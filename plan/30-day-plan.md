@@ -1,110 +1,132 @@
 # Vela: 30-day validation plan
 
-Draft v1, 2026-09-11. Two people: the founder (business side, 40–60 h/week) and the tech co-founder (AI, always on). Days count from the day we agree this plan.
+v2, 2026-09-11. Founder: business side, based in Taiwan, interviews in Russian and English, student budget, runs daily pilot ops. Tech co-founder: everything technical, always on.
+
+Changes from v1: beachhead fixed to Russian-speaking children abroad with a parent in Russia/CIS; Telegram replaces phone calls and plugs as the primary channel; survey added as the top of the funnel; budget cut to under $50.
+
+## Why this beachhead
+
+- You are the customer. Founder-market fit is the cheapest advantage there is.
+- The post-2022 emigration wave put roughly a million Russian speakers in Georgia, Serbia, Kazakhstan, Turkey, Cyprus, Thailand, Taiwan, Bali, Germany, Israel. Their parents stayed. Flights are long, visits are rare, worry is constant, and there is no product for them.
+- They pay in hard currency abroad; the parent never pays. Nothing in the pilot touches Russian payment rails.
+- Russian parents 65–80 already use Telegram or WhatsApp daily. A daily message from a bot is normal; a pendant is not.
+- Second segment, later: Taiwan itself became super-aged in 2025. Your Taiwanese friends are the interview pool for wave two; a Traditional Chinese survey is included so you can test the water for free.
 
 ## What 30 days must answer
 
-We are not building the product yet. We are buying three answers with our own data, because nobody in this market publishes theirs.
-
-| Question | Evidence we need by day 30 | Kill signal |
+| Question | Evidence by day 30 | Kill signal |
 |---|---|---|
-| 1. Will adult children pay $20–29/month for a daily "she's fine"? | 30 interviews scored; ≥10 families actually paying in the concierge pilot | <5 families pay after 25+ interviews |
-| 2. Will parents accept the signals and the call? | Parent opt-out rate; call answer rate; what they say in onboarding | >30% of parents refuse or drop out in week one |
-| 3. Can we produce a trustworthy daily signal with (near) zero hardware? | Days with a confident green dot vs. days we had to guess; false alarms per family per week | <70% confident days, or >1 false alarm per family per week |
+| 1. Will children abroad pay $15–25/month for a daily "mom is fine"? | 100+ survey responses, 20 interviews, ≥8 families paying in the pilot | <4 paying after 20 interviews |
+| 2. Will parents accept a daily Telegram exchange with a warm AI? | Parent opt-out rate; reply rate; what they say | >30% refuse or stop replying in week one |
+| 3. Can we produce a trustworthy daily signal from Telegram alone (plus an optional plug)? | Confident-day rate; false alarms per family per week | <70% confident days, or >1 false alarm per family per week |
 
-If all three pass, day 31 starts the real MVP build. If one fails, we change one variable (segment, price, signal mix) and run again. If two fail, we stop and rethink.
+Pass all three: day 31 starts the MVP build. Fail one: change one variable and rerun. Fail two: stop and rethink.
 
-## The concierge pilot (the heart of the month)
+## The pilot, zero-hardware version
 
-20 families pay $20/month. Behind the scenes it is us, a spreadsheet, and a few scripts. Each parent gets:
+15 families, $15/month (or a one-time $30 for the pilot; refundable). Behind it: a Telegram bot, Claude, a spreadsheet, and you.
 
-- **One signal we control:** a $15 smart plug on the kettle, TV, or bedside lamp (cloud API, no Wi-Fi setup by the parent if we pre-pair it, otherwise a 5-minute call).
-- **One signal from the phone, with consent:** a tiny Android app (or, for iPhone/no-smartphone, nothing; the call carries the load).
-- **One short daily call or voice message** from a named, saved number, in the parent's language, warm and two minutes long.
-- **Every morning the child gets the note:** green dot, two lines, nothing to do. Anomaly: we (humans) check before anything is sent.
+**Parent side, every morning at a time she chooses:**
+"Доброе утро, Галина Петровна. Как спалось?" with one big button, "Всё хорошо", and the option to reply by voice. The AI answers warmly in two lines, remembers yesterday, never lectures. If no reply by late morning, a gentle second message. If still nothing by early afternoon, you get a note, you decide, and only then does the child hear anything.
 
-Honesty note on signals: WhatsApp "last seen" is not available through any API and we will not scrape it. Signals are only what the parent explicitly gives us.
+**Child side, every morning at 9:00 their time:**
+A green dot and two lines. "Мама ответила в 8:12, спала нормально, собирается на дачу. Ничего делать не нужно." On a quiet day, that is the entire product.
 
-Budget for the month: about $600–1,200 (plugs, telephony, hosting, small interview incentives).
+**Optional plug (only if a family asks):** a Tuya smart plug on the kettle, bought by the child on Ozon or Wildberries for about 600 RUB, delivered to the parent. Gives us a second signal without the parent doing anything.
+
+**Humans in the loop:** you review every anomaly before it reaches a child. Every false alarm, every parent complaint, every edit you make to a morning note gets logged. Those logs are the product spec.
+
+## Budget
+
+| Item | Cost |
+|---|---|
+| Telegram bot | $0 |
+| Google Forms survey, Sheets as the ops board | $0 |
+| Hosting (Cloudflare Workers or Supabase free tier) | $0 |
+| Claude API for daily conversations, 15 parents × 30 days | ~$5–10 |
+| Domain for the waitlist page (optional) | ~$10 |
+| Plugs (optional, only if a family asks; child buys) | $0 to us |
+| **Total** | **under $25** |
+
+Interview incentives: none. People with this worry want to talk; the survey ends with "would you like to talk for 20 minutes?" and that converts.
 
 ## Week by week
 
-### Week 1: recruit and discover (days 1–7)
+### Week 1: survey out, first interviews, bot skeleton (days 1–7)
 
 **Founder**
-- Build the interview pool: 30 adult children, 15 with a parent abroad (diaspora), 15 domestic. Sources: your own network first, then diaspora Telegram/Facebook/WhatsApp groups, r/AgingParents, LinkedIn. Aim for 40 booked, expect 30 to show.
-- Run the first 8 interviews (30 min each, scoring sheet provided by me).
-- Talk to 3 parents-of-friends (65+ living alone) about the plug and the call. This is the elder-acceptance check nobody does.
-- Time: ~35 h (recruiting 15, interviews 8, elder chats 4, sync and reading 8).
+- Post the survey (Russian and English versions in `plan/materials/`) in Russian-speaking relocation groups on Telegram: Taiwan, Georgia, Serbia, Kazakhstan, Turkey, Cyprus, Thailand, Bali, Germany, Israel. Post the English version on r/AgingParents and Taiwan expat groups. Target: 100 responses by day 10.
+- Book and run the first 6 interviews from survey respondents who opted in. Script in `plan/materials/`.
+- Talk to your own parent (or a friend's) about the morning message. Show them a mock. This is the elder-acceptance check that nobody in this industry does.
+- Time: ~30 h.
 
 **Tech co-founder**
-- Interview script, scoring sheet, and recruitment messages in English, Russian, and two more languages you pick.
-- Waitlist landing page with two price points shown to alternating visitors ($19 vs $29).
-- Technical spikes: (a) Android background signals and battery cost; (b) smart-plug cloud API choice; (c) branded outbound calling with a saved caller ID in five countries; (d) smart-meter API access in UK, Japan, EU.
-- Repo hygiene: weekly review template, decision log.
+- Survey (RU, EN, ZH-TW), interview script with scoring, recruitment posts, one-page explainer for parents (RU). Done today.
+- Telegram bot skeleton: onboarding for parent and child, the morning message, the button, voice-note transcription, the AI reply, the "no reply" ladder, the child's morning note.
+- Ops board in Google Sheets: one row per family, daily status, anomaly log, false-alarm log.
+- Spike: is Telegram alone enough, or do we need WhatsApp too? (WhatsApp Business API costs money and needs Meta approval; we start Telegram-only and record how many parents are WhatsApp-only.)
 
-**Friday review:** interview pool size, first patterns, spike results, go/no-go on the concierge signal mix.
+**Friday review:** survey count and early patterns, interview notes, bot demo on your phone.
 
-### Week 2: interview, design the pilot, start selling it (days 8–14)
-
-**Founder**
-- Interviews 9–22. From the ones who say "when can I start," recruit the 20 pilot families. Charge from day one ($20, refundable, no free tier; the payment is the data).
-- Partner outreach: 10 emails to delivery, postal, and security companies in the beachhead country about a welfare-check pilot. Goal: 2 calls booked.
-- Order 25 plugs; ship or hand-deliver.
-- Time: ~45 h.
-
-**Tech co-founder**
-- Pilot operations tooling: family and parent records, daily status board, the note generator, the daily-call script and voice, plug integration, an escalation playbook (family → neighbour → local contact → emergency) with a checklist for us as the humans in the loop.
-- Consent and privacy one-pager for parents, in their language.
-
-**Friday review:** interview synthesis (top 5 objections, top 5 "yes" reasons, willingness to pay distribution), pilot roster, tooling demo.
-
-### Week 3: run the pilot (days 15–21)
+### Week 2: interviews, close pilot families, bot ready (days 8–14)
 
 **Founder**
-- Onboard the 20 families: a 15-minute call with each child, a 10-minute call with each parent (in their language where possible). Save our number in the parent's phone during the call.
-- Run daily ops with me: review every anomaly before it goes out, log every false alarm, note every parent complaint.
-- Partner calls (2), plus 2 interviews with anyone who churned or refused.
-- Time: ~50 h (onboarding 15, ops 20, partners 5, interviews 5, sync 5).
-
-**Tech co-founder**
-- Run the pipeline every morning; tune the baseline per parent; draft the morning notes for your approval in the first week, then automate.
-- Daily metrics: confident-day rate, call answer rate, false alarms, parent opt-outs, note edits you made (each edit is a product lesson).
-
-**Friday review:** first week of live data. Are the notes right? Is anyone annoyed? Did anything scary happen and how did we handle it?
-
-### Week 4: measure and decide (days 22–30)
-
-**Founder**
-- Interviews 23–30, prioritising the segment that converted best.
-- Retention check-ins with all 20 families at day 14 of their pilot. Ask the one question: "If we stopped tomorrow, how would you feel?"
-- 3 conversations with advisors or angels who know ageing, telecom, or diaspora markets. Not fundraising, learning.
+- Interviews 7–16. Every interview ends with the offer: "We are starting a small pilot next week, $15 for the month, refundable. Want in?" Collect payment on the spot (Wise, PayPal, Revolut; whatever the interviewee already has).
+- First 10 pilot families confirmed, parents' names and morning times collected.
 - Time: ~40 h.
 
 **Tech co-founder**
-- Day-30 report: the three questions answered with numbers; precision and false-alarm rate; what the note must contain; technical feasibility memo; MVP v0 spec and cost estimate.
-- Proposed beachhead country pair and segment, with the evidence.
+- Bot finished and tested with your own parent for three days before anyone else.
+- Onboarding checklist for you: what to say to the child (5 min), what to say to the parent (5 min, in Russian, warm, "your daughter asked us to say good morning").
+- Escalation playbook: reply ladder timings, what you check, when you message the child, what you never do.
 
-**Day 30 review:** pass, pivot one variable, or stop.
+**Friday review:** interview synthesis (top objections, top reasons to say yes, price points people named), pilot roster, bot walkthrough.
+
+### Week 3: pilot live (days 15–21)
+
+**Founder**
+- Onboard 10–15 families. Send the parent explainer, do the parent call yourself for the first five, then let the bot's onboarding handle the rest and see if it works without you.
+- Daily ops at a fixed morning time: review anomalies, approve notes for the first days, log everything.
+- Interviews 17–20 with anyone who declined the pilot. Their reasons matter more than the yeses.
+- Time: ~45 h.
+
+**Tech co-founder**
+- Run the pipeline daily, tune each parent's baseline, draft morning notes for your approval, then automate once your edit rate drops.
+- Daily metrics in the ops board: reply rate, reply time, confident-day rate, false alarms, opt-outs, note edits.
+
+**Friday review:** first live week. What did parents actually say to the bot? Did any child feel spied on or nagged? Did anything scary happen?
+
+### Week 4: measure, decide (days 22–30)
+
+**Founder**
+- Day-14 check-in with every family, one question: "If we stopped tomorrow, how would you feel?" Record the exact words.
+- Ask each paying family for two introductions.
+- Three conversations with people who know ageing, Telegram products, or the Russian diaspora. Learning, not fundraising.
+- Time: ~35 h.
+
+**Tech co-founder**
+- Day-30 report: the three questions answered with numbers; what the morning message must say; what parents said in their own words; technical feasibility; MVP v0 spec and cost.
+- Recommendation: continue, pivot one variable, or stop.
 
 ## Founder time budget, per week
 
 | Activity | Hours |
 |---|---|
-| Interviews and elder conversations | 10–15 |
-| Recruiting (pool and pilot families) | 8–12 |
-| Pilot operations (weeks 3–4) | 10–20 |
-| Partner and advisor outreach | 4–6 |
+| Survey distribution and community posting | 5–8 |
+| Interviews | 8–12 |
+| Pilot onboarding and daily ops (weeks 3–4) | 10–20 |
+| Elder conversations and parent explainer testing | 3–5 |
 | Working sessions with me, reading, decisions | 5–8 |
 
-## Weekly cadence
+## Cadence
 
-- Monday: 30-minute plan in this repo (`plan/weekly/`), three priorities each.
-- Daily (weeks 3–4): 15-minute ops check at the same time every morning.
-- Friday: written review, metrics table, decisions logged in `plan/decisions.md`.
+- Monday: 30-minute plan, three priorities each, in `plan/weekly/`.
+- Daily in weeks 3–4: 15-minute ops check at the same morning time.
+- Friday: written review with the metrics table; decisions in `plan/decisions.md`.
 
-## Decisions needed before day 1
+## Risks specific to this beachhead
 
-1. **Where are you and which languages can you interview in?** This sets the interview pool and the beachhead pair (child's country × parent's country).
-2. **Are you willing to be the human in the loop for weeks 3–4?** That means a daily morning check and being reachable if a parent goes quiet. Without this the pilot is not a pilot.
-3. **Budget ceiling for the month.** $600 covers the minimum; $1,200 gives interview incentives and spare plugs.
+- **Telephony and payments into Russia** are avoided entirely by design: Telegram carries the parent side, the child abroad pays.
+- **Russian data-localisation law** could apply to personal data of Russian citizens. Pilot mitigation: store the minimum (first name, morning time, reply timestamps), no health data, delete on request. Legal review before the real launch.
+- **Parents on WhatsApp only:** we count them; if it is more than half, WhatsApp Business API goes into the MVP.
+- **The AI says something wrong to a lonely parent:** every conversation is logged, you read them daily in week three, and the bot is scoped to small talk, sleep, plans, and weather, with hard rules to escalate to you on anything medical or dark.
