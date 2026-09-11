@@ -10,7 +10,9 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 
 ## Phase 0: prove the loop (weeks 1–4)
 
-**Goal.** Twenty conversations and ten to twenty families living the daily loop for at least two weeks, with paying money on the table, so that the MVP is built from evidence.
+**Goal.** Twenty conversations and ten to twenty families living the daily loop for at least two weeks, with paying money on the table, so that the MVP is built from evidence. Each pilot family should have three generations where possible: the eldest as the kept-light member, the organiser in the middle, and at least one member under 30 as a contributor, so we test both promises (closer, calmer) at once.
+
+**Two questions every interview and survey must answer.** Who in your family do you *wish* you heard from more often? Who do you *worry* about when they go quiet? If wishes cluster on the 20–45 pair and worries on the eldest, the three-generation design is confirmed.
 
 **Founder, week 1**
 - Post the survey (materials in `plan/materials/`, update the intro line so it speaks to all families, not only abroad). Channels: your own network first, Russian-speaking Telegram groups in Taiwan and the relocation cities, Taiwanese friends with the Chinese version, r/AgingParents with the English version.
@@ -86,9 +88,9 @@ The founder asked for these as the first MVP. They are built from the same mater
 1. The unanswered call (the problem, in one story).
 2. 50 million parents alone, a worried child behind each (market).
 3. Everything built so far treats her as a patient (why incumbents fail, with the adoption and non-wear numbers).
-4. Vela: one daily touch, her reply is the light (the product, one screen).
-5. The daily loop (arrival, reply, flame, quiet notice).
-6. What makes it more than a group chat (turns, prompts, grandchildren, translation, story day).
+4. Vela: the family's daily thread, one moment a day, a safe place with no feed and no strangers; and a light kept on for whoever the family worries about (the product, one screen).
+5. The daily loop (arrival, answer, flame, quiet notice).
+6. Closer and calmer: what makes it more than a group chat (turns, prompts, grandchildren, translation, story day) and what makes silence mean something.
 7. Why now (messengers everywhere, multilingual AI, super-aged crossover in Taiwan/Korea/Japan).
 8. Business model (free layer spreads, Vigil pays; comparables: Famileo, Snug, Docomo).
 9. Phase-0 evidence (reply rate, family-content days, what parents said, what children paid).

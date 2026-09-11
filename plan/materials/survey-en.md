@@ -7,6 +7,10 @@ We're two founders living abroad, and our parents stayed home alone. We're build
 
 ---
 
+**0a. Who in your family do you wish you heard from more often?** (e.g. mum, dad, my son at university, my sister; short answer)
+
+**0b. Who in your family do you worry about when they go quiet for a while?** (short answer; "nobody" is fine)
+
 **1. Where do you live now?** (country, short answer)
 
 **2. Where does the parent you think about most live?** (country and city)
