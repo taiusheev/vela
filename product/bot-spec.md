@@ -32,7 +32,8 @@ Then: a one-time link to forward to the parent, and the parent explainer text to
 | wake + 5:30, no reply | Founder gets an anomaly card in the admin chat: parent, last reply, plug signal if any, buttons: «Написать дочери» / «Подождать 2 часа» / «Отметить: всё в порядке». Nothing goes to the child automatically. |
 | founder taps «Написать дочери» | Child gets: "Мама сегодня не ответила на утреннее сообщение (обычно отвечает к 9:00). Ничего страшного пока не известно. Может, позвоните?" |
 | any time, parent replies late | Ladder resets; child's note updates if not yet sent; founder card auto-closes. |
-| child's 09:00 | Morning note to the child (see below). |
+| when the parent replies (never before 07:00 child local) | The child's note (see below). If the parent stays quiet, the child hears nothing until the founder decides. |
+| child's 07:00 onward | Retry window: if the note could not go out earlier because it was night for the child, it goes now. |
 
 Weekends are the same. Holidays are the same. Quiet is the product.
 
