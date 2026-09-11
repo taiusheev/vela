@@ -1,5 +1,7 @@
 # Thinking about the solution, before building anything
 
+> Partly superseded on 2026-09-12 by `02-app-plan.md`: the founder chose an app for all families where the family, not a service, acts on silence. The paid welfare-check partner and the Vela human on the ladder are dropped. Sections 1–3 and 5 still hold.
+
 2026-09-11. Written from the six research reports. The 30-day plan is paused until we agree on this.
 
 ## 1. What the problem actually is

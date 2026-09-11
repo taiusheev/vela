@@ -1,5 +1,7 @@
 # Vela: 30-day validation plan
 
+> Superseded on 2026-09-12 by `plan/execution-plan.md` (all families, app-first, family acts on silence). Kept for the survey and interview logistics.
+
 v2, 2026-09-11. Founder: business side, based in Taiwan, interviews in Russian and English, student budget, runs daily pilot ops. Tech co-founder: everything technical, always on.
 
 Changes from v1: beachhead fixed to Russian-speaking children abroad with a parent in Russia/CIS; Telegram replaces phone calls and plugs as the primary channel; survey added as the top of the funnel; budget cut to under $50.

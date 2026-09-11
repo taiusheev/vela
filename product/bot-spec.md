@@ -1,5 +1,7 @@
 # Vela pilot bot: behaviour spec
 
+> Phase-0 instrument only. The product is defined in `02-app-plan.md`. For phase 0 the founder card is kept only for AI flags; quiet notices go to the child with nearby contacts (see `plan/execution-plan.md`).
+
 v1, 2026-09-11. This is what the Telegram bot does during the 30-day pilot. It is deliberately small. Everything not listed here, it does not do.
 
 ## Three people, one bot

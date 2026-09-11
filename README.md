@@ -8,11 +8,13 @@ Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) h
 
 - [`research/00-SYNTHESIS.md`](research/00-SYNTHESIS.md) — start here: the landscape, ten cross-cutting truths, where Vela wins, risks
 - `research/01`–`06` — the six underlying reports (US medical alerts and wearables; passive home sensing; East Asia; Europe/ANZ/Israel; AI companions and check-in apps; market size and lessons)
-- [`plan/30-day-plan.md`](plan/30-day-plan.md) — the validation plan: Russian-diaspora beachhead, Telegram-first, near-zero budget
+- [`product/02-app-plan.md`](product/02-app-plan.md) — **the product**: people, daily loop, features, channels, AI, privacy, pricing, metrics, architecture, roadmap, risks
+- [`plan/execution-plan.md`](plan/execution-plan.md) — **what we do**: phase 0 (prove the loop), MVP, the bridge, the read; deck and site track
 - `plan/materials/` — surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer
-- [`product/bot-spec.md`](product/bot-spec.md) — what the pilot bot does and never does
-- [`bot/`](bot/README.md) — the pilot bot: Telegram + Cloudflare Workers + D1 + Claude
+- `product/01-solution-thinking.md` — problem anatomy and solution space (partly superseded)
+- [`bot/`](bot/README.md) — the phase-0 prototype: Telegram + Cloudflare Workers + D1 + Claude
+- `pitch/` — accelerator application answers
 
 ## Status
 
-2026-09-11: research complete, 30-day plan agreed, week-one materials ready, pilot bot written and type-checked. Next: founder creates the Telegram bot, Cloudflare, and Anthropic accounts; deploy; three-day test with the founder's own parent.
+2026-09-12: research complete (7 reports), product plan and execution plan written, ikigai Launchpad application submitted. Phase 0 starts: survey, interviews, and the prototype loop with 10–20 paying families.
