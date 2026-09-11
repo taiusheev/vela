@@ -6,14 +6,13 @@ Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) h
 
 ## Repository layout
 
-- [`research/00-SYNTHESIS.md`](research/00-SYNTHESIS.md) — start here: the landscape, ten cross-cutting truths, where Vela wins, risks, next 30 days
-- `research/01` — US and Canada: medical alerts (PERS), wearables, Amazon/Apple/Google
-- `research/02` — passive home sensing worldwide (PIR, radar, lamps, cameras, audio, Wi-Fi, utility data)
-- `research/03` — East Asia: Japan mimamori, Korea, China, Singapore, Taiwan, Hong Kong
-- `research/04` — Europe, UK, Nordics, Israel, Australia, New Zealand: telecare and who pays
-- `research/05` — AI companions, check-in apps, family coordination software
-- `research/06` — demographics, market size, willingness to pay, failures, channels, ten hard truths
+- [`research/00-SYNTHESIS.md`](research/00-SYNTHESIS.md) — start here: the landscape, ten cross-cutting truths, where Vela wins, risks
+- `research/01`–`06` — the six underlying reports (US medical alerts and wearables; passive home sensing; East Asia; Europe/ANZ/Israel; AI companions and check-in apps; market size and lessons)
+- [`plan/30-day-plan.md`](plan/30-day-plan.md) — the validation plan: Russian-diaspora beachhead, Telegram-first, near-zero budget
+- `plan/materials/` — surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer
+- [`product/bot-spec.md`](product/bot-spec.md) — what the pilot bot does and never does
+- [`bot/`](bot/README.md) — the pilot bot: Telegram + Cloudflare Workers + D1 + Claude
 
 ## Status
 
-Day zero: 2026-09-11. Market research complete; validation phase next (interviews, concierge MVP, technical spikes).
+2026-09-11: research complete, 30-day plan agreed, week-one materials ready, pilot bot written and type-checked. Next: founder creates the Telegram bot, Cloudflare, and Anthropic accounts; deploy; three-day test with the founder's own parent.

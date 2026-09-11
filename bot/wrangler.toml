@@ -1,0 +1,26 @@
+name = "vela-bot"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# The scheduler runs every 15 minutes and decides, per family, whether it is
+# time for the morning message, the nudge, the founder card, or the child's note.
+[triggers]
+crons = ["*/15 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vela"
+database_id = "REPLACE_WITH_ID_FROM_npm_run_db:create"
+
+[vars]
+# Public bot username without @, used to build the parent invite link.
+BOT_USERNAME = "VelaCareBot"
+# Model for parent conversations and child notes.
+MODEL = "claude-opus-5"
+
+# Secrets (set with `wrangler secret put NAME`):
+#   TELEGRAM_BOT_TOKEN       from @BotFather
+#   TELEGRAM_WEBHOOK_SECRET  any long random string; Telegram echoes it on each update
+#   ANTHROPIC_API_KEY        from console.anthropic.com
+#   ADMIN_CHAT_ID            the founder's Telegram chat id (send /whoami to the bot to learn it)
