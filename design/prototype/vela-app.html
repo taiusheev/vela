@@ -34,7 +34,14 @@ body[data-mode="single"] .phone.active{display:block}
 .status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 8px;font-size:14px;font-weight:600;font-family:"IBM Plex Mono",monospace}
 .status .pill{width:120px;height:34px;background:#111;border-radius:20px;position:absolute;top:12px;left:50%;transform:translateX(-50%)}
 .screen{padding:8px 20px 24px;height:calc(100% - 54px);overflow:hidden;display:flex;flex-direction:column}
-.screen.p{padding:8px 24px 24px}
+.screen.p{padding:8px 24px 24px;font-size:22px;line-height:1.4}
+.screen.p .cap{font-size:16px;color:#4a5566}
+.mic{width:96px;height:96px;border-radius:50%;background:#2f7d5b;color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow:0 0 0 14px #e3f1ea}
+.mic.stop{background:#1b2430;border-radius:22px}
+.widget{width:340px;border-radius:26px;background:#fff;border:1px solid #d9dee6;padding:16px 18px;box-shadow:0 10px 30px rgba(27,36,48,.12)}
+.homebg{background:linear-gradient(180deg,#c9d6e3,#e9eef4);height:100%;padding:70px 24px 0}
+.apps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:24px}
+.apps i{display:block;height:60px;border-radius:14px;background:rgba(255,255,255,.55)}
 .serif{font-family:"Newsreader",Georgia,serif;font-weight:500;letter-spacing:-.005em}
 .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:#7d8794;margin:0 0 8px}
 .h-title{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:26px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
@@ -140,7 +147,7 @@ body[data-mode="single"] .phone.active{display:block}
 
 <div class="top">
   <h1><span class="flame sm"><i></i></span>Vela</h1>
-  <span class="sub">App prototype · v1 · English first · design/design-system.md</span>
+  <span class="sub">App prototype · v1.1 · English first · design/design-system.md · design/research-best-apps.md</span>
   <span class="spacer"></span>
   <div class="seg" role="group" aria-label="View mode">
     <button id="mBoard" aria-pressed="true">Board (all screens)</button>
@@ -267,7 +274,7 @@ body[data-mode="single"] .phone.active{display:block}
     <div class="serif" style="font-size:19px;line-height:1.4;margin-top:12px">“Look how tall she is! Slept fine, off to the garden today. Tell Mia I put the drawing on the fridge.”</div>
     <div class="cap" style="margin-top:8px">Translated from Russian · <span style="color:#2f7d5b">show original</span></div>
   </div>
-  <div class="card soft" style="margin-top:12px"><p class="eyebrow" style="margin-bottom:4px">She answered</p><div class="row"><div class="photo draw" style="width:44px;height:44px"></div><div style="font-size:14px">Mia's drawing from yesterday · <span class="chip g">Mia has been told</span></div></div></div>
+  <div class="card soft" style="margin-top:12px"><p class="eyebrow" style="margin-bottom:4px">She answered</p><div class="row"><div class="photo draw" style="width:44px;height:44px"></div><div style="font-size:14px">Mia's drawing from yesterday · <span class="chip g">Mia got the receipt: “Mom saw it ♥ 8:12”</span></div></div></div>
   <div class="spacer"></div>
   <button class="btn secondary" data-go="s-send">Reply with something for tomorrow</button>
 </div></div></div>
@@ -299,7 +306,7 @@ body[data-mode="single"] .phone.active{display:block}
   <div class="appbar"><div class="brand">Thread</div><span class="chip">English · <span style="color:#7d8794;font-weight:400">originals on tap</span></span></div>
   <div class="list">
     <div class="thread-item"><span class="flame sm"><i></i></span><div><div class="who">Mom <span class="cap">· today 8:12</span></div><div class="what serif" style="font-size:15px;color:#1b2430">“Look how tall she is! Slept fine, off to the garden today.”</div><div class="cap" style="margin-top:4px">voice · translated from Russian</div></div><div class="photo thumb"></div></div>
-    <div class="thread-item"><span class="avatar"></span><div><div class="who">Mia <span class="cap">· yesterday</span></div><div class="what">sent a drawing from art class</div><div class="cap" style="margin-top:4px"><span class="chip g">Mom answered this</span></div></div><div class="photo draw thumb"></div></div>
+    <div class="thread-item"><span class="avatar"></span><div><div class="who">Mia <span class="cap">· yesterday</span></div><div class="what">sent a drawing from art class</div><div class="cap" style="margin-top:4px"><span class="chip g">Mom saw it ♥ 8:12</span></div></div><div class="photo draw thumb"></div></div>
     <div class="thread-item"><span class="avatar"></span><div><div class="who">Anna <span class="cap">· Thursday</span></div><div class="what">asked about her blood pressure</div></div><span></span></div>
     <div class="thread-item"><span class="flame sm"><i></i></span><div><div class="who">Mom <span class="cap">· Thursday 8:40</span></div><div class="what serif" style="font-size:15px;color:#1b2430">“All normal, 130 over 80. The nurse comes Tuesday.”</div><div class="cap" style="margin-top:4px">Reminder offered: ask how the nurse visit went · <span style="color:#2f7d5b">Add</span></div></div><span></span></div>
     <div class="thread-item"><span class="avatar"></span><div><div class="who">Sam <span class="cap">· Wednesday</span></div><div class="what">voice note · 0:09 · “Grandma, exams next week, wish me luck”</div></div><span></span></div>
@@ -346,9 +353,9 @@ body[data-mode="single"] .phone.active{display:block}
 <div class="dim"></div>
 <div class="sheet">
   <div class="grab"></div>
-  <p class="eyebrow">Quiet · usually answers by 9:10</p>
-  <h2 class="h-title">Mom hasn't answered yet today</h2>
-  <p class="muted2" style="margin:0 0 12px;font-size:15px">Nothing worrying is known. Her morning went out at 8:00 and again at 10:30. Yesterday: “off to the garden, back on Saturday.”</p>
+  <p class="eyebrow">Quiet · she usually answers by 9:10</p>
+  <h2 class="h-title">It's been quiet at Mom's today</h2>
+  <p class="muted2" style="margin:0 0 12px;font-size:15px">Nothing worrying is known. Her morning went out at 8:00 and again at 10:30. Yesterday she said: “off to the garden, back on Saturday.”</p>
   <p class="eyebrow">Who is nearby</p>
   <div class="list">
     <div class="contact"><div><div class="nm">Aunt Val</div><div class="rl">neighbour · 2nd floor</div></div><div class="b p">Call</div><div class="b s">Ask to check</div></div>
@@ -356,8 +363,8 @@ body[data-mode="single"] .phone.active{display:block}
   </div>
   <div style="height:12px"></div>
   <button class="btn primary">📞 Call Mom</button>
-  <div class="seg2" style="margin-top:10px"><div>She's away</div><div>Wait 2 hours</div></div>
-  <p class="cap" style="text-align:center;margin:12px 0 0">If Mom answers, this closes by itself and everyone we asked hears she's fine.</p>
+  <div class="seg2" style="margin-top:10px"><div>She's fine, I know why</div><div>Wait 2 hours</div></div>
+  <p class="cap" style="text-align:center;margin:12px 0 0">If Mom answers, this closes by itself: “Mom answered at 11:40. Everything's lit again.”</p>
 </div></div></div>
 
 <!-- ================= STORY DAY ================= -->
@@ -411,16 +418,59 @@ body[data-mode="single"] .phone.active{display:block}
   <button class="btn text">Not now</button>
 </div></div></div>
 
+<!-- ================= WIDGET ================= -->
+<div class="cell"><div class="lbl"><b>Home-screen widget</b>the arrival without opening the app</div>
+<div class="phone" data-name="Widget" id="s-widget"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="homebg">
+  <div class="widget">
+    <div class="row" style="justify-content:space-between"><div class="row" style="gap:8px"><span class="flame sm"><i></i></span><b style="font-size:14px">Mom · answered 8:12</b></div><span class="cap">Vela</span></div>
+    <div class="row" style="margin-top:12px;align-items:flex-start"><div class="photo" style="width:88px;height:72px;flex:0 0 auto"></div><div class="serif" style="font-size:16px;line-height:1.35">“Look how tall she is! Off to the garden today.”</div></div>
+    <div class="cap" style="margin-top:10px">Tomorrow is Anna's turn · tap to send</div>
+  </div>
+  <div class="apps"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="cap" style="margin-top:28px;color:#4a5566;text-align:center">The app is for answering, not browsing. Most days the widget is all you see.</div>
+</div></div></div>
+
+<!-- ================= PARENT SURFACE: CONSENT ================= -->
+<div class="cell"><div class="lbl"><b>Parent surface · consent</b>plain words · one toggle</div>
+<div class="phone" data-name="Parent · consent" id="s-pc"><div class="status"><span class="pill"></span><span>18:20</span><span>●●●</span></div>
+<div class="screen p">
+  <h2 class="h-display" style="margin-top:8px">Anna would like to keep a light on for you</h2>
+  <p style="margin:18px 0 0">Every morning you'll get something from the family. When you tap, they see your light.</p>
+  <p style="margin:12px 0 0">If you don't tap by the evening, Anna gets a quiet note so she knows to call. Nobody else hears anything.</p>
+  <p style="margin:12px 0 0">You can turn this off any time by saying <b>stop</b>.</p>
+  <div class="opt" style="margin-top:22px;font-size:20px;padding:18px"><span class="flame"><i></i></span><div>Keep a light on for me</div><span class="toggle" style="margin-left:auto"></span></div>
+  <div class="spacer"></div>
+  <button class="btn primary big" data-go="s-pm">Yes, that's fine</button>
+  <div class="cap" style="margin-top:14px;text-align:center">What the family sees · Read this aloud</div>
+</div></div></div>
+
+<!-- ================= PARENT SURFACE: RECORDING ================= -->
+<div class="cell"><div class="lbl"><b>Parent surface · reply by voice</b>tap to start · tap to stop · preview · send</div>
+<div class="phone" data-name="Parent · recording" id="s-pr"><div class="status"><span class="pill"></span><span>8:03</span><span>●●●</span></div>
+<div class="screen p" style="text-align:center">
+  <span class="cap" style="display:block;margin-top:6px">‹ Back</span>
+  <h2 class="h-display" style="margin-top:14px">Say something to Mia</h2>
+  <p style="margin:12px 0 0">Tap the button, speak, tap again when you're done.</p>
+  <div class="spacer"></div>
+  <div class="mic stop" aria-label="Stop"><svg width="36" height="36" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></div>
+  <div class="mono" style="font-size:28px;margin-top:22px">0:07</div>
+  <div class="wave" style="justify-content:center;margin:10px auto 0;width:220px" id="w5"></div>
+  <div class="cap" style="margin-top:10px">Speaking clearly. Up to a minute.</div>
+  <div class="spacer"></div>
+  <div class="card soft" style="text-align:left"><b style="font-size:16px">After you stop</b><div class="cap">You'll hear it back, then choose <b>Send</b> or <b>Record again</b>.</div></div>
+</div></div></div>
+
 <!-- ================= PARENT SURFACE: MORNING ================= -->
 <div class="cell"><div class="lbl"><b>Parent surface · morning</b>one screen · big buttons · voice first</div>
 <div class="phone" data-name="Parent · morning" id="s-pm"><div class="status"><span class="pill"></span><span>8:00</span><span>●●●</span></div>
 <div class="screen p" style="text-align:center">
   <h2 class="h-display" style="margin-top:10px">Good morning,<br>Mrs Ivanova</h2>
   <div class="photo garden" style="height:270px;margin:18px 0 12px"></div>
-  <div class="card" style="text-align:left"><div style="font-size:20px;line-height:1.4">Mia: “Grandma, this is my drawing!”</div><div class="voice" style="margin-top:8px"><div class="play">▶</div><div class="wave" id="w4"></div><span class="cap mono" style="font-size:15px">0:09</span></div></div>
+  <div class="card" style="text-align:left"><div style="font-size:22px;line-height:1.4">Mia: “Grandma, this is my drawing!”</div><div class="voice" style="margin-top:8px"><div class="play" style="width:44px;height:44px">▶</div><div class="wave" id="w4"></div><span class="cap mono">0:09</span></div></div>
   <div class="spacer"></div>
   <button class="btn primary big" data-go="s-pa">☀️ I'm fine</button>
-  <div class="seg2" style="margin-top:12px;gap:12px"><div class="btn secondary mid" style="height:70px">🎤 Reply</div><div class="btn secondary mid" style="height:70px">📞 Call Anna</div></div>
+  <div class="seg2" style="margin-top:12px;gap:12px"><div class="btn secondary mid" style="height:70px" data-go="s-pr">🎤 Reply</div><div class="btn secondary mid" style="height:70px">📞 Call Anna</div></div>
   <div class="cap" style="margin-top:14px;font-size:14px">What the family sees · Stop</div>
 </div></div></div>
 
@@ -430,7 +480,7 @@ body[data-mode="single"] .phone.active{display:block}
 <div class="screen p" style="text-align:center;justify-content:center">
   <span class="flame xl lit-anim" style="margin:0 auto"><i></i></span>
   <h2 class="h-display" style="margin-top:24px">Thank you.<br>Anna knows you're fine.</h2>
-  <p style="font-size:20px;color:#4a5566;margin:14px 0 0">Have a lovely day. The family's photos are on the next page.</p>
+  <p style="color:#4a5566;margin:14px 0 0">Have a lovely day. Mia will hear that you saw her drawing.</p>
   <div class="spacer"></div>
   <div class="row" style="gap:12px;justify-content:center"><div class="photo" style="width:96px;height:96px"></div><div class="photo draw" style="width:96px;height:96px"></div><div class="photo garden" style="width:96px;height:96px"></div></div>
   <div class="spacer"></div>
