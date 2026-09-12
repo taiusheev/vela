@@ -59,7 +59,7 @@ Fallbacks: Noto Serif TC for Voice and Titles in Traditional Chinese, Noto Sans 
 
 ## The light (component)
 
-The in-app glyph for a person's day, derived from the mark: a small rounded window (28, 40, or 120 pt tall) with a light inside.
+The in-app glyph for a person's day is the small mark: a soft-arch window (28, 40, or 120 pt tall; top corners 34% of the width, bottom corners 14%) without muntins, with a light inside.
 
 | State | Drawing |
 |---|---|
@@ -101,7 +101,7 @@ Facts, not feelings: "Nana answered at 9:12", "No word from Nana yet today". Nam
 
 ## Name and mark
 
-The mark is The Kept Light: a window seen from the street at dusk with one warm light on. Prompts in `brand/logo-prompt.md`; working drawing in `brand/kept-light-sheet.svg`. The name "Vela" is kept for now but is not clearable as a bare mark (vela.family, a family-calendar app in beta; "Vela for Caregivers", a former eldercare app; several Vela trademarks in class 9/42), so the product ships as "Vela Light" with a compound domain, formal clearance runs in EUIPO, WIPO, Rospatent, and TIPO before the mark is final, and one backup name is prepared. In India "vela" means idle; own the joke or use a local sub-brand.
+The mark is The Kept Light: a window seen from the street at dusk with the light on. Locked 2026-09-12: a portrait window 100 × 132 with a soft arch (top radius 34, bottom 14), an 11-unit charcoal frame, 6-unit muntins with the transom at 40% so the four panes read as a sash window, flat amber panes; under 32 px the muntins go and the frame thickens to 16, which is also the in-app light glyph. Wordmark "Vela" in Literata SemiBold, outlined; cap height 58% of the mark, gap 30%. Files, icons, rules, and the generator in `brand/README.md`. The name "Vela" is kept for now but is not clearable as a bare mark (vela.family, a family-calendar app in beta; "Vela for Caregivers", a former eldercare app; several Vela trademarks in class 9/42), so the product ships as "Vela Light" with a compound domain, formal clearance runs in EUIPO, WIPO, Rospatent, and TIPO before the mark is final, and one backup name is prepared. In India "vela" means idle; own the joke or use a local sub-brand.
 
 ## Figma structure
 
