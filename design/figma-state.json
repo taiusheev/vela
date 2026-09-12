@@ -79,7 +79,11 @@
   },
   "screens": {
     "App/Home": "11:7",
-    "Parent/Morning question": "13:2"
+    "Parent/Morning question": "13:2",
+    "App/Quiet notice": "14:7",
+    "App/Quiet notice sheet": "14:26",
+    "Parent/After answering": "15:5",
+    "App/Ask": "16:11"
   },
   "completedSteps": [
     "pages",
@@ -90,7 +94,10 @@
     "component-light-window",
     "component-button-teal",
     "screen-home",
-    "screen-parent-morning"
+    "screen-parent-morning",
+    "screen-quiet-notice",
+    "screen-parent-after",
+    "screen-ask"
   ],
   "notes": "Identity v3 (Candle & Ink; Literata + Inter). Dark mode values in design-system.md only (Starter plan: one mode). Next: screens on App (3:2) and Parent surface (3:3)."
 }
