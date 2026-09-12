@@ -1,6 +1,6 @@
 # Vela design system
 
-v2, 2026-09-12. Rebuilt from the Vela logo (navy house, glowing dot with arcs, sky arc, geometric wordmark) and the design research in `research-best-apps.md`. Supersedes v1 (sage/amber/flame), which the founder rejected. Built in Figma: "Vela · Design" (file key eJxG0c9ZHNSlY794RA9nrL).
+v2 (provisional), 2026-09-12. Palette, type, and mark below are placeholders until the identity research (`research-identity.md`, in progress) decides them; the founder asked for the identity to be chosen from research, with no reference to the earlier radar-concept logo. Supersedes v1 (sage/amber/flame), which the founder rejected. Built in Figma: "Vela · Design" (file key eJxG0c9ZHNSlY794RA9nrL).
 
 ## Identity, from the light story
 
