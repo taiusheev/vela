@@ -18,7 +18,7 @@ Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) h
 - [`bot/`](bot/README.md) — the phase-0 prototype: Telegram + Cloudflare Workers + D1 + Claude
 - `pitch/` — accelerator application answers
 - [`plan/master-plan.html`](plan/master-plan.html) — source of the living master plan page (published at https://claude.ai/code/artifact/b20dcd01-518a-406c-9bca-3b40906bf193)
-- [`design/diagrams/master-plan.drawio`](design/diagrams/master-plan.drawio) — **the whole plan as a 15-page Draw.io map** (open at app.diagrams.net from GitHub)
+- [`design/diagrams/master-plan.drawio`](design/diagrams/master-plan.drawio) — **the whole foundation as a 34-page Draw.io map** (open at app.diagrams.net from GitHub)
 - [`design/`](design/README.md) — Draw.io diagrams (architecture, database, daily loop) and Figma-ready wireframes of the six key screens
 - `plan/tasks-asana.csv` — optional Asana export of the phase-0 checklist (the master plan page is the tracker)
 - `tools/gource.ps1` — renders the repo history as a Gource animation
