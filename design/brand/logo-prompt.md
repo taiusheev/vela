@@ -1,45 +1,46 @@
 # Logo prompts for Vela
 
-Use with any image model (Midjourney, Ideogram, DALL·E, Recraft; Recraft and Ideogram handle vector-style marks and wordmarks best). Generate 4–8 per prompt, pick 3, then we vectorise the winner and build the wordmark in Figtree.
+v2, 2026-09-12. Written from the identity research (`design/research-identity.md`), direction "The Kept Light". No reference to any earlier logo. Best results from Recraft or Ideogram (flat vector marks); Midjourney with `--style raw`.
 
-## What the mark must say
+## The idea in one line
 
-Vela keeps a light on for the people we love who live alone or far away. *Vela* means candle; *velar* means to keep vigil. The mark is about **a light left on**, warmth, and family across distance. It must not look like a security or radar product, a medical device, a smart-home sensor, or a "call for help" button. Calm, warm, premium, trustworthy. Think Headspace's warmth with Linear's restraint.
+A window seen from the street at dusk, with one warm light on inside. Someone is home; someone kept the light on. It says home without a house, light without a bulb or candle, presence without a pulse, radar, or shield.
 
-Hard constraints for every prompt: single simple shape, works at 16 px, one accent colour, no gradients, no house, no radar waves, no shield, no heart-monitor line, no stock "elderly hands", no text unless the prompt is a wordmark.
+## Prompt 1 · mark only
 
-## Prompt 1 · The window light (my recommendation)
+```
+Minimal app logo mark: a single upright rounded rectangle with softly rounded corners, like a window seen from outside at dusk, drawn as one smooth ink shape; inside it, high and slightly off-centre, one small warm amber ellipse of light with a soft glow. Flat vector, two colours only: deep warm charcoal #1E1A16 and amber #E9A23B, on a cream background #FBF7F0. Generous negative space, perfectly balanced, calm, premium, quiet. Centered, no text.
+```
 
-> Minimalist logo mark for an app called Vela: a rounded square window frame in deep navy (#0B1B4A) with a single soft glowing dot of bright blue (#2E6BE8) inside, slightly off-centre, like a light left on in a window at night. Flat vector, geometric, thick even strokes, generous rounded corners, lots of negative space, no gradients, no text, white background. Calm, warm, premium, trustworthy. Style reference: modern app icon, Scandinavian simplicity.
+## Prompt 2 · app icon
 
-Variants to try: the glow as a small halo (two concentric circles, the outer at 20% opacity); the frame open at one corner; the dot warm white on a navy square for the app icon.
+```
+iOS app icon, 1024x1024, flat vector: cream #FBF7F0 field; centered soft-cornered window silhouette in warm charcoal #1E1A16 occupying about 55% of the height; a single small amber #E9A23B light sits in the upper third of the window with a faint radial glow bleeding softly onto the cream. No gradients elsewhere, no strokes, no shadows, no text. It should still read as a lit window at 60 pixels.
+```
 
-## Prompt 2 · The vigil
+## Prompt 3 · logo system and wordmark
 
-> Minimalist logo mark for an app called Vela: a single thick arc in deep navy (#0B1B4A) curving over a small glowing circle in bright blue (#2E6BE8), like someone gently watching over a light. Flat vector, geometric, rounded stroke ends, balanced negative space, no gradients, no text, white background. Calm, protective without being clinical, warm, premium.
+```
+Logo system sheet: the same lit-window mark in three states side by side: full colour (charcoal window, amber light on cream), pure single-colour silhouette (charcoal only, the light as a cut-out hole), and reversed (cream on charcoal #1B1714 with the amber light glowing). Beside it the wordmark "Vela" set in a warm, humanist old-style serif, lowercase after the capital V, letterspacing relaxed, same charcoal. Flat, editorial, calm, lots of white space.
+```
 
-Variants: arc on the left side like a parenthesis; two nested arcs of different weights (family generations) over one light.
+## Negative prompt (paste with every prompt)
 
-## Prompt 3 · The V-sail with a light
+```
+no candle, no flame, no lightbulb, no sun rays, no sparkles, no house with roof, no heart, no shield, no padlock, no radar rings, no concentric circles, no wifi arcs, no pulse line, no medical cross, no people figures, no faces, no gradients on the background, no 3D, no bevels, no drop shadows, no glossy glass, no neon, no blue, no red, no text inside the icon, no stock-logo look, no clip art, no multiple icons, no watermark
+```
 
-> Minimalist monogram logo for an app called Vela: a bold rounded letter V in deep navy (#0B1B4A) shaped like a sail, holding a single small glowing circle in bright blue (#2E6BE8) near its top. Flat vector, geometric, thick strokes, strong at small sizes, no gradients, no additional text, white background. Warm, calm, premium.
+## Variations worth generating
 
-## Prompt 4 · Wordmark
-
-> Wordmark logo "Vela" in a geometric humanist sans-serif, semibold, tight letter-spacing, deep navy (#0B1B4A), with the dot of no letter replaced but a small glowing blue circle (#2E6BE8) tucked into the counter of the lowercase "e" or placed after the "a" as a period of light. Flat vector, clean, premium, white background, no icon, no tagline.
-
-## Prompt 5 · App icon
-
-> iOS app icon for Vela: deep navy (#0B1B4A) rounded square, a single soft glowing dot in the lower-right third, white centre fading to light blue (#6C9BFF) halo, no other elements, no text. Calm, warm, premium, minimal. Flat with one subtle glow.
-
-## Negative prompt (paste where supported)
-
-> house, home, roof, radar, wifi waves, signal bars, shield, lock, heart, heartbeat line, medical cross, stethoscope, hands, elderly person, family silhouettes, pendant, alarm, bell, red, orange, gradient mesh, 3D, glossy, drop shadow, text, letters (except for wordmark prompts)
+- The window slightly taller than wide (portrait), versus square.
+- The light as a soft ellipse versus a small rounded square (a lamp shade).
+- The window frame open at the bottom edge, so the shape also reads as an arch.
+- Reversed version on charcoal for the app icon's dark and tinted variants.
 
 ## How to judge the options
 
-1. Cover it with your thumb at phone size: is it still a light?
-2. Would a 78-year-old find it friendly, and a 20-year-old find it cool?
-3. Does it look like a safety product? If yes, reject.
-4. One colour plus navy: does it survive in black and white?
+1. Cover it with your thumb at phone size: is it still a lit window?
+2. Fill it with one colour only (Android tints icons monochrome): does the silhouette survive?
+3. Would a 78-year-old find it friendly, and a 20-year-old find it cool?
+4. Does it look like a safety, smart-home, or medical product? If yes, reject.
 5. Can you draw it from memory after one look?
