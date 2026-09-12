@@ -26,6 +26,7 @@ Colours in the wireframes follow the plan's palette: sage green for actions, amb
 
 ## Diagrams
 
+- `master-plan.drawio`: **the whole plan as a 15-page visual map**, one tab per topic: overview, mission and problem, what we learned, the family and the two promises, the daily loop, surfaces and channels, the AI layer, architecture, business model, go to market, roadmap, phase 0 by week and owner, metrics, risks, decisions. Generated from `tools/build-master-plan-drawio.mjs`; edit the data in that script and run `node tools/build-master-plan-drawio.mjs` to regenerate, or edit the file directly in Draw.io if you prefer (then the script is out of date).
 - `architecture.drawio`: family side (app, parent surface, web), the platform (API, scheduler, AI service, Postgres, event log, media, channel interface, admin, billing), the channel adapters (Telegram, MAX, WhatsApp, LINE, Viber, voice/SMS, in-app), external services.
 - `database.drawio`: the MVP schema. Green = the daily loop; amber = the paid Light layer; grey = supporting. Retention rules in the legend.
 - `daily-loop.drawio`: swimlanes for the family, Vela, the kept-light member, and the organiser, from queueing content to the quiet notice.
