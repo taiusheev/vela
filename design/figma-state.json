@@ -1,0 +1,100 @@
+{
+  "runId": "vela-figma-2026-09-12",
+  "file": {
+    "key": "eJxG0c9ZHNSlY794RA9nrL",
+    "url": "https://www.figma.com/design/eJxG0c9ZHNSlY794RA9nrL",
+    "plan": "team::1501239291272342900 (Starter: 3 pages, 1 mode per collection)"
+  },
+  "pages": {
+    "Foundations": "0:1",
+    "App": "3:2",
+    "Parent surface": "3:3"
+  },
+  "collections": {
+    "Primitives": "VariableCollectionId:4:2",
+    "Color": "VariableCollectionId:5:3"
+  },
+  "variables": {
+    "navy/950": "VariableID:4:3",
+    "navy/900": "VariableID:4:4",
+    "navy/850": "VariableID:4:5",
+    "navy/800": "VariableID:4:6",
+    "navy/700": "VariableID:4:7",
+    "navy/600": "VariableID:4:8",
+    "navy/500": "VariableID:4:9",
+    "blue/600": "VariableID:4:10",
+    "blue/400": "VariableID:4:11",
+    "blue/300": "VariableID:4:12",
+    "blue/350": "VariableID:4:13",
+    "blue/100": "VariableID:4:14",
+    "grey/700": "VariableID:4:15",
+    "grey/500": "VariableID:4:16",
+    "grey/400": "VariableID:4:17",
+    "grey/300": "VariableID:4:18",
+    "grey/200": "VariableID:4:19",
+    "grey/100": "VariableID:4:20",
+    "grey/50": "VariableID:4:21",
+    "white": "VariableID:4:22",
+    "white/90": "VariableID:4:23",
+    "paper": "VariableID:4:24",
+    "red/600": "VariableID:4:25",
+    "red/300": "VariableID:4:26",
+    "color/bg": "VariableID:5:4",
+    "color/surface": "VariableID:5:5",
+    "color/paper": "VariableID:5:6",
+    "color/surface-2": "VariableID:5:7",
+    "color/ink": "VariableID:5:8",
+    "color/ink-2": "VariableID:5:9",
+    "color/ink-3": "VariableID:5:10",
+    "color/rule": "VariableID:5:11",
+    "color/light": "VariableID:5:12",
+    "color/light-soft": "VariableID:5:13",
+    "color/sky": "VariableID:5:14",
+    "color/on-light": "VariableID:5:15",
+    "color/error": "VariableID:5:16"
+  },
+  "textStyles": {
+    "Display": "S:378a82b2e36b199672f0418c77c106544dc28948,",
+    "Title": "S:97b9cd8e0bbe2f564b981541beb587c5ae5ea47b,",
+    "Voice": "S:3ca00e07789b076a14d596c0577d237be338be34,",
+    "Voice/Parent": "S:e2d680fef7decec940d9511296cb06c663d6ef0b,",
+    "Heading": "S:1e4fda23246197a5c5b4b6266cb8b21937b190d4,",
+    "Body": "S:1ecd94f12620a797c52dc51adc115eb95349af46,",
+    "Body/Medium": "S:2c0b60d367362ef01a9fe206a19101bca0812976,",
+    "Body/Parent": "S:a7a4d0cc64884342c56a69bf17a457695b3689d1,",
+    "Button": "S:d8a6667e1405258cbcfab48da4c83824bd30758e,",
+    "Button/Parent": "S:73b92e2374447bb5c70eb5c249ecd0df3c47c615,",
+    "Caption": "S:0aaba0a7850a002cece14ff585da392fc79a47e8,",
+    "Label": "S:abb142fd307b05717f26ed91ca61176840ad3ec3,"
+  },
+  "components": {
+    "Light": {
+      "set": "6:12",
+      "variants": {
+        "Lit": "6:2",
+        "Resting": "6:5",
+        "Quiet": "6:7",
+        "Away": "6:10"
+      }
+    },
+    "Button": {
+      "set": "6:21",
+      "variants": {
+        "Primary/Standard": "6:13",
+        "Secondary/Standard": "6:15",
+        "Primary/Parent": "6:17",
+        "Secondary/Parent": "6:19"
+      }
+    }
+  },
+  "screens": {},
+  "completedSteps": [
+    "pages",
+    "primitives",
+    "color-semantic",
+    "text-styles",
+    "component-light",
+    "component-button"
+  ],
+  "notes": "Dark mode values live in design/design-system.md only (Starter plan allows one mode). Continue with: text styles → Light component → Button → Arrival card → screens on App and Parent surface pages."
+}
