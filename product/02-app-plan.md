@@ -2,7 +2,7 @@
 
 v2, 2026-09-12. Agreed with the founder: Vela is one app for the whole family across three generations. It is a safe, calm, family-only place with one shared moment a day, free for everyone. For any member the family wants to keep a light on for, usually the grandmother who lives alone, sometimes the student abroad, the flame is the paid layer, where silence means something. No Vela staff on the ladder, no partners, no hardware.
 
-Supersedes v1 and the human-ladder parts of `01-solution-thinking.md`. `bot-spec.md` describes the phase-0 instrument only.
+Supersedes v1 and the human-ladder parts of `01-solution-thinking.md`. `bot-spec.md` describes the phase-0 instrument only. **Read with `04-interaction-model.md`** (2026-09-12): every arrival is an ask from a person (a question, a photo choice, a voice note, a word to teach, a story), her answer is a post the family replies to, and she hears the replies the next morning; "I'm fine" is the fallback, never the hero.
 
 ---
 
