@@ -1,6 +1,6 @@
 import type { Lang } from "./types";
 
-// Child-facing strings. Parent-facing strings live in parentText().
+// Child-facing strings. English is the default; Russian is a localisation. Parent-facing strings live in parentText().
 const CHILD = {
   ru: {
     welcome:

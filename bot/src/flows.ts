@@ -57,7 +57,7 @@ async function handleCallback(env: Env, q: TgCallbackQuery): Promise<void> {
     const f = await db.familyByParent(env, chatId);
     if (!f) return;
     if (q.message) await clearButtons(env, chatId, q.message.message_id);
-    await recordSignOfLife(env, f, "button", "Нажала «всё хорошо»");
+    await recordSignOfLife(env, f, "button", "Tapped I am fine");
     await sendMessage(env, chatId, parentText(f.parent_lang).okReply);
     return;
   }
@@ -93,7 +93,7 @@ async function childOnboarding(env: Env, chatId: number, m: TgMessage): Promise<
     await sendMessage(env, chatId, t(lang).welcome);
     return;
   }
-  const lang = (state.data.lang as Lang) ?? "ru";
+  const lang = (state.data.lang as Lang) ?? "en";
   const s = t(lang);
   const next = async (step: string, patch: Record<string, string>, prompt?: string, markup?: ReturnType<typeof buttons>) => {
     await db.setOnboarding(env, chatId, { step, data: { ...state.data, ...patch } });
@@ -164,7 +164,7 @@ async function onboardingTzChosen(env: Env, chatId: number, tz: string): Promise
       child_tz: d.child_tz,
       parent_name: d.parent_name,
       parent_address: d.parent_address,
-      parent_lang: (d.parent_lang as Lang) ?? "ru",
+      parent_lang: (d.parent_lang as Lang) ?? "en",
       parent_tz: d.parent_tz,
       wake_time: d.wake_time,
       invite_token: token,
@@ -179,8 +179,8 @@ async function onboardingTzChosen(env: Env, chatId: number, tz: string): Promise
 
 async function parentJoin(env: Env, chatId: number, token: string): Promise<void> {
   const f = await db.familyByToken(env, token);
-  if (!f || f.status === "deleted") return void (await sendMessage(env, chatId, "Ссылка не действует. / This link is no longer valid."));
-  if (f.parent_chat_id && f.parent_chat_id !== chatId) return void (await sendMessage(env, chatId, "Эта ссылка уже использована. / This link was already used."));
+  if (!f || f.status === "deleted") return void (await sendMessage(env, chatId, "This link is no longer valid. / Ссылка не действует."));
+  if (f.parent_chat_id && f.parent_chat_id !== chatId) return void (await sendMessage(env, chatId, "This link was already used. / Эта ссылка уже использована."));
   await db.setParentChat(env, f.id, chatId);
   const p = parentText(f.parent_lang);
   const wake = parseHHMM(f.wake_time) ?? 450;
@@ -194,7 +194,7 @@ async function parentMessage(env: Env, f: Family, m: TgMessage): Promise<void> {
   const lower = text.toLowerCase();
 
   if (m.voice) {
-    await recordSignOfLife(env, f, "voice", "Прислала голосовое сообщение");
+    await recordSignOfLife(env, f, "voice", "Sent a voice note");
     await sendMessage(env, m.chat.id, p.voice);
     return;
   }
@@ -220,7 +220,7 @@ async function parentMessage(env: Env, f: Family, m: TgMessage): Promise<void> {
   await db.addMessage(env, f.id, day, "parent", text);
 
   if (dayRow.assistant_turns >= MAX_ASSISTANT_TURNS) {
-    if (!dayRow.reply_at) await recordSignOfLife(env, f, "text", "Написала сообщение");
+    if (!dayRow.reply_at) await recordSignOfLife(env, f, "text", "Wrote a message");
     await sendMessage(env, m.chat.id, p.signoff);
     return;
   }
@@ -234,7 +234,7 @@ async function parentMessage(env: Env, f: Family, m: TgMessage): Promise<void> {
     out = await replyToParent(env, f, turns, prev, relays);
   } catch (e) {
     console.error("ai reply failed", e);
-    await recordSignOfLife(env, f, "text", "Написала сообщение (ответ ИИ не удался)");
+    await recordSignOfLife(env, f, "text", "Wrote a message (AI reply failed)");
     await sendMessage(env, m.chat.id, p.okReply);
     await sendMessage(env, env.ADMIN_CHAT_ID, `⚠️ AI reply failed for family ${f.id}. Parent wrote: "${text}"`);
     return;
@@ -245,7 +245,7 @@ async function parentMessage(env: Env, f: Family, m: TgMessage): Promise<void> {
     await db.addMessage(env, f.id, day, "assistant", out.reply);
     await db.bumpAssistantTurns(env, f.id, day);
   }
-  const summary = out.summary || "Написала сообщение";
+  const summary = out.summary || "Wrote a message";
   if (out.flag === "escalate") {
     await db.patchDay(env, f.id, day, { escalation: out.flag_reason });
     await sendAdminCard(env, f, day, `🚩 ${out.flag_reason}\n\nParent wrote: "${text}"`);

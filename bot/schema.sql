@@ -4,12 +4,12 @@ CREATE TABLE IF NOT EXISTS families (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   child_chat_id   INTEGER NOT NULL UNIQUE,
   child_name      TEXT NOT NULL,
-  child_lang      TEXT NOT NULL DEFAULT 'ru',      -- ru | en
+  child_lang      TEXT NOT NULL DEFAULT 'en',      -- en | ru
   child_tz        TEXT NOT NULL,                   -- IANA, e.g. Asia/Taipei
   parent_chat_id  INTEGER UNIQUE,                  -- NULL until the parent taps the invite link
   parent_name     TEXT NOT NULL,                   -- e.g. "Галина"
   parent_address  TEXT NOT NULL,                   -- how the bot addresses her, e.g. "Галина Петровна"
-  parent_lang     TEXT NOT NULL DEFAULT 'ru',
+  parent_lang     TEXT NOT NULL DEFAULT 'en',
   parent_tz       TEXT NOT NULL,
   wake_time       TEXT NOT NULL,                   -- "HH:MM" parent local; morning message at wake + 30 min
   status          TEXT NOT NULL DEFAULT 'invited', -- invited | active | paused | deleted

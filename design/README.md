@@ -1,13 +1,12 @@
 # Design and planning tools
 
-Free tools, as agreed, and how each one is used for Vela.
+Free tools, as agreed, and how each one is used for Vela. Everything is authored in English first; Russian and Chinese are localisations.
 
 | Tool | What it holds | Files here | How to open |
 |---|---|---|---|
 | **Draw.io (diagrams.net)** | System architecture, database schema, the daily loop | `design/diagrams/*.drawio` | Go to app.diagrams.net → Open Existing Diagram → GitHub → `taiusheev/vela` → `design/diagrams/`. Edits save straight back to the repo as commits. Or install the "Draw.io Integration" extension in VS Code and open the files locally. |
 | **Figma** | App wireframes and, later, the real UI | `design/wireframes/*.svg` | Create a Figma file "Vela · wireframes". Drag each SVG from this folder onto the canvas; Figma imports it as editable vectors. Screens are 390×844 (iPhone). The onboarding sheet is three screens side by side. |
-| **Asana** | Phase-0 tasks with owners and dates | `plan/tasks-asana.csv` | New project → Import → CSV → choose the file. Sections become the four weeks; assignee `t.aiusheev@gmail.com` is you, blank rows are the co-founder's. |
-| **Trello** | Same tasks, if you prefer a board | `plan/tasks-trello.md` | Create the four lists, paste each block into "Add a card", one card per line. |
+| **Asana** | Optional export of the phase-0 checklist; the master plan page is the tracker | `plan/tasks-asana.csv` | New project → Import → CSV → choose the file. Sections become the four weeks; assignee `t.aiusheev@gmail.com` is you, blank rows are the co-founder's. |
 | **Gource** | An animated tree of the repository's history | `tools/gource.ps1` | Install gource and ffmpeg, then run the script from the repo root. `-Record` writes an MP4 for a demo or the deck. |
 
 The living master plan (mission, research, product, roadmap, checklist) is the published page linked from the root README. These files are its working material.

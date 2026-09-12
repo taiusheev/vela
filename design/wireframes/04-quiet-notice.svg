@@ -3,38 +3,38 @@
   <text x="20" y="40" font-size="11" fill="#7d8794">04 · QUIET NOTICE (organiser, +5 h after her hour)</text>
 
   <circle cx="195" cy="120" r="34" fill="#ffffff" stroke="#e0a23a" stroke-width="2" stroke-dasharray="5 4"/>
-  <text x="195" y="190" font-size="22" text-anchor="middle" fill="#1b2430" font-weight="600">Мама сегодня пока</text>
-  <text x="195" y="218" font-size="22" text-anchor="middle" fill="#1b2430" font-weight="600">не ответила</text>
-  <text x="195" y="248" font-size="13" text-anchor="middle" fill="#7d8794">Ничего страшного пока не известно.</text>
+  <text x="195" y="190" font-size="22" text-anchor="middle" fill="#1b2430" font-weight="600">Mom hasn't answered</text>
+  <text x="195" y="218" font-size="22" text-anchor="middle" fill="#1b2430" font-weight="600">yet today</text>
+  <text x="195" y="248" font-size="13" text-anchor="middle" fill="#7d8794">Nothing worrying is known.</text>
 
   <rect x="20" y="276" width="350" height="120" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
-  <text x="36" y="302" font-size="12" fill="#4a5566">Обычно отвечает к <tspan fill="#1b2430" font-weight="600">9:10</tspan>. Сейчас 13:05.</text>
-  <text x="36" y="326" font-size="12" fill="#4a5566">Утреннее сообщение отправлено в 8:00 и повторено в 10:30.</text>
-  <text x="36" y="350" font-size="12" fill="#4a5566">Вчера: «еду на дачу, вернусь в субботу».</text>
-  <text x="36" y="380" font-size="12" fill="#2f7d5b">Похоже на отъезд? → «Она уехала»</text>
+  <text x="36" y="302" font-size="12" fill="#4a5566">She usually answers by <tspan fill="#1b2430" font-weight="600">9:10</tspan>. It's now 13:05.</text>
+  <text x="36" y="326" font-size="12" fill="#4a5566">The morning message went out at 8:00 and again at 10:30.</text>
+  <text x="36" y="350" font-size="12" fill="#4a5566">Yesterday: "off to the garden, back on Saturday".</text>
+  <text x="36" y="380" font-size="12" fill="#2f7d5b">Sounds like she's away? → "She's away"</text>
 
-  <text x="20" y="430" font-size="11" fill="#7d8794" letter-spacing="1">КТО РЯДОМ</text>
+  <text x="20" y="430" font-size="11" fill="#7d8794" letter-spacing="1">WHO IS NEARBY</text>
   <rect x="20" y="442" width="350" height="64" rx="12" fill="#ffffff" stroke="#e8ecf1"/>
-  <text x="36" y="468" font-size="13" fill="#1b2430" font-weight="600">Тётя Валя <tspan fill="#7d8794" font-weight="400">· соседка, 2-й этаж</tspan></text>
+  <text x="36" y="468" font-size="13" fill="#1b2430" font-weight="600">Aunt Val <tspan fill="#7d8794" font-weight="400">· neighbour, 2nd floor</tspan></text>
   <rect x="220" y="454" width="66" height="40" rx="10" fill="#2f7d5b"/>
-  <text x="253" y="479" font-size="12" text-anchor="middle" fill="#fff">Позвонить</text>
+  <text x="253" y="479" font-size="12" text-anchor="middle" fill="#fff">Call</text>
   <rect x="292" y="454" width="66" height="40" rx="10" fill="#f6f7f9" stroke="#cfd4dc"/>
-  <text x="325" y="479" font-size="12" text-anchor="middle" fill="#1b2430">Попросить</text>
+  <text x="325" y="479" font-size="12" text-anchor="middle" fill="#1b2430">Ask to check</text>
   <rect x="20" y="514" width="350" height="64" rx="12" fill="#ffffff" stroke="#e8ecf1"/>
-  <text x="36" y="540" font-size="13" fill="#1b2430" font-weight="600">Игорь <tspan fill="#7d8794" font-weight="400">· двоюродный брат, в городе</tspan></text>
+  <text x="36" y="540" font-size="13" fill="#1b2430" font-weight="600">Igor <tspan fill="#7d8794" font-weight="400">· cousin, same town</tspan></text>
   <rect x="220" y="526" width="66" height="40" rx="10" fill="#2f7d5b"/>
-  <text x="253" y="551" font-size="12" text-anchor="middle" fill="#fff">Позвонить</text>
+  <text x="253" y="551" font-size="12" text-anchor="middle" fill="#fff">Call</text>
   <rect x="292" y="526" width="66" height="40" rx="10" fill="#f6f7f9" stroke="#cfd4dc"/>
-  <text x="325" y="551" font-size="12" text-anchor="middle" fill="#1b2430">Попросить</text>
+  <text x="325" y="551" font-size="12" text-anchor="middle" fill="#1b2430">Ask to check</text>
 
   <rect x="20" y="610" width="350" height="52" rx="12" fill="#2f7d5b"/>
-  <text x="195" y="642" font-size="15" text-anchor="middle" fill="#fff" font-weight="600">📞 Позвонить маме</text>
+  <text x="195" y="642" font-size="15" text-anchor="middle" fill="#fff" font-weight="600">📞 Call Mom</text>
   <rect x="20" y="672" width="170" height="48" rx="12" fill="#f6f7f9" stroke="#cfd4dc"/>
-  <text x="105" y="701" font-size="13" text-anchor="middle" fill="#1b2430">Она уехала</text>
+  <text x="105" y="701" font-size="13" text-anchor="middle" fill="#1b2430">She's away</text>
   <rect x="200" y="672" width="170" height="48" rx="12" fill="#f6f7f9" stroke="#cfd4dc"/>
-  <text x="285" y="701" font-size="13" text-anchor="middle" fill="#1b2430">Подождать 2 ч</text>
+  <text x="285" y="701" font-size="13" text-anchor="middle" fill="#1b2430">Wait 2 hours</text>
 
-  <text x="195" y="770" font-size="11" text-anchor="middle" fill="#7d8794">Если мама ответит, это окно закроется само,</text>
-  <text x="195" y="788" font-size="11" text-anchor="middle" fill="#7d8794">и все, кого мы спросили, узнают, что всё хорошо.</text>
-  <text x="195" y="820" font-size="10" text-anchor="middle" fill="#7d8794">Vela не служба спасения. Мы сообщаем; действует семья.</text>
+  <text x="195" y="770" font-size="11" text-anchor="middle" fill="#7d8794">If Mom answers, this closes by itself,</text>
+  <text x="195" y="788" font-size="11" text-anchor="middle" fill="#7d8794">and everyone we asked hears that she's fine.</text>
+  <text x="195" y="820" font-size="10" text-anchor="middle" fill="#7d8794">Vela is not an emergency service. We inform; the family acts.</text>
 </svg>

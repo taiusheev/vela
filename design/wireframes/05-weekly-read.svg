@@ -1,42 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844" font-family="Helvetica, Arial, sans-serif">
   <rect width="390" height="844" fill="#ffffff" stroke="#cfd4dc"/>
   <text x="20" y="40" font-size="11" fill="#7d8794">05 · WEEKLY READ (Sunday, organiser and opted-in members)</text>
-  <text x="20" y="84" font-size="22" fill="#1b2430" font-weight="600">Как мама на этой неделе</text>
-  <text x="20" y="106" font-size="12" fill="#7d8794">6–12 сентября · из её собственных ответов</text>
+  <text x="20" y="84" font-size="22" fill="#1b2430" font-weight="600">How Mom is this week</text>
+  <text x="20" y="106" font-size="12" fill="#7d8794">6–12 September · from her own answers</text>
 
   <!-- flame strip -->
   <g transform="translate(20,130)">
-    <text x="0" y="0" font-size="11" fill="#7d8794" letter-spacing="1">СВЕТ ГОРЕЛ</text>
-    <circle cx="14" cy="26" r="9" fill="#e0a23a"/><text x="14" y="52" font-size="10" text-anchor="middle" fill="#7d8794">пн</text>
-    <circle cx="54" cy="26" r="9" fill="#e0a23a"/><text x="54" y="52" font-size="10" text-anchor="middle" fill="#7d8794">вт</text>
-    <circle cx="94" cy="26" r="9" fill="#e0a23a"/><text x="94" y="52" font-size="10" text-anchor="middle" fill="#7d8794">ср</text>
-    <circle cx="134" cy="26" r="9" fill="#e0a23a"/><text x="134" y="52" font-size="10" text-anchor="middle" fill="#7d8794">чт</text>
-    <circle cx="174" cy="26" r="9" fill="#fbf0d8" stroke="#e0a23a"/><text x="174" y="52" font-size="10" text-anchor="middle" fill="#7d8794">пт</text>
-    <circle cx="214" cy="26" r="9" fill="#e0a23a"/><text x="214" y="52" font-size="10" text-anchor="middle" fill="#7d8794">сб</text>
-    <circle cx="254" cy="26" r="9" fill="#e0a23a"/><text x="254" y="52" font-size="10" text-anchor="middle" fill="#7d8794">вс</text>
-    <text x="290" y="30" font-size="11" fill="#7d8794">пт: поздно, 11:40</text>
+    <text x="0" y="0" font-size="11" fill="#7d8794" letter-spacing="1">THE LIGHT WAS ON</text>
+    <circle cx="14" cy="26" r="9" fill="#e0a23a"/><text x="14" y="52" font-size="10" text-anchor="middle" fill="#7d8794">Mon</text>
+    <circle cx="54" cy="26" r="9" fill="#e0a23a"/><text x="54" y="52" font-size="10" text-anchor="middle" fill="#7d8794">Tue</text>
+    <circle cx="94" cy="26" r="9" fill="#e0a23a"/><text x="94" y="52" font-size="10" text-anchor="middle" fill="#7d8794">Wed</text>
+    <circle cx="134" cy="26" r="9" fill="#e0a23a"/><text x="134" y="52" font-size="10" text-anchor="middle" fill="#7d8794">Thu</text>
+    <circle cx="174" cy="26" r="9" fill="#fbf0d8" stroke="#e0a23a"/><text x="174" y="52" font-size="10" text-anchor="middle" fill="#7d8794">Fri</text>
+    <circle cx="214" cy="26" r="9" fill="#e0a23a"/><text x="214" y="52" font-size="10" text-anchor="middle" fill="#7d8794">Sat</text>
+    <circle cx="254" cy="26" r="9" fill="#e0a23a"/><text x="254" y="52" font-size="10" text-anchor="middle" fill="#7d8794">Sun</text>
+    <text x="290" y="30" font-size="11" fill="#7d8794">Fri: late, 11:40</text>
   </g>
 
   <rect x="20" y="210" width="350" height="250" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
-  <text x="36" y="240" font-size="14" fill="#1b2430">Отвечала каждый день, в среднем к 8:40,</text>
-  <text x="36" y="262" font-size="14" fill="#1b2430">чуть позже, чем на прошлой неделе.</text>
-  <text x="36" y="294" font-size="14" fill="#1b2430">Говорила про дачу, помидоры и Машин рисунок.</text>
-  <text x="36" y="326" font-size="14" fill="#1b2430">Дважды упомянула колено («ноет к вечеру»).</text>
-  <text x="36" y="358" font-size="14" fill="#1b2430">Голосовые короче обычного: 8 сек против 15.</text>
+  <text x="36" y="240" font-size="14" fill="#1b2430">Answered every day, around 8:40 on average,</text>
+  <text x="36" y="262" font-size="14" fill="#1b2430">a little later than last week.</text>
+  <text x="36" y="294" font-size="14" fill="#1b2430">Talked about the garden, tomatoes, and Mia's drawing.</text>
+  <text x="36" y="326" font-size="14" fill="#1b2430">Mentioned her knee twice ("aches in the evening").</text>
+  <text x="36" y="358" font-size="14" fill="#1b2430">Voice notes shorter than usual: 8 s versus 15.</text>
   <rect x="36" y="380" width="318" height="1" fill="#e8ecf1"/>
-  <text x="36" y="408" font-size="11" fill="#7d8794" letter-spacing="1">ОДНА ПОДСКАЗКА</text>
-  <text x="36" y="432" font-size="14" fill="#2f7d5b">Спросите про колено в выходные. Звонок от Маши</text>
-  <text x="36" y="452" font-size="14" fill="#2f7d5b">порадует: она дважды спрашивала про её школу.</text>
+  <text x="36" y="408" font-size="11" fill="#7d8794" letter-spacing="1">ONE SUGGESTION</text>
+  <text x="36" y="432" font-size="14" fill="#2f7d5b">Ask about the knee this weekend. A call from Mia</text>
+  <text x="36" y="452" font-size="14" fill="#2f7d5b">would land: she asked about school twice.</text>
 
-  <text x="20" y="500" font-size="11" fill="#7d8794" letter-spacing="1">ИСТОРИЯ НЕДЕЛИ</text>
+  <text x="20" y="500" font-size="11" fill="#7d8794" letter-spacing="1">STORY OF THE WEEK</text>
   <rect x="20" y="512" width="350" height="90" rx="12" fill="#ffffff" stroke="#e8ecf1"/>
-  <text x="36" y="540" font-size="12" fill="#7d8794">Вопрос: «Как вы познакомились с папой?»</text>
-  <text x="36" y="562" font-size="13" fill="#1b2430">«На танцах в Доме культуры, 1971 год…»</text>
-  <text x="36" y="586" font-size="12" fill="#2f7d5b">▶ 2:40 · сохранено в книгу семьи</text>
+  <text x="36" y="540" font-size="12" fill="#7d8794">Question: "How did you meet Dad?"</text>
+  <text x="36" y="562" font-size="13" fill="#1b2430">"At a dance at the community hall, 1971…"</text>
+  <text x="36" y="586" font-size="12" fill="#2f7d5b">▶ 2:40 · saved to the family book</text>
 
   <rect x="20" y="640" width="350" height="48" rx="12" fill="#f6f7f9" stroke="#cfd4dc"/>
-  <text x="195" y="669" font-size="13" text-anchor="middle" fill="#1b2430">Что она видит из этого · Кто ещё получает</text>
+  <text x="195" y="669" font-size="13" text-anchor="middle" fill="#1b2430">What she sees of this · Who else receives it</text>
 
-  <text x="195" y="760" font-size="11" text-anchor="middle" fill="#7d8794">Нейтральные слова. Никаких оценок и диагнозов.</text>
-  <text x="195" y="778" font-size="11" text-anchor="middle" fill="#7d8794">«Позже обычного», а не «тревожно».</text>
+  <text x="195" y="760" font-size="11" text-anchor="middle" fill="#7d8794">Neutral words. No scores, no diagnoses.</text>
+  <text x="195" y="778" font-size="11" text-anchor="middle" fill="#7d8794">"Later than usual", never "concerning".</text>
 </svg>
