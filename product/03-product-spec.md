@@ -1,5 +1,7 @@
 # Vela product specification
 
+> **Superseded on 2026-09-13 by [`05-product-spec-v2.md`](05-product-spec-v2.md).** Kept for history; where the two differ, v2 wins.
+
 v1, 2026-09-12. The functional contract for the MVP and phase 2. Written so a designer, an engineer, and the founder read the same thing. Companion to `02-app-plan.md` (why) and `architecture/01-technical-design.md` (how).
 
 Vocabulary: **family**, **member**, **organiser**, **kept-light member** (a member with a light), **nearby contact**, **arrival** (the one daily message), **answer**, **light**, **quiet notice**, **away**, **weekly read**, **story day**, **turn**.

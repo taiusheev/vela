@@ -1,5 +1,7 @@
 # Vela interaction model: from "tap I'm fine" to a place where the family actually talks
 
+> **Superseded on 2026-09-13 by [`05-product-spec-v2.md`](05-product-spec-v2.md).** Kept for history; where the two differ, v2 wins.
+
 v1, 2026-09-12. Founder's direction: Vela must make the generations interact, not check on each other. This document replaces the "morning message with a button" model in the product spec §3–4 wherever they conflict. The light (the sign of life) stays, but it becomes a by-product of a real exchange.
 
 ## 1. The principle
