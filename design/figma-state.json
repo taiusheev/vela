@@ -15,42 +15,32 @@
     "Color": "VariableCollectionId:5:3"
   },
   "variables": {
-    "navy/950": "VariableID:4:3",
-    "navy/900": "VariableID:4:4",
-    "navy/850": "VariableID:4:5",
-    "navy/800": "VariableID:4:6",
-    "navy/700": "VariableID:4:7",
-    "navy/600": "VariableID:4:8",
-    "navy/500": "VariableID:4:9",
-    "blue/600": "VariableID:4:10",
-    "blue/400": "VariableID:4:11",
-    "blue/300": "VariableID:4:12",
-    "blue/350": "VariableID:4:13",
-    "blue/100": "VariableID:4:14",
-    "grey/700": "VariableID:4:15",
-    "grey/500": "VariableID:4:16",
-    "grey/400": "VariableID:4:17",
-    "grey/300": "VariableID:4:18",
-    "grey/200": "VariableID:4:19",
-    "grey/100": "VariableID:4:20",
-    "grey/50": "VariableID:4:21",
+    "cream/50": "VariableID:9:2",
+    "cream/100": "VariableID:9:3",
+    "cream/200": "VariableID:9:4",
+    "charcoal/900": "VariableID:9:5",
+    "charcoal/700": "VariableID:9:6",
+    "charcoal/500": "VariableID:9:7",
+    "amber/500": "VariableID:9:8",
+    "amber/700": "VariableID:9:9",
+    "amber/100": "VariableID:9:10",
+    "teal/700": "VariableID:9:11",
+    "teal/100": "VariableID:9:12",
     "white": "VariableID:4:22",
-    "white/90": "VariableID:4:23",
-    "paper": "VariableID:4:24",
     "red/600": "VariableID:4:25",
-    "red/300": "VariableID:4:26",
     "color/bg": "VariableID:5:4",
     "color/surface": "VariableID:5:5",
-    "color/paper": "VariableID:5:6",
     "color/surface-2": "VariableID:5:7",
     "color/ink": "VariableID:5:8",
     "color/ink-2": "VariableID:5:9",
     "color/ink-3": "VariableID:5:10",
     "color/rule": "VariableID:5:11",
     "color/light": "VariableID:5:12",
+    "color/light-deep": "VariableID:9:13",
     "color/light-soft": "VariableID:5:13",
-    "color/sky": "VariableID:5:14",
-    "color/on-light": "VariableID:5:15",
+    "color/action": "VariableID:9:14",
+    "color/action-soft": "VariableID:9:15",
+    "color/on-action": "VariableID:9:16",
     "color/error": "VariableID:5:16"
   },
   "textStyles": {
@@ -69,12 +59,12 @@
   },
   "components": {
     "Light": {
-      "set": "6:12",
+      "set": "9:28",
       "variants": {
-        "Lit": "6:2",
-        "Resting": "6:5",
-        "Quiet": "6:7",
-        "Away": "6:10"
+        "Lit": "9:17",
+        "Resting": "9:21",
+        "Quiet": "9:23",
+        "Away": "9:26"
       }
     },
     "Button": {
@@ -87,14 +77,20 @@
       }
     }
   },
-  "screens": {},
+  "screens": {
+    "App/Home": "11:7",
+    "Parent/Morning question": "13:2"
+  },
   "completedSteps": [
     "pages",
     "primitives",
     "color-semantic",
     "text-styles",
-    "component-light",
-    "component-button"
+    "identity-v3-retint",
+    "component-light-window",
+    "component-button-teal",
+    "screen-home",
+    "screen-parent-morning"
   ],
-  "notes": "Dark mode values live in design/design-system.md only (Starter plan allows one mode). Continue with: text styles → Light component → Button → Arrival card → screens on App and Parent surface pages."
+  "notes": "Identity v3 (Candle & Ink; Literata + Inter). Dark mode values in design-system.md only (Starter plan: one mode). Next: screens on App (3:2) and Parent surface (3:3)."
 }
