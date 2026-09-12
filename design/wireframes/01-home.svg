@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844" font-family="Helvetica, Arial, sans-serif">
+  <rect width="390" height="844" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="20" y="40" font-size="11" fill="#7d8794">01 · HOME (organiser / any member)</text>
+  <text x="20" y="80" font-size="26" fill="#1b2430" font-weight="600">Vela</text>
+  <text x="330" y="80" font-size="12" fill="#7d8794">Сб, 12 сент</text>
+
+  <!-- flames row -->
+  <g>
+    <circle cx="60" cy="150" r="30" fill="#fbf0d8" stroke="#e0a23a" stroke-width="2"/>
+    <ellipse cx="60" cy="150" rx="8" ry="11" fill="#e0a23a"/>
+    <text x="60" y="200" font-size="13" text-anchor="middle" fill="#1b2430" font-weight="600">Мама</text>
+    <text x="60" y="216" font-size="11" text-anchor="middle" fill="#2f7d5b">ответила 8:12</text>
+  </g>
+  <g>
+    <circle cx="150" cy="150" r="30" fill="#ffffff" stroke="#cfd4dc" stroke-width="2" stroke-dasharray="4 3"/>
+    <text x="150" y="155" font-size="11" text-anchor="middle" fill="#7d8794">в отъезде</text>
+    <text x="150" y="200" font-size="13" text-anchor="middle" fill="#1b2430" font-weight="600">Саша</text>
+    <text x="150" y="216" font-size="11" text-anchor="middle" fill="#7d8794">до воскресенья</text>
+  </g>
+  <g>
+    <circle cx="240" cy="150" r="30" fill="#f6f7f9" stroke="#cfd4dc"/>
+    <text x="240" y="155" font-size="11" text-anchor="middle" fill="#7d8794">+</text>
+    <text x="240" y="200" font-size="12" text-anchor="middle" fill="#7d8794">оставить свет</text>
+  </g>
+
+  <!-- today's moment card -->
+  <rect x="20" y="250" width="350" height="230" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
+  <text x="36" y="278" font-size="11" fill="#7d8794" letter-spacing="1">СЕГОДНЯ · ЕЁ УТРО</text>
+  <rect x="36" y="290" width="120" height="90" rx="8" fill="#e8ecf1"/>
+  <text x="96" y="340" font-size="10" text-anchor="middle" fill="#7d8794">фото Маши</text>
+  <text x="170" y="310" font-size="13" fill="#1b2430">«Ой, какая большая стала!</text>
+  <text x="170" y="328" font-size="13" fill="#1b2430">Спала нормально, еду</text>
+  <text x="170" y="346" font-size="13" fill="#1b2430">на дачу.»</text>
+  <text x="170" y="372" font-size="11" fill="#7d8794">голосовое · 0:14 · перевод ▸</text>
+  <rect x="36" y="400" width="318" height="1" fill="#e8ecf1"/>
+  <text x="36" y="428" font-size="12" fill="#2f7d5b">✓ Ничего делать не нужно.</text>
+  <text x="36" y="456" font-size="12" fill="#7d8794">Завтра день Ани · подсказка придёт вечером</text>
+
+  <!-- thread preview -->
+  <text x="20" y="520" font-size="11" fill="#7d8794" letter-spacing="1">ЛЕНТА СЕМЬИ</text>
+  <rect x="20" y="532" width="350" height="56" rx="10" fill="#ffffff" stroke="#e8ecf1"/>
+  <circle cx="44" cy="560" r="14" fill="#e8ecf1"/>
+  <text x="66" y="554" font-size="12" fill="#1b2430" font-weight="600">Маша <tspan fill="#7d8794" font-weight="400">· вчера</tspan></text>
+  <text x="66" y="572" font-size="12" fill="#4a5566">отправила фото с урока рисования</text>
+  <rect x="20" y="596" width="350" height="56" rx="10" fill="#ffffff" stroke="#e8ecf1"/>
+  <circle cx="44" cy="624" r="14" fill="#e8ecf1"/>
+  <text x="66" y="618" font-size="12" fill="#1b2430" font-weight="600">Аня <tspan fill="#7d8794" font-weight="400">· четверг</tspan></text>
+  <text x="66" y="636" font-size="12" fill="#4a5566">спросила про давление; мама: «всё в норме»</text>
+
+  <!-- primary action -->
+  <rect x="20" y="760" width="350" height="56" rx="14" fill="#2f7d5b"/>
+  <text x="195" y="794" font-size="16" text-anchor="middle" fill="#ffffff" font-weight="600">Отправить маме на завтра</text>
+  <text x="195" y="836" font-size="10" text-anchor="middle" fill="#7d8794">одно окно в день · без ленты · без рекламы</text>
+</svg>

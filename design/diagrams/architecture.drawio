@@ -1,0 +1,138 @@
+<mxfile host="app.diagrams.net" modified="2026-09-12T00:00:00.000Z" agent="Vela" version="24.0.0">
+  <diagram id="arch" name="System architecture">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" background="#ffffff">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Groups -->
+        <mxCell id="gFamily" value="FAMILY SIDE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f7f9;strokeColor=#d9dee6;fontColor=#7d8794;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="300" height="360" as="geometry"/>
+        </mxCell>
+        <mxCell id="gCore" value="VELA PLATFORM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f7f9;strokeColor=#d9dee6;fontColor=#7d8794;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="400" y="40" width="560" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="gParent" value="PARENT / MEMBER CHANNELS (adapters)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f7f9;strokeColor=#d9dee6;fontColor=#7d8794;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="40" width="340" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="gExt" value="EXTERNAL SERVICES" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f7f9;strokeColor=#d9dee6;fontColor=#7d8794;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="1320" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Family side -->
+        <mxCell id="app" value="&lt;b&gt;Vela app&lt;/b&gt;&lt;br&gt;React Native (Expo), iOS + Android&lt;br&gt;&lt;font color=&quot;#4a5566&quot;&gt;flames · today's moment · thread · queue · turns · story archive&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f7d5b;strokeWidth=2;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="260" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="parentMode" value="&lt;b&gt;Parent surface / kitchen-table mode&lt;/b&gt;&lt;br&gt;same app, simplified display mode&lt;br&gt;&lt;font color=&quot;#4a5566&quot;&gt;one screen, big buttons, voice-first, photo wall&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbf0d8;strokeColor=#e0a23a;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="190" width="260" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="web" value="&lt;b&gt;Web&lt;/b&gt;&lt;br&gt;setup · story archive · account" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="290" width="260" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="push" value="Push notifications: exactly one per member per day, plus quiet notices" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="60" y="345" width="260" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Core -->
+        <mxCell id="api" value="&lt;b&gt;API / Core service&lt;/b&gt;&lt;br&gt;Cloudflare Workers (or small Node)&lt;br&gt;&lt;font color=&quot;#4a5566&quot;&gt;families · members · roles · flames · arrivals · answers · quiet ladder · away mode · reads · archive · reminders · subscriptions&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f1ea;strokeColor=#2f7d5b;strokeWidth=2;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="420" y="80" width="300" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="sched" value="&lt;b&gt;Scheduler&lt;/b&gt;&lt;br&gt;per-person jobs in their time zone&lt;br&gt;&lt;font color=&quot;#4a5566&quot;&gt;compose arrival · send · repeat +2.5h · quiet notice +5h · weekly read (Sun)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f7d5b;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="740" y="80" width="200" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai" value="&lt;b&gt;AI service&lt;/b&gt; (Claude API, versioned prompts, every output logged with its input)&lt;br&gt;&lt;font color=&quot;#4a5566&quot;&gt;transcribe · understand · flag · prompt family · compose fallback · translate · weekly read · drift&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f7d5b;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="420" y="220" width="520" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="db" value="&lt;b&gt;Postgres&lt;/b&gt; (Supabase / Neon; D1 in the prototype)&lt;br&gt;&lt;font color=&quot;#4a5566&quot;&gt;see database.drawio · per-region storage · 30-day rolling answers&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#ffffff;strokeColor=#2f7d5b;align=center;" vertex="1" parent="1">
+          <mxGeometry x="420" y="330" width="300" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="events" value="&lt;b&gt;Event log&lt;/b&gt;&lt;br&gt;auditable; feeds precision metrics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="740" y="330" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="media" value="&lt;b&gt;Media store&lt;/b&gt;&lt;br&gt;voice notes, photos, drawings (R2 / S3)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="740" y="390" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="adapterIf" value="&lt;b&gt;Channel interface&lt;/b&gt;&lt;br&gt;sendArrival(member, content, replyAffordance) · onAnswer(member, kind, payload) · readReceipt?" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f7d5b;dashed=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="420" y="450" width="520" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="admin" value="&lt;b&gt;Admin view&lt;/b&gt; (first months)&lt;br&gt;who's quiet · what got flagged · what the model said" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="420" y="530" width="300" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="billing" value="&lt;b&gt;Subscriptions&lt;/b&gt;&lt;br&gt;RevenueCat / Stripe" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="740" y="530" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Adapters -->
+        <mxCell id="tg" value="&lt;b&gt;Telegram&lt;/b&gt; (the prototype bot; first adapter)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f1ea;strokeColor=#2f7d5b;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="80" width="300" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="max" value="&lt;b&gt;MAX&lt;/b&gt; (Russia; state-run, assume readable)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="134" width="300" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="wa" value="&lt;b&gt;WhatsApp Business API&lt;/b&gt; (PH, IN, LatAm, EU; blocked in RU)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="188" width="300" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="line" value="&lt;b&gt;LINE Messaging API&lt;/b&gt; (Taiwan, Japan, Thailand)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="242" width="300" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="viber" value="&lt;b&gt;Viber&lt;/b&gt; (Ukraine, parts of CIS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="296" width="300" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="voice" value="&lt;b&gt;Voice line + SMS&lt;/b&gt; (landline parents; later)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;dashed=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="350" width="300" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="appAdapter" value="&lt;b&gt;In-app&lt;/b&gt; (members and parents who installed the app)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="404" width="300" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="rule" value="Rule: no family is told “your grandmother's messenger isn't supported.” No adapter, no launch in that market." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#7d8794;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="470" width="300" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- External -->
+        <mxCell id="xClaude" value="Claude API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="60" y="690" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="xTg" value="Telegram Bot API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="230" y="690" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="xMax" value="MAX Bot API (dev.max.ru)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="400" y="690" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="xWa" value="Meta WhatsApp Cloud API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="570" y="690" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="xLine" value="LINE Messaging API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="740" y="690" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="xTwilio" value="Twilio (voice, SMS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="910" y="690" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="xPush" value="APNs / FCM via Expo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="690" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="xPay" value="App Store / Play billing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="690" width="130" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="app" target="api"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="web" target="api"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="sched" target="api"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="api" target="ai"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="api" target="db"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="400" y="135"/><mxPoint x="400" y="375"/></Array></mxGeometry></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="api" target="adapterIf"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="960" y="135"/><mxPoint x="960" y="480"/></Array></mxGeometry></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#2f7d5b;strokeWidth=2;" edge="1" parent="1" source="adapterIf" target="tg"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1000" y="480"/><mxPoint x="1000" y="102"/></Array></mxGeometry></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="adapterIf" target="max"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1000" y="480"/><mxPoint x="1000" y="156"/></Array></mxGeometry></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="adapterIf" target="wa"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1000" y="480"/><mxPoint x="1000" y="210"/></Array></mxGeometry></mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="adapterIf" target="line"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1000" y="480"/><mxPoint x="1000" y="264"/></Array></mxGeometry></mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="adapterIf" target="viber"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1000" y="480"/><mxPoint x="1000" y="318"/></Array></mxGeometry></mxCell>
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#7d8794;dashed=1;" edge="1" parent="1" source="adapterIf" target="voice"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1000" y="480"/><mxPoint x="1000" y="372"/></Array></mxGeometry></mxCell>
+        <mxCell id="e13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="adapterIf" target="appAdapter"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1000" y="480"/><mxPoint x="1000" y="426"/></Array></mxGeometry></mxCell>
+        <mxCell id="e14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="ai" target="xClaude"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="135" y="620"/></Array></mxGeometry></mxCell>
+        <mxCell id="e15" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="billing" target="xPay"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="api" target="events"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;strokeColor=#7d8794;" edge="1" parent="1" source="api" target="media"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

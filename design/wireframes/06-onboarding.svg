@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="844" viewBox="0 0 1200 844" font-family="Helvetica, Arial, sans-serif">
+  <rect width="1200" height="844" fill="#f6f7f9"/>
+  <text x="20" y="34" font-size="11" fill="#7d8794">06 · ONBOARDING (organiser) · three screens, then the invite</text>
+
+  <!-- screen A -->
+  <g transform="translate(20,60)">
+    <rect width="360" height="760" rx="18" fill="#ffffff" stroke="#cfd4dc"/>
+    <text x="24" y="60" font-size="11" fill="#7d8794" letter-spacing="1">1 / 3 · ВАША СЕМЬЯ</text>
+    <text x="24" y="100" font-size="22" fill="#1b2430" font-weight="600">За кого хотите</text>
+    <text x="24" y="128" font-size="22" fill="#1b2430" font-weight="600">оставить свет?</text>
+    <text x="24" y="156" font-size="12" fill="#7d8794">Кто живёт один или далеко. Можно несколько.</text>
+    <rect x="24" y="180" width="312" height="60" rx="12" fill="#fbf0d8" stroke="#e0a23a"/>
+    <text x="40" y="216" font-size="14" fill="#1b2430">Мама · Галина · 78 · Иркутск</text>
+    <rect x="24" y="252" width="312" height="60" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
+    <text x="40" y="288" font-size="14" fill="#7d8794">+ Добавить ещё (папа, сын-студент…)</text>
+    <text x="24" y="350" font-size="11" fill="#7d8794" letter-spacing="1">КАК К НЕЙ ОБРАЩАТЬСЯ</text>
+    <rect x="24" y="362" width="312" height="48" rx="10" fill="#ffffff" stroke="#cfd4dc"/>
+    <text x="40" y="392" font-size="14" fill="#1b2430">Галина Петровна</text>
+    <text x="24" y="440" font-size="11" fill="#7d8794" letter-spacing="1">ВО СКОЛЬКО ОНА ПРОСЫПАЕТСЯ</text>
+    <rect x="24" y="452" width="312" height="48" rx="10" fill="#ffffff" stroke="#cfd4dc"/>
+    <text x="40" y="482" font-size="14" fill="#1b2430">7:30 · утреннее сообщение в 8:00</text>
+    <rect x="24" y="680" width="312" height="52" rx="14" fill="#2f7d5b"/>
+    <text x="180" y="712" font-size="15" text-anchor="middle" fill="#fff" font-weight="600">Дальше</text>
+  </g>
+
+  <!-- screen B -->
+  <g transform="translate(420,60)">
+    <rect width="360" height="760" rx="18" fill="#ffffff" stroke="#cfd4dc"/>
+    <text x="24" y="60" font-size="11" fill="#7d8794" letter-spacing="1">2 / 3 · КТО РЯДОМ С НЕЙ</text>
+    <text x="24" y="100" font-size="22" fill="#1b2430" font-weight="600">Двое, кому вы</text>
+    <text x="24" y="128" font-size="22" fill="#1b2430" font-weight="600">позвоните первыми</text>
+    <text x="24" y="156" font-size="12" fill="#7d8794">Если мама вдруг не ответит. Мы спросим их согласия один раз.</text>
+    <rect x="24" y="180" width="312" height="70" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
+    <text x="40" y="206" font-size="13" fill="#1b2430" font-weight="600">Тётя Валя</text>
+    <text x="40" y="228" font-size="12" fill="#7d8794">соседка · +7 ···</text>
+    <rect x="24" y="262" width="312" height="70" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
+    <text x="40" y="288" font-size="13" fill="#1b2430" font-weight="600">Игорь</text>
+    <text x="40" y="310" font-size="12" fill="#7d8794">двоюродный брат · в городе</text>
+    <text x="24" y="370" font-size="11" fill="#7d8794" letter-spacing="1">ПОЗВАТЬ СЕМЬЮ</text>
+    <rect x="24" y="382" width="312" height="60" rx="12" fill="#ffffff" stroke="#cfd4dc"/>
+    <text x="40" y="418" font-size="13" fill="#1b2430">Маша, Саша, Игорь · ссылка-приглашение</text>
+    <text x="24" y="470" font-size="12" fill="#7d8794">Внуки отправляют больше всех. Позовите их первыми.</text>
+    <rect x="24" y="680" width="312" height="52" rx="14" fill="#2f7d5b"/>
+    <text x="180" y="712" font-size="15" text-anchor="middle" fill="#fff" font-weight="600">Дальше</text>
+  </g>
+
+  <!-- screen C -->
+  <g transform="translate(820,60)">
+    <rect width="360" height="760" rx="18" fill="#ffffff" stroke="#cfd4dc"/>
+    <text x="24" y="60" font-size="11" fill="#7d8794" letter-spacing="1">3 / 3 · КАК ОНА ПОЛУЧИТ УТРО</text>
+    <text x="24" y="100" font-size="22" fill="#1b2430" font-weight="600">Ничего ставить</text>
+    <text x="24" y="128" font-size="22" fill="#1b2430" font-weight="600">не нужно</text>
+    <text x="24" y="156" font-size="12" fill="#7d8794">Выберите, где мама уже есть.</text>
+    <rect x="24" y="180" width="312" height="52" rx="12" fill="#e3f1ea" stroke="#2f7d5b"/>
+    <text x="40" y="212" font-size="14" fill="#1b2430">Telegram</text>
+    <rect x="24" y="242" width="312" height="52" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
+    <text x="40" y="274" font-size="14" fill="#1b2430">MAX</text>
+    <rect x="24" y="304" width="312" height="52" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
+    <text x="40" y="336" font-size="14" fill="#1b2430">WhatsApp · LINE · Viber</text>
+    <rect x="24" y="366" width="312" height="52" rx="12" fill="#f6f7f9" stroke="#e8ecf1"/>
+    <text x="40" y="398" font-size="14" fill="#1b2430">Приложение Vela (поставлю ей сам)</text>
+    <rect x="24" y="450" width="312" height="120" rx="12" fill="#fbf0d8" stroke="#e0a23a"/>
+    <text x="40" y="478" font-size="11" fill="#7d8794" letter-spacing="1">ОТПРАВЬТЕ ЕЙ ССЫЛКУ И ПАРУ СЛОВ</text>
+    <text x="40" y="504" font-size="12" fill="#1b2430">«Мама, я далеко и скучаю. Каждое утро тебе</text>
+    <text x="40" y="522" font-size="12" fill="#1b2430">будет приходить что-то от нас. Нажми «всё</text>
+    <text x="40" y="540" font-size="12" fill="#1b2430">хорошо», и я спокойна. Скажи «не надо» —</text>
+    <text x="40" y="558" font-size="12" fill="#1b2430">и всё выключится.»</text>
+    <rect x="24" y="680" width="312" height="52" rx="14" fill="#2f7d5b"/>
+    <text x="180" y="712" font-size="15" text-anchor="middle" fill="#fff" font-weight="600">Отправить приглашение</text>
+  </g>
+</svg>

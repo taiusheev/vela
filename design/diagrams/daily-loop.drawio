@@ -1,0 +1,44 @@
+<mxfile host="app.diagrams.net" modified="2026-09-12T00:00:00.000Z" agent="Vela" version="24.0.0">
+  <diagram id="loop" name="Daily loop and quiet ladder">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" background="#ffffff">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="lane1" value="THE FAMILY (any member, any time)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f7f9;strokeColor=#d9dee6;fontColor=#7d8794;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="1120" height="130" as="geometry"/></mxCell>
+        <mxCell id="lane2" value="VELA (scheduler + AI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f7f9;strokeColor=#d9dee6;fontColor=#7d8794;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="40" y="190" width="1120" height="200" as="geometry"/></mxCell>
+        <mxCell id="lane3" value="THE KEPT-LIGHT MEMBER (in her messenger or the parent surface)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f7f9;strokeColor=#d9dee6;fontColor=#7d8794;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="40" y="410" width="1120" height="130" as="geometry"/></mxCell>
+        <mxCell id="lane4" value="THE ORGANISER (when the light stays dark)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbf0d8;strokeColor=#e0a23a;fontColor=#7d8794;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="40" y="560" width="1120" height="150" as="geometry"/></mxCell>
+
+        <mxCell id="q" value="&lt;b&gt;Queue something&lt;/b&gt;&lt;br&gt;voice note · photo · drawing · question&lt;br&gt;for today or “whenever”" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1"><mxGeometry x="60" y="70" width="220" height="80" as="geometry"/></mxCell>
+        <mxCell id="turn" value="&lt;b&gt;Evening before: turn prompt&lt;/b&gt;&lt;br&gt;“Tomorrow is Sasha's day. She mentioned the tomatoes; ask for a photo.”" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1"><mxGeometry x="320" y="70" width="260" height="80" as="geometry"/></mxCell>
+        <mxCell id="thread" value="&lt;b&gt;Thread updates&lt;/b&gt;&lt;br&gt;her answer, transcribed and translated;&lt;br&gt;whoever's content she answered is told" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f1ea;strokeColor=#2f7d5b;" vertex="1" parent="1"><mxGeometry x="880" y="70" width="260" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="compose" value="&lt;b&gt;Compose the arrival&lt;/b&gt; (her hour, e.g. wake + 30 min)&lt;br&gt;1 · queued for today  2 · queued “whenever”&lt;br&gt;3 · story question (story day)  4 · Vela fallback, signed as Vela" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1"><mxGeometry x="60" y="230" width="300" height="80" as="geometry"/></mxCell>
+        <mxCell id="read" value="&lt;b&gt;Read the answer&lt;/b&gt;&lt;br&gt;transcribe · one neutral line · mood · mentions&lt;br&gt;flag: none | escalate → organiser with her words" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1"><mxGeometry x="620" y="230" width="280" height="80" as="geometry"/></mxCell>
+        <mxCell id="flame" value="&lt;b&gt;Flame lights&lt;/b&gt;&lt;br&gt;quiet ladder cancelled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbf0d8;strokeColor=#e0a23a;" vertex="1" parent="1"><mxGeometry x="940" y="230" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="repeat" value="&lt;b&gt;+2.5 h, no answer&lt;/b&gt;&lt;br&gt;the same arrival, repeated gently" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;dashed=1;" vertex="1" parent="1"><mxGeometry x="380" y="320" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="notice" value="&lt;b&gt;+5 h (tuned, never &lt; +4 h), still no answer&lt;/b&gt;&lt;br&gt;away mode? → stop. Else: quiet notice" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e0a23a;" vertex="1" parent="1"><mxGeometry x="620" y="320" width="280" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="arrive" value="&lt;b&gt;One message&lt;/b&gt;&lt;br&gt;“Доброе утро, Галина Петровна…” + Masha's photo&lt;br&gt;[ ☀️ Всё хорошо ]  🎤" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1"><mxGeometry x="60" y="450" width="300" height="80" as="geometry"/></mxCell>
+        <mxCell id="answer" value="&lt;b&gt;One easy answer&lt;/b&gt;&lt;br&gt;tap · heart · voice · text · photo&lt;br&gt;(anything counts; “не надо” stops everything)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f1ea;strokeColor=#2f7d5b;" vertex="1" parent="1"><mxGeometry x="620" y="450" width="280" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="qn" value="&lt;b&gt;Quiet notice&lt;/b&gt;&lt;br&gt;last contact · usual reply time · yesterday's words&lt;br&gt;nearby contacts: [ Call ] [ Ask to check ]&lt;br&gt;[ She's away ]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e0a23a;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="620" y="590" width="280" height="100" as="geometry"/></mxCell>
+        <mxCell id="family_acts" value="&lt;b&gt;The family acts&lt;/b&gt;&lt;br&gt;a call, a neighbour's knock&lt;br&gt;Vela never knocks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1"><mxGeometry x="940" y="600" width="200" height="80" as="geometry"/></mxCell>
+        <mxCell id="late" value="Late answer at any point → flame lights, notice closes, everyone told it's fine" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#7d8794;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="60" y="610" width="300" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="f1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="q" target="compose"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="turn" target="q"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="compose" target="arrive"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="arrive" target="answer"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="answer" target="read"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="read" target="flame"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="flame" target="thread"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#7d8794;dashed=1;" edge="1" parent="1" source="arrive" target="repeat"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="490" y="490"/></Array></mxGeometry></mxCell>
+        <mxCell id="f9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#7d8794;dashed=1;" edge="1" parent="1" source="repeat" target="notice"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#e0a23a;strokeWidth=2;" edge="1" parent="1" source="notice" target="qn"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4a5566;" edge="1" parent="1" source="qn" target="family_acts"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

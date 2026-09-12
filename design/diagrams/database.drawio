@@ -1,0 +1,85 @@
+<mxfile host="app.diagrams.net" modified="2026-09-12T00:00:00.000Z" agent="Vela" version="24.0.0">
+  <diagram id="db" name="Database (MVP)">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" background="#ffffff">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="families" value="&lt;b&gt;families&lt;/b&gt;&lt;hr&gt;id PK&lt;br&gt;name&lt;br&gt;region (data residency)&lt;br&gt;plan: free | light&lt;br&gt;created_at" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e3f1ea;strokeColor=#2f7d5b;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="220" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="members" value="&lt;b&gt;members&lt;/b&gt;&lt;hr&gt;id PK · family_id FK&lt;br&gt;display_name · address_form&lt;br&gt;role: organiser | member&lt;br&gt;lang · tz · arrival_hour&lt;br&gt;flame_on (bool) · flame_consented_at&lt;br&gt;quiet_after_min (learned, ≥240)&lt;br&gt;usual_answer_window (learned)&lt;br&gt;birth_year (optional)&lt;br&gt;status: active | paused | left" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e3f1ea;strokeColor=#2f7d5b;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="360" y="60" width="260" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="channels" value="&lt;b&gt;channel_links&lt;/b&gt;&lt;hr&gt;id PK · member_id FK&lt;br&gt;channel: app | telegram | max | whatsapp | line | viber | voice&lt;br&gt;external_id (chat id / phone / push token)&lt;br&gt;capabilities (buttons, voice, read receipts)&lt;br&gt;status · linked_at" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1">
+          <mxGeometry x="700" y="60" width="280" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="nearby" value="&lt;b&gt;nearby_contacts&lt;/b&gt;&lt;hr&gt;id PK · member_id FK (the kept-light member)&lt;br&gt;name · relation · phone&lt;br&gt;consented_at · consent_channel&lt;br&gt;auto_ask_after_min (optional)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fbf0d8;strokeColor=#e0a23a;" vertex="1" parent="1">
+          <mxGeometry x="700" y="220" width="280" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="items" value="&lt;b&gt;items&lt;/b&gt; (what the family queues)&lt;hr&gt;id PK · family_id FK · author_id FK&lt;br&gt;for_member_id FK (recipient; null = everyone)&lt;br&gt;kind: voice | photo | drawing | text | question&lt;br&gt;media_id · text · translation (jsonb)&lt;br&gt;scheduled_day (null = whenever)&lt;br&gt;delivered_in_arrival_id FK · created_at" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1">
+          <mxGeometry x="60" y="300" width="280" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrivals" value="&lt;b&gt;arrivals&lt;/b&gt; (one per member per day)&lt;hr&gt;id PK · member_id FK · day (member-local)&lt;br&gt;composed_at · sent_at · repeated_at&lt;br&gt;channel · source: family | story | fallback&lt;br&gt;item_ids (jsonb) · fallback_text&lt;br&gt;read_at (if channel reports it)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e3f1ea;strokeColor=#2f7d5b;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="360" y="300" width="280" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="answers" value="&lt;b&gt;answers&lt;/b&gt;&lt;hr&gt;id PK · arrival_id FK · member_id FK&lt;br&gt;kind: tap | reaction | text | voice | photo&lt;br&gt;text · media_id · transcript&lt;br&gt;summary (one neutral line) · mood_words (jsonb)&lt;br&gt;mentions (jsonb: people, places, plans, health)&lt;br&gt;flag: none | escalate · flag_reason&lt;br&gt;translations (jsonb) · created_at&lt;br&gt;&lt;font color=&quot;#7d8794&quot;&gt;rolling: rows older than 30 days deleted&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#e3f1ea;strokeColor=#2f7d5b;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="700" y="380" width="280" height="190" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="flames" value="&lt;b&gt;flame_days&lt;/b&gt; (derived, cached)&lt;hr&gt;member_id FK · day&lt;br&gt;lit_at (first answer) · answer_kind&lt;br&gt;latency_min (from sent_at)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fbf0d8;strokeColor=#e0a23a;" vertex="1" parent="1">
+          <mxGeometry x="60" y="490" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="quiet" value="&lt;b&gt;quiet_events&lt;/b&gt;&lt;hr&gt;id PK · member_id FK · day&lt;br&gt;repeat_sent_at · notice_sent_at&lt;br&gt;organiser_action: called | asked_contact | marked_away | none&lt;br&gt;contact_asked_id FK · resolved_at&lt;br&gt;outcome: answered_late | away | true_concern | unknown&lt;br&gt;&lt;font color=&quot;#7d8794&quot;&gt;precision = true_concern ÷ notices, published&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fbf0d8;strokeColor=#e0a23a;" vertex="1" parent="1">
+          <mxGeometry x="360" y="490" width="280" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="away" value="&lt;b&gt;away_periods&lt;/b&gt;&lt;hr&gt;id PK · member_id FK&lt;br&gt;from_day · to_day&lt;br&gt;source: said_in_answer | set_by_member | learned&lt;br&gt;note" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#fbf0d8;strokeColor=#e0a23a;" vertex="1" parent="1">
+          <mxGeometry x="700" y="600" width="280" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="reads" value="&lt;b&gt;weekly_reads&lt;/b&gt;&lt;hr&gt;id PK · member_id FK · week_start&lt;br&gt;text · suggestion · drift_signals (jsonb)&lt;br&gt;draft (AI) · final (edited) · sent_at&lt;br&gt;&lt;font color=&quot;#7d8794&quot;&gt;draft vs final diffs are product lessons&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1">
+          <mxGeometry x="60" y="620" width="280" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="stories" value="&lt;b&gt;stories&lt;/b&gt;&lt;hr&gt;id PK · member_id FK (author)&lt;br&gt;question · answer_text · media_id&lt;br&gt;transcript · translations (jsonb)&lt;br&gt;keep (bool, family choice) · created_at" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1">
+          <mxGeometry x="360" y="680" width="280" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="reminders" value="&lt;b&gt;reminders&lt;/b&gt; (memory)&lt;hr&gt;id PK · family_id FK · about_member_id FK&lt;br&gt;remind_member_id FK · text · due_day&lt;br&gt;source_answer_id FK · sent_at" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1">
+          <mxGeometry x="700" y="730" width="280" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="turns" value="&lt;b&gt;turns&lt;/b&gt;&lt;hr&gt;family_id FK · day · member_id FK (whose day)&lt;br&gt;prompt_text · prompt_sent_at · fulfilled_item_id FK" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#2f7d5b;" vertex="1" parent="1">
+          <mxGeometry x="60" y="190" width="220" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="subs" value="&lt;b&gt;subscriptions&lt;/b&gt;&lt;hr&gt;id PK · family_id FK · payer_member_id FK&lt;br&gt;plan · kept_light_member_ids (jsonb)&lt;br&gt;status · trial_ends · provider_ref" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="60" width="260" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="eventsT" value="&lt;b&gt;events&lt;/b&gt; (append-only log)&lt;hr&gt;id · at · family_id · member_id&lt;br&gt;type · payload (jsonb)&lt;br&gt;&lt;font color=&quot;#7d8794&quot;&gt;every AI output with its input; every send; every tap&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="190" width="260" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="mediaT" value="&lt;b&gt;media&lt;/b&gt;&lt;hr&gt;id PK · family_id FK · uploader_id FK&lt;br&gt;kind · storage_key · duration_s · created_at" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;strokeColor=#7d8794;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="320" width="260" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&lt;br&gt;green border = core of the daily loop&lt;br&gt;amber = the paid Light layer&lt;br&gt;grey = supporting&lt;br&gt;&lt;br&gt;Retention: answers 30 days rolling; stories only if the family chose to keep; per-region storage." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#f6f7f9;strokeColor=#d9dee6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="430" width="260" height="130" as="geometry"/>
+        </mxCell>
+
+        <!-- relations (crow's foot: ERmany on the many side) -->
+        <mxCell id="r1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="families" target="members"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="members" target="channels"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="members" target="nearby"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="members" target="arrivals"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="arrivals" target="answers"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="families" target="items"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;dashed=1;" edge="1" parent="1" source="arrivals" target="items"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="members" target="quiet"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="members" target="away"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="members" target="flames"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="members" target="reads"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="members" target="stories"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="families" target="turns"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="families" target="subs"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="170" y="30"/><mxPoint x="1170" y="30"/></Array></mxGeometry></mxCell>
+        <mxCell id="r15" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#4a5566;" edge="1" parent="1" source="families" target="reminders"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="30" y="115"/><mxPoint x="30" y="780"/></Array></mxGeometry></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
