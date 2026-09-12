@@ -112,6 +112,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
     <li><a href="#mission">Mission &amp; problem</a></li>
     <li><a href="#learned">What we learned</a></li>
     <li><a href="#product">The product</a></li>
+    <li><a href="#architecture">Architecture</a></li>
     <li><a href="#model">Business model</a></li>
     <li><a href="#gtm">Go to market</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
@@ -327,6 +328,82 @@ flowchart LR
   </ul>
 </section>
 
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p class="sub">How it's built. Full detail in <code>architecture/01-technical-design.md</code>; decisions and rejected alternatives in <code>architecture/decisions.md</code>; drawings in <code>design/diagrams/</code>.</p>
+  <figure>
+    <pre class="mermaid">
+flowchart LR
+  subgraph Family["Family side"]
+    APP["Vela app<br/>Expo · iOS, Android, web<br/>parent surface = a mode"]
+  end
+  subgraph Platform["Vela platform (one Cloudflare Worker)"]
+    API["API + webhooks"]
+    SCH["Scheduler<br/>cron every 5 min → queue"]
+    GW["Outbound gateway<br/>budget + idempotency"]
+    AI["AI service<br/>Claude · structured outputs · logged"]
+    DB[("Postgres per region<br/>Neon")]
+    R2[("Media · R2")]
+  end
+  subgraph Channels["Parent channels (adapters)"]
+    TG["Telegram"]; MAX["MAX"]; WA["WhatsApp"]; LINE["LINE"]; VB["Viber"]; VOICE["Voice / SMS"]
+  end
+  APP <--> API
+  SCH --> GW
+  API --> AI
+  API <--> DB
+  API <--> R2
+  GW --> TG & MAX & WA & LINE & VB & VOICE
+  TG & MAX & WA & LINE & VB & VOICE -. answers .-> API
+    </pre>
+    <figcaption>One deployable, one database per region, one queue. A new messenger is a new adapter file, never a redesign.</figcaption>
+  </figure>
+
+  <div class="two">
+    <div class="card"><h4>Principles that shape the code</h4>
+      <ul>
+        <li><b>The flame lights on the raw answer, before any AI runs.</b> Nothing on the safety path depends on a model.</li>
+        <li><b>One outbound gateway</b> enforces the notification budget and idempotency; the anti-addiction promise is code, not discipline.</li>
+        <li><b>Arrivals are unique per member per day</b> in the database, so double sends are impossible even if two crons overlap.</li>
+        <li><b>Adapters are pure translation layers</b>; the composer and the ladder never know which messenger they're talking to.</li>
+        <li><b>Every AI output is logged with its prompt version</b>; an eval set runs on every prompt change.</li>
+      </ul></div>
+    <div class="card"><h4>Failure modes, decided</h4>
+      <ul>
+        <li>Messenger down: retry 30 min, then tell the organiser once; the ladder does not fire from our own outage.</li>
+        <li>Our worker down at the arrival minute: the next tick catches up; late arrivals carry "sorry this is late".</li>
+        <li>AI down: the flame still lights; understanding runs when the queue drains.</li>
+        <li>Wrong time zone: confirmed by the first three answer times; a 3-hour mismatch triggers a check.</li>
+        <li>A kept-light member dies: any member marks it; every schedule stops within the hour; no automated message ever again.</li>
+      </ul></div>
+  </div>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Decision</th><th>Chosen</th><th>Rejected</th></tr></thead>
+    <tbody>
+      <tr><td>Backend</td><td>Cloudflare Workers + Queues + Cron + R2, Hyperdrive to Postgres</td><td>Node on Fly/Railway, Supabase functions, Lambda</td></tr>
+      <tr><td>Database</td><td>Postgres on Neon, one project per region (eu, apac, us)</td><td>D1 (prototype only), Firestore, Mongo</td></tr>
+      <tr><td>Mobile</td><td>Expo, one codebase; parent surface as a mode</td><td>Flutter, two separate apps, native</td></tr>
+      <tr><td>Parent channels</td><td>Adapters behind one contract; never one messenger</td><td>Telegram-only, WhatsApp-only, Vela-only parent app</td></tr>
+      <tr><td>AI</td><td>Claude via API, structured outputs, versioned prompts, eval set; STT provider for voice</td><td>Fine-tuning, self-hosted open model, free-text outputs</td></tr>
+      <tr><td>Payments</td><td>Stripe web checkout first; in-app purchases in phase 2</td><td>IAP from day one (30% and review friction while testing prices)</td></tr>
+      <tr><td>Residency</td><td>Region per family from the kept-light member's country; Russia = legal review before launch</td><td>Russian hosting from day one; ignoring the question</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Cost at scale (per month, order of magnitude)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Families</th><th>Infrastructure</th><th>AI</th><th>Messaging</th><th>Total</th><th>Revenue at 40% on Light</th></tr></thead>
+    <tbody>
+      <tr><td class="num">100</td><td class="num">$0</td><td class="num">~$40</td><td class="num">$0–5</td><td class="num">&lt; $50</td><td class="num">~$400</td></tr>
+      <tr><td class="num">1,000</td><td class="num">~$30</td><td class="num">~$400</td><td class="num">~$50</td><td class="num">~$500</td><td class="num">~$4,000</td></tr>
+      <tr><td class="num">10,000</td><td class="num">~$170</td><td class="num">~$4,000</td><td class="num">~$500</td><td class="num">~$5,000</td><td class="num">~$40,000</td></tr>
+      <tr><td class="num">100,000</td><td class="num">~$1,700</td><td class="num">~$40,000</td><td class="num">~$5,000</td><td class="num">~$47,000</td><td class="num">~$400,000</td></tr>
+    </tbody>
+  </table></div>
+  <p>AI is the dominant cost and the first thing to optimise at scale: cheaper models for translation and prompts, cached system prompts, batched weekly reads. Infrastructure stays under 2% of revenue throughout.</p>
+</section>
+
 <section id="model">
   <h2>Business model</h2>
   <p class="sub">The free layer spreads; the light pays.</p>
@@ -487,6 +564,9 @@ gantt
       <tr><td><code>research/00-SYNTHESIS.md</code></td><td>Landscape, ten truths, where Vela wins, risks</td></tr>
       <tr><td><code>research/01–07</code></td><td>US PERS and wearables; passive sensing; East Asia; Europe/ANZ/Israel; AI apps; market size; family-bridge apps</td></tr>
       <tr><td><code>product/02-app-plan.md</code></td><td>The product, v2: people, loop, features, surfaces, AI, privacy, pricing, metrics, architecture, roadmap, risks</td></tr>
+      <tr><td><code>product/03-product-spec.md</code></td><td>The functional contract: member states, the arrival, answers, the quiet ladder, consent, turns, story day, translation, memory, weekly read, surfaces, edge cases, copy, accessibility</td></tr>
+      <tr><td><code>architecture/01-technical-design.md</code></td><td>Components, data flow, scheduler, adapter contract, gateway, AI pipeline, data model, security, failure modes, environments, cost at scale</td></tr>
+      <tr><td><code>architecture/decisions.md</code></td><td>Ten architecture decision records with rejected alternatives</td></tr>
       <tr><td><code>product/01-solution-thinking.md</code></td><td>Problem anatomy and solution space (partly superseded)</td></tr>
       <tr><td><code>plan/execution-plan.md</code></td><td>Phase 0 to 3, week by week, with owners</td></tr>
       <tr><td><code>plan/materials/</code></td><td>Surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer</td></tr>

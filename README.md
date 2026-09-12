@@ -9,6 +9,9 @@ Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) h
 - [`research/00-SYNTHESIS.md`](research/00-SYNTHESIS.md) — start here: the landscape, ten cross-cutting truths, where Vela wins, risks
 - `research/01`–`06` — the six underlying reports (US medical alerts and wearables; passive home sensing; East Asia; Europe/ANZ/Israel; AI companions and check-in apps; market size and lessons)
 - [`product/02-app-plan.md`](product/02-app-plan.md) — **the product**: people, daily loop, features, channels, AI, privacy, pricing, metrics, architecture, roadmap, risks
+- [`product/03-product-spec.md`](product/03-product-spec.md) — **the functional contract**: states, flows, rules, edge cases, copy, accessibility
+- [`architecture/01-technical-design.md`](architecture/01-technical-design.md) — **how it's built**: components, scheduler, adapter contract, AI pipeline, security, failure modes, cost at scale
+- [`architecture/decisions.md`](architecture/decisions.md) — architecture decision records
 - [`plan/execution-plan.md`](plan/execution-plan.md) — **what we do**: phase 0 (prove the loop), MVP, the bridge, the read; deck and site track
 - `plan/materials/` — surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer
 - `product/01-solution-thinking.md` — problem anatomy and solution space (partly superseded)
