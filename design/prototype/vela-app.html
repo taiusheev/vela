@@ -1,0 +1,481 @@
+<title>Vela App Prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ---------- page chrome (theme-aware) ---------- */
+:root{--pbg:#eceff3;--ptext:#1b2430;--pmuted:#7d8794;--pline:#d9dee6;--psurf:#ffffff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pbg:#0f141a;--ptext:#e6eaf0;--pmuted:#8a94a3;--pline:#2c3643;--psurf:#1a222c}}
+:root[data-theme="dark"]{--pbg:#0f141a;--ptext:#e6eaf0;--pmuted:#8a94a3;--pline:#2c3643;--psurf:#1a222c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pbg);color:var(--ptext);font-family:"Public Sans",system-ui,sans-serif;font-size:14px}
+.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--pline);background:var(--psurf);position:sticky;top:0;z-index:5}
+.top h1{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:22px;margin:0;display:flex;align-items:center;gap:8px}
+.top .sub{color:var(--pmuted);font-size:12px}
+.top .spacer{flex:1}
+.seg{display:flex;border:1px solid var(--pline);border-radius:999px;overflow:hidden}
+.seg button{background:transparent;border:0;padding:6px 14px;color:var(--ptext);cursor:pointer;font:inherit}
+.seg button[aria-pressed="true"]{background:var(--ptext);color:var(--pbg)}
+.board{display:flex;gap:36px;padding:32px;overflow-x:auto;align-items:flex-start}
+.board .cell{flex:0 0 auto;display:flex;flex-direction:column;gap:10px}
+.board .cell .lbl{font-size:12px;color:var(--pmuted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.board .cell .lbl b{color:var(--ptext);font-weight:600;text-transform:none;letter-spacing:0;font-size:13px;display:block}
+.single{display:none;justify-content:center;padding:24px;gap:24px;flex-wrap:wrap}
+.single .nav{display:flex;flex-direction:column;gap:6px;min-width:200px}
+.single .nav button{text-align:left;background:var(--psurf);border:1px solid var(--pline);border-radius:8px;padding:8px 10px;color:var(--ptext);font:inherit;cursor:pointer}
+.single .nav button[aria-pressed="true"]{border-color:#2f7d5b;box-shadow:inset 3px 0 0 #2f7d5b}
+body[data-mode="single"] .board{display:none}
+body[data-mode="single"] .single{display:flex}
+body[data-mode="single"] .phone{display:none}
+body[data-mode="single"] .phone.active{display:block}
+@media (max-width:700px){.board{display:none}.single{display:flex;padding:8px}.single .nav{width:100%;flex-direction:row;flex-wrap:wrap}.single .nav button{font-size:12px;padding:6px 8px}}
+
+/* ---------- the phone (single-theme by design: light, warm) ---------- */
+.phone{width:390px;height:844px;border-radius:44px;background:#f6f7f9;color:#1b2430;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18),0 0 0 10px #111,0 0 0 12px #333;font-family:"Public Sans",system-ui,sans-serif;font-size:16px;line-height:1.5;flex:0 0 auto}
+.phone.wide{width:844px;height:560px;border-radius:26px;box-shadow:0 20px 60px rgba(0,0,0,.18),0 0 0 14px #1c1c1c}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 8px;font-size:14px;font-weight:600;font-family:"IBM Plex Mono",monospace}
+.status .pill{width:120px;height:34px;background:#111;border-radius:20px;position:absolute;top:12px;left:50%;transform:translateX(-50%)}
+.screen{padding:8px 20px 24px;height:calc(100% - 54px);overflow:hidden;display:flex;flex-direction:column}
+.screen.p{padding:8px 24px 24px}
+.serif{font-family:"Newsreader",Georgia,serif;font-weight:500;letter-spacing:-.005em}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:#7d8794;margin:0 0 8px}
+.h-title{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:26px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
+.h-display{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:34px;line-height:1.15;margin:0;letter-spacing:-.01em}
+.muted{color:#7d8794}.muted2{color:#4a5566}
+.cap{font-size:13px;color:#7d8794}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center;gap:12px}
+.card{background:#fff;border:1px solid #d9dee6;border-radius:12px;padding:14px 16px}
+.card.amber{background:#fbf0d8;border-color:#e0a23a}
+.card.soft{background:#eef1f5;border-color:transparent}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;height:56px;font-weight:600;font-size:16px;border:1px solid transparent;cursor:pointer;width:100%;font-family:inherit}
+.btn.primary{background:#2f7d5b;color:#fff}
+.btn.secondary{background:#fff;color:#1b2430;border-color:#d9dee6}
+.btn.text{background:transparent;color:#2f7d5b;height:44px}
+.btn.big{height:84px;border-radius:20px;font-size:26px}
+.btn.mid{height:70px;border-radius:16px;font-size:20px}
+.spacer{flex:1}
+.appbar{display:flex;align-items:center;justify-content:space-between;padding:6px 0 14px}
+.appbar .brand{font-family:"Newsreader",Georgia,serif;font-size:24px;font-weight:500;display:flex;align-items:center;gap:8px}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#d9dee6,#eef1f5);display:inline-block;flex:0 0 auto}
+.avatar.lg{width:40px;height:40px}
+.photo{border-radius:10px;background:linear-gradient(160deg,#dbe7df 0%,#f3e9d2 60%,#e7d3b0 100%);position:relative;overflow:hidden}
+.photo::after{content:"";position:absolute;inset:auto 10% 12% auto;width:38%;height:38%;border-radius:50%;background:radial-gradient(circle at 40% 40%,#fff7dd,#e0a23a 70%,transparent 72%);opacity:.9}
+.photo.garden{background:linear-gradient(180deg,#e9f1ec 0%,#cfe3d5 55%,#b9d3bf 100%)}
+.photo.garden::after{background:radial-gradient(circle at 50% 60%,#e0a23a 0 28%,transparent 30%),radial-gradient(circle at 50% 50%,#ffffff 0 30%,transparent 32%);inset:auto auto 8% 12%;width:30%;height:30%}
+.photo.draw{background:#fff;border:1px solid #d9dee6}
+.photo.draw::after{background:none;inset:0;width:100%;height:100%;background-image:radial-gradient(circle at 30% 45%,#e0a23a 0 9%,transparent 10%),radial-gradient(circle at 62% 40%,#2f7d5b 0 7%,transparent 8%),linear-gradient(90deg,transparent 47%,#7d8794 47% 49%,transparent 49%);background-repeat:no-repeat}
+/* flame */
+.flame{position:relative;display:inline-block;width:40px;height:40px;flex:0 0 auto}
+.flame i{position:absolute;left:50%;top:50%;width:14px;height:20px;transform:translate(-50%,-52%);border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:#e0a23a;box-shadow:0 0 0 6px #fbf0d8}
+.flame.unlit i{background:transparent;border:2px solid #7d8794;box-shadow:none}
+.flame.quiet i{background:transparent;border:2px solid #7d8794;box-shadow:none}
+.flame.quiet::after{content:"";position:absolute;right:2px;top:2px;width:8px;height:8px;border-radius:50%;background:#e0a23a}
+.flame.away i{background:transparent;border:2px dashed #7d8794;box-shadow:none}
+.flame.sm{width:28px;height:28px}.flame.sm i{width:10px;height:14px;box-shadow:0 0 0 4px #fbf0d8}
+.flame.xl{width:120px;height:120px}.flame.xl i{width:40px;height:58px;box-shadow:0 0 0 18px #fbf0d8}
+@media (prefers-reduced-motion:no-preference){.flame.lit-anim i{animation:light .5s ease-out}}
+@keyframes light{from{transform:translate(-50%,-52%) scale(.7);box-shadow:0 0 0 0 #fbf0d8}to{transform:translate(-50%,-52%) scale(1);box-shadow:0 0 0 6px #fbf0d8}}
+.flames{display:flex;gap:18px;align-items:flex-start;margin:6px 0 18px}
+.flames .f{display:flex;flex-direction:column;align-items:center;gap:4px;width:74px;text-align:center}
+.flames .f .n{font-weight:600;font-size:13px;margin-top:4px}
+.flames .f .s{font-size:11px;color:#2f7d5b}
+.flames .f .s.m{color:#7d8794}
+.flames .f.add .flame i{background:transparent;border:2px dashed #d9dee6;box-shadow:none}
+/* voice */
+.voice{display:flex;align-items:center;gap:10px}
+.voice .play{width:34px;height:34px;border-radius:50%;background:#2f7d5b;color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.wave{display:flex;align-items:center;gap:2px;height:22px;flex:1}
+.wave b{width:3px;background:#2f7d5b;border-radius:2px;opacity:.85;display:block}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#eef1f5;font-size:12px;font-weight:600;color:#4a5566}
+.chip.g{background:#e3f1ea;color:#215a41}
+.list{display:flex;flex-direction:column;gap:10px}
+.thread-item{display:grid;grid-template-columns:28px 1fr auto;gap:10px;background:#fff;border:1px solid #d9dee6;border-radius:12px;padding:12px 14px;align-items:start}
+.thread-item .who{font-weight:600;font-size:14px}
+.thread-item .what{font-size:14px;color:#4a5566;margin-top:2px}
+.thread-item .thumb{width:48px;height:48px;border-radius:8px}
+.tabbar{display:flex;justify-content:space-around;padding:10px 0 0;border-top:1px solid #d9dee6;margin-top:10px}
+.tabbar div{font-size:11px;color:#7d8794;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar div.on{color:#2f7d5b;font-weight:600}
+.tabbar svg{width:22px;height:22px}
+.ic{width:20px;height:20px;flex:0 0 auto}
+.kinds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kinds .k{background:#fff;border:1px solid #d9dee6;border-radius:12px;padding:14px 8px;text-align:center;font-size:13px;font-weight:600}
+.kinds .k .ico{width:44px;height:44px;border-radius:50%;background:#2f7d5b;color:#fff;margin:0 auto 8px;display:flex;align-items:center;justify-content:center}
+.kinds .k .ico.soft{background:#eef1f5;color:#1b2430}
+.kinds .k small{display:block;color:#7d8794;font-weight:400;font-size:11px;margin-top:2px}
+.seg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg2 div{height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;background:#fff;border:1px solid #d9dee6;color:#4a5566}
+.seg2 div.on{background:#2f7d5b;color:#fff;border-color:#2f7d5b}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:14px 20px 26px;box-shadow:0 -12px 40px rgba(27,36,48,.18)}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:#d9dee6;margin:0 auto 14px}
+.dim{position:absolute;inset:0;background:rgba(27,36,48,.32)}
+.contact{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;background:#fff;border:1px solid #d9dee6;border-radius:12px;padding:10px 12px}
+.contact .nm{font-weight:600;font-size:14px}.contact .rl{font-size:12px;color:#7d8794}
+.contact .b{height:40px;padding:0 12px;border-radius:10px;display:flex;align-items:center;font-weight:600;font-size:13px}
+.contact .b.p{background:#2f7d5b;color:#fff}.contact .b.s{background:#fff;border:1px solid #d9dee6}
+.days{display:flex;gap:12px;align-items:center;margin:6px 0 14px}
+.days .d{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:#7d8794}
+.days .d .o{width:18px;height:18px;border-radius:50%;background:#e0a23a}
+.days .d .o.late{background:#fbf0d8;border:2px solid #e0a23a;box-sizing:border-box}
+.read p{font-family:"Newsreader",Georgia,serif;font-size:19px;line-height:1.4;margin:0 0 10px}
+.read .sugg{color:#2f7d5b}
+.opt{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #d9dee6;border-radius:12px;padding:14px;font-size:15px;font-weight:500}
+.opt.on{background:#e3f1ea;border-color:#2f7d5b}
+.opt.amber{background:#fbf0d8;border-color:#e0a23a}
+.opt .r{margin-left:auto;color:#7d8794;font-size:13px;font-weight:400}
+.field{background:#fff;border:1px solid #d9dee6;border-radius:10px;padding:14px;font-size:15px}
+.field.ph{color:#7d8794}
+.steps{display:flex;gap:6px;margin:4px 0 16px}
+.steps i{height:4px;flex:1;border-radius:2px;background:#d9dee6}.steps i.on{background:#2f7d5b}
+.toggle{width:44px;height:26px;border-radius:13px;background:#2f7d5b;position:relative;flex:0 0 auto}
+.toggle::after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.toggle.off{background:#d9dee6}.toggle.off::after{right:auto;left:3px}
+.paywall .plan{border:2px solid #e0a23a;background:#fbf0d8;border-radius:14px;padding:14px}
+.big-time{font-family:"Newsreader",Georgia,serif;font-size:64px;line-height:1;font-weight:500}
+.kitchen{display:grid;grid-template-columns:1fr 1fr;height:100%}
+.kitchen .left{padding:36px 40px;display:flex;flex-direction:column}
+.kitchen .right{padding:24px}
+.kitchen .right .photo{height:100%;border-radius:18px}
+.hint{font-size:11px;color:#7d8794}
+</style>
+
+<div class="top">
+  <h1><span class="flame sm"><i></i></span>Vela</h1>
+  <span class="sub">App prototype · v1 · English first · design/design-system.md</span>
+  <span class="spacer"></span>
+  <div class="seg" role="group" aria-label="View mode">
+    <button id="mBoard" aria-pressed="true">Board (all screens)</button>
+    <button id="mSingle" aria-pressed="false">Phone (tap through)</button>
+  </div>
+</div>
+
+<div class="single"><div class="nav" id="nav"></div><div id="singleHost"></div></div>
+
+<div class="board" id="board">
+
+<!-- ================= ONBOARDING 1 ================= -->
+<div class="cell"><div class="lbl"><b>Onboarding · 1 of 4</b>organiser · who to keep a light on for</div>
+<div class="phone" data-name="Onboarding 1 · Who" id="s-ob1"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="steps"><i class="on"></i><i></i><i></i><i></i></div>
+  <p class="eyebrow">Your family</p>
+  <h2 class="h-title">Who do you want to keep a light on for?</h2>
+  <p class="cap" style="margin:0 0 14px">Anyone who lives alone or far away. More than one is fine.</p>
+  <div class="list">
+    <div class="opt amber"><span class="flame sm"><i></i></span><div>Mom · Galina, 78<div class="cap">Irkutsk · lives alone</div></div><span class="r">edit</span></div>
+    <div class="opt"><span class="flame sm unlit"><i></i></span><div>Sam, 20<div class="cap">Berlin · studying abroad</div></div><span class="r">edit</span></div>
+    <div class="opt" style="color:#7d8794;font-weight:400">＋ Add someone else</div>
+  </div>
+  <div style="margin-top:18px"><p class="eyebrow">How should Vela address her?</p><div class="field">Mrs Ivanova <span class="muted">· polite form</span></div></div>
+  <div style="margin-top:12px"><p class="eyebrow">When does she usually wake up?</p><div class="field">7:30 <span class="muted">· her morning arrives at 8:00</span></div></div>
+  <div class="spacer"></div>
+  <button class="btn primary" data-go="s-ob2">Next</button>
+</div></div></div>
+
+<!-- ================= ONBOARDING 2 ================= -->
+<div class="cell"><div class="lbl"><b>Onboarding · 2 of 4</b>who is nearby · consent once</div>
+<div class="phone" data-name="Onboarding 2 · Nearby" id="s-ob2"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+  <p class="eyebrow">Who is nearby</p>
+  <h2 class="h-title">Two people you'd call first</h2>
+  <p class="cap" style="margin:0 0 14px">If Mom ever goes quiet. We'll ask their consent once; they never hear from us otherwise.</p>
+  <div class="list">
+    <div class="opt"><span class="avatar"></span><div>Aunt Val<div class="cap">neighbour, 2nd floor · +7 ···</div></div><span class="r">consent sent</span></div>
+    <div class="opt"><span class="avatar"></span><div>Igor<div class="cap">cousin · same town</div></div><span class="r">consent sent</span></div>
+    <div class="opt" style="color:#7d8794;font-weight:400">＋ Add from contacts</div>
+  </div>
+  <div class="card soft" style="margin-top:16px"><p class="eyebrow" style="margin-bottom:4px">Invite the family</p><div style="font-size:15px">Mia, Sam, Igor · <span style="color:#2f7d5b;font-weight:600">share link</span></div><div class="cap" style="margin-top:6px">Grandchildren send the most. Invite them first.</div></div>
+  <div class="spacer"></div>
+  <button class="btn primary" data-go="s-ob3">Next</button>
+</div></div></div>
+
+<!-- ================= ONBOARDING 3 ================= -->
+<div class="cell"><div class="lbl"><b>Onboarding · 3 of 4</b>how she gets her morning</div>
+<div class="phone" data-name="Onboarding 3 · Channel" id="s-ob3"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+  <p class="eyebrow">How she gets her morning</p>
+  <h2 class="h-title">Nothing for her to install</h2>
+  <p class="cap" style="margin:0 0 14px">Pick where Mom already is.</p>
+  <div class="list">
+    <div class="opt on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#215a41" stroke-width="2"><path d="M21 4 3 11l7 3 3 7 8-17z"/></svg>Telegram<span class="r">recommended</span></div>
+    <div class="opt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#4a5566" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 13c1.5 2 6.5 2 8 0"/></svg>WhatsApp</div>
+    <div class="opt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#4a5566" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/></svg>LINE · MAX · Viber</div>
+    <div class="opt"><span class="flame sm"><i></i></span>The Vela app <span class="r">I'll set it up for her</span></div>
+  </div>
+  <div class="card amber" style="margin-top:16px"><p class="eyebrow" style="margin-bottom:6px">Send her the link with a few words</p><div class="serif" style="font-size:16px;line-height:1.4">“Mom, I'm far away and I miss you. Every morning you'll get something from us. Tap ‘I'm fine’ and I can breathe. Say ‘stop’ and it all switches off.”</div></div>
+  <div class="spacer"></div>
+  <button class="btn primary" data-go="s-ob4">Send the invite</button>
+</div></div></div>
+
+<!-- ================= ONBOARDING 4 ================= -->
+<div class="cell"><div class="lbl"><b>Onboarding · 4 of 4</b>waiting for her first answer</div>
+<div class="phone" data-name="Onboarding 4 · Waiting" id="s-ob4"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen" style="align-items:center;text-align:center;justify-content:center">
+  <span class="flame xl unlit"><i></i></span>
+  <h2 class="h-title" style="margin-top:28px">The light is ready</h2>
+  <p class="muted2" style="max-width:300px;margin:0 0 20px">When Mom taps Start in Telegram, her first morning arrives tomorrow at 8:00. You'll see her flame here the moment she answers.</p>
+  <div class="card" style="width:100%;text-align:left"><p class="eyebrow" style="margin-bottom:6px">Meanwhile</p><div style="font-size:15px">Queue something for her first morning: a photo, a voice note, a question.</div></div>
+  <div class="spacer"></div>
+  <button class="btn primary" data-go="s-send">Send Mom something</button>
+  <button class="btn text" data-go="s-home">Go to home</button>
+</div></div></div>
+
+<!-- ================= HOME ================= -->
+<div class="cell"><div class="lbl"><b>Home</b>flames · today's moment · thread</div>
+<div class="phone" data-name="Home" id="s-home"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="appbar"><div class="brand"><span class="flame sm"><i></i></span>Vela</div><span class="cap mono">Sat 12 Sep</span></div>
+  <div class="flames">
+    <div class="f" data-go="s-momday"><span class="flame lit-anim"><i></i></span><span class="n">Mom</span><span class="s">answered 8:12</span></div>
+    <div class="f"><span class="flame away"><i></i></span><span class="n">Sam</span><span class="s m">away · Sunday</span></div>
+    <div class="f add"><span class="flame"><i></i></span><span class="n muted">＋</span><span class="s m">keep a light</span></div>
+  </div>
+  <div class="card soft" data-go="s-momday">
+    <p class="eyebrow">Today · her morning</p>
+    <div class="row" style="align-items:flex-start">
+      <div class="photo" style="width:104px;height:84px;flex:0 0 auto"></div>
+      <div><div class="serif" style="font-size:17px;line-height:1.35">“Look how tall she is! Slept fine, off to the garden today.”</div><div class="cap" style="margin-top:6px">voice · 0:14 · <span style="color:#2f7d5b">original</span></div></div>
+    </div>
+    <div style="border-top:1px solid #d9dee6;margin:12px 0 10px"></div>
+    <div class="row" style="justify-content:space-between"><span style="color:#2f7d5b;font-weight:600;font-size:14px">✓ Nothing to do</span><span class="cap">Tomorrow is Anna's turn</span></div>
+  </div>
+  <p class="eyebrow" style="margin-top:18px">Family thread</p>
+  <div class="list">
+    <div class="thread-item" data-go="s-thread"><span class="avatar"></span><div><div class="who">Mia <span class="cap">· yesterday</span></div><div class="what">sent a drawing from art class</div></div><div class="photo draw thumb"></div></div>
+    <div class="thread-item" data-go="s-thread"><span class="avatar"></span><div><div class="who">Anna <span class="cap">· Thursday</span></div><div class="what">asked about her blood pressure · Mom: “all normal”</div></div><span class="flame sm"><i></i></span></div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn primary" data-go="s-send">Send Mom something for tomorrow</button>
+  <div class="tabbar">
+    <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11 12 4l8 7v9H4z"/></svg>Home</div>
+    <div data-go="s-thread"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4z"/></svg>Thread</div>
+    <div data-go="s-read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5z M8 9h8M8 13h6"/></svg>Sunday</div>
+    <div data-go="s-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>You</div>
+  </div>
+</div></div></div>
+
+<!-- ================= MOM'S DAY (answer detail) ================= -->
+<div class="cell"><div class="lbl"><b>Her answer</b>the moment, in full</div>
+<div class="phone" data-name="Her answer" id="s-momday"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="appbar"><span data-go="s-home" style="color:#2f7d5b;font-weight:600">‹ Home</span><span class="cap mono">Sat 12 Sep · 8:12</span></div>
+  <div class="row" style="gap:14px;margin-bottom:12px"><span class="flame"><i></i></span><div><div class="serif" style="font-size:22px">Mom answered</div><div class="cap">her morning arrived at 8:00 · she answered in 12 min</div></div></div>
+  <div class="photo" style="height:200px;margin-bottom:12px"></div>
+  <div class="card">
+    <div class="voice"><div class="play">▶</div><div class="wave" id="w1"></div><span class="cap mono">0:14</span></div>
+    <div class="serif" style="font-size:19px;line-height:1.4;margin-top:12px">“Look how tall she is! Slept fine, off to the garden today. Tell Mia I put the drawing on the fridge.”</div>
+    <div class="cap" style="margin-top:8px">Translated from Russian · <span style="color:#2f7d5b">show original</span></div>
+  </div>
+  <div class="card soft" style="margin-top:12px"><p class="eyebrow" style="margin-bottom:4px">She answered</p><div class="row"><div class="photo draw" style="width:44px;height:44px"></div><div style="font-size:14px">Mia's drawing from yesterday · <span class="chip g">Mia has been told</span></div></div></div>
+  <div class="spacer"></div>
+  <button class="btn secondary" data-go="s-send">Reply with something for tomorrow</button>
+</div></div></div>
+
+<!-- ================= SEND ================= -->
+<div class="cell"><div class="lbl"><b>Send</b>queue something for her arrival</div>
+<div class="phone" data-name="Send" id="s-send"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="appbar"><span data-go="s-home" style="color:#2f7d5b;font-weight:600">‹ Home</span><span class="cap">Mom's morning · 8:00</span></div>
+  <h2 class="h-title">What to send Mom?</h2>
+  <div class="card amber"><p class="eyebrow" style="margin-bottom:4px">Prompt · from her own words</p><div style="font-size:15px">On Tuesday she said the tomatoes are ripening. Ask her for a photo of the garden.</div><div style="margin-top:8px"><span class="chip g">Use this</span></div></div>
+  <div class="kinds" style="margin-top:14px">
+    <div class="k"><div class="ico"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>Voice<small>10 seconds</small></div>
+    <div class="k"><div class="ico soft"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#1b2430" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg></div>Photo<small>no caption needed</small></div>
+    <div class="k"><div class="ico soft"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#1b2430" stroke-width="2"><path d="M9 9a3 3 0 1 1 4 2.8c-.8.4-1 1-1 1.7M12 17h.01"/></svg></div>Question<small>she answers at 8:00</small></div>
+  </div>
+  <div class="field ph" style="margin-top:12px;height:88px">Or a few words…<div class="cap" style="margin-top:34px">Translated for Mom into Russian; Mia sees the English.</div></div>
+  <p class="eyebrow" style="margin-top:14px">When</p>
+  <div class="seg2"><div class="on">Tomorrow morning</div><div>Whenever</div></div>
+  <div class="card soft" style="margin-top:12px"><div style="font-weight:600;font-size:14px">This week's turns</div><div class="cap" style="margin-top:4px">Mon Anna · Tue Mia · Wed Sam · Thu Anna · Fri Igor · Sat — · Sun story day</div></div>
+  <div class="spacer"></div>
+  <button class="btn primary" data-go="s-home">Into her morning</button>
+</div></div></div>
+
+<!-- ================= THREAD ================= -->
+<div class="cell"><div class="lbl"><b>Thread</b>the family, in the reader's language</div>
+<div class="phone" data-name="Thread" id="s-thread"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="appbar"><div class="brand">Thread</div><span class="chip">English · <span style="color:#7d8794;font-weight:400">originals on tap</span></span></div>
+  <div class="list">
+    <div class="thread-item"><span class="flame sm"><i></i></span><div><div class="who">Mom <span class="cap">· today 8:12</span></div><div class="what serif" style="font-size:15px;color:#1b2430">“Look how tall she is! Slept fine, off to the garden today.”</div><div class="cap" style="margin-top:4px">voice · translated from Russian</div></div><div class="photo thumb"></div></div>
+    <div class="thread-item"><span class="avatar"></span><div><div class="who">Mia <span class="cap">· yesterday</span></div><div class="what">sent a drawing from art class</div><div class="cap" style="margin-top:4px"><span class="chip g">Mom answered this</span></div></div><div class="photo draw thumb"></div></div>
+    <div class="thread-item"><span class="avatar"></span><div><div class="who">Anna <span class="cap">· Thursday</span></div><div class="what">asked about her blood pressure</div></div><span></span></div>
+    <div class="thread-item"><span class="flame sm"><i></i></span><div><div class="who">Mom <span class="cap">· Thursday 8:40</span></div><div class="what serif" style="font-size:15px;color:#1b2430">“All normal, 130 over 80. The nurse comes Tuesday.”</div><div class="cap" style="margin-top:4px">Reminder offered: ask how the nurse visit went · <span style="color:#2f7d5b">Add</span></div></div><span></span></div>
+    <div class="thread-item"><span class="avatar"></span><div><div class="who">Sam <span class="cap">· Wednesday</span></div><div class="what">voice note · 0:09 · “Grandma, exams next week, wish me luck”</div></div><span></span></div>
+    <div class="thread-item"><span class="flame sm"><i></i></span><div><div class="who">Mom <span class="cap">· Wednesday 8:05</span></div><div class="what serif" style="font-size:15px;color:#1b2430">“Good luck, my dear. I'll light a candle.”</div></div><span></span></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="tabbar">
+    <div data-go="s-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11 12 4l8 7v9H4z"/></svg>Home</div>
+    <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4z"/></svg>Thread</div>
+    <div data-go="s-read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5z M8 9h8M8 13h6"/></svg>Sunday</div>
+    <div data-go="s-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>You</div>
+  </div>
+</div></div></div>
+
+<!-- ================= WEEKLY READ ================= -->
+<div class="cell"><div class="lbl"><b>Weekly read</b>Sunday · how Mom really is</div>
+<div class="phone" data-name="Weekly read" id="s-read"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen read">
+  <div class="appbar"><div class="brand">How Mom is this week</div></div>
+  <div class="cap" style="margin:-8px 0 10px">6–12 September · from her own answers</div>
+  <p class="eyebrow">The light was on</p>
+  <div class="days"><div class="d"><span class="o"></span>Mon</div><div class="d"><span class="o"></span>Tue</div><div class="d"><span class="o"></span>Wed</div><div class="d"><span class="o"></span>Thu</div><div class="d"><span class="o late"></span>Fri</div><div class="d"><span class="o"></span>Sat</div><div class="d"><span class="o"></span>Sun</div><span class="cap" style="margin-left:auto">Fri: late, 11:40</span></div>
+  <div class="card">
+    <p>Answered every day, around 8:40 on average, a little later than last week.</p>
+    <p>Talked about the garden, the tomatoes, and Mia's drawing.</p>
+    <p>Mentioned her knee twice (“aches in the evening”).</p>
+    <p>Voice notes shorter than usual: 8 seconds versus 15.</p>
+    <div style="border-top:1px solid #d9dee6;margin:6px 0 12px"></div>
+    <p class="eyebrow">One suggestion</p>
+    <p class="sugg">Ask about the knee this weekend. A call from Mia would land: she asked about school twice.</p>
+  </div>
+  <div class="card soft" style="margin-top:12px"><p class="eyebrow" style="margin-bottom:6px">Story of the week</p><div class="cap">“How did you meet Dad?”</div><div class="serif" style="font-size:17px;margin:4px 0">“At a dance at the community hall, 1971…”</div><div class="row" style="gap:8px"><span class="chip g">▶ 2:40</span><span class="cap">saved to the family book</span></div></div>
+  <div class="spacer"></div>
+  <div class="cap" style="text-align:center">Neutral words. No scores, no diagnoses. Mom can read this too.</div>
+</div></div></div>
+
+<!-- ================= QUIET NOTICE ================= -->
+<div class="cell"><div class="lbl"><b>Quiet notice</b>organiser · +5 h after her hour</div>
+<div class="phone" data-name="Quiet notice" id="s-quiet"><div class="status"><span class="pill"></span><span>13:05</span><span>●●●</span></div>
+<div class="screen">
+  <div class="appbar"><div class="brand"><span class="flame sm"><i></i></span>Vela</div><span class="cap mono">Sat 12 Sep</span></div>
+  <div class="flames"><div class="f"><span class="flame quiet"><i></i></span><span class="n">Mom</span><span class="s m">quiet</span></div><div class="f"><span class="flame away"><i></i></span><span class="n">Sam</span><span class="s m">away</span></div></div>
+</div>
+<div class="dim"></div>
+<div class="sheet">
+  <div class="grab"></div>
+  <p class="eyebrow">Quiet · usually answers by 9:10</p>
+  <h2 class="h-title">Mom hasn't answered yet today</h2>
+  <p class="muted2" style="margin:0 0 12px;font-size:15px">Nothing worrying is known. Her morning went out at 8:00 and again at 10:30. Yesterday: “off to the garden, back on Saturday.”</p>
+  <p class="eyebrow">Who is nearby</p>
+  <div class="list">
+    <div class="contact"><div><div class="nm">Aunt Val</div><div class="rl">neighbour · 2nd floor</div></div><div class="b p">Call</div><div class="b s">Ask to check</div></div>
+    <div class="contact"><div><div class="nm">Igor</div><div class="rl">cousin · same town</div></div><div class="b p">Call</div><div class="b s">Ask to check</div></div>
+  </div>
+  <div style="height:12px"></div>
+  <button class="btn primary">📞 Call Mom</button>
+  <div class="seg2" style="margin-top:10px"><div>She's away</div><div>Wait 2 hours</div></div>
+  <p class="cap" style="text-align:center;margin:12px 0 0">If Mom answers, this closes by itself and everyone we asked hears she's fine.</p>
+</div></div></div>
+
+<!-- ================= STORY DAY ================= -->
+<div class="cell"><div class="lbl"><b>Story day</b>the family book</div>
+<div class="phone" data-name="Story day" id="s-story"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="appbar"><div class="brand">The family book</div><span class="chip">12 stories</span></div>
+  <div class="card amber"><p class="eyebrow" style="margin-bottom:4px">This Sunday's question</p><div class="serif" style="font-size:20px;line-height:1.3">“What did your mother cook on Sundays?”</div><div class="cap" style="margin-top:6px">Mom answers in her morning · anyone can add a question</div></div>
+  <p class="eyebrow" style="margin-top:16px">Recent</p>
+  <div class="list">
+    <div class="card"><div class="cap">How did you meet Dad?</div><div class="serif" style="font-size:17px;margin:4px 0 8px">“At a dance at the community hall, 1971. He stepped on my foot twice and asked me to forgive him with a walk home.”</div><div class="voice"><div class="play">▶</div><div class="wave" id="w2"></div><span class="cap mono">2:40</span></div></div>
+    <div class="card"><div class="cap">Your first job</div><div class="serif" style="font-size:17px;margin:4px 0 8px">“The textile factory, at sixteen. My hands smelled of dye for a year.”</div><div class="voice"><div class="play">▶</div><div class="wave" id="w3"></div><span class="cap mono">1:12</span></div></div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn secondary">Export the book (PDF)</button>
+</div></div></div>
+
+<!-- ================= SETTINGS ================= -->
+<div class="cell"><div class="lbl"><b>You</b>your flame · what the family sees · stop</div>
+<div class="phone" data-name="Settings" id="s-settings"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen">
+  <div class="appbar"><div class="brand">You</div></div>
+  <div class="row" style="gap:14px;margin-bottom:16px"><span class="avatar lg"></span><div><div style="font-weight:600;font-size:17px">Anna</div><div class="cap">organiser · English · Taipei</div></div></div>
+  <p class="eyebrow">Your own light</p>
+  <div class="opt"><span class="flame sm unlit"><i></i></span><div>Keep a light on for me<div class="cap">Mom would see your flame; you choose who else</div></div><span class="toggle off" style="margin-left:auto"></span></div>
+  <p class="eyebrow" style="margin-top:16px">Family</p>
+  <div class="list">
+    <div class="opt"><span class="flame sm"><i></i></span><div>Mom<div class="cap">Light · $9.99/mo · trial ends 12 Oct</div></div><span class="r">manage</span></div>
+    <div class="opt"><span class="avatar"></span><div>Mia, Sam, Igor<div class="cap">contributors · free</div></div><span class="r">invite</span></div>
+    <div class="opt"><span class="avatar"></span><div>Nearby: Aunt Val, Igor<div class="cap">both consented</div></div><span class="r">edit</span></div>
+  </div>
+  <p class="eyebrow" style="margin-top:16px">Quiet</p>
+  <div class="opt"><div>One moment a day<div class="cap">Vela sends you exactly one notification, at 9:00</div></div><span class="toggle" style="margin-left:auto"></span></div>
+  <div class="spacer"></div>
+  <div class="cap" style="text-align:center">What the family sees about you · Pause · Leave</div>
+</div></div></div>
+
+<!-- ================= LIGHT (paywall) ================= -->
+<div class="cell"><div class="lbl"><b>Vela Light</b>after the first answer · 30-day trial</div>
+<div class="phone" data-name="Vela Light" id="s-light"><div class="status"><span class="pill"></span><span>9:41</span><span>●●●</span></div>
+<div class="screen paywall" style="text-align:center">
+  <span class="flame xl lit-anim" style="margin:20px auto 0"><i></i></span>
+  <h2 class="h-title" style="margin-top:20px">Mom's light is on</h2>
+  <p class="muted2" style="margin:0 0 18px">She answered her first morning. For 30 days, Vela Light is on for free, so you can see what it does before you decide.</p>
+  <div class="plan" style="text-align:left"><div class="row" style="justify-content:space-between"><b>Vela Light · for Mom</b><span class="mono">$9.99/mo</span></div>
+    <div class="cap" style="margin:6px 0 8px">or $79 a year · a second person +50%</div>
+    <div style="font-size:14px;line-height:1.6">The flame · quiet notices with nearby contacts · away mode · the Sunday read · memory and reminders · the family book</div></div>
+  <div class="card soft" style="margin-top:10px;text-align:left"><b style="font-size:14px">Always free</b><div class="cap">The daily moment, the thread, turns, prompts, translation, story day, everyone in the family.</div></div>
+  <div class="spacer"></div>
+  <button class="btn primary">Start the 30 days</button>
+  <button class="btn text">Not now</button>
+</div></div></div>
+
+<!-- ================= PARENT SURFACE: MORNING ================= -->
+<div class="cell"><div class="lbl"><b>Parent surface · morning</b>one screen · big buttons · voice first</div>
+<div class="phone" data-name="Parent · morning" id="s-pm"><div class="status"><span class="pill"></span><span>8:00</span><span>●●●</span></div>
+<div class="screen p" style="text-align:center">
+  <h2 class="h-display" style="margin-top:10px">Good morning,<br>Mrs Ivanova</h2>
+  <div class="photo garden" style="height:270px;margin:18px 0 12px"></div>
+  <div class="card" style="text-align:left"><div style="font-size:20px;line-height:1.4">Mia: “Grandma, this is my drawing!”</div><div class="voice" style="margin-top:8px"><div class="play">▶</div><div class="wave" id="w4"></div><span class="cap mono" style="font-size:15px">0:09</span></div></div>
+  <div class="spacer"></div>
+  <button class="btn primary big" data-go="s-pa">☀️ I'm fine</button>
+  <div class="seg2" style="margin-top:12px;gap:12px"><div class="btn secondary mid" style="height:70px">🎤 Reply</div><div class="btn secondary mid" style="height:70px">📞 Call Anna</div></div>
+  <div class="cap" style="margin-top:14px;font-size:14px">What the family sees · Stop</div>
+</div></div></div>
+
+<!-- ================= PARENT SURFACE: AFTER ================= -->
+<div class="cell"><div class="lbl"><b>Parent surface · after answering</b>the family's photos · nothing else to do</div>
+<div class="phone" data-name="Parent · answered" id="s-pa"><div class="status"><span class="pill"></span><span>8:12</span><span>●●●</span></div>
+<div class="screen p" style="text-align:center;justify-content:center">
+  <span class="flame xl lit-anim" style="margin:0 auto"><i></i></span>
+  <h2 class="h-display" style="margin-top:24px">Thank you.<br>Anna knows you're fine.</h2>
+  <p style="font-size:20px;color:#4a5566;margin:14px 0 0">Have a lovely day. The family's photos are on the next page.</p>
+  <div class="spacer"></div>
+  <div class="row" style="gap:12px;justify-content:center"><div class="photo" style="width:96px;height:96px"></div><div class="photo draw" style="width:96px;height:96px"></div><div class="photo garden" style="width:96px;height:96px"></div></div>
+  <div class="spacer"></div>
+  <div class="btn secondary mid" style="height:70px" data-go="s-pm">📞 Call Anna</div>
+</div></div></div>
+
+<!-- ================= KITCHEN TABLE ================= -->
+<div class="cell"><div class="lbl"><b>Kitchen-table mode</b>an old tablet as a living frame</div>
+<div class="phone wide" data-name="Kitchen-table" id="s-kt">
+<div class="kitchen">
+  <div class="left">
+    <div class="cap mono" style="font-size:16px">Saturday 12 September</div>
+    <div class="big-time">8:00</div>
+    <div class="spacer"></div>
+    <div class="serif" style="font-size:30px;line-height:1.2">Good morning, Mrs Ivanova.</div>
+    <div style="font-size:20px;color:#4a5566;margin:10px 0 20px">Mia sent you a drawing. Tap anywhere when you're up.</div>
+    <div class="btn primary big" style="width:100%">☀️ I'm fine</div>
+    <div class="cap" style="margin-top:14px;font-size:14px">Photos cycle while you're busy · a gentle chime at 8:00 · nothing else</div>
+  </div>
+  <div class="right"><div class="photo draw" style="height:100%"></div></div>
+</div></div></div>
+
+</div>
+
+<script>
+(function(){
+  // waveforms
+  document.querySelectorAll(".wave").forEach(function(w, i){
+    var seed = i * 7 + 3; for (var k = 0; k < 24; k++) { seed = (seed * 9301 + 49297) % 233280; var hgt = 6 + Math.round((seed / 233280) * 14); var b = document.createElement("b"); b.style.height = hgt + "px"; w.appendChild(b); }
+  });
+  // modes
+  var body = document.body, board = document.getElementById("board"), host = document.getElementById("singleHost"), nav = document.getElementById("nav");
+  var phones = Array.prototype.slice.call(document.querySelectorAll(".phone"));
+  var mB = document.getElementById("mBoard"), mS = document.getElementById("mSingle");
+  function setMode(m){
+    body.setAttribute("data-mode", m); mB.setAttribute("aria-pressed", m === "board"); mS.setAttribute("aria-pressed", m === "single");
+    if (m === "single") { phones.forEach(function(p){ host.appendChild(p); }); show(currentId || "s-home"); }
+    else { phones.forEach(function(p){ var cell = document.querySelector('.cell[data-for="' + p.id + '"]'); if (cell) cell.appendChild(p); p.classList.remove("active"); }); }
+  }
+  var currentId = null;
+  function show(id){ currentId = id; phones.forEach(function(p){ p.classList.toggle("active", p.id === id); }); nav.querySelectorAll("button").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.id === id); }); }
+  // remember each phone's cell
+  phones.forEach(function(p){ var cell = p.closest(".cell"); if (cell) cell.setAttribute("data-for", p.id); var b = document.createElement("button"); b.textContent = p.dataset.name; b.dataset.id = p.id; b.addEventListener("click", function(){ show(p.id); }); nav.appendChild(b); });
+  document.addEventListener("click", function(e){ var t = e.target.closest("[data-go]"); if (!t) return; if (body.getAttribute("data-mode") === "single") { show(t.getAttribute("data-go")); } else { var el = document.getElementById(t.getAttribute("data-go")); if (el) el.scrollIntoView({behavior: "smooth", inline: "center", block: "nearest"}); } });
+  mB.addEventListener("click", function(){ setMode("board"); }); mS.addEventListener("click", function(){ setMode("single"); });
+  var mobile = window.matchMedia("(max-width:700px)").matches; setMode(mobile ? "single" : "board");
+})();
+</script>
