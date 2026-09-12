@@ -1,94 +1,95 @@
 # Vela design system
 
-v1 draft, 2026-09-12. The tokens and rules every screen follows. To be refined with the design research (design/research-best-apps.md) and rebuilt in Figma as variables and components.
+v2, 2026-09-12. Rebuilt from the Vela logo (navy house, glowing dot with arcs, sky arc, geometric wordmark) and the design research in `research-best-apps.md`. Supersedes v1 (sage/amber/flame), which the founder rejected. Built in Figma: "Vela · Design" (file key eJxG0c9ZHNSlY794RA9nrL).
+
+## Identity, from the light story
+
+The mark is a light left on in a window (direction A). Navy frame, one blue glow. So:
+
+- **The light** is the product's mark for a person: a glowing dot. Lit = filled blue dot with a soft halo (she answered). Resting = outlined dot. Quiet = outlined dot with a small blue dot at the corner. Away = dashed outline. No flames, no eggs, no arcs.
+- **The window** (the rounded frame) appears in the logo, the app icon, and the empty state only.
 
 ## Principles
 
-1. **Quiet is the design.** One moment a day, then the app closes. No feed, no badges, no streaks, no red. The home screen is the flames and today's moment; that is the whole dashboard.
-2. **Warm, not clinical.** Serif for the human words (names, her answer, the weekly read); a clean sans for the interface; generous whitespace; photographs and voice over icons and charts.
-3. **Everyone by name.** Never "the parent", "the user", "member". Mom, Mrs Ivanova, Mia.
-4. **Big, legible, forgiving.** The parent surface is designed for a 78-year-old with reading glasses: 18 pt minimum, 64 pt buttons, 7:1 contrast, no gestures, nothing that disappears.
+1. **Quiet is the design.** One moment a day, then the app closes. No feed, no badges, no streaks, no red.
+2. **Interaction, not inspection.** Every arrival asks for something real: an answer to a question, a choice, a voice reply, a word taught. "I'm fine" is the fallback, never the hero.
+3. **Everyone by name.** Never "the parent", "the user".
+4. **Big, legible, forgiving.** Parent surface: 22–24 pt body, 64 pt targets (88 pt primary), 7:1 contrast, tap only, visible Back, light mode only.
 5. **Say what happens next.** Every notice ends with the one thing the reader can do.
-6. **No alarm colours.** Amber is the flame and attention; green is action and "fine"; red is reserved for true errors and is never used for the quiet state.
+6. **Blue is the light and the action; navy is the voice; nothing is red** except a true error.
 
-## Colour tokens
+## Colour
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg` | #F6F7F9 | #131920 | page background |
-| `surface` | #FFFFFF | #1A222C | cards, sheets |
-| `surface-2` | #EEF1F5 | #232C37 | secondary fills, dividers' ground |
-| `ink` | #1B2430 | #E6EAF0 | primary text |
-| `ink-2` | #4A5566 | #AEB7C4 | secondary text |
-| `ink-3` | #7D8794 | #7F8A99 | captions, labels |
-| `rule` | #D9DEE6 | #2C3643 | borders |
-| `action` | #2F7D5B | #5CB88F | primary buttons, links, "fine" |
-| `action-soft` | #E3F1EA | #1C3129 | selected states, positive chips |
-| `flame` | #E0A23A | #E8B04F | the flame, the paid layer, attention |
-| `flame-soft` | #FBF0D8 | #3A2F18 | flame halo, amber cards |
-| `quiet` | #7D8794 outline | same | the unlit flame; never red |
-| `error` | #B1413A | #D9736B | true errors only (payment failed, link broken) |
+| `color/bg` | #F5F7FB | #0E1530 | page background (cool, from the logo's blue family) |
+| `color/surface` | #FFFFFF | #16204A | cards, sheets |
+| `color/paper` | #FBF8F3 | #1B2450 | family content cards: her answer, stories, the weekly read (warm, so people's words feel like paper) |
+| `color/surface-2` | #EAF0FA | #1F2A5C | secondary fills |
+| `color/ink` | #0B1B4A | #EEF2FF | primary text (the logo navy) |
+| `color/ink-2` | #4A5678 | #B8C2E0 | secondary text |
+| `color/ink-3` | #7A8499 | #8A94B3 | captions and labels (≥ 13 pt only) |
+| `color/rule` | #DCE3F0 | #2B3768 | borders |
+| `color/light` | #2E6BE8 | #6C9BFF | the light when lit, primary actions, links |
+| `color/light-soft` | #E6EEFF | #22306A | halo, selected states, soft blue cards |
+| `color/sky` | #7FA6FF | #8FB2FF | the sky arc |
+| `color/error` | #C4453D | #F08A83 | true errors only |
 
-The parent surface uses the light palette only, with `ink` on `surface` at 7:1 and `action` buttons with white text (4.6:1, large text) or `ink` text on `action-soft` where 7:1 is required.
+Contrast: ink on bg 15:1; light (#2E6BE8) on white 4.9:1, so white text on light buttons passes at 16 pt semibold and above; light is never used as small text on white. Amber is gone.
 
 ## Type
 
-| Role | Face | Size / weight | Where |
+| Role | Face | Size / line | Where |
 |---|---|---|---|
-| Display | Newsreader (opsz 36+) | 34/40 500 | Greetings on the parent surface ("Good morning, Mrs Ivanova") |
-| Title | Newsreader | 26/32 500 | Screen titles, her answer quoted, the weekly read |
-| Heading | Public Sans | 17/24 600 | Section headings, card titles |
-| Body | Public Sans | 16/24 400 | Everything else |
-| Body large (parent surface) | Public Sans | 20/28 400 | All body text on the parent surface |
-| Caption | Public Sans | 13/18 400, ink-3 | Times, meta |
-| Label | Public Sans | 12/16 600, letter-spacing 0.08em, uppercase, ink-3 | Eyebrows ("TODAY · HER MORNING") |
-| Numbers | IBM Plex Mono | tabular | Times, counts |
+| Display | Fraunces SemiBold | 34/40 | Greetings on the parent surface |
+| Title | Fraunces SemiBold | 26/32 | Screen titles, the weekly read |
+| Voice | Fraunces Regular | 19/27 (parent: 24/32) | People's own words: her answer, a story, a question from Mia |
+| Heading | Figtree SemiBold | 17/24 | Section headings, card titles |
+| Body | Figtree Regular | 16/24 (parent: 22/30) | Everything else |
+| Caption | Figtree Regular | 13/18, ink-3 | Times, meta |
+| Label | Figtree SemiBold | 12/16, +0.08 em, uppercase, ink-3 | Eyebrows |
+| Numbers | Figtree with tabular figures | — | Times, counts |
 
-Dynamic Type: the app honours the OS text size; the parent surface starts one step larger than the OS setting and never below 18 pt.
+Why: the wordmark is a geometric sans; Figtree matches its rounded, open forms and reads well small. Fraunces carries the human voice with an optical-size axis so it stays legible at 19 pt. Serif never below 19 pt on the parent surface. The app honours Dynamic Type; the parent surface starts one step larger.
 
 ## Spacing and shape
 
-- Base unit 4 pt; spacing scale 4, 8, 12, 16, 20, 24, 32, 40, 56.
-- Screen margins 20 pt (app), 24 pt (parent surface).
-- Corner radius: cards 12, sheets 20, buttons 14, the big parent button 20, chips 999.
-- Elevation: none by default; one soft shadow only on the one sheet that floats (the quiet notice).
+- 4 pt grid; scale 4, 8, 12, 16, 20, 24, 32, 40, 56.
+- Margins 20 pt (app), 24 pt (parent surface).
+- Radius: cards 16, sheets 24, buttons 14, the big parent button 22, chips 999. Rounded like the logo's corners.
+- Elevation: none by default; one soft navy shadow (0 12 32 rgba(11,27,74,.14)) only on the sheet that floats (the quiet notice).
 
 ## Components
 
 | Component | Notes |
 |---|---|
-| **Flame** | 40 pt on home, 28 pt in lists, 120 pt on the parent surface confirmation. States: lit (amber fill, soft halo), unlit (ink-3 outline), quiet (outline + dot), away (dashed outline), paused (grey). Lighting animates once: 400 ms ease-out scale 0.8→1 with the halo fading in; respects reduce-motion. |
-| **Moment card** | Today's arrival or her answer: media left or top, one or two serif lines, meta caption, one action. |
-| **Answer bar** (parent surface) | One 84 pt primary button "☀️ I'm fine", two 70 pt secondary: "🎤 Reply", "📞 Call Anna". |
-| **Voice note** | Record: hold or tap-to-toggle, both; 10-second guide ring; playback: play button, duration, waveform of 24 bars, transcript below in `ink-2`, "original" toggle for translations. |
-| **Thread item** | Avatar 28, name + relative time caption, one line, media thumbnail; no like counts; a single "answered" flame glyph when the kept-light member responded to it. |
-| **Prompt chip** | Amber-soft card with the eyebrow "PROMPT · FROM HER OWN WORDS" and one sentence; one action "Use this". |
-| **Quiet notice sheet** | Eyebrow, serif title ("Mom hasn't answered yet today"), calm one-liner, facts list, nearby contacts with Call / Ask to check, primary "Call Mom", secondary "She's away" / "Wait 2 hours", footer line about what closes it. |
-| **Weekly read** | Seven flames row, 3–5 serif lines, one suggestion in `action`, story of the week card. |
-| **Buttons** | Primary: `action` fill, white 16/600, 56 pt (app) or 84 pt (parent). Secondary: `surface` with `rule` border. Tertiary: text only. Destructive: `ink` text, confirms twice, never red until the confirm. |
-| **Inputs** | 56 pt, `rule` border, `action` focus ring 2 pt; helper text always visible. |
-| **Empty states** | Never empty: the home shows the flames and "Tomorrow is Anna's turn"; a new family sees the first arrival composed as an example. |
+| **Light** | The dot with two arcs. Sizes 24, 40, 120. States lit / resting / quiet / away / paused. Lighting animates once: the arcs draw outward over 500 ms; respects reduce-motion. |
+| **Arrival card** | The day's moment with what it asks for: a question (answer by voice or chips), a photo ("which one?" or a heart), a voice note (reply), a word to teach. One card, one ask. |
+| **Answer bar** (parent surface) | Contextual: for a question, a 96 pt mic and two or three answer chips; for a photo, a heart and a mic; for a voice note, a mic. "Just say hi" as the small fallback. |
+| **Reply thread** | Under her answer: the family's reactions and replies; she hears them in her next morning ("Sam laughed at your story"). |
+| **Receipt chip** | "Mom saw it · 8:12" to the sender; light-soft fill, navy text. |
+| **Voice row** | Play (44 pt, 64 pt on the parent surface), 24-bar waveform in light, duration, transcript below in ink-2, "original" toggle for translations. |
+| **Prompt card** | Light-soft card with the label "PROMPT · FROM HER OWN WORDS" and one sentence; one action "Use this". |
+| **Quiet notice sheet** | Label, Fraunces title ("It's been quiet at Mom's today"), calm one-liner, facts, nearby contacts with Call / Ask to check, primary "Call Mom", secondary "She's fine, I know why" / "Wait 2 hours". |
+| **Weekly read** | Seven lights in a row, 3–5 Fraunces lines on paper, one suggestion in light, story of the week. |
+| **Buttons** | Primary: light fill, white Figtree SemiBold 16, 56 pt (app) / 88 pt (parent). Secondary: surface with rule border. Tertiary: text in light. |
+| **Inputs** | 56 pt, rule border, 2 pt light focus ring; helper text always visible. |
+| **Empty states** | Never empty: the home shows lights and "Tomorrow is Anna's turn"; a new family sees the first arrival composed as an example. |
 
 ## Motion and sound
 
-- One motion per event, 200–400 ms, ease-out; the flame lighting is the only "celebration".
-- No confetti, no streak animations, no pull-to-refresh spinner theatre.
-- Sound: one gentle chime at the arrival hour on the parent surface and kitchen-table mode; optional, off by default in the app.
+- One motion per event, 200–500 ms, ease-out; the light's arcs drawing outward is the only celebration.
+- Reduce Motion: static light with the halo.
+- Sound: one soft two-note chime at the arrival hour on the parent surface and kitchen-table mode, opt-in; silence otherwise.
 
 ## Notifications
 
-- Exactly one per member per day at their hour; the copy is the arrival's first line ("Mia sent you a drawing"), never "You have 1 new notification".
-- Turn prompt the evening before: "Tomorrow is your day. She mentioned the tomatoes…".
-- Quiet notices to organisers only, with the calm title.
+Exactly one per member per day, at their hour, with the arrival's first line as the copy. The turn prompt the evening before. Quiet notices to organisers only.
 
-## Voice and copy
+## Copy
 
-- English first, every string keyed, native review per market.
-- Names, not roles. Neutral, not alarming. Say what happens next. Never "monitor", "track", "detect", "alert" in any user-facing text; use "answered", "hasn't answered yet", "we'll tell you", "quiet".
-- The parent surface speaks in full sentences and the polite form of address in languages that have one.
+English first; names, not roles; neutral, not alarming; say what happens next; never "monitor", "track", "detect", "alert"; "answered", "hasn't answered yet", "quiet", "we'll tell you".
 
-## Figma structure (to build)
+## Figma structure
 
-- File "Vela · Design system": pages Foundations (colour variables light/dark, type styles, spacing, radius), Components (flame, cards, buttons, inputs, voice note, thread item, sheets), Icons.
-- File "Vela · App": pages Onboarding, Home, Send, Thread, Weekly read, Quiet notice, Story day, Settings, Parent surface, Kitchen-table.
-- Import path: the HTML prototype in `design/prototype/` imported with the html.to.design plugin as editable layers; SVG wireframes in `design/wireframes/` as the low-fidelity reference.
+File "Vela · Design": Cover · Foundations (variables: Primitives, Color with Light/Dark, Spacing, Radius; text styles; the light component) · Components · App · Parent surface · Flows.

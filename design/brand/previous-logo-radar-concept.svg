@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 260" width="640" height="260" role="img" aria-label="Vela">
+  <!-- Previous logo, drawn for the earlier radar-sensor concept. Kept for reference only; superseded by logo-directions.svg. -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- sky arc -->
+    <path d="M92 165 A96 96 0 0 1 268 165" stroke="#2E6BE8" stroke-width="12"/>
+    <!-- house: open at the bottom -->
+    <path d="M124 210 L124 130 L180 82 L236 130 L236 210" stroke="#0B1B4A" stroke-width="13"/>
+    <path d="M124 210 L146 210" stroke="#0B1B4A" stroke-width="13"/>
+    <path d="M214 210 L236 210" stroke="#0B1B4A" stroke-width="13"/>
+    <!-- light: dot and two arcs -->
+    <circle cx="180" cy="128" r="10" fill="#2E6BE8"/>
+    <path d="M160 152 A28 28 0 0 0 200 152" stroke="#2E6BE8" stroke-width="10"/>
+    <path d="M146 172 A48 48 0 0 0 214 172" stroke="#2E6BE8" stroke-width="10"/>
+  </g>
+  <text x="300" y="196" font-family="Figtree, 'Plus Jakarta Sans', 'Nunito Sans', Arial, sans-serif" font-weight="600" font-size="128" fill="#0B1B4A" letter-spacing="-2">Vela</text>
+</svg>
