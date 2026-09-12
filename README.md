@@ -13,6 +13,7 @@ Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) h
 - [`architecture/01-technical-design.md`](architecture/01-technical-design.md) — **how it's built**: components, scheduler, adapter contract, AI pipeline, security, failure modes, cost at scale
 - [`architecture/decisions.md`](architecture/decisions.md) — architecture decision records
 - [`plan/execution-plan.md`](plan/execution-plan.md) — **what we do**: phase 0 (prove the loop), MVP, the bridge, the read; deck and site track
+- [`plan/pre-build-readiness.md`](plan/pre-build-readiness.md) — **what is still missing before MVP code**: gaps in three tiers, the next ten days, the definition of ready
 - `plan/materials/` — surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer
 - `product/01-solution-thinking.md` — problem anatomy and solution space (partly superseded)
 - [`bot/`](bot/README.md) — the phase-0 prototype: Telegram + Cloudflare Workers + D1 + Claude
