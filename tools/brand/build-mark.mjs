@@ -90,9 +90,9 @@ writeFileSync(`${OUT}/vela-mark-small-mono.svg`, markSvg({ muntins: false, frame
   lock(CREAM2, AMBER, CREAM2, DARK, "vela-lockup-reversed.svg");
   // vertical lockup: mark above the wordmark, centred (splash screens, square placements)
   const vlock = (ink, pane, muntin, bg, name) => {
-    const f = G.frame / 2, pad = bg ? 32 : 14, vsize = WORD_SIZE * 0.72;
+    const f = G.frame / 2, pad = bg ? 32 : 14, vsize = WORD_SIZE * 0.56;
     const probe = wordmarkPath(0, 0, vsize, ink).bb, ww = probe.x2 - probe.x1;
-    const wx = G.w / 2 - ww / 2 - probe.x1, wy = G.h + f + 0.34 * MARK_OUTER_H + vsize * capH;
+    const wx = G.w / 2 - ww / 2 - probe.x1, wy = G.h + f + 0.26 * MARK_OUTER_H + vsize * capH;
     const w2 = wordmarkPath(wx, wy, vsize, ink);
     const x0 = Math.min(-f, w2.bb.x1) - pad, x1 = Math.max(G.w + f, w2.bb.x2) + pad, y0 = -f - pad, y1 = w2.bb.y2 + pad;
     const bgRect = bg ? `<rect x="${r3(x0)}" y="${r3(y0)}" width="${r3(x1 - x0)}" height="${r3(y1 - y0)}" fill="${bg}"/>` : "";
@@ -145,7 +145,7 @@ png(markSvg({}), 1024, `${OUT}/vela-mark-1024.png`);
   const eyebrow = (x, y, t) => lab(x, y, t, INK3, 11, 'letter-spacing="1.6" font-weight="600"');
   o.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="${CREAM}"/>`);
   o.push(eyebrow(40, 40, "VELA · THE KEPT LIGHT · SOFT ARCH · GEOMETRY EXPLORATION AND THE LOCKED MARK · 2026-09-12"));
-  o.push(eyebrow(40, 84, "A · ARCH RADIUS (ACROSS) × TRANSOM HEIGHT (DOWN) · FRAME 11, MUNTIN 6"));
+  o.push(eyebrow(40, 84, "A · ARCH RADIUS (ACROSS) × TRANSOM HEIGHT (DOWN)"));
   const radii = [26, 34, 42], trans = [0.36, 0.40, 0.44];
   trans.forEach((t, ri) => radii.forEach((R, ci) => {
     const x = 70 + ci * 150, y = 110 + ri * 175, s = 0.95;
@@ -154,8 +154,12 @@ png(markSvg({}), 1024, `${OUT}/vela-mark-1024.png`);
     o.push(`<g transform="translate(${x},${y}) scale(${s})">${markPaths({ topR: R, transom: t })}</g>`);
     o.push(lab(x + 50 * s, y + 132 * s + 26, `r ${R} · transom ${Math.round(t * 100)}%${chosen ? " · locked" : ""}`, chosen ? "#1F5C66" : INK3, 11, 'text-anchor="middle"' + (chosen ? ' font-weight="600"' : "")));
   }));
-  o.push(lab(70, 655, "r 26 is a rounded card; r 42 is nearly the church arch again. 34 keeps the arch readable at 24 px and the top pane wide enough for the light.", INK2, 12));
-  o.push(lab(70, 675, "Transom at 36% pinches the top panes; at 44% the four panes start to look equal, and equal panes read as a plus. 40% is the sash window.", INK2, 12));
+  [
+    "r 26 is a rounded card; r 42 is nearly the church arch again.",
+    "34 keeps the arch readable at 24 px and the top panes wide enough for the light.",
+    "Transom at 36% pinches the top panes; at 44% the four panes start to look equal,",
+    "and equal panes read as a plus. 40% is the sash window.",
+  ].forEach((t, i) => o.push(lab(70, 655 + i * 18, t, INK2, 12)));
 
   o.push(eyebrow(560, 84, "B · FRAME WEIGHT"));
   [9, 11, 13].forEach((fw, i) => {
@@ -163,14 +167,18 @@ png(markSvg({}), 1024, `${OUT}/vela-mark-1024.png`);
     o.push(`<g transform="translate(${x},${y}) scale(${s})">${markPaths({ frameW: fw, muntin: INK })}</g>`);
     o.push(lab(x + 40, y + 132 * s + 24, `frame ${fw}${fw === G.frame ? " · locked" : ""}`, fw === G.frame ? "#1F5C66" : INK3, 11, 'text-anchor="middle"' + (fw === G.frame ? ' font-weight="600"' : "")));
   });
-  o.push(lab(590, 262, "9 disappears in one colour at 32 px; 13 gets heavy next to the wordmark. 11 with muntins at 6 keeps a 1.8:1 hierarchy.", INK2, 12));
+  o.push(lab(590, 262, "9 disappears in one colour at 32 px; 13 gets heavy next to the wordmark.", INK2, 12));
+  o.push(lab(590, 280, "11 with muntins at 6 keeps a 1.8:1 hierarchy between frame and bars.", INK2, 12));
 
   o.push(eyebrow(560, 310, "C · THE LOCKED MARK"));
   const w2 = wordmarkPath(590 + 100 + 5.5 + GAP * 0.9, 340 + BASELINE * 0.9, WORD_SIZE * 0.9, INK);
   o.push(`<g transform="translate(590,340) scale(0.9)">${markPaths({})}</g>`);
   o.push(w2.d);
-  o.push(lab(590, 500, `Window 100 × 132 · arch radius 34 · bottom radius 14 · frame 11 · muntins 6 · transom 40% · wordmark Literata SemiBold, cap height 62% of the mark, gap 27%, baseline 5% above the mark's foot`, INK2, 11.5));
-  o.push(lab(590, 518, `Clear space: half the mark's height on every side. Minimum: 32 px with muntins, 16 px simplified (no muntins, frame 16).`, INK2, 11.5));
+  [
+    "Window 100 × 132 · arch radius 34 · bottom radius 14 · frame 11 · muntins 6 · transom 40%.",
+    "Wordmark Literata SemiBold, outlined; cap height 58% of the mark, gap 30%, baseline 5% above the foot.",
+    "Clear space: half the mark's height on every side. Minimum 32 px with muntins, 16 px simplified.",
+  ].forEach((t, i) => o.push(lab(590, 500 + i * 18, t, INK2, 11.5)));
 
   o.push(eyebrow(560, 566, "D · THE THREE STATES AND THE SMALL MARK"));
   o.push(`<g transform="translate(590,590) scale(0.6)">${markPaths({})}</g>`);
