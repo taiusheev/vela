@@ -14,6 +14,7 @@ Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) h
 - `product/01-solution-thinking.md` — problem anatomy and solution space (partly superseded)
 - [`bot/`](bot/README.md) — the phase-0 prototype: Telegram + Cloudflare Workers + D1 + Claude
 - `pitch/` — accelerator application answers
+- [`plan/master-plan.html`](plan/master-plan.html) — source of the living master plan page (published at https://claude.ai/code/artifact/b20dcd01-518a-406c-9bca-3b40906bf193)
 
 ## Status
 

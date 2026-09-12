@@ -1,0 +1,600 @@
+<title>Vela Master Plan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --ink:#1b2430; --ink-2:#4a5566; --ink-3:#7d8794;
+  --rule:#d9dee6; --rule-soft:#e8ecf1;
+  --fine:#2f7d5b; --fine-soft:#e3f1ea; --warn:#b8741c; --warn-soft:#f7ecd9; --bad:#b1413a; --bad-soft:#f6e3e1;
+  --accent:#2f7d5b; --accent-ink:#215a41; --flame:#e0a23a; --flame-soft:#fbf0d8;
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  --sans:"Public Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131920; --surface:#1a222c; --ink:#e6eaf0; --ink-2:#aeb7c4; --ink-3:#7f8a99;
+    --rule:#2c3643; --rule-soft:#232c37;
+    --fine:#5cb88f; --fine-soft:#1c3129; --warn:#d9a052; --warn-soft:#3a2d18; --bad:#d9736b; --bad-soft:#3b2220;
+    --accent:#5cb88f; --accent-ink:#8ed3b3; --flame:#e8b04f; --flame-soft:#3a2f18;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131920; --surface:#1a222c; --ink:#e6eaf0; --ink-2:#aeb7c4; --ink-3:#7f8a99;
+  --rule:#2c3643; --rule-soft:#232c37;
+  --fine:#5cb88f; --fine-soft:#1c3129; --warn:#d9a052; --warn-soft:#3a2d18; --bad:#d9736b; --bad-soft:#3b2220;
+  --accent:#5cb88f; --accent-ink:#8ed3b3; --flame:#e8b04f; --flame-soft:#3a2f18;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6}
+a{color:var(--accent-ink);text-decoration-thickness:1px;text-underline-offset:2px}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:36px 24px 90px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:52px}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr);gap:20px;padding:20px 16px 60px}}
+nav.toc{position:sticky;top:28px;align-self:start;font-size:13px}
+@media (max-width:900px){nav.toc{position:static}}
+nav.toc .brand{font-family:var(--serif);font-size:28px;font-weight:500;letter-spacing:-.01em;margin:0 0 2px;display:flex;align-items:center;gap:8px}
+nav.toc .meta{color:var(--ink-3);margin:0 0 18px;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+nav.toc ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--rule)}
+nav.toc li a{display:block;padding:5px 0 5px 14px;color:var(--ink-2);text-decoration:none;border-left:2px solid transparent;margin-left:-1px}
+nav.toc li a:hover{color:var(--ink);border-left-color:var(--accent)}
+nav.toc .gh{margin-top:18px;font-size:12px;color:var(--ink-3)}
+main{max-width:78ch}
+.flame{display:inline-block;width:12px;height:12px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:var(--flame);box-shadow:0 0 0 4px var(--flame-soft)}
+header.memo h1{font-family:var(--serif);font-weight:500;font-size:46px;line-height:1.06;letter-spacing:-.015em;margin:0 0 12px;text-wrap:balance}
+header.memo .lede{font-family:var(--serif);font-size:21px;line-height:1.4;color:var(--ink-2);margin:0 0 18px;text-wrap:pretty}
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 6px}
+.status div{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:10px 12px}
+.status .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:600}
+.status .v{font-family:var(--serif);font-size:20px;line-height:1.2;margin-top:2px}
+section{margin-top:54px;padding-top:6px}
+h2{font-family:var(--serif);font-weight:500;font-size:31px;line-height:1.15;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
+h2 + .sub{color:var(--ink-3);margin:0 0 18px;font-size:14px}
+h3{font-family:var(--sans);font-weight:600;font-size:17px;margin:28px 0 8px}
+p{margin:0 0 14px;text-wrap:pretty}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);font-weight:600;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+.tablewrap{overflow-x:auto;margin:14px 0 20px}
+th{text-align:left;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);padding:8px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13.5px}
+td.src{color:var(--ink-3);font-size:12.5px;white-space:nowrap}
+.claim{font-family:var(--serif);font-size:22px;line-height:1.35;margin:22px 0;padding-left:18px;border-left:3px solid var(--flame);text-wrap:balance}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:14px 0}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px 18px}
+.card h4{margin:0 0 6px;font-size:15px;font-weight:600}
+.card ul{margin:0;padding-left:18px;font-size:14.5px}
+.card li{margin-bottom:4px}
+.card.free{border-top:3px solid var(--rule)}
+.card.paid{border-top:3px solid var(--flame)}
+.tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--rule-soft);color:var(--ink-2)}
+.tag.f{background:var(--flame-soft);color:var(--ink)}
+.tag.g{background:var(--fine-soft);color:var(--accent-ink)}
+.y{color:var(--fine);font-weight:500}.n{color:var(--bad)}.p{color:var(--warn)}
+ol.truths{padding-left:0;list-style:none;counter-reset:t;margin:0}
+ol.truths li{counter-increment:t;display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule-soft)}
+ol.truths li::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);color:var(--ink-3);font-size:13px;padding-top:3px}
+ol.truths li b{font-weight:600}
+figure{margin:18px 0;background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px}
+figure figcaption{font-size:12.5px;color:var(--ink-3);margin-top:8px}
+figure svg{width:100%;height:auto;display:block}
+figure pre.mermaid{background:transparent;margin:0;overflow-x:auto}
+.note{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;margin:16px 0;max-width:430px}
+.note .hd{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.note .hd .t{margin-left:auto;font-family:var(--mono);text-transform:none;letter-spacing:0}
+.note .line{font-family:var(--serif);font-size:18px;line-height:1.35}
+/* checklist */
+.week{margin:16px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:600;display:flex;align-items:center;gap:10px}
+.week .cnt{font-family:var(--mono);text-transform:none;letter-spacing:0;color:var(--ink-3)}
+ul.tasks{list-style:none;margin:0;padding:0}
+ul.tasks li{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--rule-soft);font-size:14.5px}
+ul.tasks input{width:18px;height:18px;margin:3px 0 0;accent-color:var(--fine);cursor:pointer}
+ul.tasks li.done label{color:var(--ink-3);text-decoration:line-through}
+ul.tasks label{cursor:pointer}
+ul.tasks .who{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--rule-soft);color:var(--ink-2);white-space:nowrap;margin-top:3px}
+ul.tasks .who.me{background:var(--fine-soft);color:var(--accent-ink)}
+.sync{font-size:12.5px;color:var(--ink-3);margin:8px 0 0}
+.progress{height:6px;background:var(--rule-soft);border-radius:3px;overflow:hidden;margin:10px 0 4px}
+.progress div{height:100%;background:var(--fine);width:0%;transition:width .3s}
+@media (prefers-reduced-motion:reduce){.progress div{transition:none}}
+.dec{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--rule-soft);font-size:14.5px}
+.dec .d{font-family:var(--mono);font-size:13px;color:var(--ink-3)}
+.dec b{font-weight:600}
+footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Sections">
+  <p class="brand"><span class="flame" aria-hidden="true"></span>Vela</p>
+  <p class="meta">Master plan · living document</p>
+  <ol>
+    <li><a href="#now">Where we are</a></li>
+    <li><a href="#mission">Mission &amp; problem</a></li>
+    <li><a href="#learned">What we learned</a></li>
+    <li><a href="#product">The product</a></li>
+    <li><a href="#model">Business model</a></li>
+    <li><a href="#gtm">Go to market</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#phase0">Phase 0 checklist</a></li>
+    <li><a href="#metrics">Metrics</a></li>
+    <li><a href="#risks">Risks</a></li>
+    <li><a href="#decisions">Decisions</a></li>
+    <li><a href="#open">Open questions</a></li>
+    <li><a href="#repo">Repository map</a></li>
+  </ol>
+  <p class="gh">Source of truth: <a href="https://github.com/taiusheev/vela">github.com/taiusheev/vela</a></p>
+</nav>
+
+<main>
+<header class="memo">
+  <p class="eyebrow">Vela · master plan · updated 2026-09-12</p>
+  <h1>One family, three generations, and a light kept on</h1>
+  <p class="lede">Everything we know, everything we decided, and everything we're about to do, in one place. Edited by the founder and the tech co-founder; the checklist remembers what you tick.</p>
+</header>
+
+<section id="now">
+  <h2>Where we are</h2>
+  <p class="sub">A snapshot, refreshed with every edit.</p>
+  <div class="status">
+    <div><div class="k">Phase</div><div class="v">0 · prove the loop</div></div>
+    <div><div class="k">Day</div><div class="v">2</div></div>
+    <div><div class="k">Research</div><div class="v">7 reports, ~550 sources</div></div>
+    <div><div class="k">Prototype</div><div class="v">Written, not deployed</div></div>
+    <div><div class="k">Applications</div><div class="v">ikigai Launchpad, submitted</div></div>
+    <div><div class="k">Families</div><div class="v">0 of 20</div></div>
+    <div><div class="k">Budget</div><div class="v">&lt; $25 / month</div></div>
+    <div><div class="k">Team</div><div class="v">Founder + AI co-founder</div></div>
+  </div>
+</section>
+
+<section id="mission">
+  <h2>Mission and the problem</h2>
+  <p class="sub">Why this company exists.</p>
+  <p class="claim">Vela keeps a light on for the people we love who live alone or far away: one daily touch from their family, and the family knows the moment it goes quiet.</p>
+  <p>Super-aged societies are here. Around 50 million people over 65 live alone in the ten richest ageing countries. Behind each of them is a child, across town or across the world, who carries a daily, unspoken worry: "she didn't pick up." And in the same families, a 20-year-old and a 45-year-old, both busy, both wanting more from each other than a group chat that went quiet.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Fact</th><th>Value</th><th>Rpt</th></tr></thead>
+    <tbody>
+      <tr><td>People 65+ living alone, ten richest ageing markets</td><td class="num">45–50M (+25–30M China)</td><td class="src">06</td></tr>
+      <tr><td>Japan 65+ solo households by 2040</td><td class="num">8.96M (6.7M in 2020)</td><td class="src">03</td></tr>
+      <tr><td>Korean seniors living alone (2025, record)</td><td class="num">23.6%</td><td class="src">03</td></tr>
+      <tr><td>Taiwan became super-aged</td><td class="num">2025</td><td class="src">—</td></tr>
+      <tr><td>Japan 2024: died alone at home / found after 8+ days</td><td class="num">76,020 / 21,856</td><td class="src">06</td></tr>
+      <tr><td>Falls that become a "long lie" (&gt;1 h on the floor)</td><td class="num">1 in 5</td><td class="src">06</td></tr>
+      <tr><td>Mortality if found &lt;1 h vs helpless &gt;72 h</td><td class="num">12% vs 67%</td><td class="src">06</td></tr>
+      <tr><td>Pendant wearers: falls with the pendant off</td><td class="num">3 in 4</td><td class="src">01</td></tr>
+      <tr><td>France: alarm-centre calls that are true emergencies</td><td class="num">~2%</td><td class="src">04</td></tr>
+      <tr><td>US family caregivers, 2025 / long-distance</td><td class="num">63M / ~1 in 3</td><td class="src">06</td></tr>
+      <tr><td>People living outside their birth country</td><td class="num">~300M</td><td class="src">06</td></tr>
+    </tbody>
+  </table></div>
+  <p>The insight that organises everything: <b>the worry happens because silence is ambiguous.</b> Every product that ever delivered peace of mind did one thing: it made silence mean "nothing is wrong, because if it were, you'd know."</p>
+</section>
+
+<section id="learned">
+  <h2>What we learned</h2>
+  <p class="sub">Seven research reports, condensed to what changes decisions.</p>
+
+  <h3>How the world solves it today</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Approach</th><th>Who</th><th>Works</th><th>Fails</th></tr></thead>
+    <tbody>
+      <tr><td><b>Emergency pendants</b></td><td>Life Alert, Medical Guardian, Tunstall, Careium; 16M users EU+NA</td><td>24/7 human response; reimbursement codes (Germany €25.50)</td><td>Stigma ("I am a patient"); 18% all-day wear; 9% adoption for a decade</td></tr>
+      <tr><td><b>Consumer wearables</b></td><td>Apple Watch, Pixel, Galaxy</td><td>No stigma, no fee, fall detection</td><td>18-h battery; 911-first; can't be set up remotely; useless with dementia</td></tr>
+      <tr><td><b>Home sensors</b></td><td>Aloe, Envoy, Vayyar, Nobi, Sensi</td><td>Solves non-wear; funded for facilities</td><td>Ten dead consumer brands; $40–100/mo + hardware; privacy; precision</td></tr>
+      <tr><td><b>Utility signals</b></td><td>Zojirushi kettle, Yamato bulb, Kansai meter, Shanghai water</td><td>Zero install, accepted, near-free</td><td>One low-fidelity signal; no family layer; 14k subscribers in 23 years</td></tr>
+      <tr><td><b>AI check-in calls</b></td><td>Naver CareCall (50k), ElliQ, inTouch, AloneAssist</td><td>Cheapest thing that scaled; multilingual</td><td>All paid by governments; parents screen unknown numbers; "mechanical care"</td></tr>
+      <tr><td><b>Check-in apps</b></td><td>Snug ($19.99 tier), Iamfine, Enrich (LINE)</td><td>Elders self-enrol; paid tier sells the alert</td><td>Bare pings attract the young, not the old; tiny</td></tr>
+      <tr><td><b>Family-presence products</b></td><td>Famileo (260k paying families), GrandPad, Aura, Chikaku, Storyworth</td><td>Parents love them; half of Aura's sales come from family invites</td><td>Print or hardware; no idea if grandma opened it</td></tr>
+      <tr><td><b>Family social networks</b></td><td>Path, Cocoon, 23snaps (dead); Marco Polo, Locket</td><td>Small circles, one daily prompt (BeReal 68% open in 3 min)</td><td>Die against the group chat; messaging converts ~1% to paid</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Ten truths that hold in every country</h3>
+  <ol class="truths">
+    <li><span><b>The buyer is not the user.</b> The child pays; the parent tolerates. Design for both or fail on one.</span></li>
+    <li><span><b>Two jobs, not one.</b> Emergency (2%) and daily reassurance (98%). Amazon bundled them at $20 and cancelled.</span></li>
+    <li><span><b>Zero-install wins; hardware-first dies.</b> Everything that scaled rode something already in the home.</span></li>
+    <li><span><b>Silence needs a plan, not a notification.</b> Elders' own objection: "we don't know what we'd do if an alert fires."</span></li>
+    <li><span><b>Precision is unsolved.</b> 0.3% true positives in Seoul; nobody publishes numbers. We will.</span></li>
+    <li><span><b>Willingness to pay is $10–35/month, everywhere.</b></span></li>
+    <li><span><b>LTV is capped at 2–4 years</b> by the eldest's trajectory; the relationship must outlive one person.</span></li>
+    <li><span><b>The 70–80 "pre-dependency" segment is unserved</b> and insulted by everything on offer.</span></li>
+    <li><span><b>Distribution is the moat.</b> Utilities, telcos, post, councils, remittance apps.</span></li>
+    <li><span><b>Content from family gets opened with joy; pings get ignored.</b> Famileo and Storyworth vs Enrich and Iamfine.</span></li>
+  </ol>
+</section>
+
+<section id="product">
+  <h2>The product</h2>
+  <p class="sub">One app for the whole family. Two promises: closer, and calmer.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 300" role="img" aria-label="Three generations around one family thread; the eldest and the student abroad carry a flame">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink-3)"/></marker>
+      </defs>
+      <rect x="220" y="110" width="280" height="80" rx="10" fill="var(--fine-soft)" stroke="var(--fine)"/>
+      <text x="360" y="143" text-anchor="middle" font-family="Newsreader,Georgia,serif" font-size="20" fill="var(--ink)">The family's daily thread</text>
+      <text x="360" y="167" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="12" fill="var(--ink-2)">one moment a day · no feed · no strangers · free</text>
+
+      <g>
+        <circle cx="90" cy="70" r="34" fill="var(--flame-soft)" stroke="var(--flame)" stroke-width="2"/>
+        <text x="90" y="66" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Grandmother</text>
+        <text x="90" y="82" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-2)">78, lives alone</text>
+        <text x="90" y="124" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-3)">joins by messenger · flame on</text>
+        <line x1="124" y1="86" x2="220" y2="132" stroke="var(--ink-3)" stroke-width="1.5" marker-end="url(#arr)"/>
+      </g>
+      <g>
+        <circle cx="360" cy="252" r="34" fill="var(--surface)" stroke="var(--ink-3)" stroke-width="1.5"/>
+        <text x="360" y="248" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Parent</text>
+        <text x="360" y="264" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-2)">45, organiser, pays</text>
+        <line x1="360" y1="218" x2="360" y2="196" stroke="var(--ink-3)" stroke-width="1.5" marker-end="url(#arr)"/>
+      </g>
+      <g>
+        <circle cx="630" cy="70" r="34" fill="var(--flame-soft)" stroke="var(--flame)" stroke-width="2"/>
+        <text x="630" y="66" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Student</text>
+        <text x="630" y="82" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-2)">20, abroad</text>
+        <text x="630" y="124" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-3)">best contributor · own flame, opt-in</text>
+        <line x1="596" y1="86" x2="500" y2="132" stroke="var(--ink-3)" stroke-width="1.5" marker-end="url(#arr)"/>
+      </g>
+      <g>
+        <circle cx="90" cy="252" r="26" fill="var(--surface)" stroke="var(--ink-3)" stroke-width="1.5"/>
+        <text x="90" y="256" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" font-weight="600" fill="var(--ink)">Neighbour</text>
+        <text x="90" y="292" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-3)">called only when the light stays dark</text>
+        <line x1="116" y1="246" x2="220" y2="176" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="4 4"/>
+      </g>
+    </svg>
+    <figcaption>The unit is the family, not a pair. Anyone the family worries about can carry a flame; it is opt-in and visible to them.</figcaption>
+  </figure>
+
+  <div class="two">
+    <div class="card free"><span class="tag">Closer · free · for everyone</span><h4 style="margin-top:8px">One moment a day, then the app closes</h4>
+      <ul>
+        <li><b>Turns.</b> Each member gets a day; a prompt arrives the evening before.</li>
+        <li><b>Prompts that know the family</b>, drawn from what people actually said.</li>
+        <li><b>Grandchildren first-class</b>: a 10-second voice note, a drawing, a photo.</li>
+        <li><b>Translation both ways</b>, keeping her form of address.</li>
+        <li><b>Story day</b>: one question a week; her answers become a book.</li>
+        <li><b>Memory</b>: the Thursday appointment, the exam, the neighbour's name.</li>
+        <li><b>A safe place</b>: no ads, no strangers, no feed, no infinite scroll.</li>
+      </ul></div>
+    <div class="card paid"><span class="tag f">Calmer · Vela Light · paid</span><h4 style="margin-top:8px">A light kept on for whoever the family worries about</h4>
+      <ul>
+        <li><b>The flame.</b> Her daily answer lights it on the family's home screen.</li>
+        <li><b>Quiet notice</b> to the organiser after her usual window, never before +4 h, with the nearby contacts one tap away.</li>
+        <li><b>Away mode</b>: "уезжаю к сестре до воскресенья" pauses everything.</li>
+        <li><b>Weekly read</b>: how she really is, in neutral words, from her own replies.</li>
+        <li><b>Memory and reminders</b>, story archive export, and, later, drift with published precision.</li>
+        <li>Nothing to install, wear, or charge. The family acts; Vela never knocks.</li>
+      </ul></div>
+  </div>
+
+  <h3>The daily loop</h3>
+  <figure>
+    <pre class="mermaid">
+flowchart LR
+  Q["Anyone queues something<br/>any time, any member"] --> A["One arrival per person<br/>at their hour"]
+  A --> R["One easy answer<br/>tap · heart · voice · photo"]
+  R --> T["Thread updates,<br/>translated · flame lights"]
+  R -. silence, kept-light member only .-> N["Gentle repeat<br/>+2.5 h"]
+  N --> Qn["Quiet notice to organiser<br/>+5 h, tuned · nearby contacts"]
+  Qn -. late answer .-> T
+    </pre>
+    <figcaption>Silence only matters for members with a flame. A late answer closes everything and tells everyone it's fine.</figcaption>
+  </figure>
+
+  <p class="eyebrow">What the organiser sees on a normal day</p>
+  <div class="note" aria-label="Example daily note">
+    <div class="hd"><span class="flame" aria-hidden="true"></span>Мама · сегодня<span class="t">08:12</span></div>
+    <div class="line">Ответила голосом на фото Маши. Спала нормально, собирается на дачу. Ничего делать не нужно.</div>
+  </div>
+
+  <h3>Surfaces</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Surface</th><th>For whom</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td><b>The app</b> (iOS, Android)</td><td>Every member who can install</td><td>Flames and today's moment; the thread; the queue; turns and prompts; story archive; one's own flame settings</td></tr>
+      <tr><td><b>Parent surface</b> (same app, simplified)</td><td>The eldest, when a child installs it on a visit</td><td>One screen: today's arrival, big buttons, voice-first reply, one-tap video call, the photo wall; nothing else</td></tr>
+      <tr><td><b>Kitchen-table mode</b></td><td>An old phone or tablet on her table</td><td>The parent surface as a living frame; she taps once a day; she already owns the device</td></tr>
+      <tr><td><b>Messenger</b> (Telegram, MAX, WhatsApp, LINE, Viber)</td><td>The eldest who won't install; casual members</td><td>Adapters behind one interface; the prototype bot is the first</td></tr>
+      <tr><td><b>Voice line and SMS</b> (later)</td><td>A parent with a landline</td><td>A short call from a saved number plays the family's voice notes and takes a keypress</td></tr>
+    </tbody>
+  </table></div>
+  <p>Rule: no family is ever told "your grandmother's messenger isn't supported." If the adapter doesn't exist, we don't launch in that market.</p>
+
+  <h3>The AI layer, and the line it never crosses</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Task</th><th>How</th><th>Guardrail</th></tr></thead>
+    <tbody>
+      <tr><td>Understand answers</td><td>Transcribe any language; one neutral line; mood words; mentioned people, places, plans, health words</td><td>Never quote her without her seeing what the family sees; never infer diagnoses</td></tr>
+      <tr><td>Flag what matters now</td><td>Pain, fall, dizziness, chest or breathing, not eating, hopelessness, a stranger, a "bank" call</td><td>To the organiser with her words; warm calm reply to her; never medical advice</td></tr>
+      <tr><td>Prompt the family</td><td>Evening-before suggestions from recent answers and dates</td><td>Suggestions only; nothing auto-sent as a person</td></tr>
+      <tr><td>Fallback morning</td><td>Two lines, yesterday and her weather, when nobody sent anything</td><td>Always signed as Vela; never pretends to be family</td></tr>
+      <tr><td>Translate</td><td>Both directions, tone and form of address kept</td><td>Original shown alongside</td></tr>
+      <tr><td>Weekly read</td><td>Narrative from the week's answers and timing</td><td>"Later than usual," never "concerning"; one suggestion at most</td></tr>
+      <tr><td>Drift</td><td>Per-person baselines; sustained change over 2–3 weeks</td><td>Conservative; precision published; "worth a call," never a finding</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Privacy as product</h3>
+  <ul>
+    <li><b>Symmetry.</b> A kept-light member sees what the family sees about her, and can say "не надо."</li>
+    <li><b>Minimum data.</b> Names, forms of address, cities, hours, 30 days of answers, weekly reads, the archive the family chose to keep.</li>
+    <li><b>Consent everywhere.</b> Flames are opt-in; nearby contacts agree once.</li>
+    <li><b>No ads, ever. No selling data, ever.</b> Said on the landing page.</li>
+    <li><b>Honest language.</b> Not an emergency service. "You'll know within hours, and you'll know who to call."</li>
+  </ul>
+</section>
+
+<section id="model">
+  <h2>Business model</h2>
+  <p class="sub">The free layer spreads; the light pays.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tier</th><th>Price</th><th>What's in it</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>Vela</b></td><td class="num">Free</td><td>Daily moment, thread, turns, prompts, contributors, translation, story day</td><td>Contributors are the growth engine; ~8 relatives per paying family at Famileo</td></tr>
+      <tr><td><b>Vela Light</b></td><td class="num">$9.99/mo or $79/yr per kept-light member; +50% for a second</td><td>Flame, quiet notices, nearby contacts, away mode, weekly read, memory, archive export, drift</td><td>People pay for the meaning of silence; Snug's $19.99 tier sells exactly this</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Comparable</th><th>Price</th><th>Signal</th></tr></thead>
+    <tbody>
+      <tr><td>Famileo (printed family gazette)</td><td class="num">£5.99–17.99/mo</td><td>260k families, €14M revenue 2024</td></tr>
+      <tr><td>Snug Dispatch (alert tier)</td><td class="num">$19.99/mo</td><td>The alert is what sells</td></tr>
+      <tr><td>Docomo ちかく (TV box for parents)</td><td class="num">¥1,980/mo</td><td>Sold in every Docomo shop, Aflac invested</td></tr>
+      <tr><td>ViewClix (family frame)</td><td class="num">$9.95/mo per family</td><td>One fee for the whole family</td></tr>
+      <tr><td>Germany Hausnotruf reimbursement</td><td class="num">€25.50/mo</td><td>Public price anchor for this outcome</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Unit economics.</b> No hardware, no staff on the ladder, AI at cents per family per month. LTV capped at 2–4 years per kept-light member, so acquisition must stay under $60 per family; the plan is word of mouth inside families and communities, with the under-30 member as the recruiter. Trial: 30 days of Light after the first answer, so a family sees one weekly read or one quiet notice before paying. To test in the first 90 days: $9.99 vs $14.99 vs annual-only.</p>
+</section>
+
+<section id="gtm">
+  <h2>Go to market</h2>
+  <p class="sub">Where we start, and why.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Wave</th><th>Who</th><th>Why them</th><th>Channel</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td>Russian-speaking families; sharpest pain among the ~600k who emigrated since 2022 and whose parents stayed</td><td>The founder is one of them and can reach them; hard-currency payers; no product exists</td><td>Telegram communities, personal network; parents via Telegram and MAX</td></tr>
+      <tr><td><b>2</b></td><td>Taiwan</td><td>Super-aged since 2025; the founder lives there; LINE is one adapter away</td><td>LINE; Taiwanese friends; university networks</td></tr>
+      <tr><td><b>3</b></td><td>Philippines (2.2M overseas workers), India (18.5M abroad), Ukraine, Latin America</td><td>Same family shape at scale; remittance apps already bill this customer monthly</td><td>WhatsApp; remittance-app partnerships (Remitly 9M, Wise 15M, Paysend 10M)</td></tr>
+      <tr><td><b>4</b></td><td>Germany, UK, Japan</td><td>Insurers and councils reimburse ~€25/mo for this outcome; no software-only entrant exists</td><td>Reimbursement codes, with our published precision</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>The growth loop.</b> A 20-year-old installs Vela for his grandmother, invites his mother and aunt, the mother switches on the light and pays, the aunt tells her own family. Every family is five to eight people; every member is a potential organiser of another family.</p>
+  <p><b>Channel caution.</b> WhatsApp has been blocked in Russia since February 2026, Telegram is throttled, and the state messenger MAX now leads monthly reach. The parent side is adapters, never one messenger.</p>
+</section>
+
+<section id="roadmap">
+  <h2>Roadmap</h2>
+  <p class="sub">Four phases, each with an exit test.</p>
+  <figure>
+    <pre class="mermaid">
+gantt
+  title Vela, first twelve months
+  dateFormat YYYY-MM-DD
+  axisFormat %b
+  section Phase 0 · prove the loop
+  Survey, 20 interviews           :a1, 2026-09-14, 14d
+  Pilot, 10–20 families, no app   :a2, 2026-09-28, 14d
+  Decision                        :milestone, m0, 2026-10-12, 0d
+  section Phase 1 · MVP
+  App + Telegram/WhatsApp/LINE    :b1, 2026-10-12, 60d
+  100 families, pricing test      :b2, 2026-11-15, 30d
+  section Phase 2 · the bridge
+  Parent surface, grandchildren, translation, story day :c1, 2026-12-15, 90d
+  Taiwan launch on LINE           :c2, 2027-02-01, 45d
+  section Phase 3 · the read
+  Drift, voice line, channel partner :d1, 2027-03-15, 180d
+    </pre>
+    <figcaption>Dates assume phase 0 starts on 14 September 2026. Each phase ends with a decision, not a date.</figcaption>
+  </figure>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Phase</th><th>Ships</th><th>Families</th><th>Exit test</th></tr></thead>
+    <tbody>
+      <tr><td><b>0 · Prove the loop</b><br><span class="tag g">now</span></td><td>No app. Eldest via the Telegram prototype; family in a Telegram group; each family with an under-30 member; weekly read written by hand</td><td class="num">10–20 paying $15</td><td>Answer rate &gt; 85%; family-content days &gt; 30% by week two; ≥ 4 families paying; parents not refusing</td></tr>
+      <tr><td><b>1 · MVP</b></td><td>The app: setup, flames, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light; Telegram + WhatsApp + LINE</td><td class="num">100</td><td>Conversion &gt; 25%; D30 &gt; 85%; answer rate &gt; 85%; members per family ≥ 5</td></tr>
+      <tr><td><b>2 · The bridge</b></td><td>Parent surface, kitchen-table mode, grandchildren tools, translation both ways, story day and archive, memory, MAX and Viber, referral loop; Taiwan on LINE</td><td class="num">1,000</td><td>Contributors ≥ 3; family-content days &gt; 60%; 2–4 min/day; Sean Ellis &gt; 40%</td></tr>
+      <tr><td><b>3 · The read</b></td><td>Drift with published precision; voice line; second-member plans; first channel partner</td><td class="num">10,000</td><td>Read trusted and paid; a partner signed or rejected with reasons; seed round on evidence</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="phase0">
+  <h2>Phase 0 checklist</h2>
+  <p class="sub">Four weeks. Tick things here; both of us see the same state.</p>
+  <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+  <p class="sync" id="sync">Loading saved ticks…</p>
+  <div id="tasks"></div>
+  <p style="margin-top:18px"><b>Kill signals.</b> Fewer than 4 families paying after 20 interviews. More than 30% of parents refusing or going silent in week one for reasons other than being away. Family-content days under 30% by week two despite prompts.</p>
+</section>
+
+<section id="metrics">
+  <h2>Metrics</h2>
+  <p class="sub">What we measure and the 90-day targets.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Metric</th><th>Why</th><th>Target</th></tr></thead>
+    <tbody>
+      <tr><td>Kept-light answer rate</td><td>Is she opening it with joy?</td><td class="num">&gt; 85%</td></tr>
+      <tr><td>Median answer latency</td><td>Habit; feeds quiet tuning</td><td class="num">&lt; 60 min</td></tr>
+      <tr><td>Family-content days</td><td>Is the family present, or is Vela carrying it?</td><td class="num">&gt; 60%</td></tr>
+      <tr><td>Members / active contributors per family</td><td>Growth engine</td><td class="num">≥ 5 / ≥ 3</td></tr>
+      <tr><td>Under-30 member in family</td><td>Is "closer" landing with the young?</td><td class="num">60% of families</td></tr>
+      <tr><td>Quiet notices per member per month; share true</td><td>Precision, published</td><td class="num">&lt; 2; &gt; 50%</td></tr>
+      <tr><td>Light conversion after trial; D90 retention</td><td>The business</td><td class="num">&gt; 25%; &gt; 80%</td></tr>
+      <tr><td>"не надо" rate</td><td>Dignity</td><td class="num">&lt; 5%</td></tr>
+      <tr><td>Minutes in app per member per day</td><td>The anti-addiction promise</td><td class="num">2–4</td></tr>
+      <tr><td>"If Vela stopped tomorrow…" very disappointed</td><td>Product-market fit</td><td class="num">&gt; 40%</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="risks">
+  <h2>Risks</h2>
+  <p class="sub">Named now, not in the post-mortem.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>The family goes quiet after week three, like every group chat</td><td>Turns, prompts from their own words, the under-30 contributor, the Vela fallback; family-content days reviewed weekly as a bug when they drop</td></tr>
+      <tr><td>The eldest feels watched</td><td>Symmetry, "не надо," story day, everything arrives from people; ask her directly at week two</td></tr>
+      <tr><td>The young see it as their parents' app</td><td>The closeness promise is theirs; own flame on their terms; tested with under-30s in phase 0</td></tr>
+      <tr><td>We become a free messenger with 1% conversion</td><td>Free layer is one moment a day, not chat; paid layer is silence semantics; move the line if conversion &lt; 25% at 90 days</td></tr>
+      <tr><td>False quiet notices erode trust</td><td>Per-person tuning, away mode, never before +4 h, published precision, notice as information not alarm</td></tr>
+      <tr><td>Messenger platform risk</td><td>Adapters; never single-channel in a market; the app and the voice line as floors</td></tr>
+      <tr><td>A kept-light member is found late despite Vela</td><td>Honest promise from day one; the language written before the first customer</td></tr>
+      <tr><td>Data law (Russia localisation, GDPR, PDPA)</td><td>Minimum data, per-region storage, legal review per market</td></tr>
+      <tr><td>Solo non-technical founder; consumer AgeTech funding down 48% in 2026</td><td>AI co-founder builds; prototype exists; revenue from day one; a human technical co-founder from the batch or network</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="decisions">
+  <h2>Decisions</h2>
+  <p class="sub">What we decided, when, and why. Append, never rewrite.</p>
+  <div class="dec"><span class="d">2026-09-11</span><span><b>Research before anything.</b> Six reports across US, Europe, East Asia, sensing, AI apps, market size; a seventh on family-bridge apps.</span></div>
+  <div class="dec"><span class="d">2026-09-11</span><span><b>Repo on GitHub, near-zero budget.</b> Free tiers only; the founder is a student in Taipei.</span></div>
+  <div class="dec"><span class="d">2026-09-11</span><span><b>Don't deploy the bot before talking to customers.</b> Built as a probe, parked until interviews say what the probe should be.</span></div>
+  <div class="dec"><span class="d">2026-09-11</span><span><b>No human welfare-check ladder, no partners.</b> The family acts on silence; Vela informs and shows who is nearby.</span></div>
+  <div class="dec"><span class="d">2026-09-11</span><span><b>All families, not diaspora only.</b> Diaspora remains the first wedge because the founder can reach it.</span></div>
+  <div class="dec"><span class="d">2026-09-11</span><span><b>ikigai Launchpad application submitted</b> ($100k for 8% SAFE, Taipei, 12 weeks).</span></div>
+  <div class="dec"><span class="d">2026-09-12</span><span><b>One app for three generations.</b> Free daily thread for everyone; paid Light for any kept-light member; the eldest joins by messenger and may graduate to a parent surface.</span></div>
+  <div class="dec"><span class="d">2026-09-12</span><span><b>Pricing to test:</b> free + Light at $9.99/mo or $79/yr per kept-light member.</span></div>
+  <div class="dec"><span class="d">2026-09-12</span><span><b>Phase 0 before the app.</b> Prove the loop with the prototype and 10–20 paying three-generation families.</span></div>
+</section>
+
+<section id="open">
+  <h2>Open questions</h2>
+  <p class="sub">Things worth arguing about, and where the answer will come from.</p>
+  <ul>
+    <li><b>Should the eldest know Vela exists, or does everything appear to come from family?</b> Honesty says she knows; the messenger onboarding says "your daughter asked me to say good morning." Phase 0 tells us how it lands.</li>
+    <li><b>Is the existing family group the whole onboarding?</b> A bot added to an existing Telegram family group needs no link and no explainer. Cheapest install imaginable; test with two families.</li>
+    <li><b>Grandchildren as the content engine.</b> Famileo says they post more than children. Does that hold with a 20-year-old on Telegram?</li>
+    <li><b>Free tier or trial only?</b> Contributors spread the product; but a free daily thread may be enough for many families. Conversion at 90 days decides.</li>
+    <li><b>Where the founder's own family sits.</b> Which pair do we test on first, and what does the founder's parent say when shown the arrival?</li>
+    <li><b>What we say when it goes wrong.</b> The first time a kept-light member is found late, what did we promise? Written before the first customer.</li>
+  </ul>
+</section>
+
+<section id="repo">
+  <h2>Repository map</h2>
+  <p class="sub">Everything here has a longer version with sources in the repo.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Path</th><th>What</th></tr></thead>
+    <tbody>
+      <tr><td><code>research/00-SYNTHESIS.md</code></td><td>Landscape, ten truths, where Vela wins, risks</td></tr>
+      <tr><td><code>research/01–07</code></td><td>US PERS and wearables; passive sensing; East Asia; Europe/ANZ/Israel; AI apps; market size; family-bridge apps</td></tr>
+      <tr><td><code>product/02-app-plan.md</code></td><td>The product, v2: people, loop, features, surfaces, AI, privacy, pricing, metrics, architecture, roadmap, risks</td></tr>
+      <tr><td><code>product/01-solution-thinking.md</code></td><td>Problem anatomy and solution space (partly superseded)</td></tr>
+      <tr><td><code>plan/execution-plan.md</code></td><td>Phase 0 to 3, week by week, with owners</td></tr>
+      <tr><td><code>plan/materials/</code></td><td>Surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer</td></tr>
+      <tr><td><code>bot/</code></td><td>Phase-0 prototype: Telegram + Cloudflare Workers + D1 + Claude, type-checked, not deployed</td></tr>
+      <tr><td><code>pitch/</code></td><td>Accelerator application answers</td></tr>
+      <tr><td><code>plan/master-plan.html</code></td><td>The source of this page</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  <p>Vela · founder and tech co-founder · updated 2026-09-12 · <a href="https://github.com/taiusheev/vela">github.com/taiusheev/vela</a></p>
+</footer>
+</main>
+</div>
+
+<script>
+(function(){
+  // Task definitions live in the page; only the done-state lives in the shared store.
+  var TASKS = [
+    {w:"Week 1 · survey out, first interviews", items:[
+      {id:"w1-accounts", who:"founder", t:"Create the Telegram bot (BotFather), a Cloudflare account, and an Anthropic API key (20 min, see bot/README.md)"},
+      {id:"w1-repo", who:"founder", t:"Decide repo visibility: public or private"},
+      {id:"w1-survey-post", who:"founder", t:"Post the survey in three places today: own network, a Russian-speaking Telegram group, Taiwanese friends (ZH-TW)"},
+      {id:"w1-interviews-book", who:"founder", t:"Book 8 interviews from survey respondents who opted in"},
+      {id:"w1-parent-mock", who:"founder", t:"Show your parent a mock of the morning arrival; write down her exact words"},
+      {id:"w1-survey-update", who:"me", t:"Update survey intro and recruitment posts for the all-families framing"},
+      {id:"w1-proto", who:"me", t:"Prototype changes for phase 0: family content in the arrival, quiet notice to the child with nearby contacts, away mode by keyword"},
+      {id:"w1-landing", who:"me", t:"Landing page: the flame, the promise, waitlist with two questions, two price points shown alternately"},
+      {id:"w1-review", who:"me", t:"Weekly review template and decisions log in the repo"}
+    ]},
+    {w:"Week 2 · interviews, close pilot families", items:[
+      {id:"w2-interviews", who:"founder", t:"Interviews 9–16; each ends with the pilot offer: $15 for the month, refundable, starts Monday"},
+      {id:"w2-families", who:"founder", t:"10 families confirmed with three generations where possible: eldest, organiser, an under-30 member; parents' messengers, wake times, two nearby contacts each"},
+      {id:"w2-deploy", who:"me", t:"Deploy the prototype; three-day test with the founder's own parent before any other family"},
+      {id:"w2-onboard-script", who:"me", t:"Onboarding script: five minutes with the child, five with the parent, in Russian"},
+      {id:"w2-synthesis", who:"me", t:"Interview synthesis: top objections, reasons to say yes, price points named, wish/worry clustering"}
+    ]},
+    {w:"Week 3 · pilot live", items:[
+      {id:"w3-onboard", who:"founder", t:"Onboard 10–15 families; do the parent call yourself for the first five"},
+      {id:"w3-daily", who:"founder", t:"Daily 15-minute check: read every conversation, log every false quiet notice and every parent complaint"},
+      {id:"w3-weekly-read", who:"founder", t:"Write the weekly read by hand for each family on Sunday (AI drafts, you edit; every edit logged)"},
+      {id:"w3-declines", who:"founder", t:"Interview anyone who declined or dropped; their reasons matter more than the yeses"},
+      {id:"w3-metrics", who:"me", t:"Daily metrics: answer rate, latency, family-content days, quiet notices and whether true, opt-outs"}
+    ]},
+    {w:"Week 4 · measure and decide", items:[
+      {id:"w4-checkin", who:"founder", t:"Day-14 check-in with every family: \"If Vela stopped tomorrow, how would you feel?\""},
+      {id:"w4-parent-q", who:"founder", t:"Ask each parent through the chat: \"Нравится ли вам получать это по утрам?\""},
+      {id:"w4-referrals", who:"founder", t:"Ask each paying family for two introductions"},
+      {id:"w4-report", who:"me", t:"Phase-0 report: the metrics, what the arrival must contain, what the weekly read must say, MVP scope cut to what was proven"},
+      {id:"w4-deck", who:"me", t:"Pitch deck v1 from phase-0 evidence (ten slides)"},
+      {id:"w4-decision", who:"founder", t:"Decision: build the MVP, or change one variable and rerun phase 0"}
+    ]}
+  ];
+  var state = {};
+  var root = document.getElementById("tasks");
+  var bar = document.getElementById("bar");
+  var sync = document.getElementById("sync");
+  var dbRef = null;
+  var total = 0;
+
+  function render(){
+    root.innerHTML = "";
+    var done = 0; total = 0;
+    TASKS.forEach(function(group){
+      var gdone = 0;
+      var h = document.createElement("div"); h.className = "week";
+      var ul = document.createElement("ul"); ul.className = "tasks";
+      group.items.forEach(function(it){
+        total++;
+        var isDone = !!(state[it.id] && state[it.id].done);
+        if(isDone){ done++; gdone++; }
+        var li = document.createElement("li"); if(isDone) li.className = "done";
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.id = "cb-" + it.id; cb.checked = isDone; cb.disabled = !dbRef;
+        cb.addEventListener("change", function(){ toggle(it.id, cb.checked); });
+        var lab = document.createElement("label"); lab.htmlFor = cb.id; lab.textContent = it.t;
+        var who = document.createElement("span"); who.className = "who" + (it.who === "me" ? " me" : ""); who.textContent = it.who === "me" ? "co-founder" : "founder";
+        li.appendChild(cb); li.appendChild(lab); li.appendChild(who); ul.appendChild(li);
+      });
+      h.innerHTML = group.w + ' <span class="cnt">' + gdone + "/" + group.items.length + "</span>";
+      root.appendChild(h); root.appendChild(ul);
+    });
+    bar.style.width = (total ? Math.round(done / total * 100) : 0) + "%";
+  }
+  function toggle(id, checked){
+    if(!dbRef) return;
+    state[id] = {done: checked, doneAt: checked ? new Date().toISOString() : null};
+    render();
+    dbRef.doc("tasks/" + id).set({done: checked, doneAt: state[id].doneAt}).catch(function(e){
+      sync.textContent = "Couldn't save that tick (" + (e && e.code ? e.code : "error") + "). Try again in a moment.";
+    });
+  }
+  render();
+
+  if(!(window.claude && typeof window.claude.use === "function")){
+    sync.textContent = "Ticks aren't saved in this view; read-only.";
+    return;
+  }
+  window.claude.use("db").then(function(db){
+    if(!db){ sync.textContent = "Ticks aren't saved in this view; read-only."; return; }
+    dbRef = db;
+    db.collection("tasks").onSnapshot(function(snap){
+      var next = {};
+      snap.docs.forEach(function(d){ if(d.exists){ next[d.id] = d.data(); } });
+      state = next;
+      render();
+      sync.textContent = snap.metadata.fromCache ? "Syncing…" : "Ticks are shared and saved.";
+    }, function(err){
+      sync.textContent = "Saved ticks unavailable right now (" + err.code + ").";
+    });
+  }).catch(function(){ sync.textContent = "Ticks aren't saved in this view; read-only."; });
+})();
+</script>
