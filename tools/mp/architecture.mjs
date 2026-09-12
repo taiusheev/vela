@@ -12,7 +12,7 @@ export function architecture() {
     p.box(1040, y, 320, 480, "PARENT CHANNELS · adapters", S.lane);
     const app = p.box(60, y + 30, 300, 100, h("Vela app", ["React Native (Expo) · iOS, Android, web", "parent surface and kitchen-table mode are display modes", "push: one per member per day"]), S.cardGreen);
     const web = p.box(60, y + 150, 300, 60, h("Web", ["setup · story archive · account · Stripe checkout"]), S.card);
-    const api = p.box(440, y + 30, 260, 90, h("API + webhooks", ["Hono router · Supabase Auth JWT", "answers light the flame synchronously"]), S.cardGreen);
+    const api = p.box(440, y + 30, 260, 90, h("API + webhooks", ["Hono router · Supabase Auth JWT", "answers light the light synchronously"]), S.cardGreen);
     const sch = p.box(720, y + 30, 260, 90, h("Scheduler", ["cron every 5 min → due query → queue", "arrivals unique per member per day"]), S.card);
     const gw = p.box(440, y + 140, 260, 90, h("Outbound gateway", ["the only thing that sends to a person", "budget by kind · idempotency · retries"]), S.cardAmber);
     const ai = p.box(720, y + 140, 260, 90, h("AI service", ["Claude · structured outputs", "prompt registry · every call logged"]), S.card);
@@ -41,12 +41,12 @@ export function architecture() {
   // 4.2 Data flow, scheduler, gateway
   {
     const p = new Page("4.2 · Data flow, scheduler, gateway");
-    let y = p.title("From a queued photo to a lit flame", "Every arrow writes an event. The KPI job reads events, never the live tables. Technical design §2–5.");
+    let y = p.title("From a queued photo to a lit light", "Every arrow writes an event. The KPI job reads events, never the live tables. Technical design §2–5.");
     const a = p.box(40, y, 300, 70, h("1 · Member queues an item", ["app → API: items.insert → event"]), S.card);
     const b = p.box(380, y, 300, 70, h("2 · Cron, every 5 minutes", ["SELECT members WHERE next_arrival_at <= now() AND no arrival for (member, local_day)"]), S.card);
     const c = p.box(720, y, 300, 70, h("3 · Composer", ["today's items → “whenever” items → story? → fallback? → render per channel"]), S.card);
     const d = p.box(1060, y, 300, 70, h("4 · Outbound gateway", ["budget check → idempotency → adapter.send() → arrivals.sent_at → event"]), S.cardAmber);
-    const e = p.box(1060, y + 110, 300, 70, h("5 · Channel webhook: an answer", ["verify → parse → answers.insert → flame lights → cancel repeat/quiet → ack within 1 s"]), S.cardGreen);
+    const e = p.box(1060, y + 110, 300, 70, h("5 · Channel webhook: an answer", ["verify → parse → answers.insert → light lights → cancel repeat/quiet → ack within 1 s"]), S.cardGreen);
     const f = p.box(720, y + 110, 300, 70, h("6 · Queue: understand(answer_id)", ["transcribe → understand → translate → thread.post → notify contributor"]), S.card);
     const g = p.box(380, y + 110, 300, 70, h("7 · Flag?", ["notice to the organiser with her words; calm reply to her"]), S.cardRed);
     const k = p.box(40, y + 110, 300, 70, h("8 · Nightly KPI job", ["reads events → metrics_daily; prunes answers >30 days; precision from quiet_events.outcome"]), S.cardGrey);
@@ -55,8 +55,8 @@ export function architecture() {
     y = p.h2(y, "Scheduler rules");
     y = p.table(40, y, [{ w: 220, title: "Due when" }, { w: 640, title: "Query" }, { w: 460, title: "Idempotency" }], [
       ["Arrival", "members.next_arrival_at <= now() and no arrivals row for (member_id, local_day); next_arrival_at recomputed after each send from arrival_hour and IANA tz (DST-safe)", "UNIQUE(member_id, day) makes double sends impossible even if two crons overlap"],
-      ["Repeat", "arrivals.sent_at <= now() − 2.5 h, repeated_at is null, no answer, flame on, not away", "repeated_at set once"],
-      ["Quiet notice", "arrivals.sent_at <= now() − T_quiet(member), no answer, flame on, not away, no open quiet_events row", "one open quiet_events row per member per day"],
+      ["Repeat", "arrivals.sent_at <= now() − 2.5 h, repeated_at is null, no answer, light on, not away", "repeated_at set once"],
+      ["Quiet notice", "arrivals.sent_at <= now() − T_quiet(member), no answer, light on, not away, no open quiet_events row", "one open quiet_events row per member per day"],
       ["Turn prompt", "members whose turn is tomorrow and local time is 19:00 ± 5 min", "turns.prompt_sent_at"],
       ["Weekly read", "kept-light members, local Sunday 18:00 ± 5 min, no read for this week", "weekly_reads(member_id, week_start) unique"],
       ["Scale", "100,000 members ≈ 14 due arrivals per tick on average, a few thousand at popular hours", "One Postgres query and a queue absorb that"],
@@ -77,13 +77,13 @@ export function architecture() {
     let y = p.title("Data model (MVP)", "Drawn in database.drawio. Green = the daily loop; amber = the paid Light layer; grey = supporting.");
     y = p.table(40, y, [{ w: 170, title: "Table" }, { w: 620, title: "Key fields" }, { w: 530, title: "Notes" }], [
       [{ label: "families", style: S.tdGreen }, "id · name · region (eu, apac, us) · plan (free, light) · created_at", "Region chosen at creation from the kept-light member's country; cannot move without export/import"],
-      [{ label: "members", style: S.tdGreen }, "id · family_id · display_name · address_form · role (organiser, member) · lang · tz · arrival_hour · next_arrival_at · flame_on · flame_consented_at · quiet_after_min (learned, ≥240) · usual_answer_window · birth_year? · status", "Carries the scheduling fields so the due query touches one table"],
+      [{ label: "members", style: S.tdGreen }, "id · family_id · display_name · address_form · role (organiser, member) · lang · tz · arrival_hour · next_arrival_at · light_on · light_consented_at · quiet_after_min (learned, ≥240) · usual_answer_window · birth_year? · status", "Carries the scheduling fields so the due query touches one table"],
       ["channel_links", "id · member_id · channel · external_id · capabilities · status · linked_at", "The parent's identity on a messenger; there is no account for her"],
       [{ label: "nearby_contacts", style: S.tdAmber }, "id · member_id · name · relation · phone · consented_at · consent_channel · auto_ask_after_min?", "Cannot be auto-asked until consented"],
       ["items", "id · family_id · author_id · for_member_id? · kind (voice, photo, drawing, text, question) · media_id · text · translation · scheduled_day? · delivered_in_arrival_id · created_at", "What the family queues"],
       [{ label: "arrivals", style: S.tdGreen }, "id · member_id · day (member-local) · composed_at · sent_at · repeated_at · channel · source (family, story, fallback) · item_ids · fallback_text · read_at?", "UNIQUE(member_id, day): the idempotency backbone"],
       [{ label: "answers", style: S.tdGreen }, "id · arrival_id · member_id · kind (tap, reaction, text, voice, photo) · text · media_id · transcript · summary · mood_words · mentions · flag · flag_reason · translations · external_id · created_at", "Rolling 30 days; external_id unique per channel (duplicate webhooks)"],
-      [{ label: "flame_days", style: S.tdAmber }, "member_id · day · lit_at · answer_kind · latency_min", "Derived, cached"],
+      [{ label: "light_days", style: S.tdAmber }, "member_id · day · lit_at · answer_kind · latency_min", "Derived, cached"],
       [{ label: "quiet_events", style: S.tdAmber }, "id · member_id · day · repeat_sent_at · notice_sent_at · organiser_action · contact_asked_id · resolved_at · outcome (answered_late, away, true_concern, unknown)", "The precision dataset; outcome never null after resolution"],
       [{ label: "away_periods", style: S.tdAmber }, "id · member_id · from_day · to_day · source (said_in_answer, set_by_member, learned) · note", "Pauses repeats and notices, not arrivals"],
       ["weekly_reads", "id · member_id · week_start · text · suggestion · drift_signals · draft · final · sent_at", "Draft vs final diffs are product lessons"],
@@ -103,13 +103,13 @@ export function architecture() {
   // 4.4 Security, privacy, failure modes
   {
     const p = new Page("4.4 · Security, privacy, failure modes");
-    let y = p.title("Security and privacy architecture; failure modes", "Technical design §8–9. The flame lights on the raw answer, before any AI: nothing on the safety path depends on a model.");
+    let y = p.title("Security and privacy architecture; failure modes", "Technical design §8–9. The light lights on the raw answer, before any AI: nothing on the safety path depends on a model.");
     y = p.table(40, y, [{ w: 220, title: "Area" }, { w: 1100, title: "Decision" }], [
       ["Data residency", "One Postgres project and one R2 bucket per region: eu (default), apac (Taiwan; later Japan, Korea), us. Family region set at creation. Russia's localisation law is a legal review before any Russian launch; the pilot stores minimal data in eu (ADR-7)"],
       ["Encryption", "TLS everywhere; Postgres and R2 encrypted at rest; media URLs signed, 15-minute expiry"],
       ["Secrets", "Worker secrets only; nothing in the repo; every webhook verified by signature or secret token"],
       ["Minimum data", "No health records, no location, no contact scraping. The AI sees the answer, the last three summaries, and the profile; never the whole thread"],
-      ["Consent records", "members.flame_consented_at, nearby_contacts.consented_at, and the event that carried the consent text"],
+      ["Consent records", "members.light_consented_at, nearby_contacts.consented_at, and the event that carried the consent text"],
       ["Deletion", "Family cascade within 24 h; member left after 30 days; answers after 30 days; archive only if kept; deletion event with a hash"],
       ["Access", "Admin view gated by a short allow-list; every admin read of a family is logged as an event visible to the organiser on request"],
       ["What we never build", "Location tracking, camera or microphone monitoring, contact-list upload, advertising identifiers, selling data"],
@@ -120,7 +120,7 @@ export function architecture() {
       ["Messenger API down (Telegram throttled, WhatsApp outage)", "Arrival not delivered", "Gateway retries 3× over 30 min; then undelivered, organiser told once; the ladder does not fire from our own outage"],
       ["Our Worker down at the arrival minute", "Arrival late", "Next cron tick catches up; UNIQUE(member_id, day) prevents doubles; >3 h late carries “sorry this is late”"],
       ["Postgres unreachable", "Everything pauses", "Webhooks get 503 (channels retry); cron ticks skip; admin alert"],
-      ["AI provider down", "Answers not understood", "The flame still lights immediately; understanding runs when the queue drains; the family sees “Mom answered” with the media"],
+      ["AI provider down", "Answers not understood", "The light still lights immediately; understanding runs when the queue drains; the family sees “Mom answered” with the media"],
       ["Duplicate webhook delivery", "Duplicate answer", "answers.external_id unique per channel"],
       ["Member's phone changes number", "Channel link dead", "Detected on blocked/unreachable events; organiser told; re-invite flow"],
       ["Wrong time zone", "False quiet notice", "Tz set from the city, confirmed by the first three answer times; mismatch >3 h triggers a check with the organiser"],
@@ -173,7 +173,7 @@ export function architecture() {
       ["2", "Postgres (Neon) as system of record, one project per region", "Relational fit; branches for free staging; residency by config; D1 too small", "D1 (prototype only); Firestore; Mongo", "A market requires in-country hosting Neon lacks"],
       ["3", "One Expo codebase; the parent surface is a mode, not an app", "One codebase; EAS; a separate parent app doubles listings and support while she rarely installs anyway", "Flutter; two apps; native", "Kitchen-table mode performs badly on old tablets"],
       ["4", "Parent side is adapters behind one interface; never one messenger", "WhatsApp blocked in Russia, Telegram throttled, MAX state-run, LINE owns Taiwan; a platform dependency is a company risk", "Telegram-only; WhatsApp-only; a Vela-only parent app", "Never; add adapters"],
-      ["5", "The flame lights on the raw answer, before any AI", "The safety promise must not depend on a model or a third-party API", "Understand-then-light", "—"],
+      ["5", "The light lights on the raw answer, before any AI", "The safety promise must not depend on a model or a third-party API", "Understand-then-light", "—"],
       ["6", "Notification budget enforced in one outbound gateway", "The anti-addiction promise survives only if it is impossible to bypass in code", "Per-feature discipline", "—"],
       ["7", "Residency by region; Russia as a legal review, not a technical bet", "Minimum data reduces exposure; the founder cannot fund in-country infra now", "Russian hosting from day one; ignoring it", "Phase-1 exit, with a lawyer's opinion"],
       ["8", "Claude via the API, structured outputs, versioned prompts, eval set; STT provider for voice", "Auditable, comparable across versions; safe prompt changes with real families", "Fine-tuning; self-hosted open model; free-text outputs", "Cost at 10,000+ families; route by call type"],

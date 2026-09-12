@@ -48,10 +48,10 @@ Rejected: Telegram-only (kills Russia the day Telegram is blocked); WhatsApp-onl
 
 Revisit: never; add adapters instead.
 
-## ADR-5 · The flame lights on the raw answer, before any AI
+## ADR-5 · The light lights on the raw answer, before any AI
 **2026-09-12 · accepted**
 
-Decision: answer capture, flame lighting, and ladder cancellation happen synchronously in the webhook path; AI understanding runs afterwards from a queue.
+Decision: answer capture, light lighting, and ladder cancellation happen synchronously in the webhook path; AI understanding runs afterwards from a queue.
 
 Why: the safety promise ("you'll know within hours") must not depend on a model or a third-party API; a slow or failed AI call must never produce a false quiet notice.
 

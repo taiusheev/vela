@@ -17,7 +17,7 @@ export function foundation() {
     ]), S.card);
     p.box(720, y, 640, 200, h("The promise, in two halves", [
       "<b>Closer.</b> One moment a day from the people you love, then the app closes. Turns, prompts, grandchildren, translation, story day, memory. Free.",
-      "<b>Calmer.</b> For whoever the family keeps a light on for: her answer lights a flame the family sees; silence gets a plan, not a spiral; the family knows within hours and knows who is nearby. Paid.",
+      "<b>Calmer.</b> For whoever the family keeps a light on for: her answer lights a light the family sees; silence gets a plan, not a spiral; the family knows within hours and knows who is nearby. Paid.",
       "The name: <i>vela</i> is a candle; <i>velar</i> is to keep vigil. A light left on in the window. The family keeps it lit; the parent's answer is the glow.",
     ]), S.cardGreen);
     y += 220;

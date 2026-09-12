@@ -13,7 +13,7 @@ export function business() {
       "Risk: becoming a free messenger with 1% conversion → the free layer is one moment a day, not chat",
     ])), S.card);
     p.box(720, y, 640, 190, h("Vela Light · $9.99/month or $79/year per kept-light member · +50% for a second", li([
-      "The flame, quiet notices, nearby contacts, away mode, weekly read, memory, archive export, drift",
+      "The light, quiet notices, nearby contacts, away mode, weekly read, memory, archive export, drift",
       "Why paid: people pay for the meaning of silence; Snug's $19.99 tier sells exactly this",
       "Trial: 30 days of Light after the first answer, so a family sees one weekly read or one quiet notice before paying",
       "To test in 90 days: $9.99 vs $14.99 vs annual-only; move the line if conversion < 25%",

@@ -2,7 +2,7 @@
 
 v1, 2026-09-12. The functional contract for the MVP and phase 2. Written so a designer, an engineer, and the founder read the same thing. Companion to `02-app-plan.md` (why) and `architecture/01-technical-design.md` (how).
 
-Vocabulary: **family**, **member**, **organiser**, **kept-light member** (a member with a flame), **nearby contact**, **arrival** (the one daily message), **answer**, **flame**, **quiet notice**, **away**, **weekly read**, **story day**, **turn**.
+Vocabulary: **family**, **member**, **organiser**, **kept-light member** (a member with a light), **nearby contact**, **arrival** (the one daily message), **answer**, **light**, **quiet notice**, **away**, **weekly read**, **story day**, **turn**.
 
 ---
 
@@ -14,19 +14,19 @@ A person is a **member** of one or more families. Each membership has a role and
 |---|---|---|
 | role | organiser · member | One or more organisers per family; the organiser who pays is the **billing organiser** |
 | surfaces | app · parent-surface · telegram · whatsapp · line · max · viber · voice | A member may have several; the arrival goes to the **primary** one |
-| flame | off · on | On only with the member's consent (§6). A member may switch their own on or off any time |
+| light | off · on | On only with the member's consent (§6). A member may switch their own on or off any time |
 | status | invited · active · paused · left | Paused = "stop for now" from either side; left = removed, data retained 30 days then deleted |
 
 **Member states, as the app shows them:**
 
 | State | Meaning | Shown as |
 |---|---|---|
-| Unlit | Flame on, no answer yet today, within her usual window | Outlined flame |
-| Lit | Answered today | Filled flame, time of answer |
-| Quiet | Past her tuned quiet threshold, no answer, no away | Outlined flame with a dot; quiet notice sent |
-| Away | Away mode active | Dashed flame, "until Sunday" |
+| Unlit | Light on, no answer yet today, within her usual window | Outlined light |
+| Lit | Answered today | Filled light, time of answer |
+| Quiet | Past her tuned quiet threshold, no answer, no away | Outlined light with a dot; quiet notice sent |
+| Away | Away mode active | Dashed light, "until Sunday" |
 | Paused | Member or family paused | Grey, "paused" |
-| No flame | Ordinary member | No flame drawn; appears in the thread only |
+| No light | Ordinary member | No light drawn; appears in the thread only |
 
 ## 2. Families
 
@@ -65,7 +65,7 @@ Anything from the member on any surface between arrival and the next arrival cou
 4. Translations for members whose language differs (§9).
 5. Post to the family thread as "[Member] answered": summary line, media, transcript behind a tap.
 6. If the answer references a contributor's item, notify that contributor ("Grandma answered your photo").
-7. Light the flame; cancel any pending repeat or quiet notice; if a quiet notice was sent, resolve it and notify whoever was told.
+7. Light the light; cancel any pending repeat or quiet notice; if a quiet notice was sent, resolve it and notify whoever was told.
 
 **Vela's replies to a kept-light member.** At most one warm acknowledgement per day, in the member's language, two sentences, at most one question; never medical advice; never continues into a conversation. If the member writes again the same day, the reply is a fixed sign-off or nothing. (Phase 0 prototype allows four turns; MVP allows one.)
 
@@ -90,10 +90,10 @@ Applies only to kept-light members.
 
 **Precision accounting.** Every quiet notice records an outcome: answered late, away, true concern (organiser confirms something was wrong), unknown. Precision = true concern ÷ notices. Published monthly.
 
-## 6. Consent and the flame
+## 6. Consent and the light
 
-- A flame is switched on for a member only after they agree. On a messenger surface, the first message asks: "Anna would like to keep a light on for you: every morning something from the family, and if you don't answer, she'll know to call. Tap 'Yes' or write 'no'." On the parent surface, it's a screen. For a member who set the flame on themselves, consent is implicit.
-- "Stop", "не надо", "停" or any refusal turns the flame off and pauses arrivals; the organiser is told, without judgement.
+- A light is switched on for a member only after they agree. On a messenger surface, the first message asks: "Anna would like to keep a light on for you: every morning something from the family, and if you don't answer, she'll know to call. Tap 'Yes' or write 'no'." On the parent surface, it's a screen. For a member who set the light on themselves, consent is implicit.
+- "Stop", "не надо", "停" or any refusal turns the light off and pauses arrivals; the organiser is told, without judgement.
 - **What the family sees.** Any kept-light member can ask in the chat "what does the family see" and gets: the summary lines of the last 7 days and the last weekly read. The parent surface has it as a button.
 - Nearby contacts consent once via a message from Vela on the organiser's behalf; until they say yes, they cannot be auto-asked, only called by the organiser directly.
 
@@ -132,7 +132,7 @@ Applies only to kept-light members.
 
 | Surface | Must | Must not |
 |---|---|---|
-| App (member) | Show flames and today's moment first; thread; queue; turns; settings for own flame; language; invite | Show a feed of everything; badge counts; anything that rewards frequent opening |
+| App (member) | Show lights and today's moment first; thread; queue; turns; settings for own light; language; invite | Show a feed of everything; badge counts; anything that rewards frequent opening |
 | Parent surface | One screen; the arrival; one big answer button; voice reply; call the organiser; "what the family sees"; "stop" | Menus, settings, anything that requires reading small text |
 | Kitchen-table mode | Cycle family photos when idle; wake to the arrival; tap anywhere to answer; large clock | Notifications, sounds beyond a gentle chime at the arrival hour |
 | Messenger | Arrival as one message; button where supported; accept any reply; commands "stop", "start", "what does the family see" in the member's language | Chat beyond the one acknowledgement; links to install anything |

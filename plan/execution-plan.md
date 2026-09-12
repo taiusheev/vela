@@ -24,7 +24,7 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 **Tech co-founder, week 1**
 - Update the survey intro and the recruitment posts for the "all families" framing.
 - Adjust the prototype for phase 0: the arrival can carry family content (the child sends a photo or voice note to the bot and it goes out with tomorrow's morning); the quiet notice goes to the child with the nearby contacts they named; away mode by keyword. Remove the founder-decides card except for AI flags.
-- Landing page: one page, the flame, the promise, a waitlist, two price points shown alternately. Domain and hosting on free tiers.
+- Landing page: one page, the light, the promise, a waitlist, two price points shown alternately. Domain and hosting on free tiers.
 - Weekly review template and a decisions log.
 
 **Founder, week 2**
@@ -51,7 +51,7 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 ## Phase 1: MVP (months 2–3)
 
 **Build** (tech co-founder, with a human technical co-founder if one has joined)
-- Family app (Expo): setup flow, the flame, the family thread, turns and prompts, queue for "whenever", quiet notice with nearby contacts, away mode, weekly read, subscription.
+- Family app (Expo): setup flow, the light, the family thread, turns and prompts, queue for "whenever", quiet notice with nearby contacts, away mode, weekly read, subscription.
 - Channel adapters: Telegram (from the prototype), WhatsApp Business API, LINE.
 - AI service with versioned prompts and logged outputs.
 - Admin view for the first months.
@@ -82,14 +82,14 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 
 The founder asked for these as the first MVP. They are built from the same material and get better with each week of phase 0.
 
-**Site** (week 1, tech co-founder): one page. The flame. "Vela keeps a light on for parents who live alone." Three lines on how it works. The parent's promise ("nothing to install, nothing to learn, say 'не надо' any time"). Waitlist with the two questions we most need answered (where does your parent live, which messenger does she use). Russian and English; Chinese in week 3.
+**Site** (week 1, tech co-founder): one page. The light. "Vela keeps a light on for parents who live alone." Three lines on how it works. The parent's promise ("nothing to install, nothing to learn, say 'не надо' any time"). Waitlist with the two questions we most need answered (where does your parent live, which messenger does she use). Russian and English; Chinese in week 3.
 
 **Deck** (draft week 1, final week 4, tech co-founder drafts, founder presents): ten slides.
 1. The unanswered call (the problem, in one story).
 2. 50 million parents alone, a worried child behind each (market).
 3. Everything built so far treats her as a patient (why incumbents fail, with the adoption and non-wear numbers).
 4. Vela: the family's daily thread, one moment a day, a safe place with no feed and no strangers; and a light kept on for whoever the family worries about (the product, one screen).
-5. The daily loop (arrival, answer, flame, quiet notice).
+5. The daily loop (arrival, answer, light, quiet notice).
 6. Closer and calmer: what makes it more than a group chat (turns, prompts, grandchildren, translation, story day) and what makes silence mean something.
 7. Why now (messengers everywhere, multilingual AI, super-aged crossover in Taiwan/Korea/Japan).
 8. Business model (free layer spreads, Vigil pays; comparables: Famileo, Snug, Docomo).

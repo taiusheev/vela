@@ -6,12 +6,12 @@
 
 1. **One card per person, regardless of volume.** Retro (ex-Instagram Stories lead) puts the whole week behind a single card; no public feed, no counts, no viral mechanics ([TechCrunch 2023](https://techcrunch.com/2023/07/07/retro-is-a-deeply-personal-photo-journaling-app-for-close-friends/), [Series A 2026](https://techcrunch.com/2026/08/28/friend-focused-photo-sharing-app-retro-snags-21m/)). Vela: the daily arrival is one card; a grandchild who sends five things and one who sends a heart occupy identical space.
 2. **Don't copy BeReal's timer.** The random-time, two-minute window creates dread; Locket copied daily prompts without a time constraint and caps friends at 20 ([Locket](https://apps.apple.com/us/app/locket-widget/id1600525061)). Vela: member-chosen arrival time, no countdown, no "you missed it" state.
-3. **Home-screen widget as the arrival surface.** Locket's value is a photo that appears on the home screen without opening the app. Vela ships a widget showing today's arrival and the flame; the app is for answering, not browsing.
+3. **Home-screen widget as the arrival surface.** Locket's value is a photo that appears on the home screen without opening the app. Vela ships a widget showing today's arrival and the light; the app is for answering, not browsing.
 4. **Onboarding starts with the relationship, not features.** Finch hatches the pet first; Headspace opens with a 30-second breathing exercise before any dashboard ([Raw.Studio](https://raw.studio/blog/how-headspace-designs-for-mindfulness/)). Vela: step 1 "Who is this for?", step 2 send her first arrival, step 3 invite one more person. Paywall never in onboarding.
 5. **Suggestions are the prompt.** Apple Journal surfaces prompts as cards, separates activity prompts from reflection prompts, and its empty state is one imperative ([Apple Newsroom](https://www.apple.com/newsroom/2023/12/apple-launches-journal-app-a-new-app-for-reflecting-on-everyday-moments/)). Vela: two prompt classes, about you and about the family.
 6. **Friction fatigue is real.** One Sec's gentle check-in decays into "intervention fatigue" by week four ([Blok](https://www.blok.so/resources/one-sec-app-review-does-adding-friction-actually-reduce-screen-time)). Vela: keep the ritual fixed, rotate the content type (photo, voice, question, story day).
 7. **Warm palette rules from Headspace:** no pure black or white, coloured shadows, rounded forms.
-8. **Forgiving streaks:** never reset progress; delay the next nudge ([Smashing](https://www.smashingmagazine.com/2026/02/building-empathy-centred-ux-framework-mental-health-apps/)). Vela: the flame is today's state, never a streak counter.
+8. **Forgiving streaks:** never reset progress; delay the next nudge ([Smashing](https://www.smashingmagazine.com/2026/02/building-empathy-centred-ux-framework-mental-health-apps/)). Vela: the light is today's state, never a streak counter.
 9. **Marco Polo's bar:** ten seconds to learn, two taps to the first video. Vela: two taps from notification to a sent answer.
 10. **Close the app.** After an answer, one confirmation and a large Done. No "while you're here" upsell.
 
@@ -47,13 +47,13 @@ Don't: swipe, long-press, pinch, hidden menus, pull-to-refresh, hold-to-record; 
 
 ## 4. Trust and dignity UI
 
-1. **Staged escalation, information only when needed.** Apple Check In: the partner sees a card; only after the expected time passes do they get details ([MacRumors](https://www.macrumors.com/guide/ios-17-safety-features/)). Vela: the family sees the flame; the organiser alone gets the quiet notice; nearby contacts appear inside the notice, never in the thread.
+1. **Staged escalation, information only when needed.** Apple Check In: the partner sees a card; only after the expected time passes do they get details ([MacRumors](https://www.macrumors.com/guide/ios-17-safety-features/)). Vela: the family sees the light; the organiser alone gets the quiet notice; nearby contacts appear inside the notice, never in the thread.
 2. **Snug's flow is the reference for the notice**, including the reassurance auto-message when a late check-in arrives ([Snug](https://www.snugsafe.com/how-snug-works-for-people-who-live-alone)). Vela: "Mom answered at 11:40. Everything's lit again."
 3. **What to avoid: Life360.** Arrive/leave alerts, location history, and the knowledge that someone can check create anxiety and resentment ([Michigan Daily](https://www.michigandaily.com/arts/digital-culture/safety-or-independence-life360-offers-neither/)). Vela shows answered / not yet, never where or when-last-seen.
-4. **Semantic colour, no red.** WHOOP's strict colour vocabulary, no warning icons or urgent language ([925 Studios](https://www.925studios.co/blog/whoop-design-breakdown)). Vela: two flame states; the notice uses ink on a sage-tinted card, never a red banner.
-5. **Name the state in words.** "Mom's flame is lit, she answered at 9:14." "Mom hasn't answered yet today." Never "missed", "inactive", "offline". Notice: "It's been quiet at Mom's today. She usually answers by 10. Want to call, or ask Aunt Val to look in?" Buttons: Call Mom · Ask Val · She's fine, I know why.
-6. **Give the kept-light member the same view.** Show her own flame and who saw her answer, so it reads as reciprocity, not surveillance.
-7. **No streaks, no scores.** The flame is binary and today-only.
+4. **Semantic colour, no red.** WHOOP's strict colour vocabulary, no warning icons or urgent language ([925 Studios](https://www.925studios.co/blog/whoop-design-breakdown)). Vela: two light states; the notice uses ink on a sage-tinted card, never a red banner.
+5. **Name the state in words.** "Mom's light is lit, she answered at 9:14." "Mom hasn't answered yet today." Never "missed", "inactive", "offline". Notice: "It's been quiet at Mom's today. She usually answers by 10. Want to call, or ask Aunt Val to look in?" Buttons: Call Mom · Ask Val · She's fine, I know why.
+6. **Give the kept-light member the same view.** Show her own light and who saw her answer, so it reads as reciprocity, not surveillance.
+7. **No streaks, no scores.** The light is binary and today-only.
 8. **Consent screen for the grandmother, in plain words:** "When you tap, your family sees your light. If you don't tap by evening, Anna gets a quiet note. You can turn this off any time." One toggle.
 
 ## 5. Voice-first patterns
@@ -71,8 +71,8 @@ Don't: swipe, long-press, pinch, hidden menus, pull-to-refresh, hold-to-record; 
 2. **Serif for the human voice, sans for the machine.** This split keeps the quiet notice from reading like a poem.
 3. **Light mode is the default for older adults** ([NN/g](https://www.nngroup.com/articles/dark-mode/)). Parent surface and kitchen-table mode: light only, optional warm night dim. Standard app: dark mode for the 20-year-old.
 4. **No pure black or white; warm neutrals.** Background off-white, cards white, ink #1b2430, blue-grey secondary text at sizes that keep 4.5:1.
-5. **Motion:** flame breathing glow 3–4 s at ≤ 4% amplitude; card fades 240 ms; no parallax, no bounce; Reduce Motion → static glow; never animate while a voice note plays.
-6. **Sound:** one soft two-note chime when the flame lights (opt-in), silence otherwise.
+5. **Motion:** light breathing glow 3–4 s at ≤ 4% amplitude; card fades 240 ms; no parallax, no bounce; Reduce Motion → static glow; never animate while a voice note plays.
+6. **Sound:** one soft two-note chime when the light lights (opt-in), silence otherwise.
 7. **Illustration vs photography:** family photos are the content; flat two-tone illustration only in empty states and onboarding; no stock photos of seniors anywhere.
 8. **Premium = restraint.** No badges, no red dots, one notification a day, store screenshots showing one calm screen each.
 
@@ -80,11 +80,11 @@ Don't: swipe, long-press, pinch, hidden menus, pull-to-refresh, hold-to-record; 
 
 1. **html.to.design free tier: 10 imports per 30 days**; PRO $12/mo annual ([docs](https://html.to.design/docs/pro-plan/)). Build each screen as its own page and import one at a time. Alternatives: htmltofigma.com, html2design.
 2. **What survives import:** auto-layout frames, editable text, fills, radii, shadows. Not: CSS animations, canvas, complex filters. Google Fonts import as text with the right family.
-3. **SVG import:** gradients and clip paths survive; text is outlined; masks, filters, patterns flatten or drop ([Vellum](https://getvellum.design/blog/svg-to-figma)). Draw the flame and icons natively in Figma.
+3. **SVG import:** gradients and clip paths survive; text is outlined; masks, filters, patterns flatten or drop ([Vellum](https://getvellum.design/blog/svg-to-figma)). Draw the light and icons natively in Figma.
 4. **Base kits:** Apple's [iOS and iPadOS 26](https://www.figma.com/community/file/1527721578857867021/ios-and-ipados-26); [Material 3 Design Kit](https://www.figma.com/community/file/1035203688168086460/material-3-design-kit).
 5. **Variables architecture:** Primitives (no modes) · Semantic/Color (Light, Dark) · Semantic/Scale (**Standard, Parent**: font size, target height, spacing, so one mode switch turns any screen into the parent surface) ([zeroheight](https://zeroheight.com/blog/figma-variables-and-design-tokens-part-one-variable-architecture/)). Name tokens as in code (`color.action.primary`, `size.target.min`).
-6. **File structure:** one design-system library (tokens, components, flame, labelled icons); product files per surface (App, Parent surface, Kitchen table, Widgets, Messenger cards); a Flows page per journey.
-7. **Components first:** ArrivalCard (photo/voice/question), Flame (lit/resting × standard/parent × reduce-motion), BigButton (48/64/88), VoiceRow (recording/preview/playback), NoticeCard, ReceiptChip ("Mom saw it ♥").
+6. **File structure:** one design-system library (tokens, components, light, labelled icons); product files per surface (App, Parent surface, Kitchen table, Widgets, Messenger cards); a Flows page per journey.
+7. **Components first:** ArrivalCard (photo/voice/question), Light (lit/resting × standard/parent × reduce-motion), BigButton (48/64/88), VoiceRow (recording/preview/playback), NoticeCard, ReceiptChip ("Mom saw it ♥").
 8. **Text styles** bound to the Scale variables: Body 17/22, Title 28/34, Display 34/44 for Standard/Parent.
 
 ## The fifteen rules Vela follows
@@ -92,8 +92,8 @@ Don't: swipe, long-press, pinch, hidden menus, pull-to-refresh, hold-to-record; 
 1. One card, one action, then close.
 2. Grandma needs no app; the app and tablet are upgrades.
 3. The receipt is the product: every tap becomes a named, timestamped "Mom saw it ♥" to the sender.
-4. Two flame states, no red, no numbers; state named in words; never a streak.
-5. Staged escalation: family sees the flame; the organiser gets the notice; contacts live inside the notice; a late answer auto-sends "all good".
+4. Two light states, no red, no numbers; state named in words; never a streak.
+5. Staged escalation: family sees the light; the organiser gets the notice; contacts live inside the notice; a late answer auto-sends "all good".
 6. Never show where or when-last-seen.
 7. Parent surface: 64 pt targets (88 pt primary), 22–24 pt body, 7:1 contrast, medium weight, one column, tap only, visible Back, light mode only.
 8. Amber is never text and never the only signal.
@@ -103,6 +103,6 @@ Don't: swipe, long-press, pinch, hidden menus, pull-to-refresh, hold-to-record; 
 12. Onboarding = add the person, send the first arrival, invite one more; under 90 seconds; no paywall.
 13. Rotate content, keep the ritual.
 14. Motion is a breath, not a bounce; one optional soft chime.
-15. Build the design system with a Standard/Parent scale mode; import screens one at a time; draw the flame natively.
+15. Build the design system with a Standard/Parent scale mode; import screens one at a time; draw the light natively.
 
 Caveats: Apple's HIG page did not fetch (JS-rendered); Dynamic Type sizes and WCAG ratios are from published specs; Aura's help page returned 403 (wording from the snippet); Tinybeans/Cocoon notes are prior knowledge.

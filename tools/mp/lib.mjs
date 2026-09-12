@@ -1,11 +1,11 @@
 // Shared helpers for the master-plan Draw.io generator.
 
 export const C = {
-  ink: "#1b2430", ink2: "#4a5566", ink3: "#7d8794",
-  rule: "#d9dee6", soft: "#f6f7f9", white: "#ffffff",
-  green: "#2f7d5b", greenSoft: "#e3f1ea",
-  amber: "#e0a23a", amberSoft: "#fbf0d8",
-  red: "#b1413a", redSoft: "#f6e3e1",
+  ink: "#1E1A16", ink2: "#5A534B", ink3: "#7A7267",
+  rule: "#E8E1D6", soft: "#F3EDE4", white: "#FFFFFF",
+  green: "#1F5C66", greenSoft: "#E1EEF0",
+  amber: "#E9A23B", amberSoft: "#FBEBCF",
+  red: "#B3261E", redSoft: "#F6E3E1",
   blue: "#3b6ea5", blueSoft: "#e6eef8",
 };
 const base = "rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=10;spacingRight=8;spacingTop=6;fontSize=11;";

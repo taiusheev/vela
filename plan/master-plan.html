@@ -1,28 +1,28 @@
 <title>Vela Master Plan</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
-  --bg:#f6f7f9; --surface:#ffffff; --ink:#1b2430; --ink-2:#4a5566; --ink-3:#7d8794;
-  --rule:#d9dee6; --rule-soft:#e8ecf1;
-  --fine:#2f7d5b; --fine-soft:#e3f1ea; --warn:#b8741c; --warn-soft:#f7ecd9; --bad:#b1413a; --bad-soft:#f6e3e1;
-  --accent:#2f7d5b; --accent-ink:#215a41; --flame:#e0a23a; --flame-soft:#fbf0d8;
-  --serif:"Newsreader",Georgia,"Times New Roman",serif;
-  --sans:"Public Sans","Helvetica Neue",Arial,sans-serif;
+  --bg:#FBF7F0; --surface:#FFFFFF; --ink:#1E1A16; --ink-2:#5A534B; --ink-3:#7A7267;
+  --rule:#E8E1D6; --rule-soft:#F3EDE4;
+  --fine:#1F5C66; --fine-soft:#E1EEF0; --warn:#C27612; --warn-soft:#FBEBCF; --bad:#B3261E; --bad-soft:#F6E3E1;
+  --accent:#1F5C66; --accent-ink:#1F5C66; --light:#E9A23B; --light-soft:#FBEBCF;
+  --serif:"Literata",Georgia,"Times New Roman",serif;
+  --sans:"Inter","Helvetica Neue",Arial,sans-serif;
   --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#131920; --surface:#1a222c; --ink:#e6eaf0; --ink-2:#aeb7c4; --ink-3:#7f8a99;
-    --rule:#2c3643; --rule-soft:#232c37;
-    --fine:#5cb88f; --fine-soft:#1c3129; --warn:#d9a052; --warn-soft:#3a2d18; --bad:#d9736b; --bad-soft:#3b2220;
-    --accent:#5cb88f; --accent-ink:#8ed3b3; --flame:#e8b04f; --flame-soft:#3a2f18;
+    --bg:#1B1714; --surface:#26211D; --ink:#F3EDE4; --ink-2:#B9B0A5; --ink-3:#8F867B;
+    --rule:#3A332C; --rule-soft:#302A25;
+    --fine:#7FC3CC; --fine-soft:#17383E; --warn:#F0B65A; --warn-soft:#3B2E19; --bad:#F28B82; --bad-soft:#3B2220;
+    --accent:#7FC3CC; --accent-ink:#9AD3DA; --light:#E9A23B; --light-soft:#3B2E19;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#131920; --surface:#1a222c; --ink:#e6eaf0; --ink-2:#aeb7c4; --ink-3:#7f8a99;
-  --rule:#2c3643; --rule-soft:#232c37;
-  --fine:#5cb88f; --fine-soft:#1c3129; --warn:#d9a052; --warn-soft:#3a2d18; --bad:#d9736b; --bad-soft:#3b2220;
-  --accent:#5cb88f; --accent-ink:#8ed3b3; --flame:#e8b04f; --flame-soft:#3a2f18;
+  --bg:#1B1714; --surface:#26211D; --ink:#F3EDE4; --ink-2:#B9B0A5; --ink-3:#8F867B;
+  --rule:#3A332C; --rule-soft:#302A25;
+  --fine:#7FC3CC; --fine-soft:#17383E; --warn:#F0B65A; --warn-soft:#3B2E19; --bad:#F28B82; --bad-soft:#3B2220;
+  --accent:#7FC3CC; --accent-ink:#9AD3DA; --light:#E9A23B; --light-soft:#3B2E19;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6}
@@ -39,7 +39,7 @@ nav.toc li a{display:block;padding:5px 0 5px 14px;color:var(--ink-2);text-decora
 nav.toc li a:hover{color:var(--ink);border-left-color:var(--accent)}
 nav.toc .gh{margin-top:18px;font-size:12px;color:var(--ink-3)}
 main{max-width:78ch}
-.flame{display:inline-block;width:12px;height:12px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:var(--flame);box-shadow:0 0 0 4px var(--flame-soft)}
+.light{display:inline-block;width:12px;height:16px;border-radius:4px;border:2px solid var(--ink);background:var(--light-soft);position:relative;vertical-align:-2px}.light::after{content:"";position:absolute;left:50%;top:3px;width:5px;height:4px;border-radius:50%;background:var(--light);transform:translateX(-50%)}
 header.memo h1{font-family:var(--serif);font-weight:500;font-size:46px;line-height:1.06;letter-spacing:-.015em;margin:0 0 12px;text-wrap:balance}
 header.memo .lede{font-family:var(--serif);font-size:21px;line-height:1.4;color:var(--ink-2);margin:0 0 18px;text-wrap:pretty}
 .status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 6px}
@@ -58,7 +58,7 @@ th{text-align:left;font-weight:600;font-size:12px;text-transform:uppercase;lette
 td{padding:9px 10px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
 td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13.5px}
 td.src{color:var(--ink-3);font-size:12.5px;white-space:nowrap}
-.claim{font-family:var(--serif);font-size:22px;line-height:1.35;margin:22px 0;padding-left:18px;border-left:3px solid var(--flame);text-wrap:balance}
+.claim{font-family:var(--serif);font-size:22px;line-height:1.35;margin:22px 0;padding-left:18px;border-left:3px solid var(--light);text-wrap:balance}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:14px 0}
 @media (max-width:640px){.two{grid-template-columns:1fr}}
 .card{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px 18px}
@@ -66,9 +66,9 @@ td.src{color:var(--ink-3);font-size:12.5px;white-space:nowrap}
 .card ul{margin:0;padding-left:18px;font-size:14.5px}
 .card li{margin-bottom:4px}
 .card.free{border-top:3px solid var(--rule)}
-.card.paid{border-top:3px solid var(--flame)}
+.card.paid{border-top:3px solid var(--light)}
 .tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--rule-soft);color:var(--ink-2)}
-.tag.f{background:var(--flame-soft);color:var(--ink)}
+.tag.f{background:var(--light-soft);color:var(--ink)}
 .tag.g{background:var(--fine-soft);color:var(--accent-ink)}
 .y{color:var(--fine);font-weight:500}.n{color:var(--bad)}.p{color:var(--warn)}
 ol.truths{padding-left:0;list-style:none;counter-reset:t;margin:0}
@@ -105,7 +105,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
 
 <div class="wrap">
 <nav class="toc" aria-label="Sections">
-  <p class="brand"><span class="flame" aria-hidden="true"></span>Vela</p>
+  <p class="brand"><span class="light" aria-hidden="true"></span>Vela</p>
   <p class="meta">Master plan · living document</p>
   <ol>
     <li><a href="#now">Where we are</a></li>
@@ -211,42 +211,42 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
   <p class="sub">One app for the whole family. Two promises: closer, and calmer.</p>
 
   <figure>
-    <svg viewBox="0 0 720 300" role="img" aria-label="Three generations around one family thread; the eldest and the student abroad carry a flame">
+    <svg viewBox="0 0 720 300" role="img" aria-label="Three generations around one family thread; the eldest and the student abroad carry a light">
       <defs>
         <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink-3)"/></marker>
       </defs>
       <rect x="220" y="110" width="280" height="80" rx="10" fill="var(--fine-soft)" stroke="var(--fine)"/>
-      <text x="360" y="143" text-anchor="middle" font-family="Newsreader,Georgia,serif" font-size="20" fill="var(--ink)">The family's daily thread</text>
-      <text x="360" y="167" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="12" fill="var(--ink-2)">one moment a day · no feed · no strangers · free</text>
+      <text x="360" y="143" text-anchor="middle" font-family="Literata,Georgia,serif" font-size="20" fill="var(--ink)">The family's daily thread</text>
+      <text x="360" y="167" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="12" fill="var(--ink-2)">one moment a day · no feed · no strangers · free</text>
 
       <g>
-        <circle cx="90" cy="70" r="34" fill="var(--flame-soft)" stroke="var(--flame)" stroke-width="2"/>
-        <text x="90" y="66" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Grandmother</text>
-        <text x="90" y="82" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-2)">78, lives alone</text>
-        <text x="90" y="124" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-3)">joins by messenger · flame on</text>
+        <circle cx="90" cy="70" r="34" fill="var(--light-soft)" stroke="var(--light)" stroke-width="2"/>
+        <text x="90" y="66" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Grandmother</text>
+        <text x="90" y="82" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" fill="var(--ink-2)">78, lives alone</text>
+        <text x="90" y="124" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" fill="var(--ink-3)">joins by messenger · light on</text>
         <line x1="124" y1="86" x2="220" y2="132" stroke="var(--ink-3)" stroke-width="1.5" marker-end="url(#arr)"/>
       </g>
       <g>
         <circle cx="360" cy="252" r="34" fill="var(--surface)" stroke="var(--ink-3)" stroke-width="1.5"/>
-        <text x="360" y="248" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Parent</text>
-        <text x="360" y="264" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-2)">45, organiser, pays</text>
+        <text x="360" y="248" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Parent</text>
+        <text x="360" y="264" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" fill="var(--ink-2)">45, organiser, pays</text>
         <line x1="360" y1="218" x2="360" y2="196" stroke="var(--ink-3)" stroke-width="1.5" marker-end="url(#arr)"/>
       </g>
       <g>
-        <circle cx="630" cy="70" r="34" fill="var(--flame-soft)" stroke="var(--flame)" stroke-width="2"/>
-        <text x="630" y="66" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Student</text>
-        <text x="630" y="82" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-2)">20, abroad</text>
-        <text x="630" y="124" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-3)">best contributor · own flame, opt-in</text>
+        <circle cx="630" cy="70" r="34" fill="var(--light-soft)" stroke="var(--light)" stroke-width="2"/>
+        <text x="630" y="66" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Student</text>
+        <text x="630" y="82" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" fill="var(--ink-2)">20, abroad</text>
+        <text x="630" y="124" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" fill="var(--ink-3)">best contributor · own light, opt-in</text>
         <line x1="596" y1="86" x2="500" y2="132" stroke="var(--ink-3)" stroke-width="1.5" marker-end="url(#arr)"/>
       </g>
       <g>
         <circle cx="90" cy="252" r="26" fill="var(--surface)" stroke="var(--ink-3)" stroke-width="1.5"/>
-        <text x="90" y="256" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" font-weight="600" fill="var(--ink)">Neighbour</text>
-        <text x="90" y="292" text-anchor="middle" font-family="Public Sans,Arial,sans-serif" font-size="11" fill="var(--ink-3)">called only when the light stays dark</text>
+        <text x="90" y="256" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="var(--ink)">Neighbour</text>
+        <text x="90" y="292" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" fill="var(--ink-3)">called only when the light stays dark</text>
         <line x1="116" y1="246" x2="220" y2="176" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="4 4"/>
       </g>
     </svg>
-    <figcaption>The unit is the family, not a pair. Anyone the family worries about can carry a flame; it is opt-in and visible to them.</figcaption>
+    <figcaption>The unit is the family, not a pair. Anyone the family worries about can carry a light; it is opt-in and visible to them.</figcaption>
   </figure>
 
   <div class="two">
@@ -262,7 +262,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
       </ul></div>
     <div class="card paid"><span class="tag f">Calmer · Vela Light · paid</span><h4 style="margin-top:8px">A light kept on for whoever the family worries about</h4>
       <ul>
-        <li><b>The flame.</b> Her daily answer lights it on the family's home screen.</li>
+        <li><b>The light.</b> Her daily answer lights it on the family's home screen.</li>
         <li><b>Quiet notice</b> to the organiser after her usual window, never before +4 h, with the nearby contacts one tap away.</li>
         <li><b>Away mode</b>: "уезжаю к сестре до воскресенья" pauses everything.</li>
         <li><b>Weekly read</b>: how she really is, in neutral words, from her own replies.</li>
@@ -277,17 +277,17 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
 flowchart LR
   Q["Anyone queues something<br/>any time, any member"] --> A["One arrival per person<br/>at their hour"]
   A --> R["One easy answer<br/>tap · heart · voice · photo"]
-  R --> T["Thread updates,<br/>translated · flame lights"]
+  R --> T["Thread updates,<br/>translated · light lights"]
   R -. silence, kept-light member only .-> N["Gentle repeat<br/>+2.5 h"]
   N --> Qn["Quiet notice to organiser<br/>+5 h, tuned · nearby contacts"]
   Qn -. late answer .-> T
     </pre>
-    <figcaption>Silence only matters for members with a flame. A late answer closes everything and tells everyone it's fine.</figcaption>
+    <figcaption>Silence only matters for members with a light. A late answer closes everything and tells everyone it's fine.</figcaption>
   </figure>
 
   <p class="eyebrow">What the organiser sees on a normal day</p>
   <div class="note" aria-label="Example daily note">
-    <div class="hd"><span class="flame" aria-hidden="true"></span>Mom · today<span class="t">08:12</span></div>
+    <div class="hd"><span class="light" aria-hidden="true"></span>Mom · today<span class="t">08:12</span></div>
     <div class="line">Answered Mia's photo by voice. Slept fine, off to the garden today. Nothing to do.</div>
   </div>
 
@@ -295,7 +295,7 @@ flowchart LR
   <div class="tablewrap"><table>
     <thead><tr><th>Surface</th><th>For whom</th><th>What it is</th></tr></thead>
     <tbody>
-      <tr><td><b>The app</b> (iOS, Android)</td><td>Every member who can install</td><td>Flames and today's moment; the thread; the queue; turns and prompts; story archive; one's own flame settings</td></tr>
+      <tr><td><b>The app</b> (iOS, Android)</td><td>Every member who can install</td><td>Lights and today's moment; the thread; the queue; turns and prompts; story archive; one's own light settings</td></tr>
       <tr><td><b>Parent surface</b> (same app, simplified)</td><td>The eldest, when a child installs it on a visit</td><td>One screen: today's arrival, big buttons, voice-first reply, one-tap video call, the photo wall; nothing else</td></tr>
       <tr><td><b>Kitchen-table mode</b></td><td>An old phone or tablet on her table</td><td>The parent surface as a living frame; she taps once a day; she already owns the device</td></tr>
       <tr><td><b>Messenger</b> (Telegram, MAX, WhatsApp, LINE, Viber)</td><td>The eldest who won't install; casual members</td><td>Adapters behind one interface; the prototype bot is the first</td></tr>
@@ -322,7 +322,7 @@ flowchart LR
   <ul>
     <li><b>Symmetry.</b> A kept-light member sees what the family sees about her, and can say "не надо."</li>
     <li><b>Minimum data.</b> Names, forms of address, cities, hours, 30 days of answers, weekly reads, the archive the family chose to keep.</li>
-    <li><b>Consent everywhere.</b> Flames are opt-in; nearby contacts agree once.</li>
+    <li><b>Consent everywhere.</b> Lights are opt-in; nearby contacts agree once.</li>
     <li><b>No ads, ever. No selling data, ever.</b> Said on the landing page.</li>
     <li><b>Honest language.</b> Not an emergency service. "You'll know within hours, and you'll know who to call."</li>
   </ul>
@@ -362,7 +362,7 @@ flowchart LR
   <div class="two">
     <div class="card"><h4>Principles that shape the code</h4>
       <ul>
-        <li><b>The flame lights on the raw answer, before any AI runs.</b> Nothing on the safety path depends on a model.</li>
+        <li><b>The light lights on the raw answer, before any AI runs.</b> Nothing on the safety path depends on a model.</li>
         <li><b>One outbound gateway</b> enforces the notification budget and idempotency; the anti-addiction promise is code, not discipline.</li>
         <li><b>Arrivals are unique per member per day</b> in the database, so double sends are impossible even if two crons overlap.</li>
         <li><b>Adapters are pure translation layers</b>; the composer and the ladder never know which messenger they're talking to.</li>
@@ -372,7 +372,7 @@ flowchart LR
       <ul>
         <li>Messenger down: retry 30 min, then tell the organiser once; the ladder does not fire from our own outage.</li>
         <li>Our worker down at the arrival minute: the next tick catches up; late arrivals carry "sorry this is late".</li>
-        <li>AI down: the flame still lights; understanding runs when the queue drains.</li>
+        <li>AI down: the light still lights; understanding runs when the queue drains.</li>
         <li>Wrong time zone: confirmed by the first three answer times; a 3-hour mismatch triggers a check.</li>
         <li>A kept-light member dies: any member marks it; every schedule stops within the hour; no automated message ever again.</li>
       </ul></div>
@@ -411,7 +411,7 @@ flowchart LR
     <thead><tr><th>Tier</th><th>Price</th><th>What's in it</th><th>Why</th></tr></thead>
     <tbody>
       <tr><td><b>Vela</b></td><td class="num">Free</td><td>Daily moment, thread, turns, prompts, contributors, translation, story day</td><td>Contributors are the growth engine; ~8 relatives per paying family at Famileo</td></tr>
-      <tr><td><b>Vela Light</b></td><td class="num">$9.99/mo or $79/yr per kept-light member; +50% for a second</td><td>Flame, quiet notices, nearby contacts, away mode, weekly read, memory, archive export, drift</td><td>People pay for the meaning of silence; Snug's $19.99 tier sells exactly this</td></tr>
+      <tr><td><b>Vela Light</b></td><td class="num">$9.99/mo or $79/yr per kept-light member; +50% for a second</td><td>Light, quiet notices, nearby contacts, away mode, weekly read, memory, archive export, drift</td><td>People pay for the meaning of silence; Snug's $19.99 tier sells exactly this</td></tr>
     </tbody>
   </table></div>
   <div class="tablewrap"><table>
@@ -471,7 +471,7 @@ gantt
     <thead><tr><th>Phase</th><th>Ships</th><th>Families</th><th>Exit test</th></tr></thead>
     <tbody>
       <tr><td><b>0 · Prove the loop</b><br><span class="tag g">now</span></td><td>No app. Eldest via the Telegram prototype; family in a Telegram group; each family with an under-30 member; weekly read written by hand</td><td class="num">10–20 paying $15</td><td>Answer rate &gt; 85%; family-content days &gt; 30% by week two; ≥ 4 families paying; parents not refusing</td></tr>
-      <tr><td><b>1 · MVP</b></td><td>The app: setup, flames, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light; Telegram + WhatsApp + LINE</td><td class="num">100</td><td>Conversion &gt; 25%; D30 &gt; 85%; answer rate &gt; 85%; members per family ≥ 5</td></tr>
+      <tr><td><b>1 · MVP</b></td><td>The app: setup, lights, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light; Telegram + WhatsApp + LINE</td><td class="num">100</td><td>Conversion &gt; 25%; D30 &gt; 85%; answer rate &gt; 85%; members per family ≥ 5</td></tr>
       <tr><td><b>2 · The bridge</b></td><td>Parent surface, kitchen-table mode, grandchildren tools, translation both ways, story day and archive, memory, MAX and Viber, referral loop; Taiwan on LINE</td><td class="num">1,000</td><td>Contributors ≥ 3; family-content days &gt; 60%; 2–4 min/day; Sean Ellis &gt; 40%</td></tr>
       <tr><td><b>3 · The read</b></td><td>Drift with published precision; voice line; second-member plans; first channel partner</td><td class="num">10,000</td><td>Read trusted and paid; a partner signed or rejected with reasons; seed round on evidence</td></tr>
     </tbody>
@@ -515,7 +515,7 @@ gantt
     <tbody>
       <tr><td>The family goes quiet after week three, like every group chat</td><td>Turns, prompts from their own words, the under-30 contributor, the Vela fallback; family-content days reviewed weekly as a bug when they drop</td></tr>
       <tr><td>The eldest feels watched</td><td>Symmetry, "не надо," story day, everything arrives from people; ask her directly at week two</td></tr>
-      <tr><td>The young see it as their parents' app</td><td>The closeness promise is theirs; own flame on their terms; tested with under-30s in phase 0</td></tr>
+      <tr><td>The young see it as their parents' app</td><td>The closeness promise is theirs; own light on their terms; tested with under-30s in phase 0</td></tr>
       <tr><td>We become a free messenger with 1% conversion</td><td>Free layer is one moment a day, not chat; paid layer is silence semantics; move the line if conversion &lt; 25% at 90 days</td></tr>
       <tr><td>False quiet notices erode trust</td><td>Per-person tuning, away mode, never before +4 h, published precision, notice as information not alarm</td></tr>
       <tr><td>Messenger platform risk</td><td>Adapters; never single-channel in a market; the app and the voice line as floors</td></tr>
@@ -540,6 +540,9 @@ gantt
   <div class="dec"><span class="d">2026-09-12</span><span><b>Phase 0 before the app.</b> Prove the loop with the prototype and 10–20 paying three-generation families.</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>English first.</b> All copy, wireframes, bot defaults, and documents are authored in English; Russian and Chinese are localisations.</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>This page's checklist is the one task tracker.</b> Asana CSV kept as an optional export; Trello dropped. Draw.io for diagrams, Figma for wireframes, Gource for the repo history.</span></div>
+  <div class="dec"><span class="d">2026-09-12</span><span><b>Interaction-first product.</b> Every arrival is an ask from a person (a question, two photos, a voice note, a word to teach, a story); her answer is a post the family replies to; she hears the replies next morning; "I'm fine" is the fallback. See product/04-interaction-model.md.</span></div>
+  <div class="dec"><span class="d">2026-09-12</span><span><b>Identity chosen from research, not from the old logo.</b> Candle &amp; Ink: cream #FBF7F0, charcoal #1E1A16, amber light #E9A23B (never as text), teal actions #1F5C66; Literata + Inter (Cyrillic and Greek covered); the mark is a window with a light on. See design/research-identity.md and design/design-system.md.</span></div>
+  <div class="dec"><span class="d">2026-09-12</span><span><b>Name risk recorded.</b> "Vela" collides with vela.family (a family-calendar app in beta) and a former eldercare app, and means "idle" in Hindi slang. Ship as "Vela Light", clear the mark in EUIPO/WIPO/Rospatent/TIPO before it is final, prepare one backup name. Founder to decide.</span></div>
 </section>
 
 <section id="open">
@@ -598,7 +601,7 @@ gantt
       {id:"w1-parent-mock", who:"founder", t:"Show your parent a mock of the morning arrival; write down her exact words"},
       {id:"w1-survey-update", who:"me", t:"Update survey intro and recruitment posts for the all-families framing"},
       {id:"w1-proto", who:"me", t:"Prototype changes for phase 0: family content in the arrival, quiet notice to the child with nearby contacts, away mode by keyword"},
-      {id:"w1-landing", who:"me", t:"Landing page: the flame, the promise, waitlist with two questions, two price points shown alternately"},
+      {id:"w1-landing", who:"me", t:"Landing page: the light, the promise, waitlist with two questions, two price points shown alternately"},
       {id:"w1-review", who:"me", t:"Weekly review template and decisions log in the repo"}
     ]},
     {w:"Week 2 · interviews, close pilot families", items:[

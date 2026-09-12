@@ -42,7 +42,7 @@ Cron (every 5 min) ──▶ Scheduler: SELECT members WHERE next_arrival_at <= 
 Channel webhook (answer) ──▶ API: adapter.parse() → answers.insert → Queue: understand(answer_id)
                                         │
                                         ▼
-                         AI worker: transcribe → understand → translate → flame.light → thread.post
+                         AI worker: transcribe → understand → translate → light.light → thread.post
                                         │                        │
                                         │                        └──▶ flag? → notice to organiser
                                         ▼
@@ -57,8 +57,8 @@ Every arrow writes an event. The KPI job reads events, never the live tables.
 
 - `members.next_arrival_at` is stored in UTC, recomputed after each send from the member's `arrival_hour` and IANA time zone (DST-safe via the tz database in Workers).
 - Due arrivals: `next_arrival_at <= now()` and no `arrivals` row for `(member_id, local_day)`. The `UNIQUE(member_id, day)` constraint makes double sends impossible even if two crons overlap.
-- Repeats: `arrivals` with `sent_at <= now() - 2.5h`, `repeated_at IS NULL`, no answer, flame on, not away.
-- Quiet notices: `arrivals` with `sent_at <= now() - T_quiet(member)`, no answer, flame on, not away, no open `quiet_events` row.
+- Repeats: `arrivals` with `sent_at <= now() - 2.5h`, `repeated_at IS NULL`, no answer, light on, not away.
+- Quiet notices: `arrivals` with `sent_at <= now() - T_quiet(member)`, no answer, light on, not away, no open `quiet_events` row.
 - Turn prompts: members whose turn is tomorrow and local time is 19:00 ± 5 min.
 - Weekly reads: kept-light members whose local time is Sunday 18:00 ± 5 min and no read for this week.
 - Queue messages carry `{type, member_id, day}`; consumers re-check state before acting (the world may have changed in the 5 minutes since enqueue).
@@ -139,7 +139,7 @@ The schema is drawn in `design/diagrams/database.drawio`. Points that matter bey
 - **Encryption.** TLS everywhere; Postgres and R2 encrypted at rest by the providers; media URLs are signed and expire in 15 minutes.
 - **Secrets.** Worker secrets only; no keys in the repo; adapters verify webhook signatures or secret tokens.
 - **Minimum data.** No health records, no location, no contact scraping. The AI sees the answer, the last three summaries, and the profile; it never sees the whole thread.
-- **Consent records.** `members.flame_consented_at`, `nearby_contacts.consented_at`, and the event that carried the consent text.
+- **Consent records.** `members.light_consented_at`, `nearby_contacts.consented_at`, and the event that carried the consent text.
 - **Deletion.** Family deletion cascades within 24 h; member `left` after 30 days; answers after 30 days; the archive only if kept. A deletion is an event with a hash of what was deleted, so we can prove it happened without keeping it.
 - **Access.** Admin view gated by a short allow-list; every admin read of a family is logged as an event visible to the organiser on request.
 - **What we never build.** Location tracking, camera or microphone monitoring, contact-list upload, advertising identifiers.
@@ -151,12 +151,12 @@ The schema is drawn in `design/diagrams/database.drawio`. Points that matter bey
 | Messenger API down (Telegram throttled, WhatsApp outage) | Arrival not delivered | Gateway retries 3× over 30 min; if still failing, the arrival is marked undelivered, the organiser is told once ("we couldn't reach Mom on Telegram today"), the ladder does not fire (no false quiet notice from our own outage) |
 | Our Worker down at the arrival minute | Arrival late | Cron catches up on the next tick; `UNIQUE(member_id, day)` prevents doubles; arrivals more than 3 h late are sent with a note ("sorry this is late") |
 | Postgres unreachable | Everything pauses | Workers return 503 to webhooks (channels retry); cron ticks skip; alert to admin |
-| AI provider down | Answers not understood | Answer still lights the flame immediately (flame lighting never depends on the AI); understanding runs when the queue drains; the family sees "Mom answered" with the media |
+| AI provider down | Answers not understood | Answer still lights the light immediately (light lighting never depends on the AI); understanding runs when the queue drains; the family sees "Mom answered" with the media |
 | Duplicate webhook delivery | Duplicate answer | `answers.external_id` unique per channel |
 | Member's phone changes number | Channel link dead | Detected on `blocked`/`unreachable` events; organiser told; re-invite flow |
 | Quiet notice fires while member is asleep (wrong tz) | False notice | Tz is set from the city at onboarding and confirmed by the first three answer times; a mismatch > 3 h triggers a check with the organiser |
 
-Rule that follows from the table: **the flame lights on the raw answer, before any AI runs.** Nothing on the safety path depends on the model.
+Rule that follows from the table: **the light lights on the raw answer, before any AI runs.** Nothing on the safety path depends on the model.
 
 ## 10. Environments and delivery
 

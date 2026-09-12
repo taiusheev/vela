@@ -25,7 +25,7 @@ export function plan() {
     y += 410;
     p.table(40, y, [{ w: 170, title: "Phase" }, { w: 560, title: "Ships" }, { w: 130, title: "Families" }, { w: 460, title: "Exit test" }], [
       [{ label: "0 · Prove the loop", style: S.tdGreen }, "No app. Eldest via the Telegram prototype; family in a Telegram group with Vela; each family with an under-30 member; weekly read written by hand", "10–20 paying $15", "Answer rate > 85%; family-content days > 30% by week two; ≥ 4 families paying; parents not refusing"],
-      ["1 · MVP", "The app: setup, flames, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light subscription; Telegram + WhatsApp + LINE adapters; admin view", "100", "Light conversion > 25%; D30 > 85%; answer rate > 85%; members per family ≥ 5"],
+      ["1 · MVP", "The app: setup, lights, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light subscription; Telegram + WhatsApp + LINE adapters; admin view", "100", "Light conversion > 25%; D30 > 85%; answer rate > 85%; members per family ≥ 5"],
       ["2 · The bridge", "Parent surface and kitchen-table mode; grandchildren tools; translation both ways; story day and archive; memory; MAX and Viber; referral loop; Taiwan on LINE; first customer-facing hire", "1,000", "Contributors ≥ 3; family-content days > 60%; 2–4 minutes per day; Sean Ellis > 40%"],
       ["3 · The read", "Drift with published precision; voice/SMS line; second kept-light member plans; first channel partner (telco or remittance app); insurer conversation with precision numbers", "10,000", "The read is trusted and paid; a partner signed or rejected with reasons; a seed round on evidence"],
     ]);
@@ -64,7 +64,7 @@ export function plan() {
     const p = new Page("7.3 · Phases 1–3 in detail");
     let y = p.title("What each phase builds, and what it must prove", "Scope is cut from what phase 0 proved; nothing here is sacred except the exit tests.");
     y = p.table(40, y, [{ w: 130, title: "Phase" }, { w: 420, title: "Build (co-founder)" }, { w: 420, title: "Do (founder)" }, { w: 350, title: "Prove" }], [
-      [{ label: "1 · MVP · months 2–3", style: S.tdGreen }, "Expo app: setup, flames, thread, queue, turns, prompts, quiet notice with nearby contacts, away mode, weekly read, Light via Stripe · adapters: Telegram (from the prototype), WhatsApp, LINE · AI service with versioned prompts and logging · admin view · migrations, CI, staging", "Convert phase-0 families to the app; recruit toward 100 through referrals (two introductions per paying family); pricing test $9.99 vs $79/yr vs $14.99; ten more interviews with families who declined; Taiwan groundwork (five conversations); if ikigai says yes, the batch; if not, two more programmes with phase-0 data", "Conversion > 25%; D30 > 85%; answer rate > 85%; members per family ≥ 5"],
+      [{ label: "1 · MVP · months 2–3", style: S.tdGreen }, "Expo app: setup, lights, thread, queue, turns, prompts, quiet notice with nearby contacts, away mode, weekly read, Light via Stripe · adapters: Telegram (from the prototype), WhatsApp, LINE · AI service with versioned prompts and logging · admin view · migrations, CI, staging", "Convert phase-0 families to the app; recruit toward 100 through referrals (two introductions per paying family); pricing test $9.99 vs $79/yr vs $14.99; ten more interviews with families who declined; Taiwan groundwork (five conversations); if ikigai says yes, the batch; if not, two more programmes with phase-0 data", "Conversion > 25%; D30 > 85%; answer rate > 85%; members per family ≥ 5"],
       ["2 · The bridge · months 4–6", "Parent surface and kitchen-table mode; grandchildren tools (draw, record with a parent's phone); translation both ways; story day and archive (PDF export); memory and reminders; MAX and Viber adapters; referral loop in the app; Traditional Chinese app; feature flags", "Taiwan launch on LINE; first hire: a customer-facing person who speaks the languages of the first 1,000 families; community; onboarding calls", "1,000 families; contributors ≥ 3; family-content days > 60%; 2–4 min/day; Sean Ellis > 40%"],
       [{ label: "3 · The read · months 7–12", style: S.tdAmber }, "Drift with published precision; voice/SMS line for parents without smartphones; second kept-light member plans; in-app purchases (RevenueCat); data-residency review for a Russian launch; eval set at scale", "First B2B2C conversation with a telco or remittance app; insurer conversation in Germany or Japan with precision numbers; seed round on evidence; second engineer", "10,000 families; the read trusted and paid; a partner signed or rejected with reasons"],
     ]);
@@ -85,7 +85,7 @@ export function plan() {
       ["Under-30 member in family", "Is “closer” landing with the young?", { label: "60% of families", style: S.tdGreen }, "birth_year where given; else asked at onboarding"],
       ["Quiet notices per member per month; share true", "Precision, published monthly", { label: "< 2; > 50%", style: S.tdAmber }, "quiet_events count; outcome = true_concern ÷ notices"],
       ["Light conversion after trial; D90 retention", "The business", { label: "> 25%; > 80%", style: S.tdAmber }, "subscriptions; cohort by trial start"],
-      ["“Stop” rate among kept-light members", "Dignity", { label: "< 5%", style: S.tdGreen }, "flame off by refusal ÷ flames on"],
+      ["“Stop” rate among kept-light members", "Dignity", { label: "< 5%", style: S.tdGreen }, "light off by refusal ÷ lights on"],
       ["Minutes in app per member per day", "The anti-addiction promise", { label: "2–4", style: S.tdGreen }, "app sessions; we want this low and steady"],
       ["“If Vela stopped tomorrow…” very disappointed", "Product-market fit (Sean Ellis)", { label: "> 40%", style: S.tdAmber }, "asked at day 14 and day 60 to organisers and to under-30 members"],
     ]);
@@ -101,7 +101,7 @@ export function plan() {
     p.table(40, y, [{ w: 340, title: "Risk" }, { w: 520, title: "Mitigation" }, { w: 300, title: "Trigger to act" }, { w: 160, title: "Owner" }], [
       ["The family goes quiet after week three, like every group chat", "Turns, prompts from their own words, the under-30 contributor, the Vela fallback; family-content days reviewed weekly as a bug when they drop", "Family-content days < 40% two weeks running", "Co-founder"],
       ["The eldest feels watched", "Symmetry, “stop”, story day, everything arrives from people; ask her directly at week two", "“Stop” rate > 5%, or any interview says “surveillance”", "Founder"],
-      ["The young see it as their parents' app", "The closeness promise is theirs; own flame on their terms; tested with under-30s in phase 0", "Under-30 contribution rate < 30%", "Founder"],
+      ["The young see it as their parents' app", "The closeness promise is theirs; own light on their terms; tested with under-30s in phase 0", "Under-30 contribution rate < 30%", "Founder"],
       ["We become a free messenger with 1% conversion", "Free layer is one moment a day, not chat; paid layer is silence semantics; move the line if conversion < 25% at 90 days", "Conversion < 25% at day 90", "Both"],
       ["False quiet notices erode trust", "Per-person tuning, away mode, never before +4 h, published precision, notice as information not alarm", "Precision < 30% or > 3 notices per member per month", "Co-founder"],
       ["Messenger platform risk (blocks, throttling, API changes)", "Adapters; never single-channel in a market; the app and the voice line as floors", "Delivery failure > 5% on any channel for a week", "Co-founder"],
@@ -129,7 +129,7 @@ export function plan() {
       ["2026-09-12", "Phase 0 before the app. Prove the loop with the prototype and 10–20 paying three-generation families."],
       ["2026-09-12", "English first. All copy, wireframes, bot defaults, and documents authored in English; Russian and Chinese are localisations."],
       ["2026-09-12", "The master plan page's checklist is the one task tracker. Asana CSV as optional export; Trello dropped. Draw.io for diagrams, Figma for wireframes, Gource for the repo history."],
-      ["2026-09-12", "Architecture: Cloudflare Workers + Postgres per region + adapters; flame lights before AI; gateway enforces the budget; Stripe first, IAP in phase 2; Russia = legal review before launch."],
+      ["2026-09-12", "Architecture: Cloudflare Workers + Postgres per region + adapters; light lights before AI; gateway enforces the budget; Stripe first, IAP in phase 2; Russia = legal review before launch."],
     ].map(([date, text]) => `<span style="color:${C.ink3};font-family:monospace">${date}</span> · ${text}`);
     const g = p.grid(d, { cols: 2, x: 40, y, w: 650, h: 66, gx: 20, gy: 10, style: S.cardGrey });
     y = g.bottom + 10;
@@ -178,8 +178,8 @@ export function plan() {
     p.table(40, y, [{ w: 220, title: "Element" }, { w: 1100, title: "Decision" }], [
       ["Name", "Vela: a candle (vela), to keep vigil (velar), and a sail. A light left on in the window. Domain and trademark check pending"],
       ["Line", "“Keep a light on.” · “One family. Three generations. A light kept on.”"],
-      ["Mark", "A small flame; lit is amber, unlit is an outline. The flame is the product's only icon that matters"],
-      ["Palette", "Sage green #2f7d5b for actions · amber #e0a23a for the flame and the paid layer · ink #1b2430 · blue-grey neutrals. No red except for risks and true errors"],
+      ["Mark", "A small light; lit is amber, unlit is an outline. The light is the product's only icon that matters"],
+      ["Palette", "Candle & Ink: cream #FBF7F0 ground · ink #1E1A16 · amber #E9A23B for the light only (never text) · teal #1F5C66 for actions · Literata for people's words, Inter for the interface · the mark is a window with a light on. No red except for risks and true errors"],
       ["Type", "Newsreader for headings · Public Sans for body · IBM Plex Mono for numbers"],
       ["Voice", "By name, neutral over alarming, say what happens next, never “monitor”; English first, native-reviewed localisations"],
     ]);
@@ -195,7 +195,7 @@ export function plan() {
       "2 · 50 million parents alone, a worried child behind each: the market",
       "3 · Everything built so far treats her as a patient: why incumbents fail (adoption, non-wear, stigma)",
       "4 · Vela: the family's daily thread, one moment a day, and a light kept on for whoever the family worries about",
-      "5 · The daily loop: arrival, answer, flame, quiet notice",
+      "5 · The daily loop: arrival, answer, light, quiet notice",
       "6 · Closer and calmer: what makes it more than a group chat, and what makes silence mean something",
       "7 · Why now: messengers everywhere, multilingual AI, the super-aged crossover in Taiwan, Korea, Japan",
       "8 · Business model: the free layer spreads, Light pays; Famileo, Snug, Docomo as comparables",
@@ -207,17 +207,17 @@ export function plan() {
     y = p.h2(y, "Glossary");
     p.table(40, y, [{ w: 200, title: "Term" }, { w: 1120, title: "Meaning" }], [
       ["Family", "The unit Vela serves: members across generations around one thread"],
-      ["Member · organiser · kept-light member · nearby contact", "Anyone in the family · the one who set it up and usually pays · a member with a flame · a neighbour or relative called only when the light stays dark"],
+      ["Member · organiser · kept-light member · nearby contact", "Anyone in the family · the one who set it up and usually pays · a member with a light · a neighbour or relative called only when the light stays dark"],
       ["Arrival", "The one daily message a member receives at their hour"],
       ["Answer", "Anything the member sends back that day: tap, heart, voice, text, photo"],
-      ["Flame", "The daily sign that a kept-light member answered; lit, unlit, quiet, away, paused"],
+      ["Light", "The daily sign that a kept-light member answered; lit, unlit, quiet, away, paused"],
       ["Quiet notice", "The message to the organiser when a kept-light member hasn't answered past her tuned window"],
       ["T_quiet", "The per-person threshold: median answer latency over 14 days + 2 h, floor 4 h, cap 8 h"],
       ["Away mode", "A declared or learned period when repeats and notices pause but arrivals continue"],
       ["Weekly read", "Sunday's three-to-five-line narrative of how a kept-light member is, from her own answers"],
       ["Story day", "The weekly arrival that asks her a question about her life; answers become the archive"],
       ["Turn", "The member whose day it is to send something; prompted the evening before"],
-      ["Vela Light", "The paid layer, per kept-light member: flame, quiet notices, nearby contacts, away mode, weekly read, memory, archive, drift"],
+      ["Vela Light", "The paid layer, per kept-light member: light, quiet notices, nearby contacts, away mode, weekly read, memory, archive, drift"],
       ["Precision", "True concerns ÷ quiet notices; recorded by the organiser, published monthly"],
       ["Adapter", "A channel module (Telegram, MAX, WhatsApp, LINE, Viber, voice) behind one interface"],
       ["Gateway", "The one function that sends anything to a person and enforces the notification budget"],

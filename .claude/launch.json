@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "prototype",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "http-server", "design/prototype", "-p", "8765", "-c-1", "-s"],
+      "port": 8765
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Vela: the app plan
 
-v2, 2026-09-12. Agreed with the founder: Vela is one app for the whole family across three generations. It is a safe, calm, family-only place with one shared moment a day, free for everyone. For any member the family wants to keep a light on for, usually the grandmother who lives alone, sometimes the student abroad, the flame is the paid layer, where silence means something. No Vela staff on the ladder, no partners, no hardware.
+v2, 2026-09-12. Agreed with the founder: Vela is one app for the whole family across three generations. It is a safe, calm, family-only place with one shared moment a day, free for everyone. For any member the family wants to keep a light on for, usually the grandmother who lives alone, sometimes the student abroad, the light is the paid layer, where silence means something. No Vela staff on the ladder, no partners, no hardware.
 
 Supersedes v1 and the human-ladder parts of `01-solution-thinking.md`. `bot-spec.md` describes the phase-0 instrument only. **Read with `04-interaction-model.md`** (2026-09-12): every arrival is an ask from a person (a question, a photo choice, a voice note, a word to teach, a story), her answer is a post the family replies to, and she hears the replies the next morning; "I'm fine" is the fallback, never the hero.
 
@@ -8,7 +8,7 @@ Supersedes v1 and the human-ladder parts of `01-solution-thinking.md`. `bot-spec
 
 ## 1. What Vela is
 
-Vela is the family's daily thread. Every day, one moment: something worth opening from the people you love, and one easy way to answer. No feed, no strangers, no ads, no algorithm deciding what you see. Grandparents, parents, and children all in one place, each with the surface that fits them. And for the members the family worries about, the ones who live alone or far away, Vela keeps a light on: their daily answer lights a flame the family can see, and if it doesn't light, the family knows within hours and knows who is nearby. The name is the point: *vela* is a candle, *velar* is to keep vigil.
+Vela is the family's daily thread. Every day, one moment: something worth opening from the people you love, and one easy way to answer. No feed, no strangers, no ads, no algorithm deciding what you see. Grandparents, parents, and children all in one place, each with the surface that fits them. And for the members the family worries about, the ones who live alone or far away, Vela keeps a light on: their daily answer lights a light the family can see, and if it doesn't light, the family knows within hours and knows who is nearby. The name is the point: *vela* is a candle, *velar* is to keep vigil.
 
 Two promises, one product:
 
@@ -20,14 +20,14 @@ Two promises, one product:
 | Role | Typically | Installs | Pays | What they get |
 |---|---|---|---|---|
 | **Member** | Anyone in the family, any age | The Vela app; or nothing, joining through a messenger bot | No | The daily moment, the thread, turns and prompts, translation, story day, memory |
-| **Organiser** | The one who sets the family up; usually the 40–55-year-old in the middle, who is both a child and a parent | The app | Yes, if the family keeps a light on for someone | Everything, plus the flame(s), quiet notices, weekly reads |
+| **Organiser** | The one who sets the family up; usually the 40–55-year-old in the middle, who is both a child and a parent | The app | Yes, if the family keeps a light on for someone | Everything, plus the light(s), quiet notices, weekly reads |
 | **Kept-light member** | The grandmother who lives alone; the student abroad; anyone the family chooses, and who agrees | The app if they can; the messenger they already use if not; a landline later | No | A daily arrival from people who love them; nothing to learn; the right to say "не надо" |
 | **Nearby contact** | A neighbour, a relative in the same town | Nothing | No | One message, only when the light hasn't lit and the organiser asks; consents once |
 
 Rules that follow:
 
 - **The eldest never has to learn anything new.** She can be in Vela entirely through Telegram, WhatsApp, MAX, LINE, or Viber, as one saved contact. If a child installs the app on her phone during a visit, she gets the parent surface (§5); it is never required.
-- **Flames are opt-in per person and visible to that person.** A 20-year-old can switch his own flame on for his mother while he is abroad and off when he's home. Nobody is watched without knowing.
+- **Lights are opt-in per person and visible to that person.** A 20-year-old can switch his own light on for his mother while he is abroad and off when he's home. Nobody is watched without knowing.
 - **Everyone is a contributor.** The 20-year-old's ten-second voice note is the single strongest thing that reaches a grandmother. The product is designed so that he sends it in the time it takes to unlock his phone.
 
 ## 3. The daily loop
@@ -37,7 +37,7 @@ Rules that follow:
  (any time, from any member)     (the app, or her messenger)                  (tap, heart, voice, photo)
                                                                                      │
  the thread shows it, translated ◀──────── Vela reads and summarises ◀───────────────┘
- flames light for kept-light members
+ lights light for kept-light members
                                           (silence, kept-light member only)
                                                         ▼
                      gentle repeat (+2.5h) ─▶ quiet notice to organiser (+5h, tuned)
@@ -50,9 +50,9 @@ Rules that follow:
 
 **The answer.** Anything counts. A heart, a voice note, a photo of the cat. Vela transcribes voice, summarises one line, translates for members who need it, and posts it to the thread. Whoever's content got the reply is told. Vela may send one warm acknowledgement to a kept-light member in her messenger; it never carries a conversation for the family beyond that.
 
-**The flame.** For kept-light members, the day's answer lights their flame on the family's home screen. That is the whole dashboard. No scores, no charts.
+**The light.** For kept-light members, the day's answer lights their light on the family's home screen. That is the whole dashboard. No scores, no charts.
 
-**Silence, for kept-light members only.** The same arrival repeated gently at +2.5 h. At +5 h, tuned to her usual reply window and never earlier than +4 h, the organiser gets a quiet notice: last contact, usual reply time, yesterday's words, and the nearby contacts with one tap to call and one tap to ask them to check. Optional: "if I don't respond within 2 hours, ask [neighbour] automatically." A late reply lights the flame, closes the notice, and tells everyone it's fine. **Away mode** ("уезжаю к сестре до воскресенья", said in a reply or set by anyone) pauses the ladder; learned holidays and Sunday church are honoured. Away mode is the single biggest false-alarm killer.
+**Silence, for kept-light members only.** The same arrival repeated gently at +2.5 h. At +5 h, tuned to her usual reply window and never earlier than +4 h, the organiser gets a quiet notice: last contact, usual reply time, yesterday's words, and the nearby contacts with one tap to call and one tap to ask them to check. Optional: "if I don't respond within 2 hours, ask [neighbour] automatically." A late reply lights the light, closes the notice, and tells everyone it's fine. **Away mode** ("уезжаю к сестре до воскресенья", said in a reply or set by anyone) pauses the ladder; learned holidays and Sunday church are honoured. Away mode is the single biggest false-alarm killer.
 
 **The weekly read.** Sunday, for kept-light members: three to five lines drawn from the week's answers. What she talked about, whether she answered earlier or later than usual, whether her voice notes ran shorter, what she mentioned twice, one suggestion. Neutral words, no diagnosis.
 
@@ -71,7 +71,7 @@ Rules that follow:
 
 | Surface | For whom | What it is |
 |---|---|---|
-| **The app** (iOS, Android) | Every member who can install | Home: flames and today's moment. Thread. Queue. Turns and prompts. Story archive. Settings for one's own flame. |
+| **The app** (iOS, Android) | Every member who can install | Home: lights and today's moment. Thread. Queue. Turns and prompts. Story archive. Settings for one's own light. |
 | **Parent surface** (same app, simplified mode) | The eldest, when a child installs it on a visit | One screen: today's arrival, big buttons, voice-first reply, one-tap video call to whoever is online, the family's photo wall. Everything from family, nothing else on the screen. |
 | **Kitchen-table mode** | An old phone or tablet on her table | The parent surface as a living frame: the family's photos cycle; she taps once a day. She already owns the device; Aura sells $229 frames for less. |
 | **Messenger** (Telegram, MAX, WhatsApp, LINE, Viber) | The eldest who will not install; any member who joins casually | Adapters behind one interface: send the arrival, offer a tap, receive text/voice/photo/reaction. The prototype bot is the first adapter. |
@@ -98,7 +98,7 @@ Model: the strongest available for understanding and composition; a cheaper path
 
 - **Symmetry.** A kept-light member can always see what the family sees about her, and can say "не надо" to stop it.
 - **Minimum data.** Names, forms of address, cities, chosen hours, answers for 30 days rolling, weekly reads, the story archive the family chose to keep. No health records, no location tracking, no contact scraping.
-- **Flames are consented.** Switched on by the person or with their agreement; visible to them.
+- **Lights are consented.** Switched on by the person or with their agreement; visible to them.
 - **Nearby contacts consent once** before they can be pinged.
 - **No ads, ever. No selling data, ever.** The subscription is the business. Stated on the landing page.
 - **Regions.** Per-region storage; Russian localisation law reviewed before launch; GDPR; Taiwan PDPA.
@@ -109,7 +109,7 @@ Model: the strongest available for understanding and composition; a cheaper path
 | Tier | Price | What's in it | Why |
 |---|---|---|---|
 | **Vela** | Free | The daily moment, thread, turns, prompts, contributors, translation of answers, story day | The free layer is the growth engine; the 20-year-old recruits the family (Aura: half of sales from family invites) |
-| **Vela Light** | $9.99/month or $79/year per kept-light member; second member +50% | The flame, quiet notices and nearby contacts, away mode, weekly read, memory and reminders, story archive export and book, drift | People pay for the meaning of silence, not for messaging (Snug's $19.99 tier sells the alert; Locket and Marco Polo convert ~1% for messaging) |
+| **Vela Light** | $9.99/month or $79/year per kept-light member; second member +50% | The light, quiet notices and nearby contacts, away mode, weekly read, memory and reminders, story archive export and book, drift | People pay for the meaning of silence, not for messaging (Snug's $19.99 tier sells the alert; Locket and Marco Polo convert ~1% for messaging) |
 
 Willingness to pay from the research is $10–35 for this feeling; we start at the bottom because the payer is often young and the eldest's life is finite. Trial: 30 days of Light free after the kept-light member's first answer, so the family sees one weekly read or one quiet notice before paying. To be tested against $14.99 and annual-only in the first 90 days.
 
@@ -132,7 +132,7 @@ Willingness to pay from the research is $10–35 for this feeling; we start at t
 
 - **App**: React Native (Expo), one codebase for iOS and Android, with a "parent surface" mode and a "kitchen-table" mode as display modes of the same app. Web for setup and the story archive.
 - **Adapters**: messenger service behind one interface; the Telegram prototype is the first adapter; MAX, WhatsApp, LINE, Viber follow; voice/SMS last.
-- **Core**: families, members, roles, flames, arrivals, answers, quiet ladder, away mode, weekly reads, story archive, reminders, subscriptions. Postgres; per-person scheduled jobs; an event log.
+- **Core**: families, members, roles, lights, arrivals, answers, quiet ladder, away mode, weekly reads, story archive, reminders, subscriptions. Postgres; per-person scheduled jobs; an event log.
 - **AI service**: transcription, understanding, flags, prompts, composition, translation, weekly read, drift. Claude via the API; versioned prompts; every output logged with its input so precision can be measured.
 - **Notifications**: exactly one push per member per day, at their hour, plus quiet notices to organisers. The notification budget is a product rule, enforced in code.
 - **Ops**: internal admin view for the first months.
@@ -143,7 +143,7 @@ Willingness to pay from the research is $10–35 for this feeling; we start at t
 | Phase | When | Ships | Families | Decides |
 |---|---|---|---|---|
 | **0. Prove the loop** | Weeks 1–4 | No app. The eldest via the Telegram prototype; the family in a Telegram group with Vela; each family recruited with at least one under-30 member; weekly read written by us | 10–20, paying $15 for the month | Does she answer with joy? Does the family keep sending? Does the young member send? What must the arrival contain? |
-| **1. MVP** | Months 2–3 | The app: setup, flames, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light subscription; Telegram + WhatsApp + LINE adapters | 100 | Conversion, D30, answer rate, members per family |
+| **1. MVP** | Months 2–3 | The app: setup, lights, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light subscription; Telegram + WhatsApp + LINE adapters | 100 | Conversion, D30, answer rate, members per family |
 | **2. The bridge** | Months 4–6 | Parent surface and kitchen-table mode; grandchildren tools; translation both ways; story day and archive; memory; MAX and Viber; referral loop; Taiwan on LINE | 1,000 | Contributors per family, family-content days, minutes per day, Sean Ellis |
 | **3. The read** | Months 7–12 | Drift with published precision; voice/SMS line; second kept-light member plans; first channel partner (telco or remittance app) | 10,000 | Whether the read is trusted and paid; channel economics |
 

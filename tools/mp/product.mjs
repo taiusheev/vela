@@ -6,17 +6,17 @@ export function product() {
   // 3.1 The family and the two promises
   {
     const p = new Page("3.1 · The family and the two promises");
-    let y = p.title("One family, three generations, two promises", "The unit is the family, not a pair. Anyone the family worries about can carry a flame; it is opt-in and visible to them.");
+    let y = p.title("One family, three generations, two promises", "The unit is the family, not a pair. Anyone the family worries about can carry a light; it is opt-in and visible to them.");
     const thread = p.box(470, y + 200, 460, 110, h("The family's daily thread", ["one moment a day · no feed · no strangers · no ads · free", "turns · prompts · grandchildren · translation · story day · memory"]), S.cardGreen);
-    const gm = p.box(60, y, 300, 130, h("Grandmother · 78 · lives alone", ["joins through her messenger; installs nothing", "<b>flame on</b>: her answer is the sign of life", "story day makes her the author, not the patient"]), S.cardAmber);
-    const student = p.box(1040, y, 300, 130, h("Student · 20 · abroad", ["best contributor: a 10-second voice note gets the strongest reply", "best recruiter: invites the family", "<b>own flame, opt-in</b>, while abroad, on his terms"]), S.cardAmber);
-    const parent = p.box(550, y + 420, 300, 130, h("Parent · 45 · organiser · pays", ["both a child (of the 78-year-old) and a parent (of the 20-year-old)", "sets up the family, names the nearby contacts", "gets the flame, the weekly read, the quiet notice"]), S.card);
+    const gm = p.box(60, y, 300, 130, h("Grandmother · 78 · lives alone", ["joins through her messenger; installs nothing", "<b>light on</b>: her answer is the sign of life", "story day makes her the author, not the patient"]), S.cardAmber);
+    const student = p.box(1040, y, 300, 130, h("Student · 20 · abroad", ["best contributor: a 10-second voice note gets the strongest reply", "best recruiter: invites the family", "<b>own light, opt-in</b>, while abroad, on his terms"]), S.cardAmber);
+    const parent = p.box(550, y + 420, 300, 130, h("Parent · 45 · organiser · pays", ["both a child (of the 78-year-old) and a parent (of the 20-year-old)", "sets up the family, names the nearby contacts", "gets the light, the weekly read, the quiet notice"]), S.card);
     const neighbour = p.box(60, y + 420, 300, 110, h("Nearby contact · neighbour, cousin", ["consents once", "called only when the light stays dark", "never receives anything else"]), S.cardGrey);
     p.edge(gm, thread); p.edge(student, thread); p.edge(parent, thread); p.edge(neighbour, thread, S.edgeSoft);
     y += 600;
     y = p.table(40, y, [{ w: 150, title: "Role" }, { w: 330, title: "Typically" }, { w: 200, title: "Installs" }, { w: 120, title: "Pays" }, { w: 520, title: "What they get" }], [
       ["Member", "Anyone in the family, any age", "The app; or nothing (messenger bot)", "No", "The daily moment, the thread, turns and prompts, translation, story day, memory"],
-      ["Organiser", "The one who sets the family up; usually the 40–55-year-old in the middle", "The app", "Yes, if the family keeps a light on for someone", "Everything, plus flames, quiet notices, weekly reads"],
+      ["Organiser", "The one who sets the family up; usually the 40–55-year-old in the middle", "The app", "Yes, if the family keeps a light on for someone", "Everything, plus lights, quiet notices, weekly reads"],
       [{ label: "Kept-light member", style: S.tdAmber }, "The grandmother who lives alone; the student abroad; anyone the family chooses and who agrees", "The app if they can; their messenger if not; a landline later", "No", "A daily arrival from people who love them; nothing to learn; the right to say “stop”"],
       ["Nearby contact", "A neighbour, a relative in the same town", "Nothing", "No", "One message, only when the light hasn't lit and the organiser asks; consents once"],
     ]);
@@ -31,7 +31,7 @@ export function product() {
       "Memory: the Thursday appointment, the exam, the neighbour's name",
     ])), S.card);
     p.box(720, y, 640, 150, h("Calmer · Vela Light · paid", li([
-      "The flame: her daily answer lights it on the family's home screen",
+      "The light: her daily answer lights it on the family's home screen",
       "Quiet notice to the organiser after her usual window (never before +4 h); nearby contacts one tap away",
       "Away mode: “going to my sister's until Sunday” pauses everything",
       "Weekly read: how she really is, in neutral words, from her own replies",
@@ -44,22 +44,22 @@ export function product() {
   // 3.2 Daily loop
   {
     const p = new Page("3.2 · The daily loop");
-    let y = p.title("The daily loop and the quiet ladder", "product/03-product-spec.md §3–5. Silence only matters for members with a flame.");
+    let y = p.title("The daily loop and the quiet ladder", "product/03-product-spec.md §3–5. Silence only matters for members with a light.");
     const lanes = [["THE FAMILY (any member, any time)", y, S.lane], ["VELA (scheduler + AI)", y + 150, S.lane], ["THE KEPT-LIGHT MEMBER", y + 360, S.lane], ["THE ORGANISER (when the light stays dark)", y + 510, S.laneAmber]];
     lanes.forEach(([t, yy, st]) => p.box(40, yy, 1320, 130, t, st));
     const q = p.box(60, y + 30, 260, 80, h("Queue something", ["voice · photo · drawing · question", "for today or “whenever”"]), S.card);
     const turn = p.box(340, y + 30, 300, 80, h("Evening before: turn prompt", ["“Tomorrow is Sam's day. She mentioned the tomatoes; ask for a photo.”"]), S.card);
     const thread = p.box(1060, y + 30, 280, 80, h("Thread updates", ["her answer, transcribed and translated;", "whoever's content she answered is told"]), S.cardGreen);
     const compose = p.box(60, y + 180, 360, 90, h("Compose the arrival (her hour)", ["1 queued for today · 2 queued “whenever” (max 2)", "3 story question (story day) · 4 Vela fallback, signed as Vela", "one photo visible · voice as voice · her language and address form"]), S.card);
-    const read = p.box(680, y + 180, 340, 90, h("Read the answer (after the flame lit)", ["transcribe · one neutral line · mood words · mentions", "flag: none | escalate → organiser with her words", "away detected? confirm back"]), S.card);
-    const flame = p.box(1060, y + 180, 280, 60, h("Flame lights", ["on the raw answer, before any AI", "repeat and quiet cancelled"]), S.cardAmber);
+    const read = p.box(680, y + 180, 340, 90, h("Read the answer (after the light lit)", ["transcribe · one neutral line · mood words · mentions", "flag: none | escalate → organiser with her words", "away detected? confirm back"]), S.card);
+    const light = p.box(1060, y + 180, 280, 60, h("Light lights", ["on the raw answer, before any AI", "repeat and quiet cancelled"]), S.cardAmber);
     const repeat = p.box(440, y + 240, 220, 40, "<b>+2.5 h, no answer:</b> repeat once", S.cardGrey);
     const arrive = p.box(60, y + 390, 360, 90, h("One message", ["“Good morning, Mrs Ivanova…” + Mia's photo", "[ ☀️ I'm fine ]  🎤   (or: reply with anything, even a heart)"]), S.card);
-    const answer = p.box(680, y + 390, 340, 90, h("One easy answer", ["tap · heart · voice · text · photo; anything counts", "“stop” turns the flame off; the organiser is told"]), S.cardGreen);
+    const answer = p.box(680, y + 390, 340, 90, h("One easy answer", ["tap · heart · voice · text · photo; anything counts", "“stop” turns the light off; the organiser is told"]), S.cardGreen);
     const notice = p.box(680, y + 540, 340, 90, h("Quiet notice · arrival + T_quiet", ["T_quiet = median latency (14 d) + 2 h, floor 4 h, cap 8 h", "last contact · usual time · yesterday's words", "[Call] [Ask to check] [She's away] [Wait 2 h]"]), S.cardAmber);
     const acts = p.box(1060, y + 540, 280, 90, h("The family acts", ["a call, a neighbour's knock", "Vela never knocks", "auto-ask a contact only if opted in"]), S.card);
     p.box(60, y + 540, 360, 90, h("Precision accounting", ["every notice records an outcome:", "answered late · away · true concern · unknown", "precision = true concern ÷ notices, published monthly"]), S.cardGrey);
-    p.edge(q, compose); p.edge(turn, q); p.edge(compose, arrive); p.edge(arrive, answer); p.edge(answer, flame); p.edge(flame, read); p.edge(read, thread);
+    p.edge(q, compose); p.edge(turn, q); p.edge(compose, arrive); p.edge(arrive, answer); p.edge(answer, light); p.edge(light, read); p.edge(read, thread);
     p.edge(arrive, repeat, S.edgeSoft); p.edge(repeat, notice, S.edgeAmber); p.edge(notice, acts);
     y += 670;
     p.table(40, y, [{ w: 200, title: "Step" }, { w: 260, title: "When" }, { w: 860, title: "What happens" }], [
@@ -76,10 +76,10 @@ export function product() {
   // 3.3 Member states and consent
   {
     const p = new Page("3.3 · States and consent");
-    let y = p.title("Member states, flame states, and consent", "State machines the app and the ladder follow. Consent is a product decision, not a checkbox.");
-    y = p.h2(y, "Flame state (kept-light member, per day)");
+    let y = p.title("Member states, light states, and consent", "State machines the app and the ladder follow. Consent is a product decision, not a checkbox.");
+    y = p.h2(y, "Light state (kept-light member, per day)");
     const sx = 60, sy = y + 10;
-    const unlit = p.box(sx, sy, 170, 60, "Unlit<br><span style=\"font-weight:normal;font-size:10px\">flame on, no answer yet, within her window</span>", S.state);
+    const unlit = p.box(sx, sy, 170, 60, "Unlit<br><span style=\"font-weight:normal;font-size:10px\">light on, no answer yet, within her window</span>", S.state);
     const lit = p.box(sx + 300, sy, 170, 60, "Lit<br><span style=\"font-weight:normal;font-size:10px\">answered today (any kind)</span>", S.stateAmber);
     const quiet = p.box(sx + 300, sy + 130, 170, 60, "Quiet<br><span style=\"font-weight:normal;font-size:10px\">past T_quiet, no answer, not away</span>", S.state);
     const away = p.box(sx, sy + 130, 170, 60, "Away<br><span style=\"font-weight:normal;font-size:10px\">away mode active</span>", S.stateGrey);
@@ -102,12 +102,12 @@ export function product() {
     y += 20;
     y = p.h2(y, "Consent, by surface");
     p.table(40, y, [{ w: 240, title: "Moment" }, { w: 540, title: "What is said, and by whom" }, { w: 540, title: "What is recorded" }], [
-      ["Flame on, messenger", "First message from Vela: “Anna would like to keep a light on for you: every morning something from the family, and if you don't answer, she'll know to call. Tap Yes or write no.”", "members.flame_consented_at, the consent text as an event, the channel"],
-      ["Flame on, parent surface", "A screen with the same words and two buttons", "same"],
-      ["Flame on, self", "A member switches their own flame on (the student abroad)", "implicit consent; visible in their settings"],
+      ["Light on, messenger", "First message from Vela: “Anna would like to keep a light on for you: every morning something from the family, and if you don't answer, she'll know to call. Tap Yes or write no.”", "members.light_consented_at, the consent text as an event, the channel"],
+      ["Light on, parent surface", "A screen with the same words and two buttons", "same"],
+      ["Light on, self", "A member switches their own light on (the student abroad)", "implicit consent; visible in their settings"],
       ["Nearby contact", "Message from Vela on the organiser's behalf: who, why, what they may be asked, one tap to agree", "nearby_contacts.consented_at; until then only the organiser may call them directly"],
       ["“What the family sees”", "Any kept-light member asks in chat or taps the button: last 7 summary lines and the last weekly read", "event; symmetry is a promise, not a setting"],
-      ["“Stop”", "Any refusal word in her language turns the flame off and pauses arrivals; the organiser is told without judgement", "status paused; flame off; event"],
+      ["“Stop”", "Any refusal word in her language turns the light off and pauses arrivals; the organiser is told without judgement", "status paused; light off; event"],
     ]);
     pages.push(p);
   }
@@ -137,7 +137,7 @@ export function product() {
     const p = new Page("3.5 · Calmer: Vela Light");
     let y = p.title("What makes the family calmer (paid, per kept-light member)", "Spec §4–5, §11. The paid reason is the meaning of silence and the read, never messaging.");
     y = p.table(40, y, [{ w: 180, title: "Feature" }, { w: 520, title: "How it works" }, { w: 620, title: "Rules" }], [
-      [{ label: "The flame", style: S.tdAmber }, "Her first answer of the day lights it on the family's home screen; that is the whole dashboard", "Lights on the raw answer before any AI; no scores, no charts"],
+      [{ label: "The light", style: S.tdAmber }, "Her first answer of the day lights it on the family's home screen; that is the whole dashboard", "Lights on the raw answer before any AI; no scores, no charts"],
       [{ label: "Quiet notice", style: S.tdAmber }, "After her tuned window: last contact, usual time, yesterday's summary, nearby contacts with Call and Ask to check, She's away, Wait 2 hours", "Never before +4 h; never during away; closes itself on any answer; everyone told is told it's fine; outcome recorded for precision"],
       [{ label: "Nearby contacts", style: S.tdAmber }, "Two people named at setup; consent once; one tap to call; one tap to ask them to check; optional auto-ask after T_auto if the organiser doesn't respond", "Never contacted for anything else; the family decides, Vela never knocks"],
       [{ label: "Away mode", style: S.tdAmber }, "Set by anyone, said in an answer (confirmed back), or learned after three recurrences (Sunday church)", "Arrivals continue; repeats and notices pause; the single biggest false-alarm killer"],
@@ -167,7 +167,7 @@ export function product() {
     const p = new Page("3.6 · Surfaces and channels");
     let y = p.title("Surfaces and channels", "The eldest never learns anything new. No family is told “your grandmother's messenger isn't supported”; no adapter, no launch in that market.");
     y = p.table(40, y, [{ w: 200, title: "Surface" }, { w: 220, title: "For whom" }, { w: 480, title: "Must" }, { w: 420, title: "Must not" }], [
-      [{ label: "The app (iOS, Android, web)", style: S.tdGreen }, "Every member who can install", "Flames and today's moment first; thread; queue; turns; own flame settings; language; invite", "A feed; badge counts; anything that rewards frequent opening"],
+      [{ label: "The app (iOS, Android, web)", style: S.tdGreen }, "Every member who can install", "Lights and today's moment first; thread; queue; turns; own light settings; language; invite", "A feed; badge counts; anything that rewards frequent opening"],
       [{ label: "Parent surface (same app, simplified)", style: S.tdAmber }, "The eldest, when a child installs it on a visit", "One screen: the arrival; one big answer button; voice reply; call the organiser; “what the family sees”; “stop”; 18 pt text, 64 pt buttons, 7:1 contrast; everything read aloud", "Menus, settings, small text"],
       [{ label: "Kitchen-table mode", style: S.tdAmber }, "An old phone or tablet on her table", "Cycle family photos when idle; wake to the arrival; tap anywhere to answer; large clock", "Notifications or sounds beyond a gentle chime at her hour"],
       ["Messenger (Telegram, MAX, WhatsApp, LINE, Viber)", "The eldest who won't install; casual members", "Arrival as one message; button where supported; any reply counts; commands in her language: stop, start, what does the family see", "Chat beyond the one acknowledgement; links to install anything"],

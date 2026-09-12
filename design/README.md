@@ -15,14 +15,14 @@ The living master plan (mission, research, product, roadmap, checklist) is the p
 
 | # | Screen | What it shows |
 |---|---|---|
-| 01 | Home | Flames row (Мама lit, Саша away), today's moment from her, the family thread, one primary action |
+| 01 | Home | Lights row (Мама lit, Саша away), today's moment from her, the family thread, one primary action |
 | 02 | Send | A prompt drawn from her words, voice / photo / question, "tomorrow morning" or "whenever", the week's turns |
 | 03 | Parent surface | One screen: the greeting, a big photo, one big "Всё хорошо" button, voice reply, one-tap call. Also kitchen-table mode |
 | 04 | Quiet notice | Why we're telling you, what she said yesterday, the two nearby contacts with call and ask, "she's away", "wait 2 h" |
-| 05 | Weekly read | Seven flames, four neutral lines, one suggestion, the story of the week |
+| 05 | Weekly read | Seven lights, four neutral lines, one suggestion, the story of the week |
 | 06 | Onboarding | Who to keep a light on for, who is nearby, how she receives the morning (messenger or the app), the invite text |
 
-Colours in the wireframes follow the plan's palette: sage green for actions, amber for the flame and the paid layer, blue-grey neutrals.
+Colours in the wireframes are the superseded v1 palette (sage/amber); the prototype `prototype/vela-app.html` and the Figma file carry identity v3 (Candle & Ink: cream #FBF7F0, ink #1E1A16, light #E9A23B, teal #1F5C66; Literata + Inter). See `design-system.md`.
 
 ## Diagrams
 
