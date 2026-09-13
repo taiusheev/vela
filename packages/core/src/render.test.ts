@@ -242,6 +242,105 @@ describe("renderArrival in English", () => {
   });
 });
 
+describe("renderArrival with more words than one message holds", () => {
+  const TEXT_LIMIT = 4000;
+  /** The longest text a Telegram message carries, as a family member could write it. */
+  const maximal = (unit: string): string => unit.repeat(Math.ceil(4096 / unit.length));
+
+  function readBackLines(arrival: RenderedArrival): string[] {
+    return (paragraphs(arrival)[0] ?? "").split("\n").slice(1);
+  }
+
+  it("leaves a text of exactly the limit whole and shortens one a character longer", () => {
+    const base = render({ ask: question({ text: "a" }) }).text.length - 1;
+    const fits = render({ ask: question({ text: "a".repeat(TEXT_LIMIT - base) }) });
+    expect(fits.text).toHaveLength(TEXT_LIMIT);
+    expect(fits.text).not.toContain("…");
+    const over = render({ ask: question({ text: "a".repeat(TEXT_LIMIT - base + 1) }) });
+    expect(over.text.length).toBeLessThanOrEqual(TEXT_LIMIT);
+    expect(paragraphs(over)[1]).toMatch(/^Mia asks:\na+…$/);
+    expectSendable(over, "en");
+  });
+
+  it("shortens yesterday's longest replies before any of the ask, keeping shorter lines whole", () => {
+    const shorter = `Leo: ${"See you on Sunday!".repeat(55)}`;
+    const arrival = render({
+      readBack: [
+        `Sam: ${"We went to the market. ".repeat(66)}`,
+        `Anna: ${"The children loved it. ".repeat(66)}`,
+        shorter,
+        "Anna and Sam sent ❤️",
+      ],
+      ask: question({ chips: ["Soup"] }),
+    });
+    expectSendable(arrival, "en");
+    expect(arrival.text.length).toBeGreaterThan(TEXT_LIMIT - 10);
+    const lines = readBackLines(arrival);
+    expect(lines).toHaveLength(4);
+    expect(lines[0]).toMatch(/^Sam: We went to the market\..*…$/);
+    expect(lines[1]).toMatch(/^Anna: The children loved it\..*…$/);
+    expect(lines[2]).toBe(shorter);
+    expect(lines[3]).toBe("Anna and Sam sent ❤️");
+    expect(paragraphs(arrival).slice(1)).toEqual([
+      "Good morning, Mrs Chen.",
+      "Mia asks:\nWhat did you cook today?",
+      "Reply with a voice message, or tap a button.",
+    ]);
+    expect(labels(arrival)).toEqual([["Soup"], ["❤️", "I'm fine"]]);
+  });
+
+  it("fits a maximal ask under a maximal read-back, keeping the greeting, the asker, and the hint", () => {
+    const arrival = render({
+      late: true,
+      readBack: [`Sam: ${maximal("😀 ")}`, `Anna: ${maximal("ok ")}`, "Leo sent a voice message."],
+      ask: question({ type: "vote", text: maximal("Which day 🌷 "), voteOptions: ["Sat", "Sun"] }),
+    });
+    expectSendable(arrival, "en");
+    expect(arrival.text.isWellFormed()).toBe(true);
+    expect(arrival.text.length).toBeGreaterThan(TEXT_LIMIT - 10);
+    const lines = readBackLines(arrival);
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toMatch(/^Sam: 😀.*…$/u);
+    expect(lines[1]).toMatch(/^Anna: ok.*…$/);
+    // The ask gives up words before a reply is cut below its opening hundred characters.
+    expect(lines.slice(0, 2).map((line) => line.length >= 95)).toEqual([true, true]);
+    expect(lines[2]).toBe("Leo sent a voice message.");
+    const rest = paragraphs(arrival).slice(1);
+    expect(rest[0]).toBe("Sorry this is late.\nGood morning, Mrs Chen.");
+    expect(rest[1]).toMatch(/^Mia asks:\nWhich day 🌷.*…\nTap one\.$/u);
+    expect(rest[2]).toBe("Reply with a voice message, or tap a button.");
+    expect(labels(arrival)).toEqual([["Sat"], ["Sun"], ["❤️", "I'm fine"]]);
+  });
+
+  it("keeps the start of the ask however many replies there are, shortening each reply instead", () => {
+    const arrival = render({
+      readBack: Array.from({ length: 60 }, (_, i) => `Cousin ${i + 1}: ${"so proud ".repeat(30)}`),
+      ask: question({ text: maximal("Tell me about the harvest. ") }),
+    });
+    expectSendable(arrival, "en");
+    const lines = readBackLines(arrival);
+    expect(lines).toHaveLength(60);
+    expect(lines.every((line) => line.endsWith("…"))).toBe(true);
+    const ask = paragraphs(arrival)[2] ?? "";
+    expect(
+      ask.startsWith(`Mia asks:\n${maximal("Tell me about the harvest. ").slice(0, 990)}`),
+    ).toBe(true);
+  });
+
+  it("shortens a long read-back under the fallback hello", () => {
+    const arrival = render({
+      ask: { type: "hello" },
+      readBack: [`Sam: ${maximal("晚安 ")}`, `Anna: ${maximal("see you ")}`],
+    });
+    expectSendable(arrival, "en");
+    expect(paragraphs(arrival).slice(1)).toEqual([
+      "Good morning, Mrs Chen.",
+      "Nothing new from the family today. How are you this morning?\nVela, from your family",
+      "Reply with a voice message, or tap a button.",
+    ]);
+  });
+});
+
 describe("renderArrival in Traditional Chinese", () => {
   const lang = "zh-TW";
 

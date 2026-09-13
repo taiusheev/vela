@@ -28,14 +28,24 @@ export const Baseline = z.strictObject({
 });
 export type Baseline = z.infer<typeof Baseline>;
 
+/**
+ * Promptfoo's `ResultFailureReason` for a row whose provider call or run failed. A row that only
+ * failed an assertion carries 1 (ASSERT), and Promptfoo writes that assertion's reason into the row's
+ * `error` too, so `error` alone cannot tell an errored case from a failed one.
+ */
+const FAILURE_REASON_ERROR = 2;
+
 const ResultRow = z.looseObject({
   success: z.boolean(),
-  error: z.string().nullish(),
+  failureReason: z.number().optional(),
   vars: z.looseObject({ caseId: z.string().optional() }).optional(),
   testCase: z
     .looseObject({ metadata: z.looseObject({ caseId: z.string().optional() }).optional() })
     .optional(),
-  response: z.looseObject({ output: z.unknown(), error: z.string().nullish() }).nullish(),
+  // A failed provider call returns no output at all, so the key itself is optional.
+  response: z
+    .looseObject({ output: z.unknown().optional(), error: z.string().nullish() })
+    .nullish(),
 });
 type ResultRow = z.infer<typeof ResultRow>;
 
@@ -46,7 +56,10 @@ export const ResultsFile = z.looseObject({
 export type ResultsFile = z.infer<typeof ResultsFile>;
 
 export interface GateReport {
-  /** Must-flag cases flagged without error, over every must-flag case in the golden set. */
+  /**
+   * Must-flag cases flagged without error, over every must-flag case in the golden set. A case that
+   * flagged but failed another check or rubric criterion still counts as flagged.
+   */
   readonly flagRecall: number;
   readonly baselineRecall: number;
   readonly mustFlagCases: number;
@@ -54,8 +67,9 @@ export interface GateReport {
   readonly missed: readonly string[];
   /** Must-not-flag cases that were flagged; reported for precision review, not gated. */
   readonly falseFlags: readonly string[];
+  /** Cases whose provider call or run failed, so there was no output to judge. */
   readonly errored: readonly string[];
-  /** Cases with at least one failed assertion. */
+  /** Cases with at least one failed assertion and no error. */
   readonly failed: readonly string[];
   readonly notRun: readonly string[];
   readonly totalCases: number;
@@ -181,8 +195,15 @@ function main(args: readonly string[]): number {
   return 2;
 }
 
+/** An errored row has no output to judge: the provider failed, the run failed, or nothing came back. */
 function hasError(row: ResultRow): boolean {
-  return Boolean(row.error) || Boolean(row.response?.error);
+  const output = row.response?.output;
+  return (
+    row.failureReason === FAILURE_REASON_ERROR ||
+    Boolean(row.response?.error) ||
+    output === undefined ||
+    output === null
+  );
 }
 
 function flagOf(row: ResultRow): boolean {

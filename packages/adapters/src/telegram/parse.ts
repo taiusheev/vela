@@ -1,10 +1,11 @@
 /**
  * Turns one Telegram `Update` into normalised inbound events.
  *
- * Only what the product acts on is recognised: messages in private chats and groups, button taps,
- * reactions, and changes to the bot's own membership. Content a person sent that has no richer
- * kind arrives as `other`. Everything else (edits, channel posts, service messages, commands for
- * other bots) yields no events, so a new Telegram feature never reaches the services by accident.
+ * Only what the product acts on is recognised: messages people send in private chats and groups,
+ * button taps, reactions, changes to the bot's own membership, and a group moving to a new id.
+ * Content a person sent that has no richer kind arrives as `other`. Everything else (edits, channel
+ * posts, messages sent on behalf of a chat, other service messages, commands for other bots) yields
+ * no events, so a new Telegram feature never reaches the services by accident.
  */
 import { InboundEvent, type InboundKind, type MediaRef } from "@vela/contracts";
 
@@ -83,10 +84,22 @@ function fromMessage(message: JsonObject, botUsername: string): EventDraft | und
   const from = readUser(message.from);
   const messageId = asInteger(message.message_id);
   const date = asInteger(message.date);
-  // Anonymous group admins and linked channels arrive with a placeholder bot as `from`, and bots
-  // with bot-to-bot mode can post in groups; none of them is a family member.
-  if (conversation === undefined || from === undefined || from.isBot) return undefined;
-  if (messageId === undefined || date === undefined) return undefined;
+  if (conversation === undefined || from === undefined || date === undefined) return undefined;
+
+  // Checked before the sender: the supergroup's copy of the notice comes from a placeholder bot.
+  const migration = readMigration(message, conversation);
+  if (migration !== undefined) {
+    return { at: fromUnixTime(date), kind: "migrated", sender: from.sender, ...migration };
+  }
+
+  // A message sent on behalf of a chat carries `sender_chat` and a stand-in `from`: a placeholder
+  // bot for an anonymous admin or a channel posting as itself, but the non-bot user 777000
+  // ("Telegram") for a linked channel's post auto-forwarded into its discussion group. Bots with
+  // bot-to-bot mode can post in groups too. None of them is a family member.
+  if (from.isBot || isObject(message.sender_chat) || message.is_automatic_forward === true) {
+    return undefined;
+  }
+  if (messageId === undefined) return undefined;
   // A family group can hold other bots; a command addressed to one of them is not for Vela, whether
   // it is typed as text or as a caption.
   const body = asString(message.text) ?? asString(message.caption);
@@ -109,6 +122,28 @@ function fromMessage(message: JsonObject, botUsername: string): EventDraft | und
     startParam: content.startParam,
     media: content.media,
   };
+}
+
+/**
+ * Upgrading a basic group to a supergroup gives it a new id, and Telegram posts a service message
+ * in each chat: `migrate_to_chat_id` in the old group, `migrate_from_chat_id` in the new supergroup.
+ * Both are reported as the same move, the old id as the conversation, so the link follows whichever
+ * arrives first; the one after it describes a move already made.
+ */
+function readMigration(
+  message: JsonObject,
+  chat: Conversation,
+): Pick<EventDraft, "conversation" | "migratedToConversationId"> | undefined {
+  const toId = asInteger(message.migrate_to_chat_id);
+  if (toId !== undefined) return { conversation: chat, migratedToConversationId: String(toId) };
+  const fromId = asInteger(message.migrate_from_chat_id);
+  if (fromId !== undefined) {
+    return {
+      conversation: { ...chat, externalId: String(fromId) },
+      migratedToConversationId: chat.externalId,
+    };
+  }
+  return undefined;
 }
 
 interface Content {

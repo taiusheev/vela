@@ -230,6 +230,7 @@ function simulate(zone: string, arrivalTime: LocalTime, seed: number): Run {
       tomorrow: {
         prepared: dayIn(run, addDays(today, 1)).prepared,
         turnPromptSent: dayIn(run, addDays(today, 1)).turnPromptSent,
+        askScheduled: false,
       },
       awayOn: (date) => dayIn(run, date).away,
       weeklyReadDoneFor: (weekEnd) => run.weeklyReads.some((read) => read.weekEnd === weekEnd),

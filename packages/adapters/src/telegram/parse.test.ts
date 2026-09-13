@@ -24,6 +24,10 @@ function parseObject(update: unknown): InboundEvent[] {
   return parseTelegramUpdate(JSON.stringify(update), RECEIVED_AT, TEST_BOT_USERNAME);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 describe("parseTelegramUpdate with recorded updates", () => {
   const cases: [fixture: string, expected: InboundEvent[]][] = [
     [
@@ -250,6 +254,74 @@ describe("parseTelegramUpdate with recorded updates", () => {
       ],
     ],
     [
+      "my-chat-member-group-added-as-administrator.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920438",
+          at: "2026-09-13T12:00:00.000Z",
+          kind: "bot_added",
+          sender: ANNA,
+          conversation: FAMILY_GROUP,
+        },
+      ],
+    ],
+    [
+      "my-chat-member-group-kicked.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920439",
+          at: "2026-09-13T13:00:00.000Z",
+          kind: "bot_removed",
+          sender: ANNA,
+          conversation: FAMILY_GROUP,
+        },
+      ],
+    ],
+    [
+      "my-chat-member-group-restricted-removed.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920440",
+          at: "2026-09-13T14:00:00.000Z",
+          kind: "bot_removed",
+          sender: ANNA,
+          conversation: FAMILY_GROUP,
+        },
+      ],
+    ],
+    [
+      "group-migrate-to-supergroup.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920392",
+          at: "2026-09-10T11:01:00.000Z",
+          kind: "migrated",
+          sender: ANNA,
+          conversation: NEW_GROUP,
+          migratedToConversationId: FAMILY_GROUP.externalId,
+        },
+      ],
+    ],
+    [
+      // The supergroup's copy of the same move, posted by the anonymous-group placeholder.
+      "group-migrate-from-group.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920393",
+          at: "2026-09-10T11:01:00.000Z",
+          kind: "migrated",
+          sender: { externalUserId: "1087968824", displayName: "Group" },
+          conversation: NEW_GROUP,
+          migratedToConversationId: FAMILY_GROUP.externalId,
+        },
+      ],
+    ],
+    [
       "group-ask-with-mention.json",
       [
         {
@@ -311,6 +383,7 @@ describe("parseTelegramUpdate with recorded updates", () => {
     ["group-ask-other-bot.json", []],
     ["group-start-other-bot.json", []],
     ["my-chat-member-group-promoted.json", []],
+    ["my-chat-member-group-restricted-outside.json", []],
     ["group-new-chat-members.json", []],
     ["edited-message.json", []],
     ["channel-post.json", []],
@@ -428,6 +501,30 @@ describe("parseTelegramUpdate edge cases", () => {
     expect(parseObject(update)).toEqual([]);
   });
 
+  it("ignores a linked channel's post auto-forwarded into the group, whose stand-in is no bot", () => {
+    const post = {
+      message_id: 1240,
+      from: { id: 777000, is_bot: false, first_name: "Telegram" },
+      chat: { id: -1002214567890, title: "Chen family", type: "supergroup" },
+      date: 1789300800,
+      text: "/ask What did you cook this weekend?",
+    };
+    const channel = { id: -1001987654321, title: "Chen family news", type: "channel" };
+    const withMarkers = (markers: Record<string, unknown>): InboundEvent[] =>
+      parseObject({ update_id: 8, message: { ...post, ...markers } });
+
+    expect(withMarkers({})).toHaveLength(1);
+    expect(
+      withMarkers({
+        sender_chat: channel,
+        forward_origin: { type: "channel", chat: channel, message_id: 42, date: 1789300799 },
+        is_automatic_forward: true,
+      }),
+    ).toEqual([]);
+    expect(withMarkers({ sender_chat: channel })).toEqual([]);
+    expect(withMarkers({ is_automatic_forward: true })).toEqual([]);
+  });
+
   const otherContent: [field: string, value: Record<string, unknown>][] = [
     ["video_note", { file_id: "DQAC-note", file_unique_id: "n", length: 384, duration: 9 }],
     [
@@ -515,9 +612,15 @@ describe("parseTelegramUpdate edge cases", () => {
   });
 
   it("reports a removed reaction as an empty reaction list", () => {
-    const update = JSON.parse(readFixture("message-reaction.json"));
-    update.message_reaction.old_reaction = update.message_reaction.new_reaction;
-    update.message_reaction.new_reaction = [];
+    const fixture: unknown = JSON.parse(readFixture("message-reaction.json"));
+    if (!isRecord(fixture) || !isRecord(fixture.message_reaction)) {
+      throw new Error("the reaction fixture must hold a message_reaction");
+    }
+    const reaction = fixture.message_reaction;
+    const update = {
+      ...fixture,
+      message_reaction: { ...reaction, old_reaction: reaction.new_reaction, new_reaction: [] },
+    };
     expect(parseObject(update)[0]?.reactions).toStrictEqual([]);
   });
 });

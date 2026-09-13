@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createFakeAi, fakeRecord } from "./fake.ts";
 import type { FlagInput, TranslateInput, UnderstandInput } from "./types.ts";
 
@@ -49,7 +49,7 @@ describe("createFakeAi", () => {
       },
       record: {
         call: "understand",
-        promptVersion: "understand.v2",
+        promptVersion: "understand.v3",
         model: "claude-sonnet-5",
         ok: true,
         tokensIn: 0,
@@ -129,6 +129,45 @@ describe("createFakeAi", () => {
       record: { ok: false, error: "http_529" },
     });
     expect(translation.ok).toBe(true);
+  });
+
+  it("rejects an input the real client would reject, without recording the call", async () => {
+    const flag = vi.fn();
+    const ai = createFakeAi({ flag });
+
+    await expect(
+      ai.understand({ ...understandInput, answer: { kind: "voice", text: "" } }),
+    ).rejects.toThrow();
+    await expect(
+      ai.flag({ ...flagInput, recentSummaries: ["one", "two", "three", "four"] }),
+    ).rejects.toThrow();
+
+    expect(ai.calls).toEqual([]);
+    expect(flag).not.toHaveBeenCalled();
+  });
+
+  it("shortens over-long text from people the way the real client does", async () => {
+    const received: FlagInput[] = [];
+    const ai = createFakeAi({
+      flag: async (input) => {
+        received.push(input);
+        return {
+          ok: true,
+          value: { flag: false, category: null, severity: null, evidenceQuote: null },
+          record: fakeRecord("flag"),
+        };
+      },
+    });
+
+    const outcome = await ai.flag({
+      ...flagInput,
+      ask: { askerName: "Mia".repeat(30), type: "question", text: null },
+      answer: { kind: "text", text: "a".repeat(5000) },
+    });
+
+    expect(outcome.ok).toBe(true);
+    expect(received[0]?.answer.text).toHaveLength(4000);
+    expect(received[0]?.ask?.askerName).toHaveLength(80);
   });
 
   it("lists every call it received in order, overridden ones included", async () => {

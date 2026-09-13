@@ -27,10 +27,12 @@ const SURVEILLANCE_WORDS =
 const GENDERED_PRONOUNS = /\b(he|she|him|her|his|hers|himself|herself)\b/i;
 
 /**
- * 他 and 她 are the gendered third-person pronouns, except in 其他 ("other"); 監控, 監視, and 追蹤
- * mean monitor, surveil, and track.
+ * 他 and 她 are the gendered third-person pronouns, except in 其他 ("other"); 監控, 監看, 監視, and
+ * 追蹤 mean monitor, watch over, surveil, and track, and 盯著 and 看著您 (keeping an eye on you) are
+ * the other surveillance phrases the zh-TW consent script forbids
+ * (plan/materials/pilot/consent-script.zh-TW.md).
  */
-const FORBIDDEN_ZH_TW = /(?<!其)他|她|監控|追蹤|監視/;
+const FORBIDDEN_ZH_TW = /(?<!其)他|她|監控|監看|監視|追蹤|盯|看著您/;
 
 /** Simplified-only forms of characters used in everyday copy; Taiwan writes 們這時說發語… */
 const SIMPLIFIED_ONLY =
@@ -178,10 +180,14 @@ describe("Traditional Chinese wording", () => {
     expect("她回覆了").toMatch(FORBIDDEN_ZH_TW);
     expect("他們都好").toMatch(FORBIDDEN_ZH_TW);
     expect("其他").not.toMatch(FORBIDDEN_ZH_TW);
+    expect("有人在監看").toMatch(FORBIDDEN_ZH_TW);
+    expect("家人會盯著").toMatch(FORBIDDEN_ZH_TW);
+    expect("我們會看著您").toMatch(FORBIDDEN_ZH_TW);
+    expect("過去看看您").not.toMatch(FORBIDDEN_ZH_TW);
     expect("您今天早上好嗎？").toMatch(MAINLAND_TERMS);
   });
 
-  it("never uses 他 or 她, or words for monitoring and tracking", () => {
+  it("never uses 他 or 她, or words for monitoring, tracking, or watching over anyone", () => {
     for (const key of englishKeys) {
       expect(zhTW[key], key).not.toMatch(FORBIDDEN_ZH_TW);
     }

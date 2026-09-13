@@ -17,6 +17,11 @@
         "kind": "notContains",
         "path": "lines",
         "texts": ["Vela", "早安", "想念", "擔心", "沒有回", "沒回", "健康", "身體", "天氣"]
+      },
+      {
+        "kind": "notContains",
+        "path": "lines",
+        "texts": ["監控", "監視", "追蹤", "記錄", "紀錄", "留意"]
       }
     ],
     "rubric": [
@@ -49,6 +54,11 @@
         "kind": "notContains",
         "path": "lines",
         "texts": ["miss you", "worried", "everyone", "good morning", "from your family"]
+      },
+      {
+        "kind": "notContains",
+        "path": "lines",
+        "texts": ["monitor", "track", "checking on", "keep an eye", "record"]
       },
       { "kind": "writtenIn", "path": "lines", "lang": "en" }
     ],

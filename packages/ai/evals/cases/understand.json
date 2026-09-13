@@ -2,7 +2,7 @@
   {
     "id": "understand-zh-away-sister-until-sunday",
     "call": "understand",
-    "description": "She is going to stay with her younger sister in Taichung from tomorrow until Sunday; away must resolve to the coming Sunday.",
+    "description": "She is going to stay with her younger sister in Taichung from tomorrow until Sunday; away must run from tomorrow to the coming Sunday.",
     "tags": ["away", "taiwanese-mandarin"],
     "input": {
       "lang": "zh-TW",
@@ -26,6 +26,7 @@
         "kind": "equals",
         "path": "away",
         "value": {
+          "from": "2026-09-17",
           "until": "2026-09-20"
         }
       },
@@ -57,7 +58,7 @@
   {
     "id": "understand-en-away-sisters-until-sunday",
     "call": "understand",
-    "description": "The spec's own example: going to my sister's until Sunday, said on a Thursday.",
+    "description": "The spec's own example: going to my sister's until Sunday, said on a Thursday as she leaves; away starts today.",
     "tags": ["away"],
     "input": {
       "lang": "en",
@@ -72,7 +73,7 @@
       },
       "answer": {
         "kind": "text",
-        "text": "Going to my sister's until Sunday! Taking the early train, so don't expect long answers."
+        "text": "Going to my sister's until Sunday! Packing now for the noon train, so don't expect long answers."
       },
       "recentSummaries": []
     },
@@ -81,6 +82,7 @@
         "kind": "equals",
         "path": "away",
         "value": {
+          "from": "2026-09-17",
           "until": "2026-09-20"
         }
       },
@@ -101,7 +103,7 @@
       }
     ],
     "rubric": [
-      "The summary says Mom is going to her sister's until Sunday, without inventing where the sister lives or why, and without a gendered pronoun for Mom."
+      "Away runs from today, when Mom leaves, until Sunday; the summary says Mom is going to her sister's until Sunday, without inventing where the sister lives or why, and without a gendered pronoun for Mom."
     ]
   },
   {
@@ -131,6 +133,7 @@
         "kind": "equals",
         "path": "away",
         "value": {
+          "from": "2026-09-15",
           "until": null
         }
       },
@@ -146,7 +149,7 @@
       }
     ],
     "rubric": [
-      "The English summary says 外婆 goes into hospital tomorrow for cataract surgery and will tell the family after discharge; it neither diagnoses nor advises, adds no worry, and away has no end date because none was given."
+      "The English summary says 外婆 goes into hospital tomorrow for cataract surgery and will tell the family after discharge; it neither diagnoses nor advises, adds no worry, and away starts tomorrow with no end date because none was given."
     ]
   },
   {
@@ -215,6 +218,7 @@
         "kind": "equals",
         "path": "away",
         "value": {
+          "from": "2026-09-14",
           "until": "2026-09-15"
         }
       },
@@ -230,7 +234,7 @@
       }
     ],
     "rubric": [
-      "Away runs until Tuesday 2026-09-15, the day Nana returns; the summary says Nana is going to Kaohsiung with the church group and is back Tuesday evening, and does not claim the song was sung."
+      "Away runs from tomorrow, 2026-09-14, until Tuesday 2026-09-15, the day Nana returns; the summary says Nana is going to Kaohsiung with the church group and is back Tuesday evening, and does not claim the song was sung."
     ]
   },
   {
@@ -700,6 +704,7 @@
         "kind": "equals",
         "path": "away",
         "value": {
+          "from": "2026-09-23",
           "until": "2026-10-02"
         }
       },
@@ -725,13 +730,13 @@
       }
     ],
     "rubric": [
-      "Away runs until 2026-10-02, the date 媽 gave; the Traditional Chinese summary says 媽 goes to Japan with 秀琴 from tomorrow and is back on 2 October, with no invented detail and no gendered pronoun."
+      "Away runs from tomorrow, 2026-09-23, until 2026-10-02, the date 媽 gave; the Traditional Chinese summary says 媽 goes to Japan with 秀琴 from tomorrow and is back on 2 October, with no invented detail and no gendered pronoun."
     ]
   },
   {
     "id": "understand-code-switch-away-until-back",
     "call": "understand",
-    "description": "Flying to Seattle next week to help with a new baby, with no return date; away until I'm back, summarised in English.",
+    "description": "Flying to Seattle next Monday to help with a new baby, with no return date; away from that Monday until I'm back, summarised in English.",
     "tags": ["away", "code-switching", "taiwanese-mandarin"],
     "input": {
       "lang": "zh-TW",
@@ -746,7 +751,7 @@
       },
       "answer": {
         "kind": "voice",
-        "text": "下禮拜要飛去 Seattle 幫你小阿姨顧 baby，要住多久還不知道，等我回來再說喔"
+        "text": "下禮拜一要飛去 Seattle 幫你小阿姨顧 baby，要住多久還不知道，等我回來再說喔"
       },
       "recentSummaries": []
     },
@@ -755,6 +760,7 @@
         "kind": "equals",
         "path": "away",
         "value": {
+          "from": "2026-09-28",
           "until": null
         }
       },
@@ -775,7 +781,96 @@
       }
     ],
     "rubric": [
-      "Away has no end date because 阿嬤 gave none; the English summary says 阿嬤 flies to Seattle next week to help look after the aunt's baby, and does not claim anything about the recital."
+      "Away starts next Monday, 2026-09-28, not today, and has no end date because 阿嬤 gave none; the English summary says 阿嬤 flies to Seattle next Monday to help look after the aunt's baby, and does not claim anything about the recital."
+    ]
+  },
+  {
+    "id": "understand-zh-away-trip-starts-weeks-later",
+    "call": "understand",
+    "description": "A tour to Japan from 10 to 20 October, told on 13 September; she is home for four weeks first, so away must start on the 10th, not today.",
+    "tags": ["away", "taiwanese-mandarin"],
+    "input": {
+      "lang": "zh-TW",
+      "summaryLang": "zh-TW",
+      "addressForm": "阿嬤",
+      "today": "2026-09-13",
+      "todayWeekday": "Sunday",
+      "ask": {
+        "askerName": "小芳",
+        "type": "question",
+        "text": "阿嬤，最近有什麼好消息嗎？"
+      },
+      "answer": {
+        "kind": "voice",
+        "text": "有啊，老人會十月十號要去日本玩，我也報名了，二十號才回來，這幾個禮拜都還在家啦"
+      },
+      "recentSummaries": []
+    },
+    "checks": [
+      {
+        "kind": "equals",
+        "path": "away",
+        "value": {
+          "from": "2026-10-10",
+          "until": "2026-10-20"
+        }
+      },
+      {
+        "kind": "containsAny",
+        "path": "mentions.places",
+        "texts": ["日本"]
+      },
+      {
+        "kind": "writtenIn",
+        "path": "summary",
+        "lang": "zh-TW"
+      }
+    ],
+    "rubric": [
+      "Away runs from 2026-10-10 to 2026-10-20, the dates 阿嬤 gave, and does not start today; the Traditional Chinese summary says 阿嬤 signed up for the seniors' club trip to Japan from 10 to 20 October, with no invented detail."
+    ]
+  },
+  {
+    "id": "understand-en-away-vague-start-not-set",
+    "call": "understand",
+    "description": "A visit to a son in Vancouver sometime next month with nothing booked; with no start day, away is not set.",
+    "tags": ["away", "no-invention"],
+    "input": {
+      "lang": "en",
+      "summaryLang": "en",
+      "addressForm": "Mom",
+      "today": "2026-09-15",
+      "todayWeekday": "Tuesday",
+      "ask": {
+        "askerName": "Anna",
+        "type": "question",
+        "text": "Any news from David?"
+      },
+      "answer": {
+        "kind": "text",
+        "text": "David wants me to come and stay in Vancouver for a few weeks sometime next month. Nothing booked yet!"
+      },
+      "recentSummaries": []
+    },
+    "checks": [
+      {
+        "kind": "equals",
+        "path": "away",
+        "value": null
+      },
+      {
+        "kind": "containsAny",
+        "path": "mentions.places",
+        "texts": ["Vancouver"]
+      },
+      {
+        "kind": "writtenIn",
+        "path": "summary",
+        "lang": "en"
+      }
+    ],
+    "rubric": [
+      "Away is null because Mom named no start day, only sometime next month with nothing booked; the summary says David wants Mom to stay in Vancouver for a few weeks next month and that nothing is booked, without inventing dates."
     ]
   }
 ]

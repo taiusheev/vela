@@ -5,8 +5,8 @@ import * as hello from "./hello.v2.ts";
 import * as readback from "./readback.v1.ts";
 import * as suggest from "./suggest.v1.ts";
 import * as translate from "./translate.v1.ts";
-import * as understand from "./understand.v2.ts";
-import * as weeklyRead from "./weekly_read.v2.ts";
+import * as understand from "./understand.v3.ts";
+import * as weeklyRead from "./weekly_read.v3.ts";
 
 export interface Prompt {
   readonly version: string;
@@ -31,8 +31,8 @@ export const INPUT_CLOSE_TAG = "</vela_input>";
 
 /**
  * The user turn: a fixed preamble and the validated input as JSON inside the delimiters. Every `<`
- * in the JSON is written as its `<` escape, which parses to the same string, so no family text
- * can close the delimiter early and continue as if it were outside the data.
+ * in the JSON is written as its JSON escape `\u003c`, which parses to the same string, so no family
+ * text can close the delimiter early and continue as if it were outside the data.
  */
 export function renderUserTurn(input: unknown): string {
   const json = JSON.stringify(input, null, 2).replaceAll("<", "\\u003c");

@@ -14,9 +14,11 @@ import { SAFE_DEFAULTS } from "./defaults.ts";
 import {
   CAPABILITIES,
   EFFORT_FOR,
+  MAX_RETRIES,
   MAX_TOKENS_FOR,
   MODEL_FOR,
   SERVER_FALLBACK_BETA,
+  TIMEOUT_MS_FOR,
 } from "./models.ts";
 import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
 import {
@@ -25,22 +27,13 @@ import {
   type AiCallRecord,
   type AiCallTypes,
   type AiOutcome,
-  Chips,
-  ChipsInput,
-  FlagInput,
-  FlagResult,
-  HelloInput,
-  HelloLines,
-  ReadbackInput,
-  ReadbackLines,
-  SuggestInput,
-  Suggestion,
-  TranslateInput,
-  Translation,
-  UnderstandInput,
-  Understanding,
-  WeeklyRead,
-  WeeklyReadInput,
+  AWAY_HORIZON_DAYS,
+  type FlagInput,
+  type FlagResult,
+  INPUT_SCHEMAS,
+  OUTPUT_SCHEMAS,
+  type UnderstandInput,
+  type Understanding,
 } from "./types.ts";
 
 export interface ClaudeAiOptions {
@@ -48,10 +41,11 @@ export interface ClaudeAiOptions {
   fetch?: typeof fetch;
 }
 
+/** The API host every request goes to; the SDK would otherwise take it from `ANTHROPIC_BASE_URL`. */
+const API_BASE_URL = "https://api.anthropic.com";
+
 interface CallSpec<K extends AiCallName> {
   readonly call: K;
-  readonly input: z.ZodType<AiCallTypes[K]["input"]>;
-  readonly output: z.ZodType<AiCallTypes[K]["output"]>;
   /** Tightens a schema-valid output against its input where a schema cannot express the rule. */
   readonly normalise?: (
     output: AiCallTypes[K]["output"],
@@ -65,27 +59,28 @@ interface CallSpec<K extends AiCallName> {
  * thinking and effort where the model takes them.
  */
 export function createClaudeAi(options: ClaudeAiOptions): Ai {
-  const client = new Anthropic({ apiKey: options.apiKey, fetch: options.fetch });
+  // Every option the SDK would otherwise read from the environment is pinned where the constructor
+  // allows it: the host the key is sent to, no second credential, and no debug logging of request
+  // bodies, which carry family words. `ANTHROPIC_CUSTOM_HEADERS` has no switch; it can only add
+  // headers to requests for the pinned host.
+  const client = new Anthropic({
+    apiKey: options.apiKey,
+    authToken: null,
+    baseURL: API_BASE_URL,
+    logLevel: "warn",
+    maxRetries: MAX_RETRIES,
+    fetch: options.fetch,
+  });
   return {
     understand: (input) =>
-      invoke(client, { call: "understand", input: UnderstandInput, output: Understanding }, input),
-    flag: (input) =>
-      invoke(
-        client,
-        { call: "flag", input: FlagInput, output: FlagResult, normalise: normaliseFlag },
-        input,
-      ),
-    chips: (input) => invoke(client, { call: "chips", input: ChipsInput, output: Chips }, input),
-    suggest: (input) =>
-      invoke(client, { call: "suggest", input: SuggestInput, output: Suggestion }, input),
-    translate: (input) =>
-      invoke(client, { call: "translate", input: TranslateInput, output: Translation }, input),
-    readback: (input) =>
-      invoke(client, { call: "readback", input: ReadbackInput, output: ReadbackLines }, input),
-    hello: (input) =>
-      invoke(client, { call: "hello", input: HelloInput, output: HelloLines }, input),
-    weeklyRead: (input) =>
-      invoke(client, { call: "weekly_read", input: WeeklyReadInput, output: WeeklyRead }, input),
+      invoke(client, { call: "understand", normalise: normaliseUnderstanding }, input),
+    flag: (input) => invoke(client, { call: "flag", normalise: normaliseFlag }, input),
+    chips: (input) => invoke(client, { call: "chips" }, input),
+    suggest: (input) => invoke(client, { call: "suggest" }, input),
+    translate: (input) => invoke(client, { call: "translate" }, input),
+    readback: (input) => invoke(client, { call: "readback" }, input),
+    hello: (input) => invoke(client, { call: "hello" }, input),
+    weeklyRead: (input) => invoke(client, { call: "weekly_read" }, input),
   };
 }
 
@@ -95,12 +90,13 @@ async function invoke<K extends AiCallName>(
   rawInput: AiCallTypes[K]["input"],
 ): Promise<AiOutcome<AiCallTypes[K]["output"]>> {
   // Invalid input is a bug in the caller, not a provider failure, so it throws before any request.
-  const input = spec.input.parse(rawInput);
+  const input = INPUT_SCHEMAS[spec.call].parse(rawInput);
+  const outputSchema: z.ZodType<AiCallTypes[K]["output"]> = OUTPUT_SCHEMAS[spec.call];
   const model = MODEL_FOR[spec.call];
   const prompt = PROMPTS[spec.call];
   const capabilities = CAPABILITIES[model];
   const effort = EFFORT_FOR[spec.call];
-  const format = betaZodOutputFormat(spec.output);
+  const format = betaZodOutputFormat(outputSchema);
 
   const params: MessageCreateParamsNonStreaming = {
     model,
@@ -127,7 +123,7 @@ async function invoke<K extends AiCallName>(
   const started = performance.now();
   let message: BetaMessage;
   try {
-    message = await client.beta.messages.create(params);
+    message = await client.beta.messages.create(params, { timeout: TIMEOUT_MS_FOR[spec.call] });
   } catch (error) {
     const code = providerFailureCode(error);
     if (code === null) {
@@ -184,13 +180,35 @@ async function invoke<K extends AiCallName>(
   } catch {
     return failure("schema_invalid", record);
   }
-  const parsed = spec.output.safeParse(json);
+  const parsed = outputSchema.safeParse(json);
   if (!parsed.success) {
     return failure("schema_invalid", record);
   }
 
   const value = spec.normalise ? spec.normalise(parsed.data, input) : parsed.data;
   return { ok: true, value, record };
+}
+
+/**
+ * An away switches off repeats and quiet notices, the family's safety net, so its dates are held to
+ * her answer's date: a start already past becomes today, and an away that has ended, ends before it
+ * starts, or starts or ends beyond the horizon is dropped rather than trusted.
+ */
+function normaliseUnderstanding(output: Understanding, input: UnderstandInput): Understanding {
+  const { away } = output;
+  if (away === null) {
+    return output;
+  }
+  const from = away.from < input.today ? input.today : away.from;
+  const horizon = addDays(input.today, AWAY_HORIZON_DAYS);
+  const valid =
+    from <= horizon && (away.until === null || (away.until >= from && away.until <= horizon));
+  return { ...output, away: valid ? { from, until: away.until } : null };
+}
+
+/** `YYYY-MM-DD` dates compare as strings; adding days goes through UTC midnight, which has no DST. */
+function addDays(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 }
 
 /**

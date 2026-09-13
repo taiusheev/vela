@@ -9,49 +9,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
-import {
-  AiCallName,
-  Chips,
-  ChipsInput,
-  FlagInput,
-  FlagResult,
-  HelloInput,
-  HelloLines,
-  ReadbackInput,
-  ReadbackLines,
-  SuggestInput,
-  Suggestion,
-  TranslateInput,
-  Translation,
-  UnderstandInput,
-  Understanding,
-  WeeklyRead,
-  WeeklyReadInput,
-} from "../src/types.ts";
-
-/** The exported input schema of each call; a case's input must parse to itself under it. */
-export const INPUT_SCHEMAS = {
-  understand: UnderstandInput,
-  flag: FlagInput,
-  chips: ChipsInput,
-  suggest: SuggestInput,
-  translate: TranslateInput,
-  readback: ReadbackInput,
-  hello: HelloInput,
-  weekly_read: WeeklyReadInput,
-} as const satisfies Record<AiCallName, z.ZodType>;
-
-/** The exported output schema of each call, so checks can only point at fields that exist. */
-export const OUTPUT_SCHEMAS = {
-  understand: Understanding,
-  flag: FlagResult,
-  chips: Chips,
-  suggest: Suggestion,
-  translate: Translation,
-  readback: ReadbackLines,
-  hello: HelloLines,
-  weekly_read: WeeklyRead,
-} as const satisfies Record<AiCallName, z.ZodType>;
+import { AiCallName, INPUT_SCHEMAS, OUTPUT_SCHEMAS } from "../src/types.ts";
 
 /** A dotted path into a JSON value, with numeric segments for array items: `away.until`, `lines.0`. */
 const JsonPath = z
@@ -211,7 +169,8 @@ export function caseIssues(evalCase: EvalCase): string[] {
 
 /**
  * Why a case's input does not exactly match its call's input schema, or null when it does. Parsing
- * must give back the input unchanged, so a misspelt key (which Zod strips) or untrimmed name fails.
+ * must give back the input unchanged, so a misspelt key (which Zod strips), an untrimmed name, or text
+ * longer than the call keeps fails.
  */
 function inputIssues(evalCase: EvalCase): string | null {
   const parsed = INPUT_SCHEMAS[evalCase.call].safeParse(evalCase.input);

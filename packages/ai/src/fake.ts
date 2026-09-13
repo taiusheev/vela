@@ -1,14 +1,15 @@
 import { genericChips } from "./defaults.ts";
 import { MODEL_FOR } from "./models.ts";
 import { PROMPTS } from "./prompts/index.ts";
-import type {
-  Ai,
-  AiCallName,
-  AiCallRecord,
-  AiCallTypes,
-  AiOutcome,
-  ReplyItem,
-  UnderstandInput,
+import {
+  type Ai,
+  type AiCallName,
+  type AiCallRecord,
+  type AiCallTypes,
+  type AiOutcome,
+  INPUT_SCHEMAS,
+  type ReplyItem,
+  type UnderstandInput,
 } from "./types.ts";
 
 export interface FakeAiCall {
@@ -28,7 +29,9 @@ type Method<K extends AiCallName> = (
 /**
  * A deterministic `Ai`: the same input always yields the same successful outcome, derived from the
  * input so tests can see what flowed through. Overrides replace whole methods, for example to make
- * `flag` raise a flag or `understand` fail.
+ * `flag` raise a flag or `understand` fail. Like the real client, it parses every input first: an
+ * input the real client would reject rejects here too, unrecorded, and over-long text reaches the
+ * override or default already shortened.
  */
 export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
   const calls: FakeAiCall[] = [];
@@ -38,12 +41,13 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
     override: Method<K> | undefined,
     fallback: (input: AiCallTypes[K]["input"]) => AiCallTypes[K]["output"],
   ): Method<K> {
-    return (input) => {
-      calls.push({ call, input });
+    return async (rawInput) => {
+      const input = INPUT_SCHEMAS[call].parse(rawInput);
+      calls.push({ call, input: rawInput });
       if (override !== undefined) {
         return override(input);
       }
-      return Promise.resolve({ ok: true, value: fallback(input), record: fakeRecord(call) });
+      return { ok: true, value: fallback(input), record: fakeRecord(call) };
     };
   }
 

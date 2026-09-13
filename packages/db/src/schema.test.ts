@@ -28,17 +28,21 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { VelaDatabase } from "./database.ts";
 import * as schema from "./schema.ts";
 import {
+  adminAccessLog,
+  aiCalls,
   answers,
   awayPeriods,
   channelLinks,
   chips,
   consents,
+  deletions,
   events,
   exchanges,
   FAMILY_CHANNEL_KINDS,
   type Family,
   families,
   familyChannels,
+  flags,
   INVITE_CHANNELS,
   invites,
   MEMORY_FACT_KINDS,
@@ -61,14 +65,19 @@ import {
   quietEvents,
   RECIPE_STATUSES,
   recipes,
+  reminders,
   replies,
   SUBSCRIPTION_PROVIDERS,
   SUBSCRIPTION_STATUSES,
   stories,
+  storyQuestions,
   subscriptions,
+  suggestions,
   TRANSLATION_OBJECT_TYPES,
   translations,
+  turns,
   users,
+  weeklyReads,
 } from "./schema.ts";
 import { createTestDatabase, type TestDatabase } from "./testing.ts";
 
@@ -201,6 +210,180 @@ function outboundFor(
   };
 }
 
+/**
+ * Rows in every table, so an update to a column has something to hit and a reset has something to
+ * remove. One row per table apart from the family's two members, so updating a whole table never
+ * trips a unique index.
+ */
+async function seedEveryTable(): Promise<void> {
+  const seed = await seedFamily();
+  const familyId = seed.family.id;
+  await db.insert(users).values({ displayName: "Mia" });
+  await db
+    .insert(channelLinks)
+    .values({ memberId: seed.parent.id, channel: "telegram", externalId: "1001" });
+  await db.insert(familyChannels).values({
+    familyId,
+    channel: "telegram",
+    conversationId: "-100200",
+    kind: "group",
+    linkedByMemberId: seed.organiser.id,
+  });
+  await db.insert(onboardingSessions).values({
+    channel: "telegram",
+    conversationId: "42",
+    externalUserId: "42",
+    step: "ask_name",
+    expiresAt: new Date("2026-09-14T00:00:00Z"),
+  });
+  await db.insert(invites).values({
+    familyId,
+    invitedBy: seed.organiser.id,
+    forMemberId: seed.parent.id,
+    token: "invite-token",
+    expiresAt: new Date("2026-09-20T00:00:00Z"),
+  });
+  const contact = only(
+    await db
+      .insert(nearbyContacts)
+      .values({ familyId, memberId: seed.parent.id, name: "Anna", phone: "+886900000001" })
+      .returning(),
+  );
+  await db
+    .insert(media)
+    .values({ familyId, kind: "audio", storageKey: "apac/a.ogg", mime: "audio/ogg", bytes: 1 });
+  const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
+  await db.insert(translations).values({
+    objectType: "exchange",
+    objectId: exchange.id,
+    lang: "zh-TW",
+    text: "今晚煮什麼？",
+    provider: "claude:v1",
+  });
+  const answer = only(
+    await db
+      .insert(answers)
+      .values({
+        exchangeId: exchange.id,
+        memberId: seed.parent.id,
+        kind: "fine",
+        channel: "telegram",
+      })
+      .returning(),
+  );
+  await db.insert(replies).values({
+    exchangeId: exchange.id,
+    memberId: seed.organiser.id,
+    kind: "text",
+    text: "Yum",
+    channel: "telegram",
+  });
+  await db.insert(chips).values({
+    exchangeId: exchange.id,
+    chips: ["Noodles", "Soup", "Not sure"],
+    promptVersion: "chips.v1",
+  });
+  await db.insert(turns).values({
+    familyId,
+    localDay: "2026-09-14",
+    recipientId: seed.parent.id,
+    holderId: seed.organiser.id,
+  });
+  await db.insert(suggestions).values({
+    familyId,
+    forMemberId: seed.organiser.id,
+    aboutMemberId: seed.parent.id,
+    type: "follow_up",
+    text: "Ask how the market was",
+    promptVersion: "suggest.v1",
+  });
+  const question = only(
+    await db
+      .insert(storyQuestions)
+      .values({ lang: "en", ordinal: 1, text: "How did you meet?", theme: "family" })
+      .returning(),
+  );
+  await db.insert(stories).values({
+    familyId,
+    memberId: seed.parent.id,
+    exchangeId: exchange.id,
+    question: question.text,
+    askedBy: seed.organiser.id,
+  });
+  await db.insert(recipes).values({ familyId, memberId: seed.parent.id, title: "Braised pork" });
+  const fact = only(
+    await db
+      .insert(memoryFacts)
+      .values({ familyId, memberId: seed.parent.id, kind: "date", text: "Birthday in May" })
+      .returning(),
+  );
+  await db.insert(reminders).values({
+    familyId,
+    memberId: seed.organiser.id,
+    aboutMemberId: seed.parent.id,
+    text: "Mom's birthday",
+    dueDate: "2027-05-01",
+    factId: fact.id,
+  });
+  const quiet = only(
+    await db
+      .insert(quietEvents)
+      .values({ exchangeId: exchange.id, memberId: seed.parent.id })
+      .returning(),
+  );
+  await db
+    .insert(awayPeriods)
+    .values({ memberId: seed.parent.id, fromDate: "2026-09-14", source: "organiser" });
+  await db.insert(weeklyReads).values({
+    familyId,
+    memberId: seed.parent.id,
+    weekStart: "2026-09-07",
+    lines: [],
+    stats: {},
+    promptVersion: "weekly_read.v1",
+  });
+  await db.insert(outbound).values(outboundFor(seed, "system", { actorId: seed.organiser.id }));
+  await db.insert(messageRefs).values({
+    channel: "telegram",
+    conversationId: "1001",
+    messageId: "5",
+    familyId,
+    exchangeId: exchange.id,
+    quietEventId: quiet.id,
+    purpose: "arrival",
+  });
+  await db.insert(aiCalls).values({
+    familyId,
+    memberId: seed.parent.id,
+    call: "understand",
+    promptVersion: "understand.v1",
+    model: "claude-sonnet-5",
+    inputRef: { answer_id: answer.id },
+    ok: true,
+  });
+  await db.insert(events).values({ name: "family_created", familyId });
+  await db.insert(consents).values({
+    memberId: seed.parent.id,
+    contactId: contact.id,
+    kind: "light",
+    textVersion: "consent.request.v1",
+    lang: "zh-TW",
+    channel: "telegram",
+  });
+  await db.insert(deletions).values({
+    objectType: "media",
+    objectId: "01990000-0000-7000-8000-000000000000",
+    contentHash: "sha256:0",
+    reason: "retention",
+  });
+  await db
+    .insert(subscriptions)
+    .values({ familyId, memberId: seed.parent.id, provider: "trial", status: "trial" });
+  await db.insert(flags).values({ key: "quiet_notices", value: true });
+  await db.insert(adminAccessLog).values({ admin: "founder", familyId, what: "family view" });
+  await db.insert(metricsDaily).values({ day: "2026-09-13", familyId, memberId: seed.parent.id });
+}
+
 describe("migrations", () => {
   it("give every uuid primary key the native uuidv7() default", async () => {
     const uuidKeyed = allTables
@@ -228,6 +411,19 @@ describe("migrations", () => {
       expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     }
     expect([...inserted].sort()).toEqual(inserted);
+  });
+
+  it("name every primary key <table>_pkey, as Postgres does", async () => {
+    const result = await db.execute<{ table_name: string; conname: string }>(
+      sql`select conrelid::regclass::text as table_name, conname from pg_constraint
+          join pg_namespace on pg_namespace.oid = pg_constraint.connamespace
+          where contype = 'p' and nspname = 'public'`,
+    );
+
+    expect(result.rows).toHaveLength(allTables.length);
+    for (const row of result.rows) {
+      expect(row.conname).toBe(`${row.table_name}_pkey`);
+    }
   });
 });
 
@@ -375,7 +571,7 @@ describe("webhook redelivery", () => {
       memberId: seed.parent.id,
       kind: "voice",
       channel: "telegram",
-      externalId: "tg:msg:77",
+      externalId: "1001:77",
     } as const;
     await db.insert(answers).values(answer);
 
@@ -393,13 +589,39 @@ describe("webhook redelivery", () => {
     const base = { exchangeId: exchange.id, memberId: seed.parent.id, kind: "fine" } as const;
 
     await db.insert(answers).values([
-      { ...base, channel: "telegram", externalId: "77" },
-      { ...base, channel: "line", externalId: "77" },
+      { ...base, channel: "telegram", externalId: "1001:77" },
+      { ...base, channel: "line", externalId: "1001:77" },
       { ...base, channel: "app", externalId: null },
       { ...base, channel: "app", externalId: null },
     ]);
 
     expect(await countRows(answers)).toBe(4);
+  });
+
+  it("keeps answers from two chats apart when Telegram gives both the same message id", async () => {
+    const first = await seedFamily();
+    const second = await seedFamily();
+    const firstExchange = only(await db.insert(exchanges).values(exchangeFor(first)).returning());
+    const secondExchange = only(await db.insert(exchanges).values(exchangeFor(second)).returning());
+
+    await db.insert(answers).values([
+      {
+        exchangeId: firstExchange.id,
+        memberId: first.parent.id,
+        kind: "fine",
+        channel: "telegram",
+        externalId: "1001:77",
+      },
+      {
+        exchangeId: secondExchange.id,
+        memberId: second.parent.id,
+        kind: "fine",
+        channel: "telegram",
+        externalId: "2002:77",
+      },
+    ]);
+
+    expect(await countRows(answers)).toBe(2);
   });
 
   it("rejects a reply redelivered with the same channel and message id", async () => {
@@ -411,7 +633,7 @@ describe("webhook redelivery", () => {
       kind: "text",
       text: "Save me some!",
       channel: "telegram",
-      externalId: "-100:501",
+      externalId: "-100200:501",
     } as const;
     await db.insert(replies).values(reply);
 
@@ -421,6 +643,25 @@ describe("webhook redelivery", () => {
       code: UNIQUE_VIOLATION,
       constraint: "replies_channel_external_id_idx",
     });
+  });
+
+  it("keeps replies from two family groups apart when both carry message id 501", async () => {
+    const seed = await seedFamily();
+    const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
+    const reply = {
+      exchangeId: exchange.id,
+      memberId: seed.organiser.id,
+      kind: "text",
+      text: "Save me some!",
+      channel: "telegram",
+    } as const;
+
+    await db.insert(replies).values([
+      { ...reply, externalId: "-100200:501" },
+      { ...reply, externalId: "-100300:501" },
+    ]);
+
+    expect(await countRows(replies)).toBe(2);
   });
 
   it("allows many replies without a provider message id", async () => {
@@ -552,7 +793,7 @@ describe("media", () => {
     });
   });
 
-  it("rejects the same provider file recorded twice on one channel", async () => {
+  it("rejects the same provider file recorded twice on one channel in one family", async () => {
     const seed = await seedFamily();
     const voice = mediaFor(seed, {
       channel: "telegram",
@@ -567,7 +808,43 @@ describe("media", () => {
 
     expect(error).toEqual({
       code: UNIQUE_VIOLATION,
-      constraint: "media_channel_provider_unique_id_idx",
+      constraint: "media_family_id_channel_provider_unique_id_idx",
+    });
+  });
+
+  it("lets two families each record the same forwarded provider file", async () => {
+    const first = await seedFamily();
+    const second = await seedFamily();
+    const photo = {
+      kind: "image",
+      channel: "telegram",
+      providerFileId: "AgACAgQ1",
+      providerUniqueId: "AQADq1",
+    } as const;
+
+    const rows = await db
+      .insert(media)
+      .values([
+        { ...photo, familyId: first.family.id },
+        { ...photo, familyId: second.family.id },
+      ])
+      .returning({ familyId: media.familyId });
+
+    expect(rows).toEqual([{ familyId: first.family.id }, { familyId: second.family.id }]);
+  });
+
+  it("rejects a provider's unique file id recorded without the channel that issued it", async () => {
+    const seed = await seedFamily();
+
+    const error = await rejection(
+      db
+        .insert(media)
+        .values(mediaFor(seed, { storageKey: "families/f/a.ogg", providerUniqueId: "AgADq1" })),
+    );
+
+    expect(error).toEqual({
+      code: CHECK_VIOLATION,
+      constraint: "media_provider_unique_id_channel_check",
     });
   });
 
@@ -734,6 +1011,38 @@ describe("columns the pilot flows rely on", () => {
     expect(await countRows(messageRefs)).toBe(0);
   });
 
+  it("records an evening turn that nobody holds", async () => {
+    const seed = await seedFamily();
+
+    const turn = only(
+      await db
+        .insert(turns)
+        .values({ familyId: seed.family.id, localDay: "2026-09-15", recipientId: seed.parent.id })
+        .returning(),
+    );
+
+    expect(turn.holderId).toBeNull();
+  });
+
+  it("reads local wall-clock times as HH:MM, the format core parses", async () => {
+    const seed = await seedFamily();
+    await db.update(members).set({ wakeTime: "07:30" }).where(eq(members.id, seed.parent.id));
+    await db.insert(events).values({ name: "answer_recorded", localTime: "08:05" });
+
+    const stored = only(
+      await db
+        .select({ wakeTime: members.wakeTime, arrivalTime: members.arrivalTime })
+        .from(members)
+        .where(eq(members.id, seed.parent.id)),
+    );
+
+    expect(seed.parent.arrivalTime).toBe("08:00");
+    expect(stored).toEqual({ wakeTime: "07:30", arrivalTime: "08:00" });
+    expect(await db.select({ localTime: events.localTime }).from(events)).toEqual([
+      { localTime: "08:05" },
+    ]);
+  });
+
   it("records unsupported content as an other answer", async () => {
     const seed = await seedFamily();
     const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
@@ -746,7 +1055,7 @@ describe("columns the pilot flows rely on", () => {
           memberId: seed.parent.id,
           kind: "other",
           channel: "telegram",
-          externalId: "tg:msg:90",
+          externalId: "1001:90",
         })
         .returning(),
     );
@@ -771,6 +1080,117 @@ describe("columns the pilot flows rely on", () => {
     // now() is the transaction's start time, so both defaults carry the same instant.
     expect(session.createdAt).toBeInstanceOf(Date);
     expect(session.createdAt).toEqual(session.updatedAt);
+  });
+});
+
+describe("deleting a member who left", () => {
+  it("leaves no foreign key to members that would refuse the delete", async () => {
+    const result = await db.execute<{ conname: string }>(
+      sql`select conname from pg_constraint
+          where contype = 'f' and confrelid = 'members'::regclass and confdeltype in ('a', 'r')`,
+    );
+
+    expect(result.rows).toEqual([]);
+  });
+
+  it("keeps the family's rows without them and drops rows that existed only for them", async () => {
+    const seed = await seedFamily();
+    const familyId = seed.family.id;
+    const expiresAt = new Date("2026-08-08T00:00:00Z");
+    const sibling = only(
+      await db
+        .insert(members)
+        .values({
+          familyId,
+          displayName: "Leo",
+          tz: "Asia/Taipei",
+          country: "TW",
+          status: "left",
+          leftAt: new Date("2026-08-01T00:00:00Z"),
+        })
+        .returning(),
+    );
+    const photo = only(
+      await db
+        .insert(media)
+        .values({
+          familyId,
+          uploadedBy: sibling.id,
+          kind: "image",
+          channel: "telegram",
+          providerFileId: "AgACAgQ1",
+        })
+        .returning(),
+    );
+    const exchange = only(
+      await db
+        .insert(exchanges)
+        .values(exchangeFor(seed, { askerId: sibling.id, mediaIds: [photo.id] }))
+        .returning(),
+    );
+    await db.insert(quietEvents).values({
+      exchangeId: exchange.id,
+      memberId: seed.parent.id,
+      resolvedAt: new Date("2026-07-20T06:00:00Z"),
+      outcome: "fine_known",
+      resolvedBy: sibling.id,
+    });
+    await db.insert(awayPeriods).values({
+      memberId: seed.parent.id,
+      fromDate: "2026-07-25",
+      source: "member",
+      setBy: sibling.id,
+    });
+    await db.insert(stories).values({
+      familyId,
+      memberId: seed.parent.id,
+      exchangeId: exchange.id,
+      question: "How did you and Dad meet?",
+      askedBy: sibling.id,
+    });
+    await db.insert(turns).values({
+      familyId,
+      localDay: "2026-07-21",
+      recipientId: seed.parent.id,
+      holderId: sibling.id,
+    });
+    await db.insert(invites).values([
+      {
+        familyId,
+        invitedBy: seed.organiser.id,
+        token: "accepted-by-leo",
+        expiresAt,
+        acceptedAt: new Date("2026-07-02T00:00:00Z"),
+        acceptedBy: sibling.id,
+      },
+      { familyId, invitedBy: sibling.id, token: "sent-by-leo", expiresAt },
+      {
+        familyId,
+        invitedBy: seed.organiser.id,
+        forMemberId: sibling.id,
+        token: "for-leo",
+        expiresAt,
+      },
+    ]);
+    await db.insert(outbound).values(outboundFor(seed, "nearby_ask", { actorId: sibling.id }));
+
+    await db.delete(members).where(eq(members.id, sibling.id));
+
+    // Only a hello comes from Vela, so an ask that lost its asker still reads as a family ask.
+    expect(
+      await db.select({ type: exchanges.type, askerId: exchanges.askerId }).from(exchanges),
+    ).toEqual([{ type: "question", askerId: null }]);
+    expect(await db.select({ id: media.uploadedBy }).from(media)).toEqual([{ id: null }]);
+    expect(await db.select({ id: quietEvents.resolvedBy }).from(quietEvents)).toEqual([
+      { id: null },
+    ]);
+    expect(await db.select({ id: awayPeriods.setBy }).from(awayPeriods)).toEqual([{ id: null }]);
+    expect(await db.select({ id: stories.askedBy }).from(stories)).toEqual([{ id: null }]);
+    expect(await db.select({ id: turns.holderId }).from(turns)).toEqual([{ id: null }]);
+    expect(
+      await db.select({ token: invites.token, acceptedBy: invites.acceptedBy }).from(invites),
+    ).toEqual([{ token: "accepted-by-leo", acceptedBy: null }]);
+    expect(await countRows(outbound)).toBe(0);
   });
 });
 
@@ -817,102 +1237,6 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "subscriptions", column: "plan_interval", values: PLAN_INTERVALS },
   ];
 
-  /** One row in every table that has an enumerated column, so updates have something to hit. */
-  async function seedOneRowEach(): Promise<void> {
-    const seed = await seedFamily();
-    const familyId = seed.family.id;
-    await db.insert(users).values({ displayName: "Mia" });
-    await db
-      .insert(channelLinks)
-      .values({ memberId: seed.parent.id, channel: "telegram", externalId: "1001" });
-    await db.insert(familyChannels).values({
-      familyId,
-      channel: "telegram",
-      conversationId: "-100200",
-      kind: "group",
-      linkedByMemberId: seed.organiser.id,
-    });
-    await db.insert(onboardingSessions).values({
-      channel: "telegram",
-      conversationId: "42",
-      externalUserId: "42",
-      step: "ask_name",
-      expiresAt: new Date("2026-09-14T00:00:00Z"),
-    });
-    await db.insert(invites).values({
-      familyId,
-      invitedBy: seed.organiser.id,
-      forMemberId: seed.parent.id,
-      token: "invite-token",
-      expiresAt: new Date("2026-09-20T00:00:00Z"),
-    });
-    const contact = only(
-      await db
-        .insert(nearbyContacts)
-        .values({ familyId, memberId: seed.parent.id, name: "Anna", phone: "+886900000001" })
-        .returning(),
-    );
-    await db
-      .insert(media)
-      .values({ familyId, kind: "audio", storageKey: "apac/a.ogg", mime: "audio/ogg", bytes: 1 });
-    const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
-    await db.insert(translations).values({
-      objectType: "exchange",
-      objectId: exchange.id,
-      lang: "zh-TW",
-      text: "今晚煮什麼？",
-      provider: "claude:v1",
-    });
-    await db.insert(answers).values({
-      exchangeId: exchange.id,
-      memberId: seed.parent.id,
-      kind: "fine",
-      channel: "telegram",
-    });
-    await db.insert(replies).values({
-      exchangeId: exchange.id,
-      memberId: seed.organiser.id,
-      kind: "text",
-      text: "Yum",
-      channel: "telegram",
-    });
-    await db.insert(recipes).values({ familyId, memberId: seed.parent.id, title: "Braised pork" });
-    await db
-      .insert(memoryFacts)
-      .values({ familyId, memberId: seed.parent.id, kind: "date", text: "Birthday in May" });
-    const quiet = only(
-      await db
-        .insert(quietEvents)
-        .values({ exchangeId: exchange.id, memberId: seed.parent.id })
-        .returning(),
-    );
-    await db
-      .insert(awayPeriods)
-      .values({ memberId: seed.parent.id, fromDate: "2026-09-14", source: "organiser" });
-    await db.insert(outbound).values(outboundFor(seed, "system", { actorId: seed.organiser.id }));
-    await db.insert(messageRefs).values({
-      channel: "telegram",
-      conversationId: "1001",
-      messageId: "5",
-      familyId,
-      exchangeId: exchange.id,
-      quietEventId: quiet.id,
-      purpose: "arrival",
-    });
-    await db.insert(consents).values({
-      memberId: seed.parent.id,
-      contactId: contact.id,
-      kind: "light",
-      textVersion: "consent.request.v1",
-      lang: "zh-TW",
-      channel: "telegram",
-    });
-    await db
-      .insert(subscriptions)
-      .values({ familyId, memberId: seed.parent.id, provider: "trial", status: "trial" });
-    await db.insert(events).values({ name: "family_created", familyId });
-  }
-
   function setColumn(table: string, column: string, value: string): Promise<unknown> {
     return db.execute(
       sql`update ${sql.identifier(table)} set ${sql.identifier(column)} = ${value}`,
@@ -922,7 +1246,7 @@ describe("CHECK constraints on enumerated columns", () => {
   it.each(enumerated)(
     "$table column $column accepts every value in its tuple and nothing else",
     async ({ table, column, values }) => {
-      await seedOneRowEach();
+      await seedEveryTable();
 
       for (const value of values) {
         await setColumn(table, column, value);
@@ -953,6 +1277,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "families_story_day_check",
       "outbound_nearby_ask_actor_check",
       "media_storage_key_or_provider_file_id_check",
+      "media_provider_unique_id_channel_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());
@@ -961,28 +1286,10 @@ describe("CHECK constraints on enumerated columns", () => {
 
 describe("reset", () => {
   it("empties every application table and restarts identities", async () => {
-    const seed = await seedFamily();
-    const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
-    await db.insert(chips).values({
-      exchangeId: exchange.id,
-      chips: ["Noodles", "Soup", "Not sure"],
-      promptVersion: "chips.v1",
-    });
-    await db.insert(onboardingSessions).values({
-      channel: "telegram",
-      conversationId: "42",
-      externalUserId: "42",
-      step: "ask_name",
-      expiresAt: new Date("2026-09-14T00:00:00Z"),
-    });
-    await db.insert(metricsDaily).values({
-      day: "2026-09-13",
-      familyId: seed.family.id,
-      memberId: seed.parent.id,
-    });
-    await db
-      .insert(events)
-      .values([{ name: "family_created" }, { name: "member_joined" }, { name: "ask_composed" }]);
+    await seedEveryTable();
+    for (const table of allTables) {
+      expect(await countRows(table), `${getTableName(table)} before reset`).toBeGreaterThan(0);
+    }
 
     await testDatabase.reset();
 

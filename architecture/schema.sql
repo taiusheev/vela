@@ -225,6 +225,7 @@ CREATE TABLE "media" (
 	CONSTRAINT "media_storage_key_key" UNIQUE("storage_key"),
 	CONSTRAINT "media_kind_check" CHECK ("kind" in ('audio', 'image')),
 	CONSTRAINT "media_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
+	CONSTRAINT "media_provider_unique_id_channel_check" CHECK ("provider_unique_id" is null or "channel" is not null),
 	CONSTRAINT "media_storage_key_or_provider_file_id_check" CHECK ("storage_key" is not null or "provider_file_id" is not null)
 );
 
@@ -287,7 +288,7 @@ CREATE TABLE "message_refs" (
 	"local_date" date,
 	"purpose" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "message_refs_channel_conversation_id_message_id_pk" PRIMARY KEY("channel","conversation_id","message_id"),
+	CONSTRAINT "message_refs_pkey" PRIMARY KEY("channel","conversation_id","message_id"),
 	CONSTRAINT "message_refs_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
 	CONSTRAINT "message_refs_purpose_check" CHECK ("purpose" in ('arrival', 'repeat', 'turn_prompt', 'answer_post', 'quiet_notice', 'consent', 'ask_confirmation'))
 );
@@ -306,7 +307,7 @@ CREATE TABLE "metrics_daily" (
 	"quiet_outcome" text,
 	"away" boolean DEFAULT false NOT NULL,
 	"quiet_day" boolean DEFAULT false NOT NULL,
-	CONSTRAINT "metrics_daily_day_member_id_pk" PRIMARY KEY("day","member_id")
+	CONSTRAINT "metrics_daily_pkey" PRIMARY KEY("day","member_id")
 );
 
 CREATE TABLE "nearby_contacts" (
@@ -333,7 +334,7 @@ CREATE TABLE "onboarding_sessions" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
-	CONSTRAINT "onboarding_sessions_channel_conversation_id_pk" PRIMARY KEY("channel","conversation_id"),
+	CONSTRAINT "onboarding_sessions_pkey" PRIMARY KEY("channel","conversation_id"),
 	CONSTRAINT "onboarding_sessions_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
 );
 
@@ -483,7 +484,7 @@ CREATE TABLE "translations" (
 	"text" text NOT NULL,
 	"provider" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "translations_object_type_object_id_lang_pk" PRIMARY KEY("object_type","object_id","lang"),
+	CONSTRAINT "translations_pkey" PRIMARY KEY("object_type","object_id","lang"),
 	CONSTRAINT "translations_object_type_check" CHECK ("object_type" in ('exchange', 'answer', 'reply', 'story', 'weekly_read', 'recipe'))
 );
 
@@ -491,11 +492,11 @@ CREATE TABLE "turns" (
 	"family_id" uuid NOT NULL,
 	"local_day" date NOT NULL,
 	"recipient_id" uuid NOT NULL,
-	"holder_id" uuid NOT NULL,
+	"holder_id" uuid,
 	"prompted_at" timestamp with time zone,
 	"prompt_message_id" text,
 	"acted_at" timestamp with time zone,
-	CONSTRAINT "turns_family_id_local_day_recipient_id_pk" PRIMARY KEY("family_id","local_day","recipient_id")
+	CONSTRAINT "turns_pkey" PRIMARY KEY("family_id","local_day","recipient_id")
 );
 
 CREATE TABLE "users" (
@@ -533,24 +534,24 @@ ALTER TABLE "answers" ADD CONSTRAINT "answers_exchange_id_exchanges_id_fk" FOREI
 ALTER TABLE "answers" ADD CONSTRAINT "answers_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "answers" ADD CONSTRAINT "answers_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FOREIGN KEY ("set_by") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FOREIGN KEY ("set_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "channel_links" ADD CONSTRAINT "channel_links_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "chips" ADD CONSTRAINT "chips_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "consents" ADD CONSTRAINT "consents_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "consents" ADD CONSTRAINT "consents_contact_id_nearby_contacts_id_fk" FOREIGN KEY ("contact_id") REFERENCES "public"."nearby_contacts"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_recipient_id_members_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_asker_id_members_id_fk" FOREIGN KEY ("asker_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_asker_id_members_id_fk" FOREIGN KEY ("asker_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_voice_hello_id_media_id_fk" FOREIGN KEY ("voice_hello_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "families" ADD CONSTRAINT "families_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "family_channels" ADD CONSTRAINT "family_channels_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "family_channels" ADD CONSTRAINT "family_channels_linked_by_member_id_members_id_fk" FOREIGN KEY ("linked_by_member_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "invites" ADD CONSTRAINT "invites_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_members_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "invites" ADD CONSTRAINT "invites_for_member_id_members_id_fk" FOREIGN KEY ("for_member_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "invites" ADD CONSTRAINT "invites_accepted_by_members_id_fk" FOREIGN KEY ("accepted_by") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_members_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "invites" ADD CONSTRAINT "invites_for_member_id_members_id_fk" FOREIGN KEY ("for_member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "invites" ADD CONSTRAINT "invites_accepted_by_members_id_fk" FOREIGN KEY ("accepted_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "media" ADD CONSTRAINT "media_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "media" ADD CONSTRAINT "media_uploaded_by_members_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "media" ADD CONSTRAINT "media_uploaded_by_members_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
@@ -564,10 +565,10 @@ ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_family_id_families
 ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE set null ON UPDATE no action;
-ALTER TABLE "outbound" ADD CONSTRAINT "outbound_actor_id_members_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "outbound" ADD CONSTRAINT "outbound_actor_id_members_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_resolved_by_members_id_fk" FOREIGN KEY ("resolved_by") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_resolved_by_members_id_fk" FOREIGN KEY ("resolved_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "recipes" ADD CONSTRAINT "recipes_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "recipes" ADD CONSTRAINT "recipes_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "reminders" ADD CONSTRAINT "reminders_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
@@ -580,7 +581,7 @@ ALTER TABLE "replies" ADD CONSTRAINT "replies_media_id_media_id_fk" FOREIGN KEY 
 ALTER TABLE "stories" ADD CONSTRAINT "stories_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "stories" ADD CONSTRAINT "stories_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "stories" ADD CONSTRAINT "stories_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "stories" ADD CONSTRAINT "stories_asked_by_members_id_fk" FOREIGN KEY ("asked_by") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "stories" ADD CONSTRAINT "stories_asked_by_members_id_fk" FOREIGN KEY ("asked_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "stories" ADD CONSTRAINT "stories_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
@@ -590,7 +591,7 @@ ALTER TABLE "suggestions" ADD CONSTRAINT "suggestions_for_member_id_members_id_f
 ALTER TABLE "suggestions" ADD CONSTRAINT "suggestions_about_member_id_members_id_fk" FOREIGN KEY ("about_member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "turns" ADD CONSTRAINT "turns_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "turns" ADD CONSTRAINT "turns_recipient_id_members_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "turns" ADD CONSTRAINT "turns_holder_id_members_id_fk" FOREIGN KEY ("holder_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "turns" ADD CONSTRAINT "turns_holder_id_members_id_fk" FOREIGN KEY ("holder_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "ai_calls_at_idx" ON "ai_calls" USING btree ("at");
@@ -605,7 +606,7 @@ CREATE INDEX "exchanges_queue_idx" ON "exchanges" USING btree ("recipient_id","w
 CREATE INDEX "exchanges_family_recent_idx" ON "exchanges" USING btree ("family_id","scheduled_for" DESC NULLS FIRST);
 CREATE UNIQUE INDEX "family_channels_channel_conversation_id_idx" ON "family_channels" USING btree ("channel","conversation_id") WHERE "unlinked_at" is null;
 CREATE INDEX "media_expiry_idx" ON "media" USING btree ("expires_at") WHERE "kept" = false;
-CREATE UNIQUE INDEX "media_channel_provider_unique_id_idx" ON "media" USING btree ("channel","provider_unique_id") WHERE "provider_unique_id" is not null;
+CREATE UNIQUE INDEX "media_family_id_channel_provider_unique_id_idx" ON "media" USING btree ("family_id","channel","provider_unique_id") WHERE "provider_unique_id" is not null;
 CREATE INDEX "members_due_idx" ON "members" USING btree ("next_wake_at") WHERE "status" = 'active';
 CREATE INDEX "members_family_idx" ON "members" USING btree ("family_id");
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';

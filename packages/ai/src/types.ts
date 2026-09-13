@@ -51,9 +51,28 @@ export type AiOutcome<T> =
   | { ok: true; value: T; record: AiCallRecord }
   | { ok: false; value: T; record: AiCallRecord; error: string };
 
-const Name = z.string().trim().min(1).max(80);
-const FamilyText = z.string().max(4000);
-const ShortText = z.string().max(300);
+/**
+ * The longest text an input field keeps, in UTF-16 code units. Names and family text come from people
+ * (a Telegram message holds 4096 characters, a transcript has no bound), so a longer value is shortened
+ * to the limit before validation instead of rejecting the call as a programming error.
+ */
+export const INPUT_TEXT_LIMITS = { name: 80, familyText: 4000, shortText: 300 } as const;
+
+function clampTo(limit: number): (text: string) => string {
+  return (text) => {
+    if (text.length <= limit) {
+      return text;
+    }
+    const kept = text.slice(0, limit);
+    const last = kept.charCodeAt(kept.length - 1);
+    // A high surrogate at the cut would be half a character, such as half an emoji.
+    return last >= 0xd800 && last <= 0xdbff ? kept.slice(0, -1) : kept;
+  };
+}
+
+const Name = z.string().trim().overwrite(clampTo(INPUT_TEXT_LIMITS.name)).min(1);
+const FamilyText = z.string().overwrite(clampTo(INPUT_TEXT_LIMITS.familyText));
+const ShortText = z.string().overwrite(clampTo(INPUT_TEXT_LIMITS.shortText));
 
 export const WEEKDAYS = [
   "Sunday",
@@ -136,13 +155,24 @@ export const Mentions = z.object({
 });
 export type Mentions = z.infer<typeof Mentions>;
 
+/**
+ * How far ahead of her answer a detected away may start or end. A misread or injected date must not
+ * switch off repeats and quiet notices for months; a longer trip is set by the family.
+ */
+export const AWAY_HORIZON_DAYS = 90;
+
 export const Understanding = z.object({
   /** One neutral line in `summaryLang`. */
   summary: z.string().min(1).max(200),
   moodWords: z.array(MoodWord).max(3),
   mentions: Mentions,
-  /** Set when she says she will be away; `until` is null for "until I'm back" (spec §8). */
-  away: z.object({ until: LocalDate.nullable() }).nullable(),
+  /**
+   * Set when she says she will be away (spec §8). `from` is the first date away, which can be weeks
+   * after her answer, so an away never covers the days she is still at home; it is never before
+   * `today`, and neither date is more than `AWAY_HORIZON_DAYS` after it. `until` is null for "until
+   * I'm back", which ends on her first answer on or after `from`.
+   */
+  away: z.object({ from: LocalDate, until: LocalDate.nullable() }).nullable(),
   /** BCP-47 tag of the language she answered in. */
   language: z.string().min(2).max(35),
 });
@@ -371,9 +401,34 @@ export interface AiCallTypes {
   weekly_read: { input: WeeklyReadInput; output: WeeklyRead };
 }
 
+/** Each call's input schema; every `Ai`, the fake included, parses its input with it. */
+export const INPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes[K]["input"]> } = {
+  understand: UnderstandInput,
+  flag: FlagInput,
+  chips: ChipsInput,
+  suggest: SuggestInput,
+  translate: TranslateInput,
+  readback: ReadbackInput,
+  hello: HelloInput,
+  weekly_read: WeeklyReadInput,
+};
+
+/** Each call's output schema, which is also the structured-output format sent to Claude. */
+export const OUTPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes[K]["output"]> } = {
+  understand: Understanding,
+  flag: FlagResult,
+  chips: Chips,
+  suggest: Suggestion,
+  translate: Translation,
+  readback: ReadbackLines,
+  hello: HelloLines,
+  weekly_read: WeeklyRead,
+};
+
 /**
  * Never rejects for provider failures: a failed call resolves `ok: false` with a safe default.
- * Invalid input is a programming error and rejects.
+ * Invalid input is a programming error and rejects; text beyond `INPUT_TEXT_LIMITS` is shortened
+ * first, because it comes from people.
  */
 export interface Ai {
   understand(input: UnderstandInput): Promise<AiOutcome<Understanding>>;

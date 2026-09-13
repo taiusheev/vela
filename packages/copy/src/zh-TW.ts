@@ -4,10 +4,11 @@
  *
  * Register: warm and plain, 您 toward the kept-light member and organisers, Taiwanese vocabulary
  * (訊息, 設定, 群組, 略過, 早安) rather than mainland terms. The kept-light member is always
- * named or called 這位家人, never 他 or 她 (其他, "other", is not a pronoun), and nothing uses 監控
- * or 追蹤, for the same reasons as the English rules. `onboarding.done` asks for a separate new
- * group without the member, not the 家族群組 the family already has, which usually includes the
- * elders (see the note in en.ts). The stop and start words the member is told to say (「停」,
+ * named or called 這位家人, never 他 or 她 (其他, "other", is not a pronoun), and nothing uses 監控,
+ * 監看, 監視, 追蹤, 盯著, or 看著您 (the surveillance words the consent script forbids), for the
+ * same reasons as the English rules. `onboarding.done` asks for a separate new group without the
+ * member, not the 家族群組 the family already has, which usually includes the elders (see the note
+ * in en.ts). The stop and start words the member is told to say (「停」,
  * 「開始」) must stay in step with the zh-TW keywords of `parseParentCommand` in @vela/core.
  * `consent.request`, `consent.yes`, and `consent.no` are what the founder reads aloud on the consent
  * call (plan/materials/pilot/consent-script.zh-TW.md, sections 2 and 6): change the script with

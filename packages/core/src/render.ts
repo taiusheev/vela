@@ -49,25 +49,37 @@ export const MAX_CHIPS = 3;
 export const MAX_VOTE_OPTIONS = 7;
 /** `Button.label` allows at most 64 characters. */
 const LABEL_MAX_LENGTH = 64;
+/** `OutboundMessage.text` allows at most 4000 characters. */
+const TEXT_MAX_LENGTH = 4000;
+/** What a shortened read-back line keeps before the ask gives up any words: the name and a start. */
+const READBACK_LINE_FLOOR = 100;
+/** What a shortened ask keeps before the read-back lines go below their floor. */
+const ASK_TEXT_FLOOR = 1000;
+
+/**
+ * The text cut to at most `maxLength` characters, ending in an ellipsis when anything was cut. Cuts
+ * fall between code points so no half of a surrogate pair is left behind.
+ */
+function shorten(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  let kept = "";
+  for (const character of text) {
+    if (kept.length + character.length > maxLength - 1) {
+      break;
+    }
+    kept += character;
+  }
+  return `${kept.trimEnd()}…`;
+}
 
 /**
  * A family-written label that fits a button. An over-long label would make the platform refuse the
  * whole arrival, so it is shortened instead; the answer is resolved by index, never by the label.
- * Cuts fall between code points so no half of a surrogate pair is left behind.
  */
 function fitLabel(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed.length <= LABEL_MAX_LENGTH) {
-    return trimmed;
-  }
-  let label = "";
-  for (const character of trimmed) {
-    if (label.length + character.length > LABEL_MAX_LENGTH - 1) {
-      break;
-    }
-    label += character;
-  }
-  return `${label.trimEnd()}…`;
+  return shorten(text.trim(), LABEL_MAX_LENGTH);
 }
 
 function button(label: string, action: ButtonAction): Button {
@@ -94,12 +106,12 @@ function optionRows(
 }
 
 /**
- * Who asks and what. An ask without words would otherwise leave "Mia asks:" hanging over nothing, so
- * a voice note, or a question or memory photo that carries images, says what was sent instead.
+ * Who asks, what (`text`, already trimmed), and how to answer. An ask without words would otherwise
+ * leave "Mia asks:" hanging over nothing, so a voice note, or a question or memory photo that carries
+ * images, says what was sent instead.
  */
-function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>): string[] {
+function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text: string): string[] {
   const asker = ask.askerName;
-  const text = ask.text?.trim() ?? "";
   if (text.length === 0) {
     if (ask.type === "voice_note") {
       return [t(lang, "arrival.sent_voice", { asker })];
@@ -116,14 +128,45 @@ function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>): stri
   if (text.length > 0) {
     lines.push(text);
   }
+  if (ask.type === "photo_choice") {
+    lines.push(t(lang, "arrival.photo_choice"));
+  } else if (ask.type === "vote") {
+    lines.push(t(lang, "arrival.vote"));
+  }
   return lines;
 }
 
-export function renderArrival(input: RenderArrivalInput): RenderedArrival {
-  const { lang, exchangeId, ask } = input;
-  const paragraphs: string[][] = [];
+/** The ask's own buttons, above the heart and "I'm fine". */
+function askRows(lang: Lang, exchangeId: string, ask: ArrivalAsk): Button[][] {
+  switch (ask.type) {
+    // Spec §5.3: chips belong to questions; story, recipe, and memory asks are answered by voice.
+    case "question":
+      return optionRows(ask.chips, MAX_CHIPS, (index) => ({ type: "chip", exchangeId, index }));
+    case "photo_choice":
+      return [
+        [0, 1].map((index) =>
+          button(t(lang, "button.choice", { n: index + 1 }), { type: "pick", exchangeId, index }),
+        ),
+      ];
+    case "vote":
+      return optionRows(ask.voteOptions, MAX_VOTE_OPTIONS, (index) => ({
+        type: "vote",
+        exchangeId,
+        index,
+      }));
+    default:
+      return [];
+  }
+}
 
-  const readBack = input.readBack.filter((line) => line.trim().length > 0);
+/** The text with the family's words exactly as given: the read-back lines and the ask's text. */
+function composeText(
+  input: RenderArrivalInput,
+  readBack: readonly string[],
+  askText: string,
+): string {
+  const { lang, ask } = input;
+  const paragraphs: string[][] = [];
   if (readBack.length > 0) {
     paragraphs.push([t(lang, "arrival.readback_heading"), ...readBack]);
   }
@@ -139,50 +182,71 @@ export function renderArrival(input: RenderArrivalInput): RenderedArrival {
   opening.push(t(lang, "arrival.greeting", { address: input.address }));
   paragraphs.push(opening);
 
-  const rows: Button[][] = [];
-  if (ask.type === "hello") {
-    paragraphs.push([t(lang, "arrival.hello"), t(lang, "arrival.hello_signature")]);
-  } else {
-    const lines = askLines(lang, ask);
-    switch (ask.type) {
-      // Spec §5.3: chips belong to questions; story, recipe, and memory asks are answered by voice.
-      case "question":
-        rows.push(
-          ...optionRows(ask.chips, MAX_CHIPS, (index) => ({ type: "chip", exchangeId, index })),
-        );
-        break;
-      case "photo_choice":
-        lines.push(t(lang, "arrival.photo_choice"));
-        rows.push(
-          [0, 1].map((index) =>
-            button(t(lang, "button.choice", { n: index + 1 }), { type: "pick", exchangeId, index }),
-          ),
-        );
-        break;
-      case "vote":
-        lines.push(t(lang, "arrival.vote"));
-        rows.push(
-          ...optionRows(ask.voteOptions, MAX_VOTE_OPTIONS, (index) => ({
-            type: "vote",
-            exchangeId,
-            index,
-          })),
-        );
-        break;
-      default:
-        break;
-    }
-    paragraphs.push(lines);
-  }
-
+  paragraphs.push(
+    ask.type === "hello"
+      ? [t(lang, "arrival.hello"), t(lang, "arrival.hello_signature")]
+      : askLines(lang, ask, askText),
+  );
   paragraphs.push([t(lang, "arrival.hint")]);
-  rows.push([
-    button(t(lang, "button.heart"), { type: "answer", exchangeId, answer: "heart" }),
-    button(t(lang, "button.fine"), { type: "answer", exchangeId, answer: "fine" }),
-  ]);
+  return paragraphs.map((lines) => lines.join("\n")).join("\n\n");
+}
 
+/**
+ * The largest length every line can be cut to so that all of them together fit `room`, or `Infinity`
+ * when they already fit. Shorter lines stay whole and the longest ones share what is left.
+ */
+function lineCap(lines: readonly string[], room: number): number {
+  const lengths = lines.map((line) => line.length).sort((a, b) => a - b);
+  let rest = room;
+  for (const [index, length] of lengths.entries()) {
+    const cap = Math.floor(rest / (lengths.length - index));
+    if (length > cap) {
+      return Math.max(1, cap);
+    }
+    rest -= length;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+/**
+ * The text within `OutboundMessage`'s limit. An over-long text would make the platform refuse the
+ * whole arrival and leave her without a morning, so the family's words are shortened instead, never
+ * the greeting, who asks, or the hint. The read-back yields first, down to a floor for each line; then
+ * the ask, down to its own floor; then the read-back again. A line is shortened, never dropped: every
+ * reply behind the read-back is marked as read back once the arrival is sent.
+ */
+function fitText(input: RenderArrivalInput, readBack: readonly string[], askText: string): string {
+  const full = composeText(input, readBack, askText);
+  if (full.length <= TEXT_MAX_LENGTH) {
+    return full;
+  }
+  const readBackLength = readBack.reduce((sum, line) => sum + line.length, 0);
+  const room = TEXT_MAX_LENGTH - (full.length - readBackLength - askText.length);
+  const readBackAtFloor = readBack.reduce(
+    (sum, line) => sum + Math.min(line.length, READBACK_LINE_FLOOR),
+    0,
+  );
+  const fittedAsk = shorten(askText, Math.max(room - readBackAtFloor, ASK_TEXT_FLOOR));
+  const cap = lineCap(readBack, room - fittedAsk.length);
+  return composeText(
+    input,
+    readBack.map((line) => shorten(line, cap)),
+    fittedAsk,
+  );
+}
+
+export function renderArrival(input: RenderArrivalInput): RenderedArrival {
+  const { lang, exchangeId, ask } = input;
+  const readBack = input.readBack.filter((line) => line.trim().length > 0);
+  const askText = ask.type === "hello" ? "" : (ask.text?.trim() ?? "");
   return {
-    text: paragraphs.map((lines) => lines.join("\n")).join("\n\n"),
-    buttons: rows,
+    text: fitText(input, readBack, askText),
+    buttons: [
+      ...askRows(lang, exchangeId, ask),
+      [
+        button(t(lang, "button.heart"), { type: "answer", exchangeId, answer: "heart" }),
+        button(t(lang, "button.fine"), { type: "answer", exchangeId, answer: "fine" }),
+      ],
+    ],
   };
 }

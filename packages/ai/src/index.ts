@@ -15,6 +15,7 @@ export {
   type ClaudeModel,
   EFFORT_FOR,
   type Effort,
+  MAX_RETRIES,
   MAX_TOKENS_FOR,
   MODEL_FOR,
   type ModelCapabilities,
@@ -22,6 +23,7 @@ export {
   PRICES,
   type PricedModel,
   SERVER_FALLBACK_BETA,
+  TIMEOUT_MS_FOR,
 } from "./models.ts";
 export {
   INPUT_CLOSE_TAG,
@@ -38,6 +40,7 @@ export {
   DETECT_FALLBACK_BELOW,
   type DeepgramSttOptions,
   STT_MODEL,
+  STT_TIMEOUT_MS,
   STT_VERSION,
 } from "./stt.ts";
 export * from "./types.ts";

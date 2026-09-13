@@ -32,17 +32,26 @@ interface KeyShape {
 }
 
 /**
- * What identifies one message of each kind. Parts a kind does not list are ignored, so a caller can
- * pass the whole row context.
+ * What identifies one message of each kind. Parts a kind does not list are ignored. The parts name
+ * the message, which is not always the outbound row's own member and date: build them from what each
+ * kind's comment says, never by copying the row.
  */
 export const OUTBOUND_KEY_SHAPES: Readonly<Record<OutboundKind, KeyShape>> = {
   /** Her morning: member and her local date. */
   arrival: { parts: ["memberId", "date"], suffix: "none" },
   repeat: { parts: ["memberId", "date"], suffix: "none" },
-  /** The evening prompt: the kept-light member the turn is with, and the date the turn is for. */
+  /**
+   * The evening prompt: the kept-light member the turn is with (not the holder the row is addressed
+   * to) and the date the turn is for (not the holder's today). The holder can change between two
+   * computations of the same prompt, and a key built from the holder would let a second prompt out.
+   */
   turn_prompt: { parts: ["memberId", "date"], suffix: "none" },
   answer_receipt: { parts: ["exchangeId"], suffix: "none" },
-  answer_post: { parts: ["exchangeId"], suffix: "none" },
+  /**
+   * Per exchange; the suffix is the answer posted, as one exchange can take several (a heart, then a
+   * voice story) and each is posted to the group.
+   */
+  answer_post: { parts: ["exchangeId"], suffix: "required" },
   /** Per quiet event and organiser; the suffix is the notification round, so "wait" re-notifies. */
   quiet_notice: { parts: ["quietEventId", "memberId"], suffix: "required" },
   /** Per quiet event and each member who was told. */

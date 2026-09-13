@@ -48,6 +48,7 @@ Trigger: `/start <token>`.
 - `bot_added` by a user linked as an organiser whose family has no active group: insert `family_channels (kind group)`, set `families.language` to the organiser's language, post `group.linked` naming the kept-light member. The organiser is a turn holder.
 - `bot_added` by anyone else, or to a second group: post `group.not_linked` ("Only the family organiser can connect Vela to a group") and do nothing else.
 - `bot_removed`: set `unlinked_at`.
+- `migrated` (a basic group upgraded to a supergroup, which Telegram does when the bot is made an administrator): update the linked `family_channels.conversation_id` to `migratedToConversationId` and move that conversation's `message_refs` to the new id, in one transaction. Without this the family group silently stops working.
 
 ### 3.4 The evening turn prompt (scheduled)
 
@@ -74,7 +75,7 @@ Insert the exchange (`when_rule`, `scheduled_for`, `state composed`, `asker_id` 
 
 ### 3.6 Preparing the morning (scheduled)
 
-Action `prepare(forDate)` at 22:00 her local time. In one transaction: a composed exchange scheduled for that date moves to `scheduled`; otherwise `selectAsk` over her whenever asks moves the oldest to that date; otherwise a `hello` exchange is created (asker null). For a `question`, `ai.chips` drafts three chips into `chips` (failure: no chips, the ask still goes out). Event `exchange_prepared`. The same preparation runs on demand if an arrival is due and nothing was prepared (for example consent given the same morning).
+Action `prepare(forDate)` at 22:00 her local time. In one transaction: a composed exchange scheduled for that date moves to `scheduled`; otherwise `selectAsk` over her whenever asks moves the oldest to that date; otherwise a `hello` exchange is created (asker null). For a `question`, `ai.chips` drafts three chips into `chips` (failure: no chips, the ask still goes out). Event `exchange_prepared`. The same preparation runs on demand if an arrival is due and nothing was prepared (for example after an outage that skipped the 22:00 wake).
 
 ### 3.7 Delivering the arrival (scheduled)
 
@@ -129,7 +130,7 @@ Then, outside the transaction:
 ### 3.12 Silence (scheduled and buttons)
 
 - `open_quiet(date, notify)`: insert `quiet_events` for the day's exchange; if `notify`, notify.
-- `notify_quiet(date)`: for each active organiser with a Telegram link, enqueue `quiet_notice` (`quiet.notice`, or `quiet.notice_no_usual` when there are fewer than seven answered days; times in her local time; `quiet.nearby` listing the nearby contacts' names and numbers as plain text; buttons `quiet_fine` and `quiet_wait`). The idempotency key includes the notify count, so a re-notification after "wait" is a new message. The gateway updates `last_notified_at`, `notify_count`, and `notified_member_ids`. Event `quiet_notice_sent`.
+- `notify_quiet(date)`: for each active organiser with a Telegram link, enqueue `quiet_notice` (`quiet.notice`, or `quiet.notice_no_usual` when there are fewer answered days than `TUNING.minSamples` (14); times in her local time; `quiet.nearby` listing the nearby contacts' names and numbers as plain text; buttons `quiet_fine` and `quiet_wait`). The idempotency key includes the notify count, so a re-notification after "wait" is a new message. The gateway updates `last_notified_at`, `notify_count`, and `notified_member_ids`. Event `quiet_notice_sent`.
 - `quiet_fine`: resolve with `outcome fine_known` and `resolved_by`, close the buttons, tell the other notified organisers `quiet.resolved_fine`. Event `quiet_notice_resolved`.
 - `quiet_wait`: set `wait_until = now + 120 min`, close the buttons with `quiet.waiting`, tick her schedule.
 - Nothing is ever sent to a nearby contact in the instrument; the organiser calls them.
@@ -142,7 +143,7 @@ Then, outside the transaction:
 
 ### 3.14 The weekly read draft (scheduled)
 
-Action `draft_weekly_read(weekEnd)`: seven days of answers (summaries, answered or not, latency), `ai.weeklyRead` → `weekly_reads` (the fallback read on failure, so the week is still marked done), then a `system` outbound to the admin conversation (`admin.weekly_read_draft` and the lines) when configured. The founder edits and sends it by hand in the instrument. Event `weekly_read_drafted`.
+Action `draft_weekly_read(weekEnd)`: the days of that week on or after `light_starts_on` (a first week counts only the days since the start) with their answers (summaries, answered or not, latency), `ai.weeklyRead` → `weekly_reads` (the fallback read on failure, so the week is still marked done), then a `system` outbound to the admin conversation (`admin.weekly_read_draft` and the lines) when configured. The founder edits and sends it by hand in the instrument. Event `weekly_read_drafted`.
 
 ### 3.15 Operations (cron)
 
@@ -205,7 +206,7 @@ applyRetention(deps): Promise<Record<string, number>>
 handleOnboarding(deps, event): Promise<boolean>
 handleInviteStart(deps, event): Promise<void>
 handleConsentButton(deps, event, action): Promise<void>
-handleBotAdded(deps, event): Promise<void>; handleBotRemoved(deps, event): Promise<void>
+handleBotAdded(deps, event): Promise<void>; handleBotRemoved(deps, event): Promise<void>; handleGroupMigrated(deps, event): Promise<void>
 resolveGroupSender(deps, familyId, event): Promise<MemberRow | null>
 handleGroupAsk(deps, event, target: { familyId: string; recipientId: string; senderId: string; date: LocalDate | null }): Promise<void>
 handleAskCommand(deps, event, familyId, senderId): Promise<void>
@@ -237,6 +238,7 @@ Routing table for `handleInbound`:
 | private | sender linked to a kept-light member | `parseParentCommand` → `handleParentCommand`, else `handleParentMessage` |
 | private | anything else | `help.private` |
 | group | `bot_added` / `bot_removed` | `handleBotAdded` / `handleBotRemoved` |
+| group | `migrated` | `handleGroupMigrated` (update the link and message refs) |
 | group | not a linked group | ignore |
 | group | `/ask` or `/later` (with or without `@bot`) | `handleAskCommand` |
 | group | reply to a `turn_prompt` message | `handleGroupAsk` |

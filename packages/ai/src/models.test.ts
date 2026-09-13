@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { CAPABILITIES, EFFORT_FOR, MAX_TOKENS_FOR, MODEL_FOR, PRICES } from "./models.ts";
+import {
+  CAPABILITIES,
+  EFFORT_FOR,
+  MAX_RETRIES,
+  MAX_TOKENS_FOR,
+  MODEL_FOR,
+  PRICES,
+  TIMEOUT_MS_FOR,
+} from "./models.ts";
 import { AI_CALL_NAMES } from "./types.ts";
 
 describe("MODEL_FOR", () => {
@@ -42,6 +50,21 @@ describe("EFFORT_FOR", () => {
     for (const call of AI_CALL_NAMES) {
       expect(EFFORT_FOR[call] !== null, call).toBe(CAPABILITIES[MODEL_FOR[call]].effort);
     }
+  });
+});
+
+describe("TIMEOUT_MS_FOR", () => {
+  const QUEUE_CONSUMER_LIMIT_MS = 15 * 60_000;
+
+  it("bounds every call, and the three calls of one answer with every retry, inside a queue consumer's limit", () => {
+    const attempts = MAX_RETRIES + 1;
+    for (const call of AI_CALL_NAMES) {
+      expect(TIMEOUT_MS_FOR[call], call).toBeGreaterThan(0);
+      expect(TIMEOUT_MS_FOR[call] * attempts, call).toBeLessThan(QUEUE_CONSUMER_LIMIT_MS);
+    }
+    const oneAnswer =
+      (TIMEOUT_MS_FOR.understand + TIMEOUT_MS_FOR.flag + TIMEOUT_MS_FOR.translate) * attempts;
+    expect(oneAnswer).toBeLessThan(QUEUE_CONSUMER_LIMIT_MS * 0.8);
   });
 });
 

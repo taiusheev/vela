@@ -1,5 +1,5 @@
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { z } from "zod";
 import { createClaudeAi } from "./claude.ts";
 import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
@@ -47,7 +47,7 @@ const understanding: Understanding = {
     health: [],
     dates: ["星期三"],
   },
-  away: { until: "2026-09-16" },
+  away: { from: "2026-09-13", until: "2026-09-16" },
   language: "zh-TW",
 };
 
@@ -138,6 +138,7 @@ const weeklyReadInput: WeeklyReadInput = {
 interface Case {
   call: AiCallName;
   model: string;
+  timeoutSeconds: number;
   effort: string | undefined;
   adaptiveThinking: boolean;
   serverFallbacks: boolean;
@@ -147,12 +148,13 @@ interface Case {
   run: (ai: Ai) => Promise<AiOutcome<unknown>>;
 }
 
-// Expectations are written out rather than read from MODEL_FOR and EFFORT_FOR, so a wrong route or
-// effort in the tables fails here instead of being mirrored.
+// Expectations are written out rather than read from MODEL_FOR, EFFORT_FOR, and TIMEOUT_MS_FOR, so a
+// wrong route, effort, or timeout in the tables fails here instead of being mirrored.
 const CASES: Case[] = [
   {
     call: "understand",
     model: "claude-sonnet-5",
+    timeoutSeconds: 60,
     effort: "low",
     adaptiveThinking: true,
     serverFallbacks: false,
@@ -164,6 +166,7 @@ const CASES: Case[] = [
   {
     call: "flag",
     model: "claude-opus-5",
+    timeoutSeconds: 90,
     effort: "low",
     adaptiveThinking: true,
     serverFallbacks: true,
@@ -175,6 +178,7 @@ const CASES: Case[] = [
   {
     call: "chips",
     model: "claude-haiku-4-5",
+    timeoutSeconds: 30,
     effort: undefined,
     adaptiveThinking: false,
     serverFallbacks: false,
@@ -186,6 +190,7 @@ const CASES: Case[] = [
   {
     call: "suggest",
     model: "claude-haiku-4-5",
+    timeoutSeconds: 30,
     effort: undefined,
     adaptiveThinking: false,
     serverFallbacks: false,
@@ -201,6 +206,7 @@ const CASES: Case[] = [
   {
     call: "translate",
     model: "claude-sonnet-5",
+    timeoutSeconds: 60,
     effort: "low",
     adaptiveThinking: true,
     serverFallbacks: false,
@@ -212,6 +218,7 @@ const CASES: Case[] = [
   {
     call: "readback",
     model: "claude-sonnet-5",
+    timeoutSeconds: 60,
     effort: "low",
     adaptiveThinking: true,
     serverFallbacks: false,
@@ -223,6 +230,7 @@ const CASES: Case[] = [
   {
     call: "hello",
     model: "claude-haiku-4-5",
+    timeoutSeconds: 30,
     effort: undefined,
     adaptiveThinking: false,
     serverFallbacks: false,
@@ -234,6 +242,7 @@ const CASES: Case[] = [
   {
     call: "weekly_read",
     model: "claude-sonnet-5",
+    timeoutSeconds: 180,
     effort: "medium",
     adaptiveThinking: true,
     serverFallbacks: false,
@@ -308,6 +317,8 @@ describe("createClaudeAi request shape", () => {
       expect(request?.method).toBe("POST");
       expect(request?.url.pathname).toBe("/v1/messages");
       expect(request?.headers.get("x-api-key")).toBe("test-key");
+      // The SDK announces the per-attempt timeout it arms, in seconds.
+      expect(request?.headers.get("x-stainless-timeout")).toBe(String(testCase.timeoutSeconds));
 
       const body = JSON.parse(request?.text ?? "");
       expect(body.model).toBe(testCase.model);
@@ -353,6 +364,71 @@ describe("createClaudeAi request shape", () => {
     expect(content.split("</vela_input>")).toHaveLength(2);
     expect(content.trimEnd().endsWith("</vela_input>")).toBe(true);
   });
+
+  it("sends an answer longer than a Telegram message, shortened to the limit, instead of rejecting it", async () => {
+    const { ai, requests } = clientWith([
+      jsonReply("claude-opus-5", {
+        flag: false,
+        category: null,
+        severity: null,
+        evidenceQuote: null,
+      }),
+    ]);
+    const long = `${"I fell in the kitchen. ".repeat(250)}😀`;
+
+    const outcome = await ai.flag({
+      ...flagInput,
+      ask: { askerName: "A".repeat(129), type: "question", text: long },
+      answer: { kind: "voice", text: long },
+      recentSummaries: [long.slice(0, 500)],
+    });
+
+    expect(outcome.ok).toBe(true);
+    expect(requests).toHaveLength(1);
+    const content: string = JSON.parse(requests[0]?.text ?? "").messages[0].content;
+    const sent = JSON.parse(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1));
+    expect(sent.answer.text).toBe(long.slice(0, 4000));
+    expect(sent.ask.text).toHaveLength(4000);
+    expect(sent.ask.askerName).toBe("A".repeat(80));
+    expect(sent.recentSummaries).toEqual([long.slice(0, 300)]);
+  });
+
+  it("never splits a character in two when shortening text", async () => {
+    const { ai, requests } = clientWith([jsonReply("claude-sonnet-5", { text: "譯文" })]);
+
+    await ai.translate({ ...translateInput, text: `${"a".repeat(3999)}😀` });
+
+    const content: string = JSON.parse(requests[0]?.text ?? "").messages[0].content;
+    const sent = JSON.parse(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1));
+    expect(sent.text).toBe("a".repeat(3999));
+  });
+
+  it("keeps the host, credentials, and log level out of the environment's reach", async () => {
+    vi.stubEnv("ANTHROPIC_BASE_URL", "https://proxy.example.com/relay");
+    vi.stubEnv("ANTHROPIC_AUTH_TOKEN", "env-token");
+    vi.stubEnv("ANTHROPIC_LOG", "debug");
+    const logged = [
+      vi.spyOn(console, "debug").mockImplementation(() => undefined),
+      vi.spyOn(console, "info").mockImplementation(() => undefined),
+      vi.spyOn(console, "log").mockImplementation(() => undefined),
+    ];
+    try {
+      const { ai, requests } = clientWith([jsonReply("claude-sonnet-5", understanding)]);
+
+      const outcome = await ai.understand(understandInput);
+
+      expect(outcome.ok).toBe(true);
+      expect(requests[0]?.url.origin).toBe("https://api.anthropic.com");
+      expect(requests[0]?.url.pathname).toBe("/v1/messages");
+      expect(requests[0]?.headers.get("authorization")).toBeNull();
+      for (const spy of logged) {
+        expect(spy).not.toHaveBeenCalled();
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      vi.restoreAllMocks();
+    }
+  });
 });
 
 describe("createClaudeAi usage and cost", () => {
@@ -385,8 +461,67 @@ describe("createClaudeAi usage and cost", () => {
 
     expect(outcome.ok).toBe(true);
     expect(outcome.record.model).toBe("claude-opus-4-8");
-    expect(outcome.record.costUsd).toBe(0.0075);
   });
+
+  it("prices a response at the rates of the model that served it, not the routed one", async () => {
+    const { ai } = clientWith([jsonReply("claude-opus-4-8", understanding)]);
+
+    const outcome = await ai.understand(understandInput);
+
+    // Opus 4.8: 900 × $5 + 120 × $25 per million tokens; Sonnet 5, the route, would be $0.003.
+    expect(outcome.record).toMatchObject({ model: "claude-opus-4-8", costUsd: 0.0075 });
+  });
+});
+
+describe("createClaudeAi away dates", () => {
+  const cases: { reply: Understanding["away"]; kept: Understanding["away"]; why: string }[] = [
+    {
+      why: "a trip that starts weeks after the answer",
+      reply: { from: "2026-10-10", until: "2026-10-20" },
+      kept: { from: "2026-10-10", until: "2026-10-20" },
+    },
+    {
+      why: "an open-ended stay from tomorrow",
+      reply: { from: "2026-09-14", until: null },
+      kept: { from: "2026-09-14", until: null },
+    },
+    {
+      why: "a start already past, moved to today",
+      reply: { from: "2026-09-11", until: "2026-09-16" },
+      kept: { from: "2026-09-13", until: "2026-09-16" },
+    },
+    {
+      why: "dates on the horizon",
+      reply: { from: "2026-12-12", until: "2026-12-12" },
+      kept: { from: "2026-12-12", until: "2026-12-12" },
+    },
+    {
+      why: "an away that has ended",
+      reply: { from: "2026-09-10", until: "2026-09-12" },
+      kept: null,
+    },
+    {
+      why: "an end before the start",
+      reply: { from: "2026-09-20", until: "2026-09-18" },
+      kept: null,
+    },
+    {
+      why: "an end past the horizon",
+      reply: { from: "2026-09-13", until: "2027-01-01" },
+      kept: null,
+    },
+    { why: "a start past the horizon", reply: { from: "2026-12-13", until: null }, kept: null },
+  ];
+
+  for (const { why, reply, kept } of cases) {
+    it(`holds away to her answer's date: ${why}`, async () => {
+      const { ai } = clientWith([jsonReply("claude-sonnet-5", { ...understanding, away: reply })]);
+
+      const outcome = await ai.understand(understandInput);
+
+      expect(outcome).toMatchObject({ ok: true, value: { ...understanding, away: kept } });
+    });
+  }
 });
 
 describe("createClaudeAi flag results", () => {
@@ -511,7 +646,7 @@ describe("createClaudeAi failures", () => {
 
     const outcome = await ai.understand(understandInput);
 
-    // The SDK's two default retries run before the failure is reported.
+    // Two retries run before the failure is reported.
     expect(requests).toHaveLength(3);
     expect(outcome).toEqual({
       ok: false,
@@ -525,7 +660,7 @@ describe("createClaudeAi failures", () => {
       },
       record: expect.objectContaining({
         call: "understand",
-        promptVersion: "understand.v2",
+        promptVersion: "understand.v3",
         model: "claude-sonnet-5",
         ok: false,
         error: "http_500",
@@ -533,6 +668,35 @@ describe("createClaudeAi failures", () => {
         costUsd: 0,
       }),
     });
+  });
+
+  it("returns the safe default with a timeout code when the provider never answers", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let attempts = 0;
+      const hanging: typeof fetch = (_resource, init) => {
+        attempts += 1;
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        });
+      };
+      const ai = createClaudeAi({ apiKey: "test-key", fetch: hanging });
+
+      const pending = ai.chips(chipsInput);
+      // Three 30-second attempts and the backoff between them.
+      await vi.advanceTimersByTimeAsync(3 * 30_000 + 60_000);
+      const outcome = await pending;
+
+      expect(attempts).toBe(3);
+      expect(outcome).toMatchObject({
+        ok: false,
+        error: "timeout",
+        value: { chips: ["Good", "Not yet", "Tell you later"] },
+        record: { ok: false, error: "timeout" },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("returns the original text when the network fails during a translation", async () => {

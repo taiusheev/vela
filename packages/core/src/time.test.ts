@@ -312,9 +312,22 @@ describe("isValidTimeZone", () => {
     expect(isValidTimeZone("UTC")).toBe(true);
   });
 
+  it("accepts the tz database's names for UTC itself", () => {
+    for (const zone of ["Etc/UTC", "Etc/GMT", "Etc/GMT0", "GMT"]) {
+      expect(isValidTimeZone(zone)).toBe(true);
+    }
+  });
+
   it("rejects unknown names, empty strings, and fixed offsets", () => {
     expect(isValidTimeZone("Mars/Olympus")).toBe(false);
     expect(isValidTimeZone("")).toBe(false);
     expect(isValidTimeZone("+08:00")).toBe(false);
+    expect(isValidTimeZone("-0500")).toBe(false);
+  });
+
+  it("rejects the tz database's fixed-offset zones, in any letter case", () => {
+    for (const zone of ["Etc/GMT-8", "Etc/GMT+5", "Etc/GMT-14", "Etc/GMT+12", "etc/gmt-8"]) {
+      expect(isValidTimeZone(zone)).toBe(false);
+    }
   });
 });

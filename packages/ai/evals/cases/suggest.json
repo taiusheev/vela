@@ -44,6 +44,11 @@
       { "kind": "containsAny", "path": "text", "texts": ["Mia"] },
       { "kind": "containsAny", "path": "text", "texts": ["birthday"] },
       { "kind": "equals", "path": "source", "value": "date" },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["monitor", "track", "checking on", "keep an eye"]
+      },
       { "kind": "writtenIn", "path": "text", "lang": "en" }
     ],
     "rubric": [

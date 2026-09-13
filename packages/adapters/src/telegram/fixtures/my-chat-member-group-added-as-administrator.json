@@ -1,5 +1,5 @@
 {
-  "update_id": 873920394,
+  "update_id": 873920438,
   "my_chat_member": {
     "chat": {
       "id": -1002214567890,
@@ -14,7 +14,7 @@
       "username": "anna_chen",
       "language_code": "en"
     },
-    "date": 1789038060,
+    "date": 1789300800,
     "old_chat_member": {
       "user": {
         "id": 7412589630,
@@ -22,7 +22,7 @@
         "first_name": "Vela Light",
         "username": "VelaLightBot"
       },
-      "status": "member"
+      "status": "left"
     },
     "new_chat_member": {
       "user": {

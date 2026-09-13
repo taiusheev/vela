@@ -92,10 +92,17 @@
         "texts": ["%", "％", "百分", "令人擔心", "擔憂", "退化", "衰退", "風險", "分數"]
       },
       { "kind": "notContains", "path": "lines", "texts": ["較短", "變短", "短一些"] },
+      { "kind": "containsAny", "path": "lines", "texts": ["Vela", "問候", "招呼"] },
+      {
+        "kind": "notContains",
+        "path": "lines",
+        "texts": ["監控", "監視", "追蹤", "記錄", "紀錄"]
+      },
       { "kind": "writtenIn", "path": "suggestion", "lang": "zh-TW" }
     ],
     "rubric": [
       "The lines say plainly that 阿嬤 answered 6 of 7 days, that answers came later than usual (55 minutes is beyond 30), that the tomatoes came up more than once, and what 阿嬤 taught (braised pork with rock sugar, the Taiwanese 足好呷) in 阿嬤's words; there is no line about voice length (12 percent is within 40) and no worry words or causes.",
+      "The first line also says plainly that on one morning nobody in the family asked, so Vela sent the hello, without blaming anyone and without adding a line beyond five.",
       "The suggestion is one ask a family member could send 阿嬤 next week, grounded in this week, such as another Taiwanese word or the tomatoes."
     ]
   },
@@ -146,7 +153,8 @@
           "risk",
           "worrying",
           "%",
-          "missed"
+          "missed",
+          "hello"
         ]
       },
       { "kind": "writtenIn", "path": "suggestion", "lang": "en" }
@@ -264,6 +272,11 @@
           "lonely",
           "because"
         ]
+      },
+      {
+        "kind": "notContains",
+        "path": "lines",
+        "texts": ["monitor", "track", "checking on", "keep an eye", "record"]
       }
     ],
     "rubric": [

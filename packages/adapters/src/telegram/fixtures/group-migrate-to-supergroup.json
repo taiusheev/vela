@@ -1,0 +1,21 @@
+{
+  "update_id": 873920392,
+  "message": {
+    "message_id": 4,
+    "from": {
+      "id": 5829174630,
+      "is_bot": false,
+      "first_name": "Anna",
+      "last_name": "Chen",
+      "username": "anna_chen",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": -4567812390,
+      "title": "Chen family",
+      "type": "group"
+    },
+    "date": 1789038060,
+    "migrate_to_chat_id": -1002214567890
+  }
+}

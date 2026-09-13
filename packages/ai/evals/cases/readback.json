@@ -113,6 +113,11 @@
         "path": "lines",
         "texts": ["everyone", "the family", "one person", "only"]
       },
+      {
+        "kind": "notContains",
+        "path": "lines",
+        "texts": ["monitor", "track", "checking on", "keep an eye", "record"]
+      },
       { "kind": "writtenIn", "path": "lines", "lang": "en" }
     ],
     "rubric": [

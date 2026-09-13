@@ -1,5 +1,5 @@
 {
-  "id": "2ed12367-0079-4a07-bc0c-b6c04a63eafe",
+  "id": "3efd5bd6-e067-4272-82e5-6c97ac82173d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -516,7 +516,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1244,7 +1244,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "exchanges_voice_hello_id_media_id_fk": {
@@ -1643,7 +1643,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "invites_for_member_id_members_id_fk": {
@@ -1656,7 +1656,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "invites_accepted_by_members_id_fk": {
@@ -1669,7 +1669,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1813,9 +1813,15 @@
           "method": "btree",
           "with": {}
         },
-        "media_channel_provider_unique_id_idx": {
-          "name": "media_channel_provider_unique_id_idx",
+        "media_family_id_channel_provider_unique_id_idx": {
+          "name": "media_family_id_channel_provider_unique_id_idx",
           "columns": [
+            {
+              "expression": "family_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "channel",
               "isExpression": false,
@@ -1860,7 +1866,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1883,6 +1889,10 @@
         "media_channel_check": {
           "name": "media_channel_check",
           "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'voice', 'app')"
+        },
+        "media_provider_unique_id_channel_check": {
+          "name": "media_provider_unique_id_channel_check",
+          "value": "\"provider_unique_id\" is null or \"channel\" is not null"
         },
         "media_storage_key_or_provider_file_id_check": {
           "name": "media_storage_key_or_provider_file_id_check",
@@ -2397,8 +2407,8 @@
         }
       },
       "compositePrimaryKeys": {
-        "message_refs_channel_conversation_id_message_id_pk": {
-          "name": "message_refs_channel_conversation_id_message_id_pk",
+        "message_refs_pkey": {
+          "name": "message_refs_pkey",
           "columns": [
             "channel",
             "conversation_id",
@@ -2513,8 +2523,8 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "metrics_daily_day_member_id_pk": {
-          "name": "metrics_daily_day_member_id_pk",
+        "metrics_daily_pkey": {
+          "name": "metrics_daily_pkey",
           "columns": [
             "day",
             "member_id"
@@ -2698,8 +2708,8 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "onboarding_sessions_channel_conversation_id_pk": {
-          "name": "onboarding_sessions_channel_conversation_id_pk",
+        "onboarding_sessions_pkey": {
+          "name": "onboarding_sessions_pkey",
           "columns": [
             "channel",
             "conversation_id"
@@ -2904,7 +2914,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -3094,7 +3104,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -3653,7 +3663,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "stories_media_id_media_id_fk": {
@@ -4041,8 +4051,8 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "translations_object_type_object_id_lang_pk": {
-          "name": "translations_object_type_object_id_lang_pk",
+        "translations_pkey": {
+          "name": "translations_pkey",
           "columns": [
             "object_type",
             "object_id",
@@ -4086,7 +4096,7 @@
           "name": "holder_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "prompted_at": {
           "name": "prompted_at",
@@ -4145,13 +4155,13 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
-        "turns_family_id_local_day_recipient_id_pk": {
-          "name": "turns_family_id_local_day_recipient_id_pk",
+        "turns_pkey": {
+          "name": "turns_pkey",
           "columns": [
             "family_id",
             "local_day",

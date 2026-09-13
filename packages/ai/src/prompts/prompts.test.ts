@@ -62,6 +62,19 @@ describe("PROMPTS registry", () => {
     expect(PROMPTS.weekly_read.system).not.toContain("three to five");
   });
 
+  it("asks the weekly read for the quiet-day count the organiser sees (spec §7)", () => {
+    expect(PROMPTS.weekly_read.system).toContain(
+      "When quietDays is more than 0 and familyAsks is more than 0, the same line also says on how many mornings Vela sent the hello",
+    );
+  });
+
+  it("asks understand for the first date away, so a trip that starts later leaves the days before it alone", () => {
+    const system = PROMPTS.understand.system;
+    expect(system).toContain('{"from": the first date away, "until": the last date away}');
+    expect(system).toContain("the named day when the trip starts later, even weeks later");
+    expect(system).toContain('When the elder names only a vague start, such as "next week"');
+  });
+
   it("names every escalation signal of spec §5.5 in the flag prompt", () => {
     const system = PROMPTS.flag.system;
     for (const category of FLAG_CATEGORIES) {

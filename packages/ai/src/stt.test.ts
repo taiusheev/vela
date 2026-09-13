@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { createDeepgramStt, createFakeStt } from "./stt.ts";
+import { describe, expect, it, vi } from "vitest";
+import { createDeepgramStt, createFakeStt, STT_TIMEOUT_MS } from "./stt.ts";
 import { createRecordingFetch, jsonResponse, type Reply } from "./testing.ts";
 
 const audio = new Uint8Array([1, 2, 3, 4, 5]).buffer;
@@ -145,6 +145,52 @@ describe("createDeepgramStt", () => {
     const result = await stt.transcribe({ audio, mime: "audio/ogg", languageHint: "zh-TW" });
 
     expect(result).toMatchObject({ ok: true, text: "嗯，還好。", language: "zh-TW" });
+  });
+
+  it("keeps her Traditional Chinese transcript when detection hears the same language more confidently", async () => {
+    const { stt, requests } = sttWith([
+      deepgramResponse({ transcript: "阮今仔日足歡喜。", confidence: 0.42, duration: 12 }),
+      deepgramResponse({
+        transcript: "我今天很欢喜。",
+        confidence: 0.61,
+        duration: 12,
+        detectedLanguage: "zh",
+      }),
+    ]);
+
+    const result = await stt.transcribe({ audio, mime: "audio/ogg", languageHint: "zh-TW" });
+
+    expect(requests).toHaveLength(2);
+    expect(result).toMatchObject({
+      ok: true,
+      text: "阮今仔日足歡喜。",
+      language: "zh-TW",
+      confidence: 0.42,
+      record: { ok: true, costUsd: 0.00172 },
+    });
+  });
+
+  it("gives up on a request that never answers with a timeout failure", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const hanging: typeof fetch = (_resource, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        });
+      const stt = createDeepgramStt({ apiKey: "dg-key", fetch: hanging });
+
+      const pending = stt.transcribe({ audio, mime: "audio/ogg", languageHint: "en" });
+      await vi.advanceTimersByTimeAsync(STT_TIMEOUT_MS);
+      const result = await pending;
+
+      expect(result).toMatchObject({
+        ok: false,
+        text: "",
+        record: { ok: false, error: "timeout", costUsd: 0 },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not retry silence with detection", async () => {

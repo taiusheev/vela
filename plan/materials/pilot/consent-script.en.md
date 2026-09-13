@@ -6,11 +6,14 @@ Version `consent-script.v1` · 13 September 2026 · goes with `privacy-notice.v1
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes, that's fine" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
+Neither the founder nor the organiser can make Vela send the consent message: a bot cannot start a chat. It comes only when the person opens the invite link from the organiser's setup and taps **Start**, which is why the link is opened at the end of the call (section 6).
+
 ## Before the call
 
 - [ ] The organiser has already talked about Vela with the person. The call is never the first they hear of it.
 - [ ] The organiser has agreed to the pilot (`organiser-agreement.en.md`) and has the privacy notice.
-- [ ] You know: the name the family uses, how they like to be greeted, the language, the morning time, the messaging app, and the names of any nearby contacts.
+- [ ] The organiser has finished Vela's setup in their private chat with the bot within the last 7 days, and has the invite link from its last message (the link stops working after 7 days). They have **not** sent it to the person yet, and can send it during the call, so the consent message never arrives before the person has heard this script.
+- [ ] You know: the name the family uses, how they like to be greeted, the language, the morning time, the messaging app, the names of any nearby contacts, and the emergency number where the person lives.
 - [ ] Ten quiet minutes. The organiser may join, but the person answers for themselves.
 - [ ] You are **not** recording. Take notes by hand or in [NOTES TOOL] under the family code.
 - [ ] If the person prefers another language, stop and reschedule with the right script.
@@ -33,7 +36,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 ### 2. What it is
 
-*This part carries the meaning of the consent message. Keep all four sentences.*
+*This part carries the meaning of the consent message. Keep every sentence.*
 
 "[Organiser] would like to keep a light on for you. Every morning someone in the family will ask you something. When you answer, they will know you are fine. If a morning goes unanswered, [organiser] will get a quiet note so they can call. You can say stop at any time."
 
@@ -47,9 +50,9 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 - "What you send goes to the family in the Vela group: [names of the people in the group]."
 - "[Organiser] gave me your name, your morning time and how to greet you. Tell me if anything is wrong."
-- "If you ever mention something like a fall or pain, [organiser] will see your own words that same day. Vela is not a doctor and never gives medical advice. If you need help quickly, call 119 or [organiser] straight away. Don't wait for the morning message."
+- "If you ever mention something like a fall or pain, [organiser] will see your own words that same day. Vela is not a doctor and never gives medical advice. If you need help quickly, call [local emergency number: 119 in Taiwan, 911 in the United States, 999 or 112 in the United Kingdom, 112 in the European Union] or [organiser] straight away. Don't wait for the morning message."
 - "If [organiser] can't reach you on a quiet day, they might ask [nearby contact's name] to come by. That is always [organiser]'s own decision. Vela never contacts anyone by itself."
-- "A computer program helps with the messages: it writes down voice messages as text, translates for [family member who speaks another language], and suggests short answers you can tap. Voice messages and photos are deleted after 30 days, unless the family keeps a story you told."
+- "A computer program helps with the messages: it writes down voice messages as text, translates for [family member who speaks another language], and suggests short answers you can tap. Voice messages and photos are deleted after 30 days."
 - "While we test Vela over these first weeks, I read the messages too, only to make sure everything works. Nobody outside the family and me."
 - "On Sundays [organiser] gets a few lines about your week. You can always see what the family sees: just write 'what does the family see'."
 
@@ -63,7 +66,9 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 "Would you like to try it?"
 
-- **Yes:** "Thank you. In a few minutes you'll get a message from Vela in [Telegram / LINE] that says the same thing. Please tap **'Yes, that's fine'**. Your first morning message arrives tomorrow at [time]."
+- **Yes:** "Thank you. [Organiser] is sending you a link in Telegram now. When it arrives, tap the link, then tap **Start** at the bottom of the chat that opens. Vela will then send you a message that says what I just told you. Please tap **'Yes, that's fine'**. Your first morning message arrives tomorrow at [time]."
+
+  *Ask the organiser to send the link now (message them if they are not on the call). Stay on the call until the person has tapped Start and seen the message, or agree that the organiser helps them straight after the call. If Vela says the link is no longer valid, thank them and end the call kindly; create a new link ([`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md), section A) for the organiser to send on the next call, and never ask the person to keep retrying. These are Telegram's steps; LINE's are added here when the LINE flow is built (sprint 2).*
 - **No:** "That's completely fine. Nothing will be sent. I'll tell [organiser] you said no for now, and there's nothing wrong with that."
 - **Not sure:** "Take your time. Nothing starts until you tap yes. [Organiser] can reach me whenever you'd like to talk again."
 
@@ -106,6 +111,6 @@ Record under the family code, never in the chat:
 - The answer in their own words ("yes, let's try", "no", "not now").
 - Anything corrected (name, greeting, time) and any question you could not answer.
 - Research questions: yes or no; scores if yes.
-- Then trigger the consent message. When they tap yes, Vela writes the `consents` row (kind `light`, the message's text version, language, channel, message id as evidence) and `members.light_consented_at`. For the call itself, record a `consents` row of kind `privacy_notice` with channel `call` and your note as evidence.
+- Check with the organiser that the person opened the invite link and tapped Start: that is the only thing that makes Vela send the consent message. When they tap yes, Vela writes the `consents` row (kind `light`, the message's text version, language, channel, message id as evidence) and `members.light_consented_at`. For the call itself, record a `consents` row of kind `privacy_notice` with channel `call` and a reference to your note (family code and date) as evidence, following [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md), section B.
 - If there is no tap within 24 hours, ask the organiser to mention it once. Never send reminders from Vela.
 - If the person said no: tell the organiser the same day, kindly. Nothing is created.

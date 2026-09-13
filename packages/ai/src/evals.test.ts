@@ -39,7 +39,7 @@ import {
   toPromptfooTest,
 } from "../evals/suite.ts";
 import { createFakeAi, fakeRecord } from "./fake.ts";
-import { AI_CALL_NAMES, type FlagInput } from "./types.ts";
+import { AI_CALL_NAMES, type FlagInput, Understanding } from "./types.ts";
 
 const EVALS_DIR = new URL("../evals/", import.meta.url);
 
@@ -161,21 +161,40 @@ describe("golden set", () => {
       );
       expect(injection, `${call} has a prompt-injection case`).toBe(true);
     }
-    const awayValues = CASES.flatMap((evalCase) => {
+    const aways = CASES.flatMap((evalCase) => {
       const check = awayCheck(evalCase);
-      return check?.kind === "equals" ? [check.value] : [];
+      if (check?.kind !== "equals") {
+        return [];
+      }
+      const today = typeof evalCase.input.today === "string" ? evalCase.input.today : "";
+      return [{ today, away: Understanding.shape.away.parse(check.value) }];
     });
-    expect(awayValues).toContainEqual({ until: null });
-    expect(awayValues).toContainEqual(null);
+    expect(aways.some(({ away }) => away === null)).toBe(true);
+    expect(aways.some(({ away }) => away !== null && away.until === null)).toBe(true);
+    expect(aways.some(({ away }) => away !== null && away.until !== null)).toBe(true);
+    const weekAfter = (date: string): string =>
+      new Date(Date.parse(`${date}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
     expect(
-      awayValues.some(
-        (value) =>
-          typeof value === "object" &&
-          value !== null &&
-          "until" in value &&
-          typeof value.until === "string",
-      ),
+      aways.some(({ today, away }) => away !== null && away.from > weekAfter(today)),
+      "a trip that starts weeks after the answer",
     ).toBe(true);
+  });
+
+  it("checks what Vela writes to and about the elder for words about monitoring, in English and Chinese", () => {
+    const monitoringChecks = (call: string, word: string): number =>
+      CASES.filter(
+        (evalCase) =>
+          evalCase.call === call &&
+          evalCase.checks.some(
+            (check) => check.kind === "notContains" && check.texts.includes(word),
+          ),
+      ).length;
+    for (const call of ["hello", "readback", "suggest", "weekly_read"]) {
+      expect(monitoringChecks(call, "monitor"), call).toBeGreaterThan(0);
+    }
+    for (const call of ["hello", "weekly_read"]) {
+      expect(monitoringChecks(call, "監控"), call).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -468,6 +487,30 @@ describe("Promptfoo tests from cases", () => {
     expect(test.metadata.mustFlag).toBe(false);
   });
 
+  it("holds every prose output to each guardrail of code design §7, worded for the call", () => {
+    const guardrails = {
+      "no diagnosis": "diagnosis",
+      "no advice": "advice",
+      "no mention of monitoring or notes": "monitoring, checking on, tracking, notes, or recording",
+      "nothing invented": "invented",
+      "people's own words": "own words",
+      "not as a family member": "family member",
+    } as const;
+    // A translation is the speaker's own message, and a suggestion is drafted for the holder to
+    // send as their own ask: both are a family member's words by design.
+    const writtenAsFamily: readonly string[] = ["translate", "suggest"];
+    for (const call of AI_CALL_NAMES.filter((name) => name !== "flag")) {
+      for (const [guardrail, phrase] of Object.entries(guardrails)) {
+        if (guardrail === "not as a family member" && writtenAsFamily.includes(call)) {
+          continue;
+        }
+        expect(CALL_STANDARDS[call], `${call}: ${guardrail}`).toContain(phrase);
+      }
+    }
+    // The flag output has no text of its own: a decision and a quote that must be her exact words.
+    expect(CALL_STANDARDS.flag).toContain("exact excerpt of the elder's own words");
+  });
+
   it("keeps family text inside the judge's data block and away from the template engine", () => {
     const rubric = judgeRubric(flagCase, "The fall is flagged as health with an exact quote.");
 
@@ -561,16 +604,25 @@ describe("eval gate", () => {
   const summary: EvalCase = { ...fall, id: "understand-chip", call: "understand", checks: [] };
   const golden = [fall, scam, knee, summary];
 
+  /**
+   * A result row shaped as Promptfoo 0.123 writes it. A failed assertion sets `error` to its reason
+   * with `failureReason` 1; a provider error sets `error` and `response.error` with `failureReason` 2
+   * and leaves no output.
+   */
   function row(
     caseId: string,
-    fields: { flag?: boolean; success?: boolean; error?: string; viaVars?: boolean },
+    fields: { flag?: boolean; outcome?: "pass" | "assert" | "error"; viaVars?: boolean },
   ) {
+    const outcome = fields.outcome ?? "pass";
+    const output =
+      fields.flag === undefined ? { summary: "answered" } : JSON.stringify({ flag: fields.flag });
     return {
-      success: fields.success ?? true,
-      error: fields.error ?? null,
+      success: outcome === "pass",
+      failureReason: { pass: 0, assert: 1, error: 2 }[outcome],
+      ...(outcome === "assert" ? { error: "The output does not meet the criterion." } : {}),
+      ...(outcome === "error" ? { error: "flag failed: http_529" } : {}),
       ...(fields.viaVars ? { vars: { caseId } } : { testCase: { metadata: { caseId } } }),
-      response:
-        fields.flag === undefined ? null : { output: JSON.stringify({ flag: fields.flag }) },
+      response: outcome === "error" ? { error: "flag failed: http_529" } : { output },
     };
   }
 
@@ -604,7 +656,7 @@ describe("eval gate", () => {
   it("fails when recall drops below the baseline and passes at a baseline that allows it", () => {
     const run = results([
       row("flag-fall", { flag: true }),
-      row("flag-scam", { flag: false, success: false }),
+      row("flag-scam", { flag: false, outcome: "assert" }),
       row("flag-knee", { flag: false }),
     ]);
 
@@ -612,18 +664,47 @@ describe("eval gate", () => {
       flagRecall: 0.5,
       missed: ["flag-scam"],
       failed: ["flag-scam"],
+      errored: [],
       passed: false,
     });
     expect(evaluateGate(golden, run, { flagRecall: 0.5, note: "lowered" }).passed).toBe(true);
   });
 
-  it("counts an errored, unrun, or unevenly repeated must-flag case as missed", () => {
+  it("counts a must-flag case that flagged as flagged even when another check or criterion failed", () => {
+    const report = evaluateGate(
+      golden,
+      results([
+        row("flag-fall", { flag: true, outcome: "assert" }),
+        row("flag-scam", { flag: true }),
+        row("flag-knee", { flag: false }),
+        row("understand-chip", { outcome: "assert" }),
+      ]),
+      strict,
+    );
+
+    expect(report).toMatchObject({
+      flagRecall: 1,
+      missed: [],
+      errored: [],
+      failed: ["flag-fall", "understand-chip"],
+      passed: true,
+    });
+  });
+
+  it("counts an errored, empty, or unevenly repeated must-flag case as missed and lists errors apart", () => {
     const report = evaluateGate(
       golden,
       results([
         row("flag-fall", { flag: true }),
-        row("flag-fall", { flag: false }),
-        row("flag-knee", { error: "flag failed: http_529", success: false }),
+        row("flag-fall", { flag: false, outcome: "assert" }),
+        row("flag-scam", { outcome: "error" }),
+        {
+          success: false,
+          failureReason: 0,
+          error: "No output",
+          testCase: { metadata: { caseId: "flag-knee" } },
+          response: {},
+        },
       ]),
       strict,
     );
@@ -631,8 +712,9 @@ describe("eval gate", () => {
     expect(report).toMatchObject({
       flagRecall: 0,
       missed: ["flag-fall", "flag-scam"],
-      notRun: ["flag-scam", "understand-chip"],
-      errored: ["flag-knee"],
+      notRun: ["understand-chip"],
+      errored: ["flag-scam", "flag-knee"],
+      failed: ["flag-fall"],
     });
   });
 
@@ -642,13 +724,13 @@ describe("eval gate", () => {
       results([
         row("flag-fall", { flag: true }),
         row("flag-scam", { flag: true }),
-        row("flag-knee", { flag: true, success: false }),
+        row("flag-knee", { flag: true, outcome: "assert" }),
         row("understand-chip", {}),
       ]),
       strict,
     );
 
-    expect(report).toMatchObject({ falseFlags: ["flag-knee"], passed: true });
+    expect(report).toMatchObject({ falseFlags: ["flag-knee"], errored: [], passed: true });
     expect(formatGateReport(report)).toBe(
       [
         "Flag recall 100.0% (2 of 2); baseline 100.0%.",
@@ -660,9 +742,13 @@ describe("eval gate", () => {
     );
   });
 
-  it("says the gate failed when recall is below the baseline", () => {
+  it("counts must-flag cases that did not run as missed and says the gate failed", () => {
     const report = evaluateGate(golden, results([]), strict);
 
+    expect(report).toMatchObject({
+      missed: ["flag-fall", "flag-scam"],
+      notRun: ["flag-fall", "flag-scam", "flag-knee", "understand-chip"],
+    });
     expect(formatGateReport(report).split("\n").at(-1)).toBe(
       "Gate FAILED: flag recall dropped below the baseline.",
     );

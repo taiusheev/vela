@@ -10,10 +10,15 @@
  * deliveries. Code design: architecture/03-code-design.md §3.
  *
  * Retention jobs (implemented in services, documented here because they explain nullable columns):
- * media is deleted when expires_at has passed and kept is false, with a deletions row, and every
- * reference to it is set null by its foreign key; answers lose transcripts and media refs after 30
- * days unless kept in a story; members with status 'left' are deleted 30 days after left_at;
- * families with deleted_at set cascade within 24 h.
+ * media is deleted when expires_at has passed and kept is false, with a deletions row; foreign-key
+ * references to it are set null, and the retention job removes its id from exchanges.media_ids and
+ * exchanges.options, which no foreign key covers. Answers lose transcripts and media refs after 30
+ * days unless kept in a story. Members with status 'left' are deleted 30 days after left_at: rows
+ * that only credit them with an act (asker, uploader, resolver, turn holder) stay with the reference
+ * set null; rows that exist only because of them (invites they sent or that were meant for them,
+ * outbound messages sent on their tap) are deleted with them; member ids held in arrays or JSON
+ * (quiet_events.notified_member_ids, ask_to_check) have no foreign key. Families with deleted_at
+ * set cascade within 24 h.
  */
 import {
   AGE_BANDS,
@@ -27,6 +32,7 @@ import {
   EXCHANGE_STATES,
   EXCHANGE_TYPES,
   LANGS,
+  type LocalTime,
   MEDIA_KINDS,
   MEMBER_STATUSES,
   OUTBOUND_KINDS,
@@ -46,6 +52,7 @@ import {
   bigint,
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -55,7 +62,6 @@ import {
   primaryKey,
   smallint,
   text,
-  time,
   timestamp,
   unique,
   uniqueIndex,
@@ -106,6 +112,16 @@ type JsonObject = Record<string, unknown>;
 const uuidv7Id = () => uuid("id").primaryKey().default(sql`uuidv7()`);
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 const createdAt = () => timestamptz("created_at").notNull().defaultNow();
+
+/**
+ * A `time` column read as the domain's `LocalTime` (`HH:MM`). Postgres always prints `time` with
+ * seconds ("08:00:00"), which core's time functions reject, so the seconds are dropped at the
+ * database boundary instead of in every service.
+ */
+const localTime = customType<{ data: LocalTime; driverData: string }>({
+  dataType: () => "time",
+  fromDriver: (value) => value.slice(0, 5),
+});
 
 // ---------------------------------------------------------------------------------------------
 // Identity
@@ -193,9 +209,9 @@ export const members = pgTable(
      */
     lightStartsOn: date("light_starts_on"),
     /** Her local wake time. */
-    wakeTime: time("wake_time"),
+    wakeTime: localTime("wake_time"),
     /** Local arrival time (wake + 30 min for kept-light members). */
-    arrivalTime: time("arrival_time").notNull().default("08:00"),
+    arrivalTime: localTime("arrival_time").notNull().default("08:00"),
     /**
      * When this member's scheduler should next wake (UTC). The Durable Object alarm is the primary
      * scheduler; this column lets the reconciliation job find members whose wake was missed.
@@ -287,15 +303,15 @@ export const invites = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     invitedBy: uuid("invited_by")
       .notNull()
-      .references(() => members.id),
+      .references(() => members.id, { onDelete: "cascade" }),
     /** A pre-created member row, e.g. the kept-light member. */
-    forMemberId: uuid("for_member_id").references(() => members.id),
+    forMemberId: uuid("for_member_id").references(() => members.id, { onDelete: "cascade" }),
     token: text("token").notNull().unique("invites_token_key"),
     channel: text("channel", { enum: INVITE_CHANNELS }).notNull().default("link"),
     createdAt: createdAt(),
     expiresAt: timestamptz("expires_at").notNull(),
     acceptedAt: timestamptz("accepted_at"),
-    acceptedBy: uuid("accepted_by").references(() => members.id),
+    acceptedBy: uuid("accepted_by").references(() => members.id, { onDelete: "set null" }),
   },
   (t) => [check("invites_channel_check", isOneOf(t.channel, INVITE_CHANNELS))],
 );
@@ -315,7 +331,7 @@ export const onboardingSessions = pgTable(
     expiresAt: timestamptz("expires_at").notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.channel, t.conversationId] }),
+    primaryKey({ name: "onboarding_sessions_pkey", columns: [t.channel, t.conversationId] }),
     check("onboarding_sessions_channel_check", isOneOf(t.channel, CHANNELS)),
   ],
 );
@@ -355,7 +371,7 @@ export const media = pgTable(
     familyId: uuid("family_id")
       .notNull()
       .references(() => families.id, { onDelete: "cascade" }),
-    uploadedBy: uuid("uploaded_by").references(() => members.id),
+    uploadedBy: uuid("uploaded_by").references(() => members.id, { onDelete: "set null" }),
     kind: text("kind", { enum: MEDIA_KINDS }).notNull(),
     /** R2 object key inside the region bucket; NULL until the media queue has copied the file. */
     storageKey: text("storage_key").unique("media_storage_key_key"),
@@ -363,7 +379,11 @@ export const media = pgTable(
     channel: text("channel", { enum: CHANNELS }),
     /** The provider's handle for downloading the file (Telegram file_id). */
     providerFileId: text("provider_file_id"),
-    /** The provider's stable id for the same file (Telegram file_unique_id); deduplicates redelivery. */
+    /**
+     * The provider's stable id for the same file (Telegram file_unique_id); deduplicates redelivery
+     * within a family. It belongs to the file, not the message, so a forwarded file keeps it: the
+     * same family reuses its row, and another family records its own.
+     */
     providerUniqueId: text("provider_unique_id"),
     /** NULL until known: Telegram photos carry no MIME type, and a file size may only be known after download. */
     mime: text("mime"),
@@ -383,11 +403,17 @@ export const media = pgTable(
     index("media_expiry_idx")
       .on(t.expiresAt)
       .where(sql`${sql.identifier(t.kept.name)} = false`),
-    uniqueIndex("media_channel_provider_unique_id_idx")
-      .on(t.channel, t.providerUniqueId)
+    uniqueIndex("media_family_id_channel_provider_unique_id_idx")
+      .on(t.familyId, t.channel, t.providerUniqueId)
       .where(sql`${sql.identifier(t.providerUniqueId.name)} is not null`),
     check("media_kind_check", isOneOf(t.kind, MEDIA_KINDS)),
     check("media_channel_check", isOneOf(t.channel, CHANNELS)),
+    // A provider id means nothing without the channel that issued it, and a null channel would
+    // escape the unique index above.
+    check(
+      "media_provider_unique_id_channel_check",
+      sql`${sql.identifier(t.providerUniqueId.name)} is null or ${sql.identifier(t.channel.name)} is not null`,
+    ),
     // A media row must be reachable: stored in R2, or still fetchable from the provider.
     check(
       "media_storage_key_or_provider_file_id_check",
@@ -410,8 +436,11 @@ export const exchanges = pgTable(
     recipientId: uuid("recipient_id")
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
-    /** NULL = Vela (the fallback hello only). */
-    askerId: uuid("asker_id").references(() => members.id),
+    /**
+     * NULL for Vela's fallback hello, and for an ask whose asker was deleted after leaving. The
+     * type tells them apart (only a `hello` comes from Vela); a null asker alone does not.
+     */
+    askerId: uuid("asker_id").references(() => members.id, { onDelete: "set null" }),
     /** A child's name when a parent sends for them. */
     onBehalfOf: text("on_behalf_of"),
     type: text("type", { enum: EXCHANGE_TYPES }).notNull(),
@@ -470,7 +499,7 @@ export const translations = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    primaryKey({ columns: [t.objectType, t.objectId, t.lang] }),
+    primaryKey({ name: "translations_pkey", columns: [t.objectType, t.objectId, t.lang] }),
     check("translations_object_type_check", isOneOf(t.objectType, TRANSLATION_OBJECT_TYPES)),
   ],
 );
@@ -487,7 +516,11 @@ export const answers = pgTable(
       .references(() => members.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: ANSWER_KINDS }).notNull(),
     channel: text("channel", { enum: CHANNELS }).notNull(),
-    /** Provider message id; deduplicates redelivered webhooks. */
+    /**
+     * The provider's id for the message, unique on its channel; deduplicates redelivered webhooks.
+     * Where message ids are unique only within one chat (Telegram), it is
+     * "<conversation_id>:<message_id>", so two chats' message 77 stay two answers.
+     */
     externalId: text("external_id"),
     /** Chip text, picked option, vote, sticker id. */
     payload: jsonb("payload").$type<JsonObject>().notNull().default({}),
@@ -529,7 +562,11 @@ export const replies = pgTable(
     text: text("text"),
     mediaId: uuid("media_id").references(() => media.id, { onDelete: "set null" }),
     channel: text("channel", { enum: CHANNELS }).notNull(),
-    /** Provider message id when the platform gives one; reactions often have none. */
+    /**
+     * The provider's id for the message when the platform gives one (reactions often have none),
+     * unique on its channel. Where message ids are unique only within one chat (Telegram), it is
+     * "<conversation_id>:<message_id>", as for answers.
+     */
     externalId: text("external_id"),
     /** Replies among ordinary members are not read back to her. */
     toRecipient: boolean("to_recipient").notNull().default(true),
@@ -575,16 +612,15 @@ export const turns = pgTable(
     recipientId: uuid("recipient_id")
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
-    holderId: uuid("holder_id")
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
+    /** NULL when nobody holds turns (the prompt is open to anyone) or the holder was deleted. */
+    holderId: uuid("holder_id").references(() => members.id, { onDelete: "set null" }),
     promptedAt: timestamptz("prompted_at"),
     /** The group message carrying the prompt; a reply to it is an ask for that day. */
     promptMessageId: text("prompt_message_id"),
     /** An exchange was composed for that day by anyone. */
     actedAt: timestamptz("acted_at"),
   },
-  (t) => [primaryKey({ columns: [t.familyId, t.localDay, t.recipientId] })],
+  (t) => [primaryKey({ name: "turns_pkey", columns: [t.familyId, t.localDay, t.recipientId] })],
 );
 
 export const suggestions = pgTable("suggestions", {
@@ -630,7 +666,7 @@ export const stories = pgTable("stories", {
     .references(() => members.id, { onDelete: "cascade" }),
   exchangeId: uuid("exchange_id").references(() => exchanges.id),
   question: text("question").notNull(),
-  askedBy: uuid("asked_by").references(() => members.id),
+  askedBy: uuid("asked_by").references(() => members.id, { onDelete: "set null" }),
   transcript: text("transcript"),
   mediaId: uuid("media_id").references(() => media.id, { onDelete: "set null" }),
   /** "Don't keep that one" flips it and deletes the media. */
@@ -729,7 +765,7 @@ export const quietEvents = pgTable(
     askToCheck: jsonb("ask_to_check").$type<unknown[]>().notNull().default([]),
     resolvedAt: timestamptz("resolved_at"),
     outcome: text("outcome", { enum: QUIET_OUTCOMES }),
-    resolvedBy: uuid("resolved_by").references(() => members.id),
+    resolvedBy: uuid("resolved_by").references(() => members.id, { onDelete: "set null" }),
     /** The organiser's one-tap verdict; feeds the precision page. */
     useful: boolean("useful"),
   },
@@ -752,7 +788,7 @@ export const awayPeriods = pgTable(
     /** NULL = until she answers ("until I'm back"). */
     toDate: date("to_date"),
     source: text("source", { enum: AWAY_SOURCES }).notNull(),
-    setBy: uuid("set_by").references(() => members.id),
+    setBy: uuid("set_by").references(() => members.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     endedAt: timestamptz("ended_at"),
   },
@@ -807,8 +843,11 @@ export const outbound = pgTable(
     localDay: date("local_day").notNull(),
     /** For example arrival:<member>:<day>. */
     idempotencyKey: text("idempotency_key").notNull().unique("outbound_idempotency_key_key"),
-    /** Required for nearby_ask: a message to a third person is always a person's tap (spec §8). */
-    actorId: uuid("actor_id").references(() => members.id),
+    /**
+     * Required for nearby_ask: a message to a third person is always a person's tap (spec §8).
+     * Deleting the actor deletes the row, since setting it null would break that rule.
+     */
+    actorId: uuid("actor_id").references(() => members.id, { onDelete: "cascade" }),
     payload: jsonb("payload").$type<JsonObject>().notNull(),
     status: text("status", { enum: OUTBOUND_STATUSES }).notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),
@@ -860,7 +899,7 @@ export const messageRefs = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    primaryKey({ columns: [t.channel, t.conversationId, t.messageId] }),
+    primaryKey({ name: "message_refs_pkey", columns: [t.channel, t.conversationId, t.messageId] }),
     check("message_refs_channel_check", isOneOf(t.channel, CHANNELS)),
     check("message_refs_purpose_check", isOneOf(t.purpose, MESSAGE_REF_PURPOSES)),
   ],
@@ -908,7 +947,7 @@ export const events = pgTable(
     memberId: uuid("member_id"),
     exchangeId: uuid("exchange_id"),
     surface: text("surface"),
-    localTime: time("local_time"),
+    localTime: localTime("local_time"),
     props: jsonb("props").$type<JsonObject>().notNull().default({}),
   },
   (t) => [
@@ -1013,7 +1052,7 @@ export const metricsDaily = pgTable(
     /** The fallback hello was used. */
     quietDay: boolean("quiet_day").notNull().default(false),
   },
-  (t) => [primaryKey({ columns: [t.day, t.memberId] })],
+  (t) => [primaryKey({ name: "metrics_daily_pkey", columns: [t.day, t.memberId] })],
 );
 
 // ---------------------------------------------------------------------------------------------

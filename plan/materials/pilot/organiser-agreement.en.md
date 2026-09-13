@@ -27,9 +27,9 @@ Vela is early software under test. Messages can be late, and some features will 
 
 1. **Ask [Name] first.** Talk to [Name] about Vela before the founder's call. Nothing is switched on unless [Name] says yes to the founder and taps yes in the chat. You cannot say yes on [Name]'s behalf.
 2. **Respect "stop".** If [Name] says stop, everything pauses. Please don't press [Name] to start again.
-3. **Set up the family group with care.** Create a new Telegram group for Vela, with family members only. Share the privacy notice with everyone you add. Children under 13 do not join; a parent sends their questions for them. Keep other family conversations in your usual chat.
-4. **Only name nearby contacts who agree.** Send them the consent message yourself (`nearby-contact-consent.en.md`) and pass their reply to the founder. Tell the founder if a contact asks to be removed.
-5. **Tell the founder about changes that matter,** within a day if you can: [Name] goes into hospital, moves, changes phone or messaging account, travels (so Vela can pause the notes), or passes away. When anyone marks that [Name] has died, every scheduled message stops and nothing automated is sent again.
+3. **Set up Vela first, then the family group, with care.** First send `/start` to the Vela bot in a private chat and answer its questions; at the question about nearby contacts, tap **Skip** (contacts are added after they agree, point 4). Its last message holds a link for [Name]: keep it, and send it to [Name] only during the founder's call. Then create a new Telegram group for Vela, with family members only and without [Name], and add the Vela bot to it yourself. Making the bot an administrator lets reactions count; it is optional. Share the privacy notice with everyone you add. Children under 13 do not join; a parent sends their questions for them. Keep other family conversations in your usual chat.
+4. **Only name nearby contacts who agree.** Send them the consent message yourself (`nearby-contact-consent.en.md`) and pass their reply to the founder, who adds them to Vela only after a yes. Tell the founder if a contact asks to be removed.
+5. **Tell the founder about changes that matter,** within a day if you can: [Name] goes into hospital, moves, changes phone or messaging account, travels, or passes away; and when someone leaves the family group, so the founder removes them from Vela (Vela does not notice on its own). Vela has no button for these in the pilot; the founder makes the change the same day. For travel, give the dates: morning messages keep coming, but no second message and no quiet-day note are sent on those days. When [Name] has died, the founder stops every scheduled message and nothing automated is sent again.
 6. **Keep the family's words in the family.** Don't share [Name]'s answers outside the family without [Name]'s agreement.
 7. **Help us learn, if you are willing.** Short calls with the founder at around day 14 and day 30, and a few questions at weeks 4 and 12. Every question is optional.
 
@@ -57,7 +57,7 @@ Vela is early software under test. Messages can be late, and some features will 
 
 ## 7. When the pilot ends
 
-If your family does not continue, the founder deletes your family's information within 30 days, as the privacy notice describes. Before that, the founder offers to send you any stories the family chose to keep. Messages in your Telegram or LINE chats stay there until you delete them.
+If your family does not continue, the founder deletes your family's information within 30 days, as the privacy notice describes. If the family book exists by then (it comes later in the pilot), the founder first offers to send you the stories the family chose to keep. Messages in your Telegram or LINE chats stay there until you delete them.
 
 ## 8. Responsibility
 
@@ -65,6 +65,6 @@ Vela is an early test, provided as it is. Nothing in Vela replaces your own cont
 
 ## 9. Agreeing
 
-Reply **"I agree"** to the founder's message that contains this agreement, or say it on the onboarding call. The founder records your agreement (kind `pilot`, text version `organiser-agreement.v1`, the channel, the date, your words) and your receipt of the privacy notice (kind `privacy_notice`). Every other organiser in your family agrees the same way.
+Reply **"I agree"** to the founder's message that contains this agreement, or say it on the onboarding call. The founder notes your agreement straight away, and records it in Vela (kind `pilot`, text version `organiser-agreement.v1`, the channel, the date you agreed, your words), with your receipt of the privacy notice (kind `privacy_notice`), once your Vela setup has created your place in Vela. Every other organiser in your family agrees the same way.
 
 **Contact the founder:** [CONTACT ADDRESS]

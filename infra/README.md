@@ -8,6 +8,7 @@ What runs where, how the founder creates each account, and how credentials reach
 |---|---|
 | [`sub-processors.md`](sub-processors.md) | Adding a provider, answering "who processes our data", updating the privacy notice |
 | [`runbooks/incident.md`](runbooks/incident.md) | Something is wrong for families, or a secret or personal data may be exposed |
+| [`runbooks/data-requests.md`](runbooks/data-requests.md) | The founder changes family records by hand: consent rows, nearby contacts, away, a death, someone leaving, copies, corrections, deletions, the end of a family's pilot |
 | [`runbooks/release.md`](runbooks/release.md) | Deploying the Worker or running a migration |
 | [`runbooks/restore-drill.md`](runbooks/restore-drill.md) | Quarterly, and whenever production data must be restored |
 | [`runbooks/secrets-rotation.md`](runbooks/secrets-rotation.md) | A credential may be exposed, someone leaves, or every six months |
@@ -19,9 +20,9 @@ What runs where, how the founder creates each account, and how credentials reach
 A secret is anything that grants access: API keys, bot tokens, database connection strings with passwords, webhook secrets, the admin token, the Healthchecks ping URL, CI tokens.
 
 - **Never paste a secret into a chat** (including the conversation with the co-founder), Telegram, LINE, email, an issue, a screenshot, a markdown file or any file in the repository.
-- **The founder copies each secret from the provider's page straight into its destination**: the Cloudflare dashboard (Worker secrets, Hyperdrive) or GitHub (Actions secrets). A password manager is the only other place it may live.
-- **The co-founder receives only identifiers**: account ids, project ids, resource names, bot usernames. Each account section below lists exactly what to hand over.
-- Development keys are separate, low-limit keys that may sit in `apps/worker/.dev.vars` (ignored by git). Production keys never touch the development machine.
+- **The founder copies each secret from the provider's page straight into its destination**: the Cloudflare dashboard (Worker secrets, Hyperdrive), GitHub (environment secrets), or a hidden prompt in the founder's own terminal. A password manager is the only other place it may live.
+- **The co-founder receives only identifiers**: account ids, project ids, resource names, bot usernames. Each account section below lists exactly what to hand over. The one credential on the development machine beyond development keys is the staging Cloudflare account's session (section 1), which reaches only staging and its synthetic data.
+- Development keys are separate, low-limit keys that may sit in `apps/worker/.dev.vars` (ignored by git). Production keys, and any sign-in to the production Cloudflare account, never touch the development machine.
 - If a secret is pasted anywhere by mistake, treat it as exposed and follow [`runbooks/secrets-rotation.md`](runbooks/secrets-rotation.md) now.
 
 ## Environments
@@ -30,6 +31,7 @@ A secret is anything that grants access: API keys, bot tokens, database connecti
 |---|---|---|---|
 | Purpose | Build and test on one machine | Prove a change end to end before families see it | The pilot families |
 | Data allowed | Synthetic only | Synthetic, plus the founder's own test accounts | Real families |
+| Cloudflare account | None (local) | "Vela staging" account | "Vela" account |
 | Worker | `wrangler dev` (local) | `vela-api-staging` | `vela-api` |
 | Database | PGlite in `.pglite/`, served by `pnpm --filter @vela/db dev-db` on port 54320 | Neon project `vela-apac`, branch `staging` | Neon project `vela-apac`, branch `main` |
 | Hyperdrive | Local connection string | `vela-apac-staging` (query caching off) | `vela-apac` (query caching off) |
@@ -44,8 +46,9 @@ A secret is anything that grants access: API keys, bot tokens, database connecti
 | Sentry | Off | Project `vela-worker`, environment `staging` | Project `vela-worker`, environment `production` |
 | Healthchecks.io | None | Check `vela-staging-reconcile` (email) | Check `vela-production-reconcile` (pages the founder) |
 | Who deploys | Co-founder | CI on merge to `main`; co-founder by hand until the job exists | CI on a tag, after the founder's approval |
+| Who migrates | Co-founder (PGlite) | CI on merge to `main`; the founder by hand until the job exists ([`runbooks/release.md`](runbooks/release.md)) | CI on a tag, after the founder's approval |
 
-Only the `apac` region exists in the pilot. Neon projects for `eu` and `us` are created in sprint 2 and stay idle (build plan 2.2). Query caching is off on every Hyperdrive configuration because Hyperdrive caches reads for 60 seconds by default, and the scheduler must read fresh rows.
+Only the `apac` region exists in the pilot, so **every pilot family is `apac`**, whatever its country: `families.region` must be `apac` for every family created before the region router exists (build plan 2.2). A family labelled `us` or `eu` would be looked up in an empty database once the router ships, and its arrivals and quiet notices would stop. Flows §3.1 derives the region from the country, which contradicts this; until it is amended, the founder checks each new family ([`runbooks/data-requests.md`](runbooks/data-requests.md), section A). Neon projects for `eu` and `us` are created in sprint 2 and stay idle (build plan 2.2); before either holds a family, the privacy notice needs a new version, because it says the database is in Singapore. Query caching is off on every Hyperdrive configuration because Hyperdrive caches reads for 60 seconds by default, and the scheduler must read fresh rows.
 
 ### Worker configuration names (proposed)
 
@@ -54,7 +57,7 @@ The co-founder's `apps/worker/.dev.vars.example` becomes the source of truth onc
 | Name | Kind | Set by | Notes |
 |---|---|---|---|
 | `TELEGRAM_BOT_TOKEN` | Secret | Founder | Per environment, from BotFather |
-| `TELEGRAM_WEBHOOK_SECRET` | Secret | Founder | 32 or more random characters from the password manager |
+| `TELEGRAM_WEBHOOK_SECRET` | Secret | Founder | 32 to 256 random characters from the password manager, using only letters, digits, `_` and `-` (Telegram and the adapter reject anything else) |
 | `ANTHROPIC_API_KEY` | Secret | Founder | Per workspace |
 | `DEEPGRAM_API_KEY` | Secret | Founder | Per environment |
 | `ADMIN_TOKEN` | Secret | Founder | Bearer token for `/admin`; 32 or more random characters |
@@ -66,14 +69,23 @@ The co-founder's `apps/worker/.dev.vars.example` becomes the source of truth onc
 | `SENTRY_DSN` | Variable | Co-founder | A DSN only allows sending events, not reading them |
 | Hyperdrive id, bucket and queue names | Binding | Co-founder | Identifiers, not secrets |
 
-GitHub Actions (repository **Settings → Secrets and variables → Actions**, set by the founder): `CLOUDFLARE_API_TOKEN`, `DATABASE_URL_STAGING`, `NEON_API_KEY` as repository secrets; `DATABASE_URL_PRODUCTION` as a secret of the `production` environment; `CLOUDFLARE_ACCOUNT_ID` as a variable. Later: `EXPO_TOKEN` (sprint 3), `SENTRY_AUTH_TOKEN`.
+GitHub Actions (set by the founder): **no repository secrets.** A repository secret is readable by a workflow on any pushed branch, which would get around the production approval, so every deploy credential is an **environment** secret (**Settings → Environments →** the environment **→ Environment secrets**):
+
+| Environment | Deployment rule | Secrets | Variables |
+|---|---|---|---|
+| `staging` | Branch `main` only | `CLOUDFLARE_API_TOKEN` (the "Vela staging" account's token), `DATABASE_URL_STAGING` | `CLOUDFLARE_ACCOUNT_ID` (staging account) |
+| `production` | Tags `v*` only; the founder as required reviewer | `CLOUDFLARE_API_TOKEN` (the "Vela" account's token), `DATABASE_URL_PRODUCTION` | `CLOUDFLARE_ACCOUNT_ID` (production account) |
+
+There is no `NEON_API_KEY`: CI tests run on PGlite. If CI later creates a Neon branch per pull request (architecture §16), it does so in a separate Neon project used only by CI, with an API key limited to that project, and never branches from `main`, which holds real families. Later: `EXPO_TOKEN` (sprint 3), `SENTRY_AUTH_TOKEN`, each in the environment that uses it.
 
 ## Access rules
 
 - The founder is the owner of every account, with multi-factor authentication on each. No shared passwords.
 - The co-founder is an AI coding agent working on the founder's development machine. It works in dev and staging with synthetic data, may deploy staging, and never reads production message content, production secrets or production database connection strings. It may see content-free production signals: events, `metrics_daily` counts, Sentry errors, deployment status.
+- **These rules are enforced by accounts, not only by policy, wherever Cloudflare allows it.** A Wrangler sign-in or a Workers API token covers every Worker, bucket and secret in a Cloudflare account; it cannot be limited to one Worker. So staging lives in its own Cloudflare account, and the development machine is signed in to that account only (section 1). Apart from the founder's own dashboard sign-in, a production-capable Cloudflare credential exists only in the GitHub `production` environment.
 - Production changes go through CI on a tag the founder approves ([`runbooks/release.md`](runbooks/release.md)). Nobody runs `wrangler deploy --env production` from a laptop.
-- The production admin token is held by the founder only. Every admin read of a family writes `admin_access_log`.
+- The co-founder uses the founder's GitHub session on the development machine. Environment rules stop a workflow on any branch from reading production secrets, but the session itself could approve a production deployment, so that last gate still rests on policy: only the founder approves, in the GitHub web interface, after reading the release notes.
+- The production admin token is held by the founder only. Every admin read of a family writes `admin_access_log`; a change made in the Neon console is logged by hand ([`runbooks/data-requests.md`](runbooks/data-requests.md)).
 
 ## The founder's account checklist (sprint 0, task 0.2)
 
@@ -83,24 +95,29 @@ Do these in order; each takes 5 to 15 minutes. Start with a password manager (Bi
 
 ### 1. Cloudflare
 
-1. Sign up at `dash.cloudflare.com`, verify the email, then **My Profile → Authentication → Two-factor authentication**: add a security key or an authenticator app.
+Two separate Cloudflare users, each owning one account: **"Vela"** for production and **"Vela staging"** for dev and staging. A Wrangler sign-in reaches every account its user belongs to, and Workers permissions cannot be limited to one Worker, so a single account would let the development machine read production voice notes, tail production logs, or deploy production.
+
+1. **Production.** Sign up at `dash.cloudflare.com` with your main email address, verify it, then **My Profile → Authentication → Two-factor authentication**: add a security key or an authenticator app. Name the account "Vela".
 2. **Workers & Pages**: subscribe to Workers Paid ($5 a month, as budgeted in architecture §18).
 3. **R2**: enable it (it asks for a payment method; the pilot stays inside the free allowance).
 4. Read and accept the Cloudflare Data Processing Addendum (link in `sub-processors.md`).
-5. On the development machine, run `pnpm --filter @vela/worker exec wrangler login` yourself and approve in the browser. This lets the co-founder create buckets and queues and deploy staging; secret values stay write-only in Cloudflare and cannot be read back.
-6. CI token: **My Profile → API Tokens → Create Token → "Edit Cloudflare Workers" template**, scope it to your account, create it, and paste it straight into GitHub as `CLOUDFLARE_API_TOKEN`.
-7. **Hand over:** the account id (Workers & Pages overview, right-hand column).
+5. **Production resources**, created by you in this account's dashboard (the co-founder never signs in to it): **R2 → Create bucket** `vela-media-apac`, location hint Asia-Pacific; **Queues → Create** `vela-outbound`, `vela-media`, `vela-understand`, and a `-dlq` for each.
+6. **Production CI token:** **My Profile → API Tokens → Create Token → "Edit Cloudflare Workers" template**, account resources limited to "Vela", create it, and paste it straight into the GitHub `production` environment as `CLOUDFLARE_API_TOKEN`.
+7. **Staging.** Sign up again with a second email address (an alias such as `yourname+staging@…` works), add two-factor authentication, and name the account "Vela staging". Accept the DPA. If `wrangler deploy --env staging` later reports that a binding needs Workers Paid, subscribe this account too (another $5 a month).
+8. **Sign the development machine in to staging only.** In a private browser window, sign in to the staging user. On the development machine run `pnpm --filter @vela/worker exec wrangler login` yourself and approve it in that private window, then run `pnpm --filter @vela/worker exec wrangler whoami` and check that it lists only "Vela staging". This lets the co-founder create staging buckets and queues and deploy staging; it cannot reach the production account. Never approve a Wrangler sign-in on this machine while signed in as the production user.
+9. **Staging CI token:** as step 6, signed in as the staging user, limited to "Vela staging", pasted into the GitHub `staging` environment as `CLOUDFLARE_API_TOKEN`.
+10. **Hand over:** both account ids (Workers & Pages overview, right-hand column), saying which is which.
 
 ### 2. Neon
 
 1. Sign up at `console.neon.tech` (with Google or GitHub, which must have multi-factor authentication on).
 2. **New project:** name `vela-apac`, **Postgres 18** (the schema uses Postgres 18's native `uuidv7()`), provider AWS, region **Asia Pacific (Singapore)**, database name `vela`.
-3. **Branches:** `main` is production. Create a branch `staging` from `main`.
+3. **Branches:** `main` is production. Create a branch `staging` from `main` now, while `main` is still empty. A branch copies its parent's data and its roles with their passwords, so on the `staging` branch open **Roles** and reset the role's password: staging's connection string then cannot open `main`. Never create, reset or restore `staging` from `main` once a family exists, because it would copy their data.
 4. **Settings → Instant restore:** note the restore window. The Free plan allows at most 6 hours; before the first family beyond your own, decide whether to move to the Launch plan and set 7 days (see `runbooks/restore-drill.md`).
 5. Accept the Neon DPA (link in `sub-processors.md`).
-6. Connection strings: from **Connect**, copy the **direct** (not pooled) connection string of each branch and paste it only into (a) a Cloudflare Hyperdrive configuration (step 7) and (b) GitHub secrets `DATABASE_URL_STAGING` and `DATABASE_URL_PRODUCTION`.
-7. In Cloudflare, **Storage & Databases → Hyperdrive → Create configuration**: `vela-apac-staging` with the staging string, `vela-apac` with the main string. Turn caching off in each configuration's settings (or ask the co-founder to run `wrangler hyperdrive update <id> --caching-disabled`, which needs no secret).
-8. Neon API key for CI branches: **Account settings → API keys → Create**, paste into GitHub as `NEON_API_KEY`.
+6. Connection strings: from **Connect**, copy the **direct** (not pooled) connection string of each branch and paste it only into (a) a Cloudflare Hyperdrive configuration (step 7), (b) the GitHub environment secrets `DATABASE_URL_STAGING` (environment `staging`) and `DATABASE_URL_PRODUCTION` (environment `production`), and (c) a hidden prompt in your own terminal when a runbook asks for it.
+7. In Cloudflare, **Storage & Databases → Hyperdrive → Create configuration**: in the "Vela staging" account, `vela-apac-staging` with the staging string; in the "Vela" account, `vela-apac` with the main string. Turn caching off in each configuration's settings (or ask the co-founder to run `wrangler hyperdrive update <id> --caching-disabled` for the staging one, which needs no secret).
+8. No Neon API key in sprint 0 (see GitHub Actions above): an account key could read the `main` branch's connection string.
 9. **Hand over:** the Neon project id, region, branch names, database and role names (never passwords), and both Hyperdrive configuration ids.
 
 ### 3. Anthropic
@@ -139,10 +156,36 @@ Do these in order; each takes 5 to 15 minutes. Start with a password manager (Bi
 
 1. In Telegram, open **@BotFather** (confirm the verified badge). Send `/newbot`, display name **Vela Light**, a username ending in `bot`. BotFather shows the token: paste it straight into the production Worker secret `TELEGRAM_BOT_TOKEN`.
 2. Repeat for a staging bot ("Vela Light staging") and a dev bot. The staging token goes into the staging Worker secret; the dev token into `.dev.vars`.
-3. For each bot in BotFather: turn **group privacy off** (so Vela can see messages starting "ask:" and "whenever:"), allow joining groups, set the description and about text, set the picture, and set the **privacy policy link** to the published privacy notice (Telegram requires one).
-4. Generate a webhook secret of 32 or more characters in the password manager for each environment and paste it into `TELEGRAM_WEBHOOK_SECRET`.
-5. The webhook is registered by the adapter's setup script (`setWebhook`, code design §6), run by you in your own terminal session, or by an admin-only route the co-founder adds; neither shows the token to the co-founder.
-6. **Hand over:** the three bot usernames. For `ADMIN_CONVERSATION_ID`, send `/start` to each bot from your own account; the same setup script, run in your terminal, prints your chat id, and you set it as a secret.
+3. For each bot in BotFather: leave **group privacy on** (BotFather's default). Families ask by replying to Vela's evening message or with `/ask` and `/later`, which privacy mode delivers, so the family's ordinary conversation never reaches Vela unless an organiser makes the bot an administrator (flows §1). Allow joining groups, set the description and about text, set the picture, and set the **privacy policy link** to the published privacy notice (Telegram requires one).
+4. For each environment, generate a webhook secret in the password manager: **32 to 256 characters, letters and digits only** (turn symbols off in the generator; Telegram and the adapter accept only A–Z, a–z, 0–9, `_` and `-`). Paste it into `TELEGRAM_WEBHOOK_SECRET`.
+5. **Your chat id, before any webhook exists.** Telegram refuses `getUpdates` while a bot has a webhook, so do this first, for each bot. From your own Telegram account, open the bot and tap **Start**. Then, in your own terminal (Git Bash), paste the token at the hidden prompt:
+
+   ```bash
+   read -rsp "Bot token: " TOKEN; echo
+   curl -s "https://api.telegram.org/bot$TOKEN/getUpdates" | grep -o '"chat":{"id":[0-9-]*'
+   unset TOKEN
+   ```
+
+   The number after `"id":` is your chat id. Set it as that environment's Worker secret `ADMIN_CONVERSATION_ID`.
+6. **Webhook and command menu, once that environment's Worker is deployed.** The setup script that will do this with the adapter's `setWebhook` and `setMyCommands` helpers (code design §6) is a co-founder task that does not exist yet; when it does, this step names its command instead. Until then, in your own terminal, with the Worker URL the co-founder gives you:
+
+   ```bash
+   read -rsp "Bot token: " TOKEN; echo
+   read -rsp "Webhook secret: " SECRET; echo
+   curl -s "https://api.telegram.org/bot$TOKEN/setWebhook" \
+     --data-urlencode "url=<Worker URL>/webhooks/telegram" \
+     --data-urlencode "secret_token=$SECRET" \
+     --data-urlencode 'allowed_updates=["message","callback_query","message_reaction","my_chat_member"]' \
+     --data-urlencode "drop_pending_updates=true"
+   curl -s "https://api.telegram.org/bot$TOKEN/setMyCommands" \
+     --data-urlencode 'commands=[{"command":"ask","description":"Ask something for tomorrow morning"},{"command":"later","description":"Save an ask for another morning"}]' \
+     --data-urlencode 'scope={"type":"all_group_chats"}'
+   curl -s "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
+   unset TOKEN SECRET
+   ```
+
+   The first two calls answer `{"ok":true,...}`; the last shows the URL and no `last_error_message`. The update list must match `TELEGRAM_ALLOWED_UPDATES` in `packages/adapters/src/telegram/setup.ts`. `drop_pending_updates` discards your `/start` from step 5, which would otherwise reach the Worker and begin an organiser setup.
+7. **Hand over:** the three bot usernames.
 
 ### 8. LINE Official Account and Messaging API channel
 
@@ -164,8 +207,8 @@ Needed now so the account exists; the adapter is built in sprint 2 (build plan 2
 
 ### 10. GitHub
 
-1. **Settings → Environments:** create `staging` and `production`; on `production`, add yourself as a required reviewer.
-2. Add the Actions secrets and variables listed above as each account is created.
+1. **Settings → Environments:** create `staging` with the deployment branch rule "Selected branches and tags" → branch `main`; create `production` with the rule → tag pattern `v*`, and add yourself as a required reviewer.
+2. Add the environment secrets and variables listed above as each account is created. Leave **Repository secrets** empty.
 
 ### Later, not in sprint 0
 
@@ -184,7 +227,8 @@ Fill in as resources are created. Identifiers only, never secrets.
 
 | Resource | Identifier |
 |---|---|
-| Cloudflare account id | |
+| Cloudflare account id ("Vela", production) | |
+| Cloudflare account id ("Vela staging") | |
 | Neon project id (`vela-apac`) | |
 | Hyperdrive `vela-apac-staging` id | |
 | Hyperdrive `vela-apac` id | |

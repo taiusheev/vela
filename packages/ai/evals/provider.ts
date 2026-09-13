@@ -4,8 +4,7 @@
  */
 import { z } from "zod";
 import { createClaudeAi } from "../src/claude.ts";
-import { AI_CALL_NAMES, type Ai, AiCallName, type AiOutcome } from "../src/types.ts";
-import { INPUT_SCHEMAS } from "./cases.ts";
+import { AI_CALL_NAMES, type Ai, AiCallName, type AiOutcome, INPUT_SCHEMAS } from "../src/types.ts";
 import { requireApiKey } from "./env.ts";
 
 /** Promptfoo's provider response, as far as this provider fills it in. */

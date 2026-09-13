@@ -20,23 +20,40 @@ The build plan refers to these parts; the CI suite in `@vela/services` implement
 | 1 · delivery fails | The adapter fails for a cohort (blocked, unavailable) | Retries at 5, 15 and 30 min for temporary errors; `outbound.status = failed`; the organiser gets `delivery.failed` once; no repeat and **no quiet event** for that exchange |
 | 2 · missed wake | A Durable Object alarm never fires | Reconciliation finds the member more than 10 min overdue, logs `scheduler_missed`, delivers once (with "Sorry this is late." past 180 min), never twice; the heartbeat ping is sent |
 | 3 · database down | Postgres unreachable during a tick | The tick skips cleanly; webhooks answer 503; an error alert; no quiet event; the next tick catches up |
-| 4 · AI down | Claude or Deepgram fails | The light is lit on the raw answer; the family sees the answer with its media; `ai_calls.ok = false`; no quiet event; `understand` retries later |
+| 4 · AI down | Claude or Deepgram fails | The light is lit on the raw answer; the family sees the answer with its media; `ai_calls.ok = false`; no quiet event; the job completes with the safe defaults (summary "answered", no flag) and is **not** retried, so the answer appears in the list of answers whose AI calls failed ([`incident.md`](incident.md)) |
 
 ## Live drill in staging
 
-Takes one morning. Needs two Telegram accounts the founder controls (one as the organiser, one as the kept-light test member), and the staging test family "Drill" in the founder's time zone. Set on the test member: `learning_until` in the past (so the notice uses the normal path), `quiet_after_min = 240` (the real floor). Never change these values in production.
+Takes one morning. Needs two Telegram accounts the founder controls (one as the organiser, one as the kept-light test member), and the staging test family "Drill" in the founder's time zone. Never change these values in production.
 
-**A · Real silence (part 0).** Set the arrival hour H a few minutes ahead. Do not answer.
+**Setting the arrival hour H.** The founder does this in the Neon console, branch `staging` (the co-founder holds no staging connection string). Changing `arrival_time` alone does not move the scheduler: the member's alarm and `next_wake_at` still hold the old wake, and reconciliation only picks up members whose `next_wake_at` is empty or more than 10 minutes late. So clear `next_wake_at` in the same statement, choose H at least 15 minutes ahead (reconciliation runs every 5 minutes), and use a morning whose arrival has not been delivered yet: the scheduler delivers one arrival per local day. First check today's exchange:
+
+```sql
+SELECT scheduled_for, state, delivered_at FROM exchanges
+WHERE recipient_id = '<test member id>' ORDER BY scheduled_for DESC NULLS LAST LIMIT 2;
+```
+
+If today's row has a `delivered_at`, run the drill on another morning. Otherwise:
+
+```sql
+UPDATE members
+SET arrival_time = '<H, as HH:MM>', learning_until = current_date - 1, quiet_after_min = 240, next_wake_at = NULL
+WHERE id = '<test member id>';
+```
+
+`learning_until` in the past makes the notice use the normal path; 240 minutes is the real floor. Within 5 minutes `next_wake_at` shows H in UTC; if it does not, stop and tell the co-founder.
+
+**A · Real silence (part 0).** Set the arrival hour H as above. Do not answer.
 Expect: the arrival at H; the repeat at H + 2:30; the organiser's quiet notice at H + 4:00 with the facts and the buttons. Tap **Wait 2 hours**: "I'll look again at [time]." Answer from the test member at about H + 4:30: the organiser sees "[Name] answered at [time]. Everything is lit again." In the database: one `quiet_events` row, outcome `answered_late`.
 
-**B · Delivery failure (part 1).** On another morning, block the staging bot from the test member's account 10 minutes before H.
+**B · Delivery failure (part 1).** On another morning, set H as above, then block the staging bot from the test member's account 10 minutes before H.
 Expect: the organiser receives "We couldn't reach [Name] on Telegram today. Nothing else is known." exactly once; `outbound.status = failed`; no repeat; still no quiet notice at H + 5:00; no `quiet_events` row for that exchange. Unblock the bot afterwards.
 
-**C · Heartbeat (part 2's alarm path).** In the Cloudflare dashboard, **`vela-api-staging` → Settings → Triggers**, remove the 5-minute cron.
+**C · Heartbeat (part 2's alarm path).** In the Cloudflare dashboard ("Vela staging" account), **`vela-api-staging` → Settings → Triggers**, remove the 5-minute cron.
 Expect: Healthchecks marks `vela-staging-reconcile` down and emails within about 10 minutes; any arrival due meanwhile is still delivered by its Durable Object alarm. Restore by redeploying staging (`wrangler deploy --env staging` restores the triggers from configuration); the check is up again within 5 minutes.
 
 **D · AI down (part 4).** The founder replaces the staging `ANTHROPIC_API_KEY` with an invalid value. The test member answers with a voice note.
-Expect: "☀️ [Name] answered [asker] · [time]" in the group within seconds; the answer posted with its voice note even without a summary or translation; `ai_calls` rows with `ok = false`; no quiet notice. Restore by creating a new staging key in the Anthropic console, installing it, and deleting the old key ([`secrets-rotation.md`](secrets-rotation.md)).
+Expect: "☀️ [Name] answered [asker] · [time]" in the group within seconds; the answer posted with its voice note even without a summary or translation; `ai_calls` rows with `ok = false`; no quiet notice; after the key is restored, the answer stays without a transcript or flag check (nothing retries it) and is listed by the query in [`incident.md`](incident.md). Restore by creating a new staging key in the Anthropic console, installing it, and deleting the old key ([`secrets-rotation.md`](secrets-rotation.md)).
 
 Part 3 (database down) runs in CI only.
 
@@ -46,6 +63,7 @@ Every day in the admin page, the founder checks:
 
 - Every quiet notice has an outcome.
 - No quiet notice exists for a day whose arrival failed, and every notice came at least `quiet_after_min` after the actual delivery time, not the scheduled hour. **One notice that breaks either rule is a Sev 1 incident and a kill signal** ([`incident.md`](incident.md)).
+- Answers from the last day whose AI calls failed (the query in [`incident.md`](incident.md)): their flag check never ran, so read each and pass any words that matter to the organiser by hand.
 - Weekly: the counts of `scheduler_missed` and `arrival_delivery_failed`, and whether they are rising.
 
 ## How to know it worked

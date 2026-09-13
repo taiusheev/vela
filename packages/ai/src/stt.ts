@@ -24,6 +24,12 @@ export const DEEPGRAM_USD_PER_MINUTE = 0.0043;
  * the spec's auto-detect fallback for someone who answered in another language than her own.
  */
 export const DETECT_FALLBACK_BELOW = 0.5;
+/**
+ * The time one request, its upload and its response body, may take. Deepgram transcribes pre-recorded
+ * audio many times faster than real time, so this covers voice notes far longer than an answer; a
+ * stalled request resolves as a failure instead of holding the media queue until the platform kills it.
+ */
+export const STT_TIMEOUT_MS = 60_000;
 
 export interface DeepgramSttOptions {
   apiKey: string;
@@ -73,26 +79,33 @@ export function createDeepgramStt(options: DeepgramSttOptions): Stt {
     url.searchParams.set("smart_format", "true");
     url.searchParams.set("mip_opt_out", "true");
 
-    let response: Response;
-    try {
-      response = await fetchImpl(url.toString(), {
-        method: "POST",
-        headers: { Authorization: `Token ${options.apiKey}`, "Content-Type": input.mime },
-        body: input.audio,
-      });
-    } catch {
-      return { ok: false, error: "network" };
-    }
-    if (!response.ok) {
-      return { ok: false, error: `http_${response.status}` };
-    }
-
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), STT_TIMEOUT_MS);
     let json: unknown;
     try {
-      json = await response.json();
-    } catch {
-      return { ok: false, error: "invalid_response" };
+      let response: Response;
+      try {
+        response = await fetchImpl(url.toString(), {
+          method: "POST",
+          headers: { Authorization: `Token ${options.apiKey}`, "Content-Type": input.mime },
+          body: input.audio,
+          signal: controller.signal,
+        });
+      } catch {
+        return { ok: false, error: controller.signal.aborted ? "timeout" : "network" };
+      }
+      if (!response.ok) {
+        return { ok: false, error: `http_${response.status}` };
+      }
+      try {
+        json = await response.json();
+      } catch {
+        return { ok: false, error: controller.signal.aborted ? "timeout" : "invalid_response" };
+      }
+    } finally {
+      clearTimeout(timer);
     }
+
     const parsed = DeepgramResponse.safeParse(json);
     if (!parsed.success) {
       return { ok: false, error: "invalid_response" };
@@ -154,7 +167,10 @@ export function createDeepgramStt(options: DeepgramSttOptions): Stt {
       }
       const billed = first.attempt.durationSeconds + detected.attempt.durationSeconds;
       const better =
-        (detected.attempt.confidence ?? 0) > (first.attempt.confidence ?? 0) ? detected : first;
+        answeredInAnotherLanguage(detected.attempt, input.languageHint) &&
+        (detected.attempt.confidence ?? 0) > (first.attempt.confidence ?? 0)
+          ? detected
+          : first;
       return finish(better, billed);
     },
   };
@@ -163,6 +179,20 @@ export function createDeepgramStt(options: DeepgramSttOptions): Stt {
 /** Silence yields an empty transcript; retrying it with detection would only cost a second call. */
 function needsDetection(attempt: Attempt): boolean {
   return attempt.text !== "" && (attempt.confidence ?? 0) < DETECT_FALLBACK_BELOW;
+}
+
+/**
+ * A detected transcript replaces the one in her language only when it is in another language.
+ * Detection hears Chinese only as `zh`, Simplified, so for a zh-TW speaker on a noisy or accented note
+ * it would swap Traditional characters for Simplified ones; and confidences from two models of the
+ * same language say nothing about which transcript is right.
+ */
+function answeredInAnotherLanguage(detected: Attempt, hint: Lang): boolean {
+  return detected.language !== null && baseLanguage(detected.language) !== baseLanguage(hint);
+}
+
+function baseLanguage(tag: string): string {
+  return tag.split("-", 1)[0]?.toLowerCase() ?? tag;
 }
 
 function costOfSeconds(seconds: number): number {

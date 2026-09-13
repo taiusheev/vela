@@ -29,6 +29,7 @@ interface Scenario {
   days?: DayState[];
   prepared?: boolean;
   turnPromptSent?: boolean;
+  askScheduled?: boolean;
   away?: LocalDate[];
   weeklyReadsDone?: LocalDate[];
 }
@@ -50,6 +51,7 @@ function decide(scenario: Scenario): ScheduleDecision {
     tomorrow: {
       prepared: scenario.prepared ?? false,
       turnPromptSent: scenario.turnPromptSent ?? false,
+      askScheduled: scenario.askScheduled ?? false,
     },
     awayOn: (date) => (scenario.away ?? []).includes(date),
     weeklyReadDoneFor: (weekEnd) => (scenario.weeklyReadsDone ?? []).includes(weekEnd),
@@ -517,13 +519,28 @@ describe("yesterday", () => {
       },
     });
     const today = day(TODAY, { deliveredAt: taipei("08:00") });
-    expect(decide({ now: taipei("09:00"), days: [unanswered] }).due).toEqual([
-      { kind: "deliver_arrival", date: TODAY, late: false },
-      { kind: "send_repeat", date: YESTERDAY },
-      { kind: "open_quiet", date: YESTERDAY, notify: true },
-    ]);
     expect(decide({ now: taipei("09:00"), days: [unanswered, today] }).due).toEqual([]);
     expect(decide({ now: taipei("09:00"), days: [waited, today] }).due).toEqual([]);
+  });
+
+  it("stops yesterday's repeat and quiet in the decision that delivers today's arrival", () => {
+    const unanswered = day(YESTERDAY, { deliveredAt: taipei("08:00", YESTERDAY) });
+    const delivering = decide({ now: taipei("09:00"), days: [unanswered] });
+    expect(delivering.due).toEqual([{ kind: "deliver_arrival", date: TODAY, late: false }]);
+    expect(iso(delivering.nextWakeAt)).toBe(iso(taipei("11:30")));
+    const waited = day(YESTERDAY, {
+      deliveredAt: taipei("08:00", YESTERDAY),
+      repeatSentAt: taipei("10:30", YESTERDAY),
+      quiet: {
+        openedAt: taipei("14:00", YESTERDAY),
+        lastNotifiedAt: taipei("23:00", YESTERDAY),
+        waitUntil: taipei("07:00"),
+        resolvedAt: null,
+      },
+    });
+    expect(decide({ now: taipei("08:00"), days: [waited] }).due).toEqual([
+      { kind: "deliver_arrival", date: TODAY, late: false },
+    ]);
   });
 });
 
@@ -555,6 +572,15 @@ describe("turn prompt", () => {
     expect(decide({ ...evening, now: taipei("19:00"), turnsEnabled: false }).due).toEqual([]);
     expect(decide({ ...evening, now: taipei("19:00"), prepared: true }).due).toEqual([]);
     expect(decide({ ...evening, now: taipei("19:00"), turnPromptSent: true }).due).toEqual([]);
+  });
+
+  it("skips the turn, and does not wake for it, when tomorrow already has an ask scheduled", () => {
+    const scheduled = { ...evening, askScheduled: true };
+    expect(decide({ ...scheduled, now: taipei("19:00") }).due).toEqual([]);
+    expect(decide({ ...scheduled, now: taipei("21:59") }).due).toEqual([]);
+    expect(iso(decide({ ...scheduled, now: taipei("18:00") }).nextWakeAt)).toBe(
+      iso(taipei("22:00")),
+    );
   });
 
   it("does not wake at 19:00 when turns are off", () => {
@@ -615,6 +641,33 @@ describe("weekly read", () => {
     expect(decide({ ...done, now: taipei("18:30", SUNDAY) }).due).toEqual([]);
   });
 
+  it("does not draft or wake for a week that ends before her start date", () => {
+    const startsMonday = { startsOn: addDays(SUNDAY, 1), turnsEnabled: false, prepared: true };
+    expect(decide({ ...startsMonday, now: taipei("18:00", SUNDAY) }).due).toEqual([]);
+    expect(decide({ ...startsMonday, now: taipei("21:00", SUNDAY) }).due).toEqual([]);
+    expect(iso(decide({ ...startsMonday, now: taipei("17:59", SUNDAY) }).nextWakeAt)).toBe(
+      iso(taipei("08:00", addDays(SUNDAY, 1))),
+    );
+  });
+
+  it("drafts the first week that holds her start date, even when it ends on that date", () => {
+    const nextSunday = addDays(SUNDAY, 7);
+    const answeredNextSunday = day(nextSunday, {
+      deliveredAt: taipei("08:00", nextSunday),
+      answeredAt: taipei("09:00", nextSunday),
+    });
+    expect(
+      decide({
+        startsOn: addDays(SUNDAY, 1),
+        days: [answeredNextSunday],
+        now: taipei("18:00", nextSunday),
+      }).due,
+    ).toEqual([{ kind: "draft_weekly_read", weekEnd: nextSunday }]);
+    expect(
+      decide({ ...sundayEvening, startsOn: SUNDAY, now: taipei("18:00", SUNDAY) }).due,
+    ).toEqual([{ kind: "draft_weekly_read", weekEnd: SUNDAY }]);
+  });
+
   it("does not draft it on other days", () => {
     const saturday = addDays(SUNDAY, -1);
     const days = [
@@ -630,20 +683,24 @@ describe("weekly read", () => {
 describe("due order and wakes", () => {
   it("returns due actions in a stable order whatever the order of the days", () => {
     const saturday = addDays(SUNDAY, -1);
-    const unansweredSaturday = day(saturday, { deliveredAt: taipei("08:00", saturday) });
+    const unansweredSaturday = day(saturday, { deliveredAt: taipei("22:30", saturday) });
     const expected: DueAction[] = [
-      { kind: "deliver_arrival", date: SUNDAY, late: true },
       { kind: "send_repeat", date: saturday },
       { kind: "open_quiet", date: saturday, notify: true },
       { kind: "send_turn_prompt", forDate: addDays(SUNDAY, 1) },
       { kind: "draft_weekly_read", weekEnd: SUNDAY },
     ];
-    const now = taipei("21:00", SUNDAY);
-    expect(decide({ now, days: [unansweredSaturday, day(SUNDAY)] }).due).toEqual(expected);
-    expect(decide({ now, days: [day(SUNDAY), unansweredSaturday] }).due).toEqual(expected);
+    const scenario = { now: taipei("21:00", SUNDAY), arrivalTime: "22:30" } as const;
+    expect(decide({ ...scenario, days: [unansweredSaturday, day(SUNDAY)] }).due).toEqual(expected);
+    expect(decide({ ...scenario, days: [day(SUNDAY), unansweredSaturday] }).due).toEqual(expected);
+    expect(decide({ now: taipei("21:00", SUNDAY), days: [day(SUNDAY)] }).due).toEqual([
+      { kind: "deliver_arrival", date: SUNDAY, late: true },
+      { kind: "send_turn_prompt", forDate: addDays(SUNDAY, 1) },
+      { kind: "draft_weekly_read", weekEnd: SUNDAY },
+    ]);
   });
 
-  it("orders notify and prepare after arrival and repeat", () => {
+  it("orders notify and prepare after repeat", () => {
     const saturday = addDays(SUNDAY, -1);
     const waitedSaturday = day(saturday, {
       deliveredAt: taipei("22:30", saturday),
@@ -655,9 +712,8 @@ describe("due order and wakes", () => {
       },
     });
     expect(
-      decide({ now: taipei("22:45", SUNDAY), arrivalTime: "22:30", days: [waitedSaturday] }).due,
+      decide({ now: taipei("22:15", SUNDAY), arrivalTime: "22:30", days: [waitedSaturday] }).due,
     ).toEqual([
-      { kind: "deliver_arrival", date: SUNDAY, late: false },
       { kind: "send_repeat", date: saturday },
       { kind: "notify_quiet", date: saturday },
       { kind: "prepare", forDate: addDays(SUNDAY, 1) },

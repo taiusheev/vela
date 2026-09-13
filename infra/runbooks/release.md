@@ -18,16 +18,24 @@ Every change to the Worker in staging or production, and every database migratio
 ## Steps
 
 1. **Pull request.** CI green (lint, typecheck, tests). New behaviour has a test that fails without it. A migration's SQL is read in the diff. Copy changes have both `en` and `zh-TW` keys.
-2. **Merge.** CI applies migrations to the Neon `staging` branch, then deploys `vela-api-staging`. Until that job exists, the co-founder runs the same two steps by hand.
-3. **Staging smoke test (10 minutes).**
+2. **Merge.** CI (the GitHub `staging` environment) applies migrations to the Neon `staging` branch, then deploys `vela-api-staging`. Until that job exists, the two steps are done by hand, in this order. The co-founder never holds the staging connection string (`infra/README.md`, rule zero), so a migration is run by the founder, in their own terminal on the tested commit, pasting the staging string from the password manager at the hidden prompt:
+
+   ```bash
+   read -rsp "Staging connection string: " DATABASE_URL; echo; export DATABASE_URL
+   pnpm --filter @vela/db migrate
+   unset DATABASE_URL
+   ```
+
+   It prints "Migrations from … applied." Then the co-founder deploys `vela-api-staging` with the staging account's Wrangler sign-in.
+3. **Staging smoke test (15 minutes).**
    - `GET /healthz` returns 200.
    - In the staging family group, reply to the turn prompt with an ask; the bot answers "Into [name]'s morning."
-   - Set the staging test member's arrival a few minutes ahead; the arrival comes once; tap an answer; the light line appears in the group.
+   - **Arrival**, only if the staging test member has had no arrival delivered today (the scheduler delivers one per local day; a second release the same day, or a release after the morning's arrival, skips this line and says so in the release notes). The founder sets the arrival at least 15 minutes ahead and clears the stored wake, in the Neon console on branch `staging`, as in [`silence-drill.md`](silence-drill.md), "Setting the arrival hour H" (editing `arrival_time` alone leaves the old alarm in place). The arrival comes once at that time; tap an answer; the light line appears in the group.
    - Sentry `staging` shows no new errors.
    - If the scheduler, gateway, quiet ladder or an adapter changed: run the staging silence drill ([`silence-drill.md`](silence-drill.md)).
 4. **Tag.** The founder opens **GitHub → Releases → Draft a new release**, creates the tag `vYYYY.MM.DD` on the tested commit (add `.2` for a second release the same day), writes two lines (what changed; migration yes or no) and publishes.
 5. **Approve.** The production job waits for the founder's approval of the `production` environment. Approve it.
-6. **CI** applies migrations to Neon `main`, then deploys `vela-api`.
+6. **CI** (the GitHub `production` environment, the only place the production connection string and Cloudflare token exist) applies migrations to Neon `main`, then deploys `vela-api`.
 7. **Watch for 30 minutes.** `/healthz` 200; Sentry `production` quiet; Healthchecks up; the next due arrivals delivered on time in the admin page; no `scheduler_missed`; dead-letter queues empty.
 
 ## Rollback

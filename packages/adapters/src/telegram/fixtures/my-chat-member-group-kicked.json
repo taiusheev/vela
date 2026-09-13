@@ -1,5 +1,5 @@
 {
-  "update_id": 873920394,
+  "update_id": 873920439,
   "my_chat_member": {
     "chat": {
       "id": -1002214567890,
@@ -14,17 +14,8 @@
       "username": "anna_chen",
       "language_code": "en"
     },
-    "date": 1789038060,
+    "date": 1789304400,
     "old_chat_member": {
-      "user": {
-        "id": 7412589630,
-        "is_bot": true,
-        "first_name": "Vela Light",
-        "username": "VelaLightBot"
-      },
-      "status": "member"
-    },
-    "new_chat_member": {
       "user": {
         "id": 7412589630,
         "is_bot": true,
@@ -48,6 +39,16 @@
       "can_manage_topics": false,
       "can_manage_tags": false,
       "can_send_welcome_messages": false
+    },
+    "new_chat_member": {
+      "user": {
+        "id": 7412589630,
+        "is_bot": true,
+        "first_name": "Vela Light",
+        "username": "VelaLightBot"
+      },
+      "status": "kicked",
+      "until_date": 0
     }
   }
 }

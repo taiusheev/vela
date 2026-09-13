@@ -6,8 +6,8 @@
  * the wake already covers the thresholds the due actions create (the ladder of an arrival being
  * delivered now, the in-app-only quiet that will need a push later). Changes that can make something
  * due sooner and do not come from the passing of time (a "wait 2 hours" tap, away being cleared, a
- * new arrival time or an earlier start date, the light switched back on) must be followed by a fresh
- * decision.
+ * new arrival time or an earlier start date, the light switched back on, tomorrow's ask withdrawn)
+ * must be followed by a fresh decision.
  */
 import type { LocalDate, LocalTime, MemberStatus } from "@vela/contracts";
 import {
@@ -50,7 +50,15 @@ export interface ScheduleInput {
   family: { turnsEnabled: boolean };
   /** The exchange days that can still need action: yesterday's and today's local dates. */
   days: DayState[];
-  tomorrow: { prepared: boolean; turnPromptSent: boolean };
+  tomorrow: {
+    prepared: boolean;
+    turnPromptSent: boolean;
+    /**
+     * An ask is already scheduled for tomorrow (a `/ask` for that date), so tomorrow needs no turn:
+     * spec §7 skips such days, and a prompted holder's ask would only be queued for whenever.
+     */
+    askScheduled: boolean;
+  };
   awayOn: (date: LocalDate) => boolean;
   weeklyReadDoneFor: (weekEnd: LocalDate) => boolean;
 }
@@ -125,10 +133,11 @@ export function decideSchedule(input: ScheduleInput): ScheduleDecision {
   const ctx = createContext(input);
   const out: Collector = { due: [], wakes: [] };
 
-  arrivalRule(ctx, out);
+  const deliveringToday = arrivalRule(ctx, out);
   const today = dayOf(ctx, ctx.today);
-  // Yesterday's repeat and quiet stop once today's arrival is delivered.
-  if (today.deliveredAt === null) {
+  // Yesterday's repeat and quiet stop once today's arrival is delivered, and so also when this decision
+  // delivers it: otherwise her morning and yesterday's "in case you missed it" would arrive together.
+  if (today.deliveredAt === null && !deliveringToday) {
     ladderRules(ctx, dayOf(ctx, ctx.yesterday), out);
   }
   ladderRules(ctx, today, out);
@@ -193,10 +202,12 @@ function hasStarted(ctx: Context, date: LocalDate): boolean {
  * Today's arrival, from her arrival time until the prepare time. After the prepare time the day is
  * skipped (reconciliation logs it as missed) rather than greeting her with a morning message late at
  * night. Before her start date there is no arrival, and the next one to wake for is on that date.
+ * Returns whether today's arrival is due in this decision.
  */
-function arrivalRule(ctx: Context, out: Collector): void {
+function arrivalRule(ctx: Context, out: Collector): boolean {
   const { arrivalTime } = ctx.input.member;
   const day = dayOf(ctx, ctx.today);
+  let due = false;
   if (hasStarted(ctx, ctx.today) && day.deliveredAt === null && !day.deliveryFailed) {
     const arrival = ctx.at(ctx.today, arrivalTime);
     if (!reached(ctx.now, arrival)) {
@@ -208,11 +219,13 @@ function arrivalRule(ctx: Context, out: Collector): void {
         late: minutesBetween(arrival, ctx.now) > SCHEDULE.lateNoteAfterMinutes,
       });
       ladderWakesAfterDelivery(ctx, day, out);
+      due = true;
     }
   }
   const { startsOn } = ctx.input.member;
   const nextArrivalDate = startsOn !== null && startsOn > ctx.tomorrow ? startsOn : ctx.tomorrow;
   out.wakes.push(ctx.at(nextArrivalDate, arrivalTime));
+  return due;
 }
 
 /**
@@ -320,8 +333,8 @@ function turnPromptRule(ctx: Context, out: Collector): void {
   if (!ctx.input.family.turnsEnabled) {
     return;
   }
-  const { prepared, turnPromptSent } = ctx.input.tomorrow;
-  if (!prepared && !turnPromptSent) {
+  const { prepared, turnPromptSent, askScheduled } = ctx.input.tomorrow;
+  if (!prepared && !turnPromptSent && !askScheduled) {
     const promptAt = ctx.at(ctx.today, SCHEDULE.turnPromptTime);
     if (!reached(ctx.now, promptAt)) {
       out.wakes.push(promptAt);
@@ -344,13 +357,14 @@ function prepareRule(ctx: Context, out: Collector): void {
   out.wakes.push(ctx.at(ctx.tomorrow, SCHEDULE.prepareTime));
 }
 
+/** A week that ends before her start date holds none of her days, so there is nothing to read. */
 function weeklyReadRule(ctx: Context, out: Collector): void {
   const daysUntil = (7 + SCHEDULE.weeklyReadWeekday - weekdayOf(ctx.today)) % 7;
   if (daysUntil > 0) {
     out.wakes.push(ctx.at(addDays(ctx.today, daysUntil), SCHEDULE.weeklyReadTime));
     return;
   }
-  if (!ctx.input.weeklyReadDoneFor(ctx.today)) {
+  if (hasStarted(ctx, ctx.today) && !ctx.input.weeklyReadDoneFor(ctx.today)) {
     const readAt = ctx.at(ctx.today, SCHEDULE.weeklyReadTime);
     if (reached(ctx.now, readAt)) {
       out.due.push({ kind: "draft_weekly_read", weekEnd: ctx.today });

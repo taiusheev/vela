@@ -225,12 +225,14 @@ describe("adapter.fetchMedia", () => {
   });
 
   it("rejects a file over 20 MB before downloading it", async () => {
+    // A download path is present, so only the size Telegram reported can stop the download.
     const { adapter, requests } = setup(
       botApi({
         getFile: () => ({
           file_id: VOICE_ID,
           file_unique_id: "AgADXxMAAqPfIFc",
           file_size: TELEGRAM_MAX_DOWNLOAD_BYTES + 1,
+          file_path: "voice/file_12.oga",
         }),
       }),
     );
@@ -239,6 +241,7 @@ describe("adapter.fetchMedia", () => {
 
     await expect(failure).rejects.toBeInstanceOf(ChannelSendError);
     await expect(failure).rejects.toMatchObject({ code: "invalid_request", retryable: false });
+    await expect(failure).rejects.toThrow(/download limit/);
     expect(requests.map((request) => request.apiMethod)).toStrictEqual(["getFile"]);
   });
 

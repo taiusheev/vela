@@ -49,6 +49,27 @@ export const MAX_TOKENS_FOR: Record<AiCallName, number> = {
   hello: 2000,
 };
 
+/**
+ * The time one attempt may take, in milliseconds. The SDK default is ten minutes per attempt, so a
+ * hung call with its retries would outlast a queue consumer's 15-minute wall-clock limit and be killed
+ * before resolving to its safe default. Each bound leaves room for the call's `max_tokens`; even the
+ * three calls of one answer (understand, flag, translate), each hanging on every attempt, finish
+ * well inside that limit.
+ */
+export const TIMEOUT_MS_FOR: Record<AiCallName, number> = {
+  flag: 90_000,
+  understand: 60_000,
+  translate: 60_000,
+  readback: 60_000,
+  weekly_read: 180_000,
+  chips: 30_000,
+  suggest: 30_000,
+  hello: 30_000,
+};
+
+/** Retries after a failed attempt (a timeout, a connection error, a 408, 409, 429, or 5xx). */
+export const MAX_RETRIES = 2;
+
 export interface ModelCapabilities {
   /** Accepts `thinking: {type: "adaptive"}`; Haiku 4.5 only has budgeted thinking. */
   readonly adaptiveThinking: boolean;
