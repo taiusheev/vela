@@ -4,8 +4,8 @@
 -- (cheaper to evolve), no soft deletes except the documented status fields, every table has created_at.
 -- Spec: product/05-product-spec-v2.md. The exchange (§3) is the core object; arrivals are its deliveries.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;      -- gen_random_uuid()
-CREATE EXTENSION IF NOT EXISTS pg_trgm;       -- admin search
+-- gen_random_uuid() is built into Postgres 13+; no extension needed.
+-- pg_trgm (admin search) is added by a later migration when the admin view needs it.
 
 -- uuidv7 without an extension (time-ordered ids; falls back cleanly on any Postgres 15+)
 CREATE OR REPLACE FUNCTION uuid_v7() RETURNS uuid AS $$
