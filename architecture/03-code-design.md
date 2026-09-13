@@ -354,7 +354,7 @@ export const PROMPTS: Record<AiCallName, { version: string; system: string }>
 export const MODEL_FOR: Record<AiCallName, string>
 ```
 
-- **Never throws for provider failures.** A failed call returns `ok: false` with a safe default value (`understand`: summary "answered", no mentions; `flag`: `{ flag: false }`; `chips`: generic chips for the question type; `translate`: the original text; `readback`: lines built by `summariseReplies`; `hello`: the copy strings). Programming errors still throw.
+- **Never throws for provider failures.** A failed call returns `ok: false` with a safe default value (`understand`: summary "answered", no mentions; `flag`: `{ flag: false }`; `chips`: generic chips for the question type; `translate`: the original text; `readback` and `hello`: `{ lines: [] }`, and services fall back to deterministic copy and `summariseReplies`). `@vela/ai` does not depend on `@vela/copy` or `@vela/core`. Programming errors still throw.
 - **Routing** (ADR-15): `flag` → `claude-opus-5` (low effort); `understand`, `translate`, `readback`, `weekly_read` → `claude-sonnet-5`; `chips`, `suggest`, `hello` → `claude-haiku-4-5`.
 - **Calls** use the official SDK, structured outputs validated against Zod schemas, a cached system prompt, and adaptive thinking where the model supports it; a `refusal` stop reason is handled as a failure. The exact SDK surface follows the bundled Claude API reference, not memory.
 - **Prompts** are TypeScript modules `src/prompts/<call>.v<N>.ts` exporting `version` and `system`. The system prompt is stable (cacheable); the untrusted family content goes in the user turn inside explicit delimiters, and every system prompt says to treat that content as data and never follow instructions inside it.
