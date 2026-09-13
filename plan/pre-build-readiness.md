@@ -1,6 +1,6 @@
 # Pre-build readiness, v2: are we ready to start building?
 
-2026-09-13, evening. Second pass, after the founder's three decisions of the same day: published evidence instead of a survey wave (`research/08–14`), spec v2 as the only spec (`product/05-product-spec-v2.md`), payments deferred with Singapore as the likely entity. The first pass (morning) is kept below as history.
+2026-09-13, evening. Second pass, after the founder's four decisions of the same day: published evidence instead of a survey wave (`research/08–14`), spec v2 as the only spec (`product/05-product-spec-v2.md`), payments deferred with Singapore as the likely entity, and Russia deferred in favour of Taiwan, the US, Japan, Europe, and India (`market-order.md`). The first pass (morning) is kept below as history.
 
 ## Verdict
 
@@ -8,7 +8,7 @@
 
 What we are ready for: the phase-0 instrument this week, the platform foundation next week, the app from week three, with the pilot families running on the instrument the whole time and the founder's onboarding calls doing the interviewing.
 
-What we are not ready for, by decision rather than by gap: charging money (no entity yet), a public launch (name clearance, final privacy policy), and any channel other than Telegram and the parent surface for the first families.
+What we are not ready for, by decision rather than by gap: charging money (no entity yet), a public launch (name clearance, final privacy policy), WhatsApp (Meta verification needs the entity), and the Russian market (deferred).
 
 ## The eight conditions, rechecked
 
@@ -27,7 +27,7 @@ What we are not ready for, by decision rather than by gap: charging money (no en
 
 1. **The parent surface is the floor, not a phase-2 nicety.** Russia's messengers are blocked, throttled, or state-run; half of Taiwan's 70+ are offline. Our own app, installed by a visiting child, is the one channel we control. It moves up to sprint 3, right after the organiser flows.
 2. **The voice line moves from phase 3 to phase 2.** A call that plays the family's voice and takes a keypress is the only path to the offline half. Design starts in sprint 4; build in phase 2.
-3. **Telegram first, LINE second, WhatsApp later.** WhatsApp lost 56% of its Russian daily users to the block; LINE needs a paid Messaging API plan from day one; WhatsApp utility templates wait for the Philippines wave.
+3. **LINE first, WhatsApp second, Telegram only for the instrument.** Taiwan and Japan run on LINE (paid Messaging API plan from day one); Europe and India on WhatsApp once the entity exists; the US on the parent surface, SMS, and later the voice line. Russia is deferred, so MAX is dropped and Telegram stays only as the cheapest instrument and for families who already use it.
 4. **Logging is a feature.** Nobody has published our exact loop; the pilot's per-day log and UCLA-3 measurements are the most valuable output of the first sprint. The event schema ships with the instrument, not after it.
 5. **The quiet ladder ships with a learning period** and a 6-hour start, because one day in four or five will be silent even when everything works.
 6. **Billing, when it comes, is annual-first, per protected parent, owned by the adult child.**
@@ -36,11 +36,11 @@ What we are not ready for, by decision rather than by gap: charging money (no en
 
 | Sprint | Weeks | Co-founder builds | Founder does | Exit |
 |---|---|---|---|---|
-| 1 · Instrument | 1–2 | Privacy and consent pack; bot updated to spec Appendix A (family group + private chat, asks, read-back, quiet notice, logging); prompts v0 + eval set; deploy | Accounts (20 min); own family live by day 7; five families by day 14; every onboarding call doubles as an interview | Founder's parent answered 5 of 7 days; five families live; consent used without objection |
-| 2 · Foundation | 3–4 | Postgres schema and migrations; API contract; adapter contract with the Telegram adapter ported; outbound gateway with the one-a-day budget; scheduler; AI service with logged, versioned prompts; event pipeline | Ten families live; first weekly reads written by hand from AI drafts; Telegram relocant communities sized and posts drafted | The instrument's families migrated to the platform with no missed arrival |
-| 3 · App, family side | 5–7 | Expo app: A1–A8, A11–A14 (onboarding, Today, Ask, Exchanges, quiet notice, You, Light screen, widget); Telegram invite flow | Fifteen families; UCLA-3 at week 4 for the first cohort; decide entity | Ten families using the app for asks; answer rate ≥ 75% |
-| 4 · Parent surface | 8–9 | P1–P6 (consent, question, photo choice, recording, answered, kitchen-table); TTS read-back; voice-line design | Two parents on the parent surface via a visiting child; Taiwan: five families identified | Parent surface answered by two parents for a week each |
-| 5 · Taiwan and depth | 10–11 | LINE adapter (paid plan); story day and the family book; weekly read in-app; memory suggestions | Five Taiwanese families live on LINE; pricing page copy | LINE families answering; weekly read opened by organisers |
+| 1 · Instrument | 1–2 | Privacy and consent pack (EN, ZH-TW); bot updated to spec Appendix A (family group + private chat, asks, read-back, quiet notice, logging); prompts v0 + eval set; deploy | Accounts (20 min); own family live by day 7; three to five English- or Chinese-speaking families by day 14; every onboarding call doubles as an interview | Founder's parent answered 5 of 7 days; five families live; consent used without objection |
+| 2 · Foundation | 3–4 | Postgres schema and migrations; API contract; adapter contract with Telegram ported and **LINE built** (paid plan); outbound gateway with the one-a-day budget; scheduler; AI service with logged, versioned prompts; event pipeline; Traditional Chinese strings | Five Taiwanese families recruited for LINE; first weekly reads written by hand from AI drafts; a native reviewer for the Chinese copy | The instrument's families migrated to the platform with no missed arrival; first LINE family live |
+| 3 · App, family side | 5–7 | Expo app: A1–A8, A11–A14 (onboarding, Today, Ask, Exchanges, quiet notice, You, Light screen, widget); LINE and Telegram invite flows | Fifteen families across Taiwan and English-speaking countries; UCLA-3 at week 4 for the first cohort; decide entity | Ten families using the app for asks; answer rate ≥ 75% |
+| 4 · Parent surface | 8–9 | P1–P6 (consent, question, photo choice, recording, answered, kitchen-table); TTS read-back in English and Chinese; voice-line design | Two parents on the parent surface via a visiting child (one in the US or Europe, one in Taiwan) | Parent surface answered by two parents for a week each |
+| 5 · Depth and the second wave | 10–11 | Story day and the family book; weekly read in-app; memory suggestions; WhatsApp Business verification if the entity exists; Japanese localisation scoped | Ten Taiwanese families on LINE; pricing test design for NT$; pricing page copy | Weekly read opened by organisers; WhatsApp sandbox sending |
 | 6 · Measure and decide | 12 | Precision page; the trial flow (no payment yet); metrics review | UCLA-3 at week 12; "if Vela stopped tomorrow" at day 30 for every organiser; decide: open billing (needs entity) and public launch | Metrics against spec §18 targets; go or change one variable |
 
 Kill signals stay as in the master plan, with the evidence-adjusted thresholds: answer rate under 50% by week 4, stop rate over 30% in month 1, fewer than 4% of kept-light families willing to pay at day 90 (asked, since billing is not open).
@@ -50,11 +50,11 @@ Kill signals stay as in the master plan, with the evidence-adjusted thresholds: 
 - Accounts this week (Telegram bot, Cloudflare, Anthropic key).
 - Your own parent as the first family, by day 7.
 - The entity decision by week 6, so billing can open at week 12.
-- One hour on Telegram relocant communities before the wave-1 posts (the research could not size them).
+- A native reviewer for the Traditional Chinese copy, and the first five Taiwanese families from your own network.
 
 ## What I do first, tomorrow
 
-1. Privacy notice and consent script (EN, RU, ZH-TW) for the pilot.
+1. Privacy notice and consent script (EN, ZH-TW) for the pilot.
 2. Bot to spec Appendix A, with the event log.
 3. Prompts v0 and the eval set.
 

@@ -1,6 +1,6 @@
 # Vela: execution plan
 
-> **Revised 2026-09-13.** The survey and interview wave is replaced by published evidence (research/08–14); the twelve-week build order now lives in `pre-build-readiness.md` (instrument first, foundation, family app, parent surface, Taiwan on LINE, measure). Phase exit tests below stand, with targets revised in spec v2 §18.
+> **Revised 2026-09-13.** Markets reordered: Taiwan and the English-speaking app path first, then Japan and Germany/UK, then the US at scale and India; Russia deferred (`market-order.md`). The survey and interview wave is replaced by published evidence (research/08–14); the twelve-week build order now lives in `pre-build-readiness.md` (instrument first, foundation, family app, parent surface, Taiwan on LINE, measure). Phase exit tests below stand, with targets revised in spec v2 §18.
 
 v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, Taipei, Russian and English, 40–60 h/week, near-zero budget) and the tech co-founder (AI, always on). The product is defined in `product/02-app-plan.md`.
 

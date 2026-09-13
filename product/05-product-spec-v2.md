@@ -12,7 +12,7 @@
 | The light | Lights on any answer, on the raw event, before any AI runs. Paid layer "Vela Light" carries the light, quiet notices, nearby contacts, away mode, the weekly read, memory, and the family book export. |
 | Silence | Repeat once, then a quiet notice to the organisers with nearby contacts one tap away. **Every message to a nearby contact is sent by a person's tap.** Vela never contacts anyone on its own. The "auto-ask" step from v1 is removed. |
 | The free layer | The whole exchange: asks, answers, replies, turns, translation, story day, the archive in the app. Free for every member, for ever. |
-| Surfaces | The app (family), the parent surface (same app, one screen at a time), kitchen-table mode (tablet), messengers (Telegram first for Russian-speaking families, LINE first for Taiwan; WhatsApp where it works; MAX only with a Russian entity and never with a privacy claim), and a voice line in phase 2 for parents who are offline. The parent surface is the floor under every market. No family is told a messenger is unsupported in a market we launch. |
+| Surfaces | The app (family), the parent surface (same app, one screen at a time), kitchen-table mode (tablet), messengers (LINE first for Taiwan and Japan; WhatsApp for Europe and India once the entity exists; Telegram for the phase-0 instrument and wherever a family already uses it), and a voice line in phase 2 for parents who are offline. The parent surface is the floor under every market and the whole path for the United States. Russia is deferred (plan/market-order.md). No family is told a messenger is unsupported in a market we launch. |
 | Vocabulary | family · member · organiser · kept-light member · nearby contact · **exchange** (one ask, one answer, its replies) · arrival (the delivery of an exchange's ask) · answer · reply · light · quiet notice · away · turn · story day · family book · weekly read |
 
 ## 1. Principles
@@ -35,7 +35,7 @@
 | surfaces | app · parent-surface · telegram · line · whatsapp · max · viber · voice | The arrival goes to the **primary** surface; answers are accepted from any |
 | light | off · on | Only with the member's consent (§9); a member may switch their own on or off |
 | turns | in · out | Default: in for everyone except kept-light members |
-| language | en · ru · zh-TW (MVP) | Every string, transcript, and translation is keyed to this |
+| language | en · zh-TW (MVP); ja · de · hi (phase 2); ru as a localisation when needed | Every string, transcript, and translation is keyed to this |
 | address form | free text | "Mrs Ivanova", "Mom", "Галина Петровна"; used in every greeting |
 | arrival hour | local time | Default 08:00; for kept-light members wake time + 30 min, set by the organiser, learned after 14 days |
 | status | invited · active · paused · left | Paused from either side; left keeps data 30 days then deletes |
@@ -236,7 +236,7 @@ Applies to kept-light members only.
 
 - Every member has a language; every text is shown in the reader's language with the original one tap away.
 - Translation preserves register: address form, diminutives, a grandchild's tone. The AI is told who speaks to whom.
-- MVP: English, Russian, Traditional Chinese. Phase 2: Ukrainian, Tagalog, Hindi, Spanish, Japanese, Korean, German.
+- MVP: English and Traditional Chinese. Phase 2: Japanese, German, Hindi. Later: Russian, Ukrainian, Tagalog, Spanish, Korean.
 - Transcription in her language with auto-detect fallback; the transcript is editable by her family only with her permission ("Mia corrected the spelling of the village").
 
 ## 12. Memory and reminders
@@ -263,7 +263,7 @@ Screen names match `design/prototype/vela-app.html`. Each criterion is testable.
 
 **A3 · Onboarding 3 · Nearby.** Two contact slots (name, relation, phone); "consent sent" appears after saving; "Skip for now" is always available; the card explains this is part of Vela Light.
 
-**A4 · Onboarding 4 · Channel.** Options: Telegram (recommended in RU markets), LINE (recommended in TW), WhatsApp, MAX · Viber, the Vela app ("I'll set it up for her"). Choosing a messenger shows the invite text in her language with the organiser's name and the "say stop" line; "Send the invite" opens the messenger share sheet with the link.
+**A4 · Onboarding 4 · Channel.** Options: LINE (recommended in Taiwan and Japan), WhatsApp (Europe, India), Telegram, the Vela app ("I'll set it up for her"; recommended in the US). Choosing a messenger shows the invite text in her language with the organiser's name and the "say stop" line; "Send the invite" opens the messenger share sheet with the link.
 
 **A5 · The light is ready.** Resting light, "The light is ready", the time of her first arrival, "Ask Mom something else" and "Go to Today". Becomes lit in place if she answers while the screen is open.
 
@@ -340,7 +340,7 @@ Payments provider and legal entity are open (founder decision; Singapore under c
 - **Kept:** names, address forms, cities, languages, hours, nearby contacts, exchanges (30 days of media by default; the family book by choice), summaries, weekly reads, precision outcomes.
 - **Not kept:** raw audio beyond 30 days unless in the family book; location; contacts beyond the two nearby; anything from her device other than what she sends.
 - **Deletion:** "left" deletes a member's data after 30 days; "delete family" within 24 h; death (§19) keeps a read-only record one year unless exported, then deletes.
-- **Residency:** region from the kept-light member's country (eu · apac · us); Russia requires legal review before launch.
+- **Residency:** region from the kept-light member's country (eu · apac · us); GDPR for Europe, APPI for Japan, DPDP for India reviewed before each launch; Russia deferred.
 - **AI sees:** her answers, the ask, the family's replies, the member list with roles and languages, memory facts. Never billing data, never nearby contacts' numbers. Every AI call is logged with prompt version and output.
 
 ## 18. Events and metrics
@@ -377,7 +377,7 @@ They produce the metrics below (targets revised against research/14; kill signal
 
 ## Appendix A · Phase-0 instrument (no app)
 
-The pilot runs on Telegram only, for 10–20 families, to measure whether the loop works before the app exists.
+The pilot starts on Telegram (the cheapest bot platform, voice-capable, and where the founder's own family already is) for the first 3–5 families, then continues on LINE for Taiwanese families from sprint 2. It measures whether the loop works before the app exists.
 
 - **Setup.** The organiser adds the Vela bot to a new Telegram group with the family (not the grandmother). The grandmother talks to the bot in a private chat (M1). The founder onboards each family by call.
 - **Asking.** In the family group the bot posts at 19:00 her time: "Tomorrow is Anna's turn with Mom. Reply to this message with a question, a photo, or a voice note." Any reply to that message, or any message starting with "ask:", becomes tomorrow's ask; the bot confirms "Into her morning." Two photos in one reply become a photo choice. If nobody replies by 22:00, the bot uses the oldest "whenever" item (any message starting with "whenever:") or the fallback hello.
@@ -387,7 +387,7 @@ The pilot runs on Telegram only, for 10–20 families, to measure whether the lo
 - **The light.** The bot posts "Mom answered · 8:12 ☀" in the group; quiet notice at T_quiet to the organiser privately with the nearby contacts' names and phone numbers as text; "Ask to check" is the organiser's own call in phase 0.
 - **Weekly read.** Written by the founder from the AI draft, sent to the organiser privately on Sunday.
 - **Logged from day one.** Per parent per day: ask delivered (type, asker), seen, answered (kind), time to answer, replies received, replies heard, quiet notice and its outcome, away, stop. Per family per week: who composed, quiet days, types used. UCLA-3 loneliness at weeks 0, 4, 12 and "if Vela stopped tomorrow" at days 14 and 30, asked by the founder on the calls.
-- **Not in phase 0.** Payments in the app (the $15 pilot fee is collected by hand), LINE/WhatsApp, the parent surface, memory, votes.
+- **Not in phase 0.** Payments in the app (the $15 pilot fee is collected by hand), WhatsApp, the parent surface, memory, votes.
 
 This appendix supersedes `bot-spec.md`; the bot code in `bot/` is to be updated to it before the pilot.
 
