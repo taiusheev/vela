@@ -34,6 +34,8 @@ What we are not ready for, by decision rather than by gap: charging money (no en
 
 ## The build plan, twelve weeks
 
+> Superseded in detail by [`build-plan.md`](build-plan.md) (task level, definitions of done, sprint 0) on the evening of 2026-09-13. The table below is the summary.
+
 | Sprint | Weeks | Co-founder builds | Founder does | Exit |
 |---|---|---|---|---|
 | 1 · Instrument | 1–2 | Privacy and consent pack (EN, ZH-TW); bot updated to spec Appendix A (family group + private chat, asks, read-back, quiet notice, logging); prompts v0 + eval set; deploy | Accounts (20 min); own family live by day 7; three to five English- or Chinese-speaking families by day 14; every onboarding call doubles as an interview | Founder's parent answered 5 of 7 days; five families live; consent used without objection |

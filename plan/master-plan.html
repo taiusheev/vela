@@ -140,7 +140,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
     <div><div class="k">Phase</div><div class="v">0 · prove the loop</div></div>
     <div><div class="k">Day</div><div class="v">3</div></div>
     <div><div class="k">Research</div><div class="v">14 reports, ~750 sources</div></div>
-    <div><div class="k">Build</div><div class="v">Ready; sprint 1 starts</div></div>
+    <div><div class="k">Build</div><div class="v">Blueprint locked; sprint 0</div></div>
     <div><div class="k">Applications</div><div class="v">ikigai Launchpad, submitted</div></div>
     <div><div class="k">Families</div><div class="v">0 of 20</div></div>
     <div><div class="k">Budget</div><div class="v">&lt; $25 / month</div></div>
@@ -330,7 +330,7 @@ flowchart LR
 
 <section id="architecture">
   <h2>Architecture</h2>
-  <p class="sub">How it's built. Full detail in <code>architecture/01-technical-design.md</code>; decisions and rejected alternatives in <code>architecture/decisions.md</code>; drawings in <code>design/diagrams/</code>.</p>
+  <p class="sub">How it's built. The blueprint is <code>architecture/02-technical-architecture-v2.md</code> (every tool checked against 2026 alternatives in <code>architecture/research/</code>); the data model is <code>architecture/schema.sql</code>, the interface <code>architecture/api-contract.md</code>; decisions ADR-1 to ADR-20 in <code>architecture/decisions.md</code>; the sprint plan is <code>plan/build-plan.md</code>.</p>
   <figure>
     <pre class="mermaid">
 flowchart LR
@@ -381,11 +381,11 @@ flowchart LR
   <div class="tablewrap"><table>
     <thead><tr><th>Decision</th><th>Chosen</th><th>Rejected</th></tr></thead>
     <tbody>
-      <tr><td>Backend</td><td>Cloudflare Workers + Queues + Cron + R2, Hyperdrive to Postgres</td><td>Node on Fly/Railway, Supabase functions, Lambda</td></tr>
-      <tr><td>Database</td><td>Postgres on Neon, one project per region (eu, apac, us)</td><td>D1 (prototype only), Firestore, Mongo</td></tr>
-      <tr><td>Mobile</td><td>Expo, one codebase; parent surface as a mode</td><td>Flutter, two separate apps, native</td></tr>
-      <tr><td>Parent channels</td><td>Adapters behind one contract; never one messenger</td><td>Telegram-only, WhatsApp-only, Vela-only parent app</td></tr>
-      <tr><td>AI</td><td>Claude via API, structured outputs, versioned prompts, eval set; STT provider for voice</td><td>Fine-tuning, self-hosted open model, free-text outputs</td></tr>
+      <tr><td>Backend</td><td>Cloudflare Workers (Hono) + Durable Object alarms per member + Queues + R2 + Hyperdrive; cron only for reconciliation, with a heartbeat monitored outside Cloudflare</td><td>Lambda + EventBridge Scheduler (most correct, too much surface), Fly/Railway/Render, Vercel, Supabase functions, D1 (row caps)</td></tr>
+      <tr><td>Database</td><td>Postgres on Neon, one project per region (apac, eu, us); Drizzle migrations; Supabase Tokyo if Japan needs in-country hosting</td><td>Supabase everywhere, PlanetScale, Crunchy, Aurora, Cloud SQL, D1, Firestore</td></tr>
+      <tr><td>Mobile</td><td>Expo SDK 55, one codebase; parent surface and kitchen table as modes; native widget targets; expo-audio; Lingui; Clerk auth</td><td>Flutter, Compose Multiplatform, native, PWA, two apps</td></tr>
+      <tr><td>Parent channels</td><td>Adapters behind one contract: LINE first, WhatsApp after the entity, voice line in phase 2, Telegram for the instrument; the app is the floor</td><td>Any single messenger; MAX; BSPs; voice-AI platforms for a fixed script</td></tr>
+      <tr><td>AI and speech</td><td>Claude routed by call (Opus 5 for flags, Sonnet 5 for judgment, Haiku 4.5 for drafting), structured outputs, batch, caching, Promptfoo evals; Deepgram STT with the pilot's audio deciding; Azure TTS with on-device fallback; LLM translation</td><td>One model for everything, fine-tuning, DeepL for register text, China-hosted TTS</td></tr>
       <tr><td>Payments</td><td>Stripe web checkout first; in-app purchases in phase 2</td><td>IAP from day one (30% and review friction while testing prices)</td></tr>
       <tr><td>Residency</td><td>Region per family from the kept-light member's country; Russia = legal review before launch</td><td>Russian hosting from day one; ignoring the question</td></tr>
     </tbody>
@@ -544,6 +544,7 @@ gantt
   <div class="dec"><span class="d">2026-09-12</span><span><b>Identity chosen from research, not from the old logo.</b> Candle &amp; Ink: cream #FBF7F0, charcoal #1E1A16, amber light #E9A23B (never as text), teal actions #1F5C66; Literata + Inter (Cyrillic and Greek covered); the mark is a window with a light on. See design/research-identity.md and design/design-system.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Published evidence instead of surveys before building.</b> Six research workstreams (reports 08–13) replace the survey and interview wave as the evidence base; interviews move into the pilot itself.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Spec v2 is the only spec.</b> Asks from people, the reply loop, no automatic contact of third parties, acceptance criteria for every screen, the phase-0 instrument on Telegram. v1 spec, interaction model, and bot spec superseded.</span></div>
+  <div class="dec"><span class="d">2026-09-13</span><span><b>Architecture v2 and the build plan locked.</b> Five due-diligence sweeps checked platform, data, speech and AI, channels, mobile, and ops against September-2026 alternatives; ten new decision records (ADR-11 to ADR-20); the schema validated in Postgres; twelve weeks in six sprints with definitions of done. Sprint 0 is one afternoon of accounts and repo bootstrap.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Russia deferred; Taiwan, the US, Japan, Europe, India in that order.</b> Markets without strong platform or legal restrictions first. LINE first, WhatsApp after the entity, Telegram only for the instrument; MVP languages English and Traditional Chinese. See plan/market-order.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Ready to build, in a changed order.</b> Evidence (research/14) and spec v2 remove the two blockers. Sprint 1 is the phase-0 instrument with consent pack, prompts and evals, and logging; the platform foundation follows; the parent surface moves up to sprint 3 and the voice line to phase 2; targets revised (answer rate ≥ 75%, conversion ≥ 10%, quiet notices &lt; 4/month). See plan/pre-build-readiness.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Payments deferred; entity probably Singapore.</b> Stripe does not onboard Taiwan-registered businesses; Singapore is supported. Provider chosen when the entity exists.</span></div>
@@ -577,8 +578,11 @@ gantt
       <tr><td><code>plan/market-order.md</code></td><td>Market order v2: Taiwan and the English app path, then Japan and Germany/UK, then the US at scale and India; Russia deferred; channel, language, price and regulation per market</td></tr>
       <tr><td><code>product/02-app-plan.md</code></td><td>The product, v2: people, loop, features, surfaces, AI, privacy, pricing, metrics, architecture, roadmap, risks</td></tr>
       <tr><td><code>product/03-product-spec.md</code></td><td>The functional contract: member states, the arrival, answers, the quiet ladder, consent, turns, story day, translation, memory, weekly read, surfaces, edge cases, copy, accessibility</td></tr>
-      <tr><td><code>architecture/01-technical-design.md</code></td><td>Components, data flow, scheduler, adapter contract, gateway, AI pipeline, data model, security, failure modes, environments, cost at scale</td></tr>
-      <tr><td><code>architecture/decisions.md</code></td><td>Ten architecture decision records with rejected alternatives</td></tr>
+      <tr><td><code>architecture/02-technical-architecture-v2.md</code></td><td>The build blueprint: constraints, overview, platform decision with alternatives, repo layout, domain invariants, per-member scheduling, gateway, adapters, AI and speech, mobile, auth, residency, security, failure modes, SLOs, testing, environments, cost, risks</td></tr>
+      <tr><td><code>architecture/schema.sql</code> · <code>api-contract.md</code></td><td>The data model (32 tables, validated in Postgres) and the API with Zod contracts</td></tr>
+      <tr><td><code>architecture/research/</code></td><td>Five tool-selection sweeps: platform and data, speech and AI, channels and voice, mobile stack, ops and quality</td></tr>
+      <tr><td><code>architecture/decisions.md</code></td><td>Twenty architecture decision records with rejected alternatives</td></tr>
+      <tr><td><code>plan/build-plan.md</code></td><td>Six sprints, task by task, with definitions of done and the founder's tasks</td></tr>
       <tr><td><code>product/01-solution-thinking.md</code></td><td>Problem anatomy and solution space (partly superseded)</td></tr>
       <tr><td><code>plan/execution-plan.md</code></td><td>Phase 0 to 3, week by week, with owners</td></tr>
       <tr><td><code>plan/materials/</code></td><td>Surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer</td></tr>

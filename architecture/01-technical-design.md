@@ -1,5 +1,7 @@
 # Vela technical design
 
+> **Superseded on 2026-09-13 by [`02-technical-architecture-v2.md`](02-technical-architecture-v2.md)** (per-member scheduling on Durable Objects, adapter order for the new market order, the speech and model stack, the mobile stack, ops). Kept for history; where the two differ, v2 wins.
+
 v1, 2026-09-12. How the product in `product/02-app-plan.md` and `product/03-product-spec.md` is built. Decisions and rejected alternatives are in `architecture/decisions.md`. Diagrams: `design/diagrams/architecture.drawio`, `database.drawio`, `daily-loop.drawio`.
 
 Guiding constraints: one non-technical founder and an AI co-founder; near-zero budget until revenue; must run for 100 families on free tiers and for 100,000 without a rewrite; the parent side must work with nothing installed; every AI output must be auditable.

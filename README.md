@@ -11,6 +11,9 @@ Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) h
 - `research/01`–`06` — the six underlying reports (US medical alerts and wearables; passive home sensing; East Asia; Europe/ANZ/Israel; AI companions and check-in apps; market size and lessons)
 - [`product/02-app-plan.md`](product/02-app-plan.md) — **the product**: people, daily loop, features, channels, AI, privacy, pricing, metrics, architecture, roadmap, risks
 - [`product/05-product-spec-v2.md`](product/05-product-spec-v2.md) — **the functional contract, v2**: the exchange, arrivals as asks, the reply loop, the light and the quiet ladder, consent, acceptance criteria for every screen, the phase-0 instrument (supersedes 03 and 04)
+- [`architecture/02-technical-architecture-v2.md`](architecture/02-technical-architecture-v2.md) — **the build blueprint**: every tool checked against 2026 alternatives (`architecture/research/`), per-member scheduling, gateway, adapters, AI, mobile, residency, ops, cost
+- [`architecture/schema.sql`](architecture/schema.sql) and [`architecture/api-contract.md`](architecture/api-contract.md) — the data model (validated) and the API
+- [`plan/build-plan.md`](plan/build-plan.md) — **sprint-by-sprint tasks with definitions of done**, twelve weeks
 - [`architecture/01-technical-design.md`](architecture/01-technical-design.md) — **how it's built**: components, scheduler, adapter contract, AI pipeline, security, failure modes, cost at scale
 - [`architecture/decisions.md`](architecture/decisions.md) — architecture decision records
 - [`plan/execution-plan.md`](plan/execution-plan.md) — **what we do**: phase 0 (prove the loop), MVP, the bridge, the read; deck and site track

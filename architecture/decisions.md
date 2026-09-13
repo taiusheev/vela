@@ -105,3 +105,100 @@ Decision: Vela informs; the family acts. No Vela staff on the ladder, no partner
 Why: founder's decision; it keeps the company a software company; the research shows the family's own people are the scarce asset and the product's job is to make them one tap away.
 
 Consequence for architecture: no dispatch system, no partner APIs, no on-call rota; the quiet notice is the top of the ladder.
+
+---
+
+## ADR-11 · Per-member Durable Object alarms plus an outbox replace the cron scan
+**2026-09-13 · accepted · supersedes the scheduler in ADR-1's design**
+
+Decision: one Durable Object per member who receives arrivals holds the pending wake-ups (arrival, repeat, quiet, turn prompt, weekly read) and re-arms one alarm at a time, recomputing each occurrence from the member's IANA zone. Every fire inserts the gate row (`exchanges` or `outbound`) with `ON CONFLICT DO NOTHING` and enqueues only if the insert happened. A 5-minute Cron Trigger reconciles and pings an external heartbeat.
+
+Why: Cloudflare Cron Triggers neither retry nor alert on a missed tick (degraded incident 2026-09-09); a shared per-minute scan is where double sends come from; the alarm plus a database gate is DST-safe by construction and scales per member.
+
+Rejected: keeping the v1 cron scan (fails constraints 1 and 5 at scale); AWS EventBridge Scheduler one-off schedules (the most correct primitive, but a second cloud and IAM for one builder); pg_cron (same scan pattern).
+
+Revisit if: a duplicate send is ever observed (then SQS FIFO in front of the send path), or Cloudflare adds first-class per-object scheduling with dedup.
+
+## ADR-12 · Drizzle ORM and Drizzle Kit for schema and migrations
+**2026-09-13 · accepted**
+
+Decision: the Drizzle schema mirrors `schema.sql`; Drizzle Kit generates SQL migrations into `db/migrations/`, reviewed in PRs, applied to a Neon branch per PR in CI and to production by the release job; pglite runs the schema in CI.
+
+Why: edge-native (no proxy on Workers, unlike Prisma), typed queries, and it already produces the reviewed-SQL flow the design requires.
+
+Rejected: Prisma (needs Accelerate or driver adapters on Workers), Kysely + Atlas (two tools for one job), raw SQL only (no types).
+
+## ADR-13 · Clerk for accounts; Better Auth as the self-hosted fallback
+**2026-09-13 · accepted**
+
+Decision: organisers and members with accounts sign in through Clerk (phone OTP without a per-message surcharge, email magic link, Apple, Google; Expo SDK); the Worker verifies Clerk JWTs. Kept-light members never have an account: a channel link or a device-bound parent-surface token is their identity.
+
+Why: free to 50,000 monthly retained users, first-class Expo support, the least integration work for one builder.
+
+Rejected: Supabase Auth (only sensible if the database were Supabase), Firebase (less TypeScript-idiomatic), Auth0/Stytch/Cognito (cost).
+
+Revisit if: the Clerk bill passes ~$500/month (retained-user pricing past 50k); then Better Auth, which has an official Expo plugin.
+
+## ADR-14 · Speech stack: Deepgram by default, the pilot's audio decides; Azure TTS with on-device fallback
+**2026-09-13 · accepted, with a measurement gate**
+
+Decision: Deepgram Nova-3 batch (training opt-out set) transcribes by default; gpt-4o-transcribe is the second opinion on low confidence; SenseVoice/FunASR and Whisper on Groq are benchmarked in sprint 2 on 30 consented pilot clips, and the measured word error rate on elderly Taiwanese-accented Mandarin picks the default. Read-back and asks are pre-rendered with Azure Neural voices (zh-TW, en, ja) into R2; `expo-speech` on the device is the fallback so the loop never depends on a speech API. Audio is encoded on the device (AAC/M4A); no server transcoding. No voice cloning.
+
+Why: no vendor publishes accuracy for our speakers; Deepgram is the cheapest mainstream option with code-switching and a documented opt-out; Azure has mature zh-TW voices and the clearest compliance record; DeepL lacks formality control for Chinese and Japanese, so translation stays with the LLM.
+
+Rejected as defaults: ElevenLabs and Fish Audio (upgrade path if Azure sounds robotic), MiniMax (China-hosted; residency caution), Google Chirp 3 (zh-TW support unconfirmed).
+
+## ADR-15 · Model routing by call, with batch and prompt caching
+**2026-09-13 · accepted**
+
+Decision: `flag` runs on `claude-opus-5` at low effort; `understand`, `translate`, `readback`, `weekly_read`, `recipe` on `claude-sonnet-5`; `chips`, `suggest`, `hello` on `claude-haiku-4-5`. Every call uses structured outputs with a Zod schema, adaptive thinking where supported, a cached system prompt, the Batch API when not needed within minutes, and `fallbacks: "default"` for classifier refusals. Every call is logged with its prompt version; Promptfoo gates prompt changes in CI.
+
+Why: a missed health or safety signal is the expensive failure, so the strongest model at low effort takes it; judgment calls fit Sonnet 5's price; drafting is templated. Batch and caching roughly halve spend. Estimated AI cost ≈ $0.55 per family-month.
+
+Rejected: one model for everything (either too costly or too weak on flags); fine-tuning (premature); a self-hosted open model (ops burden, weaker multilingual quality).
+
+Revisit if: pilot evals show Sonnet 5 matches Opus 5 on flag recall (then route flags to Sonnet), or volume makes a cheaper translation path worth an eval.
+
+## ADR-16 · Adapter order: LINE, then WhatsApp after the entity, then voice; Telegram for the instrument; MAX dropped
+**2026-09-13 · accepted · updates ADR-4 and ADR-7**
+
+Decision: LINE Messaging API direct (unverified Official Account in the founder's name until the entity; paid Standard plan from the first real families); WhatsApp Cloud API direct (no BSP) once Meta Business Verification is possible, with the daily ask as a Utility template; Twilio Studio for the voice line in phase 2 (US first; legal review per country); Telegram only for the phase-0 instrument and families who already use it. MAX is dropped with the Russian market. The parent surface in our own app is the floor under every market.
+
+Why: market order v2 (Taiwan, US, Japan, Europe, India); LINE reaches 99.4% of Taiwanese adults; WhatsApp is the channel in Germany, the UK, and India but needs a legal entity; the voice line is the only path to the offline half of the 70+.
+
+Revisit: never as a principle (adapters are added, not chosen); per market when a channel's rules or costs change (WhatsApp in-window billing from 2026-10-01).
+
+## ADR-17 · A custom admin SPA instead of a low-code tool
+**2026-09-13 · accepted**
+
+Decision: `apps/admin` is a small React (Vite) app served by the Worker as static assets, using the same API with an admin role; every admin read is logged and visible to the organiser on request.
+
+Why: the code is written anyway; Retool, Forest Admin, and Appsmith charge per builder seat and route family data through a third party's sub-processor chain.
+
+## ADR-18 · Cron liveness monitored from outside Cloudflare
+**2026-09-13 · accepted**
+
+Decision: the reconciliation tick pings Healthchecks.io (free) and Sentry Crons; a missing ping for 10 minutes pages the founder. SLOs and alerts are in the architecture §15.
+
+Why: Cloudflare Cron Triggers do not alert on their own failure, and the application cannot know it missed its own wake-up.
+
+## ADR-19 · Expo SDK 55 with native widget targets; expo-audio; Lingui; TanStack Query + Zustand
+**2026-09-13 · accepted · confirms ADR-3 and fixes its details**
+
+Decision: Expo SDK 55 (New Architecture only); widgets through `expo-widgets` on iOS with a hand-written WidgetKit target budgeted as the fallback, and `react-native-android-widget` on Android; `expo-audio` (not `expo-av`, removed in SDK 55); Lingui for i18n; TanStack Query + Zustand; the parent surface in plain StyleSheet; NativeWind for the family app; Maestro for E2E; PostHog (EU) and Sentry.
+
+Why: React Native inherits the OS accessibility layer that the parent surface depends on; `expo-widgets` is alpha, so the fallback is budgeted now; Lingui's compile-time ICU handles zh/ja plurals at half the runtime size of the alternatives.
+
+Rejected: Flutter (reimplements accessibility), Compose Multiplatform (a second language), PWA-only (no widget, no always-on screen), an offline-first sync engine in v1 (the loop is low-write).
+
+## ADR-20 · Payments only where store rules allow; RevenueCat once the entity exists
+**2026-09-13 · accepted · tightens ADR-9**
+
+Decision: no payment in the app until the entity exists. Then RevenueCat for App Store and Play billing; a web checkout link (Stripe from a Singapore entity, or a merchant of record) only in storefronts that allow external links (US, EU under the DMA, Japan under the MSCA), never as an in-app "Buy" in Taiwan or India, where the trial opens from a Settings-level link. Annual is pre-selected; the adult child owns the account.
+
+Why: Apple and Google external-link rules are region-gated in 2026; Taiwan and India have no allowance; RevenueCat is free to $2,500 tracked revenue per month and bridges StoreKit 2, Play Billing, and web billing.
+
+Revisit: when Apple or Google change the allowances for Taiwan or India, or the entity is not Singapore.
+
+## ADR-7 · updated 2026-09-13
+Russia is deferred by the founder; the legal review item is closed for now. Regions stay `apac`, `eu`, `us`; Japan may get an in-country database (Supabase Tokyo) behind the same region router if volume requires it; the Cloudflare jurisdiction flags are never described as local hosting.
