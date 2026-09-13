@@ -7,6 +7,7 @@ Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) h
 ## Repository layout
 
 - [`research/00-SYNTHESIS.md`](research/00-SYNTHESIS.md) — start here: the landscape, ten cross-cutting truths, where Vela wins, risks
+- [`research/14-evidence-synthesis.md`](research/14-evidence-synthesis.md) — **evidence instead of surveys** (reports 08–13: daily answer rates, willingness to pay, channels among 70+, acceptance and dignity, ritual retention, worry and reach) and what it changed in the spec
 - `research/01`–`06` — the six underlying reports (US medical alerts and wearables; passive home sensing; East Asia; Europe/ANZ/Israel; AI companions and check-in apps; market size and lessons)
 - [`product/02-app-plan.md`](product/02-app-plan.md) — **the product**: people, daily loop, features, channels, AI, privacy, pricing, metrics, architecture, roadmap, risks
 - [`product/05-product-spec-v2.md`](product/05-product-spec-v2.md) — **the functional contract, v2**: the exchange, arrivals as asks, the reply loop, the light and the quiet ladder, consent, acceptance criteria for every screen, the phase-0 instrument (supersedes 03 and 04)

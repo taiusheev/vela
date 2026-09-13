@@ -1,5 +1,7 @@
 # Vela: the landscape, the gaps, and how we win
 
+> **2026-09-13.** Reports 08–14 add the behavioural evidence (answer rates, willingness to pay, channels among 70+, acceptance, retention, market pull) and a synthesis that revised the product targets: see `14-evidence-synthesis.md`.
+
 Tech co-founder memo. 2026-09-11. Synthesised from six deep-dive reports in this folder (US medical alerts and wearables, passive home sensing, East Asia, Europe/ANZ/Israel, AI companions and check-in apps, market sizing and lessons). Roughly 500 sources; ~600 tool calls. Every number below is cited in the underlying report.
 
 ---

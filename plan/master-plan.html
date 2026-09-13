@@ -138,9 +138,9 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
   <p class="sub">A snapshot, refreshed with every edit.</p>
   <div class="status">
     <div><div class="k">Phase</div><div class="v">0 · prove the loop</div></div>
-    <div><div class="k">Day</div><div class="v">2</div></div>
-    <div><div class="k">Research</div><div class="v">7 reports, ~550 sources</div></div>
-    <div><div class="k">Prototype</div><div class="v">Written, not deployed</div></div>
+    <div><div class="k">Day</div><div class="v">3</div></div>
+    <div><div class="k">Research</div><div class="v">14 reports, ~750 sources</div></div>
+    <div><div class="k">Build</div><div class="v">Ready; sprint 1 starts</div></div>
     <div><div class="k">Applications</div><div class="v">ikigai Launchpad, submitted</div></div>
     <div><div class="k">Families</div><div class="v">0 of 20</div></div>
     <div><div class="k">Budget</div><div class="v">&lt; $25 / month</div></div>
@@ -440,7 +440,7 @@ flowchart LR
     </tbody>
   </table></div>
   <p><b>The growth loop.</b> A 20-year-old installs Vela for his grandmother, invites his mother and aunt, the mother switches on the light and pays, the aunt tells her own family. Every family is five to eight people; every member is a potential organiser of another family.</p>
-  <p><b>Channel caution.</b> WhatsApp has been blocked in Russia since February 2026, Telegram is throttled, and the state messenger MAX now leads monthly reach. The parent side is adapters, never one messenger.</p>
+  <p><b>Channel caution.</b> WhatsApp lost 56% of its Russian daily users to the 2026 block, Telegram is throttled since February 2026, and the state messenger MAX (83M reach) stores chats in plaintext and opens its bot platform only to Russian legal entities (research/10). Telegram is the first adapter; the parent surface in our own app is the floor under every market; the voice line moves to phase 2 because half of Taiwan's 70+ are offline. Remittance apps do not serve Russia, so wave 1 is reached through Telegram relocant communities, not payment rails (research/13).</p>
 </section>
 
 <section id="roadmap">
@@ -493,14 +493,14 @@ gantt
   <div class="tablewrap"><table>
     <thead><tr><th>Metric</th><th>Why</th><th>Target</th></tr></thead>
     <tbody>
-      <tr><td>Kept-light answer rate</td><td>Is she opening it with joy?</td><td class="num">&gt; 85%</td></tr>
+      <tr><td>Kept-light answer rate</td><td>Is she opening it with joy? (research/08: ~80% in month one, 65–75% by week 12 is the published norm)</td><td class="num">≥ 75% weeks 1–4 · ≥ 65% week 12</td></tr>
       <tr><td>Median answer latency</td><td>Habit; feeds quiet tuning</td><td class="num">&lt; 60 min</td></tr>
       <tr><td>Family-content days</td><td>Is the family present, or is Vela carrying it?</td><td class="num">&gt; 60%</td></tr>
       <tr><td>Members / active contributors per family</td><td>Growth engine</td><td class="num">≥ 5 / ≥ 3</td></tr>
       <tr><td>Under-30 member in family</td><td>Is "closer" landing with the young?</td><td class="num">60% of families</td></tr>
-      <tr><td>Quiet notices per member per month; share true</td><td>Precision, published</td><td class="num">&lt; 2; &gt; 50%</td></tr>
-      <tr><td>Light conversion after trial; D90 retention</td><td>The business</td><td class="num">&gt; 25%; &gt; 80%</td></tr>
-      <tr><td>"не надо" rate</td><td>Dignity</td><td class="num">&lt; 5%</td></tr>
+      <tr><td>Quiet notices per member per month; share marked useful</td><td>Information, not alarm; true-concern share published</td><td class="num">&lt; 4 by month 3; &gt; 60%</td></tr>
+      <tr><td>Kept-light families paying at day 90; monthly paid retention</td><td>The business (research/09: freemium 2%, hard paywall 11%, Tinybeans 93% monthly retention)</td><td class="num">≥ 10%; ≥ 90%</td></tr>
+      <tr><td>"не надо" rate in month 1</td><td>Dignity (research/11: monitoring framing is refused by 30–40%; family framing is not)</td><td class="num">&lt; 10%</td></tr>
       <tr><td>Minutes in app per member per day</td><td>The anti-addiction promise</td><td class="num">2–4</td></tr>
       <tr><td>"If Vela stopped tomorrow…" very disappointed</td><td>Product-market fit</td><td class="num">&gt; 40%</td></tr>
     </tbody>
@@ -544,6 +544,7 @@ gantt
   <div class="dec"><span class="d">2026-09-12</span><span><b>Identity chosen from research, not from the old logo.</b> Candle &amp; Ink: cream #FBF7F0, charcoal #1E1A16, amber light #E9A23B (never as text), teal actions #1F5C66; Literata + Inter (Cyrillic and Greek covered); the mark is a window with a light on. See design/research-identity.md and design/design-system.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Published evidence instead of surveys before building.</b> Six research workstreams (reports 08–13) replace the survey and interview wave as the evidence base; interviews move into the pilot itself.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Spec v2 is the only spec.</b> Asks from people, the reply loop, no automatic contact of third parties, acceptance criteria for every screen, the phase-0 instrument on Telegram. v1 spec, interaction model, and bot spec superseded.</span></div>
+  <div class="dec"><span class="d">2026-09-13</span><span><b>Ready to build, in a changed order.</b> Evidence (research/14) and spec v2 remove the two blockers. Sprint 1 is the phase-0 instrument with consent pack, prompts and evals, and logging; the platform foundation follows; the parent surface moves up to sprint 3 and the voice line to phase 2; targets revised (answer rate ≥ 75%, conversion ≥ 10%, quiet notices &lt; 4/month). See plan/pre-build-readiness.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Payments deferred; entity probably Singapore.</b> Stripe does not onboard Taiwan-registered businesses; Singapore is supported. Provider chosen when the entity exists.</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>Name risk recorded.</b> "Vela" collides with vela.family (a family-calendar app in beta) and a former eldercare app, and means "idle" in Hindi slang. Ship as "Vela Light", clear the mark in EUIPO/WIPO/Rospatent/TIPO before it is final, prepare one backup name. Founder to decide.</span></div>
 </section>
@@ -569,6 +570,9 @@ gantt
     <tbody>
       <tr><td><code>research/00-SYNTHESIS.md</code></td><td>Landscape, ten truths, where Vela wins, risks</td></tr>
       <tr><td><code>research/01–07</code></td><td>US PERS and wearables; passive sensing; East Asia; Europe/ANZ/Israel; AI apps; market size; family-bridge apps</td></tr>
+      <tr><td><code>research/08–14</code></td><td>Evidence in place of surveys: daily answer rates, willingness to pay, channels among 70+, acceptance and dignity, ritual retention, worry and reach; and the synthesis that revised the spec's targets</td></tr>
+      <tr><td><code>product/05-product-spec-v2.md</code></td><td>The only spec: the exchange, asks from people, the reply loop, the light and the quiet ladder, acceptance criteria per screen, the phase-0 instrument</td></tr>
+      <tr><td><code>plan/pre-build-readiness.md</code></td><td>The readiness verdict and the twelve-week build plan</td></tr>
       <tr><td><code>product/02-app-plan.md</code></td><td>The product, v2: people, loop, features, surfaces, AI, privacy, pricing, metrics, architecture, roadmap, risks</td></tr>
       <tr><td><code>product/03-product-spec.md</code></td><td>The functional contract: member states, the arrival, answers, the quiet ladder, consent, turns, story day, translation, memory, weekly read, surfaces, edge cases, copy, accessibility</td></tr>
       <tr><td><code>architecture/01-technical-design.md</code></td><td>Components, data flow, scheduler, adapter contract, gateway, AI pipeline, data model, security, failure modes, environments, cost at scale</td></tr>

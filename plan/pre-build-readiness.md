@@ -1,92 +1,73 @@
-# Pre-build readiness: what is still missing before we write MVP code
+# Pre-build readiness, v2: are we ready to start building?
 
-2026-09-13. An audit of the planning foundation against what a build actually consumes. Verdict, then the inventory, then the gaps in three tiers with owners and effort, then the order for the next ten days, then the definition of "ready to build".
+2026-09-13, evening. Second pass, after the founder's three decisions of the same day: published evidence instead of a survey wave (`research/08–14`), spec v2 as the only spec (`product/05-product-spec-v2.md`), payments deferred with Singapore as the likely entity. The first pass (morning) is kept below as history.
 
 ## Verdict
 
-We are not ready to build the MVP, and the reasons are not more diagrams. Three things stand between us and the first line of app code:
+**Yes: start building now, in a changed order.** The two blockers from the morning are gone: the evidence base exists, and the spec no longer contradicts itself. What remains are tasks inside the first build sprint, not reasons to wait.
 
-1. **Zero evidence.** No survey responses, no interviews, no pilot family. Our own decision log says "don't deploy the bot before talking to customers"; the same logic applies harder to a two-month app build. Everything below is cheap next to building the wrong arrival.
-2. **The spec contradicts itself.** `product/03-product-spec.md` still describes the arrival as a Vela-composed message answered with "☀️ I'm fine", with a Vela fallback and an opt-in "auto-ask" step where Vela messages a neighbour. `product/04-interaction-model.md` replaced that: every arrival is an ask from a person, her answer is a post, replies are read back the next morning. A builder reading both would build two products. The spec needs a v2 that absorbs the interaction model and adds acceptance criteria per screen.
-3. **Payments as decided cannot be opened.** ADR "Stripe web checkout first" assumed Stripe. Stripe does not onboard businesses registered in Taiwan; the workarounds are a US or UK entity, or a merchant-of-record provider (Lemon Squeezy, now owned by Stripe; Paddle; Polar) that sells on our behalf and handles VAT. This is a founder decision that also fixes the legal entity, the bank account, and the app store accounts.
+What we are ready for: the phase-0 instrument this week, the platform foundation next week, the app from week three, with the pilot families running on the instrument the whole time and the founder's onboarding calls doing the interviewing.
 
-Ready to build **the phase-0 instrument** (the Telegram bot, updated to the interaction model) after roughly three days of spec work. Ready to build the MVP only after phase 0 returns numbers.
+What we are not ready for, by decision rather than by gap: charging money (no entity yet), a public launch (name clearance, final privacy policy), and any channel other than Telegram and the parent surface for the first families.
 
-## What we have
+## The eight conditions, rechecked
 
-| Area | Artefacts | State |
+| # | Condition (morning version) | Status tonight |
 |---|---|---|
-| Research | 7 reports, synthesis, ~550 sources | Done |
-| Product | app plan v2, product spec v1, interaction model, bot spec | Spec v1 and interaction model disagree |
-| Architecture | technical design (13 sections), 10 ADRs, drawio for architecture, database, daily loop | Solid; data model is a drawing, not DDL |
-| Plan | execution plan (phases 0–3), master plan page with checklist, 30-day plan (superseded) | Done |
-| Materials | surveys RU/EN/ZH-TW, interview script, recruitment posts, parent explainer (RU only) | Written, not yet posted |
-| Design | design system v3, brand locked, 20-screen prototype, 5 Figma screens | Figma capped; no messenger conversation design |
-| Code | phase-0 bot (Workers + D1 + Claude), type-checks, not deployed | Built for the old "I'm fine" model |
-| Pitch | ikigai application v3 | Submitted |
+| 1 | Twenty interviews; four paying families; refusal under 30% | **Replaced** by research/08–14 with the founder's consent. The published record gives the answer rate (~80% → 65–75%), the refusal risk (30–40% for monitoring framing, avoidable by wording), the price band, and the channel reality. Interviews move into the pilot's onboarding calls. |
+| 2 | Spec v2 is the only spec, with acceptance criteria per screen | **Done.** 20 screens, the messenger path, the exchange state machine, revised parameters (Appendix B). |
+| 3 | Pilot run two weeks; arrival content written down | **Moves into sprint 1.** The instrument is built first precisely so this happens while the platform is built. |
+| 4 | Payments provider and entity decided and opened | **Deferred by decision** (Singapore likely). Not needed to build; needed before the first charge. Stripe, Paddle, and Lemon Squeezy all serve Singapore entities. |
+| 5 | Privacy notice and consent script used in the pilot | **First task of sprint 1** (one day, co-founder). No family is onboarded before it exists. |
+| 6 | Prompts v0 pass an eval set | **Sprint 1** (three days, co-founder), synthetic first, real pilot answers from week 2. |
+| 7 | DDL, API contract, analytics events | **Sprint 2**; they are the first artefacts of the build itself. The event list is already in spec v2 §18. |
+| 8 | Developer accounts, domain, name decision | **Founder, this week**: Telegram bot, Cloudflare, Anthropic key now (20 min); Apple and Google accounts need the entity, so they wait. |
 
-## Gaps
+## What the evidence changed in the build order
 
-### Tier 1: before any MVP code
+1. **The parent surface is the floor, not a phase-2 nicety.** Russia's messengers are blocked, throttled, or state-run; half of Taiwan's 70+ are offline. Our own app, installed by a visiting child, is the one channel we control. It moves up to sprint 3, right after the organiser flows.
+2. **The voice line moves from phase 3 to phase 2.** A call that plays the family's voice and takes a keypress is the only path to the offline half. Design starts in sprint 4; build in phase 2.
+3. **Telegram first, LINE second, WhatsApp later.** WhatsApp lost 56% of its Russian daily users to the block; LINE needs a paid Messaging API plan from day one; WhatsApp utility templates wait for the Philippines wave.
+4. **Logging is a feature.** Nobody has published our exact loop; the pilot's per-day log and UCLA-3 measurements are the most valuable output of the first sprint. The event schema ships with the instrument, not after it.
+5. **The quiet ladder ships with a learning period** and a 6-hour start, because one day in four or five will be silent even when everything works.
+6. **Billing, when it comes, is annual-first, per protected parent, owned by the adult child.**
 
-| # | Gap | Why it blocks | Owner | Effort |
+## The build plan, twelve weeks
+
+| Sprint | Weeks | Co-founder builds | Founder does | Exit |
 |---|---|---|---|---|
-| 1 | **Phase-0 evidence**: 20 interviews, the parent mock test, 10 pilot families for two weeks | Decides what the arrival must contain, whether parents refuse, whether anyone pays | Founder runs; co-founder synthesises | 4 weeks, already planned |
-| 2 | **Product spec v2**: fold the interaction model into the spec; the exchange as a state machine (queued → delivered → seen → answered → replied → read back → archived); turn rules and what happens when nobody asks; receipts; drop or redefine "auto-ask"; acceptance criteria for all 20 prototype screens; empty, error, offline, and first-day states | A builder needs one source of truth | Co-founder | 2 days |
-| 3 | **Phase-0 instrument redesign**: in phase 0 there is no app, so how does the family send asks? Decide between a Telegram family group with bot commands and a one-page web form; specify the bot's conversation as screens (copy, buttons, voice, "stop"); update `bot/` | The bot we have runs the old model | Co-founder | 2 days |
-| 4 | **Payments and entity**: merchant of record vs foreign entity; which one; what it costs; how payouts reach a student in Taiwan | Fixes ADR on payments, the bank, and the Apple and Google developer accounts (organisation accounts need a legal entity and a DUNS number) | Founder decides on a one-page comparison from the co-founder | 1 day memo, decision by day 7 |
-| 5 | **Privacy and consent pack for the pilot**: plain-language notice, consent script in RU/EN/ZH-TW, retention (30 days of answers, archive by choice), deletion on "stop", a data map; GDPR applies the moment one family member is in the EU (our own persona has Sam in Berlin) | We record elderly people's voices from day one of the pilot | Co-founder drafts; founder reads it to their own parent | 1 day |
-| 6 | **AI prompt set v0 and eval set**: the real prompts (understand an answer, flag what matters now, draft answer chips, translate, suggest tomorrow's ask, weekly read) with 50 golden examples across RU/EN/ZH-TW and red-line tests (never diagnoses, never speaks as family, never quotes her without her seeing it) | Every AI output is a promise in the spec; without evals we cannot change a prompt safely | Co-founder; synthetic first, replaced with pilot answers | 3 days |
-| 7 | **Accounts**: Telegram bot, Cloudflare, Anthropic key now; Apple Developer, Google Play, Expo EAS, Neon, domain before MVP | Nothing deploys without them | Founder | 20 minutes now; $124 one-off later |
+| 1 · Instrument | 1–2 | Privacy and consent pack; bot updated to spec Appendix A (family group + private chat, asks, read-back, quiet notice, logging); prompts v0 + eval set; deploy | Accounts (20 min); own family live by day 7; five families by day 14; every onboarding call doubles as an interview | Founder's parent answered 5 of 7 days; five families live; consent used without objection |
+| 2 · Foundation | 3–4 | Postgres schema and migrations; API contract; adapter contract with the Telegram adapter ported; outbound gateway with the one-a-day budget; scheduler; AI service with logged, versioned prompts; event pipeline | Ten families live; first weekly reads written by hand from AI drafts; Telegram relocant communities sized and posts drafted | The instrument's families migrated to the platform with no missed arrival |
+| 3 · App, family side | 5–7 | Expo app: A1–A8, A11–A14 (onboarding, Today, Ask, Exchanges, quiet notice, You, Light screen, widget); Telegram invite flow | Fifteen families; UCLA-3 at week 4 for the first cohort; decide entity | Ten families using the app for asks; answer rate ≥ 75% |
+| 4 · Parent surface | 8–9 | P1–P6 (consent, question, photo choice, recording, answered, kitchen-table); TTS read-back; voice-line design | Two parents on the parent surface via a visiting child; Taiwan: five families identified | Parent surface answered by two parents for a week each |
+| 5 · Taiwan and depth | 10–11 | LINE adapter (paid plan); story day and the family book; weekly read in-app; memory suggestions | Five Taiwanese families live on LINE; pricing page copy | LINE families answering; weekly read opened by organisers |
+| 6 · Measure and decide | 12 | Precision page; the trial flow (no payment yet); metrics review | UCLA-3 at week 12; "if Vela stopped tomorrow" at day 30 for every organiser; decide: open billing (needs entity) and public launch | Metrics against spec §18 targets; go or change one variable |
 
-### Tier 2: during the build, in parallel
+Kill signals stay as in the master plan, with the evidence-adjusted thresholds: answer rate under 50% by week 4, stop rate over 30% in month 1, fewer than 4% of kept-light families willing to pay at day 90 (asked, since billing is not open).
 
-| # | Gap | Owner | Effort |
-|---|---|---|---|
-| 8 | Postgres DDL and migrations from the drawio data model; the API contract between app and worker (OpenAPI); an analytics event schema that produces the ten metrics in the master plan | Co-founder | 3 days |
-| 9 | Test strategy: unit tests for scheduler and ladder timing and the one-notification budget; AI evals in CI; device matrix for the parent surface (old Android, iOS with large text); accessibility checks; a "silence drill" that proves our own outage never fires a quiet notice | Co-founder | 2 days to write, ongoing to keep |
-| 10 | SLOs and observability: arrival delivered within 5 minutes of the hour 99.5% of the time; alert on a missed tick; a dashboard for answer rate, latency, notices and their outcomes | Co-founder | 1 day |
-| 11 | Content bank: 100 asks by type and culture, 52 story-day questions, the rules for drafting answer chips, all app and bot strings in RU/EN/ZH-TW, the parent explainer in EN and ZH-TW | Co-founder drafts; founder edits the Russian | 2 days |
-| 12 | Messenger conversation design: the eldest's real first surface is Telegram, not the app; the flow deserves the same care as the 20 screens | Co-founder | 1 day, inside #3 |
-| 13 | Name clearance for "Vela" (EUIPO, WIPO, TIPO, Rospatent) and a backup name; buy the domain | Founder, with a checklist from the co-founder | 2 hours plus filing fees later |
-| 14 | Landing page and waitlist (already on the checklist) | Co-founder | 1 day |
-| 15 | Budget: one-off (developer accounts $124, domain ~$15, entity $139–500 depending on #4) and monthly (under $25 to 100 families) | Co-founder | 1 hour |
+## What still needs the founder
 
-### Tier 3: before launch
+- Accounts this week (Telegram bot, Cloudflare, Anthropic key).
+- Your own parent as the first family, by day 7.
+- The entity decision by week 6, so billing can open at week 12.
+- One hour on Telegram relocant communities before the wave-1 posts (the research could not size them).
 
-| # | Gap |
-|---|---|
-| 16 | Store listings in three languages; App Store review notes explaining the parent surface and the subscription |
-| 17 | Support and incident runbook: who answers a family, what we say when a quiet notice was wrong, what happens when a kept-light member dies, what we do when a messenger is down |
-| 18 | Terms, privacy policy final, refund policy, trial mechanics, the pricing test design ($9.99 vs $14.99 vs annual) |
-| 19 | WhatsApp template approval, LINE channel setup, MAX terms review (technical open questions 2–4) |
-| 20 | Usability test of the parent surface with three people over 70 before the phase-2 build |
+## What I do first, tomorrow
 
-## The next ten days
+1. Privacy notice and consent script (EN, RU, ZH-TW) for the pilot.
+2. Bot to spec Appendix A, with the event log.
+3. Prompts v0 and the eval set.
 
-| Day | Founder | Co-founder |
-|---|---|---|
-| 1–2 | Post the survey in three places; create the Telegram bot, Cloudflare account, Anthropic key; book eight interviews | Product spec v2 (#2) |
-| 3–4 | Interviews 1–4; show your parent the morning arrival, write down her words | Phase-0 instrument spec and bot update (#3, #12) |
-| 5 | Interviews 5–6 | Privacy and consent pack (#5); payments and entity memo (#4) |
-| 6–7 | Interviews 7–8; **decide payments and entity** | AI prompts and eval set v0 (#6) |
-| 8–10 | Interviews 9–12; recruit the first pilot families | DDL, API contract, analytics events (#8); test strategy and SLOs (#9, #10) |
+---
 
-By day 10 the phase-0 instrument can go live with the founder's own parent, and the MVP has a spec, a data model, an API, prompts with evals, and a payments path.
+## Morning pass (kept for history)
 
-## Definition of "ready to build the MVP"
+### Verdict, morning
 
-All eight must be true:
+We were not ready to build the MVP. Three things stood between us and the first line of app code: zero evidence (no survey responses, interviews, or pilot family); a spec that contradicted itself (v1 described a Vela-composed "I'm fine" arrival; the interaction model replaced it with asks from people); and a payments decision that could not be opened (Stripe does not onboard Taiwan-registered businesses; the workarounds are a US or UK entity, or a merchant of record such as Lemon Squeezy, Paddle, or Polar).
 
-1. Twenty interviews synthesised; at least four families paying for the pilot; parent refusal under 30%.
-2. Product spec v2 is the only spec, with acceptance criteria for every screen.
-3. The pilot has run two weeks and the arrival content that works is written down.
-4. Payments provider and legal entity decided and opened.
-5. Privacy notice and consent script used in the pilot without objection.
-6. Prompts v0 pass the eval set; the eval set contains real pilot answers.
-7. DDL, API contract, and analytics events exist and match the spec.
-8. Developer accounts, domain, and the name decision (Vela Light or the backup) are done.
+### Gaps by tier, morning
 
-## Sources for the payments finding
+Tier 1 (before MVP code): phase-0 evidence; spec v2; phase-0 instrument redesign; payments and entity; privacy and consent pack; AI prompts and evals; accounts. Tier 2 (during the build): DDL, API contract, analytics events; test strategy; SLOs and observability; content bank; messenger conversation design; name clearance; landing page; budget. Tier 3 (before launch): store listings; support and incident runbook; terms, refunds, pricing test; WhatsApp templates, LINE setup, MAX terms; a usability test with three people over 70.
 
-Stripe's own availability page does not list Taiwan; third-party guides for Taiwan founders describe the US or UK entity route: [Stripe global availability](https://stripe.com/global), [How to open a Stripe account in Taiwan (doola)](https://www.doola.com/stripe-guide/how-to-open-a-stripe-account-in-taiwan/), [How to open Stripe account in Taiwan in 2026 (incorpuk)](https://incorpuk.com/blog/how-to-open-stripe-account-in-taiwan/). Merchant-of-record options and the 2026 Stripe Managed Payments development: [Lemon Squeezy 2026 update](https://www.lemonsqueezy.com/blog/2026-update), [Lemon Squeezy vs Polar vs Paddle](https://www.buildmvpfast.com/blog/lemon-squeezy-vs-polar-paddle-merchant-of-record-2026), [Merchant of record platforms 2026](https://dodopayments.com/blogs/best-merchant-of-record-platforms).
+Sources for the payments finding: [Stripe global availability](https://stripe.com/global), [doola: Stripe in Taiwan](https://www.doola.com/stripe-guide/how-to-open-a-stripe-account-in-taiwan/), [incorpuk: Stripe in Taiwan 2026](https://incorpuk.com/blog/how-to-open-stripe-account-in-taiwan/), [Lemon Squeezy 2026 update](https://www.lemonsqueezy.com/blog/2026-update), [Lemon Squeezy vs Polar vs Paddle](https://www.buildmvpfast.com/blog/lemon-squeezy-vs-polar-paddle-merchant-of-record-2026), [Merchant of record platforms 2026](https://dodopayments.com/blogs/best-merchant-of-record-platforms).

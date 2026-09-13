@@ -1,6 +1,6 @@
 # Vela product specification, v2
 
-2026-09-13. **This is the only product spec.** It absorbs `04-interaction-model.md` and replaces `03-product-spec.md` wherever they differ. Written so that the founder, a designer, and an engineer read the same thing, and so that every screen in `design/prototype/vela-app.html` has acceptance criteria here. Companion documents: `02-app-plan.md` (why), `architecture/01-technical-design.md` (how), `research/08–13` (evidence), `design/design-system.md` (look).
+2026-09-13, revised the same day against the evidence in `research/14-evidence-synthesis.md`. **This is the only product spec.** It absorbs `04-interaction-model.md` and replaces `03-product-spec.md` wherever they differ. Written so that the founder, a designer, and an engineer read the same thing, and so that every screen in `design/prototype/vela-app.html` has acceptance criteria here. Companion documents: `02-app-plan.md` (why), `architecture/01-technical-design.md` (how), `research/08–13` (evidence), `design/design-system.md` (look).
 
 ## 0. What is final
 
@@ -12,13 +12,13 @@
 | The light | Lights on any answer, on the raw event, before any AI runs. Paid layer "Vela Light" carries the light, quiet notices, nearby contacts, away mode, the weekly read, memory, and the family book export. |
 | Silence | Repeat once, then a quiet notice to the organisers with nearby contacts one tap away. **Every message to a nearby contact is sent by a person's tap.** Vela never contacts anyone on its own. The "auto-ask" step from v1 is removed. |
 | The free layer | The whole exchange: asks, answers, replies, turns, translation, story day, the archive in the app. Free for every member, for ever. |
-| Surfaces | The app (family), the parent surface (same app, one screen at a time), kitchen-table mode (tablet), and messengers (Telegram first, then LINE, WhatsApp, MAX, Viber). No family is told a messenger is unsupported in a market we launch. |
+| Surfaces | The app (family), the parent surface (same app, one screen at a time), kitchen-table mode (tablet), messengers (Telegram first for Russian-speaking families, LINE first for Taiwan; WhatsApp where it works; MAX only with a Russian entity and never with a privacy claim), and a voice line in phase 2 for parents who are offline. The parent surface is the floor under every market. No family is told a messenger is unsupported in a market we launch. |
 | Vocabulary | family · member · organiser · kept-light member · nearby contact · **exchange** (one ask, one answer, its replies) · arrival (the delivery of an exchange's ask) · answer · reply · light · quiet notice · away · turn · story day · family book · weekly read |
 
 ## 1. Principles
 
 1. **People ask; Vela carries.** Every arrival has a person's name on it. Vela signs only the fallback hello and system notices.
-2. **One gesture answers.** Nothing on the parent surface takes more than one tap or one voice note.
+2. **One gesture answers.** Every ask can be answered with one tap; voice is always offered, never required. Nothing on the parent surface takes more than one tap or one voice note.
 3. **The light is a by-product.** Peace of mind comes from a real exchange, not from a check.
 4. **She hears the family, she never scrolls it.** Replies are read to her tomorrow morning; there is no feed on her side.
 5. **Symmetry.** She can always see what the family sees about her, in one tap or one message.
@@ -151,7 +151,7 @@ Anything from the member on any surface between delivery and the next delivery: 
 
 ### 5.3 Answer chips
 
-For questions, Vela drafts up to three short chips **from her own previous answers and the question's topic** ("Soup", "Pancakes", "Nothing yet"). Only she sees them. A tapped chip is posted as her answer in her words, never expanded by AI. If she has fewer than five past answers, the chips are generic to the question type. Chips are never shown for story, recipe, or memory types; those are voice.
+For questions, Vela drafts up to three short chips **from her own previous answers and the question's topic** ("Soup", "Pancakes", "Nothing yet"). They are the primary answer row: tapping is the reliable gesture at 70+ (research/10), voice is the warm one. Only she sees them. A tapped chip is posted as her answer in her words, never expanded by AI. If she has fewer than five past answers, the chips are generic to the question type. Chips are never shown for story, recipe, or memory types; those are voice.
 
 ### 5.4 Vela's acknowledgement
 
@@ -207,7 +207,11 @@ Applies to kept-light members only.
 
 **No automatic messages to nearby contacts, ever.** Every contact to a third person is a person's tap. This is the product's promise and it is enforced in the outbound gateway (technical design §5) by requiring an actor id on every nearby-contact message.
 
-**T_quiet.** Start at 5 h. After 14 answered days: median answer latency over the last 14 answered days + 2 h, floor 4 h, cap 8 h, recomputed weekly. Sundays and her country's holidays use the Sunday median if it differs by more than 1 h. The organiser can widen it, never narrow it below 4 h.
+**T_quiet.** Start at 6 h. After 14 answered days: median answer latency over the last 14 answered days + 2 h, floor 4 h, cap 10 h, recomputed weekly. Sundays and her country's holidays use the Sunday median if it differs by more than 1 h. The organiser can widen it, never narrow it below 4 h.
+
+**Learning period.** For the first 14 days the quiet state shows in the app and the widget without a push; a push goes out only after 8 h of silence. The evidence (research/08) says one day in four or five goes unanswered even when everything works, so the ladder must treat silence as expected information and learn her rhythm before it interrupts anyone.
+
+**No guilt, either way.** She is never shown missed days, never told the family worried, never asked why. The organiser's notice states facts and never frames her silence as a failure. The precision page says plainly that most quiet notices end as "answered late" or "away".
 
 **Away mode.** Set by the organiser or any member; said by her in an answer ("going to my sister's until Sunday", detected, confirmed back once: "Until Sunday, then. Have a lovely trip."); or proposed by Vela after three occurrences of a weekly pattern. In away mode arrivals continue (she likes them), repeats and quiet notices do not. Away ends on the date, or on any answer if she chose "until I'm back".
 
@@ -216,6 +220,7 @@ Applies to kept-light members only.
 ## 9. Consent, symmetry, stop
 
 - A light is switched on only after she agrees. Messenger: the first message asks, in her language: "Anna would like to keep a light on for you: every morning someone in the family asks you something, and when you answer, they know you're fine. If you don't answer by evening, Anna will know to call. Tap Yes, or write no." Parent surface: the consent screen (§14, P1). A member who switches their own light on consents implicitly.
+- **Words.** Consent and every later screen say what the family sees and who will act; they never use "monitor", "check on", "track", or "keep an eye". Framing the product as surveillance is what 30–40% of invited elders refuse (research/08, /11); framing it as the family asking is what they accept.
 - **Stop.** "Stop", "не надо", "停", or any refusal turns the light off and pauses arrivals; the organiser is told without judgement ("Mom asked to pause. Nothing is wrong with the app."). "Start" resumes.
 - **What the family sees.** Any kept-light member can ask in the chat "what does the family see" (or tap the button on the parent surface) and gets the summary lines of the last 7 days and the last weekly read, in her language.
 - Nearby contacts consent once, via a message sent in the organiser's name. Until they say yes, they can only be called by the organiser directly; "Ask to check" is disabled for them.
@@ -284,7 +289,7 @@ Screen names match `design/prototype/vela-app.html`. Each criterion is testable.
 
 **P1 · Consent.** Display-size greeting with the organiser's name; three short paragraphs (what arrives, what happens on silence, how to stop); a toggle "Keep a light on for me"; the 88 pt "Yes, that's fine" button; "Read this aloud" plays the text. Declining shows "That's fine. Nothing will arrive." and tells the organiser.
 
-**P2 · Question.** Greeting with her address form; the asker's avatar and name; the ask in Voice type with a play button if voice exists; up to three chips; the 124 pt mic; "Tap and tell her"; "Just say hi today" as a text link; "What the family sees · Stop" at the bottom. If yesterday had replies, the screen first shows "From yesterday" with a play button and continues after it ends or on tap.
+**P2 · Question.** Greeting with her address form; the asker's avatar and name; the ask in Voice type with a play button if voice exists; up to three chips as the primary row (64 pt each); the mic below them at 96 pt with "or tell her in your voice"; "Just say hi today" as a text link; "What the family sees · Stop" at the bottom. If yesterday had replies, the screen first shows "From yesterday" with a play button and continues after it ends or on tap.
 
 **P3 · Photo choice.** Two photos filling the width, at least 190 pt tall each; a tap selects with a 4 pt teal ring and posts the answer after a 1 s undo window; optional mic; "Just say hi today".
 
@@ -324,7 +329,7 @@ Per member per day: one arrival (their surface), at most one turn prompt (19:00 
 |---|---|---|
 | Who | Every member | Per kept-light member; the billing organiser pays |
 | Includes | Asks, answers, replies, turns, translation, story day, reading the family book, the lights as "answered today" | Quiet notices, nearby contacts and Ask to check, away mode, the weekly read, memory and reminders, family book export, precision page |
-| Price | 0 | $9.99/mo or $79/yr per kept-light member; second member +50%; to be tested against $14.99 and annual-only |
+| Price | 0 | $79/yr pre-selected, or $9.99/mo as the low-commitment ramp; per kept-light member; second member +50%; to be tested against $14.99 |
 | Trial | | 30 days after her first answer, no card |
 | Lapse | | 14 days grace; then Light features stop; arrivals and exchanges continue; nobody is cut off from family |
 
@@ -344,7 +349,7 @@ Minimal event list, all with family id, member id, exchange id, surface, local t
 
 `ask_composed` (type, asker role, from suggestion), `arrival_delivered` (type, on time), `arrival_seen`, `answer_recorded` (kind: voice · chip · photo · vote · heart · text · fine), `reply_posted` (kind), `readback_delivered`, `readback_played`, `repeat_sent`, `quiet_notice_sent`, `quiet_notice_resolved` (outcome), `ask_to_check_sent`, `away_set` (source), `consent_given`, `stop_said`, `trial_started`, `plan_started`, `plan_lapsed`, `weekly_read_opened`, `story_saved`.
 
-They produce the ten metrics in the master plan plus the interaction metrics: answers with content ÷ answers (target > 70%), replies per answer (≥ 1.5), types per family per week (≥ 3), grandchild-initiated asks per week (≥ 2), quiet-day rate (< 20%), answer rate for kept-light members (> 85%), median latency (< 60 min), quiet notices per member per month and share true (< 2; > 50%), "stop" rate (< 5%), minutes in app per member per day (2–4).
+They produce the metrics below (targets revised against research/14; kill signals in brackets): answer rate for kept-light members ≥ 75% of days in weeks 1–4 and ≥ 65% at week 12 [< 50%]; median latency < 60 min; answers with content ÷ answers > 70%; replies per answer ≥ 1.5; types per family per week ≥ 3; grandchild-initiated asks per week ≥ 2; quiet-day rate < 20%; quiet notices per member per month < 4 by month 3, with > 60% marked useful by the organiser and the true-concern share published; "stop" rate < 10% in month 1 [> 30%]; families with a kept-light member paying at day 90 ≥ 10% [< 4%]; monthly paid retention ≥ 90%; minutes in app per member per day 2–4; "very disappointed if Vela stopped" > 40%. Loneliness is measured (UCLA-3 at weeks 0, 4, 12 in the pilot), never claimed.
 
 ## 19. Edge cases
 
@@ -381,18 +386,22 @@ The pilot runs on Telegram only, for 10–20 families, to measure whether the lo
 - **Read-back.** The next morning's arrival opens with those replies, as text plus forwarded voice notes.
 - **The light.** The bot posts "Mom answered · 8:12 ☀" in the group; quiet notice at T_quiet to the organiser privately with the nearby contacts' names and phone numbers as text; "Ask to check" is the organiser's own call in phase 0.
 - **Weekly read.** Written by the founder from the AI draft, sent to the organiser privately on Sunday.
+- **Logged from day one.** Per parent per day: ask delivered (type, asker), seen, answered (kind), time to answer, replies received, replies heard, quiet notice and its outcome, away, stop. Per family per week: who composed, quiet days, types used. UCLA-3 loneliness at weeks 0, 4, 12 and "if Vela stopped tomorrow" at days 14 and 30, asked by the founder on the calls.
 - **Not in phase 0.** Payments in the app (the $15 pilot fee is collected by hand), LINE/WhatsApp, the parent surface, memory, votes.
 
 This appendix supersedes `bot-spec.md`; the bot code in `bot/` is to be updated to it before the pilot.
 
-## Appendix B · Parameters the research must confirm
+## Appendix B · Parameters checked against the evidence (2026-09-13)
 
-| Parameter | Current value | Confirmed by |
-|---|---|---|
-| Expected kept-light answer rate | > 85% | research/08 |
-| Quiet-day rate target | < 20% | research/12 |
-| T_quiet start and bounds | 5 h; 4–8 h | research/08 (latency distributions) |
-| Price and trial | $9.99/mo, $79/yr, 30 days | research/09 |
-| First adapter per market | Telegram (RU), LINE (TW) | research/10 |
-| Consent copy and symmetry rules | §9 | research/11 |
-| Turn cadence and type rotation | daily turns, 5 types per week | research/12 |
+| Parameter | Before | After | Source |
+|---|---|---|---|
+| Kept-light answer rate | > 85% | ≥ 75% weeks 1–4, ≥ 65% at week 12 | research/08 |
+| T_quiet | start 5 h, 4–8 h | start 6 h, 4–10 h, 14-day learning period | research/08 |
+| Quiet notices | < 2/month, > 50% true | < 4/month by month 3, > 60% useful, true share published | research/08, /11 |
+| Answer bar | mic first | one tap always possible; chips primary, mic offered | research/10 |
+| Consent | screen + stop | no monitoring words; stop rate < 10% month 1 | research/08, /11 |
+| First adapter | Telegram (RU), LINE (TW) | confirmed, with the parent surface as the floor, the voice line in phase 2, LINE paid plan from day one | research/10 |
+| Price | $9.99/mo or $79/yr | confirmed; annual pre-selected; adult child owns the account | research/09 |
+| Conversion | > 25% at 90 days | ≥ 10% of kept-light families at 90 days | research/09, /12 |
+| Turns, one notification, no streaks, no feed | rules | confirmed | research/12 |
+| Loneliness | claimed | measured, not claimed | research/08, /11 |
