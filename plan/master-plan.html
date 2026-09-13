@@ -540,7 +540,7 @@ gantt
   <div class="dec"><span class="d">2026-09-12</span><span><b>Phase 0 before the app.</b> Prove the loop with the prototype and 10–20 paying three-generation families.</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>English first.</b> All copy, wireframes, bot defaults, and documents are authored in English; Russian and Chinese are localisations.</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>This page's checklist is the one task tracker.</b> Asana CSV kept as an optional export; Trello dropped. Draw.io for diagrams, Figma for wireframes, Gource for the repo history.</span></div>
-  <div class="dec"><span class="d">2026-09-12</span><span><b>Interaction-first product.</b> Every arrival is an ask from a person (a question, two photos, a voice note, a word to teach, a story); her answer is a post the family replies to; she hears the replies next morning; "I'm fine" is the fallback. See product/04-interaction-model.md.</span></div>
+  <div class="dec"><span class="d">2026-09-12</span><span><b>Interaction-first product.</b> Every arrival is an ask from a person (a question, two photos, a voice note, a word to teach, a story); her answer is a post the family replies to; she hears the replies next morning; "I'm fine" is the fallback. See archive/product/04-interaction-model.md (absorbed into product/05-product-spec-v2.md).</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>Identity chosen from research, not from the old logo.</b> Candle &amp; Ink: cream #FBF7F0, charcoal #1E1A16, amber light #E9A23B (never as text), teal actions #1F5C66; Literata + Inter (Cyrillic and Greek covered); the mark is a window with a light on. See design/research-identity.md and design/design-system.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Published evidence instead of surveys before building.</b> Six research workstreams (reports 08–13) replace the survey and interview wave as the evidence base; interviews move into the pilot itself.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Spec v2 is the only spec.</b> Asks from people, the reply loop, no automatic contact of third parties, acceptance criteria for every screen, the phase-0 instrument on Telegram. v1 spec, interaction model, and bot spec superseded.</span></div>
@@ -577,20 +577,18 @@ gantt
       <tr><td><code>plan/pre-build-readiness.md</code></td><td>The readiness verdict and the twelve-week build plan</td></tr>
       <tr><td><code>plan/market-order.md</code></td><td>Market order v2: Taiwan and the English app path, then Japan and Germany/UK, then the US at scale and India; Russia deferred; channel, language, price and regulation per market</td></tr>
       <tr><td><code>product/02-app-plan.md</code></td><td>The product, v2: people, loop, features, surfaces, AI, privacy, pricing, metrics, architecture, roadmap, risks</td></tr>
-      <tr><td><code>product/03-product-spec.md</code></td><td>The functional contract: member states, the arrival, answers, the quiet ladder, consent, turns, story day, translation, memory, weekly read, surfaces, edge cases, copy, accessibility</td></tr>
       <tr><td><code>architecture/02-technical-architecture-v2.md</code></td><td>The build blueprint: constraints, overview, platform decision with alternatives, repo layout, domain invariants, per-member scheduling, gateway, adapters, AI and speech, mobile, auth, residency, security, failure modes, SLOs, testing, environments, cost, risks</td></tr>
       <tr><td><code>architecture/schema.sql</code> · <code>api-contract.md</code></td><td>The data model (32 tables, validated in Postgres) and the API with Zod contracts</td></tr>
       <tr><td><code>architecture/research/</code></td><td>Five tool-selection sweeps: platform and data, speech and AI, channels and voice, mobile stack, ops and quality</td></tr>
       <tr><td><code>architecture/decisions.md</code></td><td>Twenty architecture decision records with rejected alternatives</td></tr>
       <tr><td><code>plan/build-plan.md</code></td><td>Six sprints, task by task, with definitions of done and the founder's tasks</td></tr>
-      <tr><td><code>product/01-solution-thinking.md</code></td><td>Problem anatomy and solution space (partly superseded)</td></tr>
       <tr><td><code>plan/execution-plan.md</code></td><td>Phase 0 to 3, week by week, with owners</td></tr>
       <tr><td><code>plan/materials/</code></td><td>Surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer</td></tr>
-      <tr><td><code>bot/</code></td><td>Phase-0 prototype: Telegram + Cloudflare Workers + D1 + Claude, type-checked, not deployed</td></tr>
+      <tr><td><code>apps/</code> · <code>packages/</code></td><td>The product code: the Cloudflare Worker and the shared TypeScript packages (contracts, core, db, copy, adapters, ai, services)</td></tr>
       <tr><td><code>pitch/</code></td><td>Accelerator application answers</td></tr>
       <tr><td><code>design/diagrams/master-plan.drawio</code></td><td>This plan as a 15-page Draw.io map, editable at app.diagrams.net; regenerated from <code>tools/build-master-plan-drawio.mjs</code></td></tr>
-      <tr><td><code>design/</code></td><td>Draw.io diagrams (architecture, database, daily loop) and Figma-ready wireframes of the six key screens</td></tr>
-      <tr><td><code>plan/tasks-asana.csv</code>, <code>tools/gource.ps1</code></td><td>Optional Asana export of this checklist; Gource script for the repo history</td></tr>
+      <tr><td><code>design/</code></td><td>Design system, brand files, the clickable prototype, Draw.io diagrams</td></tr>
+      <tr><td><code>archive/</code> · <code>tools/</code></td><td>Superseded documents and the phase-0 D1 prototype, kept for history; generators for the Draw.io map and the brand files, and the Gource script</td></tr>
       <tr><td><code>plan/master-plan.html</code></td><td>The source of this page</td></tr>
     </tbody>
   </table></div>

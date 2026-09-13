@@ -2,7 +2,7 @@
 
 > **Revised 2026-09-13.** Markets reordered: Taiwan and the English-speaking app path first, then Japan and Germany/UK, then the US at scale and India; Russia deferred (`market-order.md`). The survey and interview wave is replaced by published evidence (research/08–14); the twelve-week build order now lives in `pre-build-readiness.md` (instrument first, foundation, family app, parent surface, Taiwan on LINE, measure). Phase exit tests below stand, with targets revised in spec v2 §18.
 
-v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, Taipei, Russian and English, 40–60 h/week, near-zero budget) and the tech co-founder (AI, always on). The product is defined in `product/02-app-plan.md`.
+v1, 2026-09-12. Supersedes the 30-day plan (`archive/plan/`). Two people: the founder (business, Taipei, Russian and English, 40–60 h/week, near-zero budget) and the tech co-founder (AI, always on). The product is defined in `product/02-app-plan.md`.
 
 ## The order of things
 
@@ -18,7 +18,7 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 
 **Founder, week 1**
 - Post the survey (materials in `plan/materials/`, update the intro line so it speaks to all families, not only abroad). Channels: your own network first, Russian-speaking Telegram groups in Taiwan and the relocation cities, Taiwanese friends with the Chinese version, r/AgingParents with the English version.
-- Book the first eight interviews from respondents who opted in. The script is in `plan/materials/interview-script.md`; add the five bridge questions from `product/01-solution-thinking.md` §6.
+- Book the first eight interviews from respondents who opted in. The script is in `plan/materials/interview-script.md`; add the five bridge questions from `archive/product/01-solution-thinking.md` §6.
 - Talk to your own parent about the morning arrival. Show a mock. This is the elder-acceptance check.
 - Make the repo public or keep it private; decide, don't drift.
 - Time: 30 h.
@@ -35,7 +35,7 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 - Time: 40 h.
 
 **Tech co-founder, week 2**
-- Deploy the prototype once you've created the Telegram bot, the Cloudflare account, and the Anthropic key (20 minutes; see `bot/README.md`).
+- Deploy the prototype once you've created the Telegram bot, the Cloudflare account, and the Anthropic key (20 minutes; see `plan/build-plan.md` sprint 0).
 - Three-day test with your own parent before any other family.
 - Onboarding script for you: five minutes with the child, five minutes with the parent, in Russian.
 
@@ -106,7 +106,7 @@ The founder asked for these as the first MVP. They are built from the same mater
 
 ## What the founder needs to do this week, in order
 
-1. Create the Telegram bot, the Cloudflare account, and the Anthropic key (20 minutes, `bot/README.md`).
+1. Create the Telegram bot, the Cloudflare account, and the Anthropic key (20 minutes, `plan/build-plan.md` sprint 0).
 2. Post the survey in three places today.
 3. Book eight interviews.
 4. Show your parent a mock of the morning arrival and write down her exact words.

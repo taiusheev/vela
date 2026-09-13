@@ -1,0 +1,30 @@
+{
+  "name": "@vela/services",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Application services: scheduling ticks, the outbound gateway, inbound flows, the AI pipeline, jobs. Depends only on ports.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vela/adapters": "workspace:*",
+    "@vela/ai": "workspace:*",
+    "@vela/contracts": "workspace:*",
+    "@vela/copy": "workspace:*",
+    "@vela/core": "workspace:*",
+    "@vela/db": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,32 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Native binaries that must run their install step. Every other dependency stays script-free.
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+# Supply-chain guard: versions published in the last day are held back unless listed here.
+minimumReleaseAgeExclude:
+  - zod@4.6.4
+
+# One version of every dependency across the monorepo. Change versions here only.
+catalog:
+  "@anthropic-ai/sdk": 0.125.0
+  "@biomejs/biome": 2.5.13
+  "@cloudflare/vitest-pool-workers": 0.22.0
+  "@cloudflare/workers-types": 5.20260911.1
+  "@electric-sql/pglite": 0.5.8
+  "@electric-sql/pglite-socket": 0.2.11
+  "@types/node": 22.20.2
+  "@types/pg": 8.23.1
+  drizzle-kit: 0.31.10
+  drizzle-orm: 0.45.2
+  hono: 4.13.7
+  pg: 8.23.0
+  turbo: 2.10.12
+  typescript: 7.0.2
+  vitest: 4.1.11
+  wrangler: 4.131.1
+  zod: 4.6.4

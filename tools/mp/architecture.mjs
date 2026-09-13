@@ -6,7 +6,7 @@ export function architecture() {
   // 4.1 Components
   {
     const p = new Page("4.1 · Components");
-    let y = p.title("Architecture: components", "One deployable, one database per region, one queue. architecture/01-technical-design.md §1; drawing in architecture.drawio.");
+    let y = p.title("Architecture: components", "One deployable, one database per region, one queue. architecture/02-technical-architecture-v2.md §2; drawing in architecture.drawio.");
     p.box(40, y, 340, 300, "FAMILY SIDE", S.lane);
     p.box(420, y, 580, 480, "VELA PLATFORM · one Cloudflare Worker", S.lane);
     p.box(1040, y, 320, 480, "PARENT CHANNELS · adapters", S.lane);

@@ -1,6 +1,6 @@
 # Vela product specification, v2
 
-2026-09-13, revised the same day against the evidence in `research/14-evidence-synthesis.md`. **This is the only product spec.** It absorbs `04-interaction-model.md` and replaces `03-product-spec.md` wherever they differ. Written so that the founder, a designer, and an engineer read the same thing, and so that every screen in `design/prototype/vela-app.html` has acceptance criteria here. Companion documents: `02-app-plan.md` (why), `architecture/01-technical-design.md` (how), `research/08–13` (evidence), `design/design-system.md` (look).
+2026-09-13, revised the same day against the evidence in `research/14-evidence-synthesis.md`. **This is the only product spec.** It absorbs the interaction model and replaces the v1 spec (both now in `archive/product/`). Written so that the founder, a designer, and an engineer read the same thing, and so that every screen in `design/prototype/vela-app.html` has acceptance criteria here. Companion documents: `02-app-plan.md` (why), `architecture/02-technical-architecture-v2.md` (how), `research/08–13` (evidence), `design/design-system.md` (look).
 
 ## 0. What is final
 
@@ -389,7 +389,7 @@ The pilot starts on Telegram (the cheapest bot platform, voice-capable, and wher
 - **Logged from day one.** Per parent per day: ask delivered (type, asker), seen, answered (kind), time to answer, replies received, replies heard, quiet notice and its outcome, away, stop. Per family per week: who composed, quiet days, types used. UCLA-3 loneliness at weeks 0, 4, 12 and "if Vela stopped tomorrow" at days 14 and 30, asked by the founder on the calls.
 - **Not in phase 0.** Payments in the app (the $15 pilot fee is collected by hand), WhatsApp, the parent surface, memory, votes.
 
-This appendix supersedes `bot-spec.md`; the bot code in `bot/` is to be updated to it before the pilot.
+This appendix supersedes the v1 bot spec (`archive/product/bot-spec.md`). It is implemented on the production platform in `apps/worker` and `packages/services`; the D1 prototype is archived in `archive/phase0-bot-d1/`.
 
 ## Appendix B · Parameters checked against the evidence (2026-09-13)
 

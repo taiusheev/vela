@@ -3,3 +3,14 @@ Thumbs.db
 node_modules/
 .env
 *.log
+
+# Build output and local state
+.turbo/
+.wrangler/
+dist/
+coverage/
+*.tsbuildinfo
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.pglite/

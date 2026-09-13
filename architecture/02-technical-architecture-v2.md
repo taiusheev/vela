@@ -1,6 +1,6 @@
 # Vela technical architecture, v2
 
-2026-09-13. **This is the build blueprint.** It replaces `01-technical-design.md` wherever they differ. Every tool choice in it was checked against the alternatives in September 2026 by five due-diligence sweeps (`architecture/research/`); the ten records that changed are appended to `decisions.md` (ADR-11 to ADR-20). The product it builds is `product/05-product-spec-v2.md`; the markets and their order are `plan/market-order.md`; the data model is `schema.sql` (validated in a real Postgres engine); the interface is `api-contract.md`; the sprint order is `plan/build-plan.md`.
+2026-09-13. **This is the build blueprint.** It replaces the v1 technical design (`archive/architecture/01-technical-design.md`). Every tool choice in it was checked against the alternatives in September 2026 by five due-diligence sweeps (`architecture/research/`); the ten records that changed are appended to `decisions.md` (ADR-11 to ADR-20). The product it builds is `product/05-product-spec-v2.md`; the markets and their order are `plan/market-order.md`; the data model is `schema.sql` (validated in a real Postgres engine); the interface is `api-contract.md`; the sprint order is `plan/build-plan.md`.
 
 Reading order for someone new: §1 constraints → §2 overview → §6 scheduling → §7 gateway → §8 adapters → §9 AI → §10 app. The rest is reference.
 
