@@ -6,7 +6,8 @@
  * the wake already covers the thresholds the due actions create (the ladder of an arrival being
  * delivered now, the in-app-only quiet that will need a push later). Changes that can make something
  * due sooner and do not come from the passing of time (a "wait 2 hours" tap, away being cleared, a
- * new arrival time, the light switched back on) must be followed by a fresh decision.
+ * new arrival time or an earlier start date, the light switched back on) must be followed by a fresh
+ * decision.
  */
 import type { LocalDate, LocalTime, MemberStatus } from "@vela/contracts";
 import {
@@ -37,6 +38,12 @@ export interface ScheduleInput {
     status: MemberStatus;
     lightOn: boolean;
     quietAfterMinutes: number;
+    /**
+     * The first local date an arrival may be delivered (the day after consent), so her first morning
+     * is the one the copy promises. No arrival, and so no repeat or quiet, is due for an earlier
+     * date. `null` means arrivals are not held back.
+     */
+    startsOn: LocalDate | null;
     /** The first local date after the learning period; see `learningUntil` in tuning.ts. */
     learningUntil: LocalDate | null;
   };
@@ -177,15 +184,20 @@ function reached(now: Date, threshold: Date): boolean {
   return now.getTime() >= threshold.getTime();
 }
 
+function hasStarted(ctx: Context, date: LocalDate): boolean {
+  const { startsOn } = ctx.input.member;
+  return startsOn === null || date >= startsOn;
+}
+
 /**
  * Today's arrival, from her arrival time until the prepare time. After the prepare time the day is
  * skipped (reconciliation logs it as missed) rather than greeting her with a morning message late at
- * night.
+ * night. Before her start date there is no arrival, and the next one to wake for is on that date.
  */
 function arrivalRule(ctx: Context, out: Collector): void {
   const { arrivalTime } = ctx.input.member;
   const day = dayOf(ctx, ctx.today);
-  if (day.deliveredAt === null && !day.deliveryFailed) {
+  if (hasStarted(ctx, ctx.today) && day.deliveredAt === null && !day.deliveryFailed) {
     const arrival = ctx.at(ctx.today, arrivalTime);
     if (!reached(ctx.now, arrival)) {
       out.wakes.push(arrival);
@@ -198,7 +210,9 @@ function arrivalRule(ctx: Context, out: Collector): void {
       ladderWakesAfterDelivery(ctx, day, out);
     }
   }
-  out.wakes.push(ctx.at(ctx.tomorrow, arrivalTime));
+  const { startsOn } = ctx.input.member;
+  const nextArrivalDate = startsOn !== null && startsOn > ctx.tomorrow ? startsOn : ctx.tomorrow;
+  out.wakes.push(ctx.at(nextArrivalDate, arrivalTime));
 }
 
 /**
@@ -217,16 +231,22 @@ function ladderWakesAfterDelivery(ctx: Context, day: DayState, out: Collector): 
   out.wakes.push(...delivered.wakes);
 }
 
-/** Repeat and quiet apply only to a delivered, unanswered exchange on a day she is not away. */
+/**
+ * Repeat and quiet apply only to a delivered, unanswered exchange on a day she is not away, on or
+ * after her start date. Neither follows our own failure to deliver: a repeat would re-send what did
+ * not arrive, and a quiet would blame her silence on it.
+ */
 function ladderRules(ctx: Context, day: DayState, out: Collector): void {
-  if (day.deliveredAt === null || day.answeredAt !== null || ctx.input.awayOn(day.date)) {
+  if (
+    day.deliveredAt === null ||
+    day.deliveryFailed ||
+    day.answeredAt !== null ||
+    !hasStarted(ctx, day.date) ||
+    ctx.input.awayOn(day.date)
+  ) {
     return;
   }
   repeatRule(ctx, day, day.deliveredAt, out);
-  // The quiet ladder never fires on our own failure to deliver.
-  if (day.deliveryFailed) {
-    return;
-  }
   openQuietRule(ctx, day, day.deliveredAt, out);
   notifyQuietRule(ctx, day, day.deliveredAt, out);
 }

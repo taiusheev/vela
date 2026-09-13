@@ -191,14 +191,42 @@ describe("renderArrival in English", () => {
     expect(paragraphs(arrival)[1]).toBe("Mia asks:\nHow did you meet Dad?");
   });
 
-  it("names the asker alone when the ask has no text, such as a voice note", () => {
+  it("says a voice message was sent when a voice note has no text", () => {
     const arrival = render({ ask: question({ type: "voice_note", text: null }) });
     expect(paragraphs(arrival)).toEqual([
       "Good morning, Mrs Chen.",
-      "Mia asks:",
+      "Mia sent you a voice message.",
       "Reply with a voice message, or tap a button.",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "I'm fine"]]);
+    expect(paragraphs(render({ ask: question({ type: "voice_note", text: "  " }) }))[1]).toBe(
+      "Mia sent you a voice message.",
+    );
+  });
+
+  it("says a photo was sent when a question with an image has no text, keeping its chips", () => {
+    const arrival = render({
+      ask: question({ text: null, imageCount: 1, chips: ["Lovely", "Where?"] }),
+    });
+    expect(paragraphs(arrival)[1]).toBe("Mia sent you a photo.");
+    expect(labels(arrival)).toEqual([["Lovely"], ["Where?"], ["❤️", "I'm fine"]]);
+    expectSendable(arrival, "en");
+  });
+
+  it("says a photo was sent when a memory photo has no text", () => {
+    const arrival = render({ ask: question({ type: "memory_photo", text: null, imageCount: 1 }) });
+    expect(paragraphs(arrival)[1]).toBe("Mia sent you a photo.");
+  });
+
+  it("keeps the asker line and the caption when a photo comes with words", () => {
+    const arrival = render({ ask: question({ text: "Remember this garden?", imageCount: 1 }) });
+    expect(paragraphs(arrival)[1]).toBe("Mia asks:\nRemember this garden?");
+  });
+
+  it("names the asker alone when an ask without images has no text", () => {
+    expect(paragraphs(render({ ask: question({ text: null }) }))[1]).toBe("Mia asks:");
+    const memory = render({ ask: question({ type: "memory_photo", text: null, imageCount: 0 }) });
+    expect(paragraphs(memory)[1]).toBe("Mia asks:");
   });
 
   it("sends the fallback hello signed by Vela with only the heart and I'm fine", () => {
@@ -259,6 +287,32 @@ describe("renderArrival in Traditional Chinese", () => {
       ["❤️", "我很好"],
     ]);
     expectSendable(arrival, lang);
+  });
+
+  it("says a voice message or a photo was sent when the ask has no text", () => {
+    const voice = render({
+      lang,
+      address: "陳奶奶",
+      ask: question({ type: "voice_note", askerName: "小美", text: null }),
+    });
+    expect(paragraphs(voice)).toEqual([
+      "陳奶奶，早安。",
+      "小美傳了一則語音訊息給您。",
+      "您可以傳語音訊息回覆，或按下面的按鈕。",
+    ]);
+    expectSendable(voice, lang);
+    const photo = render({
+      lang,
+      address: "陳奶奶",
+      ask: question({ askerName: "小美", text: null, imageCount: 1 }),
+    });
+    expect(paragraphs(photo)[1]).toBe("小美傳了一張照片給您。");
+    const memory = render({
+      lang,
+      address: "陳奶奶",
+      ask: question({ type: "memory_photo", askerName: "小美", text: null, imageCount: 1 }),
+    });
+    expect(paragraphs(memory)[1]).toBe("小美傳了一張照片給您。");
   });
 
   it("sends the fallback hello in Traditional Chinese", () => {

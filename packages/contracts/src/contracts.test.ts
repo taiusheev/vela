@@ -98,6 +98,21 @@ describe("InboundEvent", () => {
   });
 });
 
+describe("migrated events", () => {
+  it("carry the new conversation id alongside the old one", () => {
+    const result = InboundEvent.safeParse({
+      channel: "telegram",
+      eventId: "tg:update:2001",
+      at: "2026-09-14T00:12:00.000Z",
+      kind: "migrated",
+      sender: { externalUserId: "42" },
+      conversation: { externalId: "-4001234567", kind: "group" },
+      migratedToConversationId: "-1002001234567",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
 describe("budget kinds", () => {
   it("are all outbound kinds", () => {
     for (const kind of BUDGETED_OUTBOUND_KINDS) {

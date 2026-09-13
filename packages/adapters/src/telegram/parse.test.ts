@@ -1,7 +1,7 @@
 import type { InboundEvent } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
 import { parseTelegramUpdate } from "./parse.ts";
-import { readFixture } from "./testing.ts";
+import { readFixture, TEST_BOT_USERNAME } from "./testing.ts";
 
 const RECEIVED_AT = new Date("2026-09-13T00:11:02.345Z");
 
@@ -17,11 +17,11 @@ const FAMILY_GROUP = { externalId: "-1002214567890", kind: "group", title: "Chen
 const NEW_GROUP = { externalId: "-4567812390", kind: "group", title: "Chen family" } as const;
 
 function parseFixture(name: string): InboundEvent[] {
-  return parseTelegramUpdate(readFixture(name), RECEIVED_AT);
+  return parseTelegramUpdate(readFixture(name), RECEIVED_AT, TEST_BOT_USERNAME);
 }
 
 function parseObject(update: unknown): InboundEvent[] {
-  return parseTelegramUpdate(JSON.stringify(update), RECEIVED_AT);
+  return parseTelegramUpdate(JSON.stringify(update), RECEIVED_AT, TEST_BOT_USERNAME);
 }
 
 describe("parseTelegramUpdate with recorded updates", () => {
@@ -249,6 +249,67 @@ describe("parseTelegramUpdate with recorded updates", () => {
         },
       ],
     ],
+    [
+      "group-ask-with-mention.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920432",
+          at: "2026-09-13T11:00:00.000Z",
+          kind: "text",
+          sender: ANNA,
+          conversation: FAMILY_GROUP,
+          messageId: "1220",
+          text: "/ask@VelaLightBot What did you have for breakfast?",
+        },
+      ],
+    ],
+    [
+      "private-video.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920435",
+          at: "2026-09-13T02:30:00.000Z",
+          kind: "other",
+          sender: MEIHUA,
+          conversation: MEIHUA_CHAT,
+          messageId: "323",
+          text: "孫子第一次騎腳踏車",
+        },
+      ],
+    ],
+    [
+      "private-document.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920436",
+          at: "2026-09-13T02:45:00.000Z",
+          kind: "other",
+          sender: MEIHUA,
+          conversation: MEIHUA_CHAT,
+          messageId: "324",
+          text: "醫生說都正常",
+        },
+      ],
+    ],
+    [
+      "private-location.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920437",
+          at: "2026-09-13T03:00:00.000Z",
+          kind: "other",
+          sender: MEIHUA,
+          conversation: MEIHUA_CHAT,
+          messageId: "325",
+        },
+      ],
+    ],
+    ["group-ask-other-bot.json", []],
+    ["group-start-other-bot.json", []],
     ["my-chat-member-group-promoted.json", []],
     ["group-new-chat-members.json", []],
     ["edited-message.json", []],
@@ -312,13 +373,15 @@ describe("parseTelegramUpdate edge cases", () => {
   });
 
   it("throws on malformed JSON", () => {
-    expect(() => parseTelegramUpdate("{not json", RECEIVED_AT)).toThrow(SyntaxError);
+    expect(() => parseTelegramUpdate("{not json", RECEIVED_AT, TEST_BOT_USERNAME)).toThrow(
+      SyntaxError,
+    );
   });
 
   it("throws on a JSON body that is not an update", () => {
-    expect(() => parseTelegramUpdate(JSON.stringify({ message: {} }), RECEIVED_AT)).toThrow(
-      /update_id/,
-    );
+    expect(() =>
+      parseTelegramUpdate(JSON.stringify({ message: {} }), RECEIVED_AT, TEST_BOT_USERNAME),
+    ).toThrow(/update_id/);
   });
 
   it("yields nothing for update types it does not know", () => {
@@ -365,10 +428,75 @@ describe("parseTelegramUpdate edge cases", () => {
     expect(parseObject(update)).toEqual([]);
   });
 
-  it("ignores content it has no kind for, such as a location", () => {
-    expect(
-      parseObject(privateMessage({ location: { latitude: 25.03, longitude: 121.56 } })),
-    ).toEqual([]);
+  const otherContent: [field: string, value: Record<string, unknown>][] = [
+    ["video_note", { file_id: "DQAC-note", file_unique_id: "n", length: 384, duration: 9 }],
+    [
+      "venue",
+      {
+        location: { latitude: 25.04, longitude: 121.5 },
+        title: "Dihua Market",
+        address: "Dihua St",
+      },
+    ],
+    ["contact", { phone_number: "+886912345678", first_name: "Li-ting" }],
+    [
+      "poll",
+      { id: "5321", question: "Dinner?", options: [], total_voter_count: 0, is_closed: false },
+    ],
+    ["dice", { emoji: "🎲", value: 4 }],
+    ["story", { chat: { id: 5829174630, type: "private" }, id: 12 }],
+  ];
+
+  it.each(otherContent)(
+    "reads a message with %s as other, with no text or media",
+    (field, value) => {
+      const [event, ...rest] = parseObject(privateMessage({ [field]: value }));
+      expect(rest).toEqual([]);
+      expect(event?.kind).toBe("other");
+      expect(event).not.toHaveProperty("text");
+      expect(event).not.toHaveProperty("media");
+    },
+  );
+
+  it("reads a GIF, which Telegram sends as both animation and document, as one other event", () => {
+    const gif = { file_id: "CgAC-gif", file_unique_id: "g", mime_type: "video/mp4" };
+    const events = parseObject(
+      privateMessage({
+        animation: { ...gif, width: 320, height: 240, duration: 3 },
+        document: gif,
+        caption: "哈哈",
+      }),
+    );
+    expect(events.map((event) => [event.kind, event.text, event.media])).toStrictEqual([
+      ["other", "哈哈", undefined],
+    ]);
+  });
+
+  it("ignores service messages, even one that carries content inside it", () => {
+    const pinnedVideo = {
+      message_id: 323,
+      chat: { id: 6023817745, type: "private" },
+      date: 1789266600,
+      video: { file_id: "BAAC-video", file_unique_id: "v", width: 720, height: 1280, duration: 18 },
+    };
+    expect(parseObject(privateMessage({ pinned_message: pinnedVideo }))).toEqual([]);
+    expect(parseObject(privateMessage({ new_chat_title: "Chen family" }))).toEqual([]);
+    expect(parseObject(privateMessage({ delete_chat_photo: true }))).toEqual([]);
+  });
+
+  it("ignores an edited location, which is how a live location moves", () => {
+    const update = {
+      update_id: 5,
+      edited_message: {
+        message_id: 325,
+        from: { id: 6023817745, is_bot: false, first_name: "Mei-hua" },
+        chat: { id: 6023817745, first_name: "Mei-hua", type: "private" },
+        date: 1789268400,
+        edit_date: 1789268460,
+        location: { latitude: 25.034, longitude: 121.5645, live_period: 900 },
+      },
+    };
+    expect(parseObject(update)).toEqual([]);
   });
 
   it("ignores anonymous reactions", () => {
@@ -391,5 +519,75 @@ describe("parseTelegramUpdate edge cases", () => {
     update.message_reaction.old_reaction = update.message_reaction.new_reaction;
     update.message_reaction.new_reaction = [];
     expect(parseObject(update)[0]?.reactions).toStrictEqual([]);
+  });
+});
+
+describe("parseTelegramUpdate with commands addressed to a bot", () => {
+  const groupMessage = (fields: Record<string, unknown>): unknown => ({
+    update_id: 6,
+    message: {
+      message_id: 1230,
+      from: { id: 1938475620, is_bot: false, first_name: "Sam", language_code: "en" },
+      chat: { id: -1002214567890, title: "Chen family", type: "supergroup" },
+      date: 1789297200,
+      ...fields,
+    },
+  });
+  const kindsOf = (text: string): [string, string | undefined, string | undefined][] =>
+    parseObject(groupMessage({ text })).map((event) => [event.kind, event.text, event.startParam]);
+
+  it("parses a command addressed to no bot", () => {
+    expect(kindsOf("/ask What did you cook today?")).toStrictEqual([
+      ["text", "/ask What did you cook today?", undefined],
+    ]);
+    expect(kindsOf("/start grp_Hk3vQ9")).toStrictEqual([["start", undefined, "grp_Hk3vQ9"]]);
+  });
+
+  it("matches this bot's username in any letter case", () => {
+    expect(kindsOf("/ask@velalightbot What did you cook today?")).toStrictEqual([
+      ["text", "/ask@velalightbot What did you cook today?", undefined],
+    ]);
+    expect(kindsOf("/start@VELALIGHTBOT grp_Hk3vQ9")).toStrictEqual([
+      ["start", undefined, "grp_Hk3vQ9"],
+    ]);
+  });
+
+  it("yields nothing for a command addressed to another bot", () => {
+    expect(kindsOf("/start@RecipeHelperBot grp_Hk3vQ9")).toStrictEqual([]);
+    expect(kindsOf("/later@RecipeHelperBot")).toStrictEqual([]);
+  });
+
+  it("does not take a username that merely begins with this bot's name as this bot", () => {
+    expect(kindsOf("/ask@VelaLightBot2 What did you cook today?")).toStrictEqual([]);
+  });
+
+  it("yields nothing for a command to another bot in a private chat", () => {
+    const update = {
+      update_id: 7,
+      message: {
+        message_id: 326,
+        from: { id: 6023817745, is_bot: false, first_name: "Mei-hua" },
+        chat: { id: 6023817745, first_name: "Mei-hua", type: "private" },
+        date: 1789297200,
+        text: "/start@RecipeHelperBot inv_7Qm2xK9pLw3nR8sT",
+      },
+    };
+    expect(parseObject(update)).toEqual([]);
+  });
+
+  it("yields nothing for media whose caption is a command to another bot", () => {
+    const photo = [{ file_id: "AgAC-photo", file_unique_id: "p", width: 1280, height: 960 }];
+    expect(
+      parseObject(groupMessage({ photo, caption: "/ask@RecipeHelperBot what is this?" })),
+    ).toEqual([]);
+    expect(
+      parseObject(groupMessage({ photo, caption: "/ask@VelaLightBot what is this?" })),
+    ).toHaveLength(1);
+  });
+
+  it("treats a mention of another bot's command later in the text as ordinary text", () => {
+    expect(kindsOf("Try /ask@RecipeHelperBot for recipes")).toStrictEqual([
+      ["text", "Try /ask@RecipeHelperBot for recipes", undefined],
+    ]);
   });
 });

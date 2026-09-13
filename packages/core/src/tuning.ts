@@ -12,7 +12,8 @@ export const TUNING = {
   marginMinutes: 120,
   floorMinutes: 240,
   capMinutes: 600,
-  minSamples: 7,
+  /** Spec §8: her rhythm counts as known only from the 14th answered day. */
+  minSamples: 14,
   /**
    * A Sunday rhythm needs a few Sundays before it can override the weekly one; one late Sunday is
    * not a pattern.
@@ -53,8 +54,8 @@ function clampQuiet(medianMinutes: number): number {
 
 /**
  * Minutes from delivery until an unanswered exchange turns quiet: the median answer latency plus two
- * hours, clamped to [240, 600]. With fewer than seven samples her rhythm is not known yet and the
- * default of 360 applies.
+ * hours, clamped to [240, 600]. With fewer than 14 samples (answered days) her rhythm is not known yet
+ * and the default of 360 applies.
  *
  * `latencies` are minutes from delivery to answer over her recent answered days (the caller passes
  * the last 14). On Sundays and her country's holidays (`sunday: true`), the median of

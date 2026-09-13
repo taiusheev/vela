@@ -49,7 +49,7 @@ describe("createFakeAi", () => {
       },
       record: {
         call: "understand",
-        promptVersion: "understand.v1",
+        promptVersion: "understand.v2",
         model: "claude-sonnet-5",
         ok: true,
         tokensIn: 0,

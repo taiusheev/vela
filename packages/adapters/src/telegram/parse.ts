@@ -2,9 +2,9 @@
  * Turns one Telegram `Update` into normalised inbound events.
  *
  * Only what the product acts on is recognised: messages in private chats and groups, button taps,
- * reactions, and changes to the bot's own membership. Everything else (edits, channel posts,
- * service messages, unsupported content) yields no events, so a new Telegram feature never
- * reaches the services by accident.
+ * reactions, and changes to the bot's own membership. Content a person sent that has no richer
+ * kind arrives as `other`. Everything else (edits, channel posts, service messages, commands for
+ * other bots) yields no events, so a new Telegram feature never reaches the services by accident.
  */
 import { InboundEvent, type InboundKind, type MediaRef } from "@vela/contracts";
 
@@ -16,17 +16,44 @@ type JsonObject = Record<string, unknown>;
 /** `/start`, `/start <param>`, and the group form `/start@bot_username <param>`. */
 const START_COMMAND = /^\/start(?:@\w+)?(?:\s+(.*))?$/s;
 
+/** The bot a leading command is addressed to: `VelaLightBot` in `/ask@VelaLightBot <text>`. */
+const COMMAND_ADDRESS = /^\/\w+@(\w+)/;
+
 /**
- * Parses a webhook body. `receivedAt` dates events Telegram does not date itself (button taps).
- * Malformed JSON or a body without `update_id` throws.
+ * Message fields that carry content a person sent but no richer kind describes. They are listed
+ * rather than inferred, so service messages (members joining, pins, title changes) stay unrecognised.
  */
-export function parseTelegramUpdate(rawBody: string, receivedAt: Date): InboundEvent[] {
+const OTHER_CONTENT_FIELDS = [
+  "video",
+  "video_note",
+  "animation",
+  "document",
+  "location",
+  "venue",
+  "contact",
+  "poll",
+  "dice",
+  "story",
+  "checklist",
+  "paid_media",
+] as const;
+
+/**
+ * Parses a webhook body. `receivedAt` dates events Telegram does not date itself (button taps);
+ * `botUsername` (without the `@`) tells commands for this bot from commands for other bots in the
+ * same group. Malformed JSON or a body without `update_id` throws.
+ */
+export function parseTelegramUpdate(
+  rawBody: string,
+  receivedAt: Date,
+  botUsername: string,
+): InboundEvent[] {
   const update: unknown = JSON.parse(rawBody);
   if (!isObject(update) || !isInteger(update.update_id)) {
     throw new TypeError("not a Telegram update: update_id is missing");
   }
 
-  const draft = draftEvent(update, receivedAt);
+  const draft = draftEvent(update, receivedAt, botUsername);
   if (draft === undefined) return [];
   return [
     InboundEvent.parse(
@@ -35,9 +62,13 @@ export function parseTelegramUpdate(rawBody: string, receivedAt: Date): InboundE
   ];
 }
 
-function draftEvent(update: JsonObject, receivedAt: Date): EventDraft | undefined {
+function draftEvent(
+  update: JsonObject,
+  receivedAt: Date,
+  botUsername: string,
+): EventDraft | undefined {
   const message = asObject(update.message);
-  if (message !== undefined) return fromMessage(message);
+  if (message !== undefined) return fromMessage(message, botUsername);
   const callbackQuery = asObject(update.callback_query);
   if (callbackQuery !== undefined) return fromCallbackQuery(callbackQuery, receivedAt);
   const reaction = asObject(update.message_reaction);
@@ -47,7 +78,7 @@ function draftEvent(update: JsonObject, receivedAt: Date): EventDraft | undefine
   return undefined;
 }
 
-function fromMessage(message: JsonObject): EventDraft | undefined {
+function fromMessage(message: JsonObject, botUsername: string): EventDraft | undefined {
   const conversation = readConversation(message.chat);
   const from = readUser(message.from);
   const messageId = asInteger(message.message_id);
@@ -56,6 +87,10 @@ function fromMessage(message: JsonObject): EventDraft | undefined {
   // with bot-to-bot mode can post in groups; none of them is a family member.
   if (conversation === undefined || from === undefined || from.isBot) return undefined;
   if (messageId === undefined || date === undefined) return undefined;
+  // A family group can hold other bots; a command addressed to one of them is not for Vela, whether
+  // it is typed as text or as a caption.
+  const body = asString(message.text) ?? asString(message.caption);
+  if (body !== undefined && isForAnotherBot(body, botUsername)) return undefined;
 
   const content = readContent(message);
   if (content === undefined) return undefined;
@@ -106,7 +141,19 @@ function readContent(message: JsonObject): Content | undefined {
   const sticker = asObject(message.sticker);
   if (sticker !== undefined) return { kind: "sticker", text: asString(sticker.emoji) };
 
+  // No media reference: media kinds are only audio and image, so what counts is that she replied
+  // and what she wrote alongside it.
+  if (OTHER_CONTENT_FIELDS.some((field) => isObject(message[field]))) {
+    return { kind: "other", text: caption };
+  }
+
   return undefined;
+}
+
+/** Telegram usernames are case-insensitive, so `/ask@velalightbot` is addressed to `VelaLightBot`. */
+function isForAnotherBot(body: string, botUsername: string): boolean {
+  const address = COMMAND_ADDRESS.exec(body)?.[1];
+  return address !== undefined && address.toLowerCase() !== botUsername.toLowerCase();
 }
 
 function readAudio(audio: JsonObject): MediaRef | undefined {

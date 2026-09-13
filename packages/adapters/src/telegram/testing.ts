@@ -6,6 +6,8 @@ import { readFileSync } from "node:fs";
 /** Shaped like a real token so the client accepts it, and distinctive so leaks are easy to find. */
 export const TEST_BOT_TOKEN = "7412589630:AAHf3kTq-9Zx_vN2mLp8RwYc4bD6sE1uJ0o";
 export const TEST_WEBHOOK_SECRET = "vela-test_secret-0123456789";
+/** The bot the recorded fixtures were sent to; its id matches `TEST_BOT_TOKEN`. */
+export const TEST_BOT_USERNAME = "VelaLightBot";
 
 export function readFixture(name: string): string {
   return readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");

@@ -13,6 +13,8 @@ import { isValidWebhookSecret, verifyTelegramSecret } from "./verify.ts";
 export interface TelegramAdapterOptions extends TelegramApiOptions {
   /** The `secret_token` registered with `setWebhook`. */
   readonly webhookSecret: string;
+  /** The bot's username without the `@`; commands addressed to any other bot are ignored. */
+  readonly botUsername: string;
   /**
    * Dates events Telegram sends without a date (button taps). Defaults to the system clock; tests
    * pass a fixed one.
@@ -33,9 +35,16 @@ const TELEGRAM_CAPABILITIES: AdapterCapabilities = {
 // closing buttons twice has reached the intended state, so it is not a failure.
 const NOT_MODIFIED = /message is not modified/i;
 
+// A username given as `@VelaLightBot` would match no command and silently drop every addressed
+// one, so the shape is checked up front.
+const BOT_USERNAME_PATTERN = /^[A-Za-z0-9_]{1,32}$/;
+
 export function createTelegramAdapter(options: TelegramAdapterOptions): ChannelAdapter {
   if (!isValidWebhookSecret(options.webhookSecret)) {
     throw new Error("Telegram webhook secret must be 1-256 characters of A-Z, a-z, 0-9, _ and -");
+  }
+  if (!BOT_USERNAME_PATTERN.test(options.botUsername)) {
+    throw new Error("Telegram bot username must be 1-32 characters of A-Z, a-z, 0-9 and _, no @");
   }
   const client = createTelegramClient(options);
   const now = options.now ?? (() => new Date());
@@ -49,7 +58,7 @@ export function createTelegramAdapter(options: TelegramAdapterOptions): ChannelA
     },
 
     parse(input) {
-      return parseTelegramUpdate(input.rawBody, now());
+      return parseTelegramUpdate(input.rawBody, now(), options.botUsername);
     },
 
     send(message) {

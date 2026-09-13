@@ -2,10 +2,10 @@
  * One arrival as plain text and buttons (spec §4.3–4.5, §14.3 M2 and M4), in her language.
  *
  * Text, in paragraphs: yesterday's replies under their heading; the late note or the repeat preface;
- * the greeting; the ask (who asks, what, and how to answer it) or the fallback hello with its
- * signature; the hint. Buttons: the question's chips one per row, the photo choice's 1 and 2, the
- * vote's options one per row, and always a last row with a heart and "I'm fine", so every arrival
- * can be answered with one tap.
+ * the greeting; the ask (who asks, what, and how to answer it, or, for a voice note or photo without
+ * words, who sent it) or the fallback hello with its signature; the hint. Buttons: the question's
+ * chips one per row, the photo choice's 1 and 2, the vote's options one per row, and always a last
+ * row with a heart and "I'm fine", so every arrival can be answered with one tap.
  */
 import type { Button, ExchangeType, Lang } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -93,6 +93,32 @@ function optionRows(
   return rows;
 }
 
+/**
+ * Who asks and what. An ask without words would otherwise leave "Mia asks:" hanging over nothing, so
+ * a voice note, or a question or memory photo that carries images, says what was sent instead.
+ */
+function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>): string[] {
+  const asker = ask.askerName;
+  const text = ask.text?.trim() ?? "";
+  if (text.length === 0) {
+    if (ask.type === "voice_note") {
+      return [t(lang, "arrival.sent_voice", { asker })];
+    }
+    if ((ask.type === "question" || ask.type === "memory_photo") && ask.imageCount > 0) {
+      return [t(lang, "arrival.sent_photo", { asker })];
+    }
+  }
+  const lines = [
+    ask.onBehalfOf === null
+      ? t(lang, "arrival.asks", { asker })
+      : t(lang, "arrival.asks_on_behalf", { asker, child: ask.onBehalfOf }),
+  ];
+  if (text.length > 0) {
+    lines.push(text);
+  }
+  return lines;
+}
+
 export function renderArrival(input: RenderArrivalInput): RenderedArrival {
   const { lang, exchangeId, ask } = input;
   const paragraphs: string[][] = [];
@@ -117,15 +143,7 @@ export function renderArrival(input: RenderArrivalInput): RenderedArrival {
   if (ask.type === "hello") {
     paragraphs.push([t(lang, "arrival.hello"), t(lang, "arrival.hello_signature")]);
   } else {
-    const lines = [
-      ask.onBehalfOf === null
-        ? t(lang, "arrival.asks", { asker: ask.askerName })
-        : t(lang, "arrival.asks_on_behalf", { asker: ask.askerName, child: ask.onBehalfOf }),
-    ];
-    const text = ask.text?.trim() ?? "";
-    if (text.length > 0) {
-      lines.push(text);
-    }
+    const lines = askLines(lang, ask);
     switch (ask.type) {
       // Spec §5.3: chips belong to questions; story, recipe, and memory asks are answered by voice.
       case "question":

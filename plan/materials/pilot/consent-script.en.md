@@ -35,7 +35,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 *This part carries the meaning of the consent message. Keep all four sentences.*
 
-"[Organiser] would like to keep a light on for you. Every morning someone in the family will ask you something. When you answer, they will know you are fine. If there is no answer by evening, [organiser] will know to call. You can say stop at any time."
+"[Organiser] would like to keep a light on for you. Every morning someone in the family will ask you something. When you answer, they will know you are fine. If a morning goes unanswered, [organiser] will get a quiet note so they can call. You can say stop at any time."
 
 ### 3. How answering works
 

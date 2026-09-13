@@ -54,13 +54,23 @@ describe("summariseReplies", () => {
     expect(summariseReplies({ lang: "en", replies })).toEqual(["Anna and Sam sent ❤️"]);
   });
 
-  it("uses a caption of a photo reply as its words and says nothing of a bare photo", () => {
+  it("uses a caption of a photo reply as its words and announces a photo without one", () => {
     const replies: ReadbackReply[] = [
       { name: "Sam", kind: "photo", text: "The tomatoes this year" },
       { name: "Mia", kind: "photo", text: null },
+      { name: "Anna", kind: "photo", text: "  " },
       { name: "Leo", kind: "text", text: "   " },
     ];
-    expect(summariseReplies({ lang: "en", replies })).toEqual(["Sam: The tomatoes this year"]);
+    expect(summariseReplies({ lang: "en", replies })).toEqual([
+      "Sam: The tomatoes this year",
+      "Mia sent a photo.",
+      "Anna sent a photo.",
+    ]);
+  });
+
+  it("announces a photo without a caption in Traditional Chinese", () => {
+    const replies: ReadbackReply[] = [{ name: "小明", kind: "photo", text: null }];
+    expect(summariseReplies({ lang: "zh-TW", replies })).toEqual(["小明傳了一張照片。"]);
   });
 
   it("skips replies without a name rather than rendering an empty sender", () => {

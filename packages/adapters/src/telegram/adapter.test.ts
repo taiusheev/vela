@@ -8,6 +8,7 @@ import {
   type Responder,
   readFixture,
   TEST_BOT_TOKEN,
+  TEST_BOT_USERNAME,
   TEST_WEBHOOK_SECRET,
   telegramOk,
 } from "./testing.ts";
@@ -19,6 +20,7 @@ function setup(responder: Responder) {
   const adapter = createTelegramAdapter({
     botToken: TEST_BOT_TOKEN,
     webhookSecret: TEST_WEBHOOK_SECRET,
+    botUsername: TEST_BOT_USERNAME,
     fetch: recording.fetch,
     now: () => TAPPED_AT,
   });
@@ -52,16 +54,51 @@ describe("createTelegramAdapter", () => {
 
   it("refuses a webhook secret Telegram would not accept", () => {
     expect(() =>
-      createTelegramAdapter({ botToken: TEST_BOT_TOKEN, webhookSecret: "has spaces" }),
+      createTelegramAdapter({
+        botToken: TEST_BOT_TOKEN,
+        webhookSecret: "has spaces",
+        botUsername: TEST_BOT_USERNAME,
+      }),
     ).toThrow(/webhook secret/);
-    expect(() => createTelegramAdapter({ botToken: TEST_BOT_TOKEN, webhookSecret: "" })).toThrow(
-      /webhook secret/,
-    );
+    expect(() =>
+      createTelegramAdapter({
+        botToken: TEST_BOT_TOKEN,
+        webhookSecret: "",
+        botUsername: TEST_BOT_USERNAME,
+      }),
+    ).toThrow(/webhook secret/);
+  });
+
+  it("refuses a bot username given with the @ or empty", () => {
+    for (const botUsername of ["@VelaLightBot", "", "Vela Light Bot"]) {
+      expect(() =>
+        createTelegramAdapter({
+          botToken: TEST_BOT_TOKEN,
+          webhookSecret: TEST_WEBHOOK_SECRET,
+          botUsername,
+        }),
+      ).toThrow(/bot username/);
+    }
   });
 
   it("dates button taps with the injected clock", () => {
     const { adapter } = setup(botApi({}));
     expect(tapEvent(adapter).at).toBe("2026-09-13T00:11:02.345Z");
+  });
+
+  it("parses commands against its own bot username", () => {
+    const rawBody = readFixture("group-ask-with-mention.json");
+    const velaLight = setup(botApi({})).adapter;
+    const otherBot = createTelegramAdapter({
+      botToken: TEST_BOT_TOKEN,
+      webhookSecret: TEST_WEBHOOK_SECRET,
+      botUsername: "RecipeHelperBot",
+    });
+
+    expect(velaLight.parse({ headers: new Headers(), rawBody }).map((e) => e.kind)).toStrictEqual([
+      "text",
+    ]);
+    expect(otherBot.parse({ headers: new Headers(), rawBody })).toStrictEqual([]);
   });
 });
 

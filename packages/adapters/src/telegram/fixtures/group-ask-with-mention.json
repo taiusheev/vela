@@ -1,0 +1,28 @@
+{
+  "update_id": 873920432,
+  "message": {
+    "message_id": 1220,
+    "from": {
+      "id": 5829174630,
+      "is_bot": false,
+      "first_name": "Anna",
+      "last_name": "Chen",
+      "username": "anna_chen",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": -1002214567890,
+      "title": "Chen family",
+      "type": "supergroup"
+    },
+    "date": 1789297200,
+    "text": "/ask@VelaLightBot What did you have for breakfast?",
+    "entities": [
+      {
+        "offset": 0,
+        "length": 17,
+        "type": "bot_command"
+      }
+    ]
+  }
+}

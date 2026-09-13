@@ -10,9 +10,10 @@
  * deliveries. Code design: architecture/03-code-design.md §3.
  *
  * Retention jobs (implemented in services, documented here because they explain nullable columns):
- * media is deleted when expires_at has passed and kept is false, with a deletions row; answers lose
- * transcripts and media refs after 30 days unless kept in a story; members with status 'left' are
- * deleted 30 days after left_at; families with deleted_at set cascade within 24 h.
+ * media is deleted when expires_at has passed and kept is false, with a deletions row, and every
+ * reference to it is set null by its foreign key; answers lose transcripts and media refs after 30
+ * days unless kept in a story; members with status 'left' are deleted 30 days after left_at;
+ * families with deleted_at set cascade within 24 h.
  */
 import {
   AGE_BANDS,
@@ -186,6 +187,11 @@ export const members = pgTable(
     lightConsentedAt: timestamptz("light_consented_at"),
     /** Version of the consent copy she agreed to. */
     lightConsentText: text("light_consent_text"),
+    /**
+     * The first local date on which arrivals may be delivered: the day after consent, so the first
+     * morning is tomorrow, as the consent copy promises. NULL until the light is switched on.
+     */
+    lightStartsOn: date("light_starts_on"),
     /** Her local wake time. */
     wakeTime: time("wake_time"),
     /** Local arrival time (wake + 30 min for kept-light members). */
@@ -261,7 +267,12 @@ export const familyChannels = pgTable(
     unlinkedAt: timestamptz("unlinked_at"),
   },
   (t) => [
-    unique("family_channels_channel_conversation_id_key").on(t.channel, t.conversationId),
+    // Unique only while linked: a group can be linked again after the bot was removed, and the
+    // unlinked rows stay as history.
+    uniqueIndex("family_channels_channel_conversation_id_idx")
+      .on(t.channel, t.conversationId)
+      .where(sql`${sql.identifier(t.unlinkedAt.name)} is null`),
+    check("family_channels_channel_check", isOneOf(t.channel, CHANNELS)),
     check("family_channels_kind_check", isOneOf(t.kind, FAMILY_CHANNEL_KINDS)),
   ],
 );
@@ -299,10 +310,14 @@ export const onboardingSessions = pgTable(
     step: text("step").notNull(),
     /** Answers collected so far. */
     data: jsonb("data").$type<JsonObject>().notNull().default({}),
+    createdAt: createdAt(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
     expiresAt: timestamptz("expires_at").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.channel, t.conversationId] })],
+  (t) => [
+    primaryKey({ columns: [t.channel, t.conversationId] }),
+    check("onboarding_sessions_channel_check", isOneOf(t.channel, CHANNELS)),
+  ],
 );
 
 /** Two people the organiser would call first. Consent once, in the organiser's name. */
@@ -342,10 +357,17 @@ export const media = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     uploadedBy: uuid("uploaded_by").references(() => members.id),
     kind: text("kind", { enum: MEDIA_KINDS }).notNull(),
-    /** R2 object key inside the region bucket. */
-    storageKey: text("storage_key").notNull().unique("media_storage_key_key"),
-    mime: text("mime").notNull(),
-    bytes: integer("bytes").notNull(),
+    /** R2 object key inside the region bucket; NULL until the media queue has copied the file. */
+    storageKey: text("storage_key").unique("media_storage_key_key"),
+    /** The channel the file arrived on, when it arrived on one. */
+    channel: text("channel", { enum: CHANNELS }),
+    /** The provider's handle for downloading the file (Telegram file_id). */
+    providerFileId: text("provider_file_id"),
+    /** The provider's stable id for the same file (Telegram file_unique_id); deduplicates redelivery. */
+    providerUniqueId: text("provider_unique_id"),
+    /** NULL until known: Telegram photos carry no MIME type, and a file size may only be known after download. */
+    mime: text("mime"),
+    bytes: integer("bytes"),
     /** Audio only. */
     durationMs: integer("duration_ms"),
     /** Images only. */
@@ -361,7 +383,16 @@ export const media = pgTable(
     index("media_expiry_idx")
       .on(t.expiresAt)
       .where(sql`${sql.identifier(t.kept.name)} = false`),
+    uniqueIndex("media_channel_provider_unique_id_idx")
+      .on(t.channel, t.providerUniqueId)
+      .where(sql`${sql.identifier(t.providerUniqueId.name)} is not null`),
     check("media_kind_check", isOneOf(t.kind, MEDIA_KINDS)),
+    check("media_channel_check", isOneOf(t.channel, CHANNELS)),
+    // A media row must be reachable: stored in R2, or still fetchable from the provider.
+    check(
+      "media_storage_key_or_provider_file_id_check",
+      sql`${sql.identifier(t.storageKey.name)} is not null or ${sql.identifier(t.providerFileId.name)} is not null`,
+    ),
   ],
 );
 
@@ -392,7 +423,7 @@ export const exchanges = pgTable(
     options: jsonb("options"),
     mediaIds: uuid("media_ids").array().notNull().default([]),
     /** The asker's 10-second hello. */
-    voiceHelloId: uuid("voice_hello_id").references(() => media.id),
+    voiceHelloId: uuid("voice_hello_id").references(() => media.id, { onDelete: "set null" }),
     whenRule: text("when_rule", { enum: WHEN_RULES }).notNull().default("tomorrow"),
     /** Recipient-local date of delivery. */
     scheduledFor: date("scheduled_for"),
@@ -455,12 +486,12 @@ export const answers = pgTable(
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: ANSWER_KINDS }).notNull(),
-    channel: text("channel").notNull(),
+    channel: text("channel", { enum: CHANNELS }).notNull(),
     /** Provider message id; deduplicates redelivered webhooks. */
     externalId: text("external_id"),
     /** Chip text, picked option, vote, sticker id. */
     payload: jsonb("payload").$type<JsonObject>().notNull().default({}),
-    mediaId: uuid("media_id").references(() => media.id),
+    mediaId: uuid("media_id").references(() => media.id, { onDelete: "set null" }),
     transcript: text("transcript"),
     transcriptLang: text("transcript_lang"),
     /** One neutral line (AI). */
@@ -480,6 +511,7 @@ export const answers = pgTable(
     index("answers_exchange_idx").on(t.exchangeId),
     index("answers_member_recent_idx").on(t.memberId, t.receivedAt.desc().nullsFirst()),
     check("answers_kind_check", isOneOf(t.kind, ANSWER_KINDS)),
+    check("answers_channel_check", isOneOf(t.channel, CHANNELS)),
   ],
 );
 
@@ -495,8 +527,8 @@ export const replies = pgTable(
       .references(() => members.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: REPLY_KINDS }).notNull(),
     text: text("text"),
-    mediaId: uuid("media_id").references(() => media.id),
-    channel: text("channel").notNull(),
+    mediaId: uuid("media_id").references(() => media.id, { onDelete: "set null" }),
+    channel: text("channel", { enum: CHANNELS }).notNull(),
     /** Provider message id when the platform gives one; reactions often have none. */
     externalId: text("external_id"),
     /** Replies among ordinary members are not read back to her. */
@@ -514,6 +546,7 @@ export const replies = pgTable(
       .on(t.exchangeId, t.memberId, t.kind)
       .where(isOneOf(t.kind, REACTION_KINDS)),
     check("replies_kind_check", isOneOf(t.kind, REPLY_KINDS)),
+    check("replies_channel_check", isOneOf(t.channel, CHANNELS)),
   ],
 );
 
@@ -599,7 +632,7 @@ export const stories = pgTable("stories", {
   question: text("question").notNull(),
   askedBy: uuid("asked_by").references(() => members.id),
   transcript: text("transcript"),
-  mediaId: uuid("media_id").references(() => media.id),
+  mediaId: uuid("media_id").references(() => media.id, { onDelete: "set null" }),
   /** "Don't keep that one" flips it and deletes the media. */
   kept: boolean("kept").notNull().default(true),
   createdAt: createdAt(),
@@ -767,7 +800,7 @@ export const outbound = pgTable(
       .references(() => members.id, { onDelete: "cascade" }),
     exchangeId: uuid("exchange_id").references(() => exchanges.id, { onDelete: "set null" }),
     kind: text("kind", { enum: OUTBOUND_KINDS }).notNull(),
-    channel: text("channel").notNull(),
+    channel: text("channel", { enum: CHANNELS }).notNull(),
     /** The platform conversation the message goes to: her private chat or the family group. */
     conversationId: text("conversation_id").notNull(),
     /** The member's local day; the budget key. */
@@ -795,6 +828,7 @@ export const outbound = pgTable(
       .on(t.queuedAt)
       .where(sql`${sql.identifier(t.status.name)} = 'queued'`),
     check("outbound_kind_check", isOneOf(t.kind, OUTBOUND_KINDS)),
+    check("outbound_channel_check", isOneOf(t.channel, CHANNELS)),
     check("outbound_status_check", isOneOf(t.status, OUTBOUND_STATUSES)),
     check(
       "outbound_nearby_ask_actor_check",
@@ -818,11 +852,16 @@ export const messageRefs = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     exchangeId: uuid("exchange_id").references(() => exchanges.id, { onDelete: "cascade" }),
     quietEventId: uuid("quiet_event_id").references(() => quietEvents.id, { onDelete: "cascade" }),
+    /** The member the message is about when no exchange exists yet (a turn prompt's recipient). */
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "cascade" }),
+    /** That member's local date the message is about (a turn prompt's day). */
+    localDate: date("local_date"),
     purpose: text("purpose", { enum: MESSAGE_REF_PURPOSES }).notNull(),
     createdAt: createdAt(),
   },
   (t) => [
     primaryKey({ columns: [t.channel, t.conversationId, t.messageId] }),
+    check("message_refs_channel_check", isOneOf(t.channel, CHANNELS)),
     check("message_refs_purpose_check", isOneOf(t.purpose, MESSAGE_REF_PURPOSES)),
   ],
 );
@@ -875,6 +914,7 @@ export const events = pgTable(
   (t) => [
     index("events_family_at_idx").on(t.familyId, t.at),
     index("events_name_at_idx").on(t.name, t.at),
+    check("events_name_check", isOneOf(t.name, EVENT_NAMES)),
   ],
 );
 
@@ -1094,6 +1134,7 @@ export const outboundRelations = relations(outbound, ({ one }) => ({
 
 export const messageRefsRelations = relations(messageRefs, ({ one }) => ({
   family: one(families, { fields: [messageRefs.familyId], references: [families.id] }),
+  member: one(members, { fields: [messageRefs.memberId], references: [members.id] }),
   exchange: one(exchanges, { fields: [messageRefs.exchangeId], references: [exchanges.id] }),
   quietEvent: one(quietEvents, {
     fields: [messageRefs.quietEventId],

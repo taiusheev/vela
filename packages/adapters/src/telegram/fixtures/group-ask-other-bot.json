@@ -1,0 +1,27 @@
+{
+  "update_id": 873920433,
+  "message": {
+    "message_id": 1221,
+    "from": {
+      "id": 1938475620,
+      "is_bot": false,
+      "first_name": "Sam",
+      "username": "samlin88",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": -1002214567890,
+      "title": "Chen family",
+      "type": "supergroup"
+    },
+    "date": 1789297260,
+    "text": "/ask@RecipeHelperBot how long to steam dumplings",
+    "entities": [
+      {
+        "offset": 0,
+        "length": 20,
+        "type": "bot_command"
+      }
+    ]
+  }
+}

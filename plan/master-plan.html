@@ -116,7 +116,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
     <li><a href="#model">Business model</a></li>
     <li><a href="#gtm">Go to market</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#phase0">Phase 0 checklist</a></li>
+    <li><a href="#phase0">Build checklist</a></li>
     <li><a href="#metrics">Metrics</a></li>
     <li><a href="#risks">Risks</a></li>
     <li><a href="#decisions">Decisions</a></li>
@@ -140,7 +140,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
     <div><div class="k">Phase</div><div class="v">0 · prove the loop</div></div>
     <div><div class="k">Day</div><div class="v">3</div></div>
     <div><div class="k">Research</div><div class="v">14 reports, ~750 sources</div></div>
-    <div><div class="k">Build</div><div class="v">Blueprint locked; sprint 0</div></div>
+    <div><div class="k">Build</div><div class="v">Sprint 1 in progress</div></div>
     <div><div class="k">Applications</div><div class="v">ikigai Launchpad, submitted</div></div>
     <div><div class="k">Families</div><div class="v">0 of 20</div></div>
     <div><div class="k">Budget</div><div class="v">&lt; $25 / month</div></div>
@@ -479,12 +479,12 @@ gantt
 </section>
 
 <section id="phase0">
-  <h2>Phase 0 checklist</h2>
-  <p class="sub">Four weeks. Tick things here; both of us see the same state.</p>
+  <h2>Build checklist</h2>
+  <p class="sub">Sprints 0 to 2 of plan/build-plan.md. Tick things here; both of us see the same state.</p>
   <div class="progress" aria-hidden="true"><div id="bar"></div></div>
   <p class="sync" id="sync">Loading saved ticks…</p>
   <div id="tasks"></div>
-  <p style="margin-top:18px"><b>Kill signals.</b> Fewer than 4 families paying after 20 interviews. More than 30% of parents refusing or going silent in week one for reasons other than being away. Family-content days under 30% by week two despite prompts.</p>
+  <p style="margin-top:18px"><b>Kill signals.</b> Answer rate under 50% by week 4 of any cohort. Stop rate over 30% in the first month. Fewer than 4% of organisers willing to pay at day 90. A double send or a false quiet notice caused by us that the tests did not catch: stop and fix before any new family.</p>
 </section>
 
 <section id="metrics">
@@ -604,38 +604,38 @@ gantt
 (function(){
   // Task definitions live in the page; only the done-state lives in the shared store.
   var TASKS = [
-    {w:"Week 1 · survey out, first interviews", items:[
-      {id:"w1-accounts", who:"founder", t:"Create the Telegram bot (BotFather), a Cloudflare account, and an Anthropic API key (20 min, see bot/README.md)"},
-      {id:"w1-repo", who:"founder", t:"Decide repo visibility: public or private"},
-      {id:"w1-survey-post", who:"founder", t:"Post the survey in three places today: own network, a Russian-speaking Telegram group, Taiwanese friends (ZH-TW)"},
-      {id:"w1-interviews-book", who:"founder", t:"Book 8 interviews from survey respondents who opted in"},
-      {id:"w1-parent-mock", who:"founder", t:"Show your parent a mock of the morning arrival; write down her exact words"},
-      {id:"w1-survey-update", who:"me", t:"Update survey intro and recruitment posts for the all-families framing"},
-      {id:"w1-proto", who:"me", t:"Prototype changes for phase 0: family content in the arrival, quiet notice to the child with nearby contacts, away mode by keyword"},
-      {id:"w1-landing", who:"me", t:"Landing page: the light, the promise, waitlist with two questions, two price points shown alternately"},
-      {id:"w1-review", who:"me", t:"Weekly review template and decisions log in the repo"}
+    {w:"Sprint 0 · foundation", items:[
+      {id:"s0-repo", who:"me", t:"Monorepo: pnpm workspace with pinned versions, TypeScript 7 strict, Biome, Turborepo, Vitest, CI on GitHub Actions"},
+      {id:"s0-contracts", who:"me", t:"Shared contracts: domain vocabulary, channel adapter contract, event names"},
+      {id:"s0-design", who:"me", t:"Code design and pilot flow documents (architecture/03 and 04)"},
+      {id:"s0-archive", who:"me", t:"Superseded documents and the first prototype moved to archive/"},
+      {id:"s0-runbooks", who:"me", t:"Runbooks, sub-processor list, account checklist (infra/)"},
+      {id:"s0-accounts", who:"founder", t:"Create the accounts in infra/README.md: Cloudflare, Neon (Postgres 18, Singapore), Anthropic, Deepgram, Healthchecks.io, Expo, Telegram bot, LINE Official Account; secrets go straight into Cloudflare or GitHub, never into chat"},
+      {id:"s0-duns", who:"founder", t:"Start the D-U-N-S number for the app stores (takes about a month)"}
     ]},
-    {w:"Week 2 · interviews, close pilot families", items:[
-      {id:"w2-interviews", who:"founder", t:"Interviews 9–16; each ends with the pilot offer: $15 for the month, refundable, starts Monday"},
-      {id:"w2-families", who:"founder", t:"10 families confirmed with three generations where possible: eldest, organiser, an under-30 member; parents' messengers, wake times, two nearby contacts each"},
-      {id:"w2-deploy", who:"me", t:"Deploy the prototype; three-day test with the founder's own parent before any other family"},
-      {id:"w2-onboard-script", who:"me", t:"Onboarding script: five minutes with the child, five with the parent, in Russian"},
-      {id:"w2-synthesis", who:"me", t:"Interview synthesis: top objections, reasons to say yes, price points named, wish/worry clustering"}
+    {w:"Sprint 1 · the instrument on the real platform", items:[
+      {id:"s1-consent", who:"me", t:"Pilot consent pack in English and Traditional Chinese: privacy notice, consent script, nearby-contact consent, organiser agreement, data map"},
+      {id:"s1-consent-review", who:"founder", t:"Fill the placeholders in plan/materials/pilot and confirm the decisions listed in its README; ask a native speaker to read the Traditional Chinese"},
+      {id:"s1-db", who:"me", t:"Database: schema for 34 tables, migrations, clients, invariant tests"},
+      {id:"s1-core", who:"me", t:"Core: DST-safe local time, the daily schedule with a 400-day simulation, state machine, rendering, buttons, commands"},
+      {id:"s1-copy", who:"me", t:"Every messenger string in English and Traditional Chinese"},
+      {id:"s1-telegram", who:"me", t:"Telegram adapter verified against the current Bot API, with fixtures"},
+      {id:"s1-ai", who:"me", t:"AI layer: versioned prompts, structured outputs, model routing, speech-to-text, evaluation set"},
+      {id:"s1-review", who:"me", t:"Foundation reviewed on two lenses, findings verified and fixed, gate green"},
+      {id:"s1-services", who:"me", t:"Services: scheduling tick, outbound gateway, onboarding, consent, asks, answers, replies, quiet ladder, understanding pipeline, jobs"},
+      {id:"s1-worker", who:"me", t:"Worker: webhook, member scheduler Durable Object, queues, cron, admin page, local development"},
+      {id:"s1-drill", who:"me", t:"End-to-end pilot loop test and the silence drill passing in CI"},
+      {id:"s1-deploy", who:"founder", t:"Deploy to staging with the co-founder: secrets set in Cloudflare, webhook set from your own terminal"},
+      {id:"s1-own-family", who:"founder", t:"Your own parent live by day 7; make the bot a group admin so reactions count"},
+      {id:"s1-families", who:"founder", t:"Three to five friend families by day 14; each onboarding call doubles as an interview; loneliness score (UCLA-3) at week 0"}
     ]},
-    {w:"Week 3 · pilot live", items:[
-      {id:"w3-onboard", who:"founder", t:"Onboard 10–15 families; do the parent call yourself for the first five"},
-      {id:"w3-daily", who:"founder", t:"Daily 15-minute check: read every conversation, log every false quiet notice and every parent complaint"},
-      {id:"w3-weekly-read", who:"founder", t:"Write the weekly read by hand for each family on Sunday (AI drafts, you edit; every edit logged)"},
-      {id:"w3-declines", who:"founder", t:"Interview anyone who declined or dropped; their reasons matter more than the yeses"},
-      {id:"w3-metrics", who:"me", t:"Daily metrics: answer rate, latency, family-content days, quiet notices and whether true, opt-outs"}
-    ]},
-    {w:"Week 4 · measure and decide", items:[
-      {id:"w4-checkin", who:"founder", t:"Day-14 check-in with every family: \"If Vela stopped tomorrow, how would you feel?\""},
-      {id:"w4-parent-q", who:"founder", t:"Ask each parent through the chat: \"Нравится ли вам получать это по утрам?\""},
-      {id:"w4-referrals", who:"founder", t:"Ask each paying family for two introductions"},
-      {id:"w4-report", who:"me", t:"Phase-0 report: the metrics, what the arrival must contain, what the weekly read must say, MVP scope cut to what was proven"},
-      {id:"w4-deck", who:"me", t:"Pitch deck v1 from phase-0 evidence (ten slides)"},
-      {id:"w4-decision", who:"founder", t:"Decision: build the MVP, or change one variable and rerun phase 0"}
+    {w:"Sprint 2 · foundation and LINE", items:[
+      {id:"s2-api", who:"me", t:"API v1 with Clerk sign-in, region router across apac, eu, us"},
+      {id:"s2-line", who:"me", t:"LINE adapter on the paid plan, Traditional Chinese messenger path"},
+      {id:"s2-stt", who:"me", t:"Speech-to-text benchmark on 30 consented pilot clips; default chosen on measured accuracy"},
+      {id:"s2-tts", who:"me", t:"Read-back as pre-rendered voice (Azure) with on-device fallback"},
+      {id:"s2-retention", who:"me", t:"Retention jobs with deletion proofs; first restore drill"},
+      {id:"s2-tw-families", who:"founder", t:"Five Taiwanese families recruited; three live on LINE by week 4; native reviewer for Chinese copy"}
     ]}
   ];
   var state = {};

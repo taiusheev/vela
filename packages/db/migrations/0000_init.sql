@@ -44,7 +44,8 @@ CREATE TABLE "answers" (
 	"understood_at" timestamp with time zone,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "answers_channel_external_id_key" UNIQUE("channel","external_id"),
-	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker'))
+	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker', 'other')),
+	CONSTRAINT "answers_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
 );
 --> statement-breakpoint
 CREATE TABLE "away_periods" (
@@ -111,7 +112,8 @@ CREATE TABLE "events" (
 	"exchange_id" uuid,
 	"surface" text,
 	"local_time" time,
-	"props" jsonb DEFAULT '{}'::jsonb NOT NULL
+	"props" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'invite_accepted', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_marked_deceased', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'weekly_read_drafted', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted'))
 );
 --> statement-breakpoint
 CREATE TABLE "exchanges" (
@@ -171,7 +173,7 @@ CREATE TABLE "family_channels" (
 	"linked_by_member_id" uuid,
 	"linked_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"unlinked_at" timestamp with time zone,
-	CONSTRAINT "family_channels_channel_conversation_id_key" UNIQUE("channel","conversation_id"),
+	CONSTRAINT "family_channels_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
 	CONSTRAINT "family_channels_kind_check" CHECK ("kind" in ('private', 'group'))
 );
 --> statement-breakpoint
@@ -201,9 +203,12 @@ CREATE TABLE "media" (
 	"family_id" uuid NOT NULL,
 	"uploaded_by" uuid,
 	"kind" text NOT NULL,
-	"storage_key" text NOT NULL,
-	"mime" text NOT NULL,
-	"bytes" integer NOT NULL,
+	"storage_key" text,
+	"channel" text,
+	"provider_file_id" text,
+	"provider_unique_id" text,
+	"mime" text,
+	"bytes" integer,
 	"duration_ms" integer,
 	"width" integer,
 	"height" integer,
@@ -211,7 +216,9 @@ CREATE TABLE "media" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone,
 	CONSTRAINT "media_storage_key_key" UNIQUE("storage_key"),
-	CONSTRAINT "media_kind_check" CHECK ("kind" in ('audio', 'image'))
+	CONSTRAINT "media_kind_check" CHECK ("kind" in ('audio', 'image')),
+	CONSTRAINT "media_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
+	CONSTRAINT "media_storage_key_or_provider_file_id_check" CHECK ("storage_key" is not null or "provider_file_id" is not null)
 );
 --> statement-breakpoint
 CREATE TABLE "members" (
@@ -232,6 +239,7 @@ CREATE TABLE "members" (
 	"light_on" boolean DEFAULT false NOT NULL,
 	"light_consented_at" timestamp with time zone,
 	"light_consent_text" text,
+	"light_starts_on" date,
 	"wake_time" time,
 	"arrival_time" time DEFAULT '08:00' NOT NULL,
 	"next_wake_at" timestamp with time zone,
@@ -268,9 +276,12 @@ CREATE TABLE "message_refs" (
 	"family_id" uuid NOT NULL,
 	"exchange_id" uuid,
 	"quiet_event_id" uuid,
+	"member_id" uuid,
+	"local_date" date,
 	"purpose" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "message_refs_channel_conversation_id_message_id_pk" PRIMARY KEY("channel","conversation_id","message_id"),
+	CONSTRAINT "message_refs_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
 	CONSTRAINT "message_refs_purpose_check" CHECK ("purpose" in ('arrival', 'repeat', 'turn_prompt', 'answer_post', 'quiet_notice', 'consent', 'ask_confirmation'))
 );
 --> statement-breakpoint
@@ -312,9 +323,11 @@ CREATE TABLE "onboarding_sessions" (
 	"external_user_id" text NOT NULL,
 	"step" text NOT NULL,
 	"data" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
-	CONSTRAINT "onboarding_sessions_channel_conversation_id_pk" PRIMARY KEY("channel","conversation_id")
+	CONSTRAINT "onboarding_sessions_channel_conversation_id_pk" PRIMARY KEY("channel","conversation_id"),
+	CONSTRAINT "onboarding_sessions_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
 );
 --> statement-breakpoint
 CREATE TABLE "outbound" (
@@ -336,6 +349,7 @@ CREATE TABLE "outbound" (
 	"sent_at" timestamp with time zone,
 	CONSTRAINT "outbound_idempotency_key_key" UNIQUE("idempotency_key"),
 	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')),
+	CONSTRAINT "outbound_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
 	CONSTRAINT "outbound_status_check" CHECK ("status" in ('queued', 'sent', 'failed', 'dropped')),
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
 );
@@ -396,7 +410,8 @@ CREATE TABLE "replies" (
 	"to_recipient" boolean DEFAULT true NOT NULL,
 	"read_back_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "replies_kind_check" CHECK ("kind" in ('heart', 'laugh', 'hug', 'text', 'voice', 'photo'))
+	CONSTRAINT "replies_kind_check" CHECK ("kind" in ('heart', 'laugh', 'hug', 'text', 'voice', 'photo')),
+	CONSTRAINT "replies_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
 );
 --> statement-breakpoint
 CREATE TABLE "stories" (
@@ -509,7 +524,7 @@ ALTER TABLE "ai_calls" ADD CONSTRAINT "ai_calls_family_id_families_id_fk" FOREIG
 ALTER TABLE "ai_calls" ADD CONSTRAINT "ai_calls_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "answers" ADD CONSTRAINT "answers_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "answers" ADD CONSTRAINT "answers_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "answers" ADD CONSTRAINT "answers_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "answers" ADD CONSTRAINT "answers_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FOREIGN KEY ("set_by") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "channel_links" ADD CONSTRAINT "channel_links_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -519,7 +534,7 @@ ALTER TABLE "consents" ADD CONSTRAINT "consents_contact_id_nearby_contacts_id_fk
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_recipient_id_members_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_asker_id_members_id_fk" FOREIGN KEY ("asker_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_voice_hello_id_media_id_fk" FOREIGN KEY ("voice_hello_id") REFERENCES "public"."media"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_voice_hello_id_media_id_fk" FOREIGN KEY ("voice_hello_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "families" ADD CONSTRAINT "families_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "family_channels" ADD CONSTRAINT "family_channels_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "family_channels" ADD CONSTRAINT "family_channels_linked_by_member_id_members_id_fk" FOREIGN KEY ("linked_by_member_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -537,6 +552,7 @@ ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_source_answer_id_answers
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_quiet_event_id_quiet_events_id_fk" FOREIGN KEY ("quiet_event_id") REFERENCES "public"."quiet_events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -553,12 +569,12 @@ ALTER TABLE "reminders" ADD CONSTRAINT "reminders_about_member_id_members_id_fk"
 ALTER TABLE "reminders" ADD CONSTRAINT "reminders_fact_id_memory_facts_id_fk" FOREIGN KEY ("fact_id") REFERENCES "public"."memory_facts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "replies" ADD CONSTRAINT "replies_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "replies" ADD CONSTRAINT "replies_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "replies" ADD CONSTRAINT "replies_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "replies" ADD CONSTRAINT "replies_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stories" ADD CONSTRAINT "stories_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stories" ADD CONSTRAINT "stories_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stories" ADD CONSTRAINT "stories_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stories" ADD CONSTRAINT "stories_asked_by_members_id_fk" FOREIGN KEY ("asked_by") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "stories" ADD CONSTRAINT "stories_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stories" ADD CONSTRAINT "stories_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_payer_user_id_users_id_fk" FOREIGN KEY ("payer_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -580,7 +596,9 @@ CREATE INDEX "events_name_at_idx" ON "events" USING btree ("name","at");--> stat
 CREATE UNIQUE INDEX "exchanges_one_per_day" ON "exchanges" USING btree ("recipient_id","scheduled_for") WHERE "scheduled_for" is not null and "state" <> 'withdrawn';--> statement-breakpoint
 CREATE INDEX "exchanges_queue_idx" ON "exchanges" USING btree ("recipient_id","when_rule","created_at") WHERE "state" = 'composed';--> statement-breakpoint
 CREATE INDEX "exchanges_family_recent_idx" ON "exchanges" USING btree ("family_id","scheduled_for" DESC NULLS FIRST);--> statement-breakpoint
+CREATE UNIQUE INDEX "family_channels_channel_conversation_id_idx" ON "family_channels" USING btree ("channel","conversation_id") WHERE "unlinked_at" is null;--> statement-breakpoint
 CREATE INDEX "media_expiry_idx" ON "media" USING btree ("expires_at") WHERE "kept" = false;--> statement-breakpoint
+CREATE UNIQUE INDEX "media_channel_provider_unique_id_idx" ON "media" USING btree ("channel","provider_unique_id") WHERE "provider_unique_id" is not null;--> statement-breakpoint
 CREATE INDEX "members_due_idx" ON "members" USING btree ("next_wake_at") WHERE "status" = 'active';--> statement-breakpoint
 CREATE INDEX "members_family_idx" ON "members" USING btree ("family_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';--> statement-breakpoint

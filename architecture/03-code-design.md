@@ -59,14 +59,18 @@ Dependency direction is enforced by `package.json` dependencies: a package can o
 4. `exchanges_one_per_day` becomes `UNIQUE (recipient_id, scheduled_for) WHERE scheduled_for IS NOT NULL AND state <> 'withdrawn'`, so two asks cannot claim the same morning even before scheduling.
 5. `exchanges.delivery_failed_at timestamptz`.
 6. `families.language` (the family group's language, default `en`).
-7. New `family_channels (id, family_id, channel, conversation_id, kind CHECK in ('private','group'), linked_by_member_id, linked_at, unlinked_at, UNIQUE (channel, conversation_id))`: the family's group chat on a messenger.
+7. New `family_channels (id, family_id, channel, conversation_id, kind CHECK in ('private','group'), linked_by_member_id, linked_at, unlinked_at)` with `UNIQUE (channel, conversation_id) WHERE unlinked_at IS NULL`: the family's group chat on a messenger, re-linkable while history rows stay.
 8. New `message_refs (channel, conversation_id, message_id, family_id, exchange_id NULL, quiet_event_id NULL, purpose, created_at, PRIMARY KEY (channel, conversation_id, message_id))` with `purpose` in `arrival, repeat, turn_prompt, answer_post, quiet_notice, consent, ask_confirmation`: maps a platform message to what it was about, so replies and button taps resolve.
-9. New `onboarding_sessions (channel, conversation_id, external_user_id, step, data jsonb, updated_at, expires_at, PRIMARY KEY (channel, conversation_id))`.
+9. New `onboarding_sessions (channel, conversation_id, external_user_id, step, data jsonb, created_at, updated_at, expires_at, PRIMARY KEY (channel, conversation_id))`.
 10. `replies.channel`, `replies.external_id` with a partial unique index on `(channel, external_id)`; reactions unique on `(exchange_id, member_id, kind) WHERE kind IN ('heart','laugh','hug')`.
 11. `quiet_events.last_notified_at`, `quiet_events.notify_count integer NOT NULL DEFAULT 0`, `quiet_events.notified_member_ids uuid[] NOT NULL DEFAULT '{}'`.
 12. `outbound.exchange_id uuid NULL` (FK, on delete set null) and `outbound.conversation_id text NOT NULL`; the `kind` CHECK and the budget index use `OUTBOUND_KINDS` and `BUDGETED_OUTBOUND_KINDS`.
 13. `turns.prompt_message_id text`.
 14. `metrics_daily.family_id` and `member_id` are `NOT NULL`.
+15. `members.light_starts_on date` (the first local date arrivals may be delivered).
+16. `message_refs.member_id uuid NULL` and `message_refs.local_date date NULL` (the recipient and date a turn prompt is about).
+17. `media`: `storage_key`, `mime`, and `bytes` nullable (a received file is known by its provider id before download); `channel`, `provider_file_id`, `provider_unique_id`; a row needs a storage key or a provider file id; `UNIQUE (channel, provider_unique_id)` when present.
+18. Channel columns carry CHECKs from `CHANNELS`, `events.name` from `EVENT_NAMES`; media references use `ON DELETE SET NULL`.
 
 Everything else in the reference schema stays, including tables later sprints use.
 
@@ -120,7 +124,7 @@ Initial keys (English text is the source; wording follows spec §20: names, no "
 | `readback.replied` | {name}: {text} |
 | `readback.voice` | {name} sent a voice message. |
 | `readback.reactions` | {names} sent {emoji} |
-| `consent.request` | {organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If there is no answer by evening, {organiser} will know to call. You can say stop at any time. |
+| `consent.request` | {organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time. |
 | `consent.yes` | Yes, that's fine |
 | `consent.no` | No, thank you |
 | `consent.accepted` | Thank you. Your first morning arrives tomorrow at {time}. |
@@ -165,6 +169,17 @@ Initial keys (English text is the source; wording follows spec §20: names, no "
 | `onboarding.invalid_time` | Please send a time like 07:30. |
 | `onboarding.done` | All set. Send this link to {name}: {link} Then add me to your family group chat, so the family can take turns asking. |
 | `admin.weekly_read_draft` | Weekly read draft for {family}: |
+| `consent.invalid_link` | This link is no longer valid. Please ask the person who sent it for a new one. |
+| `consent.already_linked` | This Telegram account is already connected to another family on Vela. |
+| `group.not_linked` | Only the family organiser can connect Vela to a group. |
+| `arrival.sent_photo` | {asker} sent you a photo. |
+| `arrival.sent_voice` | {asker} sent you a voice message. |
+| `readback.photo` | {name} sent a photo. |
+| `quiet.notice_no_usual` | It's been quiet at {name}'s today. The morning message went out at {sent}. Nothing worrying is known. |
+| `away.confirmed` | Until {date}, then. Have a lovely time. |
+| `away.confirmed_open` | Understood. Have a lovely time. |
+| `help.private` | Hello. To set up Vela for your family, send /start. |
+| `admin.flag` | Flag in {family}: {name} said "{quote}" |
 
 ## 5. `@vela/core`
 
@@ -318,10 +333,10 @@ summariseReplies(input: { lang: Lang; replies: { name: string; kind: ReplyKind; 
 
 ## 6. `@vela/adapters`
 
-Telegram first, in `src/telegram/`. Exports `createTelegramAdapter({ botToken, webhookSecret, fetch?, apiBaseUrl? }): ChannelAdapter` plus setup helpers used by scripts (`setWebhook`, `setMyCommands`, `getMe`).
+Telegram first, in `src/telegram/`. Exports `createTelegramAdapter({ botToken, webhookSecret, botUsername, fetch?, apiBaseUrl?, now? }): ChannelAdapter` plus setup helpers used by scripts (`setWebhook`, `setMyCommands`, `getMe`).
 
 - **verify**: constant-time comparison of `X-Telegram-Bot-Api-Secret-Token` with the configured secret.
-- **parse**: `message` in private chats and groups (text, `/start <param>`, voice, audio as voice, photo using the largest size, sticker, replies, media groups); `callback_query`; `message_reaction`; `my_chat_member` (private: kicked → `blocked`, member → `unblocked`; group: member/administrator → `bot_added`, left/kicked → `bot_removed`). Edited messages, channel posts, and service messages yield nothing. `eventId` is `tg:<update_id>`.
+- **parse**: `message` in private chats and groups (text, `/start <param>`, voice, audio as voice, photo using the largest size, sticker, replies, media groups); `callback_query`; `message_reaction`; `my_chat_member` (private: kicked → `blocked`, member → `unblocked`; group: member/administrator → `bot_added`, left/kicked → `bot_removed`). Content without a richer kind (video, document, location, contact, poll, and similar) yields one `other` event with the caption as text. Commands addressed to another bot, edited messages, channel posts, and service messages yield nothing. `eventId` is `tg:<update_id>`.
 - **send**: one image → `sendPhoto`; two to ten images → `sendMediaGroup`; audio → `sendVoice`; then `sendMessage` with the text and an inline keyboard, `reply_parameters` when replying, link previews disabled, no `parse_mode` (text is never interpreted as markup).
 - **Errors**: 403 → `blocked`; 400 "chat not found" → `not_found`; other 400 → `invalid_request`; 429 → `rate_limited` with `retry_after`; 5xx and network failures → `unavailable`.
 - **Idempotency**: Telegram has no idempotency keys, so the adapter cannot deduplicate; the gateway records every successful send and only retries failures.
@@ -423,7 +438,7 @@ Builders recorded these; they are now part of the contract.
 | Rendering | A repeat shows its preface instead of the late note; chips only on questions; vote options at most 7; labels over 64 characters are shortened. Callers guarantee a photo choice has exactly two images. |
 | Adapters | `createTelegramAdapter` takes `botUsername` (commands addressed to another bot are ignored) and `now` (callback queries carry no date). Unsupported content (video, document, location, contact) yields an `other` event, which becomes an `other` answer. Only consecutive images are grouped into an album; media keeps its order. Replies set `allow_sending_without_reply`. "Message is not modified" when closing buttons is success. |
 | AI | Requests go through the beta namespace with `betaZodOutputFormat`; output is parsed only after `stop_reason` is checked; fallbacks are set only for `claude-opus-5`. Every HTTP error resolves to the safe default. A flag's quote is kept only if it is an exact substring of her words. Services always pass her language to speech-to-text (Deepgram detects Chinese only as Simplified). Weekly read accepts 1 to 5 lines and hello 1 to 2. Batch calls wait for a separate port in a later sprint. |
-| Database | Channel columns carry CHECKs from `CHANNELS`; `events.name` carries a CHECK from `EVENT_NAMES`; media references use `ON DELETE SET NULL` so retention can delete media; a group can be re-linked (`family_channels` unique only while linked); every table has `created_at`. Constraint names follow Postgres style. `VelaDatabase` uses a result type whose `execute` returns `{ rows }` on both drivers. |
+| Database | Channel columns carry CHECKs from `CHANNELS`; `events.name` carries a CHECK from `EVENT_NAMES`; media references use `ON DELETE SET NULL` so retention can delete media (services also remove deleted ids from `exchanges.media_ids`); a group can be re-linked (`family_channels` unique only while linked); tables that record something happening carry `created_at` or an `at` column. Constraint names follow Postgres style. `VelaDatabase` uses a result type whose `execute` returns `{ rows }` on both drivers. |
 | Copy | `t()` throws on an unknown key, a missing parameter, or an unused parameter. |
 
 ## 11. Definition of done for code

@@ -1,0 +1,33 @@
+{
+  "description": "Vela AI golden set: each case runs through createClaudeAi with the shipped prompts, routes, and output schemas; deterministic checks run as javascript assertions and rubric criteria as llm-rubric assertions graded by Claude Sonnet 5. Run with pnpm --filter @vela/ai eval.",
+  "prompts": ["{{call}} {{caseId}}"],
+  "providers": [{ "id": "file://./provider.ts", "label": "vela-ai" }],
+  "defaultTest": {
+    "options": {
+      "provider": {
+        "id": "anthropic:messages:claude-sonnet-5",
+        "config": { "max_tokens": 8000, "showThinking": false }
+      }
+    }
+  },
+  "tests": [
+    {
+      "path": "file://suite.ts:loadTests",
+      "config": {
+        "caseFiles": [
+          "cases/chips.json",
+          "cases/flag.json",
+          "cases/hello.json",
+          "cases/readback.json",
+          "cases/suggest.json",
+          "cases/translate.json",
+          "cases/understand.json",
+          "cases/weekly_read.json"
+        ]
+      }
+    }
+  ],
+  "evaluateOptions": { "maxConcurrency": 4 },
+  "sharing": false,
+  "env": { "PROMPTFOO_FAILED_TEST_EXIT_CODE": "0" }
+}

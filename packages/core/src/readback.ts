@@ -3,9 +3,9 @@
  * arrival. It is also the fallback when the AI read-back fails, so it must always produce something
  * true and kind.
  *
- * She hears substance, never counts: each written reply in the sender's words, each voice reply
- * announced (the voice itself is attached), and reactions grouped by kind with the names of those who
- * sent them. Nothing ever mentions who did not reply.
+ * She hears substance, never counts: each written reply or photo caption in the sender's words, each
+ * voice reply and each photo without a caption announced, and reactions grouped by kind with the
+ * names of those who sent them. Nothing ever mentions who did not reply.
  */
 import { type Lang, MVP_LANGS, type ReactionKind, type ReplyKind } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -63,11 +63,13 @@ export function summariseReplies(input: SummariseRepliesInput): string[] {
       lines.push(t(lang, "readback.voice", { name }));
       continue;
     }
-    // A written reply, or a photo's caption. A photo without words has no line: the copy has nothing
-    // to say about it yet, and an empty quote would read as a mistake.
+    // A written reply, or a photo's caption. A photo without words is announced, since an empty
+    // quote would read as a mistake; a written reply without words has nothing to say.
     const text = reply.text?.trim() ?? "";
     if (text.length > 0) {
       lines.push(t(lang, "readback.replied", { name, text }));
+    } else if (reply.kind === "photo") {
+      lines.push(t(lang, "readback.photo", { name }));
     }
   }
 

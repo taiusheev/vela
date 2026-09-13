@@ -415,6 +415,51 @@ describe("createClaudeAi flag results", () => {
   });
 });
 
+describe("createClaudeAi line counts", () => {
+  it("accepts a hello with only its closing line", async () => {
+    const lines = ["家人今天沒有新的問題。您今天早上好嗎？"];
+    const { ai } = clientWith([jsonReply("claude-haiku-4-5", { lines })]);
+
+    const outcome = await ai.hello(helloInput);
+
+    expect(outcome).toMatchObject({ ok: true, value: { lines } });
+  });
+
+  it("accepts a weekly read of a single line, so a sparse week is not a failure", async () => {
+    const sparse = {
+      lines: ["Mom answered 1 of 1 day."],
+      suggestion: "Mom, how was your first morning?",
+    };
+    const { ai } = clientWith([jsonReply("claude-sonnet-5", sparse)]);
+
+    const outcome = await ai.weeklyRead({ ...weeklyReadInput, answeredDays: 1, familyAsks: 1 });
+
+    expect(outcome).toMatchObject({ ok: true, value: sparse });
+  });
+
+  it("rejects a hello with no lines or three lines as schema-invalid", async () => {
+    for (const lines of [[], ["One.", "Two.", "Three?"]]) {
+      const { ai } = clientWith([jsonReply("claude-haiku-4-5", { lines })]);
+
+      const outcome = await ai.hello(helloInput);
+
+      expect(outcome).toMatchObject({ ok: false, error: "schema_invalid", value: { lines: [] } });
+    }
+  });
+
+  it("rejects a weekly read with no lines or six lines as schema-invalid", async () => {
+    for (const lines of [[], ["1.", "2.", "3.", "4.", "5.", "6."]]) {
+      const { ai } = clientWith([
+        jsonReply("claude-sonnet-5", { lines, suggestion: "Mom, how are the tomatoes?" }),
+      ]);
+
+      const outcome = await ai.weeklyRead(weeklyReadInput);
+
+      expect(outcome).toMatchObject({ ok: false, error: "schema_invalid" });
+    }
+  });
+});
+
 describe("createClaudeAi failures", () => {
   it("treats a refusal as a failure before reading any partial content", async () => {
     const { ai } = clientWith([
@@ -480,7 +525,7 @@ describe("createClaudeAi failures", () => {
       },
       record: expect.objectContaining({
         call: "understand",
-        promptVersion: "understand.v1",
+        promptVersion: "understand.v2",
         model: "claude-sonnet-5",
         ok: false,
         error: "http_500",

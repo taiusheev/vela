@@ -5,6 +5,7 @@ import {
   BUDGETED_OUTBOUND_KINDS,
   CHANNELS,
   CONSENT_KINDS,
+  EVENT_NAMES,
   EXCHANGE_STATES,
   EXCHANGE_TYPES,
   LANGS,
@@ -21,7 +22,7 @@ import {
   SURFACES,
   WHEN_RULES,
 } from "@vela/contracts";
-import { eq, getTableColumns, getTableName, is, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, getTableName, is, sql } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { VelaDatabase } from "./database.ts";
@@ -50,6 +51,8 @@ import {
   metricsDaily,
   NEARBY_CONTACT_CHANNELS,
   type NewExchange,
+  type NewFamilyChannel,
+  type NewMedia,
   type NewOutbound,
   nearbyContacts,
   onboardingSessions,
@@ -61,6 +64,7 @@ import {
   replies,
   SUBSCRIPTION_PROVIDERS,
   SUBSCRIPTION_STATUSES,
+  stories,
   subscriptions,
   TRANSLATION_OBJECT_TYPES,
   translations,
@@ -486,6 +490,290 @@ describe("quiet events", () => {
   });
 });
 
+describe("media", () => {
+  function mediaFor(seed: Seed, overrides: Partial<NewMedia> = {}): NewMedia {
+    return {
+      familyId: seed.family.id,
+      kind: "audio",
+      mime: "audio/ogg",
+      bytes: 2048,
+      ...overrides,
+    };
+  }
+
+  it("accepts a received photo whose MIME type and size are not known yet", async () => {
+    const seed = await seedFamily();
+
+    const [photo] = await db
+      .insert(media)
+      .values({
+        familyId: seed.family.id,
+        kind: "image",
+        channel: "telegram",
+        providerFileId: "AgACAgQAAxkBAAIB",
+        providerUniqueId: "AQADq1",
+      })
+      .returning();
+
+    expect(photo?.mime).toBeNull();
+    expect(photo?.bytes).toBeNull();
+    expect(photo?.storageKey).toBeNull();
+  });
+
+  it("rejects a file that is neither stored nor fetchable from the provider", async () => {
+    const seed = await seedFamily();
+
+    const error = await rejection(
+      db.insert(media).values(mediaFor(seed, { channel: "telegram", providerUniqueId: "AgADq1" })),
+    );
+
+    expect(error).toEqual({
+      code: CHECK_VIOLATION,
+      constraint: "media_storage_key_or_provider_file_id_check",
+    });
+  });
+
+  it("accepts a file stored in R2 and a file known only by its provider file id", async () => {
+    const seed = await seedFamily();
+
+    const [stored, received] = await db
+      .insert(media)
+      .values([
+        mediaFor(seed, { storageKey: "families/f/hello.ogg" }),
+        mediaFor(seed, { channel: "telegram", providerFileId: "AwACAgQ1", providerUniqueId: "q1" }),
+      ])
+      .returning();
+
+    expect(stored).toMatchObject({ storageKey: "families/f/hello.ogg", providerFileId: null });
+    expect(received).toMatchObject({
+      storageKey: null,
+      channel: "telegram",
+      providerFileId: "AwACAgQ1",
+    });
+  });
+
+  it("rejects the same provider file recorded twice on one channel", async () => {
+    const seed = await seedFamily();
+    const voice = mediaFor(seed, {
+      channel: "telegram",
+      providerFileId: "AwACAgQ1",
+      providerUniqueId: "AgADq1",
+    });
+    await db.insert(media).values(voice);
+
+    const error = await rejection(
+      db.insert(media).values({ ...voice, providerFileId: "AwACAgQ1-redelivered" }),
+    );
+
+    expect(error).toEqual({
+      code: UNIQUE_VIOLATION,
+      constraint: "media_channel_provider_unique_id_idx",
+    });
+  });
+
+  it("keeps provider ids apart across channels and allows many files without one", async () => {
+    const seed = await seedFamily();
+
+    await db
+      .insert(media)
+      .values([
+        mediaFor(seed, { channel: "telegram", providerFileId: "f1", providerUniqueId: "u1" }),
+        mediaFor(seed, { channel: "line", providerFileId: "f1", providerUniqueId: "u1" }),
+        mediaFor(seed, { channel: "telegram", providerFileId: "f2" }),
+        mediaFor(seed, { channel: "telegram", providerFileId: "f3" }),
+      ]);
+
+    expect(await countRows(media)).toBe(4);
+  });
+
+  it("clears every reference to a media row when retention deletes it", async () => {
+    const seed = await seedFamily();
+    const voice = only(
+      await db
+        .insert(media)
+        .values(mediaFor(seed, { storageKey: "families/f/voice.ogg" }))
+        .returning(),
+    );
+    const exchange = only(
+      await db
+        .insert(exchanges)
+        .values(exchangeFor(seed, { voiceHelloId: voice.id }))
+        .returning(),
+    );
+    await db.insert(answers).values({
+      exchangeId: exchange.id,
+      memberId: seed.parent.id,
+      kind: "voice",
+      channel: "telegram",
+      mediaId: voice.id,
+    });
+    await db.insert(replies).values({
+      exchangeId: exchange.id,
+      memberId: seed.organiser.id,
+      kind: "voice",
+      channel: "telegram",
+      mediaId: voice.id,
+    });
+    await db.insert(stories).values({
+      familyId: seed.family.id,
+      memberId: seed.parent.id,
+      exchangeId: exchange.id,
+      question: "How did you and Dad meet?",
+      mediaId: voice.id,
+    });
+
+    await db.delete(media).where(eq(media.id, voice.id));
+
+    expect(await db.select({ id: exchanges.voiceHelloId }).from(exchanges)).toEqual([{ id: null }]);
+    expect(await db.select({ id: answers.mediaId }).from(answers)).toEqual([{ id: null }]);
+    expect(await db.select({ id: replies.mediaId }).from(replies)).toEqual([{ id: null }]);
+    expect(await db.select({ id: stories.mediaId }).from(stories)).toEqual([{ id: null }]);
+  });
+});
+
+describe("family channels", () => {
+  function groupFor(seed: Seed): NewFamilyChannel {
+    return {
+      familyId: seed.family.id,
+      channel: "telegram",
+      conversationId: "-100200",
+      kind: "group",
+      linkedByMemberId: seed.organiser.id,
+    };
+  }
+
+  it("rejects linking a conversation that is already linked", async () => {
+    const seed = await seedFamily();
+    await db.insert(familyChannels).values(groupFor(seed));
+
+    const error = await rejection(db.insert(familyChannels).values(groupFor(seed)));
+
+    expect(error).toEqual({
+      code: UNIQUE_VIOLATION,
+      constraint: "family_channels_channel_conversation_id_idx",
+    });
+  });
+
+  it("links a group again after it was unlinked and keeps the unlinked row", async () => {
+    const seed = await seedFamily();
+    const unlinkedAt = new Date("2026-09-15T02:00:00Z");
+    const first = only(await db.insert(familyChannels).values(groupFor(seed)).returning());
+    await db.update(familyChannels).set({ unlinkedAt }).where(eq(familyChannels.id, first.id));
+
+    await db.insert(familyChannels).values(groupFor(seed));
+
+    const rows = await db
+      .select({ unlinkedAt: familyChannels.unlinkedAt })
+      .from(familyChannels)
+      .orderBy(familyChannels.id);
+    expect(rows).toEqual([{ unlinkedAt }, { unlinkedAt: null }]);
+  });
+});
+
+describe("columns the pilot flows rely on", () => {
+  it("stores the first local date on which her arrivals may be delivered", async () => {
+    const seed = await seedFamily();
+
+    await db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-14" })
+      .where(eq(members.id, seed.parent.id));
+
+    const stored = only(
+      await db
+        .select({ lightStartsOn: members.lightStartsOn })
+        .from(members)
+        .where(eq(members.id, seed.parent.id)),
+    );
+    expect(seed.parent.lightStartsOn).toBeNull();
+    expect(stored.lightStartsOn).toBe("2026-09-14");
+  });
+
+  it("resolves a turn prompt message to its recipient and local date", async () => {
+    const seed = await seedFamily();
+    await db.insert(messageRefs).values({
+      channel: "telegram",
+      conversationId: "-100200",
+      messageId: "812",
+      familyId: seed.family.id,
+      memberId: seed.parent.id,
+      localDate: "2026-09-15",
+      purpose: "turn_prompt",
+    });
+
+    const ref = await db.query.messageRefs.findFirst({
+      where: and(
+        eq(messageRefs.channel, "telegram"),
+        eq(messageRefs.conversationId, "-100200"),
+        eq(messageRefs.messageId, "812"),
+      ),
+      with: { member: true },
+    });
+
+    expect(ref).toMatchObject({
+      localDate: "2026-09-15",
+      exchangeId: null,
+      member: { id: seed.parent.id, displayName: "Mom" },
+    });
+  });
+
+  it("removes a member's message refs when the member is deleted", async () => {
+    const seed = await seedFamily();
+    await db.insert(messageRefs).values({
+      channel: "telegram",
+      conversationId: "-100200",
+      messageId: "812",
+      familyId: seed.family.id,
+      memberId: seed.parent.id,
+      localDate: "2026-09-15",
+      purpose: "turn_prompt",
+    });
+
+    await db.delete(members).where(eq(members.id, seed.parent.id));
+
+    expect(await countRows(messageRefs)).toBe(0);
+  });
+
+  it("records unsupported content as an other answer", async () => {
+    const seed = await seedFamily();
+    const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
+
+    const answer = only(
+      await db
+        .insert(answers)
+        .values({
+          exchangeId: exchange.id,
+          memberId: seed.parent.id,
+          kind: "other",
+          channel: "telegram",
+          externalId: "tg:msg:90",
+        })
+        .returning(),
+    );
+
+    expect(answer.kind).toBe("other");
+  });
+
+  it("stamps an onboarding session with the time it was created", async () => {
+    const session = only(
+      await db
+        .insert(onboardingSessions)
+        .values({
+          channel: "telegram",
+          conversationId: "42",
+          externalUserId: "42",
+          step: "ask_name",
+          expiresAt: new Date("2026-09-14T00:00:00Z"),
+        })
+        .returning(),
+    );
+
+    // now() is the transaction's start time, so both defaults carry the same instant.
+    expect(session.createdAt).toBeInstanceOf(Date);
+    expect(session.createdAt).toEqual(session.updatedAt);
+  });
+});
+
 describe("CHECK constraints on enumerated columns", () => {
   const enumerated: { table: string; column: string; values: readonly string[] }[] = [
     { table: "users", column: "language", values: LANGS },
@@ -498,23 +786,31 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "members", column: "status", values: MEMBER_STATUSES },
     { table: "members", column: "primary_surface", values: SURFACES },
     { table: "channel_links", column: "channel", values: CHANNELS },
+    { table: "family_channels", column: "channel", values: CHANNELS },
     { table: "family_channels", column: "kind", values: FAMILY_CHANNEL_KINDS },
     { table: "invites", column: "channel", values: INVITE_CHANNELS },
+    { table: "onboarding_sessions", column: "channel", values: CHANNELS },
     { table: "nearby_contacts", column: "channel", values: NEARBY_CONTACT_CHANNELS },
     { table: "media", column: "kind", values: MEDIA_KINDS },
+    { table: "media", column: "channel", values: CHANNELS },
     { table: "exchanges", column: "type", values: EXCHANGE_TYPES },
     { table: "exchanges", column: "state", values: EXCHANGE_STATES },
     { table: "exchanges", column: "when_rule", values: WHEN_RULES },
     { table: "translations", column: "object_type", values: TRANSLATION_OBJECT_TYPES },
     { table: "answers", column: "kind", values: ANSWER_KINDS },
+    { table: "answers", column: "channel", values: CHANNELS },
     { table: "replies", column: "kind", values: REPLY_KINDS },
+    { table: "replies", column: "channel", values: CHANNELS },
     { table: "recipes", column: "status", values: RECIPE_STATUSES },
     { table: "memory_facts", column: "kind", values: MEMORY_FACT_KINDS },
     { table: "quiet_events", column: "outcome", values: QUIET_OUTCOMES },
     { table: "away_periods", column: "source", values: AWAY_SOURCES },
     { table: "outbound", column: "kind", values: OUTBOUND_KINDS },
+    { table: "outbound", column: "channel", values: CHANNELS },
     { table: "outbound", column: "status", values: OUTBOUND_STATUSES },
+    { table: "message_refs", column: "channel", values: CHANNELS },
     { table: "message_refs", column: "purpose", values: MESSAGE_REF_PURPOSES },
+    { table: "events", column: "name", values: EVENT_NAMES },
     { table: "consents", column: "kind", values: CONSENT_KINDS },
     { table: "subscriptions", column: "provider", values: SUBSCRIPTION_PROVIDERS },
     { table: "subscriptions", column: "status", values: SUBSCRIPTION_STATUSES },
@@ -535,6 +831,13 @@ describe("CHECK constraints on enumerated columns", () => {
       conversationId: "-100200",
       kind: "group",
       linkedByMemberId: seed.organiser.id,
+    });
+    await db.insert(onboardingSessions).values({
+      channel: "telegram",
+      conversationId: "42",
+      externalUserId: "42",
+      step: "ask_name",
+      expiresAt: new Date("2026-09-14T00:00:00Z"),
     });
     await db.insert(invites).values({
       familyId,
@@ -607,6 +910,7 @@ describe("CHECK constraints on enumerated columns", () => {
     await db
       .insert(subscriptions)
       .values({ familyId, memberId: seed.parent.id, provider: "trial", status: "trial" });
+    await db.insert(events).values({ name: "family_created", familyId });
   }
 
   function setColumn(table: string, column: string, value: string): Promise<unknown> {
@@ -648,6 +952,7 @@ describe("CHECK constraints on enumerated columns", () => {
       ...enumerated.map(({ table, column }) => `${table}_${column}_check`),
       "families_story_day_check",
       "outbound_nearby_ask_actor_check",
+      "media_storage_key_or_provider_file_id_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());

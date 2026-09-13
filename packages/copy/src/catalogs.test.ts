@@ -1,4 +1,4 @@
-import { MVP_LANGS } from "@vela/contracts";
+import { MVP_LANGS, TimeZone } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
 import { catalogs, type MessageKey } from "./index.ts";
 
@@ -26,15 +26,65 @@ const SURVEILLANCE_WORDS =
 /** The product never assumes the kept-light member's gender (code design §4). */
 const GENDERED_PRONOUNS = /\b(he|she|him|her|his|hers|himself|herself)\b/i;
 
-/** 他 and 她 are the gendered third-person pronouns; 監控, 監視, and 追蹤 mean monitor, surveil, and track. */
-const FORBIDDEN_ZH_TW = /[他她]|監控|追蹤|監視/;
+/**
+ * 他 and 她 are the gendered third-person pronouns, except in 其他 ("other"); 監控, 監視, and 追蹤
+ * mean monitor, surveil, and track.
+ */
+const FORBIDDEN_ZH_TW = /(?<!其)他|她|監控|追蹤|監視/;
 
 /** Simplified-only forms of characters used in everyday copy; Taiwan writes 們這時說發語… */
 const SIMPLIFIED_ONLY =
   /[们这时说发语设问点为会过还没让张选号码间边个来对开关给请谢讯灯应电话联络统与图组暂续听见]/;
 
-/** Mainland vocabulary with a different Taiwanese word: 訊息, 使用者, 設定, 影片, 群組, 預設, 點選, 簡訊. */
-const MAINLAND_TERMS = /信息|用戶|設置|視頻|群聊|默認|點擊|短信/;
+/**
+ * Mainland vocabulary with a different Taiwanese word: 訊息, 使用者, 設定, 影片, 群組, 預設, 點選,
+ * 簡訊, 早安.
+ */
+const MAINLAND_TERMS = /信息|用戶|設置|視頻|群聊|默認|點擊|短信|早上好/;
+
+/** Every country button of organiser onboarding (flows §3.1); Other leads to a typed time zone. */
+const COUNTRY_BUTTONS: MessageKey[] = [
+  "onboarding.country_tw",
+  "onboarding.country_us",
+  "onboarding.country_gb",
+  "onboarding.country_ca",
+  "onboarding.country_au",
+  "onboarding.country_sg",
+  "onboarding.country_jp",
+  "onboarding.country_de",
+  "onboarding.country_in",
+  "onboarding.country_other",
+];
+
+/** A `Region/City` name as written inside a sentence. */
+const ZONE_NAME = /\b[A-Z][A-Za-z]+\/[A-Za-z_]+\b/g;
+
+/**
+ * Wording that dates the first send to moments ago. The repeat goes out 150 minutes after delivery
+ * (flows §3.8), so its preface cannot say "just now".
+ */
+const JUST_NOW: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(just now|a moment ago|moments ago)\b/i,
+  "zh-TW": /剛才|剛剛|方才/,
+};
+
+/**
+ * Vela belongs in a new group without the kept-light member (spec Appendix A), not in the family
+ * chat that already exists, which usually includes the elders.
+ */
+const SEPARATE_GROUP: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bnew group\b.*\bwithout \{name\}/,
+  "zh-TW": /另外建立.*群組.*不要加\{name\}/,
+};
+
+/**
+ * Times of day and durations. The quiet threshold is learned per member and waits longer while Vela
+ * learns, so the consent text cannot promise when the organiser hears of a quiet morning.
+ */
+const TIME_OF_DAY: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(evening|night|noon|afternoon|o'clock|hours?)\b/i,
+  "zh-TW": /傍晚|晚上|中午|下午|小時|點前|點以前/,
+};
 
 describe("catalogs", () => {
   it("cover exactly the MVP languages", () => {
@@ -64,6 +114,40 @@ describe("catalogs", () => {
       expect(catalogs[lang][key].replace(PLACEHOLDER, ""), `${lang} ${key}`).not.toMatch(/[{}]/);
     }
   });
+
+  it.each(MVP_LANGS)("%s labels every onboarding country button differently", (lang) => {
+    const labels = COUNTRY_BUTTONS.map((key) => catalogs[lang][key]);
+    expect(new Set(labels).size).toBe(COUNTRY_BUTTONS.length);
+  });
+});
+
+describe("wording with a fixed meaning in every language", () => {
+  it.each(MVP_LANGS)("%s consent request promises no time for the quiet note", (lang) => {
+    expect(catalogs[lang]["consent.request"]).not.toMatch(TIME_OF_DAY[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s private-chat help names the literal /start command", (lang) => {
+    // Telegram recognises only the Latin command, so a translated command would do nothing.
+    expect(catalogs[lang]["help.private"]).toMatch(/(^|\s)\/start(?!\w)/);
+  });
+
+  it.each(MVP_LANGS)("%s typed time-zone prompts give only real IANA names as examples", (lang) => {
+    for (const key of ["onboarding.ask_zone_other", "onboarding.invalid_zone"] as const) {
+      const examples = [...catalogs[lang][key].matchAll(ZONE_NAME)].map((match) => match[0]);
+      expect(examples.length, `${lang} ${key}`).toBeGreaterThan(0);
+      for (const example of examples) {
+        expect(TimeZone.safeParse(example).success, `${lang} ${key} ${example}`).toBe(true);
+      }
+    }
+  });
+
+  it.each(MVP_LANGS)("%s repeat preface does not say the message went out just now", (lang) => {
+    expect(catalogs[lang]["arrival.repeat"]).not.toMatch(JUST_NOW[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s setup asks for a new group without the kept-light member", (lang) => {
+    expect(catalogs[lang]["onboarding.done"]).toMatch(SEPARATE_GROUP[lang]);
+  });
 });
 
 describe("English wording", () => {
@@ -89,6 +173,13 @@ describe("English wording", () => {
 
 describe("Traditional Chinese wording", () => {
   const zhTW = catalogs["zh-TW"];
+
+  it("the guards recognise the words they forbid", () => {
+    expect("她回覆了").toMatch(FORBIDDEN_ZH_TW);
+    expect("他們都好").toMatch(FORBIDDEN_ZH_TW);
+    expect("其他").not.toMatch(FORBIDDEN_ZH_TW);
+    expect("您今天早上好嗎？").toMatch(MAINLAND_TERMS);
+  });
 
   it("never uses 他 or 她, or words for monitoring and tracking", () => {
     for (const key of englishKeys) {

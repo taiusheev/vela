@@ -25,6 +25,8 @@ export const INBOUND_KINDS = [
   "bot_removed",
   "blocked",
   "unblocked",
+  /** A group moved to a new conversation id (Telegram: a basic group upgraded to a supergroup). */
+  "migrated",
 ] as const;
 export const InboundKind = z.enum(INBOUND_KINDS);
 export type InboundKind = z.infer<typeof InboundKind>;
@@ -76,6 +78,8 @@ export const InboundEvent = z.object({
   reactions: z.array(z.string()).optional(),
   /** For `start`: the deep-link parameter, e.g. an invite token. */
   startParam: z.string().optional(),
+  /** For `migrated`: the conversation id the group now has; `conversation.externalId` is the old one. */
+  migratedToConversationId: z.string().min(1).optional(),
   media: MediaRef.optional(),
 });
 export type InboundEvent = z.infer<typeof InboundEvent>;

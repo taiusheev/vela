@@ -1,0 +1,24 @@
+{
+  "update_id": 873920437,
+  "message": {
+    "message_id": 325,
+    "from": {
+      "id": 6023817745,
+      "is_bot": false,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "language_code": "zh-hant"
+    },
+    "chat": {
+      "id": 6023817745,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "type": "private"
+    },
+    "date": 1789268400,
+    "location": {
+      "latitude": 25.033964,
+      "longitude": 121.564468
+    }
+  }
+}

@@ -308,8 +308,9 @@ export const HelloInput = z.object({
 });
 export type HelloInput = z.infer<typeof HelloInput>;
 
+/** One or two lines: the reply or morning line is optional, the closing line is not. */
 export const HelloLines = z.object({
-  lines: z.array(z.string().min(1).max(300)).length(2),
+  lines: z.array(z.string().min(1).max(300)).min(1).max(2),
 });
 export type HelloLines = z.infer<typeof HelloLines>;
 
@@ -349,8 +350,9 @@ export const WeeklyReadInput = z.object({
 });
 export type WeeklyReadInput = z.infer<typeof WeeklyReadInput>;
 
+/** One to five lines, so a sparse week (a first week, few answers) is a short read, not a failure. */
 export const WeeklyRead = z.object({
-  lines: z.array(z.string().min(1).max(300)).min(3).max(5),
+  lines: z.array(z.string().min(1).max(300)).min(1).max(5),
   suggestion: z.string().min(1).max(200),
 });
 export type WeeklyRead = z.infer<typeof WeeklyRead>;

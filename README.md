@@ -1,34 +1,56 @@
 # Vela
 
-Peace of mind for adult children whose parents live alone.
+One real exchange a day between generations, and a light kept on for the parent who lives alone.
 
-Super-aged societies (Japan, Korea, Italy, Germany, and soon China and the US) have tens of millions of people over 75 living by themselves. Their children carry a constant low-grade worry: "Is mom okay today?" Vela's mission is to answer that question, quietly and reliably, for every family in the world.
+Each morning the parent receives one ask from a person in the family (a question, two photos to choose from, a voice note), answers with a tap or her voice, and hears the family's replies the next morning. Her answer is also the sign the family needs: when a morning goes unanswered, the organiser gets a calm note with the people nearby. Nothing to install for her, nothing to wear, no one watching.
 
-## Repository layout
+## Where things are
 
-- [`research/00-SYNTHESIS.md`](research/00-SYNTHESIS.md) — start here: the landscape, ten cross-cutting truths, where Vela wins, risks
-- [`research/14-evidence-synthesis.md`](research/14-evidence-synthesis.md) — **evidence instead of surveys** (reports 08–13: daily answer rates, willingness to pay, channels among 70+, acceptance and dignity, ritual retention, worry and reach) and what it changed in the spec
-- `research/01`–`06` — the six underlying reports (US medical alerts and wearables; passive home sensing; East Asia; Europe/ANZ/Israel; AI companions and check-in apps; market size and lessons)
-- [`product/02-app-plan.md`](product/02-app-plan.md) — **the product**: people, daily loop, features, channels, AI, privacy, pricing, metrics, architecture, roadmap, risks
-- [`product/05-product-spec-v2.md`](product/05-product-spec-v2.md) — **the functional contract, v2**: the exchange, arrivals as asks, the reply loop, the light and the quiet ladder, consent, acceptance criteria for every screen, the phase-0 instrument (supersedes 03 and 04)
-- [`architecture/02-technical-architecture-v2.md`](architecture/02-technical-architecture-v2.md) — **the build blueprint**: every tool checked against 2026 alternatives (`architecture/research/`), per-member scheduling, gateway, adapters, AI, mobile, residency, ops, cost
-- [`architecture/schema.sql`](architecture/schema.sql) and [`architecture/api-contract.md`](architecture/api-contract.md) — the data model (validated) and the API
-- [`plan/build-plan.md`](plan/build-plan.md) — **sprint-by-sprint tasks with definitions of done**, twelve weeks
-- [`architecture/01-technical-design.md`](architecture/01-technical-design.md) — **how it's built**: components, scheduler, adapter contract, AI pipeline, security, failure modes, cost at scale
-- [`architecture/decisions.md`](architecture/decisions.md) — architecture decision records
-- [`plan/execution-plan.md`](plan/execution-plan.md) — **what we do**: phase 0 (prove the loop), MVP, the bridge, the read; deck and site track
-- [`plan/market-order.md`](plan/market-order.md) — **which markets, in what order**: Taiwan and the English app path, then Japan and Germany/UK, then the US at scale and India; Russia deferred; channel, language, price, regulation per market
-- [`plan/pre-build-readiness.md`](plan/pre-build-readiness.md) — **what is still missing before MVP code**: gaps in three tiers, the next ten days, the definition of ready
-- `plan/materials/` — surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer
-- `product/01-solution-thinking.md` — problem anatomy and solution space (partly superseded)
-- [`bot/`](bot/README.md) — the phase-0 prototype: Telegram + Cloudflare Workers + D1 + Claude
-- `pitch/` — accelerator application answers
-- [`plan/master-plan.html`](plan/master-plan.html) — source of the living master plan page (published at https://claude.ai/code/artifact/b20dcd01-518a-406c-9bca-3b40906bf193)
-- [`design/diagrams/master-plan.drawio`](design/diagrams/master-plan.drawio) — **the whole foundation as a 34-page Draw.io map** (open at app.diagrams.net from GitHub)
-- [`design/`](design/README.md) — Draw.io diagrams (architecture, database, daily loop) and Figma-ready wireframes of the six key screens
-- `plan/tasks-asana.csv` — optional Asana export of the phase-0 checklist (the master plan page is the tracker)
-- `tools/gource.ps1` — renders the repo history as a Gource animation
+| Start here | What it is |
+|---|---|
+| [`product/05-product-spec-v2.md`](product/05-product-spec-v2.md) | **The product.** The exchange, the reply loop, the light and the quiet ladder, consent, every screen, the Telegram pilot (Appendix A) |
+| [`architecture/02-technical-architecture-v2.md`](architecture/02-technical-architecture-v2.md) | **The system.** Constraints, platform, scheduling, gateway, channels, AI and speech, mobile, residency, security, operations, cost |
+| [`architecture/03-code-design.md`](architecture/03-code-design.md) | **The code.** Package map, rules for all code, each package's API, decisions taken during the build |
+| [`architecture/04-instrument-flows.md`](architecture/04-instrument-flows.md) | **The pilot flows.** Every Telegram flow with its database effects, messages, and events |
+| [`plan/build-plan.md`](plan/build-plan.md) | **The build.** Six sprints, task by task, with definitions of done |
+| [`plan/market-order.md`](plan/market-order.md) | **The markets.** Taiwan and the English app path, then Japan and Germany/UK, then the US at scale and India |
+
+| Folder | Contents |
+|---|---|
+| `apps/worker` | The Cloudflare Worker: routes, webhooks, the member scheduler, queues, cron |
+| `packages/contracts` | The shared vocabulary, the channel adapter contract, event names |
+| `packages/core` | Pure domain logic: local time, the daily schedule, the exchange state machine, rendering |
+| `packages/db` | The Drizzle schema (source of truth for the data model), migrations, clients |
+| `packages/copy` | Every messenger string in English and Traditional Chinese |
+| `packages/adapters` | Channel adapters (Telegram first) |
+| `packages/ai` | Claude calls with versioned prompts, speech-to-text, the evaluation set |
+| `packages/services` | Application services behind ports: scheduling, the gateway, the pilot flows |
+| `architecture/` | Design documents, decision records (`decisions.md`), the generated `schema.sql`, the API contract, tool research |
+| `product/` | The app plan and the spec |
+| `research/` | Fourteen reports; start with `00-SYNTHESIS.md` and `14-evidence-synthesis.md` |
+| `plan/` | Build plan, market order, readiness, the living master plan page (`master-plan.html`), pilot materials (`materials/pilot/`) |
+| `infra/` | Environments, the founder's account checklist, sub-processors, runbooks |
+| `design/` | Design system, brand files, the clickable prototype, diagrams |
+| `pitch/` | Accelerator applications |
+| `archive/` | Superseded documents and the first prototype, kept for history |
+| `tools/` | Generators for the Draw.io map and the brand files |
+
+## Working on the code
+
+Requirements: Node 24 or later and pnpm 11.
+
+```bash
+pnpm install
+```
+
+```bash
+pnpm check
+```
+
+`pnpm check` runs Biome, TypeScript, and every test; it must pass before any commit, locally and in CI. Other commands: `pnpm format` fixes formatting, `pnpm db:generate` creates a migration after a schema change, `pnpm dev` runs the Worker locally against a local Postgres (`pnpm --filter @vela/db dev-db`).
+
+Rules every change follows are in `architecture/03-code-design.md` §2. Secrets never enter the repository or a chat: see `infra/README.md`.
 
 ## Status
 
-2026-09-12: research complete (7 reports), product plan and execution plan written, ikigai Launchpad application submitted. Phase 0 starts: survey, interviews, and the prototype loop with 10–20 paying families.
+**2026-09-13.** Sprint 0 done: the monorepo, CI, and the foundation packages (contracts, copy, core, db, adapters, ai) with their tests. Sprint 1 in progress: the services layer and the Worker for the Telegram pilot. The living plan is published at https://claude.ai/code/artifact/b20dcd01-518a-406c-9bca-3b40906bf193.

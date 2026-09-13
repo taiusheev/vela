@@ -6,6 +6,7 @@ import {
   type Responder,
   sequentialSends,
   TEST_BOT_TOKEN,
+  TEST_BOT_USERNAME,
   TEST_WEBHOOK_SECRET,
   telegramErrorFixture,
 } from "./testing.ts";
@@ -33,6 +34,7 @@ function setup(responder: Responder = sequentialSends(500)) {
   const adapter = createTelegramAdapter({
     botToken: TEST_BOT_TOKEN,
     webhookSecret: TEST_WEBHOOK_SECRET,
+    botUsername: TEST_BOT_USERNAME,
     fetch: recording.fetch,
   });
   const calls = (): [string, unknown][] =>

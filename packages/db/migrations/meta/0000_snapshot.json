@@ -1,5 +1,5 @@
 {
-  "id": "d94e8a9a-11a7-4515-b4de-4c4f6aa4b367",
+  "id": "2ed12367-0079-4a07-bc0c-b6c04a63eafe",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -391,7 +391,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -410,7 +410,11 @@
       "checkConstraints": {
         "answers_kind_check": {
           "name": "answers_kind_check",
-          "value": "\"kind\" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker')"
+          "value": "\"kind\" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker', 'other')"
+        },
+        "answers_channel_check": {
+          "name": "answers_channel_check",
+          "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'voice', 'app')"
         }
       },
       "isRLSEnabled": false
@@ -966,7 +970,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "events_name_check": {
+          "name": "events_name_check",
+          "value": "\"name\" in ('family_created', 'member_joined', 'invite_accepted', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_marked_deceased', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'weekly_read_drafted', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.exchanges": {
@@ -1248,7 +1257,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1442,7 +1451,30 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "family_channels_channel_conversation_id_idx": {
+          "name": "family_channels_channel_conversation_id_idx",
+          "columns": [
+            {
+              "expression": "channel",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "conversation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"unlinked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "family_channels_family_id_families_id_fk": {
           "name": "family_channels_family_id_families_id_fk",
@@ -1472,18 +1504,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "family_channels_channel_conversation_id_key": {
-          "name": "family_channels_channel_conversation_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "channel",
-            "conversation_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "family_channels_channel_check": {
+          "name": "family_channels_channel_check",
+          "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'voice', 'app')"
+        },
         "family_channels_kind_check": {
           "name": "family_channels_kind_check",
           "value": "\"kind\" in ('private', 'group')"
@@ -1698,19 +1725,37 @@
           "name": "storage_key",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_file_id": {
+          "name": "provider_file_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_unique_id": {
+          "name": "provider_unique_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "mime": {
           "name": "mime",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "bytes": {
           "name": "bytes",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "duration_ms": {
           "name": "duration_ms",
@@ -1767,6 +1812,28 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "media_channel_provider_unique_id_idx": {
+          "name": "media_channel_provider_unique_id_idx",
+          "columns": [
+            {
+              "expression": "channel",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "provider_unique_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"provider_unique_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1812,6 +1879,14 @@
         "media_kind_check": {
           "name": "media_kind_check",
           "value": "\"kind\" in ('audio', 'image')"
+        },
+        "media_channel_check": {
+          "name": "media_channel_check",
+          "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'voice', 'app')"
+        },
+        "media_storage_key_or_provider_file_id_check": {
+          "name": "media_storage_key_or_provider_file_id_check",
+          "value": "\"storage_key\" is not null or \"provider_file_id\" is not null"
         }
       },
       "isRLSEnabled": false
@@ -1927,6 +2002,12 @@
         "light_consent_text": {
           "name": "light_consent_text",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "light_starts_on": {
+          "name": "light_starts_on",
+          "type": "date",
           "primaryKey": false,
           "notNull": false
         },
@@ -2234,6 +2315,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "member_id": {
+          "name": "member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "local_date": {
+          "name": "local_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
         "purpose": {
           "name": "purpose",
           "type": "text",
@@ -2288,6 +2381,19 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "message_refs_member_id_members_id_fk": {
+          "name": "message_refs_member_id_members_id_fk",
+          "tableFrom": "message_refs",
+          "tableTo": "members",
+          "columnsFrom": [
+            "member_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -2303,6 +2409,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "message_refs_channel_check": {
+          "name": "message_refs_channel_check",
+          "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'voice', 'app')"
+        },
         "message_refs_purpose_check": {
           "name": "message_refs_purpose_check",
           "value": "\"purpose\" in ('arrival', 'repeat', 'turn_prompt', 'answer_post', 'quiet_notice', 'consent', 'ask_confirmation')"
@@ -2564,6 +2674,13 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
@@ -2591,7 +2708,12 @@
       },
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "onboarding_sessions_channel_check": {
+          "name": "onboarding_sessions_channel_check",
+          "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'voice', 'app')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.outbound": {
@@ -2801,6 +2923,10 @@
         "outbound_kind_check": {
           "name": "outbound_kind_check",
           "value": "\"kind\" in ('arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')"
+        },
+        "outbound_channel_check": {
+          "name": "outbound_channel_check",
+          "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'voice', 'app')"
         },
         "outbound_status_check": {
           "name": "outbound_status_check",
@@ -3389,7 +3515,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -3400,6 +3526,10 @@
         "replies_kind_check": {
           "name": "replies_kind_check",
           "value": "\"kind\" in ('heart', 'laugh', 'hug', 'text', 'voice', 'photo')"
+        },
+        "replies_channel_check": {
+          "name": "replies_channel_check",
+          "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'voice', 'app')"
         }
       },
       "isRLSEnabled": false
@@ -3536,7 +3666,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

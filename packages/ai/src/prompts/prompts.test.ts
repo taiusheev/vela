@@ -48,6 +48,20 @@ describe("PROMPTS registry", () => {
     }
   });
 
+  it("never models a gendered pronoun for the elder in its own wording", () => {
+    for (const call of AI_CALL_NAMES) {
+      expect(PROMPTS[call].system, call).not.toMatch(/\b(she|he|him|his|herself|himself)\b/i);
+    }
+  });
+
+  it("asks for the line counts the hello and weekly read schemas accept", () => {
+    expect(PROMPTS.hello.system).toContain("one or two lines");
+    expect(PROMPTS.hello.system).not.toContain("the two lines");
+    expect(PROMPTS.weekly_read.system).toContain("one to five short lines");
+    expect(PROMPTS.weekly_read.system).toContain('{"lines": [one to five strings]');
+    expect(PROMPTS.weekly_read.system).not.toContain("three to five");
+  });
+
   it("names every escalation signal of spec §5.5 in the flag prompt", () => {
     const system = PROMPTS.flag.system;
     for (const category of FLAG_CATEGORIES) {

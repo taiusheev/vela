@@ -23,6 +23,7 @@ interface Scenario {
   status?: MemberStatus;
   lightOn?: boolean;
   quietAfterMinutes?: number;
+  startsOn?: LocalDate | null;
   learningUntil?: LocalDate | null;
   turnsEnabled?: boolean;
   days?: DayState[];
@@ -41,6 +42,7 @@ function decide(scenario: Scenario): ScheduleDecision {
       status: scenario.status ?? "active",
       lightOn: scenario.lightOn ?? true,
       quietAfterMinutes: scenario.quietAfterMinutes ?? 360,
+      startsOn: scenario.startsOn ?? null,
       learningUntil: scenario.learningUntil ?? null,
     },
     family: { turnsEnabled: scenario.turnsEnabled ?? true },
@@ -220,6 +222,59 @@ describe("arrival", () => {
   });
 });
 
+describe("start date", () => {
+  it("delivers no arrival on a day before her start date, all through the arrival window", () => {
+    for (const time of ["08:00", "11:01", "21:59"] as const) {
+      const decision = decide({ now: taipei(time), startsOn: TOMORROW, turnPromptSent: true });
+      expect(decision.due).toEqual([]);
+    }
+  });
+
+  it("does not wake for an arrival time before her start date", () => {
+    const decision = decide({ now: taipei("07:59"), startsOn: TOMORROW });
+    expect(iso(decision.nextWakeAt)).toBe(iso(taipei("19:00")));
+  });
+
+  it("delivers from her start date itself at her arrival time", () => {
+    expect(decide({ now: taipei("08:00"), startsOn: TODAY }).due).toEqual([
+      { kind: "deliver_arrival", date: TODAY, late: false },
+    ]);
+    const eve = decide({ now: taipei("22:01"), startsOn: TOMORROW, prepared: true });
+    expect(iso(eve.nextWakeAt)).toBe(iso(taipei("08:00", TOMORROW)));
+    expect(decide({ now: taipei("08:00", TOMORROW), startsOn: TOMORROW }).due).toEqual([
+      { kind: "deliver_arrival", date: TOMORROW, late: false },
+    ]);
+  });
+
+  it("wakes for the first arrival on her start date, not for a morning before it", () => {
+    const startsOn = addDays(TODAY, 2);
+    const decision = decide({
+      now: taipei("22:01"),
+      startsOn,
+      prepared: true,
+      turnsEnabled: false,
+    });
+    expect(decision.due).toEqual([]);
+    expect(iso(decision.nextWakeAt)).toBe(iso(taipei("22:00", TOMORROW)));
+    const lastEve = decide({
+      now: taipei("22:01", TOMORROW),
+      startsOn,
+      prepared: true,
+      turnsEnabled: false,
+    });
+    expect(iso(lastEve.nextWakeAt)).toBe(iso(taipei("08:00", startsOn)));
+  });
+
+  it("neither repeats nor turns quiet for an exchange delivered before her start date", () => {
+    const early = day(TODAY, { deliveredAt: taipei("08:00") });
+    const decision = decide({ now: taipei("16:00"), startsOn: TOMORROW, days: [early] });
+    expect(decision.due).toEqual([]);
+    expect(iso(decision.nextWakeAt)).toBe(iso(taipei("19:00")));
+    const yesterday = day(YESTERDAY, { deliveredAt: taipei("08:00", YESTERDAY) });
+    expect(decide({ now: taipei("07:00"), startsOn: TODAY, days: [yesterday] }).due).toEqual([]);
+  });
+});
+
 describe("repeat", () => {
   const unansweredToday = day(TODAY, { deliveredAt: taipei("08:00") });
 
@@ -250,6 +305,18 @@ describe("repeat", () => {
 
   it("sends the repeat only once", () => {
     expect(decide({ now: taipei("12:00"), days: [deliveredToday()] }).due).toEqual([]);
+  });
+
+  it("sends no repeat and does not wake for one on a day whose delivery failed", () => {
+    const failed = day(TODAY, { deliveredAt: taipei("08:00"), deliveryFailed: true });
+    expect(decide({ now: taipei("10:30"), days: [failed] }).due).toEqual([]);
+    const before = decide({ now: taipei("10:29"), days: [failed] });
+    expect(iso(before.nextWakeAt)).toBe(iso(taipei("19:00")));
+    const yesterdayFailed = day(YESTERDAY, {
+      deliveredAt: taipei("08:00", YESTERDAY),
+      deliveryFailed: true,
+    });
+    expect(decide({ now: taipei("07:00"), days: [yesterdayFailed] }).due).toEqual([]);
   });
 });
 
@@ -604,10 +671,12 @@ describe("due order and wakes", () => {
       [day(TODAY, { deliveredAt: taipei("08:00") })],
       [deliveredToday({ quiet: quiet({ waitUntil: taipei("16:10") }) })],
     ];
-    for (const days of states) {
-      for (let now = taipei("00:00"); now < taipei("00:00", TOMORROW); now = addMinutes(now, 5)) {
-        const decision = decide({ now, days, learningUntil: TOMORROW });
-        expect(decision.nextWakeAt === null || decision.nextWakeAt > now).toBe(true);
+    for (const startsOn of [null, TOMORROW]) {
+      for (const days of states) {
+        for (let now = taipei("00:00"); now < taipei("00:00", TOMORROW); now = addMinutes(now, 5)) {
+          const decision = decide({ now, days, startsOn, learningUntil: TOMORROW });
+          expect(decision.nextWakeAt === null || decision.nextWakeAt > now).toBe(true);
+        }
       }
     }
   });

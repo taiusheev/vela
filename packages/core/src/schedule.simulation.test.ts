@@ -6,14 +6,18 @@ import { learningUntil, quietAfterMinutes } from "./tuning.ts";
 
 /**
  * A deterministic run of one member for 400 local days, driven only by `nextWakeAt`, with every due
- * action applied the way the services tick would apply it. Deliveries succeed at the wake instant
- * except on scripted failure days; she answers at a scripted latency on most days and not at all on
- * others; a few days are away days.
+ * action applied the way the services tick would apply it. She is activated on the consent date and
+ * her arrivals start the day after; deliveries succeed at the wake instant except on scripted failure
+ * days; she answers at a scripted latency on most days and not at all on others; a few days are away
+ * days.
  */
 
 const MINUTE = 60_000;
 const DAYS = 400;
 const CONSENT_DATE = "2026-01-05";
+/** A morning consent: without the start date, every run's arrival would still be due that day. */
+const ACTIVATED_AT: LocalTime = "09:00";
+const STARTS_ON = addDays(CONSENT_DATE, 1);
 const FAILURE_DAYS = new Set([17, 18, 95, 203, 311]);
 const AWAY_DAYS = new Set([40, 41, 42, 250, 251]);
 /** One wake per threshold kind (arrival, repeat, quiet, learning push, turn prompt, prepare, weekly read), plus one. */
@@ -43,6 +47,7 @@ interface SimDay {
 interface Run {
   readonly zone: string;
   readonly arrivalTime: LocalTime;
+  readonly startsOn: LocalDate;
   readonly learningUntil: LocalDate;
   readonly days: Map<LocalDate, SimDay>;
   readonly weeklyReads: { weekEnd: LocalDate; at: Date }[];
@@ -196,6 +201,7 @@ function simulate(zone: string, arrivalTime: LocalTime, seed: number): Run {
   const run: Run = {
     zone,
     arrivalTime,
+    startsOn: STARTS_ON,
     learningUntil: learningUntil(CONSENT_DATE),
     days: scriptDays(seed),
     weeklyReads: [],
@@ -204,8 +210,7 @@ function simulate(zone: string, arrivalTime: LocalTime, seed: number): Run {
   };
   const quietAfter = { value: quietAfterMinutes([]) };
   const end = zonedInstant(addDays(CONSENT_DATE, DAYS + 1), "00:00", zone);
-  // She consents late in the evening, so her first morning is the next day.
-  let now = zonedInstant(CONSENT_DATE, "23:00", zone);
+  let now = zonedInstant(CONSENT_DATE, ACTIVATED_AT, zone);
   while (now < end) {
     const today = localDateOf(now, zone);
     dayIn(run, today).wakes.push(now);
@@ -217,6 +222,7 @@ function simulate(zone: string, arrivalTime: LocalTime, seed: number): Run {
         status: "active",
         lightOn: true,
         quietAfterMinutes: quietAfter.value,
+        startsOn: run.startsOn,
         learningUntil: run.learningUntil,
       },
       family: { turnsEnabled: true },
@@ -308,14 +314,11 @@ function checkDay(run: Run, index: number): void {
   }
 
   const eve = addDays(day.date, -1);
-  const expectedPrompts = index === 1 ? [] : [zonedInstant(eve, SCHEDULE.turnPromptTime, run.zone)];
+  const expectedPrompts = [zonedInstant(eve, SCHEDULE.turnPromptTime, run.zone)];
   if (times(day.turnPrompts).join() !== times(expectedPrompts).join()) {
     fail(`turn prompts ${times(day.turnPrompts)}, expected ${times(expectedPrompts)}`);
   }
-  const expectedPrepare =
-    index === 1
-      ? zonedInstant(CONSENT_DATE, "23:00", run.zone)
-      : zonedInstant(eve, SCHEDULE.prepareTime, run.zone);
+  const expectedPrepare = zonedInstant(eve, SCHEDULE.prepareTime, run.zone);
   if (times(day.prepares).join() !== times([expectedPrepare]).join()) {
     fail(`prepared ${times(day.prepares)}, expected ${expectedPrepare.toISOString()}`);
   }
@@ -404,6 +407,12 @@ describe("400 days of one member", () => {
       );
       checkRun(run);
       expect(run.failures).toEqual([]);
+
+      const beforeStart = [...run.days.values()].filter((day) => day.date < run.startsOn);
+      expect(beforeStart.map((day) => day.date)).toContain(CONSENT_DATE);
+      expect(
+        beforeStart.flatMap((day) => [...day.attempts, ...day.repeats, ...day.quietOpens]),
+      ).toEqual([]);
 
       for (const [date, expected] of Object.entries(
         TRANSITION_ARRIVALS[zone]?.[arrivalTime] ?? {},
