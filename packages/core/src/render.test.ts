@@ -319,7 +319,7 @@ describe("renderArrival in Traditional Chinese", () => {
     const arrival = render({ lang, address: "陳奶奶", ask: { type: "hello" } });
     expect(paragraphs(arrival)).toEqual([
       "陳奶奶，早安。",
-      "今天家人沒有新的消息。您今天早上好嗎？\nVela，代表您的家人",
+      "今天家人沒有新的消息。您早上過得好嗎？\nVela，代表您的家人",
       "您可以傳語音訊息回覆，或按下面的按鈕。",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "我很好"]]);
