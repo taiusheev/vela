@@ -45,6 +45,11 @@ describe("TimeZone", () => {
     expect(TimeZone.safeParse("Australia/Lord_Howe").success).toBe(true);
     expect(TimeZone.safeParse("Mars/Olympus_Mons").success).toBe(false);
   });
+
+  it("rejects fixed offsets, which would lose daylight saving", () => {
+    expect(TimeZone.safeParse("+08:00").success).toBe(false);
+    expect(TimeZone.safeParse("-05:00").success).toBe(false);
+  });
 });
 
 describe("MediaRef", () => {

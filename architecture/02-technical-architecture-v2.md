@@ -59,10 +59,10 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
 
 | Component | Responsibility | Technology (2026 pick) | Alternatives checked |
 |---|---|---|---|
-| Worker | API, webhooks, scheduler, gateway, adapters, AI orchestration, admin assets | Cloudflare Workers, Hono 4, TypeScript 5.7 strict | Vercel, AWS Lambda + EventBridge Scheduler, Cloud Run, Fly.io, Railway, Render, Supabase Edge (research/platform-and-data §2a) |
+| Worker | API, webhooks, scheduler, gateway, adapters, AI orchestration, admin assets | Cloudflare Workers, Hono 4, TypeScript 7 strict | Vercel, AWS Lambda + EventBridge Scheduler, Cloud Run, Fly.io, Railway, Render, Supabase Edge (research/platform-and-data §2a) |
 | Per-member scheduler | Precise wake-ups per member in her time zone | Durable Objects with alarms | Per-minute cron scan (v1), EventBridge one-off schedules, pg_cron |
 | Queues | Decouple sends and AI from webhooks; retries; dead-letter | Cloudflare Queues (at-least-once, no dedup: the outbox gates) | SQS FIFO (dedup, but a second cloud), Cloud Tasks |
-| Database | System of record, one per region | Neon Postgres 17, projects in Singapore, Frankfurt, US-East; Hyperdrive pooling | Supabase (Tokyo region; fallback for Japan), PlanetScale Postgres, Crunchy, Aurora v2, Cloud SQL, D1 (ruled out: free-tier row caps enforced 2026-09-01) |
+| Database | System of record, one per region | Neon Postgres 18 (native `uuidv7()`), projects in Singapore, Frankfurt, US-East; Hyperdrive pooling with query caching off | Supabase (Tokyo region; fallback for Japan), PlanetScale Postgres, Crunchy, Aurora v2, Cloud SQL, D1 (ruled out: free-tier row caps enforced 2026-09-01) |
 | Media | Voice notes, photos; signed URLs; 30-day lifecycle | R2, one bucket per region, jurisdiction flag where available | S3 (egress), B2 (archive tier later), Supabase Storage |
 | Mobile | Family app, parent surface, kitchen table, widgets | Expo SDK 55 (RN 0.83, React 19.2, New Architecture) | Flutter, Compose Multiplatform, native, Capacitor, PWA (research/mobile-stack §2) |
 | Auth | Organisers and members with accounts | Clerk (phone OTP, email, Apple, Google; Expo SDK); Better Auth as the self-hosted fallback | Supabase Auth, Firebase, Auth0, Cognito, Stytch |
@@ -116,16 +116,16 @@ vela/
   packages/
     contracts/              # Zod schemas: API request/response, events, adapter types (api-contract.md §11–12)
     core/                   # pure domain logic: composer, ladder, budget, time math, state machine — no I/O
-    db/                     # Drizzle schema mirroring schema.sql, migrations, region router
+    db/                     # Drizzle schema (source of truth), migrations/, clients, PGlite test helper
     adapters/               # line/, whatsapp/, telegram/, voice/, app/ — one folder per channel, fixtures/
-    ai/                     # prompts/<call>.v<N>.md, schemas, client, cost accounting
+    ai/                     # prompts/<call>.v<N>.ts, schemas, client, speech, cost accounting, evals/
+    copy/                   # messenger strings in en and zh-TW, t()
+    services/               # application services behind ports: tick, gateway, flows, pipeline, jobs
     i18n/                   # Lingui catalogs: en (source), zh-TW, ja, de, hi
     ui/                     # NativeWind components (family) + StyleSheet kit (parent surface)
     audio/                  # expo-audio wrappers, waveform, TTS/STT adapters
   evals/                    # Promptfoo config + golden set (anonymised, consented)
-  db/migrations/            # generated SQL, reviewed in PRs
-  infra/                    # wrangler envs, Neon project ids, R2 buckets, Healthchecks ids
-  docs/                     # runbooks: incident, restore drill, release, OTA policy
+  infra/                    # environments, account checklist, sub-processors, runbooks/
 ```
 
 Rules: `packages/core` has no imports from I/O packages and is 100% unit-tested; adapters import only `contracts`; the app imports only `contracts` and `ui`/`audio`; every AI call goes through `packages/ai` (no direct SDK use elsewhere).
@@ -134,16 +134,16 @@ Rules: `packages/core` has no imports from I/O packages and is 100% unit-tested;
 
 ## 5. Domain model
 
-The schema is `schema.sql` (32 tables; validated). The invariants the code relies on:
+The schema is defined in `packages/db/src/schema.ts` (34 tables) and exported to `schema.sql`. The invariants the code relies on:
 
 - **`exchanges_one_per_day`**: a partial unique index on `(recipient_id, scheduled_for)` for every state from scheduled onward. This is the idempotency backbone: two Durable Object fires, two queue deliveries, or a replayed cron cannot create a second delivery for the same local day.
 - **`outbound_budget_idx`**: a partial unique index on `(member_id, local_day, kind)` for the budgeted kinds. The budget is a database constraint, not a check in code.
 - **`outbound.actor_id` CHECK** for `nearby_ask`: a message to a third person cannot exist without a person's id.
 - **`answers (channel, external_id)` unique**: duplicate webhooks are no-ops.
 - **`quiet_events.exchange_id` unique**: one quiet event per exchange; its `outcome` is never null after resolution and feeds the precision page.
-- **`members.next_arrival_at`** is the reconciliation index (§6.4), not the primary scheduler.
+- **`members.next_wake_at`** is the reconciliation index (§6.4), not the primary scheduler.
 - Media rows carry `expires_at`; the retention job deletes and writes a `deletions` row with a content hash, so deletion is provable without keeping the content.
-- `events` is append-only and partitioned monthly; it carries kinds and durations, never content.
+- `events` is append-only (a plain table until volume justifies partitioning); it carries kinds and durations, never content.
 
 The exchange state machine (spec §3) is implemented as a pure function in `packages/core/exchange.ts`: `transition(exchange, event) → exchange | Error`. Illegal transitions throw; the API and the consumers call the same function.
 
@@ -169,7 +169,7 @@ On `alarm()`: read state, pick every pending item whose time has passed, and for
 
 ### 6.2 Why not the v1 cron scan
 
-A per-minute scan of `members.next_arrival_at` is fine at 100 families and increasingly wrong at 100,000: Cloudflare Cron Triggers neither retry nor alert on a missed tick (and had a degraded incident on 2026-09-09), UTC-only cron granularity makes the 5-minute promise a coin toss, and a shared scan is where double sends come from. The DO alarm is per member, retried by the platform, and cheap.
+A per-minute scan of `members.next_wake_at` is fine at 100 families and increasingly wrong at 100,000: Cloudflare Cron Triggers neither retry nor alert on a missed tick (and had a degraded incident on 2026-09-09), UTC-only cron granularity makes the 5-minute promise a coin toss, and a shared scan is where double sends come from. The DO alarm is per member, retried by the platform, and cheap.
 
 ### 6.3 Composition at arrival time
 
@@ -177,7 +177,7 @@ The `arrival` consumer runs `compose(member, day)` from `packages/core`: pick th
 
 ### 6.4 Reconciliation (the safety net)
 
-A Cron Trigger every 5 minutes runs one query per region: members whose `next_arrival_at < now() − 10 min` with no exchange delivered for today's local date. For each: log `scheduler.missed` to Sentry, re-arm the DO, deliver with the "sorry this is late" line if more than 3 h late. The same tick pings the Healthchecks.io heartbeat; if the ping stops, the founder is paged from outside Cloudflare (the application cannot know it missed its own wake-up).
+A Cron Trigger every 5 minutes runs one query per region: members whose `next_wake_at < now() − 10 min` with no exchange delivered for today's local date. For each: log `scheduler.missed` to Sentry, re-arm the DO, deliver with the "sorry this is late" line if more than 3 h late. The same tick pings the Healthchecks.io heartbeat; if the ping stops, the founder is paged from outside Cloudflare (the application cannot know it missed its own wake-up).
 
 ### 6.5 Tuning
 
@@ -235,7 +235,7 @@ All calls go through `packages/ai`, use the Anthropic SDK (`@anthropic-ai/sdk`),
 | `hello` | yesterday's replies, address form | `{lines[2]}` | `claude-haiku-4-5` | — | batch | Only when nothing was queued |
 | `recipe` | the recipe exchanges | `{title, ingredients[], steps[], remarks[]}` | `claude-sonnet-5` | low | batch | Occasional |
 
-Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks: "default"` so a refusal by the safety classifiers routes to a fallback model instead of failing; `stop_reason` is checked before reading content; a schema parse failure logs and returns the safe default (no flag, summary "answered").
+Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks: "default"` (the reference documents fallbacks for Opus 5, not for Sonnet 5 or Haiku 4.5) so a refusal by the safety classifiers routes to a fallback model instead of failing; `stop_reason` is checked before reading content; a schema parse failure logs and returns the safe default (no flag, summary "answered").
 
 ### 9.2 Speech
 
@@ -245,7 +245,7 @@ Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks:
 
 ### 9.3 Prompt registry, evals, tracing
 
-- Prompts live in `packages/ai/prompts/<call>.v<N>.md` with a frozen system prompt first (cacheable) and volatile content last. The version string is logged on every `ai_calls` row with tokens, cache reads, latency, and cost.
+- Prompts live in `packages/ai/src/prompts/<call>.v<N>.ts` with a frozen system prompt first (cacheable) and volatile content last. The version string is logged on every `ai_calls` row with tokens, cache reads, latency, and cost.
 - **Golden set** in `evals/` (Promptfoo, YAML, runs in CI, exit code fails the PR): 50 cases at sprint 1 growing to 200, over-weighted toward Taiwanese-accented Mandarin, code-switched Mandarin/English, a grandchild's casual register that must become respectful for a grandparent, borderline health mentions (over-flagging) and clear ones (under-flagging), away detection, and prompt-injection attempts inside family text. Flag recall must not drop; flag precision, chip usefulness, and translation register are judged by a rubric.
 - Tracing: `ai_calls` in Postgres from day one; Langfuse (self-hosted, free) added when volume makes the admin view too thin.
 - Safety rails, in prompts and tested: never diagnose, never advise, never speak as a family member, never mention monitoring or notes to the family, treat every family message as untrusted data (no instruction-following from content), and no autonomous action of any kind: the model only drafts what a person sends or reads.
@@ -358,7 +358,7 @@ The founder's daily view reads `metrics_daily` and `quiet_events` in the admin S
 
 DST cases in Vitest with fake timers: spring-forward gap (exactly one arrival), fall-back repeat (no double), a half-hour-offset zone, a zone without DST. **Silence drill** (runs in CI on a schedule): adapter throws for a cohort → organiser told once, `quiet_events` empty; missed tick → next tick respects the one-per-day gate and the heartbeat would have paged; Postgres down during the tick → clean skip, admin alert, no quiet event; AI down → light lit, no quiet event. Contract tests: every adapter's fixtures, valid and tampered. Load: k6 locally against staging at 10× expected peak.
 
-CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite) → contract → Promptfoo (on prompt changes) → Wrangler deploy to staging on main → production on tag. Migrations: Drizzle Kit generates SQL into `db/migrations/`, reviewed in the PR, applied to a Neon branch of each region in CI, then to production by the release job. Mobile: EAS Build (Linux CI never runs macOS), EAS Submit to TestFlight and Play internal testing, EAS Update for JS-only fixes under a written OTA policy (bug fixes, copy, layout; never features or entitlements outside review).
+CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite) → contract → Promptfoo (on prompt changes) → Wrangler deploy to staging on main → production on tag. Migrations: Drizzle Kit generates SQL into `packages/db/migrations/`, reviewed in the PR, applied to a Neon branch of each region in CI, then to production by the release job. Mobile: EAS Build (Linux CI never runs macOS), EAS Submit to TestFlight and Play internal testing, EAS Update for JS-only fixes under a written OTA policy (bug fixes, copy, layout; never features or entitlements outside review).
 
 ---
 

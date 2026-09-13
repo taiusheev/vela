@@ -87,6 +87,8 @@ export const ANSWER_KINDS = [
   "photo",
   "fine",
   "sticker",
+  /** Any other content (video, document, location, contact): still a sign of life. */
+  "other",
 ] as const;
 export const AnswerKind = z.enum(ANSWER_KINDS);
 export type AnswerKind = z.infer<typeof AnswerKind>;
@@ -190,11 +192,16 @@ export type LocalDate = z.infer<typeof LocalDate>;
 export const LocalTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "expected HH:MM");
 export type LocalTime = z.infer<typeof LocalTime>;
 
-/** An IANA time zone name the runtime's ICU data recognises, e.g. `Asia/Taipei`. */
+/**
+ * An IANA time zone name the runtime's ICU data recognises, e.g. `Asia/Taipei`. Fixed offsets such
+ * as `+08:00` are rejected even though Intl accepts them: a member stored with a fixed offset would
+ * silently lose daylight saving and receive her morning an hour off for half the year.
+ */
 export const TimeZone = z.string().refine((value) => {
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-    return true;
+    const resolved = new Intl.DateTimeFormat("en-US", { timeZone: value }).resolvedOptions()
+      .timeZone;
+    return !/^[+-]/.test(resolved);
   } catch {
     return false;
   }

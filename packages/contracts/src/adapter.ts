@@ -16,6 +16,8 @@ export const INBOUND_KINDS = [
   "voice",
   "image",
   "sticker",
+  /** Content the platform delivered that has no richer kind here (video, document, location). */
+  "other",
   "button",
   "reaction",
   "read",

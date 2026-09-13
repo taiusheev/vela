@@ -1,0 +1,56 @@
+{
+  "update_id": 873920410,
+  "callback_query": {
+    "id": "2587416093847561234",
+    "from": {
+      "id": 6023817745,
+      "is_bot": false,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "language_code": "zh-hant"
+    },
+    "message": {
+      "message_id": 317,
+      "from": {
+        "id": 7412589630,
+        "is_bot": true,
+        "first_name": "Vela Light",
+        "username": "VelaLightBot"
+      },
+      "chat": {
+        "id": 6023817745,
+        "first_name": "Mei-hua",
+        "last_name": "Lin",
+        "type": "private"
+      },
+      "date": 1789257600,
+      "text": "Anna asks:\nWhat did you have for breakfast?\n\nReply with a voice message or tap a button.",
+      "reply_markup": {
+        "inline_keyboard": [
+          [
+            {
+              "text": "Congee",
+              "callback_data": "x:3f9a:c:1"
+            },
+            {
+              "text": "Toast",
+              "callback_data": "x:3f9a:c:2"
+            }
+          ],
+          [
+            {
+              "text": "❤",
+              "callback_data": "x:3f9a:h"
+            },
+            {
+              "text": "I’m fine",
+              "callback_data": "x:3f9a:f"
+            }
+          ]
+        ]
+      }
+    },
+    "chat_instance": "-5829174630412587123",
+    "data": "x:3f9a:c:1"
+  }
+}

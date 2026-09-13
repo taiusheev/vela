@@ -302,14 +302,14 @@ decodeButton(data: string): ButtonAction | null
 outboundKey(kind: OutboundKind, parts: { memberId?: string; date?: LocalDate; exchangeId?: string; quietEventId?: string; conversationId?: string; suffix?: string }): string
 
 // tuning.ts — spec §8
-quietAfterMinutes(latencies: number[], options?: { sunday?: boolean; sundayLatencies?: number[] }): number   // median + 120, clamped to [240, 600]; 360 with fewer than 7 samples
+quietAfterMinutes(latencies: number[], options?: { sunday?: boolean; sundayLatencies?: number[] }): number   // median + 120, clamped to [240, 600]; 360 with fewer than 14 answered days (spec §8)
 learningUntil(consentDate: LocalDate): LocalDate                                                             // consent date + 14 days
 
 // commands.ts — spec §9
 parseParentCommand(text: string): "stop" | "start" | "what_family_sees" | null   // en, zh-TW, ja, de, hi, ru keywords; whole-message match after trimming punctuation
 
 // turns.ts — spec §7
-nextTurnHolder(holders: { memberId: string; joinedAt: Date }[], previousHolderId: string | null): string | null  // round robin by join order
+nextTurnHolder(holders: { memberId: string; joinedAt: Date }[], previousHolderId: string | null, previousJoinedAt?: Date | null): string | null  // round robin by join order; previousJoinedAt keeps the order when the previous holder has left
 
 // readback.ts
 summariseReplies(input: { lang: Lang; replies: { name: string; kind: ReplyKind; text: string | null }[] }): string[]
@@ -410,6 +410,22 @@ Modules and their entry points (detailed in the sprint-1 build brief):
 - Configuration: `wrangler.jsonc` with `dev`, `staging`, and `production` environments; secrets documented in `.dev.vars.example`; the local database is `@vela/db dev-db` reached through Hyperdrive's local connection string.
 - Tests with `@cloudflare/vitest-pool-workers` cover routing, webhook rejection, the Durable Object alarm loop against fake services, and queue dispatch.
 
-## 10. Definition of done for code
+## 10. Decisions taken during the foundation build
+
+Builders recorded these; they are now part of the contract.
+
+| Area | Decision |
+|---|---|
+| Schedule | A member's arrivals start on `member.startsOn` (set to the day after consent or start), so the first morning is tomorrow, as the copy promises. A repeat never follows a failed delivery. Notify-quiet has the same away and delivery-failure guards as open-quiet. When a wait is pending, the re-notification waits for it. `nextWakeAt` includes thresholds created by actions due in the same decision. An arrival time at or after 22:00 keeps that day's window open until local midnight. The learning period is `date < learningUntil`. Executing `open_quiet` with `notify` must set `lastNotifiedAt`. |
+| Tuning | 360 minutes until 14 answered days; the Sunday median needs at least 3 Sunday samples; results round up. |
+| Time zones | Fixed offsets are rejected everywhere (`TimeZone` schema and `isValidTimeZone`). |
+| Buttons and keys | The wire format and per-kind key shapes are defined in `buttons.ts` and `keys.ts` (`OUTBOUND_KEY_SHAPES`); `quiet_notice` keys carry the notify count as suffix, `flag` keys the answer id. |
+| Rendering | A repeat shows its preface instead of the late note; chips only on questions; vote options at most 7; labels over 64 characters are shortened. Callers guarantee a photo choice has exactly two images. |
+| Adapters | `createTelegramAdapter` takes `botUsername` (commands addressed to another bot are ignored) and `now` (callback queries carry no date). Unsupported content (video, document, location, contact) yields an `other` event, which becomes an `other` answer. Only consecutive images are grouped into an album; media keeps its order. Replies set `allow_sending_without_reply`. "Message is not modified" when closing buttons is success. |
+| AI | Requests go through the beta namespace with `betaZodOutputFormat`; output is parsed only after `stop_reason` is checked; fallbacks are set only for `claude-opus-5`. Every HTTP error resolves to the safe default. A flag's quote is kept only if it is an exact substring of her words. Services always pass her language to speech-to-text (Deepgram detects Chinese only as Simplified). Weekly read accepts 1 to 5 lines and hello 1 to 2. Batch calls wait for a separate port in a later sprint. |
+| Database | Channel columns carry CHECKs from `CHANNELS`; `events.name` carries a CHECK from `EVENT_NAMES`; media references use `ON DELETE SET NULL` so retention can delete media; a group can be re-linked (`family_channels` unique only while linked); every table has `created_at`. Constraint names follow Postgres style. `VelaDatabase` uses a result type whose `execute` returns `{ rows }` on both drivers. |
+| Copy | `t()` throws on an unknown key, a missing parameter, or an unused parameter. |
+
+## 11. Definition of done for code
 
 A change is done when `pnpm check` passes locally and in CI, new behaviour has tests that would fail without it, no rule in §2 is broken, and any change to a contract is reflected here and in the architecture document in the same commit.

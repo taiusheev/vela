@@ -1,0 +1,28 @@
+{
+  "update_id": 873920389,
+  "message": {
+    "message_id": 1,
+    "from": {
+      "id": 5829174630,
+      "is_bot": false,
+      "first_name": "Anna",
+      "last_name": "Chen",
+      "username": "anna_chen",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": -4567812390,
+      "title": "Chen family",
+      "type": "group"
+    },
+    "date": 1789038000,
+    "new_chat_members": [
+      {
+        "id": 7412589630,
+        "is_bot": true,
+        "first_name": "Vela Light",
+        "username": "VelaLightBot"
+      }
+    ]
+  }
+}

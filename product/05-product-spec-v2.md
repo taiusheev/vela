@@ -200,9 +200,9 @@ Applies to kept-light members only.
 | Step | When | What |
 |---|---|---|
 | Repeat | delivery + 2.5 h | Re-send the arrival once (§4.6) |
-| Quiet notice | delivery + T_quiet | To every organiser, in the app and by push: last answer, her usual answer time, yesterday's summary, nearby contacts with **Call** and **Ask to check**, buttons **Call Mom**, **She's fine, I know why**, **Wait 2 hours** |
+| Quiet notice | delivery + T_quiet | To every organiser, in the app and by push: last answer, her usual answer time, yesterday's summary, nearby contacts with **Call** and **Ask them to look in**, buttons **Call Mom**, **She's fine, I know why**, **Wait 2 hours** |
 | Wait 2 hours | tap | The notice returns after 2 h if still quiet |
-| Ask to check | tap | Sends, on the organiser's behalf and in their name, a message to that nearby contact: "Anna asks: could you look in on Mrs Ivanova today? She hasn't answered this morning." The organiser sees it was sent and any reply |
+| Ask them to look in | tap | Sends, on the organiser's behalf and in their name, a message to that nearby contact: "Anna asks: could you look in on Mrs Ivanova today? She hasn't answered this morning." The organiser sees it was sent and any reply |
 | Resolution | any answer, "she's fine", or away | The notice closes; everyone who was told is told it's fine ("Mom answered at 11:40. Everything's lit again.") |
 
 **No automatic messages to nearby contacts, ever.** Every contact to a third person is a person's tap. This is the product's promise and it is enforced in the outbound gateway (technical design §5) by requiring an actor id on every nearby-contact message.
@@ -223,7 +223,7 @@ Applies to kept-light members only.
 - **Words.** Consent and every later screen say what the family sees and who will act; they never use "monitor", "check on", "track", or "keep an eye". Framing the product as surveillance is what 30–40% of invited elders refuse (research/08, /11); framing it as the family asking is what they accept.
 - **Stop.** "Stop", "не надо", "停", or any refusal turns the light off and pauses arrivals; the organiser is told without judgement ("Mom asked to pause. Nothing is wrong with the app."). "Start" resumes.
 - **What the family sees.** Any kept-light member can ask in the chat "what does the family see" (or tap the button on the parent surface) and gets the summary lines of the last 7 days and the last weekly read, in her language.
-- Nearby contacts consent once, via a message sent in the organiser's name. Until they say yes, they can only be called by the organiser directly; "Ask to check" is disabled for them.
+- Nearby contacts consent once, via a message sent in the organiser's name. Until they say yes, they can only be called by the organiser directly; "Ask them to look in" is disabled for them.
 
 ## 10. Story day, recipes, memory photos, the family book
 
@@ -277,7 +277,7 @@ Screen names match `design/prototype/vela-app.html`. Each criterion is testable.
 
 **A10 · Story day.** This Sunday's question with who chose it and "add a question"; recent stories with play buttons; "Export the book" (Vela Light) and "Read in the app" (free).
 
-**A11 · Quiet notice.** A sheet over Today: label with her usual time, Literata title "It's been quiet at Mom's today", one calm paragraph of facts (last answer, arrivals sent, yesterday's words), nearby contacts with Call and Ask to check, primary "Call Mom", secondary "She's fine, I know why" and "Wait 2 hours". Closes itself when she answers, with the resolution line. Never red.
+**A11 · Quiet notice.** A sheet over Today: label with her usual time, Literata title "It's been quiet at Mom's today", one calm paragraph of facts (last answer, arrivals sent, yesterday's words), nearby contacts with Call and Ask them to look in, primary "Call Mom", secondary "She's fine, I know why" and "Wait 2 hours". Closes itself when she answers, with the resolution line. Never red.
 
 **A12 · You.** Own light toggle with the symmetry line; family list (kept-light members with plan state, contributors, nearby contacts with consent state); "One moment a day" notification setting (on by default, cannot be set to more than one); "What the family sees about you"; Pause; Leave.
 
@@ -328,7 +328,7 @@ Per member per day: one arrival (their surface), at most one turn prompt (19:00 
 | | Free | Vela Light |
 |---|---|---|
 | Who | Every member | Per kept-light member; the billing organiser pays |
-| Includes | Asks, answers, replies, turns, translation, story day, reading the family book, the lights as "answered today" | Quiet notices, nearby contacts and Ask to check, away mode, the weekly read, memory and reminders, family book export, precision page |
+| Includes | Asks, answers, replies, turns, translation, story day, reading the family book, the lights as "answered today" | Quiet notices, nearby contacts and Ask them to look in, away mode, the weekly read, memory and reminders, family book export, precision page |
 | Price | 0 | $79/yr pre-selected, or $9.99/mo as the low-commitment ramp; per kept-light member; second member +50%; to be tested against $14.99 |
 | Trial | | 30 days after her first answer, no card |
 | Lapse | | 14 days grace; then Light features stop; arrivals and exchanges continue; nobody is cut off from family |
@@ -380,11 +380,11 @@ They produce the metrics below (targets revised against research/14; kill signal
 The pilot starts on Telegram (the cheapest bot platform, voice-capable, and where the founder's own family already is) for the first 3–5 families, then continues on LINE for Taiwanese families from sprint 2. It measures whether the loop works before the app exists.
 
 - **Setup.** The organiser adds the Vela bot to a new Telegram group with the family (not the grandmother). The grandmother talks to the bot in a private chat (M1). The founder onboards each family by call.
-- **Asking.** In the family group the bot posts at 19:00 her time: "Tomorrow is Anna's turn with Mom. Reply to this message with a question, a photo, or a voice note." Any reply to that message, or any message starting with "ask:", becomes tomorrow's ask; the bot confirms "Into her morning." Two photos in one reply become a photo choice. If nobody replies by 22:00, the bot uses the oldest "whenever" item (any message starting with "whenever:") or the fallback hello.
+- **Asking.** In the family group the bot posts at 19:00 her time: "Tomorrow is Anna's turn with Mom. Reply to this message with a question, a photo, or a voice note." A reply to that message becomes tomorrow's ask; `/ask <text>` does the same without replying, and `/later <text>` saves a whenever ask. Two photos sent as one album become a photo choice. The bot confirms "Into Mom's morning." If nobody asks by 22:00, the bot uses the oldest whenever ask or the fallback hello. Telegram's group privacy mode means the bot sees only replies to its own messages and commands, never the family's ordinary conversation.
 - **Her morning.** M2–M4 as specified, in her private chat.
-- **Her answer.** The bot posts it into the family group: "Mom answered Anna: [voice] [transcript] [translation]". Replies in the group that reply to that post, and reactions on it, are collected.
+- **Her answer.** The bot posts it into the family group: "☀️ Mom answered Anna · 8:12" with her choice, text, or voice, then the transcript and translation as a reply once processed. Replies to that post are collected; reactions on it are collected when the organiser makes the bot a group administrator (Telegram only delivers reactions to administrators).
 - **Read-back.** The next morning's arrival opens with those replies, as text plus forwarded voice notes.
-- **The light.** The bot posts "Mom answered · 8:12 ☀" in the group; quiet notice at T_quiet to the organiser privately with the nearby contacts' names and phone numbers as text; "Ask to check" is the organiser's own call in phase 0.
+- **The light.** The bot posts "Mom answered · 8:12 ☀" in the group; quiet notice at T_quiet to the organiser privately with the nearby contacts' names and phone numbers as text; "Ask them to look in" is the organiser's own call in phase 0.
 - **Weekly read.** Written by the founder from the AI draft, sent to the organiser privately on Sunday.
 - **Logged from day one.** Per parent per day: ask delivered (type, asker), seen, answered (kind), time to answer, replies received, replies heard, quiet notice and its outcome, away, stop. Per family per week: who composed, quiet days, types used. UCLA-3 loneliness at weeks 0, 4, 12 and "if Vela stopped tomorrow" at days 14 and 30, asked by the founder on the calls.
 - **Not in phase 0.** Payments in the app (the $15 pilot fee is collected by hand), WhatsApp, the parent surface, memory, votes.

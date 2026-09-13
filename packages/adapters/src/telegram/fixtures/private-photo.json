@@ -1,0 +1,51 @@
+{
+  "update_id": 873920413,
+  "message": {
+    "message_id": 320,
+    "from": {
+      "id": 6023817745,
+      "is_bot": false,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "language_code": "zh-hant"
+    },
+    "chat": {
+      "id": 6023817745,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "type": "private"
+    },
+    "date": 1789258502,
+    "photo": [
+      {
+        "file_id": "AgACAgUAAxkBAAIBQGbj9A2xYAAKhwjEb0xAhV3M-rQABAQADAgADcwADNgQ",
+        "file_unique_id": "AQADoMIxG9MQIVdyBx",
+        "file_size": 1432,
+        "width": 90,
+        "height": 68
+      },
+      {
+        "file_id": "AgACAgUAAxkBAAIBQGbj9A2xYAAKhwjEb0xAhV3M-rQABAQADAgADbQADNgQ",
+        "file_unique_id": "AQADoMIxG9MQIVdyBy",
+        "file_size": 18211,
+        "width": 320,
+        "height": 240
+      },
+      {
+        "file_id": "AgACAgUAAxkBAAIBQGbj9A2xYAAKhwjEb0xAhV3M-rQABAQADAgADeAADNgQ",
+        "file_unique_id": "AQADoMIxG9MQIVdyB9",
+        "file_size": 71503,
+        "width": 800,
+        "height": 600
+      },
+      {
+        "file_id": "AgACAgUAAxkBAAIBQGbj9A2xYAAKhwjEb0xAhV3M-rQABAQADAgADeQADNgQ",
+        "file_unique_id": "AQADoMIxG9MQIVdyB-",
+        "file_size": 142887,
+        "width": 1280,
+        "height": 960
+      }
+    ],
+    "caption": "番茄紅了"
+  }
+}
