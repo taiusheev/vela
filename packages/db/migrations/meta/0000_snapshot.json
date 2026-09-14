@@ -1,5 +1,5 @@
 {
-  "id": "3efd5bd6-e067-4272-82e5-6c97ac82173d",
+  "id": "96c4dbf3-1b3b-4cfc-b51f-0dd588af0918",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -27,6 +27,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "member_id": {
+          "name": "member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "what": {
           "name": "what",
           "type": "text",
@@ -46,7 +58,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "admin_access_log_action_check": {
+          "name": "admin_access_log_action_check",
+          "value": "\"action\" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.ai_calls": {
@@ -307,6 +324,13 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "processing_attempts": {
+          "name": "processing_attempts",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "received_at": {
           "name": "received_at",
@@ -973,7 +997,7 @@
       "checkConstraints": {
         "events_name_check": {
           "name": "events_name_check",
-          "value": "\"name\" in ('family_created', 'member_joined', 'invite_accepted', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_marked_deceased', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'weekly_read_drafted', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted')"
+          "value": "\"name\" in ('family_created', 'member_joined', 'invite_accepted', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened')"
         }
       },
       "isRLSEnabled": false
@@ -4331,6 +4355,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "sent_lines": {
+          "name": "sent_lines",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -4374,7 +4410,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "weekly_reads_sent_lines_sent_at_check": {
+          "name": "weekly_reads_sent_lines_sent_at_check",
+          "value": "(\"sent_lines\" is null) = (\"sent_at\" is null)"
+        }
+      },
       "isRLSEnabled": false
     }
   },

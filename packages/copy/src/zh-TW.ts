@@ -14,10 +14,14 @@
  * call (plan/materials/pilot/consent-script.zh-TW.md, sections 2 and 6): change the script with
  * them.
  *
+ * The weekly read is 每週小記, the name the zh-TW privacy notice and consent script give it.
+ *
  * Latin text, digits, and placeholders that always render as Latin or digits ({time}, {sent},
- * {usual}, {n}, {channel}, {link}) are separated from Chinese characters by a space. {link} also
- * keeps a space after the full-width colon, so a messenger's link detection cannot take a
- * neighbouring character as part of the URL.
+ * {usual}, {n}, {channel}, {link}, {notice}) are separated from Chinese characters by a space. The
+ * URLs {link} and {notice} also keep a space after the full-width colon, so a messenger's link
+ * detection cannot take a neighbouring character as part of the URL. Placeholders for names ({name},
+ * {names}, {asker}, {holder}, {organiser}, {child}, {address}, {family}) touch the Chinese characters
+ * around them, as a written name would.
  */
 import type { en } from "./en.ts";
 
@@ -56,9 +60,11 @@ export const zhTW: Record<keyof typeof en, string> = {
   "parent.stopped": "已經全部暫停了。想恢復的時候，隨時說「開始」就可以。",
   "parent.started": "歡迎回來。下一則早安訊息會在 {time} 送到。",
   "organiser.stopped": "{name}想先暫停。系統一切正常。",
-  "parent.family_sees_heading": "這個星期，家人從您這裡看到的是：",
-  "parent.family_sees_empty": "這個星期還沒有內容。",
-  "group.linked": "大家好，我是 Vela。每天晚上，我會告訴大家明天早上輪到誰問{name}一件事。",
+  "parent.family_sees_heading": "家人從您最近的回覆看到的是：",
+  "parent.family_sees_empty": "還沒有內容。您回覆早安訊息之後，家人就會看到。",
+  "parent.family_sees_weekly_read": "最近一次傳給家人的每週小記：",
+  "group.linked":
+    "大家好，我是 Vela。每天晚上，我會告訴大家明天早上輪到誰問{name}一件事。Vela 如何處理大家的訊息： {notice}",
   "group.not_linked": "只有家庭的發起人才能把 Vela 連結到群組。",
   "group.turn_prompt":
     "明天輪到{holder}問{name}。請直接回覆這則訊息，傳一個問題、一張照片或一段語音。",
@@ -109,11 +115,13 @@ export const zhTW: Record<keyof typeof en, string> = {
   "onboarding.invalid_zone": "請輸入像 Asia/Seoul 或 Europe/Paris 這樣的時區名稱。",
   "onboarding.ask_wake": "這位家人通常幾點起床？請按一個選項，或輸入像 07:30 這樣的時間。",
   "onboarding.ask_nearby":
-    "有沒有住在附近、需要的時候可以過去看看的人？請傳送名字和電話號碼，或按「略過」。",
+    "有沒有住在附近、需要的時候可以過去看看的人？請傳送名字和電話號碼，或按「略過」。請您先親自問過對方：對方同意之後，電話號碼才會出現在通知裡。",
   "onboarding.skip": "略過",
   "onboarding.invalid_time": "請輸入像 07:30 這樣的時間。",
   "onboarding.done":
     "設定完成。請把這個連結傳給{name}： {link} 然後另外建立一個家人群組（不要加{name}），把我加進去，讓家人可以輪流提問。",
-  "admin.weekly_read_draft": "{family}的每週回顧草稿：",
-  "admin.flag": "{family}有一則標記：{name}說「{quote}」",
+  "admin.weekly_read_draft": "{family}的每週小記草稿已經準備好了： {link}",
+  "admin.flag": "{family}有一則標記。查看： {link}",
+  "admin.understand_failed": "{family}有一則回覆試了三次仍無法讀取。查看： {link}",
+  "admin.member_left_group": "{name}退出了{family}的家人群組。{name}這邊沒有任何變動。",
 };

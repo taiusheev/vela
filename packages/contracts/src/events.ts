@@ -13,7 +13,12 @@ export const EVENT_NAMES = [
   "consent_declined",
   "stop_said",
   "start_said",
+  /** A member became `left`: they left the family group, or the founder marked them left. */
+  "member_left",
+  /** An organiser or the kept-light member left the family group; their membership is unchanged. */
+  "member_left_group",
   "member_marked_deceased",
+  "family_deletion_requested",
   // the exchange
   "ask_composed",
   "ask_withdrawn",
@@ -34,7 +39,10 @@ export const EVENT_NAMES = [
   "away_set",
   "away_ended",
   "flag_raised",
+  "nearby_contact_added",
+  "nearby_contact_removed",
   "weekly_read_drafted",
+  "weekly_read_sent",
   "weekly_read_opened",
   "story_saved",
   // plans
@@ -46,6 +54,8 @@ export const EVENT_NAMES = [
   "scheduler_tick",
   "gateway_dropped",
   "retention_deleted",
+  /** The founder opened a family's records on the admin page (`admin_access_log` action `view`). */
+  "admin_page_opened",
 ] as const;
 export const EventName = z.enum(EVENT_NAMES);
 export type EventName = z.infer<typeof EventName>;

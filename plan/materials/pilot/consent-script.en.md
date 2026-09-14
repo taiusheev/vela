@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v1` · 13 September 2026 · goes with `privacy-notice.v1` · spoken meaning matches the `consent.request` message (architecture/03-code-design.md §4, spec §9)
+Version `consent-script.v1` · 14 September 2026 · goes with `privacy-notice.v1` · spoken meaning matches the `consent.request` message (architecture/03-code-design.md §4, spec §9)
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes, that's fine" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
@@ -68,7 +68,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 - **Yes:** "Thank you. [Organiser] is sending you a link in Telegram now. When it arrives, tap the link, then tap **Start** at the bottom of the chat that opens. Vela will then send you a message that says what I just told you. Please tap **'Yes, that's fine'**. Your first morning message arrives tomorrow at [time]."
 
-  *Ask the organiser to send the link now (message them if they are not on the call). Stay on the call until the person has tapped Start and seen the message, or agree that the organiser helps them straight after the call. If Vela says the link is no longer valid, thank them and end the call kindly; create a new link ([`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md), section A) for the organiser to send on the next call, and never ask the person to keep retrying. These are Telegram's steps; LINE's are added here when the LINE flow is built (sprint 2).*
+  *Ask the organiser to send the link now (message them if they are not on the call). Stay on the call until the person has tapped Start and seen the message, or agree that the organiser helps them straight after the call. Only a tap on one of the message's buttons answers it: anything the person types in the chat instead is ignored, and neither stored nor shown to the family, so help them find the button. If Vela says the link is no longer valid, thank them and end the call kindly; create a new link ([`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md), section A) for the organiser to send on the next call, and never ask the person to keep retrying. These are Telegram's steps; LINE's are added here when the LINE flow is built (sprint 2).*
 - **No:** "That's completely fine. Nothing will be sent. I'll tell [organiser] you said no for now, and there's nothing wrong with that."
 - **Not sure:** "Take your time. Nothing starts until you tap yes. [Organiser] can reach me whenever you'd like to talk again."
 
@@ -111,6 +111,6 @@ Record under the family code, never in the chat:
 - The answer in their own words ("yes, let's try", "no", "not now").
 - Anything corrected (name, greeting, time) and any question you could not answer.
 - Research questions: yes or no; scores if yes.
-- Check with the organiser that the person opened the invite link and tapped Start: that is the only thing that makes Vela send the consent message. When they tap yes, Vela writes the `consents` row (kind `light`, the message's text version, language, channel, message id as evidence) and `members.light_consented_at`. For the call itself, record a `consents` row of kind `privacy_notice` with channel `call` and a reference to your note (family code and date) as evidence, following [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md), section B.
+- Check with the organiser that the person opened the invite link and tapped Start: that is the only thing that makes Vela send the consent message. When they tap yes, Vela writes the `consents` row (kind `light`, the message's text version, language, channel, message id as evidence) and `members.light_consented_at`. For the call itself, record a `consents` row of kind `privacy_notice` with channel `call` and a reference to your note (family code and date) as evidence: on the admin page (`record_consent`) once it ships, and until then following [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md), section B.
 - If there is no tap within 24 hours, ask the organiser to mention it once. Never send reminders from Vela.
 - If the person said no: tell the organiser the same day, kindly. Nothing is created.

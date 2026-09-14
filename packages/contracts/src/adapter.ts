@@ -27,6 +27,12 @@ export const INBOUND_KINDS = [
   "unblocked",
   /** A group moved to a new conversation id (Telegram: a basic group upgraded to a supergroup). */
   "migrated",
+  /**
+   * A person left a group or was removed from it. `subject` is the person who left; `sender` is
+   * whoever acted, the same person when they left by themself. The bot's own departure is
+   * `bot_removed`, never this.
+   */
+  "member_left",
 ] as const;
 export const InboundKind = z.enum(INBOUND_KINDS);
 export type InboundKind = z.infer<typeof InboundKind>;
@@ -37,6 +43,12 @@ export const MediaRef = z
     kind: MediaKind,
     /** Platform-held file identifier, reusable only on the same channel. */
     providerFileId: z.string().min(1).optional(),
+    /**
+     * The platform's stable identity for the file itself (Telegram `file_unique_id`): the same over
+     * time and for every bot, so a file forwarded again keeps it. Services deduplicate media per
+     * family on it. It cannot fetch or send the file, so it does not satisfy the check below.
+     */
+    providerUniqueId: z.string().min(1).optional(),
     /** A URL the platform can fetch, e.g. a short-lived signed R2 URL. */
     url: z.url().optional(),
     mime: z.string().optional(),
@@ -80,6 +92,13 @@ export const InboundEvent = z.object({
   startParam: z.string().optional(),
   /** For `migrated`: the conversation id the group now has; `conversation.externalId` is the old one. */
   migratedToConversationId: z.string().min(1).optional(),
+  /** For `member_left`: the person who left. */
+  subject: z
+    .object({
+      externalUserId: z.string().min(1),
+      displayName: z.string().optional(),
+    })
+    .optional(),
   media: MediaRef.optional(),
 });
 export type InboundEvent = z.infer<typeof InboundEvent>;
@@ -169,15 +188,26 @@ export class ChannelSendError extends Error {
   readonly code: ChannelSendErrorCode;
   readonly retryable: boolean;
   readonly retryAfterSeconds: number | undefined;
+  /**
+   * Set when the platform refused the send because the group now has a new conversation id
+   * (Telegram: a basic group upgraded to a supergroup). The send can never succeed as addressed, so
+   * `retryable` stays false; the gateway re-points the family group to this id and sends again.
+   */
+  readonly migratedToConversationId: string | undefined;
 
   constructor(
     code: ChannelSendErrorCode,
     message: string,
-    options: { retryAfterSeconds?: number; cause?: unknown } = {},
+    options: {
+      retryAfterSeconds?: number;
+      migratedToConversationId?: string;
+      cause?: unknown;
+    } = {},
   ) {
     super(message, { cause: options.cause });
     this.code = code;
     this.retryable = code === "rate_limited" || code === "unavailable";
     this.retryAfterSeconds = options.retryAfterSeconds;
+    this.migratedToConversationId = options.migratedToConversationId;
   }
 }

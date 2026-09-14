@@ -202,3 +202,68 @@ Revisit: when Apple or Google change the allowances for Taiwan or India, or the 
 
 ## ADR-7 · updated 2026-09-13
 Russia is deferred by the founder; the legal review item is closed for now. Regions stay `apac`, `eu`, `us`; Japan may get an in-country database (Supabase Tokyo) behind the same region router if volume requires it; the Cloudflare jurisdiction flags are never described as local hosting.
+
+---
+
+## ADR-21 · The admin conversation carries no family content
+**2026-09-14 · accepted**
+
+Decision: messages to the founder's Telegram chat with the bot (`admin.flag`, `admin.weekly_read_draft`, `admin.understand_failed`, `admin.member_left_group`) carry at most the family name, a member's name, and a link to the admin page (`Config.publicBaseUrl` + `/admin/...`), never her words, a quote, a transcript, or a draft's lines. The content is read on the admin page, where every view writes `admin_access_log`. Organisers still receive `flag.notice` with her words verbatim, because they are family and the notice is for them. A copy test holds every `admin.*` key to the parameters `family`, `link`, and `name`.
+
+Why: a message in the founder's chat is a copy of family data outside `admin_access_log` and outside `applyRetention`, kept only as long as the founder remembers to delete it by hand (data map, gap 15). A link keeps one place where content is read, logged, and deleted on schedule.
+
+Rejected: quotes and drafts in the admin chat with a manual deletion routine (unlogged, and deletion depends on a person); email to the founder (another copy and another sub-processor); no admin notice at all (the founder would find flags and failures only by opening the page).
+
+Revisit if: a flag waits noticeably longer to be acted on because opening the page is slower than reading the chat.
+
+## ADR-22 · Admin writes go through a logged page behind Cloudflare Access
+**2026-09-14 · accepted · narrows ADR-17 for the pilot**
+
+Decision: in the pilot, the admin surface is server-rendered pages and HTML POST forms under `/admin` in the Worker, behind a Cloudflare Access application that covers `/admin` only. The Worker verifies the `Cf-Access-Jwt-Assertion` token itself (signature, audience, issuer, expiry) and takes its `email` claim as the admin identity; a POST must also be same-origin. The actions are `ADMIN_ACTIONS` in `@vela/contracts`: `view`, `record_consent`, `record_contact_consent`, `add_contact`, `remove_contact`, `set_away`, `end_away`, `mark_left`, `mark_deceased`, `delete_family`, `send_weekly_read`, implemented in `@vela/services` `admin.ts`. Each one writes an `admin_access_log` row (`action` checked against the tuple, `member_id` without a foreign key so the log outlives members, `what` never holding message content) and a domain event in the same transaction. ADR-17's admin SPA replaces these pages once API v1 exists.
+
+Why: without a write path the founder records consents, nearby contacts' answers, away periods, departures, and deaths in the Neon console and logs each touch by hand (data map, gap 13); a bearer token identifies no person, so `admin_access_log.admin` could not say who acted, and it has no second factor. Access puts the founder's sign-in, with the identity provider's second factor, in front of the page without auth code of our own, and checking its token in the Worker as well keeps the page closed if the Access configuration is ever wrong. The same-origin check stops another site from posting a form through the founder's signed-in browser.
+
+Rejected: the Neon console with a hand-kept log (unlogged writes on real families, easy to get wrong); a shared bearer token (no identity, no MFA); building ADR-17's SPA now (it needs API v1 and Clerk roles, build plan 2.1); trusting Access alone without verifying the token in the Worker.
+
+Revisit when: API v1 and the admin role exist (build plan 2.1), or a second person needs admin access.
+
+## ADR-23 · Deploy credentials live only in GitHub environments; the deploy job migrates first
+**2026-09-14 · accepted · updates ADR-12**
+
+Decision: `.github/workflows/deploy.yml` deploys through two GitHub environments, `staging` (merges to `main`) and `production` (tags, with the founder as required reviewer). `CLOUDFLARE_API_TOKEN` and `DATABASE_URL` are environment secrets in each; the repository has no secrets. Each run applies the Drizzle migrations to that environment's database, then runs `wrangler deploy`. Until the job exists, the founder runs migrations by hand from their own terminal (build plan 0.3, `infra/runbooks/release.md`).
+
+Why: a repository secret is readable by a workflow on any pushed branch, which would get around the production approval; an environment secret is released only to a job the environment's rules allow. Migrations expand before they contract, so the schema must be in place before the code that uses it; running both in one job leaves no window where new code meets an old schema.
+
+Rejected: repository secrets (bypass the approval); deploying production from a laptop (no approval, no record); a separate migration workflow (can run after the deploy, or not at all); letting the co-founder hold connection strings (infra rule zero).
+
+Revisit if: a migration ever needs to run long enough to block a deploy, or a second region's database joins the pilot (then the job migrates each region before deploying).
+
+## ADR-24 · Retention clears content in place and deletes by age
+**2026-09-14 · accepted · implements architecture §12 for the pilot**
+
+Decision: the nightly `applyRetention` job implements the pilot rules of `plan/materials/pilot/data-map.md`. After 30 days it clears what people wrote while keeping the rows: `exchanges.text` and `options` (30 days after delivery), chips, translations, `replies.text`, the text in `answers.payload`, `answers.transcript`, `mentions`, `mood_words`, `flag_reason`, suggestions' text, `outbound.payload` (30 days after `sent_at`), `ai_calls.output`, and the reply text in `quiet_events.ask_to_check`; a NOT NULL column takes its empty value, and chips and translations rows, which hold nothing else, are deleted. It deletes `message_refs` older than 30 days, invites 30 days after expiry or acceptance, expired onboarding sessions, media per `expires_at` and `kept` (removing the id from `exchanges.media_ids` and `options`, with a `deletions` row for every media deletion), members 30 days after `left_at`, families within 24 hours of `deleted_at`, and `events`, `metrics_daily`, `ai_calls`, and `outbound` rows older than 24 months. A member's Durable Object storage is cleared when they stop, leave, die, or are deleted. Summaries, the `flag` boolean, and away dates stay while the family uses Vela. Each rule has a retention test.
+
+Why: the privacy notice promises 30 days for what the family wrote, and the earlier rules covered only media, transcripts, members, families, and events, so asks, replies, translations, chips, suggestions, outbound payloads, AI outputs, and message refs would have been kept indefinitely (data map, gap 1). Clearing columns keeps the timing, states, and quiet outcomes that answer rate and the precision page are computed from.
+
+Rejected: deleting whole exchanges after 30 days (their quiet events and outcomes cascade away, and the history of answered days with them); keeping content until the family leaves (breaks the notice); field-level encryption with key deletion as the retention mechanism (decided separately before launch, architecture §13).
+
+Revisit if: counsel says consent proof must outlive a member's deletion (data map, gap 4), the family book needs words past 30 days, or events volume makes row deletes slower than dropping partitions.
+
+## ADR-25 · Answers whose understanding failed are re-run from reconciliation
+**2026-09-14 · accepted · extends ADR-5 and ADR-8**
+
+Decision: `answers.processing_attempts` counts each start of media ingestion or understanding for an answer, and `understood_at` is set only when `ai.understand` and `ai.flag` both returned ok (a failed translation does not hold it back). Every 5 minutes `reconcile` re-enqueues answers with `understood_at` null, received between 15 minutes and 24 hours ago, with fewer than 3 attempts: a voice answer without a transcript to `ingest_answer_media`, anything else to `understand_answer`. A job that fails at the third attempt or later sends `admin.understand_failed`, keyed by the answer so it goes out once, with a link and no content. The group transcript post, translations, and flag notices are keyed per answer, so a re-run never repeats them.
+
+Timing: nothing spaces the attempts out. The first re-run comes at the first reconciliation after the answer is 15 minutes old, and the next one 5 minutes later, so every attempt falls within about 25 minutes of the answer. A voice answer whose transcription succeeds spends two attempts on its first run (ingestion, then understanding), so its understanding is re-run once. A job still waiting in the queue when reconciliation runs is enqueued again and spends an attempt; the per-answer keys keep that harmless. The 24-hour window does not spread the attempts: it only limits which answers qualify, so an answer that reconciliation missed, for example while cron was down, is still picked up within a day.
+
+Why: `@vela/ai` resolves every provider failure to a safe default, so a failed flag check looks like "no flag" and nothing would ever run it again (data map, gap 16). The light has already lit on the raw answer (ADR-5), so a re-run costs nothing on the safety path. Re-running within about 25 minutes rides out a brief provider error or a single failed request. A longer outage ends in `admin.understand_failed`, and the founder reads the answer by hand (`infra/runbooks/incident.md`). The bound stops an answer that always fails from being paid for forever.
+
+Rejected: queue retries (the job completes, because the port resolves failures instead of throwing, so the queue never retries it); unbounded retries; the founder reading every failed answer by hand as the only safeguard.
+
+Revisit if: provider outages longer than about half an hour turn out to be common, so answers regularly end in `admin.understand_failed` (then space the attempts out, for example with a last-attempt time per answer), or the second speech-to-text provider (ADR-14) is added, which would make a different provider the natural second attempt.
+
+## ADR-7 · updated 2026-09-14
+`Config.regions` lists the regions whose database exists; the pilot has `apac` only. A new family's country still picks its preferred region (TW, JP, SG, AU, IN → `apac`; US, CA → `us`; GB, DE, and other European countries → `eu`), and a family whose preferred region does not exist is created in `apac`. So every pilot family is `apac`, which the privacy notice's "Singapore" matches. A region still never changes without export and import, so moving a family out of `apac` once `eu` or `us` exists is a planned migration with a new notice version, never a relabelling.
+
+## ADR-12 · updated 2026-09-14
+Migrations run in the deploy job of each GitHub environment before `wrangler deploy` (ADR-23), not in a separate release job. No database has been migrated yet, so until one is, a schema change regenerates `packages/db/migrations/0000_init.sql` (delete the folder, run `drizzle-kit generate --name init`) instead of adding `0001`; `architecture/schema.sql` is always regenerated with `pnpm --filter @vela/db export-sql` and never edited by hand.

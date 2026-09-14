@@ -80,19 +80,23 @@ describe("Bot API error mapping", () => {
     code: string,
     retryable: boolean,
     retryAfter: number | undefined,
+    migratedTo: string | undefined,
   ][] = [
-    ["error-403-blocked.json", "blocked", false, undefined],
-    ["error-400-chat-not-found.json", "not_found", false, undefined],
-    ["error-429-retry-after.json", "rate_limited", true, 17],
-    ["error-502-bad-gateway.json", "unavailable", true, undefined],
+    ["error-403-blocked.json", "blocked", false, undefined, undefined],
+    ["error-400-chat-not-found.json", "not_found", false, undefined, undefined],
+    // The group's new id is the way forward, so the error names it rather than being retried.
+    ["error-400-group-upgraded.json", "invalid_request", false, undefined, "-1002214567890"],
+    ["error-429-retry-after.json", "rate_limited", true, 17, undefined],
+    ["error-502-bad-gateway.json", "unavailable", true, undefined, undefined],
   ];
 
-  it.each(recorded)("%s maps to %s", async (fixture, code, retryable, retryAfter) => {
+  it.each(recorded)("%s maps to %s", async (fixture, code, retryable, retryAfter, migratedTo) => {
     const error = await failureOf(sendText, () => telegramErrorFixture(fixture));
 
     expect(error.code).toBe(code);
     expect(error.retryable).toBe(retryable);
     expect(error.retryAfterSeconds).toBe(retryAfter);
+    expect(error.migratedToConversationId).toBe(migratedTo);
     expect(error.message).not.toContain(TEST_BOT_TOKEN);
   });
 

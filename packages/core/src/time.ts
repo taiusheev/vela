@@ -3,7 +3,7 @@
  * unchanged in Workers and Node. Instants are `Date` (UTC); calendar values are `LocalDate`
  * (`YYYY-MM-DD`) and `LocalTime` (`HH:MM`) strings interpreted in a zone.
  */
-import type { LocalDate, LocalTime } from "@vela/contracts";
+import { isIanaTimeZone, type LocalDate, type LocalTime } from "@vela/contracts";
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 86_400_000;
@@ -231,23 +231,12 @@ export function minutesBetween(from: Date, to: Date): number {
 }
 
 /**
- * A resolved zone that is only a fixed offset: `+08:00`, or the tz database's `Etc/GMT-8`, whose sign
- * is inverted (it means UTC+8). `UTC` and its aliases resolve to `UTC` and are accepted.
- */
-const FIXED_OFFSET_ZONE = /^(?:[+-]|Etc\/GMT[+-]\d+$)/;
-
-/**
- * True for a named zone the runtime's time zone data recognises. Fixed offsets such as `+08:00` or
- * `Etc/GMT+5` are refused even though `Intl` accepts them: a member stored with an offset would
- * silently lose daylight saving and receive her morning an hour off for half the year.
+ * True for an IANA zone name, including `UTC` and `Etc/UTC`; false for fixed offsets such as
+ * `+08:00` and `Etc/GMT-8`. The rule lives in `@vela/contracts` (`isIanaTimeZone`) so the scheduler
+ * and the `TimeZone` schema can never disagree about a stored zone.
  */
 export function isValidTimeZone(timeZone: string): boolean {
-  try {
-    const resolved = new Intl.DateTimeFormat("en-US", { timeZone }).resolvedOptions().timeZone;
-    return !FIXED_OFFSET_ZONE.test(resolved);
-  } catch {
-    return false;
-  }
+  return isIanaTimeZone(timeZone);
 }
 
 /**

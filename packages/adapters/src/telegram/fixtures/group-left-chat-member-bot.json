@@ -1,0 +1,32 @@
+{
+  "update_id": 873920444,
+  "message": {
+    "message_id": 1243,
+    "from": {
+      "id": 5829174630,
+      "is_bot": false,
+      "first_name": "Anna",
+      "last_name": "Chen",
+      "username": "anna_chen",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": -1002214567890,
+      "title": "Chen family",
+      "type": "supergroup"
+    },
+    "date": 1789312200,
+    "left_chat_participant": {
+      "id": 7412589630,
+      "is_bot": true,
+      "first_name": "Vela Light",
+      "username": "VelaLightBot"
+    },
+    "left_chat_member": {
+      "id": 7412589630,
+      "is_bot": true,
+      "first_name": "Vela Light",
+      "username": "VelaLightBot"
+    }
+  }
+}

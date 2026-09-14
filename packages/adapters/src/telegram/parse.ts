@@ -2,10 +2,11 @@
  * Turns one Telegram `Update` into normalised inbound events.
  *
  * Only what the product acts on is recognised: messages people send in private chats and groups,
- * button taps, reactions, changes to the bot's own membership, and a group moving to a new id.
- * Content a person sent that has no richer kind arrives as `other`. Everything else (edits, channel
- * posts, messages sent on behalf of a chat, other service messages, commands for other bots) yields
- * no events, so a new Telegram feature never reaches the services by accident.
+ * button taps, reactions, changes to the bot's own membership, a group moving to a new id, and
+ * someone leaving a group. Content a person sent that has no richer kind arrives as `other`.
+ * Everything else (edits, channel posts, messages sent on behalf of a chat, other service messages
+ * such as members joining, commands for other bots) yields no events, so a new Telegram feature
+ * never reaches the services by accident.
  */
 import { InboundEvent, type InboundKind, type MediaRef } from "@vela/contracts";
 
@@ -92,6 +93,11 @@ function fromMessage(message: JsonObject, botUsername: string): EventDraft | und
     return { at: fromUnixTime(date), kind: "migrated", sender: from.sender, ...migration };
   }
 
+  // Also before the sender check: an anonymous admin or a moderation bot can remove a member, and
+  // the departure is just as real.
+  const left = asObject(message.left_chat_member);
+  if (left !== undefined) return readDeparture(left, conversation, from.sender, date, botUsername);
+
   // A message sent on behalf of a chat carries `sender_chat` and a stand-in `from`: a placeholder
   // bot for an anonymous admin or a channel posting as itself, but the non-bot user 777000
   // ("Telegram") for a linked channel's post auto-forwarded into its discussion group. Bots with
@@ -146,6 +152,36 @@ function readMigration(
   return undefined;
 }
 
+/**
+ * `left_chat_member` is the service message a group gets when someone leaves or is removed; Telegram
+ * delivers service messages to bots even in privacy mode. The bot's own departure yields nothing,
+ * because `my_chat_member` already reports it as `bot_removed`. The bot knows itself by username, as
+ * it does for commands; any other bot leaving is reported, and services find no linked member for it.
+ */
+function readDeparture(
+  left: JsonObject,
+  conversation: Conversation,
+  sender: Sender,
+  date: number,
+  botUsername: string,
+): EventDraft | undefined {
+  const subject = readUser(left);
+  if (conversation.kind !== "group" || subject === undefined) return undefined;
+  if (subject.isBot && asString(left.username)?.toLowerCase() === botUsername.toLowerCase()) {
+    return undefined;
+  }
+  return {
+    at: fromUnixTime(date),
+    kind: "member_left",
+    sender,
+    conversation,
+    subject: {
+      externalUserId: subject.sender.externalUserId,
+      displayName: subject.sender.displayName,
+    },
+  };
+}
+
 interface Content {
   readonly kind: InboundKind;
   readonly text?: string | undefined;
@@ -198,28 +234,37 @@ function readAudio(audio: JsonObject): MediaRef | undefined {
   return {
     kind: "audio",
     providerFileId: fileId,
+    providerUniqueId: asString(audio.file_unique_id),
     mime: asString(audio.mime_type),
     durationMs: duration === undefined ? undefined : duration * 1000,
     bytes: asInteger(audio.file_size),
   };
 }
 
+/**
+ * Each size of a photo is a file with its own `file_unique_id`, so the unique id is the chosen
+ * size's. The largest is chosen every time, so the same photo always yields the same id.
+ */
 function largestPhoto(value: unknown): MediaRef | undefined {
   if (!Array.isArray(value)) return undefined;
   const sizes: readonly unknown[] = value;
-  let best: { fileId: string; area: number; bytes: number | undefined } | undefined;
+  let best: { ref: MediaRef; area: number } | undefined;
   for (const item of sizes) {
     const size = asObject(item);
     const fileId = size === undefined ? undefined : asString(size.file_id);
     if (size === undefined || fileId === undefined) continue;
     const area = (asInteger(size.width) ?? 0) * (asInteger(size.height) ?? 0);
     if (best === undefined || area > best.area) {
-      best = { fileId, area, bytes: asInteger(size.file_size) };
+      const ref: MediaRef = {
+        kind: "image",
+        providerFileId: fileId,
+        providerUniqueId: asString(size.file_unique_id),
+        bytes: asInteger(size.file_size),
+      };
+      best = { ref, area };
     }
   }
-  return best === undefined
-    ? undefined
-    : { kind: "image", providerFileId: best.fileId, bytes: best.bytes };
+  return best?.ref;
 }
 
 function fromCallbackQuery(query: JsonObject, receivedAt: Date): EventDraft | undefined {

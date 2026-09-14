@@ -20,7 +20,8 @@ The build plan refers to these parts; the CI suite in `@vela/services` implement
 | 1 · delivery fails | The adapter fails for a cohort (blocked, unavailable) | Retries at 5, 15 and 30 min for temporary errors; `outbound.status = failed`; the organiser gets `delivery.failed` once; no repeat and **no quiet event** for that exchange |
 | 2 · missed wake | A Durable Object alarm never fires | Reconciliation finds the member more than 10 min overdue, logs `scheduler_missed`, delivers once (with "Sorry this is late." past 180 min), never twice; the heartbeat ping is sent |
 | 3 · database down | Postgres unreachable during a tick | The tick skips cleanly; webhooks answer 503; an error alert; no quiet event; the next tick catches up |
-| 4 · AI down | Claude or Deepgram fails | The light is lit on the raw answer; the family sees the answer with its media; `ai_calls.ok = false`; no quiet event; the job completes with the safe defaults (summary "answered", no flag) and is **not** retried, so the answer appears in the list of answers whose AI calls failed ([`incident.md`](incident.md)) |
+| 4 · AI down | Claude or Deepgram fails | The light is lit on the raw answer; the family sees the answer with its media; `ai_calls.ok = false`; no quiet event; `understood_at` stays empty; `reconcile` re-runs the answer from 15 minutes after it arrived, with at most three attempts in all, without a second transcript post, translation or flag notice; after the third failed attempt the admin conversation gets `admin.understand_failed` once, with a link and no words (`architecture/decisions.md` ADR-25, [`incident.md`](incident.md)) |
+| 5 · answer before the arrival | The kept-light member writes before her arrival time, the day after a delivered morning | The message goes to the previous day's exchange and the group; the arrival is still delivered at her hour; no repeat and **no quiet event** that day, because the earlier message counts as the day's answer (spec §19, `architecture/04-instrument-flows.md` §3.9) |
 
 ## Live drill in staging
 
@@ -53,9 +54,9 @@ Expect: the organiser receives "We couldn't reach [Name] on Telegram today. Noth
 Expect: Healthchecks marks `vela-staging-reconcile` down and emails within about 10 minutes; any arrival due meanwhile is still delivered by its Durable Object alarm. Restore by redeploying staging (`wrangler deploy --env staging` restores the triggers from configuration); the check is up again within 5 minutes.
 
 **D · AI down (part 4).** The founder replaces the staging `ANTHROPIC_API_KEY` with an invalid value. The test member answers with a voice note.
-Expect: "☀️ [Name] answered [asker] · [time]" in the group within seconds; the answer posted with its voice note even without a summary or translation; `ai_calls` rows with `ok = false`; no quiet notice; after the key is restored, the answer stays without a transcript or flag check (nothing retries it) and is listed by the query in [`incident.md`](incident.md). Restore by creating a new staging key in the Anthropic console, installing it, and deleting the old key ([`secrets-rotation.md`](secrets-rotation.md)).
+Expect: "☀️ [Name] answered [asker] · [time]" in the group within seconds; the answer posted with its voice note even without a summary or translation; `ai_calls` rows with `ok = false`; no quiet notice; the answer's `understood_at` empty. Restore the key within 10 minutes of the answer by creating a new staging key in the Anthropic console, installing it, and deleting the old key ([`secrets-rotation.md`](secrets-rotation.md)). Then expect, between 15 and 25 minutes after the answer: `reconcile` re-runs it, `understood_at` is set, and the transcript appears in the group exactly once (ADR-25). If the attempts are used up first, the staging admin conversation gets `admin.understand_failed` once, with a link and no words, and the answer is listed by the query in [`incident.md`](incident.md).
 
-Part 3 (database down) runs in CI only.
+Parts 3 (database down) and 5 (answer before the arrival) run in CI only.
 
 ## Production: the daily review
 
@@ -63,7 +64,7 @@ Every day in the admin page, the founder checks:
 
 - Every quiet notice has an outcome.
 - No quiet notice exists for a day whose arrival failed, and every notice came at least `quiet_after_min` after the actual delivery time, not the scheduled hour. **One notice that breaks either rule is a Sev 1 incident and a kill signal** ([`incident.md`](incident.md)).
-- Answers from the last day whose AI calls failed (the query in [`incident.md`](incident.md)): their flag check never ran, so read each and pass any words that matter to the organiser by hand.
+- Answers from the last day that are still not understood: every `admin.understand_failed` notice (open its link), and the query in [`incident.md`](incident.md), which also finds answers `reconcile` never re-ran. Their flag check never succeeded, so read each and pass any words that matter to the organiser by hand.
 - Weekly: the counts of `scheduler_missed` and `arrival_delivery_failed`, and whether they are rising.
 
 ## How to know it worked

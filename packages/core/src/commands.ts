@@ -11,8 +11,10 @@ export type ParentCommand = "stop" | "start" | "what_family_sees";
 
 /**
  * The words she is told to use must stay here: English copy says "Say start", Traditional Chinese
- * copy says 「停」 and 「開始」. Simplified forms sit beside the Traditional ones because some phones
- * type simplified characters by default, and a stop she cannot get recognised is a promise broken.
+ * copy says 「停」 and 「開始」, and the zh-TW pilot materials use both 家人看到什麼 (consent script
+ * section 4, privacy notice) and 家人看得到什麼 (the script's answer to common question 3).
+ * Simplified forms sit beside the Traditional ones because some phones type simplified characters by
+ * default, and a stop she cannot get recognised is a promise broken.
  */
 export const PARENT_COMMAND_KEYWORDS: Readonly<Record<ParentCommand, readonly string[]>> = {
   stop: [
@@ -75,6 +77,9 @@ export const PARENT_COMMAND_KEYWORDS: Readonly<Record<ParentCommand, readonly st
     "家人看到什麼",
     "家人看到甚麼",
     "家人看到什么",
+    "家人看得到什麼",
+    "家人看得到甚麼",
+    "家人看得到什么",
     // ja
     "家族には何が見える",
     "家族には何が見えますか",

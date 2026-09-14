@@ -9,7 +9,7 @@ Architecture §13–15 · founder leads, co-founder investigates with content-fr
 - A family reports: no morning message, two messages, a message to the wrong person, or a quiet notice on a day our message failed or was late.
 - A secret or personal data may be exposed.
 
-Not an incident: one AI or transcription call failing, or one person blocking the bot. The light is already lit, but a failed call is **not retried**: `@vela/ai` resolves every provider error to a safe default, so that answer is stored with summary "answered" and no flag, and its flag check never runs. The founder's daily review ([`silence-drill.md`](silence-drill.md)) reads such answers by hand ("Answers whose AI calls failed", below).
+Not an incident: one AI or transcription call failing, or one person blocking the bot. The light is already lit. `@vela/ai` resolves every provider error to a safe default, so a failed call leaves the answer with the safe defaults (no transcript, summary "answered", no flag) and its flag check not done. Once the sprint 1 services ship the re-run (`architecture/decisions.md` ADR-25, build plan 1.13), `answers.understood_at` stays empty until understanding and the flag check both succeed, and `reconcile` re-runs the answer (below). Until then, and for an answer the re-run gives up on, the founder's daily review ([`silence-drill.md`](silence-drill.md)) reads it by hand ("Answers whose AI calls failed", below).
 
 | Severity | Meaning | Respond |
 |---|---|---|
@@ -33,16 +33,18 @@ Not an incident: one AI or transcription call failing, or one person blocking th
    | Adapter failures | Telegram `getWebhookInfo` (last error, pending updates); 429 rate limits; a revoked token |
    | Dead-letter growth | The DLQ messages (ids only): fix the cause, then re-drive |
    | Two arrivals in one day | Should be impossible (`exchanges_one_per_day`, `outbound_budget_idx`); treat as Sev 1 and a kill signal |
-   | AI or STT down | Sev 2. Arrivals, the light and the group posts still work, but nothing is retried: every answer in the outage keeps the safe defaults (no transcript or translation, summary "answered", no flag), so words about a fall or pain would not reach the organiser. Once the provider is back, read each affected answer (below) and pass any words that matter to the organiser by hand the same day |
+   | AI or STT down | Sev 2. Arrivals, the light and the group posts still work, but an answer in the outage gets no transcript, translation or flag check, so words about a fall or pain would not reach the organiser. Once the re-run ships, each is re-run with at most three attempts in all, but the attempts come within about half an hour of the answer, so an outage longer than that ends in `admin.understand_failed` (below). Until the re-run ships, nothing is retried. Either way, once the provider is back, read every answer that is still not understood (below) and pass any words that matter to the organiser by hand the same day |
 
 4. **Fix and verify** through the normal release path (hotfix PR → CI → tag). Wait until reconciliation logs no `scheduler_missed` for 15 minutes, the admin shows every due arrival delivered or marked late, and the DLQ is empty.
 
 ### Answers whose AI calls failed
 
-No re-run of `understandAnswer` exists yet (flows §3.10 has none); until it does, the founder does the flag check by hand. In the Neon console, branch `main`, first log the read for each family you will open ([`data-requests.md`](data-requests.md), rule 2), then list the answers since the outage began:
+**Once the re-run ships (ADR-25; `architecture/04-instrument-flows.md` §3.10, §3.15).** Each start of media ingestion or understanding adds one to `answers.processing_attempts`, so a voice answer's first run counts two when its transcription succeeds. Every 5 minutes `reconcile` re-enqueues answers with `understood_at` empty that arrived between 15 minutes and 24 hours ago and have fewer than three attempts: a voice answer without a transcript goes back to media ingestion, anything else to understanding. A re-run never posts the transcript to the group twice, never repeats a translation, and never sends a flag notice twice. After the third failed attempt the admin conversation receives `admin.understand_failed` once: the family's name and a link to the admin page, never her words. Open the link (the view is logged), read the answer, and pass any words that matter to the organiser as below. An answer that turned 24 hours old with fewer than three attempts (for example while cron was down) gets no notice, so after any outage also run the query below.
+
+**Until the re-run ships**, nothing runs `understandAnswer` again, and the founder does the flag check by hand for every answer in the outage. In the Neon console, branch `main`, first log the read for each family you will open ([`data-requests.md`](data-requests.md), rule 2, action `view`), then list the answers since the outage began:
 
 ```sql
-SELECT a.id, e.family_id, a.member_id, a.received_at, a.kind, a.transcript, a.payload
+SELECT a.id, e.family_id, a.member_id, a.received_at, a.kind, a.processing_attempts, a.transcript, a.payload
 FROM answers AS a
 JOIN exchanges AS e ON e.id = a.exchange_id
 WHERE a.received_at >= '<outage start, with zone>'::timestamptz
@@ -56,8 +58,8 @@ ORDER BY a.received_at;
 
 Read each text; for a voice answer without a transcript, listen to the voice note (its `media.storage_key` names the object in R2, "Vela" account). For any mention of a fall, pain, a stranger at the door or a request for money, send the organiser her own words, as `flag.notice` would have. Note in the incident note how many answers were read, never their content.
 5. **If personal data may be exposed:**
-   1. Contain: rotate the credential ([`secrets-rotation.md`](secrets-rotation.md)); rotate `ADMIN_TOKEN` if the admin page could be involved; remove any public access; delete a misdelivered bot message (Telegram lets a bot delete its own messages for 48 hours).
-   2. Scope: which families and people, which data, from when to when (`outbound`, `admin_access_log`, Cloudflare and Neon audit logs).
+   1. Contain: rotate the credential ([`secrets-rotation.md`](secrets-rotation.md)); if the admin page could be involved, revoke its Cloudflare Access sessions (ADR-22); remove any public access; delete a misdelivered bot message (Telegram lets a bot delete its own messages for 48 hours).
+   2. Scope: which families and people, which data, from when to when (`outbound`, `admin_access_log`, Cloudflare audit and Access logs, Neon audit logs).
    3. Tell the affected people **within 72 hours** of learning of it, in plain words: what happened, what data, what we did, what they can do, how to reach the founder. Organisers first; organiser and founder agree how to tell the person the light is for (a call, not a message).
    4. Notify the Taiwan authority as the amended Personal Data Protection Act requires, confirming the current rule and deadline with counsel at the time; for any EU family, 72 hours to the authority. Record every breach, including ones that need no notice.
 6. **Tell organisers** of affected families before they would notice, using the templates below.

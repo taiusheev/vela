@@ -231,9 +231,16 @@ export function createTelegramClient(options: TelegramApiOptions): TelegramClien
       parameters !== undefined && isInteger(parameters.retry_after)
         ? parameters.retry_after
         : undefined;
+    // A basic group upgraded to a supergroup refuses sends to its old id with a 400 naming the new
+    // one; ids have up to 52 significant bits, so they are safe integers.
+    const migratedToConversationId =
+      parameters !== undefined && isInteger(parameters.migrate_to_chat_id)
+        ? String(parameters.migrate_to_chat_id)
+        : undefined;
     const message = `telegram ${method} failed: ${status}${description ? ` ${description}` : ""}`;
     throw new ChannelSendError(telegramErrorCode(status, description), message, {
       retryAfterSeconds,
+      migratedToConversationId,
     });
   }
 

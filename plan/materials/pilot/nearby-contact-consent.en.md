@@ -2,15 +2,15 @@
 
 # Nearby contact: the consent message and what saying yes means
 
-Version `nearby-consent.v1` · 13 September 2026 · goes with `privacy-notice.v1` · spec §8, §9, §14.3 M6
+Version `nearby-consent.v1` · 14 September 2026 · goes with `privacy-notice.v1` · spec §8, §9, §14.3 M6
 
-A nearby contact is one of up to two people living near the person the light is for, whom an organiser would call first on a quiet day. They agree once, through a message sent in the organiser's name. Until they say yes, Vela does not list them, and nobody can use Vela to message them.
+A nearby contact is one of up to two people living near the person the light is for, whom an organiser would call first on a quiet day. They agree once, through a message sent in the organiser's name. Until they say yes, Vela does not list them in any notice, and nobody can use Vela to message them.
 
 ## How the message is sent
 
 | Stage | Who sends it | How the answer is recorded |
 |---|---|---|
-| **Pilot on Telegram and LINE (now)** | The organiser, from their own phone (SMS, LINE, WhatsApp or Telegram), using text A below | The contact replies to the organiser. The organiser forwards the reply (their words or a screenshot) to the founder. The founder adds the contact to Vela **only after a yes**, with the time of the yes, and records a `consents` row: kind `nearby`, text version `nearby-consent.v1`, the channel used, the date and the contact's words as evidence ([`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md), section C). At Vela's setup the organiser taps **Skip** at the question about nearby contacts, so no contact enters Vela before their yes |
+| **Pilot on Telegram and LINE (now)** | The organiser, from their own phone (SMS, LINE, WhatsApp or Telegram), using text A below | The contact replies to the organiser. The organiser forwards the reply (their words or a screenshot) to the founder. The founder records the answer on Vela's admin page (`record_contact_consent`; by hand, [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) section C, until the admin page ships). A yes records the time of the yes and a `consents` row: kind `nearby`, text version `nearby-consent.v1`, the channel used, the date and the contact's words as evidence; from then on Vela lists the contact in quiet notices. A no removes the contact within 7 days. The organiser may give the contact's name and number at Vela's setup, or the founder adds a contact named later (`add_contact`); either way Vela stores them without consent and lists them in no notice until the yes is recorded |
 | **In the app (from sprint 3)** | Vela, in the organiser's name, when the organiser saves the contact (text B) | The contact taps a button; `POST /nearby/:token/consent` records consent or decline |
 
 ## Text A: sent by the organiser in the pilot
@@ -21,7 +21,7 @@ A nearby contact is one of up to two people living near the person the light is 
 >
 > You live near [Name]. On a day when [Name] hasn't answered and I can't get through, could I ask you to go round? I would always ask you myself. Vela never contacts you on its own.
 >
-> If you say yes, I'll pass your name, your phone number and how you know [Name] to the person who runs the Vela pilot, who adds them to Vela and can see them. Vela uses them only to show them to me [and to (other organiser's name)] on a day like that. You can say no, or change your mind at any time, and nothing changes between us.
+> Vela keeps your name and phone number for this, and does not show them in any message until you say yes. If you say yes, I'll also tell Vela how you know [Name], and Vela shows your details only to me [and to (other organiser's name)] on a day like that. The person who runs the Vela pilot can see them and records your answer. If you say no, your details are deleted. You can say no, or change your mind at any time, and nothing changes between us.
 >
 > Vela is a pilot run by [FOUNDER FULL NAME]. How your details are used: [PRIVACY NOTICE LINK]
 >
@@ -41,7 +41,7 @@ A nearby contact is one of up to two people living near the person the light is 
 
 **What Vela keeps:** your name, how you know [Name], your phone number, the messaging app you use, and when and how you said yes.
 
-**Who sees it:** the organisers of [Name]'s family, and [FOUNDER FULL NAME], who runs the pilot and adds your details to Vela. Your details are stored with the providers named in the privacy notice (Vela's database in Singapore, and Cloudflare, which runs Vela's software), and reach the organiser through their messaging app on a quiet day. Vela's AI never sees your phone number. You will not see [Name]'s messages or answers, and nothing about [Name]'s days is shared with you.
+**Who sees it:** the organisers of [Name]'s family, and [FOUNDER FULL NAME], who runs the pilot and records your answer in Vela. Your details are stored with the providers named in the privacy notice (Vela's database in Singapore, and Cloudflare, which runs Vela's software), and reach the organiser through their messaging app on a quiet day. Vela's AI never sees your phone number. You will not see [Name]'s messages or answers, and nothing about [Name]'s days is shared with you.
 
 **When you might hear from the family:** only on a day when [Name] has not answered, and only if an organiser decides to ask you. We expect this to be rare. In the pilot, the organiser calls or messages you directly. Later, in the app, you may receive a message sent in the organiser's name, such as:
 
@@ -61,11 +61,11 @@ Your answer goes to the organiser.
 
 ## What saying no means
 
-Nothing is stored. In the pilot, your details are never added to Vela. In the app, your name and number are deleted as soon as you decline, and if you do not answer within 14 days they are deleted too, and the request is not repeated. The organiser may still call you as a friend or neighbour, as they always could.
+Your details never appear in a notice, and they are deleted. In the pilot, the founder deletes them within 7 days of your no, or 14 days after they were added to Vela if you have not said yes. In the app, your name and number are deleted as soon as you decline, and if you do not answer within 14 days they are deleted too. Either way, the request is not repeated. The organiser may still call you as a friend or neighbour, as they always could.
 
 ## Notes for the founder
 
-- A contact who has not said yes is never added to Vela in the pilot, and never appears in a notice on a quiet day. Vela's setup chat still offers the organiser a nearby-contact question: if an organiser typed a contact there instead of tapping Skip, delete it the same day ([`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md), section A) and add it only after the yes.
+- A contact without a recorded yes never appears in a notice on a quiet day: Vela lists only contacts whose yes is recorded and who have not said no (`architecture/04-instrument-flows.md` §3.12). Contacts the organiser gives at setup are stored without consent. Record each answer (`record_contact_consent` on the admin page, or [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) section C until it ships), and remove a contact who says no within 7 days, or who has no yes 14 days after being added (`remove_contact`, or section D).
 - The organiser must be the one who knows the contact. Vela never recruits contacts.
 - Record the text version, the channel, the date and the contact's exact words. If the contact asks a question the text does not answer, answer it before recording consent.
 - Changing this text in a way that changes its meaning needs a new version and a new yes from contacts already recorded.

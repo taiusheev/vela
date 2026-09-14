@@ -3,7 +3,7 @@
 
 # 同意說明腳本：與留燈的家人進行的說明通話
 
-版本 `consent-script.v1`・2026 年 9 月 13 日・搭配 `privacy-notice.v1`・口述內容的意思與 `consent.request` 訊息一致（architecture/03-code-design.md §4、spec §9）
+版本 `consent-script.v1`・2026 年 9 月 14 日・搭配 `privacy-notice.v1`・口述內容的意思與 `consent.request` 訊息一致（architecture/03-code-design.md §4、spec §9）
 
 這是創辦人在說明通話中要說的話，時間在 Vela 傳送同意訊息之前。通話是讓對方完整聽清楚、可以發問的機會；真正開啟那盞燈的，是對方在聊天中按下「好，沒問題」。光靠通話不會開啟任何人的燈，發起人也不能替對方開啟。
 
@@ -71,7 +71,7 @@
 
 - **願意：** 「謝謝您。[發起人] 現在會在 Telegram 傳一個連結給您。收到之後，請點一下連結，再按畫面下方的『**開始**』。接著 Vela 會傳一則訊息給您，內容就是我剛剛跟您說的。請按『**好，沒問題**』。明天早上 [時間]，您就會收到第一則訊息。」
 
-  *請發起人現在就傳連結（如果發起人不在線上，就傳訊息請他傳）。留在線上，直到對方按了「開始」、也看到訊息為止；或是約好通話一結束，發起人就協助對方完成。如果 Vela 說連結已經失效，就謝謝對方、溫和地結束通話；產生一個新的連結（[`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) 第 A 節），在下一次通話時再請發起人傳送，絕對不要請對方一直重試。以上是 Telegram 的步驟；LINE 的步驟會在 LINE 流程完成時補上（sprint 2）。*
+  *請發起人現在就傳連結（如果發起人不在線上，就傳訊息請他傳）。留在線上，直到對方按了「開始」、也看到訊息為止；或是約好通話一結束，發起人就協助對方完成。只有按下訊息上的按鈕才算回覆：對方如果改在聊天中打字，Vela 不會理會，既不會儲存，也不會讓家人看到，所以請協助對方找到按鈕。如果 Vela 說連結已經失效，就謝謝對方、溫和地結束通話；產生一個新的連結（[`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) 第 A 節），在下一次通話時再請發起人傳送，絕對不要請對方一直重試。以上是 Telegram 的步驟；LINE 的步驟會在 LINE 流程完成時補上（sprint 2）。*
 - **不要：** 「完全沒關係，什麼都不會送出。我會跟 [發起人] 說您目前先不要，這樣一點問題都沒有。」
 - **還不確定：** 「您慢慢想。在您按下同意之前，什麼都不會開始。您想再聊的時候，[發起人] 隨時可以聯絡我。」
 
@@ -114,6 +114,6 @@
 - 對方用自己的話給的回答（「好，試試看」、「不要」、「先不要」）。
 - 更正過的資料（名字、問候方式、時間），以及您當場答不出來的問題。
 - 研究問題：願意或不願意；願意的話記下分數。
-- 向發起人確認對方已經打開邀請連結並按下「開始」：只有這樣，Vela 才會傳出同意訊息。對方按下同意後，Vela 會寫入 `consents` 紀錄（kind `light`、該訊息的文字版本、語言、通訊管道，以及訊息編號作為證明）和 `members.light_consented_at`。通話本身則依照 [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) 第 B 節，記錄一筆 kind 為 `privacy_notice`、channel 為 `call` 的 `consents`，以您筆記的出處（家庭代碼與日期）作為證明。
+- 向發起人確認對方已經打開邀請連結並按下「開始」：只有這樣，Vela 才會傳出同意訊息。對方按下同意後，Vela 會寫入 `consents` 紀錄（kind `light`、該訊息的文字版本、語言、通訊管道，以及訊息編號作為證明）和 `members.light_consented_at`。通話本身則要記錄一筆 kind 為 `privacy_notice`、channel 為 `call` 的 `consents`，以您筆記的出處（家庭代碼與日期）作為證明：管理頁面上線後在管理頁面記錄（`record_consent`），在那之前依照 [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) 第 B 節記錄。
 - 如果 24 小時內沒有按下同意，請發起人提一次就好。絕對不要由 Vela 傳提醒。
 - 如果對方說不要：當天就溫和地告訴發起人。不建立任何資料。

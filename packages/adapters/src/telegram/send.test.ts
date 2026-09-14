@@ -207,6 +207,22 @@ describe("adapter.send", () => {
     expect(calls().map(([method]) => method)).toStrictEqual(["sendPhoto"]);
   });
 
+  it("names the supergroup when a send goes to a group that was upgraded", async () => {
+    const { adapter } = setup(() => telegramErrorFixture("error-400-group-upgraded.json"));
+
+    const failure = adapter.send({
+      ...ARRIVAL,
+      kind: "turn_prompt",
+      to: { channel: "telegram", conversationId: "-4567812390" },
+    });
+
+    await expect(failure).rejects.toMatchObject({
+      code: "invalid_request",
+      retryable: false,
+      migratedToConversationId: "-1002214567890",
+    });
+  });
+
   describe("rejects before calling Telegram", () => {
     const invalid: [string, OutboundMessage][] = [
       [

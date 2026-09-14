@@ -1,3 +1,4 @@
+import { TimeZone } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
 import {
   addDays,
@@ -325,9 +326,29 @@ describe("isValidTimeZone", () => {
     expect(isValidTimeZone("-0500")).toBe(false);
   });
 
-  it("rejects the tz database's fixed-offset zones, in any letter case", () => {
+  it("rejects Etc/GMT+N and Etc/GMT-N in any letter case, even when N is 0", () => {
     for (const zone of ["Etc/GMT-8", "Etc/GMT+5", "Etc/GMT-14", "Etc/GMT+12", "etc/gmt-8"]) {
       expect(isValidTimeZone(zone)).toBe(false);
+    }
+    expect(isValidTimeZone("Etc/GMT+0")).toBe(false);
+  });
+
+  it("agrees with the TimeZone schema on names, offsets, and signed GMT zones", () => {
+    const zones = [
+      "Asia/Taipei",
+      "UTC",
+      "Etc/UTC",
+      "GMT",
+      "Mars/Olympus",
+      "",
+      "+08:00",
+      "\u221208:00",
+      "Etc/GMT-8",
+      "Etc/GMT+0",
+      "GMT-0",
+    ];
+    for (const zone of zones) {
+      expect(isValidTimeZone(zone), zone).toBe(TimeZone.safeParse(zone).success);
     }
   });
 });

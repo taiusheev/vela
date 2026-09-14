@@ -90,6 +90,7 @@ describe("parseTelegramUpdate with recorded updates", () => {
             kind: "audio",
             providerFileId:
               "AwACAgUAAxkBAAIBP2bj8x1kQz0vT6yWm3Hn2pLr5sUAAl8TAAKj3yBXkQ7ZsYw1d8o2BA",
+            providerUniqueId: "AgADXxMAAqPfIFc",
             mime: "audio/ogg",
             durationMs: 23_000,
             bytes: 61_234,
@@ -112,6 +113,7 @@ describe("parseTelegramUpdate with recorded updates", () => {
             kind: "audio",
             providerFileId:
               "CQACAgUAAxkBAAIBRWbj9t5Lr8KcJm0Q2xVnY4pZ3wEAAm0TAAKj3yBXw5sU8Qm1ZrI2BA",
+            providerUniqueId: "AgADbRMAAqPfIFc",
             mime: "audio/mp4",
             durationMs: 41_000,
             bytes: 327_645,
@@ -134,6 +136,7 @@ describe("parseTelegramUpdate with recorded updates", () => {
           media: {
             kind: "image",
             providerFileId: "AgACAgUAAxkBAAIBQGbj9A2xYAAKhwjEb0xAhV3M-rQABAQADAgADeQADNgQ",
+            providerUniqueId: "AQADoMIxG9MQIVdyB-",
             bytes: 142_887,
           },
         },
@@ -322,6 +325,50 @@ describe("parseTelegramUpdate with recorded updates", () => {
       ],
     ],
     [
+      // Sam leaves by himself, so he is both the one who acted and the one who left.
+      "group-left-chat-member-self.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920442",
+          at: "2026-09-13T15:00:00.000Z",
+          kind: "member_left",
+          sender: SAM,
+          conversation: FAMILY_GROUP,
+          subject: { externalUserId: SAM.externalUserId, displayName: SAM.displayName },
+        },
+      ],
+    ],
+    [
+      "group-left-chat-member-removed.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920443",
+          at: "2026-09-13T15:05:00.000Z",
+          kind: "member_left",
+          sender: ANNA,
+          conversation: FAMILY_GROUP,
+          subject: { externalUserId: SAM.externalUserId, displayName: SAM.displayName },
+        },
+      ],
+    ],
+    [
+      // Services find no linked member for another bot; the parser does not decide that.
+      "group-left-chat-member-other-bot.json",
+      [
+        {
+          channel: "telegram",
+          eventId: "tg:873920445",
+          at: "2026-09-13T15:15:00.000Z",
+          kind: "member_left",
+          sender: ANNA,
+          conversation: FAMILY_GROUP,
+          subject: { externalUserId: "6798123450", displayName: "Recipe Helper" },
+        },
+      ],
+    ],
+    [
       "group-ask-with-mention.json",
       [
         {
@@ -385,6 +432,8 @@ describe("parseTelegramUpdate with recorded updates", () => {
     ["my-chat-member-group-promoted.json", []],
     ["my-chat-member-group-restricted-outside.json", []],
     ["group-new-chat-members.json", []],
+    // The bot's own removal arrives as my_chat_member, which reports it as bot_removed.
+    ["group-left-chat-member-bot.json", []],
     ["edited-message.json", []],
     ["channel-post.json", []],
   ];
@@ -393,7 +442,7 @@ describe("parseTelegramUpdate with recorded updates", () => {
     expect(parseFixture(fixture)).toStrictEqual(expected);
   });
 
-  it("parses each update of a two-photo album into an image sharing the media group id", () => {
+  it("parses each update of a two-photo album into an image with its own unique id, sharing the media group id", () => {
     const updates: unknown = JSON.parse(readFixture("group-photo-album.json"));
     expect(Array.isArray(updates)).toBe(true);
     const events = (Array.isArray(updates) ? updates : []).flatMap(parseObject);
@@ -416,6 +465,7 @@ describe("parseTelegramUpdate with recorded updates", () => {
         media: {
           kind: "image",
           providerFileId: "AgACAgUAAxkBAAIEsWbjS7pNAAKhwjEb0xAhV3M-rQABAQADAgADeQADNgQ",
+          providerUniqueId: "AQADsMIxG9MQIVdyB-",
           bytes: 142_887,
         },
       },
@@ -426,6 +476,7 @@ describe("parseTelegramUpdate with recorded updates", () => {
         media: {
           kind: "image",
           providerFileId: "AgACAgUAAxkBAAIEsmbjS7pOAAKhwjEb0xAhV3M-rQABAQADAgADeQADNgQ",
+          providerUniqueId: "AQADscIxG9MQIVdyB-",
           bytes: 142_887,
         },
       },
@@ -483,7 +534,11 @@ describe("parseTelegramUpdate edge cases", () => {
         ],
       }),
     );
-    expect(event?.media).toStrictEqual({ kind: "image", providerFileId: "big" });
+    expect(event?.media).toStrictEqual({
+      kind: "image",
+      providerFileId: "big",
+      providerUniqueId: "b",
+    });
   });
 
   it("ignores messages posted on behalf of a chat, which carry a placeholder bot sender", () => {
@@ -622,6 +677,53 @@ describe("parseTelegramUpdate edge cases", () => {
       message_reaction: { ...reaction, old_reaction: reaction.new_reaction, new_reaction: [] },
     };
     expect(parseObject(update)[0]?.reactions).toStrictEqual([]);
+  });
+});
+
+describe("parseTelegramUpdate with departures", () => {
+  const SAM_LEFT = { externalUserId: "1938475620", displayName: "Sam" };
+  const departure = (fields: Record<string, unknown>): unknown => ({
+    update_id: 9,
+    message: {
+      message_id: 1250,
+      from: { id: 5829174630, is_bot: false, first_name: "Anna", last_name: "Chen" },
+      chat: { id: -1002214567890, title: "Chen family", type: "supergroup" },
+      date: 1789312800,
+      left_chat_member: { id: 1938475620, is_bot: false, first_name: "Sam" },
+      ...fields,
+    },
+  });
+
+  it("reports a removal by an anonymous admin, whose stand-in sender is a bot", () => {
+    const events = parseObject(
+      departure({
+        from: { id: 1087968824, is_bot: true, first_name: "Group", username: "GroupAnonymousBot" },
+        sender_chat: { id: -1002214567890, title: "Chen family", type: "supergroup" },
+      }),
+    );
+    expect(events.map((event) => [event.kind, event.sender.externalUserId, event.subject])).toEqual(
+      [["member_left", "1087968824", SAM_LEFT]],
+    );
+  });
+
+  it("reports a departure from a basic group", () => {
+    const [event] = parseObject(
+      departure({ chat: { id: -4567812390, title: "Chen family", type: "group" } }),
+    );
+    expect(event?.conversation).toStrictEqual(NEW_GROUP);
+    expect(event?.subject).toStrictEqual(SAM_LEFT);
+  });
+
+  it("yields nothing for left_chat_member outside a group", () => {
+    expect(
+      parseObject(departure({ chat: { id: 5829174630, first_name: "Anna", type: "private" } })),
+    ).toEqual([]);
+  });
+
+  it("recognises its own departure whatever the letter case of the configured username", () => {
+    const rawBody = readFixture("group-left-chat-member-bot.json");
+    expect(parseTelegramUpdate(rawBody, RECEIVED_AT, "velalightbot")).toEqual([]);
+    expect(parseTelegramUpdate(rawBody, RECEIVED_AT, "RecipeHelperBot")).toHaveLength(1);
   });
 });
 

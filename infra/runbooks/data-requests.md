@@ -2,23 +2,23 @@
 
 Privacy notice ("Your rights", "How long we keep it") · `plan/materials/pilot/data-map.md` · done by the founder only, because every step reads or writes real family records; the co-founder keeps these queries true to the schema and tests them on synthetic data, and never runs them on `main`
 
-The Telegram instrument has no admin write path: the admin page is read-only (code design §9) and no flow records the founder's consent rows, nearby contacts, organiser-set away dates, a death, or someone leaving. Until admin actions exist, the founder makes these changes in the Neon console with the statements below.
+`architecture/decisions.md` ADR-22 gives the admin page write actions (services module `admin.ts`; POST forms on `/admin` behind a Cloudflare Access JWT and a same-origin check; `architecture/04-instrument-flows.md` §3.17), built with the sprint 1 services and worker (build plan 1.12). Until they ship, the founder makes these changes in the Neon console with the statements below. Once they ship, the admin action in the last column replaces a section's statements: it writes the `admin_access_log` row (with its `action`, and `member_id` when it is about one member) and the domain event itself, so nothing is logged by hand. Sections without an admin action stay console procedures.
 
 ## When to use it
 
-| Section | When |
-|---|---|
-| A | The same day an organiser finishes Vela's setup; or the person's invite link has expired |
-| B | Recording the organiser's agreement and notice, the person's call, and other family members' notice |
-| C | A nearby contact said yes |
-| D | A nearby contact withdrew, or the organiser removes one |
-| E | The organiser says the person will be away |
-| F | Someone left the family group, or asks to stop taking part |
-| G | The person the light is for has died |
-| H | Someone asks to see or get a copy of what Vela holds about them |
-| I | Something is wrong: a name, a greeting, a wake time, a phone number |
-| J | A family member asks for their information to be deleted |
-| K | A family ends the pilot without continuing, the person the light is for asks for deletion, or a family asks to be deleted |
+| Section | When | Once the admin page's actions ship |
+|---|---|---|
+| A | The same day an organiser finishes Vela's setup; or the person's invite link has expired | A1 stays as a check after the first setups (onboarding stores every pilot family in `apac`, flows §3.1). A2 gives way to the contact actions in C and D (contacts are stored without consent, flows §3.1). A3 stays: no admin action makes an invite link |
+| B | Recording the organiser's agreement and notice, the person's call, and other family members' notice | `record_consent` (kind `pilot` or `privacy_notice`) for each member |
+| C | A nearby contact said yes | `record_contact_consent` (yes); `add_contact` first for a contact not given at setup |
+| D | A nearby contact said no or withdrew, has no yes 14 days after being added, or the organiser removes one | `record_contact_consent` (no) for a no, then `remove_contact` |
+| E | The organiser says the person will be away | `set_away` (source `organiser`); `end_away` to end it early |
+| F | Someone left the family group, or asks to stop taking part | A member with role `member` who leaves the group is marked left by Vela (flows §3.16). Anyone else: `mark_left`. Naming a new organiser stays here |
+| G | The person the light is for has died | `mark_deceased` |
+| H | Someone asks to see or get a copy of what Vela holds about them | Stays here |
+| I | Something is wrong: a name, a greeting, a wake time, a phone number | Stays here |
+| J | A family member asks for their information to be deleted | Stays here (`mark_left` deletes only 30 days later) |
+| K | A family ends the pilot without continuing, the person the light is for asks for deletion, or a family asks to be deleted | `delete_family`, once the retention job that deletes the family within 24 hours has shipped too (flows §3.15, build plan 2.8). Steps 6 to 8 stay |
 
 ## Rules
 
@@ -26,21 +26,22 @@ The Telegram instrument has no admin write path: the admin page is read-only (co
 2. **Log first.** Before reading or changing anything, for each family the session touches:
 
    ```sql
-   INSERT INTO admin_access_log (admin, family_id, what)
-   VALUES ('founder', '<family id>', 'console: <section letter and what, for example C add nearby contact>');
+   INSERT INTO admin_access_log (admin, family_id, member_id, action, what)
+   VALUES ('<your admin sign-in email>', '<family id>', NULL, '<action>', 'console: <section letter and what, for example C add nearby contact>');
    ```
 
-   Take the family id from the admin page, whose reads are logged already. If you have to search the console for it, log the search first with `NULL` as the family id and `'console: find family'`.
+   `admin` is the email you sign in to the admin page with, which is what the page itself records (flows §3.17). `action` must be one of the admin actions (a CHECK enforces it): the one the section stands in for (B `record_consent`, C `record_contact_consent`, D `remove_contact`, E `set_away` or `end_away`, F `mark_left`, G `mark_deceased`, K `delete_family`), or `view` for A, H, I and J. When the change is about one member, put their id in quotes in place of `NULL`. `what` never holds message content, names or phone numbers. Take the family id from the admin page, whose views are logged already. If you have to search the console for it, log the search first with `NULL` as the family id, `'view'` as the action and `'console: find family'`.
 3. **Look before you change.** Run the `SELECT` that comes before a change, and run the change only if it shows exactly the rows you expect.
 4. **Values.** Replace everything in `<angle brackets>`, keeping the quotes around it. A single quote inside a value is written twice (`'O''Brien'`). Times carry their zone (`'2026-09-20 18:05+08'`); dates are `'YYYY-MM-DD'`.
-5. **Deadlines.** Stopping is immediate (the person's own "stop" in the chat does it). Every other request is done within 7 days, and a withdrawn nearby contact is removed within 7 days (pack decision 7). Tell the person when it is done.
+5. **Deadlines.** Stopping is immediate (the person's own "stop" in the chat does it). Every other request is done within 7 days, and a nearby contact who says no or withdraws is removed within 7 days (pack decisions 3 and 7). Tell the person when it is done.
 6. **Results stay in the console.** Never paste a result into a chat, an issue, a screenshot or the repository. A copy for someone (H) goes only to that person.
 7. **Log the request** in the table at the end: dates and family code only.
 
 ## Every week
 
-- Record `privacy_notice` for family members who joined the group since last week (B, last statement).
-- In your Telegram chat with the production bot (the admin conversation), delete every flag notice and weekly-read draft older than 30 days, choosing to delete them for the bot too where Telegram offers it (pack decision 6; `data-map.md` row 25). This chat is not in `admin_access_log`, so keep it closed except to act on a flag or edit a read.
+- Record `privacy_notice` for family members who joined the group since last week (B, last statement; `record_consent` once the admin page ships).
+- Remove nearby contacts with no yes 14 days after they were added (D, first statement).
+- Nothing to clear in your Telegram chat with the production bot (the admin conversation): it carries family and member names and admin-page links, never family content (ADR-21; `data-map.md` row 25). Read and act on the admin page, where every view is logged.
 
 ## Finding the ids
 
@@ -55,7 +56,7 @@ ORDER BY created_at;
 
 ## A. After each organiser's setup
 
-1. **Region.** Every pilot family is `apac` (`infra/README.md`, Environments). Flows §3.1 may have set `us` or `eu` from the country:
+1. **Region.** Every pilot family is `apac` (`infra/README.md`, Environments), and onboarding stores it so (flows §3.1: `Config.regions` lists only `apac`, and a country whose preferred region does not exist falls back to it). Check after the first setups; the update should change nothing, and if it changes a row, tell the co-founder:
 
    ```sql
    SELECT id, country, region FROM families WHERE id = '<family id>';
@@ -64,21 +65,11 @@ ORDER BY created_at;
    UPDATE families SET region = 'apac' WHERE id = '<family id>' AND region <> 'apac';
    ```
 
-2. **Nearby contacts typed at setup.** The organiser should have tapped Skip. Any contact without a yes is deleted the same day, with a deletion proof; the organiser then sends text A and you add the contact after the yes (C):
+2. **Nearby contacts given at setup** are stored without consent and appear in no quiet notice until their yes is recorded (flows §3.1, §3.12). List them, so the organiser sends each one text A; record each answer as it comes (C, or D for a no):
 
    ```sql
-   SELECT id, name, consented_at FROM nearby_contacts
-   WHERE family_id = '<family id>' AND consented_at IS NULL;
-   ```
-   ```sql
-   WITH gone AS (
-     DELETE FROM nearby_contacts AS n
-     WHERE n.family_id = '<family id>' AND n.consented_at IS NULL
-     RETURNING n.*
-   )
-   INSERT INTO deletions (object_type, object_id, content_hash, reason)
-   SELECT 'nearby_contact', gone.id, encode(sha256(convert_to(gone::text, 'UTF8')), 'hex'), 'added before consent'
-   FROM gone;
+   SELECT id, name, created_at, consented_at, declined_at FROM nearby_contacts
+   WHERE family_id = '<family id>';
    ```
 
 3. **A new invite link**, when the person has not accepted and the link from setup has expired (after 7 days) or is lost. This creates a new single-use link that works for 7 days:
@@ -96,6 +87,8 @@ ORDER BY created_at;
    Send the organiser `https://t.me/<bot username>?start=<token>` from your own Telegram account. It is a one-time link for the person, not a secret, but send it only to the organiser.
 
 ## B. Consent rows the founder records
+
+Once the admin page ships: `record_consent` for each member and kind. Until then, the statements below.
 
 The organiser agreed before their member row existed (pack step 1), so their rows are written once their setup is finished, with the date they actually agreed.
 
@@ -125,26 +118,46 @@ WHERE m.id = '<kept-light member id>'
   AND NOT EXISTS (SELECT 1 FROM consents AS c WHERE c.member_id = m.id AND c.kind = 'privacy_notice');
 ```
 
-**Other family members**, who received the notice when the organiser shared it in the group. Their member rows appear when they first reply there, so run this every week for each family:
+**Other family members**, who received the notice in the group: through the link in Vela's first message there (`group.linked`, flows §3.3), or from the organiser if they were added later. Their member rows appear when they first reply there, so run this every week for each family:
 
 ```sql
 INSERT INTO consents (member_id, kind, text_version, lang, channel, given_at, evidence)
 SELECT m.id, 'privacy_notice', 'privacy-notice.v1', m.language, 'telegram', m.created_at,
-       jsonb_build_object('shared_by', 'organiser', 'recorded_by', 'founder')
+       jsonb_build_object('shared_in', 'family group', 'recorded_by', 'founder')
 FROM members AS m
 WHERE m.family_id = '<family id>' AND m.role = 'member' AND m.id <> '<kept-light member id>'
   AND NOT EXISTS (SELECT 1 FROM consents AS c WHERE c.member_id = m.id AND c.kind = 'privacy_notice');
 ```
 
-## C. Add a nearby contact after their yes
+## C. Record a nearby contact's yes
+
+Once the admin page ships: `record_contact_consent` with the yes (and `add_contact` first for a contact not given at setup). Until then, the statements below. For a no, go to D.
 
 At most two per person:
 
 ```sql
-SELECT id, name, phone, consented_at FROM nearby_contacts WHERE member_id = '<kept-light member id>';
+SELECT id, name, phone, created_at, consented_at, declined_at FROM nearby_contacts WHERE member_id = '<kept-light member id>';
 ```
 
-The contact and their `nearby` consent row, in one statement:
+**A contact given at setup** (listed above, `consented_at` empty): the yes and their `nearby` consent row, in one statement:
+
+```sql
+WITH contact AS (
+  UPDATE nearby_contacts AS n
+  SET consented_at = '<when they said yes>'::timestamptz,
+      consent_requested_at = coalesce(n.consent_requested_at, '<when text A was sent>'::timestamptz),
+      relation = coalesce(n.relation, '<how they know the person>'),
+      channel = coalesce(n.channel, '<sms, line, whatsapp or telegram>')
+  WHERE n.id = '<contact id>' AND n.consented_at IS NULL AND n.declined_at IS NULL
+  RETURNING n.id, n.channel, n.consented_at
+)
+INSERT INTO consents (contact_id, kind, text_version, lang, channel, given_at, evidence)
+SELECT contact.id, 'nearby', 'nearby-consent.v1', '<en or zh-TW>', contact.channel, contact.consented_at,
+       jsonb_build_object('words', '<their exact words>', 'forwarded_by', 'organiser', 'recorded_by', 'founder')
+FROM contact;
+```
+
+**A contact not yet in Vela** (named after setup): the contact, their yes and their consent row, in one statement:
 
 ```sql
 WITH contact AS (
@@ -167,21 +180,34 @@ The next quiet notice lists them.
 
 ## D. Remove a nearby contact
 
+Within 7 days of a no or a withdrawal; 14 days after a contact was added without a yes; or when the organiser asks. Once the admin page ships: `record_contact_consent` with the no (for a no), then `remove_contact`. Until then, the statements below.
+
+Contacts with no yes 14 days after they were added (the weekly check; log it first as a search, rule 2):
+
 ```sql
-SELECT id, name FROM nearby_contacts WHERE member_id = '<kept-light member id>';
+SELECT id, family_id, name, created_at FROM nearby_contacts
+WHERE consented_at IS NULL AND created_at < now() - interval '14 days';
+```
+
+A family's contacts:
+
+```sql
+SELECT id, name, consented_at, declined_at FROM nearby_contacts WHERE member_id = '<kept-light member id>';
 ```
 ```sql
 WITH gone AS (
   DELETE FROM nearby_contacts AS n WHERE n.id = '<contact id>' RETURNING n.*
 )
 INSERT INTO deletions (object_type, object_id, content_hash, reason)
-SELECT 'nearby_contact', gone.id, encode(sha256(convert_to(gone::text, 'UTF8')), 'hex'), '<withdrawn, or removed by the organiser>'
+SELECT 'nearby_contact', gone.id, encode(sha256(convert_to(gone::text, 'UTF8')), 'hex'), '<declined, withdrawn, no yes in 14 days, or removed by the organiser>'
 FROM gone;
 ```
 
 Their consent row goes with them. Quiet notices already sent stay in the organisers' Telegram chats: if the contact asks, ask the organisers to delete those messages.
 
 ## E. Pause the notes while the person is away
+
+Once the admin page ships: `set_away`, and `end_away` to end it early. Until then, the statements below.
 
 Morning messages keep coming; on those days no repeat and no quiet notice are sent. For "until they answer again", write `NULL` in place of `'<last day away>'`.
 
@@ -205,16 +231,16 @@ Tell the organiser the dates you set.
 
 ## F. Remove a family member who left
 
-Vela receives nothing when someone leaves a group, so a member stays in the turn rotation until this is done.
+Once the sprint 1 services ship, a member with role `member` who leaves the family group is marked left by Vela, with `left_at`, and leaves the turn rotation (flows §3.16); nothing to do. When an organiser or the person the light is for leaves the group, Vela changes nothing and sends you `admin.member_left_group`: ask the family what it means (an organiser stepping back, for example). Use this section for anyone who stops taking part without leaving the group, or if Telegram did not report a departure. Once the admin page ships: `mark_left`. Until then, the statement below.
 
 ```sql
 UPDATE members SET status = 'left', left_at = now(), turns_in = false
 WHERE id = '<member id>' AND family_id = '<family id>' AND status <> 'left';
 ```
 
-Turn prompts stop naming them, and the retention job deletes their information 30 days after `left_at` (if they asked for deletion now, use J instead). Ask the organiser to remove them from the group too, so their messages stop reaching Vela.
+Turn prompts stop naming them, and the retention job deletes their information 30 days after `left_at` (if they asked for deletion now, use J instead). Ask the organiser to remove them from the group too, so their messages stop reaching Vela: a member with role `member` who asks, replies or reacts in the group again becomes active again, with `left_at` cleared and a place in the turns (flows §3.16).
 
-If they were the family's only organiser, agree a new organiser with the family first, record that person's `pilot` consent (B), ask them to open the bot and tap **Start** so Vela can write to them privately, and then:
+If they were the family's only organiser, agree a new organiser with the family first, record that person's `pilot` consent (B), ask them to open the bot and tap **Start** so Vela can write to them privately, and then (no admin action does this):
 
 ```sql
 UPDATE members SET role = 'organiser' WHERE id = '<new organiser member id>' AND family_id = '<family id>';
@@ -222,8 +248,10 @@ UPDATE members SET role = 'organiser' WHERE id = '<new organiser member id>' AND
 
 ## G. When the person the light is for has died
 
+Once the admin page ships: `mark_deceased`, which switches the light off, sets the status, clears the scheduler and records the event, and sends nothing (flows §3.17). Until then, the statements below.
+
 ```sql
-UPDATE members SET status = 'deceased', next_wake_at = NULL
+UPDATE members SET status = 'deceased', light_on = false, next_wake_at = NULL
 WHERE id = '<kept-light member id>' AND status <> 'deceased';
 ```
 ```sql
@@ -234,7 +262,7 @@ WHERE m.id = '<kept-light member id>'
   AND NOT EXISTS (SELECT 1 FROM events AS e WHERE e.name = 'member_marked_deceased' AND e.member_id = m.id);
 ```
 
-From then on no morning message, repeat, quiet notice or turn prompt is due for her: the scheduler acts only for an active member with the light on (`decideSchedule` in `@vela/core`), and an alarm already set finds nothing to do. Vela sends the family nothing about it; write to the organiser yourself, the same day. Later, and gently, ask whether the family wants its information kept for now or deleted (K).
+From then on no morning message, repeat, quiet notice or turn prompt is due for her: the scheduler acts only for an active member with the light on (`decideSchedule` in `@vela/core`), and an alarm already set finds nothing to do. A message already queued for the family, such as a retry or a quiet notice, is dropped by the gateway instead of sent, and asks, replies and reactions in the family group are ignored, so nothing automated reaches the family again (flows §3.5, §3.7). Vela sends the family nothing about it; write to the organiser yourself, the same day. Later, and gently, ask whether the family wants its information kept for now or deleted (K).
 
 ## H. A copy of someone's information
 
@@ -256,8 +284,8 @@ SELECT received_at, kind, payload, transcript, summary, mood_words, mentions, fl
 FROM answers WHERE member_id = '<kept-light member id>' ORDER BY received_at;
 SELECT from_date, to_date, source, created_at, ended_at FROM away_periods WHERE member_id = '<kept-light member id>';
 SELECT opened_at, notify_count, resolved_at, outcome FROM quiet_events WHERE member_id = '<kept-light member id>' ORDER BY opened_at;
-SELECT week_start, lines FROM weekly_reads WHERE member_id = '<kept-light member id>' ORDER BY week_start;
-SELECT at, what FROM admin_access_log WHERE family_id = '<family id>' ORDER BY at;
+SELECT week_start, lines, sent_lines, sent_at FROM weekly_reads WHERE member_id = '<kept-light member id>' ORDER BY week_start;
+SELECT at, action, what FROM admin_access_log WHERE family_id = '<family id>' ORDER BY at;
 ```
 
 Voice notes and photos: list their keys, then download each from **Cloudflare ("Vela" account) → R2 → `vela-media-apac`**:
@@ -349,7 +377,7 @@ For anyone except the person the light is for (for her, use K: everything Vela h
    UPDATE ai_calls SET output = NULL WHERE family_id = '<family id>' AND output IS NOT NULL;
    ```
 
-5. **The member**, with a proof. Their links, replies, consents, turns, suggestions and message references go with the row:
+5. **The member**, with a proof. Their links, replies, consents, suggestions, message references, delivery records and the invites they sent go with the row; turns they held and asks they made stay, with the holder and asker set to null:
 
    ```sql
    WITH gone AS (
@@ -360,11 +388,13 @@ For anyone except the person the light is for (for her, use K: everything Vela h
    FROM gone;
    ```
 
-6. **Tell them it is done**, and that messages in the Telegram group stay there until they delete them. Content-free events and daily counts keep their member id for up to 24 months; deleted rows can remain in Neon's restore history for up to 7 days.
+6. **Tell them it is done**, and that messages in the Telegram group stay there until they delete them. Content-free events and daily counts, and the admin access log, keep their member id for up to 24 months; deleted rows can remain in Neon's restore history for up to 7 days.
 
 ## K. Delete a family
 
 Within 30 days of the end of a family's pilot, or within 7 days of a request. If the family book exists by then, first offer the organiser the stories the family kept.
+
+Once `delete_family` (build plan 1.12) and the retention job (build plan 2.8) have both shipped: `delete_family` sets `families.deleted_at`, and the retention job deletes the family within 24 hours (flows §3.15, §3.17). The next day, check that `SELECT id FROM families WHERE id = '<family id>';` returns nothing and that nothing is left under `families/<family id>/` in **Cloudflare ("Vela" account) → R2 → `vela-media-apac`**, then do steps 6 to 8. Until then, steps 1 to 8.
 
 1. **Media files.** List the keys and delete every object under `families/<family id>/` in **Cloudflare ("Vela" account) → R2 → `vela-media-apac`**:
 
@@ -413,12 +443,13 @@ Within 30 days of the end of a family's pilot, or within 7 days of a request. If
    FROM gone;
    ```
 
-6. **What stays**, as the notice says: content-free `events` and `metrics_daily` (24 months), `admin_access_log` (24 months), `deletions`, error reports (up to 90 days), and outside the database your notes under the family code (up to 12 months after the pilot) and the fee record. Deleted rows can remain in Neon's restore history for up to 7 days.
-7. **Tell the organiser** it is done, that the family's Telegram chats stay theirs, and that they can now remove the Vela bot from the group (Vela ignores an unlinked group).
+6. **The admin conversation.** In your Telegram chat with the production bot, delete the messages that name this family (`data-map.md` row 25).
+7. **What stays**, as the notice says: content-free `events` and `metrics_daily` (24 months), `admin_access_log` (24 months), `deletions`, error reports (up to 90 days), and outside the database your notes under the family code (up to 12 months after the pilot) and the fee record. Deleted rows can remain in Neon's restore history for up to 7 days.
+8. **Tell the organiser** it is done, that the family's Telegram chats stay theirs, and that they can now remove the Vela bot from the group (Vela ignores an unlinked group).
 
 ## How to know it worked
 
-The `SELECT` before the change shows the new state when run again; every deletion wrote its `deletions` rows; the session's `admin_access_log` rows exist; the person was told within the deadline; and the log below has a row.
+The `SELECT` before the change (or the admin page) shows the new state; every deletion wrote its `deletions` rows; the session's `admin_access_log` rows exist, written by the admin page or by hand; the person was told within the deadline; and the log below has a row.
 
 ## Request log
 

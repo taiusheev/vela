@@ -12,7 +12,9 @@ import { isValidWebhookSecret } from "./verify.ts";
 
 /**
  * The updates the adapter parses. `message_reaction` is never delivered unless listed explicitly,
- * and leaving out edits and channel posts spares the worker requests it would ignore.
+ * and leaving out edits and channel posts spares the worker requests it would ignore. Departures
+ * need no `chat_member` subscription (which would also need the bot to be an administrator): the
+ * `left_chat_member` service message arrives inside `message`, even in privacy mode.
  */
 export const TELEGRAM_ALLOWED_UPDATES = [
   "message",

@@ -2,8 +2,11 @@ CREATE TABLE "admin_access_log" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"admin" text NOT NULL,
 	"family_id" uuid,
+	"member_id" uuid,
+	"action" text NOT NULL,
 	"what" text NOT NULL,
-	"at" timestamp with time zone DEFAULT now() NOT NULL
+	"at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read'))
 );
 --> statement-breakpoint
 CREATE TABLE "ai_calls" (
@@ -42,6 +45,7 @@ CREATE TABLE "answers" (
 	"flag_reason" text,
 	"away_until" date,
 	"understood_at" timestamp with time zone,
+	"processing_attempts" smallint DEFAULT 0 NOT NULL,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "answers_channel_external_id_key" UNIQUE("channel","external_id"),
 	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker', 'other')),
@@ -113,7 +117,7 @@ CREATE TABLE "events" (
 	"surface" text,
 	"local_time" time,
 	"props" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'invite_accepted', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_marked_deceased', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'weekly_read_drafted', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted'))
+	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'invite_accepted', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened'))
 );
 --> statement-breakpoint
 CREATE TABLE "exchanges" (
@@ -518,7 +522,10 @@ CREATE TABLE "weekly_reads" (
 	"stats" jsonb NOT NULL,
 	"prompt_version" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "weekly_reads_member_id_week_start_key" UNIQUE("member_id","week_start")
+	"sent_lines" jsonb,
+	"sent_at" timestamp with time zone,
+	CONSTRAINT "weekly_reads_member_id_week_start_key" UNIQUE("member_id","week_start"),
+	CONSTRAINT "weekly_reads_sent_lines_sent_at_check" CHECK (("sent_lines" is null) = ("sent_at" is null))
 );
 --> statement-breakpoint
 ALTER TABLE "ai_calls" ADD CONSTRAINT "ai_calls_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

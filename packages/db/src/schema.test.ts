@@ -1,4 +1,5 @@
 import {
+  ADMIN_ACTIONS,
   AGE_BANDS,
   ANSWER_KINDS,
   AWAY_SOURCES,
@@ -24,7 +25,7 @@ import {
 } from "@vela/contracts";
 import { and, eq, getTableColumns, getTableName, is, sql } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, expectTypeOf, it } from "vitest";
 import type { VelaDatabase } from "./database.ts";
 import * as schema from "./schema.ts";
 import {
@@ -58,6 +59,7 @@ import {
   type NewFamilyChannel,
   type NewMedia,
   type NewOutbound,
+  type NewWeeklyRead,
   nearbyContacts,
   onboardingSessions,
   outbound,
@@ -77,10 +79,12 @@ import {
   translations,
   turns,
   users,
+  type WeeklyRead,
   weeklyReads,
 } from "./schema.ts";
 import { createTestDatabase, type TestDatabase } from "./testing.ts";
 
+const NOT_NULL_VIOLATION = "23502";
 const UNIQUE_VIOLATION = "23505";
 const CHECK_VIOLATION = "23514";
 
@@ -112,16 +116,26 @@ function only<T>(rows: readonly T[]): T {
   return row;
 }
 
-/** Runs a statement that must fail and returns the Postgres error code and constraint name. */
+/**
+ * Runs a statement that must fail and returns the Postgres error code with the constraint or, for
+ * a NOT NULL violation (which names no constraint), the column.
+ */
 async function rejection(
   statement: PromiseLike<unknown>,
-): Promise<{ code: string; constraint: string }> {
+): Promise<{ code: string; constraint: string | undefined; column: string | undefined }> {
   try {
     await statement;
   } catch (error) {
     const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
-    if (typeof cause === "object" && cause !== null && "code" in cause && "constraint" in cause) {
-      return { code: String(cause.code), constraint: String(cause.constraint) };
+    if (typeof cause === "object" && cause !== null && "code" in cause) {
+      return {
+        code: String(cause.code),
+        constraint:
+          "constraint" in cause && typeof cause.constraint === "string"
+            ? cause.constraint
+            : undefined,
+        column: "column" in cause && typeof cause.column === "string" ? cause.column : undefined,
+      };
     }
     throw error;
   }
@@ -380,7 +394,13 @@ async function seedEveryTable(): Promise<void> {
     .insert(subscriptions)
     .values({ familyId, memberId: seed.parent.id, provider: "trial", status: "trial" });
   await db.insert(flags).values({ key: "quiet_notices", value: true });
-  await db.insert(adminAccessLog).values({ admin: "founder", familyId, what: "family view" });
+  await db.insert(adminAccessLog).values({
+    admin: "founder",
+    familyId,
+    memberId: seed.parent.id,
+    action: "view",
+    what: "family view",
+  });
   await db.insert(metricsDaily).values({ day: "2026-09-13", familyId, memberId: seed.parent.id });
 }
 
@@ -947,6 +967,166 @@ describe("family channels", () => {
   });
 });
 
+describe("understanding re-runs", () => {
+  async function voiceAnswerFor(seed: Seed): Promise<string> {
+    const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
+    const answer = only(
+      await db
+        .insert(answers)
+        .values({
+          exchangeId: exchange.id,
+          memberId: seed.parent.id,
+          kind: "voice",
+          channel: "telegram",
+        })
+        .returning({ id: answers.id, processingAttempts: answers.processingAttempts }),
+    );
+    expect(answer.processingAttempts).toBe(0);
+    return answer.id;
+  }
+
+  it("counts an answer's processing attempts up from zero", async () => {
+    const seed = await seedFamily();
+    const answerId = await voiceAnswerFor(seed);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await db
+        .update(answers)
+        .set({ processingAttempts: sql`${answers.processingAttempts} + 1` })
+        .where(eq(answers.id, answerId));
+    }
+
+    expect(await db.select({ attempts: answers.processingAttempts }).from(answers)).toEqual([
+      { attempts: 3 },
+    ]);
+  });
+
+  it("rejects an answer whose attempt count is unknown", async () => {
+    const seed = await seedFamily();
+    await voiceAnswerFor(seed);
+
+    const error = await rejection(db.execute(sql`update answers set processing_attempts = null`));
+
+    expect(error).toEqual({ code: NOT_NULL_VIOLATION, column: "processing_attempts" });
+  });
+});
+
+describe("weekly reads", () => {
+  function draftFor(seed: Seed, overrides: Partial<NewWeeklyRead> = {}): NewWeeklyRead {
+    return {
+      familyId: seed.family.id,
+      memberId: seed.parent.id,
+      weekStart: "2026-09-07",
+      lines: ["Mei answered five mornings."],
+      stats: { answered_days: 5 },
+      promptVersion: "weekly_read.v1",
+      ...overrides,
+    };
+  }
+
+  it("types the draft and the sent lines as one string per line", () => {
+    // Checked by `tsc` (pnpm typecheck), not at runtime. Services store `ai.weeklyRead` lines (a
+    // string array) in `lines` and the founder's edited lines in `sent_lines`, and "what does the
+    // family see" renders `sent_lines`, so any other element shape must fail to compile.
+    expectTypeOf<WeeklyRead["lines"]>().toEqualTypeOf<string[]>();
+    expectTypeOf<WeeklyRead["sentLines"]>().toEqualTypeOf<string[] | null>();
+  });
+
+  it("stores a draft as not sent", async () => {
+    const seed = await seedFamily();
+
+    const draft = only(await db.insert(weeklyReads).values(draftFor(seed)).returning());
+
+    expect(draft).toMatchObject({ sentLines: null, sentAt: null });
+  });
+
+  it("records the lines as sent together with the time they were sent", async () => {
+    const seed = await seedFamily();
+    const draft = only(await db.insert(weeklyReads).values(draftFor(seed)).returning());
+    const sentLines = ["Mei answered six mornings, most before nine."];
+    const sentAt = new Date("2026-09-13T11:00:00Z");
+
+    await db.update(weeklyReads).set({ sentLines, sentAt }).where(eq(weeklyReads.id, draft.id));
+
+    expect(
+      await db
+        .select({
+          lines: weeklyReads.lines,
+          sentLines: weeklyReads.sentLines,
+          sentAt: weeklyReads.sentAt,
+        })
+        .from(weeklyReads),
+    ).toEqual([{ lines: draft.lines, sentLines, sentAt }]);
+  });
+
+  it.each<{ name: string; sent: Partial<NewWeeklyRead> }>([
+    {
+      name: "sent lines but no sent time",
+      sent: { sentLines: ["Mei answered six mornings."] },
+    },
+    { name: "a sent time but no sent lines", sent: { sentAt: new Date("2026-09-13T11:00:00Z") } },
+  ])("rejects a read with $name", async ({ sent }) => {
+    const seed = await seedFamily();
+
+    const error = await rejection(db.insert(weeklyReads).values(draftFor(seed, sent)));
+
+    expect(error).toEqual({
+      code: CHECK_VIOLATION,
+      constraint: "weekly_reads_sent_lines_sent_at_check",
+    });
+  });
+});
+
+describe("the admin access log", () => {
+  it("keeps an entry after the member and the family it names are deleted", async () => {
+    const seed = await seedFamily();
+    const entry = {
+      admin: "founder",
+      familyId: seed.family.id,
+      memberId: seed.parent.id,
+      action: "mark_deceased",
+      what: "member status",
+    } as const;
+    await db.insert(adminAccessLog).values(entry);
+
+    await db.delete(families).where(eq(families.id, seed.family.id));
+
+    expect(await countRows(members)).toBe(0);
+    expect(
+      await db
+        .select({
+          admin: adminAccessLog.admin,
+          familyId: adminAccessLog.familyId,
+          memberId: adminAccessLog.memberId,
+          action: adminAccessLog.action,
+          what: adminAccessLog.what,
+        })
+        .from(adminAccessLog),
+    ).toEqual([entry]);
+  });
+
+  it("records a page view that is about no single member", async () => {
+    const seed = await seedFamily();
+
+    const entry = only(
+      await db
+        .insert(adminAccessLog)
+        .values({ admin: "founder", familyId: seed.family.id, action: "view", what: "family page" })
+        .returning(),
+    );
+
+    expect(entry).toMatchObject({ memberId: null, action: "view" });
+  });
+
+  it("rejects an entry that does not say which action it records", async () => {
+    const error = await rejection(
+      db.execute(sql`insert into admin_access_log (admin, what) values ('founder', 'family page')`),
+    );
+
+    expect(error).toEqual({ code: NOT_NULL_VIOLATION, column: "action" });
+  });
+});
+
 describe("columns the pilot flows rely on", () => {
   it("stores the first local date on which her arrivals may be delivered", async () => {
     const seed = await seedFamily();
@@ -1235,6 +1415,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "subscriptions", column: "provider", values: SUBSCRIPTION_PROVIDERS },
     { table: "subscriptions", column: "status", values: SUBSCRIPTION_STATUSES },
     { table: "subscriptions", column: "plan_interval", values: PLAN_INTERVALS },
+    { table: "admin_access_log", column: "action", values: ADMIN_ACTIONS },
   ];
 
   function setColumn(table: string, column: string, value: string): Promise<unknown> {
@@ -1278,6 +1459,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "outbound_nearby_ask_actor_check",
       "media_storage_key_or_provider_file_id_check",
       "media_provider_unique_id_channel_check",
+      "weekly_reads_sent_lines_sent_at_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());

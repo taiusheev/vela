@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADMIN_ACTIONS,
+  AdminAction,
   BUDGETED_OUTBOUND_KINDS,
   ChannelSendError,
   DomainEvent,
   InboundEvent,
+  isIanaTimeZone,
   LocalDate,
   LocalTime,
   MediaRef,
@@ -39,16 +42,60 @@ describe("LocalTime", () => {
   });
 });
 
-describe("TimeZone", () => {
-  it("accepts IANA zones and rejects inventions", () => {
-    expect(TimeZone.safeParse("Asia/Taipei").success).toBe(true);
-    expect(TimeZone.safeParse("Australia/Lord_Howe").success).toBe(true);
-    expect(TimeZone.safeParse("Mars/Olympus_Mons").success).toBe(false);
+describe("isIanaTimeZone", () => {
+  it("accepts IANA zone names in any letter case", () => {
+    for (const zone of ["Asia/Taipei", "Australia/Lord_Howe", "America/New_York", "asia/taipei"]) {
+      expect(isIanaTimeZone(zone), zone).toBe(true);
+    }
+  });
+
+  it("accepts UTC and Etc/UTC", () => {
+    expect(isIanaTimeZone("UTC")).toBe(true);
+    expect(isIanaTimeZone("Etc/UTC")).toBe(true);
+  });
+
+  it("rejects inventions and the empty string", () => {
+    for (const zone of ["Mars/Olympus_Mons", "", "UTC+8", " Asia/Taipei"]) {
+      expect(isIanaTimeZone(zone), zone).toBe(false);
+    }
   });
 
   it("rejects fixed offsets, which would lose daylight saving", () => {
-    expect(TimeZone.safeParse("+08:00").success).toBe(false);
-    expect(TimeZone.safeParse("-05:00").success).toBe(false);
+    for (const zone of ["+08:00", "-05:00", "+0800", "+08"]) {
+      expect(isIanaTimeZone(zone), zone).toBe(false);
+    }
+  });
+
+  it("rejects an offset written with the Unicode minus sign, which only resolves to an offset", () => {
+    expect(isIanaTimeZone("\u221208:00")).toBe(false);
+  });
+
+  it("rejects Etc/GMT+N and Etc/GMT-N in any letter case, even when N is 0", () => {
+    for (const zone of [
+      "Etc/GMT-8",
+      "Etc/GMT+5",
+      "Etc/GMT-14",
+      "etc/gmt-8",
+      "Etc/GMT+0",
+      "GMT-0",
+    ]) {
+      expect(isIanaTimeZone(zone), zone).toBe(false);
+    }
+  });
+});
+
+describe("TimeZone", () => {
+  it("applies the isIanaTimeZone rule", () => {
+    for (const zone of [
+      "Asia/Taipei",
+      "UTC",
+      "Etc/UTC",
+      "Mars/Olympus_Mons",
+      "+08:00",
+      "Etc/GMT-8",
+    ]) {
+      expect(TimeZone.safeParse(zone).success, zone).toBe(isIanaTimeZone(zone));
+    }
   });
 });
 
@@ -59,6 +106,13 @@ describe("MediaRef", () => {
     expect(MediaRef.safeParse({ kind: "image", url: "https://media.example/a.jpg" }).success).toBe(
       true,
     );
+  });
+
+  it("keeps the provider's unique id, which alone cannot fetch the file", () => {
+    const withBoth = { kind: "audio", providerFileId: "AwAD", providerUniqueId: "AgADXxMA" };
+    expect(MediaRef.parse(withBoth)).toStrictEqual(withBoth);
+    expect(MediaRef.safeParse({ kind: "audio", providerUniqueId: "AgADXxMA" }).success).toBe(false);
+    expect(MediaRef.safeParse({ ...withBoth, providerUniqueId: "" }).success).toBe(false);
   });
 });
 
@@ -113,6 +167,50 @@ describe("migrated events", () => {
   });
 });
 
+describe("member_left events", () => {
+  const removal = {
+    channel: "telegram",
+    eventId: "tg:update:3001",
+    at: "2026-09-14T00:12:00.000Z",
+    kind: "member_left",
+    sender: { externalUserId: "5829174630", displayName: "Anna Chen" },
+    conversation: { externalId: "-1002214567890", kind: "group" },
+    subject: { externalUserId: "1938475620", displayName: "Sam" },
+  } as const;
+
+  it("carry the person who left apart from the person who acted", () => {
+    expect(InboundEvent.parse(removal)).toStrictEqual(removal);
+  });
+
+  it("need the id of the person who left", () => {
+    expect(InboundEvent.safeParse({ ...removal, subject: { displayName: "Sam" } }).success).toBe(
+      false,
+    );
+    expect(InboundEvent.safeParse({ ...removal, subject: { externalUserId: "" } }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("ADMIN_ACTIONS", () => {
+  it("are exactly the admin page's actions, and nothing else parses as one", () => {
+    expect(ADMIN_ACTIONS).toStrictEqual([
+      "view",
+      "record_consent",
+      "record_contact_consent",
+      "add_contact",
+      "remove_contact",
+      "set_away",
+      "end_away",
+      "mark_left",
+      "mark_deceased",
+      "delete_family",
+      "send_weekly_read",
+    ]);
+    expect(AdminAction.safeParse("export_family").success).toBe(false);
+  });
+});
+
 describe("budget kinds", () => {
   it("are all outbound kinds", () => {
     for (const kind of BUDGETED_OUTBOUND_KINDS) {
@@ -139,5 +237,14 @@ describe("ChannelSendError", () => {
     expect(new ChannelSendError("unavailable", "5xx").retryable).toBe(true);
     expect(new ChannelSendError("blocked", "user blocked the bot").retryable).toBe(false);
     expect(new ChannelSendError("invalid_request", "bad").retryable).toBe(false);
+  });
+
+  it("carries the conversation a group moved to without making the send retryable", () => {
+    const error = new ChannelSendError("invalid_request", "group chat was upgraded", {
+      migratedToConversationId: "-1002214567890",
+    });
+    expect(error.migratedToConversationId).toBe("-1002214567890");
+    expect(error.retryable).toBe(false);
+    expect(new ChannelSendError("invalid_request", "bad").migratedToConversationId).toBeUndefined();
   });
 });

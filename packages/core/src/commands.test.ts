@@ -18,6 +18,8 @@ describe("parseParentCommand", () => {
     ["開始", "start"],
     ["繼續", "start"],
     ["家人看到什麼", "what_family_sees"],
+    ["家人看得到什麼", "what_family_sees"],
+    ["家人看得到什么", "what_family_sees"],
     // ja
     ["やめて", "stop"],
     ["再開", "start"],
@@ -47,6 +49,8 @@ describe("parseParentCommand", () => {
     expect(parseParentCommand("停！")).toBe("stop");
     expect(parseParentCommand("開始。")).toBe("start");
     expect(parseParentCommand("家人看到什麼？")).toBe("what_family_sees");
+    expect(parseParentCommand("「家人看得到什麼？」")).toBe("what_family_sees");
+    expect(parseParentCommand("　家人看得到什麼 ?\n")).toBe("what_family_sees");
     expect(parseParentCommand("रुको।")).toBe("stop");
     expect(parseParentCommand("«Стоп»")).toBe("stop");
     expect(parseParentCommand("/stop")).toBe("stop");
@@ -71,6 +75,8 @@ describe("parseParentCommand", () => {
     "我停了一下",
     "停一下再說",
     "今天開始下雨了",
+    "家人看得到什麼照片",
+    "家人看得到",
     "what does the family see about me today",
     "Не надо было",
     "stopp bitte nicht",

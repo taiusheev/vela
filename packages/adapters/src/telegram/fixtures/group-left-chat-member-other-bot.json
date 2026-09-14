@@ -1,0 +1,32 @@
+{
+  "update_id": 873920445,
+  "message": {
+    "message_id": 1244,
+    "from": {
+      "id": 5829174630,
+      "is_bot": false,
+      "first_name": "Anna",
+      "last_name": "Chen",
+      "username": "anna_chen",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": -1002214567890,
+      "title": "Chen family",
+      "type": "supergroup"
+    },
+    "date": 1789312500,
+    "left_chat_participant": {
+      "id": 6798123450,
+      "is_bot": true,
+      "first_name": "Recipe Helper",
+      "username": "RecipeHelperBot"
+    },
+    "left_chat_member": {
+      "id": 6798123450,
+      "is_bot": true,
+      "first_name": "Recipe Helper",
+      "username": "RecipeHelperBot"
+    }
+  }
+}

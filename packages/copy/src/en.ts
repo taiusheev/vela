@@ -11,7 +11,24 @@
  *
  * `onboarding.done` asks for a new group without the kept-light member (spec Appendix A): group
  * posts name the member in the third person, and only the family who received the privacy notice
- * may see the answers, so the family's existing chat is the wrong place for Vela.
+ * may see the answers, so the family's existing chat is the wrong place for Vela. `group.linked`
+ * ends with the privacy notice link for the same reason: everyone who will see the answers is in
+ * that group.
+ *
+ * `onboarding.ask_nearby` tells the organiser to ask the contact themselves: a contact's number is
+ * stored unconsented and appears in a quiet note only after the founder records their yes, and
+ * Vela never contacts anyone on its own (the privacy notice says so), so a contact nobody in the
+ * family asks never appears in a note.
+ *
+ * The weekly read is "weekly read", the name the English privacy notice and the spec give it.
+ *
+ * `parent.family_sees_heading` and `parent.family_sees_empty` never say "this week": the command
+ * returns her last seven answered days, which reach back further after a pause or a quiet spell.
+ *
+ * `admin.*` messages go to the founder's Telegram chat with the bot, which sits outside
+ * `admin_access_log` and outside retention (plan/materials/pilot/data-map.md, gap 15). They carry
+ * the family name and a link to the admin page, where every read is logged, and never anything the
+ * family wrote.
  */
 export const en = {
   "arrival.greeting": "Good morning, {address}.",
@@ -49,10 +66,12 @@ export const en = {
   "parent.stopped": "Everything is paused. Say start whenever you would like it back.",
   "parent.started": "Welcome back. Your next morning arrives at {time}.",
   "organiser.stopped": "{name} asked to pause. Nothing is wrong with the app.",
-  "parent.family_sees_heading": "This is what the family saw from you this week:",
-  "parent.family_sees_empty": "Nothing yet this week.",
+  "parent.family_sees_heading": "What the family saw from your latest answers:",
+  "parent.family_sees_empty":
+    "Nothing yet. When you answer a morning message, the family will see it.",
+  "parent.family_sees_weekly_read": "The latest weekly read sent to the family:",
   "group.linked":
-    "Hello, family. I'm Vela. Each evening I will say whose turn it is to ask {name} something for the morning.",
+    "Hello, family. I'm Vela. Each evening I will say whose turn it is to ask {name} something for the morning. How Vela handles your messages: {notice}",
   "group.not_linked": "Only the family organiser can connect Vela to a group.",
   "group.turn_prompt":
     "Tomorrow is {holder}'s turn with {name}. Reply to this message with a question, a photo, or a voice note.",
@@ -104,11 +123,13 @@ export const en = {
   "onboarding.invalid_zone": "Please send a time zone name like Asia/Seoul or Europe/Paris.",
   "onboarding.ask_wake": "When do they usually wake up? Tap one or type a time like 07:30.",
   "onboarding.ask_nearby":
-    "Who lives nearby and could look in if needed? Send a name and phone number, or tap Skip.",
+    "Who lives nearby and could look in if needed? Send a name and phone number, or tap Skip. Please ask them yourself first: their number appears in a note only after they say yes.",
   "onboarding.skip": "Skip",
   "onboarding.invalid_time": "Please send a time like 07:30.",
   "onboarding.done":
     "All set. Send this link to {name}: {link} Then start a new group for the family, without {name}, and add me to it, so the family can take turns asking.",
-  "admin.weekly_read_draft": "Weekly read draft for {family}:",
-  "admin.flag": 'Flag in {family}: {name} said "{quote}"',
+  "admin.weekly_read_draft": "Weekly read draft for {family} is ready: {link}",
+  "admin.flag": "Flag in {family}. Open: {link}",
+  "admin.understand_failed": "Could not read an answer in {family} after three tries. Open: {link}",
+  "admin.member_left_group": "{name} left the family group in {family}. Nothing changed for them.",
 } satisfies Record<string, string>;

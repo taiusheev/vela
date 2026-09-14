@@ -9,18 +9,35 @@
  * Spec: product/05-product-spec-v2.md. The exchange (§3) is the core object; arrivals are its
  * deliveries. Code design: architecture/03-code-design.md §3.
  *
- * Retention jobs (implemented in services, documented here because they explain nullable columns):
- * media is deleted when expires_at has passed and kept is false, with a deletions row; foreign-key
- * references to it are set null, and the retention job removes its id from exchanges.media_ids and
- * exchanges.options, which no foreign key covers. Answers lose transcripts and media refs after 30
- * days unless kept in a story. Members with status 'left' are deleted 30 days after left_at: rows
- * that only credit them with an act (asker, uploader, resolver, turn holder) stay with the reference
- * set null; rows that exist only because of them (invites they sent or that were meant for them,
- * outbound messages sent on their tap) are deleted with them; member ids held in arrays or JSON
- * (quiet_events.notified_member_ids, ask_to_check) have no foreign key. Families with deleted_at
- * set cascade within 24 h.
+ * Retention: the data map's pilot rules (plan/materials/pilot/data-map.md), implemented by
+ * applyRetention in services and documented here because they explain the nullable columns and the
+ * member ids without a foreign key.
+ *
+ * - Cleared: exchanges.text and exchanges.options 30 days after delivery; outbound.payload 30 days
+ *   after sent_at; after 30 days, chips, translations, replies.text, the text inside
+ *   answers.payload, answers.transcript, answers.mentions, mood_words and flag_reason,
+ *   suggestions.text, ai_calls.output, and the reply text inside quiet_events.ask_to_check. A
+ *   cleared column that is NOT NULL takes its empty value ('', '{}', '[]'); chips and translations
+ *   rows hold nothing but their text, so clearing them deletes the rows.
+ * - Deleted: message_refs older than 30 days; invites 30 days after expires_at or accepted_at;
+ *   onboarding sessions once expires_at has passed.
+ * - Media is deleted when expires_at has passed and kept is false, and every media deletion writes a
+ *   deletions row. Foreign-key references to it are set null; the job removes its id from
+ *   exchanges.media_ids and exchanges.options, which no foreign key covers.
+ * - Members are deleted 30 days after left_at. Rows that only credit them with an act (asker,
+ *   uploader, resolver, turn holder) stay with the reference set null; rows that exist only because
+ *   of them (invites they sent or that were meant for them, outbound messages sent on their tap)
+ *   are deleted with them. Member ids held in arrays or JSON (quiet_events.notified_member_ids,
+ *   ask_to_check) and in admin_access_log have no foreign key.
+ * - Families are deleted, with everything that cascades from them, within 24 h of deleted_at.
+ * - events, metrics_daily, ai_calls and outbound rows are deleted after 24 months.
+ * - Kept while the family uses Vela: answers.summary, the answers.flag boolean, and away periods'
+ *   dates.
+ * - Outside this database, a member's Durable Object storage is cleared when they stop, leave, are
+ *   marked deceased, or are deleted.
  */
 import {
+  ADMIN_ACTIONS,
   AGE_BANDS,
   ANSWER_KINDS,
   AWAY_SOURCES,
@@ -536,7 +553,14 @@ export const answers = pgTable(
     flagReason: text("flag_reason"),
     /** Detected "going to my sister's until Sunday". */
     awayUntil: date("away_until"),
+    /** Set only when understand and flag both succeeded; a failed translation does not block it. */
     understoodAt: timestamptz("understood_at"),
+    /**
+     * Incremented by services when media ingestion or understanding starts for this answer, so
+     * reconcile can re-run an answer that was never understood and stop after the third attempt
+     * instead of retrying a failing answer forever.
+     */
+    processingAttempts: smallint("processing_attempts").notNull().default(0),
     receivedAt: timestamptz("received_at").notNull().defaultNow(),
   },
   (t) => [
@@ -812,15 +836,33 @@ export const weeklyReads = pgTable(
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
     weekStart: date("week_start").notNull(),
-    /** [{text, kind}]; other languages via translations. */
-    lines: jsonb("lines").$type<unknown[]>().notNull(),
+    /**
+     * The draft, one string per line, as `ai.weeklyRead` returns it; other languages via
+     * translations.
+     */
+    lines: jsonb("lines").$type<string[]>().notNull(),
     suggestion: text("suggestion"),
     /** {answered_days, usual_time, drift_min, topics[], voice_len_drift} */
     stats: jsonb("stats").$type<JsonObject>().notNull(),
     promptVersion: text("prompt_version").notNull(),
     createdAt: createdAt(),
+    /**
+     * The lines as the founder sent them from the admin page, after editing the draft, in the same
+     * one-string-per-line shape as `lines`. NULL until sent; "what does the family see" shows her
+     * the most recent sent read.
+     */
+    sentLines: jsonb("sent_lines").$type<string[]>(),
+    sentAt: timestamptz("sent_at"),
   },
-  (t) => [unique("weekly_reads_member_id_week_start_key").on(t.memberId, t.weekStart)],
+  (t) => [
+    unique("weekly_reads_member_id_week_start_key").on(t.memberId, t.weekStart),
+    // The lines and the time are written together when the founder taps Send, so either one alone
+    // is a half-recorded send that "what does the family see" could misread.
+    check(
+      "weekly_reads_sent_lines_sent_at_check",
+      sql`(${sql.identifier(t.sentLines.name)} is null) = (${sql.identifier(t.sentAt.name)} is null)`,
+    ),
+  ],
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -1022,13 +1064,26 @@ export const flags = pgTable("flags", {
   updatedAt: timestamptz("updated_at").notNull().defaultNow(),
 });
 
-export const adminAccessLog = pgTable("admin_access_log", {
-  id: uuidv7Id(),
-  admin: text("admin").notNull(),
-  familyId: uuid("family_id"),
-  what: text("what").notNull(),
-  at: timestamptz("at").notNull().defaultNow(),
-});
+/**
+ * One row per admin page view and per admin write action; organisers may see their family's rows on
+ * request. family_id and member_id have no foreign key: the log is kept 24 months, while members
+ * are deleted 30 days after they leave and families within 24 h of deletion.
+ */
+export const adminAccessLog = pgTable(
+  "admin_access_log",
+  {
+    id: uuidv7Id(),
+    admin: text("admin").notNull(),
+    familyId: uuid("family_id"),
+    /** The member the action was about, when it was about one. */
+    memberId: uuid("member_id"),
+    action: text("action", { enum: ADMIN_ACTIONS }).notNull(),
+    /** The page or a detail of the action; never message content. */
+    what: text("what").notNull(),
+    at: timestamptz("at").notNull().defaultNow(),
+  },
+  (t) => [check("admin_access_log_action_check", isOneOf(t.action, ADMIN_ACTIONS))],
+);
 
 /**
  * Daily rollups written by the KPI job; the founder's dashboard reads only this and events. No
