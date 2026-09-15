@@ -57,15 +57,23 @@ describe("PROMPTS registry", () => {
   it("asks for the line counts the hello and weekly read schemas accept", () => {
     expect(PROMPTS.hello.system).toContain("one or two lines");
     expect(PROMPTS.hello.system).not.toContain("the two lines");
-    expect(PROMPTS.weekly_read.system).toContain("one to five short lines");
-    expect(PROMPTS.weekly_read.system).toContain('{"lines": [one to five strings]');
-    expect(PROMPTS.weekly_read.system).not.toContain("three to five");
+    expect(PROMPTS.weekly_read.system).toContain("zero to four short lines");
+    expect(PROMPTS.weekly_read.system).toContain('{"lines": [zero to four strings]');
+    expect(PROMPTS.weekly_read.system).toContain("a week with nothing to say gets none");
+    expect(PROMPTS.weekly_read.system).not.toMatch(/one to five|three to five/);
   });
 
-  it("asks the weekly read for the quiet-day count the organiser sees (spec §7)", () => {
-    expect(PROMPTS.weekly_read.system).toContain(
-      "When quietDays is more than 0 and familyAsks is more than 0, the same line also says on how many mornings Vela sent the hello",
+  it("leaves every count of the week out of the weekly read, which she can read (spec §8, §13)", () => {
+    const system = PROMPTS.weekly_read.system;
+    expect(system).toContain(
+      "How many days the elder answered or did not answer, in digits or in words, and never a phrase that points to a day without an answer",
     );
+    expect(system).toContain("That nobody in the family asked, that a morning was Vela's hello");
+    expect(system).toContain("How many asks the family sent, or who in the family did not ask.");
+    expect(system).toContain("Days without an answer are left out on purpose");
+    expect(system).toContain("It never mentions a day without an answer");
+    // The input no longer carries the counts, and the prompt must not ask for them.
+    expect(system).not.toMatch(/answeredDays|quietDays|familyAsks|of 7 days|nobody asked, so/);
   });
 
   it("asks understand for the first date away, so a trip that starts later leaves the days before it alone", () => {

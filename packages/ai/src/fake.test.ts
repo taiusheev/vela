@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createFakeAi, fakeRecord } from "./fake.ts";
-import type { FlagInput, TranslateInput, UnderstandInput } from "./types.ts";
+import { type FlagInput, type TranslateInput, type UnderstandInput, WeeklyRead } from "./types.ts";
 
 const understandInput: UnderstandInput = {
   lang: "zh-TW",
@@ -90,6 +90,36 @@ describe("createFakeAi", () => {
         })
       ).value,
     ).toEqual({ lines: ["Sam: heart", "Mia: Love it"] });
+  });
+
+  it("drafts a weekly read the schema accepts, from the day summaries and without a count", async () => {
+    const ai = createFakeAi();
+    const summaries = ["番茄紅了", "  ", "教了滷肉", "選了第二張照片", "去市場買菜", "說很好"];
+    const days = summaries.map((summary, index) => ({
+      date: `2026-09-1${index + 4}`,
+      answeredAt: "08:10",
+      askerName: "Mia",
+      askType: "question" as const,
+      summary,
+      voiceSeconds: null,
+    }));
+
+    const read = await ai.weeklyRead({
+      lang: "zh-TW",
+      elderName: "阿嬤",
+      weekEnd: "2026-09-20",
+      days,
+      usualAnswerTime: "08:10",
+      answerTimeDriftMinutes: null,
+      voiceLengthDriftPercent: null,
+      repeatedMentions: [],
+    });
+
+    expect(WeeklyRead.safeParse(read.value).success).toBe(true);
+    expect(read.value).toEqual({
+      lines: ["番茄紅了", "教了滷肉", "選了第二張照片", "去市場買菜"],
+      suggestion: "阿嬤，這個星期最開心的是什麼事？",
+    });
   });
 
   it("uses an override in place of the default and keeps the other defaults", async () => {

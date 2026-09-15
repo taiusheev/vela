@@ -837,30 +837,41 @@ export const weeklyReads = pgTable(
       .references(() => members.id, { onDelete: "cascade" }),
     weekStart: date("week_start").notNull(),
     /**
-     * The draft, one string per line, as `ai.weeklyRead` returns it; other languages via
-     * translations.
+     * The draft lines about her week, zero to four, one string per line, as `ai.weeklyRead` returned
+     * them and never edited, so prompt versions can be compared; other languages via translations.
      */
     lines: jsonb("lines").$type<string[]>().notNull(),
+    /** The draft suggestion as the model wrote it, kept unedited like `lines`. */
     suggestion: text("suggestion"),
-    /** {answered_days, usual_time, drift_min, topics[], voice_len_drift} */
+    /**
+     * {answered_days, counted_days, hello_mornings, family_asks, usual_time, drift_min, topics[],
+     * voice_len_drift}. The first four are the counts `renderWeeklyRead` in @vela/core writes for
+     * organisers; the model never writes a count, and she never sees one (spec §8, §13).
+     */
     stats: jsonb("stats").$type<JsonObject>().notNull(),
     promptVersion: text("prompt_version").notNull(),
     createdAt: createdAt(),
     /**
      * The lines as the founder sent them from the admin page, after editing the draft, in the same
      * one-string-per-line shape as `lines`. NULL until sent; "what does the family see" shows her
-     * the most recent sent read.
+     * the lines of the most recent sent read, without its counts or suggestion.
      */
     sentLines: jsonb("sent_lines").$type<string[]>(),
+    /**
+     * The suggestion as the founder sent it to organisers; '' when the founder removed it. NULL
+     * until sent.
+     */
+    sentSuggestion: text("sent_suggestion"),
     sentAt: timestamptz("sent_at"),
   },
   (t) => [
     unique("weekly_reads_member_id_week_start_key").on(t.memberId, t.weekStart),
-    // The lines and the time are written together when the founder taps Send, so either one alone
-    // is a half-recorded send that "what does the family see" could misread.
+    // The lines, the suggestion, and the time are written together when the founder taps Send, so
+    // any of them without the others is a half-recorded send that "what does the family see" or a
+    // comparison of drafts with what was sent could misread.
     check(
-      "weekly_reads_sent_lines_sent_at_check",
-      sql`(${sql.identifier(t.sentLines.name)} is null) = (${sql.identifier(t.sentAt.name)} is null)`,
+      "weekly_reads_sent_lines_sent_suggestion_sent_at_check",
+      sql`(${sql.identifier(t.sentLines.name)} is null) = (${sql.identifier(t.sentAt.name)} is null) and (${sql.identifier(t.sentSuggestion.name)} is null) = (${sql.identifier(t.sentAt.name)} is null)`,
     ),
   ],
 );

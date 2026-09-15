@@ -1,5 +1,5 @@
 {
-  "id": "96c4dbf3-1b3b-4cfc-b51f-0dd588af0918",
+  "id": "c64cdc1c-cb1d-4529-960d-36ca0e969240",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4362,6 +4362,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "sent_suggestion": {
+          "name": "sent_suggestion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "sent_at": {
           "name": "sent_at",
           "type": "timestamp with time zone",
@@ -4411,9 +4417,9 @@
       },
       "policies": {},
       "checkConstraints": {
-        "weekly_reads_sent_lines_sent_at_check": {
-          "name": "weekly_reads_sent_lines_sent_at_check",
-          "value": "(\"sent_lines\" is null) = (\"sent_at\" is null)"
+        "weekly_reads_sent_lines_sent_suggestion_sent_at_check": {
+          "name": "weekly_reads_sent_lines_sent_suggestion_sent_at_check",
+          "value": "(\"sent_lines\" is null) = (\"sent_at\" is null) and (\"sent_suggestion\" is null) = (\"sent_at\" is null)"
         }
       },
       "isRLSEnabled": false

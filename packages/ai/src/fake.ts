@@ -1,4 +1,4 @@
-import { genericChips } from "./defaults.ts";
+import { genericChips, genericWeeklySuggestion } from "./defaults.ts";
 import { MODEL_FOR } from "./models.ts";
 import { PROMPTS } from "./prompts/index.ts";
 import {
@@ -87,12 +87,13 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
       ],
     })),
     weeklyRead: method("weekly_read", overrides.weeklyRead, (input) => ({
-      lines: [
-        `${input.elderName} answered ${input.answeredDays} of 7 days.`,
-        `The family sent ${input.familyAsks} asks.`,
-        `${input.quietDays} mornings were a hello from Vela.`,
-      ],
-      suggestion: `Ask ${input.elderName} about the week.`,
+      // The day summaries as they are, up to the four lines a read holds: never a count, which a
+      // weekly read's lines must not carry even in tests of the services that store them.
+      lines: input.days
+        .map((day) => day.summary?.trim() ?? "")
+        .filter((summary) => summary.length > 0)
+        .slice(0, 4),
+      suggestion: genericWeeklySuggestion(input.lang, input.elderName),
     })),
   };
 }

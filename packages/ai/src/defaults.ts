@@ -21,6 +21,17 @@ export function genericChips(lang: Lang): string[] {
   return [...(lang === "zh-TW" ? GENERIC_CHIPS["zh-TW"] : GENERIC_CHIPS.en)];
 }
 
+/**
+ * The suggestion of a weekly read whose draft failed, in the reader's language: an open ask about her
+ * week that states nothing about it, so the fallback read still has the one suggestion the schema
+ * requires. The Traditional Chinese awaits native review.
+ */
+export function genericWeeklySuggestion(lang: Lang, elderName: string): string {
+  return lang === "zh-TW"
+    ? `${elderName}，這個星期最開心的是什麼事？`
+    : `${elderName}, what was the best part of your week?`;
+}
+
 export const SAFE_DEFAULTS: {
   [K in AiCallName]: (input: AiCallTypes[K]["input"]) => AiCallTypes[K]["output"];
 } = {
@@ -37,5 +48,8 @@ export const SAFE_DEFAULTS: {
   translate: (input) => ({ text: input.text }),
   readback: () => ({ lines: [] }),
   hello: () => ({ lines: [] }),
-  weekly_read: () => ({ lines: [], suggestion: "" }),
+  weekly_read: (input) => ({
+    lines: [],
+    suggestion: genericWeeklySuggestion(input.lang, input.elderName),
+  }),
 };

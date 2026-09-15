@@ -284,7 +284,7 @@ SELECT received_at, kind, payload, transcript, summary, mood_words, mentions, fl
 FROM answers WHERE member_id = '<kept-light member id>' ORDER BY received_at;
 SELECT from_date, to_date, source, created_at, ended_at FROM away_periods WHERE member_id = '<kept-light member id>';
 SELECT opened_at, notify_count, resolved_at, outcome FROM quiet_events WHERE member_id = '<kept-light member id>' ORDER BY opened_at;
-SELECT week_start, lines, sent_lines, sent_at FROM weekly_reads WHERE member_id = '<kept-light member id>' ORDER BY week_start;
+SELECT week_start, stats, lines, suggestion, sent_lines, sent_suggestion, sent_at FROM weekly_reads WHERE member_id = '<kept-light member id>' ORDER BY week_start;
 SELECT at, action, what FROM admin_access_log WHERE family_id = '<family id>' ORDER BY at;
 ```
 

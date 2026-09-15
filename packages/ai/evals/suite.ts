@@ -47,7 +47,109 @@ export const CALL_STANDARDS: Readonly<Record<AiCallName, string>> = {
   hello:
     "one or two lines in the elder's language in Vela's voice on the family's behalf, never speaking as a family member: an optional opening line that reports replies by name in words, keeping each person's own words (or, with no replies, a simple warm line stating no facts), then a closing line that says nothing new came from the family today and asks one gentle open question; no greeting or signature, no counts, no guilt, no health, no diagnosis or advice, no feelings claimed for anyone, no mention of monitoring, checking on, tracking, notes, or recording; nothing invented.",
   weekly_read:
-    "one to five short lines and one suggestion in the reader's language, built only from the input and never padded: days answered stated plainly, with the mornings Vela sent the hello because nobody asked when the family asked on other days, a time change only beyond 30 minutes, a voice-length change only beyond 40 percent, repeated mentions as 'mentioned twice' or similar, and a plain statement when nobody asked all week; the elder's own words kept from the day summaries; the lines never speak as a family member, and the suggestion is one ask grounded in this week, written as a family member would send it; never 'concerning', 'decline', 'risk', 'worrying', scores, or percentages, no speculation about causes or blame, no diagnosis or advice, and no mention of monitoring, checking on, tracking, notes, or recording; nothing invented.",
+    "zero to four short lines about the elder's week and one suggestion in the reader's language, built only from the input and never padded, so a week with nothing to say has no lines: the usual answer time with a change only beyond 30 minutes, what the elder told, taught, and chose in the elder's own words from the day summaries, repeated mentions as 'mentioned twice' or similar, and a voice-length change only beyond 40 percent; the lines never state or imply how many days the elder answered or did not answer, never point to a day without an answer, never say that nobody in the family asked or that a morning was Vela's hello, and never count the family's asks, because Vela writes those numbers itself and the elder reads the lines; the lines never speak as a family member, and the suggestion is one ask grounded in this week, written as a family member would send it, never mentioning a day without an answer; never 'concerning', 'decline', 'risk', 'worrying', scores, or percentages, no speculation about causes or blame, no diagnosis or advice, and no mention of monitoring, checking on, tracking, notes, or recording; nothing invented.",
+};
+
+/** A number of days or mornings up to a week, in digits or English words. */
+const WEEK_NUMBER = String.raw`(?:\d+|zero|one|two|three|four|five|six|seven)`;
+
+/** A number of days or mornings that could be a tally; "one day" alone is how a story begins. */
+const TALLY = String.raw`\b(?:\d+|two|three|four|five|six|seven)\s+(?:days?|mornings?)\b`;
+
+/** The verbs a tally of her answers is built on. */
+const ANSWERED = String.raw`\b(?:answered|replied|responded|heard from)\b`;
+
+/** Up to 40 more characters of the same English sentence. */
+const SAME_SENTENCE = String.raw`[^.\n]{0,40}?`;
+
+/** A number of days or mornings in Chinese; 天氣 (weather) is excluded because 星期三天氣 reads as 三天. */
+const ZH_TALLY = String.raw`[0-9０-９零兩三四五六七]\s*(?:天(?!氣)|個早上|個上午)`;
+
+const ZH_ANSWERED = "(?:回覆|回應|答覆|回話)";
+
+/**
+ * Not answering with no object after the verb: 沒回覆她 (did not answer her) is about someone else,
+ * 沒有回覆。 is about her morning.
+ */
+const ZH_NO_ANSWER = String.raw`(?:沒有?|未)${ZH_ANSWERED}(?=[。，、！？；\s]|$)`;
+
+/** A word that places a missed answer on a day: a week, a weekday, a day, or a morning. */
+const ZH_DAY = "(?:這週|本週|上週|星期|週|禮拜|一天|那天|當天|早上|上午)";
+
+/** Up to 20 more characters of the same Chinese sentence. */
+const ZH_SAME_SENTENCE = String.raw`[^。！？\n]{0,20}?`;
+
+/**
+ * Checks every case of a call runs after its own, for rules no case may forget. A weekly read's lines
+ * are the part she can read, and organisers get the week's counts from numbers (spec §8, §13), so no
+ * line may carry a tally of days or mornings, point to a day without an answer, say that nobody in the
+ * family asked, or count the family's asks, in English or in Traditional Chinese. A number of days or
+ * mornings on its own is not a tally: her own words hold trips ("Japan for five days"), weather
+ * ("rained for 3 days", 星期三天氣), and habits ("open 2 mornings a week", "never answers calls"), so
+ * the count patterns are anchored to answering in the same sentence and to the week, and the
+ * missed-day patterns to a verb with no object placed on a day.
+ */
+export const CALL_CHECKS: Readonly<Record<AiCallName, readonly Check[]>> = {
+  understand: [],
+  flag: [],
+  chips: [],
+  suggest: [],
+  translate: [],
+  readback: [],
+  hello: [],
+  weekly_read: [
+    {
+      kind: "notMatches",
+      path: "lines",
+      patterns: [
+        String.raw`\b${WEEK_NUMBER}\s+(?:of|out of)\s+(?:the\s+)?(?:${WEEK_NUMBER}\s+)?(?:days?|mornings?)\b`,
+        `${ANSWERED}${SAME_SENTENCE}${TALLY}`,
+        String.raw`${TALLY}${SAME_SENTENCE}\b(?:this week|answered|replied)\b`,
+        String.raw`\bof\s+(?:the\s+)?(?:7|seven)\b`,
+        String.raw`\banswered\s+(?:on\s+)?(?:${WEEK_NUMBER}|every|each|all|most)\b`,
+        String.raw`\bmost\s+(?:days|mornings)\b`,
+        String.raw`\b(?:every|each)\s+(?:day|morning)\s+(?:but|except)\b`,
+        `${ZH_ANSWERED}${ZH_SAME_SENTENCE}${ZH_TALLY}`,
+        `${ZH_TALLY}${ZH_SAME_SENTENCE}${ZH_ANSWERED}`,
+        "每一?天都有?回",
+      ],
+    },
+    {
+      kind: "notMatches",
+      path: "lines",
+      patterns: [
+        String.raw`\bunanswered\b`,
+        String.raw`\bno (?:answer|reply)\b`,
+        String.raw`\bwithout (?:an )?answer\b`,
+        String.raw`\b(?:did not|didn't|didn’t)\s+(?:answer|reply|respond)\b`,
+        String.raw`\bnever\s+(?:answered|replied|responded)\b`,
+        String.raw`\bmissed\s+(?:a\s+|one\s+|\d+\s+)?(?:days?|mornings?)\b`,
+        `${ZH_DAY}${ZH_SAME_SENTENCE}${ZH_NO_ANSWER}`,
+        `${ZH_NO_ANSWER}${ZH_SAME_SENTENCE}${ZH_DAY}`,
+      ],
+    },
+    {
+      kind: "notMatches",
+      path: "lines",
+      patterns: [
+        String.raw`\b(?:nobody|no one|no-one)(?:\s+in the family)?\s+(?:had\s+)?ask`,
+        String.raw`\bVela\b`,
+        String.raw`\bhellos\b`,
+        "沒有?家?人(?:提問|問)",
+        "(?:家人|家裡|大家)都?沒有?人?(?:提問|問)",
+      ],
+    },
+    {
+      kind: "notMatches",
+      path: "lines",
+      patterns: [
+        String.raw`\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|no)\s+(?:asks?|questions?)\b`,
+        String.raw`\b(?:family|they)\s+(?:sent|asked)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|no|nothing)\b`,
+        "[0-9０-９兩三四五六七八九十]\\s*(?:個|則|次)\\s*(?:提問|問題)",
+        "問了\\s*[0-9０-９一兩三四五六七八九十]+\\s*次",
+      ],
+    },
+  ],
 };
 
 export interface PromptfooAssertion {
@@ -81,7 +183,7 @@ export function toPromptfooTest(evalCase: EvalCase, caseFile: string): Promptfoo
     description: `${evalCase.id}: ${evalCase.description}`,
     vars: { caseId: evalCase.id, call: evalCase.call, input: evalCase.input },
     assert: [
-      ...evalCase.checks.map(
+      ...[...evalCase.checks, ...CALL_CHECKS[evalCase.call]].map(
         (check): PromptfooAssertion => ({
           type: "javascript",
           value: CHECK_ASSERTION,

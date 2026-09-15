@@ -118,7 +118,6 @@ const weeklyReadInput: WeeklyReadInput = {
   days: [
     {
       date: "2026-09-13",
-      answered: true,
       answeredAt: "08:40",
       askerName: "Mia",
       askType: "question",
@@ -126,13 +125,10 @@ const weeklyReadInput: WeeklyReadInput = {
       voiceSeconds: 20,
     },
   ],
-  answeredDays: 6,
   usualAnswerTime: "08:30",
   answerTimeDriftMinutes: null,
   voiceLengthDriftPercent: null,
   repeatedMentions: ["the tomatoes"],
-  quietDays: 1,
-  familyAsks: 6,
 };
 
 interface Case {
@@ -249,7 +245,7 @@ const CASES: Case[] = [
     schema: WeeklyRead,
     input: weeklyReadInput,
     output: {
-      lines: ["Mom answered 6 of 7 days.", "Usually around 08:30.", "The tomatoes came up twice."],
+      lines: ["Mom usually answered around 08:30.", "The tomatoes were mentioned twice."],
       suggestion: "Mom, how are the tomatoes doing?",
     },
     run: (ai) => ai.weeklyRead(weeklyReadInput),
@@ -560,16 +556,13 @@ describe("createClaudeAi line counts", () => {
     expect(outcome).toMatchObject({ ok: true, value: { lines } });
   });
 
-  it("accepts a weekly read of a single line, so a sparse week is not a failure", async () => {
-    const sparse = {
-      lines: ["Mom answered 1 of 1 day."],
-      suggestion: "Mom, how was your first morning?",
-    };
-    const { ai } = clientWith([jsonReply("claude-sonnet-5", sparse)]);
+  it("accepts a weekly read with no lines, so a week with nothing to say is not a failure", async () => {
+    const empty = { lines: [], suggestion: "Mom, how was your first morning?" };
+    const { ai } = clientWith([jsonReply("claude-sonnet-5", empty)]);
 
-    const outcome = await ai.weeklyRead({ ...weeklyReadInput, answeredDays: 1, familyAsks: 1 });
+    const outcome = await ai.weeklyRead({ ...weeklyReadInput, days: [], usualAnswerTime: null });
 
-    expect(outcome).toMatchObject({ ok: true, value: sparse });
+    expect(outcome).toMatchObject({ ok: true, value: empty });
   });
 
   it("rejects a hello with no lines or three lines as schema-invalid", async () => {
@@ -582,15 +575,24 @@ describe("createClaudeAi line counts", () => {
     }
   });
 
-  it("rejects a weekly read with no lines or six lines as schema-invalid", async () => {
-    for (const lines of [[], ["1.", "2.", "3.", "4.", "5.", "6."]]) {
+  it("rejects a weekly read with five lines as schema-invalid and falls back to a read the schema accepts", async () => {
+    const lines = ["One.", "Two.", "Three.", "Four.", "Five."];
+    for (const [lang, elderName, suggestion] of [
+      ["en", "Mom", "Mom, what was the best part of your week?"],
+      ["zh-TW", "阿嬤", "阿嬤，這個星期最開心的是什麼事？"],
+    ] as const) {
       const { ai } = clientWith([
         jsonReply("claude-sonnet-5", { lines, suggestion: "Mom, how are the tomatoes?" }),
       ]);
 
-      const outcome = await ai.weeklyRead(weeklyReadInput);
+      const outcome = await ai.weeklyRead({ ...weeklyReadInput, lang, elderName });
 
-      expect(outcome).toMatchObject({ ok: false, error: "schema_invalid" });
+      expect(outcome).toMatchObject({
+        ok: false,
+        error: "schema_invalid",
+        value: { lines: [], suggestion },
+      });
+      expect(WeeklyRead.safeParse(outcome.value).success).toBe(true);
     }
   });
 });

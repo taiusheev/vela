@@ -54,7 +54,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 - "If [organiser] can't reach you on a quiet day, they might ask [nearby contact's name] to come by. That is always [organiser]'s own decision. Vela never contacts anyone by itself."
 - "A computer program helps with the messages: it writes down voice messages as text, translates for [family member who speaks another language], and suggests short answers you can tap. Voice messages and photos are deleted after 30 days."
 - "While we test Vela over these first weeks, I read the messages too, only to make sure everything works. Nobody outside the family and me."
-- "On Sundays [organiser] gets a few lines about your week. You can always see what the family sees: just write 'what does the family see'."
+- "On Sundays [organiser] gets a few lines about your week. Whenever you like, write 'what does the family see', and you'll get what the family saw from your latest answers and the lines about your week."
 
 ### 5. Questions
 
@@ -92,7 +92,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 **3. "Is it listening to me, or following where I go?"**
 
-"No. Vela has no access to your microphone, your camera, your contacts or where you are. It only knows what you send it: a tap, a voice message you record and send, a photo you choose. Between messages it knows nothing about you. And you can always see what the family sees."
+"No. Vela has no access to your microphone, your camera, your contacts or where you are. It only knows what you send it: a tap, a voice message you record and send, a photo you choose. Between messages it knows nothing about you. And you can always ask Vela what the family sees."
 
 **4. "Is a computer reading my messages? Is it a robot talking to me?"**
 

@@ -10,6 +10,7 @@
 import type { Button, ExchangeType, Lang } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { type ButtonAction, encodeButton } from "./buttons.ts";
+import { lineCap, shorten, TEXT_MAX_LENGTH } from "./text.ts";
 
 export type ArrivalAsk =
   | { type: "hello" }
@@ -49,30 +50,10 @@ export const MAX_CHIPS = 3;
 export const MAX_VOTE_OPTIONS = 7;
 /** `Button.label` allows at most 64 characters. */
 const LABEL_MAX_LENGTH = 64;
-/** `OutboundMessage.text` allows at most 4000 characters. */
-const TEXT_MAX_LENGTH = 4000;
 /** What a shortened read-back line keeps before the ask gives up any words: the name and a start. */
 const READBACK_LINE_FLOOR = 100;
 /** What a shortened ask keeps before the read-back lines go below their floor. */
 const ASK_TEXT_FLOOR = 1000;
-
-/**
- * The text cut to at most `maxLength` characters, ending in an ellipsis when anything was cut. Cuts
- * fall between code points so no half of a surrogate pair is left behind.
- */
-function shorten(text: string, maxLength: number): string {
-  if (text.length <= maxLength) {
-    return text;
-  }
-  let kept = "";
-  for (const character of text) {
-    if (kept.length + character.length > maxLength - 1) {
-      break;
-    }
-    kept += character;
-  }
-  return `${kept.trimEnd()}…`;
-}
 
 /**
  * A family-written label that fits a button. An over-long label would make the platform refuse the
@@ -189,23 +170,6 @@ function composeText(
   );
   paragraphs.push([t(lang, "arrival.hint")]);
   return paragraphs.map((lines) => lines.join("\n")).join("\n\n");
-}
-
-/**
- * The largest length every line can be cut to so that all of them together fit `room`, or `Infinity`
- * when they already fit. Shorter lines stay whole and the longest ones share what is left.
- */
-function lineCap(lines: readonly string[], room: number): number {
-  const lengths = lines.map((line) => line.length).sort((a, b) => a - b);
-  let rest = room;
-  for (const [index, length] of lengths.entries()) {
-    const cap = Math.floor(rest / (lengths.length - index));
-    if (length > cap) {
-      return Math.max(1, cap);
-    }
-    rest -= length;
-  }
-  return Number.POSITIVE_INFINITY;
 }
 
 /**

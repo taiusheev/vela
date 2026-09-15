@@ -14,14 +14,18 @@
  * call (plan/materials/pilot/consent-script.zh-TW.md, sections 2 and 6): change the script with
  * them.
  *
- * The weekly read is 每週小記, the name the zh-TW privacy notice and consent script give it.
+ * The weekly read is 每週小記, the name the zh-TW privacy notice and consent script give it. Chinese
+ * counts have one form, so each `weekly_read.*_one` key repeats its plural key (see the note in
+ * en.ts). `parent.family_sees_weekly_read` says 每週小記裡…的幾行, the lines from the read, because
+ * the lines are all she gets (see the note in en.ts).
  *
  * Latin text, digits, and placeholders that always render as Latin or digits ({time}, {sent},
- * {usual}, {n}, {channel}, {link}, {notice}) are separated from Chinese characters by a space. The
- * URLs {link} and {notice} also keep a space after the full-width colon, so a messenger's link
- * detection cannot take a neighbouring character as part of the URL. Placeholders for names ({name},
- * {names}, {asker}, {holder}, {organiser}, {child}, {address}, {family}) touch the Chinese characters
- * around them, as a written name would.
+ * {usual}, {n}, {answered}, {days}, {mornings}, {channel}, {link}, {notice}) are separated from
+ * Chinese characters by a space. The URLs {link} and {notice} also keep a space after the full-width
+ * colon, so a messenger's link detection cannot take a neighbouring character as part of the URL.
+ * Placeholders for names ({name}, {names}, {asker}, {holder}, {organiser}, {child}, {address},
+ * {family}) touch the Chinese characters around them, as a written name would, and so does
+ * {suggestion}, an ask worded as the family would send it.
  */
 import type { en } from "./en.ts";
 
@@ -62,7 +66,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "organiser.stopped": "{name}想先暫停。系統一切正常。",
   "parent.family_sees_heading": "家人從您最近的回覆看到的是：",
   "parent.family_sees_empty": "還沒有內容。您回覆早安訊息之後，家人就會看到。",
-  "parent.family_sees_weekly_read": "最近一次傳給家人的每週小記：",
+  "parent.family_sees_weekly_read": "最近一次傳給家人的每週小記裡，關於您這一週的幾行：",
   "group.linked":
     "大家好，我是 Vela。每天晚上，我會告訴大家明天早上輪到誰問{name}一件事。Vela 如何處理大家的訊息： {notice}",
   "group.not_linked": "只有家庭的發起人才能把 Vela 連結到群組。",
@@ -93,6 +97,13 @@ export const zhTW: Record<keyof typeof en, string> = {
   "flag.notice": "{name}說了一句話，您可能會想知道：「{quote}」",
   "away.confirmed": "好的，那就到{date}為止。祝您過得愉快。",
   "away.confirmed_open": "好的，知道了。祝您過得愉快。",
+  "weekly_read.answered": "{name}這週 {days} 天中回覆了 {answered} 天。",
+  "weekly_read.answered_one": "{name}這週 {days} 天中回覆了 {answered} 天。",
+  "weekly_read.hello_mornings": "有 {mornings} 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。",
+  "weekly_read.hello_mornings_one":
+    "有 {mornings} 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。",
+  "weekly_read.nobody_asked": "這週家裡沒有人問{name}任何事。",
+  "weekly_read.suggestion": "下週可以問問看：{suggestion}",
   "help.private": "您好。想為家人設定 Vela 的話，請傳送 /start。",
   "onboarding.welcome": "您好，我是 Vela。我們一起為一位家人留一盞燈吧。大約兩分鐘就能完成。",
   "onboarding.ask_name": "您平常怎麼稱呼這位家人？例如：媽媽、阿嬤、爸爸。",

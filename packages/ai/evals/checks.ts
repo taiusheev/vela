@@ -88,6 +88,17 @@ export function evaluateCheck(check: Check, output: unknown, input: unknown): Ch
         typeof value === "string" && new RegExp(check.pattern, "u").test(value),
         `${shown}; expected to match /${check.pattern}/`,
       );
+    case "notMatches": {
+      const text = textOf(value);
+      if (text === null) {
+        return fail(`${shown}; expected text`);
+      }
+      const matched = check.patterns.filter((pattern) => new RegExp(pattern, "iu").test(text));
+      return verdict(
+        matched.length === 0,
+        `${shown}; must not match ${matched.map((pattern) => `/${pattern}/`).join(", ")}`,
+      );
+    }
     case "writtenIn": {
       const text = textOf(value);
       if (text === null) {

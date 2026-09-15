@@ -1017,12 +1017,17 @@ describe("weekly reads", () => {
       familyId: seed.family.id,
       memberId: seed.parent.id,
       weekStart: "2026-09-07",
-      lines: ["Mei answered five mornings."],
-      stats: { answered_days: 5 },
-      promptVersion: "weekly_read.v1",
+      lines: ["Mei taught Anna the dumpling recipe."],
+      suggestion: "Mei, which filling should Anna try next?",
+      stats: { answered_days: 5, counted_days: 7, hello_mornings: 1, family_asks: 6 },
+      promptVersion: "weekly_read.v4",
       ...overrides,
     };
   }
+
+  const SENT_LINES = ["Mei taught Anna the dumpling recipe, with extra ginger."];
+  const SENT_SUGGESTION = "Mei, how much ginger goes in?";
+  const SENT_AT = new Date("2026-09-13T11:00:00Z");
 
   it("types the draft and the sent lines as one string per line", () => {
     // Checked by `tsc` (pnpm typecheck), not at runtime. Services store `ai.weeklyRead` lines (a
@@ -1030,41 +1035,81 @@ describe("weekly reads", () => {
     // family see" renders `sent_lines`, so any other element shape must fail to compile.
     expectTypeOf<WeeklyRead["lines"]>().toEqualTypeOf<string[]>();
     expectTypeOf<WeeklyRead["sentLines"]>().toEqualTypeOf<string[] | null>();
+    expectTypeOf<WeeklyRead["sentSuggestion"]>().toEqualTypeOf<string | null>();
   });
 
-  it("stores a draft as not sent", async () => {
+  it("stores a draft as not sent, including a draft with no lines", async () => {
     const seed = await seedFamily();
 
-    const draft = only(await db.insert(weeklyReads).values(draftFor(seed)).returning());
+    const draft = only(
+      await db
+        .insert(weeklyReads)
+        .values(draftFor(seed, { lines: [] }))
+        .returning(),
+    );
 
-    expect(draft).toMatchObject({ sentLines: null, sentAt: null });
+    expect(draft).toMatchObject({ lines: [], sentLines: null, sentSuggestion: null, sentAt: null });
   });
 
-  it("records the lines as sent together with the time they were sent", async () => {
+  it("records the lines and the suggestion as sent together with the time, keeping the draft", async () => {
     const seed = await seedFamily();
     const draft = only(await db.insert(weeklyReads).values(draftFor(seed)).returning());
-    const sentLines = ["Mei answered six mornings, most before nine."];
-    const sentAt = new Date("2026-09-13T11:00:00Z");
 
-    await db.update(weeklyReads).set({ sentLines, sentAt }).where(eq(weeklyReads.id, draft.id));
+    await db
+      .update(weeklyReads)
+      .set({ sentLines: SENT_LINES, sentSuggestion: SENT_SUGGESTION, sentAt: SENT_AT })
+      .where(eq(weeklyReads.id, draft.id));
 
     expect(
       await db
         .select({
           lines: weeklyReads.lines,
+          suggestion: weeklyReads.suggestion,
           sentLines: weeklyReads.sentLines,
+          sentSuggestion: weeklyReads.sentSuggestion,
           sentAt: weeklyReads.sentAt,
         })
         .from(weeklyReads),
-    ).toEqual([{ lines: draft.lines, sentLines, sentAt }]);
+    ).toEqual([
+      {
+        lines: draft.lines,
+        suggestion: draft.suggestion,
+        sentLines: SENT_LINES,
+        sentSuggestion: SENT_SUGGESTION,
+        sentAt: SENT_AT,
+      },
+    ]);
+  });
+
+  it("records a send whose suggestion the founder removed and whose lines are empty", async () => {
+    const seed = await seedFamily();
+
+    const sent = only(
+      await db
+        .insert(weeklyReads)
+        .values(draftFor(seed, { sentLines: [], sentSuggestion: "", sentAt: SENT_AT }))
+        .returning(),
+    );
+
+    expect(sent).toMatchObject({ sentLines: [], sentSuggestion: "", sentAt: SENT_AT });
   });
 
   it.each<{ name: string; sent: Partial<NewWeeklyRead> }>([
+    { name: "sent lines alone", sent: { sentLines: SENT_LINES } },
+    { name: "a sent suggestion alone", sent: { sentSuggestion: SENT_SUGGESTION } },
+    { name: "a sent time alone", sent: { sentAt: SENT_AT } },
     {
-      name: "sent lines but no sent time",
-      sent: { sentLines: ["Mei answered six mornings."] },
+      name: "sent lines and a time but no sent suggestion",
+      sent: { sentLines: SENT_LINES, sentAt: SENT_AT },
     },
-    { name: "a sent time but no sent lines", sent: { sentAt: new Date("2026-09-13T11:00:00Z") } },
+    {
+      name: "a sent suggestion and a time but no sent lines",
+      sent: { sentSuggestion: SENT_SUGGESTION, sentAt: SENT_AT },
+    },
+    {
+      name: "sent lines and a suggestion but no sent time",
+      sent: { sentLines: SENT_LINES, sentSuggestion: SENT_SUGGESTION },
+    },
   ])("rejects a read with $name", async ({ sent }) => {
     const seed = await seedFamily();
 
@@ -1072,7 +1117,7 @@ describe("weekly reads", () => {
 
     expect(error).toEqual({
       code: CHECK_VIOLATION,
-      constraint: "weekly_reads_sent_lines_sent_at_check",
+      constraint: "weekly_reads_sent_lines_sent_suggestion_sent_at_check",
     });
   });
 });
@@ -1459,7 +1504,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "outbound_nearby_ask_actor_check",
       "media_storage_key_or_provider_file_id_check",
       "media_provider_unique_id_channel_check",
-      "weekly_reads_sent_lines_sent_at_check",
+      "weekly_reads_sent_lines_sent_suggestion_sent_at_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());

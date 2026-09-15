@@ -130,7 +130,7 @@ At any time, free of charge, you can:
 - **Delete.** Ask the founder, and we delete your information. What remains is listed under "How long we keep it" (for example, usage events without content).
 - **Withdraw consent.** This does not affect what was done before.
 
-The person the light is for can also ask **"what does the family see"** in the chat, and receives the one-line summaries of their last seven answered days and the most recent weekly read sent to the organisers. For anything else the family has seen, ask the founder.
+The person the light is for can also ask **"what does the family see"** in the chat, and receives the one-line summaries of their last seven answered days and the lines about their week from the most recent weekly read sent to the organisers. For anything else the family has seen, ask the founder.
 
 **How:** write to [CONTACT ADDRESS], or tell your organiser, who passes it on to the founder. We may ask one simple question to make sure the request comes from you. Stopping takes effect immediately. We aim to complete every other request within 7 days, and always within the time Taiwan's law allows: 15 days for access or a copy, 30 days for a correction, a stop or a deletion (each extendable once, with a written reason). These rights cannot be waived or limited by agreement.
 

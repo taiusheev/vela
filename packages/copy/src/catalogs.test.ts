@@ -142,6 +142,23 @@ const WEEKLY_READ_KEYS: readonly MessageKey[] = [
   "admin.weekly_read_draft",
 ];
 
+/**
+ * Wording that presents what follows as a part taken from the weekly read. She gets only the lines
+ * about her week, never the counts or the suggestion (spec §8, §13), and the organiser agreement,
+ * privacy notice, and consent script promise the family "the lines about her week from" the read,
+ * so her heading must not claim the lines are the whole read the family received.
+ */
+const PART_OF_WEEKLY_READ: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /^From the latest weekly read\b/i,
+  "zh-TW": /每週小記裡.*幾行/,
+};
+
+/** The heading before Decision W, when her copy was the whole read. */
+const WHOLE_WEEKLY_READ_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "The latest weekly read sent to the family:",
+  "zh-TW": "最近一次傳給家人的每週小記：",
+};
+
 /** "What the family sees" returns her last seven answered days, which can span more than a week. */
 const WEEK: Record<(typeof MVP_LANGS)[number], RegExp> = {
   en: /\bweek/i,
@@ -162,6 +179,21 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["admin.weekly_read_draft", ["family", "link"]],
   ["admin.understand_failed", ["family", "link"]],
   ["admin.member_left_group", ["family", "name"]],
+  ["weekly_read.answered", ["answered", "days", "name"]],
+  ["weekly_read.answered_one", ["answered", "days", "name"]],
+  ["weekly_read.hello_mornings", ["mornings", "name"]],
+  ["weekly_read.hello_mornings_one", ["mornings", "name"]],
+  ["weekly_read.nobody_asked", ["name"]],
+  ["weekly_read.suggestion", ["suggestion"]],
+];
+
+/**
+ * Each weekly read count as its plural key and its `_one` key. English says "1 of 1 day" and "on 1
+ * morning"; Traditional Chinese has one form.
+ */
+const COUNT_KEYS: readonly (readonly [plural: MessageKey, one: MessageKey, noun: string])[] = [
+  ["weekly_read.answered", "weekly_read.answered_one", "day"],
+  ["weekly_read.hello_mornings", "weekly_read.hello_mornings_one", "morning"],
 ];
 
 /**
@@ -186,6 +218,9 @@ const LATIN_PLACEHOLDERS: ReadonlySet<string> = new Set([
   "sent",
   "usual",
   "n",
+  "answered",
+  "days",
+  "mornings",
   "channel",
   "link",
   "notice",
@@ -322,9 +357,32 @@ describe("wording with a fixed meaning in every language", () => {
       expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(WEEK[lang]);
     }
   });
+
+  it.each(MVP_LANGS)(
+    "%s heading over her lines calls them part of the weekly read, not the read",
+    (lang) => {
+      expect(WHOLE_WEEKLY_READ_SAMPLE[lang]).not.toMatch(PART_OF_WEEKLY_READ[lang]);
+      expect(catalogs[lang]["parent.family_sees_weekly_read"]).toMatch(PART_OF_WEEKLY_READ[lang]);
+    },
+  );
 });
 
 describe("English wording", () => {
+  it("words each weekly read count in the singular for one and the plural otherwise", () => {
+    for (const [plural, one, noun] of COUNT_KEYS) {
+      const pluralNoun = new RegExp(`\\b${noun}s\\b`);
+      const singularNoun = new RegExp(`\\b${noun}\\b`);
+      // Placeholder names such as {days} are not wording.
+      const words = (key: MessageKey): string => catalogs.en[key].replace(PLACEHOLDER, "");
+      expect(words(plural), plural).toMatch(pluralNoun);
+      expect(words(plural), plural).not.toMatch(singularNoun);
+      expect(words(one), one).toMatch(singularNoun);
+      expect(words(one), one).not.toMatch(pluralNoun);
+      // Nothing but the noun differs, so the two sentences cannot drift apart.
+      expect(catalogs.en[one].replace(singularNoun, `${noun}s`), one).toBe(catalogs.en[plural]);
+    }
+  });
+
   it("the guards recognise the words they forbid", () => {
     expect("Anna keeps an eye on her").toMatch(SURVEILLANCE_WORDS);
     expect("We are checking on Mom").toMatch(SURVEILLANCE_WORDS);
@@ -368,6 +426,12 @@ describe("Traditional Chinese wording", () => {
     expect("☀️ {name}回覆了{asker} · {time}").not.toMatch(SPACED_NAME);
     expect(crowdedUrlNeighbours("查看：{link}")).toEqual(["："]);
     expect(crowdedUrlNeighbours("查看： {link}")).toEqual([]);
+  });
+
+  it("words each weekly read count once, since Chinese has no plural", () => {
+    for (const [plural, one] of COUNT_KEYS) {
+      expect(zhTW[one], one).toBe(zhTW[plural]);
+    }
   });
 
   it("never uses 他 or 她, or words for monitoring, tracking, or watching over anyone", () => {

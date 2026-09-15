@@ -346,10 +346,14 @@ export type HelloLines = z.infer<typeof HelloLines>;
 
 // weekly read --------------------------------------------------------------------------------------
 
+/**
+ * A day she answered. Days without an answer are not part of the input: the lines she can read never
+ * point to one (spec §8), and a model that is not shown them cannot.
+ */
 export const WeeklyDay = z.object({
   date: LocalDate,
-  answered: z.boolean(),
-  answeredAt: LocalTime.nullable(),
+  answeredAt: LocalTime,
+  /** Who asked; null when the morning was the fallback hello. */
   askerName: Name.nullable(),
   askType: ExchangeType.nullable(),
   summary: ShortText.nullable(),
@@ -357,15 +361,20 @@ export const WeeklyDay = z.object({
 });
 export type WeeklyDay = z.infer<typeof WeeklyDay>;
 
-/** Counts and drifts are computed by services; the model only words them (spec §13). */
+/**
+ * Drifts and repeated mentions are computed by services; the model only words them. The week's
+ * counts (days answered, mornings nobody asked, the family's asks) are not part of the input:
+ * `renderWeeklyRead` in @vela/core writes them from `weekly_reads.stats` for organisers, so a model
+ * can neither misstate them nor show them to her (spec §8, §13).
+ */
 export const WeeklyReadInput = z.object({
   /** The reader's language. */
   lang: Lang,
   /** How the reader refers to her, e.g. "Mom". */
   elderName: Name,
   weekEnd: LocalDate,
-  days: z.array(WeeklyDay).min(1).max(7),
-  answeredDays: z.number().int().min(0).max(7),
+  /** The days she answered this week, oldest first; empty when she answered none. */
+  days: z.array(WeeklyDay).max(7),
   usualAnswerTime: LocalTime.nullable(),
   /** Minutes later (positive) or earlier (negative) than last week's usual time. */
   answerTimeDriftMinutes: z.number().int().nullable(),
@@ -373,16 +382,17 @@ export const WeeklyReadInput = z.object({
   voiceLengthDriftPercent: z.number().nullable(),
   /** Things mentioned on two or more days. */
   repeatedMentions: z.array(z.string().max(120)).max(10),
-  /** Days that arrived as the fallback hello because nobody asked. */
-  quietDays: z.number().int().min(0).max(7),
-  /** Asks the family composed this week. */
-  familyAsks: z.number().int().nonnegative(),
 });
 export type WeeklyReadInput = z.infer<typeof WeeklyReadInput>;
 
-/** One to five lines, so a sparse week (a first week, few answers) is a short read, not a failure. */
+/**
+ * Zero to four lines about her week and one suggestion. A week with nothing to say is no lines, not a
+ * failure. The lines never state or imply how many days she answered, a morning nobody asked, or the
+ * family's asks: organisers read those from numbers, and she reads the lines without them (spec §8,
+ * §13). The suggestion goes to organisers only, since it is an ask meant to reach her as a surprise.
+ */
 export const WeeklyRead = z.object({
-  lines: z.array(z.string().min(1).max(300)).min(1).max(5),
+  lines: z.array(z.string().min(1).max(300)).max(4),
   suggestion: z.string().min(1).max(200),
 });
 export type WeeklyRead = z.infer<typeof WeeklyRead>;

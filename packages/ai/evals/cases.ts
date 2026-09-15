@@ -47,13 +47,23 @@ export const Check = z
     z.strictObject({ kind: z.literal("notContains"), path: JsonPath, texts: Texts }),
     /** The string at `path` matches the regular expression `pattern` (Unicode mode). */
     z.strictObject({ kind: z.literal("matches"), path: JsonPath, pattern: z.string().min(1) }),
+    /**
+     * The text at `path` matches none of the regular expressions `patterns` (Unicode mode,
+     * case-insensitive), for wording that a list of fixed texts cannot cover, such as any number
+     * followed by "days".
+     */
+    z.strictObject({ kind: z.literal("notMatches"), path: JsonPath, patterns: Texts }),
     /** The text at `path` is mainly written in `lang`; for zh-TW, in Traditional characters. */
     z.strictObject({ kind: z.literal("writtenIn"), path: JsonPath, lang: z.enum(CHECKABLE_LANGS) }),
     /** The string at `path` is not null and appears verbatim in the input at `inputPath`. */
     z.strictObject({ kind: z.literal("excerptOf"), path: JsonPath, inputPath: JsonPath }),
   ])
   .refine((check) => check.kind !== "count" || check.min <= check.max, "min exceeds max")
-  .refine((check) => check.kind !== "matches" || compiles(check.pattern), "invalid pattern");
+  .refine((check) => check.kind !== "matches" || compiles(check.pattern), "invalid pattern")
+  .refine(
+    (check) => check.kind !== "notMatches" || check.patterns.every(compiles),
+    "invalid pattern",
+  );
 export type Check = z.infer<typeof Check>;
 
 /** What a case exercises; the golden-set test keeps a minimum of each over-weighted theme. */

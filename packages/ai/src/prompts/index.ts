@@ -6,7 +6,7 @@ import * as readback from "./readback.v1.ts";
 import * as suggest from "./suggest.v1.ts";
 import * as translate from "./translate.v1.ts";
 import * as understand from "./understand.v3.ts";
-import * as weeklyRead from "./weekly_read.v3.ts";
+import * as weeklyRead from "./weekly_read.v4.ts";
 
 export interface Prompt {
   readonly version: string;

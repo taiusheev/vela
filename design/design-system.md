@@ -82,7 +82,7 @@ Lighting animates once: the light blooms in over 600–900 ms, ease-out, with a 
 | **Voice row** | Play 44 pt (64 on the parent surface), 24-bar waveform in action colour, duration, transcript below in ink-2, "original" toggle for translations. |
 | **Prompt card** | Light-soft card, label "PROMPT · FROM HER OWN WORDS", one sentence, one action "Use this". |
 | **Quiet notice sheet** | Label, Literata title ("It's been quiet at Mom's today"), one calm line, facts, nearby contacts with Call and Ask to check, primary "Call Mom", secondary "She's fine, I know why" and "Wait 2 hours". Ink on surface, never a red banner. |
-| **Weekly read** | Seven small lights in a row, 3–5 Literata lines on surface, one suggestion in action colour, story of the week. |
+| **Weekly read** | Seven small lights in a row, the count lines, then up to four Literata notes on surface, one suggestion in action colour, story of the week. |
 | **Buttons** | Primary: action fill, white Inter SemiBold, 56 pt (app) / 88 pt (parent). Secondary: surface with rule border. Tertiary: text in action. At most one primary per screen. |
 | **Inputs** | 56 pt, rule border, 2 pt action focus ring; helper text always visible. |
 | **Empty states** | Never empty: the home shows lights and "Tomorrow is Anna's turn"; a new family sees the first arrival composed as an example. The window mark, unlit, is the only illustration. |

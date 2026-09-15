@@ -22,8 +22,17 @@
  *
  * The weekly read is "weekly read", the name the English privacy notice and the spec give it.
  *
+ * `weekly_read.*` are the organisers' weekly read around the lines the founder sends, rendered by
+ * `renderWeeklyRead` in @vela/core: the counts come from numbers, never from the model, and only
+ * organisers see them or the suggestion, because she is never shown missed days (spec §8, §13). A
+ * count that decides between "day" and "days" has a plural key and a `_one` key for exactly one; a
+ * language with one form repeats the plural wording under `_one`.
+ *
  * `parent.family_sees_heading` and `parent.family_sees_empty` never say "this week": the command
  * returns her last seven answered days, which reach back further after a pause or a quiet spell.
+ * `parent.family_sees_weekly_read` says the lines under it are *from* the read, not the read itself:
+ * she gets the lines about her week alone, and the organiser agreement, privacy notice, and consent
+ * script tell the family so, so a heading that called them the whole read would be untrue.
  *
  * `admin.*` messages go to the founder's Telegram chat with the bot, which sits outside
  * `admin_access_log` and outside retention (plan/materials/pilot/data-map.md, gap 15). They carry
@@ -69,7 +78,7 @@ export const en = {
   "parent.family_sees_heading": "What the family saw from your latest answers:",
   "parent.family_sees_empty":
     "Nothing yet. When you answer a morning message, the family will see it.",
-  "parent.family_sees_weekly_read": "The latest weekly read sent to the family:",
+  "parent.family_sees_weekly_read": "From the latest weekly read sent to the family:",
   "group.linked":
     "Hello, family. I'm Vela. Each evening I will say whose turn it is to ask {name} something for the morning. How Vela handles your messages: {notice}",
   "group.not_linked": "Only the family organiser can connect Vela to a group.",
@@ -100,6 +109,14 @@ export const en = {
   "flag.notice": '{name} said something you may want to hear: "{quote}"',
   "away.confirmed": "Until {date}, then. Have a lovely time.",
   "away.confirmed_open": "Understood. Have a lovely time.",
+  "weekly_read.answered": "{name} answered {answered} of {days} days.",
+  "weekly_read.answered_one": "{name} answered {answered} of {days} day.",
+  "weekly_read.hello_mornings":
+    "On {mornings} mornings nobody in the family asked, so Vela sent {name} a hello.",
+  "weekly_read.hello_mornings_one":
+    "On {mornings} morning nobody in the family asked, so Vela sent {name} a hello.",
+  "weekly_read.nobody_asked": "Nobody in the family asked {name} anything this week.",
+  "weekly_read.suggestion": "Something to ask next week: {suggestion}",
   "help.private": "Hello. To set up Vela for your family, send /start.",
   "onboarding.welcome":
     "Hello, I'm Vela. Let's set up a light for someone in your family. It takes two minutes.",

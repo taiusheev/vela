@@ -31,6 +31,7 @@ import * as providerModule from "../evals/provider.ts";
 import { createEvalProvider, PROVIDER_ID } from "../evals/provider.ts";
 import * as suiteModule from "../evals/suite.ts";
 import {
+  CALL_CHECKS,
   CALL_STANDARDS,
   CHECK_ASSERTION,
   judgeRubric,
@@ -196,6 +197,97 @@ describe("golden set", () => {
       expect(monitoringChecks(call, "監控"), call).toBeGreaterThan(0);
     }
   });
+
+  it("holds every weekly read case, in English and in Traditional Chinese, to the checks against counts", () => {
+    const weeklyCases = CASES.filter((evalCase) => evalCase.call === "weekly_read");
+    expect(new Set(weeklyCases.flatMap(caseLanguages))).toEqual(new Set(["en", "zh-TW"]));
+    expect(CALL_CHECKS.weekly_read.length).toBeGreaterThan(0);
+    for (const evalCase of weeklyCases) {
+      const configs = toPromptfooTest(evalCase, "cases/weekly_read.json").assert.map(
+        (assertion) => assertion.config?.check,
+      );
+      for (const check of CALL_CHECKS.weekly_read) {
+        expect(configs, evalCase.id).toContainEqual(check);
+      }
+    }
+  });
+
+  it("gives every call-wide check a real path in its call's output", () => {
+    for (const evalCase of CASES) {
+      expect(
+        caseIssues({ ...evalCase, checks: [...CALL_CHECKS[evalCase.call]] }),
+        evalCase.id,
+      ).toEqual([]);
+    }
+  });
+});
+
+describe("weekly read checks against counts", () => {
+  /** Lines a weekly read must never carry: a count, a day without an answer, or the family's asks. */
+  const FORBIDDEN = [
+    "Mom answered 6 of 7 days.",
+    "Mom answered on five of the seven days.",
+    "Dad answered 1 of 1 day.",
+    "Mom answered before nine on 5 days.",
+    "Six mornings this week, Mom answered late.",
+    "Mom answered every day this week.",
+    "Dad answered most mornings.",
+    "Every day but Tuesday, Mom answered before nine.",
+    "Mom didn't answer on Wednesday.",
+    "Mom never answered on Sunday.",
+    "On 2 mornings nobody asked, so Vela sent a hello.",
+    "Nobody in the family asked anything this week.",
+    "The family sent 6 asks.",
+    "阿嬤這週 7 天中回覆了 6 天。",
+    "阿嬤這週有六天回覆。",
+    "阿嬤有 5 天早上回覆。",
+    "阿嬤每天都有回覆。",
+    "阿嬤星期三沒有回覆。",
+    "阿嬤週三早上沒回覆。",
+    "有兩個早上沒有人問，所以 Vela 傳了問候。",
+    "這週家裡沒有人提問。",
+    "家人這週問了 6 個問題。",
+  ];
+
+  /**
+   * Lines about her week, including her own words about days and mornings: trips, weather, habits,
+   * a one-word answer, someone else who has not replied, and a weekday before 天氣, which reads as
+   * 三天 to a pattern that takes any number of days for a tally.
+   */
+  const ALLOWED = [
+    "Mom usually answered around 08:50, later than usual.",
+    "Mom taught Anna how to make dumplings with ginger.",
+    "The tomatoes were mentioned twice.",
+    "Voice answers were shorter than usual.",
+    "Dad said every morning starts with a walk to the bowls club.",
+    "Mom said she is going to Japan for five days.",
+    "Mom said it rained for 3 days and the tomatoes loved it.",
+    "Mom said the market is only open 2 mornings a week.",
+    "Mom answered in one word: fine.",
+    "Mom said she never answers calls from unknown numbers.",
+    "阿嬤通常在 08:50 左右回覆，比平常晚。",
+    "阿嬤教了阿偉怎麼滷肉，要加冰糖。",
+    "番茄提到了不只一次。",
+    "阿嬤說今天去市場買菜，第二天要去台中。",
+    "阿公說今天去 Costco 買了 kiwi。",
+    "阿嬤說星期三天氣很好，去了公園。",
+    "阿嬤說下週要去日本五天。",
+    "阿嬤說鄰居還沒回覆她。",
+  ];
+
+  function passesEvery(line: string): boolean {
+    return CALL_CHECKS.weekly_read.every(
+      (check) => evaluateCheck(check, { lines: [line] }, {}).pass,
+    );
+  }
+
+  it.each(FORBIDDEN)("fails %s", (line) => {
+    expect(passesEvery(line)).toBe(false);
+  });
+
+  it.each(ALLOWED)("passes %s", (line) => {
+    expect(passesEvery(line)).toBe(true);
+  });
 });
 
 const PromptfooConfig = z.object({
@@ -248,7 +340,9 @@ describe("Promptfoo config", () => {
     for (const [index, test] of generated.entries()) {
       const evalCase = CASES[index];
       expect(test.assert).toHaveLength(
-        (evalCase?.checks.length ?? 0) + (evalCase?.rubric.length ?? 0),
+        (evalCase?.checks.length ?? 0) +
+          CALL_CHECKS[test.vars.call].length +
+          (evalCase?.rubric.length ?? 0),
       );
     }
   });
@@ -354,6 +448,22 @@ describe("deterministic checks", () => {
     expect(
       evaluateCheck({ kind: "contains", path: "lines", texts: ["x"] }, { lines: [1] }, input).pass,
     ).toBe(false);
+  });
+
+  it("fails text that matches any forbidden pattern, case-insensitively, and names the patterns", () => {
+    const check: Check = {
+      kind: "notMatches",
+      path: "lines",
+      patterns: [String.raw`\d+\s+days?\b`, "[0-9]\\s*天"],
+    };
+
+    expect(evaluateCheck(check, { lines: ["Mom taught a recipe."] }, input).pass).toBe(true);
+    expect(evaluateCheck(check, { lines: ["Mom answered on", "6 DAYS."] }, input)).toEqual({
+      pass: false,
+      reason: 'lines = ["Mom answered on","6 DAYS."]; must not match /\\d+\\s+days?\\b/',
+    });
+    expect(evaluateCheck(check, { lines: "阿嬤回覆了 6 天" }, input).pass).toBe(false);
+    expect(evaluateCheck(check, { lines: [6] }, input).pass).toBe(false);
   });
 
   it("matches a string against a Unicode pattern", () => {

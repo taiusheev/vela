@@ -530,9 +530,10 @@ CREATE TABLE "weekly_reads" (
 	"prompt_version" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"sent_lines" jsonb,
+	"sent_suggestion" text,
 	"sent_at" timestamp with time zone,
 	CONSTRAINT "weekly_reads_member_id_week_start_key" UNIQUE("member_id","week_start"),
-	CONSTRAINT "weekly_reads_sent_lines_sent_at_check" CHECK (("sent_lines" is null) = ("sent_at" is null))
+	CONSTRAINT "weekly_reads_sent_lines_sent_suggestion_sent_at_check" CHECK (("sent_lines" is null) = ("sent_at" is null) and ("sent_suggestion" is null) = ("sent_at" is null))
 );
 
 ALTER TABLE "ai_calls" ADD CONSTRAINT "ai_calls_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE set null ON UPDATE no action;
