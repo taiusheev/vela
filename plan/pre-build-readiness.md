@@ -1,6 +1,6 @@
 # Pre-build readiness, v2: are we ready to start building?
 
-2026-09-13, evening. Second pass, after the founder's four decisions of the same day: published evidence instead of a survey wave (`research/08–14`), spec v2 as the only spec (`product/05-product-spec-v2.md`), payments deferred with Singapore as the likely entity, and Russia deferred in favour of Taiwan, the US, Japan, Europe, and India (`market-order.md`). The first pass (morning) is kept below as history.
+2026-09-17: updated for the founder's decision that the pilot is free for families, so willingness to pay is asked on each organiser's day-30 call instead of counted in paying families (conditions 1 and 4, sprint 6, kill signals). Written 2026-09-13, evening, as the second pass, after the founder's four decisions of the same day: published evidence instead of a survey wave (`research/08–14`), spec v2 as the only spec (`product/05-product-spec-v2.md`), payments deferred with Singapore as the likely entity, and Russia deferred in favour of Taiwan, the US, Japan, Europe, and India (`market-order.md`). The first pass (morning) is kept below as history.
 
 ## Verdict
 
@@ -8,16 +8,16 @@
 
 What we are ready for: the phase-0 instrument this week, the platform foundation next week, the app from week three, with the pilot families running on the instrument the whole time and the founder's onboarding calls doing the interviewing.
 
-What we are not ready for, by decision rather than by gap: charging money (no entity yet), a public launch (name clearance, final privacy policy), WhatsApp (Meta verification needs the entity), and the Russian market (deferred).
+What we are not ready for, by decision rather than by gap: charging money (no entity yet; the pilot is free for families, decided 2026-09-17), a public launch (name clearance, final privacy policy), WhatsApp (Meta verification needs the entity), and the Russian market (deferred).
 
 ## The eight conditions, rechecked
 
 | # | Condition (morning version) | Status tonight |
 |---|---|---|
-| 1 | Twenty interviews; four paying families; refusal under 30% | **Replaced** by research/08–14 with the founder's consent. The published record gives the answer rate (~80% → 65–75%), the refusal risk (30–40% for monitoring framing, avoidable by wording), the price band, and the channel reality. Interviews move into the pilot's onboarding calls. |
+| 1 | Twenty interviews; four paying families; refusal under 30% | **Replaced** by research/08–14 with the founder's consent. The published record gives the answer rate (~80% → 65–75%), the refusal risk (30–40% for monitoring framing, avoidable by wording), the price band, and the channel reality. Interviews move into the pilot's onboarding calls. The pilot is free (2026-09-17), so paying families are not counted: each organiser is asked on the day-30 call whether they would pay for Vela Light at US$9.99 a month. |
 | 2 | Spec v2 is the only spec, with acceptance criteria per screen | **Done.** 20 screens, the messenger path, the exchange state machine, revised parameters (Appendix B). |
 | 3 | Pilot run two weeks; arrival content written down | **Moves into sprint 1.** The instrument is built first precisely so this happens while the platform is built. |
-| 4 | Payments provider and entity decided and opened | **Deferred by decision** (Singapore likely). Not needed to build; needed before the first charge. Stripe, Paddle, and Lemon Squeezy all serve Singapore entities. |
+| 4 | Payments provider and entity decided and opened | **Deferred by decision** (Singapore likely). Not needed to build; needed before the first charge, and the pilot takes no payment at all (2026-09-17). Stripe, Paddle, and Lemon Squeezy all serve Singapore entities. |
 | 5 | Privacy notice and consent script used in the pilot | **First task of sprint 1** (one day, co-founder). No family is onboarded before it exists. |
 | 6 | Prompts v0 pass an eval set | **Sprint 1** (three days, co-founder), synthetic first, real pilot answers from week 2. |
 | 7 | DDL, API contract, analytics events | **Sprint 2**; they are the first artefacts of the build itself. The event list is already in spec v2 §18. |
@@ -43,9 +43,9 @@ What we are not ready for, by decision rather than by gap: charging money (no en
 | 3 · App, family side | 5–7 | Expo app: A1–A8, A11–A14 (onboarding, Today, Ask, Exchanges, quiet notice, You, Light screen, widget); LINE and Telegram invite flows | Fifteen families across Taiwan and English-speaking countries; UCLA-3 at week 4 for the first cohort; decide entity | Ten families using the app for asks; answer rate ≥ 75% |
 | 4 · Parent surface | 8–9 | P1–P6 (consent, question, photo choice, recording, answered, kitchen-table); TTS read-back in English and Chinese; voice-line design | Two parents on the parent surface via a visiting child (one in the US or Europe, one in Taiwan) | Parent surface answered by two parents for a week each |
 | 5 · Depth and the second wave | 10–11 | Story day and the family book; weekly read in-app; memory suggestions; WhatsApp Business verification if the entity exists; Japanese localisation scoped | Ten Taiwanese families on LINE; pricing test design for NT$; pricing page copy | Weekly read opened by organisers; WhatsApp sandbox sending |
-| 6 · Measure and decide | 12 | Precision page; the trial flow (no payment yet); metrics review | UCLA-3 at week 12; "if Vela stopped tomorrow" at day 30 for every organiser; decide: open billing (needs entity) and public launch | Metrics against spec §18 targets; go or change one variable |
+| 6 · Measure and decide | 12 | Precision page; the trial flow (no payment yet); metrics review | UCLA-3 at week 12; "if Vela stopped tomorrow" and "would you pay for Vela Light at US$9.99 a month?" at day 30 for every organiser; decide: open billing (needs entity) and public launch | Metrics against spec §18 targets; go or change one variable |
 
-Kill signals stay as in the master plan, with the evidence-adjusted thresholds: answer rate under 50% by week 4, stop rate over 30% in month 1, fewer than 4% of kept-light families willing to pay at day 90 (asked, since billing is not open).
+Kill signals, with the evidence-adjusted thresholds: answer rate under 50% by week 4, stop rate over 30% in month 1, fewer than 4 organisers saying on their day-30 call that they would pay for Vela Light at US$9.99 a month (asked, since the pilot is free and billing is not open; the same threshold as `execution-plan.md` and `build-plan.md`). Spec §18's paying target and its kill signal (families paying at day 90, [< 4%]) apply once billing is open, so the sprint 6 review measures the day-30 answer in their place.
 
 ## What still needs the founder
 

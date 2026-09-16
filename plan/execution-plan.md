@@ -1,5 +1,7 @@
 # Vela: execution plan
 
+> **Revised 2026-09-17.** The pilot is free for families: there is no fee and no payment, because Vela has no entity yet and payments wait for one (decision of 2026-09-13). Willingness to pay is measured instead by asking each organiser on the day-30 call whether they would pay for Vela Light at $9.99/mo, and by who joins a paid plan once it exists; the goal, the pilot offer, and the kill signals below say so.
+>
 > **Revised 2026-09-13.** Markets reordered: Taiwan and the English-speaking app path first, then Japan and Germany/UK, then the US at scale and India; Russia deferred (`market-order.md`). The survey and interview wave is replaced by published evidence (research/08–14); the twelve-week build order now lives in `pre-build-readiness.md` (instrument first, foundation, family app, parent surface, Taiwan on LINE, measure). Phase exit tests below stand, with targets revised in spec v2 §18.
 
 v1, 2026-09-12. Supersedes the 30-day plan (`archive/plan/`). Two people: the founder (business, Taipei, Russian and English, 40–60 h/week, near-zero budget) and the tech co-founder (AI, always on). The product is defined in `product/02-app-plan.md`.
@@ -12,7 +14,7 @@ v1, 2026-09-12. Supersedes the 30-day plan (`archive/plan/`). Two people: the fo
 
 ## Phase 0: prove the loop (weeks 1–4)
 
-**Goal.** Twenty conversations and ten to twenty families living the daily loop for at least two weeks, with paying money on the table, so that the MVP is built from evidence. Each pilot family should have three generations where possible: the eldest as the kept-light member, the organiser in the middle, and at least one member under 30 as a contributor, so we test both promises (closer, calmer) at once.
+**Goal.** Twenty conversations and ten to twenty families living the daily loop for at least two weeks, with every organiser asked whether they would pay for it, so that the MVP is built from evidence. Each pilot family should have three generations where possible: the eldest as the kept-light member, the organiser in the middle, and at least one member under 30 as a contributor, so we test both promises (closer, calmer) at once.
 
 **Two questions every interview and survey must answer.** Who in your family do you *wish* you heard from more often? Who do you *worry* about when they go quiet? If wishes cluster on the 20–45 pair and worries on the eldest, the three-generation design is confirmed.
 
@@ -30,7 +32,7 @@ v1, 2026-09-12. Supersedes the 30-day plan (`archive/plan/`). Two people: the fo
 - Weekly review template and a decisions log.
 
 **Founder, week 2**
-- Interviews 9–16. Every interview ends with the pilot offer: $15 for the month, refundable, starts next Monday. Take payment on the spot through whatever the person already has (Wise, Revolut, PayPal).
+- Interviews 9–16. Every interview ends with the pilot offer: free for families, starts next Monday. No payment is taken; whether the organiser would pay is asked on the day-30 call.
 - Ten families confirmed with parents' names, messengers, wake times, and two nearby contacts each.
 - Time: 40 h.
 
@@ -48,7 +50,7 @@ v1, 2026-09-12. Supersedes the 30-day plan (`archive/plan/`). Two people: the fo
 - Tech co-founder: phase-0 report with the numbers in `product/02-app-plan.md` §9; what the arrival must contain; what the weekly read must say; the MVP scope cut to what was proven.
 - Decision: build the MVP, or change one variable and rerun phase 0.
 
-**Kill signals.** Fewer than 4 families paying after 20 interviews. More than 30% of parents refusing or going silent in week one for reasons other than being away. Family-content days under 30% by week two despite prompts.
+**Kill signals.** Fewer than 4 organisers of the ten to twenty pilot families saying on their day-30 call that they would pay for Vela Light at $9.99/mo (the same threshold as `build-plan.md` and `pre-build-readiness.md`). More than 30% of parents refusing or going silent in week one for reasons other than being away. Family-content days under 30% by week two despite prompts.
 
 ## Phase 1: MVP (months 2–3)
 
@@ -59,7 +61,8 @@ v1, 2026-09-12. Supersedes the 30-day plan (`archive/plan/`). Two people: the fo
 - Admin view for the first months.
 
 **Founder**
-- Convert phase-0 families to the app; recruit toward 100 families through their referrals (ask each paying family for two introductions; contributors are the referral engine).
+- Day-30 call with every phase-0 organiser: "If Vela stopped tomorrow, how would you feel?" and "Would you pay for Vela Light at $9.99/mo?"
+- Convert phase-0 families to the app; recruit toward 100 families through their referrals (ask each pilot family for two introductions; contributors are the referral engine).
 - Pricing test: $9.99/mo vs $79/yr vs $14.99/mo across cohorts.
 - Ten more interviews with families who declined, to learn the objections.
 - Taiwan groundwork: five conversations with Taiwanese families with a parent living alone; LINE is the channel.
@@ -95,7 +98,7 @@ The founder asked for these as the first MVP. They are built from the same mater
 6. Closer and calmer: what makes it more than a group chat (turns, prompts, grandchildren, translation, story day) and what makes silence mean something.
 7. Why now (messengers everywhere, multilingual AI, super-aged crossover in Taiwan/Korea/Japan).
 8. Business model (free layer spreads, Vigil pays; comparables: Famileo, Snug, Docomo).
-9. Phase-0 evidence (reply rate, family-content days, what parents said, what children paid).
+9. Phase-0 evidence (reply rate, family-content days, what parents said, how many organisers said they would pay).
 10. The founder, the ask, the plan to 1,000 families.
 
 ## Cadence

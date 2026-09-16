@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v1` · 14 September 2026 · goes with `privacy-notice.v1` · spoken meaning matches the `consent.request` message (architecture/03-code-design.md §4, spec §9)
+Version `consent-script.v1` · 17 September 2026 · goes with `privacy-notice.v1` · spoken meaning matches the `consent.request` message (architecture/03-code-design.md §4, spec §9)
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes, that's fine" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
@@ -15,7 +15,7 @@ Neither the founder nor the organiser can make Vela send the consent message: a 
 - [ ] The organiser has finished Vela's setup in their private chat with the bot within the last 7 days, and has the invite link from its last message (the link stops working after 7 days). They have **not** sent it to the person yet, and can send it during the call, so the consent message never arrives before the person has heard this script.
 - [ ] You know: the name the family uses, how they like to be greeted, the language, the morning time, the messaging app, the names of any nearby contacts, and the emergency number where the person lives.
 - [ ] Ten quiet minutes. The organiser may join, but the person answers for themselves.
-- [ ] You are **not** recording. Take notes by hand or in [NOTES TOOL] under the family code.
+- [ ] You are **not** recording. Take notes by hand or in the "Vela pilot" folder in Google Drive, under the family code.
 - [ ] If the person prefers another language, stop and reschedule with the right script.
 
 ## How to speak
@@ -32,7 +32,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 ### 1. Hello
 
-"Hello [greeting, for example Mrs Chen]. My name is [founder's first name]. I'm helping [organiser] with a small service called Vela. This call takes about ten minutes, I'm not recording it, and at the end you decide. 'No' is a perfectly good answer."
+"Hello [greeting, for example Mrs Chen]. My name is Timur. I'm helping [organiser] with a small service called Vela. This call takes about ten minutes, I'm not recording it, and at the end you decide. 'No' is a perfectly good answer."
 
 ### 2. What it is
 

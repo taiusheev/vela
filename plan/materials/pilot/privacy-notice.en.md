@@ -1,8 +1,6 @@
-> **Draft for the pilot, not legal advice. To be reviewed by counsel before any public launch.**
-
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v1` · 14 September 2026 · English is the source text; `privacy-notice.zh-TW.md` says the same thing in Traditional Chinese.
+Version `privacy-notice.v1` · last updated 17 September 2026 · English is the source text; the [Traditional Chinese notice](https://vela.vela-light.workers.dev/privacy/zh-TW) says the same thing.
 
 ## In short
 
@@ -14,9 +12,9 @@ Version `privacy-notice.v1` · 14 September 2026 · English is the source text; 
 
 ## Who runs Vela
 
-Vela is a small pilot run by **[FOUNDER FULL NAME]**, a private individual in Taipei, Taiwan. There is no company yet. [FOUNDER FULL NAME] decides how your information is used and is responsible for it. If a company takes the service over, we will tell you before anything changes.
+Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"), a private individual in Taipei, Taiwan. There is no company yet. Timur Aiusheev decides how your information is used and is responsible for it. If a company takes the service over, we will tell you before anything changes.
 
-**Contact:** [CONTACT ADDRESS — to be filled in before first use]
+**Contact:** [t.aiusheev@gmail.com](mailto:t.aiusheev@gmail.com)
 
 ## Who this notice is for
 
@@ -41,15 +39,13 @@ Vela is a small pilot run by **[FOUNDER FULL NAME]**, a private individual in Ta
 
 **About nearby contacts:** name, how they know the person, phone number, messaging app, and whether they agreed.
 
-**About the organiser, for the pilot fee:** the name and payment method used to pay the fee or to receive a refund.
-
-**Only with a separate yes, on the founder's calls:** answers to a few short questions, such as how connected someone feels (at weeks 0, 4 and 12) and how the organiser would feel if Vela stopped (at days 14 and 30). Skipping them changes nothing.
+**Only with a separate yes, on the founder's calls:** answers to a few short questions, such as how connected someone feels (at weeks 0, 4 and 12), how the organiser would feel if Vela stopped (at days 14 and 30), and whether the organiser would pay for Vela Light, a paid plan Vela plans to offer later (at day 30). Skipping them changes nothing.
 
 **Records we create:** when and how each person agreed; delivery records; a log of each AI call (which call, when, whether it worked, its cost); a log of every time the founder opens or changes a family's records; usage events without any message content, such as "an answer arrived at 08:12, by button".
 
 ## What we do not collect
 
-No location. No access to a phone's contacts, camera or microphone beyond the voice notes people choose to send. No medical records. Nothing from anyone's device other than what they send to Vela. No advertising identifiers.
+No location. No access to a phone's contacts, camera or microphone beyond the voice notes people choose to send. No medical records. Nothing from anyone's device other than what they send to Vela. No advertising identifiers. No payment information: the pilot is free.
 
 In the family's Vela group, Vela keeps only the messages meant for it: replies to its evening message, `/ask` and `/later` messages, replies to the posts of answers, and reactions to those posts. It also notices when someone leaves the group, which Telegram tells every bot in a group. When Vela is an administrator of the group (which lets reactions count), Telegram delivers every message in the group to Vela; every message not meant for Vela is discarded as it arrives, without being stored or logged.
 
@@ -62,7 +58,6 @@ In the family's Vela group, Vela keeps only the messages meant for it: replies t
 5. **To send the organiser a short weekly read** on Sunday.
 6. **To run the service safely:** send every message once and on time, fix failures, and prove that deleted information was deleted.
 7. **To learn whether the pilot works:** answer rates, answer times and how often days stay quiet, counted without names. Results are shared only as totals.
-8. **To handle the pilot fee** and any refund.
 
 We do not sell information, show advertising, or use anyone's words or voice to train AI models. We do not use a real answer or voice note to test or improve Vela's AI unless the person who said it agrees separately, for that one item.
 
@@ -81,13 +76,11 @@ In Taiwan, we rely on your consent and on the pilot arrangement with the organis
 |---|---|---|---|
 | Neon (part of Databricks) | Database | Everything we store except voice notes and photos | Singapore |
 | Cloudflare | Runs Vela's software; stores voice notes and photos | Everything while it is processed; voice notes and photos at rest | Stored in its Asia-Pacific region as we request, which Cloudflare treats as a preference, not a guarantee; processed on its worldwide network |
-| Anthropic (Claude) | AI: summaries, translations, suggested answers, drafts of the weekly read, noticing words that matter | Answers, asks, replies, and family members' first names, roles and languages. Never phone numbers or payment details | United States |
+| Anthropic (Claude) | AI: summaries, translations, suggested answers, drafts of the weekly read, noticing words that matter | Answers, asks, replies, and family members' first names, roles and languages. Never phone numbers | United States |
 | Deepgram | Turns voice notes into text | Voice notes | United States |
 | Sentry | Error reports | Technical details and record numbers; no message content | Germany (EU) |
 | Telegram, and LINE from later in the pilot | Carry the messages | Everything sent in the chat | Their own data centres, under their own privacy policies |
-| [NOTES TOOL] | The founder's pilot notes | Call notes and research answers, filed under a family code instead of a name | [NOTES TOOL LOCATION] |
-
-The payment app the organiser chooses for the fee (for example Wise, Revolut or PayPal) handles the payment under its own terms.
+| Google Drive, in the founder's own Google account | The founder's pilot notes | Call notes, research answers and quotes from the calls, filed under a family code instead of a name, in a private folder shared with no one | On Google's servers in the United States and other countries, under Google's own terms for personal accounts |
 
 Telegram and LINE are apps your family uses under their own terms. Messages in those chats stay in the app until you delete them there; deleting your information in Vela does not remove them from your chat history.
 
@@ -95,7 +88,7 @@ We will tell organisers at least 14 days before a new provider starts receiving 
 
 ## Where it is stored
 
-Our database is in Singapore. We ask Cloudflare to store voice notes and photos in its Asia-Pacific region; Cloudflare treats this as a preference, not a guarantee. Vela's software runs on Cloudflare's worldwide network, so a message may be processed for a moment in the Cloudflare data centre nearest to the person who sent it. The AI and voice-to-text providers work in the United States. Your information is therefore used in Singapore, the United States and other countries where these providers operate, not only where you live.
+Our database is in Singapore. We ask Cloudflare to store voice notes and photos in its Asia-Pacific region; Cloudflare treats this as a preference, not a guarantee. Vela's software runs on Cloudflare's worldwide network, so a message may be processed for a moment in the Cloudflare data centre nearest to the person who sent it. The AI and voice-to-text providers work in the United States. The founder's pilot notes are kept in Google Drive, on Google's servers in the United States and other countries. Your information is therefore used in Singapore, the United States and other countries where these providers operate, not only where you live.
 
 ## How long we keep it
 
@@ -114,8 +107,7 @@ Our database is in Singapore. We ask Cloudflare to store voice notes and photos 
 | Error reports | Up to 90 days |
 | Log of the founder opening or changing family records | 24 months |
 | The founder's pilot notes and research answers | Under a family code, not a name; deleted within 12 months after the pilot ends |
-| Record of the pilot fee | As long as accounting rules require |
-| **When the pilot ends** | If your family does not continue, we delete your family's information within 30 days. The only things kept longer are those this table already keeps longer, for the periods it gives: usage events and daily counts without content, the AI call log without names or content, error reports, the log of the founder opening or changing records, deletion fingerprints, the founder's pilot notes under a family code, and the fee record. If the family book exists by then, we first offer the organiser the stories the family kept |
+| **When the pilot ends** | If your family does not continue, we delete your family's information within 30 days. The only things kept longer are those this table already keeps longer, for the periods it gives: usage events and daily counts without content, the AI call log without names or content, error reports, the log of the founder opening or changing records, deletion fingerprints, and the founder's pilot notes under a family code. If the family book exists by then, we first offer the organiser the stories the family kept |
 | Backups | Deleted information can stay in the database's restore history for up to 7 days before it is gone |
 
 When we delete something, we keep a fingerprint (a hash) that proves it was deleted, without keeping what it said.
@@ -132,7 +124,7 @@ At any time, free of charge, you can:
 
 The person the light is for can also ask **"what does the family see"** in the chat, and receives the one-line summaries of their last seven answered days and the lines about their week from the most recent weekly read sent to the organisers. For anything else the family has seen, ask the founder.
 
-**How:** write to [CONTACT ADDRESS], or tell your organiser, who passes it on to the founder. We may ask one simple question to make sure the request comes from you. Stopping takes effect immediately. We aim to complete every other request within 7 days, and always within the time Taiwan's law allows: 15 days for access or a copy, 30 days for a correction, a stop or a deletion (each extendable once, with a written reason). These rights cannot be waived or limited by agreement.
+**How:** write to [t.aiusheev@gmail.com](mailto:t.aiusheev@gmail.com), or tell your organiser, who passes it on to the founder. We may ask one simple question to make sure the request comes from you. Stopping takes effect immediately. We aim to complete every other request within 7 days, and always within the time Taiwan's law allows: 15 days for access or a copy, 30 days for a correction, a stop or a deletion (each extendable once, with a written reason). These rights cannot be waived or limited by agreement.
 
 If you are unhappy with how we handled your information, please tell the founder. You can also complain to the data protection authority where you live.
 
@@ -145,7 +137,7 @@ Every part of Vela is a choice.
 - Voice is never required: every ask can be answered with one tap.
 - Nearby contacts are optional. Without them, a notice on a quiet day names no one to call except the organiser.
 - The research questions are optional.
-- An organiser who does not give a name, a way to be reached and the pilot fee cannot join the pilot.
+- An organiser who does not give a name and a way to be reached cannot join the pilot.
 
 ## Not a medical or emergency service
 
@@ -153,16 +145,4 @@ Vela cannot tell whether anyone is in danger and cannot send help. Messages can 
 
 ## Changes to this notice
 
-If we change what we collect, why we use it, who receives it or how long we keep it, we will tell everyone in the pilot before the change applies, and ask again where consent is needed. Every version has a number and a date.
-
-## For review: Taiwan PDPA Article 8 notice items
-
-| Article 8 item | Where this notice covers it |
-|---|---|
-| 1. Name of the collector | Who runs Vela |
-| 2. Purpose of collection | Why we use it. Specific-purpose codes proposed, to be confirmed by counsel: 〇六九, 〇九〇, 一三五, 一三六, 一五七 |
-| 3. Categories of personal data | What we collect. Category codes proposed, to be confirmed by counsel: C001, C002 and C093 (the payer's name, refund account and payment method for the pilot fee), C011, C021, C023, C024, C035; C111 only as far as someone chooses to mention their health in an answer |
-| 4. Period, area, recipients and manner of use | How long we keep it · Where it is stored · Who sees it · Why we use it (automated processing by the providers listed) |
-| 5. Rights under Article 3 and how to exercise them | Your rights |
-| 6. Effect of not providing data when it is optional | If you do not give us this information |
-| Article 9 (data not collected from the person directly) | The person the light is for is told on the onboarding call that the organiser supplied their details; nearby contacts are told in `nearby-contact-consent.en.md` |
+This notice may change during the pilot; the date at the top says when it was last updated. If we change what we collect, why we use it, who receives it or how long we keep it, we will tell everyone in the pilot before the change applies, and ask again where consent is needed. Every version has a number and a date.

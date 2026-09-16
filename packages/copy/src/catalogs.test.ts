@@ -159,6 +159,21 @@ const WHOLE_WEEKLY_READ_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
   "zh-TW": "最近一次傳給家人的每週小記：",
 };
 
+/**
+ * The fallback hello asks how she is this morning (spec §4.5: "How are you this morning?"), the
+ * morning it arrives. 早上好 is a mainland greeting (MAINLAND_TERMS), so zh-TW asks 早上過得好嗎.
+ */
+const THIS_MORNING: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bthis morning\b/i,
+  "zh-TW": /早上|今早/,
+};
+
+/** A hello that asks about the day instead: the zh-TW wording the review found, and its English. */
+const ABOUT_THE_DAY_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "Nothing new from the family today. How are you today?",
+  "zh-TW": "今天家人沒有新的消息。您今天好嗎？",
+};
+
 /** "What the family sees" returns her last seven answered days, which can span more than a week. */
 const WEEK: Record<(typeof MVP_LANGS)[number], RegExp> = {
   en: /\bweek/i,
@@ -318,6 +333,11 @@ describe("wording with a fixed meaning in every language", () => {
         expect(TimeZone.safeParse(example).success, `${lang} ${key} ${example}`).toBe(true);
       }
     }
+  });
+
+  it.each(MVP_LANGS)("%s fallback hello asks how she is this morning, not today", (lang) => {
+    expect(ABOUT_THE_DAY_SAMPLE[lang]).not.toMatch(THIS_MORNING[lang]);
+    expect(catalogs[lang]["arrival.hello"]).toMatch(THIS_MORNING[lang]);
   });
 
   it.each(MVP_LANGS)("%s repeat preface does not say the message went out just now", (lang) => {

@@ -70,9 +70,9 @@ Read each text; for a voice answer without a transcript, listen to the voice not
 
 | Situation | English | 繁體中文（待母語審閱） |
 |---|---|---|
-| Late arrival | This morning's message to [Name] was late because of a problem on our side, not anything at [Name]'s. It has now been sent. [Founder], Vela | 今天早上給 [名字] 的訊息晚送了，是我們這邊的問題，和 [名字] 那邊無關，現在已經送出。[創辦人]，Vela |
+| Late arrival | This morning's message to [Name] was late because of a problem on our side, not anything at [Name]'s. It has now been sent. Timur, Vela | 今天早上給 [名字] 的訊息晚送了，是我們這邊的問題，和 [名字] 那邊無關，現在已經送出。Timur，Vela |
 | False quiet notice | Please disregard today's quiet notice about [Name]. Our morning message did not go out on time, so the notice was wrong. Nothing is known to be wrong at [Name]'s. I'm sorry for the worry. | 今天關於 [名字] 沒有回覆的通知請忽略。我們早上的訊息沒有準時送出，所以那則通知是錯的。目前沒有任何跡象顯示 [名字] 那邊有狀況。讓您擔心了，真的很抱歉。 |
-| Data exposed | Something went wrong on our side: [what happened]. It affected [what data] between [times]. We have [what we did]. [What they can do.] Reply here or write to [CONTACT ADDRESS] with any question. | 我們這邊出了問題：[發生了什麼]。影響到 [哪些資料]，時間是 [時間]。我們已經 [採取的措施]。[對方可以做什麼。] 有任何問題，請直接回覆或寫信到 [聯絡信箱]。 |
+| Data exposed | Something went wrong on our side: [what happened]. It affected [what data] between [times]. We have [what we did]. [What they can do.] Reply here or write to t.aiusheev@gmail.com with any question. | 我們這邊出了問題：[發生了什麼]。影響到 [哪些資料]，時間是 [時間]。我們已經 [採取的措施]。[對方可以做什麼。] 有任何問題，請直接回覆或寫信到 t.aiusheev@gmail.com。 |
 
 ## How to know it worked
 

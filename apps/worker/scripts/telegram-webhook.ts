@@ -54,7 +54,12 @@ export interface TelegramSetupApi {
 
 export interface TelegramSetupInput {
   readonly env: Readonly<Record<string, string | undefined>>;
-  readonly argv: readonly string[];
+  /**
+   * The arguments `telegram:setup` was given, or null when the environment setup script calls
+   * this: its own command line refuses the drop flag and always keeps pending updates, so what is
+   * printed must not tell the founder to pass the flag.
+   */
+  readonly argv: readonly string[] | null;
   readonly api: TelegramSetupApi;
   readonly print: (line: string) => void;
 }
@@ -85,7 +90,8 @@ export function webhookUrl(workerUrl: string): URL {
 }
 
 export async function setUpTelegram({ env, argv, api, print }: TelegramSetupInput): Promise<void> {
-  const { dropPendingUpdates } = parseSetupArguments(argv);
+  const { dropPendingUpdates } =
+    argv === null ? { dropPendingUpdates: false } : parseSetupArguments(argv);
   const botToken = required(env, "TELEGRAM_BOT_TOKEN");
   const secretToken = required(env, "TELEGRAM_WEBHOOK_SECRET");
   const url = webhookUrl(required(env, "WORKER_URL"));
@@ -118,7 +124,7 @@ export async function setUpTelegram({ env, argv, api, print }: TelegramSetupInpu
   print(
     dropPendingUpdates
       ? "Pending updates: dropped"
-      : `Pending updates: kept (pass ${DROP_PENDING_UPDATES} to drop them)`,
+      : `Pending updates: kept${argv === null ? "" : ` (pass ${DROP_PENDING_UPDATES} to drop them)`}`,
   );
   print(`Allowed updates: ${TELEGRAM_ALLOWED_UPDATES.join(", ")}`);
   print(

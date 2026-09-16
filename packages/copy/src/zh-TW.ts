@@ -61,7 +61,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "consent.declined": "沒關係，不會傳任何訊息給您。",
   "organiser.consent_given": "{name}同意了。第一則早安訊息會在明天 {time} 送到。",
   "organiser.consent_declined": "{name}說暫時先不要。不會傳送任何訊息。",
-  "parent.stopped": "已經全部暫停了。想恢復的時候，隨時說「開始」就可以。",
+  "parent.stopped": "已經全部暫停了。想恢復的時候，隨時說「開始」就可以了。",
   "parent.started": "歡迎回來。下一則早安訊息會在 {time} 送到。",
   "organiser.stopped": "{name}想先暫停。系統一切正常。",
   "parent.family_sees_heading": "家人從您最近的回覆看到的是：",

@@ -23,7 +23,7 @@ A nearby contact is one of up to two people living near the person the light is 
 >
 > Vela keeps your name and phone number for this, and does not show them in any message until you say yes. If you say yes, I'll also tell Vela how you know [Name], and Vela shows your details only to me [and to (other organiser's name)] on a day like that. The person who runs the Vela pilot can see them and records your answer. If you say no, your details are deleted. You can say no, or change your mind at any time, and nothing changes between us.
 >
-> Vela is a pilot run by [FOUNDER FULL NAME]. How your details are used: https://vela.vela-light.workers.dev/privacy
+> Vela is a pilot run by Timur Aiusheev. How your details are used: https://vela.vela-light.workers.dev/privacy
 >
 > Would that be all right? Just reply yes or no.
 
@@ -33,7 +33,7 @@ A nearby contact is one of up to two people living near the person the light is 
 >
 > [Organiser's name] added your name and number to Vela so they can reach you on a day like that. Vela never contacts you on its own; any request comes from [organiser's name]. You can say no, or change your mind at any time.
 >
-> Vela is a pilot run by [FOUNDER FULL NAME]. How your details are used: https://vela.vela-light.workers.dev/privacy
+> Vela is a pilot run by Timur Aiusheev. How your details are used: https://vela.vela-light.workers.dev/privacy
 >
 > Buttons: **Yes, I'm happy to** · **No, thank you**
 
@@ -41,7 +41,7 @@ A nearby contact is one of up to two people living near the person the light is 
 
 **What Vela keeps:** your name, how you know [Name], your phone number, the messaging app you use, and when and how you said yes.
 
-**Who sees it:** the organisers of [Name]'s family, and [FOUNDER FULL NAME], who runs the pilot and records your answer in Vela. Your details are stored with the providers named in the privacy notice (Vela's database in Singapore, and Cloudflare, which runs Vela's software), and reach the organiser through their messaging app on a quiet day. Vela's AI never sees your phone number. You will not see [Name]'s messages or answers, and nothing about [Name]'s days is shared with you.
+**Who sees it:** the organisers of [Name]'s family, and Timur Aiusheev, who runs the pilot and records your answer in Vela. Your details are stored with the providers named in the privacy notice (Vela's database in Singapore, and Cloudflare, which runs Vela's software), and reach the organiser through their messaging app on a quiet day. Vela's AI never sees your phone number. You will not see [Name]'s messages or answers, and nothing about [Name]'s days is shared with you.
 
 **When you might hear from the family:** only on a day when [Name] has not answered, and only if an organiser decides to ask you. We expect this to be rare. In the pilot, the organiser calls or messages you directly. Later, in the app, you may receive a message sent in the organiser's name, such as:
 
@@ -55,7 +55,7 @@ Your answer goes to the organiser.
 
 **How long:** until you or the organiser remove you, or [Name]'s family leaves Vela. Then your details are deleted (see "How long we keep it" in the privacy notice).
 
-**Changing your mind:** tell the organiser, or write to the founder at [CONTACT ADDRESS]. Your details are removed within 7 days, and nobody uses Vela to contact you again.
+**Changing your mind:** tell the organiser, or write to the founder at t.aiusheev@gmail.com. Your details are removed within 7 days, and nobody uses Vela to contact you again.
 
 **Your rights:** you can see, correct or delete what Vela holds about you at any time, free of charge (privacy notice, "Your rights").
 

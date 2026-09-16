@@ -1,0 +1,1108 @@
+import { describe, expect, inject, it } from "vitest";
+import {
+  type Command,
+  cloudflareApi,
+  cloudflareRequest,
+  describeFailure,
+  EMPTY_LINE,
+  type Environment,
+  fillPlaceholder,
+  generateWebhookSecret,
+  mergeDotEnv,
+  normalizeTeamDomain,
+  parseArguments,
+  parseConnectionString,
+  planSecrets,
+  readDotEnv,
+  readEnvironmentConfig,
+  received,
+  redact,
+  runSetup,
+  type SetupIo,
+  STEPS,
+  startChats,
+  stepsFrom,
+  stripJsonComments,
+  typeInto,
+  type WorkerFile,
+} from "./setup-environment.ts";
+import { SetupError } from "./telegram-webhook.ts";
+
+/** Every value the founder pastes in a fake setup, each marked so a leak is easy to spot. */
+const SECRETS = {
+  cloudflareToken: "cfSENTINELtoken000000000000000000000000001",
+  databasePassword: "npgSENTINELdatabasepassword",
+  botToken: "7000000001:SENTINELbotTokenAAAAAAAAAAAAAAAAAAAAAA",
+  anthropic: "sk-ant-SENTINEL-anthropic-key",
+  deepgram: "SENTINELdeepgramkey00000000000000000000",
+  healthchecks: "https://hc-ping.com/SENTINEL-ping-0000",
+  accessAud: "5e0715e1".repeat(8),
+  chatId: "8765432109",
+} as const;
+
+const DATABASE_URL = `postgresql://vela_owner:${SECRETS.databasePassword}@ep-quiet-sky-a1b2c3.ap-southeast-1.aws.neon.tech/vela?sslmode=require`;
+const ACCOUNT_ID = "0123456789abcdef0123456789abcdef";
+const HYPERDRIVE_ID = "fedcba9876543210fedcba9876543210";
+const TEAM_DOMAIN = "vela-founder.cloudflareaccess.com";
+const START_UPDATE_ID = 41;
+
+const ACCOUNT_NAMES: Readonly<Record<Environment, string>> = {
+  staging: "Vela staging",
+  production: "Vela",
+};
+const SUBDOMAINS: Readonly<Record<Environment, string>> = {
+  staging: "vela-light-staging",
+  production: "vela-light",
+};
+const BOT_USERNAMES: Readonly<Record<Environment, string>> = {
+  staging: "VelaStagingTestBot",
+  production: "VelaLightBot",
+};
+
+/**
+ * Both wrangler files as JSON with comments, built from what wrangler itself read from the real
+ * files (vitest.config.ts), so the fake setups run on the real names, hosts and placeholders.
+ */
+function wranglerTexts(): { readonly pilot: string; readonly admin: string } {
+  const configs = inject("workerConfigs");
+  const text = (worker: "pilot" | "admin"): string => {
+    const env = Object.fromEntries(
+      (["staging", "production"] as const).map((environment) => {
+        const config = configs.find((c) => c.worker === worker && c.environment === environment);
+        return [
+          environment,
+          {
+            name: config?.name,
+            queues: config?.queues,
+            r2_buckets: config?.r2Buckets,
+            hyperdrive: config?.hyperdrive,
+            vars: config?.vars,
+          },
+        ];
+      }),
+    );
+    return [
+      "{",
+      `  // The ${worker} Worker. See https://developers.cloudflare.com/workers/wrangler/configuration/`,
+      `  "env": ${JSON.stringify(env, null, 2)} /* every environment */`,
+      "}",
+      "",
+    ].join("\n");
+  };
+  return { pilot: text("pilot"), admin: text("admin") };
+}
+
+// ---------------------------------------------------------------------------------------------
+// A fake Cloudflare, Neon, Telegram and terminal
+
+interface HyperdriveConfig {
+  readonly id: string;
+  readonly name: string;
+  readonly origin: { readonly host: string; readonly database: string; readonly user: string };
+  caching: { disabled: boolean };
+}
+
+interface World {
+  readonly environment: Environment;
+  /** What Cloudflare calls the account, its workers.dev subdomain, and the bot getMe names. */
+  accountName: string;
+  subdomain: string;
+  botUsername: string;
+  /** Answers given once, before the usual one, to the first prompt whose text has the label. */
+  firstAnswers: [label: string, answer: string][];
+  readonly queues: Set<string>;
+  readonly buckets: Set<string>;
+  readonly hyperdrives: HyperdriveConfig[];
+  /** Worker name to its secrets; a Worker exists once a secret is put or it is deployed. */
+  readonly workers: Map<string, Map<string, string>>;
+  readonly files: Map<WorkerFile, string>;
+  gitIgnoresEnv: boolean;
+  /** When set, creating the Hyperdrive configuration fails with this Cloudflare error message. */
+  hyperdriveError: string | null;
+  accessOn: boolean;
+  adminOpenWithoutAccess: boolean;
+  webhook: { readonly url: string; readonly secret: string } | null;
+  acknowledgedOffset: number | null;
+  seed: number;
+  // What the setup did, cleared by `resetLog`.
+  deployed: string[];
+  migrations: number;
+  requests: { readonly method: string; readonly url: string }[];
+  commands: Command[];
+  writes: { readonly file: WorkerFile; readonly text: string }[];
+  printed: string[];
+  prompts: string[];
+  /** Each prompt read the other way than its answer must be: a key shown, or Enter hidden. */
+  misread: string[];
+}
+
+function newWorld(environment: Environment): World {
+  const texts = wranglerTexts();
+  return {
+    environment,
+    accountName: ACCOUNT_NAMES[environment],
+    subdomain: SUBDOMAINS[environment],
+    botUsername: BOT_USERNAMES[environment],
+    firstAnswers: [],
+    queues: new Set(),
+    buckets: new Set(),
+    hyperdrives: [],
+    workers: new Map(),
+    files: new Map<WorkerFile, string>([
+      ["wrangler.jsonc", texts.pilot],
+      ["wrangler.admin.jsonc", texts.admin],
+    ]),
+    gitIgnoresEnv: true,
+    hyperdriveError: null,
+    accessOn: false,
+    adminOpenWithoutAccess: false,
+    webhook: null,
+    acknowledgedOffset: null,
+    seed: 7,
+    deployed: [],
+    migrations: 0,
+    requests: [],
+    commands: [],
+    writes: [],
+    printed: [],
+    prompts: [],
+    misread: [],
+  };
+}
+
+function resetLog(world: World): void {
+  world.deployed = [];
+  world.migrations = 0;
+  world.requests = [];
+  world.commands = [];
+  world.writes = [];
+  world.printed = [];
+  world.prompts = [];
+  world.misread = [];
+}
+
+function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...headers },
+  });
+}
+
+function cloudflareOk(result: unknown, resultInfo?: unknown): Response {
+  return json(200, { success: true, errors: [], result, result_info: resultInfo });
+}
+
+function cloudflareError(status: number, code: number, message: string): Response {
+  return json(status, { success: false, errors: [{ code, message }], result: null });
+}
+
+function recordOf(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? Object.fromEntries(Object.entries(value))
+    : {};
+}
+
+function secretsOf(world: World, worker: string): Map<string, string> {
+  const secrets = world.workers.get(worker) ?? new Map<string, string>();
+  world.workers.set(worker, secrets);
+  return secrets;
+}
+
+function cloudflare(
+  world: World,
+  method: string,
+  path: string,
+  body: Record<string, unknown>,
+  authorization: string | null,
+): Response {
+  if (authorization !== `Bearer ${SECRETS.cloudflareToken}`) {
+    return cloudflareError(401, 10000, "Authentication error");
+  }
+  const account = `/accounts/${ACCOUNT_ID}`;
+  const route = `${method} ${path}`;
+  if (route === "GET /user/tokens/verify") {
+    return cloudflareOk({ id: "token-id", status: "active" });
+  }
+  if (route === `GET ${account}`) {
+    return cloudflareOk({ id: ACCOUNT_ID, name: world.accountName });
+  }
+  if (route === `GET ${account}/workers/subdomain`) {
+    return cloudflareOk({ subdomain: world.subdomain });
+  }
+  if (route === `GET ${account}/queues`) {
+    const result = [...world.queues].map((name) => ({ queue_id: `id-${name}`, queue_name: name }));
+    return cloudflareOk(result, { page: 1, per_page: 100, total_pages: 1 });
+  }
+  if (route === `POST ${account}/queues`) {
+    world.queues.add(String(body.queue_name));
+    return cloudflareOk({ queue_name: body.queue_name });
+  }
+  const bucket = path.match(/^\/accounts\/\w+\/r2\/buckets\/(.+)$/)?.[1];
+  if (method === "GET" && bucket !== undefined) {
+    return world.buckets.has(decodeURIComponent(bucket))
+      ? cloudflareOk({ name: bucket })
+      : cloudflareError(404, 10006, "The specified bucket does not exist.");
+  }
+  if (route === `POST ${account}/r2/buckets`) {
+    expect(body.locationHint).toBe("apac");
+    world.buckets.add(String(body.name));
+    return cloudflareOk({ name: body.name });
+  }
+  if (route === `GET ${account}/hyperdrive/configs`) {
+    return cloudflareOk(world.hyperdrives, { page: 1, per_page: 100, total_pages: 1 });
+  }
+  const hyperdrive = world.hyperdrives.find(
+    (config) => path === `${account}/hyperdrive/configs/${config.id}`,
+  );
+  if (method === "PATCH" && hyperdrive !== undefined) {
+    hyperdrive.caching = { disabled: recordOf(body.caching).disabled === true };
+    return cloudflareOk(hyperdrive);
+  }
+  if (route === `POST ${account}/hyperdrive/configs`) {
+    if (world.hyperdriveError !== null) {
+      return cloudflareError(400, 2008, world.hyperdriveError);
+    }
+    const origin = recordOf(body.origin);
+    const created: HyperdriveConfig = {
+      id: HYPERDRIVE_ID,
+      name: String(body.name),
+      origin: {
+        host: String(origin.host),
+        database: String(origin.database),
+        user: String(origin.user),
+      },
+      caching: { disabled: recordOf(body.caching).disabled === true },
+    };
+    world.hyperdrives.push(created);
+    return cloudflareOk(created);
+  }
+  const secrets = path.match(/^\/accounts\/\w+\/workers\/scripts\/([\w-]+)\/secrets$/)?.[1];
+  if (method === "GET" && secrets !== undefined) {
+    const worker = world.workers.get(secrets);
+    return worker === undefined
+      ? cloudflareError(404, 10007, "This Worker does not exist on your account.")
+      : cloudflareOk([...worker.keys()].map((name) => ({ name, type: "secret_text" })));
+  }
+  throw new Error(`the fake Cloudflare has no ${route}`);
+}
+
+function telegram(world: World, path: string, body: Record<string, unknown>): Response {
+  const [, token, method] = path.match(/^\/bot([^/]+)\/(\w+)$/) ?? [];
+  if (token !== SECRETS.botToken) {
+    return json(401, { ok: false, error_code: 401, description: "Unauthorized" });
+  }
+  const ok = (result: unknown): Response => json(200, { ok: true, result });
+  switch (method) {
+    case "getMe":
+      return ok({
+        id: 7000000001,
+        is_bot: true,
+        first_name: "Vela Light",
+        username: world.botUsername,
+        can_join_groups: true,
+        can_read_all_group_messages: false,
+      });
+    case "getWebhookInfo":
+      return ok({ url: world.webhook?.url ?? "", pending_update_count: 0 });
+    case "getUpdates":
+      if (world.webhook !== null) {
+        return json(409, { ok: false, error_code: 409, description: "Conflict" });
+      }
+      if (typeof body.offset === "number") {
+        world.acknowledgedOffset = body.offset;
+        return ok([]);
+      }
+      return ok(
+        (world.acknowledgedOffset ?? 0) > START_UPDATE_ID
+          ? []
+          : [
+              {
+                update_id: START_UPDATE_ID,
+                message: {
+                  message_id: 1,
+                  chat: { id: Number(SECRETS.chatId), type: "private", first_name: "Timur" },
+                  text: "/start",
+                },
+              },
+            ],
+      );
+    case "setWebhook":
+      world.webhook = { url: String(body.url), secret: String(body.secret_token) };
+      return ok(true);
+    case "setMyCommands":
+      return ok(true);
+    default:
+      throw new Error(`the fake Telegram has no ${String(method)}`);
+  }
+}
+
+function site(world: World, url: URL): Response {
+  const pilot = `vela.${SUBDOMAINS[world.environment]}.workers.dev`;
+  const admin = `vela-admin.${SUBDOMAINS[world.environment]}.workers.dev`;
+  if (url.hostname === pilot && world.deployed.includes("vela")) {
+    return new Response("ok", { status: 200 });
+  }
+  if (url.hostname === admin && url.pathname === "/admin") {
+    if (world.accessOn) {
+      return new Response(null, {
+        status: 302,
+        headers: { location: `https://${TEAM_DOMAIN}/cdn-cgi/access/login` },
+      });
+    }
+    return new Response("", { status: world.adminOpenWithoutAccess ? 200 : 401 });
+  }
+  return new Response("not found", { status: 404 });
+}
+
+/**
+ * Each prompt by a label its text holds, the usual answer, and whether the setup must read it
+ * hidden. Only Enter, yes or no, and the environment's name may be shown as typed: nodeIo echoes
+ * every key of `ask`, so a key read there, or an identifier pasted while the clipboard still holds
+ * one, would be on screen, which no printed line, argument or file would reveal.
+ */
+function promptsOf(world: World): readonly (readonly [string, string, "shown" | "hidden"])[] {
+  return [
+    ["send /start", "", "shown"],
+    ['Is "Timur" you?', "yes", "shown"],
+    ["When Access is applied", "", "shown"],
+    ["This account is named", world.environment, "shown"],
+    ["Account ID", ACCOUNT_ID, "hidden"],
+    ["Team domain", `https://${TEAM_DOMAIN}/`, "hidden"],
+    ["Cloudflare API token", SECRETS.cloudflareToken, "hidden"],
+    ["Neon connection string", DATABASE_URL, "hidden"],
+    ["Telegram bot token", SECRETS.botToken, "hidden"],
+    ["Anthropic API key", SECRETS.anthropic, "hidden"],
+    ["Deepgram API key", SECRETS.deepgram, "hidden"],
+    ["Healthchecks ping URL", SECRETS.healthchecks, "hidden"],
+    ["Application Audience (AUD) tag", SECRETS.accessAud, "hidden"],
+  ];
+}
+
+function fakeIo(world: World): SetupIo {
+  const answer = (question: string, read: "shown" | "hidden"): string => {
+    world.prompts.push(question);
+    const found = promptsOf(world).find(([label]) => question.includes(label));
+    if (found === undefined) {
+      throw new Error(`unexpected prompt: ${question}`);
+    }
+    const [label, usual, must] = found;
+    if (read !== must) {
+      world.misread.push(`${label}: read ${read}, must be ${must}`);
+      throw new Error(`${label} read ${read}`);
+    }
+    if (label === "When Access is applied") {
+      world.accessOn = true;
+    }
+    const first = world.firstAnswers.findIndex(([once]) => question.includes(once));
+    const [given] = first === -1 ? [] : world.firstAnswers.splice(first, 1);
+    return given === undefined ? usual : given[1];
+  };
+  return {
+    interactive: true,
+    print: (line) => world.printed.push(line),
+    ask: async (question) => answer(question, "shown"),
+    askHidden: async (question) => answer(question, "hidden"),
+    fetch: async (input, init) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      world.requests.push({ method: request.method, url: request.url });
+      const text = request.method === "GET" ? "" : await request.text();
+      const body: Record<string, unknown> = text === "" ? {} : JSON.parse(text);
+      if (url.hostname === "api.cloudflare.com") {
+        return cloudflare(
+          world,
+          request.method,
+          url.pathname.replace("/client/v4", ""),
+          body,
+          request.headers.get("authorization"),
+        );
+      }
+      if (url.hostname === "api.telegram.org") {
+        return telegram(world, url.pathname, body);
+      }
+      return site(world, url);
+    },
+    run: async (command, onLine) => {
+      world.commands.push(command);
+      if (command.tool === "git") {
+        expect(command.args).toEqual(["check-ignore", "--quiet", ".env"]);
+        return world.gitIgnoresEnv ? 0 : 1;
+      }
+      if (command.tool === "migrate") {
+        // A database driver's error may quote the connection string; the setup must hide it.
+        onLine(`connecting with ${command.env.DATABASE_URL}`);
+        world.migrations += 1;
+        return 0;
+      }
+      if (
+        command.env.CLOUDFLARE_API_TOKEN !== SECRETS.cloudflareToken ||
+        command.env.CLOUDFLARE_ACCOUNT_ID !== ACCOUNT_ID ||
+        command.args.at(-1) !== world.environment
+      ) {
+        return 1;
+      }
+      const worker = command.args.includes("wrangler.admin.jsonc") ? "vela-admin" : "vela";
+      const [verb, action, name] = command.args;
+      if (verb === "secret" && action === "put" && name !== undefined) {
+        secretsOf(world, worker).set(name, command.stdin);
+        onLine(`Success! Uploaded secret ${name}`);
+        return 0;
+      }
+      if (verb === "deploy") {
+        secretsOf(world, worker);
+        world.deployed.push(worker);
+        onLine(`Deployed ${worker}`);
+        return 0;
+      }
+      return 1;
+    },
+    readFile: async (file) => world.files.get(file) ?? null,
+    writeFile: async (file, text) => {
+      world.files.set(file, text);
+      world.writes.push({ file, text });
+    },
+    randomBytes: (length) =>
+      Uint8Array.from({ length }, () => {
+        world.seed = (world.seed * 73 + 41) % 256;
+        return world.seed;
+      }),
+  };
+}
+
+/**
+ * Every place a secret must never be, and which secret was found there, after every prompt the
+ * setup read the other way than it must, since a key read at a shown prompt is on screen.
+ */
+function leaks(world: World): string[] {
+  const secrets = [
+    ...Object.values(SECRETS),
+    DATABASE_URL,
+    // The team domain is an identifier the resource register records (infra/README.md, section
+    // 12), put as a secret only because the admin Worker reads it with ACCESS_AUD.
+    ...[...world.workers.values()].flatMap((secrets) =>
+      [...secrets].filter(([name]) => name !== "ACCESS_TEAM_DOMAIN").map(([, value]) => value),
+    ),
+    ...(world.webhook === null ? [] : [world.webhook.secret]),
+  ];
+  const surfaces: [string, string][] = [
+    ...world.printed.map((line): [string, string] => ["printed line", line]),
+    ...world.prompts.map((question): [string, string] => ["prompt", question]),
+    ...world.commands.map((command): [string, string] => ["argument", command.args.join(" ")]),
+    ...world.writes
+      .filter((write) => !(world.environment === "staging" && write.file === ".env"))
+      .map((write): [string, string] => [`file ${write.file}`, write.text]),
+  ];
+  return [
+    ...world.misread,
+    ...surfaces.flatMap(([where, text]) =>
+      secrets.filter((secret) => text.includes(secret)).map((secret) => `${where}: ${secret}`),
+    ),
+  ];
+}
+
+function configOf(world: World): ReturnType<typeof readEnvironmentConfig> {
+  return readEnvironmentConfig(
+    {
+      pilot: world.files.get("wrangler.jsonc") ?? "",
+      admin: world.files.get("wrangler.admin.jsonc") ?? "",
+    },
+    world.environment,
+  );
+}
+
+async function setUp(world: World, ...extra: string[]): Promise<number> {
+  return runSetup(["--env", world.environment, ...extra], fakeIo(world));
+}
+
+// ---------------------------------------------------------------------------------------------
+
+describe("a whole setup", () => {
+  it("sets up staging from nothing, with every secret on the Worker that reads it", async () => {
+    const world = newWorld("staging");
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect([...world.queues]).toEqual([
+      "vela-outbound-staging",
+      "vela-media-staging",
+      "vela-understand-staging",
+      "vela-dead-letter-staging",
+    ]);
+    expect([...world.buckets]).toEqual(["vela-media-staging"]);
+    expect(world.hyperdrives.map((config) => [config.name, config.caching.disabled])).toEqual([
+      ["vela-apac-staging", true],
+    ]);
+    expect(world.migrations).toBe(1);
+    const config = configOf(world);
+    expect([config.pilotHyperdriveId, config.adminHyperdriveId, config.botUsername]).toEqual([
+      HYPERDRIVE_ID,
+      HYPERDRIVE_ID,
+      "VelaStagingTestBot",
+    ]);
+    expect(Object.fromEntries(world.workers.get("vela") ?? [])).toEqual({
+      TELEGRAM_BOT_TOKEN: SECRETS.botToken,
+      TELEGRAM_WEBHOOK_SECRET: world.webhook?.secret,
+      ADMIN_CONVERSATION_ID: SECRETS.chatId,
+      ANTHROPIC_API_KEY: SECRETS.anthropic,
+      DEEPGRAM_API_KEY: SECRETS.deepgram,
+      HEALTHCHECKS_PING_URL: SECRETS.healthchecks,
+    });
+    expect(Object.fromEntries(world.workers.get("vela-admin") ?? [])).toEqual({
+      ANTHROPIC_API_KEY: SECRETS.anthropic,
+      ACCESS_TEAM_DOMAIN: TEAM_DOMAIN,
+      ACCESS_AUD: SECRETS.accessAud,
+    });
+    expect(world.deployed).toEqual(["vela", "vela-admin"]);
+    expect(world.webhook?.url).toBe(
+      "https://vela.vela-light-staging.workers.dev/webhooks/telegram",
+    );
+    // The founder's /start was confirmed, so it never reaches the Worker once the webhook exists.
+    expect(world.acknowledgedOffset).toBe(START_UPDATE_ID + 1);
+    expect(world.printed.at(-1)).toBe("check: every check passed");
+  });
+
+  it("lets no secret reach a printed line, a prompt, a command-line argument or a written file", async () => {
+    const world = newWorld("staging");
+
+    await setUp(world);
+    // A second run takes the other paths: the saved token, kept secrets, a new webhook secret.
+    const firstWebhookSecret = world.webhook?.secret ?? "";
+    resetLog(world);
+    await setUp(world);
+
+    expect(world.printed.join("\n")).toContain("connecting with [hidden]");
+    expect(leaks(world)).toEqual([]);
+    expect(world.printed.join("\n")).not.toContain(firstWebhookSecret);
+  });
+
+  it("writes the staging token and account id to apps/worker/.env, and nothing else secret", async () => {
+    const world = newWorld("staging");
+
+    await setUp(world);
+
+    expect(readDotEnv(world.files.get(".env") ?? "")).toEqual({
+      CLOUDFLARE_API_TOKEN: SECRETS.cloudflareToken,
+      CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID,
+    });
+    expect(world.writes.filter((write) => write.file === ".env")).toHaveLength(1);
+  });
+
+  it("refuses to save the staging token when git does not ignore apps/worker/.env", async () => {
+    const world = newWorld("staging");
+    world.gitIgnoresEnv = false;
+
+    const code = await setUp(world);
+
+    expect(code).toBe(1);
+    expect(world.files.has(".env")).toBe(false);
+    expect(world.queues.size).toBe(0);
+    expect(world.printed.join("\n")).toContain("git does not ignore apps/worker/.env");
+    expect(leaks(world)).toEqual([]);
+  });
+
+  it("saves nothing for production, warns that production deploys go through CI, and leaks nothing", async () => {
+    const world = newWorld("production");
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.writes.map((write) => write.file)).not.toContain(".env");
+    expect(world.commands.filter((command) => command.tool === "git")).toEqual([]);
+    expect(world.printed.join("\n")).toContain("go through the GitHub deploy workflow");
+    expect([...world.queues]).toContain("vela-dead-letter-production");
+    expect(world.webhook?.url).toBe("https://vela.vela-light.workers.dev/webhooks/telegram");
+    expect(leaks(world)).toEqual([]);
+  });
+
+  it("flags, as a leak, a key read at a prompt that shows it, and refuses Enter read hidden", async () => {
+    const world = newWorld("staging");
+    const io = fakeIo(world);
+
+    await expect(io.ask("  Cloudflare API token: ")).rejects.toThrow();
+    await expect(io.askHidden("  When Access is applied, press Enter: ")).rejects.toThrow();
+
+    expect(leaks(world)).toEqual([
+      "Cloudflare API token: read shown, must be hidden",
+      "When Access is applied: read hidden, must be shown",
+    ]);
+  });
+
+  // Cloudflare shows the token once, so the clipboard still holds it at the Account ID prompt.
+  it("never shows a token pasted at the Account ID prompt, and shows the account id once checked", async () => {
+    const world = newWorld("production");
+    world.firstAnswers = [["Account ID", SECRETS.cloudflareToken]];
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.printed).toContain("  An account ID is 32 characters of 0-9 and a-f");
+    expect(world.printed).toContain(`  Account ID: ${ACCOUNT_ID}`);
+    expect(world.printed).toContain(`  Team domain: ${TEAM_DOMAIN}`);
+    expect(leaks(world)).toEqual([]);
+  });
+
+  it("goes on in an account with another name only when the environment's name is typed", async () => {
+    const world = newWorld("staging");
+    world.accountName = "Timur's own account";
+    world.firstAnswers = [["This account is named", "yes"]];
+
+    const refused = await setUp(world);
+
+    expect(refused).toBe(1);
+    expect(world.printed.join("\n")).toContain(
+      `Stopped: "Timur's own account" is not the staging account`,
+    );
+    expect(world.writes).toEqual([]);
+    expect(world.queues.size).toBe(0);
+
+    resetLog(world);
+    expect(await setUp(world), world.printed.join("\n")).toBe(0);
+  });
+
+  it("stops when the account's workers.dev subdomain is not the wrangler files', saving nothing", async () => {
+    const world = newWorld("staging");
+    world.subdomain = "someone-else";
+
+    const code = await setUp(world);
+
+    expect(code).toBe(1);
+    expect(world.printed.join("\n")).toContain(
+      "The account's workers.dev subdomain is someone-else, but the wrangler files are built on vela-light-staging",
+    );
+    expect(world.writes).toEqual([]);
+    expect(world.files.has(".env")).toBe(false);
+    expect(world.queues.size).toBe(0);
+  });
+
+  // Reading the chat id needs getUpdates, which Telegram answers only once the webhook is gone.
+  it("stops rather than read the chat id of a bot that already has a webhook, which it leaves as it was", async () => {
+    const world = newWorld("staging");
+    const webhook = {
+      url: "https://vela.vela-light-staging.workers.dev/webhooks/telegram",
+      secret: "families-webhook-secret",
+    };
+    world.webhook = webhook;
+
+    const code = await setUp(world);
+
+    expect(code).toBe(1);
+    expect(world.printed.join("\n")).toContain("@VelaStagingTestBot already has a webhook");
+    expect(world.prompts.filter((question) => question.includes("send /start"))).toEqual([]);
+    expect(world.requests.filter((request) => request.url.endsWith("/getUpdates"))).toEqual([]);
+    expect(world.webhook).toEqual(webhook);
+    expect(world.workers.has("vela")).toBe(false);
+    expect(leaks(world)).toEqual([]);
+  });
+
+  // --from webhook skips the telegram step, whose placeholder fill would also refuse another bot.
+  it("refuses, from the webhook step, a token for another bot than wrangler.jsonc names, and changes nothing", async () => {
+    const world = newWorld("staging");
+    await setUp(world);
+    const webhook = world.webhook;
+    const secrets = new Map(world.workers.get("vela"));
+    world.botUsername = BOT_USERNAMES.production;
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "webhook");
+
+    expect(code).toBe(1);
+    expect(world.printed.join("\n")).toContain(
+      "This token belongs to @VelaLightBot, but wrangler.jsonc names @VelaStagingTestBot for staging",
+    );
+    expect(world.commands).toEqual([]);
+    expect(world.requests.filter((request) => /\/set\w+$/.test(request.url))).toEqual([]);
+    expect(world.webhook).toEqual(webhook);
+    expect(world.workers.get("vela")).toEqual(secrets);
+  });
+
+  it("says pending updates were kept, and names no flag the setup's own arguments refuse", async () => {
+    const world = newWorld("staging");
+
+    await setUp(world);
+
+    expect(world.printed).toContain("  Pending updates: kept");
+    expect(world.printed.join("\n")).not.toContain("--drop-pending-updates");
+    expect(() => parseArguments(["--env", "staging", "--drop-pending-updates"])).toThrow(
+      SetupError,
+    );
+  });
+
+  it("refuses production credentials that apps/worker/.env holds", async () => {
+    const world = newWorld("production");
+    world.files.set(".env", `CLOUDFLARE_ACCOUNT_ID=${ACCOUNT_ID}\n`);
+
+    const code = await setUp(world);
+
+    expect(code).toBe(1);
+    expect(world.printed.join("\n")).toContain("must never be on this machine");
+    expect(world.queues.size).toBe(0);
+  });
+
+  it("skips every resource, placeholder and secret that already exists when run again", async () => {
+    const world = newWorld("staging");
+    await setUp(world);
+    resetLog(world);
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(
+      world.requests.filter(
+        (request) =>
+          request.method !== "GET" && request.url.startsWith("https://api.cloudflare.com/"),
+      ),
+    ).toEqual([]);
+    expect(world.writes).toEqual([]);
+    expect(world.prompts.map((question) => question.trim())).toEqual([
+      "Neon connection string (hidden):",
+      "Telegram bot token (hidden):",
+    ]);
+    expect(
+      world.commands
+        .filter((command) => command.args[0] === "secret")
+        .map((command) => command.args[2]),
+    ).toEqual(["TELEGRAM_WEBHOOK_SECRET"]);
+    // The webhook secret the Worker checks is the one Telegram now sends.
+    expect(world.workers.get("vela")?.get("TELEGRAM_WEBHOOK_SECRET")).toBe(world.webhook?.secret);
+    expect(world.printed).toContain(
+      "resources: already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging, bucket vela-media-staging",
+    );
+    expect(world.printed.filter((line) => line.includes("nothing to do"))).toHaveLength(2);
+  });
+
+  it("turns caching off on a Hyperdrive configuration that already exists with it on", async () => {
+    const world = newWorld("staging");
+    await setUp(world);
+    for (const config of world.hyperdrives) {
+      config.caching = { disabled: false };
+    }
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "database");
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.hyperdrives.map((config) => config.caching.disabled)).toEqual([true]);
+  });
+
+  it("resumes at the step named by --from", async () => {
+    const world = newWorld("staging");
+    await setUp(world);
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "deploy");
+
+    expect(code).toBe(0);
+    expect(
+      world.printed.filter((line) => /^\w+: /.test(line)).map((line) => line.split(":")[0]),
+    ).toEqual(["deploy", "access", "webhook", "check"]);
+    expect(world.migrations).toBe(0);
+    expect(world.requests.map((request) => request.url).join("\n")).not.toMatch(
+      /queues|hyperdrive|r2/,
+    );
+    expect(world.commands.map((command) => command.args.slice(0, 2).join(" "))).toEqual([
+      "deploy --env",
+      "deploy -c",
+      "secret put",
+    ]);
+  });
+
+  it("hides a secret that a failing service quotes in its refusal, and says where to resume", async () => {
+    const world = newWorld("staging");
+    world.hyperdriveError = `password authentication failed for ${DATABASE_URL}`;
+
+    const code = await setUp(world);
+
+    expect(code).toBe(1);
+    expect(world.printed.join("\n")).toContain("password authentication failed for [hidden]");
+    expect(world.printed.at(-1)).toBe(
+      "When it is fixed, resume: pnpm --filter @vela/worker run setup -- --env staging --from database",
+    );
+    expect(leaks(world)).toEqual([]);
+  });
+
+  it("fails the check when the admin Worker answers 200 without Access", async () => {
+    const world = newWorld("staging");
+    await setUp(world);
+    world.accessOn = false;
+    world.adminOpenWithoutAccess = true;
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "check");
+
+    expect(code).toBe(1);
+    expect(world.printed.join("\n")).toContain(
+      "FAILED GET https://vela-admin.vela-light-staging.workers.dev/admin: HTTP 200",
+    );
+  });
+
+  it("refuses to deploy while a placeholder for the environment is left", async () => {
+    const world = newWorld("staging");
+
+    const code = await setUp(world, "--from", "deploy");
+
+    expect(code).toBe(1);
+    expect(world.deployed).toEqual([]);
+    expect(world.printed.join("\n")).toContain("PLACEHOLDER_HYPERDRIVE_ID_STAGING");
+  });
+
+  it("refuses to prompt in a terminal that cannot hide what is typed", async () => {
+    const world = newWorld("staging");
+
+    const code = await runSetup(["--env", "staging"], { ...fakeIo(world), interactive: false });
+
+    expect(code).toBe(1);
+    expect(world.prompts).toEqual([]);
+  });
+});
+
+describe("the arguments", () => {
+  it("take the environment and a step to start from, past pnpm's --", () => {
+    expect(parseArguments(["--", "--env", "production", "--from", "webhook"])).toEqual({
+      kind: "run",
+      environment: "production",
+      from: "webhook",
+    });
+    expect(parseArguments(["--env", "staging"])).toEqual({
+      kind: "run",
+      environment: "staging",
+      from: "account",
+    });
+    expect(parseArguments(["--help"])).toEqual({ kind: "help" });
+  });
+
+  it.each([
+    [[]],
+    [["--env", "development"]],
+    [["--env", "staging", "--from", "everything"]],
+    [["--env", "staging", "--env", "production"]],
+  ])("refuse %j", (argv) => {
+    expect(() => parseArguments(argv)).toThrow(SetupError);
+  });
+
+  // A secret pasted onto the command line by mistake must not be printed back as well.
+  it("refuse an unknown argument without quoting it", () => {
+    let message = "";
+    try {
+      parseArguments(["--env", "staging", SECRETS.botToken]);
+    } catch (error) {
+      message = error instanceof Error ? error.message : "";
+    }
+
+    expect(message).toContain("Argument 3");
+    expect(message).not.toContain(SECRETS.botToken);
+  });
+
+  it("resume a plan at the step named, in order", () => {
+    expect(stepsFrom("account")).toEqual(STEPS);
+    expect(stepsFrom("webhook")).toEqual(["webhook", "check"]);
+  });
+});
+
+describe("the wrangler files", () => {
+  it("lose their comments but keep // inside strings", () => {
+    const text = '{\n  // a comment\n  "url": "https://x.workers.dev/a", /* block */ "n": 1\n}';
+
+    expect(JSON.parse(stripJsonComments(text, "test.jsonc"))).toEqual({
+      url: "https://x.workers.dev/a",
+      n: 1,
+    });
+  });
+
+  it.each(["staging", "production"] as const)(
+    "give %s's queues, bucket, Workers and hosts as wrangler reads them",
+    (environment) => {
+      const config = readEnvironmentConfig(wranglerTexts(), environment);
+
+      expect(config).toMatchObject({
+        pilotWorker: "vela",
+        adminWorker: "vela-admin",
+        queues: [
+          `vela-outbound-${environment}`,
+          `vela-media-${environment}`,
+          `vela-understand-${environment}`,
+          `vela-dead-letter-${environment}`,
+        ],
+        buckets: [`vela-media-${environment}`],
+        pilotOrigin: `https://vela.${SUBDOMAINS[environment]}.workers.dev`,
+        adminOrigin: `https://vela-admin.${SUBDOMAINS[environment]}.workers.dev`,
+        workersDevSubdomain: SUBDOMAINS[environment],
+      });
+    },
+  );
+
+  const commented = [
+    "{",
+    "  // Every id the founder has not created yet is a PLACEHOLDER.",
+    '  "env": {',
+    '    "staging": { "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_STAGING" }] },',
+    "    // Production binds its own configuration.",
+    '    "production": { "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION" }] }',
+    "  }",
+    "}",
+  ].join("\n");
+  const fill = {
+    file: "wrangler.jsonc",
+    text: commented,
+    environment: "staging",
+    current: "PLACEHOLDER_HYPERDRIVE_ID_STAGING",
+    placeholder: "PLACEHOLDER_HYPERDRIVE_ID_STAGING",
+    value: HYPERDRIVE_ID,
+    what: "Hyperdrive id",
+  } as const;
+
+  it("get the created value over that environment's placeholder, comments and all", () => {
+    const result = fillPlaceholder(fill);
+
+    expect(result.changed).toBe(true);
+    expect(result.text).toBe(commented.replace("PLACEHOLDER_HYPERDRIVE_ID_STAGING", HYPERDRIVE_ID));
+    expect(result.text).toContain("PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION");
+  });
+
+  it("stay as they are when they already hold the value", () => {
+    expect(fillPlaceholder({ ...fill, current: HYPERDRIVE_ID })).toEqual({
+      text: commented,
+      changed: false,
+    });
+  });
+
+  it("are not overwritten when the placeholder is gone and a different id is there", () => {
+    expect(() => fillPlaceholder({ ...fill, current: "0000000000000000000000000000beef" })).toThrow(
+      /already holds a different Hyperdrive id for staging/,
+    );
+  });
+
+  it("refuse a value another environment already uses", () => {
+    const production = commented.replace("PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION", HYPERDRIVE_ID);
+
+    expect(() => fillPlaceholder({ ...fill, text: production })).toThrow(
+      /already uses this Hyperdrive id for another environment/,
+    );
+  });
+});
+
+describe("secrets on screen", () => {
+  it("are confirmed by their length only", () => {
+    expect(received("a1-密碼")).toBe("received, 5 characters");
+  });
+
+  it("are replaced wherever a line quotes them, as typed or URL-encoded", () => {
+    const secret = "a b/c";
+
+    expect(redact(`x ${secret} y ${encodeURIComponent(secret)}`, [secret])).toBe(
+      "x [hidden] y [hidden]",
+    );
+  });
+
+  it("are typed as keys: a paste, Backspace, arrows and bracketed paste markers, then Enter", () => {
+    let line = typeInto(EMPTY_LINE, "[200~abc[201~");
+    line = typeInto(line, "d[De");
+
+    expect(line).toEqual({ value: "abce", state: "typing" });
+    expect(typeInto(line, "\r")).toEqual({ value: "abce", state: "entered" });
+    expect(typeInto(line, "")).toEqual({ value: "", state: "cancelled" });
+  });
+
+  it("include a webhook secret of 48 letters and digits that skips biased bytes", () => {
+    const bytes = [255, 250, 248, 0, 61, 62];
+    let call = 0;
+    const secret = generateWebhookSecret((length) =>
+      Uint8Array.from({ length }, () => bytes[call++ % bytes.length] ?? 0),
+    );
+
+    expect(secret).toMatch(/^[A-Za-z0-9]{48}$/);
+    expect(secret.startsWith("A9A")).toBe(true);
+  });
+
+  it("are refused, without being quoted, when a connection string is the pooled one", () => {
+    const pooled = DATABASE_URL.replace("ep-quiet-sky-a1b2c3", "ep-quiet-sky-a1b2c3-pooler");
+
+    expect(parseConnectionString(DATABASE_URL)).toEqual({
+      scheme: "postgresql",
+      host: "ep-quiet-sky-a1b2c3.ap-southeast-1.aws.neon.tech",
+      port: 5432,
+      database: "vela",
+      user: "vela_owner",
+      password: SECRETS.databasePassword,
+    });
+    expect(() => parseConnectionString(pooled)).toThrow(/pooled/);
+    expect(() => parseConnectionString(pooled)).not.toThrow(SECRETS.databasePassword);
+  });
+
+  it("travel to Cloudflare in the Authorization header, never in the URL", () => {
+    const request = cloudflareRequest(SECRETS.cloudflareToken, cloudflareApi.account(ACCOUNT_ID));
+
+    expect(request.url).toBe(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}`);
+    expect(new Headers(request.init.headers).get("authorization")).toBe(
+      `Bearer ${SECRETS.cloudflareToken}`,
+    );
+  });
+
+  it("are not in a failure that is not the script's own: only its class and code are", () => {
+    const failure = describeFailure(new TypeError(`fetch ${SECRETS.botToken}`), []);
+
+    expect(failure).toBe("Setup failed: TypeError");
+  });
+});
+
+describe("the values the setup keeps", () => {
+  it("merge into an existing .env without touching other lines", () => {
+    const merged = mergeDotEnv("# mine\nOTHER=1\nCLOUDFLARE_API_TOKEN=old\n", {
+      CLOUDFLARE_API_TOKEN: "new",
+      CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID,
+    });
+
+    expect(merged).toBe(
+      `# mine\nOTHER=1\nCLOUDFLARE_API_TOKEN=new\nCLOUDFLARE_ACCOUNT_ID=${ACCOUNT_ID}\n`,
+    );
+    expect(readDotEnv(mergeDotEnv(null, { A: "1" }))).toEqual({ A: "1" });
+  });
+
+  it("put this run's Telegram values, keep what Workers hold, and prompt the rest for every reader", () => {
+    const plan = planSecrets(
+      {
+        pilot: new Set(["DEEPGRAM_API_KEY", "ANTHROPIC_API_KEY"]),
+        admin: new Set<string>(),
+      },
+      new Map([["TELEGRAM_BOT_TOKEN", "token"]]),
+    );
+
+    expect(plan.map((entry) => [entry.name, entry.source, entry.workers])).toEqual([
+      ["TELEGRAM_BOT_TOKEN", "run", ["pilot"]],
+      ["TELEGRAM_WEBHOOK_SECRET", "missing", ["pilot"]],
+      ["ADMIN_CONVERSATION_ID", "missing", ["pilot"]],
+      ["ANTHROPIC_API_KEY", "prompt", ["pilot", "admin"]],
+      ["DEEPGRAM_API_KEY", "kept", []],
+      ["HEALTHCHECKS_PING_URL", "prompt", ["pilot"]],
+    ]);
+  });
+
+  it("read the private chats that sent /start, newest first and once each, and the last update", () => {
+    const update = (id: number, chat: number, type: string, text: string, firstName: string) => ({
+      update_id: id,
+      message: { chat: { id: chat, type, first_name: firstName }, text },
+    });
+
+    expect(
+      startChats([
+        update(1, 10, "private", "/start", "Timur"),
+        update(2, -20, "group", "/start", "Family"),
+        update(3, 30, "private", "hello", "Chatty"),
+        update(4, 40, "private", "/start", "Stranger"),
+        update(5, 10, "private", "/start", "Timur"),
+        { update_id: 6, my_chat_member: {} },
+      ]),
+    ).toEqual({
+      chats: [
+        { chatId: "10", firstName: "Timur" },
+        { chatId: "40", firstName: "Stranger" },
+      ],
+      lastUpdateId: 6,
+    });
+  });
+
+  it("accept an Access team domain pasted as a link", () => {
+    expect(normalizeTeamDomain(`https://${TEAM_DOMAIN}/`)).toBe(TEAM_DOMAIN);
+    expect(() => normalizeTeamDomain("vela.example.com")).toThrow(SetupError);
+  });
+});

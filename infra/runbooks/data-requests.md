@@ -444,7 +444,7 @@ Once `delete_family` (build plan 1.12) and the retention job (build plan 2.8) ha
    ```
 
 6. **The admin conversation.** In your Telegram chat with the production bot, delete the messages that name this family (`data-map.md` row 25).
-7. **What stays**, as the notice says: content-free `events` and `metrics_daily` (24 months), `admin_access_log` (24 months), `deletions`, error reports (up to 90 days), and outside the database your notes under the family code (up to 12 months after the pilot) and the fee record. Deleted rows can remain in Neon's restore history for up to 7 days.
+7. **What stays**, as the notice says: content-free `events` and `metrics_daily` (24 months), `admin_access_log` (24 months), `deletions`, error reports (up to 90 days), and outside the database your notes in Google Drive under the family code (up to 12 months after the pilot). Deleted rows can remain in Neon's restore history for up to 7 days.
 8. **Tell the organiser** it is done, that the family's Telegram chats stay theirs, and that they can now remove the Vela bot from the group (Vela ignores an unlinked group).
 
 ## How to know it worked

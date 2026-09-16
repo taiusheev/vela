@@ -2,9 +2,9 @@
 
 # Vela pilot: organiser agreement
 
-Version `organiser-agreement.v1` · 14 September 2026 · goes with `privacy-notice.v1`
+Version `organiser-agreement.v1` · 17 September 2026 · goes with `privacy-notice.v1`
 
-This is what you, the organiser, and [FOUNDER FULL NAME] (the founder, who runs the pilot) agree to while your family takes part in the Vela pilot. It is written to be read in five minutes. Please read the privacy notice as well.
+This is what you, the organiser, and Timur Aiusheev (the founder, who runs the pilot) agree to while your family takes part in the Vela pilot. It is written to be read in five minutes. Please read the privacy notice as well.
 
 **Your family:** [family code] · **The person the light is for:** [Name] · **Organiser(s):** [names] · **Pilot starts:** [date]
 
@@ -42,13 +42,11 @@ Vela is early software under test. Messages can be late, and some features will 
 5. Delete information as the privacy notice says, and act on any request to see, correct or delete it.
 6. Tell you before anything in this agreement or the privacy notice changes.
 
-## 5. The pilot fee
+## 5. The pilot is free
 
-- The fee is **US$15** for the first month of the pilot, paid by a method you and the founder both already use (for example Wise, Revolut or PayPal). The founder confirms receipt.
-- **It is refundable in full.** If Vela is not useful to your family, tell the founder at any time during that month or within 14 days after it. No reason is needed. The founder returns the full amount by the same method within 7 days and pays any transfer fee.
-- If the founder ends or pauses the pilot for your family during the first month, the fee is refunded in full without your asking.
-- Nothing renews automatically. If the pilot continues after the first month, the founder will ask you before any further payment, and you are never charged again without a new, separate yes.
-- The prices of the future paid plan do not apply to the pilot.
+- Taking part in the pilot is **free**. There is nothing to pay, now or later, and the founder never asks you for payment details.
+- Nothing turns into a paid plan by itself. If Vela offers a paid plan after the pilot, the founder tells you what it costs, and your family joins it only if you say yes.
+- On the day-30 call, the founder asks whether you would pay US$9.99 a month for Vela Light, the paid plan Vela plans to offer later. Your answer helps us decide, and it commits you to nothing.
 
 ## 6. Stopping
 
@@ -61,10 +59,10 @@ If your family does not continue, the founder deletes your family's information 
 
 ## 8. Responsibility
 
-Vela is an early test, provided as it is. Nothing in Vela replaces your own contact with [Name], a doctor, or emergency services. As far as the law allows, the founder's financial responsibility to you for the pilot is limited to refunding the pilot fee. Nothing in this agreement limits rights you have under consumer or data protection law. *[Counsel to review this section against Taiwan's Consumer Protection Act and the law where each family lives.]*
+Vela is an early test, provided as it is. Nothing in Vela replaces your own contact with [Name], a doctor, or emergency services. Because the pilot is free, the founder accepts no financial responsibility to you for it, as far as the law allows. Nothing in this agreement limits rights you have under consumer or data protection law. *[Counsel to review this section against Taiwan's Consumer Protection Act and the law where each family lives.]*
 
 ## 9. Agreeing
 
 Reply **"I agree"** to the founder's message that contains this agreement, or say it on the onboarding call. The founder notes your agreement straight away, and records it in Vela (kind `pilot`, text version `organiser-agreement.v1`, the channel, the date you agreed, your words), with your receipt of the privacy notice (kind `privacy_notice`), once your Vela setup has created your place in Vela. Every other organiser in your family agrees the same way.
 
-**Contact the founder:** [CONTACT ADDRESS]
+**Contact the founder:** t.aiusheev@gmail.com

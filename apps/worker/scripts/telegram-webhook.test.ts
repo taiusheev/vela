@@ -50,7 +50,7 @@ function fakeTelegram(): FakeTelegram {
 
 async function run(
   telegram: FakeTelegram,
-  argv: readonly string[],
+  argv: readonly string[] | null,
   env: Record<string, string> = ENV,
 ): Promise<string[]> {
   const printed: string[] = [];
@@ -67,6 +67,18 @@ describe("the Telegram setup script", () => {
 
     expect(telegram.webhooks.map((webhook) => webhook.dropPendingUpdates)).toEqual([false]);
     expect(printed).toContain(`Pending updates: kept (pass ${DROP_PENDING_UPDATES} to drop them)`);
+  });
+
+  // The environment setup script calls this with no arguments of telegram:setup's, and its own
+  // command line refuses the flag, so a line telling the founder to pass it would be wrong there.
+  it("keeps pending updates and names no flag when called without telegram:setup's arguments", async () => {
+    const telegram = fakeTelegram();
+
+    const printed = await run(telegram, null);
+
+    expect(telegram.webhooks.map((webhook) => webhook.dropPendingUpdates)).toEqual([false]);
+    expect(printed).toContain("Pending updates: kept");
+    expect(printed.join("\n")).not.toContain(DROP_PENDING_UPDATES);
   });
 
   it("drops pending updates when --drop-pending-updates is given", async () => {
