@@ -1,0 +1,205 @@
+{
+  // The Cloudflare Worker (code design §9). Three environments: the top level is local
+  // development (`wrangler dev`), `staging` and `production` are what deploy.yml deploys.
+  //
+  // Named environments inherit nothing that binds a resource, so every environment repeats its
+  // bindings with its own resource names. Every `id` below that the founder must create is written
+  // as a PLACEHOLDER: replace each one with the id Cloudflare returns, and never invent one.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vela-dev",
+  "main": "src/index.ts",
+  // The newest date the Workers Vitest pool's runtime accepts; raise it together with
+  // @cloudflare/vitest-pool-workers, or `pnpm test` cannot start its runtime.
+  "compatibility_date": "2026-08-22",
+  // node-postgres reaches Postgres through Hyperdrive with the Node compatibility layer.
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "workers_dev": false,
+
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MemberScheduler"] }],
+  "durable_objects": {
+    "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
+  },
+
+  "queues": {
+    "producers": [
+      { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound" },
+      { "binding": "MEDIA_QUEUE", "queue": "vela-media" },
+      { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand" }
+    ],
+    // A message is retried until the send or the AI call stops failing, then parked in the
+    // dead-letter queue, where the founder can see it rather than lose it.
+    "consumers": [
+      {
+        "queue": "vela-outbound",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 5,
+        "retry_delay": 30,
+        "dead_letter_queue": "vela-dead-letter"
+      },
+      {
+        "queue": "vela-media",
+        "max_batch_size": 5,
+        "max_batch_timeout": 10,
+        "max_retries": 3,
+        "retry_delay": 60,
+        "dead_letter_queue": "vela-dead-letter"
+      },
+      {
+        "queue": "vela-understand",
+        "max_batch_size": 5,
+        "max_batch_timeout": 10,
+        "max_retries": 3,
+        "retry_delay": 60,
+        "dead_letter_queue": "vela-dead-letter"
+      }
+    ]
+  },
+
+  "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media" }],
+
+  // `localConnectionString` is `pnpm --filter @vela/db dev-db` (packages/db/scripts/dev-db.ts).
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "PLACEHOLDER_HYPERDRIVE_ID_DEV",
+      "localConnectionString": "postgresql://postgres:postgres@127.0.0.1:54320/postgres"
+    }
+  ],
+
+  // Every 5 minutes: reconcile (late ticks, the understanding re-run, the heartbeat).
+  // Nightly at 03:20 UTC: yesterday's metrics and retention.
+  "triggers": { "crons": ["*/5 * * * *", "20 3 * * *"] },
+
+  "vars": {
+    "ENVIRONMENT": "development",
+    "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_DEV_BOT_USERNAME",
+    // Empty sends no admin messages at all, which is what a laptop should do.
+    "ADMIN_CONVERSATION_ID": "",
+    "PUBLIC_BASE_URL": "http://localhost:8787",
+    "PRIVACY_NOTICE_URL_EN": "https://vela.family/privacy",
+    "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.family/zh-TW/privacy",
+    "REGIONS": "apac"
+  },
+
+  "env": {
+    "staging": {
+      "name": "vela-staging",
+      // The Worker answers HTTP only on the hosts in `routes`. With workers.dev off and no route, a
+      // deploy still succeeds and the alarms, queues, and crons run, but Telegram cannot reach the
+      // webhook: her answers never arrive while her arrivals, repeats, and quiet notices go on. So
+      // each deployed environment names a custom domain, and PUBLIC_BASE_URL is on that host
+      // (src/wrangler-config.test.ts holds the two together). Replace both PLACEHOLDER hosts with a
+      // domain the founder owns, on a zone in that environment's Cloudflare account (staging is its
+      // own account, infra/README.md); a deploy whose zone is not in the account fails.
+      "workers_dev": false,
+      "routes": [{ "pattern": "PLACEHOLDER_STAGING_HOST", "custom_domain": true }],
+      "observability": { "enabled": true },
+      "durable_objects": {
+        "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
+      },
+      "queues": {
+        "producers": [
+          { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-staging" },
+          { "binding": "MEDIA_QUEUE", "queue": "vela-media-staging" },
+          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-staging" }
+        ],
+        "consumers": [
+          {
+            "queue": "vela-outbound-staging",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 5,
+            "retry_delay": 30,
+            "dead_letter_queue": "vela-dead-letter-staging"
+          },
+          {
+            "queue": "vela-media-staging",
+            "max_batch_size": 5,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-staging"
+          },
+          {
+            "queue": "vela-understand-staging",
+            "max_batch_size": 5,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-staging"
+          }
+        ]
+      },
+      "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-staging" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_STAGING" }],
+      "triggers": { "crons": ["*/5 * * * *", "20 3 * * *"] },
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_STAGING_BOT_USERNAME",
+        "ADMIN_CONVERSATION_ID": "PLACEHOLDER_STAGING_ADMIN_CHAT_ID",
+        "PUBLIC_BASE_URL": "https://PLACEHOLDER_STAGING_HOST",
+        "PRIVACY_NOTICE_URL_EN": "https://vela.family/privacy",
+        "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.family/zh-TW/privacy",
+        "REGIONS": "apac"
+      }
+    },
+
+    "production": {
+      "name": "vela-production",
+      // As in staging: the host of PUBLIC_BASE_URL, on a zone in the "Vela" account.
+      "workers_dev": false,
+      "routes": [{ "pattern": "PLACEHOLDER_PRODUCTION_HOST", "custom_domain": true }],
+      "observability": { "enabled": true },
+      "durable_objects": {
+        "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
+      },
+      "queues": {
+        "producers": [
+          { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-production" },
+          { "binding": "MEDIA_QUEUE", "queue": "vela-media-production" },
+          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-production" }
+        ],
+        "consumers": [
+          {
+            "queue": "vela-outbound-production",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 5,
+            "retry_delay": 30,
+            "dead_letter_queue": "vela-dead-letter-production"
+          },
+          {
+            "queue": "vela-media-production",
+            "max_batch_size": 5,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-production"
+          },
+          {
+            "queue": "vela-understand-production",
+            "max_batch_size": 5,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-production"
+          }
+        ]
+      },
+      "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-production" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION" }],
+      "triggers": { "crons": ["*/5 * * * *", "20 3 * * *"] },
+      "vars": {
+        "ENVIRONMENT": "production",
+        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
+        "ADMIN_CONVERSATION_ID": "PLACEHOLDER_PRODUCTION_ADMIN_CHAT_ID",
+        "PUBLIC_BASE_URL": "https://PLACEHOLDER_PRODUCTION_HOST",
+        "PRIVACY_NOTICE_URL_EN": "https://vela.family/privacy",
+        "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.family/zh-TW/privacy",
+        "REGIONS": "apac"
+      }
+    }
+  }
+}

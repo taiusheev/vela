@@ -13,8 +13,10 @@
  * applyRetention in services and documented here because they explain the nullable columns and the
  * member ids without a foreign key.
  *
- * - Cleared: exchanges.text and exchanges.options 30 days after delivery; outbound.payload 30 days
- *   after sent_at; after 30 days, chips, translations, replies.text, the text inside
+ * - Cleared: exchanges.text and exchanges.options 30 days after delivery, or after they were
+ *   written when the morning never reached her (delivered_at stays null on a failed arrival and on
+ *   a whenever ask nothing scheduled); outbound.payload 30 days after sent_at, or after it was
+ *   queued when the row never sent; after 30 days, chips, translations, replies.text, the text inside
  *   answers.payload, answers.transcript, answers.mentions, mood_words and flag_reason,
  *   suggestions.text, ai_calls.output, and the reply text inside quiet_events.ask_to_check. A
  *   cleared column that is NOT NULL takes its empty value ('', '{}', '[]'); chips and translations
@@ -908,6 +910,13 @@ export const outbound = pgTable(
     error: text("error"),
     queuedAt: timestamptz("queued_at").notNull().defaultNow(),
     sentAt: timestamptz("sent_at"),
+    /**
+     * When the kind's effects were applied (D-B1, 2026-09-15). The gateway commits the send in its
+     * own transaction and applies the effects in a second one, so a failed effect can never make a
+     * message go out twice: a row already `sent` with this null gets its effects and is never sent
+     * again, and `reconcile` sweeps rows left that way.
+     */
+    effectsAt: timestamptz("effects_at"),
   },
   (t) => [
     // The notification budget (spec §15) is a database constraint, not application discipline.

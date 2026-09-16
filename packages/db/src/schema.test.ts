@@ -582,6 +582,31 @@ describe("messages to a third person", () => {
   });
 });
 
+describe("a send and its effects", () => {
+  it("keeps a sent row's effects unstamped until they are applied", async () => {
+    const seed = await seedFamily();
+    const sentAt = new Date("2026-09-14T00:00:00.000Z");
+    const row = only(
+      await db
+        .insert(outbound)
+        .values(outboundFor(seed, "arrival", { status: "sent", sentAt, externalId: "77" }))
+        .returning(),
+    );
+
+    expect(row.effectsAt).toBeNull();
+
+    const effectsAt = new Date("2026-09-14T00:00:01.000Z");
+    const applied = only(
+      await db
+        .update(outbound)
+        .set({ effectsAt })
+        .where(eq(outbound.id, row.id))
+        .returning({ effectsAt: outbound.effectsAt }),
+    );
+    expect(applied.effectsAt).toEqual(effectsAt);
+  });
+});
+
 describe("webhook redelivery", () => {
   it("rejects an answer redelivered with the same channel and message id", async () => {
     const seed = await seedFamily();

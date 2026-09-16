@@ -1,0 +1,20 @@
+# Every secret the Worker reads, by name and with no value. Copy to `.dev.vars` for
+# `wrangler dev` and fill it in there; `.dev.vars` is git-ignored and never committed.
+# In staging and production these are environment-scoped deploy secrets, set once per
+# environment with `wrangler secret put <NAME> --env <staging|production>` (D16).
+
+# Telegram bot token from BotFather, `<bot id>:<secret>`.
+TELEGRAM_BOT_TOKEN=
+# The `secret_token` registered with setWebhook: 1-256 characters of A-Z a-z 0-9 _ -
+# Written by scripts/telegram-setup.ts and echoed by Telegram on every webhook request.
+TELEGRAM_WEBHOOK_SECRET=
+# Anthropic API key for @vela/ai.
+ANTHROPIC_API_KEY=
+# Deepgram API key for speech-to-text.
+DEEPGRAM_API_KEY=
+# Healthchecks.io ping URL; reconcile pings it when it finishes.
+HEALTHCHECKS_PING_URL=
+# Cloudflare Access team domain, e.g. vela.cloudflareaccess.com (no scheme, no path).
+ACCESS_TEAM_DOMAIN=
+# The Access application's Audience (AUD) tag for the /admin application.
+ACCESS_AUD=

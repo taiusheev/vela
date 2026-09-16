@@ -4,6 +4,10 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  # Nightly, so a regression in a package nobody touched is still caught: the checks run again and
+  # the silence drill runs with them.
+  schedule:
+    - cron: "40 2 * * *"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -28,3 +32,20 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+  silence-drill:
+    name: silence drill
+    # The drill is part of `pnpm test` on every push; this run is the nightly proof that the light
+    # still survives a failing adapter, a missed wake, and a failing model, with no push to trigger it.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vela/services exec vitest run src/silence-drill.test.ts

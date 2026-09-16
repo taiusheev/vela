@@ -1,0 +1,87 @@
+name: deploy
+
+# Staging deploys on every merge to main and on demand; production only on a `v*` tag (code design
+# §9, ADR-23), through the `production` GitHub environment, where the founder has set required
+# reviewers (D16). Publishing the tag on the tested commit is what starts the production run, so
+# what waits for the approval is one named commit, and what is running is always a tag. Each job
+# runs the full checks first, applies migrations to that environment's database, and only then
+# deploys the Worker. Credentials are the environment's own secrets, never repository secrets.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Read the code; the deploy credentials come from the environment.
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    name: staging
+    # A merge to main, or a manual run on a branch; the environment's own rule allows main only.
+    if: github.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    # One deploy per environment at a time, and never cancelled halfway: a cancelled run could
+    # leave migrations applied without the Worker that expects them.
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned to a commit, not a tag: this step installs the pnpm that the credentialed migrate
+      # and deploy steps below then run.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Apply migrations
+        run: pnpm --filter @vela/db migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Deploy the Worker
+        run: pnpm --filter @vela/worker exec wrangler deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  production:
+    name: production
+    # The tag the founder published from the tested commit, and nothing else: the environment's own
+    # rule allows `v*` tags only, and the deploy carries the tag that identifies what is running.
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned to a commit, not a tag: this step installs the pnpm that the credentialed migrate
+      # and deploy steps below then run.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Apply migrations
+        run: pnpm --filter @vela/db migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Deploy the Worker
+        run: pnpm --filter @vela/worker exec wrangler deploy --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -5,7 +5,8 @@
   "description": "Application services: scheduling ticks, the outbound gateway, inbound flows, the AI pipeline, jobs. Depends only on ports.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

@@ -1,0 +1,906 @@
+import {
+  type Ai,
+  type AiOutcome,
+  createFakeAi,
+  createFakeStt,
+  type FakeAi,
+  type FlagResult,
+  fakeRecord,
+  SAFE_DEFAULTS,
+  type Understanding,
+} from "@vela/ai";
+import {
+  type ChannelAdapter,
+  ChannelSendError,
+  type InboundEvent,
+  type Lang,
+  type LocalDate,
+  type MediaRef,
+} from "@vela/contracts";
+import { encodeButton, outboundKey } from "@vela/core";
+import {
+  type Answer,
+  aiCalls,
+  answers,
+  awayPeriods,
+  type ChannelLink,
+  events,
+  media,
+  members,
+  type Outbound,
+  outbound,
+  translations,
+} from "@vela/db";
+import { asc, eq } from "drizzle-orm";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
+import { type AnswerButtonAction, handleAnswerButton, handleParentMessage } from "./answers.ts";
+import type { Deps, OutboundJob } from "./deps.ts";
+import { deliverOutbound } from "./gateway.ts";
+import { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
+import { createHarness, type Harness } from "./testing/harness.ts";
+import {
+  type SeededFamily,
+  seedExchange,
+  seedFamily,
+  seedGroupMember,
+  seedLinkedGroup,
+} from "./testing/seed.ts";
+
+let h: Harness;
+
+beforeAll(async () => {
+  h = await createHarness();
+}, 60_000);
+
+beforeEach(async () => {
+  await h.reset();
+  h.deps.stt = h.stt;
+  messages = 0;
+});
+
+afterAll(async () => {
+  await h.close();
+});
+
+const TODAY: LocalDate = "2026-09-14";
+const GROUP = "-100500";
+const ADMIN = "9001";
+const VOICE: MediaRef = {
+  kind: "audio",
+  providerFileId: "voice-1",
+  providerUniqueId: "u-voice-1",
+  mime: "audio/ogg",
+};
+const VOICE_BYTES = new Uint8Array([1, 2, 3]).buffer;
+
+function handlers(): { outbound: (job: OutboundJob) => Promise<unknown> } {
+  return { outbound: (job) => deliverOutbound(h.deps, job.outboundId) };
+}
+
+let messages = 0;
+
+function fromHer(
+  link: ChannelLink,
+  extra: Partial<InboundEvent> & { kind: InboundEvent["kind"] },
+): InboundEvent {
+  messages += 1;
+  return {
+    channel: "telegram",
+    eventId: `tg:${messages}`,
+    at: h.clock.now().toISOString(),
+    sender: { externalUserId: link.externalId },
+    conversation: { externalId: link.externalId, kind: "private" },
+    messageId: String(100 + messages),
+    ...extra,
+  };
+}
+
+interface Scene {
+  seed: SeededFamily;
+  exchangeId: string;
+}
+
+/** Her family with its group; today's question went out at 08:00 and it is 08:12. */
+async function morning(options: { language?: Lang; memberLanguage?: Lang } = {}): Promise<Scene> {
+  const seed = await seedFamily(h.db, { now: h.clock.now(), ...options });
+  await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+  const exchange = await seedExchange(h.db, seed, {
+    date: TODAY,
+    state: "delivered",
+    deliveredAt: h.clock.now(),
+  });
+  h.clock.advanceMinutes(12);
+  return { seed, exchangeId: exchange.id };
+}
+
+async function latestAnswer(): Promise<Answer> {
+  const rows = await h.db.select().from(answers).orderBy(asc(answers.receivedAt), asc(answers.id));
+  const row = rows.at(-1);
+  if (row === undefined) {
+    throw new Error("no answer recorded");
+  }
+  return row;
+}
+
+async function answerById(id: string): Promise<Answer> {
+  const [row] = await h.db.select().from(answers).where(eq(answers.id, id));
+  if (row === undefined) {
+    throw new Error("answer vanished");
+  }
+  return row;
+}
+
+/** Her answer, with its group post already sent, so the pipeline finds a message to reply to. */
+async function answered(scene: Scene, event: InboundEvent): Promise<Answer> {
+  await handleParentMessage(h.deps, scene.seed.member, event);
+  await h.run(handlers());
+  h.queues.understand.clear();
+  h.queues.media.clear();
+  return latestAnswer();
+}
+
+async function herText(scene: Scene, text: string): Promise<Answer> {
+  return answered(scene, fromHer(scene.seed.memberLink, { kind: "text", text }));
+}
+
+async function herVoice(scene: Scene): Promise<Answer> {
+  h.telegram.mediaFiles.set("voice-1", { body: VOICE_BYTES, mime: "audio/ogg" });
+  return answered(scene, fromHer(scene.seed.memberLink, { kind: "voice", media: VOICE }));
+}
+
+async function herTap(scene: Scene, action: AnswerButtonAction): Promise<Answer> {
+  messages += 1;
+  await handleAnswerButton(
+    h.deps,
+    scene.seed.member,
+    {
+      channel: "telegram",
+      eventId: `tg:${messages}`,
+      at: h.clock.now().toISOString(),
+      kind: "button",
+      sender: { externalUserId: scene.seed.memberLink.externalId },
+      conversation: { externalId: scene.seed.memberLink.externalId, kind: "private" },
+      messageId: "7",
+      buttonData: encodeButton(action),
+      callbackId: `cb${messages}`,
+    },
+    action,
+  );
+  await h.run(handlers());
+  h.queues.understand.clear();
+  return latestAnswer();
+}
+
+/** Replaces the harness's fake AI for one test; `reset` puts the default back. */
+function withAi(overrides: Partial<Ai>): FakeAi {
+  const ai = createFakeAi(overrides);
+  h.deps.ai = ai;
+  return ai;
+}
+
+function failed<T>(call: "understand" | "flag" | "translate", value: T): AiOutcome<T> {
+  return { ok: false, value, record: fakeRecord(call, "http_529"), error: "http_529" };
+}
+
+const RAISED: FlagResult = {
+  flag: true,
+  category: "health",
+  severity: "concern",
+  evidenceQuote: "my chest hurts",
+};
+
+function raised(quote: string | null = RAISED.evidenceQuote): AiOutcome<FlagResult> {
+  return { ok: true, value: { ...RAISED, evidenceQuote: quote }, record: fakeRecord("flag") };
+}
+
+function understood(
+  input: Parameters<Ai["understand"]>[0],
+  away: Understanding["away"],
+): AiOutcome<Understanding> {
+  return {
+    ok: true,
+    value: { ...SAFE_DEFAULTS.understand(input), summary: input.answer.text, away },
+    record: fakeRecord("understand"),
+  };
+}
+
+/** The harness's speech-to-text, recording the language hint of each call. */
+function recordingStt(): { hints: (Lang | null)[] } {
+  const hints: (Lang | null)[] = [];
+  const inner = h.stt;
+  h.deps.stt = {
+    transcribe: (input) => {
+      hints.push(input.languageHint);
+      return inner.transcribe(input);
+    },
+  };
+  return { hints };
+}
+
+async function outboundRows(): Promise<Outbound[]> {
+  return h.db.select().from(outbound).orderBy(asc(outbound.queuedAt), asc(outbound.id));
+}
+
+const StoredMessage = z.object({
+  message: z.object({ text: z.string(), replyToMessageId: z.string().optional() }),
+});
+
+function textOf(row: Outbound): string {
+  return StoredMessage.parse(row.payload).message.text;
+}
+
+async function aiCallRows() {
+  return h.db
+    .select({
+      call: aiCalls.call,
+      ok: aiCalls.ok,
+      inputRef: aiCalls.inputRef,
+      output: aiCalls.output,
+    })
+    .from(aiCalls)
+    .orderBy(asc(aiCalls.at), asc(aiCalls.id));
+}
+
+async function eventNames(): Promise<string[]> {
+  const rows = await h.db.select({ name: events.name }).from(events).orderBy(asc(events.id));
+  return rows.map((row) => row.name);
+}
+
+function adminLink(familyId: string): string {
+  return `https://vela.test/admin/families/${familyId}`;
+}
+
+describe("understandAnswer", () => {
+  it("reads her words once: understand and flag logged, the summary stored, understood_at set, no second run", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Cooking soup");
+    const now = h.clock.now();
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(h.ai.calls.map((call) => call.call)).toEqual(["understand", "flag"]);
+    expect(h.ai.calls[0]?.input).toEqual({
+      lang: "en",
+      summaryLang: "en",
+      addressForm: "Mrs Chen",
+      today: TODAY,
+      todayWeekday: "Monday",
+      ask: { askerName: "Mia", type: "question", text: "What are you cooking tonight?" },
+      answer: { kind: "text", text: "Cooking soup" },
+      recentSummaries: [],
+    });
+    const stored = await answerById(answer.id);
+    expect(stored).toMatchObject({
+      summary: "Cooking soup",
+      moodWords: [],
+      flag: false,
+      flagReason: null,
+      awayUntil: null,
+      understoodAt: now,
+      processingAttempts: 1,
+    });
+    const logged = await aiCallRows();
+    expect(logged.map((row) => [row.call, row.ok, row.inputRef])).toEqual([
+      ["understand", true, { answer_id: answer.id }],
+      ["flag", true, { answer_id: answer.id }],
+    ]);
+    expect(await h.db.select().from(translations)).toHaveLength(0);
+    expect((await outboundRows()).map((row) => row.kind)).toEqual(["ack", "answer_post"]);
+
+    await understandAnswer(h.deps, answer.id);
+    expect(h.ai.calls).toHaveLength(2);
+    expect((await answerById(answer.id)).processingAttempts).toBe(1);
+  });
+
+  it("gives the model her last three summaries before this answer, oldest first", async () => {
+    const scene = await morning();
+    const start = h.clock.now();
+    await h.db.insert(answers).values(
+      ["first", "second", "third", "fourth"].map((summary, index) => ({
+        exchangeId: scene.exchangeId,
+        memberId: scene.seed.member.id,
+        kind: "text" as const,
+        channel: "telegram" as const,
+        externalId: `2001:${index}`,
+        payload: {},
+        summary,
+        receivedAt: new Date(start.getTime() - (10 - index) * 60_000),
+      })),
+    );
+    const answer = await herText(scene, "Cooking soup");
+
+    await understandAnswer(h.deps, answer.id);
+
+    const input = z.object({ recentSummaries: z.array(z.string()) }).parse(h.ai.calls[0]?.input);
+    expect(input.recentSummaries).toEqual(["second", "third", "fourth"]);
+  });
+
+  it("translates into the family language when it differs and posts it under the answer post, once across re-runs", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const answer = await herText(scene, "我在煮湯");
+    let flagCalls = 0;
+    const ai = withAi({
+      flag: async (input) => {
+        flagCalls += 1;
+        return flagCalls === 1 ? failed("flag", SAFE_DEFAULTS.flag(input)) : raised(null);
+      },
+    });
+
+    await understandAnswer(h.deps, answer.id);
+
+    // Her words into the family's language, then the summary into hers.
+    expect(ai.calls.map((call) => call.call)).toEqual([
+      "understand",
+      "flag",
+      "translate",
+      "translate",
+    ]);
+    expect(ai.calls[2]?.input).toMatchObject({ text: "我在煮湯", from: "zh-TW", to: "en" });
+    const stored = await h.db.select().from(translations).where(eq(translations.lang, "en"));
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({
+      objectType: "answer",
+      objectId: answer.id,
+      lang: "en",
+      text: "[en] 我在煮湯",
+    });
+    expect(stored[0]?.provider).toMatch(/^claude:/);
+    const posts = (await outboundRows()).filter((row) => row.kind === "answer_post");
+    expect(posts).toHaveLength(2);
+    expect(posts[1]?.idempotencyKey).toBe(
+      outboundKey("answer_post", {
+        exchangeId: scene.exchangeId,
+        suffix: `${answer.id}:transcript`,
+      }),
+    );
+    expect(textOf(posts[1] as Outbound)).toBe("Mom: [en] 我在煮湯");
+    expect(StoredMessage.parse(posts[1]?.payload).message.replyToMessageId).toBe(
+      posts[0]?.externalId,
+    );
+    expect((await answerById(answer.id)).understoodAt).toBeNull();
+
+    // The re-run after the failed flag reuses the stored translations and posts nothing twice.
+    await understandAnswer(h.deps, answer.id);
+    expect(ai.calls.map((call) => call.call)).toEqual([
+      "understand",
+      "flag",
+      "translate",
+      "translate",
+      "understand",
+      "flag",
+    ]);
+    expect(await h.db.select().from(translations)).toHaveLength(2);
+    expect((await outboundRows()).filter((row) => row.kind === "answer_post")).toHaveLength(2);
+    expect((await answerById(answer.id)).understoodAt).toEqual(h.clock.now());
+    await h.run(handlers());
+    const [, transcript] = h.telegram.sentTo(GROUP);
+    expect(transcript?.message.replyToMessageId).toBe(posts[0]?.externalId);
+  });
+
+  it("stores nothing for a failed translation and still sets understood_at", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const answer = await herText(scene, "我在煮湯");
+    withAi({ translate: async (input) => failed("translate", SAFE_DEFAULTS.translate(input)) });
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(await h.db.select().from(translations)).toHaveLength(0);
+    expect((await outboundRows()).filter((row) => row.kind === "answer_post")).toHaveLength(1);
+    expect((await answerById(answer.id)).understoodAt).toEqual(h.clock.now());
+    expect((await aiCallRows()).map((row) => [row.call, row.ok])).toEqual([
+      ["understand", true],
+      ["flag", true],
+      ["translate", false],
+      ["translate", false],
+    ]);
+  });
+
+  it("keeps the summary in her language when the family writes in another, following a re-run that rewrites it", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const answer = await herText(scene, "我在煮湯");
+    const summaries = ["Mom is cooking soup.", "Mom is cooking soup.", "Mom made soup for dinner."];
+    let flagCalls = 0;
+    const ai = withAi({
+      understand: async (input) => ({
+        ok: true,
+        value: { ...SAFE_DEFAULTS.understand(input), summary: summaries.shift() ?? "answered" },
+        record: fakeRecord("understand"),
+      }),
+      flag: async (input) => {
+        flagCalls += 1;
+        return flagCalls < 3
+          ? failed("flag", SAFE_DEFAULTS.flag(input))
+          : { ok: true, value: SAFE_DEFAULTS.flag(input), record: fakeRecord("flag") };
+      },
+    });
+    const forHer = async () =>
+      (await h.db.select().from(translations).where(eq(translations.lang, "zh-TW"))).map((row) => [
+        row.objectType,
+        row.objectId,
+        row.text,
+      ]);
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(ai.calls.at(-1)?.input).toMatchObject({
+      text: "Mom is cooking soup.",
+      from: "en",
+      to: "zh-TW",
+    });
+    expect(await forHer()).toEqual([["answer", answer.id, "[zh-TW] Mom is cooking soup."]]);
+
+    // The same summary again: its translation is kept, not asked for twice.
+    await understandAnswer(h.deps, answer.id);
+    expect(ai.calls.filter((call) => call.call === "translate")).toHaveLength(2);
+
+    // A rewritten summary: her copy follows it.
+    await understandAnswer(h.deps, answer.id);
+    expect(ai.calls.filter((call) => call.call === "translate")).toHaveLength(3);
+    expect(await forHer()).toEqual([["answer", answer.id, "[zh-TW] Mom made soup for dinner."]]);
+    expect(await answerById(answer.id)).toMatchObject({
+      summary: "Mom made soup for dinner.",
+      understoodAt: h.clock.now(),
+    });
+  });
+
+  it("stores no summary for her when its translation fails", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const answer = await herText(scene, "我在煮湯");
+    withAi({
+      translate: async (input) =>
+        input.to === "zh-TW"
+          ? failed("translate", SAFE_DEFAULTS.translate(input))
+          : {
+              ok: true,
+              value: { text: `[${input.to}] ${input.text}` },
+              record: fakeRecord("translate"),
+            },
+    });
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(await h.db.select().from(translations).where(eq(translations.lang, "zh-TW"))).toEqual(
+      [],
+    );
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("summary_translation_failed");
+    expect((await answerById(answer.id)).understoodAt).toEqual(h.clock.now());
+  });
+
+  it("does not translate a button answer, whose words are not hers in her language", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const answer = await herTap(scene, {
+      type: "answer",
+      exchangeId: scene.exchangeId,
+      answer: "fine",
+    });
+
+    await understandAnswer(h.deps, answer.id);
+
+    // The one translation is the summary, into her language.
+    expect(h.ai.calls.map((call) => call.call)).toEqual(["understand", "flag", "translate"]);
+    expect(h.ai.calls[0]?.input).toMatchObject({ answer: { kind: "fine", text: "我很好" } });
+    expect(h.ai.calls[2]?.input).toMatchObject({ from: "en", to: "zh-TW" });
+    expect(await h.db.select().from(translations).where(eq(translations.lang, "en"))).toEqual([]);
+    expect((await outboundRows()).filter((row) => row.kind === "answer_post")).toHaveLength(1);
+    expect((await answerById(answer.id)).understoodAt).toEqual(h.clock.now());
+  });
+
+  it("understands a photo without words at once, without a model call", async () => {
+    const scene = await morning();
+    const answer = await answered(
+      scene,
+      fromHer(scene.seed.memberLink, {
+        kind: "image",
+        media: { kind: "image", providerFileId: "photo-1", providerUniqueId: "u-photo-1" },
+      }),
+    );
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(h.ai.calls).toHaveLength(0);
+    expect(await aiCallRows()).toHaveLength(0);
+    expect(await answerById(answer.id)).toMatchObject({
+      kind: "photo",
+      understoodAt: h.clock.now(),
+      processingAttempts: 1,
+    });
+  });
+
+  it("raises a flag to each organiser with her words and to the founder with a link and no words, once", async () => {
+    const scene = await morning();
+    const sam = await seedGroupMember(h.db, scene.seed, {
+      now: h.clock.now(),
+      name: "Sam",
+      externalId: "1002",
+      role: "organiser",
+    });
+    const answer = await herText(scene, "Not great, my chest hurts a bit");
+    let understandCalls = 0;
+    withAi({
+      understand: async (input) => {
+        understandCalls += 1;
+        return understandCalls === 1
+          ? failed("understand", SAFE_DEFAULTS.understand(input))
+          : understood(input, null);
+      },
+      flag: async () => raised(),
+    });
+
+    await understandAnswer(h.deps, answer.id);
+
+    const flags = (await outboundRows()).filter((row) => row.kind === "flag");
+    expect(flags.map((row) => [row.conversationId, textOf(row)])).toEqual([
+      [
+        scene.seed.organiserLink.externalId,
+        'Mom said something you may want to hear: "my chest hurts"',
+      ],
+      [sam.link.externalId, 'Mom said something you may want to hear: "my chest hurts"'],
+      [ADMIN, `Flag in The Chens. Open: ${adminLink(scene.seed.family.id)}`],
+    ]);
+    expect(flags[2]?.idempotencyKey).toBe(
+      outboundKey("flag", {
+        exchangeId: scene.exchangeId,
+        conversationId: ADMIN,
+        suffix: answer.id,
+      }),
+    );
+    expect(await answerById(answer.id)).toMatchObject({
+      flag: true,
+      flagReason: "health:concern",
+      understoodAt: null,
+    });
+    expect((await eventNames()).filter((name) => name === "flag_raised")).toHaveLength(1);
+
+    await understandAnswer(h.deps, answer.id);
+    expect((await outboundRows()).filter((row) => row.kind === "flag")).toHaveLength(3);
+    expect((await eventNames()).filter((name) => name === "flag_raised")).toHaveLength(1);
+    expect((await answerById(answer.id)).understoodAt).toEqual(h.clock.now());
+    await h.run(handlers());
+    expect(h.telegram.sentTo(ADMIN).map((sent) => sent.message.text)).toEqual([
+      `Flag in The Chens. Open: ${adminLink(scene.seed.family.id)}`,
+    ]);
+    expect(h.telegram.sentTo(ADMIN)[0]?.message.text).not.toContain("chest");
+  });
+
+  // The admin conversation is one chat on one channel (flows §3.14). A row addressed to it on the
+  // family's channel would be handed to that channel's adapter with a Telegram chat id, and the
+  // founder would never hear about the flag or the answer nobody could read.
+  it("addresses the founder on the admin channel even when her answer came in on another", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Not great, my chest hurts a bit");
+    await h.db.update(answers).set({ channel: "line" }).where(eq(answers.id, answer.id));
+    withAi({
+      understand: async (input) => failed("understand", SAFE_DEFAULTS.understand(input)),
+      flag: async () => raised(),
+    });
+
+    await understandAnswer(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+
+    const toAdmin = (await outboundRows()).filter((row) => row.conversationId === ADMIN);
+    expect(toAdmin.map((row) => [row.kind, row.channel])).toEqual([
+      ["flag", "telegram"],
+      ["system", "telegram"],
+    ]);
+  });
+
+  // The AI layer drops an excerpt that is not exactly hers (a curly apostrophe, re-spaced Chinese)
+  // but keeps the flag: the organisers still hear it, with everything she said.
+  it("tells each organiser her own words when the model kept no exact quote", async () => {
+    const scene = await morning();
+    const sam = await seedGroupMember(h.db, scene.seed, {
+      now: h.clock.now(),
+      name: "Sam",
+      externalId: "1002",
+      role: "organiser",
+    });
+    const answer = await herText(scene, "Not great, I can’t breathe well");
+    withAi({ flag: async () => raised(null) });
+
+    await understandAnswer(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+
+    const flags = (await outboundRows()).filter((row) => row.kind === "flag");
+    const notice = 'Mom said something you may want to hear: "Not great, I can’t breathe well"';
+    expect(flags.map((row) => [row.conversationId, textOf(row)])).toEqual([
+      [scene.seed.organiserLink.externalId, notice],
+      [sam.link.externalId, notice],
+      [ADMIN, `Flag in The Chens. Open: ${adminLink(scene.seed.family.id)}`],
+    ]);
+    const raisedEvents = await h.db
+      .select({ props: events.props })
+      .from(events)
+      .where(eq(events.name, "flag_raised"));
+    expect(raisedEvents.map((row) => row.props)).toEqual([
+      { category: "health", severity: "concern", excerpt: false },
+    ]);
+    await h.run(handlers());
+    expect(
+      h.telegram.sentTo(scene.seed.organiserLink.externalId).map((s) => s.message.text),
+    ).toEqual([notice]);
+  });
+
+  it("leaves understood_at null when flag fails, counts each attempt, and tells the founder once after the third", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Cooking soup");
+    withAi({ flag: async (input) => failed("flag", SAFE_DEFAULTS.flag(input)) });
+    const notices = async () =>
+      (await outboundRows()).filter((row) => row.kind === "system" && row.conversationId === ADMIN);
+
+    await understandAnswer(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+    expect(await notices()).toHaveLength(0);
+    expect((await answerById(answer.id)).processingAttempts).toBe(2);
+
+    await understandAnswer(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+
+    const stored = await answerById(answer.id);
+    expect(stored).toMatchObject({
+      summary: "Cooking soup",
+      understoodAt: null,
+      processingAttempts: 4,
+    });
+    const [notice] = await notices();
+    expect(await notices()).toHaveLength(1);
+    expect(notice?.idempotencyKey).toBe(
+      outboundKey("system", { conversationId: ADMIN, suffix: `understand_failed:${answer.id}` }),
+    );
+    expect(notice === undefined ? null : textOf(notice)).toBe(
+      `Could not read an answer in The Chens after three tries. Open: ${adminLink(scene.seed.family.id)}`,
+    );
+    expect((await aiCallRows()).filter((row) => row.call === "flag" && !row.ok)).toHaveLength(4);
+  });
+
+  it("sets an away period from the model's dates, confirms it to her once, and wakes her scheduler", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Going to my sister's from Wednesday until Sunday");
+    let flagCalls = 0;
+    withAi({
+      understand: async (input) => understood(input, { from: "2026-09-16", until: "2026-09-20" }),
+      flag: async (input) => {
+        flagCalls += 1;
+        return flagCalls === 1 ? failed("flag", SAFE_DEFAULTS.flag(input)) : raised(null);
+      },
+    });
+
+    await understandAnswer(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+
+    const periods = await h.db.select().from(awayPeriods);
+    expect(periods).toHaveLength(1);
+    expect(periods[0]).toMatchObject({
+      memberId: scene.seed.member.id,
+      fromDate: "2026-09-16",
+      toDate: "2026-09-20",
+      source: "answer",
+      endedAt: null,
+    });
+    expect((await answerById(answer.id)).awayUntil).toBe("2026-09-20");
+    const confirmations = (await outboundRows()).filter(
+      (row) => row.kind === "system" && row.conversationId === scene.seed.memberLink.externalId,
+    );
+    expect(confirmations.map((row) => [row.idempotencyKey, textOf(row)])).toEqual([
+      [
+        outboundKey("system", {
+          conversationId: scene.seed.memberLink.externalId,
+          suffix: `away:${answer.id}`,
+        }),
+        "Until Sunday 20 September, then. Have a lovely time.",
+      ],
+    ]);
+    expect((await eventNames()).filter((name) => name === "away_set")).toHaveLength(1);
+    expect(h.scheduler.wakes.get(scene.seed.member.id)).toEqual(h.clock.now());
+    const [her] = await h.db.select().from(members).where(eq(members.id, scene.seed.member.id));
+    expect(her?.nextWakeAt).toEqual(h.clock.now());
+  });
+
+  it("writes the away date in her language", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const answer = await herText(scene, "我星期三去妹妹家，星期日回來");
+    withAi({
+      understand: async (input) => understood(input, { from: "2026-09-16", until: "2026-09-20" }),
+      translate: async (input) => failed("translate", SAFE_DEFAULTS.translate(input)),
+    });
+
+    await understandAnswer(h.deps, answer.id);
+
+    const [confirmation] = (await outboundRows()).filter(
+      (row) => row.kind === "system" && row.conversationId === scene.seed.memberLink.externalId,
+    );
+    expect(confirmation === undefined ? null : textOf(confirmation)).toBe(
+      "好的，那就到9月20日（星期日）為止。祝您過得愉快。",
+    );
+  });
+
+  it("confirms an open-ended away without a date, and ends it only on her answer on or after its start", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Off to my sister's tomorrow, back when I'm back");
+    withAi({ understand: async (input) => understood(input, { from: "2026-09-15", until: null }) });
+
+    await understandAnswer(h.deps, answer.id);
+
+    const [confirmation] = (await outboundRows()).filter(
+      (row) => row.kind === "system" && row.conversationId === scene.seed.memberLink.externalId,
+    );
+    expect(confirmation === undefined ? null : textOf(confirmation)).toBe(
+      "Understood. Have a lovely time.",
+    );
+    expect((await answerById(answer.id)).awayUntil).toBeNull();
+
+    // A second answer today, before the away starts, leaves it open.
+    h.clock.advanceMinutes(30);
+    await herText(scene, "Packing now");
+    expect((await h.db.select().from(awayPeriods))[0]?.endedAt).toBeNull();
+
+    // Her first answer on or after the start ends it: 09:00 Taipei the next day.
+    h.clock.set("2026-09-15T01:00:00Z");
+    await seedExchange(h.db, scene.seed, {
+      date: "2026-09-15",
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    await herText(scene, "Arrived safely");
+    expect((await h.db.select().from(awayPeriods))[0]?.endedAt).toEqual(h.clock.now());
+    expect(await eventNames()).toContain("away_ended");
+  });
+});
+
+describe("ingestAnswerMedia", () => {
+  it("fetches, stores, transcribes with her language as the hint, logs the call, and hands the answer to understanding", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const { hints } = recordingStt();
+    const answer = await herVoice(scene);
+
+    await ingestAnswerMedia(h.deps, answer.id);
+
+    expect(h.telegram.fetched).toEqual(["voice-1"]);
+    const key = `families/${scene.seed.family.id}/answers/${answer.id}.ogg`;
+    expect(h.media.objects.get(key)).toEqual({ body: VOICE_BYTES, mime: "audio/ogg" });
+    const [file] = await h.db.select().from(media);
+    expect(file).toMatchObject({ storageKey: key, mime: "audio/ogg", bytes: 3 });
+    expect(hints).toEqual(["zh-TW"]);
+    expect(await answerById(answer.id)).toMatchObject({
+      transcript: "fake transcript",
+      transcriptLang: "zh-TW",
+      understoodAt: null,
+      processingAttempts: 1,
+    });
+    expect((await aiCallRows()).map((row) => [row.call, row.ok, row.output])).toEqual([
+      ["transcribe", true, { language: "zh-TW", confidence: 0.99 }],
+    ]);
+    expect(h.queues.understand.pending.map((entry) => entry.job)).toEqual([
+      { type: "understand_answer", answerId: answer.id },
+    ]);
+
+    await understandAnswer(h.deps, answer.id);
+    expect(h.ai.calls[0]?.input).toMatchObject({
+      answer: { kind: "voice", text: "fake transcript" },
+    });
+    expect((await answerById(answer.id)).processingAttempts).toBe(2);
+    const posts = (await outboundRows()).filter((row) => row.kind === "answer_post");
+    expect(posts.map(textOf)).toEqual([
+      "☀️ Mom answered Mia · 08:12",
+      "Mom (voice): fake transcript\n[en] fake transcript",
+    ]);
+    expect(StoredMessage.parse(posts[1]?.payload).message.replyToMessageId).toBe(
+      posts[0]?.externalId,
+    );
+  });
+
+  it("posts the transcript alone when the family shares her language", async () => {
+    const scene = await morning();
+    const answer = await herVoice(scene);
+
+    await ingestAnswerMedia(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+
+    const posts = (await outboundRows()).filter((row) => row.kind === "answer_post");
+    expect(posts.map(textOf)).toEqual([
+      "☀️ Mom answered Mia · 08:12",
+      "Mom (voice): fake transcript",
+    ]);
+    expect(await h.db.select().from(translations)).toHaveLength(0);
+  });
+
+  it("ends the attempt without a transcript when transcription fails, reads the stored file next time, and tells the founder once after the third", async () => {
+    const scene = await morning();
+    const answer = await herVoice(scene);
+    h.deps.stt = createFakeStt({ ok: false });
+    const notices = async () =>
+      (await outboundRows()).filter((row) => row.kind === "system" && row.conversationId === ADMIN);
+
+    await ingestAnswerMedia(h.deps, answer.id);
+
+    expect(await answerById(answer.id)).toMatchObject({ transcript: null, processingAttempts: 1 });
+    expect(h.queues.understand.pending).toHaveLength(0);
+    expect((await aiCallRows()).map((row) => [row.call, row.ok])).toEqual([["transcribe", false]]);
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("transcription_failed");
+    // The voice reached the group before any of this.
+    expect(h.telegram.sentTo(GROUP)[0]?.message.media).toEqual([VOICE]);
+
+    await ingestAnswerMedia(h.deps, answer.id);
+    expect(h.telegram.fetched).toEqual(["voice-1"]);
+    expect(await notices()).toHaveLength(0);
+
+    await ingestAnswerMedia(h.deps, answer.id);
+    await ingestAnswerMedia(h.deps, answer.id);
+    expect((await answerById(answer.id)).processingAttempts).toBe(4);
+    const [notice] = await notices();
+    expect(await notices()).toHaveLength(1);
+    expect(notice === undefined ? null : textOf(notice)).toBe(
+      `Could not read an answer in The Chens after three tries. Open: ${adminLink(scene.seed.family.id)}`,
+    );
+  });
+
+  it("transcribes on the attempt the provider recovers and understands the answer", async () => {
+    const scene = await morning();
+    const answer = await herVoice(scene);
+    h.deps.stt = createFakeStt({ ok: false });
+    await ingestAnswerMedia(h.deps, answer.id);
+    await ingestAnswerMedia(h.deps, answer.id);
+    h.deps.stt = h.stt;
+
+    await ingestAnswerMedia(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+
+    expect(await answerById(answer.id)).toMatchObject({
+      transcript: "fake transcript",
+      understoodAt: h.clock.now(),
+      processingAttempts: 4,
+    });
+    expect((await outboundRows()).filter((row) => row.kind === "answer_post")).toHaveLength(2);
+    expect(
+      (await outboundRows()).filter((row) => row.kind === "system" && row.conversationId === ADMIN),
+    ).toHaveLength(0);
+  });
+
+  it("does not transcribe twice a voice whose transcript is already known", async () => {
+    const scene = await morning();
+    const { hints } = recordingStt();
+    const answer = await herVoice(scene);
+    await ingestAnswerMedia(h.deps, answer.id);
+
+    await ingestAnswerMedia(h.deps, answer.id);
+
+    expect(hints).toHaveLength(1);
+    expect(h.telegram.fetched).toHaveLength(1);
+    expect((await answerById(answer.id)).processingAttempts).toBe(1);
+    expect(h.queues.understand.pending).toHaveLength(2);
+  });
+
+  it("never throws when the platform or the store fails, and spends the attempt", async () => {
+    const scene = await morning();
+    const { hints } = recordingStt();
+    const answer = await herVoice(scene);
+    const unreachable: ChannelAdapter = {
+      ...h.telegram,
+      fetchMedia: async () => {
+        throw new ChannelSendError("unavailable", "fake telegram: unavailable");
+      },
+    };
+    const deps: Deps = { ...h.deps, channels: { get: () => unreachable } };
+
+    await expect(ingestAnswerMedia(deps, answer.id)).resolves.toBeUndefined();
+
+    expect(hints).toEqual([]);
+    expect(await answerById(answer.id)).toMatchObject({ transcript: null, processingAttempts: 1 });
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("answer_media_fetch_failed");
+
+    const fullStore: Deps = {
+      ...h.deps,
+      media: {
+        ...h.media,
+        put: async () => {
+          throw new Error("bucket unavailable");
+        },
+      },
+    };
+    await expect(ingestAnswerMedia(fullStore, answer.id)).resolves.toBeUndefined();
+    expect(hints).toEqual([]);
+    expect((await h.db.select().from(media))[0]?.storageKey).toBeNull();
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("answer_media_store_failed");
+  });
+});

@@ -352,6 +352,7 @@ CREATE TABLE "outbound" (
 	"error" text,
 	"queued_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"sent_at" timestamp with time zone,
+	"effects_at" timestamp with time zone,
 	CONSTRAINT "outbound_idempotency_key_key" UNIQUE("idempotency_key"),
 	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')),
 	CONSTRAINT "outbound_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
