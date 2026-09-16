@@ -1,112 +1,26 @@
 /**
- * Every HTTP route the Worker serves (code design §9): the health check, the Telegram webhook, and
- * the founder's admin pages behind Cloudflare Access.
+ * Every HTTP route the pilot Worker serves (code design §9, H1): the health check, the Telegram
+ * webhook, and the privacy notices. The admin pages are another Worker's (`admin-app.ts`), so
+ * anything under `/admin` here is 404.
  *
  * Nothing here decides anything about a family: a route verifies the request, builds deps, calls
- * services, and renders what came back. Services' entry points arrive through `WorkerRuntime`, so
- * a test hands the routes fakes; only the error types, the log label, and the channels a nearby
- * contact form may name are imported directly.
+ * services, and renders what came back. Services' entry points arrive through `PilotRuntime`, so a
+ * test hands the routes fakes.
  */
-import { NEARBY_CONTACT_CHANNELS } from "@vela/db";
-import { type AdminContext, type Deps, errorLabel, VelaError } from "@vela/services";
-import { type Context, Hono } from "hono";
-import {
-  ADMIN_PATH,
-  familyHref,
-  noticeFor,
-  renderFamilyPage,
-  renderMessage,
-  renderOverview,
-} from "./admin-pages.ts";
-import { ConfigError } from "./deps.ts";
-import type { Env } from "./env.ts";
-import type { WorkerRuntime } from "./runtime.ts";
+import { Hono } from "hono";
+import { readEnvironment, refuseUnfilledNotices } from "./config.ts";
+import type { PilotEnv } from "./env.ts";
+import { noticePage } from "./html.ts";
+import { NOTICE_LANGS, NOTICE_PATHS } from "./notices.ts";
+import { requestFailed } from "./request-errors.ts";
+import type { PilotRuntime } from "./runtime.ts";
 
-interface AppEnv {
-  Bindings: Env;
-  Variables: {
-    /** The `email` claim of the verified Access token; every `admin_access_log` row's `admin`. */
-    admin: string;
-  };
+interface PilotAppEnv {
+  Bindings: PilotEnv;
 }
 
-type AppContext = Context<AppEnv>;
-
-/** Local time as a form's `datetime-local` gives it, read as UTC (the pages label the fields). */
-const DATETIME_LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
-
-/** A refusal from services; the route needs nothing from it but the code, which decides the status. */
-function domainErrorCode(error: unknown): VelaError["code"] | null {
-  return error instanceof VelaError ? error.code : null;
-}
-
-function statusForDomainError(code: VelaError["code"]): 400 | 404 | 409 {
-  if (code === "not_found") {
-    return 404;
-  }
-  return code === "illegal_state" || code === "no_channel_link" ? 409 : 400;
-}
-
-function field(form: FormData, name: string): string {
-  const value = form.get(name);
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function optionalField(form: FormData, name: string): string | null {
-  const value = field(form, name);
-  return value === "" ? null : value;
-}
-
-/** A form the page itself would never send: a missing field, a value no input allows. */
-class BadRequest extends Error {
-  override readonly name = "BadRequest";
-}
-
-/**
- * A value one of the page's selects offers. Anything else is refused rather than read as one of
- * them: a missing answer read as "yes" would list a nearby contact who never agreed.
- */
-function oneOf<const T extends string>(form: FormData, name: string, allowed: readonly T[]): T {
-  const value = field(form, name);
-  const found = allowed.find((option) => option === value);
-  if (found === undefined) {
-    throw new BadRequest(`${name} is not one of ${allowed.join(", ")}`);
-  }
-  return found;
-}
-
-/** The languages the consent forms offer. */
-const CONSENT_LANGS = ["en", "zh-TW"] as const;
-
-function instantField(form: FormData, name: string): Date {
-  const value = field(form, name);
-  const parsed = new Date(DATETIME_LOCAL.test(value) ? `${value}:00Z` : value);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new BadRequest(`${name} is not a time`);
-  }
-  return parsed;
-}
-
-/** The lines of a weekly read as the founder left them in the textarea. */
-function lines(form: FormData, name: string): string[] {
-  return field(form, name)
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line !== "");
-}
-
-export function createApp(runtime: WorkerRuntime): Hono<AppEnv> {
-  const app = new Hono<AppEnv>();
-
-  /** Deps for one request; the connection closes after the response, on the invocation's own time. */
-  async function withDeps<T>(c: AppContext, run: (deps: Deps) => Promise<T>): Promise<T> {
-    const handle = await runtime.createDeps(c.env);
-    try {
-      return await run(handle.deps);
-    } finally {
-      c.executionCtx.waitUntil(handle.close());
-    }
-  }
+export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
+  const app = new Hono<PilotAppEnv>();
 
   app.get("/healthz", (c) => c.text("ok"));
 
@@ -136,241 +50,20 @@ export function createApp(runtime: WorkerRuntime): Hono<AppEnv> {
     return c.text("ok");
   });
 
-  const admin = new Hono<AppEnv>();
-
   /**
-   * Cloudflare Access covers `/admin` at the edge; the Worker verifies the token again so a
-   * misconfigured application, or a request straight to the Worker's hostname, opens nothing. A
-   * write must also come from a form on this origin: a foreign or missing `Origin` is refused, so
-   * another site cannot post one on the founder's behalf.
+   * The privacy notice in each language, the pages `PRIVACY_NOTICE_URL_EN` and `_ZH_TW` link.
+   * Outside development a notice with a blank left in either language is refused as the deps are,
+   * with a 500 logged as `ConfigError:<notice file>`, so no family reads an unfilled notice.
    */
-  admin.use("*", async (c, next) => {
-    const identity = await runtime.access(c.req.raw, c.env);
-    if (identity === null) {
-      // 401: nobody is signed in. A signed-in request from a foreign origin is 403 below.
-      return renderMessage(
-        401,
-        "Not signed in",
-        "This page needs a Cloudflare Access sign-in. Open it through the Access application.",
-      );
-    }
-    c.set("admin", identity.email);
-    if (c.req.method !== "GET") {
-      const origin = c.req.header("Origin");
-      // §9 names one origin, not a set: the origin of `PUBLIC_BASE_URL`, which is where the
-      // founder's browser loaded the page from. A second hostname the Worker happens to answer on
-      // is not that origin.
-      if (origin === undefined || origin !== publicOrigin(c.env.PUBLIC_BASE_URL)) {
-        return renderMessage(
-          403,
-          "Refused",
-          "This form was not sent from the admin page. Open the page again and retry.",
-        );
-      }
-    }
-    await next();
-    return;
-  });
-
-  admin.get("/", async (c) => {
-    const ctx: AdminContext = { admin: c.get("admin") };
-    // One read after the other: both use the request's one database connection.
-    const overview = await withDeps(c, async (deps) => ({
-      families: await runtime.services.loadAdminOverview(deps, ctx),
-      failedOutbound: await runtime.services.loadFailedOutbound(deps, ctx),
-    }));
-    return renderOverview(overview.families, overview.failedOutbound);
-  });
-
-  admin.get("/families/:familyId", async (c) => {
-    const familyId = c.req.param("familyId");
-    const ctx: AdminContext = { admin: c.get("admin") };
-    try {
-      const family = await withDeps(c, (deps) =>
-        runtime.services.loadFamilyPage(deps, ctx, familyId),
-      );
-      if (family === null) {
-        return renderMessage(404, "No such family", "Nothing is recorded under that address.");
-      }
-      return renderFamilyPage(family, noticeFor(c.req.query("result") ?? null));
-    } catch (error) {
-      // A mistyped or stale address is a bad address, not a failure of the Worker: services refuse
-      // an id that is not a uuid before they look anything up, and that refusal reads as a status
-      // here rather than as a 500 and an error in the log.
-      const code = domainErrorCode(error);
-      if (code === null) {
-        throw error;
-      }
-      return renderMessage(
-        statusForDomainError(code),
-        "No such family",
-        `That address is not a family (${code}).`,
-      );
-    }
-  });
-
-  admin.post("/families/:familyId/:action", async (c) => {
-    const familyId = c.req.param("familyId");
-    const action = c.req.param("action");
-    // Every id in the form must belong to the family the form was posted from; services refuse a
-    // form that names another family's row.
-    const ctx: AdminContext = { admin: c.get("admin"), familyId };
-    const form = await c.req.formData();
-    try {
-      const result = await withDeps(c, (deps) =>
-        runAction(runtime, deps, ctx, familyId, action, form),
-      );
-      if (result === null) {
-        return renderMessage(404, "No such action", "That address is not an admin action.");
-      }
-      return c.redirect(`${familyHref(familyId)}?result=${result}`, 303);
-    } catch (error) {
-      if (error instanceof BadRequest) {
-        return renderMessage(400, "Not saved", `${error.message}. Nothing was changed.`);
-      }
-      const code = domainErrorCode(error);
-      if (code === null) {
-        throw error;
-      }
-      return renderMessage(
-        statusForDomainError(code),
-        "Not saved",
-        `The action was refused (${code}). Nothing was changed.`,
-      );
-    }
-  });
-
-  app.route(ADMIN_PATH, admin);
+  for (const lang of NOTICE_LANGS) {
+    app.get(NOTICE_PATHS[lang], (c) => {
+      refuseUnfilledNotices(readEnvironment(c.env), runtime.notices);
+      return noticePage(lang, runtime.notices[lang]);
+    });
+  }
 
   app.notFound((c) => c.text("not found", 404));
-
-  // An unexpected failure: 500, so Telegram redelivers the webhook and the founder sees the page
-  // failed rather than a blank success. Neither the response nor the log line carries the error's
-  // message: a failed query's message lists its parameters, which hold what the family wrote, and
-  // a platform's description can repeat what was sent. The label keeps the class names and codes.
-  app.onError((error, c) => {
-    console.log(
-      JSON.stringify({
-        level: "error",
-        event: "request_failed",
-        path: new URL(c.req.url).pathname,
-        method: c.req.method,
-        error: errorLabel(error),
-      }),
-    );
-    return c.text("internal error", 500);
-  });
+  app.onError(requestFailed);
 
   return app;
-}
-
-/**
- * The one origin a form may be posted from. A `PUBLIC_BASE_URL` that does not parse is a
- * misconfigured deployment, not an origin nothing matches: it fails loudly, the way a missing var
- * does in `deps.ts`, rather than refusing every form with a quiet 403.
- */
-function publicOrigin(baseUrl: string): string {
-  try {
-    return new URL(baseUrl).origin;
-  } catch {
-    throw new ConfigError(
-      "PUBLIC_BASE_URL",
-      "PUBLIC_BASE_URL is not a URL: set the Worker's public origin in the environment's vars in wrangler.jsonc",
-    );
-  }
-}
-
-/**
- * One admin write per `ADMIN_ACTIONS` value except `view`, each calling the matching `admin.ts`
- * function with the Access identity. Returns the word the page shows afterwards, or null when the
- * address names no action.
- */
-async function runAction(
-  runtime: WorkerRuntime,
-  deps: Deps,
-  ctx: AdminContext,
-  familyId: string,
-  action: string,
-  form: FormData,
-): Promise<string | null> {
-  const services = runtime.services;
-  switch (action) {
-    case "record_consent":
-      await services.recordConsent(deps, ctx, {
-        memberId: field(form, "memberId"),
-        kind: oneOf(form, "kind", ["pilot", "privacy_notice"]),
-        textVersion: field(form, "textVersion"),
-        lang: oneOf(form, "lang", CONSENT_LANGS),
-        channel: field(form, "channel"),
-        givenAt: instantField(form, "givenAt"),
-        evidence: { note: field(form, "note") },
-      });
-      return "done";
-    case "record_contact_consent":
-      await services.recordContactConsent(deps, ctx, {
-        contactId: field(form, "contactId"),
-        answer: oneOf(form, "answer", ["yes", "no"]),
-        at: instantField(form, "at"),
-        textVersion: field(form, "textVersion"),
-        lang: oneOf(form, "lang", CONSENT_LANGS),
-        channel: field(form, "channel"),
-        evidence: { note: field(form, "note") },
-      });
-      return "done";
-    case "add_contact":
-      await services.addContact(deps, ctx, {
-        memberId: field(form, "memberId"),
-        name: field(form, "name"),
-        phone: field(form, "phone"),
-        relation: optionalField(form, "relation"),
-        channel: contactChannel(form),
-      });
-      return "done";
-    case "remove_contact":
-      await services.removeContact(deps, ctx, field(form, "contactId"));
-      return "done";
-    case "set_away":
-      await services.setAway(deps, ctx, {
-        memberId: field(form, "memberId"),
-        setBy: field(form, "setBy"),
-        from: field(form, "from"),
-        until: optionalField(form, "until"),
-      });
-      return "done";
-    case "end_away":
-      await services.endAway(deps, ctx, field(form, "awayPeriodId"));
-      return "done";
-    case "mark_left":
-      // For the kept-light member this puts her light out for good: nothing on the page, and
-      // nothing she sends, turns it back on. Which member that is lives in the database, so every
-      // departure is typed out, and the page sets her form apart.
-      if (field(form, "confirm") !== "left") {
-        throw new BadRequest("the departure was not confirmed");
-      }
-      await services.markLeft(deps, ctx, field(form, "memberId"));
-      return "done";
-    case "mark_deceased":
-      await services.markDeceased(deps, ctx, field(form, "memberId"));
-      return "done";
-    case "delete_family":
-      // A family is deleted within 24 hours of this click, so the word is typed out first.
-      if (field(form, "confirm") !== "delete") {
-        throw new BadRequest("the deletion was not confirmed");
-      }
-      await services.deleteFamily(deps, ctx, familyId);
-      return "done";
-    case "send_weekly_read":
-      return services.sendWeeklyRead(deps, ctx, {
-        weeklyReadId: field(form, "weeklyReadId"),
-        lines: lines(form, "lines"),
-        suggestion: field(form, "suggestion"),
-      });
-    default:
-      return null;
-  }
-}
-
-function contactChannel(form: FormData): (typeof NEARBY_CONTACT_CHANNELS)[number] | null {
-  const value = field(form, "channel");
-  return NEARBY_CONTACT_CHANNELS.find((channel) => channel === value) ?? null;
 }

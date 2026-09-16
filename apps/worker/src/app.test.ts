@@ -1,39 +1,42 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
-import { NEARBY_CONTACT_CHANNELS } from "@vela/db";
-import { type FailedOutboundRow, VelaError } from "@vela/services";
 import { describe, expect, it } from "vitest";
-import { createApp } from "./app.ts";
-import type { Env } from "./env.ts";
+import type { PilotEnv } from "./env.ts";
+import { PRIVACY_NOTICES } from "./notices.generated.ts";
+import { createWorker } from "./pilot-worker.ts";
 import {
-  argsOf,
   consoleLinesDuring,
-  createFakeRuntime,
+  createFakePilotRuntime,
   FAILED_QUERY_LABEL,
   FAILED_QUERY_WORDS,
-  type FakeRuntime,
+  type FakePilotRuntime,
   failedQueryFixture,
-  familyPageFixture,
   inboundEventFixture,
   namesOf,
+  noticesFixture,
   testEnv,
 } from "./testing/fakes.ts";
 
-const ORIGIN = "https://worker.test";
+const ORIGIN = "https://vela.worker.test";
 
-/**
- * The Worker as it is deployed: `PUBLIC_BASE_URL` is the origin the founder's browser loaded the
- * admin page from, which is the only origin a form may be posted from (§9). A test about that rule
- * passes an environment whose base URL is somewhere else.
- */
-const adminEnv: Env = { ...testEnv, PUBLIC_BASE_URL: ORIGIN };
+/** Staging once its vars and secrets are chosen, as the pilot Worker checks them before it runs. */
+const chosenStaging: PilotEnv = {
+  ...testEnv,
+  ENVIRONMENT: "staging",
+  TELEGRAM_BOT_USERNAME: "VelaStagingBot",
+  ADMIN_CONVERSATION_ID: "123456789",
+  PUBLIC_BASE_URL: "https://vela-admin.vela.example",
+  PRIVACY_NOTICE_URL_EN: "https://vela.vela.example/privacy",
+  PRIVACY_NOTICE_URL_ZH_TW: "https://vela.vela.example/privacy/zh-TW",
+};
 
+/** The pilot Worker as it is deployed, handed fakes: the same routes, queues, and crons. */
 async function send(
-  app: ReturnType<typeof createApp>,
+  fake: FakePilotRuntime,
   request: Request,
-  env: Env = adminEnv,
+  env: PilotEnv = testEnv,
 ): Promise<Response> {
   const ctx = createExecutionContext();
-  const response = await app.fetch(request, env, ctx);
+  const response = await createWorker(fake.runtime).fetch(request, env, ctx);
   await waitOnExecutionContext(ctx);
   return response;
 }
@@ -50,38 +53,28 @@ function webhookRequest(secret: string | null): Request {
   });
 }
 
-function formRequest(path: string, form: Record<string, string>, origin: string | null): Request {
-  const body = new URLSearchParams(form);
-  const headers = new Headers({ "content-type": "application/x-www-form-urlencoded" });
-  if (origin !== null) {
-    headers.set("Origin", origin);
-  }
-  return new Request(`${ORIGIN}${path}`, { method: "POST", headers, body });
-}
-
-function appFor(fake: FakeRuntime): ReturnType<typeof createApp> {
-  return createApp(fake.runtime);
-}
-
 describe("the Telegram webhook", () => {
   it("refuses a request whose secret does not match and hands nothing to the router", async () => {
-    const fake = createFakeRuntime({ webhookSecret: "right", events: [inboundEventFixture()] });
-    const response = await send(appFor(fake), webhookRequest("wrong"));
+    const fake = createFakePilotRuntime({
+      webhookSecret: "right",
+      events: [inboundEventFixture()],
+    });
+    const response = await send(fake, webhookRequest("wrong"));
 
     expect(response.status).toBe(401);
     expect(namesOf(fake.calls)).toEqual([]);
   });
 
   it("refuses a request with no secret header at all", async () => {
-    const fake = createFakeRuntime({ webhookSecret: "right" });
-    expect((await send(appFor(fake), webhookRequest(null))).status).toBe(401);
+    const fake = createFakePilotRuntime({ webhookSecret: "right" });
+    expect((await send(fake, webhookRequest(null))).status).toBe(401);
   });
 
   it("hands the parsed events to the router and answers 200", async () => {
     const event = inboundEventFixture({ eventId: "telegram:77", text: "hello" });
-    const fake = createFakeRuntime({ webhookSecret: "right", events: [event] });
+    const fake = createFakePilotRuntime({ webhookSecret: "right", events: [event] });
 
-    const response = await send(appFor(fake), webhookRequest("right"));
+    const response = await send(fake, webhookRequest("right"));
 
     expect(response.status).toBe(200);
     expect(fake.inbound).toEqual([event]);
@@ -89,14 +82,14 @@ describe("the Telegram webhook", () => {
   });
 
   it("builds no deps when the update parsed to nothing", async () => {
-    const fake = createFakeRuntime({ webhookSecret: "right", events: [] });
+    const fake = createFakePilotRuntime({ webhookSecret: "right", events: [] });
 
-    expect((await send(appFor(fake), webhookRequest("right"))).status).toBe(200);
+    expect((await send(fake, webhookRequest("right"))).status).toBe(200);
     expect(fake.built()).toBe(0);
   });
 
   it("answers 500 when the router throws, so Telegram redelivers", async () => {
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       webhookSecret: "right",
       events: [inboundEventFixture()],
       services: {
@@ -106,12 +99,12 @@ describe("the Telegram webhook", () => {
       },
     });
 
-    expect((await send(appFor(fake), webhookRequest("right"))).status).toBe(500);
+    expect((await send(fake, webhookRequest("right"))).status).toBe(500);
     expect(fake.closed()).toBe(1);
   });
 
   it("logs a failure by its error label, never by the message that carries the family's words", async () => {
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       webhookSecret: "right",
       events: [inboundEventFixture()],
       services: {
@@ -122,7 +115,7 @@ describe("the Telegram webhook", () => {
     });
 
     const { result: response, lines } = await consoleLinesDuring(() =>
-      send(appFor(fake), webhookRequest("right")),
+      send(fake, webhookRequest("right")),
     );
 
     expect(response.status).toBe(500);
@@ -139,420 +132,113 @@ describe("the Telegram webhook", () => {
   });
 });
 
-describe("the admin pages", () => {
-  it("answers /healthz without an identity", async () => {
-    const fake = createFakeRuntime({ admin: null });
-    expect((await send(appFor(fake), new Request(`${ORIGIN}/healthz`))).status).toBe(200);
+describe("the pilot Worker's other addresses", () => {
+  it("answers /healthz without building anything", async () => {
+    const fake = createFakePilotRuntime();
+
+    expect((await send(fake, new Request(`${ORIGIN}/healthz`))).status).toBe(200);
+    expect(fake.built()).toBe(0);
   });
 
-  it("refuses the overview without a valid Access token and reads nothing", async () => {
-    const fake = createFakeRuntime({ admin: null });
+  // The admin pages are the admin Worker's, behind Cloudflare Access; the pilot Worker, which
+  // Telegram must reach without a sign-in, has none of them.
+  it.each([
+    ["GET", "/admin"],
+    ["GET", "/admin/families/11111111-1111-7111-8111-111111111111"],
+    ["POST", "/admin/families/11111111-1111-7111-8111-111111111111/delete_family"],
+  ])("answers 404 to %s %s and calls nothing", async (method, path) => {
+    const fake = createFakePilotRuntime();
 
-    const response = await send(appFor(fake), new Request(`${ORIGIN}/admin`));
-
-    expect(response.status).toBe(401);
-    expect(namesOf(fake.calls)).toEqual([]);
-  });
-
-  it("reads the overview and its failed sends as the identity in the token", async () => {
-    const failed: FailedOutboundRow = {
-      id: "55555555-5555-7555-8555-555555555555",
-      family: { id: "11111111-1111-7111-8111-111111111111", name: "The Lin family" },
-      memberId: "22222222-2222-7222-8222-222222222222",
-      kind: "arrival",
-      status: "failed",
-      attempts: 4,
-      errorCode: "blocked",
-      queuedAt: new Date("2026-09-14T00:35:00.000Z"),
-    };
-    const fake = createFakeRuntime({
-      admin: "founder@vela.test",
-      services: { loadFailedOutbound: async () => [failed] },
-    });
-
-    const response = await send(appFor(fake), new Request(`${ORIGIN}/admin`));
-    const body = await response.text();
-
-    expect(response.status).toBe(200);
-    expect(namesOf(fake.calls)).toEqual(["loadAdminOverview", "loadFailedOutbound"]);
-    expect(argsOf(fake.calls, "loadAdminOverview")).toEqual([[{ admin: "founder@vela.test" }]]);
-    expect(argsOf(fake.calls, "loadFailedOutbound")).toEqual([[{ admin: "founder@vela.test" }]]);
-    expect(body).toContain(`<span class="muted">${failed.id}</span>`);
-    expect(body).toContain("<code>blocked</code>");
-    expect(fake.closed()).toBe(fake.built());
-  });
-
-  it("answers 404 for a family that is not recorded", async () => {
-    const fake = createFakeRuntime();
     const response = await send(
-      appFor(fake),
-      new Request(`${ORIGIN}/admin/families/11111111-1111-7111-8111-111111111111`),
+      fake,
+      new Request(`${ORIGIN}${path}`, {
+        method,
+        headers: { Origin: ORIGIN, "content-type": "application/x-www-form-urlencoded" },
+        body: method === "POST" ? "confirm=delete" : null,
+      }),
     );
 
     expect(response.status).toBe(404);
-  });
-
-  it("answers 400 for an address that is not a family id, without failing the request", async () => {
-    const refusal = new VelaError("invalid_payload", "view: 'not-a-uuid' is not a uuid");
-    const fake = createFakeRuntime({
-      services: {
-        loadFamilyPage: async () => {
-          throw refusal;
-        },
-      },
-    });
-
-    const response = await send(appFor(fake), new Request(`${ORIGIN}/admin/families/not-a-uuid`));
-
-    expect(response.status).toBe(400);
-    expect(await response.text()).not.toContain("is not a uuid");
-    expect(fake.closed()).toBe(fake.built());
-  });
-
-  it("escapes what a family wrote into its own name", async () => {
-    const page = familyPageFixture();
-    page.family.name = '<script>alert("x")</script>';
-    const fake = createFakeRuntime({ services: { loadFamilyPage: async () => page } });
-
-    const response = await send(
-      appFor(fake),
-      new Request(`${ORIGIN}/admin/families/${page.family.id}`),
-    );
-    const body = await response.text();
-
-    expect(response.status).toBe(200);
-    expect(body).not.toContain("<script>alert");
-    expect(body).toContain("&lt;script&gt;");
+    expect(namesOf(fake.calls)).toEqual([]);
+    expect(fake.built()).toBe(0);
   });
 });
 
-describe("an admin action", () => {
-  const memberId = "22222222-2222-7222-8222-222222222222";
-  const familyId = "11111111-1111-7111-8111-111111111111";
-  const path = `/admin/families/${familyId}/mark_left`;
+describe("the privacy notice pages", () => {
+  it.each([
+    ["/privacy", "en", "Vela pilot: privacy notice"],
+    ["/privacy/zh-TW", "zh-TW", "Vela 試辦計畫：隱私權告知事項"],
+  ])(
+    "serves %s in its language, with no scripts and no requests elsewhere",
+    async (path, lang, title) => {
+      const fake = createFakePilotRuntime();
 
-  it("refuses a post with no Origin header", async () => {
-    const fake = createFakeRuntime();
+      const response = await send(fake, new Request(`${ORIGIN}${path}`));
+      const body = await response.text();
 
-    const response = await send(appFor(fake), formRequest(path, { memberId }, null));
-
-    expect(response.status).toBe(403);
-    expect(namesOf(fake.calls)).toEqual([]);
-  });
-
-  it("refuses a post from another origin", async () => {
-    const fake = createFakeRuntime();
-
-    const response = await send(
-      appFor(fake),
-      formRequest(path, { memberId }, "https://elsewhere.example"),
-    );
-
-    expect(response.status).toBe(403);
-    expect(namesOf(fake.calls)).toEqual([]);
-  });
-
-  it("refuses a post whose Origin is the hostname it arrived on rather than the public base", async () => {
-    const fake = createFakeRuntime();
-    const deployed: Env = { ...testEnv, PUBLIC_BASE_URL: "https://admin.vela.example" };
-
-    const response = await send(appFor(fake), formRequest(path, { memberId }, ORIGIN), deployed);
-
-    expect(response.status).toBe(403);
-    expect(namesOf(fake.calls)).toEqual([]);
-  });
-
-  it("accepts a post from the public base, whichever hostname it arrived on", async () => {
-    const fake = createFakeRuntime();
-    const deployed: Env = { ...testEnv, PUBLIC_BASE_URL: "https://admin.vela.example" };
-
-    const response = await send(
-      appFor(fake),
-      formRequest(path, { memberId, confirm: "left" }, "https://admin.vela.example"),
-      deployed,
-    );
-
-    expect(response.status).toBe(303);
-  });
-
-  it("changes nothing when PUBLIC_BASE_URL is not a URL: that is a misconfigured deployment", async () => {
-    const fake = createFakeRuntime();
-    const misconfigured: Env = { ...testEnv, PUBLIC_BASE_URL: "admin.vela.example" };
-
-    const response = await send(
-      appFor(fake),
-      formRequest(path, { memberId }, ORIGIN),
-      misconfigured,
-    );
-
-    expect(response.status).toBe(500);
-    expect(namesOf(fake.calls)).toEqual([]);
-  });
-
-  it("refuses a post without a valid Access token", async () => {
-    const fake = createFakeRuntime({ admin: null });
-
-    const response = await send(appFor(fake), formRequest(path, { memberId }, ORIGIN));
-
-    expect(response.status).toBe(401);
-    expect(namesOf(fake.calls)).toEqual([]);
-  });
-
-  it("calls the action with the Access identity and the family it was posted from", async () => {
-    const fake = createFakeRuntime({ admin: "founder@vela.test" });
-
-    const response = await send(
-      appFor(fake),
-      formRequest(path, { memberId, confirm: "left" }, ORIGIN),
-    );
-
-    expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(`/admin/families/${familyId}?result=done`);
-    expect(argsOf(fake.calls, "markLeft")).toEqual([
-      [{ admin: "founder@vela.test", familyId }, memberId],
-    ]);
-  });
-
-  it("sends the weekly read as the founder edited it and says what came back", async () => {
-    const weeklyReadId = "33333333-3333-7333-8333-333333333333";
-    const fake = createFakeRuntime({ services: { sendWeeklyRead: async () => "budget" } });
-
-    const response = await send(
-      appFor(fake),
-      formRequest(
-        `/admin/families/${familyId}/send_weekly_read`,
-        {
-          weeklyReadId,
-          lines: "She walked to the market.\n\nThe cat is well.\n",
-          suggestion: "Ask about the market",
-        },
-        ORIGIN,
-      ),
-    );
-
-    expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(`/admin/families/${familyId}?result=budget`);
-    expect(argsOf(fake.calls, "sendWeeklyRead")).toEqual([
-      [
-        { admin: "founder@vela.test", familyId },
-        {
-          weeklyReadId,
-          lines: ["She walked to the market.", "The cat is well."],
-          suggestion: "Ask about the market",
-        },
-      ],
-    ]);
-  });
-
-  it("deletes a family only when the word is typed", async () => {
-    const fake = createFakeRuntime();
-
-    const refused = await send(
-      appFor(fake),
-      formRequest(`/admin/families/${familyId}/delete_family`, { confirm: "" }, ORIGIN),
-    );
-    expect(refused.status).toBe(400);
-    expect(namesOf(fake.calls)).toEqual([]);
-
-    const accepted = await send(
-      appFor(fake),
-      formRequest(`/admin/families/${familyId}/delete_family`, { confirm: "delete" }, ORIGIN),
-    );
-    expect(accepted.status).toBe(303);
-    expect(argsOf(fake.calls, "deleteFamily")).toEqual([
-      [{ admin: "founder@vela.test", familyId }, familyId],
-    ]);
-  });
-
-  it("adds a contact on every channel a nearby contact can be reached on", async () => {
-    const fake = createFakeRuntime();
-    const contact = { memberId, name: "Auntie Lin", phone: "+886 900 000 000", relation: "" };
-
-    for (const channel of NEARBY_CONTACT_CHANNELS) {
-      const response = await send(
-        appFor(fake),
-        formRequest(`/admin/families/${familyId}/add_contact`, { ...contact, channel }, ORIGIN),
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+      expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
+      expect(body).toContain(`<html lang="${lang}">`);
+      expect(body).toContain(`<title>${title}</title>`);
+      expect(body).toContain(`<h1>${title}</h1>`);
+      expect(body).toContain(
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
       );
-      expect(response.status).toBe(303);
-    }
+      expect(body).not.toContain("<script");
+      expect(body).not.toMatch(/(src|href)=/);
+      expect(body).not.toContain("[");
+      expect(fake.built()).toBe(0);
+    },
+  );
 
-    expect(argsOf(fake.calls, "addContact")).toEqual(
-      NEARBY_CONTACT_CHANNELS.map((channel) => [
-        { admin: "founder@vela.test", familyId },
-        { memberId, name: "Auntie Lin", phone: "+886 900 000 000", relation: null, channel },
-      ]),
-    );
+  it("serves the committed notices in development, blanks and all, for the founder to read", async () => {
+    const fake = createFakePilotRuntime({ notices: PRIVACY_NOTICES });
+
+    const response = await send(fake, new Request(`${ORIGIN}/privacy/zh-TW`));
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain(PRIVACY_NOTICES["zh-TW"].html);
   });
 
-  // For the kept-light member a departure cannot be undone, and which member that is lives in the
-  // database, so every departure is typed out.
-  it("marks a member left only when the departure is typed out", async () => {
-    const fake = createFakeRuntime();
+  it("serves a filled-in notice in a deployed environment", async () => {
+    const fake = createFakePilotRuntime();
 
-    for (const confirm of [null, "", "yes"]) {
-      const form: Record<string, string> = confirm === null ? { memberId } : { memberId, confirm };
-      const refused = await send(appFor(fake), formRequest(path, form, ORIGIN));
-      expect(refused.status).toBe(400);
-    }
-    expect(namesOf(fake.calls)).toEqual([]);
-
-    const accepted = await send(
-      appFor(fake),
-      formRequest(path, { memberId, confirm: "left" }, ORIGIN),
-    );
-    expect(accepted.status).toBe(303);
-    expect(argsOf(fake.calls, "markLeft")).toEqual([
-      [{ admin: "founder@vela.test", familyId }, memberId],
-    ]);
+    expect((await send(fake, new Request(`${ORIGIN}/privacy`), chosenStaging)).status).toBe(200);
   });
 
-  describe("a consent form", () => {
-    const contactId = "44444444-4444-7444-8444-444444444444";
-    const contactConsent = {
-      contactId,
-      answer: "yes",
-      at: "2026-09-14T08:30",
-      textVersion: "pilot-2026-09",
-      lang: "zh-TW",
-      channel: "telegram",
-      note: "said yes on the onboarding call",
+  // No family may ever read an unfilled notice: outside development the page is refused while
+  // either language still holds a blank, and the log names the file to fill in.
+  it("refuses either page in a deployed environment while a notice holds a blank", async () => {
+    const notices = noticesFixture();
+    const unfilled = {
+      ...notices,
+      "zh-TW": { ...notices["zh-TW"], html: "<p>Vela 由 <strong>[創辦人全名]</strong> 經營。</p>" },
     };
-    const memberConsent = {
-      memberId,
-      kind: "privacy_notice",
-      givenAt: "2026-09-14T08:30",
-      textVersion: "pilot-2026-09",
-      lang: "en",
-      channel: "telegram",
-      note: "read to her on the call",
-    };
+    const fake = createFakePilotRuntime({ notices: unfilled });
 
-    // A contact is listed in quiet notices only after they said yes themselves: an answer the page
-    // could not have sent is refused, never read as the yes.
-    it("refuses a contact answer the page does not offer instead of recording a yes", async () => {
-      const fake = createFakeRuntime();
-      const contactPath = `/admin/families/${familyId}/record_contact_consent`;
+    const { result, lines } = await consoleLinesDuring(async () => ({
+      en: await send(fake, new Request(`${ORIGIN}/privacy`), chosenStaging),
+      zh: await send(fake, new Request(`${ORIGIN}/privacy/zh-TW`), chosenStaging),
+    }));
 
-      for (const answer of ["", "Yes", "maybe"]) {
-        const response = await send(
-          appFor(fake),
-          formRequest(contactPath, { ...contactConsent, answer }, ORIGIN),
-        );
-        expect(response.status).toBe(400);
-      }
-      const unanswered = Object.fromEntries(
-        Object.entries(contactConsent).filter(([name]) => name !== "answer"),
-      );
-      expect((await send(appFor(fake), formRequest(contactPath, unanswered, ORIGIN))).status).toBe(
-        400,
-      );
-      expect(namesOf(fake.calls)).toEqual([]);
-
-      const declined = await send(
-        appFor(fake),
-        formRequest(contactPath, { ...contactConsent, answer: "no" }, ORIGIN),
-      );
-      expect(declined.status).toBe(303);
-      expect(argsOf(fake.calls, "recordContactConsent")).toEqual([
-        [
-          { admin: "founder@vela.test", familyId },
-          {
-            contactId,
-            answer: "no",
-            at: new Date("2026-09-14T08:30:00.000Z"),
-            textVersion: "pilot-2026-09",
-            lang: "zh-TW",
-            channel: "telegram",
-            evidence: { note: "said yes on the onboarding call" },
-          },
-        ],
-      ]);
-    });
-
-    it("refuses a language the page does not offer instead of recording English", async () => {
-      const fake = createFakeRuntime();
-
-      const contact = await send(
-        appFor(fake),
-        formRequest(
-          `/admin/families/${familyId}/record_contact_consent`,
-          { ...contactConsent, lang: "ja" },
-          ORIGIN,
-        ),
-      );
-      const member = await send(
-        appFor(fake),
-        formRequest(
-          `/admin/families/${familyId}/record_consent`,
-          { ...memberConsent, lang: "" },
-          ORIGIN,
-        ),
-      );
-
-      expect([contact.status, member.status]).toEqual([400, 400]);
-      expect(namesOf(fake.calls)).toEqual([]);
-    });
-
-    it("refuses a consent kind the page does not offer instead of recording the pilot consent", async () => {
-      const fake = createFakeRuntime();
-      const consentPath = `/admin/families/${familyId}/record_consent`;
-
-      for (const kind of ["", "nearby"]) {
-        const response = await send(
-          appFor(fake),
-          formRequest(consentPath, { ...memberConsent, kind }, ORIGIN),
-        );
-        expect(response.status).toBe(400);
-      }
-      expect(namesOf(fake.calls)).toEqual([]);
-
-      const recorded = await send(appFor(fake), formRequest(consentPath, memberConsent, ORIGIN));
-      expect(recorded.status).toBe(303);
-      expect(argsOf(fake.calls, "recordConsent")).toEqual([
-        [
-          { admin: "founder@vela.test", familyId },
-          {
-            memberId,
-            kind: "privacy_notice",
-            textVersion: "pilot-2026-09",
-            lang: "en",
-            channel: "telegram",
-            givenAt: new Date("2026-09-14T08:30:00.000Z"),
-            evidence: { note: "read to her on the call" },
-          },
-        ],
-      ]);
-    });
-  });
-
-  it("answers 404 for an address that is not an action", async () => {
-    const fake = createFakeRuntime();
-
-    const response = await send(
-      appFor(fake),
-      formRequest(`/admin/families/${familyId}/burn_everything`, {}, ORIGIN),
-    );
-
-    expect(response.status).toBe(404);
-    expect(namesOf(fake.calls)).toEqual([]);
-  });
-
-  it("turns a refusal from services into a status, not a stack trace", async () => {
-    const refusal = new VelaError("not_found", "not in this family");
-    const fake = createFakeRuntime({
-      services: {
-        markLeft: async () => {
-          throw refusal;
-        },
+    expect([result.en.status, result.zh.status]).toEqual([500, 500]);
+    expect(await result.zh.text()).not.toContain("創辦人全名");
+    expect(lines).toEqual([
+      {
+        level: "error",
+        event: "request_failed",
+        path: "/privacy",
+        method: "GET",
+        error: "ConfigError:privacy-notice.zh-TW.md",
       },
-    });
-
-    const response = await send(
-      appFor(fake),
-      formRequest(path, { memberId, confirm: "left" }, ORIGIN),
-    );
-
-    expect(response.status).toBe(404);
-    expect(await response.text()).not.toContain("not in this family");
+      {
+        level: "error",
+        event: "request_failed",
+        path: "/privacy/zh-TW",
+        method: "GET",
+        error: "ConfigError:privacy-notice.zh-TW.md",
+      },
+    ]);
   });
 });

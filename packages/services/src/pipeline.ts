@@ -578,12 +578,34 @@ async function translateWords(
 }
 
 /**
+ * Removes her copy of a summary that is being rewritten. `understandAnswer` calls it in the
+ * transaction that writes the new summary, so no read finds the old translation next to the new
+ * summary, and a job that stops before the new one is translated cannot leave the old one behind.
+ */
+async function dropSummaryForHer(tx: Queryable, ctx: AnswerContext): Promise<void> {
+  const { answer, member, family } = ctx;
+  if (family.language === member.language) {
+    return;
+  }
+  await tx
+    .delete(translations)
+    .where(
+      and(
+        eq(translations.objectType, "answer"),
+        eq(translations.objectId, answer.id),
+        eq(translations.lang, member.language),
+      ),
+    );
+}
+
+/**
  * The summary line in her language, for "what does the family see" (flows §3.13): `ai.understand`
  * writes it in the family's language, so when hers differs it is translated and kept as the
  * answer's `translations` row in her language. That row can only be the summary, since her words
  * are in her language already (their translation is the row in the family's). A re-run that keeps
- * the summary keeps the row; one that rewrites it rewrites the row, so she never reads a summary
- * the family no longer has. A failed translation stores nothing, and she reads the summary as the
+ * the summary keeps the row; one that rewrites it has already removed the row with the summary
+ * write (`dropSummaryForHer`) and stores the new translation here, so she never reads a summary the
+ * family no longer has. A failed translation stores nothing, and she reads the summary as the
  * family does.
  */
 async function translateSummaryForHer(
@@ -784,28 +806,34 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
   await logAiCall(deps, ctx, flag.record, flag.value);
 
   const understood = understanding.ok && flag.ok;
-  await deps.db
-    .update(answers)
-    .set({
-      ...(understanding.ok
-        ? {
-            summary: understanding.value.summary,
-            moodWords: understanding.value.moodWords,
-            mentions: understanding.value.mentions,
-            awayUntil: understanding.value.away?.until ?? null,
-          }
-        : {}),
-      ...(flag.ok
-        ? {
-            flag: flag.value.flag,
-            flagReason: flag.value.flag
-              ? `${flag.value.category ?? "unspecified"}:${flag.value.severity ?? "concern"}`
-              : null,
-          }
-        : {}),
-      ...(understood ? { understoodAt: now } : {}),
-    })
-    .where(eq(answers.id, answerId));
+  const summaryChanged = understanding.ok && understanding.value.summary !== answer.summary;
+  await deps.db.transaction(async (tx) => {
+    await tx
+      .update(answers)
+      .set({
+        ...(understanding.ok
+          ? {
+              summary: understanding.value.summary,
+              moodWords: understanding.value.moodWords,
+              mentions: understanding.value.mentions,
+              awayUntil: understanding.value.away?.until ?? null,
+            }
+          : {}),
+        ...(flag.ok
+          ? {
+              flag: flag.value.flag,
+              flagReason: flag.value.flag
+                ? `${flag.value.category ?? "unspecified"}:${flag.value.severity ?? "concern"}`
+                : null,
+            }
+          : {}),
+        ...(understood ? { understoodAt: now } : {}),
+      })
+      .where(eq(answers.id, answerId));
+    if (summaryChanged) {
+      await dropSummaryForHer(tx, ctx);
+    }
+  });
 
   if (understanding.ok && understanding.value.away !== null) {
     await setAwayFromAnswer(deps, ctx, understanding.value.away, now);

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ACCESS_HEADER, createAccessVerifier } from "./access.ts";
-import type { Env } from "./env.ts";
-import { testEnv } from "./testing/fakes.ts";
+import type { AdminEnv } from "./env.ts";
+import { adminTestEnv } from "./testing/fakes.ts";
 
 const TEAM_DOMAIN = "vela-test.cloudflareaccess.com";
 const AUDIENCE = "test-audience";
@@ -103,7 +103,7 @@ describe("the Cloudflare Access token", () => {
     const jwks = jwksFetch([key]);
     const verify = createAccessVerifier({ fetch: jwks.fetch, now: () => NOW });
 
-    const identity = await verify(requestWith(await tokenFor(key)), testEnv);
+    const identity = await verify(requestWith(await tokenFor(key)), adminTestEnv);
 
     expect(identity).toEqual({ email: "founder@vela.test" });
   });
@@ -112,7 +112,7 @@ describe("the Cloudflare Access token", () => {
     const jwks = jwksFetch([{ ...key, jwk: otherKey.jwk }]);
     const verify = createAccessVerifier({ fetch: jwks.fetch, now: () => NOW });
 
-    expect(await verify(requestWith(await tokenFor(key)), testEnv)).toBeNull();
+    expect(await verify(requestWith(await tokenFor(key)), adminTestEnv)).toBeNull();
   });
 
   it("is refused when it was issued for another application", async () => {
@@ -121,7 +121,7 @@ describe("the Cloudflare Access token", () => {
 
     const token = await tokenFor(key, { aud: "another-application" });
 
-    expect(await verify(requestWith(token), testEnv)).toBeNull();
+    expect(await verify(requestWith(token), adminTestEnv)).toBeNull();
     expect(jwks.calls()).toBe(0);
   });
 
@@ -131,7 +131,7 @@ describe("the Cloudflare Access token", () => {
 
     const token = await tokenFor(key, { iss: "https://elsewhere.cloudflareaccess.com" });
 
-    expect(await verify(requestWith(token), testEnv)).toBeNull();
+    expect(await verify(requestWith(token), adminTestEnv)).toBeNull();
   });
 
   it("is refused once it has expired", async () => {
@@ -140,14 +140,14 @@ describe("the Cloudflare Access token", () => {
 
     const token = await tokenFor(key, { exp: SECONDS - 3600 });
 
-    expect(await verify(requestWith(token), testEnv)).toBeNull();
+    expect(await verify(requestWith(token), adminTestEnv)).toBeNull();
   });
 
   it("is refused when it is not a token at all", async () => {
     const jwks = jwksFetch([key]);
     const verify = createAccessVerifier({ fetch: jwks.fetch, now: () => NOW });
 
-    expect(await verify(requestWith("not.a.token"), testEnv)).toBeNull();
+    expect(await verify(requestWith("not.a.token"), adminTestEnv)).toBeNull();
   });
 
   it("is refused, not thrown at, when its signature is not base64url", async () => {
@@ -158,7 +158,7 @@ describe("the Cloudflare Access token", () => {
     const token = await tokenFor(key);
     const mangled = `${token.slice(0, token.lastIndexOf("."))}.not base64!`;
 
-    expect(await verify(requestWith(mangled), testEnv)).toBeNull();
+    expect(await verify(requestWith(mangled), adminTestEnv)).toBeNull();
     expect(jwks.calls()).toBe(1);
   });
 
@@ -167,8 +167,8 @@ describe("the Cloudflare Access token", () => {
     const verify = createAccessVerifier({ fetch: jwks.fetch, now: () => NOW });
     const token = await tokenFor(key);
 
-    await verify(requestWith(token), testEnv);
-    await verify(requestWith(token), testEnv);
+    await verify(requestWith(token), adminTestEnv);
+    await verify(requestWith(token), adminTestEnv);
 
     expect(jwks.calls()).toBe(1);
   });
@@ -178,9 +178,9 @@ describe("the Cloudflare Access token", () => {
     const jwks = jwksFetch(served);
     const verify = createAccessVerifier({ fetch: jwks.fetch, now: () => NOW });
 
-    await verify(requestWith(await tokenFor(key)), testEnv);
+    await verify(requestWith(await tokenFor(key)), adminTestEnv);
     served.push(otherKey);
-    const rotated = await verify(requestWith(await tokenFor(otherKey)), testEnv);
+    const rotated = await verify(requestWith(await tokenFor(otherKey)), adminTestEnv);
 
     expect(rotated).toEqual({ email: "founder@vela.test" });
     expect(jwks.calls()).toBe(2);
@@ -191,7 +191,7 @@ describe("a request with no Access token", () => {
   it("is refused in production", async () => {
     const jwks = jwksFetch([key]);
     const verify = createAccessVerifier({ fetch: jwks.fetch, now: () => NOW });
-    const production: Env = { ...testEnv, ENVIRONMENT: "production" };
+    const production: AdminEnv = { ...adminTestEnv, ENVIRONMENT: "production" };
 
     expect(await verify(requestWith(null), production)).toBeNull();
   });
@@ -199,7 +199,7 @@ describe("a request with no Access token", () => {
   it("is allowed on a laptop, where there is no Access application in front", async () => {
     const jwks = jwksFetch([key]);
     const verify = createAccessVerifier({ fetch: jwks.fetch, now: () => NOW });
-    const development: Env = { ...testEnv, ENVIRONMENT: "development" };
+    const development: AdminEnv = { ...adminTestEnv, ENVIRONMENT: "development" };
 
     expect(await verify(requestWith(null), development)).toEqual({ email: "development" });
   });

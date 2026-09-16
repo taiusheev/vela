@@ -4,10 +4,10 @@ import type { MemberScheduler } from "./scheduler.ts";
 import {
   argsOf,
   consoleLinesDuring,
-  createFakeRuntime,
+  createFakePilotRuntime,
   FAILED_QUERY_LABEL,
   FAILED_QUERY_WORDS,
-  type FakeRuntime,
+  type FakePilotRuntime,
   failedQueryFixture,
   testEnv,
 } from "./testing/fakes.ts";
@@ -23,7 +23,7 @@ function schedulerFor(memberId: string): DurableObjectStub<MemberScheduler> {
  */
 async function runAlarm(
   stub: DurableObjectStub<MemberScheduler>,
-  fake: FakeRuntime,
+  fake: FakePilotRuntime,
 ): Promise<number | null> {
   return runInDurableObject(stub, async (instance, state) => {
     instance.runtime = fake.runtime;
@@ -56,7 +56,7 @@ describe("the member scheduler", () => {
   it("ticks the member and re-arms at the time the tick returned", async () => {
     const memberId = "member-tick";
     const next = new Date("2031-01-02T00:00:00.000Z");
-    const fake = createFakeRuntime({ services: { tickMember: async () => next } });
+    const fake = createFakePilotRuntime({ services: { tickMember: async () => next } });
     const stub = schedulerFor(memberId);
     await stub.wakeAt(memberId, new Date("2031-01-01T00:00:00.000Z"));
 
@@ -69,7 +69,7 @@ describe("the member scheduler", () => {
 
   it("clears the alarm when the tick says there is nothing more to wake for", async () => {
     const memberId = "member-done";
-    const fake = createFakeRuntime({ services: { tickMember: async () => null } });
+    const fake = createFakePilotRuntime({ services: { tickMember: async () => null } });
     const stub = schedulerFor(memberId);
     await stub.wakeAt(memberId, new Date("2031-01-01T00:00:00.000Z"));
 
@@ -78,7 +78,7 @@ describe("the member scheduler", () => {
 
   it("keeps the light on when a tick throws: it logs and tries again shortly", async () => {
     const memberId = "member-broken";
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       services: {
         tickMember: async () => {
           throw new Error("the database is away");
@@ -97,7 +97,7 @@ describe("the member scheduler", () => {
 
   it("logs a failed tick by its error label, never by the message that carries the family's words", async () => {
     const memberId = "member-logged";
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       services: {
         tickMember: async () => {
           throw failedQueryFixture();
@@ -135,7 +135,7 @@ describe("the member scheduler", () => {
     const duringTick: (number | null)[] = [];
 
     const after = await runInDurableObject(stub, async (instance, state) => {
-      const fake = createFakeRuntime({
+      const fake = createFakePilotRuntime({
         services: {
           tickMember: async (deps, id) => {
             await deps.scheduler.wakeAt(id, inner);
@@ -179,7 +179,7 @@ describe("the member scheduler", () => {
     const stale = new Date("2031-01-02T00:00:00.000Z");
     const stub = schedulerFor(memberId);
     await stub.wakeAt(memberId, new Date("2031-01-01T00:00:00.000Z"));
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       services: {
         tickMember: async (deps, id) => {
           await schedulerFor(id).wakeAt(id, asked);
@@ -198,7 +198,7 @@ describe("the member scheduler", () => {
     await stub.wakeAt(memberId, new Date("2031-01-01T00:00:00.000Z"));
     // Sooner than the retry a minute from now, and late enough not to fire while the file runs.
     const asked = new Date(Date.now() + 30_000);
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       services: {
         tickMember: async (_deps, id) => {
           await schedulerFor(id).wakeAt(id, asked);
@@ -227,7 +227,7 @@ describe("the member scheduler", () => {
 
   it("does nothing when the alarm fires after the object was cleared", async () => {
     const memberId = "member-cleared";
-    const fake = createFakeRuntime();
+    const fake = createFakePilotRuntime();
     const stub = schedulerFor(memberId);
     await stub.wakeAt(memberId, new Date("2031-01-01T00:00:00.000Z"));
     await stub.wakeAt(memberId, null);

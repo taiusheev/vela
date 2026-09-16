@@ -1,7 +1,8 @@
 /**
- * `MemberScheduler`, one Durable Object per kept-light member (code design §9). It is the
- * instrument's clock: services ask it to wake at an instant, the alarm runs the member's tick, and
- * the tick says when to wake next. `reconcile` is the safety net, not the schedule.
+ * `MemberScheduler`, one Durable Object per kept-light member (code design §9), exported by the
+ * pilot Worker; the admin Worker reaches the same objects through a binding with `script_name`.
+ * It is the instrument's clock: services ask it to wake at an instant, the alarm runs the member's
+ * tick, and the tick says when to wake next. `reconcile` is the safety net, not the schedule.
  *
  * A wake means "tick no later than this", so it never moves an alarm that is already set sooner.
  * The tick decides from the data, so an early wake costs one tick that finds nothing due, while a
@@ -14,9 +15,9 @@
  */
 import { DurableObject } from "cloudflare:workers";
 import { errorLabel, type MemberScheduler as MemberSchedulerPort } from "@vela/services";
-import { createLogger, createSchedulerPort } from "./deps.ts";
-import type { Env } from "./env.ts";
-import { productionRuntime, type WorkerRuntime } from "./runtime.ts";
+import { createLogger, createSchedulerPort, type DepsHandle } from "./deps.ts";
+import type { PilotEnv } from "./env.ts";
+import { type PilotRuntime, pilotRuntime } from "./runtime.ts";
 
 /** The only key the object stores: whose schedule this is. */
 const MEMBER_ID_KEY = "memberId";
@@ -24,12 +25,12 @@ const MEMBER_ID_KEY = "memberId";
 /** A tick that threw is tried again shortly; the next scheduled wake is recomputed from the data. */
 const RETRY_AFTER_MS = 60_000;
 
-export class MemberScheduler extends DurableObject<Env> {
+export class MemberScheduler extends DurableObject<PilotEnv> {
   /**
    * What the alarm builds deps from and calls. A field rather than an import so the alarm can be
    * tested against fakes: a test replaces it inside `runInDurableObject`, and nothing else does.
    */
-  runtime: WorkerRuntime = productionRuntime;
+  runtime: PilotRuntime = pilotRuntime;
 
   /**
    * Wakes this member no later than `at`, or clears the object when `at` is null. Called over RPC
@@ -81,7 +82,7 @@ export class MemberScheduler extends DurableObject<Env> {
       return;
     }
     const logger = createLogger(this.env);
-    let handle: Awaited<ReturnType<WorkerRuntime["createDeps"]>> | null = null;
+    let handle: DepsHandle | null = null;
     try {
       handle = await this.runtime.createDeps(this.env, { scheduler: this.#port(memberId) });
       const next = await this.runtime.services.tickMember(handle.deps, memberId);

@@ -1,16 +1,38 @@
 {
-  // The Cloudflare Worker (code design §9). Three environments: the top level is local
-  // development (`wrangler dev`), `staging` and `production` are what deploy.yml deploys.
+  // The pilot Worker (code design §9, H1): Telegram's webhook, the privacy notices, the health
+  // check, the three queues, cron, and the MemberScheduler Durable Object. The admin pages are a
+  // second Worker from this package, configured in wrangler.admin.jsonc, because Cloudflare Access
+  // protects every hostname of a Worker and would close this one to Telegram.
   //
-  // Named environments inherit nothing that binds a resource, so every environment repeats its
-  // bindings with its own resource names. Every `id` below that the founder must create is written
-  // as a PLACEHOLDER: replace each one with the id Cloudflare returns, and never invent one.
+  // Three environments: the top level is local development (`wrangler dev`), `staging` and
+  // `production` are what deploy.yml deploys. Named environments inherit nothing that binds a
+  // resource, so every environment repeats its bindings with its own resource names.
   //
-  // The same goes for every host, username, and chat id in staging and production: each is a
-  // PLACEHOLDER until the founder chooses it. Never fill one with a guess. vela.family, for one,
-  // belongs to another company (design/research-identity.md), so a notice link there would send
-  // families to someone else's site. Outside development the Worker refuses to start while any
-  // value still holds PLACEHOLDER_ or a URL var is not https (src/deps.ts).
+  // Hosts (H3). Each deployed Worker answers only on its workers.dev address,
+  // https://<Worker name>.<account subdomain>.workers.dev, where the subdomain is the one each
+  // Cloudflare account chose at sign-up: `vela-light` for production ("Vela"), `vela-light-staging`
+  // for staging ("Vela staging"). There is no domain, zone, or route.
+  //
+  // This is the one list of what changes if an account's subdomain is not the one above. First,
+  // what src/wrangler-config.test.ts holds together, and fails on until every place agrees:
+  //   - WORKERS_DEV_SUBDOMAINS in that test, from which it derives every host it expects;
+  //   - the three URL vars of that environment here;
+  //   - PUBLIC_BASE_URL of that environment in wrangler.admin.jsonc;
+  //   - every workers.dev link written into the Markdown of plan/materials/pilot: the notice links
+  //     in the nearby-contact consent texts (en and zh-TW), which families are sent, and in the
+  //     pilot README.
+  // Then what no test can see:
+  //   - the privacy policy link of that environment's bots in @BotFather, and the WORKER_URL given
+  //     to `telegram:setup` (infra/README.md section 7, steps 3 and 6);
+  //   - the documents that write the hosts out, which `git grep vela-light` lists.
+  //
+  // Every `id` or username the founder has not created yet is written as a PLACEHOLDER: replace
+  // each with the value Cloudflare or BotFather returns, never a guess. Outside development the
+  // Worker refuses to start while any var or secret still holds PLACEHOLDER_, a URL var is not
+  // https, or a privacy notice still holds a bracketed blank (src/config.ts).
+  //
+  // ADMIN_CONVERSATION_ID, the founder's own Telegram chat id, is a secret of this Worker (H5),
+  // never a var: `.dev.vars.example` lists it with the other secrets.
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-dev",
   "main": "src/index.ts",
@@ -20,8 +42,16 @@
   // node-postgres reaches Postgres through Hyperdrive with the Node compatibility layer.
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  // Development is never deployed, so it has no address: `workers_dev` defaults to true and is
+  // inherited, and a `wrangler deploy` without --env deploys this top level, which is ENVIRONMENT
+  // development, where config.ts skips its refusals. `staging` and `production` turn workers.dev on
+  // as their only address. Preview URLs stay off everywhere: a Worker with a Durable Object gets
+  // none anyway, and every hostname the Worker answers on is one more to reason about.
   "workers_dev": false,
+  "preview_urls": false,
 
+  // The admin Worker binds this class by `script_name`; only this Worker, which exports it,
+  // declares its migrations.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MemberScheduler"] }],
   "durable_objects": {
     "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
@@ -82,27 +112,19 @@
   "vars": {
     "ENVIRONMENT": "development",
     "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_DEV_BOT_USERNAME",
-    // Empty sends no admin messages at all, which is what a laptop should do.
-    "ADMIN_CONVERSATION_ID": "",
+    // `pnpm dev` serves this Worker on port 8787; `pnpm dev:admin` serves the admin Worker there
+    // instead. On a laptop a link only has to be there.
     "PUBLIC_BASE_URL": "http://localhost:8787",
-    // Nothing is served at these paths: on a laptop the link only has to be there.
     "PRIVACY_NOTICE_URL_EN": "http://localhost:8787/privacy",
-    "PRIVACY_NOTICE_URL_ZH_TW": "http://localhost:8787/zh-TW/privacy",
+    "PRIVACY_NOTICE_URL_ZH_TW": "http://localhost:8787/privacy/zh-TW",
     "REGIONS": "apac"
   },
 
   "env": {
     "staging": {
-      "name": "vela-staging",
-      // The Worker answers HTTP only on the hosts in `routes`. With workers.dev off and no route, a
-      // deploy still succeeds and the alarms, queues, and crons run, but Telegram cannot reach the
-      // webhook: her answers never arrive while her arrivals, repeats, and quiet notices go on. So
-      // each deployed environment names a custom domain, and PUBLIC_BASE_URL is on that host
-      // (src/wrangler-config.test.ts holds the two together). Replace both PLACEHOLDER hosts with a
-      // domain the founder owns, on a zone in that environment's Cloudflare account (staging is its
-      // own account, infra/README.md); a deploy whose zone is not in the account fails.
-      "workers_dev": false,
-      "routes": [{ "pattern": "PLACEHOLDER_STAGING_HOST", "custom_domain": true }],
+      "name": "vela",
+      "workers_dev": true,
+      "preview_urls": false,
       "observability": { "enabled": true },
       "durable_objects": {
         "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
@@ -146,20 +168,19 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_STAGING_BOT_USERNAME",
-        "ADMIN_CONVERSATION_ID": "PLACEHOLDER_STAGING_ADMIN_CHAT_ID",
-        "PUBLIC_BASE_URL": "https://PLACEHOLDER_STAGING_HOST",
-        // The published privacy notice in each language, from the founder (infra/README.md).
-        "PRIVACY_NOTICE_URL_EN": "PLACEHOLDER_STAGING_PRIVACY_NOTICE_URL_EN",
-        "PRIVACY_NOTICE_URL_ZH_TW": "PLACEHOLDER_STAGING_PRIVACY_NOTICE_URL_ZH_TW",
+        // The admin Worker's origin: links in the founder's admin messages open it.
+        "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev",
+        // This Worker's origin and the notice paths it serves (src/notices.ts).
+        "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light-staging.workers.dev/privacy",
+        "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light-staging.workers.dev/privacy/zh-TW",
         "REGIONS": "apac"
       }
     },
 
     "production": {
-      "name": "vela-production",
-      // As in staging: the host of PUBLIC_BASE_URL, on a zone in the "Vela" account.
-      "workers_dev": false,
-      "routes": [{ "pattern": "PLACEHOLDER_PRODUCTION_HOST", "custom_domain": true }],
+      "name": "vela",
+      "workers_dev": true,
+      "preview_urls": false,
       "observability": { "enabled": true },
       "durable_objects": {
         "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
@@ -203,10 +224,9 @@
       "vars": {
         "ENVIRONMENT": "production",
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
-        "ADMIN_CONVERSATION_ID": "PLACEHOLDER_PRODUCTION_ADMIN_CHAT_ID",
-        "PUBLIC_BASE_URL": "https://PLACEHOLDER_PRODUCTION_HOST",
-        "PRIVACY_NOTICE_URL_EN": "PLACEHOLDER_PRODUCTION_PRIVACY_NOTICE_URL_EN",
-        "PRIVACY_NOTICE_URL_ZH_TW": "PLACEHOLDER_PRODUCTION_PRIVACY_NOTICE_URL_ZH_TW",
+        "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
+        "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light.workers.dev/privacy",
+        "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light.workers.dev/privacy/zh-TW",
         "REGIONS": "apac"
       }
     }

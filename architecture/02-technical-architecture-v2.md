@@ -1,6 +1,6 @@
 # Vela technical architecture, v2
 
-2026-09-14. **This is the build blueprint.** It replaces the v1 technical design (`archive/architecture/01-technical-design.md`). Every tool choice in it was checked against the alternatives in September 2026 by five due-diligence sweeps (`architecture/research/`); the ten records that changed are appended to `decisions.md` (ADR-11 to ADR-20). The product it builds is `product/05-product-spec-v2.md`; the markets and their order are `plan/market-order.md`; the data model is `schema.sql` (validated in a real Postgres engine); the interface is `api-contract.md`; the sprint order is `plan/build-plan.md`.
+2026-09-17. **This is the build blueprint.** It replaces the v1 technical design (`archive/architecture/01-technical-design.md`). Every tool choice in it was checked against the alternatives in September 2026 by five due-diligence sweeps (`architecture/research/`); the ten records that changed are appended to `decisions.md` (ADR-11 to ADR-20). The product it builds is `product/05-product-spec-v2.md`; the markets and their order are `plan/market-order.md`; the data model is `schema.sql` (validated in a real Postgres engine); the interface is `api-contract.md`; the sprint order is `plan/build-plan.md`.
 
 Reading order for someone new: §1 constraints → §2 overview → §6 scheduling → §7 gateway → §8 adapters → §9 AI → §10 app. The rest is reference.
 
@@ -32,13 +32,13 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
                        └───────────────┬───────────────────────────────────────┬────────────────┘
                                        │ HTTPS (Clerk session)                  │ push (Expo → APNs/FCM)
 ┌──────────────────────────────────────▼───────────────────────────────────────▼──────────────────────┐
-│  Cloudflare Worker "vela-api" (Hono, TypeScript)                                                     │
+│  Cloudflare Workers "vela" and "vela-admin" (Hono, TypeScript; on workers.dev in the pilot, ADR-26) │
 │  ├─ /v1/* API (api-contract.md)            ├─ /webhooks/{line,whatsapp,telegram,voice,billing}     │
 │  ├─ Member Durable Objects  (one per member with arrivals: alarms for arrival · repeat · quiet ·   │
 │  │   turn prompt · weekly read; recomputed from the IANA zone on every fire)                        │
 │  ├─ Queues: "outbound" (gateway sends) · "understand" (AI) · "media" · dead-letter                  │
 │  ├─ Cron Triggers (housekeeping only): reconciliation every 5 min · retention nightly · metrics    │
-│  └─ Static assets: admin SPA                                                                        │
+│  └─ Admin: pages in the Worker "vela-admin", behind Cloudflare Access; later the admin SPA          │
 │      bindings: Hyperdrive ×3 (apac · eu · us) · R2 ×3 · Queues · DO · Rate Limiting · secrets      │
 └──────┬────────────────┬───────────────────┬─────────────────────┬───────────────────────────────────┘
        │                │                   │                     │
@@ -59,7 +59,7 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
 
 | Component | Responsibility | Technology (2026 pick) | Alternatives checked |
 |---|---|---|---|
-| Worker | API, webhooks, scheduler, gateway, adapters, AI orchestration, admin assets | Cloudflare Workers, Hono 4, TypeScript 7 strict | Vercel, AWS Lambda + EventBridge Scheduler, Cloud Run, Fly.io, Railway, Render, Supabase Edge (research/platform-and-data §2a) |
+| Worker | API, webhooks, scheduler, gateway, adapters, AI orchestration, admin assets. In the pilot, two Workers from one package, each on its workers.dev hostname only: `vela` (webhooks, privacy notice pages, scheduler, queues, cron) and `vela-admin` (the admin pages, with Cloudflare Access on the whole Worker) (ADR-26) | Cloudflare Workers, Hono 4, TypeScript 7 strict | Vercel, AWS Lambda + EventBridge Scheduler, Cloud Run, Fly.io, Railway, Render, Supabase Edge (research/platform-and-data §2a) |
 | Per-member scheduler | Precise wake-ups per member in her time zone | Durable Objects with alarms | Per-minute cron scan (v1), EventBridge one-off schedules, pg_cron |
 | Queues | Decouple sends and AI from webhooks; retries; dead-letter | Cloudflare Queues (at-least-once, no dedup: the outbox gates) | SQS FIFO (dedup, but a second cloud), Cloud Tasks |
 | Database | System of record, one per region | Neon Postgres 18 (native `uuidv7()`), projects in Singapore, Frankfurt, US-East; Hyperdrive pooling with query caching off | Supabase (Tokyo region; fallback for Japan), PlanetScale Postgres, Crunchy, Aurora v2, Cloud SQL, D1 (ruled out: free-tier row caps enforced 2026-09-01) |
@@ -69,7 +69,7 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
 | AI | Understanding, flags, chips, suggestions, translation, weekly read, hello | Anthropic Claude via the Messages API, structured outputs, batch, caching | OpenAI GPT-5.6 family, Gemini 3.x (as fallback providers) |
 | Speech | STT and TTS | Deepgram Nova-3 batch (STT), gpt-4o-transcribe as second opinion, SenseVoice/Groq Whisper benchmarked in the pilot; Azure Neural TTS (zh-TW, en, ja) with on-device `expo-speech` fallback | AssemblyAI, Google Chirp 3, ElevenLabs, Fish Audio, MiniMax (residency caution) |
 | Channels | LINE, WhatsApp, Telegram, voice/SMS, push | LINE Messaging API direct; WhatsApp Cloud API direct (after the entity); Telegram Bot API; Twilio Studio + Gather for the voice line; Expo Push | BSPs (markup), Vapi/Retell/Bland (not needed for a fixed script), OneSignal (not needed) |
-| Admin | Founder's daily ops view, evals browser, flags | Small React SPA (Vite) served by the Worker, same API with an admin role | Retool, Forest Admin, Appsmith (seat pricing, third-party data path) |
+| Admin | Founder's daily ops view, evals browser, flags | Small React SPA (Vite) served by the Worker, same API with an admin role; in the pilot, server-rendered pages in the admin Worker `vela-admin` behind Cloudflare Access (ADR-22, ADR-26) | Retool, Forest Admin, Appsmith (seat pricing, third-party data path) |
 | Observability | Errors, traces, cron liveness, alerts | Sentry free tier (+ Crons), Workers Logs, Healthchecks.io heartbeat | Grafana Cloud, Honeycomb, Axiom, Better Stack |
 | Analytics | Product funnels, flags, replay | PostHog Cloud EU (free tier); the founder's KPIs come from `metrics_daily` | Amplitude, Mixpanel, Segment |
 | CI/CD | Tests, migrations, deploys, mobile builds | GitHub Actions; Wrangler; Drizzle migrations; Neon branch per PR; EAS Build/Submit/Update | macOS runners (10× Linux cost), Prisma (needs a proxy on Workers) |
@@ -108,7 +108,8 @@ vela/
       src/do/               # MemberScheduler Durable Object
       src/queues/           # outbound, understand, media consumers
       src/cron/             # reconcile, retention, metrics, heartbeat
-      wrangler.toml         # bindings per environment (dev, staging, prod)
+      wrangler.jsonc        # the pilot Worker "vela": bindings per environment (dev, staging, production)
+      wrangler.admin.jsonc  # the admin Worker "vela-admin", from the same package (ADR-26)
     mobile/                 # Expo SDK 55 app; Expo Router; modes family/, parent-surface/, kitchen-table/
       ios/                  # WidgetKit target (Swift) — the fallback if expo-widgets churns
       android/              # react-native-android-widget output
@@ -283,7 +284,7 @@ Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` wit
 
 - **Clerk** for organisers and members with accounts: phone OTP (no per-message surcharge), email magic link, Sign in with Apple and Google; Expo SDK; free to 50,000 monthly retained users. The Worker verifies Clerk session JWTs (JWKS cached in the Worker). Better Auth (MIT, self-hosted, Expo plugin) is the fallback if Clerk's retained-user pricing bites past 50k.
 - **Kept-light members have no account.** Their identity is a `channel_links` row (LINE userId, WhatsApp number, Telegram id, phone) or, on the parent surface, a device-bound token issued when a visiting child signs in and hands over the phone (`primary_surface = parent-surface`; no password, no email; re-issued by any organiser).
-- **Roles** are per membership (organiser, member) plus a global admin allow-list read by the admin routes; every admin read of a family writes `admin_access_log` and an event visible to the organiser on request.
+- **Roles** are per membership (organiser, member) plus a global admin allow-list read by the admin routes; every admin read of a family writes `admin_access_log` and an event visible to the organiser on request. In the pilot, before accounts exist, the admin identity is the founder's Cloudflare Access sign-in: Access covers the whole admin Worker `vela-admin`, and the Worker verifies the Access token itself (ADR-22, ADR-26).
 
 ---
 
@@ -306,7 +307,7 @@ Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` wit
 - Secrets only in Worker secrets, `.dev.vars`, and GitHub environment secrets for deploys (`CLOUDFLARE_API_TOKEN`, `DATABASE_URL`; never repository secrets, ADR-23); Infisical when a second environment or person needs synced secrets; no keys in the repo; Renovate for dependency updates.
 - TLS everywhere; provider encryption at rest for Neon and R2 during the pilot; field-level envelope encryption (AES-256-GCM, keys in Worker secrets) for transcripts decided before launch, not retrofitted at scale.
 - Backups: Neon point-in-time restore (plan-dependent history) plus a **quarterly restore drill** (restore to a timestamp, verify counts, discard); R2 versioning on the family-book prefix.
-- Admin reads logged and visible to organisers; MFA on every provider account; a one-page incident runbook (notify, rotate, status update) and a one-page sub-processor list written in sprint 1.
+- Admin reads logged and visible to organisers; in the pilot the admin pages are a Worker of their own, `vela-admin`, so Cloudflare Access covers every hostname they answer on while Telegram's webhook stays on the public Worker `vela` (ADR-26); MFA on every provider account; a one-page incident runbook (notify, rotate, status update) and a one-page sub-processor list written in sprint 1.
 - Status page: Instatus free tier at pilot; alerts in §15.
 
 ---
@@ -366,11 +367,11 @@ CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite
 
 | Env | Worker | Databases | Channels | Mobile |
 |---|---|---|---|---|
-| dev | `wrangler dev` | pglite locally; a personal Neon branch | Telegram test bot; LINE test OA | Expo dev client on the founder's phone |
-| staging | `vela-api-staging` | Neon branches of each region | Telegram test bot; LINE test OA; WhatsApp sandbox | TestFlight / Play internal (dev client) |
-| prod | `vela-api` | Neon main branches (apac, eu, us) | Real accounts | Store builds; EAS Update channel `production` |
+| dev | `wrangler dev` (`vela-dev`; `vela-admin-dev` beside it with `pnpm --filter @vela/worker dev:admin`) | pglite locally; a personal Neon branch | Telegram test bot; LINE test OA | Expo dev client on the founder's phone |
+| staging | `vela` (`https://vela.vela-light-staging.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light-staging.workers.dev`), in the "Vela staging" Cloudflare account | Neon branches of each region | Telegram test bot; LINE test OA; WhatsApp sandbox | TestFlight / Play internal (dev client) |
+| prod | `vela` (`https://vela.vela-light.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light.workers.dev`), in the "Vela" Cloudflare account | Neon main branches (apac, eu, us) | Real accounts | Store builds; EAS Update channel `production` |
 
-Release: trunk-based; PRs run the full CI; `main` deploys to staging; a tag deploys to production after the founder's approval, its deploy job migrating before `wrangler deploy`; mobile releases weekly during the pilot, with EAS Update for JS-only fixes.
+Release: trunk-based; PRs run the full CI; `main` deploys to staging; a tag deploys to production after the founder's approval, its deploy job migrating once, then deploying `vela`, then `vela-admin` (ADR-26); mobile releases weekly during the pilot, with EAS Update for JS-only fixes.
 
 ---
 
@@ -408,7 +409,7 @@ At 10,000 families with 10% on Light at $79/year the gross margin is thin; at 20
 
 1. Legal entity (Singapore likely): gates WhatsApp Business verification, Apple and Google organisation accounts (D-U-N-S number takes 30+ days; start now), payments.
 2. Accounts in the founder's name now: Cloudflare, Neon, Anthropic, Deepgram, Azure (TTS), Clerk, Sentry, PostHog, Healthchecks.io, Expo, a LINE Official Account (unverified is allowed for individuals), Telegram bot, Twilio (later).
-3. Domain and the name decision (ship as "Vela Light" until clearance).
+3. The name decision (ship as "Vela Light" until clearance). No domain is needed for the pilot: each Cloudflare account's workers.dev subdomain (`vela-light`, `vela-light-staging`) is chosen when the account is set up (ADR-26).
 4. Native reviewers for Traditional Chinese now, Japanese in phase 2.
 5. The first families: own parent, three to five friend families, five Taiwanese families.
 
@@ -416,4 +417,4 @@ At 10,000 families with 10% on Light at $79/year the gross margin is thin; at 20
 
 ## 21. Decision records added
 
-ADR-11 Durable Object alarms plus outbox replace the cron scan · ADR-12 Drizzle for schema and migrations · ADR-13 Clerk for auth, Better Auth as fallback · ADR-14 Speech stack (Deepgram default, pilot benchmark decides; Azure TTS with on-device fallback) · ADR-15 Model routing by call (Opus 5 for flags, Sonnet 5 for judgment, Haiku 4.5 for drafting; batch and cache) · ADR-16 Adapter order LINE → WhatsApp → voice; Telegram instrument only; MAX dropped · ADR-17 Custom admin SPA · ADR-18 Heartbeat monitoring outside Cloudflare · ADR-19 Expo SDK 55 with native widget targets · ADR-20 External payment links only where store rules allow; RevenueCat when the entity exists. See `decisions.md`.
+ADR-11 Durable Object alarms plus outbox replace the cron scan · ADR-12 Drizzle for schema and migrations · ADR-13 Clerk for auth, Better Auth as fallback · ADR-14 Speech stack (Deepgram default, pilot benchmark decides; Azure TTS with on-device fallback) · ADR-15 Model routing by call (Opus 5 for flags, Sonnet 5 for judgment, Haiku 4.5 for drafting; batch and cache) · ADR-16 Adapter order LINE → WhatsApp → voice; Telegram instrument only; MAX dropped · ADR-17 Custom admin SPA · ADR-18 Heartbeat monitoring outside Cloudflare · ADR-19 Expo SDK 55 with native widget targets · ADR-20 External payment links only where store rules allow; RevenueCat when the entity exists. Later records that change what this document names: ADR-22 and ADR-26 (the pilot's admin pages in their own Worker `vela-admin` behind Cloudflare Access, both Workers on workers.dev). See `decisions.md`.

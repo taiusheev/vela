@@ -1,5 +1,5 @@
 /**
- * The fakes every Worker test runs against. The Worker's job is wiring, so a test only has to see
+ * The fakes every Worker test runs against. Both Workers' job is wiring, so a test only has to see
  * which services entry point a route, a job, a cron, or an alarm called, and with what: services
  * are recorded rather than run, and no test opens a database, a socket, or a channel.
  */
@@ -9,33 +9,41 @@ import type { ChannelAdapter, InboundEvent } from "@vela/contracts";
 import type { Family, Member, VelaDatabase } from "@vela/db";
 import type { Deps, FamilyPage, Logger } from "@vela/services";
 import { vi } from "vitest";
-import type { DepsHandle, DepsOptions } from "../deps.ts";
-import type { Env } from "../env.ts";
-import type { WorkerRuntime, WorkerServices } from "../runtime.ts";
+import type { AdminRuntime, AdminServices } from "../admin-runtime.ts";
+import type { AdminDeps, AdminDepsHandle, DepsHandle, DepsOptions } from "../deps.ts";
+import type { AdminEnv, PilotEnv } from "../env.ts";
+import type { PrivacyNotices } from "../notices.ts";
+import type { PilotRuntime, PilotServices } from "../runtime.ts";
 
 /**
- * The bindings wrangler.jsonc declares, as the Worker's own `Env`. The runtime only knows them as
- * the generated `Cloudflare.Env`, which this package does not generate.
+ * The bindings wrangler.jsonc declares, as the pilot Worker's own `Env`. The runtime only knows
+ * them as the generated `Cloudflare.Env`, which this package does not generate.
  */
-export const testEnv = env as unknown as Env;
+export const testEnv = env as unknown as PilotEnv;
+
+/**
+ * The admin Worker's environment on a laptop. The pool runs the pilot Worker's configuration, so
+ * the bindings the admin Worker shares with it (the scheduler namespace, the outbound queue, and
+ * Hyperdrive) are the pilot's own, as in a deployed environment, where they name the same resources.
+ */
+export const adminTestEnv: AdminEnv = {
+  ENVIRONMENT: "development",
+  PUBLIC_BASE_URL: "http://localhost:8787",
+  ANTHROPIC_API_KEY: "test-anthropic-key",
+  ACCESS_TEAM_DOMAIN: "vela-test.cloudflareaccess.com",
+  ACCESS_AUD: "test-audience",
+  HYPERDRIVE: testEnv.HYPERDRIVE,
+  MEMBER_SCHEDULER: testEnv.MEMBER_SCHEDULER,
+  OUTBOUND_QUEUE: testEnv.OUTBOUND_QUEUE,
+};
+
+/** Every services entry point either Worker calls. */
+type ServiceName = keyof PilotServices | keyof AdminServices;
 
 /** One recorded services call: its name and the arguments after `deps`. */
 export interface ServiceCall {
-  readonly name: keyof WorkerServices;
+  readonly name: ServiceName;
   readonly args: readonly unknown[];
-}
-
-export interface FakeRuntime {
-  readonly runtime: WorkerRuntime;
-  /** Every services call, in order. */
-  readonly calls: ServiceCall[];
-  /** How many times deps were built and closed; a leak shows as a difference. */
-  built(): number;
-  closed(): number;
-  /** The events the webhook route handed to `handleInbound`. */
-  readonly inbound: InboundEvent[];
-  /** Every line the deps' logger was given, in order. */
-  readonly logs: LogLine[];
 }
 
 /** One line a `Logger` was given. */
@@ -45,19 +53,49 @@ export interface LogLine {
   readonly fields: Record<string, unknown> | undefined;
 }
 
-export interface FakeRuntimeOptions {
+/** What a fake runtime recorded, whichever Worker it is for. */
+interface Recording {
+  /** Every services call, in order. */
+  readonly calls: ServiceCall[];
+  /** How many times deps were built and closed; a leak shows as a difference. */
+  built(): number;
+  closed(): number;
+  /** Every line the deps' logger was given, in order. */
+  readonly logs: LogLine[];
+}
+
+export interface FakePilotRuntime extends Recording {
+  readonly runtime: PilotRuntime;
+  /** The events the webhook route handed to `handleInbound`. */
+  readonly inbound: InboundEvent[];
+}
+
+export interface FakeAdminRuntime extends Recording {
+  readonly runtime: AdminRuntime;
+}
+
+export interface FakePilotRuntimeOptions {
   /** Replaces what a service returns or makes it throw; the call is still recorded. */
-  readonly services?: Partial<WorkerServices>;
-  /** What the Access verifier returns; null refuses the request. */
-  readonly admin?: string | null;
+  readonly services?: Partial<PilotServices>;
   /** The events the fake Telegram adapter parses out of a verified request. */
   readonly events?: InboundEvent[];
   /** The secret the fake adapter accepts in `X-Telegram-Bot-Api-Secret-Token`. */
   readonly webhookSecret?: string;
+  /** The notices the routes serve; `noticesFixture()` when left out. */
+  readonly notices?: PrivacyNotices;
+}
+
+export interface FakeAdminRuntimeOptions {
+  /** Replaces what a service returns or makes it throw; the call is still recorded. */
+  readonly services?: Partial<AdminServices>;
+  /** What the Access verifier returns; null refuses the request. */
+  readonly admin?: string | null;
 }
 
 // Only services read the database, and here every service is a recorder.
 const UNUSED_DATABASE = {} as VelaDatabase;
+
+const FAKE_NOW = new Date("2026-09-14T00:00:00Z");
 
 /** A `Logger` that keeps every line it is given in `logs`. */
 export function recordingLogger(logs: LogLine[]): Logger {
@@ -71,7 +109,7 @@ export function recordingLogger(logs: LogLine[]): Logger {
 function createFakeDeps(logs: LogLine[]): Deps {
   return {
     db: UNUSED_DATABASE,
-    clock: { now: () => new Date("2026-09-14T00:00:00Z") },
+    clock: { now: () => FAKE_NOW },
     logger: recordingLogger(logs),
     random: { token: () => "token" },
     queues: {
@@ -90,16 +128,28 @@ function createFakeDeps(logs: LogLine[]): Deps {
       adminConversationId: null,
       environment: "development",
       regions: ["apac"],
-      publicBaseUrl: "https://worker.test",
+      publicBaseUrl: "https://vela-admin.worker.test",
       privacyNoticeUrls: {
-        en: "https://vela.test/privacy",
-        "zh-TW": "https://vela.test/zh-TW/privacy",
-        ja: "https://vela.test/privacy",
-        de: "https://vela.test/privacy",
-        hi: "https://vela.test/privacy",
-        ru: "https://vela.test/privacy",
+        en: "https://vela.worker.test/privacy",
+        "zh-TW": "https://vela.worker.test/privacy/zh-TW",
+        ja: "https://vela.worker.test/privacy",
+        de: "https://vela.worker.test/privacy",
+        hi: "https://vela.worker.test/privacy",
+        ru: "https://vela.worker.test/privacy",
       },
     },
+  };
+}
+
+/** The admin ports, each a recorder or a fake: the admin Worker is given nothing else. */
+export function createFakeAdminDeps(logs: LogLine[]): AdminDeps {
+  return {
+    db: UNUSED_DATABASE,
+    clock: { now: () => FAKE_NOW },
+    logger: recordingLogger(logs),
+    queues: { outbound: { send: async () => {} } },
+    scheduler: { wakeAt: async () => {} },
+    ai: createFakeAi(),
   };
 }
 
@@ -127,21 +177,55 @@ function fakeAdapter(events: InboundEvent[], webhookSecret: string): ChannelAdap
   };
 }
 
-export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime {
+/** Both notices as a filled-in notice would be: no blank left in either. */
+export function noticesFixture(): PrivacyNotices {
+  return {
+    en: {
+      title: "Vela pilot: privacy notice",
+      html: "<h1>Vela pilot: privacy notice</h1>\n<p>Vela is run by <strong>Mei Lin</strong>.</p>",
+    },
+    "zh-TW": {
+      title: "Vela 試辦計畫：隱私權告知事項",
+      html: "<h1>Vela 試辦計畫：隱私權告知事項</h1>\n<p>Vela 由 <strong>林美</strong> 經營。</p>",
+    },
+  };
+}
+
+function createRecording(): Recording & {
+  note(name: ServiceName, ...args: unknown[]): void;
+  build(): void;
+  close(): void;
+} {
   const calls: ServiceCall[] = [];
-  const inbound: InboundEvent[] = [];
   const logs: LogLine[] = [];
+  let built = 0;
+  let closed = 0;
+  return {
+    calls,
+    logs,
+    built: () => built,
+    closed: () => closed,
+    note: (name, ...args) => {
+      calls.push({ name, args });
+    },
+    build: () => {
+      built += 1;
+    },
+    close: () => {
+      closed += 1;
+    },
+  };
+}
+
+export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): FakePilotRuntime {
+  const recording = createRecording();
+  const { note } = recording;
+  const inbound: InboundEvent[] = [];
   const given = options.services ?? {};
   const events = options.events ?? [];
   const webhookSecret = options.webhookSecret ?? "test-webhook-secret";
-  let built = 0;
-  let closed = 0;
 
-  const note = (name: keyof WorkerServices, ...args: unknown[]): void => {
-    calls.push({ name, args });
-  };
-
-  const services: WorkerServices = {
+  const services: PilotServices = {
     async handleInbound(deps, parsed) {
       note("handleInbound", parsed);
       inbound.push(...parsed);
@@ -177,6 +261,37 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
       note("understandAnswer", answerId);
       await given.understandAnswer?.(deps, answerId);
     },
+  };
+
+  const runtime: PilotRuntime = {
+    services,
+    createDeps: async (_env: PilotEnv, depsOptions: DepsOptions = {}): Promise<DepsHandle> => {
+      recording.build();
+      const deps = createFakeDeps(recording.logs);
+      return {
+        deps: {
+          ...deps,
+          scheduler: depsOptions.scheduler ?? deps.scheduler,
+          channels: depsOptions.channels ?? deps.channels,
+        },
+        close: async () => {
+          recording.close();
+        },
+      };
+    },
+    createChannels: () => ({ get: () => fakeAdapter(events, webhookSecret) }),
+    notices: options.notices ?? noticesFixture(),
+  };
+
+  return { ...recording, runtime, inbound };
+}
+
+export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): FakeAdminRuntime {
+  const recording = createRecording();
+  const { note } = recording;
+  const given = options.services ?? {};
+
+  const services: AdminServices = {
     async loadAdminOverview(deps, ctx) {
       note("loadAdminOverview", ctx);
       return given.loadAdminOverview === undefined ? [] : given.loadAdminOverview(deps, ctx);
@@ -231,30 +346,24 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
     },
   };
 
-  const runtime: WorkerRuntime = {
+  const runtime: AdminRuntime = {
     services,
-    createDeps: async (_env: Env, depsOptions: DepsOptions = {}): Promise<DepsHandle> => {
-      built += 1;
-      const deps = createFakeDeps(logs);
+    createDeps: async (_env: AdminEnv): Promise<AdminDepsHandle> => {
+      recording.build();
       return {
-        deps: {
-          ...deps,
-          scheduler: depsOptions.scheduler ?? deps.scheduler,
-          channels: depsOptions.channels ?? deps.channels,
-        },
+        deps: createFakeAdminDeps(recording.logs),
         close: async () => {
-          closed += 1;
+          recording.close();
         },
       };
     },
-    createChannels: () => ({ get: () => fakeAdapter(events, webhookSecret) }),
     access: async () => {
       const admin = options.admin === undefined ? "founder@vela.test" : options.admin;
       return admin === null ? null : { email: admin };
     },
   };
 
-  return { runtime, calls, built: () => built, closed: () => closed, inbound, logs };
+  return { ...recording, runtime };
 }
 
 /**
@@ -280,7 +389,7 @@ export function failedQueryFixture(): Error {
 export const FAILED_QUERY_LABEL = "DrizzleQueryError <- Error:23505";
 
 /**
- * What `run` returned, and the JSON lines written to `console.log` while it ran, parsed: where the
+ * What `run` returned, and the JSON lines written to `console.log` while it ran, parsed: where a
  * Worker logs without a fake `Logger` (the request error handler, and the logger `createLogger`
  * builds), this is its log.
  */
@@ -385,7 +494,7 @@ export function familyPageFixture(overrides: Partial<FamilyPage> = {}): FamilyPa
 }
 
 /** The arguments of every call with this name, in order. */
-export function argsOf(calls: readonly ServiceCall[], name: keyof WorkerServices): unknown[][] {
+export function argsOf(calls: readonly ServiceCall[], name: ServiceName): unknown[][] {
   return calls.filter((call) => call.name === name).map((call) => [...call.args]);
 }
 

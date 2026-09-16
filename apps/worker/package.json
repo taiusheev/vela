@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "dev:admin": "wrangler dev -c wrangler.admin.jsonc -c wrangler.jsonc",
     "deploy": "wrangler deploy",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "telegram:setup": "node scripts/telegram-setup.ts",
+    "notices": "node scripts/generate-notices.ts",
     "cf-typegen": "wrangler types --include-runtime false"
   },
   "dependencies": {

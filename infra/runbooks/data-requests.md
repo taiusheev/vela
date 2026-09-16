@@ -2,7 +2,7 @@
 
 Privacy notice ("Your rights", "How long we keep it") · `plan/materials/pilot/data-map.md` · done by the founder only, because every step reads or writes real family records; the co-founder keeps these queries true to the schema and tests them on synthetic data, and never runs them on `main`
 
-`architecture/decisions.md` ADR-22 gives the admin page write actions (services module `admin.ts`; POST forms on `/admin` behind a Cloudflare Access JWT and a same-origin check; `architecture/04-instrument-flows.md` §3.17), built with the sprint 1 services and worker (build plan 1.12). Until they ship, the founder makes these changes in the Neon console with the statements below. Once they ship, the admin action in the last column replaces a section's statements: it writes the `admin_access_log` row (with its `action`, and `member_id` when it is about one member) and the domain event itself, so nothing is logged by hand. Sections without an admin action stay console procedures.
+`architecture/decisions.md` ADR-22 gives the admin page write actions (services module `admin.ts`; POST forms on `/admin` in the admin Worker `vela-admin`, at `https://vela-admin.vela-light.workers.dev/admin` in production, behind Cloudflare Access with a verified Access JWT and a same-origin check, ADR-26; `architecture/04-instrument-flows.md` §3.17), built with the sprint 1 services and worker (build plan 1.12). Until they ship, the founder makes these changes in the Neon console with the statements below. Once they ship, the admin action in the last column replaces a section's statements: it writes the `admin_access_log` row (with its `action`, and `member_id` when it is about one member) and the domain event itself, so nothing is logged by hand. Sections without an admin action stay console procedures.
 
 ## When to use it
 
@@ -288,7 +288,7 @@ SELECT week_start, stats, lines, suggestion, sent_lines, sent_suggestion, sent_a
 SELECT at, action, what FROM admin_access_log WHERE family_id = '<family id>' ORDER BY at;
 ```
 
-Voice notes and photos: list their keys, then download each from **Cloudflare ("Vela" account) → R2 → `vela-media-apac`**:
+Voice notes and photos: list their keys, then download each from **Cloudflare ("Vela" account) → R2 object storage → `vela-media-production`**:
 
 ```sql
 SELECT md.storage_key FROM media AS md
@@ -320,7 +320,7 @@ WHERE id = '<kept-light member id>';
 
 For anyone except the person the light is for (for her, use K: everything Vela holds is about her). Statements in this order:
 
-1. **Media they sent.** List the keys, and delete each object in **Cloudflare ("Vela" account) → R2 → `vela-media-apac`**:
+1. **Media they sent.** List the keys, and delete each object in **Cloudflare ("Vela" account) → R2 object storage → `vela-media-production`**:
 
    ```sql
    SELECT md.storage_key FROM media AS md
@@ -394,9 +394,9 @@ For anyone except the person the light is for (for her, use K: everything Vela h
 
 Within 30 days of the end of a family's pilot, or within 7 days of a request. If the family book exists by then, first offer the organiser the stories the family kept.
 
-Once `delete_family` (build plan 1.12) and the retention job (build plan 2.8) have both shipped: `delete_family` sets `families.deleted_at`, and the retention job deletes the family within 24 hours (flows §3.15, §3.17). The next day, check that `SELECT id FROM families WHERE id = '<family id>';` returns nothing and that nothing is left under `families/<family id>/` in **Cloudflare ("Vela" account) → R2 → `vela-media-apac`**, then do steps 6 to 8. Until then, steps 1 to 8.
+Once `delete_family` (build plan 1.12) and the retention job (build plan 2.8) have both shipped: `delete_family` sets `families.deleted_at`, and the retention job deletes the family within 24 hours (flows §3.15, §3.17). The next day, check that `SELECT id FROM families WHERE id = '<family id>';` returns nothing and that nothing is left under `families/<family id>/` in **Cloudflare ("Vela" account) → R2 object storage → `vela-media-production`**, then do steps 6 to 8. Until then, steps 1 to 8.
 
-1. **Media files.** List the keys and delete every object under `families/<family id>/` in **Cloudflare ("Vela" account) → R2 → `vela-media-apac`**:
+1. **Media files.** List the keys and delete every object under `families/<family id>/` in **Cloudflare ("Vela" account) → R2 object storage → `vela-media-production`**:
 
    ```sql
    SELECT storage_key FROM media WHERE family_id = '<family id>' AND storage_key IS NOT NULL;

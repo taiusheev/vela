@@ -28,8 +28,9 @@ Not an incident: one AI or transcription call failing, or one person blocking th
 
    | Symptom | Look first |
    |---|---|
-   | Heartbeat missing | cloudflarestatus.com (Workers, Cron Triggers, Durable Objects); Workers Logs for the `scheduled` handler. Durable Object alarms still deliver arrivals if only cron is degraded: confirm in the admin |
-   | Postgres unreachable | neonstatus.com; Neon plan limits (compute hours, storage); the Hyperdrive configuration. Webhooks answer 503 and Telegram retries |
+   | Heartbeat missing | cloudflarestatus.com (Workers, Cron Triggers, Durable Objects); the pilot Worker `vela`'s logs for the `scheduled` handler (`cron_failed`, with a `ConfigError:<variable>` when a secret or notice is the cause). Durable Object alarms still deliver arrivals if only cron is degraded: confirm in the admin |
+   | Postgres unreachable | neonstatus.com; Neon plan limits (compute hours, storage); the Hyperdrive configuration, which both Workers bind. The webhook answers 500 and Telegram retries; the admin page fails too |
+   | Admin page will not open | Access refuses your sign-in: the Access application and its policy on `vela-admin` (`infra/README.md`, section 12). A "Not signed in" page after signing in: `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` on `vela-admin`. A failed page: `vela-admin`'s logs (`request_failed`). Families are not affected: the pilot Worker `vela` does not depend on the admin Worker |
    | Adapter failures | Telegram `getWebhookInfo` (last error, pending updates); 429 rate limits; a revoked token |
    | Dead-letter growth | The DLQ messages (ids only): fix the cause, then re-drive |
    | Two arrivals in one day | Should be impossible (`exchanges_one_per_day`, `outbound_budget_idx`); treat as Sev 1 and a kill signal |
@@ -56,9 +57,9 @@ WHERE a.received_at >= '<outage start, with zone>'::timestamptz
 ORDER BY a.received_at;
 ```
 
-Read each text; for a voice answer without a transcript, listen to the voice note (its `media.storage_key` names the object in R2, "Vela" account). For any mention of a fall, pain, a stranger at the door or a request for money, send the organiser her own words, as `flag.notice` would have. Note in the incident note how many answers were read, never their content.
+Read each text; for a voice answer without a transcript, listen to the voice note (its `media.storage_key` names the object in the R2 bucket `vela-media-production`, "Vela" account). For any mention of a fall, pain, a stranger at the door or a request for money, send the organiser her own words, as `flag.notice` would have. Note in the incident note how many answers were read, never their content.
 5. **If personal data may be exposed:**
-   1. Contain: rotate the credential ([`secrets-rotation.md`](secrets-rotation.md)); if the admin page could be involved, revoke its Cloudflare Access sessions (ADR-22); remove any public access; delete a misdelivered bot message (Telegram lets a bot delete its own messages for 48 hours).
+   1. Contain: rotate the credential ([`secrets-rotation.md`](secrets-rotation.md)); if the admin page could be involved, revoke the Cloudflare Access sessions of the `vela-admin` Worker (**Zero Trust → Access controls → Applications**, **Configure** on its application, **Revoke existing tokens**; ADR-22, ADR-26); remove any public access; delete a misdelivered bot message (Telegram lets a bot delete its own messages for 48 hours).
    2. Scope: which families and people, which data, from when to when (`outbound`, `admin_access_log`, Cloudflare audit and Access logs, Neon audit logs).
    3. Tell the affected people **within 72 hours** of learning of it, in plain words: what happened, what data, what we did, what they can do, how to reach the founder. Organisers first; organiser and founder agree how to tell the person the light is for (a call, not a message).
    4. Notify the Taiwan authority as the amended Personal Data Protection Act requires, confirming the current rule and deadline with counsel at the time; for any EU family, 72 hours to the authority. Record every breach, including ones that need no notice.

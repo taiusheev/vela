@@ -1,22 +1,22 @@
 /**
- * Cloudflare Access in front of `/admin` (code design §9). The Access application already refuses
- * a request without an identity; the Worker verifies the token again so a misconfigured
- * application, or a request that reached the Worker's own hostname directly, cannot open the page.
+ * Cloudflare Access in front of the admin Worker (code design §9, H2). The Access application,
+ * turned on for the whole Worker, already refuses a request without an identity; the Worker
+ * verifies the token again so an application switched off or misconfigured cannot open the page.
  *
  * The `Cf-Access-Jwt-Assertion` header carries an RS256 JWT. It is accepted only when its
  * signature matches a key from the team's JWKS, its `aud` holds the application's audience tag,
  * its `iss` is the team domain, and it is neither expired nor used before it is valid. The `email`
  * claim is the admin identity every `admin_access_log` row records.
  */
-import { secret } from "./deps.ts";
-import type { Env } from "./env.ts";
+import { secret } from "./config.ts";
+import type { AdminEnv } from "./env.ts";
 
 export interface AccessIdentity {
   /** The `email` claim of the verified token; `admin_access_log.admin`. */
   readonly email: string;
 }
 
-export type AccessVerifier = (request: Request, env: Env) => Promise<AccessIdentity | null>;
+export type AccessVerifier = (request: Request, env: AdminEnv) => Promise<AccessIdentity | null>;
 
 export const ACCESS_HEADER = "Cf-Access-Jwt-Assertion";
 

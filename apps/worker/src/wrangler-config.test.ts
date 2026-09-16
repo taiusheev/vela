@@ -1,67 +1,307 @@
 import { describe, expect, inject, it } from "vitest";
+import { NOTICE_LANGS, NOTICE_PATHS, type NoticeLang } from "./notices.ts";
+import { NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
 
 /**
- * The hosts wrangler attaches to the Worker as custom domains. A custom domain is the binding this
- * configuration uses: a deploy whose zone is not in the account fails, where a Worker with no route
- * at all deploys successfully and answers nothing.
+ * The workers.dev subdomain each Cloudflare account chose at sign-up (H3). This is the test's one
+ * copy of it: every host below is derived from it, so if an account's subdomain turns out
+ * different, this table changes, and the tests then fail on every other place that names it (the
+ * list is in the header of wrangler.jsonc).
  */
-function customDomains(routes: unknown): string[] {
-  if (!Array.isArray(routes)) {
-    return [];
-  }
-  return routes.flatMap((route: unknown) =>
-    typeof route === "object" &&
-    route !== null &&
-    "custom_domain" in route &&
-    route.custom_domain === true &&
-    "pattern" in route &&
-    typeof route.pattern === "string"
-      ? [route.pattern.toLowerCase()]
-      : [],
-  );
+const WORKERS_DEV_SUBDOMAINS = {
+  staging: "vela-light-staging",
+  production: "vela-light",
+} as const;
+
+const NAMES = { pilot: "vela", admin: "vela-admin" } as const;
+const DEV_NAMES = { pilot: "vela-dev", admin: "vela-admin-dev" } as const;
+
+const DEPLOYED = ["staging", "production"] as const;
+
+/**
+ * A deployed Worker's one address (H3): `https://<Worker name>.<subdomain>.workers.dev`, which is
+ * what families, Telegram, and the founder's browser are sent to.
+ */
+function hostOf(worker: keyof typeof NAMES, environment: (typeof DEPLOYED)[number]): string {
+  return `https://${NAMES[worker]}.${WORKERS_DEV_SUBDOMAINS[environment]}.workers.dev`;
 }
 
-/** The vars that name a host: the Worker's own origin and the published privacy notices. */
-const HOST_VARS = ["PUBLIC_BASE_URL", "PRIVACY_NOTICE_URL_EN", "PRIVACY_NOTICE_URL_ZH_TW"] as const;
+/**
+ * A Hyperdrive id once the founder has created the configuration: 32 lowercase hex characters, like
+ * the id `wrangler hyperdrive create` prints in Cloudflare's Hyperdrive get-started guide.
+ */
+const HYPERDRIVE_ID = /^[0-9a-f]{32}$/;
 
-describe("each deployed environment in wrangler.jsonc", () => {
-  const environments = inject("deployedConfig");
+/**
+ * The vars that may still hold a placeholder in a deployed environment, until the founder creates
+ * what they name. Filled is allowed too: infra/README.md section 11 fills them before the first
+ * deploy, and config.ts refuses to start the Worker while one is left.
+ */
+const MAY_BE_PLACEHOLDERS: Readonly<Record<keyof typeof NAMES, readonly string[]>> = {
+  pilot: ["TELEGRAM_BOT_USERNAME"],
+  admin: [],
+};
 
-  it("covers every environment deploy.yml deploys", () => {
-    expect(environments.map(({ environment }) => environment)).toEqual(["staging", "production"]);
+/** The var that links each notice, as the pilot Worker's `Config` reads it (config.ts). */
+const NOTICE_URL_VARS: Readonly<Record<NoticeLang, string>> = {
+  en: "PRIVACY_NOTICE_URL_EN",
+  "zh-TW": "PRIVACY_NOTICE_URL_ZH_TW",
+};
+
+/**
+ * A workers.dev address as the pilot pack writes one, in either scheme and any case, ending before
+ * the punctuation around it.
+ */
+const WORKERS_DEV_URL = /https?:\/\/[\w.-]+\.workers\.dev[\w/-]*/gi;
+
+function workersDevUrls(text: string): string[] {
+  return [...text.matchAll(WORKERS_DEV_URL)].map((match) => match[0]);
+}
+
+const configs = inject("workerConfigs");
+
+function configOf(
+  worker: "pilot" | "admin",
+  environment: "development" | "staging" | "production",
+): (typeof configs)[number] {
+  const found = configs.find(
+    (config) => config.worker === worker && config.environment === environment,
+  );
+  if (found === undefined) {
+    throw new Error(`no ${worker} configuration for ${environment}`);
+  }
+  return found;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** The entries of an array field, each a record, or none. */
+function records(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function doBindings(config: (typeof configs)[number]): Record<string, unknown>[] {
+  return isRecord(config.durableObjects) ? records(config.durableObjects.bindings) : [];
+}
+
+function producers(config: (typeof configs)[number]): Record<string, unknown>[] {
+  return isRecord(config.queues) ? records(config.queues.producers) : [];
+}
+
+function consumers(config: (typeof configs)[number]): Record<string, unknown>[] {
+  return isRecord(config.queues) ? records(config.queues.consumers) : [];
+}
+
+describe("the two Workers' configurations", () => {
+  it("cover both Workers in every environment deploy.yml deploys, and development", () => {
+    expect(configs.map(({ worker, environment }) => `${worker}:${environment}`)).toEqual([
+      "pilot:development",
+      "pilot:staging",
+      "pilot:production",
+      "admin:development",
+      "admin:staging",
+      "admin:production",
+    ]);
   });
 
-  // Telegram's webhook, /healthz, and the links in admin messages are all PUBLIC_BASE_URL. A Worker
-  // that does not answer on that host still runs its alarms and crons, so arrivals and quiet notices
-  // would go on while none of her answers could arrive.
-  it.each(environments)(
-    "$environment serves HTTPS on the host of its PUBLIC_BASE_URL",
-    ({ vars, routes }) => {
-      const publicBaseUrl = vars.PUBLIC_BASE_URL;
-      expect(typeof publicBaseUrl).toBe("string");
-      const base = new URL(String(publicBaseUrl));
+  it.each(DEPLOYED)("name the Workers vela and vela-admin in %s", (environment) => {
+    expect(configOf("pilot", environment).name).toBe(NAMES.pilot);
+    expect(configOf("admin", environment).name).toBe(NAMES.admin);
+  });
 
-      expect(base.protocol).toBe("https:");
-      expect(customDomains(routes)).toContain(base.hostname);
+  it("run the pilot and admin entry modules", () => {
+    for (const environment of ["development", ...DEPLOYED] as const) {
+      expect(String(configOf("pilot", environment).main)).toMatch(/\/src\/index\.ts$/);
+      expect(String(configOf("admin", environment).main)).toMatch(/\/src\/admin-worker\.ts$/);
+    }
+  });
+
+  // Each deployed Worker answers on its workers.dev address and nowhere else: no route, no custom
+  // domain, and no preview URL, because every hostname a Worker answers on is one more to reason
+  // about (Access on the admin Worker would cover a preview URL too).
+  it.each(DEPLOYED)("serve %s on workers.dev only", (environment) => {
+    for (const worker of ["pilot", "admin"] as const) {
+      const config = configOf(worker, environment);
+      expect(config.workersDev, worker).toBe(true);
+      expect(config.previewUrls, worker).toBe(false);
+      expect(config.routes ?? [], worker).toEqual([]);
+    }
+  });
+
+  // `workers_dev` defaults to true and is inherited, and `wrangler deploy` without --env deploys the
+  // top level, which is development: there a request with no Access token passes as the admin
+  // `development`, and config.ts refuses no placeholder. A stray deploy must get no address.
+  it("give development no address a stray deploy could publish, in either Worker", () => {
+    for (const worker of ["pilot", "admin"] as const) {
+      const config = configOf(worker, "development");
+      expect(config.workersDev, worker).toBe(false);
+      expect(config.previewUrls, worker).toBe(false);
+      expect(config.routes ?? [], worker).toEqual([]);
+    }
+  });
+
+  it.each(DEPLOYED)(
+    "hold the %s hosts: each Worker's name on the account's subdomain",
+    (environment) => {
+      const pilot = configOf("pilot", environment).vars;
+      // Admin links in the founder's chat open the admin Worker; the notices are the pilot's pages.
+      expect(pilot.PUBLIC_BASE_URL).toBe(hostOf("admin", environment));
+      for (const lang of NOTICE_LANGS) {
+        expect(pilot[NOTICE_URL_VARS[lang]], lang).toBe(
+          `${hostOf("pilot", environment)}${NOTICE_PATHS[lang]}`,
+        );
+      }
+      // A form may be posted only from the admin Worker's own origin.
+      expect(configOf("admin", environment).vars.PUBLIC_BASE_URL).toBe(
+        hostOf("admin", environment),
+      );
     },
   );
 
-  // A guessed host can belong to someone else: vela.family is another company's family-calendar
-  // app (design/research-identity.md), and a notice link there sends families to its site. Until
-  // the founder chooses hosts Vela owns, each is a placeholder the Worker refuses to start with
-  // (src/deps.ts). The commit that sets the chosen hosts changes this test to name them.
-  it.each(environments)(
-    "$environment leaves every host the founder must choose as a placeholder",
-    ({ vars, routes }) => {
-      for (const name of HOST_VARS) {
-        expect(vars[name], name).toEqual(expect.stringContaining("PLACEHOLDER_"));
+  it("links a notice path for every language a notice is written in", () => {
+    expect(NOTICE_LANGS.map((lang) => NOTICE_PATHS[lang])).toEqual(["/privacy", "/privacy/zh-TW"]);
+  });
+
+  // H5: the founder's personal chat id is a secret, never a value in a committed file.
+  it("never holds ADMIN_CONVERSATION_ID as a var, in either Worker or any environment", () => {
+    for (const config of configs) {
+      expect(Object.keys(config.vars), `${config.worker}:${config.environment}`).not.toContain(
+        "ADMIN_CONVERSATION_ID",
+      );
+    }
+  });
+
+  // A placeholder may stay only where the founder has not created the thing yet, and filling it in
+  // (infra/README.md section 11, steps 2 and 3) must keep this test green, or no deploy passes CI.
+  it.each(DEPLOYED)(
+    "leave nothing but the Hyperdrive ids and bot usernames as placeholders in %s",
+    (environment) => {
+      for (const worker of ["pilot", "admin"] as const) {
+        const config = configOf(worker, environment);
+        const unchosen = Object.entries(config.vars)
+          .filter(([, value]) => typeof value === "string" && value.includes("PLACEHOLDER_"))
+          .map(([name]) => name);
+        expect(
+          unchosen.filter((name) => !MAY_BE_PLACEHOLDERS[worker].includes(name)),
+          worker,
+        ).toEqual([]);
+
+        const ids = records(config.hyperdrive).map((binding) => binding.id);
+        expect(ids, worker).toHaveLength(1);
+        for (const id of ids) {
+          const placeholder = `PLACEHOLDER_HYPERDRIVE_ID_${environment.toUpperCase()}`;
+          expect(
+            id === placeholder || (typeof id === "string" && HYPERDRIVE_ID.test(id)),
+            `${worker}: ${String(id)} is neither ${placeholder} nor a Hyperdrive id`,
+          ).toBe(true);
+        }
       }
-      const domains = customDomains(routes);
-      expect(domains.length).toBeGreaterThan(0);
-      for (const domain of domains) {
-        // `customDomains` lowercases each pattern, as `URL` does a hostname.
-        expect(domain).toContain("placeholder_");
-      }
+    },
+  );
+});
+
+describe("the links written into the pilot pack", () => {
+  const materials = inject("pilotMaterials");
+
+  // The texts in plan/materials/pilot are sent as written. A link left on an old subdomain would
+  // lead a nearby contact nowhere, or to someone else's Worker, when they are asked to consent.
+  it("name no workers.dev address but a deployed pilot Worker's notice page", () => {
+    const noticeUrls = DEPLOYED.flatMap((environment) =>
+      NOTICE_LANGS.map((lang) => configOf("pilot", environment).vars[NOTICE_URL_VARS[lang]]),
+    );
+    const links = Object.entries(materials).flatMap(([file, text]) =>
+      workersDevUrls(text).map((url) => ({ file, url })),
+    );
+
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.filter(({ url }) => !noticeUrls.includes(url))).toEqual([]);
+  });
+
+  it.each(NOTICE_LANGS)(
+    "give a nearby contact the production notice in the message's own language (%s)",
+    (lang) => {
+      const text = materials[`nearby-contact-consent.${lang}.md`];
+      const production = configOf("pilot", "production").vars[NOTICE_URL_VARS[lang]];
+
+      expect(text, `nearby-contact-consent.${lang}.md`).toBeDefined();
+      const links = workersDevUrls(text ?? "");
+      expect(links.length).toBeGreaterThan(0);
+      expect([...new Set(links)]).toEqual([production]);
+    },
+  );
+});
+
+describe("the pilot Worker's bindings", () => {
+  it.each(DEPLOYED)("own the scheduler class and the queue consumers in %s", (environment) => {
+    const pilot = configOf("pilot", environment);
+
+    expect(doBindings(pilot)).toEqual([
+      { name: "MEMBER_SCHEDULER", class_name: "MemberScheduler" },
+    ]);
+    expect(consumers(pilot).map((consumer) => consumer.queue)).toEqual([
+      `vela-outbound-${environment}`,
+      `vela-media-${environment}`,
+      `vela-understand-${environment}`,
+    ]);
+  });
+
+  // The scheduled handler picks its work by comparing `controller.cron` with these constants and
+  // only logs `cron_unknown` for anything else: a trigger that is not one of them runs nothing.
+  it.each(["development", ...DEPLOYED] as const)(
+    "trigger exactly the crons the scheduled handler dispatches on in %s",
+    (environment) => {
+      expect(configOf("pilot", environment).crons).toEqual([RECONCILE_CRON, NIGHTLY_CRON]);
+    },
+  );
+
+  it("declare the scheduler's migration, which only the Worker exporting the class may", () => {
+    expect(configOf("pilot", "development").migrations).toEqual([
+      { tag: "v1", new_sqlite_classes: ["MemberScheduler"] },
+    ]);
+  });
+});
+
+describe("the admin Worker's bindings", () => {
+  // H2: the admin Worker reaches the pilot Worker's scheduler objects across scripts, so a wake it
+  // asks for (an away period, a departure) lands on the same object the alarms run in.
+  it.each(["development", ...DEPLOYED] as const)(
+    "bind the pilot Worker's MemberScheduler class by script_name in %s",
+    (environment) => {
+      const pilotName = environment === "development" ? DEV_NAMES.pilot : NAMES.pilot;
+
+      expect(configOf("pilot", environment).name).toBe(pilotName);
+      expect(doBindings(configOf("admin", environment))).toEqual([
+        { name: "MEMBER_SCHEDULER", class_name: "MemberScheduler", script_name: pilotName },
+      ]);
+    },
+  );
+
+  it.each(DEPLOYED)(
+    "produce onto the pilot Worker's outbound queue and read its database in %s",
+    (environment) => {
+      const admin = configOf("admin", environment);
+      const pilot = configOf("pilot", environment);
+      const pilotOutbound = producers(pilot).find(
+        (producer) => producer.binding === "OUTBOUND_QUEUE",
+      );
+
+      expect(producers(admin)).toEqual([pilotOutbound]);
+      expect(records(admin.hyperdrive)).toEqual(records(pilot.hyperdrive));
+    },
+  );
+
+  it.each(["development", ...DEPLOYED] as const)(
+    "run nothing of the pilot Worker's in %s: no consumer, cron, bucket, migration, or chat id",
+    (environment) => {
+      const admin = configOf("admin", environment);
+
+      expect(consumers(admin)).toEqual([]);
+      expect(admin.crons ?? []).toEqual([]);
+      expect(records(admin.r2Buckets)).toEqual([]);
+      expect(records(admin.migrations)).toEqual([]);
+      expect(Object.keys(admin.vars).sort()).toEqual(["ENVIRONMENT", "PUBLIC_BASE_URL"]);
     },
   );
 });

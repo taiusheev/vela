@@ -1,84 +1,40 @@
 /**
  * Registers the bot with Telegram: the webhook (with its secret and the updates the adapter
  * parses) and the command menu. The founder runs it from their own terminal, once per bot and
- * again whenever the Worker's URL changes.
+ * again whenever the pilot Worker's URL changes. `WORKER_URL` is the pilot Worker's origin, never
+ * the admin Worker's, which Cloudflare Access closes to Telegram:
  *
- *   TELEGRAM_BOT_TOKEN=… TELEGRAM_WEBHOOK_SECRET=… WORKER_URL=https://… \
- *     pnpm --filter @vela/worker telegram:setup
+ *   TELEGRAM_BOT_TOKEN=… TELEGRAM_WEBHOOK_SECRET=… WORKER_URL=https://vela.<subdomain>.workers.dev \
+ *     pnpm --filter @vela/worker telegram:setup [--drop-pending-updates]
+ *
+ * Pending updates are kept unless `--drop-pending-updates` is given (H6): during a live pilot they
+ * are real answers.
  *
  * Nothing secret is ever printed: the token and the secret are read from the environment and only
- * sent to api.telegram.org. What it prints is what the founder has to check by eye — the bot's
- * username, and whether Telegram will deliver group messages that are not addressed to it.
+ * sent to api.telegram.org, and a failure is printed as this script's own refusal or as the
+ * error's class and code, never a message a request could have put the token into. What it prints
+ * is what the founder has to check by eye: the webhook, whether pending updates were kept, the
+ * bot's username, and whether Telegram will deliver group messages that are not addressed to it.
  */
-import { getMe, setMyCommands, setWebhook, TELEGRAM_ALLOWED_UPDATES } from "@vela/adapters";
+import { getMe, setMyCommands, setWebhook } from "@vela/adapters";
+import { errorLabel } from "@vela/services";
+import { SetupError, setUpTelegram } from "./telegram-webhook.ts";
 
 // Node's own `process`; this script runs under Node, not in the Worker.
 declare const process: {
   readonly env: Record<string, string | undefined>;
+  readonly argv: readonly string[];
   exitCode: number | undefined;
 };
 
-/** Telegram's rule for `secret_token`, checked here so a bad one never reaches a request. */
-const WEBHOOK_SECRET = /^[A-Za-z0-9_-]{1,256}$/;
-
-/** The two commands, in groups only. A private chat has no menu: she is never asked to type one. */
-const GROUP_COMMANDS = [
-  { command: "ask", description: "Ask something for tomorrow morning" },
-  { command: "later", description: "Save an ask for another morning" },
-] as const;
-
-function required(name: string): string {
-  const value = process.env[name];
-  if (value === undefined || value.trim() === "") {
-    throw new Error(`${name} is not set in the environment`);
-  }
-  return value.trim();
-}
-
-async function main(): Promise<void> {
-  const botToken = required("TELEGRAM_BOT_TOKEN");
-  const secretToken = required("TELEGRAM_WEBHOOK_SECRET");
-  const workerUrl = required("WORKER_URL");
-
-  if (!WEBHOOK_SECRET.test(secretToken)) {
-    throw new Error(
-      "TELEGRAM_WEBHOOK_SECRET must be 1 to 256 characters of A-Z, a-z, 0-9, _ and - (the value is not shown)",
-    );
-  }
-  const url = new URL("/webhooks/telegram", workerUrl);
-  if (url.protocol !== "https:") {
-    throw new Error("WORKER_URL must be https: Telegram delivers webhooks over TLS only");
-  }
-
-  const me = await getMe({ botToken });
-
-  // The updates the adapter parses (D17), passed explicitly rather than left to setWebhook's
-  // default so the line printed below is what was registered.
-  await setWebhook({
-    botToken,
-    url: url.toString(),
-    secretToken,
-    allowedUpdates: TELEGRAM_ALLOWED_UPDATES,
-  });
-  await setMyCommands({ botToken, commands: GROUP_COMMANDS, scope: { type: "all_group_chats" } });
-  await setMyCommands({ botToken, commands: [], scope: { type: "all_private_chats" } });
-
-  console.log(`Webhook set: ${url.toString()}`);
-  console.log(`Allowed updates: ${TELEGRAM_ALLOWED_UPDATES.join(", ")}`);
-  console.log(
-    `Commands: /${GROUP_COMMANDS.map((c) => c.command).join(", /")} in groups, none in private chats`,
-  );
-  console.log(`Bot: @${me.username}`);
-  console.log(
-    me.canReadAllGroupMessages
-      ? "Group privacy is off: Telegram delivers every group message."
-      : "Group privacy is on: Telegram delivers only commands and replies to the bot in groups.",
-  );
-}
-
 try {
-  await main();
+  await setUpTelegram({
+    env: process.env,
+    argv: process.argv.slice(2),
+    api: { getMe, setWebhook, setMyCommands },
+    print: (line) => console.log(line),
+  });
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(error instanceof SetupError ? error.message : `Setup failed: ${errorLabel(error)}`);
   process.exitCode = 1;
 }

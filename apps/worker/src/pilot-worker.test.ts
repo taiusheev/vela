@@ -4,13 +4,13 @@ import {
   waitOnExecutionContext,
 } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { ConfigError } from "./deps.ts";
-import { createWorker, NIGHTLY_CRON, RECONCILE_CRON } from "./index.ts";
-import type { WorkerRuntime } from "./runtime.ts";
+import { ConfigError } from "./config.ts";
+import { createWorker, NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
+import type { PilotRuntime } from "./runtime.ts";
 import {
   argsOf,
   consoleLinesDuring,
-  createFakeRuntime,
+  createFakePilotRuntime,
   FAILED_QUERY_LABEL,
   FAILED_QUERY_WORDS,
   failedQueryFixture,
@@ -97,7 +97,7 @@ async function cronFailure(
 
 describe("the queue consumer", () => {
   it("sends each job to its service and acks it", async () => {
-    const fake = createFakeRuntime();
+    const fake = createFakePilotRuntime();
     const outcome = batchOf("vela-outbound", [
       { type: "deliver", outboundId: "outbound-1" },
       { type: "ingest_answer_media", answerId: "answer-1" },
@@ -117,7 +117,7 @@ describe("the queue consumer", () => {
   });
 
   it("retries only the message whose job threw", async () => {
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       services: {
         understandAnswer: async () => {
           throw new Error("the model is away");
@@ -136,7 +136,7 @@ describe("the queue consumer", () => {
   });
 
   it("logs a failed job by its error label, never by the message that carries the family's words", async () => {
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       services: {
         understandAnswer: async () => {
           throw failedQueryFixture();
@@ -166,7 +166,7 @@ describe("the queue consumer", () => {
   });
 
   it("acks a message it cannot read, which no retry could fix", async () => {
-    const fake = createFakeRuntime();
+    const fake = createFakePilotRuntime();
     const outcome = batchOf("vela-outbound", [{ type: "deliver" }, "not a job"]);
 
     await runQueue(createWorker(fake.runtime), outcome);
@@ -177,7 +177,7 @@ describe("the queue consumer", () => {
   });
 
   it("closes its deps once for the whole batch", async () => {
-    const fake = createFakeRuntime();
+    const fake = createFakePilotRuntime();
     const outcome = batchOf("vela-outbound", [
       { type: "deliver", outboundId: "a" },
       { type: "deliver", outboundId: "b" },
@@ -192,7 +192,7 @@ describe("the queue consumer", () => {
 
 describe("cron", () => {
   it("reconciles every five minutes", async () => {
-    const fake = createFakeRuntime();
+    const fake = createFakePilotRuntime();
 
     await runCron(createWorker(fake.runtime), RECONCILE_CRON);
 
@@ -201,7 +201,7 @@ describe("cron", () => {
   });
 
   it("rolls up yesterday and applies retention nightly, in that order", async () => {
-    const fake = createFakeRuntime();
+    const fake = createFakePilotRuntime();
 
     await runCron(createWorker(fake.runtime), NIGHTLY_CRON);
 
@@ -209,7 +209,7 @@ describe("cron", () => {
   });
 
   it("logs a failed run by its error label, and fails it with nothing but the label", async () => {
-    const fake = createFakeRuntime({
+    const fake = createFakePilotRuntime({
       services: {
         reconcile: async () => {
           throw failedQueryFixture();
@@ -237,8 +237,8 @@ describe("cron", () => {
   });
 
   it("logs a run whose deps could not be built by the variable to fix", async () => {
-    const fake = createFakeRuntime();
-    const runtime: WorkerRuntime = {
+    const fake = createFakePilotRuntime();
+    const runtime: PilotRuntime = {
       ...fake.runtime,
       createDeps: async () => {
         throw new ConfigError("PUBLIC_BASE_URL", "PUBLIC_BASE_URL still holds a placeholder");
@@ -263,7 +263,7 @@ describe("cron", () => {
   });
 
   it("runs nothing for a cron it does not know", async () => {
-    const fake = createFakeRuntime();
+    const fake = createFakePilotRuntime();
 
     await runCron(createWorker(fake.runtime), "0 0 1 1 *");
 

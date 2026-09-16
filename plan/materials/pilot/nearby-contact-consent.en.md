@@ -2,7 +2,7 @@
 
 # Nearby contact: the consent message and what saying yes means
 
-Version `nearby-consent.v1` · 14 September 2026 · goes with `privacy-notice.v1` · spec §8, §9, §14.3 M6
+Version `nearby-consent.v1` · 17 September 2026 · goes with `privacy-notice.v1` · spec §8, §9, §14.3 M6
 
 A nearby contact is one of up to two people living near the person the light is for, whom an organiser would call first on a quiet day. They agree once, through a message sent in the organiser's name. Until they say yes, Vela does not list them in any notice, and nobody can use Vela to message them.
 
@@ -23,7 +23,7 @@ A nearby contact is one of up to two people living near the person the light is 
 >
 > Vela keeps your name and phone number for this, and does not show them in any message until you say yes. If you say yes, I'll also tell Vela how you know [Name], and Vela shows your details only to me [and to (other organiser's name)] on a day like that. The person who runs the Vela pilot can see them and records your answer. If you say no, your details are deleted. You can say no, or change your mind at any time, and nothing changes between us.
 >
-> Vela is a pilot run by [FOUNDER FULL NAME]. How your details are used: [PRIVACY NOTICE LINK]
+> Vela is a pilot run by [FOUNDER FULL NAME]. How your details are used: https://vela.vela-light.workers.dev/privacy
 >
 > Would that be all right? Just reply yes or no.
 
@@ -33,7 +33,7 @@ A nearby contact is one of up to two people living near the person the light is 
 >
 > [Organiser's name] added your name and number to Vela so they can reach you on a day like that. Vela never contacts you on its own; any request comes from [organiser's name]. You can say no, or change your mind at any time.
 >
-> Vela is a pilot run by [FOUNDER FULL NAME]. How your details are used: [PRIVACY NOTICE LINK]
+> Vela is a pilot run by [FOUNDER FULL NAME]. How your details are used: https://vela.vela-light.workers.dev/privacy
 >
 > Buttons: **Yes, I'm happy to** · **No, thank you**
 

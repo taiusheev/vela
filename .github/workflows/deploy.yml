@@ -4,8 +4,10 @@ name: deploy
 # §9, ADR-23), through the `production` GitHub environment, where the founder has set required
 # reviewers (D16). Publishing the tag on the tested commit is what starts the production run, so
 # what waits for the approval is one named commit, and what is running is always a tag. Each job
-# runs the full checks first, applies migrations to that environment's database, and only then
-# deploys the Worker. Credentials are the environment's own secrets, never repository secrets.
+# runs the full checks first, applies migrations to that environment's database once, and only
+# then deploys the two Workers (H7): the pilot Worker `vela` (wrangler.jsonc), then the admin
+# Worker `vela-admin` (wrangler.admin.jsonc). Credentials are the environment's own secrets, never
+# repository secrets.
 on:
   push:
     branches: [main]
@@ -25,7 +27,7 @@ jobs:
     timeout-minutes: 20
     environment: staging
     # One deploy per environment at a time, and never cancelled halfway: a cancelled run could
-    # leave migrations applied without the Worker that expects them.
+    # leave migrations applied without the Workers that expect them.
     concurrency:
       group: deploy-staging
       cancel-in-progress: false
@@ -46,8 +48,15 @@ jobs:
         run: pnpm --filter @vela/db migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Deploy the Worker
+      # The pilot Worker first: it exports the MemberScheduler class that the admin Worker binds by
+      # script_name, so the admin Worker never binds a class that is not deployed.
+      - name: Deploy the pilot Worker
         run: pnpm --filter @vela/worker exec wrangler deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy the admin Worker
+        run: pnpm --filter @vela/worker exec wrangler deploy -c wrangler.admin.jsonc --env staging
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -80,8 +89,14 @@ jobs:
         run: pnpm --filter @vela/db migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Deploy the Worker
+      # As in staging: the pilot Worker, whose class the admin Worker binds, before the admin Worker.
+      - name: Deploy the pilot Worker
         run: pnpm --filter @vela/worker exec wrangler deploy --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy the admin Worker
+        run: pnpm --filter @vela/worker exec wrangler deploy -c wrangler.admin.jsonc --env production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -1,0 +1,106 @@
+{
+  // The admin Worker (code design §9, H2): the founder's admin pages and forms under /admin, and
+  // nothing else. It is deployed from this package beside the pilot Worker (wrangler.jsonc):
+  //
+  //   wrangler deploy -c wrangler.admin.jsonc --env <staging|production>
+  //
+  // after the pilot Worker, whose MemberScheduler class it binds. Its own hosts are the admin
+  // origins of H3; wrangler.jsonc says where the account subdomain in them is written.
+  //
+  // Cloudflare Access protects this whole Worker, every hostname Cloudflare associates with it
+  // (ADR-26). The founder turns it on in each account once the Worker exists, following
+  // infra/README.md section 12, which is the one copy of the steps: Workers & Pages -> vela-admin ->
+  // Access -> Protect this Worker behind Access -> All traffic, then the AUD tag from Zero Trust ->
+  // Access controls -> Applications -> Configure -> Additional settings. The team domain (without
+  // https://) and that tag become this Worker's secrets ACCESS_TEAM_DOMAIN and ACCESS_AUD. The
+  // Worker checks the Cf-Access-Jwt-Assertion token itself as well, so a request without a valid
+  // one gets 401 even if Access is ever switched off.
+  //
+  // It has no queue consumer, cron, R2 bucket, Telegram token, or Durable Object class of its own,
+  // and it builds only the ports the admin actions and reads use (src/deps.ts, AdminDeps). Its
+  // secrets are ACCESS_TEAM_DOMAIN, ACCESS_AUD, and ANTHROPIC_API_KEY (a sent weekly read is
+  // translated for her); it does not read ADMIN_CONVERSATION_ID.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vela-admin-dev",
+  "main": "src/admin-worker.ts",
+  // Kept equal to wrangler.jsonc: the two Workers share code and the database driver.
+  "compatibility_date": "2026-08-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // Development is never deployed, so it has no address: a `wrangler deploy -c wrangler.admin.jsonc`
+  // without --env deploys this top level, where no Access application exists and a request with no
+  // token passes as `development` (src/access.ts). `staging` and `production` turn workers.dev on.
+  // Preview URLs stay off everywhere: Access on the whole Worker would cover them too, but every
+  // hostname the Worker answers on is one more to reason about.
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // The pilot Worker's class. `pnpm dev:admin` runs both Workers in one session, so `vela-dev`
+  // resolves locally.
+  "durable_objects": {
+    "bindings": [
+      { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler", "script_name": "vela-dev" }
+    ]
+  },
+  // Producer only: a sent weekly read is queued for delivery, which the pilot Worker consumes.
+  "queues": {
+    "producers": [{ "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound" }]
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "PLACEHOLDER_HYPERDRIVE_ID_DEV",
+      "localConnectionString": "postgresql://postgres:postgres@127.0.0.1:54320/postgres"
+    }
+  ],
+
+  "vars": {
+    "ENVIRONMENT": "development",
+    // `pnpm dev:admin` serves this Worker on port 8787.
+    "PUBLIC_BASE_URL": "http://localhost:8787"
+  },
+
+  "env": {
+    "staging": {
+      "name": "vela-admin",
+      "workers_dev": true,
+      "preview_urls": false,
+      "observability": { "enabled": true },
+      "durable_objects": {
+        "bindings": [
+          { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler", "script_name": "vela" }
+        ]
+      },
+      "queues": {
+        "producers": [{ "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-staging" }]
+      },
+      // The same Hyperdrive configuration as the pilot Worker's in this account.
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_STAGING" }],
+      "vars": {
+        "ENVIRONMENT": "staging",
+        // This Worker's own origin: the one origin a form may be posted from.
+        "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev"
+      }
+    },
+
+    "production": {
+      "name": "vela-admin",
+      "workers_dev": true,
+      "preview_urls": false,
+      "observability": { "enabled": true },
+      "durable_objects": {
+        "bindings": [
+          { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler", "script_name": "vela" }
+        ]
+      },
+      "queues": {
+        "producers": [{ "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-production" }]
+      },
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION" }],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev"
+      }
+    }
+  }
+}

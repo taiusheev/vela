@@ -45,7 +45,7 @@ The restored branch is a full copy of production. Only the founder connects to i
    ```
 
 4. **Compare.** Counts must match. A difference can only come from a write that committed in the seconds around T0, or a retention deletion in the same minutes (visible as a `deletions` row); explain each one in the log.
-5. **Check media.** On the branch, list five `storage_key` values of unkept media from the last 30 days; in the Cloudflare dashboard, **R2 → `vela-media-apac`**, confirm each object exists. R2 objects deleted after T0 cannot come back with the database; record how many are missing and why.
+5. **Check media.** On the branch, list five `storage_key` values of unkept media from the last 30 days; in the "Vela" account's Cloudflare dashboard, on the **R2 object storage** page, open the bucket `vela-media-production` and confirm each object exists. R2 objects deleted after T0 cannot come back with the database; record how many are missing and why.
 6. **Stop the timer** and record the time to restore.
 7. **Delete the branch** (**Branches → `restore-drill-…` → Delete**) and confirm it no longer appears.
 8. **Log it** in the table below.

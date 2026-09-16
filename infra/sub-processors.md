@@ -1,8 +1,8 @@
 # Sub-processors
 
-13 September 2026 · architecture §12–13 · one page, kept in step with `plan/materials/pilot/privacy-notice.en.md` and `plan/materials/pilot/data-map.md`
+17 September 2026 · architecture §12–13 · one page, kept in step with `plan/materials/pilot/privacy-notice.en.md` and `plan/materials/pilot/data-map.md`
 
-Every outside company that processes personal data for Vela. The controller during the pilot is the founder as a private individual; there is no entity yet. Links were current on the date above; confirm each before relying on it for a filing. Where a page was opened while writing this list, the link column says *checked*.
+Every outside company that processes personal data for Vela. The controller during the pilot is the founder as a private individual; there is no entity yet. Links were current on 13 September 2026, when they were last checked; confirm each before relying on it for a filing. Where a page was opened while writing this list, the link column says *checked*.
 
 ## Rules
 
@@ -14,7 +14,7 @@ Every outside company that processes personal data for Vela. The controller duri
 
 | Provider | Purpose | Personal data it receives | Region | DPA or privacy terms | DPA accepted |
 |---|---|---|---|---|---|
-| **Cloudflare, Inc.** (US) | Runs the Worker, Durable Objects, Queues, Hyperdrive; stores media in R2 | All categories while processed; voice notes and photos at rest; scheduler state (member id, time zone, arrival time); queue jobs (ids only) | Processing on the global network; R2 bucket with the Asia-Pacific location hint, which Cloudflare describes as best effort rather than a guarantee (jurisdiction restrictions exist only for the EU, US and FedRAMP) | DPA: https://www.cloudflare.com/cloudflare-customer-dpa/ (*checked*; requires acceptance) · Privacy: https://www.cloudflare.com/privacypolicy/ | |
+| **Cloudflare, Inc.** (US) | Runs the two Workers (the pilot Worker `vela` and the admin Worker `vela-admin`, ADR-26), Durable Objects, Queues, Hyperdrive; serves the privacy notice pages; stores media in R2; Cloudflare Access signs the founder in to the admin page | All categories while processed; voice notes and photos at rest; scheduler state (member id, time zone, arrival time); queue jobs (ids only); the founder's sign-in email (Access); from sprint 2, the consented benchmark voice clips in the private R2 bucket `vela-benchmark` ("Vela staging" account, data map row 23) | Processing on the global network; R2 bucket with the Asia-Pacific location hint, which Cloudflare describes as best effort rather than a guarantee (jurisdiction restrictions exist only for the EU, US and FedRAMP) | DPA: https://www.cloudflare.com/cloudflare-customer-dpa/ (*checked*; requires acceptance) · Privacy: https://www.cloudflare.com/privacypolicy/ | |
 | **Neon** (a Databricks company) | Postgres database, point-in-time restore | Everything stored in the database (data map rows 1–10, 12–19) | Singapore, AWS `ap-southeast-1` | DPA: https://neon.com/dpa · Privacy: https://www.databricks.com/legal/privacynotice (neon.com's privacy link redirects there, *checked*) | |
 | **Anthropic, PBC** (US) | AI calls: understand, flag, chips, suggest, translate, readback, hello, weekly read | Answer text and transcripts, asks, replies, members' first names, roles and languages, memory facts | United States; `inference_geo` is not pinned during the pilot (architecture §9.3) | DPA: https://www.anthropic.com/legal/data-processing-addendum (*checked*; incorporated into the Commercial Terms) · Terms: https://www.anthropic.com/legal/commercial-terms | Incorporated |
 | **Deepgram, Inc.** (US) | Speech to text | Voice notes; a language hint | United States (an EU endpoint exists and is not used) | Privacy: https://deepgram.com/privacy (*checked*; DPA on request via security@deepgram.com) · Sub-processors: https://deepgram.com/privacy/subprocessors | |

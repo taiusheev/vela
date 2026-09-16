@@ -1,4 +1,11 @@
-import { createFakeAi, fakeRecord, SAFE_DEFAULTS } from "@vela/ai";
+import {
+  type Ai,
+  type AiOutcome,
+  createFakeAi,
+  fakeRecord,
+  SAFE_DEFAULTS,
+  type Translation,
+} from "@vela/ai";
 import type { InboundEvent, Lang, LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { parseParentCommand } from "@vela/core";
@@ -366,6 +373,109 @@ describe("what the family sees", () => {
         "9月13日（星期日）：[zh-TW] Mom cooked soup.",
         "9月12日（星期六）：Mom went to the market.",
       ].join("\n"),
+    ]);
+  });
+
+  /**
+   * The model for an answer understood twice: the first flag fails, so the answer is re-run, and
+   * the re-run rewrites the summary. The family writes in English and she reads Traditional Chinese.
+   */
+  async function rewrittenOnRerun(translate: Ai["translate"]): Promise<{
+    seed: SeededFamily;
+    answerId: string;
+  }> {
+    const seed = await seedFamily(h.db, {
+      now: h.clock.now(),
+      language: "en",
+      memberLanguage: "zh-TW",
+    });
+    const summaries = ["Mom cooked soup.", "Mom made soup for dinner."];
+    let flagCalls = 0;
+    h.deps.ai = createFakeAi({
+      understand: async (input) => ({
+        ok: true,
+        value: { ...SAFE_DEFAULTS.understand(input), summary: summaries.shift() ?? "answered" },
+        record: fakeRecord("understand"),
+      }),
+      flag: async (input) => {
+        flagCalls += 1;
+        return flagCalls === 1
+          ? {
+              ok: false,
+              value: SAFE_DEFAULTS.flag(input),
+              record: fakeRecord("flag", "http_529"),
+              error: "http_529",
+            }
+          : { ok: true, value: SAFE_DEFAULTS.flag(input), record: fakeRecord("flag") };
+      },
+      translate,
+    });
+    return { seed, answerId: await answeredDay(seed, "2026-09-13", null, "我煮了湯") };
+  }
+
+  function translated(input: Parameters<Ai["translate"]>[0]): AiOutcome<Translation> {
+    return {
+      ok: true,
+      value: { text: `[${input.to}] ${input.text}` },
+      record: fakeRecord("translate"),
+    };
+  }
+
+  function translationFailed(input: Parameters<Ai["translate"]>[0]): AiOutcome<Translation> {
+    return {
+      ok: false,
+      value: SAFE_DEFAULTS.translate(input),
+      record: fakeRecord("translate", "http_529"),
+      error: "http_529",
+    };
+  }
+
+  it("gives her a rewritten summary as stored, not the old one's translation, when the new translation fails", async () => {
+    let summaryTranslations = 0;
+    const { seed, answerId } = await rewrittenOnRerun(async (input) => {
+      if (input.to !== "zh-TW") {
+        return translated(input);
+      }
+      summaryTranslations += 1;
+      return summaryTranslations === 1 ? translated(input) : translationFailed(input);
+    });
+
+    await understandAnswer(h.deps, answerId);
+    await say(seed.member, "家人看到什麼");
+    await understandAnswer(h.deps, answerId);
+    await say(seed.member, "家人看到什麼");
+
+    const heading = t("zh-TW", "parent.family_sees_heading");
+    expect(await herMessages()).toEqual([
+      `${heading}\n9月13日（星期日）：[zh-TW] Mom cooked soup.`,
+      `${heading}\n9月13日（星期日）：Mom made soup for dinner.`,
+    ]);
+  });
+
+  it("leaves her no translation of the old summary when a re-run stops after rewriting it", async () => {
+    let wordTranslations = 0;
+    const { seed, answerId } = await rewrittenOnRerun(async (input) => {
+      if (input.to === "zh-TW") {
+        return translated(input);
+      }
+      wordTranslations += 1;
+      if (wordTranslations === 1) {
+        return translationFailed(input);
+      }
+      // Her words are translated after the summary is written and before her copy of it is: the
+      // job stopping there, as a Worker out of time would, must not leave the old copy behind.
+      throw new Error("the job stopped");
+    });
+
+    await understandAnswer(h.deps, answerId);
+    await say(seed.member, "家人看到什麼");
+    await expect(understandAnswer(h.deps, answerId)).rejects.toThrow("the job stopped");
+    await say(seed.member, "家人看到什麼");
+
+    const heading = t("zh-TW", "parent.family_sees_heading");
+    expect(await herMessages()).toEqual([
+      `${heading}\n9月13日（星期日）：[zh-TW] Mom cooked soup.`,
+      `${heading}\n9月13日（星期日）：Mom made soup for dinner.`,
     ]);
   });
 
