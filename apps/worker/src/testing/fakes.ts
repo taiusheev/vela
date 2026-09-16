@@ -7,7 +7,8 @@ import { env } from "cloudflare:test";
 import { createFakeAi, createFakeStt } from "@vela/ai";
 import type { ChannelAdapter, InboundEvent } from "@vela/contracts";
 import type { Family, Member, VelaDatabase } from "@vela/db";
-import type { Deps, FamilyPage } from "@vela/services";
+import type { Deps, FamilyPage, Logger } from "@vela/services";
+import { vi } from "vitest";
 import type { DepsHandle, DepsOptions } from "../deps.ts";
 import type { Env } from "../env.ts";
 import type { WorkerRuntime, WorkerServices } from "../runtime.ts";
@@ -33,6 +34,15 @@ export interface FakeRuntime {
   closed(): number;
   /** The events the webhook route handed to `handleInbound`. */
   readonly inbound: InboundEvent[];
+  /** Every line the deps' logger was given, in order. */
+  readonly logs: LogLine[];
+}
+
+/** One line a `Logger` was given. */
+export interface LogLine {
+  readonly level: "info" | "warn" | "error";
+  readonly event: string;
+  readonly fields: Record<string, unknown> | undefined;
 }
 
 export interface FakeRuntimeOptions {
@@ -49,11 +59,20 @@ export interface FakeRuntimeOptions {
 // Only services read the database, and here every service is a recorder.
 const UNUSED_DATABASE = {} as VelaDatabase;
 
-function createFakeDeps(): Deps {
+/** A `Logger` that keeps every line it is given in `logs`. */
+export function recordingLogger(logs: LogLine[]): Logger {
+  return {
+    info: (event, fields) => logs.push({ level: "info", event, fields }),
+    warn: (event, fields) => logs.push({ level: "warn", event, fields }),
+    error: (event, fields) => logs.push({ level: "error", event, fields }),
+  };
+}
+
+function createFakeDeps(logs: LogLine[]): Deps {
   return {
     db: UNUSED_DATABASE,
     clock: { now: () => new Date("2026-09-14T00:00:00Z") },
-    logger: { info: () => {}, warn: () => {}, error: () => {} },
+    logger: recordingLogger(logs),
     random: { token: () => "token" },
     queues: {
       outbound: { send: async () => {} },
@@ -111,6 +130,7 @@ function fakeAdapter(events: InboundEvent[], webhookSecret: string): ChannelAdap
 export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime {
   const calls: ServiceCall[] = [];
   const inbound: InboundEvent[] = [];
+  const logs: LogLine[] = [];
   const given = options.services ?? {};
   const events = options.events ?? [];
   const webhookSecret = options.webhookSecret ?? "test-webhook-secret";
@@ -160,6 +180,10 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
     async loadAdminOverview(deps, ctx) {
       note("loadAdminOverview", ctx);
       return given.loadAdminOverview === undefined ? [] : given.loadAdminOverview(deps, ctx);
+    },
+    async loadFailedOutbound(deps, ctx) {
+      note("loadFailedOutbound", ctx);
+      return given.loadFailedOutbound === undefined ? [] : given.loadFailedOutbound(deps, ctx);
     },
     async loadFamilyPage(deps, ctx, familyId) {
       note("loadFamilyPage", ctx, familyId);
@@ -211,7 +235,7 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
     services,
     createDeps: async (_env: Env, depsOptions: DepsOptions = {}): Promise<DepsHandle> => {
       built += 1;
-      const deps = createFakeDeps();
+      const deps = createFakeDeps(logs);
       return {
         deps: {
           ...deps,
@@ -230,7 +254,46 @@ export function createFakeRuntime(options: FakeRuntimeOptions = {}): FakeRuntime
     },
   };
 
-  return { runtime, calls, built: () => built, closed: () => closed, inbound };
+  return { runtime, calls, built: () => built, closed: () => closed, inbound, logs };
+}
+
+/**
+ * What a failed query throws: Drizzle's message lists the query's parameters, which hold what the
+ * family wrote, and the driver's error beneath it carries the SQLSTATE. The words in it are the
+ * ones a log line must never contain.
+ */
+export const FAILED_QUERY_WORDS = "walked to the market with Mei";
+
+export function failedQueryFixture(): Error {
+  const driver = Object.assign(new Error("duplicate key value violates unique constraint"), {
+    code: "23505",
+  });
+  const failed = new Error(
+    `Failed query: insert into "answers" ("payload") values ($1)\nparams: {"text":"I ${FAILED_QUERY_WORDS}"}`,
+    { cause: driver },
+  );
+  failed.name = "DrizzleQueryError";
+  return failed;
+}
+
+/** `errorLabel` of `failedQueryFixture()`: the class names and the code, nothing else. */
+export const FAILED_QUERY_LABEL = "DrizzleQueryError <- Error:23505";
+
+/**
+ * What `run` returned, and the JSON lines written to `console.log` while it ran, parsed: where the
+ * Worker logs without a fake `Logger` (the request error handler, and the logger `createLogger`
+ * builds), this is its log.
+ */
+export async function consoleLinesDuring<T>(
+  run: () => Promise<T>,
+): Promise<{ readonly result: T; readonly lines: unknown[] }> {
+  const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+  try {
+    const result = await run();
+    return { result, lines: spy.mock.calls.map(([line]): unknown => JSON.parse(String(line))) };
+  } finally {
+    spy.mockRestore();
+  }
 }
 
 /** A parsed inbound event, with only the fields a routing test needs to tell one from another. */

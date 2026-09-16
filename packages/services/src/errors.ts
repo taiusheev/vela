@@ -33,12 +33,16 @@ const CAUSE_DEPTH = 3;
 /** An error code is an identifier (`unavailable`, `not_found`, SQLSTATE `40001`), never prose. */
 const ERROR_CODE = /^[A-Za-z0-9_.-]{1,40}$/;
 
+export function isErrorCode(value: string): boolean {
+  return ERROR_CODE.test(value);
+}
+
 function codeOf(error: Error): string | null {
   const code: unknown = "code" in error ? error.code : undefined;
   if (typeof code === "number" && Number.isInteger(code)) {
     return String(code);
   }
-  return typeof code === "string" && ERROR_CODE.test(code) ? code : null;
+  return typeof code === "string" && isErrorCode(code) ? code : null;
 }
 
 /**

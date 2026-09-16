@@ -10,7 +10,7 @@
  * sent to api.telegram.org. What it prints is what the founder has to check by eye — the bot's
  * username, and whether Telegram will deliver group messages that are not addressed to it.
  */
-import { getMe, setMyCommands, setWebhook } from "@vela/adapters";
+import { getMe, setMyCommands, setWebhook, TELEGRAM_ALLOWED_UPDATES } from "@vela/adapters";
 
 // Node's own `process`; this script runs under Node, not in the Worker.
 declare const process: {
@@ -20,19 +20,6 @@ declare const process: {
 
 /** Telegram's rule for `secret_token`, checked here so a bad one never reaches a request. */
 const WEBHOOK_SECRET = /^[A-Za-z0-9_-]{1,256}$/;
-
-/**
- * The updates the adapter parses (D17). This is `TELEGRAM_ALLOWED_UPDATES` in @vela/adapters,
- * which the package root does not re-export; it is passed explicitly so what is printed is what
- * was registered. A departure arrives inside `message` as `left_chat_member`, and
- * `message_reaction` is never delivered unless it is listed.
- */
-const ALLOWED_UPDATES = [
-  "message",
-  "callback_query",
-  "message_reaction",
-  "my_chat_member",
-] as const;
 
 /** The two commands, in groups only. A private chat has no menu: she is never asked to type one. */
 const GROUP_COMMANDS = [
@@ -65,17 +52,19 @@ async function main(): Promise<void> {
 
   const me = await getMe({ botToken });
 
+  // The updates the adapter parses (D17), passed explicitly rather than left to setWebhook's
+  // default so the line printed below is what was registered.
   await setWebhook({
     botToken,
     url: url.toString(),
     secretToken,
-    allowedUpdates: ALLOWED_UPDATES,
+    allowedUpdates: TELEGRAM_ALLOWED_UPDATES,
   });
   await setMyCommands({ botToken, commands: GROUP_COMMANDS, scope: { type: "all_group_chats" } });
   await setMyCommands({ botToken, commands: [], scope: { type: "all_private_chats" } });
 
   console.log(`Webhook set: ${url.toString()}`);
-  console.log(`Allowed updates: ${ALLOWED_UPDATES.join(", ")}`);
+  console.log(`Allowed updates: ${TELEGRAM_ALLOWED_UPDATES.join(", ")}`);
   console.log(
     `Commands: /${GROUP_COMMANDS.map((c) => c.command).join(", /")} in groups, none in private chats`,
   );

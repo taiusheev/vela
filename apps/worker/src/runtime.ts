@@ -17,10 +17,12 @@ import {
   deleteFamily,
   deliverOutbound,
   endAway,
+  type FailedOutboundRow,
   type FamilyPage,
   handleInbound,
   ingestAnswerMedia,
   loadAdminOverview,
+  loadFailedOutbound,
   loadFamilyPage,
   markDeceased,
   markLeft,
@@ -55,6 +57,7 @@ export interface WorkerServices {
   ingestAnswerMedia(deps: Deps, answerId: string): Promise<void>;
   understandAnswer(deps: Deps, answerId: string): Promise<void>;
   loadAdminOverview(deps: Deps, ctx: AdminContext): Promise<AdminOverviewRow[]>;
+  loadFailedOutbound(deps: Deps, ctx: AdminContext): Promise<FailedOutboundRow[]>;
   loadFamilyPage(deps: Deps, ctx: AdminContext, familyId: string): Promise<FamilyPage | null>;
   recordConsent(deps: Deps, ctx: AdminContext, input: RecordConsentInput): Promise<void>;
   recordContactConsent(
@@ -96,6 +99,7 @@ const services: WorkerServices = {
   ingestAnswerMedia,
   understandAnswer,
   loadAdminOverview,
+  loadFailedOutbound,
   loadFamilyPage,
   recordConsent,
   recordContactConsent,

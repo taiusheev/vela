@@ -15,10 +15,12 @@ import {
   turns,
   weeklyReads,
 } from "@vela/db";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import type { Deps } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
+import { markWakeDue } from "./repo.ts";
 import { createHarness, type Harness, type JobHandlers } from "./testing/harness.ts";
 import {
   type SeededFamily,
@@ -331,6 +333,9 @@ describe("loadScheduleInput", () => {
 });
 
 describe("tickMember", () => {
+  // It fires every wake of a whole week, each a tick that reads and writes PGlite, so it takes a
+  // few seconds alone and more than twice that while the other suites share the machine: more
+  // than Vitest's 5 s default allows. The limit is wall-clock time, not the scheduler's clock.
   it("runs her through her first days at the exact times", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
@@ -440,7 +445,7 @@ describe("tickMember", () => {
     expect((await outboundRows("repeat")).map((row) => row.localDay)).toEqual(days);
     expect(await h.db.select().from(quietEvents)).toHaveLength(6);
     expect(await outboundRows("quiet_notice")).toHaveLength(6);
-  });
+  }, 60_000);
 
   it("produces one arrival when two ticks run at once", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
@@ -474,6 +479,86 @@ describe("tickMember", () => {
 
     expect(await tickMember(h.deps, seed.member.id)).toBeNull();
     expect(h.scheduler.history.map((entry) => entry.at)).toEqual([null, null]);
+  });
+
+  /**
+   * Deps whose first queued send runs `flow` before it queues: another flow committing its change
+   * while the tick is at work, after the tick has read her state.
+   */
+  function flowDuringTick(flow: () => Promise<void>): { deps: Deps; ran: () => boolean } {
+    let ran = false;
+    const deps: Deps = {
+      ...h.deps,
+      queues: {
+        ...h.deps.queues,
+        outbound: {
+          send: async (job, options) => {
+            if (!ran) {
+              ran = true;
+              await flow();
+            }
+            await h.queues.outbound.send(job, options);
+          },
+        },
+      },
+    };
+    return { deps, ran: () => ran };
+  }
+
+  it("keeps the sooner wake another flow marked while the tick ran", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const her = seed.member.id;
+    h.clock.set(at("2026-09-15", "08:00"));
+    // Her answer lands a minute into the tick, while the arrival is being queued: the answer flow
+    // marks her wake due at that minute and wakes her scheduler.
+    const during = flowDuringTick(async () => {
+      h.clock.set(at("2026-09-15", "08:01"));
+      await markWakeDue(h.db, her, h.clock.now());
+      await h.deps.scheduler.wakeAt(her, h.clock.now());
+    });
+
+    expect(await tickMember(during.deps, her)).toEqual(at("2026-09-15", "08:01"));
+
+    expect(during.ran()).toBe(true);
+    expect(await nextWake(her)).toEqual(at("2026-09-15", "08:01"));
+    expect(h.scheduler.wakes.get(her)).toEqual(at("2026-09-15", "08:01"));
+  });
+
+  it("keeps a wake marked while the tick ran even when the flow stamped it before the tick started", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const her = seed.member.id;
+    h.clock.set(at("2026-09-15", "08:00"));
+    // The answer flow read its clock at 07:59, before the tick started, and commits her wake only
+    // while the arrival is being queued. Its wake call to her scheduler never arrives, so the wake
+    // the tick stores and arms is all that brings her schedule back to the answer.
+    const during = flowDuringTick(async () => {
+      await markWakeDue(h.db, her, at("2026-09-15", "07:59"));
+    });
+
+    expect(await tickMember(during.deps, her)).toEqual(at("2026-09-15", "07:59"));
+
+    expect(during.ran()).toBe(true);
+    expect(await nextWake(her)).toEqual(at("2026-09-15", "07:59"));
+    expect(h.scheduler.wakes.get(her)).toEqual(at("2026-09-15", "07:59"));
+  });
+
+  it("replaces the wake it read, even one sooner than the decision or stored to the microsecond", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const her = seed.member.id;
+
+    // The wake that fired this tick, at the tick's own instant; one long past; and one written by
+    // hand in SQL, whose microseconds the `Date` the tick reads it into cannot hold.
+    for (const stale of [
+      h.clock.now(),
+      at("2026-09-14", "06:00"),
+      sql`'2026-09-13T22:00:00.000123Z'::timestamptz`,
+    ]) {
+      await h.db.update(members).set({ nextWakeAt: stale }).where(eq(members.id, her));
+
+      expect(await tickMember(h.deps, her)).toEqual(at("2026-09-14", "19:00"));
+      expect(await nextWake(her)).toEqual(at("2026-09-14", "19:00"));
+      expect(h.scheduler.wakes.get(her)).toEqual(at("2026-09-14", "19:00"));
+    }
   });
 });
 

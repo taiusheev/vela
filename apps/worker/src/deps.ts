@@ -4,7 +4,8 @@
  *
  * Deps are built per invocation, because a database connection belongs to one request: the caller
  * hands `close()` to `ctx.waitUntil`, and Hyperdrive keeps the pooled connection behind it warm.
- * A missing secret throws before anything is opened, naming the variable.
+ * A missing secret, or a var a deployed environment cannot run with, throws before anything is
+ * opened, naming the variable.
  */
 import { createTelegramAdapter } from "@vela/adapters";
 import { createClaudeAi, createDeepgramStt } from "@vela/ai";
@@ -41,6 +42,21 @@ export interface DepsOptions {
 
 const ENVIRONMENTS = ["development", "staging", "production"] as const;
 
+/**
+ * A configuration the Worker cannot run with. The variable to fix is the error's `code`, because
+ * failures are logged through `errorLabel`, which keeps a code and never a message: the log line
+ * then reads `ConfigError:PUBLIC_BASE_URL` rather than a bare `Error`.
+ */
+export class ConfigError extends Error {
+  override readonly name = "ConfigError";
+  readonly code: string;
+
+  constructor(variable: string, message: string) {
+    super(message);
+    this.code = variable;
+  }
+}
+
 /** The secrets in `.dev.vars.example`; each is read through `secret()`, which names a missing one. */
 type SecretName =
   | "TELEGRAM_BOT_TOKEN"
@@ -58,7 +74,8 @@ type SecretName =
 export function secret(env: Env, name: SecretName): string {
   const value = env[name];
   if (value === undefined || value.trim() === "") {
-    throw new Error(
+    throw new ConfigError(
+      name,
       `${name} is not set: add it to .dev.vars locally, or run "wrangler secret put ${name} --env <environment>"`,
     );
   }
@@ -68,7 +85,10 @@ export function secret(env: Env, name: SecretName): string {
 function requireVar(env: Env, name: "PUBLIC_BASE_URL" | "TELEGRAM_BOT_USERNAME"): string {
   const value = env[name];
   if (value.trim() === "") {
-    throw new Error(`${name} is not set: add it to the environment's vars in wrangler.jsonc`);
+    throw new ConfigError(
+      name,
+      `${name} is not set: add it to the environment's vars in wrangler.jsonc`,
+    );
   }
   return value.trim();
 }
@@ -76,9 +96,54 @@ function requireVar(env: Env, name: "PUBLIC_BASE_URL" | "TELEGRAM_BOT_USERNAME")
 function readEnvironment(env: Env): Config["environment"] {
   const found = ENVIRONMENTS.find((candidate) => candidate === env.ENVIRONMENT);
   if (found === undefined) {
-    throw new Error(`ENVIRONMENT must be one of ${ENVIRONMENTS.join(", ")}`);
+    throw new ConfigError("ENVIRONMENT", `ENVIRONMENT must be one of ${ENVIRONMENTS.join(", ")}`);
   }
   return found;
+}
+
+/** How wrangler.jsonc writes a value nobody has chosen yet: whole, or as a URL's host. */
+const PLACEHOLDER = "PLACEHOLDER_";
+
+/** The vars that become links: the origin admin messages point to, and the privacy notices. */
+const URL_VARS = ["PUBLIC_BASE_URL", "PRIVACY_NOTICE_URL_EN", "PRIVACY_NOTICE_URL_ZH_TW"] as const;
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Refuses to run a deployed environment on a value nobody chose. Filled with a guess, a
+ * placeholder can send families' privacy notice links, or the founder's admin links, to a host
+ * Vela does not own; a link that is not https opens the admin page or the notice in the clear.
+ * Every string the platform hands over is checked, vars and secrets alike, so a var added later
+ * is covered without being listed here; the error names the variable and never its value.
+ * Development runs on localhost with the placeholders wrangler.jsonc ships, so it is not checked.
+ */
+function checkDeployedEnv(env: Env, environment: Config["environment"]): void {
+  if (environment === "development") {
+    return;
+  }
+  const entries: [string, unknown][] = Object.entries(env);
+  for (const [name, value] of entries) {
+    if (typeof value === "string" && value.includes(PLACEHOLDER)) {
+      throw new ConfigError(
+        name,
+        `${name} still holds a placeholder: set the value chosen for ${environment} in wrangler.jsonc, or with "wrangler secret put ${name} --env ${environment}" for a secret`,
+      );
+    }
+  }
+  for (const name of URL_VARS) {
+    if (!isHttpsUrl(env[name])) {
+      throw new ConfigError(
+        name,
+        `${name} must be an https URL in ${environment}: set it in the environment's vars in wrangler.jsonc`,
+      );
+    }
+  }
 }
 
 function readRegions(env: Env): readonly Region[] {
@@ -88,18 +153,29 @@ function readRegions(env: Env): readonly Region[] {
   const regions = names.map((name) => {
     const region = REGIONS.find((candidate) => candidate === name);
     if (region === undefined) {
-      throw new Error(`REGIONS lists "${name}", which is not one of ${REGIONS.join(", ")}`);
+      throw new ConfigError(
+        "REGIONS",
+        `REGIONS lists "${name}", which is not one of ${REGIONS.join(", ")}`,
+      );
     }
     return region;
   });
   if (regions.length === 0) {
-    throw new Error("REGIONS is empty: list the regions whose database exists, such as apac");
+    throw new ConfigError(
+      "REGIONS",
+      "REGIONS is empty: list the regions whose database exists, such as apac",
+    );
   }
   return regions;
 }
 
-/** Vars and secrets as services' `Config` (code design §8). */
-function readConfig(env: Env): Config {
+/**
+ * Vars and secrets as services' `Config` (code design §8), or a `ConfigError` naming the first
+ * variable a deployed environment cannot start with.
+ */
+export function readConfig(env: Env): Config {
+  const environment = readEnvironment(env);
+  checkDeployedEnv(env, environment);
   const english = env.PRIVACY_NOTICE_URL_EN;
   // A language without its own notice takes the English one, so the link is never empty.
   const privacyNoticeUrls: Record<Lang, string> = {
@@ -114,7 +190,7 @@ function readConfig(env: Env): Config {
   return {
     telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
     adminConversationId: adminConversationId === "" ? null : adminConversationId,
-    environment: readEnvironment(env),
+    environment,
     regions: readRegions(env),
     publicBaseUrl: requireVar(env, "PUBLIC_BASE_URL"),
     privacyNoticeUrls,

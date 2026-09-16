@@ -1,12 +1,12 @@
 /**
  * The founder's two server-rendered pages (code design §9, flows §3.17). The overview carries no
- * family content at all: states, times, kinds, counts. The family page carries the records the
- * founder needs to act on — summaries, flag quotes, AI outputs — and every write on it is a POST
- * form to `/admin/families/:familyId/:action`.
+ * family content at all: states, times, kinds, counts, and the codes of failed sends. The family
+ * page carries the records the founder needs to act on — summaries, flag quotes, AI outputs — and
+ * every write on it is a POST form to `/admin/families/:familyId/:action`.
  *
  * Nothing here queries or decides: it renders what `@vela/services` returned, escaped.
  */
-import type { AdminOverviewRow, FamilyPage } from "@vela/services";
+import type { AdminOverviewRow, FailedOutboundRow, FamilyPage } from "@vela/services";
 import { type Html, html, page, type Renderable } from "./html.ts";
 
 const DASH = "—";
@@ -14,8 +14,8 @@ const DASH = "—";
 /**
  * The two paths, as `ADMIN_OVERVIEW_PATH` and `familyPagePath` in `@vela/services` shape them:
  * `adminLink` puts the family one in every admin message, so the two must stay the same. They are
- * repeated rather than imported because this file, like the routes, keeps the services module
- * graph (and with it the Postgres driver) out of the pages and their tests.
+ * repeated rather than imported because this file keeps the services module graph (and with it
+ * the Postgres driver) out of the pages and their tests.
  */
 export const ADMIN_PATH = "/admin";
 
@@ -70,9 +70,42 @@ function overviewRow(row: AdminOverviewRow): Html {
 </tr>`;
 }
 
-export function renderOverview(rows: readonly AdminOverviewRow[]): Response {
+function failedOutboundRow(row: FailedOutboundRow): Html {
+  return html`<tr>
+<td>${instant(row.queuedAt)}</td>
+<td><a href="${familyHref(row.family.id)}">${row.family.name}</a></td>
+<td>${row.kind}<br><span class="muted">${row.id}</span></td>
+<td><span class="muted">${row.memberId}</span></td>
+<td>${row.status}</td>
+<td class="num">${row.attempts}</td>
+<td><code>${row.errorCode}</code></td>
+</tr>`;
+}
+
+/**
+ * The sends that did not go out, as services return them: ids, kind, state, attempts, and the
+ * code in front of the stored error. What was sent, and the platform's own description, never
+ * reach this page. The id matches the `what` of the view rows services write for this section.
+ */
+function failedOutboundSection(rows: readonly FailedOutboundRow[]): Html {
+  return html`<section id="failed-outbound"><h2>Failed sends</h2>
+<p class="muted">The most recent sends that failed or were dropped, newest first. The time is when the last attempt was due; the code is the platform's or the gateway's reason.</p>
+${
+  rows.length === 0
+    ? html`<p class="muted">No send has failed or been dropped.</p>`
+    : table(
+        ["Last due (UTC)", "Family", "Kind", "Member", "Status", "Attempts", "Code"],
+        rows.map(failedOutboundRow),
+      )
+}</section>`;
+}
+
+export function renderOverview(
+  rows: readonly AdminOverviewRow[],
+  failedOutbound: readonly FailedOutboundRow[],
+): Response {
   const body = html`<h1>Vela admin</h1>
-<p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, and counts only.</p>
+<p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, counts, and codes only.</p>
 ${table(
   [
     "Family",
@@ -85,7 +118,8 @@ ${table(
     "AI 24 h (calls / failures)",
   ],
   rows.map(overviewRow),
-)}`;
+)}
+${failedOutboundSection(failedOutbound)}`;
   return page("Vela admin", body);
 }
 

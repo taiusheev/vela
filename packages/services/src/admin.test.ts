@@ -1,5 +1,5 @@
-import type { LocalDate } from "@vela/contracts";
-import { outboundKey } from "@vela/core";
+import type { LocalDate, OutboundKind, OutboundStatus } from "@vela/contracts";
+import { addMinutes, outboundKey } from "@vela/core";
 import {
   adminAccessLog,
   aiCalls,
@@ -27,6 +27,7 @@ import {
   endAway,
   familyPagePath,
   loadAdminOverview,
+  loadFailedOutbound,
   loadFamilyPage,
   markDeceased,
   markLeft,
@@ -1372,5 +1373,169 @@ describe("the admin pages", () => {
     await family();
     expect(await loadFamilyPage(h.deps, FOUNDER, UNKNOWN_ID)).toBeNull();
     expect(await logRows()).toHaveLength(0);
+  });
+});
+
+describe("loadFailedOutbound", () => {
+  let sequence = 0;
+
+  async function seedSend(
+    memberId: string,
+    options: {
+      kind: OutboundKind;
+      status: OutboundStatus;
+      minutesAgo: number;
+      attempts?: number;
+      error?: string | null;
+    },
+  ): Promise<string> {
+    sequence += 1;
+    const [row] = await h.db
+      .insert(outbound)
+      .values({
+        memberId,
+        kind: options.kind,
+        channel: "telegram",
+        conversationId: "2001",
+        localDay: TODAY,
+        idempotencyKey: `test:${sequence}`,
+        payload: { message: { lang: "en", text: "What are you cooking today, Mrs Chen?" } },
+        status: options.status,
+        attempts: options.attempts ?? 1,
+        error: options.error ?? null,
+        queuedAt: addMinutes(h.clock.now(), -options.minutesAgo),
+      })
+      .returning({ id: outbound.id });
+    if (row === undefined) {
+      throw new Error("outbound row not inserted");
+    }
+    return row.id;
+  }
+
+  it("lists failed and dropped sends across families, newest first, with a code and no words", async () => {
+    const chens = await family();
+    const lins = await seedFamily(h.db, {
+      now: h.clock.now(),
+      familyName: "The Lins",
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+    const failed = await seedSend(chens.member.id, {
+      kind: "arrival",
+      status: "failed",
+      minutesAgo: 30,
+      attempts: 4,
+      error: "not_found: Bad Request: chat not found",
+    });
+    const dropped = await seedSend(lins.organiser.id, {
+      kind: "quiet_notice",
+      status: "dropped",
+      minutesAgo: 10,
+      attempts: 0,
+      error: "family_ended",
+    });
+    const uncoded = await seedSend(chens.organiser.id, {
+      kind: "system",
+      status: "failed",
+      minutesAgo: 20,
+      error: "the platform said Mrs Chen blocked the bot",
+    });
+    await seedSend(chens.member.id, { kind: "repeat", status: "sent", minutesAgo: 5 });
+    await seedSend(chens.organiser.id, {
+      kind: "turn_prompt",
+      status: "queued",
+      minutesAgo: 1,
+      error: "unavailable: Too Many Requests: retry after 30",
+    });
+
+    const rows = await loadFailedOutbound(h.deps, FOUNDER);
+
+    expect(rows).toEqual([
+      {
+        id: dropped,
+        family: { id: lins.family.id, name: "The Lins" },
+        memberId: lins.organiser.id,
+        kind: "quiet_notice",
+        status: "dropped",
+        attempts: 0,
+        errorCode: "family_ended",
+        queuedAt: addMinutes(h.clock.now(), -10),
+      },
+      {
+        id: uncoded,
+        family: { id: chens.family.id, name: "The Chens" },
+        memberId: chens.organiser.id,
+        kind: "system",
+        status: "failed",
+        attempts: 1,
+        errorCode: "unknown",
+        queuedAt: addMinutes(h.clock.now(), -20),
+      },
+      {
+        id: failed,
+        family: { id: chens.family.id, name: "The Chens" },
+        memberId: chens.member.id,
+        kind: "arrival",
+        status: "failed",
+        attempts: 4,
+        errorCode: "not_found",
+        queuedAt: addMinutes(h.clock.now(), -30),
+      },
+    ]);
+    const serialised = JSON.stringify(rows);
+    expect(serialised).not.toContain("What are you cooking");
+    expect(serialised).not.toContain("Mrs Chen");
+    expect(serialised).not.toContain("chat not found");
+  });
+
+  it("logs one view per family whose sends it lists, and nothing when none failed", async () => {
+    const chens = await family();
+    const lins = await seedFamily(h.db, {
+      now: h.clock.now(),
+      familyName: "The Lins",
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+    await seedSend(chens.member.id, { kind: "repeat", status: "sent", minutesAgo: 5 });
+
+    expect(await loadFailedOutbound(h.deps, FOUNDER)).toEqual([]);
+    expect(await logRows()).toHaveLength(0);
+    await expect(loadFailedOutbound(h.deps, { admin: "" })).rejects.toThrow(VelaError);
+
+    await seedSend(chens.member.id, { kind: "arrival", status: "failed", minutesAgo: 3 });
+    await seedSend(chens.organiser.id, { kind: "system", status: "dropped", minutesAgo: 2 });
+    await seedSend(lins.member.id, { kind: "arrival", status: "failed", minutesAgo: 1 });
+
+    await loadFailedOutbound(h.deps, FOUNDER);
+
+    // One row per family, in the order the list first shows it, however many of its sends it lists.
+    expect(
+      (await logRows()).map((row) => [row.admin, row.familyId, row.memberId, row.action, row.what]),
+    ).toEqual([
+      ["founder@vela.test", lins.family.id, null, "view", "/admin#failed-outbound"],
+      ["founder@vela.test", chens.family.id, null, "view", "/admin#failed-outbound"],
+    ]);
+    expect((await eventRows()).map((event) => [event.name, event.familyId, event.props])).toEqual([
+      ["admin_page_opened", lins.family.id, { what: "/admin#failed-outbound" }],
+      ["admin_page_opened", chens.family.id, { what: "/admin#failed-outbound" }],
+    ]);
+  });
+
+  it("lists the 20 most recent by default, as many as asked, and refuses a limit out of bounds", async () => {
+    const seed = await family();
+    const ids: string[] = [];
+    for (let minutesAgo = 0; minutesAgo < 22; minutesAgo += 1) {
+      ids.push(await seedSend(seed.member.id, { kind: "system", status: "failed", minutesAgo }));
+    }
+
+    const byDefault = await loadFailedOutbound(h.deps, FOUNDER);
+    expect(byDefault.map((row) => row.id)).toEqual(ids.slice(0, 20));
+
+    const three = await loadFailedOutbound(h.deps, FOUNDER, { limit: 3 });
+    expect(three.map((row) => row.id)).toEqual(ids.slice(0, 3));
+
+    await expect(loadFailedOutbound(h.deps, FOUNDER, { limit: 0 })).rejects.toThrow(VelaError);
+    await expect(loadFailedOutbound(h.deps, FOUNDER, { limit: 2.5 })).rejects.toThrow(VelaError);
+    expect(await logRows()).toHaveLength(2);
   });
 });

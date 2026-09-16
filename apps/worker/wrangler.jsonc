@@ -5,6 +5,12 @@
   // Named environments inherit nothing that binds a resource, so every environment repeats its
   // bindings with its own resource names. Every `id` below that the founder must create is written
   // as a PLACEHOLDER: replace each one with the id Cloudflare returns, and never invent one.
+  //
+  // The same goes for every host, username, and chat id in staging and production: each is a
+  // PLACEHOLDER until the founder chooses it. Never fill one with a guess. vela.family, for one,
+  // belongs to another company (design/research-identity.md), so a notice link there would send
+  // families to someone else's site. Outside development the Worker refuses to start while any
+  // value still holds PLACEHOLDER_ or a URL var is not https (src/deps.ts).
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-dev",
   "main": "src/index.ts",
@@ -68,7 +74,8 @@
     }
   ],
 
-  // Every 5 minutes: reconcile (late ticks, the understanding re-run, the heartbeat).
+  // Every 5 minutes: reconcile (pending send effects, stranded sends, late ticks, the understanding
+  // re-run and the founder's note, then the heartbeat; flows §3.15).
   // Nightly at 03:20 UTC: yesterday's metrics and retention.
   "triggers": { "crons": ["*/5 * * * *", "20 3 * * *"] },
 
@@ -78,8 +85,9 @@
     // Empty sends no admin messages at all, which is what a laptop should do.
     "ADMIN_CONVERSATION_ID": "",
     "PUBLIC_BASE_URL": "http://localhost:8787",
-    "PRIVACY_NOTICE_URL_EN": "https://vela.family/privacy",
-    "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.family/zh-TW/privacy",
+    // Nothing is served at these paths: on a laptop the link only has to be there.
+    "PRIVACY_NOTICE_URL_EN": "http://localhost:8787/privacy",
+    "PRIVACY_NOTICE_URL_ZH_TW": "http://localhost:8787/zh-TW/privacy",
     "REGIONS": "apac"
   },
 
@@ -140,8 +148,9 @@
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_STAGING_BOT_USERNAME",
         "ADMIN_CONVERSATION_ID": "PLACEHOLDER_STAGING_ADMIN_CHAT_ID",
         "PUBLIC_BASE_URL": "https://PLACEHOLDER_STAGING_HOST",
-        "PRIVACY_NOTICE_URL_EN": "https://vela.family/privacy",
-        "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.family/zh-TW/privacy",
+        // The published privacy notice in each language, from the founder (infra/README.md).
+        "PRIVACY_NOTICE_URL_EN": "PLACEHOLDER_STAGING_PRIVACY_NOTICE_URL_EN",
+        "PRIVACY_NOTICE_URL_ZH_TW": "PLACEHOLDER_STAGING_PRIVACY_NOTICE_URL_ZH_TW",
         "REGIONS": "apac"
       }
     },
@@ -196,8 +205,8 @@
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
         "ADMIN_CONVERSATION_ID": "PLACEHOLDER_PRODUCTION_ADMIN_CHAT_ID",
         "PUBLIC_BASE_URL": "https://PLACEHOLDER_PRODUCTION_HOST",
-        "PRIVACY_NOTICE_URL_EN": "https://vela.family/privacy",
-        "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.family/zh-TW/privacy",
+        "PRIVACY_NOTICE_URL_EN": "PLACEHOLDER_PRODUCTION_PRIVACY_NOTICE_URL_EN",
+        "PRIVACY_NOTICE_URL_ZH_TW": "PLACEHOLDER_PRODUCTION_PRIVACY_NOTICE_URL_ZH_TW",
         "REGIONS": "apac"
       }
     }

@@ -3,14 +3,24 @@
  * `MemberScheduler` Durable Object. Everything it drives arrives through `WorkerRuntime`, so the
  * same handlers run in a test against fakes.
  */
-import type { Deps, MediaJob, OutboundJob, UnderstandJob } from "@vela/services";
+import {
+  type Deps,
+  errorLabel,
+  type MediaJob,
+  type OutboundJob,
+  type UnderstandJob,
+} from "@vela/services";
 import { createApp } from "./app.ts";
+import { createLogger, type DepsHandle } from "./deps.ts";
 import type { Env } from "./env.ts";
 import { productionRuntime, type WorkerRuntime, type WorkerServices } from "./runtime.ts";
 
 export { MemberScheduler } from "./scheduler.ts";
 
-/** Reconciliation: late ticks, the understanding re-run, then the heartbeat (flows §3.15). */
+/**
+ * Reconciliation: pending send effects, stranded sends, late ticks, the understanding re-run and the
+ * founder's note, then the heartbeat (flows §3.15).
+ */
 export const RECONCILE_CRON = "*/5 * * * *";
 /** Nightly: yesterday's metrics per kept-light member, then the retention rules. */
 export const NIGHTLY_CRON = "20 3 * * *";
@@ -101,12 +111,14 @@ export function createWorker(runtime: WorkerRuntime): VelaWorker {
             await runJob(runtime.services, handle.deps, job);
             message.ack();
           } catch (error) {
+            // The label, never the message: a failed send's error can repeat what was sent, and a
+            // failed query's lists the family's words among its parameters.
             handle.deps.logger.error("queue_job_failed", {
               queue: batch.queue,
               messageId: message.id,
               type: job.type,
               attempts: message.attempts,
-              error: String(error),
+              error: errorLabel(error),
             });
             message.retry();
           }
@@ -116,9 +128,17 @@ export function createWorker(runtime: WorkerRuntime): VelaWorker {
       }
     },
 
+    /**
+     * A run that throws is logged by its label and fails with an error that carries only the label:
+     * the runtime logs an uncaught error with its message, and a failed query's message lists the
+     * family's words among its parameters. Deps are built inside, so a misconfigured Worker's run
+     * reads `ConfigError:<variable>` too; the line goes through a logger built from `env`, because
+     * the deps may be what failed.
+     */
     async scheduled(controller, env, ctx) {
-      const handle = await runtime.createDeps(env);
+      let handle: DepsHandle | null = null;
       try {
+        handle = await runtime.createDeps(env);
         if (controller.cron === RECONCILE_CRON) {
           await runtime.services.reconcile(handle.deps);
         } else if (controller.cron === NIGHTLY_CRON) {
@@ -127,8 +147,14 @@ export function createWorker(runtime: WorkerRuntime): VelaWorker {
         } else {
           handle.deps.logger.error("cron_unknown", { cron: controller.cron });
         }
+      } catch (error) {
+        const label = errorLabel(error);
+        createLogger(env).error("cron_failed", { cron: controller.cron, error: label });
+        throw new Error(label);
       } finally {
-        ctx.waitUntil(handle.close());
+        if (handle !== null) {
+          ctx.waitUntil(handle.close());
+        }
       }
     },
   };

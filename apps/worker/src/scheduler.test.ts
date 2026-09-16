@@ -1,7 +1,16 @@
 import { runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { MemberScheduler } from "./scheduler.ts";
-import { argsOf, createFakeRuntime, type FakeRuntime, testEnv } from "./testing/fakes.ts";
+import {
+  argsOf,
+  consoleLinesDuring,
+  createFakeRuntime,
+  FAILED_QUERY_LABEL,
+  FAILED_QUERY_WORDS,
+  type FakeRuntime,
+  failedQueryFixture,
+  testEnv,
+} from "./testing/fakes.ts";
 
 function schedulerFor(memberId: string): DurableObjectStub<MemberScheduler> {
   const namespace = testEnv.MEMBER_SCHEDULER;
@@ -84,6 +93,32 @@ describe("the member scheduler", () => {
     expect(alarm).not.toBeNull();
     expect(alarm ?? 0).toBeGreaterThan(Date.now());
     expect(fake.closed()).toBe(1);
+  });
+
+  it("logs a failed tick by its error label, never by the message that carries the family's words", async () => {
+    const memberId = "member-logged";
+    const fake = createFakeRuntime({
+      services: {
+        tickMember: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+    const stub = schedulerFor(memberId);
+    await stub.wakeAt(memberId, new Date("2031-01-01T00:00:00.000Z"));
+
+    const { lines } = await consoleLinesDuring(() => runAlarm(stub, fake));
+
+    expect(lines).toEqual([
+      {
+        level: "error",
+        event: "scheduler_tick_failed",
+        environment: testEnv.ENVIRONMENT,
+        memberId,
+        error: FAILED_QUERY_LABEL,
+      },
+    ]);
+    expect(JSON.stringify(lines)).not.toContain(FAILED_QUERY_WORDS);
   });
 
   // The port a tick receives writes a wake for this member onto this object rather than calling

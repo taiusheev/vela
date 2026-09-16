@@ -3,10 +3,12 @@
  * the founder's admin pages behind Cloudflare Access.
  *
  * Nothing here decides anything about a family: a route verifies the request, builds deps, calls
- * one services entry point, and renders what came back. Services arrive through `WorkerRuntime`,
- * and only as types, so these routes and their tests never load the database driver.
+ * services, and renders what came back. Services' entry points arrive through `WorkerRuntime`, so
+ * a test hands the routes fakes; only the error types, the log label, and the channels a nearby
+ * contact form may name are imported directly.
  */
-import type { AdminContext, Deps } from "@vela/services";
+import { NEARBY_CONTACT_CHANNELS } from "@vela/db";
+import { type AdminContext, type Deps, errorLabel, VelaError } from "@vela/services";
 import { type Context, Hono } from "hono";
 import {
   ADMIN_PATH,
@@ -16,6 +18,7 @@ import {
   renderMessage,
   renderOverview,
 } from "./admin-pages.ts";
+import { ConfigError } from "./deps.ts";
 import type { Env } from "./env.ts";
 import type { WorkerRuntime } from "./runtime.ts";
 
@@ -32,19 +35,12 @@ type AppContext = Context<AppEnv>;
 /** Local time as a form's `datetime-local` gives it, read as UTC (the pages label the fields). */
 const DATETIME_LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
-/**
- * `VelaError` recognised without importing `@vela/services` as a value. Its `name` is fixed by the
- * class, and the worker needs nothing from it but the code, which decides the status.
- */
-function domainErrorCode(error: unknown): string | null {
-  if (error instanceof Error && error.name === "VelaError") {
-    const code: unknown = (error as Error & { code?: unknown }).code;
-    return typeof code === "string" ? code : null;
-  }
-  return null;
+/** A refusal from services; the route needs nothing from it but the code, which decides the status. */
+function domainErrorCode(error: unknown): VelaError["code"] | null {
+  return error instanceof VelaError ? error.code : null;
 }
 
-function statusForDomainError(code: string): 400 | 404 | 409 {
+function statusForDomainError(code: VelaError["code"]): 400 | 404 | 409 {
   if (code === "not_found") {
     return 404;
   }
@@ -177,10 +173,13 @@ export function createApp(runtime: WorkerRuntime): Hono<AppEnv> {
   });
 
   admin.get("/", async (c) => {
-    const rows = await withDeps(c, (deps) =>
-      runtime.services.loadAdminOverview(deps, { admin: c.get("admin") }),
-    );
-    return renderOverview(rows);
+    const ctx: AdminContext = { admin: c.get("admin") };
+    // One read after the other: both use the request's one database connection.
+    const overview = await withDeps(c, async (deps) => ({
+      families: await runtime.services.loadAdminOverview(deps, ctx),
+      failedOutbound: await runtime.services.loadFailedOutbound(deps, ctx),
+    }));
+    return renderOverview(overview.families, overview.failedOutbound);
   });
 
   admin.get("/families/:familyId", async (c) => {
@@ -246,7 +245,9 @@ export function createApp(runtime: WorkerRuntime): Hono<AppEnv> {
   app.notFound((c) => c.text("not found", 404));
 
   // An unexpected failure: 500, so Telegram redelivers the webhook and the founder sees the page
-  // failed rather than a blank success. The message never carries the cause.
+  // failed rather than a blank success. Neither the response nor the log line carries the error's
+  // message: a failed query's message lists its parameters, which hold what the family wrote, and
+  // a platform's description can repeat what was sent. The label keeps the class names and codes.
   app.onError((error, c) => {
     console.log(
       JSON.stringify({
@@ -254,7 +255,7 @@ export function createApp(runtime: WorkerRuntime): Hono<AppEnv> {
         event: "request_failed",
         path: new URL(c.req.url).pathname,
         method: c.req.method,
-        error: String(error),
+        error: errorLabel(error),
       }),
     );
     return c.text("internal error", 500);
@@ -272,7 +273,8 @@ function publicOrigin(baseUrl: string): string {
   try {
     return new URL(baseUrl).origin;
   } catch {
-    throw new Error(
+    throw new ConfigError(
+      "PUBLIC_BASE_URL",
       "PUBLIC_BASE_URL is not a URL: set the Worker's public origin in the environment's vars in wrangler.jsonc",
     );
   }
@@ -368,10 +370,7 @@ async function runAction(
   }
 }
 
-/** `NEARBY_CONTACT_CHANNELS` in `@vela/db`; repeated for the same reason as the admin paths. */
-const CONTACT_CHANNELS = ["line", "whatsapp", "telegram", "sms"] as const;
-
-function contactChannel(form: FormData): (typeof CONTACT_CHANNELS)[number] | null {
+function contactChannel(form: FormData): (typeof NEARBY_CONTACT_CHANNELS)[number] | null {
   const value = field(form, "channel");
-  return CONTACT_CHANNELS.find((channel) => channel === value) ?? null;
+  return NEARBY_CONTACT_CHANNELS.find((channel) => channel === value) ?? null;
 }

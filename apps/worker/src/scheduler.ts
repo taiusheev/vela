@@ -13,7 +13,7 @@
  * stopped, left, died, or was deleted keeps nothing here (flows §3.15).
  */
 import { DurableObject } from "cloudflare:workers";
-import type { MemberScheduler as MemberSchedulerPort } from "@vela/services";
+import { errorLabel, type MemberScheduler as MemberSchedulerPort } from "@vela/services";
 import { createLogger, createSchedulerPort } from "./deps.ts";
 import type { Env } from "./env.ts";
 import { productionRuntime, type WorkerRuntime } from "./runtime.ts";
@@ -94,7 +94,8 @@ export class MemberScheduler extends DurableObject<Env> {
       }
     } catch (error) {
       // Her light must not go out because one tick failed: try again in a minute, from the data.
-      logger.error("scheduler_tick_failed", { memberId, error: String(error) });
+      // The label, never the message, which for a failed query lists the family's words.
+      logger.error("scheduler_tick_failed", { memberId, error: errorLabel(error) });
       await this.#armNoLaterThan(Date.now() + RETRY_AFTER_MS);
     } finally {
       if (handle !== null) {

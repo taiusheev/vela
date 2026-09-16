@@ -31,7 +31,7 @@ import {
   turns,
   weeklyReads,
 } from "@vela/db";
-import { and, asc, eq, gte, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, lte, ne, or, type SQL, sql } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import { deliverArrival, prepareDay, sendRepeat, sendTurnPrompt } from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
@@ -267,12 +267,35 @@ function sameActions(a: readonly DueAction[], b: readonly DueAction[]): boolean 
 export type TickMember = (deps: Deps, memberId: string) => Promise<unknown>;
 
 /**
+ * The `next_wake_at` a tick stores for its decision `decided`, in one statement, so a wake marked
+ * between the tick's reads and its write is never lost. `observed` is the wake the tick read before
+ * anything its decision reads. A stored wake that differs from it was written while the tick ran,
+ * by a flow marking its change or by another tick, and the decision may not have seen why: the
+ * sooner of the two is kept, as the Durable Object keeps the sooner alarm, and a change the decision
+ * did see costs one tick that finds nothing due. No clock reading can tell such a wake apart: a flow
+ * stamps it with the time it read before its own work, which can be before the tick started. The
+ * wake the tick read (the one that caused it, or an earlier decision) is replaced. It is compared to
+ * the millisecond, the precision of the `Date` it was read into: a wake written by hand in SQL can
+ * hold microseconds, and would otherwise look changed to every tick and be kept, waking her at once,
+ * forever. Null clears the wake whatever is stored, as the scheduler is cleared.
+ */
+function storedWake(decided: Date | null, observed: Date | null): SQL | null {
+  if (decided === null) {
+    return null;
+  }
+  return sql`case when date_trunc('milliseconds', ${members.nextWakeAt}) is distinct from ${observed}::timestamptz then least(${members.nextWakeAt}, ${decided}::timestamptz) else ${decided}::timestamptz end`;
+}
+
+/**
  * Decides what is due for the member, runs it, and decides again until nothing is due or a round
  * changed nothing, at most `MAX_TICK_ROUNDS` times; then stores `next_wake_at` from the last
- * decision, arms the scheduler with it, and returns it. Null clears the scheduler: the member is
- * paused, her light is off, or her family is being deleted.
+ * decision, or the sooner wake another flow asked for during the tick (`storedWake`), arms the
+ * scheduler with what was stored, and returns it. Null clears the scheduler: the member is paused,
+ * her light is off, or her family is being deleted.
  */
 export async function tickMember(deps: Deps, memberId: string): Promise<Date | null> {
+  // Read before anything the decision reads, so every wake marked after it shows as a change.
+  const observed = (await memberById(deps.db, memberId))?.nextWakeAt ?? null;
   let previous: DueAction[] | null = null;
   let nextWakeAt: Date | null = null;
   const kinds: string[] = [];
@@ -293,14 +316,20 @@ export async function tickMember(deps: Deps, memberId: string): Promise<Date | n
     }
     previous = decision.due;
   }
-  await deps.db.update(members).set({ nextWakeAt }).where(eq(members.id, memberId));
-  await deps.scheduler.wakeAt(memberId, nextWakeAt);
+  const [stored] = await deps.db
+    .update(members)
+    .set({ nextWakeAt: storedWake(nextWakeAt, observed) })
+    .where(eq(members.id, memberId))
+    .returning({ nextWakeAt: members.nextWakeAt });
+  // No row means the member is gone, and her decision was already null.
+  const wake = stored?.nextWakeAt ?? null;
+  await deps.scheduler.wakeAt(memberId, wake);
   deps.logger.info("scheduler_tick", {
     memberId,
     actions: kinds.join(","),
-    nextWakeAt: nextWakeAt?.toISOString() ?? null,
+    nextWakeAt: wake?.toISOString() ?? null,
   });
-  return nextWakeAt;
+  return wake;
 }
 
 export interface ReconcileResult {

@@ -1,6 +1,6 @@
 # Pilot consent pack
 
-14 September 2026 · build plan sprint 1, task 1.1 (spec §9, §17, Appendix A) · owner: the founder uses it, the co-founder keeps it true to the code
+16 September 2026 · build plan sprint 1, task 1.1 (spec §9, §17, Appendix A) · owner: the founder uses it, the co-founder keeps it true to the code
 
 Everything the founder needs to bring a family into the pilot with each person's agreement recorded. English is the source. The Traditional Chinese files say the same thing and await native review (build plan 2.4); do not use them with a Taiwanese family until a native reviewer has signed them off.
 
@@ -35,12 +35,12 @@ While the family takes part, the organiser tells the founder about travel, a dea
 
 ## Before first use beyond the founder's own family
 
-The sprint 1 contract decisions (14 September 2026) close the design gaps this gate used to wait for (`data-map.md`, gaps 1–3 and 11–17). What remains is shipping them, and the founder's checks until then:
+The sprint 1 contract decisions (14 September 2026) close the design gaps this gate used to wait for (`data-map.md`, gaps 1–3 and 11–17). The services and the Worker that implement them are built, with their tests (16 September 2026), but not yet deployed. What remains is to have them proven on staging and running in production for the founder's own family (the sprint 1 status in the build plan; staging never holds a real family, `infra/README.md`, "Environments"), and the founder's checks until then:
 
-- `applyRetention` ships with retention tests for every pilot rule in `data-map.md` (flows §3.15, ADR-24, build plan 2.8). Until it runs nightly, the 30-day promise in the notice is not kept automatically.
-- The sprint 1 services and worker ship what the notice and the agreement now describe: nearby contacts in quiet notices only after a recorded yes, and every pilot family in `apac` (flows §3.1, §3.12; build plan 1.8); departures from the family group noticed (flows §3.16, build plan 1.11); no family content in the admin conversation (ADR-21, build plan 1.9); answers not understood re-run (ADR-25, build plan 1.13); the weekly read sent from the admin page, with its lines, never its counts or suggestion, shown in "what does the family see" (flows §3.13, §3.17; build plan 1.14). On the day of each of the first setups, the founder runs the checks in data-requests A.
-- The privacy notice is published at a public URL in each language, and the URLs are set as the Worker variables `PRIVACY_NOTICE_URL_EN` and `PRIVACY_NOTICE_URL_ZH_TW`: Vela's first message in every family group links the notice (flows §3.3).
-- Until the admin page's write actions ship (flows §3.17, ADR-22, build plan 1.12), every manual change follows `infra/runbooks/data-requests.md` in the Neon console, logged by hand. Once they ship, the admin page replaces those procedures, section by section as the runbook's table says.
+- `applyRetention` is built, with retention tests for every pilot rule in `data-map.md` (flows §3.15, ADR-24, build plan 2.8), and runs nightly wherever the Worker is deployed. Until it is proven on staging and running in production for the founder's own family, the 30-day promise in the notice is not kept automatically.
+- The services and the Worker are built to do what the notice and the agreement now describe: nearby contacts in quiet notices only after a recorded yes, and every pilot family in `apac` (flows §3.1, §3.12; build plan 1.8); departures from the family group noticed (flows §3.16, build plan 1.11); no family content in the admin conversation (ADR-21, build plan 1.9); answers not understood re-run (ADR-25, build plan 1.13); the weekly read sent from the admin page, with its lines, never its counts or suggestion, shown in "what does the family see" (flows §3.13, §3.17; build plan 1.14). None of it counts until it is proven on staging and running in production for the founder's own family. On the day of each of the first setups, the founder runs the checks in data-requests A.
+- The privacy notice is published on a domain Vela owns, at an https URL in each language (never on `vela.family`, which belongs to another company), and those URLs replace the placeholders in the Worker variables `PRIVACY_NOTICE_URL_EN` and `PRIVACY_NOTICE_URL_ZH_TW` (`infra/README.md`, sections 1 and 11): Vela's first message in every family group links the notice (flows §3.3), and a deployed Worker refuses to run while either is a placeholder or not https.
+- The admin page's write actions are built (flows §3.17, ADR-22, build plan 1.12). Until they are proven on staging and running in production for the founder's own family, every manual change follows `infra/runbooks/data-requests.md` in the Neon console, logged by hand. From then on the admin page replaces those procedures, section by section as the runbook's table says.
 - Every placeholder below is filled, and the Traditional Chinese files are signed off by a native reviewer before any Taiwanese family.
 
 ## Placeholders to fill before first use
@@ -49,7 +49,7 @@ The sprint 1 contract decisions (14 September 2026) close the design gaps this g
 |---|---|---|
 | `[FOUNDER FULL NAME]` | Notice, agreement, nearby message | The founder's legal name |
 | `[CONTACT ADDRESS]` | Notice, agreement, nearby page | A contact address the founder reads daily (a Vela address once the domain exists) |
-| `[PRIVACY NOTICE LINK]` | Nearby message, bot profile, the Worker variables `PRIVACY_NOTICE_URL_EN` and `PRIVACY_NOTICE_URL_ZH_TW` (Vela's first group message) | A public URL for the notice in each language (Telegram also requires a privacy policy link in the bot's settings) |
+| `[PRIVACY NOTICE LINK]` | Nearby message, bot profile, the Worker variables `PRIVACY_NOTICE_URL_EN` and `PRIVACY_NOTICE_URL_ZH_TW` (Vela's first group message) | An https URL for the notice in each language, on a domain Vela owns, never `vela.family` (Telegram also requires a privacy policy link in the bot's settings) |
 | `[NOTES TOOL]`, `[NOTES TOOL LOCATION]` | Notice, data map, script | The tool holding call notes, research answers and the fee ledger, and where its data is stored |
 | `[BENCHMARK STORAGE]` | Data map | Where consented STT clips live during sprint 2, outside git |
 | `[local emergency number]` | Script, section 4 | The emergency number where the person lives (119 in Taiwan, 911 in the United States, 999 or 112 in the United Kingdom, 112 in the European Union), noted with the family's details before the call |

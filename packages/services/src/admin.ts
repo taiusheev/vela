@@ -41,6 +41,8 @@ import {
   NEARBY_CONTACT_CHANNELS,
   type NearbyContact,
   nearbyContacts,
+  type Outbound,
+  outbound,
   type QuietEvent,
   quietEvents,
   translations,
@@ -51,7 +53,7 @@ import {
 import { and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Config, Deps } from "./deps.ts";
-import { VelaError } from "./errors.ts";
+import { isErrorCode, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
@@ -1231,6 +1233,80 @@ async function overviewSubject(db: Queryable, familyId: string): Promise<Member 
     .orderBy(desc(invites.createdAt), desc(invites.id))
     .limit(1);
   return invited?.member;
+}
+
+/** The overview lists this many failed or dropped sends unless the caller asks for another number. */
+const FAILED_OUTBOUND_LIMIT = 20;
+
+const FailedOutboundOptionsSchema = z.object({
+  limit: z.number().int().min(1).max(100).default(FAILED_OUTBOUND_LIMIT),
+});
+export type FailedOutboundOptions = z.input<typeof FailedOutboundOptionsSchema>;
+
+/** The `what` of the view rows: the failed sends are a section of the overview. */
+const FAILED_OUTBOUND_VIEW = `${ADMIN_OVERVIEW_PATH}#failed-outbound`;
+
+/** A send that did not go out: ids, kind, state, and a code; never the message or platform words. */
+export type FailedOutboundRow = Pick<
+  Outbound,
+  "id" | "memberId" | "kind" | "status" | "attempts" | "queuedAt"
+> & {
+  family: Pick<Family, "id" | "name">;
+  /**
+   * The code the gateway stored in front of the platform's description (`blocked`, `not_found`,
+   * `invalid_payload`) or the reason a row was dropped (`family_ended`, `member_deceased`);
+   * `unknown` when the row holds none.
+   */
+  errorCode: string;
+};
+
+/**
+ * The most recent sends across families that failed or were dropped, newest first (the overview's
+ * "failed outbound"). The table keeps no failure time, so rows are ordered by `queued_at`, which
+ * each retry moves to its due time: the failed attempt ran then. Only the code in front of
+ * `outbound.error` leaves the database, since the platform's description after it may repeat what
+ * was sent. Logs one `view` per family whose rows it returns.
+ */
+export async function loadFailedOutbound(
+  deps: Deps,
+  ctx: AdminContext,
+  options: FailedOutboundOptions = {},
+): Promise<FailedOutboundRow[]> {
+  const input = parse(FailedOutboundOptionsSchema, options, "view");
+  const rows = await deps.db
+    .select({
+      id: outbound.id,
+      familyId: families.id,
+      familyName: families.name,
+      memberId: outbound.memberId,
+      kind: outbound.kind,
+      status: outbound.status,
+      attempts: outbound.attempts,
+      errorCode: sql<string>`split_part(coalesce(${outbound.error}, ''), ':', 1)`,
+      queuedAt: outbound.queuedAt,
+    })
+    .from(outbound)
+    .innerJoin(members, eq(members.id, outbound.memberId))
+    .innerJoin(families, eq(families.id, members.familyId))
+    .where(inArray(outbound.status, ["failed", "dropped"]))
+    .orderBy(desc(outbound.queuedAt), desc(outbound.id))
+    .limit(input.limit);
+  await recordAdminView(deps, ctx, {
+    familyIds: rows.map((row) => row.familyId),
+    memberId: null,
+    what: FAILED_OUTBOUND_VIEW,
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    family: { id: row.familyId, name: row.familyName },
+    memberId: row.memberId,
+    kind: row.kind,
+    status: row.status,
+    attempts: row.attempts,
+    // A row written without a code in front would otherwise put its whole text on the page.
+    errorCode: isErrorCode(row.errorCode) ? row.errorCode : "unknown",
+    queuedAt: row.queuedAt,
+  }));
 }
 
 /** An answer as the family page shows it: its summary and processing state, never the payload. */

@@ -10,5 +10,6 @@ export {
   type SetWebhookOptions,
   setMyCommands,
   setWebhook,
+  TELEGRAM_ALLOWED_UPDATES,
   type TelegramBotInfo,
 } from "./telegram/setup.ts";

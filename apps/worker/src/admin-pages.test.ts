@@ -1,6 +1,52 @@
+import type { FailedOutboundRow } from "@vela/services";
 import { describe, expect, it } from "vitest";
-import { renderFamilyPage } from "./admin-pages.ts";
+import { renderFamilyPage, renderOverview } from "./admin-pages.ts";
 import { familyPageFixture, memberFixture } from "./testing/fakes.ts";
+
+describe("the overview's failed sends", () => {
+  /** The section alone, from its opening tag to its close. */
+  function failedSection(body: string): string {
+    const start = body.indexOf('<section id="failed-outbound">');
+    expect(start, "no failed-outbound section on the overview").toBeGreaterThan(-1);
+    return body.slice(start, body.indexOf("</section>", start));
+  }
+
+  const failed: FailedOutboundRow = {
+    id: "55555555-5555-7555-8555-555555555555",
+    family: {
+      id: "11111111-1111-7111-8111-111111111111",
+      name: '<img src=x onerror="go()"> & Lin',
+    },
+    memberId: "22222222-2222-7222-8222-222222222222",
+    kind: "quiet_notice",
+    status: "dropped",
+    attempts: 1,
+    errorCode: "member_deceased",
+    queuedAt: new Date("2026-09-14T06:10:00.000Z"),
+  };
+
+  it("lists each send by its code, time, kind, and attempts, linked to its family and escaped", async () => {
+    const section = failedSection(await renderOverview([], [failed]).text());
+
+    expect(section).toContain(
+      '<a href="/admin/families/11111111-1111-7111-8111-111111111111">&lt;img src=x onerror=&quot;go()&quot;&gt; &amp; Lin</a>',
+    );
+    expect(section).not.toContain("<img");
+    expect(section).toContain("<td>2026-09-14T06:10:00Z</td>");
+    expect(section).toContain(`<td>quiet_notice<br><span class="muted">${failed.id}</span></td>`);
+    expect(section).toContain(`<span class="muted">${failed.memberId}</span>`);
+    expect(section).toContain("<td>dropped</td>");
+    expect(section).toContain('<td class="num">1</td>');
+    expect(section).toContain("<td><code>member_deceased</code></td>");
+  });
+
+  it("says no send has failed when services returned none", async () => {
+    const section = failedSection(await renderOverview([], []).text());
+
+    expect(section).toContain("No send has failed or been dropped.");
+    expect(section).not.toContain("<table");
+  });
+});
 
 /** One form of the family page, from its `action` to its closing tag. */
 function formFor(body: string, familyId: string, action: string): string {

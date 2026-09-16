@@ -8,16 +8,19 @@ const WRANGLER_CONFIG = fileURLToPath(new URL("./wrangler.jsonc", import.meta.ur
 /** The environments `.github/workflows/deploy.yml` deploys. */
 const DEPLOYED_ENVIRONMENTS = ["staging", "production"] as const;
 
-/** What one deployed environment serves HTTP on, as `wrangler deploy --env <environment>` reads it. */
-interface DeployedHttp {
+/**
+ * What one deployed environment starts with and serves HTTP on, as
+ * `wrangler deploy --env <environment>` reads it.
+ */
+interface DeployedConfig {
   readonly environment: string;
-  readonly publicBaseUrl: unknown;
+  readonly vars: Readonly<Record<string, unknown>>;
   readonly routes: unknown;
 }
 
 declare module "vitest" {
   export interface ProvidedContext {
-    deployedHttp: readonly DeployedHttp[];
+    deployedConfig: readonly DeployedConfig[];
   }
 }
 
@@ -26,10 +29,10 @@ declare module "vitest" {
  * inside workerd, which cannot read the file. wrangler's config type lives in a package it bundles
  * without its types, so the fields arrive as unknown and the test checks their shape.
  */
-function deployedHttp(environment: string): DeployedHttp {
+function deployedConfig(environment: string): DeployedConfig {
   const config: { readonly vars?: Readonly<Record<string, unknown>>; readonly routes?: unknown } =
     unstable_readConfig({ config: WRANGLER_CONFIG, env: environment }, { hideWarnings: true });
-  return { environment, publicBaseUrl: config.vars?.PUBLIC_BASE_URL, routes: config.routes };
+  return { environment, vars: config.vars ?? {}, routes: config.routes };
 }
 
 /**
@@ -47,7 +50,7 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts"],
-    provide: { deployedHttp: DEPLOYED_ENVIRONMENTS.map(deployedHttp) },
+    provide: { deployedConfig: DEPLOYED_ENVIRONMENTS.map(deployedConfig) },
   },
   plugins: [
     cloudflareTest({

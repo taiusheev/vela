@@ -1,11 +1,17 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { NEARBY_CONTACT_CHANNELS } from "@vela/db";
+import { type FailedOutboundRow, VelaError } from "@vela/services";
 import { describe, expect, it } from "vitest";
 import { createApp } from "./app.ts";
 import type { Env } from "./env.ts";
 import {
   argsOf,
+  consoleLinesDuring,
   createFakeRuntime,
+  FAILED_QUERY_LABEL,
+  FAILED_QUERY_WORDS,
   type FakeRuntime,
+  failedQueryFixture,
   familyPageFixture,
   inboundEventFixture,
   namesOf,
@@ -103,6 +109,34 @@ describe("the Telegram webhook", () => {
     expect((await send(appFor(fake), webhookRequest("right"))).status).toBe(500);
     expect(fake.closed()).toBe(1);
   });
+
+  it("logs a failure by its error label, never by the message that carries the family's words", async () => {
+    const fake = createFakeRuntime({
+      webhookSecret: "right",
+      events: [inboundEventFixture()],
+      services: {
+        handleInbound: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+
+    const { result: response, lines } = await consoleLinesDuring(() =>
+      send(appFor(fake), webhookRequest("right")),
+    );
+
+    expect(response.status).toBe(500);
+    expect(lines).toEqual([
+      {
+        level: "error",
+        event: "request_failed",
+        path: "/webhooks/telegram",
+        method: "POST",
+        error: FAILED_QUERY_LABEL,
+      },
+    ]);
+    expect(JSON.stringify(lines)).not.toContain(FAILED_QUERY_WORDS);
+  });
 });
 
 describe("the admin pages", () => {
@@ -120,13 +154,32 @@ describe("the admin pages", () => {
     expect(namesOf(fake.calls)).toEqual([]);
   });
 
-  it("reads the overview as the identity in the token", async () => {
-    const fake = createFakeRuntime({ admin: "founder@vela.test" });
+  it("reads the overview and its failed sends as the identity in the token", async () => {
+    const failed: FailedOutboundRow = {
+      id: "55555555-5555-7555-8555-555555555555",
+      family: { id: "11111111-1111-7111-8111-111111111111", name: "The Lin family" },
+      memberId: "22222222-2222-7222-8222-222222222222",
+      kind: "arrival",
+      status: "failed",
+      attempts: 4,
+      errorCode: "blocked",
+      queuedAt: new Date("2026-09-14T00:35:00.000Z"),
+    };
+    const fake = createFakeRuntime({
+      admin: "founder@vela.test",
+      services: { loadFailedOutbound: async () => [failed] },
+    });
 
     const response = await send(appFor(fake), new Request(`${ORIGIN}/admin`));
+    const body = await response.text();
 
     expect(response.status).toBe(200);
+    expect(namesOf(fake.calls)).toEqual(["loadAdminOverview", "loadFailedOutbound"]);
     expect(argsOf(fake.calls, "loadAdminOverview")).toEqual([[{ admin: "founder@vela.test" }]]);
+    expect(argsOf(fake.calls, "loadFailedOutbound")).toEqual([[{ admin: "founder@vela.test" }]]);
+    expect(body).toContain(`<span class="muted">${failed.id}</span>`);
+    expect(body).toContain("<code>blocked</code>");
+    expect(fake.closed()).toBe(fake.built());
   });
 
   it("answers 404 for a family that is not recorded", async () => {
@@ -140,10 +193,7 @@ describe("the admin pages", () => {
   });
 
   it("answers 400 for an address that is not a family id, without failing the request", async () => {
-    const refusal = Object.assign(new Error("view: 'not-a-uuid' is not a uuid"), {
-      name: "VelaError",
-      code: "invalid_payload",
-    });
+    const refusal = new VelaError("invalid_payload", "view: 'not-a-uuid' is not a uuid");
     const fake = createFakeRuntime({
       services: {
         loadFamilyPage: async () => {
@@ -204,7 +254,7 @@ describe("an admin action", () => {
 
   it("refuses a post whose Origin is the hostname it arrived on rather than the public base", async () => {
     const fake = createFakeRuntime();
-    const deployed: Env = { ...testEnv, PUBLIC_BASE_URL: "https://vela.family" };
+    const deployed: Env = { ...testEnv, PUBLIC_BASE_URL: "https://admin.vela.example" };
 
     const response = await send(appFor(fake), formRequest(path, { memberId }, ORIGIN), deployed);
 
@@ -214,11 +264,11 @@ describe("an admin action", () => {
 
   it("accepts a post from the public base, whichever hostname it arrived on", async () => {
     const fake = createFakeRuntime();
-    const deployed: Env = { ...testEnv, PUBLIC_BASE_URL: "https://vela.family" };
+    const deployed: Env = { ...testEnv, PUBLIC_BASE_URL: "https://admin.vela.example" };
 
     const response = await send(
       appFor(fake),
-      formRequest(path, { memberId, confirm: "left" }, "https://vela.family"),
+      formRequest(path, { memberId, confirm: "left" }, "https://admin.vela.example"),
       deployed,
     );
 
@@ -227,7 +277,7 @@ describe("an admin action", () => {
 
   it("changes nothing when PUBLIC_BASE_URL is not a URL: that is a misconfigured deployment", async () => {
     const fake = createFakeRuntime();
-    const misconfigured: Env = { ...testEnv, PUBLIC_BASE_URL: "vela.family" };
+    const misconfigured: Env = { ...testEnv, PUBLIC_BASE_URL: "admin.vela.example" };
 
     const response = await send(
       appFor(fake),
@@ -312,6 +362,26 @@ describe("an admin action", () => {
     expect(argsOf(fake.calls, "deleteFamily")).toEqual([
       [{ admin: "founder@vela.test", familyId }, familyId],
     ]);
+  });
+
+  it("adds a contact on every channel a nearby contact can be reached on", async () => {
+    const fake = createFakeRuntime();
+    const contact = { memberId, name: "Auntie Lin", phone: "+886 900 000 000", relation: "" };
+
+    for (const channel of NEARBY_CONTACT_CHANNELS) {
+      const response = await send(
+        appFor(fake),
+        formRequest(`/admin/families/${familyId}/add_contact`, { ...contact, channel }, ORIGIN),
+      );
+      expect(response.status).toBe(303);
+    }
+
+    expect(argsOf(fake.calls, "addContact")).toEqual(
+      NEARBY_CONTACT_CHANNELS.map((channel) => [
+        { admin: "founder@vela.test", familyId },
+        { memberId, name: "Auntie Lin", phone: "+886 900 000 000", relation: null, channel },
+      ]),
+    );
   });
 
   // For the kept-light member a departure cannot be undone, and which member that is lives in the
@@ -468,10 +538,7 @@ describe("an admin action", () => {
   });
 
   it("turns a refusal from services into a status, not a stack trace", async () => {
-    const refusal = Object.assign(new Error("not in this family"), {
-      name: "VelaError",
-      code: "not_found",
-    });
+    const refusal = new VelaError("not_found", "not in this family");
     const fake = createFakeRuntime({
       services: {
         markLeft: async () => {
