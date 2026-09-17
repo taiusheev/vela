@@ -1,6 +1,6 @@
 import type { InboundEvent, Lang } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { decodeButton, encodeButton } from "@vela/core";
+import { decodeButton, encodeButton, outboundKey } from "@vela/core";
 import {
   type ChannelLink,
   channelLinks,
@@ -13,13 +13,17 @@ import {
   type Member,
   members,
   messageRefs,
+  nearbyContacts,
   outbound,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { handleConsentButton, handleInviteStart } from "./consent.ts";
+import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "./consent.ts";
 import type { OutboundJob } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
+import { sha256Hex } from "./hash.ts";
+import { handleParentCommand } from "./parent-commands.ts";
+import { hasHealthWordsConsent } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { seedFamily } from "./testing/seed.ts";
 
@@ -40,6 +44,7 @@ afterAll(async () => {
 const ORGANISER = "1001";
 const HER = "2001";
 const TOKEN = "token-1";
+const NOTICE_EN = "https://vela.test/privacy/en";
 
 interface Invited {
   family: Family;
@@ -250,7 +255,10 @@ describe("handleInviteStart", () => {
     expect(rows[0]).toMatchObject({ kind: "consent", memberId: seed.her.id, conversationId: HER });
     await h.run(handlers());
     const [request] = h.telegram.sentTo(HER);
-    expect(request?.message.text).toBe(t("en", "consent.request", { organiser: "Mia" }));
+    expect(request?.message.text).toBe(
+      t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN }),
+    );
+    expect(request?.message.text).toContain("Timur Aiusheev");
     expect(request?.message.lang).toBe("en");
     expect(
       request?.message.buttons?.flat().map((button) => [decodeButton(button.id), button.label]),
@@ -277,7 +285,12 @@ describe("handleInviteStart", () => {
     await h.run(handlers());
 
     const [request] = h.telegram.sentTo(HER);
-    expect(request?.message.text).toBe(t("zh-TW", "consent.request", { organiser: "Mia" }));
+    expect(request?.message.text).toBe(
+      t("zh-TW", "consent.request", {
+        organiser: "Mia",
+        notice: "https://vela.test/privacy/zh-TW",
+      }),
+    );
     expect(request?.message.buttons?.flat().map((button) => button.label)).toEqual([
       "好，沒問題",
       "不用了，謝謝",
@@ -325,7 +338,7 @@ describe("handleInviteStart", () => {
 });
 
 describe("handleConsentButton: Yes", () => {
-  it("switches the light on from tomorrow, records the consent, thanks her, and tells the organiser", async () => {
+  it("switches the light on from tomorrow, records the consent with its evidence, thanks her, and tells the organiser", async () => {
     const seed = await linked();
     h.clock.advanceMinutes(5);
     const tap = tapEvent(seed.her.id, true);
@@ -343,33 +356,49 @@ describe("handleConsentButton: Yes", () => {
     expect(await herRow(seed.her.id)).toMatchObject({
       lightOn: true,
       lightConsentedAt: now,
-      lightConsentText: "consent.request@1",
+      lightConsentText: "consent.request@2",
       status: "active",
       lightStartsOn: "2026-09-15",
       learningUntil: "2026-09-28",
       nextWakeAt: turnPrompt,
     });
+    const params = { organiser: "Mia", notice: NOTICE_EN };
     const [consent] = await h.db.select().from(consents);
-    expect(consent).toMatchObject({
+    expect(consent).toEqual({
+      id: expect.any(String),
       memberId: seed.her.id,
+      contactId: null,
+      subjectRef: `member:${seed.her.id}`,
       kind: "light",
-      textVersion: "consent.request@1",
+      answer: "yes",
+      textVersion: "consent.request@2",
       lang: "en",
       channel: "telegram",
       givenAt: now,
-      evidence: { message_id: "1" },
+      withdrawnAt: null,
+      subjectDeletedAt: null,
+      evidence: {
+        chat_id: HER,
+        message_id: "1",
+        params,
+        text_sha256: await sha256Hex(t("en", "consent.request", params)),
+      },
     });
     await h.run(handlers());
-    expect(h.telegram.sentTo(HER).at(-1)?.message.text).toBe(
-      "Thank you. Your first morning arrives tomorrow at 08:00.",
-    );
     expect(h.telegram.sentTo(ORGANISER).map((entry) => entry.message.text)).toEqual([
       "Mom said yes. The first morning arrives tomorrow at 08:00.",
     ]);
     expect(h.telegram.acknowledged.map((call) => call.eventId)).toEqual([tap.eventId]);
+    // The request stays in her chat, who runs Vela and the notice link included, with her choice.
     expect(h.telegram.closed).toEqual([
-      { conversationId: HER, messageId: "1", replacementText: "Yes, that's fine" },
+      {
+        conversationId: HER,
+        messageId: "1",
+        replacementText: `${t("en", "consent.request", params)}\n\nYes, that's fine`,
+      },
     ]);
+    expect(h.telegram.closed[0]?.replacementText).toContain("Timur Aiusheev");
+    expect(h.telegram.closed[0]?.replacementText).toContain(NOTICE_EN);
     expect(await eventNames()).toEqual(["invite_accepted", "consent_given"]);
     expect(h.scheduler.wakes.get(seed.her.id)).toEqual(turnPrompt);
   });
@@ -415,16 +444,343 @@ describe("handleConsentButton: Yes", () => {
     await handleConsentButton(h.deps, tapEvent(seed.her.id, true), action);
 
     expect(await h.db.select().from(consents)).toHaveLength(1);
-    expect((await outboundRows()).map((row) => row.conversationId)).toEqual([HER, HER, ORGANISER]);
+    expect((await outboundRows()).map((row) => row.conversationId)).toEqual([
+      HER,
+      HER,
+      ORGANISER,
+      HER,
+    ]);
     expect((await eventNames()).filter((name) => name === "consent_given")).toHaveLength(1);
-    expect(h.telegram.closed).toHaveLength(2);
+    // The second tap records nothing, so it only makes sure the buttons are gone.
+    expect(h.telegram.closed.map((call) => call.replacementText)).toEqual([
+      `${t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN })}\n\nYes, that's fine`,
+      undefined,
+    ]);
     expect(h.scheduler.history).toHaveLength(1);
   });
 });
 
+describe("the health-words question", () => {
+  async function consented(options: Parameters<typeof seedInvited>[0] = {}): Promise<Invited> {
+    const seed = await linked(options);
+    await handleConsentButton(
+      h.deps,
+      tapEvent(seed.her.id, true),
+      { type: "consent", memberId: seed.her.id, accept: true },
+      async () => {},
+    );
+    await h.run(handlers());
+    return seed;
+  }
+
+  function healthTap(memberId: string, accept: boolean, user = HER): InboundEvent {
+    sequence += 1;
+    return {
+      channel: "telegram",
+      eventId: `tg:${sequence}`,
+      at: h.clock.now().toISOString(),
+      kind: "button",
+      sender: { externalUserId: user },
+      conversation: { externalId: user, kind: "private" },
+      messageId: "3",
+      buttonData: encodeButton({ type: "health_words", memberId, accept }),
+      callbackId: `cb${sequence}`,
+    };
+  }
+
+  async function healthRows() {
+    return h.db.select().from(consents).where(eq(consents.kind, "health_words"));
+  }
+
+  it("follows her thanks, ten seconds later, with its own Yes and No buttons, once", async () => {
+    const seed = await consented();
+
+    const toHer = h.telegram.sentTo(HER);
+    expect(toHer.map((entry) => entry.message.text)).toEqual([
+      t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN }),
+      t("en", "consent.accepted", { time: "08:00" }),
+      t("en", "consent.health_words", { organiser: "Mia" }),
+    ]);
+    const [accepted, question] = toHer.slice(1);
+    expect((question?.at.getTime() ?? 0) - (accepted?.at.getTime() ?? 0)).toBe(10_000);
+    expect(
+      question?.message.buttons?.flat().map((button) => [decodeButton(button.id), button.label]),
+    ).toEqual([
+      [{ type: "health_words", memberId: seed.her.id, accept: true }, "Yes, that's fine"],
+      [{ type: "health_words", memberId: seed.her.id, accept: false }, "No, thank you"],
+    ]);
+    const rows = await outboundRows();
+    const questionKey = outboundKey("consent", {
+      conversationId: HER,
+      suffix: `health_words:${seed.her.id}`,
+    });
+    expect(rows.filter((row) => row.idempotencyKey === questionKey)).toHaveLength(1);
+    const refs = await h.db.select().from(messageRefs).where(eq(messageRefs.conversationId, HER));
+    expect(refs.map((ref) => [ref.messageId, ref.purpose, ref.memberId])).toContainEqual([
+      question?.result.primaryMessageId,
+      "consent",
+      seed.her.id,
+    ]);
+  });
+
+  it("is asked in her language, and never before a Yes", async () => {
+    const seed = await linked({ language: "zh-TW" });
+    expect(h.telegram.sentTo(HER).map((entry) => entry.message.text)).not.toContain(
+      t("zh-TW", "consent.health_words", { organiser: "Mia" }),
+    );
+
+    await handleConsentButton(
+      h.deps,
+      tapEvent(seed.her.id, true),
+      { type: "consent", memberId: seed.her.id, accept: true },
+      async () => {},
+    );
+    await h.run(handlers());
+
+    expect(h.telegram.sentTo(HER).at(-1)?.message.text).toBe(
+      t("zh-TW", "consent.health_words", { organiser: "Mia" }),
+    );
+  });
+
+  it("records her Yes with its evidence, sends nothing, and records nothing for a second tap, the other button, or a redelivery", async () => {
+    const seed = await consented();
+    const sentBefore = h.telegram.sent.length;
+    h.clock.advanceMinutes(1);
+    const tap = healthTap(seed.her.id, true);
+
+    await handleHealthWordsButton(h.deps, tap, {
+      type: "health_words",
+      memberId: seed.her.id,
+      accept: true,
+    });
+    await handleHealthWordsButton(h.deps, tap, {
+      type: "health_words",
+      memberId: seed.her.id,
+      accept: true,
+    });
+    await handleHealthWordsButton(h.deps, healthTap(seed.her.id, false), {
+      type: "health_words",
+      memberId: seed.her.id,
+      accept: false,
+    });
+    await h.run(handlers());
+
+    const params = { organiser: "Mia" };
+    const rows = await healthRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      memberId: seed.her.id,
+      subjectRef: `member:${seed.her.id}`,
+      answer: "yes",
+      textVersion: "consent.health_words@1",
+      lang: "en",
+      givenAt: h.clock.now(),
+      withdrawnAt: null,
+      evidence: {
+        chat_id: HER,
+        message_id: "3",
+        params,
+        text_sha256: await sha256Hex(t("en", "consent.health_words", params)),
+      },
+    });
+    const given = await h.db
+      .select({ props: events.props })
+      .from(events)
+      .where(eq(events.name, "consent_given"));
+    expect(given.map((row) => row.props)).toContainEqual({
+      kind: "health_words",
+      text_version: "consent.health_words@1",
+    });
+    expect(h.telegram.sent.length).toBe(sentBefore);
+    expect(h.telegram.closed.at(-1)).toEqual({
+      conversationId: HER,
+      messageId: "3",
+      replacementText: `${t("en", "consent.health_words", params)}\n\nYes, that's fine`,
+    });
+    expect(h.telegram.closed.filter((call) => call.messageId === "3")).toHaveLength(1);
+    expect(h.telegram.acknowledged.slice(-3)).toHaveLength(3);
+    expect(
+      h.logger.entries.filter((entry) => entry.event === "health_words_button_ignored"),
+    ).toEqual([
+      {
+        level: "info",
+        event: "health_words_button_ignored",
+        fields: { familyId: seed.family.id, reason: "already_answered" },
+      },
+      {
+        level: "info",
+        event: "health_words_button_ignored",
+        fields: { familyId: seed.family.id, reason: "already_answered" },
+      },
+    ]);
+  });
+
+  it("records her No as a decline and sends nothing to anyone", async () => {
+    const seed = await consented();
+    const sentBefore = h.telegram.sent.length;
+
+    await handleHealthWordsButton(h.deps, healthTap(seed.her.id, false), {
+      type: "health_words",
+      memberId: seed.her.id,
+      accept: false,
+    });
+    await h.run(handlers());
+
+    expect((await healthRows()).map((row) => [row.answer, row.withdrawnAt])).toEqual([
+      ["no", null],
+    ]);
+    expect((await eventNames()).at(-1)).toBe("consent_declined");
+    expect(h.telegram.sent.length).toBe(sentBefore);
+    expect(h.telegram.closed.at(-1)).toEqual({
+      conversationId: HER,
+      messageId: "3",
+      replacementText: `${t("en", "consent.health_words", { organiser: "Mia" })}\n\nNo, thank you`,
+    });
+  });
+
+  it("records nothing for a tap from another person, before her Yes, or while she is paused", async () => {
+    const seed = await consented();
+    const action = { type: "health_words", memberId: seed.her.id, accept: true } as const;
+
+    await handleHealthWordsButton(h.deps, healthTap(seed.her.id, true, ORGANISER), action);
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.her.id));
+    await handleHealthWordsButton(h.deps, healthTap(seed.her.id, true), action);
+
+    await h.reset();
+    const before = await linked();
+    await handleHealthWordsButton(h.deps, healthTap(before.her.id, true), {
+      type: "health_words",
+      memberId: before.her.id,
+      accept: true,
+    });
+
+    expect(await healthRows()).toEqual([]);
+    expect(h.telegram.closed).toEqual([]);
+    expect(
+      h.logger.entries.filter((entry) => entry.event === "health_words_button_ignored"),
+    ).toEqual([
+      {
+        level: "info",
+        event: "health_words_button_ignored",
+        fields: { familyId: before.family.id, reason: "status" },
+      },
+    ]);
+  });
+
+  it("is not asked again after a stop, a start, or a second Yes", async () => {
+    const seed = await consented();
+    const her = await herRow(seed.her.id);
+    if (her === undefined) {
+      throw new Error("she is gone");
+    }
+    const say = (text: string): InboundEvent => {
+      sequence += 1;
+      return {
+        channel: "telegram",
+        eventId: `tg:${sequence}`,
+        at: h.clock.now().toISOString(),
+        kind: "text",
+        text,
+        sender: { externalUserId: HER },
+        conversation: { externalId: HER, kind: "private" },
+        messageId: String(100 + sequence),
+      };
+    };
+
+    await handleParentCommand(h.deps, her, "stop", say("stop"), async () => {});
+    const paused = await herRow(seed.her.id);
+    if (paused === undefined) {
+      throw new Error("she is gone");
+    }
+    await handleParentCommand(h.deps, paused, "start", say("start"), async () => {});
+    await handleConsentButton(
+      h.deps,
+      tapEvent(seed.her.id, true),
+      { type: "consent", memberId: seed.her.id, accept: true },
+      async () => {},
+    );
+    await h.run(handlers());
+
+    const questions = h.telegram
+      .sentTo(HER)
+      .filter(
+        (entry) => entry.message.text === t("en", "consent.health_words", { organiser: "Mia" }),
+      );
+    expect(questions).toHaveLength(1);
+  });
+
+  it("stop withdraws her Yes, and start leaves it withdrawn", async () => {
+    const seed = await consented();
+    await handleHealthWordsButton(h.deps, healthTap(seed.her.id, true), {
+      type: "health_words",
+      memberId: seed.her.id,
+      accept: true,
+    });
+    const stopAt = h.clock.now();
+    const her = await herRow(seed.her.id);
+    if (her === undefined) {
+      throw new Error("she is gone");
+    }
+    const command = (text: string): InboundEvent => {
+      sequence += 1;
+      return {
+        channel: "telegram",
+        eventId: `tg:${sequence}`,
+        at: h.clock.now().toISOString(),
+        kind: "text",
+        text,
+        sender: { externalUserId: HER },
+        conversation: { externalId: HER, kind: "private" },
+        messageId: String(100 + sequence),
+      };
+    };
+
+    await handleParentCommand(h.deps, her, "stop", command("stop"), async () => {});
+    h.clock.advanceMinutes(30);
+    const paused = await herRow(seed.her.id);
+    if (paused === undefined) {
+      throw new Error("she is gone");
+    }
+    await handleParentCommand(h.deps, paused, "start", command("start"), async () => {});
+
+    expect((await healthRows()).map((row) => [row.answer, row.withdrawnAt])).toEqual([
+      ["yes", stopAt],
+    ]);
+    expect(await hasHealthWordsConsent(h.db, seed.her.id, h.clock.now())).toBe(false);
+    const stops = await h.db
+      .select({ props: events.props })
+      .from(events)
+      .where(eq(events.name, "stop_said"));
+    expect(stops.map((row) => row.props)).toEqual([{ health_words_withdrawn: true }]);
+  });
+});
+
 describe("handleConsentButton: No", () => {
-  it("records the decline, tells her and the organiser, and leaves her invited with the light off", async () => {
+  it("records the decline, tells the organiser, deletes her member row with everything setup stored, and keeps only the forgotten proof", async () => {
     const seed = await linked();
+    const contact = only(
+      await h.db
+        .insert(nearbyContacts)
+        .values({
+          familyId: seed.family.id,
+          memberId: seed.her.id,
+          name: "Anna",
+          relation: "neighbour",
+          createdAt: h.clock.now(),
+        })
+        .returning(),
+    );
+    await h.db.insert(consents).values({
+      memberId: seed.her.id,
+      subjectRef: `member:${seed.her.id}`,
+      kind: "privacy_notice",
+      answer: "yes",
+      textVersion: "privacy-notice.v1",
+      lang: "en",
+      channel: "paper",
+      givenAt: h.clock.now(),
+      evidence: { note: "Mom read it with me", recorded_by: "founder" },
+    });
     h.clock.advanceMinutes(2);
 
     await handleConsentButton(h.deps, tapEvent(seed.her.id, false), {
@@ -433,35 +789,118 @@ describe("handleConsentButton: No", () => {
       accept: false,
     });
 
-    expect(await herRow(seed.her.id)).toMatchObject({
-      lightOn: false,
-      lightConsentedAt: null,
-      status: "invited",
-      lightStartsOn: null,
-      nextWakeAt: null,
-    });
-    expect(await h.db.select().from(consents)).toHaveLength(0);
+    const now = h.clock.now();
+    expect(await herRow(seed.her.id)).toBeUndefined();
+    expect(await h.db.select().from(channelLinks).where(eq(channelLinks.externalId, HER))).toEqual(
+      [],
+    );
+    expect(await h.db.select().from(invites)).toEqual([]);
+    expect(await h.db.select().from(nearbyContacts)).toEqual([]);
+    expect(
+      await h.db.select().from(messageRefs).where(eq(messageRefs.conversationId, HER)),
+    ).toEqual([]);
+    expect(await h.db.select().from(outbound).where(eq(outbound.conversationId, HER))).toEqual([]);
+    const params = { organiser: "Mia", notice: NOTICE_EN };
+    const proofs = await h.db.select().from(consents).orderBy(asc(consents.givenAt));
+    expect(
+      proofs.map((row) => ({
+        memberId: row.memberId,
+        subjectRef: row.subjectRef,
+        kind: row.kind,
+        answer: row.answer,
+        textVersion: row.textVersion,
+        subjectDeletedAt: row.subjectDeletedAt,
+        evidence: row.evidence,
+      })),
+    ).toEqual([
+      {
+        memberId: null,
+        subjectRef: `member:${seed.her.id}`,
+        kind: "privacy_notice",
+        answer: "yes",
+        textVersion: "privacy-notice.v1",
+        subjectDeletedAt: now,
+        evidence: { recorded_by: "founder" },
+      },
+      {
+        memberId: null,
+        subjectRef: `member:${seed.her.id}`,
+        kind: "light",
+        answer: "no",
+        textVersion: "consent.request@2",
+        subjectDeletedAt: now,
+        evidence: {
+          chat_id: HER,
+          message_id: "1",
+          text_sha256: await sha256Hex(t("en", "consent.request", params)),
+        },
+      },
+    ]);
+    expect(contact.id).toBeDefined();
     await h.run(handlers());
-    expect(h.telegram.sentTo(HER).at(-1)?.message.text).toBe("That's fine. Nothing will arrive.");
+    expect(h.telegram.sentTo(HER).map((entry) => entry.message.text)).toEqual([
+      t("en", "consent.request", params),
+      "That's fine. Nothing will arrive.",
+    ]);
     expect(h.telegram.sentTo(ORGANISER).map((entry) => entry.message.text)).toEqual([
       "Mom said no for now. Nothing will be sent.",
     ]);
     expect(h.telegram.closed).toEqual([
-      { conversationId: HER, messageId: "1", replacementText: "No, thank you" },
+      {
+        conversationId: HER,
+        messageId: "1",
+        replacementText: `${t("en", "consent.request", params)}\n\nNo, thank you`,
+      },
     ]);
     expect(await eventNames()).toEqual(["invite_accepted", "consent_declined"]);
+    const [declined] = await h.db
+      .select({ props: events.props })
+      .from(events)
+      .where(eq(events.name, "consent_declined"));
+    expect(declined?.props).toEqual({
+      kind: "light",
+      text_version: "consent.request@2",
+      member_deleted: true,
+    });
     expect(h.scheduler.history).toHaveLength(0);
   });
 
-  it("records a second No nowhere", async () => {
+  it("changes and sends nothing for a second No or a redelivered one, and the old link is no longer valid", async () => {
     const seed = await linked();
     const action = { type: "consent", memberId: seed.her.id, accept: false } as const;
+    const tap = tapEvent(seed.her.id, false);
 
+    await handleConsentButton(h.deps, tap, action);
+    await handleConsentButton(h.deps, tap, action);
     await handleConsentButton(h.deps, tapEvent(seed.her.id, false), action);
-    await handleConsentButton(h.deps, tapEvent(seed.her.id, false), action);
+    await h.run(handlers());
 
     expect((await eventNames()).filter((name) => name === "consent_declined")).toHaveLength(1);
-    expect((await outboundRows()).map((row) => row.conversationId)).toEqual([HER, HER, ORGANISER]);
+    expect(await h.db.select().from(consents)).toHaveLength(1);
+    expect(h.telegram.sentTo(HER).map((entry) => entry.message.text)).toEqual([
+      t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN }),
+      "That's fine. Nothing will arrive.",
+    ]);
+    expect(h.telegram.sentTo(ORGANISER)).toHaveLength(1);
+
+    await handleInviteStart(h.deps, startEvent(TOKEN));
+    expect(h.telegram.sentTo(HER).at(-1)?.message.text).toBe(t("en", "consent.invalid_link"));
+  });
+
+  it("keeps the decline when the reply to her cannot be sent, and logs it without retrying", async () => {
+    const seed = await linked();
+    h.telegram.failSendsTo(HER, "blocked");
+
+    await handleConsentButton(h.deps, tapEvent(seed.her.id, false), {
+      type: "consent",
+      memberId: seed.her.id,
+      accept: false,
+    });
+
+    expect(await herRow(seed.her.id)).toBeUndefined();
+    expect((await h.db.select().from(consents)).map((row) => row.answer)).toEqual(["no"]);
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("direct_send_failed");
+    expect(h.telegram.closed).toHaveLength(1);
   });
 
   it("ignores a No after a Yes", async () => {
@@ -480,6 +919,11 @@ describe("handleConsentButton: No", () => {
 
     expect((await herRow(seed.her.id))?.status).toBe("active");
     expect(await eventNames()).toEqual(["invite_accepted", "consent_given"]);
+    // The request keeps showing the Yes that stands.
+    expect(h.telegram.closed.map((call) => call.replacementText?.split("\n\n").at(-1))).toEqual([
+      "Yes, that's fine",
+      undefined,
+    ]);
   });
 });
 
@@ -492,10 +936,10 @@ describe("handleConsentButton: who may answer", () => {
       memberId: seed.her.id,
       accept: true,
     });
-    await handleConsentButton(h.deps, tapEvent(seed.her.id, true, "4242"), {
+    await handleConsentButton(h.deps, tapEvent(seed.her.id, false, "4242"), {
       type: "consent",
       memberId: seed.her.id,
-      accept: true,
+      accept: false,
     });
 
     expect((await herRow(seed.her.id))?.status).toBe("invited");
@@ -513,13 +957,14 @@ describe("handleConsentButton: who may answer", () => {
       memberExternalId: "7002",
     });
 
-    await handleConsentButton(h.deps, tapEvent(other.member.id, true), {
+    await handleConsentButton(h.deps, tapEvent(other.member.id, false), {
       type: "consent",
       memberId: other.member.id,
-      accept: true,
+      accept: false,
     });
 
     expect((await herRow(seed.her.id))?.status).toBe("invited");
+    expect(await herRow(other.member.id)).toBeDefined();
     expect(await h.db.select().from(consents).where(eq(consents.memberId, seed.her.id))).toEqual(
       [],
     );

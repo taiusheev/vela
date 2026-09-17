@@ -10,6 +10,7 @@
 import { Hono } from "hono";
 import { readEnvironment, refuseUnfilledNotices } from "./config.ts";
 import type { PilotEnv } from "./env.ts";
+import { readHealth } from "./heartbeat.ts";
 import { noticePage } from "./html.ts";
 import { NOTICE_LANGS, NOTICE_PATHS } from "./notices.ts";
 import { requestFailed } from "./request-errors.ts";
@@ -22,7 +23,15 @@ interface PilotAppEnv {
 export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
   const app = new Hono<PilotAppEnv>();
 
-  app.get("/healthz", (c) => c.text("ok"));
+  /**
+   * Whether reconciliation is running (W2), for the watchdog outside Cloudflare: 200 while the last
+   * run finished at most 35 minutes ago, 503 otherwise. It reads the heartbeat object and builds no
+   * deps, so it never wakes the database, and it says nothing about any family.
+   */
+  app.get("/healthz", async (c) => {
+    const health = await readHealth(c.env);
+    return c.json(health, health.status === "ok" ? 200 : 503, { "cache-control": "no-store" });
+  });
 
   /**
    * Telegram's webhook. The secret is checked before anything else is built, so an unsigned

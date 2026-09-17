@@ -18,7 +18,6 @@ import type {
   ChannelRegistry,
   Clock,
   Deps,
-  Heartbeat,
   JobQueue,
   Logger,
   MediaStore,
@@ -28,6 +27,7 @@ import type {
 } from "@vela/services";
 import { checkAdminConfig, readConfig, requireVar, secret } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
+import { createHeartbeat } from "./heartbeat.ts";
 import type { PrivacyNotices } from "./notices.ts";
 
 /** Built ports and the connection they hold; `close()` belongs in `ctx.waitUntil`. */
@@ -40,11 +40,12 @@ export type DepsHandle = Handle<Deps>;
 
 /**
  * The ports `packages/services/src/admin.ts` reaches for, and no others: the database and the
- * clock; the logger; the outbound queue, through which a weekly read is sent to organisers; the
- * member scheduler, which setting or ending an away period, a departure, a death, and a deletion
- * wake or clear; and the AI, which translates a sent weekly read for her. Anything else (channels,
- * media, speech-to-text, the heartbeat, invite tokens, the other queues, services' `Config`) the
- * admin Worker has no binding or secret for, so it is not here to call.
+ * clock; the logger; the outbound queue, through which a weekly read, and a new invite link, reach
+ * organisers; the member scheduler, which setting or ending an away period, a departure, a death,
+ * and a deletion wake or clear; the AI, which translates a sent weekly read for her; and, for
+ * `create_invite`, invite tokens and the bot the link opens. Anything else (channels, media,
+ * speech-to-text, the heartbeat, the other queues, the rest of services' `Config`) the admin Worker
+ * has no binding or secret for, so it is not here to call.
  */
 export interface AdminDeps {
   readonly db: VelaDatabase;
@@ -53,6 +54,9 @@ export interface AdminDeps {
   readonly queues: { readonly outbound: JobQueue<OutboundJob> };
   readonly scheduler: MemberSchedulerPort;
   readonly ai: Ai;
+  readonly random: Random;
+  /** The pilot Worker's bot in this environment, `Config.telegramBotUsername` for services. */
+  readonly telegramBotUsername: string;
 }
 
 export type AdminDepsHandle = Handle<AdminDeps>;
@@ -158,39 +162,6 @@ export function createSchedulerPort(env: Pick<PilotEnv, "MEMBER_SCHEDULER">): Me
   };
 }
 
-export interface HeartbeatOptions {
-  /** Injected by tests; production uses the global. */
-  readonly fetch?: typeof fetch;
-}
-
-/**
- * The cron heartbeat. A missed ping must never fail the reconciliation that was otherwise fine, so
- * a failure is logged and swallowed; the monitor notices the silence by itself.
- *
- * The ping URL is a secret, and a capability: whoever holds it can silence or fake the monitor. A
- * failed fetch can carry the URL it was given inside its message, so the log line says what went
- * wrong and never the error itself, the way the Telegram client keeps its token out of one.
- */
-export function createHeartbeat(
-  url: string,
-  logger: Logger,
-  options: HeartbeatOptions = {},
-): Heartbeat {
-  const fetchImpl: typeof fetch = options.fetch ?? ((resource, init) => fetch(resource, init));
-  return {
-    async ping() {
-      try {
-        const response = await fetchImpl(url, { method: "POST" });
-        if (!response.ok) {
-          logger.warn("heartbeat_failed", { status: response.status });
-        }
-      } catch {
-        logger.warn("heartbeat_failed", { reason: "network" });
-      }
-    },
-  };
-}
-
 /** The channels the pilot Worker speaks. Telegram is the pilot's only one; the rest are not wired. */
 export function createChannels(env: PilotEnv): ChannelRegistry {
   const telegram = createTelegramAdapter({
@@ -223,7 +194,6 @@ export async function buildDeps(
   const channels = options.channels ?? createChannels(env);
   const ai = createClaudeAi({ apiKey: secret(env, "ANTHROPIC_API_KEY") });
   const stt = createDeepgramStt({ apiKey: secret(env, "DEEPGRAM_API_KEY") });
-  const heartbeat = createHeartbeat(secret(env, "HEALTHCHECKS_PING_URL"), logger);
 
   const connection = await connectDatabase(env.HYPERDRIVE.connectionString);
   return {
@@ -242,7 +212,7 @@ export async function buildDeps(
       channels,
       ai,
       stt,
-      heartbeat,
+      heartbeat: createHeartbeat(env, logger),
       config,
     },
     close: () => connection.close(),
@@ -253,6 +223,7 @@ export async function buildDeps(
 export async function buildAdminDeps(env: AdminEnv): Promise<AdminDepsHandle> {
   checkAdminConfig(env);
   const ai = createClaudeAi({ apiKey: secret(env, "ANTHROPIC_API_KEY") });
+  const telegramBotUsername = requireVar(env, "TELEGRAM_BOT_USERNAME", "wrangler.admin.jsonc");
 
   const connection = await connectDatabase(env.HYPERDRIVE.connectionString);
   return {
@@ -263,6 +234,8 @@ export async function buildAdminDeps(env: AdminEnv): Promise<AdminDepsHandle> {
       queues: { outbound: createJobQueue(env.OUTBOUND_QUEUE) },
       scheduler: createSchedulerPort(env),
       ai,
+      random: createRandom(),
+      telegramBotUsername,
     },
     close: () => connection.close(),
   };

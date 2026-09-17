@@ -117,6 +117,12 @@ export const UnderstandInput = z.object({
   answer: AnswerContent,
   /** Her last three summary lines, oldest first. */
   recentSummaries: z.array(ShortText).max(3),
+  /**
+   * Whether she has agreed that Vela may carry her words about her health (consent kind
+   * `health_words`, ADR-27), as the consent stood for this answer. Without it the understanding
+   * keeps no health mention, no `unwell`, and no health in the summary.
+   */
+  healthWordsConsent: z.boolean(),
 });
 export type UnderstandInput = z.infer<typeof UnderstandInput>;
 
@@ -150,6 +156,10 @@ export const Mentions = z.object({
   people: MentionList,
   places: MentionList,
   plans: MentionList,
+  /**
+   * The body words she used ("knee hurts", "fell", "doctor"), never the name of a diagnosis, a test
+   * result, or a medicine; empty without her health-words consent (ADR-27).
+   */
   health: MentionList,
   dates: MentionList,
 });

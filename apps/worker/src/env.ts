@@ -6,6 +6,7 @@
  * `src/config.ts` refuses to build anything until each is present and says which is missing.
  */
 import type { MediaJob, OutboundJob, UnderstandJob } from "@vela/services";
+import type { ReconcileHeartbeat } from "./heartbeat.ts";
 import type { MemberScheduler } from "./scheduler.ts";
 
 /** What both Workers are given: the environment, the admin origin, and the admin's reach. */
@@ -23,7 +24,10 @@ interface SharedEnv {
   readonly OUTBOUND_QUEUE: Queue<OutboundJob>;
 }
 
-/** The pilot Worker `vela` (wrangler.jsonc): webhooks, notices, queues, cron, the scheduler. */
+/**
+ * The pilot Worker `vela` (wrangler.jsonc): webhooks, notices, queues, cron, the scheduler, and
+ * the heartbeat.
+ */
 export interface PilotEnv extends SharedEnv {
   // Vars.
   readonly TELEGRAM_BOT_USERNAME: string;
@@ -36,7 +40,6 @@ export interface PilotEnv extends SharedEnv {
   readonly TELEGRAM_BOT_TOKEN?: string;
   readonly TELEGRAM_WEBHOOK_SECRET?: string;
   readonly DEEPGRAM_API_KEY?: string;
-  readonly HEALTHCHECKS_PING_URL?: string;
   /** The founder's personal chat with the bot; left out on a laptop, which sends no admin messages. */
   readonly ADMIN_CONVERSATION_ID?: string;
 
@@ -44,6 +47,8 @@ export interface PilotEnv extends SharedEnv {
   readonly MEDIA_QUEUE: Queue<MediaJob>;
   readonly UNDERSTAND_QUEUE: Queue<UnderstandJob>;
   readonly MEDIA_BUCKET: R2Bucket;
+  /** The one object that records when reconciliation last finished, for `/healthz`. */
+  readonly RECONCILE_HEARTBEAT: DurableObjectNamespace<ReconcileHeartbeat>;
 }
 
 /**
@@ -51,6 +56,11 @@ export interface PilotEnv extends SharedEnv {
  * Cloudflare Access. Its scheduler binding reaches the `MemberScheduler` class in the pilot Worker.
  */
 export interface AdminEnv extends SharedEnv {
+  /**
+   * The pilot Worker's bot in the same environment: the link `create_invite` sends an organiser
+   * opens a chat with it.
+   */
+  readonly TELEGRAM_BOT_USERNAME: string;
   /** The Cloudflare Access team domain, `<team>.cloudflareaccess.com`. */
   readonly ACCESS_TEAM_DOMAIN?: string;
   /** The audience tag of the Access application that covers this Worker. */

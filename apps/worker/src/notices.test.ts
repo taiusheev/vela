@@ -1,5 +1,8 @@
 import { describe, expect, inject, it } from "vitest";
 import {
+  NoticeVersionError,
+  noticesModule,
+  noticeVersion,
   renderNotice,
   renderNotices,
   UnsupportedMarkdownError,
@@ -108,5 +111,42 @@ describe("a notice's Markdown", () => {
     ["a notice without a title", "## Only a section\n"],
   ])("refuses %s", (_what, markdown) => {
     expect(() => renderNotice(markdown)).toThrow(UnsupportedMarkdownError);
+  });
+});
+
+describe("a notice's version", () => {
+  const en =
+    "# Vela pilot: privacy notice\n\nVersion `privacy-notice.v2` · last updated 17 September 2026\n";
+  const zhTw =
+    "# Vela 試辦計畫：隱私權告知事項\n\n版本 `privacy-notice.v2`・最後更新：2026 年 9 月 17 日\n";
+
+  // An adult's tap on "I've read it" records the version of the notice they read (flows §3.3).
+  it("is read from each notice's version line and written into the module", () => {
+    const notices = renderNotices({ en, "zh-TW": zhTw });
+
+    expect([notices.en.version, notices["zh-TW"].version]).toEqual([
+      "privacy-notice.v2",
+      "privacy-notice.v2",
+    ]);
+    expect(noticesModule({ en, "zh-TW": zhTw })).toContain('version: "privacy-notice.v2",');
+    expect(noticeVersion(en)).toBe("privacy-notice.v2");
+  });
+
+  it("is what the committed notices carry", () => {
+    expect(PRIVACY_NOTICES.en.version).toMatch(/^privacy-notice\.v[1-9]\d*$/);
+    expect(PRIVACY_NOTICES["zh-TW"].version).toBe(PRIVACY_NOTICES.en.version);
+  });
+
+  it("is required: a notice without a version line is refused", () => {
+    expect(() =>
+      renderNotices({ en: "# Vela pilot\n\nNo version here.\n", "zh-TW": zhTw }),
+    ).toThrow(NoticeVersionError);
+  });
+
+  // One Config.privacyNoticeVersion is recorded whichever language an adult read.
+  it("must be the same in both languages", () => {
+    expect(() =>
+      renderNotices({ en, "zh-TW": zhTw.replace("privacy-notice.v2", "privacy-notice.v1") }),
+    ).toThrow(/versions differ/);
   });
 });

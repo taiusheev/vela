@@ -15,8 +15,6 @@ TELEGRAM_WEBHOOK_SECRET=
 ANTHROPIC_API_KEY=
 # Pilot Worker: Deepgram API key for speech-to-text.
 DEEPGRAM_API_KEY=
-# Pilot Worker: Healthchecks.io ping URL; reconcile pings it when it finishes.
-HEALTHCHECKS_PING_URL=
 # Pilot Worker: the founder's personal chat id with the bot. Leave it empty on a laptop, which then
 # sends no admin messages; a deployed pilot Worker refuses to start without it.
 ADMIN_CONVERSATION_ID=

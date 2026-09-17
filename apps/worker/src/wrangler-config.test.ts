@@ -5,8 +5,15 @@ import { NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
 /**
  * The workers.dev subdomain each Cloudflare account chose at sign-up (H3). This is the test's one
  * copy of it: every host below is derived from it, so if an account's subdomain turns out
- * different, this table changes, and the tests then fail on every other place that names it (the
- * list is in the header of wrangler.jsonc).
+ * different, this table changes, and the tests then fail on every other place that names it: the
+ * three URL vars of that environment in wrangler.jsonc, PUBLIC_BASE_URL in wrangler.admin.jsonc,
+ * and every workers.dev link in the Markdown of plan/materials/pilot, the two privacy notices'
+ * links to each other included, after which `pnpm --filter @vela/worker notices` regenerates
+ * src/notices.generated.ts (src/notices.test.ts fails until it does). No test sees the privacy
+ * policy link in @BotFather, the Telegram webhook, which the setup script's `webhook` step
+ * registers again (`pnpm --filter @vela/worker run setup -- --env <environment> --from webhook`),
+ * the watchdog's URL in .github/watchdog.json, or the documents that write the hosts out. The
+ * header of wrangler.jsonc keeps the same list.
  */
 const WORKERS_DEV_SUBDOMAINS = {
   staging: "vela-light-staging",
@@ -39,7 +46,7 @@ const HYPERDRIVE_ID = /^[0-9a-f]{32}$/;
  */
 const MAY_BE_PLACEHOLDERS: Readonly<Record<keyof typeof NAMES, readonly string[]>> = {
   pilot: ["TELEGRAM_BOT_USERNAME"],
-  admin: [],
+  admin: ["TELEGRAM_BOT_USERNAME"],
 };
 
 /** The var that links each notice, as the pilot Worker's `Config` reads it (config.ts). */
@@ -164,14 +171,32 @@ describe("the two Workers' configurations", () => {
     expect(NOTICE_LANGS.map((lang) => NOTICE_PATHS[lang])).toEqual(["/privacy", "/privacy/zh-TW"]);
   });
 
-  // H5: the founder's personal chat id is a secret, never a value in a committed file.
-  it("never holds ADMIN_CONVERSATION_ID as a var, in either Worker or any environment", () => {
+  // H5: the founder's personal chat id is a secret, never a value in a committed file. The
+  // heartbeat needs no value at all (W5): the watchdog reads /healthz.
+  it("never holds ADMIN_CONVERSATION_ID or a heartbeat ping URL as a var, in either Worker or any environment", () => {
     for (const config of configs) {
-      expect(Object.keys(config.vars), `${config.worker}:${config.environment}`).not.toContain(
+      const names = Object.keys(config.vars);
+      expect(names, `${config.worker}:${config.environment}`).not.toContain(
         "ADMIN_CONVERSATION_ID",
       );
+      expect(
+        names.filter((name) => /HEALTHCHECK|PING/.test(name)),
+        `${config.worker}:${config.environment}`,
+      ).toEqual([]);
     }
   });
+
+  // create_invite's link, made by the admin Worker, must open the bot whose webhook the pilot
+  // Worker serves, or the new member's /start never reaches Vela.
+  it.each(["development", ...DEPLOYED] as const)(
+    "name the same bot in both Workers in %s",
+    (environment) => {
+      const bot = configOf("pilot", environment).vars.TELEGRAM_BOT_USERNAME;
+
+      expect(typeof bot).toBe("string");
+      expect(configOf("admin", environment).vars.TELEGRAM_BOT_USERNAME).toBe(bot);
+    },
+  );
 
   // A placeholder may stay only where the founder has not created the thing yet, and filling it in
   // (infra/README.md section 11, steps 2 and 3) must keep this test green, or no deploy passes CI.
@@ -234,18 +259,25 @@ describe("the links written into the pilot pack", () => {
 });
 
 describe("the pilot Worker's bindings", () => {
-  it.each(DEPLOYED)("own the scheduler class and the queue consumers in %s", (environment) => {
-    const pilot = configOf("pilot", environment);
+  // Named environments inherit no binding, so each repeats both objects: without the heartbeat,
+  // /healthz could never answer ok there and the watchdog would email all day (W1).
+  it.each(["development", ...DEPLOYED] as const)(
+    "own the scheduler class, the heartbeat object, and the queue consumers in %s",
+    (environment) => {
+      const pilot = configOf("pilot", environment);
 
-    expect(doBindings(pilot)).toEqual([
-      { name: "MEMBER_SCHEDULER", class_name: "MemberScheduler" },
-    ]);
-    expect(consumers(pilot).map((consumer) => consumer.queue)).toEqual([
-      `vela-outbound-${environment}`,
-      `vela-media-${environment}`,
-      `vela-understand-${environment}`,
-    ]);
-  });
+      expect(doBindings(pilot)).toEqual([
+        { name: "MEMBER_SCHEDULER", class_name: "MemberScheduler" },
+        { name: "RECONCILE_HEARTBEAT", class_name: "ReconcileHeartbeat" },
+      ]);
+      const suffix = environment === "development" ? "" : `-${environment}`;
+      expect(consumers(pilot).map((consumer) => consumer.queue)).toEqual([
+        `vela-outbound${suffix}`,
+        `vela-media${suffix}`,
+        `vela-understand${suffix}`,
+      ]);
+    },
+  );
 
   // The scheduled handler picks its work by comparing `controller.cron` with these constants and
   // only logs `cron_unknown` for anything else: a trigger that is not one of them runs nothing.
@@ -256,11 +288,16 @@ describe("the pilot Worker's bindings", () => {
     },
   );
 
-  it("declare the scheduler's migration, which only the Worker exporting the class may", () => {
-    expect(configOf("pilot", "development").migrations).toEqual([
-      { tag: "v1", new_sqlite_classes: ["MemberScheduler"] },
-    ]);
-  });
+  // A migration once deployed is never rewritten: the heartbeat's class arrives as a second one.
+  it.each(["development", ...DEPLOYED] as const)(
+    "declare the scheduler's and the heartbeat's migrations in %s, which only the Worker exporting the classes may",
+    (environment) => {
+      expect(configOf("pilot", environment).migrations).toEqual([
+        { tag: "v1", new_sqlite_classes: ["MemberScheduler"] },
+        { tag: "v2", new_sqlite_classes: ["ReconcileHeartbeat"] },
+      ]);
+    },
+  );
 });
 
 describe("the admin Worker's bindings", () => {
@@ -301,7 +338,11 @@ describe("the admin Worker's bindings", () => {
       expect(admin.crons ?? []).toEqual([]);
       expect(records(admin.r2Buckets)).toEqual([]);
       expect(records(admin.migrations)).toEqual([]);
-      expect(Object.keys(admin.vars).sort()).toEqual(["ENVIRONMENT", "PUBLIC_BASE_URL"]);
+      expect(Object.keys(admin.vars).sort()).toEqual([
+        "ENVIRONMENT",
+        "PUBLIC_BASE_URL",
+        "TELEGRAM_BOT_USERNAME",
+      ]);
     },
   );
 });

@@ -1,6 +1,11 @@
-import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import {
+  createExecutionContext,
+  runInDurableObject,
+  waitOnExecutionContext,
+} from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { PilotEnv } from "./env.ts";
+import { createHeartbeat, LAST_RECONCILE_KEY } from "./heartbeat.ts";
 import { PRIVACY_NOTICES } from "./notices.generated.ts";
 import { createWorker } from "./pilot-worker.ts";
 import {
@@ -13,6 +18,7 @@ import {
   inboundEventFixture,
   namesOf,
   noticesFixture,
+  recordingLogger,
   testEnv,
 } from "./testing/fakes.ts";
 
@@ -132,14 +138,91 @@ describe("the Telegram webhook", () => {
   });
 });
 
-describe("the pilot Worker's other addresses", () => {
-  it("answers /healthz without building anything", async () => {
+/** The one heartbeat object `/healthz` reads, set to a last reconciliation this old, or none. */
+async function heartbeatAged(ageMs: number | null): Promise<void> {
+  const namespace = testEnv.RECONCILE_HEARTBEAT;
+  const stub = namespace.get(namespace.idFromName("reconcile"));
+  await runInDurableObject(stub, async (_instance, state) => {
+    await state.storage.deleteAll();
+    if (ageMs !== null) {
+      await state.storage.put(LAST_RECONCILE_KEY, Date.now() - ageMs);
+    }
+  });
+}
+
+/** `/healthz` as the watchdog reads it: status, caching, and the JSON body. */
+async function health(
+  fake: FakePilotRuntime,
+  env: PilotEnv = testEnv,
+): Promise<{ status: number; cache: string | null; body: unknown }> {
+  const response = await send(fake, new Request(`${ORIGIN}/healthz`), env);
+  return {
+    status: response.status,
+    cache: response.headers.get("cache-control"),
+    body: await response.json(),
+  };
+}
+
+describe("/healthz, which the watchdog outside Cloudflare reads", () => {
+  it("answers 503 no_reconcile_yet before any reconciliation, building nothing", async () => {
+    await heartbeatAged(null);
     const fake = createFakePilotRuntime();
 
-    expect((await send(fake, new Request(`${ORIGIN}/healthz`))).status).toBe(200);
+    expect(await health(fake)).toEqual({
+      status: 503,
+      cache: "no-store",
+      body: { status: "no_reconcile_yet" },
+    });
     expect(fake.built()).toBe(0);
   });
 
+  it("answers 200 ok with the age in whole seconds once reconcile has recorded the heartbeat", async () => {
+    await heartbeatAged(null);
+    await createHeartbeat(testEnv, recordingLogger([])).ping();
+    const fake = createFakePilotRuntime();
+
+    const answer = await health(fake);
+
+    expect(answer.status).toBe(200);
+    expect(answer.cache).toBe("no-store");
+    expect(answer.body).toEqual({ status: "ok", lastReconcileAgeSeconds: expect.any(Number) });
+    expect(fake.built()).toBe(0);
+  });
+
+  // The exact 35-minute boundary is healthOf's (heartbeat.test.ts); a minute either side leaves a
+  // slow test runner no room to cross it between the write and the read.
+  it("answers ok a minute inside 35 minutes and 503 stale a minute past, with no content and no ids", async () => {
+    const fake = createFakePilotRuntime();
+
+    await heartbeatAged(34 * 60 * 1000);
+    expect(await health(fake)).toMatchObject({ status: 200, body: { status: "ok" } });
+
+    await heartbeatAged(36 * 60 * 1000);
+    expect(await health(fake)).toEqual({
+      status: 503,
+      cache: "no-store",
+      body: { status: "stale" },
+    });
+    expect(fake.built()).toBe(0);
+  });
+
+  // A deployed Worker that refuses its configuration builds no deps, so it never reconciles: the
+  // health check must still answer, and say so, rather than fail with the configuration.
+  it("still answers, from the heartbeat alone, in a deployed environment that refuses its configuration", async () => {
+    await heartbeatAged(null);
+    const fake = createFakePilotRuntime();
+    const refused: PilotEnv = { ...testEnv, ENVIRONMENT: "production" };
+
+    expect(await health(fake, refused)).toMatchObject({
+      status: 503,
+      body: { status: "no_reconcile_yet" },
+    });
+    expect(fake.built()).toBe(0);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+});
+
+describe("the pilot Worker's other addresses", () => {
   // The admin pages are the admin Worker's, behind Cloudflare Access; the pilot Worker, which
   // Telegram must reach without a sign-in, has none of them.
   it.each([

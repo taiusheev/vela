@@ -18,7 +18,7 @@ import {
   handleParentMessage,
 } from "../answers.ts";
 import { handleAskCommand, handleGroupAsk, parseAskCommand } from "../asks.ts";
-import { handleConsentButton, handleInviteStart } from "../consent.ts";
+import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "../consent.ts";
 import type { Deps } from "../deps.ts";
 import { errorLabel } from "../errors.ts";
 import { enqueueOutbound } from "../gateway.ts";
@@ -27,6 +27,7 @@ import {
   handleBotRemoved,
   handleGroupMigrated,
   handleMemberLeft,
+  handleNoticeReadButton,
   isKeptLightMember,
   languageOfSender,
   resolveGroupSender,
@@ -159,6 +160,9 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
     case "consent":
       await handleConsentButton(deps, event, action);
       return;
+    case "health_words":
+      await handleHealthWordsButton(deps, event, action);
+      return;
     case "quiet_fine":
     case "quiet_wait":
       await handleQuietButton(deps, event, action);
@@ -166,8 +170,17 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
     case "onboarding":
       await handleOnboarding(deps, event);
       return;
-    default:
+    case "notice_read":
+      // Only the family group carries this button: in a private chat it means nothing.
+      await acknowledge(deps, event);
+      deps.logger.warn("button_ignored", { action: action.type, conversation: "private" });
+      return;
+    case "answer":
+    case "chip":
+    case "pick":
+    case "vote":
       await routeAnswerButton(deps, event, action);
+      return;
   }
 }
 
@@ -248,6 +261,10 @@ async function routeGroup(deps: Deps, event: InboundEvent): Promise<void> {
     await handleMemberLeft(deps, familyId, event);
     return;
   }
+  if (event.kind === "button") {
+    await routeGroupButton(deps, familyId, event);
+    return;
+  }
   if (await familyHasEnded(deps.db, familyId)) {
     deps.logger.info("group_event_ignored", { familyId, reason: "family_ended" });
     return;
@@ -267,6 +284,21 @@ async function routeGroup(deps: Deps, event: InboundEvent): Promise<void> {
     return;
   }
   deps.logger.info("group_event_ignored", { familyId, kind: event.kind });
+}
+
+/**
+ * A tap in the family group. The one button Vela posts there is "I've read it" under its first
+ * message (flows §3.3), which decides for itself what a tap in a family that has ended means; any
+ * other tap is answered and nothing else happens.
+ */
+async function routeGroupButton(deps: Deps, familyId: string, event: InboundEvent): Promise<void> {
+  const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
+  if (action?.type === "notice_read") {
+    await handleNoticeReadButton(deps, familyId, event, action);
+    return;
+  }
+  await acknowledge(deps, event);
+  deps.logger.warn("button_ignored", { action: action?.type ?? null, conversation: "group" });
 }
 
 /**

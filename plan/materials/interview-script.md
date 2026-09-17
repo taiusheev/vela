@@ -32,7 +32,7 @@ Thanks for doing this. I live in Taiwan, my parents are far away, and I'm trying
 11. If this existed and worked, what monthly price would feel fair? What price would make you stop?
 
 **Close (3 min)**
-12. We're starting a tiny pilot next week: a warm morning message to your parent on Telegram, a note to you, $15 for the month, refundable if it's useless. Would you want in? If not, what's the reason?
+12. We're starting a tiny pilot soon: a warm morning message to your parent on Telegram, a note to you if a morning stays quiet. It's free for families: we take no payment and ask for no card. After a month I'd ask you whether you would pay for it. Would you want in? If not, what's the reason?
 13. Who else do you know with the same worry?
 
 ## Русский
@@ -58,7 +58,7 @@ Thanks for doing this. I live in Taiwan, my parents are far away, and I'm trying
 11. Если бы это существовало и работало, какая цена в месяц показалась бы честной? При какой вы бы отказались?
 
 **Закрытие (3 мин)**
-12. Мы запускаем маленький пилот на следующей неделе: тёплое утреннее сообщение родителю в Telegram, короткая заметка вам, 15 долларов за месяц, вернём, если окажется бесполезно. Хотите поучаствовать? Если нет, почему?
+12. Скоро мы запускаем маленький пилот: тёплое утреннее сообщение родителю в Telegram и короткая заметка вам, если утро осталось без ответа. Для семей это бесплатно: мы не берём оплату и не просим данные карты. Через месяц я спрошу, стали бы вы за это платить. Хотите поучаствовать? Если нет, почему?
 13. Кого ещё вы знаете с такой же тревогой?
 
 ## Scoring sheet (one row per interview in the Sheet)

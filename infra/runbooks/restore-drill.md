@@ -1,6 +1,6 @@
 # Restore drill
 
-Architecture §13 (quarterly drill) · build plan 2.8 (drill #1) and 5.7 (drill #2) · done by the founder, because the restored copy holds real family data
+17 September 2026 · architecture §13 (quarterly drill) · build plan 2.8 (drill #1) and 5.7 (drill #2) · done by the founder, because the restored copy holds real family data
 
 ## When to use it
 
@@ -60,7 +60,7 @@ The log row is complete: counts matched or every difference is explained, the co
 2. Find the last good moment from events and logs. Create a branch at that moment and compare before touching `main`.
 3. Prefer copying back only the damaged rows from the branch. If that is not possible, use Neon's restore of `main` to the timestamp; Neon keeps the pre-restore state as a backup branch.
 4. After a restore: confirm `/healthz` and the admin page; let reconciliation run; tell organisers whose answers or asks after the restore point were lost.
-5. **Re-apply deletions.** Any data deleted after the restore point (retention jobs, a person's deletion request, a family deleted) has come back. Use the `deletions` rows on the backup branch after the restore point to delete it again, and run `applyRetention`.
+5. **Re-apply deletions.** Any data deleted after the restore point (retention jobs, a person's deletion request, a family deleted) has come back. Use the `deletions` rows on the backup branch after the restore point to delete it again, and run `applyRetention`. Before deleting a member or a nearby contact again, forget their consent rows ([`data-requests.md`](data-requests.md), "Forgetting before a deletion"), or the database refuses the delete; a restored `consents` row whose subject was deleted after the restore point holds the words again until it is forgotten.
 6. Delete the backup branch within 7 days, once the restore is verified, because it holds data that may be past its retention.
 
 ## Drill log

@@ -83,6 +83,37 @@ describe("PROMPTS registry", () => {
     expect(system).toContain('When the elder names only a vague start, such as "next week"');
   });
 
+  it("keeps diagnosis, test result, and medicine names out of every understanding, and health out without consent (ADR-27)", () => {
+    const system = PROMPTS.understand.system;
+    expect(system).toContain("- healthWordsConsent: true when the elder has agreed");
+    expect(system).toContain("They take precedence over keeping the elder's own words.");
+    expect(system).toContain(
+      "1. For every answer: the summary and every list in mentions never keep the name of a diagnosis or of a condition a doctor named",
+    );
+    expect(system).toContain("a test or measurement result");
+    expect(system).toContain("or the name of a medicine");
+    expect(system).toContain(
+      "2. When healthWordsConsent is false: mentions.health is an empty list, and no other list in mentions holds anything about the elder's health or body; moodWords never include unwell; and the summary says nothing about the elder's health or body",
+    );
+    expect(system).toContain(
+      'the summary says only that the elder answered, for example "Mom answered."',
+    );
+    expect(system).toContain(
+      "Away is still returned as described above, and a hospital stay is summarised as being away, without the reason",
+    );
+  });
+
+  it("leaves diagnosis, test result, and medicine names out of the flag quote without changing when it flags (ADR-27)", () => {
+    const system = PROMPTS.flag.system;
+    expect(system).toContain(
+      "When the signal shows without the name of a diagnosis or of a condition a doctor named, a test or measurement result, or a medicine, the excerpt leaves those names out",
+    );
+    expect(system).toContain("This rule never changes whether or how you flag.");
+    expect(system).toContain("with the elder's words verbatim when the elder has agreed to that");
+    // The flag decision must not depend on her consent, so the prompt is never told of it.
+    expect(system).not.toContain("healthWordsConsent");
+  });
+
   it("names every escalation signal of spec §5.5 in the flag prompt", () => {
     const system = PROMPTS.flag.system;
     for (const category of FLAG_CATEGORIES) {
@@ -128,6 +159,23 @@ describe("PROMPTS registry", () => {
 });
 
 describe("inputs", () => {
+  it("require understand to be told whether she agreed to health words", () => {
+    const input = {
+      lang: "en",
+      summaryLang: "en",
+      addressForm: "Mom",
+      today: "2026-09-17",
+      todayWeekday: "Thursday",
+      ask: null,
+      answer: { kind: "text", text: "My knee hurts a little." },
+      recentSummaries: [],
+    };
+
+    expect(UnderstandInput.safeParse(input).success).toBe(false);
+    expect(UnderstandInput.safeParse({ ...input, healthWordsConsent: "yes" }).success).toBe(false);
+    expect(UnderstandInput.safeParse({ ...input, healthWordsConsent: false }).success).toBe(true);
+  });
+
   it("never carry a phone number or contact field", () => {
     const inputs = [
       UnderstandInput,

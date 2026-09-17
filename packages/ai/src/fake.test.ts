@@ -11,6 +11,7 @@ const understandInput: UnderstandInput = {
   ask: null,
   answer: { kind: "text", text: "  今天去市場買菜  " },
   recentSummaries: [],
+  healthWordsConsent: true,
 };
 
 const flagInput: FlagInput = {
@@ -49,7 +50,7 @@ describe("createFakeAi", () => {
       },
       record: {
         call: "understand",
-        promptVersion: "understand.v3",
+        promptVersion: "understand.v4",
         model: "claude-sonnet-5",
         ok: true,
         tokensIn: 0,
@@ -59,6 +60,19 @@ describe("createFakeAi", () => {
         costUsd: 0,
       },
     });
+  });
+
+  it("keeps no health mention and no unwell when she has not agreed to health words", async () => {
+    const ai = createFakeAi();
+
+    const understanding = await ai.understand({
+      ...understandInput,
+      answer: { kind: "voice", text: "I fell this morning and feel unwell, my hip hurts" },
+      healthWordsConsent: false,
+    });
+
+    expect(understanding.value.mentions.health).toEqual([]);
+    expect(understanding.value.moodWords).not.toContain("unwell");
   });
 
   it("derives defaults from the input so tests can see what flowed through", async () => {

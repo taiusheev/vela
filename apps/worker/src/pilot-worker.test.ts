@@ -191,9 +191,12 @@ describe("the queue consumer", () => {
 });
 
 describe("cron", () => {
-  it("reconciles every five minutes", async () => {
+  // Every run wakes Neon, whose free plan suspends a project that spends its monthly compute hours:
+  // a run every 5 minutes would keep the database awake all month (W3).
+  it("reconciles every 15 minutes", async () => {
     const fake = createFakePilotRuntime();
 
+    expect(RECONCILE_CRON).toBe("*/15 * * * *");
     await runCron(createWorker(fake.runtime), RECONCILE_CRON);
 
     expect(namesOf(fake.calls)).toEqual(["reconcile"]);

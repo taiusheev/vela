@@ -6,7 +6,7 @@ CREATE TABLE "admin_access_log" (
 	"action" text NOT NULL,
 	"what" text NOT NULL,
 	"at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read'))
+	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite'))
 );
 --> statement-breakpoint
 CREATE TABLE "ai_calls" (
@@ -88,14 +88,21 @@ CREATE TABLE "consents" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"member_id" uuid,
 	"contact_id" uuid,
+	"subject_ref" text NOT NULL,
 	"kind" text NOT NULL,
+	"answer" text NOT NULL,
 	"text_version" text NOT NULL,
 	"lang" text NOT NULL,
 	"channel" text NOT NULL,
 	"given_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"withdrawn_at" timestamp with time zone,
 	"evidence" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	CONSTRAINT "consents_kind_check" CHECK ("kind" in ('light', 'nearby', 'privacy_notice', 'pilot'))
+	"subject_deleted_at" timestamp with time zone,
+	CONSTRAINT "consents_kind_check" CHECK ("kind" in ('light', 'nearby', 'privacy_notice', 'pilot', 'health_words')),
+	CONSTRAINT "consents_answer_check" CHECK ("answer" in ('yes', 'no')),
+	CONSTRAINT "consents_subject_ref_check" CHECK ("subject_ref" ~ '^(member|contact):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' and ("member_id" is null or "subject_ref" = ('member:' || "member_id"::text)) and ("contact_id" is null or "subject_ref" = ('contact:' || "contact_id"::text))),
+	CONSTRAINT "consents_withdrawn_at_check" CHECK ("withdrawn_at" is null or "answer" = 'yes'),
+	CONSTRAINT "consents_subject_deleted_check" CHECK ("member_id" is not null or "contact_id" is not null or ("subject_deleted_at" is not null and "evidence" - 'chat_id' - 'message_id' - 'text_sha256' - 'recorded_by' = '{}'::jsonb))
 );
 --> statement-breakpoint
 CREATE TABLE "deletions" (
@@ -104,7 +111,8 @@ CREATE TABLE "deletions" (
 	"object_id" uuid NOT NULL,
 	"content_hash" text NOT NULL,
 	"reason" text NOT NULL,
-	"deleted_at" timestamp with time zone DEFAULT now() NOT NULL
+	"deleted_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "deletions_content_hash_check" CHECK ("content_hash" = encode(sha256(convert_to("object_type" || ':' || "object_id"::text, 'UTF8')), 'hex'))
 );
 --> statement-breakpoint
 CREATE TABLE "events" (
@@ -117,7 +125,7 @@ CREATE TABLE "events" (
 	"surface" text,
 	"local_time" time,
 	"props" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'invite_accepted', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened'))
+	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'invite_accepted', 'invite_created', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened'))
 );
 --> statement-breakpoint
 CREATE TABLE "exchanges" (
@@ -177,6 +185,7 @@ CREATE TABLE "family_channels" (
 	"linked_by_member_id" uuid,
 	"linked_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"unlinked_at" timestamp with time zone,
+	"linked_text_sha256" text NOT NULL,
 	CONSTRAINT "family_channels_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
 	CONSTRAINT "family_channels_kind_check" CHECK ("kind" in ('private', 'group'))
 );
@@ -313,13 +322,14 @@ CREATE TABLE "nearby_contacts" (
 	"member_id" uuid NOT NULL,
 	"name" text NOT NULL,
 	"relation" text,
-	"phone" text NOT NULL,
+	"phone" text,
 	"channel" text,
 	"consent_requested_at" timestamp with time zone,
 	"consented_at" timestamp with time zone,
 	"declined_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "nearby_contacts_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'sms'))
+	CONSTRAINT "nearby_contacts_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'sms')),
+	CONSTRAINT "nearby_contacts_phone_consented_check" CHECK (("phone" is not null) = ("consented_at" is not null and "declined_at" is null))
 );
 --> statement-breakpoint
 CREATE TABLE "onboarding_sessions" (
@@ -539,8 +549,8 @@ ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_member_id_members_id_fk"
 ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FOREIGN KEY ("set_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "channel_links" ADD CONSTRAINT "channel_links_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "chips" ADD CONSTRAINT "chips_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "consents" ADD CONSTRAINT "consents_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "consents" ADD CONSTRAINT "consents_contact_id_nearby_contacts_id_fk" FOREIGN KEY ("contact_id") REFERENCES "public"."nearby_contacts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consents" ADD CONSTRAINT "consents_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consents" ADD CONSTRAINT "consents_contact_id_nearby_contacts_id_fk" FOREIGN KEY ("contact_id") REFERENCES "public"."nearby_contacts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_recipient_id_members_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_asker_id_members_id_fk" FOREIGN KEY ("asker_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -601,6 +611,7 @@ CREATE INDEX "answers_exchange_idx" ON "answers" USING btree ("exchange_id");-->
 CREATE INDEX "answers_member_recent_idx" ON "answers" USING btree ("member_id","received_at" DESC NULLS FIRST);--> statement-breakpoint
 CREATE INDEX "away_active_idx" ON "away_periods" USING btree ("member_id") WHERE "ended_at" is null;--> statement-breakpoint
 CREATE INDEX "channel_links_member_idx" ON "channel_links" USING btree ("member_id");--> statement-breakpoint
+CREATE INDEX "consents_subject_ref_idx" ON "consents" USING btree ("subject_ref");--> statement-breakpoint
 CREATE INDEX "events_family_at_idx" ON "events" USING btree ("family_id","at");--> statement-breakpoint
 CREATE INDEX "events_name_at_idx" ON "events" USING btree ("name","at");--> statement-breakpoint
 CREATE UNIQUE INDEX "exchanges_one_per_day" ON "exchanges" USING btree ("recipient_id","scheduled_for") WHERE "scheduled_for" is not null and "state" <> 'withdrawn';--> statement-breakpoint

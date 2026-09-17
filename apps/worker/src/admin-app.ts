@@ -8,12 +8,14 @@
  * `AdminRuntime`, so a test hands the routes fakes; only the error types and the channels a nearby
  * contact form may name are imported directly.
  */
+import { isIanaTimeZone } from "@vela/contracts";
 import { NEARBY_CONTACT_CHANNELS } from "@vela/db";
-import { type AdminContext, VelaError } from "@vela/services";
+import { type AddContactInput, type AdminContext, VelaError } from "@vela/services";
 import { type Context, Hono } from "hono";
 import {
   ADMIN_PATH,
   familyHref,
+  INVITE_COUNTRIES,
   noticeFor,
   renderFamilyPage,
   renderMessage,
@@ -37,6 +39,9 @@ type AdminAppContext = Context<AdminAppEnv>;
 
 /** Local time as a form's `datetime-local` gives it, read as UTC (the pages label the fields). */
 const DATETIME_LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/** A wake time as the invite form takes it, as onboarding stores one. */
+const WAKE_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** A refusal from services; the route needs nothing from it but the code, which decides the status. */
 function domainErrorCode(error: unknown): VelaError["code"] | null {
@@ -88,6 +93,55 @@ function instantField(form: FormData, name: string): Date {
     throw new BadRequest(`${name} is not a time`);
   }
   return parsed;
+}
+
+/** The fields of the add-contact form's "Their yes" group, besides the number. */
+const CONTACT_YES_FIELDS = ["consentAt", "textVersion", "lang", "consentChannel", "note"] as const;
+
+/**
+ * The contact's yes from the add-contact form (L8). A number arrives only inside a yes: with no
+ * number the contact is a name, and a yes field filled without one is refused rather than dropped;
+ * with a number, every field of the yes is required, so a number never arrives without its yes.
+ */
+function contactYes(form: FormData): AddContactInput["yes"] {
+  const phone = field(form, "phone");
+  if (phone === "") {
+    const filled = CONTACT_YES_FIELDS.filter((name) => field(form, name) !== "");
+    if (filled.length > 0) {
+      throw new BadRequest(`${filled.join(", ")} given without the contact's number`);
+    }
+    return null;
+  }
+  const missing = CONTACT_YES_FIELDS.filter((name) => field(form, name) === "");
+  if (missing.length > 0) {
+    throw new BadRequest(`a number needs the contact's yes: ${missing.join(", ")} missing`);
+  }
+  return {
+    phone,
+    at: instantField(form, "consentAt"),
+    textVersion: field(form, "textVersion"),
+    lang: oneOf(form, "lang", CONSENT_LANGS),
+    channel: field(form, "consentChannel"),
+    evidence: { note: field(form, "note") },
+  };
+}
+
+/** A time zone the founder typed: an IANA name, the one rule every member's zone follows. */
+function timeZoneField(form: FormData, name: string): string {
+  const value = field(form, name);
+  if (!isIanaTimeZone(value)) {
+    throw new BadRequest(`${name} is not an IANA time zone name`);
+  }
+  return value;
+}
+
+/** A wake time the founder typed, `HH:MM`. */
+function wakeTimeField(form: FormData, name: string): string {
+  const value = field(form, name);
+  if (!WAKE_TIME.test(value)) {
+    throw new BadRequest(`${name} is not a time like 07:30`);
+  }
+  return value;
 }
 
 /** The lines of a weekly read as the founder left them in the textarea. */
@@ -286,6 +340,8 @@ async function runAction(
       await services.recordContactConsent(deps, ctx, {
         contactId: field(form, "contactId"),
         answer: oneOf(form, "answer", ["yes", "no"]),
+        // Services refuse a yes without a number and a no with one.
+        phone: optionalField(form, "phone"),
         at: instantField(form, "at"),
         textVersion: field(form, "textVersion"),
         lang: oneOf(form, "lang", CONSENT_LANGS),
@@ -297,9 +353,9 @@ async function runAction(
       await services.addContact(deps, ctx, {
         memberId: field(form, "memberId"),
         name: field(form, "name"),
-        phone: field(form, "phone"),
         relation: optionalField(form, "relation"),
         channel: contactChannel(form),
+        yes: contactYes(form),
       });
       return "done";
     case "remove_contact":
@@ -341,6 +397,26 @@ async function runAction(
         lines: lines(form, "lines"),
         suggestion: field(form, "suggestion"),
       });
+    case "create_invite":
+      // A new member, and a link that stops any earlier one working, so the word is typed out first.
+      if (field(form, "confirm") !== "invite") {
+        throw new BadRequest("the invite was not confirmed");
+      }
+      await services.createInvite(deps, ctx, {
+        invitedBy: field(form, "invitedBy"),
+        name: field(form, "name"),
+        address: field(form, "address"),
+        language: oneOf(form, "language", CONSENT_LANGS),
+        country: oneOf(
+          form,
+          "country",
+          INVITE_COUNTRIES.map((country) => country.code),
+        ),
+        timeZone: timeZoneField(form, "timeZone"),
+        wakeTime: wakeTimeField(form, "wakeTime"),
+        replacesMemberId: optionalField(form, "replacesMemberId"),
+      });
+      return "done";
     default:
       return null;
   }

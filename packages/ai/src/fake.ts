@@ -32,6 +32,11 @@ type Method<K extends AiCallName> = (
  * `flag` raise a flag or `understand` fail. Like the real client, it parses every input first: an
  * input the real client would reject rejects here too, unrecorded, and over-long text reaches the
  * override or default already shortened.
+ *
+ * The default understanding keeps no mentions and no mood words, so it keeps no health mention and no
+ * `unwell` whether or not she agreed to health words (`healthWordsConsent`), as the real prompt must
+ * without that consent; a test of what services do with health words overrides `understand`. Its
+ * summary is her answer as given, so tests can see what flowed through.
  */
 export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
   const calls: FakeAiCall[] = [];

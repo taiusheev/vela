@@ -1,4 +1,4 @@
-import { channelLinks, familyChannels, members, messageRefs, outbound } from "@vela/db";
+import { channelLinks, consents, familyChannels, members, messageRefs, outbound } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -9,6 +9,7 @@ import {
   exchangesByIds,
   familyByLinkedGroup,
   familyHasEnded,
+  hasHealthWordsConsent,
   keptLightMembersOfFamily,
   latestDeliveredExchangeWithin,
   linkedGroupOfFamily,
@@ -24,6 +25,7 @@ import {
   seedExchange,
   seedFamily,
   seedGroupMember,
+  seedHealthWordsConsent,
   seedLinkedGroup,
   seedNearbyContact,
 } from "./testing/seed.ts";
@@ -253,25 +255,49 @@ describe("exchanges and refs", () => {
     const yes = await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Anna",
-      phone: "+886912000001",
-      answer: "yes",
+      answer: { yes: { phone: "+886912000001" } },
     });
     await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Bob",
-      phone: "+886912000002",
       answer: null,
     });
     await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Cara",
-      phone: "+886912000003",
       answer: "no",
     });
 
-    expect((await consentedNearbyContacts(h.db, seed.member.id)).map((c) => c.id)).toEqual([
-      yes.id,
-    ]);
+    expect(
+      (await consentedNearbyContacts(h.db, seed.member.id)).map((c) => [c.id, c.phone]),
+    ).toEqual([[yes.id, "+886912000001"]]);
+  });
+});
+
+describe("hasHealthWordsConsent", () => {
+  it("is true only for a yes given at or before the answer and not withdrawn", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const answerAt = h.clock.now();
+    const later = new Date(answerAt.getTime() + 60_000);
+
+    expect(await hasHealthWordsConsent(h.db, seed.member.id, answerAt)).toBe(false);
+    await seedHealthWordsConsent(h.db, seed, { at: later, answer: "yes" });
+    expect(await hasHealthWordsConsent(h.db, seed.member.id, answerAt)).toBe(false);
+    expect(await hasHealthWordsConsent(h.db, seed.member.id, later)).toBe(true);
+
+    await h.db
+      .update(consents)
+      .set({ withdrawnAt: later })
+      .where(eq(consents.kind, "health_words"));
+    expect(await hasHealthWordsConsent(h.db, seed.member.id, later)).toBe(false);
+
+    const other = await seedFamily(h.db, {
+      now: answerAt,
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+    await seedHealthWordsConsent(h.db, other, { at: answerAt, answer: "no" });
+    expect(await hasHealthWordsConsent(h.db, other.member.id, later)).toBe(false);
   });
 });
 

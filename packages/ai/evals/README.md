@@ -1,11 +1,11 @@
 # AI evals
 
-The golden set for `@vela/ai`: 79 synthetic cases across all eight calls, run through `createClaudeAi` exactly as services call it (same prompts, model routes, and output schemas), and graded two ways:
+The golden set for `@vela/ai`: 85 synthetic cases across all eight calls, run through `createClaudeAi` exactly as services call it (same prompts, model routes, and output schemas), and graded two ways:
 
 - **Deterministic checks** that code decides: `flag` is true, `away` runs from `2026-09-17` to `2026-09-20`, the quote is an exact excerpt of her words, the summary is Traditional Chinese, a weekly read line carries no count of days, mornings, or asks.
 - **Rubric criteria** that Claude Sonnet 5 judges as `llm-rubric` assertions: register, faithfulness, tone, guardrails.
 
-The set is weighted to what the pilot will see most and get wrong most expensively: Taiwanese Mandarin (53 of 79 cases), Hokkien words mixed in (`跋倒`, `足痛`, `無要緊`, `呷`), Mandarin and English code-switching, a grandchild's casual register made respectful in translation, borderline health mentions that must not be flagged, clear ones that must (a fall, chest pain, not eating for days, a stranger asking for money, a "bank" call asking for a code, a fake prosecutor), away detection (dated, "until I'm back", a trip that starts weeks later, and a vague start that sets nothing), sparse weeks and weeks with nothing to say, and prompt injection inside family text for every call.
+The set is weighted to what the pilot will see most and get wrong most expensively: Taiwanese Mandarin (56 of 85 cases), Hokkien words mixed in (`跋倒`, `足痛`, `無要緊`, `呷`), Mandarin and English code-switching, a grandchild's casual register made respectful in translation, borderline health mentions that must not be flagged, clear ones that must (a fall, chest pain, not eating for days, a stranger asking for money, a "bank" call asking for a code, a fake prosecutor), away detection (dated, "until I'm back", a trip that starts weeks later, and a vague start that sets nothing), health words (an answer about a fall understood without her health-words consent, and a diagnosis, a test result, and a medicine name that no summary, health mention, or flag quote keeps, each in English and Traditional Chinese), sparse weeks and weeks with nothing to say, and prompt injection inside family text for every call.
 
 ## Files
 
@@ -25,7 +25,7 @@ The set is weighted to what the pilot will see most and get wrong most expensive
 
 ## Running the evals
 
-The run calls Claude for every case (79 calls, routed as in production, `flag` on Opus 5) and once more per rubric criterion (86 judge calls on Sonnet 5), so it needs a key and costs money. It is not part of `pnpm check`.
+The run calls Claude for every case (85 calls, routed as in production, `flag` on Opus 5) and once more per rubric criterion (92 judge calls on Sonnet 5), so it needs a key and costs money. It is not part of `pnpm check`.
 
 ```sh
 # bash
@@ -97,6 +97,7 @@ Each case in `cases/<call>.json`:
 | `excerptOf` | the string is an exact excerpt of the input at `inputPath` |
 
 - Keep checks to what any good output must satisfy; judgement about tone, register, and faithfulness belongs in `rubric`. Each rubric criterion is one judgement. The judge already holds every output to the call's guardrails (`CALL_STANDARDS` in `suite.ts`: no diagnosis or advice, never speaking as a family member where Vela speaks, no mention of monitoring or notes, nothing invented, people's own words), so a criterion says only what is particular to the case. In the same way, every case of a call also runs that call's `CALL_CHECKS` in `suite.ts`: each weekly read case is checked, in English and Traditional Chinese, for lines that count the days she answered ("6 of 7 days", 「7 天中回覆了 6 天」), point to a day without an answer, say that nobody asked (「沒有人問」), or count the family's asks, because organisers get those numbers from `@vela/core` and she reads the lines without them. Promptfoo renders rubric text as a Nunjucks template, so a criterion must not contain `{{`, `{%`, or `{#`.
+- Every `understand` input states `healthWordsConsent`. A case with `false` is tagged `health-words` and checks that `mentions.health` equals `[]`, that `moodWords` has no `unwell`, and that the summary holds none of the answer's health words; a case tagged `minimisation` checks that the summary and `mentions.health` (for `understand`, which still keeps some body words) or `evidenceQuote` (for `flag`, which still flags) hold none of the answer's diagnosis, test result, or medicine names. `src/evals.test.ts` requires both kinds in English and in Traditional Chinese, and that no name a `minimisation` case looks for appears in the prompt itself, so the prompt cannot pass by listing the answers.
 - Write Chinese in Traditional characters, as used in Taiwan. Names, places, and events are invented; no real person's words, names, or numbers.
 
 A new call file must be added to `caseFiles` in `promptfooconfig.json`. `pnpm --filter @vela/ai test` checks every rule above, the minimums (at least 50 cases, three per call, 30% zh-TW, an injection case per call), and that the config lists exactly the files in `cases/`.

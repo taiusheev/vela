@@ -17,13 +17,15 @@ import {
   type LocalDate,
   type MediaRef,
 } from "@vela/contracts";
-import { encodeButton, outboundKey } from "@vela/core";
+import { t } from "@vela/copy";
+import { addMinutes, encodeButton, outboundKey } from "@vela/core";
 import {
   type Answer,
   aiCalls,
   answers,
   awayPeriods,
   type ChannelLink,
+  consents,
   events,
   media,
   members,
@@ -44,6 +46,7 @@ import {
   seedExchange,
   seedFamily,
   seedGroupMember,
+  seedHealthWordsConsent,
   seedLinkedGroup,
 } from "./testing/seed.ts";
 
@@ -269,6 +272,7 @@ describe("understandAnswer", () => {
       ask: { askerName: "Mia", type: "question", text: "What are you cooking tonight?" },
       answer: { kind: "text", text: "Cooking soup" },
       recentSummaries: [],
+      healthWordsConsent: false,
     });
     const stored = await answerById(answer.id);
     expect(stored).toMatchObject({
@@ -507,8 +511,9 @@ describe("understandAnswer", () => {
     });
   });
 
-  it("raises a flag to each organiser with her words and to the founder with a link and no words, once", async () => {
+  it("raises a flag to each organiser with her words, when she agreed to health words, and to the founder with a link and no words, once", async () => {
     const scene = await morning();
+    await seedHealthWordsConsent(h.db, scene.seed, { at: h.clock.now(), answer: "yes" });
     const sam = await seedGroupMember(h.db, scene.seed, {
       now: h.clock.now(),
       name: "Sam",
@@ -596,6 +601,7 @@ describe("understandAnswer", () => {
       externalId: "1002",
       role: "organiser",
     });
+    await seedHealthWordsConsent(h.db, scene.seed, { at: h.clock.now(), answer: "yes" });
     const answer = await herText(scene, "Not great, I can’t breathe well");
     withAi({ flag: async () => raised(null) });
 
@@ -614,7 +620,7 @@ describe("understandAnswer", () => {
       .from(events)
       .where(eq(events.name, "flag_raised"));
     expect(raisedEvents.map((row) => row.props)).toEqual([
-      { category: "health", severity: "concern", excerpt: false },
+      { severity: "concern", words: true, category: "health", excerpt: false },
     ]);
     await h.run(handlers());
     expect(
@@ -745,6 +751,192 @@ describe("understandAnswer", () => {
     await herText(scene, "Arrived safely");
     expect((await h.db.select().from(awayPeriods))[0]?.endedAt).toEqual(h.clock.now());
     expect(await eventNames()).toContain("away_ended");
+  });
+});
+
+describe("understandAnswer: health words (ADR-27)", () => {
+  const WORDS = "I fell yesterday and my knee hurts";
+
+  /** A model that heard health in her answer: a health mention, `unwell`, and a flag with a quote. */
+  function healthAi(): FakeAi {
+    return withAi({
+      understand: async (input) => ({
+        ok: true,
+        value: {
+          ...SAFE_DEFAULTS.understand(input),
+          summary: "Mom answered.",
+          moodWords: ["tired", "unwell"],
+          mentions: {
+            people: [],
+            places: ["the market"],
+            plans: [],
+            health: ["fell", "knee hurts"],
+            dates: [],
+          },
+        },
+        record: fakeRecord("understand"),
+      }),
+      flag: async () => ({
+        ok: true,
+        value: {
+          flag: true,
+          category: "health",
+          severity: "urgent",
+          evidenceQuote: "I fell yesterday",
+        },
+        record: fakeRecord("flag"),
+      }),
+    });
+  }
+
+  async function flagNotices(): Promise<[string, string][]> {
+    return (await outboundRows())
+      .filter((row) => row.kind === "flag")
+      .map((row) => [row.conversationId, textOf(row)]);
+  }
+
+  async function flagEvents(): Promise<unknown[]> {
+    const rows = await h.db
+      .select({ props: events.props })
+      .from(events)
+      .where(eq(events.name, "flag_raised"));
+    return rows.map((row) => row.props);
+  }
+
+  it("without her consent stores no health mention, no unwell, no category and no quote, and tells the organisers only that a call may be worth it", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, WORDS);
+    const ai = healthAi();
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(ai.calls[0]?.input).toMatchObject({ healthWordsConsent: false });
+    expect(await answerById(answer.id)).toMatchObject({
+      moodWords: ["tired"],
+      mentions: { people: [], places: ["the market"], plans: [], health: [], dates: [] },
+      flag: true,
+      flagReason: "urgent",
+      understoodAt: h.clock.now(),
+    });
+    const logged = await aiCallRows();
+    expect(logged.map((row) => [row.call, row.output])).toEqual([
+      [
+        "understand",
+        {
+          summary: "Mom answered.",
+          moodWords: ["tired"],
+          mentions: { people: [], places: ["the market"], plans: [], health: [], dates: [] },
+          away: null,
+          language: "en",
+        },
+      ],
+      ["flag", { flag: true, category: null, severity: "urgent", evidenceQuote: null }],
+    ]);
+    expect(JSON.stringify(logged)).not.toContain("fell");
+    expect(await flagNotices()).toEqual([
+      [scene.seed.organiserLink.externalId, t("en", "flag.notice_no_words", { name: "Mom" })],
+      [ADMIN, `Flag in The Chens. Open: ${adminLink(scene.seed.family.id)}`],
+    ]);
+    expect(await flagEvents()).toEqual([{ severity: "urgent", words: false }]);
+  });
+
+  it("with her yes given before the answer stores what the models returned and quotes her to the organisers", async () => {
+    const scene = await morning();
+    await seedHealthWordsConsent(h.db, scene.seed, {
+      at: addMinutes(h.clock.now(), -60),
+      answer: "yes",
+    });
+    const answer = await herText(scene, WORDS);
+    const ai = healthAi();
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(ai.calls[0]?.input).toMatchObject({ healthWordsConsent: true });
+    expect(await answerById(answer.id)).toMatchObject({
+      moodWords: ["tired", "unwell"],
+      mentions: { health: ["fell", "knee hurts"] },
+      flagReason: "health:urgent",
+    });
+    expect(await flagNotices()).toEqual([
+      [
+        scene.seed.organiserLink.externalId,
+        t("en", "flag.notice", { name: "Mom", quote: "I fell yesterday" }),
+      ],
+      [ADMIN, `Flag in The Chens. Open: ${adminLink(scene.seed.family.id)}`],
+    ]);
+    expect(await flagEvents()).toEqual([
+      { severity: "urgent", words: true, category: "health", excerpt: true },
+    ]);
+  });
+
+  it("counts a yes given after the answer arrived, a withdrawn yes, and a no as no consent", async () => {
+    const setUps: ((scene: Scene) => Promise<unknown>)[] = [
+      (scene) =>
+        seedHealthWordsConsent(h.db, scene.seed, {
+          at: addMinutes(h.clock.now(), 5),
+          answer: "yes",
+        }),
+      async (scene) => {
+        const yes = await seedHealthWordsConsent(h.db, scene.seed, {
+          at: addMinutes(h.clock.now(), -60),
+          answer: "yes",
+        });
+        await h.db
+          .update(consents)
+          .set({ withdrawnAt: h.clock.now() })
+          .where(eq(consents.id, yes.id));
+      },
+      (scene) =>
+        seedHealthWordsConsent(h.db, scene.seed, {
+          at: addMinutes(h.clock.now(), -60),
+          answer: "no",
+        }),
+    ];
+    for (const setUp of setUps) {
+      await h.reset();
+      h.deps.stt = h.stt;
+      const scene = await morning();
+      const answer = await herText(scene, WORDS);
+      await setUp(scene);
+      const ai = healthAi();
+
+      await understandAnswer(h.deps, answer.id);
+
+      expect(ai.calls[0]?.input).toMatchObject({ healthWordsConsent: false });
+      expect((await answerById(answer.id)).flagReason).toBe("urgent");
+      expect((await flagNotices())[0]?.[1]).toBe(t("en", "flag.notice_no_words", { name: "Mom" }));
+    }
+  });
+
+  it("sends no second notice when a re-run finds her consent changed", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, WORDS);
+    let understandCalls = 0;
+    const ai = withAi({
+      understand: async (input) => {
+        understandCalls += 1;
+        return understandCalls === 1
+          ? failed("understand", SAFE_DEFAULTS.understand(input))
+          : understood(input, null);
+      },
+      flag: async () => raised(),
+    });
+
+    await understandAnswer(h.deps, answer.id);
+    await seedHealthWordsConsent(h.db, scene.seed, {
+      at: addMinutes(answer.receivedAt, -60),
+      answer: "yes",
+    });
+    await understandAnswer(h.deps, answer.id);
+
+    expect(
+      ai.calls.filter((call) => call.call === "understand").map((call) => call.input),
+    ).toMatchObject([{ healthWordsConsent: false }, { healthWordsConsent: true }]);
+    expect(await flagNotices()).toEqual([
+      [scene.seed.organiserLink.externalId, t("en", "flag.notice_no_words", { name: "Mom" })],
+      [ADMIN, `Flag in The Chens. Open: ${adminLink(scene.seed.family.id)}`],
+    ]);
+    expect(await flagEvents()).toHaveLength(1);
   });
 });
 

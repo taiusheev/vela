@@ -19,6 +19,23 @@ const DASH = "—";
  */
 export const ADMIN_PATH = "/admin";
 
+/**
+ * The countries the invite form offers: onboarding's (`COUNTRIES` in services' onboarding.ts), with
+ * ZZ for Other, so a member invited again is described as onboarding would have described her.
+ */
+export const INVITE_COUNTRIES: readonly { readonly code: string; readonly label: string }[] = [
+  { code: "TW", label: "Taiwan" },
+  { code: "US", label: "United States" },
+  { code: "GB", label: "United Kingdom" },
+  { code: "CA", label: "Canada" },
+  { code: "AU", label: "Australia" },
+  { code: "SG", label: "Singapore" },
+  { code: "JP", label: "Japan" },
+  { code: "DE", label: "Germany" },
+  { code: "IN", label: "India" },
+  { code: "ZZ", label: "Other" },
+];
+
 function instant(value: Date | null): string {
   return value === null ? DASH : value.toISOString().replace(".000Z", "Z");
 }
@@ -203,15 +220,18 @@ function consentsSection(data: FamilyPage): Html {
   const rows = data.consents.map(
     (consent) => html`<tr>
 <td>${consent.kind}</td>
-<td>${text(consent.memberId)}</td>
-<td>${text(consent.contactId)}</td>
+<td>${consent.answer}</td>
+<td><span class="muted">${consent.subjectRef}</span></td>
 <td>${consent.textVersion} · ${consent.lang} · ${consent.channel}</td>
 <td>${instant(consent.givenAt)}</td>
 <td>${instant(consent.withdrawnAt)}</td>
+<td>${instant(consent.subjectDeletedAt)}</td>
+<td>${json(consent.evidence, 300)}</td>
 </tr>`,
   );
   return html`<section id="consents"><h2>Consents</h2>
-${table(["Kind", "Member", "Contact", "Text", "Given", "Withdrawn"], rows)}</section>`;
+<p class="muted">Each answer is kept as a proof. Once the person it is about is deleted, it keeps only ids, the text version, and the text's hash.</p>
+${table(["Kind", "Answer", "Subject", "Text", "Given", "Withdrawn", "Subject deleted", "Evidence"], rows)}</section>`;
 }
 
 /** Services' rule for a kept-light member: the light is on, or she has consented and it is off. */
@@ -236,16 +256,16 @@ function contactsSection(data: FamilyPage): Html {
   const rows = data.nearbyContacts.map(
     (contact) => html`<tr>
 <td>${contact.name}<br><span class="muted">${text(contact.relation)}</span></td>
-<td>${contact.phone}</td>
+<td>${text(contact.phone)}</td>
 <td>${text(contact.channel)}</td>
 <td>${instant(contact.consentedAt)}</td>
 <td>${instant(contact.declinedAt)}</td>
-<td>${actionForm(data.family.id, "record_contact_consent", html`${hidden("contactId", contact.id)}<label>Answer<select name="answer"><option value="yes">yes</option><option value="no">no</option></select></label><label>At (UTC)<input type="datetime-local" name="at" required></label>${consentFields()}`, "Record")}
+<td>${actionForm(data.family.id, "record_contact_consent", html`${hidden("contactId", contact.id)}<label>Answer<select name="answer"><option value="yes">yes</option><option value="no">no</option></select></label><label>Phone (with a yes; empty with a no)<input name="phone"></label><label>At (UTC)<input type="datetime-local" name="at" required></label>${consentFields()}`, "Record")}
 ${actionForm(data.family.id, "remove_contact", hidden("contactId", contact.id), "Remove")}</td>
 </tr>`,
   );
   return html`<section id="contacts"><h2>Nearby contacts</h2>
-<p class="muted">A contact is listed in a quiet notice only after they have said yes themselves. Vela never contacts them.</p>
+<p class="muted">A contact is listed in a quiet notice only after they have said yes themselves. Their number is stored only with that yes, and a no removes it. Vela never contacts them.</p>
 ${table(["Name", "Phone", "Channel", "Consented", "Declined", "Actions"], rows)}
 <h3>Add a contact</h3>
 ${actionForm(
@@ -253,10 +273,50 @@ ${actionForm(
   "add_contact",
   html`<label>Member they are near<select name="memberId">${contactMembers(data).map((entry) => html`<option value="${entry.member.id}">${entry.member.displayName}${isKeptLight(entry) ? " · kept light" : ""}</option>`)}</select></label>
 <label>Name<input name="name" required></label>
-<label>Phone<input name="phone" required></label>
 <label>Relation<input name="relation"></label>
-<label>Channel<select name="channel"><option value="">none</option><option value="line">line</option><option value="whatsapp">whatsapp</option><option value="telegram">telegram</option><option value="sms">sms</option></select></label>`,
+<label>Channel<select name="channel"><option value="">none</option><option value="line">line</option><option value="whatsapp">whatsapp</option><option value="telegram">telegram</option><option value="sms">sms</option></select></label>
+<fieldset><legend>Their yes (leave all of it empty to add a name alone)</legend>
+<label>Phone<input name="phone"></label>
+<label>Said yes at (UTC)<input type="datetime-local" name="consentAt"></label>
+<label>Text version<input name="textVersion" placeholder="nearby-contact-consent.en@1"></label>
+<label>Language<select name="lang"><option value="">—</option><option value="en">en</option><option value="zh-TW">zh-TW</option></select></label>
+<label>Channel of the yes<input name="consentChannel" placeholder="line"></label>
+<label>Note (evidence)<input name="note"></label>
+</fieldset>`,
   "Add contact",
+)}</section>`;
+}
+
+/**
+ * Inviting again (flows §3.17, `create_invite`), offered only while the family can be invited: it
+ * has not asked to be deleted, and nobody's light is on or was consented to. A No deleted her
+ * profile, so the form asks again what onboarding asked. The page names the never-consented invited
+ * member it showed, if any, so a form sent twice changes nothing the second time.
+ */
+function inviteSection(data: FamilyPage): Html | null {
+  const lit = data.members.some(isKeptLight);
+  if (data.family.deletedAt !== null || lit) {
+    return null;
+  }
+  const waiting = data.members.find(
+    ({ member }) => member.status === "invited" && member.lightConsentedAt === null,
+  );
+  const organisers = data.members.filter(({ member }) => member.role === "organiser");
+  return html`<section id="invite"><h2>Invite again</h2>
+<p class="muted">Creates a new invited member and a link that works for 7 days. The link goes to the organiser in their Telegram chat, never to this page${waiting === undefined ? "" : html`, and ${waiting.member.displayName}'s earlier link stops working: she is replaced, and her nearby contacts move to the new member`}.</p>
+${actionForm(
+  data.family.id,
+  "create_invite",
+  html`${hidden("replacesMemberId", waiting?.member.id ?? "")}
+<label>Organiser who asked<select name="invitedBy">${organisers.map(({ member }) => html`<option value="${member.id}">${member.displayName}</option>`)}</select></label>
+<label>What the family calls her<input name="name" maxlength="40" required></label>
+<label>How Vela greets her<input name="address" maxlength="60" required></label>
+<label>Language<select name="language"><option value="en">English</option><option value="zh-TW">繁體中文</option></select></label>
+<label>Country<select name="country">${INVITE_COUNTRIES.map((country) => html`<option value="${country.code}">${country.label}</option>`)}</select></label>
+<label>Time zone (an IANA name, like Asia/Taipei)<input name="timeZone" required></label>
+<label>Wake time (HH:MM)<input name="wakeTime" pattern="[0-2][0-9]:[0-5][0-9]" required></label>
+<label>Type <code>invite</code> to confirm<input name="confirm" required></label>`,
+  "Create the invite",
 )}</section>`;
 }
 
@@ -401,6 +461,7 @@ export function renderFamilyPage(data: FamilyPage, notice: Html | null): Respons
 <p class="lede"><a href="${ADMIN_PATH}">All families</a> ·${data.family.region} · ${data.family.language} · ${data.family.country} · created ${instant(data.family.createdAt)}</p>
 ${notice}
 ${membersSection(data)}
+${inviteSection(data)}
 ${consentsSection(data)}
 ${contactsSection(data)}
 ${awaySection(data)}

@@ -127,6 +127,10 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
+    // The Durable Object tests call their objects across isolates, and on a busy laptop, with the
+    // runtime still importing the other test files, one such call has taken more than Vitest's
+    // default 5 seconds, failing tests that pass in milliseconds alone. A real hang still fails.
+    testTimeout: 20_000,
     provide: {
       workerConfigs: (["pilot", "admin"] as const).flatMap((worker) =>
         ENVIRONMENTS.map((environment) => workerConfig(worker, environment)),
@@ -144,7 +148,6 @@ export default defineConfig({
           TELEGRAM_WEBHOOK_SECRET: "test-webhook-secret",
           ANTHROPIC_API_KEY: "test-anthropic-key",
           DEEPGRAM_API_KEY: "test-deepgram-key",
-          HEALTHCHECKS_PING_URL: "https://hc.example/ping",
         },
       },
     }),

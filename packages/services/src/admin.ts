@@ -8,9 +8,25 @@
  * event. A form a browser resubmits is harmless: an action whose effect is already in place writes
  * nothing at all, so the log holds one row per change rather than one per click. `what` names a
  * kind, dates, or an id, never message content, names, or phone numbers. Nothing here sends a
- * message except the weekly read, and that only to organisers, through the gateway.
+ * message except the weekly read and a new invite link, and those only to organisers, through the
+ * gateway.
+ *
+ * Every consent row an action writes names its subject (`subject_ref`) and its answer, and every
+ * deletion of a contact or a member forgets the consent rows about them first, so the proof outlives
+ * the person's data without holding it (ADR-28). A contact's number arrives only with their yes, and
+ * goes with their no (L8).
  */
-import { type AdminAction, type Channel, type DomainEvent, Lang, LocalDate } from "@vela/contracts";
+import {
+  type AdminAction,
+  type Channel,
+  type DomainEvent,
+  isIanaTimeZone,
+  Lang,
+  LocalDate,
+  LocalTime,
+  MVP_LANGS,
+} from "@vela/contracts";
+import { t } from "@vela/copy";
 import {
   addDays,
   localDateOf,
@@ -56,9 +72,16 @@ import type { Config, Deps } from "./deps.ts";
 import { isErrorCode, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
-import { sha256Hex } from "./hash.ts";
+import {
+  ADDRESS_MAX_LENGTH,
+  insertInvite,
+  insertInvitedMember,
+  NAME_MAX_LENGTH,
+} from "./invites.ts";
+import { forgetConsentSubjects, recordDeletion, subjectRef } from "./proofs.ts";
 import {
   activeOrganisersWithLinks,
+  channelLinkOfMember,
   exchangeForLocalDate,
   familyById,
   keptLightMembersOfFamily,
@@ -137,6 +160,15 @@ const Evidence = z.record(z.string().min(1).max(60), z.string().max(500));
 const TextVersion = z.string().trim().min(1).max(80);
 const ConsentChannel = z.string().trim().min(1).max(40);
 
+/** A number as a contact gives it: digits, spaces, and `+ - ( ) .`, with at least six digits. */
+const Phone = z
+  .string()
+  .trim()
+  .min(6)
+  .max(40)
+  .regex(/^[\d\s+\-().]+$/, "a phone number is digits, spaces, and + - ( ) .")
+  .refine((value) => (value.match(/\d/g) ?? []).length >= 6, "a phone number has six digits");
+
 const AdminViewSchema = z.object({
   familyIds: z.array(Uuid).max(1000),
   memberId: Uuid.nullable(),
@@ -156,21 +188,27 @@ const RecordConsentSchema = z.object({
 });
 export type RecordConsentInput = z.input<typeof RecordConsentSchema>;
 
-const RecordContactConsentSchema = z.object({
-  contactId: Uuid,
-  answer: z.enum(["yes", "no"]),
-  at: z.date(),
-  textVersion: TextVersion,
-  lang: Lang,
-  channel: ConsentChannel,
-  evidence: Evidence,
-});
+const RecordContactConsentSchema = z
+  .object({
+    contactId: Uuid,
+    answer: z.enum(["yes", "no"]),
+    /** Required with a yes, which is the only way a number is stored; refused with a no. */
+    phone: Phone.nullable(),
+    at: z.date(),
+    textVersion: TextVersion,
+    lang: Lang,
+    channel: ConsentChannel,
+    evidence: Evidence,
+  })
+  .refine((input) => (input.answer === "yes") === (input.phone !== null), {
+    message: "a yes takes the contact's number, and a no takes none",
+    path: ["phone"],
+  });
 export type RecordContactConsentInput = z.input<typeof RecordContactConsentSchema>;
 
 const AddContactSchema = z.object({
   memberId: Uuid,
   name: z.string().trim().min(1).max(80),
-  phone: z.string().trim().min(1).max(40),
   // An empty relation field on the form means none.
   relation: z
     .string()
@@ -179,8 +217,38 @@ const AddContactSchema = z.object({
     .nullable()
     .transform((value) => (value === "" ? null : value)),
   channel: z.enum(NEARBY_CONTACT_CHANNELS).nullable(),
+  /** The contact's own yes, with the number they gave; without it the contact is a name. */
+  yes: z
+    .object({
+      phone: Phone,
+      at: z.date(),
+      textVersion: TextVersion,
+      lang: Lang,
+      channel: ConsentChannel,
+      evidence: Evidence,
+    })
+    .nullable(),
 });
 export type AddContactInput = z.input<typeof AddContactSchema>;
+
+/** What onboarding asked, asked again: a No deleted her profile (flows §3.17, `create_invite`). */
+const CreateInviteSchema = z.object({
+  /** The organiser who asked; the new link reaches them. */
+  invitedBy: Uuid,
+  name: z.string().trim().min(1).max(NAME_MAX_LENGTH),
+  address: z.string().trim().min(1).max(ADDRESS_MAX_LENGTH),
+  language: z.enum(MVP_LANGS),
+  /** An ISO 3166-1 alpha-2 code, or ZZ for a country onboarding lists as Other. */
+  country: z.string().regex(/^[A-Z]{2}$/, "a two-letter country code"),
+  timeZone: z.string().refine(isIanaTimeZone, "an IANA time zone name"),
+  wakeTime: LocalTime,
+  /**
+   * The family's never-consented invited member the page showed, or null when it showed none: a
+   * resubmitted form names a member already replaced and changes nothing.
+   */
+  replacesMemberId: Uuid.nullable(),
+});
+export type CreateInviteInput = z.input<typeof CreateInviteSchema>;
 
 const SetAwaySchema = z
   .object({
@@ -407,6 +475,7 @@ export async function recordConsent(
         and(
           eq(consents.memberId, member.id),
           eq(consents.kind, input.kind),
+          eq(consents.answer, "yes"),
           eq(consents.textVersion, input.textVersion),
           isNull(consents.withdrawnAt),
         ),
@@ -417,7 +486,9 @@ export async function recordConsent(
     }
     await tx.insert(consents).values({
       memberId: member.id,
+      subjectRef: subjectRef({ memberId: member.id }),
       kind: input.kind,
+      answer: "yes",
       textVersion: input.textVersion,
       lang: input.lang,
       channel: input.channel,
@@ -440,9 +511,10 @@ export async function recordConsent(
 }
 
 /**
- * A nearby contact's answer to being listed in quiet notices (flows §3.17). A yes lists them from
- * `at`; a no unlists them and withdraws their nearby consents. The same answer twice changes nothing;
- * a yes after a no, or a no after a yes, is a new answer.
+ * A nearby contact's answer to being listed in quiet notices (flows §3.17). A yes, with the number
+ * they gave, lists them from `at`; a no unlists them, clears the number, withdraws their nearby
+ * consents, and is recorded as a no. The same answer twice changes nothing; a yes after a no, or a
+ * no after a yes, is a new answer.
  */
 export async function recordContactConsent(
   deps: Deps,
@@ -458,30 +530,33 @@ export async function recordContactConsent(
       throw new VelaError("not_found", "record_contact_consent: contact does not exist");
     }
     const listed = contact.consentedAt !== null && contact.declinedAt === null;
-    if (input.answer === "yes") {
+    const answer = {
+      contactId: contact.id,
+      subjectRef: subjectRef({ contactId: contact.id }),
+      kind: "nearby" as const,
+      textVersion: input.textVersion,
+      lang: input.lang,
+      channel: input.channel,
+      givenAt: input.at,
+      evidence: { ...input.evidence, recorded_by: "founder" },
+    };
+    if (input.phone !== null) {
       if (listed) {
         return;
       }
       await tx
         .update(nearbyContacts)
-        .set({ consentedAt: input.at, declinedAt: null })
+        .set({ phone: input.phone, consentedAt: input.at, declinedAt: null })
         .where(eq(nearbyContacts.id, contact.id));
-      await tx.insert(consents).values({
-        contactId: contact.id,
-        kind: "nearby",
-        textVersion: input.textVersion,
-        lang: input.lang,
-        channel: input.channel,
-        givenAt: input.at,
-        evidence: { ...input.evidence, recorded_by: "founder" },
-      });
+      await tx.insert(consents).values({ ...answer, answer: "yes" });
     } else {
       if (contact.declinedAt !== null) {
         return;
       }
+      // The number goes with the yes it depended on.
       await tx
         .update(nearbyContacts)
-        .set({ declinedAt: input.at })
+        .set({ phone: null, declinedAt: input.at })
         .where(eq(nearbyContacts.id, contact.id));
       await tx
         .update(consents)
@@ -490,9 +565,11 @@ export async function recordContactConsent(
           and(
             eq(consents.contactId, contact.id),
             eq(consents.kind, "nearby"),
+            eq(consents.answer, "yes"),
             isNull(consents.withdrawnAt),
           ),
         );
+      await tx.insert(consents).values({ ...answer, answer: "no" });
     }
     await logChange(tx, admin, at, {
       action: "record_contact_consent",
@@ -512,9 +589,13 @@ export async function recordContactConsent(
 // Nearby contacts -----------------------------------------------------------------------------------
 
 /**
- * A person near her, stored unconsented: they are listed in quiet notices only once
- * `recordContactConsent` records their yes. A contact with the same number is the same person, so a
- * resubmitted form adds nobody.
+ * A person near her. Without their yes they are a name, listed in quiet notices only once
+ * `recordContactConsent` records a yes with their number; with it, the contact, their number, and
+ * their `nearby` consent are one change. A contact with the same name near the same member (trimmed,
+ * any letter case) is the same person, so a resubmitted form adds nobody. A yes for that person is
+ * refused unless their row already holds it: onboarding stores contacts as names alone (L8), so the
+ * likely mistake is a yes typed here instead of on their row, and skipping it would drop their number
+ * and consent while the page reported success.
  */
 export async function addContact(
   deps: Deps,
@@ -527,11 +608,27 @@ export async function addContact(
   await deps.db.transaction(async (tx) => {
     const { member, family } = await lockMember(tx, admin, input.memberId, "add_contact");
     const existing = await tx
-      .select({ phone: nearbyContacts.phone })
+      .select({
+        name: nearbyContacts.name,
+        phone: nearbyContacts.phone,
+        consentedAt: nearbyContacts.consentedAt,
+        declinedAt: nearbyContacts.declinedAt,
+      })
       .from(nearbyContacts)
       .where(eq(nearbyContacts.memberId, member.id));
-    if (existing.some((contact) => contact.phone === input.phone)) {
-      return;
+    const name = input.name.toLowerCase();
+    const same = existing.find((contact) => contact.name.trim().toLowerCase() === name);
+    if (same !== undefined) {
+      const heldAlready =
+        input.yes === null ||
+        (same.phone === input.yes.phone && same.consentedAt !== null && same.declinedAt === null);
+      if (heldAlready) {
+        return;
+      }
+      throw new VelaError(
+        "illegal_state",
+        "add_contact: a contact with this name is already near her; record their yes on that contact's row",
+      );
     }
     if (existing.length >= MAX_NEARBY_CONTACTS) {
       throw new VelaError(
@@ -547,13 +644,28 @@ export async function addContact(
           memberId: member.id,
           name: input.name,
           relation: input.relation,
-          phone: input.phone,
+          phone: input.yes?.phone ?? null,
           channel: input.channel,
+          consentedAt: input.yes?.at ?? null,
           createdAt: at,
         })
         .returning({ id: nearbyContacts.id }),
       "add_contact",
     );
+    const yes = input.yes;
+    if (yes !== null) {
+      await tx.insert(consents).values({
+        contactId: contact.id,
+        subjectRef: subjectRef({ contactId: contact.id }),
+        kind: "nearby",
+        answer: "yes",
+        textVersion: yes.textVersion,
+        lang: yes.lang,
+        channel: yes.channel,
+        givenAt: yes.at,
+        evidence: { ...yes.evidence, recorded_by: "founder" },
+      });
+    }
     await logChange(tx, admin, at, {
       action: "add_contact",
       familyId: family.id,
@@ -563,16 +675,30 @@ export async function addContact(
         name: "nearby_contact_added",
         familyId: family.id,
         memberId: member.id,
-        props: { contact_id: contact.id, by: "founder" },
+        props: { contact_id: contact.id, by: "founder", consented: yes !== null },
       },
     });
+    if (yes !== null) {
+      // A nearby yes is counted under one event name however it was recorded.
+      await recordEvent(
+        tx,
+        {
+          name: "consent_given",
+          familyId: family.id,
+          memberId: member.id,
+          props: { kind: "nearby", contact_id: contact.id, recorded_by: "founder" },
+        },
+        at,
+      );
+    }
   });
 }
 
 /**
- * Deletes the contact (their consents cascade) and proves it with a `deletions` row that holds a
- * hash of the number, never the number. A contact already removed is known only from that row, which
- * is what tells a resubmitted form from a wrong id.
+ * Deletes the contact, and proves it with a `deletions` row that hashes only its type and id (L4).
+ * Their consent rows stay as proofs, forgotten first: nothing they said or are called is kept. A
+ * contact already removed is known only from that row, which is what tells a resubmitted form from a
+ * wrong id.
  */
 export async function removeContact(
   deps: Deps,
@@ -595,14 +721,13 @@ export async function removeContact(
       }
       throw new VelaError("not_found", "remove_contact: contact does not exist");
     }
-    const contentHash = await sha256Hex(contact.phone);
+    await forgetConsentSubjects(tx, { contactIds: [contact.id] }, at);
     await tx.delete(nearbyContacts).where(eq(nearbyContacts.id, contact.id));
-    await tx.insert(deletions).values({
+    await recordDeletion(tx, {
       objectType: "nearby_contact",
       objectId: contact.id,
-      contentHash,
       reason: "admin remove_contact",
-      deletedAt: at,
+      at,
     });
     await logChange(tx, admin, at, {
       action: "remove_contact",
@@ -614,6 +739,127 @@ export async function removeContact(
         familyId: contact.familyId,
         memberId: contact.memberId,
         props: { contact_id: contact.id, by: "founder" },
+      },
+    });
+  });
+}
+
+// Inviting again ------------------------------------------------------------------------------------
+
+/**
+ * A new invite for a family whose kept-light member said No, or never answered (flows §3.17, L7).
+ * A No deleted her profile, so the founder fills in again, with the organiser, what onboarding asked,
+ * and a new `invited` member and single-use invite are created; the link reaches the organiser who
+ * asked in their own chat, so the founder never handles a token. When the family still has a
+ * never-consented `invited` member, she is replaced: her nearby contacts move to the new member,
+ * because they are near the same person, and she is forgotten and deleted with her link and invites,
+ * so her old link stops working. The form must name exactly that member, or none when there is none,
+ * so a resubmitted form, which names a member already replaced, changes nothing. A family that asked
+ * to be deleted, or whose light is on or was consented to, is refused.
+ */
+export async function createInvite(
+  deps: Deps,
+  ctx: AdminContext,
+  rawInput: CreateInviteInput,
+): Promise<void> {
+  const admin = parseContext(ctx);
+  const input = parse(CreateInviteSchema, rawInput, "create_invite");
+  const at = deps.clock.now();
+  await deps.db.transaction(async (tx) => {
+    const { member: organiser, family } = await lockMember(
+      tx,
+      admin,
+      input.invitedBy,
+      "create_invite",
+    );
+    // The family row lock orders two submissions of the form one after the other.
+    await tx
+      .select({ id: families.id })
+      .from(families)
+      .where(eq(families.id, family.id))
+      .for("update");
+    if (family.deletedAt !== null) {
+      throw new VelaError("illegal_state", "create_invite: the family asked to be deleted");
+    }
+    const people = await tx.select().from(members).where(eq(members.familyId, family.id));
+    if (people.some((person) => person.lightOn || person.lightConsentedAt !== null)) {
+      throw new VelaError(
+        "illegal_state",
+        "create_invite: the family's light is on or was consented to",
+      );
+    }
+    const waiting = people.filter(
+      (person) => person.status === "invited" && person.lightConsentedAt === null,
+    );
+    const replaces = input.replacesMemberId;
+    if (
+      replaces === null ? waiting.length > 0 : waiting.length !== 1 || waiting[0]?.id !== replaces
+    ) {
+      throw new VelaError(
+        "illegal_state",
+        "create_invite: the invited member the form names is not the family's",
+      );
+    }
+    if (organiser.role !== "organiser" || organiser.status !== "active") {
+      throw new VelaError(
+        "not_found",
+        "create_invite: the organiser who asked is not an active organiser",
+      );
+    }
+    const link = await channelLinkOfMember(tx, organiser.id, ORGANISER_CHANNEL);
+    if (link === null) {
+      throw new VelaError("no_channel_link", "create_invite: the organiser has no Telegram link");
+    }
+    const her = await insertInvitedMember(
+      tx,
+      {
+        familyId: family.id,
+        name: input.name,
+        address: input.address,
+        language: input.language,
+        timeZone: input.timeZone,
+        country: input.country,
+        wakeTime: input.wakeTime,
+      },
+      at,
+    );
+    if (replaces !== null) {
+      await tx
+        .update(nearbyContacts)
+        .set({ memberId: her.id })
+        .where(eq(nearbyContacts.memberId, replaces));
+      await forgetConsentSubjects(tx, { memberIds: [replaces] }, at);
+      await tx.delete(members).where(eq(members.id, replaces));
+    }
+    const invited = await insertInvite(
+      deps,
+      tx,
+      { familyId: family.id, invitedBy: organiser.id, forMemberId: her.id },
+      at,
+    );
+    const lang = organiser.language;
+    await enqueueOutbound(deps, tx, {
+      kind: "system",
+      idempotencyKey: outboundKey("system", {
+        conversationId: link.externalId,
+        suffix: `invite:${invited.invite.id}`,
+      }),
+      memberId: organiser.id,
+      channel: link.channel,
+      conversationId: link.externalId,
+      lang,
+      text: t(lang, "organiser.invite_again", { name: her.displayName, link: invited.link }),
+    });
+    await logChange(tx, admin, at, {
+      action: "create_invite",
+      familyId: family.id,
+      memberId: her.id,
+      what: `invite=${invited.invite.id} replaced=${replaces === null ? 0 : 1}`,
+      event: {
+        name: "invite_created",
+        familyId: family.id,
+        memberId: her.id,
+        props: { invite_id: invited.invite.id, replaced: replaces !== null },
       },
     });
   });
@@ -1218,7 +1464,8 @@ export async function loadAdminOverview(
 /**
  * The member a family's overview row is about: the kept-light member, or until she has consented
  * the member the family's invite was for, so the founder sees `invited` while the link is unopened
- * or after a No (flows §3.2) rather than a family with nobody in it.
+ * or unanswered rather than a family with nobody in it. After a No there is nobody: her member row
+ * was deleted (flows §3.2), and the family page offers `create_invite`.
  */
 async function overviewSubject(db: Queryable, familyId: string): Promise<Member | undefined> {
   const [keptLight] = await keptLightMembersOfFamily(db, familyId);

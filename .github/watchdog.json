@@ -1,0 +1,12 @@
+{
+  "environments": {
+    "production": {
+      "url": "https://vela.vela-light.workers.dev/healthz",
+      "enabled": false
+    },
+    "staging": {
+      "url": "https://vela.vela-light-staging.workers.dev/healthz",
+      "enabled": false
+    }
+  }
+}

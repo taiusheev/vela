@@ -8,6 +8,20 @@
  *
  * `consent.request`, `consent.yes`, and `consent.no` are what the founder reads aloud on the consent
  * call (plan/materials/pilot/consent-script.en.md, sections 2 and 6): change the script with them.
+ * A tap records the text version of the message it answers (`consent.request@2`,
+ * `consent.health_words@1`, in services' consent.ts) and a hash of the text as rendered, so a change
+ * of wording here is also a new text version there. `consent.request` names who runs Vela and links
+ * the notice in her language, so the message she taps holds what she agrees to (ADR-28).
+ * `consent.health_words` is its own message with its own buttons, labelled `consent.yes` and
+ * `consent.no`, because a consent to carry words that may be medical must be given separately
+ * (ADR-27); it says a no changes nothing else, so saying no is a free choice.
+ *
+ * `flag.notice_no_words` is the organisers' flag notice when she has not agreed to health words: her
+ * name and nothing she said, no quote and no category, so it carries no health data and still gives
+ * the organiser a reason to call.
+ *
+ * `group.notice_read` labels the button under `group.linked`; each adult who taps it is recorded as
+ * having read the notice (flows §3.3).
  *
  * `onboarding.done` asks for a new group without the kept-light member (spec Appendix A): group
  * posts name the member in the third person, and only the family who received the privacy notice
@@ -15,10 +29,14 @@
  * ends with the privacy notice link for the same reason: everyone who will see the answers is in
  * that group.
  *
- * `onboarding.ask_nearby` tells the organiser to ask the contact themselves: a contact's number is
- * stored unconsented and appears in a quiet note only after the founder records their yes, and
- * Vela never contacts anyone on its own (the privacy notice says so), so a contact nobody in the
- * family asks never appears in a note.
+ * `onboarding.ask_nearby` tells the organiser to ask the contact themselves, and asks only for a name
+ * and how the contact knows her: a contact's number is stored only with their yes, which the founder
+ * records on the admin page (flows §3.17), and Vela never contacts anyone on its own (the privacy
+ * notice says so), so a contact nobody in the family asks never appears in a note.
+ * `onboarding.nearby_no_number` answers a setup reply that holds a phone number, which is not kept.
+ *
+ * `organiser.invite_again` carries the link the founder's `create_invite` makes, after she said no
+ * or never answered; like `onboarding.done`, it goes to the organiser, who sends it on.
  *
  * The weekly read is "weekly read", the name the English privacy notice and the spec give it.
  *
@@ -65,13 +83,17 @@ export const en = {
     "This link is no longer valid. Please ask the person who sent it for a new one.",
   "consent.already_linked": "This Telegram account is already connected to another family on Vela.",
   "consent.request":
-    "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time.",
+    "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time. Vela is run by Timur Aiusheev. How your information is used: {notice}",
+  "consent.health_words":
+    "One more question. If you mention your health, for example a fall or pain, may Vela pass your words on to {organiser} so they can call you? Vela works the same if you say no.",
   "consent.yes": "Yes, that's fine",
   "consent.no": "No, thank you",
   "consent.accepted": "Thank you. Your first morning arrives tomorrow at {time}.",
   "consent.declined": "That's fine. Nothing will arrive.",
   "organiser.consent_given": "{name} said yes. The first morning arrives tomorrow at {time}.",
   "organiser.consent_declined": "{name} said no for now. Nothing will be sent.",
+  "organiser.invite_again":
+    "Here is a new invite. Send this link to {name}: {link} It works for 7 days.",
   "parent.stopped": "Everything is paused. Say start whenever you would like it back.",
   "parent.started": "Welcome back. Your next morning arrives at {time}.",
   "organiser.stopped": "{name} asked to pause. Nothing is wrong with the app.",
@@ -81,6 +103,7 @@ export const en = {
   "parent.family_sees_weekly_read": "From the latest weekly read sent to the family:",
   "group.linked":
     "Hello, family. I'm Vela. Each evening I will say whose turn it is to ask {name} something for the morning. How Vela handles your messages: {notice}",
+  "group.notice_read": "I've read it",
   "group.not_linked": "Only the family organiser can connect Vela to a group.",
   "group.turn_prompt":
     "Tomorrow is {holder}'s turn with {name}. Reply to this message with a question, a photo, or a voice note.",
@@ -107,6 +130,7 @@ export const en = {
   "quiet.resolved_fine": "{organiser} says {name} is fine.",
   "delivery.failed": "We couldn't reach {name} on {channel} today. Nothing else is known.",
   "flag.notice": '{name} said something you may want to hear: "{quote}"',
+  "flag.notice_no_words": "{name} said something today that may be worth a call.",
   "away.confirmed": "Until {date}, then. Have a lovely time.",
   "away.confirmed_open": "Understood. Have a lovely time.",
   "weekly_read.answered": "{name} answered {answered} of {days} days.",
@@ -140,7 +164,9 @@ export const en = {
   "onboarding.invalid_zone": "Please send a time zone name like Asia/Seoul or Europe/Paris.",
   "onboarding.ask_wake": "When do they usually wake up? Tap one or type a time like 07:30.",
   "onboarding.ask_nearby":
-    "Who lives nearby and could look in if needed? Send a name and phone number, or tap Skip. Please ask them yourself first: their number appears in a note only after they say yes.",
+    "Who lives nearby and could look in if needed? Send a name and, if you like, how they know each other, for example: Anna, neighbour. Or tap Skip. Please ask them yourself first. Only their name goes here: their number is added after they say yes.",
+  "onboarding.nearby_no_number":
+    "Please send only a name and, if you like, how they know each other, for example: Anna, neighbour. Their number is added after they say yes.",
   "onboarding.skip": "Skip",
   "onboarding.invalid_time": "Please send a time like 07:30.",
   "onboarding.done":

@@ -5,7 +5,7 @@
  * founder is told there is a draft with a link and nothing else. Retention implements the pilot
  * data map rule by rule and reports a count per rule, so the nightly run is auditable.
  */
-import type { AiCallRecord, WeeklyDay } from "@vela/ai";
+import type { AiCallRecord, Mentions, WeeklyDay } from "@vela/ai";
 import type { LocalDate, LocalTime } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -24,6 +24,7 @@ import {
   answers,
   awayPeriods,
   chips,
+  consents,
   deletions,
   type Exchange,
   events,
@@ -44,17 +45,36 @@ import {
   translations,
   weeklyReads,
 } from "@vela/db";
-import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
-import { sha256Hex } from "./hash.ts";
+import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import { familyById, memberById, type Queryable, recentAnswerLatencies } from "./repo.ts";
 
 const DAYS_IN_WEEK = 7;
 const RETENTION_DAYS = 30;
 const RETENTION_MONTHS = 24;
+/**
+ * Consent and deletion proofs are kept this many calendar years once they no longer permit anything
+ * (L5): long enough to answer a question about what someone agreed to or what was deleted.
+ */
+const PROOF_RETENTION_YEARS = 5;
 const DAY_MS = 86_400_000;
 
 export interface AiCallLog {
@@ -249,12 +269,23 @@ function meanVoiceMs(days: readonly WeekDay[]): number | null {
   return lengths.reduce((sum, value) => sum + value, 0) / lengths.length;
 }
 
-/** Things she mentioned on two or more days, in her words, at most ten. */
+/**
+ * The mention lists a week's topics are drawn from. Never `health`: topics are stored in
+ * `weekly_reads.stats`, kept while the family uses Vela, and health words are kept only 30 days and
+ * only under a yes she can withdraw (ADR-27). A list is named here to count, so a new kind of mention
+ * stays out until someone decides it may be kept that long.
+ */
+const TOPIC_MENTIONS = ["people", "places", "plans", "dates"] as const satisfies readonly Exclude<
+  keyof Mentions,
+  "health"
+>[];
+
+/** Things she mentioned on two or more days, in her words, at most ten; never her health words. */
 function repeatedMentions(days: readonly WeekDay[]): string[] {
   const datesByMention = new Map<string, { text: string; dates: Set<LocalDate> }>();
   for (const day of days) {
     for (const answer of day.answers) {
-      for (const list of Object.values(answer.mentions)) {
+      for (const list of TOPIC_MENTIONS.map((kind) => answer.mentions[kind])) {
         if (!Array.isArray(list)) {
           continue;
         }
@@ -585,22 +616,20 @@ function optionsWithout(id: string) {
 
 /**
  * Deletes one media file: the R2 object first, so no object outlives its row, then in one
- * transaction the proof of deletion (a hash of the storage key, or of the provider file id when the
- * file was never stored), the id's removal from `exchanges.media_ids` and `exchanges.options`, and
+ * transaction the proof of deletion (the hash of `media:<id>`, never of the storage key or the
+ * provider file id, L4), the id's removal from `exchanges.media_ids` and `exchanges.options`, and
  * the row; the foreign keys set the other references null.
  */
 async function deleteMedia(deps: Deps, row: Media, reason: string): Promise<void> {
   if (row.storageKey !== null) {
     await deps.media.delete(row.storageKey);
   }
-  const contentHash = await sha256Hex(row.storageKey ?? row.providerFileId ?? row.id);
   await deps.db.transaction(async (tx) => {
-    await tx.insert(deletions).values({
+    await recordDeletion(tx, {
       objectType: "media",
       objectId: row.id,
-      contentHash,
       reason,
-      deletedAt: deps.clock.now(),
+      at: deps.clock.now(),
     });
     await tx
       .update(exchanges)
@@ -628,18 +657,51 @@ async function clearSchedulers(
   }
 }
 
+/** A kept-light member still invited who never tapped Yes (a No deletes her at once). */
+function neverAnswered(): SQL {
+  return sql`${members.status} = 'invited' and ${members.lightConsentedAt} is null`;
+}
+
 /**
- * The pilot's retention rules (flows §3.15, ADR-24), one after the other, each reporting how many
- * rows it changed. Families whose deletion was requested go first, their media before them so every
- * file gets its proof of deletion; then expired media; then members who left 30 days ago; then the
- * 30-day clearing and deletion; then the 24-month deletion. Every count is recorded in one
- * `retention_deleted` event.
+ * The members a rule deletes, in one transaction: their consent rows and their nearby contacts'
+ * are forgotten first (flows §3.15, "Consent proofs"), or the delete fails on
+ * `consents_subject_deleted_check`. Returns the deleted rows, for their schedulers.
+ */
+async function deleteMembers(
+  deps: Deps,
+  select: (tx: Queryable) => Promise<{ id: string }[]>,
+  now: Date,
+): Promise<{ id: string; lightOn: boolean; lightConsentedAt: Date | null }[]> {
+  return deps.db.transaction(async (tx) => {
+    const ids = (await select(tx)).map((row) => row.id);
+    if (ids.length === 0) {
+      return [];
+    }
+    await forgetMembersWithTheirContacts(tx, ids, now);
+    return tx.delete(members).where(inArray(members.id, ids)).returning({
+      id: members.id,
+      lightOn: members.lightOn,
+      lightConsentedAt: members.lightConsentedAt,
+    });
+  });
+}
+
+/**
+ * The pilot's retention rules (flows §3.15, ADR-24, ADR-28), one after the other, each reporting how
+ * many rows it changed. Families whose deletion was requested go first, their media before them so
+ * every file gets its proof of deletion; then expired media; then members who left 30 days ago; then
+ * invited members who never answered, 30 days after their last invite expired; then the 30-day
+ * clearing and deletion; then the 24-month deletion; then the proofs that stopped permitting
+ * anything 5 years ago. Every deletion of a member or a contact forgets their consent rows first.
+ * Every count is recorded in one `retention_deleted` event.
  */
 export async function applyRetention(deps: Deps): Promise<Record<string, number>> {
   const now = deps.clock.now();
   const cutoff30 = new Date(now.getTime() - RETENTION_DAYS * DAY_MS);
   const cutoff24m = new Date(now.getTime());
   cutoff24m.setUTCMonth(cutoff24m.getUTCMonth() - RETENTION_MONTHS);
+  const cutoff5y = new Date(now.getTime());
+  cutoff5y.setUTCFullYear(cutoff5y.getUTCFullYear() - PROOF_RETENTION_YEARS);
   const counts: Record<string, number> = {};
   const db = deps.db;
 
@@ -663,7 +725,10 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       })
       .from(members)
       .where(eq(members.familyId, family.id));
-    await db.delete(families).where(eq(families.id, family.id));
+    await db.transaction(async (tx) => {
+      await forgetFamilySubjects(tx, family.id, now);
+      await tx.delete(families).where(eq(families.id, family.id));
+    });
     await clearSchedulers(deps, lit);
   }
   counts.families_deleted = doomed.length;
@@ -678,16 +743,37 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   }
   counts.media_deleted = expired.length;
 
-  const gone = await db
-    .delete(members)
-    .where(and(eq(members.status, "left"), lt(members.leftAt, cutoff30)))
-    .returning({
-      id: members.id,
-      lightOn: members.lightOn,
-      lightConsentedAt: members.lightConsentedAt,
-    });
+  const gone = await deleteMembers(
+    deps,
+    (tx) =>
+      tx
+        .select({ id: members.id })
+        .from(members)
+        .where(and(eq(members.status, "left"), lt(members.leftAt, cutoff30))),
+    now,
+  );
   await clearSchedulers(deps, gone);
   counts.members_deleted = gone.length;
+
+  // An invited member who never answered holds only what setup stored: she goes 30 days after her
+  // last invite expired (L7), her invites and nearby contacts with her. She has no scheduler.
+  counts.invited_members_deleted = (
+    await deleteMembers(
+      deps,
+      (tx) =>
+        tx
+          .select({ id: members.id })
+          .from(members)
+          .where(
+            and(
+              neverAnswered(),
+              sql`exists (select 1 from ${invites} where ${invites.forMemberId} = ${members.id})`,
+              sql`not exists (select 1 from ${invites} where ${invites.forMemberId} = ${members.id} and ${invites.expiresAt} >= ${cutoff30})`,
+            ),
+          ),
+      now,
+    )
+  ).length;
 
   // The ask's own words go 30 days after delivery, and 30 days after they were written when the
   // morning never reached her: `delivered_at` stays null on a failed arrival and on a whenever ask
@@ -796,9 +882,14 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
     await db
       .delete(invites)
       .where(
-        or(
-          lt(invites.acceptedAt, cutoff30),
-          and(isNull(invites.acceptedAt), lt(invites.expiresAt, cutoff30)),
+        and(
+          or(
+            lt(invites.acceptedAt, cutoff30),
+            and(isNull(invites.acceptedAt), lt(invites.expiresAt, cutoff30)),
+          ),
+          // An invite meant for a member who never answered is how the rule above finds her, so it
+          // stays until she is deleted and goes with her.
+          sql`not exists (select 1 from ${members} where ${members.id} = ${invites.forMemberId} and ${neverAnswered()})`,
         ),
       )
       .returning({ id: invites.id })
@@ -824,6 +915,34 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   ).length;
   counts.outbound_deleted = (
     await db.delete(outbound).where(lt(outbound.queuedAt, cutoff24m)).returning({ id: outbound.id })
+  ).length;
+
+  // A standing yes whose subject still exists is never deleted by age: Vela still relies on it. A
+  // proof that stopped permitting anything is kept 5 years from when it stopped (L5).
+  counts.consents_deleted = (
+    await db
+      .delete(consents)
+      .where(
+        and(
+          or(
+            eq(consents.answer, "no"),
+            isNotNull(consents.withdrawnAt),
+            isNotNull(consents.subjectDeletedAt),
+          ),
+          // greatest() skips nulls: the latest of the times that are set.
+          lt(
+            sql`greatest(${consents.givenAt}, ${consents.withdrawnAt}, ${consents.subjectDeletedAt})`,
+            cutoff5y,
+          ),
+        ),
+      )
+      .returning({ id: consents.id })
+  ).length;
+  counts.deletions_deleted = (
+    await db
+      .delete(deletions)
+      .where(lt(deletions.deletedAt, cutoff5y))
+      .returning({ id: deletions.id })
   ).length;
 
   await recordEvent(db, { name: "retention_deleted", props: counts }, now);

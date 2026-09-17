@@ -88,7 +88,7 @@ export class MemberScheduler extends DurableObject<PilotEnv> {
       const next = await this.runtime.services.tickMember(handle.deps, memberId);
       if (next === null) {
         // Nothing to wake for. A wake asked for mid-tick goes too, but her `next_wake_at` is now
-        // null, and `reconcile` ticks an active kept-light member with none within five minutes.
+        // null, and `reconcile` ticks an active kept-light member with none within 15 minutes.
         await this.ctx.storage.deleteAlarm();
       } else {
         await this.#armNoLaterThan(next.getTime());

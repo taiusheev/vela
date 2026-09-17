@@ -1,9 +1,11 @@
 import type { InboundEvent } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { outboundKey } from "@vela/core";
+import { decodeButton, encodeButton, outboundKey } from "@vela/core";
 import {
   channelLinks,
+  consents,
   events,
+  exchanges,
   families,
   familyChannels,
   members,
@@ -12,6 +14,8 @@ import {
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { handleAskCommand } from "./asks.ts";
+import { handleConsentButton } from "./consent.ts";
 import type { OutboundJob } from "./deps.ts";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import {
@@ -19,8 +23,10 @@ import {
   handleBotRemoved,
   handleGroupMigrated,
   handleMemberLeft,
+  handleNoticeReadButton,
   resolveGroupSender,
 } from "./group.ts";
+import { sha256Hex } from "./hash.ts";
 import { familyByLinkedGroup } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedFamily, seedGroupMember, seedLinkedGroup } from "./testing/seed.ts";
@@ -134,6 +140,12 @@ describe("handleBotAdded", () => {
       t("zh-TW", "group.linked", { name: "Mom", notice: "https://vela.test/privacy/zh-TW" }),
     );
     expect(greeting?.message.text).toContain("https://vela.test/privacy/zh-TW");
+    expect(rows[0]?.linkedTextSha256).toBe(await sha256Hex(greeting?.message.text ?? ""));
+    expect(
+      greeting?.message.buttons?.map((row) =>
+        row.map((button) => [decodeButton(button.id), button.label]),
+      ),
+    ).toEqual([[[{ type: "notice_read", familyChannelId: rows[0]?.id }, "我看過了"]]]);
     expect((await memberRow(seed.organiser.id))?.turnsIn).toBe(true);
   });
 
@@ -217,6 +229,251 @@ describe("handleBotAdded", () => {
       t("en", "group.linked", { name: "Mom", notice: "https://vela.test/privacy/en" }),
       t("en", "group.not_linked"),
     ]);
+  });
+});
+
+describe("handleNoticeReadButton", () => {
+  const NOTICE = "https://vela.test/privacy/en";
+
+  /**
+   * Her family with its group linked through Vela, so the greeting and its button went out. With
+   * `invited`, she has not answered her invite yet, as when the README's step 4 links the group.
+   */
+  async function linkedFamily(options: { invited?: boolean } = {}): Promise<{
+    seed: SeededFamily;
+    channelId: string;
+    greetingId: string;
+    greetingSha256: string;
+  }> {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    if (options.invited === true) {
+      await h.db.delete(consents).where(eq(consents.memberId, seed.member.id));
+      await h.db
+        .update(members)
+        .set({
+          status: "invited",
+          lightOn: false,
+          lightConsentedAt: null,
+          lightConsentText: null,
+          lightStartsOn: null,
+          learningUntil: null,
+        })
+        .where(eq(members.id, seed.member.id));
+    }
+    await handleBotAdded(h.deps, botAdded(seed.organiserLink.externalId));
+    await h.run(handlers());
+    const [link] = await links();
+    const [greeting] = h.telegram.sentTo(GROUP);
+    return {
+      seed,
+      channelId: link?.id ?? "",
+      greetingId: greeting?.result.primaryMessageId ?? "",
+      greetingSha256: await sha256Hex(greeting?.message.text ?? ""),
+    };
+  }
+
+  function readTap(
+    user: string,
+    channelId: string,
+    messageId: string,
+    name = `User ${user}`,
+  ): InboundEvent {
+    return groupEvent({
+      kind: "button",
+      user,
+      sender: { externalUserId: user, displayName: name },
+      messageId,
+      buttonData: encodeButton({ type: "notice_read", familyChannelId: channelId }),
+      callbackId: `cb-${user}`,
+    });
+  }
+
+  async function noticeRows() {
+    return h.db
+      .select()
+      .from(consents)
+      .where(eq(consents.kind, "privacy_notice"))
+      .orderBy(asc(consents.givenAt), asc(consents.id));
+  }
+
+  it("creates a family member who never wrote in the group and records their reading once, with evidence hashed over the greeting", async () => {
+    const { seed, channelId, greetingId, greetingSha256 } = await linkedFamily();
+    const tap = readTap("3001", channelId, greetingId, "Sam");
+    const action = { type: "notice_read", familyChannelId: channelId } as const;
+
+    await handleNoticeReadButton(h.deps, seed.family.id, tap, action);
+    await handleNoticeReadButton(h.deps, seed.family.id, tap, action);
+    await handleNoticeReadButton(
+      h.deps,
+      seed.family.id,
+      readTap("3001", channelId, greetingId, "Sam"),
+      action,
+    );
+
+    const [sam] = await h.db.select().from(members).where(eq(members.displayName, "Sam"));
+    expect(sam).toMatchObject({ familyId: seed.family.id, role: "member", status: "active" });
+    expect(greetingSha256).toBe(
+      await sha256Hex(t("en", "group.linked", { name: "Mom", notice: NOTICE })),
+    );
+    const rows = await noticeRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      memberId: sam?.id,
+      subjectRef: `member:${sam?.id}`,
+      kind: "privacy_notice",
+      answer: "yes",
+      textVersion: "privacy-notice.v1",
+      lang: "en",
+      channel: "telegram",
+      givenAt: h.clock.now(),
+      withdrawnAt: null,
+      evidence: { chat_id: GROUP, message_id: greetingId, text_sha256: greetingSha256 },
+    });
+    const given = (await eventRows()).filter((row) => row.name === "consent_given");
+    expect(given.map((row) => [row.memberId, row.props])).toEqual([
+      [sam?.id, { kind: "privacy_notice", text_version: "privacy-notice.v1", source: "button" }],
+    ]);
+    expect(h.telegram.acknowledged).toHaveLength(3);
+    expect(h.telegram.closed).toEqual([]);
+    await h.run(handlers());
+    expect(h.telegram.sentTo(GROUP)).toHaveLength(1);
+  });
+
+  it("records each adult who taps once, the organiser included, and a new notice version again", async () => {
+    const { seed, channelId, greetingId } = await linkedFamily();
+    const action = { type: "notice_read", familyChannelId: channelId } as const;
+
+    await handleNoticeReadButton(
+      h.deps,
+      seed.family.id,
+      readTap(seed.organiserLink.externalId, channelId, greetingId),
+      action,
+    );
+    await handleNoticeReadButton(
+      h.deps,
+      seed.family.id,
+      readTap("3001", channelId, greetingId),
+      action,
+    );
+    h.deps.config.privacyNoticeVersion = "privacy-notice.v2";
+    try {
+      await handleNoticeReadButton(
+        h.deps,
+        seed.family.id,
+        readTap("3001", channelId, greetingId),
+        action,
+      );
+    } finally {
+      h.deps.config.privacyNoticeVersion = "privacy-notice.v1";
+    }
+
+    const rows = await noticeRows();
+    expect(rows.map((row) => row.textVersion)).toEqual([
+      "privacy-notice.v1",
+      "privacy-notice.v1",
+      "privacy-notice.v2",
+    ]);
+    expect(rows[0]?.memberId).toBe(seed.organiser.id);
+  });
+
+  it("keeps her name out of every adult's proof, and hashes the greeting the group received after her No", async () => {
+    const { seed, channelId, greetingId, greetingSha256 } = await linkedFamily({ invited: true });
+    const action = { type: "notice_read", familyChannelId: channelId } as const;
+    const her = seed.memberLink.externalId;
+
+    await handleNoticeReadButton(
+      h.deps,
+      seed.family.id,
+      readTap("3001", channelId, greetingId, "Sam"),
+      action,
+    );
+    await handleConsentButton(
+      h.deps,
+      groupEvent({
+        kind: "button",
+        user: her,
+        conversation: { externalId: her, kind: "private" },
+        messageId: "1",
+        buttonData: encodeButton({ type: "consent", memberId: seed.member.id, accept: false }),
+        callbackId: "cb-her",
+      }),
+      { type: "consent", memberId: seed.member.id, accept: false },
+    );
+    await handleNoticeReadButton(
+      h.deps,
+      seed.family.id,
+      readTap("3002", channelId, greetingId, "Lee"),
+      action,
+    );
+
+    expect(await memberRow(seed.member.id)).toBeUndefined();
+    const proof = { chat_id: GROUP, message_id: greetingId, text_sha256: greetingSha256 };
+    expect((await noticeRows()).map((row) => row.evidence)).toEqual([proof, proof]);
+    expect(JSON.stringify(await h.db.select().from(consents))).not.toContain("Mom");
+  });
+
+  it("records nothing for a user linked to another family, a button of another family's group, or a family that has ended", async () => {
+    const { seed, channelId, greetingId } = await linkedFamily();
+    const other = await seedFamily(h.db, {
+      now: h.clock.now(),
+      familyName: "The Lins",
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+    const otherGroup = await seedLinkedGroup(h.db, other, {
+      now: h.clock.now(),
+      conversationId: "-100900",
+    });
+    const action = { type: "notice_read", familyChannelId: channelId } as const;
+
+    await handleNoticeReadButton(
+      h.deps,
+      seed.family.id,
+      readTap("1101", channelId, greetingId),
+      action,
+    );
+    await handleNoticeReadButton(
+      h.deps,
+      seed.family.id,
+      readTap("3001", otherGroup.id, greetingId),
+      { type: "notice_read", familyChannelId: otherGroup.id },
+    );
+    await h.db
+      .update(members)
+      .set({ status: "deceased", lightOn: false })
+      .where(eq(members.id, seed.member.id));
+    await handleNoticeReadButton(
+      h.deps,
+      seed.family.id,
+      readTap("3001", channelId, greetingId),
+      action,
+    );
+
+    expect(await noticeRows()).toEqual([]);
+    expect(
+      await h.db.select().from(members).where(eq(members.familyId, seed.family.id)),
+    ).toHaveLength(2);
+    expect(h.telegram.acknowledged).toHaveLength(3);
+  });
+
+  it("never holds back an ask from a family member who has not tapped it", async () => {
+    const { seed } = await linkedFamily();
+    const sam = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Sam",
+      externalId: "3001",
+    });
+
+    await handleAskCommand(
+      h.deps,
+      groupEvent({ kind: "text", user: "3001", text: "/ask What did you cook?" }),
+      seed.family.id,
+      sam.member.id,
+    );
+
+    expect(await noticeRows()).toEqual([]);
+    const asked = await h.db.select().from(exchanges).where(eq(exchanges.askerId, sam.member.id));
+    expect(asked.map((row) => row.text)).toEqual(["What did you cook?"]);
   });
 });
 

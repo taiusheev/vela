@@ -8,6 +8,7 @@ import { addMinutes } from "@vela/core";
 import {
   type ChannelLink,
   channelLinks,
+  consents,
   type Exchange,
   exchanges,
   type Family,
@@ -28,7 +29,7 @@ import {
   type VelaDatabase,
   type VelaTransaction,
 } from "@vela/db";
-import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 
 /** The database, or the transaction a flow is already inside. */
 export type Queryable = VelaDatabase | VelaTransaction;
@@ -282,12 +283,19 @@ export async function messageRefFor(
   return rows[0] ?? null;
 }
 
-/** Her nearby contacts who said yes to being listed and have not since declined. */
+/** A nearby contact whose yes stands, and so whose number is stored. */
+export type ListedNearbyContact = NearbyContact & { phone: string };
+
+/**
+ * Her nearby contacts who said yes to being listed and have not since declined. The database holds a
+ * number exactly while a yes stands (`nearby_contacts_phone_consented_check`), so each has one; the
+ * filter only tells the type so.
+ */
 export async function consentedNearbyContacts(
   db: Queryable,
   memberId: string,
-): Promise<NearbyContact[]> {
-  return db
+): Promise<ListedNearbyContact[]> {
+  const rows = await db
     .select()
     .from(nearbyContacts)
     .where(
@@ -298,6 +306,35 @@ export async function consentedNearbyContacts(
       ),
     )
     .orderBy(nearbyContacts.createdAt, nearbyContacts.id);
+  return rows.flatMap((contact) =>
+    contact.phone === null ? [] : [{ ...contact, phone: contact.phone }],
+  );
+}
+
+/**
+ * Whether she had agreed that Vela may carry her health words for an answer received at `at`
+ * (flows §3.10, ADR-27): a `health_words` yes given at or before it and not withdrawn now. A yes
+ * given after the answer arrived, or withdrawn before it is understood, counts as none.
+ */
+export async function hasHealthWordsConsent(
+  db: Queryable,
+  memberId: string,
+  at: Date,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: consents.id })
+    .from(consents)
+    .where(
+      and(
+        eq(consents.memberId, memberId),
+        eq(consents.kind, "health_words"),
+        eq(consents.answer, "yes"),
+        lte(consents.givenAt, at),
+        isNull(consents.withdrawnAt),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 export async function quietEventById(

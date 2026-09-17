@@ -29,6 +29,7 @@ export const testEnv = env as unknown as PilotEnv;
 export const adminTestEnv: AdminEnv = {
   ENVIRONMENT: "development",
   PUBLIC_BASE_URL: "http://localhost:8787",
+  TELEGRAM_BOT_USERNAME: testEnv.TELEGRAM_BOT_USERNAME,
   ANTHROPIC_API_KEY: "test-anthropic-key",
   ACCESS_TEAM_DOMAIN: "vela-test.cloudflareaccess.com",
   ACCESS_AUD: "test-audience",
@@ -137,6 +138,7 @@ function createFakeDeps(logs: LogLine[]): Deps {
         hi: "https://vela.worker.test/privacy",
         ru: "https://vela.worker.test/privacy",
       },
+      privacyNoticeVersion: "privacy-notice.v1",
     },
   };
 }
@@ -150,6 +152,8 @@ export function createFakeAdminDeps(logs: LogLine[]): AdminDeps {
     queues: { outbound: { send: async () => {} } },
     scheduler: { wakeAt: async () => {} },
     ai: createFakeAi(),
+    random: { token: () => "token" },
+    telegramBotUsername: "VelaTestBot",
   };
 }
 
@@ -183,10 +187,12 @@ export function noticesFixture(): PrivacyNotices {
     en: {
       title: "Vela pilot: privacy notice",
       html: "<h1>Vela pilot: privacy notice</h1>\n<p>Vela is run by <strong>Mei Lin</strong>.</p>",
+      version: "privacy-notice.v1",
     },
     "zh-TW": {
       title: "Vela 試辦計畫：隱私權告知事項",
       html: "<h1>Vela 試辦計畫：隱私權告知事項</h1>\n<p>Vela 由 <strong>林美</strong> 經營。</p>",
+      version: "privacy-notice.v1",
     },
   };
 }
@@ -343,6 +349,10 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
     async sendWeeklyRead(deps, ctx, input) {
       note("sendWeeklyRead", ctx, input);
       return given.sendWeeklyRead === undefined ? "sent" : given.sendWeeklyRead(deps, ctx, input);
+    },
+    async createInvite(deps, ctx, input) {
+      note("createInvite", ctx, input);
+      await given.createInvite?.(deps, ctx, input);
     },
   };
 

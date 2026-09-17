@@ -50,6 +50,19 @@ describe("the configuration a deployed pilot Worker starts with", () => {
     expect(config.privacyNoticeUrls["zh-TW"]).toBe("https://vela.vela.example/privacy/zh-TW");
   });
 
+  // An adult's tap on "I've read it" records the version of the notice this Worker serves.
+  it("takes the privacy notice version from the notices it serves", () => {
+    const v2: PrivacyNotices = {
+      en: { ...filled.en, version: "privacy-notice.v2" },
+      "zh-TW": { ...filled["zh-TW"], version: "privacy-notice.v2" },
+    };
+
+    expect(readConfig(chosenStaging, v2).privacyNoticeVersion).toBe("privacy-notice.v2");
+    expect(readConfig(testEnv, PRIVACY_NOTICES).privacyNoticeVersion).toBe(
+      PRIVACY_NOTICES.en.version,
+    );
+  });
+
   // The shapes a wrangler config writes: a whole value, or a URL whose host nobody has chosen.
   const placeholders: readonly (readonly [StringVar | UrlVar, string])[] = [
     ["TELEGRAM_BOT_USERNAME", "PLACEHOLDER_STAGING_BOT_USERNAME"],
@@ -152,13 +165,17 @@ describe("the configuration a deployed admin Worker starts with", () => {
     ...adminTestEnv,
     ENVIRONMENT: "production",
     PUBLIC_BASE_URL: "https://vela-admin.vela.example",
+    TELEGRAM_BOT_USERNAME: "VelaLightBot",
   };
 
   it("starts once its origin is https and nothing holds a placeholder", () => {
     expect(() => checkAdminConfig(chosenAdmin)).not.toThrow();
   });
 
+  // create_invite's link opens this bot; a link to a placeholder or to no bot reaches nobody.
   it.each([
+    ["TELEGRAM_BOT_USERNAME", "PLACEHOLDER_PRODUCTION_BOT_USERNAME"],
+    ["TELEGRAM_BOT_USERNAME", ""],
     ["PUBLIC_BASE_URL", "https://PLACEHOLDER_PRODUCTION_ADMIN_HOST"],
     ["PUBLIC_BASE_URL", "http://vela-admin.vela.example"],
     ["ACCESS_AUD", "PLACEHOLDER_ACCESS_AUD"],

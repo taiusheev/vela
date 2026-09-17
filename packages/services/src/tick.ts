@@ -50,6 +50,16 @@ import { familyById, memberById, type Queryable } from "./repo.ts";
  */
 export const MAX_TICK_ROUNDS = 5;
 
+/*
+ * `reconcile` runs every 15 minutes (2026-09-18, W3): a 5-minute cron would keep Neon awake all
+ * month and spend the free plan's compute hours. The thresholds below were checked against that
+ * cadence, and none needs to move: the Durable Object alarms still send every arrival at its minute,
+ * and a threshold only says how old a row must be before a sweep treats it as stuck, so a slower
+ * sweep catches the same rows up to 15 minutes later. A missed wake is still ticked within 25
+ * minutes, long before an arrival counts as late (three hours), and the three understanding
+ * attempts now fall within about 45 minutes of the answer instead of 25.
+ */
+
 /** A wake this far in the past without a tick counts as missed (flows §3.15). */
 export const RECONCILE_LATE_MINUTES = 10;
 
@@ -59,7 +69,8 @@ export const RERUN_WITHIN_HOURS = 24;
 
 /**
  * `reconcile` notes an answer whose attempts are spent only once it is this old: an hour after its
- * last possible re-run, so no attempt it started can still be running or waiting in the queue.
+ * last possible re-run, so no attempt it started can still be running or waiting in the queue. The
+ * last re-run starts at most one 15-minute sweep after the day ends, which leaves 45 minutes over.
  */
 export const FAILURE_NOTE_AFTER_HOURS = RERUN_WITHIN_HOURS + 1;
 /** The note is still sent up to this age, so reconciliations missing for most of a day lose none. */
@@ -434,11 +445,12 @@ async function noteUnderstandFailures(deps: Deps, now: Date): Promise<void> {
 }
 
 /**
- * Every five minutes (flows §3.15): finishes the sends whose effects never landed; re-drives the
+ * Every 15 minutes (flows §3.15): finishes the sends whose effects never landed; re-drives the
  * queued sends whose delivery job was lost; ticks the active kept-light members whose wake never
  * came, logging each missed one; re-runs the answers not understood; notes the ones that failed for
- * good; pings the heartbeat. A member whose tick throws
- * is logged and skipped, so one broken member never holds the others back.
+ * good; then records the heartbeat, which only a run that got this far reaches, so the watchdog
+ * outside Cloudflare sees a silence when reconciliation stops. A member whose tick throws is logged
+ * and skipped, so one broken member never holds the others back.
  */
 export async function reconcile(deps: Deps): Promise<ReconcileResult> {
   const now = deps.clock.now();

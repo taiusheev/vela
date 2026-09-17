@@ -35,7 +35,6 @@ const SECRETS = {
   botToken: "7000000001:SENTINELbotTokenAAAAAAAAAAAAAAAAAAAAAA",
   anthropic: "sk-ant-SENTINEL-anthropic-key",
   deepgram: "SENTINELdeepgramkey00000000000000000000",
-  healthchecks: "https://hc-ping.com/SENTINEL-ping-0000",
   accessAud: "5e0715e1".repeat(8),
   chatId: "8765432109",
 } as const;
@@ -121,6 +120,8 @@ interface World {
   hyperdriveError: string | null;
   accessOn: boolean;
   adminOpenWithoutAccess: boolean;
+  /** What the deployed pilot Worker's `/healthz` says. */
+  health: "ok" | "stale" | "no_reconcile_yet";
   webhook: { readonly url: string; readonly secret: string } | null;
   acknowledgedOffset: number | null;
   seed: number;
@@ -156,6 +157,7 @@ function newWorld(environment: Environment): World {
     hyperdriveError: null,
     accessOn: false,
     adminOpenWithoutAccess: false,
+    health: "no_reconcile_yet",
     webhook: null,
     acknowledgedOffset: null,
     seed: 7,
@@ -340,6 +342,11 @@ function site(world: World, url: URL): Response {
   const pilot = `vela.${SUBDOMAINS[world.environment]}.workers.dev`;
   const admin = `vela-admin.${SUBDOMAINS[world.environment]}.workers.dev`;
   if (url.hostname === pilot && world.deployed.includes("vela")) {
+    if (url.pathname === "/healthz") {
+      return world.health === "ok"
+        ? json(200, { status: "ok", lastReconcileAgeSeconds: 42 })
+        : json(503, { status: world.health });
+    }
     return new Response("ok", { status: 200 });
   }
   if (url.hostname === admin && url.pathname === "/admin") {
@@ -373,7 +380,6 @@ function promptsOf(world: World): readonly (readonly [string, string, "shown" | 
     ["Telegram bot token", SECRETS.botToken, "hidden"],
     ["Anthropic API key", SECRETS.anthropic, "hidden"],
     ["Deepgram API key", SECRETS.deepgram, "hidden"],
-    ["Healthchecks ping URL", SECRETS.healthchecks, "hidden"],
     ["Application Audience (AUD) tag", SECRETS.accessAud, "hidden"],
   ];
 }
@@ -535,18 +541,18 @@ describe("a whole setup", () => {
     ]);
     expect(world.migrations).toBe(1);
     const config = configOf(world);
-    expect([config.pilotHyperdriveId, config.adminHyperdriveId, config.botUsername]).toEqual([
-      HYPERDRIVE_ID,
-      HYPERDRIVE_ID,
-      "VelaStagingTestBot",
-    ]);
+    expect([
+      config.pilotHyperdriveId,
+      config.adminHyperdriveId,
+      config.botUsername,
+      config.adminBotUsername,
+    ]).toEqual([HYPERDRIVE_ID, HYPERDRIVE_ID, "VelaStagingTestBot", "VelaStagingTestBot"]);
     expect(Object.fromEntries(world.workers.get("vela") ?? [])).toEqual({
       TELEGRAM_BOT_TOKEN: SECRETS.botToken,
       TELEGRAM_WEBHOOK_SECRET: world.webhook?.secret,
       ADMIN_CONVERSATION_ID: SECRETS.chatId,
       ANTHROPIC_API_KEY: SECRETS.anthropic,
       DEEPGRAM_API_KEY: SECRETS.deepgram,
-      HEALTHCHECKS_PING_URL: SECRETS.healthchecks,
     });
     expect(Object.fromEntries(world.workers.get("vela-admin") ?? [])).toEqual({
       ANTHROPIC_API_KEY: SECRETS.anthropic,
@@ -836,6 +842,72 @@ describe("a whole setup", () => {
     );
   });
 
+  // A Worker deployed minutes ago may not have reconciled yet; one that reconciled and stopped has.
+  it("passes /healthz before the first reconciliation, says when to look again, and names the watchdog", async () => {
+    const world = newWorld("staging");
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    const printed = world.printed.join("\n");
+    expect(printed).toContain(
+      "ok     GET https://vela.vela-light-staging.workers.dev/healthz: HTTP 503, no_reconcile_yet: the first reconciliation comes within 15 minutes of the deploy",
+    );
+    expect(printed).toContain(
+      `set staging's "enabled" to true in .github/watchdog.json, so the watchdog emails you when it stops`,
+    );
+    expect(printed).not.toMatch(/healthchecks/i);
+    expect(world.prompts.join("\n")).not.toMatch(/healthchecks|ping url/i);
+  });
+
+  it("passes /healthz once reconciliation runs, and fails it when reconciliation stopped", async () => {
+    const world = newWorld("staging");
+    await setUp(world);
+    world.health = "ok";
+    resetLog(world);
+    // The Workers stay deployed from the first run; the log reset forgets that.
+    world.deployed.push("vela");
+
+    expect(await setUp(world, "--from", "check"), world.printed.join("\n")).toBe(0);
+    expect(world.printed).toContain(
+      "  ok     GET https://vela.vela-light-staging.workers.dev/healthz: HTTP 200, ok: reconciliation is running",
+    );
+
+    world.health = "stale";
+    resetLog(world);
+    world.deployed.push("vela");
+
+    expect(await setUp(world, "--from", "check")).toBe(1);
+    expect(world.printed).toContain(
+      "  FAILED GET https://vela.vela-light-staging.workers.dev/healthz: HTTP 503, stale, expected 200 ok, or 503 no_reconcile_yet before the first reconciliation",
+    );
+  });
+
+  // The admin Worker's invite links open the same bot the pilot Worker's webhook belongs to.
+  it("writes the bot's username to both wrangler files, and fills the admin file from the pilot file on a later run", async () => {
+    const world = newWorld("staging");
+    await setUp(world);
+    const placeholder = "PLACEHOLDER_STAGING_BOT_USERNAME";
+    const admin = world.files.get("wrangler.admin.jsonc") ?? "";
+    world.files.set(
+      "wrangler.admin.jsonc",
+      admin.replace('"VelaStagingTestBot"', `"${placeholder}"`),
+    );
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "telegram");
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(configOf(world).adminBotUsername).toBe("VelaStagingTestBot");
+    expect(world.writes.map((write) => write.file)).toEqual(["wrangler.admin.jsonc"]);
+    expect(
+      world.prompts.filter((question) => question.includes("Telegram bot token")),
+    ).toHaveLength(1);
+    expect(world.printed).toContain(
+      "telegram: @VelaStagingTestBot written to wrangler.admin.jsonc; vela already holds its token, webhook secret and your chat id",
+    );
+  });
+
   it("refuses to deploy while a placeholder for the environment is left", async () => {
     const world = newWorld("staging");
 
@@ -1073,7 +1145,6 @@ describe("the values the setup keeps", () => {
       ["ADMIN_CONVERSATION_ID", "missing", ["pilot"]],
       ["ANTHROPIC_API_KEY", "prompt", ["pilot", "admin"]],
       ["DEEPGRAM_API_KEY", "kept", []],
-      ["HEALTHCHECKS_PING_URL", "prompt", ["pilot"]],
     ]);
   });
 

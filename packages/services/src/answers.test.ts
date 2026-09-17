@@ -312,7 +312,7 @@ describe("handleParentMessage", () => {
     expect(await h.db.select().from(media)).toHaveLength(0);
   });
 
-  it("ignores everything from her before consent, after a No, once she is left or deceased, and once her family's deletion is requested", async () => {
+  it("ignores everything from her before consent, once she is left or deceased, and once her family's deletion is requested", async () => {
     const { seed, exchangeId } = await morning();
     const patches: Partial<typeof members.$inferInsert>[] = [
       { status: "invited", lightOn: false, lightConsentedAt: null },

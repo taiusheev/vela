@@ -193,19 +193,16 @@ describe("openQuiet", () => {
     await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Anna",
-      phone: "+886912000001",
-      answer: "yes",
+      answer: { yes: { phone: "+886912000001" } },
     });
     await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Bob",
-      phone: "+886912000002",
       answer: null,
     });
     await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Cara",
-      phone: "+886912000003",
       answer: "no",
     });
 

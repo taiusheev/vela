@@ -23,6 +23,7 @@ import {
   enqueueOutbound,
   type OutboundRequest,
   RETRY_DELAY_MINUTES,
+  redriveStrandedOutbound,
   STRANDED_AFTER_MINUTES,
 } from "./gateway.ts";
 import { openQuiet } from "./quiet.ts";
@@ -133,6 +134,41 @@ describe("enqueueOutbound", () => {
     expect(second).toEqual({ duplicate: true });
     expect(await outboundRows()).toHaveLength(1);
     expect(h.queues.outbound.pending).toHaveLength(1);
+  });
+
+  // The health-words question must follow consent.accepted, and Cloudflare Queues promise no order
+  // between two jobs sent back to back (flows §3.2).
+  it("delays a request that asks for it: the row is due then, the job waits as long, and a re-drive counts from then", async () => {
+    const seed = await family();
+    const now = h.clock.now();
+
+    const id = await enqueued({ ...systemTo(seed, "later"), delaySeconds: 10 });
+
+    const [row] = await outboundRows();
+    expect(row).toMatchObject({ id, queuedAt: new Date(now.getTime() + 10_000), status: "queued" });
+    expect(h.queues.outbound.pending.map((entry) => [entry.job, entry.delaySeconds])).toEqual([
+      [{ type: "deliver", outboundId: id }, 10],
+    ]);
+    h.queues.outbound.clear();
+
+    h.clock.set(new Date(now.getTime() + 10 * 60_000 + 5_000));
+    await redriveStrandedOutbound(h.deps);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+    h.clock.set(new Date(now.getTime() + 10 * 60_000 + 11_000));
+    await redriveStrandedOutbound(h.deps);
+    expect(h.queues.outbound.pending).toHaveLength(1);
+  });
+
+  it("refuses a delay that is not a whole number of seconds from 1 to 60, storing nothing", async () => {
+    const seed = await family();
+
+    for (const delaySeconds of [0, 61, 1.5, -10]) {
+      await expect(
+        enqueueOutbound(h.deps, h.db, { ...systemTo(seed, `delay-${delaySeconds}`), delaySeconds }),
+      ).rejects.toMatchObject({ name: "VelaError", code: "invalid_outbound" });
+    }
+    expect(await outboundRows()).toHaveLength(0);
+    expect(h.queues.outbound.pending).toHaveLength(0);
   });
 
   it("refuses a second budgeted message of the same kind for the member's local day", async () => {

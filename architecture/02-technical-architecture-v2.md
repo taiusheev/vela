@@ -37,7 +37,7 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
 │  ├─ Member Durable Objects  (one per member with arrivals: alarms for arrival · repeat · quiet ·   │
 │  │   turn prompt · weekly read; recomputed from the IANA zone on every fire)                        │
 │  ├─ Queues: "outbound" (gateway sends) · "understand" (AI) · "media" · dead-letter                  │
-│  ├─ Cron Triggers (housekeeping only): reconciliation every 5 min · retention nightly · metrics    │
+│  ├─ Cron Triggers (housekeeping only): reconciliation every 15 min · retention nightly · metrics   │
 │  └─ Admin: pages in the Worker "vela-admin", behind Cloudflare Access; later the admin SPA          │
 │      bindings: Hyperdrive ×3 (apac · eu · us) · R2 ×3 · Queues · DO · Rate Limiting · secrets      │
 └──────┬────────────────┬───────────────────┬─────────────────────┬───────────────────────────────────┘
@@ -52,7 +52,7 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
        ▲
        │ read-only
 ┌──────┴───────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Ops: Sentry (errors, cron monitor) · Healthchecks.io heartbeat (outside Cloudflare) · Workers Logs   │
+│ Ops: Sentry (errors) · heartbeat Durable Object read by a GitHub Actions watchdog · Workers Logs     │
 │ PostHog Cloud EU (app funnels, flags) · founder dashboard reads metrics_daily · GitHub Actions + EAS  │
 └───────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -70,7 +70,7 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
 | Speech | STT and TTS | Deepgram Nova-3 batch (STT), gpt-4o-transcribe as second opinion, SenseVoice/Groq Whisper benchmarked in the pilot; Azure Neural TTS (zh-TW, en, ja) with on-device `expo-speech` fallback | AssemblyAI, Google Chirp 3, ElevenLabs, Fish Audio, MiniMax (residency caution) |
 | Channels | LINE, WhatsApp, Telegram, voice/SMS, push | LINE Messaging API direct; WhatsApp Cloud API direct (after the entity); Telegram Bot API; Twilio Studio + Gather for the voice line; Expo Push | BSPs (markup), Vapi/Retell/Bland (not needed for a fixed script), OneSignal (not needed) |
 | Admin | Founder's daily ops view, evals browser, flags | Small React SPA (Vite) served by the Worker, same API with an admin role; in the pilot, server-rendered pages in the admin Worker `vela-admin` behind Cloudflare Access (ADR-22, ADR-26) | Retool, Forest Admin, Appsmith (seat pricing, third-party data path) |
-| Observability | Errors, traces, cron liveness, alerts | Sentry free tier (+ Crons), Workers Logs, Healthchecks.io heartbeat | Grafana Cloud, Honeycomb, Axiom, Better Stack |
+| Observability | Errors, traces, cron liveness, alerts | Sentry free tier, Workers Logs, a heartbeat the pilot Worker keeps in a Durable Object and serves at `/healthz`, read every 15 minutes by a GitHub Actions watchdog outside Cloudflare (ADR-18, update of 2026-09-18) | Grafana Cloud, Honeycomb, Axiom, Better Stack; hosted cron monitors (a third-party account for one signal) |
 | Analytics | Product funnels, flags, replay | PostHog Cloud EU (free tier); the founder's KPIs come from `metrics_daily` | Amplitude, Mixpanel, Segment |
 | CI/CD | Tests, migrations, deploys, mobile builds | GitHub Actions; Wrangler; Drizzle migrations; Neon branch per PR; EAS Build/Submit/Update | macOS runners (10× Linux cost), Prisma (needs a proxy on Workers) |
 
@@ -178,7 +178,7 @@ The `arrival` consumer runs `compose(member, day)` from `packages/core`: pick th
 
 ### 6.4 Reconciliation (the safety net)
 
-A Cron Trigger every 5 minutes runs one query per region: members whose `next_wake_at < now() − 10 min` with no exchange delivered for today's local date. For each: log `scheduler.missed` to Sentry, re-arm the DO, deliver with the "sorry this is late" line if more than 3 h late. The same tick pings the Healthchecks.io heartbeat; if the ping stops, the founder is paged from outside Cloudflare (the application cannot know it missed its own wake-up).
+A Cron Trigger every 15 minutes (every 5 until 2026-09-18: a run every 5 minutes would keep the Neon database awake all month, `03-code-design.md` §10, "Reconcile interval") runs one query per region: members whose `next_wake_at < now() − 10 min` with no exchange delivered for today's local date. For each: log `scheduler.missed` to Sentry, re-arm the DO, deliver with the "sorry this is late" line if more than 3 h late. When a run finishes, the Worker records the time in a singleton Durable Object, and `/healthz` answers `ok` only while that time is at most 35 minutes old; a GitHub Actions watchdog reads `/healthz` every 15 minutes, so if the runs stop, the founder is emailed from outside Cloudflare (the application cannot know it missed its own wake-up; ADR-18, update of 2026-09-18).
 
 ### 6.5 Tuning
 
@@ -317,7 +317,7 @@ Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` wit
 | Failure | Effect | Handling |
 |---|---|---|
 | Channel API down or account throttled | Arrival undelivered | Gateway retries 3× over 50 min; then `failed`; organiser told once; **no quiet ladder that day**; the app offers the next channel |
-| Durable Object alarm missed or Cloudflare cron degraded | Late arrival | Reconciliation cron re-arms and delivers with the late note; Healthchecks.io pages the founder if ticks stop; `exchanges_one_per_day` prevents doubles |
+| Durable Object alarm missed or Cloudflare cron degraded | Late arrival | Reconciliation cron re-arms and delivers with the late note; the watchdog emails the founder if reconcile runs stop; `exchanges_one_per_day` prevents doubles |
 | Postgres unreachable in one region | That region pauses | Webhooks return 503 (providers retry); alarms re-arm with backoff; Sentry critical alert; other regions unaffected |
 | AI provider down or slow | Answers not understood | The light lit already (constraint 2); `understand` queue drains later; the family sees "Mom answered" with the media |
 | STT fails on her audio | No transcript | Answer still counts; the family hears the voice; transcript retried with the second provider; logged for the pilot benchmark |
@@ -331,11 +331,11 @@ Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` wit
 
 ## 15. Observability, SLOs, alerts
 
-SLOs: arrival sent P95 ≤ 5 min and P99 ≤ 15 min after her hour; a scheduler tick recorded at least every 10 minutes per region; duplicate sends zero (constraint, alert as backstop); quiet notices attributable to our own outage zero (silence drill, §16); webhook ack P95 ≤ 1 s.
+SLOs: arrival sent P95 ≤ 5 min and P99 ≤ 15 min after her hour (the Durable Object alarm carries both; an arrival whose alarm is lost is caught by reconciliation 10 to 25 min late); a reconcile run recorded at least every 15 minutes per region (the watchdog alerts once none has finished for 35 minutes); duplicate sends zero (constraint, alert as backstop); quiet notices attributable to our own outage zero (silence drill, §16); webhook ack P95 ≤ 1 s.
 
 | Signal | Threshold | Where | Severity |
 |---|---|---|---|
-| Heartbeat missing | > 10 min | Healthchecks.io (outside Cloudflare) | Page |
+| Heartbeat stale (`/healthz` not `ok`) | no successful reconcile for > 35 min | GitHub Actions watchdog (outside Cloudflare), every 15 min | Email to the founder |
 | Arrival unsent past hour + 5 min | any | reconciliation cron → Sentry | High |
 | Budget index rejection for `arrival`/`quiet_notice` | any | Sentry log alert | Medium (should never happen) |
 | Adapter send failure rate | > 5% in 15 min on one channel | Sentry | High |
@@ -377,7 +377,7 @@ Release: trunk-based; PRs run the full CI; `main` deploys to staging; a tag depl
 
 ## 18. Cost model (monthly, order of magnitude, before volume discounts)
 
-| Families | Cloudflare | Neon ×3 | R2 | AI + speech | Channels (LINE/WhatsApp mix) | Tools (Sentry, PostHog, Healthchecks, Clerk, Expo) | Total |
+| Families | Cloudflare | Neon ×3 | R2 | AI + speech | Channels (LINE/WhatsApp mix) | Tools (Sentry, PostHog, Clerk, Expo) | Total |
 |---|---|---|---|---|---|---|---|
 | 100 | $5 | $0 | $0 | ~$55 | ~$40 | $0 (free tiers) | **≈ $100** |
 | 1,000 | $5–10 | ~$60 | ~$5 | ~$550 | ~$400 | ~$50 | **≈ $1,100** |
@@ -397,7 +397,7 @@ At 10,000 families with 10% on Light at $79/year the gross margin is thin; at 20
 | `expo-widgets` is alpha | API churn before ship | Hand-written WidgetKit target (already in the repo layout) |
 | WhatsApp pricing moving (in-window utility billed from 2026-10-01) | Cost per parent-month above $2 | Prefer LINE and the app where possible; re-price Light in India |
 | LINE has no read receipts | Ladder timing on LINE noisier than on WhatsApp | Longer T_quiet floor on LINE (300 min) after pilot data |
-| Cloudflare cron degraded (2026-09-09 incident) | Heartbeat pages | Reconciliation and the DO alarms already carry the load; EventBridge Scheduler is the fallback design |
+| Cloudflare cron degraded (2026-09-09 incident) | The watchdog emails that `/healthz` is stale | Reconciliation and the DO alarms already carry the load; EventBridge Scheduler is the fallback design |
 | Clerk pricing is per retained user, not MAU | Bill above $500/month | Better Auth (Expo plugin, self-hosted) |
 | Old Android 8 tablets and the New Architecture | Jank in kitchen-table mode | A minimal native shell for that mode only (ADR-3 fallback) |
 | No published STT accuracy for elderly Taiwanese Mandarin | Pilot WER above 20% | Self-hosted SenseVoice or fine-tuning on consented pilot audio |
@@ -408,7 +408,7 @@ At 10,000 families with 10% on Light at $79/year the gross margin is thin; at 20
 ## 20. What only the founder can do
 
 1. Legal entity (Singapore likely): gates WhatsApp Business verification, Apple and Google organisation accounts (D-U-N-S number takes 30+ days; start now), payments.
-2. Accounts in the founder's name now: Cloudflare, Neon, Anthropic, Deepgram, Azure (TTS), Clerk, Sentry, PostHog, Healthchecks.io, Expo, a LINE Official Account (unverified is allowed for individuals), Telegram bot, Twilio (later).
+2. Accounts in the founder's name now: Cloudflare, Neon, Anthropic, Deepgram, Azure (TTS), Clerk, Sentry, PostHog, Expo, a LINE Official Account (unverified is allowed for individuals), Telegram bot, Twilio (later).
 3. The name decision (ship as "Vela Light" until clearance). No domain is needed for the pilot: each Cloudflare account's workers.dev subdomain (`vela-light`, `vela-light-staging`) is chosen when the account is set up (ADR-26).
 4. Native reviewers for Traditional Chinese now, Japanese in phase 2.
 5. The first families: own parent, three to five friend families, five Taiwanese families.

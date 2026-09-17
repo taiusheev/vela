@@ -38,6 +38,7 @@ export {
   seedExchange,
   seedFamily,
   seedGroupMember,
+  seedHealthWordsConsent,
   seedLinkedGroup,
   seedNearbyContact,
 } from "./seed.ts";

@@ -1,5 +1,5 @@
 {
-  "id": "18bf3557-9d43-400e-afa3-2bf1604f1422",
+  "id": "d027af70-3e32-4d5f-8222-faef12f7276d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -61,7 +61,7 @@
       "checkConstraints": {
         "admin_access_log_action_check": {
           "name": "admin_access_log_action_check",
-          "value": "\"action\" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read')"
+          "value": "\"action\" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite')"
         }
       },
       "isRLSEnabled": false
@@ -738,8 +738,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "subject_ref": {
+          "name": "subject_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "kind": {
           "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "answer": {
+          "name": "answer",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -781,9 +793,31 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
+        },
+        "subject_deleted_at": {
+          "name": "subject_deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "consents_subject_ref_idx": {
+          "name": "consents_subject_ref_idx",
+          "columns": [
+            {
+              "expression": "subject_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "consents_member_id_members_id_fk": {
           "name": "consents_member_id_members_id_fk",
@@ -795,7 +829,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "consents_contact_id_nearby_contacts_id_fk": {
@@ -808,7 +842,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -818,7 +852,23 @@
       "checkConstraints": {
         "consents_kind_check": {
           "name": "consents_kind_check",
-          "value": "\"kind\" in ('light', 'nearby', 'privacy_notice', 'pilot')"
+          "value": "\"kind\" in ('light', 'nearby', 'privacy_notice', 'pilot', 'health_words')"
+        },
+        "consents_answer_check": {
+          "name": "consents_answer_check",
+          "value": "\"answer\" in ('yes', 'no')"
+        },
+        "consents_subject_ref_check": {
+          "name": "consents_subject_ref_check",
+          "value": "\"subject_ref\" ~ '^(member|contact):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' and (\"member_id\" is null or \"subject_ref\" = ('member:' || \"member_id\"::text)) and (\"contact_id\" is null or \"subject_ref\" = ('contact:' || \"contact_id\"::text))"
+        },
+        "consents_withdrawn_at_check": {
+          "name": "consents_withdrawn_at_check",
+          "value": "\"withdrawn_at\" is null or \"answer\" = 'yes'"
+        },
+        "consents_subject_deleted_check": {
+          "name": "consents_subject_deleted_check",
+          "value": "\"member_id\" is not null or \"contact_id\" is not null or (\"subject_deleted_at\" is not null and \"evidence\" - 'chat_id' - 'message_id' - 'text_sha256' - 'recorded_by' = '{}'::jsonb)"
         }
       },
       "isRLSEnabled": false
@@ -871,7 +921,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "deletions_content_hash_check": {
+          "name": "deletions_content_hash_check",
+          "value": "\"content_hash\" = encode(sha256(convert_to(\"object_type\" || ':' || \"object_id\"::text, 'UTF8')), 'hex')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.events": {
@@ -997,7 +1052,7 @@
       "checkConstraints": {
         "events_name_check": {
           "name": "events_name_check",
-          "value": "\"name\" in ('family_created', 'member_joined', 'invite_accepted', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened')"
+          "value": "\"name\" in ('family_created', 'member_joined', 'invite_accepted', 'invite_created', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened')"
         }
       },
       "isRLSEnabled": false
@@ -1473,6 +1528,12 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "linked_text_sha256": {
+          "name": "linked_text_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {
@@ -2599,7 +2660,7 @@
           "name": "phone",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "channel": {
           "name": "channel",
@@ -2669,6 +2730,10 @@
         "nearby_contacts_channel_check": {
           "name": "nearby_contacts_channel_check",
           "value": "\"channel\" in ('line', 'whatsapp', 'telegram', 'sms')"
+        },
+        "nearby_contacts_phone_consented_check": {
+          "name": "nearby_contacts_phone_consented_check",
+          "value": "(\"phone\" is not null) = (\"consented_at\" is not null and \"declined_at\" is null)"
         }
       },
       "isRLSEnabled": false

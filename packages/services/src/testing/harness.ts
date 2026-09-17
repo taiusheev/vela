@@ -102,6 +102,7 @@ const DEFAULT_CONFIG: Config = {
       lang === "zh-TW" ? "https://vela.test/privacy/zh-TW" : "https://vela.test/privacy/en",
     ]),
   ) as Record<Lang, string>,
+  privacyNoticeVersion: "privacy-notice.v1",
 };
 
 interface Candidate {

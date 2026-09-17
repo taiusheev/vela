@@ -641,6 +641,37 @@ Every change to an English pilot document applies to its `.zh-TW` twin in the sa
 | C23 | `README.md` "Before first use", `consent-script.en.md` "Before the call" | Record where everyone lives and any Russian citizenship; onboard only families in Taiwan or US states other than Washington with no Russian citizen until the Q6 steps are done | High |
 | C24 | `README.md` "Review notes" | Record that the 2025 amendment was not in force on 4 September 2026; check again before any public launch | Low |
 
+## Status of the changes
+
+Added on 17 September 2026, after the memo. On the founder's instruction, the tech co-founder decided on every change the same day (decisions L1 to L14, recorded in `architecture/decisions.md` ADR-27 and ADR-28 and in the pilot pack's README). "Applied" means the pilot pack, the runbooks and the architecture documents now say it; where code is named, the foundation (schema, copy, prompts) is built and the services and Workers are built in the same round, to be proven on staging before any family. The memo above is left as written.
+
+| # | Status | Where, and what differs from the memo |
+|---|---|---|
+| C1 | Applied (L1) | Consent kind `health_words`, its own message and buttons right after the yes to the light (`consent.health_words@1`); script §4 and §6; `infra/runbooks/data-requests.md` B for a change by hand or an answer on paper. The founder does not send the question by hand: the button flow is built before any family |
+| C2 | Applied (L2) | Without the consent: no health mentions, no `unwell`, health left out of the summary, `flag_reason` the severity alone, and the organisers' notice without words or category. The flag check still runs |
+| C3 | Applied | Both notices: "Health words" section citing Article 6(1)(6); "No medical records." replaced; one lawful-basis line per group |
+| C4 | Applied in code (L3) | `understand.v4` and `flag.v2`, with eval cases in English and Traditional Chinese. Open: the paid eval run before merging |
+| C5 | Applied in the data map | Row 29: health memory facts only with the consent and a defined `expires_at`. Open until memory ships (sprint 5) |
+| C6 | Applied (L4) | Every deletion proof hashes `<object type>:<object id>`, with a database CHECK; the runbook's by-hand statements too |
+| C7 | Applied, differently (L5) | `subject_ref` is `member:<id>` or `contact:<id>`, not a keyed HMAC (ADR-28 explains why); consent rows are deleted 5 years after they stop applying, counted from the latest of given, withdrawn and subject deleted |
+| C8 | Applied | Both notices and `data-map.md` rows 5 and 19 and gap 4: 5 years, and why |
+| C9 | Partly applied (L10) | `infra/sub-processors.md` records each provider's current data processing terms, how they are accepted and a "Last checked" date. Open: the founder's own steps (Deepgram's DPA on request, Sentry's in-product acceptance, recording the dates the other terms were accepted), listed as founder tasks in `infra/README.md` |
+| C10 | Partly applied | `infra/sub-processors.md` lists OpenAI, Groq and Microsoft as not yet used. Open (sprint 2): the notice names them before they receive data, and the benchmark consent names OpenAI and Groq |
+| C11 | Applied (L13) | Notes hold only the family code, dates, text versions, yes or no answers, "who can join" codes and scores. Open: whether a personal Google Drive may hold even that (lawyer question 9) |
+| C12 | Applied (L6) | Script §1, §4 and question 1 |
+| C13 | Applied (L6) | `consent.request@2` names Timur Aiusheev and links the notice in her language; script §2 |
+| C14 | Applied (L6) | Evidence holds the chat id, message id, the values filled into the text and a SHA-256 of the rendered text |
+| C15 | Applied | Script §6 and the organiser agreement §3, point 1 |
+| C16 | Applied (L7) | A No deletes at once, keeping the decline; an invited member with no answer is deleted 30 days after the last invite expired; the organiser invites again through `create_invite` on the admin page. A No given on the call is recorded and deleted by hand (data-requests L) |
+| C17 | Applied (L8) | Text A in both languages; it says only the name and relation were given at setup, since numbers now come with the yes |
+| C18 | Applied (L8) | Setup stores names only; `record_contact_consent` and `add_contact` take a number only with a yes. Open: lawyer question 5, now only about the name kept before the yes |
+| C19 | Applied (L9) | README step 4 and organiser agreement §3, point 3 |
+| C20 | Partly applied (L9) | The "I've read it" button records `privacy_notice` per member. Not adopted: keeping asks only from members who tapped; the organiser's individual notice and the founder's weekly record cover adults who do not tap |
+| C21 | Applied (L11) | `infra/security-plan.md` |
+| C22 | Applied (L11) | `infra/runbooks/incident.md` step 5.4: the rule in force, the 72-hour report where the Ministry of Digital Affairs regulation applies, for a lawyer to confirm |
+| C23 | Applied (L12) | README "Who can join the pilot", script "Before the call", organiser agreement §1 |
+| C24 | Applied | README "Review notes" |
+
 ## Questions for a lawyer
 
 1. **Relayed diagnoses.** When the person repeats in their own words what a doctor diagnosed, found or prescribed, is that 醫療 or 健康檢查 data under Rules Article 4? Does Article 6 then reach the transcript Vela carries to the family?

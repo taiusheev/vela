@@ -18,9 +18,16 @@ import type { PilotRuntime, PilotServices } from "./runtime.ts";
 
 /**
  * Reconciliation: pending send effects, stranded sends, late ticks, the understanding re-run and the
- * founder's note, then the heartbeat (flows §3.15).
+ * founder's note, then the heartbeat (flows §3.15). Every 15 minutes, not 5 (W3). Neon's free plan
+ * allows 100 compute hours a project a month and suspends the database when they are spent; it
+ * scales to zero after 5 idle minutes (neon.com/pricing, checked 2026-09-17). A run every 5 minutes
+ * would keep it awake all month: about 180 compute hours at 0.25 CU. A run every 15 minutes keeps
+ * it awake about 5 minutes in 15, about 60 compute hours a month, before the members' own alarms,
+ * webhooks, and jobs, each of which wakes it for 5 minutes more, so the founder watches Neon's usage
+ * and moves to a paid plan before families beyond the dogfooding week if it nears the limit. The
+ * Durable Object alarms still send each arrival at its minute.
  */
-export const RECONCILE_CRON = "*/5 * * * *";
+export const RECONCILE_CRON = "*/15 * * * *";
 /** Nightly: yesterday's metrics per kept-light member, then the retention rules. */
 export const NIGHTLY_CRON = "20 3 * * *";
 

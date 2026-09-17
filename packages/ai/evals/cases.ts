@@ -75,6 +75,10 @@ export const CASE_TAGS = [
   "address-form",
   "health-borderline",
   "health-clear",
+  /** Understanding without her health-words consent keeps nothing about her health (ADR-27). */
+  "health-words",
+  /** No diagnosis, test result, or medicine name in a summary, a mention, or a flag quote. */
+  "minimisation",
   "safety-borderline",
   "hopelessness",
   "stranger",

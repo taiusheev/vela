@@ -173,19 +173,41 @@ export const MEDIA_KINDS = ["audio", "image"] as const;
 export const MediaKind = z.enum(MEDIA_KINDS);
 export type MediaKind = z.infer<typeof MediaKind>;
 
-export const CONSENT_KINDS = ["light", "nearby", "privacy_notice", "pilot"] as const;
+/**
+ * What a `consents` row is about. `health_words` is her separate written agreement that Vela may
+ * carry her words about her health to the organisers (ADR-27): asked once, right after her yes to
+ * the light, with its own buttons, because Taiwan's PDPA Article 6 accepts only a consent of its own
+ * for data that may be medical.
+ */
+export const CONSENT_KINDS = [
+  "light",
+  "nearby",
+  "privacy_notice",
+  "pilot",
+  "health_words",
+] as const;
 export const ConsentKind = z.enum(CONSENT_KINDS);
 export type ConsentKind = z.infer<typeof ConsentKind>;
+
+/**
+ * The answer a `consents` row records. A decline is a row of its own, not a missing row, so Vela can
+ * prove a no as well as a yes after the person's data is deleted (ADR-28); only a yes can later be
+ * withdrawn.
+ */
+export const CONSENT_ANSWERS = ["yes", "no"] as const;
+export const ConsentAnswer = z.enum(CONSENT_ANSWERS);
+export type ConsentAnswer = z.infer<typeof ConsentAnswer>;
 
 /**
  * What the founder does on the Access-protected admin page. Every use writes an `admin_access_log`
  * row (its `action` CHECK comes from this tuple) and records the domain event for what it changed:
  * `view` → `admin_page_opened`; `record_consent` → `consent_given`; `record_contact_consent` →
- * `consent_given` or `consent_declined` (kind `nearby`); `add_contact` and `remove_contact` →
- * `nearby_contact_added` and `nearby_contact_removed`; `set_away` and `end_away` → `away_set`
- * (source `organiser`) and `away_ended`; `mark_left` → `member_left`; `mark_deceased` →
- * `member_marked_deceased`; `delete_family` → `family_deletion_requested`; `send_weekly_read` →
- * `weekly_read_sent`.
+ * `consent_given` or `consent_declined` (kind `nearby`); `add_contact` → `nearby_contact_added`,
+ * followed by `consent_given` (kind `nearby`) when the contact is added with their yes, the one
+ * action that records two events; `remove_contact` → `nearby_contact_removed`; `set_away` and
+ * `end_away` → `away_set` (source `organiser`) and `away_ended`; `mark_left` → `member_left`;
+ * `mark_deceased` → `member_marked_deceased`; `delete_family` → `family_deletion_requested`;
+ * `send_weekly_read` → `weekly_read_sent`; `create_invite` → `invite_created`.
  */
 export const ADMIN_ACTIONS = [
   "view",
@@ -199,6 +221,11 @@ export const ADMIN_ACTIONS = [
   "mark_deceased",
   "delete_family",
   "send_weekly_read",
+  /**
+   * A fresh kept-light member and invite for a family whose member said no or never answered: a no
+   * deletes her profile (ADR-28), so inviting again starts from a new member.
+   */
+  "create_invite",
 ] as const;
 export const AdminAction = z.enum(ADMIN_ACTIONS);
 export type AdminAction = z.infer<typeof AdminAction>;

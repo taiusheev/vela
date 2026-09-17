@@ -27,8 +27,13 @@ describe("t", () => {
   });
 
   it("substitutes every occurrence of a placeholder", () => {
-    expect(t("en", "consent.request", { organiser: "Anna" })).toBe(
-      "Anna would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, Anna will get a quiet note so they can call. You can say stop at any time.",
+    expect(
+      t("en", "consent.request", {
+        organiser: "Anna",
+        notice: "https://vela.vela-light.workers.dev/privacy",
+      }),
+    ).toBe(
+      "Anna would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, Anna will get a quiet note so they can call. You can say stop at any time. Vela is run by Timur Aiusheev. How your information is used: https://vela.vela-light.workers.dev/privacy",
     );
   });
 

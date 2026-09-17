@@ -35,6 +35,7 @@ const understandInput: UnderstandInput = {
   ask: { askerName: "Mia", type: "question", text: "What did you cook today?" },
   answer: { kind: "voice", text: "今天煮了排骨湯，下午要去妹妹家住到星期三。" },
   recentSummaries: ["阿嬤 went to the market."],
+  healthWordsConsent: true,
 };
 
 const understanding: Understanding = {
@@ -389,6 +390,22 @@ describe("createClaudeAi request shape", () => {
     expect(sent.recentSummaries).toEqual([long.slice(0, 300)]);
   });
 
+  it("tells understand whether she has agreed to health words", async () => {
+    const { ai, requests } = clientWith([
+      jsonReply("claude-sonnet-5", understanding),
+      jsonReply("claude-sonnet-5", understanding),
+    ]);
+
+    await ai.understand(understandInput);
+    await ai.understand({ ...understandInput, healthWordsConsent: false });
+
+    const sent = requests.map((request) => {
+      const content: string = JSON.parse(request.text).messages[0].content;
+      return JSON.parse(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1));
+    });
+    expect(sent.map((input) => input.healthWordsConsent)).toEqual([true, false]);
+  });
+
   it("never splits a character in two when shortening text", async () => {
     const { ai, requests } = clientWith([jsonReply("claude-sonnet-5", { text: "譯文" })]);
 
@@ -662,7 +679,7 @@ describe("createClaudeAi failures", () => {
       },
       record: expect.objectContaining({
         call: "understand",
-        promptVersion: "understand.v3",
+        promptVersion: "understand.v4",
         model: "claude-sonnet-5",
         ok: false,
         error: "http_500",

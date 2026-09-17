@@ -12,7 +12,15 @@
  * 「開始」) must stay in step with the zh-TW keywords of `parseParentCommand` in @vela/core.
  * `consent.request`, `consent.yes`, and `consent.no` are what the founder reads aloud on the consent
  * call (plan/materials/pilot/consent-script.zh-TW.md, sections 2 and 6): change the script with
- * them.
+ * them. A tap records the message's text version and a hash of the text as rendered, so a change of
+ * meaning here is a new text version in services, as in English (see the note in en.ts). The
+ * founder's name stays in its Latin spelling, as in every language. `consent.health_words` speaks of
+ * 身體狀況 (the state of one's body), the everyday way to say "your health" in a question, and keeps
+ * the English promise that a no changes nothing else (就算您說不要，Vela 也會照常運作).
+ *
+ * `onboarding.ask_nearby` and `onboarding.nearby_no_number` ask for a name and the contact's
+ * relation to 這位家人, never a number; the example 王小姐，鄰居 uses the full-width comma that
+ * onboarding splits the name and the relation at.
  *
  * The weekly read is 每週小記, the name the zh-TW privacy notice and consent script give it. Chinese
  * counts have one form, so each `weekly_read.*_one` key repeats its plural key (see the note in
@@ -54,13 +62,16 @@ export const zhTW: Record<keyof typeof en, string> = {
   "consent.invalid_link": "這個連結已經失效了。請跟傳連結給您的人再要一個新的。",
   "consent.already_linked": "這個 Telegram 帳號已經連結到 Vela 上的另一個家庭。",
   "consent.request":
-    "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。",
+    "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。Vela 由 Timur Aiusheev 經營。您的資料會怎麼使用，請看： {notice}",
+  "consent.health_words":
+    "還有一個問題。如果您提到身體狀況，例如跌倒或哪裡痛，Vela 可以把您說的話轉告{organiser}，讓{organiser}打電話給您嗎？就算您說不要，Vela 也會照常運作。",
   "consent.yes": "好，沒問題",
   "consent.no": "不用了，謝謝",
   "consent.accepted": "謝謝您。第一則早安訊息會在明天 {time} 送到。",
   "consent.declined": "沒關係，不會傳任何訊息給您。",
   "organiser.consent_given": "{name}同意了。第一則早安訊息會在明天 {time} 送到。",
   "organiser.consent_declined": "{name}說暫時先不要。不會傳送任何訊息。",
+  "organiser.invite_again": "這是新的邀請連結。請把這個連結傳給{name}： {link} 連結 7 天內有效。",
   "parent.stopped": "已經全部暫停了。想恢復的時候，隨時說「開始」就可以了。",
   "parent.started": "歡迎回來。下一則早安訊息會在 {time} 送到。",
   "organiser.stopped": "{name}想先暫停。系統一切正常。",
@@ -69,6 +80,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "parent.family_sees_weekly_read": "最近一次傳給家人的每週小記裡，關於您這一週的幾行：",
   "group.linked":
     "大家好，我是 Vela。每天晚上，我會告訴大家明天早上輪到誰問{name}一件事。Vela 如何處理大家的訊息： {notice}",
+  "group.notice_read": "我看過了",
   "group.not_linked": "只有家庭的發起人才能把 Vela 連結到群組。",
   "group.turn_prompt":
     "明天輪到{holder}問{name}。請直接回覆這則訊息，傳一個問題、一張照片或一段語音。",
@@ -95,6 +107,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "quiet.resolved_fine": "{organiser}說{name}沒事。",
   "delivery.failed": "今天沒辦法透過 {channel} 把訊息送給{name}。除此之外，目前沒有別的消息。",
   "flag.notice": "{name}說了一句話，您可能會想知道：「{quote}」",
+  "flag.notice_no_words": "{name}今天說了一些話，也許值得打個電話問問。",
   "away.confirmed": "好的，那就到{date}為止。祝您過得愉快。",
   "away.confirmed_open": "好的，知道了。祝您過得愉快。",
   "weekly_read.answered": "{name}這週 {days} 天中回覆了 {answered} 天。",
@@ -126,7 +139,9 @@ export const zhTW: Record<keyof typeof en, string> = {
   "onboarding.invalid_zone": "請輸入像 Asia/Seoul 或 Europe/Paris 這樣的時區名稱。",
   "onboarding.ask_wake": "這位家人通常幾點起床？請按一個選項，或輸入像 07:30 這樣的時間。",
   "onboarding.ask_nearby":
-    "有沒有住在附近、需要的時候可以過去看看的人？請傳送名字和電話號碼，或按「略過」。請您先親自問過對方：對方同意之後，電話號碼才會出現在通知裡。",
+    "有沒有住在附近、需要的時候可以過去看看的人？請傳送對方的名字，也可以加上對方和這位家人的關係，例如：王小姐，鄰居。或按「略過」。請您先親自問過對方。這裡只填名字：對方同意之後，才會加上電話號碼。",
+  "onboarding.nearby_no_number":
+    "請只傳送名字，也可以加上對方和這位家人的關係，例如：王小姐，鄰居。對方同意之後，才會加上電話號碼。",
   "onboarding.skip": "略過",
   "onboarding.invalid_time": "請輸入像 07:30 這樣的時間。",
   "onboarding.done":

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   ADMIN_ACTIONS,
   AGE_BANDS,
@@ -5,6 +6,7 @@ import {
   AWAY_SOURCES,
   BUDGETED_OUTBOUND_KINDS,
   CHANNELS,
+  CONSENT_ANSWERS,
   CONSENT_KINDS,
   EVENT_NAMES,
   EXCHANGE_STATES,
@@ -33,6 +35,7 @@ import {
   aiCalls,
   answers,
   awayPeriods,
+  CONSENT_PROOF_KEYS,
   channelLinks,
   chips,
   consents,
@@ -55,9 +58,12 @@ import {
   messageRefs,
   metricsDaily,
   NEARBY_CONTACT_CHANNELS,
+  type NewConsent,
+  type NewDeletion,
   type NewExchange,
   type NewFamilyChannel,
   type NewMedia,
+  type NewNearbyContact,
   type NewOutbound,
   type NewWeeklyRead,
   nearbyContacts,
@@ -224,6 +230,43 @@ function outboundFor(
   };
 }
 
+type ConsentSubject = { memberId: string } | { contactId: string };
+
+/** A consent about one member or contact, recorded from a tap, with the evidence a tap stores. */
+function consentAbout(subject: ConsentSubject, overrides: Partial<NewConsent> = {}): NewConsent {
+  return {
+    ...subject,
+    subjectRef:
+      "memberId" in subject ? `member:${subject.memberId}` : `contact:${subject.contactId}`,
+    kind: "light",
+    answer: "yes",
+    textVersion: "consent.request@2",
+    lang: "zh-TW",
+    channel: "telegram",
+    evidence: {
+      chat_id: "1001",
+      message_id: "77",
+      params: { organiser: "Mia", notice: "https://vela.vela-light.workers.dev/privacy/zh-TW" },
+      text_sha256: "9f".repeat(32),
+    },
+    ...overrides,
+  };
+}
+
+function sha256Hex(text: string): string {
+  return createHash("sha256").update(text, "utf8").digest("hex");
+}
+
+/** A deletion proof as services write it: the hash of the object's type and id. */
+function deletionOf(objectType: string, objectId: string): NewDeletion {
+  return {
+    objectType,
+    objectId,
+    contentHash: sha256Hex(`${objectType}:${objectId}`),
+    reason: "retention",
+  };
+}
+
 /**
  * Rows in every table, so an update to a column has something to hit and a reset has something to
  * remove. One row per table apart from the family's two members, so updating a whole table never
@@ -242,6 +285,7 @@ async function seedEveryTable(): Promise<void> {
     conversationId: "-100200",
     kind: "group",
     linkedByMemberId: seed.organiser.id,
+    linkedTextSha256: "9f".repeat(32),
   });
   await db.insert(onboardingSessions).values({
     channel: "telegram",
@@ -260,7 +304,13 @@ async function seedEveryTable(): Promise<void> {
   const contact = only(
     await db
       .insert(nearbyContacts)
-      .values({ familyId, memberId: seed.parent.id, name: "Anna", phone: "+886900000001" })
+      .values({
+        familyId,
+        memberId: seed.parent.id,
+        name: "Anna",
+        phone: "+886900000001",
+        consentedAt: new Date("2026-09-14T00:00:00Z"),
+      })
       .returning(),
   );
   await db
@@ -376,20 +426,12 @@ async function seedEveryTable(): Promise<void> {
     ok: true,
   });
   await db.insert(events).values({ name: "family_created", familyId });
-  await db.insert(consents).values({
-    memberId: seed.parent.id,
-    contactId: contact.id,
-    kind: "light",
-    textVersion: "consent.request.v1",
-    lang: "zh-TW",
-    channel: "telegram",
-  });
-  await db.insert(deletions).values({
-    objectType: "media",
-    objectId: "01990000-0000-7000-8000-000000000000",
-    contentHash: "sha256:0",
-    reason: "retention",
-  });
+  await db
+    .insert(consents)
+    .values(
+      consentAbout({ contactId: contact.id }, { kind: "nearby", textVersion: "nearby-consent.v1" }),
+    );
+  await db.insert(deletions).values(deletionOf("media", "01990000-0000-7000-8000-000000000000"));
   await db
     .insert(subscriptions)
     .values({ familyId, memberId: seed.parent.id, provider: "trial", status: "trial" });
@@ -961,6 +1003,7 @@ describe("family channels", () => {
       conversationId: "-100200",
       kind: "group",
       linkedByMemberId: seed.organiser.id,
+      linkedTextSha256: "9f".repeat(32),
     };
   }
 
@@ -1444,6 +1487,355 @@ describe("deleting a member who left", () => {
   });
 });
 
+describe("consent proofs", () => {
+  async function contactNear(seed: Seed): Promise<string> {
+    const contact = only(
+      await db
+        .insert(nearbyContacts)
+        .values({ familyId: seed.family.id, memberId: seed.parent.id, name: "Anna" })
+        .returning({ id: nearbyContacts.id }),
+    );
+    return contact.id;
+  }
+
+  /** What forgetConsentSubjects in services does before a delete. */
+  function forget(at: Date): Promise<unknown> {
+    const kept = CONSENT_PROOF_KEYS.map((key) => sql`${key}`);
+    return db.execute(
+      sql`update consents set subject_deleted_at = ${at.toISOString()},
+          evidence = (select coalesce(jsonb_object_agg(key, value), '{}'::jsonb)
+                      from jsonb_each(evidence) where key in (${sql.join(kept, sql`, `)}))`,
+    );
+  }
+
+  it("records a decline as a row of its own", async () => {
+    const seed = await seedFamily();
+
+    const decline = only(
+      await db
+        .insert(consents)
+        .values(consentAbout({ memberId: seed.parent.id }, { answer: "no" }))
+        .returning(),
+    );
+
+    expect(decline).toMatchObject({
+      answer: "no",
+      subjectRef: `member:${seed.parent.id}`,
+      withdrawnAt: null,
+      subjectDeletedAt: null,
+    });
+  });
+
+  it.each(["answer", "subject_ref"])("rejects a consent without its %s", async (column) => {
+    const seed = await seedFamily();
+    const values = {
+      member_id: seed.parent.id,
+      subject_ref: `member:${seed.parent.id}`,
+      kind: "light",
+      answer: "yes",
+      text_version: "consent.request@2",
+      lang: "en",
+      channel: "telegram",
+    };
+    const given = Object.entries(values).filter(([name]) => name !== column);
+
+    const error = await rejection(
+      db.execute(
+        sql`insert into consents (${sql.join(
+          given.map(([name]) => sql.identifier(name)),
+          sql`, `,
+        )}) values (${sql.join(
+          given.map(([, value]) => sql`${value}`),
+          sql`, `,
+        )})`,
+      ),
+    );
+
+    expect(error).toEqual({ code: NOT_NULL_VIOLATION, column });
+  });
+
+  it("accepts a proof about a member and a proof about a nearby contact", async () => {
+    const seed = await seedFamily();
+    const contactId = await contactNear(seed);
+
+    await db
+      .insert(consents)
+      .values([
+        consentAbout({ memberId: seed.parent.id }),
+        consentAbout({ contactId }, { kind: "nearby", answer: "no" }),
+      ]);
+
+    expect(await db.select({ subjectRef: consents.subjectRef }).from(consents)).toEqual(
+      expect.arrayContaining([
+        { subjectRef: `member:${seed.parent.id}` },
+        { subjectRef: `contact:${contactId}` },
+      ]),
+    );
+  });
+
+  it.each<{ name: string; row: (seed: Seed, contactId: string) => NewConsent }>([
+    {
+      name: "another member",
+      row: (seed) => ({
+        ...consentAbout({ memberId: seed.parent.id }),
+        subjectRef: `member:${seed.organiser.id}`,
+      }),
+    },
+    {
+      name: "its contact as a member",
+      row: (_seed, contactId) => ({
+        ...consentAbout({ contactId }),
+        subjectRef: `member:${contactId}`,
+      }),
+    },
+    {
+      name: "its member and a contact at once",
+      row: (seed, contactId) => ({ ...consentAbout({ memberId: seed.parent.id }), contactId }),
+    },
+    {
+      name: "a subject kind that does not exist",
+      row: (seed) => ({
+        ...consentAbout({ memberId: seed.parent.id }),
+        subjectRef: `user:${seed.parent.id}`,
+      }),
+    },
+    {
+      name: "its member's id in upper case",
+      row: (seed) => ({
+        ...consentAbout({ memberId: seed.parent.id }),
+        subjectRef: `member:${seed.parent.id.toUpperCase()}`,
+      }),
+    },
+    {
+      name: "something that is not an id",
+      row: (seed) => ({ ...consentAbout({ memberId: seed.parent.id }), subjectRef: "member:Mom" }),
+    },
+  ])("rejects a subject_ref that names $name", async ({ row }) => {
+    const seed = await seedFamily();
+    const contactId = await contactNear(seed);
+
+    const error = await rejection(db.insert(consents).values(row(seed, contactId)));
+
+    expect(error).toEqual({ code: CHECK_VIOLATION, constraint: "consents_subject_ref_check" });
+  });
+
+  it("allows only a yes to be withdrawn", async () => {
+    const seed = await seedFamily();
+    const withdrawnAt = new Date("2026-09-20T00:00:00Z");
+
+    await db
+      .insert(consents)
+      .values(consentAbout({ memberId: seed.parent.id }, { kind: "health_words", withdrawnAt }));
+    const error = await rejection(
+      db
+        .insert(consents)
+        .values(consentAbout({ memberId: seed.parent.id }, { answer: "no", withdrawnAt })),
+    );
+
+    expect(error).toEqual({ code: CHECK_VIOLATION, constraint: "consents_withdrawn_at_check" });
+  });
+
+  it("refuses to delete a member or a contact whose consent rows were not forgotten", async () => {
+    const seed = await seedFamily();
+    const contactId = await contactNear(seed);
+    await db
+      .insert(consents)
+      .values([
+        consentAbout({ memberId: seed.parent.id }),
+        consentAbout({ contactId }, { kind: "nearby" }),
+      ]);
+
+    const memberError = await rejection(db.delete(members).where(eq(members.id, seed.parent.id)));
+    const contactError = await rejection(
+      db.delete(nearbyContacts).where(eq(nearbyContacts.id, contactId)),
+    );
+
+    const refused = { code: CHECK_VIOLATION, constraint: "consents_subject_deleted_check" };
+    expect(memberError).toEqual(refused);
+    expect(contactError).toEqual(refused);
+    expect(await countRows(members)).toBe(2);
+    expect(await countRows(nearbyContacts)).toBe(1);
+  });
+
+  it("refuses the delete while the evidence still holds words, even with the deletion time set", async () => {
+    const seed = await seedFamily();
+    await db
+      .insert(consents)
+      .values(
+        consentAbout(
+          { memberId: seed.parent.id },
+          { subjectDeletedAt: new Date("2026-09-20T00:00:00Z") },
+        ),
+      );
+
+    const error = await rejection(db.delete(members).where(eq(members.id, seed.parent.id)));
+
+    expect(error).toEqual({ code: CHECK_VIOLATION, constraint: "consents_subject_deleted_check" });
+  });
+
+  it("keeps a forgotten proof after its member and contact are deleted, naming them only by id", async () => {
+    const seed = await seedFamily();
+    const contactId = await contactNear(seed);
+    await db
+      .insert(consents)
+      .values([
+        consentAbout({ memberId: seed.parent.id }, { answer: "no" }),
+        consentAbout(
+          { contactId },
+          { kind: "nearby", evidence: { recorded_by: "founder", note: "Anna said yes by phone" } },
+        ),
+      ]);
+    const deletedAt = new Date("2026-09-20T00:00:00Z");
+
+    await forget(deletedAt);
+    await db.delete(members).where(eq(members.id, seed.parent.id));
+
+    expect(await countRows(nearbyContacts)).toBe(0);
+    const proofs = await db
+      .select({
+        memberId: consents.memberId,
+        contactId: consents.contactId,
+        subjectRef: consents.subjectRef,
+        answer: consents.answer,
+        evidence: consents.evidence,
+        subjectDeletedAt: consents.subjectDeletedAt,
+      })
+      .from(consents)
+      .orderBy(consents.id);
+    expect(proofs).toEqual([
+      {
+        memberId: null,
+        contactId: null,
+        subjectRef: `member:${seed.parent.id}`,
+        answer: "no",
+        evidence: { chat_id: "1001", message_id: "77", text_sha256: "9f".repeat(32) },
+        subjectDeletedAt: deletedAt,
+      },
+      {
+        memberId: null,
+        contactId: null,
+        subjectRef: `contact:${contactId}`,
+        answer: "yes",
+        evidence: { recorded_by: "founder" },
+        subjectDeletedAt: deletedAt,
+      },
+    ]);
+  });
+
+  it("keeps a family's forgotten proofs when the family is deleted", async () => {
+    const seed = await seedFamily();
+    await db
+      .insert(consents)
+      .values([
+        consentAbout({ memberId: seed.parent.id }),
+        consentAbout({ memberId: seed.organiser.id }, { kind: "pilot" }),
+      ]);
+
+    await forget(new Date("2026-09-20T00:00:00Z"));
+    await db.delete(families).where(eq(families.id, seed.family.id));
+
+    expect(await countRows(members)).toBe(0);
+    expect(await db.select({ memberId: consents.memberId }).from(consents)).toEqual([
+      { memberId: null },
+      { memberId: null },
+    ]);
+  });
+});
+
+describe("nearby contacts' numbers", () => {
+  const CONSENTED_AT = new Date("2026-09-15T02:00:00Z");
+  const DECLINED_AT = new Date("2026-09-16T02:00:00Z");
+
+  function contactFor(seed: Seed, overrides: Partial<NewNearbyContact> = {}): NewNearbyContact {
+    return {
+      familyId: seed.family.id,
+      memberId: seed.parent.id,
+      name: "Anna",
+      relation: "neighbour",
+      ...overrides,
+    };
+  }
+
+  it("stores a contact named at setup without a number", async () => {
+    const seed = await seedFamily();
+
+    const contact = only(await db.insert(nearbyContacts).values(contactFor(seed)).returning());
+
+    expect(contact).toMatchObject({ phone: null, consentedAt: null, declinedAt: null });
+  });
+
+  it("stores a number with a standing yes, and none once the contact says no", async () => {
+    const seed = await seedFamily();
+    const contact = only(
+      await db
+        .insert(nearbyContacts)
+        .values(contactFor(seed, { phone: "+886 912 345 678", consentedAt: CONSENTED_AT }))
+        .returning(),
+    );
+
+    await db
+      .update(nearbyContacts)
+      .set({ phone: null, declinedAt: DECLINED_AT })
+      .where(eq(nearbyContacts.id, contact.id));
+
+    expect(
+      await db
+        .select({ phone: nearbyContacts.phone, declinedAt: nearbyContacts.declinedAt })
+        .from(nearbyContacts),
+    ).toEqual([{ phone: null, declinedAt: DECLINED_AT }]);
+  });
+
+  it.each<{ name: string; fields: Partial<NewNearbyContact> }>([
+    { name: "a number without a yes", fields: { phone: "+886912345678" } },
+    {
+      name: "a number kept after a no",
+      fields: { phone: "+886912345678", consentedAt: CONSENTED_AT, declinedAt: DECLINED_AT },
+    },
+    { name: "a standing yes without a number", fields: { consentedAt: CONSENTED_AT } },
+  ])("rejects $name", async ({ fields }) => {
+    const seed = await seedFamily();
+
+    const error = await rejection(db.insert(nearbyContacts).values(contactFor(seed, fields)));
+
+    expect(error).toEqual({
+      code: CHECK_VIOLATION,
+      constraint: "nearby_contacts_phone_consented_check",
+    });
+  });
+});
+
+describe("deletion proofs", () => {
+  const MEDIA_ID = "01990000-0000-7000-8000-00000000000a";
+
+  it("accept the hash of the deleted object's type and id", async () => {
+    await db
+      .insert(deletions)
+      .values([
+        deletionOf("media", MEDIA_ID),
+        deletionOf("nearby_contact", "01990000-0000-7000-8000-00000000000b"),
+      ]);
+
+    expect(await countRows(deletions)).toBe(2);
+  });
+
+  it.each<{ name: string; hash: string }>([
+    { name: "a phone number", hash: sha256Hex("+886912345678") },
+    { name: "a storage key", hash: sha256Hex("families/f/answers/a.ogg") },
+    { name: "the id alone", hash: sha256Hex(MEDIA_ID) },
+    { name: "another object type", hash: sha256Hex(`answer:${MEDIA_ID}`) },
+    {
+      name: "its type and id in upper-case hex",
+      hash: sha256Hex(`media:${MEDIA_ID}`).toUpperCase(),
+    },
+  ])("reject the hash of $name", async ({ hash }) => {
+    const error = await rejection(
+      db.insert(deletions).values({ ...deletionOf("media", MEDIA_ID), contentHash: hash }),
+    );
+
+    expect(error).toEqual({ code: CHECK_VIOLATION, constraint: "deletions_content_hash_check" });
+  });
+});
+
 describe("CHECK constraints on enumerated columns", () => {
   const enumerated: { table: string; column: string; values: readonly string[] }[] = [
     { table: "users", column: "language", values: LANGS },
@@ -1482,6 +1874,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "message_refs", column: "purpose", values: MESSAGE_REF_PURPOSES },
     { table: "events", column: "name", values: EVENT_NAMES },
     { table: "consents", column: "kind", values: CONSENT_KINDS },
+    { table: "consents", column: "answer", values: CONSENT_ANSWERS },
     { table: "subscriptions", column: "provider", values: SUBSCRIPTION_PROVIDERS },
     { table: "subscriptions", column: "status", values: SUBSCRIPTION_STATUSES },
     { table: "subscriptions", column: "plan_interval", values: PLAN_INTERVALS },
@@ -1530,6 +1923,11 @@ describe("CHECK constraints on enumerated columns", () => {
       "media_storage_key_or_provider_file_id_check",
       "media_provider_unique_id_channel_check",
       "weekly_reads_sent_lines_sent_suggestion_sent_at_check",
+      "consents_subject_ref_check",
+      "consents_withdrawn_at_check",
+      "consents_subject_deleted_check",
+      "nearby_contacts_phone_consented_check",
+      "deletions_content_hash_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());

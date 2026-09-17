@@ -14,6 +14,7 @@ import {
   listCaseFiles,
   mustFlag,
   readCaseFile,
+  resolvePath,
   TEMPLATE_OPENER,
 } from "../evals/cases.ts";
 import * as checksModule from "../evals/checks.ts";
@@ -40,6 +41,7 @@ import {
   toPromptfooTest,
 } from "../evals/suite.ts";
 import { createFakeAi, fakeRecord } from "./fake.ts";
+import { PROMPTS } from "./prompts/index.ts";
 import { AI_CALL_NAMES, type FlagInput, Understanding } from "./types.ts";
 
 const EVALS_DIR = new URL("../evals/", import.meta.url);
@@ -65,6 +67,25 @@ function stringsIn(value: unknown): string[] {
 
 function awayCheck(evalCase: EvalCase): Check | undefined {
   return evalCase.checks.find((check) => check.kind === "equals" && check.path === "away");
+}
+
+function answerText(evalCase: EvalCase): string {
+  const answer = resolvePath(evalCase.input, "answer.text");
+  return answer.found && typeof answer.value === "string" ? answer.value : "";
+}
+
+/**
+ * Whether the case has a `notContains` check on `path` naming at least one word of `source`, so the
+ * check is about words the input actually holds.
+ */
+function leavesOut(evalCase: EvalCase, path: string, source: string): boolean {
+  const haystack = source.toLowerCase();
+  return evalCase.checks.some(
+    (check) =>
+      check.kind === "notContains" &&
+      check.path === path &&
+      check.texts.some((text) => haystack.includes(text.toLowerCase())),
+  );
 }
 
 describe("golden set", () => {
@@ -208,6 +229,72 @@ describe("golden set", () => {
       );
       for (const check of CALL_CHECKS.weekly_read) {
         expect(configs, evalCase.id).toContainEqual(check);
+      }
+    }
+  });
+
+  it("holds understanding without health-words consent, in English and Traditional Chinese, to no health mention, no unwell, and a summary without the answer's health words", () => {
+    const withoutConsent = CASES.filter(
+      (evalCase) => evalCase.call === "understand" && evalCase.input.healthWordsConsent === false,
+    );
+    expect(new Set(withoutConsent.map((evalCase) => evalCase.input.lang))).toEqual(
+      new Set(["en", "zh-TW"]),
+    );
+    for (const evalCase of withoutConsent) {
+      expect(evalCase.tags, evalCase.id).toContain("health-words");
+      expect(evalCase.checks, evalCase.id).toContainEqual({
+        kind: "equals",
+        path: "mentions.health",
+        value: [],
+      });
+      expect(leavesOut(evalCase, "moodWords", "unwell"), evalCase.id).toBe(true);
+      expect(leavesOut(evalCase, "summary", answerText(evalCase)), evalCase.id).toBe(true);
+    }
+  });
+
+  it("holds the minimisation cases, in English and Traditional Chinese, to no diagnosis, test result, or medicine name in a summary, a health mention, or a flag quote", () => {
+    const minimisation = CASES.filter((evalCase) => evalCase.tags.includes("minimisation"));
+    for (const call of ["understand", "flag"] as const) {
+      const langs = minimisation
+        .filter((evalCase) => evalCase.call === call)
+        .map((evalCase) => evalCase.input.lang);
+      expect(new Set(langs), call).toEqual(new Set(["en", "zh-TW"]));
+    }
+    for (const evalCase of minimisation) {
+      const answer = answerText(evalCase);
+      if (evalCase.call === "understand") {
+        expect(evalCase.input.healthWordsConsent, evalCase.id).toBe(true);
+        expect(leavesOut(evalCase, "summary", answer), evalCase.id).toBe(true);
+        expect(leavesOut(evalCase, "mentions.health", answer), evalCase.id).toBe(true);
+        // The names go, the body words stay: an empty list would pass the checks above trivially.
+        const keepsBodyWords = evalCase.checks.some(
+          (check) =>
+            check.path === "mentions.health" &&
+            ((check.kind === "count" && check.min >= 1) || check.kind === "containsAny"),
+        );
+        expect(keepsBodyWords, evalCase.id).toBe(true);
+      } else {
+        expect(evalCase.call, evalCase.id).toBe("flag");
+        expect(mustFlag(evalCase), evalCase.id).toBe(true);
+        expect(evalCase.checks, evalCase.id).toContainEqual({
+          kind: "excerptOf",
+          path: "evidenceQuote",
+          inputPath: "answer.text",
+        });
+        expect(leavesOut(evalCase, "evidenceQuote", answer), evalCase.id).toBe(true);
+      }
+    }
+  });
+
+  it("never shows the model a name the minimisation cases look for", () => {
+    for (const evalCase of CASES.filter((candidate) => candidate.tags.includes("minimisation"))) {
+      const system = PROMPTS[evalCase.call].system.toLowerCase();
+      for (const check of evalCase.checks) {
+        if (check.kind === "notContains") {
+          for (const text of check.texts) {
+            expect(system, `${evalCase.id}: ${text}`).not.toContain(text.toLowerCase());
+          }
+        }
       }
     }
   });
@@ -895,7 +982,7 @@ describe("eval provider", () => {
       output: { flag: false, category: null, severity: null, evidenceQuote: null },
       cost: 0,
       tokenUsage: { total: 0, prompt: 0, completion: 0, cached: 0 },
-      metadata: { model: "claude-opus-5", promptVersion: "flag.v1", latencyMs: 0 },
+      metadata: { model: "claude-opus-5", promptVersion: "flag.v2", latencyMs: 0 },
     });
     expect(ai.calls).toEqual([{ call: "flag", input: flagInput }]);
   });

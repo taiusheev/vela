@@ -27,6 +27,7 @@ import {
   seedExchange,
   seedFamily,
   seedGroupMember,
+  seedHealthWordsConsent,
   seedLinkedGroup,
 } from "./testing/seed.ts";
 import { FAILURE_NOTE_AFTER_HOURS, loadScheduleInput, reconcile, tickMember } from "./tick.ts";
@@ -747,6 +748,8 @@ describe("reconcile", () => {
   it("retries a failed understanding after 15 minutes without repeating the transcript post or the flag", async () => {
     flagPlan.push("fail", "raise");
     const seed = await seedFamily(h.db, { now: h.clock.now() });
+    // She agreed that her health words reach the organisers, so the flag quotes her (flows §3.10).
+    await seedHealthWordsConsent(h.db, seed, { at: h.clock.now(), answer: "yes" });
     await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
     const exchange = await seedExchange(h.db, seed, {
       date: "2026-09-14",

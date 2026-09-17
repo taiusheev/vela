@@ -9,15 +9,18 @@ import { t } from "@vela/copy";
 import { encodeButton } from "@vela/core";
 import {
   answers,
+  consents,
   events,
   exchanges,
   families,
+  familyChannels,
+  invites,
   members,
   messageRefs,
   outbound,
   replies,
 } from "@vela/db";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Deps, OutboundJob } from "../deps.ts";
 import { deliverOutbound } from "../gateway.ts";
@@ -181,6 +184,84 @@ describe("the private chat", () => {
   });
 });
 
+describe("the consent buttons", () => {
+  /** She opened her invite and has not answered: linked, invited, no consent. */
+  async function invited(): Promise<Scene> {
+    const found = await scene();
+    const { seed } = found;
+    await h.db.delete(consents).where(eq(consents.memberId, seed.member.id));
+    await h.db
+      .update(members)
+      .set({ status: "invited", lightOn: false, lightConsentedAt: null, lightConsentText: null })
+      .where(eq(members.id, seed.member.id));
+    await h.db.insert(invites).values({
+      familyId: seed.family.id,
+      invitedBy: seed.organiser.id,
+      forMemberId: seed.member.id,
+      token: "her-token",
+      createdAt: h.clock.now(),
+      expiresAt: new Date(h.clock.now().getTime() + 7 * 86_400_000),
+      acceptedAt: h.clock.now(),
+    });
+    return found;
+  }
+
+  it("answers her as a stranger after she taps No: help.private once per message, and nothing stored", async () => {
+    const { seed } = await invited();
+
+    await inbound(
+      privately(HER, {
+        kind: "button",
+        buttonData: encodeButton({ type: "consent", memberId: seed.member.id, accept: false }),
+        callbackId: "cb1",
+      }),
+    );
+    const people = await memberCount();
+    const sentBefore = h.telegram.sentTo(HER).length;
+    await inbound(
+      privately(HER, { kind: "text", text: "Hello?" }),
+      privately(HER, { kind: "voice", media: { kind: "audio", providerFileId: "v-1" } }),
+      privately(HER, { kind: "text", text: "stop" }),
+    );
+
+    expect(await memberCount()).toBe(people);
+    expect(await h.db.select().from(members).where(eq(members.id, seed.member.id))).toEqual([]);
+    expect(await h.db.select().from(answers)).toHaveLength(0);
+    expect(await h.db.select().from(outbound).where(eq(outbound.conversationId, HER))).toEqual([]);
+    expect(
+      h.telegram
+        .sentTo(HER)
+        .slice(sentBefore)
+        .map((entry) => entry.message.text),
+    ).toEqual([t("en", "help.private"), t("en", "help.private"), t("en", "help.private")]);
+  });
+
+  it("hands her tap on the health-words question to its handler, and only acknowledges a notice button in a private chat", async () => {
+    const { seed } = await scene();
+
+    await inbound(
+      privately(HER, {
+        kind: "button",
+        buttonData: encodeButton({ type: "health_words", memberId: seed.member.id, accept: true }),
+        callbackId: "cb1",
+      }),
+      privately(HER, {
+        kind: "button",
+        buttonData: encodeButton({ type: "notice_read", familyChannelId: seed.member.id }),
+        callbackId: "cb2",
+      }),
+    );
+
+    expect(h.telegram.acknowledged.map((tap) => tap.callbackId)).toEqual(["cb1", "cb2"]);
+    const rows = await h.db.select().from(consents).orderBy(asc(consents.kind));
+    expect(rows.map((row) => [row.kind, row.answer])).toEqual([
+      ["health_words", "yes"],
+      ["light", "yes"],
+    ]);
+    expect(h.telegram.sent).toHaveLength(0);
+  });
+});
+
 describe("the family group", () => {
   it("drops a message that is not an ask, a reply, or a reaction, storing and logging nothing of it", async () => {
     await scene();
@@ -245,6 +326,32 @@ describe("the family group", () => {
     expect(await h.db.select().from(exchanges)).toHaveLength(1);
     expect(await h.db.select().from(replies)).toHaveLength(0);
     expect(await memberCount()).toBe(before);
+    expect(h.telegram.sent).toHaveLength(0);
+  });
+});
+
+describe("the family group's buttons", () => {
+  it("hands a tap on the notice button to its handler, and only acknowledges any other tap there", async () => {
+    const { seed, exchangeId } = await scene();
+    const [group] = await h.db.select().from(familyChannels);
+
+    await inbound(
+      inGroup(ORGANISER, {
+        kind: "button",
+        buttonData: encodeButton({ type: "notice_read", familyChannelId: group?.id ?? "" }),
+        callbackId: "cb1",
+      }),
+      inGroup(ORGANISER, {
+        kind: "button",
+        buttonData: encodeButton({ type: "answer", exchangeId, answer: "fine" }),
+        callbackId: "cb2",
+      }),
+    );
+
+    expect(h.telegram.acknowledged.map((tap) => tap.callbackId)).toEqual(["cb1", "cb2"]);
+    const rows = await h.db.select().from(consents).where(eq(consents.kind, "privacy_notice"));
+    expect(rows.map((row) => row.memberId)).toEqual([seed.organiser.id]);
+    expect(await h.db.select().from(answers)).toHaveLength(0);
     expect(h.telegram.sent).toHaveLength(0);
   });
 });

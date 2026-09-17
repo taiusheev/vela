@@ -1175,5 +1175,95 @@
     "rubric": [
       "A smaller appetite in hot weather with a meal eaten and dinner planned is not 'not eating for days': the output does not flag it."
     ]
+  },
+  {
+    "id": "flag-en-fall-head-medicine-name-left-out",
+    "call": "flag",
+    "description": "A fall on the stairs with a bleeding head and dizziness, told after naming the blood thinner taken at breakfast; flagged, and the quote leaves the medicine name out.",
+    "tags": ["health-clear", "minimisation"],
+    "input": {
+      "lang": "en",
+      "addressForm": "Mom",
+      "ask": {
+        "askerName": "Anna",
+        "type": "question",
+        "text": "Morning Mom, any plans today?"
+      },
+      "answer": {
+        "kind": "text",
+        "text": "Took my warfarin with breakfast, then fell on the stairs and hit my head. It's bleeding a bit and I feel dizzy."
+      },
+      "recentSummaries": []
+    },
+    "checks": [
+      {
+        "kind": "equals",
+        "path": "flag",
+        "value": true
+      },
+      {
+        "kind": "equals",
+        "path": "category",
+        "value": "health"
+      },
+      {
+        "kind": "excerptOf",
+        "path": "evidenceQuote",
+        "inputPath": "answer.text"
+      },
+      {
+        "kind": "notContains",
+        "path": "evidenceQuote",
+        "texts": ["warfarin"]
+      }
+    ],
+    "rubric": [
+      "A fall with a head injury, bleeding, and dizziness is danger today: the output flags it as health, and the quote is a short exact excerpt about the fall, the head, the bleeding, or the dizziness that leaves the medicine name out."
+    ]
+  },
+  {
+    "id": "flag-zh-fall-stairs-medicine-name-left-out",
+    "call": "flag",
+    "description": "A fall on the stairs with a bleeding head and dizziness right after taking 阿斯匹靈; flagged, and the quote leaves the medicine name out.",
+    "tags": ["health-clear", "minimisation", "taiwanese-mandarin"],
+    "input": {
+      "lang": "zh-TW",
+      "addressForm": "阿嬤",
+      "ask": {
+        "askerName": "小芳",
+        "type": "question",
+        "text": "阿嬤早安，今天有什麼計畫？"
+      },
+      "answer": {
+        "kind": "voice",
+        "text": "早上吃完阿斯匹靈，下樓梯的時候跌倒，頭撞到流血，現在頭很暈"
+      },
+      "recentSummaries": []
+    },
+    "checks": [
+      {
+        "kind": "equals",
+        "path": "flag",
+        "value": true
+      },
+      {
+        "kind": "equals",
+        "path": "category",
+        "value": "health"
+      },
+      {
+        "kind": "excerptOf",
+        "path": "evidenceQuote",
+        "inputPath": "answer.text"
+      },
+      {
+        "kind": "notContains",
+        "path": "evidenceQuote",
+        "texts": ["阿斯匹靈"]
+      }
+    ],
+    "rubric": [
+      "A fall on the stairs with a bleeding head and dizziness now is danger today: the output flags it as health, and the quote is a short exact excerpt, in the original Chinese, about the fall, the head, the bleeding, or the dizziness that leaves the medicine name out."
+    ]
   }
 ]

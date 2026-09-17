@@ -4,13 +4,13 @@
 
 Version `nearby-consent.v1` · 17 September 2026 · goes with `privacy-notice.v1` · spec §8, §9, §14.3 M6
 
-A nearby contact is one of up to two people living near the person the light is for, whom an organiser would call first on a quiet day. They agree once, through a message sent in the organiser's name. Until they say yes, Vela does not list them in any notice, and nobody can use Vela to message them.
+A nearby contact is one of up to two people living near the person the light is for, whom an organiser would call first on a quiet day. They agree once, through a message sent in the organiser's name. Until they say yes, Vela holds only their name and how they know the person, lists them in no notice, and holds no number with which anyone could reach them.
 
 ## How the message is sent
 
 | Stage | Who sends it | How the answer is recorded |
 |---|---|---|
-| **Pilot on Telegram and LINE (now)** | The organiser, from their own phone (SMS, LINE, WhatsApp or Telegram), using text A below | The contact replies to the organiser. The organiser forwards the reply (their words or a screenshot) to the founder. The founder records the answer on Vela's admin page (`record_contact_consent`; by hand, [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) section C, until the admin page ships). A yes records the time of the yes and a `consents` row: kind `nearby`, text version `nearby-consent.v1`, the channel used, the date and the contact's words as evidence; from then on Vela lists the contact in quiet notices. A no removes the contact within 7 days. The organiser may give the contact's name and number at Vela's setup, or the founder adds a contact named later (`add_contact`); either way Vela stores them without consent and lists them in no notice until the yes is recorded |
+| **Pilot on Telegram and LINE (now)** | The organiser, from their own phone (SMS, LINE, WhatsApp or Telegram), using text A below | The organiser gives Vela only the contact's name, and how they know the person, at Vela's setup; for a contact named later, the founder first adds the name the same way (`add_contact` without a number). The organiser sends text A, the contact replies to the organiser, and the organiser forwards the reply (their words or a screenshot), with the contact's phone number for a yes, to the founder. The founder records the answer on Vela's admin page (`record_contact_consent`; by hand, [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) section C, until the admin page runs in production). A yes stores the number, the messaging app and the time of the yes, with a `consents` row: kind `nearby`, answer `yes`, text version `nearby-consent.v1`, the channel used, the date and the contact's words as evidence; from then on Vela lists the contact in quiet notices. A no is recorded the same way with answer `no`, holds no number, and the founder removes the contact within 7 days (`remove_contact`, section D) |
 | **In the app (from sprint 3)** | Vela, in the organiser's name, when the organiser saves the contact (text B) | The contact taps a button; `POST /nearby/:token/consent` records consent or decline |
 
 ## Text A: sent by the organiser in the pilot
@@ -21,9 +21,9 @@ A nearby contact is one of up to two people living near the person the light is 
 >
 > You live near [Name]. On a day when [Name] hasn't answered and I can't get through, could I ask you to go round? I would always ask you myself. Vela never contacts you on its own.
 >
-> Vela keeps your name and phone number for this, and does not show them in any message until you say yes. If you say yes, I'll also tell Vela how you know [Name], and Vela shows your details only to me [and to (other organiser's name)] on a day like that. The person who runs the Vela pilot can see them and records your answer. If you say no, your details are deleted. You can say no, or change your mind at any time, and nothing changes between us.
+> When I set Vela up, I gave it only your name and how you know [Name], and it shows them in no message. If you say yes, I'll also give Vela your phone number and the messaging app you use. Vela keeps your details in its database in Singapore and shows them only to me [and to (other organiser's name)], on a day like that. Timur Aiusheev, who runs the Vela pilot, can see them and records your answer. Vela keeps them until you or I remove them. If you say no, your details are deleted within 7 days, and if you haven't said yes after 14 days, they are deleted then. You can ask Timur at any time to see, correct or delete them, or change your mind, and nothing changes between us.
 >
-> Vela is a pilot run by Timur Aiusheev. How your details are used: https://vela.vela-light.workers.dev/privacy
+> How your details are used: https://vela.vela-light.workers.dev/privacy
 >
 > Would that be all right? Just reply yes or no.
 
@@ -53,19 +53,20 @@ Your answer goes to the organiser.
 
 **What you are not agreeing to:** you are not responsible for [Name]. "Can't today" is always a good answer, and nobody will ask why. Vela does not send you reminders, updates or anything else. If you ever think someone is in danger, call emergency services first (119 in Taiwan, 911 in the United States, 112 in Europe); Vela is not an emergency service.
 
-**How long:** until you or the organiser remove you, or [Name]'s family leaves Vela. Then your details are deleted (see "How long we keep it" in the privacy notice).
+**How long:** until you or the organiser remove you, or [Name]'s family leaves Vela. Then your details are deleted (see "How long we keep it" in the privacy notice). A record that you said yes, holding reference numbers, the version of this text and the time, but not your name or number, is kept for 5 years after your details are deleted, to show what was agreed.
 
-**Changing your mind:** tell the organiser, or write to the founder at t.aiusheev@gmail.com. Your details are removed within 7 days, and nobody uses Vela to contact you again.
+**Changing your mind:** tell the organiser, or write to the founder at t.aiusheev@gmail.com. Your number is removed from Vela's list of contacts as soon as your no is recorded, your other details within 7 days, and nobody uses Vela to contact you again. A quiet-day notice sent to the organiser before your no may hold your number: Vela deletes its copy within 30 days of that notice, and the message stays in the organiser's own chat until they delete it.
 
 **Your rights:** you can see, correct or delete what Vela holds about you at any time, free of charge (privacy notice, "Your rights").
 
 ## What saying no means
 
-Your details never appear in a notice, and they are deleted. In the pilot, the founder deletes them within 7 days of your no, or 14 days after they were added to Vela if you have not said yes. In the app, your name and number are deleted as soon as you decline, and if you do not answer within 14 days they are deleted too. Either way, the request is not repeated. The organiser may still call you as a friend or neighbour, as they always could.
+Your details never appear in a notice, and they are deleted. In the pilot, Vela never holds your number unless you say yes, and the founder deletes your name within 7 days of your no, or 14 days after it was added to Vela if you have not said yes. In the app, your name and number are deleted as soon as you decline, and if you do not answer within 14 days they are deleted too. Either way, the request is not repeated. A record that you said no, without your name or number, is kept for 5 years to show that you were asked and what you answered. The organiser may still call you as a friend or neighbour, as they always could.
 
 ## Notes for the founder
 
-- A contact without a recorded yes never appears in a notice on a quiet day: Vela lists only contacts whose yes is recorded and who have not said no (`architecture/04-instrument-flows.md` §3.12). Contacts the organiser gives at setup are stored without consent. Record each answer (`record_contact_consent` on the admin page, or [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) section C until it ships), and remove a contact who says no within 7 days, or who has no yes 14 days after being added (`remove_contact`, or section D).
+- A contact without a recorded yes never appears in a notice on a quiet day: Vela lists only contacts whose yes is recorded and who have not said no (`architecture/04-instrument-flows.md` §3.12). Vela's setup stores contacts by name and relation only, and refuses a number there (`onboarding.nearby_no_number`). Record each answer (`record_contact_consent` on the admin page, with the number for a yes, or [`infra/runbooks/data-requests.md`](../../../infra/runbooks/data-requests.md) section C until it runs in production), and remove a contact who says no within 7 days, or who has no yes 14 days after being added (`remove_contact`, or section D).
+- A number is entered only together with the contact's recorded yes (`record_contact_consent` with the number, or `add_contact` with the yes and the number in one form). A number without a standing yes is refused by the database.
 - The organiser must be the one who knows the contact. Vela never recruits contacts.
-- Record the text version, the channel, the date and the contact's exact words. If the contact asks a question the text does not answer, answer it before recording consent.
+- Record the text version, the channel, the date and the contact's exact words in Vela's consent record, never in the Google Drive notes. If the contact asks a question the text does not answer, answer it before recording consent.
 - Changing this text in a way that changes its meaning needs a new version and a new yes from contacts already recorded.

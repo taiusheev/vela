@@ -237,8 +237,31 @@ function blocks(lines: readonly Line[], into: Blocks): void {
   }
 }
 
-/** One notice's Markdown as the page the pilot Worker serves. */
-export function renderNotice(markdown: string): PrivacyNotice {
+/**
+ * A notice's version: the code span of its version line, "Version `privacy-notice.vN`" in English
+ * and "版本 `privacy-notice.vN`" in Traditional Chinese. An adult's tap on "I've read it" records it
+ * (flows §3.3), so a notice without one cannot be served.
+ */
+const VERSION_LINE = /^\S+\s+`(privacy-notice\.v[1-9]\d*)`/mu;
+
+/** A notice with no version line, or two notices whose versions differ. */
+export class NoticeVersionError extends Error {
+  override readonly name = "NoticeVersionError";
+}
+
+/** The version on a notice's version line, or a `NoticeVersionError`. */
+export function noticeVersion(markdown: string): string {
+  const version = VERSION_LINE.exec(markdown)?.[1];
+  if (version === undefined) {
+    throw new NoticeVersionError(
+      "a notice needs a version line such as: Version `privacy-notice.v1`",
+    );
+  }
+  return version;
+}
+
+/** One notice's Markdown as the page the pilot Worker serves, without its version. */
+export function renderNotice(markdown: string): Omit<PrivacyNotice, "version"> {
   const lines = markdown
     .replace(/\r\n?/g, "\n")
     .split("\n")
@@ -251,12 +274,28 @@ export function renderNotice(markdown: string): PrivacyNotice {
   return { title: rendered.title, html: rendered.html.join("\n") };
 }
 
-/** Both notices, rendered. */
+/**
+ * Both notices, rendered, each with its version. The two must carry the same version: they say the
+ * same thing, and one `Config.privacyNoticeVersion` is recorded whichever language an adult read.
+ */
 export function renderNotices(sources: Readonly<Record<NoticeLang, string>>): PrivacyNotices {
-  return { en: renderNotice(sources.en), "zh-TW": renderNotice(sources["zh-TW"]) };
+  const en = noticeVersion(sources.en);
+  const zhTw = noticeVersion(sources["zh-TW"]);
+  if (en !== zhTw) {
+    throw new NoticeVersionError(
+      `the notices' versions differ: ${NOTICE_FILES.en} has ${en}, ${NOTICE_FILES["zh-TW"]} has ${zhTw}`,
+    );
+  }
+  return {
+    en: { ...renderNotice(sources.en), version: en },
+    "zh-TW": { ...renderNotice(sources["zh-TW"]), version: zhTw },
+  };
 }
 
-/** The committed module's text: a header, then each notice's title and HTML as string literals. */
+/**
+ * The committed module's text: a header, then each notice's title, HTML, and version as string
+ * literals.
+ */
 export function noticesModule(sources: Readonly<Record<NoticeLang, string>>): string {
   const notices = renderNotices(sources);
   const entries = NOTICE_LANGS.map((lang) => {
@@ -266,6 +305,7 @@ export function noticesModule(sources: Readonly<Record<NoticeLang, string>>): st
       `  ${key}: {`,
       `    title: ${JSON.stringify(notice.title)},`,
       `    html: ${JSON.stringify(notice.html)},`,
+      `    version: ${JSON.stringify(notice.version)},`,
       "  },",
     ].join("\n");
   });

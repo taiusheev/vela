@@ -171,3 +171,101 @@ describe("the mark-left forms", () => {
     expect(body.indexOf(`value="${consented.member.id}"><label>Type`)).toBeGreaterThan(heading);
   });
 });
+
+describe("the invite-again form", () => {
+  const organiser = memberFixture({
+    id: "33333333-3333-7333-8333-333333333333",
+    role: "organiser",
+    displayName: "Mia",
+    status: "active",
+  });
+
+  it("is offered after a No, when nobody waits, naming no member to replace", async () => {
+    const page = familyPageFixture({ members: [organiser] });
+
+    const form = formFor(await render(page), page.family.id, "create_invite");
+
+    expect(form).toContain('<input type="hidden" name="replacesMemberId" value="">');
+    expect(form).toContain(`<option value="${organiser.member.id}">Mia</option>`);
+    expect(form).toContain('<input name="confirm" required>');
+    for (const name of ["name", "address", "language", "country", "timeZone", "wakeTime"]) {
+      expect(form).toContain(`name="${name}"`);
+    }
+    expect(form).toContain('<option value="ZZ">Other</option>');
+  });
+
+  it("names the invited member who never answered, whose link the new one replaces", async () => {
+    const waiting = memberFixture();
+    const page = familyPageFixture({ members: [organiser, waiting] });
+    const body = await render(page);
+
+    const form = formFor(body, page.family.id, "create_invite");
+
+    expect(form).toContain(
+      `<input type="hidden" name="replacesMemberId" value="${waiting.member.id}">`,
+    );
+    expect(body).toContain("Mom's earlier link stops working");
+  });
+
+  it.each([
+    ["her light is on", memberFixture({ lightOn: true, status: "active" })],
+    [
+      "she consented and paused",
+      memberFixture({ lightConsentedAt: new Date("2026-09-02T00:00:00.000Z"), status: "paused" }),
+    ],
+  ])("is not offered when %s", async (_state, her) => {
+    const page = familyPageFixture({ members: [organiser, her] });
+
+    expect(await render(page)).not.toContain("create_invite");
+  });
+
+  it("is not offered for a family that asked to be deleted", async () => {
+    const page = familyPageFixture({ members: [organiser] });
+    const deleted = {
+      ...page,
+      family: { ...page.family, deletedAt: new Date("2026-09-16T00:00:00Z") },
+    };
+
+    expect(await render(deleted)).not.toContain("create_invite");
+  });
+});
+
+describe("the nearby contacts section", () => {
+  const her = memberFixture();
+  const contact = {
+    id: "44444444-4444-7444-8444-444444444444",
+    familyId: her.member.familyId,
+    memberId: her.member.id,
+    name: "Auntie Lin",
+    relation: "neighbour",
+    phone: null,
+    channel: null,
+    consentRequestedAt: null,
+    consentedAt: null,
+    declinedAt: null,
+    createdAt: new Date("2026-09-15T00:00:00.000Z"),
+  };
+
+  it("shows a contact named at setup without a number, and asks for the number with the answer", async () => {
+    const page = familyPageFixture({ members: [her], nearbyContacts: [contact] });
+    const body = await render(page);
+
+    expect(body).toContain(
+      '<td>Auntie Lin<br><span class="muted">neighbour</span></td>\n<td>—</td>',
+    );
+    const answer = formFor(body, page.family.id, "record_contact_consent");
+    expect(answer).toContain('<input name="phone">');
+  });
+
+  it("takes a number on the add-contact form only inside the contact's yes", async () => {
+    const page = familyPageFixture({ members: [her] });
+
+    const form = formFor(await render(page), page.family.id, "add_contact");
+    const yes = form.slice(form.indexOf("<fieldset>"), form.indexOf("</fieldset>"));
+
+    expect(form.indexOf('name="phone"')).toBeGreaterThan(form.indexOf("<fieldset>"));
+    for (const name of ["phone", "consentAt", "textVersion", "lang", "consentChannel", "note"]) {
+      expect(yes).toContain(`name="${name}"`);
+    }
+  });
+});

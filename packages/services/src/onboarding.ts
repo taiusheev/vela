@@ -22,7 +22,6 @@ import { decodeButton, encodeButton, isValidTimeZone, outboundKey } from "@vela/
 import {
   channelLinks,
   families,
-  invites,
   members,
   nearbyContacts,
   type OnboardingSession,
@@ -35,26 +34,34 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { isKeptLightMember, languageOfSender, sendOutsideGateway } from "./group.ts";
+import {
+  ADDRESS_MAX_LENGTH,
+  insertInvite,
+  insertInvitedMember,
+  NAME_MAX_LENGTH,
+} from "./invites.ts";
 import { type MemberWithFamily, memberByChannelUser } from "./repo.ts";
 
 /** A session that hears nothing for a day is abandoned (flows §3.1). */
 const SESSION_HOURS = 24;
-/** An invite link is good for a week (flows §3.1). */
-const INVITE_DAYS = 7;
-/** Her arrival comes half an hour after she usually wakes (flows §3.1). */
-const ARRIVAL_AFTER_WAKE_MINUTES = 30;
-const NAME_MAX_LENGTH = 40;
-const ADDRESS_MAX_LENGTH = 60;
 /** Two people the organiser would call first (schema: nearby_contacts). */
 const NEARBY_MAX = 2;
+/** A contact's name and how they know her are each short, as the step asks for them. */
+const NEARBY_FIELD_MAX_LENGTH = 40;
 /** Telegram shows at most four buttons comfortably in one row on a phone. */
 const BUTTONS_PER_ROW = 4;
 /** The kept-light member's country when the organiser chose "Other": ISO 3166-1's user-assigned code. */
 const OTHER_COUNTRY = "ZZ";
 /** A wake time as typed: `7:30` and `07:30` both mean the same morning. */
 const TYPED_TIME = /^([01]?\d|2[0-3]):([0-5]\d)$/;
-/** "Anna +886 912 000 001": a name, then a number of at least six digits. */
-const NAME_AND_PHONE = /^(.+?)[\s,:：]+(\+?\d[\d\s\-().]{5,})$/u;
+/**
+ * A run of digits, spaces, and `+ - ( ) .`. One that holds six digits or more is a phone number,
+ * which the nearby step never keeps (L8): a contact's number arrives only with their own yes.
+ */
+const PHONE_RUN = /[\d\s+\-().]+/g;
+const PHONE_MIN_DIGITS = 6;
+/** Where a name ends and how they know her begins: "Anna, neighbour", "王小姐，鄰居", "王小姐、鄰居". */
+const NEARBY_SEPARATOR = /[,，、]/u;
 const SKIP_VALUE = "skip";
 
 export const ONBOARDING_STEPS = [
@@ -69,7 +76,8 @@ export const ONBOARDING_STEPS = [
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 const Step = z.enum(ONBOARDING_STEPS);
 
-const NearbyEntry = z.object({ name: z.string().min(1), phone: z.string().min(1) });
+const NearbyEntry = z.object({ name: z.string().min(1), relation: z.string().min(1).nullable() });
+type NearbyEntry = z.infer<typeof NearbyEntry>;
 
 const SessionData = z.object({
   organiserLanguage: Lang,
@@ -181,13 +189,29 @@ export function regionForCountry(regions: readonly Region[], country: string): R
   return regions.includes(preferred) ? preferred : "apac";
 }
 
-/** `HH:MM` plus minutes, wrapping at midnight. */
-function addMinutesToLocalTime(time: LocalTime, minutes: number): LocalTime {
-  const [hourText, minuteText] = time.split(":");
-  const total = (Number(hourText) * 60 + Number(minuteText) + minutes) % (24 * 60);
-  const hour = Math.floor(total / 60);
-  const minute = total % 60;
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+/** Whether a text holds a phone number anywhere in it (`PHONE_RUN`). */
+function holdsPhoneNumber(text: string): boolean {
+  return [...text.matchAll(PHONE_RUN)].some(
+    (match) => (match[0].match(/\d/g) ?? []).length >= PHONE_MIN_DIGITS,
+  );
+}
+
+/**
+ * "Name" or "Name, relation": the name before the first separator and how they know her after it,
+ * each 1 to 40 characters, the relation null when nothing follows; null when the text is not that.
+ */
+function parseNearbyEntry(text: string): NearbyEntry | null {
+  const trimmed = text.trim();
+  const separator = NEARBY_SEPARATOR.exec(trimmed);
+  const name = (separator === null ? trimmed : trimmed.slice(0, separator.index)).trim();
+  const relation = separator === null ? "" : trimmed.slice(separator.index + 1).trim();
+  if (name.length === 0 || name.length > NEARBY_FIELD_MAX_LENGTH) {
+    return null;
+  }
+  if (relation.length > NEARBY_FIELD_MAX_LENGTH) {
+    return null;
+  }
+  return { name, relation: relation === "" ? null : relation };
 }
 
 function normaliseTime(text: string): LocalTime | null {
@@ -415,13 +439,18 @@ function applyOnboardingStep(
       if (isSkip(input, lang)) {
         return complete(data, input.kind === "button" ? t(lang, "onboarding.skip") : undefined);
       }
-      const match = input.kind === "text" ? NAME_AND_PHONE.exec(input.text.trim()) : null;
-      const name = match?.[1]?.trim();
-      const phone = match?.[2]?.replace(/\s+/g, "");
-      if (name === undefined || name.length === 0 || phone === undefined) {
+      if (input.kind !== "text") {
         return { kind: "repeat" };
       }
-      const nearby = [...data.nearby, { name, phone }];
+      // Refused before anything is read, so nothing of a text with a number reaches the session.
+      if (holdsPhoneNumber(input.text)) {
+        return { kind: "repeat", notice: "onboarding.nearby_no_number" };
+      }
+      const entry = parseNearbyEntry(input.text);
+      if (entry === null) {
+        return { kind: "repeat" };
+      }
+      const nearby = [...data.nearby, entry];
       const next = { ...data, nearby };
       return nearby.length >= NEARBY_MAX
         ? complete(next)
@@ -482,49 +511,37 @@ async function createFamily(
     displayName: event.sender.displayName ?? null,
     linkedAt: now,
   });
-  const [her] = await tx
-    .insert(members)
-    .values({
+  const her = await insertInvitedMember(
+    tx,
+    {
       familyId: family.id,
-      role: "member",
-      displayName: data.name,
-      addressForm: data.address,
+      name: data.name,
+      address: data.address,
       language: data.language,
-      tz: data.timeZone,
+      timeZone: data.timeZone,
       country: data.country,
-      status: "invited",
-      turnsIn: false,
-      primarySurface: "telegram",
-      lightOn: false,
       wakeTime: data.wakeTime,
-      arrivalTime: addMinutesToLocalTime(data.wakeTime, ARRIVAL_AFTER_WAKE_MINUTES),
-      createdAt: now,
-    })
-    .returning();
-  if (her === undefined) {
-    throw new Error("kept-light member insert returned no row");
-  }
+    },
+    now,
+  );
   if (data.nearby.length > 0) {
+    // Names only: a contact's number arrives with their yes, on the admin page (flows §3.17).
     await tx.insert(nearbyContacts).values(
       data.nearby.map((contact) => ({
         familyId: family.id,
         memberId: her.id,
         name: contact.name,
-        phone: contact.phone,
+        relation: contact.relation,
         createdAt: now,
       })),
     );
   }
-  const token = deps.random.token();
-  await tx.insert(invites).values({
-    familyId: family.id,
-    invitedBy: organiser.id,
-    forMemberId: her.id,
-    token,
-    channel: "link",
-    createdAt: now,
-    expiresAt: new Date(now.getTime() + INVITE_DAYS * 24 * 60 * 60_000),
-  });
+  const { link } = await insertInvite(
+    deps,
+    tx,
+    { familyId: family.id, invitedBy: organiser.id, forMemberId: her.id },
+    now,
+  );
   const lang = data.organiserLanguage;
   await enqueueOutbound(deps, tx, {
     kind: "onboarding",
@@ -536,10 +553,7 @@ async function createFamily(
     channel: event.channel,
     conversationId: event.conversation.externalId,
     lang,
-    text: t(lang, "onboarding.done", {
-      name: data.name,
-      link: `https://t.me/${deps.config.telegramBotUsername}?start=${token}`,
-    }),
+    text: t(lang, "onboarding.done", { name: data.name, link }),
   });
   await recordEvent(
     tx,

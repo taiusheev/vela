@@ -4,7 +4,12 @@ import {
   AdminAction,
   BUDGETED_OUTBOUND_KINDS,
   ChannelSendError,
+  CONSENT_ANSWERS,
+  CONSENT_KINDS,
+  ConsentAnswer,
+  ConsentKind,
   DomainEvent,
+  EventName,
   InboundEvent,
   isIanaTimeZone,
   LocalDate,
@@ -206,8 +211,49 @@ describe("ADMIN_ACTIONS", () => {
       "mark_deceased",
       "delete_family",
       "send_weekly_read",
+      "create_invite",
     ]);
     expect(AdminAction.safeParse("export_family").success).toBe(false);
+  });
+
+  it("each record events that exist", () => {
+    // The events each action records (flows §3.17). An action whose event is missing from
+    // EVENT_NAMES could not record it: events_name_check would refuse the row.
+    const recorded: Record<AdminAction, readonly EventName[]> = {
+      view: ["admin_page_opened"],
+      record_consent: ["consent_given"],
+      record_contact_consent: ["consent_given", "consent_declined"],
+      add_contact: ["nearby_contact_added", "consent_given"],
+      remove_contact: ["nearby_contact_removed"],
+      set_away: ["away_set"],
+      end_away: ["away_ended"],
+      mark_left: ["member_left"],
+      mark_deceased: ["member_marked_deceased"],
+      delete_family: ["family_deletion_requested"],
+      send_weekly_read: ["weekly_read_sent"],
+      create_invite: ["invite_created"],
+    };
+    for (const [action, names] of Object.entries(recorded)) {
+      for (const name of names) {
+        expect(EventName.safeParse(name).success, `${action}: ${name}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe("consents", () => {
+  it("record her health-words agreement as a kind of its own", () => {
+    expect(CONSENT_KINDS).toContain("health_words");
+    expect(ConsentKind.safeParse("health_words").success).toBe(true);
+    expect(ConsentKind.safeParse("health").success).toBe(false);
+  });
+
+  it("record a yes or a no, and nothing else", () => {
+    expect(CONSENT_ANSWERS).toStrictEqual(["yes", "no"]);
+    expect(ConsentAnswer.safeParse("no").success).toBe(true);
+    for (const value of ["maybe", "withdrawn", "", "Yes"]) {
+      expect(ConsentAnswer.safeParse(value).success, value).toBe(false);
+    }
   });
 });
 

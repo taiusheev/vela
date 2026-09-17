@@ -16,6 +16,8 @@ import {
   type AdminOverviewRow,
   addContact,
   type Config,
+  type CreateInviteInput,
+  createInvite,
   type Deps,
   deleteFamily,
   endAway,
@@ -64,6 +66,7 @@ export interface AdminServices {
     ctx: AdminContext,
     input: SendWeeklyReadInput,
   ): Promise<SendWeeklyReadResult>;
+  createInvite(deps: AdminDeps, ctx: AdminContext, input: CreateInviteInput): Promise<void>;
 }
 
 export interface AdminRuntime {
@@ -89,27 +92,33 @@ function notGiven(port: string): never {
   throw new PortNotGivenError(port);
 }
 
-/** Services' `Config` is the pilot Worker's; reading any of it here is reaching for a port. */
-const CONFIG_NOT_GIVEN: Config = {
-  get telegramBotUsername(): never {
-    return notGiven("config");
-  },
-  get adminConversationId(): never {
-    return notGiven("config");
-  },
-  get environment(): never {
-    return notGiven("config");
-  },
-  get regions(): never {
-    return notGiven("config");
-  },
-  get publicBaseUrl(): never {
-    return notGiven("config");
-  },
-  get privacyNoticeUrls(): never {
-    return notGiven("config");
-  },
-};
+/**
+ * Services' `Config` is the pilot Worker's. The admin Worker knows one field of it, the bot a new
+ * invite's link opens; reading any other is reaching for a port.
+ */
+function adminConfig(telegramBotUsername: string): Config {
+  return {
+    telegramBotUsername,
+    get adminConversationId(): never {
+      return notGiven("config");
+    },
+    get environment(): never {
+      return notGiven("config");
+    },
+    get regions(): never {
+      return notGiven("config");
+    },
+    get publicBaseUrl(): never {
+      return notGiven("config");
+    },
+    get privacyNoticeUrls(): never {
+      return notGiven("config");
+    },
+    get privacyNoticeVersion(): never {
+      return notGiven("config");
+    },
+  };
+}
 
 /**
  * The `Deps` services' signatures ask for, made of the admin ports: the ports given are passed on
@@ -127,7 +136,7 @@ export function servicesDeps(ports: AdminDeps): Deps {
       media: { send: () => notGiven("queues.media") },
       understand: { send: () => notGiven("queues.understand") },
     },
-    random: { token: () => notGiven("random") },
+    random: ports.random,
     media: {
       put: () => notGiven("media"),
       get: () => notGiven("media"),
@@ -136,7 +145,7 @@ export function servicesDeps(ports: AdminDeps): Deps {
     channels: { get: () => notGiven("channels") },
     stt: { transcribe: () => notGiven("stt") },
     heartbeat: { ping: () => notGiven("heartbeat") },
-    config: CONFIG_NOT_GIVEN,
+    config: adminConfig(ports.telegramBotUsername),
   };
 }
 
@@ -154,6 +163,7 @@ const services: AdminServices = {
   markDeceased: (deps, ctx, memberId) => markDeceased(servicesDeps(deps), ctx, memberId),
   deleteFamily: (deps, ctx, familyId) => deleteFamily(servicesDeps(deps), ctx, familyId),
   sendWeeklyRead: (deps, ctx, input) => sendWeeklyRead(servicesDeps(deps), ctx, input),
+  createInvite: (deps, ctx, input) => createInvite(servicesDeps(deps), ctx, input),
 };
 
 export const adminRuntime: AdminRuntime = {

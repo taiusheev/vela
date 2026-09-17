@@ -328,7 +328,7 @@ describe("an admin action", () => {
 
   it("adds a contact on every channel a nearby contact can be reached on", async () => {
     const fake = createFakeAdminRuntime();
-    const contact = { memberId, name: "Auntie Lin", phone: "+886 900 000 000", relation: "" };
+    const contact = { memberId, name: "Auntie Lin", relation: "" };
 
     for (const channel of NEARBY_CONTACT_CHANNELS) {
       const response = await send(
@@ -341,9 +341,176 @@ describe("an admin action", () => {
     expect(argsOf(fake.calls, "addContact")).toEqual(
       NEARBY_CONTACT_CHANNELS.map((channel) => [
         { admin: "founder@vela.test", familyId },
-        { memberId, name: "Auntie Lin", phone: "+886 900 000 000", relation: null, channel },
+        { memberId, name: "Auntie Lin", relation: null, channel, yes: null },
       ]),
     );
+  });
+
+  // L8: a contact's number reaches the database only with their recorded yes.
+  describe("the add-contact form's number", () => {
+    const addPath = `/admin/families/${familyId}/add_contact`;
+    const named = { memberId, name: "Auntie Lin", relation: "neighbour", channel: "line" };
+    const theirYes = {
+      phone: "+886 900 000 000",
+      consentAt: "2026-09-16T09:15",
+      textVersion: "nearby-contact-consent.zh-TW@1",
+      lang: "zh-TW",
+      consentChannel: "line",
+      note: "replied yes to text A",
+    };
+
+    it("adds a name alone when the yes group is empty", async () => {
+      const fake = createFakeAdminRuntime();
+
+      const response = await send(fake, formRequest(addPath, named, ORIGIN));
+
+      expect(response.status).toBe(303);
+      expect(argsOf(fake.calls, "addContact")).toEqual([
+        [
+          { admin: "founder@vela.test", familyId },
+          { memberId, name: "Auntie Lin", relation: "neighbour", channel: "line", yes: null },
+        ],
+      ]);
+    });
+
+    it("passes the number only inside the contact's yes, with every field of it", async () => {
+      const fake = createFakeAdminRuntime();
+
+      const response = await send(fake, formRequest(addPath, { ...named, ...theirYes }, ORIGIN));
+
+      expect(response.status).toBe(303);
+      expect(argsOf(fake.calls, "addContact")).toEqual([
+        [
+          { admin: "founder@vela.test", familyId },
+          {
+            memberId,
+            name: "Auntie Lin",
+            relation: "neighbour",
+            channel: "line",
+            yes: {
+              phone: "+886 900 000 000",
+              at: new Date("2026-09-16T09:15:00.000Z"),
+              textVersion: "nearby-contact-consent.zh-TW@1",
+              lang: "zh-TW",
+              channel: "line",
+              evidence: { note: "replied yes to text A" },
+            },
+          },
+        ],
+      ]);
+    });
+
+    it.each(["consentAt", "textVersion", "lang", "consentChannel", "note"])(
+      "refuses a number whose yes lacks %s, and changes nothing",
+      async (missing) => {
+        const fake = createFakeAdminRuntime();
+        const form = { ...named, ...theirYes, [missing]: "" };
+
+        const response = await send(fake, formRequest(addPath, form, ORIGIN));
+
+        expect(response.status).toBe(400);
+        expect(namesOf(fake.calls)).toEqual([]);
+      },
+    );
+
+    it("refuses a yes without a number rather than dropping it", async () => {
+      const fake = createFakeAdminRuntime();
+      const form = { ...named, ...theirYes, phone: "" };
+
+      const response = await send(fake, formRequest(addPath, form, ORIGIN));
+
+      expect(response.status).toBe(400);
+      expect(await response.text()).not.toContain("replied yes to text A");
+      expect(namesOf(fake.calls)).toEqual([]);
+    });
+  });
+
+  describe("the invite-again form", () => {
+    const invitePath = `/admin/families/${familyId}/create_invite`;
+    const organiserId = "66666666-6666-7666-8666-666666666666";
+    const replacedId = "77777777-7777-7777-8777-777777777777";
+    const invite = {
+      invitedBy: organiserId,
+      name: "Mum",
+      address: "Mum",
+      language: "zh-TW",
+      country: "TW",
+      timeZone: "Asia/Taipei",
+      wakeTime: "07:30",
+      replacesMemberId: "",
+      confirm: "invite",
+    };
+
+    it("creates the invite with what onboarding asked, and no member to replace when none waits", async () => {
+      const fake = createFakeAdminRuntime();
+
+      const response = await send(fake, formRequest(invitePath, invite, ORIGIN));
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get("location")).toBe(`/admin/families/${familyId}?result=done`);
+      expect(argsOf(fake.calls, "createInvite")).toEqual([
+        [
+          { admin: "founder@vela.test", familyId },
+          {
+            invitedBy: organiserId,
+            name: "Mum",
+            address: "Mum",
+            language: "zh-TW",
+            country: "TW",
+            timeZone: "Asia/Taipei",
+            wakeTime: "07:30",
+            replacesMemberId: null,
+          },
+        ],
+      ]);
+    });
+
+    it("names the waiting member the page showed, so a form sent twice changes nothing", async () => {
+      const fake = createFakeAdminRuntime();
+
+      await send(
+        fake,
+        formRequest(invitePath, { ...invite, replacesMemberId: replacedId }, ORIGIN),
+      );
+
+      expect(argsOf(fake.calls, "createInvite")).toMatchObject([
+        [{ familyId }, { replacesMemberId: replacedId }],
+      ]);
+    });
+
+    it.each([
+      ["no confirmation", { confirm: "" }],
+      ["another word typed", { confirm: "yes" }],
+      ["a language the form does not offer", { language: "ja" }],
+      ["a country the form does not offer", { country: "RU" }],
+      ["a country in lower case", { country: "tw" }],
+      ["a time zone that is not an IANA name", { timeZone: "+08:00" }],
+      ["an empty time zone", { timeZone: "" }],
+      ["a wake time that is not HH:MM", { wakeTime: "7:30" }],
+      ["a wake time past midnight", { wakeTime: "24:00" }],
+    ])("refuses %s with 400, changing nothing", async (_what, change) => {
+      const fake = createFakeAdminRuntime();
+
+      const response = await send(fake, formRequest(invitePath, { ...invite, ...change }, ORIGIN));
+
+      expect(response.status).toBe(400);
+      expect(namesOf(fake.calls)).toEqual([]);
+    });
+
+    it("turns a refusal from services, such as a family whose light is on, into 409", async () => {
+      const fake = createFakeAdminRuntime({
+        services: {
+          createInvite: async () => {
+            throw new VelaError("illegal_state", "the family's light is on");
+          },
+        },
+      });
+
+      const response = await send(fake, formRequest(invitePath, invite, ORIGIN));
+
+      expect(response.status).toBe(409);
+      expect(await response.text()).toContain("illegal_state");
+    });
   });
 
   // For the kept-light member a departure cannot be undone, and which member that is lives in the
@@ -416,6 +583,7 @@ describe("an admin action", () => {
           {
             contactId,
             answer: "no",
+            phone: null,
             at: new Date("2026-09-14T08:30:00.000Z"),
             textVersion: "pilot-2026-09",
             lang: "zh-TW",
@@ -423,6 +591,23 @@ describe("an admin action", () => {
             evidence: { note: "said yes on the onboarding call" },
           },
         ],
+      ]);
+    });
+
+    // L8: the number arrives with the yes; services refuse a yes without one and a no with one.
+    it("passes the number given with a contact's answer, and none when the field is empty", async () => {
+      const fake = createFakeAdminRuntime();
+      const contactPath = `/admin/families/${familyId}/record_contact_consent`;
+
+      await send(
+        fake,
+        formRequest(contactPath, { ...contactConsent, phone: " +886 912 000 001 " }, ORIGIN),
+      );
+      await send(fake, formRequest(contactPath, { ...contactConsent, phone: "" }, ORIGIN));
+
+      expect(argsOf(fake.calls, "recordContactConsent")).toMatchObject([
+        [{ familyId }, { contactId, answer: "yes", phone: "+886 912 000 001" }],
+        [{ familyId }, { contactId, answer: "yes", phone: null }],
       ]);
     });
 

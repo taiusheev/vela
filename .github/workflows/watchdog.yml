@@ -1,0 +1,138 @@
+name: watchdog
+
+# The watchdog outside Cloudflare (decision W4; infra/README.md, section 6; ADR-18, update of
+# 2026-09-18). If the pilot Worker, its cron, or the database stops, no arrival and no quiet notice
+# goes out, and a family reads the silence as "all fine". Each successful reconcile records its time
+# in the pilot Worker's ReconcileHeartbeat object, and GET /healthz answers 200 with
+# {"status":"ok",...} only while that time is at most 35 minutes old. This workflow checks /healthz
+# for every environment .github/watchdog.json enables and fails when one does not answer ok.
+#
+# What GitHub documents, checked on docs.github.com on 2026-09-17:
+# - "Notifications for scheduled workflows are sent to the user who last modified the cron syntax
+#   in the workflow file", and only when that user's Settings > Notifications > System > Actions is
+#   set to Email (it starts at "Don't notify"; choose "Only notify for failed workflows"). A failed
+#   run is how the founder hears of a silence.
+# - "The schedule event can be delayed during periods of high loads of GitHub Actions workflow runs.
+#   High load times include the start of every hour", and some queued jobs may then be dropped, so
+#   the runs are placed away from the hour. The watchdog is a backstop, not a pager.
+# - "Scheduled workflows will only run on the default branch", and workflow_dispatch needs the file
+#   on the default branch too.
+# - "In a public repository, scheduled workflows are automatically disabled when no repository
+#   activity has occurred in 60 days": the weekly review re-enables it (runbooks/silence-drill.md).
+#
+# An environment is enabled in a commit only after its first successful deploy, so nothing fails
+# before a deploy exists. The workflow reads no secret and uses no GitHub environment: /healthz is
+# public and holds no content and no ids.
+on:
+  schedule:
+    # Every 15 minutes, off the start of the hour.
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  healthz:
+    name: healthz of each enabled environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/watchdog.json
+          sparse-checkout-cone-mode: false
+
+      - name: Check /healthz
+        shell: bash
+        run: |
+          set -euo pipefail
+          config=.github/watchdog.json
+          tries=3
+          pause_seconds=20
+          timeout_seconds=15
+
+          {
+            echo "## Watchdog"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # One line per enabled environment: its name and its URL. A list the watchdog cannot read
+          # fails the run: a watchdog that checks nothing must not look green.
+          if ! environments=$(jq -r '
+            .environments
+            | to_entries[]
+            | select(.value.enabled == true)
+            | [.key, .value.url]
+            | @tsv
+          ' "$config"); then
+            echo "\`$config\` is not the expected JSON: nothing was checked." >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Watchdog::$config is not the expected JSON, so nothing was checked"
+            exit 1
+          fi
+
+          if [ -z "$environments" ]; then
+            echo "No environment is enabled in \`$config\`: nothing to check." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "| Environment | URL | Answer | Result |"
+            echo "|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          failed=0
+          while IFS=$'\t' read -r name url; do
+            case "$url" in
+              https://*/healthz) ;;
+              *)
+                echo "| $name | $url | not an https /healthz URL | FAILED |" >> "$GITHUB_STEP_SUMMARY"
+                echo "::error title=Watchdog: $name::$name's URL in $config is not an https /healthz URL"
+                failed=1
+                continue
+                ;;
+            esac
+
+            answer="no answer"
+            healthy=0
+            for try in $(seq 1 "$tries"); do
+              body=$(mktemp)
+              code=$(curl --silent --max-time "$timeout_seconds" --output "$body" \
+                --write-out '%{http_code}' "$url" || true)
+              status=$(jq -r 'if type == "object" and (.status | type) == "string" then .status else "" end' \
+                "$body" 2>/dev/null || true)
+              rm -f "$body"
+              if [ "$code" = "000" ] || [ -z "$code" ]; then
+                answer="no answer"
+              elif [ -n "$status" ]; then
+                answer="HTTP $code, $status"
+              else
+                answer="HTTP $code"
+              fi
+              if [ "$code" = "200" ] && [ "$status" = "ok" ]; then
+                healthy=1
+                break
+              fi
+              echo "$name, try $try of $tries: $answer"
+              if [ "$try" -lt "$tries" ]; then
+                sleep "$pause_seconds"
+              fi
+            done
+
+            if [ "$healthy" -eq 1 ]; then
+              echo "| $name | $url | $answer | ok |" >> "$GITHUB_STEP_SUMMARY"
+              echo "$name: $answer"
+            else
+              echo "| $name | $url | $answer | FAILED |" >> "$GITHUB_STEP_SUMMARY"
+              echo "::error title=Watchdog: $name::$name did not answer 200 with status ok after $tries tries ($answer): reconciliation may have stopped. See infra/runbooks/incident.md."
+              failed=1
+            fi
+          done <<< "$environments"
+
+          if [ "$failed" -ne 0 ]; then
+            {
+              echo
+              echo "At least one environment is not reconciling, or not answering. Families may be reading silence as all fine: follow \`infra/runbooks/incident.md\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi

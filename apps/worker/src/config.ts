@@ -40,7 +40,6 @@ type SecretName =
   | "TELEGRAM_WEBHOOK_SECRET"
   | "ANTHROPIC_API_KEY"
   | "DEEPGRAM_API_KEY"
-  | "HEALTHCHECKS_PING_URL"
   | "ADMIN_CONVERSATION_ID"
   | "ACCESS_TEAM_DOMAIN"
   | "ACCESS_AUD";
@@ -61,17 +60,18 @@ export function secret<N extends SecretName>(env: { readonly [K in N]?: string }
 }
 
 export function requireVar(
-  env: PilotEnv,
+  env: { readonly [K in "PUBLIC_BASE_URL" | "TELEGRAM_BOT_USERNAME"]?: string },
   name: "PUBLIC_BASE_URL" | "TELEGRAM_BOT_USERNAME",
+  configFile = "wrangler.jsonc",
 ): string {
-  const value = env[name];
-  if (value.trim() === "") {
+  const value = env[name]?.trim() ?? "";
+  if (value === "") {
     throw new ConfigError(
       name,
-      `${name} is not set: add it to the environment's vars in wrangler.jsonc`,
+      `${name} is not set: add it to the environment's vars in ${configFile}`,
     );
   }
-  return value.trim();
+  return value;
 }
 
 export function readEnvironment(env: { readonly ENVIRONMENT: string }): Environment {
@@ -218,13 +218,17 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     regions: readRegions(env),
     publicBaseUrl: requireVar(env, "PUBLIC_BASE_URL"),
     privacyNoticeUrls,
+    // The generator refuses notices whose versions differ, so the English one names both.
+    privacyNoticeVersion: notices.en.version,
   };
 }
 
 /**
- * The admin Worker's environment, checked as the pilot's is: no placeholder anywhere, and its own
- * origin, the one a form may be posted from, is https outside development.
+ * The admin Worker's environment, checked as the pilot's is: no placeholder anywhere, its own
+ * origin, the one a form may be posted from, is https outside development, and the bot the link a
+ * new invite carries opens is named, in every environment.
  */
 export function checkAdminConfig(env: AdminEnv): void {
   checkDeployedEnv(env, readEnvironment(env), ["PUBLIC_BASE_URL"], "wrangler.admin.jsonc");
+  requireVar(env, "TELEGRAM_BOT_USERNAME", "wrangler.admin.jsonc");
 }

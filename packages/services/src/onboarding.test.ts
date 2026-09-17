@@ -310,25 +310,55 @@ describe("handleOnboarding: validation", () => {
     expect(await session()).toBeUndefined();
   });
 
-  it("repeats the nearby prompt for a contact without a number", async () => {
+  // L8: a contact's number arrives only with their own yes, so setup never keeps one.
+  it.each([
+    ["a number after the name", "Anna +886 912 000 001"],
+    ["a number after a comma", "Bob, 0912-000-002"],
+    ["a number in brackets inside the relation", "王小姐，鄰居 (02) 2345 6789"],
+    ["a number alone", "0912000003"],
+  ])("refuses %s with nearby_no_number and keeps nothing of it", async (_what, typed) => {
     await reachNearby();
 
-    await handleOnboarding(h.deps, text("Anna"));
+    await handleOnboarding(h.deps, text(typed));
 
-    expect(lastPrompt()?.text).toBe(t("en", "onboarding.ask_nearby"));
+    expect(lastPrompt()?.text).toBe(t("en", "onboarding.nearby_no_number"));
     expect((await session())?.step).toBe("nearby");
     expect((await session())?.data).toMatchObject({ nearby: [] });
+    expect(JSON.stringify((await session())?.data)).not.toContain(typed.slice(0, 3));
+  });
+
+  it("repeats the nearby prompt for a blank name, or a name or relation over 40 characters", async () => {
+    await reachNearby();
+
+    for (const typed of [
+      ", neighbour",
+      `${"A".repeat(41)}, neighbour`,
+      `Anna, ${"n".repeat(41)}`,
+    ]) {
+      await handleOnboarding(h.deps, text(typed));
+      expect(lastPrompt()?.text).toBe(t("en", "onboarding.ask_nearby"));
+    }
+    expect((await session())?.data).toMatchObject({ nearby: [] });
+  });
+
+  it("takes a name alone, or a name and how they know her after a comma, 、 or ，", async () => {
+    await reachNearby();
+
+    await handleOnboarding(h.deps, text("  Anna  "));
+
+    expect(lastPrompt()?.text).toBe(t("en", "onboarding.ask_nearby"));
+    expect((await session())?.data).toMatchObject({ nearby: [{ name: "Anna", relation: null }] });
   });
 });
 
 describe("handleOnboarding: completion", () => {
   it("creates the family, both members, the contacts, and the invite in one go, then sends the link", async () => {
     await reachNearby();
-    await handleOnboarding(h.deps, text("Anna +886 912 000 001"));
+    await handleOnboarding(h.deps, text("Anna, neighbour"));
     expect(lastPrompt()?.text).toBe(t("en", "onboarding.ask_nearby"));
     expect(await session()).toBeDefined();
 
-    await handleOnboarding(h.deps, text("Bob, +886912000002"));
+    await handleOnboarding(h.deps, text("王小姐、樓下的鄰居"));
 
     const [family] = await h.db.select().from(families);
     expect(family).toMatchObject({
@@ -380,9 +410,9 @@ describe("handleOnboarding: completion", () => {
       .select()
       .from(nearbyContacts)
       .orderBy(asc(nearbyContacts.createdAt), asc(nearbyContacts.id));
-    expect(contacts.map((contact) => [contact.name, contact.phone])).toEqual([
-      ["Anna", "+886912000001"],
-      ["Bob", "+886912000002"],
+    expect(contacts.map((contact) => [contact.name, contact.relation, contact.phone])).toEqual([
+      ["Anna", "neighbour", null],
+      ["王小姐", "樓下的鄰居", null],
     ]);
     for (const contact of contacts) {
       expect(contact).toMatchObject({
@@ -437,7 +467,7 @@ describe("handleOnboarding: completion", () => {
 
     await h.reset();
     await reachNearby();
-    await handleOnboarding(h.deps, text("Anna +886 912 000 001"));
+    await handleOnboarding(h.deps, text("Anna，鄰居"));
     await handleOnboarding(h.deps, text("skip"));
 
     expect(await h.db.select().from(nearbyContacts)).toHaveLength(1);

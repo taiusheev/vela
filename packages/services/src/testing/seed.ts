@@ -15,6 +15,7 @@ import type {
 import { addDays, learningUntil, localDateOf } from "@vela/core";
 import {
   type ChannelLink,
+  type Consent,
   channelLinks,
   consents,
   type Exchange,
@@ -29,6 +30,7 @@ import {
   nearbyContacts,
   type VelaDatabase,
 } from "@vela/db";
+import { sha256Hex } from "../hash.ts";
 
 export interface SeedFamilyOptions {
   /** The consent time; her arrivals start the next local day. */
@@ -129,7 +131,7 @@ export async function seedFamily(
         primarySurface: "telegram",
         lightOn: true,
         lightConsentedAt: options.now,
-        lightConsentText: "consent.request@1",
+        lightConsentText: "consent.request@2",
         lightStartsOn: addDays(today, 1),
         wakeTime: "07:30",
         arrivalTime: options.arrivalTime ?? "08:00",
@@ -152,32 +154,39 @@ export async function seedFamily(
   );
   await db.insert(consents).values({
     memberId: member.id,
+    subjectRef: `member:${member.id}`,
     kind: "light",
-    textVersion: "consent.request@1",
+    answer: "yes",
+    textVersion: "consent.request@2",
     lang: memberLanguage,
     channel: "telegram",
     givenAt: options.now,
-    evidence: { message_id: "1" },
+    evidence: { chat_id: memberLink.externalId, message_id: "1" },
   });
   return { family, organiser, organiserLink, member, memberLink };
 }
 
-/** The family's Telegram group, linked by the organiser. */
+/**
+ * The family's Telegram group, linked by the organiser. No greeting was posted, so the hash it keeps
+ * is of a stand-in text; a test about the greeting links the group through `handleBotAdded`.
+ */
 export async function seedLinkedGroup(
   db: VelaDatabase,
   seed: SeededFamily,
   options: { now: Date; conversationId?: string },
 ): Promise<FamilyChannel> {
+  const conversationId = options.conversationId ?? "-100500";
   return only(
     await db
       .insert(familyChannels)
       .values({
         familyId: seed.family.id,
         channel: "telegram",
-        conversationId: options.conversationId ?? "-100500",
+        conversationId,
         kind: "group",
         linkedByMemberId: seed.organiser.id,
         linkedAt: options.now,
+        linkedTextSha256: await sha256Hex(`seeded greeting in ${conversationId}`),
       })
       .returning(),
   );
@@ -264,12 +273,21 @@ export async function seedExchange(
   );
 }
 
-/** A nearby contact: unlisted until `answer` records a yes; a no is listed nowhere. */
+/**
+ * A nearby contact near her. Their number exists only inside a yes, as the database holds it (L8):
+ * a contact with no answer yet, or with a no, is a name, and is listed nowhere.
+ */
 export async function seedNearbyContact(
   db: VelaDatabase,
   seed: SeededFamily,
-  options: { now: Date; name: string; phone: string; answer: "yes" | "no" | null },
+  options: {
+    now: Date;
+    name: string;
+    relation?: string | null;
+    answer: { yes: { phone: string } } | "no" | null;
+  },
 ): Promise<NearbyContact> {
+  const yes = options.answer === null || options.answer === "no" ? null : options.answer.yes;
   return only(
     await db
       .insert(nearbyContacts)
@@ -277,10 +295,38 @@ export async function seedNearbyContact(
         familyId: seed.family.id,
         memberId: seed.member.id,
         name: options.name,
-        phone: options.phone,
-        consentedAt: options.answer === "yes" ? options.now : null,
+        relation: options.relation ?? null,
+        phone: yes?.phone ?? null,
+        consentedAt: yes === null ? null : options.now,
         declinedAt: options.answer === "no" ? options.now : null,
         createdAt: options.now,
+      })
+      .returning(),
+  );
+}
+
+/**
+ * Her answer to the health-words question (flows §3.2), as the tap records it; a test of what
+ * understanding keeps with and without that consent starts from it.
+ */
+export async function seedHealthWordsConsent(
+  db: VelaDatabase,
+  seed: SeededFamily,
+  options: { at: Date; answer: "yes" | "no" },
+): Promise<Consent> {
+  return only(
+    await db
+      .insert(consents)
+      .values({
+        memberId: seed.member.id,
+        subjectRef: `member:${seed.member.id}`,
+        kind: "health_words",
+        answer: options.answer,
+        textVersion: "consent.health_words@1",
+        lang: seed.member.language,
+        channel: "telegram",
+        givenAt: options.at,
+        evidence: { chat_id: seed.memberLink.externalId, message_id: "2" },
       })
       .returning(),
   );

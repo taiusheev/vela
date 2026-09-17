@@ -1,7 +1,7 @@
 /**
- * The digest that proves a deletion (flows §3.15): `deletions.content_hash` is written by the
- * retention job and by the admin actions, and a family asking what was deleted compares the two, so
- * both must hash the same way. One implementation, so a later edit cannot move only one of them.
+ * The digest behind every proof services keep (`proofs.ts`): the hash of a consent text a person saw,
+ * and the hash that proves a deletion. A family asking what was agreed or deleted compares the stored
+ * value with one computed again, so everything that writes one must hash the same way.
  */
 
 /** The SHA-256 of the text, lowercase hex. */

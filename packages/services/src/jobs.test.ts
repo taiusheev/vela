@@ -7,6 +7,7 @@ import {
   answers,
   awayPeriods,
   chips,
+  consents,
   deletions,
   type Exchange,
   events,
@@ -17,6 +18,7 @@ import {
   members,
   messageRefs,
   metricsDaily,
+  nearbyContacts,
   onboardingSessions,
   outbound,
   quietEvents,
@@ -26,11 +28,17 @@ import {
   turns,
   weeklyReads,
 } from "@vela/db";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { applyRetention, draftWeeklyRead, rollupMetrics } from "./jobs.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedExchange, seedFamily, seedGroupMember } from "./testing/seed.ts";
+import {
+  type SeededFamily,
+  seedExchange,
+  seedFamily,
+  seedGroupMember,
+  seedNearbyContact,
+} from "./testing/seed.ts";
 
 const TZ = "Asia/Taipei";
 const ADMIN_CHAT = "9001";
@@ -56,6 +64,16 @@ function at(date: LocalDate, time: LocalTime): Date {
 
 function daysAgo(days: number): Date {
   return new Date(h.clock.now().getTime() - days * DAY_MS);
+}
+
+function yearsAgo(years: number): Date {
+  const date = new Date(h.clock.now().getTime());
+  date.setUTCFullYear(date.getUTCFullYear() - years);
+  return date;
+}
+
+function sha256(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
 }
 
 function monthsAgo(months: number): Date {
@@ -257,6 +275,37 @@ describe("draftWeeklyRead", () => {
       },
     });
     expect(JSON.stringify(notes[0]?.payload)).not.toContain("soup");
+  });
+
+  it("keeps her health words out of the stored topics and the model's input, even with her yes", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await setStartsOn(seed, "2026-09-01");
+    await h.db.insert(consents).values({
+      memberId: seed.member.id,
+      subjectRef: `member:${seed.member.id}`,
+      kind: "health_words",
+      answer: "yes",
+      textVersion: "consent.health_words@1",
+      lang: "en",
+      channel: "telegram",
+      givenAt: at("2026-09-01", "09:00"),
+    });
+    for (const date of ["2026-09-15", "2026-09-17"] as const) {
+      await seedMorning(seed, {
+        date,
+        answeredAt: "09:00",
+        summary: "Walked in the park",
+        mentions: { places: ["the park"], health: ["knee hurts"] },
+      });
+    }
+    h.clock.set(at("2026-09-20", "18:00"));
+
+    await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
+
+    const [read] = await h.db.select().from(weeklyReads);
+    expect(read?.stats).toMatchObject({ topics: ["the park"] });
+    expect(h.ai.calls[0]?.input).toMatchObject({ repeatedMentions: ["the park"] });
+    expect(JSON.stringify(read)).not.toContain("knee");
   });
 
   it("measures the drifts against last week", async () => {
@@ -486,6 +535,7 @@ describe("applyRetention", () => {
     "family_media_deleted",
     "media_deleted",
     "members_deleted",
+    "invited_members_deleted",
     "exchanges_cleared",
     "outbound_payloads_cleared",
     "chips_deleted",
@@ -502,6 +552,8 @@ describe("applyRetention", () => {
     "metrics_deleted",
     "ai_calls_deleted",
     "outbound_deleted",
+    "consents_deleted",
+    "deletions_deleted",
   ];
 
   /** Everything the 30-day clearing touches, dated `age` days ago, around one delivered exchange. */
@@ -930,10 +982,14 @@ describe("applyRetention", () => {
       proofs.map((row) => [row.objectType, row.objectId, row.contentHash, row.reason]).sort(),
     ).toEqual(
       [
-        ["media", expired.id, createHash("sha256").update(storedKey).digest("hex"), "expired"],
-        ["media", unstored.id, createHash("sha256").update("file-d").digest("hex"), "expired"],
+        ["media", expired.id, sha256(`media:${expired.id}`), "expired"],
+        ["media", unstored.id, sha256(`media:${unstored.id}`), "expired"],
       ].sort(),
     );
+    // L4: a storage key or a provider file id has so few possible values that its hash gives it back.
+    for (const proof of proofs) {
+      expect([sha256(storedKey), sha256("file-d")]).not.toContain(proof.contentHash);
+    }
     const [after] = await h.db.select().from(exchanges).where(eq(exchanges.id, exchange.id));
     expect(after?.mediaIds).toEqual([kept.id]);
     expect(after?.options).toEqual({ photo_ids: [kept.id], caption: "Which one?" });
@@ -983,10 +1039,29 @@ describe("applyRetention", () => {
       createdAt: daysAgo(1),
       expiresAt: daysAgo(-6),
     });
+    const params = { name: "Mom", notice: "https://vela.test/privacy/en" };
+    await h.db.insert(consents).values({
+      memberId: sam.member.id,
+      subjectRef: `member:${sam.member.id}`,
+      kind: "privacy_notice",
+      answer: "yes",
+      textVersion: "privacy-notice.v1",
+      lang: "en",
+      channel: "telegram",
+      givenAt: daysAgo(40),
+      evidence: { chat_id: "-100500", message_id: "7", params, text_sha256: "a".repeat(64) },
+    });
 
     const counts = await applyRetention(h.deps);
 
     expect(counts).toMatchObject({ members_deleted: 1 });
+    const [proof] = await h.db.select().from(consents).where(eq(consents.kind, "privacy_notice"));
+    expect(proof).toMatchObject({
+      memberId: null,
+      subjectRef: `member:${sam.member.id}`,
+      subjectDeletedAt: h.clock.now(),
+      evidence: { chat_id: "-100500", message_id: "7", text_sha256: "a".repeat(64) },
+    });
     expect((await h.db.select().from(members)).map((row) => row.displayName).sort()).toEqual([
       "Lee",
       "Mia",
@@ -1022,6 +1097,22 @@ describe("applyRetention", () => {
       })
       .returning({ id: media.id });
     await seedExchange(h.db, doomed, { date: "2026-09-13", state: "delivered" });
+    const contact = await seedNearbyContact(h.db, doomed, {
+      now: daysAgo(10),
+      name: "Anna",
+      answer: { yes: { phone: "+886912000001" } },
+    });
+    await h.db.insert(consents).values({
+      contactId: contact.id,
+      subjectRef: `contact:${contact.id}`,
+      kind: "nearby",
+      answer: "yes",
+      textVersion: "nearby-contact-consent.en@1",
+      lang: "en",
+      channel: "line",
+      givenAt: daysAgo(10),
+      evidence: { note: "Anna said yes", recorded_by: "founder" },
+    });
     await h.db
       .update(families)
       .set({ deletedAt: new Date(h.clock.now().getTime() - 12 * 3_600_000) })
@@ -1029,6 +1120,27 @@ describe("applyRetention", () => {
 
     const counts = await applyRetention(h.deps);
 
+    // Their consent rows outlive the family, forgotten: ids, answers, and hashes, no words or names.
+    const proofs = await h.db
+      .select()
+      .from(consents)
+      .where(inArray(consents.subjectRef, [`member:${doomed.member.id}`, `contact:${contact.id}`]))
+      .orderBy(asc(consents.kind));
+    expect(
+      proofs.map((row) => [
+        row.kind,
+        row.memberId,
+        row.contactId,
+        row.subjectDeletedAt,
+        row.evidence,
+      ]),
+    ).toEqual([
+      ["light", null, null, h.clock.now(), { chat_id: "2001", message_id: "1" }],
+      ["nearby", null, null, h.clock.now(), { recorded_by: "founder" }],
+    ]);
+    expect(
+      await h.db.select().from(consents).where(eq(consents.memberId, staying.member.id)),
+    ).toHaveLength(1);
     expect(counts).toMatchObject({
       families_deleted: 1,
       family_media_deleted: 1,
@@ -1041,11 +1153,189 @@ describe("applyRetention", () => {
     ]);
     expect(await h.db.select().from(media)).toHaveLength(0);
     expect(h.media.objects.has(key)).toBe(false);
-    const proofs = await h.db.select().from(deletions);
-    expect(proofs.map((row) => [row.objectId, row.reason])).toEqual([
-      [file?.id ?? "", "family_deleted"],
+    const deleted = await h.db.select().from(deletions);
+    expect(deleted.map((row) => [row.objectId, row.reason, row.contentHash])).toEqual([
+      [file?.id ?? "", "family_deleted", sha256(`media:${file?.id}`)],
     ]);
     expect(h.scheduler.history).toEqual([{ memberId: doomed.member.id, at: null }]);
+  });
+
+  it("deletes an invited member who never answered 30 days after her last invite expired, and keeps her invites until then", async () => {
+    const make = async (name: string, externalId: string, expiredDaysAgo: number[]) => {
+      const seed = await seedFamily(h.db, {
+        now: daysAgo(60),
+        familyName: name,
+        organiserExternalId: `1${externalId}`,
+        memberExternalId: externalId,
+      });
+      await h.db.delete(consents).where(eq(consents.memberId, seed.member.id));
+      await h.db
+        .update(members)
+        .set({ status: "invited", lightOn: false, lightConsentedAt: null, lightConsentText: null })
+        .where(eq(members.id, seed.member.id));
+      await h.db.insert(invites).values(
+        expiredDaysAgo.map((age, index) => ({
+          familyId: seed.family.id,
+          invitedBy: seed.organiser.id,
+          forMemberId: seed.member.id,
+          token: `${externalId}-${index}`,
+          createdAt: daysAgo(age + 7),
+          expiresAt: daysAgo(age),
+          // She opened the first link and never tapped: accepted long ago, still unanswered.
+          acceptedAt: index === 0 ? daysAgo(age + 6) : null,
+        })),
+      );
+      return seed;
+    };
+    const gone = await make("The Lins", "2101", [45, 31]);
+    const waiting = await make("The Wus", "2201", [45, 29]);
+    const contact = await seedNearbyContact(h.db, gone, {
+      now: daysAgo(50),
+      name: "Anna",
+      answer: null,
+    });
+    await h.db.insert(consents).values({
+      contactId: contact.id,
+      subjectRef: `contact:${contact.id}`,
+      kind: "nearby",
+      answer: "no",
+      textVersion: "nearby-contact-consent.en@1",
+      lang: "en",
+      channel: "line",
+      givenAt: daysAgo(50),
+      evidence: { note: "Anna said no", recorded_by: "founder" },
+    });
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts).toMatchObject({ invited_members_deleted: 1, members_deleted: 0 });
+    expect(await memberRow(gone.member.id)).toBeUndefined();
+    expect(await memberRow(waiting.member.id)).toMatchObject({ status: "invited" });
+    expect((await h.db.select().from(invites)).map((row) => row.token).sort()).toEqual([
+      "2201-0",
+      "2201-1",
+    ]);
+    expect(await h.db.select().from(nearbyContacts)).toEqual([]);
+    const [proof] = await h.db.select().from(consents).where(eq(consents.contactId, contact.id));
+    expect(proof).toBeUndefined();
+    const [forgotten] = await h.db
+      .select()
+      .from(consents)
+      .where(eq(consents.subjectRef, `contact:${contact.id}`));
+    expect(forgotten).toMatchObject({
+      contactId: null,
+      answer: "no",
+      subjectDeletedAt: h.clock.now(),
+      evidence: { recorded_by: "founder" },
+    });
+    expect(h.scheduler.history).toHaveLength(0);
+  });
+
+  it("deletes consents that no longer permit anything and deletion proofs after 5 years, and never a standing yes", async () => {
+    const seed = await seedFamily(h.db, { now: yearsAgo(7) });
+    const justPast = new Date(yearsAgo(5).getTime() - 60_000);
+    const justInside = new Date(yearsAgo(5).getTime() + 60_000);
+    const subject = `member:${seed.member.id}`;
+    const base = {
+      subjectRef: subject,
+      textVersion: "v",
+      lang: "en",
+      channel: "telegram",
+    } as const;
+    await h.db.insert(consents).values([
+      // A standing yes of a member who still exists, however old.
+      { ...base, memberId: seed.member.id, kind: "pilot", answer: "yes", givenAt: yearsAgo(7) },
+      { ...base, memberId: seed.member.id, kind: "health_words", answer: "no", givenAt: justPast },
+      {
+        ...base,
+        memberId: seed.member.id,
+        kind: "privacy_notice",
+        answer: "no",
+        givenAt: justInside,
+      },
+      // Withdrawn: counted from the withdrawal, not from the yes.
+      {
+        ...base,
+        memberId: seed.member.id,
+        kind: "privacy_notice",
+        answer: "yes",
+        givenAt: yearsAgo(7),
+        withdrawnAt: justPast,
+        textVersion: "withdrawn-past",
+      },
+      {
+        ...base,
+        memberId: seed.member.id,
+        kind: "privacy_notice",
+        answer: "yes",
+        givenAt: yearsAgo(7),
+        withdrawnAt: justInside,
+        textVersion: "withdrawn-inside",
+      },
+      // Forgotten: counted from when the subject was deleted.
+      {
+        subjectRef: "member:01990000-0000-7000-8000-000000000001",
+        kind: "light",
+        answer: "yes",
+        textVersion: "forgotten-past",
+        lang: "en",
+        channel: "telegram",
+        givenAt: yearsAgo(7),
+        subjectDeletedAt: justPast,
+      },
+      {
+        subjectRef: "member:01990000-0000-7000-8000-000000000002",
+        kind: "light",
+        answer: "yes",
+        textVersion: "forgotten-inside",
+        lang: "en",
+        channel: "telegram",
+        givenAt: yearsAgo(7),
+        subjectDeletedAt: justInside,
+      },
+    ]);
+    const deletedIds = [
+      "01990000-0000-7000-8000-00000000000a",
+      "01990000-0000-7000-8000-00000000000b",
+    ];
+    await h.db.insert(deletions).values([
+      {
+        objectType: "media",
+        objectId: deletedIds[0] ?? "",
+        contentHash: sha256(`media:${deletedIds[0]}`),
+        reason: "expired",
+        deletedAt: justPast,
+      },
+      {
+        objectType: "media",
+        objectId: deletedIds[1] ?? "",
+        contentHash: sha256(`media:${deletedIds[1]}`),
+        reason: "expired",
+        deletedAt: justInside,
+      },
+    ]);
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts).toMatchObject({ consents_deleted: 3, deletions_deleted: 1 });
+    const kept = await h.db
+      .select()
+      .from(consents)
+      .orderBy(asc(consents.givenAt), asc(consents.textVersion));
+    expect(kept.map((row) => [row.kind, row.answer, row.textVersion]).sort()).toEqual(
+      [
+        ["forgotten-inside"],
+        ["light", "yes", "consent.request@2"],
+        ["pilot", "yes", "v"],
+        ["privacy_notice", "no", "v"],
+        ["privacy_notice", "yes", "withdrawn-inside"],
+      ]
+        .map((row) => (row.length === 1 ? ["light", "yes", row[0]] : row))
+        .sort(),
+    );
+    expect((await h.db.select().from(deletions)).map((row) => row.objectId)).toEqual([
+      deletedIds[1],
+    ]);
   });
 
   it("deletes events, daily metrics, AI calls, and outbound rows after 24 months", async () => {

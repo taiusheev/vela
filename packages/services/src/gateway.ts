@@ -42,7 +42,7 @@ import {
 } from "@vela/db";
 import { and, asc, eq, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
-import type { Deps } from "./deps.ts";
+import type { Deps, OutboundJob } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import {
@@ -116,7 +116,17 @@ export interface OutboundRequestBase {
   media?: MediaRef[];
   replyToMessageId?: string;
   ref?: MessageRefIntent;
+  /**
+   * Whole seconds, 1 to 60, before the row is due and its delivery runs. Cloudflare Queues promise no
+   * order between two jobs sent one after the other, so a message that must follow another in the
+   * same chat (the health-words question after `consent.accepted`, flows §3.2) waits a little. The
+   * row's `queued_at` is the due time, so `redriveStrandedOutbound` counts from it too.
+   */
+  delaySeconds?: number;
 }
+
+/** The longest delay a request may ask for: long enough to follow a message, short enough to feel prompt. */
+const MAX_REQUEST_DELAY_SECONDS = 60;
 
 /**
  * One message to send. Kinds whose send changes state (`EffectByKind`) carry what the effect needs;
@@ -155,6 +165,20 @@ export async function enqueueOutbound(
       cause: message.error,
     });
   }
+  const delaySeconds = request.delaySeconds;
+  if (
+    delaySeconds !== undefined &&
+    !(
+      Number.isInteger(delaySeconds) &&
+      delaySeconds >= 1 &&
+      delaySeconds <= MAX_REQUEST_DELAY_SECONDS
+    )
+  ) {
+    throw new VelaError(
+      "invalid_outbound",
+      `${request.kind} request delay is not a whole number of seconds from 1 to ${MAX_REQUEST_DELAY_SECONDS}`,
+    );
+  }
   const localDay = request.localDay ?? (await localTodayOf(deps, db, request.memberId));
   const payload: OutboundPayload = {
     message: {
@@ -179,7 +203,7 @@ export async function enqueueOutbound(
       idempotencyKey: request.idempotencyKey,
       actorId: request.actorId ?? null,
       payload,
-      queuedAt: deps.clock.now(),
+      queuedAt: new Date(deps.clock.now().getTime() + (delaySeconds ?? 0) * 1000),
     })
     .onConflictDoNothing()
     .returning({ id: outbound.id });
@@ -188,7 +212,10 @@ export async function enqueueOutbound(
     deps.logger.info("outbound_duplicate", { kind: request.kind, memberId: request.memberId });
     return { duplicate: true };
   }
-  await deps.queues.outbound.send({ type: "deliver", outboundId: row.id });
+  const job: OutboundJob = { type: "deliver", outboundId: row.id };
+  await (delaySeconds === undefined
+    ? deps.queues.outbound.send(job)
+    : deps.queues.outbound.send(job, { delaySeconds }));
   return { outboundId: row.id };
 }
 

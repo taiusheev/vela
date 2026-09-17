@@ -1,6 +1,7 @@
 {
   // The pilot Worker (code design §9, H1): Telegram's webhook, the privacy notices, the health
-  // check, the three queues, cron, and the MemberScheduler Durable Object. The admin pages are a
+  // check, the three queues, cron, and two Durable Objects: MemberScheduler, and ReconcileHeartbeat,
+  // which /healthz reads for the watchdog (.github/workflows/watchdog.yml). The admin pages are a
   // second Worker from this package, configured in wrangler.admin.jsonc, because Cloudflare Access
   // protects every hostname of a Worker and would close this one to Telegram.
   //
@@ -18,12 +19,18 @@
   //   - WORKERS_DEV_SUBDOMAINS in that test, from which it derives every host it expects;
   //   - the three URL vars of that environment here;
   //   - PUBLIC_BASE_URL of that environment in wrangler.admin.jsonc;
-  //   - every workers.dev link written into the Markdown of plan/materials/pilot: the notice links
-  //     in the nearby-contact consent texts (en and zh-TW), which families are sent, and in the
-  //     pilot README.
+  //   - every workers.dev link written into the Markdown of plan/materials/pilot: the two privacy
+  //     notices' links to each other, the notice links in the nearby-contact consent texts (en and
+  //     zh-TW), which families are sent, in the organiser agreements (en and zh-TW), and in the
+  //     pilot README;
+  //   - src/notices.generated.ts, which src/notices.test.ts holds to the notices: after changing
+  //     their links, run `pnpm --filter @vela/worker notices`.
   // Then what no test can see:
-  //   - the privacy policy link of that environment's bots in @BotFather, and the WORKER_URL given
-  //     to `telegram:setup` (infra/README.md section 7, steps 3 and 6);
+  //   - the privacy policy link of that environment's bot in @BotFather (infra/README.md section 7);
+  //   - the Telegram webhook, which the setup script's `webhook` step registers on the origin of
+  //     that environment's notice URLs here: run it again with
+  //     `pnpm --filter @vela/worker run setup -- --env <environment> --from webhook`;
+  //   - the watchdog's URL for that environment in .github/watchdog.json;
   //   - the documents that write the hosts out, which `git grep vela-light` lists.
   //
   // Every `id` or username the founder has not created yet is written as a PLACEHOLDER: replace
@@ -50,11 +57,18 @@
   "workers_dev": false,
   "preview_urls": false,
 
-  // The admin Worker binds this class by `script_name`; only this Worker, which exports it,
-  // declares its migrations.
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MemberScheduler"] }],
+  // The admin Worker binds MemberScheduler by `script_name`; only this Worker, which exports both
+  // classes, declares their migrations. ReconcileHeartbeat (v2) holds one time, the last finished
+  // reconciliation, in a Durable Object rather than in Postgres, so /healthz never wakes Neon.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["MemberScheduler"] },
+    { "tag": "v2", "new_sqlite_classes": ["ReconcileHeartbeat"] }
+  ],
   "durable_objects": {
-    "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
+    "bindings": [
+      { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" },
+      { "name": "RECONCILE_HEARTBEAT", "class_name": "ReconcileHeartbeat" }
+    ]
   },
 
   "queues": {
@@ -104,10 +118,11 @@
     }
   ],
 
-  // Every 5 minutes: reconcile (pending send effects, stranded sends, late ticks, the understanding
-  // re-run and the founder's note, then the heartbeat; flows §3.15).
+  // Every 15 minutes: reconcile (pending send effects, stranded sends, late ticks, the understanding
+  // re-run and the founder's note, then the heartbeat; flows §3.15). Not every 5: each run wakes
+  // Neon, and a 5-minute run would spend the free plan's compute hours (src/pilot-worker.ts).
   // Nightly at 03:20 UTC: yesterday's metrics and retention.
-  "triggers": { "crons": ["*/5 * * * *", "20 3 * * *"] },
+  "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
 
   "vars": {
     "ENVIRONMENT": "development",
@@ -127,7 +142,10 @@
       "preview_urls": false,
       "observability": { "enabled": true },
       "durable_objects": {
-        "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
+        "bindings": [
+          { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" },
+          { "name": "RECONCILE_HEARTBEAT", "class_name": "ReconcileHeartbeat" }
+        ]
       },
       "queues": {
         "producers": [
@@ -164,7 +182,7 @@
       },
       "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-staging" }],
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_STAGING" }],
-      "triggers": { "crons": ["*/5 * * * *", "20 3 * * *"] },
+      "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
       "vars": {
         "ENVIRONMENT": "staging",
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_STAGING_BOT_USERNAME",
@@ -183,7 +201,10 @@
       "preview_urls": false,
       "observability": { "enabled": true },
       "durable_objects": {
-        "bindings": [{ "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" }]
+        "bindings": [
+          { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" },
+          { "name": "RECONCILE_HEARTBEAT", "class_name": "ReconcileHeartbeat" }
+        ]
       },
       "queues": {
         "producers": [
@@ -220,7 +241,7 @@
       },
       "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-production" }],
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION" }],
-      "triggers": { "crons": ["*/5 * * * *", "20 3 * * *"] },
+      "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
       "vars": {
         "ENVIRONMENT": "production",
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",

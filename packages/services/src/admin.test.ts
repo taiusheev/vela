@@ -1,4 +1,5 @@
 import type { LocalDate, OutboundKind, OutboundStatus } from "@vela/contracts";
+import { t } from "@vela/copy";
 import { addMinutes, outboundKey } from "@vela/core";
 import {
   adminAccessLog,
@@ -23,6 +24,7 @@ import {
   ADMIN_OVERVIEW_PATH,
   addContact,
   adminLink,
+  createInvite,
   deleteFamily,
   endAway,
   familyPagePath,
@@ -41,6 +43,7 @@ import {
 import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
+import { sha256Hex } from "./hash.ts";
 import { consentedNearbyContacts } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import {
@@ -241,6 +244,8 @@ describe("recordConsent", () => {
     expect(rows[0]).toMatchObject({
       memberId: seed.organiser.id,
       contactId: null,
+      subjectRef: `member:${seed.organiser.id}`,
+      answer: "yes",
       textVersion: "pilot-agreement@1",
       lang: "en",
       channel: "paper",
@@ -326,9 +331,11 @@ describe("recordConsent", () => {
 });
 
 describe("recordContactConsent", () => {
-  const answer = (contactId: string, answer: "yes" | "no") => ({
+  const ANNA_PHONE = "+886 912 000 001";
+  const answer = (contactId: string, answer: "yes" | "no", phone: string | null = null) => ({
     contactId,
     answer,
+    phone,
     at: h.clock.now(),
     textVersion: "nearby-notice@1",
     lang: "en" as const,
@@ -336,29 +343,30 @@ describe("recordContactConsent", () => {
     evidence: { call: "organiser reported the answer" },
   });
 
-  it("lists the contact on a yes, with a nearby consent, and changes nothing on the same yes again", async () => {
+  it("lists the contact on a yes with their number, records the yes as a proof, and changes nothing on the same yes again", async () => {
     const seed = await family();
     const contact = await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Anna",
-      phone: "+886912000001",
       answer: null,
     });
     expect(await consentedNearbyContacts(h.db, seed.member.id)).toHaveLength(0);
 
-    await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes"));
+    await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes", ANNA_PHONE));
     h.clock.advanceMinutes(5);
-    await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes"));
+    await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes", ANNA_PHONE));
 
     const listed = await consentedNearbyContacts(h.db, seed.member.id);
-    expect(listed.map((row) => [row.id, row.consentedAt, row.declinedAt])).toEqual([
-      [contact.id, new Date("2026-09-14T00:00:00Z"), null],
+    expect(listed.map((row) => [row.id, row.phone, row.consentedAt, row.declinedAt])).toEqual([
+      [contact.id, ANNA_PHONE, new Date("2026-09-14T00:00:00Z"), null],
     ]);
     const nearby = await h.db.select().from(consents).where(eq(consents.kind, "nearby"));
     expect(nearby).toHaveLength(1);
     expect(nearby[0]).toMatchObject({
       contactId: contact.id,
       memberId: null,
+      subjectRef: `contact:${contact.id}`,
+      answer: "yes",
       textVersion: "nearby-notice@1",
       evidence: { call: "organiser reported the answer", recorded_by: "founder" },
     });
@@ -380,15 +388,14 @@ describe("recordContactConsent", () => {
     ]);
   });
 
-  it("unlists the contact on a no, withdraws their nearby consents, and changes nothing on a second no", async () => {
+  it("unlists the contact on a no, clears their number, withdraws their yes, records the no, and changes nothing on a second no", async () => {
     const seed = await family();
     const contact = await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Anna",
-      phone: "+886912000001",
       answer: null,
     });
-    await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes"));
+    await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes", ANNA_PHONE));
     h.clock.advanceMinutes(60);
 
     await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "no"));
@@ -396,9 +403,16 @@ describe("recordContactConsent", () => {
 
     expect(await consentedNearbyContacts(h.db, seed.member.id)).toHaveLength(0);
     const [row] = await h.db.select().from(nearbyContacts).where(eq(nearbyContacts.id, contact.id));
-    expect(row?.declinedAt).toEqual(h.clock.now());
-    const nearby = await h.db.select().from(consents).where(eq(consents.kind, "nearby"));
-    expect(nearby.map((consent) => consent.withdrawnAt)).toEqual([h.clock.now()]);
+    expect(row).toMatchObject({ phone: null, declinedAt: h.clock.now() });
+    const nearby = await h.db
+      .select()
+      .from(consents)
+      .where(eq(consents.kind, "nearby"))
+      .orderBy(asc(consents.givenAt));
+    expect(nearby.map((consent) => [consent.answer, consent.withdrawnAt])).toEqual([
+      ["yes", h.clock.now()],
+      ["no", null],
+    ]);
     expect((await logRows()).map((log) => log.what)).toEqual([
       `nearby yes contact=${contact.id}`,
       `nearby no contact=${contact.id}`,
@@ -409,43 +423,94 @@ describe("recordContactConsent", () => {
     ]);
   });
 
+  it("refuses a yes without a number and a no with one, storing nothing", async () => {
+    const seed = await family();
+    const contact = await seedNearbyContact(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      answer: null,
+    });
+
+    await expect(
+      recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes")),
+    ).rejects.toMatchObject({ name: "VelaError", code: "invalid_payload" });
+    await expect(
+      recordContactConsent(h.deps, FOUNDER, answer(contact.id, "no", ANNA_PHONE)),
+    ).rejects.toMatchObject({ name: "VelaError", code: "invalid_payload" });
+    await expect(
+      recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes", "call me")),
+    ).rejects.toMatchObject({ name: "VelaError", code: "invalid_payload" });
+
+    const [row] = await h.db.select().from(nearbyContacts).where(eq(nearbyContacts.id, contact.id));
+    expect(row).toMatchObject({ phone: null, consentedAt: null, declinedAt: null });
+    expect(await h.db.select().from(consents).where(eq(consents.kind, "nearby"))).toEqual([]);
+    expect(await logRows()).toHaveLength(0);
+  });
+
   it("lists a contact again on a yes after a no, and refuses an unknown contact", async () => {
     const seed = await family();
     const contact = await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Anna",
-      phone: "+886912000001",
       answer: "no",
     });
 
-    await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes"));
+    await recordContactConsent(h.deps, FOUNDER, answer(contact.id, "yes", ANNA_PHONE));
 
     expect((await consentedNearbyContacts(h.db, seed.member.id)).map((row) => row.id)).toEqual([
       contact.id,
     ]);
     await expect(
-      recordContactConsent(h.deps, FOUNDER, answer(UNKNOWN_ID, "yes")),
+      recordContactConsent(h.deps, FOUNDER, answer(UNKNOWN_ID, "yes", ANNA_PHONE)),
     ).rejects.toMatchObject({
       name: "VelaError",
       code: "not_found",
     });
     for (const log of await logRows()) {
       expect(log.what).not.toContain("Anna");
-      expect(log.what).not.toContain("+886");
+      expect(log.what).not.toContain("912");
     }
+  });
+
+  // The database holds a number exactly while a yes stands, whichever path writes it.
+  it("cannot leave a number on a contact without a standing yes, even written directly", async () => {
+    const seed = await family();
+    const contact = await seedNearbyContact(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      answer: { yes: { phone: ANNA_PHONE } },
+    });
+
+    await expect(
+      h.db
+        .update(nearbyContacts)
+        .set({ declinedAt: h.clock.now() })
+        .where(eq(nearbyContacts.id, contact.id)),
+    ).rejects.toMatchObject({ cause: { constraint: "nearby_contacts_phone_consented_check" } });
   });
 });
 
 describe("addContact", () => {
-  const contact = (memberId: string, phone = "+886912000001") => ({
+  const contact = (memberId: string, name = "Anna") => ({
     memberId,
-    name: "Anna",
-    phone,
+    name,
     relation: "",
     channel: "line" as const,
+    yes: null,
+  });
+  const withYes = (memberId: string, name = "Anna") => ({
+    ...contact(memberId, name),
+    yes: {
+      phone: "+886912000001",
+      at: new Date("2026-09-13T09:00:00Z"),
+      textVersion: "nearby-contact-consent.en@1",
+      lang: "en" as const,
+      channel: "line",
+      evidence: { note: "Anna replied yes on LINE" },
+    },
   });
 
-  it("stores the contact unconsented, so a quiet notice does not list them yet, and logs no name or number", async () => {
+  it("stores a contact without their yes as a name alone, unlisted, and logs no name", async () => {
     const seed = await family();
 
     await addContact(h.deps, FOUNDER, contact(seed.member.id));
@@ -456,13 +521,14 @@ describe("addContact", () => {
       familyId: seed.family.id,
       memberId: seed.member.id,
       name: "Anna",
-      phone: "+886912000001",
+      phone: null,
       relation: null,
       channel: "line",
       consentedAt: null,
       declinedAt: null,
     });
     expect(await consentedNearbyContacts(h.db, seed.member.id)).toHaveLength(0);
+    expect(await h.db.select().from(consents).where(eq(consents.kind, "nearby"))).toEqual([]);
     const [log] = await logRows();
     expect(log).toMatchObject({
       action: "add_contact",
@@ -475,27 +541,103 @@ describe("addContact", () => {
         name: "nearby_contact_added",
         familyId: seed.family.id,
         memberId: seed.member.id,
-        props: { contact_id: rows[0]?.id, by: "founder" },
+        props: { contact_id: rows[0]?.id, by: "founder", consented: false },
       },
     ]);
   });
 
-  it("adds nobody for the same number again, and refuses a third contact", async () => {
+  it("stores a contact with their yes, number, and nearby consent together, listed at once, with two events under one log row", async () => {
+    const seed = await family();
+
+    await addContact(h.deps, FOUNDER, withYes(seed.member.id));
+
+    const [row] = await h.db.select().from(nearbyContacts);
+    expect(row).toMatchObject({
+      name: "Anna",
+      phone: "+886912000001",
+      consentedAt: new Date("2026-09-13T09:00:00Z"),
+      declinedAt: null,
+    });
+    expect((await consentedNearbyContacts(h.db, seed.member.id)).map((c) => c.id)).toEqual([
+      row?.id,
+    ]);
+    const nearby = await h.db.select().from(consents).where(eq(consents.kind, "nearby"));
+    expect(nearby).toHaveLength(1);
+    expect(nearby[0]).toMatchObject({
+      contactId: row?.id,
+      subjectRef: `contact:${row?.id}`,
+      answer: "yes",
+      textVersion: "nearby-contact-consent.en@1",
+      givenAt: new Date("2026-09-13T09:00:00Z"),
+      evidence: { note: "Anna replied yes on LINE", recorded_by: "founder" },
+    });
+    const logs = await logRows();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.what).not.toContain("912");
+    expect(await eventRows()).toEqual([
+      {
+        name: "nearby_contact_added",
+        familyId: seed.family.id,
+        memberId: seed.member.id,
+        props: { contact_id: row?.id, by: "founder", consented: true },
+      },
+      {
+        name: "consent_given",
+        familyId: seed.family.id,
+        memberId: seed.member.id,
+        props: { kind: "nearby", contact_id: row?.id, recorded_by: "founder" },
+      },
+    ]);
+  });
+
+  it("adds nobody for the same name again, in any letter case, and refuses a third contact", async () => {
     const seed = await family();
     await addContact(h.deps, FOUNDER, contact(seed.member.id));
-    await addContact(h.deps, FOUNDER, contact(seed.member.id));
-    await addContact(h.deps, FOUNDER, contact(seed.member.id, "+886912000002"));
+    await addContact(h.deps, FOUNDER, contact(seed.member.id, " anna "));
+    await addContact(h.deps, FOUNDER, withYes(seed.member.id, "Bob"));
+    await addContact(h.deps, FOUNDER, withYes(seed.member.id, " BOB "));
 
     expect(await h.db.select().from(nearbyContacts)).toHaveLength(2);
+    expect(await h.db.select().from(consents).where(eq(consents.kind, "nearby"))).toHaveLength(1);
     expect(await logRows()).toHaveLength(2);
 
     await expect(
-      addContact(h.deps, FOUNDER, contact(seed.member.id, "+886912000003")),
+      addContact(h.deps, FOUNDER, contact(seed.member.id, "Cara")),
     ).rejects.toMatchObject({ name: "VelaError", code: "illegal_state" });
     expect(await h.db.select().from(nearbyContacts)).toHaveLength(2);
   });
 
-  it("refuses a channel Vela does not know and a blank name", async () => {
+  it("refuses a yes for a contact already stored by name, instead of dropping it, and points to their row", async () => {
+    const seed = await family();
+    await addContact(h.deps, FOUNDER, contact(seed.member.id));
+
+    await expect(
+      addContact(h.deps, FOUNDER, withYes(seed.member.id, " anna ")),
+    ).rejects.toMatchObject({
+      name: "VelaError",
+      code: "illegal_state",
+      message: expect.stringContaining("record their yes on that contact's row"),
+    });
+    await addContact(h.deps, FOUNDER, withYes(seed.member.id, "Bob"));
+    await expect(
+      addContact(h.deps, FOUNDER, {
+        ...withYes(seed.member.id, "Bob"),
+        yes: { ...withYes(seed.member.id).yes, phone: "+886912000002" },
+      }),
+    ).rejects.toMatchObject({ name: "VelaError", code: "illegal_state" });
+
+    const rows = await h.db
+      .select({ name: nearbyContacts.name, phone: nearbyContacts.phone })
+      .from(nearbyContacts)
+      .orderBy(asc(nearbyContacts.name));
+    expect(rows).toEqual([
+      { name: "Anna", phone: null },
+      { name: "Bob", phone: "+886912000001" },
+    ]);
+    expect(await logRows()).toHaveLength(2);
+  });
+
+  it("refuses a channel Vela does not know, a blank name, and a yes whose number is not one", async () => {
     const seed = await family();
     await expect(
       addContact(h.deps, FOUNDER, { ...contact(seed.member.id), channel: "fax" as never }),
@@ -503,42 +645,58 @@ describe("addContact", () => {
     await expect(
       addContact(h.deps, FOUNDER, { ...contact(seed.member.id), name: "  " }),
     ).rejects.toMatchObject({ name: "VelaError", code: "invalid_payload" });
+    const yes = withYes(seed.member.id);
+    await expect(
+      addContact(h.deps, FOUNDER, { ...yes, yes: { ...yes.yes, phone: "12345" } }),
+    ).rejects.toMatchObject({ name: "VelaError", code: "invalid_payload" });
     expect(await h.db.select().from(nearbyContacts)).toHaveLength(0);
   });
 });
 
 describe("removeContact", () => {
-  it("deletes the contact with their consents, proves it without the number, and is a no-op again", async () => {
+  it("deletes the contact, keeps their consent rows forgotten, proves it with a hash of its type and id, and is a no-op again", async () => {
     const seed = await family();
     const contact = await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Anna",
-      phone: "+886912000001",
-      answer: "yes",
+      answer: { yes: { phone: "+886912000001" } },
     });
     await h.db.insert(consents).values({
       contactId: contact.id,
+      subjectRef: `contact:${contact.id}`,
       kind: "nearby",
+      answer: "yes",
       textVersion: "nearby-notice@1",
       lang: "en",
       channel: "phone",
       givenAt: h.clock.now(),
+      evidence: { note: "Anna said yes on the phone", recorded_by: "founder" },
     });
+    h.clock.advanceMinutes(10);
 
     await removeContact(h.deps, FOUNDER, contact.id);
     await removeContact(h.deps, FOUNDER, contact.id);
 
     expect(await h.db.select().from(nearbyContacts)).toHaveLength(0);
-    expect(await h.db.select().from(consents).where(eq(consents.kind, "nearby"))).toHaveLength(0);
+    const nearby = await h.db.select().from(consents).where(eq(consents.kind, "nearby"));
+    expect(nearby).toHaveLength(1);
+    expect(nearby[0]).toMatchObject({
+      contactId: null,
+      subjectRef: `contact:${contact.id}`,
+      answer: "yes",
+      subjectDeletedAt: h.clock.now(),
+      evidence: { recorded_by: "founder" },
+    });
     const proofs = await h.db.select().from(deletions);
     expect(proofs).toHaveLength(1);
     expect(proofs[0]).toMatchObject({
       objectType: "nearby_contact",
       objectId: contact.id,
+      contentHash: await sha256Hex(`nearby_contact:${contact.id}`),
       reason: "admin remove_contact",
       deletedAt: h.clock.now(),
     });
-    expect(proofs[0]?.contentHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(proofs[0]?.contentHash).not.toBe(await sha256Hex("+886912000001"));
     const logs = await logRows();
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({
@@ -560,6 +718,243 @@ describe("removeContact", () => {
       name: "VelaError",
       code: "invalid_payload",
     });
+    expect(await logRows()).toHaveLength(0);
+  });
+});
+
+describe("createInvite", () => {
+  const PROFILE = {
+    name: "Grandma",
+    address: "Mrs Lin",
+    language: "zh-TW" as const,
+    country: "TW",
+    timeZone: "Asia/Taipei",
+    wakeTime: "06:30",
+  };
+
+  /** A family whose kept-light member said No: her member row is gone, the organiser remains. */
+  async function afterNo(): Promise<SeededFamily> {
+    const seed = await family();
+    await h.db.delete(consents).where(eq(consents.memberId, seed.member.id));
+    await h.db.delete(members).where(eq(members.id, seed.member.id));
+    return seed;
+  }
+
+  /** A family whose kept-light member was invited and never answered, with a contact near her. */
+  async function invitedOnly(): Promise<{ seed: SeededFamily; contactId: string }> {
+    const seed = await family();
+    await h.db.delete(consents).where(eq(consents.memberId, seed.member.id));
+    await h.db
+      .update(members)
+      .set({ status: "invited", lightOn: false, lightConsentedAt: null, lightConsentText: null })
+      .where(eq(members.id, seed.member.id));
+    await h.db.insert(invites).values({
+      familyId: seed.family.id,
+      invitedBy: seed.organiser.id,
+      forMemberId: seed.member.id,
+      token: "old-token",
+      createdAt: h.clock.now(),
+      expiresAt: addMinutes(h.clock.now(), 7 * 24 * 60),
+    });
+    const contact = await seedNearbyContact(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      answer: { yes: { phone: "+886912000001" } },
+    });
+    return { seed, contactId: contact.id };
+  }
+
+  it("creates an invited member with the given profile and an invite, sends the organiser the link, and logs one row with its event", async () => {
+    const seed = await afterNo();
+
+    await createInvite(
+      h.deps,
+      { ...FOUNDER, familyId: seed.family.id },
+      {
+        invitedBy: seed.organiser.id,
+        replacesMemberId: null,
+        ...PROFILE,
+      },
+    );
+
+    const invited = await h.db.select().from(members).where(eq(members.status, "invited"));
+    expect(invited).toHaveLength(1);
+    expect(invited[0]).toMatchObject({
+      familyId: seed.family.id,
+      role: "member",
+      displayName: "Grandma",
+      addressForm: "Mrs Lin",
+      language: "zh-TW",
+      tz: "Asia/Taipei",
+      country: "TW",
+      turnsIn: false,
+      lightOn: false,
+      primarySurface: "telegram",
+      wakeTime: "06:30",
+      arrivalTime: "07:00",
+    });
+    const her = invited[0];
+    const [invite] = await h.db.select().from(invites);
+    expect(invite).toMatchObject({
+      familyId: seed.family.id,
+      invitedBy: seed.organiser.id,
+      forMemberId: her?.id,
+      token: "token-1".padEnd(43, "x"),
+      expiresAt: addMinutes(h.clock.now(), 7 * 24 * 60),
+      acceptedAt: null,
+    });
+    const rows = await outboundRows();
+    expect(
+      rows.map((row) => [row.kind, row.memberId, row.conversationId, row.idempotencyKey]),
+    ).toEqual([
+      [
+        "system",
+        seed.organiser.id,
+        seed.organiserLink.externalId,
+        outboundKey("system", {
+          conversationId: seed.organiserLink.externalId,
+          suffix: `invite:${invite?.id}`,
+        }),
+      ],
+    ]);
+    await h.run(handlers());
+    expect(
+      h.telegram.sentTo(seed.organiserLink.externalId).map((sent) => sent.message.text),
+    ).toEqual([
+      t("en", "organiser.invite_again", {
+        name: "Grandma",
+        link: `https://t.me/VelaLightBot?start=${invite?.token}`,
+      }),
+    ]);
+    const logs = await logRows();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({
+      action: "create_invite",
+      familyId: seed.family.id,
+      memberId: her?.id,
+      what: `invite=${invite?.id} replaced=0`,
+    });
+    expect(await eventRows()).toEqual([
+      {
+        name: "invite_created",
+        familyId: seed.family.id,
+        memberId: her?.id,
+        props: { invite_id: invite?.id, replaced: false },
+      },
+    ]);
+  });
+
+  it("replaces a never-consented invited member: her contacts move to the new member, and she is forgotten and deleted", async () => {
+    const { seed, contactId } = await invitedOnly();
+    await h.db.insert(consents).values({
+      memberId: seed.member.id,
+      subjectRef: `member:${seed.member.id}`,
+      kind: "privacy_notice",
+      answer: "yes",
+      textVersion: "privacy-notice.v1",
+      lang: "en",
+      channel: "paper",
+      givenAt: h.clock.now(),
+      evidence: { note: "read aloud on the call", recorded_by: "founder" },
+    });
+    const input = { invitedBy: seed.organiser.id, replacesMemberId: seed.member.id, ...PROFILE };
+
+    await createInvite(h.deps, FOUNDER, input);
+    // The browser sends the form again: it names a member who is gone now.
+    await expect(createInvite(h.deps, FOUNDER, input)).rejects.toMatchObject({
+      name: "VelaError",
+      code: "illegal_state",
+    });
+
+    expect(await h.db.select().from(members).where(eq(members.id, seed.member.id))).toEqual([]);
+    const [her] = await h.db.select().from(members).where(eq(members.status, "invited"));
+    const [contact] = await h.db
+      .select()
+      .from(nearbyContacts)
+      .where(eq(nearbyContacts.id, contactId));
+    expect(contact).toMatchObject({ memberId: her?.id, phone: "+886912000001" });
+    const invitesNow = await h.db.select().from(invites);
+    expect(invitesNow.map((invite) => [invite.forMemberId, invite.token === "old-token"])).toEqual([
+      [her?.id, false],
+    ]);
+    const [proof] = await h.db.select().from(consents).where(eq(consents.kind, "privacy_notice"));
+    expect(proof).toMatchObject({
+      memberId: null,
+      subjectRef: `member:${seed.member.id}`,
+      subjectDeletedAt: h.clock.now(),
+      evidence: { recorded_by: "founder" },
+    });
+    expect(await logRows()).toHaveLength(1);
+    expect((await logRows())[0]?.what).toMatch(/ replaced=1$/);
+    expect((await outboundRows()).filter((row) => row.kind === "system")).toHaveLength(1);
+  });
+
+  it("refuses a family whose light is on or was consented to, one that asked to be deleted, and a form that names no member when one waits", async () => {
+    const lit = await family();
+    await expect(
+      createInvite(h.deps, FOUNDER, {
+        invitedBy: lit.organiser.id,
+        replacesMemberId: null,
+        ...PROFILE,
+      }),
+    ).rejects.toMatchObject({ name: "VelaError", code: "illegal_state" });
+
+    await h.reset();
+    const { seed } = await invitedOnly();
+    await expect(
+      createInvite(h.deps, FOUNDER, {
+        invitedBy: seed.organiser.id,
+        replacesMemberId: null,
+        ...PROFILE,
+      }),
+    ).rejects.toMatchObject({ name: "VelaError", code: "illegal_state" });
+
+    await h.db
+      .update(families)
+      .set({ deletedAt: h.clock.now() })
+      .where(eq(families.id, seed.family.id));
+    await expect(
+      createInvite(h.deps, FOUNDER, {
+        invitedBy: seed.organiser.id,
+        replacesMemberId: seed.member.id,
+        ...PROFILE,
+      }),
+    ).rejects.toMatchObject({ name: "VelaError", code: "illegal_state" });
+
+    expect(await h.db.select().from(members).where(eq(members.status, "invited"))).toHaveLength(1);
+    expect(await logRows()).toHaveLength(0);
+    expect(await outboundRows()).toHaveLength(0);
+  });
+
+  it("refuses an organiser who is not one of the family's active organisers, or has no Telegram link, and a profile onboarding would refuse", async () => {
+    const seed = await afterNo();
+    const sibling = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Sam",
+      externalId: "3001",
+    });
+    const base = { replacesMemberId: null, ...PROFILE };
+
+    await expect(
+      createInvite(h.deps, FOUNDER, { ...base, invitedBy: sibling.member.id }),
+    ).rejects.toMatchObject({ name: "VelaError", code: "not_found" });
+    await h.db.delete(channelLinks).where(eq(channelLinks.memberId, seed.organiser.id));
+    await expect(
+      createInvite(h.deps, FOUNDER, { ...base, invitedBy: seed.organiser.id }),
+    ).rejects.toMatchObject({ name: "VelaError", code: "no_channel_link" });
+    for (const bad of [
+      { timeZone: "+08:00" },
+      { wakeTime: "6:30" },
+      { country: "Taiwan" },
+      { language: "ja" as never },
+      { name: "x".repeat(41) },
+      { address: " " },
+    ]) {
+      await expect(
+        createInvite(h.deps, FOUNDER, { ...base, invitedBy: seed.organiser.id, ...bad }),
+      ).rejects.toMatchObject({ name: "VelaError", code: "invalid_payload" });
+    }
+    expect(await h.db.select().from(members).where(eq(members.status, "invited"))).toEqual([]);
     expect(await logRows()).toHaveLength(0);
   });
 });
@@ -1232,7 +1627,7 @@ describe("the admin pages", () => {
       {
         familyId: seed.family.id,
         call: "understand",
-        promptVersion: "understand.v3",
+        promptVersion: "understand.v4",
         model: "fake",
         inputRef: {},
         ok: true,
@@ -1241,7 +1636,7 @@ describe("the admin pages", () => {
       {
         familyId: seed.family.id,
         call: "flag",
-        promptVersion: "flag.v1",
+        promptVersion: "flag.v2",
         model: "fake",
         inputRef: {},
         ok: false,
@@ -1304,7 +1699,6 @@ describe("the admin pages", () => {
     const contact = await seedNearbyContact(h.db, seed, {
       now: h.clock.now(),
       name: "Anna",
-      phone: "+886912000001",
       answer: null,
     });
     const exchange = await seedExchange(h.db, seed, {

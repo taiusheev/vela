@@ -211,13 +211,11 @@ describe("silence", () => {
     await seedNearbyContact(h.db, seed, {
       now: at("2026-09-13", "08:00"),
       name: "Anna",
-      phone: "+886912000001",
-      answer: "yes",
+      answer: { yes: { phone: "+886912000001" } },
     });
     await seedNearbyContact(h.db, seed, {
       now: at("2026-09-13", "08:00"),
       name: "Bob",
-      phone: "+886912000002",
       answer: "no",
     });
 

@@ -1,6 +1,6 @@
 # Vela: the app plan
 
-v2, 2026-09-12. Agreed with the founder: Vela is one app for the whole family across three generations. It is a safe, calm, family-only place with one shared moment a day, free for everyone. For any member the family wants to keep a light on for, usually the grandmother who lives alone, sometimes the student abroad, the light is the paid layer, where silence means something. No Vela staff on the ladder, no partners, no hardware.
+v2, 2026-09-12; phase 0 in the roadmap revised 2026-09-17 (a free pilot). Agreed with the founder: Vela is one app for the whole family across three generations. It is a safe, calm, family-only place with one shared moment a day, free for everyone. For any member the family wants to keep a light on for, usually the grandmother who lives alone, sometimes the student abroad, the light is the paid layer, where silence means something. No Vela staff on the ladder, no partners, no hardware.
 
 Supersedes v1 and the human-ladder parts of `archive/product/01-solution-thinking.md`. **The functional contract is `05-product-spec-v2.md`**, which absorbed the interaction model (2026-09-12): every arrival is an ask from a person (a question, a photo choice, a voice note, a word to teach, a story), her answer is a post the family replies to, and she hears the replies the next morning; "I'm fine" is the fallback, never the hero.
 
@@ -142,7 +142,7 @@ Willingness to pay from the research is $10–35 for this feeling; we start at t
 
 | Phase | When | Ships | Families | Decides |
 |---|---|---|---|---|
-| **0. Prove the loop** | Weeks 1–4 | No app. The eldest via the Telegram prototype; the family in a Telegram group with Vela; each family recruited with at least one under-30 member; weekly read written by us | 10–20, paying $15 for the month | Does she answer with joy? Does the family keep sending? Does the young member send? What must the arrival contain? |
+| **0. Prove the loop** | Weeks 1–4 | No app. The eldest via the Telegram prototype; the family in a Telegram group with Vela; each family recruited with at least one under-30 member; weekly read written by us | 10–20, free for families (decided 2026-09-17: no payment until an entity and billing exist); each organiser is asked on the day-30 call whether they would pay for Vela Light at US$9.99 a month | Does she answer with joy? Does the family keep sending? Does the young member send? What must the arrival contain? |
 | **1. MVP** | Months 2–3 | The app: setup, lights, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light subscription; Telegram + WhatsApp + LINE adapters | 100 | Conversion, D30, answer rate, members per family |
 | **2. The bridge** | Months 4–6 | Parent surface and kitchen-table mode; grandchildren tools; translation both ways; story day and archive; memory; MAX and Viber; referral loop; Taiwan on LINE | 1,000 | Contributors per family, family-content days, minutes per day, Sean Ellis |
 | **3. The read** | Months 7–12 | Drift with published precision; voice/SMS line; second kept-light member plans; first channel partner (telco or remittance app) | 10,000 | Whether the read is trusted and paid; channel economics |

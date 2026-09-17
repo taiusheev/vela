@@ -45,7 +45,7 @@ const STEP_DESCRIPTIONS: Readonly<Record<Step, string>> = {
   resources: "create the queues, the dead-letter queue and the R2 media bucket",
   database: "apply the migrations to Neon, create the Hyperdrive configuration, write its id",
   telegram:
-    "check the bot token, write the bot's username, read your chat id, generate the webhook secret",
+    "check the bot token, write the bot's username to both files, read your chat id, generate the webhook secret",
   secrets: "put each secret on the Worker that reads it",
   deploy: "deploy the pilot Worker, then the admin Worker",
   access: "turn on Cloudflare Access for the admin Worker and put its two secrets",
@@ -97,7 +97,6 @@ interface EnvironmentFacts {
   readonly botName: string;
   readonly anthropicWorkspace: string;
   readonly deepgramKey: string;
-  readonly healthcheck: string;
 }
 
 const FACTS: Readonly<Record<Environment, EnvironmentFacts>> = {
@@ -108,7 +107,6 @@ const FACTS: Readonly<Record<Environment, EnvironmentFacts>> = {
     botName: "Vela Light staging",
     anthropicWorkspace: "vela-staging",
     deepgramKey: "vela-staging",
-    healthcheck: "vela-staging-reconcile",
   },
   production: {
     accountName: "Vela",
@@ -117,7 +115,6 @@ const FACTS: Readonly<Record<Environment, EnvironmentFacts>> = {
     botName: "Vela Light",
     anthropicWorkspace: "vela-production",
     deepgramKey: "vela-production",
-    healthcheck: "vela-production-reconcile",
   },
 };
 
@@ -340,7 +337,10 @@ export interface EnvironmentConfig {
   readonly buckets: readonly string[];
   readonly pilotHyperdriveId: string;
   readonly adminHyperdriveId: string;
+  /** The pilot Worker's bot, which its webhook and command menu belong to. */
   readonly botUsername: string;
+  /** The same bot in the admin Worker's vars: the link a new invite (`create_invite`) carries. */
+  readonly adminBotUsername: string;
   /** The pilot Worker's workers.dev origin, taken from its English notice URL. */
   readonly pilotOrigin: string;
   /** The admin Worker's origin, its `PUBLIC_BASE_URL`. */
@@ -400,6 +400,7 @@ export function readEnvironmentConfig(
     pilotHyperdriveId: onlyHyperdriveId(pilot, pilotWhere),
     adminHyperdriveId: onlyHyperdriveId(admin, adminWhere),
     botUsername: textAt(pilotVars, "TELEGRAM_BOT_USERNAME", `${pilotWhere}.vars`),
+    adminBotUsername: textAt(adminVars, "TELEGRAM_BOT_USERNAME", `${adminWhere}.vars`),
     pilotOrigin: pilotUrl.origin,
     adminOrigin: adminUrl.origin,
     noticeUrls,
@@ -712,7 +713,6 @@ export const WORKER_SECRETS = [
   "ADMIN_CONVERSATION_ID",
   "ANTHROPIC_API_KEY",
   "DEEPGRAM_API_KEY",
-  "HEALTHCHECKS_PING_URL",
 ] as const;
 export type WorkerSecret = (typeof WORKER_SECRETS)[number];
 export type WorkerRole = "pilot" | "admin";
@@ -724,7 +724,6 @@ const SECRET_HOMES: Readonly<Record<WorkerSecret, readonly WorkerRole[]>> = {
   ADMIN_CONVERSATION_ID: ["pilot"],
   ANTHROPIC_API_KEY: ["pilot", "admin"],
   DEEPGRAM_API_KEY: ["pilot"],
-  HEALTHCHECKS_PING_URL: ["pilot"],
 };
 
 /**
@@ -894,6 +893,76 @@ function describeCloudflareErrors(body: unknown): string {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The checks
+
+/** Reconciliation runs every 15 minutes, so a new deployment records its first within that. */
+const HEALTH_WAIT_MINUTES = 15;
+
+/**
+ * An address the check step opens and what it expects: a page open to everyone, one closed
+ * without Cloudflare Access, or the pilot Worker's `/healthz`.
+ */
+interface SiteCheck {
+  readonly url: string;
+  readonly expect: "open" | "closed" | "health";
+}
+
+/** What the address answered. */
+interface SiteAnswer {
+  readonly status: number;
+  readonly location: string;
+  /** The `status` field of `/healthz`'s JSON (`ok`, `stale`, `no_reconcile_yet`), when it has one. */
+  readonly health: string | null;
+}
+
+function healthStatusOf(body: unknown): string | null {
+  return isRecord(body) && typeof body.status === "string" ? body.status : null;
+}
+
+/**
+ * Whether an answer passes, and what the printed line adds. `/healthz` passes with `ok`, and also
+ * with `no_reconcile_yet`, because a Worker deployed minutes ago may not have reconciled yet; the
+ * founder is then told when to look again. `stale` fails: this environment reconciled once and
+ * stopped.
+ */
+function judgeSiteCheck(
+  check: SiteCheck,
+  answer: SiteAnswer | null,
+): { readonly ok: boolean; readonly detail: string } {
+  switch (check.expect) {
+    case "open":
+      return { ok: answer?.status === 200, detail: ", expected 200" };
+    case "closed": {
+      if (answer === null || answer.status === 200) {
+        return { ok: false, detail: ", expected anything but 200" };
+      }
+      return {
+        ok: true,
+        detail: answer.location.includes(".cloudflareaccess.com")
+          ? ", expected anything but 200, Cloudflare Access asks for a sign-in"
+          : ", expected anything but 200, closed by the Worker itself, but Access did not ask for a sign-in: check the access step",
+      };
+    }
+    case "health": {
+      if (answer?.status === 200 && answer.health === "ok") {
+        return { ok: true, detail: ", ok: reconciliation is running" };
+      }
+      if (answer?.status === 503 && answer.health === "no_reconcile_yet") {
+        return {
+          ok: true,
+          detail: `, no_reconcile_yet: the first reconciliation comes within ${HEALTH_WAIT_MINUTES} minutes of the deploy`,
+        };
+      }
+      const said = answer === null || answer.health === null ? "" : `, ${answer.health}`;
+      return {
+        ok: false,
+        detail: `${said}, expected 200 ok, or 503 no_reconcile_yet before the first reconciliation`,
+      };
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The setup
 
 interface Account {
@@ -953,19 +1022,6 @@ function secretPrompts(environment: Environment): Partial<Record<WorkerSecret, S
         `Deepgram console (console.deepgram.com), project vela, API Keys: create ${facts.deepgramKey} with the Member role and copy the key (section 4).`,
       ],
       check: noSpaces,
-    },
-    HEALTHCHECKS_PING_URL: {
-      label: "Healthchecks ping URL",
-      where: [
-        `Healthchecks.io, project Vela: the check ${facts.healthcheck}, period 5 minutes, grace 5 minutes, so a silence of 10 minutes alerts (section 6). Copy its ping URL.`,
-      ],
-      check: (value) => {
-        try {
-          return new URL(value).protocol === "https:" ? null : "The ping URL starts with https://";
-        } catch {
-          return "The ping URL starts with https://";
-        }
-      },
     },
   };
 }
@@ -1469,14 +1525,36 @@ class Setup {
     if (!BOT_USERNAME.test(username)) {
       throw new SetupError("Telegram answered with a bot username this script cannot write");
     }
-    const configured = (await this.#config()).botUsername;
-    if (!configured.startsWith(PLACEHOLDER) && configured !== username) {
-      throw new SetupError(
-        `This token belongs to @${username}, but ${PILOT_FILE} names @${configured} for ${this.#environment}: use that bot's token`,
-      );
+    const config = await this.#config();
+    for (const [file, configured] of [
+      [PILOT_FILE, config.botUsername],
+      [ADMIN_FILE, config.adminBotUsername],
+    ] as const) {
+      if (!configured.startsWith(PLACEHOLDER) && configured !== username) {
+        throw new SetupError(
+          `This token belongs to @${username}, but ${file} names @${configured} for ${this.#environment}: use that bot's token`,
+        );
+      }
     }
     this.#bot = { token, username };
     return this.#bot;
+  }
+
+  /**
+   * The bot's username over the placeholder in both wrangler files: the pilot Worker's webhook and
+   * the admin Worker's invite links name the same bot. Answers the files it wrote.
+   */
+  async #fillBotUsername(username: string): Promise<string[]> {
+    const placeholder = placeholdersOf(this.#environment).botUsername;
+    const written: string[] = [];
+    for (const file of [PILOT_FILE, ADMIN_FILE] as const) {
+      const config = await this.#config();
+      const current = file === PILOT_FILE ? config.botUsername : config.adminBotUsername;
+      if (await this.#fill(file, { placeholder, current, value: username, what: "bot username" })) {
+        written.push(file);
+      }
+    }
+    return written;
   }
 
   async #telegramStep(): Promise<string> {
@@ -1486,15 +1564,15 @@ class Setup {
       !config.botUsername.startsWith(PLACEHOLDER) &&
       TELEGRAM_STEP_SECRETS.every((name) => pilotSecrets.has(name))
     ) {
-      return `@${config.botUsername} is in ${PILOT_FILE}, and ${config.pilotWorker} already holds its token, webhook secret and your chat id: nothing to do`;
+      // A pilot Worker set up before the admin Worker read the username has nothing to ask for: the
+      // admin file takes the name the pilot file already holds.
+      const written = await this.#fillBotUsername(config.botUsername);
+      return written.length === 0
+        ? `@${config.botUsername} is in both wrangler files, and ${config.pilotWorker} already holds its token, webhook secret and your chat id: nothing to do`
+        : `@${config.botUsername} written to ${written.join(" and ")}; ${config.pilotWorker} already holds its token, webhook secret and your chat id`;
     }
     const bot = await this.#ensureBot();
-    const written = await this.#fill(PILOT_FILE, {
-      placeholder: placeholdersOf(this.#environment).botUsername,
-      current: config.botUsername,
-      value: bot.username,
-      what: "bot username",
-    });
+    const written = await this.#fillBotUsername(bot.username);
     this.#fromRun.set("TELEGRAM_BOT_TOKEN", bot.token);
 
     let chat: string;
@@ -1508,7 +1586,11 @@ class Setup {
     }
 
     this.#fromRun.set("TELEGRAM_WEBHOOK_SECRET", this.#newWebhookSecret());
-    return `@${bot.username} ${written ? "written to" : "already in"} ${PILOT_FILE}; ${chat}; webhook secret generated`;
+    const files =
+      written.length === 0
+        ? "already in both wrangler files"
+        : `written to ${written.join(" and ")}`;
+    return `@${bot.username} ${files}; ${chat}; webhook secret generated`;
   }
 
   #newWebhookSecret(): string {
@@ -1633,9 +1715,12 @@ class Setup {
 
   async #deployStep(): Promise<string> {
     const config = await this.#config();
-    const left = [config.pilotHyperdriveId, config.adminHyperdriveId, config.botUsername].filter(
-      (value) => value.startsWith(PLACEHOLDER),
-    );
+    const left = [
+      config.pilotHyperdriveId,
+      config.adminHyperdriveId,
+      config.botUsername,
+      config.adminBotUsername,
+    ].filter((value) => value.startsWith(PLACEHOLDER));
     if (left.length > 0) {
       throw new SetupError(
         `The wrangler files still hold ${[...new Set(left)].join(", ")} for ${this.#environment}: run the database and telegram steps first`,
@@ -1725,32 +1810,28 @@ class Setup {
 
   async #checkStep(): Promise<string> {
     const config = await this.#config();
-    const checks = [
-      { url: `${config.pilotOrigin}/healthz`, open: true },
-      ...config.noticeUrls.map((url) => ({ url, open: true })),
-      { url: `${config.adminOrigin}/admin`, open: false },
+    const checks: readonly SiteCheck[] = [
+      { url: `${config.pilotOrigin}/healthz`, expect: "health" },
+      ...config.noticeUrls.map((url): SiteCheck => ({ url, expect: "open" })),
+      { url: `${config.adminOrigin}/admin`, expect: "closed" },
     ];
     let failed = 0;
     for (const check of checks) {
-      let status: number | null = null;
-      let location = "";
+      let answer: SiteAnswer | null = null;
       try {
         const response = await this.#io.fetch(check.url, { redirect: "manual" });
-        status = response.status;
-        location = response.headers.get("location") ?? "";
+        answer = {
+          status: response.status,
+          location: response.headers.get("location") ?? "",
+          health: check.expect === "health" ? healthStatusOf(await readJson(response)) : null,
+        };
       } catch {
-        status = null;
+        answer = null;
       }
-      const ok = check.open ? status === 200 : status !== null && status !== 200;
-      failed += ok ? 0 : 1;
-      let note = "";
-      if (!check.open && ok) {
-        note = location.includes(".cloudflareaccess.com")
-          ? ", Cloudflare Access asks for a sign-in"
-          : ", closed by the Worker itself, but Access did not ask for a sign-in: check the access step";
-      }
+      const verdict = judgeSiteCheck(check, answer);
+      failed += verdict.ok ? 0 : 1;
       this.#say(
-        `${ok ? "ok    " : "FAILED"} GET ${check.url}: ${status === null ? "no answer" : `HTTP ${status}`}${check.open ? ", expected 200" : ", expected anything but 200"}${note}`,
+        `${verdict.ok ? "ok    " : "FAILED"} GET ${check.url}: ${answer === null ? "no answer" : `HTTP ${answer.status}`}${verdict.detail}`,
       );
     }
     if (failed > 0) {
@@ -1760,7 +1841,7 @@ class Setup {
       "Next:",
       `1. From your own Telegram account, open @${config.botUsername} and send /start: onboarding begins, with your own family first.`,
       `2. Open ${config.adminOrigin}/admin: Cloudflare Access asks you to sign in, then the overview opens.`,
-      `3. Within 10 minutes, Healthchecks shows ${this.#facts.healthcheck} up.`,
+      `3. Within ${HEALTH_WAIT_MINUTES} minutes, ${config.pilotOrigin}/healthz answers {"status":"ok",...}: reconciliation runs every 15 minutes. Then, in a commit, set ${this.#environment}'s "enabled" to true in .github/watchdog.json, so the watchdog emails you when it stops (infra/README.md, section 6).`,
       "4. The wrangler files now hold this environment's Hyperdrive id and bot username (identifiers, not secrets): commit them.",
     ]) {
       this.#say(line);

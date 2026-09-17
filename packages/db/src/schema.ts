@@ -21,18 +21,27 @@
  *   suggestions.text, ai_calls.output, and the reply text inside quiet_events.ask_to_check. A
  *   cleared column that is NOT NULL takes its empty value ('', '{}', '[]'); chips and translations
  *   rows hold nothing but their text, so clearing them deletes the rows.
- * - Deleted: message_refs older than 30 days; invites 30 days after expires_at or accepted_at;
- *   onboarding sessions once expires_at has passed.
+ * - Deleted: message_refs older than 30 days; invites 30 days after expires_at or accepted_at, except
+ *   an invite meant for a member still invited without light_consented_at, which stays until that
+ *   member is deleted; onboarding sessions once expires_at has passed.
  * - Media is deleted when expires_at has passed and kept is false, and every media deletion writes a
  *   deletions row. Foreign-key references to it are set null; the job removes its id from
  *   exchanges.media_ids and exchanges.options, which no foreign key covers.
- * - Members are deleted 30 days after left_at. Rows that only credit them with an act (asker,
- *   uploader, resolver, turn holder) stay with the reference set null; rows that exist only because
- *   of them (invites they sent or that were meant for them, outbound messages sent on their tap)
- *   are deleted with them. Member ids held in arrays or JSON (quiet_events.notified_member_ids,
- *   ask_to_check) and in admin_access_log have no foreign key.
+ * - Members are deleted 30 days after left_at, and a member still invited without consent 30 days
+ *   after her last invite expired (a no to the light deletes her at once). Rows that only credit them
+ *   with an act (asker, uploader, resolver, turn holder) stay with the reference set null; rows that
+ *   exist only because of them (invites they sent or that were meant for them, outbound messages
+ *   sent on their tap, nearby contacts near them) are deleted with them. Member ids held in arrays or
+ *   JSON (quiet_events.notified_member_ids, ask_to_check) and in admin_access_log have no foreign key.
  * - Families are deleted, with everything that cascades from them, within 24 h of deleted_at.
+ * - Consent proofs outlive their subject. Before any member or nearby contact is deleted, a family's
+ *   included, the consent rows about them are forgotten: evidence cut to CONSENT_PROOF_KEYS and
+ *   subject_deleted_at set (consents_subject_deleted_check refuses the delete otherwise). The delete
+ *   then sets member_id and contact_id null, and subject_ref still names the subject by id.
  * - events, metrics_daily, ai_calls and outbound rows are deleted after 24 months.
+ * - After 5 years: consents that no longer permit anything (a no, a withdrawn yes, or a deleted
+ *   subject), counted from the latest of given_at, withdrawn_at and subject_deleted_at, and deletions
+ *   rows, counted from deleted_at. A standing yes whose subject still exists is never deleted by age.
  * - Kept while the family uses Vela: answers.summary, the answers.flag boolean, and away periods'
  *   dates.
  * - Outside this database, a member's Durable Object storage is cleared when they stop, leave, are
@@ -45,7 +54,9 @@ import {
   AWAY_SOURCES,
   BUDGETED_OUTBOUND_KINDS,
   CHANNELS,
+  CONSENT_ANSWERS,
   CONSENT_KINDS,
+  type ConsentAnswer,
   type ConversationKind,
   EVENT_NAMES,
   EXCHANGE_STATES,
@@ -122,6 +133,13 @@ export const MEMORY_FACT_KINDS = [
   "plan",
   "preference",
 ] as const;
+/**
+ * What a consent row's `evidence` keeps once its member or contact is deleted (ADR-28): the ids of
+ * the chat and the message that carried the buttons, the hash of the text she saw, and the marker of
+ * a row the founder recorded. Enough to show what was agreed or declined, and nothing of what the
+ * person said or was called; `consents_subject_deleted_check` is built from this list.
+ */
+export const CONSENT_PROOF_KEYS = ["chat_id", "message_id", "text_sha256", "recorded_by"] as const;
 export const SUBSCRIPTION_PROVIDERS = ["trial", "stripe", "revenuecat", "manual"] as const;
 export const SUBSCRIPTION_STATUSES = ["trial", "active", "grace", "lapsed", "cancelled"] as const;
 export const PLAN_INTERVALS = ["month", "year"] as const;
@@ -300,6 +318,14 @@ export const familyChannels = pgTable(
     }),
     linkedAt: timestamptz("linked_at").notNull().defaultNow(),
     unlinkedAt: timestamptz("unlinked_at"),
+    /**
+     * SHA-256, lowercase hex, of the text Vela posted when it linked the conversation
+     * (`group.linked`). Each adult's "I've read it" tap copies it into their `privacy_notice`
+     * evidence, so the proof names the message the group received, however the family changes
+     * later, and holds no one's name: the text names the kept-light member, and her name must not
+     * outlive her deletion in another adult's row (flows §3.3).
+     */
+    linkedTextSha256: text("linked_text_sha256").notNull(),
   },
   (t) => [
     // Unique only while linked: a group can be linked again after the bot was removed, and the
@@ -369,14 +395,26 @@ export const nearbyContacts = pgTable(
       .references(() => members.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     relation: text("relation"),
-    phone: text("phone").notNull(),
+    /**
+     * Stored exactly while the contact's yes stands (L8): setup stores a name, the founder adds the
+     * number with the recorded yes, and a no clears it.
+     */
+    phone: text("phone"),
     channel: text("channel", { enum: NEARBY_CONTACT_CHANNELS }),
     consentRequestedAt: timestamptz("consent_requested_at"),
     consentedAt: timestamptz("consented_at"),
     declinedAt: timestamptz("declined_at"),
     createdAt: createdAt(),
   },
-  (t) => [check("nearby_contacts_channel_check", isOneOf(t.channel, NEARBY_CONTACT_CHANNELS))],
+  (t) => [
+    check("nearby_contacts_channel_check", isOneOf(t.channel, NEARBY_CONTACT_CHANNELS)),
+    // A number without a standing yes is a third person's data held without their agreement, and a
+    // yes without a number would list a contact nobody can call.
+    check(
+      "nearby_contacts_phone_consented_check",
+      sql`(${sql.identifier(t.phone.name)} is not null) = (${sql.identifier(t.consentedAt.name)} is not null and ${sql.identifier(t.declinedAt.name)} is null)`,
+    ),
+  ],
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -1019,33 +1057,89 @@ export const events = pgTable(
   ],
 );
 
+/**
+ * A proof of consent or decline (ADR-28). It outlives the member or contact it is about without
+ * holding their data: the references are set null when the subject is deleted, `subject_ref` still
+ * names the subject by id, and `evidence` has been cut to `CONSENT_PROOF_KEYS` beforehand.
+ */
 export const consents = pgTable(
   "consents",
   {
     id: uuidv7Id(),
-    memberId: uuid("member_id").references(() => members.id, { onDelete: "cascade" }),
-    contactId: uuid("contact_id").references(() => nearbyContacts.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "set null" }),
+    contactId: uuid("contact_id").references(() => nearbyContacts.id, { onDelete: "set null" }),
+    /**
+     * `member:<member id>` or `contact:<contact id>`, written at insert and never changed, so the
+     * proof still names its subject once `member_id` or `contact_id` is null.
+     */
+    subjectRef: text("subject_ref").notNull(),
     kind: text("kind", { enum: CONSENT_KINDS }).notNull(),
+    /** No default: every row states whether it records a yes or a no. */
+    answer: text("answer", { enum: CONSENT_ANSWERS }).notNull(),
     textVersion: text("text_version").notNull(),
     lang: text("lang").notNull(),
     channel: text("channel").notNull(),
     givenAt: timestamptz("given_at").notNull().defaultNow(),
     withdrawnAt: timestamptz("withdrawn_at"),
-    /** Message id, screen, the exact words. */
+    /**
+     * For a tap on her consent messages: {chat_id, message_id, params, text_sha256}, so the text
+     * version and the parameters rebuild the message and the hash shows it is the one she saw. For
+     * an adult's tap on "I've read it": {chat_id, message_id, text_sha256}, the hash copied from the
+     * group's `family_channels` row and no parameters, which would name her. For a row the founder
+     * records: the founder's fields and recorded_by "founder". Once the subject is deleted: only the
+     * keys in `CONSENT_PROOF_KEYS` that were present.
+     */
     evidence: jsonb("evidence").$type<JsonObject>().notNull().default({}),
+    /** When the member or contact was deleted and `evidence` was cut to the proof keys. */
+    subjectDeletedAt: timestamptz("subject_deleted_at"),
   },
-  (t) => [check("consents_kind_check", isOneOf(t.kind, CONSENT_KINDS))],
+  (t) => [
+    index("consents_subject_ref_idx").on(t.subjectRef),
+    check("consents_kind_check", isOneOf(t.kind, CONSENT_KINDS)),
+    check("consents_answer_check", isOneOf(t.answer, CONSENT_ANSWERS)),
+    // A reference that names another subject than the row's own member or contact would make the
+    // proof point at the wrong person once the reference is set null.
+    check(
+      "consents_subject_ref_check",
+      sql`${sql.identifier(t.subjectRef.name)} ~ '^(member|contact):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' and (${sql.identifier(t.memberId.name)} is null or ${sql.identifier(t.subjectRef.name)} = ('member:' || ${sql.identifier(t.memberId.name)}::text)) and (${sql.identifier(t.contactId.name)} is null or ${sql.identifier(t.subjectRef.name)} = ('contact:' || ${sql.identifier(t.contactId.name)}::text))`,
+    ),
+    // Only a yes permits anything, so only a yes can be withdrawn.
+    check(
+      "consents_withdrawn_at_check",
+      sql`${sql.identifier(t.withdrawnAt.name)} is null or ${sql.identifier(t.answer.name)} = ${sql.raw(quoteLiteral("yes" satisfies ConsentAnswer))}`,
+    ),
+    // Postgres checks this on the update a foreign key's SET NULL makes, so deleting a member or
+    // contact whose consent rows were not forgotten first fails, a deletion by hand included, instead
+    // of keeping their words in a proof.
+    check(
+      "consents_subject_deleted_check",
+      sql`${sql.identifier(t.memberId.name)} is not null or ${sql.identifier(t.contactId.name)} is not null or (${sql.identifier(t.subjectDeletedAt.name)} is not null and ${sql.identifier(t.evidence.name)}${sql.raw(CONSENT_PROOF_KEYS.map((key) => ` - ${quoteLiteral(key)}`).join(""))} = '{}'::jsonb)`,
+    ),
+  ],
 );
 
-/** Proof of deletion without keeping what was deleted. */
-export const deletions = pgTable("deletions", {
-  id: uuidv7Id(),
-  objectType: text("object_type").notNull(),
-  objectId: uuid("object_id").notNull(),
-  contentHash: text("content_hash").notNull(),
-  reason: text("reason").notNull(),
-  deletedAt: timestamptz("deleted_at").notNull().defaultNow(),
-});
+/**
+ * Proof of deletion without keeping what was deleted. `content_hash` is the SHA-256, lowercase hex,
+ * of `<object_type>:<object_id>` and nothing else (ADR-28): a hash of a phone number or a storage key
+ * would give the value back to anyone who tries the few values it can have.
+ */
+export const deletions = pgTable(
+  "deletions",
+  {
+    id: uuidv7Id(),
+    objectType: text("object_type").notNull(),
+    objectId: uuid("object_id").notNull(),
+    contentHash: text("content_hash").notNull(),
+    reason: text("reason").notNull(),
+    deletedAt: timestamptz("deleted_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "deletions_content_hash_check",
+      sql`${sql.identifier(t.contentHash.name)} = encode(sha256(convert_to(${sql.identifier(t.objectType.name)} || ':' || ${sql.identifier(t.objectId.name)}::text, 'UTF8')), 'hex')`,
+    ),
+  ],
+);
 
 export const subscriptions = pgTable(
   "subscriptions",

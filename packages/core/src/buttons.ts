@@ -11,9 +11,11 @@
  * | pick         | `p:<id>:<index>`                          |
  * | vote         | `v:<id>:<index>`                          |
  * | consent      | `k:<id>:y` · `k:<id>:n`                   |
+ * | health_words | `h:<id>:y` · `h:<id>:n`                   |
  * | quiet_fine   | `q:<id>:f`                                |
  * | quiet_wait   | `q:<id>:w`                                |
  * | onboarding   | `o:<step>:<value>`                        |
+ * | notice_read  | `n:<id>:r`                                |
  *
  * `<id>` is the uuid as 32 lowercase hex digits without dashes, so an id-bearing payload is 36 bytes.
  * Every payload has exactly one encoding and `decodeButton` accepts only that encoding, so a decoded
@@ -26,9 +28,16 @@ export type ButtonAction =
   | { type: "pick"; exchangeId: string; index: number }
   | { type: "vote"; exchangeId: string; index: number }
   | { type: "consent"; memberId: string; accept: boolean }
+  /** Her answer to the separate health-words question sent after her yes (flows §3.2). */
+  | { type: "health_words"; memberId: string; accept: boolean }
   | { type: "quiet_fine"; quietEventId: string }
   | { type: "quiet_wait"; quietEventId: string }
-  | { type: "onboarding"; step: string; value: string };
+  | { type: "onboarding"; step: string; value: string }
+  /**
+   * "I've read it" under Vela's first group message, tapped by each adult in the group; the id is
+   * the `family_channels` row the message was posted for (flows §3.3).
+   */
+  | { type: "notice_read"; familyChannelId: string };
 
 export const BUTTON_DATA_MAX_BYTES = 64;
 
@@ -89,6 +98,8 @@ export function encodeButton(action: ButtonAction): string {
       return `v:${compactId(action.exchangeId, "exchangeId")}:${indexField(action.index)}`;
     case "consent":
       return `k:${compactId(action.memberId, "memberId")}:${action.accept ? "y" : "n"}`;
+    case "health_words":
+      return `h:${compactId(action.memberId, "memberId")}:${action.accept ? "y" : "n"}`;
     case "quiet_fine":
       return `q:${compactId(action.quietEventId, "quietEventId")}:f`;
     case "quiet_wait":
@@ -103,6 +114,8 @@ export function encodeButton(action: ButtonAction): string {
         throw new RangeError(`onboarding button value is not a short code: ${action.value}`);
       }
       return `o:${action.step}:${action.value}`;
+    case "notice_read":
+      return `n:${compactId(action.familyChannelId, "familyChannelId")}:r`;
   }
 }
 
@@ -152,6 +165,12 @@ export function decodeButton(data: string): ButtonAction | null {
       if (tail === "y") return { type: "consent", memberId: id, accept: true };
       if (tail === "n") return { type: "consent", memberId: id, accept: false };
       return null;
+    case "h":
+      if (tail === "y") return { type: "health_words", memberId: id, accept: true };
+      if (tail === "n") return { type: "health_words", memberId: id, accept: false };
+      return null;
+    case "n":
+      return tail === "r" ? { type: "notice_read", familyChannelId: id } : null;
     case "q":
       if (tail === "f") return { type: "quiet_fine", quietEventId: id };
       if (tail === "w") return { type: "quiet_wait", quietEventId: id };

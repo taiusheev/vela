@@ -7,14 +7,18 @@ import { createFakeAdminDeps, type LogLine } from "./testing/fakes.ts";
 
 /**
  * The admin ports passed on whole. A record over `AdminDeps`, so a port added to the admin Worker
- * cannot be left out here without the typecheck failing; `queues` is checked queue by queue.
+ * cannot be left out here without the typecheck failing; `queues` is checked queue by queue, and
+ * the bot username reaches services as `Config.telegramBotUsername`.
  */
-const WHOLE_PORTS: Readonly<Record<Exclude<keyof AdminDeps, "queues">, true>> = {
+const WHOLE_PORTS: Readonly<
+  Record<Exclude<keyof AdminDeps, "queues" | "telegramBotUsername">, true>
+> = {
   db: true,
   clock: true,
   logger: true,
   scheduler: true,
   ai: true,
+  random: true,
 };
 
 /** Each port the admin Worker was not given, touched the way services would touch it. */
@@ -27,7 +31,6 @@ const NOT_GIVEN: readonly (readonly [string, (deps: Deps) => unknown])[] = [
     "queues.understand",
     (deps) => deps.queues.understand.send({ type: "understand_answer", answerId: "a" }),
   ],
-  ["random", (deps) => deps.random.token()],
   ["media", (deps) => deps.media.put("key", new ArrayBuffer(1), "audio/ogg")],
   ["media", (deps) => deps.media.get("key")],
   ["media", (deps) => deps.media.delete("key")],
@@ -41,6 +44,9 @@ const NOT_GIVEN: readonly (readonly [string, (deps: Deps) => unknown])[] = [
   ["config", (deps) => deps.config.publicBaseUrl],
   ["config", (deps) => deps.config.adminConversationId],
   ["config", (deps) => deps.config.privacyNoticeUrls],
+  ["config", (deps) => deps.config.privacyNoticeVersion],
+  ["config", (deps) => deps.config.environment],
+  ["config", (deps) => deps.config.regions],
 ];
 
 describe("the ports the admin Worker hands services", () => {
@@ -53,6 +59,13 @@ describe("the ports the admin Worker hands services", () => {
       expect(Reflect.get(deps, name), name).toBe(Reflect.get(ports, name));
     }
     expect(deps.queues.outbound).toBe(ports.queues.outbound);
+  });
+
+  // create_invite's link names the bot, and that is the one field of Config the admin Worker has.
+  it("give services the bot's username as the one Config field it has", () => {
+    const ports = { ...createFakeAdminDeps([]), telegramBotUsername: "VelaStagingBot" };
+
+    expect(servicesDeps(ports).config.telegramBotUsername).toBe("VelaStagingBot");
   });
 
   // A port the admin Worker has no binding for must never do nothing quietly: a services change

@@ -63,9 +63,17 @@ export const OUTBOUND_KEY_SHAPES: Readonly<Record<OutboundKind, KeyShape>> = {
   nearby_ask: { parts: ["quietEventId", "conversationId"], suffix: "none" },
   /** Per exchange and reader; the suffix is the flagged answer, as one exchange can take several. */
   flag: { parts: ["exchangeId", "conversationId"], suffix: "required" },
-  /** Replies to a person's action; the suffix is the inbound event (and step) that caused them. */
+  /**
+   * Replies to a person's action; the suffix is the inbound event (and step) that caused them. The
+   * health-words question is the exception: its suffix is `health_words:<member id>`, so it is asked
+   * once per member whichever tap or retry enqueues it (flows §3.2).
+   */
   consent: { parts: ["conversationId"], suffix: "required" },
   onboarding: { parts: ["conversationId"], suffix: "required" },
+  /**
+   * The suffix names what the message is about: the inbound event, or a row such as an answer or an
+   * invite (`invite:<invite id>` for the link `create_invite` sends the organiser, flows §3.17).
+   */
   system: { parts: ["conversationId"], suffix: "required" },
 };
 

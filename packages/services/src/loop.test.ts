@@ -18,6 +18,7 @@ import type { MediaJob, OutboundJob, UnderstandJob } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { handleInbound } from "./inbound/router.ts";
 import { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
+import { hasHealthWordsConsent } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { tickMember } from "./tick.ts";
 
@@ -210,7 +211,12 @@ describe("the pilot loop", () => {
 
     // ── She opens the link and says yes ────────────────────────────────────────────────────────
     await inbound(privately(HER, { kind: "start", startParam: invite?.token }));
-    expect(newMessages()).toEqual([[HER, t("en", "consent.request", { organiser: "Mia" })]]);
+    expect(newMessages()).toEqual([
+      [
+        HER,
+        t("en", "consent.request", { organiser: "Mia", notice: "https://vela.test/privacy/en" }),
+      ],
+    ]);
 
     await inbound(tapLast(HER, 0));
 
@@ -223,7 +229,12 @@ describe("the pilot loop", () => {
     expect(newMessages()).toEqual([
       [HER, t("en", "consent.accepted", { time: "08:00" })],
       [ORGANISER, t("en", "organiser.consent_given", { name: "Mom", time: "08:00" })],
+      [HER, t("en", "consent.health_words", { organiser: "Mia" })],
     ]);
+    // She agrees that her health words may reach Mia: recorded, and nothing more is sent.
+    await inbound(tapLast(HER, 0));
+    expect(newMessages()).toEqual([]);
+    expect(await hasHealthWordsConsent(h.db, her.id, h.clock.now())).toBe(true);
     // Her first wake is this evening's turn prompt: the light starts tomorrow.
     expect(await nextWake(her.id)).toEqual(at("2026-09-14", "19:00"));
 

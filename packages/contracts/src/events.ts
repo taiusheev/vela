@@ -9,6 +9,8 @@ export const EVENT_NAMES = [
   "family_created",
   "member_joined",
   "invite_accepted",
+  /** The founder created a new invite for a family on the admin page (`create_invite`). */
+  "invite_created",
   "consent_given",
   "consent_declined",
   "stop_said",

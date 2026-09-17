@@ -60,7 +60,18 @@ const VALUE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 function randomAction(random: () => number): ButtonAction {
   const index = Math.floor(random() * (MAX_BUTTON_INDEX + 1));
   switch (
-    pick(random, ["answer", "chip", "pick", "vote", "consent", "fine", "wait", "onboarding"])
+    pick(random, [
+      "answer",
+      "chip",
+      "pick",
+      "vote",
+      "consent",
+      "health_words",
+      "fine",
+      "wait",
+      "notice_read",
+      "onboarding",
+    ])
   ) {
     case "answer":
       return {
@@ -76,10 +87,14 @@ function randomAction(random: () => number): ButtonAction {
       return { type: "vote", exchangeId: uuidv7(random), index };
     case "consent":
       return { type: "consent", memberId: uuidv7(random), accept: random() < 0.5 };
+    case "health_words":
+      return { type: "health_words", memberId: uuidv7(random), accept: random() < 0.5 };
     case "fine":
       return { type: "quiet_fine", quietEventId: uuidv7(random) };
     case "wait":
       return { type: "quiet_wait", quietEventId: uuidv7(random) };
+    case "notice_read":
+      return { type: "notice_read", familyChannelId: uuidv7(random) };
     default:
       return {
         type: "onboarding",
@@ -139,6 +154,25 @@ describe("encodeButton and decodeButton", () => {
     expect(encodeButton({ type: "quiet_wait", quietEventId: EXCHANGE })).toHaveLength(36);
   });
 
+  it("keeps a consent answer, a health-words answer, and a notice read apart on the wire", () => {
+    const id = EXCHANGE.replaceAll("-", "");
+
+    expect(encodeButton({ type: "consent", memberId: EXCHANGE, accept: true })).toBe(`k:${id}:y`);
+    expect(encodeButton({ type: "health_words", memberId: EXCHANGE, accept: true })).toBe(
+      `h:${id}:y`,
+    );
+    expect(encodeButton({ type: "health_words", memberId: EXCHANGE, accept: false })).toBe(
+      `h:${id}:n`,
+    );
+    expect(encodeButton({ type: "notice_read", familyChannelId: EXCHANGE })).toBe(`n:${id}:r`);
+    expect(decodeButton(`h:${id}:n`)).toEqual({
+      type: "health_words",
+      memberId: EXCHANGE,
+      accept: false,
+    });
+    expect(decodeButton(`n:${id}:r`)).toEqual({ type: "notice_read", familyChannelId: EXCHANGE });
+  });
+
   it("encodes an id written in upper case the same way and decodes it in lower case", () => {
     const upper = { type: "pick", exchangeId: EXCHANGE.toUpperCase(), index: 1 } as const;
     const payload = encodeButton(upper);
@@ -178,6 +212,10 @@ describe("decodeButton rejects", () => {
     ["a multi-letter code", `cc:${id}:1`],
     ["an unknown answer", `a:${id}:x`],
     ["an unknown consent value", `k:${id}:yes`],
+    ["an unknown health-words value", `h:${id}:r`],
+    ["a health-words answer spelt out", `h:${id}:yes`],
+    ["an unknown notice read value", `n:${id}:y`],
+    ["a notice read without its value", `n:${id}:`],
     ["an unknown quiet action", `q:${id}:later`],
     ["a trailing field", `c:${id}:1:2`],
     ["an empty index", `c:${id}:`],
@@ -213,6 +251,8 @@ describe("encodeButton refuses invalid actions", () => {
     ["a non-uuid exchange id", { type: "chip", exchangeId: "exchange-1", index: 0 }],
     ["a non-uuid member id", { type: "consent", memberId: "", accept: true }],
     ["a non-uuid quiet event id", { type: "quiet_fine", quietEventId: "12345" }],
+    ["a non-uuid health-words member id", { type: "health_words", memberId: "mom", accept: false }],
+    ["a non-uuid family channel id", { type: "notice_read", familyChannelId: "-100200" }],
     ["a negative index", { type: "chip", exchangeId: EXCHANGE, index: -1 }],
     [
       "an index above the maximum",

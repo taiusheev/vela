@@ -89,15 +89,69 @@ const TIME_OF_DAY: Record<(typeof MVP_LANGS)[number], RegExp> = {
 };
 
 /**
- * A nearby contact's number is stored unconsented and reaches a quiet note only after the founder
- * records the contact's yes. Vela never contacts anyone on its own (the privacy notice says so): the
- * organiser sends the consent message from their own phone (nearby-contact-consent.en.md), so the
- * setup step tells the organiser to ask, and that the number appears only after a yes.
+ * Vela never contacts anyone on its own (the privacy notice says so): the organiser sends the consent
+ * message from their own phone (nearby-contact-consent.en.md), so the setup step tells the organiser
+ * to ask.
  */
 const ORGANISER_ASKS_CONTACT: Record<(typeof MVP_LANGS)[number], RegExp> = {
-  en: /\bask them yourself\b.*\bonly after they say yes\b/,
-  "zh-TW": /請您先親自問過對方.*同意之後，電話號碼才會出現/,
+  en: /\bask them yourself\b/,
+  "zh-TW": /請您先親自問過對方/,
 };
+
+/**
+ * A contact's number is stored only with their recorded yes, which the founder adds on the admin page
+ * (2026-09-17, L8), so setup asks for a name and says where the number comes from. This sentence is
+ * the only place a nearby step may mention a number.
+ */
+const NUMBER_AFTER_YES: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b[Tt]heir number is added after they say yes\./,
+  "zh-TW": /對方同意之後，才會加上電話號碼。/,
+};
+
+/** Words for a phone number, which a nearby step must not ask for. */
+const NUMBER_WORDS: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(phone|numbers?|mobile|digits?)\b/i,
+  "zh-TW": /電話|號碼|手機/,
+};
+
+/** The nearby step before 17 September 2026, which asked for a number at setup. */
+const ASKS_FOR_NUMBER_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "Send a name and phone number, or tap Skip. Their number is added after they say yes.",
+  "zh-TW": "請傳送名字和電話號碼，或按「略過」。對方同意之後，才會加上電話號碼。",
+};
+
+/** The keys of the nearby step. */
+const NEARBY_KEYS: readonly MessageKey[] = ["onboarding.ask_nearby", "onboarding.nearby_no_number"];
+
+/** The founder's legal name, written the same in every language (pilot pack README). */
+const FOUNDER_NAME = "Timur Aiusheev";
+
+/**
+ * A no to health words must leave Vela working, or the consent would not be freely given (PDPA
+ * Article 6(1)(6), ADR-27), and the question says so.
+ */
+const NO_CHANGES_NOTHING: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bVela works the same if you say no\./,
+  "zh-TW": /就算您說不要，Vela 也會照常運作。/,
+};
+
+/**
+ * Words about her health or body. The flag notice sent without her health-words consent names
+ * nothing she said (ADR-27), neither her words nor the kind of signal.
+ */
+const HEALTH_WORDS: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(health|fall|fell|pain|hurts?|doctor|hospital|medicine|ill|sick|unwell)\b/i,
+  "zh-TW": /健康|身體|跌|痛|醫|藥|病|不舒服/,
+};
+
+/** A notice that would carry the kind of signal. */
+const HEALTH_NOTICE_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "{name} mentioned a health problem today that may be worth a call.",
+  "zh-TW": "{name}今天提到身體不舒服，也許值得打個電話問問。",
+};
+
+/** Quotation marks around words she said. */
+const QUOTE_MARKS = /["“”「」『』]/;
 
 /**
  * Wording in which Vela ("we", "I", or the name) asks or contacts the nearby contact, which it never
@@ -181,12 +235,20 @@ const WEEK: Record<(typeof MVP_LANGS)[number], RegExp> = {
 };
 
 /**
- * The parameters services pass for keys whose parameters the Sprint 1 contract fixed. A catalog
- * edit that adds or drops one breaks those call sites at run time, so the sets are pinned here.
+ * The parameters services pass for keys whose parameters the Sprint 1 contract and the decisions of
+ * 17 September 2026 fixed. A catalog edit that adds or drops one breaks those call sites at run time,
+ * so the sets are pinned here; `flag.notice_no_words` takes only her name, so it can never carry a
+ * quote.
  */
 const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] = [
   ["group.linked", ["name", "notice"]],
+  ["group.notice_read", []],
+  ["consent.request", ["notice", "organiser"]],
+  ["consent.health_words", ["organiser"]],
+  ["flag.notice_no_words", ["name"]],
+  ["organiser.invite_again", ["link", "name"]],
   ["onboarding.ask_nearby", []],
+  ["onboarding.nearby_no_number", []],
   ["parent.family_sees_heading", []],
   ["parent.family_sees_empty", []],
   ["parent.family_sees_weekly_read", []],
@@ -355,8 +417,52 @@ describe("wording with a fixed meaning in every language", () => {
 
   it.each(MVP_LANGS)("%s nearby step tells the organiser to ask the contact first", (lang) => {
     expect(catalogs[lang]["onboarding.ask_nearby"]).toMatch(ORGANISER_ASKS_CONTACT[lang]);
-    expect(catalogs[lang]["onboarding.ask_nearby"]).not.toMatch(VELA_ASKS_CONTACT[lang]);
+    for (const key of NEARBY_KEYS) {
+      expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(VELA_ASKS_CONTACT[lang]);
+    }
   });
+
+  it.each(MVP_LANGS)("%s nearby guard recognises a request for a phone number", (lang) => {
+    const sample = ASKS_FOR_NUMBER_SAMPLE[lang];
+    expect(sample).toMatch(NUMBER_AFTER_YES[lang]);
+    expect(sample.replace(NUMBER_AFTER_YES[lang], "")).toMatch(NUMBER_WORDS[lang]);
+  });
+
+  it.each(MVP_LANGS)(
+    "%s nearby step never asks for a phone number and says it is added after a yes",
+    (lang) => {
+      for (const key of NEARBY_KEYS) {
+        const text = catalogs[lang][key];
+        expect(text, `${lang} ${key}`).toMatch(NUMBER_AFTER_YES[lang]);
+        expect(text.replace(NUMBER_AFTER_YES[lang], ""), `${lang} ${key}`).not.toMatch(
+          NUMBER_WORDS[lang],
+        );
+      }
+    },
+  );
+
+  it.each(MVP_LANGS)("%s consent request says who runs Vela and links the notice", (lang) => {
+    expect(catalogs[lang]["consent.request"]).toContain(FOUNDER_NAME);
+    expect(catalogs[lang]["consent.request"]).toContain("{notice}");
+  });
+
+  it.each(MVP_LANGS)("%s health-words question says Vela works the same after a no", (lang) => {
+    expect(catalogs[lang]["consent.health_words"]).toMatch(NO_CHANGES_NOTHING[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s flag notice guard recognises a notice that names the signal", (lang) => {
+    expect(HEALTH_NOTICE_SAMPLE[lang]).toMatch(HEALTH_WORDS[lang]);
+    expect(catalogs[lang]["flag.notice"]).toMatch(QUOTE_MARKS);
+  });
+
+  it.each(MVP_LANGS)(
+    "%s flag notice without health-words consent carries no words, quote, or kind of signal",
+    (lang) => {
+      const text = catalogs[lang]["flag.notice_no_words"];
+      expect(text).not.toMatch(HEALTH_WORDS[lang]);
+      expect(text).not.toMatch(QUOTE_MARKS);
+    },
+  );
 
   it.each(MVP_LANGS)("%s weekly read guard recognises another name for it", (lang) => {
     expect(OTHER_WEEKLY_READ_NAME_SAMPLE[lang]).toMatch(OTHER_WEEKLY_READ_NAME[lang]);

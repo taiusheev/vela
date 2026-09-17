@@ -40,6 +40,11 @@ export interface PrivacyNotice {
   readonly title: string;
   /** The notice as HTML, every character of the Markdown's text already escaped. */
   readonly html: string;
+  /**
+   * The notice's version, from its "Version `privacy-notice.vN`" line: the text version recorded
+   * when an adult taps "I've read it" (`Config.privacyNoticeVersion`, flows §3.3).
+   */
+  readonly version: string;
 }
 
 export type PrivacyNotices = Readonly<Record<NoticeLang, PrivacyNotice>>;

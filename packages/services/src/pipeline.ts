@@ -2,8 +2,13 @@
  * Understanding her answer (spec §5.2, flows §3.10): the voice is fetched, stored, and transcribed
  * in her language; the words go to `ai.understand` and `ai.flag`, are translated into the family's
  * language when it differs, and reach the group as a reply to the answer post; the summary line is
- * translated into her language when it differs; a flag reaches the organisers with her words and
- * the founder with a link and no words; a detected away sets a period and is confirmed to her once.
+ * translated into her language when it differs; a flag reaches the organisers, with her words only
+ * when she agreed that Vela may carry her health words, and the founder with a link and no words; a
+ * detected away sets a period and is confirmed to her once.
+ *
+ * Without that agreement (ADR-27) nothing understanding stores holds her health: no health mention,
+ * no `unwell`, no flag category or quote, in the answer or in `ai_calls`. The flag check still runs,
+ * because it is the safety feature.
  *
  * Every step is keyed per answer, so `reconcile`'s re-runs never repeat a post, a translation, a
  * notice, or an away. Both jobs count an attempt when they start work on an answer (a redelivered
@@ -54,6 +59,7 @@ import { enqueueOutbound } from "./gateway.ts";
 import {
   activeOrganisersWithLinks,
   channelLinkOfMember,
+  hasHealthWordsConsent,
   linkedGroupOfFamily,
   markWakeDue,
   memberById,
@@ -440,19 +446,51 @@ async function setAwayFromAnswer(
   }
 }
 
+/** The one health word in the mood list: without her consent it is not kept (flows §3.10). */
+const HEALTH_MOOD_WORD = "unwell";
+
 /**
- * A flag reaches each organiser with her words verbatim (flows §3.10), and the founder with the
- * family's name and a link, never her words (ADR-21). The quote is the model's excerpt when it kept
- * an exact one, and otherwise everything she said: the AI layer drops an excerpt that is not exactly
- * hers but keeps the flag, because a missed signal is the expensive failure, so the notice must not
- * depend on the excerpt. Both are `flag` rows keyed by the exchange, the reader's conversation, and
- * the answer; the event is recorded once, with them.
+ * What understanding keeps without her health-words consent: no health mention and no `unwell`.
+ * The prompt already leaves them out; this holds it without a model.
+ */
+function withoutHealthWords(understanding: Understanding): Understanding {
+  return {
+    ...understanding,
+    moodWords: understanding.moodWords.filter((word) => word !== HEALTH_MOOD_WORD),
+    mentions: { ...understanding.mentions, health: [] },
+  };
+}
+
+/** What a flag keeps without her health-words consent: whether to call, and how soon. */
+function flagWithoutWords(flag: FlagResult): FlagResult {
+  return { flag: flag.flag, severity: flag.severity, category: null, evidenceQuote: null };
+}
+
+/**
+ * The content-free reason stored with a flag: `<category>:<severity>` with her health-words
+ * consent, the severity alone without it.
+ */
+function flagReasonOf(flag: FlagResult, healthWords: boolean): string {
+  const severity = flag.severity ?? "concern";
+  return healthWords ? `${flag.category ?? "unspecified"}:${severity}` : severity;
+}
+
+/**
+ * A flag reaches each organiser (flows §3.10), and the founder with the family's name and a link,
+ * never her words (ADR-21). With her health-words consent the organisers read her words verbatim:
+ * the model's excerpt when it kept an exact one, and otherwise everything she said, because the AI
+ * layer drops an excerpt that is not an exact substring of her words but keeps the flag, and a
+ * missed signal is the expensive failure. Without it they read only that she said something worth
+ * a call. Both are `flag` rows keyed by the exchange, the reader's conversation, and the answer, and
+ * not by her consent, so a re-run after her answer changed sends nothing twice; the event is
+ * recorded once, with them.
  */
 async function raiseFlag(
   deps: Deps,
   ctx: AnswerContext,
   flag: FlagResult,
   words: string,
+  healthWords: boolean,
   now: Date,
 ): Promise<void> {
   const { answer, member, family, exchange } = ctx;
@@ -474,7 +512,9 @@ async function raiseFlag(
         conversationId: organiser.link.externalId,
         exchangeId: exchange.id,
         lang,
-        text: fitMessageText(t(lang, "flag.notice", { name: member.displayName, quote })),
+        text: healthWords
+          ? fitMessageText(t(lang, "flag.notice", { name: member.displayName, quote }))
+          : t(lang, "flag.notice_no_words", { name: member.displayName }),
       });
       inserted ||= "outboundId" in result;
     }
@@ -507,11 +547,14 @@ async function raiseFlag(
           familyId: family.id,
           memberId: member.id,
           exchangeId: exchange.id,
-          props: {
-            category: flag.category,
-            severity: flag.severity,
-            excerpt: flag.evidenceQuote !== null,
-          },
+          props: healthWords
+            ? {
+                severity: flag.severity,
+                words: true,
+                category: flag.category,
+                excerpt: flag.evidenceQuote !== null,
+              }
+            : { severity: flag.severity, words: false },
         },
         now,
       );
@@ -784,8 +827,10 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
       : { askerName: asker?.displayName ?? family.name, type: exchange.type, text: exchange.text };
   const content = { kind: answer.kind, text: words };
   const summaries = await recentSummaries(deps, ctx);
+  // Read on every attempt: a yes given after the answer arrived, or withdrawn since, counts as none.
+  const healthWords = await hasHealthWordsConsent(deps.db, member.id, answer.receivedAt);
 
-  const understanding = await deps.ai.understand({
+  const modelUnderstanding = await deps.ai.understand({
     lang: member.language,
     summaryLang: family.language,
     addressForm,
@@ -794,15 +839,20 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
     ask,
     answer: content,
     recentSummaries: summaries,
+    healthWordsConsent: healthWords,
   });
+  const understanding = healthWords
+    ? modelUnderstanding
+    : { ...modelUnderstanding, value: withoutHealthWords(modelUnderstanding.value) };
   await logAiCall(deps, ctx, understanding.record, understanding.value);
-  const flag = await deps.ai.flag({
+  const modelFlag = await deps.ai.flag({
     lang: member.language,
     addressForm,
     ask,
     answer: content,
     recentSummaries: summaries,
   });
+  const flag = healthWords ? modelFlag : { ...modelFlag, value: flagWithoutWords(modelFlag.value) };
   await logAiCall(deps, ctx, flag.record, flag.value);
 
   const understood = understanding.ok && flag.ok;
@@ -822,9 +872,7 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
         ...(flag.ok
           ? {
               flag: flag.value.flag,
-              flagReason: flag.value.flag
-                ? `${flag.value.category ?? "unspecified"}:${flag.value.severity ?? "concern"}`
-                : null,
+              flagReason: flag.value.flag ? flagReasonOf(flag.value, healthWords) : null,
             }
           : {}),
         ...(understood ? { understoodAt: now } : {}),
@@ -839,7 +887,7 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
     await setAwayFromAnswer(deps, ctx, understanding.value.away, now);
   }
   if (flag.ok && flag.value.flag) {
-    await raiseFlag(deps, ctx, flag.value, words, now);
+    await raiseFlag(deps, ctx, flag.value, words, healthWords, now);
   }
   if (WORDS_IN_HER_LANGUAGE.has(answer.kind)) {
     const translation = await translateWords(deps, ctx, words);

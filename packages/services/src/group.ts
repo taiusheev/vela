@@ -1,9 +1,10 @@
 /**
- * The family group (flows §3.3, §3.16): linking the group the organiser adds Vela to, following it
- * when Telegram gives it a new id, and departures. Also the questions the other inbound flows
- * share about who is in the family: which member is the kept-light member, who a group sender is
- * (created lazily on their first act, made active again when they act after leaving), and how to
- * reach a person the gateway cannot address because they are not a member yet.
+ * The family group (flows §3.3, §3.16): linking the group the organiser adds Vela to, each adult's
+ * tap saying they have read the privacy notice, following the group when Telegram gives it a new
+ * id, and departures. Also the questions the other inbound flows share about who is in the family:
+ * which member is the kept-light member, who a group sender is (created lazily on their first act,
+ * made active again when they act after leaving), and how to reach a person the gateway cannot
+ * address because they are not a member yet.
  */
 import {
   ChannelSendError,
@@ -12,10 +13,12 @@ import {
   type OutboundMessage,
 } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { outboundKey } from "@vela/core";
+import { type ButtonAction, encodeButton, outboundKey } from "@vela/core";
 import {
   channelLinks,
+  consents,
   events,
+  type Family,
   families,
   familyChannels,
   type Member,
@@ -27,8 +30,11 @@ import { ADMIN_CHANNEL, ADMIN_LANG } from "./admin.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
+import { sha256Hex } from "./hash.ts";
+import { groupNoticeEvidence, subjectRef } from "./proofs.ts";
 import {
   familyById,
+  familyHasEnded,
   linkedGroupOfFamily,
   type MemberWithFamily,
   memberByChannelUser,
@@ -138,9 +144,24 @@ async function refuseLink(
 }
 
 /**
+ * The `group.linked` text: her name as the family calls her (the family's name while she has none),
+ * and the notice in the family's language. Rendered once, when the group is linked; its hash is kept
+ * on the link for the notice button's taps (flows §3.3).
+ */
+async function linkedText(deps: Deps, db: Queryable, family: Family, lang: Lang): Promise<string> {
+  const her = await keptLightMemberOfFamily(db, family.id);
+  return t(lang, "group.linked", {
+    name: her?.displayName ?? family.name,
+    notice: deps.config.privacyNoticeUrls[lang],
+  });
+}
+
+/**
  * The bot was added to a group. Only an organiser links it, and only to a family without a group:
  * the family's language becomes the organiser's, and the group hears who Vela is and where the
- * privacy notice is. Anyone else, or a second group, is told only the organiser can connect Vela.
+ * privacy notice is, with a button each adult taps once they have read it. The link keeps the hash
+ * of that text for the taps' evidence. Anyone else, or a second group, is told only the organiser
+ * can connect Vela.
  */
 export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<void> {
   if (event.conversation.kind !== "group") {
@@ -164,6 +185,7 @@ export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<v
   const now = deps.clock.now();
   const lang = sender.member.language;
   const linked = await deps.db.transaction(async (tx) => {
+    const text = await linkedText(deps, tx, sender.family, lang);
     const [row] = await tx
       .insert(familyChannels)
       .values({
@@ -173,6 +195,7 @@ export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<v
         kind: "group",
         linkedByMemberId: sender.member.id,
         linkedAt: now,
+        linkedTextSha256: await sha256Hex(text),
       })
       .onConflictDoNothing()
       .returning();
@@ -180,7 +203,6 @@ export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<v
       return false;
     }
     await tx.update(families).set({ language: lang }).where(eq(families.id, sender.family.id));
-    const her = await keptLightMemberOfFamily(tx, sender.family.id);
     await enqueueOutbound(deps, tx, {
       kind: "system",
       idempotencyKey: outboundKey("system", { conversationId, suffix: `linked:${row.id}` }),
@@ -188,10 +210,15 @@ export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<v
       channel: event.channel,
       conversationId,
       lang,
-      text: t(lang, "group.linked", {
-        name: her?.displayName ?? sender.family.name,
-        notice: deps.config.privacyNoticeUrls[lang],
-      }),
+      text,
+      buttons: [
+        [
+          {
+            id: encodeButton({ type: "notice_read", familyChannelId: row.id }),
+            label: t(lang, "group.notice_read"),
+          },
+        ],
+      ],
     });
     return true;
   });
@@ -449,4 +476,100 @@ export async function resolveGroupSender(
   }
   const again = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
   return again !== null && again.family.id === familyId ? again.member : null;
+}
+
+/**
+ * A tap on "I've read it" under `group.linked` (flows §3.3, L9): the adult who tapped is recorded as
+ * having read the privacy notice, once per member and notice version. Acknowledged first. It counts
+ * only in a family that has not ended, and only when the button's group row belongs to the family
+ * this group is linked to: a row the family re-linked or migrated still does. The person who tapped
+ * is resolved as any group sender is, so a family member who never wrote in the group is created
+ * here. The evidence carries the hash that row kept of the greeting, never the greeting rebuilt now
+ * (`groupNoticeEvidence`). Nothing is posted and the button stays open for the next adult; asks
+ * never wait for it.
+ */
+export async function handleNoticeReadButton(
+  deps: Deps,
+  familyId: string,
+  event: InboundEvent,
+  action: Extract<ButtonAction, { type: "notice_read" }>,
+): Promise<void> {
+  await deps.channels.get(event.channel).acknowledgeButton(event);
+  if (event.conversation.kind !== "group") {
+    return;
+  }
+  const [row] = await deps.db
+    .select({
+      familyId: familyChannels.familyId,
+      linkedTextSha256: familyChannels.linkedTextSha256,
+    })
+    .from(familyChannels)
+    .where(eq(familyChannels.id, action.familyChannelId))
+    .limit(1);
+  if (row === undefined || row.familyId !== familyId) {
+    deps.logger.info("notice_read_ignored", { familyId, reason: "other_group" });
+    return;
+  }
+  if (await familyHasEnded(deps.db, familyId)) {
+    deps.logger.info("notice_read_ignored", { familyId, reason: "family_ended" });
+    return;
+  }
+  const reader = await resolveGroupSender(deps, familyId, event);
+  if (reader === null) {
+    deps.logger.info("notice_read_ignored", { familyId, reason: "sender" });
+    return;
+  }
+  const version = deps.config.privacyNoticeVersion;
+  const now = deps.clock.now();
+  const recorded = await deps.db.transaction(async (tx) => {
+    const [member] = await tx.select().from(members).where(eq(members.id, reader.id)).for("update");
+    const family = await familyById(tx, familyId);
+    if (member === undefined || family === null) {
+      return false;
+    }
+    const read = await tx
+      .select({ id: consents.id })
+      .from(consents)
+      .where(
+        and(
+          eq(consents.memberId, member.id),
+          eq(consents.kind, "privacy_notice"),
+          eq(consents.answer, "yes"),
+          eq(consents.textVersion, version),
+          isNull(consents.withdrawnAt),
+        ),
+      )
+      .limit(1);
+    if (read.length > 0) {
+      return false;
+    }
+    await tx.insert(consents).values({
+      memberId: member.id,
+      subjectRef: subjectRef({ memberId: member.id }),
+      kind: "privacy_notice",
+      answer: "yes",
+      textVersion: version,
+      lang: family.language,
+      channel: event.channel,
+      givenAt: now,
+      evidence: groupNoticeEvidence(
+        event.conversation.externalId,
+        event.messageId,
+        row.linkedTextSha256,
+      ),
+    });
+    await recordEvent(
+      tx,
+      {
+        name: "consent_given",
+        familyId,
+        memberId: member.id,
+        surface: event.channel,
+        props: { kind: "privacy_notice", text_version: version, source: "button" },
+      },
+      now,
+    );
+    return true;
+  });
+  deps.logger.info("notice_read", { familyId, recorded });
 }

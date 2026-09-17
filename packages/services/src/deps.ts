@@ -38,6 +38,11 @@ export interface MediaStore {
   delete(key: string): Promise<void>;
 }
 
+/**
+ * That a reconciliation finished. The Worker records the time where a watchdog outside Cloudflare
+ * reads it, so a Worker, cron, or database that stopped shows as silence rather than as a quiet
+ * family.
+ */
 export interface Heartbeat {
   ping(): Promise<void>;
 }
@@ -63,6 +68,12 @@ export interface Config {
   publicBaseUrl: string;
   /** The privacy notice URL per language; a language without its own notice carries the English URL. */
   privacyNoticeUrls: Record<Lang, string>;
+  /**
+   * The version line of the notices those URLs serve (`privacy-notice.v1`): the text version of a
+   * `privacy_notice` consent tapped in the family group (flows §3.3), which must name the notice
+   * the adult actually read, so it comes from the notices rather than from a constant here.
+   */
+  privacyNoticeVersion: string;
 }
 
 export interface Deps {

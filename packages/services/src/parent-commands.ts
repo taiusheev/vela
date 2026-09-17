@@ -29,6 +29,7 @@ import {
 import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { canAnswer } from "./answers.ts";
+import { withdrawHealthWords } from "./consent.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
@@ -77,8 +78,10 @@ async function reply(
 }
 
 /**
- * Stop (flows §3.13): she is paused and her scheduler is cleared, in one transaction under her row
- * lock; the organisers hear it without judgement. A stop while already paused only repeats her
+ * Stop (flows §3.13): she is paused, her health-words yes is withdrawn (L1), and her scheduler is
+ * cleared, in one transaction under her row lock; the organisers hear it without judgement. The
+ * light consent itself stands, because a stop is a pause she ends by saying start, which gives the
+ * health-words yes back only through the founder. A stop while already paused only repeats her
  * reply, so the event and the organisers' note are recorded once.
  */
 async function stop(deps: Deps, member: Member, event: InboundEvent, now: Date): Promise<void> {
@@ -95,6 +98,7 @@ async function stop(deps: Deps, member: Member, event: InboundEvent, now: Date):
       .update(members)
       .set({ status: "paused", nextWakeAt: null })
       .where(eq(members.id, locked.id));
+    const healthWordsWithdrawn = await withdrawHealthWords(tx, locked.id, now);
     const organisers = await activeOrganisersWithLinks(tx, locked.familyId, ORGANISER_CHANNEL);
     for (const organiser of organisers) {
       const lang = organiser.member.language;
@@ -113,7 +117,13 @@ async function stop(deps: Deps, member: Member, event: InboundEvent, now: Date):
     }
     await recordEvent(
       tx,
-      { name: "stop_said", familyId: locked.familyId, memberId: locked.id, surface: event.channel },
+      {
+        name: "stop_said",
+        familyId: locked.familyId,
+        memberId: locked.id,
+        surface: event.channel,
+        props: { health_words_withdrawn: healthWordsWithdrawn },
+      },
       now,
     );
   });
