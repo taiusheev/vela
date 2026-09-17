@@ -1,6 +1,6 @@
 # API contract, v2
 
-2026-09-13. The contract between the Expo app (and the web admin) and the worker, plus the inbound webhooks. Every endpoint maps to spec v2 (`product/05-product-spec-v2.md`); every request and response is a Zod schema in `packages/contracts`, shared by the worker and the app, so a change breaks the build before it breaks a family.
+2026-09-18 (written 2026-09-13; §10's health check revised 2026-09-18 to the pilot Worker as built). The contract between the Expo app (and the web admin) and the worker, plus the inbound webhooks. Every endpoint maps to spec v2 (`product/05-product-spec-v2.md`); every request and response is a Zod schema in `packages/contracts`, shared by the worker and the app, so a change breaks the build before it breaks a family.
 
 Conventions: JSON over HTTPS; `Authorization: Bearer <session>`; ids are uuids; times are ISO-8601 with offset; every mutating call accepts an `Idempotency-Key` header and returns the first result on replay; errors are `{error: {code, message, details?}}` with codes `unauthenticated`, `forbidden`, `not_found`, `invalid`, `conflict`, `budget`, `rate_limited`; pagination by cursor (`?cursor=&limit=`); all text fields are returned in the caller's language with `original` alongside when translated.
 
@@ -123,7 +123,7 @@ Rule: verify, parse into `InboundEvent[]`, acknowledge within 1 s, do all work f
 | GET | /admin/metrics?from=&to= | metrics_daily rollups |
 | GET | /admin/ai-calls?call=&version= | Prompt outputs by version for evals |
 | POST | /admin/flags | Feature flags |
-| GET | /healthz, /readyz | Liveness; readiness checks DB per region |
+| GET | /healthz | On the pilot Worker, as built (`apps/worker/src/app.ts`, `heartbeat.ts`): whether reconciliation is running, for the GitHub watchdog outside Cloudflare. It reads the time of the last successful reconcile from the `ReconcileHeartbeat` Durable Object and never touches the database. 200 `{status: "ok", lastReconcileAgeSeconds}` while that reconcile finished at most 35 minutes ago; otherwise 503 `{status: "stale"}`, or 503 `{status: "no_reconcile_yet"}` before the first. `cache-control: no-store`; no content and no ids; no authentication. There is no `/readyz` |
 
 ## 11. Core types (Zod, `packages/contracts`)
 

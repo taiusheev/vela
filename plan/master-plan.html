@@ -128,7 +128,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
 
 <main>
 <header class="memo">
-  <p class="eyebrow">Vela · master plan · updated 2026-09-17</p>
+  <p class="eyebrow">Vela · master plan · updated 2026-09-18</p>
   <h1>One family, three generations, and a light kept on</h1>
   <p class="lede">Everything we know, everything we decided, and everything we're about to do, in one place. Edited by the founder and the tech co-founder; the checklist remembers what you tick.</p>
 </header>
@@ -140,7 +140,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
     <div><div class="k">Phase</div><div class="v">0 · prove the loop, free for families</div></div>
     <div><div class="k">Day</div><div class="v">5</div></div>
     <div><div class="k">Research</div><div class="v">14 reports, ~750 sources</div></div>
-    <div><div class="k">Build</div><div class="v">Sprint 1 built, not deployed; consent and privacy round building</div></div>
+    <div><div class="k">Build</div><div class="v">Services, Worker and legal hardening done; staging setup next</div></div>
     <div><div class="k">Applications</div><div class="v">ikigai Launchpad, submitted</div></div>
     <div><div class="k">Families</div><div class="v">0 of 20</div></div>
     <div><div class="k">Budget</div><div class="v">&lt; $25 / month</div></div>
@@ -553,6 +553,7 @@ gantt
   <div class="dec"><span class="d">2026-09-12</span><span><b>Name risk recorded.</b> "Vela" collides with vela.family (a family-calendar app in beta) and a former eldercare app, and means "idle" in Hindi slang. Ship as "Vela Light", clear the mark in EUIPO/WIPO/Rospatent/TIPO before it is final, prepare one backup name. Founder to decide.</span></div>
   <div class="dec"><span class="d">2026-09-17</span><span><b>The pilot is free; hosting on workers.dev; the legal memo applied.</b> Families pay nothing and no payment data is collected until an entity and billing exist; willingness to pay is asked on each organiser's day-30 call, and fewer than 4 organisers saying they would pay US$9.99 a month is a kill signal. The Workers run on free workers.dev addresses with the admin page in its own Access-protected Worker. On the founder's instruction the tech co-founder decided the legal memo's 24 recommendations (L1 to L14): health words get their own written consent and are otherwise not kept; consent records outlive deletion for 5 years without anyone's words; a No deletes what setup stored; nearby contacts are names until they say yes; every adult gets the notice individually; a security plan and the breach rule in force; minimal Drive notes; and, until a lawyer advises, only families in Taiwan or US states other than Washington with no Russian citizen.</span></div>
   <div class="dec"><span class="d">2026-09-18</span><span><b>The heartbeat moves inside the Worker, read from outside Cloudflare.</b> No outside monitoring service: the pilot Worker keeps the time of its last successful reconcile in a Durable Object and reports it at /healthz without touching the database; a GitHub Actions workflow reads it every 15 minutes from outside Cloudflare, and GitHub emails the founder when it is stale. Reconcile runs every 15 minutes instead of 5, so Neon's free compute hours last the month; the founder watches usage and moves to a paid plan before families beyond the dogfooding week if it nears the limit.</span></div>
+  <div class="dec"><span class="d">2026-09-18</span><span><b>A dogfooding week first, then families living in Taiwan; the founder's parent waits.</b> The founder's parent lives in Russia and is a Russian citizen, so cannot be the first pilot family (plan/materials/pilot/legal-memo.md Q6): Russia's Federal Law 152-FZ reaches a foreign individual who processes a Russian citizen's data by consent, and since Law 23-FZ of 28 February 2025 forbids storing it in databases outside Russia, while Vela stores in Singapore; and Telegram has been largely inaccessible in Russia since mid-March 2026, so arrivals would not arrive reliably and quiet notices would fire on the platform's failure. Week one is a dogfooding week on staging: the founder is the organiser, and a second Telegram account of the founder's, or a friend living in Taiwan who agrees, is the kept-light member; a friend takes part only once the providers' data processing terms are in place and uses only scripted test content, so staging holds only synthetic data and that friend's name, Telegram account and consent rows, deleted when the week ends; it exercises onboarding, consent, the health-words question, arrivals, answers, the quiet ladder, the weekly read, stop and start, the admin page, and the watchdog. The first real families are families living in Taiwan, the founder's friends and their families, onboarded only after that week passes and production is deployed, within the pilot's "who can join" rule. The founder's parent waits until there is a channel that works in Russia and a lawyer has advised on 152-FZ; Russia stays a deferred market (plan/market-order.md).</span></div>
 </section>
 
 <section id="open">
@@ -563,7 +564,7 @@ gantt
     <li><b>Is the existing family group the whole onboarding?</b> A bot added to an existing Telegram family group needs no link and no explainer. Cheapest install imaginable; test with two families.</li>
     <li><b>Grandchildren as the content engine.</b> Famileo says they post more than children. Does that hold with a 20-year-old on Telegram?</li>
     <li><b>Free tier or trial only?</b> Contributors spread the product; but a free daily thread may be enough for many families. Conversion at 90 days decides.</li>
-    <li><b>Where the founder's own family sits.</b> Which pair do we test on first, and what does the founder's parent say when shown the arrival?</li>
+    <li><b>What the first kept-light members say when shown the arrival.</b> Who tests first is decided (2026-09-18): a dogfooding week on staging, then families living in Taiwan, while the founder's parent waits (see Decisions). How the arrival lands with an older person comes from the first families' onboarding calls.</li>
     <li><b>What we say when it goes wrong.</b> The first time a kept-light member is found late, what did we promise? Written before the first customer.</li>
   </ul>
 </section>
@@ -599,7 +600,7 @@ gantt
 </section>
 
 <footer>
-  <p>Vela · founder and tech co-founder · updated 2026-09-17 · <a href="https://github.com/taiusheev/vela">github.com/taiusheev/vela</a></p>
+  <p>Vela · founder and tech co-founder · updated 2026-09-18 · <a href="https://github.com/taiusheev/vela">github.com/taiusheev/vela</a></p>
 </footer>
 </main>
 </div>
@@ -630,8 +631,9 @@ gantt
       {id:"s1-worker", who:"me", t:"Worker: webhook, member scheduler Durable Object, queues, cron, admin page, local development"},
       {id:"s1-drill", who:"me", t:"End-to-end pilot loop test and the silence drill passing in CI"},
       {id:"s1-deploy", who:"founder", t:"Run the setup script for staging from your own terminal (infra/README.md section 11): secrets at hidden prompts, both Workers deployed, webhook registered"},
-      {id:"s1-own-family", who:"founder", t:"Dogfood the loop on staging with your own test accounts by day 7; make the bot a group admin so reactions count"},
-      {id:"s1-families", who:"founder", t:"Three to five friend families by day 14, each checked against 'Who can join' in the pilot README; each onboarding call doubles as an interview; loneliness score (UCLA-3) at week 0"}
+      {id:"s1-own-family", who:"founder", t:"Dogfooding week on staging, starting by day 7: you are the organiser, and a second Telegram account of yours, or a friend living in Taiwan who agrees, is the kept-light member; a friend only once the providers' data processing terms are recorded, with scripted test content only, and their name, account and consent rows deleted from staging when the week ends; never your parent; run onboarding, consent, the health-words question, arrivals, answers, the quiet ladder, the weekly read, stop and start, the admin page and the watchdog; make the bot a group admin so reactions count"},
+      {id:"s1-production", who:"founder", t:"Once staging has passed, run the setup script for production on the commit proven on staging, with a setup token for the 'Vela' account that expires the next day, then the 30-minute watch (build plan, sprint 1 status, item 4; infra/README.md section 11)"},
+      {id:"s1-families", who:"founder", t:"After the dogfooding week passes and production is deployed: the first three to five families living in Taiwan (your friends and their families) from day 14, each checked against 'Who can join' in the pilot README; each onboarding call doubles as an interview; loneliness score (UCLA-3) at week 0"}
     ]},
     {w:"Sprint 2 · foundation and LINE", items:[
       {id:"s2-api", who:"me", t:"API v1 with Clerk sign-in, region router across apac, eu, us"},
