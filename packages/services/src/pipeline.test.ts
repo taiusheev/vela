@@ -3,6 +3,7 @@ import {
   type AiOutcome,
   createFakeAi,
   createFakeStt,
+  createOffAi,
   type FakeAi,
   type FlagResult,
   fakeRecord,
@@ -751,6 +752,62 @@ describe("understandAnswer", () => {
     await herText(scene, "Arrived safely");
     expect((await h.db.select().from(awayPeriods))[0]?.endedAt).toEqual(h.clock.now());
     expect(await eventNames()).toContain("away_ended");
+  });
+});
+
+// Decision X (2026-09-18): with AI_PROVIDER "off" every model step takes the failure path, but AI
+// off is not a failure, so nothing claims a call happened and nothing waits for a re-run.
+describe("understandAnswer with AI off", () => {
+  it("stores nothing a model writes, logs no call, sends no flag, and counts the answer understood", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    await seedHealthWordsConsent(h.db, scene.seed, { at: h.clock.now(), answer: "yes" });
+    const answer = await herText(scene, "我明天去妹妹家住到星期日，今天跌倒了，膝蓋很痛");
+    h.deps.ai = createOffAi();
+    const logged = h.logger.entries.length;
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(await answerById(answer.id)).toMatchObject({
+      summary: null,
+      moodWords: [],
+      mentions: {},
+      flag: false,
+      flagReason: null,
+      awayUntil: null,
+      understoodAt: h.clock.now(),
+      processingAttempts: 1,
+    });
+    expect(await aiCallRows()).toEqual([]);
+    expect(await h.db.select().from(translations)).toEqual([]);
+    expect(await h.db.select().from(awayPeriods)).toEqual([]);
+    // Her words are in the group already, in the answer post; no flag, away reply, or note follows.
+    expect((await outboundRows()).map((row) => row.kind)).toEqual(["ack", "answer_post"]);
+    expect(h.logger.entries.slice(logged).filter((entry) => entry.level !== "info")).toEqual([]);
+
+    await understandAnswer(h.deps, answer.id);
+    expect((await answerById(answer.id)).processingAttempts).toBe(1);
+  });
+
+  it("posts a voice answer's transcript untranslated, and logs only the speech-to-text call", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const answer = await herVoice(scene);
+    h.deps.ai = createOffAi();
+
+    await ingestAnswerMedia(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+
+    const posts = (await outboundRows()).filter((row) => row.kind === "answer_post");
+    expect(posts.map(textOf)).toEqual([
+      "☀️ Mom answered Mia · 08:12",
+      "Mom (voice): fake transcript",
+    ]);
+    expect((await aiCallRows()).map((row) => [row.call, row.ok])).toEqual([["transcribe", true]]);
+    expect(await answerById(answer.id)).toMatchObject({
+      transcript: "fake transcript",
+      summary: null,
+      understoodAt: h.clock.now(),
+      processingAttempts: 2,
+    });
   });
 });
 

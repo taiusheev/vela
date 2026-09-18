@@ -41,6 +41,7 @@ import {
   toPromptfooTest,
 } from "../evals/suite.ts";
 import { createFakeAi, fakeRecord } from "./fake.ts";
+import { createOffAi } from "./off.ts";
 import { PROMPTS } from "./prompts/index.ts";
 import { AI_CALL_NAMES, type FlagInput, Understanding } from "./types.ts";
 
@@ -1003,6 +1004,15 @@ describe("eval provider", () => {
 
     expect(response.error).toBe("flag failed: refusal");
     expect(response.output).toBeUndefined();
+  });
+
+  // With AI off nothing ran, so the safe default would score a model that was never asked.
+  it("reports an AI that is off as an error, never as its safe default output", async () => {
+    const provider = createEvalProvider(createOffAi());
+
+    const response = await provider.callApi("", { vars: { call: "flag", input: flagInput } });
+
+    expect(response).toEqual({ error: "flag not run: AI is off" });
   });
 
   it("rejects an unknown call or an input that does not match without calling the AI", async () => {

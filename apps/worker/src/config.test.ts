@@ -1,6 +1,6 @@
 import { errorLabel } from "@vela/services";
 import { describe, expect, it } from "vitest";
-import { ConfigError, checkAdminConfig, readConfig, secret } from "./config.ts";
+import { ConfigError, checkAdminConfig, readAiProvider, readConfig, secret } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
 import { PRIVACY_NOTICES } from "./notices.generated.ts";
 import type { PrivacyNotices } from "./notices.ts";
@@ -184,6 +184,46 @@ describe("the configuration a deployed admin Worker starts with", () => {
       name,
     );
   });
+});
+
+// Decision X (2026-09-18): AI can be off while the founder buys no Anthropic credit, but never
+// where real families answer, since with it off nothing they say is checked for a flag.
+describe("the AI provider", () => {
+  it.each([
+    ["development", "off"],
+    ["development", "anthropic"],
+    ["staging", "off"],
+    ["staging", "anthropic"],
+    ["production", "anthropic"],
+  ] as const)("runs %s with %s", (environment, provider) => {
+    expect(readAiProvider({ AI_PROVIDER: ` ${provider} ` }, environment, "wrangler.jsonc")).toBe(
+      provider,
+    );
+  });
+
+  it("refuses to start production with AI off, naming the variable and the file to fix", () => {
+    const error = configErrorOf(() =>
+      readAiProvider({ AI_PROVIDER: "off" }, "production", "wrangler.admin.jsonc"),
+    );
+
+    expect(error.code).toBe("AI_PROVIDER");
+    expect(error.message).toContain("wrangler.admin.jsonc");
+    expect(errorLabel(error)).toBe("ConfigError:AI_PROVIDER");
+  });
+
+  it.each([["gemini"], [""], [undefined]])(
+    "refuses %j in every environment, naming the variable and not its value",
+    (value) => {
+      for (const environment of ["development", "staging", "production"] as const) {
+        const error = configErrorOf(() =>
+          readAiProvider({ AI_PROVIDER: value }, environment, "wrangler.jsonc"),
+        );
+
+        expect(error.code).toBe("AI_PROVIDER");
+        expect(error.message).not.toContain("gemini");
+      }
+    },
+  );
 });
 
 describe("a secret", () => {

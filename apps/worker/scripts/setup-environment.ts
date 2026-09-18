@@ -22,6 +22,7 @@
  */
 import { getMe, setMyCommands, setWebhook } from "@vela/adapters";
 import { errorLabel } from "@vela/services";
+import { AI_PROVIDERS, type AiProvider } from "../src/config.ts";
 import { SetupError, setUpTelegram, type TelegramSetupApi } from "./telegram-webhook.ts";
 
 export const ENVIRONMENTS = ["staging", "production"] as const;
@@ -47,7 +48,8 @@ const STEP_DESCRIPTIONS: Readonly<Record<Step, string>> = {
     "apply the migrations to the environment's Neon project, create the Hyperdrive configuration, write its id",
   telegram:
     "check the bot token, write the bot's username to both files, read your chat id, generate the webhook secret",
-  secrets: "put each secret on the Worker that reads it",
+  secrets:
+    "put each secret on the Worker that reads it (the Anthropic key only while AI_PROVIDER is anthropic)",
   deploy: "deploy the pilot Worker, then the admin Worker",
   access: "turn on Cloudflare Access for the admin Worker and put its two secrets",
   webhook: "register the Telegram webhook and command menu",
@@ -352,6 +354,8 @@ export interface EnvironmentConfig {
   readonly adminOrigin: string;
   readonly noticeUrls: readonly string[];
   readonly workersDevSubdomain: string;
+  /** Both Workers' `AI_PROVIDER`, which must agree; with "off" no Anthropic key is needed. */
+  readonly aiProvider: AiProvider;
 }
 
 function originOf(url: string, where: string): URL {
@@ -360,6 +364,33 @@ function originOf(url: string, where: string): URL {
   } catch {
     throw new SetupError(`${where} is not a URL`);
   }
+}
+
+/**
+ * The environment's `AI_PROVIDER`, which both Workers must share (decision X, 2026-09-18). A
+ * production set to "off" is refused before anything is created, since its Workers would refuse to
+ * start: families' answers there need the flag check.
+ */
+function aiProviderOf(
+  pilotVars: unknown,
+  adminVars: unknown,
+  environment: Environment,
+  where: { readonly pilot: string; readonly admin: string },
+): AiProvider {
+  const pilot = textAt(pilotVars, "AI_PROVIDER", where.pilot);
+  const admin = textAt(adminVars, "AI_PROVIDER", where.admin);
+  const provider = AI_PROVIDERS.find((candidate) => candidate === pilot);
+  if (provider === undefined || admin !== pilot) {
+    throw new SetupError(
+      `${PILOT_FILE} and ${ADMIN_FILE} must set AI_PROVIDER for ${environment} to the same value, one of ${AI_PROVIDERS.join(", ")}`,
+    );
+  }
+  if (provider === "off" && environment === "production") {
+    throw new SetupError(
+      `AI_PROVIDER is off for production, which its Workers refuse to start with: set it to anthropic in ${PILOT_FILE} and ${ADMIN_FILE}`,
+    );
+  }
+  return provider;
 }
 
 /** The names and hosts both wrangler files give an environment, read from the files' text. */
@@ -410,6 +441,10 @@ export function readEnvironmentConfig(
     adminOrigin: adminUrl.origin,
     noticeUrls,
     workersDevSubdomain: subdomain,
+    aiProvider: aiProviderOf(pilotVars, adminVars, environment, {
+      pilot: `${pilotWhere}.vars`,
+      admin: `${adminWhere}.vars`,
+    }),
   };
 }
 
@@ -746,23 +781,29 @@ export interface SecretPlan {
   readonly workers: readonly WorkerRole[];
   /**
    * `run`: this run holds the value; `prompt`: ask for it; `kept`: every Worker has it;
-   * `missing`: a Worker lacks one of the telegram step's values and this run has none.
+   * `missing`: a Worker lacks one of the telegram step's values and this run has none; `ai_off`:
+   * the Anthropic key while AI is off, which no Worker reads, so it is neither asked for nor put.
    */
-  readonly source: "run" | "prompt" | "kept" | "missing";
+  readonly source: "run" | "prompt" | "kept" | "missing" | "ai_off";
 }
 
 /**
  * What the secrets step does with each secret. A value this run produced is always put, because
  * the webhook step registers that same webhook secret. Anything else a Worker already holds is
  * kept. A prompted key goes on every Worker that reads it, so both Workers of an environment hold
- * the same Anthropic key.
+ * the same Anthropic key. While AI is off the Anthropic key is skipped, so the founder need not
+ * buy credit to set an environment up.
  */
 export function planSecrets(
   existing: Readonly<Record<WorkerRole, ReadonlySet<string>>>,
   fromRun: ReadonlyMap<WorkerSecret, string>,
+  aiProvider: AiProvider,
 ): readonly SecretPlan[] {
   return WORKER_SECRETS.map((name) => {
     const homes = SECRET_HOMES[name];
+    if (name === "ANTHROPIC_API_KEY" && aiProvider === "off") {
+      return { name, workers: [], source: "ai_off" };
+    }
     if (fromRun.has(name)) {
       return { name, workers: homes, source: "run" };
     }
@@ -1005,6 +1046,17 @@ function tokenTemplate(environment: Environment): readonly string[] {
       : "  Client IP Address Filtering and TTL: leave empty (this laptop keeps using the token).",
     "Continue to summary > Create Token, and copy the token (Cloudflare shows it once).",
   ];
+}
+
+/**
+ * What the secrets step says instead of asking for the Anthropic key while AI is off (decision X,
+ * 2026-09-18), and how to switch it on: `--from secrets` asks for the key and runs the deploy. Only
+ * staging gets here, since the account step refuses production with AI off, and CI deploys staging
+ * from main: the key has to be on both Workers before the commit that switches AI on is merged, or
+ * that deploy leaves both refusing to run (infra/README.md, section 3, step 7).
+ */
+function aiOffLine(environment: Environment): string {
+  return `AI is off in ${environment} (AI_PROVIDER "off" in ${PILOT_FILE} and ${ADMIN_FILE}), so no Anthropic key is asked for. To switch it on later: set AI_PROVIDER to "anthropic" for ${environment} in both files and commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy staging without the key, and both Workers would refuse to run.`;
 }
 
 /** The keys the founder pastes at the secrets step, and where each is created. */
@@ -1684,6 +1736,7 @@ class Setup {
         admin: await this.#workerSecrets(config.adminWorker),
       },
       this.#fromRun,
+      config.aiProvider,
     );
     const missing = plan.filter((entry) => entry.source === "missing").map((entry) => entry.name);
     if (missing.length > 0) {
@@ -1697,6 +1750,10 @@ class Setup {
     for (const entry of plan) {
       if (entry.source === "kept") {
         kept.push(entry.name);
+        continue;
+      }
+      if (entry.source === "ai_off") {
+        this.#say(aiOffLine(this.#environment));
         continue;
       }
       const prompt = prompts[entry.name];

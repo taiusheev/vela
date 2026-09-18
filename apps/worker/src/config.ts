@@ -82,6 +82,38 @@ export function readEnvironment(env: { readonly ENVIRONMENT: string }): Environm
   return found;
 }
 
+/** Where a Worker's AI calls go (decision X, 2026-09-18): Anthropic, or nowhere while AI is off. */
+export const AI_PROVIDERS = ["anthropic", "off"] as const;
+
+export type AiProvider = (typeof AI_PROVIDERS)[number];
+
+/**
+ * The var `AI_PROVIDER`. With "off" no AI provider is called and every AI step takes its safe
+ * default, which staging and development may run with. Production refuses it: there real families
+ * answer, and with AI off nothing they say is checked for a flag.
+ */
+export function readAiProvider(
+  env: { readonly AI_PROVIDER?: string },
+  environment: Environment,
+  configFile: string,
+): AiProvider {
+  const value = env.AI_PROVIDER?.trim() ?? "";
+  const provider = AI_PROVIDERS.find((candidate) => candidate === value);
+  if (provider === undefined) {
+    throw new ConfigError(
+      "AI_PROVIDER",
+      `AI_PROVIDER must be one of ${AI_PROVIDERS.join(", ")}: set it in the environment's vars in ${configFile}`,
+    );
+  }
+  if (provider === "off" && environment === "production") {
+    throw new ConfigError(
+      "AI_PROVIDER",
+      `AI_PROVIDER is off in production, where families' answers need the flag check: set it to anthropic in ${configFile}`,
+    );
+  }
+  return provider;
+}
+
 /** How a wrangler config writes a value nobody has chosen yet: whole, or as a URL's host. */
 const PLACEHOLDER = "PLACEHOLDER_";
 
@@ -226,9 +258,11 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
 /**
  * The admin Worker's environment, checked as the pilot's is: no placeholder anywhere, its own
  * origin, the one a form may be posted from, is https outside development, and the bot the link a
- * new invite carries opens is named, in every environment.
+ * new invite carries opens is named, in every environment. Returns the environment it checked.
  */
-export function checkAdminConfig(env: AdminEnv): void {
-  checkDeployedEnv(env, readEnvironment(env), ["PUBLIC_BASE_URL"], "wrangler.admin.jsonc");
+export function checkAdminConfig(env: AdminEnv): Environment {
+  const environment = readEnvironment(env);
+  checkDeployedEnv(env, environment, ["PUBLIC_BASE_URL"], "wrangler.admin.jsonc");
   requireVar(env, "TELEGRAM_BOT_USERNAME", "wrangler.admin.jsonc");
+  return environment;
 }

@@ -1,6 +1,6 @@
 # The Telegram instrument: flows and services design
 
-2026-09-17. The exact behaviour of the phase-0 instrument (spec Appendix A) on the production platform, and the `@vela/services` modules that implement it. Read with `03-code-design.md` (package rules and APIs), `product/05-product-spec-v2.md` (the product), and `plan/materials/pilot/data-map.md` (what is stored, for how long). Every flow names its database effects, the messages it sends, and the events it records; admin flows also name their `admin_access_log` rows.
+2026-09-18. The exact behaviour of the phase-0 instrument (spec Appendix A) on the production platform, and the `@vela/services` modules that implement it. Read with `03-code-design.md` (package rules and APIs), `product/05-product-spec-v2.md` (the product), and `plan/materials/pilot/data-map.md` (what is stored, for how long). Every flow names its database effects, the messages it sends, and the events it records; admin flows also name their `admin_access_log` rows.
 
 ## 1. Two facts about Telegram that shape the flows
 
@@ -18,6 +18,22 @@ The webhook subscribes to `message`, `callback_query`, `message_reaction`, and `
 - A group is linked to a family through `family_channels`. Anyone who replies in a linked group is lazily created as a member (`role = member`, name from Telegram, the family's language, the kept-light member's time zone).
 
 ## 3. Flows
+
+> **Note: while AI is off** (decision X, 2026-09-18; `03-code-design.md` §7 to §10). A Worker whose var `AI_PROVIDER` is `off` calls no AI provider, and nothing leaves to one. That is staging during the dogfooding week, and development by default; production refuses to start with it. Every AI step below then takes the path it takes when the call fails, but AI being off is not a failure: no `ai_calls` row, no failure warning. Speech-to-text (Deepgram) is not affected.
+>
+> - **§3.6:** no chips; the question goes out without them.
+> - **§3.7:** nothing changes. The hello is copy (`arrival.hello`) and the read-back is `summariseReplies`, so the family's replies are still read back to her.
+> - **§3.10:** the voice is still transcribed, and that call is logged. Nothing else a model would give is there:
+>   - no summary, mood words, mentions, away, flag, or flag reason is stored;
+>   - no flag notice or `admin.flag` is sent, and no away period or `away.confirmed` follows;
+>   - nothing is translated: a voice answer's transcript is posted to the group untranslated, a written answer stays as the answer post showed it, and her summary is not translated for her.
+>
+>   For an answer that reaches understanding, `understood_at` is set on that run, so no understanding re-run (§3.15) or `admin.understand_failed` follows. A failed transcription is re-run as before, and an attempt that ends without a transcript at 3 or more still sends `admin.understand_failed`. Switching AI on later does not go back to the answers understood while it was off.
+> - **§3.13:** with no summaries, "what does the family see" answers `parent.family_sees_empty`, followed by the lines of the latest sent weekly read when it has any, although her answers reached the group. This needs a product decision. With no away read from her words, the founder sets away periods on the admin page (`set_away`, §3.17).
+> - **§3.14:** the draft is the safe default, no lines and a generic suggestion. Its `weekly_reads.prompt_version` is `ai_off`, and `weekly_read_drafted` carries `ai_off: true`. The founder still gets `admin.weekly_read_draft`, and can type the lines on the admin page before Send.
+> - **§3.17:** a sent weekly read is not translated for her; she reads the lines as sent.
+>
+> The admin overview counts an answer read while AI was off as understood. What shows that AI was off is each Worker's `ai_off` log line (once per start), the `prompt_version` `ai_off`, and the event property.
 
 ### 3.1 Organiser onboarding (private chat)
 

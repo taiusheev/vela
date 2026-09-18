@@ -5,7 +5,7 @@
  * founder is told there is a draft with a link and nothing else. Retention implements the pilot
  * data map rule by rule and reports a count per rule, so the nightly run is auditable.
  */
-import type { AiCallRecord, Mentions, WeeklyDay } from "@vela/ai";
+import { type AiCallRecord, isAiOff, type Mentions, type WeeklyDay } from "@vela/ai";
 import type { LocalDate, LocalTime } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -76,6 +76,11 @@ const RETENTION_MONTHS = 24;
  */
 const PROOF_RETENTION_YEARS = 5;
 const DAY_MS = 86_400_000;
+/**
+ * The `prompt_version` of a weekly read drafted while AI was off: no prompt wrote it, and prompt
+ * versions are compared by what they wrote.
+ */
+const DRAFTED_WITH_AI_OFF = "ai_off";
 
 export interface AiCallLog {
   familyId: string | null;
@@ -363,7 +368,8 @@ async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
 
 /**
  * Drafts the read for the week ending `weekEnd` (a Sunday): the counts into `weekly_reads.stats`,
- * the lines and the suggestion from `ai.weeklyRead` given only the days she answered, and one
+ * the lines and the suggestion from `ai.weeklyRead` given only the days she answered (its safe
+ * default, no lines and a generic suggestion, when the call fails or AI is off), and one
  * content-free note to the founder. T_quiet is retuned in the same weekly pass. A week already
  * drafted is left as it is.
  */
@@ -434,7 +440,8 @@ export async function draftWeeklyRead(
     voiceLengthDriftPercent: voiceLenDrift,
     repeatedMentions: topics,
   });
-  if (!outcome.ok) {
+  // AI off is not a failure: the draft is the safe default, and nothing is logged as a failed call.
+  if (!outcome.ok && !isAiOff(outcome)) {
     deps.logger.warn("weekly_read_draft_failed", { memberId, weekEnd, error: outcome.error });
   }
   const now = deps.clock.now();
@@ -449,14 +456,16 @@ export async function draftWeeklyRead(
     voice_len_drift: voiceLenDrift,
   };
   await deps.db.transaction(async (tx) => {
-    await recordAiCall(tx, {
-      familyId: family.id,
-      memberId: member.id,
-      record: outcome.record,
-      inputRef: { member_id: member.id, week_end: weekEnd },
-      output: outcome.value,
-      at: now,
-    });
+    if (!isAiOff(outcome)) {
+      await recordAiCall(tx, {
+        familyId: family.id,
+        memberId: member.id,
+        record: outcome.record,
+        inputRef: { member_id: member.id, week_end: weekEnd },
+        output: outcome.value,
+        at: now,
+      });
+    }
     const [read] = await tx
       .insert(weeklyReads)
       .values({
@@ -466,7 +475,7 @@ export async function draftWeeklyRead(
         lines: outcome.value.lines,
         suggestion: outcome.value.suggestion,
         stats,
-        promptVersion: outcome.record.promptVersion,
+        promptVersion: isAiOff(outcome) ? DRAFTED_WITH_AI_OFF : outcome.record.promptVersion,
         createdAt: now,
       })
       .onConflictDoNothing()
@@ -486,6 +495,8 @@ export async function draftWeeklyRead(
           answered_days: answered.length,
           lines: outcome.value.lines.length,
           ok: outcome.ok,
+          // Tells a draft made while AI was off from one whose call failed; both are not ok.
+          ai_off: isAiOff(outcome),
         },
       },
       now,

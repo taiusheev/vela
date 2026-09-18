@@ -1,4 +1,4 @@
-import { createFakeAi, fakeRecord, genericChips } from "@vela/ai";
+import { createFakeAi, createOffAi, fakeRecord, genericChips } from "@vela/ai";
 import type { LocalDate, OutboundKind } from "@vela/contracts";
 import { decodeButton, outboundKey, zonedInstant } from "@vela/core";
 import {
@@ -356,6 +356,21 @@ describe("prepareDay", () => {
     ).toEqual([{ exchangeId: ask.id, error: "Error" }]);
   });
 
+  // Decision X (2026-09-18): with AI off the question goes out as it does after a failed call, but
+  // nothing claims a call was made or that one failed.
+  it("lets the question go out without chips while AI is off, logging no call and no failure", async () => {
+    h.deps.ai = createOffAi();
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const ask = await seedExchange(h.db, seed, { date: TOMORROW, state: "composed" });
+
+    await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+    expect((await exchangeById(ask.id)).state).toBe("scheduled");
+    expect(await h.db.select().from(chips)).toHaveLength(0);
+    expect(await h.db.select().from(aiCalls)).toHaveLength(0);
+    expect(h.logger.entries.map((entry) => entry.event)).not.toContain("chips_failed");
+  });
+
   it("lets the question go out without chips when drafting fails", async () => {
     chipsFail = true;
     const seed = await seedFamily(h.db, { now: h.clock.now() });
@@ -497,6 +512,32 @@ describe("deliverArrival", () => {
       "arrival_delivered",
       "readback_delivered",
     ]);
+  });
+
+  // Decision X (2026-09-18): the read-back is the product, so AI off must not take it away. Both it
+  // and the hello are written from copy, with no model call.
+  it("still reads yesterday's replies back and sends the hello's own copy while AI is off", async () => {
+    h.deps.ai = createOffAi();
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const { replyIds } = await seedYesterdayWithReplies(seed);
+    h.clock.set(at(TOMORROW, "08:00"));
+
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+
+    const [row] = await outboundRows("arrival");
+    expect(row?.payload).toMatchObject({
+      message: {
+        text: [
+          "From yesterday:\nSam: Looks great, Mom!\nMia sent a voice message.",
+          "Good morning, Mrs Chen.",
+          "Nothing new from the family today. How are you this morning?\nVela, from your family",
+          "Reply with a voice message, or tap a button.",
+        ].join("\n\n"),
+        media: [{ kind: "audio", providerFileId: "voice-mia" }],
+      },
+      effect: { readBackReplyIds: replyIds },
+    });
+    expect(await h.db.select().from(aiCalls)).toHaveLength(0);
   });
 
   it("sends a photo choice with exactly two images, and one image as a question", async () => {

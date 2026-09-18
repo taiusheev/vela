@@ -1,7 +1,8 @@
-import { createFakeAi, fakeRecord, SAFE_DEFAULTS } from "@vela/ai";
+import { createFakeAi, createOffAi, fakeRecord, SAFE_DEFAULTS } from "@vela/ai";
 import type { LocalDate, LocalTime, OutboundKind } from "@vela/contracts";
 import { addMinutes, outboundKey, zonedInstant } from "@vela/core";
 import {
+  aiCalls,
   answers,
   awayPeriods,
   type Exchange,
@@ -905,6 +906,50 @@ describe("reconcile", () => {
     h.clock.advanceMinutes(FAILURE_NOTE_AFTER_HOURS * 60);
     await reconcile(h.deps);
     expect(await outboundRows("system")).toHaveLength(0);
+  });
+
+  // Decision X (2026-09-18): AI off is a setting, not a failure. An answer read while it is off is
+  // understood at once, so the re-run has nothing to pick up and the founder hears of no failure.
+  it("re-runs no answer read while AI is off, and never tells the founder one could not be read", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const exchange = await seedExchange(h.db, seed, {
+      date: "2026-09-14",
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    const fresh = await seedAnswer(seed, {
+      exchangeId: exchange.id,
+      kind: "text",
+      externalId: "1",
+      minutesAgo: 0,
+    });
+    // Left not understood after two failed attempts, before AI was switched off.
+    const earlier = await seedAnswer(seed, {
+      exchangeId: exchange.id,
+      kind: "text",
+      externalId: "2",
+      minutesAgo: 20,
+      attempts: 2,
+    });
+    h.deps.ai = createOffAi();
+
+    await understandAnswer(h.deps, fresh);
+    h.clock.advanceMinutes(15);
+    expect((await reconcile(h.deps)).rerun).toBe(1);
+    await h.runDue(handlers());
+
+    expect(await answerRow(earlier)).toMatchObject({
+      processingAttempts: 3,
+      understoodAt: h.clock.now(),
+    });
+    expect(await answerRow(fresh)).toMatchObject({
+      processingAttempts: 1,
+      understoodAt: addMinutes(h.clock.now(), -15),
+    });
+    h.clock.advanceMinutes(FAILURE_NOTE_AFTER_HOURS * 60);
+    expect((await reconcile(h.deps)).rerun).toBe(0);
+    expect(await outboundRows("system")).toHaveLength(0);
+    expect(await h.db.select().from(aiCalls)).toEqual([]);
   });
 
   it("says nothing to the founder while a third understanding is still waiting on the model", async () => {

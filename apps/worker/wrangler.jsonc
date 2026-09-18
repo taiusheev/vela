@@ -40,6 +40,18 @@
   //
   // ADMIN_CONVERSATION_ID, the founder's own Telegram chat id, is a secret of this Worker (H5),
   // never a var: `.dev.vars.example` lists it with the other secrets.
+  //
+  // AI_PROVIDER (decision X, 2026-09-18) is "anthropic" or "off", the same in wrangler.admin.jsonc
+  // for each environment. With "off" no AI provider is called: answers get no summary, flag check,
+  // or translation, questions no chips, weekly read drafts no lines, and a sent weekly read no
+  // translation for her; speech-to-text stays on. ANTHROPIC_API_KEY is needed only with
+  // "anthropic". Development defaults to "off", so local work needs no key; staging is "off" for
+  // the dogfooding week; production must be "anthropic", and src/config.ts refuses to start it
+  // otherwise, because families' answers need the flag check. To switch staging on: set
+  // "anthropic" for staging here and in wrangler.admin.jsonc and commit, then run
+  // `pnpm --filter @vela/worker run setup -- --env staging --from secrets` on that commit before
+  // it is merged to main, which asks for the key and deploys. Merged first, CI would deploy
+  // staging without the key, and both Workers would refuse to run (ConfigError:ANTHROPIC_API_KEY).
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-dev",
   "main": "src/index.ts",
@@ -132,7 +144,8 @@
     "PUBLIC_BASE_URL": "http://localhost:8787",
     "PRIVACY_NOTICE_URL_EN": "http://localhost:8787/privacy",
     "PRIVACY_NOTICE_URL_ZH_TW": "http://localhost:8787/privacy/zh-TW",
-    "REGIONS": "apac"
+    "REGIONS": "apac",
+    "AI_PROVIDER": "off"
   },
 
   "env": {
@@ -191,7 +204,9 @@
         // This Worker's origin and the notice paths it serves (src/notices.ts).
         "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light-staging.workers.dev/privacy",
         "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light-staging.workers.dev/privacy/zh-TW",
-        "REGIONS": "apac"
+        "REGIONS": "apac",
+        // Off for the dogfooding week, until the founder approves buying Anthropic credit.
+        "AI_PROVIDER": "off"
       }
     },
 
@@ -248,7 +263,8 @@
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
         "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light.workers.dev/privacy",
         "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light.workers.dev/privacy/zh-TW",
-        "REGIONS": "apac"
+        "REGIONS": "apac",
+        "AI_PROVIDER": "anthropic"
       }
     }
   }

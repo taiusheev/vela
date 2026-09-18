@@ -41,6 +41,7 @@ declare module "vitest" {
     workerConfigs: readonly WorkerConfig[];
     noticeSources: Readonly<Record<NoticeLang, string>>;
     pilotMaterials: Readonly<Record<string, string>>;
+    pilotConfigSource: string;
   }
 }
 
@@ -137,6 +138,9 @@ export default defineConfig({
       ),
       noticeSources: { en: noticeSource("en"), "zh-TW": noticeSource("zh-TW") },
       pilotMaterials: pilotMaterials(),
+      // As written, comments included: wrangler's reader drops them, and the header is prose the
+      // tests hold to the code it describes.
+      pilotConfigSource: readFileSync(PILOT_CONFIG, "utf8"),
     },
   },
   plugins: [

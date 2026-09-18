@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createFakeAi, fakeRecord, SAFE_DEFAULTS } from "@vela/ai";
+import { createFakeAi, createOffAi, fakeRecord, SAFE_DEFAULTS } from "@vela/ai";
 import type { LocalDate, LocalTime } from "@vela/contracts";
 import { localDateOf, outboundKey, zonedInstant } from "@vela/core";
 import {
@@ -256,7 +256,14 @@ describe("draftWeeklyRead", () => {
     });
     const drafted = (await eventRows()).filter((event) => event.name === "weekly_read_drafted");
     expect(drafted.map((event) => event.props)).toEqual([
-      { week_end: "2026-09-20", counted_days: 3, answered_days: 2, lines: 2, ok: true },
+      {
+        week_end: "2026-09-20",
+        counted_days: 3,
+        answered_days: 2,
+        lines: 2,
+        ok: true,
+        ai_off: false,
+      },
     ]);
     const notes = await h.db.select().from(outbound);
     expect(notes).toHaveLength(1);
@@ -372,9 +379,35 @@ describe("draftWeeklyRead", () => {
     const [logged] = await h.db.select().from(aiCalls);
     expect(logged).toMatchObject({ call: "weekly_read", ok: false, output: null });
     const [drafted] = (await eventRows()).filter((event) => event.name === "weekly_read_drafted");
-    expect(drafted?.props).toMatchObject({ lines: 0, ok: false });
+    expect(drafted?.props).toMatchObject({ lines: 0, ok: false, ai_off: false });
     expect(await h.db.select().from(outbound)).toHaveLength(1);
     expect(h.logger.entries.map((entry) => entry.event)).toContain("weekly_read_draft_failed");
+  });
+
+  // Decision X (2026-09-18): the founder still gets a draft to edit and send, with the counts; no
+  // call is logged or warned about, because none was made.
+  it("stores the safe default as the draft while AI is off, logs no call, and still tells the founder", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await setStartsOn(seed, "2026-09-14");
+    await seedMorning(seed, { date: "2026-09-15", answeredAt: "09:00", summary: "Fine" });
+    h.clock.set(at("2026-09-20", "18:00"));
+
+    await draftWeeklyRead({ ...h.deps, ai: createOffAi() }, seed.member.id, "2026-09-20");
+
+    const [read] = await h.db.select().from(weeklyReads);
+    expect(read).toMatchObject({
+      lines: [],
+      suggestion: "Mom, what was the best part of your week?",
+      stats: { counted_days: 7, answered_days: 1 },
+      promptVersion: "ai_off",
+    });
+    expect(await h.db.select().from(aiCalls)).toEqual([]);
+    const [drafted] = (await eventRows()).filter((event) => event.name === "weekly_read_drafted");
+    expect(drafted?.props).toMatchObject({ lines: 0, ok: false, ai_off: true });
+    expect((await h.db.select().from(outbound)).map((row) => row.conversationId)).toEqual([
+      ADMIN_CHAT,
+    ]);
+    expect(h.logger.entries.map((entry) => entry.event)).not.toContain("weekly_read_draft_failed");
   });
 
   it("retunes T_quiet from her last fourteen answered days and records what it was computed from", async () => {

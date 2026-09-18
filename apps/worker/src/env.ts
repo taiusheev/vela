@@ -17,6 +17,12 @@ interface SharedEnv {
    * admin messages; the admin Worker accepts a form only from it.
    */
   readonly PUBLIC_BASE_URL: string;
+  /**
+   * Where AI calls go: "anthropic", or "off", when none is made (`config.ts`, `readAiProvider`).
+   * The same in both Workers of an environment; production refuses "off".
+   */
+  readonly AI_PROVIDER: string;
+  /** Read only while `AI_PROVIDER` is "anthropic", and required then. */
   readonly ANTHROPIC_API_KEY?: string;
 
   readonly HYPERDRIVE: Hyperdrive;

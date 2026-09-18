@@ -4,6 +4,7 @@
  * prompt to the family group. Every function is safe to run twice: the exchange is unique per day,
  * the outbound rows are keyed by member and date, and the turn is keyed by the day.
  */
+import { isAiOff } from "@vela/ai";
 import type { Channel, LocalDate, MediaRef } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -204,6 +205,11 @@ async function draftChips(deps: Deps, exchange: Exchange): Promise<void> {
       question,
       pastAnswers: await recentAnswerTexts(deps.db, member.id),
     });
+    if (isAiOff(outcome)) {
+      // No call was made, so none is logged, and the question goes out without chips, as it does
+      // after a failed call.
+      return;
+    }
     await recordAiCall(deps.db, {
       familyId: family.id,
       memberId: member.id,

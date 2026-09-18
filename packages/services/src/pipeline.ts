@@ -16,10 +16,19 @@
  * that ends without a transcript or without `understood_at` at three or more tells the founder once
  * (flows §3.15). Provider failures never throw: the light is long since on, and the queue must not
  * retry them.
+ *
+ * While AI is off (the Workers' `AI_PROVIDER` "off") every model step takes the path of a failed
+ * call, so nothing is summarised, flagged, or translated and her words reach the group as she wrote
+ * or said them; but it is not a failure. No `ai_calls` row is written for a call that was never
+ * made, the first understanding run sets `understood_at`, and so neither the re-run nor the
+ * founder's note follows. Speech-to-text is not affected.
  */
 import {
   type AiCallRecord,
+  type AiOutcome,
   type FlagResult,
+  isAiOff,
+  type TranslateInput,
   type Understanding,
   WEEKDAYS,
   type Weekday,
@@ -563,6 +572,29 @@ async function raiseFlag(
 }
 
 /**
+ * One `ai.translate` call about the answer, logged: the translation with the provider it is stored
+ * under, or null when the call failed, which is warned as `failure`, or when AI is off, when no call
+ * was made and nothing is logged.
+ */
+async function translated(
+  deps: Deps,
+  ctx: AnswerContext,
+  input: TranslateInput,
+  failure: "translation_failed" | "summary_translation_failed",
+): Promise<{ text: string; provider: string } | null> {
+  const outcome = await deps.ai.translate(input);
+  if (isAiOff(outcome)) {
+    return null;
+  }
+  await logAiCall(deps, ctx, outcome.record, outcome.value);
+  if (!outcome.ok) {
+    deps.logger.warn(failure, { answerId: ctx.answer.id, error: outcome.error });
+    return null;
+  }
+  return { text: outcome.value.text, provider: `claude:${outcome.record.promptVersion}` };
+}
+
+/**
  * Her words in the family's language when it differs from hers: the stored translation when one
  * exists (a re-run), otherwise one `ai.translate` call whose result is kept per answer and language.
  */
@@ -589,21 +621,24 @@ async function translateWords(
   if (existing !== undefined) {
     return existing.text;
   }
-  const outcome = await deps.ai.translate({
-    text: words,
-    from: member.language,
-    to: family.language,
-    speaker: {
-      name: member.displayName,
-      ageBand: member.ageBand ?? "elder",
-      addressForm: member.addressForm,
+  const translation = await translated(
+    deps,
+    ctx,
+    {
+      text: words,
+      from: member.language,
+      to: family.language,
+      speaker: {
+        name: member.displayName,
+        ageBand: member.ageBand ?? "elder",
+        addressForm: member.addressForm,
+      },
+      listener: { name: family.name, ageBand: "adult", addressForm: null },
+      relationship: "a family elder to the family group that keeps a light on for them",
     },
-    listener: { name: family.name, ageBand: "adult", addressForm: null },
-    relationship: "a family elder to the family group that keeps a light on for them",
-  });
-  await logAiCall(deps, ctx, outcome.record, outcome.value);
-  if (!outcome.ok) {
-    deps.logger.warn("translation_failed", { answerId: answer.id, error: outcome.error });
+    "translation_failed",
+  );
+  if (translation === null) {
     return null;
   }
   await deps.db
@@ -612,12 +647,12 @@ async function translateWords(
       objectType: "answer",
       objectId: answer.id,
       lang: family.language,
-      text: outcome.value.text,
-      provider: `claude:${outcome.record.promptVersion}`,
+      text: translation.text,
+      provider: translation.provider,
       createdAt: deps.clock.now(),
     })
     .onConflictDoNothing();
-  return outcome.value.text;
+  return translation.text;
 }
 
 /**
@@ -666,28 +701,27 @@ async function translateSummaryForHer(
       return;
     }
   }
-  const outcome = await deps.ai.translate({
-    text: summary,
-    from: family.language,
-    to: member.language,
-    speaker: { name: family.name, ageBand: "adult", addressForm: null },
-    listener: {
-      name: member.displayName,
-      ageBand: member.ageBand ?? "elder",
-      addressForm: member.addressForm,
+  const translation = await translated(
+    deps,
+    ctx,
+    {
+      text: summary,
+      from: family.language,
+      to: member.language,
+      speaker: { name: family.name, ageBand: "adult", addressForm: null },
+      listener: {
+        name: member.displayName,
+        ageBand: member.ageBand ?? "elder",
+        addressForm: member.addressForm,
+      },
+      relationship: "the family's one-line note on the listener's answer, shown to her",
     },
-    relationship: "the family's one-line note on the listener's answer, shown to her",
-  });
-  await logAiCall(deps, ctx, outcome.record, outcome.value);
-  if (!outcome.ok) {
-    deps.logger.warn("summary_translation_failed", { answerId: answer.id, error: outcome.error });
+    "summary_translation_failed",
+  );
+  if (translation === null) {
     return;
   }
-  const row = {
-    text: outcome.value.text,
-    provider: `claude:${outcome.record.promptVersion}`,
-    createdAt: deps.clock.now(),
-  };
+  const row = { ...translation, createdAt: deps.clock.now() };
   await deps.db
     .insert(translations)
     .values({ objectType: "answer", objectId: answer.id, lang: member.language, ...row })
@@ -789,10 +823,27 @@ async function postWordsToGroup(
   });
 }
 
+/** Logs the call behind a model step; with AI off there was none, so nothing is logged. */
+async function logOutcome<T>(deps: Deps, ctx: AnswerContext, outcome: AiOutcome<T>): Promise<void> {
+  if (!isAiOff(outcome)) {
+    await logAiCall(deps, ctx, outcome.record, outcome.value);
+  }
+}
+
+/**
+ * Whether a model step leaves nothing to try again: it succeeded, or AI is off, which is a setting
+ * rather than a failure, so the answer is neither re-run nor reported to the founder as unreadable.
+ * A step that failed is tried again by `reconcile`.
+ */
+function settled<T>(outcome: AiOutcome<T>): boolean {
+  return outcome.ok || isAiOff(outcome);
+}
+
 /**
  * `understand_answer` (flows §3.10). `understood_at` is set only when `ai.understand` and `ai.flag`
- * both returned ok; a failed translation does not hold it back. An answer with nothing to read (a
- * photo without words) is understood at once, so it is never re-run.
+ * both returned ok, or AI is off; a failed translation does not hold it back. With AI off nothing
+ * the models return is stored: no summary, mentions, mood words, away, or flag. An answer with
+ * nothing to read (a photo without words) is understood at once, so it is never re-run.
  */
 export async function understandAnswer(deps: Deps, answerId: string): Promise<void> {
   const ctx = await loadAnswer(deps, answerId);
@@ -844,7 +895,7 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
   const understanding = healthWords
     ? modelUnderstanding
     : { ...modelUnderstanding, value: withoutHealthWords(modelUnderstanding.value) };
-  await logAiCall(deps, ctx, understanding.record, understanding.value);
+  await logOutcome(deps, ctx, understanding);
   const modelFlag = await deps.ai.flag({
     lang: member.language,
     addressForm,
@@ -853,9 +904,9 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
     recentSummaries: summaries,
   });
   const flag = healthWords ? modelFlag : { ...modelFlag, value: flagWithoutWords(modelFlag.value) };
-  await logAiCall(deps, ctx, flag.record, flag.value);
+  await logOutcome(deps, ctx, flag);
 
-  const understood = understanding.ok && flag.ok;
+  const understood = settled(understanding) && settled(flag);
   const summaryChanged = understanding.ok && understanding.value.summary !== answer.summary;
   await deps.db.transaction(async (tx) => {
     await tx

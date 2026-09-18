@@ -12,6 +12,8 @@ TELEGRAM_BOT_TOKEN=
 # Written by scripts/telegram-setup.ts and echoed by Telegram on every webhook request.
 TELEGRAM_WEBHOOK_SECRET=
 # Pilot Worker and admin Worker (`vela-admin`, which translates a sent weekly read): Anthropic API key.
+# Read only while the var AI_PROVIDER is "anthropic". Development's AI_PROVIDER is "off" in both
+# wrangler files, so leave this empty unless you switch it on there.
 ANTHROPIC_API_KEY=
 # Pilot Worker: Deepgram API key for speech-to-text.
 DEEPGRAM_API_KEY=

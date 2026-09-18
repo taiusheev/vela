@@ -11,7 +11,7 @@
  * reads use (`AdminDeps`), from its own, smaller set of bindings.
  */
 import { createTelegramAdapter } from "@vela/adapters";
-import { type Ai, createClaudeAi, createDeepgramStt } from "@vela/ai";
+import { type Ai, createClaudeAi, createDeepgramStt, createOffAi } from "@vela/ai";
 import type { Channel } from "@vela/contracts";
 import { connectDatabase, type VelaDatabase } from "@vela/db";
 import type {
@@ -25,7 +25,14 @@ import type {
   OutboundJob,
   Random,
 } from "@vela/services";
-import { checkAdminConfig, readConfig, requireVar, secret } from "./config.ts";
+import {
+  checkAdminConfig,
+  type Environment,
+  readAiProvider,
+  readConfig,
+  requireVar,
+  secret,
+} from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
 import { createHeartbeat } from "./heartbeat.ts";
 import type { PrivacyNotices } from "./notices.ts";
@@ -179,6 +186,49 @@ export function createChannels(env: PilotEnv): ChannelRegistry {
   };
 }
 
+/** Whether a Worker start has said yet that AI is off. */
+export interface AiOffNotice {
+  said: boolean;
+}
+
+/**
+ * This isolate's notice. An isolate is one start of the Worker, and deps are built for every
+ * invocation, so kept at module scope the line is written once per start, not once per request.
+ */
+const thisStart: AiOffNotice = { said: false };
+
+/**
+ * What AI off leaves out, in the words of the `ai_off` line. The header of wrangler.jsonc, which is
+ * where wrangler.admin.jsonc sends a reader for what "off" means, repeats it word for word, and
+ * `src/wrangler-config.test.ts` holds the two together.
+ */
+export const AI_OFF_EFFECTS =
+  "answers get no summary, flag check, or translation, questions no chips, weekly read drafts no lines, and a sent weekly read no translation for her";
+
+/**
+ * The AI port `AI_PROVIDER` names (decision X, 2026-09-18). "anthropic" is Claude, and only then is
+ * `ANTHROPIC_API_KEY` read, and required. "off" calls no provider at all (`createOffAi`), and the
+ * Worker says so once per start, since every AI step then quietly takes its safe default.
+ */
+export function createAiPort(
+  env: { readonly AI_PROVIDER?: string; readonly ANTHROPIC_API_KEY?: string },
+  environment: Environment,
+  configFile: string,
+  logger: Logger,
+  notice: AiOffNotice = thisStart,
+): Ai {
+  if (readAiProvider(env, environment, configFile) === "anthropic") {
+    return createClaudeAi({ apiKey: secret(env, "ANTHROPIC_API_KEY") });
+  }
+  if (!notice.said) {
+    notice.said = true;
+    logger.warn("ai_off", {
+      detail: `AI_PROVIDER is off: no AI provider is called, so ${AI_OFF_EFFECTS}`,
+    });
+  }
+  return createOffAi();
+}
+
 /**
  * The pilot Worker's deps for one invocation. Everything that can fail on configuration, the
  * notices included, fails before the database connection is opened, so a misconfigured Worker
@@ -192,7 +242,7 @@ export async function buildDeps(
   const config = readConfig(env, notices);
   const logger = createLogger(env);
   const channels = options.channels ?? createChannels(env);
-  const ai = createClaudeAi({ apiKey: secret(env, "ANTHROPIC_API_KEY") });
+  const ai = createAiPort(env, config.environment, "wrangler.jsonc", logger);
   const stt = createDeepgramStt({ apiKey: secret(env, "DEEPGRAM_API_KEY") });
 
   const connection = await connectDatabase(env.HYPERDRIVE.connectionString);
@@ -221,8 +271,9 @@ export async function buildDeps(
 
 /** The admin Worker's ports for one request, checked the same way before a connection opens. */
 export async function buildAdminDeps(env: AdminEnv): Promise<AdminDepsHandle> {
-  checkAdminConfig(env);
-  const ai = createClaudeAi({ apiKey: secret(env, "ANTHROPIC_API_KEY") });
+  const environment = checkAdminConfig(env);
+  const logger = createLogger(env);
+  const ai = createAiPort(env, environment, "wrangler.admin.jsonc", logger);
   const telegramBotUsername = requireVar(env, "TELEGRAM_BOT_USERNAME", "wrangler.admin.jsonc");
 
   const connection = await connectDatabase(env.HYPERDRIVE.connectionString);
@@ -230,7 +281,7 @@ export async function buildAdminDeps(env: AdminEnv): Promise<AdminDepsHandle> {
     deps: {
       db: connection.db,
       clock,
-      logger: createLogger(env),
+      logger,
       queues: { outbound: createJobQueue(env.OUTBOUND_QUEUE) },
       scheduler: createSchedulerPort(env),
       ai,

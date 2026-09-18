@@ -1,3 +1,4 @@
+import { createOffAi } from "@vela/ai";
 import type { LocalDate, OutboundKind, OutboundStatus } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { addMinutes, outboundKey } from "@vela/core";
@@ -1494,6 +1495,26 @@ describe("sendWeeklyRead", () => {
       ok: true,
       inputRef: { weekly_read_id: readId, lang: "zh-TW" },
     });
+  });
+
+  // Decision X (2026-09-18): she reads the lines as sent, as after a failed call, and no call is
+  // logged or warned about, because none was made.
+  it("sends the read and translates nothing for her while AI is off, logging no call", async () => {
+    h.deps.ai = createOffAi();
+    const seed = await seedFamily(h.db, {
+      now: h.clock.now(),
+      language: "en",
+      memberLanguage: "zh-TW",
+    });
+    const readId = await seedWeeklyRead(seed);
+
+    expect(await sendWeeklyRead(h.deps, FOUNDER, { weeklyReadId: readId, ...EDITED })).toBe("sent");
+
+    expect(await h.db.select().from(translations)).toHaveLength(0);
+    expect(await h.db.select().from(aiCalls)).toHaveLength(0);
+    expect(h.logger.entries.map((entry) => entry.event)).not.toContain(
+      "weekly_read_translation_failed",
+    );
   });
 
   it("stores no translation when the call fails, and calls nothing when the languages match", async () => {

@@ -1,4 +1,5 @@
 import { describe, expect, inject, it } from "vitest";
+import { AI_OFF_EFFECTS } from "./deps.ts";
 import { NOTICE_LANGS, NOTICE_PATHS, type NoticeLang } from "./notices.ts";
 import { NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
 
@@ -101,6 +102,24 @@ function consumers(config: (typeof configs)[number]): Record<string, unknown>[] 
   return isRecord(config.queues) ? records(config.queues.consumers) : [];
 }
 
+/**
+ * The opening comment of wrangler.jsonc, everything before its first key, as one line of prose:
+ * without the `//` markers and line breaks, a phrase reads the same wherever its lines wrap.
+ */
+function pilotHeader(): string {
+  const source = inject("pilotConfigSource");
+  const firstKey = source.indexOf('"$schema"');
+  if (firstKey === -1) {
+    throw new Error("wrangler.jsonc has no $schema key to end its header");
+  }
+  return source
+    .slice(0, firstKey)
+    .split("\n")
+    .map((line) => line.trim().replace(/^\/\/\s*/, ""))
+    .join(" ")
+    .replace(/\s+/g, " ");
+}
+
 describe("the two Workers' configurations", () => {
   it("cover both Workers in every environment deploy.yml deploys, and development", () => {
     expect(configs.map(({ worker, environment }) => `${worker}:${environment}`)).toEqual([
@@ -197,6 +216,40 @@ describe("the two Workers' configurations", () => {
       expect(configOf("admin", environment).vars.TELEGRAM_BOT_USERNAME).toBe(bot);
     },
   );
+
+  // Decision X (2026-09-18): one setting per environment, so the admin Worker never calls Anthropic
+  // while the pilot Worker is off, or needs a key the pilot Worker does not.
+  it.each(["development", ...DEPLOYED] as const)(
+    "set AI_PROVIDER to anthropic or off, the same in both Workers, in %s",
+    (environment) => {
+      const provider = configOf("pilot", environment).vars.AI_PROVIDER;
+
+      expect(["anthropic", "off"]).toContain(provider);
+      expect(configOf("admin", environment).vars.AI_PROVIDER).toBe(provider);
+    },
+  );
+
+  // config.ts refuses to start production with AI off: families' answers need the flag check.
+  it("run production with AI on in both Workers", () => {
+    expect(configOf("pilot", "production").vars.AI_PROVIDER).toBe("anthropic");
+    expect(configOf("admin", "production").vars.AI_PROVIDER).toBe("anthropic");
+  });
+
+  // Local work needs no Anthropic key.
+  it("run development with AI off in both Workers", () => {
+    expect(configOf("pilot", "development").vars.AI_PROVIDER).toBe("off");
+    expect(configOf("admin", "development").vars.AI_PROVIDER).toBe("off");
+  });
+
+  // wrangler.admin.jsonc sends a reader to the pilot header for what "off" means and how to switch
+  // it on, so it lists all that the ai_off line lists, and puts the key on before main, since CI
+  // deploys staging from main and both Workers refuse to run with AI on and no key.
+  it("say in the pilot header what AI off leaves out, and to put the key on before main", () => {
+    const header = pilotHeader();
+
+    expect(header).toContain(AI_OFF_EFFECTS);
+    expect(header).toContain("on that commit before it is merged to main");
+  });
 
   // A placeholder may stay only where the founder has not created the thing yet, and filling it in
   // (infra/README.md section 11, steps 2 and 3) must keep this test green, or no deploy passes CI.
@@ -339,6 +392,7 @@ describe("the admin Worker's bindings", () => {
       expect(records(admin.r2Buckets)).toEqual([]);
       expect(records(admin.migrations)).toEqual([]);
       expect(Object.keys(admin.vars).sort()).toEqual([
+        "AI_PROVIDER",
         "ENVIRONMENT",
         "PUBLIC_BASE_URL",
         "TELEGRAM_BOT_USERNAME",

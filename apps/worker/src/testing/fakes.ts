@@ -30,6 +30,7 @@ export const adminTestEnv: AdminEnv = {
   ENVIRONMENT: "development",
   PUBLIC_BASE_URL: "http://localhost:8787",
   TELEGRAM_BOT_USERNAME: testEnv.TELEGRAM_BOT_USERNAME,
+  AI_PROVIDER: testEnv.AI_PROVIDER,
   ANTHROPIC_API_KEY: "test-anthropic-key",
   ACCESS_TEAM_DOMAIN: "vela-test.cloudflareaccess.com",
   ACCESS_AUD: "test-audience",

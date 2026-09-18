@@ -25,6 +25,7 @@ export {
   SERVER_FALLBACK_BETA,
   TIMEOUT_MS_FOR,
 } from "./models.ts";
+export { createOffAi } from "./off.ts";
 export {
   INPUT_CLOSE_TAG,
   INPUT_OPEN_TAG,

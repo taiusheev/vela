@@ -4,7 +4,14 @@
  */
 import { z } from "zod";
 import { createClaudeAi } from "../src/claude.ts";
-import { AI_CALL_NAMES, type Ai, AiCallName, type AiOutcome, INPUT_SCHEMAS } from "../src/types.ts";
+import {
+  AI_CALL_NAMES,
+  type Ai,
+  AiCallName,
+  type AiOutcome,
+  INPUT_SCHEMAS,
+  isAiOff,
+} from "../src/types.ts";
 import { requireApiKey } from "./env.ts";
 
 /** Promptfoo's provider response, as far as this provider fills it in. */
@@ -60,9 +67,13 @@ function runCall(ai: Ai, call: AiCallName, input: unknown): Promise<AiOutcome<un
 
 /**
  * A failed call is an error for Promptfoo, never an output: the safe default it carries would pass
- * some checks (an unflagged answer, an untranslated text) and hide the failure.
+ * some checks (an unflagged answer, an untranslated text) and hide the failure. So is an `Ai` that
+ * is off, which called no model and so has nothing to measure.
  */
-function toProviderResponse(outcome: AiOutcome<unknown>): ProviderResponse {
+function toProviderResponse(call: AiCallName, outcome: AiOutcome<unknown>): ProviderResponse {
+  if (isAiOff(outcome)) {
+    return { error: `${call} not run: AI is off` };
+  }
   const { record } = outcome;
   const accounting = {
     cost: record.costUsd,
@@ -94,7 +105,7 @@ export function createEvalProvider(ai: Ai): EvalProvider {
         return { error: `vars.call must be one of ${AI_CALL_NAMES.join(", ")}` };
       }
       try {
-        return toProviderResponse(await runCall(ai, call.data, context?.vars?.input));
+        return toProviderResponse(call.data, await runCall(ai, call.data, context?.vars?.input));
       } catch (error) {
         if (error instanceof z.ZodError) {
           const issues = z.prettifyError(error);

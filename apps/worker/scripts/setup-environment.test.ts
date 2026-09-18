@@ -1,4 +1,5 @@
 import { describe, expect, inject, it } from "vitest";
+import type { AiProvider } from "../src/config.ts";
 import {
   type Command,
   cloudflareApi,
@@ -61,14 +62,20 @@ const BOT_USERNAMES: Readonly<Record<Environment, string>> = {
 
 /**
  * Both wrangler files as JSON with comments, built from what wrangler itself read from the real
- * files (vitest.config.ts), so the fake setups run on the real names, hosts and placeholders.
+ * files (vitest.config.ts), so the fake setups run on the real names, hosts and placeholders. A
+ * test about the Anthropic key names the `AI_PROVIDER` it needs, so it does not depend on whether
+ * an environment's AI is switched on in the real files.
  */
-function wranglerTexts(): { readonly pilot: string; readonly admin: string } {
+function wranglerTexts(aiProviders: Partial<Record<Environment, AiProvider>> = {}): {
+  readonly pilot: string;
+  readonly admin: string;
+} {
   const configs = inject("workerConfigs");
   const text = (worker: "pilot" | "admin"): string => {
     const env = Object.fromEntries(
       (["staging", "production"] as const).map((environment) => {
         const config = configs.find((c) => c.worker === worker && c.environment === environment);
+        const aiProvider = aiProviders[environment];
         return [
           environment,
           {
@@ -76,7 +83,10 @@ function wranglerTexts(): { readonly pilot: string; readonly admin: string } {
             queues: config?.queues,
             r2_buckets: config?.r2Buckets,
             hyperdrive: config?.hyperdrive,
-            vars: config?.vars,
+            vars:
+              aiProvider === undefined
+                ? config?.vars
+                : { ...config?.vars, AI_PROVIDER: aiProvider },
           },
         ];
       }),
@@ -138,8 +148,8 @@ interface World {
   misread: string[];
 }
 
-function newWorld(environment: Environment): World {
-  const texts = wranglerTexts();
+function newWorld(environment: Environment, aiProvider?: AiProvider): World {
+  const texts = wranglerTexts(aiProvider === undefined ? {} : { [environment]: aiProvider });
   return {
     environment,
     accountName: ACCOUNT_NAMES[environment],
@@ -524,8 +534,8 @@ async function setUp(world: World, ...extra: string[]): Promise<number> {
 // ---------------------------------------------------------------------------------------------
 
 describe("a whole setup", () => {
-  it("sets up staging from nothing, with every secret on the Worker that reads it", async () => {
-    const world = newWorld("staging");
+  it("sets up staging from nothing with AI on, with every secret on the Worker that reads it", async () => {
+    const world = newWorld("staging", "anthropic");
 
     const code = await setUp(world);
 
@@ -566,6 +576,69 @@ describe("a whole setup", () => {
     // The founder's /start was confirmed, so it never reaches the Worker once the webhook exists.
     expect(world.acknowledgedOffset).toBe(START_UPDATE_ID + 1);
     expect(world.printed.at(-1)).toBe("check: every check passed");
+    expect(world.printed.join("\n")).not.toContain("AI is off");
+  });
+
+  // Decision X (2026-09-18): no Anthropic credit is bought while AI is off.
+  it("sets up staging with AI off without asking for an Anthropic key, and says how to switch it on", async () => {
+    const world = newWorld("staging", "off");
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.prompts.join("\n")).not.toContain("Anthropic");
+    expect([...(world.workers.get("vela")?.keys() ?? [])].sort()).toEqual([
+      "ADMIN_CONVERSATION_ID",
+      "DEEPGRAM_API_KEY",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_WEBHOOK_SECRET",
+    ]);
+    expect([...(world.workers.get("vela-admin")?.keys() ?? [])].sort()).toEqual([
+      "ACCESS_AUD",
+      "ACCESS_TEAM_DOMAIN",
+    ]);
+    // The key goes on before the switch reaches main, or CI deploys staging without it.
+    expect(world.printed.filter((line) => line.includes("AI is off"))).toEqual([
+      '  AI is off in staging (AI_PROVIDER "off" in wrangler.jsonc and wrangler.admin.jsonc), so no Anthropic key is asked for. To switch it on later: set AI_PROVIDER to "anthropic" for staging in both files and commit, then run pnpm --filter @vela/worker run setup -- --env staging --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy staging without the key, and both Workers would refuse to run.',
+    ]);
+    expect(world.deployed).toEqual(["vela", "vela-admin"]);
+  });
+
+  it("asks for the Anthropic key and deploys when run from secrets once AI is switched on", async () => {
+    const world = newWorld("staging", "off");
+    await setUp(world);
+    for (const file of ["wrangler.jsonc", "wrangler.admin.jsonc"] as const) {
+      const text = world.files.get(file) ?? "";
+      world.files.set(file, text.replace('"AI_PROVIDER": "off"', '"AI_PROVIDER": "anthropic"'));
+    }
+    expect(configOf(world).aiProvider).toBe("anthropic");
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "secrets");
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.prompts.filter((question) => question.includes("Anthropic API key"))).toHaveLength(
+      1,
+    );
+    expect(world.workers.get("vela")?.get("ANTHROPIC_API_KEY")).toBe(SECRETS.anthropic);
+    expect(world.workers.get("vela-admin")?.get("ANTHROPIC_API_KEY")).toBe(SECRETS.anthropic);
+    expect(world.deployed).toEqual(["vela", "vela-admin"]);
+    expect(world.printed.join("\n")).not.toContain("AI is off");
+    expect(leaks(world)).toEqual([]);
+  });
+
+  // Its Workers would refuse to start: families' answers there need the flag check.
+  it("refuses to set up production with AI off, before it creates anything", async () => {
+    const world = newWorld("production", "off");
+
+    const code = await setUp(world);
+
+    expect(code).toBe(1);
+    expect(world.printed.join("\n")).toContain(
+      "AI_PROVIDER is off for production, which its Workers refuse to start with",
+    );
+    expect([world.queues.size, world.buckets.size, world.writes.length]).toEqual([0, 0, 0]);
+    expect(world.prompts.join("\n")).not.toContain("Anthropic");
   });
 
   it("lets no secret reach a printed line, a prompt, a command-line argument or a written file", async () => {
@@ -1044,6 +1117,34 @@ describe("the wrangler files", () => {
     },
   );
 
+  it.each(["anthropic", "off"] as const)(
+    "give staging's AI_PROVIDER when both Workers set it to %s",
+    (provider) => {
+      expect(
+        readEnvironmentConfig(wranglerTexts({ staging: provider }), "staging").aiProvider,
+      ).toBe(provider);
+    },
+  );
+
+  // One Worker calling Anthropic while the other is off would need a key the setup never asked for.
+  it("refuse Workers whose AI_PROVIDER differs, or is neither anthropic nor off", () => {
+    const texts = wranglerTexts({ staging: "off" });
+    const differing = {
+      ...texts,
+      admin: texts.admin.replace('"AI_PROVIDER": "off"', '"AI_PROVIDER": "anthropic"'),
+    };
+    const unknown = {
+      pilot: texts.pilot.replace('"AI_PROVIDER": "off"', '"AI_PROVIDER": "gemini"'),
+      admin: texts.admin.replace('"AI_PROVIDER": "off"', '"AI_PROVIDER": "gemini"'),
+    };
+
+    for (const broken of [differing, unknown]) {
+      expect(() => readEnvironmentConfig(broken, "staging")).toThrow(
+        /must set AI_PROVIDER for staging to the same value, one of anthropic, off/,
+      );
+    }
+  });
+
   const commented = [
     "{",
     "  // Every id the founder has not created yet is a PLACEHOLDER.",
@@ -1178,6 +1279,7 @@ describe("the values the setup keeps", () => {
         admin: new Set<string>(),
       },
       new Map([["TELEGRAM_BOT_TOKEN", "token"]]),
+      "anthropic",
     );
 
     expect(plan.map((entry) => [entry.name, entry.source, entry.workers])).toEqual([
@@ -1187,6 +1289,21 @@ describe("the values the setup keeps", () => {
       ["ANTHROPIC_API_KEY", "prompt", ["pilot", "admin"]],
       ["DEEPGRAM_API_KEY", "kept", []],
     ]);
+  });
+
+  it("neither ask for nor put the Anthropic key while AI is off, even on a Worker without it", () => {
+    const plan = planSecrets(
+      { pilot: new Set(["DEEPGRAM_API_KEY"]), admin: new Set<string>() },
+      new Map(),
+      "off",
+    );
+
+    expect(plan.find((entry) => entry.name === "ANTHROPIC_API_KEY")).toEqual({
+      name: "ANTHROPIC_API_KEY",
+      workers: [],
+      source: "ai_off",
+    });
+    expect(plan.find((entry) => entry.name === "DEEPGRAM_API_KEY")?.source).toBe("kept");
   });
 
   it("read the private chats that sent /start, newest first and once each, and the last update", () => {

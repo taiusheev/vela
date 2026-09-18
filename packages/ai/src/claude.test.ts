@@ -464,7 +464,7 @@ describe("createClaudeAi usage and cost", () => {
       tokensCached: 2000,
       costUsd: 0.0068,
     });
-    expect(outcome.record.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(outcome.record?.latencyMs).toBeGreaterThanOrEqual(0);
   });
 
   it("records the model that served a fallback response", async () => {
@@ -473,7 +473,7 @@ describe("createClaudeAi usage and cost", () => {
     const outcome = await ai.flag(flagInput);
 
     expect(outcome.ok).toBe(true);
-    expect(outcome.record.model).toBe("claude-opus-4-8");
+    expect(outcome.record?.model).toBe("claude-opus-4-8");
   });
 
   it("prices a response at the rates of the model that served it, not the routed one", async () => {
@@ -652,7 +652,7 @@ describe("createClaudeAi failures", () => {
     const outcome = await ai.chips(chipsInput);
 
     expect(outcome.ok).toBe(false);
-    expect(outcome.record.error).toBe("truncated");
+    expect(outcome.record?.error).toBe("truncated");
     expect(outcome.value).toEqual({ chips: ["Good", "Not yet", "Tell you later"] });
   });
 
@@ -724,7 +724,7 @@ describe("createClaudeAi failures", () => {
     const outcome = await ai.translate(translateInput);
 
     expect(outcome.ok).toBe(false);
-    expect(outcome.record.error).toBe("network");
+    expect(outcome.record?.error).toBe("network");
     expect(outcome.value).toEqual({ text: translateInput.text });
   });
 
@@ -746,7 +746,7 @@ describe("createClaudeAi failures", () => {
     const outcome = await ai.readback(readbackInput);
 
     expect(outcome.ok).toBe(false);
-    expect(outcome.record.error).toBe("schema_invalid");
+    expect(outcome.record?.error).toBe("schema_invalid");
     expect(outcome.value).toEqual({ lines: [] });
   });
 

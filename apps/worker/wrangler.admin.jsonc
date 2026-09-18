@@ -18,11 +18,13 @@
   //
   // It has no queue consumer, cron, R2 bucket, Telegram token, or Durable Object class of its own,
   // and it builds only the ports the admin actions and reads use (src/deps.ts, AdminDeps). Its
-  // secrets are ACCESS_TEAM_DOMAIN, ACCESS_AUD, and ANTHROPIC_API_KEY (a sent weekly read is
-  // translated for her); it does not read ADMIN_CONVERSATION_ID. Its var TELEGRAM_BOT_USERNAME is
-  // the pilot Worker's bot in the same environment, which the link create_invite sends an organiser
-  // opens: a PLACEHOLDER_ until the founder creates the bot, and the setup script's telegram step
-  // writes it into both files.
+  // secrets are ACCESS_TEAM_DOMAIN, ACCESS_AUD, and, while AI_PROVIDER is "anthropic",
+  // ANTHROPIC_API_KEY (a sent weekly read is translated for her); it does not read
+  // ADMIN_CONVERSATION_ID. Its var TELEGRAM_BOT_USERNAME is the pilot Worker's bot in the same
+  // environment, which the link create_invite sends an organiser opens: a PLACEHOLDER_ until the
+  // founder creates the bot, and the setup script's telegram step writes it into both files. Its
+  // var AI_PROVIDER equals the pilot Worker's in each environment; wrangler.jsonc says what "off"
+  // means and how to switch it on.
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-admin-dev",
   "main": "src/admin-worker.ts",
@@ -61,7 +63,8 @@
     "ENVIRONMENT": "development",
     // `pnpm dev:admin` serves this Worker on port 8787.
     "PUBLIC_BASE_URL": "http://localhost:8787",
-    "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_DEV_BOT_USERNAME"
+    "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_DEV_BOT_USERNAME",
+    "AI_PROVIDER": "off"
   },
 
   "env": {
@@ -85,7 +88,9 @@
         // This Worker's own origin: the one origin a form may be posted from.
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev",
         // The pilot Worker's bot in staging, as in wrangler.jsonc.
-        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_STAGING_BOT_USERNAME"
+        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_STAGING_BOT_USERNAME",
+        // As in wrangler.jsonc: off for the dogfooding week.
+        "AI_PROVIDER": "off"
       }
     },
 
@@ -106,7 +111,8 @@
       "vars": {
         "ENVIRONMENT": "production",
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
-        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME"
+        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
+        "AI_PROVIDER": "anthropic"
       }
     }
   }

@@ -16,6 +16,7 @@
  * the person's data without holding it (ADR-28). A contact's number arrives only with their yes, and
  * goes with their no (L8).
  */
+import { isAiOff } from "@vela/ai";
 import {
   type AdminAction,
   type Channel,
@@ -1174,6 +1175,10 @@ async function translateForHer(deps: Deps, sent: SentWeeklyRead): Promise<void> 
     relationship:
       "the family's weekly note about the listener, shown to her as the family reads it",
   });
+  if (isAiOff(outcome)) {
+    // No call was made, so none is logged, and she reads the lines as sent, as after a failure.
+    return;
+  }
   const at = deps.clock.now();
   const { record } = outcome;
   await deps.db.transaction(async (tx) => {

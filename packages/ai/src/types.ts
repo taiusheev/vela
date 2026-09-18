@@ -49,7 +49,25 @@ export interface AiCallRecord {
 
 export type AiOutcome<T> =
   | { ok: true; value: T; record: AiCallRecord }
-  | { ok: false; value: T; record: AiCallRecord; error: string };
+  | { ok: false; value: T; record: AiCallRecord; error: string }
+  | AiOffOutcome<T>;
+
+/**
+ * What every call resolves with while AI is off (`createOffAi`; the Workers' `AI_PROVIDER` "off"):
+ * the call's safe default, and no record, because no provider was called. It is not a failure, so
+ * it carries no error: services take the path a failed call takes, without logging a call that
+ * never happened.
+ */
+export interface AiOffOutcome<T> {
+  ok: false;
+  value: T;
+  record: null;
+}
+
+/** Whether AI was off for this outcome, rather than a provider having been called. */
+export function isAiOff<T>(outcome: AiOutcome<T>): outcome is AiOffOutcome<T> {
+  return outcome.record === null;
+}
 
 /**
  * The longest text an input field keeps, in UTF-16 code units. Names and family text come from people
@@ -446,7 +464,8 @@ export const OUTPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes
 };
 
 /**
- * Never rejects for provider failures: a failed call resolves `ok: false` with a safe default.
+ * Never rejects for provider failures: a failed call resolves `ok: false` with a safe default. While
+ * AI is off, every call resolves `AiOffOutcome`: the same safe default, and no record.
  * Invalid input is a programming error and rejects; text beyond `INPUT_TEXT_LIMITS` is shortened
  * first, because it comes from people.
  */
