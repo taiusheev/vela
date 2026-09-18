@@ -1,6 +1,6 @@
 # Vela technical architecture, v2
 
-2026-09-17. **This is the build blueprint.** It replaces the v1 technical design (`archive/architecture/01-technical-design.md`). Every tool choice in it was checked against the alternatives in September 2026 by five due-diligence sweeps (`architecture/research/`); the ten records that changed are appended to `decisions.md` (ADR-11 to ADR-20). The product it builds is `product/05-product-spec-v2.md`; the markets and their order are `plan/market-order.md`; the data model is `schema.sql` (validated in a real Postgres engine); the interface is `api-contract.md`; the sprint order is `plan/build-plan.md`.
+2026-09-18. **This is the build blueprint.** It replaces the v1 technical design (`archive/architecture/01-technical-design.md`). Every tool choice in it was checked against the alternatives in September 2026 by five due-diligence sweeps (`architecture/research/`); the ten records that changed are appended to `decisions.md` (ADR-11 to ADR-20). The product it builds is `product/05-product-spec-v2.md`; the markets and their order are `plan/market-order.md`; the data model is `schema.sql` (validated in a real Postgres engine); the interface is `api-contract.md`; the sprint order is `plan/build-plan.md`.
 
 Reading order for someone new: §1 constraints → §2 overview → §6 scheduling → §7 gateway → §8 adapters → §9 AI → §10 app. The rest is reference.
 
@@ -336,13 +336,13 @@ SLOs: arrival sent P95 ≤ 5 min and P99 ≤ 15 min after her hour (the Durable 
 | Signal | Threshold | Where | Severity |
 |---|---|---|---|
 | Heartbeat stale (`/healthz` not `ok`) | no successful reconcile for > 35 min | GitHub Actions watchdog (outside Cloudflare), every 15 min | Email to the founder |
-| Arrival unsent past hour + 5 min | any | reconciliation cron → Sentry | High |
+| Arrival unsent past hour + 5 min | any | reconciliation logs `scheduler_missed` in the pilot Worker's logs (Sentry once connected); a cron or Worker that stops leaves `/healthz` stale for the watchdog | High |
 | Budget index rejection for `arrival`/`quiet_notice` | any | Sentry log alert | Medium (should never happen) |
 | Adapter send failure rate | > 5% in 15 min on one channel | Sentry | High |
 | Dead-letter queue growth | any | Queues DLQ → Sentry | High |
 | Quiet notice fired | every | `quiet_events`, reviewed daily in the admin | Informational |
 | Provider spend | 50/80/100% of tier | Cloudflare, Neon (hard cap), Anthropic, Twilio budget alerts | Medium |
-| Postgres unreachable | 5xx spike | Sentry + synthetic `/readyz` | Critical |
+| Postgres unreachable | reconcile stops finishing, so `/healthz` answers `stale` after 35 min; the webhook answers 5xx | GitHub Actions watchdog (a stale `/healthz`, read from outside Cloudflare), plus the Workers' error logs (`cron_failed`, `request_failed`, `queue_job_failed`; Sentry once connected) | Critical |
 
 The founder's daily view reads `metrics_daily` and `quiet_events` in the admin SPA: answer rate, latency, quiet notices and outcomes, stop rate, families per market, AI cost. PostHog (EU) carries app funnels, flags, and replay; it never receives content.
 
@@ -367,9 +367,9 @@ CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite
 
 | Env | Worker | Databases | Channels | Mobile |
 |---|---|---|---|---|
-| dev | `wrangler dev` (`vela-dev`; `vela-admin-dev` beside it with `pnpm --filter @vela/worker dev:admin`) | pglite locally; a personal Neon branch | Telegram test bot; LINE test OA | Expo dev client on the founder's phone |
-| staging | `vela` (`https://vela.vela-light-staging.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light-staging.workers.dev`), in the "Vela staging" Cloudflare account | Neon branches of each region | Telegram test bot; LINE test OA; WhatsApp sandbox | TestFlight / Play internal (dev client) |
-| prod | `vela` (`https://vela.vela-light.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light.workers.dev`), in the "Vela" Cloudflare account | Neon main branches (apac, eu, us) | Real accounts | Store builds; EAS Update channel `production` |
+| dev | `wrangler dev` (`vela-dev`; `vela-admin-dev` beside it with `pnpm --filter @vela/worker dev:admin`) | PGlite locally (`pnpm --filter @vela/db dev-db`); no Neon branch: each Neon project is one environment's (`infra/README.md`, section 2) | Telegram test bot; LINE test OA | Expo dev client on the founder's phone |
+| staging | `vela` (`https://vela.vela-light-staging.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light-staging.workers.dev`), in the "Vela staging" Cloudflare account | Neon projects of their own, one per region (apac: `vela-staging`), so staging never copies production data | Telegram test bot; LINE test OA; WhatsApp sandbox | TestFlight / Play internal (dev client) |
+| prod | `vela` (`https://vela.vela-light.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light.workers.dev`), in the "Vela" Cloudflare account | Neon projects, one per region (apac: `vela`; eu and us from sprint 2), each on its default branch `main` | Real accounts | Store builds; EAS Update channel `production` |
 
 Release: trunk-based; PRs run the full CI; `main` deploys to staging; a tag deploys to production after the founder's approval, its deploy job migrating once, then deploying `vela`, then `vela-admin` (ADR-26); mobile releases weekly during the pilot, with EAS Update for JS-only fixes.
 
@@ -411,7 +411,7 @@ At 10,000 families with 10% on Light at $79/year the gross margin is thin; at 20
 2. Accounts in the founder's name now: Cloudflare, Neon, Anthropic, Deepgram, Azure (TTS), Clerk, Sentry, PostHog, Expo, a LINE Official Account (unverified is allowed for individuals), Telegram bot, Twilio (later).
 3. The name decision (ship as "Vela Light" until clearance). No domain is needed for the pilot: each Cloudflare account's workers.dev subdomain (`vela-light`, `vela-light-staging`) is chosen when the account is set up (ADR-26).
 4. Native reviewers for Traditional Chinese now, Japanese in phase 2.
-5. The first families: own parent, three to five friend families, five Taiwanese families.
+5. The first families (revised 2026-09-18): a dogfooding week on staging, then families living in Taiwan on Telegram once production is deployed, then English- and Chinese-speaking families on the app, then Taiwan on LINE (`plan/market-order.md`). The founder's own parent waits: Russia's 152-FZ forbids storing Russian citizens' data in databases outside Russia, and Telegram has been largely inaccessible in Russia since mid-March 2026 (`plan/materials/pilot/legal-memo.md` Q6).
 
 ---
 

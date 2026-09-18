@@ -1,6 +1,6 @@
 # Data requests and manual changes
 
-17 September 2026 · privacy notice ("Your rights", "How long we keep it", "Health words") · `plan/materials/pilot/data-map.md` · decisions L1 to L9 (ADR-27, ADR-28) · done by the founder only, because every step reads or writes real family records; the co-founder keeps these queries true to the schema and tests them on synthetic data, and never runs them on `main`
+18 September 2026 · privacy notice ("Your rights", "How long we keep it", "Health words") · `plan/materials/pilot/data-map.md` · decisions L1 to L9 (ADR-27, ADR-28) · done by the founder only, because every step reads or writes real family records; the co-founder keeps these queries true to the schema and tests them on synthetic data, and never runs them on the Neon project `vela` or on the dogfooding week's rows in `vela-staging`
 
 `architecture/decisions.md` ADR-22 gives the admin page write actions (services module `admin.ts`; POST forms on `/admin` in the admin Worker `vela-admin`, at `https://vela-admin.vela-light.workers.dev/admin` in production, behind Cloudflare Access with a verified Access JWT and a same-origin check, ADR-26; `architecture/04-instrument-flows.md` §3.17), built with the sprint 1 services and worker (build plan 1.12). Until they run in production, the founder makes these changes in the Neon console with the statements below. From then on, the admin action in the last column replaces a section's statements: it writes the `admin_access_log` row (with its `action`, and `member_id` when it is about one member) and the domain event itself, so nothing is logged by hand. Sections without an admin action stay console procedures.
 
@@ -23,7 +23,7 @@
 
 ## Rules
 
-1. **Where.** Neon console → project `vela-apac` → **SQL Editor**, branch `main`. Run one statement at a time, in the order given, except a block that starts with `BEGIN;` and ends with `COMMIT;`: select the whole block and run it once, so either all of it is kept or, if any statement fails, none of it. A statement is one transaction on its own, so a change written as one statement is kept whole or not at all. Each change is written so that running it twice does no harm, except a new invite link (A3, A4), which makes another link each time.
+1. **Where.** Neon console → project `vela` (production) → **SQL Editor**, the project's default branch, database `neondb`. The one exception is the end of the dogfooding week, which runs K on the project `vela-staging` (K, "The end of the dogfooding week"). Run one statement at a time, in the order given, except a block that starts with `BEGIN;` and ends with `COMMIT;`: select the whole block and run it once, so either all of it is kept or, if any statement fails, none of it. A statement is one transaction on its own, so a change written as one statement is kept whole or not at all. Each change is written so that running it twice does no harm, except a new invite link (A3, A4), which makes another link each time.
 2. **Log first.** Before reading or changing anything, for each family the session touches:
 
    ```sql
@@ -540,6 +540,22 @@ For anyone except the person the light is for (for her, use K: everything Vela h
 Within 30 days of the end of a family's pilot, or within 7 days of a request. If the family book exists by then, first offer the organiser the stories the family kept.
 
 Once `delete_family` (build plan 1.12) and the retention job (build plan 2.8) both run in production: `delete_family` sets `families.deleted_at`, and the retention job deletes the family within 24 hours, forgetting every member's and contact's consent rows first (flows §3.15, §3.17). The next day, check that `SELECT id FROM families WHERE id = '<family id>';` returns nothing and that nothing is left under `families/<family id>/` in **Cloudflare ("Vela" account) → R2 object storage → `vela-media-production`**, then do steps 6 to 8. Until then, steps 1 to 8.
+
+**The end of the dogfooding week** (build plan 1.10). When a friend was the kept-light member, the only real data on staging is that friend's name, Telegram account and consent rows (`infra/README.md`, "Environments"), and all of it goes the day the week ends: delete the test family from staging with steps 1 to 8 by hand, even once `delete_family` runs, because it keeps the consent rows. Change three things:
+
+- **Where.** Every statement runs in the Neon console → project `vela-staging` → **SQL Editor**, the project's default branch, database `neondb`, never in `vela`. Step 1's bucket is `vela-media-staging` in the "Vela staging" account, and step 6's chat is your chat with the staging bot.
+- **Consent rows are deleted, not forgotten.** Staging keeps no proof of a test's consent. Right before step 5, delete every consent row about the family's members and contacts; step 5's `UPDATE consents` then changes no row, and the rest of step 5 runs as written:
+
+  ```sql
+  DELETE FROM consents AS c
+  WHERE c.subject_ref IN (
+    SELECT 'member:' || m.id::text FROM members AS m WHERE m.family_id = '<family id>'
+    UNION ALL
+    SELECT 'contact:' || n.id::text FROM nearby_contacts AS n WHERE n.family_id = '<family id>'
+  );
+  ```
+
+- **What stays** (step 7) on staging: content-free `events` and `metrics_daily`, `admin_access_log` and `deletions`, which hold ids, never a name or a Telegram account. The friend's chats with the staging bot stay the friend's own.
 
 1. **Media files.** List the keys and delete every object under `families/<family id>/` in **Cloudflare ("Vela" account) → R2 object storage → `vela-media-production`**:
 

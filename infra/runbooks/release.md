@@ -1,6 +1,6 @@
 # Release runbook
 
-17 September 2026 · architecture §16–17 · code design §9–10 · ADR-23, ADR-26 · the co-founder prepares, the founder approves production
+18 September 2026 · architecture §16–17 · code design §9–10 · ADR-23, ADR-26 · the co-founder prepares, the founder approves production
 
 ## When to use it
 
@@ -25,7 +25,7 @@ An environment's first migration and deploy are not done with this runbook: the 
 ## Steps
 
 1. **Pull request.** CI green (lint, typecheck, tests). New behaviour has a test that fails without it. A migration's SQL is read in the diff. Copy changes have both `en` and `zh-TW` keys.
-2. **Merge.** CI (the GitHub `staging` environment) runs the checks, applies migrations to the Neon `staging` branch once, then deploys `vela`, then `vela-admin`. Until the `staging` environment holds its secrets, these steps are done by hand, in this order. The co-founder never holds the staging connection string (`infra/README.md`, rule zero), so a migration is run by the founder, in their own terminal on the tested commit, pasting the staging string from the password manager at the hidden prompt:
+2. **Merge.** CI (the GitHub `staging` environment) runs the checks, applies migrations to staging's own Neon project, `vela-staging`, once, then deploys `vela`, then `vela-admin`. Until the `staging` environment holds its secrets, these steps are done by hand, in this order. The co-founder never holds the staging connection string (`infra/README.md`, rule zero), so a migration is run by the founder, in their own terminal on the tested commit, pasting `vela-staging`'s direct string from the password manager at the hidden prompt:
 
    ```bash
    read -rsp "Staging connection string: " DATABASE_URL; echo; export DATABASE_URL
@@ -43,12 +43,12 @@ An environment's first migration and deploy are not done with this runbook: the 
 3. **Staging smoke test (15 minutes).**
    - `https://vela.vela-light-staging.workers.dev/healthz` returns 200 with `"status":"ok"` (within 15 minutes of the deploy, once a reconcile has run); `/privacy` and `/privacy/zh-TW` on that host open with no sign-in; `/admin` on that host answers `not found`; and `https://vela-admin.vela-light-staging.workers.dev/admin` opens through Cloudflare Access. `/healthz` builds no deps and never touches the database: it answers `ok` only while a reconcile has finished in the last 35 minutes, which needs the pilot Worker's configuration, its database and its cron, so it proves the pilot Worker, and the admin page proves the admin Worker's configuration.
    - In the staging family group, reply to the turn prompt with an ask; the bot answers "Into [name]'s morning."
-   - **Arrival**, only if the staging test member has had no arrival delivered today (the scheduler delivers one per local day; a second release the same day, or a release after the morning's arrival, skips this line and says so in the release notes). The founder sets the arrival at least 30 minutes ahead and clears the stored wake, in the Neon console on branch `staging`, as in [`silence-drill.md`](silence-drill.md), "Setting the arrival hour H" (editing `arrival_time` alone leaves the old alarm in place). The arrival comes once at that time; tap an answer; the light line appears in the group.
+   - **Arrival**, only if the staging test member has had no arrival delivered today (the scheduler delivers one per local day; a second release the same day, or a release after the morning's arrival, skips this line and says so in the release notes). The founder sets the arrival at least 30 minutes ahead and clears the stored wake, in the Neon console in the project `vela-staging`, as in [`silence-drill.md`](silence-drill.md), "Setting the arrival hour H" (editing `arrival_time` alone leaves the old alarm in place). The arrival comes once at that time; tap an answer; the light line appears in the group.
    - Both Workers' logs in the "Vela staging" dashboard show, since the deploy, no line whose `level` is `error` (such as `request_failed`, `queue_job_failed`, `cron_failed`, `scheduler_tick_failed`, `reconcile_tick_failed`, `outbound_failed`, `outbound_redrive_failed`), no `ConfigError`, and no uncaught exception. Sentry is not connected to either Worker yet (`SENTRY_DSN` is not read) and stays empty whatever fails, so these logs are the error check.
    - If the scheduler, gateway, quiet ladder or an adapter changed: run the staging silence drill ([`silence-drill.md`](silence-drill.md)).
 4. **Tag.** The founder opens **GitHub → Releases → Draft a new release**, creates the tag `vYYYY.MM.DD` on the tested commit (add `.2` for a second release the same day), writes two lines (what changed; migration yes or no) and publishes.
 5. **Approve.** The production job waits for the founder's approval of the `production` environment. Approve it.
-6. **CI** (the GitHub `production` environment, the only place the production connection string and Cloudflare token exist) runs the checks, applies migrations to Neon `main` once, then deploys `vela`, then `vela-admin`.
+6. **CI** (the GitHub `production` environment, the only place the production connection string and Cloudflare token exist) runs the checks, applies migrations to the Neon project `vela` once, then deploys `vela`, then `vela-admin`.
 7. **Watch for 30 minutes.** `https://vela.vela-light.workers.dev/healthz` 200 with `"status":"ok"` and its `/privacy` pages open; `https://vela-admin.vela-light.workers.dev/admin` opens through Cloudflare Access; both Workers' logs in the "Vela" dashboard show, since the deploy, no line whose `level` is `error`, no `ConfigError`, and no uncaught exception (as in step 3; Sentry is not connected yet); no watchdog failure email; the next due arrivals delivered on time in the admin page; no `scheduler_missed`; dead-letter queues empty.
 
 ## Rollback

@@ -1,13 +1,13 @@
 # Silence drill
 
-17 September 2026 · architecture §1 constraint 5, §14, §16 · code design §8 · build plan 1.3, 1.8, 3.6 and "the silence drill runs nightly from sprint 1"
+18 September 2026 · architecture §1 constraint 5, §14, §16 · code design §8 · build plan 1.3, 1.8, 3.6 and "the silence drill runs nightly from sprint 1"
 
 What it proves: **a real silence produces exactly one quiet notice, and our own failure never produces one.** A quarter of days go unanswered even when everything works (research/08), so both halves matter: a notice that never comes, and a notice that comes because we failed, both break the promise.
 
 ## When to use it
 
 - **Automatically:** every night in CI, from sprint 1.
-- **Live, in staging:** before the first family beyond the founder's own; after any change to the scheduler, the gateway, the quiet ladder or an adapter; monthly during the pilot; after an incident involving missed or late arrivals.
+- **Live, in staging:** before the first family; after any change to the scheduler, the gateway, the quiet ladder or an adapter; monthly during the pilot; after an incident involving missed or late arrivals.
 - **Never inject failures in production.** Production is covered by the daily review at the end.
 
 ## Part numbers
@@ -27,7 +27,7 @@ The build plan refers to these parts; the CI suite in `@vela/services` implement
 
 Takes one morning. Needs two Telegram accounts the founder controls (one as the organiser, one as the kept-light test member), and the staging test family "Drill" in the founder's time zone. Never change these values in production.
 
-**Setting the arrival hour H.** The founder does this in the Neon console, branch `staging` (the co-founder holds no staging connection string). Changing `arrival_time` alone does not move the scheduler: the member's alarm and `next_wake_at` still hold the old wake, and reconciliation only picks up members whose `next_wake_at` is empty or more than 10 minutes late. So clear `next_wake_at` in the same statement, choose H at least 30 minutes ahead (reconciliation runs every 15 minutes), and use a morning whose arrival has not been delivered yet: the scheduler delivers one arrival per local day. First check today's exchange:
+**Setting the arrival hour H.** The founder does this in the Neon console, in staging's own project `vela-staging`, its default branch (the co-founder holds no staging connection string). Changing `arrival_time` alone does not move the scheduler: the member's alarm and `next_wake_at` still hold the old wake, and reconciliation only picks up members whose `next_wake_at` is empty or more than 10 minutes late. So clear `next_wake_at` in the same statement, choose H at least 30 minutes ahead (reconciliation runs every 15 minutes), and use a morning whose arrival has not been delivered yet: the scheduler delivers one arrival per local day. First check today's exchange:
 
 ```sql
 SELECT scheduled_for, state, delivered_at FROM exchanges

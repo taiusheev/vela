@@ -362,3 +362,7 @@ Revisit if: the watchdog misses an outage in a drill or for real, GitHub's sched
 
 ## ADR-26 · updated 2026-09-18
 The pilot Worker also owns the `ReconcileHeartbeat` Durable Object class and its migration, which the admin Worker does not bind, and `GET /healthz` reads it (ADR-18 update). The pilot Worker no longer holds a heartbeat URL secret, so neither Worker holds one. When an account's subdomain changes, the places to change also include the cross-links between the two privacy notices, followed by `pnpm --filter @vela/worker notices`, the organiser agreements' notice links, the `/healthz` URL in `.github/watchdog.json`, and the webhook, registered again with the setup script's `webhook` step (`--from webhook`) rather than a hand-set `WORKER_URL` (`03-code-design.md` §9).
+
+
+## ADR-2 · updated 2026-09-18
+Each environment has its own Neon project in Singapore, created in the Neon console on 17 September 2026: `vela-staging` for staging and `vela` for production, each on its default branch with Neon's default database `neondb` and role `neondb_owner`. Staging is not a branch of production, so it can never copy production data, and each project has its own Free-plan compute hours. ADR-2's "one Postgres project per data region" still holds within each environment; "Neon branches give free staging databases" no longer does. The plan (Free or Launch) belongs to the Neon organisation, not to a project, so moving production to Launch also bills every other project in that organisation (`infra/README.md`, section 2).

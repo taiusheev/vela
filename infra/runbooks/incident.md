@@ -1,6 +1,6 @@
 # Incident runbook
 
-17 September 2026 · architecture §13–15 · founder leads, co-founder investigates with content-free data
+18 September 2026 · architecture §13–15 · founder leads, co-founder investigates with content-free data
 
 ## When to use it
 
@@ -29,7 +29,7 @@ Not an incident: one AI or transcription call failing, or one person blocking th
    | Symptom | Look first |
    |---|---|
    | Watchdog failed | Open `https://vela.<subdomain>.workers.dev/healthz` yourself. `stale` or `no_reconcile_yet`: cloudflarestatus.com (Workers, Cron Triggers, Durable Objects); the pilot Worker `vela`'s logs for the `scheduled` handler (`cron_failed`, with a `ConfigError:<variable>` when a secret or notice is the cause, or a database error); Neon (next row). No answer, or a 5xx other than 503: the Worker itself (a failed deploy, cloudflarestatus.com). An `ok` answer while the run failed: re-run the workflow (**Actions → watchdog → Run workflow**); a network error on GitHub's side can fail a run. Durable Object alarms still deliver arrivals if only cron is degraded: confirm in the admin |
-   | Postgres unreachable | neonstatus.com; Neon plan limits: on the Free plan, the project's 100 compute hours a month are shared by the `main` and `staging` branches, and when they are used up Neon suspends compute until the next billing month (Neon console → project `vela-apac` → **Usage**; `infra/README.md`, section 2); storage; the Hyperdrive configuration, which both Workers bind. The webhook answers 500 and Telegram retries; the admin page fails too. A suspended project needs the paid plan today, not next month: arrivals and quiet notices stop |
+   | Postgres unreachable | neonstatus.com; Neon plan limits: on the Free plan, each environment's project (`vela` for production, `vela-staging` for staging) has its own 100 compute hours a month, and when a project has used them up Neon suspends its compute until the next billing month (Neon console → that project → **Usage**; `infra/README.md`, section 2), so staging running out never stops production; storage; the Hyperdrive configuration, which both Workers bind. The webhook answers 500 and Telegram retries; the admin page fails too. A suspended `vela` needs the paid plan today, not next month: arrivals and quiet notices stop |
    | Admin page will not open | Access refuses your sign-in: the Access application and its policy on `vela-admin` (`infra/README.md`, section 12). A "Not signed in" page after signing in: `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` on `vela-admin`. A failed page: `vela-admin`'s logs (`request_failed`). Families are not affected: the pilot Worker `vela` does not depend on the admin Worker |
    | Adapter failures | Telegram `getWebhookInfo` (last error, pending updates); 429 rate limits; a revoked token |
    | Dead-letter growth | The DLQ messages (ids only): fix the cause, then re-drive |
@@ -42,7 +42,7 @@ Not an incident: one AI or transcription call failing, or one person blocking th
 
 **Once the re-run ships (ADR-25; `architecture/04-instrument-flows.md` §3.10, §3.15).** Each start of media ingestion or understanding adds one to `answers.processing_attempts`, so a voice answer's first run counts two when its transcription succeeds. Every 15 minutes `reconcile` re-enqueues answers with `understood_at` empty that arrived between 15 minutes and 24 hours ago and have fewer than three attempts: a voice answer without a transcript goes back to media ingestion, anything else to understanding. A re-run never posts the transcript to the group twice, never repeats a translation, and never sends a flag notice twice. After the third failed attempt the admin conversation receives `admin.understand_failed` once: the family's name and a link to the admin page, never her words. Open the link (the view is logged), read the answer, and pass any words that matter to the organiser as below. An answer that turned 24 hours old with fewer than three attempts (for example while cron was down) gets no notice, so after any outage also run the query below.
 
-**Until the re-run ships**, nothing runs `understandAnswer` again, and the founder does the flag check by hand for every answer in the outage. In the Neon console, branch `main`, first log the read for each family you will open ([`data-requests.md`](data-requests.md), rule 2, action `view`), then list the answers since the outage began:
+**Until the re-run ships**, nothing runs `understandAnswer` again, and the founder does the flag check by hand for every answer in the outage. In the Neon console, project `vela`, its default branch, first log the read for each family you will open ([`data-requests.md`](data-requests.md), rule 2, action `view`), then list the answers since the outage began:
 
 ```sql
 SELECT a.id, e.family_id, a.member_id, a.received_at, a.kind, a.processing_attempts, a.transcript, a.payload

@@ -1,6 +1,6 @@
 # Restore drill
 
-17 September 2026 · architecture §13 (quarterly drill) · build plan 2.8 (drill #1) and 5.7 (drill #2) · done by the founder, because the restored copy holds real family data
+18 September 2026 · architecture §13 (quarterly drill) · build plan 2.8 (drill #1) and 5.7 (drill #2) · done by the founder, because the restored copy holds real family data
 
 ## When to use it
 
@@ -8,13 +8,13 @@
 - After changing the Neon plan, the restore window or the database role setup.
 - For real, when production data was destroyed or corrupted (last section).
 
-Before starting, note the restore window: Neon's Free plan keeps at most 6 hours of history, Launch up to 7 days, Scale up to 30 days (Neon plans page, September 2026). A 6-hour window means a problem noticed the next morning cannot be undone; decide on the plan before families beyond the founder's own join.
+Before starting, note the restore window: Neon's Free plan keeps at most 6 hours of history, Launch up to 7 days, Scale up to 30 days (Neon plans page, September 2026). A 6-hour window means a problem noticed the next morning cannot be undone; decide on the plan before the first family joins. The plan is the Neon organisation's, not one project's, so moving to Launch also bills `vela-staging` per compute hour (`infra/README.md`, section 2, step 8).
 
-The restored branch is a full copy of production. Only the founder connects to it, queries return counts and identifiers only, nothing is exported or screenshotted, and it is deleted the same day.
+Every step runs in the Neon project `vela`, production's own project, on its default branch (database `neondb`; Neon names it `production` in a project created in the console), called the default branch below; staging has its own project, `vela-staging`, which this drill never touches (`infra/README.md`, section 2). The restored branch is a full copy of production. Only the founder connects to it, queries return counts and identifiers only, nothing is exported or screenshotted, and it is deleted the same day.
 
 ## Steps
 
-1. **Record T0 and counts on `main`.** In the Neon console, **SQL Editor**, branch `main`:
+1. **Record T0 and counts on the default branch.** In the Neon console, project `vela`, **SQL Editor**, the default branch:
 
    ```sql
    SELECT now() AS t0;
@@ -36,7 +36,7 @@ The restored branch is a full copy of production. Only the founder connects to i
    ```
 
    Also note the latest applied migration (Drizzle's migrations table, by default `drizzle.__drizzle_migrations`).
-2. **Wait 5 minutes**, then **Branches → New branch**: name `restore-drill-YYYY-MM-DD`, parent `main`, "from a specific date and time" = T0, smallest compute. Start a timer.
+2. **Wait 5 minutes**, then, in the same project, **Branches → New branch**: name `restore-drill-YYYY-MM-DD`, parent `main`, "from a specific date and time" = T0, smallest compute. Start a timer.
 3. **Run the same queries on the new branch**, and check the constraints the product depends on exist:
 
    ```sql

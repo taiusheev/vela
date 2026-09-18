@@ -43,7 +43,8 @@ export type Step = (typeof STEPS)[number];
 const STEP_DESCRIPTIONS: Readonly<Record<Step, string>> = {
   account: "check the Cloudflare API token and account id (staging saves them to apps/worker/.env)",
   resources: "create the queues, the dead-letter queue and the R2 media bucket",
-  database: "apply the migrations to Neon, create the Hyperdrive configuration, write its id",
+  database:
+    "apply the migrations to the environment's Neon project, create the Hyperdrive configuration, write its id",
   telegram:
     "check the bot token, write the bot's username to both files, read your chat id, generate the webhook secret",
   secrets: "put each secret on the Worker that reads it",
@@ -92,7 +93,8 @@ export interface SetupIo {
 /** What differs between the two accounts, named as infra/README.md names it. */
 interface EnvironmentFacts {
   readonly accountName: string;
-  readonly neonBranch: string;
+  /** Each environment has a Neon project of its own, so staging never copies production data. */
+  readonly neonProject: string;
   readonly hyperdriveName: string;
   readonly botName: string;
   readonly anthropicWorkspace: string;
@@ -102,7 +104,7 @@ interface EnvironmentFacts {
 const FACTS: Readonly<Record<Environment, EnvironmentFacts>> = {
   staging: {
     accountName: "Vela staging",
-    neonBranch: "staging",
+    neonProject: "vela-staging",
     hyperdriveName: "vela-apac-staging",
     botName: "Vela Light staging",
     anthropicWorkspace: "vela-staging",
@@ -110,13 +112,16 @@ const FACTS: Readonly<Record<Environment, EnvironmentFacts>> = {
   },
   production: {
     accountName: "Vela",
-    neonBranch: "main",
+    neonProject: "vela",
     hyperdriveName: "vela-apac",
     botName: "Vela Light",
     anthropicWorkspace: "vela-production",
     deepgramKey: "vela-production",
   },
 };
+
+/** What Neon gives every new project, which both projects kept (infra/README.md, section 2). */
+const NEON_DEFAULTS = { database: "neondb", role: "neondb_owner" } as const;
 
 const PLACEHOLDER = "PLACEHOLDER_";
 
@@ -1393,13 +1398,13 @@ class Setup {
   // --- database
 
   async #databaseStep(): Promise<string> {
-    const { neonBranch, hyperdriveName } = this.#facts;
+    const { neonProject, hyperdriveName } = this.#facts;
     const account = await this.#ensureAccount();
     const connectionString = await this.#askSecret({
       label: "Neon connection string",
       where: [
-        "Neon console (console.neon.tech), project vela-apac: select Connect.",
-        `Choose branch ${neonBranch}, database vela and the role that owns it, turn Connection pooling off, and copy the connection string.`,
+        `Neon console (console.neon.tech), project ${neonProject} (${this.#environment}'s own project): select Connect.`,
+        `Keep the default branch the dialog selects (production or main), database ${NEON_DEFAULTS.database} and role ${NEON_DEFAULTS.role}, turn Connection pooling off, and copy the connection string.`,
         "The direct string, not the pooled one: the migrations need a session, and Hyperdrive pools connections itself.",
       ],
       check: (value) => problemOf(() => parseConnectionString(value)),
@@ -1407,7 +1412,7 @@ class Setup {
     const origin = parseConnectionString(connectionString);
     this.#secrets.add(origin.password);
 
-    this.#say(`Applying the migrations to the Neon ${neonBranch} branch.`);
+    this.#say(`Applying the migrations to the Neon project ${neonProject}.`);
     const exitCode = await this.#io.run(
       { tool: "migrate", args: [], env: { DATABASE_URL: connectionString }, stdin: "" },
       (line) => this.#say(`  ${line}`),
@@ -1839,7 +1844,7 @@ class Setup {
     }
     for (const line of [
       "Next:",
-      `1. From your own Telegram account, open @${config.botUsername} and send /start: onboarding begins, with your own family first.`,
+      firstFamilyStep(this.#environment, config.botUsername),
       `2. Open ${config.adminOrigin}/admin: Cloudflare Access asks you to sign in, then the overview opens.`,
       `3. Within ${HEALTH_WAIT_MINUTES} minutes, ${config.pilotOrigin}/healthz answers {"status":"ok",...}: reconciliation runs every 15 minutes. Then, in a commit, set ${this.#environment}'s "enabled" to true in .github/watchdog.json, so the watchdog emails you when it stops (infra/README.md, section 6).`,
       "4. The wrangler files now hold this environment's Hyperdrive id and bot username (identifiers, not secrets): commit them.",
@@ -1848,6 +1853,18 @@ class Setup {
     }
     return "every check passed";
   }
+}
+
+/**
+ * Who uses the environment first (build plan 1.10). Staging carries the dogfooding week, with the
+ * founder as the organiser. Production waits for that week to pass, and then its first family,
+ * living in Taiwan, is set up by that family's organiser. The founder's own parent is not
+ * onboarded (plan/materials/pilot/README.md, decision 19).
+ */
+function firstFamilyStep(environment: Environment, botUsername: string): string {
+  return environment === "staging"
+    ? `1. The dogfooding week (build plan 1.10): from your own Telegram account, open @${botUsername} and send /start to set up the test family as its organiser. The kept-light member is your second Telegram account, or a friend living in Taiwan once the data processing terms are done, with scripted test content only (plan/materials/pilot/README.md, "Before any family").`
+    : `1. No family yet: the first family living in Taiwan is onboarded only once the dogfooding week on staging has passed and the checks in plan/materials/pilot/README.md, "Before any family", are done. Its organiser sends /start to @${botUsername} ("Onboarding a family, in order").`;
 }
 
 function changes(

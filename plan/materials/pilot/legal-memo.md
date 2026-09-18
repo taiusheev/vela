@@ -2,7 +2,7 @@ This memo is research by Vela's tech co-founder, an AI. It is not legal advice, 
 
 # Legal memo: Taiwan's Personal Data Protection Act and the Vela pilot
 
-Version `legal-memo.v1` · 17 September 2026 · for the founder and counsel · reviews the pack at `privacy-notice.v1`, `consent-script.v1`, `nearby-consent.v1`, `organiser-agreement.v1` and `data-map.v1`, and the code at commit 8991fdf with the working tree of 17 September 2026
+Version `legal-memo.v1` · 17 September 2026, with dated notes of 18 September 2026 · for the founder and counsel · reviews the pack at `privacy-notice.v1`, `consent-script.v1`, `nearby-consent.v1`, `organiser-agreement.v1` and `data-map.v1`, and the code at commit 8991fdf with the working tree of 17 September 2026
 
 Six questions about the pilot under Taiwan's Personal Data Protection Act (個人資料保護法, "the Act") and its Enforcement Rules (施行細則, "the Rules"), plus the laws of the countries where a pilot family might live. Each answer gives the short answer, the reasoning with sources, a confidence level, and what Vela's documents or code should change. All the changes are collected in the table at the end, followed by the questions for a lawyer.
 
@@ -535,6 +535,8 @@ No authority addresses chat buttons.
 
 **What stays the same.** The Act still applies to the founder, who processes data in Taiwan [T13]. What follows applies on top of it. The pilot starts with the founder's own family, so this is the first thing to settle.
 
+> **Note of 18 September 2026.** The pilot no longer starts with the founder's own family. The founder's parent lives in Russia and is a Russian citizen, so the Russia result below applies: the parent is not onboarded, because Article 18 part 5 forbids storing a Russian citizen's data in databases outside Russia while Vela stores in Singapore, and because Telegram has been largely inaccessible in Russia since mid-March 2026 [R8]. The parent waits until there is a channel that works in Russia and a lawyer has advised on 152-FZ. The pilot now starts with a dogfooding week on staging, then families living in Taiwan on Telegram once production is deployed, then English- and Chinese-speaking families on the app, then Taiwan on LINE (`plan/market-order.md`; `README.md`, decision 19). The paragraph above is left as written.
+
 **How the Russia rule differs.** Russia's law follows citizenship, not residence. The other three follow where the person is.
 
 **Russia (Federal Law 152-FZ, as consolidated to 26 July 2026 by ConsultantPlus, an unofficial source [R1]).**
@@ -611,6 +613,8 @@ Priority:
 - **High:** before Vela runs for any family, the founder's own included.
 - **Medium:** before the first family beyond the founder's own.
 - **Low:** before the named feature ships, or before any public launch.
+
+> **Note of 18 September 2026.** No family of the founder's comes first any more (Q6, note of the same date), so the Medium changes are due before the first family, as the High ones are. That first family lives in Taiwan and is onboarded only after the dogfooding week on staging has passed and production is deployed. In the dogfooding week, a friend living in Taiwan may be the kept-light member only once C9 is done, using scripted test content only (`README.md`, "Before any family"). The priorities above are left as written.
 
 Every change to an English pilot document applies to its `.zh-TW` twin in the same commit. Every change to a notice regenerates `apps/worker/src/notices.generated.ts`.
 

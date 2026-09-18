@@ -39,7 +39,8 @@ const SECRETS = {
   chatId: "8765432109",
 } as const;
 
-const DATABASE_URL = `postgresql://vela_owner:${SECRETS.databasePassword}@ep-quiet-sky-a1b2c3.ap-southeast-1.aws.neon.tech/vela?sslmode=require`;
+/** A direct string as Neon's Connect shows it for a new project: database neondb, role neondb_owner. */
+const DATABASE_URL = `postgresql://neondb_owner:${SECRETS.databasePassword}@ep-quiet-sky-a1b2c3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`;
 const ACCOUNT_ID = "0123456789abcdef0123456789abcdef";
 const HYPERDRIVE_ID = "fedcba9876543210fedcba9876543210";
 const TEAM_DOMAIN = "vela-founder.cloudflareaccess.com";
@@ -536,9 +537,8 @@ describe("a whole setup", () => {
       "vela-dead-letter-staging",
     ]);
     expect([...world.buckets]).toEqual(["vela-media-staging"]);
-    expect(world.hyperdrives.map((config) => [config.name, config.caching.disabled])).toEqual([
-      ["vela-apac-staging", true],
-    ]);
+    const hyperdrives = world.hyperdrives.map((config) => [config.name, config.caching.disabled]);
+    expect(hyperdrives).toEqual([["vela-apac-staging", true]]);
     expect(world.migrations).toBe(1);
     const config = configOf(world);
     expect([
@@ -860,6 +860,47 @@ describe("a whole setup", () => {
     expect(world.prompts.join("\n")).not.toMatch(/healthchecks|ping url/i);
   });
 
+  // Two Neon projects, not two branches of one: staging's string can never open production's data.
+  it.each([
+    ["staging", "vela-staging"],
+    ["production", "vela"],
+  ] as const)(
+    "sends %s's founder to its own Neon project, %s, on Neon's default branch, database and role",
+    async (environment, project) => {
+      const world = newWorld(environment);
+
+      const code = await setUp(world);
+
+      expect(code, world.printed.join("\n")).toBe(0);
+      expect(world.printed).toContain(
+        `  Neon console (console.neon.tech), project ${project} (${environment}'s own project): select Connect.`,
+      );
+      expect(world.printed).toContain(
+        "  Keep the default branch the dialog selects (production or main), database neondb and role neondb_owner, turn Connection pooling off, and copy the connection string.",
+      );
+      expect(world.printed).toContain(`  Applying the migrations to the Neon project ${project}.`);
+      expect(world.printed.join("\n")).not.toMatch(/branch staging|staging branch/);
+    },
+  );
+
+  it("ends staging with the dogfooding week, and production with the first family living in Taiwan once that week has passed", async () => {
+    const staging = newWorld("staging");
+    const production = newWorld("production");
+
+    expect(await setUp(staging), staging.printed.join("\n")).toBe(0);
+    expect(await setUp(production), production.printed.join("\n")).toBe(0);
+
+    const stagingNext = staging.printed.slice(staging.printed.indexOf("  Next:"));
+    const productionNext = production.printed.slice(production.printed.indexOf("  Next:"));
+    expect(stagingNext[1]).toBe(
+      `  1. The dogfooding week (build plan 1.10): from your own Telegram account, open @VelaStagingTestBot and send /start to set up the test family as its organiser. The kept-light member is your second Telegram account, or a friend living in Taiwan once the data processing terms are done, with scripted test content only (plan/materials/pilot/README.md, "Before any family").`,
+    );
+    expect(productionNext[1]).toBe(
+      `  1. No family yet: the first family living in Taiwan is onboarded only once the dogfooding week on staging has passed and the checks in plan/materials/pilot/README.md, "Before any family", are done. Its organiser sends /start to @VelaLightBot ("Onboarding a family, in order").`,
+    );
+    expect([...stagingNext, ...productionNext].join("\n")).not.toMatch(/your own family/);
+  });
+
   it("passes /healthz once reconciliation runs, and fails it when reconciliation stopped", async () => {
     const world = newWorld("staging");
     await setUp(world);
@@ -1093,8 +1134,8 @@ describe("secrets on screen", () => {
       scheme: "postgresql",
       host: "ep-quiet-sky-a1b2c3.ap-southeast-1.aws.neon.tech",
       port: 5432,
-      database: "vela",
-      user: "vela_owner",
+      database: "neondb",
+      user: "neondb_owner",
       password: SECRETS.databasePassword,
     });
     expect(() => parseConnectionString(pooled)).toThrow(/pooled/);
