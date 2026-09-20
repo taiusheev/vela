@@ -137,6 +137,8 @@ export function servicesDeps(ports: AdminDeps): Deps {
       understand: { send: () => notGiven("queues.understand") },
     },
     random: ports.random,
+    // A port that throws, never `null`: `null` is MEDIA_STORAGE "off" (decision M), under which
+    // services quietly keep no copy, and this Worker binds no bucket in any environment.
     media: {
       put: () => notGiven("media"),
       get: () => notGiven("media"),

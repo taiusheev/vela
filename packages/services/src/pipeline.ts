@@ -198,9 +198,14 @@ async function endAttemptUnresolved(
 }
 
 /**
- * The voice as bytes: from R2 when a row is already stored (a re-forwarded file, a re-run after a
- * failed transcription), otherwise fetched from the platform and stored first. Null, logged, when
- * neither is possible; the attempt then ends without a transcript.
+ * The voice as bytes: from Vela's own storage when a row is already stored (a re-forwarded file, a
+ * re-run after a failed transcription), otherwise fetched from the platform and stored first. Null,
+ * logged, when neither is possible; the attempt then ends without a transcript.
+ *
+ * With storage off (`deps.media` null, decision M) the bytes come from the platform every time and
+ * no copy is kept: the row keeps the provider file id it arrived with, its storage key stays null,
+ * and speech-to-text is given the same bytes it would have been given from storage. A row stored
+ * while storage was on is read the same way, since nothing here can open its object any more.
  */
 async function loadAudio(
   deps: Deps,
@@ -208,8 +213,9 @@ async function loadAudio(
   file: Media,
 ): Promise<FetchedMedia | null> {
   const answerId = ctx.answer.id;
-  if (file.storageKey !== null) {
-    const stored = await deps.media.get(file.storageKey);
+  const store = deps.media;
+  if (store !== null && file.storageKey !== null) {
+    const stored = await store.get(file.storageKey);
     if (stored === null) {
       deps.logger.error("answer_media_object_missing", { answerId, mediaId: file.id });
     }
@@ -232,9 +238,12 @@ async function loadAudio(
   // The message's own MIME type (a voice note's audio/ogg) is more exact than the one a download
   // path yields, so it is kept when the platform gave one.
   const mime = file.mime ?? fetched.mime;
+  if (store === null) {
+    return { body: fetched.body, mime };
+  }
   const key = `families/${ctx.family.id}/answers/${answerId}.${extensionFor(mime)}`;
   try {
-    await deps.media.put(key, fetched.body, mime);
+    await store.put(key, fetched.body, mime);
   } catch (error) {
     deps.logger.error("answer_media_store_failed", {
       answerId,

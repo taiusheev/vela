@@ -26,10 +26,12 @@ import type {
   Random,
 } from "@vela/services";
 import {
+  ConfigError,
   checkAdminConfig,
   type Environment,
   readAiProvider,
   readConfig,
+  readMediaStorage,
   requireVar,
   secret,
 } from "./config.ts";
@@ -186,16 +188,20 @@ export function createChannels(env: PilotEnv): ChannelRegistry {
   };
 }
 
-/** Whether a Worker start has said yet that AI is off. */
-export interface AiOffNotice {
+/** Whether a Worker start has said yet that a switch is off. */
+export interface OffNotice {
   said: boolean;
 }
 
 /**
- * This isolate's notice. An isolate is one start of the Worker, and deps are built for every
- * invocation, so kept at module scope the line is written once per start, not once per request.
+ * This isolate's notices, one per switch. An isolate is one start of the Worker, and deps are
+ * built for every invocation, so kept at module scope each line is written once per start, not
+ * once per request.
  */
-const thisStart: AiOffNotice = { said: false };
+const thisStart: { readonly ai: OffNotice; readonly media: OffNotice } = {
+  ai: { said: false },
+  media: { said: false },
+};
 
 /**
  * What AI off leaves out, in the words of the `ai_off` line. The header of wrangler.jsonc, which is
@@ -215,7 +221,7 @@ export function createAiPort(
   environment: Environment,
   configFile: string,
   logger: Logger,
-  notice: AiOffNotice = thisStart,
+  notice: OffNotice = thisStart.ai,
 ): Ai {
   if (readAiProvider(env, environment, configFile) === "anthropic") {
     return createClaudeAi({ apiKey: secret(env, "ANTHROPIC_API_KEY") });
@@ -227,6 +233,46 @@ export function createAiPort(
     });
   }
   return createOffAi();
+}
+
+/**
+ * What media storage off leaves out, in the words of the `media_storage_off` line. The header of
+ * wrangler.jsonc repeats it word for word, and `src/wrangler-config.test.ts` holds the two
+ * together.
+ */
+export const MEDIA_OFF_EFFECTS =
+  "nothing she sends is copied into Vela's own storage: the light, the family group, and the transcript of a voice answer are unchanged, because Telegram carries the file and the pipeline fetches it from there, but each media row keeps only what Telegram said about the file, its id, its type and its size, with no storage key and no copy of the file itself";
+
+/**
+ * The media port `MEDIA_STORAGE` names (decision M, 2026-09-20). "r2" stores media in the bucket
+ * `MEDIA_BUCKET` binds, and refuses to start without that binding, since every stored object would
+ * otherwise be lost silently. "off" binds no bucket and returns no port at all, and the Worker says
+ * so once per start, since every media path then quietly keeps no copy.
+ */
+export function createMediaPort(
+  env: { readonly MEDIA_STORAGE?: string; readonly MEDIA_BUCKET?: R2Bucket },
+  environment: Environment,
+  configFile: string,
+  logger: Logger,
+  notice: OffNotice = thisStart.media,
+): MediaStore | null {
+  if (readMediaStorage(env, environment, configFile) === "r2") {
+    const bucket = env.MEDIA_BUCKET;
+    if (bucket === undefined) {
+      throw new ConfigError(
+        "MEDIA_BUCKET",
+        `MEDIA_STORAGE is r2 but no bucket is bound: add the environment's r2_buckets binding in ${configFile}`,
+      );
+    }
+    return createMediaStore(bucket);
+  }
+  if (!notice.said) {
+    notice.said = true;
+    logger.warn("media_storage_off", {
+      detail: `MEDIA_STORAGE is off: ${MEDIA_OFF_EFFECTS}`,
+    });
+  }
+  return null;
 }
 
 /**
@@ -244,6 +290,7 @@ export async function buildDeps(
   const channels = options.channels ?? createChannels(env);
   const ai = createAiPort(env, config.environment, "wrangler.jsonc", logger);
   const stt = createDeepgramStt({ apiKey: secret(env, "DEEPGRAM_API_KEY") });
+  const media = createMediaPort(env, config.environment, "wrangler.jsonc", logger);
 
   const connection = await connectDatabase(env.HYPERDRIVE.connectionString);
   return {
@@ -258,7 +305,7 @@ export async function buildDeps(
         understand: createJobQueue(env.UNDERSTAND_QUEUE),
       },
       scheduler: options.scheduler ?? createSchedulerPort(env),
-      media: createMediaStore(env.MEDIA_BUCKET),
+      media,
       channels,
       ai,
       stt,

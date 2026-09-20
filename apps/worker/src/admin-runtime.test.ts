@@ -1,5 +1,5 @@
 import type { VelaDatabase } from "@vela/db";
-import { type Deps, errorLabel } from "@vela/services";
+import { type Deps, errorLabel, type MediaStore } from "@vela/services";
 import { describe, expect, it } from "vitest";
 import { adminRuntime, PortNotGivenError, servicesDeps } from "./admin-runtime.ts";
 import type { AdminDeps } from "./deps.ts";
@@ -21,6 +21,18 @@ const WHOLE_PORTS: Readonly<
   random: true,
 };
 
+/**
+ * The media port as services see it. `Deps.media` is `null` while the pilot Worker's MEDIA_STORAGE
+ * is "off" (decision M), and this Worker must never look like that: it has no bucket in any
+ * environment, so every call has to fail rather than quietly keep no copy.
+ */
+function mediaOf(deps: Deps): MediaStore {
+  if (deps.media === null) {
+    throw new Error("the admin Worker gave services a null media port, which reads as storage off");
+  }
+  return deps.media;
+}
+
 /** Each port the admin Worker was not given, touched the way services would touch it. */
 const NOT_GIVEN: readonly (readonly [string, (deps: Deps) => unknown])[] = [
   [
@@ -31,9 +43,9 @@ const NOT_GIVEN: readonly (readonly [string, (deps: Deps) => unknown])[] = [
     "queues.understand",
     (deps) => deps.queues.understand.send({ type: "understand_answer", answerId: "a" }),
   ],
-  ["media", (deps) => deps.media.put("key", new ArrayBuffer(1), "audio/ogg")],
-  ["media", (deps) => deps.media.get("key")],
-  ["media", (deps) => deps.media.delete("key")],
+  ["media", (deps) => mediaOf(deps).put("key", new ArrayBuffer(1), "audio/ogg")],
+  ["media", (deps) => mediaOf(deps).get("key")],
+  ["media", (deps) => mediaOf(deps).delete("key")],
   ["channels", (deps) => deps.channels.get("telegram")],
   [
     "stt",

@@ -1,5 +1,5 @@
 import { describe, expect, inject, it } from "vitest";
-import type { AiProvider } from "../src/config.ts";
+import type { AiProvider, MediaStorage } from "../src/config.ts";
 import {
   type Command,
   cloudflareApi,
@@ -61,12 +61,21 @@ const BOT_USERNAMES: Readonly<Record<Environment, string>> = {
 };
 
 /**
- * Both wrangler files as JSON with comments, built from what wrangler itself read from the real
- * files (vitest.config.ts), so the fake setups run on the real names, hosts and placeholders. A
- * test about the Anthropic key names the `AI_PROVIDER` it needs, so it does not depend on whether
- * an environment's AI is switched on in the real files.
+ * What a test sets an environment's switches to, whatever the real files hold, so a test about the
+ * Anthropic key or the media bucket does not depend on whether that switch is on in the repository
+ * today. `media` moves the `MEDIA_STORAGE` var and the r2_buckets binding together, as decision M
+ * holds them: with "off" there is no binding at all.
  */
-function wranglerTexts(aiProviders: Partial<Record<Environment, AiProvider>> = {}): {
+interface SwitchOverrides {
+  readonly ai?: Partial<Record<Environment, AiProvider>>;
+  readonly media?: Partial<Record<Environment, MediaStorage>>;
+}
+
+/**
+ * Both wrangler files as JSON with comments, built from what wrangler itself read from the real
+ * files (vitest.config.ts), so the fake setups run on the real names, hosts and placeholders.
+ */
+function wranglerTexts(overrides: SwitchOverrides = {}): {
   readonly pilot: string;
   readonly admin: string;
 } {
@@ -75,18 +84,26 @@ function wranglerTexts(aiProviders: Partial<Record<Environment, AiProvider>> = {
     const env = Object.fromEntries(
       (["staging", "production"] as const).map((environment) => {
         const config = configs.find((c) => c.worker === worker && c.environment === environment);
-        const aiProvider = aiProviders[environment];
+        const aiProvider = overrides.ai?.[environment];
+        // MEDIA_STORAGE is the pilot Worker's var alone, and so is the binding it moves with.
+        const mediaStorage = worker === "pilot" ? overrides.media?.[environment] : undefined;
         return [
           environment,
           {
             name: config?.name,
             queues: config?.queues,
-            r2_buckets: config?.r2Buckets,
+            r2_buckets:
+              mediaStorage === undefined
+                ? config?.r2Buckets
+                : mediaStorage === "r2"
+                  ? [{ binding: "MEDIA_BUCKET", bucket_name: `vela-media-${environment}` }]
+                  : [],
             hyperdrive: config?.hyperdrive,
-            vars:
-              aiProvider === undefined
-                ? config?.vars
-                : { ...config?.vars, AI_PROVIDER: aiProvider },
+            vars: {
+              ...config?.vars,
+              ...(aiProvider === undefined ? {} : { AI_PROVIDER: aiProvider }),
+              ...(mediaStorage === undefined ? {} : { MEDIA_STORAGE: mediaStorage }),
+            },
           },
         ];
       }),
@@ -148,8 +165,14 @@ interface World {
   misread: string[];
 }
 
-function newWorld(environment: Environment, aiProvider?: AiProvider): World {
-  const texts = wranglerTexts(aiProvider === undefined ? {} : { [environment]: aiProvider });
+function newWorld(
+  environment: Environment,
+  switches: { readonly ai?: AiProvider; readonly media?: MediaStorage } = {},
+): World {
+  const texts = wranglerTexts({
+    ...(switches.ai === undefined ? {} : { ai: { [environment]: switches.ai } }),
+    ...(switches.media === undefined ? {} : { media: { [environment]: switches.media } }),
+  });
   return {
     environment,
     accountName: ACCOUNT_NAMES[environment],
@@ -535,7 +558,7 @@ async function setUp(world: World, ...extra: string[]): Promise<number> {
 
 describe("a whole setup", () => {
   it("sets up staging from nothing with AI on, with every secret on the Worker that reads it", async () => {
-    const world = newWorld("staging", "anthropic");
+    const world = newWorld("staging", { ai: "anthropic", media: "r2" });
 
     const code = await setUp(world);
 
@@ -581,7 +604,7 @@ describe("a whole setup", () => {
 
   // Decision X (2026-09-18): no Anthropic credit is bought while AI is off.
   it("sets up staging with AI off without asking for an Anthropic key, and says how to switch it on", async () => {
-    const world = newWorld("staging", "off");
+    const world = newWorld("staging", { ai: "off" });
 
     const code = await setUp(world);
 
@@ -605,7 +628,7 @@ describe("a whole setup", () => {
   });
 
   it("asks for the Anthropic key and deploys when run from secrets once AI is switched on", async () => {
-    const world = newWorld("staging", "off");
+    const world = newWorld("staging", { ai: "off" });
     await setUp(world);
     for (const file of ["wrangler.jsonc", "wrangler.admin.jsonc"] as const) {
       const text = world.files.get(file) ?? "";
@@ -629,7 +652,7 @@ describe("a whole setup", () => {
 
   // Its Workers would refuse to start: families' answers there need the flag check.
   it("refuses to set up production with AI off, before it creates anything", async () => {
-    const world = newWorld("production", "off");
+    const world = newWorld("production", { ai: "off" });
 
     const code = await setUp(world);
 
@@ -639,6 +662,63 @@ describe("a whole setup", () => {
     );
     expect([world.queues.size, world.buckets.size, world.writes.length]).toEqual([0, 0, 0]);
     expect(world.prompts.join("\n")).not.toContain("Anthropic");
+  });
+
+  // Decision M (2026-09-20): R2 needs a subscription with a payment method, which only the founder
+  // can add, so staging is set up without one and nothing is stored there.
+  it("sets up staging with media storage off without creating a bucket, and says how to switch it on", async () => {
+    const world = newWorld("staging", { media: "off" });
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect([...world.buckets]).toEqual([]);
+    expect(world.requests.filter((request) => request.url.includes("/r2/buckets"))).toEqual([]);
+    expect(world.printed.filter((line) => line.includes("Media storage is off"))).toEqual([
+      '  Media storage is off in staging (MEDIA_STORAGE "off" in wrangler.jsonc), so no R2 bucket is created and Vela keeps no copy of a voice note or photo: Telegram holds them, and each media row keeps only what Telegram said about the file, its id, its type and its size, with no storage key and no copy of the file itself. To switch it on later: enable R2 in the Cloudflare dashboard for the "Vela staging" account (it asks for a payment method, though the pilot\'s use stays inside the free monthly allowance), set MEDIA_STORAGE to "r2" for staging in wrangler.jsonc and add its r2_buckets binding, commit, then run pnpm --filter @vela/worker run setup -- --env staging --from resources on that commit before it is merged to main, which creates the bucket and deploys.',
+    ]);
+    expect(world.deployed).toEqual(["vela", "vela-admin"]);
+  });
+
+  it("creates the media bucket when run from resources once media storage is switched on", async () => {
+    const world = newWorld("staging", { media: "off" });
+    await setUp(world);
+    const pilot = world.files.get("wrangler.jsonc") ?? "";
+    world.files.set(
+      "wrangler.jsonc",
+      pilot
+        .replace('"MEDIA_STORAGE": "off"', '"MEDIA_STORAGE": "r2"')
+        .replace(
+          '"r2_buckets": []',
+          '"r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-staging" }]',
+        ),
+    );
+    expect(configOf(world).mediaStorage).toBe("r2");
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "resources");
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect([...world.buckets]).toEqual(["vela-media-staging"]);
+    expect(world.printed).toContain(
+      "resources: created bucket vela-media-staging; already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging",
+    );
+    expect(world.printed.join("\n")).not.toContain("Media storage is off");
+    expect(world.deployed).toEqual(["vela", "vela-admin"]);
+  });
+
+  // Its Worker would refuse to start: the privacy notice promises families that media is kept in
+  // Vela's own storage for 30 days and then deleted.
+  it("refuses to set up production with media storage off, before it creates anything", async () => {
+    const world = newWorld("production", { media: "off" });
+
+    const code = await setUp(world);
+
+    expect(code).toBe(1);
+    expect(world.printed.join("\n")).toContain(
+      "MEDIA_STORAGE is off for production, which its Worker refuses to start with",
+    );
+    expect([world.queues.size, world.buckets.size, world.writes.length]).toEqual([0, 0, 0]);
   });
 
   it("lets no secret reach a printed line, a prompt, a command-line argument or a written file", async () => {
@@ -818,8 +898,11 @@ describe("a whole setup", () => {
     expect(world.queues.size).toBe(0);
   });
 
+  // The line below lists the resources of a staging with media storage off, which is said here
+  // rather than taken from the repository's own files: a run that reads them once storage has been
+  // switched on creates a bucket too, and this test is not about that.
   it("skips every resource, placeholder and secret that already exists when run again", async () => {
-    const world = newWorld("staging");
+    const world = newWorld("staging", { media: "off" });
     await setUp(world);
     resetLog(world);
 
@@ -844,8 +927,9 @@ describe("a whole setup", () => {
     ).toEqual(["TELEGRAM_WEBHOOK_SECRET"]);
     // The webhook secret the Worker checks is the one Telegram now sends.
     expect(world.workers.get("vela")?.get("TELEGRAM_WEBHOOK_SECRET")).toBe(world.webhook?.secret);
+    // No bucket: media storage is off above, so none was created the first time either.
     expect(world.printed).toContain(
-      "resources: already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging, bucket vela-media-staging",
+      "resources: already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging",
     );
     expect(world.printed.filter((line) => line.includes("nothing to do"))).toHaveLength(2);
   });
@@ -1095,8 +1179,12 @@ describe("the wrangler files", () => {
     });
   });
 
+  // `mediaStorage` and its buckets are left out here, as `aiProvider` is: pinning staging's switch
+  // against the real files would make the commit that switches it on red, and that commit has to
+  // pass CI before it can be deployed and merged. Production is pinned below, and both values of
+  // staging's switch are read from built texts further down.
   it.each(["staging", "production"] as const)(
-    "give %s's queues, bucket, Workers and hosts as wrangler reads them",
+    "give %s's queues, Workers and hosts as wrangler reads them",
     (environment) => {
       const config = readEnvironmentConfig(wranglerTexts(), environment);
 
@@ -1109,7 +1197,6 @@ describe("the wrangler files", () => {
           `vela-understand-${environment}`,
           `vela-dead-letter-${environment}`,
         ],
-        buckets: [`vela-media-${environment}`],
         pilotOrigin: `https://vela.${SUBDOMAINS[environment]}.workers.dev`,
         adminOrigin: `https://vela-admin.${SUBDOMAINS[environment]}.workers.dev`,
         workersDevSubdomain: SUBDOMAINS[environment],
@@ -1117,18 +1204,29 @@ describe("the wrangler files", () => {
     },
   );
 
+  // Production is the one environment whose switch is fixed: config.ts refuses to start it with
+  // storage off, and the bucket it names has to be the one the resources step creates.
+  it("give production's media storage and the bucket it keeps media in", () => {
+    const config = readEnvironmentConfig(wranglerTexts(), "production");
+
+    expect(config).toMatchObject({
+      mediaStorage: "r2",
+      buckets: ["vela-media-production"],
+    });
+  });
+
   it.each(["anthropic", "off"] as const)(
     "give staging's AI_PROVIDER when both Workers set it to %s",
     (provider) => {
       expect(
-        readEnvironmentConfig(wranglerTexts({ staging: provider }), "staging").aiProvider,
+        readEnvironmentConfig(wranglerTexts({ ai: { staging: provider } }), "staging").aiProvider,
       ).toBe(provider);
     },
   );
 
   // One Worker calling Anthropic while the other is off would need a key the setup never asked for.
   it("refuse Workers whose AI_PROVIDER differs, or is neither anthropic nor off", () => {
-    const texts = wranglerTexts({ staging: "off" });
+    const texts = wranglerTexts({ ai: { staging: "off" } });
     const differing = {
       ...texts,
       admin: texts.admin.replace('"AI_PROVIDER": "off"', '"AI_PROVIDER": "anthropic"'),
@@ -1143,6 +1241,52 @@ describe("the wrangler files", () => {
         /must set AI_PROVIDER for staging to the same value, one of anthropic, off/,
       );
     }
+  });
+
+  it.each(["r2", "off"] as const)(
+    "give staging's MEDIA_STORAGE, and the bucket it agrees with, when it is %s",
+    (storage) => {
+      const config = readEnvironmentConfig(
+        wranglerTexts({ media: { staging: storage } }),
+        "staging",
+      );
+
+      expect(config.mediaStorage).toBe(storage);
+      expect(config.buckets).toEqual(storage === "r2" ? ["vela-media-staging"] : []);
+    },
+  );
+
+  // A binding to a bucket that does not exist fails the deploy, and "r2" without one would leave
+  // the Worker refusing to start, so the var and the binding are read as one.
+  it("refuse a MEDIA_STORAGE that disagrees with the r2_buckets binding, or is neither r2 nor off", () => {
+    const off = wranglerTexts({ media: { staging: "off" } });
+    const on = wranglerTexts({ media: { staging: "r2" } });
+    const boundWhileOff = {
+      ...off,
+      pilot: off.pilot.replace(
+        '"r2_buckets": []',
+        '"r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-staging" }]',
+      ),
+    };
+    // The first r2_buckets in either text is staging's, which is the environment read below.
+    const unboundWhileOn = {
+      ...on,
+      pilot: on.pilot.replace(/"r2_buckets": \[[^\]]*\]/, '"r2_buckets": []'),
+    };
+    const unknown = {
+      ...off,
+      pilot: off.pilot.replace('"MEDIA_STORAGE": "off"', '"MEDIA_STORAGE": "s3"'),
+    };
+
+    expect(() => readEnvironmentConfig(boundWhileOff, "staging")).toThrow(
+      /MEDIA_STORAGE is off for staging, so wrangler.jsonc must bind no R2 bucket/,
+    );
+    expect(() => readEnvironmentConfig(unboundWhileOn, "staging")).toThrow(
+      /MEDIA_STORAGE is r2 for staging, so wrangler.jsonc must bind exactly one R2 bucket/,
+    );
+    expect(() => readEnvironmentConfig(unknown, "staging")).toThrow(
+      /must set MEDIA_STORAGE for staging to one of r2, off/,
+    );
   });
 
   const commented = [
@@ -1270,6 +1414,17 @@ describe("the values the setup keeps", () => {
       `# mine\nOTHER=1\nCLOUDFLARE_API_TOKEN=new\nCLOUDFLARE_ACCOUNT_ID=${ACCOUNT_ID}\n`,
     );
     expect(readDotEnv(mergeDotEnv(null, { A: "1" }))).toEqual({ A: "1" });
+  });
+
+  // The `git check-ignore` the account step runs sees only the one name it writes. A founder who
+  // copies that file to read the token elsewhere (.env.txt, .env.bak) makes a file git never
+  // matched against `.env`, and `git add -A` would then commit the staging token with it, so
+  // apps/worker/.gitignore covers the whole family of names rather than the single one.
+  it("keep the token where git ignores every .env of this Worker, not only the name it writes", () => {
+    const rules = inject("workerIgnoreRules");
+
+    expect(rules).toContain(".env");
+    expect(rules).toContain(".env.*");
   });
 
   it("put this run's Telegram values, keep what Workers hold, and prompt the rest for every reader", () => {

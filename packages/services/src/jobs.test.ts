@@ -1033,6 +1033,74 @@ describe("applyRetention", () => {
     expect(answerAfter?.mediaId).toBeNull();
   });
 
+  // Decision M (2026-09-20): with media storage off a row carries no storage key and there is no
+  // object to delete, and the 30-day rule still takes the row and writes its proof, so what the
+  // privacy notice promises about deletion is unchanged.
+  it("deletes expired media with its proof while media storage is off", async () => {
+    const seed = await seedFamily(h.db, { now: daysAgo(40) });
+    const [expired] = await h.db
+      .insert(media)
+      .values({
+        familyId: seed.family.id,
+        kind: "audio",
+        channel: "telegram",
+        providerFileId: "file-off",
+        providerUniqueId: "u-off",
+        expiresAt: daysAgo(1),
+      })
+      .returning({ id: media.id });
+    if (expired === undefined) {
+      throw new Error("media not inserted");
+    }
+
+    const counts = await applyRetention({ ...h.deps, media: null });
+
+    expect(counts).toMatchObject({ media_deleted: 1 });
+    expect(await h.db.select().from(media)).toEqual([]);
+    expect(
+      (await h.db.select().from(deletions)).map((row) => [
+        row.objectType,
+        row.objectId,
+        row.contentHash,
+        row.reason,
+      ]),
+    ).toEqual([["media", expired.id, sha256(`media:${expired.id}`), "expired"]]);
+  });
+
+  // An object stored before storage was switched off outlives its row, and only the founder can
+  // reach it, so the run names it rather than leaving it unsaid.
+  it("names the object it cannot reach when media storage is off and the row was stored", async () => {
+    const seed = await seedFamily(h.db, { now: daysAgo(40) });
+    const storedKey = `families/${seed.family.id}/answers/left.ogg`;
+    await h.media.put(storedKey, new ArrayBuffer(3), "audio/ogg");
+    const [expired] = await h.db
+      .insert(media)
+      .values({
+        familyId: seed.family.id,
+        kind: "audio",
+        storageKey: storedKey,
+        channel: "telegram",
+        providerFileId: "file-left",
+        providerUniqueId: "u-left",
+        expiresAt: daysAgo(1),
+      })
+      .returning({ id: media.id });
+
+    const counts = await applyRetention({ ...h.deps, media: null });
+
+    expect(counts).toMatchObject({ media_deleted: 1 });
+    expect(await h.db.select().from(media)).toEqual([]);
+    expect(h.logger.entries.filter((entry) => entry.event === "media_object_unreachable")).toEqual([
+      {
+        level: "error",
+        event: "media_object_unreachable",
+        fields: { mediaId: expired?.id, reason: "expired" },
+      },
+    ]);
+    // Only the founder can delete it, so it is still there: nothing pretended otherwise.
+    expect(h.media.objects.has(storedKey)).toBe(true);
+  });
+
   it("deletes members 30 days after they left and keeps what only credits them", async () => {
     const seed = await seedFamily(h.db, { now: daysAgo(60) });
     const sam = await seedGroupMember(h.db, seed, {

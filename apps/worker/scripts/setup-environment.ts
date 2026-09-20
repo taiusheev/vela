@@ -14,6 +14,8 @@
  * one exception: for staging, the "Vela staging" API token and account id go to apps/worker/.env,
  * which git ignores (checked with `git check-ignore` before writing), so wrangler on this laptop
  * reaches the staging account afterwards (infra/README.md, section 1). Production saves nothing.
+ * The check covers the one name written here; apps/worker/.gitignore covers `.env.*` as well, so a
+ * copy of that file made by hand cannot be committed either.
  *
  * The steps run in the order of infra/README.md section 11. Each skips what already exists, so a
  * run can be repeated, and `--from <step>` resumes after a failure. Everything that reaches the
@@ -22,7 +24,7 @@
  */
 import { getMe, setMyCommands, setWebhook } from "@vela/adapters";
 import { errorLabel } from "@vela/services";
-import { AI_PROVIDERS, type AiProvider } from "../src/config.ts";
+import { AI_PROVIDERS, type AiProvider, MEDIA_STORAGES, type MediaStorage } from "../src/config.ts";
 import { SetupError, setUpTelegram, type TelegramSetupApi } from "./telegram-webhook.ts";
 
 export const ENVIRONMENTS = ["staging", "production"] as const;
@@ -43,7 +45,8 @@ export type Step = (typeof STEPS)[number];
 
 const STEP_DESCRIPTIONS: Readonly<Record<Step, string>> = {
   account: "check the Cloudflare API token and account id (staging saves them to apps/worker/.env)",
-  resources: "create the queues, the dead-letter queue and the R2 media bucket",
+  resources:
+    "create the queues, the dead-letter queue and, while MEDIA_STORAGE is r2, the R2 media bucket",
   database:
     "apply the migrations to the environment's Neon project, create the Hyperdrive configuration, write its id",
   telegram:
@@ -341,6 +344,7 @@ export interface EnvironmentConfig {
   readonly adminWorker: string;
   /** Every queue either Worker binds, the dead-letter queue included, each once. */
   readonly queues: readonly string[];
+  /** The media bucket while `MEDIA_STORAGE` is "r2"; none at all while it is "off". */
   readonly buckets: readonly string[];
   readonly pilotHyperdriveId: string;
   readonly adminHyperdriveId: string;
@@ -356,6 +360,8 @@ export interface EnvironmentConfig {
   readonly workersDevSubdomain: string;
   /** Both Workers' `AI_PROVIDER`, which must agree; with "off" no Anthropic key is needed. */
   readonly aiProvider: AiProvider;
+  /** The pilot Worker's `MEDIA_STORAGE`; with "off" no bucket is bound and none is created. */
+  readonly mediaStorage: MediaStorage;
 }
 
 function originOf(url: string, where: string): URL {
@@ -391,6 +397,40 @@ function aiProviderOf(
     );
   }
   return provider;
+}
+
+/**
+ * The environment's `MEDIA_STORAGE` (decision M, 2026-09-20), and the r2_buckets binding it has to
+ * agree with: with "off" nothing may be bound, since a binding to a bucket that does not exist
+ * fails the deploy, and with "r2" the one bucket the Worker binds is the one to create. A
+ * production set to "off" is refused before anything is created, since its Worker would refuse to
+ * start: the privacy notice promises families that media is kept in Vela's own storage for 30 days
+ * and then deleted.
+ */
+function mediaStorageOf(
+  pilotVars: unknown,
+  buckets: readonly string[],
+  environment: Environment,
+  where: string,
+): MediaStorage {
+  const value = textAt(pilotVars, "MEDIA_STORAGE", where);
+  const storage = MEDIA_STORAGES.find((candidate) => candidate === value);
+  if (storage === undefined) {
+    throw new SetupError(
+      `${PILOT_FILE} must set MEDIA_STORAGE for ${environment} to one of ${MEDIA_STORAGES.join(", ")}`,
+    );
+  }
+  if (storage === "off" && environment === "production") {
+    throw new SetupError(
+      `MEDIA_STORAGE is off for production, which its Worker refuses to start with: set it to r2 in ${PILOT_FILE} and bind its bucket`,
+    );
+  }
+  if ((storage === "r2") !== (buckets.length === 1)) {
+    throw new SetupError(
+      `MEDIA_STORAGE is ${storage} for ${environment}, so ${PILOT_FILE} must bind ${storage === "r2" ? "exactly one R2 bucket" : "no R2 bucket"}`,
+    );
+  }
+  return storage;
 }
 
 /** The names and hosts both wrangler files give an environment, read from the files' text. */
@@ -445,6 +485,7 @@ export function readEnvironmentConfig(
       pilot: `${pilotWhere}.vars`,
       admin: `${adminWhere}.vars`,
     }),
+    mediaStorage: mediaStorageOf(pilotVars, buckets, environment, `${pilotWhere}.vars`),
   };
 }
 
@@ -1059,6 +1100,16 @@ function aiOffLine(environment: Environment): string {
   return `AI is off in ${environment} (AI_PROVIDER "off" in ${PILOT_FILE} and ${ADMIN_FILE}), so no Anthropic key is asked for. To switch it on later: set AI_PROVIDER to "anthropic" for ${environment} in both files and commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy staging without the key, and both Workers would refuse to run.`;
 }
 
+/**
+ * What the resources step says instead of creating the media bucket while media storage is off
+ * (decision M, 2026-09-20), and how to switch it on. R2 needs a subscription with a payment method
+ * on that Cloudflare account, which only the founder can add, so this script never turns it on.
+ * Only staging gets here, since `readEnvironmentConfig` refuses production with storage off.
+ */
+function mediaOffLine(environment: Environment): string {
+  return `Media storage is off in ${environment} (MEDIA_STORAGE "off" in ${PILOT_FILE}), so no R2 bucket is created and Vela keeps no copy of a voice note or photo: Telegram holds them, and each media row keeps only what Telegram said about the file, its id, its type and its size, with no storage key and no copy of the file itself. To switch it on later: enable R2 in the Cloudflare dashboard for the "${FACTS[environment].accountName}" account (it asks for a payment method, though the pilot's use stays inside the free monthly allowance), set MEDIA_STORAGE to "r2" for ${environment} in ${PILOT_FILE} and add its r2_buckets binding, commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from resources on that commit before it is merged to main, which creates the bucket and deploys.`;
+}
+
 /** The keys the founder pastes at the secrets step, and where each is created. */
 function secretPrompts(environment: Environment): Partial<Record<WorkerSecret, SecretPrompt>> {
   const facts = FACTS[environment];
@@ -1396,7 +1447,7 @@ class Setup {
     );
     if (ignored !== 0) {
       throw new SetupError(
-        "git does not ignore apps/worker/.env, so the staging token was not saved there: restore the .env line in .gitignore and run again",
+        "git does not ignore apps/worker/.env, so the staging token was not saved there: restore the .env rules in apps/worker/.gitignore and run again",
       );
     }
     await this.#io.writeFile(
@@ -1433,6 +1484,10 @@ class Setup {
         created.push(queue);
       }
     }
+    if (config.mediaStorage === "off") {
+      this.#say(mediaOffLine(this.#environment));
+    }
+    // None while storage is off: readEnvironmentConfig holds the var and the binding together.
     for (const bucket of config.buckets) {
       if (
         (await this.#cloudflare(cloudflareApi.bucket(accountId, bucket), { missing: true })) !==

@@ -626,14 +626,22 @@ function optionsWithout(id: string) {
 }
 
 /**
- * Deletes one media file: the R2 object first, so no object outlives its row, then in one
+ * Deletes one media file: the stored object first, so no object outlives its row, then in one
  * transaction the proof of deletion (the hash of `media:<id>`, never of the storage key or the
  * provider file id, L4), the id's removal from `exchanges.media_ids` and `exchanges.options`, and
  * the row; the foreign keys set the other references null.
+ *
+ * With storage off (decision M) a row has no storage key and there is no object to delete, so the
+ * proof and the row go as they always do. A row that was stored before storage was switched off
+ * keeps an object nobody here can reach: that is logged, because only the founder can delete it.
  */
 async function deleteMedia(deps: Deps, row: Media, reason: string): Promise<void> {
   if (row.storageKey !== null) {
-    await deps.media.delete(row.storageKey);
+    if (deps.media === null) {
+      deps.logger.error("media_object_unreachable", { mediaId: row.id, reason });
+    } else {
+      await deps.media.delete(row.storageKey);
+    }
   }
   await deps.db.transaction(async (tx) => {
     await recordDeletion(tx, {

@@ -1,11 +1,13 @@
 import { type FlagInput, isAiOff } from "@vela/ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfigError } from "./config.ts";
-import { buildAdminDeps, buildDeps, createAiPort } from "./deps.ts";
+import { buildAdminDeps, buildDeps, createAiPort, createMediaPort } from "./deps.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
 import type { PrivacyNotices } from "./notices.ts";
 import {
   adminTestEnv,
+  type FakeR2Object,
+  fakeR2Bucket,
   type LogLine,
   noticesFixture,
   recordingLogger,
@@ -86,6 +88,33 @@ describe("building deps", () => {
 
     await expect(buildDeps(pilot, noticesFixture())).rejects.toHaveProperty("code", "AI_PROVIDER");
     await expect(buildAdminDeps(admin)).rejects.toHaveProperty("code", "AI_PROVIDER");
+  });
+
+  // Decision M: the privacy notice promises families that media is kept in Vela's own storage for
+  // 30 days and then deleted, which no copy at all cannot be.
+  it("refuses production with media storage off before it opens a database connection", async () => {
+    const pilot: PilotEnv = {
+      ...chosenStaging,
+      ENVIRONMENT: "production",
+      AI_PROVIDER: "anthropic",
+      MEDIA_STORAGE: "off",
+    };
+
+    await expect(buildDeps(pilot, noticesFixture())).rejects.toHaveProperty(
+      "code",
+      "MEDIA_STORAGE",
+    );
+  });
+
+  // A "r2" whose binding was left out of that environment deploys, and would then lose every
+  // object it was meant to keep: the Worker refuses to start instead.
+  it("refuses media storage r2 without the bucket bound, before it opens a database connection", async () => {
+    const unbound: PilotEnv = { ...chosenStaging, MEDIA_STORAGE: "r2", MEDIA_BUCKET: undefined };
+
+    await expect(buildDeps(unbound, noticesFixture())).rejects.toHaveProperty(
+      "code",
+      "MEDIA_BUCKET",
+    );
   });
 
   it("refuses either Worker without the Anthropic key while AI is anthropic", async () => {
@@ -179,5 +208,75 @@ describe("the AI port", () => {
     expect(String(logs[0]?.fields?.detail)).toMatch(
       /^AI_PROVIDER is off: no AI provider is called/,
     );
+  });
+});
+
+describe("the media port", () => {
+  const BYTES = new Uint8Array([1, 2, 3]).buffer;
+
+  it("is no port at all while media storage is off, so services keep no copy", () => {
+    const port = createMediaPort(
+      { MEDIA_STORAGE: "off" },
+      "staging",
+      "wrangler.jsonc",
+      recordingLogger([]),
+      {
+        said: false,
+      },
+    );
+
+    expect(port).toBeNull();
+  });
+
+  it("puts, reads and deletes an object in the bound bucket while media storage is r2", async () => {
+    const objects = new Map<string, FakeR2Object>();
+    const port = createMediaPort(
+      { MEDIA_STORAGE: "r2", MEDIA_BUCKET: fakeR2Bucket(objects) },
+      "production",
+      "wrangler.jsonc",
+      recordingLogger([]),
+      { said: false },
+    );
+
+    if (port === null) {
+      throw new Error("media storage r2 with a bound bucket built no port");
+    }
+    await port.put("families/f/answers/a.ogg", BYTES, "audio/ogg");
+    expect(objects.get("families/f/answers/a.ogg")).toEqual({ body: BYTES, mime: "audio/ogg" });
+    expect(await port.get("families/f/answers/a.ogg")).toEqual({ body: BYTES, mime: "audio/ogg" });
+    expect(await port.get("families/f/answers/missing.ogg")).toBeNull();
+
+    await port.delete("families/f/answers/a.ogg");
+    expect(objects.size).toBe(0);
+  });
+
+  it("says once per Worker start that media storage is off, and nothing while it is on", () => {
+    const logs: LogLine[] = [];
+    const logger = recordingLogger(logs);
+    const notice = { said: false };
+
+    createMediaPort({ MEDIA_STORAGE: "off" }, "development", "wrangler.jsonc", logger, notice);
+    createMediaPort({ MEDIA_STORAGE: "off" }, "development", "wrangler.jsonc", logger, notice);
+    createMediaPort(
+      { MEDIA_STORAGE: "r2", MEDIA_BUCKET: fakeR2Bucket(new Map()) },
+      "production",
+      "wrangler.jsonc",
+      logger,
+      { said: false },
+    );
+
+    expect(logs.map((line) => [line.level, line.event])).toEqual([["warn", "media_storage_off"]]);
+    expect(String(logs[0]?.fields?.detail)).toMatch(
+      /^MEDIA_STORAGE is off: nothing she sends is copied into Vela's own storage/,
+    );
+  });
+
+  it("refuses a value that is neither r2 nor off, naming the var", () => {
+    expect(() =>
+      createMediaPort({ MEDIA_STORAGE: "s3" }, "staging", "wrangler.jsonc", recordingLogger([])),
+    ).toThrow(ConfigError);
+    expect(() =>
+      createMediaPort({ MEDIA_STORAGE: "s3" }, "staging", "wrangler.jsonc", recordingLogger([])),
+    ).toThrow(/MEDIA_STORAGE must be one of r2, off/);
   });
 });

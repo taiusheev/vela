@@ -32,6 +32,7 @@ export interface MemberScheduler {
   wakeAt(memberId: string, at: Date | null): Promise<void>;
 }
 
+/** Vela's own storage for the media a family sends: one object per key, written once and deleted. */
 export interface MediaStore {
   put(key: string, body: ArrayBuffer, mime: string): Promise<void>;
   get(key: string): Promise<{ body: ArrayBuffer; mime: string } | null>;
@@ -87,7 +88,13 @@ export interface Deps {
     understand: JobQueue<UnderstandJob>;
   };
   scheduler: MemberScheduler;
-  media: MediaStore;
+  /**
+   * Vela's own storage, or `null` while the Worker's `MEDIA_STORAGE` is "off" (decision M,
+   * 2026-09-20). With `null` nothing is copied out of the channel: a media row keeps the provider
+   * file id it arrived with and no storage key, the bytes a transcription needs are fetched from
+   * the channel each time, and retention has no object to delete.
+   */
+  media: MediaStore | null;
   channels: ChannelRegistry;
   ai: Ai;
   stt: Stt;

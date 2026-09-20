@@ -41,6 +41,11 @@ export interface PilotEnv extends SharedEnv {
   readonly PRIVACY_NOTICE_URL_ZH_TW: string;
   /** The regions whose database exists in this environment, comma separated; the pilot is `apac`. */
   readonly REGIONS: string;
+  /**
+   * Where media is kept: "r2", or "off", when no copy is made (`config.ts`, `readMediaStorage`).
+   * Production refuses "off". Only this Worker stores media, so the admin Worker has no such var.
+   */
+  readonly MEDIA_STORAGE: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;
@@ -52,7 +57,12 @@ export interface PilotEnv extends SharedEnv {
   // Bindings.
   readonly MEDIA_QUEUE: Queue<MediaJob>;
   readonly UNDERSTAND_QUEUE: Queue<UnderstandJob>;
-  readonly MEDIA_BUCKET: R2Bucket;
+  /**
+   * Optional, because an environment whose `MEDIA_STORAGE` is "off" binds no bucket: binding one
+   * that does not exist would fail its deploy. `deps.ts` builds the media port only when it is
+   * bound, and refuses to start while `MEDIA_STORAGE` is "r2" and it is not.
+   */
+  readonly MEDIA_BUCKET?: R2Bucket;
   /** The one object that records when reconciliation last finished, for `/healthz`. */
   readonly RECONCILE_HEARTBEAT: DurableObjectNamespace<ReconcileHeartbeat>;
 }

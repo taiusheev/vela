@@ -1,5 +1,5 @@
 import { describe, expect, inject, it } from "vitest";
-import { AI_OFF_EFFECTS } from "./deps.ts";
+import { AI_OFF_EFFECTS, MEDIA_OFF_EFFECTS } from "./deps.ts";
 import { NOTICE_LANGS, NOTICE_PATHS, type NoticeLang } from "./notices.ts";
 import { NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
 
@@ -249,6 +249,53 @@ describe("the two Workers' configurations", () => {
 
     expect(header).toContain(AI_OFF_EFFECTS);
     expect(header).toContain("on that commit before it is merged to main");
+  });
+
+  // Decision M (2026-09-20): where media is kept is the pilot Worker's alone, since the admin
+  // Worker stores none and its reads never open a stored object.
+  it.each(["development", ...DEPLOYED] as const)(
+    "set MEDIA_STORAGE to r2 or off in the pilot Worker alone in %s",
+    (environment) => {
+      expect(["r2", "off"]).toContain(configOf("pilot", environment).vars.MEDIA_STORAGE);
+      expect(Object.keys(configOf("admin", environment).vars)).not.toContain("MEDIA_STORAGE");
+    },
+  );
+
+  // config.ts refuses to start production with storage off: the privacy notice promises families
+  // that media is kept in Vela's own storage for 30 days and then deleted. Local work keeps nothing,
+  // so no laptop needs R2. Staging's value is not pinned, as AI_PROVIDER's is not: the commit that
+  // switches an environment on has to pass CI before it can be deployed and merged (the header
+  // above), and a pin here would make that commit red. The test above holds it to r2 or off, and
+  // the one below holds it to its binding, which is all that keeps the deploy honest.
+  it("keep media in production and keep none on this laptop", () => {
+    expect(configOf("pilot", "production").vars.MEDIA_STORAGE).toBe("r2");
+    expect(configOf("pilot", "development").vars.MEDIA_STORAGE).toBe("off");
+  });
+
+  // A binding to a bucket that does not exist fails the deploy, and storage "r2" without one would
+  // lose every object it was meant to keep, so the var and the binding move together.
+  it.each(["development", ...DEPLOYED] as const)(
+    "bind the media bucket in %s exactly when MEDIA_STORAGE is r2",
+    (environment) => {
+      const pilot = configOf("pilot", environment);
+      const suffix = environment === "development" ? "" : `-${environment}`;
+
+      expect(records(pilot.r2Buckets)).toEqual(
+        pilot.vars.MEDIA_STORAGE === "r2"
+          ? [{ binding: "MEDIA_BUCKET", bucket_name: `vela-media${suffix}` }]
+          : [],
+      );
+    },
+  );
+
+  // The header is the one place that says what storage off leaves out and how to turn it on, and
+  // the bucket has to exist before the switch reaches main, or CI deploys a Worker that refuses
+  // to run (ConfigError:MEDIA_BUCKET).
+  it("say in the pilot header what media storage off leaves out, and to create the bucket before main", () => {
+    const header = pilotHeader();
+
+    expect(header).toContain(MEDIA_OFF_EFFECTS);
+    expect(header).toContain("--from resources` on that commit before it is merged to main");
   });
 
   // A placeholder may stay only where the founder has not created the thing yet, and filling it in

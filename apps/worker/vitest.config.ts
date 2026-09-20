@@ -42,6 +42,7 @@ declare module "vitest" {
     noticeSources: Readonly<Record<NoticeLang, string>>;
     pilotMaterials: Readonly<Record<string, string>>;
     pilotConfigSource: string;
+    workerIgnoreRules: readonly string[];
   }
 }
 
@@ -113,11 +114,25 @@ function pilotMaterials(): Record<string, string> {
 }
 
 /**
+ * This directory's own ignore rules, comments and blank lines dropped. The tests run inside workerd
+ * and can neither read a file nor run git, so the rules are read here for the test that no copy of
+ * the Cloudflare token the setup script saves can be committed (`scripts/setup-environment.ts`).
+ */
+function workerIgnoreRules(): readonly string[] {
+  return readFileSync(fileURLToPath(new URL("./.gitignore", import.meta.url)), "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+}
+
+/**
  * The Worker's tests run inside workerd, against the bindings in wrangler.jsonc, so the Durable
- * Object, the queues, and the R2 bucket behave as they will in production. The secrets below are
- * fakes and `.dev.vars` is not read: every test injects fake services through its runtime, so
- * none of them reaches a database, Telegram, Anthropic, or the network. The admin Worker's tests
- * build its environment from these same bindings (`src/testing/fakes.ts`).
+ * Object and the queues behave as they will in production. No R2 bucket is bound: this file's
+ * environment is development, whose MEDIA_STORAGE is off (decision M), so the media port is covered
+ * against `fakeR2Bucket` in `src/deps.test.ts` instead. The secrets below are fakes and `.dev.vars`
+ * is not read: every test injects fake services through its runtime, so none of them reaches a
+ * database, Telegram, Anthropic, or the network. The admin Worker's tests build its environment
+ * from these same bindings (`src/testing/fakes.ts`).
  */
 export default defineConfig({
   resolve: {
@@ -141,6 +156,7 @@ export default defineConfig({
       // As written, comments included: wrangler's reader drops them, and the header is prose the
       // tests hold to the code it describes.
       pilotConfigSource: readFileSync(PILOT_CONFIG, "utf8"),
+      workerIgnoreRules: workerIgnoreRules(),
     },
   },
   plugins: [

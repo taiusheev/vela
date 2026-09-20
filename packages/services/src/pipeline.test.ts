@@ -70,12 +70,18 @@ afterAll(async () => {
 const TODAY: LocalDate = "2026-09-14";
 const GROUP = "-100500";
 const ADMIN = "9001";
+/**
+ * A voice note as Telegram delivers one: `bytes` is the `file_size` it reports, which the media row
+ * keeps whether or not there is a store, so the tests below see what a real row holds.
+ */
 const VOICE: MediaRef = {
   kind: "audio",
   providerFileId: "voice-1",
   providerUniqueId: "u-voice-1",
   mime: "audio/ogg",
+  bytes: 4321,
 };
+/** The file itself, which is shorter than the `file_size` above, so the two are told apart. */
 const VOICE_BYTES = new Uint8Array([1, 2, 3]).buffer;
 
 function handlers(): { outbound: (job: OutboundJob) => Promise<unknown> } {
@@ -1009,6 +1015,7 @@ describe("ingestAnswerMedia", () => {
     const key = `families/${scene.seed.family.id}/answers/${answer.id}.ogg`;
     expect(h.media.objects.get(key)).toEqual({ body: VOICE_BYTES, mime: "audio/ogg" });
     const [file] = await h.db.select().from(media);
+    // With a store, `bytes` becomes the length of what was stored, over the size Telegram reported.
     expect(file).toMatchObject({ storageKey: key, mime: "audio/ogg", bytes: 3 });
     expect(hints).toEqual(["zh-TW"]);
     expect(await answerById(answer.id)).toMatchObject({
@@ -1118,6 +1125,78 @@ describe("ingestAnswerMedia", () => {
     expect(h.telegram.fetched).toHaveLength(1);
     expect((await answerById(answer.id)).processingAttempts).toBe(1);
     expect(h.queues.understand.pending).toHaveLength(2);
+  });
+
+  // Decision M (2026-09-20): staging runs without R2. The only thing that changes for her is that
+  // Vela keeps no copy; Telegram carries the voice note, and the transcript is made from the bytes
+  // fetched from there.
+  it("keeps no copy with media storage off, and still transcribes and hands the answer to understanding", async () => {
+    const scene = await morning({ memberLanguage: "zh-TW" });
+    const { hints } = recordingStt();
+    const answer = await herVoice(scene);
+    const storageOff: Deps = { ...h.deps, media: null };
+
+    await ingestAnswerMedia(storageOff, answer.id);
+
+    expect(h.telegram.fetched).toEqual(["voice-1"]);
+    expect([...h.media.objects.keys()]).toEqual([]);
+    const [file] = await h.db.select().from(media);
+    // No storage key and no object, but the row still holds what Telegram said about the file: its
+    // id, its type and the size it reported. The media_storage_off line says exactly this much.
+    expect(file).toMatchObject({
+      storageKey: null,
+      providerFileId: "voice-1",
+      mime: "audio/ogg",
+      bytes: VOICE.bytes,
+    });
+    expect(hints).toEqual(["zh-TW"]);
+    expect(await answerById(answer.id)).toMatchObject({
+      transcript: "fake transcript",
+      transcriptLang: "zh-TW",
+      processingAttempts: 1,
+    });
+    expect((await aiCallRows()).map((row) => [row.call, row.ok])).toEqual([["transcribe", true]]);
+    expect(h.queues.understand.pending.map((entry) => entry.job)).toEqual([
+      { type: "understand_answer", answerId: answer.id },
+    ]);
+    // The voice reached the group as it always does, by its Telegram file id.
+    expect(h.telegram.sentTo(GROUP)[0]?.message.media).toEqual([VOICE]);
+  });
+
+  // Nothing is stored to read back, so a second attempt asks Telegram again rather than giving up.
+  it("fetches the voice from the channel again on a re-run with media storage off", async () => {
+    const scene = await morning();
+    const answer = await herVoice(scene);
+    const storageOff: Deps = { ...h.deps, media: null, stt: createFakeStt({ ok: false }) };
+
+    await ingestAnswerMedia(storageOff, answer.id);
+    expect(await answerById(answer.id)).toMatchObject({ transcript: null, processingAttempts: 1 });
+
+    await ingestAnswerMedia({ ...storageOff, stt: h.stt }, answer.id);
+
+    expect(h.telegram.fetched).toEqual(["voice-1", "voice-1"]);
+    expect(await answerById(answer.id)).toMatchObject({ transcript: "fake transcript" });
+  });
+
+  // A file stored while storage was on: nothing here can open its object any more, so the bytes
+  // come from Telegram, which still holds the voice note.
+  it("reads a row stored before media storage was switched off from the channel instead", async () => {
+    const scene = await morning();
+    const answer = await herVoice(scene);
+    const key = `families/${scene.seed.family.id}/answers/${answer.id}.ogg`;
+    await h.media.put(key, VOICE_BYTES, "audio/ogg");
+    await h.db.update(media).set({ storageKey: key, bytes: 3 });
+
+    await ingestAnswerMedia({ ...h.deps, media: null }, answer.id);
+
+    expect(h.telegram.fetched).toEqual(["voice-1"]);
+    expect(h.logger.entries.map((entry) => entry.event)).not.toContain(
+      "answer_media_object_missing",
+    );
+    expect(await answerById(answer.id)).toMatchObject({ transcript: "fake transcript" });
+    // The object and the key it was stored under are left exactly as they were.
+    expect(h.media.objects.get(key)).toEqual({ body: VOICE_BYTES, mime: "audio/ogg" });
+    expect((await h.db.select().from(media))[0]?.storageKey).toBe(key);
   });
 
   it("never throws when the platform or the store fails, and spends the attempt", async () => {

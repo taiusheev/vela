@@ -24,7 +24,8 @@
   // environment, which the link create_invite sends an organiser opens: a PLACEHOLDER_ until the
   // founder creates the bot, and the setup script's telegram step writes it into both files. Its
   // var AI_PROVIDER equals the pilot Worker's in each environment; wrangler.jsonc says what "off"
-  // means and how to switch it on.
+  // means and how to switch it on. It has no MEDIA_STORAGE var: only the pilot Worker stores media,
+  // and the admin reads never open a stored object.
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-admin-dev",
   "main": "src/admin-worker.ts",

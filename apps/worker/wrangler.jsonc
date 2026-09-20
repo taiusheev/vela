@@ -52,6 +52,22 @@
   // `pnpm --filter @vela/worker run setup -- --env staging --from secrets` on that commit before
   // it is merged to main, which asks for the key and deploys. Merged first, CI would deploy
   // staging without the key, and both Workers would refuse to run (ConfigError:ANTHROPIC_API_KEY).
+  //
+  // MEDIA_STORAGE (decision M, 2026-09-20) is "r2" or "off", and belongs to this Worker alone: the
+  // admin Worker stores no media and has no such var. With "off" nothing she sends is copied into
+  // Vela's own storage: the light, the family group, and the transcript of a voice answer are
+  // unchanged, because Telegram carries the file and the pipeline fetches it from there, but each
+  // media row keeps only what Telegram said about the file, its id, its type and its size, with no
+  // storage key and no copy of the file itself. An environment that is "off" binds no R2 bucket at
+  // all, because a binding to a bucket that does not exist fails the deploy, and src/deps.ts then
+  // builds no media port. Development and staging are "off" while R2 is not subscribed to on those
+  // accounts: R2 needs a payment method even though the pilot's use stays inside its free monthly
+  // allowance. Production must be "r2", and src/config.ts refuses to start it otherwise, because
+  // the privacy notice promises families that media is kept in Vela's own storage for 30 days and
+  // then deleted. To switch an environment on: enable R2 in the Cloudflare dashboard for that
+  // account, set "r2" for that environment here and add its r2_buckets binding, commit, then run
+  // `pnpm --filter @vela/worker run setup -- --env <environment> --from resources` on that commit
+  // before it is merged to main, which creates the bucket and deploys.
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-dev",
   "main": "src/index.ts",
@@ -119,7 +135,8 @@
     ]
   },
 
-  "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media" }],
+  // No r2_buckets binding: MEDIA_STORAGE is "off" here, so `wrangler dev` needs no bucket and
+  // nothing a laptop run keeps a copy of.
 
   // `localConnectionString` is `pnpm --filter @vela/db dev-db` (packages/db/scripts/dev-db.ts).
   "hyperdrive": [
@@ -145,7 +162,8 @@
     "PRIVACY_NOTICE_URL_EN": "http://localhost:8787/privacy",
     "PRIVACY_NOTICE_URL_ZH_TW": "http://localhost:8787/privacy/zh-TW",
     "REGIONS": "apac",
-    "AI_PROVIDER": "off"
+    "AI_PROVIDER": "off",
+    "MEDIA_STORAGE": "off"
   },
 
   "env": {
@@ -193,7 +211,8 @@
           }
         ]
       },
-      "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-staging" }],
+      // No r2_buckets binding: MEDIA_STORAGE is "off" for the dogfooding week, and the staging
+      // account has no R2 subscription, so a binding here would fail the deploy.
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_STAGING" }],
       "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
       "vars": {
@@ -206,7 +225,9 @@
         "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light-staging.workers.dev/privacy/zh-TW",
         "REGIONS": "apac",
         // Off for the dogfooding week, until the founder approves buying Anthropic credit.
-        "AI_PROVIDER": "off"
+        "AI_PROVIDER": "off",
+        // Off until R2 is subscribed to: Telegram holds the voice notes and photos meanwhile.
+        "MEDIA_STORAGE": "off"
       }
     },
 
@@ -264,7 +285,8 @@
         "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light.workers.dev/privacy",
         "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light.workers.dev/privacy/zh-TW",
         "REGIONS": "apac",
-        "AI_PROVIDER": "anthropic"
+        "AI_PROVIDER": "anthropic",
+        "MEDIA_STORAGE": "r2"
       }
     }
   }

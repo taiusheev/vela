@@ -114,6 +114,43 @@ export function readAiProvider(
   return provider;
 }
 
+/**
+ * Where the media a family sends is kept (decision M, 2026-09-20): Vela's own R2 bucket, or
+ * nowhere while R2 is not subscribed to.
+ */
+export const MEDIA_STORAGES = ["r2", "off"] as const;
+
+export type MediaStorage = (typeof MEDIA_STORAGES)[number];
+
+/**
+ * The var `MEDIA_STORAGE`. With "off" no bucket is bound and Vela keeps no copy of a voice note or
+ * photo: the channel it arrived on holds it, and the media row keeps only what that channel said
+ * about the file, its provider file id, its mime and its size, with `storage_key` null.
+ * Production refuses it, because the privacy notice promises families that media is kept in Vela's
+ * own storage for 30 days and then deleted, which no copy at all cannot be.
+ */
+export function readMediaStorage(
+  env: { readonly MEDIA_STORAGE?: string },
+  environment: Environment,
+  configFile: string,
+): MediaStorage {
+  const value = env.MEDIA_STORAGE?.trim() ?? "";
+  const storage = MEDIA_STORAGES.find((candidate) => candidate === value);
+  if (storage === undefined) {
+    throw new ConfigError(
+      "MEDIA_STORAGE",
+      `MEDIA_STORAGE must be one of ${MEDIA_STORAGES.join(", ")}: set it in the environment's vars in ${configFile}`,
+    );
+  }
+  if (storage === "off" && environment === "production") {
+    throw new ConfigError(
+      "MEDIA_STORAGE",
+      `MEDIA_STORAGE is off in production, where the privacy notice promises families that media is kept in Vela's own storage for 30 days and then deleted: set it to r2 in ${configFile}`,
+    );
+  }
+  return storage;
+}
+
 /** How a wrangler config writes a value nobody has chosen yet: whole, or as a URL's host. */
 const PLACEHOLDER = "PLACEHOLDER_";
 

@@ -39,6 +39,41 @@ export const adminTestEnv: AdminEnv = {
   OUTBOUND_QUEUE: testEnv.OUTBOUND_QUEUE,
 };
 
+/** One object in a fake bucket, as `createMediaStore` writes and reads it. */
+export interface FakeR2Object {
+  readonly body: ArrayBuffer;
+  readonly mime: string;
+}
+
+/**
+ * An R2 bucket with the three operations the media port uses, over a map the test reads. The pool's
+ * runtime binds no real one: development's `MEDIA_STORAGE` is "off" (decision M), so wrangler.jsonc
+ * declares no `r2_buckets` there, exactly as a deployed environment with storage off declares none.
+ */
+export function fakeR2Bucket(objects: Map<string, FakeR2Object>): R2Bucket {
+  return {
+    put: async (
+      key: string,
+      body: ArrayBuffer,
+      options?: { httpMetadata?: { contentType?: string } },
+    ) => {
+      objects.set(key, { body, mime: options?.httpMetadata?.contentType ?? "" });
+    },
+    get: async (key: string) => {
+      const object = objects.get(key);
+      return object === undefined
+        ? null
+        : {
+            arrayBuffer: async () => object.body,
+            httpMetadata: { contentType: object.mime },
+          };
+    },
+    delete: async (key: string) => {
+      objects.delete(key);
+    },
+  } as unknown as R2Bucket;
+}
+
 /** Every services entry point either Worker calls. */
 type ServiceName = keyof PilotServices | keyof AdminServices;
 
