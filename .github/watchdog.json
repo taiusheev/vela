@@ -6,7 +6,7 @@
     },
     "staging": {
       "url": "https://vela.vela-light-staging.workers.dev/healthz",
-      "enabled": false
+      "enabled": true
     }
   }
 }

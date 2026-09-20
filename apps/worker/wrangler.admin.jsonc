@@ -83,13 +83,13 @@
         "producers": [{ "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-staging" }]
       },
       // The same Hyperdrive configuration as the pilot Worker's in this account.
-      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_STAGING" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "e9e9837d1eee47528304916a1ac2d1e9" }],
       "vars": {
         "ENVIRONMENT": "staging",
         // This Worker's own origin: the one origin a form may be posted from.
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev",
         // The pilot Worker's bot in staging, as in wrangler.jsonc.
-        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_STAGING_BOT_USERNAME",
+        "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
         // As in wrangler.jsonc: off for the dogfooding week.
         "AI_PROVIDER": "off"
       }

@@ -213,11 +213,11 @@
       },
       // No r2_buckets binding: MEDIA_STORAGE is "off" for the dogfooding week, and the staging
       // account has no R2 subscription, so a binding here would fail the deploy.
-      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_STAGING" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "e9e9837d1eee47528304916a1ac2d1e9" }],
       "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
       "vars": {
         "ENVIRONMENT": "staging",
-        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_STAGING_BOT_USERNAME",
+        "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
         // The admin Worker's origin: links in the founder's admin messages open it.
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev",
         // This Worker's origin and the notice paths it serves (src/notices.ts).

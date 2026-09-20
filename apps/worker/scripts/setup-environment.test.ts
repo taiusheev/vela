@@ -13,6 +13,7 @@ import {
   normalizeTeamDomain,
   parseArguments,
   parseConnectionString,
+  placeholdersOf,
   planSecrets,
   readDotEnv,
   readEnvironmentConfig,
@@ -98,9 +99,10 @@ function wranglerTexts(overrides: SwitchOverrides = {}): {
                 : mediaStorage === "r2"
                   ? [{ binding: "MEDIA_BUCKET", bucket_name: `vela-media-${environment}` }]
                   : [],
-            hyperdrive: config?.hyperdrive,
+            hyperdrive: [{ binding: "HYPERDRIVE", id: placeholdersOf(environment).hyperdriveId }],
             vars: {
               ...config?.vars,
+              TELEGRAM_BOT_USERNAME: placeholdersOf(environment).botUsername,
               ...(aiProvider === undefined ? {} : { AI_PROVIDER: aiProvider }),
               ...(mediaStorage === undefined ? {} : { MEDIA_STORAGE: mediaStorage }),
             },
