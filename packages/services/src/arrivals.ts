@@ -262,20 +262,62 @@ async function loadArrivalContext(deps: Deps, exchangeId: string): Promise<Arriv
   return { member, family, link, exchange };
 }
 
-/** The media rows behind ids, in the ids' order; ids without a row are skipped. */
-async function mediaByIds(db: Queryable, ids: readonly string[]): Promise<Media[]> {
+/**
+ * The media rows behind ids, in the ids' order, and only ever this family's. `exchanges.media_ids`
+ * is a bare `uuid[]` that no foreign key covers (schema, exchanges), so this predicate is the only
+ * thing standing between one family's photo and another family's morning. It is the recipient's
+ * family rather than `exchanges.family_id`, because what has to be true is that she sees nothing
+ * but her own family's files, whatever the exchange row claims. An id this family does not own is
+ * dropped rather than refused, as a photo choice without two images is downgraded rather than
+ * refused: her morning still goes out.
+ *
+ * Nothing on today's inbound path can write such an id — media arrives through
+ * `recordInboundMedia`, which sets the family — so a drop is never routine, and is always logged.
+ */
+async function mediaByIds(deps: Deps, familyId: string, ids: readonly string[]): Promise<Media[]> {
   if (ids.length === 0) {
     return [];
   }
-  const rows = await db
+  const rows = await deps.db
     .select()
     .from(media)
-    .where(inArray(media.id, [...ids]));
+    .where(and(eq(media.familyId, familyId), inArray(media.id, [...ids])));
   const byId = new Map(rows.map((row) => [row.id, row]));
+  const dropped = ids.filter((id) => !byId.has(id));
+  if (dropped.length > 0) {
+    await logDroppedMedia(deps, familyId, dropped);
+  }
   return ids.flatMap((id) => {
     const row = byId.get(id);
     return row === undefined ? [] : [row];
   });
+}
+
+/**
+ * Why ids were dropped, for the log alone. An id that exists in another family is an integrity
+ * failure — something wrote an exchange across families — and is logged as an error with the ids to
+ * chase it; an id that exists nowhere is the ordinary end of a file retention has already cleared.
+ * This reads ids and nothing else, and hands no row back to the caller.
+ */
+async function logDroppedMedia(
+  deps: Deps,
+  familyId: string,
+  dropped: readonly string[],
+): Promise<void> {
+  const elsewhere = await deps.db
+    .select({ id: media.id })
+    .from(media)
+    .where(inArray(media.id, [...dropped]));
+  if (elsewhere.length > 0) {
+    deps.logger.error("media_outside_family", {
+      familyId,
+      mediaIds: elsewhere.map((row) => row.id),
+    });
+  }
+  const absent = dropped.length - elsewhere.length;
+  if (absent > 0) {
+    deps.logger.warn("ask_media_missing", { familyId, count: absent });
+  }
 }
 
 /**
@@ -298,13 +340,18 @@ interface LoadedAsk {
  * The ask as `renderArrival` takes it, with the files to attach. A photo choice needs exactly two
  * images (spec §4.4, core's rendering contract); with any other number it goes out as a question
  * carrying the first image, so a family's morning is never refused for a missing photo.
+ *
+ * `exchanges.voice_hello_id` is not read here. It is a write-only column today: nothing loads it,
+ * and `ArrivalAsk` has no slot for it, so no voice hello reaches anyone. Whoever gives it a slot
+ * has to scope it the way `mediaByIds` is scoped above — its foreign key reaches `media.id` in
+ * any family — and that belongs with the change that delivers it, not before.
  */
 async function loadAsk(deps: Deps, family: Family, exchange: Exchange): Promise<LoadedAsk> {
   if (exchange.type === "hello") {
     return { ask: { type: "hello" }, media: [] };
   }
   const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);
-  const files = (await mediaByIds(deps.db, exchange.mediaIds)).flatMap((row) => {
+  const files = (await mediaByIds(deps, family.id, exchange.mediaIds)).flatMap((row) => {
     const ref = mediaRefOf(row);
     return ref === null ? [] : [ref];
   });
@@ -387,7 +434,7 @@ async function loadReadBack(deps: Deps, member: Member, date: LocalDate): Promis
   const voiceIds = rows.flatMap((row) =>
     row.reply.kind === "voice" && row.reply.mediaId !== null ? [row.reply.mediaId] : [],
   );
-  const voices = (await mediaByIds(deps.db, voiceIds)).flatMap((row) => {
+  const voices = (await mediaByIds(deps, member.familyId, voiceIds)).flatMap((row) => {
     const ref = mediaRefOf(row);
     return ref === null ? [] : [ref];
   });

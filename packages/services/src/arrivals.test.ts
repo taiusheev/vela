@@ -599,6 +599,58 @@ describe("deliverArrival", () => {
       fields: { exchangeId: lone.id, images: 1 },
     });
   });
+
+  it("leaves another family's photo out of her morning rather than carrying it in", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const neighbours = await seedFamily(h.db, {
+      now: h.clock.now(),
+      familyName: "The Wangs",
+      organiserExternalId: "1003",
+      memberExternalId: "2003",
+    });
+    const ours = await seedMedia(seed, "image", "photo-1");
+    const theirs = await seedMedia(neighbours, "image", "photo-wang");
+    const [ask] = await h.db
+      .insert(exchanges)
+      .values({
+        familyId: seed.family.id,
+        recipientId: seed.member.id,
+        askerId: seed.organiser.id,
+        type: "photo_choice",
+        state: "scheduled",
+        text: null,
+        textLang: "en",
+        whenRule: "tomorrow",
+        scheduledFor: TOMORROW,
+        mediaIds: [ours, theirs],
+      })
+      .returning({ id: exchanges.id });
+    if (ask === undefined) {
+      throw new Error("ask not inserted");
+    }
+    h.clock.set(at(TOMORROW, "08:00"));
+
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+
+    const [sent] = (await outboundRows("arrival")).map(
+      (row) => row.payload as { message: { text: string; media?: unknown[] } },
+    );
+    // Her own photo arrives; the neighbours' never does, so the choice falls back to a question.
+    expect(sent?.message.media).toEqual([{ kind: "image", providerFileId: "photo-1" }]);
+    expect(JSON.stringify(sent?.message.media)).not.toContain("photo-wang");
+    expect(sent?.message.text).toContain("Mia sent you a photo.");
+    expect(sent?.message.text).not.toContain("Tap 1 or 2");
+    expect(h.logger.entries).toContainEqual({
+      level: "error",
+      event: "media_outside_family",
+      fields: { familyId: seed.family.id, mediaIds: [theirs] },
+    });
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "photo_choice_without_two_images",
+      fields: { exchangeId: ask.id, images: 1 },
+    });
+  });
 });
 
 describe("sendRepeat", () => {
