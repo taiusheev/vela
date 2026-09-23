@@ -20,8 +20,10 @@ import {
   zonedInstant,
 } from "@vela/core";
 import {
+  accountLinkChallenges,
   aiCalls,
   answers,
+  apiRequestReceipts,
   awayPeriods,
   chips,
   consents,
@@ -723,6 +725,34 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   cutoff5y.setUTCFullYear(cutoff5y.getUTCFullYear() - PROOF_RETENTION_YEARS);
   const counts: Record<string, number> = {};
   const db = deps.db;
+
+  counts.account_link_challenges_deleted = (
+    await db
+      .delete(accountLinkChallenges)
+      .where(
+        or(
+          and(isNull(accountLinkChallenges.completedAt), lte(accountLinkChallenges.expiresAt, now)),
+          lte(accountLinkChallenges.completedAt, new Date(now.getTime() - DAY_MS)),
+        ),
+      )
+      .returning({ id: accountLinkChallenges.id })
+  ).length;
+
+  // A request reusing an expired receipt holds that row while it deletes the actor's other expired
+  // rows, so a nightly delete that waited for it would close a lock cycle and PostgreSQL would
+  // abort one side: the job, losing the rest of the night's rules, or the family's write. Skipping
+  // the rows a request holds costs nothing, because the next night deletes them.
+  const expiredReceipts = db
+    .select({ id: apiRequestReceipts.id })
+    .from(apiRequestReceipts)
+    .where(lte(apiRequestReceipts.expiresAt, now))
+    .for("update", { skipLocked: true });
+  counts.api_request_receipts_deleted = (
+    await db
+      .delete(apiRequestReceipts)
+      .where(inArray(apiRequestReceipts.id, expiredReceipts))
+      .returning({ id: apiRequestReceipts.id })
+  ).length;
 
   // Families whose deletion was requested, within 24 hours: media first, then everything cascades.
   const doomed = await db

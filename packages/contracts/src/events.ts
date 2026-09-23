@@ -8,6 +8,7 @@ export const EVENT_NAMES = [
   // lifecycle
   "family_created",
   "member_joined",
+  "account_linked",
   "invite_accepted",
   /** The founder created a new invite for a family on the admin page (`create_invite`). */
   "invite_created",

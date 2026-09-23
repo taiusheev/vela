@@ -74,6 +74,7 @@ import {
   REGIONS,
   REPLY_KINDS,
   ROLES,
+  SUBSCRIPTION_STATUSES,
   SURFACES,
   WHEN_RULES,
 } from "@vela/contracts";
@@ -141,7 +142,7 @@ export const MEMORY_FACT_KINDS = [
  */
 export const CONSENT_PROOF_KEYS = ["chat_id", "message_id", "text_sha256", "recorded_by"] as const;
 export const SUBSCRIPTION_PROVIDERS = ["trial", "stripe", "revenuecat", "manual"] as const;
-export const SUBSCRIPTION_STATUSES = ["trial", "active", "grace", "lapsed", "cancelled"] as const;
+export { SUBSCRIPTION_STATUSES };
 export const PLAN_INTERVALS = ["month", "year"] as const;
 
 type JsonObject = Record<string, unknown>;
@@ -1172,6 +1173,89 @@ export const subscriptions = pgTable(
   ],
 );
 
+export const accountLinkChallenges = pgTable(
+  "account_link_challenges",
+  {
+    id: uuidv7Id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sessionHash: text("session_hash").notNull(),
+    familyId: uuid("family_id").references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "cascade" }),
+    channelLinkId: uuid("channel_link_id").references(() => channelLinks.id, {
+      onDelete: "cascade",
+    }),
+    channelIdentityHash: text("channel_identity_hash"),
+    codeHash: text("code_hash"),
+    attempts: smallint("attempts").notNull().default(0),
+    createdAt: createdAt(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    completedAt: timestamptz("completed_at"),
+    invalidatedAt: timestamptz("invalidated_at"),
+  },
+  (t) => [
+    index("account_link_challenges_user_idx").on(t.userId),
+    index("account_link_challenges_expiry_idx").on(t.expiresAt),
+    index("account_link_challenges_completed_idx").on(t.completedAt),
+    check(
+      "account_link_challenges_hashes_check",
+      sql`${sql.identifier(t.sessionHash.name)} ~ '^[0-9a-f]{64}$' and (${sql.identifier(t.channelIdentityHash.name)} is null or ${sql.identifier(t.channelIdentityHash.name)} ~ '^[0-9a-f]{64}$') and (${sql.identifier(t.codeHash.name)} is null or ${sql.identifier(t.codeHash.name)} ~ '^[0-9a-f]{64}$')`,
+    ),
+    check(
+      "account_link_challenges_attempts_check",
+      sql`${sql.identifier(t.attempts.name)} between 0 and 5`,
+    ),
+    check(
+      "account_link_challenges_binding_check",
+      sql`(${sql.identifier(t.familyId.name)} is null and ${sql.identifier(t.memberId.name)} is null and ${sql.identifier(t.channelLinkId.name)} is null and ${sql.identifier(t.channelIdentityHash.name)} is null) or (${sql.identifier(t.familyId.name)} is not null and ${sql.identifier(t.memberId.name)} is not null and ${sql.identifier(t.channelLinkId.name)} is not null and ${sql.identifier(t.channelIdentityHash.name)} is not null)`,
+    ),
+    check(
+      "account_link_challenges_state_check",
+      sql`(${sql.identifier(t.completedAt.name)} is null or (${sql.identifier(t.familyId.name)} is not null and ${sql.identifier(t.codeHash.name)} is null and ${sql.identifier(t.invalidatedAt.name)} is null)) and (${sql.identifier(t.invalidatedAt.name)} is null or (${sql.identifier(t.codeHash.name)} is null and ${sql.identifier(t.completedAt.name)} is null)) and (${sql.identifier(t.codeHash.name)} is null or (${sql.identifier(t.familyId.name)} is not null and ${sql.identifier(t.completedAt.name)} is null and ${sql.identifier(t.invalidatedAt.name)} is null))`,
+    ),
+    check(
+      "account_link_challenges_timing_check",
+      sql`${sql.identifier(t.expiresAt.name)} > ${sql.identifier(t.createdAt.name)} and ${sql.identifier(t.expiresAt.name)} <= ${sql.identifier(t.createdAt.name)} + interval '15 minutes' and (${sql.identifier(t.completedAt.name)} is null or (${sql.identifier(t.completedAt.name)} >= ${sql.identifier(t.createdAt.name)} and ${sql.identifier(t.completedAt.name)} < ${sql.identifier(t.expiresAt.name)})) and (${sql.identifier(t.invalidatedAt.name)} is null or ${sql.identifier(t.invalidatedAt.name)} >= ${sql.identifier(t.createdAt.name)})`,
+    ),
+  ],
+);
+
+export const apiRequestReceipts = pgTable(
+  "api_request_receipts",
+  {
+    id: uuidv7Id(),
+    actorHash: text("actor_hash").notNull(),
+    keyHash: text("key_hash").notNull(),
+    requestHash: text("request_hash").notNull(),
+    result: jsonb("result").$type<JsonObject>(),
+    familyId: uuid("family_id").references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+    expiresAt: timestamptz("expires_at").notNull(),
+  },
+  (t) => [
+    unique("api_request_receipts_actor_key_key").on(t.actorHash, t.keyHash),
+    index("api_request_receipts_expiry_idx").on(t.expiresAt),
+    check(
+      "api_request_receipts_hashes_check",
+      sql`${sql.identifier(t.actorHash.name)} ~ '^[0-9a-f]{64}$' and ${sql.identifier(t.keyHash.name)} ~ '^[0-9a-f]{64}$' and ${sql.identifier(t.requestHash.name)} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      "api_request_receipts_expiry_check",
+      sql`${sql.identifier(t.expiresAt.name)} > ${sql.identifier(t.createdAt.name)} and ${sql.identifier(t.expiresAt.name)} <= ${sql.identifier(t.createdAt.name)} + interval '24 hours'`,
+    ),
+    check(
+      "api_request_receipts_result_check",
+      sql`${sql.identifier(t.result.name)} is null or jsonb_typeof(${sql.identifier(t.result.name)}) = 'object'`,
+    ),
+    check(
+      "api_request_receipts_member_scope_check",
+      sql`${sql.identifier(t.memberId.name)} is null or ${sql.identifier(t.familyId.name)} is not null`,
+    ),
+  ],
+);
+
 export const flags = pgTable("flags", {
   key: text("key").primaryKey(),
   value: jsonb("value").notNull(),
@@ -1417,6 +1501,10 @@ export type Deletion = typeof deletions.$inferSelect;
 export type NewDeletion = typeof deletions.$inferInsert;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type NewSubscription = typeof subscriptions.$inferInsert;
+export type AccountLinkChallenge = typeof accountLinkChallenges.$inferSelect;
+export type NewAccountLinkChallenge = typeof accountLinkChallenges.$inferInsert;
+export type ApiRequestReceipt = typeof apiRequestReceipts.$inferSelect;
+export type NewApiRequestReceipt = typeof apiRequestReceipts.$inferInsert;
 export type Flag = typeof flags.$inferSelect;
 export type NewFlag = typeof flags.$inferInsert;
 export type AdminAccessLogEntry = typeof adminAccessLog.$inferSelect;

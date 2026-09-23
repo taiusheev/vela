@@ -8,6 +8,20 @@
       "when": 1789637343047,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790055584643,
+      "tag": "0001_api_request_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790136923795,
+      "tag": "0002_account_linking",
+      "breakpoints": true
     }
   ]
 }

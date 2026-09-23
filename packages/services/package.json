@@ -10,7 +10,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:postgres": "node scripts/test-postgres.ts"
   },
   "dependencies": {
     "@vela/adapters": "workspace:*",

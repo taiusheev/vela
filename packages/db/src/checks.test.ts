@@ -1,8 +1,9 @@
+import { SUBSCRIPTION_STATUSES as CONTRACT_SUBSCRIPTION_STATUSES } from "@vela/contracts";
 import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { isOneOf, literalList, quoteLiteral } from "./checks.ts";
-import { outbound } from "./schema.ts";
+import { outbound, SUBSCRIPTION_STATUSES, subscriptions } from "./schema.ts";
 
 describe("quoteLiteral", () => {
   it("doubles single quotes so a value cannot end the literal", () => {
@@ -22,6 +23,17 @@ describe("literalList", () => {
 });
 
 describe("isOneOf", () => {
+  it("keeps the subscription CHECK unchanged while sharing its values with the API", () => {
+    expect(SUBSCRIPTION_STATUSES).toBe(CONTRACT_SUBSCRIPTION_STATUSES);
+    const query = new PgDialect().sqlToQuery(
+      sql`${isOneOf(subscriptions.status, SUBSCRIPTION_STATUSES)}`,
+    );
+    expect(query).toEqual({
+      sql: `"status" in ('trial', 'active', 'grace', 'lapsed', 'cancelled')`,
+      params: [],
+    });
+  });
+
   it("renders the column unqualified with no bound parameters", () => {
     const query = new PgDialect().sqlToQuery(sql`${isOneOf(outbound.kind, ["ack", "flag"])}`);
     expect(query).toEqual({ sql: `"kind" in ('ack', 'flag')`, params: [] });

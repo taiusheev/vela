@@ -3,8 +3,10 @@ import { createFakeAi, createOffAi, fakeRecord, SAFE_DEFAULTS } from "@vela/ai";
 import type { LocalDate, LocalTime } from "@vela/contracts";
 import { localDateOf, outboundKey, zonedInstant } from "@vela/core";
 import {
+  accountLinkChallenges,
   aiCalls,
   answers,
+  apiRequestReceipts,
   awayPeriods,
   chips,
   consents,
@@ -26,6 +28,7 @@ import {
   suggestions,
   translations,
   turns,
+  users,
   weeklyReads,
 } from "@vela/db";
 import { asc, eq, inArray } from "drizzle-orm";
@@ -564,6 +567,8 @@ describe("rollupMetrics", () => {
 
 describe("applyRetention", () => {
   const RULES = [
+    "account_link_challenges_deleted",
+    "api_request_receipts_deleted",
     "families_deleted",
     "family_media_deleted",
     "media_deleted",
@@ -702,6 +707,126 @@ describe("applyRetention", () => {
     });
     return { exchange, answerId: answer?.id ?? "", replyId: reply?.id ?? "" };
   }
+
+  it.each([
+    { state: "pending", age: 1, deleted: 1 },
+    { state: "pending", age: 0, deleted: 1 },
+    { state: "pending", age: -1, deleted: 0 },
+    { state: "invalidated", age: 0, deleted: 1 },
+    { state: "invalidated", age: -1, deleted: 0 },
+    { state: "completed", age: 23 * 60 * 60 * 1_000, deleted: 0 },
+    { state: "completed", age: DAY_MS - 1, deleted: 0 },
+    { state: "completed", age: DAY_MS, deleted: 1 },
+    { state: "completed", age: DAY_MS + 1, deleted: 1 },
+  ])("retains challenges at the $state boundary aged $age ms", async ({ state, age, deleted }) => {
+    const now = h.clock.now();
+    const seed = await seedFamily(h.db, { now: daysAgo(2) });
+    const [account] = await h.db
+      .insert(users)
+      .values({ authSubject: "retention-actor", displayName: "Mia" })
+      .returning();
+    if (account === undefined) throw new Error("expected account");
+    const boundary = new Date(now.getTime() - age);
+    const completedAt = state === "completed" ? boundary : null;
+    const expiresAt = new Date(boundary.getTime() + (completedAt === null ? 0 : 5 * 60 * 1_000));
+    const [challenge] = await h.db
+      .insert(accountLinkChallenges)
+      .values({
+        userId: account.id,
+        sessionHash: sha256("retention-session"),
+        familyId: seed.family.id,
+        memberId: seed.member.id,
+        channelLinkId: seed.memberLink.id,
+        channelIdentityHash: sha256("retention-channel"),
+        codeHash: state === "pending" ? sha256("retention-code") : null,
+        createdAt: new Date(expiresAt.getTime() - 15 * 60 * 1_000),
+        expiresAt,
+        completedAt,
+        invalidatedAt: state === "invalidated" ? new Date(expiresAt.getTime() - 1_000) : null,
+      })
+      .returning();
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts.account_link_challenges_deleted).toBe(deleted);
+    expect(await h.db.select().from(accountLinkChallenges)).toEqual(
+      deleted === 1 ? [] : [challenge],
+    );
+    const recorded = (await eventRows()).filter((event) => event.name === "retention_deleted");
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.props).toEqual(counts);
+  });
+
+  it("counts expired challenges before their family cascades", async () => {
+    const now = h.clock.now();
+    const seed = await seedFamily(h.db, { now: daysAgo(1) });
+    const [account] = await h.db
+      .insert(users)
+      .values({ authSubject: "retention-actor", displayName: "Mia" })
+      .returning();
+    if (account === undefined) throw new Error("expected account");
+    await h.db.insert(accountLinkChallenges).values({
+      userId: account.id,
+      sessionHash: sha256("retention-session"),
+      familyId: seed.family.id,
+      memberId: seed.member.id,
+      channelLinkId: seed.memberLink.id,
+      channelIdentityHash: sha256("retention-channel"),
+      codeHash: sha256("retention-code"),
+      createdAt: new Date(now.getTime() - 15 * 60 * 1_000),
+      expiresAt: now,
+    });
+    await h.db.update(families).set({ deletedAt: now }).where(eq(families.id, seed.family.id));
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts).toMatchObject({ account_link_challenges_deleted: 1, families_deleted: 1 });
+    expect(await h.db.select().from(accountLinkChallenges)).toEqual([]);
+    const [recorded] = (await eventRows()).filter((event) => event.name === "retention_deleted");
+    expect(recorded?.props).toEqual(counts);
+  });
+
+  it("deletes receipts expired before or at now before family cascades and keeps future receipts", async () => {
+    const now = h.clock.now();
+    const seed = await seedFamily(h.db, { now });
+    await h.db.update(families).set({ deletedAt: now }).where(eq(families.id, seed.family.id));
+    await h.db.insert(apiRequestReceipts).values(
+      [
+        {
+          keyHash: "a".repeat(64),
+          expiresAt: new Date(now.getTime() - 1),
+          familyId: seed.family.id,
+          memberId: seed.member.id,
+        },
+        { keyHash: "b".repeat(64), expiresAt: now, familyId: null, memberId: null },
+        {
+          keyHash: "c".repeat(64),
+          expiresAt: new Date(now.getTime() + 1),
+          familyId: null,
+          memberId: null,
+        },
+      ].map((receipt) => ({
+        ...receipt,
+        actorHash: "d".repeat(64),
+        requestHash: "e".repeat(64),
+        result: { ok: true },
+        createdAt: new Date(receipt.expiresAt.getTime() - DAY_MS),
+      })),
+    );
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts).toMatchObject({ api_request_receipts_deleted: 2, families_deleted: 1 });
+    const remaining = await h.db.select().from(apiRequestReceipts);
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]).toMatchObject({
+      keyHash: "c".repeat(64),
+      expiresAt: new Date(now.getTime() + 1),
+      result: { ok: true },
+    });
+    const [recorded] = (await eventRows()).filter((event) => event.name === "retention_deleted");
+    expect(recorded?.props).toEqual(counts);
+  });
 
   it("clears the family's words at 30 days, keeps what is younger, and reports every rule in one event", async () => {
     const seed = await seedFamily(h.db, { now: daysAgo(40) });

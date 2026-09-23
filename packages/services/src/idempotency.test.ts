@@ -9,9 +9,11 @@
 import type { InboundEvent, InboundKind, LocalDate } from "@vela/contracts";
 import { encodeButton } from "@vela/core";
 import {
+  accountLinkChallenges,
   adminAccessLog,
   aiCalls,
   answers,
+  apiRequestReceipts,
   awayPeriods,
   channelLinks,
   chips,
@@ -106,6 +108,8 @@ const TABLES = {
   metricsDaily,
   deletions,
   adminAccessLog,
+  apiRequestReceipts,
+  accountLinkChallenges,
 };
 
 /**

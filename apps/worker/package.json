@@ -22,7 +22,8 @@
     "@vela/core": "workspace:*",
     "@vela/db": "workspace:*",
     "@vela/services": "workspace:*",
-    "hono": "catalog:"
+    "hono": "catalog:",
+    "jose": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "catalog:",

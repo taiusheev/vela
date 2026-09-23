@@ -7,6 +7,7 @@
  * including the helpers these call themselves, is a flow's own business. The test harness is not
  * here: it lives behind `@vela/services/testing`, so production code cannot reach it.
  */
+export { completeAccountLink, issueAccountLinkCode, startAccountLink } from "./account-linking.ts";
 export {
   ADMIN_OVERVIEW_PATH,
   type AddContactInput,
@@ -40,6 +41,20 @@ export {
   sendWeeklyRead,
   setAway,
 } from "./admin.ts";
+export {
+  authorizeFamilyAccess,
+  type FamilyAccess,
+  type FamilyAccessResult,
+  type SessionIdentity,
+} from "./api-access.ts";
+export { disableApiAccount, provisionApiAccount, updateApiAccount } from "./api-account-writes.ts";
+export { loadApiFamilyPlan, loadApiMe, provisionApiUser } from "./api-accounts.ts";
+export {
+  ApiIdempotencyError,
+  type ApiMutationAction,
+  type ApiMutationRequest,
+  runApiMutation,
+} from "./api-idempotency.ts";
 export type {
   ChannelRegistry,
   Clock,

@@ -22,6 +22,10 @@ export const PLANS = ["free", "light"] as const;
 export const Plan = z.enum(PLANS);
 export type Plan = z.infer<typeof Plan>;
 
+export const SUBSCRIPTION_STATUSES = ["trial", "active", "grace", "lapsed", "cancelled"] as const;
+export const SubscriptionStatus = z.enum(SUBSCRIPTION_STATUSES);
+export type SubscriptionStatus = z.infer<typeof SubscriptionStatus>;
+
 export const ROLES = ["organiser", "member"] as const;
 export const Role = z.enum(ROLES);
 export type Role = z.infer<typeof Role>;

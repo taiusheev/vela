@@ -31,9 +31,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, expectTypeOf, it } f
 import type { VelaDatabase } from "./database.ts";
 import * as schema from "./schema.ts";
 import {
+  accountLinkChallenges,
   adminAccessLog,
   aiCalls,
   answers,
+  apiRequestReceipts,
   awayPeriods,
   CONSENT_PROOF_KEYS,
   channelLinks,
@@ -275,7 +277,8 @@ function deletionOf(objectType: string, objectId: string): NewDeletion {
 async function seedEveryTable(): Promise<void> {
   const seed = await seedFamily();
   const familyId = seed.family.id;
-  await db.insert(users).values({ displayName: "Mia" });
+  const user = only(await db.insert(users).values({ displayName: "Mia" }).returning());
+  await db.insert(accountLinkChallenges).values(challengeValues(user.id));
   await db
     .insert(channelLinks)
     .values({ memberId: seed.parent.id, channel: "telegram", externalId: "1001" });
@@ -435,6 +438,7 @@ async function seedEveryTable(): Promise<void> {
   await db
     .insert(subscriptions)
     .values({ familyId, memberId: seed.parent.id, provider: "trial", status: "trial" });
+  await db.insert(apiRequestReceipts).values(receiptValues());
   await db.insert(flags).values({ key: "quiet_notices", value: true });
   await db.insert(adminAccessLog).values({
     admin: "founder",
@@ -1928,9 +1932,212 @@ describe("CHECK constraints on enumerated columns", () => {
       "consents_subject_deleted_check",
       "nearby_contacts_phone_consented_check",
       "deletions_content_hash_check",
+      "api_request_receipts_hashes_check",
+      "api_request_receipts_expiry_check",
+      "api_request_receipts_result_check",
+      "api_request_receipts_member_scope_check",
+      "account_link_challenges_hashes_check",
+      "account_link_challenges_attempts_check",
+      "account_link_challenges_binding_check",
+      "account_link_challenges_state_check",
+      "account_link_challenges_timing_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());
+  });
+});
+
+function challengeValues(userId: string) {
+  return {
+    userId,
+    sessionHash: "a".repeat(64),
+    createdAt: new Date("2026-09-22T08:00:00Z"),
+    expiresAt: new Date("2026-09-22T08:15:00Z"),
+  };
+}
+
+describe("account link challenges", () => {
+  it("starts unbound with no plaintext credential", async () => {
+    const user = only(await db.insert(users).values({ displayName: "App user" }).returning());
+    const challenge = only(
+      await db.insert(accountLinkChallenges).values(challengeValues(user.id)).returning(),
+    );
+    expect(challenge).toMatchObject({
+      userId: user.id,
+      attempts: 0,
+      codeHash: null,
+      memberId: null,
+      familyId: null,
+      channelLinkId: null,
+      channelIdentityHash: null,
+      completedAt: null,
+      invalidatedAt: null,
+    });
+  });
+
+  it.each([
+    [{ sessionHash: "bad" }, "hashes"],
+    [{ attempts: -1 }, "attempts"],
+    [{ attempts: 6 }, "attempts"],
+    [{ expiresAt: new Date("2026-09-22T08:00:00Z") }, "timing"],
+    [{ expiresAt: new Date("2026-09-22T08:15:01Z") }, "timing"],
+    [{ completedAt: new Date("2026-09-22T08:05:00Z") }, "state"],
+    [{ codeHash: "b".repeat(64) }, "state"],
+  ] as const)("rejects invalid challenge state %#", async (change, constraint) => {
+    const user = only(await db.insert(users).values({ displayName: "App user" }).returning());
+    const error = await rejection(
+      db.insert(accountLinkChallenges).values({ ...challengeValues(user.id), ...change }),
+    );
+    expect(error).toMatchObject({
+      code: CHECK_VIOLATION,
+      constraint: `account_link_challenges_${constraint}_check`,
+    });
+  });
+
+  it("requires complete binding and clears codes on terminal states", async () => {
+    const seed = await seedFamily();
+    const user = only(await db.insert(users).values({ displayName: "App user" }).returning());
+    const link = only(
+      await db
+        .insert(channelLinks)
+        .values({ memberId: seed.parent.id, channel: "telegram", externalId: "1001" })
+        .returning(),
+    );
+    expect(
+      await rejection(
+        db
+          .insert(accountLinkChallenges)
+          .values({ ...challengeValues(user.id), memberId: seed.parent.id }),
+      ),
+    ).toMatchObject({ constraint: "account_link_challenges_binding_check" });
+    const bound = {
+      ...challengeValues(user.id),
+      familyId: seed.family.id,
+      memberId: seed.parent.id,
+      channelLinkId: link.id,
+      channelIdentityHash: "b".repeat(64),
+      codeHash: "c".repeat(64),
+    };
+    const challenge = only(await db.insert(accountLinkChallenges).values(bound).returning());
+    expect(
+      await rejection(
+        db
+          .update(accountLinkChallenges)
+          .set({ completedAt: new Date("2026-09-22T08:05:00Z") })
+          .where(eq(accountLinkChallenges.id, challenge.id)),
+      ),
+    ).toMatchObject({ constraint: "account_link_challenges_state_check" });
+    await db
+      .update(accountLinkChallenges)
+      .set({ codeHash: null, completedAt: new Date("2026-09-22T08:05:00Z") })
+      .where(eq(accountLinkChallenges.id, challenge.id));
+    expect(
+      await rejection(
+        db
+          .update(accountLinkChallenges)
+          .set({ invalidatedAt: new Date("2026-09-22T08:06:00Z") })
+          .where(eq(accountLinkChallenges.id, challenge.id)),
+      ),
+    ).toMatchObject({ constraint: "account_link_challenges_state_check" });
+  });
+
+  it("cascades a challenge when its owner is physically deleted", async () => {
+    const user = only(await db.insert(users).values({ displayName: "App user" }).returning());
+    await db.insert(accountLinkChallenges).values(challengeValues(user.id));
+    await db.delete(users).where(eq(users.id, user.id));
+    expect(await countRows(accountLinkChallenges)).toBe(0);
+  });
+});
+
+function receiptValues() {
+  return {
+    actorHash: "a".repeat(64),
+    keyHash: "b".repeat(64),
+    requestHash: "c".repeat(64),
+    createdAt: new Date("2026-09-22T00:00:00Z"),
+    expiresAt: new Date("2026-09-23T00:00:00Z"),
+  };
+}
+
+describe("API request receipts", () => {
+  it("accepts a reservation followed by a completed response", async () => {
+    const row = only(await db.insert(apiRequestReceipts).values(receiptValues()).returning());
+    expect(row.result).toBeNull();
+    const result = { status: 201, body: { id: row.id } };
+    await db.update(apiRequestReceipts).set({ result }).where(eq(apiRequestReceipts.id, row.id));
+    expect(only(await db.select().from(apiRequestReceipts)).result).toEqual(result);
+  });
+
+  it("uniquely scopes keys to an actor, not a session or payload", async () => {
+    await db.insert(apiRequestReceipts).values(receiptValues());
+    const error = await rejection(
+      db.insert(apiRequestReceipts).values({ ...receiptValues(), requestHash: "d".repeat(64) }),
+    );
+    expect(error).toMatchObject({
+      code: UNIQUE_VIOLATION,
+      constraint: "api_request_receipts_actor_key_key",
+    });
+    await db.insert(apiRequestReceipts).values({ ...receiptValues(), actorHash: "d".repeat(64) });
+    expect(await countRows(apiRequestReceipts)).toBe(2);
+  });
+
+  it.each(["actorHash", "keyHash", "requestHash"] as const)(
+    "rejects a malformed %s",
+    async (field) => {
+      const error = await rejection(
+        db.insert(apiRequestReceipts).values({ ...receiptValues(), [field]: "A".repeat(64) }),
+      );
+      expect(error).toMatchObject({
+        code: CHECK_VIOLATION,
+        constraint: "api_request_receipts_hashes_check",
+      });
+    },
+  );
+
+  it.each(["2026-09-21T23:59:59Z", "2026-09-22T00:00:00Z", "2026-09-23T00:00:01Z"])(
+    "rejects expiry %s outside the positive 24-hour window",
+    async (expiresAt) => {
+      const error = await rejection(
+        db
+          .insert(apiRequestReceipts)
+          .values({ ...receiptValues(), expiresAt: new Date(expiresAt) }),
+      );
+      expect(error).toMatchObject({
+        code: CHECK_VIOLATION,
+        constraint: "api_request_receipts_expiry_check",
+      });
+    },
+  );
+
+  it("requires an object for a saved result", async () => {
+    const error = await rejection(
+      db.insert(apiRequestReceipts).values({ ...receiptValues(), result: sql`'[]'::jsonb` }),
+    );
+    expect(error).toMatchObject({
+      code: CHECK_VIOLATION,
+      constraint: "api_request_receipts_result_check",
+    });
+  });
+
+  it("requires a family scope for a member-scoped receipt", async () => {
+    const seed = await seedFamily();
+    const error = await rejection(
+      db.insert(apiRequestReceipts).values({ ...receiptValues(), memberId: seed.parent.id }),
+    );
+    expect(error).toMatchObject({
+      code: CHECK_VIOLATION,
+      constraint: "api_request_receipts_member_scope_check",
+    });
+  });
+
+  it.each(["family", "member"])("cascades when its %s is deleted", async (scope) => {
+    const seed = await seedFamily();
+    await db
+      .insert(apiRequestReceipts)
+      .values({ ...receiptValues(), familyId: seed.family.id, memberId: seed.parent.id });
+    if (scope === "family") await db.delete(families).where(eq(families.id, seed.family.id));
+    else await db.delete(members).where(eq(members.id, seed.parent.id));
+    expect(await countRows(apiRequestReceipts)).toBe(0);
   });
 });
 

@@ -59,6 +59,23 @@ CREATE TABLE "answers" (
 	CONSTRAINT "answers_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
 );
 
+CREATE TABLE "api_request_receipts" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"actor_hash" text NOT NULL,
+	"key_hash" text NOT NULL,
+	"request_hash" text NOT NULL,
+	"result" jsonb,
+	"family_id" uuid,
+	"member_id" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "api_request_receipts_actor_key_key" UNIQUE("actor_hash","key_hash"),
+	CONSTRAINT "api_request_receipts_hashes_check" CHECK ("actor_hash" ~ '^[0-9a-f]{64}$' and "key_hash" ~ '^[0-9a-f]{64}$' and "request_hash" ~ '^[0-9a-f]{64}$'),
+	CONSTRAINT "api_request_receipts_expiry_check" CHECK ("expires_at" > "created_at" and "expires_at" <= "created_at" + interval '24 hours'),
+	CONSTRAINT "api_request_receipts_result_check" CHECK ("result" is null or jsonb_typeof("result") = 'object'),
+	CONSTRAINT "api_request_receipts_member_scope_check" CHECK ("member_id" is null or "family_id" is not null)
+);
+
 CREATE TABLE "away_periods" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"member_id" uuid NOT NULL,
@@ -552,6 +569,8 @@ ALTER TABLE "ai_calls" ADD CONSTRAINT "ai_calls_member_id_members_id_fk" FOREIGN
 ALTER TABLE "answers" ADD CONSTRAINT "answers_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "answers" ADD CONSTRAINT "answers_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "answers" ADD CONSTRAINT "answers_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "api_request_receipts" ADD CONSTRAINT "api_request_receipts_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "api_request_receipts" ADD CONSTRAINT "api_request_receipts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FOREIGN KEY ("set_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "channel_links" ADD CONSTRAINT "channel_links_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
@@ -616,6 +635,7 @@ ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_member_id_members_id_fk"
 CREATE INDEX "ai_calls_at_idx" ON "ai_calls" USING btree ("at");
 CREATE INDEX "answers_exchange_idx" ON "answers" USING btree ("exchange_id");
 CREATE INDEX "answers_member_recent_idx" ON "answers" USING btree ("member_id","received_at" DESC NULLS FIRST);
+CREATE INDEX "api_request_receipts_expiry_idx" ON "api_request_receipts" USING btree ("expires_at");
 CREATE INDEX "away_active_idx" ON "away_periods" USING btree ("member_id") WHERE "ended_at" is null;
 CREATE INDEX "channel_links_member_idx" ON "channel_links" USING btree ("member_id");
 CREATE INDEX "consents_subject_ref_idx" ON "consents" USING btree ("subject_ref");
