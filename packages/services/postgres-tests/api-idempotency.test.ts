@@ -133,14 +133,16 @@ describe("runApiMutation on independent PostgreSQL connections", () => {
     expect(await names()).toEqual(["holder"]);
   });
 
-  it("commits exactly one mutation for unsynchronised identical requests", async () => {
+  it("commits exactly one mutation for unsynchronised identical requests from refreshed sessions", async () => {
     const clients = await pg.clientPool("identical", 6);
     for (let round = 0; round < 5; round += 1) {
       await pg.reset();
       const record = calls();
       const results = await pg.settle(
         `identical round ${round}`,
-        clients.map((client) => mutate(client, writer(client.name, record))),
+        clients.map((client) =>
+          mutate(client, writer(client.name, record), {}, { ...actor, sessionId: client.name }),
+        ),
       );
 
       expect(rejections(results)).toEqual([]);
@@ -368,6 +370,36 @@ describe("runApiMutation on independent PostgreSQL connections", () => {
     expect(theirs?.keyHash).toBe(mine?.keyHash);
     expect(theirs?.actorHash).not.toBe(mine?.actorHash);
     expect(await names()).toEqual(["holder", "other-actor"]);
+  });
+
+  it("still replays a matching key at the receipt cap while refusing a fresh one", async () => {
+    const record = calls();
+    const replayer = await pg.client("replayer");
+    const fresh = await pg.client("fresh");
+    const blocker = await pg.client("blocker");
+    expect(
+      await pg.finish("the first mutation", mutate(replayer, writer("first", record))),
+    ).toEqual({ response: written("first"), replayed: false });
+    await pg.seedReceipts(actor.authSubject, MAX_API_RECEIPTS_PER_ACTOR - 1);
+    const lock = await pg.holdActorLock(blocker, actor.authSubject);
+    const { operation: replay } = await queueOne(replayer, blocker, (client) =>
+      mutate(client, writer("replay", record)),
+    );
+    const { operation: refused } = await queueOne(fresh, blocker, (client) =>
+      mutate(client, writer(client.name, record), { key: "fresh-key" }),
+    );
+
+    lock.release();
+    await pg.finish("the blocker", lock.done);
+    expect(await pg.finish("the matching replay", replay)).toEqual({
+      response: written("first"),
+      replayed: true,
+    });
+    await expect(pg.finish("the fresh key", refused)).rejects.toMatchObject(rateLimited);
+
+    expect(record.mutated).toEqual(["first"]);
+    expect(record.authorized).toEqual(["first", "replay", "fresh"]);
+    expect(await pg.receipts(actor.authSubject)).toHaveLength(MAX_API_RECEIPTS_PER_ACTOR);
   });
 
   it("rate limits fresh keys queued behind the request that takes the last receipt slot", async () => {
