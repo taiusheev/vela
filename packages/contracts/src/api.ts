@@ -1,5 +1,7 @@
 import { z } from "zod";
 import {
+  AnswerKind,
+  ExchangeType,
   Lang,
   LightState,
   LocalDate,
@@ -7,6 +9,7 @@ import {
   MemberStatus,
   Plan,
   Region,
+  ReplyKind,
   Role,
   SubscriptionStatus,
   TimeZone,
@@ -152,3 +155,52 @@ export type SetLight = z.infer<typeof SetLight>;
 
 export const PauseMember = z.strictObject({ paused: z.boolean() });
 export type PauseMember = z.infer<typeof PauseMember>;
+
+export const ApiTodayAnswer = z.object({
+  kind: AnswerKind,
+  /** Her words: what she said, else what she wrote, else what she tapped. */
+  text: z.string().nullable(),
+  at: z.iso.datetime({ offset: true }),
+});
+export type ApiTodayAnswer = z.infer<typeof ApiTodayAnswer>;
+
+export const ApiTodayReply = z.object({
+  from: z.string(),
+  kind: ReplyKind,
+  text: z.string().nullable(),
+});
+export type ApiTodayReply = z.infer<typeof ApiTodayReply>;
+
+export const ApiTodayExchange = z.object({
+  id: z.uuid(),
+  recipient_id: z.uuid(),
+  recipient_name: z.string(),
+  /** Null for Vela's own hello, and for an ask whose asker has since been deleted. */
+  asker_name: z.string().nullable(),
+  on_behalf_of: z.string().nullable(),
+  type: ExchangeType,
+  ask: z.string().nullable(),
+  answer: ApiTodayAnswer.nullable(),
+  replies: z.array(ApiTodayReply),
+  /** The receipt chip: she opened it. */
+  seen_at: z.iso.datetime({ offset: true }).nullable(),
+});
+export type ApiTodayExchange = z.infer<typeof ApiTodayExchange>;
+
+export const ApiTomorrowTurn = z.object({
+  local_day: LocalDate,
+  recipient_id: z.uuid(),
+  recipient_name: z.string(),
+  /** Null when nobody holds turns, or the holder has left. */
+  holder_id: z.uuid().nullable(),
+  holder_name: z.string().nullable(),
+  suggestion: z.object({ id: z.uuid(), text: z.string() }).nullable(),
+});
+export type ApiTomorrowTurn = z.infer<typeof ApiTomorrowTurn>;
+
+export const ApiToday = z.object({
+  lights: z.array(MemberLight),
+  exchanges: z.array(ApiTodayExchange),
+  tomorrow: z.array(ApiTomorrowTurn),
+});
+export type ApiToday = z.infer<typeof ApiToday>;

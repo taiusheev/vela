@@ -70,6 +70,14 @@ Before real account writes are enabled, apply the migrations, configure the real
 
 `GET /v1/families/:familyId/lights` answers `MemberLight[]` for the caller's family: one row per kept-light member, read in that member's own local day. `loadApiLights` in `packages/services/src/api-lights.ts` takes the family authorization every other family read takes, then derives each state in this order: a paused member is `paused`, an unended away period covering her day is `away` with the day it ends, the day's exchange having an answer is `lit` with the time she answered, an unresolved quiet event on that exchange is `quiet` with its id, and anything else is `resting`. `usual_time` is her arrival time. A stranger, a family that is not the caller's and an unknown family all answer 404. The route is registered on the isolated API app and, like the rest of it, is mounted nowhere.
 
+### The Today screen (23 September 2026)
+
+`GET /v1/families/:familyId/today` answers `ApiToday` for the caller’s family: `lights` exactly as the lights route answers them, `exchanges` with one entry per kept-light member who has an exchange in her own local day, and `tomorrow` with one entry per kept-light member whose next local day already holds a turn. `loadApiToday` in `packages/services/src/api-today.ts` takes the same family authorization and reads every day in the member’s own time zone, so a family spread across zones sees each person’s day and not the caller’s.
+
+An exchange carries the asker’s name (null for Vela’s own hello, and for an ask whose asker was deleted), the ask, her latest answer with the time it arrived, the replies in the order they were written, and `seen_at` for the receipt chip. Her words are read as the read-back reads them: the transcript, else the text of what she wrote, else the choice she tapped, else the summary — so an answer that carried no words comes back with `text: null` and its kind, and the reader decides what to call it. A turn carries the holder (null when nobody holds turns, or the holder has left) and the newest unused suggestion written for that holder about that member, or null; suggestions have no writer yet, so today it is always null outside tests.
+
+A stranger, a family that is not the caller’s and an unknown family all answer 404. The route is registered on the isolated API app and, like the rest of it, is mounted on neither deployed Worker; `apps/worker/scripts/api-dev.ts` serves it on a developer’s own machine for the app to read (infra/README.md, section 9a).
+
 ### Durable mutation receipts (22 September 2026, not exposed)
 
 `runApiMutation` in `packages/services/src/api-idempotency.ts` provides database-only replay protection. The optional account-write routes call it locally; no deployed route calls it. Migration `0001_api_request_receipts` adds the receipt table; apply it before deploying the updated retention job. `0002_account_linking` follows it with `account_link_challenges` and the `account_linked` event name. The applied `0000_init` is unchanged, and no migration has been run against staging or production for this slice.
@@ -114,7 +122,7 @@ Before real account writes are enabled, apply the migrations, configure the real
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | /families/:id/today | The Today screen (A6): lights, today's exchange per kept-light member, tomorrow's turn and suggestion |
+| GET | /families/:id/today | The Today screen (A6): lights, today's exchange per kept-light member, tomorrow's turn and suggestion. **Built**, see below |
 | GET | /families/:id/exchanges?cursor= | Exchanges newest first (A8), with answers, replies, receipts, translations |
 | GET | /exchanges/:id | One exchange in full |
 | POST | /families/:id/exchanges | Compose an ask: `{recipient_id, type, text?, options?, media_ids?, voice_hello_id?, when: tomorrow|date|whenever, date?, on_behalf_of?}` → exchange (state composed). `409 conflict` with `{taken_by}` if that date already has an ask; body may include `date_alternative` |

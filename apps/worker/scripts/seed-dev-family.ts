@@ -10,7 +10,17 @@
  *
  * It writes synthetic people and words only, and refuses any database that is not local.
  */
-import { connectDatabase, exchanges, members, users } from "@vela/db";
+import { addDays, localDateOf } from "@vela/core";
+import {
+  answers,
+  connectDatabase,
+  exchanges,
+  members,
+  replies,
+  suggestions,
+  turns,
+  users,
+} from "@vela/db";
 import { seedFamily } from "@vela/services/testing";
 import { and, eq } from "drizzle-orm";
 
@@ -101,21 +111,84 @@ try {
   if (asker === undefined) throw new Error("that family has no organiser");
 
   // The day is rewritten on every run, so a second run refreshes it rather than stacking asks.
-  const today = new Date(now.getTime()).toISOString().slice(0, 10);
+  // Her answer and the replies go with it: Today reads those rows, not the exchange's timestamps.
+  // Her own local day, which is what Today reads; the machine’s UTC date is not hers.
+  const today = localDateOf(now, keptLight.tz);
+  const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
+  const ids = channelIds(authSubject);
   await db
     .delete(exchanges)
     .where(and(eq(exchanges.recipientId, keptLight.id), eq(exchanges.scheduledFor, today)));
-  await db.insert(exchanges).values({
+  const [exchange] = await db
+    .insert(exchanges)
+    .values({
+      familyId,
+      recipientId: keptLight.id,
+      askerId: asker.id,
+      type: "question",
+      state: "answered",
+      text: "What did the garden look like this morning?",
+      textLang: "en",
+      scheduledFor: today,
+      deliveredAt: minutesAgo(120),
+      seenAt: minutesAgo(95),
+      answeredAt: minutesAgo(90),
+    })
+    .returning();
+  if (exchange === undefined) throw new Error("the day could not be written");
+
+  await db.insert(answers).values({
+    exchangeId: exchange.id,
+    memberId: keptLight.id,
+    kind: "text",
+    channel: "telegram",
+    externalId: `${ids.member}:dev-answer`,
+    payload: {
+      text: "The tomatoes finally turned. I picked three before breakfast and left them on the sill.",
+    },
+    receivedAt: minutesAgo(90),
+  });
+  await db.insert(replies).values([
+    {
+      exchangeId: exchange.id,
+      memberId: asker.id,
+      kind: "heart",
+      channel: "telegram",
+      createdAt: minutesAgo(80),
+    },
+    {
+      exchangeId: exchange.id,
+      memberId: asker.id,
+      kind: "text",
+      text: "Those are the ones from the seeds you saved",
+      channel: "telegram",
+      externalId: `${ids.organiser}:dev-reply`,
+      createdAt: minutesAgo(75),
+    },
+  ]);
+
+  // Tomorrow's turn, so the second card on Today has something to show as well.
+  const tomorrow = addDays(today, 1);
+  await db
+    .insert(turns)
+    .values({
+      familyId,
+      localDay: tomorrow,
+      recipientId: keptLight.id,
+      holderId: asker.id,
+      promptedAt: minutesAgo(5),
+    })
+    .onConflictDoNothing();
+  await db
+    .delete(suggestions)
+    .where(and(eq(suggestions.familyId, familyId), eq(suggestions.forMemberId, asker.id)));
+  await db.insert(suggestions).values({
     familyId,
-    recipientId: keptLight.id,
-    askerId: asker.id,
-    type: "question",
-    state: "answered",
-    text: "What did the garden look like this morning?",
-    textLang: "en",
-    scheduledFor: today,
-    deliveredAt: new Date(now.getTime() - 2 * 60 * 60 * 1_000),
-    answeredAt: new Date(now.getTime() - 90 * 60 * 1_000),
+    forMemberId: asker.id,
+    aboutMemberId: keptLight.id,
+    type: "mention",
+    text: "Ask her about the seeds she saved from last year",
+    promptVersion: "dev-seed@1",
   });
 
   console.log(`[seed] family ${familyId} belongs to ${authSubject}`);

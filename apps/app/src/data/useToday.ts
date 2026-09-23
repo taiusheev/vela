@@ -1,9 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import type { MemberLight } from "@vela/contracts";
-import { apiConfigured, fetchLights, fetchMe } from "../api/client.ts";
+import type { ApiToday, ApiTodayExchange, ApiTomorrowTurn, MemberLight } from "@vela/contracts";
+import { apiConfigured, fetchMe, fetchToday } from "../api/client.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import type { LightState } from "../components/light.tsx";
-import { type Today, type TodayLight, todayFixture } from "./today.ts";
+import {
+  type Today,
+  type TodayExchange,
+  type TodayLight,
+  type TomorrowTurn,
+  todayFixture,
+} from "./today.ts";
 
 function timeOfDay(instant: string): string {
   const at = new Date(instant);
@@ -44,9 +50,94 @@ export function toTodayLight(light: MemberLight): TodayLight {
   };
 }
 
+/** What an answer that carried no words was: a tap is still something she said. */
+function wordlessAnswer(kind: string): string {
+  switch (kind) {
+    case "heart":
+      return "sent a heart";
+    case "fine":
+      return "said she is fine";
+    case "photo":
+      return "sent a photo";
+    case "photo_pick":
+      return "picked a photo";
+    case "sticker":
+      return "sent a sticker";
+    case "voice":
+      return "sent a voice message";
+    case "vote":
+      return "voted";
+    case "chip":
+      return "tapped an answer";
+    default:
+      return "answered";
+  }
+}
+
+/** The same for a reply: reactions are read as what they are, words as themselves. */
+function replyWords(kind: string, text: string | null): string {
+  if (text !== null && text.trim().length > 0) return text;
+  switch (kind) {
+    case "heart":
+      return "sent a heart";
+    case "laugh":
+      return "laughed";
+    case "hug":
+      return "sent a hug";
+    case "voice":
+      return "sent a voice message";
+    case "photo":
+      return "sent a photo";
+    default:
+      return "replied";
+  }
+}
+
+export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
+  const answer = exchange.answer;
+  return {
+    ...(exchange.asker_name === null ? {} : { asker: exchange.asker_name }),
+    recipient: exchange.recipient_name,
+    ...(exchange.ask === null ? {} : { ask: exchange.ask }),
+    ...(answer === null
+      ? {}
+      : {
+          answer: {
+            text: answer.text ?? wordlessAnswer(answer.kind),
+            at: timeOfDay(answer.at),
+          },
+        }),
+    replies: exchange.replies.map((reply) => ({
+      from: reply.from,
+      text: replyWords(reply.kind, reply.text),
+    })),
+    ...(exchange.seen_at === null
+      ? {}
+      : { receipt: `${exchange.recipient_name} saw it · ${timeOfDay(exchange.seen_at)}` }),
+  };
+}
+
+export function toTomorrowTurn(turn: ApiTomorrowTurn, viewerMemberId?: string): TomorrowTurn {
+  return {
+    name: turn.holder_name ?? "Anyone",
+    mine: turn.holder_id !== null && turn.holder_id === viewerMemberId,
+    ...(turn.suggestion === null ? {} : { suggestion: turn.suggestion.text }),
+  };
+}
+
+export function toToday(day: ApiToday, viewerMemberId?: string): Today {
+  const exchange = day.exchanges[0];
+  const tomorrow = day.tomorrow[0];
+  return {
+    lights: day.lights.map(toTodayLight),
+    ...(exchange === undefined ? {} : { exchange: toTodayExchange(exchange) }),
+    ...(tomorrow === undefined ? {} : { tomorrow: toTomorrowTurn(tomorrow, viewerMemberId) }),
+  };
+}
+
 export interface TodayView {
   today: Today;
-  /** True while the real lights are on their way; the fixtures show in the meantime. */
+  /** True while the real day is on its way; the fixtures show in the meantime. */
   loading: boolean;
   /** Set when the API is configured but would not answer, so the screen can say so plainly. */
   trouble: boolean;
@@ -55,8 +146,7 @@ export interface TodayView {
 
 /**
  * Today reads the API when the app is pointed at one and someone is signed in, and its fixtures
- * otherwise. Only the lights are live so far: the exchange and tomorrow's turn wait for their
- * routes (API contract §4).
+ * otherwise. The first membership is the family shown; a second one waits for the family switcher.
  */
 export function useToday(): TodayView {
   const account = useAccount();
@@ -67,20 +157,21 @@ export function useToday(): TodayView {
     enabled,
     queryFn: async () => fetchMe(await account.token()),
   });
-  const familyId = me.data?.memberships[0]?.family.id;
+  const membership = me.data?.memberships[0];
+  const familyId = membership?.family.id;
 
-  const lights = useQuery({
-    queryKey: ["lights", familyId],
+  const day = useQuery({
+    queryKey: ["today", familyId],
     enabled: enabled && familyId !== undefined,
-    queryFn: async () => fetchLights(familyId ?? "", await account.token()),
+    queryFn: async () => fetchToday(familyId ?? "", await account.token()),
   });
 
   if (!enabled) return { today: todayFixture, loading: false, trouble: false, live: false };
-  const live = lights.data !== undefined;
+  const live = day.data !== undefined;
   return {
-    today: live ? { ...todayFixture, lights: lights.data.map(toTodayLight) } : todayFixture,
-    loading: me.isPending || lights.isPending,
-    trouble: me.isError || lights.isError,
+    today: live ? toToday(day.data, membership?.member_id) : todayFixture,
+    loading: me.isPending || day.isPending,
+    trouble: me.isError || day.isError,
     live,
   };
 }

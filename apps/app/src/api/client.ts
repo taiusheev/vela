@@ -1,4 +1,4 @@
-import type { ApiMe, MemberLight } from "@vela/contracts";
+import type { ApiMe, ApiToday } from "@vela/contracts";
 
 /**
  * The worker the app talks to. Without it the screens read their fixtures, so a checkout with no
@@ -47,6 +47,6 @@ export function fetchMe(token: string | null): Promise<ApiMe> {
   return read<ApiMe>("/v1/me", token);
 }
 
-export function fetchLights(familyId: string, token: string | null): Promise<MemberLight[]> {
-  return read<MemberLight[]>(`/v1/families/${familyId}/lights`, token);
+export function fetchToday(familyId: string, token: string | null): Promise<ApiToday> {
+  return read<ApiToday>(`/v1/families/${familyId}/today`, token);
 }

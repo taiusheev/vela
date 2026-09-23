@@ -5,6 +5,7 @@ import {
   ApiFamilyPlan,
   ApiIdempotencyKey,
   ApiMe,
+  ApiToday,
   ApiUser,
   MemberLight,
 } from "@vela/contracts";
@@ -18,6 +19,7 @@ import {
   type loadApiFamilyPlan,
   type loadApiLights,
   type loadApiMe,
+  type loadApiToday,
   type provisionApiAccount,
   type updateApiAccount,
   VelaError,
@@ -39,6 +41,7 @@ export interface ApiReadServices {
   loadApiMe: typeof loadApiMe;
   loadApiFamilyPlan: typeof loadApiFamilyPlan;
   loadApiLights: typeof loadApiLights;
+  loadApiToday: typeof loadApiToday;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
 }
 
@@ -272,6 +275,24 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       return lights === null
         ? c.json(FAMILY_NOT_FOUND, 404)
         : c.json(lights.map((light) => MemberLight.parse(light)));
+    },
+  );
+  app.get(
+    "/v1/families/:familyId/today",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const day = await runtime.services.loadApiToday(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        runtime.now(),
+      );
+      return day === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiToday.parse(day));
     },
   );
   const writes = runtime.writes;

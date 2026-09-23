@@ -1,8 +1,10 @@
 import type { LightState } from "../components/light.tsx";
 
 /**
- * What Today needs (spec §14.1 A6). The API has no `/v1/families/:id/today` yet (API contract §4),
- * so the screen reads these fixtures; the shapes are what that route will answer with.
+ * What Today needs (spec §14.1 A6), in the screen's own idiom: times already read as times, words
+ * already chosen for a tap that carried none. `GET /v1/families/:id/today` answers it in the wire's
+ * shape (API contract §4); `useToday` turns one into the other, and these fixtures stand in when
+ * the app has no API to talk to.
  */
 
 export interface TodayLight {
@@ -20,9 +22,11 @@ export interface TodayReply {
 }
 
 export interface TodayExchange {
-  asker: string;
+  /** Undefined for Vela's own hello, and for an ask whose asker has since been deleted. */
+  asker?: string;
   recipient: string;
-  ask: string;
+  /** A hello carries no question. */
+  ask?: string;
   answer?: { text: string; at: string };
   replies: TodayReply[];
   /** "Mom saw it · 8:12", shown only once she has. */
@@ -31,7 +35,9 @@ export interface TodayExchange {
 
 export interface TomorrowTurn {
   name: string;
-  suggestion: string;
+  /** True when the turn is the reader’s own, so the card says so instead of naming them. */
+  mine: boolean;
+  suggestion?: string;
 }
 
 export interface Today {
@@ -61,6 +67,7 @@ export const todayFixture: Today = {
   },
   tomorrow: {
     name: "Anna",
+    mine: false,
     suggestion: "Ask her about the seeds she saved from last year",
   },
 };

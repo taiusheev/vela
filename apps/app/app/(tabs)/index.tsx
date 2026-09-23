@@ -35,10 +35,15 @@ function LightsRow({ lights }: { lights: Today["lights"] }) {
 }
 
 function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }) {
+  const recipient = exchange.recipient.toUpperCase();
   return (
     <Card>
-      <Eyebrow>{`${exchange.asker.toUpperCase()} ASKED ${exchange.recipient.toUpperCase()}`}</Eyebrow>
-      <Words variant="voice">{exchange.ask}</Words>
+      <Eyebrow>
+        {exchange.asker === undefined
+          ? `A HELLO FOR ${recipient}`
+          : `${exchange.asker.toUpperCase()} ASKED ${recipient}`}
+      </Eyebrow>
+      {exchange.ask === undefined ? null : <Words variant="voice">{exchange.ask}</Words>}
       {exchange.answer === undefined ? (
         <Words variant="body" tone="ink2">
           No word yet today.
@@ -71,11 +76,19 @@ function TomorrowCard({ tomorrow }: { tomorrow: NonNullable<Today["tomorrow"]> }
   const palette = usePalette();
   return (
     <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
-      <Eyebrow>{`TOMORROW · ${tomorrow.name.toUpperCase()}'S TURN`}</Eyebrow>
-      <Words variant="voice">{tomorrow.suggestion}</Words>
-      <Words variant="button" tone="action">
-        Use this
-      </Words>
+      <Eyebrow>
+        {tomorrow.mine
+          ? "TOMORROW · YOUR TURN"
+          : `TOMORROW · ${tomorrow.name.toUpperCase()}'S TURN`}
+      </Eyebrow>
+      {tomorrow.suggestion === undefined ? null : (
+        <>
+          <Words variant="voice">{tomorrow.suggestion}</Words>
+          <Words variant="button" tone="action">
+            Use this
+          </Words>
+        </>
+      )}
     </Card>
   );
 }

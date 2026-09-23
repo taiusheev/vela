@@ -297,7 +297,7 @@ DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54320/postgres node apps/w
 pnpm --filter @vela/app run web
 ```
 
-The seed gives that account a family with one kept light and a day already answered, so Today shows a real light instead of the example one. Run it again whenever you want a fresh day. Your Clerk user id is on Clerk's **Users** page; it starts `user_`.
+The seed gives that account a family with one kept light and a whole day: the ask, her answer, a heart and a written reply, the receipt, and tomorrow’s turn with a suggestion — so Today shows a real day instead of the example one. Run it again whenever you want a fresh day. Your Clerk user id is on Clerk's **Users** page; it starts `user_`.
 
 ### 10. GitHub
 

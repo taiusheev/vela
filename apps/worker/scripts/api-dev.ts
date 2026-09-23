@@ -21,6 +21,7 @@ import {
   loadApiFamilyPlan,
   loadApiLights,
   loadApiMe,
+  loadApiToday,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
 import { createClerkSessionVerifier } from "../src/session.ts";
@@ -74,14 +75,14 @@ const app = createApiApp({
   }),
   now: () => new Date(),
   openDatabase: async () => ({ db: connection.db, close: async () => {} }),
-  services: { loadApiMe, loadApiFamilyPlan, loadApiLights, authorizeFamilyAccess },
+  services: { loadApiMe, loadApiFamilyPlan, loadApiLights, loadApiToday, authorizeFamilyAccess },
   logger: { error: (event, fields) => console.error(`[api-dev] ${event}`, fields ?? {}) },
 });
 
 const server = serve({ fetch: app.fetch, port, hostname: "127.0.0.1" }, (address) => {
   console.log(`[api-dev] the API is on http://127.0.0.1:${address.port}`);
   console.log(`[api-dev] verifying sessions against ${issuer}`);
-  console.log("[api-dev] writes are off; reads are /v1/me, the family plan and the lights");
+  console.log("[api-dev] writes are off; reads are /v1/me, the family plan, the lights and Today");
 });
 
 async function stop(): Promise<void> {
