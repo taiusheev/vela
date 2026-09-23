@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Light } from "../../src/components/light.tsx";
@@ -94,7 +95,7 @@ export default function TodayScreen() {
       <LightsRow lights={today.lights} />
       {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
       {today.tomorrow === undefined ? null : <TomorrowCard tomorrow={today.tomorrow} />}
-      <PrimaryButton label={`Ask ${recipient} something`} />
+      <PrimaryButton label={`Ask ${recipient} something`} onPress={() => router.push("/ask")} />
     </ScrollView>
   );
 }

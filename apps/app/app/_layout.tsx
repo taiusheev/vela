@@ -24,11 +24,12 @@ function Root() {
     Literata_600SemiBold,
   });
 
+  // The screens render before Literata and Inter arrive, with the platform's own faces standing in:
+  // a slow network must not leave a family looking at nothing.
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
 
-  if (!ready) return null;
   return (
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
