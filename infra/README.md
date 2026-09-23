@@ -268,36 +268,43 @@ The app signs people in with Clerk (build plan 3.1). Do this when you want the a
 1. Sign up at `clerk.com` with the password manager, turn on two-factor authentication, and create an application named **Vela Light**. Keep the free plan.
 2. **User & Authentication → Email, Phone, Username**: turn **Phone number** on as an identifier and turn **Email** off if you want the shortest first run. Apple and Google can wait until the app has its store identifiers.
 3. Clerk gives you two environments. Use **Development** now; production waits until the app ships.
-4. **API keys**: copy the **Publishable key** (it starts `pk_test_`) and the **Secret key** (it starts `sk_test_`). The publishable key is public and belongs in the app; the secret key is a secret and belongs only in a Worker.
-5. **Hand over:** the publishable key and the **Frontend API URL** (it looks like `https://something-12.clerk.accounts.dev`), which the worker verifies tokens against. Paste the secret key yourself at the setup script's prompt when the API is deployed; the co-founder never sees it.
-6. For local development, the co-founder puts the publishable key in `apps/app/.env.local`, which git ignores:
+4. **API keys**: copy the **Publishable key** (it starts `pk_test_`). The publishable key is public by design — it is compiled into the app and ships to every phone. Leave the **Secret key** (`sk_test_`) where it is for now.
+5. **Hand over:** the publishable key and nothing else. The **Frontend API URL** (`https://something-12.clerk.accounts.dev`), which the worker verifies tokens against, is written inside the publishable key and does not need sending. The secret key you paste yourself, at the setup script's hidden prompt, when the API is deployed; the co-founder never sees it.
+
+> The secret key is the whole instance: with it, anyone can read and change every account. It belongs in no file in this repository, in no variable whose name begins `EXPO_PUBLIC_` (everything so named is compiled into the app bundle), and in no chat message. If one is ever pasted somewhere it should not be, rotate it on Clerk's **API keys** page — the old one stops working at once, and nothing in this repository has to change, because nothing in this repository holds one.
+
+6. **Done, 23 September 2026.** The publishable key of the development instance `ideal-vulture-9262` is in `apps/app/.env.local`, which git ignores. To set another machine up, copy `apps/app/.env.example` to `.env.local` and put the key in:
 
 ```
 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_…
 EXPO_PUBLIC_API_URL=http://localhost:8787
 ```
 
-Without those two lines the app runs on its example day and asks nobody to sign in, which is how it behaves in this repository today.
+Without those two lines the app runs on its example day and asks nobody to sign in.
 
-7. **Seeing your own family on this machine.** Four terminals, in this order. Nothing here touches staging or production: both commands refuse a database that is not on this machine, and the API server refuses a Clerk instance that is not a development one.
+7. **Seeing your own family on this machine.** Three terminals, in this order. `apps/worker/.env.local`, which git also ignores, holds the local database address and the Frontend API URL, so the commands carry nothing. Nothing here touches staging or production: both scripts refuse a database that is not on this machine, and the API server refuses a Clerk instance that is not a development one.
 
 ```bash
 pnpm --filter @vela/db dev-db
 ```
 
 ```bash
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54320/postgres CLERK_ISSUER=https://<your>.clerk.accounts.dev pnpm --filter @vela/worker api:dev
-```
-
-```bash
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54320/postgres node apps/worker/scripts/seed-dev-family.ts <your Clerk user id>
+pnpm --filter @vela/worker api:dev
 ```
 
 ```bash
 pnpm --filter @vela/app run web
 ```
 
-The seed gives that account a family with one kept light and a whole day: the ask, her answer, a heart and a written reply, the receipt, and tomorrow’s turn with a suggestion — so Today shows a real day instead of the example one. Run it again whenever you want a fresh day. Your Clerk user id is on Clerk's **Users** page; it starts `user_`.
+Sign in on the app's own screen, then run the seed once with the user id Clerk gives you — it is on Clerk's **Users** page, and the app prints it under **You**; it starts `user_`:
+
+```bash
+pnpm --filter @vela/worker seed:dev -- user_…
+```
+
+The seed gives that account a family with one kept light and a whole day: the ask, her answer, a heart and a written reply, the receipt, and tomorrow’s turn with a suggestion — so Today shows a real day instead of the example one. Run it again whenever you want a fresh day.
+
+The web preview runs on a different address from the API, so the browser asks the API for permission before every call. `api-dev.ts` gives it, to the three loopback addresses above and to nothing else. The deployed API needs none of that and has none of it: the app on a phone is not a web page and asks no permission.
 
 ### 10. GitHub
 

@@ -79,7 +79,44 @@ const app = createApiApp({
   logger: { error: (event, fields) => console.error(`[api-dev] ${event}`, fields ?? {}) },
 });
 
-const server = serve({ fetch: app.fetch, port, hostname: "127.0.0.1" }, (address) => {
+/**
+ * A browser calling this server from `expo start --web` is calling another origin, and would be
+ * refused before the request arrived. The deployed API needs none of this, because the app on a
+ * phone sends no Origin at all, so the allowance lives here and not in `createApiApp`: only the
+ * loopback origins above, echoed one at a time rather than `*`, and no credentials, since the
+ * session travels in the Authorization header.
+ */
+const ALLOWED_HEADERS = "authorization, content-type, accept, idempotency-key";
+
+function allowedOrigin(request: Request): string | null {
+  const origin = request.headers.get("origin");
+  return origin !== null && origins.includes(origin) ? origin : null;
+}
+
+async function handle(request: Request): Promise<Response> {
+  const origin = allowedOrigin(request);
+  if (request.method === "OPTIONS" && origin !== null) {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "access-control-allow-origin": origin,
+        "access-control-allow-methods": "GET, POST, PATCH, OPTIONS",
+        "access-control-allow-headers": ALLOWED_HEADERS,
+        "access-control-max-age": "600",
+        vary: "origin",
+      },
+    });
+  }
+  const response = await app.fetch(request);
+  if (origin === null) return response;
+  const headers = new Headers(response.headers);
+  headers.set("access-control-allow-origin", origin);
+  headers.set("access-control-expose-headers", "idempotency-replayed");
+  headers.append("vary", "origin");
+  return new Response(response.body, { status: response.status, headers });
+}
+
+const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) => {
   console.log(`[api-dev] the API is on http://127.0.0.1:${address.port}`);
   console.log(`[api-dev] verifying sessions against ${issuer}`);
   console.log("[api-dev] writes are off; reads are /v1/me, the family plan, the lights and Today");
