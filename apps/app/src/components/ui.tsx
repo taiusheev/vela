@@ -51,16 +51,26 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 }
 
 /** At most one primary per screen; 56 pt tall in the app. */
-export function PrimaryButton({ label, onPress }: { label: string; onPress?: () => void }) {
+export function PrimaryButton({
+  label,
+  onPress,
+  disabled = false,
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+}) {
   const palette = usePalette();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
       hitSlop={hitSlop}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => ({
         backgroundColor: palette.action,
-        opacity: pressed ? 0.9 : 1,
+        opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
         borderRadius: radius.button,
         height: 56,
         alignItems: "center",

@@ -78,6 +78,18 @@ An exchange carries the asker’s name (null for Vela’s own hello, and for an 
 
 A stranger, a family that is not the caller’s and an unknown family all answer 404. The route is registered on the isolated API app and, like the rest of it, is mounted on neither deployed Worker; `apps/worker/scripts/api-dev.ts` serves it on a developer’s own machine for the app to read (infra/README.md, section 9a).
 
+### Composing an ask (23 September 2026)
+
+`POST /v1/families/:familyId/exchanges` is the first write a family makes. It takes `ComposeAsk` — `recipient_id`, `type`, `text`, `when` (`tomorrow`, `date` or `whenever`), `date` for a `date` ask, `vote_options` for a vote, and `on_behalf_of` — and answers 201 with `ApiComposedAsk`. `composeApiAsk` in `packages/services/src/api-asks.ts` runs it through `runApiMutation` as `exchange.compose:v1`, scoped to the family and the recipient, so a repeat replays the first answer and writes no second ask.
+
+Only the types an arrival can carry from words alone are accepted: `question`, `word`, `story`, `recipe` and `vote`. A photo choice, a voice note and an old photo need media the app cannot yet attach, so they are refused rather than stored undeliverable. Family ownership is no longer the obstacle: `mediaByIds` takes the recipient's family and cannot return another family's row, dropping an id the family does not own and logging it as `media_outside_family`. Once the app can attach a file, `media_ids` can be accepted here — what is missing is the upload path, not the check.
+
+Every date is the recipient's own local day. `tomorrow` is her next morning, a `date` ask must name a day after today and no more than 14 days ahead — retention clears an undelivered ask's words after 30 days, so nothing may be composed into that — and `whenever` carries no date at all. The one-ask-per-day rule is held by the recipient's member row, locked `for update` as the mutation's first statement, which is the lock `prepareDay` and the Telegram compose path take; `exchanges_one_per_day` stays the backstop whose firing is an incident, never a control path.
+
+A day already claimed answers **409** whose `details` are `{taken_by, date_alternative}`: who holds that morning (Vela when it is her own fallback hello) and the next one nobody holds within the window, or null. That is what A7 needs to say "Anna already has tomorrow morning" and offer the day after or whenever. The caller must be a live member of the family, and the recipient a kept-light member who is active and has not left; a stranger, another family, a paused recipient and an unknown family all answer 404.
+
+The mutation sends nothing. A `runApiMutation` callback may not enqueue, so unlike the Telegram path this composes no confirmation into the family group — a family on Telegram sees a morning claimed with no notice until that is carried after commit. The route is mounted on neither deployed Worker; `api-dev.ts` serves it only when a Clerk secret key is present, because a write needs the live session check that only Clerk's backend can make.
+
 ### Durable mutation receipts (22 September 2026, not exposed)
 
 `runApiMutation` in `packages/services/src/api-idempotency.ts` provides database-only replay protection. The optional account-write routes call it locally; no deployed route calls it. Migration `0001_api_request_receipts` adds the receipt table; apply it before deploying the updated retention job. `0002_account_linking` follows it with `account_link_challenges` and the `account_linked` event name. The applied `0000_init` is unchanged, and no migration has been run against staging or production for this slice.
@@ -125,7 +137,7 @@ A stranger, a family that is not the caller’s and an unknown family all answer
 | GET | /families/:id/today | The Today screen (A6): lights, today's exchange per kept-light member, tomorrow's turn and suggestion. **Built**, see below |
 | GET | /families/:id/exchanges?cursor= | Exchanges newest first (A8), with answers, replies, receipts, translations |
 | GET | /exchanges/:id | One exchange in full |
-| POST | /families/:id/exchanges | Compose an ask: `{recipient_id, type, text?, options?, media_ids?, voice_hello_id?, when: tomorrow|date|whenever, date?, on_behalf_of?}` → exchange (state composed). `409 conflict` with `{taken_by}` if that date already has an ask; body may include `date_alternative` |
+| POST | /families/:id/exchanges | Compose an ask: `{recipient_id, type, text?, options?, media_ids?, voice_hello_id?, when: tomorrow|date|whenever, date?, on_behalf_of?}` → exchange (state composed). `409 conflict` with `{taken_by}` if that date already has an ask; body may include `date_alternative` | **Built** for words-only asks, see below
 | DELETE | /exchanges/:id | Withdraw before delivery only |
 | POST | /exchanges/:id/seen | Parent surface: she opened it |
 | POST | /exchanges/:id/answer | Parent surface: `{kind: voice|chip|photo_pick|vote|heart|text|fine, media_id?, payload?}` → lights the light synchronously, enqueues understanding |

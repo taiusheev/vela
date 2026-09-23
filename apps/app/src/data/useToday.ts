@@ -18,7 +18,8 @@ function timeOfDay(instant: string): string {
     : "";
 }
 
-function dayName(date: string): string {
+/** A local date as the day it names, for copy that must not say “tomorrow” about Thursday. */
+export function dayName(date: string): string {
   const day = new Date(`${date}T00:00:00Z`);
   return Number.isFinite(day.getTime())
     ? day.toLocaleDateString(undefined, { weekday: "long", timeZone: "UTC" })
@@ -137,10 +138,13 @@ export function toToday(day: ApiToday, viewerMemberId?: string): Today {
 
 export interface TodayView {
   today: Today;
+  /** The family the screens are showing, once the API has said which; Ask writes to it. */
+  familyId?: string;
   /** True while the real day is on its way; the fixtures show in the meantime. */
   loading: boolean;
   /** Set when the API is configured but would not answer, so the screen can say so plainly. */
   trouble: boolean;
+  /** True only once the real day has arrived: until then `today` is the example one. */
   live: boolean;
 }
 
@@ -170,6 +174,7 @@ export function useToday(): TodayView {
   const live = day.data !== undefined;
   return {
     today: live ? toToday(day.data, membership?.member_id) : todayFixture,
+    ...(familyId === undefined ? {} : { familyId }),
     loading: me.isPending || day.isPending,
     trouble: me.isError || day.isError,
     live,

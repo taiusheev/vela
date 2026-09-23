@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   AnswerKind,
+  ExchangeState,
   ExchangeType,
   Lang,
   LightState,
@@ -13,6 +14,7 @@ import {
   Role,
   SubscriptionStatus,
   TimeZone,
+  WhenRule,
 } from "./domain.ts";
 
 export const API_ERROR_CODES = [
@@ -204,3 +206,78 @@ export const ApiToday = z.object({
   tomorrow: z.array(ApiTomorrowTurn),
 });
 export type ApiToday = z.infer<typeof ApiToday>;
+
+/**
+ * Composing an ask (`POST /v1/families/:familyId/exchanges`, API contract §4, spec §14.1 A7).
+ * Only the types an arrival can carry from words alone: a photo choice, a voice note and an old
+ * photo need media the app cannot yet attach, so they are refused rather than stored undeliverable.
+ */
+export const COMPOSABLE_EXCHANGE_TYPES = ["question", "word", "story", "recipe", "vote"] as const;
+export const ComposableExchangeType = z.enum(COMPOSABLE_EXCHANGE_TYPES);
+export type ComposableExchangeType = z.infer<typeof ComposableExchangeType>;
+
+/** What `renderArrival` keeps of an ask before it starts shortening (core's `ASK_TEXT_FLOOR`). */
+export const MAX_ASK_TEXT = 1_000;
+/** A vote's options are buttons, and the last row is always the heart and "I'm fine". */
+export const MAX_VOTE_OPTIONS = 7;
+/** Retention clears an undelivered ask's words after 30 days; no ask may be composed into that. */
+export const MAX_ASK_DAYS_AHEAD = 14;
+
+const AskText = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MAX_ASK_TEXT)
+  .refine(
+    (text) => text.isWellFormed() && !text.includes("\u0000"),
+    "the ask must be valid UTF8 text without NUL",
+  );
+
+export const ComposeAsk = z
+  .strictObject({
+    recipient_id: z.uuid(),
+    type: ComposableExchangeType,
+    text: AskText,
+    vote_options: z
+      .array(AskText.pipe(z.string().max(64)))
+      .min(2)
+      .max(MAX_VOTE_OPTIONS)
+      .optional(),
+    when: WhenRule,
+    /** Only a `date` ask carries one, and only a day in the recipient's own future. */
+    date: LocalDate.optional(),
+    /** A child's name when a parent sends for them. */
+    on_behalf_of: z.string().trim().min(1).max(80).optional(),
+  })
+  .refine((ask) => (ask.when === "date") === (ask.date !== undefined), {
+    message: "a date ask needs its date, and no other kind takes one",
+    path: ["date"],
+  })
+  .refine((ask) => (ask.type === "vote") === (ask.vote_options !== undefined), {
+    message: "a vote needs its options, and nothing else takes them",
+    path: ["vote_options"],
+  });
+export type ComposeAsk = z.infer<typeof ComposeAsk>;
+
+export const ApiComposedAsk = z.object({
+  id: z.uuid(),
+  family_id: z.uuid(),
+  recipient_id: z.uuid(),
+  recipient_name: z.string(),
+  asker_name: z.string(),
+  on_behalf_of: z.string().nullable(),
+  type: ExchangeType,
+  ask: z.string().nullable(),
+  when_rule: WhenRule,
+  /** Null for a whenever ask: it waits for the first morning nobody else has claimed. */
+  scheduled_for: LocalDate.nullable(),
+  state: ExchangeState,
+});
+export type ApiComposedAsk = z.infer<typeof ApiComposedAsk>;
+
+/** The 409's `details` when that morning is already someone's (spec A7: "or the day after"). */
+export const ApiAskConflict = z.strictObject({
+  taken_by: z.string(),
+  date_alternative: LocalDate.nullable(),
+});
+export type ApiAskConflict = z.infer<typeof ApiAskConflict>;

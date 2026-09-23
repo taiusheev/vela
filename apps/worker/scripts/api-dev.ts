@@ -5,26 +5,34 @@
  *
  * It is a development tool, not a deployment. Neither deployed Worker mounts the API (API contract
  * §1), and this script refuses anything but a local database and a development Clerk instance, so
- * it cannot be pointed at staging or production by accident. Writes stay off: it serves the reads
- * the app needs today.
+ * it cannot be pointed at staging or production by accident.
  *
  * Needs, in apps/worker/.env.local or the environment:
  *   DATABASE_URL          a local Postgres, for example the one `pnpm --filter @vela/db dev-db` serves
  *   CLERK_ISSUER          the Clerk Frontend API URL, https://<something>.clerk.accounts.dev
  *   API_PORT              optional, 8787 by default
+ *   CLERK_SECRET_KEY      optional, and only a development key (sk_test_…). Without it the writes
+ *                         answer 404, as they do on both deployed Workers; with it they are served,
+ *                         because a write needs the live session check that only Clerk’s backend
+ *                         can make, and nothing here weakens that check to do without one. This is
+ *                         the only place a secret key may sit on a developer’s machine:
+ *                         apps/worker/.env.local, which git ignores.
  */
 import { serve } from "@hono/node-server";
 import { connectDatabase } from "@vela/db";
 import {
   authorizeFamilyAccess,
+  composeApiAsk,
   errorLabel,
   loadApiFamilyPlan,
   loadApiLights,
   loadApiMe,
   loadApiToday,
+  provisionApiAccount,
+  updateApiAccount,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
-import { createClerkSessionVerifier } from "../src/session.ts";
+import { createClerkSessionActivityChecker, createClerkSessionVerifier } from "../src/session.ts";
 
 const DEFAULT_PORT = 8787;
 
@@ -63,6 +71,25 @@ const issuer = developmentIssuer(required("CLERK_ISSUER"));
 const port = Number(process.env.API_PORT ?? DEFAULT_PORT);
 const origins = [`http://localhost:${port}`, "http://localhost:8081", "http://127.0.0.1:8081"];
 
+/**
+ * A development key only. `sk_live_` belongs to the real instance whose accounts are real people,
+ * and this server is not the place to hold one: it is refused rather than quietly turning writes
+ * on against a credential nobody meant to use here.
+ */
+function developmentSecret(key: string): string {
+  if (!key.startsWith("sk_test_")) {
+    console.error(
+      "[api-dev] CLERK_SECRET_KEY must be a development key (sk_test_…). Writes stay off.",
+    );
+    process.exit(2);
+  }
+  return key;
+}
+
+const given = process.env.CLERK_SECRET_KEY?.trim();
+const secretKey = given === undefined || given.length === 0 ? undefined : developmentSecret(given);
+const writesOn = secretKey !== undefined;
+
 const connection = await connectDatabase(databaseUrl);
 const app = createApiApp({
   // Expo's native builds send no Origin and no `azp`; the loopback origins above cover the web
@@ -77,6 +104,15 @@ const app = createApiApp({
   openDatabase: async () => ({ db: connection.db, close: async () => {} }),
   services: { loadApiMe, loadApiFamilyPlan, loadApiLights, loadApiToday, authorizeFamilyAccess },
   logger: { error: (event, fields) => console.error(`[api-dev] ${event}`, fields ?? {}) },
+  ...(writesOn && secretKey !== undefined
+    ? {
+        writes: {
+          verifyActiveSession: createClerkSessionActivityChecker({ secretKey }),
+          clock: { now: () => new Date() },
+          services: { provisionApiAccount, updateApiAccount, composeApiAsk },
+        },
+      }
+    : {}),
 });
 
 /**
@@ -119,7 +155,12 @@ async function handle(request: Request): Promise<Response> {
 const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) => {
   console.log(`[api-dev] the API is on http://127.0.0.1:${address.port}`);
   console.log(`[api-dev] verifying sessions against ${issuer}`);
-  console.log("[api-dev] writes are off; reads are /v1/me, the family plan, the lights and Today");
+  console.log("[api-dev] reads: /v1/me, the family plan, the lights and Today");
+  console.log(
+    writesOn
+      ? "[api-dev] writes: the account routes and composing an ask; sessions checked live with Clerk"
+      : "[api-dev] writes answer 404: set CLERK_SECRET_KEY in apps/worker/.env.local to serve them",
+  );
 });
 
 async function stop(): Promise<void> {

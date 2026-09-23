@@ -1,6 +1,11 @@
-import type { ApiFamilyPlan, ApiMe, ApiToday, MemberLight } from "@vela/contracts";
+import type { ApiComposedAsk, ApiFamilyPlan, ApiMe, ApiToday, MemberLight } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
-import { ApiIdempotencyError, type SessionIdentity, VelaError } from "@vela/services";
+import {
+  ApiIdempotencyError,
+  AskDayTakenError,
+  type SessionIdentity,
+  VelaError,
+} from "@vela/services";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ApiReadServices, type ApiRuntime, createApiApp } from "./api-app.ts";
 import { SessionVerificationUnavailable } from "./session.ts";
@@ -69,6 +74,20 @@ const TODAY: ApiToday = {
   ],
   tomorrow: [],
 };
+const EXCHANGES_PATH = `/v1/families/${FAMILY_ID}/exchanges`;
+const COMPOSED: ApiComposedAsk = {
+  id: "55555555-5555-7555-8555-555555555555",
+  family_id: FAMILY_ID,
+  recipient_id: MEMBER_ID,
+  recipient_name: "Synthetic member",
+  asker_name: "Synthetic user",
+  on_behalf_of: null,
+  type: "question",
+  ask: "What did the garden look like this morning?",
+  when_rule: "tomorrow",
+  scheduled_for: "2026-09-23",
+  state: "composed",
+};
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
 const FAMILY_NOT_FOUND = { error: { code: "not_found", message: "Family not found." } };
 const INTERNAL = { error: { code: "internal", message: "Internal server error." } };
@@ -108,6 +127,9 @@ function fixture(enableWrites = false) {
       updateApiAccount: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["updateApiAccount"]>()
         .mockResolvedValue({ response: { status: 200, body: ME.user }, replayed: false }),
+      composeApiAsk: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["composeApiAsk"]>()
+        .mockResolvedValue({ response: { status: 201, body: COMPOSED }, replayed: false }),
     },
   };
   const runtime: ApiRuntime = {
@@ -1273,5 +1295,114 @@ describe("the Today screen", () => {
     expect(response.status).toBe(401);
     expect(services.loadApiToday).not.toHaveBeenCalled();
     expect(openDatabase).not.toHaveBeenCalled();
+  });
+});
+
+const ASK = {
+  recipient_id: MEMBER_ID,
+  type: "question",
+  text: "What did the garden look like this morning?",
+  when: "tomorrow",
+};
+
+function composeRequest(body: unknown = ASK, headers: Record<string, string> = {}) {
+  return writeRequest("POST", EXCHANGES_PATH, JSON.stringify(body), headers);
+}
+
+describe("composing an ask", () => {
+  it("dispatches the family's own id, the verified actor and the key, and answers 201", async () => {
+    const { app, writes, services } = fixture(true);
+    const response = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
+    expect(response.status).toBe(201);
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual(COMPOSED);
+    expect(writes.services.composeApiAsk).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      ASK,
+    );
+    expect(services.authorizeFamilyAccess).toHaveBeenCalled();
+  });
+
+  it("answers 404 without composing when the family is not the caller's", async () => {
+    const { app, writes, services } = fixture(true);
+    services.authorizeFamilyAccess.mockResolvedValue({ kind: "not_found" });
+    const response = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
+    await expectResponse(response, 404, FAMILY_NOT_FOUND);
+    expect(writes.services.composeApiAsk).not.toHaveBeenCalled();
+  });
+
+  it("answers 409 with who holds the day and the one to offer instead", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.composeApiAsk.mockRejectedValue(
+      new AskDayTakenError({ taken_by: "Anna", date_alternative: "2026-09-24" }),
+    );
+    const response = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
+    await expectResponse(response, 409, {
+      error: {
+        code: "conflict",
+        message: "That day already has an ask.",
+        details: { taken_by: "Anna", date_alternative: "2026-09-24" },
+      },
+    });
+  });
+
+  it("refuses a body the contract would not accept, before any database is opened", async () => {
+    for (const body of [
+      { ...ASK, text: "" },
+      { ...ASK, type: "voice_note" },
+      { ...ASK, when: "date" },
+      { ...ASK, extra: "field" },
+      {},
+    ]) {
+      const f = fixture(true);
+      const response = await f.app.request(composeRequest(body, { authorization: "Bearer good" }));
+      await expectResponse(response, 400, INVALID);
+      expect(f.writes.services.composeApiAsk).not.toHaveBeenCalled();
+      expect(f.openDatabase).not.toHaveBeenCalled();
+    }
+  });
+
+  it("refuses a request with no idempotency key, and one whose session is not live", async () => {
+    const withoutKey = fixture(true);
+    const noKey = await withoutKey.app.request(
+      new Request(`https://api.test${EXCHANGES_PATH}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer good" },
+        body: JSON.stringify(ASK),
+      }),
+    );
+    await expectResponse(noKey, 400, INVALID);
+    expect(withoutKey.writes.services.composeApiAsk).not.toHaveBeenCalled();
+
+    const stale = fixture(true);
+    stale.writes.verifyActiveSession.mockResolvedValue(false);
+    const response = await stale.app.request(
+      composeRequest(undefined, { authorization: "Bearer good" }),
+    );
+    expect(response.status).toBe(401);
+    expect(stale.writes.services.composeApiAsk).not.toHaveBeenCalled();
+    expect(stale.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("is not there at all when the runtime has no write capability", async () => {
+    const { app, services } = fixture();
+    const response = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
+    await expectResponse(response, 404, NOT_FOUND);
+    expect(services.authorizeFamilyAccess).not.toHaveBeenCalled();
+  });
+
+  it("marks a replayed compose so the screen knows nothing new was written", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.composeApiAsk.mockResolvedValue({
+      response: { status: 201, body: COMPOSED },
+      replayed: true,
+    });
+    const response = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
+    expect(response.status).toBe(201);
+    expect(response.headers.get("idempotency-replayed")).toBe("true");
   });
 });

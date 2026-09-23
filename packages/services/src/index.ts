@@ -49,6 +49,7 @@ export {
 } from "./api-access.ts";
 export { disableApiAccount, provisionApiAccount, updateApiAccount } from "./api-account-writes.ts";
 export { loadApiFamilyPlan, loadApiMe, provisionApiUser } from "./api-accounts.ts";
+export { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
 export {
   ApiIdempotencyError,
   type ApiMutationAction,

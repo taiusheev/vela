@@ -1,7 +1,11 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
+import { useAccount } from "../src/auth/clerk.tsx";
 import {
   Card,
   Chip,
@@ -14,29 +18,101 @@ import {
 import {
   type AskType,
   askTypes,
+  composableType,
   previewTranslation,
   recipientLanguage,
   suggestionFixture,
-  tomorrowTakenBy,
 } from "../src/data/ask.ts";
-import { todayFixture } from "../src/data/today.ts";
+import { dayName, useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
-type When = "tomorrow" | "day_after" | "whenever";
+type When = "tomorrow" | "another_day" | "whenever";
+
+/**
+ * One ask is one key, so tapping again after a failure finishes the same write rather than making
+ * a second one; changing what is being sent starts a new one.
+ */
+function useIdempotencyKey(): (body: unknown) => string {
+  const run = useRef(Math.random().toString(36).slice(2, 12));
+  const sent = useRef<{ body: string; key: string } | null>(null);
+  const attempts = useRef(0);
+  return (body: unknown) => {
+    const serialised = JSON.stringify(body);
+    if (sent.current?.body !== serialised) {
+      attempts.current += 1;
+      sent.current = { body: serialised, key: `ask:${run.current}:${attempts.current}` };
+    }
+    return sent.current.key;
+  };
+}
 
 export default function AskScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
-  const recipient = todayFixture.lights[0]?.displayName ?? "her";
+  const account = useAccount();
+  const queries = useQueryClient();
+  const { today, familyId, live } = useToday();
   const [kind, setKind] = useState<AskType>("question");
   const [text, setText] = useState("");
-  const [when, setWhen] = useState<When>(tomorrowTakenBy === undefined ? "tomorrow" : "whenever");
+  const [when, setWhen] = useState<When>("tomorrow");
+  const [taken, setTaken] = useState<ApiAskConflict | null>(null);
+  const keyFor = useIdempotencyKey();
   const preview = previewTranslation(text);
+
+  // With no API this screen is the example day and sends nothing. With one, it must wait for the
+  // real day: `today` is the fixture until it arrives, and its people are nobody's family.
+  const demo = !apiConfigured();
+  const lights = demo || live ? today.lights : [];
+  // A paused light cannot be asked (`canBeAsked`), so the screen offers the first one that can.
+  const recipient = lights.find((light) => light.state !== "paused") ?? lights[0];
+  const paused = recipient !== undefined && recipient.state === "paused";
+  const ready = demo || (live && familyId !== undefined && recipient !== undefined && !paused);
+
+  const compose = useMutation({
+    mutationFn: async (ask: ComposeAsk) =>
+      composeAsk(familyId ?? "", keyFor(ask), ask, await account.token()),
+    onSuccess: async () => {
+      await queries.invalidateQueries({ queryKey: ["today"] });
+      router.back();
+    },
+    onError: (error: unknown) => {
+      const conflict = askConflict(error);
+      if (conflict === null) return;
+      setTaken(conflict);
+      setWhen(conflict.date_alternative === null ? "whenever" : "another_day");
+    },
+  });
+
+  function send() {
+    if (demo) {
+      router.back();
+      return;
+    }
+    const type = composableType[kind];
+    // Never a silent close: a screen that is not ready keeps the words and says why below.
+    if (!ready || type === undefined || recipient === undefined || familyId === undefined) return;
+    const alternative = taken?.date_alternative;
+    const timing: Pick<ComposeAsk, "when" | "date"> =
+      when === "another_day" && alternative !== null && alternative !== undefined
+        ? { when: "date", date: alternative }
+        : { when: when === "whenever" ? "whenever" : "tomorrow" };
+    compose.mutate({ recipient_id: recipient.memberId, type, text: text.trim(), ...timing });
+  }
+
+  const name = recipient?.displayName ?? "her";
+  const written = text.trim().length > 0;
+  const trouble = compose.isError && askConflict(compose.error) === null;
+  const waiting = !demo && !ready;
+  const hold = waiting
+    ? paused
+      ? `${name}'s light is paused just now, so nothing can be sent into her morning.`
+      : "Waiting for today to arrive. Your words are kept."
+    : null;
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: `Ask ${recipient} something` }} />
+      <Stack.Screen options={{ headerShown: true, title: `Ask ${name} something` }} />
       <ScrollView
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
@@ -85,23 +161,24 @@ export default function AskScreen() {
 
         <View style={{ gap: space.m }}>
           <Words variant="heading">When</Words>
-          {tomorrowTakenBy === undefined ? null : (
+          {taken === null ? null : (
             <Words variant="body" tone="ink2">
-              {`${tomorrowTakenBy} already has tomorrow morning.`}
+              {`${taken.taken_by} already has that morning.`}
             </Words>
           )}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
             <Chip
               label="Tomorrow morning"
               selected={when === "tomorrow"}
-              disabled={tomorrowTakenBy !== undefined}
+              disabled={taken !== null}
               onPress={() => setWhen("tomorrow")}
             />
-            {tomorrowTakenBy === undefined ? null : (
+            {taken?.date_alternative == null ? null : (
+              // Named, never "the day after": the next free morning can be several days out.
               <Chip
-                label="The day after"
-                selected={when === "day_after"}
-                onPress={() => setWhen("day_after")}
+                label={`${dayName(taken.date_alternative)} morning`}
+                selected={when === "another_day"}
+                onPress={() => setWhen("another_day")}
               />
             )}
             <Chip
@@ -112,7 +189,21 @@ export default function AskScreen() {
           </View>
         </View>
 
-        <PrimaryButton label="Into her morning" onPress={() => router.back()} />
+        {hold === null ? null : (
+          <Words variant="body" tone="ink2">
+            {hold}
+          </Words>
+        )}
+        {trouble ? (
+          <Words variant="body" tone="ink2">
+            That could not be sent just now. Look at Today before sending it again.
+          </Words>
+        ) : null}
+        <PrimaryButton
+          label={compose.isPending ? "Sending…" : "Into her morning"}
+          onPress={send}
+          disabled={compose.isPending || (!demo && (!ready || !written))}
+        />
       </ScrollView>
     </>
   );

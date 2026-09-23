@@ -304,6 +304,8 @@ pnpm --filter @vela/worker seed:dev -- user_…
 
 The seed gives that account a family with one kept light and a whole day: the ask, her answer, a heart and a written reply, the receipt, and tomorrow’s turn with a suggestion — so Today shows a real day instead of the example one. Run it again whenever you want a fresh day.
 
+Reads need no secret. **Composing an ask does**: a write is checked against Clerk's backend to be sure the session is still live, and nothing here weakens that check to do without one, so the write routes answer 404 until `CLERK_SECRET_KEY` is in `apps/worker/.env.local`. That file is the one place a secret key may sit on your own machine, and git ignores it; it belongs in no other file here and in no chat message. The server says on start which of the two it is serving.
+
 The web preview runs on a different address from the API, so the browser asks the API for permission before every call. `api-dev.ts` gives it, to the three loopback addresses above and to nothing else. The deployed API needs none of that and has none of it: the app on a phone is not a web page and asks no permission.
 
 ### 10. GitHub

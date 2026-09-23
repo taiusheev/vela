@@ -1,19 +1,23 @@
 import {
   ApiAccountPatch,
   ApiAccountProfile,
+  ApiComposedAsk,
   type ApiErrorBody,
   ApiFamilyPlan,
   ApiIdempotencyKey,
   ApiMe,
   ApiToday,
   ApiUser,
+  ComposeAsk,
   MemberLight,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import {
   ApiIdempotencyError,
+  AskDayTakenError,
   type authorizeFamilyAccess,
   type Clock,
+  type composeApiAsk,
   errorLabel,
   type Logger,
   type loadApiFamilyPlan,
@@ -48,6 +52,7 @@ export interface ApiReadServices {
 export interface ApiWriteServices {
   provisionApiAccount: typeof provisionApiAccount;
   updateApiAccount: typeof updateApiAccount;
+  composeApiAsk: typeof composeApiAsk;
 }
 
 export interface ApiRuntime {
@@ -68,7 +73,7 @@ interface RuntimeEnv {
   Variables: ApiSecurityEnv["Variables"] & {
     db: VelaDatabase;
     writeKey: string;
-    writeInput: ApiAccountProfile | ApiAccountPatch;
+    writeInput: unknown;
   };
 }
 
@@ -87,6 +92,9 @@ const UNAVAILABLE: ApiErrorBody = {
 
 const INVALID: ApiErrorBody = {
   error: { code: "invalid", message: "Invalid request." },
+};
+const DAY_TAKEN: ApiErrorBody = {
+  error: { code: "conflict", message: "That day already has an ask." },
 };
 const CONFLICT: ApiErrorBody = {
   error: { code: "conflict", message: "Request conflicts with an earlier operation." },
@@ -160,8 +168,13 @@ async function readWriteBody(request: Request, logger: Pick<Logger, "error">): P
   return { ok: false, status: 400 };
 }
 
+/** Any contract schema: the service parses the body again, so the middleware passes it on as is. */
+interface WriteSchema {
+  safeParse(value: unknown): { success: boolean; data?: unknown };
+}
+
 function validateWrite(
-  schema: typeof ApiAccountProfile | typeof ApiAccountPatch,
+  schema: WriteSchema,
   logger: Pick<Logger, "error">,
 ): MiddlewareHandler<RuntimeEnv> {
   return async (c, next) => {
@@ -212,6 +225,19 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           runtime.logger.error("api_request_failed", { error: errorLabel(error) });
           return c.json(UNAVAILABLE, 503);
         }
+      }
+      if (error instanceof AskDayTakenError) {
+        const taken: ApiErrorBody = {
+          error: {
+            code: "conflict",
+            message: DAY_TAKEN.error.message,
+            details: {
+              taken_by: error.conflict.taken_by,
+              date_alternative: error.conflict.date_alternative,
+            },
+          },
+        };
+        return c.json(taken, 409);
       }
       if (error instanceof VelaError) {
         if (error.code === "not_found") return c.json(NOT_FOUND, 404);
@@ -332,6 +358,32 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         },
       );
     }
+    app.post(
+      "/v1/families/:familyId/exchanges",
+      authenticate,
+      validateWrite(ComposeAsk, runtime.logger),
+      checkActivity,
+      withDatabase,
+      (c, next) =>
+        createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        )(c, next),
+      async (c) => {
+        const result = await writes.services.composeApiAsk(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const ask = ApiComposedAsk.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ask, 201);
+      },
+    );
   }
   app.notFound((c) => c.json(NOT_FOUND, 404));
 
