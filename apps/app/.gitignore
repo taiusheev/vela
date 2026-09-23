@@ -6,3 +6,6 @@ expo-env.d.ts
 # @end expo-cli
 # Expo's local cache and the device list it writes while `expo start` runs.
 .expo/
+
+# Local environment: keys belong in .env.local, never in the repository.
+.env.local

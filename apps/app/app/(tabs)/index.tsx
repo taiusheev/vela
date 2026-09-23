@@ -10,7 +10,8 @@ import {
   ReceiptChip,
   Words,
 } from "../../src/components/ui.tsx";
-import { type Today, todayFixture } from "../../src/data/today.ts";
+import type { Today } from "../../src/data/today.ts";
+import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
@@ -79,7 +80,7 @@ function TomorrowCard({ tomorrow }: { tomorrow: NonNullable<Today["tomorrow"]> }
 export default function TodayScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
-  const today = todayFixture;
+  const { today, trouble } = useToday();
   const recipient = today.lights[0]?.displayName ?? "her";
 
   return (
@@ -93,6 +94,11 @@ export default function TodayScreen() {
       }}
     >
       <LightsRow lights={today.lights} />
+      {trouble ? (
+        <Words variant="body" tone="ink2">
+          Today could not be reached just now.
+        </Words>
+      ) : null}
       {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
       {today.tomorrow === undefined ? null : <TomorrowCard tomorrow={today.tomorrow} />}
       <PrimaryButton label={`Ask ${recipient} something`} onPress={() => router.push("/ask")} />

@@ -12,14 +12,18 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@clerk/clerk-expo": "^2.20.0",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/literata": "^0.4.3",
     "@expo/metro-runtime": "~57.0.16",
+    "@tanstack/react-query": "^5.103.2",
+    "@vela/contracts": "workspace:*",
     "expo": "^57.0.24",
     "expo-constants": "~57.0.19",
     "expo-font": "~57.0.4",
     "expo-linking": "~57.0.10",
     "expo-router": "~57.0.22",
+    "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",

@@ -9,7 +9,12 @@ packages:
 
 # Native binaries that must run their install step. Every other dependency stays script-free.
 allowBuilds:
+  '@clerk/shared': false
+  browser-tabs-lock: false
+  bufferutil: false
+  core-js: false
   esbuild: true
+  utf-8-validate: false
   workerd: true
 
 # Supply-chain guard: versions published in the last day are held back unless listed here.

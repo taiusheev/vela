@@ -261,6 +261,24 @@ Needed now so the account exists; the adapter is built in sprint 2 (build plan 2
 2. In sprint 3: **Access tokens → Create** `github-actions`, paste into GitHub as `EXPO_TOKEN`.
 3. **Hand over:** the organisation name.
 
+### 9a. Clerk (sprint 3, the app's accounts)
+
+The app signs people in with Clerk (build plan 3.1). Do this when you want the app to show a real family instead of its example day; nothing in the Telegram pilot depends on it.
+
+1. Sign up at `clerk.com` with the password manager, turn on two-factor authentication, and create an application named **Vela Light**. Keep the free plan.
+2. **User & Authentication → Email, Phone, Username**: turn **Phone number** on as an identifier and turn **Email** off if you want the shortest first run. Apple and Google can wait until the app has its store identifiers.
+3. Clerk gives you two environments. Use **Development** now; production waits until the app ships.
+4. **API keys**: copy the **Publishable key** (it starts `pk_test_`) and the **Secret key** (it starts `sk_test_`). The publishable key is public and belongs in the app; the secret key is a secret and belongs only in a Worker.
+5. **Hand over:** the publishable key and the **Frontend API URL** (it looks like `https://something-12.clerk.accounts.dev`), which the worker verifies tokens against. Paste the secret key yourself at the setup script's prompt when the API is deployed; the co-founder never sees it.
+6. For local development, the co-founder puts the publishable key in `apps/app/.env.local`, which git ignores:
+
+```
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_…
+EXPO_PUBLIC_API_URL=http://localhost:8787
+```
+
+Without those two lines the app runs on its example day and asks nobody to sign in, which is how it behaves in this repository today.
+
 ### 10. GitHub
 
 1. **Settings → Environments:** create `staging` with the deployment branch rule "Selected branches and tags" → branch `main`; create `production` with the rule → tag pattern `v*`, and add yourself as a required reviewer.
