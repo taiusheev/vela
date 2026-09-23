@@ -279,6 +279,26 @@ EXPO_PUBLIC_API_URL=http://localhost:8787
 
 Without those two lines the app runs on its example day and asks nobody to sign in, which is how it behaves in this repository today.
 
+7. **Seeing your own family on this machine.** Four terminals, in this order. Nothing here touches staging or production: both commands refuse a database that is not on this machine, and the API server refuses a Clerk instance that is not a development one.
+
+```bash
+pnpm --filter @vela/db dev-db
+```
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54320/postgres CLERK_ISSUER=https://<your>.clerk.accounts.dev pnpm --filter @vela/worker api:dev
+```
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54320/postgres node apps/worker/scripts/seed-dev-family.ts <your Clerk user id>
+```
+
+```bash
+pnpm --filter @vela/app run web
+```
+
+The seed gives that account a family with one kept light and a day already answered, so Today shows a real light instead of the example one. Run it again whenever you want a fresh day. Your Clerk user id is on Clerk's **Users** page; it starts `user_`.
+
 ### 10. GitHub
 
 1. **Settings → Environments:** create `staging` with the deployment branch rule "Selected branches and tags" → branch `main`; create `production` with the rule → tag pattern `v*`, and add yourself as a required reviewer.
