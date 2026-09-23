@@ -65,6 +65,7 @@
       "includes": [
         "**/*.test.ts",
         "**/*.config.ts",
+        "**/*.config.js",
         "**/testing.ts",
         "**/scripts/**",
         "scripts/**",

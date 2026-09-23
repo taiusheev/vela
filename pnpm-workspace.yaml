@@ -1,3 +1,8 @@
+# React Native needs a flat node_modules: Metro resolves from the app directory upwards, and
+# pnpm's isolated layout also asks Windows for symlinks it is not allowed to create. Hoisting is
+# what Expo documents for pnpm monorepos.
+nodeLinker: hoisted
+
 packages:
   - apps/*
   - packages/*

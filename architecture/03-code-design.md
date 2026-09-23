@@ -27,6 +27,7 @@ worker ── wires Cloudflare bindings into services' ports; owns HTTP, the Dur
 | `@vela/ai` | Claude calls with versioned prompts and structured outputs, the `Ai` that calls nothing while AI is off, speech-to-text, cost accounting, fakes | Persist anything, read the clock for business decisions |
 | `@vela/services` | Application services: scheduling ticks, the outbound gateway, inbound flows, the AI pipeline, jobs | Import Cloudflare APIs; everything platform-specific arrives through ports |
 | `@vela/worker` | Hono routes, the `MemberScheduler` and `ReconcileHeartbeat` Durable Objects, queue consumers, cron, bindings, the privacy notice pages, `/healthz`; the two Workers' configurations; the environment setup script | Contain business logic |
+| `@vela/app` | The family app (Expo, `apps/app`): the screens of spec §14.1, the Candle & Ink tokens, the light glyph, and the client that talks to the API | Reach the database, or hold a rule the API should enforce |
 
 Dependency direction is enforced by `package.json` dependencies: a package can only import what it declares.
 

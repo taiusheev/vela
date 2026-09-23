@@ -73,7 +73,7 @@ Goal: organisers use the app for asks, exchanges, and the quiet notice.
 
 | # | Task | Spec | DoD |
 |---|---|---|---|
-| 3.1 | Expo app skeleton: SDK 55, Expo Router, Clerk sign-in (phone OTP, Apple, Google), design tokens (Candle & Ink), Literata/Inter/Noto fonts, Lingui en + zh-TW, TanStack Query + Zustand, Sentry, PostHog | design-system | Dev client on the founder's phone; sign-in works |
+| 3.1 | **Started 23 September 2026.** Expo app skeleton in `apps/app`: SDK 57 (the current release; the plan said 55 before the app existed), Expo Router with the four tabs, the Candle & Ink tokens and the light glyph in its five states, Literata and Inter, and Today (A6) reading fixtures while its route is unbuilt. The workspace now installs hoisted (`pnpm-workspace.yaml`), which React Native needs. Remaining: Clerk sign-in (phone OTP, Apple, Google), Noto fallbacks, Lingui en + zh-TW, TanStack Query + Zustand against the real API, Sentry, PostHog | design-system | Dev client on the founder's phone; sign-in works |
 | 3.2 | A1–A5 onboarding (who, first ask, nearby, channel, the light is ready) | §14.1 | Founder creates a family from the app end to end |
 | 3.3 | A6 Today: lights row, today's exchange card, tomorrow's turn and suggestion, "Ask Mom something" | §14.1 | Matches the prototype; no badge counts anywhere |
 | 3.4 | A7 Ask: suggestion, type grid, two-photo picker, voice hello, translation preview, when; 409 handling | §14.1 | An ask composed in the app arrives on LINE next morning |

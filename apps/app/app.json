@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Vela Light",
+    "slug": "vela-light",
+    "scheme": "velalight",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "backgroundColor": "#FBF7F0",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "family.vela.light"
+    },
+    "android": {
+      "package": "family.vela.light",
+      "adaptiveIcon": {
+        "backgroundColor": "#FBF7F0"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router", "expo-font", "expo-splash-screen"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
