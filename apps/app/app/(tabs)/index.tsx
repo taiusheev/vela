@@ -1,7 +1,9 @@
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Light } from "../../src/components/light.tsx";
+import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import {
   Card,
   Eyebrow,
@@ -10,6 +12,7 @@ import {
   ReceiptChip,
   Words,
 } from "../../src/components/ui.tsx";
+import { quietFixture } from "../../src/data/quiet.ts";
 import type { Today } from "../../src/data/today.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
@@ -79,8 +82,16 @@ function TomorrowCard({ tomorrow }: { tomorrow: NonNullable<Today["tomorrow"]> }
 
 export default function TodayScreen() {
   const palette = usePalette();
+  const [quietOpen, setQuietOpen] = useState(false);
+  const [resolution, setResolution] = useState<string | undefined>();
   const insets = useSafeAreaInsets();
   const { today, trouble } = useToday();
+  const quiet = today.lights.find((light) => light.state === "quiet");
+  // The sheet opens itself on a quiet day and closes itself the moment she answers (spec A11).
+  useEffect(() => {
+    if (quiet !== undefined) setQuietOpen(true);
+    else setResolution(undefined);
+  }, [quiet]);
   const recipient = today.lights[0]?.displayName ?? "her";
 
   return (
@@ -102,6 +113,21 @@ export default function TodayScreen() {
       {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
       {today.tomorrow === undefined ? null : <TomorrowCard tomorrow={today.tomorrow} />}
       <PrimaryButton label={`Ask ${recipient} something`} onPress={() => router.push("/ask")} />
+      <QuietNoticeSheet
+        notice={{
+          ...quietFixture,
+          memberName: quiet?.displayName ?? quietFixture.memberName,
+          resolution,
+        }}
+        visible={quietOpen && quiet !== undefined}
+        onFine={() => {
+          setResolution("You said she is fine. Nothing else was sent.");
+        }}
+        onWait={() => {
+          setResolution("Waiting two hours. You will hear again at 13:00 if it is still quiet.");
+        }}
+        onClose={() => setQuietOpen(false)}
+      />
     </ScrollView>
   );
 }
