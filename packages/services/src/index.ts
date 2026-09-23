@@ -55,6 +55,7 @@ export {
   type ApiMutationRequest,
   runApiMutation,
 } from "./api-idempotency.ts";
+export { loadApiLights } from "./api-lights.ts";
 export type {
   ChannelRegistry,
   Clock,

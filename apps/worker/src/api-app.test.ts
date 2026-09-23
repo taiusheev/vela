@@ -1,4 +1,4 @@
-import type { ApiFamilyPlan, ApiMe } from "@vela/contracts";
+import type { ApiFamilyPlan, ApiMe, MemberLight } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import { ApiIdempotencyError, type SessionIdentity, VelaError } from "@vela/services";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,7 @@ const MEMBER_ID = "22222222-2222-7222-8222-222222222222";
 const FAMILY_ID = "33333333-3333-7333-8333-333333333333";
 const IDENTITY: SessionIdentity = { authSubject: "verified-user", sessionId: "verified-session" };
 const PLAN_PATH = `/v1/families/${FAMILY_ID}/plan`;
+const LIGHTS_PATH = `/v1/families/${FAMILY_ID}/lights`;
 const ME: ApiMe = {
   user: { id: USER_ID, display_name: "Synthetic user", language: "en", tz: "Asia/Taipei" },
   memberships: [
@@ -34,6 +35,17 @@ const PLAN: ApiFamilyPlan = {
     },
   ],
 };
+const LIGHTS: MemberLight[] = [
+  {
+    member_id: MEMBER_ID,
+    display_name: "Synthetic member",
+    state: "lit",
+    answered_at: "2026-09-22T00:12:00.000Z",
+    usual_time: "08:00",
+    away_until: null,
+    quiet_event_id: null,
+  },
+];
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
 const FAMILY_NOT_FOUND = { error: { code: "not_found", message: "Family not found." } };
 const INTERNAL = { error: { code: "internal", message: "Internal server error." } };
@@ -53,6 +65,7 @@ function fixture(enableWrites = false) {
   const services = {
     loadApiMe: vi.fn<ApiReadServices["loadApiMe"]>().mockResolvedValue(ME),
     loadApiFamilyPlan: vi.fn<ApiReadServices["loadApiFamilyPlan"]>().mockResolvedValue(PLAN),
+    loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>().mockResolvedValue(LIGHTS),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -75,6 +88,7 @@ function fixture(enableWrites = false) {
   };
   const runtime: ApiRuntime = {
     verifySession,
+    now: () => new Date("2026-09-22T00:00:00.000Z"),
     openDatabase,
     services,
     logger,
@@ -1173,5 +1187,36 @@ describe("isolated API account writes", () => {
     expect(f.writes.verifyActiveSession).toHaveBeenNthCalledWith(1, IDENTITY);
     expect(f.writes.verifyActiveSession).toHaveBeenNthCalledWith(2, otherIdentity);
     expect(f.close).toHaveBeenCalledOnce();
+  });
+});
+
+describe("the lights of a family", () => {
+  it("answers the kept lights to a member of that family", async () => {
+    const { app, services } = fixture();
+    const response = await app.request(LIGHTS_PATH, { headers: { authorization: "Bearer good" } });
+    await expectResponse(response, 200, LIGHTS);
+    expect(services.loadApiLights).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      new Date("2026-09-22T00:00:00.000Z"),
+    );
+  });
+
+  it("answers not found when the family is not the caller's", async () => {
+    const { app, services } = fixture();
+    services.loadApiLights.mockResolvedValue(null);
+    const response = await app.request(LIGHTS_PATH, { headers: { authorization: "Bearer good" } });
+    await expectResponse(response, 404, FAMILY_NOT_FOUND);
+  });
+
+  it("refuses a request without a verified session before reading anything", async () => {
+    const f = fixture();
+    const { app, services, openDatabase } = f;
+    f.verifySession.mockResolvedValue(null);
+    const response = await app.request(LIGHTS_PATH, { headers: { authorization: "Bearer bad" } });
+    expect(response.status).toBe(401);
+    expect(services.loadApiLights).not.toHaveBeenCalled();
+    expect(openDatabase).not.toHaveBeenCalled();
   });
 });

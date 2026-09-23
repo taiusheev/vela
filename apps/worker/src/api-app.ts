@@ -6,6 +6,7 @@ import {
   ApiIdempotencyKey,
   ApiMe,
   ApiUser,
+  MemberLight,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import {
@@ -15,6 +16,7 @@ import {
   errorLabel,
   type Logger,
   type loadApiFamilyPlan,
+  type loadApiLights,
   type loadApiMe,
   type provisionApiAccount,
   type updateApiAccount,
@@ -36,6 +38,7 @@ import {
 export interface ApiReadServices {
   loadApiMe: typeof loadApiMe;
   loadApiFamilyPlan: typeof loadApiFamilyPlan;
+  loadApiLights: typeof loadApiLights;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
 }
 
@@ -46,6 +49,8 @@ export interface ApiWriteServices {
 
 export interface ApiRuntime {
   verifySession: SessionVerifier;
+  /** Reads that answer in a member's own local day need the hour it is now. */
+  now(): Date;
   openDatabase(): Promise<{ db: VelaDatabase; close(): Promise<void> }>;
   services: ApiReadServices;
   logger: Pick<Logger, "error">;
@@ -247,6 +252,26 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         c.req.param("familyId"),
       );
       return plan === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiFamilyPlan.parse(plan));
+    },
+  );
+  app.get(
+    "/v1/families/:familyId/lights",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const lights = await runtime.services.loadApiLights(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        runtime.now(),
+      );
+      return lights === null
+        ? c.json(FAMILY_NOT_FOUND, 404)
+        : c.json(lights.map((light) => MemberLight.parse(light)));
     },
   );
   const writes = runtime.writes;

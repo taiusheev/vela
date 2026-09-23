@@ -66,6 +66,10 @@ The mechanism is therefore in place, but linking is still unavailable to a perso
 
 Before real account writes are enabled, apply the migrations, configure the real Clerk instance and gateway limits, wire verified disable/deletion lifecycle handling, review the notices/sub-processors, and run the provider smoke checks. The multi-connection PostgreSQL contention drill is done (§ "Durable mutation receipts" below).
 
+### The lights of a family (23 September 2026)
+
+`GET /v1/families/:familyId/lights` answers `MemberLight[]` for the caller's family: one row per kept-light member, read in that member's own local day. `loadApiLights` in `packages/services/src/api-lights.ts` takes the family authorization every other family read takes, then derives each state in this order: a paused member is `paused`, an unended away period covering her day is `away` with the day it ends, the day's exchange having an answer is `lit` with the time she answered, an unresolved quiet event on that exchange is `quiet` with its id, and anything else is `resting`. `usual_time` is her arrival time. A stranger, a family that is not the caller's and an unknown family all answer 404. The route is registered on the isolated API app and, like the rest of it, is mounted nowhere.
+
 ### Durable mutation receipts (22 September 2026, not exposed)
 
 `runApiMutation` in `packages/services/src/api-idempotency.ts` provides database-only replay protection. The optional account-write routes call it locally; no deployed route calls it. Migration `0001_api_request_receipts` adds the receipt table; apply it before deploying the updated retention job. `0002_account_linking` follows it with `account_link_challenges` and the `account_linked` event name. The applied `0000_init` is unchanged, and no migration has been run against staging or production for this slice.
