@@ -1,5 +1,6 @@
 import type {
   ApiComposedAsk,
+  ApiCreatedFamily,
   ApiExchangePage,
   ApiFamilyPlan,
   ApiMe,
@@ -9,6 +10,7 @@ import type {
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import {
+  AlreadyOrganiserError,
   ApiIdempotencyError,
   AskDayTakenError,
   ReplyRefusedError,
@@ -96,6 +98,31 @@ const EXCHANGE_PAGE: ApiExchangePage = {
   ],
   next_cursor: null,
 };
+const CREATED: ApiCreatedFamily = {
+  family: { id: FAMILY_ID, name: "Synthetic user", region: "apac", country: "TW" },
+  organiser_member_id: USER_ID,
+  kept_light_member: {
+    id: MEMBER_ID,
+    display_name: "Synthetic member",
+    status: "invited",
+    arrival_time: "08:00",
+  },
+  invite: {
+    url: "https://t.me/VelaTestBot?start=fixture-token",
+    expires_at: "2026-09-29T00:00:00.000Z",
+    text: "Hello",
+  },
+};
+const NEW_FAMILY = {
+  country: "TW",
+  kept_light_member: {
+    display_name: "Synthetic member",
+    address_form: "Mrs Chen",
+    language: "en",
+    tz: "Asia/Taipei",
+    wake_time: "07:30",
+  },
+};
 const EXCHANGE_ID = "66666666-6666-7666-8666-666666666666";
 const REPLIES_PATH = `/v1/exchanges/${EXCHANGE_ID}/replies`;
 const REPLY: ApiReply = {
@@ -167,6 +194,13 @@ function fixture(enableWrites = false) {
       replyToApiExchange: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["replyToApiExchange"]>()
         .mockResolvedValue({ response: { status: 201, body: REPLY }, replayed: false }),
+      createApiFamily: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["createApiFamily"]>()
+        .mockResolvedValue({ response: { status: 201, body: CREATED }, replayed: false }),
+    },
+    families: {
+      random: { token: () => "fixture-token" },
+      config: { telegramBotUsername: "VelaTestBot", regions: ["apac"] as const },
     },
   };
   const runtime: ApiRuntime = {
@@ -1184,7 +1218,7 @@ describe("isolated API account writes", () => {
     ["PUT", "/v1/me"],
     ["POST", "/v1/me/link"],
     ["POST", "/v1/link"],
-    ["POST", "/v1/families"],
+    ["PUT", "/v1/families"],
     ["PATCH", PLAN_PATH],
     ["GET", "/v1/me/provision"],
     ["PATCH", "/v1/me/provision"],
@@ -1581,5 +1615,85 @@ describe("replying to an exchange", () => {
     expect(response.status).toBe(401);
     expect(f.writes.services.replyToApiExchange).not.toHaveBeenCalled();
     expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+});
+
+function familyRequest(body: unknown = NEW_FAMILY) {
+  return writeRequest("POST", "/v1/families", JSON.stringify(body), {
+    authorization: "Bearer good",
+  });
+}
+
+describe("creating a family", () => {
+  it("dispatches the verified actor, the key and the body with its token and bot, and answers 201", async () => {
+    const { app, writes } = fixture(true);
+    const response = await app.request(familyRequest());
+    expect(response.status).toBe(201);
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual(CREATED);
+    expect(writes.services.createApiFamily).toHaveBeenCalledWith(
+      {
+        db: expect.anything(),
+        clock: writes.clock,
+        random: writes.families.random,
+        config: writes.families.config,
+      },
+      IDENTITY,
+      "request-1",
+      NEW_FAMILY,
+    );
+  });
+
+  it("answers 409 with its reason for an account that already runs a family", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.createApiFamily.mockRejectedValue(new AlreadyOrganiserError());
+    await expectResponse(await app.request(familyRequest()), 409, {
+      error: {
+        code: "conflict",
+        message: "This account already runs a family.",
+        details: { reason: "already_organiser" },
+      },
+    });
+  });
+
+  it("answers 404 for a caller whose account does not exist yet", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.createApiFamily.mockRejectedValue(
+      new VelaError("not_found", "Account not found"),
+    );
+    await expectResponse(await app.request(familyRequest()), 404, NOT_FOUND);
+  });
+
+  it("refuses a body the contract would not accept before any database is opened", async () => {
+    for (const body of [
+      {},
+      { ...NEW_FAMILY, country: "Taiwan" },
+      { ...NEW_FAMILY, extra: true },
+      { ...NEW_FAMILY, kept_light_member: { ...NEW_FAMILY.kept_light_member, wake_time: "7" } },
+    ]) {
+      const f = fixture(true);
+      await expectResponse(await f.app.request(familyRequest(body)), 400, INVALID);
+      expect(f.writes.services.createApiFamily).not.toHaveBeenCalled();
+      expect(f.openDatabase).not.toHaveBeenCalled();
+    }
+  });
+
+  it("is not there without the family capability, even with writes on", async () => {
+    const f = fixture(true);
+    const runtime = createApiApp({
+      verifySession: f.verifySession,
+      now: () => new Date("2026-09-22T00:00:00.000Z"),
+      openDatabase: f.openDatabase,
+      services: f.services,
+      logger: f.logger,
+      writes: {
+        verifyActiveSession: f.writes.verifyActiveSession,
+        clock: f.writes.clock,
+        services: f.writes.services,
+      },
+    });
+    await expectResponse(await runtime.request(familyRequest()), 404, NOT_FOUND);
+    expect(f.writes.services.createApiFamily).not.toHaveBeenCalled();
   });
 });

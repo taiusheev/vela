@@ -35,6 +35,10 @@
  * notice says so), so a contact nobody in the family asks never appears in a note.
  * `onboarding.nearby_no_number` answers a setup reply that holds a phone number, which is not kept.
  *
+ * `invite.for_her` is what the app hands the organiser to send her, in her language (spec A4): it names
+ * the organiser, carries the link and the "say stop" line, and leaves everything else to the bot's own
+ * `consent.request`, which she reads when she opens the link and which is what she agrees to.
+ *
  * `organiser.invite_again` carries the link the founder's `create_invite` makes, after she said no
  * or never answered; like `onboarding.done`, it goes to the organiser, who sends it on.
  *
@@ -92,6 +96,8 @@ export const en = {
   "consent.declined": "That's fine. Nothing will arrive.",
   "organiser.consent_given": "{name} said yes. The first morning arrives tomorrow at {time}.",
   "organiser.consent_declined": "{name} said no for now. Nothing will be sent.",
+  "invite.for_her":
+    "Hello {name}, it is {organiser}. I would like to keep a light on for you: one small question from the family each morning. Open this to hear about it, and say yes if you would like it: {link} You can say stop at any time.",
   "organiser.invite_again":
     "Here is a new invite. Send this link to {name}: {link} It works for 7 days.",
   "parent.stopped": "Everything is paused. Say start whenever you would like it back.",

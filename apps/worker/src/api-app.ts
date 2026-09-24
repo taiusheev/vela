@@ -2,6 +2,7 @@ import {
   ApiAccountPatch,
   ApiAccountProfile,
   ApiComposedAsk,
+  ApiCreatedFamily,
   type ApiErrorBody,
   ApiExchangePage,
   ApiFamilyPlan,
@@ -12,15 +13,19 @@ import {
   ApiUser,
   ComposeAsk,
   ComposeReply,
+  CreateFamily,
   MemberLight,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import {
+  AlreadyOrganiserError,
+  type ApiFamilyDeps,
   ApiIdempotencyError,
   AskDayTakenError,
   type authorizeFamilyAccess,
   type Clock,
   type composeApiAsk,
+  type createApiFamily,
   errorLabel,
   type Logger,
   type loadApiExchanges,
@@ -61,6 +66,7 @@ export interface ApiWriteServices {
   updateApiAccount: typeof updateApiAccount;
   composeApiAsk: typeof composeApiAsk;
   replyToApiExchange: typeof replyToApiExchange;
+  createApiFamily: typeof createApiFamily;
 }
 
 export interface ApiRuntime {
@@ -74,6 +80,11 @@ export interface ApiRuntime {
     verifyActiveSession: SessionActivityChecker;
     clock: Clock;
     services: ApiWriteServices;
+    /**
+     * Creating a family: a token source for her invite, and the bot and regions it needs. Without
+     * it `POST /v1/families` answers 404, as every write does without `writes`.
+     */
+    families?: Pick<ApiFamilyDeps, "random" | "config">;
   };
 }
 
@@ -233,6 +244,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           runtime.logger.error("api_request_failed", { error: errorLabel(error) });
           return c.json(UNAVAILABLE, 503);
         }
+      }
+      if (error instanceof AlreadyOrganiserError) {
+        const running: ApiErrorBody = {
+          error: {
+            code: "conflict",
+            message: "This account already runs a family.",
+            details: { reason: "already_organiser" },
+          },
+        };
+        return c.json(running, 409);
       }
       if (error instanceof ReplyRefusedError) {
         const refused: ApiErrorBody = {
@@ -428,6 +449,31 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         return c.json(ask, 201);
       },
     );
+    const familyDeps = writes.families;
+    if (familyDeps !== undefined) {
+      // No family exists yet, so there is no family middleware: the caller becomes its organiser.
+      app.post(
+        "/v1/families",
+        authenticate,
+        validateWrite(CreateFamily, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await writes.services.createApiFamily(
+            { db: c.get("db"), clock: writes.clock, ...familyDeps },
+            c.get("session"),
+            c.get("writeKey"),
+            c.get("writeInput"),
+          );
+          if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+            throw new Error("Invalid API mutation response");
+          }
+          const created = ApiCreatedFamily.parse(result.response.body);
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(created, 201);
+        },
+      );
+    }
     // The path names an exchange, not a family, so there is no family middleware here: the
     // service reads the family from the exchange under its row lock and answers 404 itself.
     app.post(

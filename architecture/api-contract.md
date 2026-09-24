@@ -114,6 +114,16 @@ The route is a read, so it needs no write capability and is served whether or no
 
 The mutation sends nothing and wakes nothing — a reply reaches her through the next arrival, which reads the database. It needs the write capability, like composing.
 
+### Creating a family (24 September 2026)
+
+`POST /v1/families` takes `CreateFamily` — a two-letter `country` and `kept_light_member`: `display_name`, `address_form`, `language`, `tz`, `wake_time` — and answers 201 with `ApiCreatedFamily`: the family, the organiser's member id, her invited member with the arrival time half an hour after she wakes, and her invite: the link, when it expires, and `invite.text`, the words the organiser sends her, in her language (spec A4, copy key `invite.for_her`). `createApiFamily` in `packages/services/src/api-families.ts` runs as `family.create:v1`.
+
+**The same rows Telegram onboarding writes**, through the same helpers (`insertInvitedMember`, `insertInvite`, `regionForCountry`): the family, the caller as organiser (`primary_surface` `app`, linked to the account), and her as an **invited** kept-light member — light off, not consented, out of the turn rotation — with a single-use invite good for a week. Nothing about her is consented here. The link opens the bot, which reads her `consent.request` and records her answer exactly as it does for a family made in Telegram; a test runs that flow against an app-made family, and until she says yes nobody may ask her anything.
+
+The caller's account must exist first (`POST /v1/me/provision`), because the organiser's name, language and time zone come from it; a caller without one gets 404. An account that already runs a family gets **409** with `details.reason` `already_organiser`: the app shows one family, and a second would sit behind it with nothing to reach it by until there is a family switcher. That check is made in `mutate`, not `authorize`: `authorize` runs again on a replay, when the caller already *is* this family's organiser, and would refuse the replay its own answer.
+
+A1's age, city and "lives alone" are not asked: nothing stores or uses them, and the privacy notice does not cover them. The response carries the invite token, so the receipt that replays it holds the token for its 24 hours; it is never logged. The route needs the write capability and a family capability of its own — a token source and the bot the link opens — and answers 404 without them.
+
 ### Durable mutation receipts (22 September 2026, not exposed)
 
 `runApiMutation` in `packages/services/src/api-idempotency.ts` provides database-only replay protection. The optional account-write routes call it locally; no deployed route calls it. Migration `0001_api_request_receipts` adds the receipt table; apply it before deploying the updated retention job. `0002_account_linking` follows it with `account_link_challenges` and the `account_linked` event name. The applied `0000_init` is unchanged, and no migration has been run against staging or production for this slice.
@@ -132,7 +142,7 @@ The mutation sends nothing and wakes nothing — a reply reaches her through the
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | /families | Create a family: `{name, country, kept_light_member: {display_name, address_form, language, tz, wake_time, city}}` → family, member rows, region set |
+| POST | /families | Create a family: `{name, country, kept_light_member: {display_name, address_form, language, tz, wake_time, city}}` → family, member rows, region set **Built**, see below |
 | GET | /families/:id | Family, members with light states (§2.2), nearby contacts, plan |
 | PATCH | /families/:id | name, story_day, turns_enabled |
 | DELETE | /families/:id | Schedules deletion within 24 h |

@@ -51,6 +51,7 @@ export { disableApiAccount, provisionApiAccount, updateApiAccount } from "./api-
 export { loadApiFamilyPlan, loadApiMe, provisionApiUser } from "./api-accounts.ts";
 export { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
 export { type ApiExchangePageQuery, loadApiExchanges } from "./api-exchanges.ts";
+export { AlreadyOrganiserError, type ApiFamilyDeps, createApiFamily } from "./api-families.ts";
 export {
   ApiIdempotencyError,
   type ApiMutationAction,

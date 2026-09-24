@@ -17,12 +17,14 @@
  *                         can make, and nothing here weakens that check to do without one. This is
  *                         the only place a secret key may sit on a developer’s machine:
  *                         apps/worker/.env.local, which git ignores.
+ *   TELEGRAM_BOT_USERNAME optional; with it, and with writes on, POST /v1/families is served too.
  */
 import { serve } from "@hono/node-server";
 import { connectDatabase } from "@vela/db";
 import {
   authorizeFamilyAccess,
   composeApiAsk,
+  createApiFamily,
   errorLabel,
   loadApiExchanges,
   loadApiFamilyPlan,
@@ -34,6 +36,7 @@ import {
   updateApiAccount,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
+import { createRandom } from "../src/deps.ts";
 import { createClerkSessionActivityChecker, createClerkSessionVerifier } from "../src/session.ts";
 
 const DEFAULT_PORT = 8787;
@@ -91,6 +94,10 @@ function developmentSecret(key: string): string {
 const given = process.env.CLERK_SECRET_KEY?.trim();
 const secretKey = given === undefined || given.length === 0 ? undefined : developmentSecret(given);
 const writesOn = secretKey !== undefined;
+// The bot her invite link opens. On this machine that bot answers from its own deployment's
+// database, not this one, so a link made here cannot be accepted there: `consent:dev` stands in for
+// her yes (infra/README.md, section 9a).
+const botUsername = process.env.TELEGRAM_BOT_USERNAME?.trim();
 
 const connection = await connectDatabase(databaseUrl);
 const app = createApiApp({
@@ -118,7 +125,21 @@ const app = createApiApp({
         writes: {
           verifyActiveSession: createClerkSessionActivityChecker({ secretKey }),
           clock: { now: () => new Date() },
-          services: { provisionApiAccount, updateApiAccount, composeApiAsk, replyToApiExchange },
+          services: {
+            provisionApiAccount,
+            updateApiAccount,
+            composeApiAsk,
+            replyToApiExchange,
+            createApiFamily,
+          },
+          ...(botUsername === undefined || botUsername.length === 0
+            ? {}
+            : {
+                families: {
+                  random: createRandom(),
+                  config: { telegramBotUsername: botUsername, regions: ["apac"] as const },
+                },
+              }),
         },
       }
     : {}),
@@ -167,7 +188,7 @@ const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) =
   console.log("[api-dev] reads: /v1/me, the family plan, the lights, Today and Exchanges");
   console.log(
     writesOn
-      ? "[api-dev] writes: the account routes, composing an ask and replying; sessions checked live with Clerk"
+      ? `[api-dev] writes: the account routes, composing an ask and replying${botUsername ? ", and creating a family" : ""}; sessions checked live with Clerk`
       : "[api-dev] writes answer 404: set CLERK_SECRET_KEY in apps/worker/.env.local to serve them",
   );
 });

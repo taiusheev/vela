@@ -73,11 +73,20 @@ export async function insertInvitedMember(
 }
 
 /**
+ * What making an invite needs: a token and the bot the link opens. Narrower than `Deps`, so the
+ * API can make one without the pilot Worker's ports.
+ */
+export interface InviteDeps {
+  random: Deps["random"];
+  config: Pick<Deps["config"], "telegramBotUsername">;
+}
+
+/**
  * A single-use invite for the member, from a fresh token, with the link to send her: the token is
  * never logged, and reaches only the organiser's own chat.
  */
 export async function insertInvite(
-  deps: Deps,
+  deps: InviteDeps,
   tx: VelaTransaction,
   input: { familyId: string; invitedBy: string; forMemberId: string },
   now: Date,

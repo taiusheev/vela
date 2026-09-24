@@ -364,3 +364,52 @@ export type ApiReply = z.infer<typeof ApiReply>;
 export const REPLY_REFUSALS = ["not_answered", "her_own"] as const;
 export const ReplyRefusal = z.enum(REPLY_REFUSALS);
 export type ReplyRefusal = z.infer<typeof ReplyRefusal>;
+
+/** What onboarding's first screen asks about her (spec §14.1 A1). */
+export const NEW_MEMBER_NAME_MAX = 40;
+export const NEW_MEMBER_ADDRESS_MAX = 60;
+
+const PersonText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .min(1)
+    .max(max)
+    .refine((text) => text.isWellFormed() && !text.includes("\u0000"), "must be valid text");
+
+/**
+ * Creating a family from the app (`POST /v1/families`, spec §14.1 A1). The organiser is the caller;
+ * she is invited, not enrolled: her light stays off until she says yes on her own channel. Age, city
+ * and "lives alone" from A1 are not asked, because nothing stores or uses them and the privacy
+ * notice does not cover them.
+ */
+export const CreateFamily = z.strictObject({
+  country: z.string().regex(/^[A-Z]{2}$/, "a two-letter country code"),
+  kept_light_member: z.strictObject({
+    display_name: PersonText(NEW_MEMBER_NAME_MAX),
+    address_form: PersonText(NEW_MEMBER_ADDRESS_MAX),
+    language: Lang,
+    tz: TimeZone,
+    wake_time: LocalTime,
+  }),
+});
+export type CreateFamily = z.infer<typeof CreateFamily>;
+
+export const ApiCreatedFamily = z.object({
+  family: z.object({ id: z.uuid(), name: z.string(), region: Region, country: z.string() }),
+  organiser_member_id: z.uuid(),
+  kept_light_member: z.object({
+    id: z.uuid(),
+    display_name: z.string(),
+    status: MemberStatus,
+    /** Half an hour after she wakes, in her own time zone. */
+    arrival_time: LocalTime,
+  }),
+  invite: z.object({
+    url: z.url(),
+    expires_at: z.iso.datetime({ offset: true }),
+    /** What the organiser sends her, in her language (spec A4). */
+    text: z.string(),
+  }),
+});
+export type ApiCreatedFamily = z.infer<typeof ApiCreatedFamily>;

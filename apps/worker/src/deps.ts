@@ -113,7 +113,7 @@ const BASE64URL_UNSAFE = /[+/=]/g;
 const BASE64URL_REPLACEMENTS: Record<string, string> = { "+": "-", "/": "_", "=": "" };
 
 /** Invite tokens: the platform's CSPRNG, base64url so the token survives a Telegram deep link. */
-function createRandom(): Random {
+export function createRandom(): Random {
   return {
     token(bytes = 32) {
       const buffer = new Uint8Array(bytes);
