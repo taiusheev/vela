@@ -15,7 +15,6 @@ import { AskDayTakenError, composeApiAsk } from "../src/api-asks.ts";
 import { seedFamily, seedGroupMember } from "../src/testing/seed.ts";
 import {
   databaseErrorCode,
-  HOLD_MS,
   NOW,
   openPostgresHarness,
   type PostgresHarness,
@@ -87,53 +86,25 @@ function tomorrow(): string {
 }
 
 function compose(client: RaceClient, who: SessionIdentity, key: string, date: string) {
-  return pg.track(
-    composeApiAsk(client.deps, who, key, scope.familyId, {
-      recipient_id: scope.recipientId,
-      type: "question",
-      text: `Composed by ${who.sessionId}`,
-      when: "date",
-      date,
-    }),
-  );
+  return composeApiAsk(client.deps, who, key, scope.familyId, {
+    recipient_id: scope.recipientId,
+    type: "question",
+    text: `Composed by ${who.sessionId}`,
+    when: "date",
+    date,
+  });
 }
 
-/**
- * Every compose queued on her member row behind a third connection holding it, in the order given,
- * then the holder lets go and they serialise on that row alone.
- *
- * Each one is started only once the one before it is confirmed waiting, because `pg_blocking_pids`
- * names a backend's *direct* blocker and nothing further up: the first waiter blocks on the holder's
- * transaction, the second on the first waiter's tuple lock, and so on. Starting them together would
- * leave the queue order to chance, and with it which asker gets the morning.
- */
-async function queueOnHerRow(
+/** Composes queued on her member row, in the order given, behind a connection that holds it. */
+function queueOnHerRow(
   holder: RaceClient,
-  starts: readonly { client: RaceClient; start: () => Promise<unknown> }[],
-): Promise<Promise<unknown>[]> {
-  const entered = pg.latch("the holder to take her row");
-  const release = pg.latch("the holder to let her row go", HOLD_MS);
-  const held = pg.track(
-    holder.db.transaction(async (tx) => {
-      await tx.select().from(members).where(eq(members.id, scope.recipientId)).for("update");
-      entered.release();
-      await release.wait();
-    }),
+  contenders: readonly { client: RaceClient; start: () => ReturnType<typeof compose> }[],
+) {
+  return pg.queueBehindRowLock(
+    holder,
+    (tx) => tx.select().from(members).where(eq(members.id, scope.recipientId)).for("update"),
+    contenders,
   );
-  await entered.wait();
-
-  const operations: Promise<unknown>[] = [];
-  let ahead: RaceClient = holder;
-  for (const queued of starts) {
-    const operation = queued.start();
-    operations.push(operation);
-    await pg.waitForRowLockWait(queued.client, [ahead], operation);
-    ahead = queued.client;
-  }
-
-  release.release();
-  await held;
-  return operations;
 }
 
 async function exchangeRows(client: RaceClient) {
@@ -160,13 +131,9 @@ describe("composing an ask on independent PostgreSQL connections", () => {
       );
     }
 
-    const composed = won.value as {
-      response: { status: number; body: unknown };
-      replayed: boolean;
-    };
-    expect(composed.response.status).toBe(201);
-    expect(composed.replayed).toBe(false);
-    expect((composed.response.body as { asker_name: string }).asker_name).toBe("Mia");
+    expect(won.value.response.status).toBe(201);
+    expect(won.value.replayed).toBe(false);
+    expect((won.value.response.body as { asker_name: string }).asker_name).toBe("Mia");
 
     expect(lost.reason).toBeInstanceOf(AskDayTakenError);
     // The rule was held by the row lock, not by `exchanges_one_per_day`: a unique violation here

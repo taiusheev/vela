@@ -9,6 +9,7 @@ import {
   type NewApiRequestReceipt,
   users,
   type VelaDatabase,
+  type VelaTransaction,
 } from "@vela/db";
 import { asc, eq, sql } from "drizzle-orm";
 import { type ApiMutationAction, lockApiActor } from "../src/api-idempotency.ts";
@@ -143,6 +144,21 @@ export interface PostgresHarness {
     holders: readonly RaceClient[],
     operation: Promise<unknown>,
   ): Promise<"waiting" | "completed">;
+  /**
+   * Contenders queued behind a row lock that `holder` takes with `lockRow` and keeps, in the order
+   * given; the holder then lets go and they serialise on that row alone. Returns each contender's
+   * operation, in that order.
+   *
+   * Each contender starts only once the one before it is confirmed waiting, because
+   * `pg_blocking_pids` names a backend's *direct* blocker and nothing further up: the first waits
+   * on the holder's transaction, the second on the first's tuple lock, and so on. Started together,
+   * the queue order — and with it which contender wins — would be left to chance.
+   */
+  queueBehindRowLock<T>(
+    holder: RaceClient,
+    lockRow: (tx: VelaTransaction) => Promise<unknown>,
+    contenders: readonly { readonly client: RaceClient; readonly start: () => Promise<T> }[],
+  ): Promise<Promise<T>[]>;
   jobDeps(client: RaceClient): Deps;
   holdsActorLock(client: RaceClient): Promise<boolean>;
   holdActorLock(client: RaceClient, authSubject: string): Promise<HeldActorLock>;
@@ -468,6 +484,36 @@ export async function openPostgresHarness(): Promise<PostgresHarness> {
         "a row lock, or to complete without waiting,",
         true,
       );
+    },
+
+    async queueBehindRowLock<T>(
+      holder: RaceClient,
+      lockRow: (tx: VelaTransaction) => Promise<unknown>,
+      contenders: readonly { readonly client: RaceClient; readonly start: () => Promise<T> }[],
+    ): Promise<Promise<T>[]> {
+      const entered = harness.latch(`${holder.name} to take the row`);
+      const release = harness.latch(`${holder.name} to let the row go`, HOLD_MS);
+      const held = harness.track(
+        holder.db.transaction(async (tx) => {
+          await lockRow(tx);
+          entered.release();
+          await release.wait();
+        }),
+      );
+      await entered.wait();
+
+      const operations: Promise<T>[] = [];
+      let ahead = holder;
+      for (const contender of contenders) {
+        const operation = harness.track(contender.start());
+        operations.push(operation);
+        await harness.waitForRowLockWait(contender.client, [ahead], operation);
+        ahead = contender.client;
+      }
+
+      release.release();
+      await harness.finish(`${holder.name} to let the row go`, held);
+      return operations;
     },
 
     jobDeps(client) {
