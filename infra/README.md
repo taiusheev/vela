@@ -296,7 +296,7 @@ pnpm --filter @vela/worker api:dev
 pnpm --filter @vela/app run web
 ```
 
-Sign in on the app's own screen, then run the seed once with the user id Clerk gives you — it is on Clerk's **Users** page, and the app prints it under **You**; it starts `user_`:
+Sign in on the app’s own screen. The first run has no family yet, so Today says so and shows the example day; open **You**, copy the account id it shows (it starts `user_`, and it is also on Clerk’s **Users** page), and run the seed once with it:
 
 ```bash
 pnpm --filter @vela/worker seed:dev -- user_…
