@@ -3,6 +3,7 @@ import type { ApiToday, ApiTodayExchange, ApiTomorrowTurn, MemberLight } from "@
 import { ApiError, apiConfigured, fetchMe, fetchToday } from "../api/client.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import type { LightState } from "../components/light.tsx";
+import { dayName, timeOfDay } from "./format.ts";
 import {
   type Today,
   type TodayExchange,
@@ -11,20 +12,8 @@ import {
   todayFixture,
 } from "./today.ts";
 
-function timeOfDay(instant: string): string {
-  const at = new Date(instant);
-  return Number.isFinite(at.getTime())
-    ? at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-    : "";
-}
-
-/** A local date as the day it names, for copy that must not say “tomorrow” about Thursday. */
-export function dayName(date: string): string {
-  const day = new Date(`${date}T00:00:00Z`);
-  return Number.isFinite(day.getTime())
-    ? day.toLocaleDateString(undefined, { weekday: "long", timeZone: "UTC" })
-    : date;
-}
+// Kept as an export here, where Ask and Exchanges already take it from.
+export { dayName };
 
 /** The line under each name: "answered 8:12" · "quiet" · "away · Sunday" · "resting" (spec A6). */
 export function stateText(light: MemberLight): string {

@@ -1,4 +1,5 @@
 import type { ApiFamily, ApiMe } from "@vela/contracts";
+import { dayMonth } from "./format.ts";
 import { languages } from "./onboarding.ts";
 
 /** One kept-light member on You: her light and where her Vela Light stands (spec A12). */
@@ -9,6 +10,10 @@ export interface KeptLightRow {
   paused: boolean;
   /** "Vela Light trial · ends 12 Oct", "Vela Light", "Free", "Has not said yes yet". */
   line: string;
+  /** Where her Vela Light stands: never started, in its trial, paid for, or ended. */
+  plan: "none" | "trial" | "active" | "ended";
+  /** When the trial ends, as a day and month, while it runs. */
+  trialEnds?: string;
 }
 
 /** The family as You shows it: whose light is kept, who else asks and replies, who is nearby. */
@@ -39,11 +44,18 @@ function languageOf(code: string): string {
   return languages.find((language) => language.value === code)?.label ?? code;
 }
 
-function dayMonth(instant: string): string {
-  const at = new Date(instant);
-  return Number.isFinite(at.getTime())
-    ? at.toLocaleDateString(undefined, { day: "numeric", month: "short" })
-    : "";
+function planOf(member: ApiFamily["members"][number]): KeptLightRow["plan"] {
+  switch (member.subscription?.status) {
+    case undefined:
+      return "none";
+    case "trial":
+      return "trial";
+    case "active":
+    case "grace":
+      return "active";
+    default:
+      return "ended";
+  }
 }
 
 function planLine(member: ApiFamily["members"][number]): string {
@@ -110,6 +122,10 @@ export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily
       light: member.light,
       paused: member.status === "paused",
       line: member.status === "paused" ? `Paused · ${planLine(member)}` : planLine(member),
+      plan: planOf(member),
+      ...(member.subscription?.trial_ends_at == null
+        ? {}
+        : { trialEnds: dayMonth(member.subscription.trial_ends_at) }),
     })),
     ...(others.length === 0
       ? {}
@@ -152,6 +168,8 @@ export const youFixture: YouFamily = {
       light: "on",
       paused: false,
       line: "Vela Light trial · ends 12 Oct",
+      plan: "trial",
+      trialEnds: "12 Oct",
     },
   ],
   others: { names: "Mia, Sam, Igor", line: "Ask and reply · free" },

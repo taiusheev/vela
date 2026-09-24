@@ -132,6 +132,14 @@ A1's age, city and "lives alone" are not asked: nothing stores or uses them, and
 
 **The people nearby are for the organisers**, who set them up; anyone else gets `nearby: null`. **No number is in it**, for anyone: a number is given only in the quiet notice, to the people the notice is for. A contact near a member who has left is not listed. Prices are not in it either — the plan card is A13's, and nothing charges yet. A stranger, a family that is not the caller's and an unknown family all answer 404.
 
+### Starting the trial (24 September 2026)
+
+`POST /v1/families/:familyId/plan/trial` takes `StartTrial` — `{member_id}`, the kept-light member it covers — and answers 200 with `ApiTrial`: her member id, the subscription's status and when the trial ends. `startApiTrial` in `packages/services/src/api-trial.ts` runs it as `plan.trial:v1`, for the family's **organisers only**, since the one who pays is an organiser.
+
+Her member row is locked first, the lock her arrivals and asks take, so two organisers starting at once make one trial. With no subscription yet, it writes one: provider `trial`, status `trial`, `trial_ends_at` thirty days on (`TRIAL_DAYS`), the caller's account as payer, no price and no interval; and records `trial_started`. A member who already has a subscription, in any state, is answered with it as it stands, so there is one trial per kept-light member. Two refusals, 409 with `details.reason`: `not_answered_yet` before her first answer (spec §16: the trial is "30 days after her first answer") and `light_off` when her light is not on. A member of another family, or one who has left, answers 404; her membership is checked in `authorize`, before the mutation helper's own scope check, whose refusal is not a 404.
+
+**Nothing is charged or gated.** The pilot is free (spec Appendix A), no service checks the plan, and `families.plan` is left as it is: nothing would turn it back when the trial ends, because nothing ends a trial yet. The subscription row carries it, and `GET /v1/families/:id` shows it on You. Lapse, grace and checkout wait for billing.
+
 ### Pausing and leaving (24 September 2026)
 
 `POST /v1/families/:familyId/members/:memberId/pause` takes `PauseMember` — `{paused}` — and answers 200 with `ApiMemberPause`, the member's status after it. `POST /v1/families/:familyId/members/:memberId/left` takes an empty body (`LeaveFamily`) and answers 200 with `ApiLeft`, the member and when they left. `pauseApiMember` and `leaveApiFamily` in `packages/services/src/api-members.ts` run them as `member.pause:v1` and `member.leave:v1`.
@@ -246,7 +254,7 @@ A quiet event opened during the learning period notifies nobody for its first ei
 | GET | /me/notifications | The one-a-day setting and hour |
 | PATCH | /me/notifications | `{hour}` only; frequency cannot be raised |
 | GET | /families/:id/plan | Plan, trial, per-member subscription states |
-| POST | /families/:id/plan/trial | Start the 30 days (after her first answer) |
+| POST | /families/:id/plan/trial | Start the 30 days (after her first answer) `{member_id}` **Built**, see §1 "Starting the trial" |
 | POST | /families/:id/plan/checkout | Web checkout session (provider decided later) |
 | POST | /webhooks/billing/:provider | Provider events |
 

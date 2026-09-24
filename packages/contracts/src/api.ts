@@ -531,3 +531,26 @@ export type ApiLeft = z.infer<typeof ApiLeft>;
 export const MEMBER_CHANGE_REFUSALS = ["last_organiser", "kept_light"] as const;
 export const MemberChangeRefusal = z.enum(MEMBER_CHANGE_REFUSALS);
 export type MemberChangeRefusal = z.infer<typeof MemberChangeRefusal>;
+
+/** How long the trial runs, from the moment it is started (spec §16: no card). */
+export const TRIAL_DAYS = 30;
+
+/** "Start the 30 days" for one kept-light member (spec A13, API contract §7). */
+export const StartTrial = z.strictObject({ member_id: z.uuid() });
+export type StartTrial = z.infer<typeof StartTrial>;
+
+/** Where her Vela Light stands once the trial is asked for: the new trial, or what was there. */
+export const ApiTrial = z.object({
+  member_id: z.uuid(),
+  status: SubscriptionStatus,
+  trial_ends_at: z.iso.datetime({ offset: true }).nullable(),
+});
+export type ApiTrial = z.infer<typeof ApiTrial>;
+
+/**
+ * Why a trial was refused, in a 409's `details.reason`: she has not answered yet, and the trial
+ * starts after her first answer (spec §16), or her light is not on.
+ */
+export const TRIAL_REFUSALS = ["not_answered_yet", "light_off"] as const;
+export const TrialRefusal = z.enum(TRIAL_REFUSALS);
+export type TrialRefusal = z.infer<typeof TrialRefusal>;

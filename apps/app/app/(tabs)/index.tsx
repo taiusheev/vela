@@ -14,8 +14,10 @@ import {
 } from "../../src/components/ui.tsx";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
 import type { Today } from "../../src/data/today.ts";
+import { useFamily } from "../../src/data/useFamily.ts";
 import { useQuiet } from "../../src/data/useQuiet.ts";
 import { useToday } from "../../src/data/useToday.ts";
+import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
@@ -122,7 +124,7 @@ export default function TodayScreen() {
   const [quietOpen, setQuietOpen] = useState(false);
   const [resolution, setResolution] = useState<string | undefined>();
   const insets = useSafeAreaInsets();
-  const { today, trouble, noAccount, noFamily, live, organiser } = useToday();
+  const { today, trouble, noAccount, noFamily, live, organiser, familyId } = useToday();
   // A first run, or an account that belongs to no family yet: onboarding is where that starts (A1).
   useEffect(() => {
     if (noAccount || noFamily) router.replace("/onboarding");
@@ -153,6 +155,28 @@ export default function TodayScreen() {
   const notice = live
     ? liveQuiet.notice
     : { ...quietFixtureFor(quiet?.displayName ?? "Mom"), resolution };
+  // A13: the first time an organiser sees her lit with no Vela Light yet, the offer opens, once on
+  // this device; You opens it again whenever they want it.
+  const lit = today.lights.find((light) => light.state === "lit");
+  const plans = useFamily(familyId, live && organiser && lit !== undefined);
+  const offerFor =
+    live && organiser && plans.live
+      ? plans.family.keptLight.find((row) => row.memberId === lit?.memberId && row.plan === "none")
+          ?.memberId
+      : undefined;
+  useEffect(() => {
+    if (offerFor === undefined) return;
+    let current = true;
+    const flag = `light-offered.${offerFor}`;
+    void readFlag(flag).then(async (shown) => {
+      if (!current || shown) return;
+      await writeFlag(flag);
+      router.push({ pathname: "/vela-light", params: { member: offerFor } });
+    });
+    return () => {
+      current = false;
+    };
+  }, [offerFor]);
   const recipient = today.lights[0]?.displayName ?? "her";
 
   return (

@@ -110,6 +110,23 @@ export default function YouScreen() {
                 leading={<Light state={member.paused ? "paused" : "resting"} height={24} />}
                 title={member.name}
                 caption={member.line}
+                trailing={
+                  family.me.organiser && member.light === "on" ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() =>
+                        router.push({
+                          pathname: "/vela-light",
+                          params: { member: member.memberId },
+                        })
+                      }
+                    >
+                      <Words variant="button" tone="action">
+                        Vela Light
+                      </Words>
+                    </Pressable>
+                  ) : undefined
+                }
               />
             </View>
           ))}

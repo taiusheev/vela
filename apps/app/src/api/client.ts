@@ -12,6 +12,7 @@ import type {
   ApiQuietState,
   ApiReply,
   ApiToday,
+  ApiTrial,
   ApiUser,
   ComposeAsk,
   ComposeReply,
@@ -193,6 +194,27 @@ export function leaveFamily(
     key,
     body: {},
   });
+}
+
+/** "Start the 30 days" of Vela Light for one kept-light member (spec A13). */
+export function startTrial(
+  familyId: string,
+  memberId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiTrial> {
+  return call<ApiTrial>({
+    path: `/v1/families/${familyId}/plan/trial`,
+    token,
+    key,
+    body: { member_id: memberId },
+  });
+}
+
+/** Why the trial was refused: she has not answered yet, or her light is not on. */
+export function trialRefusal(error: unknown): "not_answered_yet" | "light_off" | null {
+  const reason = refusalReason(error);
+  return reason === "not_answered_yet" || reason === "light_off" ? reason : null;
 }
 
 /** Whether creating a family was refused because this account already runs one. */

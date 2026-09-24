@@ -15,6 +15,7 @@ import {
   ApiQuietState,
   ApiReply,
   ApiToday,
+  ApiTrial,
   ApiUser,
   ComposeAsk,
   ComposeReply,
@@ -23,6 +24,7 @@ import {
   MemberLight,
   PauseMember,
   QuietAction,
+  StartTrial,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import {
@@ -52,6 +54,8 @@ import {
   type replyToApiExchange,
   type resolveApiQuiet,
   runAfterCommit,
+  type startApiTrial,
+  TrialRefusedError,
   type updateApiAccount,
   VelaError,
 } from "@vela/services";
@@ -88,6 +92,7 @@ export interface ApiWriteServices {
   resolveApiQuiet: typeof resolveApiQuiet;
   pauseApiMember: typeof pauseApiMember;
   leaveApiFamily: typeof leaveApiFamily;
+  startApiTrial: typeof startApiTrial;
 }
 
 export interface ApiRuntime {
@@ -302,6 +307,19 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               error.reason === "last_organiser"
                 ? "Someone else who organises the family has to be active first."
                 : "A kept light is paused from her own chat.",
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(refused, 409);
+      }
+      if (error instanceof TrialRefusedError) {
+        const refused: ApiErrorBody = {
+          error: {
+            code: "conflict",
+            message:
+              error.reason === "not_answered_yet"
+                ? "The trial starts after her first answer."
+                : "Her light is not on.",
             details: { reason: error.reason },
           },
         };
@@ -539,6 +557,32 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         },
       );
     }
+    app.post(
+      "/v1/families/:familyId/plan/trial",
+      authenticate,
+      validateWrite(StartTrial, runtime.logger),
+      checkActivity,
+      withDatabase,
+      (c, next) =>
+        createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        )(c, next),
+      async (c) => {
+        const result = await writes.services.startApiTrial(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const trial = ApiTrial.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(trial, 200);
+      },
+    );
     app.post(
       "/v1/families/:familyId/members/:memberId/pause",
       authenticate,

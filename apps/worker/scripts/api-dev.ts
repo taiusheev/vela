@@ -38,6 +38,7 @@ import {
   provisionApiAccount,
   replyToApiExchange,
   resolveApiQuiet,
+  startApiTrial,
   updateApiAccount,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
@@ -141,6 +142,7 @@ const app = createApiApp({
             resolveApiQuiet,
             pauseApiMember,
             leaveApiFamily,
+            startApiTrial,
           },
           ...(botUsername === undefined || botUsername.length === 0
             ? {}
@@ -200,7 +202,7 @@ const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) =
   );
   console.log(
     writesOn
-      ? `[api-dev] writes: the account routes, composing an ask, replying, settling a quiet morning (its messages wait for reconcile here), pausing and leaving${botUsername ? ", and creating a family" : ""}; sessions checked live with Clerk`
+      ? `[api-dev] writes: the account routes, composing an ask, replying, settling a quiet morning (its messages wait for reconcile here), pausing and leaving, starting a trial${botUsername ? ", and creating a family" : ""}; sessions checked live with Clerk`
       : "[api-dev] writes answer 404: set CLERK_SECRET_KEY in apps/worker/.env.local to serve them",
   );
 });

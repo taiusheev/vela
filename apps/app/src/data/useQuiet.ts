@@ -4,14 +4,8 @@ import { useState } from "react";
 import { fetchQuiet, settleQuiet } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
+import { timeOfDay, weekday } from "./format.ts";
 import type { QuietNotice } from "./quiet.ts";
-
-function timeOfDay(instant: string): string {
-  const at = new Date(instant);
-  return Number.isFinite(at.getTime())
-    ? at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-    : "";
-}
 
 function dayOf(instant: string): string {
   const at = new Date(instant);
@@ -20,7 +14,7 @@ function dayOf(instant: string): string {
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1_000);
   if (at.toDateString() === today.toDateString()) return "today";
   if (at.toDateString() === yesterday.toDateString()) return "yesterday";
-  return at.toLocaleDateString(undefined, { weekday: "long" });
+  return weekday(instant);
 }
 
 /**

@@ -11,6 +11,7 @@ import type {
   ApiQuietState,
   ApiReply,
   ApiToday,
+  ApiTrial,
   MemberLight,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
@@ -21,6 +22,7 @@ import {
   MemberChangeRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
+  TrialRefusedError,
   VelaError,
 } from "@vela/services";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -145,6 +147,11 @@ const NEW_FAMILY = {
     wake_time: "07:30",
   },
 };
+const TRIAL: ApiTrial = {
+  member_id: MEMBER_ID,
+  status: "trial",
+  trial_ends_at: "2026-10-22T00:00:00.000Z",
+};
 const PAUSED: ApiMemberPause = { member_id: MEMBER_ID, status: "paused" };
 const LEFT: ApiLeft = { member_id: MEMBER_ID, left_at: "2026-09-22T00:00:00.000Z" };
 const QUIET_ID = "88888888-8888-7888-8888-888888888888";
@@ -244,6 +251,9 @@ function fixture(enableWrites = false) {
       pauseApiMember: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["pauseApiMember"]>()
         .mockResolvedValue({ response: { status: 200, body: PAUSED }, replayed: false }),
+      startApiTrial: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["startApiTrial"]>()
+        .mockResolvedValue({ response: { status: 200, body: TRIAL }, replayed: false }),
       leaveApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["leaveApiFamily"]>()
         .mockResolvedValue({ response: { status: 200, body: LEFT }, replayed: false }),
@@ -1947,5 +1957,47 @@ describe("pausing and leaving", () => {
       404,
       NOT_FOUND,
     );
+  });
+});
+
+describe("starting the trial", () => {
+  const TRIAL_PATH = `/v1/families/${FAMILY_ID}/plan/trial`;
+  const good = { authorization: "Bearer good" };
+  const body = JSON.stringify({ member_id: MEMBER_ID });
+
+  it("starts it through the family check and answers where her Vela Light stands", async () => {
+    const { app, writes, services } = fixture(true);
+    const response = await app.request(writeRequest("POST", TRIAL_PATH, body, good));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(TRIAL);
+    expect(services.authorizeFamilyAccess).toHaveBeenCalled();
+    expect(writes.services.startApiTrial).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      { member_id: MEMBER_ID },
+    );
+  });
+
+  it.each([
+    ["not_answered_yet", "The trial starts after her first answer."],
+    ["light_off", "Her light is not on."],
+  ] as const)("answers a %s refusal as a 409 that says why", async (reason, message) => {
+    const { app, writes } = fixture(true);
+    writes.services.startApiTrial.mockRejectedValue(new TrialRefusedError(reason));
+    await expectResponse(await app.request(writeRequest("POST", TRIAL_PATH, body, good)), 409, {
+      error: { code: "conflict", message, details: { reason } },
+    });
+  });
+
+  it("refuses a body that is not the contract's before the database is opened", async () => {
+    const f = fixture(true);
+    await expectResponse(
+      await f.app.request(writeRequest("POST", TRIAL_PATH, JSON.stringify({ months: 2 }), good)),
+      400,
+      INVALID,
+    );
+    expect(f.openDatabase).not.toHaveBeenCalled();
   });
 });
