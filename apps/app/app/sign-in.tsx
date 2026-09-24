@@ -11,6 +11,41 @@ import { space } from "../src/theme/tokens.ts";
 
 type Step = "phone" | "code";
 
+/** However she wrote it: spaces, dashes and brackets are hers, not the number's. */
+function tidy(raw: string): string {
+  return raw.replace(/[\s()\-.‐-―]/g, "");
+}
+
+/**
+ * A number written the way it is said at home keeps the national 0 — 0903 224 780 in Taipei — and
+ * international form drops it. Rather than guess, the screen offers the number back without it.
+ */
+function withoutTrunkZero(number: string): string | null {
+  const match = /^(\+\d{1,3})0(\d{6,})$/.exec(number);
+  return match === null ? null : `${match[1]}${match[2]}`;
+}
+
+/** A bot check that never finishes must not leave her watching "Sending…" for ever. */
+const PATIENCE_MS = 25_000;
+
+class TookTooLong extends Error {
+  override readonly name = "TookTooLong";
+}
+
+async function within<T>(work: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new TookTooLong()), PATIENCE_MS);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 /**
  * Phone first, because the organiser is often signing in on a train with one hand (build plan
  * 3.1). Apple and Google come next; they need the app's store identifiers.
@@ -61,20 +96,20 @@ function PhoneSignIn() {
   /** Her number is not yet an account: the same code, through the other door. */
   const startJoining = async (number: string) => {
     if (signUp === undefined) return false;
-    await signUp.create({ phoneNumber: number });
-    await signUp.preparePhoneNumberVerification({ strategy: "phone_code" });
+    await within(signUp.create({ phoneNumber: number }));
+    await within(signUp.preparePhoneNumberVerification({ strategy: "phone_code" }));
     setJoining(true);
     return true;
   };
 
   const sendCode = async () => {
     if (!ready || signIn === undefined) return;
-    const number = phone.trim();
+    const number = tidy(phone);
     if (number.length === 0) return;
     setWorking(true);
     setTrouble(undefined);
     try {
-      const attempt = await signIn.create({ identifier: number });
+      const attempt = await within(signIn.create({ identifier: number }));
       const factor = attempt.supportedFirstFactors?.find(
         (candidate) => candidate.strategy === "phone_code",
       );
@@ -82,10 +117,9 @@ function PhoneSignIn() {
         setTrouble("That number cannot receive a code yet.");
         return;
       }
-      await signIn.prepareFirstFactor({
-        strategy: "phone_code",
-        phoneNumberId: factor.phoneNumberId,
-      });
+      await within(
+        signIn.prepareFirstFactor({ strategy: "phone_code", phoneNumberId: factor.phoneNumberId }),
+      );
       setJoining(false);
       setStep("code");
     } catch {
@@ -94,9 +128,16 @@ function PhoneSignIn() {
       try {
         if (await startJoining(number)) setStep("code");
         else setTrouble("That number did not work. Check it and try again.");
-      } catch {
+      } catch (error: unknown) {
         // Clerk's message can name the account; the screen says only what the person can act on.
-        setTrouble("That number did not work. Check the country code and try again.");
+        const shorter = withoutTrunkZero(number);
+        setTrouble(
+          error instanceof TookTooLong
+            ? "The bot check did not finish. Try again in a moment."
+            : shorter === null
+              ? "That number did not work. Check the country code and try again."
+              : `That number did not work. The 0 after the country code is dropped abroad — try ${shorter}.`,
+        );
       }
     } finally {
       setWorking(false);
@@ -108,23 +149,35 @@ function PhoneSignIn() {
     setWorking(true);
     setTrouble(undefined);
     try {
-      const attempt = joining
-        ? await signUp.attemptPhoneNumberVerification({ code: code.trim() })
-        : await signIn.attemptFirstFactor({ strategy: "phone_code", code: code.trim() });
-      if (attempt.status !== "complete" || attempt.createdSessionId === null) {
+      // The two halves answer with different shapes, so each is asked on its own terms.
+      let session: string | null;
+      if (joining) {
+        const attempt = await within(signUp.attemptPhoneNumberVerification({ code: code.trim() }));
         // A right code that still cannot finish means this instance asks for more than a number,
         // which is a setting, not something she can fix by typing the six digits again.
-        setTrouble(
-          attempt.status === "missing_requirements"
-            ? "That code was right, but this account needs more than a number to finish."
-            : "That code did not work. Ask for a new one.",
+        if (attempt.status === "missing_requirements") {
+          setTrouble("That code was right, but this account needs more than a number to finish.");
+          return;
+        }
+        session = attempt.status === "complete" ? attempt.createdSessionId : null;
+      } else {
+        const attempt = await within(
+          signIn.attemptFirstFactor({ strategy: "phone_code", code: code.trim() }),
         );
+        session = attempt.status === "complete" ? attempt.createdSessionId : null;
+      }
+      if (session === null) {
+        setTrouble("That code did not work. Ask for a new one.");
         return;
       }
-      await setActive({ session: attempt.createdSessionId });
+      await setActive({ session });
       router.replace("/");
-    } catch {
-      setTrouble("That code did not work. Ask for a new one.");
+    } catch (error: unknown) {
+      setTrouble(
+        error instanceof TookTooLong
+          ? "That took too long to check. Try the code again."
+          : "That code did not work. Ask for a new one.",
+      );
     } finally {
       setWorking(false);
     }
@@ -196,6 +249,12 @@ function PhoneSignIn() {
             {trouble}
           </Words>
         )}
+        {/*
+          Clerk's bot check for a new account mounts itself into an element of this name, and says
+          so loudly when it cannot find one. On the web this renders that element; on a phone it is
+          an empty view, and Clerk uses its own native check there.
+        */}
+        <View nativeID="clerk-captcha" style={{ alignItems: "center" }} />
       </ScrollView>
     </>
   );
