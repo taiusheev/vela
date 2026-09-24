@@ -240,6 +240,29 @@ export async function lockExchangeForLocalDate(
   return rows[0] ?? null;
 }
 
+/**
+ * The exchange whose replies her next arrival reads back: her latest delivered one. `loadReadBack`
+ * in `arrivals.ts` selects the latest delivered exchange before the arrival's date, and every
+ * exchange on or after that date is still undelivered when it runs, so the two always agree. Any
+ * reply to an older exchange is kept for the family and never heard.
+ */
+export async function readBackExchangeId(db: Queryable, memberId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: exchanges.id })
+    .from(exchanges)
+    .where(
+      and(
+        eq(exchanges.recipientId, memberId),
+        isNotNull(exchanges.scheduledFor),
+        isNotNull(exchanges.deliveredAt),
+        ne(exchanges.state, "withdrawn"),
+      ),
+    )
+    .orderBy(desc(exchanges.scheduledFor))
+    .limit(1);
+  return row?.id ?? null;
+}
+
 /** Her most recent exchange delivered at or after `since` that is not archived. */
 export async function latestDeliveredExchangeWithin(
   db: Queryable,

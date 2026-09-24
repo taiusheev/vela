@@ -186,6 +186,11 @@ export const ApiTodayExchange = z.object({
   replies: z.array(ApiTodayReply),
   /** The receipt chip: she opened it. */
   seen_at: z.iso.datetime({ offset: true }).nullable(),
+  /**
+   * Whether a reply written now reaches her: her next arrival reads back only her latest delivered
+   * exchange, so a reply to any older one is kept for the family but never heard.
+   */
+  replies_reach_her: z.boolean(),
 });
 export type ApiTodayExchange = z.infer<typeof ApiTodayExchange>;
 
@@ -317,3 +322,45 @@ export const ApiExchangePage = z.object({
   next_cursor: z.uuid().nullable(),
 });
 export type ApiExchangePage = z.infer<typeof ApiExchangePage>;
+
+/**
+ * A reply from the app (`POST /v1/exchanges/:exchangeId/replies`, spec §14.1 A8). Words only: a
+ * heart, a laugh or a hug is the same row a Telegram reaction writes, and the Telegram path makes a
+ * member's reactions equal to their platform set, so an app reaction would vanish the next time
+ * that member reacted in the group.
+ */
+export const MAX_REPLY_TEXT = 1_000;
+
+export const ComposeReply = z.strictObject({
+  text: z
+    .string()
+    .trim()
+    .min(1)
+    .max(MAX_REPLY_TEXT)
+    .refine(
+      (text) => text.isWellFormed() && !text.includes("\u0000"),
+      "a reply must be valid UTF8 text without NUL",
+    ),
+});
+export type ComposeReply = z.infer<typeof ComposeReply>;
+
+export const ApiReply = z.object({
+  id: z.uuid(),
+  exchange_id: z.uuid(),
+  from: z.string(),
+  kind: ReplyKind,
+  text: z.string().nullable(),
+  created_at: z.iso.datetime({ offset: true }),
+  /** Whether her next arrival reads this one back to her; see `replies_reach_her`. */
+  reaches_her: z.boolean(),
+});
+export type ApiReply = z.infer<typeof ApiReply>;
+
+/**
+ * Why a reply was refused, in the error's `details`: `not_answered` (409) when she has not answered
+ * yet, so there is nothing to reply to; `her_own` (403) when the kept-light member herself replies,
+ * which would read her own words back to her tomorrow.
+ */
+export const REPLY_REFUSALS = ["not_answered", "her_own"] as const;
+export const ReplyRefusal = z.enum(REPLY_REFUSALS);
+export type ReplyRefusal = z.infer<typeof ReplyRefusal>;

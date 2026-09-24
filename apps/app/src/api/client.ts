@@ -1,4 +1,13 @@
-import type { ApiAskConflict, ApiComposedAsk, ApiMe, ApiToday, ComposeAsk } from "@vela/contracts";
+import type {
+  ApiAskConflict,
+  ApiComposedAsk,
+  ApiExchangePage,
+  ApiMe,
+  ApiReply,
+  ApiToday,
+  ComposeAsk,
+  ComposeReply,
+} from "@vela/contracts";
 
 /**
  * The worker the app talks to. Without it the screens read their fixtures, so a checkout with no
@@ -100,4 +109,31 @@ export function composeAsk(
     key,
     body: ask,
   });
+}
+
+export function fetchExchanges(
+  familyId: string,
+  cursor: string | null,
+  token: string | null,
+): Promise<ApiExchangePage> {
+  const query = cursor === null ? "" : `?cursor=${encodeURIComponent(cursor)}`;
+  return read<ApiExchangePage>(`/v1/families/${familyId}/exchanges${query}`, token);
+}
+
+export function replyTo(
+  exchangeId: string,
+  key: string,
+  reply: ComposeReply,
+  token: string | null,
+): Promise<ApiReply> {
+  return call<ApiReply>({ path: `/v1/exchanges/${exchangeId}/replies`, token, key, body: reply });
+}
+
+/** Why a reply was refused, when it was: she has not answered yet, or it is her own exchange. */
+export function replyRefusal(error: unknown): "not_answered" | "her_own" | null {
+  if (!(error instanceof ApiError) || (error.status !== 409 && error.status !== 403)) return null;
+  const details = error.details;
+  const reason =
+    typeof details === "object" && details !== null && "reason" in details ? details.reason : null;
+  return reason === "not_answered" || reason === "her_own" ? reason : null;
 }

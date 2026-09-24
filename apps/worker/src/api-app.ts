@@ -7,9 +7,11 @@ import {
   ApiFamilyPlan,
   ApiIdempotencyKey,
   ApiMe,
+  ApiReply,
   ApiToday,
   ApiUser,
   ComposeAsk,
+  ComposeReply,
   MemberLight,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
@@ -27,6 +29,8 @@ import {
   type loadApiMe,
   type loadApiToday,
   type provisionApiAccount,
+  ReplyRefusedError,
+  type replyToApiExchange,
   type updateApiAccount,
   VelaError,
 } from "@vela/services";
@@ -56,6 +60,7 @@ export interface ApiWriteServices {
   provisionApiAccount: typeof provisionApiAccount;
   updateApiAccount: typeof updateApiAccount;
   composeApiAsk: typeof composeApiAsk;
+  replyToApiExchange: typeof replyToApiExchange;
 }
 
 export interface ApiRuntime {
@@ -228,6 +233,19 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           runtime.logger.error("api_request_failed", { error: errorLabel(error) });
           return c.json(UNAVAILABLE, 503);
         }
+      }
+      if (error instanceof ReplyRefusedError) {
+        const refused: ApiErrorBody = {
+          error: {
+            code: error.reason === "her_own" ? "forbidden" : "conflict",
+            message:
+              error.reason === "her_own"
+                ? "She cannot reply to her own exchange."
+                : "She has not answered yet.",
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(refused, error.reason === "her_own" ? 403 : 409);
       }
       if (error instanceof AskDayTakenError) {
         const taken: ApiErrorBody = {
@@ -408,6 +426,30 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         const ask = ApiComposedAsk.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ask, 201);
+      },
+    );
+    // The path names an exchange, not a family, so there is no family middleware here: the
+    // service reads the family from the exchange under its row lock and answers 404 itself.
+    app.post(
+      "/v1/exchanges/:exchangeId/replies",
+      authenticate,
+      validateWrite(ComposeReply, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.replyToApiExchange(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const reply = ApiReply.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(reply, 201);
       },
     );
   }

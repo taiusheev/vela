@@ -3,6 +3,7 @@ import type {
   ApiExchangePage,
   ApiFamilyPlan,
   ApiMe,
+  ApiReply,
   ApiToday,
   MemberLight,
 } from "@vela/contracts";
@@ -10,6 +11,7 @@ import type { VelaDatabase } from "@vela/db";
 import {
   ApiIdempotencyError,
   AskDayTakenError,
+  ReplyRefusedError,
   type SessionIdentity,
   VelaError,
 } from "@vela/services";
@@ -77,6 +79,7 @@ const TODAY: ApiToday = {
       },
       replies: [{ from: "Synthetic user", kind: "heart", text: null }],
       seen_at: null,
+      replies_reach_her: true,
     },
   ],
   tomorrow: [],
@@ -92,6 +95,17 @@ const EXCHANGE_PAGE: ApiExchangePage = {
     },
   ],
   next_cursor: null,
+};
+const EXCHANGE_ID = "66666666-6666-7666-8666-666666666666";
+const REPLIES_PATH = `/v1/exchanges/${EXCHANGE_ID}/replies`;
+const REPLY: ApiReply = {
+  id: "77777777-7777-7777-8777-777777777777",
+  exchange_id: EXCHANGE_ID,
+  from: "Synthetic user",
+  kind: "text",
+  text: "Those are the seeds you saved",
+  created_at: "2026-09-22T00:00:00.000Z",
+  reaches_her: true,
 };
 const EXCHANGES_PATH = `/v1/families/${FAMILY_ID}/exchanges`;
 const COMPOSED: ApiComposedAsk = {
@@ -150,6 +164,9 @@ function fixture(enableWrites = false) {
       composeApiAsk: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["composeApiAsk"]>()
         .mockResolvedValue({ response: { status: 201, body: COMPOSED }, replayed: false }),
+      replyToApiExchange: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["replyToApiExchange"]>()
+        .mockResolvedValue({ response: { status: 201, body: REPLY }, replayed: false }),
     },
   };
   const runtime: ApiRuntime = {
@@ -1484,6 +1501,85 @@ describe("the Exchanges list", () => {
     });
     expect(response.status).toBe(401);
     expect(f.services.loadApiExchanges).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+});
+
+function replyRequest(body: unknown = { text: "Those are the seeds you saved" }) {
+  return writeRequest("POST", REPLIES_PATH, JSON.stringify(body), { authorization: "Bearer good" });
+}
+
+describe("replying to an exchange", () => {
+  it("dispatches the exchange from the path, the verified actor and the key, and answers 201", async () => {
+    const { app, writes, services } = fixture(true);
+    const response = await app.request(replyRequest());
+    expect(response.status).toBe(201);
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual(REPLY);
+    expect(writes.services.replyToApiExchange).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      EXCHANGE_ID,
+      { text: "Those are the seeds you saved" },
+    );
+    // The path has no family, so no family middleware runs: the service authorizes by exchange.
+    expect(services.authorizeFamilyAccess).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 when the service cannot find the exchange for this caller", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.replyToApiExchange.mockRejectedValue(
+      new VelaError("not_found", "Exchange not found"),
+    );
+    await expectResponse(await app.request(replyRequest()), 404, NOT_FOUND);
+  });
+
+  it("answers 409 before she has answered, and 403 for her own exchange, each with its reason", async () => {
+    const early = fixture(true);
+    early.writes.services.replyToApiExchange.mockRejectedValue(
+      new ReplyRefusedError("not_answered"),
+    );
+    await expectResponse(await early.app.request(replyRequest()), 409, {
+      error: {
+        code: "conflict",
+        message: "She has not answered yet.",
+        details: { reason: "not_answered" },
+      },
+    });
+
+    const hers = fixture(true);
+    hers.writes.services.replyToApiExchange.mockRejectedValue(new ReplyRefusedError("her_own"));
+    await expectResponse(await hers.app.request(replyRequest()), 403, {
+      error: {
+        code: "forbidden",
+        message: "She cannot reply to her own exchange.",
+        details: { reason: "her_own" },
+      },
+    });
+  });
+
+  it("refuses a reaction or an empty reply before any database is opened", async () => {
+    for (const body of [{}, { text: "" }, { text: "hi", kind: "heart" }, { kind: "heart" }]) {
+      const f = fixture(true);
+      await expectResponse(await f.app.request(replyRequest(body)), 400, INVALID);
+      expect(f.writes.services.replyToApiExchange).not.toHaveBeenCalled();
+      expect(f.openDatabase).not.toHaveBeenCalled();
+    }
+  });
+
+  it("is not there at all without the write capability", async () => {
+    const { app } = fixture();
+    await expectResponse(await app.request(replyRequest()), 404, NOT_FOUND);
+  });
+
+  it("refuses a session that is no longer live before opening the database", async () => {
+    const f = fixture(true);
+    f.writes.verifyActiveSession.mockResolvedValue(false);
+    const response = await f.app.request(replyRequest());
+    expect(response.status).toBe(401);
+    expect(f.writes.services.replyToApiExchange).not.toHaveBeenCalled();
     expect(f.openDatabase).not.toHaveBeenCalled();
   });
 });

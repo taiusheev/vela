@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack } from "expo-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
+import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import {
   Card,
@@ -29,24 +30,6 @@ import { space } from "../src/theme/tokens.ts";
 
 type When = "tomorrow" | "another_day" | "whenever";
 
-/**
- * One ask is one key, so tapping again after a failure finishes the same write rather than making
- * a second one; changing what is being sent starts a new one.
- */
-function useIdempotencyKey(): (body: unknown) => string {
-  const run = useRef(Math.random().toString(36).slice(2, 12));
-  const sent = useRef<{ body: string; key: string } | null>(null);
-  const attempts = useRef(0);
-  return (body: unknown) => {
-    const serialised = JSON.stringify(body);
-    if (sent.current?.body !== serialised) {
-      attempts.current += 1;
-      sent.current = { body: serialised, key: `ask:${run.current}:${attempts.current}` };
-    }
-    return sent.current.key;
-  };
-}
-
 export default function AskScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
@@ -57,7 +40,7 @@ export default function AskScreen() {
   const [text, setText] = useState("");
   const [when, setWhen] = useState<When>("tomorrow");
   const [taken, setTaken] = useState<ApiAskConflict | null>(null);
-  const keyFor = useIdempotencyKey();
+  const keyFor = useIdempotencyKey("ask");
   const preview = previewTranslation(text);
 
   // With no API this screen is the example day and sends nothing. With one, it must wait for the

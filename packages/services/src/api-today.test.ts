@@ -55,6 +55,7 @@ describe("loadApiToday", () => {
       date: today(),
       state: "answered",
       text: "What did the garden look like this morning?",
+      deliveredAt: new Date(answeredAt.getTime() - 60 * 60_000),
       answeredAt,
     });
     await h.db.insert(answers).values({
@@ -105,6 +106,7 @@ describe("loadApiToday", () => {
           { from: "Mia", kind: "text", text: "Those are the seeds you saved" },
         ],
         seen_at: null,
+        replies_reach_her: true,
       },
     ]);
   });

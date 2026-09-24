@@ -12,7 +12,12 @@ import {
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { loadApiLights } from "./api-lights.ts";
-import { exchangeForLocalDate, keptLightMembersOfFamily, type Queryable } from "./repo.ts";
+import {
+  exchangeForLocalDate,
+  keptLightMembersOfFamily,
+  type Queryable,
+  readBackExchangeId,
+} from "./repo.ts";
 
 /** Her words, in the order the read-back uses: what she said, else wrote, else tapped. */
 const answerText = sql<string | null>`coalesce(
@@ -71,6 +76,7 @@ export async function exchangeRow(
         : { kind: answer.kind, text: answer.text, at: answer.receivedAt.toISOString() },
     replies: replyRows,
     seen_at: exchange.seenAt?.toISOString() ?? null,
+    replies_reach_her: (await readBackExchangeId(db, recipient.id)) === exchange.id,
   };
 }
 

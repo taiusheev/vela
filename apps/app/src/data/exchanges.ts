@@ -1,6 +1,7 @@
 /**
- * What the Exchanges list and one exchange need (spec §14.1 A8). The API has no exchange routes
- * yet (API contract §4), so these fixtures carry the shapes those routes will answer with.
+ * What the Exchanges list and one exchange need (spec §14.1 A8), in the screens’ idiom. With an API
+ * the list comes from `GET /v1/families/:id/exchanges` (`useExchanges`); these example days stand
+ * in when there is none.
  */
 
 export type ReactionKind = "heart" | "laugh" | "hug";
@@ -31,6 +32,11 @@ export interface Exchange {
   answer?: ExchangeAnswer;
   replies: ExchangeReply[];
   receipt?: string;
+  /**
+   * Whether a reply written now reaches her. Her next morning reads back only her latest exchange,
+   * so on any older one a reply is kept for the family and never heard (API contract §4).
+   */
+  repliesReachHer?: boolean;
 }
 
 export const exchangesFixture: Exchange[] = [
@@ -50,6 +56,7 @@ export const exchangesFixture: Exchange[] = [
       { id: "r2", from: "Anna", text: "Those are the ones from the seeds you saved" },
     ],
     receipt: "Mom saw it · 8:12",
+    repliesReachHer: true,
   },
   {
     id: "x2",
@@ -82,7 +89,3 @@ export const exchangesFixture: Exchange[] = [
     receipt: "Mom saw it · 8:41",
   },
 ];
-
-export function findExchange(id: string): Exchange | undefined {
-  return exchangesFixture.find((exchange) => exchange.id === id);
-}

@@ -30,6 +30,7 @@ import {
   loadApiMe,
   loadApiToday,
   provisionApiAccount,
+  replyToApiExchange,
   updateApiAccount,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
@@ -117,7 +118,7 @@ const app = createApiApp({
         writes: {
           verifyActiveSession: createClerkSessionActivityChecker({ secretKey }),
           clock: { now: () => new Date() },
-          services: { provisionApiAccount, updateApiAccount, composeApiAsk },
+          services: { provisionApiAccount, updateApiAccount, composeApiAsk, replyToApiExchange },
         },
       }
     : {}),
@@ -166,7 +167,7 @@ const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) =
   console.log("[api-dev] reads: /v1/me, the family plan, the lights, Today and Exchanges");
   console.log(
     writesOn
-      ? "[api-dev] writes: the account routes and composing an ask; sessions checked live with Clerk"
+      ? "[api-dev] writes: the account routes, composing an ask and replying; sessions checked live with Clerk"
       : "[api-dev] writes answer 404: set CLERK_SECRET_KEY in apps/worker/.env.local to serve them",
   );
 });

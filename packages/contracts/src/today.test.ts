@@ -34,6 +34,7 @@ const exchange = {
     { from: "Anna", kind: "text", text: "Those are the seeds you saved" },
   ],
   seen_at: "2026-09-23T08:10:00+08:00",
+  replies_reach_her: true,
 };
 
 const turn = {

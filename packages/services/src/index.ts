@@ -58,6 +58,7 @@ export {
   runApiMutation,
 } from "./api-idempotency.ts";
 export { loadApiLights } from "./api-lights.ts";
+export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";
 export type {
   ChannelRegistry,

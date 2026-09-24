@@ -100,6 +100,20 @@ Paging is on `exchanges.id`, which is uuidv7 and so already in the order the lis
 
 The route is a read, so it needs no write capability and is served whether or not a Clerk secret key is present — unlike composing, which needs the live session check.
 
+### Replying (24 September 2026)
+
+`POST /v1/exchanges/:exchangeId/replies` takes `ComposeReply` — `{text}`, one to 1,000 characters of valid text — and answers 201 with `ApiReply`. `replyToApiExchange` in `packages/services/src/api-replies.ts` runs it through `runApiMutation` as `exchange.reply:v1`, with the exchange id in the fingerprint, so one key cannot be spent on two exchanges.
+
+**Words only.** A heart, a laugh or a hug is the same `replies` row a Telegram reaction writes, and the Telegram path makes a member's reactions *equal* to their platform set — deleting any of that member's reaction rows it does not see, whatever their channel — while `replies_one_reaction_idx` has no channel column. An app reaction would vanish the next time that member reacted in the group, or collide with the reaction they already made there.
+
+**Authorization comes from the exchange.** The path names no family, so no family middleware runs: the service locks the exchange `for update` in `authorize` — which `runApiMutation` runs on every attempt, a replay included — reads its family, and checks the caller is a live member of it. An exchange that does not exist, belongs to another family, was withdrawn, never reached her, or is older than the Exchanges list's thirty days all answer 404 alike, and so does a family that has ended. The same row lock serialises two members replying at once, which the actor lock does not, and the state is re-read under it before the transition, so a reply after the read-back leaves `read_back` where it is and `replied_at` keeps the first reply's time.
+
+**Two refusals** carry `details.reason`: `not_answered` (409) when she has not answered yet, so there is nothing to reply to; and `her_own` (403) when the caller is the kept-light member herself — she may hold an account, and her own reply would be read back to her by name the next morning. The Telegram path keeps an early reply and logs a warning; this service has no logger, so it refuses instead.
+
+**Which replies she hears.** Her next arrival reads back only her latest delivered exchange (`loadReadBack`), so a reply to any older one is kept for the family and never heard. Every card on Today and in the list carries `replies_reach_her`, and every reply `reaches_her`, computed by `readBackExchangeId` in `repo.ts` with the same selection; the app words the composer from it rather than promising a read-back it cannot keep. One window remains: the arrival captures its reply ids when it is enqueued and stamps them when it is sent, so a reply written in the seconds between the two is neither read back nor, the day after, still on her latest exchange.
+
+The mutation sends nothing and wakes nothing — a reply reaches her through the next arrival, which reads the database. It needs the write capability, like composing.
+
 ### Durable mutation receipts (22 September 2026, not exposed)
 
 `runApiMutation` in `packages/services/src/api-idempotency.ts` provides database-only replay protection. The optional account-write routes call it locally; no deployed route calls it. Migration `0001_api_request_receipts` adds the receipt table; apply it before deploying the updated retention job. `0002_account_linking` follows it with `account_link_challenges` and the `account_linked` event name. The applied `0000_init` is unchanged, and no migration has been run against staging or production for this slice.
@@ -151,7 +165,7 @@ The route is a read, so it needs no write capability and is served whether or no
 | DELETE | /exchanges/:id | Withdraw before delivery only |
 | POST | /exchanges/:id/seen | Parent surface: she opened it |
 | POST | /exchanges/:id/answer | Parent surface: `{kind: voice|chip|photo_pick|vote|heart|text|fine, media_id?, payload?}` → lights the light synchronously, enqueues understanding |
-| POST | /exchanges/:id/replies | `{kind: heart|laugh|hug|text|voice|photo, text?, media_id?}` |
+| POST | /exchanges/:id/replies | `{kind: heart|laugh|hug|text|voice|photo, text?, media_id?}` **Built** for words, see below |
 | POST | /exchanges/:id/read-back | Parent surface: she heard yesterday's replies |
 | GET | /families/:id/suggestions?for=me | The turn holder's suggestion(s) for tomorrow |
 | POST | /suggestions/:id/use | Marks used; returns a prefilled compose body |
