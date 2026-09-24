@@ -292,3 +292,28 @@ export const ApiAskConflict = z.strictObject({
   date_alternative: LocalDate.nullable(),
 });
 export type ApiAskConflict = z.infer<typeof ApiAskConflict>;
+
+/**
+ * The Exchanges list (`GET /v1/families/:familyId/exchanges`, spec §14.1 A8). The same card Today
+ * shows, with the day it was for and the moment it arrived.
+ */
+export const ApiExchangeSummary = ApiTodayExchange.extend({
+  scheduled_for: LocalDate.nullable(),
+  delivered_at: z.iso.datetime({ offset: true }).nullable(),
+});
+export type ApiExchangeSummary = z.infer<typeof ApiExchangeSummary>;
+
+/** How far back the list reaches before the family book takes over (spec A8). */
+export const EXCHANGE_LIST_DAYS = 30;
+export const EXCHANGE_PAGE_SIZE = 20;
+export const MAX_EXCHANGE_PAGE_SIZE = 50;
+
+export const ApiExchangePage = z.object({
+  exchanges: z.array(ApiExchangeSummary),
+  /**
+   * The id to ask for next, or null at the end. Ids are uuidv7 and so already in the order the
+   * list reads, which `scheduled_for` is not: it is nullable, and two exchanges can share a day.
+   */
+  next_cursor: z.uuid().nullable(),
+});
+export type ApiExchangePage = z.infer<typeof ApiExchangePage>;

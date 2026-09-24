@@ -3,6 +3,7 @@ import {
   ApiAccountProfile,
   ApiComposedAsk,
   type ApiErrorBody,
+  ApiExchangePage,
   ApiFamilyPlan,
   ApiIdempotencyKey,
   ApiMe,
@@ -20,6 +21,7 @@ import {
   type composeApiAsk,
   errorLabel,
   type Logger,
+  type loadApiExchanges,
   type loadApiFamilyPlan,
   type loadApiLights,
   type loadApiMe,
@@ -46,6 +48,7 @@ export interface ApiReadServices {
   loadApiFamilyPlan: typeof loadApiFamilyPlan;
   loadApiLights: typeof loadApiLights;
   loadApiToday: typeof loadApiToday;
+  loadApiExchanges: typeof loadApiExchanges;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
 }
 
@@ -319,6 +322,29 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         runtime.now(),
       );
       return day === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiToday.parse(day));
+    },
+  );
+  app.get(
+    "/v1/families/:familyId/exchanges",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const limit = Number(c.req.query("limit"));
+      const page = await runtime.services.loadApiExchanges(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        runtime.now(),
+        {
+          cursor: c.req.query("cursor"),
+          ...(Number.isInteger(limit) && limit > 0 ? { limit } : {}),
+        },
+      );
+      return page === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiExchangePage.parse(page));
     },
   );
   const writes = runtime.writes;

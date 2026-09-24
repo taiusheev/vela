@@ -1,4 +1,11 @@
-import type { ApiComposedAsk, ApiFamilyPlan, ApiMe, ApiToday, MemberLight } from "@vela/contracts";
+import type {
+  ApiComposedAsk,
+  ApiExchangePage,
+  ApiFamilyPlan,
+  ApiMe,
+  ApiToday,
+  MemberLight,
+} from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import {
   ApiIdempotencyError,
@@ -74,6 +81,18 @@ const TODAY: ApiToday = {
   ],
   tomorrow: [],
 };
+const LISTED = TODAY.exchanges[0];
+if (LISTED === undefined) throw new Error("the Today fixture needs an exchange");
+const EXCHANGE_PAGE: ApiExchangePage = {
+  exchanges: [
+    {
+      ...LISTED,
+      scheduled_for: "2026-09-22",
+      delivered_at: "2026-09-22T00:00:00.000Z",
+    },
+  ],
+  next_cursor: null,
+};
 const EXCHANGES_PATH = `/v1/families/${FAMILY_ID}/exchanges`;
 const COMPOSED: ApiComposedAsk = {
   id: "55555555-5555-7555-8555-555555555555",
@@ -109,6 +128,7 @@ function fixture(enableWrites = false) {
     loadApiFamilyPlan: vi.fn<ApiReadServices["loadApiFamilyPlan"]>().mockResolvedValue(PLAN),
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>().mockResolvedValue(LIGHTS),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>().mockResolvedValue(TODAY),
+    loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -1404,5 +1424,66 @@ describe("composing an ask", () => {
     const response = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
     expect(response.status).toBe(201);
     expect(response.headers.get("idempotency-replayed")).toBe("true");
+  });
+});
+
+describe("the Exchanges list", () => {
+  it("answers the page to a member of that family, passing the query through", async () => {
+    const { app, services } = fixture();
+    const response = await app.request(`${EXCHANGES_PATH}?cursor=abc&limit=5`, {
+      headers: { authorization: "Bearer good" },
+    });
+    await expectResponse(response, 200, EXCHANGE_PAGE);
+    expect(services.loadApiExchanges).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      new Date("2026-09-22T00:00:00.000Z"),
+      { cursor: "abc", limit: 5 },
+    );
+  });
+
+  it("leaves a nonsense limit to the service's own default", async () => {
+    for (const limit of ["0", "-3", "abc", "1.5"]) {
+      const { app, services } = fixture();
+      await app.request(`${EXCHANGES_PATH}?limit=${limit}`, {
+        headers: { authorization: "Bearer good" },
+      });
+      expect(services.loadApiExchanges, limit).toHaveBeenCalledWith(
+        expect.anything(),
+        IDENTITY,
+        FAMILY_ID,
+        expect.anything(),
+        { cursor: undefined },
+      );
+    }
+  });
+
+  it("answers not found when the family is not the caller's", async () => {
+    const { app, services } = fixture();
+    services.loadApiExchanges.mockResolvedValue(null);
+    const response = await app.request(EXCHANGES_PATH, {
+      headers: { authorization: "Bearer good" },
+    });
+    await expectResponse(response, 404, FAMILY_NOT_FOUND);
+  });
+
+  it("is served without the write capability, unlike composing", async () => {
+    const { app } = fixture();
+    const read = await app.request(EXCHANGES_PATH, { headers: { authorization: "Bearer good" } });
+    expect(read.status).toBe(200);
+    const write = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
+    expect(write.status).toBe(404);
+  });
+
+  it("refuses a request without a verified session before reading anything", async () => {
+    const f = fixture();
+    f.verifySession.mockResolvedValue(null);
+    const response = await f.app.request(EXCHANGES_PATH, {
+      headers: { authorization: "Bearer bad" },
+    });
+    expect(response.status).toBe(401);
+    expect(f.services.loadApiExchanges).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
   });
 });

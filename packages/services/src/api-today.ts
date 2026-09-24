@@ -30,10 +30,11 @@ async function nameOf(db: Queryable, memberId: string | null): Promise<string | 
   return row?.displayName ?? null;
 }
 
-async function exchangeOfDay(
+/** One exchange as a family reads it. Shared with the Exchanges list, which shows the same card. */
+export async function exchangeRow(
   db: Queryable,
-  member: Member,
   exchange: Exchange,
+  recipient: { id: string; displayName: string },
 ): Promise<ApiTodayExchange> {
   const [answer] = await db
     .select({
@@ -58,8 +59,8 @@ async function exchangeOfDay(
 
   return {
     id: exchange.id,
-    recipient_id: member.id,
-    recipient_name: member.displayName,
+    recipient_id: recipient.id,
+    recipient_name: recipient.displayName,
     asker_name: await nameOf(db, exchange.askerId),
     on_behalf_of: exchange.onBehalfOf,
     type: exchange.type,
@@ -159,7 +160,7 @@ export async function loadApiToday(
   for (const member of keptLight) {
     const today = localDateOf(now, member.tz);
     const exchange = await exchangeForLocalDate(db, member.id, today);
-    if (exchange !== null) exchanges.push(await exchangeOfDay(db, member, exchange));
+    if (exchange !== null) exchanges.push(await exchangeRow(db, exchange, member));
     const turn = await turnOfTomorrow(db, familyId, member, addDays(today, 1));
     if (turn !== null) tomorrow.push(turn);
   }

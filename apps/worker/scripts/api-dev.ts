@@ -24,6 +24,7 @@ import {
   authorizeFamilyAccess,
   composeApiAsk,
   errorLabel,
+  loadApiExchanges,
   loadApiFamilyPlan,
   loadApiLights,
   loadApiMe,
@@ -102,7 +103,14 @@ const app = createApiApp({
   }),
   now: () => new Date(),
   openDatabase: async () => ({ db: connection.db, close: async () => {} }),
-  services: { loadApiMe, loadApiFamilyPlan, loadApiLights, loadApiToday, authorizeFamilyAccess },
+  services: {
+    loadApiMe,
+    loadApiFamilyPlan,
+    loadApiLights,
+    loadApiToday,
+    loadApiExchanges,
+    authorizeFamilyAccess,
+  },
   logger: { error: (event, fields) => console.error(`[api-dev] ${event}`, fields ?? {}) },
   ...(writesOn && secretKey !== undefined
     ? {
@@ -155,7 +163,7 @@ async function handle(request: Request): Promise<Response> {
 const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) => {
   console.log(`[api-dev] the API is on http://127.0.0.1:${address.port}`);
   console.log(`[api-dev] verifying sessions against ${issuer}`);
-  console.log("[api-dev] reads: /v1/me, the family plan, the lights and Today");
+  console.log("[api-dev] reads: /v1/me, the family plan, the lights, Today and Exchanges");
   console.log(
     writesOn
       ? "[api-dev] writes: the account routes and composing an ask; sessions checked live with Clerk"

@@ -90,6 +90,16 @@ A day already claimed answers **409** whose `details` are `{taken_by, date_alter
 
 The mutation sends nothing. A `runApiMutation` callback may not enqueue, so unlike the Telegram path this composes no confirmation into the family group — a family on Telegram sees a morning claimed with no notice until that is carried after commit. The route is mounted on neither deployed Worker; `api-dev.ts` serves it only when a Clerk secret key is present, because a write needs the live session check that only Clerk's backend can make.
 
+### The Exchanges list (24 September 2026)
+
+`GET /v1/families/:familyId/exchanges` answers `ApiExchangePage`: the same card Today shows, with the day it was for and the moment it arrived, newest first. `loadApiExchanges` in `packages/services/src/api-exchanges.ts` takes the same family authorization the other family reads take, and puts the family in the query itself: membership is not permission to read a nested id.
+
+Only days that happened. An ask still waiting for its morning belongs on Today's tomorrow card, and a withdrawn one belongs nowhere, so the list carries only exchanges that were delivered. It reaches back `EXCHANGE_LIST_DAYS` (30) days and then stops, which is where the family book takes over (spec A8) — and is also where retention clears an exchange's words, so a longer list would be a list of blanks. That floor is applied to **every** page, not only the first, so a cursor invented by a caller cannot walk past the end the route promises.
+
+Paging is on `exchanges.id`, which is uuidv7 and so already in the order the list reads. `scheduled_for` cannot carry a cursor: it is nullable, its index is `desc nulls first`, and two exchanges in one family can share a day, so it has no total order. A cursor that is not a uuid is ignored rather than trusted. `next_cursor` is null at the end.
+
+The route is a read, so it needs no write capability and is served whether or not a Clerk secret key is present — unlike composing, which needs the live session check.
+
 ### Durable mutation receipts (22 September 2026, not exposed)
 
 `runApiMutation` in `packages/services/src/api-idempotency.ts` provides database-only replay protection. The optional account-write routes call it locally; no deployed route calls it. Migration `0001_api_request_receipts` adds the receipt table; apply it before deploying the updated retention job. `0002_account_linking` follows it with `account_link_challenges` and the `account_linked` event name. The applied `0000_init` is unchanged, and no migration has been run against staging or production for this slice.
@@ -135,7 +145,7 @@ The mutation sends nothing. A `runApiMutation` callback may not enqueue, so unli
 | Method | Path | Purpose |
 |---|---|---|
 | GET | /families/:id/today | The Today screen (A6): lights, today's exchange per kept-light member, tomorrow's turn and suggestion. **Built**, see below |
-| GET | /families/:id/exchanges?cursor= | Exchanges newest first (A8), with answers, replies, receipts, translations |
+| GET | /families/:id/exchanges?cursor= | Exchanges newest first (A8), with answers, replies, receipts, translations **Built**, see below |
 | GET | /exchanges/:id | One exchange in full |
 | POST | /families/:id/exchanges | Compose an ask: `{recipient_id, type, text?, options?, media_ids?, voice_hello_id?, when: tomorrow|date|whenever, date?, on_behalf_of?}` → exchange (state composed). `409 conflict` with `{taken_by}` if that date already has an ask; body may include `date_alternative` | **Built** for words-only asks, see below
 | DELETE | /exchanges/:id | Withdraw before delivery only |
