@@ -2,6 +2,7 @@ import type {
   ApiComposedAsk,
   ApiCreatedFamily,
   ApiExchangePage,
+  ApiFamily,
   ApiFamilyPlan,
   ApiMe,
   ApiQuietNotice,
@@ -65,6 +66,22 @@ const LIGHTS: MemberLight[] = [
     quiet_event_id: null,
   },
 ];
+const FAMILY_PATH = `/v1/families/${FAMILY_ID}`;
+const FAMILY: ApiFamily = {
+  family: { id: FAMILY_ID, name: "Synthetic family", plan: "free" },
+  me: { member_id: MEMBER_ID, role: "organiser" },
+  members: [
+    {
+      member_id: MEMBER_ID,
+      display_name: "Synthetic member",
+      role: "member",
+      status: "active",
+      light: "on",
+      subscription: null,
+    },
+  ],
+  nearby: [],
+};
 const TODAY: ApiToday = {
   lights: LIGHTS,
   exchanges: [
@@ -189,6 +206,7 @@ function fixture(enableWrites = false) {
     loadApiFamilyPlan: vi.fn<ApiReadServices["loadApiFamilyPlan"]>().mockResolvedValue(PLAN),
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>().mockResolvedValue(LIGHTS),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>().mockResolvedValue(TODAY),
+    loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>().mockResolvedValue(FAMILY),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
@@ -602,7 +620,7 @@ describe("isolated API read routes", () => {
     ["GET", "/"],
     ["GET", "/v1/unknown"],
     ["GET", "/v1/families"],
-    ["GET", "/v1/families/id"],
+    ["DELETE", "/v1/families/id"],
     ["GET", "/v1/families/id/plan/extra"],
     ["POST", "/v1/me"],
     ["POST", "/v1/me/provision"],
@@ -1398,6 +1416,34 @@ describe("the Today screen", () => {
     expect(response.status).toBe(401);
     expect(services.loadApiToday).not.toHaveBeenCalled();
     expect(openDatabase).not.toHaveBeenCalled();
+  });
+});
+
+describe("the family", () => {
+  it("answers the family to one of its members, through the family check", async () => {
+    const { app, services } = fixture();
+    const response = await app.request(FAMILY_PATH, { headers: { authorization: "Bearer good" } });
+    await expectResponse(response, 200, FAMILY);
+    expect(services.loadApiFamily).toHaveBeenCalledWith(expect.anything(), IDENTITY, FAMILY_ID);
+    expect(services.authorizeFamilyAccess).toHaveBeenCalled();
+  });
+
+  it("answers not found when the family is not the caller's", async () => {
+    const { app, services } = fixture();
+    services.loadApiFamily.mockResolvedValue(null);
+    const response = await app.request(FAMILY_PATH, { headers: { authorization: "Bearer good" } });
+    await expectResponse(response, 404, FAMILY_NOT_FOUND);
+  });
+
+  it("refuses a request without a verified session before reading anything", async () => {
+    const f = fixture();
+    f.verifySession.mockResolvedValue(null);
+    const response = await f.app.request(FAMILY_PATH, {
+      headers: { authorization: "Bearer bad" },
+    });
+    expect(response.status).toBe(401);
+    expect(f.services.loadApiFamily).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
   });
 });
 

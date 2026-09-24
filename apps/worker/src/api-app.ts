@@ -5,6 +5,7 @@ import {
   ApiCreatedFamily,
   type ApiErrorBody,
   ApiExchangePage,
+  ApiFamily,
   ApiFamilyPlan,
   ApiIdempotencyKey,
   ApiMe,
@@ -33,6 +34,7 @@ import {
   errorLabel,
   type Logger,
   type loadApiExchanges,
+  type loadApiFamily,
   type loadApiFamilyPlan,
   type loadApiLights,
   type loadApiMe,
@@ -64,6 +66,7 @@ export interface ApiReadServices {
   loadApiFamilyPlan: typeof loadApiFamilyPlan;
   loadApiLights: typeof loadApiLights;
   loadApiToday: typeof loadApiToday;
+  loadApiFamily: typeof loadApiFamily;
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
@@ -375,6 +378,23 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         runtime.now(),
       );
       return day === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiToday.parse(day));
+    },
+  );
+  app.get(
+    "/v1/families/:familyId",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const family = await runtime.services.loadApiFamily(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+      );
+      return family === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiFamily.parse(family));
     },
   );
   app.get(

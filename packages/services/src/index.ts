@@ -58,6 +58,7 @@ export {
 export { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
 export { type ApiExchangePageQuery, loadApiExchanges } from "./api-exchanges.ts";
 export { AlreadyOrganiserError, type ApiFamilyDeps, createApiFamily } from "./api-families.ts";
+export { loadApiFamily } from "./api-family.ts";
 export {
   ApiIdempotencyError,
   type ApiMutationAction,

@@ -460,3 +460,47 @@ export type QuietAction = z.infer<typeof QuietAction>;
  */
 export const ApiQuietState = ApiQuietNotice.omit({ contacts: true });
 export type ApiQuietState = z.infer<typeof ApiQuietState>;
+
+/** Where a nearby contact's yes stands: given, refused, or not yet given (spec §8, L8). */
+export const NEARBY_CONSENTS = ["yes", "no", "waiting"] as const;
+export const NearbyConsent = z.enum(NEARBY_CONSENTS);
+export type NearbyConsent = z.infer<typeof NearbyConsent>;
+
+/**
+ * The family as You shows it (`GET /v1/families/:familyId`, spec §14.1 A12). Every live member with
+ * their light — on, waiting for her yes, or off — and, for a kept-light member, where her Vela Light
+ * trial or plan stands. The people nearby are for the organisers, who set them up, and carry where
+ * their yes stands, never their numbers; anyone else gets null.
+ */
+export const ApiFamily = z.object({
+  family: z.object({ id: z.uuid(), name: z.string(), plan: Plan }),
+  me: z.object({ member_id: z.uuid(), role: Role }),
+  members: z.array(
+    z.object({
+      member_id: z.uuid(),
+      display_name: z.string(),
+      role: Role,
+      status: MemberStatus.extract(["invited", "active", "paused"]),
+      light: z.enum(["on", "waiting", "off"]),
+      subscription: z
+        .object({
+          status: SubscriptionStatus,
+          trial_ends_at: z.iso.datetime({ offset: true }).nullable(),
+          current_period_end: z.iso.datetime({ offset: true }).nullable(),
+        })
+        .nullable(),
+    }),
+  ),
+  nearby: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        near_member_id: z.uuid(),
+        name: z.string(),
+        relation: z.string().nullable(),
+        consent: NearbyConsent,
+      }),
+    )
+    .nullable(),
+});
+export type ApiFamily = z.infer<typeof ApiFamily>;

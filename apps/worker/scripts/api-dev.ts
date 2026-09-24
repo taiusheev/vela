@@ -27,6 +27,7 @@ import {
   createApiFamily,
   errorLabel,
   loadApiExchanges,
+  loadApiFamily,
   loadApiFamilyPlan,
   loadApiLights,
   loadApiMe,
@@ -118,6 +119,7 @@ const app = createApiApp({
     loadApiFamilyPlan,
     loadApiLights,
     loadApiToday,
+    loadApiFamily,
     loadApiExchanges,
     loadApiQuiet,
     authorizeFamilyAccess,
@@ -190,7 +192,7 @@ const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) =
   console.log(`[api-dev] the API is on http://127.0.0.1:${address.port}`);
   console.log(`[api-dev] verifying sessions against ${issuer}`);
   console.log(
-    "[api-dev] reads: /v1/me, the family plan, the lights, Today, Exchanges and the quiet notice",
+    "[api-dev] reads: /v1/me, the family plan, the family, the lights, Today, Exchanges and the quiet notice",
   );
   console.log(
     writesOn

@@ -4,6 +4,7 @@ import type {
   ApiComposedAsk,
   ApiCreatedFamily,
   ApiExchangePage,
+  ApiFamily,
   ApiMe,
   ApiQuietNotice,
   ApiQuietState,
@@ -97,6 +98,11 @@ function read<T>(path: string, token: string | null): Promise<T> {
 
 export function fetchMe(token: string | null): Promise<ApiMe> {
   return read<ApiMe>("/v1/me", token);
+}
+
+/** The family behind You: members, their lights and plans, and for organisers the people nearby. */
+export function fetchFamily(familyId: string, token: string | null): Promise<ApiFamily> {
+  return read<ApiFamily>(`/v1/families/${familyId}`, token);
 }
 
 export function fetchToday(familyId: string, token: string | null): Promise<ApiToday> {

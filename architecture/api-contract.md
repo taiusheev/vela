@@ -124,6 +124,12 @@ The caller's account must exist first (`POST /v1/me/provision`), because the org
 
 A1's age, city and "lives alone" are not asked: nothing stores or uses them, and the privacy notice does not cover them. The response carries the invite token, so the receipt that replays it holds the token for its 24 hours; it is never logged. The route needs the write capability and a family capability of its own — a token source and the bot the link opens — and answers 404 without them.
 
+### The family (24 September 2026)
+
+`GET /v1/families/:familyId` answers `ApiFamily`, what You shows (spec A12): the family's name and plan; `me`, the caller's member id and role; every live member — invited, active or paused, never one who has left — in the order they joined, each with a `light` of `on`, `waiting` (invited and not yet answered, which is how onboarding leaves a kept-light member, and how the lights row reads her) or `off`, and, where a subscription covers them, its status, trial end and period end; and `nearby`, the people who could look in, each with the member they are near and `consent` `yes`, `no` or `waiting`. `loadApiFamily` in `packages/services/src/api-family.ts` takes the same family authorization as the other family reads.
+
+**The people nearby are for the organisers**, who set them up; anyone else gets `nearby: null`. **No number is in it**, for anyone: a number is given only in the quiet notice, to the people the notice is for. A contact near a member who has left is not listed. Prices are not in it either — the plan card is A13's, and nothing charges yet. A stranger, a family that is not the caller's and an unknown family all answer 404.
+
 ### The quiet notice (24 September 2026)
 
 `GET /v1/quiet/:quietEventId` answers `ApiQuietNotice`: whose light it is, when today's ask reached her and when it was asked again, her usual answering time once there are enough answers to know it, when she last answered, when the event opened, `wait_until`, `resolved` (the outcome, when, and who said she was fine), and the people nearby who have said yes, with their numbers. Facts only — never her words. `loadApiQuiet` in `packages/services/src/api-quiet.ts` reads the family from the event, since the path names none, and answers **the family's organisers only**, as the Telegram notice goes only to them: the numbers are given to the people the notice is for. Anyone else, an event that does not exist and an id that is not a uuid all answer 404 alike.
@@ -153,7 +159,7 @@ A quiet event opened during the learning period notifies nobody for its first ei
 | Method | Path | Purpose |
 |---|---|---|
 | POST | /families | Create a family: `{name, country, kept_light_member: {display_name, address_form, language, tz, wake_time, city}}` → family, member rows, region set **Built**, see below |
-| GET | /families/:id | Family, members with light states (§2.2), nearby contacts, plan |
+| GET | /families/:id | Family, members with their light and plan, nearby contacts' consent (organisers only) **Built**, see §1 "The family" |
 | PATCH | /families/:id | name, story_day, turns_enabled |
 | DELETE | /families/:id | Schedules deletion within 24 h |
 | POST | /families/:id/members | Add a member (self-invite accepted, or organiser adds a kept-light member) |
