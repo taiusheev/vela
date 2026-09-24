@@ -25,6 +25,7 @@ import {
   type VelaTransaction,
 } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
+import { quietNobodyToldAlert } from "./admin-alerts.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime } from "./format.ts";
@@ -134,6 +135,21 @@ async function sendQuietNotices(
 ): Promise<void> {
   const { member, family, exchange, quiet } = ctx;
   const organisers = await activeOrganisersWithLinks(tx, family.id, NOTICE_CHANNEL);
+  if (organisers.length === 0) {
+    // Nobody who could be told: an app-made family, or one whose last organiser was marked left or
+    // blocked the bot. Her silence must not end here unheard, so the founder hears it.
+    deps.logger.error("quiet_notice_nobody_told", { familyId: family.id, memberId: member.id });
+    const alert = quietNobodyToldAlert(deps, {
+      quietId: quiet.id,
+      round: quiet.notifyCount,
+      her: member,
+      family,
+    });
+    if (alert !== null) {
+      await enqueueOutbound(deps, tx, alert);
+    }
+    return;
+  }
   const contacts = await consentedNearbyContacts(tx, member.id);
   const usual = usualAnswerTime(
     await recentAnswerTimes(tx, member.id, TUNING.minSamples),

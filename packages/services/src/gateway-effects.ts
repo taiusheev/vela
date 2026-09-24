@@ -3,9 +3,10 @@
  * §3.8, §3.12). The gateway calls these inside the transaction that records the send; they return
  * the notices to enqueue and the members whose scheduler must look again, and the gateway does both,
  * the wakes only after the transaction has committed, so a tick never reads state that is about to
- * appear. Nothing here imports a flow module: the effects are the gateway's own. The one exception is
- * the message that closes a quiet event (`quiet-closing.ts`), which a notice landing after the close
- * must send and the close itself sends too; it imports no flow, so no cycle comes with it.
+ * appear. Nothing here imports a flow module: the effects are the gateway's own. Two leaves are the
+ * exception, each importing no flow, so no cycle comes with them: the message that closes a quiet
+ * event (`quiet-closing.ts`), which a notice landing after the close must send; and the founder's
+ * alert when a blocked link was a family's last organiser who could be told (`admin-alerts.ts`).
  */
 import { LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -23,6 +24,7 @@ import {
 } from "@vela/db";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { organisersUnreachableAlert } from "./admin-alerts.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { channelLabel } from "./format.ts";
@@ -374,14 +376,19 @@ async function arrivalFailed(
   return { notices, wakeMemberIds: [member.id] };
 }
 
-/** The state changes after a send has finally failed: the block on the link, then by kind. */
+/**
+ * The state changes after a send has finally failed: the block on the link, then by kind. A link
+ * that becomes blocked here may have been the family's last organiser who could be told, and the
+ * founder hears that at once (`organisersUnreachableAlert`); a link already blocked says nothing new.
+ */
 export async function applyFailureEffects(
   deps: Deps,
   tx: VelaTransaction,
   ctx: FailedContext,
 ): Promise<FailedOutcome> {
+  const alerts: OutboundRequest[] = [];
   if (ctx.code === "blocked") {
-    await tx
+    const blocked = await tx
       .update(channelLinks)
       .set({ blockedAt: ctx.failedAt })
       .where(
@@ -390,10 +397,20 @@ export async function applyFailureEffects(
           eq(channelLinks.externalId, ctx.row.conversationId),
           isNull(channelLinks.blockedAt),
         ),
+      )
+      .returning({ memberId: channelLinks.memberId });
+    for (const link of blocked) {
+      const alert = await organisersUnreachableAlert(
+        deps,
+        tx,
+        link.memberId,
+        `blocked:${link.memberId}:${ctx.row.id}`,
       );
+      if (alert !== null) {
+        alerts.push(alert);
+      }
+    }
   }
-  if (ctx.row.kind === "arrival") {
-    return arrivalFailed(deps, tx, ctx);
-  }
-  return { notices: [], wakeMemberIds: [] };
+  const byKind = ctx.row.kind === "arrival" ? await arrivalFailed(deps, tx, ctx) : NOTHING_FOLLOWS;
+  return { wakeMemberIds: byKind.wakeMemberIds, notices: [...byKind.notices, ...alerts] };
 }

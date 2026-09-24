@@ -182,4 +182,8 @@ export const en = {
   "admin.flag": "Flag in {family}. Open: {link}",
   "admin.understand_failed": "Could not read an answer in {family} after three tries. Open: {link}",
   "admin.member_left_group": "{name} left the family group in {family}. Nothing changed for them.",
+  "admin.organisers_unreachable":
+    "{name} can no longer be told anything in {family}, and no other organiser can: nobody will hear if a light there goes quiet. Open: {link}",
+  "admin.quiet_nobody_told":
+    "It's been quiet at {name}'s today in {family}, and no organiser can be told. Open: {link}",
 } satisfies Record<string, string>;

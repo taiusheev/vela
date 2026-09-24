@@ -69,7 +69,15 @@ import {
 } from "@vela/db";
 import { and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { Config, Deps } from "./deps.ts";
+import {
+  ADMIN_CHANNEL,
+  ADMIN_LANG,
+  ADMIN_OVERVIEW_PATH,
+  adminLink,
+  familyPagePath,
+  organisersUnreachableAlert,
+} from "./admin-alerts.ts";
+import type { Deps } from "./deps.ts";
 import { isErrorCode, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
@@ -108,31 +116,8 @@ const DAY_MS = 86_400_000;
 
 const DAYS_IN_WEEK = 7;
 
-/**
- * The founder reads the admin conversation in English, the copy's source language: every
- * `admin.*` message is written in it, whatever the family speaks.
- */
-export const ADMIN_LANG: Lang = "en";
-
-/**
- * The admin conversation is one chat on one channel: the founder's chat with the bot on Telegram,
- * like the pilot's families (flows §3.14). Every row addressed to `Config.adminConversationId`
- * carries this channel, whatever channel the family that caused it is on, or the row would be
- * handed to another channel's adapter with a Telegram chat id.
- */
-export const ADMIN_CHANNEL: Channel = "telegram";
-
-/** The path of the overview; the family page is `familyPagePath`. The worker serves both (§9). */
-export const ADMIN_OVERVIEW_PATH = "/admin";
-
-export function familyPagePath(familyId: string): string {
-  return `/admin/families/${familyId}`;
-}
-
-/** The `{link}` in admin messages: the family's page on the Worker's public origin. */
-export function adminLink(config: Config, familyId: string): string {
-  return `${config.publicBaseUrl.replace(/\/+$/, "")}${familyPagePath(familyId)}`;
-}
+// Where the founder is told lives in `admin-alerts.ts`, a leaf the gateway's effects can import.
+export { ADMIN_CHANNEL, ADMIN_LANG, ADMIN_OVERVIEW_PATH, adminLink, familyPagePath };
 
 // Input ---------------------------------------------------------------------------------------------
 
@@ -1017,6 +1002,16 @@ export async function markLeft(deps: Deps, ctx: AdminContext, memberId: string):
         props: { source: "admin", role: member.role, kept_light: keptLight },
       },
     });
+    // Marking the last organiser left is allowed — the founder may know better — but it is said.
+    const alert = await organisersUnreachableAlert(
+      deps,
+      tx,
+      member.id,
+      `left:${member.id}:${at.toISOString()}`,
+    );
+    if (alert !== null) {
+      await enqueueOutbound(deps, tx, alert);
+    }
     return keptLight;
   });
   if (clearScheduler) {

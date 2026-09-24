@@ -11,6 +11,7 @@
 import type { InboundEvent, InboundKind } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { decodeButton, outboundKey, parseParentCommand } from "@vela/core";
+import { organisersUnreachableAlert } from "../admin-alerts.ts";
 import {
   type AnswerButtonAction,
   canAnswer,
@@ -93,12 +94,28 @@ async function route(deps: Deps, event: InboundEvent): Promise<void> {
 async function routePrivate(deps: Deps, event: InboundEvent): Promise<void> {
   if (event.kind === "blocked" || event.kind === "unblocked") {
     const blocked = event.kind === "blocked";
-    const known = await setChannelLinkBlocked(
-      deps.db,
-      event.channel,
-      event.sender.externalUserId,
-      blocked ? new Date(event.at) : null,
-    );
+    const known = await deps.db.transaction(async (tx) => {
+      const change = await setChannelLinkBlocked(
+        tx,
+        event.channel,
+        event.sender.externalUserId,
+        blocked ? new Date(event.at) : null,
+      );
+      // An organiser who blocks the bot can no longer be told her light went quiet; if none is
+      // left who can be, the founder hears it now (`admin-alerts.ts`).
+      for (const memberId of change.newlyBlockedMemberIds) {
+        const alert = await organisersUnreachableAlert(
+          deps,
+          tx,
+          memberId,
+          `blocked:${memberId}:${event.eventId}`,
+        );
+        if (alert !== null) {
+          await enqueueOutbound(deps, tx, alert);
+        }
+      }
+      return change.known;
+    });
     deps.logger.info("channel_link_blocked", { blocked, known });
     return;
   }

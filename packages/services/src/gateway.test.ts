@@ -580,6 +580,55 @@ describe("deliverOutbound retries", () => {
       .where(eq(channelLinks.id, seed.organiserLink.id));
     expect(organiserLink?.blockedAt).toBeNull();
   });
+
+  /** A system message to Mia, the family's organiser, in her private chat. */
+  function systemToOrganiser(seed: SeededFamily, suffix: string): OutboundRequest {
+    return {
+      ...systemTo(seed, suffix),
+      idempotencyKey: outboundKey("system", {
+        conversationId: seed.organiserLink.externalId,
+        suffix,
+      }),
+      memberId: seed.organiser.id,
+      conversationId: seed.organiserLink.externalId,
+    };
+  }
+
+  async function toFounder(): Promise<string[]> {
+    const rows = await h.db
+      .select()
+      .from(outbound)
+      .where(eq(outbound.conversationId, h.deps.config.adminConversationId ?? ""));
+    return rows.map((row) => (row.payload as { message: { text: string } }).message.text);
+  }
+
+  it("tells the founder when the last organiser who could be told blocks the bot", async () => {
+    const seed = await family();
+    const id = await enqueued(systemToOrganiser(seed, "blocked"));
+    h.telegram.failNextSends(1, "blocked");
+
+    expect(await deliverOutbound(h.deps, id)).toBe("failed");
+
+    expect(await toFounder()).toEqual([
+      `Mia can no longer be told anything in The Chens, and no other organiser can: nobody will hear if a light there goes quiet. Open: https://vela.test/admin/families/${seed.family.id}`,
+    ]);
+  });
+
+  it("says nothing to the founder while another organiser can still be told", async () => {
+    const seed = await family();
+    await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      externalId: "1003",
+      role: "organiser",
+    });
+    const id = await enqueued(systemToOrganiser(seed, "blocked"));
+    h.telegram.failNextSends(1, "blocked");
+
+    expect(await deliverOutbound(h.deps, id)).toBe("failed");
+
+    expect(await toFounder()).toEqual([]);
+  });
 });
 
 describe("deliverOutbound and the upgraded group", () => {

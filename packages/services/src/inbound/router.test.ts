@@ -126,6 +126,23 @@ async function memberCount(): Promise<number> {
 }
 
 describe("the private chat", () => {
+  it("tells the founder once when the family's last organiser blocks the bot, and not for her", async () => {
+    const { seed } = await scene();
+    const founder = h.deps.config.adminConversationId ?? "";
+
+    // Her block matters to her morning, not to who can be told of it.
+    await inbound(privately(HER, { kind: "blocked" }));
+    expect(h.telegram.sentTo(founder)).toEqual([]);
+
+    // Mia was the only organiser: from now on nobody hears when her light goes quiet.
+    await inbound(privately(ORGANISER, { kind: "blocked" }));
+    await inbound(privately(ORGANISER, { kind: "blocked" }));
+
+    expect(h.telegram.sentTo(founder).map((sent) => sent.message.text)).toEqual([
+      `Mia can no longer be told anything in The Chens, and no other organiser can: nobody will hear if a light there goes quiet. Open: https://vela.test/admin/families/${seed.family.id}`,
+    ]);
+  });
+
   it("answers a stranger with how to begin, directly, and a member of a family through the gateway", async () => {
     const { seed } = await scene();
 

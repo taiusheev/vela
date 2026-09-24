@@ -153,4 +153,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "admin.flag": "{family}有一則標記。查看： {link}",
   "admin.understand_failed": "{family}有一則回覆試了三次仍無法讀取。查看： {link}",
   "admin.member_left_group": "{name}退出了{family}的家人群組。{name}這邊沒有任何變動。",
+  "admin.organisers_unreachable":
+    "{family}已經無法再通知{name}，也沒有其他發起人能收到通知：那裡有人安靜下來時，不會有人知道。查看： {link}",
+  "admin.quiet_nobody_told":
+    "{family}的{name}那邊今天比較安靜，但沒有任何發起人能收到通知。查看： {link}",
 };

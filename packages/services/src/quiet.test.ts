@@ -1,6 +1,14 @@
 import type { InboundEvent, LocalDate } from "@vela/contracts";
 import { decodeButton, encodeButton, outboundKey, TUNING } from "@vela/core";
-import { type ChannelLink, events, exchanges, members, outbound, quietEvents } from "@vela/db";
+import {
+  type ChannelLink,
+  channelLinks,
+  events,
+  exchanges,
+  members,
+  outbound,
+  quietEvents,
+} from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { OutboundJob } from "./deps.ts";
@@ -227,6 +235,31 @@ describe("openQuiet", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.lastNotifiedAt).toBeNull();
     expect(await noticeRows()).toHaveLength(0);
+  });
+
+  it("tells the founder, and only the founder, when her silence finds no organiser who can be told", async () => {
+    // A family made in the app: its organiser has no Telegram link, and notices reach only Telegram.
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db.delete(channelLinks).where(eq(channelLinks.id, seed.organiserLink.id));
+    await seedExchange(h.db, seed, { date: TODAY, state: "delivered", deliveredAt: h.clock.now() });
+    h.clock.advanceMinutes(TUNING.defaultQuietAfterMinutes);
+
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+
+    expect(await noticeRows()).toEqual([]);
+    const admin = h.deps.config.adminConversationId ?? "";
+    const toFounder = await h.db.select().from(outbound).where(eq(outbound.conversationId, admin));
+    expect(
+      toFounder.map((row) => (row.payload as { message: { text: string } }).message.text),
+    ).toEqual([
+      `It's been quiet at Mom's today in The Chens, and no organiser can be told. Open: https://vela.test/admin/families/${seed.family.id}`,
+    ]);
+    expect(h.logger.entries).toContainEqual({
+      level: "error",
+      event: "quiet_notice_nobody_told",
+      fields: { familyId: seed.family.id, memberId: seed.member.id },
+    });
   });
 
   it("opens nothing for a morning that was never delivered", async () => {

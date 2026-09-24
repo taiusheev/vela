@@ -165,20 +165,35 @@ export async function familyById(db: Queryable, familyId: string): Promise<Famil
 
 /**
  * Records that the person blocked the bot on the channel, or unblocked it (flows §5, the routing
- * table): a blocked link is left out of every send, so nothing is queued that can only fail.
+ * table): a blocked link is left out of every send, so nothing is queued that can only fail. Says
+ * whether any link was known, and whose link this has just blocked — one already blocked is not
+ * "just" — so the caller can tell whether a family has lost its last organiser who could be told.
  */
 export async function setChannelLinkBlocked(
   db: Queryable,
   channel: Channel,
   externalUserId: string,
   blockedAt: Date | null,
-): Promise<boolean> {
-  const rows = await db
-    .update(channelLinks)
-    .set({ blockedAt })
-    .where(and(eq(channelLinks.channel, channel), eq(channelLinks.externalId, externalUserId)))
-    .returning({ id: channelLinks.id });
-  return rows.length > 0;
+): Promise<{ known: boolean; newlyBlockedMemberIds: string[] }> {
+  const where = and(eq(channelLinks.channel, channel), eq(channelLinks.externalId, externalUserId));
+  // Read under the row lock (in the caller's transaction), so a block the gateway records at the
+  // same moment is seen, and only one of the two counts as the moment the link became blocked.
+  const before = await db
+    .select({ memberId: channelLinks.memberId, blockedAt: channelLinks.blockedAt })
+    .from(channelLinks)
+    .where(where)
+    .for("update");
+  if (before.length === 0) {
+    return { known: false, newlyBlockedMemberIds: [] };
+  }
+  await db.update(channelLinks).set({ blockedAt }).where(where);
+  return {
+    known: true,
+    newlyBlockedMemberIds:
+      blockedAt === null
+        ? []
+        : before.filter((link) => link.blockedAt === null).map((l) => l.memberId),
+  };
 }
 
 /** The member's link on the channel, blocked or not. */

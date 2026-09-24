@@ -1153,6 +1153,33 @@ describe("markLeft", () => {
     });
     expect(await logRows()).toHaveLength(1);
   });
+
+  it("tells the founder when the organiser marked left was the last one who could be told", async () => {
+    const seed = await family();
+    const anna = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      externalId: "1003",
+      role: "organiser",
+    });
+    const toFounder = async () =>
+      (
+        await h.db
+          .select()
+          .from(outbound)
+          .where(eq(outbound.conversationId, h.deps.config.adminConversationId ?? ""))
+      ).map((row) => (row.payload as { message: { text: string } }).message.text);
+
+    // One of two: Mia can still be told, so nothing is said.
+    await markLeft(h.deps, FOUNDER, anna.member.id);
+    expect(await toFounder()).toEqual([]);
+
+    // The last one: from now on a quiet morning here reaches nobody.
+    await markLeft(h.deps, FOUNDER, seed.organiser.id);
+    expect(await toFounder()).toEqual([
+      `Mia can no longer be told anything in The Chens, and no other organiser can: nobody will hear if a light there goes quiet. Open: https://vela.test/admin/families/${seed.family.id}`,
+    ]);
+  });
 });
 
 describe("markDeceased", () => {
