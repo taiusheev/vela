@@ -2,9 +2,10 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { closeSync, existsSync, openSync, readFileSync } from "node:fs";
 import { appendFile, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { connectDatabase, type DatabaseConnection } from "@vela/db";
@@ -19,10 +20,32 @@ const INTERRUPT_GRACE_MS = 30_000;
 
 const packageDir = fileURLToPath(new URL("..", import.meta.url));
 const dbDir = fileURLToPath(new URL("../../db", import.meta.url));
-const vitestCli = fileURLToPath(new URL("../node_modules/vitest/vitest.mjs", import.meta.url));
 const vitestConfig = fileURLToPath(new URL("../vitest.postgres.config.ts", import.meta.url));
 
 class HarnessBlocker extends Error {}
+
+/**
+ * Vitest's own entry point. Where pnpm puts it depends on hoisting, and it is not always under this
+ * package's own node_modules, so ask Node rather than guess: a hardcoded path made the drill
+ * unrunnable in both the main checkout and a worktree once hoisting changed.
+ */
+function vitestCli(): string {
+  const guess = fileURLToPath(new URL("../node_modules/vitest/vitest.mjs", import.meta.url));
+  if (existsSync(guess)) return guess;
+  let resolved: string;
+  try {
+    resolved = join(
+      dirname(createRequire(import.meta.url).resolve("vitest/package.json")),
+      "vitest.mjs",
+    );
+  } catch {
+    throw new HarnessBlocker("vitest could not be resolved from @vela/services; run pnpm install");
+  }
+  if (!existsSync(resolved)) {
+    throw new HarnessBlocker(`vitest was resolved to ${resolved}, which does not exist`);
+  }
+  return resolved;
+}
 
 class HarnessInterrupted extends Error {}
 
@@ -615,7 +638,7 @@ function runTests(port: number, args: readonly string[]): Promise<number> {
   ensureRunning();
   return new Promise((resolve, reject) => {
     const child = watch(
-      spawn(process.execPath, [vitestCli, "run", "--config", vitestConfig, ...args], {
+      spawn(process.execPath, [vitestCli(), "run", "--config", vitestConfig, ...args], {
         cwd: packageDir,
         stdio: "inherit",
         windowsHide: true,

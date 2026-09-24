@@ -15,6 +15,7 @@ import { AskDayTakenError, composeApiAsk } from "../src/api-asks.ts";
 import { seedFamily, seedGroupMember } from "../src/testing/seed.ts";
 import {
   databaseErrorCode,
+  HOLD_MS,
   NOW,
   openPostgresHarness,
   type PostgresHarness,
@@ -98,15 +99,20 @@ function compose(client: RaceClient, who: SessionIdentity, key: string, date: st
 }
 
 /**
- * Both composes queued on her member row, held open by a third connection. Releasing it leaves them
- * to serialise on that row alone, in whichever order PostgreSQL granted it.
+ * Every compose queued on her member row behind a third connection holding it, in the order given,
+ * then the holder lets go and they serialise on that row alone.
+ *
+ * Each one is started only once the one before it is confirmed waiting, because `pg_blocking_pids`
+ * names a backend's *direct* blocker and nothing further up: the first waiter blocks on the holder's
+ * transaction, the second on the first waiter's tuple lock, and so on. Starting them together would
+ * leave the queue order to chance, and with it which asker gets the morning.
  */
 async function queueOnHerRow(
   holder: RaceClient,
-  waiters: readonly { client: RaceClient; operation: Promise<unknown> }[],
-): Promise<void> {
+  starts: readonly { client: RaceClient; start: () => Promise<unknown> }[],
+): Promise<Promise<unknown>[]> {
   const entered = pg.latch("the holder to take her row");
-  const release = pg.latch("the holder to let her row go");
+  const release = pg.latch("the holder to let her row go", HOLD_MS);
   const held = pg.track(
     holder.db.transaction(async (tx) => {
       await tx.select().from(members).where(eq(members.id, scope.recipientId)).for("update");
@@ -115,11 +121,19 @@ async function queueOnHerRow(
     }),
   );
   await entered.wait();
-  for (const waiter of waiters) {
-    await pg.waitForRowLockWait(waiter.client, [holder], waiter.operation);
+
+  const operations: Promise<unknown>[] = [];
+  let ahead: RaceClient = holder;
+  for (const queued of starts) {
+    const operation = queued.start();
+    operations.push(operation);
+    await pg.waitForRowLockWait(queued.client, [ahead], operation);
+    ahead = queued.client;
   }
+
   release.release();
   await held;
+  return operations;
 }
 
 async function exchangeRows(client: RaceClient) {
@@ -134,36 +148,34 @@ describe("composing an ask on independent PostgreSQL connections", () => {
     }
     const date = tomorrow();
 
-    const hers = compose(first, mia, "key-mia", date);
-    const his = compose(second, sam, "key-sam", date);
-    await queueOnHerRow(holder, [
-      { client: first, operation: hers },
-      { client: second, operation: his },
+    // Mia queues first, so the morning is hers and Sam is the one who hears about it.
+    const queued = await queueOnHerRow(holder, [
+      { client: first, start: () => compose(first, mia, "key-mia", date) },
+      { client: second, start: () => compose(second, sam, "key-sam", date) },
     ]);
-
-    const results = await pg.settle("both composes", [hers, his]);
-    const won = results.filter((result) => result.status === "fulfilled");
-    const lost = results.filter((result) => result.status === "rejected");
-    expect(won).toHaveLength(1);
-    expect(lost).toHaveLength(1);
-
-    // The winner's ask is the one in her morning, and the loser hears whose it is.
-    const winner = won[0];
-    const loser = lost[0];
-    if (winner?.status !== "fulfilled" || loser?.status !== "rejected") {
-      throw new Error("expected exactly one composed ask and one refusal");
+    const [won, lost] = await pg.settle("both composes", queued);
+    if (won?.status !== "fulfilled" || lost?.status !== "rejected") {
+      throw new Error(
+        `expected Mia's ask and Sam's refusal, got ${won?.status} and ${lost?.status}`,
+      );
     }
-    expect(winner.value.response.status).toBe(201);
-    expect(winner.value.replayed).toBe(false);
-    expect(loser.reason).toBeInstanceOf(AskDayTakenError);
+
+    const composed = won.value as {
+      response: { status: number; body: unknown };
+      replayed: boolean;
+    };
+    expect(composed.response.status).toBe(201);
+    expect(composed.replayed).toBe(false);
+    expect((composed.response.body as { asker_name: string }).asker_name).toBe("Mia");
+
+    expect(lost.reason).toBeInstanceOf(AskDayTakenError);
     // The rule was held by the row lock, not by `exchanges_one_per_day`: a unique violation here
     // would mean both mutations reached the insert, which is the incident the backstop exists for.
-    expect(databaseErrorCode(loser.reason)).toBeUndefined();
-
-    const conflict = (loser.reason as AskDayTakenError).conflict;
-    const askerName = (winner.value.response.body as { asker_name: string }).asker_name;
-    expect(conflict.taken_by).toBe(askerName);
-    expect(conflict.date_alternative).toBe(addDays(date, 1));
+    expect(databaseErrorCode(lost.reason)).toBeUndefined();
+    expect((lost.reason as AskDayTakenError).conflict).toEqual({
+      taken_by: "Mia",
+      date_alternative: addDays(date, 1),
+    });
 
     const rows = await exchangeRows(holder);
     expect(rows).toHaveLength(1);
@@ -179,15 +191,13 @@ describe("composing an ask on independent PostgreSQL connections", () => {
     const date = tomorrow();
     const dayAfter = addDays(date, 1);
 
-    const hers = compose(first, mia, "key-mia", date);
-    const his = compose(second, sam, "key-sam", dayAfter);
-    await queueOnHerRow(holder, [
-      { client: first, operation: hers },
-      { client: second, operation: his },
+    const queued = await queueOnHerRow(holder, [
+      { client: first, start: () => compose(first, mia, "key-mia", date) },
+      { client: second, start: () => compose(second, sam, "key-sam", dayAfter) },
     ]);
 
     // Serialising on her row must not turn two free mornings into a conflict.
-    const results = await pg.settle("both composes", [hers, his]);
+    const results = await pg.settle("both composes", queued);
     expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"]);
 
     const rows = await exchangeRows(holder);
