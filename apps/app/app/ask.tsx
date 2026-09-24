@@ -47,10 +47,14 @@ export default function AskScreen() {
   // real day: `today` is the fixture until it arrives, and its people are nobody's family.
   const demo = !apiConfigured();
   const lights = demo || live ? today.lights : [];
-  // A paused light cannot be asked (`canBeAsked`), so the screen offers the first one that can.
-  const recipient = lights.find((light) => light.state !== "paused") ?? lights[0];
+  // A paused light, or one not yet said yes to, cannot be asked (`canBeAsked`), so the screen offers
+  // the first that can, and says why when none can.
+  const recipient =
+    lights.find((light) => light.state !== "paused" && light.invited !== true) ?? lights[0];
   const paused = recipient !== undefined && recipient.state === "paused";
-  const ready = demo || (live && familyId !== undefined && recipient !== undefined && !paused);
+  const invited = recipient !== undefined && recipient.invited === true;
+  const ready =
+    demo || (live && familyId !== undefined && recipient !== undefined && !paused && !invited);
 
   const compose = useMutation({
     mutationFn: async (ask: ComposeAsk) =>
@@ -90,7 +94,9 @@ export default function AskScreen() {
   const hold = waiting
     ? paused
       ? `${name}'s light is paused just now, so nothing can be sent into her morning.`
-      : "Waiting for today to arrive. Your words are kept."
+      : invited
+        ? `${name} has not said yes yet. Once she does, her first morning is the next day.`
+        : "Waiting for today to arrive. Your words are kept."
     : null;
 
   return (

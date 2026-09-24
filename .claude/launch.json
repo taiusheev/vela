@@ -6,6 +6,13 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@vela/app", "run", "web", "--port", "8081"],
       "port": 8081
+    },
+    {
+      "name": "vela-app-demo",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@vela/app", "run", "web", "--port", "8082"],
+      "port": 8082,
+      "env": { "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "", "EXPO_PUBLIC_API_URL": "" }
     }
   ]
 }

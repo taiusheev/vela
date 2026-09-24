@@ -15,7 +15,8 @@
     "notices": "node scripts/generate-notices.ts",
     "cf-typegen": "wrangler types --include-runtime false",
     "api:dev": "node --env-file-if-exists=.env.local scripts/api-dev.ts",
-    "seed:dev": "node --env-file-if-exists=.env.local scripts/seed-dev-family.ts"
+    "seed:dev": "node --env-file-if-exists=.env.local scripts/seed-dev-family.ts",
+    "consent:dev": "node --env-file-if-exists=.env.local scripts/consent-dev.ts"
   },
   "dependencies": {
     "@vela/adapters": "workspace:*",

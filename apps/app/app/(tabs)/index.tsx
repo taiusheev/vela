@@ -108,7 +108,11 @@ export default function TodayScreen() {
   const [quietOpen, setQuietOpen] = useState(false);
   const [resolution, setResolution] = useState<string | undefined>();
   const insets = useSafeAreaInsets();
-  const { today, trouble, noAccount } = useToday();
+  const { today, trouble, noAccount, noFamily } = useToday();
+  // A first run, or an account that belongs to no family yet: onboarding is where that starts (A1).
+  useEffect(() => {
+    if (noAccount || noFamily) router.replace("/onboarding");
+  }, [noAccount, noFamily]);
   const quiet = today.lights.find((light) => light.state === "quiet");
   // The sheet opens itself on a quiet day and closes itself the moment she answers (spec A11).
   useEffect(() => {
@@ -128,9 +132,9 @@ export default function TodayScreen() {
       }}
     >
       <LightsRow lights={today.lights} />
-      {noAccount ? (
+      {noAccount || noFamily ? (
         <Words variant="body" tone="ink2">
-          This is the example day. Your own family is not set up on this account yet.
+          Setting up your family…
         </Words>
       ) : trouble ? (
         <Words variant="body" tone="ink2">

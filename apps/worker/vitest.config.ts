@@ -5,6 +5,13 @@ import { defineConfig } from "vitest/config";
 import { unstable_readConfig } from "wrangler";
 import { NOTICE_DIRECTORY, NOTICE_FILES, type NoticeLang } from "./src/notices.ts";
 
+/**
+ * The tests' runtime is built from the wrangler files alone. Wrangler would also read `.env` and
+ * `.env.local` into it, as `wrangler dev` does, and those hold a developer's own settings for the
+ * local scripts — a bot name, a Clerk key — which would then quietly become the tests' inputs.
+ */
+process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
+
 /** The pilot Worker's configuration, which the tests' runtime is built from. */
 const PILOT_CONFIG = fileURLToPath(new URL("./wrangler.jsonc", import.meta.url));
 /** The admin Worker's configuration, read here only for its own tests. */

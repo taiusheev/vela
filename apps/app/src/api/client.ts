@@ -1,12 +1,16 @@
 import type {
+  ApiAccountProfile,
   ApiAskConflict,
   ApiComposedAsk,
+  ApiCreatedFamily,
   ApiExchangePage,
   ApiMe,
   ApiReply,
   ApiToday,
+  ApiUser,
   ComposeAsk,
   ComposeReply,
+  CreateFamily,
 } from "@vela/contracts";
 
 /**
@@ -129,11 +133,39 @@ export function replyTo(
   return call<ApiReply>({ path: `/v1/exchanges/${exchangeId}/replies`, token, key, body: reply });
 }
 
-/** Why a reply was refused, when it was: she has not answered yet, or it is her own exchange. */
-export function replyRefusal(error: unknown): "not_answered" | "her_own" | null {
+/** The reason a 403 or 409 names in its details, when it names one. */
+function refusalReason(error: unknown): string | null {
   if (!(error instanceof ApiError) || (error.status !== 409 && error.status !== 403)) return null;
   const details = error.details;
   const reason =
     typeof details === "object" && details !== null && "reason" in details ? details.reason : null;
+  return typeof reason === "string" ? reason : null;
+}
+
+/** Why a reply was refused, when it was: she has not answered yet, or it is her own exchange. */
+export function replyRefusal(error: unknown): "not_answered" | "her_own" | null {
+  const reason = refusalReason(error);
   return reason === "not_answered" || reason === "her_own" ? reason : null;
+}
+
+/** Whether creating a family was refused because this account already runs one. */
+export function alreadyOrganiser(error: unknown): boolean {
+  return refusalReason(error) === "already_organiser";
+}
+
+/** The account the organiser's name, language and time zone live on; made once, on first run. */
+export function provisionAccount(
+  profile: ApiAccountProfile,
+  key: string,
+  token: string | null,
+): Promise<ApiUser> {
+  return call<ApiUser>({ path: "/v1/me/provision", token, key, body: profile });
+}
+
+export function createFamily(
+  family: CreateFamily,
+  key: string,
+  token: string | null,
+): Promise<ApiCreatedFamily> {
+  return call<ApiCreatedFamily>({ path: "/v1/families", token, key, body: family });
 }

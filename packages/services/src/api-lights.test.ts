@@ -124,3 +124,59 @@ describe("loadApiLights", () => {
     expect(rows?.map((light) => light.member_id)).not.toContain(seed.organiser.id);
   });
 });
+
+describe("an invited member who has not said yes", () => {
+  it("follows the lights with the state none, so the organiser's Today is not empty", async () => {
+    const [invited] = await h.db
+      .insert(members)
+      .values({
+        familyId: seed.family.id,
+        role: "member",
+        displayName: "Dad",
+        addressForm: "Mr Chen",
+        language: "en",
+        tz: "Asia/Taipei",
+        country: "TW",
+        status: "invited",
+        turnsIn: false,
+        primarySurface: "telegram",
+        lightOn: false,
+        wakeTime: "06:30",
+        arrivalTime: "07:00",
+      })
+      .returning();
+    if (invited === undefined) throw new Error("expected an invited member");
+
+    const rows = await lights();
+    expect(rows?.map((row) => [row.display_name, row.state])).toEqual([
+      ["Mom", "resting"],
+      ["Dad", "none"],
+    ]);
+    expect(MemberLight.parse(rows?.[1])).toEqual({
+      member_id: invited.id,
+      display_name: "Dad",
+      state: "none",
+      answered_at: null,
+      usual_time: "07:00",
+      away_until: null,
+      quiet_event_id: null,
+    });
+  });
+
+  it("leaves a member who declined or left out of the row entirely", async () => {
+    await h.db.insert(members).values({
+      familyId: seed.family.id,
+      role: "member",
+      displayName: "Gone",
+      language: "en",
+      tz: "Asia/Taipei",
+      country: "TW",
+      status: "invited",
+      turnsIn: false,
+      primarySurface: "telegram",
+      lightOn: false,
+      leftAt: h.clock.now(),
+    });
+    expect((await lights())?.map((row) => row.display_name)).toEqual(["Mom"]);
+  });
+});

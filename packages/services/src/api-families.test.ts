@@ -1,7 +1,7 @@
 import { ApiCreatedFamily, type InboundEvent } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { encodeButton } from "@vela/core";
-import { events, families, invites, members, users } from "@vela/db";
+import { consents, events, families, invites, members, users } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
@@ -13,6 +13,7 @@ import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
+import { acceptInvitationForDevelopment } from "./testing/seed.ts";
 
 let h: Harness;
 const identity: SessionIdentity = { authSubject: "auth|Mia", sessionId: "session-1" };
@@ -192,6 +193,79 @@ describe("createApiFamily", () => {
       when: "whenever",
     });
     expect(asked.response.status).toBe(201);
+  });
+
+  it("stands in for her yes on a developer's machine with the fields the real yes writes", async () => {
+    // The real flow, on one family.
+    const real = ApiCreatedFamily.parse((await create()).response.body);
+    const token = new URL(real.invite.url).searchParams.get("start") ?? "";
+    const base = {
+      channel: "telegram" as const,
+      at: h.clock.now().toISOString(),
+      sender: { externalUserId: HER_TELEGRAM, displayName: "Mom", languageCode: "en" },
+      conversation: { externalId: HER_TELEGRAM, kind: "private" as const },
+    };
+    await handleInviteStart(h.deps, {
+      ...base,
+      eventId: "tg:s",
+      messageId: "1",
+      kind: "start",
+      startParam: token,
+    });
+    await h.run({ outbound: (job: OutboundJob) => deliverOutbound(h.deps, job.outboundId) });
+    const action = { type: "consent" as const, memberId: real.kept_light_member.id, accept: true };
+    await handleConsentButton(
+      h.deps,
+      {
+        ...base,
+        eventId: "tg:b",
+        messageId: "2",
+        kind: "button",
+        buttonData: encodeButton(action),
+        callbackId: "cb",
+      },
+      action,
+    );
+
+    // The stand-in, on a second family made by a second account.
+    await h.db
+      .insert(users)
+      .values({ authSubject: "auth|Sam", displayName: "Sam", language: "en", tz: "Asia/Taipei" });
+    const standIn = ApiCreatedFamily.parse(
+      (await create(REQUEST, { who: { authSubject: "auth|Sam", sessionId: "s" } })).response.body,
+    );
+    await acceptInvitationForDevelopment(h.db, standIn.kept_light_member.id, h.clock.now());
+
+    const fields = async (id: string) => {
+      const [row] = await h.db.select().from(members).where(eq(members.id, id));
+      return {
+        status: row?.status,
+        lightOn: row?.lightOn,
+        lightConsentText: row?.lightConsentText,
+        lightStartsOn: row?.lightStartsOn,
+        learningUntil: row?.learningUntil,
+        consented: row?.lightConsentedAt instanceof Date,
+      };
+    };
+    expect(await fields(standIn.kept_light_member.id)).toEqual(
+      await fields(real.kept_light_member.id),
+    );
+
+    // Its evidence says no tap was made, and the invite cannot be used again.
+    const [proof] = await h.db
+      .select()
+      .from(consents)
+      .where(eq(consents.memberId, standIn.kept_light_member.id));
+    expect(JSON.stringify(proof?.evidence)).toContain("no tap was made");
+    const [used] = await h.db
+      .select()
+      .from(invites)
+      .where(eq(invites.forMemberId, standIn.kept_light_member.id));
+    expect(used?.acceptedBy).toBe(standIn.kept_light_member.id);
+
+    await expect(
+      acceptInvitationForDevelopment(h.db, standIn.kept_light_member.id, h.clock.now()),
+    ).rejects.toThrow("not waiting for her yes");
   });
 
   it("refuses a second family for an account that already runs one, and writes nothing", async () => {

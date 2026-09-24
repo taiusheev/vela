@@ -36,7 +36,7 @@ import {
   updateApiAccount,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
-import { createRandom } from "../src/deps.ts";
+import { createRandom } from "../src/random.ts";
 import { createClerkSessionActivityChecker, createClerkSessionVerifier } from "../src/session.ts";
 
 const DEFAULT_PORT = 8787;

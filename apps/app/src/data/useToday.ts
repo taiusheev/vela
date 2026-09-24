@@ -37,17 +37,22 @@ export function stateText(light: MemberLight): string {
       return light.away_until === null ? "away" : `away · ${dayName(light.away_until)}`;
     case "paused":
       return "paused";
+    case "none":
+      return "waiting for her yes";
     default:
       return "resting";
   }
 }
 
 export function toTodayLight(light: MemberLight): TodayLight {
+  // `none` is a light that does not exist yet: drawn resting, and marked so nobody asks her early.
+  const invited = light.state === "none";
   return {
     memberId: light.member_id,
     displayName: light.display_name,
-    state: light.state as LightState,
+    state: invited ? "resting" : (light.state as LightState),
     stateText: stateText(light),
+    ...(invited ? { invited: true } : {}),
   };
 }
 
@@ -151,6 +156,8 @@ export interface TodayView {
   trouble: boolean;
   /** Signed in, but the API knows no account here yet: a first run, not a failure. */
   noAccount: boolean;
+  /** Signed in with an account that belongs to no family yet: onboarding's turn (spec A1). */
+  noFamily: boolean;
   /** True only once the real day has arrived: until then `today` is the example one. */
   live: boolean;
 }
@@ -178,7 +185,14 @@ export function useToday(): TodayView {
   });
 
   if (!enabled) {
-    return { today: todayFixture, loading: false, trouble: false, noAccount: false, live: false };
+    return {
+      today: todayFixture,
+      loading: false,
+      trouble: false,
+      noAccount: false,
+      noFamily: false,
+      live: false,
+    };
   }
   const live = day.data !== undefined;
   // A 404 from /v1/me is the ordinary first run: the account signed in before anything was set up.
@@ -189,6 +203,7 @@ export function useToday(): TodayView {
     loading: me.isPending || day.isPending,
     trouble: (me.isError && !noAccount) || day.isError,
     noAccount,
+    noFamily: me.data !== undefined && me.data.memberships.length === 0,
     live,
   };
 }

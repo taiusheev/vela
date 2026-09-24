@@ -32,6 +32,7 @@ export {
   type JobHandlers,
 } from "./harness.ts";
 export {
+  acceptInvitationForDevelopment,
   type SeedExchangeOptions,
   type SeededFamily,
   type SeedFamilyOptions,

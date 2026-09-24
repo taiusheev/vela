@@ -24,13 +24,17 @@ import {
   type FamilyChannel,
   families,
   familyChannels,
+  invites,
   type Member,
   members,
   type NearbyContact,
   nearbyContacts,
   type VelaDatabase,
 } from "@vela/db";
+import { and, eq, isNull } from "drizzle-orm";
+import { CONSENT_TEXT_VERSION } from "../consent.ts";
 import { sha256Hex } from "../hash.ts";
+import { subjectRef } from "../proofs.ts";
 
 export interface SeedFamilyOptions {
   /** The consent time; her arrivals start the next local day. */
@@ -330,4 +334,54 @@ export async function seedHealthWordsConsent(
       })
       .returning(),
   );
+}
+
+/**
+ * Her yes, without her tap: the member and consent fields `acceptConsent` writes (`consent.ts`), for a
+ * database no bot can reach — a developer's own, where the invite link opens a bot that answers from
+ * another deployment. It marks the invite accepted as `acceptInvite` does, and its evidence says in so
+ * many words that no tap was made, so the row can never pass for one. It sends nothing and links no
+ * channel: on that machine nothing would be delivered anyway.
+ */
+export async function acceptInvitationForDevelopment(
+  db: VelaDatabase,
+  memberId: string,
+  now: Date,
+): Promise<Member> {
+  return db.transaction(async (tx) => {
+    const [member] = await tx.select().from(members).where(eq(members.id, memberId)).for("update");
+    if (member === undefined || member.status !== "invited" || member.lightConsentedAt !== null) {
+      throw new Error("that member is not waiting for her yes");
+    }
+    const today = localDateOf(now, member.tz);
+    await tx.insert(consents).values({
+      memberId: member.id,
+      subjectRef: subjectRef({ memberId: member.id }),
+      kind: "light",
+      answer: "yes",
+      textVersion: CONSENT_TEXT_VERSION,
+      lang: member.language,
+      channel: "telegram",
+      givenAt: now,
+      evidence: { stand_in: "development seed on a developer's machine; no tap was made" },
+    });
+    const [updated] = await tx
+      .update(members)
+      .set({
+        lightOn: true,
+        lightConsentedAt: now,
+        lightConsentText: CONSENT_TEXT_VERSION,
+        status: "active",
+        lightStartsOn: addDays(today, 1),
+        learningUntil: learningUntil(today),
+      })
+      .where(eq(members.id, member.id))
+      .returning();
+    await tx
+      .update(invites)
+      .set({ acceptedAt: now, acceptedBy: member.id })
+      .where(and(eq(invites.forMemberId, member.id), isNull(invites.acceptedAt)));
+    if (updated === undefined) throw new Error("member update returned no row");
+    return updated;
+  });
 }

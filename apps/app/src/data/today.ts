@@ -13,6 +13,8 @@ export interface TodayLight {
   state: LightState;
   /** The state line under the name: "answered 8:12", "quiet", "away · Sunday", "resting". */
   stateText: string;
+  /** Invited and not yet answered: shown, but nobody may ask her anything until she says yes. */
+  invited?: boolean;
 }
 
 export interface TodayReply {

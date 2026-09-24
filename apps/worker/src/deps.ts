@@ -38,6 +38,7 @@ import {
 import type { AdminEnv, PilotEnv } from "./env.ts";
 import { createHeartbeat } from "./heartbeat.ts";
 import type { PrivacyNotices } from "./notices.ts";
+import { createRandom } from "./random.ts";
 
 /** Built ports and the connection they hold; `close()` belongs in `ctx.waitUntil`. */
 export interface Handle<D> {
@@ -108,24 +109,6 @@ export function createLogger(env: { readonly ENVIRONMENT: string }): Logger {
 }
 
 const clock: Clock = { now: () => new Date() };
-
-const BASE64URL_UNSAFE = /[+/=]/g;
-const BASE64URL_REPLACEMENTS: Record<string, string> = { "+": "-", "/": "_", "=": "" };
-
-/** Invite tokens: the platform's CSPRNG, base64url so the token survives a Telegram deep link. */
-export function createRandom(): Random {
-  return {
-    token(bytes = 32) {
-      const buffer = new Uint8Array(bytes);
-      crypto.getRandomValues(buffer);
-      let binary = "";
-      for (const byte of buffer) {
-        binary += String.fromCharCode(byte);
-      }
-      return btoa(binary).replace(BASE64URL_UNSAFE, (char) => BASE64URL_REPLACEMENTS[char] ?? "");
-    },
-  };
-}
 
 function createMediaStore(bucket: R2Bucket): MediaStore {
   return {
