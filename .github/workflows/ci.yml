@@ -49,3 +49,22 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @vela/services exec vitest run src/silence-drill.test.ts
+
+  contention-drill:
+    name: contention drill (PostgreSQL 18)
+    # The same writes on independent connections of a real PostgreSQL (code design §8), which PGlite,
+    # one connection, cannot give; `pnpm test` never runs it. It found her answer and "she's fine"
+    # deadlocking, and it rots unrun: its runner once could not start at all and nothing noticed. On
+    # every push, since minutes are free on a public repository. The runner starts `postgres:18` in
+    # Docker here, the path a machine without Docker never exercises.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vela/services run test:postgres
