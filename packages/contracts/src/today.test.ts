@@ -42,6 +42,7 @@ const turn = {
   recipient_name: "Mom",
   holder_id: ASKER,
   holder_name: "Anna",
+  ask: null,
   suggestion: { id: SUGGESTION, text: "Ask her about the seeds she saved" },
 };
 
@@ -109,6 +110,26 @@ describe("ApiTomorrowTurn", () => {
   it("accepts a turn nobody holds and one with nothing suggested yet", () => {
     const open = { ...turn, holder_id: null, holder_name: null, suggestion: null };
     expect(ApiTomorrowTurn.parse(open)).toStrictEqual(open);
+  });
+
+  it("accepts a claimed morning, which carries the ask instead of a suggestion", () => {
+    const claimed = {
+      ...turn,
+      ask: {
+        id: EXCHANGE,
+        type: "question",
+        text: "What did the garden look like this morning?",
+        asker_name: "Anna",
+        on_behalf_of: null,
+      },
+      suggestion: null,
+    };
+    expect(ApiTomorrowTurn.parse(claimed)).toStrictEqual(claimed);
+  });
+
+  it("requires the ask to be present, so a claimed morning cannot read as a free one", () => {
+    const incomplete = Object.fromEntries(Object.entries(turn).filter(([k]) => k !== "ask"));
+    expect(ApiTomorrowTurn.safeParse(incomplete).success).toBe(false);
   });
 
   it("rejects a day that is not a calendar date and a suggestion without its id", () => {

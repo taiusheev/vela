@@ -119,9 +119,14 @@ export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
 }
 
 export function toTomorrowTurn(turn: ApiTomorrowTurn, viewerMemberId?: string): TomorrowTurn {
+  const ask = turn.ask;
+  const words = ask?.text?.trim() ?? "";
   return {
     name: turn.holder_name ?? "Anyone",
     mine: turn.holder_id !== null && turn.holder_id === viewerMemberId,
+    ...(ask === null || words.length === 0
+      ? {}
+      : { asked: { by: ask.on_behalf_of ?? ask.asker_name ?? "Vela", text: words } }),
     ...(turn.suggestion === null ? {} : { suggestion: turn.suggestion.text }),
   };
 }

@@ -37,6 +37,8 @@ export interface TomorrowTurn {
   name: string;
   /** True when the turn is the reader’s own, so the card says so instead of naming them. */
   mine: boolean;
+  /** Set once that morning is claimed: who asked, and what. A claimed morning has no suggestion. */
+  asked?: { by: string; text: string };
   suggestion?: string;
 }
 

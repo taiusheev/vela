@@ -196,6 +196,17 @@ export const ApiTomorrowTurn = z.object({
   /** Null when nobody holds turns, or the holder has left. */
   holder_id: z.uuid().nullable(),
   holder_name: z.string().nullable(),
+  /** The ask already composed for that morning, once someone has claimed it. */
+  ask: z
+    .object({
+      id: z.uuid(),
+      type: ExchangeType,
+      text: z.string().nullable(),
+      asker_name: z.string().nullable(),
+      on_behalf_of: z.string().nullable(),
+    })
+    .nullable(),
+  /** Never offered beside an ask: a claimed morning holds one, and only one. */
   suggestion: z.object({ id: z.uuid(), text: z.string() }).nullable(),
 });
 export type ApiTomorrowTurn = z.infer<typeof ApiTomorrowTurn>;

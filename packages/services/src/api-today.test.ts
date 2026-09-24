@@ -214,6 +214,7 @@ describe("loadApiToday", () => {
         recipient_name: "Mom",
         holder_id: seed.organiser.id,
         holder_name: "Mia",
+        ask: null,
         suggestion: { id: suggestion.id, text: suggestion.text },
       },
     ]);
@@ -238,6 +239,58 @@ describe("loadApiToday", () => {
     });
     expect((await load())?.tomorrow).toEqual([
       expect.objectContaining({ holder_name: "Mia", suggestion: null }),
+    ]);
+  });
+
+  it("carries tomorrow's ask once a morning is claimed, and stops offering a suggestion", async () => {
+    const tomorrow = addDays(today(), 1);
+    await h.db.insert(turns).values({
+      familyId: seed.family.id,
+      localDay: tomorrow,
+      recipientId: seed.member.id,
+      holderId: seed.organiser.id,
+    });
+    await h.db.insert(suggestions).values({
+      familyId: seed.family.id,
+      forMemberId: seed.organiser.id,
+      aboutMemberId: seed.member.id,
+      type: "mention",
+      text: "Not for a morning that is taken",
+      promptVersion: "suggest@1",
+    });
+    const composed = await seedExchange(h.db, seed, {
+      date: tomorrow,
+      state: "composed",
+      text: "What did the garden look like this morning?",
+    });
+
+    expect(ApiToday.parse(await load()).tomorrow).toEqual([
+      expect.objectContaining({
+        holder_name: "Mia",
+        suggestion: null,
+        ask: {
+          id: composed.id,
+          type: "question",
+          text: "What did the garden look like this morning?",
+          asker_name: "Mia",
+          on_behalf_of: null,
+        },
+      }),
+    ]);
+  });
+
+  it("shows the card for an ask composed before the evening prompt has run", async () => {
+    const tomorrow = addDays(today(), 1);
+    const composed = await seedExchange(h.db, seed, { date: tomorrow, state: "composed" });
+    expect(await h.db.select().from(turns).where(eq(turns.familyId, seed.family.id))).toEqual([]);
+
+    expect(ApiToday.parse(await load()).tomorrow).toEqual([
+      expect.objectContaining({
+        holder_id: null,
+        holder_name: null,
+        suggestion: null,
+        ask: expect.objectContaining({ id: composed.id }),
+      }),
     ]);
   });
 

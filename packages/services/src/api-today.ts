@@ -90,9 +90,12 @@ async function turnOfTomorrow(
       ),
     )
     .limit(1);
-  if (turn === undefined) return null;
+  // An ask composed before the evening's prompt has run has no turn row behind it, and a card that
+  // appeared only with a turn row would leave the asker with nothing to show for it (spec A7).
+  const composed = await exchangeForLocalDate(db, member.id, tomorrow);
+  if (turn === undefined && composed === null) return null;
 
-  const holderId = turn.holderId;
+  const holderId = turn?.holderId ?? null;
   const [suggestion] =
     holderId === null
       ? []
@@ -116,7 +119,19 @@ async function turnOfTomorrow(
     recipient_name: member.displayName,
     holder_id: holderId,
     holder_name: await nameOf(db, holderId),
-    suggestion: suggestion ?? null,
+    // Once a morning is claimed the card carries the ask itself; a suggestion would be an invitation
+    // to write a second one into a day that only holds one.
+    ask:
+      composed === null
+        ? null
+        : {
+            id: composed.id,
+            type: composed.type,
+            text: composed.text,
+            asker_name: await nameOf(db, composed.askerId),
+            on_behalf_of: composed.onBehalfOf,
+          },
+    suggestion: composed === null ? (suggestion ?? null) : null,
   };
 }
 

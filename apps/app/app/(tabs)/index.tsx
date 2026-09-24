@@ -77,11 +77,21 @@ function TomorrowCard({ tomorrow }: { tomorrow: NonNullable<Today["tomorrow"]> }
   return (
     <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
       <Eyebrow>
-        {tomorrow.mine
-          ? "TOMORROW · YOUR TURN"
-          : `TOMORROW · ${tomorrow.name.toUpperCase()}'S TURN`}
+        {tomorrow.asked !== undefined
+          ? `TOMORROW · ${tomorrow.asked.by.toUpperCase()} ASKED`
+          : tomorrow.mine
+            ? "TOMORROW · YOUR TURN"
+            : `TOMORROW · ${tomorrow.name.toUpperCase()}'S TURN`}
       </Eyebrow>
-      {tomorrow.suggestion === undefined ? null : (
+      {/* A claimed morning shows the ask that claimed it; only a free one offers a suggestion. */}
+      {tomorrow.asked !== undefined ? (
+        <>
+          <Words variant="voice">{tomorrow.asked.text}</Words>
+          <Words variant="caption" tone="ink3">
+            Into her morning.
+          </Words>
+        </>
+      ) : tomorrow.suggestion === undefined ? null : (
         <>
           <Words variant="voice">{tomorrow.suggestion}</Words>
           <Words variant="button" tone="action">
