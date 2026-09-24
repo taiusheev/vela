@@ -413,3 +413,50 @@ export const ApiCreatedFamily = z.object({
   }),
 });
 export type ApiCreatedFamily = z.infer<typeof ApiCreatedFamily>;
+
+/**
+ * A quiet morning, as the organiser's sheet reads it (`GET /v1/quiet/:quietEventId`, spec §14.1 A11,
+ * §8). Facts only, never her words: when the ask reached her, when it was asked again, when she
+ * usually answers and last did, and the people nearby who have said yes, with the number to call.
+ */
+export const ApiQuietNotice = z.object({
+  quiet_event_id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  delivered_at: z.iso.datetime({ offset: true }).nullable(),
+  repeated_at: z.iso.datetime({ offset: true }).nullable(),
+  /** Her usual hour from her recent answered days; null until her rhythm is known. */
+  usual_time: LocalTime.nullable(),
+  last_answered_at: z.iso.datetime({ offset: true }).nullable(),
+  opened_at: z.iso.datetime({ offset: true }),
+  /** Set after "wait 2 hours": the notice is not raised again before it. */
+  wait_until: z.iso.datetime({ offset: true }).nullable(),
+  resolved: z
+    .object({
+      outcome: z.string(),
+      at: z.iso.datetime({ offset: true }),
+      by_name: z.string().nullable(),
+    })
+    .nullable(),
+  contacts: z.array(
+    z.object({
+      id: z.uuid(),
+      name: z.string(),
+      relation: z.string().nullable(),
+      phone: z.string(),
+    }),
+  ),
+});
+export type ApiQuietNotice = z.infer<typeof ApiQuietNotice>;
+
+/** "She's fine" and "wait 2 hours" carry nothing but the event in their path. */
+export const QuietAction = z.strictObject({});
+export type QuietAction = z.infer<typeof QuietAction>;
+
+/**
+ * What "she's fine" and "wait" answer: the notice without the people nearby. A write's answer is
+ * kept for a day to replay, and a contact's number must not outlive their yes in it; the sheet has
+ * no use for the numbers once the morning is settled or put off.
+ */
+export const ApiQuietState = ApiQuietNotice.omit({ contacts: true });
+export type ApiQuietState = z.infer<typeof ApiQuietState>;

@@ -5,6 +5,8 @@ import type {
   ApiCreatedFamily,
   ApiExchangePage,
   ApiMe,
+  ApiQuietNotice,
+  ApiQuietState,
   ApiReply,
   ApiToday,
   ApiUser,
@@ -168,4 +170,18 @@ export function createFamily(
   token: string | null,
 ): Promise<ApiCreatedFamily> {
   return call<ApiCreatedFamily>({ path: "/v1/families", token, key, body: family });
+}
+
+export function fetchQuiet(quietEventId: string, token: string | null): Promise<ApiQuietNotice> {
+  return read<ApiQuietNotice>(`/v1/quiet/${quietEventId}`, token);
+}
+
+/** "She's fine" or "wait 2 hours": the body is empty, the event is in the path. */
+export function settleQuiet(
+  quietEventId: string,
+  action: "fine" | "wait",
+  key: string,
+  token: string | null,
+): Promise<ApiQuietState> {
+  return call<ApiQuietState>({ path: `/v1/quiet/${quietEventId}/${action}`, token, key, body: {} });
 }

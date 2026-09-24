@@ -8,6 +8,8 @@ import {
   ApiFamilyPlan,
   ApiIdempotencyKey,
   ApiMe,
+  ApiQuietNotice,
+  ApiQuietState,
   ApiReply,
   ApiToday,
   ApiUser,
@@ -15,12 +17,14 @@ import {
   ComposeReply,
   CreateFamily,
   MemberLight,
+  QuietAction,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import {
   AlreadyOrganiserError,
   type ApiFamilyDeps,
   ApiIdempotencyError,
+  type ApiNudges,
   AskDayTakenError,
   type authorizeFamilyAccess,
   type Clock,
@@ -32,10 +36,13 @@ import {
   type loadApiFamilyPlan,
   type loadApiLights,
   type loadApiMe,
+  type loadApiQuiet,
   type loadApiToday,
   type provisionApiAccount,
   ReplyRefusedError,
   type replyToApiExchange,
+  type resolveApiQuiet,
+  runAfterCommit,
   type updateApiAccount,
   VelaError,
 } from "@vela/services";
@@ -58,6 +65,7 @@ export interface ApiReadServices {
   loadApiLights: typeof loadApiLights;
   loadApiToday: typeof loadApiToday;
   loadApiExchanges: typeof loadApiExchanges;
+  loadApiQuiet: typeof loadApiQuiet;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
 }
 
@@ -67,6 +75,7 @@ export interface ApiWriteServices {
   composeApiAsk: typeof composeApiAsk;
   replyToApiExchange: typeof replyToApiExchange;
   createApiFamily: typeof createApiFamily;
+  resolveApiQuiet: typeof resolveApiQuiet;
 }
 
 export interface ApiRuntime {
@@ -85,6 +94,11 @@ export interface ApiRuntime {
      * it `POST /v1/families` answers 404, as every write does without `writes`.
      */
     families?: Pick<ApiFamilyDeps, "random" | "config">;
+    /**
+     * What a committed write left behind — rows to hand to the queue, members to wake — is carried out
+     * through these. Without them nothing is lost: `reconcile` re-drives the rows and ticks the members.
+     */
+    nudges?: ApiNudges;
   };
 }
 
@@ -386,6 +400,15 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       return page === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiExchangePage.parse(page));
     },
   );
+  // The event names its family, so no family middleware: the service answers organisers only.
+  app.get("/v1/quiet/:quietEventId", authenticate, withDatabase, async (c) => {
+    const notice = await runtime.services.loadApiQuiet(
+      c.get("db"),
+      c.get("session"),
+      c.req.param("quietEventId"),
+    );
+    return notice === null ? c.json(NOT_FOUND, 404) : c.json(ApiQuietNotice.parse(notice));
+  });
   const writes = runtime.writes;
   if (writes) {
     const checkActivity: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
@@ -471,6 +494,35 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           const created = ApiCreatedFamily.parse(result.response.body);
           c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
           return c.json(created, 201);
+        },
+      );
+    }
+    for (const action of ["fine", "wait"] as const) {
+      app.post(
+        `/v1/quiet/:quietEventId/${action}`,
+        authenticate,
+        validateWrite(QuietAction, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await writes.services.resolveApiQuiet(
+            { db: c.get("db"), clock: writes.clock },
+            c.get("session"),
+            c.get("writeKey"),
+            c.req.param("quietEventId"),
+            action,
+            c.get("writeInput"),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+            throw new Error("Invalid API mutation response");
+          }
+          const state = ApiQuietState.parse(result.response.body);
+          // Committed: now the messages to the others who were told, and her scheduler's alarm.
+          await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+            runtime.logger.error(event, fields),
+          );
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(state, 200);
         },
       );
     }

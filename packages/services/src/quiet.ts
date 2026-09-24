@@ -28,7 +28,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime } from "./format.ts";
-import { enqueueOutbound } from "./gateway.ts";
+import { enqueueOutbound, type OutboundRequest } from "./gateway.ts";
 import {
   activeOrganisersWithLinks,
   channelLinkOfMember,
@@ -108,7 +108,7 @@ function pad(value: number): string {
  * When she usually answers: the median wall-clock time of her recent answered days, in her zone.
  * Null until her rhythm is known (spec §8: from the 14th answered day).
  */
-function usualAnswerTime(answerTimes: readonly Date[], timeZone: string): string | null {
+export function usualAnswerTime(answerTimes: readonly Date[], timeZone: string): string | null {
   if (answerTimes.length < TUNING.minSamples) {
     return null;
   }
@@ -264,15 +264,21 @@ export async function notifyQuiet(deps: Deps, memberId: string, date: LocalDate)
   });
 }
 
+/**
+ * How a message leaves a transaction: enqueued at once from the pilot Worker, or written alone by an
+ * API mutation, which hands the rows over after it commits (`insertOutbound`).
+ */
+export type EmitOutbound = (request: OutboundRequest) => Promise<unknown>;
+
 /** One `quiet_resolved` to each member who was told, except `exclude`, in their own language. */
 async function tellNotified(
-  deps: Deps,
   tx: VelaTransaction,
   input: {
     quiet: QuietEvent;
     exclude: string | null;
     text: (lang: Member["language"]) => string;
   },
+  emit: EmitOutbound,
 ): Promise<void> {
   for (const readerId of input.quiet.notifiedMemberIds) {
     if (readerId === input.exclude) {
@@ -283,7 +289,7 @@ async function tellNotified(
     if (reader === null || link === null || link.blockedAt !== null) {
       continue;
     }
-    await enqueueOutbound(deps, tx, {
+    await emit({
       kind: "quiet_resolved",
       idempotencyKey: outboundKey("quiet_resolved", {
         quietEventId: input.quiet.id,
@@ -326,11 +332,15 @@ export async function resolveQuietOnAnswer(
     .set({ resolvedAt: now, outcome: "answered_late" })
     .where(eq(quietEvents.id, quiet.id));
   const time = formatTime(now, member.tz);
-  await tellNotified(deps, tx, {
-    quiet,
-    exclude: null,
-    text: (lang) => t(lang, "quiet.resolved_answered", { name: member.displayName, time }),
-  });
+  await tellNotified(
+    tx,
+    {
+      quiet,
+      exclude: null,
+      text: (lang) => t(lang, "quiet.resolved_answered", { name: member.displayName, time }),
+    },
+    (request) => enqueueOutbound(deps, tx, request),
+  );
   await recordEvent(
     tx,
     {
@@ -342,6 +352,64 @@ export async function resolveQuietOnAnswer(
     },
     now,
   );
+}
+
+/**
+ * "She's fine" (spec §8, flows §3.12): the event, already locked by the caller and still open, closes
+ * with `fine_known` and who said so; everyone else who was told hears it, through `emit`. Shared by
+ * the Telegram tap and the app, so the two cannot close an event differently.
+ */
+export async function resolveQuietAsFine(
+  tx: VelaTransaction,
+  now: Date,
+  input: { quiet: QuietEvent; her: Member; resolver: Member },
+  emit: EmitOutbound,
+): Promise<void> {
+  const { quiet, her, resolver } = input;
+  await tx
+    .update(quietEvents)
+    .set({ resolvedAt: now, outcome: "fine_known", resolvedBy: resolver.id })
+    .where(eq(quietEvents.id, quiet.id));
+  await tellNotified(
+    tx,
+    {
+      quiet,
+      exclude: resolver.id,
+      text: (readerLang) =>
+        t(readerLang, "quiet.resolved_fine", {
+          organiser: resolver.displayName,
+          name: her.displayName,
+        }),
+    },
+    emit,
+  );
+  await recordEvent(
+    tx,
+    {
+      name: "quiet_notice_resolved",
+      familyId: her.familyId,
+      memberId: her.id,
+      exchangeId: quiet.exchangeId,
+      props: { outcome: "fine_known", by: resolver.id },
+    },
+    now,
+  );
+}
+
+/**
+ * "Wait 2 hours": the event, already locked by the caller and still open, is not to be raised again
+ * before the wait ends. The wait is a threshold her schedule did not know about, so her next wake is
+ * marked due at once — which `reconcile` finds should nothing else wake her. Returns when it ends.
+ */
+export async function waitOnQuiet(
+  tx: VelaTransaction,
+  now: Date,
+  input: { quiet: QuietEvent; her: Member },
+): Promise<Date> {
+  const waitUntil = addMinutes(now, SCHEDULE.waitMinutes);
+  await tx.update(quietEvents).set({ waitUntil }).where(eq(quietEvents.id, input.quiet.id));
+  await markWakeDue(tx, input.her.id, now);
+  return waitUntil;
 }
 
 /**
@@ -376,29 +444,11 @@ export async function handleQuietButton(
       if (locked === undefined || locked.resolvedAt !== null) {
         return false;
       }
-      await tx
-        .update(quietEvents)
-        .set({ resolvedAt: now, outcome: "fine_known", resolvedBy: sender.member.id })
-        .where(eq(quietEvents.id, locked.id));
-      await tellNotified(deps, tx, {
-        quiet: locked,
-        exclude: sender.member.id,
-        text: (readerLang) =>
-          t(readerLang, "quiet.resolved_fine", {
-            organiser: sender.member.displayName,
-            name: her.displayName,
-          }),
-      });
-      await recordEvent(
+      await resolveQuietAsFine(
         tx,
-        {
-          name: "quiet_notice_resolved",
-          familyId: her.familyId,
-          memberId: her.id,
-          exchangeId: locked.exchangeId,
-          props: { outcome: "fine_known", by: sender.member.id },
-        },
         now,
+        { quiet: locked, her, resolver: sender.member },
+        (request) => enqueueOutbound(deps, tx, request),
       );
       return true;
     });
@@ -406,23 +456,18 @@ export async function handleQuietButton(
       replacement = t(lang, "quiet.fine_button", { name: her.displayName });
     }
   } else {
-    const waitUntil = addMinutes(now, SCHEDULE.waitMinutes);
-    const waiting = await deps.db.transaction(async (tx) => {
+    const waitUntil = await deps.db.transaction(async (tx) => {
       const [locked] = await tx
         .select()
         .from(quietEvents)
         .where(eq(quietEvents.id, quiet.id))
         .for("update");
       if (locked === undefined || locked.resolvedAt !== null) {
-        return false;
+        return null;
       }
-      await tx.update(quietEvents).set({ waitUntil }).where(eq(quietEvents.id, locked.id));
-      // The wait is a threshold the schedule did not know about, so her scheduler decides again:
-      // the alarm at once, and `reconcile` should the alarm never fire.
-      await markWakeDue(tx, her.id, now);
-      return true;
+      return waitOnQuiet(tx, now, { quiet: locked, her });
     });
-    if (waiting) {
+    if (waitUntil !== null) {
       replacement = t(lang, "quiet.waiting", { time: formatTime(waitUntil, her.tz) });
       await deps.scheduler.wakeAt(her.id, now);
     }

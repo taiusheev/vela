@@ -140,16 +140,22 @@ export type OutboundRequest = {
 
 export type EnqueueResult = { outboundId: string } | { duplicate: true };
 
+/** A row written but not yet handed to the queue, with the delay its delivery job must carry. */
+export type InsertResult = { outboundId: string; delaySeconds?: number } | { duplicate: true };
+
 /**
- * Inserts the row and enqueues its delivery, inside the caller's transaction when given one. A row
- * refused by the idempotency key or by the budget index is reported as a duplicate and nothing is
- * enqueued. A request that cannot be a valid platform message is a programming error and throws.
+ * Inserts the row alone, inside the caller's transaction when given one, and sends nothing. For a
+ * caller that may not send before it commits — an API mutation, whose transaction can still roll
+ * back and whose callback a replay skips — which hands the row to the queue after its commit. A row
+ * nobody hands over is still delivered: `redriveStrandedOutbound` finds it `queued` and past due.
+ * A row refused by the idempotency key or by the budget index is reported as a duplicate. A request
+ * that cannot be a valid platform message is a programming error and throws.
  */
-export async function enqueueOutbound(
-  deps: Deps,
+export async function insertOutbound(
+  deps: Pick<Deps, "clock">,
   db: Queryable,
   request: OutboundRequest,
-): Promise<EnqueueResult> {
+): Promise<InsertResult> {
   const message = OutboundMessage.safeParse({
     kind: request.kind,
     idempotencyKey: request.idempotencyKey,
@@ -208,18 +214,37 @@ export async function enqueueOutbound(
     .onConflictDoNothing()
     .returning({ id: outbound.id });
   const row = inserted[0];
-  if (row === undefined) {
-    deps.logger.info("outbound_duplicate", { kind: request.kind, memberId: request.memberId });
-    return { duplicate: true };
-  }
-  const job: OutboundJob = { type: "deliver", outboundId: row.id };
-  await (delaySeconds === undefined
-    ? deps.queues.outbound.send(job)
-    : deps.queues.outbound.send(job, { delaySeconds }));
-  return { outboundId: row.id };
+  if (row === undefined) return { duplicate: true };
+  return delaySeconds === undefined ? { outboundId: row.id } : { outboundId: row.id, delaySeconds };
 }
 
-async function localTodayOf(deps: Deps, db: Queryable, memberId: string): Promise<LocalDate> {
+/**
+ * Inserts the row and enqueues its delivery, inside the caller's transaction when given one. A row
+ * refused by the idempotency key or by the budget index is reported as a duplicate and nothing is
+ * enqueued. A request that cannot be a valid platform message is a programming error and throws.
+ */
+export async function enqueueOutbound(
+  deps: Deps,
+  db: Queryable,
+  request: OutboundRequest,
+): Promise<EnqueueResult> {
+  const result = await insertOutbound(deps, db, request);
+  if ("duplicate" in result) {
+    deps.logger.info("outbound_duplicate", { kind: request.kind, memberId: request.memberId });
+    return result;
+  }
+  const job: OutboundJob = { type: "deliver", outboundId: result.outboundId };
+  await (result.delaySeconds === undefined
+    ? deps.queues.outbound.send(job)
+    : deps.queues.outbound.send(job, { delaySeconds: result.delaySeconds }));
+  return { outboundId: result.outboundId };
+}
+
+async function localTodayOf(
+  deps: Pick<Deps, "clock">,
+  db: Queryable,
+  memberId: string,
+): Promise<LocalDate> {
   const member = await memberById(db, memberId);
   if (member === null) {
     throw new VelaError("not_found", `member ${memberId} does not exist`);

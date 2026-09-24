@@ -53,6 +53,7 @@ export function toTodayLight(light: MemberLight): TodayLight {
     state: invited ? "resting" : (light.state as LightState),
     stateText: stateText(light),
     ...(invited ? { invited: true } : {}),
+    ...(light.quiet_event_id === null ? {} : { quietEventId: light.quiet_event_id }),
   };
 }
 
@@ -158,6 +159,8 @@ export interface TodayView {
   noAccount: boolean;
   /** Signed in with an account that belongs to no family yet: onboarding's turn (spec A1). */
   noFamily: boolean;
+  /** The reader organises this family, so the quiet notice is for them (spec A11). */
+  organiser: boolean;
   /** True only once the real day has arrived: until then `today` is the example one. */
   live: boolean;
 }
@@ -191,6 +194,7 @@ export function useToday(): TodayView {
       trouble: false,
       noAccount: false,
       noFamily: false,
+      organiser: true,
       live: false,
     };
   }
@@ -204,6 +208,7 @@ export function useToday(): TodayView {
     trouble: (me.isError && !noAccount) || day.isError,
     noAccount,
     noFamily: me.data !== undefined && me.data.memberships.length === 0,
+    organiser: membership?.role === "organiser",
     live,
   };
 }

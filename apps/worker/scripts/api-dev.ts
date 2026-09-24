@@ -30,9 +30,11 @@ import {
   loadApiFamilyPlan,
   loadApiLights,
   loadApiMe,
+  loadApiQuiet,
   loadApiToday,
   provisionApiAccount,
   replyToApiExchange,
+  resolveApiQuiet,
   updateApiAccount,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
@@ -117,6 +119,7 @@ const app = createApiApp({
     loadApiLights,
     loadApiToday,
     loadApiExchanges,
+    loadApiQuiet,
     authorizeFamilyAccess,
   },
   logger: { error: (event, fields) => console.error(`[api-dev] ${event}`, fields ?? {}) },
@@ -131,6 +134,7 @@ const app = createApiApp({
             composeApiAsk,
             replyToApiExchange,
             createApiFamily,
+            resolveApiQuiet,
           },
           ...(botUsername === undefined || botUsername.length === 0
             ? {}
@@ -185,10 +189,12 @@ async function handle(request: Request): Promise<Response> {
 const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) => {
   console.log(`[api-dev] the API is on http://127.0.0.1:${address.port}`);
   console.log(`[api-dev] verifying sessions against ${issuer}`);
-  console.log("[api-dev] reads: /v1/me, the family plan, the lights, Today and Exchanges");
+  console.log(
+    "[api-dev] reads: /v1/me, the family plan, the lights, Today, Exchanges and the quiet notice",
+  );
   console.log(
     writesOn
-      ? `[api-dev] writes: the account routes, composing an ask and replying${botUsername ? ", and creating a family" : ""}; sessions checked live with Clerk`
+      ? `[api-dev] writes: the account routes, composing an ask, replying, settling a quiet morning (its messages wait for reconcile here)${botUsername ? ", and creating a family" : ""}; sessions checked live with Clerk`
       : "[api-dev] writes answer 404: set CLERK_SECRET_KEY in apps/worker/.env.local to serve them",
   );
 });

@@ -49,6 +49,12 @@ export {
 } from "./api-access.ts";
 export { disableApiAccount, provisionApiAccount, updateApiAccount } from "./api-account-writes.ts";
 export { loadApiFamilyPlan, loadApiMe, provisionApiUser } from "./api-accounts.ts";
+export {
+  type AfterCommit,
+  type ApiNudges,
+  nothingAfterCommit,
+  runAfterCommit,
+} from "./api-after-commit.ts";
 export { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
 export { type ApiExchangePageQuery, loadApiExchanges } from "./api-exchanges.ts";
 export { AlreadyOrganiserError, type ApiFamilyDeps, createApiFamily } from "./api-families.ts";
@@ -59,6 +65,7 @@ export {
   runApiMutation,
 } from "./api-idempotency.ts";
 export { loadApiLights } from "./api-lights.ts";
+export { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
 export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";
 export type {

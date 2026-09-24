@@ -124,6 +124,16 @@ The caller's account must exist first (`POST /v1/me/provision`), because the org
 
 A1's age, city and "lives alone" are not asked: nothing stores or uses them, and the privacy notice does not cover them. The response carries the invite token, so the receipt that replays it holds the token for its 24 hours; it is never logged. The route needs the write capability and a family capability of its own — a token source and the bot the link opens — and answers 404 without them.
 
+### The quiet notice (24 September 2026)
+
+`GET /v1/quiet/:quietEventId` answers `ApiQuietNotice`: whose light it is, when today's ask reached her and when it was asked again, her usual answering time once there are enough answers to know it, when she last answered, when the event opened, `wait_until`, `resolved` (the outcome, when, and who said she was fine), and the people nearby who have said yes, with their numbers. Facts only — never her words. `loadApiQuiet` in `packages/services/src/api-quiet.ts` reads the family from the event, since the path names none, and answers **the family's organisers only**, as the Telegram notice goes only to them: the numbers are given to the people the notice is for. Anyone else, an event that does not exist and an id that is not a uuid all answer 404 alike.
+
+`POST /v1/quiet/:quietEventId/fine` and `/wait` take an empty body (`QuietAction`) and answer 200 with `ApiQuietState` — the notice without its contacts. `resolveApiQuiet` runs them as `quiet.fine:v1` and `quiet.wait:v1` through the functions the Telegram buttons use (`resolveQuietAsFine`, `waitOnQuiet` in `quiet.ts`), so the two surfaces cannot close or delay an event differently. The event is locked `for update` in `authorize`, so a 404 is decided on every attempt including a replay. An event already settled — she answered a moment before the tap, or another organiser said she is fine — is answered as it stands rather than refused: the tap has nothing left to do, and the sheet shows how it was settled. The answer leaves out the contacts because it is kept a day to replay, and a number must not outlive the yes that let the family have it.
+
+**After the commit.** "She's fine" tells everyone else who was told, and "wait" moves her scheduler's alarm; a mutation may not send a queue job or reach the scheduler, because both would outlive a rollback. So the mutation writes the messages as `queued` outbound rows (`insertOutbound`, the row half of `enqueueOutbound`) and marks her wake due, and returns an `AfterCommit` — the row ids and the members to wake — which the route hands to `runAfterCommit` once the transaction has committed. A replay returns nothing to do. If the handover fails, or the runtime has no `nudges` (the local `api:dev` server has none), nothing is lost: `reconcile` re-drives an outbound row still queued after ten minutes and ticks a member whose wake is overdue. The failure is logged as `api_after_commit_deliver_failed` or `api_after_commit_wake_failed` and the route still answers 200, since the write stands.
+
+A quiet event opened during the learning period notifies nobody for its first eight hours, but it is a row like any other, so the light reads `quiet` and the app's organisers see the sheet at once: that is the in-app-only quiet the spec asks for. **Not built:** `ask-to-check`, which sends a nearby ask in the caller's name and so needs the actor stamp, and `useful`. The app shows Call beside each contact and no "Ask them to look in" until it is.
+
 ### Durable mutation receipts (22 September 2026, not exposed)
 
 `runApiMutation` in `packages/services/src/api-idempotency.ts` provides database-only replay protection. The optional account-write routes call it locally; no deployed route calls it. Migration `0001_api_request_receipts` adds the receipt table; apply it before deploying the updated retention job. `0002_account_linking` follows it with `account_link_challenges` and the `account_linked` event name. The applied `0000_init` is unchanged, and no migration has been run against staging or production for this slice.
@@ -185,8 +195,9 @@ A1's age, city and "lives alone" are not asked: nothing stores or uses them, and
 | Method | Path | Purpose |
 |---|---|---|
 | GET | /families/:id/lights | Per kept-light member: state, answered_at, usual_time, quiet_event? (widget endpoint; cheap, cacheable 60 s) |
-| POST | /quiet/:qid/fine | "She's fine, I know why" → resolves with outcome fine_known |
-| POST | /quiet/:qid/wait | Wait 2 hours |
+| GET | /quiet/:qid | The notice: facts, usual time, settled state, consenting nearby contacts with numbers; organisers only (built, §1 "The quiet notice") |
+| POST | /quiet/:qid/fine | "She's fine, I know why" → resolves with outcome fine_known (built) |
+| POST | /quiet/:qid/wait | Wait 2 hours (built) |
 | POST | /quiet/:qid/ask-to-check | `{contact_id}` → nearby_ask sent in the caller's name (actor required) |
 | POST | /quiet/:qid/useful | `{useful: boolean}` one-tap verdict for the precision page |
 | POST | /families/:id/members/:mid/away | `{from, to?}` or `{until_back: true}` |

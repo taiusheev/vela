@@ -49,7 +49,13 @@ export function QuietNoticeSheet({
           ]}
         >
           <ScrollView contentContainerStyle={{ gap: space.l }}>
-            <Eyebrow>{`USUALLY ANSWERS BY ${notice.usualTime}`}</Eyebrow>
+            <Eyebrow>
+              {notice.usualTime !== undefined
+                ? `USUALLY ANSWERS BY ${notice.usualTime}`
+                : notice.sentAt !== undefined
+                  ? `ASKED AT ${notice.sentAt}`
+                  : "A QUIET MORNING"}
+            </Eyebrow>
             <Words variant="title">{`It's been quiet at ${notice.memberName}'s today`}</Words>
             {answered ? (
               <Words variant="body">{notice.resolution}</Words>
@@ -69,20 +75,26 @@ export function QuietNoticeSheet({
                       <Pressable
                         accessibilityRole="button"
                         hitSlop={hitSlop}
-                        onPress={() => void Linking.openURL("tel:")}
+                        onPress={() =>
+                          void Linking.openURL(
+                            contact.phone === undefined
+                              ? "tel:"
+                              : `tel:${contact.phone.replace(/[^d+]/g, "")}`,
+                          )
+                        }
                       >
                         <Words variant="button" tone="action">
                           Call
                         </Words>
                       </Pressable>
                       {/* Nobody is asked to look in until they have said yes (spec §9). */}
-                      {contact.consented ? (
+                      {contact.consented && notice.canAskToCheck !== false ? (
                         <Pressable accessibilityRole="button" hitSlop={hitSlop}>
                           <Words variant="button" tone="action">
                             Ask them to look in
                           </Words>
                         </Pressable>
-                      ) : (
+                      ) : contact.consented ? null : (
                         <Words variant="caption" tone="ink3">
                           Has not said yes yet
                         </Words>

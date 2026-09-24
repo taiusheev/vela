@@ -15,6 +15,8 @@ export interface TodayLight {
   stateText: string;
   /** Invited and not yet answered: shown, but nobody may ask her anything until she says yes. */
   invited?: boolean;
+  /** The open quiet event behind a quiet light, which the sheet reads and settles. */
+  quietEventId?: string;
 }
 
 export interface TodayReply {

@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
@@ -12,23 +12,37 @@ import {
   ReceiptChip,
   Words,
 } from "../../src/components/ui.tsx";
-import { quietFixture } from "../../src/data/quiet.ts";
+import { quietFixtureFor } from "../../src/data/quiet.ts";
 import type { Today } from "../../src/data/today.ts";
+import { useQuiet } from "../../src/data/useQuiet.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
-function LightsRow({ lights }: { lights: Today["lights"] }) {
+function LightsRow({
+  lights,
+  onQuiet,
+}: {
+  lights: Today["lights"];
+  /** A quiet light opens its notice again, once the sheet that opened by itself was closed. */
+  onQuiet: () => void;
+}) {
   return (
     <View style={{ flexDirection: "row", gap: space.xl }}>
       {lights.map((light) => (
-        <View key={light.memberId} style={{ alignItems: "center", gap: space.s }}>
+        <Pressable
+          key={light.memberId}
+          accessibilityRole={light.state === "quiet" ? "button" : undefined}
+          disabled={light.state !== "quiet"}
+          onPress={onQuiet}
+          style={{ alignItems: "center", gap: space.s }}
+        >
           <Light state={light.state} height={40} />
           <Words variant="heading">{light.displayName}</Words>
           <Words variant="caption" tone="ink3">
             {light.stateText}
           </Words>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -108,17 +122,37 @@ export default function TodayScreen() {
   const [quietOpen, setQuietOpen] = useState(false);
   const [resolution, setResolution] = useState<string | undefined>();
   const insets = useSafeAreaInsets();
-  const { today, trouble, noAccount, noFamily } = useToday();
+  const { today, trouble, noAccount, noFamily, live, organiser } = useToday();
   // A first run, or an account that belongs to no family yet: onboarding is where that starts (A1).
   useEffect(() => {
     if (noAccount || noFamily) router.replace("/onboarding");
   }, [noAccount, noFamily]);
   const quiet = today.lights.find((light) => light.state === "quiet");
-  // The sheet opens itself on a quiet day and closes itself the moment she answers (spec A11).
+  // The event the sheet opened on stays its own until it is closed: once it is settled, Today no
+  // longer shows the light quiet, and the organiser should still read how it was settled.
+  const [openEventId, setOpenEventId] = useState<string | undefined>();
+  const liveQuiet = useQuiet(openEventId, live && organiser);
+  // The sheet opens itself once for each quiet morning (spec A11), and only for the family's
+  // organisers, whom the notice is for. Keyed on the event, not the light, which is a new object
+  // every time Today is read, so a sheet the organiser closed does not keep coming back.
+  const quietKey = quiet === undefined ? undefined : (quiet.quietEventId ?? quiet.memberId);
+  const quietEvent = quiet?.quietEventId;
+  const mayOpen = !live || organiser;
+  const openQuiet = () => {
+    if (quietEvent !== undefined) setOpenEventId(quietEvent);
+    setQuietOpen(true);
+  };
   useEffect(() => {
-    if (quiet !== undefined) setQuietOpen(true);
-    else setResolution(undefined);
-  }, [quiet]);
+    if (quietKey !== undefined && mayOpen) {
+      if (quietEvent !== undefined) setOpenEventId(quietEvent);
+      setQuietOpen(true);
+    } else if (quietKey === undefined && !live) {
+      setResolution(undefined);
+    }
+  }, [quietKey, quietEvent, mayOpen, live]);
+  const notice = live
+    ? liveQuiet.notice
+    : { ...quietFixtureFor(quiet?.displayName ?? "Mom"), resolution };
   const recipient = today.lights[0]?.displayName ?? "her";
 
   return (
@@ -131,7 +165,7 @@ export default function TodayScreen() {
         gap: space.xl,
       }}
     >
-      <LightsRow lights={today.lights} />
+      <LightsRow lights={today.lights} onQuiet={() => (mayOpen ? openQuiet() : undefined)} />
       {noAccount || noFamily ? (
         <Words variant="body" tone="ink2">
           Setting up your family…
@@ -144,21 +178,30 @@ export default function TodayScreen() {
       {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
       {today.tomorrow === undefined ? null : <TomorrowCard tomorrow={today.tomorrow} />}
       <PrimaryButton label={`Ask ${recipient} something`} onPress={() => router.push("/ask")} />
-      <QuietNoticeSheet
-        notice={{
-          ...quietFixture,
-          memberName: quiet?.displayName ?? quietFixture.memberName,
-          resolution,
-        }}
-        visible={quietOpen && quiet !== undefined}
-        onFine={() => {
-          setResolution("You said she is fine. Nothing else was sent.");
-        }}
-        onWait={() => {
-          setResolution("Waiting two hours. You will hear again at 13:00 if it is still quiet.");
-        }}
-        onClose={() => setQuietOpen(false)}
-      />
+      {notice === undefined ? null : (
+        <QuietNoticeSheet
+          notice={notice}
+          visible={quietOpen && (live ? openEventId !== undefined : quiet !== undefined)}
+          onFine={() => {
+            if (live) liveQuiet.settle("fine");
+            else
+              setResolution(
+                `You said ${quiet?.displayName ?? "Mom"} is fine. Nothing else was sent.`,
+              );
+          }}
+          onWait={() => {
+            if (live) liveQuiet.settle("wait");
+            else
+              setResolution(
+                "Waiting two hours. You will hear again at 13:00 if it is still quiet.",
+              );
+          }}
+          onClose={() => {
+            setQuietOpen(false);
+            setOpenEventId(undefined);
+          }}
+        />
+      )}
     </ScrollView>
   );
 }

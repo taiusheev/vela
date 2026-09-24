@@ -4,6 +4,8 @@ import type {
   ApiExchangePage,
   ApiFamilyPlan,
   ApiMe,
+  ApiQuietNotice,
+  ApiQuietState,
   ApiReply,
   ApiToday,
   MemberLight,
@@ -123,6 +125,24 @@ const NEW_FAMILY = {
     wake_time: "07:30",
   },
 };
+const QUIET_ID = "88888888-8888-7888-8888-888888888888";
+const QUIET_STATE: ApiQuietState = {
+  quiet_event_id: QUIET_ID,
+  member_id: MEMBER_ID,
+  member_name: "Synthetic member",
+  delivered_at: "2026-09-22T00:00:00.000Z",
+  repeated_at: null,
+  usual_time: null,
+  last_answered_at: null,
+  opened_at: "2026-09-22T03:00:00.000Z",
+  wait_until: null,
+  resolved: { outcome: "fine_known", at: "2026-09-22T04:00:00.000Z", by_name: "Synthetic user" },
+};
+const QUIET_NOTICE: ApiQuietNotice = {
+  ...QUIET_STATE,
+  resolved: null,
+  contacts: [{ id: MEMBER_ID, name: "Lena", relation: "neighbour", phone: "+886 2 1234 5678" }],
+};
 const EXCHANGE_ID = "66666666-6666-7666-8666-666666666666";
 const REPLIES_PATH = `/v1/exchanges/${EXCHANGE_ID}/replies`;
 const REPLY: ApiReply = {
@@ -170,6 +190,7 @@ function fixture(enableWrites = false) {
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>().mockResolvedValue(LIGHTS),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>().mockResolvedValue(TODAY),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
+    loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -197,6 +218,17 @@ function fixture(enableWrites = false) {
       createApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["createApiFamily"]>()
         .mockResolvedValue({ response: { status: 201, body: CREATED }, replayed: false }),
+      resolveApiQuiet: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["resolveApiQuiet"]>()
+        .mockResolvedValue({
+          response: { status: 200, body: QUIET_STATE },
+          replayed: false,
+          after: { outboundIds: ["row-1"], wakeMemberIds: [] },
+        }),
+    },
+    nudges: {
+      deliver: vi.fn<(id: string) => Promise<void>>().mockResolvedValue(undefined),
+      wake: vi.fn<(id: string, at: Date) => Promise<void>>().mockResolvedValue(undefined),
     },
     families: {
       random: { token: () => "fixture-token" },
@@ -1695,5 +1727,91 @@ describe("creating a family", () => {
     });
     await expectResponse(await runtime.request(familyRequest()), 404, NOT_FOUND);
     expect(f.writes.services.createApiFamily).not.toHaveBeenCalled();
+  });
+});
+
+function quietRequest(action: "fine" | "wait", body: unknown = {}) {
+  return writeRequest("POST", `/v1/quiet/${QUIET_ID}/${action}`, JSON.stringify(body), {
+    authorization: "Bearer good",
+  });
+}
+
+describe("the quiet notice", () => {
+  it("reads the notice for the caller, with no family middleware since the event names its family", async () => {
+    const { app, services } = fixture();
+    const response = await app.request(`/v1/quiet/${QUIET_ID}`, {
+      headers: { authorization: "Bearer good" },
+    });
+    await expectResponse(response, 200, QUIET_NOTICE);
+    expect(services.loadApiQuiet).toHaveBeenCalledWith(expect.anything(), IDENTITY, QUIET_ID);
+    expect(services.authorizeFamilyAccess).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 when the service finds nothing for this caller", async () => {
+    const { app, services } = fixture();
+    services.loadApiQuiet.mockResolvedValue(null);
+    const response = await app.request(`/v1/quiet/${QUIET_ID}`, {
+      headers: { authorization: "Bearer good" },
+    });
+    await expectResponse(response, 404, NOT_FOUND);
+  });
+
+  it.each(["fine", "wait"] as const)(
+    "dispatches %s, answers the state, and then hands over what the write left behind",
+    async (action) => {
+      const { app, writes } = fixture(true);
+      const order: string[] = [];
+      writes.services.resolveApiQuiet.mockImplementation(async () => {
+        order.push("service");
+        return {
+          response: { status: 200, body: QUIET_STATE },
+          replayed: false,
+          after: { outboundIds: ["row-1"], wakeMemberIds: ["her"] },
+        };
+      });
+      writes.nudges.deliver.mockImplementation(async () => {
+        order.push("deliver");
+      });
+      writes.nudges.wake.mockImplementation(async () => {
+        order.push("wake");
+      });
+
+      const response = await app.request(quietRequest(action));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(QUIET_STATE);
+      expect(writes.services.resolveApiQuiet).toHaveBeenCalledWith(
+        { db: expect.anything(), clock: writes.clock },
+        IDENTITY,
+        "request-1",
+        QUIET_ID,
+        action,
+        {},
+      );
+      expect(order).toEqual(["service", "deliver", "wake"]);
+      expect(writes.nudges.deliver).toHaveBeenCalledWith("row-1");
+      expect(writes.nudges.wake).toHaveBeenCalledWith("her", expect.any(Date));
+    },
+  );
+
+  it("still answers 200 when handing over fails: the write committed, and reconcile finishes it", async () => {
+    const { app, writes, logger } = fixture(true);
+    writes.nudges.deliver.mockRejectedValue(new Error("queue down"));
+    const response = await app.request(quietRequest("fine"));
+    expect(response.status).toBe(200);
+    expect(logger.error).toHaveBeenCalledWith("api_after_commit_deliver_failed", {
+      outboundId: "row-1",
+    });
+  });
+
+  it("refuses a body with anything in it before the database is opened", async () => {
+    const f = fixture(true);
+    await expectResponse(await f.app.request(quietRequest("fine", { reason: "x" })), 400, INVALID);
+    expect(f.writes.services.resolveApiQuiet).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("is not there without the write capability", async () => {
+    const { app } = fixture();
+    await expectResponse(await app.request(quietRequest("wait")), 404, NOT_FOUND);
   });
 });
