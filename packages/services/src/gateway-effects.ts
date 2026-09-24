@@ -3,7 +3,9 @@
  * §3.8, §3.12). The gateway calls these inside the transaction that records the send; they return
  * the notices to enqueue and the members whose scheduler must look again, and the gateway does both,
  * the wakes only after the transaction has committed, so a tick never reads state that is about to
- * appear. Nothing here imports a flow module: the effects are the gateway's own.
+ * appear. Nothing here imports a flow module: the effects are the gateway's own. The one exception is
+ * the message that closes a quiet event (`quiet-closing.ts`), which a notice landing after the close
+ * must send and the close itself sends too; it imports no flow, so no cycle comes with it.
  */
 import { LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -25,7 +27,8 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { channelLabel } from "./format.ts";
 import type { OutboundRequest } from "./gateway.ts";
-import { activeOrganisersWithLinks, markWakeDue } from "./repo.ts";
+import { closingNoticeFor } from "./quiet-closing.ts";
+import { activeOrganisersWithLinks, markWakeDue, memberById } from "./repo.ts";
 
 export const ArrivalEffect = z.object({
   exchangeId: z.uuid(),
@@ -86,11 +89,13 @@ export interface FailedContext extends RowContext {
 
 export interface SentOutcome {
   wakeMemberIds: string[];
-}
-
-export interface FailedOutcome extends SentOutcome {
+  /** Messages the outcome calls for, which the gateway enqueues in the effects' own transaction. */
   notices: OutboundRequest[];
 }
+
+export type FailedOutcome = SentOutcome;
+
+const NOTHING_FOLLOWS: SentOutcome = { wakeMemberIds: [], notices: [] };
 
 function parseEffect<T>(deps: Deps, schema: z.ZodType<T>, ctx: RowContext): T | null {
   const parsed = schema.safeParse(ctx.effect);
@@ -110,7 +115,7 @@ async function arrivalSent(
 ): Promise<SentOutcome> {
   const effect = parseEffect(deps, ArrivalEffect, ctx);
   if (effect === null) {
-    return { wakeMemberIds: [] };
+    return NOTHING_FOLLOWS;
   }
   const { row, member, family, sentAt } = ctx;
   const [exchange] = await tx
@@ -120,7 +125,7 @@ async function arrivalSent(
     .for("update");
   if (exchange === undefined) {
     deps.logger.error("gateway_effect_missing_exchange", { outboundId: row.id, kind: row.kind });
-    return { wakeMemberIds: [] };
+    return NOTHING_FOLLOWS;
   }
   const state = canApply(exchange.state, "deliver")
     ? nextExchangeState(exchange.state, "deliver")
@@ -188,7 +193,7 @@ async function arrivalSent(
   // Her ladder (the repeat, the quiet threshold) starts from the delivery, so the scheduler must
   // decide again now that delivered_at is known.
   await markWakeDue(tx, member.id, sentAt);
-  return { wakeMemberIds: [member.id] };
+  return { wakeMemberIds: [member.id], notices: [] };
 }
 
 async function repeatSent(deps: Deps, tx: VelaTransaction, ctx: SentContext): Promise<void> {
@@ -242,10 +247,21 @@ async function turnPromptSent(deps: Deps, tx: VelaTransaction, ctx: SentContext)
   );
 }
 
-async function quietNoticeSent(deps: Deps, tx: VelaTransaction, ctx: SentContext): Promise<void> {
+/**
+ * The notice is out: its reader is counted among those told. When the event closed while it was on
+ * its way, the close did not count this reader — the update below, which counts them, waited on the
+ * close's lock on the event and runs after it — so they have just read that she is quiet with nothing
+ * to follow. They are told how it closed now (`closingNoticeFor`), under the key the close would
+ * have used, so a reader it did count hears it once.
+ */
+async function quietNoticeSent(
+  deps: Deps,
+  tx: VelaTransaction,
+  ctx: SentContext,
+): Promise<SentOutcome> {
   const effect = parseEffect(deps, QuietNoticeEffect, ctx);
   if (effect === null) {
-    return;
+    return NOTHING_FOLLOWS;
   }
   const { sentAt } = ctx;
   // Retries of an earlier round can land after a later one, so the counts never move backwards.
@@ -257,10 +273,10 @@ async function quietNoticeSent(deps: Deps, tx: VelaTransaction, ctx: SentContext
       notifiedMemberIds: sql`case when ${effect.notifiedMemberId}::uuid = any(${quietEvents.notifiedMemberIds}) then ${quietEvents.notifiedMemberIds} else array_append(${quietEvents.notifiedMemberIds}, ${effect.notifiedMemberId}::uuid) end`,
     })
     .where(eq(quietEvents.id, effect.quietEventId))
-    .returning({ memberId: quietEvents.memberId, exchangeId: quietEvents.exchangeId });
+    .returning();
   if (quiet === undefined) {
     deps.logger.error("gateway_effect_missing_quiet_event", { outboundId: ctx.row.id });
-    return;
+    return NOTHING_FOLLOWS;
   }
   await recordEvent(
     tx,
@@ -273,6 +289,13 @@ async function quietNoticeSent(deps: Deps, tx: VelaTransaction, ctx: SentContext
     },
     sentAt,
   );
+  if (quiet.resolvedAt === null) {
+    return NOTHING_FOLLOWS;
+  }
+  const her = await memberById(tx, quiet.memberId);
+  const closing =
+    her === null ? null : await closingNoticeFor(tx, quiet, her, effect.notifiedMemberId);
+  return { wakeMemberIds: [], notices: closing === null ? [] : [closing] };
 }
 
 /** The state changes after a successful send, by the row's kind. */
@@ -286,15 +309,14 @@ export async function applySentEffects(
       return arrivalSent(deps, tx, ctx);
     case "repeat":
       await repeatSent(deps, tx, ctx);
-      return { wakeMemberIds: [] };
+      return NOTHING_FOLLOWS;
     case "turn_prompt":
       await turnPromptSent(deps, tx, ctx);
-      return { wakeMemberIds: [] };
+      return NOTHING_FOLLOWS;
     case "quiet_notice":
-      await quietNoticeSent(deps, tx, ctx);
-      return { wakeMemberIds: [] };
+      return quietNoticeSent(deps, tx, ctx);
     default:
-      return { wakeMemberIds: [] };
+      return NOTHING_FOLLOWS;
   }
 }
 

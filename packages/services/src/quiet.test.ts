@@ -367,6 +367,49 @@ describe("resolveQuietOnAnswer", () => {
     );
     expect((await eventNames()).filter((name) => name === "quiet_notice_resolved")).toHaveLength(1);
   });
+
+  it("drops the notices still queued when her answer closes the event first", async () => {
+    const { seed, second, exchangeId } = await quietMorning();
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    // She answers in the seconds before the queue delivers either notice.
+    h.clock.advanceMinutes(2);
+    await h.db.transaction((tx) => resolveQuietOnAnswer(h.deps, tx, exchangeId));
+
+    await h.run(handlers());
+
+    // Nobody hears she is quiet after she answered: the notices are moot, not late.
+    expect(h.telegram.sentTo(seed.organiserLink.externalId)).toEqual([]);
+    expect(h.telegram.sentTo(second.link.externalId)).toEqual([]);
+    expect((await noticeRows()).map((row) => [row.status, row.error])).toEqual([
+      ["dropped", "quiet_resolved"],
+      ["dropped", "quiet_resolved"],
+    ]);
+    expect(await resolvedRows()).toEqual([]);
+  });
+
+  it("tells an organiser whose notice was on its way when her answer closed the event", async () => {
+    const { seed, second, exchangeId } = await quietMorning();
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    // Mia's notice has gone out, and its effect — which adds her to those told — has not run yet:
+    // the window a check before sending cannot close. Sam's is still queued.
+    await h.db
+      .update(outbound)
+      .set({ status: "sent", sentAt: h.clock.now(), externalId: "900" })
+      .where(eq(outbound.memberId, seed.organiser.id));
+    h.clock.advanceMinutes(2);
+    await h.db.transaction((tx) => resolveQuietOnAnswer(h.deps, tx, exchangeId));
+
+    await h.run(handlers());
+
+    // Mia read that her mother is quiet, so she hears at once that she answered; Sam hears nothing.
+    expect(
+      h.telegram.sentTo(seed.organiserLink.externalId).map((sent) => sent.message.text),
+    ).toEqual(["Mom answered at 14:02. Everything is lit again."]);
+    expect(h.telegram.sentTo(second.link.externalId)).toEqual([]);
+    expect((await resolvedRows()).map((row) => row.memberId)).toEqual([seed.organiser.id]);
+    const [quiet] = await quietRows();
+    expect(quiet?.notifiedMemberIds).toEqual([seed.organiser.id]);
+  });
 });
 
 describe("handleQuietButton with 'she's fine'", () => {
@@ -405,6 +448,35 @@ describe("handleQuietButton with 'she's fine'", () => {
     const [message] = h.telegram.sentTo(second.link.externalId).slice(-1);
     expect(message?.message.text).toBe("Mia says Mom is fine.");
     expect(await eventNames()).toContain("quiet_notice_resolved");
+  });
+
+  it("tells an organiser whose notice was on its way when another said she is fine", async () => {
+    const { seed, second } = await quietMorning();
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    const byMember = new Map((await noticeRows()).map((row) => [row.memberId, row.id]));
+    // Mia's notice is delivered and she is among those told; Sam's has gone out, its effect not run.
+    await deliverOutbound(h.deps, byMember.get(seed.organiser.id) ?? "");
+    await h.db
+      .update(outbound)
+      .set({ status: "sent", sentAt: h.clock.now(), externalId: "901" })
+      .where(eq(outbound.id, byMember.get(second.member.id) ?? ""));
+    const [quiet] = await quietRows();
+    if (quiet === undefined) {
+      throw new Error("quiet event not opened");
+    }
+    h.clock.advanceMinutes(3);
+    await handleQuietButton(h.deps, tap(seed.organiserLink, quiet.id, "quiet_fine"), {
+      type: "quiet_fine",
+      quietEventId: quiet.id,
+    });
+
+    await h.run(handlers());
+
+    // Sam read the notice, so he hears Mia's answer to it; Mia, who gave it, hears nothing back.
+    expect(h.telegram.sentTo(second.link.externalId).map((sent) => sent.message.text)).toEqual([
+      "Mia says Mom is fine.",
+    ]);
+    expect((await resolvedRows()).map((row) => row.memberId)).toEqual([second.member.id]);
   });
 
   it("only takes the buttons away on a second tap or a tap after the event closed", async () => {

@@ -5,7 +5,7 @@
  * everyone who was told. Nothing is ever sent to a nearby contact: their names and numbers are
  * listed for the organiser to call.
  */
-import type { Button, Channel, InboundEvent, LocalDate } from "@vela/contracts";
+import type { Button, InboundEvent, LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
   addMinutes,
@@ -29,9 +29,9 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime } from "./format.ts";
 import { enqueueOutbound, type OutboundRequest } from "./gateway.ts";
+import { closingNoticeFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
 import {
   activeOrganisersWithLinks,
-  channelLinkOfMember,
   consentedNearbyContacts,
   familyById,
   lockExchangeForLocalDate,
@@ -41,9 +41,6 @@ import {
   quietEventById,
   recentAnswerTimes,
 } from "./repo.ts";
-
-/** The pilot's organisers are reached on Telegram (flows §3.12). */
-const NOTICE_CHANNEL: Channel = "telegram";
 
 /** `Button.label` allows at most 64 characters, and her name is the family's own words. */
 const LABEL_MAX_LENGTH = 64;
@@ -270,38 +267,22 @@ export async function notifyQuiet(deps: Deps, memberId: string, date: LocalDate)
  */
 export type EmitOutbound = (request: OutboundRequest) => Promise<unknown>;
 
-/** One `quiet_resolved` to each member who was told, except `exclude`, in their own language. */
+/**
+ * One `quiet_resolved` to each member the closed event counts as told, except whoever closed it, in
+ * their own language (`closingNoticeFor`). A notice still on its way is not counted yet; the gateway
+ * tells its reader once it lands (`quietNoticeSent`), and drops one not yet sent.
+ */
 async function tellNotified(
   tx: VelaTransaction,
-  input: {
-    quiet: QuietEvent;
-    exclude: string | null;
-    text: (lang: Member["language"]) => string;
-  },
+  closed: QuietEvent,
+  her: Member,
   emit: EmitOutbound,
 ): Promise<void> {
-  for (const readerId of input.quiet.notifiedMemberIds) {
-    if (readerId === input.exclude) {
-      continue;
+  for (const readerId of closed.notifiedMemberIds) {
+    const notice = await closingNoticeFor(tx, closed, her, readerId);
+    if (notice !== null) {
+      await emit(notice);
     }
-    const reader = await memberById(tx, readerId);
-    const link = await channelLinkOfMember(tx, readerId, NOTICE_CHANNEL);
-    if (reader === null || link === null || link.blockedAt !== null) {
-      continue;
-    }
-    await emit({
-      kind: "quiet_resolved",
-      idempotencyKey: outboundKey("quiet_resolved", {
-        quietEventId: input.quiet.id,
-        memberId: readerId,
-      }),
-      memberId: readerId,
-      channel: link.channel,
-      conversationId: link.externalId,
-      exchangeId: input.quiet.exchangeId,
-      lang: reader.language,
-      text: input.text(reader.language),
-    });
   }
 }
 
@@ -327,20 +308,15 @@ export async function resolveQuietOnAnswer(
   if (member === null) {
     return;
   }
-  await tx
+  const [closed] = await tx
     .update(quietEvents)
     .set({ resolvedAt: now, outcome: "answered_late" })
-    .where(eq(quietEvents.id, quiet.id));
-  const time = formatTime(now, member.tz);
-  await tellNotified(
-    tx,
-    {
-      quiet,
-      exclude: null,
-      text: (lang) => t(lang, "quiet.resolved_answered", { name: member.displayName, time }),
-    },
-    (request) => enqueueOutbound(deps, tx, request),
-  );
+    .where(eq(quietEvents.id, quiet.id))
+    .returning();
+  if (closed === undefined) {
+    throw new Error("quiet event vanished under its own lock");
+  }
+  await tellNotified(tx, closed, member, (request) => enqueueOutbound(deps, tx, request));
   await recordEvent(
     tx,
     {
@@ -366,23 +342,15 @@ export async function resolveQuietAsFine(
   emit: EmitOutbound,
 ): Promise<void> {
   const { quiet, her, resolver } = input;
-  await tx
+  const [closed] = await tx
     .update(quietEvents)
     .set({ resolvedAt: now, outcome: "fine_known", resolvedBy: resolver.id })
-    .where(eq(quietEvents.id, quiet.id));
-  await tellNotified(
-    tx,
-    {
-      quiet,
-      exclude: resolver.id,
-      text: (readerLang) =>
-        t(readerLang, "quiet.resolved_fine", {
-          organiser: resolver.displayName,
-          name: her.displayName,
-        }),
-    },
-    emit,
-  );
+    .where(eq(quietEvents.id, quiet.id))
+    .returning();
+  if (closed === undefined) {
+    throw new Error("quiet event vanished under its caller's lock");
+  }
+  await tellNotified(tx, closed, her, emit);
   await recordEvent(
     tx,
     {

@@ -38,6 +38,7 @@ import {
   messageRefs,
   type Outbound,
   outbound,
+  quietEvents,
   type VelaTransaction,
 } from "@vela/db";
 import { and, asc, eq, isNull, lt } from "drizzle-orm";
@@ -50,6 +51,7 @@ import {
   applySentEffects,
   type EffectByKind,
   type FailedOutcome,
+  QuietNoticeEffect,
 } from "./gateway-effects.ts";
 import { familyHasEnded, memberById, type Queryable, repointFamilyGroup } from "./repo.ts";
 
@@ -260,6 +262,31 @@ interface LoadedOutbound {
   family: Family;
 }
 
+/**
+ * A quiet notice whose event has closed before it went out: she answered, or someone said she is
+ * fine, in the seconds or the retries between queueing and sending. Sent, it would tell an organiser
+ * she is quiet after she was not, and nothing would follow it, since the close told only those it
+ * already counted and an unsent notice counts no one. So it is not sent. One already on its way when
+ * the event closes is followed by the close instead (`quietNoticeSent`). A payload that does not
+ * parse is left to the send path, which fails it as it fails any other.
+ */
+async function quietNoticeIsMoot(db: Queryable, row: Outbound): Promise<boolean> {
+  if (row.kind !== "quiet_notice") {
+    return false;
+  }
+  const payload = OutboundPayload.safeParse(row.payload);
+  const effect = payload.success ? QuietNoticeEffect.safeParse(payload.data.effect) : null;
+  if (effect === null || !effect.success) {
+    return false;
+  }
+  const [quiet] = await db
+    .select({ resolvedAt: quietEvents.resolvedAt })
+    .from(quietEvents)
+    .where(eq(quietEvents.id, effect.data.quietEventId))
+    .limit(1);
+  return quiet !== undefined && quiet.resolvedAt !== null;
+}
+
 async function loadOutbound(db: Queryable, outboundId: string): Promise<LoadedOutbound | null> {
   const rows = await db
     .select({ row: outbound, member: members, family: families })
@@ -298,6 +325,9 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
   }
   if (await familyHasEnded(deps.db, family.id)) {
     return drop(deps, loaded, "family_ended");
+  }
+  if (await quietNoticeIsMoot(deps.db, row)) {
+    return drop(deps, loaded, "quiet_resolved");
   }
 
   const payload = OutboundPayload.safeParse(row.payload);
@@ -400,9 +430,9 @@ async function applyEffects(
       .where(and(eq(outbound.id, row.id), isNull(outbound.effectsAt)))
       .returning({ id: outbound.id });
     if (claimed.length === 0) {
-      return { wakeMemberIds: [] };
+      return { wakeMemberIds: [], notices: [] };
     }
-    return applySentEffects(deps, tx, {
+    const effects = await applySentEffects(deps, tx, {
       row,
       member,
       family,
@@ -410,6 +440,10 @@ async function applyEffects(
       sentAt,
       primaryMessageId: primaryMessageId ?? row.externalId ?? "",
     });
+    for (const notice of effects.notices) {
+      await enqueueOutbound(deps, tx, notice);
+    }
+    return effects;
   });
   for (const memberId of outcome.wakeMemberIds) {
     await deps.scheduler.wakeAt(memberId, sentAt);
