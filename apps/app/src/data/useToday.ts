@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ApiToday, ApiTodayExchange, ApiTomorrowTurn, MemberLight } from "@vela/contracts";
-import { apiConfigured, fetchMe, fetchToday } from "../api/client.ts";
+import { ApiError, apiConfigured, fetchMe, fetchToday } from "../api/client.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import type { LightState } from "../components/light.tsx";
 import {
@@ -144,6 +144,8 @@ export interface TodayView {
   loading: boolean;
   /** Set when the API is configured but would not answer, so the screen can say so plainly. */
   trouble: boolean;
+  /** Signed in, but the API knows no account here yet: a first run, not a failure. */
+  noAccount: boolean;
   /** True only once the real day has arrived: until then `today` is the example one. */
   live: boolean;
 }
@@ -170,13 +172,18 @@ export function useToday(): TodayView {
     queryFn: async () => fetchToday(familyId ?? "", await account.token()),
   });
 
-  if (!enabled) return { today: todayFixture, loading: false, trouble: false, live: false };
+  if (!enabled) {
+    return { today: todayFixture, loading: false, trouble: false, noAccount: false, live: false };
+  }
   const live = day.data !== undefined;
+  // A 404 from /v1/me is the ordinary first run: the account signed in before anything was set up.
+  const noAccount = me.error instanceof ApiError && me.error.status === 404;
   return {
     today: live ? toToday(day.data, membership?.member_id) : todayFixture,
     ...(familyId === undefined ? {} : { familyId }),
     loading: me.isPending || day.isPending,
-    trouble: me.isError || day.isError,
+    trouble: (me.isError && !noAccount) || day.isError,
+    noAccount,
     live,
   };
 }

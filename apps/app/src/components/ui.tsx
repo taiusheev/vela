@@ -9,10 +9,13 @@ type Tone = "ink" | "ink2" | "ink3" | "action";
 export function Words({
   variant = "body",
   tone = "ink",
+  selectable = false,
   children,
 }: {
   variant?: Role;
   tone?: Tone;
+  /** For the few strings a person has to copy rather than read, such as an account id. */
+  selectable?: boolean;
   children: ReactNode;
 }) {
   const palette = usePalette();
@@ -25,7 +28,11 @@ export function Words({
         : tone === "action"
           ? palette.action
           : palette.ink;
-  return <Text style={[style, { color: colour }]}>{children}</Text>;
+  return (
+    <Text selectable={selectable} style={[style, { color: colour }]}>
+      {children}
+    </Text>
+  );
 }
 
 /** Surface, 16 radius, one hairline: the card the whole app is built from. */

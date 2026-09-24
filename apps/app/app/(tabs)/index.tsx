@@ -98,7 +98,7 @@ export default function TodayScreen() {
   const [quietOpen, setQuietOpen] = useState(false);
   const [resolution, setResolution] = useState<string | undefined>();
   const insets = useSafeAreaInsets();
-  const { today, trouble } = useToday();
+  const { today, trouble, noAccount } = useToday();
   const quiet = today.lights.find((light) => light.state === "quiet");
   // The sheet opens itself on a quiet day and closes itself the moment she answers (spec A11).
   useEffect(() => {
@@ -118,7 +118,11 @@ export default function TodayScreen() {
       }}
     >
       <LightsRow lights={today.lights} />
-      {trouble ? (
+      {noAccount ? (
+        <Words variant="body" tone="ink2">
+          This is the example day. Your own family is not set up on this account yet.
+        </Words>
+      ) : trouble ? (
         <Words variant="body" tone="ink2">
           Today could not be reached just now.
         </Words>
