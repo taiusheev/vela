@@ -169,11 +169,13 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | n
       return null;
     }
 
+    // `for no key update`, as `lockExchangeForLocalDate` explains: with `for update` this lock and
+    // "she's fine" deadlocked, and PostgreSQL chose her answer to abort.
     const [exchange] = await tx
       .select()
       .from(exchanges)
       .where(eq(exchanges.id, input.exchange.id))
-      .for("update");
+      .for("no key update");
     if (exchange === undefined) {
       // The answer row's foreign key has just proven the exchange exists; this guards the type.
       throw new VelaError("not_found", `exchange ${input.exchange.id} does not exist`);

@@ -219,6 +219,14 @@ export async function exchangeForLocalDate(
  * The same row, locked for the caller's transaction. The quiet ladder decides from state read
  * before the transaction opens, so it locks the exchange before acting on that decision: her answer
  * takes the same lock (`lightTheLight`), and one of the two then sees what the other wrote.
+ *
+ * `for no key update`, not `for update`, and her answer's lock is the same. Both go on to lock the
+ * exchange's quiet event, while "she's fine" (the app's and the Telegram button's) holds that event
+ * and writes outbound rows whose foreign key is this exchange — each insert taking `for key share`
+ * on it, which `for update` blocks. That is a lock cycle, and PostgreSQL broke it by aborting her
+ * answer, or the detector (the contention drill's `quiet-notice-race`). `for no key update` still
+ * excludes every other writer of the row, and admits only those foreign-key checks; it is enough
+ * because no caller deletes the exchange or changes its id, which would need the stronger lock.
  */
 export async function lockExchangeForLocalDate(
   tx: VelaTransaction,
@@ -236,7 +244,7 @@ export async function lockExchangeForLocalDate(
       ),
     )
     .limit(1)
-    .for("update");
+    .for("no key update");
   return rows[0] ?? null;
 }
 
