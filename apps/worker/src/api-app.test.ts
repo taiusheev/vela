@@ -4,7 +4,9 @@ import type {
   ApiExchangePage,
   ApiFamily,
   ApiFamilyPlan,
+  ApiLeft,
   ApiMe,
+  ApiMemberPause,
   ApiQuietNotice,
   ApiQuietState,
   ApiReply,
@@ -16,6 +18,7 @@ import {
   AlreadyOrganiserError,
   ApiIdempotencyError,
   AskDayTakenError,
+  MemberChangeRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
   VelaError,
@@ -142,6 +145,8 @@ const NEW_FAMILY = {
     wake_time: "07:30",
   },
 };
+const PAUSED: ApiMemberPause = { member_id: MEMBER_ID, status: "paused" };
+const LEFT: ApiLeft = { member_id: MEMBER_ID, left_at: "2026-09-22T00:00:00.000Z" };
 const QUIET_ID = "88888888-8888-7888-8888-888888888888";
 const QUIET_STATE: ApiQuietState = {
   quiet_event_id: QUIET_ID,
@@ -236,6 +241,12 @@ function fixture(enableWrites = false) {
       createApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["createApiFamily"]>()
         .mockResolvedValue({ response: { status: 201, body: CREATED }, replayed: false }),
+      pauseApiMember: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["pauseApiMember"]>()
+        .mockResolvedValue({ response: { status: 200, body: PAUSED }, replayed: false }),
+      leaveApiFamily: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["leaveApiFamily"]>()
+        .mockResolvedValue({ response: { status: 200, body: LEFT }, replayed: false }),
       resolveApiQuiet: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["resolveApiQuiet"]>()
         .mockResolvedValue({
@@ -1859,5 +1870,82 @@ describe("the quiet notice", () => {
   it("is not there without the write capability", async () => {
     const { app } = fixture();
     await expectResponse(await app.request(quietRequest("wait")), 404, NOT_FOUND);
+  });
+});
+
+describe("pausing and leaving", () => {
+  const PAUSE_PATH = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/pause`;
+  const LEFT_PATH = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/left`;
+  const good = { authorization: "Bearer good" };
+
+  it("pauses through the family check and answers the new state", async () => {
+    const { app, writes, services } = fixture(true);
+    const response = await app.request(
+      writeRequest("POST", PAUSE_PATH, JSON.stringify({ paused: true }), good),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(PAUSED);
+    expect(services.authorizeFamilyAccess).toHaveBeenCalled();
+    expect(writes.services.pauseApiMember).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      MEMBER_ID,
+      { paused: true },
+    );
+  });
+
+  it("leaves without the family check, so the replay after leaving still answers", async () => {
+    const { app, writes, services } = fixture(true);
+    const response = await app.request(writeRequest("POST", LEFT_PATH, "{}", good));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(LEFT);
+    expect(services.authorizeFamilyAccess).not.toHaveBeenCalled();
+    expect(writes.services.leaveApiFamily).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      MEMBER_ID,
+      {},
+    );
+  });
+
+  it.each([
+    ["last_organiser", "Someone else who organises the family has to be active first."],
+    ["kept_light", "A kept light is paused from her own chat."],
+  ] as const)("answers a %s refusal as a 409 that says why", async (reason, message) => {
+    const { app, writes } = fixture(true);
+    writes.services.leaveApiFamily.mockRejectedValue(new MemberChangeRefusedError(reason));
+    await expectResponse(await app.request(writeRequest("POST", LEFT_PATH, "{}", good)), 409, {
+      error: { code: "conflict", message, details: { reason } },
+    });
+  });
+
+  it("refuses a body that is not the contract's before the database is opened", async () => {
+    const f = fixture(true);
+    await expectResponse(
+      await f.app.request(
+        writeRequest("POST", PAUSE_PATH, JSON.stringify({ paused: "yes" }), good),
+      ),
+      400,
+      INVALID,
+    );
+    await expectResponse(
+      await f.app.request(writeRequest("POST", LEFT_PATH, JSON.stringify({ why: "x" }), good)),
+      400,
+      INVALID,
+    );
+    expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("is not there without the write capability", async () => {
+    const { app } = fixture();
+    await expectResponse(
+      await app.request(writeRequest("POST", LEFT_PATH, "{}", good)),
+      404,
+      NOT_FOUND,
+    );
   });
 });

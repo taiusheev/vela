@@ -504,3 +504,30 @@ export const ApiFamily = z.object({
     .nullable(),
 });
 export type ApiFamily = z.infer<typeof ApiFamily>;
+
+/** What pausing oneself answers: where the caller's membership now stands (spec A12). */
+export const ApiMemberPause = z.object({
+  member_id: z.uuid(),
+  status: MemberStatus.extract(["active", "paused"]),
+});
+export type ApiMemberPause = z.infer<typeof ApiMemberPause>;
+
+/** Leaving carries nothing but the member in its path. */
+export const LeaveFamily = z.strictObject({});
+export type LeaveFamily = z.infer<typeof LeaveFamily>;
+
+export const ApiLeft = z.object({
+  member_id: z.uuid(),
+  left_at: z.iso.datetime({ offset: true }),
+});
+export type ApiLeft = z.infer<typeof ApiLeft>;
+
+/**
+ * Why pausing or leaving was refused, in a 409's `details.reason`. `last_organiser`: nobody else
+ * who organises the family is active, and an organiser who is paused or gone is not told when her
+ * light goes quiet. `kept_light`: a kept-light member's pause and stop go through her own chat,
+ * where her schedule, her words and her yes are handled together.
+ */
+export const MEMBER_CHANGE_REFUSALS = ["last_organiser", "kept_light"] as const;
+export const MemberChangeRefusal = z.enum(MEMBER_CHANGE_REFUSALS);
+export type MemberChangeRefusal = z.infer<typeof MemberChangeRefusal>;

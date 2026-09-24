@@ -132,6 +132,18 @@ A1's age, city and "lives alone" are not asked: nothing stores or uses them, and
 
 **The people nearby are for the organisers**, who set them up; anyone else gets `nearby: null`. **No number is in it**, for anyone: a number is given only in the quiet notice, to the people the notice is for. A contact near a member who has left is not listed. Prices are not in it either — the plan card is A13's, and nothing charges yet. A stranger, a family that is not the caller's and an unknown family all answer 404.
 
+### Pausing and leaving (24 September 2026)
+
+`POST /v1/families/:familyId/members/:memberId/pause` takes `PauseMember` — `{paused}` — and answers 200 with `ApiMemberPause`, the member's status after it. `POST /v1/families/:familyId/members/:memberId/left` takes an empty body (`LeaveFamily`) and answers 200 with `ApiLeft`, the member and when they left. `pauseApiMember` and `leaveApiFamily` in `packages/services/src/api-members.ts` run them as `member.pause:v1` and `member.leave:v1`.
+
+**Only one's own membership.** A member id that is not the caller's answers 404, as an unknown one does. Pausing an organiser's parent is not this route: she pauses in her own chat, and a family's absence is away mode (§5).
+
+**What they do.** A paused member holds no turns — the rotation takes active members only — and a paused organiser is not sent the quiet notice, which goes to active organisers. Resuming makes them active again. Leaving sets `left`, `left_at` and `turns_in` false, as the founder's `mark_left` does, records `member_left` with `source: "app"`, and retention deletes the membership thirty days on. Asking for the state one is already in answers it as it stands. Pausing records no event: the events table's check names no pause, and adding one is a migration.
+
+**Two refusals**, both 409 with `details.reason`: `last_organiser` when the caller organises the family and no other organiser is active — someone must still be told when her light goes quiet, so neither a pause nor a leave may take the last one away, and a paused organiser does not count; and `kept_light` when the caller keeps a light, whose pause and stop go through her own chat, where her arrivals, her health-words yes and her schedule are handled together (flows §3.13). The family's organiser rows are locked in id order before the caller's own, so two organisers pausing at once queue, and the second sees that the first is paused.
+
+**Leave authorizes itself.** Once the caller has left they are no longer a live member, so the family check would refuse the replay of the very leave that made them one. The route has no family middleware; `authorize` accepts the caller's own row in a family that still exists whether it is live or left, and a later leave answers the time they left. The app clears everything it has read when a leave succeeds, and `/v1/me` then lists no family, so Today sends the reader to onboarding.
+
 ### The quiet notice (24 September 2026)
 
 `GET /v1/quiet/:quietEventId` answers `ApiQuietNotice`: whose light it is, when today's ask reached her and when it was asked again, her usual answering time once there are enough answers to know it, when she last answered, when the event opened, `wait_until`, `resolved` (the outcome, when, and who said she was fine), and the people nearby who have said yes, with their numbers. Facts only — never her words. `loadApiQuiet` in `packages/services/src/api-quiet.ts` reads the family from the event, since the path names none, and answers **the family's organisers only**, as the Telegram notice goes only to them: the numbers are given to the people the notice is for. Anyone else, an event that does not exist and an id that is not a uuid all answer 404 alike.
@@ -169,8 +181,8 @@ A quiet event opened during the learning period notifies nobody for its first ei
 | POST | /families/:id/members | Add a member (self-invite accepted, or organiser adds a kept-light member) |
 | PATCH | /families/:id/members/:mid | address_form, language, tz, wake_time, turns_in, primary_surface, role |
 | POST | /families/:id/members/:mid/light | `{on: boolean}` — for oneself: consent implicit; for another: requires their consent flow |
-| POST | /families/:id/members/:mid/pause | Pause or resume (`{paused: boolean}`) |
-| POST | /families/:id/members/:mid/left | Member leaves |
+| POST | /families/:id/members/:mid/pause | Pause or resume (`{paused: boolean}`) **Built for oneself**, see §1 "Pausing and leaving" |
+| POST | /families/:id/members/:mid/left | Member leaves **Built for oneself**, see §1 "Pausing and leaving" |
 | POST | /families/:id/members/:mid/deceased | Any member marks it; every schedule stops within the hour |
 | POST | /families/:id/invites | `{channel: link|line|whatsapp|telegram|sms|email, for_member_id?}` → `{url, token, expires_at, invite_text}` |
 | POST | /invites/:token/accept | Accept into the family |

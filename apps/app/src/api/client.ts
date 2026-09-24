@@ -5,7 +5,9 @@ import type {
   ApiCreatedFamily,
   ApiExchangePage,
   ApiFamily,
+  ApiLeft,
   ApiMe,
+  ApiMemberPause,
   ApiQuietNotice,
   ApiQuietState,
   ApiReply,
@@ -154,6 +156,43 @@ function refusalReason(error: unknown): string | null {
 export function replyRefusal(error: unknown): "not_answered" | "her_own" | null {
   const reason = refusalReason(error);
   return reason === "not_answered" || reason === "her_own" ? reason : null;
+}
+
+/** Why pausing or leaving was refused: nobody else organising is active, or a kept light's own. */
+export function memberChangeRefusal(error: unknown): "last_organiser" | "kept_light" | null {
+  const reason = refusalReason(error);
+  return reason === "last_organiser" || reason === "kept_light" ? reason : null;
+}
+
+/** Pause or resume one's own membership (spec A12). */
+export function pauseSelf(
+  familyId: string,
+  memberId: string,
+  paused: boolean,
+  key: string,
+  token: string | null,
+): Promise<ApiMemberPause> {
+  return call<ApiMemberPause>({
+    path: `/v1/families/${familyId}/members/${memberId}/pause`,
+    token,
+    key,
+    body: { paused },
+  });
+}
+
+/** Leave the family: the membership is closed, and deleted thirty days on (spec A12). */
+export function leaveFamily(
+  familyId: string,
+  memberId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiLeft> {
+  return call<ApiLeft>({
+    path: `/v1/families/${familyId}/members/${memberId}/left`,
+    token,
+    key,
+    body: {},
+  });
 }
 
 /** Whether creating a family was refused because this account already runs one. */

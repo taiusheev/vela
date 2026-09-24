@@ -13,7 +13,16 @@ export interface KeptLightRow {
 
 /** The family as You shows it: whose light is kept, who else asks and replies, who is nearby. */
 export interface YouFamily {
-  me: { name: string; line: string; lightOn: boolean };
+  familyId: string;
+  familyName: string;
+  me: {
+    memberId: string;
+    name: string;
+    line: string;
+    organiser: boolean;
+    lightOn: boolean;
+    paused: boolean;
+  };
   keptLight: KeptLightRow[];
   /** Everyone else, who asks and replies; undefined when there is nobody but the reader. */
   others?: { names: string; line: string };
@@ -82,7 +91,12 @@ export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily
   const role = family.me.role === "organiser" ? "organiser" : "family";
   const user = me?.user;
   return {
+    familyId: family.family.id,
+    familyName: family.family.name,
     me: {
+      memberId: family.me.member_id,
+      organiser: family.me.role === "organiser",
+      paused: mine?.status === "paused",
       name: user?.display_name ?? mine?.display_name ?? "You",
       line: [
         role,
@@ -121,7 +135,16 @@ export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily
 
 /** The example family, shown with no API or nobody signed in; it matches the prototype. */
 export const youFixture: YouFamily = {
-  me: { name: "Anna", line: "organiser · English · Taipei", lightOn: false },
+  familyId: "example",
+  familyName: "The Chens",
+  me: {
+    memberId: "me",
+    organiser: true,
+    name: "Anna",
+    line: "organiser · English · Taipei",
+    lightOn: false,
+    paused: false,
+  },
   keptLight: [
     {
       memberId: "m1",

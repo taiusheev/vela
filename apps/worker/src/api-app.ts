@@ -8,7 +8,9 @@ import {
   ApiFamily,
   ApiFamilyPlan,
   ApiIdempotencyKey,
+  ApiLeft,
   ApiMe,
+  ApiMemberPause,
   ApiQuietNotice,
   ApiQuietState,
   ApiReply,
@@ -17,7 +19,9 @@ import {
   ComposeAsk,
   ComposeReply,
   CreateFamily,
+  LeaveFamily,
   MemberLight,
+  PauseMember,
   QuietAction,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
@@ -33,6 +37,7 @@ import {
   type createApiFamily,
   errorLabel,
   type Logger,
+  type leaveApiFamily,
   type loadApiExchanges,
   type loadApiFamily,
   type loadApiFamilyPlan,
@@ -40,6 +45,8 @@ import {
   type loadApiMe,
   type loadApiQuiet,
   type loadApiToday,
+  MemberChangeRefusedError,
+  type pauseApiMember,
   type provisionApiAccount,
   ReplyRefusedError,
   type replyToApiExchange,
@@ -79,6 +86,8 @@ export interface ApiWriteServices {
   replyToApiExchange: typeof replyToApiExchange;
   createApiFamily: typeof createApiFamily;
   resolveApiQuiet: typeof resolveApiQuiet;
+  pauseApiMember: typeof pauseApiMember;
+  leaveApiFamily: typeof leaveApiFamily;
 }
 
 export interface ApiRuntime {
@@ -284,6 +293,19 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           },
         };
         return c.json(refused, error.reason === "her_own" ? 403 : 409);
+      }
+      if (error instanceof MemberChangeRefusedError) {
+        const refused: ApiErrorBody = {
+          error: {
+            code: "conflict",
+            message:
+              error.reason === "last_organiser"
+                ? "Someone else who organises the family has to be active first."
+                : "A kept light is paused from her own chat.",
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(refused, 409);
       }
       if (error instanceof AskDayTakenError) {
         const taken: ApiErrorBody = {
@@ -517,6 +539,58 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         },
       );
     }
+    app.post(
+      "/v1/families/:familyId/members/:memberId/pause",
+      authenticate,
+      validateWrite(PauseMember, runtime.logger),
+      checkActivity,
+      withDatabase,
+      (c, next) =>
+        createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        )(c, next),
+      async (c) => {
+        const result = await writes.services.pauseApiMember(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.req.param("memberId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const state = ApiMemberPause.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(state, 200);
+      },
+    );
+    // No family middleware: once the caller has left they are no longer a live member, and the
+    // replay of the leave itself must still answer. The service checks the membership is theirs.
+    app.post(
+      "/v1/families/:familyId/members/:memberId/left",
+      authenticate,
+      validateWrite(LeaveFamily, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.leaveApiFamily(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.req.param("memberId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const left = ApiLeft.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(left, 200);
+      },
+    );
     for (const action of ["fine", "wait"] as const) {
       app.post(
         `/v1/quiet/:quietEventId/${action}`,

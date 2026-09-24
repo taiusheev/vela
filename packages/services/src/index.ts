@@ -66,6 +66,7 @@ export {
   runApiMutation,
 } from "./api-idempotency.ts";
 export { loadApiLights } from "./api-lights.ts";
+export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
 export { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
 export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";

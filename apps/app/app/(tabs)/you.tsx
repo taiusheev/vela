@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
 import { Pressable, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -55,8 +56,14 @@ export default function YouScreen() {
   const insets = useSafeAreaInsets();
   const account = useAccount();
   const { familyId, live: todayLive, trouble: todayTrouble, noAccount } = useToday();
-  const { family, live, trouble } = useFamily(familyId, familyId !== undefined);
+  const { family, live, trouble, setPaused, leave, changing, refused } = useFamily(
+    familyId,
+    familyId !== undefined,
+  );
   const [seesOpen, setSeesOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [exampleNote, setExampleNote] = useState(false);
+
   const her = family.keptLight[0]?.name ?? "Mom";
 
   return (
@@ -151,6 +158,77 @@ export default function YouScreen() {
           </Words>
         </Card>
       ) : null}
+
+      {/* A kept light pauses and stops in her own chat, where her mornings arrive (spec §9). */}
+      {family.me.lightOn ? null : (
+        <View style={{ gap: space.m }}>
+          {family.me.paused ? (
+            <Words variant="body" tone="ink2">
+              {family.me.organiser
+                ? "You are paused: no turns come to you, and you are not told if it goes quiet."
+                : "You are paused: no turns come to you."}
+            </Words>
+          ) : null}
+          <View style={{ flexDirection: "row", gap: space.xl }}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={changing}
+              onPress={() => setPaused(!family.me.paused)}
+            >
+              <Words variant="button" tone="action">
+                {family.me.paused ? "Resume" : "Pause"}
+              </Words>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={changing}
+              onPress={() => {
+                setExampleNote(false);
+                setLeaving(true);
+              }}
+            >
+              <Words variant="button" tone="action">
+                Leave
+              </Words>
+            </Pressable>
+          </View>
+          {refused === undefined ? null : (
+            <Words variant="caption" tone="ink2">
+              {refused}
+            </Words>
+          )}
+          {leaving ? (
+            <Card>
+              <Words variant="heading">{`Leave ${family.familyName}?`}</Words>
+              <Words variant="body" tone="ink2">
+                You will stop seeing the family's days and taking turns. Thirty days on, what is
+                kept about you is deleted.
+              </Words>
+              <SecondaryButton
+                label={changing ? "Leaving…" : "Leave the family"}
+                onPress={() => {
+                  if (!live) {
+                    setLeaving(false);
+                    setExampleNote(true);
+                    return;
+                  }
+                  leave(() => router.replace("/"));
+                }}
+              />
+              <Pressable accessibilityRole="button" onPress={() => setLeaving(false)}>
+                <Words variant="button" tone="action">
+                  Stay
+                </Words>
+              </Pressable>
+            </Card>
+          ) : null}
+          {exampleNote ? (
+            <Words variant="caption" tone="ink3">
+              This is the example family, so nobody left.
+            </Words>
+          ) : null}
+        </View>
+      )}
 
       {account.signedIn ? (
         <Card>
