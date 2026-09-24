@@ -266,7 +266,7 @@ Needed now so the account exists; the adapter is built in sprint 2 (build plan 2
 The app signs people in with Clerk (build plan 3.1). Do this when you want the app to show a real family instead of its example day; nothing in the Telegram pilot depends on it.
 
 1. Sign up at `clerk.com` with the password manager, turn on two-factor authentication, and create an application named **Vela Light**. Keep the free plan.
-2. **User & Authentication → Email, Phone, Username**: turn **Phone number** on as an identifier and turn **Email** off if you want the shortest first run. Apple and Google can wait until the app has its store identifiers.
+2. **User & Authentication → Email, Phone, Username**: turn on **Email address**, **Phone number**, or both, as identifiers. Either carries the app’s sign-in, which asks for one and sends a six-digit code to it. Email is the easier of the two to start with: a phone number needs SMS, which Clerk meters, and a new number has to be created through sign-up, which the bot check guards (step 8). Apple and Google can wait until the app has its store identifiers.
 3. Clerk gives you two environments. Use **Development** now; production waits until the app ships.
 4. **API keys**: copy the **Publishable key** (it starts `pk_test_`). The publishable key is public by design — it is compiled into the app and ships to every phone. Leave the **Secret key** (`sk_test_`) where it is for now.
 5. **Hand over:** the publishable key and nothing else. The **Frontend API URL** (`https://something-12.clerk.accounts.dev`), which the worker verifies tokens against, is written inside the publishable key and does not need sending. The secret key you paste yourself, at the setup script's hidden prompt, when the API is deployed; the co-founder never sees it.
@@ -301,6 +301,8 @@ Sign in on the app’s own screen. The first run has no family yet, so Today say
 ```bash
 pnpm --filter @vela/worker seed:dev -- user_…
 ```
+
+8. **If a brand-new account cannot be created from the app.** Clerk guards *sign-up* with a Cloudflare bot check that mounts into a page element; on `localhost` it can mount and never finish, and the screen then waits its twenty-five seconds and says the check did not finish. *Sign-in* is not guarded at all. So either turn **Configure → Attack protection → Bot sign-up protection** off on the development instance, or make the account once in Clerk’s own **Users → Create user** and let the app sign in to it — which needs no setting changed.
 
 The seed gives that account a family with one kept light and a whole day: the ask, her answer, a heart and a written reply, the receipt, and tomorrow’s turn with a suggestion — so Today shows a real day instead of the example one. Run it again whenever you want a fresh day.
 

@@ -9,19 +9,29 @@ import { PrimaryButton, SecondaryButton, TextField, Words } from "../src/compone
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
-type Step = "phone" | "code";
+type Step = "identifier" | "code";
+/** Which of Clerk's two one-time codes this attempt is carrying. */
+type Strategy = "email_code" | "phone_code";
 
-/** However she wrote it: spaces, dashes and brackets are hers, not the number's. */
+function looksLikeEmail(identifier: string): boolean {
+  return identifier.includes("@");
+}
+
+/**
+ * However she wrote the number: spaces, dashes and brackets are hers, not its. An email keeps every
+ * character it has — the dots in one are part of the address, not punctuation to tidy away.
+ */
 function tidy(raw: string): string {
-  return raw.replace(/[\s()\-.‐-―]/g, "");
+  const trimmed = raw.trim();
+  return looksLikeEmail(trimmed) ? trimmed : trimmed.replace(/[\s()\-.‐-―]/g, "");
 }
 
 /**
  * A number written the way it is said at home keeps the national 0 — 0903 224 780 in Taipei — and
  * international form drops it. Rather than guess, the screen offers the number back without it.
  */
-function withoutTrunkZero(number: string): string | null {
-  const match = /^(\+\d{1,3})0(\d{6,})$/.exec(number);
+function withoutTrunkZero(identifier: string): string | null {
+  const match = /^(\+\d{1,3})0(\d{6,})$/.exec(identifier);
   return match === null ? null : `${match[1]}${match[2]}`;
 }
 
@@ -47,13 +57,13 @@ async function within<T>(work: Promise<T>): Promise<T> {
 }
 
 /**
- * Phone first, because the organiser is often signing in on a train with one hand (build plan
- * 3.1). Apple and Google come next; they need the app's store identifiers.
+ * A number or an email, whichever the account was made with, and a code to the same place (build
+ * plan 3.1). Apple and Google come next; they need the app's store identifiers.
  */
 export default function SignInScreen() {
   // A checkout without a Clerk key has no accounts at all; the screen says so rather than asking
   // Clerk's hooks for a provider that is not there.
-  return accountsConfigured() ? <PhoneSignIn /> : <NoAccounts />;
+  return accountsConfigured() ? <CodeSignIn /> : <NoAccounts />;
 }
 
 function NoAccounts() {
@@ -79,63 +89,86 @@ function NoAccounts() {
   );
 }
 
-function PhoneSignIn() {
+function CodeSignIn() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isLoaded: signUpLoaded, signUp } = useSignUp();
-  const [step, setStep] = useState<Step>("phone");
-  // Which half of Clerk is carrying this attempt: a number it knows, or one it is meeting.
+  const [step, setStep] = useState<Step>("identifier");
+  // Which half of Clerk is carrying this attempt: an account it knows, or one it is meeting.
   const [joining, setJoining] = useState(false);
-  const [phone, setPhone] = useState("");
+  const [strategy, setStrategy] = useState<Strategy>("email_code");
+  const [identifier, setIdentifier] = useState("");
   const [code, setCode] = useState("");
   const [trouble, setTrouble] = useState<string | undefined>();
   const [working, setWorking] = useState(false);
   const ready = isLoaded && signUpLoaded && signIn !== undefined && signUp !== undefined;
 
-  /** Her number is not yet an account: the same code, through the other door. */
-  const startJoining = async (number: string) => {
+  /** Not yet an account: the same code, through the other door. */
+  const startJoining = async (entered: string) => {
     if (signUp === undefined) return false;
-    await within(signUp.create({ phoneNumber: number }));
-    await within(signUp.preparePhoneNumberVerification({ strategy: "phone_code" }));
+    if (looksLikeEmail(entered)) {
+      await within(signUp.create({ emailAddress: entered }));
+      await within(signUp.prepareEmailAddressVerification({ strategy: "email_code" }));
+      setStrategy("email_code");
+    } else {
+      await within(signUp.create({ phoneNumber: entered }));
+      await within(signUp.preparePhoneNumberVerification({ strategy: "phone_code" }));
+      setStrategy("phone_code");
+    }
     setJoining(true);
     return true;
   };
 
   const sendCode = async () => {
     if (!ready || signIn === undefined) return;
-    const number = tidy(phone);
-    if (number.length === 0) return;
+    const entered = tidy(identifier);
+    if (entered.length === 0) return;
     setWorking(true);
     setTrouble(undefined);
     try {
-      const attempt = await within(signIn.create({ identifier: number }));
+      const attempt = await within(signIn.create({ identifier: entered }));
+      // Whichever way this account can be reached; an account made with an email has no number.
       const factor = attempt.supportedFirstFactors?.find(
-        (candidate) => candidate.strategy === "phone_code",
+        (candidate) => candidate.strategy === "email_code" || candidate.strategy === "phone_code",
       );
-      if (factor === undefined || !("phoneNumberId" in factor)) {
-        setTrouble("That number cannot receive a code yet.");
+      if (factor === undefined) {
+        setTrouble("That account cannot receive a code yet.");
         return;
       }
-      await within(
-        signIn.prepareFirstFactor({ strategy: "phone_code", phoneNumberId: factor.phoneNumberId }),
-      );
+      if (factor.strategy === "email_code") {
+        await within(
+          signIn.prepareFirstFactor({
+            strategy: "email_code",
+            emailAddressId: factor.emailAddressId,
+          }),
+        );
+        setStrategy("email_code");
+      } else if (factor.strategy === "phone_code") {
+        await within(
+          signIn.prepareFirstFactor({
+            strategy: "phone_code",
+            phoneNumberId: factor.phoneNumberId,
+          }),
+        );
+        setStrategy("phone_code");
+      }
       setJoining(false);
       setStep("code");
     } catch {
-      // The first family through the door has no account yet, so a number Clerk does not know is
-      // the ordinary first run, not a mistake. Only a number it cannot use either is worth saying.
+      // The first family through the door has no account yet, so something Clerk does not know is
+      // the ordinary first run, not a mistake. Only one it cannot use either is worth saying.
       try {
-        if (await startJoining(number)) setStep("code");
-        else setTrouble("That number did not work. Check it and try again.");
+        if (await startJoining(entered)) setStep("code");
+        else setTrouble("That did not work. Check it and try again.");
       } catch (error: unknown) {
         // Clerk's message can name the account; the screen says only what the person can act on.
-        const shorter = withoutTrunkZero(number);
+        const shorter = withoutTrunkZero(entered);
         setTrouble(
           error instanceof TookTooLong
             ? "The bot check did not finish. Try again in a moment."
             : shorter === null
-              ? "That number did not work. Check the country code and try again."
+              ? "That did not work. Check it and try again."
               : `That number did not work. The 0 after the country code is dropped abroad — try ${shorter}.`,
         );
       }
@@ -152,18 +185,20 @@ function PhoneSignIn() {
       // The two halves answer with different shapes, so each is asked on its own terms.
       let session: string | null;
       if (joining) {
-        const attempt = await within(signUp.attemptPhoneNumberVerification({ code: code.trim() }));
-        // A right code that still cannot finish means this instance asks for more than a number,
-        // which is a setting, not something she can fix by typing the six digits again.
+        const attempt = await within(
+          strategy === "email_code"
+            ? signUp.attemptEmailAddressVerification({ code: code.trim() })
+            : signUp.attemptPhoneNumberVerification({ code: code.trim() }),
+        );
+        // A right code that still cannot finish means this instance asks for more than this, which
+        // is a setting, not something she can fix by typing the six digits again.
         if (attempt.status === "missing_requirements") {
-          setTrouble("That code was right, but this account needs more than a number to finish.");
+          setTrouble("That code was right, but this account needs more than that to finish.");
           return;
         }
         session = attempt.status === "complete" ? attempt.createdSessionId : null;
       } else {
-        const attempt = await within(
-          signIn.attemptFirstFactor({ strategy: "phone_code", code: code.trim() }),
-        );
+        const attempt = await within(signIn.attemptFirstFactor({ strategy, code: code.trim() }));
         session = attempt.status === "complete" ? attempt.createdSessionId : null;
       }
       if (session === null) {
@@ -183,6 +218,8 @@ function PhoneSignIn() {
     }
   };
 
+  const sentTo = strategy === "email_code" ? "your email" : tidy(identifier);
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
@@ -199,17 +236,16 @@ function PhoneSignIn() {
           <Light state="lit" height={120} />
           <Words variant="title">Vela Light</Words>
         </View>
-        {step === "phone" ? (
+        {step === "identifier" ? (
           <>
             <Words variant="body" tone="ink2">
-              Your number, and we send you a code.
+              Your number or your email, and we send you a code.
             </Words>
             <TextField
-              value={phone}
-              onChangeText={setPhone}
+              value={identifier}
+              onChangeText={setIdentifier}
               placeholder="+886 900 000 000"
-              helper="The number you answer on, with its country code."
-              keyboardType="phone-pad"
+              helper="A number needs its country code."
               autoComplete="tel"
               autoFocus
               onSubmit={() => void sendCode()}
@@ -219,7 +255,7 @@ function PhoneSignIn() {
         ) : (
           <>
             <Words variant="body" tone="ink2">
-              {`We sent a code to ${phone.trim()}.`}
+              {`We sent a code to ${sentTo}.`}
             </Words>
             <TextField
               value={code}
@@ -234,9 +270,9 @@ function PhoneSignIn() {
             />
             <PrimaryButton label={working ? "Checking…" : "Enter"} onPress={enter} />
             <SecondaryButton
-              label="Use another number"
+              label="Use something else"
               onPress={() => {
-                setStep("phone");
+                setStep("identifier");
                 setCode("");
                 setJoining(false);
                 setTrouble(undefined);
