@@ -7,15 +7,27 @@ import {
   type LocalDate,
   MAX_ASK_DAYS_AHEAD,
 } from "@vela/contracts";
-import { addDays, localDateOf } from "@vela/core";
+import { t } from "@vela/copy";
+import { addDays, localDateOf, outboundKey } from "@vela/core";
 import { exchanges, type Member, members, turns, type VelaTransaction } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
+import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
-import { familyHasEnded, lockExchangeForLocalDate, memberById } from "./repo.ts";
+import { insertOutbound } from "./gateway.ts";
+import {
+  familyById,
+  familyHasEnded,
+  linkedGroupOfFamily,
+  lockExchangeForLocalDate,
+  memberById,
+} from "./repo.ts";
+
+/** The family group the app's asks are told to: the Telegram one, as the pilot's arrivals are. */
+const GROUP_CHANNEL = "telegram" as const;
 
 /**
  * That morning is already someone's (spec §14.1 A7: "the screen says so and offers the day after or
@@ -85,14 +97,15 @@ export async function composeApiAsk(
   key: string,
   familyId: string,
   input: unknown,
-): Promise<{ response: ApiMutationResponse; replayed: boolean }> {
+): Promise<{ response: ApiMutationResponse; replayed: boolean; after: AfterCommit }> {
   const parsed = ComposeAsk.safeParse(input);
   if (!parsed.success) throw new ApiIdempotencyError("invalid");
   const ask = parsed.data;
   const now = deps.clock.now();
   let askerId = "";
+  const after = nothingAfterCommit();
 
-  return runApiMutation(
+  const result = await runApiMutation(
     deps,
     identity,
     {
@@ -209,6 +222,32 @@ export async function composeApiAsk(
           now,
         );
 
+        // Tomorrow's morning is taken, so the family group hears who took it — never the words,
+        // which are hers to hear first — as it does when someone asks there. Written as a row and
+        // handed to the queue after the commit; a family with no group has nobody to tell.
+        const group = await linkedGroupOfFamily(tx, familyId, GROUP_CHANNEL);
+        const family = await familyById(tx, familyId);
+        if (group !== null && family !== null && scheduledFor === addDays(today, 1)) {
+          const written = await insertOutbound(deps, tx, {
+            kind: "system",
+            idempotencyKey: outboundKey("system", {
+              conversationId: group.conversationId,
+              suffix: `app-ask:${exchange.id}`,
+            }),
+            memberId: asker.id,
+            channel: GROUP_CHANNEL,
+            conversationId: group.conversationId,
+            exchangeId: exchange.id,
+            lang: family.language,
+            text: t(family.language, "group.ask_from_app", {
+              asker: asker.displayName,
+              name: locked.displayName,
+            }),
+            ref: { purpose: "ask_confirmation", exchangeId: exchange.id },
+          });
+          if ("outboundId" in written) after.outboundIds.push(written.outboundId);
+        }
+
         return {
           status: 201,
           body: ApiComposedAsk.parse({
@@ -228,4 +267,5 @@ export async function composeApiAsk(
       },
     },
   );
+  return { ...result, after: result.replayed ? nothingAfterCommit() : after };
 }

@@ -90,6 +90,7 @@ export const zhTW: Record<keyof typeof en, string> = {
     "明天大家都可以問{name}一件事。請直接回覆這則訊息，傳一個問題、一張照片或一段語音。",
   "group.ask_confirmed": "已放進{name}的早安訊息。",
   "group.ask_queued": "明天已經有{asker}的提問了。這則先保留，改天早上再送出。",
+  "group.ask_from_app": "{asker}已經為{name}準備好明天早上的提問。",
   "group.answer_light": "☀️ {name}回覆了{asker} · {time}",
   "group.answer_hello": "☀️ {name}一切都好 · {time}",
   "group.answer_chip": "{name}選了：{choice}",

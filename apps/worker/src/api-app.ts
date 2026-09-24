@@ -528,6 +528,10 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           throw new Error("Invalid API mutation response");
         }
         const ask = ApiComposedAsk.parse(result.response.body);
+        // Committed: now the line that tells the family group tomorrow's morning is taken.
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ask, 201);
       },

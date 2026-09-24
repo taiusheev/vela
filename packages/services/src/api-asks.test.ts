@@ -1,14 +1,17 @@
 import { ApiComposedAsk } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
-import { events, exchanges, members, turns, users } from "@vela/db";
+import { events, exchanges, members, outbound, turns, users } from "@vela/db";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
 import { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
+import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
+import { deliverOutbound, STRANDED_AFTER_MINUTES } from "./gateway.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedExchange, seedFamily } from "./testing/seed.ts";
+import { type SeededFamily, seedExchange, seedFamily, seedLinkedGroup } from "./testing/seed.ts";
+import { reconcile } from "./tick.ts";
 
 let h: Harness;
 let seed: SeededFamily;
@@ -308,5 +311,61 @@ describe("composeApiAsk", () => {
     await expect(
       compose({ recipient_id: seed.organiser.id, text: "Asking the organiser" }),
     ).rejects.toThrow(VelaError);
+  });
+});
+
+describe("the family group hears that tomorrow is taken", () => {
+  const nothing = { outboundIds: [], wakeMemberIds: [] };
+
+  async function groupRows() {
+    return h.db.select().from(outbound).where(eq(outbound.conversationId, "-100500"));
+  }
+
+  it("writes one line to the linked group for tomorrow's ask, without its words, for after the commit", async () => {
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    const result = await compose({ text: "What did the garden look like this morning?" });
+    const rows = await groupRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "system",
+      status: "queued",
+      memberId: seed.organiser.id,
+      channel: "telegram",
+    });
+    const payload = JSON.stringify(rows[0]?.payload);
+    expect(payload).toContain("Mia asked Mom something for tomorrow morning.");
+    expect(payload).not.toContain("garden");
+    expect(h.queues.outbound.pending).toEqual([]);
+    expect(result.after).toEqual({ outboundIds: [rows[0]?.id], wakeMemberIds: [] });
+  });
+
+  it("says nothing for a later morning, for whenever, or with no group, and nothing again on a replay", async () => {
+    const noGroup = await compose({ text: "Tomorrow?" });
+    expect(noGroup.after).toEqual(nothing);
+    await h.db.delete(exchanges);
+
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    expect((await compose({ text: "Whenever?", when: "whenever" })).after).toEqual(nothing);
+    expect(
+      (await compose({ text: "Later?", when: "date", date: addDays(today(), 3) })).after,
+    ).toEqual(nothing);
+    expect(await groupRows()).toEqual([]);
+
+    const first = await compose({ text: "Tomorrow?" }, { key: "same" });
+    const replay = await compose({ text: "Tomorrow?" }, { key: "same" });
+    expect(replay.replayed).toBe(true);
+    expect(replay.after).toEqual(nothing);
+    expect(first.after.outboundIds).toHaveLength(1);
+    expect(await groupRows()).toHaveLength(1);
+  });
+
+  it("reaches the group when nothing hands the line over: reconcile finds it", async () => {
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    await compose({ text: "Tomorrow?" });
+    h.clock.set(new Date(h.clock.now().getTime() + (STRANDED_AFTER_MINUTES + 1) * 60_000));
+    await reconcile(h.deps);
+    await h.run({ outbound: (job: OutboundJob) => deliverOutbound(h.deps, job.outboundId) });
+    expect((await groupRows())[0]?.status).toBe("sent");
+    expect(h.telegram.sentTo("-100500")).toHaveLength(1);
   });
 });

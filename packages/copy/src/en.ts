@@ -117,6 +117,7 @@ export const en = {
     "Tomorrow, anyone can ask {name} something. Reply to this message with a question, a photo, or a voice note.",
   "group.ask_confirmed": "Into {name}'s morning.",
   "group.ask_queued": "Tomorrow already has {asker}'s ask. This one is saved for another morning.",
+  "group.ask_from_app": "{asker} asked {name} something for tomorrow morning.",
   "group.answer_light": "☀️ {name} answered {asker} · {time}",
   "group.answer_hello": "☀️ {name} is fine · {time}",
   "group.answer_chip": "{name} chose: {choice}",

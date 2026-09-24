@@ -241,7 +241,11 @@ function fixture(enableWrites = false) {
         .mockResolvedValue({ response: { status: 200, body: ME.user }, replayed: false }),
       composeApiAsk: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["composeApiAsk"]>()
-        .mockResolvedValue({ response: { status: 201, body: COMPOSED }, replayed: false }),
+        .mockResolvedValue({
+          response: { status: 201, body: COMPOSED },
+          replayed: false,
+          after: { outboundIds: ["group-row"], wakeMemberIds: [] },
+        }),
       replyToApiExchange: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["replyToApiExchange"]>()
         .mockResolvedValue({ response: { status: 201, body: REPLY }, replayed: false }),
@@ -1565,11 +1569,19 @@ describe("composing an ask", () => {
     expect(services.authorizeFamilyAccess).not.toHaveBeenCalled();
   });
 
+  it("hands the family group's line to the queue once the ask is written", async () => {
+    const { app, writes } = fixture(true);
+    const response = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
+    expect(response.status).toBe(201);
+    expect(writes.nudges.deliver).toHaveBeenCalledWith("group-row");
+  });
+
   it("marks a replayed compose so the screen knows nothing new was written", async () => {
     const { app, writes } = fixture(true);
     writes.services.composeApiAsk.mockResolvedValue({
       response: { status: 201, body: COMPOSED },
       replayed: true,
+      after: { outboundIds: [], wakeMemberIds: [] },
     });
     const response = await app.request(composeRequest(undefined, { authorization: "Bearer good" }));
     expect(response.status).toBe(201);
