@@ -161,12 +161,26 @@ export function TextField({
   placeholder,
   helper,
   multiline = false,
+  keyboardType,
+  autoComplete,
+  autoFocus = false,
+  maxLength,
+  onSubmit,
 }: {
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
   helper: string;
   multiline?: boolean;
+  /** The keyboard she gets: a number pad for a phone or a code, words for an ask. */
+  keyboardType?: "phone-pad" | "number-pad";
+  /** Lets the phone offer her own number, and fill a code from the message that carries it. */
+  autoComplete?: "tel" | "one-time-code";
+  /** For the one field a screen exists to fill, so it is ready without hunting for it. */
+  autoFocus?: boolean;
+  maxLength?: number;
+  /** Enter, or the keyboard's own go key, rather than reaching for the button. */
+  onSubmit?: () => void;
 }) {
   const palette = usePalette();
   const [focused, setFocused] = useState(false);
@@ -178,6 +192,11 @@ export function TextField({
         placeholder={placeholder}
         placeholderTextColor={palette.ink3}
         multiline={multiline}
+        {...(keyboardType === undefined ? {} : { keyboardType })}
+        {...(autoComplete === undefined ? {} : { autoComplete })}
+        {...(maxLength === undefined ? {} : { maxLength })}
+        {...(onSubmit === undefined ? {} : { onSubmitEditing: onSubmit, returnKeyType: "go" })}
+        autoFocus={autoFocus}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={[
