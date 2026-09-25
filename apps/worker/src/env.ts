@@ -31,8 +31,8 @@ interface SharedEnv {
 }
 
 /**
- * The pilot Worker `vela` (wrangler.jsonc): webhooks, notices, queues, cron, the scheduler, and
- * the heartbeat.
+ * The pilot Worker `vela` (wrangler.jsonc): webhooks, notices, queues, cron, the scheduler, the
+ * heartbeat, and the API under /v1.
  */
 export interface PilotEnv extends SharedEnv {
   // Vars.
@@ -46,6 +46,13 @@ export interface PilotEnv extends SharedEnv {
    * Production refuses "off". Only this Worker stores media, so the admin Worker has no such var.
    */
   readonly MEDIA_STORAGE: string;
+  /** "on" or "off": whether this Worker serves the API under /v1 (ADR-29). Production is "off". */
+  readonly API_V1: string;
+  /**
+   * The Clerk Frontend API origin session tokens are verified against; read only while `API_V1` is
+   * "on", and absent in production while it is "off".
+   */
+  readonly CLERK_ISSUER?: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;
@@ -53,6 +60,11 @@ export interface PilotEnv extends SharedEnv {
   readonly DEEPGRAM_API_KEY?: string;
   /** The founder's personal chat with the bot; left out on a laptop, which sends no admin messages. */
   readonly ADMIN_CONVERSATION_ID?: string;
+  /**
+   * Clerk's secret key, for the live session check on every API write. Required outside development
+   * while `API_V1` is "on"; a laptop without it serves the API's reads only.
+   */
+  readonly CLERK_SECRET_KEY?: string;
 
   // Bindings.
   readonly MEDIA_QUEUE: Queue<MediaJob>;
@@ -65,6 +77,15 @@ export interface PilotEnv extends SharedEnv {
   readonly MEDIA_BUCKET?: R2Bucket;
   /** The one object that records when reconciliation last finished, for `/healthz`. */
   readonly RECONCILE_HEARTBEAT: DurableObjectNamespace<ReconcileHeartbeat>;
+  /**
+   * 120 API requests a minute per client address (per /64 for IPv6), checked after the
+   * configuration check and the off switch and before the app (wrangler `ratelimits`). Optional,
+   * because production binds none while its `API_V1` is "off"; `readApiConfig` refuses to serve the
+   * API outside development without it.
+   */
+  readonly API_IP_LIMIT?: RateLimit;
+  /** 20 API writes a minute per account, before the live session check calls Clerk. */
+  readonly API_WRITE_LIMIT?: RateLimit;
 }
 
 /**

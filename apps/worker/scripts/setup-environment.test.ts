@@ -1,5 +1,5 @@
 import { describe, expect, inject, it } from "vitest";
-import type { AiProvider, MediaStorage } from "../src/config.ts";
+import type { AiProvider, ApiSwitch, MediaStorage } from "../src/config.ts";
 import {
   type Command,
   cloudflareApi,
@@ -36,6 +36,11 @@ const SECRETS = {
   databasePassword: "npgSENTINELdatabasepassword",
   botToken: "7000000001:SENTINELbotTokenAAAAAAAAAAAAAAAAAAAAAA",
   anthropic: "sk-ant-SENTINEL-anthropic-key",
+  // Clerk keys share Stripe's sk_test_/sk_live_ prefixes, so these two are joined at run time:
+  // a literal would be taken for a real key by secret scanning (GitHub push protection).
+  clerk: ["sk", "test", "SENTINELclerkSecretKey000000000000000"].join("_"),
+  /** A production instance's key, which staging's prompt refuses. */
+  clerkLive: ["sk", "live", "SENTINELclerkSecretKey000000000000000"].join("_"),
   deepgram: "SENTINELdeepgramkey00000000000000000000",
   accessAud: "5e0715e1".repeat(8),
   chatId: "8765432109",
@@ -63,13 +68,15 @@ const BOT_USERNAMES: Readonly<Record<Environment, string>> = {
 
 /**
  * What a test sets an environment's switches to, whatever the real files hold, so a test about the
- * Anthropic key or the media bucket does not depend on whether that switch is on in the repository
- * today. `media` moves the `MEDIA_STORAGE` var and the r2_buckets binding together, as decision M
- * holds them: with "off" there is no binding at all.
+ * Anthropic key, the media bucket or Clerk's key does not depend on whether that switch is on in
+ * the repository today. `media` moves the `MEDIA_STORAGE` var and the r2_buckets binding together,
+ * as decision M holds them: with "off" there is no binding at all. `api` is the pilot Worker's
+ * `API_V1` (ADR-29).
  */
 interface SwitchOverrides {
   readonly ai?: Partial<Record<Environment, AiProvider>>;
   readonly media?: Partial<Record<Environment, MediaStorage>>;
+  readonly api?: Partial<Record<Environment, ApiSwitch>>;
 }
 
 /**
@@ -88,6 +95,8 @@ function wranglerTexts(overrides: SwitchOverrides = {}): {
         const aiProvider = overrides.ai?.[environment];
         // MEDIA_STORAGE is the pilot Worker's var alone, and so is the binding it moves with.
         const mediaStorage = worker === "pilot" ? overrides.media?.[environment] : undefined;
+        // So is API_V1: the admin Worker never serves /v1.
+        const apiV1 = worker === "pilot" ? overrides.api?.[environment] : undefined;
         return [
           environment,
           {
@@ -105,6 +114,7 @@ function wranglerTexts(overrides: SwitchOverrides = {}): {
               TELEGRAM_BOT_USERNAME: placeholdersOf(environment).botUsername,
               ...(aiProvider === undefined ? {} : { AI_PROVIDER: aiProvider }),
               ...(mediaStorage === undefined ? {} : { MEDIA_STORAGE: mediaStorage }),
+              ...(apiV1 === undefined ? {} : { API_V1: apiV1 }),
             },
           },
         ];
@@ -152,6 +162,12 @@ interface World {
   adminOpenWithoutAccess: boolean;
   /** What the deployed pilot Worker's `/healthz` says. */
   health: "ok" | "stale" | "no_reconcile_yet";
+  /**
+   * When set, what the deployed pilot Worker's `/v1/me` answers whatever its settings say:
+   * `not_found` as a deployment from before /v1 would, `unavailable` as a refused CLERK_ISSUER would,
+   * `foreign_401` a plain-text 401 from something that is not the API.
+   */
+  apiFault: "not_found" | "unavailable" | "foreign_401" | null;
   webhook: { readonly url: string; readonly secret: string } | null;
   acknowledgedOffset: number | null;
   seed: number;
@@ -169,11 +185,16 @@ interface World {
 
 function newWorld(
   environment: Environment,
-  switches: { readonly ai?: AiProvider; readonly media?: MediaStorage } = {},
+  switches: {
+    readonly ai?: AiProvider;
+    readonly media?: MediaStorage;
+    readonly api?: ApiSwitch;
+  } = {},
 ): World {
   const texts = wranglerTexts({
     ...(switches.ai === undefined ? {} : { ai: { [environment]: switches.ai } }),
     ...(switches.media === undefined ? {} : { media: { [environment]: switches.media } }),
+    ...(switches.api === undefined ? {} : { api: { [environment]: switches.api } }),
   });
   return {
     environment,
@@ -194,6 +215,7 @@ function newWorld(
     accessOn: false,
     adminOpenWithoutAccess: false,
     health: "no_reconcile_yet",
+    apiFault: null,
     webhook: null,
     acknowledgedOffset: null,
     seed: 7,
@@ -374,6 +396,33 @@ function telegram(world: World, path: string, body: Record<string, unknown>): Re
   }
 }
 
+/** The API's answers the check step can meet, as `src/api-runtime.ts` and `src/api-app.ts` send them. */
+const API_ANSWERS = {
+  unauthenticated: [401, "Sign in required."],
+  not_found: [404, "Not found."],
+  unavailable: [503, "Service temporarily unavailable."],
+} as const;
+
+/**
+ * What the deployed pilot Worker's `/v1/me` answers without a token, as its API decides: 404 while
+ * `API_V1` is off, 503 while `vela` lacks Clerk's secret key, and otherwise 401, unless the test
+ * set a fault. So a whole setup passes its check only once the key is on the Worker.
+ */
+function apiAnswer(world: World): Response {
+  if (world.apiFault === "foreign_401") {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  const code =
+    world.apiFault ??
+    (configOf(world).apiV1 === "off"
+      ? "not_found"
+      : world.workers.get("vela")?.has("CLERK_SECRET_KEY") === true
+        ? "unauthenticated"
+        : "unavailable");
+  const [status, message] = API_ANSWERS[code];
+  return json(status, { error: { code, message } }, { "cache-control": "no-store" });
+}
+
 function site(world: World, url: URL): Response {
   const pilot = `vela.${SUBDOMAINS[world.environment]}.workers.dev`;
   const admin = `vela-admin.${SUBDOMAINS[world.environment]}.workers.dev`;
@@ -382,6 +431,9 @@ function site(world: World, url: URL): Response {
       return world.health === "ok"
         ? json(200, { status: "ok", lastReconcileAgeSeconds: 42 })
         : json(503, { status: world.health });
+    }
+    if (url.pathname === "/v1/me") {
+      return apiAnswer(world);
     }
     return new Response("ok", { status: 200 });
   }
@@ -415,6 +467,7 @@ function promptsOf(world: World): readonly (readonly [string, string, "shown" | 
     ["Neon connection string", DATABASE_URL, "hidden"],
     ["Telegram bot token", SECRETS.botToken, "hidden"],
     ["Anthropic API key", SECRETS.anthropic, "hidden"],
+    ["Clerk secret key", SECRETS.clerk, "hidden"],
     ["Deepgram API key", SECRETS.deepgram, "hidden"],
     ["Application Audience (AUD) tag", SECRETS.accessAud, "hidden"],
   ];
@@ -560,7 +613,7 @@ async function setUp(world: World, ...extra: string[]): Promise<number> {
 
 describe("a whole setup", () => {
   it("sets up staging from nothing with AI on, with every secret on the Worker that reads it", async () => {
-    const world = newWorld("staging", { ai: "anthropic", media: "r2" });
+    const world = newWorld("staging", { ai: "anthropic", media: "r2", api: "on" });
 
     const code = await setUp(world);
 
@@ -587,6 +640,7 @@ describe("a whole setup", () => {
       TELEGRAM_WEBHOOK_SECRET: world.webhook?.secret,
       ADMIN_CONVERSATION_ID: SECRETS.chatId,
       ANTHROPIC_API_KEY: SECRETS.anthropic,
+      CLERK_SECRET_KEY: SECRETS.clerk,
       DEEPGRAM_API_KEY: SECRETS.deepgram,
     });
     expect(Object.fromEntries(world.workers.get("vela-admin") ?? [])).toEqual({
@@ -600,13 +654,28 @@ describe("a whole setup", () => {
     );
     // The founder's /start was confirmed, so it never reaches the Worker once the webhook exists.
     expect(world.acknowledgedOffset).toBe(START_UPDATE_ID + 1);
+    // The secrets step's prompts, in the order infra/README.md, section 11, step 7 lists them.
+    expect(
+      world.prompts
+        .filter((question) => /Anthropic|Clerk|Deepgram/.test(question))
+        .map((question) => question.trim()),
+    ).toEqual([
+      "Anthropic API key (hidden):",
+      "Clerk secret key (hidden):",
+      "Deepgram API key (hidden):",
+    ]);
+    expect(world.printed).toContain(
+      "  ok     GET https://vela.vela-light-staging.workers.dev/v1/me: HTTP 401, unauthenticated: the API is served and its settings accepted",
+    );
     expect(world.printed.at(-1)).toBe("check: every check passed");
     expect(world.printed.join("\n")).not.toContain("AI is off");
+    expect(world.printed.join("\n")).not.toContain("The API is off");
+    expect(leaks(world)).toEqual([]);
   });
 
   // Decision X (2026-09-18): no Anthropic credit is bought while AI is off.
   it("sets up staging with AI off without asking for an Anthropic key, and says how to switch it on", async () => {
-    const world = newWorld("staging", { ai: "off" });
+    const world = newWorld("staging", { ai: "off", api: "on" });
 
     const code = await setUp(world);
 
@@ -614,6 +683,7 @@ describe("a whole setup", () => {
     expect(world.prompts.join("\n")).not.toContain("Anthropic");
     expect([...(world.workers.get("vela")?.keys() ?? [])].sort()).toEqual([
       "ADMIN_CONVERSATION_ID",
+      "CLERK_SECRET_KEY",
       "DEEPGRAM_API_KEY",
       "TELEGRAM_BOT_TOKEN",
       "TELEGRAM_WEBHOOK_SECRET",
@@ -721,6 +791,106 @@ describe("a whole setup", () => {
       "MEDIA_STORAGE is off for production, which its Worker refuses to start with",
     );
     expect([world.queues.size, world.buckets.size, world.writes.length]).toEqual([0, 0, 0]);
+  });
+
+  // ADR-29: production's API stays off until a new ADR, so production is set up without a Clerk
+  // production instance, and its /v1, which answers 404, is not checked.
+  it("sets up production with the API off without asking for a Clerk key, says so, and never opens /v1", async () => {
+    const world = newWorld("production", { api: "off" });
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.prompts.join("\n")).not.toContain("Clerk");
+    expect(world.workers.get("vela")?.has("CLERK_SECRET_KEY")).toBe(false);
+    expect(world.printed.filter((line) => line.includes("The API is off"))).toEqual([
+      '  The API is off in production (API_V1 "off" in wrangler.jsonc), so /v1 answers 404 there and no Clerk secret key is asked for. Turning it on takes a new ADR (ADR-29): Clerk\'s production instance, on a domain Vela owns, its sk_live_ key, and a privacy notice naming Clerk. The key then goes on the pilot Worker in the Cloudflare dashboard (infra/runbooks/secrets-rotation.md, principle 5) before the release that sets API_V1 to "on"; released without it, /v1 answers 503 while every other route keeps answering.',
+    ]);
+    expect(world.requests.filter((request) => request.url.includes("/v1/"))).toEqual([]);
+    expect(world.printed.at(-1)).toBe("check: every check passed");
+    expect(leaks(world)).toEqual([]);
+  });
+
+  it("asks for the Clerk key and checks /v1/me when run from secrets once the API is switched on", async () => {
+    const world = newWorld("staging", { api: "off" });
+    await setUp(world);
+    expect(world.printed.filter((line) => line.includes("The API is off"))).toEqual([
+      '  The API is off in staging (API_V1 "off" in wrangler.jsonc), so /v1 answers 404 there and no Clerk secret key is asked for. To switch it on later: set API_V1 to "on" for staging in wrangler.jsonc, with its CLERK_ISSUER and ratelimits, and commit, then run pnpm --filter @vela/worker run setup -- --env staging --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy staging without the key, and /v1 would answer 503 while every other route keeps answering.',
+    ]);
+    // The first "API_V1" in the pilot text is staging's, which is the environment set up here.
+    const pilot = world.files.get("wrangler.jsonc") ?? "";
+    world.files.set("wrangler.jsonc", pilot.replace('"API_V1": "off"', '"API_V1": "on"'));
+    expect(configOf(world).apiV1).toBe("on");
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "secrets");
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.prompts.filter((question) => question.includes("Clerk secret key"))).toHaveLength(
+      1,
+    );
+    expect(world.workers.get("vela")?.get("CLERK_SECRET_KEY")).toBe(SECRETS.clerk);
+    expect(world.workers.get("vela-admin")?.has("CLERK_SECRET_KEY")).toBe(false);
+    expect(world.printed).toContain(
+      "  ok     GET https://vela.vela-light-staging.workers.dev/v1/me: HTTP 401, unauthenticated: the API is served and its settings accepted",
+    );
+    expect(world.printed.join("\n")).not.toContain("The API is off");
+    expect(leaks(world)).toEqual([]);
+  });
+
+  // Staging verifies the development instance's tokens and holds only test accounts (ADR-29).
+  it("refuses a production Clerk key at staging's prompt without showing it, and puts the development one", async () => {
+    const world = newWorld("staging", { api: "on" });
+    world.firstAnswers = [["Clerk secret key", SECRETS.clerkLive]];
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.printed).toContain(
+      "  Clerk dashboard (dashboard.clerk.com), application Vela Light, Development instance: API keys > Secret keys, and copy the secret key, which starts sk_test_ (infra/README.md, section 9a). It goes on the pilot Worker, for the API's live session check on every write.",
+    );
+    expect(world.printed).toContain(
+      "  Staging takes only the Development instance's secret key, which starts sk_test_: copy that one",
+    );
+    expect(world.prompts.filter((question) => question.includes("Clerk secret key"))).toHaveLength(
+      2,
+    );
+    expect(world.workers.get("vela")?.get("CLERK_SECRET_KEY")).toBe(SECRETS.clerk);
+    expect(leaks(world)).toEqual([]);
+  });
+
+  it("fails the check when /v1/me answers 503, 404, or a 401 that is not the API's, without a token", async () => {
+    const world = newWorld("staging", { api: "on" });
+    await setUp(world);
+    world.workers.get("vela")?.delete("CLERK_SECRET_KEY");
+    resetLog(world);
+    // The Workers stay deployed from the first run; the log reset forgets that.
+    world.deployed.push("vela");
+
+    expect(await setUp(world, "--from", "check")).toBe(1);
+    expect(world.printed).toContain(
+      "  FAILED GET https://vela.vela-light-staging.workers.dev/v1/me: HTTP 503, unavailable, expected 401 unauthenticated without a token: a 503 is the API refusing its own settings, and its log line api_config_refused names the variable",
+    );
+    expect(world.printed).toContain("1 of 5 checks failed (above)");
+
+    world.apiFault = "not_found";
+    resetLog(world);
+    world.deployed.push("vela");
+
+    expect(await setUp(world, "--from", "check")).toBe(1);
+    expect(world.printed).toContain(
+      "  FAILED GET https://vela.vela-light-staging.workers.dev/v1/me: HTTP 404, not_found, expected 401 unauthenticated without a token: a 404 is a deployed Worker with API_V1 off, or one from before /v1",
+    );
+
+    // A 401 without the API's own error body is something else answering on the API's path.
+    world.apiFault = "foreign_401";
+    resetLog(world);
+    world.deployed.push("vela");
+
+    expect(await setUp(world, "--from", "check")).toBe(1);
+    expect(world.printed).toContain(
+      "  FAILED GET https://vela.vela-light-staging.workers.dev/v1/me: HTTP 401, expected 401 unauthenticated without a token",
+    );
   });
 
   it("lets no secret reach a printed line, a prompt, a command-line argument or a written file", async () => {
@@ -1291,6 +1461,36 @@ describe("the wrangler files", () => {
     );
   });
 
+  // Unlike the switches above, both environments' API_V1 are pinned already, by
+  // src/wrangler-config.test.ts (ADR-29): staging on, production off until a new ADR.
+  it("give each environment's API_V1 as the real files set it: staging on, production off", () => {
+    expect(readEnvironmentConfig(wranglerTexts(), "staging").apiV1).toBe("on");
+    expect(readEnvironmentConfig(wranglerTexts(), "production").apiV1).toBe("off");
+  });
+
+  it.each(["on", "off"] as const)(
+    "give staging's API_V1 when the pilot file sets it to %s",
+    (apiV1) => {
+      expect(
+        readEnvironmentConfig(wranglerTexts({ api: { staging: apiV1 } }), "staging").apiV1,
+      ).toBe(apiV1);
+    },
+  );
+
+  // The Worker would answer every /v1 request with 503 (ConfigError:API_V1).
+  it("refuse an API_V1 that is missing, or neither on nor off", () => {
+    const texts = wranglerTexts({ api: { staging: "on" } });
+    // The first API_V1 in the pilot text is staging's, which is the environment read below.
+    const missing = { ...texts, pilot: texts.pilot.replace('"API_V1": "on"', '"API_V2": "on"') };
+    const unknown = { ...texts, pilot: texts.pilot.replace('"API_V1": "on"', '"API_V1": "yes"') };
+
+    for (const broken of [missing, unknown]) {
+      expect(() => readEnvironmentConfig(broken, "staging")).toThrow(
+        /wrangler.jsonc must set API_V1 for staging to one of on, off/,
+      );
+    }
+  });
+
   const commented = [
     "{",
     "  // Every id the founder has not created yet is a PLACEHOLDER.",
@@ -1437,6 +1637,7 @@ describe("the values the setup keeps", () => {
       },
       new Map([["TELEGRAM_BOT_TOKEN", "token"]]),
       "anthropic",
+      "on",
     );
 
     expect(plan.map((entry) => [entry.name, entry.source, entry.workers])).toEqual([
@@ -1444,6 +1645,7 @@ describe("the values the setup keeps", () => {
       ["TELEGRAM_WEBHOOK_SECRET", "missing", ["pilot"]],
       ["ADMIN_CONVERSATION_ID", "missing", ["pilot"]],
       ["ANTHROPIC_API_KEY", "prompt", ["pilot", "admin"]],
+      ["CLERK_SECRET_KEY", "prompt", ["pilot"]],
       ["DEEPGRAM_API_KEY", "kept", []],
     ]);
   });
@@ -1453,6 +1655,7 @@ describe("the values the setup keeps", () => {
       { pilot: new Set(["DEEPGRAM_API_KEY"]), admin: new Set<string>() },
       new Map(),
       "off",
+      "on",
     );
 
     expect(plan.find((entry) => entry.name === "ANTHROPIC_API_KEY")).toEqual({
@@ -1461,6 +1664,34 @@ describe("the values the setup keeps", () => {
       source: "ai_off",
     });
     expect(plan.find((entry) => entry.name === "DEEPGRAM_API_KEY")?.source).toBe("kept");
+  });
+
+  // ADR-29: only the pilot Worker serves /v1, and with API_V1 off nothing reads Clerk's key.
+  it("ask for the Clerk key for the pilot Worker alone while the API is on, and neither ask for nor put it while off", () => {
+    const clerk = (pilot: readonly string[], apiV1: ApiSwitch) =>
+      planSecrets(
+        { pilot: new Set(pilot), admin: new Set<string>() },
+        new Map(),
+        "anthropic",
+        apiV1,
+      ).find((entry) => entry.name === "CLERK_SECRET_KEY");
+
+    expect(clerk([], "off")).toEqual({ name: "CLERK_SECRET_KEY", workers: [], source: "api_off" });
+    expect(clerk(["CLERK_SECRET_KEY"], "off")).toEqual({
+      name: "CLERK_SECRET_KEY",
+      workers: [],
+      source: "api_off",
+    });
+    expect(clerk([], "on")).toEqual({
+      name: "CLERK_SECRET_KEY",
+      workers: ["pilot"],
+      source: "prompt",
+    });
+    expect(clerk(["CLERK_SECRET_KEY"], "on")).toEqual({
+      name: "CLERK_SECRET_KEY",
+      workers: [],
+      source: "kept",
+    });
   });
 
   it("read the private chats that sent /start, newest first and once each, and the last update", () => {

@@ -1,8 +1,9 @@
 /**
- * The pilot Worker's handlers (code design §9, H1): HTTP through the Hono app (the webhook, the
- * privacy notices, the health check), the three queues, and cron. Everything they drive arrives
- * through `PilotRuntime`, so the same handlers run in a test against fakes. The entry module that
- * wrangler deploys is `index.ts`.
+ * The pilot Worker's handlers (code design §9, H1): HTTP, where the API under /v1 goes to
+ * `PilotRuntime.api` (ADR-29) and everything else to the Hono app (the webhook, the privacy
+ * notices, the health check), the three queues, and cron. Everything they drive arrives through
+ * `PilotRuntime`, so the same handlers run in a test against fakes. The entry module that wrangler
+ * deploys is `index.ts`.
  */
 import {
   type Deps,
@@ -88,10 +89,24 @@ export interface VelaWorker extends ExportedHandler<PilotEnv> {
   scheduled(controller: ScheduledController, env: PilotEnv, ctx: ExecutionContext): Promise<void>;
 }
 
+/**
+ * The API's paths (ADR-29): /v1 and everything under it, and nothing that merely starts with "v1".
+ */
+export function isApiPath(pathname: string): boolean {
+  return pathname === "/v1" || pathname.startsWith("/v1/");
+}
+
 export function createWorker(runtime: PilotRuntime): VelaWorker {
   const app = createApp(runtime);
   return {
+    /**
+     * The API is handed its paths before the Hono app sees them, with its own configuration check
+     * and its own JSON errors, so neither app's refusal or failure reaches the other's routes.
+     */
     async fetch(request, env, ctx) {
+      if (isApiPath(new URL(request.url).pathname)) {
+        return runtime.api(request, env);
+      }
       return app.fetch(request, env, ctx);
     },
 

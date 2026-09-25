@@ -4,8 +4,10 @@ import {
   waitOnExecutionContext,
 } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
+import { createApiHandler } from "./api-runtime.ts";
 import { ConfigError } from "./config.ts";
-import { createWorker, NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
+import type { PilotEnv } from "./env.ts";
+import { createWorker, isApiPath, NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
 import type { PilotRuntime } from "./runtime.ts";
 import {
   argsOf,
@@ -271,5 +273,113 @@ describe("cron", () => {
     await runCron(createWorker(fake.runtime), "0 0 1 1 *");
 
     expect(namesOf(fake.calls)).toEqual([]);
+  });
+});
+
+async function fetchFrom(
+  worker: ReturnType<typeof createWorker>,
+  method: string,
+  path: string,
+  env: PilotEnv = testEnv,
+): Promise<Response> {
+  const ctx = createExecutionContext();
+  const response = await worker.fetch(
+    new Request(`https://vela.worker.test${path}`, { method }),
+    env,
+    ctx,
+  );
+  await waitOnExecutionContext(ctx);
+  return response;
+}
+
+// ADR-29: the API is dispatched on its path before the pilot's Hono app, so it never builds the
+// pilot's deps and the pilot's routes never see it.
+describe("the API under /v1", () => {
+  it.each([
+    ["GET", "/v1/me"],
+    ["POST", "/v1/families"],
+    ["GET", "/v1"],
+    ["OPTIONS", "/v1/me"],
+  ])("hands %s %s to the API, and builds none of the pilot's deps", async (method, path) => {
+    const fake = createFakePilotRuntime();
+
+    const response = await fetchFrom(createWorker(fake.runtime), method, path);
+
+    expect(response.status).toBe(204);
+    expect(fake.apiRequests).toEqual([`${method} ${path}`]);
+    expect(fake.built()).toBe(0);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it.each([
+    ["GET", "/v1x"],
+    ["GET", "/v10/me"],
+    ["GET", "/healthz"],
+    ["GET", "/privacy"],
+    ["POST", "/webhooks/telegram"],
+    ["GET", "/admin"],
+  ])("never hands %s %s to the API", async (method, path) => {
+    const fake = createFakePilotRuntime();
+
+    await fetchFrom(createWorker(fake.runtime), method, path);
+
+    expect(fake.apiRequests).toEqual([]);
+  });
+
+  it("takes /v1 and what is under it, and nothing that merely starts with v1", () => {
+    expect(["/v1", "/v1/", "/v1/me", "/v1/families/x/today"].map(isApiPath)).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(["/", "/v1x", "/v10/me", "/v2/me", "/api/v1/me", "/V1/me"].map(isApiPath)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it("answers under /v1 while the pilot's own configuration is refused", async () => {
+    const fake = createFakePilotRuntime();
+    const refusing: PilotRuntime = {
+      ...fake.runtime,
+      createDeps: async () => {
+        throw new ConfigError("PUBLIC_BASE_URL", "PUBLIC_BASE_URL still holds a placeholder");
+      },
+    };
+
+    const response = await fetchFrom(createWorker(refusing), "GET", "/v1/me");
+
+    expect(response.status).toBe(204);
+    expect(fake.apiRequests).toEqual(["GET /v1/me"]);
+  });
+
+  it("serves the pilot's pages while the API's configuration is refused", async () => {
+    const fake = createFakePilotRuntime({ api: createApiHandler() });
+    const worker = createWorker(fake.runtime);
+    const refused: PilotEnv = { ...testEnv, API_V1: "maybe" };
+
+    const { result: api, lines } = await consoleLinesDuring(() =>
+      fetchFrom(worker, "GET", "/v1/me", refused),
+    );
+    const notice = await fetchFrom(worker, "GET", "/privacy", refused);
+
+    expect(api.status).toBe(503);
+    expect(await api.json()).toEqual({
+      error: { code: "unavailable", message: "Service temporarily unavailable." },
+    });
+    expect(lines).toEqual([
+      {
+        level: "error",
+        event: "api_config_refused",
+        environment: testEnv.ENVIRONMENT,
+        error: "ConfigError:API_V1",
+      },
+    ]);
+    expect(notice.status).toBe(200);
   });
 });

@@ -3,8 +3,8 @@
  * handler, and the Durable Object take a `PilotRuntime` rather than importing services directly,
  * so a test can hand them fakes and no test needs a database, Telegram, or Anthropic.
  *
- * `pilotRuntime` is the only place the real services are wired into the pilot Worker; the admin
- * Worker has its own seam in `admin-runtime.ts`.
+ * `pilotRuntime` is the only place the real services are wired into the pilot Worker, the API's
+ * through `api` (`api-runtime.ts`); the admin Worker has its own seam in `admin-runtime.ts`.
  */
 import type { InboundEvent } from "@vela/contracts";
 import {
@@ -20,6 +20,7 @@ import {
   tickMember,
   understandAnswer,
 } from "@vela/services";
+import { type ApiHandler, createApiHandler } from "./api-runtime.ts";
 import { buildDeps, createChannels, type DepsHandle, type DepsOptions } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { PRIVACY_NOTICES } from "./notices.generated.ts";
@@ -48,6 +49,8 @@ export interface PilotRuntime {
   createChannels: typeof createChannels;
   /** The notices `/privacy` and `/privacy/zh-TW` serve, and the ones `createDeps` checks. */
   readonly notices: PrivacyNotices;
+  /** The API under /v1 (ADR-29): its own config check, limits and app; never `createDeps`. */
+  readonly api: ApiHandler;
 }
 
 const services: PilotServices = {
@@ -66,4 +69,5 @@ export const pilotRuntime: PilotRuntime = {
   createDeps: (env, options) => buildDeps(env, PRIVACY_NOTICES, options),
   createChannels,
   notices: PRIVACY_NOTICES,
+  api: createApiHandler(),
 };

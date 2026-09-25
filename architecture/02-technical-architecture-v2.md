@@ -33,7 +33,7 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
                                        │ HTTPS (Clerk session)                  │ push (Expo → APNs/FCM)
 ┌──────────────────────────────────────▼───────────────────────────────────────▼──────────────────────┐
 │  Cloudflare Workers "vela" and "vela-admin" (Hono, TypeScript; on workers.dev in the pilot, ADR-26) │
-│  ├─ /v1/* API (api-contract.md)            ├─ /webhooks/{line,whatsapp,telegram,voice,billing}     │
+│  ├─ /v1/* API on "vela" (api-contract.md)  ├─ /webhooks/{line,whatsapp,telegram,voice,billing}     │
 │  ├─ Member Durable Objects  (one per member with arrivals: alarms for arrival · repeat · quiet ·   │
 │  │   turn prompt · weekly read; recomputed from the IANA zone on every fire)                        │
 │  ├─ Queues: "outbound" (gateway sends) · "understand" (AI) · "media" · dead-letter                  │
@@ -59,7 +59,7 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
 
 | Component | Responsibility | Technology (2026 pick) | Alternatives checked |
 |---|---|---|---|
-| Worker | API, webhooks, scheduler, gateway, adapters, AI orchestration, admin assets. In the pilot, two Workers from one package, each on its workers.dev hostname only: `vela` (webhooks, privacy notice pages, scheduler, queues, cron) and `vela-admin` (the admin pages, with Cloudflare Access on the whole Worker) (ADR-26) | Cloudflare Workers, Hono 4, TypeScript 7 strict | Vercel, AWS Lambda + EventBridge Scheduler, Cloud Run, Fly.io, Railway, Render, Supabase Edge (research/platform-and-data §2a) |
+| Worker | API, webhooks, scheduler, gateway, adapters, AI orchestration, admin assets. In the pilot, two Workers from one package, each on its workers.dev hostname only: `vela` (the API under `/v1`, ADR-29; webhooks, privacy notice pages, scheduler, queues, cron) and `vela-admin` (the admin pages, with Cloudflare Access on the whole Worker) (ADR-26) | Cloudflare Workers, Hono 4, TypeScript 7 strict | Vercel, AWS Lambda + EventBridge Scheduler, Cloud Run, Fly.io, Railway, Render, Supabase Edge (research/platform-and-data §2a) |
 | Per-member scheduler | Precise wake-ups per member in her time zone | Durable Objects with alarms | Per-minute cron scan (v1), EventBridge one-off schedules, pg_cron |
 | Queues | Decouple sends and AI from webhooks; retries; dead-letter | Cloudflare Queues (at-least-once, no dedup: the outbox gates) | SQS FIFO (dedup, but a second cloud), Cloud Tasks |
 | Database | System of record, one per region | Neon Postgres 18 (native `uuidv7()`), projects in Singapore, Frankfurt, US-East; Hyperdrive pooling with query caching off | Supabase (Tokyo region; fallback for Japan), PlanetScale Postgres, Crunchy, Aurora v2, Cloud SQL, D1 (ruled out: free-tier row caps enforced 2026-09-01) |
@@ -368,7 +368,7 @@ CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite
 | Env | Worker | Databases | Channels | Mobile |
 |---|---|---|---|---|
 | dev | `wrangler dev` (`vela-dev`; `vela-admin-dev` beside it with `pnpm --filter @vela/worker dev:admin`) | PGlite locally (`pnpm --filter @vela/db dev-db`); no Neon branch: each Neon project is one environment's (`infra/README.md`, section 2) | Telegram test bot; LINE test OA | Expo dev client on the founder's phone |
-| staging | `vela` (`https://vela.vela-light-staging.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light-staging.workers.dev`), in the "Vela staging" Cloudflare account | Neon projects of their own, one per region (apac: `vela-staging`), so staging never copies production data | Telegram test bot; LINE test OA; WhatsApp sandbox | TestFlight / Play internal (dev client) |
+| staging | `vela` (`https://vela.vela-light-staging.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light-staging.workers.dev`), in the "Vela staging" Cloudflare account | Neon projects of their own, one per region (apac: `vela-staging`), so staging never copies production data | Telegram test bot; LINE test OA; WhatsApp sandbox | Expo Go against `vela`'s `/v1` (`start:staging`) until EAS; TestFlight / Play internal (dev client) |
 | prod | `vela` (`https://vela.vela-light.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light.workers.dev`), in the "Vela" Cloudflare account | Neon projects, one per region (apac: `vela`; eu and us from sprint 2), each on its default branch `main` | Real accounts | Store builds; EAS Update channel `production` |
 
 Release: trunk-based; PRs run the full CI; `main` deploys to staging; a tag deploys to production after the founder's approval, its deploy job migrating once, then deploying `vela`, then `vela-admin` (ADR-26); mobile releases weekly during the pilot, with EAS Update for JS-only fixes.

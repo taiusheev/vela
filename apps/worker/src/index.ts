@@ -1,7 +1,7 @@
 /**
- * The pilot Worker `vela` as wrangler deploys it (wrangler.jsonc): its handlers, the
- * `MemberScheduler` Durable Object class, which the admin Worker also binds by `script_name`, and
- * the `ReconcileHeartbeat` class `/healthz` reads.
+ * The pilot Worker `vela` as wrangler deploys it (wrangler.jsonc): its handlers, whose `fetch` also
+ * serves the API under /v1 (ADR-29), the `MemberScheduler` Durable Object class, which the admin
+ * Worker also binds by `script_name`, and the `ReconcileHeartbeat` class `/healthz` reads.
  *
  * workerd reads every export of this module as a handler or a class and refuses to start on any
  * other value, so the handlers and their constants live in `pilot-worker.ts` and nothing else is

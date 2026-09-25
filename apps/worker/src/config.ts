@@ -1,7 +1,8 @@
 /**
  * What both Workers check before they run anything: the environment, the secrets, and the vars a
- * deployed environment cannot run with. The pilot Worker reads services' `Config` here; the admin
- * Worker only needs its environment and its own origin checked.
+ * deployed environment cannot run with. The pilot Worker reads services' `Config` here, and the API
+ * it serves under /v1 its own `ApiConfig`; the admin Worker only needs its environment and its own
+ * origin checked.
  *
  * Every refusal is a `ConfigError` naming the variable (or the notice file) to fix, never its value.
  */
@@ -41,6 +42,7 @@ type SecretName =
   | "ANTHROPIC_API_KEY"
   | "DEEPGRAM_API_KEY"
   | "ADMIN_CONVERSATION_ID"
+  | "CLERK_SECRET_KEY"
   | "ACCESS_TEAM_DOMAIN"
   | "ACCESS_AUD";
 
@@ -289,6 +291,158 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     privacyNoticeUrls,
     // The generator refuses notices whose versions differ, so the English one names both.
     privacyNoticeVersion: notices.en.version,
+  };
+}
+
+/**
+ * Whether the pilot Worker serves the API under /v1 (ADR-29): "on" in development and staging,
+ * "off" in production until a new ADR turns it on (src/wrangler-config.test.ts pins it).
+ */
+export const API_SWITCHES = ["on", "off"] as const;
+
+export type ApiSwitch = (typeof API_SWITCHES)[number];
+
+/** What the API under /v1 runs with (`src/api-runtime.ts`), and nothing of the pilot's `Config`. */
+export interface ApiConfig {
+  readonly environment: Environment;
+  /** The Clerk Frontend API origin: https, no path, no trailing slash. */
+  readonly issuer: string;
+  /** Clerk's secret key, for the live session check; null only in development, which then reads. */
+  readonly secretKey: string | null;
+  /** The bot a new family's invite link opens. */
+  readonly telegramBotUsername: string;
+  readonly regions: readonly Region[];
+}
+
+/** The hosts of Clerk's development instances, whose accounts are test accounts. */
+const CLERK_DEVELOPMENT_HOST = ".clerk.accounts.dev";
+
+/**
+ * A Clerk secret key as Clerk issues one: its instance's prefix and printable characters, no longer
+ * than the session activity checker accepts (`session.ts`).
+ */
+const CLERK_SECRET_KEY_SHAPE = /^sk_(test|live)_[!-~]+$/;
+const MAX_CLERK_SECRET_KEY_LENGTH = 4096;
+
+function readApiSwitch(env: { readonly API_V1?: string }): ApiSwitch {
+  const value = env.API_V1?.trim() ?? "";
+  const found = API_SWITCHES.find((candidate) => candidate === value);
+  if (found === undefined) {
+    throw new ConfigError(
+      "API_V1",
+      `API_V1 must be one of ${API_SWITCHES.join(", ")}: set it in the environment's vars in wrangler.jsonc`,
+    );
+  }
+  return found;
+}
+
+/**
+ * The issuer tokens are verified against, as an origin. Development and staging hold only test
+ * accounts, so they take only a development instance; production's accounts are real people's, so
+ * it refuses one.
+ */
+function readClerkIssuer(env: PilotEnv, environment: Environment): string {
+  const given = env.CLERK_ISSUER?.trim() ?? "";
+  if (given === "") {
+    throw new ConfigError(
+      "CLERK_ISSUER",
+      "CLERK_ISSUER is not set: add the Clerk Frontend API origin to the environment's vars in wrangler.jsonc",
+    );
+  }
+  const issuer = given.endsWith("/") ? given.slice(0, -1) : given;
+  let url: URL | null;
+  try {
+    url = new URL(issuer);
+  } catch {
+    url = null;
+  }
+  if (url === null || url.protocol !== "https:" || url.origin !== issuer) {
+    throw new ConfigError(
+      "CLERK_ISSUER",
+      "CLERK_ISSUER must be an https origin with no path, the Frontend API URL in Clerk's dashboard: set it in the environment's vars in wrangler.jsonc",
+    );
+  }
+  const development = url.hostname.endsWith(CLERK_DEVELOPMENT_HOST);
+  if (environment === "production" && development) {
+    throw new ConfigError(
+      "CLERK_ISSUER",
+      "CLERK_ISSUER is a Clerk development instance, which production refuses: set production's own Clerk instance in wrangler.jsonc",
+    );
+  }
+  if (environment !== "production" && !development) {
+    throw new ConfigError(
+      "CLERK_ISSUER",
+      `CLERK_ISSUER must be a Clerk development instance (*${CLERK_DEVELOPMENT_HOST}) in ${environment}: set it in the environment's vars in wrangler.jsonc`,
+    );
+  }
+  return issuer;
+}
+
+/**
+ * The secret key of the issuer's own instance: a development key (`sk_test_`) in development and
+ * staging, so a live key can never sit where the co-founder deploys from a laptop, and a production
+ * key (`sk_live_`) in production. Only development may go without one, and then serves reads only.
+ */
+function readClerkSecretKey(env: PilotEnv, environment: Environment): string | null {
+  if (environment === "development" && (env.CLERK_SECRET_KEY?.trim() ?? "") === "") {
+    return null;
+  }
+  const key = secret(env, "CLERK_SECRET_KEY").trim();
+  if (key.length > MAX_CLERK_SECRET_KEY_LENGTH || !CLERK_SECRET_KEY_SHAPE.test(key)) {
+    throw new ConfigError(
+      "CLERK_SECRET_KEY",
+      "CLERK_SECRET_KEY is not a Clerk secret key (sk_test_… or sk_live_…, printable characters only): put the one Clerk's dashboard shows under API keys",
+    );
+  }
+  const expected = environment === "production" ? "sk_live_" : "sk_test_";
+  if (!key.startsWith(expected)) {
+    const where =
+      environment === "development"
+        ? "put one in .dev.vars"
+        : `put one with "wrangler secret put CLERK_SECRET_KEY --env ${environment}"`;
+    throw new ConfigError(
+      "CLERK_SECRET_KEY",
+      `CLERK_SECRET_KEY must be a Clerk ${environment === "production" ? "production" : "development"} secret key in ${environment} (${expected}…): ${where}`,
+    );
+  }
+  return key;
+}
+
+/**
+ * The API's configuration (ADR-29), or null while `API_V1` is "off", when nothing else is read: so
+ * production needs no Clerk var or secret while its API is off. Otherwise a `ConfigError` names the
+ * first variable the API cannot run with, and the Worker answers 503 on /v1 alone.
+ *
+ * It never reads the privacy notices or the founder's chat id, and never builds the pilot's deps,
+ * so a refusal of the pilot's own settings leaves /v1 answering, and a refusal here leaves the
+ * webhook and the notices answering. The one check both share is `checkDeployedEnv`'s: a
+ * placeholder in any value, the pilot's included, refuses /v1 too, because it means nobody has
+ * finished setting up this environment, and a value added later is covered without being listed.
+ */
+export function readApiConfig(env: PilotEnv): ApiConfig | null {
+  const environment = readEnvironment(env);
+  if (readApiSwitch(env) === "off") {
+    return null;
+  }
+  checkDeployedEnv(env, environment, ["CLERK_ISSUER"], "wrangler.jsonc");
+  const issuer = readClerkIssuer(env, environment);
+  const secretKey = readClerkSecretKey(env, environment);
+  if (environment !== "development") {
+    for (const name of ["API_IP_LIMIT", "API_WRITE_LIMIT"] as const) {
+      if (env[name] === undefined) {
+        throw new ConfigError(
+          name,
+          `${name} is not bound in ${environment}: add the ratelimits binding in wrangler.jsonc (API_LIMITS in src/api-runtime.ts)`,
+        );
+      }
+    }
+  }
+  return {
+    environment,
+    issuer,
+    secretKey,
+    telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
+    regions: readRegions(env),
   };
 }
 

@@ -1,4 +1,5 @@
 import { describe, expect, inject, it } from "vitest";
+import { API_LIMITS } from "./api-runtime.ts";
 import { AI_OFF_EFFECTS, MEDIA_OFF_EFFECTS } from "./deps.ts";
 import { NOTICE_LANGS, NOTICE_PATHS, type NoticeLang } from "./notices.ts";
 import { NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
@@ -191,13 +192,15 @@ describe("the two Workers' configurations", () => {
   });
 
   // H5: the founder's personal chat id is a secret, never a value in a committed file. The
-  // heartbeat needs no value at all (W5): the watchdog reads /healthz.
-  it("never holds ADMIN_CONVERSATION_ID or a heartbeat ping URL as a var, in either Worker or any environment", () => {
+  // heartbeat needs no value at all (W5): the watchdog reads /healthz. Clerk's secret key is a
+  // secret only the founder puts (ADR-29).
+  it("never holds ADMIN_CONVERSATION_ID, CLERK_SECRET_KEY, or a heartbeat ping URL as a var, in either Worker or any environment", () => {
     for (const config of configs) {
       const names = Object.keys(config.vars);
       expect(names, `${config.worker}:${config.environment}`).not.toContain(
         "ADMIN_CONVERSATION_ID",
       );
+      expect(names, `${config.worker}:${config.environment}`).not.toContain("CLERK_SECRET_KEY");
       expect(
         names.filter((name) => /HEALTHCHECK|PING/.test(name)),
         `${config.worker}:${config.environment}`,
@@ -388,6 +391,41 @@ describe("the pilot Worker's bindings", () => {
     },
   );
 
+  // ADR-29: production's API stays off until a Clerk production instance, a production key, a
+  // privacy notice naming Clerk, and a new ADR, which changes this pin.
+  it("serve the API in development and staging, and not in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.API_V1,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
+  // Staging holds only synthetic families and test accounts, so it verifies tokens from the same
+  // development instance as a laptop; production names none while its API is off.
+  it("verify tokens from Clerk's development instance in development and staging, and name no issuer in production", () => {
+    expect(configOf("pilot", "development").vars.CLERK_ISSUER).toBe(
+      "https://ideal-vulture-9262.clerk.accounts.dev",
+    );
+    expect(configOf("pilot", "staging").vars.CLERK_ISSUER).toBe(
+      configOf("pilot", "development").vars.CLERK_ISSUER,
+    );
+    expect(Object.keys(configOf("pilot", "production").vars)).not.toContain("CLERK_ISSUER");
+  });
+
+  // Named environments inherit no binding, so each environment that serves the API repeats both
+  // limiters; production binds none while its API is off, and config.ts refuses to turn it on
+  // without them.
+  it("bind both of the API's limiters in development and staging, and none in production", () => {
+    for (const environment of ["development", "staging"] as const) {
+      expect(configOf("pilot", environment).ratelimits, environment).toEqual([
+        API_LIMITS.address,
+        API_LIMITS.writes,
+      ]);
+    }
+    expect(configOf("pilot", "production").ratelimits ?? []).toEqual([]);
+  });
+
   // A migration once deployed is never rewritten: the heartbeat's class arrives as a second one.
   it.each(["development", ...DEPLOYED] as const)(
     "declare the scheduler's and the heartbeat's migrations in %s, which only the Worker exporting the classes may",
@@ -430,7 +468,7 @@ describe("the admin Worker's bindings", () => {
   );
 
   it.each(["development", ...DEPLOYED] as const)(
-    "run nothing of the pilot Worker's in %s: no consumer, cron, bucket, migration, or chat id",
+    "run nothing of the pilot Worker's in %s: no consumer, cron, bucket, migration, limiter, API var, or chat id",
     (environment) => {
       const admin = configOf("admin", environment);
 
@@ -438,6 +476,7 @@ describe("the admin Worker's bindings", () => {
       expect(admin.crons ?? []).toEqual([]);
       expect(records(admin.r2Buckets)).toEqual([]);
       expect(records(admin.migrations)).toEqual([]);
+      expect(records(admin.ratelimits)).toEqual([]);
       expect(Object.keys(admin.vars).sort()).toEqual([
         "AI_PROVIDER",
         "ENVIRONMENT",

@@ -9,6 +9,7 @@
     "web": "expo start --web",
     "android": "expo start --android",
     "ios": "expo start --ios",
+    "start:staging": "node --env-file=.env.staging ../../node_modules/expo/bin/cli start --clear",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {

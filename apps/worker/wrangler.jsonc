@@ -1,9 +1,10 @@
 {
   // The pilot Worker (code design §9, H1): Telegram's webhook, the privacy notices, the health
-  // check, the three queues, cron, and two Durable Objects: MemberScheduler, and ReconcileHeartbeat,
-  // which /healthz reads for the watchdog (.github/workflows/watchdog.yml). The admin pages are a
-  // second Worker from this package, configured in wrangler.admin.jsonc, because Cloudflare Access
-  // protects every hostname of a Worker and would close this one to Telegram.
+  // check, the API under /v1 (ADR-29), the three queues, cron, and two Durable Objects:
+  // MemberScheduler, and ReconcileHeartbeat, which /healthz reads for the watchdog
+  // (.github/workflows/watchdog.yml). The admin pages are a second Worker from this package,
+  // configured in wrangler.admin.jsonc, because Cloudflare Access protects every hostname of a
+  // Worker and would close this one to Telegram, and to the app on a phone.
   //
   // Three environments: the top level is local development (`wrangler dev`), `staging` and
   // `production` are what deploy.yml deploys. Named environments inherit nothing that binds a
@@ -68,6 +69,23 @@
   // account, set "r2" for that environment here and add its r2_buckets binding, commit, then run
   // `pnpm --filter @vela/worker run setup -- --env <environment> --from resources` on that commit
   // before it is merged to main, which creates the bucket and deploys.
+  //
+  // API_V1 (ADR-29) is "on" or "off": whether this Worker serves the API under /v1, which
+  // src/pilot-worker.ts hands to src/api-runtime.ts before any other route, and which checks its
+  // own settings (src/config.ts, readApiConfig), so a refusal there answers 503 on /v1 alone.
+  // Development and staging are "on"; production is "off", where /v1 answers 404 and nothing below
+  // is read, and src/wrangler-config.test.ts pins it off until a new ADR turns it on. CLERK_ISSUER
+  // is the Clerk Frontend API origin session tokens are verified against: the development instance
+  // in development and staging, and absent in production while its API is off. CLERK_SECRET_KEY,
+  // for the live session check on every write, is a secret only the founder puts, never a var: in
+  // apps/worker, `pnpm exec wrangler secret put CLERK_SECRET_KEY --env staging`. Staging refuses an
+  // issuer that is not *.clerk.accounts.dev or a key that is not a development key (sk_test_), and
+  // answers 503 on /v1 without the key; production, once on, refuses a development issuer or key.
+  // Two Workers Rate Limiting bindings, which create no resource, admit the API's requests:
+  // API_IP_LIMIT, 120 a minute per client address (per /64 for IPv6), and API_WRITE_LIMIT, 20
+  // writes a minute per account, before the call to Clerk. Production binds neither while its API
+  // is off, and readApiConfig refuses to serve the API without them. /v1 has no CORS: OPTIONS
+  // answers 404, no Access-Control- header is sent, and a request carrying Origin is refused.
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-dev",
   "main": "src/index.ts",
@@ -153,6 +171,13 @@
   // Nightly at 03:20 UTC: yesterday's metrics and retention.
   "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
 
+  // The API's admission limits (ADR-29, API_LIMITS in src/api-runtime.ts): per client address
+  // (per /64 for IPv6) before the app, and per account before the live session check calls Clerk.
+  "ratelimits": [
+    { "name": "API_IP_LIMIT", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } },
+    { "name": "API_WRITE_LIMIT", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } }
+  ],
+
   "vars": {
     "ENVIRONMENT": "development",
     "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_DEV_BOT_USERNAME",
@@ -163,7 +188,10 @@
     "PRIVACY_NOTICE_URL_ZH_TW": "http://localhost:8787/privacy/zh-TW",
     "REGIONS": "apac",
     "AI_PROVIDER": "off",
-    "MEDIA_STORAGE": "off"
+    "MEDIA_STORAGE": "off",
+    "API_V1": "on",
+    // Clerk's development instance for Vela Light: public, since the publishable key encodes it.
+    "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev"
   },
 
   "env": {
@@ -215,6 +243,18 @@
       // account has no R2 subscription, so a binding here would fail the deploy.
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "e9e9837d1eee47528304916a1ac2d1e9" }],
       "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
+      "ratelimits": [
+        {
+          "name": "API_IP_LIMIT",
+          "namespace_id": "1001",
+          "simple": { "limit": 120, "period": 60 }
+        },
+        {
+          "name": "API_WRITE_LIMIT",
+          "namespace_id": "1002",
+          "simple": { "limit": 20, "period": 60 }
+        }
+      ],
       "vars": {
         "ENVIRONMENT": "staging",
         "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
@@ -227,7 +267,11 @@
         // Off for the dogfooding week, until the founder approves buying Anthropic credit.
         "AI_PROVIDER": "off",
         // Off until R2 is subscribed to: Telegram holds the voice notes and photos meanwhile.
-        "MEDIA_STORAGE": "off"
+        "MEDIA_STORAGE": "off",
+        // Staging's app accounts are all test accounts (the dogfooding week's friend has none),
+        // so it verifies tokens from Clerk's development instance, as development does.
+        "API_V1": "on",
+        "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev"
       }
     },
 
@@ -286,7 +330,9 @@
         "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light.workers.dev/privacy/zh-TW",
         "REGIONS": "apac",
         "AI_PROVIDER": "anthropic",
-        "MEDIA_STORAGE": "r2"
+        "MEDIA_STORAGE": "r2",
+        // Off until a new ADR turns it on (ADR-29): no CLERK_ISSUER and no ratelimits until then.
+        "API_V1": "off"
       }
     }
   }

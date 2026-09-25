@@ -3,9 +3,10 @@
  *
  *   pnpm --filter @vela/worker api:dev
  *
- * It is a development tool, not a deployment. Neither deployed Worker mounts the API (API contract
- * §1), and this script refuses anything but a local database and a development Clerk instance, so
- * it cannot be pointed at staging or production by accident.
+ * It is a development tool, not a deployment. The pilot Worker serves the API under /v1 where
+ * API_V1 is on (ADR-29); this script serves it on this machine, and refuses anything but a local
+ * database and a development Clerk instance, so it cannot be pointed at staging or production by
+ * accident.
  *
  * Needs, in apps/worker/.env.local or the environment:
  *   DATABASE_URL          a local Postgres, for example the one `pnpm --filter @vela/db dev-db` serves

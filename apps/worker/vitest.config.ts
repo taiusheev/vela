@@ -6,9 +6,11 @@ import { unstable_readConfig } from "wrangler";
 import { NOTICE_DIRECTORY, NOTICE_FILES, type NoticeLang } from "./src/notices.ts";
 
 /**
- * The tests' runtime is built from the wrangler files alone. Wrangler would also read `.env` and
- * `.env.local` into it, as `wrangler dev` does, and those hold a developer's own settings for the
- * local scripts — a bot name, a Clerk key — which would then quietly become the tests' inputs.
+ * The tests' runtime is built from the wrangler files, and from a developer's `.dev.vars` when there
+ * is one; the fake secrets below win over the same names in it. Without a `.dev.vars`, wrangler
+ * would read `.env` and `.env.local` into it instead, as `wrangler dev` does, and those hold a
+ * developer's own settings for the local scripts — a bot name, a Clerk key — which would then
+ * quietly become the tests' inputs. This turns that fallback off.
  */
 process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
 
@@ -41,6 +43,7 @@ interface WorkerConfig {
   readonly hyperdrive: unknown;
   readonly r2Buckets: unknown;
   readonly crons: unknown;
+  readonly ratelimits: unknown;
 }
 
 declare module "vitest" {
@@ -75,6 +78,7 @@ function workerConfig(
     readonly hyperdrive?: unknown;
     readonly r2_buckets?: unknown;
     readonly triggers?: { readonly crons?: unknown };
+    readonly ratelimits?: unknown;
   } = unstable_readConfig(
     {
       config: WORKERS[worker],
@@ -97,6 +101,7 @@ function workerConfig(
     hyperdrive: config.hyperdrive,
     r2Buckets: config.r2_buckets,
     crons: config.triggers?.crons,
+    ratelimits: config.ratelimits,
   };
 }
 
@@ -136,10 +141,13 @@ function workerIgnoreRules(): readonly string[] {
  * The Worker's tests run inside workerd, against the bindings in wrangler.jsonc, so the Durable
  * Object and the queues behave as they will in production. No R2 bucket is bound: this file's
  * environment is development, whose MEDIA_STORAGE is off (decision M), so the media port is covered
- * against `fakeR2Bucket` in `src/deps.test.ts` instead. The secrets below are fakes and `.dev.vars`
- * is not read: every test injects fake services through its runtime, so none of them reaches a
- * database, Telegram, Anthropic, or the network. The admin Worker's tests build its environment
- * from these same bindings (`src/testing/fakes.ts`).
+ * against `fakeR2Bucket` in `src/deps.test.ts` instead. The secrets below are fakes, and they win
+ * over the same names in a developer's `.dev.vars`, which the pool does read (only `.env` and
+ * `.env.local` are kept out, above). `CLERK_SECRET_KEY` is blank, so development serves the API's
+ * reads only, as a laptop without a key does, whatever a `.dev.vars` holds. Every test injects fake
+ * services through its runtime, so none of them reaches a database, Telegram, Anthropic, or the
+ * network. The admin Worker's tests build its environment from these same bindings
+ * (`src/testing/fakes.ts`).
  */
 export default defineConfig({
   resolve: {
@@ -175,6 +183,7 @@ export default defineConfig({
           TELEGRAM_WEBHOOK_SECRET: "test-webhook-secret",
           ANTHROPIC_API_KEY: "test-anthropic-key",
           DEEPGRAM_API_KEY: "test-deepgram-key",
+          CLERK_SECRET_KEY: "",
         },
       },
     }),

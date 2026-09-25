@@ -10,6 +10,7 @@ import type { Family, Member, VelaDatabase } from "@vela/db";
 import type { Deps, FamilyPage, Logger } from "@vela/services";
 import { vi } from "vitest";
 import type { AdminRuntime, AdminServices } from "../admin-runtime.ts";
+import type { ApiHandler } from "../api-runtime.ts";
 import type { AdminDeps, AdminDepsHandle, DepsHandle, DepsOptions } from "../deps.ts";
 import type { AdminEnv, PilotEnv } from "../env.ts";
 import type { PrivacyNotices } from "../notices.ts";
@@ -105,6 +106,8 @@ export interface FakePilotRuntime extends Recording {
   readonly runtime: PilotRuntime;
   /** The events the webhook route handed to `handleInbound`. */
   readonly inbound: InboundEvent[];
+  /** Every request handed to `api`, as `"<METHOD> <pathname>"`, in order. */
+  readonly apiRequests: string[];
 }
 
 export interface FakeAdminRuntime extends Recording {
@@ -120,6 +123,8 @@ export interface FakePilotRuntimeOptions {
   readonly webhookSecret?: string;
   /** The notices the routes serve; `noticesFixture()` when left out. */
   readonly notices?: PrivacyNotices;
+  /** Answers what is handed to `api`, which is still recorded; a 204 when left out. */
+  readonly api?: ApiHandler;
 }
 
 export interface FakeAdminRuntimeOptions {
@@ -263,9 +268,11 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
   const recording = createRecording();
   const { note } = recording;
   const inbound: InboundEvent[] = [];
+  const apiRequests: string[] = [];
   const given = options.services ?? {};
   const events = options.events ?? [];
   const webhookSecret = options.webhookSecret ?? "test-webhook-secret";
+  const api = options.api;
 
   const services: PilotServices = {
     async handleInbound(deps, parsed) {
@@ -323,9 +330,13 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
     },
     createChannels: () => ({ get: () => fakeAdapter(events, webhookSecret) }),
     notices: options.notices ?? noticesFixture(),
+    api: async (request, env) => {
+      apiRequests.push(`${request.method} ${new URL(request.url).pathname}`);
+      return api === undefined ? new Response(null, { status: 204 }) : api(request, env);
+    },
   };
 
-  return { ...recording, runtime, inbound };
+  return { ...recording, runtime, inbound, apiRequests };
 }
 
 export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): FakeAdminRuntime {

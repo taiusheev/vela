@@ -24,7 +24,14 @@
  */
 import { getMe, setMyCommands, setWebhook } from "@vela/adapters";
 import { errorLabel } from "@vela/services";
-import { AI_PROVIDERS, type AiProvider, MEDIA_STORAGES, type MediaStorage } from "../src/config.ts";
+import {
+  AI_PROVIDERS,
+  type AiProvider,
+  API_SWITCHES,
+  type ApiSwitch,
+  MEDIA_STORAGES,
+  type MediaStorage,
+} from "../src/config.ts";
 import { SetupError, setUpTelegram, type TelegramSetupApi } from "./telegram-webhook.ts";
 
 export const ENVIRONMENTS = ["staging", "production"] as const;
@@ -52,11 +59,12 @@ const STEP_DESCRIPTIONS: Readonly<Record<Step, string>> = {
   telegram:
     "check the bot token, write the bot's username to both files, read your chat id, generate the webhook secret",
   secrets:
-    "put each secret on the Worker that reads it (the Anthropic key only while AI_PROVIDER is anthropic)",
+    "put each secret on the Worker that reads it (the Anthropic key only while AI_PROVIDER is anthropic, Clerk's only while API_V1 is on)",
   deploy: "deploy the pilot Worker, then the admin Worker",
   access: "turn on Cloudflare Access for the admin Worker and put its two secrets",
   webhook: "register the Telegram webhook and command menu",
-  check: "check /healthz, the privacy notice pages, and that /admin is closed without Access",
+  check:
+    "check /healthz, the privacy notice pages, /v1/me while API_V1 is on, and that /admin is closed without Access",
 };
 
 /** The files this script reads and the only ones it writes, relative to apps/worker. */
@@ -362,6 +370,8 @@ export interface EnvironmentConfig {
   readonly aiProvider: AiProvider;
   /** The pilot Worker's `MEDIA_STORAGE`; with "off" no bucket is bound and none is created. */
   readonly mediaStorage: MediaStorage;
+  /** The pilot Worker's `API_V1` (ADR-29); with "off" no Clerk key is asked for and /v1 is not checked. */
+  readonly apiV1: ApiSwitch;
 }
 
 function originOf(url: string, where: string): URL {
@@ -433,6 +443,23 @@ function mediaStorageOf(
   return storage;
 }
 
+/**
+ * The pilot Worker's `API_V1` (ADR-29), which only it reads: the admin Worker never serves /v1.
+ * With "on" the secrets step asks for Clerk's secret key and the check step opens /v1/me; with
+ * "off" /v1 answers 404 and reads no Clerk setting, so neither is needed. A missing or unknown value
+ * is refused before anything is created, since the Worker would answer every /v1 request with 503.
+ */
+function apiSwitchOf(pilotVars: unknown, environment: Environment, where: string): ApiSwitch {
+  const value = field(pilotVars, "API_V1", where);
+  const found = API_SWITCHES.find((candidate) => candidate === value);
+  if (found === undefined) {
+    throw new SetupError(
+      `${PILOT_FILE} must set API_V1 for ${environment} to one of ${API_SWITCHES.join(", ")}`,
+    );
+  }
+  return found;
+}
+
 /** The names and hosts both wrangler files give an environment, read from the files' text. */
 export function readEnvironmentConfig(
   texts: { readonly pilot: string; readonly admin: string },
@@ -486,6 +513,7 @@ export function readEnvironmentConfig(
       admin: `${adminWhere}.vars`,
     }),
     mediaStorage: mediaStorageOf(pilotVars, buckets, environment, `${pilotWhere}.vars`),
+    apiV1: apiSwitchOf(pilotVars, environment, `${pilotWhere}.vars`),
   };
 }
 
@@ -688,6 +716,9 @@ const BOT_USERNAME = /^[A-Za-z0-9_]{5,32}$/;
 const ACCESS_AUD = /^[0-9a-f]{64}$/;
 const TEAM_DOMAIN = /^[a-z0-9-]+\.cloudflareaccess\.com$/;
 const WHITESPACE = /\s/;
+/** What the pilot Worker accepts as Clerk's secret key (`readApiConfig` in src/config.ts). */
+const CLERK_SECRET_KEY = /^sk_(test|live)_[!-~]+$/;
+const MAX_CLERK_SECRET_KEY_LENGTH = 4096;
 
 /** `<team name>.cloudflareaccess.com`, accepting the https:// and slash a copied link brings. */
 export function normalizeTeamDomain(value: string): string {
@@ -793,6 +824,7 @@ export const WORKER_SECRETS = [
   "TELEGRAM_WEBHOOK_SECRET",
   "ADMIN_CONVERSATION_ID",
   "ANTHROPIC_API_KEY",
+  "CLERK_SECRET_KEY",
   "DEEPGRAM_API_KEY",
 ] as const;
 export type WorkerSecret = (typeof WORKER_SECRETS)[number];
@@ -804,6 +836,8 @@ const SECRET_HOMES: Readonly<Record<WorkerSecret, readonly WorkerRole[]>> = {
   TELEGRAM_WEBHOOK_SECRET: ["pilot"],
   ADMIN_CONVERSATION_ID: ["pilot"],
   ANTHROPIC_API_KEY: ["pilot", "admin"],
+  // The API under /v1 is the pilot Worker's alone (ADR-29).
+  CLERK_SECRET_KEY: ["pilot"],
   DEEPGRAM_API_KEY: ["pilot"],
 };
 
@@ -823,9 +857,10 @@ export interface SecretPlan {
   /**
    * `run`: this run holds the value; `prompt`: ask for it; `kept`: every Worker has it;
    * `missing`: a Worker lacks one of the telegram step's values and this run has none; `ai_off`:
-   * the Anthropic key while AI is off, which no Worker reads, so it is neither asked for nor put.
+   * the Anthropic key while AI is off, which no Worker reads, so it is neither asked for nor put;
+   * `api_off`: Clerk's secret key while `API_V1` is off, which nothing reads either.
    */
-  readonly source: "run" | "prompt" | "kept" | "missing" | "ai_off";
+  readonly source: "run" | "prompt" | "kept" | "missing" | "ai_off" | "api_off";
 }
 
 /**
@@ -833,17 +868,22 @@ export interface SecretPlan {
  * the webhook step registers that same webhook secret. Anything else a Worker already holds is
  * kept. A prompted key goes on every Worker that reads it, so both Workers of an environment hold
  * the same Anthropic key. While AI is off the Anthropic key is skipped, so the founder need not
- * buy credit to set an environment up.
+ * buy credit to set an environment up; while the API is off Clerk's key is skipped, so production
+ * is set up without a Clerk production instance (ADR-29).
  */
 export function planSecrets(
   existing: Readonly<Record<WorkerRole, ReadonlySet<string>>>,
   fromRun: ReadonlyMap<WorkerSecret, string>,
   aiProvider: AiProvider,
+  apiV1: ApiSwitch,
 ): readonly SecretPlan[] {
   return WORKER_SECRETS.map((name) => {
     const homes = SECRET_HOMES[name];
     if (name === "ANTHROPIC_API_KEY" && aiProvider === "off") {
       return { name, workers: [], source: "ai_off" };
+    }
+    if (name === "CLERK_SECRET_KEY" && apiV1 === "off") {
+      return { name, workers: [], source: "api_off" };
     }
     if (fromRun.has(name)) {
       return { name, workers: homes, source: "run" };
@@ -987,11 +1027,11 @@ const HEALTH_WAIT_MINUTES = 15;
 
 /**
  * An address the check step opens and what it expects: a page open to everyone, one closed
- * without Cloudflare Access, or the pilot Worker's `/healthz`.
+ * without Cloudflare Access, the pilot Worker's `/healthz`, or an API route asked without a token.
  */
 interface SiteCheck {
   readonly url: string;
-  readonly expect: "open" | "closed" | "health";
+  readonly expect: "open" | "closed" | "health" | "unauthenticated";
 }
 
 /** What the address answered. */
@@ -1000,17 +1040,26 @@ interface SiteAnswer {
   readonly location: string;
   /** The `status` field of `/healthz`'s JSON (`ok`, `stale`, `no_reconcile_yet`), when it has one. */
   readonly health: string | null;
+  /** The `error.code` of the API's JSON (`unauthenticated`, `unavailable`), when it has one. */
+  readonly apiError: string | null;
 }
 
 function healthStatusOf(body: unknown): string | null {
   return isRecord(body) && typeof body.status === "string" ? body.status : null;
 }
 
+function apiErrorOf(body: unknown): string | null {
+  const error = isRecord(body) ? body.error : undefined;
+  return isRecord(error) && typeof error.code === "string" ? error.code : null;
+}
+
 /**
  * Whether an answer passes, and what the printed line adds. `/healthz` passes with `ok`, and also
  * with `no_reconcile_yet`, because a Worker deployed minutes ago may not have reconciled yet; the
  * founder is then told when to look again. `stale` fails: this environment reconciled once and
- * stopped.
+ * stopped. An API route asked without a token passes only with 401 `unauthenticated`, which the
+ * API answers once its own settings are accepted and before it opens the database (ADR-29): a 503
+ * is those settings refused, and a 404 is a Worker that does not serve /v1.
  */
 function judgeSiteCheck(
   check: SiteCheck,
@@ -1045,6 +1094,22 @@ function judgeSiteCheck(
         ok: false,
         detail: `${said}, expected 200 ok, or 503 no_reconcile_yet before the first reconciliation`,
       };
+    }
+    case "unauthenticated": {
+      if (answer?.status === 401 && answer.apiError === "unauthenticated") {
+        return {
+          ok: true,
+          detail: ", unauthenticated: the API is served and its settings accepted",
+        };
+      }
+      const said = answer === null || answer.apiError === null ? "" : `, ${answer.apiError}`;
+      const why =
+        answer?.status === 503
+          ? ": a 503 is the API refusing its own settings, and its log line api_config_refused names the variable"
+          : answer?.status === 404
+            ? ": a 404 is a deployed Worker with API_V1 off, or one from before /v1"
+            : "";
+      return { ok: false, detail: `${said}, expected 401 unauthenticated without a token${why}` };
     }
   }
 }
@@ -1110,11 +1175,31 @@ function mediaOffLine(environment: Environment): string {
   return `Media storage is off in ${environment} (MEDIA_STORAGE "off" in ${PILOT_FILE}), so no R2 bucket is created and Vela keeps no copy of a voice note or photo: Telegram holds them, and each media row keeps only what Telegram said about the file, its id, its type and its size, with no storage key and no copy of the file itself. To switch it on later: enable R2 in the Cloudflare dashboard for the "${FACTS[environment].accountName}" account (it asks for a payment method, though the pilot's use stays inside the free monthly allowance), set MEDIA_STORAGE to "r2" for ${environment} in ${PILOT_FILE} and add its r2_buckets binding, commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from resources on that commit before it is merged to main, which creates the bucket and deploys.`;
 }
 
+/**
+ * What the secrets step says instead of asking for Clerk's secret key while the API is off
+ * (ADR-29): /v1 then answers 404 and reads no Clerk setting, so production is set up without a
+ * Clerk production instance. Deployed with the switch on and no key, only /v1 answers 503; every
+ * other route keeps answering, so the key is put before the commit that switches it on is
+ * deployed: by the setup script in staging, and in production by the dashboard, which is how
+ * production's secrets go in (infra/runbooks/secrets-rotation.md, principle 5).
+ */
+function apiOffLine(environment: Environment): string {
+  const off = `The API is off in ${environment} (API_V1 "off" in ${PILOT_FILE}), so /v1 answers 404 there and no Clerk secret key is asked for.`;
+  return environment === "production"
+    ? `${off} Turning it on takes a new ADR (ADR-29): Clerk's production instance, on a domain Vela owns, its sk_live_ key, and a privacy notice naming Clerk. The key then goes on the pilot Worker in the Cloudflare dashboard (infra/runbooks/secrets-rotation.md, principle 5) before the release that sets API_V1 to "on"; released without it, /v1 answers 503 while every other route keeps answering.`
+    : `${off} To switch it on later: set API_V1 to "on" for ${environment} in ${PILOT_FILE}, with its CLERK_ISSUER and ratelimits, and commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy ${environment} without the key, and /v1 would answer 503 while every other route keeps answering.`;
+}
+
 /** The keys the founder pastes at the secrets step, and where each is created. */
 function secretPrompts(environment: Environment): Partial<Record<WorkerSecret, SecretPrompt>> {
   const facts = FACTS[environment];
   const noSpaces = (value: string): string | null =>
     WHITESPACE.test(value) ? "A key has no spaces: copy it again" : null;
+  // Staging verifies the development instance's tokens, so a live key never sits there (ADR-29).
+  const clerk =
+    environment === "production"
+      ? { name: "Production", instance: "Production", prefix: "sk_live_" }
+      : { name: "Staging", instance: "Development", prefix: "sk_test_" };
   return {
     ANTHROPIC_API_KEY: {
       label: "Anthropic API key",
@@ -1123,6 +1208,23 @@ function secretPrompts(environment: Environment): Partial<Record<WorkerSecret, S
       ],
       check: (value) =>
         value.startsWith("sk-ant-") ? noSpaces(value) : "An Anthropic API key starts with sk-ant-",
+    },
+    CLERK_SECRET_KEY: {
+      label: "Clerk secret key",
+      where: [
+        `Clerk dashboard (dashboard.clerk.com), application Vela Light, ${clerk.instance} instance: API keys > Secret keys, and copy the secret key, which starts ${clerk.prefix} (infra/README.md, section 9a). It goes on the pilot Worker, for the API's live session check on every write.`,
+      ],
+      check: (value) => {
+        if (!value.startsWith(clerk.prefix)) {
+          return `${clerk.name} takes only the ${clerk.instance} instance's secret key, which starts ${clerk.prefix}: copy that one`;
+        }
+        return (
+          noSpaces(value) ??
+          (CLERK_SECRET_KEY.test(value) && value.length <= MAX_CLERK_SECRET_KEY_LENGTH
+            ? null
+            : "A Clerk secret key is letters, digits and punctuation only: copy it again")
+        );
+      },
     },
     DEEPGRAM_API_KEY: {
       label: "Deepgram API key",
@@ -1792,6 +1894,7 @@ class Setup {
       },
       this.#fromRun,
       config.aiProvider,
+      config.apiV1,
     );
     const missing = plan.filter((entry) => entry.source === "missing").map((entry) => entry.name);
     if (missing.length > 0) {
@@ -1809,6 +1912,10 @@ class Setup {
       }
       if (entry.source === "ai_off") {
         this.#say(aiOffLine(this.#environment));
+        continue;
+      }
+      if (entry.source === "api_off") {
+        this.#say(apiOffLine(this.#environment));
         continue;
       }
       const prompt = prompts[entry.name];
@@ -1930,6 +2037,10 @@ class Setup {
     const checks: readonly SiteCheck[] = [
       { url: `${config.pilotOrigin}/healthz`, expect: "health" },
       ...config.noticeUrls.map((url): SiteCheck => ({ url, expect: "open" })),
+      // Without a token the API answers before it opens the database, so this wakes no Neon.
+      ...(config.apiV1 === "on"
+        ? [{ url: `${config.pilotOrigin}/v1/me`, expect: "unauthenticated" } as const]
+        : []),
       { url: `${config.adminOrigin}/admin`, expect: "closed" },
     ];
     let failed = 0;
@@ -1937,10 +2048,15 @@ class Setup {
       let answer: SiteAnswer | null = null;
       try {
         const response = await this.#io.fetch(check.url, { redirect: "manual" });
+        const body =
+          check.expect === "health" || check.expect === "unauthenticated"
+            ? await readJson(response)
+            : undefined;
         answer = {
           status: response.status,
           location: response.headers.get("location") ?? "",
-          health: check.expect === "health" ? healthStatusOf(await readJson(response)) : null,
+          health: check.expect === "health" ? healthStatusOf(body) : null,
+          apiError: check.expect === "unauthenticated" ? apiErrorOf(body) : null,
         };
       } catch {
         answer = null;

@@ -20,6 +20,10 @@ DEEPGRAM_API_KEY=
 # Pilot Worker: the founder's personal chat id with the bot. Leave it empty on a laptop, which then
 # sends no admin messages; a deployed pilot Worker refuses to start without it.
 ADMIN_CONVERSATION_ID=
+# Pilot Worker: Clerk's secret key (sk_test_… locally), for the live session check on API writes.
+# Optional on a laptop: without it /v1 serves reads only. Deployed, the founder puts it with
+# `wrangler secret put CLERK_SECRET_KEY --env staging`; never in a file that is committed.
+CLERK_SECRET_KEY=
 # Admin Worker: Cloudflare Access team domain, e.g. vela.cloudflareaccess.com (no scheme, no path).
 ACCESS_TEAM_DOMAIN=
 # Admin Worker: the Audience (AUD) tag of the Access application that covers the admin Worker.

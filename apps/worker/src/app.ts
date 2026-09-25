@@ -1,7 +1,8 @@
 /**
  * Every HTTP route the pilot Worker serves (code design §9, H1): the health check, the Telegram
  * webhook, and the privacy notices. The admin pages are another Worker's (`admin-app.ts`), so
- * anything under `/admin` here is 404.
+ * anything under `/admin` here is 404. `/v1` never reaches this app; `pilot-worker.ts` hands it to
+ * `PilotRuntime.api`.
  *
  * Nothing here decides anything about a family: a route verifies the request, builds deps, calls
  * services, and renders what came back. Services' entry points arrive through `PilotRuntime`, so a
