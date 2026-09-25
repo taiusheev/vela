@@ -324,6 +324,36 @@ describe("loadScheduleInput", () => {
     expect(input?.weeklyReadDoneFor("2026-09-20")).toBe(false);
   });
 
+  it("gives her last start since her yesterday began as the instant she resumed", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const said = (name: "start_said" | "stop_said", instant: Date, memberId = seed.member.id) => ({
+      at: instant,
+      name,
+      familyId: seed.family.id,
+      memberId,
+    });
+    await h.db
+      .insert(events)
+      .values([
+        said("start_said", at("2026-09-12", "23:59")),
+        said("start_said", at("2026-09-13", "07:30"), seed.organiser.id),
+      ]);
+    expect((await loadScheduleInput(h.deps, seed.member.id, h.clock.now()))?.member.resumedAt).toBe(
+      null,
+    );
+
+    await h.db
+      .insert(events)
+      .values([
+        said("start_said", at("2026-09-13", "00:00")),
+        said("start_said", at("2026-09-13", "19:30")),
+        said("stop_said", at("2026-09-13", "21:00")),
+      ]);
+
+    const input = await loadScheduleInput(h.deps, seed.member.id, h.clock.now());
+    expect(input?.member.resumedAt).toEqual(at("2026-09-13", "19:30"));
+  });
+
   it("is null for a member who does not exist or whose family is being deleted", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     expect(

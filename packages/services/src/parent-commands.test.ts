@@ -16,6 +16,7 @@ import {
   type Member,
   members,
   outbound,
+  quietEvents,
   translations,
   weeklyReads,
 } from "@vela/db";
@@ -27,6 +28,7 @@ import { handleParentCommand } from "./parent-commands.ts";
 import { understandAnswer } from "./pipeline.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedExchange, seedFamily } from "./testing/seed.ts";
+import { tickMember } from "./tick.ts";
 
 let h: Harness;
 
@@ -237,6 +239,67 @@ describe("start", () => {
       "arrival_delivered",
     ]);
     expect(h.scheduler.wakes.get(seed.member.id)).not.toBeNull();
+  });
+
+  /** Her 08:00 morning delivered on a started day, then her stop at 09:00. */
+  async function deliveredThenStopped(): Promise<SeededFamily> {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-01" })
+      .where(eq(members.id, seed.member.id));
+    await tickMember(h.deps, seed.member.id);
+    await h.run(handlers());
+    h.clock.advanceMinutes(60);
+    await say(await herRow(seed), "stop");
+    return seed;
+  }
+
+  async function ladderSent(): Promise<string[]> {
+    const rows = await outboundRows();
+    return rows
+      .map((row) => row.kind)
+      .filter((kind) => kind === "repeat" || kind === "quiet_notice");
+  }
+
+  it("neither repeats nor turns quiet a morning delivered before her stop when she starts that evening", async () => {
+    const seed = await deliveredThenStopped();
+    h.clock.advanceMinutes(630);
+
+    await say(await herRow(seed), "start");
+
+    // The 10:30 repeat and the 14:00 quiet (its notice at 16:00 in her learning period) all passed
+    // while she was paused, and the silence they would report ends with her own start.
+    expect(await herMessages()).toEqual([
+      expect.stringContaining(t("en", "arrival.greeting", { address: "Mrs Chen" })),
+      t("en", "parent.stopped"),
+      "Welcome back. Your next morning arrives at 08:00.",
+    ]);
+    expect(h.telegram.sentTo(ORGANISER).map((entry) => entry.message.text)).toEqual([
+      "Mom asked to pause. Nothing is wrong with the app.",
+    ]);
+    expect(await ladderSent()).toEqual([]);
+    expect(await h.db.select().from(quietEvents)).toEqual([]);
+    // The next morning, before its arrival, does not take up the paused morning either.
+    h.clock.advanceMinutes(720);
+    await tickMember(h.deps, seed.member.id);
+    await h.run(handlers());
+    expect(await ladderSent()).toEqual([]);
+  });
+
+  it("neither repeats nor turns quiet that morning later in the day when she starts minutes after her stop", async () => {
+    const seed = await deliveredThenStopped();
+    h.clock.advanceMinutes(5);
+    await say(await herRow(seed), "start");
+
+    for (const minutes of [85, 210, 120]) {
+      h.clock.advanceMinutes(minutes);
+      await tickMember(h.deps, seed.member.id);
+    }
+
+    await h.run(handlers());
+    expect(await ladderSent()).toEqual([]);
+    expect(await h.db.select().from(quietEvents)).toEqual([]);
   });
 
   it("keeps a start date that is still ahead", async () => {

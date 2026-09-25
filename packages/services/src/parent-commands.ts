@@ -139,7 +139,10 @@ function laterOf(a: LocalDate | null, b: LocalDate): LocalDate {
 /**
  * Start (flows §3.13), only when she paused: active again, with arrivals from today at the earliest
  * so a morning already past is not sent late at night, then her schedule is ticked. True when she
- * was paused, so a repeated start changes nothing more.
+ * was paused, so a repeated start changes nothing more. The schedule reads the `start_said` event
+ * written here with her status as the instant she resumed: a morning delivered before it, such as
+ * today's when she stopped after it, gets no repeat and no quiet, which a start date cannot hold
+ * back on the day it names.
  */
 async function start(deps: Deps, member: Member, event: InboundEvent, now: Date): Promise<boolean> {
   return deps.db.transaction(async (tx) => {

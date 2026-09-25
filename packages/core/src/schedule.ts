@@ -46,6 +46,12 @@ export interface ScheduleInput {
     startsOn: LocalDate | null;
     /** The first local date after the learning period; see `learningUntil` in tuning.ts. */
     learningUntil: LocalDate | null;
+    /**
+     * When she last said start after a stop, or `null`. A morning delivered before it has no repeat
+     * and no quiet: its thresholds passed while she was paused, or would count the paused hours as
+     * silence, and she has just written to Vela (flows §3.13).
+     */
+    resumedAt: Date | null;
   };
   family: { turnsEnabled: boolean };
   /** The exchange days that can still need action: yesterday's and today's local dates. */
@@ -251,22 +257,36 @@ function ladderWakesAfterDelivery(ctx: Context, day: DayState, out: Collector): 
 }
 
 /**
- * Repeat and quiet apply only to a delivered, unanswered exchange on or after her start date, each
- * at a threshold she is not away at. Neither follows our own failure to deliver: a repeat would
- * re-send what did not arrive, and a quiet would blame her silence on it.
+ * Repeat and quiet apply only to a delivered, unanswered exchange on or after her start date and
+ * delivered since she last said start, each at a threshold she is not away at. Neither follows our
+ * own failure to deliver: a repeat would re-send what did not arrive, and a quiet would blame her
+ * silence on it.
  */
 function ladderRules(ctx: Context, day: DayState, out: Collector): void {
   if (
     day.deliveredAt === null ||
     day.deliveryFailed ||
     day.answeredAt !== null ||
-    !hasStarted(ctx, day.date)
+    !hasStarted(ctx, day.date) ||
+    deliveredBeforeResume(ctx, day.deliveredAt)
   ) {
     return;
   }
   repeatRule(ctx, day, day.deliveredAt, out);
   openQuietRule(ctx, day, day.deliveredAt, out);
   notifyQuietRule(ctx, day, day.deliveredAt, out);
+}
+
+/**
+ * A morning delivered before her latest start went out before a pause she ended herself. Its start
+ * date cannot hold it back when she stops and starts on the same day, and its ladder would then
+ * fire everything that fell due in the pause at the start, or later count the paused hours as
+ * silence, right after she wrote to Vela. So her start stands for that morning's ladder as an
+ * answer would, without lighting the light (flows §3.13).
+ */
+function deliveredBeforeResume(ctx: Context, deliveredAt: Date): boolean {
+  const { resumedAt } = ctx.input.member;
+  return resumedAt !== null && deliveredAt.getTime() < resumedAt.getTime();
 }
 
 /**

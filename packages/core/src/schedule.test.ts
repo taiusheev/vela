@@ -25,6 +25,8 @@ interface Scenario {
   quietAfterMinutes?: number;
   startsOn?: LocalDate | null;
   learningUntil?: LocalDate | null;
+  /** When she last said start after a stop; unset, she never did. */
+  resumedAt?: Date;
   turnsEnabled?: boolean;
   days?: DayState[];
   prepared?: boolean;
@@ -47,6 +49,7 @@ function decide(scenario: Scenario): ScheduleDecision {
       quietAfterMinutes: scenario.quietAfterMinutes ?? 360,
       startsOn: scenario.startsOn ?? null,
       learningUntil: scenario.learningUntil ?? null,
+      resumedAt: scenario.resumedAt ?? null,
     },
     family: { turnsEnabled: scenario.turnsEnabled ?? true },
     days: scenario.days ?? [],
@@ -278,6 +281,55 @@ describe("start date", () => {
     expect(iso(decision.nextWakeAt)).toBe(iso(taipei("19:00")));
     const yesterday = day(YESTERDAY, { deliveredAt: taipei("08:00", YESTERDAY) });
     expect(decide({ now: taipei("07:00"), startsOn: TODAY, days: [yesterday] }).due).toEqual([]);
+  });
+});
+
+describe("start after a stop", () => {
+  const unanswered = day(TODAY, { deliveredAt: taipei("08:00") });
+
+  it("neither repeats nor turns quiet a morning delivered before her start, at once or later that day", () => {
+    const evening = decide({
+      now: taipei("19:30"),
+      days: [unanswered],
+      resumedAt: taipei("19:30"),
+      turnPromptSent: true,
+    });
+    expect(evening.due).toEqual([]);
+    expect(iso(evening.nextWakeAt)).toBe(iso(taipei("22:00")));
+
+    const early = { days: [unanswered], resumedAt: taipei("09:05"), learningUntil: TOMORROW };
+    expect(iso(decide({ ...early, now: taipei("09:05") }).nextWakeAt)).toBe(iso(taipei("19:00")));
+    for (const time of ["10:30", "14:00", "16:00"] as const) {
+      expect(decide({ ...early, now: taipei(time) }).due).toEqual([]);
+    }
+
+    const yesterday = day(YESTERDAY, { deliveredAt: taipei("08:00", YESTERDAY) });
+    const nextMorning = decide({
+      now: taipei("07:00"),
+      days: [yesterday],
+      resumedAt: taipei("19:30", YESTERDAY),
+    });
+    expect(nextMorning.due).toEqual([]);
+    expect(iso(nextMorning.nextWakeAt)).toBe(iso(taipei("08:00")));
+  });
+
+  it("sends no waited notice for a quiet opened before her start", () => {
+    const waited = deliveredToday({ quiet: quiet({ waitUntil: taipei("16:30") }) });
+    expect(
+      decide({ now: taipei("17:00"), days: [waited], resumedAt: taipei("17:00") }).due,
+    ).toEqual([]);
+  });
+
+  it("ladders a morning delivered at or after her start as on any day", () => {
+    const late = { resumedAt: taipei("12:00") };
+    const delivered = day(TODAY, { deliveredAt: taipei("12:00") });
+    expect(decide({ ...late, days: [delivered], now: taipei("14:30") }).due).toEqual([
+      { kind: "send_repeat", date: TODAY },
+    ]);
+    const repeated = day(TODAY, { deliveredAt: taipei("12:00"), repeatSentAt: taipei("14:30") });
+    expect(decide({ ...late, days: [repeated], now: taipei("18:00") }).due).toEqual([
+      { kind: "open_quiet", date: TODAY, notify: true },
+    ]);
   });
 });
 

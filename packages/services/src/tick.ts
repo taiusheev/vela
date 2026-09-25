@@ -23,6 +23,7 @@ import {
   answers,
   awayPeriods,
   type Exchange,
+  events,
   exchanges,
   families,
   members,
@@ -31,7 +32,21 @@ import {
   turns,
   weeklyReads,
 } from "@vela/db";
-import { and, asc, eq, gte, inArray, isNull, lt, lte, ne, or, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import { deliverArrival, prepareDay, sendRepeat, sendTurnPrompt } from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
@@ -145,9 +160,9 @@ function dayStateOf(
 
 /**
  * The member's state as core's schedule reads it, at `now`: her yesterday and today, tomorrow's
- * preparation and turn, her away periods, and the weeks already read. Null for a member who does
- * not exist or whose family's deletion was requested (flows §3.17), which the tick treats as
- * nothing to schedule.
+ * preparation and turn, her away periods, her last start, and the weeks already read. Null for a
+ * member who does not exist or whose family's deletion was requested (flows §3.17), which the tick
+ * treats as nothing to schedule.
  */
 export async function loadScheduleInput(
   deps: Deps,
@@ -220,6 +235,20 @@ export async function loadScheduleInput(
         ),
       ),
     );
+  // Her last start, which `start` records with her status in one transaction and only the event log
+  // keeps (flows §3.13). One before her yesterday began came before every morning read here.
+  const [resumed] = await db
+    .select({ at: events.at })
+    .from(events)
+    .where(
+      and(
+        eq(events.name, "start_said"),
+        eq(events.memberId, memberId),
+        gte(events.at, zonedInstant(yesterday, "00:00", timeZone)),
+      ),
+    )
+    .orderBy(desc(events.at))
+    .limit(1);
   const reads = await db
     .select({ weekStart: weeklyReads.weekStart })
     .from(weeklyReads)
@@ -238,6 +267,7 @@ export async function loadScheduleInput(
       quietAfterMinutes: member.quietAfterMin,
       startsOn: member.lightStartsOn,
       learningUntil: member.learningUntil,
+      resumedAt: resumed?.at ?? null,
     },
     family: { turnsEnabled: family.turnsEnabled },
     days,
