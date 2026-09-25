@@ -737,7 +737,8 @@ describe("a whole setup", () => {
   });
 
   // Decision M (2026-09-20): R2 needs a subscription with a payment method, which only the founder
-  // can add, so staging is set up without one and nothing is stored there.
+  // can add, so an account without one (staging's, until 26 September 2026) is set up with storage
+  // off and nothing is stored there.
   it("sets up staging with media storage off without creating a bucket, and says how to switch it on", async () => {
     const world = newWorld("staging", { media: "off" });
 
@@ -1071,8 +1072,9 @@ describe("a whole setup", () => {
   });
 
   // The line below lists the resources of a staging with media storage off, which is said here
-  // rather than taken from the repository's own files: a run that reads them once storage has been
-  // switched on creates a bucket too, and this test is not about that.
+  // rather than taken from the repository's own files: staging's storage there is on since 26
+  // September 2026, so a first run that reads them creates a bucket too, and this test is not about
+  // that.
   it("skips every resource, placeholder and secret that already exists when run again", async () => {
     const world = newWorld("staging", { media: "off" });
     await setUp(world);
@@ -1351,10 +1353,11 @@ describe("the wrangler files", () => {
     });
   });
 
-  // `mediaStorage` and its buckets are left out here, as `aiProvider` is: pinning staging's switch
-  // against the real files would make the commit that switches it on red, and that commit has to
-  // pass CI before it can be deployed and merged. Production is pinned below, and both values of
-  // staging's switch are read from built texts further down.
+  // `aiProvider` is left out here: pinning staging's switch against the real files would make the
+  // commit that switches it on red, and that commit has to pass CI before it can be deployed and
+  // merged. `mediaStorage` and its buckets are left out too, and given below for both environments
+  // as src/wrangler-config.test.ts pins them; both values of staging's switches are read from
+  // built texts further down.
   it.each(["staging", "production"] as const)(
     "give %s's queues, Workers and hosts as wrangler reads them",
     (environment) => {
@@ -1376,16 +1379,18 @@ describe("the wrangler files", () => {
     },
   );
 
-  // Production is the one environment whose switch is fixed: config.ts refuses to start it with
-  // storage off, and the bucket it names has to be the one the resources step creates.
-  it("give production's media storage and the bucket it keeps media in", () => {
-    const config = readEnvironmentConfig(wranglerTexts(), "production");
-
-    expect(config).toMatchObject({
-      mediaStorage: "r2",
-      buckets: ["vela-media-production"],
-    });
-  });
+  // Both environments keep media, each in a bucket of its own: production because config.ts refuses
+  // to start it with storage off, staging since R2 was enabled on its account on 26 September 2026.
+  // The bucket each names has to be the one the resources step creates.
+  it.each(["staging", "production"] as const)(
+    "give %s's media storage and the bucket it keeps media in",
+    (environment) => {
+      expect(readEnvironmentConfig(wranglerTexts(), environment)).toMatchObject({
+        mediaStorage: "r2",
+        buckets: [`vela-media-${environment}`],
+      });
+    },
+  );
 
   it.each(["anthropic", "off"] as const)(
     "give staging's AI_PROVIDER when both Workers set it to %s",

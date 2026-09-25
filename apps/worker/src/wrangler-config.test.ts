@@ -265,14 +265,16 @@ describe("the two Workers' configurations", () => {
   );
 
   // config.ts refuses to start production with storage off: the privacy notice promises families
-  // that media is kept in Vela's own storage for 30 days and then deleted. Local work keeps nothing,
-  // so no laptop needs R2. Staging's value is not pinned, as AI_PROVIDER's is not: the commit that
-  // switches an environment on has to pass CI before it can be deployed and merged (the header
-  // above), and a pin here would make that commit red. The test above holds it to r2 or off, and
-  // the one below holds it to its binding, which is all that keeps the deploy honest.
-  it("keep media in production and keep none on this laptop", () => {
-    expect(configOf("pilot", "production").vars.MEDIA_STORAGE).toBe("r2");
-    expect(configOf("pilot", "development").vars.MEDIA_STORAGE).toBe("off");
+  // that media is kept in Vela's own storage for 30 days and then deleted. Staging keeps media too
+  // since 26 September 2026, when the founder enabled R2 on its account, so photo asks and
+  // voice-note copies run there as they will in production; a commit that turns it off again
+  // changes this pin with the var and the binding. Local work keeps nothing, so no laptop needs R2.
+  it("keep media in staging and production and keep none on this laptop", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.MEDIA_STORAGE,
+      ),
+    ).toEqual(["off", "r2", "r2"]);
   });
 
   // A binding to a bucket that does not exist fails the deploy, and storage "r2" without one would

@@ -62,12 +62,15 @@
   // media row keeps only what Telegram said about the file, its id, its type and its size, with no
   // storage key and no copy of the file itself. An environment that is "off" binds no R2 bucket at
   // all, because a binding to a bucket that does not exist fails the deploy, and src/deps.ts then
-  // builds no media port. Development and staging are "off" while R2 is not subscribed to on those
-  // accounts: R2 needs a payment method even though the pilot's use stays inside its free monthly
-  // allowance. Production must be "r2", and src/config.ts refuses to start it otherwise, because
-  // the privacy notice promises families that media is kept in Vela's own storage for 30 days and
-  // then deleted. To switch an environment on: enable R2 in the Cloudflare dashboard for that
-  // account, set "r2" for that environment here and add its r2_buckets binding, commit, then run
+  // builds no media port. Development is "off", so a laptop needs no bucket and keeps no copy.
+  // Staging is "r2" since 26 September 2026: the founder enabled R2 on the "Vela staging" account
+  // (R2 needs a payment method even though the pilot's use stays inside its free monthly
+  // allowance), and the co-founder created its bucket, vela-media-staging, so photo asks and
+  // voice-note copies run there as in production. Production must be "r2", and src/config.ts
+  // refuses to start it otherwise, because the privacy notice promises families that media is kept
+  // in Vela's own storage for 30 days and then deleted. To switch an environment on: enable R2 in
+  // the Cloudflare dashboard for that account, set "r2" for that environment here and add its
+  // r2_buckets binding, commit, then run
   // `pnpm --filter @vela/worker run setup -- --env <environment> --from resources` on that commit
   // before it is merged to main, which creates the bucket and deploys.
   //
@@ -247,8 +250,9 @@
           }
         ]
       },
-      // No r2_buckets binding: MEDIA_STORAGE is "off" for the dogfooding week, and the staging
-      // account has no R2 subscription, so a binding here would fail the deploy.
+      // MEDIA_STORAGE is "r2" here since 26 September 2026: the founder enabled R2 on the staging
+      // account, and the co-founder created this bucket (private, Asia-Pacific).
+      "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-staging" }],
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "e9e9837d1eee47528304916a1ac2d1e9" }],
       "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
       "ratelimits": [
@@ -269,8 +273,9 @@
         "REGIONS": "apac",
         // Off for the dogfooding week, until the founder approves buying Anthropic credit.
         "AI_PROVIDER": "off",
-        // Off until R2 is subscribed to: Telegram holds the voice notes and photos meanwhile.
-        "MEDIA_STORAGE": "off",
+        // On since 26 September 2026, bound to vela-media-staging above: voice notes and photos
+        // are copied there and deleted after 30 days, as in production.
+        "MEDIA_STORAGE": "r2",
         // Staging's app accounts are all test accounts (the dogfooding week's friend has none),
         // so it verifies tokens from Clerk's development instance, as development does.
         "API_V1": "on",
