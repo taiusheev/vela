@@ -428,13 +428,17 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
   const issuer = readClerkIssuer(env, environment);
   const secretKey = readClerkSecretKey(env, environment);
   if (environment !== "development") {
-    for (const name of ["API_IP_LIMIT", "API_WRITE_LIMIT"] as const) {
-      if (env[name] === undefined) {
-        throw new ConfigError(
-          name,
-          `${name} is not bound in ${environment}: add the ratelimits binding in wrangler.jsonc (API_LIMITS in src/api-runtime.ts)`,
-        );
-      }
+    if (env.API_IP_LIMIT === undefined) {
+      throw new ConfigError(
+        "API_IP_LIMIT",
+        `API_IP_LIMIT is not bound in ${environment}: add the ratelimits binding in wrangler.jsonc (API_ADDRESS_LIMIT in src/api-runtime.ts)`,
+      );
+    }
+    if (env.ACCOUNT_WRITE_LIMITER === undefined) {
+      throw new ConfigError(
+        "ACCOUNT_WRITE_LIMITER",
+        `ACCOUNT_WRITE_LIMITER is not bound in ${environment}: add its durable_objects binding in wrangler.jsonc (AccountWriteLimiter in src/write-limit.ts)`,
+      );
     }
   }
   return {

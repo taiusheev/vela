@@ -1187,7 +1187,7 @@ function apiOffLine(environment: Environment): string {
   const off = `The API is off in ${environment} (API_V1 "off" in ${PILOT_FILE}), so /v1 answers 404 there and no Clerk secret key is asked for.`;
   return environment === "production"
     ? `${off} Turning it on takes a new ADR (ADR-29): Clerk's production instance, on a domain Vela owns, its sk_live_ key, and a privacy notice naming Clerk. The key then goes on the pilot Worker in the Cloudflare dashboard (infra/runbooks/secrets-rotation.md, principle 5) before the release that sets API_V1 to "on"; released without it, /v1 answers 503 while every other route keeps answering.`
-    : `${off} To switch it on later: set API_V1 to "on" for ${environment} in ${PILOT_FILE}, with its CLERK_ISSUER and ratelimits, and commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy ${environment} without the key, and /v1 would answer 503 while every other route keeps answering.`;
+    : `${off} To switch it on later: set API_V1 to "on" for ${environment} in ${PILOT_FILE}, with its CLERK_ISSUER, its ratelimits and its ACCOUNT_WRITE_LIMITER binding, and commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy ${environment} without the key, and /v1 would answer 503 while every other route keeps answering.`;
 }
 
 /** The keys the founder pastes at the secrets step, and where each is created. */

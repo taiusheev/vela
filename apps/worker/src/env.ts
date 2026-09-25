@@ -8,6 +8,7 @@
 import type { MediaJob, OutboundJob, UnderstandJob } from "@vela/services";
 import type { ReconcileHeartbeat } from "./heartbeat.ts";
 import type { MemberScheduler } from "./scheduler.ts";
+import type { AccountWriteLimiter } from "./write-limit.ts";
 
 /** What both Workers are given: the environment, the admin origin, and the admin's reach. */
 interface SharedEnv {
@@ -84,8 +85,12 @@ export interface PilotEnv extends SharedEnv {
    * API outside development without it.
    */
   readonly API_IP_LIMIT?: RateLimit;
-  /** 20 API writes a minute per account, before the live session check calls Clerk. */
-  readonly API_WRITE_LIMIT?: RateLimit;
+  /**
+   * 20 API writes a minute per account, before the live session check calls Clerk: one
+   * `AccountWriteLimiter` object per Clerk subject (`write-limit.ts`). Optional, and required
+   * outside development by `readApiConfig`, as `API_IP_LIMIT` is.
+   */
+  readonly ACCOUNT_WRITE_LIMITER?: DurableObjectNamespace<AccountWriteLimiter>;
 }
 
 /**

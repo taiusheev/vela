@@ -1,4 +1,4 @@
-import type { SessionIdentity } from "@vela/services";
+import { ApiIdempotencyError, type SessionIdentity } from "@vela/services";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { type ApiRuntime, type ApiWriteServices, createApiApp } from "./api-app.ts";
 import {
@@ -57,6 +57,45 @@ function fakeLimiter(success = true): FakeLimiter {
   return { limit: vi.fn<RateLimit["limit"]>().mockResolvedValue({ success }) };
 }
 
+type WriteLimiters = NonNullable<PilotEnv["ACCOUNT_WRITE_LIMITER"]>;
+
+interface FakeWriteLimiters {
+  readonly namespace: WriteLimiters;
+  /** The name of each object asked for, in order. */
+  readonly names: string[];
+  readonly admit: Mock<() => Promise<boolean>>;
+}
+
+/**
+ * Write limiter objects that answer `admitted` every time, for the tests about what reaches them;
+ * the tests about the limit itself use the real objects wrangler.jsonc binds (`realWriteLimiters`).
+ */
+function fakeWriteLimiters(admitted = true): FakeWriteLimiters {
+  const names: string[] = [];
+  const admit = vi.fn<() => Promise<boolean>>().mockResolvedValue(admitted);
+  const namespace = {
+    idFromName: (name: string) => {
+      names.push(name);
+      return `id:${name}`;
+    },
+    get: () => ({ admit }),
+  } as unknown as WriteLimiters;
+  return { namespace, names, admit };
+}
+
+/** The `AccountWriteLimiter` objects development binds, which the tests' runtime runs. */
+function realWriteLimiters(): WriteLimiters {
+  if (testEnv.ACCOUNT_WRITE_LIMITER === undefined) {
+    throw new Error("wrangler.jsonc binds no ACCOUNT_WRITE_LIMITER in development");
+  }
+  return testEnv.ACCOUNT_WRITE_LIMITER;
+}
+
+/** A signed-in account no other test writes as, so each test starts with the whole allowance. */
+function freshIdentity(): SessionIdentity {
+  return { authSubject: `user_${crypto.randomUUID()}`, sessionId: "sess_limited" };
+}
+
 /** A Hyperdrive binding that counts every read of its connection string, and refuses each one. */
 function untouchedDatabase(): { readonly binding: Hyperdrive; reads(): number } {
   let reads = 0;
@@ -87,7 +126,7 @@ function stagingEnv(overrides: Partial<PilotEnv> = {}): PilotEnv {
     CLERK_ISSUER: DEV_ISSUER,
     CLERK_SECRET_KEY: TEST_KEY,
     API_IP_LIMIT: fakeLimiter(),
-    API_WRITE_LIMIT: fakeLimiter(),
+    ACCOUNT_WRITE_LIMITER: fakeWriteLimiters().namespace,
     HYPERDRIVE: untouchedDatabase().binding,
     ...overrides,
   };
@@ -152,6 +191,7 @@ describe("the API's host on the pilot Worker", () => {
       "CLERK_ISSUER",
     ],
     ["no address limiter", { API_IP_LIMIT: undefined }, "API_IP_LIMIT"],
+    ["no write limiter", { ACCOUNT_WRITE_LIMITER: undefined }, "ACCOUNT_WRITE_LIMITER"],
   ] as const)(
     "answers 503 on staging with %s, logging the variable and no value",
     async (_, overrides, variable) => {
@@ -188,7 +228,7 @@ describe("the API's host on the pilot Worker", () => {
       CLERK_ISSUER: undefined,
       CLERK_SECRET_KEY: undefined,
       API_IP_LIMIT: address,
-      API_WRITE_LIMIT: undefined,
+      ACCOUNT_WRITE_LIMITER: undefined,
     });
 
     const { result: response, lines } = await consoleLinesDuring(() =>
@@ -369,11 +409,15 @@ describe("the API as staging serves it", () => {
     vi.stubGlobal("fetch", network);
   });
 
-  function staging(): { readonly env: PilotEnv; readonly writes: FakeLimiter; reads(): number } {
+  function staging(): {
+    readonly env: PilotEnv;
+    readonly writes: FakeWriteLimiters;
+    reads(): number;
+  } {
     const database = untouchedDatabase();
-    const writes = fakeLimiter();
+    const writes = fakeWriteLimiters();
     return {
-      env: stagingEnv({ HYPERDRIVE: database.binding, API_WRITE_LIMIT: writes }),
+      env: stagingEnv({ HYPERDRIVE: database.binding, ACCOUNT_WRITE_LIMITER: writes.namespace }),
       writes,
       reads: database.reads,
     };
@@ -467,7 +511,7 @@ describe("the API as staging serves it", () => {
       const response = await createApiHandler()(apiRequest(path, { method: "POST" }), env);
 
       await expectAnswer(response, 401, UNAUTHENTICATED);
-      expect(writes.limit).not.toHaveBeenCalled();
+      expect(writes.admit).not.toHaveBeenCalled();
       expect(network).not.toHaveBeenCalled();
       expect(reads()).toBe(0);
     },
@@ -479,7 +523,7 @@ describe("the API as staging serves it", () => {
       ...testEnv,
       CLERK_SECRET_KEY: undefined,
       API_IP_LIMIT: fakeLimiter(),
-      API_WRITE_LIMIT: fakeLimiter(),
+      ACCOUNT_WRITE_LIMITER: fakeWriteLimiters().namespace,
       HYPERDRIVE: database.binding,
     };
     const handler = createApiHandler();
@@ -523,28 +567,36 @@ describe("the runtime staging's API app runs on", () => {
 
   const identity: SessionIdentity = { authSubject: "user_x", sessionId: "sess_x" };
 
-  it("refuses a write over the account's limit without calling Clerk", async () => {
-    const writes = fakeLimiter(false);
-    const runtime = apiRuntimeFor(stagingEnv({ API_WRITE_LIMIT: writes }), STAGING_CONFIG);
+  it("refuses a write over the account's limit, asking the account's own object, without calling Clerk", async () => {
+    const writes = fakeWriteLimiters(false);
+    const runtime = apiRuntimeFor(
+      stagingEnv({ ACCOUNT_WRITE_LIMITER: writes.namespace }),
+      STAGING_CONFIG,
+    );
 
     const refusal = await writesOf(runtime)
       .verifyActiveSession(identity)
       .catch((error: unknown) => error);
 
     expect(refusal).toMatchObject({ name: "ApiIdempotencyError", code: "rate_limited" });
-    expect(writes.limit).toHaveBeenCalledExactlyOnceWith({ key: "user_x" });
+    expect(writes.names).toEqual(["user_x"]);
+    expect(writes.admit).toHaveBeenCalledOnce();
     expect(network).not.toHaveBeenCalled();
   });
 
   it("asks Clerk about the session with the environment's key, within the account's limit", async () => {
-    const writes = fakeLimiter();
-    const runtime = apiRuntimeFor(stagingEnv({ API_WRITE_LIMIT: writes }), STAGING_CONFIG);
+    const writes = fakeWriteLimiters();
+    const runtime = apiRuntimeFor(
+      stagingEnv({ ACCOUNT_WRITE_LIMITER: writes.namespace }),
+      STAGING_CONFIG,
+    );
 
     await expect(writesOf(runtime).verifyActiveSession(identity)).rejects.toMatchObject({
       name: "SessionVerificationUnavailable",
     });
 
-    expect(writes.limit).toHaveBeenCalledExactlyOnceWith({ key: "user_x" });
+    expect(writes.names).toEqual(["user_x"]);
+    expect(writes.admit).toHaveBeenCalledOnce();
     expect(network).toHaveBeenCalledOnce();
     const [url, init] = network.mock.calls[0] ?? [];
     expect(String(url)).toBe("https://api.clerk.com/v1/sessions/sess_x");
@@ -623,68 +675,227 @@ describe("what a committed write leaves behind", () => {
 });
 
 describe("the per-account write limit", () => {
-  const identity: SessionIdentity = { authSubject: "user_limited", sessionId: "sess_limited" };
+  const NOW = new Date("2026-09-26T00:00:00.000Z");
+  const USER = {
+    id: "0199a000-0000-7000-8000-000000000001",
+    display_name: "Synthetic user",
+    language: "en",
+    tz: "Asia/Taipei",
+  } as const;
 
-  it("refuses a write over the account's limit before the live check calls Clerk, logging nothing", async () => {
-    const writes = fakeLimiter(false);
+  /** Asks `verify` for `identity` `count` times in turn, and returns what each answered or threw. */
+  async function outcomes(
+    verify: SessionActivityChecker,
+    identity: SessionIdentity,
+    count: number,
+  ): Promise<unknown[]> {
+    const answers: unknown[] = [];
+    for (let i = 0; i < count; i += 1) {
+      answers.push(
+        await verify(identity).catch((error: unknown) =>
+          error instanceof ApiIdempotencyError ? error.code : error,
+        ),
+      );
+    }
+    return answers;
+  }
+
+  // The limit that matters: the real object, as a deployed Worker reaches it.
+  it("admits an account's first 20 writes in a minute and refuses the rest before the live check calls Clerk, logging nothing", async () => {
     const check = vi.fn<SessionActivityChecker>().mockResolvedValue(true);
     const logs: LogLine[] = [];
+    const verify = limitWrites(realWriteLimiters(), check, recordingLogger(logs));
 
-    const refusal = await limitWrites(
-      writes,
-      check,
-      recordingLogger(logs),
-    )(identity).catch((error: unknown) => error);
+    const answers = await outcomes(verify, freshIdentity(), 23);
 
-    expect(refusal).toMatchObject({ name: "ApiIdempotencyError", code: "rate_limited" });
-    expect(writes.limit).toHaveBeenCalledExactlyOnceWith({ key: "user_limited" });
-    expect(check).not.toHaveBeenCalled();
+    expect(answers).toEqual([...Array<boolean>(20).fill(true), ...Array(3).fill("rate_limited")]);
+    expect(check).toHaveBeenCalledTimes(20);
     expect(logs).toEqual([]);
   });
 
   it.each([true, false])("answers with the live check's %s within the limit", async (active) => {
     const check = vi.fn<SessionActivityChecker>().mockResolvedValue(active);
+    const identity = freshIdentity();
 
-    await expect(limitWrites(fakeLimiter(), check, recordingLogger([]))(identity)).resolves.toBe(
-      active,
-    );
+    await expect(
+      limitWrites(realWriteLimiters(), check, recordingLogger([]))(identity),
+    ).resolves.toBe(active);
     expect(check).toHaveBeenCalledExactlyOnceWith(identity);
   });
 
-  it("skips a failing limiter, logging its label, and still makes the live check", async () => {
-    const failure = new Error("user_limited could not be counted");
-    failure.name = "RateLimitUnavailable";
-    const writes = { limit: vi.fn<RateLimit["limit"]>().mockRejectedValue(failure) };
+  it("counts each account alone", async () => {
+    const check = vi.fn<SessionActivityChecker>().mockResolvedValue(true);
+    const verify = limitWrites(realWriteLimiters(), check, recordingLogger([]));
+    const spent = freshIdentity();
+    await outcomes(verify, spent, 20);
+
+    expect(await outcomes(verify, spent, 1)).toEqual(["rate_limited"]);
+    expect(await outcomes(verify, freshIdentity(), 1)).toEqual([true]);
+  });
+
+  // An account flooding its own object until Cloudflare reports it overloaded must not lift its own
+  // limit: the write is closed, as it is when Clerk cannot answer the live check.
+  it("closes the write when the limiter cannot answer: unavailable, without the live check, logging the label only", async () => {
+    const failure = new Error("Durable Object is overloaded. Too many requests queued.");
+    failure.name = "DurableObjectOverloaded";
+    const writes = fakeWriteLimiters();
+    writes.admit.mockRejectedValue(failure);
     const check = vi.fn<SessionActivityChecker>().mockResolvedValue(true);
     const logs: LogLine[] = [];
+    const identity = freshIdentity();
 
-    await expect(limitWrites(writes, check, recordingLogger(logs))(identity)).resolves.toBe(true);
+    const refusal = await limitWrites(
+      writes.namespace,
+      check,
+      recordingLogger(logs),
+    )(identity).catch((error: unknown) => error);
+
+    expect(refusal).toMatchObject({ name: "ApiIdempotencyError", code: "unavailable" });
+    expect(check).not.toHaveBeenCalled();
     expect(logs).toEqual([
       {
         level: "error",
         event: "api_rate_limit_failed",
-        fields: { scope: "writes", error: "RateLimitUnavailable" },
+        fields: { scope: "writes", error: "DurableObjectOverloaded" },
       },
     ]);
-    expect(JSON.stringify(logs)).not.toContain("user_limited");
+    expect(JSON.stringify(logs)).not.toContain(identity.authSubject);
   });
 
-  it("answers a write over the limit with 429 through the API app, with no Retry-After, before the database", async () => {
-    const writes = fakeLimiter(false);
+  it("closes the write when the account's object cannot even be named", async () => {
+    const broken = {
+      idFromName: () => {
+        throw new TypeError("the namespace is unavailable");
+      },
+    } as unknown as WriteLimiters;
     const check = vi.fn<SessionActivityChecker>().mockResolvedValue(true);
-    const provision = vi.fn<ApiWriteServices["provisionApiAccount"]>();
-    const openDatabase = vi.fn<ApiRuntime["openDatabase"]>();
+    const logs: LogLine[] = [];
+
+    const refusal = await limitWrites(
+      broken,
+      check,
+      recordingLogger(logs),
+    )(freshIdentity()).catch((error: unknown) => error);
+
+    expect(refusal).toMatchObject({ name: "ApiIdempotencyError", code: "unavailable" });
+    expect(check).not.toHaveBeenCalled();
+    expect(logs).toEqual([
+      {
+        level: "error",
+        event: "api_rate_limit_failed",
+        fields: { scope: "writes", error: "TypeError" },
+      },
+    ]);
+  });
+
+  it("limits nothing where no limiter is bound, which only development may be", async () => {
+    const check = vi.fn<SessionActivityChecker>().mockResolvedValue(true);
+
+    const answers = await outcomes(
+      limitWrites(undefined, check, recordingLogger([])),
+      freshIdentity(),
+      25,
+    );
+
+    expect(answers).toEqual(Array<boolean>(25).fill(true));
+  });
+
+  /** The API app with its writes behind the real limit, and fakes for Clerk and the database. */
+  function limitedApp(identity: SessionIdentity) {
+    const check = vi.fn<SessionActivityChecker>().mockResolvedValue(true);
+    const close = vi.fn(async () => {});
+    const openDatabase = vi.fn<ApiRuntime["openDatabase"]>().mockResolvedValue({
+      db: {} as Awaited<ReturnType<ApiRuntime["openDatabase"]>>["db"],
+      close,
+    });
+    const provision = vi
+      .fn<ApiWriteServices["provisionApiAccount"]>()
+      .mockResolvedValue({ response: { status: 200, body: USER }, replayed: false });
     const logger = { error: vi.fn<ApiRuntime["logger"]["error"]>() };
     const app = createApiApp({
       verifySession: async () => identity,
-      now: () => new Date("2026-09-25T00:00:00.000Z"),
+      now: () => NOW,
       openDatabase,
       services: API_READ_SERVICES,
       logger,
       writes: {
-        verifyActiveSession: limitWrites(writes, check, logger),
-        clock: { now: () => new Date("2026-09-25T00:00:00.000Z") },
+        verifyActiveSession: limitWrites(realWriteLimiters(), check, logger),
+        clock: { now: () => NOW },
         services: { ...API_WRITE_SERVICES, provisionApiAccount: provision },
+      },
+    });
+    let sent = 0;
+    async function provisionWith(body: unknown): Promise<Response> {
+      sent += 1;
+      return app.request("https://vela.vela-light-staging.workers.dev/v1/me/provision", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer good",
+          "content-type": "application/json",
+          "idempotency-key": `request-${sent}`,
+        },
+        body: JSON.stringify(body),
+      });
+    }
+    return { check, openDatabase, provision, logger, provisionWith };
+  }
+
+  const PROFILE = { display_name: "Synthetic user", language: "en", tz: "Asia/Taipei" };
+
+  it("answers an account's 21st write in a minute with 429 through the API app, with no Retry-After, before Clerk and the database", async () => {
+    const f = limitedApp(freshIdentity());
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 20; i += 1) {
+      statuses.push((await f.provisionWith(PROFILE)).status);
+    }
+    const refused = await f.provisionWith(PROFILE);
+
+    expect(statuses).toEqual(Array<number>(20).fill(200));
+    await expectAnswer(refused, 429, RATE_LIMITED);
+    expect(refused.headers.get("retry-after")).toBeNull();
+    expect(f.check).toHaveBeenCalledTimes(20);
+    expect(f.openDatabase).toHaveBeenCalledTimes(20);
+    expect(f.provision).toHaveBeenCalledTimes(20);
+    expect(f.logger.error).not.toHaveBeenCalled();
+  });
+
+  // The body is validated before the limit, so a malformed write spends none of the allowance.
+  it("counts no write whose body is refused", async () => {
+    const f = limitedApp(freshIdentity());
+
+    const malformed: number[] = [];
+    for (let i = 0; i < 5; i += 1) {
+      malformed.push((await f.provisionWith({ display_name: 42 })).status);
+    }
+    const valid: number[] = [];
+    for (let i = 0; i < 21; i += 1) {
+      valid.push((await f.provisionWith(PROFILE)).status);
+    }
+
+    expect(malformed).toEqual(Array<number>(5).fill(400));
+    expect(valid).toEqual([...Array<number>(20).fill(200), 429]);
+  });
+
+  it("answers 503 through the API app when the limiter cannot answer, before Clerk and the database", async () => {
+    const failure = new Error("Durable Object is overloaded. Too many requests queued.");
+    failure.name = "DurableObjectOverloaded";
+    const writes = fakeWriteLimiters();
+    writes.admit.mockRejectedValue(failure);
+    const check = vi.fn<SessionActivityChecker>().mockResolvedValue(true);
+    const openDatabase = vi.fn<ApiRuntime["openDatabase"]>();
+    const logs: LogLine[] = [];
+    const logger = recordingLogger(logs);
+    const app = createApiApp({
+      verifySession: async () => freshIdentity(),
+      now: () => NOW,
+      openDatabase,
+      services: API_READ_SERVICES,
+      logger,
+      writes: {
+        verifyActiveSession: limitWrites(writes.namespace, check, logger),
+        clock: { now: () => NOW },
+        services: API_WRITE_SERVICES,
       },
     });
 
@@ -697,16 +908,24 @@ describe("the per-account write limit", () => {
           "content-type": "application/json",
           "idempotency-key": "request-1",
         },
-        body: JSON.stringify({ display_name: "Synthetic user", language: "en", tz: "Asia/Taipei" }),
+        body: JSON.stringify(PROFILE),
       },
     );
 
-    await expectAnswer(response, 429, RATE_LIMITED);
-    expect(response.headers.get("retry-after")).toBeNull();
-    expect(writes.limit).toHaveBeenCalledExactlyOnceWith({ key: "user_limited" });
+    await expectAnswer(response, 503, UNAVAILABLE);
     expect(check).not.toHaveBeenCalled();
     expect(openDatabase).not.toHaveBeenCalled();
-    expect(provision).not.toHaveBeenCalled();
-    expect(logger.error).not.toHaveBeenCalled();
+    expect(logs).toEqual([
+      {
+        level: "error",
+        event: "api_rate_limit_failed",
+        fields: { scope: "writes", error: "DurableObjectOverloaded" },
+      },
+      {
+        level: "error",
+        event: "api_request_failed",
+        fields: { error: "ApiIdempotencyError:unavailable" },
+      },
+    ]);
   });
 });

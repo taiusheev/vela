@@ -1,5 +1,5 @@
 import { describe, expect, inject, it } from "vitest";
-import { API_LIMITS } from "./api-runtime.ts";
+import { API_ADDRESS_LIMIT } from "./api-runtime.ts";
 import { AI_OFF_EFFECTS, MEDIA_OFF_EFFECTS } from "./deps.ts";
 import { NOTICE_LANGS, NOTICE_PATHS, type NoticeLang } from "./notices.ts";
 import { NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
@@ -362,14 +362,15 @@ describe("the links written into the pilot pack", () => {
 });
 
 describe("the pilot Worker's bindings", () => {
-  // Named environments inherit no binding, so each repeats both objects: without the heartbeat,
-  // /healthz could never answer ok there and the watchdog would email all day (W1).
+  // Named environments inherit no binding, so each repeats its objects: without the heartbeat,
+  // /healthz could never answer ok there and the watchdog would email all day (W1). The write
+  // limiter is bound where the API is served, below.
   it.each(["development", ...DEPLOYED] as const)(
     "own the scheduler class, the heartbeat object, and the queue consumers in %s",
     (environment) => {
       const pilot = configOf("pilot", environment);
 
-      expect(doBindings(pilot)).toEqual([
+      expect(doBindings(pilot).slice(0, 2)).toEqual([
         { name: "MEMBER_SCHEDULER", class_name: "MemberScheduler" },
         { name: "RECONCILE_HEARTBEAT", class_name: "ReconcileHeartbeat" },
       ]);
@@ -414,25 +415,35 @@ describe("the pilot Worker's bindings", () => {
   });
 
   // Named environments inherit no binding, so each environment that serves the API repeats both
-  // limiters; production binds none while its API is off, and config.ts refuses to turn it on
-  // without them.
-  it("bind both of the API's limiters in development and staging, and none in production", () => {
+  // limits: the address limiter, the one Rate Limiting binding, and the write limiter's objects.
+  // Production binds neither while its API is off, and config.ts refuses to turn it on without them.
+  it("bind both of the API's limits in development and staging, and neither in production", () => {
     for (const environment of ["development", "staging"] as const) {
-      expect(configOf("pilot", environment).ratelimits, environment).toEqual([
-        API_LIMITS.address,
-        API_LIMITS.writes,
+      const pilot = configOf("pilot", environment);
+
+      expect(pilot.ratelimits, environment).toEqual([API_ADDRESS_LIMIT]);
+      expect(doBindings(pilot).slice(2), environment).toEqual([
+        { name: "ACCOUNT_WRITE_LIMITER", class_name: "AccountWriteLimiter" },
       ]);
     }
-    expect(configOf("pilot", "production").ratelimits ?? []).toEqual([]);
+    const production = configOf("pilot", "production");
+    expect(production.ratelimits ?? []).toEqual([]);
+    expect(doBindings(production).map((binding) => binding.name)).toEqual([
+      "MEMBER_SCHEDULER",
+      "RECONCILE_HEARTBEAT",
+    ]);
   });
 
-  // A migration once deployed is never rewritten: the heartbeat's class arrives as a second one.
+  // A migration once deployed is never rewritten: each class arrives with one of its own. Every
+  // environment inherits them, production included, where the write limiter's class is declared
+  // and never bound while its API is off.
   it.each(["development", ...DEPLOYED] as const)(
-    "declare the scheduler's and the heartbeat's migrations in %s, which only the Worker exporting the classes may",
+    "declare the migrations of the scheduler, the heartbeat and the write limiter in %s, which only the Worker exporting the classes may",
     (environment) => {
       expect(configOf("pilot", environment).migrations).toEqual([
         { tag: "v1", new_sqlite_classes: ["MemberScheduler"] },
         { tag: "v2", new_sqlite_classes: ["ReconcileHeartbeat"] },
+        { tag: "v3", new_sqlite_classes: ["AccountWriteLimiter"] },
       ]);
     },
   );

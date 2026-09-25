@@ -815,7 +815,7 @@ describe("a whole setup", () => {
     const world = newWorld("staging", { api: "off" });
     await setUp(world);
     expect(world.printed.filter((line) => line.includes("The API is off"))).toEqual([
-      '  The API is off in staging (API_V1 "off" in wrangler.jsonc), so /v1 answers 404 there and no Clerk secret key is asked for. To switch it on later: set API_V1 to "on" for staging in wrangler.jsonc, with its CLERK_ISSUER and ratelimits, and commit, then run pnpm --filter @vela/worker run setup -- --env staging --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy staging without the key, and /v1 would answer 503 while every other route keeps answering.',
+      '  The API is off in staging (API_V1 "off" in wrangler.jsonc), so /v1 answers 404 there and no Clerk secret key is asked for. To switch it on later: set API_V1 to "on" for staging in wrangler.jsonc, with its CLERK_ISSUER, its ratelimits and its ACCOUNT_WRITE_LIMITER binding, and commit, then run pnpm --filter @vela/worker run setup -- --env staging --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy staging without the key, and /v1 would answer 503 while every other route keeps answering.',
     ]);
     // The first "API_V1" in the pilot text is staging's, which is the environment set up here.
     const pilot = world.files.get("wrangler.jsonc") ?? "";

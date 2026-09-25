@@ -8,7 +8,10 @@
  * Each request meets, in this order: the configuration check (503 `unavailable` when it refuses),
  * the off switch (404 `not_found`), the per-address limit (429 `rate_limited`), then the app, built
  * once per isolate and kept. The per-account write limit runs inside the app, after authentication
- * and the body's validation and before the live session check calls Clerk (`limitWrites`).
+ * and the body's validation and before the live session check calls Clerk (`limitWrites`). The
+ * address limit is a Workers Rate Limiting binding and best effort: on staging it was never shown
+ * to refuse anything. The write limit is counted in a Durable Object per account
+ * (`write-limit.ts`), which does.
  *
  * The lines this file logs are event names and error labels only: `api_config_refused`,
  * `api_rate_limit_failed`, and `api_request_failed`. A 4xx is never logged, and neither is a token,
@@ -54,6 +57,7 @@ import {
   createClerkSessionVerifier,
   type SessionActivityChecker,
 } from "./session.ts";
+import { type AccountWriteLimiter, writeLimiterOf } from "./write-limit.ts";
 
 /** What `PilotRuntime.api` is: one request under /v1 in, its answer out. */
 export type ApiHandler = (request: Request, env: PilotEnv) => Promise<Response>;
@@ -95,19 +99,17 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
 };
 
 /**
- * The two Workers Rate Limiting bindings, as each environment that serves the API declares them in
- * wrangler.jsonc; src/wrangler-config.test.ts holds the file to these. Cloudflare counts per
- * location, so a limit is approximate, which is enough to keep one caller from spending the Free
- * plan's requests, Neon's compute hours, or Clerk's quota.
+ * The address limit: every request per client address (per /64 for IPv6), after the config check
+ * and off switch, before the app. A Workers Rate Limiting binding, as each environment that serves
+ * the API declares it in wrangler.jsonc; src/wrangler-config.test.ts holds the file to this.
+ * Cloudflare counts per location, so the limit is approximate at best, and on staging's workers.dev
+ * host, 355 requests from one address in about two minutes were all admitted (25 September 2026).
+ * It is kept as a best effort in front of the app; what bounds each account is `limitWrites`.
  */
-export const API_LIMITS = {
-  /**
-   * Every request per client address (per /64 for IPv6), after the config check and off switch,
-   * before the app.
-   */
-  address: { name: "API_IP_LIMIT", namespace_id: "1001", simple: { limit: 120, period: 60 } },
-  /** Every write, per account, before the live session check calls Clerk. */
-  writes: { name: "API_WRITE_LIMIT", namespace_id: "1002", simple: { limit: 20, period: 60 } },
+export const API_ADDRESS_LIMIT = {
+  name: "API_IP_LIMIT",
+  namespace_id: "1001",
+  simple: { limit: 120, period: 60 },
 } as const;
 
 // The API app's own error bodies (`api-app.ts`), copied rather than imported, since that module
@@ -137,25 +139,24 @@ function answer(
 }
 
 /**
- * Whether the limiter admits one more request under `key`. One that fails is skipped rather than
- * closing the API, and the failure is logged by its label, never with the key: authentication, the
- * live session check, and the receipt cap per account still gate every write. No limiter at all is
+ * Whether the address limiter admits one more request from `address`. One that fails is skipped
+ * rather than closing the API, and the failure is logged by its label, never with the address:
+ * authentication and, for a write, the per-account limit still stand behind it. No limiter at all is
  * development's, since `readApiConfig` refuses a deployed environment without one.
  */
-async function admitted(
+async function addressAdmitted(
   limiter: RateLimit | undefined,
-  key: string,
-  scope: keyof typeof API_LIMITS,
+  address: string,
   logger: Pick<Logger, "error">,
 ): Promise<boolean> {
   if (limiter === undefined) {
     return true;
   }
   try {
-    const { success } = await limiter.limit({ key });
+    const { success } = await limiter.limit({ key: address });
     return success;
   } catch (error) {
-    logger.error("api_rate_limit_failed", { scope, error: errorLabel(error) });
+    logger.error("api_rate_limit_failed", { scope: "address", error: errorLabel(error) });
     return true;
   }
 }
@@ -209,19 +210,36 @@ export function createApiNudges(
 }
 
 /**
- * The live session check, behind the per-account write limit. It runs where the check does: after
- * authentication and the body's validation, so the account is a verified one, and before the call
- * to Clerk, so a caller over the limit spends none of Clerk's quota. Over it, the write answers 429
- * `rate_limited` through the API app's own mapping of `ApiIdempotencyError`, and nothing is logged.
+ * The live session check, behind the per-account write limit (`write-limit.ts`). It runs where the
+ * check does: after authentication and the body's validation, so the account is a verified one and
+ * a malformed body spends none of its allowance, and before the call to Clerk, so a caller over the
+ * limit spends none of Clerk's quota and opens no database connection. Over it, the write answers
+ * 429 `rate_limited` through the API app's own mapping of `ApiIdempotencyError`, and nothing is
+ * logged.
+ *
+ * A limiter that cannot answer closes the write, unlike the address limit: an account that floods
+ * its own object until Cloudflare reports it overloaded would otherwise lift its own limit. The
+ * write answers 503 `unavailable`, as it does when Clerk cannot answer the live check, and the
+ * failure is logged by its label, never with the subject. No limiter at all is development's, since
+ * `readApiConfig` refuses a deployed environment without one.
  */
 export function limitWrites(
-  limiter: RateLimit | undefined,
+  limiters: DurableObjectNamespace<AccountWriteLimiter> | undefined,
   check: SessionActivityChecker,
   logger: Pick<Logger, "error">,
 ): SessionActivityChecker {
   return async (identity) => {
-    if (!(await admitted(limiter, identity.authSubject, "writes", logger))) {
-      throw new ApiIdempotencyError("rate_limited");
+    if (limiters !== undefined) {
+      let admitted: boolean;
+      try {
+        admitted = await writeLimiterOf(limiters, identity.authSubject).admit();
+      } catch (error) {
+        logger.error("api_rate_limit_failed", { scope: "writes", error: errorLabel(error) });
+        throw new ApiIdempotencyError("unavailable");
+      }
+      if (!admitted) {
+        throw new ApiIdempotencyError("rate_limited");
+      }
     }
     return check(identity);
   };
@@ -255,7 +273,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
       : {
           writes: {
             verifyActiveSession: limitWrites(
-              env.API_WRITE_LIMIT,
+              env.ACCOUNT_WRITE_LIMITER,
               createClerkSessionActivityChecker({ secretKey }),
               logger,
             ),
@@ -312,8 +330,8 @@ export function createApiHandler(
     if (config === null) {
       return answer(NOT_FOUND, 404);
     }
-    if (!(await admitted(env.API_IP_LIMIT, addressOf(request), "address", logger))) {
-      return answer(RATE_LIMITED, 429, { "retry-after": String(API_LIMITS.address.simple.period) });
+    if (!(await addressAdmitted(env.API_IP_LIMIT, addressOf(request), logger))) {
+      return answer(RATE_LIMITED, 429, { "retry-after": String(API_ADDRESS_LIMIT.simple.period) });
     }
     let app: ApiApp;
     try {

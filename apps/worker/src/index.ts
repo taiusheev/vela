@@ -1,7 +1,8 @@
 /**
  * The pilot Worker `vela` as wrangler deploys it (wrangler.jsonc): its handlers, whose `fetch` also
  * serves the API under /v1 (ADR-29), the `MemberScheduler` Durable Object class, which the admin
- * Worker also binds by `script_name`, and the `ReconcileHeartbeat` class `/healthz` reads.
+ * Worker also binds by `script_name`, the `ReconcileHeartbeat` class `/healthz` reads, and the
+ * `AccountWriteLimiter` class the API's writes are counted in.
  *
  * workerd reads every export of this module as a handler or a class and refuses to start on any
  * other value, so the handlers and their constants live in `pilot-worker.ts` and nothing else is
@@ -12,5 +13,6 @@ import { pilotRuntime } from "./runtime.ts";
 
 export { ReconcileHeartbeat } from "./heartbeat.ts";
 export { MemberScheduler } from "./scheduler.ts";
+export { AccountWriteLimiter } from "./write-limit.ts";
 
 export default createWorker(pilotRuntime);

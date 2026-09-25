@@ -235,6 +235,8 @@ describe("the AI provider", () => {
 
 /** A limiter that admits everything: the configuration only asks whether one is bound. */
 const boundLimiter: RateLimit = { limit: async () => ({ success: true }) };
+/** The write limiter's objects, as bound: the configuration only asks whether they are. */
+const boundWriteLimiters = {} as NonNullable<PilotEnv["ACCOUNT_WRITE_LIMITER"]>;
 
 const DEV_ISSUER = "https://ideal-vulture-9262.clerk.accounts.dev";
 // Shaped like Clerk's keys, and distinctive enough that a message holding one would show. Joined at
@@ -242,14 +244,14 @@ const DEV_ISSUER = "https://ideal-vulture-9262.clerk.accounts.dev";
 const TEST_KEY = ["sk", "test", "StagingKeyNeverLogged42"].join("_");
 const LIVE_KEY = ["sk", "live", "ProductionKeyNeverLogged42"].join("_");
 
-/** Staging with the API on: the chosen values, Clerk's development instance, and both limiters. */
+/** Staging with the API on: the chosen values, Clerk's development instance, and both limits. */
 const apiStaging: PilotEnv = {
   ...chosenStaging,
   API_V1: "on",
   CLERK_ISSUER: DEV_ISSUER,
   CLERK_SECRET_KEY: TEST_KEY,
   API_IP_LIMIT: boundLimiter,
-  API_WRITE_LIMIT: boundLimiter,
+  ACCOUNT_WRITE_LIMITER: boundWriteLimiters,
 };
 
 /** Production as it would be the day a new ADR turns its API on, on a host Vela owns. */
@@ -307,7 +309,7 @@ describe("the API's configuration", () => {
         CLERK_ISSUER: undefined,
         CLERK_SECRET_KEY: undefined,
         API_IP_LIMIT: undefined,
-        API_WRITE_LIMIT: undefined,
+        ACCOUNT_WRITE_LIMITER: undefined,
       };
 
       expect(readApiConfig(off)).toBeNull();
@@ -357,7 +359,7 @@ describe("the API's configuration", () => {
     },
   );
 
-  it.each(["API_IP_LIMIT", "API_WRITE_LIMIT"] as const)(
+  it.each(["API_IP_LIMIT", "ACCOUNT_WRITE_LIMITER"] as const)(
     "refuses staging without the %s binding",
     (name) => {
       expectRefused({ ...apiStaging, [name]: undefined }, name);
@@ -404,7 +406,7 @@ describe("the API's configuration", () => {
     ["a development key", { CLERK_SECRET_KEY: TEST_KEY }, "CLERK_SECRET_KEY"],
     ["no key", { CLERK_SECRET_KEY: undefined }, "CLERK_SECRET_KEY"],
     ["no address limiter", { API_IP_LIMIT: undefined }, "API_IP_LIMIT"],
-    ["no write limiter", { API_WRITE_LIMIT: undefined }, "API_WRITE_LIMIT"],
+    ["no write limiter", { ACCOUNT_WRITE_LIMITER: undefined }, "ACCOUNT_WRITE_LIMITER"],
   ] as const)("refuses production with %s", (_, overrides, code) => {
     expectRefused({ ...apiProduction, ...overrides }, code);
   });
@@ -414,7 +416,7 @@ describe("the API's configuration", () => {
       ...testEnv,
       CLERK_SECRET_KEY: "  ",
       API_IP_LIMIT: undefined,
-      API_WRITE_LIMIT: undefined,
+      ACCOUNT_WRITE_LIMITER: undefined,
     };
 
     expect(readApiConfig(laptop)?.secretKey).toBeNull();
