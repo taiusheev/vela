@@ -3,6 +3,7 @@
  * migrated on start, and served over the Postgres wire protocol so Hyperdrive's local connection
  * string and ordinary Postgres tools can reach it.
  * Usage: pnpm --filter @vela/db dev-db   (Ctrl+C to stop)
+ * DEV_DB_PORT moves it off 54320, so a second checkout can run its own beside this one.
  */
 import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -12,7 +13,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 
 const host = "127.0.0.1";
-const port = 54320;
+const port = Number(process.env.DEV_DB_PORT ?? 54320);
 const dataDir = fileURLToPath(new URL("../.pglite/dev", import.meta.url));
 const migrationsFolder = fileURLToPath(new URL("../migrations", import.meta.url));
 

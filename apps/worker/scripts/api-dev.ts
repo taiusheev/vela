@@ -11,6 +11,8 @@
  *   DATABASE_URL          a local Postgres, for example the one `pnpm --filter @vela/db dev-db` serves
  *   CLERK_ISSUER          the Clerk Frontend API URL, https://<something>.clerk.accounts.dev
  *   API_PORT              optional, 8787 by default
+ *   APP_PORT              optional, 8081 by default: the port the app's web build is served on,
+ *                         the only browser origin besides this server that may call it
  *   CLERK_SECRET_KEY      optional, and only a development key (sk_test_…). Without it the writes
  *                         answer 404, as they do on both deployed Workers; with it they are served,
  *                         because a write needs the live session check that only Clerk’s backend
@@ -80,7 +82,12 @@ function developmentIssuer(issuer: string): string {
 const databaseUrl = localDatabase(required("DATABASE_URL"));
 const issuer = developmentIssuer(required("CLERK_ISSUER"));
 const port = Number(process.env.API_PORT ?? DEFAULT_PORT);
-const origins = [`http://localhost:${port}`, "http://localhost:8081", "http://127.0.0.1:8081"];
+const appPort = Number(process.env.APP_PORT ?? 8081);
+const origins = [
+  `http://localhost:${port}`,
+  `http://localhost:${appPort}`,
+  `http://127.0.0.1:${appPort}`,
+];
 
 /**
  * A development key only. `sk_live_` belongs to the real instance whose accounts are real people,
