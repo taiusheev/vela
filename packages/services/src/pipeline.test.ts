@@ -759,6 +759,31 @@ describe("understandAnswer", () => {
     expect((await h.db.select().from(awayPeriods))[0]?.endedAt).toEqual(h.clock.now());
     expect(await eventNames()).toContain("away_ended");
   });
+
+  it("keeps an open-ended away she set today through her replies that day, and ends it on her first answer the next day", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Going to my sister's today, back when I'm back");
+    withAi({ understand: async (input) => understood(input, { from: TODAY, until: null }) });
+    await understandAnswer(h.deps, answer.id);
+
+    // Her thanks for "Understood. Have a lovely time." is a second answer to today's exchange, sent
+    // from wherever she is: it does not say she is back.
+    h.clock.advanceMinutes(2);
+    await herText(scene, "Thank you!");
+    expect((await h.db.select().from(awayPeriods))[0]?.endedAt).toBeNull();
+    expect(await eventNames()).not.toContain("away_ended");
+
+    // Her first answer on a later day ends it: 09:00 Taipei the next day.
+    h.clock.set("2026-09-15T01:00:00Z");
+    await seedExchange(h.db, scene.seed, {
+      date: "2026-09-15",
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    await herText(scene, "Home again");
+    expect((await h.db.select().from(awayPeriods))[0]?.endedAt).toEqual(h.clock.now());
+    expect((await eventNames()).filter((name) => name === "away_ended")).toHaveLength(1);
+  });
 });
 
 // Decision X (2026-09-18): with AI_PROVIDER "off" every model step takes the failure path, but AI

@@ -442,14 +442,35 @@ describe("handleParentMessage", () => {
     expect(await answerRows()).toHaveLength(2);
   });
 
-  it("resolves the open quiet event and ends her open-ended away periods that have started", async () => {
+  it("resolves the open quiet event and ends her open-ended away periods that have started and were set before today", async () => {
     const { seed, exchangeId } = await morning();
     h.clock.advanceMinutes(360);
     await openQuiet(h.deps, seed.member.id, TODAY, true);
     await h.run(handlers());
+    const setYesterday = addMinutes(h.clock.now(), -24 * 60);
     await h.db.insert(awayPeriods).values([
-      { memberId: seed.member.id, fromDate: TODAY, toDate: null, source: "answer" },
-      { memberId: seed.member.id, fromDate: "2026-09-15", toDate: null, source: "organiser" },
+      {
+        memberId: seed.member.id,
+        fromDate: TODAY,
+        toDate: null,
+        source: "answer",
+        createdAt: setYesterday,
+      },
+      {
+        memberId: seed.member.id,
+        fromDate: "2026-09-15",
+        toDate: null,
+        source: "organiser",
+        createdAt: setYesterday,
+      },
+      // Set this afternoon: an answer later today does not say she is back (flows §3.9).
+      {
+        memberId: seed.member.id,
+        fromDate: YESTERDAY,
+        toDate: null,
+        source: "organiser",
+        createdAt: h.clock.now(),
+      },
     ]);
     h.clock.advanceMinutes(20);
 
@@ -469,6 +490,7 @@ describe("handleParentMessage", () => {
     expect(told.map((row) => row.memberId)).toEqual([seed.organiser.id]);
     const periods = await h.db.select().from(awayPeriods).orderBy(asc(awayPeriods.fromDate));
     expect(periods.map((row) => [row.fromDate, row.endedAt])).toEqual([
+      [YESTERDAY, null],
       [TODAY, h.clock.now()],
       ["2026-09-15", null],
     ]);

@@ -18,6 +18,7 @@ import {
 } from "@vela/db";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { endAway, setAway } from "./admin.ts";
 import type { Deps } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
@@ -561,6 +562,80 @@ describe("tickMember", () => {
       expect(await nextWake(her)).toEqual(at("2026-09-14", "19:00"));
       expect(h.scheduler.wakes.get(her)).toEqual(at("2026-09-14", "19:00"));
     }
+  });
+});
+
+describe("an away period the founder ends", () => {
+  const FOUNDER = { admin: "founder@vela.test" };
+
+  /** Her away from Tuesday 15 September, until she is back, as her organiser asked. */
+  async function awayFromTuesday(seed: SeededFamily): Promise<string> {
+    await setAway(h.deps, FOUNDER, {
+      memberId: seed.member.id,
+      setBy: seed.organiser.id,
+      from: "2026-09-15",
+      until: null,
+    });
+    const [period] = await h.db.select().from(awayPeriods);
+    if (period === undefined) {
+      throw new Error("away period not stored");
+    }
+    return period.id;
+  }
+
+  it("keeps yesterday an away day when it ends before today's arrival: no repeat or quiet notice follows yesterday's morning", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const her = seed.member.id;
+    const period = await awayFromTuesday(seed);
+    // Tuesday's morning went out while she was away and was not answered.
+    await seedExchange(h.db, seed, {
+      date: "2026-09-15",
+      state: "delivered",
+      deliveredAt: at("2026-09-15", "08:00"),
+    });
+    await seedExchange(h.db, seed, { date: "2026-09-16", state: "scheduled" });
+
+    // Wednesday 07:00: the family says she is home, and the founder ends the away.
+    h.clock.set(at("2026-09-16", "07:00"));
+    await endAway(h.deps, FOUNDER, period);
+    await tickMember(h.deps, her);
+    await settle(her);
+
+    expect(await outboundRows("repeat")).toEqual([]);
+    expect(await h.db.select().from(quietEvents)).toEqual([]);
+    expect(await outboundRows("quiet_notice")).toEqual([]);
+    expect(await nextWake(her)).toEqual(at("2026-09-16", "08:00"));
+
+    // Wednesday's morning goes out after the end, so its repeat follows as on any day.
+    await advanceTo(her, at("2026-09-16", "10:30"));
+    expect((await outboundRows("arrival")).map((row) => row.localDay)).toEqual(["2026-09-16"]);
+    expect((await outboundRows("repeat")).map((row) => row.localDay)).toEqual(["2026-09-16"]);
+  });
+
+  it("keeps today an away day when it ends after today's morning went out: its passed thresholds do not fire at the end", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const her = seed.member.id;
+    const period = await awayFromTuesday(seed);
+    await seedExchange(h.db, seed, {
+      date: "2026-09-16",
+      state: "delivered",
+      deliveredAt: at("2026-09-16", "08:00"),
+    });
+
+    // Wednesday 20:00, the morning unanswered: the founder ends the away.
+    h.clock.set(at("2026-09-16", "20:00"));
+    await endAway(h.deps, FOUNDER, period);
+    await tickMember(h.deps, her);
+    await settle(her);
+
+    expect(await outboundRows("repeat")).toEqual([]);
+    expect(await h.db.select().from(quietEvents)).toEqual([]);
+    expect(await outboundRows("quiet_notice")).toEqual([]);
+
+    // Thursday's morning goes out after the end, so its repeat follows as on any day.
+    await advanceTo(her, at("2026-09-17", "10:30"));
+    expect((await outboundRows("arrival")).map((row) => row.localDay)).toEqual(["2026-09-17"]);
+    expect((await outboundRows("repeat")).map((row) => row.localDay)).toEqual(["2026-09-17"]);
   });
 });
 

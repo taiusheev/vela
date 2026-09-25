@@ -17,6 +17,7 @@ import {
   minutesBetween,
   nextExchangeState,
   outboundKey,
+  zonedInstant,
 } from "@vela/core";
 import {
   type Answer,
@@ -28,7 +29,7 @@ import {
   type Family,
   type Member,
 } from "@vela/db";
-import { and, eq, isNull, lte } from "drizzle-orm";
+import { and, eq, isNull, lt, lte } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -196,7 +197,10 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | n
 
     await resolveQuietOnAnswer(deps, tx, exchange.id);
 
-    // An open-ended away ("until I'm back") lasts until her first answer on or after its start.
+    // An open-ended away ("until I'm back") lasts until her first answer on or after its start, on a
+    // later day than the one it was set on. A reply the same day, such as her thanks for
+    // `away.confirmed_open`, comes from wherever she is going and does not say she is back: ending
+    // the away on it would send tomorrow's repeat and quiet notice while she is away.
     const ended = await tx
       .update(awayPeriods)
       .set({ endedAt: now })
@@ -206,6 +210,7 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | n
           isNull(awayPeriods.toDate),
           isNull(awayPeriods.endedAt),
           lte(awayPeriods.fromDate, localDate),
+          lt(awayPeriods.createdAt, zonedInstant(localDate, "00:00", member.tz)),
         ),
       )
       .returning({ id: awayPeriods.id, source: awayPeriods.source });

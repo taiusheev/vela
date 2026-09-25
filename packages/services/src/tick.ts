@@ -202,10 +202,24 @@ export async function loadScheduleInput(
       ),
     )
     .limit(1);
+  // A period ended since yesterday began still covers yesterday or today when that day's arrival
+  // went out before the end (see `awayOn` below); one ended earlier covers neither.
   const away = await db
-    .select({ fromDate: awayPeriods.fromDate, toDate: awayPeriods.toDate })
+    .select({
+      fromDate: awayPeriods.fromDate,
+      toDate: awayPeriods.toDate,
+      endedAt: awayPeriods.endedAt,
+    })
     .from(awayPeriods)
-    .where(and(eq(awayPeriods.memberId, memberId), isNull(awayPeriods.endedAt)));
+    .where(
+      and(
+        eq(awayPeriods.memberId, memberId),
+        or(
+          isNull(awayPeriods.endedAt),
+          gte(awayPeriods.endedAt, zonedInstant(yesterday, "00:00", timeZone)),
+        ),
+      ),
+    );
   const reads = await db
     .select({ weekStart: weeklyReads.weekStart })
     .from(weeklyReads)
@@ -232,10 +246,20 @@ export async function loadScheduleInput(
       turnPromptSent: turn !== undefined,
       askScheduled: tomorrowExchange !== null && tomorrowExchange.state === "composed",
     },
-    awayOn: (date) =>
-      away.some(
-        (period) => period.fromDate <= date && (period.toDate === null || period.toDate >= date),
-      ),
+    // An arrival that went out while she was away gets no repeat and no quiet notice (spec §8), so
+    // ending the period, by `end_away` or by her answer, keeps covering that day: otherwise the
+    // thresholds its away held back, yesterday's or this morning's, would all fall due at the end.
+    // The ladder comes back with the first arrival delivered after the end.
+    awayOn: (date) => {
+      const deliveredAt = days.find((day) => day.date === date)?.deliveredAt ?? null;
+      return away.some(
+        (period) =>
+          period.fromDate <= date &&
+          (period.toDate === null || period.toDate >= date) &&
+          (period.endedAt === null ||
+            (deliveredAt !== null && deliveredAt.getTime() < period.endedAt.getTime())),
+      );
+    },
     weeklyReadDoneFor: (weekEnd) => weekStarts.has(addDays(weekEnd, -6)),
   };
 }
