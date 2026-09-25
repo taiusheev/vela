@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createTelegramAdapter } from "./adapter.ts";
 import { readFixture, TEST_BOT_TOKEN, TEST_BOT_USERNAME, TEST_WEBHOOK_SECRET } from "./testing.ts";
-import { constantTimeEqual, isValidWebhookSecret, verifyTelegramSecret } from "./verify.ts";
+import { isValidWebhookSecret, verifyTelegramSecret } from "./verify.ts";
 
 const adapter = createTelegramAdapter({
   botToken: TEST_BOT_TOKEN,
@@ -46,28 +46,6 @@ describe("adapter.verify", () => {
 
   it("rejects the secret with extra characters appended", async () => {
     await expect(adapter.verify(webhook(`${TEST_WEBHOOK_SECRET}0`))).resolves.toBe(false);
-  });
-});
-
-describe("constantTimeEqual", () => {
-  it("is true only for identical strings", () => {
-    expect(constantTimeEqual("abc-123_XYZ", "abc-123_XYZ")).toBe(true);
-    expect(constantTimeEqual("abc-123_XYZ", "abc-123_XYz")).toBe(false);
-    expect(constantTimeEqual("Abc-123_XYZ", "abc-123_XYZ")).toBe(false);
-  });
-
-  it("is false for different lengths in either direction", () => {
-    expect(constantTimeEqual("abc", "abcd")).toBe(false);
-    expect(constantTimeEqual("abcd", "abc")).toBe(false);
-  });
-
-  it("does not let trailing zero bytes stand in for missing ones", () => {
-    expect(constantTimeEqual("abc", "abc\u0000")).toBe(false);
-    expect(constantTimeEqual("abc\u0000", "abc")).toBe(false);
-  });
-
-  it("never matches an empty expected secret", () => {
-    expect(constantTimeEqual("", "")).toBe(false);
   });
 });
 

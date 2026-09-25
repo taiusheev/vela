@@ -1,0 +1,26 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "615cd098e708f4b799182917e7353721",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463763439,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZ9RZFQD7MPQ66ZYXK8ZBZ",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "542402518368845950",
+        "type": "text",
+        "quoteToken": "S6TIhAxy5v8GVAkrm3MSmzRq7YJWN4rbse5eAiBCF9eX0D-L34iJz6TEYwxzGxnM",
+        "text": "睡得很好，謝謝",
+        "quotedMessageId": "514869307975298878"
+      }
+    }
+  ]
+}

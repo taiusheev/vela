@@ -1,0 +1,25 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "f90e78aed98c45c74761d524df7dcf12",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463823039,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZBK5ZYJ4EYFE0PQY2WF2X",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "508378059350039548",
+        "type": "file",
+        "fileName": "health-check.pdf",
+        "fileSize": 2138
+      }
+    }
+  ]
+}

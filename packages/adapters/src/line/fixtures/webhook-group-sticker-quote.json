@@ -1,0 +1,30 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "c0848b10571e5da831209875f3cee1f7",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463978495,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff",
+        "userId": "U8f8c4117e99b1a4fa8346f3d1c56731b"
+      },
+      "webhookEventId": "01M3FZGAZZBZ5JRWWAPG9HFGR0",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "533129488523346903",
+        "type": "sticker",
+        "quoteToken": "Ks4Wx8Qb1Nc5Ra9Vd2Tf6Lg0Mh3Pj7Zk1Yi4Oe8Cu2Bn5Sw9Eq3Ht6Dm0Ax4Gv7L",
+        "stickerId": "52002734",
+        "packageId": "11537",
+        "stickerResourceType": "STATIC",
+        "keywords": ["love", "heart", "hug"],
+        "quotedMessageId": "501968441952665100"
+      }
+    }
+  ]
+}

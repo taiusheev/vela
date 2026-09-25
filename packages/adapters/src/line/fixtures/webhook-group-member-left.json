@@ -1,0 +1,30 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "type": "memberLeft",
+      "mode": "active",
+      "timestamp": 1790464032733,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff"
+      },
+      "webhookEventId": "01M3FZHZYXW99Q647HEWJ0NPFF",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "left": {
+        "members": [
+          {
+            "type": "user",
+            "userId": "U8f8c4117e99b1a4fa8346f3d1c56731b"
+          },
+          {
+            "type": "user",
+            "userId": "Uc883b1237ee2a3bf59863ac7b4e2337a"
+          }
+        ]
+      }
+    }
+  ]
+}

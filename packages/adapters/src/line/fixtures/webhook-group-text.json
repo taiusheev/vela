@@ -1,0 +1,26 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "83aec881b5e25e3f98821133280d3916",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463890898,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff",
+        "userId": "U8f8c4117e99b1a4fa8346f3d1c56731b"
+      },
+      "webhookEventId": "01M3FZDNEJB6CAQXHRGFE5R844",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "529385796544261132",
+        "type": "text",
+        "quoteToken": "Ub4Ym8Rc1Wd5Ne9Xf2Kg6Qh0Lj3Pk7Ti1Oa4Vs8Mb2Ez5Cn9Gw3Hq6Dt0Jr4Fl7S",
+        "text": "Who is picking Grandma up on Sunday?"
+      }
+    }
+  ]
+}

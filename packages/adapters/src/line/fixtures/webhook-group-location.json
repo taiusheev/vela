@@ -1,0 +1,28 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "b5b59dfadea62353fb4107d49efe64f8",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463965829,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff",
+        "userId": "U8f8c4117e99b1a4fa8346f3d1c56731b"
+      },
+      "webhookEventId": "01M3FZFYM5JRTWYV7ZSF7NMS4R",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "508794438942531509",
+        "type": "location",
+        "title": "Songshan Station",
+        "address": "No. 11, Songshan Rd, Taipei",
+        "latitude": 25.0493,
+        "longitude": 121.5781
+      }
+    }
+  ]
+}

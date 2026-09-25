@@ -1,6 +1,6 @@
 # The LINE channel: flows, adapter, and cost
 
-2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9. Step 1 of §8, the contract, is built; nothing else is yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
+2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9. Steps 1 and 2 of §8 are built: the contract, and the adapter's webhook verification and events. Nothing else is yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
 
 Read it with:
 - `04-instrument-flows.md`. Any flow this document does not change works exactly as written there.
@@ -37,6 +37,7 @@ The LINE adapter never reads `files` (§5.5), and its `send` declares one parame
    - `join` carries only the group id and a reply token.
    - `leave` and `memberLeft` name no one who acted.
    - In a group, `source.userId` is documented only on message events, and only for users of LINE for iOS or Android. Every LINE account created since April 2020 is one.
+   - LINE contradicts itself here: its own examples of a group `unsend` and `messageEdited` include `source.userId`. So the adapter reads a user wherever LINE sends one, and requires one only where §5.4 says an event needs it.
    - Whether a postback tapped in a group carries `source.userId` is not documented (question 15).
 
    Sources: https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects · https://github.com/line/line-openapi/blob/main/webhook.yml · https://developers.line.biz/en/docs/messaging-api/user-consent/
@@ -304,7 +305,7 @@ LINE sends Vela everything said in the family group (fact 1). Vela's rule on LIN
 - `join`, `leave` or `memberLeft`;
 - `unsend` (its message id only);
 - a postback that names its user;
-- a **text** message from a named user that starts with `/` or quotes a message (`quotedMessageId`).
+- a **text** message from a named user that starts with `/`, after any leading whitespace (services trim a command too), or quotes a message (`quotedMessageId`).
 
 Everything else produces nothing. That includes:
 - ordinary text;
@@ -504,20 +505,24 @@ packages/adapters/src/line/
   adapter.ts     createLineAdapter(options): ChannelAdapter; capabilities; the no-op acknowledgeButton and closeButtons
   client.ts      a typed client for api.line.me and api-data.line.me: push, reply, content, transcoding status, preview,
                  profile, group member profile, leave group or room, quota, consumption; lineErrorOf(response) → ChannelSendError
-  verify.ts      LINE_SIGNATURE_HEADER; verifyLineSignature(headers, rawBody, channelSecret)
+  verify.ts      LINE_SIGNATURE_HEADER; createLineSignatureVerifier(channelSecret): (headers, rawBody) => Promise<boolean>
   parse.ts       parseLineWebhook(rawBody, receivedAt): InboundEvent[]
   send.ts        sendLineMessage(client, message, options); planLineRequests (shapes, labels, chunks); fitLabel
   retry-key.ts   lineRetryKey(idempotencyKey, requestIndex): a v5 UUID
   media.ts       fetchLineMedia(client, messageId), fetchLinePreview(client, messageId)
   quota.ts       readLineQuota(client): ChannelQuota
-  testing.ts     a recording fake fetch, fixture loaders, signWebhook(body, secret) for tests
+  testing.ts     readFixture, signWebhook(body, secret), signedWebhook(body) (step 2); a recording fake fetch (step 3)
   fixtures/      webhook-*.json (bodies) and api-*.json (responses), below
   *.test.ts      one per module, as Telegram has
 ```
 
-`src/index.ts` also exports `createLineAdapter`, `LineAdapterOptions` and `LINE_SIGNATURE_HEADER`. The adapters package keeps its single dependency, `@vela/contracts`.
+`constantTimeEqual` moves from `telegram/verify.ts` to `src/constant-time.ts`, shared by both channels, so neither channel's folder imports from the other's.
 
-**Fixtures.** They are built from the shapes in LINE's reference examples and `webhook.yml` and signed in the test with a test secret, so no LINE account is needed. They include LINE's own worked signature example:
+`src/index.ts` exports `LINE_SIGNATURE_HEADER` from step 2, and `createLineAdapter` and `LineAdapterOptions` from step 3, where they are written. The adapters package keeps its single dependency, `@vela/contracts`.
+
+**The recorder** (step 3) is not a copy of Telegram's. Telegram's keeps the last path segment and the parsed JSON body, which cannot show two sends byte-identical, the `X-Line-Retry-Key` and `Authorization` headers, or a LINE path whose last segment is an id. LINE's `RecordedRequest` keeps the full `pathname`, the `Headers` and the raw body string.
+
+**Fixtures.** They are built from the shapes in LINE's reference examples and `webhook.yml`, with made-up ids and no real person's data, and signed in the test with a test secret, so no LINE account is needed. Step 2 has 41 webhook bodies: one for each row of §5.4, one for each group message the adapter drops, a standby event, two users' events in one body, and one body holding every event type Vela ignores. LINE's own worked signature example sits in `verify.test.ts` as a string rather than a fixture, because Biome formats the JSON fixtures and would change its bytes:
 - body `{"destination":"U8e742f61d673b39c7fff3cecb7536ef0","events":[]}`;
 - secret `8c570fa6dd201bb328f1c1eac23a96d8`;
 - signature `GhRKmvmHys4Pi8DxkF4+EayaH0OqtJtaZxgTD9fMDLs=`, which the research recomputed.
@@ -561,29 +566,30 @@ Telegram sets the four new ones to `true, true, false, true`.
 
 ### 5.3 Webhook verification
 
-`verify({ headers, rawBody })`:
+`verify({ headers, rawBody })` calls a verifier built once per adapter by `createLineSignatureVerifier(channelSecret)`, which throws on an empty secret:
 1. Read `headers.get("x-line-signature")`. `Headers` is case-insensitive.
-2. Strictly Base64-decode it to exactly 32 bytes; anything else is `false`.
-3. Compute HMAC-SHA256 with the channel secret, as UTF-8 bytes, over `TextEncoder().encode(rawBody)`, using Web Crypto. The key is imported once per adapter.
-4. Compare the 32 bytes in constant time: no early return, the length folded in, as `constantTimeEqual` does.
+2. Check that it is `^[A-Za-z0-9+/]{43}=$`, the only canonical Base64 form of 32 bytes; anything else is `false`. The form is checked rather than decoded, because `atob` accepts whitespace and missing padding.
+3. Compute HMAC-SHA256 with the channel secret, as UTF-8 bytes, over `TextEncoder().encode(rawBody)`, using Web Crypto. The adapter is built synchronously and the key import is not, so the verifier imports the key on the first webhook and keeps the promise. A rejected import is forgotten, and the next webhook tries again.
+4. Base64-encode the result and compare the two strings with `constantTimeEqual` (§5.1): no early return, the length folded in. Another Base64 spelling of the right bytes, one that differs only in the unused bits of the last character, is refused.
 5. Any throw returns `false`.
 
 The route reads the body once with `c.req.text()`, as the Telegram route does. LINE sends UTF-8, so re-encoding yields the received bytes. A body that is not valid UTF-8 would decode with replacement characters, re-encode differently and fail verification: the safe direction.
 
 **Tests:**
 - LINE's worked example;
-- a valid fixture;
-- one byte of the body changed;
+- a valid fixture, and the Verify body `{"events":[]}` with a valid signature;
+- one character of the body changed;
 - whitespace reformatted;
 - `\n` rewritten as `\r\n`;
 - the wrong secret;
-- the header missing, empty, not Base64, or 31 bytes;
+- the header missing, empty, not Base64, 31 bytes, without its padding, or another spelling of the right bytes;
 - the header's name in three letter cases;
-- a body of `{"events":[]}` with a valid signature.
+- the key imported once for many webhooks, and a failed import refused, then retried on the next webhook;
+- headers that throw when read, answered with `false`.
 
 ### 5.4 Events (`parse`)
 
-Common to every event:
+`parseLineWebhook(rawBody, receivedAt)`, where `receivedAt` is the adapter's `now()` at parse. Common to every event:
 
 | Field | Value |
 |---|---|
@@ -591,44 +597,59 @@ Common to every event:
 | `eventId` | `line:<webhookEventId>` |
 | `at` | `timestamp` (milliseconds) as ISO |
 | `conversation` | A user source → `{ externalId: userId, kind: "private" }`; a group → `{ externalId: groupId, kind: "group" }`; a multi-person chat → `{ externalId: roomId, kind: "group" }` |
-| `sender.externalUserId` | `source.userId` |
-| `reply` | `{ token: replyToken, until }`, where `until` = min(receipt + 50 s, event time + 19 min). Receipt is the adapter's `now()` at parse. Carried when the event has a reply token |
+| `sender.externalUserId` | `source.userId`, or the conversation's own id where LINE names no one (the unknown actor, §5.9) |
+| `messageId` | `message.id`, on every message event the adapter emits: text, start, image, audio, sticker, other, and group text. `inboundExternalId` is `<conversation>:<messageId ?? eventId>`, so without it an image or voice answer would be keyed by the webhook event, and D6's unsend, which names only the message id, could never find it |
+| `replyToMessageId` | `quotedMessageId`, which LINE sends only on text and stickers |
+| `reply` | `{ token: replyToken, until }`, where `until` = min(receipt + 50 s, event time + 19 min). Carried whenever the event has a reply token, even when `until` is already past |
 
-Rules that apply to the whole body:
-- An event with `mode: "standby"` yields nothing; Vela uses no module channel.
-- An event of any kind that needs a user and has none yields nothing.
+**Which events need a user.**
+- `message`, `postback`, `follow` and `unfollow` need `source.userId`. In a group LINE documents it on message events only (fact 2), so a group postback without one yields nothing (question 15b).
+- `join`, `leave` and `memberLeft` never read one: their sender is always the conversation.
+- `unsend` needs none. Its message id is unique across LINE's whole Messaging API, and LINE asks that unsent content be made unusable, so a group or room unsend without a user is still reported, with the unknown actor as sender. Services match an unsend on channel, conversation and message id only.
+- A user source without a `userId` has no conversation, so nothing from it becomes an event.
+
+**Rules for the whole body.**
 - Malformed JSON, or a body without an `events` array, throws.
-- A single event object that fails its own shape is skipped, so it cannot sink the others in the same body.
+- An event with `mode: "standby"` yields nothing; Vela uses no module channel.
+- **An event's own shape:** an object with a non-empty string `webhookEventId`, a string `type`, a `timestamp` that is a non-negative safe integer a `Date` can hold, and a source of a known type whose id has LINE's documented shape (`U`, `C` or `R`, then 32 lowercase hex digits). Message ids, quoted ids and unsent ids must be decimal, since content downloads put them in a URL path. An event that fails its shape is skipped; no event id is ever made up.
+- Each drafted event goes through `InboundEvent.safeParse`, and one that fails is skipped. Telegram's parser calls `InboundEvent.parse`, which throws; on LINE a throw would answer 500 for a whole body of other people's events.
+- `destination` is ignored (§5.2).
 
 | LINE event | Source | `InboundEvent` |
 |---|---|---|
-| `message` text | user | `start` with `startParam` when the text is `^/start(?:[ \t]+([A-Za-z0-9_-]{1,64}))?[ \t]*$`; otherwise `text`. `messageId` = `message.id`; `replyToMessageId` = `quotedMessageId` |
-| `message` text | group or room | `text`, only when the text starts with `/` or has `quotedMessageId` (§3.2); otherwise nothing. `/start` in a group stays `text` |
-| `message` image | user | `image`, `media { kind: "image", providerFileId: message.id }`, `mediaGroupId` = `imageSet.id`; `other` when `contentProvider.type` is not `line` |
-| `message` audio | user | `voice`, `media { kind: "audio", providerFileId, durationMs: duration }`; `other` when not `line` |
+| `message` text | user | `start` with `startParam` when the text, without trailing whitespace, is `^/start(?:[^\S\r\n]+(\S[^\r\n]*))?$`; otherwise `text`. Any parameter on the first line counts, as on Telegram, so a damaged or edited token (an extra character, a trailing line break) reaches `handleInviteStart`, which answers `consent.invalid_link`, instead of onboarding and `help.private` |
+| `message` text | group or room | `text`, only when `text.trimStart()` starts with `/` (services trim before `parseAskCommand`) or it has `quotedMessageId` (§3.2); otherwise nothing. `/start` in a group stays `text` |
+| `message` image | user | `image`, `media { kind: "image", providerFileId: message.id, providerUniqueId: message.id }`, `mediaGroupId` = `imageSet.id`; `other` when `contentProvider.type` is not `line` |
+| `message` audio | user | `voice`, `media { kind: "audio", providerFileId, providerUniqueId, durationMs: duration }`; `other` when not `line` |
 | `message` video, file, location | user | `other` |
 | `message` sticker | user | `sticker`, `text` = `sticker.text` when present |
-| `message` of any content other than the text above | group or room | nothing |
+| `message` of any other type | user | nothing, so a type LINE adds later never arrives by accident |
+| `message` of any content other than the text above | group or room | nothing, read no further than its type |
 | `messageEdited` | any | nothing (D5) |
-| `unsend` | any | `unsent`, `messageId` = `unsend.messageId`. In a group or room without `source.userId`, the sender is the conversation (§5.9): an unsend needs no user, since its message id is unique across LINE |
-| `follow` | user | `followed` (`isUnblocked` is not relied on) |
+| `unsend` | any | `unsent`, `messageId` = `unsend.messageId`; the sender is `source.userId`, or the conversation when a group or room names no one |
+| `follow` | user | `followed` (`isUnblocked` is not read) |
 | `unfollow` | user | `blocked` |
 | `join` | group or room | `bot_added`; sender is the conversation (§5.9) |
 | `leave` | group or room | `bot_removed`; sender is the conversation |
 | `memberJoined` | group or room | nothing |
-| `memberLeft` | group or room | one `member_left` per member that has a `userId`: `subject` that user, sender the conversation, `eventId` `line:<webhookEventId>:<userId>` |
-| `postback` | user | `button`, `buttonData` = `postback.data`, no `messageId`; `params` ignored |
+| `memberLeft` | group or room | one `member_left` per member of type `user` with a `userId`, each person once: `subject` that user, sender the conversation, `eventId` `line:<webhookEventId>:<userId>` |
+| `postback` | user | `button`, `buttonData` = `postback.data` (not empty), no `messageId`; `params` ignored |
 | `postback` | group or room | `button` when `source.userId` is present; otherwise nothing |
+| `follow` or `unfollow` from a group; `join`, `leave` or `memberLeft` from a user | — | nothing |
 | `accountLink`, `beacon`, `membership`, `videoPlayComplete`, module events, `delivery`, any unknown type | — | nothing |
 
+**`providerUniqueId` is the message id.** LINE has no file identity, but its message id stays the same when an event is delivered again. `lightTheLight` records the media before inserting the answer, and `recordInboundMedia` deduplicates only on `providerUniqueId`, so without it a redelivered image or voice event would add a second media row that no answer references. Unlike Telegram's `file_unique_id`, it changes when a file is forwarded, which Vela does not rely on.
+
 Rules the tests prove:
-- every row above;
+- every row above, one fixture each, compared exactly;
+- every dropped group message kind: ordinary text, a text that only mentions Vela, a command from a user LINE does not name, a tap that names no one, an image, a voice note, a video, a file, a location, a sticker quoting Vela, an edit, and a member joining;
 - a body with two users' events yields both, in order;
 - an empty `events` array yields `[]`;
 - a redelivered event yields the same `eventId`;
-- the `until` arithmetic for a fresh event and for one redelivered 25 minutes after it happened (already past);
-- no group fixture of ordinary chat, a photo, a sticker, an edit, or a message without a user yields an event;
-- every event yielded passes `InboundEvent.parse`.
+- the `until` arithmetic for a fresh event, for one delivered 18½ minutes after it happened (capped at 19 minutes), and for one redelivered 25 minutes after it happened (already past);
+- the start variants: a bare `/start`, the invite, a trailing line break, a damaged token, an ideographic space, `/starting`, and a second line;
+- a malformed event between good ones is skipped: no id, an empty or numeric id, a timestamp that is a string, fractional, negative or out of range, an unknown source type, and ids of the wrong shape;
+- every event from every fixture passes `InboundEvent.parse` unchanged.
 
 ### 5.5 Sending
 
@@ -954,11 +975,12 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
    - Founder: nothing.
    - **Done** on `feat/line`.
 2. **The LINE adapter: verification and events.**
-   - Files: `packages/adapters/src/line/{verify,parse,testing}.ts`, `fixtures/webhook-*.json`, tests, `index.ts`.
+   - Files: `packages/adapters/src/line/{verify,parse,testing}.ts`, `fixtures/webhook-*.json`, tests; `src/constant-time.ts` and its test, moved out of `telegram/verify.ts`; `index.ts`, which exports only `LINE_SIGNATURE_HEADER`, since the adapter itself is written in step 3.
    - Tests: §5.3 and §5.4, with no LINE account.
    - Founder: nothing.
+   - **Done** on `feat/line`.
 3. **The LINE adapter: sending, errors, media, profiles, quota.**
-   - Files: `line/{client,send,retry-key,media,quota,adapter}.ts`, `fixtures/api-*.json` (push 200 and 409; reply 200 and 400; 400, 401, 403, 404, 413, 429 monthly, 429 rate, 500; content 200, 202→200, 404, 410; profile 200 and 404; quota), tests.
+   - Files: `line/{client,send,retry-key,media,quota,adapter}.ts`, the recording fake `fetch` in `line/testing.ts` (§5.1), `index.ts` (`createLineAdapter`, `LineAdapterOptions`), `fixtures/api-*.json` (push 200 and 409; reply 200 and 400; 400, 401, 403, 404, 413, 429 monthly, 429 rate, 500; content 200, 202→200, 404, 410; profile 200 and 404; quota), tests.
    - Tests, through a recording fake `fetch`:
      - the request shapes per kind and conversation;
      - quick replies only on the last object;

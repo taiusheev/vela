@@ -1,3 +1,4 @@
+export { LINE_SIGNATURE_HEADER } from "./line/verify.ts";
 export { createTelegramAdapter, type TelegramAdapterOptions } from "./telegram/adapter.ts";
 export type {
   TelegramApiOptions,
