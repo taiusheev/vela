@@ -19,5 +19,13 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["app", "src", "*.config.ts", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": [
+    "app",
+    "src",
+    "scripts",
+    "*.config.ts",
+    "*.config.mts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }

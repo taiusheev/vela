@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+
 /**
  * What the quiet notice needs (spec §14.1 A11, §8). The API route that will carry it does not
  * exist yet, so these fixtures hold the shapes it will answer with. Facts only: the sheet says
@@ -28,16 +30,29 @@ export interface QuietNotice {
   resolution?: string;
 }
 
-/** The demo's notice, worded as the live one is: her name, never a pronoun, and facts, never her words. */
-export const quietFixtureFor = (memberName: string): QuietNotice => ({
-  memberName,
+/**
+ * The demo's notice, worded as the live one is: her name, never a pronoun, and facts, never her
+ * words. It is read in the language active when it is built, which is while Today renders.
+ */
+export const quietFixtureFor = (name: string): QuietNotice => ({
+  memberName: name,
   usualTime: "08:00",
   facts: [
-    `Today's ask reached ${memberName} at 8:00, and again at 11:00.`,
-    `${memberName} last answered yesterday at 8:41.`,
+    t`Today's ask reached ${name} at 8:00, and again at 11:00.`,
+    t`${name} last answered yesterday at 8:41.`,
   ],
   contacts: [
-    { id: "c1", name: "Lena", relation: "neighbour", consented: true },
-    { id: "c2", name: "Petro", relation: "downstairs", consented: false },
+    {
+      id: "c1",
+      name: "Lena",
+      relation: t({ comment: "who a nearby contact is to her", message: "neighbour" }),
+      consented: true,
+    },
+    {
+      id: "c2",
+      name: "Petro",
+      relation: t({ comment: "who a nearby contact is to her", message: "downstairs" }),
+      consented: false,
+    },
   ],
 });

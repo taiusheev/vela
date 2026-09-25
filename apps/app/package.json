@@ -10,19 +10,25 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "start:staging": "node --env-file=.env.staging ../../node_modules/expo/bin/cli start --clear",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "i18n:extract": "lingui extract --clean",
+    "i18n:review": "node scripts/i18n-review.mts",
+    "test": "lingui check sync --clean && lingui check missing --locale zh-TW --mode catalog && vitest run"
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.20.0",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/literata": "^0.4.3",
     "@expo/metro-runtime": "~57.0.16",
+    "@lingui/core": "catalog:",
+    "@lingui/react": "catalog:",
     "@tanstack/react-query": "^5.103.2",
     "@vela/contracts": "workspace:*",
     "expo": "^57.0.24",
     "expo-constants": "~57.0.19",
     "expo-font": "~57.0.4",
     "expo-linking": "~57.0.10",
+    "expo-localization": "~57.0.2",
     "expo-router": "~57.0.22",
     "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",
@@ -34,5 +40,16 @@
     "react-native-screens": "~4.26.2",
     "react-native-svg": "15.15.4",
     "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@babel/parser": "catalog:",
+    "@lingui/babel-plugin-lingui-macro": "catalog:",
+    "@lingui/cli": "catalog:",
+    "@lingui/format-po": "catalog:",
+    "@lingui/metro-transformer": "catalog:",
+    "@types/node": "catalog:",
+    "@vela/copy": "workspace:*",
+    "pofile-ts": "catalog:",
+    "vitest": "catalog:"
   }
 }

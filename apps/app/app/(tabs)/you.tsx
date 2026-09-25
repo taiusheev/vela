@@ -1,12 +1,15 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
 import { Pressable, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAccount } from "../../src/auth/clerk.tsx";
 import { Light } from "../../src/components/light.tsx";
+import { LocaleChips } from "../../src/components/locale-chips.tsx";
 import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { useFamily } from "../../src/data/useFamily.ts";
 import { useToday } from "../../src/data/useToday.ts";
+import { useAppLocale } from "../../src/i18n/provider.tsx";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
@@ -55,6 +58,8 @@ export default function YouScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const account = useAccount();
+  const { t } = useLingui();
+  const language = useAppLocale();
   const { familyId, live: todayLive, trouble: todayTrouble, noAccount } = useToday();
   const { family, live, trouble, setPaused, leave, changing, refused } = useFamily(
     familyId,
@@ -64,7 +69,8 @@ export default function YouScreen() {
   const [leaving, setLeaving] = useState(false);
   const [exampleNote, setExampleNote] = useState(false);
 
-  const her = family.keptLight[0]?.name ?? "Mom";
+  const her = family.keptLight[0]?.name ?? t`Mom`;
+  const { familyName } = family;
 
   return (
     <ScrollView
@@ -76,7 +82,10 @@ export default function YouScreen() {
         gap: space.xl,
       }}
     >
-      <Words variant="title">You</Words>
+      {/* The tab's own name, so the title reads as the tab bar does. */}
+      <Words variant="title">
+        <Trans context="tab">You</Trans>
+      </Words>
       <View style={{ gap: space.xs }}>
         <Words variant="heading">{family.me.name}</Words>
         <Words variant="caption" tone="ink3">
@@ -85,23 +94,27 @@ export default function YouScreen() {
       </View>
       {trouble ? (
         <Words variant="body" tone="ink2">
-          Your family could not be reached just now, so this is the example one.
+          <Trans>Your family could not be reached just now, so this is the example one.</Trans>
         </Words>
       ) : null}
 
       <View style={{ gap: space.m }}>
-        <Eyebrow>YOUR OWN LIGHT</Eyebrow>
+        <Eyebrow>
+          <Trans>Your own light</Trans>
+        </Eyebrow>
         {/* Symmetry (spec §9): anyone can keep a light, and would be seen as she is. */}
         <Row
           leading={<Light state={family.me.lightOn ? "lit" : "resting"} height={24} />}
-          title="Keep a light on for me"
-          caption={`${her} would see your light, and you choose who else. Not in the app yet.`}
+          title={t`Keep a light on for me`}
+          caption={t`${her} would see your light, and you choose who else. Not in the app yet.`}
           trailing={<Fixed on={family.me.lightOn} />}
         />
       </View>
 
       <View style={{ gap: space.m }}>
-        <Eyebrow>FAMILY</Eyebrow>
+        <Eyebrow>
+          <Trans>Family</Trans>
+        </Eyebrow>
         <Card>
           {family.keptLight.map((member, index) => (
             <View key={member.memberId} style={{ gap: space.m }}>
@@ -146,12 +159,29 @@ export default function YouScreen() {
       </View>
 
       <View style={{ gap: space.m }}>
-        <Eyebrow>QUIET</Eyebrow>
+        <Eyebrow>
+          <Trans>Quiet</Trans>
+        </Eyebrow>
         <Row
-          title="One moment a day"
-          caption="Vela sends you at most one notification a day. Notifications are not on in this build yet."
+          title={t`One moment a day`}
+          caption={t`Vela sends you at most one notification a day. Notifications are not on in this build yet.`}
           trailing={<Fixed on />}
         />
+      </View>
+
+      <View style={{ gap: space.m }}>
+        <Eyebrow>
+          <Trans>Language</Trans>
+        </Eyebrow>
+        <LocaleChips />
+        <Words variant="caption" tone="ink3">
+          <Trans>The app's words. Her mornings keep the language she reads.</Trans>
+        </Words>
+        {language.refused ? (
+          <Words variant="caption" tone="ink2">
+            <Trans>That did not go through. Try again in a moment.</Trans>
+          </Words>
+        ) : null}
       </View>
 
       <Pressable
@@ -160,18 +190,18 @@ export default function YouScreen() {
         onPress={() => setSeesOpen((open) => !open)}
       >
         <Words variant="button" tone="action">
-          What the family sees about you
+          <Trans>What the family sees about you</Trans>
         </Words>
       </Pressable>
       {seesOpen ? (
         <Card>
           <Words variant="body" tone="ink2">
-            Your name, the asks you write, and your replies.
+            <Trans>Your name, the asks you write, and your replies.</Trans>
           </Words>
           <Words variant="body" tone="ink2">
             {family.me.lightOn
-              ? "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
-              : "Your light is off, so nothing about your mornings is shown."}
+              ? t`With your light on, they also see whether you answered each morning and when, and are told if it stays quiet.`
+              : t`Your light is off, so nothing about your mornings is shown.`}
           </Words>
         </Card>
       ) : null}
@@ -182,8 +212,8 @@ export default function YouScreen() {
           {family.me.paused ? (
             <Words variant="body" tone="ink2">
               {family.me.organiser
-                ? "You are paused: no turns come to you, and you are not told if it goes quiet."
-                : "You are paused: no turns come to you."}
+                ? t`You are paused: no turns come to you, and you are not told if it goes quiet.`
+                : t`You are paused: no turns come to you.`}
             </Words>
           ) : null}
           <View style={{ flexDirection: "row", gap: space.xl }}>
@@ -193,7 +223,7 @@ export default function YouScreen() {
               onPress={() => setPaused(!family.me.paused)}
             >
               <Words variant="button" tone="action">
-                {family.me.paused ? "Resume" : "Pause"}
+                {family.me.paused ? t`Resume` : t`Pause`}
               </Words>
             </Pressable>
             <Pressable
@@ -205,7 +235,7 @@ export default function YouScreen() {
               }}
             >
               <Words variant="button" tone="action">
-                Leave
+                <Trans>Leave</Trans>
               </Words>
             </Pressable>
           </View>
@@ -216,13 +246,17 @@ export default function YouScreen() {
           )}
           {leaving ? (
             <Card>
-              <Words variant="heading">{`Leave ${family.familyName}?`}</Words>
+              <Words variant="heading">
+                <Trans>Leave {familyName}?</Trans>
+              </Words>
               <Words variant="body" tone="ink2">
-                You will stop seeing the family's days and taking turns. Thirty days on, what is
-                kept about you is deleted.
+                <Trans>
+                  You will stop seeing the family's days and taking turns. Thirty days on, what is
+                  kept about you is deleted.
+                </Trans>
               </Words>
               <SecondaryButton
-                label={changing ? "Leaving…" : "Leave the family"}
+                label={changing ? t`Leaving…` : t`Leave the family`}
                 onPress={() => {
                   if (!live) {
                     setLeaving(false);
@@ -234,14 +268,14 @@ export default function YouScreen() {
               />
               <Pressable accessibilityRole="button" onPress={() => setLeaving(false)}>
                 <Words variant="button" tone="action">
-                  Stay
+                  <Trans>Stay</Trans>
                 </Words>
               </Pressable>
             </Card>
           ) : null}
           {exampleNote ? (
             <Words variant="caption" tone="ink3">
-              This is the example family, so nobody left.
+              <Trans>This is the example family, so nobody left.</Trans>
             </Words>
           ) : null}
         </View>
@@ -249,25 +283,27 @@ export default function YouScreen() {
 
       {account.signedIn ? (
         <Card>
-          <Eyebrow>ACCOUNT</Eyebrow>
+          <Eyebrow>
+            <Trans>Account</Trans>
+          </Eyebrow>
           {/* The id the development seed takes, so setting a family up needs no dashboard. */}
           <Words variant="bodyMedium" selectable>
             {account.userId ?? "—"}
           </Words>
           <Words variant="caption" tone="ink3">
             {live || todayLive
-              ? "Your account id. Nobody but you needs it."
+              ? t`Your account id. Nobody but you needs it.`
               : noAccount
-                ? "No family is set up on this account yet."
+                ? t`No family is set up on this account yet.`
                 : todayTrouble
-                  ? "Your family could not be reached just now."
-                  : "Looking for your family on this account…"}
+                  ? t`Your family could not be reached just now.`
+                  : t`Looking for your family on this account…`}
           </Words>
-          <SecondaryButton label="Sign out" onPress={() => void account.signOut()} />
+          <SecondaryButton label={t`Sign out`} onPress={() => void account.signOut()} />
         </Card>
       ) : (
         <Words variant="caption" tone="ink3">
-          You are not signed in, so this is the example family.
+          <Trans>You are not signed in, so this is the example family.</Trans>
         </Words>
       )}
     </ScrollView>

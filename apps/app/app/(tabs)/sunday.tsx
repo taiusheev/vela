@@ -1,3 +1,4 @@
+import { Trans } from "@lingui/react/macro";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Words } from "../../src/components/ui.tsx";
@@ -17,9 +18,12 @@ export default function SundayScreen() {
         gap: space.m,
       }}
     >
-      <Words variant="title">Sunday</Words>
+      {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
+      <Words variant="title">
+        <Trans context="tab">Sunday</Trans>
+      </Words>
       <Words variant="body" tone="ink2">
-        Not built yet.
+        <Trans>Not built yet.</Trans>
       </Words>
     </View>
   );

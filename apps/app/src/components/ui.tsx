@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react";
 import { type ReactNode, useState } from "react";
 import { Pressable, type StyleProp, Text, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
@@ -107,9 +108,26 @@ export function ReceiptChip({ label }: { label: string }) {
   );
 }
 
+/**
+ * The small label over a card. Its words are written in sentence case: English shows them in
+ * capitals, and Chinese as written with no extra tracking, since the design system never sets CJK in
+ * capitals (Typography, Label).
+ */
 export function Eyebrow({ children }: { children: ReactNode }) {
   const palette = usePalette();
-  return <Text style={[type.label, { color: palette.ink3 }]}>{children}</Text>;
+  const { i18n } = useLingui();
+  const english = i18n.locale === "en";
+  return (
+    <Text
+      style={[
+        type.label,
+        english ? { textTransform: "uppercase" } : { letterSpacing: 0 },
+        { color: palette.ink3 },
+      ]}
+    >
+      {children}
+    </Text>
+  );
 }
 
 export function Hairline() {

@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ComposeReply } from "@vela/contracts";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -17,32 +18,22 @@ import {
   Words,
 } from "../../src/components/ui.tsx";
 import type { ExchangeReply } from "../../src/data/exchanges.ts";
+import { replyLine } from "../../src/data/lines.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
-
-function replyWords(reply: ExchangeReply): string {
-  return reply.reaction === undefined
-    ? `${reply.from}: ${reply.text ?? ""}`
-    : `${reply.from} sent a ${reply.reaction}`;
-}
-
-/** What the caption under the composer may promise, which depends on the day (API contract §4). */
-function reachLine(reachesHer: boolean | undefined): string {
-  return reachesHer === true
-    ? "She hears it in her read-back tomorrow morning."
-    : "The family sees it here. She will not hear it: her mornings read back only her latest day.";
-}
 
 export default function ExchangeScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const account = useAccount();
+  const { t } = useLingui();
   const queries = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { exchanges, live } = useExchanges();
   const exchange = exchanges.find((candidate) => candidate.id === id);
-  const [sent, setSent] = useState<ExchangeReply[]>([]);
+  // Words sent in the demo, as typed: the line around them is built in the language shown.
+  const [sent, setSent] = useState<string[]>([]);
   const [text, setText] = useState("");
   const keyFor = useIdempotencyKey("reply");
   const demo = !apiConfigured();
@@ -63,22 +54,37 @@ export default function ExchangeScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: palette.bg, padding: space.margin }}>
         <Words variant="body" tone="ink2">
-          {live || demo ? "That exchange is not here." : "Looking for that exchange…"}
+          {live || demo ? (
+            <Trans>That exchange is not here.</Trans>
+          ) : (
+            <Trans>Looking for that exchange…</Trans>
+          )}
         </Words>
       </View>
     );
   }
 
-  const replies = [...exchange.replies, ...sent];
+  const asker = exchange.asker;
+  const recipient = exchange.recipient;
+  const time = exchange.answer?.at ?? "";
+  const you = t`You`;
+  const replies = [
+    ...exchange.replies,
+    ...sent.map(
+      (words, index): ExchangeReply => ({
+        id: `local-${index}`,
+        from: you,
+        kind: "text",
+        text: words,
+      }),
+    ),
+  ];
   const answered = exchange.answer !== undefined;
   const words = text.trim();
   const send = () => {
     if (words.length === 0) return;
     if (demo) {
-      setSent((earlier) => [
-        ...earlier,
-        { id: `local-${earlier.length}`, from: "You", text: words },
-      ]);
+      setSent((earlier) => [...earlier, words]);
       setText("");
       return;
     }
@@ -88,12 +94,17 @@ export default function ExchangeScreen() {
   const refusal = post.isError ? replyRefusal(post.error) : null;
   const trouble =
     refusal === "not_answered"
-      ? "She has not answered yet, so there is nothing to reply to."
+      ? t`She has not answered yet, so there is nothing to reply to.`
       : refusal === "her_own"
-        ? "This is your own morning; replies are for the family."
+        ? t`This is your own morning; replies are for the family.`
         : post.isError
-          ? "That could not be sent just now. Your words are kept."
+          ? t`That could not be sent just now. Your words are kept.`
           : null;
+  // What the caption under the composer may promise, which depends on the day (API contract §4).
+  const reach =
+    exchange.repliesReachHer === true
+      ? t`She hears it in her read-back tomorrow morning.`
+      : t`The family sees it here. She will not hear it: her mornings read back only her latest day.`;
 
   return (
     <>
@@ -111,22 +122,21 @@ export default function ExchangeScreen() {
       >
         <Card>
           <Eyebrow>
-            {[exchange.day, `${exchange.asker} asked`]
-              .filter((part) => part.length > 0)
-              .join(" · ")
-              .toUpperCase()}
+            {[exchange.day, t`${asker} asked`].filter((part) => part.length > 0).join(" · ")}
           </Eyebrow>
           <Words variant="voice">{exchange.ask}</Words>
           {exchange.answer === undefined ? (
             <Words variant="body" tone="ink2">
-              No word yet.
+              <Trans>No word yet.</Trans>
             </Words>
           ) : (
             <>
               <Hairline />
               <Words variant="voice">{exchange.answer.text}</Words>
               <Words variant="caption" tone="ink3">
-                {`${exchange.recipient} answered at ${exchange.answer.at}`}
+                <Trans>
+                  {recipient} answered at {time}
+                </Trans>
               </Words>
               {exchange.answer.original === undefined ? null : (
                 <Words variant="body" tone="ink2">
@@ -139,15 +149,17 @@ export default function ExchangeScreen() {
         </Card>
 
         <View style={{ gap: space.m }}>
-          <Words variant="heading">What the family said</Words>
+          <Words variant="heading">
+            <Trans>What the family said</Trans>
+          </Words>
           {replies.length === 0 ? (
             <Words variant="body" tone="ink3">
-              Nothing yet.
+              <Trans>Nothing yet.</Trans>
             </Words>
           ) : (
             replies.map((reply) => (
               <Words key={reply.id} variant="body" tone="ink2">
-                {replyWords(reply)}
+                {replyLine(reply.from, reply.kind, reply.text)}
               </Words>
             ))
           )}
@@ -160,12 +172,14 @@ export default function ExchangeScreen() {
         */}
         {answered ? (
           <View style={{ gap: space.m }}>
-            <Words variant="heading">Reply</Words>
+            <Words variant="heading">
+              <Trans>Reply</Trans>
+            </Words>
             <TextField
               value={text}
               onChangeText={setText}
-              placeholder="Say something short"
-              helper={reachLine(exchange.repliesReachHer)}
+              placeholder={t`Say something short`}
+              helper={reach}
               multiline
             />
             {trouble === null ? null : (
@@ -174,14 +188,14 @@ export default function ExchangeScreen() {
               </Words>
             )}
             <PrimaryButton
-              label={post.isPending ? "Sending…" : "Send"}
+              label={post.isPending ? t`Sending…` : t`Send`}
               onPress={send}
               disabled={post.isPending || words.length === 0}
             />
           </View>
         ) : (
           <Words variant="body" tone="ink2">
-            You can reply once she has answered.
+            <Trans>You can reply once she has answered.</Trans>
           </Words>
         )}
       </ScrollView>

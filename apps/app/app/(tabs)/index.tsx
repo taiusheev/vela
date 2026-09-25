@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -51,34 +52,38 @@ function LightsRow({
 }
 
 function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }) {
-  const recipient = exchange.recipient.toUpperCase();
+  const { t } = useLingui();
+  const asker = exchange.asker;
+  const recipient = exchange.recipient;
+  const time = exchange.answer?.at;
   return (
     <Card>
       <Eyebrow>
-        {exchange.asker === undefined
-          ? `A HELLO FOR ${recipient}`
-          : `${exchange.asker.toUpperCase()} ASKED ${recipient}`}
+        {asker === undefined ? t`A hello for ${recipient}` : t`${asker} asked ${recipient}`}
       </Eyebrow>
       {exchange.ask === undefined ? null : <Words variant="voice">{exchange.ask}</Words>}
       {exchange.answer === undefined ? (
         <Words variant="body" tone="ink2">
-          No word yet today.
+          <Trans>No word yet today.</Trans>
         </Words>
       ) : (
         <>
           <Hairline />
           <Words variant="voice">{exchange.answer.text}</Words>
           <Words variant="caption" tone="ink3">
-            {`${exchange.recipient} answered at ${exchange.answer.at}`}
+            <Trans>
+              {recipient} answered at {time}
+            </Trans>
           </Words>
         </>
       )}
       {exchange.replies.length > 0 ? (
         <>
           <Hairline />
+          {/* Each reply is its whole line already, with the name inside it. */}
           {exchange.replies.map((reply) => (
             <Words key={`${reply.from}:${reply.text}`} variant="body" tone="ink2">
-              {`${reply.from} ${reply.text}`}
+              {reply.text}
             </Words>
           ))}
         </>
@@ -90,28 +95,31 @@ function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }
 
 function TomorrowCard({ tomorrow }: { tomorrow: NonNullable<Today["tomorrow"]> }) {
   const palette = usePalette();
+  const { t } = useLingui();
+  const by = tomorrow.asked?.by;
+  const name = tomorrow.name;
   return (
     <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
       <Eyebrow>
         {tomorrow.asked !== undefined
-          ? `TOMORROW · ${tomorrow.asked.by.toUpperCase()} ASKED`
+          ? t`Tomorrow · ${by} asked`
           : tomorrow.mine
-            ? "TOMORROW · YOUR TURN"
-            : `TOMORROW · ${tomorrow.name.toUpperCase()}'S TURN`}
+            ? t`Tomorrow · your turn`
+            : t`Tomorrow · ${name}'s turn`}
       </Eyebrow>
       {/* A claimed morning shows the ask that claimed it; only a free one offers a suggestion. */}
       {tomorrow.asked !== undefined ? (
         <>
           <Words variant="voice">{tomorrow.asked.text}</Words>
           <Words variant="caption" tone="ink3">
-            Into her morning.
+            <Trans>Into her morning.</Trans>
           </Words>
         </>
       ) : tomorrow.suggestion === undefined ? null : (
         <>
           <Words variant="voice">{tomorrow.suggestion}</Words>
           <Words variant="button" tone="action">
-            Use this
+            <Trans>Use this</Trans>
           </Words>
         </>
       )}
@@ -121,8 +129,10 @@ function TomorrowCard({ tomorrow }: { tomorrow: NonNullable<Today["tomorrow"]> }
 
 export default function TodayScreen() {
   const palette = usePalette();
+  const { t } = useLingui();
   const [quietOpen, setQuietOpen] = useState(false);
-  const [resolution, setResolution] = useState<string | undefined>();
+  // How the example notice was settled; its sentence is chosen as it renders, in the language shown.
+  const [resolution, setResolution] = useState<"fine" | "wait" | undefined>();
   const insets = useSafeAreaInsets();
   const { today, trouble, noAccount, noFamily, live, organiser, familyId } = useToday();
   // A first run, or an account that belongs to no family yet: onboarding is where that starts (A1).
@@ -152,9 +162,18 @@ export default function TodayScreen() {
       setResolution(undefined);
     }
   }, [quietKey, quietEvent, mayOpen, live]);
+  const name = quiet?.displayName ?? t`Mom`;
   const notice = live
     ? liveQuiet.notice
-    : { ...quietFixtureFor(quiet?.displayName ?? "Mom"), resolution };
+    : {
+        ...quietFixtureFor(name),
+        resolution:
+          resolution === "fine"
+            ? t`You said ${name} is fine. Nothing else was sent.`
+            : resolution === "wait"
+              ? t`Waiting two hours. You will hear again at 13:00 if it is still quiet.`
+              : undefined,
+      };
   // A13: the first time an organiser sees her lit with no Vela Light yet, the offer opens, once on
   // this device; You opens it again whenever they want it.
   const lit = today.lights.find((light) => light.state === "lit");
@@ -177,7 +196,8 @@ export default function TodayScreen() {
       current = false;
     };
   }, [offerFor]);
-  const recipient = today.lights[0]?.displayName ?? "her";
+  const recipient =
+    today.lights[0]?.displayName ?? t({ comment: "stands in for her name", message: "her" });
 
   return (
     <ScrollView
@@ -192,33 +212,27 @@ export default function TodayScreen() {
       <LightsRow lights={today.lights} onQuiet={() => (mayOpen ? openQuiet() : undefined)} />
       {noAccount || noFamily ? (
         <Words variant="body" tone="ink2">
-          Setting up your family…
+          <Trans>Setting up your family…</Trans>
         </Words>
       ) : trouble ? (
         <Words variant="body" tone="ink2">
-          Today could not be reached just now.
+          <Trans>Today could not be reached just now.</Trans>
         </Words>
       ) : null}
       {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
       {today.tomorrow === undefined ? null : <TomorrowCard tomorrow={today.tomorrow} />}
-      <PrimaryButton label={`Ask ${recipient} something`} onPress={() => router.push("/ask")} />
+      <PrimaryButton label={t`Ask ${recipient} something`} onPress={() => router.push("/ask")} />
       {notice === undefined ? null : (
         <QuietNoticeSheet
           notice={notice}
           visible={quietOpen && (live ? openEventId !== undefined : quiet !== undefined)}
           onFine={() => {
             if (live) liveQuiet.settle("fine");
-            else
-              setResolution(
-                `You said ${quiet?.displayName ?? "Mom"} is fine. Nothing else was sent.`,
-              );
+            else setResolution("fine");
           }}
           onWait={() => {
             if (live) liveQuiet.settle("wait");
-            else
-              setResolution(
-                "Waiting two hours. You will hear again at 13:00 if it is still quiet.",
-              );
+            else setResolution("wait");
           }}
           onClose={() => {
             setQuietOpen(false);

@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -28,11 +30,17 @@ export interface FamilyView {
 function refusedLine(error: unknown): string | undefined {
   const reason = memberChangeRefusal(error);
   if (reason === "last_organiser") {
-    return "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first.";
+    return t`You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first.`;
   }
   if (reason === "kept_light")
-    return "Your light is paused from your own chat, where your mornings arrive.";
-  return error === null ? undefined : "That did not go through. Try again in a moment.";
+    return t`Your light is paused from your own chat, where your mornings arrive.`;
+  return error === null ? undefined : t`That did not go through. Try again in a moment.`;
+}
+
+/** The example family, paused or not as the reader last chose; nothing is sent for it. */
+function exampleFamily(paused: boolean): YouFamily {
+  const example = youFixture();
+  return { ...example, me: { ...example.me, paused } };
 }
 
 /**
@@ -41,6 +49,8 @@ function refusedLine(error: unknown): string | undefined {
  * since both change what Today and the tabs show.
  */
 export function useFamily(familyId: string | undefined, enabled: boolean): FamilyView {
+  // Its lines are built in the app's language, so a change of language builds them again.
+  useLingui();
   const account = useAccount();
   const queries = useQueryClient();
   const pauseKey = useIdempotencyKey("pause");
@@ -57,9 +67,7 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
     queryFn: async () => fetchFamily(familyId ?? "", await account.token()),
   });
   const live = read.data !== undefined;
-  const family = live
-    ? toYouFamily(read.data, me.data)
-    : { ...youFixture, me: { ...youFixture.me, paused: examplePaused } };
+  const family = live ? toYouFamily(read.data, me.data) : exampleFamily(examplePaused);
 
   const pause = useMutation({
     mutationFn: async (paused: boolean) =>

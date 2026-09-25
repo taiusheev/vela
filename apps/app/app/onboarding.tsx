@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiCreatedFamily, CreateFamily } from "@vela/contracts";
 import { router, Stack } from "expo-router";
@@ -25,6 +26,7 @@ import {
   wakeTimes,
 } from "../src/data/onboarding.ts";
 import { useToday } from "../src/data/useToday.ts";
+import { useAppLocale } from "../src/i18n/provider.tsx";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
@@ -38,6 +40,8 @@ type Step = "who" | "invite" | "ready";
 export default function OnboardingScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useLingui();
+  const { locale } = useAppLocale();
   const account = useAccount();
   const queries = useQueryClient();
   const { noAccount } = useToday();
@@ -64,11 +68,12 @@ export default function OnboardingScreen() {
   const create = useMutation({
     mutationFn: async () => {
       const token = await account.token();
-      // A first run has no account yet: the organiser's name, language and zone live there.
+      // A first run has no account yet: the organiser's name, language and zone live there. The
+      // language is the one the app is in, which the organiser chose or the device gave.
       if (noAccount) {
         const profile = {
           display_name: yourName.trim(),
-          language: "en" as const,
+          language: locale,
           tz: deviceZone(zone),
         };
         await provisionAccount(profile, provisionKey(profile), token);
@@ -98,11 +103,13 @@ export default function OnboardingScreen() {
 
   const needsYourName = noAccount && yourName.trim().length === 0;
   const ready = herName.trim().length > 0 && !needsYourName && !create.isPending;
-  const arrival = arrivalAfter(wake);
+  // When her morning comes: after the waking time chosen so far, then as the family was made.
+  const time = created?.kept_light_member.arrival_time ?? arrivalAfter(wake);
+  const name = created?.kept_light_member.display_name;
   const refusal = create.isError
     ? alreadyOrganiser(create.error)
-      ? "This account already runs a family."
-      : "That could not be saved just now. Nothing was lost; try again."
+      ? t`This account already runs a family.`
+      : t`That could not be saved just now. Nothing was lost; try again.`
     : null;
 
   const share = async () => {
@@ -128,30 +135,34 @@ export default function OnboardingScreen() {
       >
         {step === "who" ? (
           <>
-            <Words variant="title">Who are you keeping a light on for?</Words>
+            <Words variant="title">
+              <Trans>Who are you keeping a light on for?</Trans>
+            </Words>
             {noAccount ? (
               <TextField
                 value={yourName}
                 onChangeText={setYourName}
                 placeholder="Mia"
-                helper="Your name, as the family says it."
+                helper={t`Your name, as the family says it.`}
               />
             ) : null}
             <TextField
               value={herName}
               onChangeText={setHerName}
-              placeholder="Mom"
-              helper="Her name, as the family calls her."
+              placeholder={t`Mom`}
+              helper={t`Her name, as the family calls her.`}
             />
             <TextField
               value={address}
               onChangeText={setAddress}
-              placeholder="Mrs Chen"
-              helper="How Vela greets her each morning."
+              placeholder={t`Mrs Chen`}
+              helper={t`How Vela greets her each morning.`}
             />
 
             <View style={{ gap: space.m }}>
-              <Words variant="heading">She reads</Words>
+              <Words variant="heading">
+                <Trans>She reads</Trans>
+              </Words>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
                 {languages.map((choice) => (
                   <Chip
@@ -165,12 +176,14 @@ export default function OnboardingScreen() {
             </View>
 
             <View style={{ gap: space.m }}>
-              <Words variant="heading">She lives in</Words>
+              <Words variant="heading">
+                <Trans>She lives in</Trans>
+              </Words>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
                 {countries.map((choice) => (
                   <Chip
                     key={choice.code}
-                    label={choice.label}
+                    label={i18n._(choice.label)}
                     selected={countryCode === choice.code}
                     onPress={() => chooseCountry(choice.code)}
                   />
@@ -181,7 +194,7 @@ export default function OnboardingScreen() {
                   {country.zones.map((choice) => (
                     <Chip
                       key={choice.zone}
-                      label={choice.label}
+                      label={i18n._(choice.label)}
                       selected={zone === choice.zone}
                       onPress={() => setZone(choice.zone)}
                     />
@@ -191,19 +204,21 @@ export default function OnboardingScreen() {
             </View>
 
             <View style={{ gap: space.m }}>
-              <Words variant="heading">She usually wakes at</Words>
+              <Words variant="heading">
+                <Trans>She usually wakes at</Trans>
+              </Words>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-                {wakeTimes.map((time) => (
+                {wakeTimes.map((choice) => (
                   <Chip
-                    key={time}
-                    label={time}
-                    selected={wake === time}
-                    onPress={() => setWake(time)}
+                    key={choice}
+                    label={choice}
+                    selected={wake === choice}
+                    onPress={() => setWake(choice)}
                   />
                 ))}
               </View>
               <Words variant="body" tone="ink2">
-                {`Her morning comes at ${arrival}, half an hour after she wakes.`}
+                <Trans>Her morning comes at {time}, half an hour after she wakes.</Trans>
               </Words>
             </View>
 
@@ -213,50 +228,61 @@ export default function OnboardingScreen() {
               </Words>
             )}
             <PrimaryButton
-              label={create.isPending ? "Setting up…" : "Next"}
+              label={create.isPending ? t`Setting up…` : t`Next`}
               onPress={() => create.mutate()}
               disabled={!ready}
             />
             {create.isError && alreadyOrganiser(create.error) ? (
-              <SecondaryButton label="Go to Today" onPress={() => router.replace("/")} />
+              <SecondaryButton label={t`Go to Today`} onPress={() => router.replace("/")} />
             ) : null}
           </>
         ) : null}
 
         {step === "invite" && created !== null ? (
           <>
-            <Words variant="title">{`Now ask ${created.kept_light_member.display_name}`}</Words>
+            <Words variant="title">
+              <Trans>Now ask {name}</Trans>
+            </Words>
             <Words variant="body" tone="ink2">
-              {`Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her.`}
+              <Trans>
+                Nothing reaches her until she says yes. Send her these words; the link tells her
+                what Vela is and asks her.
+              </Trans>
             </Words>
             <Card>
-              <Eyebrow>WHAT YOU SEND HER</Eyebrow>
+              <Eyebrow>
+                <Trans>What you send her</Trans>
+              </Eyebrow>
               <Words variant="voice" selectable>
                 {created.invite.text}
               </Words>
             </Card>
             <Words variant="caption" tone="ink3">
-              She answers on Telegram for now. LINE and WhatsApp come next.
+              <Trans>She answers on Telegram for now. LINE and WhatsApp come next.</Trans>
             </Words>
             {shareTrouble ? (
               <Words variant="body" tone="ink2">
-                This device cannot share from here. Copy the words above and send them to her
-                yourself.
+                <Trans>
+                  This device cannot share from here. Copy the words above and send them to her
+                  yourself.
+                </Trans>
               </Words>
             ) : null}
-            <PrimaryButton label="Send it to her" onPress={() => void share()} />
-            <SecondaryButton label="I have sent it" onPress={() => setStep("ready")} />
+            <PrimaryButton label={t`Send it to her`} onPress={() => void share()} />
+            <SecondaryButton label={t`I have sent it`} onPress={() => setStep("ready")} />
           </>
         ) : null}
 
         {step === "ready" && created !== null ? (
           <View style={{ alignItems: "center", gap: space.l }}>
             <Light state="resting" height={120} />
-            <Words variant="title">The light is ready</Words>
-            <Words variant="body" tone="ink2">
-              {`Her first morning is the day after she says yes, at ${created.kept_light_member.arrival_time}.`}
+            <Words variant="title">
+              <Trans>The light is ready</Trans>
             </Words>
-            <PrimaryButton label="Go to Today" onPress={() => router.replace("/")} />
+            <Words variant="body" tone="ink2">
+              <Trans>Her first morning is the day after she says yes, at {time}.</Trans>
+            </Words>
+            <PrimaryButton label={t`Go to Today`} onPress={() => router.replace("/")} />
           </View>
         ) : null}
       </ScrollView>

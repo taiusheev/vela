@@ -24,11 +24,18 @@ minimumReleaseAgeExclude:
 # One version of every dependency across the monorepo. Change versions here only.
 catalog:
   "@anthropic-ai/sdk": 0.125.0
+  "@babel/parser": 7.29.9
   "@biomejs/biome": 2.5.13
   "@cloudflare/vitest-pool-workers": 0.22.0
   "@cloudflare/workers-types": 5.20260911.1
   "@electric-sql/pglite": 0.5.8
   "@electric-sql/pglite-socket": 0.2.11
+  "@lingui/babel-plugin-lingui-macro": 6.8.0
+  "@lingui/cli": 6.8.0
+  "@lingui/core": 6.8.0
+  "@lingui/format-po": 6.8.0
+  "@lingui/metro-transformer": 6.8.0
+  "@lingui/react": 6.8.0
   "@types/node": 22.20.2
   "@types/pg": 8.23.1
   drizzle-kit: 0.31.10
@@ -36,6 +43,7 @@ catalog:
   hono: 4.13.7
   jose: 6.2.12
   pg: 8.23.0
+  pofile-ts: 4.0.3
   turbo: 2.10.12
   typescript: 7.0.2
   vitest: 4.1.11

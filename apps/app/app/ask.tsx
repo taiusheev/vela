@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack } from "expo-router";
@@ -33,6 +34,7 @@ type When = "tomorrow" | "another_day" | "whenever";
 export default function AskScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
   const { today, familyId, live } = useToday();
@@ -87,21 +89,26 @@ export default function AskScreen() {
     compose.mutate({ recipient_id: recipient.memberId, type, text: text.trim(), ...timing });
   }
 
-  const name = recipient?.displayName ?? "her";
+  const name = recipient?.displayName ?? t({ comment: "stands in for her name", message: "her" });
   const written = text.trim().length > 0;
   const trouble = compose.isError && askConflict(compose.error) === null;
   const waiting = !demo && !ready;
   const hold = waiting
     ? paused
-      ? `${name}'s light is paused just now, so nothing can be sent into her morning.`
+      ? t`${name}'s light is paused just now, so nothing can be sent into her morning.`
       : invited
-        ? `${name} has not said yes yet. Once she does, her first morning is the next day.`
-        : "Waiting for today to arrive. Your words are kept."
+        ? t`${name} has not said yes yet. Once she does, her first morning is the next day.`
+        : t`Waiting for today to arrive. Your words are kept.`
     : null;
+  const suggestion = suggestionFixture();
+  const language = i18n._(recipientLanguage);
+  const holder = taken?.taken_by;
+  // Named, never "the day after": the next free morning can be several days out.
+  const day = taken?.date_alternative == null ? null : dayName(taken.date_alternative);
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: `Ask ${name} something` }} />
+      <Stack.Screen options={{ headerShown: true, title: t`Ask ${name} something` }} />
       <ScrollView
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
@@ -112,18 +119,22 @@ export default function AskScreen() {
         }}
       >
         <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
-          <Eyebrow>PROMPT · FROM HER OWN WORDS</Eyebrow>
-          <Words variant="voice">{suggestionFixture.text}</Words>
-          <SecondaryButton label="Use this" onPress={() => setText(suggestionFixture.text)} />
+          <Eyebrow>
+            <Trans>Prompt · from her own words</Trans>
+          </Eyebrow>
+          <Words variant="voice">{suggestion.text}</Words>
+          <SecondaryButton label={t`Use this`} onPress={() => setText(suggestion.text)} />
         </Card>
 
         <View style={{ gap: space.m }}>
-          <Words variant="heading">What are you sending?</Words>
+          <Words variant="heading">
+            <Trans>What are you sending?</Trans>
+          </Words>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
             {askTypes.map((option) => (
               <Chip
                 key={option.kind}
-                label={option.label}
+                label={i18n._(option.label)}
                 selected={option.kind === kind}
                 disabled={!option.available}
                 onPress={() => setKind(option.kind)}
@@ -136,42 +147,45 @@ export default function AskScreen() {
           <TextField
             value={text}
             onChangeText={setText}
-            placeholder="Say it the way you would say it"
-            helper={`She reads it in ${recipientLanguage}. One question at a time.`}
+            placeholder={t`Say it the way you would say it`}
+            helper={t`She reads it in ${language}. One question at a time.`}
             multiline
           />
           {preview.length === 0 ? null : (
             <Card>
-              <Eyebrow>{`SHE WILL SEE · ${recipientLanguage.toUpperCase()}`}</Eyebrow>
+              <Eyebrow>
+                <Trans>She will see · {language}</Trans>
+              </Eyebrow>
               <Words variant="voice">{preview}</Words>
             </Card>
           )}
         </View>
 
         <View style={{ gap: space.m }}>
-          <Words variant="heading">When</Words>
+          <Words variant="heading">
+            <Trans comment="heading over the morning the ask arrives">When</Trans>
+          </Words>
           {taken === null ? null : (
             <Words variant="body" tone="ink2">
-              {`${taken.taken_by} already has that morning.`}
+              <Trans>{holder} already has that morning.</Trans>
             </Words>
           )}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
             <Chip
-              label="Tomorrow morning"
+              label={t`Tomorrow morning`}
               selected={when === "tomorrow"}
               disabled={taken !== null}
               onPress={() => setWhen("tomorrow")}
             />
-            {taken?.date_alternative == null ? null : (
-              // Named, never "the day after": the next free morning can be several days out.
+            {day === null ? null : (
               <Chip
-                label={`${dayName(taken.date_alternative)} morning`}
+                label={t`${day} morning`}
                 selected={when === "another_day"}
                 onPress={() => setWhen("another_day")}
               />
             )}
             <Chip
-              label="Whenever"
+              label={t`Whenever`}
               selected={when === "whenever"}
               onPress={() => setWhen("whenever")}
             />
@@ -185,11 +199,11 @@ export default function AskScreen() {
         )}
         {trouble ? (
           <Words variant="body" tone="ink2">
-            That could not be sent just now. Look at Today before sending it again.
+            <Trans>That could not be sent just now. Look at Today before sending it again.</Trans>
           </Words>
         ) : null}
         <PrimaryButton
-          label={compose.isPending ? "Sending…" : "Into her morning"}
+          label={compose.isPending ? t`Sending…` : t`Into her morning`}
           onPress={send}
           disabled={compose.isPending || (!demo && (!ready || !written))}
         />

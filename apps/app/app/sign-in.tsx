@@ -1,10 +1,12 @@
 import { useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
+import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
@@ -12,6 +14,22 @@ import { space } from "../src/theme/tokens.ts";
 type Step = "identifier" | "code";
 /** Which of Clerk's two one-time codes this attempt is carrying. */
 type Strategy = "email_code" | "phone_code";
+/**
+ * What went wrong, kept as what happened and put into words only as the screen draws, so the words
+ * follow the app's language when it changes (build plan 3.1).
+ */
+type Trouble =
+  | {
+      kind:
+        | "cannot_receive"
+        | "did_not_work"
+        | "bot_check"
+        | "needs_more"
+        | "wrong_code"
+        | "code_took_too_long";
+    }
+  /** The number with its national 0 dropped, offered back to try. */
+  | { kind: "trunk_zero"; shorter: string };
 
 function looksLikeEmail(identifier: string): boolean {
   return identifier.includes("@");
@@ -81,10 +99,13 @@ function NoAccounts() {
       }}
     >
       <Light state="resting" height={120} />
-      <Words variant="title">No accounts yet</Words>
-      <Words variant="body" tone="ink2">
-        This build has no sign-in configured, so it shows example days.
+      <Words variant="title">
+        <Trans>No accounts yet</Trans>
       </Words>
+      <Words variant="body" tone="ink2">
+        <Trans>This build has no sign-in configured, so it shows example days.</Trans>
+      </Words>
+      <LocaleChips />
     </View>
   );
 }
@@ -92,6 +113,7 @@ function NoAccounts() {
 function CodeSignIn() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
+  const { t } = useLingui();
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isLoaded: signUpLoaded, signUp } = useSignUp();
   const [step, setStep] = useState<Step>("identifier");
@@ -100,7 +122,7 @@ function CodeSignIn() {
   const [strategy, setStrategy] = useState<Strategy>("email_code");
   const [identifier, setIdentifier] = useState("");
   const [code, setCode] = useState("");
-  const [trouble, setTrouble] = useState<string | undefined>();
+  const [trouble, setTrouble] = useState<Trouble | undefined>();
   const [working, setWorking] = useState(false);
   const ready = isLoaded && signUpLoaded && signIn !== undefined && signUp !== undefined;
 
@@ -133,7 +155,7 @@ function CodeSignIn() {
         (candidate) => candidate.strategy === "email_code" || candidate.strategy === "phone_code",
       );
       if (factor === undefined) {
-        setTrouble("That account cannot receive a code yet.");
+        setTrouble({ kind: "cannot_receive" });
         return;
       }
       if (factor.strategy === "email_code") {
@@ -160,16 +182,16 @@ function CodeSignIn() {
       // the ordinary first run, not a mistake. Only one it cannot use either is worth saying.
       try {
         if (await startJoining(entered)) setStep("code");
-        else setTrouble("That did not work. Check it and try again.");
+        else setTrouble({ kind: "did_not_work" });
       } catch (error: unknown) {
         // Clerk's message can name the account; the screen says only what the person can act on.
         const shorter = withoutTrunkZero(entered);
         setTrouble(
           error instanceof TookTooLong
-            ? "The bot check did not finish. Try again in a moment."
+            ? { kind: "bot_check" }
             : shorter === null
-              ? "That did not work. Check it and try again."
-              : `That number did not work. The 0 after the country code is dropped abroad — try ${shorter}.`,
+              ? { kind: "did_not_work" }
+              : { kind: "trunk_zero", shorter },
         );
       }
     } finally {
@@ -193,7 +215,7 @@ function CodeSignIn() {
         // A right code that still cannot finish means this instance asks for more than this, which
         // is a setting, not something she can fix by typing the six digits again.
         if (attempt.status === "missing_requirements") {
-          setTrouble("That code was right, but this account needs more than that to finish.");
+          setTrouble({ kind: "needs_more" });
           return;
         }
         session = attempt.status === "complete" ? attempt.createdSessionId : null;
@@ -202,23 +224,43 @@ function CodeSignIn() {
         session = attempt.status === "complete" ? attempt.createdSessionId : null;
       }
       if (session === null) {
-        setTrouble("That code did not work. Ask for a new one.");
+        setTrouble({ kind: "wrong_code" });
         return;
       }
       await setActive({ session });
       router.replace("/");
     } catch (error: unknown) {
       setTrouble(
-        error instanceof TookTooLong
-          ? "That took too long to check. Try the code again."
-          : "That code did not work. Ask for a new one.",
+        error instanceof TookTooLong ? { kind: "code_took_too_long" } : { kind: "wrong_code" },
       );
     } finally {
       setWorking(false);
     }
   };
 
-  const sentTo = strategy === "email_code" ? "your email" : tidy(identifier);
+  /** The words for what went wrong, in the language the screen is in now. */
+  function troubleWords(what: Trouble): string {
+    switch (what.kind) {
+      case "cannot_receive":
+        return t`That account cannot receive a code yet.`;
+      case "did_not_work":
+        return t`That did not work. Check it and try again.`;
+      case "bot_check":
+        return t`The bot check did not finish. Try again in a moment.`;
+      case "trunk_zero": {
+        const shorter = what.shorter;
+        return t`That number did not work. The 0 after the country code is dropped abroad — try ${shorter}.`;
+      }
+      case "needs_more":
+        return t`That code was right, but this account needs more than that to finish.`;
+      case "wrong_code":
+        return t`That code did not work. Ask for a new one.`;
+      case "code_took_too_long":
+        return t`That took too long to check. Try the code again.`;
+    }
+  }
+
+  const sentTo = tidy(identifier);
 
   return (
     <>
@@ -239,38 +281,49 @@ function CodeSignIn() {
         {step === "identifier" ? (
           <>
             <Words variant="body" tone="ink2">
-              Your number or your email, and we send you a code.
+              <Trans>Your number or your email, and we send you a code.</Trans>
             </Words>
             <TextField
               value={identifier}
               onChangeText={setIdentifier}
               placeholder="+886 900 000 000"
-              helper="A number needs its country code."
+              helper={t`A number needs its country code.`}
               autoComplete="tel"
               autoFocus
               onSubmit={() => void sendCode()}
             />
-            <PrimaryButton label={working ? "Sending…" : "Send me a code"} onPress={sendCode} />
+            <PrimaryButton label={working ? t`Sending…` : t`Send me a code`} onPress={sendCode} />
           </>
         ) : (
           <>
             <Words variant="body" tone="ink2">
-              {`We sent a code to ${sentTo}.`}
+              {strategy === "email_code" ? (
+                <Trans>We sent a code to your email.</Trans>
+              ) : (
+                <Trans>We sent a code to {sentTo}.</Trans>
+              )}
             </Words>
             <TextField
               value={code}
               onChangeText={setCode}
               placeholder="123456"
-              helper="Six digits, good for ten minutes."
+              helper={t`Six digits, good for ten minutes.`}
               keyboardType="number-pad"
               autoComplete="one-time-code"
               autoFocus
               maxLength={6}
               onSubmit={() => void enter()}
             />
-            <PrimaryButton label={working ? "Checking…" : "Enter"} onPress={enter} />
+            <PrimaryButton
+              label={
+                working
+                  ? t`Checking…`
+                  : t({ comment: "button: sign in with the code", message: "Enter" })
+              }
+              onPress={enter}
+            />
             <SecondaryButton
-              label="Use something else"
+              label={t`Use something else`}
               onPress={() => {
                 setStep("identifier");
                 setCode("");
@@ -282,9 +335,11 @@ function CodeSignIn() {
         )}
         {trouble === undefined ? null : (
           <Words variant="body" tone="ink2">
-            {trouble}
+            {troubleWords(trouble)}
           </Words>
         )}
+        {/* The app's language, before there is an account to keep it (build plan 3.1). */}
+        {step === "identifier" ? <LocaleChips /> : null}
         {/*
           Clerk's bot check for a new account mounts itself into an element of this name, and says
           so loudly when it cannot find one. On the web this renders that element; on a phone it is

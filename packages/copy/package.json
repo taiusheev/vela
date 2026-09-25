@@ -5,7 +5,8 @@
   "description": "Every user-facing string for the messenger path, in English and Traditional Chinese.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./rules": "./src/rules.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

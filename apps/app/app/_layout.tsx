@@ -12,6 +12,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
+import { LocaleProvider, useAppLocale } from "../src/i18n/provider.tsx";
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
 
 void SplashScreen.preventAutoHideAsync();
@@ -35,6 +36,7 @@ function useSignInGuard(): void {
 
 function Root() {
   const { palette, scheme } = useTheme();
+  const { settled } = useAppLocale();
   useSignInGuard();
   const [ready] = useFonts({
     Inter_400Regular,
@@ -45,10 +47,11 @@ function Root() {
   });
 
   // The screens render before Literata and Inter arrive, with the platform's own faces standing in:
-  // a slow network must not leave a family looking at nothing.
+  // a slow network must not leave a family looking at nothing. The splash also waits for a phone to
+  // read the language it remembers, so the first words seen are in that language.
   useEffect(() => {
-    if (ready) void SplashScreen.hideAsync();
-  }, [ready]);
+    if (ready && settled) void SplashScreen.hideAsync();
+  }, [ready, settled]);
 
   return (
     <>
@@ -67,11 +70,13 @@ export default function RootLayout() {
   return (
     <AccountProvider>
       <QueryClientProvider client={queries}>
-        <SafeAreaProvider>
-          <ThemeProvider>
-            <Root />
-          </ThemeProvider>
-        </SafeAreaProvider>
+        <LocaleProvider>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <Root />
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </LocaleProvider>
       </QueryClientProvider>
     </AccountProvider>
   );

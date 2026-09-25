@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { Link } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -11,27 +12,25 @@ import {
   Words,
 } from "../../src/components/ui.tsx";
 import type { Exchange } from "../../src/data/exchanges.ts";
+import { replyLine } from "../../src/data/lines.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, space } from "../../src/theme/tokens.ts";
 
-function replyLine(exchange: Exchange): string | undefined {
-  const words = exchange.replies.map((reply) =>
-    reply.reaction === undefined
-      ? `${reply.from}: ${reply.text ?? ""}`
-      : `${reply.from} sent a ${reply.reaction}`,
-  );
-  return words.length === 0 ? undefined : words.join(" · ");
+function repliesLine(exchange: Exchange): string | undefined {
+  const lines = exchange.replies.map((reply) => replyLine(reply.from, reply.kind, reply.text));
+  return lines.length === 0 ? undefined : lines.join(" · ");
 }
 
 function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: boolean }) {
   const answer = exchange.answer;
   const shown = originals ? (answer?.original ?? answer?.text) : answer?.text;
-  const replies = replyLine(exchange);
+  const replies = repliesLine(exchange);
   const heading = [exchange.day, `${exchange.asker} → ${exchange.recipient}`]
     .filter((part) => part.length > 0)
-    .join(" · ")
-    .toUpperCase();
+    .join(" · ");
+  const recipient = exchange.recipient;
+  const time = answer?.at ?? "";
   return (
     <Link href={{ pathname: "/exchange/[id]", params: { id: exchange.id } }} asChild>
       <Pressable accessibilityRole="button" hitSlop={hitSlop}>
@@ -40,14 +39,22 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
           <Words variant="voice">{exchange.ask}</Words>
           {shown === undefined ? (
             <Words variant="body" tone="ink2">
-              No word yet.
+              <Trans>No word yet.</Trans>
             </Words>
           ) : (
             <>
               <Hairline />
               <Words variant="voice">{shown}</Words>
               <Words variant="caption" tone="ink3">
-                {`${exchange.recipient} answered at ${answer?.at ?? ""}${answer?.transcript === true ? " · from her voice note" : ""}`}
+                {answer?.transcript === true ? (
+                  <Trans>
+                    {recipient} answered at {time} · from her voice note
+                  </Trans>
+                ) : (
+                  <Trans>
+                    {recipient} answered at {time}
+                  </Trans>
+                )}
               </Words>
             </>
           )}
@@ -66,6 +73,7 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
 export default function ExchangesScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
+  const { t } = useLingui();
   const [originals, setOriginals] = useState(false);
   const { exchanges, live, loading, trouble, more, loadMore } = useExchanges();
   // Her originals come from translations the API does not carry yet, so the switch is offered
@@ -83,7 +91,9 @@ export default function ExchangesScreen() {
       }}
     >
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Words variant="title">Exchanges</Words>
+        <Words variant="title">
+          <Trans context="tab">Exchanges</Trans>
+        </Words>
         {canShowOriginals ? (
           <Pressable
             accessibilityRole="button"
@@ -91,31 +101,31 @@ export default function ExchangesScreen() {
             onPress={() => setOriginals((shown) => !shown)}
           >
             <Words variant="button" tone="action">
-              {originals ? "Show translations" : "Show originals"}
+              {originals ? <Trans>Show translations</Trans> : <Trans>Show originals</Trans>}
             </Words>
           </Pressable>
         ) : null}
       </View>
       {trouble ? (
         <Words variant="body" tone="ink2">
-          The exchanges could not be reached just now.
+          <Trans>The exchanges could not be reached just now.</Trans>
         </Words>
       ) : loading ? (
         <Words variant="body" tone="ink2">
-          Looking for your family's days…
+          <Trans>Looking for your family's days…</Trans>
         </Words>
       ) : live && exchanges.length === 0 ? (
         <Words variant="body" tone="ink2">
-          Nothing has happened yet. Her first morning will be here.
+          <Trans>Nothing has happened yet. Her first morning will be here.</Trans>
         </Words>
       ) : null}
       {exchanges.map((exchange) => (
         <ExchangeRow key={exchange.id} exchange={exchange} originals={originals} />
       ))}
-      {more ? <SecondaryButton label="Earlier this month" onPress={loadMore} /> : null}
+      {more ? <SecondaryButton label={t`Earlier this month`} onPress={loadMore} /> : null}
       {/* No infinite scroll: after thirty days the list ends in the family book (spec A8). */}
       <Words variant="body" tone="ink2">
-        Older than thirty days lives in the family book.
+        <Trans>Older than thirty days lives in the family book.</Trans>
       </Words>
     </ScrollView>
   );

@@ -1,0 +1,1129 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-09-26 00:27+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: zh-TW\n"
+"X-Native-Review: pending; entries without the native-reviewed flag are drafts (build plan 2.4)\n"
+
+#: app/exchange/[id].tsx
+msgid "{asker} asked"
+msgstr "{asker}提問"
+
+#: app/(tabs)/index.tsx
+msgid "{asker} asked {recipient}"
+msgstr "{asker}問{recipient}"
+
+#: src/data/useQuiet.ts
+msgid "{by} said {name} is fine. Everyone who was told has heard."
+msgstr "{by}說{name}沒事。收到通知的每個人都已經知道了。"
+
+#: app/ask.tsx
+msgid "{day} morning"
+msgstr "{day}早上"
+
+#: src/data/lines.ts
+msgid "{from} replied"
+msgstr "{from}回覆了"
+
+#: src/data/lines.ts
+msgid "{from} sent a heart"
+msgstr "{from}送上一顆愛心"
+
+#: src/data/lines.ts
+msgid "{from} sent a hug"
+msgstr "{from}送上一個擁抱"
+
+#: src/data/lines.ts
+msgid "{from} sent a laugh"
+msgstr "{from}送上一個笑臉"
+
+#: src/data/lines.ts
+msgid "{from} sent a photo"
+msgstr "{from}傳了一張照片"
+
+#: src/data/lines.ts
+msgid "{from} sent a voice message"
+msgstr "{from}傳了一則語音訊息"
+
+#: src/data/lines.ts
+msgid "{from}: {text}"
+msgstr "{from}：{text}"
+
+#: app/(tabs)/you.tsx
+msgid "{her} would see your light, and you choose who else. Not in the app yet."
+msgstr "{her}會看到您的燈，還有誰能看到由您決定。App 裡還沒有這個功能。"
+
+#: app/ask.tsx
+msgid "{holder} already has that morning."
+msgstr "那天早上已經有{holder}的提問了。"
+
+#: app/vela-light.tsx
+msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
+msgstr "{name}回覆了。接下來 30 天，Vela Light 免費開啟，讓您先看看它能做什麼，再決定要不要使用。"
+
+#: src/data/useQuiet.ts
+msgid "{name} answered. The light is lit again."
+msgstr "{name}回覆了。燈又亮了。"
+
+#: src/data/family.ts
+msgid "{name} has not said yes yet"
+msgstr "{name}還沒有同意"
+
+#: app/ask.tsx
+msgid "{name} has not said yes yet. Once she does, her first morning is the next day."
+msgstr "{name}還沒有同意。同意之後的隔天早上，就會收到第一則早安訊息。"
+
+#: src/components/quiet-notice.tsx
+msgid "{name} is fine, I know why"
+msgstr "{name}沒事，我知道原因"
+
+#: src/data/useQuiet.ts
+msgid "{name} last answered {day} at {time}."
+msgstr "{name}最後一次回覆是在{day} {time}。"
+
+#: src/data/useQuiet.ts
+msgid "{name} last answered today at {time}."
+msgstr "{name}最後一次回覆是在今天 {time}。"
+
+#: src/data/useQuiet.ts
+msgid "{name} last answered yesterday at {time}."
+msgstr "{name}最後一次回覆是在昨天 {time}。"
+
+#: src/data/quiet.ts
+msgid "{name} last answered yesterday at 8:41."
+msgstr "{name}最後一次回覆是在昨天 08:41。"
+
+#: src/data/family.ts
+msgid "{name} said no"
+msgstr "{name}說不要"
+
+#: src/data/family.ts
+msgid "{name} said yes"
+msgstr "{name}同意了"
+
+#: app/vela-light.tsx
+msgid "{name}'s light is not on."
+msgstr "{name}的燈還沒有點亮。"
+
+#: app/vela-light.tsx
+msgid "{name}'s light is on"
+msgstr "{name}的燈亮著"
+
+#: app/ask.tsx
+msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
+msgstr "{name}的燈目前暫停中，所以現在無法放進早安訊息。"
+
+#: app/vela-light.tsx
+msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
+msgstr "{name}的 30 天試用已經結束了。每天的提問和問答會照常進行。"
+
+#: app/(tabs)/exchanges.tsx
+#: app/(tabs)/index.tsx
+#: app/exchange/[id].tsx
+msgid "{recipient} answered at {time}"
+msgstr "{recipient}在 {time} 回覆了"
+
+#: app/(tabs)/exchanges.tsx
+msgid "{recipient} answered at {time} · from her voice note"
+msgstr "{recipient}在 {time} 回覆了 · 由語音轉成文字"
+
+#: src/data/exchanges.ts
+#: src/data/today.ts
+#: src/data/useToday.ts
+msgid "{recipient} saw it · {time}"
+msgstr "{recipient}看過了 · {time}"
+
+#: src/data/ask.ts
+msgid "{words} · shown to her in {language}"
+msgstr "{words} · 這位家人看到的{language}版本"
+
+#: app/vela-light.tsx
+msgid "$79 a year"
+msgstr "每年 79 美元"
+
+#: app/(tabs)/index.tsx
+msgid "A hello for {recipient}"
+msgstr "給{recipient}的問候"
+
+#: src/data/useExchanges.ts
+msgid "A hello from Vela"
+msgstr "來自 Vela 的問候"
+
+#: app/sign-in.tsx
+msgid "A number needs its country code."
+msgstr "電話號碼要加上國碼。"
+
+#: src/data/exchanges.ts
+msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
+msgstr "您從小長大的那條街的照片——還記得街角那家店嗎？"
+
+#: src/data/ask.ts
+msgid "A question"
+msgstr "一個問題"
+
+#: src/components/quiet-notice.tsx
+msgid "A quiet morning"
+msgstr "安靜的早上"
+
+#: src/data/ask.ts
+msgid "A voice note"
+msgstr "一段語音"
+
+#: src/data/ask.ts
+msgid "A vote"
+msgstr "投票"
+
+#: src/data/ask.ts
+msgid "A word to teach"
+msgstr "請教一個詞"
+
+#: app/(tabs)/you.tsx
+msgid "Account"
+msgstr "帳號"
+
+#: src/data/onboarding.ts
+msgid "Adelaide"
+msgstr "阿得雷德"
+
+#: src/data/onboarding.ts
+msgid "Alaska"
+msgstr "阿拉斯加"
+
+#: src/data/family.ts
+msgid "All said yes"
+msgstr "都同意了"
+
+#: app/vela-light.tsx
+msgid "Always free"
+msgstr "永遠免費"
+
+#: src/data/ask.ts
+msgid "An old photo"
+msgstr "一張老照片"
+
+#: src/data/useToday.ts
+msgid "answered"
+msgstr "回覆了"
+
+#: src/data/today.ts
+#: src/data/useToday.ts
+msgid "answered {time}"
+msgstr "{time} 回覆了"
+
+#: src/data/useToday.ts
+msgid "Anyone"
+msgstr "大家"
+
+#: app/ask.tsx
+msgid "Ask {name} something"
+msgstr "問{name}一件事"
+
+#: app/(tabs)/index.tsx
+msgid "Ask {recipient} something"
+msgstr "問{recipient}一件事"
+
+#: src/data/family.ts
+msgid "Ask and reply · free"
+msgstr "提問和回覆 · 免費"
+
+#: src/data/ask.ts
+#: src/data/today.ts
+msgid "Ask her about the seeds she saved from last year"
+msgstr "聊聊去年留下來的那些種子"
+
+#: src/components/quiet-notice.tsx
+msgid "Ask them to look in"
+msgstr "請對方過去看看"
+
+#: src/components/quiet-notice.tsx
+msgid "Asked at {time}"
+msgstr "提問時間 {time}"
+
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Atlantic"
+msgstr "大西洋時間"
+
+#: src/data/onboarding.ts
+msgid "Australia"
+msgstr "澳洲"
+
+#: src/data/useToday.ts
+msgid "away"
+msgstr "外出中"
+
+#: src/data/useToday.ts
+msgid "away · {day}"
+msgstr "外出中 · 到{day}"
+
+#: src/data/exchanges.ts
+msgid "Both of you, but only Mia listened about the butter."
+msgstr "你們兩個都教過，但只有 Mia 把奶油那段聽進去了。"
+
+#: src/data/onboarding.ts
+msgid "Brisbane"
+msgstr "布里斯本"
+
+#: src/components/quiet-notice.tsx
+msgid "Call"
+msgstr "打電話"
+
+#: src/components/quiet-notice.tsx
+msgid "Call {name}"
+msgstr "打電話給{name}"
+
+#: src/data/onboarding.ts
+msgid "Canada"
+msgstr "加拿大"
+
+#. a time zone
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Central"
+msgstr "中部時間"
+
+#: app/sign-in.tsx
+msgid "Checking…"
+msgstr "確認中…"
+
+#: src/components/quiet-notice.tsx
+msgid "Close"
+msgstr "關閉"
+
+#: src/data/today.ts
+msgid "Dad"
+msgstr "爸爸"
+
+#: src/data/onboarding.ts
+msgid "Darwin"
+msgstr "達爾文"
+
+#. who a nearby contact is to her
+#: src/data/quiet.ts
+msgid "downstairs"
+msgstr "樓下鄰居"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Earlier this month"
+msgstr "這個月稍早"
+
+#. a time zone
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Eastern"
+msgstr "東部時間"
+
+#. button: sign in with the code
+#: app/sign-in.tsx
+msgid "Enter"
+msgstr "登入"
+
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/exchanges.tsx
+msgctxt "tab"
+msgid "Exchanges"
+msgstr "問答"
+
+#: src/data/family.ts
+msgctxt "role"
+msgid "family"
+msgstr "家人"
+
+#: app/(tabs)/you.tsx
+msgid "Family"
+msgstr "家人"
+
+#: src/data/family.ts
+msgid "Free"
+msgstr "免費"
+
+#: src/data/onboarding.ts
+msgid "Germany"
+msgstr "德國"
+
+#: app/onboarding.tsx
+#: app/vela-light.tsx
+msgid "Go to Today"
+msgstr "前往「今天」"
+
+#: src/components/quiet-notice.tsx
+#: src/data/family.ts
+msgid "Has not said yes yet"
+msgstr "還沒有同意"
+
+#: src/data/onboarding.ts
+msgid "Hawaii"
+msgstr "夏威夷"
+
+#. stands in for her name
+#. stands in for her name
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "her"
+msgstr "這位家人"
+
+#: app/onboarding.tsx
+msgid "Her first morning is the day after she says yes, at {time}."
+msgstr "同意之後的隔天 {time}，就會收到第一則早安訊息。"
+
+#: app/onboarding.tsx
+msgid "Her morning comes at {time}, half an hour after she wakes."
+msgstr "早安訊息會在 {time} 送到，也就是起床後半小時。"
+
+#: app/onboarding.tsx
+msgid "Her name, as the family calls her."
+msgstr "家裡平常怎麼稱呼這位家人。"
+
+#: app/onboarding.tsx
+msgid "How Vela greets her each morning."
+msgstr "Vela 每天早上問候時的稱呼。"
+
+#: app/onboarding.tsx
+msgid "I have sent it"
+msgstr "我已經傳了"
+
+#: src/data/onboarding.ts
+msgid "India"
+msgstr "印度"
+
+#: app/ask.tsx
+msgid "Into her morning"
+msgstr "放進早安訊息"
+
+#: app/(tabs)/index.tsx
+msgid "Into her morning."
+msgstr "已放進早安訊息。"
+
+#: src/data/exchanges.ts
+msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
+msgstr "先是麵包店，後來變成書店。冬天我們在那裡排隊買麵包。"
+
+#: src/components/quiet-notice.tsx
+msgid "It's been quiet at {name}'s today"
+msgstr "{name}那邊今天比較安靜"
+
+#: src/data/onboarding.ts
+msgid "Japan"
+msgstr "日本"
+
+#: app/(tabs)/you.tsx
+msgid "Keep a light on for me"
+msgstr "也為我留一盞燈"
+
+#: app/(tabs)/you.tsx
+msgid "Language"
+msgstr "語言"
+
+#: app/(tabs)/you.tsx
+msgid "Leave"
+msgstr "離開"
+
+#: app/(tabs)/you.tsx
+msgid "Leave {familyName}?"
+msgstr "要離開{familyName}嗎？"
+
+#: app/(tabs)/you.tsx
+msgid "Leave the family"
+msgstr "離開這個家庭"
+
+#: app/(tabs)/you.tsx
+msgid "Leaving…"
+msgstr "正在離開…"
+
+#: app/exchange/[id].tsx
+msgid "Looking for that exchange…"
+msgstr "正在找這則問答…"
+
+#: app/(tabs)/you.tsx
+msgid "Looking for your family on this account…"
+msgstr "正在找這個帳號的家庭…"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Looking for your family's days…"
+msgstr "正在載入家人的問答…"
+
+#: app/(tabs)/index.tsx
+#: app/(tabs)/you.tsx
+#: app/onboarding.tsx
+#: app/vela-light.tsx
+#: src/data/exchanges.ts
+#: src/data/family.ts
+#: src/data/today.ts
+msgid "Mom"
+msgstr "媽媽"
+
+#. a time zone
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Mountain"
+msgstr "山區時間"
+
+#: app/onboarding.tsx
+msgid "Mrs Chen"
+msgstr "陳太太"
+
+#: src/data/useQuiet.ts
+msgctxt "relation"
+msgid "nearby"
+msgstr "附近的聯絡人"
+
+#: src/components/quiet-notice.tsx
+msgid "Nearby"
+msgstr "附近的聯絡人"
+
+#: src/data/family.ts
+msgid "Nearby: {names}"
+msgstr "附近的聯絡人：{names}"
+
+#. who a nearby contact is to her
+#: src/data/quiet.ts
+msgid "neighbour"
+msgstr "鄰居"
+
+#: app/onboarding.tsx
+msgid "Next"
+msgstr "下一步"
+
+#: app/sign-in.tsx
+msgid "No accounts yet"
+msgstr "目前還沒有開放帳號"
+
+#: app/(tabs)/you.tsx
+msgid "No family is set up on this account yet."
+msgstr "這個帳號還沒有設定家庭。"
+
+#: app/(tabs)/index.tsx
+msgid "No word yet today."
+msgstr "今天還沒有回覆。"
+
+#: app/(tabs)/exchanges.tsx
+#: app/exchange/[id].tsx
+msgid "No word yet."
+msgstr "還沒有回覆。"
+
+#: src/data/family.ts
+msgid "Nobody nearby yet"
+msgstr "還沒有附近的聯絡人"
+
+#: app/(tabs)/sunday.tsx
+msgid "Not built yet."
+msgstr "這裡還在製作中。"
+
+#: app/vela-light.tsx
+msgid "Not now"
+msgstr "先不要"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Nothing has happened yet. Her first morning will be here."
+msgstr "還沒有任何內容。第一則早安訊息會出現在這裡。"
+
+#: app/vela-light.tsx
+msgid "Nothing is charged during the pilot, and no card is asked for."
+msgstr "試辦期間不收任何費用，也不需要提供信用卡。"
+
+#: app/onboarding.tsx
+msgid "Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her."
+msgstr "在這位家人同意之前，不會傳送任何訊息。請把下面這段話傳給這位家人；連結會說明 Vela 是什麼，並詢問是否同意。"
+
+#: app/exchange/[id].tsx
+msgid "Nothing yet."
+msgstr "還沒有內容。"
+
+#: app/onboarding.tsx
+msgid "Now ask {name}"
+msgstr "現在去問問{name}"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Older than thirty days lives in the family book."
+msgstr "超過三十天的內容會收進家族故事書。"
+
+#: app/(tabs)/you.tsx
+msgid "One moment a day"
+msgstr "一天一次"
+
+#: app/vela-light.tsx
+msgid "or $9.99 a month · a second person +50%"
+msgstr "或每月 9.99 美元 · 第二位 +50%"
+
+#: src/data/family.ts
+msgctxt "role"
+msgid "organiser"
+msgstr "發起人"
+
+#. a time zone
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Pacific"
+msgstr "太平洋時間"
+
+#: app/(tabs)/you.tsx
+msgid "Pause"
+msgstr "暫停"
+
+#: src/data/useToday.ts
+msgid "paused"
+msgstr "暫停中"
+
+#: src/data/family.ts
+msgid "Paused · {plan}"
+msgstr "暫停中 · {plan}"
+
+#: src/data/onboarding.ts
+msgid "Perth"
+msgstr "伯斯"
+
+#: src/data/useToday.ts
+msgid "picked a photo"
+msgstr "選了一張照片"
+
+#: app/ask.tsx
+msgid "Prompt · from her own words"
+msgstr "建議 · 取自這位家人說過的話"
+
+#: src/data/useToday.ts
+msgid "quiet"
+msgstr "比較安靜"
+
+#: app/(tabs)/you.tsx
+msgid "Quiet"
+msgstr "安靜通知"
+
+#: app/vela-light.tsx
+msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
+msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記事與提醒 · 可以保存的家族故事書"
+
+#: app/exchange/[id].tsx
+msgid "Reply"
+msgstr "回覆"
+
+#: src/data/today.ts
+#: src/data/useToday.ts
+msgid "resting"
+msgstr "休息中"
+
+#: app/(tabs)/you.tsx
+msgid "Resume"
+msgstr "恢復"
+
+#. the name of a language
+#: src/data/ask.ts
+msgid "Russian"
+msgstr "俄文"
+
+#: src/data/useToday.ts
+msgid "said she is fine"
+msgstr "說自己很好"
+
+#: src/data/family.ts
+msgid "Said yes"
+msgstr "已同意"
+
+#: app/ask.tsx
+msgid "Say it the way you would say it"
+msgstr "用您平常說話的方式寫"
+
+#: app/exchange/[id].tsx
+msgid "Say something short"
+msgstr "寫一句簡短的話"
+
+#: app/exchange/[id].tsx
+msgid "Send"
+msgstr "傳送"
+
+#: app/onboarding.tsx
+msgid "Send it to her"
+msgstr "傳給這位家人"
+
+#: app/sign-in.tsx
+msgid "Send me a code"
+msgstr "傳驗證碼給我"
+
+#: app/ask.tsx
+#: app/exchange/[id].tsx
+#: app/sign-in.tsx
+msgid "Sending…"
+msgstr "傳送中…"
+
+#: src/data/useToday.ts
+msgid "sent a heart"
+msgstr "送上一顆愛心"
+
+#: src/data/useToday.ts
+msgid "sent a photo"
+msgstr "傳了一張照片"
+
+#: src/data/useToday.ts
+msgid "sent a sticker"
+msgstr "傳了一張貼圖"
+
+#: src/data/useToday.ts
+msgid "sent a voice message"
+msgstr "傳了一則語音訊息"
+
+#: app/(tabs)/index.tsx
+msgid "Setting up your family…"
+msgstr "正在設定您的家庭…"
+
+#: app/onboarding.tsx
+msgid "Setting up…"
+msgstr "設定中…"
+
+#: app/onboarding.tsx
+msgid "She answers on Telegram for now. LINE and WhatsApp come next."
+msgstr "這位家人目前會在 Telegram 上回覆。接下來會支援 LINE 和 WhatsApp。"
+
+#: app/exchange/[id].tsx
+msgid "She has not answered yet, so there is nothing to reply to."
+msgstr "這位家人還沒有回覆，所以目前沒有可以回應的內容。"
+
+#: app/exchange/[id].tsx
+msgid "She hears it in her read-back tomorrow morning."
+msgstr "這位家人明天早上會在早安訊息裡看到。"
+
+#: src/data/exchanges.ts
+msgid "She is never letting that go"
+msgstr "媽媽會把這件事念一輩子"
+
+#: app/onboarding.tsx
+msgid "She lives in"
+msgstr "這位家人住在"
+
+#: app/onboarding.tsx
+msgid "She reads"
+msgstr "這位家人看的語言"
+
+#: app/ask.tsx
+msgid "She reads it in {language}. One question at a time."
+msgstr "這位家人會用{language}閱讀。一次問一個問題。"
+
+#: app/onboarding.tsx
+msgid "She usually wakes at"
+msgstr "這位家人通常起床的時間"
+
+#: app/ask.tsx
+msgid "She will see · {language}"
+msgstr "這位家人會看到 · {language}"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Show originals"
+msgstr "顯示原文"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Show translations"
+msgstr "顯示翻譯"
+
+#: app/(tabs)/you.tsx
+msgid "Sign out"
+msgstr "登出"
+
+#: src/data/onboarding.ts
+msgid "Singapore"
+msgstr "新加坡"
+
+#: app/sign-in.tsx
+msgid "Six digits, good for ten minutes."
+msgstr "六位數字，十分鐘內有效。"
+
+#: src/data/useQuiet.ts
+msgid "Someone said {name} is fine. Everyone who was told has heard."
+msgstr "有人說{name}沒事。收到通知的每個人都已經知道了。"
+
+#: src/data/family.ts
+msgid "Someone who could look in, if it goes quiet"
+msgstr "安靜的日子裡，可以過去看看的人"
+
+#: app/vela-light.tsx
+msgid "Start the 30 days"
+msgstr "開始 30 天試用"
+
+#: app/vela-light.tsx
+msgid "Starting…"
+msgstr "正在開啟…"
+
+#: app/(tabs)/you.tsx
+msgid "Stay"
+msgstr "留下"
+
+#: src/data/exchanges.ts
+msgid "Sunday"
+msgstr "星期日"
+
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/sunday.tsx
+msgctxt "tab"
+msgid "Sunday"
+msgstr "週日"
+
+#: src/data/onboarding.ts
+msgid "Sydney"
+msgstr "雪梨"
+
+#: src/data/onboarding.ts
+msgid "Taiwan"
+msgstr "台灣"
+
+#: src/data/useToday.ts
+msgid "tapped an answer"
+msgstr "選了一個回答"
+
+#: app/sign-in.tsx
+msgid "That account cannot receive a code yet."
+msgstr "這個帳號目前還無法接收驗證碼。"
+
+#: app/sign-in.tsx
+msgid "That code did not work. Ask for a new one."
+msgstr "這組驗證碼無法使用。請重新索取一組。"
+
+#: app/sign-in.tsx
+msgid "That code was right, but this account needs more than that to finish."
+msgstr "驗證碼正確，但這個帳號還需要其他步驟才能完成登入。"
+
+#: app/onboarding.tsx
+msgid "That could not be saved just now. Nothing was lost; try again."
+msgstr "目前無法儲存。內容都還在，請再試一次。"
+
+#: app/ask.tsx
+msgid "That could not be sent just now. Look at Today before sending it again."
+msgstr "目前無法傳送。再傳一次之前，請先看看「今天」。"
+
+#: app/exchange/[id].tsx
+msgid "That could not be sent just now. Your words are kept."
+msgstr "目前無法傳送。您寫的內容都還在。"
+
+#: app/(tabs)/you.tsx
+#: app/vela-light.tsx
+#: src/data/useFamily.ts
+msgid "That did not go through. Try again in a moment."
+msgstr "沒有成功。請稍後再試一次。"
+
+#: app/sign-in.tsx
+msgid "That did not work. Check it and try again."
+msgstr "沒有成功。請檢查後再試一次。"
+
+#: app/exchange/[id].tsx
+msgid "That exchange is not here."
+msgstr "找不到這則問答。"
+
+#: app/sign-in.tsx
+msgid "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
+msgstr "這個號碼無法使用。從國外撥打時，國碼後面的 0 要去掉，請試試 {shorter}。"
+
+#: app/sign-in.tsx
+msgid "That took too long to check. Try the code again."
+msgstr "確認的時間太久了。請再輸入一次驗證碼。"
+
+#: app/vela-light.tsx
+msgid "The 30 days start after {name}'s first answer."
+msgstr "30 天會從{name}第一次回覆之後開始。"
+
+#: app/(tabs)/you.tsx
+msgid "The app's words. Her mornings keep the language she reads."
+msgstr "這是 App 顯示的語言。早安訊息仍然使用這位家人閱讀的語言。"
+
+#: app/sign-in.tsx
+msgid "The bot check did not finish. Try again in a moment."
+msgstr "人機驗證沒有完成。請稍後再試一次。"
+
+#: src/data/family.ts
+msgid "The Chens"
+msgstr "陳家"
+
+#: app/vela-light.tsx
+msgid "The daily ask, the exchanges, turns, translation, story day, everyone in the family."
+msgstr "每天的提問、問答、輪流提問、翻譯、故事日，還有家裡的每一個人。"
+
+#: app/(tabs)/exchanges.tsx
+msgid "The exchanges could not be reached just now."
+msgstr "目前無法載入問答。"
+
+#: app/exchange/[id].tsx
+msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
+msgstr "家人會在這裡看到。這位家人不會收到：早安訊息只會回顧最近一天的回覆。"
+
+#: app/onboarding.tsx
+msgid "The light is ready"
+msgstr "燈已經準備好了"
+
+#: src/data/exchanges.ts
+#: src/data/today.ts
+msgid "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
+msgstr "番茄終於紅了。早餐前我摘了三顆，放在窗台上。"
+
+#: app/onboarding.tsx
+msgid "This account already runs a family."
+msgstr "這個帳號已經有一個家庭了。"
+
+#: app/sign-in.tsx
+msgid "This build has no sign-in configured, so it shows example days."
+msgstr "這個版本沒有設定登入，所以顯示的是範例內容。"
+
+#: app/onboarding.tsx
+msgid "This device cannot share from here. Copy the words above and send them to her yourself."
+msgstr "這台裝置無法從這裡分享。請複製上面的文字，自己傳給這位家人。"
+
+#: app/(tabs)/you.tsx
+msgid "This is the example family, so nobody left."
+msgstr "這是範例家庭，所以沒有人離開。"
+
+#: app/exchange/[id].tsx
+msgid "This is your own morning; replies are for the family."
+msgstr "這是您自己的早安訊息；回覆是給家人的。"
+
+#: src/data/exchanges.ts
+#: src/data/today.ts
+msgid "Those are the ones from the seeds you saved"
+msgstr "那些就是您留下來的種子種出來的"
+
+#: src/data/exchanges.ts
+msgid "Today"
+msgstr "今天"
+
+#: app/(tabs)/_layout.tsx
+msgctxt "tab"
+msgid "Today"
+msgstr "今天"
+
+#: app/(tabs)/index.tsx
+msgid "Today could not be reached just now."
+msgstr "目前無法載入今天的內容。"
+
+#: src/data/useQuiet.ts
+msgid "Today's ask reached {name} at {time}, and again at {timeAgain}."
+msgstr "今天的提問在 {time} 送到{name}那裡，{timeAgain} 又送了一次。"
+
+#: src/data/useQuiet.ts
+msgid "Today's ask reached {name} at {time}."
+msgstr "今天的提問在 {time} 送到{name}那裡。"
+
+#: src/data/quiet.ts
+msgid "Today's ask reached {name} at 8:00, and again at 11:00."
+msgstr "今天的提問在 08:00 送到{name}那裡，11:00 又送了一次。"
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · {by} asked"
+msgstr "明天 · {by}已提問"
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · {name}'s turn"
+msgstr "明天 · 輪到{name}"
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · your turn"
+msgstr "明天 · 輪到您"
+
+#: app/ask.tsx
+msgid "Tomorrow morning"
+msgstr "明天早上"
+
+#: src/data/ask.ts
+msgid "Two photos"
+msgstr "兩張照片"
+
+#: src/data/onboarding.ts
+msgid "UK"
+msgstr "英國"
+
+#: src/data/onboarding.ts
+msgid "United Kingdom"
+msgstr "英國"
+
+#: src/data/onboarding.ts
+msgid "United States"
+msgstr "美國"
+
+#: app/sign-in.tsx
+msgid "Use something else"
+msgstr "改用其他方式"
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Use this"
+msgstr "用這個"
+
+#: src/components/quiet-notice.tsx
+msgid "Usually answers by {time}"
+msgstr "通常在 {time} 前回覆"
+
+#: app/vela-light.tsx
+msgid "Vela Light · for {name}"
+msgstr "Vela Light · 給{name}"
+
+#: src/data/family.ts
+msgid "Vela Light · payment due"
+msgstr "Vela Light · 待付款"
+
+#: app/vela-light.tsx
+msgid "Vela Light is on for {name} until {date}. Nothing is charged, and no card was asked for."
+msgstr "{name}的 Vela Light 已開啟，到 {date}為止。不收任何費用，也沒有要求提供信用卡。"
+
+#: app/vela-light.tsx
+msgid "Vela Light is on for {name}."
+msgstr "{name}的 Vela Light 已開啟。"
+
+#: src/data/family.ts
+msgid "Vela Light trial"
+msgstr "Vela Light 試用"
+
+#: src/data/family.ts
+msgid "Vela Light trial · ends {date}"
+msgstr "Vela Light 試用 · {date}結束"
+
+#: app/(tabs)/you.tsx
+msgid "Vela sends you at most one notification a day. Notifications are not on in this build yet."
+msgstr "Vela 每天最多只會傳一則通知給您。這個版本還沒有開啟通知。"
+
+#: src/data/useToday.ts
+msgid "voted"
+msgstr "投了票"
+
+#: src/components/quiet-notice.tsx
+msgid "Wait 2 hours"
+msgstr "再等 2 小時"
+
+#: src/data/useToday.ts
+msgid "waiting for her yes"
+msgstr "等待同意"
+
+#: app/ask.tsx
+msgid "Waiting for today to arrive. Your words are kept."
+msgstr "正在載入今天的資料。您寫的內容都還在。"
+
+#: app/(tabs)/index.tsx
+msgid "Waiting two hours. You will hear again at 13:00 if it is still quiet."
+msgstr "會再等 2 小時。到時候如果還是比較安靜，13:00 會再通知您。"
+
+#: src/data/useQuiet.ts
+msgid "Waiting until {time}. You will hear again then if it is still quiet."
+msgstr "會等到 {time}。到時候如果還是比較安靜，會再通知您。"
+
+#: app/sign-in.tsx
+msgid "We sent a code to {sentTo}."
+msgstr "我們已經把驗證碼傳到 {sentTo}。"
+
+#: app/sign-in.tsx
+msgid "We sent a code to your email."
+msgstr "我們已經把驗證碼寄到您的電子信箱。"
+
+#: app/ask.tsx
+msgid "What are you sending?"
+msgstr "您要傳什麼？"
+
+#: src/data/exchanges.ts
+#: src/data/today.ts
+msgid "What did the garden look like this morning?"
+msgstr "今天早上花園看起來怎麼樣？"
+
+#: app/exchange/[id].tsx
+msgid "What the family said"
+msgstr "家人說了什麼"
+
+#: app/(tabs)/you.tsx
+msgid "What the family sees about you"
+msgstr "家人看得到您的哪些資訊"
+
+#: app/onboarding.tsx
+msgid "What you send her"
+msgstr "您要傳給這位家人的內容"
+
+#. heading over the morning the ask arrives
+#: app/ask.tsx
+msgid "When"
+msgstr "什麼時候"
+
+#: app/ask.tsx
+msgid "Whenever"
+msgstr "哪天都可以"
+
+#: src/data/exchanges.ts
+msgid "Which one of us did you teach to make the pies?"
+msgstr "您當初是教我們哪一個做派的？"
+
+#: app/onboarding.tsx
+msgid "Who are you keeping a light on for?"
+msgstr "您要為誰留一盞燈？"
+
+#: app/(tabs)/you.tsx
+msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
+msgstr "您的燈亮著時，家人也會看到您每天早上有沒有回覆、幾點回覆；如果一直很安靜，家人也會收到通知。"
+
+#: src/data/exchanges.ts
+msgid "Yesterday"
+msgstr "昨天"
+
+#: app/exchange/[id].tsx
+#: src/data/family.ts
+msgid "You"
+msgstr "我"
+
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/you.tsx
+msgctxt "tab"
+msgid "You"
+msgstr "我"
+
+#: app/(tabs)/you.tsx
+msgid "You are not signed in, so this is the example family."
+msgstr "您還沒有登入，所以這是範例家庭。"
+
+#: app/(tabs)/you.tsx
+msgid "You are paused: no turns come to you, and you are not told if it goes quiet."
+msgstr "您目前暫停中：不會輪到您提問，安靜的日子也不會通知您。"
+
+#: app/(tabs)/you.tsx
+msgid "You are paused: no turns come to you."
+msgstr "您目前暫停中：不會輪到您提問。"
+
+#: src/data/useFamily.ts
+msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
+msgstr "目前只有您一位發起人在使用中，而暫停的發起人在安靜的日子不會收到通知。必須先有這個家庭的另一位發起人在使用中。"
+
+#: app/exchange/[id].tsx
+msgid "You can reply once she has answered."
+msgstr "等這位家人回覆之後，您就可以回應。"
+
+#: app/(tabs)/index.tsx
+msgid "You said {name} is fine. Nothing else was sent."
+msgstr "您說{name}沒事。沒有再傳送其他訊息。"
+
+#: app/(tabs)/you.tsx
+msgid "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
+msgstr "您將不再看到家人的日常，也不會再輪流提問。三十天後，保存的關於您的資料會被刪除。"
+
+#: app/(tabs)/you.tsx
+msgid "Your account id. Nobody but you needs it."
+msgstr "您的帳號 ID。只有您自己會用到。"
+
+#: app/(tabs)/you.tsx
+msgid "Your family could not be reached just now, so this is the example one."
+msgstr "目前無法載入您的家庭，所以這裡顯示的是範例家庭。"
+
+#: app/(tabs)/you.tsx
+msgid "Your family could not be reached just now."
+msgstr "目前無法載入您的家庭。"
+
+#: app/(tabs)/you.tsx
+msgid "Your light is off, so nothing about your mornings is shown."
+msgstr "您的燈沒有亮著，所以不會顯示任何關於您早上的內容。"
+
+#: src/data/useFamily.ts
+msgid "Your light is paused from your own chat, where your mornings arrive."
+msgstr "您的燈要從您自己的聊天室暫停，也就是您收到早安訊息的地方。"
+
+#: app/onboarding.tsx
+msgid "Your name, as the family says it."
+msgstr "您的名字，用家人平常的叫法。"
+
+#: app/(tabs)/you.tsx
+msgid "Your name, the asks you write, and your replies."
+msgstr "您的名字、您寫的提問，以及您的回覆。"
+
+#: app/sign-in.tsx
+msgid "Your number or your email, and we send you a code."
+msgstr "輸入您的電話號碼或電子郵件，我們會傳驗證碼給您。"
+
+#: app/(tabs)/you.tsx
+msgid "Your own light"
+msgstr "您自己的燈"

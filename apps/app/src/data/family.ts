@@ -1,5 +1,7 @@
-import type { ApiFamily, ApiMe } from "@vela/contracts";
-import { dayMonth } from "./format.ts";
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
+import type { ApiFamily, ApiMe, NearbyConsent } from "@vela/contracts";
+import { dayMonth, listOf } from "./format.ts";
 import { languages } from "./onboarding.ts";
 
 /** One kept-light member on You: her light and where her Vela Light stands (spec A12). */
@@ -44,6 +46,12 @@ function languageOf(code: string): string {
   return languages.find((language) => language.value === code)?.label ?? code;
 }
 
+function roleOf(organiser: boolean): string {
+  return organiser
+    ? t({ context: "role", message: "organiser" })
+    : t({ context: "role", message: "family" });
+}
+
 function planOf(member: ApiFamily["members"][number]): KeptLightRow["plan"] {
   switch (member.subscription?.status) {
     case undefined:
@@ -58,36 +66,48 @@ function planOf(member: ApiFamily["members"][number]): KeptLightRow["plan"] {
   }
 }
 
+function trialLine(endsAt: string | null): string {
+  if (endsAt === null) return t`Vela Light trial`;
+  const date = dayMonth(endsAt);
+  return t`Vela Light trial · ends ${date}`;
+}
+
 function planLine(member: ApiFamily["members"][number]): string {
-  if (member.light === "waiting") return "Has not said yes yet";
+  if (member.light === "waiting") return t`Has not said yes yet`;
   const subscription = member.subscription;
   switch (subscription?.status) {
     case "trial":
-      return subscription.trial_ends_at === null
-        ? "Vela Light trial"
-        : `Vela Light trial · ends ${dayMonth(subscription.trial_ends_at)}`;
+      return trialLine(subscription.trial_ends_at);
     case "active":
       return "Vela Light";
     case "grace":
-      return "Vela Light · payment due";
+      return t`Vela Light · payment due`;
     default:
-      return "Free";
+      return t`Free`;
+  }
+}
+
+function nearbyNames(contacts: readonly string[]): string {
+  const names = listOf(contacts);
+  return t`Nearby: ${names}`;
+}
+
+function consentLine(name: string, consent: NearbyConsent): string {
+  switch (consent) {
+    case "yes":
+      return t`${name} said yes`;
+    case "no":
+      return t`${name} said no`;
+    default:
+      return t`${name} has not said yes yet`;
   }
 }
 
 function nearbyLine(nearby: NonNullable<ApiFamily["nearby"]>): string {
   if (nearby.every((contact) => contact.consent === "yes")) {
-    return nearby.length === 1 ? "Said yes" : "All said yes";
+    return nearby.length === 1 ? t`Said yes` : t`All said yes`;
   }
-  return nearby
-    .map((contact) =>
-      contact.consent === "yes"
-        ? `${contact.name} said yes`
-        : contact.consent === "no"
-          ? `${contact.name} said no`
-          : `${contact.name} has not said yes yet`,
-    )
-    .join(" · ");
+  return nearby.map((contact) => consentLine(contact.name, contact.consent)).join(" · ");
 }
 
 export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily {
@@ -100,7 +120,6 @@ export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily
     (member) => member.member_id !== family.me.member_id && member.light === "off",
   );
   const nearby = family.nearby;
-  const role = family.me.role === "organiser" ? "organiser" : "family";
   const user = me?.user;
   return {
     familyId: family.family.id,
@@ -109,30 +128,33 @@ export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily
       memberId: family.me.member_id,
       organiser: family.me.role === "organiser",
       paused: mine?.status === "paused",
-      name: user?.display_name ?? mine?.display_name ?? "You",
+      name: user?.display_name ?? mine?.display_name ?? t`You`,
       line: [
-        role,
+        roleOf(family.me.role === "organiser"),
         ...(user === undefined ? [] : [languageOf(user.language), placeOf(user.tz)]),
       ].join(" · "),
       lightOn: mine?.light === "on",
     },
-    keptLight: keptLight.map((member) => ({
-      memberId: member.member_id,
-      name: member.display_name,
-      light: member.light,
-      paused: member.status === "paused",
-      line: member.status === "paused" ? `Paused · ${planLine(member)}` : planLine(member),
-      plan: planOf(member),
-      ...(member.subscription?.trial_ends_at == null
-        ? {}
-        : { trialEnds: dayMonth(member.subscription.trial_ends_at) }),
-    })),
+    keptLight: keptLight.map((member) => {
+      const plan = planLine(member);
+      return {
+        memberId: member.member_id,
+        name: member.display_name,
+        light: member.light,
+        paused: member.status === "paused",
+        line: member.status === "paused" ? t`Paused · ${plan}` : plan,
+        plan: planOf(member),
+        ...(member.subscription?.trial_ends_at == null
+          ? {}
+          : { trialEnds: dayMonth(member.subscription.trial_ends_at) }),
+      };
+    }),
     ...(others.length === 0
       ? {}
       : {
           others: {
-            names: others.map((member) => member.display_name).join(", "),
-            line: "Ask and reply · free",
+            names: listOf(others.map((member) => member.display_name)),
+            line: t`Ask and reply · free`,
           },
         }),
     ...(nearby === null
@@ -140,38 +162,52 @@ export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily
       : {
           nearby:
             nearby.length === 0
-              ? { names: "Nobody nearby yet", line: "Someone who could look in, if it goes quiet" }
+              ? {
+                  names: t`Nobody nearby yet`,
+                  line: t`Someone who could look in, if it goes quiet`,
+                }
               : {
-                  names: `Nearby: ${nearby.map((contact) => contact.name).join(", ")}`,
+                  names: nearbyNames(nearby.map((contact) => contact.name)),
                   line: nearbyLine(nearby),
                 },
         }),
   };
 }
 
-/** The example family, shown with no API or nobody signed in; it matches the prototype. */
-export const youFixture: YouFamily = {
-  familyId: "example",
-  familyName: "The Chens",
-  me: {
-    memberId: "me",
-    organiser: true,
-    name: "Anna",
-    line: "organiser · English · Taipei",
-    lightOn: false,
-    paused: false,
-  },
-  keptLight: [
-    {
-      memberId: "m1",
-      name: "Mom",
-      light: "on",
+/**
+ * The example family, shown with no API or nobody signed in; it matches the prototype. It is built
+ * each time it is read, from the same lines as a real family, so its words are in the app's
+ * language, which is its organiser's too.
+ */
+export function youFixture(): YouFamily {
+  // 12 Oct at noon on the reader's own clock, so the day shown is the 12th in every time zone.
+  const trialEndsAt = new Date(2026, 9, 12, 12).toISOString();
+  return {
+    familyId: "example",
+    familyName: t`The Chens`,
+    me: {
+      memberId: "me",
+      organiser: true,
+      name: "Anna",
+      line: [roleOf(true), languageOf(i18n.locale), "Taipei"].join(" · "),
+      lightOn: false,
       paused: false,
-      line: "Vela Light trial · ends 12 Oct",
-      plan: "trial",
-      trialEnds: "12 Oct",
     },
-  ],
-  others: { names: "Mia, Sam, Igor", line: "Ask and reply · free" },
-  nearby: { names: "Nearby: Lena, Petro", line: "Lena said yes · Petro has not said yes yet" },
-};
+    keptLight: [
+      {
+        memberId: "m1",
+        name: t`Mom`,
+        light: "on",
+        paused: false,
+        line: trialLine(trialEndsAt),
+        plan: "trial",
+        trialEnds: dayMonth(trialEndsAt),
+      },
+    ],
+    others: { names: listOf(["Mia", "Sam", "Igor"]), line: t`Ask and reply · free` },
+    nearby: {
+      names: nearbyNames(["Lena", "Petro"]),
+      line: [consentLine("Lena", "yes"), consentLine("Petro", "waiting")].join(" · "),
+    },
+  };
+}

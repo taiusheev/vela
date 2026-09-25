@@ -1,10 +1,13 @@
+import { t } from "@lingui/core/macro";
 import type { LightState } from "../components/light.tsx";
+import { clockTime } from "./format.ts";
+import { reactionLine, replyLine } from "./lines.ts";
 
 /**
- * What Today needs (spec §14.1 A6), in the screen's own idiom: times already read as times, words
- * already chosen for a tap that carried none. `GET /v1/families/:id/today` answers it in the wire's
- * shape (API contract §4); `useToday` turns one into the other, and these fixtures stand in when
- * the app has no API to talk to.
+ * What Today needs (spec §14.1 A6), in the screen's own idiom and the app's language: times already
+ * read as times, words already chosen for a tap that carried none. `GET /v1/families/:id/today`
+ * answers it in the wire's shape (API contract §4); `useToday` turns one into the other, and these
+ * fixtures stand in when the app has no API to talk to.
  */
 
 export interface TodayLight {
@@ -21,7 +24,10 @@ export interface TodayLight {
 
 export interface TodayReply {
   from: string;
-  /** Words, never counts: the family hears substance, not a number. */
+  /**
+   * The whole line, with the name inside it: "Anna: Those are…", "Mia sent a heart". Words, never
+   * counts: the family hears substance, not a number.
+   */
   text: string;
 }
 
@@ -52,28 +58,39 @@ export interface Today {
   tomorrow?: TomorrowTurn;
 }
 
-export const todayFixture: Today = {
-  lights: [
-    { memberId: "m1", displayName: "Mom", state: "lit", stateText: "answered 8:12" },
-    { memberId: "m2", displayName: "Dad", state: "resting", stateText: "resting" },
-  ],
-  exchange: {
-    asker: "Mia",
-    recipient: "Mom",
-    ask: "What did the garden look like this morning?",
-    answer: {
-      text: "The tomatoes finally turned. I picked three before breakfast and left them on the sill.",
-      at: "8:12",
-    },
-    replies: [
-      { from: "Mia", text: "sent a heart" },
-      { from: "Anna", text: "Those are the ones from the seeds you saved" },
+/**
+ * The example day, in the language active when it is read. Its state line and receipt are the
+ * messages `useToday` builds for a real day, so both read alike.
+ */
+export function todayFixture(): Today {
+  const recipient = t`Mom`;
+  const time = clockTime(8, 12);
+  return {
+    lights: [
+      { memberId: "m1", displayName: recipient, state: "lit", stateText: t`answered ${time}` },
+      { memberId: "m2", displayName: t`Dad`, state: "resting", stateText: t`resting` },
     ],
-    receipt: "Mom saw it · 8:12",
-  },
-  tomorrow: {
-    name: "Anna",
-    mine: false,
-    suggestion: "Ask her about the seeds she saved from last year",
-  },
-};
+    exchange: {
+      asker: "Mia",
+      recipient,
+      ask: t`What did the garden look like this morning?`,
+      answer: {
+        text: t`The tomatoes finally turned. I picked three before breakfast and left them on the sill.`,
+        at: time,
+      },
+      replies: [
+        { from: "Mia", text: reactionLine("Mia", "heart") },
+        {
+          from: "Anna",
+          text: replyLine("Anna", "text", t`Those are the ones from the seeds you saved`),
+        },
+      ],
+      receipt: t`${recipient} saw it · ${time}`,
+    },
+    tomorrow: {
+      name: "Anna",
+      mine: false,
+      suggestion: t`Ask her about the seeds she saved from last year`,
+    },
+  };
+}

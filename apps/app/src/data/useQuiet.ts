@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiQuietNotice, ApiQuietState } from "@vela/contracts";
 import { useState } from "react";
@@ -7,14 +9,37 @@ import { useAccount } from "../auth/clerk.tsx";
 import { timeOfDay, weekday } from "./format.ts";
 import type { QuietNotice } from "./quiet.ts";
 
-function dayOf(instant: string): string {
+/** Whether an instant fell today or yesterday on this device, or on a day before. */
+function dayOf(instant: string): "today" | "yesterday" | "earlier" {
   const at = new Date(instant);
-  if (!Number.isFinite(at.getTime())) return "";
   const today = new Date();
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1_000);
   if (at.toDateString() === today.toDateString()) return "today";
   if (at.toDateString() === yesterday.toDateString()) return "yesterday";
-  return weekday(instant);
+  return "earlier";
+}
+
+/** When she last answered, as one whole sentence for each kind of day. */
+function lastAnswered(name: string, instant: string): string {
+  const time = timeOfDay(instant);
+  switch (dayOf(instant)) {
+    case "today":
+      return t`${name} last answered today at ${time}.`;
+    case "yesterday":
+      return t`${name} last answered yesterday at ${time}.`;
+    default: {
+      const day = weekday(instant);
+      return t`${name} last answered ${day} at ${time}.`;
+    }
+  }
+}
+
+/** When today's ask reached her, and when it was asked again, if it was. */
+function reached(name: string, delivered: string, repeated: string | null): string {
+  const time = timeOfDay(delivered);
+  if (repeated === null) return t`Today's ask reached ${name} at ${time}.`;
+  const timeAgain = timeOfDay(repeated);
+  return t`Today's ask reached ${name} at ${time}, and again at ${timeAgain}.`;
 }
 
 /**
@@ -25,16 +50,10 @@ function factsOf(notice: ApiQuietNotice | ApiQuietState): string[] {
   const name = notice.member_name;
   const facts: string[] = [];
   if (notice.delivered_at !== null) {
-    facts.push(
-      notice.repeated_at === null
-        ? `Today's ask reached ${name} at ${timeOfDay(notice.delivered_at)}.`
-        : `Today's ask reached ${name} at ${timeOfDay(notice.delivered_at)}, and again at ${timeOfDay(notice.repeated_at)}.`,
-    );
+    facts.push(reached(name, notice.delivered_at, notice.repeated_at));
   }
   if (notice.last_answered_at !== null) {
-    facts.push(
-      `${name} last answered ${dayOf(notice.last_answered_at)} at ${timeOfDay(notice.last_answered_at)}.`,
-    );
+    facts.push(lastAnswered(name, notice.last_answered_at));
   }
   return facts;
 }
@@ -43,12 +62,16 @@ function resolutionOf(state: ApiQuietNotice | ApiQuietState): string | undefined
   const name = state.member_name;
   if (state.resolved !== null) {
     const by = state.resolved.by_name;
-    return state.resolved.outcome === "fine_known"
-      ? `${by ?? "Someone"} said ${name} is fine. Everyone who was told has heard.`
-      : `${name} answered. The light is lit again.`;
+    if (state.resolved.outcome !== "fine_known") {
+      return t`${name} answered. The light is lit again.`;
+    }
+    return by === null
+      ? t`Someone said ${name} is fine. Everyone who was told has heard.`
+      : t`${by} said ${name} is fine. Everyone who was told has heard.`;
   }
   if (state.wait_until !== null && new Date(state.wait_until).getTime() > Date.now()) {
-    return `Waiting until ${timeOfDay(state.wait_until)}. You will hear again then if it is still quiet.`;
+    const time = timeOfDay(state.wait_until);
+    return t`Waiting until ${time}. You will hear again then if it is still quiet.`;
   }
   return undefined;
 }
@@ -63,7 +86,7 @@ export function toQuietNotice(notice: ApiQuietNotice): QuietNotice {
     contacts: notice.contacts.map((contact) => ({
       id: contact.id,
       name: contact.name,
-      relation: contact.relation ?? "nearby",
+      relation: contact.relation ?? t({ context: "relation", message: "nearby" }),
       consented: true,
       phone: contact.phone,
     })),
@@ -85,6 +108,8 @@ export interface QuietView {
  * then read again, since the light may have changed.
  */
 export function useQuiet(quietEventId: string | undefined, enabled: boolean): QuietView {
+  // Read so a change of language renders the notice again with its facts in the new one.
+  useLingui();
   const account = useAccount();
   const queries = useQueryClient();
   const fineKey = useIdempotencyKey("quiet-fine");

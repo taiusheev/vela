@@ -1,4 +1,5 @@
 import type {
+  ApiAccountPatch,
   ApiAccountProfile,
   ApiAskConflict,
   ApiComposedAsk,
@@ -64,14 +65,16 @@ interface Call {
   /** Present on a write; the same key twice is the same write, answered from its receipt. */
   key?: string;
   body?: unknown;
+  /** A write is a POST unless it changes part of something that already exists. */
+  method?: "POST" | "PATCH";
 }
 
-async function call<T>({ path, token, key, body }: Call): Promise<T> {
+async function call<T>({ path, token, key, body, method }: Call): Promise<T> {
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
   const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: body === undefined ? "GET" : "POST",
+    method: body === undefined ? "GET" : (method ?? "POST"),
     headers: {
       accept: "application/json",
       ...(token === null ? {} : { authorization: `Bearer ${token}` }),
@@ -229,6 +232,15 @@ export function provisionAccount(
   token: string | null,
 ): Promise<ApiUser> {
   return call<ApiUser>({ path: "/v1/me/provision", token, key, body: profile });
+}
+
+/** A change to the organiser's language, name or zone: PATCH /v1/me (API contract §2). */
+export function updateAccount(
+  patch: ApiAccountPatch,
+  key: string,
+  token: string | null,
+): Promise<ApiUser> {
+  return call<ApiUser>({ path: "/v1/me", token, key, body: patch, method: "PATCH" });
 }
 
 export function createFamily(
