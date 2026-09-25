@@ -202,8 +202,8 @@ export async function loadScheduleInput(
       ),
     )
     .limit(1);
-  // A period ended since yesterday began still covers yesterday or today when that day's arrival
-  // went out before the end (see `awayOn` below); one ended earlier covers neither.
+  // A period ended since yesterday began can still hold back a threshold of yesterday or today
+  // reached before its end (see `awayOn` below); every such threshold comes after one ended earlier.
   const away = await db
     .select({
       fromDate: awayPeriods.fromDate,
@@ -246,20 +246,16 @@ export async function loadScheduleInput(
       turnPromptSent: turn !== undefined,
       askScheduled: tomorrowExchange !== null && tomorrowExchange.state === "composed",
     },
-    // An arrival that went out while she was away gets no repeat and no quiet notice (spec §8), so
-    // ending the period, by `end_away` or by her answer, keeps covering that day: otherwise the
-    // thresholds its away held back, yesterday's or this morning's, would all fall due at the end.
-    // The ladder comes back with the first arrival delivered after the end.
-    awayOn: (date) => {
-      const deliveredAt = days.find((day) => day.date === date)?.deliveredAt ?? null;
-      return away.some(
+    // A period covers its dates until it ends, by `end_away` or by her answer (flows §3.17): the
+    // repeat and quiet thresholds reached before the end stay held back, or they would all fall due
+    // at the end, yesterday's included, while the ones reached after it come as on any day.
+    awayOn: (date, at) =>
+      away.some(
         (period) =>
           period.fromDate <= date &&
           (period.toDate === null || period.toDate >= date) &&
-          (period.endedAt === null ||
-            (deliveredAt !== null && deliveredAt.getTime() < period.endedAt.getTime())),
-      );
-    },
+          (period.endedAt === null || at.getTime() < period.endedAt.getTime()),
+      ),
     weeklyReadDoneFor: (weekEnd) => weekStarts.has(addDays(weekEnd, -6)),
   };
 }

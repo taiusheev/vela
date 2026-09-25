@@ -31,6 +31,8 @@ interface Scenario {
   turnPromptSent?: boolean;
   askScheduled?: boolean;
   away?: LocalDate[];
+  /** When the away over the dates in `away` ended; unset, it still lasts. */
+  awayEndedAt?: Date;
   weeklyReadsDone?: LocalDate[];
 }
 
@@ -53,7 +55,9 @@ function decide(scenario: Scenario): ScheduleDecision {
       turnPromptSent: scenario.turnPromptSent ?? false,
       askScheduled: scenario.askScheduled ?? false,
     },
-    awayOn: (date) => (scenario.away ?? []).includes(date),
+    awayOn: (date, at) =>
+      (scenario.away ?? []).includes(date) &&
+      (scenario.awayEndedAt === undefined || at.getTime() < scenario.awayEndedAt.getTime()),
     weeklyReadDoneFor: (weekEnd) => (scenario.weeklyReadsDone ?? []).includes(weekEnd),
   });
 }
@@ -339,6 +343,65 @@ describe("away", () => {
   it("sends no waited quiet notice once she is away", () => {
     const waited = deliveredToday({ quiet: quiet({ waitUntil: taipei("16:00") }) });
     expect(decide({ now: taipei("16:00"), days: [waited], away: [TODAY] }).due).toEqual([]);
+  });
+
+  it("gives back the thresholds still ahead when the away ends after the morning went out", () => {
+    const unanswered = day(TODAY, { deliveredAt: taipei("08:00") });
+    const ended = { days: [unanswered], away: [TODAY], awayEndedAt: taipei("08:30") };
+    const atEnd = decide({ ...ended, now: taipei("08:30") });
+    expect(atEnd.due).toEqual([]);
+    expect(iso(atEnd.nextWakeAt)).toBe(iso(taipei("10:30")));
+    expect(decide({ ...ended, now: taipei("10:30") }).due).toEqual([
+      { kind: "send_repeat", date: TODAY },
+    ]);
+    expect(decide({ ...ended, days: [deliveredToday()], now: taipei("14:00") }).due).toEqual([
+      { kind: "open_quiet", date: TODAY, notify: true },
+    ]);
+  });
+
+  it("never fires at the end a threshold reached before the away ended, and wakes for the next one", () => {
+    const unanswered = day(TODAY, { deliveredAt: taipei("08:00") });
+    const midday = { days: [unanswered], away: [TODAY], awayEndedAt: taipei("12:00") };
+    const atNoon = decide({ ...midday, now: taipei("12:00") });
+    expect(atNoon.due).toEqual([]);
+    expect(iso(atNoon.nextWakeAt)).toBe(iso(taipei("14:00")));
+    expect(decide({ ...midday, now: taipei("14:00") }).due).toEqual([
+      { kind: "open_quiet", date: TODAY, notify: true },
+    ]);
+
+    const evening = { days: [unanswered], away: [TODAY], turnPromptSent: true };
+    expect(decide({ ...evening, awayEndedAt: taipei("20:00"), now: taipei("20:00") }).due).toEqual(
+      [],
+    );
+
+    const yesterday = day(YESTERDAY, { deliveredAt: taipei("08:00", YESTERDAY) });
+    const morning = decide({
+      now: taipei("07:00"),
+      days: [yesterday],
+      away: [YESTERDAY],
+      awayEndedAt: taipei("07:00"),
+    });
+    expect(morning.due).toEqual([]);
+    expect(iso(morning.nextWakeAt)).toBe(iso(taipei("08:00")));
+  });
+
+  it("pushes an open quiet when its push time comes after the away ended, and not when it came inside it", () => {
+    const inApp = deliveredToday({ quiet: quiet({ lastNotifiedAt: null }) });
+    const learning = { days: [inApp], away: [TODAY], learningUntil: TOMORROW };
+    expect(decide({ ...learning, awayEndedAt: taipei("15:00"), now: taipei("16:00") }).due).toEqual(
+      [{ kind: "notify_quiet", date: TODAY }],
+    );
+    expect(decide({ ...learning, awayEndedAt: taipei("16:30"), now: taipei("16:30") }).due).toEqual(
+      [],
+    );
+
+    const waited = { days: [deliveredToday({ quiet: quiet({ waitUntil: taipei("16:00") }) })] };
+    const endedBefore = { ...waited, away: [TODAY], awayEndedAt: taipei("15:00") };
+    expect(decide({ ...endedBefore, now: taipei("16:00") }).due).toEqual([
+      { kind: "notify_quiet", date: TODAY },
+    ]);
+    const endedAfter = { ...waited, away: [TODAY], awayEndedAt: taipei("16:30") };
+    expect(decide({ ...endedAfter, now: taipei("16:30") }).due).toEqual([]);
   });
 });
 

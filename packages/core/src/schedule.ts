@@ -59,7 +59,13 @@ export interface ScheduleInput {
      */
     askScheduled: boolean;
   };
-  awayOn: (date: LocalDate) => boolean;
+  /**
+   * Whether an away period covers `date` at the instant `at`, when one of that day's thresholds is
+   * reached. A period covers its dates until it ends, so the answer is true up to the end and false
+   * from it on: the thresholds reached before an away ended stay held back, and the ones after it
+   * come as on any day (spec §8, flows §3.17).
+   */
+  awayOn: (date: LocalDate, at: Date) => boolean;
   weeklyReadDoneFor: (weekEnd: LocalDate) => boolean;
 }
 
@@ -245,17 +251,16 @@ function ladderWakesAfterDelivery(ctx: Context, day: DayState, out: Collector): 
 }
 
 /**
- * Repeat and quiet apply only to a delivered, unanswered exchange on a day she is not away, on or
- * after her start date. Neither follows our own failure to deliver: a repeat would re-send what did
- * not arrive, and a quiet would blame her silence on it.
+ * Repeat and quiet apply only to a delivered, unanswered exchange on or after her start date, each
+ * at a threshold she is not away at. Neither follows our own failure to deliver: a repeat would
+ * re-send what did not arrive, and a quiet would blame her silence on it.
  */
 function ladderRules(ctx: Context, day: DayState, out: Collector): void {
   if (
     day.deliveredAt === null ||
     day.deliveryFailed ||
     day.answeredAt !== null ||
-    !hasStarted(ctx, day.date) ||
-    ctx.input.awayOn(day.date)
+    !hasStarted(ctx, day.date)
   ) {
     return;
   }
@@ -264,11 +269,25 @@ function ladderRules(ctx: Context, day: DayState, out: Collector): void {
   notifyQuietRule(ctx, day, day.deliveredAt, out);
 }
 
+/**
+ * A threshold reached while an away covered its day is held back for good: neither due nor woken
+ * for, even once the away has ended, so an end never fires at once what the away held back. Each
+ * threshold is judged on its own, because an away ended in the morning leaves that day's later
+ * thresholds reached with her at home, and holding back the whole day would put the first possible
+ * quiet notice a day later (spec §8, flows §3.17).
+ */
+function awayAt(ctx: Context, day: DayState, threshold: Date): boolean {
+  return ctx.input.awayOn(day.date, threshold);
+}
+
 function repeatRule(ctx: Context, day: DayState, deliveredAt: Date, out: Collector): void {
   if (day.repeatSentAt !== null) {
     return;
   }
   const repeatAt = addMinutes(deliveredAt, SCHEDULE.repeatAfterMinutes);
+  if (awayAt(ctx, day, repeatAt)) {
+    return;
+  }
   if (reached(ctx.now, repeatAt)) {
     out.due.push({ kind: "send_repeat", date: day.date });
   } else {
@@ -286,6 +305,11 @@ function openQuietRule(ctx: Context, day: DayState, deliveredAt: Date, out: Coll
     return;
   }
   const quietAt = addMinutes(deliveredAt, ctx.input.member.quietAfterMinutes);
+  // A quiet that opens past an away's end is pushed past it too: its notice goes now or at the
+  // learning push time, never before `quietAt`.
+  if (awayAt(ctx, day, quietAt)) {
+    return;
+  }
   if (!reached(ctx.now, quietAt)) {
     out.wakes.push(quietAt);
     return;
@@ -319,7 +343,7 @@ function notifyQuietRule(ctx: Context, day: DayState, deliveredAt: Date, out: Co
   } else if (lastNotifiedAt === null) {
     notifyAt = addMinutes(deliveredAt, SCHEDULE.learningNotifyMinutes);
   }
-  if (notifyAt === null) {
+  if (notifyAt === null || awayAt(ctx, day, notifyAt)) {
     return;
   }
   if (reached(ctx.now, notifyAt)) {

@@ -314,8 +314,12 @@ describe("loadScheduleInput", () => {
       tomorrow: { prepared: false, turnPromptSent: true, askScheduled: true },
     });
     expect(
-      ["2026-09-14", "2026-09-15", "2026-09-17", "2026-09-18"].map((date) => input?.awayOn(date)),
+      ["2026-09-14", "2026-09-15", "2026-09-17", "2026-09-18"].map((date) =>
+        input?.awayOn(date, at(date, "12:00")),
+      ),
     ).toEqual([false, true, true, false]);
+    // The period ended at 08:00 still covers the 14th before its end.
+    expect(input?.awayOn("2026-09-14", at("2026-09-14", "07:59"))).toBe(true);
     expect(input?.weeklyReadDoneFor("2026-09-13")).toBe(true);
     expect(input?.weeklyReadDoneFor("2026-09-20")).toBe(false);
   });
@@ -583,7 +587,7 @@ describe("an away period the founder ends", () => {
     return period.id;
   }
 
-  it("keeps yesterday an away day when it ends before today's arrival: no repeat or quiet notice follows yesterday's morning", async () => {
+  it("keeps yesterday's thresholds held back when it ends before today's arrival: no repeat or quiet notice follows yesterday's morning", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const her = seed.member.id;
     const period = await awayFromTuesday(seed);
@@ -612,7 +616,7 @@ describe("an away period the founder ends", () => {
     expect((await outboundRows("repeat")).map((row) => row.localDay)).toEqual(["2026-09-16"]);
   });
 
-  it("keeps today an away day when it ends after today's morning went out: its passed thresholds do not fire at the end", async () => {
+  it("keeps today's thresholds held back when it ends after they passed: none fires at the end", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const her = seed.member.id;
     const period = await awayFromTuesday(seed);
@@ -636,6 +640,38 @@ describe("an away period the founder ends", () => {
     await advanceTo(her, at("2026-09-17", "10:30"));
     expect((await outboundRows("arrival")).map((row) => row.localDay)).toEqual(["2026-09-17"]);
     expect((await outboundRows("repeat")).map((row) => row.localDay)).toEqual(["2026-09-17"]);
+  });
+
+  it("gives back today's thresholds still ahead when it ends after the morning went out: the repeat and the quiet notice come at their times", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const her = seed.member.id;
+    const period = await awayFromTuesday(seed);
+    await seedExchange(h.db, seed, { date: "2026-09-16", state: "scheduled" });
+    // Wednesday's morning goes out at 08:00 while she is away.
+    h.clock.set(at("2026-09-16", "08:00"));
+    await tickMember(h.deps, her);
+    await settle(her);
+    expect((await exchangeOn(her, "2026-09-16")).deliveredAt).toEqual(at("2026-09-16", "08:00"));
+
+    // 08:30, the morning unanswered: her trip was called off, and the founder ends the away.
+    h.clock.set(at("2026-09-16", "08:30"));
+    await endAway(h.deps, FOUNDER, period);
+    await tickMember(h.deps, her);
+    await settle(her);
+    expect(await outboundRows("repeat")).toEqual([]);
+    expect(await nextWake(her)).toEqual(at("2026-09-16", "10:30"));
+
+    // Every threshold after the end is reached with her at home: the repeat at 10:30, the quiet at
+    // 14:00, and, in her learning period, its notice at 16:00.
+    await advanceTo(her, at("2026-09-16", "16:00"));
+    expect((await outboundRows("repeat")).map((row) => row.localDay)).toEqual(["2026-09-16"]);
+    const [quiet] = await h.db.select().from(quietEvents);
+    expect(quiet).toMatchObject({
+      openedAt: at("2026-09-16", "14:00"),
+      lastNotifiedAt: at("2026-09-16", "16:00"),
+      notifiedMemberIds: [seed.organiser.id],
+    });
+    expect(await outboundRows("quiet_notice")).toHaveLength(1);
   });
 });
 

@@ -341,11 +341,13 @@ WHERE NOT EXISTS (
 );
 ```
 
-Ending it early:
+Ending it early. The repeat and quiet notice times that passed while she was away stay skipped, and the ones still ahead that day come as usual. Clearing `next_wake_at` makes reconciliation re-plan her schedule within 15 minutes, as `end_away` does at once; without it, today's times still ahead would wait for her next planned wake, such as the evening's, and come together then:
 
 ```sql
 UPDATE away_periods SET ended_at = now()
 WHERE member_id = '<kept-light member id>' AND source = 'organiser' AND ended_at IS NULL;
+UPDATE members SET next_wake_at = NULL
+WHERE id = '<kept-light member id>';
 ```
 
 Tell the organiser the dates you set.
