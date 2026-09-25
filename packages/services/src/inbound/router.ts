@@ -84,6 +84,14 @@ export async function handleInbound(deps: Deps, events: InboundEvent[]): Promise
 }
 
 async function route(deps: Deps, event: InboundEvent): Promise<void> {
+  if (event.kind === "followed" || event.kind === "unsent") {
+    // LINE reports these before Vela has flows for them (`05-line-flows.md` §8, steps 5 and 9).
+    // Until then each is noted by kind alone and changes nothing.
+    deps.logger.info(event.kind === "followed" ? "follow_ignored" : "unsend_ignored", {
+      conversation: event.conversation.kind,
+    });
+    return;
+  }
   if (event.conversation.kind === "group") {
     await routeGroup(deps, event);
     return;

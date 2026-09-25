@@ -49,7 +49,19 @@ describe("createTelegramAdapter", () => {
       readReceipts: false,
       reactions: true,
       albums: true,
+      editMessages: true,
+      resendsProviderFiles: true,
+      mediaByUrl: false,
+      mediaReplies: true,
     });
+  });
+
+  it("implements none of the optional methods", () => {
+    const { adapter } = setup(botApi({}));
+    expect(adapter.profile).toBeUndefined();
+    expect(adapter.leaveConversation).toBeUndefined();
+    expect(adapter.quota).toBeUndefined();
+    expect(adapter.fetchPreview).toBeUndefined();
   });
 
   it("refuses a webhook secret Telegram would not accept", () => {

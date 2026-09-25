@@ -68,6 +68,10 @@ const CAPABILITIES: AdapterCapabilities = {
   readReceipts: false,
   reactions: true,
   albums: true,
+  editMessages: true,
+  resendsProviderFiles: true,
+  mediaByUrl: false,
+  mediaReplies: true,
 };
 
 interface FailureRule {

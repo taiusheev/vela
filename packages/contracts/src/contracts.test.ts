@@ -16,6 +16,7 @@ import {
   ApiMutationResponse,
   ApiUser,
   BUDGETED_OUTBOUND_KINDS,
+  CHANNEL_SEND_ERROR_CODES,
   ChannelSendError,
   CONSENT_ANSWERS,
   CONSENT_KINDS,
@@ -23,6 +24,7 @@ import {
   ConsentKind,
   DomainEvent,
   EventName,
+  INBOUND_KINDS,
   InboundEvent,
   isIanaTimeZone,
   LocalDate,
@@ -138,6 +140,9 @@ describe("MediaRef", () => {
   });
 });
 
+const LINE_USER = "U4af4980629c1e6e5b7a4f1a8e5c0b2d3";
+const LINE_GROUP = "Ca56f94637cc4347f90a25382909b24b9";
+
 describe("OutboundMessage", () => {
   const base = {
     kind: "arrival",
@@ -155,6 +160,16 @@ describe("OutboundMessage", () => {
     const tooLong = { ...base, buttons: [[{ id: "x".repeat(65), label: "Yes" }]] };
     expect(OutboundMessage.safeParse(tooLong).success).toBe(false);
   });
+
+  it("carries the reply token of the event it answers, and refuses an empty one", () => {
+    const reply = {
+      ...base,
+      to: { channel: "line", conversationId: LINE_USER },
+      replyToken: "rt1",
+    };
+    expect(OutboundMessage.parse(reply)).toStrictEqual(reply);
+    expect(OutboundMessage.safeParse({ ...reply, replyToken: "" }).success).toBe(false);
+  });
 });
 
 describe("InboundEvent", () => {
@@ -171,6 +186,82 @@ describe("InboundEvent", () => {
       callbackId: "cb-1",
     });
     expect(result.success).toBe(true);
+  });
+
+  const tap = {
+    channel: "line",
+    eventId: "line:01JAQ3Z6W8K2V5N7R9T1X3B5D7",
+    at: "2026-09-14T00:12:00.000Z",
+    kind: "button",
+    sender: { externalUserId: LINE_USER },
+    conversation: { externalId: LINE_USER, kind: "private" },
+    buttonData: "a:0198f6aa000070008000000000000001:f",
+  } as const;
+
+  it("carries a free reply handle and the instant it expires", () => {
+    const withReply = {
+      ...tap,
+      reply: { token: "b60d1f2e2a8c4f5d9a3e7b1c0f4d6e8a", until: "2026-09-14T00:12:50.000Z" },
+    };
+    expect(InboundEvent.parse(withReply)).toStrictEqual(withReply);
+    expect(InboundEvent.parse(tap)).toStrictEqual(tap);
+  });
+
+  it("refuses a reply handle without a token or without an instant with an offset", () => {
+    for (const reply of [
+      { token: "", until: "2026-09-14T00:12:50.000Z" },
+      { until: "2026-09-14T00:12:50.000Z" },
+      { token: "b60d1f2e", until: "2026-09-14 00:12:50" },
+      { token: "b60d1f2e", until: "2026-09-14T00:12:50" },
+      { token: "b60d1f2e" },
+    ]) {
+      expect(InboundEvent.safeParse({ ...tap, reply }).success, JSON.stringify(reply)).toBe(false);
+    }
+  });
+});
+
+describe("followed and unsent events", () => {
+  const common = {
+    channel: "line",
+    eventId: "line:01JAQ3Z6W8K2V5N7R9T1X3B5D8",
+    at: "2026-09-14T00:12:00.000Z",
+    sender: { externalUserId: LINE_USER },
+  } as const;
+
+  it("are kinds of their own, under Vela's names rather than LINE's", () => {
+    const privately = { ...common, conversation: { externalId: LINE_USER, kind: "private" } };
+    expect(INBOUND_KINDS).toContain("followed");
+    expect(INBOUND_KINDS).toContain("unsent");
+    expect(InboundEvent.safeParse({ ...privately, kind: "followed" }).success).toBe(true);
+    expect(InboundEvent.safeParse({ ...privately, kind: "follow" }).success).toBe(false);
+    expect(InboundEvent.safeParse({ ...privately, kind: "unsend" }).success).toBe(false);
+  });
+
+  it("say who followed in their own chat, and which message was withdrawn", () => {
+    const followed = {
+      ...common,
+      kind: "followed",
+      conversation: { externalId: LINE_USER, kind: "private" },
+    } as const;
+    const unsent = {
+      ...common,
+      kind: "unsent",
+      conversation: { externalId: LINE_USER, kind: "private" },
+      messageId: "325708",
+    } as const;
+    expect(InboundEvent.parse(followed)).toStrictEqual(followed);
+    expect(InboundEvent.parse(unsent)).toStrictEqual(unsent);
+  });
+
+  it("name the group itself as the sender when the platform does not say who acted", () => {
+    const unsent = {
+      ...common,
+      kind: "unsent",
+      sender: { externalUserId: LINE_GROUP },
+      conversation: { externalId: LINE_GROUP, kind: "group" },
+      messageId: "325709",
+    } as const;
+    expect(InboundEvent.parse(unsent)).toStrictEqual(unsent);
   });
 });
 
@@ -761,8 +852,18 @@ describe("ChannelSendError", () => {
       new ChannelSendError("rate_limited", "slow down", { retryAfterSeconds: 3 }).retryable,
     ).toBe(true);
     expect(new ChannelSendError("unavailable", "5xx").retryable).toBe(true);
+    expect(new ChannelSendError("quota_exhausted", "monthly limit").retryable).toBe(true);
     expect(new ChannelSendError("blocked", "user blocked the bot").retryable).toBe(false);
+    expect(new ChannelSendError("not_found", "no such chat").retryable).toBe(false);
     expect(new ChannelSendError("invalid_request", "bad").retryable).toBe(false);
+    expect(new ChannelSendError("unknown", "2xx without a result").retryable).toBe(false);
+  });
+
+  it("retries exactly the rate limit, the spent quota, and an unavailable platform", () => {
+    const retryable = CHANNEL_SEND_ERROR_CODES.filter(
+      (code) => new ChannelSendError(code, code).retryable,
+    );
+    expect(retryable).toStrictEqual(["rate_limited", "quota_exhausted", "unavailable"]);
   });
 
   it("carries the conversation a group moved to without making the send retryable", () => {

@@ -1,6 +1,6 @@
 # The LINE channel: flows, adapter, and cost
 
-2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9; nothing here is built yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
+2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9. Step 1 of §8, the contract, is built; nothing else is yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
 
 Read it with:
 - `04-instrument-flows.md`. Any flow this document does not change works exactly as written there.
@@ -20,10 +20,10 @@ No developers.line.biz page shows a last-updated date, so dated facts come from 
 
 **The photo-asks change is taken as given** (build plan 3.4, `feat/photo-asks`):
 - `ChannelAdapter.send(message, files?)`, where `files` maps storage keys to bytes;
-- a `MediaRef` that may carry a `storageKey`;
+- an outbound media schema whose items carry a `storageKey`. It is separate from `MediaRef`, which stays the inbound reference and gains no `storageKey`;
 - `MediaStore.head(key)`.
 
-The LINE adapter never reads `files` (§5.5).
+The LINE adapter never reads `files` (§5.5), and its `send` declares one parameter, which satisfies both today's `send(message)` and photo-asks' signature (§5.9).
 
 ## 1. LINE facts that shape the flows
 
@@ -610,7 +610,7 @@ Rules that apply to the whole body:
 | `message` sticker | user | `sticker`, `text` = `sticker.text` when present |
 | `message` of any content other than the text above | group or room | nothing |
 | `messageEdited` | any | nothing (D5) |
-| `unsend` | any | `unsent`, `messageId` = `unsend.messageId` |
+| `unsend` | any | `unsent`, `messageId` = `unsend.messageId`. In a group or room without `source.userId`, the sender is the conversation (§5.9): an unsend needs no user, since its message id is unique across LINE |
 | `follow` | user | `followed` (`isUnblocked` is not relied on) |
 | `unfollow` | user | `blocked` |
 | `join` | group or room | `bot_added`; sender is the conversation (§5.9) |
@@ -632,7 +632,7 @@ Rules the tests prove:
 
 ### 5.5 Sending
 
-`send(message, files?)` validates with `OutboundMessage.safeParse` and refuses a `to.channel` other than `line`. It never reads `files`.
+`send(message)` validates with `OutboundMessage.safeParse` and refuses a `to.channel` other than `line`. It declares one parameter and so never reads photo-asks' `files` (§5.9).
 
 **Local refusals.** These are `invalid_request`, raised before any network call:
 - a media ref with only a `providerFileId`, since LINE cannot re-send by id;
@@ -721,17 +721,41 @@ Every path is written exactly, with no trailing slash (LINE news of 17 August 20
 
 ### 5.9 Contract changes (`packages/contracts/src/adapter.ts`)
 
+Built in step 1 (§8). `03-code-design.md` §6 summarises them.
+
 - **`INBOUND_KINDS`** gains two kinds:
   - `followed`: a person added the account or unblocked it (LINE `follow`);
   - `unsent`: the sender withdrew the message `messageId`.
-- **The sender convention.** `sender` stays required. For `bot_added`, `bot_removed` and `member_left` on a platform that does not say who acted, `sender.externalUserId` equals `conversation.externalId`, and services read that as "unknown". A helper in services, `actorOf(event)`, returns null in that case. Group ids never equal user ids on either platform: Telegram's group ids are negative, LINE's start with `C` or `R`.
-- **`InboundEvent.reply?: { token: string; until: string }`**: a free reply handle and the time after which it must not be used.
-- **`OutboundMessage.replyToken?: string`**: the adapter replies with it when it can and pushes when LINE refuses it.
-- **`AdapterCapabilities`** gains `editMessages`, `resendsProviderFiles`, `mediaByUrl` and `mediaReplies`.
-- **`CHANNEL_SEND_ERROR_CODES`** gains `quota_exhausted`, which is retryable.
-- **Optional methods on `ChannelAdapter`:** `profile?`, `leaveConversation?`, `quota?` and `fetchPreview?`. They come with the types `ChannelProfile { displayName?; languageCode? }` and `ChannelQuota { limit: number | null; used: number; readAt: string }`.
+
+  Until steps 5 and 9, services' router logs `follow_ignored` or `unsend_ignored` (the conversation kind only) and does nothing else.
+- **The sender convention.** `sender` stays required. For `bot_added`, `bot_removed` and `member_left` on a platform that does not say who acted, and for an `unsent` in a group or room that names no user (§5.4), `sender.externalUserId` equals `conversation.externalId`, and services read that as "unknown". A helper in services, `actorOf(event)` (step 5), returns null in that case, and only when `event.conversation.kind` is `group`. On Telegram a private chat's id equals the user's id, so a test of the ids alone would call every private sender unknown. Group ids never equal user ids on either platform: Telegram's group ids are negative, LINE's start with `C` or `R`.
+- **`InboundEvent.reply?: { token, until }`**: a free reply handle and the time after which it must not be used. `token` is a non-empty string; `until` is an ISO datetime with an offset.
+- **`OutboundMessage.replyToken?`**, a non-empty string. The adapter replies with it when it can and pushes when LINE refuses it; adapters without free replies ignore it. A LINE reply has no `to`: it always lands in the chat the token came from, and neither the adapter nor LINE can catch a mismatch. So the token is set only when its conversation is `to.conversationId`, the gateway's rule in §5.11.
+- **`AdapterCapabilities`** gains four flags. Each is defined by a doc comment in `adapter.ts`, because Telegram already sends a `MediaRef.url` by URL and a looser reading would set its `mediaByUrl` true:
+  - `editMessages`: `closeButtons` really edits; when false it resolves without doing anything;
+  - `resendsProviderFiles`: a `providerFileId` received on this channel can be sent again on it;
+  - `mediaByUrl`: the adapter turns a storage key into an HTTPS URL itself and needs no bytes, so the gateway loads none for it;
+  - `mediaReplies`: an inbound voice note or image can carry `replyToMessageId`.
+- **`CHANNEL_SEND_ERROR_CODES`** gains `quota_exhausted`, which is retryable. `retryable` is derived from the code in `ChannelSendError`'s constructor, so the constructor names it beside `rate_limited` and `unavailable`. Nothing in services or the Worker switches over the codes exhaustively.
+- **Optional methods on `ChannelAdapter`:**
+  - `profile?(externalUserId, conversationId?)`, null when the platform does not know the person there;
+  - `leaveConversation?(conversationId)`, where a conversation already left counts as left;
+  - `quota?()`;
+  - `fetchPreview?(providerFileId)`.
+
+  They come with the types `ChannelProfile { displayName?; languageCode? }` and `ChannelQuota { limit: number | null; used: number; readAt: string }`. Telegram implements none of them.
+- **Stated semantics** that the LINE adapter relies on:
+  - `acknowledgeButton`: a platform with nothing to acknowledge resolves for any event, while Telegram's refuses an event that is not one of its taps;
+  - `closeButtons`: see `editMessages`;
+  - `SendResult.primaryMessageId`: always the text message, even where the platform puts the buttons in a following message;
+  - `member_left`: `sender` may be the unknown actor.
 - **The `Button.id` comment** notes LINE's 300-character postback data. The 64 limit stays.
-- **From photo-asks:** `MediaRef.storageKey` and `send(message, files?)`. The LINE adapter uses `storageKey` through `mediaUrl`.
+- **The `MediaRef.providerUniqueId` comment** says that on LINE it is the message id: stable across redelivery, not across forwards. Services deduplicate inbound media on it, so a redelivered image or voice event adds no second media row (§5.4 sets it in step 2).
+- **Photo-asks.** Step 1 adds no `storageKey` to `MediaRef`, leaves its refine alone, and does not touch `send`'s signature:
+  - Photo-asks brings its own outbound media schema carrying `storageKey`, and `send(message, files?)`.
+  - The LINE adapter implements `send(message)` with one parameter. `noUnusedParameters` would refuse a declared but unread `files`, and one parameter satisfies both signatures.
+  - Outbound media resolution lives in one function in `line/send.ts` (item → `{ url, previewUrl?, mime, durationMs, bytes }`). Until photo-asks lands it reads `MediaRef.url` (https only); then only that function changes, to `mediaUrl({ storageKey, mime })`.
+  - Photo-asks' outbound schema must also cover audio and carry `mime`, `durationMs` (audio) and `bytes`. Without them every item trips LINE's local refusals (§5.5).
 
 ### 5.10 Worker wiring
 
@@ -810,7 +834,7 @@ It runs in its own try/catch that logs `line_quota_failed` with the label, so a 
 - **Consent evidence:** `message_id` falls back to the outbound row's `external_id` (§2.5), and `groupNoticeEvidence` does the same (§3.1).
 - **Closing buttons:** with `editMessages` false, services skip `closeButtons`, and send `quiet.waiting` as a reply (§4).
 - **Gateway:**
-  - A `payload.reply` is stored from the event and passed as `replyToken` only on a row's first attempt, and only while `now < until`.
+  - A `payload.reply = { token, until, conversationId: event.conversation.externalId }` is stored from the event. It is passed as `replyToken` only on a row's first attempt, only while `now < until`, and only when its `conversationId` equals the row's conversation (§5.9): a reply lands in the chat the token came from, so an organiser notice caused by her tap must never carry her token. A test proves the last rule.
   - Replies are used for `ack`, `help.private`, `help.followed`, `consent.invalid_link`, `consent.already_linked`, `consent.request`, `consent.accepted`, `consent.declined`, onboarding prompts, `group.ask_confirmed`, `group.ask_queued`, `group.linked`, `group.not_linked` and `quiet.waiting`. A second message on one token falls back to a push.
   - A private conversation whose link is blocked fails as `blocked` unsent.
   - `quota_exhausted` sends `admin.line_quota_exhausted` once per month.
@@ -916,15 +940,19 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
 1. **The contract.**
    - Files:
      - `packages/contracts/src/adapter.ts` and its test (§5.9);
-     - `packages/adapters/src/telegram/adapter.ts`, the new capabilities;
-     - `packages/services/src/inbound/router.ts`, where `followed` and `unsent` are ignored for now;
+     - `packages/adapters/src/telegram/adapter.ts` and its test, the new capabilities;
+     - the two fakes that build `AdapterCapabilities` by hand, with Telegram's values: `packages/services/src/testing/fake-telegram.ts` and `apps/worker/src/testing/fakes.ts`;
+     - `packages/services/src/inbound/router.ts` and its test, where `followed` and `unsent` are logged and otherwise ignored for now;
      - `03-code-design.md` §6.
    - Tests:
      - schemas accept and refuse `reply`, `replyToken` and the new kinds;
-     - `quota_exhausted` is retryable;
-     - Telegram's capabilities;
+     - `quota_exhausted` is retryable, and exactly three codes are;
+     - Telegram's capabilities, and none of the optional methods on Telegram;
+     - the router changes nothing for a follow or an unsend;
+     - `pnpm --filter` typecheck of contracts, adapters, services and worker;
      - the whole suite unchanged.
    - Founder: nothing.
+   - **Done** on `feat/line`.
 2. **The LINE adapter: verification and events.**
    - Files: `packages/adapters/src/line/{verify,parse,testing}.ts`, `fixtures/webhook-*.json`, tests, `index.ts`.
    - Tests: §5.3 and §5.4, with no LINE account.

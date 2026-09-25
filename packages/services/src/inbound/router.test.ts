@@ -389,6 +389,34 @@ describe("the family group's buttons", () => {
   });
 });
 
+describe("a follow and an unsend", () => {
+  it("are noted by kind and change nothing until their flows exist, in a private chat or the group", async () => {
+    await scene();
+    const before = await memberCount();
+
+    await inbound(
+      privately(STRANGER, { kind: "followed" }),
+      privately(HER, { kind: "unsent", messageId: "77" }),
+      inGroup(STRANGER, { kind: "unsent", messageId: "78" }),
+    );
+
+    expect(await memberCount()).toBe(before);
+    expect(await h.db.select().from(answers)).toHaveLength(0);
+    expect(await h.db.select().from(outbound)).toHaveLength(0);
+    expect(await h.db.select().from(events)).toHaveLength(0);
+    expect(h.telegram.sent).toHaveLength(0);
+    expect(
+      h.logger.entries
+        .filter((entry) => entry.event.endsWith("_ignored"))
+        .map((entry) => [entry.event, entry.fields]),
+    ).toEqual([
+      ["follow_ignored", { conversation: "private" }],
+      ["unsend_ignored", { conversation: "private" }],
+      ["unsend_ignored", { conversation: "group" }],
+    ]);
+  });
+});
+
 describe("a batch", () => {
   it("carries on after an event that throws, and reports the failure once it is done", async () => {
     await scene();

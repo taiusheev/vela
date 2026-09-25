@@ -29,6 +29,12 @@ const TELEGRAM_CAPABILITIES: AdapterCapabilities = {
   readReceipts: false,
   reactions: true,
   albums: true,
+  editMessages: true,
+  resendsProviderFiles: true,
+  // Telegram fetches a `MediaRef.url` itself, but the adapter makes no URL for a stored object:
+  // those bytes must be handed to it.
+  mediaByUrl: false,
+  mediaReplies: true,
 };
 
 // Editing a message into the state it is already in is Telegram's 400 "message is not modified";
