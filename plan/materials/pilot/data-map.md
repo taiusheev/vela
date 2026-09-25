@@ -56,7 +56,7 @@ There is no row 21: the pilot is free for families, so Vela collects no payment 
 
 ## Planned API mutation receipts (22 September 2026; not enabled)
 
-This is a prospective design entry, **not a change to the data currently collected by the Telegram pilot**. The receipt service, incremental migration and optional isolated account-write routes exist locally; writes default off, neither deployed Worker mounts the API, and the migration has not been applied to staging or production. Before enabling real response caching, review and version the public notices and integrate account/resource deletion; do not treat this entry as approval to collect new live data.
+This is a prospective design entry, **not a change to the data currently collected by the Telegram pilot**. The receipt service, incremental migration and optional isolated account-write routes exist in the repository; since 25 September 2026 staging's pilot Worker serves the API with its writes on and staging's database holds the migration, for test accounts only (staging holds no real person's app account), while production's API is off and its database has not received the migration. Before enabling real response caching, review and version the public notices and integrate account/resource deletion; do not treat this entry as approval to collect new live data.
 
 | Category | Source and storage | Purpose | Retention | Access and processors |
 |---|---|---|---|---|

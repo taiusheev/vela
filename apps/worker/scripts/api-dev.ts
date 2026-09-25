@@ -15,7 +15,7 @@
  *   APP_PORT              optional, 8081 by default: the port the app's web build is served on,
  *                         the only browser origin besides this server that may call it
  *   CLERK_SECRET_KEY      optional, and only a development key (sk_test_…). Without it the writes
- *                         answer 404, as they do on both deployed Workers; with it they are served,
+ *                         answer 404 (staging's pilot Worker requires one); with it they are served,
  *                         because a write needs the live session check that only Clerk’s backend
  *                         can make, and nothing here weakens that check to do without one. This is
  *                         the only place a secret key may sit on a developer’s machine:
