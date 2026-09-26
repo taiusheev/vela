@@ -472,6 +472,37 @@ export async function applyPendingEffects(deps: Deps): Promise<number> {
 }
 
 /**
+ * Her arrivals that are out but whose effects have not landed (D-B1), finished now through
+ * `deliverOutbound`, which applies the effects and never sends again; with `exchangeId`, only that
+ * exchange's. Her answer calls it first (flows §3.9): the morning is on her phone, and her tap or
+ * reply must find it delivered rather than wait for the queue's retry or `reconcile`. Throws what
+ * the effects throw, so the answer fails and the platform delivers it again.
+ */
+export async function finishArrivalEffects(
+  deps: Deps,
+  memberId: string,
+  exchangeId?: string,
+): Promise<void> {
+  const rows = await deps.db
+    .select({ id: outbound.id, kind: outbound.kind })
+    .from(outbound)
+    .where(
+      and(
+        eq(outbound.memberId, memberId),
+        eq(outbound.kind, "arrival"),
+        eq(outbound.status, "sent"),
+        isNull(outbound.effectsAt),
+        exchangeId === undefined ? undefined : eq(outbound.exchangeId, exchangeId),
+      ),
+    )
+    .orderBy(outbound.sentAt);
+  for (const row of rows) {
+    deps.logger.warn("outbound_effects_late", { outboundId: row.id, kind: row.kind, by: "answer" });
+    await deliverOutbound(deps, row.id);
+  }
+}
+
+/**
  * The queued rows whose delivery is more than `STRANDED_AFTER_MINUTES` past due, so no job for them
  * is still coming. Each is claimed by counting the lost delivery as a failed attempt and moving its
  * due time to now, so a reconciliation running beside this one does not drive it twice; then a

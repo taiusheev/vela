@@ -34,13 +34,14 @@ import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatTime, inboundExternalId } from "./format.ts";
-import { enqueueOutbound } from "./gateway.ts";
+import { enqueueOutbound, finishArrivalEffects } from "./gateway.ts";
 import { resolveQuietOnAnswer } from "./quiet.ts";
 import {
   exchangesByIds,
   familyById,
   latestDeliveredExchangeWithin,
   linkedGroupOfFamily,
+  lockDeliveredExchangeForLocalDate,
   markWakeDue,
   memberById,
   type Queryable,
@@ -196,6 +197,15 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | n
       .where(eq(exchanges.id, exchange.id));
 
     await resolveQuietOnAnswer(deps, tx, exchange.id);
+    // An answer counts for the local date it arrives on (flows §3.9), so a tap on an older
+    // arrival's buttons is today's answer too, and closes today's quiet. It takes the lock the quiet
+    // ladder takes before it opens or notifies, so the ladder either sees this answer or waits and
+    // is closed here. Taken after the target's, which is safe because only a delivered morning is
+    // locked (`lockDeliveredExchangeForLocalDate`).
+    const day = await lockDeliveredExchangeForLocalDate(tx, member.id, localDate);
+    if (day !== null && day.id !== exchange.id) {
+      await resolveQuietOnAnswer(deps, tx, day.id);
+    }
 
     // An open-ended away ("until I'm back") lasts until her first answer on or after its start, on a
     // later day than the one it was set on. A reply the same day, such as her thanks for
@@ -402,6 +412,9 @@ export async function handleParentMessage(
   if (family === null || !canAnswer(member, family)) {
     return;
   }
+  // A morning on her phone whose delivery is not recorded yet (D-B1) is the one she is answering.
+  // On her first morning nothing else was delivered, and her words would go out unattached.
+  await finishArrivalEffects(deps, member.id);
   const now = deps.clock.now();
   const exchange = await latestDeliveredExchangeWithin(
     deps.db,
@@ -426,6 +439,32 @@ export async function handleParentMessage(
   if (answer !== null) {
     await afterLight(deps, input, answer);
   }
+}
+
+/**
+ * The exchange a tap names, with the delivery of its arrival recorded. The send commits before its
+ * effects (D-B1, flows §3.7), so a failed effects transaction leaves the arrival on her phone while
+ * the exchange is still `scheduled`, until the queue's retry or `reconcile` finishes it; her tap
+ * finishes it at once instead of being ignored. A morning never sent has nothing to finish and
+ * stays undelivered. It is read again even when nothing was left to finish here, since the queue's
+ * retry may have finished it after the first read.
+ */
+async function tappedExchange(
+  deps: Deps,
+  member: Member,
+  exchangeId: string,
+): Promise<Exchange | undefined> {
+  const [exchange] = await exchangesByIds(deps.db, [exchangeId]);
+  if (
+    exchange === undefined ||
+    exchange.recipientId !== member.id ||
+    exchange.deliveredAt !== null
+  ) {
+    return exchange;
+  }
+  await finishArrivalEffects(deps, member.id, exchange.id);
+  const [current] = await exchangesByIds(deps.db, [exchangeId]);
+  return current;
 }
 
 /** An arrival's buttons answer only the exchange they were sent for, while it can still take one. */
@@ -522,7 +561,7 @@ export async function handleAnswerButton(
   if (family === null || !canAnswer(member, family)) {
     return;
   }
-  const [exchange] = await exchangesByIds(deps.db, [action.exchangeId]);
+  const exchange = await tappedExchange(deps, member, action.exchangeId);
   if (exchange === undefined || !answerable(member, exchange)) {
     deps.logger.warn("answer_button_ignored", {
       action: action.type,

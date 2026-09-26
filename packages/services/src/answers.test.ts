@@ -20,7 +20,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { type AnswerButtonAction, handleAnswerButton, handleParentMessage } from "./answers.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
-import { deliverOutbound } from "./gateway.ts";
+import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { openQuiet } from "./quiet.ts";
 import { MEDIA_RETENTION_DAYS } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -104,6 +104,36 @@ async function morning(options: { type?: "question" | "hello" } = {}): Promise<S
   });
   h.clock.advanceMinutes(12);
   return { seed, exchangeId: exchange.id };
+}
+
+/**
+ * Today's arrival as the gateway leaves it when the send has committed and the effects transaction
+ * then failed (D-B1): the row `sent`, the message on her phone as "7", `effects_at` null, and the
+ * exchange still `scheduled` with no `delivered_at`. Returns the row's id.
+ */
+async function sentBeforeItsEffects(seed: SeededFamily, exchangeId: string): Promise<string> {
+  const result = await enqueueOutbound(h.deps, h.db, {
+    kind: "arrival",
+    idempotencyKey: outboundKey("arrival", { memberId: seed.member.id, date: TODAY }),
+    memberId: seed.member.id,
+    channel: "telegram",
+    conversationId: seed.memberLink.externalId,
+    localDay: TODAY,
+    exchangeId,
+    lang: "en",
+    text: "Good morning, Mrs Chen.",
+    ref: { purpose: "arrival", exchangeId },
+    effect: { exchangeId, late: false, readBackReplyIds: [], previousExchangeId: null },
+  });
+  if (!("outboundId" in result)) {
+    throw new Error("expected the arrival to be inserted");
+  }
+  h.queues.outbound.clear();
+  await h.db
+    .update(outbound)
+    .set({ status: "sent", sentAt: h.clock.now(), attempts: 1, externalId: "7" })
+    .where(eq(outbound.id, result.outboundId));
+  return result.outboundId;
 }
 
 async function answerRows() {
@@ -291,6 +321,35 @@ describe("handleParentMessage", () => {
     expect(h.queues.understand.pending).toHaveLength(0);
     expect((await exchangeById(old.id))?.state).toBe("delivered");
     expect(h.scheduler.wakes.has(seed.member.id)).toBe(false);
+  });
+
+  // Her first morning: nothing was delivered before, so the arrival still waiting for its effects
+  // (D-B1) is the only exchange she can be answering.
+  it("attaches a message to an arrival that went out before its delivery was recorded", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    const exchange = await seedExchange(h.db, seed, { date: TODAY, state: "scheduled" });
+    const sentAt = h.clock.now();
+    await sentBeforeItsEffects(seed, exchange.id);
+    h.clock.advanceMinutes(1);
+
+    await handleParentMessage(
+      h.deps,
+      seed.member,
+      privateEvent(seed.memberLink, { kind: "text", text: "Good morning!" }),
+    );
+
+    const [answer] = await answerRows();
+    expect(answer?.exchangeId).toBe(exchange.id);
+    expect(await exchangeById(exchange.id)).toMatchObject({
+      state: "answered",
+      deliveredAt: sentAt,
+    });
+    expect((await outboundRows()).map((row) => row.kind)).toEqual([
+      "arrival",
+      "ack",
+      "answer_post",
+    ]);
   });
 
   it("posts an unattached voice message with the voice attached", async () => {
@@ -745,6 +804,108 @@ describe("handleAnswerButton", () => {
     expect(await outboundRows()).toHaveLength(0);
     expect(await eventRows()).toHaveLength(0);
     expect((await exchangeById(theirs.id))?.state).toBe("delivered");
+  });
+
+  // Yesterday's arrival keeps its buttons (she answered it by voice), and a tap on one answers
+  // yesterday's exchange. It still arrived today, so it is today's answer (flows §3.9): today's quiet
+  // closes as it would for an answer to today's own question.
+  it("closes today's quiet event when she taps yesterday's arrival after the notice, and tells who was told", async () => {
+    const scene = await morning();
+    const { seed, exchangeId } = scene;
+    const yesterday = await seedExchange(h.db, seed, {
+      date: YESTERDAY,
+      state: "answered",
+      deliveredAt: new Date("2026-09-13T00:00:00Z"),
+      answeredAt: new Date("2026-09-13T01:00:00Z"),
+    });
+    h.clock.advanceMinutes(360);
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+    h.clock.advanceMinutes(20);
+
+    await tapped(scene, { type: "answer", exchangeId: yesterday.id, answer: "fine" }, "6");
+
+    const [answer] = await answerRows();
+    expect(answer?.exchangeId).toBe(yesterday.id);
+    const [quiet] = await h.db.select().from(quietEvents);
+    expect(quiet).toMatchObject({
+      exchangeId,
+      outcome: "answered_late",
+      resolvedAt: h.clock.now(),
+    });
+    const told = (await outboundRows()).filter((row) => row.kind === "quiet_resolved");
+    expect(told.map((row) => [row.memberId, textOf(row)])).toEqual([
+      [seed.organiser.id, "Mom answered at 14:32. Everything is lit again."],
+    ]);
+  });
+
+  // The send is committed before its effects (D-B1, flows §3.7): when the effects transaction
+  // fails, the message is on her phone while the exchange is still `scheduled`, until the queue's
+  // retry or `reconcile` finishes it.
+  it("answers a tap on an arrival that went out before its delivery was recorded", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    const exchange = await seedExchange(h.db, seed, { date: TODAY, state: "scheduled" });
+    const sentAt = h.clock.now();
+    const arrivalId = await sentBeforeItsEffects(seed, exchange.id);
+    h.clock.advance(20_000);
+    const action: AnswerButtonAction = { type: "answer", exchangeId: exchange.id, answer: "fine" };
+
+    await handleAnswerButton(
+      h.deps,
+      seed.member,
+      tap(seed.memberLink, ARRIVAL_MESSAGE, action),
+      action,
+    );
+
+    const [answer] = await answerRows();
+    expect(answer).toMatchObject({ exchangeId: exchange.id, kind: "fine" });
+    expect(await exchangeById(exchange.id)).toMatchObject({
+      state: "answered",
+      deliveredAt: sentAt,
+      answeredAt: h.clock.now(),
+    });
+    expect(h.telegram.closed.map((call) => call.replacementText)).toEqual(["I'm fine"]);
+    expect((await eventRows()).map((row) => row.name)).toEqual([
+      "arrival_delivered",
+      "answer_recorded",
+    ]);
+    // The effects were finished here, once: the queue's retry finds nothing left, and sends nothing.
+    expect(await deliverOutbound(h.deps, arrivalId)).toBe("skipped");
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toEqual([]);
+  });
+
+  it("fails a tap whose arrival's delivery cannot be recorded yet, so the platform delivers it again", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    const exchange = await seedExchange(h.db, seed, { date: TODAY, state: "scheduled" });
+    await sentBeforeItsEffects(seed, exchange.id);
+    h.clock.advance(20_000);
+    const action: AnswerButtonAction = { type: "answer", exchangeId: exchange.id, answer: "fine" };
+    const event = tap(seed.memberLink, ARRIVAL_MESSAGE, action);
+    // The effects' transaction still fails, as it did for the gateway a moment ago.
+    const failing: Deps = {
+      ...h.deps,
+      db: new Proxy(h.deps.db, {
+        get(target, property) {
+          if (property === "transaction") {
+            return () => Promise.reject(new Error("the effects transaction failed"));
+          }
+          const value: unknown = Reflect.get(target, property);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      }),
+    };
+
+    await expect(handleAnswerButton(failing, seed.member, event, action)).rejects.toThrow(
+      "the effects transaction failed",
+    );
+    expect(await answerRows()).toEqual([]);
+
+    await handleAnswerButton(h.deps, seed.member, event, action);
+
+    expect(await answerRows()).toHaveLength(1);
+    expect((await exchangeById(exchange.id))?.state).toBe("answered");
   });
 
   it("counts a second tap on the same arrival once", async () => {

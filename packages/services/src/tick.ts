@@ -56,7 +56,7 @@ import { applyPendingEffects, enqueueOutbound, redriveStrandedOutbound } from ".
 import { draftWeeklyRead } from "./jobs.ts";
 import { MAX_PROCESSING_ATTEMPTS } from "./pipeline.ts";
 import { notifyQuiet, openQuiet } from "./quiet.ts";
-import { familyById, memberById, type Queryable } from "./repo.ts";
+import { familyById, firstAnswersByDate, memberById } from "./repo.ts";
 
 /**
  * How many decide-and-execute rounds one tick runs. Executing an action changes what the next
@@ -99,38 +99,6 @@ function earliest(a: Date | null, b: Date | null): Date | null {
     return a;
   }
   return a.getTime() <= b.getTime() ? a : b;
-}
-
-/**
- * When her first answer of each local date between `from` and `to` arrived: an answer sent before
- * the day's arrival attaches to the previous exchange and still counts for the day (flows §3.9).
- */
-async function firstAnswersByDate(
-  db: Queryable,
-  memberId: string,
-  timeZone: string,
-  from: LocalDate,
-  to: LocalDate,
-): Promise<Map<LocalDate, Date>> {
-  const rows = await db
-    .select({ receivedAt: answers.receivedAt })
-    .from(answers)
-    .where(
-      and(
-        eq(answers.memberId, memberId),
-        gte(answers.receivedAt, zonedInstant(from, "00:00", timeZone)),
-        lt(answers.receivedAt, zonedInstant(addDays(to, 1), "00:00", timeZone)),
-      ),
-    )
-    .orderBy(asc(answers.receivedAt));
-  const first = new Map<LocalDate, Date>();
-  for (const row of rows) {
-    const date = localDateOf(row.receivedAt, timeZone);
-    if (!first.has(date)) {
-      first.set(date, row.receivedAt);
-    }
-  }
-  return first;
 }
 
 function dayStateOf(

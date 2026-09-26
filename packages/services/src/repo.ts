@@ -4,8 +4,9 @@
  * database or the caller's transaction, so a flow can read inside the transaction it writes in.
  */
 import type { Channel, LocalDate, MediaRef } from "@vela/contracts";
-import { addMinutes } from "@vela/core";
+import { addDays, addMinutes, localDateOf, zonedInstant } from "@vela/core";
 import {
+  answers,
   type ChannelLink,
   channelLinks,
   consents,
@@ -29,7 +30,21 @@ import {
   type VelaDatabase,
   type VelaTransaction,
 } from "@vela/db";
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 
 /** The database, or the transaction a flow is already inside. */
 export type Queryable = VelaDatabase | VelaTransaction;
@@ -261,6 +276,70 @@ export async function lockExchangeForLocalDate(
     .limit(1)
     .for("no key update");
   return rows[0] ?? null;
+}
+
+/**
+ * The same row and lock, only once the morning has been delivered: her answer takes it for the
+ * local date it arrives on, whichever exchange the answer attaches to (`lightTheLight`, flows §3.9).
+ * A morning not delivered yet has no quiet to open or close, and is not locked: preparing it locks
+ * her member row before writing it, which an answer writes last, and the arrival's effects lock it
+ * before the exchange read back, which the answer may already hold; either would be a lock cycle.
+ * A row being delivered as this runs reads as undelivered and is passed over without waiting.
+ */
+export async function lockDeliveredExchangeForLocalDate(
+  tx: VelaTransaction,
+  memberId: string,
+  date: LocalDate,
+): Promise<Exchange | null> {
+  const rows = await tx
+    .select()
+    .from(exchanges)
+    .where(
+      and(
+        eq(exchanges.recipientId, memberId),
+        eq(exchanges.scheduledFor, date),
+        ne(exchanges.state, "withdrawn"),
+        isNotNull(exchanges.deliveredAt),
+      ),
+    )
+    .limit(1)
+    .for("no key update");
+  return rows[0] ?? null;
+}
+
+/**
+ * When her first answer of each local date between `from` and `to` arrived, whichever exchange it
+ * attached to: an answer counts for the date it arrives on (flows §3.9), so one sent before the
+ * day's arrival, which attaches to the previous exchange, or tapped on an older arrival's buttons,
+ * is still the day's answer. The schedule reads each day's answer by it (`loadScheduleInput`), and
+ * the quiet ladder checks it again under the day's lock (`quiet.ts`).
+ */
+export async function firstAnswersByDate(
+  db: Queryable,
+  memberId: string,
+  timeZone: string,
+  from: LocalDate,
+  to: LocalDate,
+): Promise<Map<LocalDate, Date>> {
+  const rows = await db
+    .select({ receivedAt: answers.receivedAt })
+    .from(answers)
+    .where(
+      and(
+        eq(answers.memberId, memberId),
+        gte(answers.receivedAt, zonedInstant(from, "00:00", timeZone)),
+        lt(answers.receivedAt, zonedInstant(addDays(to, 1), "00:00", timeZone)),
+      ),
+    )
+    .orderBy(asc(answers.receivedAt));
+  const first = new Map<LocalDate, Date>();
+  for (const row of rows) {
+    const date = localDateOf(row.receivedAt, timeZone);
+    if (!first.has(date)) {
+      first.set(date, row.receivedAt);
+    }
+  }
+  return first;
 }
 
 /**

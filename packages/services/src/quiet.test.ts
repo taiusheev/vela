@@ -1,6 +1,7 @@
 import type { InboundEvent, LocalDate } from "@vela/contracts";
 import { decodeButton, encodeButton, outboundKey, TUNING } from "@vela/core";
 import {
+  answers,
   type ChannelLink,
   channelLinks,
   events,
@@ -283,6 +284,32 @@ describe("openQuiet", () => {
       .where(eq(exchanges.id, exchangeId));
 
     await openQuiet(h.deps, seed.member.id, TODAY, true);
+
+    expect(await quietRows()).toHaveLength(0);
+    expect(await noticeRows()).toHaveLength(0);
+  });
+
+  // Yesterday's arrival keeps its buttons, and her tap on one answers yesterday's exchange: today's
+  // stays unanswered, yet the answer arrived today and counts as today's (flows §3.9).
+  it("opens nothing when she answered today on an older arrival after the schedule decided", async () => {
+    const { seed } = await quietMorning();
+    const yesterday = await seedExchange(h.db, seed, {
+      date: "2026-09-13",
+      state: "answered",
+      deliveredAt: new Date("2026-09-13T00:00:00Z"),
+      answeredAt: new Date("2026-09-13T01:00:00Z"),
+    });
+    await h.db.insert(answers).values({
+      exchangeId: yesterday.id,
+      memberId: seed.member.id,
+      kind: "fine",
+      channel: "telegram",
+      externalId: `${seed.memberLink.externalId}:6`,
+      receivedAt: h.clock.now(),
+    });
+
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await notifyQuiet(h.deps, seed.member.id, TODAY);
 
     expect(await quietRows()).toHaveLength(0);
     expect(await noticeRows()).toHaveLength(0);

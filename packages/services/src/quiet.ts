@@ -35,6 +35,7 @@ import {
   activeOrganisersWithLinks,
   consentedNearbyContacts,
   familyById,
+  firstAnswersByDate,
   lockExchangeForLocalDate,
   markWakeDue,
   memberByChannelUser,
@@ -75,9 +76,15 @@ async function loadQuietContext(
     deps.logger.warn("quiet_without_delivery", { memberId, date, exchangeId: exchange.id });
     return null;
   }
-  // A morning she has answered is never quiet (flows §3.12). The schedule decided this from state
-  // read before the transaction, so a day answered since then is caught only here.
-  if (exchange.answeredAt !== null) {
+  // A morning she has answered is never quiet (flows §3.12), and an answer counts for the local date
+  // it arrives on, whichever exchange it attached to (flows §3.9): a message before the arrival, or
+  // a tap on an older arrival's buttons. The schedule decided this from state read before the
+  // transaction, so a day answered since then is caught only here. An answer to another exchange
+  // takes this lock too (`lightTheLight`), so it is visible here or closes what this opens.
+  if (
+    exchange.answeredAt !== null ||
+    (await firstAnswersByDate(tx, memberId, member.tz, date, date)).has(date)
+  ) {
     deps.logger.info("quiet_after_answer", { memberId, date, exchangeId: exchange.id });
     return null;
   }
