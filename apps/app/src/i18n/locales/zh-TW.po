@@ -120,6 +120,10 @@ msgstr "{name}的燈目前暫停中，所以現在無法放進早安訊息。"
 msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
 msgstr "{name}的 30 天試用已經結束了。每天的提問和問答會照常進行。"
 
+#: src/data/useToday.ts
+msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
+msgstr "{recipient}在 {time} 回覆了之前的提問，這則提問還沒有回覆。"
+
 #: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
@@ -490,7 +494,7 @@ msgstr "目前還沒有開放帳號"
 msgid "No family is set up on this account yet."
 msgstr "這個帳號還沒有設定家庭。"
 
-#: app/(tabs)/index.tsx
+#: src/data/useToday.ts
 msgid "No word yet today."
 msgstr "今天還沒有回覆。"
 

@@ -63,9 +63,12 @@ function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }
       </Eyebrow>
       {exchange.ask === undefined ? null : <Words variant="voice">{exchange.ask}</Words>}
       {exchange.answer === undefined ? (
-        <Words variant="body" tone="ink2">
-          <Trans>No word yet today.</Trans>
-        </Words>
+        // Chosen with her light (`toToday`): her day can be answered by words to an earlier ask.
+        exchange.unanswered === undefined ? null : (
+          <Words variant="body" tone="ink2">
+            {exchange.unanswered}
+          </Words>
+        )
       ) : (
         <>
           <Hairline />

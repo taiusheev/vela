@@ -39,6 +39,13 @@ export interface TodayExchange {
   /** A hello carries no question. */
   ask?: string;
   answer?: { text: string; at: string };
+  /**
+   * Today's line in place of her answer while this ask has none (`toToday`): "No word yet today",
+   * or, when her day is answered all the same by words to an earlier ask (flows §3.9: a tap on
+   * yesterday's arrival, or a message before today's), that she answered an earlier ask, at the
+   * time the lights row above shows.
+   */
+  unanswered?: string;
   replies: TodayReply[];
   /** "Mom saw it · 8:12", shown only once she has. */
   receipt?: string;

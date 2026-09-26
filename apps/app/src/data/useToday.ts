@@ -136,11 +136,33 @@ export function toTomorrowTurn(turn: ApiTomorrowTurn, viewerMemberId?: string): 
   };
 }
 
+/**
+ * What Today says under an ask that has no answer yet. Her day can be answered by words to an
+ * earlier ask (flows §3.9): her tap today on yesterday's arrival, or a message before today's,
+ * which attaches to the one before. Her light then reads "answered 14:32", so saying she sent no
+ * word today would be false; the line says where her answer went instead.
+ */
+function unansweredLine(exchange: ApiTodayExchange, light: MemberLight | undefined): string {
+  if (light === undefined || light.answered_at === null) return t`No word yet today.`;
+  const recipient = exchange.recipient_name;
+  const time = timeOfDay(light.answered_at);
+  return t`${recipient} answered an earlier ask at ${time}. This one has no answer yet.`;
+}
+
 export function toToday(day: ApiToday, viewerMemberId?: string): Today {
   const exchange = day.exchanges[0];
+  // The light of the person the ask is for, whose day it is, not the first one in the row.
+  const light = day.lights.find((row) => row.member_id === exchange?.recipient_id);
   return {
     lights: day.lights.map(toTodayLight),
-    ...(exchange === undefined ? {} : { exchange: toTodayExchange(exchange) }),
+    ...(exchange === undefined
+      ? {}
+      : {
+          exchange: {
+            ...toTodayExchange(exchange),
+            ...(exchange.answer === null ? { unanswered: unansweredLine(exchange, light) } : {}),
+          },
+        }),
     tomorrow: day.tomorrow.map((turn) => toTomorrowTurn(turn, viewerMemberId)),
   };
 }
