@@ -983,11 +983,11 @@ At three adults, a full 中用量 costs about NT$91 per family-month. The "~NT$1
 - Consent evidence keeps `CONSENT_PROOF_KEYS`.
 - LINE media rows leave `provider_unique_id` null, so LINE has no re-forward dedup, and `media_provider_unique_id_channel_check` is untouched.
 
-One migration comes only with D6: **`0003_message_unsent`**, which regenerates `events_name_check` for the event name `message_unsent`, followed by `pnpm --filter @vela/db export-sql`. It is incremental, since staging already holds `0001` and `0002`.
+One migration comes only with D6: **`00NN_message_unsent`**, numbered at its landing (0004 at the earliest: `0003_suggestion_days` is tomorrow's suggestion's), which regenerates `events_name_check` for the event name `message_unsent`, followed by `pnpm --filter @vela/db export-sql`. It is incremental, since staging already holds `0001` and `0002`.
 
-**ADR text to append.** It is ADR-31. ADR-30, the app's languages, is on `build/sprint-0-1`; if another record lands first, use the next free number.
+**The ADR.** It is ADR-32, appended to `decisions.md` on 26 September 2026 as proposed (ADR-31 is tomorrow's suggestion). Its text:
 
-> ## ADR-31 · LINE: invites by a pre-filled start message, groups linked by an organiser's presence, the family's ordinary group messages dropped in the adapter
+> ## ADR-32 · LINE: invites by a pre-filled start message, groups linked by an organiser's presence, the family's ordinary group messages dropped in the adapter
 > **2026-09-26 · proposed · refines ADR-16 · corrects `02-technical-architecture-v2.md` §8 (LINE row)**
 >
 > Context: LINE passes nothing from an add-friend link to the webhook, its `join` names nobody, a bot in a group receives every message, a bot cannot edit what it sent, pushes are billed per person in a group, and Taiwan's 中用量 plan cannot buy messages beyond its 3,000 (`05-line-flows.md` §1).
@@ -1120,7 +1120,7 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
      - any adapter correction the answers call for.
    - Proof: the founder's test account completes 04 §6 test 1 on LINE, and the admin overview shows the quota.
 9. **Unsend (D6).**
-   - Files: migration `0003_message_unsent` and the regenerated `schema.sql`, `packages/contracts/src/events.ts`, a `handleUnsend` in services.
+   - Files: migration `00NN_message_unsent` (the next free number) and the regenerated `schema.sql`, `packages/contracts/src/events.ts`, a `handleUnsend` in services.
    - Tests:
      - an unsent answer loses its object, text, transcript and translations, and keeps its light;
      - an unsent reply loses its text;
@@ -1134,10 +1134,10 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
       - the LINE row of `02-technical-architecture-v2.md` §8;
       - `api-contract.md` §9 and §12;
       - `architecture/research/channels-and-voice.md`, whose Japan plan names and three-button template are outdated;
-      - ADR-31.
+      - ADR-32, accepted.
     - Founder: D11, D12, and the 14-day notice to organisers.
 11. **Production on.**
-    - An ADR-31 update.
+    - An ADR-32 update.
     - Founder: D10 (the purchase, with an explicit yes); §2.7 on the production account; secrets.
     - Co-founder: the switch commit and a tagged deploy.
 
