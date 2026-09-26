@@ -6,8 +6,9 @@
  * same member and local day. The queue delivers rows one at a time: a send that fails for a reason
  * that can pass is tried again at 5, 15, and 30 minutes; one that cannot, or one whose last retry
  * fails, is marked failed and its consequences applied; a row for a family that has ended is dropped
- * unsent. Telegram has no idempotency keys, so a redelivered job finds the row already sent and
- * stops, and only failures are ever retried.
+ * unsent, and so is a morning of hers that a pause, her answer, or her start has made moot on its
+ * way. Telegram has no idempotency keys, so a redelivered job finds the row already sent and stops,
+ * and only failures are ever retried.
  *
  * A queued row's `queued_at` is when its pending delivery is due: set by the insert, moved to the
  * end of a retry's delay, and to the moment of a re-send to a migrated group or a re-drive. A
@@ -30,6 +31,8 @@ import {
 } from "@vela/contracts";
 import { localDateOf } from "@vela/core";
 import {
+  events,
+  exchanges,
   type Family,
   families,
   MESSAGE_REF_PURPOSES,
@@ -41,7 +44,7 @@ import {
   quietEvents,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, eq, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
@@ -53,10 +56,28 @@ import {
   type FailedOutcome,
   QuietNoticeEffect,
 } from "./gateway-effects.ts";
-import { familyHasEnded, memberById, type Queryable, repointFamilyGroup } from "./repo.ts";
+import {
+  familyHasEnded,
+  firstAnswersByDate,
+  memberById,
+  type Queryable,
+  repointFamilyGroup,
+} from "./repo.ts";
 
 /** Minutes before each retry of a send that failed for a passing reason: the first send, then these. */
 export const RETRY_DELAY_MINUTES = [5, 15, 30] as const;
+
+/**
+ * The kinds her pause holds back: her morning and its repeat (flows §3.13). Everything else to her
+ * answers her own words — the reply to her stop, her thanks, a receipt — and still goes.
+ */
+const HELD_BY_PAUSE: ReadonlySet<OutboundKind> = new Set<OutboundKind>(["arrival", "repeat"]);
+
+/**
+ * The reason, and `outbound.error`, of a row dropped because she had said stop: the one reason a
+ * dropped row can be queued again (`requeueArrivalHeldByPause`).
+ */
+const PAUSED = "member_paused";
 
 /** How long a sent row may wait for its effects before `reconcile` applies them (D-B1). */
 const EFFECTS_LATE_MINUTES = 2;
@@ -199,6 +220,7 @@ export async function insertOutbound(
     ref: request.ref,
     effect: request.effect,
   };
+  const queuedAt = new Date(deps.clock.now().getTime() + (delaySeconds ?? 0) * 1000);
   const inserted = await db
     .insert(outbound)
     .values({
@@ -211,13 +233,54 @@ export async function insertOutbound(
       idempotencyKey: request.idempotencyKey,
       actorId: request.actorId ?? null,
       payload,
-      queuedAt: new Date(deps.clock.now().getTime() + (delaySeconds ?? 0) * 1000),
+      queuedAt,
     })
     .onConflictDoNothing()
     .returning({ id: outbound.id });
-  const row = inserted[0];
+  const row = inserted[0] ?? (await requeueArrivalHeldByPause(db, request, payload, queuedAt));
   if (row === undefined) return { duplicate: true };
   return delaySeconds === undefined ? { outboundId: row.id } : { outboundId: row.id, delaySeconds };
+}
+
+/**
+ * Her morning, dropped unsent because she had said stop, asked for again: she has said start and
+ * its window is still open, so it goes out now, as any morning not sent before her start does
+ * (flows §3.13). Its key names that one morning and the dropped row holds it, so the row itself is
+ * queued again, as a new delivery holding what the request holds now (a late note, the read-back),
+ * and it is sent once like any other. No other dropped row comes back: an ended family, an answer,
+ * a start, and a closed quiet event are for good, and a repeat a pause dropped is never asked for
+ * again, because its morning went out before her start.
+ */
+async function requeueArrivalHeldByPause(
+  db: Queryable,
+  request: OutboundRequest,
+  payload: OutboundPayload,
+  queuedAt: Date,
+): Promise<{ id: string } | undefined> {
+  if (request.kind !== "arrival") {
+    return undefined;
+  }
+  const [row] = await db
+    .update(outbound)
+    .set({
+      exchangeId: request.exchangeId ?? null,
+      channel: request.channel,
+      conversationId: request.conversationId,
+      payload,
+      status: "queued",
+      attempts: 0,
+      error: null,
+      queuedAt,
+    })
+    .where(
+      and(
+        eq(outbound.idempotencyKey, request.idempotencyKey),
+        eq(outbound.status, "dropped"),
+        eq(outbound.error, PAUSED),
+      ),
+    )
+    .returning({ id: outbound.id });
+  return row;
 }
 
 /**
@@ -287,6 +350,57 @@ async function quietNoticeIsMoot(db: Queryable, row: Outbound): Promise<boolean>
   return quiet !== undefined && quiet.resolvedAt !== null;
 }
 
+/**
+ * Why a repeat's morning no longer waits for an answer, or null while it does (flows §3.8). The
+ * schedule decided the repeat before any of these, and the seconds before the send, a retry, or a
+ * re-drive can hold it for many minutes: she answered it, or answered on its day, which counts the
+ * same (§3.9: a message before the arrival, a tap on an older arrival); or she said start since it
+ * went out, which stands for that morning's ladder as an answer would (§3.13). Sent, "in case you
+ * missed it" would reach her after she wrote, with buttons whose tap posts her answer to the group
+ * a second time. One already on its way when she answers still arrives: that gap, as a quiet
+ * notice's, cannot close.
+ */
+async function repeatIsMoot(
+  db: Queryable,
+  row: Outbound,
+  member: Member,
+): Promise<"answered" | "resumed" | null> {
+  if (row.kind !== "repeat" || row.exchangeId === null) {
+    return null;
+  }
+  const [exchange] = await db
+    .select({ answeredAt: exchanges.answeredAt, deliveredAt: exchanges.deliveredAt })
+    .from(exchanges)
+    .where(eq(exchanges.id, row.exchangeId))
+    .limit(1);
+  if (exchange === undefined) {
+    return null;
+  }
+  if (
+    exchange.answeredAt !== null ||
+    (await firstAnswersByDate(db, member.id, member.tz, row.localDay, row.localDay)).has(
+      row.localDay,
+    )
+  ) {
+    return "answered";
+  }
+  if (exchange.deliveredAt === null) {
+    return null;
+  }
+  const [started] = await db
+    .select({ at: events.at })
+    .from(events)
+    .where(
+      and(
+        eq(events.name, "start_said"),
+        eq(events.memberId, member.id),
+        gt(events.at, exchange.deliveredAt),
+      ),
+    )
+    .limit(1);
+  return started === undefined ? null : "resumed";
+}
+
 async function loadOutbound(db: Queryable, outboundId: string): Promise<LoadedOutbound | null> {
   const rows = await db
     .select({ row: outbound, member: members, family: families })
@@ -325,6 +439,15 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
   }
   if (await familyHasEnded(deps.db, family.id)) {
     return drop(deps, loaded, "family_ended");
+  }
+  // She said stop after the tick that read her active, or while the row waited for a retry or a
+  // re-drive: nothing of her morning goes to her until she says start (flows §3.13).
+  if (member.status === "paused" && HELD_BY_PAUSE.has(row.kind)) {
+    return drop(deps, loaded, PAUSED);
+  }
+  const repeatMoot = await repeatIsMoot(deps.db, row, member);
+  if (repeatMoot !== null) {
+    return drop(deps, loaded, repeatMoot);
   }
   if (await quietNoticeIsMoot(deps.db, row)) {
     return drop(deps, loaded, "quiet_resolved");
@@ -673,7 +796,10 @@ async function fail(
   return "failed";
 }
 
-/** A row for a family that has ended is never sent (flows §3.7). */
+/**
+ * A row that must not go out is marked dropped unsent (flows §3.7): its family has ended, or it is
+ * a morning of hers, or a notice, that has become moot on its way.
+ */
 async function drop(deps: Deps, loaded: LoadedOutbound, reason: string): Promise<"skipped"> {
   const { row, family } = loaded;
   const at = deps.clock.now();

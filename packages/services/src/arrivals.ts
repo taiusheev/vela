@@ -503,6 +503,7 @@ export async function deliverArrival(
 /**
  * Re-sends the morning once, "in case you missed it", without the read-back (flows §3.8). Nothing
  * goes out for a day that was not delivered, failed, was answered meanwhile, or was repeated already.
+ * This reads the day before the enqueue, so the gateway checks the answer again before the send.
  */
 export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate): Promise<void> {
   const exchange = await exchangeForLocalDate(deps.db, memberId, date);

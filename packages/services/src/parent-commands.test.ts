@@ -302,6 +302,49 @@ describe("start", () => {
     expect(await h.db.select().from(quietEvents)).toEqual([]);
   });
 
+  // Flows §3.7 and §3.13: her stop drops the morning still on its way to her, and her start that
+  // day sends it, as it sends any morning not sent before the start while its window is open.
+  it("sends this morning at her start when her stop dropped it on its way, and never before", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-01" })
+      .where(eq(members.id, seed.member.id));
+    await tickMember(h.deps, seed.member.id);
+    h.telegram.failNextSends(1, "unavailable");
+    expect(await h.runDue(handlers())).toBe(1);
+    h.clock.advanceMinutes(2);
+    await say(await herRow(seed), "stop");
+    h.clock.advanceMinutes(3);
+    await h.runDue(handlers());
+
+    expect(h.telegram.sentTo(HER).map((entry) => entry.message.text)).toEqual([
+      t("en", "parent.stopped"),
+    ]);
+    expect((await outboundRows()).filter((row) => row.kind === "arrival")).toMatchObject([
+      { status: "dropped", error: "member_paused" },
+    ]);
+
+    h.clock.advanceMinutes(85);
+    await say(await herRow(seed), "start");
+
+    expect(await herMessages()).toEqual([
+      t("en", "parent.stopped"),
+      "Welcome back. Your next morning arrives at 08:00.",
+      expect.stringContaining(t("en", "arrival.greeting", { address: "Mrs Chen" })),
+    ]);
+    expect((await outboundRows()).filter((row) => row.kind === "arrival")).toMatchObject([
+      { status: "sent", attempts: 1, error: null },
+    ]);
+    expect(await eventNames()).toEqual([
+      "exchange_prepared",
+      "stop_said",
+      "gateway_dropped",
+      "start_said",
+      "arrival_delivered",
+    ]);
+  });
+
   it("keeps a start date that is still ahead", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await say(seed.member, "stop");
