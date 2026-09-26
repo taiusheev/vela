@@ -4,7 +4,7 @@ import {
   waitOnExecutionContext,
 } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import type { PilotEnv } from "./env.ts";
+import type { InboundJob, PilotEnv } from "./env.ts";
 import { createHeartbeat, LAST_RECONCILE_KEY } from "./heartbeat.ts";
 import { PRIVACY_NOTICES } from "./notices.generated.ts";
 import { createWorker } from "./pilot-worker.ts";
@@ -16,9 +16,12 @@ import {
   type FakePilotRuntime,
   failedQueryFixture,
   inboundEventFixture,
+  lineOnEnv,
   namesOf,
   noticesFixture,
   recordingLogger,
+  recordingQueue,
+  signLineBody,
   testEnv,
 } from "./testing/fakes.ts";
 
@@ -135,6 +138,245 @@ describe("the Telegram webhook", () => {
       },
     ]);
     expect(JSON.stringify(lines)).not.toContain(FAILED_QUERY_WORDS);
+  });
+});
+
+/** The kept-light member's LINE user id and her words, which no log line or answer may carry. */
+const HER_LINE_ID = "U3bf020427417f5c0decf3c1612d4e59a";
+const HER_WORDS = "今天去市場買了空心菜";
+
+/** One LINE webhook body holding one event, as LINE sends it (the adapter's fixtures' shapes). */
+function lineBody(event: Record<string, unknown>): string {
+  return JSON.stringify({ destination: "U2ba6561a468b4afe9fa1df6d946e23de", events: [event] });
+}
+
+/** Her good morning in her own chat. */
+const HER_TEXT = lineBody({
+  replyToken: "c49772f8bb2228e107007ca23b93a3b3",
+  type: "message",
+  mode: "active",
+  timestamp: 1790463748405,
+  source: { type: "user", userId: HER_LINE_ID },
+  webhookEventId: "01M3FZ9A9NW73PK6SZ3PDQ7PYS",
+  deliveryContext: { isRedelivery: false },
+  message: { id: "552078231551808266", type: "text", quoteToken: "q", text: HER_WORDS },
+});
+
+/** The family talking among themselves in their group, which Vela never reads (05 §3.2). */
+const FAMILY_TALK = lineBody({
+  replyToken: "83aec881b5e25e3f98821133280d3916",
+  type: "message",
+  mode: "active",
+  timestamp: 1790463890898,
+  source: {
+    type: "group",
+    groupId: "Ce5f4dcc362130dc312c78866466c6fff",
+    userId: "U8f8c4117e99b1a4fa8346f3d1c56731b",
+  },
+  webhookEventId: "01M3FZDNEJB6CAQXHRGFE5R844",
+  deliveryContext: { isRedelivery: false },
+  message: { id: "529385796544261132", type: "text", text: "Who is picking Grandma up on Sunday?" },
+});
+
+/** What the Verify button in LINE's console sends: no event at all (05 §1 fact 6). */
+const VERIFY_BODY = '{"destination":"U2ba6561a468b4afe9fa1df6d946e23de","events":[]}';
+
+function lineRequest(body: string, signature: string | null): Request {
+  const headers = new Headers({ "content-type": "application/json; charset=utf-8" });
+  if (signature !== null) {
+    headers.set("x-line-signature", signature);
+  }
+  return new Request(`${ORIGIN}/webhooks/line`, { method: "POST", headers, body });
+}
+
+/** A body signed with the test channel's secret, as LINE signs it. */
+async function signedLineRequest(body: string): Promise<Request> {
+  return lineRequest(body, await signLineBody(body));
+}
+
+describe("the LINE webhook", () => {
+  // Development and every deployed environment are off until the staging loop (05 §8).
+  it("answers the Worker's one 404 where LINE is off, and reads, builds and queues nothing", async () => {
+    const fake = createFakePilotRuntime();
+    const sent: InboundJob[] = [];
+    const off: PilotEnv = { ...testEnv, INBOUND_QUEUE: recordingQueue(sent) };
+
+    const response = await send(fake, await signedLineRequest(HER_TEXT), off);
+    const nowhere = await send(fake, new Request(`${ORIGIN}/nowhere`), off);
+
+    expect(testEnv.LINE_CHANNEL).toBe("off");
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe(await nowhere.text());
+    expect(sent).toEqual([]);
+    expect(fake.channelsBuilt()).toBe(0);
+    expect(fake.built()).toBe(0);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it.each([
+    [
+      "a body changed after LINE signed it",
+      async () => lineRequest(HER_TEXT.replace("空心菜", "高麗菜"), await signLineBody(HER_TEXT)),
+    ],
+    ["no signature at all", async () => lineRequest(HER_TEXT, null)],
+    [
+      "a signature made with another channel's secret",
+      async () => lineRequest(HER_TEXT, await signLineBody(HER_TEXT, "0f".repeat(16))),
+    ],
+  ] as const)("answers 401 to %s, building no deps and queueing nothing", async (_, request) => {
+    const fake = createFakePilotRuntime();
+    const sent: InboundJob[] = [];
+
+    const { result: response, lines } = await consoleLinesDuring(async () =>
+      send(fake, await request(), lineOnEnv({ INBOUND_QUEUE: recordingQueue(sent) })),
+    );
+
+    expect(response.status).toBe(401);
+    expect(sent).toEqual([]);
+    expect(fake.built()).toBe(0);
+    expect(namesOf(fake.calls)).toEqual([]);
+    expect(lines).toEqual([]);
+  });
+
+  it("answers the console's Verify body, which holds no event, with 200 and queues nothing", async () => {
+    const fake = createFakePilotRuntime();
+    const sent: InboundJob[] = [];
+
+    const response = await send(
+      fake,
+      await signedLineRequest(VERIFY_BODY),
+      lineOnEnv({ INBOUND_QUEUE: recordingQueue(sent) }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(sent).toEqual([]);
+    expect(fake.built()).toBe(0);
+  });
+
+  // Nothing is handled inside LINE's 2 seconds: the queue's consumer does it (05 §5.10).
+  it("puts her message on the inbound queue as one job, with no deps built and nothing handled here", async () => {
+    const fake = createFakePilotRuntime();
+    const sent: InboundJob[] = [];
+
+    const response = await send(
+      fake,
+      await signedLineRequest(HER_TEXT),
+      lineOnEnv({ INBOUND_QUEUE: recordingQueue(sent) }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(sent).toEqual([
+      {
+        type: "handle_inbound",
+        events: [
+          expect.objectContaining({
+            channel: "line",
+            eventId: "line:01M3FZ9A9NW73PK6SZ3PDQ7PYS",
+            kind: "text",
+            text: HER_WORDS,
+            conversation: { externalId: HER_LINE_ID, kind: "private" },
+          }),
+        ],
+      },
+    ]);
+    expect(fake.built()).toBe(0);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("queues nothing for the family's own talk in their group, which the adapter drops unread", async () => {
+    const fake = createFakePilotRuntime();
+    const sent: InboundJob[] = [];
+
+    const { result: response, lines } = await consoleLinesDuring(async () =>
+      send(
+        fake,
+        await signedLineRequest(FAMILY_TALK),
+        lineOnEnv({ INBOUND_QUEUE: recordingQueue(sent) }),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(sent).toEqual([]);
+    expect(lines).toEqual([]);
+  });
+
+  // LINE signed it, so a redelivery would bring the same body: a 500 would only teach LINE to stop
+  // redelivering the ones a retry could fix.
+  it.each([
+    ["not JSON", "not json", "SyntaxError"],
+    ["without its events", '{"destination":"U2ba6561a468b4afe9fa1df6d946e23de"}', "TypeError"],
+  ])(
+    "answers 200 to a signed body %s, queues nothing, and logs its label alone",
+    async (_, body, label) => {
+      const fake = createFakePilotRuntime();
+      const sent: InboundJob[] = [];
+
+      const { result: response, lines } = await consoleLinesDuring(async () =>
+        send(
+          fake,
+          await signedLineRequest(body),
+          lineOnEnv({ INBOUND_QUEUE: recordingQueue(sent) }),
+        ),
+      );
+
+      expect(response.status).toBe(200);
+      expect(sent).toEqual([]);
+      expect(lines).toEqual([
+        {
+          level: "error",
+          event: "line_webhook_unreadable",
+          environment: testEnv.ENVIRONMENT,
+          error: label,
+        },
+      ]);
+    },
+  );
+
+  it("answers 500 when the queue refuses the job, so LINE redelivers, logging neither her words nor who she is", async () => {
+    const fake = createFakePilotRuntime();
+    const refusing = recordingQueue<InboundJob>([], new Error(`queue full: ${HER_WORDS}`));
+
+    const { result: response, lines } = await consoleLinesDuring(async () =>
+      send(fake, await signedLineRequest(HER_TEXT), lineOnEnv({ INBOUND_QUEUE: refusing })),
+    );
+
+    expect(response.status).toBe(500);
+    expect(lines).toEqual([
+      {
+        level: "error",
+        event: "request_failed",
+        path: "/webhooks/line",
+        method: "POST",
+        error: "Error",
+      },
+    ]);
+    expect(JSON.stringify(lines)).not.toContain(HER_WORDS);
+    expect(JSON.stringify(lines)).not.toContain(HER_LINE_ID);
+  });
+
+  it("answers 500 naming the variable, and queues nothing, while LINE is on without its secret", async () => {
+    const fake = createFakePilotRuntime();
+    const sent: InboundJob[] = [];
+
+    const { result: response, lines } = await consoleLinesDuring(async () =>
+      send(
+        fake,
+        await signedLineRequest(HER_TEXT),
+        lineOnEnv({ INBOUND_QUEUE: recordingQueue(sent), LINE_CHANNEL_SECRET: undefined }),
+      ),
+    );
+
+    expect(response.status).toBe(500);
+    expect(lines).toEqual([
+      {
+        level: "error",
+        event: "request_failed",
+        path: "/webhooks/line",
+        method: "POST",
+        error: "ConfigError:LINE_CHANNEL_SECRET",
+      },
+    ]);
+    expect(sent).toEqual([]);
   });
 });
 

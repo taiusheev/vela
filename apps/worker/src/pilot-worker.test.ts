@@ -16,6 +16,7 @@ import {
   FAILED_QUERY_LABEL,
   FAILED_QUERY_WORDS,
   failedQueryFixture,
+  inboundEventFixture,
   namesOf,
   testEnv,
 } from "./testing/fakes.ts";
@@ -117,6 +118,29 @@ function deployedEnv(environment: "staging" | "production"): PilotEnv {
   return { ...testEnv, ...vars };
 }
 
+/** The kept-light member's LINE user id and her words, which no log line may carry. */
+const HER_LINE_ID = "U3bf020427417f5c0decf3c1612d4e59a";
+const HER_WORDS = "今天去市場買了空心菜";
+
+/** Her text and then her tap on "I'm fine", as the LINE adapter parses them. */
+const herLineText = inboundEventFixture({
+  channel: "line",
+  eventId: "line:01M3FZ9A9NW73PK6SZ3PDQ7PYS",
+  kind: "text",
+  text: HER_WORDS,
+  messageId: "552078231551808266",
+  sender: { externalUserId: HER_LINE_ID },
+  conversation: { externalId: HER_LINE_ID, kind: "private" },
+});
+const herLineTap = inboundEventFixture({
+  channel: "line",
+  eventId: "line:01M3FZB1Q2W3E4R5T6Y7U8I9O0",
+  kind: "button",
+  buttonData: "fine",
+  sender: { externalUserId: HER_LINE_ID },
+  conversation: { externalId: HER_LINE_ID, kind: "private" },
+});
+
 describe("the queue consumer", () => {
   it("sends each job to its service and acks it", async () => {
     const fake = createFakePilotRuntime();
@@ -197,6 +221,85 @@ describe("the queue consumer", () => {
     expect(outcome.acked).toEqual(["message-0", "message-1"]);
     expect(outcome.retried).toEqual([]);
   });
+
+  // LINE's webhook hands one webhook's events over as one job (05 §5.10).
+  it("hands an inbound job's events to handleInbound in the order LINE sent them, and acks it", async () => {
+    const fake = createFakePilotRuntime();
+    const outcome = batchOf("vela-inbound", [
+      { type: "handle_inbound", events: [herLineText, herLineTap] },
+    ]);
+
+    await runQueue(createWorker(fake.runtime), outcome);
+
+    expect(argsOf(fake.calls, "handleInbound")).toEqual([[[herLineText, herLineTap]]]);
+    expect(outcome.acked).toEqual(["message-0"]);
+    expect(outcome.retried).toEqual([]);
+  });
+
+  // Every handler behind handleInbound is idempotent (04 §5), so the events handled before the
+  // failure change nothing the second time.
+  it("retries an inbound job whose handling threw", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        handleInbound: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+    const outcome = batchOf("vela-inbound", [{ type: "handle_inbound", events: [herLineText] }]);
+
+    await runQueue(createWorker(fake.runtime), outcome);
+
+    expect(outcome.retried).toEqual(["message-0"]);
+    expect(fake.logs).toEqual([
+      {
+        level: "error",
+        event: "queue_job_failed",
+        fields: {
+          queue: "vela-inbound",
+          messageId: "message-0",
+          type: "handle_inbound",
+          attempts: 1,
+          error: FAILED_QUERY_LABEL,
+        },
+      },
+    ]);
+    expect(JSON.stringify(fake.logs)).not.toContain(FAILED_QUERY_WORDS);
+  });
+
+  it.each([
+    ["no events", { type: "handle_inbound" }],
+    ["events that are not a list", { type: "handle_inbound", events: HER_WORDS }],
+    [
+      "an event the contract refuses",
+      { type: "handle_inbound", events: [herLineText, { ...herLineText, kind: "gossip" }] },
+    ],
+    [
+      "an event without its channel",
+      { type: "handle_inbound", events: [{ ...herLineText, channel: undefined }] },
+    ],
+  ])(
+    "acks an inbound job with %s unread, handling none of it and logging its queue and id alone",
+    async (_, body) => {
+      const fake = createFakePilotRuntime();
+      const outcome = batchOf("vela-inbound", [body]);
+
+      await runQueue(createWorker(fake.runtime), outcome);
+
+      expect(namesOf(fake.calls)).toEqual([]);
+      expect(outcome.acked).toEqual(["message-0"]);
+      expect(outcome.retried).toEqual([]);
+      expect(fake.logs).toEqual([
+        {
+          level: "error",
+          event: "queue_message_unreadable",
+          fields: { queue: "vela-inbound", messageId: "message-0" },
+        },
+      ]);
+      expect(JSON.stringify(fake.logs)).not.toContain(HER_WORDS);
+      expect(JSON.stringify(fake.logs)).not.toContain(HER_LINE_ID);
+    },
+  );
 
   it("closes its deps once for the whole batch", async () => {
     const fake = createFakePilotRuntime();
@@ -429,6 +532,8 @@ describe("the API under /v1", () => {
     ["GET", "/healthz"],
     ["GET", "/privacy"],
     ["POST", "/webhooks/telegram"],
+    ["POST", "/webhooks/line"],
+    ["GET", "/media/a2V5/signature.m4a"],
     ["GET", "/admin"],
   ])("never hands %s %s to the API", async (method, path) => {
     const fake = createFakePilotRuntime();

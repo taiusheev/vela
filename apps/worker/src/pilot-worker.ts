@@ -1,10 +1,11 @@
 /**
  * The pilot Worker's handlers (code design §9, H1): HTTP, where the API under /v1 goes to
- * `PilotRuntime.api` (ADR-29) and everything else to the Hono app (the webhook, the privacy
- * notices, the health check), the three queues, and cron. Everything they drive arrives through
- * `PilotRuntime`, so the same handlers run in a test against fakes. The entry module that wrangler
- * deploys is `index.ts`.
+ * `PilotRuntime.api` (ADR-29) and everything else to the Hono app (the webhooks, the media LINE
+ * fetches, the privacy notices, the health check), the four queues, and cron. Everything they drive
+ * arrives through `PilotRuntime`, so the same handlers run in a test against fakes. The entry module
+ * that wrangler deploys is `index.ts`.
  */
+import { InboundEvent } from "@vela/contracts";
 import {
   type Deps,
   errorLabel,
@@ -15,7 +16,7 @@ import {
 import { createApp } from "./app.ts";
 import { readApiSwitch } from "./config.ts";
 import { createLogger, type DepsHandle } from "./deps.ts";
-import type { PilotEnv } from "./env.ts";
+import type { InboundJob, PilotEnv } from "./env.ts";
 import type { PilotRuntime, PilotServices } from "./runtime.ts";
 
 /**
@@ -36,19 +37,27 @@ export const RECONCILE_CRON = "*/15 * * * *";
  */
 export const NIGHTLY_CRON = "20 3 * * *";
 
-type WorkerJob = OutboundJob | MediaJob | UnderstandJob;
+type WorkerJob = OutboundJob | MediaJob | UnderstandJob | InboundJob;
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
 }
 
-/** A queue message is only trusted as far as its shape: an unreadable body is never a job. */
+/**
+ * A queue message is only trusted as far as its shape: an unreadable body is never a job. An
+ * inbound job is read only when every event in it is one the contract accepts, since services
+ * route on the events alone.
+ */
 function parseJob(body: unknown): WorkerJob | null {
   const record = asRecord(body);
   if (record === null) {
     return null;
   }
-  const { type, outboundId, answerId, mediaId } = record;
+  const { type, outboundId, answerId, mediaId, events } = record;
+  if (type === "handle_inbound") {
+    const parsed = InboundEvent.array().safeParse(events);
+    return parsed.success ? { type, events: parsed.data } : null;
+  }
   if (type === "deliver" && typeof outboundId === "string") {
     return { type, outboundId };
   }
@@ -107,6 +116,11 @@ async function runJob(services: PilotServices, deps: Deps, job: WorkerJob): Prom
       return;
     case "understand_answer":
       await services.understandAnswer(deps, job.answerId);
+      return;
+    case "handle_inbound":
+      // One webhook's events in the order LINE sent them. A retry handles them all again, which
+      // changes nothing twice: every handler behind handleInbound is idempotent (04 §5).
+      await services.handleInbound(deps, job.events);
       return;
     case "ingest_exchange_media":
       // Reserved in the job union; no flow enqueues it and services expose no handler, so a retry

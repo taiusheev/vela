@@ -1,6 +1,7 @@
 {
-  // The pilot Worker (code design §9, H1): Telegram's webhook, the privacy notices, the health
-  // check, the API under /v1 (ADR-29), the three queues, cron, and three Durable Objects:
+  // The pilot Worker (code design §9, H1): Telegram's and LINE's webhooks, the media LINE fetches,
+  // the privacy notices, the health check, the API under /v1 (ADR-29), the queues (LINE's inbound
+  // queue only where LINE is on, and in development), cron, and three Durable Objects:
   // MemberScheduler, ReconcileHeartbeat, which /healthz reads for the watchdog
   // (.github/workflows/watchdog.yml), and AccountWriteLimiter, which counts each account's API
   // writes. The admin pages are a second Worker from this package,
@@ -19,7 +20,7 @@
   // This is the one list of what changes if an account's subdomain is not the one above. First,
   // what src/wrangler-config.test.ts holds together, and fails on until every place agrees:
   //   - WORKERS_DEV_SUBDOMAINS in that test, from which it derives every host it expects;
-  //   - the three URL vars of that environment here;
+  //   - the four URL vars of that environment here, PILOT_PUBLIC_URL among them;
   //   - PUBLIC_BASE_URL of that environment in wrangler.admin.jsonc;
   //   - every workers.dev link written into the Markdown of plan/materials/pilot: the two privacy
   //     notices' links to each other, the notice links in the nearby-contact consent texts (en and
@@ -33,6 +34,8 @@
   //     that environment's notice URLs here: run it again with
   //     `pnpm --filter @vela/worker run setup -- --env <environment> --from webhook`;
   //   - the watchdog's URL for that environment in .github/watchdog.json;
+  //   - the webhook URL in that environment's LINE Developers Console, once its LINE_CHANNEL is on
+  //     (architecture/05-line-flows.md §2.7);
   //   - the documents that write the hosts out, which `git grep vela-light` lists.
   //
   // Every `id` or username the founder has not created yet is written as a PLACEHOLDER: replace
@@ -91,6 +94,27 @@
   // Object, one per account, 20 writes a minute, before the call to Clerk. Production binds neither
   // while its API is off, and readApiConfig refuses to serve the API without them. /v1 has no CORS:
   // OPTIONS answers 404, no Access-Control- header is sent, and a request carrying Origin is refused.
+  //
+  // LINE_CHANNEL (architecture/05-line-flows.md §5.10) is "on" or "off", the same in
+  // wrangler.admin.jsonc for each environment, and "off" everywhere for now;
+  // src/wrangler-config.test.ts pins production off. With "off", /webhooks/line and /media answer
+  // 404 and nothing reads a LINE setting. With "on", /webhooks/line checks LINE's signature, puts
+  // the events on INBOUND_QUEUE and answers, this Worker consumes that queue with handleInbound,
+  // and /media serves the copies LINE is sent by signed URL. Then src/config.ts refuses to start
+  // without: MEDIA_STORAGE "r2" and its bucket, since LINE sends a voice note or photo only as a
+  // URL to Vela's own copy; the INBOUND_QUEUE binding; PILOT_PUBLIC_URL, this Worker's https
+  // origin, which every media URL starts with; LINE_BOT_BASIC_ID, the Official Account's basic id
+  // (@ and its characters), in both files, and absent while LINE is off; and three secrets of this
+  // Worker: LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN from the LINE Developers Console,
+  // and MEDIA_URL_SECRET, 32 random bytes that sign the media URLs, generated and never typed. A
+  // binding to a queue that does not exist fails the deploy, so development binds vela-inbound,
+  // which is local there, and a deployed environment binds vela-inbound-<environment> only in the
+  // commit that turns its LINE on. To switch staging on: put the three secrets on this Worker, set
+  // LINE_CHANNEL to "on" for staging here and in wrangler.admin.jsonc with LINE_BOT_BASIC_ID, add
+  // the INBOUND_QUEUE producer and the vela-inbound-staging consumer here, commit, then run
+  // `pnpm --filter @vela/worker run setup -- --env staging --from resources` on that commit before
+  // it is merged to main, which creates the queue and deploys. Merged first, CI would deploy a
+  // binding to a queue that does not exist, and the deploy would fail.
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-dev",
   "main": "src/index.ts",
@@ -131,7 +155,9 @@
     "producers": [
       { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound" },
       { "binding": "MEDIA_QUEUE", "queue": "vela-media" },
-      { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand" }
+      { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand" },
+      // LINE's webhook queue, local here; a deployed environment binds its own only with LINE on.
+      { "binding": "INBOUND_QUEUE", "queue": "vela-inbound" }
     ],
     // A message is retried until the send or the AI call stops failing, then parked in the
     // dead-letter queue, where the founder can see it rather than lose it.
@@ -158,6 +184,15 @@
         "max_batch_timeout": 10,
         "max_retries": 3,
         "retry_delay": 60,
+        "dead_letter_queue": "vela-dead-letter"
+      },
+      // A batch waits at most a second: a reply token is free for a minute only (05 §1 fact 7).
+      {
+        "queue": "vela-inbound",
+        "max_batch_size": 10,
+        "max_batch_timeout": 1,
+        "max_retries": 3,
+        "retry_delay": 30,
         "dead_letter_queue": "vela-dead-letter"
       }
     ]
@@ -201,7 +236,10 @@
     "MEDIA_STORAGE": "off",
     "API_V1": "on",
     // Clerk's development instance for Vela Light: public, since the publishable key encodes it.
-    "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev"
+    "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev",
+    // Off: a laptop has no media bucket, and LINE's tests run on fixtures (05 §5.10).
+    "LINE_CHANNEL": "off",
+    "PILOT_PUBLIC_URL": "http://localhost:8787"
   },
 
   "env": {
@@ -279,7 +317,12 @@
         // Staging's app accounts are all test accounts (the dogfooding week's friend has none),
         // so it verifies tokens from Clerk's development instance, as development does.
         "API_V1": "on",
-        "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev"
+        "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev",
+        // Off until the founder's test Official Account is set up and vela-inbound-staging exists
+        // (05 §8, step 8): no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
+        "LINE_CHANNEL": "off",
+        // This Worker's origin, which the media URLs LINE fetches start with once LINE is on.
+        "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev"
       }
     },
 
@@ -341,7 +384,11 @@
         "MEDIA_STORAGE": "r2",
         // Off until a new ADR turns it on (ADR-29): no CLERK_ISSUER, no ratelimits, and no
         // ACCOUNT_WRITE_LIMITER binding until then.
-        "API_V1": "off"
+        "API_V1": "off",
+        // Off until the design's last step turns it on (05 §8, step 11), and pinned off by
+        // src/wrangler-config.test.ts: no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
+        "LINE_CHANNEL": "off",
+        "PILOT_PUBLIC_URL": "https://vela.vela-light.workers.dev"
       }
     }
   }

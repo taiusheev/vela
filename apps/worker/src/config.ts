@@ -8,7 +8,7 @@
  */
 import { type Lang, REGIONS, type Region } from "@vela/contracts";
 import type { Config } from "@vela/services";
-import type { AdminEnv, PilotEnv } from "./env.ts";
+import type { AdminEnv, InboundJob, PilotEnv } from "./env.ts";
 import {
   NOTICE_FILES,
   NOTICE_LANGS,
@@ -43,6 +43,9 @@ type SecretName =
   | "DEEPGRAM_API_KEY"
   | "ADMIN_CONVERSATION_ID"
   | "CLERK_SECRET_KEY"
+  | "LINE_CHANNEL_SECRET"
+  | "LINE_CHANNEL_ACCESS_TOKEN"
+  | "MEDIA_URL_SECRET"
   | "ACCESS_TEAM_DOMAIN"
   | "ACCESS_AUD";
 
@@ -261,17 +264,181 @@ function readAdminConversationId(env: PilotEnv, environment: Environment): strin
   return value === "" ? null : value;
 }
 
+/**
+ * Whether an environment speaks LINE (05 §5.10): "off" everywhere until the staging loop (05 §8,
+ * step 8), and in production until the design's last step turns it on (src/wrangler-config.test.ts
+ * pins it).
+ */
+export const LINE_SWITCHES = ["on", "off"] as const;
+
+export type LineSwitch = (typeof LINE_SWITCHES)[number];
+
+/** The var `LINE_CHANNEL`, which both Workers hold; any value but "on" or "off" is refused. */
+export function readLineSwitch(
+  env: { readonly LINE_CHANNEL?: string },
+  configFile: string,
+): LineSwitch {
+  const value = env.LINE_CHANNEL?.trim() ?? "";
+  const found = LINE_SWITCHES.find((candidate) => candidate === value);
+  if (found === undefined) {
+    throw new ConfigError(
+      "LINE_CHANNEL",
+      `LINE_CHANNEL must be one of ${LINE_SWITCHES.join(", ")}: set it in the environment's vars in ${configFile}`,
+    );
+  }
+  return found;
+}
+
+/** A basic id as LINE shows it: `@`, then the account's characters, with no space. */
+const LINE_BASIC_ID = /^@\S+$/;
+
+function readLineBasicId(env: { readonly LINE_BOT_BASIC_ID?: string }, configFile: string): string {
+  const value = env.LINE_BOT_BASIC_ID?.trim() ?? "";
+  if (!LINE_BASIC_ID.test(value)) {
+    throw new ConfigError(
+      "LINE_BOT_BASIC_ID",
+      `LINE_BOT_BASIC_ID must be the Official Account's basic id, @ and its characters, while LINE_CHANNEL is on: set it in the environment's vars in ${configFile}`,
+    );
+  }
+  return value;
+}
+
+/**
+ * The channel secret and access token as the adapter takes them: visible ASCII and nothing else,
+ * since the token goes into a header, where a space or a pasted line break breaks every request.
+ */
+const LINE_CREDENTIAL = /^[\x21-\x7e]+$/;
+
+function readLineCredential(
+  env: PilotEnv,
+  name: "LINE_CHANNEL_SECRET" | "LINE_CHANNEL_ACCESS_TOKEN",
+): string {
+  const value = secret(env, name).trim();
+  if (!LINE_CREDENTIAL.test(value)) {
+    throw new ConfigError(
+      name,
+      `${name} holds a character LINE never issues (a space, a line break, a letter outside ASCII): put it again as the LINE Developers Console shows it`,
+    );
+  }
+  return value;
+}
+
+/**
+ * The media URLs' signing key: 32 random bytes, which is 43 or 44 characters as base64 and 64 as
+ * hex. A shorter value is refused, since whoever guesses it can read every stored voice note.
+ */
+const MIN_MEDIA_URL_SECRET_LENGTH = 43;
+
+function readMediaUrlSecret(env: PilotEnv): string {
+  const value = secret(env, "MEDIA_URL_SECRET").trim();
+  if (value.length < MIN_MEDIA_URL_SECRET_LENGTH || !LINE_CREDENTIAL.test(value)) {
+    throw new ConfigError(
+      "MEDIA_URL_SECRET",
+      `MEDIA_URL_SECRET must be 32 random bytes as base64 or hex, at least ${MIN_MEDIA_URL_SECRET_LENGTH} visible characters: generate one, never type one`,
+    );
+  }
+  return value;
+}
+
+/**
+ * This Worker's own https origin, which every media URL starts with: LINE fetches media only over
+ * https (05 §1 fact 14). One trailing `/` is stripped; a path is refused, since the media route
+ * answers at the origin.
+ */
+function readPilotOrigin(env: PilotEnv): string {
+  const given = env.PILOT_PUBLIC_URL?.trim() ?? "";
+  const origin = given.endsWith("/") ? given.slice(0, -1) : given;
+  let url: URL | null;
+  try {
+    url = new URL(origin);
+  } catch {
+    url = null;
+  }
+  if (url === null || url.protocol !== "https:" || url.origin !== origin) {
+    throw new ConfigError(
+      "PILOT_PUBLIC_URL",
+      "PILOT_PUBLIC_URL must be this Worker's own https origin, with no path, while LINE_CHANNEL is on: set it in the environment's vars in wrangler.jsonc",
+    );
+  }
+  return origin;
+}
+
+/** What the pilot Worker speaks LINE with, and the two bindings only LINE needs. */
+export interface LineConfig {
+  readonly channelSecret: string;
+  readonly channelAccessToken: string;
+  /** Keys the signature in every media URL (`media-route.ts`). */
+  readonly mediaUrlSecret: string;
+  /** `@…`: the account a LINE invite link opens. */
+  readonly basicId: string;
+  /** This Worker's https origin, without a trailing slash: the start of every media URL. */
+  readonly pilotOrigin: string;
+  /** Where the webhook hands its events. */
+  readonly inboundQueue: Queue<InboundJob>;
+  /** Where the copies LINE is sent by URL are read from. */
+  readonly mediaBucket: R2Bucket;
+}
+
+/**
+ * LINE's settings (05 §5.10), or null while `LINE_CHANNEL` is "off", when nothing else is read: an
+ * environment that does not speak LINE needs none of its secrets. Otherwise a `ConfigError` names
+ * the first setting LINE cannot run with. LINE sends media only by URL, so it needs the R2 copy,
+ * and the webhook needs its queue.
+ */
+export function readLineConfig(env: PilotEnv): LineConfig | null {
+  if (readLineSwitch(env, "wrangler.jsonc") === "off") {
+    return null;
+  }
+  if (readMediaStorage(env, readEnvironment(env), "wrangler.jsonc") === "off") {
+    throw new ConfigError(
+      "LINE_CHANNEL",
+      "LINE_CHANNEL is on while MEDIA_STORAGE is off: LINE sends a voice note or photo only by a URL to Vela's own copy, so set MEDIA_STORAGE to r2 and bind its bucket in wrangler.jsonc, or LINE_CHANNEL to off",
+    );
+  }
+  const mediaBucket = env.MEDIA_BUCKET;
+  if (mediaBucket === undefined) {
+    throw new ConfigError(
+      "MEDIA_BUCKET",
+      "MEDIA_STORAGE is r2 but no bucket is bound: add the environment's r2_buckets binding in wrangler.jsonc",
+    );
+  }
+  const inboundQueue = env.INBOUND_QUEUE;
+  if (inboundQueue === undefined) {
+    throw new ConfigError(
+      "INBOUND_QUEUE",
+      "LINE_CHANNEL is on but INBOUND_QUEUE is not bound: create the environment's vela-inbound queue, then add its producer and consumer in wrangler.jsonc",
+    );
+  }
+  const pilotOrigin = readPilotOrigin(env);
+  const basicId = readLineBasicId(env, "wrangler.jsonc");
+  const channelSecret = readLineCredential(env, "LINE_CHANNEL_SECRET");
+  const channelAccessToken = readLineCredential(env, "LINE_CHANNEL_ACCESS_TOKEN");
+  const mediaUrlSecret = readMediaUrlSecret(env);
+  return {
+    channelSecret,
+    channelAccessToken,
+    mediaUrlSecret,
+    basicId,
+    pilotOrigin,
+    inboundQueue,
+    mediaBucket,
+  };
+}
+
 /** The vars that become links: the admin origin in admin messages, and the privacy notices. */
 const PILOT_URL_VARS = ["PUBLIC_BASE_URL", "PRIVACY_NOTICE_URL_EN", "PRIVACY_NOTICE_URL_ZH_TW"];
 
 /**
  * The pilot Worker's vars and secrets as services' `Config` (code design §8), or a `ConfigError`
- * naming the first variable, or notice, a deployed environment cannot start with.
+ * naming the first variable, or notice, a deployed environment cannot start with. Where LINE is on,
+ * its settings are refused here too (05 §5.10), in every environment; services' `Config` gains the
+ * basic id with the services change that first reads it (05 §8, step 4).
  */
 export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
   const environment = readEnvironment(env);
   checkDeployedEnv(env, environment, PILOT_URL_VARS, "wrangler.jsonc");
   refuseUnfilledNotices(environment, notices);
+  readLineConfig(env);
   const english = env.PRIVACY_NOTICE_URL_EN;
   // A language without its own notice takes the English one, so the link is never empty.
   const privacyNoticeUrls: Record<Lang, string> = {
@@ -457,11 +624,15 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
 /**
  * The admin Worker's environment, checked as the pilot's is: no placeholder anywhere, its own
  * origin, the one a form may be posted from, is https outside development, and the bot the link a
- * new invite carries opens is named, in every environment. Returns the environment it checked.
+ * new invite carries opens is named, in every environment. Where LINE is on, the account its
+ * invite links open must be named too. Returns the environment it checked.
  */
 export function checkAdminConfig(env: AdminEnv): Environment {
   const environment = readEnvironment(env);
   checkDeployedEnv(env, environment, ["PUBLIC_BASE_URL"], "wrangler.admin.jsonc");
   requireVar(env, "TELEGRAM_BOT_USERNAME", "wrangler.admin.jsonc");
+  if (readLineSwitch(env, "wrangler.admin.jsonc") === "on") {
+    readLineBasicId(env, "wrangler.admin.jsonc");
+  }
   return environment;
 }

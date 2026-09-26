@@ -5,10 +5,21 @@
  * Secrets are typed `string | undefined` because a missing one only shows up at runtime;
  * `src/config.ts` refuses to build anything until each is present and says which is missing.
  */
+import type { InboundEvent } from "@vela/contracts";
 import type { MediaJob, OutboundJob, UnderstandJob } from "@vela/services";
 import type { ReconcileHeartbeat } from "./heartbeat.ts";
 import type { MemberScheduler } from "./scheduler.ts";
 import type { AccountWriteLimiter } from "./write-limit.ts";
+
+/**
+ * What the LINE webhook hands the inbound queue (05 §5.10): one webhook's events, in the order LINE
+ * sent them, for one call of `handleInbound`. The adapter has already dropped the family's ordinary
+ * group messages, so they never reach the queue.
+ */
+export interface InboundJob {
+  readonly type: "handle_inbound";
+  readonly events: InboundEvent[];
+}
 
 /** What both Workers are given: the environment, the admin origin, and the admin's reach. */
 interface SharedEnv {
@@ -25,6 +36,16 @@ interface SharedEnv {
   readonly AI_PROVIDER: string;
   /** Read only while `AI_PROVIDER` is "anthropic", and required then. */
   readonly ANTHROPIC_API_KEY?: string;
+  /**
+   * "on" or "off": whether this environment speaks LINE (05 §5.10; `config.ts`, `readLineSwitch`).
+   * The same in both Workers of an environment; "off" everywhere until the staging loop (05 §8).
+   */
+  readonly LINE_CHANNEL: string;
+  /**
+   * The Official Account's basic id, `@` and its characters, which a LINE invite link opens.
+   * Absent where LINE is off, and required where it is on.
+   */
+  readonly LINE_BOT_BASIC_ID?: string;
 
   readonly HYPERDRIVE: Hyperdrive;
   readonly MEMBER_SCHEDULER: DurableObjectNamespace<MemberScheduler>;
@@ -32,8 +53,8 @@ interface SharedEnv {
 }
 
 /**
- * The pilot Worker `vela` (wrangler.jsonc): webhooks, notices, queues, cron, the scheduler, the
- * heartbeat, and the API under /v1.
+ * The pilot Worker `vela` (wrangler.jsonc): webhooks, notices, the media LINE fetches, queues, cron,
+ * the scheduler, the heartbeat, and the API under /v1.
  */
 export interface PilotEnv extends SharedEnv {
   // Vars.
@@ -54,6 +75,11 @@ export interface PilotEnv extends SharedEnv {
    * "on", and absent in production while it is "off".
    */
   readonly CLERK_ISSUER?: string;
+  /**
+   * This Worker's own origin, which the signed media URLs LINE fetches start with (05 §5.10). Read
+   * only while `LINE_CHANNEL` is "on", and required to be an https origin then.
+   */
+  readonly PILOT_PUBLIC_URL?: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;
@@ -66,10 +92,27 @@ export interface PilotEnv extends SharedEnv {
    * while `API_V1` is "on"; a laptop without it serves the API's reads only.
    */
   readonly CLERK_SECRET_KEY?: string;
+  /**
+   * The LINE channel's secret, which keys each webhook's signature, and its long-lived access token.
+   * Read only while `LINE_CHANNEL` is "on", and required then.
+   */
+  readonly LINE_CHANNEL_SECRET?: string;
+  readonly LINE_CHANNEL_ACCESS_TOKEN?: string;
+  /**
+   * The key of the signature in each media URL (`media-route.ts`): 32 random bytes, generated and
+   * never typed. Read only while `LINE_CHANNEL` is "on", and required then.
+   */
+  readonly MEDIA_URL_SECRET?: string;
 
   // Bindings.
   readonly MEDIA_QUEUE: Queue<MediaJob>;
   readonly UNDERSTAND_QUEUE: Queue<UnderstandJob>;
+  /**
+   * The LINE webhook's queue, `vela-inbound`. Optional, because a binding to a queue that does not
+   * exist fails the deploy: development binds it, where the queue is local, and a deployed
+   * environment binds it only once its `LINE_CHANNEL` is "on", which `config.ts` refuses without it.
+   */
+  readonly INBOUND_QUEUE?: Queue<InboundJob>;
   /**
    * Optional, because an environment whose `MEDIA_STORAGE` is "off" binds no bucket: binding one
    * that does not exist would fail its deploy. `deps.ts` builds the media port only when it is

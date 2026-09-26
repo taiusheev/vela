@@ -1,7 +1,7 @@
 /**
  * The seam between the pilot Worker and everything it drives. Routes, the queue consumer, the cron
  * handler, and the Durable Object take a `PilotRuntime` rather than importing services directly,
- * so a test can hand them fakes and no test needs a database, Telegram, or Anthropic.
+ * so a test can hand them fakes and no test needs a database, Telegram, LINE, or Anthropic.
  *
  * `pilotRuntime` is the only place the real services are wired into the pilot Worker, the API's
  * through `api` (`api-runtime.ts`); the admin Worker has its own seam in `admin-runtime.ts`.
@@ -48,7 +48,10 @@ export interface PilotRuntime {
    * opens anything, while a deployed environment's configuration or either notice is unfilled.
    */
   createDeps(env: PilotEnv, options?: DepsOptions): Promise<DepsHandle>;
-  /** The channel adapters, built before a webhook is verified and reused for its deps. */
+  /**
+   * The channel adapters, built before a webhook is verified; Telegram's registry is reused for its
+   * deps, and LINE's webhook needs no deps at all.
+   */
   createChannels: typeof createChannels;
   /** The notices `/privacy` and `/privacy/zh-TW` serve, and the ones `createDeps` checks. */
   readonly notices: PrivacyNotices;

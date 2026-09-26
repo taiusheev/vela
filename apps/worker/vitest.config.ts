@@ -139,14 +139,17 @@ function workerIgnoreRules(): readonly string[] {
 
 /**
  * The Worker's tests run inside workerd, against the bindings in wrangler.jsonc, so the Durable
- * Object and the queues behave as they will in production. No R2 bucket is bound: this file's
+ * Object and the queues behave as they will in production. No media bucket is bound: this file's
  * environment is development, whose MEDIA_STORAGE is off (decision M), so the media port is covered
- * against `fakeR2Bucket` in `src/deps.test.ts` instead. The secrets below are fakes, and they win
- * over the same names in a developer's `.dev.vars`, which the pool does read (only `.env` and
- * `.env.local` are kept out, above). `CLERK_SECRET_KEY` is blank, so development serves the API's
- * reads only, as a laptop without a key does, whatever a `.dev.vars` holds. Every test injects fake
- * services through its runtime, so none of them reaches a database, Telegram, Anthropic, or the
- * network. The admin Worker's tests build its environment from these same bindings
+ * against `fakeR2Bucket` in `src/deps.test.ts` instead. The media route LINE fetches from is
+ * covered against a local bucket of the runtime's own, `TEST_MEDIA_BUCKET`, which no wrangler file
+ * declares, so a range is answered as R2 answers one (`src/media-route.test.ts`). The secrets below
+ * are fakes, and they win over the same names in a developer's `.dev.vars`, which the pool does
+ * read (only `.env` and `.env.local` are kept out, above). `CLERK_SECRET_KEY` is blank, so
+ * development serves the API's reads only, as a laptop without a key does, whatever a `.dev.vars`
+ * holds, and so are LINE's three, which a test that turns LINE on gives its own. Every test injects
+ * fake services through its runtime, so none of them reaches a database, Telegram, LINE, Anthropic,
+ * or the network. The admin Worker's tests build its environment from these same bindings
  * (`src/testing/fakes.ts`).
  */
 export default defineConfig({
@@ -184,7 +187,11 @@ export default defineConfig({
           ANTHROPIC_API_KEY: "test-anthropic-key",
           DEEPGRAM_API_KEY: "test-deepgram-key",
           CLERK_SECRET_KEY: "",
+          LINE_CHANNEL_SECRET: "",
+          LINE_CHANNEL_ACCESS_TOKEN: "",
+          MEDIA_URL_SECRET: "",
         },
+        r2Buckets: ["TEST_MEDIA_BUCKET"],
       },
     }),
   ],

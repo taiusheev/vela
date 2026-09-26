@@ -11,7 +11,13 @@ import type { Deps, FamilyPage, Logger } from "@vela/services";
 import { vi } from "vitest";
 import type { AdminRuntime, AdminServices } from "../admin-runtime.ts";
 import type { ApiHandler } from "../api-runtime.ts";
-import type { AdminDeps, AdminDepsHandle, DepsHandle, DepsOptions } from "../deps.ts";
+import {
+  type AdminDeps,
+  type AdminDepsHandle,
+  createChannels,
+  type DepsHandle,
+  type DepsOptions,
+} from "../deps.ts";
 import type { AdminEnv, PilotEnv } from "../env.ts";
 import type { PrivacyNotices } from "../notices.ts";
 import type { PilotRuntime, PilotServices } from "../runtime.ts";
@@ -21,6 +27,82 @@ import type { PilotRuntime, PilotServices } from "../runtime.ts";
  * them as the generated `Cloudflare.Env`, which this package does not generate.
  */
 export const testEnv = env as unknown as PilotEnv;
+
+/**
+ * A local R2 bucket of the test runtime's own (vitest.config.ts), which no wrangler file declares:
+ * the media route reads it where a deployed Worker reads `MEDIA_BUCKET`, so ranges are answered as
+ * R2 answers them.
+ */
+export const testMediaBucket = (env as unknown as { readonly TEST_MEDIA_BUCKET: R2Bucket })
+  .TEST_MEDIA_BUCKET;
+
+/**
+ * LINE's settings as a test that turns LINE on gives them. Each is shaped like the real one and
+ * distinctive, so a leak into a log line or an answer is easy to find.
+ */
+export const TEST_LINE = {
+  channelSecret: "5c1d0a7e3b9f4c2d8e6a1b0f9d3c7e2a",
+  channelAccessToken: "vElAtEsTlInE+aCcEsS/tOkEn0123456789abcdefghijklmnopqrstuvwxyz=",
+  mediaUrlSecret: "tEsTmEdIaUrLsEcReT-0123456789abcdefghijklmnopqrstuv",
+  basicId: "@123velatest",
+  pilotOrigin: "https://vela.worker.test",
+} as const;
+
+/** A queue that keeps what it is sent in `sent`, or refuses every send with `failure`. */
+export function recordingQueue<J>(sent: J[], failure?: Error): Queue<J> {
+  return {
+    send: async (job: J) => {
+      if (failure !== undefined) {
+        throw failure;
+      }
+      sent.push(job);
+    },
+    sendBatch: async () => {
+      throw new Error("the fake queue takes one job at a time");
+    },
+  } as unknown as Queue<J>;
+}
+
+/**
+ * Development with LINE on, as a laptop that tried it would have it: every LINE setting given, the
+ * test runtime's bucket for media, and a recording inbound queue unless the test hands its own.
+ */
+export function lineOnEnv(overrides: Partial<PilotEnv> = {}): PilotEnv {
+  return {
+    ...testEnv,
+    LINE_CHANNEL: "on",
+    LINE_BOT_BASIC_ID: TEST_LINE.basicId,
+    PILOT_PUBLIC_URL: TEST_LINE.pilotOrigin,
+    LINE_CHANNEL_SECRET: TEST_LINE.channelSecret,
+    LINE_CHANNEL_ACCESS_TOKEN: TEST_LINE.channelAccessToken,
+    MEDIA_URL_SECRET: TEST_LINE.mediaUrlSecret,
+    MEDIA_STORAGE: "r2",
+    MEDIA_BUCKET: testMediaBucket,
+    INBOUND_QUEUE: recordingQueue([]),
+    ...overrides,
+  };
+}
+
+const UTF8 = new TextEncoder();
+
+/**
+ * What LINE puts in `x-line-signature` for `rawBody`: Base64(HMAC-SHA256(channel secret, body)),
+ * made here with Web Crypto directly rather than with the adapter's verifier.
+ */
+export async function signLineBody(
+  rawBody: string,
+  channelSecret: string = TEST_LINE.channelSecret,
+): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    UTF8.encode(channelSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, UTF8.encode(rawBody)));
+  return btoa(String.fromCharCode(...mac));
+}
 
 /**
  * The admin Worker's environment on a laptop. The pool runs the pilot Worker's configuration, so
@@ -33,6 +115,7 @@ export const adminTestEnv: AdminEnv = {
   TELEGRAM_BOT_USERNAME: testEnv.TELEGRAM_BOT_USERNAME,
   AI_PROVIDER: testEnv.AI_PROVIDER,
   ANTHROPIC_API_KEY: "test-anthropic-key",
+  LINE_CHANNEL: testEnv.LINE_CHANNEL,
   ACCESS_TEAM_DOMAIN: "vela-test.cloudflareaccess.com",
   ACCESS_AUD: "test-audience",
   HYPERDRIVE: testEnv.HYPERDRIVE,
@@ -108,6 +191,8 @@ export interface FakePilotRuntime extends Recording {
   readonly inbound: InboundEvent[];
   /** Every request handed to `api`, as `"<METHOD> <pathname>"`, in order. */
   readonly apiRequests: string[];
+  /** How many channel registries a route built: a route that read nothing built none. */
+  channelsBuilt(): number;
 }
 
 export interface FakeAdminRuntime extends Recording {
@@ -117,7 +202,10 @@ export interface FakeAdminRuntime extends Recording {
 export interface FakePilotRuntimeOptions {
   /** Replaces what a service returns or makes it throw; the call is still recorded. */
   readonly services?: Partial<PilotServices>;
-  /** The events the fake Telegram adapter parses out of a verified request. */
+  /**
+   * The events the fake Telegram adapter parses out of a verified request. LINE's adapter is the
+   * real one, built from the environment, so its signatures and its parsing are LINE's own.
+   */
   readonly events?: InboundEvent[];
   /** The secret the fake adapter accepts in `X-Telegram-Bot-Api-Secret-Token`. */
   readonly webhookSecret?: string;
@@ -277,6 +365,7 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
   const events = options.events ?? [];
   const webhookSecret = options.webhookSecret ?? "test-webhook-secret";
   const api = options.api;
+  let channelsBuilt = 0;
 
   const services: PilotServices = {
     async handleInbound(deps, parsed) {
@@ -338,7 +427,15 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
         },
       };
     },
-    createChannels: () => ({ get: () => fakeAdapter(events, webhookSecret) }),
+    createChannels: (pilotEnv) => {
+      channelsBuilt += 1;
+      return {
+        get: (channel) =>
+          channel === "line"
+            ? createChannels(pilotEnv).get("line")
+            : fakeAdapter(events, webhookSecret),
+      };
+    },
     notices: options.notices ?? noticesFixture(),
     api: async (request, env) => {
       apiRequests.push(`${request.method} ${new URL(request.url).pathname}`);
@@ -346,7 +443,13 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
     },
   };
 
-  return { ...recording, runtime, inbound, apiRequests };
+  return {
+    ...recording,
+    runtime,
+    inbound,
+    apiRequests,
+    channelsBuilt: () => channelsBuilt,
+  };
 }
 
 export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): FakeAdminRuntime {

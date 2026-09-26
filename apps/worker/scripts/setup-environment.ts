@@ -29,6 +29,8 @@ import {
   type AiProvider,
   API_SWITCHES,
   type ApiSwitch,
+  LINE_SWITCHES,
+  type LineSwitch,
   MEDIA_STORAGES,
   type MediaStorage,
 } from "../src/config.ts";
@@ -53,7 +55,7 @@ export type Step = (typeof STEPS)[number];
 const STEP_DESCRIPTIONS: Readonly<Record<Step, string>> = {
   account: "check the Cloudflare API token and account id (staging saves them to apps/worker/.env)",
   resources:
-    "create the queues, the dead-letter queue and, while MEDIA_STORAGE is r2, the R2 media bucket",
+    "create the queues, the dead-letter queue, LINE's inbound queue while LINE_CHANNEL is on, and, while MEDIA_STORAGE is r2, the R2 media bucket",
   database:
     "apply the migrations to the environment's Neon project, create the Hyperdrive configuration, write its id",
   telegram:
@@ -372,6 +374,11 @@ export interface EnvironmentConfig {
   readonly mediaStorage: MediaStorage;
   /** The pilot Worker's `API_V1` (ADR-29); with "off" no Clerk key is asked for and /v1 is not checked. */
   readonly apiV1: ApiSwitch;
+  /**
+   * Both Workers' `LINE_CHANNEL`, which must agree (05 §5.10); with "off" the pilot Worker binds no
+   * inbound queue and none is created.
+   */
+  readonly lineChannel: LineSwitch;
 }
 
 function originOf(url: string, where: string): URL {
@@ -460,6 +467,46 @@ function apiSwitchOf(pilotVars: unknown, environment: Environment, where: string
   return found;
 }
 
+/**
+ * The environment's `LINE_CHANNEL` (05 §5.10), which both Workers must share, and the inbound queue
+ * binding it has to agree with: a binding to a queue that does not exist fails the deploy, so with
+ * "off" the pilot Worker binds none, and with "on" it produces onto and consumes
+ * `vela-inbound-<environment>`, which the resources step then creates like any queue it binds. So
+ * a run creates LINE's queue only for an environment that speaks LINE.
+ */
+function lineChannelOf(
+  pilot: unknown,
+  adminVars: unknown,
+  environment: Environment,
+  where: { readonly pilot: string; readonly admin: string },
+): LineSwitch {
+  const value = field(field(pilot, "vars", where.pilot), "LINE_CHANNEL", `${where.pilot}.vars`);
+  const found = LINE_SWITCHES.find((candidate) => candidate === value);
+  if (found === undefined || field(adminVars, "LINE_CHANNEL", `${where.admin}.vars`) !== value) {
+    throw new SetupError(
+      `${PILOT_FILE} and ${ADMIN_FILE} must set LINE_CHANNEL for ${environment} to the same value, one of ${LINE_SWITCHES.join(", ")}`,
+    );
+  }
+  const queue = `vela-inbound-${environment}`;
+  const queues = field(pilot, "queues", where.pilot) ?? {};
+  const produced = listAt(queues, "producers", `${where.pilot}.queues`)
+    .filter((producer) => field(producer, "binding", where.pilot) === "INBOUND_QUEUE")
+    .map((producer) => field(producer, "queue", where.pilot));
+  const consumed = listAt(queues, "consumers", `${where.pilot}.queues`).some(
+    (consumer) => field(consumer, "queue", where.pilot) === queue,
+  );
+  const agrees =
+    found === "on"
+      ? produced.length === 1 && produced[0] === queue && consumed
+      : produced.length === 0 && !consumed;
+  if (!agrees) {
+    throw new SetupError(
+      `LINE_CHANNEL is ${found} for ${environment}, so ${PILOT_FILE} must ${found === "on" ? `bind INBOUND_QUEUE to ${queue} and consume it` : "bind no inbound queue"}`,
+    );
+  }
+  return found;
+}
+
 /** The names and hosts both wrangler files give an environment, read from the files' text. */
 export function readEnvironmentConfig(
   texts: { readonly pilot: string; readonly admin: string },
@@ -514,6 +561,10 @@ export function readEnvironmentConfig(
     }),
     mediaStorage: mediaStorageOf(pilotVars, buckets, environment, `${pilotWhere}.vars`),
     apiV1: apiSwitchOf(pilotVars, environment, `${pilotWhere}.vars`),
+    lineChannel: lineChannelOf(pilot, adminVars, environment, {
+      pilot: pilotWhere,
+      admin: adminWhere,
+    }),
   };
 }
 
@@ -1176,6 +1227,18 @@ function mediaOffLine(environment: Environment): string {
 }
 
 /**
+ * What the resources step says instead of creating LINE's inbound queue while LINE is off (05
+ * §5.10), and how to switch it on. The founder's LINE account and its secrets come first, so this
+ * script never turns it on; production stays off until the design's last step (05 §8, step 11).
+ */
+function lineOffLine(environment: Environment): string {
+  const off = `LINE is off in ${environment} (LINE_CHANNEL "off" in ${PILOT_FILE} and ${ADMIN_FILE}), so no inbound queue is created, and /webhooks/line and /media answer 404 there.`;
+  return environment === "production"
+    ? `${off} It stays off until the LINE design's last step turns it on (architecture/05-line-flows.md, section 8, step 11).`
+    : `${off} To switch it on later: put LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN and MEDIA_URL_SECRET on the pilot Worker, set LINE_CHANNEL to "on" for ${environment} in both files with its LINE_BOT_BASIC_ID, add the INBOUND_QUEUE producer and the vela-inbound-${environment} consumer to ${PILOT_FILE}, commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from resources on that commit before it is merged to main, which creates the queue and deploys. Merged first, CI would deploy a binding to a queue that does not exist, and the deploy would fail.`;
+}
+
+/**
  * What the secrets step says instead of asking for Clerk's secret key while the API is off
  * (ADR-29): /v1 then answers 404 and reads no Clerk setting, so production is set up without a
  * Clerk production instance. Deployed with the switch on and no key, only /v1 answers 503; every
@@ -1585,6 +1648,11 @@ class Setup {
         await this.#required(cloudflareApi.createQueue(accountId, queue));
         created.push(queue);
       }
+    }
+    // LINE's queue is among them once LINE is on: readEnvironmentConfig holds the var and the
+    // binding together.
+    if (config.lineChannel === "off") {
+      this.#say(lineOffLine(this.#environment));
     }
     if (config.mediaStorage === "off") {
       this.#say(mediaOffLine(this.#environment));

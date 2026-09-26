@@ -10,9 +10,9 @@
  * The pilot Worker builds every port. The admin Worker builds only the ports the admin actions and
  * reads use (`AdminDeps`), from its own, smaller set of bindings.
  */
-import { createTelegramAdapter } from "@vela/adapters";
+import { createLineAdapter, createTelegramAdapter } from "@vela/adapters";
 import { type Ai, createClaudeAi, createDeepgramStt, createOffAi } from "@vela/ai";
-import type { Channel } from "@vela/contracts";
+import type { Channel, ChannelAdapter } from "@vela/contracts";
 import { connectDatabase, type VelaDatabase } from "@vela/db";
 import type {
   ChannelRegistry,
@@ -31,6 +31,7 @@ import {
   type Environment,
   readAiProvider,
   readConfig,
+  readLineConfig,
   readMediaStorage,
   requireVar,
   secret,
@@ -154,21 +155,45 @@ export function createSchedulerPort(env: Pick<PilotEnv, "MEMBER_SCHEDULER">): Me
   };
 }
 
-/** The channels the pilot Worker speaks. Telegram is the pilot's only one; the rest are not wired. */
+/**
+ * The channels the pilot Worker speaks. Telegram always: the founder's admin conversation is there
+ * (ADR-21). LINE only where `LINE_CHANNEL` is "on", built the first time it is asked for, so an
+ * environment without LINE reads none of its secrets; asked for where it is off, it is refused by
+ * the variable that turns it on. The rest are not wired.
+ */
 export function createChannels(env: PilotEnv): ChannelRegistry {
   const telegram = createTelegramAdapter({
     botToken: secret(env, "TELEGRAM_BOT_TOKEN"),
     webhookSecret: secret(env, "TELEGRAM_WEBHOOK_SECRET"),
     botUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
   });
+  let line: ChannelAdapter | null = null;
   return {
     get(channel: Channel) {
-      if (channel !== "telegram") {
-        throw new Error(`no adapter is wired for the ${channel} channel`);
+      if (channel === "telegram") {
+        return telegram;
       }
-      return telegram;
+      if (channel === "line") {
+        line ??= createLineChannel(env);
+        return line;
+      }
+      throw new Error(`no adapter is wired for the ${channel} channel`);
     },
   };
+}
+
+function createLineChannel(env: PilotEnv): ChannelAdapter {
+  const config = readLineConfig(env);
+  if (config === null) {
+    throw new ConfigError(
+      "LINE_CHANNEL",
+      "LINE is off in this environment: LINE_CHANNEL is off in wrangler.jsonc",
+    );
+  }
+  return createLineAdapter({
+    channelSecret: config.channelSecret,
+    channelAccessToken: config.channelAccessToken,
+  });
 }
 
 /** Whether a Worker start has said yet that a switch is off. */

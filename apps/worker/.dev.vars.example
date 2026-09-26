@@ -24,6 +24,15 @@ ADMIN_CONVERSATION_ID=
 # Optional on a laptop: without it /v1 serves reads only. Deployed, the founder puts it with
 # `wrangler secret put CLERK_SECRET_KEY --env staging`; never in a file that is committed.
 CLERK_SECRET_KEY=
+# Pilot Worker: the LINE channel's secret (Basic settings) and long-lived access token (Messaging
+# API) from the LINE Developers Console. Read only while the var LINE_CHANNEL is "on", and required
+# then; development's LINE_CHANNEL is "off" in both wrangler files, so leave them empty.
+LINE_CHANNEL_SECRET=
+LINE_CHANNEL_ACCESS_TOKEN=
+# Pilot Worker: the key that signs the media URLs LINE fetches: 32 random bytes as base64 or hex,
+# at least 43 characters, generated (for example `openssl rand -base64 32`) and never typed. Read
+# only while LINE_CHANNEL is "on", and required then.
+MEDIA_URL_SECRET=
 # Admin Worker: Cloudflare Access team domain, e.g. vela.cloudflareaccess.com (no scheme, no path).
 ACCESS_TEAM_DOMAIN=
 # Admin Worker: the Audience (AUD) tag of the Access application that covers the admin Worker.

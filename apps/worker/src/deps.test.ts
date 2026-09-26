@@ -1,7 +1,13 @@
 import { type FlagInput, isAiOff } from "@vela/ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfigError } from "./config.ts";
-import { buildAdminDeps, buildDeps, createAiPort, createMediaPort } from "./deps.ts";
+import {
+  buildAdminDeps,
+  buildDeps,
+  createAiPort,
+  createChannels,
+  createMediaPort,
+} from "./deps.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
 import type { PrivacyNotices } from "./notices.ts";
 import {
@@ -9,6 +15,7 @@ import {
   type FakeR2Object,
   fakeR2Bucket,
   type LogLine,
+  lineOnEnv,
   noticesFixture,
   recordingLogger,
   testEnv,
@@ -117,6 +124,16 @@ describe("building deps", () => {
     );
   });
 
+  // 05 §5.10: every job, cron run and alarm refuses a LINE it could not speak, not only the webhook.
+  it("refuses LINE on without its inbound queue before it opens a database connection", async () => {
+    const withoutQueue: PilotEnv = lineOnEnv({ INBOUND_QUEUE: undefined });
+
+    await expect(buildDeps(withoutQueue, noticesFixture())).rejects.toHaveProperty(
+      "code",
+      "INBOUND_QUEUE",
+    );
+  });
+
   it("refuses either Worker without the Anthropic key while AI is anthropic", async () => {
     const pilot: PilotEnv = {
       ...chosenStaging,
@@ -161,6 +178,43 @@ describe("building deps", () => {
     );
     // At most, not exactly: another test's build in this isolate may already have written it.
     expect(aiOffLines.length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("the channels", () => {
+  // The founder's admin conversation is on Telegram (ADR-21), so Telegram is built everywhere.
+  it("give Telegram and refuse LINE by its switch where LINE is off, reading none of its secrets", () => {
+    const channels = createChannels(testEnv);
+
+    expect(channels.get("telegram").id).toBe("telegram");
+    expect(() => channels.get("line")).toThrow(ConfigError);
+    expect(() => channels.get("line")).toThrow(/LINE is off in this environment/);
+  });
+
+  it("build LINE's adapter once, the first time it is asked for, where LINE is on", () => {
+    const channels = createChannels(lineOnEnv());
+
+    const line = channels.get("line");
+
+    expect(line.id).toBe("line");
+    expect(line.capabilities.mediaByUrl).toBe(true);
+    expect(channels.get("line")).toBe(line);
+    expect(channels.get("telegram").id).toBe("telegram");
+  });
+
+  it("refuse LINE by the variable to fix when LINE is on without its access token", () => {
+    const channels = createChannels(lineOnEnv({ LINE_CHANNEL_ACCESS_TOKEN: undefined }));
+
+    let refusal: unknown = null;
+    try {
+      channels.get("line");
+    } catch (error) {
+      refusal = error;
+    }
+
+    expect(refusal).toBeInstanceOf(ConfigError);
+    expect(refusal).toHaveProperty("code", "LINE_CHANNEL_ACCESS_TOKEN");
+    expect(channels.get("telegram").id).toBe("telegram");
   });
 });
 

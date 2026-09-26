@@ -25,7 +25,10 @@
   // founder creates the bot, and the setup script's telegram step writes it into both files. Its
   // var AI_PROVIDER equals the pilot Worker's in each environment; wrangler.jsonc says what "off"
   // means and how to switch it on. It has no MEDIA_STORAGE var: only the pilot Worker stores media,
-  // and the admin reads never open a stored object.
+  // and the admin reads never open a stored object. Its var LINE_CHANNEL equals the pilot Worker's
+  // in each environment, and where it is on, so does LINE_BOT_BASIC_ID, the account a LINE invite
+  // link from create_invite opens; the admin Worker never calls LINE and holds none of its secrets
+  // (wrangler.jsonc says what LINE needs and how to switch it on).
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-admin-dev",
   "main": "src/admin-worker.ts",
@@ -65,7 +68,8 @@
     // `pnpm dev:admin` serves this Worker on port 8787.
     "PUBLIC_BASE_URL": "http://localhost:8787",
     "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_DEV_BOT_USERNAME",
-    "AI_PROVIDER": "off"
+    "AI_PROVIDER": "off",
+    "LINE_CHANNEL": "off"
   },
 
   "env": {
@@ -91,7 +95,9 @@
         // The pilot Worker's bot in staging, as in wrangler.jsonc.
         "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
         // As in wrangler.jsonc: off for the dogfooding week.
-        "AI_PROVIDER": "off"
+        "AI_PROVIDER": "off",
+        // As in wrangler.jsonc; its LINE_BOT_BASIC_ID comes with the commit that turns it on.
+        "LINE_CHANNEL": "off"
       }
     },
 
@@ -113,7 +119,8 @@
         "ENVIRONMENT": "production",
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
-        "AI_PROVIDER": "anthropic"
+        "AI_PROVIDER": "anthropic",
+        "LINE_CHANNEL": "off"
       }
     }
   }

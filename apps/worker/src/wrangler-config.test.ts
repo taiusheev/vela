@@ -8,14 +8,15 @@ import { NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
  * The workers.dev subdomain each Cloudflare account chose at sign-up (H3). This is the test's one
  * copy of it: every host below is derived from it, so if an account's subdomain turns out
  * different, this table changes, and the tests then fail on every other place that names it: the
- * three URL vars of that environment in wrangler.jsonc, PUBLIC_BASE_URL in wrangler.admin.jsonc,
+ * four URL vars of that environment in wrangler.jsonc, PUBLIC_BASE_URL in wrangler.admin.jsonc,
  * and every workers.dev link in the Markdown of plan/materials/pilot, the two privacy notices'
  * links to each other included, after which `pnpm --filter @vela/worker notices` regenerates
  * src/notices.generated.ts (src/notices.test.ts fails until it does). No test sees the privacy
  * policy link in @BotFather, the Telegram webhook, which the setup script's `webhook` step
  * registers again (`pnpm --filter @vela/worker run setup -- --env <environment> --from webhook`),
- * the watchdog's URL in .github/watchdog.json, or the documents that write the hosts out. The
- * header of wrangler.jsonc keeps the same list.
+ * the watchdog's URL in .github/watchdog.json, the LINE webhook URL in the LINE Developers Console
+ * once LINE is on, or the documents that write the hosts out. The header of wrangler.jsonc keeps
+ * the same list.
  */
 const WORKERS_DEV_SUBDOMAINS = {
   staging: "vela-light-staging",
@@ -173,13 +174,15 @@ describe("the two Workers' configurations", () => {
     "hold the %s hosts: each Worker's name on the account's subdomain",
     (environment) => {
       const pilot = configOf("pilot", environment).vars;
-      // Admin links in the founder's chat open the admin Worker; the notices are the pilot's pages.
+      // Admin links in the founder's chat open the admin Worker; the notices are the pilot's pages,
+      // and so are the media URLs LINE is sent once it is on.
       expect(pilot.PUBLIC_BASE_URL).toBe(hostOf("admin", environment));
       for (const lang of NOTICE_LANGS) {
         expect(pilot[NOTICE_URL_VARS[lang]], lang).toBe(
           `${hostOf("pilot", environment)}${NOTICE_PATHS[lang]}`,
         );
       }
+      expect(pilot.PILOT_PUBLIC_URL).toBe(hostOf("pilot", environment));
       // A form may be posted only from the admin Worker's own origin.
       expect(configOf("admin", environment).vars.PUBLIC_BASE_URL).toBe(
         hostOf("admin", environment),
@@ -193,14 +196,21 @@ describe("the two Workers' configurations", () => {
 
   // H5: the founder's personal chat id is a secret, never a value in a committed file. The
   // heartbeat needs no value at all (W5): the watchdog reads /healthz. Clerk's secret key is a
-  // secret only the founder puts (ADR-29).
-  it("never holds ADMIN_CONVERSATION_ID, CLERK_SECRET_KEY, or a heartbeat ping URL as a var, in either Worker or any environment", () => {
+  // secret only the founder puts (ADR-29), and so are LINE's, and the media URLs' signing key.
+  it("never holds ADMIN_CONVERSATION_ID, CLERK_SECRET_KEY, LINE's secrets, or a heartbeat ping URL as a var, in either Worker or any environment", () => {
     for (const config of configs) {
       const names = Object.keys(config.vars);
       expect(names, `${config.worker}:${config.environment}`).not.toContain(
         "ADMIN_CONVERSATION_ID",
       );
       expect(names, `${config.worker}:${config.environment}`).not.toContain("CLERK_SECRET_KEY");
+      for (const secret of [
+        "LINE_CHANNEL_SECRET",
+        "LINE_CHANNEL_ACCESS_TOKEN",
+        "MEDIA_URL_SECRET",
+      ]) {
+        expect(names, `${config.worker}:${config.environment}`).not.toContain(secret);
+      }
       expect(
         names.filter((name) => /HEALTHCHECK|PING/.test(name)),
         `${config.worker}:${config.environment}`,
@@ -303,6 +313,54 @@ describe("the two Workers' configurations", () => {
     expect(header).toContain("--from resources` on that commit before it is merged to main");
   });
 
+  // 05 §5.10: one switch per environment, so the admin Worker's invite links name LINE only where
+  // the pilot Worker speaks it.
+  it.each(["development", ...DEPLOYED] as const)(
+    "set LINE_CHANNEL to on or off, the same in both Workers, in %s",
+    (environment) => {
+      const line = configOf("pilot", environment).vars.LINE_CHANNEL;
+
+      expect(["on", "off"]).toContain(line);
+      expect(configOf("admin", environment).vars.LINE_CHANNEL).toBe(line);
+    },
+  );
+
+  // Production speaks LINE only once the design's last step turns it on (05 §8, step 11): a real
+  // family's plan, the privacy notice's new version, and LY's terms first. That step changes this.
+  it("keep LINE off in production, in both Workers", () => {
+    expect(configOf("pilot", "production").vars.LINE_CHANNEL).toBe("off");
+    expect(configOf("admin", "production").vars.LINE_CHANNEL).toBe("off");
+  });
+
+  // A LINE invite link from either Worker must open the account whose webhook the pilot serves;
+  // where LINE is off there is no account to name, and a placeholder would stop the Worker.
+  it.each(["development", ...DEPLOYED] as const)(
+    "name the same LINE account in both Workers where LINE is on, and none where it is off, in %s",
+    (environment) => {
+      const pilot = configOf("pilot", environment).vars;
+      const admin = configOf("admin", environment).vars;
+
+      if (pilot.LINE_CHANNEL === "on") {
+        expect(String(pilot.LINE_BOT_BASIC_ID)).toMatch(/^@\S+$/);
+        expect(admin.LINE_BOT_BASIC_ID).toBe(pilot.LINE_BOT_BASIC_ID);
+      } else {
+        expect([pilot.LINE_BOT_BASIC_ID, admin.LINE_BOT_BASIC_ID]).toEqual([undefined, undefined]);
+      }
+    },
+  );
+
+  // The queue has to exist before a binding to it reaches main, or CI's deploy fails.
+  it("say in the pilot header that a deployed environment binds LINE's queue only with LINE on, created before main", () => {
+    const header = pilotHeader();
+
+    expect(header).toContain(
+      "a deployed environment binds vela-inbound-<environment> only in the commit that turns its LINE on",
+    );
+    expect(header).toContain(
+      "--env staging --from resources` on that commit before it is merged to main",
+    );
+  });
+
   // A placeholder may stay only where the founder has not created the thing yet, and filling it in
   // (infra/README.md section 11, steps 2 and 3) must keep this test green, or no deploy passes CI.
   it.each(DEPLOYED)(
@@ -377,11 +435,47 @@ describe("the pilot Worker's bindings", () => {
         { name: "RECONCILE_HEARTBEAT", class_name: "ReconcileHeartbeat" },
       ]);
       const suffix = environment === "development" ? "" : `-${environment}`;
+      const inbound = producers(pilot).some((producer) => producer.binding === "INBOUND_QUEUE")
+        ? [`vela-inbound${suffix}`]
+        : [];
       expect(consumers(pilot).map((consumer) => consumer.queue)).toEqual([
         `vela-outbound${suffix}`,
         `vela-media${suffix}`,
         `vela-understand${suffix}`,
+        ...inbound,
       ]);
+    },
+  );
+
+  // 05 §5.10: a binding to a queue that does not exist fails the deploy, so a deployed environment
+  // binds LINE's queue only once its LINE is on, in the commit that turns it on; development's is
+  // local. Its batches wait at most a second, since a reply token is free for a minute only.
+  it.each(["development", ...DEPLOYED] as const)(
+    "bind LINE's inbound queue in %s only where it exists: in development, and where LINE is on",
+    (environment) => {
+      const pilot = configOf("pilot", environment);
+      const suffix = environment === "development" ? "" : `-${environment}`;
+      const bound = environment === "development" || pilot.vars.LINE_CHANNEL === "on";
+
+      expect(producers(pilot).filter((producer) => producer.binding === "INBOUND_QUEUE")).toEqual(
+        bound ? [{ binding: "INBOUND_QUEUE", queue: `vela-inbound${suffix}` }] : [],
+      );
+      expect(
+        consumers(pilot).filter((consumer) => String(consumer.queue).startsWith("vela-inbound")),
+      ).toEqual(
+        bound
+          ? [
+              {
+                queue: `vela-inbound${suffix}`,
+                max_batch_size: 10,
+                max_batch_timeout: 1,
+                max_retries: 3,
+                retry_delay: 30,
+                dead_letter_queue: `vela-dead-letter${suffix}`,
+              },
+            ]
+          : [],
+      );
     },
   );
 
@@ -490,12 +584,16 @@ describe("the admin Worker's bindings", () => {
       expect(records(admin.r2Buckets)).toEqual([]);
       expect(records(admin.migrations)).toEqual([]);
       expect(records(admin.ratelimits)).toEqual([]);
-      expect(Object.keys(admin.vars).sort()).toEqual([
-        "AI_PROVIDER",
-        "ENVIRONMENT",
-        "PUBLIC_BASE_URL",
-        "TELEGRAM_BOT_USERNAME",
-      ]);
+      expect(Object.keys(admin.vars).sort()).toEqual(
+        [
+          "AI_PROVIDER",
+          "ENVIRONMENT",
+          "LINE_CHANNEL",
+          "PUBLIC_BASE_URL",
+          "TELEGRAM_BOT_USERNAME",
+          ...(admin.vars.LINE_CHANNEL === "on" ? ["LINE_BOT_BASIC_ID"] : []),
+        ].sort(),
+      );
     },
   );
 });

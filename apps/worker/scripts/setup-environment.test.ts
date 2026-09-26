@@ -1,5 +1,5 @@
 import { describe, expect, inject, it } from "vitest";
-import type { AiProvider, ApiSwitch, MediaStorage } from "../src/config.ts";
+import type { AiProvider, ApiSwitch, LineSwitch, MediaStorage } from "../src/config.ts";
 import {
   type Command,
   cloudflareApi,
@@ -71,12 +71,80 @@ const BOT_USERNAMES: Readonly<Record<Environment, string>> = {
  * Anthropic key, the media bucket or Clerk's key does not depend on whether that switch is on in
  * the repository today. `media` moves the `MEDIA_STORAGE` var and the r2_buckets binding together,
  * as decision M holds them: with "off" there is no binding at all. `api` is the pilot Worker's
- * `API_V1` (ADR-29).
+ * `API_V1` (ADR-29). `line` moves both Workers' `LINE_CHANNEL` and the pilot Worker's inbound
+ * queue binding together, as 05 §5.10 holds them.
  */
 interface SwitchOverrides {
   readonly ai?: Partial<Record<Environment, AiProvider>>;
   readonly media?: Partial<Record<Environment, MediaStorage>>;
   readonly api?: Partial<Record<Environment, ApiSwitch>>;
+  readonly line?: Partial<Record<Environment, LineSwitch>>;
+}
+
+/**
+ * An environment's queues with LINE's inbound queue bound (a producer onto
+ * `vela-inbound-<environment>` and its consumer, as the commit that turns LINE on adds them) or with
+ * none of it.
+ */
+function withInboundQueue(queues: unknown, environment: Environment, bound: boolean): unknown {
+  const queue = `vela-inbound-${environment}`;
+  const record = typeof queues === "object" && queues !== null ? recordOf(queues) : {};
+  const producers = (Array.isArray(record.producers) ? record.producers : []).filter(
+    (producer) => recordOf(producer).binding !== "INBOUND_QUEUE",
+  );
+  const consumers = (Array.isArray(record.consumers) ? record.consumers : []).filter(
+    (consumer) => recordOf(consumer).queue !== queue,
+  );
+  if (!bound) {
+    return { producers, consumers };
+  }
+  return {
+    producers: [...producers, { binding: "INBOUND_QUEUE", queue }],
+    consumers: [
+      ...consumers,
+      {
+        queue,
+        max_batch_size: 10,
+        max_batch_timeout: 1,
+        max_retries: 3,
+        retry_delay: 30,
+        dead_letter_queue: `vela-dead-letter-${environment}`,
+      },
+    ],
+  };
+}
+
+/**
+ * One environment's block of a wrangler text, changed by `edit`: the text is parsed, edited and
+ * written back as JSON, since a switch that also moves a binding is more than one quoted token.
+ */
+function editedBlock(
+  text: string,
+  environment: Environment,
+  edit: (block: Record<string, unknown>) => void,
+): string {
+  const parsed = JSON.parse(stripJsonComments(text, "wrangler.jsonc")) as {
+    readonly env: Partial<Record<Environment, Record<string, unknown>>>;
+  };
+  const block = parsed.env[environment];
+  if (block === undefined) {
+    throw new Error(`the text has no env.${environment}`);
+  }
+  edit(block);
+  return JSON.stringify(parsed, null, 2);
+}
+
+/** Sets `LINE_CHANNEL` in one environment of a wrangler text, and nothing else. */
+function withLineVar(text: string, environment: Environment, value: string | undefined): string {
+  return editedBlock(text, environment, (block) => {
+    const vars = { ...recordOf(block.vars) };
+    if (value === undefined) {
+      delete vars.LINE_CHANNEL;
+    } else {
+      vars.LINE_CHANNEL = value;
+    }
+    block.vars = vars;
+  });
 }
 
 /**
@@ -97,11 +165,16 @@ function wranglerTexts(overrides: SwitchOverrides = {}): {
         const mediaStorage = worker === "pilot" ? overrides.media?.[environment] : undefined;
         // So is API_V1: the admin Worker never serves /v1.
         const apiV1 = worker === "pilot" ? overrides.api?.[environment] : undefined;
+        // LINE_CHANNEL is both Workers', and only the pilot Worker binds the inbound queue.
+        const line = overrides.line?.[environment];
         return [
           environment,
           {
             name: config?.name,
-            queues: config?.queues,
+            queues:
+              line === undefined || worker === "admin"
+                ? config?.queues
+                : withInboundQueue(config?.queues, environment, line === "on"),
             r2_buckets:
               mediaStorage === undefined
                 ? config?.r2Buckets
@@ -115,6 +188,7 @@ function wranglerTexts(overrides: SwitchOverrides = {}): {
               ...(aiProvider === undefined ? {} : { AI_PROVIDER: aiProvider }),
               ...(mediaStorage === undefined ? {} : { MEDIA_STORAGE: mediaStorage }),
               ...(apiV1 === undefined ? {} : { API_V1: apiV1 }),
+              ...(line === undefined ? {} : { LINE_CHANNEL: line }),
             },
           },
         ];
@@ -189,12 +263,14 @@ function newWorld(
     readonly ai?: AiProvider;
     readonly media?: MediaStorage;
     readonly api?: ApiSwitch;
+    readonly line?: LineSwitch;
   } = {},
 ): World {
   const texts = wranglerTexts({
     ...(switches.ai === undefined ? {} : { ai: { [environment]: switches.ai } }),
     ...(switches.media === undefined ? {} : { media: { [environment]: switches.media } }),
     ...(switches.api === undefined ? {} : { api: { [environment]: switches.api } }),
+    ...(switches.line === undefined ? {} : { line: { [environment]: switches.line } }),
   });
   return {
     environment,
@@ -792,6 +868,69 @@ describe("a whole setup", () => {
       "MEDIA_STORAGE is off for production, which its Worker refuses to start with",
     );
     expect([world.queues.size, world.buckets.size, world.writes.length]).toEqual([0, 0, 0]);
+  });
+
+  // 05 §5.10: LINE is off in every environment the repository sets up today, so a run creates no
+  // queue it did not create before; the queue comes with the commit that turns LINE on.
+  it("sets up staging with LINE off without creating its inbound queue, and says how to switch it on", async () => {
+    const world = newWorld("staging", { line: "off" });
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect([...world.queues]).toEqual([
+      "vela-outbound-staging",
+      "vela-media-staging",
+      "vela-understand-staging",
+      "vela-dead-letter-staging",
+    ]);
+    expect(world.printed.filter((line) => line.includes("LINE is off"))).toEqual([
+      '  LINE is off in staging (LINE_CHANNEL "off" in wrangler.jsonc and wrangler.admin.jsonc), so no inbound queue is created, and /webhooks/line and /media answer 404 there. To switch it on later: put LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN and MEDIA_URL_SECRET on the pilot Worker, set LINE_CHANNEL to "on" for staging in both files with its LINE_BOT_BASIC_ID, add the INBOUND_QUEUE producer and the vela-inbound-staging consumer to wrangler.jsonc, commit, then run pnpm --filter @vela/worker run setup -- --env staging --from resources on that commit before it is merged to main, which creates the queue and deploys. Merged first, CI would deploy a binding to a queue that does not exist, and the deploy would fail.',
+    ]);
+    expect(world.deployed).toEqual(["vela", "vela-admin"]);
+  });
+
+  it("creates LINE's inbound queue when run from resources once LINE is switched on", async () => {
+    const world = newWorld("staging", { line: "off" });
+    await setUp(world);
+    for (const [file, worker] of [
+      ["wrangler.jsonc", "pilot"],
+      ["wrangler.admin.jsonc", "admin"],
+    ] as const) {
+      world.files.set(
+        file,
+        editedBlock(world.files.get(file) ?? "", "staging", (block) => {
+          block.vars = { ...recordOf(block.vars), LINE_CHANNEL: "on" };
+          if (worker === "pilot") {
+            block.queues = withInboundQueue(block.queues, "staging", true);
+          }
+        }),
+      );
+    }
+    expect(configOf(world).lineChannel).toBe("on");
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "resources");
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.queues.has("vela-inbound-staging")).toBe(true);
+    expect(world.printed).toContain(
+      "resources: created vela-inbound-staging; already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging, bucket vela-media-staging",
+    );
+    expect(world.printed.join("\n")).not.toContain("LINE is off");
+    expect(world.deployed).toEqual(["vela", "vela-admin"]);
+  });
+
+  it("says production's LINE stays off until the design's last step, creating no inbound queue", async () => {
+    const world = newWorld("production", { line: "off" });
+
+    const code = await setUp(world);
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect([...world.queues].filter((queue) => queue.includes("inbound"))).toEqual([]);
+    expect(world.printed.filter((line) => line.includes("LINE is off"))).toEqual([
+      '  LINE is off in production (LINE_CHANNEL "off" in wrangler.jsonc and wrangler.admin.jsonc), so no inbound queue is created, and /webhooks/line and /media answer 404 there. It stays off until the LINE design\'s last step turns it on (architecture/05-line-flows.md, section 8, step 11).',
+    ]);
   });
 
   // ADR-29: production's API stays off until a new ADR, so production is set up without a Clerk
@@ -1492,6 +1631,79 @@ describe("the wrangler files", () => {
     for (const broken of [missing, unknown]) {
       expect(() => readEnvironmentConfig(broken, "staging")).toThrow(
         /wrangler.jsonc must set API_V1 for staging to one of on, off/,
+      );
+    }
+  });
+
+  // Both are off until the staging loop (05 §8, step 8), and production is pinned off by
+  // src/wrangler-config.test.ts; the commit that turns staging on changes this with the files.
+  it("give each environment's LINE_CHANNEL as the real files set it: off in staging and production", () => {
+    expect(readEnvironmentConfig(wranglerTexts(), "staging").lineChannel).toBe("off");
+    expect(readEnvironmentConfig(wranglerTexts(), "production").lineChannel).toBe("off");
+  });
+
+  it.each(["on", "off"] as const)(
+    "give staging's LINE_CHANNEL %s, with LINE's inbound queue among the queues exactly when on",
+    (line) => {
+      const config = readEnvironmentConfig(wranglerTexts({ line: { staging: line } }), "staging");
+
+      expect(config.lineChannel).toBe(line);
+      expect(config.queues.includes("vela-inbound-staging")).toBe(line === "on");
+    },
+  );
+
+  // A binding to a queue that does not exist fails the deploy, and LINE on without one leaves the
+  // Worker refusing to start (ConfigError:INBOUND_QUEUE), so the var and the binding are one.
+  it("refuse a LINE_CHANNEL that disagrees with the inbound queue binding", () => {
+    const off = wranglerTexts({ line: { staging: "off" } });
+    const on = wranglerTexts({ line: { staging: "on" } });
+    const unboundWhileOn = {
+      pilot: withLineVar(off.pilot, "staging", "on"),
+      admin: withLineVar(off.admin, "staging", "on"),
+    };
+    const boundWhileOff = {
+      pilot: withLineVar(on.pilot, "staging", "off"),
+      admin: withLineVar(on.admin, "staging", "off"),
+    };
+    const boundToAnotherQueue = {
+      ...on,
+      pilot: editedBlock(on.pilot, "staging", (block) => {
+        block.queues = JSON.parse(
+          JSON.stringify(block.queues).replaceAll("vela-inbound-staging", "vela-inbound"),
+        );
+      }),
+    };
+
+    for (const broken of [unboundWhileOn, boundToAnotherQueue]) {
+      expect(() => readEnvironmentConfig(broken, "staging")).toThrow(
+        /LINE_CHANNEL is on for staging, so wrangler.jsonc must bind INBOUND_QUEUE to vela-inbound-staging and consume it/,
+      );
+    }
+    expect(() => readEnvironmentConfig(boundWhileOff, "staging")).toThrow(
+      /LINE_CHANNEL is off for staging, so wrangler.jsonc must bind no inbound queue/,
+    );
+  });
+
+  // One Worker naming LINE's account while the other does not speak it would send invite links to
+  // an account whose webhook answers 404.
+  it("refuse Workers whose LINE_CHANNEL differs, is missing, or is neither on nor off", () => {
+    const texts = wranglerTexts({ line: { staging: "off" } });
+    const broken = [
+      { ...texts, admin: withLineVar(texts.admin, "staging", "on") },
+      { ...texts, admin: withLineVar(texts.admin, "staging", undefined) },
+      {
+        pilot: withLineVar(texts.pilot, "staging", undefined),
+        admin: withLineVar(texts.admin, "staging", undefined),
+      },
+      {
+        pilot: withLineVar(texts.pilot, "staging", "maybe"),
+        admin: withLineVar(texts.admin, "staging", "maybe"),
+      },
+    ];
+
+    for (const candidate of broken) {
+      expect(() => readEnvironmentConfig(candidate, "staging")).toThrow(
+        /must set LINE_CHANNEL for staging to the same value, one of on, off/,
       );
     }
   });

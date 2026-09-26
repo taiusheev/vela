@@ -6,12 +6,20 @@ import {
   readAiProvider,
   readApiConfig,
   readConfig,
+  readLineConfig,
   secret,
 } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
 import { PRIVACY_NOTICES } from "./notices.generated.ts";
 import type { PrivacyNotices } from "./notices.ts";
-import { adminTestEnv, noticesFixture, testEnv } from "./testing/fakes.ts";
+import {
+  adminTestEnv,
+  lineOnEnv,
+  noticesFixture,
+  TEST_LINE,
+  testEnv,
+  testMediaBucket,
+} from "./testing/fakes.ts";
 
 /**
  * Staging once the founder has chosen its bot, chat, and hosts. The hosts are under the reserved
@@ -426,6 +434,210 @@ describe("the API's configuration", () => {
     expectRefused({ ...testEnv, CLERK_SECRET_KEY: LIVE_KEY }, "CLERK_SECRET_KEY");
     expectRefused({ ...testEnv, CLERK_ISSUER: "https://clerk.vela.example" }, "CLERK_ISSUER");
     expect(readApiConfig({ ...testEnv, CLERK_SECRET_KEY: TEST_KEY })?.secretKey).toBe(TEST_KEY);
+  });
+});
+
+/** Staging the day LINE is turned on: every LINE setting chosen, its bucket and queue bound. */
+const lineStaging: PilotEnv = lineOnEnv({
+  ENVIRONMENT: "staging",
+  TELEGRAM_BOT_USERNAME: "VelaStagingBot",
+  ADMIN_CONVERSATION_ID: "123456789",
+  PUBLIC_BASE_URL: "https://vela-admin.vela.example",
+  PRIVACY_NOTICE_URL_EN: "https://vela.vela.example/privacy",
+  PRIVACY_NOTICE_URL_ZH_TW: "https://vela.vela.example/privacy/zh-TW",
+  PILOT_PUBLIC_URL: "https://vela.vela.example",
+});
+
+/** Expects `readConfig` to refuse `env` by `code`, with no LINE value in its message. */
+function expectLineRefused(env: PilotEnv, code: string): void {
+  const error = configErrorOf(() => readConfig(env, filled));
+
+  expect(error.code).toBe(code);
+  expect(errorLabel(error)).toBe(`ConfigError:${code}`);
+  for (const value of [
+    env.LINE_CHANNEL_SECRET,
+    env.LINE_CHANNEL_ACCESS_TOKEN,
+    env.MEDIA_URL_SECRET,
+    env.LINE_BOT_BASIC_ID,
+    env.PILOT_PUBLIC_URL,
+  ]) {
+    const given = value?.trim() ?? "";
+    if (given.length > 1) {
+      expect(error.message).not.toContain(given);
+    }
+  }
+}
+
+// 05 §5.10: LINE sends media only by URL to Vela's own copy, and its webhook needs its queue.
+describe("LINE's configuration", () => {
+  it("starts staging with LINE on once every LINE setting is chosen and its bucket and queue are bound", () => {
+    expect(readConfig(lineStaging, filled).environment).toBe("staging");
+    expect(readLineConfig(lineStaging)).toEqual({
+      channelSecret: TEST_LINE.channelSecret,
+      channelAccessToken: TEST_LINE.channelAccessToken,
+      mediaUrlSecret: TEST_LINE.mediaUrlSecret,
+      basicId: TEST_LINE.basicId,
+      pilotOrigin: "https://vela.vela.example",
+      inboundQueue: lineStaging.INBOUND_QUEUE,
+      mediaBucket: testMediaBucket,
+    });
+  });
+
+  it("takes the pilot origin with one trailing slash as the origin", () => {
+    expect(
+      readLineConfig({ ...lineStaging, PILOT_PUBLIC_URL: "https://vela.vela.example/" })
+        ?.pilotOrigin,
+    ).toBe("https://vela.vela.example");
+  });
+
+  // An environment that does not speak LINE needs none of its secrets, bindings or vars, and
+  // production keeps its media storage rule whatever LINE says.
+  it.each(["development", "staging", "production"] as const)(
+    "reads nothing else of LINE in %s while LINE_CHANNEL is off",
+    (environment) => {
+      const off: PilotEnv = {
+        ...lineStaging,
+        ENVIRONMENT: environment,
+        LINE_CHANNEL: " off ",
+        LINE_BOT_BASIC_ID: undefined,
+        PILOT_PUBLIC_URL: undefined,
+        LINE_CHANNEL_SECRET: undefined,
+        LINE_CHANNEL_ACCESS_TOKEN: undefined,
+        MEDIA_URL_SECRET: undefined,
+        MEDIA_STORAGE: "maybe",
+        MEDIA_BUCKET: undefined,
+        INBOUND_QUEUE: undefined,
+      };
+
+      expect(readLineConfig(off)).toBeNull();
+    },
+  );
+
+  // A deployed environment binds no inbound queue while its LINE is off: the queue does not exist.
+  it("starts staging as wrangler.jsonc ships it: LINE off, and no LINE setting, secret or queue", () => {
+    const shipped: PilotEnv = {
+      ...chosenStaging,
+      LINE_BOT_BASIC_ID: undefined,
+      LINE_CHANNEL_SECRET: undefined,
+      LINE_CHANNEL_ACCESS_TOKEN: undefined,
+      MEDIA_URL_SECRET: undefined,
+      INBOUND_QUEUE: undefined,
+    };
+
+    expect(shipped.LINE_CHANNEL).toBe("off");
+    expect(readConfig(shipped, filled).environment).toBe("staging");
+  });
+
+  it.each([["maybe"], ["ON"], [""], [undefined]])(
+    "refuses LINE_CHANNEL %j in every environment, in either Worker, naming the variable",
+    (value) => {
+      for (const environment of ["development", "staging", "production"] as const) {
+        expectLineRefused(
+          { ...lineStaging, ENVIRONMENT: environment, LINE_CHANNEL: value as string },
+          "LINE_CHANNEL",
+        );
+        const admin: AdminEnv = {
+          ...adminTestEnv,
+          ENVIRONMENT: environment,
+          PUBLIC_BASE_URL: "https://vela-admin.vela.example",
+          TELEGRAM_BOT_USERNAME: "VelaLightBot",
+          LINE_CHANNEL: value as string,
+        };
+        expect(configErrorOf(() => checkAdminConfig(admin)).code).toBe("LINE_CHANNEL");
+      }
+    },
+  );
+
+  it.each([
+    ["media storage off", { MEDIA_STORAGE: "off", MEDIA_BUCKET: undefined }, "LINE_CHANNEL"],
+    ["no media bucket bound", { MEDIA_BUCKET: undefined }, "MEDIA_BUCKET"],
+    ["no inbound queue bound", { INBOUND_QUEUE: undefined }, "INBOUND_QUEUE"],
+    ["no pilot origin", { PILOT_PUBLIC_URL: undefined }, "PILOT_PUBLIC_URL"],
+    ["an http pilot origin", { PILOT_PUBLIC_URL: "http://vela.vela.example" }, "PILOT_PUBLIC_URL"],
+    [
+      "a pilot origin with a path",
+      { PILOT_PUBLIC_URL: "https://vela.vela.example/privacy" },
+      "PILOT_PUBLIC_URL",
+    ],
+    [
+      "a pilot origin with no scheme",
+      { PILOT_PUBLIC_URL: "vela.vela.example" },
+      "PILOT_PUBLIC_URL",
+    ],
+    ["no basic id", { LINE_BOT_BASIC_ID: undefined }, "LINE_BOT_BASIC_ID"],
+    ["a basic id without its @", { LINE_BOT_BASIC_ID: "123velatest" }, "LINE_BOT_BASIC_ID"],
+    ["a basic id that is only @", { LINE_BOT_BASIC_ID: "@" }, "LINE_BOT_BASIC_ID"],
+    ["a basic id with a space", { LINE_BOT_BASIC_ID: "@123 velatest" }, "LINE_BOT_BASIC_ID"],
+    ["no channel secret", { LINE_CHANNEL_SECRET: undefined }, "LINE_CHANNEL_SECRET"],
+    ["a blank channel secret", { LINE_CHANNEL_SECRET: "  " }, "LINE_CHANNEL_SECRET"],
+    [
+      "a channel secret with a space in it",
+      { LINE_CHANNEL_SECRET: "5c1d0a7e3b9f 4c2d8e6a1b0f9d3c7e2a" },
+      "LINE_CHANNEL_SECRET",
+    ],
+    ["no access token", { LINE_CHANNEL_ACCESS_TOKEN: undefined }, "LINE_CHANNEL_ACCESS_TOKEN"],
+    [
+      "an access token with a line break pasted into it",
+      { LINE_CHANNEL_ACCESS_TOKEN: "vElAtEsTlInE+aCcEsS/tOkEn\n0123456789" },
+      "LINE_CHANNEL_ACCESS_TOKEN",
+    ],
+    [
+      "an access token with a letter outside ASCII",
+      { LINE_CHANNEL_ACCESS_TOKEN: "vElAtEsTlInE+aCcEsS/tOkEné" },
+      "LINE_CHANNEL_ACCESS_TOKEN",
+    ],
+    ["no media URL secret", { MEDIA_URL_SECRET: undefined }, "MEDIA_URL_SECRET"],
+    ["a media URL secret a person typed", { MEDIA_URL_SECRET: "velavelavela" }, "MEDIA_URL_SECRET"],
+    [
+      "a media URL secret one character short of 32 random bytes",
+      { MEDIA_URL_SECRET: "k".repeat(42) },
+      "MEDIA_URL_SECRET",
+    ],
+  ] as const)(
+    "refuses LINE on with %s, naming %s's variable and never its value",
+    (_, overrides, code) => {
+      expectLineRefused({ ...lineStaging, ...overrides }, code);
+    },
+  );
+
+  // The refusals hold on a laptop too: there is no LINE without its copies and its queue.
+  it("refuses LINE on in development with media storage off, as development ships it", () => {
+    expect(testEnv.MEDIA_STORAGE).toBe("off");
+    expectLineRefused(lineOnEnv({ MEDIA_STORAGE: "off", MEDIA_BUCKET: undefined }), "LINE_CHANNEL");
+  });
+
+  // The placeholder rule covers every var: one left means nobody finished setting LINE up.
+  it.each([
+    ["LINE_BOT_BASIC_ID", "PLACEHOLDER_STAGING_LINE_BASIC_ID"],
+    ["PILOT_PUBLIC_URL", "https://PLACEHOLDER_STAGING_HOST"],
+  ] as const)(
+    "refuses staging while %s holds a placeholder, with LINE on or off",
+    (name, value) => {
+      expectLineRefused({ ...lineStaging, [name]: value }, name);
+      expectLineRefused({ ...chosenStaging, [name]: value }, name);
+    },
+  );
+
+  it("starts the admin Worker with LINE on once the account its invite links open is named", () => {
+    const admin: AdminEnv = {
+      ...adminTestEnv,
+      ENVIRONMENT: "staging",
+      PUBLIC_BASE_URL: "https://vela-admin.vela.example",
+      TELEGRAM_BOT_USERNAME: "VelaStagingBot",
+      LINE_CHANNEL: "on",
+      LINE_BOT_BASIC_ID: TEST_LINE.basicId,
+    };
+
+    expect(checkAdminConfig(admin)).toBe("staging");
+    expect(checkAdminConfig({ ...admin, LINE_CHANNEL: "off", LINE_BOT_BASIC_ID: undefined })).toBe(
+      "staging",
+    );
+    expect(
+      configErrorOf(() => checkAdminConfig({ ...admin, LINE_BOT_BASIC_ID: undefined })).code,
+    ).toBe("LINE_BOT_BASIC_ID");
+    expect(
+      configErrorOf(() => checkAdminConfig({ ...admin, LINE_BOT_BASIC_ID: "velatest" })).code,
+    ).toBe("LINE_BOT_BASIC_ID");
   });
 });
 

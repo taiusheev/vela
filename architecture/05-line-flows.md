@@ -1,6 +1,6 @@
 # The LINE channel: flows, adapter, and cost
 
-2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9. Steps 1 to 3 of §8 are built: the contract, and the whole adapter (webhook verification and events; sending, errors, downloads, profiles, leaving and quota). Nothing else is yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
+2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9. Steps 1 to 3 and 6 of §8 are built: the contract; the whole adapter (webhook verification and events; sending, errors, downloads, profiles, leaving and quota); and the Worker's wiring, with LINE off in every environment (the webhook, the inbound queue, the media route and LINE's configuration). Nothing else is yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
 
 Read it with:
 - `04-instrument-flows.md`. Any flow this document does not change works exactly as written there.
@@ -819,68 +819,80 @@ Built in step 1 (§8). `03-code-design.md` §6 summarises them.
 
 ### 5.10 Worker wiring
 
+Built in step 6 (§8), with LINE off in every environment. Where this section differs from the first proposal, the co-founder decided it: the inbound queue is bound per environment, the webhook answers 500 only for what a redelivery can fix, the media route ships now, and the quota cron moved to step 7.
+
 **Route `POST /webhooks/line`** in `app.ts`:
-1. Where `LINE_CHANNEL` is `off`, answer 404 and call nothing.
+1. `readLineConfig(env)` (`config.ts`). Where `LINE_CHANNEL` is `off`, answer the Worker's one 404 and read nothing else: not the body, not a secret, not the channel registry.
 2. Read `c.req.text()`.
-3. Call `channels.get("line").verify` before building deps or opening a database connection. A failure is 401, and LINE is told nothing more.
-4. `parse`. With no events (the Verify button's body), answer 200.
-5. Otherwise send one job `{ type: "handle_inbound", events }` to `INBOUND_QUEUE` and answer 200.
+3. Build the registry through `PilotRuntime.createChannels` and call `get("line").verify` before building deps or opening a database connection. A failure (a changed body, no signature, another channel's secret) is 401, and LINE is told nothing more.
+4. `parse`. A body LINE signed that still cannot be read (not JSON, or no `events` array) is answered 200 with nothing queued, and logged as `line_webhook_unreadable` with its error label alone. A redelivery would carry the same body, and a 500 would only count against redelivery: LINE may switch it off after many.
+5. With no events, answer 200. That covers the Verify button's body, and a body holding only what the adapter drops, such as the family's own talk in their group.
+6. Otherwise send one job `{ type: "handle_inbound", events }` to `INBOUND_QUEUE` and answer 200.
 
-A throw anywhere answers 500, logged as `request_failed` (path, method and label only), and LINE redelivers because redelivery is on. The route opens no database connection, so it answers well inside LINE's 2 seconds whatever Neon's state. This is the "verify, parse, acknowledge within 1 s, do all work from the queue" rule of `api-contract.md` §9, applied first to LINE. The Telegram route is unchanged.
+A 500 comes only from what a retry can fix: a failed enqueue, or a LINE setting refused (`ConfigError:<variable>`). It is logged as `request_failed` with the path, method and label only, and LINE redelivers because redelivery is on. The route opens no database connection, so it answers well inside LINE's 2 seconds whatever Neon's state. This is the "verify, parse, acknowledge within 1 s, do all work from the queue" rule of `api-contract.md` §9, applied first to LINE. The Telegram route is unchanged. Nothing about an event's content, a user or group id, a reply token or a storage key is ever logged, by this route or by anything after it.
 
-**Queue `vela-inbound`** (`-staging`, `-production` in the deployed environments):
-- consumed by the pilot Worker with `max_batch_size` 10, `max_batch_timeout` 1, `max_retries` 3, `retry_delay` 30, and the environment's dead-letter queue;
-- `parseJob` accepts `handle_inbound` only when `events` passes `InboundEvent.array()`, then calls `services.handleInbound(deps, events)`;
-- one webhook's events are handled in order in one job, and redeliveries and retries are safe because every handler is idempotent (04 §5).
+**Queue `vela-inbound`** (`vela-inbound-staging`, `vela-inbound-production` when deployed):
+- A binding to a queue that does not exist fails the deploy. So development's top level binds the producer `INBOUND_QUEUE` and the consumer, local there, and a deployed environment binds its queue only in the commit that turns its LINE on, once the queue exists. In step 6 no deployed environment binds it, and `readConfig` refuses LINE on without the binding (`ConfigError:INBOUND_QUEUE`).
+- The pilot Worker consumes it with `max_batch_size` 10, `max_batch_timeout` 1 (a reply token is free for a minute only), `max_retries` 3, `retry_delay` 30, and the environment's dead-letter queue.
+- `parseJob` (`pilot-worker.ts`) accepts `handle_inbound` only when `events` passes `InboundEvent.array()`. Anything else is acked and logged as `queue_message_unreadable` with the queue and the message id alone. A job calls `services.handleInbound(deps, events)`, and one that throws is retried and logged as `queue_job_failed` with its label, as every job is.
+- One webhook's events are handled in order in one job, and redeliveries and retries are safe because every handler is idempotent (04 §5).
 
-**Route `GET /media/<base64url(storage key)>/<signature>.<ext>`:**
-- The signature is the base64url HMAC-SHA256 of the storage key under `MEDIA_URL_SECRET`, compared in constant time.
-- The extension is `m4a`, `mp3`, `jpg` or `png`, from the MIME type.
-- It streams the R2 object with its stored `Content-Type` and `cache-control: private`, and passes a `Range` header through to R2.
-- A bad signature, a malformed key or a missing object all answer the same 404. Nothing is logged but the status.
+**Route `GET /media/<base64url(storage key)>/<signature>.<ext>`** (`media-route.ts`):
+- Where LINE is off it answers the one 404 and reads nothing.
+- The signature is the base64url HMAC-SHA256 of the storage key's UTF-8 bytes under `MEDIA_URL_SECRET`, checked with `crypto.subtle.verify`, which compares in constant time.
+- Only the one base64url spelling the Worker writes is taken, for the key and for the signature, so no object has two URLs. The key must decode to UTF-8 of at most 1,024 bytes (R2's limit on a key).
+- The extension is `m4a`, `mp3`, `jpg` or `png`, from the MIME type. It is not signed: LINE and the phones read the object's own `Content-Type`.
+- It streams the R2 object with its stored `Content-Type`, `cache-control: private`, `accept-ranges: bytes`, `x-content-type-options: nosniff` and its `etag`. The request's headers go to R2 as its `range`, so a `Range` header is answered 206 with `content-range`, as R2 reads it.
+- A bad signature, a malformed key, a missing object and LINE off all answer the same 404, and nothing is logged. A failure (R2 unreachable, a LINE setting refused) answers 500 and is logged as `media_request_failed` with its label alone, never as `request_failed`, whose path would hold the key and the signature that opens it.
 - The URL carries no expiry: a LINE retry must send the same body (fact 8), and phones fetch it later (fact 14). It stops working when retention deletes the object at 30 days.
+- `createMediaUrl({ pilotOrigin, mediaUrlSecret })` returns the function the adapter's `mediaUrl` option will take with photo-asks (§5.2): `({ storageKey, mime }) => Promise<string>`, the same URL for the same object every time. A type LINE plays no media of (`audio/ogg`, say) is `ChannelSendError` `invalid_request`. `packages/adapters` is unchanged in step 6, so nothing passes it yet.
+- **Open for step 8.** Cloudflare's own invocation logs (Workers Logs, with `observability` on in `wrangler.jsonc`) record each request's URL, so a media URL's key and signature would sit there for the logs' retention. The route itself logs nothing. Before staging turns LINE on, the co-founder either turns invocation logs off for `vela` (`observability.logs.invocation_logs: false`, which drops them for every route) or accepts that record.
 
-**Registry.** `createChannels(env)` builds Telegram as today, since the admin conversation stays on Telegram (ADR-21). It builds LINE on the first `get("line")`, only when `LINE_CHANNEL` is `on`; otherwise `get("line")` throws "LINE is off in this environment". `mediaUrl` (added to the adapter's options with photo-asks, §5.2) is built from `PILOT_PUBLIC_URL` and `MEDIA_URL_SECRET`.
+**Registry.** `createChannels(env)` builds Telegram as today, since the admin conversation stays on Telegram (ADR-21). It builds LINE on the first `get("line")`, from `readLineConfig`, and keeps it. Where `LINE_CHANNEL` is `off`, `get("line")` throws `ConfigError:LINE_CHANNEL` ("LINE is off in this environment"), and nothing reads a LINE secret. `mediaUrl` is passed to the adapter with photo-asks, built by `createMediaUrl` from `PILOT_PUBLIC_URL` and `MEDIA_URL_SECRET`.
 
 **Env, secrets and vars:**
 
 | Name | Kind | Holder | Notes |
 |---|---|---|---|
-| `LINE_CHANNEL_SECRET` | Secret | `vela` | Added to `SecretName`, `env.ts` and `.dev.vars.example` |
+| `LINE_CHANNEL_SECRET` | Secret | `vela` | Read only while `LINE_CHANNEL` is `on`. In `SecretName`, `env.ts` and `.dev.vars.example`; the test runtime blanks it, as it does `CLERK_SECRET_KEY` |
 | `LINE_CHANNEL_ACCESS_TOKEN` | Secret | `vela` | Same |
-| `MEDIA_URL_SECRET` | Secret | `vela` | 32 random bytes, generated by the setup script, never typed |
-| `LINE_CHANNEL` | Var | Both Workers | `on` or `off` |
-| `LINE_BOT_BASIC_ID` | Var | Both Workers | `@…`; absent where LINE is off |
-| `PILOT_PUBLIC_URL` | Var | `vela` | The pilot origin; the fourth URL var `wrangler-config.test.ts` checks against `WORKERS_DEV_SUBDOMAINS` |
+| `MEDIA_URL_SECRET` | Secret | `vela` | Same. 32 random bytes as base64 or hex, at least 43 characters, generated and never typed |
+| `LINE_CHANNEL` | Var | Both Workers | `on` or `off`, the same in both files for each environment; `off` everywhere in step 6 |
+| `LINE_BOT_BASIC_ID` | Var | Both Workers | `@…`, the same in both files; absent where LINE is off, which `wrangler-config.test.ts` pins |
+| `PILOT_PUBLIC_URL` | Var | `vela` | The pilot origin, in every environment (`http://localhost:8787` in development), and the fourth URL var `wrangler-config.test.ts` checks against `WORKERS_DEV_SUBDOMAINS`. Read only while LINE is on |
+| `INBOUND_QUEUE` | Binding | `vela` | Development, and a deployed environment once its LINE is on |
 
-`Config` gains `lineBasicId: string | null`, and `AdminDeps` passes it.
+`Config` gains `lineBasicId: string | null` with step 4, the services change that first reads it, and `AdminDeps` passes it then. `readConfig` and `checkAdminConfig` already refuse a bad basic id where LINE is on.
 
-**Refusals.** `readConfig` and `checkAdminConfig` throw `ConfigError`:
-- for an unknown `LINE_CHANNEL`;
-- and, where it is `on`:
-  - `MEDIA_STORAGE` `off` (`ConfigError:LINE_CHANNEL`, since LINE media needs the R2 copy);
-  - a missing LINE secret or `MEDIA_URL_SECRET`;
-  - a `PILOT_PUBLIC_URL` that is not https;
-  - a `LINE_BOT_BASIC_ID` that is not `@` followed by non-space characters.
+**Refusals.** Each is a `ConfigError` naming the variable, never its value, in every environment, development included.
+- `readConfig` refuses an unknown `LINE_CHANNEL`, and so does `checkAdminConfig`.
+- Where LINE is on, `readConfig` (through `readLineConfig`) refuses:
+  - `MEDIA_STORAGE` `off` (`ConfigError:LINE_CHANNEL`, since LINE media needs the R2 copy), or no bucket bound (`MEDIA_BUCKET`);
+  - no `INBOUND_QUEUE` binding;
+  - a `PILOT_PUBLIC_URL` that is not an https origin with no path (one trailing `/` is stripped);
+  - a `LINE_BOT_BASIC_ID` that is not `@` followed by non-space characters;
+  - a missing LINE secret, or one with anything but visible ASCII (a space, a pasted line break, a letter outside ASCII);
+  - a missing `MEDIA_URL_SECRET`, or one shorter than 43 characters.
+- Where LINE is on, `checkAdminConfig` refuses a bad or missing `LINE_BOT_BASIC_ID`.
 
-The placeholder rule already refuses `PLACEHOLDER_` values.
+Because `buildDeps` calls `readConfig`, every job, cron run and alarm refuses a LINE it could not speak, not only the webhook. The placeholder rule already refuses `PLACEHOLDER_` values, in `LINE_BOT_BASIC_ID` and `PILOT_PUBLIC_URL` as in any var, with LINE on or off.
 
 **Per environment.**
-- **Development:** `off`, since it has no bucket. Tests use fixtures.
-- **Staging:** `on`, in the commit after the founder has put the secrets and handed over the test account's basic id, and `vela-inbound-staging` exists.
-- **Production:** `off`, pinned by `wrangler-config.test.ts` until an update of ADR-31 turns it on, as `API_V1` is pinned.
+- **Development:** `off`, since it has no bucket. It binds the inbound queue locally. Tests turn LINE on in their own environment, with fixtures, the test runtime's own local bucket `TEST_MEDIA_BUCKET`, and a recording queue.
+- **Staging:** `off` in step 6. `on` in step 8's commit, with the `INBOUND_QUEUE` producer and the `vela-inbound-staging` consumer, `LINE_BOT_BASIC_ID` in both files, and the three secrets already put. The setup script runs `--from resources` on that commit before it is merged to main, which creates the queue and deploys.
+- **Production:** `off`, pinned by `wrangler-config.test.ts` until step 11 turns it on, as `API_V1` is pinned.
 
-**Cron.** In the `RECONCILE_CRON` branch, after `reconcile` (and so after the heartbeat), where LINE is on:
+**Cron** (step 7). In the `RECONCILE_CRON` branch, after `reconcile` (and so after the heartbeat), where LINE is on:
 
 ```ts
 services.recordChannelQuota(deps, "line", await channels.get("line").quota())
 ```
 
-It runs in its own try/catch that logs `line_quota_failed` with the label, so a LINE outage never fails reconcile. The admin Worker never calls LINE.
+It runs in its own try/catch that logs `line_quota_failed` with the label, so a LINE outage never fails reconcile. The admin Worker never calls LINE. It is built with `recordChannelQuota`.
 
 **Setup script.**
-- `resources` creates `vela-inbound*`.
-- A new step, `line`, puts the two LINE secrets at a hidden prompt and generates and puts `MEDIA_URL_SECRET`.
+- `resources` creates `vela-inbound-<environment>` only where that environment's `LINE_CHANNEL` is `on`. `readEnvironmentConfig` reads `LINE_CHANNEL` from both files into `EnvironmentConfig.lineChannel`. It refuses (`SetupError`) two values that differ, a value that is neither `on` nor `off`, and a value that disagrees with the pilot's binding: `on` must produce `INBOUND_QUEUE` onto `vela-inbound-<environment>` and consume it, `off` must bind no inbound queue. The queue is then among those the step creates, like any other. With `off` the step prints `lineOffLine` instead, which says how to switch it on. So a run today creates nothing new.
+- A new step, `line`, puts the two LINE secrets at a hidden prompt and generates and puts `MEDIA_URL_SECRET`. It is not built in step 6; it comes with step 8. Until then the secrets go on with `wrangler secret put … --env staging` from Git Bash, with `MEDIA_URL_SECRET` piped in from `openssl rand -base64 32`.
 
 ### 5.11 Services changes
 
@@ -1066,26 +1078,30 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
    - Founder: the zh-TW reviewer for the new keys (build plan 2.4).
 6. **The Worker.**
    - Files:
-     - `apps/worker/src/{app,deps,config,env,pilot-worker,runtime}.ts` and a new `media-route.ts`;
-     - `wrangler.jsonc` and `wrangler.admin.jsonc`, with LINE off everywhere in this step;
-     - `.dev.vars.example`, `scripts/setup-environment.ts`, `testing/fakes.ts`, `wrangler-config.test.ts`.
+     - `apps/worker/src/{app,deps,config,env,pilot-worker,runtime}.ts` and a new `media-route.ts` (`openMedia`, and `createMediaUrl`, the signing helper the adapter's `mediaUrl` option will take);
+     - `wrangler.jsonc` and `wrangler.admin.jsonc`, with LINE off everywhere and the inbound queue bound in development alone; the header of `wrangler.jsonc` says what each LINE var and secret means and how to switch staging on;
+     - `.dev.vars.example`, `vitest.config.ts` (blank LINE secrets and a local bucket, `TEST_MEDIA_BUCKET`, for the media route), `scripts/setup-environment.ts` and its test, `testing/fakes.ts`, `wrangler-config.test.ts`; `infra/README.md`'s Worker configuration table and `03-code-design.md` §9.
    - Tests in workerd:
-     - a tampered, missing or wrong-secret signature is 401 with no deps built;
-     - LINE off means 404 and no call;
-     - Verify's empty body is 200 with nothing queued;
-     - events go to `INBOUND_QUEUE`, and the consumer calls `handleInbound`, with an unreadable job acked and logged;
-     - the media route: a good signature streams, with `Range`; a bad one, or a missing object, is 404;
-     - each config refusal of §5.10;
-     - production pinned `off`;
-     - the quota cron runs after reconcile, and its failure is logged without failing the run.
+     - a tampered, missing or wrong-secret signature is 401 with no deps built and nothing queued or logged;
+     - LINE off means the Worker's one 404, with no channel registry, deps or service call;
+     - Verify's empty body, and a body holding only the family's own group talk, are 200 with nothing queued;
+     - a signed body that cannot be read is 200 with nothing queued and `line_webhook_unreadable` logged with its label alone; a failed enqueue is 500, logged with no words or ids; LINE on without its secret is 500 naming the variable;
+     - her message goes to `INBOUND_QUEUE` as one job with no deps built, and the consumer calls `handleInbound` with the events in order; a job whose handling throws is retried; an unreadable job (no events, not a list, an event the contract refuses) is acked and logged with its queue and id alone;
+     - the media route: a good signature streams with its stored `Content-Type` and `cache-control: private`; `Range` is answered 206 with `content-range` for a span, an open end and a suffix; a changed or foreign signature, another key under a signature, a key that is not base64url, a second spelling of a stored key, a key that is not UTF-8, another extension, a missing object and LINE off each get the Worker's one 404, with nothing logged; an R2 failure is 500 logged by label, never by path; `createMediaUrl` gives the same URL every time, the extension of each type, and refuses a type LINE cannot play;
+     - each config refusal of §5.10, in either Worker, the placeholder rule on the two new vars, and `buildDeps` refusing LINE on without its queue before a connection opens; the registry building LINE once and refusing it where it is off;
+     - the wrangler pins: `LINE_CHANNEL` the same in both Workers, production `off`, the basic id where LINE is on and nowhere else, `PILOT_PUBLIC_URL` the pilot host, LINE's secrets never vars, the inbound queue bound in development and exactly where LINE is on, and the header on the order of the switch;
+     - the setup script: LINE off creates no inbound queue and says how to switch it on (production: that it stays off), switching it on and running `--from resources` creates `vela-inbound-staging`, and `readEnvironmentConfig` refuses a `LINE_CHANNEL` that differs between the files, is unknown or missing, or disagrees with the inbound binding.
+   - Not in this step, as the co-founder decided: the quota cron and `recordChannelQuota` (step 7); the setup script's `line` step (step 8); `Config.lineBasicId` (step 4). `packages/adapters` is unchanged.
    - Founder: nothing.
+   - **Done** on `feat/line`.
 7. **Quota in admin.**
-   - Files: `packages/services/src/quota.ts` (`recordChannelQuota`), `admin.ts` (`loadAdminOverview` reads `line_quota`), `apps/worker/src/admin-pages.ts`.
+   - Files: `packages/services/src/quota.ts` (`recordChannelQuota`), `admin.ts` (`loadAdminOverview` reads `line_quota`), `apps/worker/src/admin-pages.ts`, and the quota cron in `apps/worker/src/pilot-worker.ts` (§5.10, "Cron").
    - Tests:
      - the snapshot is written;
      - alerts at 70% and 90%, each once a month;
      - the overview shows used, limit and time, or "not read yet";
-     - no page shows anything else of LINE.
+     - no page shows anything else of LINE;
+     - the quota cron runs after reconcile only where LINE is on, and its failure is logged without failing the run.
    - Founder: nothing.
 8. **The staging loop: build plan 2.3's definition of done.**
    - Founder:
@@ -1093,7 +1109,9 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
      - §2.7 steps 1 to 6 on the test account;
      - a 30-minute session with the co-founder to run the tests of question 15 on his phone and in a test group.
    - Co-founder:
-     - the commit that turns staging `on`, then the deploy;
+     - the setup script's `line` step (§5.10), then the secrets put before the switch;
+     - the decision on Cloudflare's invocation logs for media URLs (§5.10, "Open for step 8");
+     - the commit that turns staging `on`, with the `vela-inbound-staging` binding and the basic id, the setup script run `--from resources` on it before it is merged, then the deploy;
      - real fixtures recorded;
      - any adapter correction the answers call for.
    - Proof: the founder's test account completes 04 §6 test 1 on LINE, and the admin overview shows the quota.
