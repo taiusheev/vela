@@ -143,6 +143,22 @@ describe("the private chat", () => {
     ]);
   });
 
+  // While her link was blocked, her schedule woke for none of that morning's thresholds (flows
+  // §3.12), so her unblock is a change that can make one due sooner.
+  it("looks at her schedule again when she unblocks the bot, and at nobody's for an organiser", async () => {
+    const { seed } = await scene();
+    await inbound(privately(HER, { kind: "blocked" }), privately(ORGANISER, { kind: "blocked" }));
+    h.clock.advanceMinutes(45);
+
+    await inbound(privately(ORGANISER, { kind: "unblocked" }));
+    expect(h.scheduler.wakes.size).toBe(0);
+
+    await inbound(privately(HER, { kind: "unblocked" }));
+    expect(h.scheduler.wakes.get(seed.member.id)).toEqual(h.clock.now());
+    const [her] = await h.db.select().from(members).where(eq(members.id, seed.member.id));
+    expect(her?.nextWakeAt).toEqual(h.clock.now());
+  });
+
   it("answers a stranger with how to begin, directly, and a member of a family through the gateway", async () => {
     const { seed } = await scene();
 

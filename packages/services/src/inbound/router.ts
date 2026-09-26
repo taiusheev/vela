@@ -42,7 +42,9 @@ import {
   familyByLinkedGroup,
   familyHasEnded,
   type MemberWithFamily,
+  markWakeDue,
   memberByChannelUser,
+  memberById,
   messageRefFor,
   setChannelLinkBlocked,
 } from "../repo.ts";
@@ -94,7 +96,8 @@ async function route(deps: Deps, event: InboundEvent): Promise<void> {
 async function routePrivate(deps: Deps, event: InboundEvent): Promise<void> {
   if (event.kind === "blocked" || event.kind === "unblocked") {
     const blocked = event.kind === "blocked";
-    const known = await deps.db.transaction(async (tx) => {
+    const now = deps.clock.now();
+    const { known, wake } = await deps.db.transaction(async (tx) => {
       const change = await setChannelLinkBlocked(
         tx,
         event.channel,
@@ -114,8 +117,22 @@ async function routePrivate(deps: Deps, event: InboundEvent): Promise<void> {
           await enqueueOutbound(deps, tx, alert);
         }
       }
-      return change.known;
+      // While her mark lasted, her schedule woke for none of the repeat and quiet thresholds of a
+      // morning delivered before it (flows §3.12), so a tick in the block stored a later, unrelated
+      // wake. Clearing the mark can make one due sooner, so her schedule is decided again now.
+      const wake: string[] = [];
+      for (const memberId of change.unblockedMemberIds) {
+        const member = await memberById(tx, memberId);
+        if (member !== null && isKeptLightMember(member) && member.status === "active") {
+          await markWakeDue(tx, memberId, now);
+          wake.push(memberId);
+        }
+      }
+      return { known: change.known, wake };
     });
+    for (const memberId of wake) {
+      await deps.scheduler.wakeAt(memberId, now);
+    }
     deps.logger.info("channel_link_blocked", { blocked, known });
     return;
   }

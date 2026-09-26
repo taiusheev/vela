@@ -416,7 +416,23 @@ describe("notifyQuiet", () => {
     expect(h.telegram.sentTo(seed.organiserLink.externalId)).toHaveLength(2);
   });
 
-  it("sends no waited notice once she has blocked the bot", async () => {
+  it("tells nobody for the first time once she has blocked the bot after her morning", async () => {
+    const { seed } = await quietMorning();
+    await openQuiet(h.deps, seed.member.id, TODAY, false);
+    h.clock.advanceMinutes(60);
+    await blockHerLink(seed, h.clock.now());
+
+    // The learning period's eight hours, or a stale decision: the light pauses without a notice.
+    h.clock.advanceMinutes(60);
+    await notifyQuiet(h.deps, seed.member.id, TODAY);
+
+    expect(await noticeRows()).toHaveLength(0);
+    const [silent] = await quietRows();
+    expect(silent).toMatchObject({ lastNotifiedAt: null, notifyCount: 0 });
+  });
+
+  // "I'll look again at 16:05": a wait is the organisers asking to hear again, so it is kept.
+  it("sends the notice a wait asked for, and only once the wait has run out, although she has blocked the bot since", async () => {
     const { seed } = await quietMorning();
     await openQuiet(h.deps, seed.member.id, TODAY, true);
     await h.run(handlers());
@@ -431,12 +447,16 @@ describe("notifyQuiet", () => {
     h.clock.advanceMinutes(30);
     await blockHerLink(seed, h.clock.now());
 
-    h.clock.advanceMinutes(90);
+    h.clock.advanceMinutes(60);
     await notifyQuiet(h.deps, seed.member.id, TODAY);
-
     expect(await noticeRows()).toHaveLength(2);
+
+    h.clock.advanceMinutes(30);
+    await notifyQuiet(h.deps, seed.member.id, TODAY);
+    expect(await noticeRows()).toHaveLength(4);
+    await h.run(handlers());
     const [waited] = await quietRows();
-    expect(waited).toMatchObject({ notifyCount: 1, resolvedAt: null });
+    expect(waited).toMatchObject({ notifyCount: 2, resolvedAt: null });
   });
 });
 

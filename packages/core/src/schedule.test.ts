@@ -356,11 +356,34 @@ describe("a blocked link", () => {
     expect(iso(nextMorning.nextWakeAt)).toBe(iso(taipei("08:00")));
   });
 
-  it("sends no waited notice for a quiet opened before she blocked the bot", () => {
+  it("tells nobody for the first time of a quiet opened in the app before she blocked the bot", () => {
+    const silent = deliveredToday({ quiet: quiet({ lastNotifiedAt: null }) });
+    const blocked = {
+      days: [silent],
+      blockedAt: taipei("15:00"),
+      learningUntil: TOMORROW,
+      turnsEnabled: false,
+    };
+    expect(iso(decide({ ...blocked, now: taipei("15:00") }).nextWakeAt)).toBe(iso(taipei("22:00")));
+    expect(decide({ ...blocked, now: taipei("16:00") }).due).toEqual([]);
+  });
+
+  // A wait is the organiser asking to hear again, and Vela said when (`quiet.waiting`): a notice
+  // they were already given, or saw in the app, is not a quiet raised over her dead link.
+  it("brings back the notice the organiser waited on, although she blocked the bot since", () => {
     const waited = deliveredToday({ quiet: quiet({ waitUntil: taipei("16:30") }) });
+    const blocked = { days: [waited], blockedAt: taipei("15:00") };
+    expect(iso(decide({ ...blocked, now: taipei("15:00") }).nextWakeAt)).toBe(iso(taipei("16:30")));
+    expect(decide({ ...blocked, now: taipei("16:30") }).due).toEqual([
+      { kind: "notify_quiet", date: TODAY },
+    ]);
+
+    const seenInApp = deliveredToday({
+      quiet: quiet({ lastNotifiedAt: null, waitUntil: taipei("16:30") }),
+    });
     expect(
-      decide({ now: taipei("17:00"), days: [waited], blockedAt: taipei("15:00") }).due,
-    ).toEqual([]);
+      decide({ now: taipei("16:30"), days: [seenInApp], blockedAt: taipei("15:00") }).due,
+    ).toEqual([{ kind: "notify_quiet", date: TODAY }]);
   });
 
   it("ladders a morning delivered after her link was marked blocked as on any day", () => {

@@ -55,6 +55,12 @@ interface QuietContext {
   member: Member;
   family: Family;
   exchange: Exchange;
+  /**
+   * She blocked the bot after this morning reached her, and her link is still blocked: the light
+   * pauses without a quiet notice (architecture §14), so no quiet opens and nobody is told for the
+   * first time, while a notice a wait asked for still goes (flows §3.12).
+   */
+  blockedSinceDelivery: boolean;
 }
 
 async function loadQuietContext(
@@ -90,20 +96,23 @@ async function loadQuietContext(
     deps.logger.info("quiet_after_answer", { memberId, date, exchangeId: exchange.id });
     return null;
   }
-  // She blocked the bot after this morning reached her: the light pauses without a quiet notice
-  // (architecture §14), a waited one included. The schedule holds such a morning back
-  // (`blockedAt`), but her block can land after it decided. A morning delivered after the block
-  // shows she had unblocked unheard, so that stale mark changes nothing.
+  // Whether she blocked the bot after this morning reached her: the schedule holds such a morning
+  // back (`blockedAt`), but her block can land after it decided. A morning delivered after the
+  // block shows she had unblocked unheard, so that stale mark changes nothing.
   const link = await channelLinkOfMember(tx, memberId, ARRIVAL_CHANNEL);
-  if (
+  const blockedSinceDelivery =
     link !== null &&
     link.blockedAt !== null &&
-    exchange.deliveredAt.getTime() <= link.blockedAt.getTime()
-  ) {
-    deps.logger.info("quiet_link_blocked", { memberId, date, exchangeId: exchange.id });
-    return null;
-  }
-  return { member, family, exchange };
+    exchange.deliveredAt.getTime() <= link.blockedAt.getTime();
+  return { member, family, exchange, blockedSinceDelivery };
+}
+
+function logHeldByBlock(deps: Deps, ctx: QuietContext, date: LocalDate): void {
+  deps.logger.info("quiet_link_blocked", {
+    memberId: ctx.member.id,
+    date,
+    exchangeId: ctx.exchange.id,
+  });
 }
 
 function fitLabel(text: string): string {
@@ -243,6 +252,10 @@ export async function openQuiet(
     if (ctx === null) {
       return;
     }
+    if (ctx.blockedSinceDelivery) {
+      logHeldByBlock(deps, ctx, date);
+      return;
+    }
     const [quiet] = await tx
       .insert(quietEvents)
       .values({
@@ -268,12 +281,14 @@ export async function openQuiet(
  * once, or a decision made on stale state, then cannot send a round twice.
  */
 function notificationDue(quiet: QuietEvent, now: Date): boolean {
-  if (quiet.lastNotifiedAt === null) {
-    return true;
-  }
+  return quiet.lastNotifiedAt === null || waitHasRunOut(quiet, now);
+}
+
+/** A "wait 2 hours" asked for since the last notice, if any, has run out. */
+function waitHasRunOut(quiet: QuietEvent, now: Date): boolean {
   return (
     quiet.waitUntil !== null &&
-    quiet.waitUntil.getTime() > quiet.lastNotifiedAt.getTime() &&
+    (quiet.lastNotifiedAt === null || quiet.waitUntil.getTime() > quiet.lastNotifiedAt.getTime()) &&
     now.getTime() >= quiet.waitUntil.getTime()
   );
 }
@@ -292,6 +307,12 @@ export async function notifyQuiet(deps: Deps, memberId: string, date: LocalDate)
       .where(eq(quietEvents.exchangeId, ctx.exchange.id))
       .for("update");
     if (quiet === undefined || quiet.resolvedAt !== null || !notificationDue(quiet, now)) {
+      return;
+    }
+    // Her block holds back a first notice, not the one a wait asked for: the organisers already
+    // know of this quiet and were told when Vela would look again (`quiet.waiting`, spec §8).
+    if (ctx.blockedSinceDelivery && !waitHasRunOut(quiet, now)) {
+      logHeldByBlock(deps, ctx, date);
       return;
     }
     await tx.update(quietEvents).set({ lastNotifiedAt: now }).where(eq(quietEvents.id, quiet.id));

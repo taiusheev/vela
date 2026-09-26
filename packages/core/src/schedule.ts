@@ -6,8 +6,8 @@
  * the wake already covers the thresholds the due actions create (the ladder of an arrival being
  * delivered now, the in-app-only quiet that will need a push later). Changes that can make something
  * due sooner and do not come from the passing of time (a "wait 2 hours" tap, away being cleared, a
- * new arrival time or an earlier start date, the light switched back on, tomorrow's ask withdrawn)
- * must be followed by a fresh decision.
+ * new arrival time or an earlier start date, the light switched back on, tomorrow's ask withdrawn,
+ * her link unblocked) must be followed by a fresh decision.
  */
 import type { LocalDate, LocalTime, MemberStatus } from "@vela/contracts";
 import {
@@ -264,9 +264,10 @@ function ladderWakesAfterDelivery(ctx: Context, day: DayState, out: Collector): 
 
 /**
  * Repeat and quiet apply only to a delivered, unanswered exchange on or after her start date and
- * delivered since she last said start and after any block still on her link, each at a threshold
- * she is not away at. Neither follows our own failure to deliver: a repeat would re-send what did
- * not arrive, and a quiet would blame her silence on it.
+ * delivered since she last said start, each at a threshold she is not away at. Neither follows our
+ * own failure to deliver: a repeat would re-send what did not arrive, and a quiet would blame her
+ * silence on it. A block still on her link after the delivery holds back the repeat, the quiet,
+ * and a first notice, but not the notice a wait asked for (`deliveredBeforeBlock`).
  */
 function ladderRules(ctx: Context, day: DayState, out: Collector): void {
   if (
@@ -274,14 +275,16 @@ function ladderRules(ctx: Context, day: DayState, out: Collector): void {
     day.deliveryFailed ||
     day.answeredAt !== null ||
     !hasStarted(ctx, day.date) ||
-    deliveredBeforeResume(ctx, day.deliveredAt) ||
-    deliveredBeforeBlock(ctx, day.deliveredAt)
+    deliveredBeforeResume(ctx, day.deliveredAt)
   ) {
     return;
   }
-  repeatRule(ctx, day, day.deliveredAt, out);
-  openQuietRule(ctx, day, day.deliveredAt, out);
-  notifyQuietRule(ctx, day, day.deliveredAt, out);
+  const blocked = deliveredBeforeBlock(ctx, day.deliveredAt);
+  if (!blocked) {
+    repeatRule(ctx, day, day.deliveredAt, out);
+    openQuietRule(ctx, day, day.deliveredAt, out);
+  }
+  notifyQuietRule(ctx, day, day.deliveredAt, blocked, out);
 }
 
 /**
@@ -299,9 +302,11 @@ function deliveredBeforeResume(ctx: Context, deliveredAt: Date): boolean {
 /**
  * She blocked the bot after this morning reached her, and the link is still blocked. The light
  * pauses without a quiet notice (architecture §14): Vela knows it cannot reach her, and a repeat
- * could only be refused. A morning delivered after the block went through, so she had unblocked
- * without Telegram saying so, and that morning is laddered as usual; otherwise a stale mark would
- * silence her quiet notices for good.
+ * could only be refused, so no repeat, no quiet, and no first notice. A notice a wait asked for
+ * still comes: the organisers already know of the quiet, asked to hear again, and were told when
+ * (spec §8, `quiet.waiting`). A morning delivered after the block went through, so she had
+ * unblocked without Telegram saying so, and that morning is laddered as usual; otherwise a stale
+ * mark would silence her quiet notices for good.
  */
 function deliveredBeforeBlock(ctx: Context, deliveredAt: Date): boolean {
   const { blockedAt } = ctx.input.member;
@@ -364,10 +369,17 @@ function openQuietRule(ctx: Context, day: DayState, deliveredAt: Date, out: Coll
 
 /**
  * A quiet is (re)notified when the organiser's "wait 2 hours" has run out, or, if nobody has been
- * told yet, once the learning-period silence has lasted long enough. A pending wait takes precedence:
- * the organiser has seen the quiet and asked to hear again later, not sooner.
+ * told yet and her link is not `blocked` since the delivery, once the learning-period silence has
+ * lasted long enough. A pending wait takes precedence: the organiser has seen the quiet and asked
+ * to hear again later, not sooner.
  */
-function notifyQuietRule(ctx: Context, day: DayState, deliveredAt: Date, out: Collector): void {
+function notifyQuietRule(
+  ctx: Context,
+  day: DayState,
+  deliveredAt: Date,
+  blocked: boolean,
+  out: Collector,
+): void {
   const { quiet } = day;
   if (quiet === null || quiet.resolvedAt !== null) {
     return;
@@ -379,7 +391,7 @@ function notifyQuietRule(ctx: Context, day: DayState, deliveredAt: Date, out: Co
     (lastNotifiedAt === null || waitUntil.getTime() > lastNotifiedAt.getTime())
   ) {
     notifyAt = waitUntil;
-  } else if (lastNotifiedAt === null) {
+  } else if (lastNotifiedAt === null && !blocked) {
     notifyAt = addMinutes(deliveredAt, SCHEDULE.learningNotifyMinutes);
   }
   if (notifyAt === null || awayAt(ctx, day, notifyAt)) {

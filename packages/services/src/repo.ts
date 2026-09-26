@@ -181,15 +181,16 @@ export async function familyById(db: Queryable, familyId: string): Promise<Famil
 /**
  * Records that the person blocked the bot on the channel, or unblocked it (flows §5, the routing
  * table): a blocked link is left out of every send, so nothing is queued that can only fail. Says
- * whether any link was known, and whose link this has just blocked — one already blocked is not
- * "just" — so the caller can tell whether a family has lost its last organiser who could be told.
+ * whether any link was known, whose link this has just blocked — one already blocked is not
+ * "just" — so the caller can tell whether a family has lost its last organiser who could be told,
+ * and whose mark this has cleared, so the caller can re-decide a schedule the mark held back.
  */
 export async function setChannelLinkBlocked(
   db: Queryable,
   channel: Channel,
   externalUserId: string,
   blockedAt: Date | null,
-): Promise<{ known: boolean; newlyBlockedMemberIds: string[] }> {
+): Promise<{ known: boolean; newlyBlockedMemberIds: string[]; unblockedMemberIds: string[] }> {
   const where = and(eq(channelLinks.channel, channel), eq(channelLinks.externalId, externalUserId));
   // Read under the row lock (in the caller's transaction), so a block the gateway records at the
   // same moment is seen, and only one of the two counts as the moment the link became blocked.
@@ -199,7 +200,7 @@ export async function setChannelLinkBlocked(
     .where(where)
     .for("update");
   if (before.length === 0) {
-    return { known: false, newlyBlockedMemberIds: [] };
+    return { known: false, newlyBlockedMemberIds: [], unblockedMemberIds: [] };
   }
   await db.update(channelLinks).set({ blockedAt }).where(where);
   return {
@@ -208,6 +209,10 @@ export async function setChannelLinkBlocked(
       blockedAt === null
         ? []
         : before.filter((link) => link.blockedAt === null).map((l) => l.memberId),
+    unblockedMemberIds:
+      blockedAt === null
+        ? before.filter((link) => link.blockedAt !== null).map((l) => l.memberId)
+        : [],
   };
 }
 

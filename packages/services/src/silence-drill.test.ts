@@ -9,8 +9,8 @@
  *
  * The drill: sends that keep failing produce one delivery notice, no repeat, and no quiet event; a
  * blocked chat marks the link, and a block after her morning reached her brings no repeat and no
- * quiet notice; a wake nobody served is caught by `reconcile` and delivered late,
- * exactly once; and an outage of the AI or of speech-to-text never delays the light, the ack, or
+ * quiet notice beyond one a wait asked for, while her unblock looks at her day again; a wake nobody
+ * served is caught by `reconcile` and delivered late, exactly once; and an outage of the AI or of speech-to-text never delays the light, the ack, or
  * the group post, with the understanding picked up again once the outage ends.
  */
 import {
@@ -388,6 +388,69 @@ describe("the silence drill", () => {
     expect(
       (await h.db.select({ kind: outbound.kind }).from(outbound)).map((row) => row.kind),
     ).toEqual(["arrival"]);
+  });
+
+  it("looks at her day again when she unblocks the bot, so the quiet still opens and tells on time", async () => {
+    const seed = await consentedYesterday();
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "08:00"));
+    expect(newMessages()).toEqual([[HER, HELLO_ARRIVAL]]);
+
+    // Blocked at 10:00, over the 10:30 tick, which holds her morning back; unblocked at 10:45.
+    h.clock.set(at("2026-09-14", "10:00"));
+    await inbound(fromHer({ kind: "blocked" }));
+    h.telegram.failSendsTo(HER, "blocked");
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "10:40"));
+    h.clock.set(at("2026-09-14", "10:45"));
+    h.telegram.clearFailures();
+    await inbound(fromHer({ kind: "unblocked" }));
+
+    // The repeat that fell due in the block goes at the unblock: nothing records when she unblocked.
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "15:00"));
+    expect(newMessages()).toEqual([[HER, HELLO_REPEAT]]);
+    expect(await h.db.select().from(quietEvents)).toMatchObject([
+      { openedAt: at("2026-09-14", "14:00"), lastNotifiedAt: null },
+    ]);
+
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "16:00"));
+    expect(newMessages()).toEqual([
+      [ORGANISER, t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })],
+    ]);
+  });
+
+  it("brings the notice back when the wait the organiser asked for runs out, although she blocked the bot since", async () => {
+    const seed = await consentedYesterday();
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "16:00"));
+    expect(newMessages()).toEqual([
+      [HER, HELLO_ARRIVAL],
+      [HER, HELLO_REPEAT],
+      [ORGANISER, t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })],
+    ]);
+    h.clock.set(at("2026-09-14", "16:05"));
+    await inbound(
+      fromOrganiser({
+        kind: "button",
+        buttonData: lastButtonTo(ORGANISER, 1),
+        callbackId: "cb-wait",
+        messageId: h.telegram.sentTo(ORGANISER).at(-1)?.result.primaryMessageId,
+      }),
+    );
+    expect(h.telegram.closed.at(-1)).toMatchObject({
+      conversationId: ORGANISER,
+      replacementText: t("en", "quiet.waiting", { time: "18:05" }),
+    });
+
+    h.clock.set(at("2026-09-14", "17:00"));
+    await inbound(fromHer({ kind: "blocked" }));
+    h.telegram.failSendsTo(HER, "blocked");
+
+    // Vela said it would look again at 18:05, and she is still quiet.
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "18:05"));
+    expect(newMessages()).toEqual([
+      [ORGANISER, t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })],
+    ]);
+    expect(await h.db.select().from(quietEvents)).toMatchObject([
+      { notifyCount: 2, resolvedAt: null },
+    ]);
   });
 
   it("ladders a morning that reached her after her link was marked blocked, as on any day", async () => {
