@@ -10,13 +10,21 @@
  * no `unwell`, no flag category or quote, in the answer or in `ai_calls`. The flag check still runs,
  * because it is the safety feature.
  *
- * Every step is keyed per answer, so `reconcile`'s re-runs never repeat a post, a translation, a
- * notice, or an away; and `understood_at` is written after all of them, so a run that throws or
- * stops half way is run again, not taken for done. Both jobs count an attempt when they start work
- * on an answer (a redelivered job for a voice already transcribed or an answer already understood
- * does nothing); the attempt that ends without a transcript or without `understood_at` at three or
- * more tells the founder once (flows §3.15). Provider failures never throw: the light is long since
- * on, and the queue must not retry them.
+ * Every step is keyed per answer, so a re-run never repeats a post, a translation, a notice, or an
+ * away; and `understood_at` is written after all of them, so a run that stops half way is not taken
+ * for done. Every message the jobs write is a `queued` outbound row, written with what it is about
+ * (a flag's notices in the flag's transaction, the away's confirmation in the away's), and its
+ * delivery job goes to the queue only after the commit: a send the queue refuses is logged, not
+ * thrown, and `reconcile` re-drives the row, so no flag, away, or post waits on the outbound queue.
+ *
+ * Both jobs count an attempt when they start work on an answer (a redelivered job for a voice
+ * already transcribed or an answer already understood does nothing); the attempt that ends without
+ * a transcript or without `understood_at` at three or more tells the founder once (flows §3.15). The
+ * queue retries a job that throws up to three times, a minute apart, and every retry counts;
+ * `reconcile` re-runs only an answer with fewer than three attempts, so it takes up a run that ended
+ * without throwing, or a job that never ran, but not one that threw on every delivery, which the
+ * founder hears of from `reconcile`'s note a day later. Provider failures never throw: the light is
+ * long since on, and the queue must not retry them.
  *
  * While AI is off (the Workers' `AI_PROVIDER` "off") every model step takes the path of a failed
  * call, so nothing is summarised, flagged, or translated and her words reach the group as she wrote
@@ -61,11 +69,11 @@ import {
 } from "@vela/db";
 import { and, desc, eq, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
-import type { Deps } from "./deps.ts";
+import type { Deps, OutboundJob } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
-import { enqueueOutbound } from "./gateway.ts";
+import { type InsertResult, insertOutbound } from "./gateway.ts";
 import {
   activeOrganisersWithLinks,
   channelLinkOfMember,
@@ -162,6 +170,38 @@ async function logAiCall(
 }
 
 /**
+ * Hands the rows a job wrote, once they are committed, to the delivery queue; a duplicate was handed
+ * over by the run that wrote it. A send the queue refuses is logged and not thrown: the row is
+ * `queued`, so `reconcile` re-drives it once it is past due (`redriveStrandedOutbound`). A throw
+ * would fail the job over a message already kept, and each retry of it would count an attempt and
+ * find the row written, so it would hand nothing over; once the retries were spent, `reconcile`
+ * would not run the answer again.
+ */
+async function handOver(
+  deps: Deps,
+  answerId: string,
+  written: readonly InsertResult[],
+): Promise<void> {
+  for (const row of written) {
+    if ("duplicate" in row) {
+      continue;
+    }
+    const job: OutboundJob = { type: "deliver", outboundId: row.outboundId };
+    try {
+      await (row.delaySeconds === undefined
+        ? deps.queues.outbound.send(job)
+        : deps.queues.outbound.send(job, { delaySeconds: row.delaySeconds }));
+    } catch (error) {
+      deps.logger.error("understand_handover_failed", {
+        answerId,
+        outboundId: row.outboundId,
+        error: errorLabel(error),
+      });
+    }
+  }
+}
+
+/**
  * After the third failed attempt the founder is told once, with a link and no content: the key
  * names the answer, so later attempts add nothing.
  */
@@ -170,7 +210,7 @@ async function tellAdminUnderstandFailed(deps: Deps, ctx: AnswerContext): Promis
   if (admin === null) {
     return;
   }
-  await enqueueOutbound(deps, deps.db, {
+  const written = await insertOutbound(deps, deps.db, {
     kind: "system",
     idempotencyKey: outboundKey("system", {
       conversationId: admin,
@@ -186,6 +226,7 @@ async function tellAdminUnderstandFailed(deps: Deps, ctx: AnswerContext): Promis
       link: adminLink(deps.config, ctx.family.id),
     }),
   });
+  await handOver(deps, ctx.answer.id, [written]);
 }
 
 async function endAttemptUnresolved(
@@ -394,7 +435,9 @@ async function recentSummaries(deps: Deps, ctx: AnswerContext): Promise<string[]
 /**
  * A detected away becomes a period from `away.from` (never before her answer's date), unless an
  * unended one from an answer already starts that day, and is confirmed to her once, keyed by the
- * answer. Her scheduler decides again: the away suppresses today's repeat and quiet.
+ * answer. Her scheduler decides again: the away suppresses today's repeat and quiet. The period, her
+ * wake marked due, and the confirmation's row commit together, and the queue and her scheduler are
+ * told only after, so neither can roll the away back.
  */
 async function setAwayFromAnswer(
   deps: Deps,
@@ -404,7 +447,7 @@ async function setAwayFromAnswer(
 ): Promise<void> {
   const { answer, member, family, exchange } = ctx;
   const link = await channelLinkOfMember(deps.db, member.id, answer.channel);
-  const inserted = await deps.db.transaction(async (tx) => {
+  const written = await deps.db.transaction(async (tx): Promise<InsertResult[] | null> => {
     const existing = await tx
       .select({ id: awayPeriods.id })
       .from(awayPeriods)
@@ -418,7 +461,7 @@ async function setAwayFromAnswer(
       )
       .limit(1);
     if (existing.length > 0) {
-      return false;
+      return null;
     }
     await tx.insert(awayPeriods).values({
       memberId: member.id,
@@ -439,30 +482,32 @@ async function setAwayFromAnswer(
       now,
     );
     await markWakeDue(tx, member.id, now);
-    if (link !== null && link.blockedAt === null) {
-      const lang = member.language;
-      await enqueueOutbound(deps, tx, {
-        kind: "system",
-        idempotencyKey: outboundKey("system", {
-          conversationId: link.externalId,
-          suffix: `away:${answer.id}`,
-        }),
-        memberId: member.id,
-        channel: link.channel,
-        conversationId: link.externalId,
-        exchangeId: exchange.id,
-        lang,
-        text:
-          away.until === null
-            ? t(lang, "away.confirmed_open")
-            : t(lang, "away.confirmed", { date: formatAwayDate(away.until, lang) }),
-      });
+    if (link === null || link.blockedAt !== null) {
+      return [];
     }
-    return true;
+    const lang = member.language;
+    const confirmation = await insertOutbound(deps, tx, {
+      kind: "system",
+      idempotencyKey: outboundKey("system", {
+        conversationId: link.externalId,
+        suffix: `away:${answer.id}`,
+      }),
+      memberId: member.id,
+      channel: link.channel,
+      conversationId: link.externalId,
+      exchangeId: exchange.id,
+      lang,
+      text:
+        away.until === null
+          ? t(lang, "away.confirmed_open")
+          : t(lang, "away.confirmed", { date: formatAwayDate(away.until, lang) }),
+    });
+    return [confirmation];
   });
-  if (!inserted) {
+  if (written === null) {
     return;
   }
+  await handOver(deps, answer.id, written);
   try {
     await deps.scheduler.wakeAt(member.id, now);
   } catch (error) {
@@ -511,7 +556,8 @@ function flagReasonOf(flag: FlagResult, healthWords: boolean): string {
  * a call. Both are `flag` rows keyed by the exchange, the reader's conversation, and the answer, and
  * not by her consent, so a re-run after her answer changed sends nothing twice; the event is
  * recorded once, with them. `understandAnswer` calls it in the transaction that stores the flag, so
- * the flag and its notices are stored together or not at all.
+ * the flag and its notices are stored together or not at all, and hands the rows it returns to the
+ * queue after the commit, so a refused send cannot roll the flag back.
  */
 async function raiseFlag(
   deps: Deps,
@@ -521,14 +567,14 @@ async function raiseFlag(
   words: string,
   healthWords: boolean,
   now: Date,
-): Promise<void> {
+): Promise<InsertResult[]> {
   const { answer, member, family, exchange } = ctx;
   const quote = flag.evidenceQuote ?? words;
-  let inserted = false;
+  const written: InsertResult[] = [];
   const organisers = await activeOrganisersWithLinks(tx, family.id, answer.channel);
   for (const organiser of organisers) {
     const lang = organiser.member.language;
-    const result = await enqueueOutbound(deps, tx, {
+    const result = await insertOutbound(deps, tx, {
       kind: "flag",
       idempotencyKey: outboundKey("flag", {
         exchangeId: exchange.id,
@@ -544,11 +590,11 @@ async function raiseFlag(
         ? fitMessageText(t(lang, "flag.notice", { name: member.displayName, quote }))
         : t(lang, "flag.notice_no_words", { name: member.displayName }),
     });
-    inserted ||= "outboundId" in result;
+    written.push(result);
   }
   const admin = deps.config.adminConversationId;
   if (admin !== null) {
-    const result = await enqueueOutbound(deps, tx, {
+    const result = await insertOutbound(deps, tx, {
       kind: "flag",
       idempotencyKey: outboundKey("flag", {
         exchangeId: exchange.id,
@@ -565,9 +611,9 @@ async function raiseFlag(
         link: adminLink(deps.config, family.id),
       }),
     });
-    inserted ||= "outboundId" in result;
+    written.push(result);
   }
-  if (inserted) {
+  if (written.some((result) => "outboundId" in result)) {
     await recordEvent(
       tx,
       {
@@ -587,6 +633,7 @@ async function raiseFlag(
       now,
     );
   }
+  return written;
 }
 
 /**
@@ -824,7 +871,7 @@ async function postWordsToGroup(
     return;
   }
   const replyTo = await answerPostMessageId(deps, ctx);
-  await enqueueOutbound(deps, deps.db, {
+  const written = await insertOutbound(deps, deps.db, {
     kind: "answer_post",
     idempotencyKey: outboundKey("answer_post", {
       exchangeId: exchange.id,
@@ -839,6 +886,7 @@ async function postWordsToGroup(
     replyToMessageId: replyTo ?? undefined,
     ref: { purpose: "answer_post", exchangeId: exchange.id, memberId: member.id },
   });
+  await handOver(deps, answer.id, [written]);
 }
 
 /** Logs the call behind a model step; with AI off there was none, so nothing is logged. */
@@ -860,10 +908,11 @@ function settled<T>(outcome: AiOutcome<T>): boolean {
 /**
  * `understand_answer` (flows §3.10). `understood_at` is set only when `ai.understand` and `ai.flag`
  * both returned ok, or AI is off; a failed translation does not hold it back. It is written last,
- * after the flag's notices, the away, and the post to the group, so a run that stops on the way is
- * run again rather than taken for done. With AI off nothing the models return is stored: no summary,
- * mentions, mood words, away, or flag. An answer with nothing to read (a photo without words) is
- * understood at once, so it is never re-run.
+ * after the rows of the flag's notices, the away, and the post to the group, so a run that stops on
+ * the way is run again rather than taken for done; each row goes to the delivery queue after its
+ * commit, and a refused send is logged, not thrown (`handOver`). With AI off nothing the models
+ * return is stored: no summary, mentions, mood words, away, or flag. An answer with nothing to read
+ * (a photo without words) is understood at once, so it is never re-run.
  */
 export async function understandAnswer(deps: Deps, answerId: string): Promise<void> {
   const ctx = await loadAnswer(deps, answerId);
@@ -930,7 +979,7 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
   const summaryChanged = understanding.ok && understanding.value.summary !== answer.summary;
   // When both calls failed, or AI is off, the models returned nothing to store.
   if (understanding.ok || flag.ok) {
-    await deps.db.transaction(async (tx) => {
+    const notices = await deps.db.transaction(async (tx) => {
       await tx
         .update(answers)
         .set({
@@ -954,10 +1003,11 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
         await dropSummaryForHer(tx, ctx);
       }
       // First, with the flag itself: a flag that reached no one is the expensive failure.
-      if (flag.ok && flag.value.flag) {
-        await raiseFlag(deps, tx, ctx, flag.value, words, healthWords, now);
-      }
+      return flag.ok && flag.value.flag
+        ? raiseFlag(deps, tx, ctx, flag.value, words, healthWords, now)
+        : [];
     });
+    await handOver(deps, answerId, notices);
   }
 
   if (understanding.ok && understanding.value.away !== null) {
@@ -982,8 +1032,9 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
     await endAttemptUnresolved(deps, ctx, attempts);
     return;
   }
-  // Last: a run that stops before this line (a queue send refused, a lost connection, a Worker
-  // stopped mid-run) throws or dies with `understood_at` still null, so the queue's retry and
-  // `reconcile` run the answer again, and the keys above let that run write only what is missing.
+  // Last: a run that stops before this line (a lost connection, a Worker stopped mid-run) throws or
+  // dies with `understood_at` still null, so the queue's retry runs the answer again, and the keys
+  // above let that run write only what is missing. A refused hand-over is not such a stop: its row
+  // is written, and `reconcile` re-drives it.
   await deps.db.update(answers).set({ understoodAt: now }).where(eq(answers.id, answerId));
 }

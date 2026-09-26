@@ -39,7 +39,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { type AnswerButtonAction, handleAnswerButton, handleParentMessage } from "./answers.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
-import { deliverOutbound } from "./gateway.ts";
+import { deliverOutbound, STRANDED_AFTER_MINUTES } from "./gateway.ts";
 import { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import {
@@ -50,6 +50,7 @@ import {
   seedHealthWordsConsent,
   seedLinkedGroup,
 } from "./testing/seed.ts";
+import { reconcile } from "./tick.ts";
 
 let h: Harness;
 
@@ -762,31 +763,36 @@ describe("understandAnswer", () => {
     expect(h.logger.entries.map((entry) => entry.event)).toContain("away_wake_failed");
   });
 
-  // A step after the models can fail: here the queue refuses the flag notice's delivery job, so the
-  // notices roll back. The answer must not count as understood before they are written, or the
-  // queue's retry and `reconcile` take it for done and the flag never reaches anyone.
+  // A step after the models can fail: here the database connection drops as the flag's transaction
+  // commits, so the flag and its notices roll back. The answer must not count as understood before
+  // they are written, or the queue's retry and `reconcile` take it for done and the flag never
+  // reaches anyone.
   it("leaves understood_at null until the flag's notices are written, so the queue's retry raises the flag once", async () => {
     const scene = await morning();
     const answer = await herText(scene, "I fell in the bathroom last night");
     withAi({ flag: async () => raised(null) });
-    let refused = false;
+    let dropped = false;
     const deps: Deps = {
       ...h.deps,
-      queues: {
-        ...h.deps.queues,
-        outbound: {
-          send: async (job, options) => {
-            if (!refused) {
-              refused = true;
-              throw new Error("Queue send failed: overloaded");
-            }
-            await h.queues.outbound.send(job, options);
-          },
+      db: new Proxy(h.deps.db, {
+        get(target, property) {
+          if (property === "transaction" && !dropped) {
+            return async (work: Parameters<typeof target.transaction>[0]) => {
+              dropped = true;
+              await target.transaction(async (tx) => {
+                await work(tx);
+                throw new Error("Connection terminated unexpectedly");
+              });
+            };
+          }
+          const value: unknown = Reflect.get(target, property);
+          return typeof value === "function" ? value.bind(target) : value;
         },
-      },
+      }),
     };
 
-    await expect(understandAnswer(deps, answer.id)).rejects.toThrow("overloaded");
+    await expect(understandAnswer(deps, answer.id)).rejects.toThrow("Connection terminated");
+    expect((await outboundRows()).filter((row) => row.kind === "flag")).toEqual([]);
     expect((await answerById(answer.id)).understoodAt).toBeNull();
 
     await understandAnswer(h.deps, answer.id);
@@ -801,6 +807,100 @@ describe("understandAnswer", () => {
       understoodAt: h.clock.now(),
       processingAttempts: 2,
     });
+  });
+
+  // The outbound queue can refuse sends for longer than the understand queue's retries last (an
+  // incident, backpressure): each run of the job counts an attempt, and one that threw every time
+  // would end in the dead-letter queue with its attempts spent, which `reconcile` never re-runs.
+  // The flag and the away must not depend on that queue: their messages are rows written with
+  // them, and `reconcile` re-drives a row whose delivery job never reached the queue.
+  it("keeps the flag, its notices and the away when the outbound queue refuses every send, and reconcile delivers them", async () => {
+    const scene = await morning();
+    const answer = await herText(
+      scene,
+      "I fell in the bathroom last night, I'm staying at my daughter's until Sunday",
+    );
+    withAi({
+      understand: async (input) => understood(input, { from: TODAY, until: "2026-09-20" }),
+      flag: async () => raised(null),
+    });
+    const deps: Deps = {
+      ...h.deps,
+      queues: {
+        ...h.deps.queues,
+        outbound: {
+          send: async () => {
+            throw new Error("Queue send failed: overloaded");
+          },
+        },
+      },
+    };
+
+    // The understand queue's deliveries of the job (`max_retries` 3, `retry_delay` 60): the first
+    // and three more a minute apart, until one returns.
+    let deliveries = 0;
+    let done = false;
+    while (!done && deliveries < 4) {
+      deliveries += 1;
+      done = await understandAnswer(deps, answer.id).then(
+        () => true,
+        () => false,
+      );
+      if (!done) h.clock.advanceMinutes(1);
+    }
+    h.clock.advanceMinutes(STRANDED_AFTER_MINUTES + 1);
+    await reconcile(h.deps);
+    await h.run(handlers());
+
+    const flags = (await outboundRows()).filter((row) => row.kind === "flag");
+    expect(flags.map((row) => [row.conversationId, row.status])).toEqual([
+      [scene.seed.organiserLink.externalId, "sent"],
+      [ADMIN, "sent"],
+    ]);
+    expect(
+      h.telegram.sentTo(scene.seed.organiserLink.externalId).map((sent) => sent.message.text),
+    ).toEqual([t("en", "flag.notice_no_words", { name: "Mom" })]);
+    expect(h.telegram.sentTo(ADMIN).map((sent) => sent.message.text)).toEqual([
+      `Flag in The Chens. Open: ${adminLink(scene.seed.family.id)}`,
+    ]);
+    expect((await eventNames()).filter((name) => name === "flag_raised")).toHaveLength(1);
+    expect(await h.db.select().from(awayPeriods)).toHaveLength(1);
+    expect(
+      h.telegram.sentTo(scene.seed.memberLink.externalId).map((sent) => sent.message.text),
+    ).toContain("Until Sunday 20 September, then. Have a lovely time.");
+    // The first delivery finished the answer: a refused hand-over is logged, not thrown.
+    expect(deliveries).toBe(1);
+    expect(await answerById(answer.id)).toMatchObject({ flag: true, processingAttempts: 1 });
+    expect((await answerById(answer.id)).understoodAt).not.toBeNull();
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("understand_handover_failed");
+  });
+
+  it("finishes a voice answer whose transcript post the outbound queue refuses, and reconcile delivers the post", async () => {
+    const scene = await morning();
+    const answer = await herVoice(scene);
+    await ingestAnswerMedia(h.deps, answer.id);
+    const deps: Deps = {
+      ...h.deps,
+      queues: {
+        ...h.deps.queues,
+        outbound: {
+          send: async () => {
+            throw new Error("Queue send failed: overloaded");
+          },
+        },
+      },
+    };
+
+    await understandAnswer(deps, answer.id);
+
+    expect((await answerById(answer.id)).understoodAt).toEqual(h.clock.now());
+    h.clock.advanceMinutes(STRANDED_AFTER_MINUTES + 1);
+    await reconcile(h.deps);
+    await h.run(handlers());
+    expect(h.telegram.sentTo(GROUP).map((sent) => sent.message.text)).toEqual([
+      "☀️ Mom answered Mia · 08:12",
+      "Mom (voice): fake transcript",
+    ]);
   });
 
   it("writes the away date in her language", async () => {
