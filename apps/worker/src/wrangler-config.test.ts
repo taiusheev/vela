@@ -300,6 +300,9 @@ describe("the two Workers' configurations", () => {
     const header = pilotHeader();
 
     expect(header).toContain(MEDIA_OFF_EFFECTS);
+    // Since ADR-33 "off" also switches off the app's photo asks, and the header says how.
+    expect(MEDIA_OFF_EFFECTS).toContain("a photo from the app has nowhere to be kept");
+    expect(MEDIA_OFF_EFFECTS).toContain("503 with media_storage_off");
     expect(header).toContain("--from resources` on that commit before it is merged to main");
   });
 

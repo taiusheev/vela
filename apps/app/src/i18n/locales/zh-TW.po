@@ -184,6 +184,10 @@ msgstr "請教一個詞"
 msgid "Account"
 msgstr "帳號"
 
+#: src/components/vote-options.tsx
+msgid "Add an option"
+msgstr "新增選項"
+
 #: src/data/onboarding.ts
 msgid "Adelaide"
 msgstr "阿得雷德"
@@ -284,6 +288,10 @@ msgstr "中部時間"
 msgid "Checking…"
 msgstr "確認中…"
 
+#: src/components/photo-slots.tsx
+msgid "Choose a photo"
+msgstr "選一張照片"
+
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "關閉"
@@ -295,6 +303,10 @@ msgstr "爸爸"
 #: src/data/onboarding.ts
 msgid "Darwin"
 msgstr "達爾文"
+
+#: src/data/photos.ts
+msgid "Do you remember this?"
+msgstr "您還記得這張嗎？"
 
 #. who a nearby contact is to her
 #: src/data/quiet.ts
@@ -539,6 +551,10 @@ msgstr "超過三十天的內容會收進家族故事書。"
 msgid "One moment a day"
 msgstr "一天一次"
 
+#: src/components/vote-options.tsx
+msgid "Option {number}"
+msgstr "選項 {number}"
+
 #: app/vela-light.tsx
 msgid "or $9.99 a month · a second person +50%"
 msgstr "或每月 9.99 美元 · 第二位 +50%"
@@ -570,6 +586,20 @@ msgstr "暫停中 · {plan}"
 msgid "Perth"
 msgstr "伯斯"
 
+#: src/components/family-photo.tsx
+#: src/components/photo-slots.tsx
+msgid "Photo"
+msgstr "照片"
+
+#: src/components/family-photo.tsx
+msgid "Photo in the family group"
+msgstr "照片在家人群組裡"
+
+#: app/ask.tsx
+#: src/components/photo-slots.tsx
+msgid "Photos are not switched on here yet."
+msgstr "這裡還沒有開啟照片功能。"
+
 #: src/data/useToday.ts
 msgid "picked a photo"
 msgstr "選了一張照片"
@@ -585,6 +615,15 @@ msgstr "安靜通知"
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記事與提醒 · 可以保存的家族故事書"
+
+#: src/components/photo-slots.tsx
+#: src/components/vote-options.tsx
+msgid "Remove"
+msgstr "移除"
+
+#: src/components/photo-slots.tsx
+msgid "Replace"
+msgstr "換一張"
 
 #: app/exchange/[id].tsx
 msgid "Reply"
@@ -698,6 +737,10 @@ msgstr "這位家人通常起床的時間"
 msgid "She will see · {language}"
 msgstr "這位家人會看到 · {language}"
 
+#: src/components/vote-options.tsx
+msgid "Short answers she can tap, from two to seven."
+msgstr "可以直接點選的簡短答案，兩到七個。"
+
 #: app/(tabs)/exchanges.tsx
 msgid "Show originals"
 msgstr "顯示原文"
@@ -802,6 +845,14 @@ msgstr "找不到這則問答。"
 msgid "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
 msgstr "這個號碼無法使用。從國外撥打時，國碼後面的 0 要去掉，請試試 {shorter}。"
 
+#: src/components/photo-slots.tsx
+msgid "That photo did not go up. Try again."
+msgstr "這張照片沒有傳上去，請再試一次。"
+
+#: src/components/photo-slots.tsx
+msgid "That photo is no longer here. Choose it again."
+msgstr "這張照片已經不在了，請重新選擇。"
+
 #: app/sign-in.tsx
 msgid "That took too long to check. Try the code again."
 msgstr "確認的時間太久了。請再輸入一次驗證碼。"
@@ -838,6 +889,10 @@ msgstr "家人會在這裡看到。這位家人不會收到：早安訊息只會
 msgid "The light is ready"
 msgstr "燈已經準備好了"
 
+#: src/components/family-photo.tsx
+msgid "The picked photo"
+msgstr "選中的照片"
+
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
@@ -862,6 +917,10 @@ msgstr "這是範例家庭，所以沒有人離開。"
 #: app/exchange/[id].tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "這是您自己的早安訊息；回覆是給家人的。"
+
+#: src/components/photo-slots.tsx
+msgid "This photo could not be used. Choose another."
+msgstr "這張照片無法使用，請換一張。"
 
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -913,6 +972,14 @@ msgstr "明天 · 輪到您問{recipient}"
 msgid "Tomorrow morning"
 msgstr "明天早上"
 
+#: src/components/photo-slots.tsx
+msgid "Too many photos for now. Try again later."
+msgstr "目前照片太多了，請稍後再試。"
+
+#: src/components/photo-slots.tsx
+msgid "Try again"
+msgstr "再試一次"
+
 #: src/data/ask.ts
 msgid "Two photos"
 msgstr "兩張照片"
@@ -928,6 +995,10 @@ msgstr "英國"
 #: src/data/onboarding.ts
 msgid "United States"
 msgstr "美國"
+
+#: src/components/photo-slots.tsx
+msgid "Uploading {percent}%"
+msgstr "正在上傳 {percent}%"
 
 #: app/sign-in.tsx
 msgid "Use something else"
@@ -1049,6 +1120,10 @@ msgstr "什麼時候"
 #: app/ask.tsx
 msgid "Whenever"
 msgstr "哪天都可以"
+
+#: src/data/photos.ts
+msgid "Which one do you like more?"
+msgstr "您比較喜歡哪一張？"
 
 #: src/data/exchanges.ts
 msgid "Which one of us did you teach to make the pies?"

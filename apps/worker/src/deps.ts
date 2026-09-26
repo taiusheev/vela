@@ -128,6 +128,16 @@ function createMediaStore(bucket: R2Bucket): MediaStore {
     async delete(key) {
       await bucket.delete(key);
     },
+    async head(key) {
+      const object = await bucket.head(key);
+      if (object === null) {
+        return null;
+      }
+      return {
+        bytes: object.size,
+        mime: object.httpMetadata?.contentType ?? "application/octet-stream",
+      };
+    },
   };
 }
 
@@ -219,12 +229,12 @@ export function createAiPort(
 }
 
 /**
- * What media storage off leaves out, in the words of the `media_storage_off` line. The header of
- * wrangler.jsonc repeats it word for word, and `src/wrangler-config.test.ts` holds the two
- * together.
+ * What media storage off leaves out, in the words of the `media_storage_off` line: the copies of
+ * what she sends, and since ADR-33 the app's photo asks. The header of wrangler.jsonc repeats it
+ * word for word, and `src/wrangler-config.test.ts` holds the two together.
  */
 export const MEDIA_OFF_EFFECTS =
-  "nothing she sends is copied into Vela's own storage: the light, the family group, and the transcript of a voice answer are unchanged, because Telegram carries the file and the pipeline fetches it from there, but each media row keeps only what Telegram said about the file, its id, its type and its size, with no storage key and no copy of the file itself";
+  "nothing she sends is copied into Vela's own storage: the light, the family group, and the transcript of a voice answer are unchanged, because Telegram carries the file and the pipeline fetches it from there, but each media row keeps only what Telegram said about the file, its id, its type and its size, with no storage key and no copy of the file itself; and a photo from the app has nowhere to be kept, so the API answers its upload 503 with media_storage_off, GET /v1/me says photos is false, and the app keeps its photo asks switched off";
 
 /**
  * The media port `MEDIA_STORAGE` names (decision M, 2026-09-20). "r2" stores media in the bucket

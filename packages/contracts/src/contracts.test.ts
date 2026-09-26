@@ -591,34 +591,47 @@ describe("API accounts and plan reads", () => {
             family: { ...membership.family, created_by: user.id },
           },
         ],
+        photos: true,
         session_id: "private-session",
       }),
-    ).toEqual({ user, memberships: [membership] });
-    expect(ApiMe.parse({ user, memberships: [] })).toEqual({ user, memberships: [] });
+    ).toEqual({ user, memberships: [membership], photos: true });
+    expect(ApiMe.parse({ user, memberships: [], photos: false })).toEqual({
+      user,
+      memberships: [],
+      photos: false,
+    });
+  });
+
+  it("says whether photos are kept, and never leaves it out", () => {
+    expect(ApiMe.safeParse({ user, memberships: [] }).success).toBe(false);
+    expect(ApiMe.safeParse({ user, memberships: [], photos: "yes" }).success).toBe(false);
   });
 
   it("accepts paused memberships but not departed or invited ones", () => {
     expect(
-      ApiMe.safeParse({ user, memberships: [{ ...membership, status: "paused" }] }).success,
+      ApiMe.safeParse({ user, memberships: [{ ...membership, status: "paused" }], photos: true })
+        .success,
     ).toBe(true);
     for (const status of ["invited", "left", "deceased", "unknown"]) {
-      expect(ApiMe.safeParse({ user, memberships: [{ ...membership, status }] }).success).toBe(
-        false,
-      );
+      expect(
+        ApiMe.safeParse({ user, memberships: [{ ...membership, status }], photos: true }).success,
+      ).toBe(false);
     }
   });
 
   it("rejects malformed account and family identifiers or roles", () => {
-    expect(ApiMe.safeParse({ user: { ...user, id: "invalid" }, memberships: [] }).success).toBe(
-      false,
-    );
-    expect(ApiMe.safeParse({ user, memberships: [{ ...membership, role: "admin" }] }).success).toBe(
-      false,
-    );
+    expect(
+      ApiMe.safeParse({ user: { ...user, id: "invalid" }, memberships: [], photos: true }).success,
+    ).toBe(false);
+    expect(
+      ApiMe.safeParse({ user, memberships: [{ ...membership, role: "admin" }], photos: true })
+        .success,
+    ).toBe(false);
     expect(
       ApiMe.safeParse({
         user,
         memberships: [{ ...membership, family: { ...membership.family, id: "invalid" } }],
+        photos: true,
       }).success,
     ).toBe(false);
   });

@@ -13,14 +13,46 @@ export function readFixture(name: string): string {
   return readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 }
 
+/** One file part of a multipart request. */
+export interface RecordedFile {
+  /** The form field it was sent under. */
+  readonly field: string;
+  readonly filename: string;
+  readonly type: string;
+  readonly bytes: Uint8Array;
+}
+
 export interface RecordedRequest {
   readonly url: string;
   readonly httpMethod: string;
   /** The last path segment: the Bot API method, or the file name of a download. */
   readonly apiMethod: string;
   readonly contentType: string | null;
-  /** The parsed JSON body, or undefined for requests without one. */
+  /**
+   * The parsed JSON body; for a multipart form, its text fields, each one that holds JSON parsed;
+   * undefined for requests without one.
+   */
   readonly params: unknown;
+  /** A multipart form's file parts, in order; empty for any other body. */
+  readonly files: readonly RecordedFile[];
+}
+
+async function readForm(form: FormData): Promise<{ params: unknown; files: RecordedFile[] }> {
+  const params: Record<string, unknown> = {};
+  const files: RecordedFile[] = [];
+  for (const [field, value] of form.entries()) {
+    if (typeof value === "string") {
+      params[field] = /^[[{]/.test(value) ? JSON.parse(value) : value;
+    } else {
+      files.push({
+        field,
+        filename: value.name,
+        type: value.type,
+        bytes: new Uint8Array(await value.arrayBuffer()),
+      });
+    }
+  }
+  return { params, files };
 }
 
 export type Responder = (request: RecordedRequest) => Response | Promise<Response>;
@@ -35,12 +67,14 @@ export function createRecordingFetch(responder: Responder): RecordingFetch {
   const fakeFetch: typeof fetch = async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const body = init?.body;
+    const form = body instanceof FormData ? await readForm(body) : undefined;
     const request: RecordedRequest = {
       url,
       httpMethod: init?.method ?? "GET",
       apiMethod: url.slice(url.lastIndexOf("/") + 1),
       contentType: new Headers(init?.headers).get("content-type"),
-      params: typeof body === "string" ? JSON.parse(body) : undefined,
+      params: form?.params ?? (typeof body === "string" ? JSON.parse(body) : undefined),
+      files: form?.files ?? [],
     };
     requests.push(request);
     return responder(request);

@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import type { ReplyKind } from "@vela/contracts";
 import { clockTime } from "./format.ts";
+import type { ExchangePhoto } from "./today.ts";
 
 /**
  * What the Exchanges list and one exchange need (spec §14.1 A8), in the screens’ idiom. With an API
@@ -42,6 +43,10 @@ export interface Exchange {
    * so on any older one a reply is kept for the family and never heard (API contract §4).
    */
   repliesReachHer?: boolean;
+  /** The ask's photos, in the order she saw them (ADR-33): a photo choice's first is her "1". */
+  photos?: ExchangePhoto[];
+  /** The photo she picked on a photo choice, which the detail screen rings. */
+  picked?: string;
 }
 
 /** The receipt in the words `useToday` gives a real one, so the two share one translation. */
@@ -109,6 +114,8 @@ export function exchangesFixture(): Exchange[] {
       },
       replies: [{ id: "r5", from: "Anna", kind: "hug" }],
       receipt: seen(mom, clockTime(8, 41)),
+      // Sent through the family group, so the example shows where such a photo is kept.
+      photos: [{ id: "p3", width: null, height: null, stored: false }],
     },
   ];
 }

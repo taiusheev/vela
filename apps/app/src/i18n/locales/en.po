@@ -183,6 +183,10 @@ msgstr "A word to teach"
 msgid "Account"
 msgstr "Account"
 
+#: src/components/vote-options.tsx
+msgid "Add an option"
+msgstr "Add an option"
+
 #: src/data/onboarding.ts
 msgid "Adelaide"
 msgstr "Adelaide"
@@ -283,6 +287,10 @@ msgstr "Central"
 msgid "Checking…"
 msgstr "Checking…"
 
+#: src/components/photo-slots.tsx
+msgid "Choose a photo"
+msgstr "Choose a photo"
+
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "Close"
@@ -294,6 +302,10 @@ msgstr "Dad"
 #: src/data/onboarding.ts
 msgid "Darwin"
 msgstr "Darwin"
+
+#: src/data/photos.ts
+msgid "Do you remember this?"
+msgstr "Do you remember this?"
 
 #. who a nearby contact is to her
 #: src/data/quiet.ts
@@ -538,6 +550,10 @@ msgstr "Older than thirty days lives in the family book."
 msgid "One moment a day"
 msgstr "One moment a day"
 
+#: src/components/vote-options.tsx
+msgid "Option {number}"
+msgstr "Option {number}"
+
 #: app/vela-light.tsx
 msgid "or $9.99 a month · a second person +50%"
 msgstr "or $9.99 a month · a second person +50%"
@@ -569,6 +585,20 @@ msgstr "Paused · {plan}"
 msgid "Perth"
 msgstr "Perth"
 
+#: src/components/family-photo.tsx
+#: src/components/photo-slots.tsx
+msgid "Photo"
+msgstr "Photo"
+
+#: src/components/family-photo.tsx
+msgid "Photo in the family group"
+msgstr "Photo in the family group"
+
+#: app/ask.tsx
+#: src/components/photo-slots.tsx
+msgid "Photos are not switched on here yet."
+msgstr "Photos are not switched on here yet."
+
 #: src/data/useToday.ts
 msgid "picked a photo"
 msgstr "picked a photo"
@@ -584,6 +614,15 @@ msgstr "Quiet"
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
+
+#: src/components/photo-slots.tsx
+#: src/components/vote-options.tsx
+msgid "Remove"
+msgstr "Remove"
+
+#: src/components/photo-slots.tsx
+msgid "Replace"
+msgstr "Replace"
 
 #: app/exchange/[id].tsx
 msgid "Reply"
@@ -697,6 +736,10 @@ msgstr "She usually wakes at"
 msgid "She will see · {language}"
 msgstr "She will see · {language}"
 
+#: src/components/vote-options.tsx
+msgid "Short answers she can tap, from two to seven."
+msgstr "Short answers she can tap, from two to seven."
+
 #: app/(tabs)/exchanges.tsx
 msgid "Show originals"
 msgstr "Show originals"
@@ -801,6 +844,14 @@ msgstr "That exchange is not here."
 msgid "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
 msgstr "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
 
+#: src/components/photo-slots.tsx
+msgid "That photo did not go up. Try again."
+msgstr "That photo did not go up. Try again."
+
+#: src/components/photo-slots.tsx
+msgid "That photo is no longer here. Choose it again."
+msgstr "That photo is no longer here. Choose it again."
+
 #: app/sign-in.tsx
 msgid "That took too long to check. Try the code again."
 msgstr "That took too long to check. Try the code again."
@@ -837,6 +888,10 @@ msgstr "The family sees it here. She will not hear it: her mornings read back on
 msgid "The light is ready"
 msgstr "The light is ready"
 
+#: src/components/family-photo.tsx
+msgid "The picked photo"
+msgstr "The picked photo"
+
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
@@ -861,6 +916,10 @@ msgstr "This is the example family, so nobody left."
 #: app/exchange/[id].tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "This is your own morning; replies are for the family."
+
+#: src/components/photo-slots.tsx
+msgid "This photo could not be used. Choose another."
+msgstr "This photo could not be used. Choose another."
 
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -912,6 +971,14 @@ msgstr "Tomorrow · your turn to ask {recipient}"
 msgid "Tomorrow morning"
 msgstr "Tomorrow morning"
 
+#: src/components/photo-slots.tsx
+msgid "Too many photos for now. Try again later."
+msgstr "Too many photos for now. Try again later."
+
+#: src/components/photo-slots.tsx
+msgid "Try again"
+msgstr "Try again"
+
 #: src/data/ask.ts
 msgid "Two photos"
 msgstr "Two photos"
@@ -927,6 +994,10 @@ msgstr "United Kingdom"
 #: src/data/onboarding.ts
 msgid "United States"
 msgstr "United States"
+
+#: src/components/photo-slots.tsx
+msgid "Uploading {percent}%"
+msgstr "Uploading {percent}%"
 
 #: app/sign-in.tsx
 msgid "Use something else"
@@ -1048,6 +1119,10 @@ msgstr "When"
 #: app/ask.tsx
 msgid "Whenever"
 msgstr "Whenever"
+
+#: src/data/photos.ts
+msgid "Which one do you like more?"
+msgstr "Which one do you like more?"
 
 #: src/data/exchanges.ts
 msgid "Which one of us did you teach to make the pies?"

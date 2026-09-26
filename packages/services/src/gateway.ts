@@ -23,8 +23,8 @@ import {
   ChannelSendError,
   type Lang,
   LocalDate,
-  type MediaRef,
   type OutboundKind,
+  type OutboundMediaRef,
   OutboundMessage,
   type SendResult,
 } from "@vela/contracts";
@@ -53,6 +53,7 @@ import {
   type FailedOutcome,
   QuietNoticeEffect,
 } from "./gateway-effects.ts";
+import { loadOutboundFiles } from "./outbound-media.ts";
 import { familyHasEnded, memberById, type Queryable, repointFamilyGroup } from "./repo.ts";
 
 /** Minutes before each retry of a send that failed for a passing reason: the first send, then these. */
@@ -115,7 +116,7 @@ export interface OutboundRequestBase {
   lang: Lang;
   text: string;
   buttons?: Button[][];
-  media?: MediaRef[];
+  media?: OutboundMediaRef[];
   replyToMessageId?: string;
   ref?: MessageRefIntent;
   /**
@@ -376,7 +377,12 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
 
   let result: SendResult;
   try {
-    result = await deps.channels.get(row.channel).send(message.data);
+    // Stored photos (ADR-33) are loaded for this attempt; one that cannot be is a passing failure.
+    const files = await loadOutboundFiles(deps, row.id, message.data);
+    const adapter = deps.channels.get(row.channel);
+    result = await (files === undefined
+      ? adapter.send(message.data)
+      : adapter.send(message.data, files));
   } catch (error) {
     if (error instanceof ChannelSendError) {
       return handleSendError(deps, loaded, payload.data, error);

@@ -61,6 +61,9 @@ const LATIN_PLACEHOLDERS: ReadonlySet<string> = new Set([
   "sentTo",
   "shorter",
   "code",
+  // A photo's upload in digits ("42%"), and a vote option's number.
+  "percent",
+  "number",
 ]);
 
 /** Names that hide a time or a date from the rule above; they are written `time` and `date`. */

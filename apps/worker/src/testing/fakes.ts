@@ -47,7 +47,7 @@ export interface FakeR2Object {
 }
 
 /**
- * An R2 bucket with the three operations the media port uses, over a map the test reads. The pool's
+ * An R2 bucket with the four operations the media port uses, over a map the test reads. The pool's
  * runtime binds no real one: development's `MEDIA_STORAGE` is "off" (decision M), so wrangler.jsonc
  * declares no `r2_buckets` there, exactly as a deployed environment with storage off declares none.
  */
@@ -71,6 +71,12 @@ export function fakeR2Bucket(objects: Map<string, FakeR2Object>): R2Bucket {
     },
     delete: async (key: string) => {
       objects.delete(key);
+    },
+    head: async (key: string) => {
+      const object = objects.get(key);
+      return object === undefined
+        ? null
+        : { size: object.body.byteLength, httpMetadata: { contentType: object.mime } };
     },
   } as unknown as R2Bucket;
 }
@@ -160,7 +166,12 @@ function createFakeDeps(logs: LogLine[]): Deps {
       understand: { send: async () => {} },
     },
     scheduler: { wakeAt: async () => {} },
-    media: { put: async () => {}, get: async () => null, delete: async () => {} },
+    media: {
+      put: async () => {},
+      get: async () => null,
+      delete: async () => {},
+      head: async () => null,
+    },
     channels: { get: () => fakeAdapter([], "secret") },
     ai: createFakeAi(),
     stt: createFakeStt(),

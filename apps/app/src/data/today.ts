@@ -32,6 +32,17 @@ export interface TodayReply {
   text: string;
 }
 
+/**
+ * A photo an ask showed her (ADR-33). `stored` says whether the API can show it; a photo only
+ * Telegram holds cannot be, and is shown as a placeholder.
+ */
+export interface ExchangePhoto {
+  id: string;
+  width: number | null;
+  height: number | null;
+  stored: boolean;
+}
+
 export interface TodayExchange {
   /** Undefined for Vela's own hello, and for an ask whose asker has since been deleted. */
   asker?: string;
@@ -42,6 +53,10 @@ export interface TodayExchange {
   replies: TodayReply[];
   /** "Mom saw it · 8:12", shown only once she has. */
   receipt?: string;
+  /** The ask's photos, in the order she saw them: a photo choice's first is her "1". */
+  photos?: ExchangePhoto[];
+  /** The photo she picked on a photo choice, by its id. */
+  picked?: string;
 }
 
 /** Vela's suggestion for her morning, which "Use this" puts into Ask with its kind. */

@@ -31,6 +31,7 @@ export {
   type HarnessOptions,
   type JobHandlers,
 } from "./harness.ts";
+export { type TestJpegOptions, testJpeg } from "./jpeg.ts";
 export {
   acceptInvitationForDevelopment,
   type SeedExchangeOptions,

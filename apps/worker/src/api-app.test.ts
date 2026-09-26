@@ -36,7 +36,8 @@ const IDENTITY: SessionIdentity = { authSubject: "verified-user", sessionId: "ve
 const PLAN_PATH = `/v1/families/${FAMILY_ID}/plan`;
 const LIGHTS_PATH = `/v1/families/${FAMILY_ID}/lights`;
 const TODAY_PATH = `/v1/families/${FAMILY_ID}/today`;
-const ME: ApiMe = {
+/** What the account service answers; the route adds `photos`, the API's own. */
+const ME: Omit<ApiMe, "photos"> = {
   user: { id: USER_ID, display_name: "Synthetic user", language: "en", tz: "Asia/Taipei" },
   memberships: [
     {
@@ -47,6 +48,8 @@ const ME: ApiMe = {
     },
   ],
 };
+/** What `GET /v1/me` answers from `ME` on a runtime that keeps no photos. */
+const ME_BODY: ApiMe = { ...ME, photos: false };
 const PLAN: ApiFamilyPlan = {
   family_id: FAMILY_ID,
   plan: "light",
@@ -102,10 +105,12 @@ const TODAY: ApiToday = {
         kind: "text",
         text: "The tomatoes finally turned.",
         at: "2026-09-22T00:12:00.000Z",
+        picked_media_id: null,
       },
       replies: [{ from: "Synthetic user", kind: "heart", text: null }],
       seen_at: null,
       replies_reach_her: true,
+      photos: [],
     },
   ],
   tomorrow: [],
@@ -225,6 +230,10 @@ function fixture(enableWrites = false) {
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
     }),
+    // Photos have their own tests (api-media.test.ts); here they are never reached.
+    readApiMedia: vi
+      .fn<ApiReadServices["readApiMedia"]>()
+      .mockRejectedValue(new Error("no photo read in these tests")),
   };
   const logger = { error: vi.fn<ApiRuntime["logger"]["error"]>() };
   const writes = {
@@ -268,6 +277,9 @@ function fixture(enableWrites = false) {
           replayed: false,
           after: { outboundIds: ["row-1"], wakeMemberIds: [] },
         }),
+      uploadApiMedia: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["uploadApiMedia"]>()
+        .mockRejectedValue(new Error("no photo upload in these tests")),
     },
     nudges: {
       deliver: vi.fn<(id: string) => Promise<void>>().mockResolvedValue(undefined),
@@ -362,7 +374,7 @@ describe("isolated API read routes", () => {
       },
     });
 
-    await expectResponse(await f.app.request(request), 200, ME);
+    await expectResponse(await f.app.request(request), 200, ME_BODY);
     expect(f.verifySession).toHaveBeenCalledExactlyOnceWith(request);
     expect(f.openDatabase).toHaveBeenCalledExactlyOnceWith();
     expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY);
@@ -412,7 +424,7 @@ describe("isolated API read routes", () => {
       role: "organiser",
     });
 
-    await expectResponse(await f.app.request(request), 200, path === "/v1/me" ? ME : PLAN);
+    await expectResponse(await f.app.request(request), 200, path === "/v1/me" ? ME_BODY : PLAN);
     expect(readJson).not.toHaveBeenCalled();
     expect(request.bodyUsed).toBe(false);
     if (path === "/v1/me") {
@@ -510,7 +522,7 @@ describe("isolated API read routes", () => {
     };
     f.services.loadApiMe.mockResolvedValue(privateResult);
 
-    await expectResponse(await f.app.request("/v1/me"), 200, ME);
+    await expectResponse(await f.app.request("/v1/me"), 200, ME_BODY);
     expect(f.close).toHaveBeenCalledOnce();
   });
 
@@ -592,7 +604,7 @@ describe("isolated API read routes", () => {
   );
 
   it.each([
-    ["success", 200, ME],
+    ["success", 200, ME_BODY],
     ["not_found", 404, NOT_FOUND],
     ["denied", 404, FAMILY_NOT_FOUND],
     ["internal", 500, INTERNAL],
@@ -637,7 +649,7 @@ describe("isolated API read routes", () => {
     expect(settled).toBe(false);
     release.resolve();
 
-    await expectResponse(await response, 200, ME);
+    await expectResponse(await response, 200, ME_BODY);
     expect(f.close).toHaveBeenCalledOnce();
   });
 
@@ -1319,7 +1331,7 @@ describe("isolated API account writes", () => {
 
   it("keeps existing GETs read-only when writes are configured", async () => {
     const f = fixture(true);
-    await expectResponse(await f.app.request("/v1/me"), 200, ME);
+    await expectResponse(await f.app.request("/v1/me"), 200, ME_BODY);
     await expectResponse(await f.app.request(PLAN_PATH), 200, PLAN);
     expect(f.writes.verifyActiveSession).not.toHaveBeenCalled();
     expect(f.writes.services.provisionApiAccount).not.toHaveBeenCalled();

@@ -60,6 +60,32 @@ export const MediaRef = z
   });
 export type MediaRef = z.infer<typeof MediaRef>;
 
+/**
+ * A file an outbound message carries (ADR-33): anything a `MediaRef` names, or a file Vela keeps
+ * itself under `storageKey`, whose bytes the gateway loads on each attempt and hands to
+ * `ChannelAdapter.send`, so no URL to a family's photo is ever made or stored. Inbound events never
+ * carry a storage key, so `MediaRef`, which they use, has none.
+ */
+export const OutboundMediaRef = z
+  .object({
+    kind: MediaKind,
+    providerFileId: z.string().min(1).optional(),
+    /** Carried along from an inbound `MediaRef`; it neither fetches nor sends the file. */
+    providerUniqueId: z.string().min(1).optional(),
+    url: z.url().optional(),
+    /** The key in Vela's own media store. */
+    storageKey: z.string().min(1).max(512).optional(),
+    mime: z.string().optional(),
+    durationMs: z.number().int().nonnegative().optional(),
+    bytes: z.number().int().nonnegative().optional(),
+  })
+  .refine(
+    (ref) =>
+      ref.providerFileId !== undefined || ref.url !== undefined || ref.storageKey !== undefined,
+    { message: "an outbound media reference needs a providerFileId, a url or a storageKey" },
+  );
+export type OutboundMediaRef = z.infer<typeof OutboundMediaRef>;
+
 export const InboundEvent = z.object({
   channel: Channel,
   /** Unique per platform event; the idempotency key for webhook redelivery. */
@@ -124,7 +150,7 @@ export const OutboundMessage = z.object({
   /** Rows of buttons. */
   buttons: z.array(z.array(Button).min(1).max(4)).max(8).optional(),
   /** Sent before the text, in order: photos as an album where supported, audio as voice. */
-  media: z.array(MediaRef).max(10).optional(),
+  media: z.array(OutboundMediaRef).max(10).optional(),
   replyToMessageId: z.string().optional(),
 });
 export type OutboundMessage = z.infer<typeof OutboundMessage>;
@@ -163,8 +189,11 @@ export interface ChannelAdapter {
   verify(input: WebhookInput): Promise<boolean>;
   /** Parse a verified webhook body. Unknown update types yield no events; malformed JSON throws. */
   parse(input: WebhookInput): InboundEvent[];
-  /** Throws `ChannelSendError` on failure. */
-  send(message: OutboundMessage): Promise<SendResult>;
+  /**
+   * Throws `ChannelSendError` on failure. `files` holds the bytes of every `media` item that has
+   * only a `storageKey`, keyed by that key, loaded by the gateway for this attempt (ADR-33).
+   */
+  send(message: OutboundMessage, files?: ReadonlyMap<string, FetchedMedia>): Promise<SendResult>;
   /** Acknowledge a button tap (stops the client spinner). Safe to call once per tap. */
   acknowledgeButton(event: InboundEvent, text?: string): Promise<void>;
   /** Remove the buttons from a sent message, optionally replacing its text to show the choice. */

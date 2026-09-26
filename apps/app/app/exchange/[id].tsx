@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, replyRefusal, replyTo } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
+import { ExchangePhotos } from "../../src/components/family-photo.tsx";
 import {
   Card,
   Eyebrow,
@@ -124,6 +125,7 @@ export default function ExchangeScreen() {
           <Eyebrow>
             {[exchange.day, t`${asker} asked`].filter((part) => part.length > 0).join(" · ")}
           </Eyebrow>
+          <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size="full" />
           <Words variant="voice">{exchange.ask}</Words>
           {exchange.answer === undefined ? (
             <Words variant="body" tone="ink2">

@@ -55,7 +55,7 @@ export {
   nothingAfterCommit,
   runAfterCommit,
 } from "./api-after-commit.ts";
-export { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
+export { AskDayTakenError, AskPhotoMissingError, composeApiAsk } from "./api-asks.ts";
 export { type ApiExchangePageQuery, loadApiExchanges } from "./api-exchanges.ts";
 export { AlreadyOrganiserError, type ApiFamilyDeps, createApiFamily } from "./api-families.ts";
 export { loadApiFamily } from "./api-family.ts";
@@ -66,6 +66,14 @@ export {
   runApiMutation,
 } from "./api-idempotency.ts";
 export { loadApiLights } from "./api-lights.ts";
+export {
+  MAX_LIVE_PHOTOS_PER_FAMILY,
+  MAX_PHOTOS_PER_ACCOUNT_DAY,
+  MediaRefusedError,
+  readApiMedia,
+  type UploadApiMediaDeps,
+  uploadApiMedia,
+} from "./api-media.ts";
 export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
 export { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
 export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";

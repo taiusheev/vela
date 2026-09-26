@@ -163,6 +163,10 @@ export function createFakeMediaStore(): FakeMediaStore {
     delete: async (key) => {
       objects.delete(key);
     },
+    head: async (key) => {
+      const object = objects.get(key);
+      return object === undefined ? null : { bytes: object.body.byteLength, mime: object.mime };
+    },
     clear: () => {
       objects.clear();
     },

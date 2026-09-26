@@ -35,6 +35,8 @@ export function toExchange(summary: ApiExchangeSummary): Exchange {
     replies: summary.replies.map((reply, index) => toReply(summary.id, index, reply)),
     ...(card.receipt === undefined ? {} : { receipt: card.receipt }),
     repliesReachHer: summary.replies_reach_her,
+    ...(card.photos === undefined ? {} : { photos: card.photos }),
+    ...(card.picked === undefined ? {} : { picked: card.picked }),
   };
 }
 

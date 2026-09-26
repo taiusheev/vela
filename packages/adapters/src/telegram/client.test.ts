@@ -51,6 +51,7 @@ describe("createTelegramClient", () => {
         apiMethod: "sendMessage",
         contentType: "application/json",
         params: { chat_id: 6023817745, text: "hello" },
+        files: [],
       },
     ]);
   });

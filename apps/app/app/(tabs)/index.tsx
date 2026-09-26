@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ExchangePhotos } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import {
@@ -61,6 +62,7 @@ function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }
       <Eyebrow>
         {asker === undefined ? t`A hello for ${recipient}` : t`${asker} asked ${recipient}`}
       </Eyebrow>
+      <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
       {exchange.ask === undefined ? null : <Words variant="voice">{exchange.ask}</Words>}
       {exchange.answer === undefined ? (
         <Words variant="body" tone="ink2">

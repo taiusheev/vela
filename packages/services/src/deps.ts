@@ -37,6 +37,8 @@ export interface MediaStore {
   put(key: string, body: ArrayBuffer, mime: string): Promise<void>;
   get(key: string): Promise<{ body: ArrayBuffer; mime: string } | null>;
   delete(key: string): Promise<void>;
+  /** Whether an object is there, without its bytes: its size and type, or null (ADR-33). */
+  head(key: string): Promise<{ bytes: number; mime: string } | null>;
 }
 
 /**

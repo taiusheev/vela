@@ -28,6 +28,7 @@ const exchange = {
     kind: "text",
     text: "The tomatoes finally turned.",
     at: "2026-09-23T08:12:00+08:00",
+    picked_media_id: null,
   },
   replies: [
     { from: "Mia", kind: "heart", text: null },
@@ -35,6 +36,7 @@ const exchange = {
   ],
   seen_at: "2026-09-23T08:10:00+08:00",
   replies_reach_her: true,
+  photos: [],
 };
 
 const turn = {

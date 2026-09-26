@@ -16,11 +16,13 @@ import {
   ApiReply,
   ApiToday,
   ApiTrial,
+  ApiUploadedMedia,
   ApiUser,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
   LeaveFamily,
+  type MediaUnavailableReason,
   MemberLight,
   PauseMember,
   QuietAction,
@@ -33,6 +35,7 @@ import {
   ApiIdempotencyError,
   type ApiNudges,
   AskDayTakenError,
+  AskPhotoMissingError,
   type authorizeFamilyAccess,
   type Clock,
   type composeApiAsk,
@@ -47,16 +50,21 @@ import {
   type loadApiMe,
   type loadApiQuiet,
   type loadApiToday,
+  MediaRefusedError,
+  type MediaStore,
   MemberChangeRefusedError,
   type pauseApiMember,
   type provisionApiAccount,
+  type Random,
   ReplyRefusedError,
+  type readApiMedia,
   type replyToApiExchange,
   type resolveApiQuiet,
   runAfterCommit,
   type startApiTrial,
   TrialRefusedError,
   type updateApiAccount,
+  type uploadApiMedia,
   VelaError,
 } from "@vela/services";
 import { Hono, type MiddlewareHandler } from "hono";
@@ -66,6 +74,12 @@ import {
   createFamilyAuthorization,
   withApiErrorNoStore,
 } from "./api-security.ts";
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_READ_MS,
+  readUploadBody,
+  uploadHeaders,
+} from "./api-upload.ts";
 import {
   type SessionActivityChecker,
   SessionVerificationUnavailable,
@@ -81,6 +95,7 @@ export interface ApiReadServices {
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
+  readApiMedia: typeof readApiMedia;
 }
 
 export interface ApiWriteServices {
@@ -93,6 +108,7 @@ export interface ApiWriteServices {
   pauseApiMember: typeof pauseApiMember;
   leaveApiFamily: typeof leaveApiFamily;
   startApiTrial: typeof startApiTrial;
+  uploadApiMedia: typeof uploadApiMedia;
 }
 
 export interface ApiRuntime {
@@ -117,6 +133,14 @@ export interface ApiRuntime {
      */
     nudges?: ApiNudges;
   };
+  /**
+   * Where photos from the app are kept (ADR-33): the store, and a token source for the keys an
+   * upload mints. Undefined where there is nowhere to keep them, and `mediaOff` says why: an upload
+   * answers 503 with that reason, a photo read 404, and `GET /v1/me` says `photos: false`.
+   */
+  media?: { store: MediaStore; random: Random };
+  /** Why `media` is undefined; "media_storage_off" when it is left out. */
+  mediaOff?: MediaUnavailableReason;
 }
 
 interface RuntimeEnv {
@@ -130,6 +154,8 @@ interface RuntimeEnv {
 const NOT_FOUND: ApiErrorBody = {
   error: { code: "not_found", message: "Not found." },
 };
+/** A media id as the read route takes one: a uuid, checked before any query. */
+const MEDIA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FAMILY_NOT_FOUND: ApiErrorBody = {
   error: { code: "not_found", message: "Family not found." },
 };
@@ -155,6 +181,13 @@ const RATE_LIMITED: ApiErrorBody = {
 const UNAUTHENTICATED: ApiErrorBody = {
   error: { code: "unauthenticated", message: "Sign in required." },
 };
+/** What a refused photo is told, by `MediaRefusedError.reason` (ADR-33). */
+const PHOTO_REFUSALS = {
+  jpeg_only: "Only JPEG photos can be kept.",
+  malformed: "That photo could not be read.",
+  dimensions: "That photo is too large or too narrow.",
+  photo_limit: "Too many photos for now.",
+} as const;
 const MAX_BODY_BYTES = 4096;
 const JSON_CONTENT_TYPE = /^application\/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?\s*$/i;
 
@@ -338,6 +371,31 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         };
         return c.json(taken, 409);
       }
+      if (error instanceof MediaRefusedError) {
+        const refused: ApiErrorBody = {
+          error: {
+            code: error.reason === "photo_limit" ? "rate_limited" : "invalid",
+            message: PHOTO_REFUSALS[error.reason],
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(
+          refused,
+          error.reason === "jpeg_only" ? 415 : error.reason === "photo_limit" ? 429 : 400,
+        );
+      }
+      if (error instanceof AskPhotoMissingError) {
+        // A photo the ask names is gone or not the asker's to ask with (ADR-33): the app offers
+        // to choose it again.
+        const missing: ApiErrorBody = {
+          error: {
+            code: "not_found",
+            message: "That photo is no longer here.",
+            details: { reason: "photo_missing" },
+          },
+        };
+        return c.json(missing, 404);
+      }
       if (error instanceof VelaError) {
         if (error.code === "not_found") return c.json(NOT_FOUND, 404);
         if (error.code === "invalid_payload") return c.json(INVALID, 400);
@@ -363,7 +421,9 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
 
   app.get("/v1/me", authenticate, withDatabase, async (c) => {
     const me = await runtime.services.loadApiMe(c.get("db"), c.get("session"));
-    return me === null ? c.json(NOT_FOUND, 404) : c.json(ApiMe.parse(me));
+    return me === null
+      ? c.json(NOT_FOUND, 404)
+      : c.json(ApiMe.parse({ ...me, photos: runtime.media !== undefined }));
   });
   app.get(
     "/v1/families/:familyId/plan",
@@ -469,6 +529,41 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
     return notice === null ? c.json(NOT_FOUND, 404) : c.json(ApiQuietNotice.parse(notice));
   });
+  // A photo the family may see (ADR-33), proxied from the store: there is no signed or public URL.
+  // Without a store, and for an id that is not a uuid, it is 404 before a connection is opened.
+  app.get(
+    "/v1/families/:familyId/media/:mediaId",
+    authenticate,
+    async (c, next) => {
+      if (runtime.media === undefined || !MEDIA_ID.test(c.req.param("mediaId"))) {
+        return c.json(NOT_FOUND, 404);
+      }
+      await next();
+      return c.res;
+    },
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const media = runtime.media;
+      if (media === undefined) return c.json(NOT_FOUND, 404);
+      const photo = await runtime.services.readApiMedia(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        c.req.param("mediaId"),
+        media.store,
+      );
+      if (photo === null) return c.json(NOT_FOUND, 404);
+      return c.body(photo.body, 200, {
+        "content-type": "image/jpeg",
+        "x-content-type-options": "nosniff",
+        "content-disposition": "inline",
+      });
+    },
+  );
   const writes = runtime.writes;
   if (writes) {
     const checkActivity: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
@@ -690,6 +785,65 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         const reply = ApiReply.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(reply, 201);
+      },
+    );
+    // A photo for an ask (ADR-33): the JPEG's own bytes, not JSON. Every cheap refusal comes before
+    // the body is read: nowhere to keep it (503), the headers (400, 415, 413), the write limit and
+    // the live session (429, 401), the family (404). Only then are up to 1 MiB read, for up to
+    // 60 seconds, and the service cleans, stores and records it.
+    app.post(
+      "/v1/families/:familyId/media",
+      authenticate,
+      async (c, next) => {
+        if (runtime.media === undefined) {
+          const off: ApiErrorBody = {
+            error: {
+              code: "unavailable",
+              message: "Photos are not switched on here.",
+              details: { reason: runtime.mediaOff ?? "media_storage_off" },
+            },
+          };
+          return c.json(off, 503);
+        }
+        await next();
+        return c.res;
+      },
+      uploadHeaders<RuntimeEnv>(MAX_UPLOAD_BYTES),
+      checkActivity,
+      withDatabase,
+      (c, next) =>
+        createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        )(c, next),
+      async (c) => {
+        const media = runtime.media;
+        if (media === undefined) throw new Error("photo upload without a store");
+        const body = await readUploadBody(
+          c.req.raw,
+          runtime.logger,
+          MAX_UPLOAD_BYTES,
+          MAX_UPLOAD_READ_MS,
+        );
+        if (!body.ok) return c.json(INVALID, body.status);
+        const result = await writes.services.uploadApiMedia(
+          {
+            db: c.get("db"),
+            clock: writes.clock,
+            random: media.random,
+            store: media.store,
+            logger: runtime.logger,
+          },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          body.bytes,
+        );
+        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const uploaded = ApiUploadedMedia.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(uploaded, 201);
       },
     );
   }

@@ -21,6 +21,9 @@
  *                         the only place a secret key may sit on a developer’s machine:
  *                         apps/worker/.env.local, which git ignores.
  *   TELEGRAM_BOT_USERNAME optional; with it, and with writes on, POST /v1/families is served too.
+ *
+ * Photos from the app (ADR-33) are kept in this process's memory and lost when it stops: the
+ * upload and the photo read work as on staging, and nothing is written to disk or to any bucket.
  */
 import { serve } from "@hono/node-server";
 import { connectDatabase } from "@vela/db";
@@ -37,12 +40,15 @@ import {
   loadApiMe,
   loadApiQuiet,
   loadApiToday,
+  type MediaStore,
   pauseApiMember,
   provisionApiAccount,
+  readApiMedia,
   replyToApiExchange,
   resolveApiQuiet,
   startApiTrial,
   updateApiAccount,
+  uploadApiMedia,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
 import { createRandom } from "../src/random.ts";
@@ -113,6 +119,24 @@ const writesOn = secretKey !== undefined;
 // her yes (infra/README.md, section 9a).
 const botUsername = process.env.TELEGRAM_BOT_USERNAME?.trim();
 
+/** Photos for this run only: a Map, gone when the server stops. */
+function memoryMediaStore(): MediaStore {
+  const objects = new Map<string, { body: ArrayBuffer; mime: string }>();
+  return {
+    put: async (key, body, mime) => {
+      objects.set(key, { body, mime });
+    },
+    get: async (key) => objects.get(key) ?? null,
+    delete: async (key) => {
+      objects.delete(key);
+    },
+    head: async (key) => {
+      const object = objects.get(key);
+      return object === undefined ? null : { bytes: object.body.byteLength, mime: object.mime };
+    },
+  };
+}
+
 const connection = await connectDatabase(databaseUrl);
 const app = createApiApp({
   // Expo's native builds send no Origin and no `azp`; the loopback origins above cover the web
@@ -134,6 +158,7 @@ const app = createApiApp({
     loadApiExchanges,
     loadApiQuiet,
     authorizeFamilyAccess,
+    readApiMedia,
   },
   logger: { error: (event, fields) => console.error(`[api-dev] ${event}`, fields ?? {}) },
   ...(writesOn && secretKey !== undefined
@@ -151,6 +176,7 @@ const app = createApiApp({
             pauseApiMember,
             leaveApiFamily,
             startApiTrial,
+            uploadApiMedia,
           },
           ...(botUsername === undefined || botUsername.length === 0
             ? {}
@@ -163,6 +189,7 @@ const app = createApiApp({
         },
       }
     : {}),
+  media: { store: memoryMediaStore(), random: createRandom() },
 });
 
 /**
@@ -213,6 +240,7 @@ const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) =
       ? `[api-dev] writes: the account routes, composing an ask, replying, settling a quiet morning (its messages wait for reconcile here), pausing and leaving, starting a trial${botUsername ? ", and creating a family" : ""}; sessions checked live with Clerk`
       : "[api-dev] writes answer 404: set CLERK_SECRET_KEY in apps/worker/.env.local to serve them",
   );
+  console.log("[api-dev] media: kept in memory, lost on restart");
 });
 
 async function stop(): Promise<void> {

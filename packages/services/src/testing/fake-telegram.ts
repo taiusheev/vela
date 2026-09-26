@@ -1,7 +1,9 @@
 /**
  * A recording `ChannelAdapter` that stands in for Telegram: every send gets message ids that count
  * up per conversation, as Telegram's do, and a test can make the next sends, or every send to one
- * conversation, fail with a chosen `ChannelSendError`.
+ * conversation, fail with a chosen `ChannelSendError`. A stored file the gateway handed over is
+ * recorded as the upload it would be, and one it did not hand over is refused, as the real adapter
+ * refuses it (ADR-33).
  */
 import {
   type AdapterCapabilities,
@@ -19,6 +21,8 @@ export interface SentMessage {
   readonly message: OutboundMessage;
   readonly result: SendResult;
   readonly at: Date;
+  /** The stored files uploaded with it, in the message's order: each one's key and bytes. */
+  readonly uploads: readonly { readonly storageKey: string; readonly file: FetchedMedia }[];
 }
 
 export interface FailedSend {
@@ -122,8 +126,19 @@ export function createFakeTelegram(clock: Clock): FakeTelegram {
       return [];
     },
 
-    async send(message) {
+    async send(message, files) {
       const conversationId = message.to.conversationId;
+      const uploads = (message.media ?? []).flatMap((ref) => {
+        if (ref.providerFileId !== undefined || ref.url !== undefined) return [];
+        const file = ref.storageKey === undefined ? undefined : files?.get(ref.storageKey);
+        if (ref.storageKey === undefined || file === undefined) {
+          throw new ChannelSendError(
+            "invalid_request",
+            "fake telegram: a stored file was not loaded",
+          );
+        }
+        return [{ storageKey: ref.storageKey, file }];
+      });
       const rule = failureFor(conversationId);
       if (rule !== null) {
         failed.push({ message, code: rule.code, at: clock.now() });
@@ -139,7 +154,7 @@ export function createFakeTelegram(clock: Clock): FakeTelegram {
         externalMessageIds: [...mediaIds, primaryMessageId],
         primaryMessageId,
       };
-      sent.push({ message, result, at: clock.now() });
+      sent.push({ message, result, at: clock.now(), uploads });
       return result;
     },
 

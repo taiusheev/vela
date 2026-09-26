@@ -27,6 +27,8 @@
     "expo": "^57.0.24",
     "expo-constants": "~57.0.19",
     "expo-font": "~57.0.4",
+    "expo-image-manipulator": "~57.0.20",
+    "expo-image-picker": "~57.0.20",
     "expo-linking": "~57.0.10",
     "expo-localization": "~57.0.2",
     "expo-router": "~57.0.22",

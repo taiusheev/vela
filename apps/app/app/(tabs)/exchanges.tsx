@@ -3,6 +3,7 @@ import { Link } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ExchangePhotos } from "../../src/components/family-photo.tsx";
 import {
   Card,
   Eyebrow,
@@ -36,6 +37,7 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
       <Pressable accessibilityRole="button" hitSlop={hitSlop}>
         <Card>
           <Eyebrow>{heading}</Eyebrow>
+          <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
           <Words variant="voice">{exchange.ask}</Words>
           {shown === undefined ? (
             <Words variant="body" tone="ink2">

@@ -172,7 +172,10 @@ export function Chip({
   );
 }
 
-/** Inputs are 56 pt with a rule border, a 2 pt action focus ring, and helper text always visible. */
+/**
+ * Inputs are 56 pt with a rule border, a 2 pt action focus ring, and helper text always visible. A
+ * field in a list, such as a vote's options, may share one helper written under the list instead.
+ */
 export function TextField({
   value,
   onChangeText,
@@ -188,7 +191,7 @@ export function TextField({
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
-  helper: string;
+  helper?: string;
   multiline?: boolean;
   /** The keyboard she gets: a number pad for a phone or a code, words for an ask. */
   keyboardType?: "phone-pad" | "number-pad";
@@ -232,9 +235,11 @@ export function TextField({
           },
         ]}
       />
-      <Words variant="caption" tone="ink3">
-        {helper}
-      </Words>
+      {helper === undefined ? null : (
+        <Words variant="caption" tone="ink3">
+          {helper}
+        </Words>
+      )}
     </View>
   );
 }

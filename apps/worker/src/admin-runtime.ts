@@ -143,6 +143,7 @@ export function servicesDeps(ports: AdminDeps): Deps {
       put: () => notGiven("media"),
       get: () => notGiven("media"),
       delete: () => notGiven("media"),
+      head: () => notGiven("media"),
     },
     channels: { get: () => notGiven("channels") },
     stt: { transcribe: () => notGiven("stt") },

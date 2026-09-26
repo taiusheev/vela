@@ -75,6 +75,26 @@ export interface TelegramSendMediaGroupParams {
   readonly media: readonly TelegramInputMediaPhoto[];
 }
 
+/** A file sent with a request as multipart/form-data: a photo Vela keeps, not one Telegram holds. */
+export interface TelegramUpload {
+  readonly body: ArrayBuffer;
+  readonly mime: string;
+  /** The file name the form gives it; Telegram shows it nowhere for a photo. */
+  readonly name: string;
+}
+
+export interface TelegramSendPhotoUploadParams {
+  readonly chat_id: TelegramChatId;
+  readonly photo: TelegramUpload;
+}
+
+export interface TelegramSendMediaGroupUploadParams {
+  readonly chat_id: TelegramChatId;
+  /** 2–10 items: a file_id, an HTTP URL, or `attach://<name>` naming one of `files`. */
+  readonly media: readonly TelegramInputMediaPhoto[];
+  readonly files: Readonly<Record<string, TelegramUpload>>;
+}
+
 export interface TelegramEditMessageTextParams {
   readonly chat_id: TelegramChatId;
   readonly message_id: number;
@@ -160,6 +180,10 @@ export interface TelegramClient {
   sendPhoto(params: TelegramSendPhotoParams): Promise<TelegramSentMessage>;
   sendVoice(params: TelegramSendVoiceParams): Promise<TelegramSentMessage>;
   sendMediaGroup(params: TelegramSendMediaGroupParams): Promise<TelegramSentMessage[]>;
+  /** `sendPhoto` with the photo's bytes, as multipart/form-data. */
+  sendPhotoUpload(params: TelegramSendPhotoUploadParams): Promise<TelegramSentMessage>;
+  /** `sendMediaGroup` with some photos' bytes, as multipart/form-data. */
+  sendMediaGroupUpload(params: TelegramSendMediaGroupUploadParams): Promise<TelegramSentMessage[]>;
   editMessageText(params: TelegramEditMessageTextParams): Promise<void>;
   editMessageReplyMarkup(params: TelegramEditMessageReplyMarkupParams): Promise<void>;
   answerCallbackQuery(params: TelegramAnswerCallbackQueryParams): Promise<void>;
@@ -201,20 +225,49 @@ export function createTelegramClient(options: TelegramApiOptions): TelegramClien
       `telegram ${what} failed: network error (${redact(describe(error))})`,
     );
 
-  async function call(method: string, params: object): Promise<unknown> {
+  async function post(
+    method: string,
+    init: { readonly headers?: Record<string, string>; readonly body: string | FormData },
+  ): Promise<unknown> {
     let response: Response;
     let text: string;
     try {
-      response = await fetchImpl(`${baseUrl}/bot${token}/${method}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(params),
-      });
+      response = await fetchImpl(`${baseUrl}/bot${token}/${method}`, { method: "POST", ...init });
       text = await response.text();
     } catch (error) {
       throw networkError(method, error);
     }
+    return readResult(method, response, text);
+  }
 
+  function call(method: string, params: object): Promise<unknown> {
+    return post(method, {
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+
+  /**
+   * The same call as multipart/form-data, for files Telegram does not hold yet: every field a
+   * string, every file a part with its type and name. No content-type is set, so `fetch` writes
+   * the multipart one with its boundary.
+   */
+  function callMultipart(
+    method: string,
+    fields: Readonly<Record<string, string>>,
+    files: Readonly<Record<string, TelegramUpload>>,
+  ): Promise<unknown> {
+    const form = new FormData();
+    for (const [name, value] of Object.entries(fields)) {
+      form.append(name, value);
+    }
+    for (const [name, file] of Object.entries(files)) {
+      form.append(name, new Blob([file.body], { type: file.mime }), file.name);
+    }
+    return post(method, { body: form });
+  }
+
+  function readResult(method: string, response: Response, text: string): unknown {
     const body = parseJson(text);
     if (isRecord(body) && body.ok === true && "result" in body) {
       return body.result;
@@ -254,6 +307,23 @@ export function createTelegramClient(options: TelegramApiOptions): TelegramClien
     sendVoice: (params) => sentMessage("sendVoice", params),
     async sendMediaGroup(params) {
       const result = await call("sendMediaGroup", params);
+      if (!Array.isArray(result)) throw unexpectedResult("sendMediaGroup");
+      return result.map((item) => readSentMessage("sendMediaGroup", item));
+    },
+    async sendPhotoUpload(params) {
+      const result = await callMultipart(
+        "sendPhoto",
+        { chat_id: String(params.chat_id) },
+        { photo: params.photo },
+      );
+      return readSentMessage("sendPhoto", result);
+    },
+    async sendMediaGroupUpload(params) {
+      const result = await callMultipart(
+        "sendMediaGroup",
+        { chat_id: String(params.chat_id), media: JSON.stringify(params.media) },
+        params.files,
+      );
       if (!Array.isArray(result)) throw unexpectedResult("sendMediaGroup");
       return result.map((item) => readSentMessage("sendMediaGroup", item));
     },

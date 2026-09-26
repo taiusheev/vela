@@ -14,8 +14,8 @@ export interface AskTypeOption {
   kind: AskType;
   label: MessageDescriptor;
   /**
-   * Available means this screen can compose it today. The route also takes a vote, but a vote
-   * needs its options, and this screen has no field for them yet.
+   * Available means this screen can compose it today. A voice note needs a recording the app
+   * cannot make yet; the photo kinds are also off wherever the API keeps no photos (ADR-33).
    */
   available: boolean;
 }
@@ -23,17 +23,26 @@ export interface AskTypeOption {
 export const askTypes: AskTypeOption[] = [
   { kind: "question", label: msg`A question`, available: true },
   { kind: "word", label: msg`A word to teach`, available: true },
-  { kind: "vote", label: msg`A vote`, available: false },
-  { kind: "two_photos", label: msg`Two photos`, available: false },
+  { kind: "vote", label: msg`A vote`, available: true },
+  { kind: "two_photos", label: msg`Two photos`, available: true },
   { kind: "voice_note", label: msg`A voice note`, available: false },
-  { kind: "old_photo", label: msg`An old photo`, available: false },
+  { kind: "old_photo", label: msg`An old photo`, available: true },
 ];
 
 /** The name the contract gives each kind the screen can send. */
 export const composableType: Partial<Record<AskType, ComposableExchangeType>> = {
   question: "question",
   word: "word",
+  two_photos: "photo_choice",
+  old_photo: "memory_photo",
+  vote: "vote",
 };
+
+/**
+ * How many options a vote takes and how long each may be: the contract's own
+ * (`ComposeAsk.vote_options`), written here so the app bundles no schema; a test holds them equal.
+ */
+export const VOTE_OPTIONS = { fewest: 2, most: 7, longest: 64 } as const;
 
 /**
  * The kind "Use this" selects: the suggestion's own where this screen can compose it, and a

@@ -61,8 +61,8 @@ export function createTelegramAdapter(options: TelegramAdapterOptions): ChannelA
       return parseTelegramUpdate(input.rawBody, now(), options.botUsername);
     },
 
-    send(message) {
-      return sendTelegramMessage(client, message);
+    send(message, files) {
+      return sendTelegramMessage(client, message, files);
     },
 
     async acknowledgeButton(event: InboundEvent, text?: string) {

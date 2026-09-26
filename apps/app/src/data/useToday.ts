@@ -107,6 +107,17 @@ export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
       text: replyLine(reply.from, reply.kind, reply.text),
     })),
     ...(receipt === undefined ? {} : { receipt }),
+    ...(exchange.photos.length === 0
+      ? {}
+      : {
+          photos: exchange.photos.map((photo) => ({
+            id: photo.id,
+            width: photo.width,
+            height: photo.height,
+            stored: photo.stored,
+          })),
+        }),
+    ...(answer?.picked_media_id == null ? {} : { picked: answer.picked_media_id }),
   };
 }
 
@@ -161,6 +172,11 @@ export interface TodayView {
   organiser: boolean;
   /** True only once the real day has arrived: until then `today` is the example one. */
   live: boolean;
+  /**
+   * Whether photo asks can be sent: the API keeps photos (`ApiMe.photos`, ADR-33), or there is no
+   * API and the example day shows the photos chosen without sending them anywhere.
+   */
+  photos: boolean;
 }
 
 /**
@@ -196,6 +212,7 @@ export function useToday(): TodayView {
       noFamily: false,
       organiser: true,
       live: false,
+      photos: !apiConfigured(),
     };
   }
   const live = day.data !== undefined;
@@ -210,5 +227,6 @@ export function useToday(): TodayView {
     noFamily: me.data !== undefined && me.data.memberships.length === 0,
     organiser: membership?.role === "organiser",
     live,
+    photos: me.data?.photos === true,
   };
 }

@@ -60,7 +60,9 @@
   // Vela's own storage: the light, the family group, and the transcript of a voice answer are
   // unchanged, because Telegram carries the file and the pipeline fetches it from there, but each
   // media row keeps only what Telegram said about the file, its id, its type and its size, with no
-  // storage key and no copy of the file itself. An environment that is "off" binds no R2 bucket at
+  // storage key and no copy of the file itself; and a photo from the app has nowhere to be kept, so
+  // the API answers its upload 503 with media_storage_off, GET /v1/me says photos is false, and the
+  // app keeps its photo asks switched off. An environment that is "off" binds no R2 bucket at
   // all, because a binding to a bucket that does not exist fails the deploy, and src/deps.ts then
   // builds no media port. Development is "off", so a laptop needs no bucket and keeps no copy.
   // Staging is "r2" since 26 September 2026: the founder enabled R2 on the "Vela staging" account
@@ -251,7 +253,11 @@
         ]
       },
       // MEDIA_STORAGE is "r2" here since 26 September 2026: the founder enabled R2 on the staging
-      // account, and the co-founder created this bucket (private, Asia-Pacific).
+      // account, and the co-founder created this bucket (private, Asia-Pacific). Photos from the app
+      // are kept under asks/<family id>/ (ADR-33). The bucket, not this file, is to hold a lifecycle
+      // rule that deletes objects under asks/ after 32 days, the backstop for an upload whose row was
+      // never written; it is not set yet, it is added once with `wrangler r2 bucket lifecycle add`,
+      // and production's bucket needs the same rule before its API is switched on.
       "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-staging" }],
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "e9e9837d1eee47528304916a1ac2d1e9" }],
       "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },

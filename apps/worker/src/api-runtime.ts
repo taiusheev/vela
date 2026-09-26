@@ -13,6 +13,9 @@
  * to refuse anything. The write limit is counted in a Durable Object per account
  * (`write-limit.ts`), which does.
  *
+ * Photos from the app (ADR-33) are kept in the same media store the pilot Worker copies voice notes
+ * into, `MEDIA_STORAGE`'s: a store that cannot be built leaves /v1 answering, with photos off.
+ *
  * The lines this file logs are event names and error labels only: `api_config_refused`,
  * `api_rate_limit_failed`, and `api_request_failed`. A 4xx is never logged, and neither is a token,
  * an address, a body, a key, or any configured value.
@@ -37,10 +40,12 @@ import {
   loadApiToday,
   pauseApiMember,
   provisionApiAccount,
+  readApiMedia,
   replyToApiExchange,
   resolveApiQuiet,
   startApiTrial,
   updateApiAccount,
+  uploadApiMedia,
 } from "@vela/services";
 import {
   type ApiReadServices,
@@ -49,7 +54,7 @@ import {
   createApiApp,
 } from "./api-app.ts";
 import { type ApiConfig, readApiConfig } from "./config.ts";
-import { createLogger, createSchedulerPort } from "./deps.ts";
+import { createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { createRandom } from "./random.ts";
 import {
@@ -80,6 +85,7 @@ export const API_READ_SERVICES: ApiReadServices = {
   loadApiExchanges,
   loadApiQuiet,
   authorizeFamilyAccess,
+  readApiMedia,
 };
 
 /**
@@ -96,6 +102,7 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   pauseApiMember,
   leaveApiFamily,
   startApiTrial,
+  uploadApiMedia,
 };
 
 /**
@@ -257,7 +264,9 @@ export function limitWrites(
 export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const logger = createLogger(env);
   const { secretKey } = config;
+  const photos = apiMediaFor(env, config, logger);
   return {
+    ...photos,
     verifySession: createClerkSessionVerifier({
       issuer: config.issuer,
       authorizedParties: [],
@@ -287,6 +296,30 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
           },
         }),
   };
+}
+
+/**
+ * Where the API keeps photos from the app (ADR-33): the store `MEDIA_STORAGE` names, built as the
+ * pilot Worker builds it (`createMediaPort`), with the Worker's CSPRNG for the keys an upload
+ * mints. "off" builds none, and `createMediaPort` says so once per start (`media_storage_off`). A
+ * store that cannot be built, such as "r2" with no bucket bound, is logged as `api_config_refused`
+ * by its label and leaves photos off with `media_storage_unavailable`: the rest of /v1 answers as
+ * before, since a photo setting is no reason to close the whole API (ADR-29's isolation).
+ */
+export function apiMediaFor(
+  env: PilotEnv,
+  config: ApiConfig,
+  logger: Logger,
+): Pick<ApiRuntime, "media" | "mediaOff"> {
+  try {
+    const store = createMediaPort(env, config.environment, "wrangler.jsonc", logger);
+    return store === null
+      ? { mediaOff: "media_storage_off" }
+      : { media: { store, random: createRandom() } };
+  } catch (error) {
+    logger.error("api_config_refused", { error: errorLabel(error) });
+    return { mediaOff: "media_storage_unavailable" };
+  }
 }
 
 /** The API app as the pilot Worker serves it: `createApiApp` on `apiRuntimeFor`'s runtime. */

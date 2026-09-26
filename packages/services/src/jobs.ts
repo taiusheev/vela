@@ -646,6 +646,15 @@ async function deleteMedia(deps: Deps, row: Media, reason: string): Promise<void
     }
   }
   await deps.db.transaction(async (tx) => {
+    // The row first (ADR-33): an ask being composed holds it `for share` until it commits, so the
+    // ids are removed below only after its exchange exists, and never left naming a deleted photo.
+    // Media before exchanges, as compose takes them. A row already gone went in another run.
+    const [held] = await tx
+      .select({ id: media.id })
+      .from(media)
+      .where(eq(media.id, row.id))
+      .for("update");
+    if (held === undefined) return;
     await recordDeletion(tx, {
       objectType: "media",
       objectId: row.id,
