@@ -441,9 +441,11 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
     return drop(deps, loaded, "family_ended");
   }
   // She said stop after the tick that read her active, or while the row waited for a retry or a
-  // re-drive: nothing of her morning goes to her until she says start (flows §3.13).
+  // re-drive: nothing of her morning goes to her until she says start (flows §3.13). Her start can
+  // land after this read, so the drop is decided again under locks, and a drop that no longer holds
+  // leaves the delivery to decide again from what is stored now.
   if (member.status === "paused" && HELD_BY_PAUSE.has(row.kind)) {
-    return drop(deps, loaded, PAUSED);
+    return (await dropWhilePaused(deps, loaded)) ?? deliverOutbound(deps, outboundId);
   }
   const repeatMoot = await repeatIsMoot(deps.db, row, member);
   if (repeatMoot !== null) {
@@ -801,25 +803,77 @@ async function fail(
  * a morning of hers, or a notice, that has become moot on its way.
  */
 async function drop(deps: Deps, loaded: LoadedOutbound, reason: string): Promise<"skipped"> {
-  const { row, family } = loaded;
-  const at = deps.clock.now();
-  await deps.db.transaction(async (tx) => {
-    await tx
-      .update(outbound)
-      .set({ status: "dropped", error: reason })
-      .where(eq(outbound.id, row.id));
-    await recordEvent(
-      tx,
-      {
-        name: "gateway_dropped",
-        familyId: family.id,
-        memberId: row.memberId,
-        exchangeId: row.exchangeId ?? undefined,
-        props: { kind: row.kind, reason },
-      },
-      at,
-    );
+  await deps.db.transaction((tx) => markDropped(deps, tx, loaded, reason));
+  deps.logger.info("outbound_dropped", {
+    outboundId: loaded.row.id,
+    kind: loaded.row.kind,
+    reason,
   });
-  deps.logger.info("outbound_dropped", { outboundId: row.id, kind: row.kind, reason });
+  return "skipped";
+}
+
+async function markDropped(
+  deps: Deps,
+  tx: VelaTransaction,
+  loaded: LoadedOutbound,
+  reason: string,
+): Promise<void> {
+  const { row, family } = loaded;
+  await tx
+    .update(outbound)
+    .set({ status: "dropped", error: reason })
+    .where(eq(outbound.id, row.id));
+  await recordEvent(
+    tx,
+    {
+      name: "gateway_dropped",
+      familyId: family.id,
+      memberId: row.memberId,
+      exchangeId: row.exchangeId ?? undefined,
+      props: { kind: row.kind, reason },
+    },
+    deps.clock.now(),
+  );
+}
+
+/**
+ * The pause drop, decided again under locks, since the delivery read her paused before it got here.
+ * Her start may have landed since: its tick asked for this morning, found the row still queued, and
+ * left it to this delivery, so a drop now would lose the morning her start asked for until a later
+ * tick (flows §3.13). Another delivery of the row may have sent it since, and `dropped` over `sent`
+ * would hide the send from `reconcile` and let her start queue the morning again. So the row is
+ * locked and must still be queued; then her row is read `for share`, which waits for a start in
+ * flight (it locks her row `for update` before it makes her active) and holds off a later one until
+ * this commits, whose tick then finds the row dropped and queues it again
+ * (`requeueArrivalHeldByPause`). The row before hers, as a send's effects take them. Null when she
+ * is no longer paused or the row no longer queued: the delivery decides again from what is stored.
+ */
+async function dropWhilePaused(deps: Deps, loaded: LoadedOutbound): Promise<"skipped" | null> {
+  const { row } = loaded;
+  const dropped = await deps.db.transaction(async (tx) => {
+    const [current] = await tx
+      .select({ status: outbound.status })
+      .from(outbound)
+      .where(eq(outbound.id, row.id))
+      .for("update");
+    if (current?.status !== "queued") {
+      return false;
+    }
+    const [her] = await tx
+      .select({ status: members.status })
+      .from(members)
+      .where(eq(members.id, row.memberId))
+      .for("share");
+    if (her?.status !== "paused") {
+      return false;
+    }
+    await markDropped(deps, tx, loaded, PAUSED);
+    return true;
+  });
+  if (!dropped) {
+    deps.logger.info("outbound_pause_drop_moot", { outboundId: row.id, kind: row.kind });
+    return null;
+  }
+  deps.logger.info("outbound_dropped", { outboundId: row.id, kind: row.kind, reason: PAUSED });
   return "skipped";
 }
