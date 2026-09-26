@@ -68,6 +68,7 @@ import {
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
+import { clockMinutesBetween, medianTimeAround } from "./format.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { INVITE_DAYS } from "./invites.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
@@ -76,7 +77,7 @@ import {
   familyById,
   memberById,
   type Queryable,
-  recentAnswerLatencies,
+  recentAnsweredDays,
 } from "./repo.ts";
 
 const DAYS_IN_WEEK = 7;
@@ -237,16 +238,6 @@ async function loadWeekDays(
   });
 }
 
-function minutesOfDay(time: LocalTime): number {
-  const [hour, minute] = time.split(":");
-  return Number(hour) * 60 + Number(minute);
-}
-
-function timeOfMinutes(minutes: number): LocalTime {
-  const hour = Math.floor(minutes / 60);
-  return `${String(hour).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-}
-
 function median(values: readonly number[]): number | null {
   if (values.length === 0) {
     return null;
@@ -257,13 +248,16 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 1 ? upper : Math.round(((sorted[middle - 1] ?? upper) + upper) / 2);
 }
 
-/** When she usually answered that week: the median wall-clock minute of her answered days. */
-function usualTimeOf(days: readonly WeekDay[], timeZone: string): LocalTime | null {
-  const minutes = days.flatMap((day) =>
-    day.answeredAt === null ? [] : [minutesOfDay(localTimeOf(day.answeredAt, timeZone))],
-  );
-  const result = median(minutes);
-  return result === null ? null : timeOfMinutes(result);
+/**
+ * When she usually answered that week: the median wall-clock time of her answered days, around her
+ * arrival time, so a week of answers on both sides of midnight reads as near midnight.
+ */
+function usualTimeOf(
+  days: readonly WeekDay[],
+  member: Pick<Member, "tz" | "arrivalTime">,
+): LocalTime | null {
+  const answered = days.flatMap((day) => (day.answeredAt === null ? [] : [day.answeredAt]));
+  return medianTimeAround(answered, member.tz, member.arrivalTime);
 }
 
 function meanVoiceMs(days: readonly WeekDay[]): number | null {
@@ -334,19 +328,19 @@ const SUNDAY = 0;
  * T_quiet from her own rhythm (spec §8): the median answer latency of her last 14 answered days
  * plus two hours, floored at 4 h and capped at 10 h, recomputed once a week with her read, so
  * silence is measured against the person rather than against the six-hour default she starts on.
- * Below 14 answered days `quietAfterMinutes` keeps that default.
+ * Below 14 answered days `quietAfterMinutes` keeps that default. A day's latency runs from its
+ * delivery to the answer the day counts (`recentAnsweredDays`), which is negative for a message
+ * sent before the arrival, and a day is a Sunday by its own date.
  *
  * `answer_stats` records what the number was computed from, the Sunday median beside it. The
  * schedule holds one threshold for every day, so the Sunday median is stored rather than applied:
  * spec §8's Sunday and holiday branch needs `ScheduleInput` to carry both, which is core's to give.
  */
 async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
-  const timings = await recentAnswerLatencies(deps.db, member.id, TUNING.minSamples);
-  const latencies = timings.map((row) => minutesBetween(row.deliveredAt, row.answeredAt));
-  const sundays = timings.flatMap((row) =>
-    weekdayOf(localDateOf(row.answeredAt, member.tz)) === SUNDAY
-      ? [minutesBetween(row.deliveredAt, row.answeredAt)]
-      : [],
+  const days = await recentAnsweredDays(deps.db, member, TUNING.minSamples);
+  const latencies = days.map((day) => minutesBetween(day.deliveredAt, day.answeredAt));
+  const sundays = days.flatMap((day) =>
+    weekdayOf(day.date) === SUNDAY ? [minutesBetween(day.deliveredAt, day.answeredAt)] : [],
   );
   const minutes = quietAfterMinutes(latencies);
   await deps.db
@@ -416,12 +410,13 @@ export async function draftWeeklyRead(
   const familyAsks = counted.filter(
     (day) => day.exchange !== null && day.exchange.type !== "hello",
   ).length;
-  const usualTime = usualTimeOf(counted, member.tz);
-  const lastUsualTime = usualTimeOf(lastWeek, member.tz);
+  const usualTime = usualTimeOf(counted, member);
+  const lastUsualTime = usualTimeOf(lastWeek, member);
+  // The short way round the clock: from 23:55 to 00:05 is ten minutes later.
   const driftMin =
     usualTime === null || lastUsualTime === null
       ? null
-      : minutesOfDay(usualTime) - minutesOfDay(lastUsualTime);
+      : clockMinutesBetween(lastUsualTime, usualTime);
   const voiceMs = meanVoiceMs(counted);
   const lastVoiceMs = meanVoiceMs(lastWeek);
   const voiceLenDrift =

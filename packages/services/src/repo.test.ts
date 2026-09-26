@@ -1,4 +1,12 @@
-import { channelLinks, consents, familyChannels, members, messageRefs, outbound } from "@vela/db";
+import {
+  answers,
+  channelLinks,
+  consents,
+  familyChannels,
+  members,
+  messageRefs,
+  outbound,
+} from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -17,7 +25,7 @@ import {
   memberByChannelUser,
   messageRefFor,
   openQuietEventForExchange,
-  recentAnswerTimes,
+  recentAnsweredDays,
   repointFamilyGroup,
 } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -215,21 +223,83 @@ describe("exchanges and refs", () => {
     expect(await latestDeliveredExchangeWithin(h.db, seed.member.id, since)).toBeNull();
   });
 
-  it("returns her recent answer times newest first, up to the limit", async () => {
+  it("returns her recent answered days newest first, each with the answer the day counts", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
-    for (const day of ["11", "12", "13"]) {
+    // Mornings at 08:00 Taipei (00:00 UTC). The 10th is answered at 09:00. Nothing comes on the
+    // 11th; her 07:00 message on the 12th attaches to the 11th and is also the 12th's answer,
+    // an hour before its arrival (flows §3.9). The 13th is never answered, the 14th never delivered.
+    await seedExchange(h.db, seed, {
+      date: "2026-09-10",
+      state: "answered",
+      deliveredAt: new Date("2026-09-10T00:00:00Z"),
+      answeredAt: new Date("2026-09-10T01:00:00Z"),
+    });
+    const late = await seedExchange(h.db, seed, {
+      date: "2026-09-11",
+      state: "answered",
+      deliveredAt: new Date("2026-09-11T00:00:00Z"),
+      answeredAt: new Date("2026-09-11T23:00:00Z"),
+    });
+    await h.db.insert(answers).values({
+      exchangeId: late.id,
+      memberId: seed.member.id,
+      kind: "text",
+      channel: "telegram",
+      externalId: `${seed.memberLink.externalId}:7`,
+      payload: { text: "Good morning" },
+      receivedAt: new Date("2026-09-11T23:00:00Z"),
+    });
+    for (const date of ["2026-09-12", "2026-09-13"]) {
       await seedExchange(h.db, seed, {
-        date: `2026-09-${day}`,
-        state: "answered",
-        deliveredAt: new Date(`2026-09-${day}T00:00:00Z`),
-        answeredAt: new Date(`2026-09-${day}T01:00:00Z`),
+        date,
+        state: "delivered",
+        deliveredAt: new Date(`${date}T00:00:00Z`),
       });
     }
-    await seedExchange(h.db, seed, { date: "2026-09-14", state: "delivered" });
+    await seedExchange(h.db, seed, { date: "2026-09-14", state: "scheduled" });
 
-    expect(await recentAnswerTimes(h.db, seed.member.id, 2)).toEqual([
-      new Date("2026-09-13T01:00:00Z"),
-      new Date("2026-09-12T01:00:00Z"),
+    expect(await recentAnsweredDays(h.db, seed.member, 3)).toEqual([
+      {
+        date: "2026-09-12",
+        deliveredAt: new Date("2026-09-12T00:00:00Z"),
+        answeredAt: new Date("2026-09-11T23:00:00Z"),
+      },
+      {
+        date: "2026-09-11",
+        deliveredAt: new Date("2026-09-11T00:00:00Z"),
+        answeredAt: new Date("2026-09-11T23:00:00Z"),
+      },
+      {
+        date: "2026-09-10",
+        deliveredAt: new Date("2026-09-10T00:00:00Z"),
+        answeredAt: new Date("2026-09-10T01:00:00Z"),
+      },
+    ]);
+    expect((await recentAnsweredDays(h.db, seed.member, 2)).map((day) => day.date)).toEqual([
+      "2026-09-12",
+      "2026-09-11",
+    ]);
+  });
+
+  it("looks past a month of unanswered mornings for her answered days", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedExchange(h.db, seed, {
+      date: "2026-07-31",
+      state: "answered",
+      deliveredAt: new Date("2026-07-31T00:00:00Z"),
+      answeredAt: new Date("2026-07-31T01:00:00Z"),
+    });
+    for (let day = 1; day <= 40; day += 1) {
+      const deliveredAt = new Date(Date.UTC(2026, 7, day));
+      await seedExchange(h.db, seed, {
+        date: deliveredAt.toISOString().slice(0, 10),
+        state: "delivered",
+        deliveredAt,
+      });
+    }
+
+    expect((await recentAnsweredDays(h.db, seed.member, 14)).map((day) => day.date)).toEqual([
+      "2026-07-31",
     ]);
   });
 

@@ -205,6 +205,33 @@ describe("openQuiet", () => {
     );
   });
 
+  // Her morning comes at 23:00: half her answers come before midnight and half after, 20 minutes
+  // either side of it. Minutes counted from midnight put the middle pair at 10 and 1430, whose mean
+  // is noon.
+  it("gives her usual answer time across midnight as the time around which she answers", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now(), arrivalTime: "23:00" });
+    for (let day = 1; day <= TUNING.minSamples; day += 1) {
+      const date = `2026-08-${String(day).padStart(2, "0")}`;
+      await seedExchange(h.db, seed, {
+        date,
+        state: "answered",
+        deliveredAt: new Date(`${date}T15:00:00Z`),
+        answeredAt: new Date(`${date}T${day <= 7 ? "15:50" : "16:10"}:00Z`),
+      });
+    }
+    h.clock.set(new Date("2026-09-14T15:00:00Z"));
+    await seedExchange(h.db, seed, { date: TODAY, state: "delivered", deliveredAt: h.clock.now() });
+    h.clock.advanceMinutes(TUNING.defaultQuietAfterMinutes);
+
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+
+    const [notice] = h.telegram.sentTo(seed.organiserLink.externalId);
+    expect(notice?.message.text).toBe(
+      "It's been quiet at Mom's today. The morning message went out at 23:00; Mom usually answers by 00:00. Nothing worrying is known.",
+    );
+  });
+
   it("lists only the nearby contacts who said yes, and no line when none did", async () => {
     const { seed } = await quietMorning();
     await seedNearbyContact(h.db, seed, {
@@ -457,6 +484,120 @@ describe("notifyQuiet", () => {
     await h.run(handlers());
     const [waited] = await quietRows();
     expect(waited).toMatchObject({ notifyCount: 2, resolvedAt: null });
+  });
+});
+
+describe("a round whose notices fail", () => {
+  async function founderTexts(): Promise<string[]> {
+    const rows = await h.db
+      .select()
+      .from(outbound)
+      .where(eq(outbound.conversationId, h.deps.config.adminConversationId ?? ""))
+      .orderBy(asc(outbound.queuedAt), asc(outbound.id));
+    return rows.map((row) => (row.payload as { message: { text: string } }).message.text);
+  }
+
+  // Telegram answered 5xx from before 14:00 until after the last retry at 14:50: nothing makes the
+  // round due again (it was stamped when it was enqueued), so without the founder her silence that
+  // day reaches nobody.
+  it("tells the founder once when every notice of the round finally fails", async () => {
+    const { seed, second } = await quietMorning();
+    h.telegram.failSendsTo(seed.organiserLink.externalId, "unavailable");
+    h.telegram.failSendsTo(second.link.externalId, "unavailable");
+
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+
+    expect((await noticeRows()).map((row) => [row.status, row.attempts])).toEqual([
+      ["failed", 4],
+      ["failed", 4],
+    ]);
+    const [quiet] = await quietRows();
+    expect(quiet).toMatchObject({ notifyCount: 0, notifiedMemberIds: [], resolvedAt: null });
+    expect(await founderTexts()).toEqual([
+      `It's been quiet at Mom's today in The Chens, and no organiser can be told. Open: https://vela.test/admin/families/${seed.family.id}`,
+    ]);
+    expect(h.telegram.sentTo(h.deps.config.adminConversationId ?? "")).toHaveLength(1);
+    expect(h.logger.entries).toContainEqual({
+      level: "error",
+      event: "quiet_notice_nobody_told",
+      fields: {
+        familyId: seed.family.id,
+        memberId: seed.member.id,
+        quietEventId: quiet?.id,
+        round: 0,
+      },
+    });
+  });
+
+  // Mia has blocked the bot, and Sam can still be told when her notice fails, so the family is not
+  // left without an organiser; then Sam's fails too, and this round has told nobody.
+  it("tells the founder once when the notices fail in different ways", async () => {
+    const { seed, second } = await quietMorning();
+    h.telegram.failSendsTo(seed.organiserLink.externalId, "blocked");
+    h.telegram.failSendsTo(second.link.externalId, "unavailable");
+
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+
+    expect((await noticeRows()).map((row) => row.status)).toEqual(["failed", "failed"]);
+    expect(await founderTexts()).toEqual([
+      `It's been quiet at Mom's today in The Chens, and no organiser can be told. Open: https://vela.test/admin/families/${seed.family.id}`,
+    ]);
+  });
+
+  it("tells the founder nothing when one notice of the round got out", async () => {
+    const { seed, second } = await quietMorning();
+    h.telegram.failSendsTo(seed.organiserLink.externalId, "not_found");
+
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+
+    expect((await noticeRows()).map((row) => [row.memberId, row.status])).toEqual([
+      [seed.organiser.id, "failed"],
+      [second.member.id, "sent"],
+    ]);
+    expect(await founderTexts()).toEqual([]);
+  });
+
+  // The round a wait asked for is a round of its own: Sam read the first, and none of the second
+  // reached anyone.
+  it("tells the founder of a later round that reached nobody, under that round", async () => {
+    const { seed, second } = await quietMorning();
+    h.telegram.failSendsTo(seed.organiserLink.externalId, "not_found");
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+    const [quiet] = await quietRows();
+    if (quiet === undefined) {
+      throw new Error("quiet event not opened");
+    }
+    await handleQuietButton(h.deps, tap(second.link, quiet.id, "quiet_wait"), {
+      type: "quiet_wait",
+      quietEventId: quiet.id,
+    });
+    expect(await founderTexts()).toEqual([]);
+    h.telegram.failSendsTo(second.link.externalId, "unavailable");
+    h.clock.advanceMinutes(120);
+
+    await notifyQuiet(h.deps, seed.member.id, TODAY);
+    await h.run(handlers());
+
+    expect((await noticeRows()).map((row) => row.status)).toEqual([
+      "failed",
+      "sent",
+      "failed",
+      "failed",
+    ]);
+    const founder = await h.db
+      .select({ key: outbound.idempotencyKey })
+      .from(outbound)
+      .where(eq(outbound.conversationId, h.deps.config.adminConversationId ?? ""));
+    expect(founder.map((row) => row.key)).toEqual([
+      outboundKey("system", {
+        conversationId: h.deps.config.adminConversationId ?? "",
+        suffix: `quiet_nobody_told:${quiet.id}:1`,
+      }),
+    ]);
   });
 });
 

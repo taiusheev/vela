@@ -26,7 +26,7 @@ import {
   familyHasEnded,
   memberById,
   type Queryable,
-  recentAnswerTimes,
+  recentAnsweredDays,
 } from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,7 +52,7 @@ async function noticeOf(db: Queryable, quiet: QuietEvent, her: Member): Promise<
     member_name: her.displayName,
     delivered_at: exchange?.deliveredAt?.toISOString() ?? null,
     repeated_at: exchange?.repeatedAt?.toISOString() ?? null,
-    usual_time: usualAnswerTime(await recentAnswerTimes(db, her.id, TUNING.minSamples), her.tz),
+    usual_time: usualAnswerTime(await recentAnsweredDays(db, her, TUNING.minSamples), her),
     last_answered_at: lastAnswer?.at.toISOString() ?? null,
     opened_at: quiet.openedAt.toISOString(),
     wait_until: quiet.waitUntil?.toISOString() ?? null,

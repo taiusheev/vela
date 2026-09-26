@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   channelLabel,
+  clockMinutesBetween,
   formatAwayDate,
   formatNearbyContacts,
   formatTime,
+  medianTimeAround,
   reactionKindOf,
   reactionKindsOf,
 } from "./format.ts";
@@ -13,6 +15,48 @@ describe("formatTime", () => {
     const instant = new Date("2026-09-14T00:05:00Z");
     expect(formatTime(instant, "Asia/Taipei")).toBe("08:05");
     expect(formatTime(instant, "Europe/Berlin")).toBe("02:05");
+  });
+});
+
+describe("clockMinutesBetween", () => {
+  it("goes the short way round the clock, across midnight either way", () => {
+    expect(clockMinutesBetween("08:30", "09:00")).toBe(30);
+    expect(clockMinutesBetween("09:00", "08:30")).toBe(-30);
+    expect(clockMinutesBetween("23:55", "00:05")).toBe(10);
+    expect(clockMinutesBetween("00:05", "23:55")).toBe(-10);
+    expect(clockMinutesBetween("08:00", "20:00")).toBe(-720);
+    expect(clockMinutesBetween("08:00", "19:59")).toBe(719);
+  });
+});
+
+describe("medianTimeAround", () => {
+  /** Instants at the given Taipei wall-clock times (UTC+8, no daylight saving). */
+  function taipei(...times: string[]): Date[] {
+    return times.map((time, index) => {
+      const [hour, minute] = time.split(":");
+      return new Date(Date.UTC(2026, 7, 1 + index, Number(hour) - 8, Number(minute)));
+    });
+  }
+
+  it("gives a time near midnight for answers on both sides of it", () => {
+    const answers = taipei(...Array(7).fill("23:50"), ...Array(7).fill("00:10"));
+    expect(medianTimeAround(answers, "Asia/Taipei", "23:00")).toBe("00:00");
+    expect(
+      medianTimeAround(taipei("23:40", "23:55", "00:05", "00:15", "00:20"), "Asia/Taipei", "23:00"),
+    ).toBe("00:05");
+  });
+
+  it("orders an answer before her arrival before the ones after it", () => {
+    expect(
+      medianTimeAround(taipei("07:30", "07:40", "08:20", "08:30"), "Asia/Taipei", "08:00"),
+    ).toBe("08:00");
+    expect(medianTimeAround(taipei("09:00", "09:30", "10:00"), "Asia/Taipei", "08:00")).toBe(
+      "09:30",
+    );
+  });
+
+  it("has no usual time without an answer", () => {
+    expect(medianTimeAround([], "Asia/Taipei", "08:00")).toBeNull();
   });
 });
 

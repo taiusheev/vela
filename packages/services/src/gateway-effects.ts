@@ -6,7 +6,8 @@
  * appear. Nothing here imports a flow module: the effects are the gateway's own. Two leaves are the
  * exception, each importing no flow, so no cycle comes with them: the message that closes a quiet
  * event (`quiet-closing.ts`), which a notice landing after the close must send; and the founder's
- * alert when a blocked link was a family's last organiser who could be told (`admin-alerts.ts`).
+ * alerts (`admin-alerts.ts`), when a blocked link was a family's last organiser who could be told
+ * and when every notice of a quiet round has failed.
  */
 import { LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -17,14 +18,15 @@ import {
   type Family,
   type Member,
   type Outbound,
+  outbound,
   quietEvents,
   replies,
   turns,
   type VelaTransaction,
 } from "@vela/db";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
-import { organisersUnreachableAlert } from "./admin-alerts.ts";
+import { organisersUnreachableAlert, quietNobodyToldAlert } from "./admin-alerts.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { channelLabel } from "./format.ts";
@@ -377,6 +379,61 @@ async function arrivalFailed(
 }
 
 /**
+ * A quiet notice has finally failed. The round was stamped when it was enqueued (`last_notified_at`),
+ * so nothing asks for it again, and when every notice of the round has failed her silence has
+ * reached nobody: the founder is told, as when the round found no organiser to tell (flows §3.12,
+ * "Nobody to tell"), under the same key, so once per round. Not while the event is closed, a notice
+ * of this round or a later one has reached its reader, or another of the round is still queued or
+ * sent. The event is locked first, so of two notices of a round failing at once, the one that takes
+ * the lock second sees the first failed and is the one that tells.
+ */
+async function quietNoticeFailed(
+  deps: Deps,
+  tx: VelaTransaction,
+  ctx: FailedContext,
+): Promise<FailedOutcome> {
+  const effect = parseEffect(deps, QuietNoticeEffect, ctx);
+  if (effect === null) {
+    return NOTHING_FOLLOWS;
+  }
+  const [quiet] = await tx
+    .select()
+    .from(quietEvents)
+    .where(eq(quietEvents.id, effect.quietEventId))
+    .for("update");
+  if (quiet === undefined || quiet.resolvedAt !== null || quiet.notifyCount >= effect.notifyCount) {
+    return NOTHING_FOLLOWS;
+  }
+  const [pending] = await tx
+    .select({ id: outbound.id })
+    .from(outbound)
+    .where(
+      and(
+        eq(outbound.kind, "quiet_notice"),
+        eq(outbound.exchangeId, quiet.exchangeId),
+        inArray(outbound.status, ["queued", "sent"]),
+        ne(outbound.id, ctx.row.id),
+        sql`${outbound.payload} -> 'effect' ->> 'quietEventId' = ${quiet.id}`,
+        sql`(${outbound.payload} -> 'effect' ->> 'notifyCount')::int = ${effect.notifyCount}`,
+      ),
+    )
+    .limit(1);
+  const her = await memberById(tx, quiet.memberId);
+  if (pending !== undefined || her === null) {
+    return NOTHING_FOLLOWS;
+  }
+  const round = effect.notifyCount - 1;
+  deps.logger.error("quiet_notice_nobody_told", {
+    familyId: ctx.family.id,
+    memberId: her.id,
+    quietEventId: quiet.id,
+    round,
+  });
+  const alert = quietNobodyToldAlert(deps, { quietId: quiet.id, round, her, family: ctx.family });
+  return { wakeMemberIds: [], notices: alert === null ? [] : [alert] };
+}
+
+/**
  * The state changes after a send has finally failed: the block on the link, then by kind. A link
  * that becomes blocked here may have been the family's last organiser who could be told, and the
  * founder hears that at once (`organisersUnreachableAlert`); a link already blocked says nothing new.
@@ -411,6 +468,21 @@ export async function applyFailureEffects(
       }
     }
   }
-  const byKind = ctx.row.kind === "arrival" ? await arrivalFailed(deps, tx, ctx) : NOTHING_FOLLOWS;
+  const byKind = await failureEffectsByKind(deps, tx, ctx);
   return { wakeMemberIds: byKind.wakeMemberIds, notices: [...byKind.notices, ...alerts] };
+}
+
+function failureEffectsByKind(
+  deps: Deps,
+  tx: VelaTransaction,
+  ctx: FailedContext,
+): Promise<FailedOutcome> {
+  switch (ctx.row.kind) {
+    case "arrival":
+      return arrivalFailed(deps, tx, ctx);
+    case "quiet_notice":
+      return quietNoticeFailed(deps, tx, ctx);
+    default:
+      return Promise.resolve(NOTHING_FOLLOWS);
+  }
 }

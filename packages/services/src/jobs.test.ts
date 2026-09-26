@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { createFakeAi, createOffAi, fakeRecord, SAFE_DEFAULTS } from "@vela/ai";
 import type { LocalDate, LocalTime } from "@vela/contracts";
-import { localDateOf, outboundKey, zonedInstant } from "@vela/core";
+import { addDays, localDateOf, outboundKey, zonedInstant } from "@vela/core";
 import {
   accountLinkChallenges,
   aiCalls,
@@ -358,6 +358,34 @@ describe("draftWeeklyRead", () => {
     });
   });
 
+  // Her morning comes at 23:00. Last week she answered at 23:55; this week around midnight, from
+  // 23:40 to 00:20. Read from midnight, this week's middle answer is 00:20 and the drift is 1415
+  // minutes earlier; read around her arrival, it is 00:05, ten minutes later.
+  it("reads her usual time and its drift around her arrival when her answers cross midnight", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now(), arrivalTime: "23:00" });
+    await setStartsOn(seed, "2026-09-07");
+    const thisWeek = ["23:40", "23:50", "23:55", "00:05", "00:10", "00:15", "00:20"] as const;
+    for (const [index, date] of datesOfFortnight().entries()) {
+      const time = index < 7 ? "23:55" : (thisWeek[index - 7] ?? "23:55");
+      await seedExchange(h.db, seed, {
+        date,
+        state: "answered",
+        deliveredAt: at(date, "23:00"),
+        answeredAt: at(time < "23:00" ? addDays(date, 1) : date, time),
+      });
+    }
+    h.clock.set(at("2026-09-21", "01:00"));
+
+    await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
+
+    const [read] = await h.db.select().from(weeklyReads);
+    expect(read?.stats).toMatchObject({ answered_days: 7, usual_time: "00:05", drift_min: 10 });
+    expect(h.ai.calls[0]?.input).toMatchObject({
+      usualAnswerTime: "00:05",
+      answerTimeDriftMinutes: 10,
+    });
+  });
+
   it("stores the safe default when the model fails, so the week is still marked done", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await setStartsOn(seed, "2026-09-14");
@@ -438,6 +466,46 @@ describe("draftWeeklyRead", () => {
         n_days: 14,
         updated_at: at("2026-09-20", "18:00").toISOString(),
       },
+    });
+  });
+
+  // She writes "good morning" at 07:00, before her 08:00 arrival, and never answers the arrival
+  // itself. Each message attaches to the previous morning's exchange (flows §3.9) and counts as its
+  // own date's answer, sixty minutes before that date's delivery: the floor, not the ten-hour cap.
+  it("retunes T_quiet from the answer each day counts, so an early writer lands on the floor", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await setStartsOn(seed, "2026-09-06");
+    const dates = ["2026-09-06", ...datesOfFortnight()];
+    for (const [index, date] of dates.entries()) {
+      const next = dates[index + 1] ?? "2026-09-21";
+      const answeredAt = next === "2026-09-21" ? null : at(next, "07:00");
+      const exchange = await seedExchange(h.db, seed, {
+        date,
+        state: answeredAt === null ? "delivered" : "answered",
+        deliveredAt: at(date, "08:00"),
+        answeredAt,
+      });
+      if (answeredAt !== null) {
+        await h.db.insert(answers).values({
+          exchangeId: exchange.id,
+          memberId: seed.member.id,
+          kind: "text",
+          channel: "telegram",
+          externalId: `2001:${next}`,
+          payload: { text: "Good morning" },
+          receivedAt: answeredAt,
+        });
+      }
+    }
+    h.clock.set(at("2026-09-20", "18:00"));
+
+    await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
+
+    // The fourteen answered days before today are 7 to 20 September, each answered at 07:00; the
+    // 6th, answered only on the 7th, is the fifteenth.
+    expect(await memberRow(seed.member.id)).toMatchObject({
+      quietAfterMin: 240,
+      answerStats: { median_latency_min: -60, sunday_median_min: -60, n_days: 14 },
     });
   });
 

@@ -11,7 +11,6 @@ import {
   addMinutes,
   type ButtonAction,
   encodeButton,
-  localTimeOf,
   outboundKey,
   SCHEDULE,
   TUNING,
@@ -29,10 +28,11 @@ import { quietNobodyToldAlert } from "./admin-alerts.ts";
 import { ARRIVAL_CHANNEL } from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
-import { formatNearbyContacts, formatTime } from "./format.ts";
+import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
 import { enqueueOutbound, type OutboundRequest } from "./gateway.ts";
 import { closingNoticeFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
 import {
+  type AnsweredDay,
   activeOrganisersWithLinks,
   channelLinkOfMember,
   consentedNearbyContacts,
@@ -43,7 +43,7 @@ import {
   memberByChannelUser,
   memberById,
   quietEventById,
-  recentAnswerTimes,
+  recentAnsweredDays,
 } from "./repo.ts";
 
 /** `Button.label` allows at most 64 characters, and her name is the family's own words. */
@@ -129,29 +129,23 @@ function fitLabel(text: string): string {
   return `${kept.trimEnd()}…`;
 }
 
-function pad(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
 /**
- * When she usually answers: the median wall-clock time of her recent answered days, in her zone.
- * Null until her rhythm is known (spec §8: from the 14th answered day).
+ * When she usually answers: the median wall-clock time of her last answered days, in her zone,
+ * around her arrival time (`medianTimeAround`), so answers on both sides of midnight give a time
+ * near midnight. Null until her rhythm is known (spec §8: from the 14th answered day).
  */
-export function usualAnswerTime(answerTimes: readonly Date[], timeZone: string): string | null {
-  if (answerTimes.length < TUNING.minSamples) {
+export function usualAnswerTime(
+  days: readonly AnsweredDay[],
+  her: Pick<Member, "tz" | "arrivalTime">,
+): string | null {
+  if (days.length < TUNING.minSamples) {
     return null;
   }
-  const minutes = answerTimes
-    .map((instant) => {
-      const [hour, minute] = localTimeOf(instant, timeZone).split(":");
-      return Number(hour) * 60 + Number(minute);
-    })
-    .sort((a, b) => a - b);
-  const middle = Math.floor(minutes.length / 2);
-  const upper = minutes[middle] ?? 0;
-  const median =
-    minutes.length % 2 === 1 ? upper : Math.round(((minutes[middle - 1] ?? upper) + upper) / 2);
-  return `${pad(Math.floor(median / 60))}:${pad(median % 60)}`;
+  return medianTimeAround(
+    days.map((day) => day.answeredAt),
+    her.tz,
+    her.arrivalTime,
+  );
 }
 
 /**
@@ -182,10 +176,7 @@ async function sendQuietNotices(
     return;
   }
   const contacts = await consentedNearbyContacts(tx, member.id);
-  const usual = usualAnswerTime(
-    await recentAnswerTimes(tx, member.id, TUNING.minSamples),
-    member.tz,
-  );
+  const usual = usualAnswerTime(await recentAnsweredDays(tx, member, TUNING.minSamples), member);
   const sent = formatTime(exchange.deliveredAt ?? quiet.openedAt, member.tz);
   const name = member.displayName;
 

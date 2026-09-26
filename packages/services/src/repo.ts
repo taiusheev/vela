@@ -351,9 +351,9 @@ export async function firstAnswersByDate(
 /**
  * When her day counts as answered: the earlier of the day's own exchange's `answered_at` and her
  * first answer that arrived on the date to any exchange (`firstAnswersByDate`), or null when she has
- * given neither. The schedule (`loadScheduleInput`), the weekly read's counts (`jobs.ts`) and the
- * lights (`api-lights.ts`) read her day by it, so the family sees her lit exactly when the quiet
- * ladder counts her day answered.
+ * given neither. The schedule (`loadScheduleInput`), the weekly read's counts (`jobs.ts`), T_quiet's
+ * tuning and `{usual}` (`recentAnsweredDays`), and the lights (`api-lights.ts`) read her day by it,
+ * so the family sees her lit exactly when the quiet ladder counts her day answered.
  */
 export function dayAnsweredAt(
   exchangeAnsweredAt: Date | null,
@@ -509,53 +509,73 @@ export async function openQuietEventForExchange(
   return rows[0] ?? null;
 }
 
-export interface AnswerTiming {
+/** One of her answered days: the day's delivered morning, and the answer the day counts. */
+export interface AnsweredDay {
+  date: LocalDate;
   deliveredAt: Date;
   answeredAt: Date;
 }
 
-/**
- * Her last `limit` answered days that were delivered, newest first. The quiet threshold is tuned
- * from the minutes between the two (spec §8); a day answered without a delivery has no latency and
- * is left out, so it cannot pull the median.
- */
-export async function recentAnswerLatencies(
-  db: Queryable,
-  memberId: string,
-  limit: number,
-): Promise<AnswerTiming[]> {
-  const rows = await db
-    .select({ deliveredAt: exchanges.deliveredAt, answeredAt: exchanges.answeredAt })
-    .from(exchanges)
-    .where(
-      and(
-        eq(exchanges.recipientId, memberId),
-        isNotNull(exchanges.answeredAt),
-        isNotNull(exchanges.deliveredAt),
-      ),
-    )
-    .orderBy(desc(exchanges.answeredAt))
-    .limit(limit);
-  return rows.flatMap((row) =>
-    row.answeredAt === null || row.deliveredAt === null
-      ? []
-      : [{ deliveredAt: row.deliveredAt, answeredAt: row.answeredAt }],
-  );
-}
+/** Her delivered mornings read at a time, newest first, while looking for answered ones. */
+const ANSWERED_DAYS_PAGE = 30;
 
-/** When she answered her last `limit` answered exchanges, newest first. */
-export async function recentAnswerTimes(
+/**
+ * Her last `limit` answered days whose morning was delivered, newest first, each with the answer
+ * the day counts (flows §3.9, `dayAnsweredAt`), as the schedule and the weekly read count it: the
+ * earlier of its exchange's `answered_at` and her first answer received on that local date, to
+ * whichever exchange. A message before the arrival attaches to the previous morning and is still
+ * its own day's answer, so that day's latency is negative (spec §19), as `quietAfterMinutes`
+ * expects; read per exchange, it counted only for the previous morning, nearly a day late, and an
+ * early writer's threshold went to the cap. T_quiet is tuned from these days (spec §8) and
+ * `{usual}` is read from them (flows §3.12). A day whose morning was never delivered has no latency
+ * and is left out.
+ */
+export async function recentAnsweredDays(
   db: Queryable,
-  memberId: string,
+  member: Pick<Member, "id" | "tz">,
   limit: number,
-): Promise<Date[]> {
-  const rows = await db
-    .select({ answeredAt: exchanges.answeredAt })
-    .from(exchanges)
-    .where(and(eq(exchanges.recipientId, memberId), isNotNull(exchanges.answeredAt)))
-    .orderBy(desc(exchanges.answeredAt))
-    .limit(limit);
-  return rows.flatMap((row) => (row.answeredAt === null ? [] : [row.answeredAt]));
+): Promise<AnsweredDay[]> {
+  const days: AnsweredDay[] = [];
+  let before: LocalDate | null = null;
+  while (days.length < limit) {
+    const mornings = await db
+      .select({
+        date: exchanges.scheduledFor,
+        deliveredAt: exchanges.deliveredAt,
+        answeredAt: exchanges.answeredAt,
+      })
+      .from(exchanges)
+      .where(
+        and(
+          eq(exchanges.recipientId, member.id),
+          isNotNull(exchanges.deliveredAt),
+          ne(exchanges.state, "withdrawn"),
+          before === null ? isNotNull(exchanges.scheduledFor) : lt(exchanges.scheduledFor, before),
+        ),
+      )
+      .orderBy(desc(exchanges.scheduledFor))
+      .limit(ANSWERED_DAYS_PAGE);
+    const newest = mornings[0]?.date ?? null;
+    const oldest: LocalDate | null = mornings.at(-1)?.date ?? null;
+    if (newest === null || oldest === null) {
+      break;
+    }
+    const firstOn = await firstAnswersByDate(db, member.id, member.tz, oldest, newest);
+    for (const { date, deliveredAt, answeredAt } of mornings) {
+      const counted = dayAnsweredAt(
+        answeredAt,
+        (date === null ? undefined : firstOn.get(date)) ?? null,
+      );
+      if (date !== null && deliveredAt !== null && counted !== null) {
+        days.push({ date, deliveredAt, answeredAt: counted });
+      }
+    }
+    if (mornings.length < ANSWERED_DAYS_PAGE) {
+      break;
+    }
+    before = oldest;
+  }
+  return days.slice(0, limit);
 }
 
 /**

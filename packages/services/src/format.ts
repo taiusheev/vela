@@ -9,6 +9,7 @@ import {
   type InboundEvent,
   type Lang,
   LocalDate,
+  type LocalTime,
   type ReactionKind,
 } from "@vela/contracts";
 import { formatLocalTime, weekdayOf } from "@vela/core";
@@ -45,6 +46,51 @@ export function fitMessageText(text: string): string {
 /** `{time}`, `{sent}`, `{usual}`: the wall clock in the zone the reader thinks in, `HH:MM`. */
 export function formatTime(instant: Date, timeZone: string): string {
   return formatLocalTime(instant, timeZone);
+}
+
+const MINUTES_PER_DAY = 24 * 60;
+const HALF_DAY_MINUTES = MINUTES_PER_DAY / 2;
+
+function minutesOfTime(time: LocalTime): number {
+  const [hour, minute] = time.split(":");
+  return Number(hour) * 60 + Number(minute);
+}
+
+/**
+ * Minutes from `from` to `to` on the clock, the short way round, in [-720, 720): 00:05 is ten
+ * minutes after 23:55, not 1430 minutes before it.
+ */
+export function clockMinutesBetween(from: LocalTime, to: LocalTime): number {
+  const ahead = (minutesOfTime(to) - minutesOfTime(from) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  return ahead >= HALF_DAY_MINUTES ? ahead - MINUTES_PER_DAY : ahead;
+}
+
+/**
+ * `{usual}`, and the weekly read's usual time: the median wall-clock time of `instants` in the
+ * zone, or null for none. Each time is placed by its distance from `around`, her arrival time,
+ * within twelve hours either side, not by its minutes from midnight: her answers gather around her
+ * morning, and when it comes late in the evening they fall on both sides of midnight, where 23:50
+ * is 1430 minutes and 00:10 is 10, and a middle pair of those two made "usually answers by 12:00".
+ */
+export function medianTimeAround(
+  instants: readonly Date[],
+  timeZone: string,
+  around: LocalTime,
+): LocalTime | null {
+  const offsets = instants
+    .map((instant) => clockMinutesBetween(around, formatLocalTime(instant, timeZone)))
+    .sort((a, b) => a - b);
+  if (offsets.length === 0) {
+    return null;
+  }
+  const middle = Math.floor(offsets.length / 2);
+  const upper = offsets[middle] ?? 0;
+  const median =
+    offsets.length % 2 === 1 ? upper : Math.round(((offsets[middle - 1] ?? upper) + upper) / 2);
+  const minutes =
+    (((minutesOfTime(around) + median) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  const hour = String(Math.floor(minutes / 60)).padStart(2, "0");
+  return `${hour}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
 const WEEKDAYS_EN = [
