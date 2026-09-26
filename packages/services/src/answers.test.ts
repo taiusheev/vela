@@ -24,7 +24,13 @@ import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { openQuiet } from "./quiet.ts";
 import { MEDIA_RETENTION_DAYS } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedExchange, seedFamily, seedLinkedGroup } from "./testing/seed.ts";
+import {
+  type SeededFamily,
+  seedExchange,
+  seedFamily,
+  seedGroupMember,
+  seedLinkedGroup,
+} from "./testing/seed.ts";
 
 let h: Harness;
 
@@ -836,6 +842,48 @@ describe("handleAnswerButton", () => {
     const told = (await outboundRows()).filter((row) => row.kind === "quiet_resolved");
     expect(told.map((row) => [row.memberId, textOf(row)])).toEqual([
       [seed.organiser.id, "Mom answered at 14:32. Everything is lit again."],
+    ]);
+  });
+
+  // Two silent days: yesterday's event is still open, since only her answer or a "she's fine" tap
+  // closes one, and today's was told at 14:12. Her tap on yesterday's arrival closes both, yet it is
+  // one answer: an organiser told of both reads "Mom answered at 14:32" once, not twice in the same
+  // second. One who joined since yesterday's notice was told only of today's, and hears it too.
+  it("tells each organiser once when her tap on yesterday's arrival closes yesterday's quiet and today's", async () => {
+    const scene = await morning();
+    const { seed, exchangeId } = scene;
+    const yesterday = await seedExchange(h.db, seed, {
+      date: YESTERDAY,
+      state: "delivered",
+      deliveredAt: new Date("2026-09-13T00:00:00Z"),
+    });
+    await openQuiet(h.deps, seed.member.id, YESTERDAY, true);
+    await h.run(handlers());
+    const second = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Sam",
+      externalId: "1002",
+      role: "organiser",
+    });
+    h.clock.advanceMinutes(360);
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+    h.clock.advanceMinutes(20);
+
+    await tapped(scene, { type: "answer", exchangeId: yesterday.id, answer: "fine" }, "6");
+
+    const quiet = await h.db.select().from(quietEvents).orderBy(asc(quietEvents.openedAt));
+    expect(quiet.map((row) => [row.exchangeId, row.outcome, row.resolvedAt])).toEqual([
+      [yesterday.id, "answered_late", h.clock.now()],
+      [exchangeId, "answered_late", h.clock.now()],
+    ]);
+    const told = (await outboundRows()).filter((row) => row.kind === "quiet_resolved");
+    expect(told.map((row) => row.memberId).sort()).toEqual(
+      [seed.organiser.id, second.member.id].sort(),
+    );
+    expect(told.map(textOf)).toEqual([
+      "Mom answered at 14:32. Everything is lit again.",
+      "Mom answered at 14:32. Everything is lit again.",
     ]);
   });
 

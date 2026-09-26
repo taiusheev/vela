@@ -196,15 +196,16 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | n
       .set({ state, answeredAt: exchange.answeredAt ?? now })
       .where(eq(exchanges.id, exchange.id));
 
-    await resolveQuietOnAnswer(deps, tx, exchange.id);
+    const told = await resolveQuietOnAnswer(deps, tx, exchange.id);
     // An answer counts for the local date it arrives on (flows §3.9), so a tap on an older
     // arrival's buttons is today's answer too, and closes today's quiet. It takes the lock the quiet
     // ladder takes before it opens or notifies, so the ladder either sees this answer or waits and
     // is closed here. Taken after the target's, which is safe because only a delivered morning is
-    // locked (`lockDeliveredExchangeForLocalDate`).
+    // locked (`lockDeliveredExchangeForLocalDate`). An organiser told of both events hears this one
+    // answer once.
     const day = await lockDeliveredExchangeForLocalDate(tx, member.id, localDate);
     if (day !== null && day.id !== exchange.id) {
-      await resolveQuietOnAnswer(deps, tx, day.id);
+      await resolveQuietOnAnswer(deps, tx, day.id, told);
     }
 
     // An open-ended away ("until I'm back") lasts until her first answer on or after its start, on a

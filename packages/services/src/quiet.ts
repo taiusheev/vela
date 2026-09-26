@@ -291,33 +291,45 @@ export async function notifyQuiet(deps: Deps, memberId: string, date: LocalDate)
 export type EmitOutbound = (request: OutboundRequest) => Promise<unknown>;
 
 /**
- * One `quiet_resolved` to each member the closed event counts as told, except whoever closed it, in
- * their own language (`closingNoticeFor`). A notice still on its way is not counted yet; the gateway
- * tells its reader once it lands (`quietNoticeSent`), and drops one not yet sent.
+ * One `quiet_resolved` to each member the closed event counts as told, except whoever closed it and
+ * those in `alreadyTold`, in their own language (`closingNoticeFor`). A notice still on its way is
+ * not counted yet; the gateway tells its reader once it lands (`quietNoticeSent`), and drops one not
+ * yet sent. Returns everyone told of the close, `alreadyTold` included.
  */
 async function tellNotified(
   tx: VelaTransaction,
   closed: QuietEvent,
   her: Member,
   emit: EmitOutbound,
-): Promise<void> {
+  alreadyTold: ReadonlySet<string> = new Set(),
+): Promise<ReadonlySet<string>> {
+  const told = new Set(alreadyTold);
   for (const readerId of closed.notifiedMemberIds) {
+    if (told.has(readerId)) {
+      continue;
+    }
     const notice = await closingNoticeFor(tx, closed, her, readerId);
     if (notice !== null) {
       await emit(notice);
+      told.add(readerId);
     }
   }
+  return told;
 }
 
 /**
  * Her answer closes the exchange's open quiet event (`answered_late`) inside the answer's own
- * transaction, and everyone who was told hears that the light is lit again.
+ * transaction, and everyone who was told hears that the light is lit again, once per answer: one
+ * answer can close two events (flows §3.9, step 3), whose closing notices read the same words at the
+ * same minute, so a reader in `alreadyTold`, told by the other close, is not told again. Returns the
+ * readers this answer has told, `alreadyTold` included.
  */
 export async function resolveQuietOnAnswer(
   deps: Deps,
   tx: VelaTransaction,
   exchangeId: string,
-): Promise<void> {
+  alreadyTold: ReadonlySet<string> = new Set(),
+): Promise<ReadonlySet<string>> {
   const now = deps.clock.now();
   const [quiet] = await tx
     .select()
@@ -325,11 +337,11 @@ export async function resolveQuietOnAnswer(
     .where(and(eq(quietEvents.exchangeId, exchangeId), isNull(quietEvents.resolvedAt)))
     .for("update");
   if (quiet === undefined) {
-    return;
+    return alreadyTold;
   }
   const member = await memberById(tx, quiet.memberId);
   if (member === null) {
-    return;
+    return alreadyTold;
   }
   const [closed] = await tx
     .update(quietEvents)
@@ -339,7 +351,13 @@ export async function resolveQuietOnAnswer(
   if (closed === undefined) {
     throw new Error("quiet event vanished under its own lock");
   }
-  await tellNotified(tx, closed, member, (request) => enqueueOutbound(deps, tx, request));
+  const told = await tellNotified(
+    tx,
+    closed,
+    member,
+    (request) => enqueueOutbound(deps, tx, request),
+    alreadyTold,
+  );
   await recordEvent(
     tx,
     {
@@ -351,6 +369,7 @@ export async function resolveQuietOnAnswer(
     },
     now,
   );
+  return told;
 }
 
 /**
