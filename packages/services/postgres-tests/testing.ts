@@ -59,6 +59,11 @@ export interface HeldActorLock {
   readonly done: Promise<void>;
 }
 
+export interface HeldRows {
+  /** Lets the rows go and waits for the holding transaction to end. */
+  release(): Promise<void>;
+}
+
 export interface Account {
   readonly authSubject: string | null;
   readonly displayName: string;
@@ -159,6 +164,17 @@ export interface PostgresHarness {
     lockRow: (tx: VelaTransaction) => Promise<unknown>,
     contenders: readonly { readonly client: RaceClient; readonly start: () => Promise<T> }[],
   ): Promise<Promise<T>[]>;
+  /**
+   * Rows that `holder` takes with `lockRows` and keeps until `release`, for a race whose contenders
+   * stop at different points: the test starts them one at a time and confirms where each one waits
+   * (`waitForRowLockWait`), or that it went on without waiting (`waitForRowLockWaitOrCompletion`).
+   * The second is how a race still judges the outcome when the lock a guard relies on is missing,
+   * rather than failing on a wait that never comes.
+   */
+  holdRows(
+    holder: RaceClient,
+    lockRows: (tx: VelaTransaction) => Promise<unknown>,
+  ): Promise<HeldRows>;
   jobDeps(client: RaceClient): Deps;
   holdsActorLock(client: RaceClient): Promise<boolean>;
   holdActorLock(client: RaceClient, authSubject: string): Promise<HeldActorLock>;
@@ -514,6 +530,25 @@ export async function openPostgresHarness(): Promise<PostgresHarness> {
       release.release();
       await harness.finish(`${holder.name} to let the row go`, held);
       return operations;
+    },
+
+    async holdRows(holder, lockRows) {
+      const entered = harness.latch(`${holder.name} to take the rows`);
+      const release = harness.latch(`${holder.name} to let the rows go`, HOLD_MS);
+      const held = harness.track(
+        holder.db.transaction(async (tx) => {
+          await lockRows(tx);
+          entered.release();
+          await release.wait();
+        }),
+      );
+      await harness.reach(`${holder.name} to take the rows`, entered, held);
+      return {
+        release: async () => {
+          release.release();
+          await harness.finish(`${holder.name} to let the rows go`, held);
+        },
+      };
     },
 
     jobDeps(client) {

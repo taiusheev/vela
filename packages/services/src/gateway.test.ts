@@ -1179,6 +1179,101 @@ describe("deliverOutbound and her morning once she has answered or said stop", (
     });
   });
 
+  /**
+   * Deps whose database runs `between` once, just before the first transaction a flow opens: for a
+   * delivery, after it read the row and her, and before it writes a drop or a send.
+   */
+  function withBeforeFirstTransaction(between: () => Promise<void>): Deps {
+    let done = false;
+    const real = h.deps.db;
+    const db = new Proxy(real, {
+      get(target, property) {
+        if (property === "transaction") {
+          const wrapped = ((...args: Parameters<VelaDatabase["transaction"]>) => {
+            if (done) {
+              return target.transaction(...args);
+            }
+            done = true;
+            return between().then(() => target.transaction(...args));
+          }) as VelaDatabase["transaction"];
+          return wrapped;
+        }
+        const value: unknown = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    return { ...h.deps, db };
+  }
+
+  function morningsToHer(seed: SeededFamily): string[] {
+    return h.telegram
+      .sentTo(seed.memberLink.externalId)
+      .filter((entry) => entry.message.kind === "arrival")
+      .map((entry) => entry.message.text);
+  }
+
+  // Flows §3.13, and the contention drill's `pause-drop-race`: her start can land between a
+  // delivery's read of her pause and its drop. The start's tick asks for the morning, finds its row
+  // still queued, and leaves it to that delivery, which must not drop it then.
+  it("sends her morning when her start lands after a delivery read her paused and before its drop", async () => {
+    const seed = await family();
+    await h.db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-01" })
+      .where(eq(members.id, seed.member.id));
+    const { id } = await arrivalFor(seed);
+    await command(seed, "stop");
+    h.clock.advanceMinutes(5);
+
+    const delivered = await deliverOutbound(
+      withBeforeFirstTransaction(() => command(seed, "start")),
+      id,
+    );
+
+    expect(delivered).toBe("sent");
+    expect(await rowsOf("arrival")).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+    expect(morningsToHer(seed)).toEqual(["Good morning, Mrs Chen."]);
+    expect(await drops()).toEqual([]);
+  });
+
+  // A second delivery of the row, a re-drive beside a late job, can send it after this one read her
+  // paused. `dropped` over `sent` would hide the send from `reconcile`, whose effects never land, and
+  // her start would queue the morning again and send it twice.
+  it("keeps her morning sent when another delivery sent it after this one read her paused", async () => {
+    const seed = await family();
+    await h.db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-01" })
+      .where(eq(members.id, seed.member.id));
+    const { id, exchangeId } = await arrivalFor(seed);
+    await command(seed, "stop");
+    const sentAt = h.clock.now();
+
+    const delivered = await deliverOutbound(
+      withBeforeFirstTransaction(async () => {
+        await h.db
+          .update(outbound)
+          .set({ status: "sent", sentAt, attempts: 1, externalId: "900" })
+          .where(eq(outbound.id, id));
+      }),
+      id,
+    );
+
+    // The send is kept, and this delivery finished its effects instead.
+    expect(delivered).toBe("sent");
+    expect(await rowsOf("arrival")).toMatchObject([{ id, status: "sent", error: null }]);
+    expect(await exchangeState(exchangeId)).toMatchObject({
+      state: "delivered",
+      deliveredAt: sentAt,
+    });
+    expect(await drops()).toEqual([]);
+
+    h.clock.advanceMinutes(5);
+    await command(seed, "start");
+    await h.run(handlers());
+    expect(morningsToHer(seed)).toEqual([]);
+  });
+
   it("never queues again an arrival dropped for an ended family", async () => {
     const seed = await family();
     const { exchangeId } = await arrivalFor(seed);
