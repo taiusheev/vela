@@ -13,11 +13,13 @@
  * applyRetention in services and documented here because they explain the nullable columns and the
  * member ids without a foreign key.
  *
- * - Cleared: exchanges.text and exchanges.options 30 days after delivery, or after they were
- *   written when the morning never reached her (delivered_at stays null on a failed arrival and on
- *   a whenever ask nothing scheduled); outbound.payload 30 days after sent_at, or after it was
- *   queued when the row never sent; after 30 days, chips, translations, replies.text, the text inside
- *   answers.payload, answers.transcript, answers.mentions, mood_words and flag_reason,
+ * - Cleared: exchanges.text and exchanges.options 30 days after delivery, never while a morning can
+ *   still take the ask (a whenever ask in the queue, or one dated for a morning not yet past), and
+ *   30 days after they were written when the ask can no longer reach her (delivered_at stays null on
+ *   a failed arrival and on a date that passed unsent); outbound.payload 30 days after sent_at, or
+ *   after it was queued when the row never sent; after 30 days, chips, translations, replies.text,
+ *   the words inside answers.payload (her text and the chip or vote option she tapped),
+ *   answers.transcript, answers.mentions, mood_words and flag_reason,
  *   suggestions.text, ai_calls.output, and the reply text inside quiet_events.ask_to_check. A
  *   cleared column that is NOT NULL takes its empty value ('', '{}', '[]'); chips and translations
  *   rows hold nothing but their text, so clearing them deletes the rows.
@@ -28,12 +30,14 @@
  *   deletions row. Foreign-key references to it are set null; the job removes its id from
  *   exchanges.media_ids and exchanges.options, which no foreign key covers.
  * - Members are deleted 30 days after left_at, and a member still invited without consent 30 days
- *   after her last invite expired (a no to the light deletes her at once). Rows that only credit them
+ *   after her last invite expired, which her created_at dates once the invite cascaded away with the
+ *   organiser who sent it (a no to the light deletes her at once). Rows that only credit them
  *   with an act (asker, uploader, resolver, turn holder) stay with the reference set null; rows that
  *   exist only because of them (invites they sent or that were meant for them, outbound messages
  *   sent on their tap, nearby contacts near them) are deleted with them. Member ids held in arrays or
  *   JSON (quiet_events.notified_member_ids, ask_to_check) and in admin_access_log have no foreign key.
- * - Families are deleted, with everything that cascades from them, within 24 h of deleted_at.
+ * - Families are deleted, with everything that cascades from them, within 24 h of deleted_at, and in
+ *   the same transaction their translations (no foreign key) and their ai_calls output.
  * - Consent proofs outlive their subject. Before any member or nearby contact is deleted, a family's
  *   included, the consent rows about them are forgotten: evidence cut to CONSENT_PROOF_KEYS and
  *   subject_deleted_at set (consents_subject_deleted_check refuses the delete otherwise). The delete

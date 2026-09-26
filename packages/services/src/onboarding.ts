@@ -55,10 +55,12 @@ const OTHER_COUNTRY = "ZZ";
 /** A wake time as typed: `7:30` and `07:30` both mean the same morning. */
 const TYPED_TIME = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 /**
- * A run of digits, spaces, and `+ - ( ) .`. One that holds six digits or more is a phone number,
- * which the nearby step never keeps (L8): a contact's number arrives only with their own yes.
+ * A run of digits, spaces, dashes, and `+ ( ) .`. One that holds six digits or more is a phone
+ * number, which the nearby step never keeps (L8): a contact's number arrives only with their own
+ * yes. Digits and dashes of any script count, because `\d` is only 0 to 9.
  */
-const PHONE_RUN = /[\d\s+\-().]+/g;
+const PHONE_RUN = /[\p{Nd}\s\p{Pd}+().]+/gu;
+const PHONE_DIGIT = /\p{Nd}/gu;
 const PHONE_MIN_DIGITS = 6;
 /** Where a name ends and how they know her begins: "Anna, neighbour", "王小姐，鄰居", "王小姐、鄰居". */
 const NEARBY_SEPARATOR = /[,，、]/u;
@@ -189,10 +191,14 @@ export function regionForCountry(regions: readonly Region[], country: string): R
   return regions.includes(preferred) ? preferred : "apac";
 }
 
-/** Whether a text holds a phone number anywhere in it (`PHONE_RUN`). */
+/**
+ * Whether a text holds a phone number anywhere in it (`PHONE_RUN`). NFKC first folds what a zh-TW
+ * keyboard in full-width mode types (`０９１２－３４５`, `＋`, `（）`) into the usual characters; the
+ * check reads the folded text, and what the step keeps is the text as typed.
+ */
 function holdsPhoneNumber(text: string): boolean {
-  return [...text.matchAll(PHONE_RUN)].some(
-    (match) => (match[0].match(/\d/g) ?? []).length >= PHONE_MIN_DIGITS,
+  return [...text.normalize("NFKC").matchAll(PHONE_RUN)].some(
+    (match) => (match[0].match(PHONE_DIGIT) ?? []).length >= PHONE_MIN_DIGITS,
   );
 }
 

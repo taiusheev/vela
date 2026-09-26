@@ -42,8 +42,11 @@ import {
   onboardingSessions,
   outbound,
   quietEvents,
+  recipes,
   replies,
+  stories,
   suggestions,
+  type Translation,
   translations,
   weeklyReads,
 } from "@vela/db";
@@ -66,6 +69,7 @@ import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
+import { INVITE_DAYS } from "./invites.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import {
   dayAnsweredAt,
@@ -671,6 +675,46 @@ async function deleteMedia(deps: Deps, row: Media, reason: string): Promise<void
   });
 }
 
+/**
+ * The translations of a family's objects. `translations` names its object by type and id with no
+ * foreign key, so the family's cascade leaves them behind. The record lists every object type, so a
+ * new one does not compile until it says where its family is. Joined by hand rather than with
+ * `or()`, whose result may be undefined, and a delete given no condition would take every row.
+ */
+function familyTranslations(tx: Queryable, familyId: string): SQL {
+  const exchangeIds = tx
+    .select({ id: exchanges.id })
+    .from(exchanges)
+    .where(eq(exchanges.familyId, familyId));
+  const objects: Record<Translation["objectType"], SQL> = {
+    exchange: inArray(translations.objectId, exchangeIds),
+    answer: inArray(
+      translations.objectId,
+      tx.select({ id: answers.id }).from(answers).where(inArray(answers.exchangeId, exchangeIds)),
+    ),
+    reply: inArray(
+      translations.objectId,
+      tx.select({ id: replies.id }).from(replies).where(inArray(replies.exchangeId, exchangeIds)),
+    ),
+    weekly_read: inArray(
+      translations.objectId,
+      tx.select({ id: weeklyReads.id }).from(weeklyReads).where(eq(weeklyReads.familyId, familyId)),
+    ),
+    story: inArray(
+      translations.objectId,
+      tx.select({ id: stories.id }).from(stories).where(eq(stories.familyId, familyId)),
+    ),
+    recipe: inArray(
+      translations.objectId,
+      tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.familyId, familyId)),
+    ),
+  };
+  const byType = Object.entries(objects).map(
+    ([objectType, ids]) => sql`(${translations.objectType} = ${objectType} and ${ids})`,
+  );
+  return sql`(${sql.join(byType, sql` or `)})`;
+}
+
 /** Clears a kept-light member's Durable Object storage and alarm; other members have none. */
 async function clearSchedulers(
   deps: Deps,
@@ -686,6 +730,20 @@ async function clearSchedulers(
 /** A kept-light member still invited who never tapped Yes (a No deletes her at once). */
 function neverAnswered(): SQL {
   return sql`${members.status} = 'invited' and ${members.lightConsentedAt} is null`;
+}
+
+/**
+ * An ask a morning can still take (`prepareDay`), whose words that morning renders: never
+ * delivered nor failed, composed or scheduled, either a whenever ask no morning has claimed or one
+ * dated for a morning not yet past, and addressed to a member who is not left or deceased. Every
+ * zone's today is at least the day before the UTC date, so an earlier date has passed for her.
+ */
+function stillWaiting(now: Date): SQL {
+  const earliestToday = addDays(localDateOf(now, "UTC"), -1);
+  return sql`${exchanges.deliveredAt} is null and ${exchanges.deliveryFailedAt} is null
+    and ${exchanges.state} in ('composed', 'scheduled')
+    and (${exchanges.scheduledFor} is null or ${exchanges.scheduledFor} >= ${earliestToday})
+    and exists (select 1 from ${members} where ${members.id} = ${exchanges.recipientId} and ${members.status} not in ('left', 'deceased'))`;
 }
 
 /**
@@ -765,6 +823,8 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
     .from(families)
     .where(and(isNotNull(families.deletedAt), lte(families.deletedAt, now)));
   let familyMedia = 0;
+  let familyTranslationsDeleted = 0;
+  let familyAiOutputsCleared = 0;
   for (const family of doomed) {
     const files = await db.select().from(media).where(eq(media.familyId, family.id));
     for (const file of files) {
@@ -781,12 +841,45 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .where(eq(members.familyId, family.id));
     await db.transaction(async (tx) => {
       await forgetFamilySubjects(tx, family.id, now);
+      // Neither follows the cascade: translations have no foreign key, and the AI call log is kept
+      // 24 months with its ids set null, which would leave her words in it unfindable for 30 days.
+      // The ids are set null here too: a row this transaction updated has its member key checked
+      // again when the cascade updates it, and by then the member is gone.
+      familyTranslationsDeleted += (
+        await tx
+          .delete(translations)
+          .where(familyTranslations(tx, family.id))
+          .returning({ id: translations.objectId })
+      ).length;
+      familyAiOutputsCleared += (
+        await tx
+          .update(aiCalls)
+          .set({ output: null, familyId: null, memberId: null })
+          .where(
+            and(
+              isNotNull(aiCalls.output),
+              or(
+                eq(aiCalls.familyId, family.id),
+                inArray(
+                  aiCalls.memberId,
+                  tx
+                    .select({ id: members.id })
+                    .from(members)
+                    .where(eq(members.familyId, family.id)),
+                ),
+              ),
+            ),
+          )
+          .returning({ id: aiCalls.id })
+      ).length;
       await tx.delete(families).where(eq(families.id, family.id));
     });
     await clearSchedulers(deps, lit);
   }
   counts.families_deleted = doomed.length;
   counts.family_media_deleted = familyMedia;
+  counts.family_translations_deleted = familyTranslationsDeleted;
+  counts.family_ai_call_outputs_cleared = familyAiOutputsCleared;
 
   const expired = await db
     .select()
@@ -810,7 +903,10 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   counts.members_deleted = gone.length;
 
   // An invited member who never answered holds only what setup stored: she goes 30 days after her
-  // last invite expired (L7), her invites and nearby contacts with her. She has no scheduler.
+  // last invite expired (L7), her invites and nearby contacts with her. She has no scheduler. Her
+  // profile is made with her first invite, which expires `INVITE_DAYS` later, so her own
+  // `created_at` dates that expiry even once the invite is gone: it cascades away with the organiser
+  // who sent it, who can leave in her first week and be deleted before she comes due.
   counts.invited_members_deleted = (
     await deleteMembers(
       deps,
@@ -821,7 +917,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
           .where(
             and(
               neverAnswered(),
-              sql`exists (select 1 from ${invites} where ${invites.forMemberId} = ${members.id})`,
+              lt(members.createdAt, new Date(cutoff30.getTime() - INVITE_DAYS * DAY_MS)),
               sql`not exists (select 1 from ${invites} where ${invites.forMemberId} = ${members.id} and ${invites.expiresAt} >= ${cutoff30})`,
             ),
           ),
@@ -829,9 +925,10 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
     )
   ).length;
 
-  // The ask's own words go 30 days after delivery, and 30 days after they were written when the
-  // morning never reached her: `delivered_at` stays null on a failed arrival and on a whenever ask
-  // nothing ever scheduled, and a NULL comparison would keep those words for good.
+  // The ask's own words go 30 days after delivery, and an ask still waiting for her keeps them
+  // until then (`stillWaiting`). One that can no longer reach her (a failed arrival, a date that
+  // passed unsent, a withdrawn ask) loses them 30 days after they were written: its `delivered_at`
+  // stays null for good, and a NULL comparison would keep those words forever.
   counts.exchanges_cleared = (
     await db
       .update(exchanges)
@@ -840,6 +937,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
         and(
           lt(sql`coalesce(${exchanges.deliveredAt}, ${exchanges.createdAt})`, cutoff30),
           or(isNotNull(exchanges.text), isNotNull(exchanges.options)),
+          sql`not (${stillWaiting(now)})`,
         ),
       )
       .returning({ id: exchanges.id })
@@ -875,11 +973,13 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .where(and(lt(replies.createdAt, cutoff30), isNotNull(replies.text)))
       .returning({ id: replies.id })
   ).length;
+  // The words in the payload are what she typed (`text`) and the chip or vote option she tapped
+  // (`choice`), a copy of words the chips and options rules above delete; the index is no word.
   counts.answers_cleared = (
     await db
       .update(answers)
       .set({
-        payload: sql`${answers.payload} - 'text'`,
+        payload: sql`${answers.payload} - array['text', 'choice']`,
         transcript: null,
         mentions: {},
         moodWords: [],
@@ -891,7 +991,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
           or(
             isNotNull(answers.transcript),
             isNotNull(answers.flagReason),
-            sql`${answers.payload} ? 'text'`,
+            sql`${answers.payload} ?| array['text', 'choice']`,
             sql`${answers.mentions} <> '{}'::jsonb`,
             sql`cardinality(${answers.moodWords}) > 0`,
           ),
@@ -942,8 +1042,8 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
             lt(invites.acceptedAt, cutoff30),
             and(isNull(invites.acceptedAt), lt(invites.expiresAt, cutoff30)),
           ),
-          // An invite meant for a member who never answered is how the rule above finds her, so it
-          // stays until she is deleted and goes with her.
+          // An invite meant for a member who never answered dates her deletion in the rule above, so
+          // it stays until she is deleted and goes with her.
           sql`not exists (select 1 from ${members} where ${members.id} = ${invites.forMemberId} and ${neverAnswered()})`,
         ),
       )

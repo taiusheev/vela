@@ -316,6 +316,10 @@ describe("handleOnboarding: validation", () => {
     ["a number after a comma", "Bob, 0912-000-002"],
     ["a number in brackets inside the relation", "王小姐，鄰居 (02) 2345 6789"],
     ["a number alone", "0912000003"],
+    // A zh-TW keyboard in full-width mode types these; `\d` alone reads none of them as digits.
+    ["a number in full-width digits", "王小姐，鄰居 ０９１２３４５６７８"],
+    ["full-width digits and hyphens with no comma", "王小姐 ０９１２－３４５－６７８"],
+    ["a number split by en dashes", "Anna 0912–345–678"],
   ])("refuses %s with nearby_no_number and keeps nothing of it", async (_what, typed) => {
     await reachNearby();
 

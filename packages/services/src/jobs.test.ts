@@ -33,6 +33,7 @@ import {
 } from "@vela/db";
 import { asc, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { deliverArrival } from "./arrivals.ts";
 import { applyRetention, draftWeeklyRead, rollupMetrics } from "./jobs.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import {
@@ -571,6 +572,8 @@ describe("applyRetention", () => {
     "api_request_receipts_deleted",
     "families_deleted",
     "family_media_deleted",
+    "family_translations_deleted",
+    "family_ai_call_outputs_cleared",
     "media_deleted",
     "members_deleted",
     "invited_members_deleted",
@@ -874,9 +877,13 @@ describe("applyRetention", () => {
       [young.replyId, "Lovely"],
     ]);
     const answerRows = await h.db.select().from(answers).orderBy(asc(answers.receivedAt));
+    // Her typed words and the option she tapped both go; toMatchObject would take `{}` as any object.
+    expect(answerRows.map((row) => row.payload)).toEqual([
+      {},
+      { text: "her words", choice: "Soup" },
+    ]);
     expect(answerRows[0]).toMatchObject({
       id: old.answerId,
-      payload: { choice: "Soup" },
       transcript: null,
       mentions: {},
       moodWords: [],
@@ -950,6 +957,104 @@ describe("applyRetention", () => {
     ]);
   });
 
+  // A tap stores the chip or vote option's words in the answer, and the chips and options they were
+  // copied from go at 30 days: the copy has to go with them, leaving the kind, the index, and the time.
+  it("clears the chip or vote option she tapped at 30 days, as it clears the words she typed", async () => {
+    const seed = await seedFamily(h.db, { now: daysAgo(40) });
+    const tapped = async (date: LocalDate, age: number, kind: "chip" | "vote", choice: string) => {
+      const exchange = await seedExchange(h.db, seed, {
+        date,
+        type: kind === "vote" ? "vote" : "question",
+        state: "answered",
+        text: "Did you see the doctor?",
+        deliveredAt: daysAgo(age),
+        answeredAt: daysAgo(age),
+      });
+      const [answer] = await h.db
+        .insert(answers)
+        .values({
+          exchangeId: exchange.id,
+          memberId: seed.member.id,
+          kind,
+          channel: "telegram",
+          externalId: `2001:${date}`,
+          payload: { index: 0, choice },
+          receivedAt: daysAgo(age),
+        })
+        .returning({ id: answers.id });
+      return answer?.id ?? "";
+    };
+    const oldChip = await tapped("2026-08-10", 31, "chip", "Went to the clinic");
+    const oldVote = await tapped("2026-08-11", 31, "vote", "Salad");
+    const young = await tapped("2026-08-12", 29, "chip", "Stayed home");
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts).toMatchObject({ answers_cleared: 2 });
+    const rows = await h.db.select().from(answers).orderBy(asc(answers.externalId));
+    expect(rows.map((row) => [row.id, row.kind, row.payload])).toEqual([
+      [oldChip, "chip", { index: 0 }],
+      [oldVote, "vote", { index: 0 }],
+      [young, "chip", { index: 0, choice: "Stayed home" }],
+    ]);
+  });
+
+  // A whenever ask waits in the queue for a morning nobody asked, and she may stop for weeks while
+  // the family keeps adding to it: its words are cleared 30 days after delivery, never before, or
+  // the morning that takes it would say "Mia asks:" over nothing.
+  it("keeps the words of an ask still waiting for her, so the morning that takes it carries them", async () => {
+    const seed = await seedFamily(h.db, { now: daysAgo(40) });
+    const ask = (text: string, age: number, fields: Partial<typeof exchanges.$inferInsert>) => ({
+      familyId: seed.family.id,
+      recipientId: seed.member.id,
+      askerId: seed.organiser.id,
+      type: "question" as const,
+      state: "composed" as const,
+      text,
+      whenRule: "whenever" as const,
+      scheduledFor: null,
+      createdAt: daysAgo(age),
+      ...fields,
+    });
+    await h.db.insert(exchanges).values([
+      // Claimed last night for this morning, which has not gone out yet.
+      ask("Is the persimmon ripe?", 33, { state: "scheduled", scheduledFor: "2026-09-14" }),
+      ask("Tea or coffee?", 32, { type: "vote", options: { vote_options: ["Tea", "Coffee"] } }),
+      ask("Did the plum tree flower?", 31, {}),
+    ]);
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts).toMatchObject({ exchanges_cleared: 0 });
+    const rows = await h.db.select().from(exchanges).orderBy(asc(exchanges.createdAt));
+    expect(rows.map((row) => [row.text, row.options])).toEqual([
+      ["Is the persimmon ripe?", null],
+      ["Tea or coffee?", { vote_options: ["Tea", "Coffee"] }],
+      ["Did the plum tree flower?", null],
+    ]);
+
+    for (const date of ["2026-09-14", "2026-09-15", "2026-09-16"] as const) {
+      await deliverArrival(h.deps, seed.member.id, date, false);
+    }
+    const arrivals = await h.db
+      .select()
+      .from(outbound)
+      .where(eq(outbound.kind, "arrival"))
+      .orderBy(asc(outbound.localDay));
+    const messages = arrivals.map(
+      (row) =>
+        (row.payload as { message: { text: string; buttons: { label: string }[][] } }).message,
+    );
+    expect(messages.map((message) => message.text.split("\n\n")[1])).toEqual([
+      "Mia asks:\nIs the persimmon ripe?",
+      "Mia asks:\nTea or coffee?\nTap one.",
+      "Mia asks:\nDid the plum tree flower?",
+    ]);
+    expect(messages[1]?.buttons.flat().map((button) => button.label)).toEqual(
+      expect.arrayContaining(["Tea", "Coffee"]),
+    );
+  });
+
   // delivered_at and sent_at stay null on everything that never reached anyone, and a NULL
   // comparison is never true, so these rows would keep their words until the 24-month sweep, which
   // exchanges do not even have. The promise is 30 days, whether or not the message went out.
@@ -965,18 +1070,34 @@ describe("applyRetention", () => {
       .update(exchanges)
       .set({ deliveryFailedAt: daysAgo(32) })
       .where(eq(exchanges.id, failed.id));
-    // A whenever ask nobody ever scheduled: composed, with no date and no delivery.
+    // An /ask for a morning that passed while she was stopped: no morning takes it any more.
+    const passed = await seedExchange(h.db, seed, {
+      date: "2026-08-11",
+      state: "composed",
+      text: "Whatever happened to the cat?",
+      createdAt: daysAgo(31),
+    });
+    // A whenever ask for a member marked deceased, whom nothing reaches again (spec §19).
+    const mourned = await seedFamily(h.db, {
+      now: daysAgo(40),
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+    await h.db
+      .update(members)
+      .set({ status: "deceased", lightOn: false })
+      .where(eq(members.id, mourned.member.id));
     const [whenever] = await h.db
       .insert(exchanges)
       .values({
-        familyId: seed.family.id,
-        recipientId: seed.member.id,
-        askerId: seed.organiser.id,
+        familyId: mourned.family.id,
+        recipientId: mourned.member.id,
+        askerId: mourned.organiser.id,
         type: "question",
         state: "composed",
-        text: "Whatever happened to the cat?",
+        text: "Shall we plant the bulbs?",
         whenRule: "whenever",
-        createdAt: daysAgo(31),
+        createdAt: daysAgo(30.5),
       })
       .returning({ id: exchanges.id });
     const young = await seedExchange(h.db, seed, {
@@ -1008,10 +1129,11 @@ describe("applyRetention", () => {
 
     const counts = await applyRetention(h.deps);
 
-    expect(counts).toMatchObject({ exchanges_cleared: 2, outbound_payloads_cleared: 2 });
+    expect(counts).toMatchObject({ exchanges_cleared: 3, outbound_payloads_cleared: 2 });
     const rows = await h.db.select().from(exchanges).orderBy(asc(exchanges.createdAt));
     expect(rows.map((row) => [row.id, row.text])).toEqual([
       [failed.id, null],
+      [passed.id, null],
       [whenever?.id, null],
       [young.id, "Still warm there?"],
     ]);
@@ -1421,6 +1543,132 @@ describe("applyRetention", () => {
     expect(h.scheduler.history).toEqual([{ memberId: doomed.member.id, at: null }]);
   });
 
+  // Translations name their object by id with no foreign key, and the AI call log sets its ids null
+  // when the family goes, so neither would follow the cascade: both hold her words for 30 more days
+  // with nothing left to find them by.
+  it("deletes a family's translations and the output of its AI calls with it, and nobody else's", async () => {
+    const seedWords = async (seed: SeededFamily, date: LocalDate) => {
+      const sam = await seedGroupMember(h.db, seed, {
+        now: daysAgo(10),
+        name: "Sam",
+        externalId: `${seed.member.id}-sam`,
+      });
+      const exchange = await seedExchange(h.db, seed, {
+        date,
+        state: "answered",
+        deliveredAt: daysAgo(1),
+        answeredAt: daysAgo(1),
+      });
+      const [answer] = await h.db
+        .insert(answers)
+        .values({
+          exchangeId: exchange.id,
+          memberId: seed.member.id,
+          kind: "text",
+          channel: "telegram",
+          externalId: `${seed.memberLink.externalId}:${date}`,
+          payload: { text: "I slept badly, my knee hurts" },
+          summary: "Slept badly; knee pain",
+          receivedAt: daysAgo(1),
+        })
+        .returning({ id: answers.id });
+      const [reply] = await h.db
+        .insert(replies)
+        .values({
+          exchangeId: exchange.id,
+          memberId: sam.member.id,
+          kind: "text",
+          text: "Rest today",
+          channel: "telegram",
+          externalId: `-100:${seed.member.id}`,
+        })
+        .returning({ id: replies.id });
+      const [read] = await h.db
+        .insert(weeklyReads)
+        .values({
+          familyId: seed.family.id,
+          memberId: seed.member.id,
+          weekStart: "2026-09-07",
+          lines: ["A calm week"],
+          suggestion: "",
+          stats: {},
+          promptVersion: "v",
+        })
+        .returning({ id: weeklyReads.id });
+      const objects = [
+        ["exchange", exchange.id],
+        ["answer", answer?.id ?? ""],
+        ["reply", reply?.id ?? ""],
+        ["weekly_read", read?.id ?? ""],
+      ] as const;
+      await h.db.insert(translations).values(
+        objects.map(([objectType, objectId]) => ({
+          objectType,
+          objectId,
+          lang: "zh-TW",
+          text: "翻譯",
+          provider: "claude:v3",
+          createdAt: daysAgo(1),
+        })),
+      );
+      await h.db.insert(aiCalls).values(
+        [
+          { familyId: seed.family.id, memberId: seed.member.id, call: "understand" },
+          { familyId: seed.family.id, memberId: null, call: "weekly_read" },
+          { familyId: null, memberId: seed.member.id, call: "flag" },
+        ].map((row) => ({
+          ...row,
+          promptVersion: "v",
+          model: "m",
+          inputRef: { answer_id: answer?.id ?? "" },
+          output: { evidenceQuote: "my knee hurts" },
+          ok: true,
+          at: daysAgo(1),
+        })),
+      );
+    };
+    const doomed = await seedFamily(h.db, { now: daysAgo(10), familyName: "The Lins" });
+    const staying = await seedFamily(h.db, {
+      now: daysAgo(10),
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+    await seedWords(doomed, "2026-09-13");
+    await seedWords(staying, "2026-09-13");
+    await h.db
+      .update(families)
+      .set({ deletedAt: new Date(h.clock.now().getTime() - 12 * 3_600_000) })
+      .where(eq(families.id, doomed.family.id));
+
+    const counts = await applyRetention(h.deps);
+
+    const [kept] = await h.db
+      .select({ id: exchanges.id })
+      .from(exchanges)
+      .where(eq(exchanges.familyId, staying.family.id));
+    expect(
+      (await h.db.select().from(translations)).filter((row) => row.objectType === "exchange"),
+    ).toEqual([expect.objectContaining({ objectId: kept?.id })]);
+    expect(await h.db.select().from(translations)).toHaveLength(4);
+    const calls = await h.db.select().from(aiCalls).orderBy(asc(aiCalls.call));
+    expect(calls.map((row) => [row.call, row.familyId, row.memberId, row.output])).toEqual(
+      expect.arrayContaining([
+        ["understand", null, null, null],
+        ["weekly_read", null, null, null],
+        ["flag", null, null, null],
+        ["understand", staying.family.id, staying.member.id, { evidenceQuote: "my knee hurts" }],
+        ["weekly_read", staying.family.id, null, { evidenceQuote: "my knee hurts" }],
+        ["flag", null, staying.member.id, { evidenceQuote: "my knee hurts" }],
+      ]),
+    );
+    expect(calls).toHaveLength(6);
+    expect(counts).toMatchObject({
+      families_deleted: 1,
+      family_translations_deleted: 4,
+      family_ai_call_outputs_cleared: 3,
+    });
+  });
+
   it("deletes an invited member who never answered 30 days after her last invite expired, and keeps her invites until then", async () => {
     const make = async (name: string, externalId: string, expiredDaysAgo: number[]) => {
       const seed = await seedFamily(h.db, {
@@ -1490,6 +1738,63 @@ describe("applyRetention", () => {
       evidence: { recorded_by: "founder" },
     });
     expect(h.scheduler.history).toHaveLength(0);
+  });
+
+  // Her invite cascades away with the organiser who sent it, who can leave in her first week and be
+  // deleted 30 days later, before she comes due: she is still deleted when her link's 30 days end.
+  it("deletes an invited member who never answered on time after the organiser who invited her was deleted", async () => {
+    // Her profile and her one invite are made together (`insertInvitedMember`, `insertInvite`).
+    const make = async (name: string, externalId: string, expiredDaysAgo: number, left: number) => {
+      const seed = await seedFamily(h.db, {
+        now: daysAgo(expiredDaysAgo + 7),
+        familyName: name,
+        organiserExternalId: `1${externalId}`,
+        memberExternalId: externalId,
+      });
+      await h.db.delete(consents).where(eq(consents.memberId, seed.member.id));
+      await h.db
+        .update(members)
+        .set({ status: "invited", lightOn: false, lightConsentedAt: null, lightConsentText: null })
+        .where(eq(members.id, seed.member.id));
+      await h.db.insert(invites).values({
+        familyId: seed.family.id,
+        invitedBy: seed.organiser.id,
+        forMemberId: seed.member.id,
+        token: externalId,
+        createdAt: daysAgo(expiredDaysAgo + 7),
+        expiresAt: daysAgo(expiredDaysAgo),
+      });
+      await h.db
+        .update(members)
+        .set({ status: "left", leftAt: daysAgo(left), turnsIn: false })
+        .where(eq(members.id, seed.organiser.id));
+      await seedNearbyContact(h.db, seed, {
+        now: daysAgo(expiredDaysAgo + 7),
+        name: "Anna",
+        answer: null,
+      });
+      return seed;
+    };
+    // Both fall due the same night, and the organiser's rule runs first.
+    const sameNight = await make("The Lins", "2101", 33, 38);
+    // The organiser goes 26 days after her link expired, and she 4 days later.
+    const later = await make("The Wus", "2201", 26, 31);
+
+    const first = await applyRetention(h.deps);
+
+    expect(first).toMatchObject({ members_deleted: 2, invited_members_deleted: 1 });
+    expect(await memberRow(sameNight.member.id)).toBeUndefined();
+    expect(await memberRow(later.member.id)).toMatchObject({ status: "invited" });
+
+    h.clock.set(new Date(h.clock.now().getTime() + 3 * DAY_MS));
+    expect(await applyRetention(h.deps)).toMatchObject({ invited_members_deleted: 0 });
+    expect(await memberRow(later.member.id)).toMatchObject({ status: "invited" });
+
+    h.clock.set(new Date(h.clock.now().getTime() + 2 * DAY_MS));
+    expect(await applyRetention(h.deps)).toMatchObject({ invited_members_deleted: 1 });
+    expect(await memberRow(later.member.id)).toBeUndefined();
+    expect(await h.db.select().from(members)).toEqual([]);
+    expect(await h.db.select().from(nearbyContacts)).toEqual([]);
   });
 
   it("deletes consents that no longer permit anything and deletion proofs after 5 years, and never a standing yes", async () => {
