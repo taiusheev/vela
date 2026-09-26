@@ -1,3 +1,5 @@
+export { createLineAdapter, type LineAdapterOptions } from "./line/adapter.ts";
+export type { LineApiOptions } from "./line/client.ts";
 export { LINE_SIGNATURE_HEADER } from "./line/verify.ts";
 export { createTelegramAdapter, type TelegramAdapterOptions } from "./telegram/adapter.ts";
 export type {

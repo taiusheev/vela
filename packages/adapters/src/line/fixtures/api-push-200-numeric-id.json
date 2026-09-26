@@ -1,0 +1,11 @@
+{
+  "status": 200,
+  "body": {
+    "sentMessages": [
+      {
+        "id": 533817094156927010,
+        "quoteToken": "IStG5h1Tz7b0vL3dS9kQ2rXmF8pWcN4yJ6aE1uH7oZtBqRgVxYs"
+      }
+    ]
+  }
+}

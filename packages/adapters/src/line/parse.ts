@@ -12,6 +12,7 @@
  * accident. Nothing is logged, not even that an event was dropped.
  */
 import { InboundEvent, type InboundKind, type MediaRef } from "@vela/contracts";
+import { GROUP_ID, MESSAGE_ID, ROOM_ID, USER_ID } from "./ids.ts";
 
 type EventDraft = Omit<InboundEvent, "channel" | "at" | "reply">;
 type Sender = InboundEvent["sender"];
@@ -47,17 +48,6 @@ interface Content {
  * whitespace, which a keyboard can add.
  */
 const START_COMMAND = /^\/start(?:[^\S\r\n]+(\S[^\r\n]*))?$/;
-
-/**
- * LINE's documented id shapes. They become conversation ids that services key on and sends
- * address, and the unknown actor (a group's own id as the sender) relies on a group id never being
- * a user id.
- */
-const USER_ID = /^U[0-9a-f]{32}$/;
-const GROUP_ID = /^C[0-9a-f]{32}$/;
-const ROOM_ID = /^R[0-9a-f]{32}$/;
-/** Decimal, and beyond 2^53, so kept as text. Content downloads put them in a URL path. */
-const MESSAGE_ID = /^[0-9]+$/;
 
 /**
  * A reply token works once, within a minute of receipt, and on a redelivery never later than 20
