@@ -1,8 +1,9 @@
+import { TUNING } from "@vela/core";
 import { describe, expect, inject, it } from "vitest";
 import { API_ADDRESS_LIMIT } from "./api-runtime.ts";
 import { AI_OFF_EFFECTS, MEDIA_OFF_EFFECTS } from "./deps.ts";
 import { NOTICE_LANGS, NOTICE_PATHS, type NoticeLang } from "./notices.ts";
-import { NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
+import { inboundRetryDelaySeconds, NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
 
 /**
  * The workers.dev subdomain each Cloudflare account chose at sign-up (H3). This is the test's one
@@ -449,7 +450,8 @@ describe("the pilot Worker's bindings", () => {
 
   // 05 §5.10: a binding to a queue that does not exist fails the deploy, so a deployed environment
   // binds LINE's queue only once its LINE is on, in the commit that turns it on; development's is
-  // local. Its batches wait at most a second, since a reply token is free for a minute only.
+  // local. Its batches wait at most a second, since a reply token is free for a minute only, and
+  // its retries last until the latest quiet deadline has passed (below).
   it.each(["development", ...DEPLOYED] as const)(
     "bind LINE's inbound queue in %s only where it exists: in development, and where LINE is on",
     (environment) => {
@@ -469,7 +471,7 @@ describe("the pilot Worker's bindings", () => {
                 queue: `vela-inbound${suffix}`,
                 max_batch_size: 10,
                 max_batch_timeout: 1,
-                max_retries: 3,
+                max_retries: 64,
                 retry_delay: 30,
                 dead_letter_queue: `vela-dead-letter${suffix}`,
               },
@@ -478,6 +480,27 @@ describe("the pilot Worker's bindings", () => {
       );
     },
   );
+
+  // 05 §5.10: LINE was answered 200 when the job was queued and redelivers nothing, and no row holds
+  // the events yet, so the job is the only copy of her answer. Its attempts must outlast T_quiet's
+  // cap, the latest quiet deadline after a delivery, so that an outage ending before her deadline
+  // never costs her answer; and stop soon after, since each attempt at a job that cannot succeed
+  // wakes the database.
+  it("retry an inbound job until the latest quiet deadline has passed, and not much longer", () => {
+    const inbound = consumers(configOf("pilot", "development")).find(
+      (consumer) => consumer.queue === "vela-inbound",
+    );
+    const maxRetries = Number(inbound?.max_retries);
+    const secondsOf = (retries: number): number =>
+      Array.from({ length: retries }, (_, index) => inboundRetryDelaySeconds(index + 1)).reduce(
+        (sum, delay) => sum + delay,
+        0,
+      );
+
+    expect(Number.isInteger(maxRetries)).toBe(true);
+    expect(secondsOf(maxRetries)).toBeGreaterThanOrEqual(TUNING.capMinutes * 60);
+    expect(secondsOf(maxRetries - 1)).toBeLessThan(TUNING.capMinutes * 60);
+  });
 
   // The scheduled handler picks its work by comparing `controller.cron` with these constants and
   // only logs `cron_unknown` for anything else: a trigger that is not one of them runs nothing.

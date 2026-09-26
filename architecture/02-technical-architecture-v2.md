@@ -342,7 +342,7 @@ SLOs: arrival sent P95 ≤ 5 min and P99 ≤ 15 min after her hour (the Durable 
 | Dead-letter queue growth | any | Queues DLQ → Sentry | High |
 | Quiet notice fired | every | `quiet_events`, reviewed daily in the admin | Informational |
 | Provider spend | 50/80/100% of tier | Cloudflare, Neon (hard cap), Anthropic, Twilio budget alerts | Medium |
-| Postgres unreachable | reconcile stops finishing, so `/healthz` answers `stale` after 35 min; the webhook answers 5xx | GitHub Actions watchdog (a stale `/healthz`, read from outside Cloudflare), plus the Workers' error logs (`cron_failed`, `request_failed`, `queue_job_failed`; Sentry once connected) | Critical |
+| Postgres unreachable | reconcile stops finishing, so `/healthz` answers `stale` after 35 min; the webhook answers 5xx | GitHub Actions watchdog (a stale `/healthz`, read from outside Cloudflare), plus the Workers' error logs (`cron_failed`, `request_failed`, `queue_job_failed`, `queue_deps_failed`; Sentry once connected) | Critical |
 
 The founder's daily view reads `metrics_daily` and `quiet_events` in the admin SPA: answer rate, latency, quiet notices and outcomes, stop rate, families per market, AI cost. PostHog (EU) carries app funnels, flags, and replay; it never receives content.
 

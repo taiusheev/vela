@@ -187,11 +187,16 @@
         "dead_letter_queue": "vela-dead-letter"
       },
       // A batch waits at most a second: a reply token is free for a minute only (05 §1 fact 7).
+      // LINE was answered 200 and redelivers nothing, so a job is the only copy of her answer: the
+      // consumer retries it 30 seconds after its first attempt, doubling to every 10 minutes
+      // (inboundRetryDelaySeconds in src/pilot-worker.ts), and 64 retries last 10 hours, T_quiet's
+      // cap, so an outage that ends before her quiet deadline never costs her answer (05 §5.10).
+      // retry_delay applies only if the handler itself throws.
       {
         "queue": "vela-inbound",
         "max_batch_size": 10,
         "max_batch_timeout": 1,
-        "max_retries": 3,
+        "max_retries": 64,
         "retry_delay": 30,
         "dead_letter_queue": "vela-dead-letter"
       }

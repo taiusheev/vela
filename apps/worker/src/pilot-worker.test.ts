@@ -25,24 +25,34 @@ interface BatchOutcome {
   readonly batch: MessageBatch<unknown>;
   readonly acked: string[];
   readonly retried: string[];
+  /**
+   * The delay each retried message asked for, by id: `undefined` where it asked for none, so the
+   * queue's own `retry_delay` applies.
+   */
+  readonly delays: Map<string, number | undefined>;
 }
 
-/** One batch of queue messages, with what the handler did to each one recorded. */
-function batchOf(queue: string, bodies: readonly unknown[]): BatchOutcome {
+/**
+ * One batch of queue messages, each delivered for the `attempts`-th time, with what the handler did
+ * to each one recorded.
+ */
+function batchOf(queue: string, bodies: readonly unknown[], attempts = 1): BatchOutcome {
   const acked: string[] = [];
   const retried: string[] = [];
+  const delays = new Map<string, number | undefined>();
   const messages = bodies.map((body, index) => {
     const id = `message-${index}`;
     return {
       id,
       timestamp: new Date("2026-09-14T00:00:00.000Z"),
       body,
-      attempts: 1,
+      attempts,
       ack: () => {
         acked.push(id);
       },
-      retry: () => {
+      retry: (options?: QueueRetryOptions) => {
         retried.push(id);
+        delays.set(id, options?.delaySeconds);
       },
     };
   });
@@ -56,15 +66,26 @@ function batchOf(queue: string, bodies: readonly unknown[]): BatchOutcome {
           acked.push(message.id);
         }
       },
-      retryAll: () => {
+      retryAll: (options?: QueueRetryOptions) => {
         for (const message of messages) {
           retried.push(message.id);
+          delays.set(message.id, options?.delaySeconds);
         }
       },
     },
     acked,
     retried,
+    delays,
   };
+}
+
+/** A queue run that must not throw, with the lines the Worker's own logger wrote meanwhile. */
+async function queueLines(
+  worker: ReturnType<typeof createWorker>,
+  outcome: BatchOutcome,
+): Promise<unknown[]> {
+  const { lines } = await consoleLinesDuring(() => runQueue(worker, outcome));
+  return lines;
 }
 
 async function runQueue(
@@ -179,6 +200,9 @@ describe("the queue consumer", () => {
 
     expect(outcome.retried).toEqual(["message-0"]);
     expect(outcome.acked).toEqual(["message-1"]);
+    // Rows in the database stand behind these jobs, and reconcile drives them again: the queue's
+    // own delay is theirs.
+    expect(outcome.delays).toEqual(new Map([["message-0", undefined]]));
   });
 
   it("logs a failed job by its error label, never by the message that carries the family's words", async () => {
@@ -265,6 +289,68 @@ describe("the queue consumer", () => {
       },
     ]);
     expect(JSON.stringify(fake.logs)).not.toContain(FAILED_QUERY_WORDS);
+  });
+
+  // LINE was answered 200 when the job was queued and redelivers nothing, so the job is the only
+  // copy of her answer: a database away for three minutes must cost it a few attempts, not the
+  // dead-letter queue and a false quiet notice (05 §5.10).
+  it("waits longer before each retry of an inbound job, from 30 seconds up to 10 minutes", async () => {
+    const delays: (number | undefined)[] = [];
+    for (const attempts of [1, 2, 3, 4, 5, 6, 7, 64]) {
+      const fake = createFakePilotRuntime({
+        services: {
+          handleInbound: async () => {
+            throw failedQueryFixture();
+          },
+        },
+      });
+      const outcome = batchOf(
+        "vela-inbound",
+        [{ type: "handle_inbound", events: [herLineTap] }],
+        attempts,
+      );
+
+      await runQueue(createWorker(fake.runtime), outcome);
+
+      expect(outcome.retried).toEqual(["message-0"]);
+      delays.push(outcome.delays.get("message-0"));
+    }
+
+    expect(delays).toEqual([30, 60, 120, 240, 480, 600, 600, 600]);
+  });
+
+  // Deps that cannot be built (Hyperdrive or a setting refused) ran nothing, so nothing is acked;
+  // an inbound job keeps its own schedule then too, rather than the queue's 30 seconds.
+  it("retries a batch whose deps could not be built, an inbound job on its own schedule, logging the label alone", async () => {
+    const fake = createFakePilotRuntime();
+    const unreachable: PilotRuntime = {
+      ...fake.runtime,
+      createDeps: async () => {
+        throw failedQueryFixture();
+      },
+    };
+    const inbound = batchOf("vela-inbound", [{ type: "handle_inbound", events: [herLineTap] }], 3);
+    const outbound = batchOf("vela-outbound", [{ type: "deliver", outboundId: "outbound-1" }], 3);
+
+    const lines = [
+      ...(await queueLines(createWorker(unreachable), inbound)),
+      ...(await queueLines(createWorker(unreachable), outbound)),
+    ];
+
+    expect(inbound.delays).toEqual(new Map([["message-0", 120]]));
+    expect(outbound.delays).toEqual(new Map([["message-0", undefined]]));
+    expect([...inbound.acked, ...outbound.acked]).toEqual([]);
+    expect(namesOf(fake.calls)).toEqual([]);
+    expect(lines).toEqual(
+      ["vela-inbound", "vela-outbound"].map((queue) => ({
+        level: "error",
+        event: "queue_deps_failed",
+        environment: testEnv.ENVIRONMENT,
+        queue,
+        error: FAILED_QUERY_LABEL,
+      })),
+    );
+    expect(JSON.stringify(lines)).not.toContain(FAILED_QUERY_WORDS);
   });
 
   it.each([

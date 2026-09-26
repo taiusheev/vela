@@ -39,6 +39,34 @@ export const NIGHTLY_CRON = "20 3 * * *";
 
 type WorkerJob = OutboundJob | MediaJob | UnderstandJob | InboundJob;
 
+/**
+ * The seconds an inbound job waits after its `attempts`-th failed attempt: 30, doubling up to 10
+ * minutes (05 §5.10). LINE was answered 200 when the job was queued and redelivers nothing, and no
+ * row holds the events yet, so reconcile cannot drive them again as it does a send: the job is the
+ * only copy of them, her answer among them. `vela-inbound`'s `max_retries` keeps it trying for at
+ * least T_quiet's cap, the latest quiet deadline after a delivery (wrangler-config.test.ts pins
+ * the two together), so an outage that ends before her deadline cannot turn her answer into a
+ * false quiet notice. The first retry comes while the reply token may still be fresh; the cap
+ * bounds how long her answer waits once the outage ends.
+ */
+export function inboundRetryDelaySeconds(attempts: number): number {
+  const first = 30;
+  const cap = 600;
+  return Math.min(cap, first * 2 ** Math.max(0, attempts - 1));
+}
+
+/**
+ * A retry for a message whose job did not finish. Every other job keeps its queue's `retry_delay`:
+ * a row in the database stands behind it, which reconcile drives again once its job is lost.
+ */
+function retryLater(message: Message<unknown>, job: WorkerJob | null): void {
+  if (job?.type === "handle_inbound") {
+    message.retry({ delaySeconds: inboundRetryDelaySeconds(message.attempts) });
+    return;
+  }
+  message.retry();
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
 }
@@ -164,10 +192,26 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
     /**
      * One batch, one set of deps. A message is acked when its job returns and retried when it
      * throws, so one failing job never replays the ones beside it; the queue's `max_retries` then
-     * parks it in the dead-letter queue.
+     * parks it in the dead-letter queue. Deps that cannot be built ran nothing, so every message is
+     * retried, each on its job's schedule. Throwing instead would retry them all at the queue's
+     * `retry_delay` and have the runtime log the error's message, which for a failed query lists
+     * the family's words; the line here carries the label alone, through a logger built from `env`
+     * because the deps are what failed, as in `scheduled`.
      */
     async queue(batch, env, ctx) {
-      const handle = await runtime.createDeps(env);
+      let handle: DepsHandle;
+      try {
+        handle = await runtime.createDeps(env);
+      } catch (error) {
+        createLogger(env).error("queue_deps_failed", {
+          queue: batch.queue,
+          error: errorLabel(error),
+        });
+        for (const message of batch.messages) {
+          retryLater(message, parseJob(message.body));
+        }
+        return;
+      }
       try {
         for (const message of batch.messages) {
           const job = parseJob(message.body);
@@ -192,7 +236,7 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
               attempts: message.attempts,
               error: errorLabel(error),
             });
-            message.retry();
+            retryLater(message, job);
           }
         }
       } finally {

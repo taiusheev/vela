@@ -106,7 +106,7 @@ function withInboundQueue(queues: unknown, environment: Environment, bound: bool
         queue,
         max_batch_size: 10,
         max_batch_timeout: 1,
-        max_retries: 3,
+        max_retries: 64,
         retry_delay: 30,
         dead_letter_queue: `vela-dead-letter-${environment}`,
       },
