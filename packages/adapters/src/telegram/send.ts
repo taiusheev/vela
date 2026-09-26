@@ -6,7 +6,8 @@
  *
  * Text is sent without `parse_mode`, so nothing in it is ever interpreted as markup, and with link
  * previews disabled. Telegram has no idempotency keys: if a later call fails after earlier media
- * went out, the error is thrown and the gateway decides whether to retry.
+ * went out, the error names those media items' messages (`sentMediaMessageIds`), so the gateway's
+ * retry sends only what is missing, and the gateway decides whether to retry.
  */
 import {
   type Button,
@@ -67,48 +68,70 @@ export async function sendTelegramMessage(
   const replyMarkup = outbound.buttons === undefined ? undefined : inlineKeyboard(outbound.buttons);
   const steps = planMedia(outbound.media ?? [], files);
 
+  // One message per media item, in order: an album returns one per photo.
   const sent: TelegramSentMessage[] = [];
-  for (const step of steps) {
-    switch (step.kind) {
-      case "photo":
-        sent.push(
-          "remote" in step.source
-            ? await client.sendPhoto({ chat_id: chatId, photo: step.source.remote })
-            : await client.sendPhotoUpload({ chat_id: chatId, photo: step.source.upload }),
-        );
-        break;
-      case "album":
-        sent.push(...(await sendAlbum(client, chatId, step.sources)));
-        break;
-      case "voice":
-        sent.push(
-          await client.sendVoice({
-            chat_id: chatId,
-            voice: step.source,
-            duration: step.durationMs === undefined ? undefined : Math.ceil(step.durationMs / 1000),
-          }),
-        );
-        break;
+  let text: TelegramSentMessage;
+  try {
+    for (const step of steps) {
+      sent.push(...(await sendMediaStep(client, chatId, step)));
     }
+    text = await client.sendMessage({
+      chat_id: chatId,
+      text: outbound.text,
+      link_preview_options: { is_disabled: true },
+      reply_parameters:
+        replyToMessageId === undefined
+          ? undefined
+          : // The reply is context, not content: a deleted original must not lose the message.
+            { message_id: replyToMessageId, allow_sending_without_reply: true },
+      reply_markup: replyMarkup,
+    });
+  } catch (error) {
+    throw withSentMedia(error, sent);
   }
 
-  const text = await client.sendMessage({
-    chat_id: chatId,
-    text: outbound.text,
-    link_preview_options: { is_disabled: true },
-    reply_parameters:
-      replyToMessageId === undefined
-        ? undefined
-        : // The reply is context, not content: a deleted original must not lose the message.
-          { message_id: replyToMessageId, allow_sending_without_reply: true },
-    reply_markup: replyMarkup,
-  });
-  sent.push(text);
-
   return {
-    externalMessageIds: sent.map((item) => String(item.message_id)),
+    externalMessageIds: [...sent, text].map((item) => String(item.message_id)),
     primaryMessageId: String(text.message_id),
   };
+}
+
+async function sendMediaStep(
+  client: TelegramClient,
+  chatId: TelegramChatId,
+  step: MediaStep,
+): Promise<TelegramSentMessage[]> {
+  switch (step.kind) {
+    case "photo":
+      return [
+        "remote" in step.source
+          ? await client.sendPhoto({ chat_id: chatId, photo: step.source.remote })
+          : await client.sendPhotoUpload({ chat_id: chatId, photo: step.source.upload }),
+      ];
+    case "album":
+      return sendAlbum(client, chatId, step.sources);
+    case "voice":
+      return [
+        await client.sendVoice({
+          chat_id: chatId,
+          voice: step.source,
+          duration: step.durationMs === undefined ? undefined : Math.ceil(step.durationMs / 1000),
+        }),
+      ];
+  }
+}
+
+/** The failed call's error, naming the media that had already reached the chat. */
+function withSentMedia(error: unknown, sent: readonly TelegramSentMessage[]): unknown {
+  if (!(error instanceof ChannelSendError) || sent.length === 0) {
+    return error;
+  }
+  return new ChannelSendError(error.code, error.message, {
+    retryAfterSeconds: error.retryAfterSeconds,
+    migratedToConversationId: error.migratedToConversationId,
+    sentMediaMessageIds: sent.map((item) => String(item.message_id)),
+    cause: error.cause,
+  });
 }
 
 /** Numeric chat ids are sent as integers, as the Bot API documents; `@username` stays a string. */

@@ -35,6 +35,15 @@ async function failureOf(
 const sendText = (client: TelegramClient) =>
   client.sendMessage({ chat_id: 6023817745, text: "hello" });
 
+/** A body the connection loses while it is read, after the status has arrived. */
+function unreadableBody(): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      controller.error(new TypeError("Network connection lost."));
+    },
+  });
+}
+
 describe("createTelegramClient", () => {
   it("posts JSON to the bot's method URL and returns the documented result", async () => {
     const { client, requests } = clientWith(() => telegramOk({ message_id: 42, date: 1789258325 }));
@@ -168,6 +177,24 @@ describe("Bot API error mapping", () => {
     const error = await failureOf(sendText, () => new Response("OK", { status: 200 }));
     expect(error.code).toBe("unknown");
     expect(error.retryable).toBe(false);
+  });
+
+  // Telegram answers 2xx only once it has acted, so a body lost on the way back is a send that
+  // happened: retried as a network failure, the message would reach her twice.
+  it("treats a success status whose body cannot be read as unknown, since the send happened", async () => {
+    const error = await failureOf(sendText, () => new Response(unreadableBody(), { status: 200 }));
+    expect(error.code).toBe("unknown");
+    expect(error.retryable).toBe(false);
+    expect(error.message).not.toContain(TEST_BOT_TOKEN);
+  });
+
+  it("maps a failure status whose body cannot be read by the status alone", async () => {
+    const error = await failureOf(
+      sendText,
+      () => new Response(unreadableBody(), { status: 502, statusText: "Bad Gateway" }),
+    );
+    expect(error.code).toBe("unavailable");
+    expect(error.retryable).toBe(true);
   });
 
   it("treats a result without a message id as unknown", async () => {

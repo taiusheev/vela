@@ -979,6 +979,12 @@ export const outbound = pgTable(
     externalId: text("external_id"),
     error: text("error"),
     queuedAt: timestamptz("queued_at").notNull().defaultNow(),
+    /**
+     * When the row was sent. On a row still `queued`, when a delivery took it to send it (flows
+     * §3.7): the gateway sets it in one conditional update before the send, so a second delivery of
+     * the row finds it taken and sends nothing, and gives it back null with a retry. Null on a row
+     * that failed or was dropped.
+     */
     sentAt: timestamptz("sent_at"),
     /**
      * When the kind's effects were applied (D-B1, 2026-09-15). The gateway commits the send in its

@@ -203,8 +203,67 @@ describe("adapter.send", () => {
       media: [{ kind: "image", providerFileId: PHOTO_A }],
     });
 
-    await expect(failure).rejects.toMatchObject({ code: "blocked", retryable: false });
+    await expect(failure).rejects.toMatchObject({
+      code: "blocked",
+      retryable: false,
+      sentMediaMessageIds: [],
+    });
     expect(calls().map(([method]) => method)).toStrictEqual(["sendPhoto"]);
+  });
+
+  // Telegram has no idempotency keys: the gateway can leave out of its retry only what it knows
+  // went out, so the error names each media item's message (flows §3.7).
+  it("names the media that went out, one message per item in order, when the text then fails", async () => {
+    const sends = sequentialSends(700);
+    const { adapter, calls } = setup((request) =>
+      request.apiMethod === "sendMessage"
+        ? telegramErrorFixture("error-429-retry-after.json")
+        : sends(request),
+    );
+
+    const failure = adapter.send({
+      ...ARRIVAL,
+      media: [
+        { kind: "audio", providerFileId: VOICE },
+        { kind: "image", providerFileId: PHOTO_A },
+        { kind: "image", url: PHOTO_B_URL },
+      ],
+    });
+
+    await expect(failure).rejects.toMatchObject({
+      code: "rate_limited",
+      retryable: true,
+      retryAfterSeconds: 17,
+      sentMediaMessageIds: ["700", "701", "702"],
+    });
+    expect(calls().map(([method]) => method)).toStrictEqual([
+      "sendVoice",
+      "sendMediaGroup",
+      "sendMessage",
+    ]);
+  });
+
+  it("names only the media before the call that failed", async () => {
+    const sends = sequentialSends(700);
+    const { adapter } = setup((request) =>
+      request.apiMethod === "sendMediaGroup"
+        ? telegramErrorFixture("error-502-bad-gateway.json")
+        : sends(request),
+    );
+
+    const failure = adapter.send({
+      ...ARRIVAL,
+      media: [
+        { kind: "audio", providerFileId: VOICE },
+        { kind: "image", providerFileId: PHOTO_A },
+        { kind: "image", url: PHOTO_B_URL },
+      ],
+    });
+
+    await expect(failure).rejects.toMatchObject({
+      code: "unavailable",
+      sentMediaMessageIds: ["700"],
+    });
   });
 
   it("names the supergroup when a send goes to a group that was upgraded", async () => {

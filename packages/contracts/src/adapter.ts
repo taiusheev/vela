@@ -321,6 +321,13 @@ export class ChannelSendError extends Error {
    * `retryable` stays false; the gateway re-points the family group to this id and sends again.
    */
   readonly migratedToConversationId: string | undefined;
+  /**
+   * The platform message ids of the media items that went out before the send failed, one per item
+   * in the order of `OutboundMessage.media`: always its first items, since media goes out in order
+   * before the text. Empty when nothing went out. With no idempotency keys, only the sender can know
+   * what reached the chat, so the gateway keeps these and a retry sends only what is missing.
+   */
+  readonly sentMediaMessageIds: readonly string[];
 
   constructor(
     code: ChannelSendErrorCode,
@@ -328,6 +335,7 @@ export class ChannelSendError extends Error {
     options: {
       retryAfterSeconds?: number;
       migratedToConversationId?: string;
+      sentMediaMessageIds?: readonly string[];
       cause?: unknown;
     } = {},
   ) {
@@ -337,5 +345,6 @@ export class ChannelSendError extends Error {
       code === "rate_limited" || code === "quota_exhausted" || code === "unavailable";
     this.retryAfterSeconds = options.retryAfterSeconds;
     this.migratedToConversationId = options.migratedToConversationId;
+    this.sentMediaMessageIds = options.sentMediaMessageIds ?? [];
   }
 }

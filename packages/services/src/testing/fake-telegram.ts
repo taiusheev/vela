@@ -1,9 +1,9 @@
 /**
  * A recording `ChannelAdapter` that stands in for Telegram: every send gets message ids that count
  * up per conversation, as Telegram's do, and a test can make the next sends, or every send to one
- * conversation, fail with a chosen `ChannelSendError`. A stored file the gateway handed over is
- * recorded as the upload it would be, and one it did not hand over is refused, as the real adapter
- * refuses it (ADR-33).
+ * conversation, fail with a chosen `ChannelSendError`, after some of the media went out if it asks.
+ * A stored file the gateway handed over is recorded as the upload it would be, and one it did not
+ * hand over is refused, as the real adapter refuses it (ADR-33).
  */
 import {
   type AdapterCapabilities,
@@ -12,6 +12,7 @@ import {
   type ChannelSendErrorCode,
   type FetchedMedia,
   type InboundEvent,
+  type OutboundMediaRef,
   type OutboundMessage,
   type SendResult,
 } from "@vela/contracts";
@@ -28,6 +29,8 @@ export interface SentMessage {
 export interface FailedSend {
   readonly message: OutboundMessage;
   readonly code: ChannelSendErrorCode;
+  /** The media items that reached the chat before the failure (`FailureOptions.mediaDelivered`). */
+  readonly sentMedia: readonly OutboundMediaRef[];
   readonly at: Date;
 }
 
@@ -46,6 +49,11 @@ export interface AcknowledgedTap {
 export interface FailureOptions {
   readonly retryAfterSeconds?: number;
   readonly migratedToConversationId?: string;
+  /**
+   * How many of the message's media items reach the chat before the send fails, as when a later
+   * Bot API call fails after the first ones went out; none by default. The error names them.
+   */
+  readonly mediaDelivered?: number;
 }
 
 export interface FakeTelegram extends ChannelAdapter {
@@ -145,10 +153,13 @@ export function createFakeTelegram(clock: Clock): FakeTelegram {
       });
       const rule = failureFor(conversationId);
       if (rule !== null) {
-        failed.push({ message, code: rule.code, at: clock.now() });
+        const sentMedia = (message.media ?? []).slice(0, rule.options.mediaDelivered ?? 0);
+        const sentMediaMessageIds = sentMedia.map(() => nextMessageId(conversationId));
+        failed.push({ message, code: rule.code, sentMedia, at: clock.now() });
         throw new ChannelSendError(rule.code, `fake telegram: ${rule.code}`, {
           retryAfterSeconds: rule.options.retryAfterSeconds,
           migratedToConversationId: rule.options.migratedToConversationId,
+          sentMediaMessageIds,
         });
       }
       // Telegram creates one message per media item, then the text with the buttons.

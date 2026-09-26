@@ -845,7 +845,8 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .returning({ id: exchanges.id })
   ).length;
   // The same for the rendered message: `sent_at` stays null on a row that failed, was dropped, or
-  // is still queued, and the payload of a quiet notice carries the nearby contacts' phone numbers.
+  // is still queued (on one a delivery holds, it is when that delivery took it), and the payload of
+  // a quiet notice carries the nearby contacts' phone numbers.
   counts.outbound_payloads_cleared = (
     await db
       .update(outbound)

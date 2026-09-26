@@ -7,8 +7,11 @@
  * that can pass is tried again at 5, 15, and 30 minutes; one that cannot, or one whose last retry
  * fails, is marked failed and its consequences applied; a row for a family that has ended is dropped
  * unsent, and so is a morning of hers that a pause, her answer, or her start has made moot on its
- * way. Telegram has no idempotency keys, so a redelivered job finds the row already sent and stops,
- * and only failures are ever retried.
+ * way. Telegram has no idempotency keys, so a delivery takes the row before it sends (`sent_at` on a
+ * queued row) and writes its outcome only on the row it holds: a second delivery of the row, however
+ * it overlaps the first, finds it taken or sent and stops. Only failures are ever retried, a retry
+ * sends only the media that did not go out, and a row whose delivery stopped between its take and
+ * its record is never sent again, since its message may be out.
  *
  * A queued row's `queued_at` is when its pending delivery is due: set by the insert, moved to the
  * end of a retry's delay, and to the moment of a re-send to a migrated group or a re-drive. A
@@ -44,7 +47,7 @@ import {
   quietEvents,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, eq, gt, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lt, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
@@ -93,6 +96,17 @@ export const STRANDED_AFTER_MINUTES = 10;
 /** The code in `outbound.error`, and of the failure, for a row whose delivery job was lost. */
 const STRANDED_CODE = "stranded";
 
+/**
+ * How long a delivery may hold a row it took before the hold counts as lost: longer than any
+ * delivery runs, since a queue consumer's invocation ends after 15 minutes of wall time. A row held
+ * that long was taken by a delivery that stopped between its take and its record, perhaps with its
+ * message out, so it is failed unsent (`INTERRUPTED_CODE`) rather than sent a second time.
+ */
+export const CLAIM_LOST_AFTER_MINUTES = 15;
+
+/** The code in `outbound.error`, and of the failure, for a row whose delivery stopped mid-send. */
+const INTERRUPTED_CODE = "interrupted";
+
 const MessageRefIntent = z.object({
   purpose: z.enum(MESSAGE_REF_PURPOSES),
   exchangeId: z.uuid().optional(),
@@ -111,13 +125,62 @@ const StoredMessage = OutboundMessage.pick({
   replyToMessageId: true,
 });
 
+/**
+ * The media of the message that went out on an earlier try whose later call failed: each item's
+ * platform message id, keyed by `mediaKey`, so a later try sends only the rest (flows §3.7).
+ */
+const SentMedia = z.record(z.string(), z.string());
+type SentMedia = z.infer<typeof SentMedia>;
+
 /** `outbound.payload`: the message as it will be sent, what it is about, and what its send changes. */
 const OutboundPayload = z.object({
   message: StoredMessage,
   ref: MessageRefIntent.optional(),
   effect: z.unknown().optional(),
+  sentMedia: SentMedia.optional(),
 });
 type OutboundPayload = z.infer<typeof OutboundPayload>;
+
+/**
+ * Names a media item in `sentMedia` by the file itself, as the platform, a URL, or Vela's own store
+ * (ADR-33) holds it, not by its place in the message, so the entry still holds when the request is
+ * built again (a morning her pause dropped, queued again with the read-back as it stands then). The
+ * contract requires one of the three.
+ */
+function mediaKey(ref: OutboundMediaRef): string {
+  return ref.providerFileId ?? ref.url ?? ref.storageKey ?? "";
+}
+
+/** The media still to send: the stored media without the items that went out on an earlier try. */
+function unsentMedia(
+  media: OutboundMediaRef[] | undefined,
+  sent: SentMedia,
+): OutboundMediaRef[] | undefined {
+  if (media === undefined || Object.keys(sent).length === 0) {
+    return media;
+  }
+  const left = media.filter((item) => sent[mediaKey(item)] === undefined);
+  return left.length === 0 ? undefined : left;
+}
+
+/**
+ * `sent` with the items of `sending` that went out before the send failed: the error names one
+ * platform message per item, in the order the items were given.
+ */
+function addSentMedia(
+  sent: SentMedia,
+  sending: readonly OutboundMediaRef[] | undefined,
+  messageIds: readonly string[],
+): SentMedia {
+  const next: SentMedia = { ...sent };
+  messageIds.forEach((messageId, index) => {
+    const item = sending?.[index];
+    if (item !== undefined) {
+      next[mediaKey(item)] = messageId;
+    }
+  });
+  return next;
+}
 
 export interface OutboundRequestBase {
   /** From `outboundKey`: names this one message, so a repeat of the same request is a no-op. */
@@ -248,9 +311,10 @@ export async function insertOutbound(
  * its window is still open, so it goes out now, as any morning not sent before her start does
  * (flows §3.13). Its key names that one morning and the dropped row holds it, so the row itself is
  * queued again, as a new delivery holding what the request holds now (a late note, the read-back),
- * and it is sent once like any other. No other dropped row comes back: an ended family, an answer,
- * a start, and a closed quiet event are for good, and a repeat a pause dropped is never asked for
- * again, because its morning went out before her start.
+ * and it is sent once like any other. The media an earlier try got out before its pause stays in
+ * `sentMedia`, so none of it reaches her twice. No other dropped row comes back: an ended family,
+ * an answer, a start, and a closed quiet event are for good, and a repeat a pause dropped is never
+ * asked for again, because its morning went out before her start.
  */
 async function requeueArrivalHeldByPause(
   db: Queryable,
@@ -267,11 +331,12 @@ async function requeueArrivalHeldByPause(
       exchangeId: request.exchangeId ?? null,
       channel: request.channel,
       conversationId: request.conversationId,
-      payload,
+      payload: sql`${JSON.stringify(payload)}::jsonb || jsonb_strip_nulls(jsonb_build_object('sentMedia', ${outbound.payload} -> 'sentMedia'))`,
       status: "queued",
       attempts: 0,
       error: null,
       queuedAt,
+      sentAt: null,
     })
     .where(
       and(
@@ -420,6 +485,11 @@ async function loadOutbound(db: Queryable, outboundId: string): Promise<LoadedOu
  *
  * A row already `sent` whose effects were never stamped is finished rather than sent again (D-B1),
  * so a retry after a failed effect cannot produce a second message.
+ *
+ * Before it sends, the delivery takes the row (`takeOutbound`), and it writes the outcome only on
+ * the row it holds, so a second delivery of the row finds it taken or sent and sends nothing
+ * (flows §3.7). A row another delivery holds is left to it, and one held past
+ * `CLAIM_LOST_AFTER_MINUTES` is failed unsent.
  */
 export async function deliverOutbound(deps: Deps, outboundId: string): Promise<DeliveryResult> {
   const loaded = await loadOutbound(deps.db, outboundId);
@@ -434,6 +504,9 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
   if (row.status !== "queued") {
     deps.logger.info("outbound_skipped", { outboundId, kind: row.kind, status: row.status });
     return "skipped";
+  }
+  if (row.sentAt !== null) {
+    return heldElsewhere(deps, loaded, row.sentAt);
   }
   if (member.status === "left" || member.status === "deceased") {
     return drop(deps, loaded, `member_${member.status}`);
@@ -456,45 +529,58 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
     return drop(deps, loaded, "quiet_resolved");
   }
 
-  const payload = OutboundPayload.safeParse(row.payload);
+  const held = await takeOutbound(deps, row);
+  if (held === null) {
+    deps.logger.info("outbound_skipped", { outboundId, kind: row.kind, status: row.status });
+    return "skipped";
+  }
+  // From here on the row is as taken: a morning queued again, or a group re-pointed, since it was
+  // read is sent as it stands now.
+  const taken: LoadedOutbound = { row: held.row, member, family };
+  const { heldSince } = held;
+  const payload = OutboundPayload.safeParse(taken.row.payload);
   if (!payload.success) {
     return fail(
       deps,
-      loaded,
+      taken,
+      heldSince,
       undefined,
-      row.attempts + 1,
+      taken.row.attempts + 1,
       "invalid_payload",
       "stored payload does not parse",
     );
   }
-  if (row.attempts > RETRY_DELAY_MINUTES.length) {
+  if (taken.row.attempts > RETRY_DELAY_MINUTES.length) {
     // Every try the retry policy allows has been spent, the last on a delivery that was lost and
     // re-driven: the row fails as it would on its last failed send, without sending.
     return fail(
       deps,
-      loaded,
+      taken,
+      heldSince,
       payload.data.effect,
-      row.attempts,
+      taken.row.attempts,
       STRANDED_CODE,
       "no delivery ran by its due time",
     );
   }
+  const sentMedia = payload.data.sentMedia ?? {};
   const message = OutboundMessage.safeParse({
-    kind: row.kind,
-    idempotencyKey: row.idempotencyKey,
+    kind: taken.row.kind,
+    idempotencyKey: taken.row.idempotencyKey,
     lang: payload.data.message.lang,
-    to: { channel: row.channel, conversationId: row.conversationId },
+    to: { channel: taken.row.channel, conversationId: taken.row.conversationId },
     text: payload.data.message.text,
     buttons: payload.data.message.buttons,
-    media: payload.data.message.media,
+    media: unsentMedia(payload.data.message.media, sentMedia),
     replyToMessageId: payload.data.message.replyToMessageId,
   });
   if (!message.success) {
     return fail(
       deps,
-      loaded,
+      taken,
+      heldSince,
       payload.data.effect,
-      row.attempts + 1,
+      taken.row.attempts + 1,
       "invalid_outbound",
       "row is not a valid message",
     );
@@ -502,33 +588,123 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
 
   let result: SendResult;
   try {
-    // Stored photos (ADR-33) are loaded for this attempt; one that cannot be is a passing failure.
-    const files = await loadOutboundFiles(deps, row.id, message.data);
-    const adapter = deps.channels.get(row.channel);
+    // Stored photos (ADR-33) are loaded for this attempt, only those still to send; one that cannot
+    // be is a passing failure.
+    const files = await loadOutboundFiles(deps, taken.row.id, message.data);
+    const adapter = deps.channels.get(taken.row.channel);
     result = await (files === undefined
       ? adapter.send(message.data)
       : adapter.send(message.data, files));
   } catch (error) {
     if (error instanceof ChannelSendError) {
-      return handleSendError(deps, loaded, payload.data, error);
+      return handleSendError(deps, taken, heldSince, payload.data, message.data.media, error);
     }
     throw error;
   }
 
   // The send is committed alone (D-B1): the message is out, and no later failure may undo the row
-  // that proves it. The effects follow in their own transaction.
+  // that proves it. The effects follow in their own transaction. The media an earlier try got out
+  // is part of the message, so a reply to it resolves too.
   const sentAt = deps.clock.now();
-  const attempts = row.attempts + 1;
-  await deps.db.transaction(async (tx) => {
-    await tx
+  const attempts = taken.row.attempts + 1;
+  const created: SendResult = {
+    externalMessageIds: [...Object.values(sentMedia), ...result.externalMessageIds],
+    primaryMessageId: result.primaryMessageId,
+  };
+  const recorded = await deps.db.transaction(async (tx) => {
+    const [sent] = await tx
       .update(outbound)
       .set({ status: "sent", sentAt, attempts, externalId: result.primaryMessageId, error: null })
-      .where(eq(outbound.id, row.id));
-    await recordRefs(tx, loaded, payload.data.ref, result);
+      .where(heldBy(taken.row.id, heldSince))
+      .returning({ id: outbound.id });
+    if (sent === undefined) {
+      return false;
+    }
+    await recordRefs(tx, taken, payload.data.ref, created);
+    return true;
   });
+  if (!recorded) {
+    // Only a hold older than any delivery runs is taken from its delivery, so this cannot happen
+    // while the platform keeps its limits; if it does, the message is out and the row says not.
+    deps.logger.error("outbound_sent_unrecorded", { outboundId, kind: row.kind, attempts });
+    return "skipped";
+  }
   deps.logger.info("outbound_sent", { outboundId, kind: row.kind, attempts });
-  await applyEffects(deps, loaded, payload.data.effect, sentAt, result.primaryMessageId);
+  await applyEffects(deps, taken, payload.data.effect, sentAt, result.primaryMessageId);
   return "sent";
+}
+
+/**
+ * Takes a queued row for this delivery before anything is sent (flows §3.7): on a queued row,
+ * `sent_at` is when a delivery took it. The update matches only the row as this delivery read it,
+ * queued, held by no one, and with no attempt counted since, so of two deliveries of one row
+ * however they overlap (a duplicate job, a re-driven one beside a late one) exactly one takes it.
+ * Returns the row as taken and the time that names this delivery's hold, or null.
+ */
+async function takeOutbound(
+  deps: Deps,
+  row: Outbound,
+): Promise<{ row: Outbound; heldSince: Date } | null> {
+  const heldSince = deps.clock.now();
+  const [taken] = await deps.db
+    .update(outbound)
+    .set({ sentAt: heldSince })
+    .where(
+      and(
+        eq(outbound.id, row.id),
+        eq(outbound.status, "queued"),
+        isNull(outbound.sentAt),
+        eq(outbound.attempts, row.attempts),
+      ),
+    )
+    .returning();
+  return taken === undefined ? null : { row: taken, heldSince };
+}
+
+/**
+ * The row as this delivery holds it: still queued, and held since `heldSince`, or, for a delivery
+ * that has not taken it, held by no one. Every outcome is written only there, so no delivery ever
+ * overwrites what another recorded.
+ */
+function heldBy(rowId: string, heldSince: Date | null): SQL | undefined {
+  return and(
+    eq(outbound.id, rowId),
+    eq(outbound.status, "queued"),
+    heldSince === null ? isNull(outbound.sentAt) : eq(outbound.sentAt, heldSince),
+  );
+}
+
+/** Whether a hold taken at `heldSince` is older than any delivery runs (`CLAIM_LOST_AFTER_MINUTES`). */
+function holdIsLost(deps: Deps, heldSince: Date): boolean {
+  return heldSince.getTime() <= deps.clock.now().getTime() - CLAIM_LOST_AFTER_MINUTES * 60_000;
+}
+
+/**
+ * A queued row another delivery took. Within the time a delivery runs it is at the platform, and
+ * that delivery records what happened, so this one sends nothing. Past it, the delivery that took
+ * it stopped between its take and its record (its invocation ended, or the record's commit
+ * failed), perhaps with the message out: the row fails unsent, the lost delivery counted as an
+ * attempt, rather than reach its reader twice (flows §3.7).
+ */
+async function heldElsewhere(
+  deps: Deps,
+  loaded: LoadedOutbound,
+  heldSince: Date,
+): Promise<DeliveryResult> {
+  const { row } = loaded;
+  if (!holdIsLost(deps, heldSince)) {
+    deps.logger.info("outbound_skipped", { outboundId: row.id, kind: row.kind, status: "held" });
+    return "skipped";
+  }
+  return fail(
+    deps,
+    loaded,
+    heldSince,
+    effectOf(deps, row),
+    row.attempts + 1,
+    INTERRUPTED_CODE,
+    "a delivery took the row and never recorded its send",
+  );
 }
 
 /** The effect stored with a row, for a retry that has only the effects left to apply. */
@@ -638,19 +814,32 @@ export async function finishArrivalEffects(
  * is still coming. Each is claimed by counting the lost delivery as a failed attempt and moving its
  * due time to now, so a reconciliation running beside this one does not drive it twice; then a
  * delivery is enqueued again, or, once the attempts are spent, the row is failed at once, unsent.
- * Should a late job turn up after all, whichever delivery runs first sends and the other finds the
- * row sent. A row that has ended meanwhile is dropped as usual. A row that throws is logged and left
- * for the next sweep, so one broken row never holds the others back.
+ * Should a late job turn up after all, whichever delivery takes the row first sends and the other
+ * finds it taken or sent. A row a delivery holds is not lost: it is left to that delivery, and
+ * failed unsent through `deliverOutbound` once the hold is older than any delivery runs. A row that
+ * has ended meanwhile is dropped as usual. A row that throws is logged and left for the next sweep,
+ * so one broken row never holds the others back.
  */
 export async function redriveStrandedOutbound(deps: Deps): Promise<void> {
   const now = deps.clock.now();
   const dueBefore = new Date(now.getTime() - STRANDED_AFTER_MINUTES * 60_000);
   const stranded = await deps.db
-    .select({ id: outbound.id, kind: outbound.kind, attempts: outbound.attempts })
+    .select({
+      id: outbound.id,
+      kind: outbound.kind,
+      attempts: outbound.attempts,
+      heldSince: outbound.sentAt,
+    })
     .from(outbound)
     .where(and(eq(outbound.status, "queued"), lt(outbound.queuedAt, dueBefore)))
     .orderBy(asc(outbound.queuedAt), asc(outbound.id));
   for (const row of stranded) {
+    if (row.heldSince !== null) {
+      if (holdIsLost(deps, row.heldSince)) {
+        await redriveSafely(deps, row, () => deliverOutbound(deps, row.id));
+      }
+      continue;
+    }
     const attempts = row.attempts + 1;
     const [claimed] = await deps.db
       .update(outbound)
@@ -663,6 +852,7 @@ export async function redriveStrandedOutbound(deps: Deps): Promise<void> {
         and(
           eq(outbound.id, row.id),
           eq(outbound.status, "queued"),
+          isNull(outbound.sentAt),
           eq(outbound.attempts, row.attempts),
           lt(outbound.queuedAt, dueBefore),
         ),
@@ -672,19 +862,28 @@ export async function redriveStrandedOutbound(deps: Deps): Promise<void> {
       continue;
     }
     deps.logger.warn("outbound_stranded", { outboundId: row.id, kind: row.kind, attempts });
-    try {
-      if (attempts > RETRY_DELAY_MINUTES.length) {
-        await deliverOutbound(deps, row.id);
-      } else {
-        await deps.queues.outbound.send({ type: "deliver", outboundId: row.id });
-      }
-    } catch (error) {
-      deps.logger.error("outbound_redrive_failed", {
-        outboundId: row.id,
-        kind: row.kind,
-        error: errorLabel(error),
-      });
-    }
+    await redriveSafely(deps, row, () =>
+      attempts > RETRY_DELAY_MINUTES.length
+        ? deliverOutbound(deps, row.id)
+        : deps.queues.outbound.send({ type: "deliver", outboundId: row.id }),
+    );
+  }
+}
+
+/** Runs one row's re-drive; one that throws is logged and left for the next sweep. */
+async function redriveSafely(
+  deps: Deps,
+  row: { id: string; kind: OutboundKind },
+  redrive: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await redrive();
+  } catch (error) {
+    deps.logger.error("outbound_redrive_failed", {
+      outboundId: row.id,
+      kind: row.kind,
+      error: errorLabel(error),
+    });
   }
 }
 
@@ -720,23 +919,47 @@ async function recordRefs(
     .onConflictDoNothing();
 }
 
+/**
+ * A failed send, on the row this delivery holds since `heldSince`. A retry, and a re-send to a
+ * migrated group, give the row back (`sent_at` null) with the media this send got out added to
+ * `sentMedia`, in the same write, so the next try sends only the rest (flows §3.7).
+ */
 async function handleSendError(
   deps: Deps,
   loaded: LoadedOutbound,
+  heldSince: Date,
   payload: OutboundPayload,
+  sending: readonly OutboundMediaRef[] | undefined,
   error: ChannelSendError,
 ): Promise<DeliveryResult> {
   const { row } = loaded;
+  const progress: { payload?: OutboundPayload } =
+    error.sentMediaMessageIds.length === 0
+      ? {}
+      : {
+          payload: {
+            ...payload,
+            sentMedia: addSentMedia(payload.sentMedia ?? {}, sending, error.sentMediaMessageIds),
+          },
+        };
   const migratedTo = error.migratedToConversationId;
   if (migratedTo !== undefined && migratedTo !== row.conversationId) {
     // The group became a supergroup: the family group follows it, as it does on the inbound
     // notice, and the send goes again at once to the new id. The row's own conversation id moves
     // with the group's other queued rows. A row already addressed to the id the error names falls
     // through to a permanent failure, so a send cannot loop.
-    await deps.db.transaction(async (tx) => {
+    const released = await deps.db.transaction(async (tx) => {
       await repointFamilyGroup(tx, row.channel, row.conversationId, migratedTo);
-      await tx.update(outbound).set({ queuedAt: deps.clock.now() }).where(eq(outbound.id, row.id));
+      const [mine] = await tx
+        .update(outbound)
+        .set({ queuedAt: deps.clock.now(), sentAt: null, ...progress })
+        .where(heldBy(row.id, heldSince))
+        .returning({ id: outbound.id });
+      return mine !== undefined;
     });
+    if (!released) {
+      return holdTaken(deps, row);
+    }
     deps.logger.info("outbound_group_migrated", { outboundId: row.id, kind: row.kind });
     await deps.queues.outbound.send({ type: "deliver", outboundId: row.id });
     return "retry";
@@ -746,10 +969,20 @@ async function handleSendError(
   if (error.retryable && delayMinutes !== undefined) {
     const delaySeconds = Math.max(delayMinutes * 60, error.retryAfterSeconds ?? 0);
     const dueAt = new Date(deps.clock.now().getTime() + delaySeconds * 1000);
-    await deps.db
+    const [released] = await deps.db
       .update(outbound)
-      .set({ attempts, error: describe(error.code, error.message), queuedAt: dueAt })
-      .where(eq(outbound.id, row.id));
+      .set({
+        attempts,
+        error: describe(error.code, error.message),
+        queuedAt: dueAt,
+        sentAt: null,
+        ...progress,
+      })
+      .where(heldBy(row.id, heldSince))
+      .returning({ id: outbound.id });
+    if (released === undefined) {
+      return holdTaken(deps, row);
+    }
     await deps.queues.outbound.send({ type: "deliver", outboundId: row.id }, { delaySeconds });
     deps.logger.warn("outbound_retry", {
       outboundId: row.id,
@@ -760,7 +993,17 @@ async function handleSendError(
     });
     return "retry";
   }
-  return fail(deps, loaded, payload.effect, attempts, error.code, error.message);
+  return fail(deps, loaded, heldSince, payload.effect, attempts, error.code, error.message);
+}
+
+/**
+ * The row is no longer as this delivery left it: its hold was counted as lost and the row failed
+ * (`CLAIM_LOST_AFTER_MINUTES`), or, before any take, another delivery took, sent, or dropped it.
+ * That outcome stands, and this delivery writes nothing over it.
+ */
+function holdTaken(deps: Deps, row: Outbound): "skipped" {
+  deps.logger.warn("outbound_hold_taken", { outboundId: row.id, kind: row.kind });
+  return "skipped";
 }
 
 /** `outbound.error`: the code and the platform's reason, bounded; never message content. */
@@ -768,21 +1011,31 @@ function describe(code: string, message: string): string {
   return `${code}: ${message}`.slice(0, 500);
 }
 
+/**
+ * Marks the row failed, on the row as the delivery holds it since `heldSince`, and applies the
+ * failure's consequences in the same transaction, only when that write took: two reconciliations
+ * failing one lost hold tell nobody twice.
+ */
 async function fail(
   deps: Deps,
   loaded: LoadedOutbound,
+  heldSince: Date,
   effect: unknown,
   attempts: number,
   code: string,
   message: string,
-): Promise<"failed"> {
+): Promise<"failed" | "skipped"> {
   const { row, member, family } = loaded;
   const failedAt = deps.clock.now();
-  const outcome: FailedOutcome = await deps.db.transaction(async (tx) => {
-    await tx
+  const outcome: FailedOutcome | null = await deps.db.transaction(async (tx) => {
+    const [failed] = await tx
       .update(outbound)
-      .set({ status: "failed", attempts, error: describe(code, message) })
-      .where(eq(outbound.id, row.id));
+      .set({ status: "failed", attempts, error: describe(code, message), sentAt: null })
+      .where(heldBy(row.id, heldSince))
+      .returning({ id: outbound.id });
+    if (failed === undefined) {
+      return null;
+    }
     const effects = await applyFailureEffects(deps, tx, {
       row,
       member,
@@ -797,6 +1050,9 @@ async function fail(
     }
     return effects;
   });
+  if (outcome === null) {
+    return holdTaken(deps, row);
+  }
   for (const memberId of outcome.wakeMemberIds) {
     await deps.scheduler.wakeAt(memberId, failedAt);
   }
@@ -806,10 +1062,15 @@ async function fail(
 
 /**
  * A row that must not go out is marked dropped unsent (flows §3.7): its family has ended, or it is
- * a morning of hers, or a notice, that has become moot on its way.
+ * a morning of hers, or a notice, that has become moot on its way. It is decided before the take,
+ * so it is written only on a row still held by no delivery, and recorded only then: a row another
+ * delivery took in the meantime is that delivery's to finish.
  */
 async function drop(deps: Deps, loaded: LoadedOutbound, reason: string): Promise<"skipped"> {
-  await deps.db.transaction((tx) => markDropped(deps, tx, loaded, reason));
+  const dropped = await deps.db.transaction((tx) => markDropped(deps, tx, loaded, reason));
+  if (!dropped) {
+    return holdTaken(deps, loaded.row);
+  }
   deps.logger.info("outbound_dropped", {
     outboundId: loaded.row.id,
     kind: loaded.row.kind,
@@ -818,17 +1079,25 @@ async function drop(deps: Deps, loaded: LoadedOutbound, reason: string): Promise
   return "skipped";
 }
 
+/**
+ * Marks the row dropped and records it, only on a row still queued and held by no delivery; false,
+ * writing nothing, when another delivery took, sent, or dropped it first.
+ */
 async function markDropped(
   deps: Deps,
   tx: VelaTransaction,
   loaded: LoadedOutbound,
   reason: string,
-): Promise<void> {
+): Promise<boolean> {
   const { row, family } = loaded;
-  await tx
+  const [mine] = await tx
     .update(outbound)
     .set({ status: "dropped", error: reason })
-    .where(eq(outbound.id, row.id));
+    .where(heldBy(row.id, null))
+    .returning({ id: outbound.id });
+  if (mine === undefined) {
+    return false;
+  }
   await recordEvent(
     tx,
     {
@@ -840,29 +1109,32 @@ async function markDropped(
     },
     deps.clock.now(),
   );
+  return true;
 }
 
 /**
  * The pause drop, decided again under locks, since the delivery read her paused before it got here.
  * Her start may have landed since: its tick asked for this morning, found the row still queued, and
  * left it to this delivery, so a drop now would lose the morning her start asked for until a later
- * tick (flows §3.13). Another delivery of the row may have sent it since, and `dropped` over `sent`
- * would hide the send from `reconcile` and let her start queue the morning again. So the row is
- * locked and must still be queued; then her row is read `for share`, which waits for a start in
- * flight (it locks her row `for update` before it makes her active) and holds off a later one until
- * this commits, whose tick then finds the row dropped and queues it again
+ * tick (flows §3.13). Another delivery of the row may have taken or sent it since: the take decided,
+ * so that delivery sends it even though she paused after it, and `dropped` over `sent` would hide
+ * the send from `reconcile` and let her start queue the morning again. So the row is locked and
+ * must still be queued and held by no delivery; then her row is read `for share`, which waits for a
+ * start in flight (it locks her row `for update` before it makes her active) and holds off a later
+ * one until this commits, whose tick then finds the row dropped and queues it again
  * (`requeueArrivalHeldByPause`). The row before hers, as a send's effects take them. Null when she
- * is no longer paused or the row no longer queued: the delivery decides again from what is stored.
+ * is no longer paused or the row is no longer queued and free: the delivery decides again from what
+ * is stored.
  */
 async function dropWhilePaused(deps: Deps, loaded: LoadedOutbound): Promise<"skipped" | null> {
   const { row } = loaded;
   const dropped = await deps.db.transaction(async (tx) => {
     const [current] = await tx
-      .select({ status: outbound.status })
+      .select({ status: outbound.status, heldSince: outbound.sentAt })
       .from(outbound)
       .where(eq(outbound.id, row.id))
       .for("update");
-    if (current?.status !== "queued") {
+    if (current?.status !== "queued" || current.heldSince !== null) {
       return false;
     }
     const [her] = await tx
@@ -873,8 +1145,7 @@ async function dropWhilePaused(deps: Deps, loaded: LoadedOutbound): Promise<"ski
     if (her?.status !== "paused") {
       return false;
     }
-    await markDropped(deps, tx, loaded, PAUSED);
-    return true;
+    return markDropped(deps, tx, loaded, PAUSED);
   });
   if (!dropped) {
     deps.logger.info("outbound_pause_drop_moot", { outboundId: row.id, kind: row.kind });

@@ -230,12 +230,28 @@ export function createTelegramClient(options: TelegramApiOptions): TelegramClien
     init: { readonly headers?: Record<string, string>; readonly body: string | FormData },
   ): Promise<unknown> {
     let response: Response;
-    let text: string;
     try {
       response = await fetchImpl(`${baseUrl}/bot${token}/${method}`, { method: "POST", ...init });
-      text = await response.text();
     } catch (error) {
       throw networkError(method, error);
+    }
+    let text: string;
+    try {
+      text = await response.text();
+    } catch (error) {
+      // The status has arrived and the body was lost on its way. Telegram answers 2xx only once it
+      // has acted, so that call happened and must not be retried; any other status says it all.
+      const reason = redact(describe(error));
+      if (response.ok) {
+        throw new ChannelSendError(
+          "unknown",
+          `telegram ${method} succeeded but its result could not be read (${reason})`,
+        );
+      }
+      throw new ChannelSendError(
+        telegramErrorCode(response.status, response.statusText),
+        `telegram ${method} failed: ${response.status} and its body could not be read (${reason})`,
+      );
     }
     return readResult(method, response, text);
   }

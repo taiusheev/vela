@@ -192,7 +192,7 @@ Every message to a person passes through `gateway.send(kind, member, message, ac
 
 1. Compute `local_day` from the member's zone.
 2. `INSERT INTO outbound (…) ON CONFLICT DO NOTHING` with the idempotency key `${kind}:${member}:${day}` (nearby asks: `${quiet}:${contact}`). If nothing was inserted, return `duplicate`. The budget index rejects a second `arrival`, `repeat`, `turn_prompt`, `weekly_read`, `ack`, or `answer_receipt` for the same day; the CHECK rejects a `nearby_ask` without an actor.
-3. Enqueue `{outbound_id}` to the `outbound` queue. The consumer loads the row, calls `adapter.send()`, sets `sent_at` and `external_id`; on failure retries 3× with backoff (5, 15, 30 min); then `failed`, the organiser is told once ("we couldn't reach Mom on LINE today"), and the quiet ladder is **not** armed for that day (constraint 5).
+3. Enqueue `{outbound_id}` to the `outbound` queue. The consumer loads the row, takes it (`sent_at` set on the queued row in one conditional update, so a second delivery of the row finds it taken and sends nothing), calls `adapter.send()`, sets `status sent`, `sent_at`, and `external_id`; on failure retries 3× with backoff (5, 15, 30 min), resending only the media that did not go out, and a row whose delivery stopped mid-send is failed, never sent again (`04-instrument-flows.md` §3.7); then `failed`, the organiser is told once ("we couldn't reach Mom on LINE today"), and the quiet ladder is **not** armed for that day (constraint 5).
 4. Every outcome writes an event.
 
 Flags (`kind = flag`) are the single exception to the budget and are logged as such. Nothing else in the codebase calls an adapter.

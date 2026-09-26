@@ -1,4 +1,4 @@
-import type { InboundEvent, LocalDate } from "@vela/contracts";
+import type { ChannelAdapter, InboundEvent, LocalDate, MediaRef } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { encodeButton, outboundKey } from "@vela/core";
 import type { VelaDatabase } from "@vela/db";
@@ -22,6 +22,7 @@ import { sendRepeat } from "./arrivals.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import {
+  CLAIM_LOST_AFTER_MINUTES,
   deliverOutbound,
   enqueueOutbound,
   type OutboundRequest,
@@ -556,6 +557,72 @@ describe("deliverOutbound retries", () => {
     expect(row?.attempts).toBe(1);
   });
 
+  /** Her morning's files: a family voice note read back, then a photo choice's two photos. */
+  const MORNING_MEDIA: MediaRef[] = [
+    { kind: "audio", providerFileId: "voice-sam" },
+    { kind: "image", providerFileId: "photo-a" },
+    { kind: "image", providerFileId: "photo-b" },
+  ];
+
+  /** Every file that reached the chat, from the sends that failed part way and those that went out. */
+  function filesTo(conversationId: string): string[] {
+    const partly = h.telegram.failed
+      .filter((entry) => entry.message.to.conversationId === conversationId)
+      .flatMap((entry) => entry.sentMedia);
+    const whole = h.telegram.sentTo(conversationId).flatMap((entry) => entry.message.media ?? []);
+    return [...partly, ...whole].map((ref) => ref.providerFileId ?? ref.url ?? "");
+  }
+
+  // Telegram has no idempotency keys: sent again whole, the retry would give her the voice note and
+  // the photos a second time (flows §3.7).
+  it("sends only what did not go out on the retry of a message whose text failed after its media", async () => {
+    const seed = await family();
+    const her = seed.memberLink.externalId;
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const id = await enqueued({ ...arrivalRequest(seed, exchange.id), media: MORNING_MEDIA });
+    h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 3 });
+
+    expect(await h.runDue(handlers())).toBe(1);
+    h.clock.advanceMinutes(5);
+    expect(await h.runDue(handlers())).toBe(1);
+
+    expect(filesTo(her)).toEqual(["voice-sam", "photo-a", "photo-b"]);
+    expect(h.telegram.sentTo(her).map((entry) => entry.message.media)).toEqual([undefined]);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 2 }]);
+    // Each message of the morning, from either try, leads back to it.
+    const refs = await h.db.select().from(messageRefs).orderBy(asc(messageRefs.messageId));
+    expect(refs.map((ref) => [ref.messageId, ref.purpose, ref.exchangeId])).toEqual([
+      ["1", "arrival", exchange.id],
+      ["2", "arrival", exchange.id],
+      ["3", "arrival", exchange.id],
+      ["4", "arrival", exchange.id],
+    ]);
+  });
+
+  it("keeps what went out when her start queues again the morning her pause dropped on its retry", async () => {
+    const seed = await family();
+    const her = seed.memberLink.externalId;
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const request: OutboundRequest = { ...arrivalRequest(seed, exchange.id), media: MORNING_MEDIA };
+    const id = await enqueued(request);
+    h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 1 });
+    expect(await h.runDue(handlers())).toBe(1);
+
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    h.clock.advanceMinutes(5);
+    expect(await h.runDue(handlers())).toBe(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "dropped", error: "member_paused" }]);
+    await h.db.update(members).set({ status: "active" }).where(eq(members.id, seed.member.id));
+    expect(await enqueueOutbound(h.deps, h.db, request)).toEqual({ outboundId: id });
+    await h.run(handlers());
+
+    expect(filesTo(her)).toEqual(["voice-sam", "photo-a", "photo-b"]);
+    expect(h.telegram.sentTo(her).map((entry) => entry.message.media)).toEqual([
+      MORNING_MEDIA.slice(1),
+    ]);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
   it("fails at once on an error that cannot pass", async () => {
     const seed = await family();
     await enqueued(systemTo(seed, "bad"));
@@ -815,34 +882,34 @@ describe("deliverOutbound and a failed arrival", () => {
   });
 });
 
-describe("deliverOutbound and the effects of a send", () => {
-  /**
-   * Deps whose database rejects the `failFrom`-th transaction and every one after it. The send is
-   * committed in the first transaction, so the second is the one a kind's effects run in (D-B1).
-   * Every other call reaches the real database with the real receiver, private fields included.
-   */
-  function failsTransactionsFrom(failFrom: number): Deps {
-    let calls = 0;
-    const real = h.deps.db;
-    const db = new Proxy(real, {
-      get(target, property) {
-        if (property === "transaction") {
-          const wrapped: VelaDatabase["transaction"] = (...args) => {
-            calls += 1;
-            if (calls >= failFrom) {
-              return Promise.reject(new Error("the effects transaction failed"));
-            }
-            return target.transaction(...args);
-          };
-          return wrapped;
-        }
-        const value: unknown = Reflect.get(target, property);
-        return typeof value === "function" ? value.bind(target) : value;
-      },
-    });
-    return { ...h.deps, db };
-  }
+/**
+ * Deps whose database rejects the `failFrom`-th transaction and every one after it. The send is
+ * committed in the first transaction, so the second is the one a kind's effects run in (D-B1).
+ * Every other call reaches the real database with the real receiver, private fields included.
+ */
+function failsTransactionsFrom(failFrom: number): Deps {
+  let calls = 0;
+  const real = h.deps.db;
+  const db = new Proxy(real, {
+    get(target, property) {
+      if (property === "transaction") {
+        const wrapped: VelaDatabase["transaction"] = (...args) => {
+          calls += 1;
+          if (calls >= failFrom) {
+            return Promise.reject(new Error("the effects transaction failed"));
+          }
+          return target.transaction(...args);
+        };
+        return wrapped;
+      }
+      const value: unknown = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  return { ...h.deps, db };
+}
 
+describe("deliverOutbound and the effects of a send", () => {
   it("keeps the row sent when its effects fail, and applies them on the retry without sending again", async () => {
     const seed = await family();
     const { id, exchangeId } = await arrivalFor(seed);
@@ -1406,5 +1473,172 @@ describe("reconcile and a delivery job that was lost", () => {
     ]);
     expect(await exchangeState(exchangeId)).toMatchObject({ deliveryFailedAt: null });
     expect(h.telegram.sent).toHaveLength(0);
+  });
+});
+
+describe("deliverOutbound takes the row before it sends", () => {
+  /**
+   * Deps whose Telegram holds every send until `release`, as the network holds a send in flight, so
+   * a second delivery of the row can run while the first is at the platform. `entered(n)` resolves
+   * once `n` sends have begun.
+   */
+  function holdingSends(): {
+    deps: Deps;
+    entered: (count: number) => Promise<void>;
+    release: () => void;
+  } {
+    let calls = 0;
+    const waiting: { count: number; resolve: () => void }[] = [];
+    let open = (): void => undefined;
+    const released = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    const adapter: ChannelAdapter = {
+      ...h.telegram,
+      async send(message) {
+        calls += 1;
+        for (const waiter of waiting) {
+          if (calls >= waiter.count) {
+            waiter.resolve();
+          }
+        }
+        await released;
+        return h.telegram.send(message);
+      },
+    };
+    return {
+      deps: { ...h.deps, channels: { get: () => adapter } },
+      entered: (count) =>
+        new Promise((resolve) => {
+          if (calls >= count) {
+            resolve();
+          } else {
+            waiting.push({ count, resolve });
+          }
+        }),
+      release: () => open(),
+    };
+  }
+
+  // Flows §3.7: a duplicate of the job (the queue delivers at least once), or a re-driven job beside
+  // a late one, can run while the first delivery's send is out. Telegram has no idempotency keys.
+  it("sends a row once when a second delivery of it runs while the first is at Telegram", async () => {
+    const seed = await family();
+    const { id } = await arrivalFor(seed);
+    const held = holdingSends();
+
+    const first = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    const second = deliverOutbound(held.deps, id);
+    await Promise.race([second, held.entered(2)]);
+    held.release();
+
+    expect(await Promise.all([first, second])).toEqual(["sent", "skipped"]);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
+  it("sends a row once when two deliveries read it before either takes it", async () => {
+    const seed = await family();
+    const { id } = await arrivalFor(seed);
+    const held = holdingSends();
+
+    const first = deliverOutbound(held.deps, id);
+    const second = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    // The one that did not take the row returns; without the take, both would be at Telegram.
+    await Promise.race([first, second, held.entered(2)]);
+    held.release();
+
+    expect((await Promise.all([first, second])).sort()).toEqual(["sent", "skipped"]);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
+  // The morning her pause dropped is the same row when her start queues it again, so the job of
+  // the delivery that dropped it, delivered once more, finds it queued beside the new one.
+  it("sends once the morning her start queued again while a job of its dropped delivery runs beside the new one", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    expect(await h.runDue(handlers())).toBe(1);
+    await h.db.update(members).set({ status: "active" }).where(eq(members.id, seed.member.id));
+    expect(await enqueueOutbound(h.deps, h.db, arrivalRequest(seed, exchangeId))).toEqual({
+      outboundId: id,
+    });
+    const held = holdingSends();
+
+    const fresh = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    const old = deliverOutbound(held.deps, id);
+    await Promise.race([old, held.entered(2)]);
+    held.release();
+
+    expect(await Promise.all([fresh, old])).toEqual(["sent", "skipped"]);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
+  // The message went out and the commit that records it failed. Nothing can tell that send from one
+  // that never happened, so the row is never sent again, and it ends failed (flows §3.7).
+  it("never sends again a row whose send went out unrecorded, and fails it once no delivery can hold it", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    h.queues.outbound.clear();
+
+    await expect(deliverOutbound(failsTransactionsFrom(1), id)).rejects.toThrow();
+    // The queue delivers the job again half a minute later.
+    h.clock.advance(30_000);
+    expect(await deliverOutbound(h.deps, id)).toBe("skipped");
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+
+    // Past its due time, but held for less than any delivery runs: no re-drive, no failure yet.
+    h.clock.advanceMinutes(CLAIM_LOST_AFTER_MINUTES - 1);
+    await reconcile(h.deps);
+    expect(await outboundRows()).toMatchObject([{ id, status: "queued", attempts: 0 }]);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+
+    h.clock.advanceMinutes(1);
+    await reconcile(h.deps);
+    const [row] = await outboundRows();
+    expect(row).toMatchObject({ id, status: "failed", attempts: 1, sentAt: null });
+    expect(row?.error).toMatch(/^interrupted: /);
+    expect(await exchangeState(exchangeId)).toMatchObject({ deliveryFailedAt: h.clock.now() });
+
+    await h.run(handlers());
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(
+      h.telegram.sentTo(seed.organiserLink.externalId).map((sent) => sent.message.text),
+    ).toEqual(["We couldn't reach Mom on Telegram today. Nothing else is known."]);
+  });
+
+  // Flows §3.7: a late job that has taken the row is sending it, so the row is not lost, and it
+  // must not be failed, or its organisers told of a failure, while the morning reaches her.
+  it("leaves a row a delivery is sending to that delivery when reconcile finds it overdue", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    h.queues.outbound.clear();
+    // Three tries have failed, and the job of the last retry runs more than 10 minutes late.
+    await h.db.update(outbound).set({ attempts: 3 }).where(eq(outbound.id, id));
+    h.clock.advanceMinutes(STRANDED_AFTER_MINUTES + 1);
+    const held = holdingSends();
+
+    const late = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    await redriveStrandedOutbound(h.deps);
+    expect(await outboundRows()).toMatchObject([
+      { id, status: "queued", attempts: 3, error: null },
+    ]);
+    expect(h.logger.entries.filter((entry) => entry.event === "outbound_stranded")).toEqual([]);
+    held.release();
+
+    expect(await late).toBe("sent");
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 4 }]);
+    expect(await exchangeState(exchangeId)).toMatchObject({
+      state: "delivered",
+      deliveryFailedAt: null,
+    });
+    expect(h.queues.outbound.pending).toHaveLength(0);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
   });
 });

@@ -887,4 +887,13 @@ describe("ChannelSendError", () => {
     expect(error.retryable).toBe(false);
     expect(new ChannelSendError("invalid_request", "bad").migratedToConversationId).toBeUndefined();
   });
+
+  it("names the media that went out before the failure, and none by default", () => {
+    const error = new ChannelSendError("unavailable", "the text failed", {
+      sentMediaMessageIds: ["700", "701"],
+    });
+    expect(error.sentMediaMessageIds).toEqual(["700", "701"]);
+    expect(error.retryable).toBe(true);
+    expect(new ChannelSendError("unavailable", "5xx").sentMediaMessageIds).toEqual([]);
+  });
 });
