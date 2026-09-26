@@ -688,27 +688,55 @@ export const turns = pgTable(
   (t) => [primaryKey({ name: "turns_pkey", columns: [t.familyId, t.localDay, t.recipientId] })],
 );
 
-export const suggestions = pgTable("suggestions", {
-  id: uuidv7Id(),
-  familyId: uuid("family_id")
-    .notNull()
-    .references(() => families.id, { onDelete: "cascade" }),
-  /** The turn holder. */
-  forMemberId: uuid("for_member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  /** The kept-light member the suggestion is about. */
-  aboutMemberId: uuid("about_member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  text: text("text").notNull(),
-  /** {mention_answer_id, fact_id, rotation} */
-  source: jsonb("source").$type<JsonObject>().notNull().default({}),
-  promptVersion: text("prompt_version").notNull(),
-  createdAt: createdAt(),
-  usedAt: timestamptz("used_at"),
-});
+/**
+ * Tomorrow's suggestion: one ask per kept-light member per local day, written nightly ahead of the
+ * day (services `suggestions.ts`). A row holds either a bank item or an AI draft: a bank row keeps
+ * no words at all (`text` '' and `lang` NULL; the reader sees the bank item in their own language),
+ * and an AI draft keeps its text in the language it was written in until retention clears it.
+ */
+export const suggestions = pgTable(
+  "suggestions",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /**
+     * Unused by the writer: a suggestion is her morning's, not one turn holder's, because the
+     * holder is chosen only at the evening prompt and anyone may compose.
+     */
+    forMemberId: uuid("for_member_id").references(() => members.id, { onDelete: "cascade" }),
+    /** The kept-light member the suggestion is about. */
+    aboutMemberId: uuid("about_member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    /** Her local day the ask would arrive. */
+    localDay: date("local_day").notNull(),
+    /**
+     * The question bank item the writer picked (`ASK_BANK` in `@vela/copy`), which an AI draft
+     * stands on. It holds no family words, so retention keeps it, and the repeat and used rules key
+     * on it.
+     */
+    bankId: text("bank_id").notNull(),
+    type: text("type", { enum: EXCHANGE_TYPES }).notNull(),
+    /** An AI draft; '' for a bank row, and once retention has cleared the draft. */
+    text: text("text").notNull(),
+    /** The language an AI draft is written in; NULL for a bank row. */
+    lang: text("lang", { enum: LANGS }),
+    /** {ai_source?: "mention" | "date" | "last_ask" | "rotation"}: names, never words. */
+    source: jsonb("source").$type<JsonObject>().notNull().default({}),
+    promptVersion: text("prompt_version").notNull(),
+    createdAt: createdAt(),
+    usedAt: timestamptz("used_at"),
+  },
+  (t) => [
+    // The writer runs every night for the next days and inserts with ON CONFLICT DO NOTHING, so a
+    // second run, or a second writer, finds the day taken instead of adding another suggestion.
+    uniqueIndex("suggestions_one_per_day").on(t.aboutMemberId, t.localDay),
+    check("suggestions_type_check", isOneOf(t.type, EXCHANGE_TYPES)),
+    check("suggestions_lang_check", isOneOf(t.lang, LANGS)),
+  ],
+);
 
 /** The curated story bank, per language. */
 export const storyQuestions = pgTable("story_questions", {

@@ -1,11 +1,11 @@
 # AI evals
 
-The golden set for `@vela/ai`: 85 synthetic cases across all eight calls, run through `createClaudeAi` exactly as services call it (same prompts, model routes, and output schemas), and graded two ways:
+The golden set for `@vela/ai`: 88 synthetic cases across all eight calls, run through `createClaudeAi` exactly as services call it (same prompts, model routes, and output schemas), and graded two ways:
 
 - **Deterministic checks** that code decides: `flag` is true, `away` runs from `2026-09-17` to `2026-09-20`, the quote is an exact excerpt of her words, the summary is Traditional Chinese, a weekly read line carries no count of days, mornings, or asks.
 - **Rubric criteria** that Claude Sonnet 5 judges as `llm-rubric` assertions: register, faithfulness, tone, guardrails.
 
-The set is weighted to what the pilot will see most and get wrong most expensively: Taiwanese Mandarin (56 of 85 cases), Hokkien words mixed in (`跋倒`, `足痛`, `無要緊`, `呷`), Mandarin and English code-switching, a grandchild's casual register made respectful in translation, borderline health mentions that must not be flagged, clear ones that must (a fall, chest pain, not eating for days, a stranger asking for money, a "bank" call asking for a code, a fake prosecutor), away detection (dated, "until I'm back", a trip that starts weeks later, and a vague start that sets nothing), health words (an answer about a fall understood without her health-words consent, and a diagnosis, a test result, and a medicine name that no summary, health mention, or flag quote keeps, each in English and Traditional Chinese), sparse weeks and weeks with nothing to say, and prompt injection inside family text for every call.
+The set is weighted to what the pilot will see most and get wrong most expensively: Taiwanese Mandarin (58 of 88 cases), Hokkien words mixed in (`跋倒`, `足痛`, `無要緊`, `呷`), Mandarin and English code-switching, a grandchild's casual register made respectful in translation, borderline health mentions that must not be flagged, clear ones that must (a fall, chest pain, not eating for days, a stranger asking for money, a "bank" call asking for a code, a fake prosecutor), away detection (dated, "until I'm back", a trip that starts weeks later, and a vague start that sets nothing), health words (an answer about a fall understood without her health-words consent, and a diagnosis, a test result, and a medicine name that no summary, health mention, or flag quote keeps, each in English and Traditional Chinese), sparse weeks and weeks with nothing to say, and prompt injection inside family text for every call.
 
 ## Files
 
@@ -25,7 +25,7 @@ The set is weighted to what the pilot will see most and get wrong most expensive
 
 ## Running the evals
 
-The run calls Claude for every case (85 calls, routed as in production, `flag` on Opus 5) and once more per rubric criterion (92 judge calls on Sonnet 5), so it needs a key and costs money. It is not part of `pnpm check`.
+The run calls Claude for every case (88 calls, routed as in production, `flag` on Opus 5) and once more per rubric criterion (95 judge calls on Sonnet 5), so it needs a key and costs money. It is not part of `pnpm check`.
 
 ```sh
 # bash

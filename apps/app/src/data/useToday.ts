@@ -113,23 +113,35 @@ export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
 export function toTomorrowTurn(turn: ApiTomorrowTurn, viewerMemberId?: string): TomorrowTurn {
   const ask = turn.ask;
   const words = ask?.text?.trim() ?? "";
+  const suggestion = turn.suggestion;
   return {
+    recipientId: turn.recipient_id,
+    recipient: turn.recipient_name,
     name: turn.holder_name ?? t`Anyone`,
     mine: turn.holder_id !== null && turn.holder_id === viewerMemberId,
+    pending: turn.turn_pending,
     ...(ask === null || words.length === 0
       ? {}
       : { asked: { by: ask.on_behalf_of ?? ask.asker_name ?? "Vela", text: words } }),
-    ...(turn.suggestion === null ? {} : { suggestion: turn.suggestion.text }),
+    ...(suggestion === null
+      ? {}
+      : {
+          suggestion: {
+            id: suggestion.id,
+            text: suggestion.text,
+            type: suggestion.type,
+            fromHerWords: suggestion.from_her_words,
+          },
+        }),
   };
 }
 
 export function toToday(day: ApiToday, viewerMemberId?: string): Today {
   const exchange = day.exchanges[0];
-  const tomorrow = day.tomorrow[0];
   return {
     lights: day.lights.map(toTodayLight),
     ...(exchange === undefined ? {} : { exchange: toTodayExchange(exchange) }),
-    ...(tomorrow === undefined ? {} : { tomorrow: toTomorrowTurn(tomorrow, viewerMemberId) }),
+    tomorrow: day.tomorrow.map((turn) => toTomorrowTurn(turn, viewerMemberId)),
   };
 }
 

@@ -662,6 +662,8 @@ describe("applyRetention", () => {
       familyId: seed.family.id,
       forMemberId: seed.organiser.id,
       aboutMemberId: seed.member.id,
+      localDay: date,
+      bankId: "knowledge.garden.plant",
       type: "question",
       text: "Ask about the garden",
       promptVersion: "v",
@@ -913,6 +915,39 @@ describe("applyRetention", () => {
     expect(await h.db.select().from(awayPeriods)).toHaveLength(2);
     const [recorded] = (await eventRows()).filter((event) => event.name === "retention_deleted");
     expect(recorded?.props).toEqual(counts);
+  });
+
+  // A cleared draft is shown as the bank item it stood on, so the item, the type and the day stay.
+  it("clears an AI suggestion's words at 30 days and keeps its bank item, type and day", async () => {
+    const seed = await seedFamily(h.db, { now: daysAgo(40) });
+    const drafted = (age: number, localDay: LocalDate) => ({
+      familyId: seed.family.id,
+      aboutMemberId: seed.member.id,
+      localDay,
+      bankId: "knowledge.food.soup",
+      type: "question" as const,
+      text: "What soup did Auntie Lin teach you?",
+      lang: "en" as const,
+      source: { ai_source: "mention" },
+      promptVersion: "suggest.v1",
+      createdAt: daysAgo(age),
+    });
+    await h.db.insert(suggestions).values([drafted(31, "2026-08-15"), drafted(29, "2026-08-17")]);
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts.suggestions_cleared).toBe(1);
+    const rows = await h.db.select().from(suggestions).orderBy(asc(suggestions.localDay));
+    expect(rows.map((row) => [row.localDay, row.bankId, row.type, row.lang, row.text])).toEqual([
+      ["2026-08-15", "knowledge.food.soup", "question", "en", ""],
+      [
+        "2026-08-17",
+        "knowledge.food.soup",
+        "question",
+        "en",
+        "What soup did Auntie Lin teach you?",
+      ],
+    ]);
   });
 
   // delivered_at and sent_at stay null on everything that never reached anyone, and a NULL

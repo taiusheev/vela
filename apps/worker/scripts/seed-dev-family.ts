@@ -10,17 +10,10 @@
  *
  * It writes synthetic people and words only, and refuses any database that is not local.
  */
+import { createOffAi } from "@vela/ai";
 import { addDays, localDateOf } from "@vela/core";
-import {
-  answers,
-  connectDatabase,
-  exchanges,
-  members,
-  replies,
-  suggestions,
-  turns,
-  users,
-} from "@vela/db";
+import { answers, connectDatabase, exchanges, members, replies, turns, users } from "@vela/db";
+import { writeSuggestions } from "@vela/services";
 import { seedFamily } from "@vela/services/testing";
 import { and, eq } from "drizzle-orm";
 
@@ -167,7 +160,8 @@ try {
     },
   ]);
 
-  // Tomorrow's turn, so the second card on Today has something to show as well.
+  // Tomorrow's turn, and the suggestions the nightly job would write from the question bank, so the
+  // second card on Today has something to show as well.
   const tomorrow = addDays(today, 1);
   await db
     .insert(turns)
@@ -179,20 +173,20 @@ try {
       promptedAt: minutesAgo(5),
     })
     .onConflictDoNothing();
-  await db
-    .delete(suggestions)
-    .where(and(eq(suggestions.familyId, familyId), eq(suggestions.forMemberId, asker.id)));
-  await db.insert(suggestions).values({
-    familyId,
-    forMemberId: asker.id,
-    aboutMemberId: keptLight.id,
-    type: "mention",
-    text: "Ask her about the seeds she saved from last year",
-    promptVersion: "dev-seed@1",
+  const written = await writeSuggestions({
+    db,
+    clock: { now: () => now },
+    ai: createOffAi(),
+    logger: {
+      info: () => {},
+      warn: (event, fields) => console.warn(`[seed] ${event}`, fields ?? {}),
+      error: (event, fields) => console.error(`[seed] ${event}`, fields ?? {}),
+    },
   });
 
   console.log(`[seed] family ${familyId} belongs to ${authSubject}`);
   console.log(`[seed] ${keptLight.displayName} keeps the light, and today is answered`);
+  console.log(`[seed] ${written.written} suggestions written, ${written.existing} already there`);
 } finally {
   await connection.close();
 }

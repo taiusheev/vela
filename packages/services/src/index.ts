@@ -91,4 +91,14 @@ export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
+export {
+  BANK_PROMPT_VERSION,
+  pickBankItem,
+  type RenderedSuggestion,
+  renderSuggestion,
+  type SuggestionOutcome,
+  type SuggestionsRun,
+  writeSuggestionFor,
+  writeSuggestions,
+} from "./suggestions.ts";
 export { type ReconcileResult, reconcile, tickMember } from "./tick.ts";

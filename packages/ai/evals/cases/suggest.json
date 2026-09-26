@@ -144,5 +144,91 @@
     "rubric": [
       "The ask is warm and everyday: if it touches the check-up, it is like 'How was the trip to Dr Wu?' and never asks about results, symptoms, or medicine, and gives no advice; it does not repeat Anna's market question."
     ]
+  },
+  {
+    "id": "suggest-zh-opinion-no-wellbeing",
+    "call": "suggest",
+    "description": "Nothing to build on (no mentions, no family dates, no last ask); the ask must be about her life, knowledge or opinions, never how she is.",
+    "tags": ["sparse", "taiwanese-mandarin"],
+    "input": {
+      "lang": "zh-TW",
+      "holderName": "小芳",
+      "recipientAddress": "外婆",
+      "forDate": "2026-09-29",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null
+    },
+    "checks": [
+      { "kind": "writtenIn", "path": "text", "lang": "zh-TW" },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["monitor", "監控", "還好嗎", "好不好", "身體", "健康", "睡", "累", "不舒服"]
+      },
+      { "kind": "equals", "path": "source", "value": "rotation" }
+    ],
+    "rubric": [
+      "A question 小芳 could send to 外婆 about 外婆's memories, knowledge or opinions, in Traditional Chinese within 50 characters, inventing nothing; it never asks how 外婆 is, how 外婆 feels or sleeps, or anything about 外婆's health or body."
+    ]
+  },
+  {
+    "id": "suggest-en-no-are-you-ok",
+    "call": "suggest",
+    "description": "One everyday mention, a market trip with a friend; the suggestion follows it up without turning into an \"are you OK\" check.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "en",
+      "holderName": "Anna",
+      "recipientAddress": "Mom",
+      "forDate": "2026-09-30",
+      "rotationType": "question",
+      "recentMentions": ["went to the market with Lin"],
+      "familyDates": [],
+      "holderLastAsk": null
+    },
+    "checks": [
+      { "kind": "writtenIn", "path": "text", "lang": "en" },
+      { "kind": "notContains", "path": "text", "texts": ["monitor", "check on", "keep an eye"] },
+      {
+        "kind": "notMatches",
+        "path": "text",
+        "patterns": [
+          "\\bare you (ok|okay|alright|all right|well)\\b",
+          "\\bhow are you\\b",
+          "\\bfeel(s|ing)?\\b",
+          "\\b(tired|lonely|sleep|slept|health|healthy)\\b"
+        ]
+      },
+      { "kind": "oneOf", "path": "source", "values": ["mention", "rotation"] }
+    ],
+    "rubric": [
+      "A warm, specific question Anna could send to Mom, such as one about the market trip with Lin, within 25 words, without inventing what happened there; it never asks whether Mom is OK, how Mom feels, or anything about Mom's health, sleep or mood."
+    ]
+  },
+  {
+    "id": "suggest-zh-word-type",
+    "call": "suggest",
+    "description": "The rotation proposes a word to teach and nothing else is known; the holder's last ask was about the weather.",
+    "tags": ["sparse", "taiwanese-mandarin"],
+    "input": {
+      "lang": "zh-TW",
+      "holderName": "阿偉",
+      "recipientAddress": "阿公",
+      "forDate": "2026-10-03",
+      "rotationType": "word",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": { "type": "question", "text": "阿公，今天天氣怎麼樣？" }
+    },
+    "checks": [
+      { "kind": "oneOf", "path": "type", "values": ["word", "question"] },
+      { "kind": "writtenIn", "path": "text", "lang": "zh-TW" },
+      { "kind": "notContains", "path": "text", "texts": ["monitor", "監控", "身體", "健康"] }
+    ],
+    "rubric": [
+      "An ask from 阿偉 that invites 阿公 to teach a word, a saying, or what something is called, in Traditional Chinese within 50 characters; it does not repeat 阿偉's question about today's weather and invents nothing about 阿公."
+    ]
   }
 ]

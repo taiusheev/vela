@@ -298,6 +298,12 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       note("applyRetention");
       return given.applyRetention === undefined ? {} : given.applyRetention(deps);
     },
+    async writeSuggestions(deps) {
+      note("writeSuggestions");
+      return given.writeSuggestions === undefined
+        ? { written: 0, existing: 0, claimed: 0, inactive: 0, failed: 0 }
+        : given.writeSuggestions(deps);
+    },
     async deliverOutbound(deps, outboundId) {
       note("deliverOutbound", outboundId);
       return given.deliverOutbound === undefined ? "sent" : given.deliverOutbound(deps, outboundId);

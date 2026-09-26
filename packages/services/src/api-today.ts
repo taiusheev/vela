@@ -1,4 +1,4 @@
-import type { ApiToday, ApiTodayExchange, ApiTomorrowTurn } from "@vela/contracts";
+import type { ApiToday, ApiTodayExchange, ApiTomorrowTurn, Lang, LocalDate } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
 import {
   answers,
@@ -12,12 +12,15 @@ import {
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { loadApiLights } from "./api-lights.ts";
+import { canBeAsked } from "./askable.ts";
 import {
   exchangeForLocalDate,
+  familyHasEnded,
   keptLightMembersOfFamily,
   type Queryable,
   readBackExchangeId,
 } from "./repo.ts";
+import { renderSuggestion } from "./suggestions.ts";
 
 /** Her words, in the order the read-back uses: what she said, else wrote, else tapped. */
 const answerText = sql<string | null>`coalesce(
@@ -80,11 +83,62 @@ export async function exchangeRow(
   };
 }
 
+/** Who is reading Today: suggestions are rendered in their language, and never shown about them. */
+interface Viewer {
+  readonly memberId: string;
+  readonly lang: Lang;
+}
+
+/**
+ * Her day's unused suggestion, as the viewer reads it (`renderSuggestion`). The nightly writer
+ * keeps one per member per day, so the day alone finds it; once an ask was composed from it, it is
+ * used and no longer offered.
+ */
+async function suggestionOfDay(
+  db: Queryable,
+  familyId: string,
+  memberId: string,
+  day: LocalDate,
+  viewerLang: Lang,
+): Promise<ApiTomorrowTurn["suggestion"]> {
+  const [row] = await db
+    .select({
+      id: suggestions.id,
+      bankId: suggestions.bankId,
+      type: suggestions.type,
+      text: suggestions.text,
+      lang: suggestions.lang,
+      source: suggestions.source,
+    })
+    .from(suggestions)
+    .where(
+      and(
+        eq(suggestions.familyId, familyId),
+        eq(suggestions.aboutMemberId, memberId),
+        eq(suggestions.localDay, day),
+        isNull(suggestions.usedAt),
+      ),
+    )
+    .limit(1);
+  if (row === undefined) return null;
+  const rendered = renderSuggestion(row, viewerLang);
+  return rendered === null
+    ? null
+    : {
+        id: row.id,
+        text: rendered.text,
+        type: rendered.type,
+        from_her_words: rendered.fromHerWords,
+      };
+}
+
 async function turnOfTomorrow(
   db: Queryable,
   familyId: string,
   member: Member,
-  tomorrow: string,
+  tomorrow: LocalDate,
+  viewer: Viewer,
+  familyEnded: boolean,
 ): Promise<ApiTomorrowTurn | null> {
   const [turn] = await db
     .select({ holderId: turns.holderId })
@@ -100,34 +154,25 @@ async function turnOfTomorrow(
   // An ask composed before the evening's prompt has run has no turn row behind it, and a card that
   // appeared only with a turn row would leave the asker with nothing to show for it (spec A7).
   const composed = await exchangeForLocalDate(db, member.id, tomorrow);
-  if (turn === undefined && composed === null) return null;
+  // Once a morning is claimed the card carries the ask itself; a suggestion would be an invitation
+  // to write a second one into a day that only holds one. It is offered only for a morning an ask
+  // could take, and never to her about herself (spec §7).
+  const suggestion =
+    composed === null &&
+    viewer.memberId !== member.id &&
+    canBeAsked(member, familyId) &&
+    !familyEnded
+      ? await suggestionOfDay(db, familyId, member.id, tomorrow, viewer.lang)
+      : null;
+  if (turn === undefined && composed === null && suggestion === null) return null;
 
   const holderId = turn?.holderId ?? null;
-  const [suggestion] =
-    holderId === null
-      ? []
-      : await db
-          .select({ id: suggestions.id, text: suggestions.text })
-          .from(suggestions)
-          .where(
-            and(
-              eq(suggestions.familyId, familyId),
-              eq(suggestions.forMemberId, holderId),
-              eq(suggestions.aboutMemberId, member.id),
-              isNull(suggestions.usedAt),
-            ),
-          )
-          .orderBy(desc(suggestions.createdAt), desc(suggestions.id))
-          .limit(1);
-
   return {
     local_day: tomorrow,
     recipient_id: member.id,
     recipient_name: member.displayName,
     holder_id: holderId,
     holder_name: await nameOf(db, holderId),
-    // Once a morning is claimed the card carries the ask itself; a suggestion would be an invitation
-    // to write a second one into a day that only holds one.
     ask:
       composed === null
         ? null
@@ -138,7 +183,8 @@ async function turnOfTomorrow(
             asker_name: await nameOf(db, composed.askerId),
             on_behalf_of: composed.onBehalfOf,
           },
-    suggestion: composed === null ? (suggestion ?? null) : null,
+    suggestion,
+    turn_pending: turn === undefined,
   };
 }
 
@@ -147,7 +193,8 @@ async function turnOfTomorrow(
  * row, today's exchange for each kept-light member with her answer and the family's replies, and
  * tomorrow's turn with its suggestion. Every day is the member's own local day, so a family spread
  * across time zones sees each person's day and not the caller's. The caller must be a live member
- * of the family; a stranger and a missing family look the same.
+ * of the family; a stranger and a missing family look the same. A suggestion is written in the
+ * caller's own language where Vela has one (`members.language`), and in English otherwise.
  */
 export async function loadApiToday(
   db: Queryable,
@@ -160,6 +207,13 @@ export async function loadApiToday(
   const lights = await loadApiLights(db, identity, familyId, now);
   if (lights === null) return null;
 
+  const [reader] = await db
+    .select({ language: members.language })
+    .from(members)
+    .where(eq(members.id, access.access.memberId))
+    .limit(1);
+  const viewer: Viewer = { memberId: access.access.memberId, lang: reader?.language ?? "en" };
+  const familyEnded = await familyHasEnded(db, familyId);
   const keptLight = await keptLightMembersOfFamily(db, familyId);
   const exchanges: ApiTodayExchange[] = [];
   const tomorrow: ApiTomorrowTurn[] = [];
@@ -167,7 +221,7 @@ export async function loadApiToday(
     const today = localDateOf(now, member.tz);
     const exchange = await exchangeForLocalDate(db, member.id, today);
     if (exchange !== null) exchanges.push(await exchangeRow(db, exchange, member));
-    const turn = await turnOfTomorrow(db, familyId, member, addDays(today, 1));
+    const turn = await turnOfTomorrow(db, familyId, member, addDays(today, 1), viewer, familyEnded);
     if (turn !== null) tomorrow.push(turn);
   }
   return { lights, exchanges, tomorrow };

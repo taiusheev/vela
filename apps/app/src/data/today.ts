@@ -1,4 +1,5 @@
 import { t } from "@lingui/core/macro";
+import type { ExchangeType } from "@vela/contracts";
 import type { LightState } from "../components/light.tsx";
 import { clockTime } from "./format.ts";
 import { reactionLine, replyLine } from "./lines.ts";
@@ -43,19 +44,37 @@ export interface TodayExchange {
   receipt?: string;
 }
 
+/** Vela's suggestion for her morning, which "Use this" puts into Ask with its kind. */
+export interface TomorrowSuggestion {
+  id: string;
+  /** Already in the reader's language, and addressed to her as the ask itself would be. */
+  text: string;
+  /** The kind of ask it was written as: a question, a story, a recipe or a word. */
+  type: ExchangeType;
+  /** Drafted from something she said, rather than taken from Vela's question bank. */
+  fromHerWords: boolean;
+}
+
+/** One kept-light member's next morning: a family with two of them has two. */
 export interface TomorrowTurn {
+  /** Whose morning it is, which Ask selects when the card is used. */
+  recipientId: string;
+  recipient: string;
+  /** Who holds the turn, or "Anyone" when nobody does. */
   name: string;
   /** True when the turn is the reader’s own, so the card says so instead of naming them. */
   mine: boolean;
+  /** The evening prompt has not chosen a holder for that morning yet, so nobody's turn is named. */
+  pending: boolean;
   /** Set once that morning is claimed: who asked, and what. A claimed morning has no suggestion. */
   asked?: { by: string; text: string };
-  suggestion?: string;
+  suggestion?: TomorrowSuggestion;
 }
 
 export interface Today {
   lights: TodayLight[];
   exchange?: TodayExchange;
-  tomorrow?: TomorrowTurn;
+  tomorrow: TomorrowTurn[];
 }
 
 /**
@@ -87,10 +106,20 @@ export function todayFixture(): Today {
       ],
       receipt: t`${recipient} saw it · ${time}`,
     },
-    tomorrow: {
-      name: "Anna",
-      mine: false,
-      suggestion: t`Ask her about the seeds she saved from last year`,
-    },
+    tomorrow: [
+      {
+        recipientId: "m1",
+        recipient,
+        name: "Anna",
+        mine: false,
+        pending: false,
+        suggestion: {
+          id: "s1",
+          text: t`What seeds did you save from last year's garden?`,
+          type: "question",
+          fromHerWords: true,
+        },
+      },
+    ],
   };
 }

@@ -1,6 +1,16 @@
 import { ApiComposedAsk } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
-import { events, exchanges, members, outbound, turns, users } from "@vela/db";
+import {
+  events,
+  exchanges,
+  members,
+  type NewSuggestion,
+  outbound,
+  type Suggestion,
+  suggestions,
+  turns,
+  users,
+} from "@vela/db";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
@@ -10,7 +20,13 @@ import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { deliverOutbound, STRANDED_AFTER_MINUTES } from "./gateway.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedExchange, seedFamily, seedLinkedGroup } from "./testing/seed.ts";
+import {
+  type SeededFamily,
+  seedExchange,
+  seedFamily,
+  seedGroupMember,
+  seedLinkedGroup,
+} from "./testing/seed.ts";
 import { reconcile } from "./tick.ts";
 
 let h: Harness;
@@ -134,6 +150,7 @@ describe("composeApiAsk", () => {
       { when: "date", text: "A date with no day" },
       { when: "tomorrow", date: addDays(today(), 1), text: "A day it may not name" },
       { recipient_id: "not-a-uuid", text: "Nobody" },
+      { suggestion_id: "not-a-uuid", text: "From no suggestion" },
     ]) {
       await expect(compose(body)).rejects.toThrow(ApiIdempotencyError);
     }
@@ -242,6 +259,7 @@ describe("composeApiAsk", () => {
       source: "app",
       media: 0,
       queued: false,
+      from_suggestion: false,
     });
     expect(JSON.stringify(event?.props)).not.toContain("cook");
   });
@@ -311,6 +329,138 @@ describe("composeApiAsk", () => {
     await expect(
       compose({ recipient_id: seed.organiser.id, text: "Asking the organiser" }),
     ).rejects.toThrow(VelaError);
+  });
+});
+
+describe("composing from tomorrow's suggestion", () => {
+  /** Her suggestion for tomorrow, as the nightly writer stores a bank item. */
+  async function seedSuggestion(values: Partial<NewSuggestion> = {}): Promise<Suggestion> {
+    const [row] = await h.db
+      .insert(suggestions)
+      .values({
+        familyId: seed.family.id,
+        aboutMemberId: seed.member.id,
+        localDay: addDays(today(), 1),
+        bankId: "life.childhood.home",
+        type: "question",
+        text: "",
+        promptVersion: "bank.v1",
+        ...values,
+      })
+      .returning();
+    if (row === undefined) throw new Error("expected a suggestion");
+    return row;
+  }
+
+  async function usedAt(id: string): Promise<Date | null | undefined> {
+    const [row] = await h.db
+      .select({ usedAt: suggestions.usedAt })
+      .from(suggestions)
+      .where(eq(suggestions.id, id));
+    return row?.usedAt;
+  }
+
+  async function composedProps() {
+    const rows = await h.db
+      .select({ props: events.props })
+      .from(events)
+      .where(eq(events.name, "ask_composed"));
+    return rows.map((row) => row.props);
+  }
+
+  it("marks the suggestion used and says so in the event, even when its words were changed", async () => {
+    const suggestion = await seedSuggestion();
+    const result = await compose({
+      text: "What did the house you grew up in smell like?",
+      suggestion_id: suggestion.id,
+    });
+    expect(result.response.status).toBe(201);
+    expect(await usedAt(suggestion.id)).toEqual(h.clock.now());
+    expect(await composedProps()).toEqual([expect.objectContaining({ from_suggestion: true })]);
+    // The ask keeps the words that were sent; nothing of the suggestion goes into the event.
+    expect((await exchangeRows())[0]?.text).toBe("What did the house you grew up in smell like?");
+  });
+
+  it("marks it used whichever morning the ask takes", async () => {
+    const suggestion = await seedSuggestion();
+    await compose({ when: "whenever", text: "Whenever suits", suggestion_id: suggestion.id });
+    expect(await usedAt(suggestion.id)).toEqual(h.clock.now());
+  });
+
+  it("marks nothing a second time when the same compose is replayed", async () => {
+    const suggestion = await seedSuggestion();
+    const first = await compose(
+      { text: "Tomorrow", suggestion_id: suggestion.id },
+      { key: "same" },
+    );
+    const markedAt = h.clock.now();
+    h.clock.advanceMinutes(5);
+    const again = await compose(
+      { text: "Tomorrow", suggestion_id: suggestion.id },
+      { key: "same" },
+    );
+    expect(again.replayed).toBe(true);
+    expect(again.response).toEqual(first.response);
+    expect(await usedAt(suggestion.id)).toEqual(markedAt);
+    expect(await composedProps()).toHaveLength(1);
+  });
+
+  it("composes all the same from a suggestion already used, and keeps its first use", async () => {
+    const firstUse = new Date(h.clock.now().getTime() - 60 * 60_000);
+    const suggestion = await seedSuggestion({ usedAt: firstUse });
+    const result = await compose({ text: "From a stale screen", suggestion_id: suggestion.id });
+    expect(result.response.status).toBe(201);
+    expect(await usedAt(suggestion.id)).toEqual(firstUse);
+    expect(await composedProps()).toEqual([expect.objectContaining({ from_suggestion: false })]);
+  });
+
+  it("composes all the same from an id that is not hers, and marks nothing", async () => {
+    const other = await seedFamily(h.db, {
+      now: h.clock.now(),
+      organiserExternalId: "3001",
+      memberExternalId: "3002",
+    });
+    const foreign = await seedSuggestion({
+      familyId: other.family.id,
+      aboutMemberId: other.member.id,
+    });
+    // Her husband keeps a light in the same family: his suggestion is not hers to use.
+    const dad = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Dad",
+      externalId: "3003",
+    });
+    await h.db
+      .update(members)
+      .set({ lightOn: true, lightConsentedAt: h.clock.now() })
+      .where(eq(members.id, dad.member.id));
+    const his = await seedSuggestion({ aboutMemberId: dad.member.id });
+
+    for (const suggestionId of [missingId, foreign.id, his.id]) {
+      const result = await compose({ text: "Mine to ask", suggestion_id: suggestionId });
+      expect(result.response.status, suggestionId).toBe(201);
+      await h.db.delete(exchanges);
+    }
+    expect(await usedAt(foreign.id)).toBeNull();
+    expect(await usedAt(his.id)).toBeNull();
+    expect(await composedProps()).toEqual([
+      expect.objectContaining({ from_suggestion: false }),
+      expect.objectContaining({ from_suggestion: false }),
+      expect.objectContaining({ from_suggestion: false }),
+    ]);
+  });
+
+  it("leaves the suggestion unused when the morning is taken, or the caller is not family", async () => {
+    const suggestion = await seedSuggestion();
+    await seedExchange(h.db, seed, { date: addDays(today(), 1), state: "scheduled" });
+    await expect(compose({ text: "Mine too", suggestion_id: suggestion.id })).rejects.toThrow(
+      AskDayTakenError,
+    );
+    await expect(
+      compose({ text: "Not mine to ask", suggestion_id: suggestion.id }, { who: stranger }),
+    ).rejects.toThrow(VelaError);
+    expect(await usedAt(suggestion.id)).toBeNull();
+    expect(await composedProps()).toEqual([]);
   });
 });
 

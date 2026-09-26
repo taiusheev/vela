@@ -228,11 +228,6 @@ msgstr "Ask {recipient} something"
 msgid "Ask and reply · free"
 msgstr "Ask and reply · free"
 
-#: src/data/ask.ts
-#: src/data/today.ts
-msgid "Ask her about the seeds she saved from last year"
-msgstr "Ask her about the seeds she saved from last year"
-
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
 msgstr "Ask them to look in"
@@ -578,10 +573,6 @@ msgstr "Perth"
 msgid "picked a photo"
 msgstr "picked a photo"
 
-#: app/ask.tsx
-msgid "Prompt · from her own words"
-msgstr "Prompt · from her own words"
-
 #: src/data/useToday.ts
 msgid "quiet"
 msgstr "quiet"
@@ -902,16 +893,20 @@ msgid "Today's ask reached {name} at 8:00, and again at 11:00."
 msgstr "Today's ask reached {name} at 8:00, and again at 11:00."
 
 #: app/(tabs)/index.tsx
-msgid "Tomorrow · {by} asked"
-msgstr "Tomorrow · {by} asked"
+msgid "Tomorrow · {by} asked {recipient}"
+msgstr "Tomorrow · {by} asked {recipient}"
 
 #: app/(tabs)/index.tsx
-msgid "Tomorrow · {name}'s turn"
-msgstr "Tomorrow · {name}'s turn"
+msgid "Tomorrow · {name}'s turn to ask {recipient}"
+msgstr "Tomorrow · {name}'s turn to ask {recipient}"
 
 #: app/(tabs)/index.tsx
-msgid "Tomorrow · your turn"
-msgstr "Tomorrow · your turn"
+msgid "Tomorrow · {recipient}"
+msgstr "Tomorrow · {recipient}"
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · your turn to ask {recipient}"
+msgstr "Tomorrow · your turn to ask {recipient}"
 
 #: app/ask.tsx
 msgid "Tomorrow morning"
@@ -941,6 +936,10 @@ msgstr "Use something else"
 #: app/ask.tsx
 msgid "Use this"
 msgstr "Use this"
+
+#: app/(tabs)/index.tsx
+msgid "Use this suggestion"
+msgstr "Use this suggestion"
 
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
@@ -973,6 +972,16 @@ msgstr "Vela Light trial · ends {date}"
 #: app/(tabs)/you.tsx
 msgid "Vela sends you at most one notification a day. Notifications are not on in this build yet."
 msgstr "Vela sends you at most one notification a day. Notifications are not on in this build yet."
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Vela suggests"
+msgstr "Vela suggests"
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Vela suggests · from her own words"
+msgstr "Vela suggests · from her own words"
 
 #: src/data/useToday.ts
 msgid "voted"
@@ -1014,6 +1023,10 @@ msgstr "What are you sending?"
 #: src/data/today.ts
 msgid "What did the garden look like this morning?"
 msgstr "What did the garden look like this morning?"
+
+#: src/data/today.ts
+msgid "What seeds did you save from last year's garden?"
+msgstr "What seeds did you save from last year's garden?"
 
 #: app/exchange/[id].tsx
 msgid "What the family said"

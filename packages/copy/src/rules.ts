@@ -30,3 +30,16 @@ export const MAINLAND_TERMS = /信息|用戶|設置|視頻|群聊|默認|點擊|
 
 /** A Chinese character directly against a Latin letter or a digit, with no space between. */
 export const LATIN_TOUCHING_HAN = /\p{Script=Han}[A-Za-z0-9]|[A-Za-z0-9]\p{Script=Han}/u;
+
+/**
+ * Words that turn an ask into a check on how she is: "are you OK", "how have you been", how she
+ * feels, her mood, her body, her appetite, sleep, medicine, doctors, being alone, loneliness, worry.
+ * A suggested ask is about her life, her knowledge, or her opinions, never a health check: the
+ * question bank (`ask-bank.ts`) never uses these words, and a suggestion an AI drafts with one of
+ * them is dropped for the bank item it stood on.
+ */
+export const HEALTH_CHECK: Readonly<Record<"en" | "zh-TW", RegExp>> = {
+  en: /\b(are you (ok|okay|alright|all right|well)|how are you|how have you been|feel(s|ing)?|health(y)?|sick|ill|pain|hurts?|doctor|clinic|hospital|medicines?|pills?|sleep|slept|tired|alone|lonely|moods?|appetite|worried)\b/i,
+  "zh-TW":
+    /還好嗎|好不好|身體|健康|生病|不舒服|痛|醫生|醫院|診所|看病|吃藥|藥|睡|累|孤單|寂寞|擔心|心情|胃口|精神/,
+};

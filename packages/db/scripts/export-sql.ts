@@ -5,12 +5,16 @@
  */
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageDir = fileURLToPath(new URL("..", import.meta.url));
 // drizzle-kit's package exports do not expose its bin, and on Windows the .bin shim is a .cmd that
-// cannot be spawned without a shell, so the entry point is run with this Node directly.
-const drizzleKit = fileURLToPath(new URL("../node_modules/drizzle-kit/bin.cjs", import.meta.url));
+// cannot be spawned without a shell, so the entry point is run with this Node directly. It sits
+// beside the package's main module, which is resolved rather than looked for in this package's own
+// node_modules: the workspace hoists its dependencies to the root (pnpm-workspace.yaml).
+const drizzleKit = join(dirname(createRequire(import.meta.url).resolve("drizzle-kit")), "bin.cjs");
 const target = fileURLToPath(new URL("../../../architecture/schema.sql", import.meta.url));
 
 const result = spawnSync(

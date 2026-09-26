@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiToday, ApiTodayExchange, ApiTomorrowTurn } from "./index.ts";
+import { ApiToday, ApiTodayExchange, ApiTomorrowTurn, ComposeAsk } from "./index.ts";
 
 const MEMBER = "0198f6aa-0000-7000-8000-000000000001";
 const ASKER = "0198f6aa-0000-7000-8000-000000000002";
@@ -44,7 +44,13 @@ const turn = {
   holder_id: ASKER,
   holder_name: "Anna",
   ask: null,
-  suggestion: { id: SUGGESTION, text: "Ask her about the seeds she saved" },
+  suggestion: {
+    id: SUGGESTION,
+    text: "What seeds did you save from last year's garden?",
+    type: "question",
+    from_her_words: true,
+  },
+  turn_pending: false,
 };
 
 describe("ApiTodayExchange", () => {
@@ -113,6 +119,33 @@ describe("ApiTomorrowTurn", () => {
     expect(ApiTomorrowTurn.parse(open)).toStrictEqual(open);
   });
 
+  it("accepts a day before its evening prompt: no holder yet, and the bank's suggestion", () => {
+    const pending = {
+      ...turn,
+      holder_id: null,
+      holder_name: null,
+      suggestion: {
+        id: SUGGESTION,
+        text: "Tell me about your grandparents.",
+        type: "story",
+        from_her_words: false,
+      },
+      turn_pending: true,
+    };
+    expect(ApiTomorrowTurn.parse(pending)).toStrictEqual(pending);
+  });
+
+  it("requires whether the turn is pending and where a suggestion came from", () => {
+    const { turn_pending: _pending, ...noPending } = turn;
+    expect(ApiTomorrowTurn.safeParse(noPending).success).toBe(false);
+    for (const field of ["type", "from_her_words"]) {
+      const suggestion = Object.fromEntries(
+        Object.entries(turn.suggestion).filter(([key]) => key !== field),
+      );
+      expect(ApiTomorrowTurn.safeParse({ ...turn, suggestion }).success, field).toBe(false);
+    }
+  });
+
   it("accepts a claimed morning, which carries the ask instead of a suggestion", () => {
     const claimed = {
       ...turn,
@@ -133,14 +166,37 @@ describe("ApiTomorrowTurn", () => {
     expect(ApiTomorrowTurn.safeParse(incomplete).success).toBe(false);
   });
 
-  it("rejects a day that is not a calendar date and a suggestion without its id", () => {
+  it("rejects a day that is not a calendar date, and a suggestion without its id, words or type", () => {
     for (const invalid of [
       { local_day: "2026-09-31" },
       { local_day: "2026-09-24T00:00:00Z" },
-      { suggestion: { text: "Ask her about the seeds she saved" } },
+      { suggestion: { ...turn.suggestion, id: undefined } },
+      { suggestion: { ...turn.suggestion, text: "" } },
+      { suggestion: { ...turn.suggestion, type: "gossip" } },
       { holder_id: "not-a-uuid" },
     ]) {
       expect(ApiTomorrowTurn.safeParse({ ...turn, ...invalid }).success).toBe(false);
+    }
+  });
+});
+
+describe("ComposeAsk", () => {
+  const ask = {
+    recipient_id: MEMBER,
+    type: "question",
+    text: "What seeds did you save from last year's garden?",
+    when: "tomorrow",
+  };
+
+  it("takes an ask on its own, and one that says which suggestion it started from", () => {
+    expect(ComposeAsk.parse(ask)).toStrictEqual(ask);
+    const used = { ...ask, suggestion_id: SUGGESTION };
+    expect(ComposeAsk.parse(used)).toStrictEqual(used);
+  });
+
+  it("refuses a suggestion id that is not an id", () => {
+    for (const id of ["not-a-uuid", "", null, 7]) {
+      expect(ComposeAsk.safeParse({ ...ask, suggestion_id: id }).success, String(id)).toBe(false);
     }
   });
 });

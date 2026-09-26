@@ -520,14 +520,19 @@ CREATE TABLE "subscriptions" (
 CREATE TABLE "suggestions" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"family_id" uuid NOT NULL,
-	"for_member_id" uuid NOT NULL,
+	"for_member_id" uuid,
 	"about_member_id" uuid NOT NULL,
+	"local_day" date NOT NULL,
+	"bank_id" text NOT NULL,
 	"type" text NOT NULL,
 	"text" text NOT NULL,
+	"lang" text,
 	"source" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"prompt_version" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"used_at" timestamp with time zone
+	"used_at" timestamp with time zone,
+	CONSTRAINT "suggestions_type_check" CHECK ("type" in ('question', 'photo_choice', 'voice_note', 'word', 'story', 'recipe', 'memory_photo', 'vote', 'hello')),
+	CONSTRAINT "suggestions_lang_check" CHECK ("lang" in ('en', 'zh-TW', 'ja', 'de', 'hi', 'ru'))
 );
 
 CREATE TABLE "translations" (
@@ -683,3 +688,4 @@ CREATE INDEX "quiet_open_idx" ON "quiet_events" USING btree ("member_id") WHERE 
 CREATE INDEX "replies_exchange_idx" ON "replies" USING btree ("exchange_id");
 CREATE UNIQUE INDEX "replies_channel_external_id_idx" ON "replies" USING btree ("channel","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "replies_one_reaction_idx" ON "replies" USING btree ("exchange_id","member_id","kind") WHERE "kind" in ('heart', 'laugh', 'hug');
+CREATE UNIQUE INDEX "suggestions_one_per_day" ON "suggestions" USING btree ("about_member_id","local_day");

@@ -17,8 +17,10 @@ import {
   type ReconcileResult,
   reconcile,
   rollupMetrics,
+  type SuggestionsRun,
   tickMember,
   understandAnswer,
+  writeSuggestions,
 } from "@vela/services";
 import { type ApiHandler, createApiHandler } from "./api-runtime.ts";
 import { buildDeps, createChannels, type DepsHandle, type DepsOptions } from "./deps.ts";
@@ -33,6 +35,7 @@ export interface PilotServices {
   reconcile(deps: Deps): Promise<ReconcileResult>;
   rollupMetrics(deps: Deps): Promise<number>;
   applyRetention(deps: Deps): Promise<Record<string, number>>;
+  writeSuggestions(deps: Deps): Promise<SuggestionsRun>;
   deliverOutbound(deps: Deps, outboundId: string): Promise<DeliveryResult>;
   ingestAnswerMedia(deps: Deps, answerId: string): Promise<void>;
   understandAnswer(deps: Deps, answerId: string): Promise<void>;
@@ -59,6 +62,7 @@ const services: PilotServices = {
   reconcile,
   rollupMetrics,
   applyRetention,
+  writeSuggestions,
   deliverOutbound,
   ingestAnswerMedia,
   understandAnswer,

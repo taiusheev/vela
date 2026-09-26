@@ -229,11 +229,6 @@ msgstr "問{recipient}一件事"
 msgid "Ask and reply · free"
 msgstr "提問和回覆 · 免費"
 
-#: src/data/ask.ts
-#: src/data/today.ts
-msgid "Ask her about the seeds she saved from last year"
-msgstr "聊聊去年留下來的那些種子"
-
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
 msgstr "請對方過去看看"
@@ -579,10 +574,6 @@ msgstr "伯斯"
 msgid "picked a photo"
 msgstr "選了一張照片"
 
-#: app/ask.tsx
-msgid "Prompt · from her own words"
-msgstr "建議 · 取自這位家人說過的話"
-
 #: src/data/useToday.ts
 msgid "quiet"
 msgstr "比較安靜"
@@ -903,16 +894,20 @@ msgid "Today's ask reached {name} at 8:00, and again at 11:00."
 msgstr "今天的提問在 08:00 送到{name}那裡，11:00 又送了一次。"
 
 #: app/(tabs)/index.tsx
-msgid "Tomorrow · {by} asked"
-msgstr "明天 · {by}已提問"
+msgid "Tomorrow · {by} asked {recipient}"
+msgstr "明天 · {by}已向{recipient}提問"
 
 #: app/(tabs)/index.tsx
-msgid "Tomorrow · {name}'s turn"
-msgstr "明天 · 輪到{name}"
+msgid "Tomorrow · {name}'s turn to ask {recipient}"
+msgstr "明天 · 輪到{name}問{recipient}"
 
 #: app/(tabs)/index.tsx
-msgid "Tomorrow · your turn"
-msgstr "明天 · 輪到您"
+msgid "Tomorrow · {recipient}"
+msgstr "明天 · {recipient}"
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · your turn to ask {recipient}"
+msgstr "明天 · 輪到您問{recipient}"
 
 #: app/ask.tsx
 msgid "Tomorrow morning"
@@ -942,6 +937,10 @@ msgstr "改用其他方式"
 #: app/ask.tsx
 msgid "Use this"
 msgstr "用這個"
+
+#: app/(tabs)/index.tsx
+msgid "Use this suggestion"
+msgstr "使用這個建議"
 
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
@@ -974,6 +973,16 @@ msgstr "Vela Light 試用 · {date}結束"
 #: app/(tabs)/you.tsx
 msgid "Vela sends you at most one notification a day. Notifications are not on in this build yet."
 msgstr "Vela 每天最多只會傳一則通知給您。這個版本還沒有開啟通知。"
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Vela suggests"
+msgstr "Vela 的建議"
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Vela suggests · from her own words"
+msgstr "Vela 的建議 · 取自這位家人說過的話"
 
 #: src/data/useToday.ts
 msgid "voted"
@@ -1015,6 +1024,10 @@ msgstr "您要傳什麼？"
 #: src/data/today.ts
 msgid "What did the garden look like this morning?"
 msgstr "今天早上花園看起來怎麼樣？"
+
+#: src/data/today.ts
+msgid "What seeds did you save from last year's garden?"
+msgstr "去年花園裡的種子，您留下了哪些？"
 
 #: app/exchange/[id].tsx
 msgid "What the family said"

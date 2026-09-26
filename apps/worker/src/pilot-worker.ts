@@ -13,6 +13,7 @@ import {
   type UnderstandJob,
 } from "@vela/services";
 import { createApp } from "./app.ts";
+import { readApiSwitch } from "./config.ts";
 import { createLogger, type DepsHandle } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import type { PilotRuntime, PilotServices } from "./runtime.ts";
@@ -29,7 +30,10 @@ import type { PilotRuntime, PilotServices } from "./runtime.ts";
  * Durable Object alarms still send each arrival at its minute.
  */
 export const RECONCILE_CRON = "*/15 * * * *";
-/** Nightly: yesterday's metrics per kept-light member, then the retention rules. */
+/**
+ * Nightly: yesterday's metrics per kept-light member, the retention rules, then the suggestions for
+ * each kept-light member's next three days, so every zone's tomorrow has one long before its day.
+ */
 export const NIGHTLY_CRON = "20 3 * * *";
 
 type WorkerJob = OutboundJob | MediaJob | UnderstandJob;
@@ -58,6 +62,39 @@ function parseJob(body: unknown): WorkerJob | null {
     return { type, mediaId };
   }
   return null;
+}
+
+/**
+ * The nightly jobs after the metrics, each run whatever the one before it did, since neither needs
+ * the other: retention, then tomorrow's suggestions, only where the API that shows them is served
+ * (ADR-29). Production's API is off and its database has none of the API's tables, so it writes no
+ * suggestion and never asks the model to draft one. A job that throws is logged by its label, and
+ * the first failure fails the run once every job has had its turn.
+ */
+async function runNightlyJobs(services: PilotServices, deps: Deps, env: PilotEnv): Promise<void> {
+  const jobs: [job: string, run: () => Promise<unknown>][] = [
+    ["applyRetention", () => services.applyRetention(deps)],
+    [
+      "writeSuggestions",
+      async () => {
+        if (readApiSwitch(env) === "on") {
+          await services.writeSuggestions(deps);
+        }
+      },
+    ],
+  ];
+  const failures: unknown[] = [];
+  for (const [job, run] of jobs) {
+    try {
+      await run();
+    } catch (error) {
+      deps.logger.error("nightly_job_failed", { job, error: errorLabel(error) });
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0) {
+    throw failures[0];
+  }
 }
 
 async function runJob(services: PilotServices, deps: Deps, job: WorkerJob): Promise<void> {
@@ -164,7 +201,7 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
           await runtime.services.reconcile(handle.deps);
         } else if (controller.cron === NIGHTLY_CRON) {
           await runtime.services.rollupMetrics(handle.deps);
-          await runtime.services.applyRetention(handle.deps);
+          await runNightlyJobs(runtime.services, handle.deps, env);
         } else {
           handle.deps.logger.error("cron_unknown", { cron: controller.cron });
         }

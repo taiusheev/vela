@@ -1501,6 +1501,22 @@ describe("composing an ask", () => {
     expect(services.authorizeFamilyAccess).toHaveBeenCalled();
   });
 
+  it("hands compose the suggestion the ask started from", async () => {
+    const { app, writes } = fixture(true);
+    const fromSuggestion = { ...ASK, suggestion_id: "99999999-9999-7999-8999-999999999999" };
+    const response = await app.request(
+      composeRequest(fromSuggestion, { authorization: "Bearer good" }),
+    );
+    expect(response.status).toBe(201);
+    expect(writes.services.composeApiAsk).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      fromSuggestion,
+    );
+  });
+
   it("answers 404 without composing when the family is not the caller's", async () => {
     const { app, writes, services } = fixture(true);
     services.authorizeFamilyAccess.mockResolvedValue({ kind: "not_found" });
@@ -1530,6 +1546,8 @@ describe("composing an ask", () => {
       { ...ASK, type: "voice_note" },
       { ...ASK, when: "date" },
       { ...ASK, extra: "field" },
+      { ...ASK, suggestion_id: "not-a-uuid" },
+      { ...ASK, suggestion_id: null },
       {},
     ]) {
       const f = fixture(true);

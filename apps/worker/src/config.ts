@@ -324,7 +324,11 @@ const CLERK_DEVELOPMENT_HOST = ".clerk.accounts.dev";
 const CLERK_SECRET_KEY_SHAPE = /^sk_(test|live)_[!-~]+$/;
 const MAX_CLERK_SECRET_KEY_LENGTH = 4096;
 
-function readApiSwitch(env: { readonly API_V1?: string }): ApiSwitch {
+/**
+ * `API_V1` as the environment sets it. Read by the API before anything else, and by the nightly
+ * cron, which writes tomorrow's suggestions only where the API that shows them is served.
+ */
+export function readApiSwitch(env: { readonly API_V1?: string }): ApiSwitch {
   const value = env.API_V1?.trim() ?? "";
   const found = API_SWITCHES.find((candidate) => candidate === value);
   if (found === undefined) {

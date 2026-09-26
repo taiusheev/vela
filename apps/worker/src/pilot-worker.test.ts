@@ -3,7 +3,7 @@ import {
   createScheduledController,
   waitOnExecutionContext,
 } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, inject, it } from "vitest";
 import { createApiHandler } from "./api-runtime.ts";
 import { ConfigError } from "./config.ts";
 import type { PilotEnv } from "./env.ts";
@@ -75,9 +75,13 @@ async function runQueue(
   await waitOnExecutionContext(ctx);
 }
 
-async function runCron(worker: ReturnType<typeof createWorker>, cron: string): Promise<void> {
+async function runCron(
+  worker: ReturnType<typeof createWorker>,
+  cron: string,
+  env: PilotEnv = testEnv,
+): Promise<void> {
   const ctx = createExecutionContext();
-  await worker.scheduled(createScheduledController({ cron }), testEnv, ctx);
+  await worker.scheduled(createScheduledController({ cron }), env, ctx);
   await waitOnExecutionContext(ctx);
 }
 
@@ -95,6 +99,22 @@ async function cronFailure(
     await waitOnExecutionContext(ctx);
   }
   throw new Error("the cron run did not fail");
+}
+
+/** The pilot Worker's environment with a deployed environment's vars, as wrangler.jsonc sets them. */
+function deployedEnv(environment: "staging" | "production"): PilotEnv {
+  const config = inject("workerConfigs").find(
+    (candidate) => candidate.worker === "pilot" && candidate.environment === environment,
+  );
+  if (config === undefined) {
+    throw new Error(`no pilot configuration for ${environment}`);
+  }
+  const vars = Object.fromEntries(
+    Object.entries(config.vars).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+  return { ...testEnv, ...vars };
 }
 
 describe("the queue consumer", () => {
@@ -205,12 +225,104 @@ describe("cron", () => {
     expect(fake.closed()).toBe(1);
   });
 
-  it("rolls up yesterday and applies retention nightly, in that order", async () => {
+  it("rolls up yesterday, applies retention, and writes tomorrow's suggestions nightly, in that order", async () => {
     const fake = createFakePilotRuntime();
 
     await runCron(createWorker(fake.runtime), NIGHTLY_CRON);
 
+    expect(namesOf(fake.calls)).toEqual(["rollupMetrics", "applyRetention", "writeSuggestions"]);
+  });
+
+  // ADR-29: production's API is off, and its database has none of the API's migrations, so the
+  // suggestions the app shows are written, and drafted by the model, only where the API is on.
+  it.each([
+    ["staging", ["rollupMetrics", "applyRetention", "writeSuggestions"]],
+    ["production", ["rollupMetrics", "applyRetention"]],
+  ] as const)(
+    "writes tomorrow's suggestions in %s only if its API is served",
+    async (environment, calls) => {
+      const fake = createFakePilotRuntime();
+
+      await runCron(createWorker(fake.runtime), NIGHTLY_CRON, deployedEnv(environment));
+
+      expect(namesOf(fake.calls)).toEqual(calls);
+    },
+  );
+
+  // The deployed configurations differ in more than the switch; this one differs in it alone.
+  it("writes no suggestions while API_V1 is off, whatever else the environment sets", async () => {
+    const fake = createFakePilotRuntime();
+
+    await runCron(createWorker(fake.runtime), NIGHTLY_CRON, { ...testEnv, API_V1: "off" });
+
     expect(namesOf(fake.calls)).toEqual(["rollupMetrics", "applyRetention"]);
+  });
+
+  it("still writes tomorrow's suggestions after retention failed, and fails the run by retention's label", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        applyRetention: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+
+    const { result: failure, lines } = await consoleLinesDuring(() =>
+      cronFailure(createWorker(fake.runtime), NIGHTLY_CRON),
+    );
+
+    expect(namesOf(fake.calls)).toEqual(["rollupMetrics", "applyRetention", "writeSuggestions"]);
+    expect(fake.logs).toEqual([
+      {
+        level: "error",
+        event: "nightly_job_failed",
+        fields: { job: "applyRetention", error: FAILED_QUERY_LABEL },
+      },
+    ]);
+    expect(lines).toEqual([
+      {
+        level: "error",
+        event: "cron_failed",
+        environment: testEnv.ENVIRONMENT,
+        cron: NIGHTLY_CRON,
+        error: FAILED_QUERY_LABEL,
+      },
+    ]);
+    expect(failure).toEqual(new Error(FAILED_QUERY_LABEL));
+  });
+
+  it("logs a failed suggestions run by its error label, and fails the run with nothing but the label", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        writeSuggestions: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+
+    const { result: failure, lines } = await consoleLinesDuring(() =>
+      cronFailure(createWorker(fake.runtime), NIGHTLY_CRON),
+    );
+
+    expect(fake.logs).toEqual([
+      {
+        level: "error",
+        event: "nightly_job_failed",
+        fields: { job: "writeSuggestions", error: FAILED_QUERY_LABEL },
+      },
+    ]);
+    expect(lines).toEqual([
+      {
+        level: "error",
+        event: "cron_failed",
+        environment: testEnv.ENVIRONMENT,
+        cron: NIGHTLY_CRON,
+        error: FAILED_QUERY_LABEL,
+      },
+    ]);
+    expect(failure).toEqual(new Error(FAILED_QUERY_LABEL));
+    expect(JSON.stringify([lines, fake.logs])).not.toContain(FAILED_QUERY_WORDS);
+    expect(fake.closed()).toBe(1);
   });
 
   it("logs a failed run by its error label, and fails it with nothing but the label", async () => {

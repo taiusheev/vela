@@ -1,8 +1,8 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
-import { router, Stack } from "expo-router";
-import { useState } from "react";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
@@ -23,13 +23,19 @@ import {
   composableType,
   previewTranslation,
   recipientLanguage,
-  suggestionFixture,
+  suggestedKind,
 } from "../src/data/ask.ts";
+import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
 import { dayName, useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
 type When = "tomorrow" | "another_day" | "whenever";
+
+/** A paused light, or one not yet said yes to, cannot be asked (`canBeAsked`). */
+function askable(light: TodayLight): boolean {
+  return light.state !== "paused" && light.invited !== true;
+}
 
 export default function AskScreen() {
   const palette = usePalette();
@@ -38,10 +44,12 @@ export default function AskScreen() {
   const account = useAccount();
   const queries = useQueryClient();
   const { today, familyId, live } = useToday();
+  const params = useLocalSearchParams<{ recipient?: string; suggestion?: string }>(); // suggestion
   const [kind, setKind] = useState<AskType>("question");
   const [text, setText] = useState("");
   const [when, setWhen] = useState<When>("tomorrow");
   const [taken, setTaken] = useState<ApiAskConflict | null>(null);
+  const [used, setUsed] = useState<{ id: string; recipientId: string } | undefined>(); // suggestion
   const keyFor = useIdempotencyKey("ask");
   const preview = previewTranslation(text);
 
@@ -49,10 +57,34 @@ export default function AskScreen() {
   // real day: `today` is the fixture until it arrives, and its people are nobody's family.
   const demo = !apiConfigured();
   const lights = demo || live ? today.lights : [];
-  // A paused light, or one not yet said yes to, cannot be asked (`canBeAsked`), so the screen offers
-  // the first that can, and says why when none can.
+  // The screen asks the person Today's card was for when she can be asked, and otherwise the first
+  // who can; it says why when nobody can.
   const recipient =
-    lights.find((light) => light.state !== "paused" && light.invited !== true) ?? lights[0];
+    lights.find((light) => light.memberId === params.recipient && askable(light)) ??
+    lights.find(askable) ??
+    lights[0];
+  // Vela's suggestion for her own morning, and never another's (a claimed morning has none).
+  const suggestion = (demo || live ? today.tomorrow : []).find(
+    (turn) => turn.recipientId === recipient?.memberId && turn.asked === undefined,
+  )?.suggestion;
+  // suggestion: a used one goes with the ask only while its person is the one being asked.
+  const usedSuggestionId =
+    used !== undefined && used.recipientId === recipient?.memberId ? used.id : undefined;
+  // "Use this": the suggestion's words and its kind, remembered with whose morning it was for.
+  const fill = useCallback((chosen: TomorrowSuggestion, recipientId: string) => {
+    setText(chosen.text);
+    setKind(suggestedKind(chosen.type));
+    setUsed({ id: chosen.id, recipientId });
+  }, []);
+  // Today's card sends its suggestion along. The live day can arrive after the screen opens, so it
+  // fills the field once, when it is there, and never over words already typed.
+  const offered = useRef(false);
+  useEffect(() => {
+    if (offered.current || recipient === undefined || suggestion === undefined) return;
+    if (suggestion.id !== params.suggestion) return;
+    offered.current = true;
+    if (text.trim().length === 0) fill(suggestion, recipient.memberId);
+  }, [recipient, suggestion, params.suggestion, text, fill]);
   const paused = recipient !== undefined && recipient.state === "paused";
   const invited = recipient !== undefined && recipient.invited === true;
   const ready =
@@ -86,7 +118,13 @@ export default function AskScreen() {
       when === "another_day" && alternative !== null && alternative !== undefined
         ? { when: "date", date: alternative }
         : { when: when === "whenever" ? "whenever" : "tomorrow" };
-    compose.mutate({ recipient_id: recipient.memberId, type, text: text.trim(), ...timing });
+    compose.mutate({
+      recipient_id: recipient.memberId,
+      type,
+      text: text.trim(),
+      ...timing,
+      ...(usedSuggestionId === undefined ? {} : { suggestion_id: usedSuggestionId }), // suggestion
+    });
   }
 
   const name = recipient?.displayName ?? t({ comment: "stands in for her name", message: "her" });
@@ -100,7 +138,6 @@ export default function AskScreen() {
         ? t`${name} has not said yes yet. Once she does, her first morning is the next day.`
         : t`Waiting for today to arrive. Your words are kept.`
     : null;
-  const suggestion = suggestionFixture();
   const language = i18n._(recipientLanguage);
   const holder = taken?.taken_by;
   // Named, never "the day after": the next free morning can be several days out.
@@ -118,13 +155,23 @@ export default function AskScreen() {
           gap: space.xl,
         }}
       >
-        <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
-          <Eyebrow>
-            <Trans>Prompt · from her own words</Trans>
-          </Eyebrow>
-          <Words variant="voice">{suggestion.text}</Words>
-          <SecondaryButton label={t`Use this`} onPress={() => setText(suggestion.text)} />
-        </Card>
+        {/* Live with no suggestion for her morning, there is no card. */}
+        {suggestion === undefined || recipient === undefined ? null : (
+          <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
+            <Eyebrow>
+              {suggestion.fromHerWords ? (
+                <Trans>Vela suggests · from her own words</Trans>
+              ) : (
+                <Trans>Vela suggests</Trans>
+              )}
+            </Eyebrow>
+            <Words variant="voice">{suggestion.text}</Words>
+            <SecondaryButton
+              label={t`Use this`}
+              onPress={() => fill(suggestion, recipient.memberId)}
+            />
+          </Card>
+        )}
 
         <View style={{ gap: space.m }}>
           <Words variant="heading">

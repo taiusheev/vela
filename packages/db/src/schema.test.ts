@@ -67,6 +67,7 @@ import {
   type NewMedia,
   type NewNearbyContact,
   type NewOutbound,
+  type NewSuggestion,
   type NewWeeklyRead,
   nearbyContacts,
   onboardingSessions,
@@ -358,10 +359,12 @@ async function seedEveryTable(): Promise<void> {
   });
   await db.insert(suggestions).values({
     familyId,
-    forMemberId: seed.organiser.id,
     aboutMemberId: seed.parent.id,
-    type: "follow_up",
-    text: "Ask how the market was",
+    localDay: "2026-09-15",
+    bankId: "knowledge.food.market",
+    type: "question",
+    text: "How was the market?",
+    lang: "en",
     promptVersion: "suggest.v1",
   });
   const question = only(
@@ -556,6 +559,98 @@ describe("one exchange per recipient per date", () => {
     ]);
 
     expect(await countRows(exchanges)).toBe(4);
+  });
+});
+
+describe("one suggestion per kept-light member per day", () => {
+  function suggestionFor(seed: Seed, overrides: Partial<NewSuggestion> = {}): NewSuggestion {
+    return {
+      familyId: seed.family.id,
+      aboutMemberId: seed.parent.id,
+      localDay: "2026-09-15",
+      bankId: "life.childhood.home",
+      type: "question",
+      text: "",
+      promptVersion: "bank.v1",
+      ...overrides,
+    };
+  }
+
+  it("stores a bank item for her day with no words, no language, and no turn holder", async () => {
+    const seed = await seedFamily();
+
+    const row = only(await db.insert(suggestions).values(suggestionFor(seed)).returning());
+
+    expect(row).toMatchObject({
+      forMemberId: null,
+      localDay: "2026-09-15",
+      bankId: "life.childhood.home",
+      text: "",
+      lang: null,
+      source: {},
+      usedAt: null,
+    });
+  });
+
+  it("rejects a second suggestion for the same member and day, whoever it would be for", async () => {
+    const seed = await seedFamily();
+    await db.insert(suggestions).values(suggestionFor(seed));
+
+    const error = await rejection(
+      db.insert(suggestions).values(
+        suggestionFor(seed, {
+          forMemberId: seed.organiser.id,
+          bankId: "life.family.name",
+          type: "story",
+          text: "Tell me the story of your name.",
+          lang: "en",
+          promptVersion: "suggest.v1",
+        }),
+      ),
+    );
+
+    expect(error).toEqual({ code: UNIQUE_VIOLATION, constraint: "suggestions_one_per_day" });
+  });
+
+  it("allows her next day and the same day for another member", async () => {
+    const seed = await seedFamily();
+    await db
+      .insert(suggestions)
+      .values([
+        suggestionFor(seed),
+        suggestionFor(seed, { localDay: "2026-09-16" }),
+        suggestionFor(seed, { aboutMemberId: seed.organiser.id }),
+      ]);
+
+    expect(await countRows(suggestions)).toBe(3);
+  });
+
+  it.each(["local_day", "bank_id"])("rejects a suggestion without its %s", async (column) => {
+    const seed = await seedFamily();
+    const values = {
+      family_id: seed.family.id,
+      about_member_id: seed.parent.id,
+      local_day: "2026-09-15",
+      bank_id: "life.childhood.home",
+      type: "question",
+      text: "",
+      prompt_version: "bank.v1",
+    };
+    const given = Object.entries(values).filter(([name]) => name !== column);
+
+    const error = await rejection(
+      db.execute(
+        sql`insert into suggestions (${sql.join(
+          given.map(([name]) => sql.identifier(name)),
+          sql`, `,
+        )}) values (${sql.join(
+          given.map(([, value]) => sql`${value}`),
+          sql`, `,
+        )})`,
+      ),
+    );
+
+    expect(error).toEqual({ code: NOT_NULL_VIOLATION, column });
   });
 });
 
@@ -1862,6 +1957,8 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "exchanges", column: "type", values: EXCHANGE_TYPES },
     { table: "exchanges", column: "state", values: EXCHANGE_STATES },
     { table: "exchanges", column: "when_rule", values: WHEN_RULES },
+    { table: "suggestions", column: "type", values: EXCHANGE_TYPES },
+    { table: "suggestions", column: "lang", values: LANGS },
     { table: "translations", column: "object_type", values: TRANSLATION_OBJECT_TYPES },
     { table: "answers", column: "kind", values: ANSWER_KINDS },
     { table: "answers", column: "channel", values: CHANNELS },

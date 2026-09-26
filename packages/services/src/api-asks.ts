@@ -9,11 +9,12 @@ import {
 } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { addDays, localDateOf, outboundKey } from "@vela/core";
-import { exchanges, type Member, members, turns, type VelaTransaction } from "@vela/db";
+import { exchanges, members, suggestions, turns, type VelaTransaction } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
+import { canBeAsked } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -44,15 +45,32 @@ export class AskDayTakenError extends Error {
   }
 }
 
-/** A kept-light member who can be asked today: the light is hers, and she is here to answer. */
-function canBeAsked(member: Member, familyId: string): boolean {
-  return (
-    member.familyId === familyId &&
-    member.leftAt === null &&
-    member.status === "active" &&
-    member.lightOn &&
-    member.lightConsentedAt !== null
-  );
+/**
+ * Marks the suggestion an ask was composed from as used, and says whether it did. Only her unused
+ * suggestion in this family is marked: an id that is stale, already used or not hers composes the
+ * ask all the same and marks nothing, so a stale Today never blocks a send, and an id from
+ * elsewhere tells the caller nothing. The first use keeps its time.
+ */
+async function markSuggestionUsed(
+  tx: VelaTransaction,
+  suggestionId: string,
+  familyId: string,
+  recipientId: string,
+  now: Date,
+): Promise<boolean> {
+  const marked = await tx
+    .update(suggestions)
+    .set({ usedAt: now })
+    .where(
+      and(
+        eq(suggestions.id, suggestionId),
+        eq(suggestions.familyId, familyId),
+        eq(suggestions.aboutMemberId, recipientId),
+        isNull(suggestions.usedAt),
+      ),
+    )
+    .returning({ id: suggestions.id });
+  return marked.length > 0;
 }
 
 /**
@@ -89,7 +107,11 @@ async function holderOf(tx: VelaTransaction, askerId: string | null): Promise<st
  * another time zone still lands on her morning.
  *
  * The mutation writes only on its transaction and sends nothing: `runApiMutation`'s callback may
- * not enqueue (code design §8), so unlike the Telegram path this composes no group confirmation.
+ * not enqueue (code design §8), so the family group's line is written as an outbound row and handed
+ * to the queue after the commit (`after`).
+ *
+ * An ask composed from tomorrow's suggestion names it (`suggestion_id`), and the suggestion is
+ * marked used in the same transaction, after the morning is known to be free: a 409 marks nothing.
  */
 export async function composeApiAsk(
   deps: Pick<Deps, "db" | "clock">,
@@ -187,6 +209,9 @@ export async function composeApiAsk(
           })
           .returning();
         if (exchange === undefined) throw new Error("exchange insert returned no row");
+        const fromSuggestion =
+          ask.suggestion_id !== undefined &&
+          (await markSuggestionUsed(tx, ask.suggestion_id, familyId, locked.id, now));
 
         if (scheduledFor !== null && scheduledFor !== undefined) {
           // The turn row exists only once the 19:00 prompt has run, so this stamps or does nothing.
@@ -217,6 +242,7 @@ export async function composeApiAsk(
               source: "app",
               media: 0,
               queued: false,
+              from_suggestion: fromSuggestion,
             },
           },
           now,

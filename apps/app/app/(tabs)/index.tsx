@@ -14,13 +14,13 @@ import {
   Words,
 } from "../../src/components/ui.tsx";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
-import type { Today } from "../../src/data/today.ts";
+import type { Today, TomorrowTurn } from "../../src/data/today.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
 import { useQuiet } from "../../src/data/useQuiet.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
-import { space } from "../../src/theme/tokens.ts";
+import { hitSlop, space } from "../../src/theme/tokens.ts";
 
 function LightsRow({
   lights,
@@ -93,21 +93,26 @@ function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }
   );
 }
 
-function TomorrowCard({ tomorrow }: { tomorrow: NonNullable<Today["tomorrow"]> }) {
+function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
   const palette = usePalette();
   const { t } = useLingui();
   const by = tomorrow.asked?.by;
   const name = tomorrow.name;
-  return (
+  // Each card names whose morning it is: a family where two keep a light sees two.
+  const recipient = tomorrow.recipient;
+  // A claimed morning shows the ask that claimed it; only a free one offers a suggestion.
+  const suggestion = tomorrow.asked === undefined ? tomorrow.suggestion : undefined;
+  const card = (
     <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
       <Eyebrow>
         {tomorrow.asked !== undefined
-          ? t`Tomorrow · ${by} asked`
-          : tomorrow.mine
-            ? t`Tomorrow · your turn`
-            : t`Tomorrow · ${name}'s turn`}
+          ? t`Tomorrow · ${by} asked ${recipient}`
+          : tomorrow.pending
+            ? t`Tomorrow · ${recipient}`
+            : tomorrow.mine
+              ? t`Tomorrow · your turn to ask ${recipient}`
+              : t`Tomorrow · ${name}'s turn to ask ${recipient}`}
       </Eyebrow>
-      {/* A claimed morning shows the ask that claimed it; only a free one offers a suggestion. */}
       {tomorrow.asked !== undefined ? (
         <>
           <Words variant="voice">{tomorrow.asked.text}</Words>
@@ -115,15 +120,42 @@ function TomorrowCard({ tomorrow }: { tomorrow: NonNullable<Today["tomorrow"]> }
             <Trans>Into her morning.</Trans>
           </Words>
         </>
-      ) : tomorrow.suggestion === undefined ? null : (
+      ) : suggestion === undefined ? null : (
         <>
-          <Words variant="voice">{tomorrow.suggestion}</Words>
+          {/* Vela's, as on Ask: without it a suggestion reads like an ask already on its way. */}
+          <Words variant="caption" tone="ink2">
+            {suggestion.fromHerWords ? (
+              <Trans>Vela suggests · from her own words</Trans>
+            ) : (
+              <Trans>Vela suggests</Trans>
+            )}
+          </Words>
+          <Words variant="voice">{suggestion.text}</Words>
           <Words variant="button" tone="action">
             <Trans>Use this</Trans>
           </Words>
         </>
       )}
     </Card>
+  );
+  if (suggestion === undefined) return card;
+  // The whole card is the way in, as in the prototype. Only ids travel in the route, never her
+  // words: Ask reads the suggestion from the same Today, and asks the person it is for.
+  return (
+    <Pressable
+      accessibilityRole="button"
+      // A hint, not a label, so a screen reader still reads the suggestion itself.
+      accessibilityHint={t`Use this suggestion`}
+      hitSlop={hitSlop}
+      onPress={() =>
+        router.push({
+          pathname: "/ask",
+          params: { recipient: tomorrow.recipientId, suggestion: suggestion.id },
+        })
+      }
+    >
+      {card}
+    </Pressable>
   );
 }
 
@@ -220,7 +252,9 @@ export default function TodayScreen() {
         </Words>
       ) : null}
       {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
-      {today.tomorrow === undefined ? null : <TomorrowCard tomorrow={today.tomorrow} />}
+      {today.tomorrow.map((turn) => (
+        <TomorrowCard key={turn.recipientId} tomorrow={turn} />
+      ))}
       <PrimaryButton label={t`Ask ${recipient} something`} onPress={() => router.push("/ask")} />
       {notice === undefined ? null : (
         <QuietNoticeSheet

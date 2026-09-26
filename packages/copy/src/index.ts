@@ -54,3 +54,4 @@ export function t(lang: Lang, key: MessageKey, params?: Record<string, string | 
   }
   return text;
 }
+export * from "./ask-bank.ts";

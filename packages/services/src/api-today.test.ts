@@ -1,18 +1,34 @@
-import { ApiToday } from "@vela/contracts";
+import { ApiToday, type Lang, type LocalDate } from "@vela/contracts";
+import { askBankText } from "@vela/copy";
 import { addDays, localDateOf } from "@vela/core";
-import { answers, exchanges, members, replies, suggestions, turns, users } from "@vela/db";
+import {
+  answers,
+  exchanges,
+  members,
+  type NewSuggestion,
+  replies,
+  type Suggestion,
+  suggestions,
+  turns,
+  users,
+} from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
 import { loadApiToday } from "./api-today.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedExchange, seedFamily } from "./testing/seed.ts";
+import { type SeededFamily, seedExchange, seedFamily, seedGroupMember } from "./testing/seed.ts";
 
 let h: Harness;
 let seed: SeededFamily;
 const identity: SessionIdentity = { authSubject: "auth|Mia", sessionId: "session-1" };
 const stranger: SessionIdentity = { authSubject: "auth|nobody", sessionId: "session-2" };
+const samIdentity: SessionIdentity = { authSubject: "auth|Sam", sessionId: "session-3" };
+const momIdentity: SessionIdentity = { authSubject: "auth|Mom", sessionId: "session-4" };
 const missingId = "00000000-0000-4000-8000-000000000001";
+/** Two items of Vela's question bank, a question and a story. */
+const BANK_ID = "life.childhood.home";
+const STORY_ID = "life.family.grandparents";
 
 beforeAll(async () => {
   h = await createHarness();
@@ -20,23 +36,68 @@ beforeAll(async () => {
 beforeEach(async () => {
   await h.reset();
   seed = await seedFamily(h.db, { now: h.clock.now() });
-  const [user] = await h.db
-    .insert(users)
-    .values({ authSubject: identity.authSubject, displayName: "Mia" })
-    .returning();
-  if (user === undefined) throw new Error("expected a seeded account");
-  await h.db.update(members).set({ userId: user.id }).where(eq(members.id, seed.organiser.id));
+  await signIn(identity, "Mia", seed.organiser.id);
 });
 afterAll(async () => {
   await h.close();
 });
 
-function today(): string {
+/** An account that reads Today as the member given. */
+async function signIn(who: SessionIdentity, displayName: string, memberId: string): Promise<void> {
+  const [user] = await h.db
+    .insert(users)
+    .values({ authSubject: who.authSubject, displayName })
+    .returning();
+  if (user === undefined) throw new Error("expected a seeded account");
+  await h.db.update(members).set({ userId: user.id }).where(eq(members.id, memberId));
+}
+
+function today(): LocalDate {
   return localDateOf(h.clock.now(), seed.member.tz);
+}
+
+function tomorrow(): LocalDate {
+  return addDays(today(), 1);
 }
 
 async function load(who: SessionIdentity = identity, familyId = seed.family.id) {
   return loadApiToday(h.db, who, familyId, h.clock.now());
+}
+
+function bankText(id: string, lang: Lang): string {
+  const text = askBankText(id, lang);
+  if (text === undefined) throw new Error(`expected ${id} in the question bank`);
+  return text;
+}
+
+/** The evening prompt's row for her day, with Mia holding the turn. */
+async function seedTurn(localDay: LocalDate = tomorrow()): Promise<void> {
+  await h.db.insert(turns).values({
+    familyId: seed.family.id,
+    localDay,
+    recipientId: seed.member.id,
+    holderId: seed.organiser.id,
+    promptedAt: h.clock.now(),
+  });
+}
+
+/** Her suggestion for tomorrow as the nightly writer stores a bank item, unless told otherwise. */
+async function seedSuggestion(values: Partial<NewSuggestion> = {}): Promise<Suggestion> {
+  const [row] = await h.db
+    .insert(suggestions)
+    .values({
+      familyId: seed.family.id,
+      aboutMemberId: seed.member.id,
+      localDay: tomorrow(),
+      bankId: BANK_ID,
+      type: "question",
+      text: "",
+      promptVersion: "bank.v1",
+      ...values,
+    })
+    .returning();
+  if (row === undefined) throw new Error("expected a suggestion");
+  return row;
 }
 
 describe("loadApiToday", () => {
@@ -187,81 +248,201 @@ describe("loadApiToday", () => {
     expect(exchange?.type).toBe("hello");
   });
 
-  it("names tomorrow's turn holder and the suggestion waiting for them", async () => {
-    const tomorrow = addDays(today(), 1);
-    await h.db.insert(turns).values({
-      familyId: seed.family.id,
-      localDay: tomorrow,
-      recipientId: seed.member.id,
-      holderId: seed.organiser.id,
-      promptedAt: h.clock.now(),
-    });
-    const [suggestion] = await h.db
-      .insert(suggestions)
-      .values({
-        familyId: seed.family.id,
-        forMemberId: seed.organiser.id,
-        aboutMemberId: seed.member.id,
-        type: "mention",
-        text: "Ask her about the seeds she saved last year",
-        promptVersion: "suggest@1",
-      })
-      .returning();
-    if (suggestion === undefined) throw new Error("expected a suggestion");
+  it("names tomorrow's turn holder and the suggestion the family may use", async () => {
+    await seedTurn();
+    const suggestion = await seedSuggestion();
 
     expect(ApiToday.parse(await load()).tomorrow).toEqual([
       {
-        local_day: tomorrow,
+        local_day: tomorrow(),
         recipient_id: seed.member.id,
         recipient_name: "Mom",
         holder_id: seed.organiser.id,
         holder_name: "Mia",
         ask: null,
-        suggestion: { id: suggestion.id, text: suggestion.text },
+        suggestion: {
+          id: suggestion.id,
+          text: bankText(BANK_ID, "en"),
+          type: "question",
+          from_her_words: false,
+        },
+        turn_pending: false,
       },
     ]);
   });
 
+  it("offers the suggestion before the evening prompt has chosen anyone", async () => {
+    const suggestion = await seedSuggestion({ bankId: STORY_ID, type: "story" });
+    expect(ApiToday.parse(await load()).tomorrow).toEqual([
+      {
+        local_day: tomorrow(),
+        recipient_id: seed.member.id,
+        recipient_name: "Mom",
+        holder_id: null,
+        holder_name: null,
+        ask: null,
+        suggestion: {
+          id: suggestion.id,
+          text: bankText(STORY_ID, "en"),
+          type: "story",
+          from_her_words: false,
+        },
+        turn_pending: true,
+      },
+    ]);
+  });
+
+  it("offers tomorrow's own suggestion and never one written for another day", async () => {
+    await seedSuggestion({ localDay: today() });
+    await seedSuggestion({ localDay: addDays(today(), 2), bankId: STORY_ID, type: "story" });
+    expect((await load())?.tomorrow).toEqual([]);
+
+    await seedTurn();
+    expect((await load())?.tomorrow).toEqual([
+      expect.objectContaining({ holder_name: "Mia", suggestion: null, turn_pending: false }),
+    ]);
+  });
+
   it("leaves a used suggestion out and keeps the turn without one", async () => {
-    const tomorrow = addDays(today(), 1);
-    await h.db.insert(turns).values({
-      familyId: seed.family.id,
-      localDay: tomorrow,
-      recipientId: seed.member.id,
-      holderId: seed.organiser.id,
-    });
-    await h.db.insert(suggestions).values({
-      familyId: seed.family.id,
-      forMemberId: seed.organiser.id,
-      aboutMemberId: seed.member.id,
-      type: "mention",
-      text: "Already used",
-      promptVersion: "suggest@1",
-      usedAt: h.clock.now(),
-    });
+    await seedSuggestion({ usedAt: h.clock.now() });
+    expect((await load())?.tomorrow).toEqual([]);
+
+    await seedTurn();
     expect((await load())?.tomorrow).toEqual([
       expect.objectContaining({ holder_name: "Mia", suggestion: null }),
     ]);
   });
 
+  it("shows an AI draft in its own language, from her words only when it was drawn from them", async () => {
+    const suggestion = await seedSuggestion({
+      type: "recipe",
+      text: "What did you cook with the herbs Lin brought?",
+      lang: "en",
+      source: { ai_source: "mention" },
+      promptVersion: "suggest.v1",
+    });
+    expect((await load())?.tomorrow[0]?.suggestion).toEqual({
+      id: suggestion.id,
+      text: "What did you cook with the herbs Lin brought?",
+      type: "recipe",
+      from_her_words: true,
+    });
+
+    await h.db
+      .update(suggestions)
+      .set({ source: { ai_source: "rotation" } })
+      .where(eq(suggestions.id, suggestion.id));
+    expect((await load())?.tomorrow[0]?.suggestion).toEqual(
+      expect.objectContaining({ type: "recipe", from_her_words: false }),
+    );
+  });
+
+  it("shows the bank item and its type once retention has cleared a draft's words", async () => {
+    const suggestion = await seedSuggestion({
+      type: "word",
+      text: "",
+      lang: "en",
+      source: { ai_source: "mention" },
+      promptVersion: "suggest.v1",
+    });
+    expect((await load())?.tomorrow[0]?.suggestion).toEqual({
+      id: suggestion.id,
+      text: bankText(BANK_ID, "en"),
+      type: "question",
+      from_her_words: false,
+    });
+  });
+
+  it("gives each reader the suggestion in their own language, and a draft only in its own", async () => {
+    const sam = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Sam",
+      externalId: "3001",
+    });
+    await h.db.update(members).set({ language: "zh-TW" }).where(eq(members.id, sam.member.id));
+    await signIn(samIdentity, "Sam", sam.member.id);
+    const suggestion = await seedSuggestion();
+
+    expect((await load())?.tomorrow[0]?.suggestion?.text).toBe(bankText(BANK_ID, "en"));
+    expect((await load(samIdentity))?.tomorrow[0]?.suggestion?.text).toBe(
+      bankText(BANK_ID, "zh-TW"),
+    );
+
+    // Drafted in Mia's English: Sam reads the bank item it stands on, in his own language.
+    await h.db
+      .update(suggestions)
+      .set({
+        text: "What did you and Lin find at the market?",
+        lang: "en",
+        source: { ai_source: "mention" },
+        promptVersion: "suggest.v1",
+      })
+      .where(eq(suggestions.id, suggestion.id));
+    expect((await load())?.tomorrow[0]?.suggestion).toEqual(
+      expect.objectContaining({
+        text: "What did you and Lin find at the market?",
+        from_her_words: true,
+      }),
+    );
+    expect((await load(samIdentity))?.tomorrow[0]?.suggestion).toEqual({
+      id: suggestion.id,
+      text: bankText(BANK_ID, "zh-TW"),
+      type: "question",
+      from_her_words: false,
+    });
+
+    // A reader in a language Vela does not yet write reads English: the English draft, and the
+    // bank item once retention has cleared it.
+    await h.db.update(members).set({ language: "ja" }).where(eq(members.id, sam.member.id));
+    expect((await load(samIdentity))?.tomorrow[0]?.suggestion?.text).toBe(
+      "What did you and Lin find at the market?",
+    );
+    await h.db.update(suggestions).set({ text: "" }).where(eq(suggestions.id, suggestion.id));
+    expect((await load(samIdentity))?.tomorrow[0]?.suggestion?.text).toBe(bankText(BANK_ID, "en"));
+  });
+
+  it("never shows her a suggestion about herself", async () => {
+    await signIn(momIdentity, "Mom", seed.member.id);
+    await seedSuggestion();
+    expect((await load(momIdentity))?.tomorrow).toEqual([]);
+
+    await seedTurn();
+    expect((await load(momIdentity))?.tomorrow).toEqual([
+      expect.objectContaining({ recipient_id: seed.member.id, suggestion: null }),
+    ]);
+    expect((await load())?.tomorrow[0]?.suggestion).not.toBeNull();
+  });
+
+  it("offers no suggestion for a morning nobody may ask her for", async () => {
+    await seedSuggestion();
+    for (const change of [{ status: "paused" as const }, { lightOn: false }]) {
+      await h.db.update(members).set(change).where(eq(members.id, seed.member.id));
+      expect((await load())?.tomorrow, JSON.stringify(change)).toEqual([]);
+      await h.db
+        .update(members)
+        .set({ status: "active", lightOn: true })
+        .where(eq(members.id, seed.member.id));
+    }
+    expect((await load())?.tomorrow).toHaveLength(1);
+
+    // A family whose other kept-light member has died has ended: nothing is composed for it.
+    const dad = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Dad",
+      externalId: "3002",
+    });
+    await h.db
+      .update(members)
+      .set({ lightOn: true, lightConsentedAt: h.clock.now(), status: "deceased" })
+      .where(eq(members.id, dad.member.id));
+    expect((await load())?.tomorrow).toEqual([]);
+  });
+
   it("carries tomorrow's ask once a morning is claimed, and stops offering a suggestion", async () => {
-    const tomorrow = addDays(today(), 1);
-    await h.db.insert(turns).values({
-      familyId: seed.family.id,
-      localDay: tomorrow,
-      recipientId: seed.member.id,
-      holderId: seed.organiser.id,
-    });
-    await h.db.insert(suggestions).values({
-      familyId: seed.family.id,
-      forMemberId: seed.organiser.id,
-      aboutMemberId: seed.member.id,
-      type: "mention",
-      text: "Not for a morning that is taken",
-      promptVersion: "suggest@1",
-    });
+    await seedTurn();
+    await seedSuggestion();
     const composed = await seedExchange(h.db, seed, {
-      date: tomorrow,
+      date: tomorrow(),
       state: "composed",
       text: "What did the garden look like this morning?",
     });
@@ -270,6 +451,7 @@ describe("loadApiToday", () => {
       expect.objectContaining({
         holder_name: "Mia",
         suggestion: null,
+        turn_pending: false,
         ask: {
           id: composed.id,
           type: "question",
@@ -282,8 +464,8 @@ describe("loadApiToday", () => {
   });
 
   it("shows the card for an ask composed before the evening prompt has run", async () => {
-    const tomorrow = addDays(today(), 1);
-    const composed = await seedExchange(h.db, seed, { date: tomorrow, state: "composed" });
+    await seedSuggestion();
+    const composed = await seedExchange(h.db, seed, { date: tomorrow(), state: "composed" });
     expect(await h.db.select().from(turns).where(eq(turns.familyId, seed.family.id))).toEqual([]);
 
     expect(ApiToday.parse(await load()).tomorrow).toEqual([
@@ -291,18 +473,14 @@ describe("loadApiToday", () => {
         holder_id: null,
         holder_name: null,
         suggestion: null,
+        turn_pending: true,
         ask: expect.objectContaining({ id: composed.id }),
       }),
     ]);
   });
 
   it("holds no turn while tomorrow has not been prompted", async () => {
-    await h.db.insert(turns).values({
-      familyId: seed.family.id,
-      localDay: today(),
-      recipientId: seed.member.id,
-      holderId: seed.organiser.id,
-    });
+    await seedTurn(today());
     expect((await load())?.tomorrow).toEqual([]);
   });
 

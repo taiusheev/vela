@@ -198,7 +198,10 @@ export const ApiTomorrowTurn = z.object({
   local_day: LocalDate,
   recipient_id: z.uuid(),
   recipient_name: z.string(),
-  /** Null when nobody holds turns, or the holder has left. */
+  /**
+   * Null until the evening prompt has chosen a holder (`turn_pending`), when nobody holds turns, or
+   * when the holder has left.
+   */
   holder_id: z.uuid().nullable(),
   holder_name: z.string().nullable(),
   /** The ask already composed for that morning, once someone has claimed it. */
@@ -211,8 +214,23 @@ export const ApiTomorrowTurn = z.object({
       on_behalf_of: z.string().nullable(),
     })
     .nullable(),
-  /** Never offered beside an ask: a claimed morning holds one, and only one. */
-  suggestion: z.object({ id: z.uuid(), text: z.string() }).nullable(),
+  /**
+   * Never offered beside an ask: a claimed morning holds one, and only one. It is her morning's, not
+   * the holder's, so anyone in the family may use it; never offered to her about herself.
+   */
+  suggestion: z
+    .object({
+      id: z.uuid(),
+      /** In the reader's own language. */
+      text: z.string().min(1),
+      /** The kind of ask the words were written as: a question, a story, a recipe or a word. */
+      type: ExchangeType,
+      /** Drafted from something she mentioned, rather than taken from Vela's question bank. */
+      from_her_words: z.boolean(),
+    })
+    .nullable(),
+  /** No turn row yet: the evening prompt that chooses a holder has not run for that day. */
+  turn_pending: z.boolean(),
 });
 export type ApiTomorrowTurn = z.infer<typeof ApiTomorrowTurn>;
 
@@ -264,6 +282,11 @@ export const ComposeAsk = z
     date: LocalDate.optional(),
     /** A child's name when a parent sends for them. */
     on_behalf_of: z.string().trim().min(1).max(80).optional(),
+    /**
+     * The suggestion the ask started from, even if its words were changed; marked used when the ask
+     * is composed. One already used, or not hers, marks nothing and never stops the ask.
+     */
+    suggestion_id: z.uuid().optional(),
   })
   .refine((ask) => (ask.when === "date") === (ask.date !== undefined), {
     message: "a date ask needs its date, and no other kind takes one",
