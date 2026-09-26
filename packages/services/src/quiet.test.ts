@@ -68,6 +68,14 @@ async function quietMorning(): Promise<Scene> {
   return { seed, second, exchangeId: exchange.id };
 }
 
+/** Marks her Telegram link blocked at `at`, as her `blocked` event or a refused send does. */
+async function blockHerLink(seed: SeededFamily, at: Date): Promise<void> {
+  await h.db
+    .update(channelLinks)
+    .set({ blockedAt: at })
+    .where(eq(channelLinks.id, seed.memberLink.id));
+}
+
 async function quietRows() {
   return h.db.select().from(quietEvents);
 }
@@ -314,6 +322,29 @@ describe("openQuiet", () => {
     expect(await quietRows()).toHaveLength(0);
     expect(await noticeRows()).toHaveLength(0);
   });
+
+  // Her block can land between the schedule's read and this transaction: the light pauses without
+  // a quiet notice (architecture §14), however the decision was made.
+  it("opens nothing when she blocked the bot after her morning reached her", async () => {
+    const { seed } = await quietMorning();
+    await blockHerLink(seed, h.clock.now());
+
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+
+    expect(await quietRows()).toHaveLength(0);
+    expect(await noticeRows()).toHaveLength(0);
+  });
+
+  // The morning went through after the block was marked, so she had unblocked unheard.
+  it("opens and tells as usual when her link was marked blocked before her morning reached her", async () => {
+    const { seed } = await quietMorning();
+    await blockHerLink(seed, new Date("2026-09-13T12:00:00Z"));
+
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+
+    expect(await quietRows()).toHaveLength(1);
+    expect(await noticeRows()).toHaveLength(2);
+  });
 });
 
 describe("notifyQuiet", () => {
@@ -383,6 +414,29 @@ describe("notifyQuiet", () => {
     expect(again?.notifyCount).toBe(2);
     expect(again?.exchangeId).toBe(exchangeId);
     expect(h.telegram.sentTo(seed.organiserLink.externalId)).toHaveLength(2);
+  });
+
+  it("sends no waited notice once she has blocked the bot", async () => {
+    const { seed } = await quietMorning();
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+    const [quiet] = await quietRows();
+    if (quiet === undefined) {
+      throw new Error("quiet event not opened");
+    }
+    await handleQuietButton(h.deps, tap(seed.organiserLink, quiet.id, "quiet_wait"), {
+      type: "quiet_wait",
+      quietEventId: quiet.id,
+    });
+    h.clock.advanceMinutes(30);
+    await blockHerLink(seed, h.clock.now());
+
+    h.clock.advanceMinutes(90);
+    await notifyQuiet(h.deps, seed.member.id, TODAY);
+
+    expect(await noticeRows()).toHaveLength(2);
+    const [waited] = await quietRows();
+    expect(waited).toMatchObject({ notifyCount: 1, resolvedAt: null });
   });
 });
 

@@ -50,7 +50,7 @@ import {
 } from "./repo.ts";
 
 /** The pilot's kept-light members and families are reached on Telegram. */
-const ARRIVAL_CHANNEL: Channel = "telegram";
+export const ARRIVAL_CHANNEL: Channel = "telegram";
 
 /** `OutboundMessage.media` allows at most ten items. */
 const MAX_MEDIA = 10;

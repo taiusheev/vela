@@ -52,6 +52,12 @@ export interface ScheduleInput {
      * silence, and she has just written to Vela (flows §3.13).
      */
     resumedAt: Date | null;
+    /**
+     * When her link on the channel her mornings go out on was marked blocked, or `null` while it is
+     * not. A morning delivered at or before it has no repeat and no quiet while the link stays
+     * blocked: the light pauses without a quiet notice (architecture §14, flows §3.12).
+     */
+    blockedAt: Date | null;
   };
   family: { turnsEnabled: boolean };
   /** The exchange days that can still need action: yesterday's and today's local dates. */
@@ -258,9 +264,9 @@ function ladderWakesAfterDelivery(ctx: Context, day: DayState, out: Collector): 
 
 /**
  * Repeat and quiet apply only to a delivered, unanswered exchange on or after her start date and
- * delivered since she last said start, each at a threshold she is not away at. Neither follows our
- * own failure to deliver: a repeat would re-send what did not arrive, and a quiet would blame her
- * silence on it.
+ * delivered since she last said start and after any block still on her link, each at a threshold
+ * she is not away at. Neither follows our own failure to deliver: a repeat would re-send what did
+ * not arrive, and a quiet would blame her silence on it.
  */
 function ladderRules(ctx: Context, day: DayState, out: Collector): void {
   if (
@@ -268,7 +274,8 @@ function ladderRules(ctx: Context, day: DayState, out: Collector): void {
     day.deliveryFailed ||
     day.answeredAt !== null ||
     !hasStarted(ctx, day.date) ||
-    deliveredBeforeResume(ctx, day.deliveredAt)
+    deliveredBeforeResume(ctx, day.deliveredAt) ||
+    deliveredBeforeBlock(ctx, day.deliveredAt)
   ) {
     return;
   }
@@ -287,6 +294,18 @@ function ladderRules(ctx: Context, day: DayState, out: Collector): void {
 function deliveredBeforeResume(ctx: Context, deliveredAt: Date): boolean {
   const { resumedAt } = ctx.input.member;
   return resumedAt !== null && deliveredAt.getTime() < resumedAt.getTime();
+}
+
+/**
+ * She blocked the bot after this morning reached her, and the link is still blocked. The light
+ * pauses without a quiet notice (architecture §14): Vela knows it cannot reach her, and a repeat
+ * could only be refused. A morning delivered after the block went through, so she had unblocked
+ * without Telegram saying so, and that morning is laddered as usual; otherwise a stale mark would
+ * silence her quiet notices for good.
+ */
+function deliveredBeforeBlock(ctx: Context, deliveredAt: Date): boolean {
+  const { blockedAt } = ctx.input.member;
+  return blockedAt !== null && deliveredAt.getTime() <= blockedAt.getTime();
 }
 
 /**

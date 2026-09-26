@@ -5,6 +5,7 @@ import {
   aiCalls,
   answers,
   awayPeriods,
+  channelLinks,
   type Exchange,
   events,
   exchanges,
@@ -352,6 +353,26 @@ describe("loadScheduleInput", () => {
 
     const input = await loadScheduleInput(h.deps, seed.member.id, h.clock.now());
     expect(input?.member.resumedAt).toEqual(at("2026-09-13", "19:30"));
+  });
+
+  it("gives the block on her own link, and none once it is cleared", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const block = (blockedAt: Date | null, linkId: string) =>
+      h.db.update(channelLinks).set({ blockedAt }).where(eq(channelLinks.id, linkId));
+    await block(at("2026-09-14", "07:00"), seed.organiserLink.id);
+    expect((await loadScheduleInput(h.deps, seed.member.id, h.clock.now()))?.member.blockedAt).toBe(
+      null,
+    );
+
+    await block(at("2026-09-14", "07:30"), seed.memberLink.id);
+    expect(
+      (await loadScheduleInput(h.deps, seed.member.id, h.clock.now()))?.member.blockedAt,
+    ).toEqual(at("2026-09-14", "07:30"));
+
+    await block(null, seed.memberLink.id);
+    expect((await loadScheduleInput(h.deps, seed.member.id, h.clock.now()))?.member.blockedAt).toBe(
+      null,
+    );
   });
 
   it("is null for a member who does not exist or whose family is being deleted", async () => {

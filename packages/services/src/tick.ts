@@ -48,7 +48,13 @@ import {
   sql,
 } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
-import { deliverArrival, prepareDay, sendRepeat, sendTurnPrompt } from "./arrivals.ts";
+import {
+  ARRIVAL_CHANNEL,
+  deliverArrival,
+  prepareDay,
+  sendRepeat,
+  sendTurnPrompt,
+} from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -56,7 +62,7 @@ import { applyPendingEffects, enqueueOutbound, redriveStrandedOutbound } from ".
 import { draftWeeklyRead } from "./jobs.ts";
 import { MAX_PROCESSING_ATTEMPTS } from "./pipeline.ts";
 import { notifyQuiet, openQuiet } from "./quiet.ts";
-import { familyById, firstAnswersByDate, memberById } from "./repo.ts";
+import { channelLinkOfMember, familyById, firstAnswersByDate, memberById } from "./repo.ts";
 
 /**
  * How many decide-and-execute rounds one tick runs. Executing an action changes what the next
@@ -128,9 +134,9 @@ function dayStateOf(
 
 /**
  * The member's state as core's schedule reads it, at `now`: her yesterday and today, tomorrow's
- * preparation and turn, her away periods, her last start, and the weeks already read. Null for a
- * member who does not exist or whose family's deletion was requested (flows §3.17), which the tick
- * treats as nothing to schedule.
+ * preparation and turn, her away periods, her last start, a block on her link, and the weeks
+ * already read. Null for a member who does not exist or whose family's deletion was requested
+ * (flows §3.17), which the tick treats as nothing to schedule.
  */
 export async function loadScheduleInput(
   deps: Deps,
@@ -217,6 +223,9 @@ export async function loadScheduleInput(
     )
     .orderBy(desc(events.at))
     .limit(1);
+  // Her `blocked` event, or a send to her refused as blocked, marks the link; her `unblocked` event
+  // clears it (flows §3.12, §5).
+  const link = await channelLinkOfMember(db, memberId, ARRIVAL_CHANNEL);
   const reads = await db
     .select({ weekStart: weeklyReads.weekStart })
     .from(weeklyReads)
@@ -236,6 +245,7 @@ export async function loadScheduleInput(
       startsOn: member.lightStartsOn,
       learningUntil: member.learningUntil,
       resumedAt: resumed?.at ?? null,
+      blockedAt: link?.blockedAt ?? null,
     },
     family: { turnsEnabled: family.turnsEnabled },
     days,

@@ -27,6 +27,8 @@ interface Scenario {
   learningUntil?: LocalDate | null;
   /** When she last said start after a stop; unset, she never did. */
   resumedAt?: Date;
+  /** When her link was marked blocked; unset, it is not. */
+  blockedAt?: Date;
   turnsEnabled?: boolean;
   days?: DayState[];
   prepared?: boolean;
@@ -50,6 +52,7 @@ function decide(scenario: Scenario): ScheduleDecision {
       startsOn: scenario.startsOn ?? null,
       learningUntil: scenario.learningUntil ?? null,
       resumedAt: scenario.resumedAt ?? null,
+      blockedAt: scenario.blockedAt ?? null,
     },
     family: { turnsEnabled: scenario.turnsEnabled ?? true },
     days: scenario.days ?? [],
@@ -330,6 +333,42 @@ describe("start after a stop", () => {
     expect(decide({ ...late, days: [repeated], now: taipei("18:00") }).due).toEqual([
       { kind: "open_quiet", date: TODAY, notify: true },
     ]);
+  });
+});
+
+describe("a blocked link", () => {
+  const unanswered = day(TODAY, { deliveredAt: taipei("08:00") });
+
+  it("neither repeats nor turns quiet a morning delivered before she blocked the bot, and wakes for neither", () => {
+    const blocked = { days: [unanswered], blockedAt: taipei("10:00"), learningUntil: TOMORROW };
+    expect(iso(decide({ ...blocked, now: taipei("10:00") }).nextWakeAt)).toBe(iso(taipei("19:00")));
+    for (const time of ["10:30", "14:00", "16:00"] as const) {
+      expect(decide({ ...blocked, now: taipei(time) }).due).toEqual([]);
+    }
+
+    const yesterday = day(YESTERDAY, { deliveredAt: taipei("08:00", YESTERDAY) });
+    const nextMorning = decide({
+      now: taipei("07:00"),
+      days: [yesterday],
+      blockedAt: taipei("09:00", YESTERDAY),
+    });
+    expect(nextMorning.due).toEqual([]);
+    expect(iso(nextMorning.nextWakeAt)).toBe(iso(taipei("08:00")));
+  });
+
+  it("sends no waited notice for a quiet opened before she blocked the bot", () => {
+    const waited = deliveredToday({ quiet: quiet({ waitUntil: taipei("16:30") }) });
+    expect(
+      decide({ now: taipei("17:00"), days: [waited], blockedAt: taipei("15:00") }).due,
+    ).toEqual([]);
+  });
+
+  it("ladders a morning delivered after her link was marked blocked as on any day", () => {
+    const stale = { blockedAt: taipei("20:00", YESTERDAY) };
+    expect(decide({ ...stale, days: [unanswered], now: taipei("10:30") }).due).toEqual([
+      { kind: "send_repeat", date: TODAY },
+    ]);
+    expect(decide({ ...stale, now: taipei("08:00") }).nextWakeAt).toEqual(taipei("10:30"));
   });
 });
 

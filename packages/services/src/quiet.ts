@@ -26,6 +26,7 @@ import {
 } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { quietNobodyToldAlert } from "./admin-alerts.ts";
+import { ARRIVAL_CHANNEL } from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime } from "./format.ts";
@@ -33,6 +34,7 @@ import { enqueueOutbound, type OutboundRequest } from "./gateway.ts";
 import { closingNoticeFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
 import {
   activeOrganisersWithLinks,
+  channelLinkOfMember,
   consentedNearbyContacts,
   familyById,
   firstAnswersByDate,
@@ -86,6 +88,19 @@ async function loadQuietContext(
     (await firstAnswersByDate(tx, memberId, member.tz, date, date)).has(date)
   ) {
     deps.logger.info("quiet_after_answer", { memberId, date, exchangeId: exchange.id });
+    return null;
+  }
+  // She blocked the bot after this morning reached her: the light pauses without a quiet notice
+  // (architecture §14), a waited one included. The schedule holds such a morning back
+  // (`blockedAt`), but her block can land after it decided. A morning delivered after the block
+  // shows she had unblocked unheard, so that stale mark changes nothing.
+  const link = await channelLinkOfMember(tx, memberId, ARRIVAL_CHANNEL);
+  if (
+    link !== null &&
+    link.blockedAt !== null &&
+    exchange.deliveredAt.getTime() <= link.blockedAt.getTime()
+  ) {
+    deps.logger.info("quiet_link_blocked", { memberId, date, exchangeId: exchange.id });
     return null;
   }
   return { member, family, exchange };

@@ -225,6 +225,7 @@ function simulate(zone: string, arrivalTime: LocalTime, seed: number): Run {
         startsOn: run.startsOn,
         learningUntil: run.learningUntil,
         resumedAt: null,
+        blockedAt: null,
       },
       family: { turnsEnabled: true },
       days: [dayState(dayIn(run, addDays(today, -1)), now), dayState(dayIn(run, today), now)],

@@ -8,7 +8,8 @@
  * counts for that day, and the morning still goes out.
  *
  * The drill: sends that keep failing produce one delivery notice, no repeat, and no quiet event; a
- * blocked chat marks the link; a wake nobody served is caught by `reconcile` and delivered late,
+ * blocked chat marks the link, and a block after her morning reached her brings no repeat and no
+ * quiet notice; a wake nobody served is caught by `reconcile` and delivered late,
  * exactly once; and an outage of the AI or of speech-to-text never delays the light, the ack, or
  * the group post, with the understanding picked up again once the outage ends.
  */
@@ -367,6 +368,43 @@ describe("the silence drill", () => {
       (await h.db.select().from(channelLinks).where(eq(channelLinks.memberId, seed.member.id)))[0]
         ?.blockedAt,
     ).toBeNull();
+  });
+
+  it("pauses the light without a repeat or a quiet notice when she blocks the bot after her morning reached her", async () => {
+    const seed = await consentedYesterday();
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "08:00"));
+    expect(newMessages()).toEqual([[HER, HELLO_ARRIVAL]]);
+
+    // 10:00: she deletes the chat with "Stop and block bot", and Telegram refuses every later send.
+    h.clock.set(at("2026-09-14", "10:00"));
+    await inbound(fromHer({ kind: "blocked" }));
+    h.telegram.failSendsTo(HER, "blocked");
+
+    // Past 14:00, when the quiet would open, and 16:00, when the learning period would tell them.
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "18:00"));
+
+    expect(newMessages()).toEqual([]);
+    expect(await h.db.select().from(quietEvents)).toHaveLength(0);
+    expect(
+      (await h.db.select({ kind: outbound.kind }).from(outbound)).map((row) => row.kind),
+    ).toEqual(["arrival"]);
+  });
+
+  it("ladders a morning that reached her after her link was marked blocked, as on any day", async () => {
+    const seed = await consentedYesterday();
+    // A block Telegram reported last night, and an unblock it never did: the morning goes through.
+    await h.db
+      .update(channelLinks)
+      .set({ blockedAt: at("2026-09-13", "20:00") })
+      .where(eq(channelLinks.memberId, seed.member.id));
+
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "16:00"));
+
+    expect(newMessages()).toEqual([
+      [HER, HELLO_ARRIVAL],
+      [HER, HELLO_REPEAT],
+      [ORGANISER, t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })],
+    ]);
   });
 
   it("delivers a wake nobody served three hours late, with the note, exactly once", async () => {
