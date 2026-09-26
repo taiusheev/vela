@@ -878,7 +878,10 @@ export const awayPeriods = pgTable(
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
     fromDate: date("from_date").notNull(),
-    /** NULL = until she answers ("until I'm back"). */
+    /**
+     * NULL = "until I'm back": her first answer on or after `from_date` that arrives on a later local
+     * date than `created_at`'s ends it (flows §3.9), or `end_away`.
+     */
     toDate: date("to_date"),
     source: text("source", { enum: AWAY_SOURCES }).notNull(),
     setBy: uuid("set_by").references(() => members.id, { onDelete: "set null" }),

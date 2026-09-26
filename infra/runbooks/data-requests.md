@@ -330,7 +330,7 @@ Their consent rows stay, forgotten, as the record of what they answered. Quiet n
 
 Once the admin page runs in production: `set_away`, and `end_away` to end it early. Until then, the statements below.
 
-Morning messages keep coming; on those days no repeat and no quiet notice are sent. For "until they answer again", write `NULL` in place of `'<last day away>'`.
+Morning messages keep coming; on those days no repeat and no quiet notice are sent. For "until they are back", write `NULL` in place of `'<last day away>'`. Such a period ends on her first answer that arrives on or after the first day away and on a later day, in her time zone, than the day you set it (`created_at`); an answer the day you set it leaves it open, since it may come from wherever she is going (`architecture/04-instrument-flows.md` §3.9, step 4). So when the family says she is home again the same day, end the period with the statements below: otherwise it holds back her next morning's repeat and quiet notice until she answers on a later day. The same holds for a period set with `set_away`, which `end_away` ends.
 
 ```sql
 INSERT INTO away_periods (member_id, from_date, to_date, source, set_by)

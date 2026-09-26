@@ -14,6 +14,7 @@ import {
   type Outbound,
   outbound,
   quietEvents,
+  users,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -26,6 +27,7 @@ import {
   handleParentMessage,
   postMissedAnswers,
 } from "./answers.ts";
+import { loadApiLights } from "./api-lights.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { openQuiet } from "./quiet.ts";
@@ -973,6 +975,46 @@ describe("handleAnswerButton", () => {
     const told = (await outboundRows()).filter((row) => row.kind === "quiet_resolved");
     expect(told.map((row) => [row.memberId, textOf(row)])).toEqual([
       [seed.organiser.id, "Mom answered at 14:32. Everything is lit again."],
+    ]);
+  });
+
+  // What the close tells the organisers, the app shows them: her light, lit at the time of the tap
+  // (API contract §5). It used to read only today's own exchange, which the tap leaves unanswered,
+  // so the app showed her resting under "Everything is lit again".
+  it("shows her lit in the app at the time the close names when her tap on yesterday's arrival closed today's quiet", async () => {
+    const scene = await morning();
+    const { seed } = scene;
+    const yesterday = await seedExchange(h.db, seed, {
+      date: YESTERDAY,
+      state: "answered",
+      deliveredAt: new Date("2026-09-13T00:00:00Z"),
+      answeredAt: new Date("2026-09-13T01:00:00Z"),
+    });
+    h.clock.advanceMinutes(360);
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+    h.clock.advanceMinutes(20);
+    const identity = { authSubject: "auth|Mia", sessionId: "session-1" };
+    const [account] = await h.db
+      .insert(users)
+      .values({ authSubject: identity.authSubject, displayName: "Mia" })
+      .returning();
+    await h.db
+      .update(members)
+      .set({ userId: account?.id ?? null })
+      .where(eq(members.id, seed.organiser.id));
+    expect(await loadApiLights(h.db, identity, seed.family.id, h.clock.now())).toEqual([
+      expect.objectContaining({ state: "quiet" }),
+    ]);
+
+    await tapped(scene, { type: "answer", exchangeId: yesterday.id, answer: "fine" }, "6");
+
+    expect(await loadApiLights(h.db, identity, seed.family.id, h.clock.now())).toEqual([
+      expect.objectContaining({
+        state: "lit",
+        answered_at: "2026-09-14T06:32:00.000Z",
+        quiet_event_id: null,
+      }),
     ]);
   });
 
