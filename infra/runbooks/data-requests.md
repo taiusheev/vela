@@ -328,9 +328,9 @@ Their consent rows stay, forgotten, as the record of what they answered. Quiet n
 
 ## E. Pause the notes while the person is away
 
-Once the admin page runs in production: `set_away`, and `end_away` to end it early. Until then, the statements below.
+Once the admin page runs in production: `set_away`, and `end_away` to end a period early, whoever set it. Until then, the statements below.
 
-Morning messages keep coming; on those days no repeat and no quiet notice are sent. For "until they are back", write `NULL` in place of `'<last day away>'`. Such a period ends on her first answer that arrives on or after the first day away and on a later day, in her time zone, than the day you set it (`created_at`); an answer the day you set it leaves it open, since it may come from wherever she is going (`architecture/04-instrument-flows.md` §3.9, step 4). So when the family says she is home again the same day, end the period with the statements below: otherwise it holds back her next morning's repeat and quiet notice until she answers on a later day. The same holds for a period set with `set_away`, which `end_away` ends.
+Morning messages keep coming; on those days no repeat and no quiet notice are sent. For "until they are back", write `NULL` in place of `'<last day away>'`. Such a period ends on her first answer that arrives on or after the first day away and on a later day, in her time zone, than the day you set it (`created_at`); an answer the day you set it leaves it open, since it may come from wherever she is going (`architecture/04-instrument-flows.md` §3.9, step 4). An away she set herself by message, such as "until I'm back" (`source` `answer`), ends by the same rule, counted from the day she wrote it. So when the family says she is home again the same day, end the period, hers or one you set, with the statements below: otherwise it holds back her next morning's repeat and quiet notice until she answers on a later day. The same holds for a period set with `set_away`; `end_away` ends any of them.
 
 ```sql
 INSERT INTO away_periods (member_id, from_date, to_date, source, set_by)
@@ -341,14 +341,25 @@ WHERE NOT EXISTS (
 );
 ```
 
-Ending it early. The repeat and quiet notice times that passed while she was away stay skipped, and the ones still ahead that day come as usual. Clearing `next_wake_at` makes reconciliation re-plan her schedule within 15 minutes, as `end_away` does at once; without it, today's times still ahead would wait for her next planned wake, such as the evening's, and come together then:
+Ending it early, whoever set it: a period you set here or with `set_away` (`source` `organiser`), or one she set herself by message (`source` `answer`), as `end_away` ends any period. First list her open periods:
+
+```sql
+SELECT id, from_date, to_date, source, created_at
+FROM away_periods
+WHERE member_id = '<kept-light member id>' AND ended_at IS NULL
+ORDER BY from_date, created_at;
+```
+
+Then end, by its id, each period she is back from: one whose `from_date` is on or before her today. A period still ahead, such as a trip planned for next month, is not the one she is back from, and stays. The repeat and quiet notice times that passed while she was away stay skipped, and the ones still ahead that day come as usual. Clearing `next_wake_at` makes reconciliation re-plan her schedule within 15 minutes, as `end_away` does at once; without it, today's times still ahead would wait for her next planned wake, such as the evening's, and come together then:
 
 ```sql
 UPDATE away_periods SET ended_at = now()
-WHERE member_id = '<kept-light member id>' AND source = 'organiser' AND ended_at IS NULL;
+WHERE id = '<away period id>' AND member_id = '<kept-light member id>' AND ended_at IS NULL;
 UPDATE members SET next_wake_at = NULL
 WHERE id = '<kept-light member id>';
 ```
+
+Until 26 September 2026 this statement ended every open period an organiser had set, and none she had set herself: her own "until I'm back" stayed open while it looked ended, and a trip set for later ended with it (`packages/services/src/runbook.test.ts` runs these statements).
 
 Tell the organiser the dates you set.
 

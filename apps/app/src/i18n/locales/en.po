@@ -119,6 +119,10 @@ msgstr "{name}'s light is paused just now, so nothing can be sent into her morni
 msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
 msgstr "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
 
+#: src/data/useToday.ts
+msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
+msgstr "{recipient} answered an earlier ask at {time}. This one has no answer yet."
+
 #: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
@@ -489,7 +493,7 @@ msgstr "No accounts yet"
 msgid "No family is set up on this account yet."
 msgstr "No family is set up on this account yet."
 
-#: app/(tabs)/index.tsx
+#: src/data/useToday.ts
 msgid "No word yet today."
 msgstr "No word yet today."
 
