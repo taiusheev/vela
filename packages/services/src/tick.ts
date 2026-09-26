@@ -48,6 +48,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
+import { postMissedAnswers } from "./answers.ts";
 import {
   ARRIVAL_CHANNEL,
   deliverArrival,
@@ -474,11 +475,12 @@ async function noteUnderstandFailures(deps: Deps, now: Date): Promise<void> {
 
 /**
  * Every 15 minutes (flows §3.15): finishes the sends whose effects never landed; re-drives the
- * queued sends whose delivery job was lost; ticks the active kept-light members whose wake never
- * came, logging each missed one; re-runs the answers not understood; notes the ones that failed for
- * good; then records the heartbeat, which only a run that got this far reaches, so the watchdog
- * outside Cloudflare sees a silence when reconciliation stops. A member whose tick throws is logged
- * and skipped, so one broken member never holds the others back.
+ * queued sends whose delivery job was lost; writes the group posts of answers whose post was lost;
+ * ticks the active kept-light members whose wake never came, logging each missed one; re-runs the
+ * answers not understood; notes the ones that failed for good; then records the heartbeat, which
+ * only a run that got this far reaches, so the watchdog outside Cloudflare sees a silence when
+ * reconciliation stops. A member whose tick throws is logged and skipped, so one broken member
+ * never holds the others back.
  */
 export async function reconcile(deps: Deps): Promise<ReconcileResult> {
   const now = deps.clock.now();
@@ -487,6 +489,7 @@ export async function reconcile(deps: Deps): Promise<ReconcileResult> {
   // through its own row, since the schedule's next try finds the same idempotency key.
   const effects = await applyPendingEffects(deps);
   await redriveStrandedOutbound(deps);
+  await postMissedAnswers(deps);
   const lateBefore = addMinutes(now, -RECONCILE_LATE_MINUTES);
   const due = await deps.db
     .select({ member: members })

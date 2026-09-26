@@ -18,7 +18,14 @@ import {
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { type AnswerButtonAction, handleAnswerButton, handleParentMessage } from "./answers.ts";
+import {
+  ANSWER_POST_LATE_MINUTES,
+  ANSWER_POST_WITHIN_HOURS,
+  type AnswerButtonAction,
+  handleAnswerButton,
+  handleParentMessage,
+  postMissedAnswers,
+} from "./answers.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { openQuiet } from "./quiet.ts";
@@ -31,6 +38,7 @@ import {
   seedGroupMember,
   seedLinkedGroup,
 } from "./testing/seed.ts";
+import { reconcile } from "./tick.ts";
 
 let h: Harness;
 
@@ -593,6 +601,129 @@ describe("handleParentMessage", () => {
     expect((await eventRows()).map((row) => row.name)).toEqual(["answer_recorded"]);
     const failures = h.logger.entries.filter((entry) => entry.event === "after_light_failed");
     expect(failures.map((entry) => entry.fields?.step)).toEqual(["ack", "post", "queue", "wake"]);
+  });
+
+  // The light commits, and then its acknowledgement is lost with the connection (or the Worker
+  // stops before the post): the platform delivers the message again, and the replay ends at the
+  // duplicate, so only `reconcile` can still post her answer.
+  it("posts an answer whose post was lost before a redelivery that ended at the duplicate, once, at the next reconcile", async () => {
+    const { seed, exchangeId } = await morning();
+    const event = privateEvent(seed.memberLink, { kind: "text", text: "Cooking soup" });
+    let committed = false;
+    const failing: Deps = {
+      ...h.deps,
+      db: new Proxy(h.deps.db, {
+        get(target, property) {
+          if (property === "transaction" && !committed) {
+            return async (...args: Parameters<typeof target.transaction>) => {
+              await target.transaction(...args);
+              committed = true;
+              throw new Error("Connection terminated unexpectedly");
+            };
+          }
+          const value: unknown = Reflect.get(target, property);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      }),
+    };
+
+    await expect(handleParentMessage(failing, seed.member, event)).rejects.toThrow(
+      "Connection terminated unexpectedly",
+    );
+    await handleParentMessage(h.deps, seed.member, event);
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("answer_duplicate");
+    expect(await outboundRows()).toEqual([]);
+
+    h.clock.advanceMinutes(ANSWER_POST_LATE_MINUTES);
+    await reconcile(h.deps);
+    await reconcile(h.deps);
+    await h.run(handlers());
+
+    const [answer] = await answerRows();
+    const posts = (await outboundRows()).filter((row) => row.kind === "answer_post");
+    expect(posts.map((row) => [row.idempotencyKey, textOf(row)])).toEqual([
+      [
+        outboundKey("answer_post", { exchangeId, suffix: answer?.id ?? "" }),
+        "☀️ Mom answered Mia · 08:12\nMom: Cooking soup",
+      ],
+    ]);
+    expect(h.telegram.sentTo(GROUP).map((sent) => sent.message.text)).toEqual([
+      "☀️ Mom answered Mia · 08:12\nMom: Cooking soup",
+    ]);
+  });
+
+  it("posts an answer whose post step failed after the light, with her voice, at the next reconcile", async () => {
+    const { seed } = await morning();
+    let lit = false;
+    const failing: Deps = {
+      ...h.deps,
+      db: new Proxy(h.deps.db, {
+        get(target, property) {
+          if (property === "transaction") {
+            return async (...args: Parameters<typeof target.transaction>) => {
+              const result = await target.transaction(...args);
+              lit = true;
+              return result;
+            };
+          }
+          if (property === "select" && lit) {
+            return () => {
+              throw new Error("Connection terminated unexpectedly");
+            };
+          }
+          const value: unknown = Reflect.get(target, property);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      }),
+    };
+
+    await handleParentMessage(
+      failing,
+      seed.member,
+      privateEvent(seed.memberLink, { kind: "voice", media: VOICE }),
+    );
+    const failures = h.logger.entries.filter((entry) => entry.event === "after_light_failed");
+    expect(failures.map((entry) => entry.fields?.step)).toContain("post");
+    expect((await outboundRows()).filter((row) => row.kind === "answer_post")).toEqual([]);
+
+    h.clock.advanceMinutes(ANSWER_POST_LATE_MINUTES);
+    await reconcile(h.deps);
+    await h.run(handlers());
+
+    const [post] = h.telegram.sentTo(GROUP);
+    expect(post?.message.text).toBe("☀️ Mom answered Mia · 08:12");
+    expect(post?.message.media).toEqual([{ kind: "audio", providerFileId: "voice-1" }]);
+  });
+
+  it("leaves unposted an answer from before its family's group was linked, and one more than a day old", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    h.clock.advanceMinutes(12);
+    await handleParentMessage(
+      h.deps,
+      seed.member,
+      privateEvent(seed.memberLink, { kind: "text", text: "Cooking soup" }),
+    );
+    h.clock.advanceMinutes(30);
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+
+    // The light path had no group to post the first answer to, so there was no post to lose.
+    expect(await postMissedAnswers(h.deps)).toBe(0);
+
+    // A post lost a day ago is not written any more.
+    await handleParentMessage(
+      h.deps,
+      seed.member,
+      privateEvent(seed.memberLink, { kind: "text", text: "Soup is ready" }),
+    );
+    await h.db.delete(outbound).where(eq(outbound.kind, "answer_post"));
+    h.clock.advanceMinutes(ANSWER_POST_WITHIN_HOURS * 60 + 1);
+    expect(await postMissedAnswers(h.deps)).toBe(0);
+    expect((await outboundRows()).filter((row) => row.kind === "answer_post")).toEqual([]);
   });
 
   it("keeps the light when every send to her and to the group fails", async () => {

@@ -2,12 +2,19 @@
  * Her answer (spec §5, flows §3.9). The light path runs first, in one transaction: the answer row,
  * the exchange to `answered`, the open quiet event resolved, her open-ended away periods ended, the
  * event. Everything the family sees follows outside it (the ack, the group post, the understanding
- * jobs) and can fail without touching the light.
+ * jobs) and can fail without touching the light; `reconcile` writes a group post that was lost.
  *
  * Nothing she writes before she taps Yes on the consent message, or after she says no, or once she
  * is left or deceased, is stored, sent, posted, or logged: the privacy notice promises it.
  */
-import type { AnswerKind, InboundEvent, InboundKind, Lang, MediaRef } from "@vela/contracts";
+import type {
+  AnswerKind,
+  Channel,
+  InboundEvent,
+  InboundKind,
+  Lang,
+  MediaRef,
+} from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
   addMinutes,
@@ -27,14 +34,20 @@ import {
   type Exchange,
   exchanges,
   type Family,
+  families,
+  familyChannels,
+  type Media,
   type Member,
+  media,
+  members,
+  outbound,
 } from "@vela/db";
-import { and, eq, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, eq, exists, gte, inArray, isNull, lt, lte } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatTime, inboundExternalId } from "./format.ts";
-import { enqueueOutbound, finishArrivalEffects } from "./gateway.ts";
+import { type EnqueueResult, enqueueOutbound, finishArrivalEffects } from "./gateway.ts";
 import { resolveQuietOnAnswer } from "./quiet.ts";
 import {
   exchangesByIds,
@@ -105,22 +118,37 @@ function payloadOf(content: AnswerContent): Record<string, unknown> {
   }
 }
 
-/** The line under the light in the group, in the family's language; none for a heart or a voice. */
-function contentLine(lang: Lang, name: string, content: AnswerContent): string | null {
-  switch (content.kind) {
+function textIn(payload: Record<string, unknown>, key: string): string | null {
+  const value = Object.hasOwn(payload, key) ? payload[key] : undefined;
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+/**
+ * The line under the light in the group, in the family's language; none for a heart or a voice.
+ * Read from the answer as stored (`payloadOf`), so `reconcile` can post an answer whose post was
+ * lost with the same line the light path would have written.
+ */
+function contentLine(lang: Lang, name: string, answer: Answer): string | null {
+  const { payload } = answer;
+  const choice = textIn(payload, "choice");
+  switch (answer.kind) {
     case "chip":
-      return t(lang, "group.answer_chip", { name, choice: content.choice });
+      return choice === null ? null : t(lang, "group.answer_chip", { name, choice });
     case "vote":
-      return t(lang, "group.answer_vote", { name, choice: content.choice });
-    case "photo_pick":
-      return t(lang, "group.answer_pick", { name, n: content.index + 1 });
+      return choice === null ? null : t(lang, "group.answer_vote", { name, choice });
+    case "photo_pick": {
+      const index = Object.hasOwn(payload, "index") ? payload.index : undefined;
+      return typeof index === "number"
+        ? t(lang, "group.answer_pick", { name, n: index + 1 })
+        : null;
+    }
     case "fine":
     case "heart":
       return null;
-    default:
-      return content.text === null
-        ? null
-        : t(lang, "group.answer_text", { name, text: content.text });
+    default: {
+      const text = textIn(payload, "text");
+      return text === null ? null : t(lang, "group.answer_text", { name, text });
+    }
   }
 }
 
@@ -277,36 +305,47 @@ async function sendAck(deps: Deps, input: AnswerInput): Promise<void> {
   });
 }
 
+/** What the family's post of one answer is made of: the answer as stored, and her file if any. */
+interface AnswerPost {
+  member: Member;
+  family: Family;
+  exchange: Exchange;
+  answer: Answer;
+  /** Her voice or photo, still held by the platform. */
+  media: MediaRef | null;
+}
+
 /**
  * The family sees her answer as one `answer_post` per answer (one exchange can take several): the
- * light line, then what she said, with her voice or photo attached by its platform file id.
+ * light line at the time she answered, then what she said, with her voice or photo attached by its
+ * platform file id. Null when the family has no group on her channel.
  */
-async function postAnswer(deps: Deps, input: AnswerInput, answer: Answer): Promise<void> {
-  const { member, family, exchange, event, content, now } = input;
-  const group = await linkedGroupOfFamily(deps.db, family.id, event.channel);
+async function postAnswer(deps: Deps, post: AnswerPost): Promise<EnqueueResult | null> {
+  const { member, family, exchange, answer } = post;
+  const group = await linkedGroupOfFamily(deps.db, family.id, answer.channel);
   if (group === null) {
     deps.logger.info("answer_post_skipped", { familyId: family.id, reason: "no_group" });
-    return;
+    return null;
   }
   const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);
   const lang = family.language;
   const name = member.displayName;
-  const time = formatTime(now, member.tz);
+  const time = formatTime(answer.receivedAt, member.tz);
   const light =
-    exchange.type === "hello" || content.kind === "fine" || asker === null
+    exchange.type === "hello" || answer.kind === "fine" || asker === null
       ? t(lang, "group.answer_hello", { name, time })
       : t(lang, "group.answer_light", { name, asker: asker.displayName, time });
-  const line = contentLine(lang, name, content);
-  await enqueueOutbound(deps, deps.db, {
+  const line = contentLine(lang, name, answer);
+  return enqueueOutbound(deps, deps.db, {
     kind: "answer_post",
     idempotencyKey: outboundKey("answer_post", { exchangeId: exchange.id, suffix: answer.id }),
     memberId: member.id,
-    channel: event.channel,
+    channel: answer.channel,
     conversationId: group.conversationId,
     exchangeId: exchange.id,
     lang,
     text: fitMessageText(line === null ? light : `${light}\n${line}`),
-    media: input.media === null ? undefined : [input.media],
+    media: post.media === null ? undefined : [post.media],
     ref: { purpose: "answer_post", exchangeId: exchange.id, memberId: member.id },
   });
 }
@@ -314,8 +353,8 @@ async function postAnswer(deps: Deps, input: AnswerInput, answer: Answer): Promi
 /**
  * One step after the light. A step that throws is logged and the next still runs: the light is
  * already committed, and throwing would only make the platform redeliver the webhook, whose replay
- * finds the answer row and ends at once. An understanding job that was never enqueued is picked up
- * by `reconcile` after 15 minutes (flows §3.15).
+ * finds the answer row and ends at once. `reconcile` picks up an understanding job that was never
+ * enqueued after 15 minutes, and a group post that was never written after two (flows §3.15).
  */
 async function settle(
   deps: Deps,
@@ -333,13 +372,114 @@ async function settle(
 /** What follows the light, outside its transaction: none of it can hold the light back. */
 async function afterLight(deps: Deps, input: AnswerInput, answer: Answer): Promise<void> {
   await settle(deps, "ack", answer.id, () => sendAck(deps, input));
-  await settle(deps, "post", answer.id, () => postAnswer(deps, input, answer));
+  await settle(deps, "post", answer.id, () => postAnswer(deps, { ...input, answer }));
   await settle(deps, "queue", answer.id, () =>
     input.content.kind === "voice" && answer.mediaId !== null
       ? deps.queues.media.send({ type: "ingest_answer_media", answerId: answer.id })
       : deps.queues.understand.send({ type: "understand_answer", answerId: answer.id }),
   );
   await settle(deps, "wake", answer.id, () => deps.scheduler.wakeAt(input.member.id, input.now));
+}
+
+/**
+ * An answer without its group post this long after it arrived has lost it: the post step failed
+ * and was logged, or the Worker stopped between the light and the post, and the platform's
+ * redelivery ended at the duplicate. `reconcile` writes it (flows §3.15).
+ */
+export const ANSWER_POST_LATE_MINUTES = 2;
+/** `reconcile` writes a lost post up to this age, as it re-runs understanding. */
+export const ANSWER_POST_WITHIN_HOURS = 24;
+
+/**
+ * Her voice or photo from its stored row, for a post rebuilt after the fact: the send needs only
+ * the kind and the platform's file id, which works again on the channel it came from. Null when the
+ * row holds no such id.
+ */
+function storedMediaRef(file: Media | null, channel: Channel): MediaRef | null {
+  return file === null || file.providerFileId === null || file.channel !== channel
+    ? null
+    : { kind: file.kind, providerFileId: file.providerFileId };
+}
+
+/**
+ * The group posts the light path lost (flows §3.9, §3.15): each answer received 2 minutes to 24
+ * hours ago, in a family not being deleted whose group on the answer's channel was linked when she
+ * answered and still is, that has no `answer_post` row, gets it now, built from the stored answer
+ * under the light path's key, so whichever writes it first writes it once. A post that was written
+ * and then failed or was dropped keeps its row and is not written again. An answer that throws is
+ * logged and left for the next sweep. Returns how many posts it wrote.
+ */
+export async function postMissedAnswers(deps: Deps): Promise<number> {
+  const now = deps.clock.now();
+  const candidates = await deps.db
+    .select({
+      answer: answers,
+      member: members,
+      family: families,
+      exchange: exchanges,
+      file: media,
+    })
+    .from(answers)
+    .innerJoin(exchanges, eq(exchanges.id, answers.exchangeId))
+    .innerJoin(members, eq(members.id, answers.memberId))
+    .innerJoin(families, eq(families.id, members.familyId))
+    .leftJoin(media, eq(media.id, answers.mediaId))
+    .where(
+      and(
+        isNull(families.deletedAt),
+        gte(answers.receivedAt, addMinutes(now, -ANSWER_POST_WITHIN_HOURS * 60)),
+        lte(answers.receivedAt, addMinutes(now, -ANSWER_POST_LATE_MINUTES)),
+        // The light path posts only to a group linked when she answered; one linked later never
+        // had her answer to lose.
+        exists(
+          deps.db
+            .select({ id: familyChannels.id })
+            .from(familyChannels)
+            .where(
+              and(
+                eq(familyChannels.familyId, families.id),
+                eq(familyChannels.channel, answers.channel),
+                eq(familyChannels.kind, "group"),
+                isNull(familyChannels.unlinkedAt),
+                lte(familyChannels.linkedAt, answers.receivedAt),
+              ),
+            ),
+        ),
+      ),
+    )
+    .orderBy(asc(answers.receivedAt), asc(answers.id));
+  if (candidates.length === 0) {
+    return 0;
+  }
+  const exchangeIds = [...new Set(candidates.map((row) => row.exchange.id))];
+  const written = await deps.db
+    .select({ key: outbound.idempotencyKey })
+    .from(outbound)
+    .where(and(eq(outbound.kind, "answer_post"), inArray(outbound.exchangeId, exchangeIds)));
+  const keys = new Set(written.map((row) => row.key));
+  let posted = 0;
+  for (const row of candidates) {
+    const { answer, family, exchange } = row;
+    if (keys.has(outboundKey("answer_post", { exchangeId: exchange.id, suffix: answer.id }))) {
+      continue;
+    }
+    try {
+      const result = await postAnswer(deps, {
+        ...row,
+        media: storedMediaRef(row.file, answer.channel),
+      });
+      if (result !== null && "outboundId" in result) {
+        posted += 1;
+        deps.logger.warn("answer_post_late", { answerId: answer.id, familyId: family.id });
+      }
+    } catch (error) {
+      deps.logger.error("answer_post_late_failed", {
+        answerId: answer.id,
+        error: errorLabel(error),
+      });
+    }
+  }
+  return posted;
 }
 
 /**

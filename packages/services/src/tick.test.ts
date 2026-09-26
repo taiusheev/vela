@@ -21,7 +21,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { endAway, setAway } from "./admin.ts";
 import type { Deps } from "./deps.ts";
-import { deliverOutbound } from "./gateway.ts";
+import { deliverOutbound, insertOutbound } from "./gateway.ts";
 import { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 import { markWakeDue } from "./repo.ts";
 import { createHarness, type Harness, type JobHandlers } from "./testing/harness.ts";
@@ -164,6 +164,11 @@ interface AnswerSeed {
   mediaId?: string | null;
   attempts?: number;
   understood?: boolean;
+  /**
+   * Her answer's group post, sent, as the light path leaves it (flows §3.9); without it `reconcile`
+   * finds the post lost and writes it.
+   */
+  posted?: boolean;
 }
 
 async function seedAnswer(seed: SeededFamily, input: AnswerSeed): Promise<string> {
@@ -187,7 +192,30 @@ async function seedAnswer(seed: SeededFamily, input: AnswerSeed): Promise<string
   if (row === undefined) {
     throw new Error("answer not inserted");
   }
+  if (input.posted === true) {
+    const post = await insertOutbound(h.deps, h.db, {
+      kind: "answer_post",
+      idempotencyKey: answerPostKey(input.exchangeId, row.id),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: GROUP,
+      exchangeId: input.exchangeId,
+      lang: "en",
+      text: "☀️ Mom answered",
+    });
+    if (!("outboundId" in post)) {
+      throw new Error("answer post not inserted");
+    }
+    await h.db
+      .update(outbound)
+      .set({ status: "sent", sentAt: receivedAt, attempts: 1, externalId: "501" })
+      .where(eq(outbound.id, post.outboundId));
+  }
   return row.id;
+}
+
+function answerPostKey(exchangeId: string, answerId: string): string {
+  return outboundKey("answer_post", { exchangeId, suffix: answerId });
 }
 
 async function answerRow(id: string) {
@@ -925,6 +953,7 @@ describe("reconcile", () => {
       externalId: "1",
       minutesAgo: 0,
       transcript: "I feel unwell today",
+      posted: true,
     });
     const transcriptKey = outboundKey("answer_post", {
       exchangeId: exchange.id,
@@ -941,6 +970,7 @@ describe("reconcile", () => {
       flag: false,
     });
     expect((await outboundRows("answer_post")).map((row) => row.idempotencyKey)).toEqual([
+      answerPostKey(exchange.id, answerId),
       transcriptKey,
     ]);
     expect(await outboundRows("flag")).toHaveLength(0);
@@ -959,6 +989,7 @@ describe("reconcile", () => {
       flagReason: "health:concern",
     });
     expect((await outboundRows("answer_post")).map((row) => row.idempotencyKey)).toEqual([
+      answerPostKey(exchange.id, answerId),
       transcriptKey,
     ]);
     expect((await outboundRows("flag")).map((row) => row.conversationId).sort()).toEqual([
@@ -975,7 +1006,7 @@ describe("reconcile", () => {
     h.clock.advanceMinutes(5);
     expect((await reconcile(h.deps)).rerun).toBe(0);
     expect(await outboundRows("flag")).toHaveLength(2);
-    expect(await outboundRows("answer_post")).toHaveLength(1);
+    expect(await outboundRows("answer_post")).toHaveLength(2);
     expect(await outboundRows("system")).toHaveLength(0);
   });
 
@@ -994,6 +1025,7 @@ describe("reconcile", () => {
       externalId: "1",
       minutesAgo: 0,
       transcript: "I feel unwell today",
+      posted: true,
     });
 
     await understandAnswer(h.deps, answerId);
@@ -1006,7 +1038,7 @@ describe("reconcile", () => {
 
     expect(await answerRow(answerId)).toMatchObject({ understoodAt: null, processingAttempts: 3 });
     expect(h.queues.understand.pending).toHaveLength(0);
-    expect(await outboundRows("answer_post")).toHaveLength(1);
+    expect(await outboundRows("answer_post")).toHaveLength(2);
     expect(await outboundRows("flag")).toHaveLength(0);
     const notes = await outboundRows("system");
     expect(notes.map((row) => row.idempotencyKey)).toEqual([

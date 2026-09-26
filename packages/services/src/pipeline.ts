@@ -11,11 +11,12 @@
  * because it is the safety feature.
  *
  * Every step is keyed per answer, so `reconcile`'s re-runs never repeat a post, a translation, a
- * notice, or an away. Both jobs count an attempt when they start work on an answer (a redelivered
- * job for a voice already transcribed or an answer already understood does nothing); the attempt
- * that ends without a transcript or without `understood_at` at three or more tells the founder once
- * (flows §3.15). Provider failures never throw: the light is long since on, and the queue must not
- * retry them.
+ * notice, or an away; and `understood_at` is written after all of them, so a run that throws or
+ * stops half way is run again, not taken for done. Both jobs count an attempt when they start work
+ * on an answer (a redelivered job for a voice already transcribed or an answer already understood
+ * does nothing); the attempt that ends without a transcript or without `understood_at` at three or
+ * more tells the founder once (flows §3.15). Provider failures never throw: the light is long since
+ * on, and the queue must not retry them.
  *
  * While AI is off (the Workers' `AI_PROVIDER` "off") every model step takes the path of a failed
  * call, so nothing is summarised, flagged, or translated and her words reach the group as she wrote
@@ -459,8 +460,16 @@ async function setAwayFromAnswer(
     }
     return true;
   });
-  if (inserted) {
+  if (!inserted) {
+    return;
+  }
+  try {
     await deps.scheduler.wakeAt(member.id, now);
+  } catch (error) {
+    // Her scheduler is a Durable Object, and a call to one can fail (a deploy resets it). The
+    // transaction above marked her wake due, so `reconcile` ticks her; failing the job for the
+    // alarm would only ask the models again.
+    deps.logger.error("away_wake_failed", { answerId: answer.id, error: errorLabel(error) });
   }
 }
 
@@ -501,10 +510,12 @@ function flagReasonOf(flag: FlagResult, healthWords: boolean): string {
  * missed signal is the expensive failure. Without it they read only that she said something worth
  * a call. Both are `flag` rows keyed by the exchange, the reader's conversation, and the answer, and
  * not by her consent, so a re-run after her answer changed sends nothing twice; the event is
- * recorded once, with them.
+ * recorded once, with them. `understandAnswer` calls it in the transaction that stores the flag, so
+ * the flag and its notices are stored together or not at all.
  */
 async function raiseFlag(
   deps: Deps,
+  tx: Queryable,
   ctx: AnswerContext,
   flag: FlagResult,
   words: string,
@@ -513,71 +524,69 @@ async function raiseFlag(
 ): Promise<void> {
   const { answer, member, family, exchange } = ctx;
   const quote = flag.evidenceQuote ?? words;
-  await deps.db.transaction(async (tx) => {
-    let inserted = false;
-    const organisers = await activeOrganisersWithLinks(tx, family.id, answer.channel);
-    for (const organiser of organisers) {
-      const lang = organiser.member.language;
-      const result = await enqueueOutbound(deps, tx, {
-        kind: "flag",
-        idempotencyKey: outboundKey("flag", {
-          exchangeId: exchange.id,
-          conversationId: organiser.link.externalId,
-          suffix: answer.id,
-        }),
-        memberId: organiser.member.id,
-        channel: organiser.link.channel,
+  let inserted = false;
+  const organisers = await activeOrganisersWithLinks(tx, family.id, answer.channel);
+  for (const organiser of organisers) {
+    const lang = organiser.member.language;
+    const result = await enqueueOutbound(deps, tx, {
+      kind: "flag",
+      idempotencyKey: outboundKey("flag", {
+        exchangeId: exchange.id,
         conversationId: organiser.link.externalId,
+        suffix: answer.id,
+      }),
+      memberId: organiser.member.id,
+      channel: organiser.link.channel,
+      conversationId: organiser.link.externalId,
+      exchangeId: exchange.id,
+      lang,
+      text: healthWords
+        ? fitMessageText(t(lang, "flag.notice", { name: member.displayName, quote }))
+        : t(lang, "flag.notice_no_words", { name: member.displayName }),
+    });
+    inserted ||= "outboundId" in result;
+  }
+  const admin = deps.config.adminConversationId;
+  if (admin !== null) {
+    const result = await enqueueOutbound(deps, tx, {
+      kind: "flag",
+      idempotencyKey: outboundKey("flag", {
         exchangeId: exchange.id,
-        lang,
-        text: healthWords
-          ? fitMessageText(t(lang, "flag.notice", { name: member.displayName, quote }))
-          : t(lang, "flag.notice_no_words", { name: member.displayName }),
-      });
-      inserted ||= "outboundId" in result;
-    }
-    const admin = deps.config.adminConversationId;
-    if (admin !== null) {
-      const result = await enqueueOutbound(deps, tx, {
-        kind: "flag",
-        idempotencyKey: outboundKey("flag", {
-          exchangeId: exchange.id,
-          conversationId: admin,
-          suffix: answer.id,
-        }),
-        memberId: member.id,
-        channel: ADMIN_CHANNEL,
         conversationId: admin,
+        suffix: answer.id,
+      }),
+      memberId: member.id,
+      channel: ADMIN_CHANNEL,
+      conversationId: admin,
+      exchangeId: exchange.id,
+      lang: ADMIN_LANG,
+      text: t(ADMIN_LANG, "admin.flag", {
+        family: family.name,
+        link: adminLink(deps.config, family.id),
+      }),
+    });
+    inserted ||= "outboundId" in result;
+  }
+  if (inserted) {
+    await recordEvent(
+      tx,
+      {
+        name: "flag_raised",
+        familyId: family.id,
+        memberId: member.id,
         exchangeId: exchange.id,
-        lang: ADMIN_LANG,
-        text: t(ADMIN_LANG, "admin.flag", {
-          family: family.name,
-          link: adminLink(deps.config, family.id),
-        }),
-      });
-      inserted ||= "outboundId" in result;
-    }
-    if (inserted) {
-      await recordEvent(
-        tx,
-        {
-          name: "flag_raised",
-          familyId: family.id,
-          memberId: member.id,
-          exchangeId: exchange.id,
-          props: healthWords
-            ? {
-                severity: flag.severity,
-                words: true,
-                category: flag.category,
-                excerpt: flag.evidenceQuote !== null,
-              }
-            : { severity: flag.severity, words: false },
-        },
-        now,
-      );
-    }
-  });
+        props: healthWords
+          ? {
+              severity: flag.severity,
+              words: true,
+              category: flag.category,
+              excerpt: flag.evidenceQuote !== null,
+            }
+          : { severity: flag.severity, words: false },
+      },
+      now,
+    );
+  }
 }
 
 /**
@@ -850,9 +859,11 @@ function settled<T>(outcome: AiOutcome<T>): boolean {
 
 /**
  * `understand_answer` (flows §3.10). `understood_at` is set only when `ai.understand` and `ai.flag`
- * both returned ok, or AI is off; a failed translation does not hold it back. With AI off nothing
- * the models return is stored: no summary, mentions, mood words, away, or flag. An answer with
- * nothing to read (a photo without words) is understood at once, so it is never re-run.
+ * both returned ok, or AI is off; a failed translation does not hold it back. It is written last,
+ * after the flag's notices, the away, and the post to the group, so a run that stops on the way is
+ * run again rather than taken for done. With AI off nothing the models return is stored: no summary,
+ * mentions, mood words, away, or flag. An answer with nothing to read (a photo without words) is
+ * understood at once, so it is never re-run.
  */
 export async function understandAnswer(deps: Deps, answerId: string): Promise<void> {
   const ctx = await loadAnswer(deps, answerId);
@@ -860,8 +871,8 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
     return;
   }
   if (ctx.answer.understoodAt !== null) {
-    // A redelivered job: the model is not asked twice, and every message it could produce is
-    // already keyed out.
+    // A redelivered job: the model is not asked twice, and every message it could produce was
+    // written before `understood_at` was.
     deps.logger.info("understand_already_done", { answerId });
     return;
   }
@@ -917,37 +928,40 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
 
   const understood = settled(understanding) && settled(flag);
   const summaryChanged = understanding.ok && understanding.value.summary !== answer.summary;
-  await deps.db.transaction(async (tx) => {
-    await tx
-      .update(answers)
-      .set({
-        ...(understanding.ok
-          ? {
-              summary: understanding.value.summary,
-              moodWords: understanding.value.moodWords,
-              mentions: understanding.value.mentions,
-              awayUntil: understanding.value.away?.until ?? null,
-            }
-          : {}),
-        ...(flag.ok
-          ? {
-              flag: flag.value.flag,
-              flagReason: flag.value.flag ? flagReasonOf(flag.value, healthWords) : null,
-            }
-          : {}),
-        ...(understood ? { understoodAt: now } : {}),
-      })
-      .where(eq(answers.id, answerId));
-    if (summaryChanged) {
-      await dropSummaryForHer(tx, ctx);
-    }
-  });
+  // When both calls failed, or AI is off, the models returned nothing to store.
+  if (understanding.ok || flag.ok) {
+    await deps.db.transaction(async (tx) => {
+      await tx
+        .update(answers)
+        .set({
+          ...(understanding.ok
+            ? {
+                summary: understanding.value.summary,
+                moodWords: understanding.value.moodWords,
+                mentions: understanding.value.mentions,
+                awayUntil: understanding.value.away?.until ?? null,
+              }
+            : {}),
+          ...(flag.ok
+            ? {
+                flag: flag.value.flag,
+                flagReason: flag.value.flag ? flagReasonOf(flag.value, healthWords) : null,
+              }
+            : {}),
+        })
+        .where(eq(answers.id, answerId));
+      if (summaryChanged) {
+        await dropSummaryForHer(tx, ctx);
+      }
+      // First, with the flag itself: a flag that reached no one is the expensive failure.
+      if (flag.ok && flag.value.flag) {
+        await raiseFlag(deps, tx, ctx, flag.value, words, healthWords, now);
+      }
+    });
+  }
 
   if (understanding.ok && understanding.value.away !== null) {
     await setAwayFromAnswer(deps, ctx, understanding.value.away, now);
-  }
-  if (flag.ok && flag.value.flag) {
-    await raiseFlag(deps, ctx, flag.value, words, healthWords, now);
   }
   if (WORDS_IN_HER_LANGUAGE.has(answer.kind)) {
     const translation = await translateWords(deps, ctx, words);
@@ -966,5 +980,10 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
       flag: flag.ok,
     });
     await endAttemptUnresolved(deps, ctx, attempts);
+    return;
   }
+  // Last: a run that stops before this line (a queue send refused, a lost connection, a Worker
+  // stopped mid-run) throws or dies with `understood_at` still null, so the queue's retry and
+  // `reconcile` run the answer again, and the keys above let that run write only what is missing.
+  await deps.db.update(answers).set({ understoodAt: now }).where(eq(answers.id, answerId));
 }

@@ -667,6 +667,25 @@ describe("understandAnswer", () => {
     expect((await aiCallRows()).filter((row) => row.call === "flag" && !row.ok)).toHaveLength(4);
   });
 
+  it("does not throw when both model calls fail, and leaves the answer to be run again", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Cooking soup");
+    withAi({
+      understand: async (input) => failed("understand", SAFE_DEFAULTS.understand(input)),
+      flag: async (input) => failed("flag", SAFE_DEFAULTS.flag(input)),
+    });
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(await answerById(answer.id)).toMatchObject({
+      summary: null,
+      flag: false,
+      understoodAt: null,
+      processingAttempts: 1,
+    });
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("understanding_incomplete");
+  });
+
   it("sets an away period from the model's dates, confirms it to her once, and wakes her scheduler", async () => {
     const scene = await morning();
     const answer = await herText(scene, "Going to my sister's from Wednesday until Sunday");
@@ -708,6 +727,80 @@ describe("understandAnswer", () => {
     expect(h.scheduler.wakes.get(scene.seed.member.id)).toEqual(h.clock.now());
     const [her] = await h.db.select().from(members).where(eq(members.id, scene.seed.member.id));
     expect(her?.nextWakeAt).toEqual(h.clock.now());
+  });
+
+  // Her scheduler is a Durable Object, and a call to one can fail (a deploy resets it). The away's
+  // transaction has already marked her wake due, so `reconcile` ticks her; the job goes on.
+  it("raises the flag and finishes the answer when her scheduler cannot be woken after the away is set", async () => {
+    const scene = await morning();
+    const answer = await herText(
+      scene,
+      "I fell in the bathroom last night, I'm staying at my daughter's until Sunday",
+    );
+    withAi({
+      understand: async (input) => understood(input, { from: TODAY, until: "2026-09-20" }),
+      flag: async () => raised(null),
+    });
+    const deps: Deps = {
+      ...h.deps,
+      scheduler: {
+        wakeAt: async () => {
+          throw new Error("Durable Object reset because its code was updated");
+        },
+      },
+    };
+
+    await understandAnswer(deps, answer.id);
+
+    expect(
+      (await outboundRows()).filter((row) => row.kind === "flag").map((row) => row.conversationId),
+    ).toEqual([scene.seed.organiserLink.externalId, ADMIN]);
+    expect(await h.db.select().from(awayPeriods)).toHaveLength(1);
+    const [her] = await h.db.select().from(members).where(eq(members.id, scene.seed.member.id));
+    expect(her?.nextWakeAt).toEqual(h.clock.now());
+    expect((await answerById(answer.id)).understoodAt).toEqual(h.clock.now());
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("away_wake_failed");
+  });
+
+  // A step after the models can fail: here the queue refuses the flag notice's delivery job, so the
+  // notices roll back. The answer must not count as understood before they are written, or the
+  // queue's retry and `reconcile` take it for done and the flag never reaches anyone.
+  it("leaves understood_at null until the flag's notices are written, so the queue's retry raises the flag once", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "I fell in the bathroom last night");
+    withAi({ flag: async () => raised(null) });
+    let refused = false;
+    const deps: Deps = {
+      ...h.deps,
+      queues: {
+        ...h.deps.queues,
+        outbound: {
+          send: async (job, options) => {
+            if (!refused) {
+              refused = true;
+              throw new Error("Queue send failed: overloaded");
+            }
+            await h.queues.outbound.send(job, options);
+          },
+        },
+      },
+    };
+
+    await expect(understandAnswer(deps, answer.id)).rejects.toThrow("overloaded");
+    expect((await answerById(answer.id)).understoodAt).toBeNull();
+
+    await understandAnswer(h.deps, answer.id);
+    await understandAnswer(h.deps, answer.id);
+
+    expect(
+      (await outboundRows()).filter((row) => row.kind === "flag").map((row) => row.conversationId),
+    ).toEqual([scene.seed.organiserLink.externalId, ADMIN]);
+    expect((await eventNames()).filter((name) => name === "flag_raised")).toHaveLength(1);
+    expect(await answerById(answer.id)).toMatchObject({
+      flag: true,
+      understoodAt: h.clock.now(),
+      processingAttempts: 2,
+    });
   });
 
   it("writes the away date in her language", async () => {
