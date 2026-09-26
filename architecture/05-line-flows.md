@@ -642,7 +642,8 @@ The route reads the body once with `c.req.text()`, as the Telegram route does. L
 
 Rules the tests prove:
 - every row above, one fixture each, compared exactly;
-- every dropped group message kind: ordinary text, a text that only mentions Vela, a command from a user LINE does not name, a tap that names no one, an image, a voice note, a video, a file, a location, a sticker quoting Vela, an edit, and a member joining;
+- every dropped group message kind: ordinary text, a text that only mentions Vela, a command from a user LINE does not name, a tap that names no one, an image, a voice note, a video, a file, a location, a message sticker whose words quote Vela, an edit, and a member joining;
+- a group message of any type but text is dropped on its type: an image, voice note, video, file, location or unknown type given words and a quote still yields nothing, while the same fields on text make an event;
 - a body with two users' events yields both, in order;
 - an empty `events` array yields `[]`;
 - a redelivered event yields the same `eventId`;

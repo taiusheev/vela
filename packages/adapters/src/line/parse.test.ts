@@ -516,6 +516,7 @@ describe("parseLineWebhook with LINE-shaped fixtures", () => {
     "webhook-group-video.json",
     "webhook-group-file.json",
     "webhook-group-location.json",
+    // A message sticker with words that quotes Vela: the words would pass for a family reply.
     "webhook-group-sticker-quote.json",
     "webhook-group-edited.json",
     "webhook-group-member-joined.json",
@@ -733,6 +734,20 @@ describe("parseLineWebhook in a group", () => {
 
   it("drops a text that only mentions a command further in", () => {
     expect(groupText("Try /ask tomorrow")).toStrictEqual([]);
+  });
+
+  it("drops every message but text on its type, even one that carries words and a quote", () => {
+    // Stray words and a quote, as a message sticker carries, on every other kind and on a type LINE
+    // adds later: were the text read, each would pass for a family reply.
+    const words = { text: "/ask Did you sleep well?", quotedMessageId: "501968441952665100" };
+    const others = ["image", "audio", "video", "file", "location"].map((kind) =>
+      withMessage(`webhook-group-${kind}.json`, words),
+    );
+    const later = withMessage("webhook-group-ask.json", { ...words, type: "hologram" });
+    expect(parseEvents([...others, later])).toStrictEqual([]);
+    // The same fields on a text message make an event, so only the type drops the others.
+    const asText = withMessage("webhook-group-image.json", { ...words, type: "text" });
+    expect(parseEvents([asText]).map((event) => event.kind)).toStrictEqual(["text"]);
   });
 
   it("reads a multi-person chat like a group", () => {
