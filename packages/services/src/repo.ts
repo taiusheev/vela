@@ -317,7 +317,8 @@ export async function lockDeliveredExchangeForLocalDate(
  * attached to: an answer counts for the date it arrives on (flows §3.9), so one sent before the
  * day's arrival, which attaches to the previous exchange, or tapped on an older arrival's buttons,
  * is still the day's answer. The schedule reads each day's answer by it (`loadScheduleInput`), and
- * the quiet ladder checks it again under the day's lock (`quiet.ts`).
+ * the quiet ladder checks it again under the day's lock (`quiet.ts`); `dayAnsweredAt` combines it
+ * with the day's own exchange.
  */
 export async function firstAnswersByDate(
   db: Queryable,
@@ -345,6 +346,26 @@ export async function firstAnswersByDate(
     }
   }
   return first;
+}
+
+/**
+ * When her day counts as answered: the earlier of the day's own exchange's `answered_at` and her
+ * first answer that arrived on the date to any exchange (`firstAnswersByDate`), or null when she has
+ * given neither. The schedule (`loadScheduleInput`), the weekly read's counts (`jobs.ts`) and the
+ * lights (`api-lights.ts`) read her day by it, so the family sees her lit exactly when the quiet
+ * ladder counts her day answered.
+ */
+export function dayAnsweredAt(
+  exchangeAnsweredAt: Date | null,
+  firstAnswer: Date | null,
+): Date | null {
+  if (exchangeAnsweredAt === null) {
+    return firstAnswer;
+  }
+  if (firstAnswer === null) {
+    return exchangeAnsweredAt;
+  }
+  return exchangeAnsweredAt.getTime() <= firstAnswer.getTime() ? exchangeAnsweredAt : firstAnswer;
 }
 
 /**

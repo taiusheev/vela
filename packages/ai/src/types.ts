@@ -198,7 +198,9 @@ export const Understanding = z.object({
    * Set when she says she will be away (spec §8). `from` is the first date away, which can be weeks
    * after her answer, so an away never covers the days she is still at home; it is never before
    * `today`, and neither date is more than `AWAY_HORIZON_DAYS` after it. `until` is null for "until
-   * I'm back", which ends on her first answer on or after `from`.
+   * I'm back", which ends on her first answer on or after `from` that arrives on a later local date
+   * than the one the period was set on: a reply the day she set it, such as her thanks for the
+   * confirmation, comes from wherever she is going and leaves it open (flows §3.9).
    */
   away: z.object({ from: LocalDate, until: LocalDate.nullable() }).nullable(),
   /** BCP-47 tag of the language she answered in. */

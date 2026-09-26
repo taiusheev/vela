@@ -67,7 +67,13 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
-import { familyById, memberById, type Queryable, recentAnswerLatencies } from "./repo.ts";
+import {
+  dayAnsweredAt,
+  familyById,
+  memberById,
+  type Queryable,
+  recentAnswerLatencies,
+} from "./repo.ts";
 
 const DAYS_IN_WEEK = 7;
 const RETENTION_DAYS = 30;
@@ -125,16 +131,6 @@ function datesBetween(from: LocalDate, to: LocalDate): LocalDate[] {
     dates.push(date);
   }
   return dates;
-}
-
-function earliest(a: Date | null, b: Date | null): Date | null {
-  if (a === null) {
-    return b;
-  }
-  if (b === null) {
-    return a;
-  }
-  return a.getTime() <= b.getTime() ? a : b;
 }
 
 interface AnswerOnDay {
@@ -219,7 +215,7 @@ async function loadWeekDays(
       date,
       exchange,
       askerName: row?.askerName ?? null,
-      answeredAt: earliest(exchange?.answeredAt ?? null, firstOnDate.get(date) ?? null),
+      answeredAt: dayAnsweredAt(exchange?.answeredAt ?? null, firstOnDate.get(date) ?? null),
       answers:
         exchange === null
           ? []

@@ -63,7 +63,13 @@ import { applyPendingEffects, enqueueOutbound, redriveStrandedOutbound } from ".
 import { draftWeeklyRead } from "./jobs.ts";
 import { MAX_PROCESSING_ATTEMPTS } from "./pipeline.ts";
 import { notifyQuiet, openQuiet } from "./quiet.ts";
-import { channelLinkOfMember, familyById, firstAnswersByDate, memberById } from "./repo.ts";
+import {
+  channelLinkOfMember,
+  dayAnsweredAt,
+  familyById,
+  firstAnswersByDate,
+  memberById,
+} from "./repo.ts";
 
 /**
  * How many decide-and-execute rounds one tick runs. Executing an action changes what the next
@@ -98,16 +104,6 @@ export const FAILURE_NOTE_AFTER_HOURS = RERUN_WITHIN_HOURS + 1;
 /** The note is still sent up to this age, so reconciliations missing for most of a day lose none. */
 const FAILURE_NOTE_WITHIN_HOURS = 2 * RERUN_WITHIN_HOURS;
 
-function earliest(a: Date | null, b: Date | null): Date | null {
-  if (a === null) {
-    return b;
-  }
-  if (b === null) {
-    return a;
-  }
-  return a.getTime() <= b.getTime() ? a : b;
-}
-
 function dayStateOf(
   date: LocalDate,
   exchange: Exchange | null,
@@ -119,7 +115,7 @@ function dayStateOf(
     prepared: exchange !== null && exchange.state !== "composed",
     deliveredAt: exchange?.deliveredAt ?? null,
     deliveryFailed: exchange !== null && exchange.deliveryFailedAt !== null,
-    answeredAt: earliest(exchange?.answeredAt ?? null, firstAnswer),
+    answeredAt: dayAnsweredAt(exchange?.answeredAt ?? null, firstAnswer),
     repeatSentAt: exchange?.repeatedAt ?? null,
     quiet:
       quiet === null

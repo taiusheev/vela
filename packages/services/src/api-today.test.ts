@@ -248,6 +248,38 @@ describe("loadApiToday", () => {
     expect(exchange?.type).toBe("hello");
   });
 
+  // Flows §3.9: her tap today on yesterday's arrival is today's answer, so Today shows her lit at the
+  // time she tapped. Her words belong to yesterday's ask, so today's ask still waits for its own.
+  it("shows her lit from a tap today on yesterday's arrival, and today's ask still without an answer", async () => {
+    const eight = h.clock.now();
+    const yesterday = await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      state: "answered",
+      deliveredAt: new Date(eight.getTime() - 24 * 60 * 60_000),
+      answeredAt: new Date(eight.getTime() - 23 * 60 * 60_000),
+    });
+    const day = await seedExchange(h.db, seed, {
+      date: today(),
+      state: "delivered",
+      deliveredAt: eight,
+    });
+    h.clock.advanceMinutes(6 * 60 + 32);
+    await h.db.insert(answers).values({
+      exchangeId: yesterday.id,
+      memberId: seed.member.id,
+      kind: "fine",
+      channel: "telegram",
+      externalId: "2001:12",
+      receivedAt: h.clock.now(),
+    });
+
+    const read = ApiToday.parse(await load());
+    expect(read.lights).toEqual([
+      expect.objectContaining({ state: "lit", answered_at: h.clock.now().toISOString() }),
+    ]);
+    expect(read.exchanges).toEqual([expect.objectContaining({ id: day.id, answer: null })]);
+  });
+
   it("names tomorrow's turn holder and the suggestion the family may use", async () => {
     await seedTurn();
     const suggestion = await seedSuggestion();

@@ -1,6 +1,6 @@
 import { MemberLight } from "@vela/contracts";
-import { localDateOf } from "@vela/core";
-import { awayPeriods, members, quietEvents, users } from "@vela/db";
+import { addDays, addMinutes, localDateOf } from "@vela/core";
+import { answers, awayPeriods, exchanges, members, quietEvents, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
@@ -57,6 +57,118 @@ describe("loadApiLights", () => {
     await seedExchange(h.db, seed, { date: today(), state: "answered", answeredAt });
     expect(await lights()).toEqual([
       expect.objectContaining({ state: "lit", answered_at: answeredAt.toISOString() }),
+    ]);
+  });
+
+  // An answer counts for the local date it arrives on, whichever exchange it attaches to (flows
+  // §3.9). Yesterday's arrival keeps its buttons, and a tap on one today answers yesterday's exchange,
+  // closes today's quiet and tells the organisers "Mom answered at 14:32. Everything is lit again.",
+  // so the app must show her lit at 14:32 too, not resting.
+  it("lights her from a tap today on yesterday's arrival that closed today's quiet, at the time she tapped", async () => {
+    const eight = h.clock.now();
+    const yesterday = await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      state: "answered",
+      deliveredAt: addMinutes(eight, -24 * 60),
+      answeredAt: addMinutes(eight, -23 * 60),
+    });
+    const day = await seedExchange(h.db, seed, {
+      date: today(),
+      state: "delivered",
+      deliveredAt: eight,
+    });
+    h.clock.advanceMinutes(6 * 60 + 32);
+    const tappedAt = h.clock.now();
+    await h.db.insert(answers).values({
+      exchangeId: yesterday.id,
+      memberId: seed.member.id,
+      kind: "fine",
+      channel: "telegram",
+      externalId: "2001:6",
+      receivedAt: tappedAt,
+    });
+    await h.db.insert(quietEvents).values({
+      exchangeId: day.id,
+      memberId: seed.member.id,
+      openedAt: addMinutes(eight, 6 * 60),
+      resolvedAt: tappedAt,
+      outcome: "answered_late",
+    });
+
+    expect(await lights()).toEqual([
+      expect.objectContaining({
+        state: "lit",
+        answered_at: tappedAt.toISOString(),
+        quiet_event_id: null,
+      }),
+    ]);
+  });
+
+  // Spec §19: an answer before the arrival counts as that day's answer. Her message at 07:30 attaches
+  // to yesterday's exchange, the last one delivered, and still lights today; her answer to today's
+  // own ask later keeps the time she first answered.
+  it("lights her from a message before today's arrival, and keeps that time once she answers today's ask", async () => {
+    const eight = h.clock.now();
+    const early = addMinutes(eight, -30);
+    const yesterday = await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      state: "answered",
+      deliveredAt: addMinutes(eight, -24 * 60),
+      answeredAt: early,
+    });
+    const day = await seedExchange(h.db, seed, { date: today(), state: "scheduled" });
+    await h.db.insert(answers).values({
+      exchangeId: yesterday.id,
+      memberId: seed.member.id,
+      kind: "text",
+      channel: "telegram",
+      externalId: "2001:7",
+      payload: { text: "Up early today." },
+      receivedAt: early,
+    });
+    expect(await lights()).toEqual([
+      expect.objectContaining({ state: "lit", answered_at: early.toISOString() }),
+    ]);
+
+    h.clock.advanceMinutes(60);
+    await h.db
+      .update(exchanges)
+      .set({ state: "answered", deliveredAt: eight, answeredAt: h.clock.now() })
+      .where(eq(exchanges.id, day.id));
+    await h.db.insert(answers).values({
+      exchangeId: day.id,
+      memberId: seed.member.id,
+      kind: "text",
+      channel: "telegram",
+      externalId: "2001:8",
+      payload: { text: "The tomatoes turned." },
+      receivedAt: h.clock.now(),
+    });
+    expect(await lights()).toEqual([
+      expect.objectContaining({ state: "lit", answered_at: early.toISOString() }),
+    ]);
+  });
+
+  it("rests her when her latest answer arrived before her midnight, on yesterday's own exchange", async () => {
+    const eight = h.clock.now();
+    const lastNight = addMinutes(eight, -8 * 60 - 10);
+    const yesterday = await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      state: "answered",
+      deliveredAt: addMinutes(eight, -24 * 60),
+      answeredAt: lastNight,
+    });
+    await seedExchange(h.db, seed, { date: today(), state: "delivered", deliveredAt: eight });
+    await h.db.insert(answers).values({
+      exchangeId: yesterday.id,
+      memberId: seed.member.id,
+      kind: "heart",
+      channel: "telegram",
+      externalId: "2001:9",
+      receivedAt: lastNight,
+    });
+    expect(await lights()).toEqual([
+      expect.objectContaining({ state: "resting", answered_at: null }),
     ]);
   });
 

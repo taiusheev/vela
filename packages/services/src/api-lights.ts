@@ -3,14 +3,21 @@ import { localDateOf } from "@vela/core";
 import { awayPeriods, members, quietEvents } from "@vela/db";
 import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
-import { exchangeForLocalDate, keptLightMembersOfFamily, type Queryable } from "./repo.ts";
+import {
+  dayAnsweredAt,
+  exchangeForLocalDate,
+  firstAnswersByDate,
+  keptLightMembersOfFamily,
+  type Queryable,
+} from "./repo.ts";
 
 /**
  * The lights row behind Today and the widget (`GET /v1/families/:familyId/lights`, API contract
  * §5). One glyph per kept-light member, in the member's own local day: paused and away come from
- * the member's own state, lit and quiet from the day's exchange, and everything else is resting.
- * A member still invited, who has not said yes, follows with the state `none`.
- * The caller must be a live member of the family; a stranger and a missing family look the same.
+ * the member's own state, lit from her answers that day, quiet from the day's exchange, and
+ * everything else is resting. A member still invited, who has not said yes, follows with the state
+ * `none`. The caller must be a live member of the family; a stranger and a missing family look the
+ * same.
  */
 export async function loadApiLights(
   db: Queryable,
@@ -47,7 +54,14 @@ export async function loadApiLights(
             .where(and(eq(quietEvents.exchangeId, exchange.id), isNull(quietEvents.resolvedAt)))
             .limit(1);
 
-    const answeredAt = exchange?.answeredAt ?? null;
+    // An answer counts for the local date it arrives on, whichever exchange it attaches to (flows
+    // §3.9): a message before the day's arrival attaches to the previous exchange, and a tap on an
+    // older arrival's buttons answers that older one, yet either answers her day. The quiet ladder
+    // counts the day answered by the same rule and tells the organisers "Everything is lit again";
+    // reading only the day's own exchange would show her resting under that message.
+    const firstAnswer =
+      (await firstAnswersByDate(db, member.id, member.tz, today, today)).get(today) ?? null;
+    const answeredAt = dayAnsweredAt(exchange?.answeredAt ?? null, firstAnswer);
     const state: LightState =
       member.status === "paused"
         ? "paused"
