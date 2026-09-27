@@ -14,12 +14,13 @@
  * member ids without a foreign key.
  *
  * - Cleared: exchanges.text and exchanges.options 30 days after delivery, never while a morning can
- *   still take the ask (a whenever ask in the queue, or one dated for a morning not yet past), and
- *   30 days after they were written when the ask can no longer reach her (delivered_at stays null on
- *   a failed arrival and on a date that passed unsent); outbound.payload 30 days after sent_at, or
- *   after it was queued when the row never sent; after 30 days, chips, translations, replies.text,
- *   the words inside answers.payload (her text and the chip or vote option she tapped),
- *   answers.transcript, answers.mentions, mood_words and flag_reason,
+ *   still take the ask (a whenever ask in the queue, one dated for a morning not yet past, or one
+ *   whose morning passed unsent, which the next morning carries), and 30 days after they were
+ *   written when the ask can no longer reach her (delivered_at stays null on a failed arrival, a
+ *   withdrawn ask, and an ask to a member who left or died); outbound.payload 30 days after
+ *   sent_at, or after it was queued when the row never sent; after 30 days, chips, translations,
+ *   replies.text, the words inside answers.payload (her text and the chip or vote option she
+ *   tapped), answers.transcript, answers.mentions, mood_words and flag_reason,
  *   suggestions.text, ai_calls.output, and the reply text inside quiet_events.ask_to_check. A
  *   cleared column that is NOT NULL takes its empty value ('', '{}', '[]'); chips and translations
  *   rows hold nothing but their text, so clearing them deletes the rows.
@@ -637,6 +638,14 @@ export const replies = pgTable(
      * "<conversation_id>:<message_id>", as for answers.
      */
     externalId: text("external_id"),
+    /**
+     * For a reaction, the messages of the exchange that carry it, each
+     * "<conversation_id>:<message_id>" as `external_id` is built. One exchange is posted as several
+     * messages (her photo or voice note, the text, the transcript), and Telegram sends a member's
+     * reactions on one message at a time, so the row goes only once no message carries it (flows
+     * §3.11). Empty for words, and on a reaction stored before the column existed.
+     */
+    reactedMessageIds: text("reacted_message_ids").array().notNull().default([]),
     /** Replies among ordinary members are not read back to her. */
     toRecipient: boolean("to_recipient").notNull().default(true),
     readBackAt: timestamptz("read_back_at"),

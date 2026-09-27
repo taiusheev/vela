@@ -610,9 +610,15 @@ export async function markWakeDue(db: Queryable, memberId: string, at: Date): Pr
 
 /**
  * Moves a family group to its new conversation id (a basic Telegram group upgraded to a supergroup,
- * flows §3.3 and §3.7): the linked `family_channels` row, that conversation's `message_refs`, and
- * the outbound rows still queued for it, in the caller's transaction. Telegram reports one move
- * twice and a send can report it too, so a repeat finds nothing left to move and changes nothing.
+ * flows §3.3 and §3.7): the linked `family_channels` row and the outbound rows still queued for it,
+ * in the caller's transaction. Message ids are unique only within one chat, and a supergroup
+ * numbers its own from 1, so nothing that names an old message moves: the old conversation's
+ * `message_refs` are deleted, since a moved ref would resolve whichever new message took its number
+ * (and a reply there to a message from before the upgrade does not carry that message's id); a
+ * queued row loses the message it replies to, and the media an earlier try got out in the old chat
+ * (`sentMedia`), which then goes again with the text, so the post stands whole in the new chat and
+ * each ref it records is the new chat's. Telegram reports one move twice and a send can report it
+ * too, so a repeat finds nothing left to move and changes nothing.
  */
 export async function repointFamilyGroup(
   tx: VelaTransaction,
@@ -633,22 +639,6 @@ export async function repointFamilyGroup(
         isNull(familyChannels.unlinkedAt),
       ),
     );
-  // Message ids are unique only within one chat: a ref the new chat already holds under the same id
-  // stays as it is, and the old chat's ref for that id is dropped rather than made to collide.
-  const taken = tx
-    .select({ messageId: messageRefs.messageId })
-    .from(messageRefs)
-    .where(and(eq(messageRefs.channel, channel), eq(messageRefs.conversationId, toConversationId)));
-  await tx
-    .update(messageRefs)
-    .set({ conversationId: toConversationId })
-    .where(
-      and(
-        eq(messageRefs.channel, channel),
-        eq(messageRefs.conversationId, fromConversationId),
-        sql`${messageRefs.messageId} not in (${taken})`,
-      ),
-    );
   await tx
     .delete(messageRefs)
     .where(
@@ -656,7 +646,10 @@ export async function repointFamilyGroup(
     );
   await tx
     .update(outbound)
-    .set({ conversationId: toConversationId })
+    .set({
+      conversationId: toConversationId,
+      payload: sql`(${outbound.payload} - 'sentMedia') #- '{message,replyToMessageId}'`,
+    })
     .where(
       and(
         eq(outbound.channel, channel),

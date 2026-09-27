@@ -343,6 +343,97 @@ describe("handleReaction", () => {
     expect(rows.every((row) => row.externalId === null)).toBe(true);
   });
 
+  /** Another message of the same answer post, such as her photo sent before the text. */
+  async function otherPost(scene: Scene, messageId: string): Promise<MessageRef> {
+    const [ref] = await h.db
+      .insert(messageRefs)
+      .values({ ...scene.ref, messageId, createdAt: h.clock.now() })
+      .returning();
+    if (ref === undefined) {
+      throw new Error("ref not inserted");
+    }
+    return ref;
+  }
+
+  const onMessage = (link: ChannelLink, ref: MessageRef, reactions: string[]): InboundEvent =>
+    groupEvent(link, {
+      kind: "reaction",
+      messageId: ref.messageId,
+      replyToMessageId: undefined,
+      reactions,
+    });
+
+  async function reactionRows() {
+    return (await replyRows()).map((row) => [row.kind, row.reactedMessageIds]);
+  }
+
+  // Her photo answer is posted as the photo and then the text, and a voice answer's transcript is
+  // a post of its own; Telegram sends a member's set on one message at a time (flows §3.11).
+  it("keeps a member's reactions on each message of one exchange apart", async () => {
+    const scene = await answeredMorning();
+    const { seed, anna, ref: text } = scene;
+    const photo = await otherPost(scene, "9");
+    const react = (ref: MessageRef, reactions: string[]) =>
+      handleReaction(
+        h.deps,
+        seed.family.id,
+        anna.member.id,
+        onMessage(anna.link, ref, reactions),
+        ref,
+      );
+    const PHOTO = `${GROUP}:9`;
+    const TEXT = `${GROUP}:${ANSWER_POST}`;
+
+    await react(photo, ["❤️"]);
+    await react(text, ["😂"]);
+    expect(await reactionRows()).toEqual([
+      ["heart", [PHOTO]],
+      ["laugh", [TEXT]],
+    ]);
+
+    // Her heart on both messages is one reaction, kept while either message carries it.
+    await react(text, ["❤️"]);
+    expect(await reactionRows()).toEqual([["heart", [PHOTO, TEXT]]]);
+    await react(photo, []);
+    expect(await reactionRows()).toEqual([["heart", [TEXT]]]);
+    await react(photo, []);
+    expect(await reactionRows()).toEqual([["heart", [TEXT]]]);
+    await react(text, ["🎉"]);
+    expect(await reactionRows()).toEqual([]);
+
+    expect((await eventRows()).map((row) => row.props)).toEqual([
+      { kind: "reaction", added: 1, removed: 0, by: anna.member.id },
+      { kind: "reaction", added: 1, removed: 0, by: anna.member.id },
+    ]);
+  });
+
+  it("lets a message's set replace a reaction stored before its messages were recorded, as it did then", async () => {
+    const scene = await answeredMorning();
+    const { seed, anna, exchangeId, ref } = scene;
+    await h.db.insert(replies).values(
+      (["heart", "hug"] as const).map((kind) => ({
+        exchangeId,
+        memberId: anna.member.id,
+        kind,
+        channel: "telegram" as const,
+        createdAt: h.clock.now(),
+      })),
+    );
+
+    await handleReaction(
+      h.deps,
+      seed.family.id,
+      anna.member.id,
+      onMessage(anna.link, ref, ["❤️", "😂"]),
+      ref,
+    );
+
+    expect(await reactionRows()).toEqual([
+      ["heart", [`${GROUP}:${ANSWER_POST}`]],
+      ["laugh", [`${GROUP}:${ANSWER_POST}`]],
+    ]);
+  });
+
   it("ignores a reaction on a message that is not an answer post", async () => {
     const { seed, anna, ref } = await answeredMorning();
 

@@ -1,8 +1,8 @@
 /**
  * Family replies and reactions in the group (spec §6, flows §3.11): a reply to an answer post is a
  * `replies` row read back to her in her next arrival; a reaction on it is a state, the member's
- * whole set at once, so re-tapping the same emoji never counts twice. Anything else in the group is
- * not this module's, and nothing about it is stored or logged.
+ * whole set on that message at once, so re-tapping the same emoji never counts twice. Anything else
+ * in the group is not this module's, and nothing about it is stored or logged.
  */
 import { type InboundEvent, REACTION_KINDS, type ReplyKind } from "@vela/contracts";
 import { canApply, nextExchangeState } from "@vela/core";
@@ -144,9 +144,12 @@ export async function handleGroupReply(
 
 /**
  * A member's reactions on an `answer_post` message (flows §3.11). The platform sends the member's
- * full set, so their reaction rows for the exchange are made equal to the mapped set in one
- * transaction: kinds added, kinds removed, and unmapped emoji ignored. A repeated update changes
- * nothing and records nothing.
+ * full set on that one message, and an exchange is posted as several (her photo or voice note, the
+ * text, the transcript), so in one transaction the set replaces only what that message carried:
+ * each kind in it gains the message in its row's `reacted_message_ids`, or a row of its own; each
+ * kind not in it loses the message, and its row goes once no message carries it. A row stored
+ * before the column existed names no message and goes as before. Unmapped emoji are ignored. A
+ * repeated update changes nothing and records nothing.
  */
 export async function handleReaction(
   deps: Deps,
@@ -165,6 +168,7 @@ export async function handleReaction(
   }
   const kinds = reactionKindsOf(event.reactions ?? []);
   const wanted: ReadonlySet<ReplyKind> = new Set(kinds);
+  const message = inboundExternalId(event);
   const now = deps.clock.now();
   await deps.db.transaction(async (tx) => {
     const exchange = await lockExchange(deps, tx, familyId, exchangeId);
@@ -172,7 +176,7 @@ export async function handleReaction(
       return;
     }
     const current = await tx
-      .select({ id: replies.id, kind: replies.kind })
+      .select({ id: replies.id, kind: replies.kind, messageIds: replies.reactedMessageIds })
       .from(replies)
       .where(
         and(
@@ -181,17 +185,28 @@ export async function handleReaction(
           inArray(replies.kind, [...REACTION_KINDS]),
         ),
       );
-    const have = new Set(current.map((row) => row.kind));
-    const removed = current.filter((row) => !wanted.has(row.kind));
-    const added = kinds.filter((kind) => !have.has(kind));
-    if (removed.length > 0) {
-      await tx.delete(replies).where(
-        inArray(
-          replies.id,
-          removed.map((row) => row.id),
-        ),
-      );
+    const removed: string[] = [];
+    for (const row of current) {
+      const others = row.messageIds.filter((id) => id !== message);
+      if (wanted.has(row.kind)) {
+        if (others.length === row.messageIds.length) {
+          await tx
+            .update(replies)
+            .set({ reactedMessageIds: [...row.messageIds, message] })
+            .where(eq(replies.id, row.id));
+        }
+      } else if (others.length === 0) {
+        // No other message carries it, or the row predates the column and names none.
+        removed.push(row.id);
+      } else if (others.length !== row.messageIds.length) {
+        await tx.update(replies).set({ reactedMessageIds: others }).where(eq(replies.id, row.id));
+      }
     }
+    if (removed.length > 0) {
+      await tx.delete(replies).where(inArray(replies.id, removed));
+    }
+    const have = new Set(current.map((row) => row.kind));
+    const added = kinds.filter((kind) => !have.has(kind));
     if (added.length === 0) {
       return;
     }
@@ -203,6 +218,7 @@ export async function handleReaction(
           memberId: senderId,
           kind,
           channel: event.channel,
+          reactedMessageIds: [message],
           toRecipient: true,
           createdAt: now,
         })),

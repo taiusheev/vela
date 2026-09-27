@@ -729,15 +729,13 @@ function neverAnswered(): SQL {
 
 /**
  * An ask a morning can still take (`prepareDay`), whose words that morning renders: never
- * delivered nor failed, composed or scheduled, either a whenever ask no morning has claimed or one
- * dated for a morning not yet past, and addressed to a member who is not left or deceased. Every
- * zone's today is at least the day before the UTC date, so an earlier date has passed for her.
+ * delivered nor failed, composed or scheduled, and addressed to a member who is not left or
+ * deceased. That holds for a whenever ask no morning has claimed, one dated for a morning not yet
+ * past, and one whose morning passed unsent, which her next morning carries (flows §3.6).
  */
-function stillWaiting(now: Date): SQL {
-  const earliestToday = addDays(localDateOf(now, "UTC"), -1);
+function stillWaiting(): SQL {
   return sql`${exchanges.deliveredAt} is null and ${exchanges.deliveryFailedAt} is null
     and ${exchanges.state} in ('composed', 'scheduled')
-    and (${exchanges.scheduledFor} is null or ${exchanges.scheduledFor} >= ${earliestToday})
     and exists (select 1 from ${members} where ${members.id} = ${exchanges.recipientId} and ${members.status} not in ('left', 'deceased'))`;
 }
 
@@ -921,8 +919,9 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   ).length;
 
   // The ask's own words go 30 days after delivery, and an ask still waiting for her keeps them
-  // until then (`stillWaiting`). One that can no longer reach her (a failed arrival, a date that
-  // passed unsent, a withdrawn ask) loses them 30 days after they were written: its `delivered_at`
+  // until then (`stillWaiting`), one whose morning passed unsent included, since her next morning
+  // carries it. One that can no longer reach her (a failed arrival, a withdrawn ask, an ask to a
+  // member marked left or deceased) loses them 30 days after they were written: its `delivered_at`
   // stays null for good, and a NULL comparison would keep those words forever.
   counts.exchanges_cleared = (
     await db
@@ -932,7 +931,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
         and(
           lt(sql`coalesce(${exchanges.deliveredAt}, ${exchanges.createdAt})`, cutoff30),
           or(isNotNull(exchanges.text), isNotNull(exchanges.options)),
-          sql`not (${stillWaiting(now)})`,
+          sql`not (${stillWaiting()})`,
         ),
       )
       .returning({ id: exchanges.id })

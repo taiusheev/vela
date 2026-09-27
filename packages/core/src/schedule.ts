@@ -251,8 +251,25 @@ function arrivalRule(ctx: Context, out: Collector): boolean {
  * otherwise never open a window at all, so such a member's window runs to the end of her day.
  */
 function arrivalCutoff(ctx: Context, arrival: Date): Date {
-  const prepare = ctx.at(ctx.today, SCHEDULE.prepareTime);
-  return arrival.getTime() < prepare.getTime() ? prepare : ctx.at(ctx.tomorrow, START_OF_DAY);
+  return windowEnd(ctx.today, arrival, ctx.at);
+}
+
+function windowEnd(
+  date: LocalDate,
+  arrival: Date,
+  at: (date: LocalDate, time: LocalTime) => Date,
+): Date {
+  const prepare = at(date, SCHEDULE.prepareTime);
+  return arrival.getTime() < prepare.getTime() ? prepare : at(addDays(date, 1), START_OF_DAY);
+}
+
+/**
+ * When the arrival window of `date` closes, as the decision closes it: from then on that morning is
+ * skipped and never goes out, so preparing a later morning may carry the ask it left (flows §3.6).
+ */
+export function arrivalWindowEnd(date: LocalDate, arrivalTime: LocalTime, timeZone: string): Date {
+  const at = (day: LocalDate, time: LocalTime) => zonedInstant(day, time, timeZone);
+  return windowEnd(date, at(date, arrivalTime), at);
 }
 
 /** The ladder thresholds of an arrival that the tick is about to deliver at `now`. */

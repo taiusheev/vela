@@ -11,6 +11,7 @@ import {
   members,
   messageRefs,
   outbound,
+  replies,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -27,9 +28,16 @@ import {
   resolveGroupSender,
 } from "./group.ts";
 import { sha256Hex } from "./hash.ts";
-import { familyByLinkedGroup } from "./repo.ts";
+import { handleInbound } from "./inbound/router.ts";
+import { familyByLinkedGroup, messageRefFor } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedFamily, seedGroupMember, seedLinkedGroup } from "./testing/seed.ts";
+import {
+  type SeededFamily,
+  seedExchange,
+  seedFamily,
+  seedGroupMember,
+  seedLinkedGroup,
+} from "./testing/seed.ts";
 
 let h: Harness;
 
@@ -504,7 +512,7 @@ describe("handleBotRemoved", () => {
 });
 
 describe("handleGroupMigrated", () => {
-  it("moves the link, the group's message refs, and its queued sends to the new id, once", async () => {
+  it("moves the link and its queued sends to the new id and drops the group's message refs, once", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
     await h.db.insert(messageRefs).values({
@@ -537,12 +545,117 @@ describe("handleGroupMigrated", () => {
       seed.family.id,
     );
     expect(await familyByLinkedGroup(h.db, "telegram", GROUP)).toBeNull();
-    const refs = await h.db.select().from(messageRefs);
-    expect(refs.map((ref) => [ref.conversationId, ref.messageId])).toEqual([["-1001000", "10"]]);
+    // The old group's message ids name nothing in the supergroup (below), so its refs go.
+    expect(await h.db.select().from(messageRefs)).toEqual([]);
     const [queued] = await outboundRows();
     expect(queued?.conversationId).toBe("-1001000");
     await h.run(handlers());
     expect(h.telegram.sentTo("-1001000")).toHaveLength(1);
+  });
+
+  // A supergroup numbers its own messages from 1 (its first is the upgrade notice), and a reply
+  // there to a message from before the upgrade names a basic group's message, whose id Telegram
+  // does not give. So an id from the old group names some other message in the new one.
+  describe("the old group's message ids in the supergroup", () => {
+    const SUPERGROUP = "-1001000";
+
+    async function upgradedScene() {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+      const sam = await seedGroupMember(h.db, seed, {
+        now: h.clock.now(),
+        name: "Sam",
+        externalId: "1002",
+      });
+      const yesterday = await seedExchange(h.db, seed, {
+        date: "2026-09-13",
+        state: "answered",
+        deliveredAt: new Date("2026-09-13T00:00:00.000Z"),
+        answeredAt: new Date("2026-09-13T00:10:00.000Z"),
+      });
+      await h.db.insert(messageRefs).values([
+        {
+          channel: "telegram",
+          conversationId: GROUP,
+          messageId: "1",
+          familyId: seed.family.id,
+          memberId: seed.member.id,
+          localDate: "2026-09-14",
+          purpose: "turn_prompt",
+        },
+        {
+          channel: "telegram",
+          conversationId: GROUP,
+          messageId: "2",
+          familyId: seed.family.id,
+          exchangeId: yesterday.id,
+          memberId: seed.member.id,
+          purpose: "answer_post",
+        },
+      ]);
+      await handleGroupMigrated(h.deps, migrated(GROUP, SUPERGROUP));
+      return { seed, sam, yesterday };
+    }
+
+    const samReplies = (replyToMessageId: string, text: string): InboundEvent =>
+      groupEvent({
+        kind: "text",
+        user: "1002",
+        text,
+        sender: { externalUserId: "1002", displayName: "Sam" },
+        conversation: { externalId: SUPERGROUP, kind: "group" },
+        replyToMessageId,
+      });
+
+    it("reads a reply in the new chat to a number the old one used as the family's own conversation", async () => {
+      const { yesterday } = await upgradedScene();
+
+      await handleInbound(h.deps, [
+        samReplies("1", "See you at dinner"),
+        samReplies("2", "The cat again"),
+      ]);
+
+      // No ask for her morning, no reply read back to her, nothing posted.
+      const rows = await h.db.select().from(exchanges);
+      expect(rows.map((row) => [row.id, row.state])).toEqual([[yesterday.id, "answered"]]);
+      expect(await h.db.select().from(replies)).toEqual([]);
+      expect(await outboundRows()).toEqual([]);
+    });
+
+    it("maps Vela's own post in the new chat to what it is about, whatever the old chat's number meant", async () => {
+      const { seed } = await upgradedScene();
+      const today = await seedExchange(h.db, seed, {
+        date: "2026-09-14",
+        state: "answered",
+        deliveredAt: h.clock.now(),
+        answeredAt: h.clock.now(),
+      });
+      await enqueueOutbound(h.deps, h.db, {
+        kind: "answer_post",
+        idempotencyKey: outboundKey("answer_post", { exchangeId: today.id, suffix: "answer" }),
+        memberId: seed.member.id,
+        channel: "telegram",
+        conversationId: SUPERGROUP,
+        exchangeId: today.id,
+        lang: "en",
+        text: "Mom answered Mia · 08:00",
+        ref: { purpose: "answer_post", exchangeId: today.id, memberId: seed.member.id },
+      });
+      await h.run(handlers());
+      const [post] = h.telegram.sentTo(SUPERGROUP);
+      // The supergroup's first message after the notice; the old group's prompt was "1" too.
+      const postId = post?.result.primaryMessageId ?? "";
+      expect(postId).toBe("1");
+      expect(await messageRefFor(h.db, "telegram", SUPERGROUP, postId)).toMatchObject({
+        purpose: "answer_post",
+        exchangeId: today.id,
+      });
+
+      await handleInbound(h.deps, [samReplies(postId, "Lovely soup")]);
+
+      const rows = await h.db.select().from(replies);
+      expect(rows.map((row) => [row.exchangeId, row.text])).toEqual([[today.id, "Lovely soup"]]);
+    });
   });
 
   it("moves nothing for a group that is not linked", async () => {

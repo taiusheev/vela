@@ -1068,8 +1068,9 @@ describe("applyRetention", () => {
   });
 
   // A whenever ask waits in the queue for a morning nobody asked, and she may stop for weeks while
-  // the family keeps adding to it: its words are cleared 30 days after delivery, never before, or
-  // the morning that takes it would say "Mia asks:" over nothing.
+  // the family keeps adding to it, and an ask whose own morning passed unsent waits for her next
+  // one (flows §3.6): its words are cleared 30 days after delivery, never before, or the morning
+  // that takes it would say "Mia asks:" over nothing.
   it("keeps the words of an ask still waiting for her, so the morning that takes it carries them", async () => {
     const seed = await seedFamily(h.db, { now: daysAgo(40) });
     const ask = (text: string, age: number, fields: Partial<typeof exchanges.$inferInsert>) => ({
@@ -1088,6 +1089,11 @@ describe("applyRetention", () => {
       // Claimed last night for this morning, which has not gone out yet.
       ask("Is the persimmon ripe?", 33, { state: "scheduled", scheduledFor: "2026-09-14" }),
       ask("Tea or coffee?", 32, { type: "vote", options: { vote_options: ["Tea", "Coffee"] } }),
+      // An /ask for a morning that passed while she was stopped: her next morning carries it.
+      ask("Whatever happened to the cat?", 31.5, {
+        whenRule: "tomorrow",
+        scheduledFor: "2026-08-11",
+      }),
       ask("Did the plum tree flower?", 31, {}),
     ]);
 
@@ -1098,10 +1104,11 @@ describe("applyRetention", () => {
     expect(rows.map((row) => [row.text, row.options])).toEqual([
       ["Is the persimmon ripe?", null],
       ["Tea or coffee?", { vote_options: ["Tea", "Coffee"] }],
+      ["Whatever happened to the cat?", null],
       ["Did the plum tree flower?", null],
     ]);
 
-    for (const date of ["2026-09-14", "2026-09-15", "2026-09-16"] as const) {
+    for (const date of ["2026-09-14", "2026-09-15", "2026-09-16", "2026-09-17"] as const) {
       await deliverArrival(h.deps, seed.member.id, date, false);
     }
     const arrivals = await h.db
@@ -1115,10 +1122,11 @@ describe("applyRetention", () => {
     );
     expect(messages.map((message) => message.text.split("\n\n")[1])).toEqual([
       "Mia asks:\nIs the persimmon ripe?",
+      "Mia asks:\nWhatever happened to the cat?",
       "Mia asks:\nTea or coffee?\nTap one.",
       "Mia asks:\nDid the plum tree flower?",
     ]);
-    expect(messages[1]?.buttons.flat().map((button) => button.label)).toEqual(
+    expect(messages[2]?.buttons.flat().map((button) => button.label)).toEqual(
       expect.arrayContaining(["Tea", "Coffee"]),
     );
   });
@@ -1138,13 +1146,6 @@ describe("applyRetention", () => {
       .update(exchanges)
       .set({ deliveryFailedAt: daysAgo(32) })
       .where(eq(exchanges.id, failed.id));
-    // An /ask for a morning that passed while she was stopped: no morning takes it any more.
-    const passed = await seedExchange(h.db, seed, {
-      date: "2026-08-11",
-      state: "composed",
-      text: "Whatever happened to the cat?",
-      createdAt: daysAgo(31),
-    });
     // A whenever ask for a member marked deceased, whom nothing reaches again (spec §19).
     const mourned = await seedFamily(h.db, {
       now: daysAgo(40),
@@ -1197,11 +1198,10 @@ describe("applyRetention", () => {
 
     const counts = await applyRetention(h.deps);
 
-    expect(counts).toMatchObject({ exchanges_cleared: 3, outbound_payloads_cleared: 2 });
+    expect(counts).toMatchObject({ exchanges_cleared: 2, outbound_payloads_cleared: 2 });
     const rows = await h.db.select().from(exchanges).orderBy(asc(exchanges.createdAt));
     expect(rows.map((row) => [row.id, row.text])).toEqual([
       [failed.id, null],
-      [passed.id, null],
       [whenever?.id, null],
       [young.id, "Still warm there?"],
     ]);

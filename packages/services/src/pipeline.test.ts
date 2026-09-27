@@ -41,6 +41,7 @@ import { type AnswerButtonAction, handleAnswerButton, handleParentMessage } from
 import type { Deps, OutboundJob } from "./deps.ts";
 import { deliverOutbound, STRANDED_AFTER_MINUTES } from "./gateway.ts";
 import { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
+import { repointFamilyGroup } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import {
   type SeededFamily,
@@ -388,6 +389,22 @@ describe("understandAnswer", () => {
     await h.run(handlers());
     const [, transcript] = h.telegram.sentTo(GROUP);
     expect(transcript?.message.replyToMessageId).toBe(posts[0]?.externalId);
+  });
+
+  // A supergroup numbers its own messages, so the answer post's id in the old group names another
+  // message there: her words go without a reply rather than under someone else's message.
+  it("posts her words to a group upgraded since her answer post without replying to the old group's id", async () => {
+    const scene = await morning({ language: "en", memberLanguage: "zh-TW" });
+    const answer = await herText(scene, "我在煮湯");
+    expect(h.telegram.sentTo(GROUP).map((entry) => entry.result.primaryMessageId)).toEqual(["1"]);
+    await h.db.transaction((tx) => repointFamilyGroup(tx, "telegram", GROUP, "-1001000"));
+
+    await understandAnswer(h.deps, answer.id);
+    await h.run(handlers());
+
+    const [words] = h.telegram.sentTo("-1001000");
+    expect(words?.message.text).toBe("Mom: [en] 我在煮湯");
+    expect(words?.message.replyToMessageId).toBeUndefined();
   });
 
   it("stores nothing for a failed translation and still sets understood_at", async () => {

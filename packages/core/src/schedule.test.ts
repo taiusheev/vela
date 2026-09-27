@@ -1,6 +1,7 @@
 import type { LocalDate, LocalTime, MemberStatus } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  arrivalWindowEnd,
   type DayState,
   type DueAction,
   decideSchedule,
@@ -194,6 +195,14 @@ describe("arrival", () => {
     expect(decide({ ...base, now: taipei("23:59") }).due).toEqual([
       { kind: "deliver_arrival", date: TODAY, late: false },
     ]);
+  });
+
+  // Preparing a later morning reads from it when a date's morning can no longer go out (flows §3.6).
+  it("names the end of a date's arrival window where the decision stops delivering it", () => {
+    expect(iso(arrivalWindowEnd(TODAY, "08:00", ZONE))).toBe(iso(taipei("22:00")));
+    expect(iso(arrivalWindowEnd(TODAY, "22:30", ZONE))).toBe(
+      iso(zonedInstant(TOMORROW, "00:00", ZONE)),
+    );
   });
 
   it("delivers at 03:00 when 02:30 does not exist (America/New_York spring forward)", () => {

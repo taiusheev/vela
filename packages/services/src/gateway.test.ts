@@ -30,6 +30,7 @@ import {
   redriveStrandedOutbound,
   STRANDED_AFTER_MINUTES,
 } from "./gateway.ts";
+import { handleGroupMigrated } from "./group.ts";
 import { handleParentCommand } from "./parent-commands.ts";
 import { openQuiet } from "./quiet.ts";
 import { messageRefFor } from "./repo.ts";
@@ -743,8 +744,8 @@ describe("deliverOutbound and the upgraded group", () => {
 
     const [group] = await h.db.select().from(familyChannels);
     expect(group?.conversationId).toBe(NEW_GROUP);
-    const moved = await h.db.select().from(messageRefs).where(eq(messageRefs.messageId, "7"));
-    expect(moved.map((ref) => ref.conversationId)).toEqual([NEW_GROUP]);
+    // The old group's refs go: its message ids name other messages in the supergroup.
+    expect(await h.db.select().from(messageRefs)).toEqual([]);
     // The other row queued for the old group follows it, so it never hits the same error.
     const rows = await outboundRows();
     expect(rows.map((row) => [row.id, row.conversationId, row.attempts, row.status])).toEqual([
@@ -782,6 +783,140 @@ describe("deliverOutbound and the upgraded group", () => {
     expect(
       await messageRefFor(h.db, "telegram", NEW_GROUP, resent?.result.primaryMessageId ?? ""),
     ).toMatchObject({ purpose: "ask_confirmation", familyId: seed.family.id });
+  });
+
+  /** Her photo answer's post to the old group, replying to the old group's message 2. */
+  async function photoPost(seed: SeededFamily): Promise<string> {
+    // The old group had three messages before, so its numbers run ahead of the new chat's.
+    for (const suffix of ["a", "b", "c"]) {
+      await deliverOutbound(h.deps, await groupPost(seed, suffix));
+    }
+    const exchange = await seedExchange(h.db, seed, { date: TODAY, state: "answered" });
+    return enqueued({
+      kind: "answer_post",
+      idempotencyKey: outboundKey("answer_post", { exchangeId: exchange.id, suffix: "photo" }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: OLD_GROUP,
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "Mom answered · 08:12",
+      media: [{ kind: "image", providerFileId: "photo-her" }],
+      replyToMessageId: "2",
+      ref: { purpose: "answer_post", exchangeId: exchange.id, memberId: seed.member.id },
+    });
+  }
+
+  async function refsIn(conversationId: string): Promise<string[]> {
+    const refs = await h.db
+      .select()
+      .from(messageRefs)
+      .where(eq(messageRefs.conversationId, conversationId))
+      .orderBy(asc(messageRefs.messageId));
+    return refs.map((ref) => ref.messageId);
+  }
+
+  // The supergroup numbers its own messages, so neither the photo that reached the old group nor
+  // the old message the post replied to has an id there: the post goes to the new chat whole, as
+  // a message of its own, and only what went out there is mapped.
+  it("sends a post the upgrade caught part way to the new chat whole, mapping only what went out there", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    const id = await photoPost(seed);
+    // The photo goes out as the old group's message 4; the text finds the group upgraded.
+    h.telegram.failNextSends(1, "invalid_request", {
+      migratedToConversationId: NEW_GROUP,
+      mediaDelivered: 1,
+    });
+
+    expect(await deliverOutbound(h.deps, id)).toBe("retry");
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [post] = h.telegram.sentTo(NEW_GROUP);
+    expect(post?.message.media).toEqual([{ kind: "image", providerFileId: "photo-her" }]);
+    expect(post?.message.replyToMessageId).toBeUndefined();
+    expect(await refsIn(NEW_GROUP)).toEqual(["1", "2"]);
+  });
+
+  function upgraded(seed: SeededFamily): InboundEvent {
+    return {
+      channel: "telegram",
+      eventId: "tg:migrated",
+      at: h.clock.now().toISOString(),
+      kind: "migrated",
+      sender: { externalUserId: seed.organiserLink.externalId },
+      conversation: { externalId: OLD_GROUP, kind: "group" },
+      migratedToConversationId: NEW_GROUP,
+    };
+  }
+
+  it("sends a post waiting for its retry when the group is upgraded to the new chat whole", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    const id = await photoPost(seed);
+    h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 1 });
+    expect(await deliverOutbound(h.deps, id)).toBe("retry");
+
+    await handleGroupMigrated(h.deps, upgraded(seed));
+    h.clock.advanceMinutes(RETRY_DELAY_MINUTES[0] ?? 5);
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [post] = h.telegram.sentTo(NEW_GROUP);
+    expect(post?.message.media).toEqual([{ kind: "image", providerFileId: "photo-her" }]);
+    expect(post?.message.replyToMessageId).toBeUndefined();
+    expect(await refsIn(NEW_GROUP)).toEqual(["1", "2"]);
+  });
+
+  // Her words' post replies to her answer post only in the chat that post went to (flows §3.3).
+  it("records the chat a send went to when the upgrade moved its row while the send was out", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    const id = await groupPost(seed, "confirm");
+    const adapter: ChannelAdapter = {
+      ...h.telegram,
+      async send(message) {
+        const result = await h.telegram.send(message);
+        await handleGroupMigrated(h.deps, upgraded(seed));
+        return result;
+      },
+    };
+
+    expect(await deliverOutbound({ ...h.deps, channels: { get: () => adapter } }, id)).toBe("sent");
+
+    const [row] = await outboundRows();
+    expect(row).toMatchObject({ id, status: "sent", conversationId: OLD_GROUP, externalId: "1" });
+    const [group] = await h.db.select().from(familyChannels);
+    expect(group?.conversationId).toBe(NEW_GROUP);
+  });
+
+  // The upgrade notice can be handled while a delivery of the row is at Telegram: the photo reaches
+  // the old group, the text fails for a retry, and the row already addresses the new chat.
+  it("keeps nothing of a send that was out when the upgrade moved its row, so the retry goes to the new chat whole", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    const id = await photoPost(seed);
+    const adapter: ChannelAdapter = {
+      ...h.telegram,
+      async send(message) {
+        await handleGroupMigrated(h.deps, upgraded(seed));
+        h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 1 });
+        return h.telegram.send(message);
+      },
+    };
+    expect(await deliverOutbound({ ...h.deps, channels: { get: () => adapter } }, id)).toBe(
+      "retry",
+    );
+    const [row] = (await outboundRows()).filter((candidate) => candidate.id === id);
+    expect(row).toMatchObject({ conversationId: NEW_GROUP, status: "queued", attempts: 1 });
+    expect(row?.payload).not.toHaveProperty("sentMedia");
+
+    h.clock.advanceMinutes(RETRY_DELAY_MINUTES[0] ?? 5);
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [post] = h.telegram.sentTo(NEW_GROUP);
+    expect(post?.message.media).toEqual([{ kind: "image", providerFileId: "photo-her" }]);
+    expect(post?.message.replyToMessageId).toBeUndefined();
+    expect(await refsIn(NEW_GROUP)).toEqual(["1", "2"]);
   });
 
   it("fails a row the platform says to move to the id it already addresses, so a send cannot loop", async () => {

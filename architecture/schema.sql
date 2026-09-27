@@ -468,6 +468,7 @@ CREATE TABLE "replies" (
 	"media_id" uuid,
 	"channel" text NOT NULL,
 	"external_id" text,
+	"reacted_message_ids" text[] DEFAULT '{}' NOT NULL,
 	"to_recipient" boolean DEFAULT true NOT NULL,
 	"read_back_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,

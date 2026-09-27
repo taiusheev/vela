@@ -1,5 +1,5 @@
 import { createFakeAi, createOffAi, fakeRecord, genericChips } from "@vela/ai";
-import type { LocalDate, OutboundKind } from "@vela/contracts";
+import type { LocalDate, LocalTime, OutboundKind } from "@vela/contracts";
 import { decodeButton, outboundKey, zonedInstant } from "@vela/core";
 import {
   aiCalls,
@@ -30,8 +30,10 @@ import {
 } from "./testing/seed.ts";
 
 const TZ = "Asia/Taipei";
+const YESTERDAY: LocalDate = "2026-09-13";
 const TODAY: LocalDate = "2026-09-14";
 const TOMORROW: LocalDate = "2026-09-15";
+const DAY_AFTER: LocalDate = "2026-09-16";
 const GROUP = "-100500";
 
 let h: Harness;
@@ -246,6 +248,118 @@ describe("prepareDay", () => {
     expect(await exchangeById(newer.id)).toMatchObject({ state: "composed", scheduledFor: null });
     const [prepared] = (await eventRows()).filter((event) => event.name === "exchange_prepared");
     expect(prepared?.props).toMatchObject({ source: "whenever" });
+  });
+
+  // Flows §3.6: a morning that passed unsent (she was paused, or its window closed during an
+  // outage) leaves its ask behind, and the family was told "Into Mom's morning.".
+  it("carries an ask whose morning passed unsent to her next morning, the earliest first, before an older whenever ask", async () => {
+    const seed = await seedFamily(h.db, { now: at(YESTERDAY, "08:00") });
+    const [whenever] = await h.db
+      .insert(exchanges)
+      .values({
+        familyId: seed.family.id,
+        recipientId: seed.member.id,
+        askerId: seed.organiser.id,
+        type: "question",
+        state: "composed",
+        text: "Did the plum tree flower?",
+        textLang: "en",
+        whenRule: "whenever",
+        scheduledFor: null,
+        createdAt: at(YESTERDAY, "07:00"),
+      })
+      .returning({ id: exchanges.id });
+    if (whenever === undefined) {
+      throw new Error("whenever ask not inserted");
+    }
+    // Asked for this morning while she was paused, so no evening prepared it.
+    const paused = await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "composed",
+      text: "Did you sleep well?",
+      createdAt: at(YESTERDAY, "20:00"),
+    });
+    // Prepared last night for tomorrow, with its chips, and that window then passes with nothing sent.
+    const soup = await seedSoupQuestion(seed, TOMORROW);
+    await h.db
+      .insert(chips)
+      .values({ exchangeId: soup.id, chips: ["Tomato", "Miso", "None"], promptVersion: "chips@1" });
+    h.clock.set(at(TOMORROW, "22:00"));
+
+    expect(await prepareDay(h.deps, seed.member.id, DAY_AFTER)).toBe(paused.id);
+    h.clock.set(at(DAY_AFTER, "22:00"));
+    expect(await prepareDay(h.deps, seed.member.id, "2026-09-17")).toBe(soup.id);
+
+    expect(await exchangeById(paused.id)).toMatchObject({
+      state: "scheduled",
+      scheduledFor: DAY_AFTER,
+      text: "Did you sleep well?",
+    });
+    expect(await exchangeById(soup.id)).toMatchObject({
+      state: "scheduled",
+      scheduledFor: "2026-09-17",
+    });
+    expect(await exchangeById(whenever.id)).toMatchObject({
+      state: "composed",
+      scheduledFor: null,
+    });
+    // The soup keeps the chips drafted for the morning that passed; only the new ask is drafted.
+    expect(h.ai.calls.map((call) => call.input)).toEqual([
+      expect.objectContaining({ question: "Did you sleep well?" }),
+    ]);
+    const prepared = (await eventRows()).filter((event) => event.name === "exchange_prepared");
+    expect(prepared.map((event) => event.props)).toEqual([
+      { date: DAY_AFTER, type: "question", source: "carried" },
+      { date: "2026-09-17", type: "question", source: "carried" },
+    ]);
+  });
+
+  // Carrying a morning that can still go out, or may have, would send it twice or take it from
+  // its own date.
+  it("leaves an ask whose morning is on its way, has failed, or keeps its window open", async () => {
+    const family = (n: number, arrivalTime?: LocalTime) =>
+      seedFamily(h.db, {
+        now: at(YESTERDAY, "08:00"),
+        organiserExternalId: `10${n}1`,
+        memberExternalId: `20${n}1`,
+        arrivalTime,
+      });
+    // Her morning went out at 21:55, failed, and waits for its retry past the prepare time.
+    const retrying = await family(1);
+    const onItsWay = await seedExchange(h.db, retrying, { date: TODAY });
+    await h.db.insert(outbound).values({
+      memberId: retrying.member.id,
+      exchangeId: onItsWay.id,
+      kind: "arrival",
+      channel: "telegram",
+      conversationId: retrying.memberLink.externalId,
+      localDay: TODAY,
+      idempotencyKey: outboundKey("arrival", { memberId: retrying.member.id, date: TODAY }),
+      payload: {},
+      attempts: 1,
+      queuedAt: at(TODAY, "22:00"),
+    });
+    // Its delivery failed for good: the organisers were told, and it may have reached her.
+    const failing = await family(2);
+    const failed = await seedExchange(h.db, failing, { date: TODAY });
+    await h.db
+      .update(exchanges)
+      .set({ deliveryFailedAt: at(TODAY, "09:00") })
+      .where(eq(exchanges.id, failed.id));
+    // An arrival at or after the prepare time keeps its window until midnight.
+    const lateRiser = await family(3, "22:30");
+    const tonight = await seedExchange(h.db, lateRiser, { date: TODAY, state: "composed" });
+    h.clock.set(at(TODAY, "22:00"));
+
+    for (const [seed, ask] of [
+      [retrying, onItsWay],
+      [failing, failed],
+      [lateRiser, tonight],
+    ] as const) {
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+      expect(await exchangeById(id)).toMatchObject({ type: "hello", scheduledFor: TOMORROW });
+      expect(await exchangeById(ask.id)).toMatchObject({ scheduledFor: TODAY, deliveredAt: null });
+    }
   });
 
   it("creates the hello when nobody asked, with no chips and no model call", async () => {

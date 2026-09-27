@@ -1,0 +1,1 @@
+ALTER TABLE "replies" ADD COLUMN "reacted_message_ids" text[] DEFAULT '{}' NOT NULL;

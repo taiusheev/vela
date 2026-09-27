@@ -396,9 +396,8 @@ describe("every inbound path processed twice", () => {
     ]);
     const [group] = await h.db.select().from(familyChannels);
     expect(group?.conversationId).toBe(NEW_GROUP);
-    // The refs moved with it, so a reply to the message as re-sent still resolves.
-    const refs = await h.db.select().from(messageRefs);
-    expect(refs.every((ref) => ref.conversationId === NEW_GROUP)).toBe(true);
+    // The old group's refs are deleted: its message ids name other messages in the new chat.
+    expect(await h.db.select().from(messageRefs)).toEqual([]);
   });
 
   it("records one departure from the group", async () => {

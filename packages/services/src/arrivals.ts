@@ -9,6 +9,7 @@ import type { Channel, LocalDate, OutboundMediaRef } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
   type ArrivalAsk,
+  arrivalWindowEnd,
   localDateOf,
   nextExchangeState,
   nextTurnHolder,
@@ -29,11 +30,25 @@ import {
   type Member,
   media,
   members,
+  outbound,
   replies,
   turns,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
@@ -72,8 +87,9 @@ interface Prepared {
 
 /**
  * Settles what the morning of `date` carries, in one transaction under her member row's lock so
- * two ticks cannot both claim a whenever ask: a composed exchange for the date, else the oldest
- * whenever ask, else a hello. Returns the exchange's id. A day already prepared is left as it is.
+ * two ticks cannot both claim a whenever ask: a composed exchange for the date, else an ask whose
+ * own morning passed unsent, else the oldest whenever ask, else a hello. Returns the exchange's id.
+ * A day already prepared is left as it is.
  */
 export async function prepareDay(deps: Deps, memberId: string, date: LocalDate): Promise<string> {
   const now = deps.clock.now();
@@ -86,11 +102,15 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
     if (existing !== null && existing.state !== "composed") {
       return { exchange: existing, fresh: false };
     }
-    const candidates = await tx
-      .select()
-      .from(exchanges)
-      .where(and(eq(exchanges.recipientId, memberId), eq(exchanges.state, "composed")));
-    // The pilot has no story day (flows §3.6): the choice is the date's ask, a whenever ask, or the hello.
+    const candidates = (await askCandidates(tx, memberId, date)).filter(
+      (candidate) =>
+        candidate.scheduledFor === null ||
+        candidate.scheduledFor >= date ||
+        now.getTime() >=
+          arrivalWindowEnd(candidate.scheduledFor, member.arrivalTime, member.tz).getTime(),
+    );
+    // The pilot has no story day (flows §3.6): the choice is the date's ask, an ask its own morning
+    // left, a whenever ask, or the hello.
     const selection = selectAsk({
       date,
       candidates: candidates.map((candidate) => ({
@@ -103,7 +123,11 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
       isStoryDay: false,
       storyQuestionAvailable: false,
     });
-    const exchange = await settle(tx, member, date, selection, now);
+    const chosen =
+      "exchangeId" in selection
+        ? candidates.find((candidate) => candidate.id === selection.exchangeId)
+        : undefined;
+    const exchange = await settle(tx, member, date, chosen, now);
     await recordEvent(
       tx,
       {
@@ -123,21 +147,64 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
   return prepared.exchange.id;
 }
 
+/**
+ * Her asks a morning may take: composed ones, and one already scheduled for a morning before `date`
+ * that passed unsent, which is carried (flows §3.6). A hello left by a skipped morning is not an
+ * ask. An ask whose delivery failed, or whose arrival is queued, sent, or failed, may be on her
+ * phone or about to be, so carrying it could send it twice; only an arrival the gateway dropped
+ * unsent leaves it free. The caller still drops a passed morning whose window is open.
+ */
+async function askCandidates(
+  tx: VelaTransaction,
+  memberId: string,
+  date: LocalDate,
+): Promise<Exchange[]> {
+  const arrivalNotDropped = tx
+    .select({ id: outbound.id })
+    .from(outbound)
+    .where(
+      and(
+        eq(outbound.exchangeId, exchanges.id),
+        eq(outbound.kind, "arrival"),
+        ne(outbound.status, "dropped"),
+      ),
+    );
+  return tx
+    .select()
+    .from(exchanges)
+    .where(
+      and(
+        eq(exchanges.recipientId, memberId),
+        or(
+          eq(exchanges.state, "composed"),
+          and(
+            eq(exchanges.state, "scheduled"),
+            lt(exchanges.scheduledFor, date),
+            ne(exchanges.type, "hello"),
+          ),
+        ),
+        isNull(exchanges.deliveredAt),
+        isNull(exchanges.deliveryFailedAt),
+        notExists(arrivalNotDropped),
+      ),
+    );
+}
+
 async function settle(
   tx: VelaTransaction,
   member: Member,
   date: LocalDate,
-  selection: ReturnType<typeof selectAsk>,
+  chosen: Exchange | undefined,
   now: Date,
 ): Promise<Exchange> {
-  if (selection.source === "scheduled" || selection.source === "whenever") {
+  if (chosen !== undefined) {
     const [row] = await tx
       .update(exchanges)
-      .set({ state: nextExchangeState("composed", "schedule"), scheduledFor: date })
-      .where(eq(exchanges.id, selection.exchangeId))
+      .set({ state: nextExchangeState(chosen.state, "schedule"), scheduledFor: date })
+      .where(eq(exchanges.id, chosen.id))
       .returning();
     if (row === undefined) {
-      throw new VelaError("not_found", `exchange ${selection.exchangeId} vanished while preparing`);
+      throw new VelaError("not_found", `exchange ${chosen.id} vanished while preparing`);
     }
     return row;
   }
@@ -186,7 +253,8 @@ async function recentAnswerTexts(db: Queryable, memberId: string): Promise<strin
 
 /**
  * Three chips for a question, drafted once when the day is prepared. Nothing here may stop the
- * ask: a failed or refused call is logged and the arrival goes out without chips (flows §3.6).
+ * ask: a failed or refused call is logged and the arrival goes out without chips (flows §3.6). A
+ * carried ask keeps the chips drafted for the morning that passed, so the model is asked once.
  */
 async function draftChips(deps: Deps, exchange: Exchange): Promise<void> {
   const question = exchange.text?.trim() ?? "";
@@ -194,6 +262,14 @@ async function draftChips(deps: Deps, exchange: Exchange): Promise<void> {
     return;
   }
   try {
+    const [drafted] = await deps.db
+      .select({ exchangeId: chips.exchangeId })
+      .from(chips)
+      .where(eq(chips.exchangeId, exchange.id))
+      .limit(1);
+    if (drafted !== undefined) {
+      return;
+    }
     const member = await memberById(deps.db, exchange.recipientId);
     const family = member === null ? null : await familyById(deps.db, member.familyId);
     const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);

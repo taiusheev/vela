@@ -8,10 +8,11 @@ import {
 } from "@vela/ai";
 import type { InboundEvent, Lang, LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { parseParentCommand } from "@vela/core";
+import { parseParentCommand, zonedInstant } from "@vela/core";
 import {
   answers,
   events,
+  exchanges,
   families,
   type Member,
   members,
@@ -343,6 +344,33 @@ describe("start", () => {
       "start_said",
       "arrival_delivered",
     ]);
+  });
+
+  // Flows §3.6: Mia was told her ask was going into Mom's morning, and that morning passed unsent
+  // while Mom was paused, so her first morning after the start carries it rather than the hello.
+  it("brings the ask of a morning that passed while she was paused on her first morning after her start", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const ask = await seedExchange(h.db, seed, {
+      date: "2026-09-15",
+      state: "composed",
+      text: "Which soup today?",
+    });
+    h.clock.set(zonedInstant("2026-09-14", "22:00", "Asia/Taipei"));
+    await tickMember(h.deps, seed.member.id);
+    h.clock.set(zonedInstant("2026-09-15", "07:00", "Asia/Taipei"));
+    await say(await herRow(seed), "stop");
+    h.clock.set(zonedInstant("2026-09-16", "09:05", "Asia/Taipei"));
+
+    await say(await herRow(seed), "start");
+
+    expect(await herMessages()).toEqual([
+      t("en", "parent.stopped"),
+      "Welcome back. Your next morning arrives at 08:00.",
+      expect.stringContaining("Mia asks:\nWhich soup today?"),
+    ]);
+    const [carried] = await h.db.select().from(exchanges).where(eq(exchanges.id, ask.id));
+    expect(carried).toMatchObject({ state: "delivered", scheduledFor: "2026-09-16" });
+    expect(await h.db.select().from(exchanges).where(eq(exchanges.type, "hello"))).toEqual([]);
   });
 
   it("keeps a start date that is still ahead", async () => {

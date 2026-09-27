@@ -823,8 +823,16 @@ export async function summariesForHer(
   return new Map(rows.map((row) => [row.answerId, row.text]));
 }
 
-/** The platform id of the sent answer post, so the transcript can reply to it; null until sent. */
-async function answerPostMessageId(deps: Deps, ctx: AnswerContext): Promise<string | null> {
+/**
+ * The platform id of the sent answer post, so the transcript can reply to it; null until sent, and
+ * null when it went to the group before an upgrade moved it to `conversationId`, where that id names
+ * another message (flows §3.3).
+ */
+async function answerPostMessageId(
+  deps: Deps,
+  ctx: AnswerContext,
+  conversationId: string,
+): Promise<string | null> {
   const [row] = await deps.db
     .select({ externalId: outbound.externalId })
     .from(outbound)
@@ -835,6 +843,7 @@ async function answerPostMessageId(deps: Deps, ctx: AnswerContext): Promise<stri
           outboundKey("answer_post", { exchangeId: ctx.exchange.id, suffix: ctx.answer.id }),
         ),
         eq(outbound.status, "sent"),
+        eq(outbound.conversationId, conversationId),
       ),
     )
     .limit(1);
@@ -870,7 +879,7 @@ async function postWordsToGroup(
   if (group === null) {
     return;
   }
-  const replyTo = await answerPostMessageId(deps, ctx);
+  const replyTo = await answerPostMessageId(deps, ctx, group.conversationId);
   const written = await insertOutbound(deps, deps.db, {
     kind: "answer_post",
     idempotencyKey: outboundKey("answer_post", {

@@ -115,6 +115,47 @@ describe("selectAsk", () => {
     expect(result).toEqual({ source: "whenever", exchangeId: "open" });
   });
 
+  // Flows §3.6: its own morning passed unsent (she was paused, or the window closed during an
+  // outage), and the family was told it was going into a morning.
+  it("carries an ask whose morning passed unsent, after the date's own ask and before the whenever queue", () => {
+    const carried = scheduledAsk("carried", {
+      scheduledFor: "2026-09-15",
+      state: "scheduled",
+      createdAt: at(30),
+    });
+    expect(select([wheneverAsk("w1", { createdAt: at(0) }), carried])).toEqual({
+      source: "carried",
+      exchangeId: "carried",
+    });
+    expect(select([carried, scheduledAsk("s1", { createdAt: at(40) })])).toEqual({
+      source: "scheduled",
+      exchangeId: "s1",
+    });
+  });
+
+  it("carries the ask of the earliest passed morning first, then the oldest of that morning", () => {
+    const result = select([
+      scheduledAsk("later-day", { scheduledFor: "2026-09-15", createdAt: at(0) }),
+      scheduledAsk("earlier-day-newer", {
+        scheduledFor: "2026-09-14",
+        createdAt: at(20),
+        whenRule: "whenever",
+        state: "scheduled",
+      }),
+      scheduledAsk("earlier-day", { scheduledFor: "2026-09-14", createdAt: at(10) }),
+    ]);
+    expect(result).toEqual({ source: "carried", exchangeId: "earlier-day" });
+  });
+
+  it.each<ExchangeState>(["delivered", "answered", "withdrawn"])(
+    "carries no ask of a passed morning once it is %s",
+    (state) => {
+      expect(select([scheduledAsk("s1", { scheduledFor: "2026-09-15", state })])).toEqual({
+        source: "hello",
+      });
+    },
+  );
+
   it("does not treat a dated ask without a date as a whenever ask", () => {
     expect(select([scheduledAsk("s1", { whenRule: "date", scheduledFor: null })])).toEqual({
       source: "hello",

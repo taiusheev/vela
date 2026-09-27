@@ -372,7 +372,9 @@ describe("hasHealthWordsConsent", () => {
 });
 
 describe("repointFamilyGroup", () => {
-  it("moves the link, the refs, and the queued rows, keeping a ref the new chat already holds", async () => {
+  // A supergroup numbers its own messages from 1, so an id from the old chat names another message
+  // there: nothing that names one moves (flows §3.3).
+  it("moves the link and the queued rows, and drops the old chat's refs and what names its messages", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const group = await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: "-1" });
     const exchange = await seedExchange(h.db, seed, { date: "2026-09-14" });
@@ -408,7 +410,10 @@ describe("repointFamilyGroup", () => {
         conversationId: "-1",
         localDay: "2026-09-14",
         idempotencyKey: "queued",
-        payload: {},
+        payload: {
+          message: { lang: "en", text: "Mom: I made soup", replyToMessageId: "5" },
+          sentMedia: { "photo-her": "4" },
+        },
       },
       {
         memberId: seed.member.id,
@@ -417,7 +422,7 @@ describe("repointFamilyGroup", () => {
         conversationId: "-1",
         localDay: "2026-09-14",
         idempotencyKey: "sent",
-        payload: {},
+        payload: { message: { lang: "en", text: "Into Mom's morning.", replyToMessageId: "3" } },
         status: "sent",
       },
     ]);
@@ -431,12 +436,15 @@ describe("repointFamilyGroup", () => {
     const refs = await h.db.select().from(messageRefs).orderBy(asc(messageRefs.messageId));
     expect(refs.map((ref) => [ref.conversationId, ref.messageId, ref.purpose])).toEqual([
       ["-2", "5", "turn_prompt"],
-      ["-2", "6", "ask_confirmation"],
     ]);
     const rows = await h.db.select().from(outbound).orderBy(asc(outbound.idempotencyKey));
-    expect(rows.map((row) => [row.idempotencyKey, row.conversationId])).toEqual([
-      ["queued", "-2"],
-      ["sent", "-1"],
+    expect(rows.map((row) => [row.idempotencyKey, row.conversationId, row.payload])).toEqual([
+      ["queued", "-2", { message: { lang: "en", text: "Mom: I made soup" } }],
+      [
+        "sent",
+        "-1",
+        { message: { lang: "en", text: "Into Mom's morning.", replyToMessageId: "3" } },
+      ],
     ]);
   });
 });

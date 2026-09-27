@@ -29,6 +29,13 @@
       "when": 1790361534080,
       "tag": "0003_suggestion_days",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790479410876,
+      "tag": "0004_reaction_messages",
+      "breakpoints": true
     }
   ]
 }

@@ -887,6 +887,33 @@ describe("webhook redelivery", () => {
     ]);
     expect(await countRows(replies)).toBe(4);
   });
+
+  // Flows §3.11: a member's set on one message of an exchange must not replace what another
+  // message of it carries.
+  it("records the messages a reaction is on, and none for a reply or a reaction stored before", async () => {
+    const seed = await seedFamily();
+    const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
+    const base = {
+      exchangeId: exchange.id,
+      memberId: seed.organiser.id,
+      channel: "telegram",
+    } as const;
+
+    const rows = await db
+      .insert(replies)
+      .values([
+        { ...base, kind: "heart", reactedMessageIds: ["-100500:9", "-100500:10"] },
+        { ...base, kind: "laugh" },
+        { ...base, kind: "text", text: "Lovely" },
+      ])
+      .returning();
+
+    expect(rows.map((row) => [row.kind, row.reactedMessageIds])).toEqual([
+      ["heart", ["-100500:9", "-100500:10"]],
+      ["laugh", []],
+      ["text", []],
+    ]);
+  });
 });
 
 describe("quiet events", () => {

@@ -604,7 +604,8 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
 
   // The send is committed alone (D-B1): the message is out, and no later failure may undo the row
   // that proves it. The effects follow in their own transaction. The media an earlier try got out
-  // is part of the message, so a reply to it resolves too.
+  // is part of the message, so a reply to it resolves too. The row names the chat the message went
+  // to, which an upgrade of the group handled while the send was out has moved on (flows §3.3).
   const sentAt = deps.clock.now();
   const attempts = taken.row.attempts + 1;
   const created: SendResult = {
@@ -614,7 +615,14 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
   const recorded = await deps.db.transaction(async (tx) => {
     const [sent] = await tx
       .update(outbound)
-      .set({ status: "sent", sentAt, attempts, externalId: result.primaryMessageId, error: null })
+      .set({
+        status: "sent",
+        sentAt,
+        attempts,
+        conversationId: taken.row.conversationId,
+        externalId: result.primaryMessageId,
+        error: null,
+      })
       .where(heldBy(taken.row.id, heldSince))
       .returning({ id: outbound.id });
     if (sent === undefined) {
@@ -920,9 +928,10 @@ async function recordRefs(
 }
 
 /**
- * A failed send, on the row this delivery holds since `heldSince`. A retry, and a re-send to a
- * migrated group, give the row back (`sent_at` null) with the media this send got out added to
- * `sentMedia`, in the same write, so the next try sends only the rest (flows §3.7).
+ * A failed send, on the row this delivery holds since `heldSince`. A retry gives the row back
+ * (`sent_at` null) with the media this send got out added to `sentMedia`, in the same write, so the
+ * next try sends only the rest (flows §3.7); a re-send to a migrated group gives it back with none,
+ * since those ids name nothing in the new chat (flows §3.3).
  */
 async function handleSendError(
   deps: Deps,
@@ -946,13 +955,15 @@ async function handleSendError(
   if (migratedTo !== undefined && migratedTo !== row.conversationId) {
     // The group became a supergroup: the family group follows it, as it does on the inbound
     // notice, and the send goes again at once to the new id. The row's own conversation id moves
-    // with the group's other queued rows. A row already addressed to the id the error names falls
-    // through to a permanent failure, so a send cannot loop.
+    // with the group's other queued rows. The media this try got out went to the old chat, whose
+    // ids name nothing in the new one, so it is not kept: the message goes to the new chat whole
+    // (flows §3.3). A row already addressed to the id the error names falls through to a permanent
+    // failure, so a send cannot loop.
     const released = await deps.db.transaction(async (tx) => {
       await repointFamilyGroup(tx, row.channel, row.conversationId, migratedTo);
       const [mine] = await tx
         .update(outbound)
-        .set({ queuedAt: deps.clock.now(), sentAt: null, ...progress })
+        .set({ queuedAt: deps.clock.now(), sentAt: null })
         .where(heldBy(row.id, heldSince))
         .returning({ id: outbound.id });
       return mine !== undefined;
@@ -969,17 +980,31 @@ async function handleSendError(
   if (error.retryable && delayMinutes !== undefined) {
     const delaySeconds = Math.max(delayMinutes * 60, error.retryAfterSeconds ?? 0);
     const dueAt = new Date(deps.clock.now().getTime() + delaySeconds * 1000);
-    const [released] = await deps.db
-      .update(outbound)
-      .set({
-        attempts,
-        error: describe(error.code, error.message),
-        queuedAt: dueAt,
-        sentAt: null,
-        ...progress,
-      })
-      .where(heldBy(row.id, heldSince))
-      .returning({ id: outbound.id });
+    const giveBack = (kept: { payload?: OutboundPayload }, where: SQL | undefined) =>
+      deps.db
+        .update(outbound)
+        .set({
+          attempts,
+          error: describe(error.code, error.message),
+          queuedAt: dueAt,
+          sentAt: null,
+          ...kept,
+        })
+        .where(where)
+        .returning({ id: outbound.id });
+    // The media this send got out is kept only while the row addresses the chat it went to. An
+    // upgrade of the group handled while the send was out has moved the row to the supergroup,
+    // where those ids name other messages, and taken its reply target, so the retry goes there
+    // whole (flows §3.3).
+    let [released] = await giveBack(
+      progress,
+      progress.payload === undefined
+        ? heldBy(row.id, heldSince)
+        : and(heldBy(row.id, heldSince), eq(outbound.conversationId, row.conversationId)),
+    );
+    if (released === undefined && progress.payload !== undefined) {
+      [released] = await giveBack({}, heldBy(row.id, heldSince));
+    }
     if (released === undefined) {
       return holdTaken(deps, row);
     }
