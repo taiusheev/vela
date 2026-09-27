@@ -1,7 +1,56 @@
-import type { FailedOutboundRow } from "@vela/services";
+import type { AdminOverview, FailedOutboundRow } from "@vela/services";
 import { describe, expect, it } from "vitest";
 import { renderFamilyPage, renderOverview } from "./admin-pages.ts";
 import { familyPageFixture, memberFixture } from "./testing/fakes.ts";
+
+/** An overview with no family and LINE never read. */
+const NO_FAMILIES: AdminOverview = { families: [], lineQuota: null };
+
+/** One section of a page, from its opening tag to its close. */
+function sectionOf(body: string, id: string): string {
+  const start = body.indexOf(`<section id="${id}">`);
+  expect(start, `no ${id} section on the page`).toBeGreaterThan(-1);
+  return body.slice(start, body.indexOf("</section>", start));
+}
+
+describe("the overview's LINE quota", () => {
+  const readAt = new Date("2026-10-12T01:30:00.000Z");
+
+  it("shows the month's count, the limit and when it was read, and nothing else of LINE", async () => {
+    const overview: AdminOverview = {
+      families: [],
+      lineQuota: { limit: 3000, used: 2100, readAt },
+    };
+
+    const section = sectionOf(await renderOverview(overview, []).text(), "line-quota");
+
+    expect(section).toBe(`<section id="line-quota"><h2>LINE quota</h2>
+<p>LINE: 2100 of 3000 messages this month, read at 2026-10-12T01:30:00Z.</p>
+<p class="muted">Read every 15 minutes where LINE is on. The founder hears at 70% and 90% of the limit, and when it is spent.</p>`);
+  });
+
+  it("shows a plan without a limit as having none", async () => {
+    const overview: AdminOverview = { families: [], lineQuota: { limit: null, used: 194, readAt } };
+
+    const section = sectionOf(await renderOverview(overview, []).text(), "line-quota");
+
+    expect(section).toContain(
+      "<p>LINE: 194 messages this month, with no limit, read at 2026-10-12T01:30:00Z.</p>",
+    );
+  });
+
+  it("says LINE has not been read yet before the first reading", async () => {
+    const section = sectionOf(await renderOverview(NO_FAMILIES, []).text(), "line-quota");
+
+    expect(section).toContain("<p>LINE: not read yet.</p>");
+  });
+
+  it("is on the overview alone: the family page names nothing of LINE", async () => {
+    const page = familyPageFixture({ members: [memberFixture()] });
+
+    expect(await renderFamilyPage(page, null).text()).not.toMatch(/\bLINE\b/);
+  });
+});
 
 describe("the overview's failed sends", () => {
   /** The section alone, from its opening tag to its close. */
@@ -26,7 +75,7 @@ describe("the overview's failed sends", () => {
   };
 
   it("lists each send by its code, time, kind, and attempts, linked to its family and escaped", async () => {
-    const section = failedSection(await renderOverview([], [failed]).text());
+    const section = failedSection(await renderOverview(NO_FAMILIES, [failed]).text());
 
     expect(section).toContain(
       '<a href="/admin/families/11111111-1111-7111-8111-111111111111">&lt;img src=x onerror=&quot;go()&quot;&gt; &amp; Lin</a>',
@@ -41,7 +90,7 @@ describe("the overview's failed sends", () => {
   });
 
   it("says no send has failed when services returned none", async () => {
-    const section = failedSection(await renderOverview([], []).text());
+    const section = failedSection(await renderOverview(NO_FAMILIES, []).text());
 
     expect(section).toContain("No send has failed or been dropped.");
     expect(section).not.toContain("<table");

@@ -12,6 +12,7 @@ import {
   deletions,
   events,
   families,
+  flags,
   invites,
   members,
   nearbyContacts,
@@ -45,6 +46,7 @@ import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
+import { recordChannelQuota } from "./quota.ts";
 import { consentedNearbyContacts } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import {
@@ -1692,7 +1694,7 @@ describe("the admin pages", () => {
       },
     ]);
 
-    const rows = await loadAdminOverview(h.deps, FOUNDER);
+    const { families: rows } = await loadAdminOverview(h.deps, FOUNDER);
 
     expect(rows.map((row) => row.family.id)).toEqual([seed.family.id, other.family.id]);
     expect(rows[0]).toMatchObject({
@@ -1731,7 +1733,7 @@ describe("the admin pages", () => {
       createdAt: h.clock.now(),
     });
 
-    const rows = await loadAdminOverview(h.deps, FOUNDER);
+    const { families: rows } = await loadAdminOverview(h.deps, FOUNDER);
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -1740,6 +1742,64 @@ describe("the admin pages", () => {
       answers: [],
     });
     expect((await logRows()).map((log) => log.action)).toEqual(["view"]);
+  });
+
+  it("says LINE's quota has not been read before the first reading", async () => {
+    await family();
+
+    const overview = await loadAdminOverview(h.deps, FOUNDER);
+
+    expect(overview.lineQuota).toBeNull();
+  });
+
+  it("shows LINE's last reading, its count, limit and time and nothing else, logging no view for it", async () => {
+    await recordChannelQuota(h.deps, "line", {
+      limit: 3000,
+      used: 120,
+      readAt: "2026-09-14T00:00:00.000+08:00",
+    });
+    await recordChannelQuota(h.deps, "line", {
+      limit: 3000,
+      used: 194,
+      readAt: "2026-09-14T08:15:00.000+08:00",
+    });
+
+    const overview = await loadAdminOverview(h.deps, FOUNDER);
+
+    expect(overview).toStrictEqual({
+      families: [],
+      lineQuota: { limit: 3000, used: 194, readAt: new Date("2026-09-14T00:15:00.000Z") },
+    });
+    expect(await logRows()).toEqual([]);
+  });
+
+  it("shows a reading with no limit as it is", async () => {
+    await recordChannelQuota(h.deps, "line", {
+      limit: null,
+      used: 5000,
+      readAt: "2026-09-14T00:15:00.000Z",
+    });
+
+    const overview = await loadAdminOverview(h.deps, FOUNDER);
+
+    expect(overview.lineQuota).toStrictEqual({
+      limit: null,
+      used: 5000,
+      readAt: new Date("2026-09-14T00:15:00.000Z"),
+    });
+  });
+
+  it("shows LINE as not read, and says so in the log, when its row no longer reads as a reading", async () => {
+    await h.db.insert(flags).values({ key: "line_quota", value: { used: "a lot" } });
+
+    const overview = await loadAdminOverview(h.deps, FOUNDER);
+
+    expect(overview.lineQuota).toBeNull();
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "channel_quota_unreadable",
+      fields: { channel: "line" },
+    });
   });
 
   it("shows one family with its flagged and unread answers and the read's count lines, logging the page path", async () => {

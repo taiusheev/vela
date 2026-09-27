@@ -207,11 +207,11 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
   admin.get("/", async (c) => {
     const ctx: AdminContext = { admin: c.get("admin") };
     // One read after the other: both use the request's one database connection.
-    const overview = await withDeps(c, async (deps) => ({
-      families: await runtime.services.loadAdminOverview(deps, ctx),
+    const read = await withDeps(c, async (deps) => ({
+      overview: await runtime.services.loadAdminOverview(deps, ctx),
       failedOutbound: await runtime.services.loadFailedOutbound(deps, ctx),
     }));
-    return renderOverview(overview.families, overview.failedOutbound);
+    return renderOverview(read.overview, read.failedOutbound);
   });
 
   admin.get("/families/:familyId", async (c) => {

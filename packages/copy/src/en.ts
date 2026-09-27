@@ -59,7 +59,9 @@
  * `admin.*` messages go to the founder's Telegram chat with the bot, which sits outside
  * `admin_access_log` and outside retention (plan/materials/pilot/data-map.md, gap 15). They carry
  * the family name and a link to the admin page, where every read is logged, and never anything the
- * family wrote.
+ * family wrote. `admin.line_quota` and `admin.line_quota_exhausted` are about no family: they link
+ * to the overview, and the first carries two counts of Vela's own LINE messages this month
+ * (05-line-flows.md §6), which say nothing about anyone.
  */
 export const en = {
   "arrival.greeting": "Good morning, {address}.",
@@ -186,4 +188,7 @@ export const en = {
     "{name} can no longer be told anything in {family}, and no other organiser can: nobody will hear if a light there goes quiet. Open: {link}",
   "admin.quiet_nobody_told":
     "It's been quiet at {name}'s today in {family}, and no organiser can be told. Open: {link}",
+  "admin.line_quota": "LINE has used {used} of this month's {limit} messages. Open: {link}",
+  "admin.line_quota_exhausted":
+    "LINE has used all of this month's messages: mornings and notices on LINE fail until the plan changes or the month ends, and only replies still go out. Open: {link}",
 } satisfies Record<string, string>;

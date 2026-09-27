@@ -2,8 +2,9 @@
  * What the Worker wires itself to (code design §8, §9): the inbound door; the member's scheduler
  * tick and the cron's reconciliation; the three queue jobs and their messages; the nightly jobs;
  * the admin page's reads and actions, with their input and result types, its paths, and the admin
- * link; the ports all of them receive; and `VelaError`, whose code the Worker turns into a status,
- * with `errorLabel`, which logs a failure without its message. Everything else in the package,
+ * link; the channel quota the cron records for the overview; the ports all of them receive; and
+ * `VelaError`, whose code the Worker turns into a status, with `errorLabel`, which logs a failure
+ * without its message. Everything else in the package,
  * including the helpers these call themselves, is a flow's own business. The test harness is not
  * here: it lives behind `@vela/services/testing`, so production code cannot reach it.
  */
@@ -12,6 +13,7 @@ export {
   ADMIN_OVERVIEW_PATH,
   type AddContactInput,
   type AdminContext,
+  type AdminOverview,
   type AdminOverviewRow,
   addContact,
   adminLink,
@@ -99,6 +101,7 @@ export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
+export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";
 export {
   BANK_PROMPT_VERSION,
   pickBankItem,

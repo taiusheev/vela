@@ -1,12 +1,17 @@
 /**
  * The founder's two server-rendered pages (code design §9, flows §3.17). The overview carries no
- * family content at all: states, times, kinds, counts, and the codes of failed sends. The family
- * page carries the records the founder needs to act on — summaries, flag quotes, AI outputs — and
- * every write on it is a POST form to `/admin/families/:familyId/:action`.
+ * family content at all: states, times, kinds, counts, the codes of failed sends, and LINE's
+ * monthly count. The family page carries the records the founder needs to act on — summaries, flag
+ * quotes, AI outputs — and every write on it is a POST form to `/admin/families/:familyId/:action`.
  *
  * Nothing here queries or decides: it renders what `@vela/services` returned, escaped.
  */
-import type { AdminOverviewRow, FailedOutboundRow, FamilyPage } from "@vela/services";
+import type {
+  AdminOverview,
+  AdminOverviewRow,
+  FailedOutboundRow,
+  FamilyPage,
+} from "@vela/services";
 import { type Html, html, page, type Renderable } from "./html.ts";
 
 const DASH = "—";
@@ -117,8 +122,24 @@ ${
 }</section>`;
 }
 
+/**
+ * LINE's month as the pilot Worker last read it (05-line-flows.md §6): the count, the limit, and
+ * when it was read. No other LINE data is on any page.
+ */
+function lineQuotaSection(quota: AdminOverview["lineQuota"]): Html {
+  const reading =
+    quota === null
+      ? "not read yet."
+      : quota.limit === null
+        ? `${quota.used} messages this month, with no limit, read at ${instant(quota.readAt)}.`
+        : `${quota.used} of ${quota.limit} messages this month, read at ${instant(quota.readAt)}.`;
+  return html`<section id="line-quota"><h2>LINE quota</h2>
+<p>LINE: ${reading}</p>
+<p class="muted">Read every 15 minutes where LINE is on. The founder hears at 70% and 90% of the limit, and when it is spent.</p></section>`;
+}
+
 export function renderOverview(
-  rows: readonly AdminOverviewRow[],
+  overview: AdminOverview,
   failedOutbound: readonly FailedOutboundRow[],
 ): Response {
   const body = html`<h1>Vela admin</h1>
@@ -134,8 +155,9 @@ ${table(
     "Answers today",
     "AI 24 h (calls / failures)",
   ],
-  rows.map(overviewRow),
+  overview.families.map(overviewRow),
 )}
+${lineQuotaSection(overview.lineQuota)}
 ${failedOutboundSection(failedOutbound)}`;
   return page("Vela admin", body);
 }

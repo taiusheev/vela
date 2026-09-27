@@ -1,6 +1,6 @@
 # The LINE channel: flows, adapter, and cost
 
-2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9. Steps 1 to 3 and 6 of §8 are built: the contract; the whole adapter (webhook verification and events; sending, errors, downloads, profiles, leaving and quota); and the Worker's wiring, with LINE off in every environment (the webhook, the inbound queue, the media route and LINE's configuration). Nothing else is yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
+2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9. Steps 1 to 3, 6 and 7 of §8 are built: the contract; the whole adapter (webhook verification and events; sending, errors, downloads, profiles, leaving and quota); the Worker's wiring, with LINE off in every environment (the webhook, the inbound queue, the media route and LINE's configuration); and the quota in admin (the cron's reading, the overview's LINE line and the founder's alerts), inert while LINE is off. Nothing else is yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
 
 Read it with:
 - `04-instrument-flows.md`. Any flow this document does not change works exactly as written there.
@@ -886,13 +886,13 @@ Because `buildDeps` calls `readConfig`, every job, cron run and alarm refuses a 
 - **Staging:** `off` in step 6. `on` in step 8's commit, with the `INBOUND_QUEUE` producer and the `vela-inbound-staging` consumer, `LINE_BOT_BASIC_ID` in both files, and the three secrets already put. The setup script runs `--from resources` on that commit before it is merged to main, which creates the queue and deploys.
 - **Production:** `off`, pinned by `wrangler-config.test.ts` until step 11 turns it on, as `API_V1` is pinned.
 
-**Cron** (step 7). In the `RECONCILE_CRON` branch, after `reconcile` (and so after the heartbeat), where LINE is on:
+**Cron** (step 7, built). In the `RECONCILE_CRON` branch, after `reconcile` (and so after the heartbeat), where LINE is on:
 
 ```ts
 services.recordChannelQuota(deps, "line", await channels.get("line").quota())
 ```
 
-It runs in its own try/catch that logs `line_quota_failed` with the label, so a LINE outage never fails reconcile. The admin Worker never calls LINE. It is built with `recordChannelQuota`.
+It runs in its own try/catch that logs `line_quota_failed` with the label, so a LINE outage, or a reading services refuse, never fails reconcile; a reconcile that throws fails the run as before, and no quota is read. The admin Worker never calls LINE: its overview reads the `flags` row the cron wrote.
 
 **Setup script.**
 - `resources` creates `vela-inbound-<environment>` only where that environment's `LINE_CHANNEL` is `on`. `readEnvironmentConfig` reads `LINE_CHANNEL` from both files into `EnvironmentConfig.lineChannel`. It refuses (`SetupError`) two values that differ, a value that is neither `on` nor `off`, and a value that disagrees with the pilot's binding: `on` must produce `INBOUND_QUEUE` onto `vela-inbound-<environment>` and consume it, `off` must bind no inbound queue. The queue is then among those the step creates, like any other. With `off` the step prints `lineOffLine` instead, which says how to switch it on. So a run today creates nothing new.
@@ -913,7 +913,7 @@ It runs in its own try/catch that logs `line_quota_failed` with the label, so a 
   - A `payload.reply = { token, until, conversationId: event.conversation.externalId }` is stored from the event. It is passed as `replyToken` only on a row's first attempt, only while `now < until`, and only when its `conversationId` equals the row's conversation (§5.9): a reply lands in the chat the token came from, so an organiser notice caused by her tap must never carry her token. A test proves the last rule.
   - Replies are used for `ack`, `help.private`, `help.followed`, `consent.invalid_link`, `consent.already_linked`, `consent.request`, `consent.accepted`, `consent.declined`, onboarding prompts, `group.ask_confirmed`, `group.ask_queued`, `group.linked`, `group.not_linked` and `quiet.waiting`. A second message on one token falls back to a push.
   - A private conversation whose link is blocked fails as `blocked` unsent.
-  - `quota_exhausted` sends `admin.line_quota_exhausted` once per month.
+  - `quota_exhausted` sends `admin.line_quota_exhausted` once per month, through the claim `line_quota:<yyyy-mm>:exhausted` that `quota.ts` already takes when a reading shows the month spent (§6), so the founder hears once whichever sees it first.
   - With `mediaByUrl`, no bytes are loaded.
   - Media refs are built for the target channel: `storageKey` when stored; `providerFileId` only when the media row's channel is the target and the adapter re-sends provider files; otherwise dropped with `media_unsendable`.
 - **Router:**
@@ -923,7 +923,7 @@ It runs in its own try/catch that logs `line_quota_failed` with the label, so a 
   - the turn prompt copy chosen by `mediaReplies`.
 - **Answers and pipeline:** the post after ingestion, photo ingestion with preview, and duration from the m4a header (§4).
 - **Names and language:** `profile()` lookups for the organiser at onboarding (name and language) and for lazily created group members (name), with D7's fallback.
-- **Copy:** new keys `help.followed`, `group.turn_prompt_text`, `group.turn_prompt_open_text`, `admin.line_quota` `{used, limit, link}` and `admin.line_quota_exhausted` `{link}`. `consent.already_linked` loses "Telegram" ("This account is already connected to another family on Vela."). The zh-TW texts go to the native reviewer of build plan 2.4.
+- **Copy:** new keys `help.followed`, `group.turn_prompt_text` and `group.turn_prompt_open_text`; `admin.line_quota` `{used, limit, link}` and `admin.line_quota_exhausted` `{link}` came with step 7. `consent.already_linked` loses "Telegram" ("This account is already connected to another family on Vela."). The zh-TW texts go to the native reviewer of build plan 2.4.
 
 ## 6. Cost
 
@@ -955,12 +955,13 @@ At three adults, a full 中用量 costs about NT$91 per family-month. The "~NT$1
 - whether the Official Account itself counts as a person in the group;
 - whether members who blocked the account, or never added it, count.
 
-**Quota tracking.**
+**Quota tracking** (built in step 7, `packages/services/src/quota.ts`).
 - The pilot Worker reads LINE's quota every 15 minutes, after reconcile (§5.10).
-- `recordChannelQuota` writes the `flags` row `line_quota` with `{ limit, used, readAt }`. That table exists and is unused, so no migration is needed.
-- It sends `admin.line_quota` to the admin conversation once per quota month at 70% and once at 90%, keyed `line_quota:<yyyy-mm, Asia/Taipei>:<threshold>`. LINE does not document the time zone its quota month resets in, so an alert near a month's edge may land in the next month's key.
-- `quota_exhausted` sends `admin.line_quota_exhausted` once a month.
-- The admin overview shows "LINE: used of limit this month, read at …", or "not read yet". It reads only the `flags` row and writes the usual `view` rows.
+- `recordChannelQuota` checks the reading (whole counts, a limit or null, a time with its offset; anything else is `VelaError` `invalid_payload`) and writes the `flags` row `line_quota` with `{ limit, used, readAt }`, replacing the one before. That table existed unused, so no migration was needed.
+- It tells the founder the highest level the reading has reached, once per quota month each: `admin.line_quota` `{used, limit, link}` at 70% and at 90% of the limit, and `admin.line_quota_exhausted` `{link}` once `used` reaches it; `{link}` is the overview. A reading that jumps past two levels sends one message, so a first reading at 95% says 90% and not 70% as well. A plan with no limit tells nothing.
+- "Once" is a `flags` row claimed before the send, keyed `line_quota:<yyyy-mm, Asia/Taipei>:<level>` (`70`, `90`, `exhausted`). A quota belongs to no member, and an outbound row does, so the message cannot go through the gateway: it goes straight to the admin conversation on Telegram, as `sendOutsideGateway` sends to someone not yet a member. A send that fails for a reason that can pass gives the claim back, and the next reading tries again 15 minutes later; one Telegram refuses for good keeps it, as the gateway would not retry it. With no admin conversation nothing is claimed. LINE does not document the time zone its quota month resets in, so an alert near a month's edge may land in the next month's key. A plan changed mid-month keeps the month's claims: after a move to 高用量 at the 70% alert, the founder next hears at 90% of the new limit.
+- `quota_exhausted` from a send (step 5) will take the same `exhausted` claim.
+- The admin overview shows "LINE: used of limit this month, read at …", "with no limit" for a plan without one, or "not read yet". It reads only the `flags` row and writes the usual `view` rows, none for LINE. No other LINE data is on any page.
 - When the quota runs out, replies still work, because they are free. Vela degrades to reply-only by itself, which is what `02-technical-architecture-v2.md` §8 asked of `adapters/line/quota.ts`. An adapter never holds state, so that module does not exist.
 
 **FOUNDER DECISION D10 (the plan).**
@@ -1099,7 +1100,7 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
    - Founder: nothing.
    - **Done** on `feat/line`.
 7. **Quota in admin.**
-   - Files: `packages/services/src/quota.ts` (`recordChannelQuota`), `admin.ts` (`loadAdminOverview` reads `line_quota`), `apps/worker/src/admin-pages.ts`, and the quota cron in `apps/worker/src/pilot-worker.ts` (§5.10, "Cron").
+   - Files: `packages/services/src/quota.ts` (`recordChannelQuota`, `loadChannelQuota`), `admin-alerts.ts` (`adminOverviewLink`), `admin.ts` (`loadAdminOverview` returns `{ families, lineQuota }`), `packages/copy` (`admin.line_quota`, `admin.line_quota_exhausted`, en and zh-TW drafts), `apps/worker/src/admin-pages.ts`, and the quota cron in `apps/worker/src/pilot-worker.ts` (§5.10, "Cron").
    - Tests:
      - the snapshot is written;
      - alerts at 70% and 90%, each once a month;
@@ -1107,6 +1108,12 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
      - no page shows anything else of LINE;
      - the quota cron runs after reconcile only where LINE is on, and its failure is logged without failing the run.
    - Founder: nothing.
+   - **Done** on `feat/line-quota`, 27 September 2026:
+     - `recordChannelQuota` and the alerts as §6 "Quota tracking" says: the reading kept in `flags`, the highest level reached told once per Taipei month through a claim row, sent outside the gateway because a quota belongs to no member, and a claim given back when the send failed for a reason that can pass;
+     - the overview's "LINE quota" section, after the families and before the failed sends;
+     - the cron's `recordLineQuota`, in its own try, logging `line_quota_failed` with the label; `PilotServices` gains `recordChannelQuota`, its tenth entry point;
+     - the copy's admin rule now lets `admin.line_quota` alone carry its two counts, which are of Vela's own messages, and the zh-TW spacing rule counts `{used}` and `{limit}` as digits;
+     - tests: services (`quota.test.ts`: the snapshot replaced, 70% and 90% once each, a spent month once and without the 90% before it, one message for a jump past two levels, the next Taipei month, no limit, a passing failure retried at the next reading, a lasting refusal not retried, no admin conversation, bad readings refused; `admin.test.ts`: the overview's reading, no reading, no limit, an unreadable row, no `view` row for LINE); the Worker (`pilot-worker.test.ts`: the reading after reconcile where LINE is on, none in development, staging and production, none nightly, a LINE failure and a services failure logged by label with the run succeeding, none after a failed reconcile; `admin-pages.test.ts` and `admin-app.test.ts`: the section's exact text, no limit, not read yet, and no `LINE` on the family page). The claim, its release, the Taipei month, the highest level, the LINE switch, the try and the order after reconcile were each shown to fail their tests when broken.
 8. **The staging loop: build plan 2.3's definition of done.**
    - Founder:
      - D1;

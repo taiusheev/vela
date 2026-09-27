@@ -6,9 +6,10 @@
  * `pilotRuntime` is the only place the real services are wired into the pilot Worker, the API's
  * through `api` (`api-runtime.ts`); the admin Worker has its own seam in `admin-runtime.ts`.
  */
-import type { InboundEvent } from "@vela/contracts";
+import type { ChannelQuota, InboundEvent } from "@vela/contracts";
 import {
   applyRetention,
+  type BilledChannel,
   type DeliveryResult,
   type Deps,
   deliverOutbound,
@@ -16,6 +17,7 @@ import {
   ingestAnswerMedia,
   type ReconcileResult,
   reconcile,
+  recordChannelQuota,
   rollupMetrics,
   type SuggestionsRun,
   tickMember,
@@ -33,6 +35,7 @@ export interface PilotServices {
   handleInbound(deps: Deps, events: InboundEvent[]): Promise<void>;
   tickMember(deps: Deps, memberId: string): Promise<Date | null>;
   reconcile(deps: Deps): Promise<ReconcileResult>;
+  recordChannelQuota(deps: Deps, channel: BilledChannel, quota: ChannelQuota): Promise<void>;
   rollupMetrics(deps: Deps): Promise<number>;
   applyRetention(deps: Deps): Promise<Record<string, number>>;
   writeSuggestions(deps: Deps): Promise<SuggestionsRun>;
@@ -63,6 +66,7 @@ const services: PilotServices = {
   handleInbound,
   tickMember,
   reconcile,
+  recordChannelQuota,
   rollupMetrics,
   applyRetention,
   writeSuggestions,

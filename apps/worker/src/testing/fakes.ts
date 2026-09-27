@@ -5,9 +5,9 @@
  */
 import { env } from "cloudflare:test";
 import { createFakeAi, createFakeStt } from "@vela/ai";
-import type { ChannelAdapter, InboundEvent } from "@vela/contracts";
+import type { ChannelAdapter, ChannelQuota, InboundEvent } from "@vela/contracts";
 import type { Family, Member, VelaDatabase } from "@vela/db";
-import type { Deps, FamilyPage, Logger } from "@vela/services";
+import type { AdminOverview, Deps, FamilyPage, Logger } from "@vela/services";
 import { vi } from "vitest";
 import type { AdminRuntime, AdminServices } from "../admin-runtime.ts";
 import type { ApiHandler } from "../api-runtime.ts";
@@ -199,6 +199,8 @@ export interface FakePilotRuntime extends Recording {
   readonly apiRequests: string[];
   /** How many channel registries a route built: a route that read nothing built none. */
   channelsBuilt(): number;
+  /** How many times the deps' LINE adapter was asked for its quota. */
+  quotaReads(): number;
 }
 
 export interface FakeAdminRuntime extends Recording {
@@ -219,6 +221,11 @@ export interface FakePilotRuntimeOptions {
   readonly notices?: PrivacyNotices;
   /** Answers what is handed to `api`, which is still recorded; a 204 when left out. */
   readonly api?: ApiHandler;
+  /**
+   * What the deps' LINE adapter answers when the cron reads its quota, `LINE_QUOTA` when left out.
+   * Only the cron reads it, and only where LINE is on.
+   */
+  readonly lineQuota?: () => Promise<ChannelQuota>;
 }
 
 export interface FakeAdminRuntimeOptions {
@@ -242,7 +249,14 @@ export function recordingLogger(logs: LogLine[]): Logger {
   };
 }
 
-function createFakeDeps(logs: LogLine[]): Deps {
+/** A reading as the LINE adapter gives one: 194 of 中用量's 3,000, the staging dogfood's month (05 §6). */
+export const LINE_QUOTA: ChannelQuota = {
+  limit: 3000,
+  used: 194,
+  readAt: "2026-09-14T08:00:00.000+08:00",
+};
+
+function createFakeDeps(logs: LogLine[], line: ChannelAdapter): Deps {
   return {
     db: UNUSED_DATABASE,
     clock: { now: () => FAKE_NOW },
@@ -260,7 +274,7 @@ function createFakeDeps(logs: LogLine[]): Deps {
       delete: async () => {},
       head: async () => null,
     },
-    channels: { get: () => fakeAdapter([], "secret") },
+    channels: { get: (channel) => (channel === "line" ? line : fakeAdapter([], "secret")) },
     ai: createFakeAi(),
     stt: createFakeStt(),
     heartbeat: { ping: async () => {} },
@@ -325,6 +339,11 @@ function fakeAdapter(events: InboundEvent[], webhookSecret: string): ChannelAdap
   };
 }
 
+/** The deps' LINE adapter, which the cron alone reaches: it reads its quota and nothing else. */
+function fakeLineAdapter(quota: () => Promise<ChannelQuota>): ChannelAdapter {
+  return { ...fakeAdapter([], "secret"), id: "line", quota };
+}
+
 /** Both notices as a filled-in notice would be: no blank left in either. */
 export function noticesFixture(): PrivacyNotices {
   return {
@@ -376,7 +395,13 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
   const events = options.events ?? [];
   const webhookSecret = options.webhookSecret ?? "test-webhook-secret";
   const api = options.api;
+  const lineQuota = options.lineQuota ?? (async () => LINE_QUOTA);
   let channelsBuilt = 0;
+  let quotaReads = 0;
+  const line = fakeLineAdapter(() => {
+    quotaReads += 1;
+    return lineQuota();
+  });
 
   const services: PilotServices = {
     async handleInbound(deps, parsed) {
@@ -393,6 +418,10 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       return given.reconcile === undefined
         ? { ticked: 0, missed: 0, rerun: 0, effects: 0 }
         : given.reconcile(deps);
+    },
+    async recordChannelQuota(deps, channel, quota) {
+      note("recordChannelQuota", channel, quota);
+      await given.recordChannelQuota?.(deps, channel, quota);
     },
     async rollupMetrics(deps) {
       note("rollupMetrics");
@@ -426,7 +455,7 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
     services,
     createDeps: async (_env: PilotEnv, depsOptions: DepsOptions = {}): Promise<DepsHandle> => {
       recording.build();
-      const deps = createFakeDeps(recording.logs);
+      const deps = createFakeDeps(recording.logs, line);
       return {
         deps: {
           ...deps,
@@ -460,8 +489,12 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
     inbound,
     apiRequests,
     channelsBuilt: () => channelsBuilt,
+    quotaReads: () => quotaReads,
   };
 }
+
+/** An overview with no family and LINE never read, as a fresh environment's. */
+const EMPTY_OVERVIEW: AdminOverview = { families: [], lineQuota: null };
 
 export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): FakeAdminRuntime {
   const recording = createRecording();
@@ -471,7 +504,9 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
   const services: AdminServices = {
     async loadAdminOverview(deps, ctx) {
       note("loadAdminOverview", ctx);
-      return given.loadAdminOverview === undefined ? [] : given.loadAdminOverview(deps, ctx);
+      return given.loadAdminOverview === undefined
+        ? EMPTY_OVERVIEW
+        : given.loadAdminOverview(deps, ctx);
     },
     async loadFailedOutbound(deps, ctx) {
       note("loadFailedOutbound", ctx);

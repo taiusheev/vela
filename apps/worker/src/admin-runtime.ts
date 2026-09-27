@@ -13,7 +13,7 @@
 import {
   type AddContactInput,
   type AdminContext,
-  type AdminOverviewRow,
+  type AdminOverview,
   addContact,
   type Config,
   type CreateInviteInput,
@@ -45,7 +45,7 @@ import type { AdminEnv } from "./env.ts";
 
 /** Every services entry point the admin Worker calls, on the ports it holds (code design §9). */
 export interface AdminServices {
-  loadAdminOverview(deps: AdminDeps, ctx: AdminContext): Promise<AdminOverviewRow[]>;
+  loadAdminOverview(deps: AdminDeps, ctx: AdminContext): Promise<AdminOverview>;
   loadFailedOutbound(deps: AdminDeps, ctx: AdminContext): Promise<FailedOutboundRow[]>;
   loadFamilyPage(deps: AdminDeps, ctx: AdminContext, familyId: string): Promise<FamilyPage | null>;
   recordConsent(deps: AdminDeps, ctx: AdminContext, input: RecordConsentInput): Promise<void>;

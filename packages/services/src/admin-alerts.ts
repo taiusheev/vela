@@ -48,6 +48,11 @@ export function adminLink(config: Config, familyId: string): string {
   return `${config.publicBaseUrl.replace(/\/+$/, "")}${familyPagePath(familyId)}`;
 }
 
+/** The `{link}` in an admin message about no family, such as LINE's quota: the overview. */
+export function adminOverviewLink(config: Config): string {
+  return `${config.publicBaseUrl.replace(/\/+$/, "")}${ADMIN_OVERVIEW_PATH}`;
+}
+
 /**
  * `memberId`, an organiser, has just stopped being one who can be told — marked left, or their
  * link blocked — and no other organiser of the family can be. From now on a quiet morning there

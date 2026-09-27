@@ -28,8 +28,8 @@
  * the lines are all she gets (see the note in en.ts).
  *
  * Latin text, digits, and placeholders that always render as Latin or digits ({time}, {sent},
- * {usual}, {n}, {answered}, {days}, {mornings}, {channel}, {link}, {notice}) are separated from
- * Chinese characters by a space. The URLs {link} and {notice} also keep a space after the full-width
+ * {usual}, {n}, {answered}, {days}, {mornings}, {used}, {limit}, {channel}, {link}, {notice}) are
+ * separated from Chinese characters by a space. The URLs {link} and {notice} also keep a space after the full-width
  * colon, so a messenger's link detection cannot take a neighbouring character as part of the URL.
  * Placeholders for names ({name}, {names}, {asker}, {holder}, {organiser}, {child}, {address},
  * {family}) touch the Chinese characters around them, as a written name would, and so does
@@ -157,4 +157,7 @@ export const zhTW: Record<keyof typeof en, string> = {
     "{family}已經無法再通知{name}，也沒有其他發起人能收到通知：那裡有人安靜下來時，不會有人知道。查看： {link}",
   "admin.quiet_nobody_told":
     "{family}的{name}那邊今天比較安靜，但沒有任何發起人能收到通知。查看： {link}",
+  "admin.line_quota": "LINE 本月已用了 {used} 則訊息，上限是 {limit} 則。查看： {link}",
+  "admin.line_quota_exhausted":
+    "LINE 本月的訊息額度已經用完：在方案變更或下個月開始之前，LINE 上的早安訊息和通知都會傳送失敗，只有回覆還能送出。查看： {link}",
 };

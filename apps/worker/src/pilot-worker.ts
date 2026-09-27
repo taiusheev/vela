@@ -14,21 +14,22 @@ import {
   type UnderstandJob,
 } from "@vela/services";
 import { createApp } from "./app.ts";
-import { readApiSwitch } from "./config.ts";
+import { readApiSwitch, readLineSwitch } from "./config.ts";
 import { createLogger, type DepsHandle } from "./deps.ts";
 import type { InboundJob, PilotEnv } from "./env.ts";
 import type { PilotRuntime, PilotServices } from "./runtime.ts";
 
 /**
  * Reconciliation: pending send effects, stranded sends, late ticks, the understanding re-run and the
- * founder's note, then the heartbeat (flows §3.15). Every 15 minutes, not 5 (W3). Neon's free plan
- * allows 100 compute hours a project a month and suspends the database when they are spent; it
- * scales to zero after 5 idle minutes (neon.com/pricing, checked 2026-09-17). A run every 5 minutes
- * would keep it awake all month: about 180 compute hours at 0.25 CU. A run every 15 minutes keeps
- * it awake about 5 minutes in 15, about 60 compute hours a month, before the members' own alarms,
- * webhooks, and jobs, each of which wakes it for 5 minutes more, so the founder watches Neon's usage
- * and moves to a paid plan before families beyond the dogfooding week if it nears the limit. The
- * Durable Object alarms still send each arrival at its minute.
+ * founder's note, then the heartbeat (flows §3.15), then LINE's quota where LINE is on (05 §5.10).
+ * Every 15 minutes, not 5 (W3). Neon's free plan allows 100 compute hours a project a month and
+ * suspends the database when they are spent; it scales to zero after 5 idle minutes
+ * (neon.com/pricing, checked 2026-09-17). A run every 5 minutes would keep it awake all month: about
+ * 180 compute hours at 0.25 CU. A run every 15 minutes keeps it awake about 5 minutes in 15, about
+ * 60 compute hours a month, before the members' own alarms, webhooks, and jobs, each of which wakes
+ * it for 5 minutes more, so the founder watches Neon's usage and moves to a paid plan before
+ * families beyond the dogfooding week if it nears the limit. The Durable Object alarms still send
+ * each arrival at its minute.
  */
 export const RECONCILE_CRON = "*/15 * * * *";
 /**
@@ -131,6 +132,26 @@ async function runNightlyJobs(services: PilotServices, deps: Deps, env: PilotEnv
   }
   if (failures.length > 0) {
     throw failures[0];
+  }
+}
+
+/**
+ * LINE's quota, read after reconcile where LINE is on and kept for the admin overview and the
+ * founder's alerts (05 §5.10 and §6). In its own try: reconcile's work is done by then, so a LINE
+ * outage, or a reading services refuse, is logged by its label and never fails the run.
+ */
+async function recordLineQuota(services: PilotServices, deps: Deps, env: PilotEnv): Promise<void> {
+  if (readLineSwitch(env, "wrangler.jsonc") === "off") {
+    return;
+  }
+  try {
+    const line = deps.channels.get("line");
+    if (line.quota === undefined) {
+      throw new Error("the LINE adapter reads no quota");
+    }
+    await services.recordChannelQuota(deps, "line", await line.quota());
+  } catch (error) {
+    deps.logger.error("line_quota_failed", { error: errorLabel(error) });
   }
 }
 
@@ -257,6 +278,7 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
         handle = await runtime.createDeps(env);
         if (controller.cron === RECONCILE_CRON) {
           await runtime.services.reconcile(handle.deps);
+          await recordLineQuota(runtime.services, handle.deps, env);
         } else if (controller.cron === NIGHTLY_CRON) {
           await runtime.services.rollupMetrics(handle.deps);
           await runNightlyJobs(runtime.services, handle.deps, env);

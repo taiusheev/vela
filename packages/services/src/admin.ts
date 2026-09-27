@@ -88,6 +88,7 @@ import {
   NAME_MAX_LENGTH,
 } from "./invites.ts";
 import { forgetConsentSubjects, recordDeletion, subjectRef } from "./proofs.ts";
+import { type ChannelQuotaSnapshot, loadChannelQuota } from "./quota.ts";
 import {
   activeOrganisersWithLinks,
   channelLinkOfMember,
@@ -1435,15 +1436,23 @@ async function overviewRow(
   return row;
 }
 
+/** The overview: every family, and LINE's quota. */
+export interface AdminOverview {
+  families: AdminOverviewRow[];
+  /**
+   * LINE's month as the pilot Worker last read it (05-line-flows.md §6): the count, the limit and
+   * the time of the reading, and nothing else of LINE; null before the first reading.
+   */
+  lineQuota: ChannelQuotaSnapshot | null;
+}
+
 /**
  * The overview (`GET /admin`): every family with today's delivery, answer, and quiet states and
  * times, the answer kinds, and the AI call counts, each linking to its page; no words. Logs one
- * `view` per family listed before reading.
+ * `view` per family listed before reading. LINE's quota is about no family, so reading it logs
+ * nothing more.
  */
-export async function loadAdminOverview(
-  deps: Deps,
-  ctx: AdminContext,
-): Promise<AdminOverviewRow[]> {
+export async function loadAdminOverview(deps: Deps, ctx: AdminContext): Promise<AdminOverview> {
   const now = deps.clock.now();
   const all = await deps.db
     .select()
@@ -1458,7 +1467,7 @@ export async function loadAdminOverview(
   for (const family of all) {
     rows.push(await overviewRow(deps.db, family, await overviewSubject(deps.db, family.id), now));
   }
-  return rows;
+  return { families: rows, lineQuota: await loadChannelQuota(deps, "line") };
 }
 
 /**

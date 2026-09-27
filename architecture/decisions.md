@@ -465,7 +465,7 @@ Revisit if: a family's suggestions start repeating within six weeks (from about 
 ## ADR-32 · LINE: invites by a pre-filled start message, groups linked by an organiser's presence, the family's ordinary group messages dropped in the adapter
 **2026-09-26 · proposed, awaiting the founder's decisions in `05-line-flows.md` §9 · refines ADR-16 · corrects `02-technical-architecture-v2.md` §8 (LINE row)**
 
-Built so far, with `LINE_CHANNEL` `off` in every environment: the contract's LINE additions, the adapter (`packages/adapters/src/line`) and the pilot Worker's wiring (the webhook onto `vela-inbound`, the signed media route, the configuration refusals). The flows, the quota in the admin page and the staging loop are steps 4, 5, 7 and 8 of `05-line-flows.md` §8, and nothing reaches a family on LINE until this record is updated.
+Built so far, with `LINE_CHANNEL` `off` in every environment: the contract's LINE additions, the adapter (`packages/adapters/src/line`), the pilot Worker's wiring (the webhook onto `vela-inbound`, the signed media route, the configuration refusals) and the quota in the admin page (the cron's reading into `flags`, the overview's LINE line, the founder's alerts at 70%, 90% and a spent month, sent outside the gateway because a quota belongs to no member). The flows and the staging loop are steps 4, 5 and 8 of `05-line-flows.md` §8, and nothing reaches a family on LINE until this record is updated.
 
 Context: LINE passes nothing from an add-friend link to the webhook, its `join` names nobody, a bot in a group receives every message, a bot cannot edit what it sent, pushes are billed per person in a group, and Taiwan's 中用量 plan cannot buy messages beyond its 3,000 (`05-line-flows.md` §1).
 

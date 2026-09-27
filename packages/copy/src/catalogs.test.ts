@@ -239,6 +239,8 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["admin.weekly_read_draft", ["family", "link"]],
   ["admin.understand_failed", ["family", "link"]],
   ["admin.member_left_group", ["family", "name"]],
+  ["admin.line_quota", ["limit", "link", "used"]],
+  ["admin.line_quota_exhausted", ["link"]],
   ["weekly_read.answered", ["answered", "days", "name"]],
   ["weekly_read.answered_one", ["answered", "days", "name"]],
   ["weekly_read.hello_mornings", ["mornings", "name"]],
@@ -262,6 +264,14 @@ const COUNT_KEYS: readonly (readonly [plural: MessageKey, one: MessageKey, noun:
  */
 const ADMIN_PARAMETERS: ReadonlySet<string> = new Set(["family", "link", "name"]);
 
+/**
+ * The one admin message that carries more: LINE's quota alert, whose two counts are of Vela's own
+ * messages this month (05-line-flows.md §6), about no family and nothing anyone wrote.
+ */
+const ADMIN_COUNTS: ReadonlyMap<MessageKey, ReadonlySet<string>> = new Map([
+  ["admin.line_quota", new Set(["used", "limit"])],
+]);
+
 /** Placeholders that render as URLs. */
 const URL_PLACEHOLDERS = /(.?)\{(?:link|notice)\}(.?)/gsu;
 
@@ -281,6 +291,8 @@ const LATIN_PLACEHOLDERS: ReadonlySet<string> = new Set([
   "answered",
   "days",
   "mornings",
+  "used",
+  "limit",
   "channel",
   "link",
   "notice",
@@ -345,7 +357,7 @@ describe("catalogs", () => {
     expect(adminKeys.length).toBeGreaterThan(0);
     for (const key of adminKeys) {
       const extra = placeholdersOf(catalogs[lang][key]).filter(
-        (name) => !ADMIN_PARAMETERS.has(name),
+        (name) => !ADMIN_PARAMETERS.has(name) && ADMIN_COUNTS.get(key)?.has(name) !== true,
       );
       expect(extra, `${lang} ${key}`).toEqual([]);
     }

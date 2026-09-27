@@ -136,7 +136,25 @@ describe("the admin pages", () => {
     expect(argsOf(fake.calls, "loadFailedOutbound")).toEqual([[{ admin: "founder@vela.test" }]]);
     expect(body).toContain(`<span class="muted">${failed.id}</span>`);
     expect(body).toContain("<code>blocked</code>");
+    expect(body).toContain("<p>LINE: not read yet.</p>");
     expect(fake.closed()).toBe(fake.built());
+  });
+
+  it("shows LINE's quota as the overview read it", async () => {
+    const fake = createFakeAdminRuntime({
+      services: {
+        loadAdminOverview: async () => ({
+          families: [],
+          lineQuota: { limit: 3000, used: 2100, readAt: new Date("2026-10-12T01:30:00.000Z") },
+        }),
+      },
+    });
+
+    const body = await (await send(fake, new Request(`${ORIGIN}/admin`))).text();
+
+    expect(body).toContain(
+      "<p>LINE: 2100 of 3000 messages this month, read at 2026-10-12T01:30:00Z.</p>",
+    );
   });
 
   it("answers 404 for a family that is not recorded", async () => {

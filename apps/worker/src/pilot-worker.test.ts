@@ -3,6 +3,7 @@ import {
   createScheduledController,
   waitOnExecutionContext,
 } from "cloudflare:test";
+import { ChannelSendError } from "@vela/contracts";
 import { describe, expect, inject, it } from "vitest";
 import { createApiHandler } from "./api-runtime.ts";
 import { ConfigError } from "./config.ts";
@@ -17,7 +18,10 @@ import {
   FAILED_QUERY_WORDS,
   failedQueryFixture,
   inboundEventFixture,
+  LINE_QUOTA,
+  lineOnEnv,
   namesOf,
+  TEST_LINE,
   testEnv,
 } from "./testing/fakes.ts";
 
@@ -111,10 +115,11 @@ async function runCron(
 async function cronFailure(
   worker: ReturnType<typeof createWorker>,
   cron: string,
+  env: PilotEnv = testEnv,
 ): Promise<unknown> {
   const ctx = createExecutionContext();
   try {
-    await worker.scheduled(createScheduledController({ cron }), testEnv, ctx);
+    await worker.scheduled(createScheduledController({ cron }), env, ctx);
   } catch (error) {
     return error;
   } finally {
@@ -412,6 +417,109 @@ describe("cron", () => {
 
     expect(namesOf(fake.calls)).toEqual(["reconcile"]);
     expect(fake.closed()).toBe(1);
+  });
+
+  // 05 §5.10 and §6: LINE's quota is read after reconcile, and only where LINE is on.
+  it("reads LINE's quota after reconcile where LINE is on, and hands the reading to services", async () => {
+    const fake = createFakePilotRuntime();
+
+    await runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv());
+
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "recordChannelQuota"]);
+    expect(argsOf(fake.calls, "recordChannelQuota")).toEqual([["line", LINE_QUOTA]]);
+    expect(fake.quotaReads()).toBe(1);
+    expect(fake.logs).toEqual([]);
+    expect(fake.closed()).toBe(1);
+  });
+
+  it.each(["development", "staging", "production"] as const)(
+    "reads no quota in %s, where LINE is off",
+    async (environment) => {
+      const fake = createFakePilotRuntime();
+      const env = environment === "development" ? testEnv : deployedEnv(environment);
+
+      await runCron(createWorker(fake.runtime), RECONCILE_CRON, env);
+
+      expect(env.LINE_CHANNEL).toBe("off");
+      expect(namesOf(fake.calls)).toEqual(["reconcile"]);
+      expect(fake.quotaReads()).toBe(0);
+    },
+  );
+
+  it("reads no quota nightly, even where LINE is on", async () => {
+    const fake = createFakePilotRuntime();
+
+    await runCron(createWorker(fake.runtime), NIGHTLY_CRON, lineOnEnv());
+
+    expect(namesOf(fake.calls)).not.toContain("recordChannelQuota");
+    expect(fake.quotaReads()).toBe(0);
+  });
+
+  it("logs a quota LINE could not give by its label alone, and the run still succeeds", async () => {
+    const fake = createFakePilotRuntime({
+      lineQuota: async () => {
+        throw new ChannelSendError(
+          "unavailable",
+          `LINE answered 500 to Bearer ${TEST_LINE.channelAccessToken}`,
+        );
+      },
+    });
+
+    const { lines } = await consoleLinesDuring(() =>
+      runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv()),
+    );
+
+    expect(namesOf(fake.calls)).toEqual(["reconcile"]);
+    expect(fake.logs).toEqual([
+      {
+        level: "error",
+        event: "line_quota_failed",
+        fields: { error: "ChannelSendError:unavailable" },
+      },
+    ]);
+    expect(lines).toEqual([]);
+    expect(JSON.stringify(fake.logs)).not.toContain(TEST_LINE.channelAccessToken);
+    expect(fake.closed()).toBe(1);
+  });
+
+  it("logs a reading services could not keep by its label alone, and the run still succeeds", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        recordChannelQuota: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+
+    const { lines } = await consoleLinesDuring(() =>
+      runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv()),
+    );
+
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "recordChannelQuota"]);
+    expect(fake.logs).toEqual([
+      { level: "error", event: "line_quota_failed", fields: { error: FAILED_QUERY_LABEL } },
+    ]);
+    expect(lines).toEqual([]);
+    expect(JSON.stringify([lines, fake.logs])).not.toContain(FAILED_QUERY_WORDS);
+    expect(fake.closed()).toBe(1);
+  });
+
+  it("reads no quota when reconcile failed, and fails the run by reconcile's label", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        reconcile: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+
+    const { result: failure } = await consoleLinesDuring(() =>
+      cronFailure(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv()),
+    );
+
+    expect(namesOf(fake.calls)).toEqual(["reconcile"]);
+    expect(fake.quotaReads()).toBe(0);
+    expect(failure).toEqual(new Error(FAILED_QUERY_LABEL));
   });
 
   it("rolls up yesterday, applies retention, and writes tomorrow's suggestions nightly, in that order", async () => {
