@@ -528,8 +528,9 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
   }
   // She said stop after the tick that read her active, or while the row waited for a retry or a
   // re-drive: nothing of her morning goes to her until she says start (flows §3.13). Her start can
-  // land after this read, so the drop is decided again under locks, and a drop that no longer holds
-  // leaves the delivery to decide again from what is stored now.
+  // land after this read, and another delivery can take the row, so the drop is decided again under
+  // locks, and a drop that no longer holds leaves the delivery to decide again from what is stored
+  // now: a row taken since is that delivery's to send, since the take decided.
   if (member.status === "paused" && HELD_BY_PAUSE.has(row.kind)) {
     return (await dropWhilePaused(deps, loaded)) ?? deliverOutbound(deps, outboundId);
   }

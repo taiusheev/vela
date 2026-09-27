@@ -203,6 +203,26 @@ describe("a photo Vela keeps, sent to Telegram", () => {
     });
   });
 
+  // Telegram has no idempotency keys: the gateway leaves out of its retry only what it knows went
+  // out, so an uploaded album is named like any other (flows §3.7), and the retry uploads neither.
+  it("names an uploaded album's photos when the text then fails", async () => {
+    const sends = sequentialSends(700);
+    const { adapter, requests } = setup((request) =>
+      request.apiMethod === "sendMessage"
+        ? telegramErrorFixture("error-429-retry-after.json")
+        : sends(request),
+    );
+
+    const failure = adapter.send({ ...ARRIVAL, media: [stored(KEY_ONE), stored(KEY_TWO)] }, FILES);
+
+    await expect(failure).rejects.toMatchObject({
+      code: "rate_limited",
+      retryable: true,
+      sentMediaMessageIds: ["700", "701"],
+    });
+    expect(requests.map((request) => request.apiMethod)).toEqual(["sendMediaGroup", "sendMessage"]);
+  });
+
   it("maps a refused upload as it maps any refused call", async () => {
     const { adapter } = setup(() => telegramErrorFixture("error-429-retry-after.json"));
 
@@ -246,6 +266,29 @@ describe("the client's upload calls", () => {
         { type: "photo", media: PHOTO_A },
       ],
       files: { p0: { body: new ArrayBuffer(3), mime: "image/jpeg", name: "photo.jpg" } },
+    });
+
+    await expect(failure).rejects.toMatchObject({ code: "unknown", retryable: false });
+  });
+
+  // Telegram answers 2xx only once it has acted, so an upload whose answer was lost on its way went
+  // out, and uploading it again would give her the photo twice.
+  it("treats an upload answered 2xx whose body is lost as an unknown outcome, not retried", async () => {
+    const { client } = clientWith(
+      () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new TypeError("Network connection lost."));
+            },
+          }),
+          { status: 200 },
+        ),
+    );
+
+    const failure = client.sendPhotoUpload({
+      chat_id: 6023817745,
+      photo: { body: new ArrayBuffer(3), mime: "image/jpeg", name: "photo.jpg" },
     });
 
     await expect(failure).rejects.toMatchObject({ code: "unknown", retryable: false });

@@ -624,6 +624,46 @@ describe("deliverOutbound retries", () => {
     expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
   });
 
+  // A photo Vela keeps is named by its storage key (ADR-33), the key `sentMedia` holds it by, and
+  // only the photos still to send are loaded: the retry neither reads nor uploads one that went out,
+  // even once its object is gone from the store.
+  it("keeps the stored photos that went out by their storage keys, so the retry neither loads nor uploads them", async () => {
+    const seed = await family();
+    const her = seed.memberLink.externalId;
+    const keys = ["asks/family/one.jpg", "asks/family/two.jpg"];
+    for (const key of keys) {
+      await h.media.put(key, new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer, "image/jpeg");
+    }
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const id = await enqueued({
+      ...arrivalRequest(seed, exchange.id),
+      media: keys.map((storageKey) => ({ kind: "image" as const, storageKey, mime: "image/jpeg" })),
+    });
+    h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 2 });
+    expect(await h.runDue(handlers())).toBe(1);
+    for (const key of keys) {
+      await h.media.delete(key);
+    }
+    h.clock.advanceMinutes(5);
+    expect(await h.runDue(handlers())).toBe(1);
+
+    expect(
+      h.telegram.failed.flatMap((entry) => entry.sentMedia.map((ref) => ref.storageKey)),
+    ).toEqual(keys);
+    expect(
+      h.telegram.sentTo(her).map((entry) => [entry.message.media, entry.uploads.length]),
+    ).toEqual([[undefined, 0]]);
+    const [one, two] = keys;
+    expect(await outboundRows()).toMatchObject([
+      {
+        id,
+        status: "sent",
+        attempts: 2,
+        payload: { sentMedia: { [one ?? ""]: "1", [two ?? ""]: "2" } },
+      },
+    ]);
+  });
+
   it("fails at once on an error that cannot pass", async () => {
     const seed = await family();
     await enqueued(systemTo(seed, "bad"));
@@ -1476,6 +1516,33 @@ describe("deliverOutbound and her morning once she has answered or said stop", (
     expect(morningsToHer(seed)).toEqual([]);
   });
 
+  // The take decides (flows §3.7): a second delivery of the row that took it after this one read her
+  // paused is sending it, and a drop over its hold would leave that delivery's record nowhere to go.
+  it("leaves her morning to another delivery that took it after this one read her paused", async () => {
+    const seed = await family();
+    await h.db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-01" })
+      .where(eq(members.id, seed.member.id));
+    const { id } = await arrivalFor(seed);
+    await command(seed, "stop");
+    const takenAt = h.clock.now();
+
+    const delivered = await deliverOutbound(
+      withBeforeFirstTransaction(async () => {
+        await h.db.update(outbound).set({ sentAt: takenAt }).where(eq(outbound.id, id));
+      }),
+      id,
+    );
+
+    expect(delivered).toBe("skipped");
+    expect(await rowsOf("arrival")).toMatchObject([
+      { id, status: "queued", sentAt: takenAt, error: null },
+    ]);
+    expect(await drops()).toEqual([]);
+    expect(morningsToHer(seed)).toEqual([]);
+  });
+
   it("never queues again an arrival dropped for an ended family", async () => {
     const seed = await family();
     const { exchangeId } = await arrivalFor(seed);
@@ -1712,6 +1779,26 @@ describe("deliverOutbound takes the row before it sends", () => {
     expect(await Promise.all([fresh, old])).toEqual(["sent", "skipped"]);
     expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
     expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
+  // The take decides (flows §3.7, §3.13): a morning a delivery took before her stop goes out, as one
+  // already at Telegram would, and a delivery of the row that reads her paused leaves it to the one
+  // that holds it.
+  it("sends the morning a delivery took before she said stop, and a delivery that reads her paused leaves it", async () => {
+    const seed = await family();
+    const { id } = await arrivalFor(seed);
+    const held = holdingSends();
+
+    const first = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    expect(await deliverOutbound(h.deps, id)).toBe("skipped");
+    held.release();
+
+    expect(await first).toBe("sent");
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+    expect(await h.db.select().from(events).where(eq(events.name, "gateway_dropped"))).toEqual([]);
   });
 
   // The message went out and the commit that records it failed. Nothing can tell that send from one

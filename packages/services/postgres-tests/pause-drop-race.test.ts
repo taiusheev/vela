@@ -12,8 +12,10 @@
  * - A drop and the requeue of her start's tick meet in either order, and the requeue comes last:
  *   her start waits for the drop's lock on her row, and the tick queues the dropped row again.
  * - A delivery that read her paused must not drop a row another delivery of it (a re-drive beside a
- *   late job) has just sent: `dropped` over `sent` hides the send from the effects' recovery, and her
- *   start would then queue the morning again and send it twice.
+ *   late job) has just taken to send: the take decided, so that delivery sends the morning, and
+ *   `dropped` over its hold, or over `sent`, would hide the send from the effects' recovery, and her
+ *   start would then queue the morning again and send it twice. So the drop also needs the row
+ *   held by no delivery.
  */
 import type { InboundEvent, LocalDate } from "@vela/contracts";
 import { localDateOf, type ParentCommand } from "@vela/core";
@@ -212,14 +214,15 @@ describe("her morning dropped for her pause, and her start", () => {
     await expectHerMorningOnce();
   });
 
-  it("keeps her morning sent when a delivery that read her paused reaches it as another delivery sends it", async () => {
+  it("keeps her morning sent by the delivery that took it when a delivery that read her paused reaches it", async () => {
     const [sender, dropper, holder] = await pg.clientPool("pause", 3);
     if (sender === undefined || dropper === undefined || holder === undefined) {
       throw new Error("expected three race connections");
     }
 
-    // One delivery read her active and sent the morning, and is about to record the send; she then
-    // says stop, and a second delivery of the same row, reading her paused, comes to drop it.
+    // One delivery read her active and is taking the row to send the morning; she then says stop,
+    // and a second delivery of the same row, reading her paused, comes to drop it. The take decided:
+    // the first delivery sends the morning, and the drop leaves the row it holds.
     const held = await pg.holdRows(holder, onTheArrival);
     const sending = pg.track(deliver(sender));
     await pg.waitForRowLockWait(sender, [holder], sending);
