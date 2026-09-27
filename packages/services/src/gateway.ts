@@ -359,16 +359,28 @@ export async function enqueueOutbound(
   db: Queryable,
   request: OutboundRequest,
 ): Promise<EnqueueResult> {
-  const result = await insertOutbound(deps, db, request);
-  if ("duplicate" in result) {
+  return handOverOutbound(deps, request, await insertOutbound(deps, db, request));
+}
+
+/**
+ * Enqueues the delivery of a row `insertOutbound` wrote for `request`, as `enqueueOutbound` does
+ * after its insert; a duplicate is logged and nothing is enqueued. For a caller that writes the row
+ * under a lock it should not hold across the queue's send, and hands the row over after its commit.
+ */
+export async function handOverOutbound(
+  deps: Pick<Deps, "logger" | "queues">,
+  request: OutboundRequest,
+  written: InsertResult,
+): Promise<EnqueueResult> {
+  if ("duplicate" in written) {
     deps.logger.info("outbound_duplicate", { kind: request.kind, memberId: request.memberId });
-    return result;
+    return written;
   }
-  const job: OutboundJob = { type: "deliver", outboundId: result.outboundId };
-  await (result.delaySeconds === undefined
+  const job: OutboundJob = { type: "deliver", outboundId: written.outboundId };
+  await (written.delaySeconds === undefined
     ? deps.queues.outbound.send(job)
-    : deps.queues.outbound.send(job, { delaySeconds: result.delaySeconds }));
-  return { outboundId: result.outboundId };
+    : deps.queues.outbound.send(job, { delaySeconds: written.delaySeconds }));
+  return { outboundId: written.outboundId };
 }
 
 async function localTodayOf(

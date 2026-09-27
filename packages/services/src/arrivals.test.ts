@@ -554,6 +554,62 @@ describe("deliverArrival", () => {
     expect(await outboundRows("arrival")).toHaveLength(1);
   });
 
+  // Two ticks at 22:00 (flows §3.6, §3.7): one decided just before it that this morning is due,
+  // and prepares it; the prepare-time tick then prepares tomorrow, which finds this morning's
+  // window closed and its ask with no arrival row, and carries the ask, all before the first
+  // queues it. Queued anyway, the ask went out tonight and tomorrow's morning found it delivered.
+  it("queues nothing for a morning whose ask tomorrow's preparation carried off before its row was written", async () => {
+    const seed = await seedFamily(h.db, { now: at(YESTERDAY, "08:00") });
+    const ask = await seedExchange(h.db, seed, { date: TODAY, state: "composed" });
+    let tomorrowPrepared = false;
+    h.deps.ai = createFakeAi({
+      // Drafting the chips runs after this morning's preparation commits and before its queueing.
+      chips: async (input) => {
+        if (!tomorrowPrepared) {
+          tomorrowPrepared = true;
+          h.clock.set(at(TODAY, "22:00"));
+          await prepareDay(h.deps, seed.member.id, TOMORROW);
+        }
+        return {
+          ok: true,
+          value: { chips: genericChips(input.lang) },
+          record: fakeRecord("chips"),
+        };
+      },
+    });
+    h.clock.set(at(TODAY, "21:59"));
+
+    await deliverArrival(h.deps, seed.member.id, TODAY, true);
+
+    expect(tomorrowPrepared).toBe(true);
+    expect(await exchangeById(ask.id)).toMatchObject({
+      state: "scheduled",
+      scheduledFor: TOMORROW,
+    });
+    expect(await outboundRows("arrival")).toEqual([]);
+    expect(h.logger.entries).toContainEqual({
+      level: "info",
+      event: "arrival_carried",
+      fields: { memberId: seed.member.id, date: TODAY, exchangeId: ask.id },
+    });
+
+    // Her next morning brings the ask, once, and counts its repeat and quiet from then.
+    h.clock.set(at(TOMORROW, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    await h.run(handlers());
+
+    const rows = await outboundRows("arrival");
+    expect(rows.map((row) => [row.localDay, row.exchangeId, row.status])).toEqual([
+      [TOMORROW, ask.id, "sent"],
+    ]);
+    expect(await exchangeById(ask.id)).toMatchObject({
+      state: "delivered",
+      scheduledFor: TOMORROW,
+      deliveredAt: at(TOMORROW, "08:00"),
+    });
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+  });
+
   it("renders the question with its chips and image, and reads yesterday's replies back with the voice first", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const { previous, replyIds } = await seedYesterdayWithReplies(seed);

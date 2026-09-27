@@ -53,7 +53,13 @@ import { z } from "zod";
 import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
-import { enqueueOutbound } from "./gateway.ts";
+import {
+  enqueueOutbound,
+  handOverOutbound,
+  type InsertResult,
+  insertOutbound,
+  type OutboundRequest,
+} from "./gateway.ts";
 import { recordAiCall } from "./jobs.ts";
 import { uploadsStoredMedia } from "./outbound-media.ts";
 import {
@@ -599,6 +605,14 @@ async function loadReadBack(
  * The ask's files are kept whole within the message's ten, and the voices take what is left: a
  * photo choice's buttons are drawn for both its photos, so neither may be cut.
  * A day already delivered, or whose delivery failed, is left alone.
+ *
+ * The row is written under her member row's lock, the one `prepareDay` takes, once the ask is read
+ * again still dated `date`. Preparing a later morning carries an ask that has no arrival row once
+ * its window has closed (flows §3.6), and a tick that decided before 22:00 that this morning is due
+ * can reach its queueing after the 22:00 tick has prepared tomorrow: queued anyway, the ask would go
+ * out tonight and tomorrow's morning would find it delivered. Under the lock, whichever comes second
+ * sees what the first wrote: the arrival row, and the ask stays, or the ask moved, and this morning,
+ * whose window has closed, sends nothing, as any morning whose window closed.
  */
 export async function deliverArrival(
   deps: Deps,
@@ -625,7 +639,7 @@ export async function deliverArrival(
   });
   const askFiles = askMedia.slice(0, MAX_MEDIA);
   const attached = [...readBack.media.slice(0, MAX_MEDIA - askFiles.length), ...askFiles];
-  await enqueueOutbound(deps, deps.db, {
+  const request: OutboundRequest = {
     kind: "arrival",
     idempotencyKey: outboundKey("arrival", { memberId, date }),
     memberId,
@@ -644,7 +658,27 @@ export async function deliverArrival(
       readBackReplyIds: readBack.replyIds,
       previousExchangeId: readBack.previousExchangeId,
     },
+  };
+  const written = await deps.db.transaction(async (tx): Promise<InsertResult | null> => {
+    await tx.select({ id: members.id }).from(members).where(eq(members.id, memberId)).for("update");
+    const [current] = await tx
+      .select({ scheduledFor: exchanges.scheduledFor })
+      .from(exchanges)
+      .where(eq(exchanges.id, exchange.id));
+    if (current === undefined) {
+      throw new VelaError("not_found", `exchange ${exchange.id} vanished before its arrival`);
+    }
+    if (current.scheduledFor !== date) {
+      deps.logger.info("arrival_carried", { memberId, date, exchangeId: exchange.id });
+      return null;
+    }
+    return insertOutbound(deps, tx, request);
   });
+  // Handed to the queue after the commit, as `enqueueOutbound` hands a row over after its insert, so
+  // her member row is not held across the queue's send.
+  if (written !== null) {
+    await handOverOutbound(deps, request, written);
+  }
 }
 
 /**
