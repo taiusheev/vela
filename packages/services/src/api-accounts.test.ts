@@ -307,7 +307,7 @@ describe("loadApiMe", () => {
       status: "paused",
       family: { id: other.family.id, name: other.family.name, region: "apac", plan: "free" },
     });
-    expect(ApiMe.parse(result)).toEqual(result);
+    expect(ApiMe.parse({ ...result, photos: false })).toEqual({ ...result, photos: false });
     expect(Object.keys(result?.user ?? {}).sort()).toEqual([
       "display_name",
       "id",

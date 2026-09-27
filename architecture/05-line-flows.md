@@ -18,12 +18,12 @@ No developers.line.biz page shows a last-updated date, so dated facts come from 
 
 **Who decides what.** Technical choices are made in this document. Every product or legal choice is marked **FOUNDER DECISION** with a recommended default. There are fourteen, D1 to D14, and all of them are collected in §9.
 
-**The photo-asks change is taken as given** (build plan 3.4, `feat/photo-asks`):
+**The photo-asks change has landed** (build plan 3.4, ADR-33) with:
 - `ChannelAdapter.send(message, files?)`, where `files` maps storage keys to bytes;
-- an outbound media schema whose items carry a `storageKey`. It is separate from `MediaRef`, which stays the inbound reference and gains no `storageKey`;
+- an outbound media schema, `OutboundMediaRef`, whose items carry a `storageKey`, `mime` and `bytes`. It is separate from `MediaRef`, which stays the inbound reference and gains no `storageKey`;
 - `MediaStore.head(key)`.
 
-The LINE adapter never reads `files` (§5.5), and its `send` declares one parameter, which satisfies both today's `send(message)` and photo-asks' signature (§5.9).
+It landed without the adapter's `mediaUrl` option and without a preview storage key on the outbound item, and services put a stored photo only into a message on a channel whose adapter uploads bytes (`uploadsStoredMedia`, Telegram alone). So no photo from the app reaches LINE yet: a photo choice to someone on LINE would go as words. Wiring `mediaUrl` is part of turning LINE's media on, and it makes each app photo a signed, non-expiring URL that anyone holding it can open until retention deletes the object: a trade-off ADR-33 leaves to that decision (its Revisit if). The LINE adapter never reads `files` (§5.5), and its `send` declares one parameter, which satisfies both signatures (§5.9).
 
 ## 1. LINE facts that shape the flows
 
@@ -426,7 +426,7 @@ What goes out: one push to her user id.
 - The request carries `X-Line-Retry-Key` (§5.5).
 
 Where the media come from:
-- Images: an ask's photos, by R2 URL (after build plan 3.4).
+- Images: an ask's photos, by R2 URL, once `mediaUrl` is wired; build plan 3.4 landed without it, so none are sent to LINE yet.
 - Audio: m4a or mp3 by R2 URL with its duration. Sources are her own voice re-posted to the group, and later app voice hellos (3.4) and TTS read-backs (2.6, which must render m4a or mp3). A family's Telegram voice note never goes to LINE (D9).
 - Media the target channel cannot send is left out and logged `media_unsendable`, and the morning still goes out. That covers a row with only another channel's file id, or no stored copy (§5.11).
 
@@ -550,7 +550,7 @@ createLineAdapter({
 }): ChannelAdapter
 ```
 
-Photo-asks adds `mediaUrl: (ref: { storageKey: string; mime: string }) => Promise<string>`, the Worker's signed R2 URL (§5.10), with the outbound media schema that carries storage keys. Step 3 does not declare it: nothing in today's contract names a storage key, so it would be an option no code reads.
+`mediaUrl: (ref: { storageKey: string; mime: string }) => Promise<string>`, the Worker's signed R2 URL (§5.10), is still to come. Photo-asks (build plan 3.4, ADR-33) brought the outbound media schema that carries storage keys but not this option, and services give LINE no item named by a storage key (`uploadsStoredMedia`), so the option is added with the step that turns LINE's media on, together with the change to `uploadsStoredMedia`.
 
 **Refusals at construction.** It throws on an empty secret or token, and on anything but visible ASCII in either (a space, a control character, a non-ASCII letter), because the token goes into a header, where such a character breaks every request. LINE documents no shape for either, so nothing more is checked. The error never repeats the value.
 
@@ -683,8 +683,8 @@ LINE's sizes say "MB"; the decimal reading is the smaller, so it is the one used
 
 **Message objects.**
 
-Media, in order. Each item is first resolved by one function, `resolveMedia`, to `{ url, previewUrl?, mime, durationMs?, bytes? }`. In step 3 it reads `MediaRef.url`; when photo-asks lands only that function changes, to call `mediaUrl({ storageKey, mime })` for the item's storage key, and its preview's.
-- An image is `{ type: "image", originalContentUrl, previewImageUrl }`. The preview is `previewUrl` when the item has one; otherwise the original, but only when `bytes` is known and at most 1,000,000; otherwise the image is refused. Photo-asks' outbound media item must therefore carry a preview storage key where ingestion stored one (§3.10 for LINE's own photos; build plan 3.4 resizes app photos to at most 1 MB), set by services, rather than the adapter deriving a `.preview` key and its MIME type by convention.
+Media, in order. Each item is first resolved by one function, `resolveMedia`, to `{ url, previewUrl?, mime, durationMs?, bytes? }`. In step 3 it reads `MediaRef.url`, and it still does: photo-asks landed without `mediaUrl`. When `mediaUrl` is wired only that function changes, to call `mediaUrl({ storageKey, mime })` for the item's storage key, and its preview's.
+- An image is `{ type: "image", originalContentUrl, previewImageUrl }`. The preview is `previewUrl` when the item has one; otherwise the original, but only when `bytes` is known and at most 1,000,000; otherwise the image is refused. The outbound media item must therefore carry a preview storage key where ingestion stored one (§3.10 for LINE's own photos), set by services, rather than the adapter deriving a `.preview` key and its MIME type by convention. Photo-asks landed without that key. It carries `bytes`, but the app's upload takes up to 1 MiB (1,048,576 bytes; the phone sends about 300 to 700 KB), so a photo from the app over 1,000,000 bytes needs a preview copy, or the upload cap lowered to 1,000,000, before LINE can send it.
 - Audio is `{ type: "audio", originalContentUrl, duration }`.
 
 Then the text as `{ type: "text", text }`, and the buttons in one of two shapes:
@@ -812,10 +812,10 @@ Built in step 1 (§8). `03-code-design.md` §6 summarises them.
 - **The `Button.id` comment** notes LINE's 300-character postback data. The 64 limit stays.
 - **The `MediaRef.providerUniqueId` comment** says that on LINE it is the message id: stable across redelivery, not across forwards. Services deduplicate inbound media on it, so a redelivered image or voice event adds no second media row (§5.4 sets it in step 2).
 - **Photo-asks.** Step 1 adds no `storageKey` to `MediaRef`, leaves its refine alone, and does not touch `send`'s signature:
-  - Photo-asks brings its own outbound media schema carrying `storageKey`, and `send(message, files?)`.
+  - Photo-asks brought its own outbound media schema, `OutboundMediaRef`, carrying `storageKey`, and `send(message, files?)` (ADR-33).
   - The LINE adapter implements `send(message)` with one parameter. `noUnusedParameters` would refuse a declared but unread `files`, and one parameter satisfies both signatures.
-  - Outbound media resolution lives in one function in `line/send.ts`, `resolveMedia` (item → `{ url, previewUrl?, mime, durationMs?, bytes? }`). Since step 3 it reads `MediaRef.url` (https only); then only that function changes, to `mediaUrl({ storageKey, mime })`.
-  - Photo-asks' outbound schema must also cover audio and carry `mime`, `durationMs` (audio), `bytes`, and a preview storage key where ingestion stored one. Without them every item trips LINE's local refusals (§5.5): audio without its duration, an image of unknown size without a preview.
+  - Outbound media resolution lives in one function in `line/send.ts`, `resolveMedia` (item → `{ url, previewUrl?, mime, durationMs?, bytes? }`). Since step 3 it reads `MediaRef.url` (https only), and it still does, since photo-asks landed without `mediaUrl`; when that is wired only this function changes, to `mediaUrl({ storageKey, mime })`.
+  - `OutboundMediaRef` covers audio and carries `mime`, `durationMs` (audio) and `bytes`, but no preview storage key yet. Without one, an image over 1,000,000 bytes trips LINE's local refusal (§5.5), and a photo from the app can be up to 1 MiB; until `mediaUrl` is wired, services send LINE no stored photo at all.
 
 ### 5.10 Worker wiring
 
@@ -849,10 +849,10 @@ A 500 comes only from what a retry can fix: a failed enqueue, or a LINE setting 
 - It streams the R2 object with its stored `Content-Type`, `cache-control: private`, `accept-ranges: bytes`, `x-content-type-options: nosniff` and its `etag`. The request's headers go to R2 as its `range`, so a `Range` header is answered 206 with `content-range`, as R2 reads it.
 - A bad signature, a malformed key, a missing object and LINE off all answer the same 404, and nothing is logged. A failure (R2 unreachable, a LINE setting refused) answers 500 and is logged as `media_request_failed` with its label alone, never as `request_failed`, whose path would hold the key and the signature that opens it.
 - The URL carries no expiry: a LINE retry must send the same body (fact 8), and phones fetch it later (fact 14). It stops working when retention deletes the object at 30 days.
-- `createMediaUrl({ pilotOrigin, mediaUrlSecret })` returns the function the adapter's `mediaUrl` option will take with photo-asks (§5.2): `({ storageKey, mime }) => Promise<string>`, the same URL for the same object every time. A type LINE plays no media of (`audio/ogg`, say) is `ChannelSendError` `invalid_request`. `packages/adapters` is unchanged in step 6, so nothing passes it yet.
+- `createMediaUrl({ pilotOrigin, mediaUrlSecret })` returns the function the adapter's `mediaUrl` option will take once it is wired (§5.2; photo-asks landed without it): `({ storageKey, mime }) => Promise<string>`, the same URL for the same object every time. A type LINE plays no media of (`audio/ogg`, say) is `ChannelSendError` `invalid_request`. `packages/adapters` is unchanged in step 6, so nothing passes it yet.
 - **Open for step 8.** Cloudflare's own invocation logs (Workers Logs, with `observability` on in `wrangler.jsonc`) record each request's URL, so a media URL's key and signature would sit there for the logs' retention. The route itself logs nothing. Before staging turns LINE on, the co-founder either turns invocation logs off for `vela` (`observability.logs.invocation_logs: false`, which drops them for every route) or accepts that record.
 
-**Registry.** `createChannels(env)` builds Telegram as today, since the admin conversation stays on Telegram (ADR-21). It builds LINE on the first `get("line")`, from `readLineConfig`, and keeps it. Where `LINE_CHANNEL` is `off`, `get("line")` throws `ConfigError:LINE_CHANNEL` ("LINE is off in this environment"), and nothing reads a LINE secret. `mediaUrl` is passed to the adapter with photo-asks, built by `createMediaUrl` from `PILOT_PUBLIC_URL` and `MEDIA_URL_SECRET`.
+**Registry.** `createChannels(env)` builds Telegram as today, since the admin conversation stays on Telegram (ADR-21). It builds LINE on the first `get("line")`, from `readLineConfig`, and keeps it. Where `LINE_CHANNEL` is `off`, `get("line")` throws `ConfigError:LINE_CHANNEL` ("LINE is off in this environment"), and nothing reads a LINE secret. `mediaUrl` will be passed to the adapter, built by `createMediaUrl` from `PILOT_PUBLIC_URL` and `MEDIA_URL_SECRET`, when LINE's media are turned on; photo-asks landed without it.
 
 **Env, secrets and vars:**
 

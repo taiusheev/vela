@@ -123,6 +123,12 @@ export const ApiMe = z.object({
       family: z.object({ id: z.uuid(), name: z.string(), region: Region, plan: Plan }),
     }),
   ),
+  /**
+   * Whether this API keeps photos from the app (ADR-33): true when it has somewhere to keep them,
+   * false where media storage is off or its store could not be built, so the app can switch its
+   * photo asks off before anyone picks a photo. The upload's 503 stays as the backstop.
+   */
+  photos: z.boolean(),
 });
 export type ApiMe = z.infer<typeof ApiMe>;
 
@@ -163,6 +169,12 @@ export const ApiTodayAnswer = z.object({
   /** Her words: what she said, else what she wrote, else what she tapped. */
   text: z.string().nullable(),
   at: z.iso.datetime({ offset: true }),
+  /**
+   * The photo she picked, on a photo choice she answered by picking one (ADR-33): kept when a
+   * later answer, her voice say, is the one shown. Null otherwise. The photo itself may have been
+   * deleted since, and `ApiTodayExchange.photos` then no longer lists it.
+   */
+  picked_media_id: z.uuid().nullable(),
 });
 export type ApiTodayAnswer = z.infer<typeof ApiTodayAnswer>;
 
@@ -191,6 +203,20 @@ export const ApiTodayExchange = z.object({
    * exchange, so a reply to any older one is kept for the family but never heard.
    */
   replies_reach_her: z.boolean(),
+  /**
+   * The ask's photos, in the order she was shown them, so a photo choice's first is her "1"
+   * (ADR-33). `stored` says whether the API can show it (`GET /v1/families/:familyId/media/:id`);
+   * one Telegram alone holds cannot be, and the app shows a placeholder. A photo deleted after its
+   * 30 days is no longer listed.
+   */
+  photos: z.array(
+    z.object({
+      id: z.uuid(),
+      width: z.number().int().positive().nullable(),
+      height: z.number().int().positive().nullable(),
+      stored: z.boolean(),
+    }),
+  ),
 });
 export type ApiTodayExchange = z.infer<typeof ApiTodayExchange>;
 
@@ -243,10 +269,19 @@ export type ApiToday = z.infer<typeof ApiToday>;
 
 /**
  * Composing an ask (`POST /v1/families/:familyId/exchanges`, API contract §4, spec §14.1 A7).
- * Only the types an arrival can carry from words alone: a photo choice, a voice note and an old
- * photo need media the app cannot yet attach, so they are refused rather than stored undeliverable.
+ * Only the types an arrival can carry: words alone, or words with the photos the app uploaded
+ * first (ADR-33), two for a photo choice and one for an old photo. A voice note needs media the
+ * app cannot yet attach, so it is refused rather than stored undeliverable.
  */
-export const COMPOSABLE_EXCHANGE_TYPES = ["question", "word", "story", "recipe", "vote"] as const;
+export const COMPOSABLE_EXCHANGE_TYPES = [
+  "question",
+  "word",
+  "story",
+  "recipe",
+  "vote",
+  "photo_choice",
+  "memory_photo",
+] as const;
 export const ComposableExchangeType = z.enum(COMPOSABLE_EXCHANGE_TYPES);
 export type ComposableExchangeType = z.infer<typeof ComposableExchangeType>;
 
@@ -256,6 +291,12 @@ export const MAX_ASK_TEXT = 1_000;
 export const MAX_VOTE_OPTIONS = 7;
 /** Retention clears an undelivered ask's words after 30 days; no ask may be composed into that. */
 export const MAX_ASK_DAYS_AHEAD = 14;
+/** How many uploaded photos an ask names (ADR-33); every other type names none. */
+export const ASK_PHOTO_COUNT = { photo_choice: 2, memory_photo: 1 } as const;
+
+function askPhotoCount(type: ComposableExchangeType): number {
+  return type === "photo_choice" || type === "memory_photo" ? ASK_PHOTO_COUNT[type] : 0;
+}
 
 const AskText = z
   .string()
@@ -287,6 +328,11 @@ export const ComposeAsk = z
      * is composed. One already used, or not hers, marks nothing and never stops the ask.
      */
     suggestion_id: z.uuid().optional(),
+    /**
+     * The photos a photo ask shows her, in order, each one uploaded to this family first
+     * (`POST /v1/families/:familyId/media`, ADR-33). A photo choice's first is her "1".
+     */
+    media_ids: z.array(z.uuid()).min(1).max(2).optional(),
   })
   .refine((ask) => (ask.when === "date") === (ask.date !== undefined), {
     message: "a date ask needs its date, and no other kind takes one",
@@ -295,6 +341,21 @@ export const ComposeAsk = z
   .refine((ask) => (ask.type === "vote") === (ask.vote_options !== undefined), {
     message: "a vote needs its options, and nothing else takes them",
     path: ["vote_options"],
+  })
+  .refine((ask) => (ask.media_ids?.length ?? 0) === askPhotoCount(ask.type), {
+    message: "a photo choice takes two photos, an old photo one, and nothing else takes any",
+    path: ["media_ids"],
+  })
+  .refine(
+    (ask) =>
+      ask.media_ids === undefined ||
+      new Set(ask.media_ids.map((id) => id.toLowerCase())).size === ask.media_ids.length,
+    { message: "each photo is named once", path: ["media_ids"] },
+  )
+  .refine((ask) => ask.media_ids === undefined || ask.when !== "whenever", {
+    // A whenever ask waits for a free morning with no end, and a photo is deleted after 30 days.
+    message: "a photo ask names its morning",
+    path: ["when"],
   });
 export type ComposeAsk = z.infer<typeof ComposeAsk>;
 
@@ -577,3 +638,41 @@ export type ApiTrial = z.infer<typeof ApiTrial>;
 export const TRIAL_REFUSALS = ["not_answered_yet", "light_off"] as const;
 export const TrialRefusal = z.enum(TRIAL_REFUSALS);
 export type TrialRefusal = z.infer<typeof TrialRefusal>;
+
+/**
+ * A photo the app uploaded for an ask (ADR-33, `POST /v1/families/:familyId/media`): its id, which a
+ * photo ask names, its size in pixels and in bytes as Vela keeps it (cleaned of everything but what
+ * draws it), and when it is deleted unless the family keeps it.
+ */
+export const ApiUploadedMedia = z.object({
+  id: z.uuid(),
+  kind: z.literal("image"),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  bytes: z.number().int().positive(),
+  expires_at: z.iso.datetime({ offset: true }),
+});
+export type ApiUploadedMedia = z.infer<typeof ApiUploadedMedia>;
+
+/**
+ * Why a photo upload was refused, in `details.reason`. `jpeg_only` (415): not a JPEG, or a JPEG kind
+ * Telegram and phones do not draw (lossless, arithmetic, hierarchical). `malformed` (400): a JPEG
+ * that cannot be walked to its end. `dimensions` (400): a side of 0, a long side over 4096, or one
+ * side over 20 times the other. `photo_limit` (429): the account's 20 photos in 24 hours, or the
+ * family's 60 photos waiting to be asked about or deleted.
+ */
+export const MEDIA_REFUSALS = ["jpeg_only", "malformed", "dimensions", "photo_limit"] as const;
+export const MediaRefusal = z.enum(MEDIA_REFUSALS);
+export type MediaRefusal = z.infer<typeof MediaRefusal>;
+
+/**
+ * Why an upload answered 503 `unavailable`, in `details.reason`: `media_storage_off`, where this
+ * environment keeps no media at all, or `media_storage_unavailable`, where it should and its store
+ * could not be built. `ApiMe.photos` is false in both.
+ */
+export const MEDIA_UNAVAILABLE_REASONS = [
+  "media_storage_off",
+  "media_storage_unavailable",
+] as const;
+export const MediaUnavailableReason = z.enum(MEDIA_UNAVAILABLE_REASONS);
+export type MediaUnavailableReason = z.infer<typeof MediaUnavailableReason>;

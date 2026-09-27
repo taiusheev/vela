@@ -208,6 +208,7 @@ function exchange(fields: Partial<ApiTodayExchange> = {}): ApiTodayExchange {
     replies: [],
     seen_at: null,
     replies_reach_her: true,
+    photos: [],
     ...fields,
   };
 }
@@ -253,7 +254,7 @@ describe("Today's card while its ask has no answer", () => {
 
   it("has no such line once the ask has her answer", () => {
     const answered = exchange({
-      answer: { kind: "text", text: "Beans.", at: TWO_THIRTY_TWO },
+      answer: { kind: "text", text: "Beans.", at: TWO_THIRTY_TWO, picked_media_id: null },
     });
     const card = cardIn("en", [light({ state: "lit", answered_at: TWO_THIRTY_TWO })], answered);
     expect(card?.answer).toEqual({ text: "Beans.", at: "14:32" });

@@ -5,7 +5,7 @@
  * the outbound rows are keyed by member and date, and the turn is keyed by the day.
  */
 import { isAiOff } from "@vela/ai";
-import type { Channel, LocalDate, MediaRef } from "@vela/contracts";
+import type { Channel, LocalDate, OutboundMediaRef } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
   type ArrivalAsk,
@@ -40,6 +40,7 @@ import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { recordAiCall } from "./jobs.ts";
+import { uploadsStoredMedia } from "./outbound-media.ts";
 import {
   channelLinkOfMember,
   exchangeForLocalDate,
@@ -321,40 +322,100 @@ async function logDroppedMedia(
 }
 
 /**
- * A file the platform can re-send by its own file id. The pilot records every Telegram file's id;
- * a row without one (stored only in R2) cannot be attached this way and is left out.
+ * How a message names a file. One the platform holds goes by its own file id, which Telegram sends
+ * again without an upload. An image only Vela keeps, a photo the app uploaded (ADR-33), goes by its
+ * storage key: the gateway loads its bytes on each attempt and the adapter uploads them. One whose
+ * object is gone, or that nothing can reach while storage is off, is null and left out, so a photo
+ * choice short of two is turned into a question before her text and buttons are drawn, never sent
+ * with 1 and 2 under one photo. A store that cannot answer throws, and her morning is tried again,
+ * rather than sent without a photo that is there.
  */
-function mediaRefOf(row: Media): MediaRef | null {
-  if (row.providerFileId === null) {
+async function mediaRefOf(deps: Deps, row: Media): Promise<OutboundMediaRef | null> {
+  if (row.providerFileId !== null) {
+    return { kind: row.kind, providerFileId: row.providerFileId };
+  }
+  if (row.storageKey === null || row.kind !== "image" || deps.media === null) {
     return null;
   }
-  return { kind: row.kind, providerFileId: row.providerFileId };
+  const object = await deps.media.head(row.storageKey);
+  if (object === null) {
+    return null;
+  }
+  return {
+    kind: "image",
+    storageKey: row.storageKey,
+    mime: row.mime ?? "image/jpeg",
+    bytes: object.bytes,
+  };
+}
+
+/**
+ * The files behind rows, in their order, for a message on `channel`, leaving out any that cannot be
+ * sent, which is logged. A file only Vela keeps goes only where the adapter uploads its bytes
+ * (`uploadsStoredMedia`); on any other channel it is left out as a missing one is, and logged with
+ * the channel, so a photo choice becomes a question there rather than a send the adapter refuses.
+ */
+async function mediaRefsOf(
+  deps: Deps,
+  familyId: string,
+  channel: Channel,
+  rows: readonly Media[],
+): Promise<OutboundMediaRef[]> {
+  const refs: OutboundMediaRef[] = [];
+  let offChannel = 0;
+  for (const row of rows) {
+    if (row.providerFileId === null && row.storageKey !== null && !uploadsStoredMedia(channel)) {
+      offChannel += 1;
+      continue;
+    }
+    const ref = await mediaRefOf(deps, row);
+    if (ref !== null) {
+      refs.push(ref);
+    }
+  }
+  if (offChannel > 0) {
+    deps.logger.warn("media_not_sendable_on_channel", { familyId, channel, count: offChannel });
+  }
+  const missing = rows.length - refs.length - offChannel;
+  if (missing > 0) {
+    deps.logger.warn("media_not_sendable", { familyId, count: missing });
+  }
+  return refs;
 }
 
 interface LoadedAsk {
   ask: ArrivalAsk;
-  media: MediaRef[];
+  media: OutboundMediaRef[];
 }
 
 /**
- * The ask as `renderArrival` takes it, with the files to attach. A photo choice needs exactly two
- * images (spec §4.4, core's rendering contract); with any other number it goes out as a question
- * carrying the first image, so a family's morning is never refused for a missing photo.
+ * The ask as `renderArrival` takes it, with the files to attach on `channel`. A photo choice needs
+ * exactly two images (spec §4.4, core's rendering contract); with any other number it goes out as a
+ * question carrying the first image, so a family's morning is never refused for a missing photo, nor
+ * for photos her channel cannot be sent. Exported for the tests alone: every arrival today goes by
+ * `ARRIVAL_CHANNEL`, so only a test can ask for another channel's.
  *
  * `exchanges.voice_hello_id` is not read here. It is a write-only column today: nothing loads it,
  * and `ArrivalAsk` has no slot for it, so no voice hello reaches anyone. Whoever gives it a slot
  * has to scope it the way `mediaByIds` is scoped above — its foreign key reaches `media.id` in
  * any family — and that belongs with the change that delivers it, not before.
  */
-async function loadAsk(deps: Deps, family: Family, exchange: Exchange): Promise<LoadedAsk> {
+export async function loadAsk(
+  deps: Deps,
+  family: Family,
+  exchange: Exchange,
+  channel: Channel,
+): Promise<LoadedAsk> {
   if (exchange.type === "hello") {
     return { ask: { type: "hello" }, media: [] };
   }
   const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);
-  const files = (await mediaByIds(deps, family.id, exchange.mediaIds)).flatMap((row) => {
-    const ref = mediaRefOf(row);
-    return ref === null ? [] : [ref];
-  });
+  const files = await mediaRefsOf(
+    deps,
+    family.id,
+    channel,
+    await mediaByIds(deps, family.id, exchange.mediaIds),
+  );
   const images = files.filter((file) => file.kind === "image");
   let type = exchange.type;
   let attached = files;
@@ -389,7 +450,7 @@ async function loadAsk(deps: Deps, family: Family, exchange: Exchange): Promise<
 
 interface ReadBack {
   lines: string[];
-  media: MediaRef[];
+  media: OutboundMediaRef[];
   replyIds: string[];
   previousExchangeId: string | null;
 }
@@ -398,7 +459,12 @@ interface ReadBack {
  * Yesterday's replies (spec §6.3, flows §3.7): the previous delivered exchange's replies to her that
  * were not read back yet, as lines in her language, with the family's voice replies as files.
  */
-async function loadReadBack(deps: Deps, member: Member, date: LocalDate): Promise<ReadBack> {
+async function loadReadBack(
+  deps: Deps,
+  member: Member,
+  date: LocalDate,
+  channel: Channel,
+): Promise<ReadBack> {
   const none: ReadBack = { lines: [], media: [], replyIds: [], previousExchangeId: null };
   const [previous] = await deps.db
     .select()
@@ -434,10 +500,12 @@ async function loadReadBack(deps: Deps, member: Member, date: LocalDate): Promis
   const voiceIds = rows.flatMap((row) =>
     row.reply.kind === "voice" && row.reply.mediaId !== null ? [row.reply.mediaId] : [],
   );
-  const voices = (await mediaByIds(deps, member.familyId, voiceIds)).flatMap((row) => {
-    const ref = mediaRefOf(row);
-    return ref === null ? [] : [ref];
-  });
+  const voices = await mediaRefsOf(
+    deps,
+    member.familyId,
+    channel,
+    await mediaByIds(deps, member.familyId, voiceIds),
+  );
   return {
     lines: summariseReplies({
       lang: member.language,
@@ -452,6 +520,8 @@ async function loadReadBack(deps: Deps, member: Member, date: LocalDate): Promis
 /**
  * Enqueues her arrival for `date`, preparing the day first if nothing was (flows §3.7). The read-back
  * voices come before the ask's own files, as the read-back lines come before the ask in the text.
+ * The ask's files are kept whole within the message's ten, and the voices take what is left: a
+ * photo choice's buttons are drawn for both its photos, so neither may be cut.
  * A day already delivered, or whose delivery failed, is left alone.
  */
 export async function deliverArrival(
@@ -466,8 +536,8 @@ export async function deliverArrival(
     deps.logger.info("arrival_already_out", { memberId, date });
     return;
   }
-  const readBack = await loadReadBack(deps, member, date);
-  const { ask, media: askMedia } = await loadAsk(deps, family, exchange);
+  const readBack = await loadReadBack(deps, member, date, link.channel);
+  const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel);
   const rendered = renderArrival({
     lang: member.language,
     address: member.addressForm ?? member.displayName,
@@ -477,7 +547,8 @@ export async function deliverArrival(
     late,
     repeat: false,
   });
-  const attached = [...readBack.media, ...askMedia].slice(0, MAX_MEDIA);
+  const askFiles = askMedia.slice(0, MAX_MEDIA);
+  const attached = [...readBack.media.slice(0, MAX_MEDIA - askFiles.length), ...askFiles];
   await enqueueOutbound(deps, deps.db, {
     kind: "arrival",
     idempotencyKey: outboundKey("arrival", { memberId, date }),
@@ -518,7 +589,7 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
     return;
   }
   const { member, family, link } = await loadArrivalContext(deps, exchange.id);
-  const { ask, media: askMedia } = await loadAsk(deps, family, exchange);
+  const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel);
   const rendered = renderArrival({
     lang: member.language,
     address: member.addressForm ?? member.displayName,

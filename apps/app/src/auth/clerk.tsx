@@ -19,8 +19,12 @@ export interface Account {
   signedIn: boolean;
   /** The account id Clerk knows this person by; the seed and Clerk’s own Users page use it. */
   userId: string | null;
-  /** The bearer token for the API, or null when there is no session. */
-  token(): Promise<string | null>;
+  /**
+   * The bearer token for the API, or null when there is no session. Clerk hands back the token it
+   * holds while it is still good; `fresh` asks Clerk for a new one, for a retry after the API has
+   * refused the one held (401).
+   */
+  token(options?: { fresh?: boolean }): Promise<string | null>;
   signOut(): Promise<void>;
 }
 
@@ -42,7 +46,7 @@ function ClerkAccount({ children }: { children: ReactNode }) {
       ready: isLoaded,
       signedIn: isSignedIn === true,
       userId: userId ?? null,
-      token: () => getToken(),
+      token: (options) => getToken(options?.fresh === true ? { skipCache: true } : undefined),
       signOut: () => signOut(),
     }),
     [isLoaded, isSignedIn, userId, getToken, signOut],

@@ -8,12 +8,13 @@ import {
   MAX_ASK_DAYS_AHEAD,
 } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { addDays, localDateOf, outboundKey } from "@vela/core";
-import { exchanges, members, suggestions, turns, type VelaTransaction } from "@vela/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { addDays, localDateOf, outboundKey, zonedInstant } from "@vela/core";
+import { exchanges, media, members, suggestions, turns, type VelaTransaction } from "@vela/db";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
+import { sharedWith } from "./api-media.ts";
 import { canBeAsked } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
@@ -43,6 +44,62 @@ export class AskDayTakenError extends Error {
     super("That day already has an ask");
     this.conflict = conflict;
   }
+}
+
+/**
+ * A photo the ask names cannot be shown to her on its morning (ADR-33): it is unknown, another
+ * family's, not an image, an upload of someone else's that the family does not share yet, or it
+ * is deleted before her morning is over. The app asks for it to be chosen again.
+ */
+export class AskPhotoMissingError extends Error {
+  override readonly name = "AskPhotoMissingError";
+
+  constructor() {
+    super("That photo is no longer here");
+  }
+}
+
+/**
+ * Takes the photos an ask names, `for share`, and refuses the ask unless each can be shown to her
+ * (`AskPhotoMissingError`). The share lock is what keeps retention off them until the ask commits:
+ * retention takes a photo's row `for update` before it removes the id from every exchange, so
+ * either it waits for this ask and then finds it, or this ask waits for retention and finds the row
+ * gone; retention (`deleteMedia`) is the only code that deletes a photo. Lock order: her member
+ * row, then the photos, then her exchanges (code design §8), as retention takes the photo before
+ * the exchanges.
+ *
+ * A photo is the asker's to ask with when they uploaded it or the family already shares it, as the
+ * read route decides (`sharedWith`). It must be kept, or not deleted before `until`: her morning
+ * and the day after it, when a pick is still resolved against it.
+ */
+async function lockAskPhotos(
+  tx: VelaTransaction,
+  familyId: string,
+  askerId: string,
+  ids: readonly string[],
+  until: Date,
+): Promise<void> {
+  const rows = await tx
+    .select({ id: media.id, kind: media.kind, kept: media.kept, expiresAt: media.expiresAt })
+    .from(media)
+    .where(
+      and(
+        eq(media.familyId, familyId),
+        inArray(media.id, [...ids]),
+        sharedWith(tx, familyId, askerId),
+      ),
+    )
+    .for("share");
+  const usable = new Set(
+    rows
+      .filter(
+        (row) =>
+          row.kind === "image" &&
+          (row.kept || (row.expiresAt !== null && row.expiresAt.getTime() > until.getTime())),
+      )
+      .map((row) => row.id.toLowerCase()),
+  );
+  if (!ids.every((id) => usable.has(id.toLowerCase()))) throw new AskPhotoMissingError();
 }
 
 /**
@@ -112,6 +169,10 @@ async function holderOf(tx: VelaTransaction, askerId: string | null): Promise<st
  *
  * An ask composed from tomorrow's suggestion names it (`suggestion_id`), and the suggestion is
  * marked used in the same transaction, after the morning is known to be free: a 409 marks nothing.
+ *
+ * A photo ask names the photos the app uploaded (`media_ids`, ADR-33), which are taken and checked
+ * after her member row and before her morning (`lockAskPhotos`); one she cannot be shown is
+ * `AskPhotoMissingError`, 404 `photo_missing`.
  */
 export async function composeApiAsk(
   deps: Pick<Deps, "db" | "clock">,
@@ -166,6 +227,10 @@ export async function composeApiAsk(
         }
         const asker = await memberById(tx, askerId);
         if (asker === null) throw new VelaError("not_found", "Asker not found");
+        // The contract refuses photos on a whenever ask; this only keeps it from reaching the insert.
+        if (ask.media_ids !== undefined && ask.when === "whenever") {
+          throw new VelaError("invalid_payload", "A photo ask names its morning");
+        }
 
         const today = localDateOf(now, locked.tz);
         const horizon = addDays(today, MAX_ASK_DAYS_AHEAD);
@@ -174,6 +239,10 @@ export async function composeApiAsk(
         if (scheduledFor !== null && scheduledFor !== undefined) {
           if (scheduledFor <= today || scheduledFor > horizon) {
             throw new VelaError("invalid_payload", "That day is outside her next two weeks");
+          }
+          if (ask.media_ids !== undefined) {
+            const until = zonedInstant(addDays(scheduledFor, 2), "00:00", locked.tz);
+            await lockAskPhotos(tx, familyId, asker.id, ask.media_ids, until);
           }
           const taken = await lockExchangeForLocalDate(tx, locked.id, scheduledFor);
           if (taken !== null) {
@@ -206,6 +275,8 @@ export async function composeApiAsk(
             whenRule: ask.when,
             scheduledFor: scheduledFor ?? null,
             createdAt: now,
+            // In the order she is shown them: a photo choice's pick resolves by this index.
+            mediaIds: ask.media_ids ?? [],
           })
           .returning();
         if (exchange === undefined) throw new Error("exchange insert returned no row");
@@ -240,7 +311,7 @@ export async function composeApiAsk(
               type,
               when_rule: ask.when,
               source: "app",
-              media: 0,
+              media: ask.media_ids?.length ?? 0,
               queued: false,
               from_suggestion: fromSuggestion,
             },

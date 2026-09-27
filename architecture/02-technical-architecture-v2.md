@@ -63,7 +63,7 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
 | Per-member scheduler | Precise wake-ups per member in her time zone | Durable Objects with alarms | Per-minute cron scan (v1), EventBridge one-off schedules, pg_cron |
 | Queues | Decouple sends and AI from webhooks; retries; dead-letter | Cloudflare Queues (at-least-once, no dedup: the outbox gates) | SQS FIFO (dedup, but a second cloud), Cloud Tasks |
 | Database | System of record, one per region | Neon Postgres 18 (native `uuidv7()`), projects in Singapore, Frankfurt, US-East; Hyperdrive pooling with query caching off | Supabase (Tokyo region; fallback for Japan), PlanetScale Postgres, Crunchy, Aurora v2, Cloud SQL, D1 (ruled out: free-tier row caps enforced 2026-09-01) |
-| Media | Voice notes, photos; signed URLs; 30-day lifecycle | R2, one bucket per region, jurisdiction flag where available | S3 (egress), B2 (archive tier later), Supabase Storage |
+| Media | Voice notes, photos; signed URLs (photos from the app: proxied by the Worker, uploaded to Telegram as bytes; ADR-33); 30-day lifecycle | R2, one bucket per region, jurisdiction flag where available | S3 (egress), B2 (archive tier later), Supabase Storage |
 | Mobile | Family app, parent surface, kitchen table, widgets | Expo SDK 55 (RN 0.83, React 19.2, New Architecture) | Flutter, Compose Multiplatform, native, Capacitor, PWA (research/mobile-stack §2) |
 | Auth | Organisers and members with accounts | Clerk (phone OTP, email, Apple, Google; Expo SDK); Better Auth as the self-hosted fallback | Supabase Auth, Firebase, Auth0, Cognito, Stytch |
 | AI | Understanding, flags, chips, suggestions, translation, weekly read, hello | Anthropic Claude via the Messages API, structured outputs, batch, caching | OpenAI GPT-5.6 family, Gemini 3.x (as fallback providers) |
@@ -303,7 +303,7 @@ Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` wit
 ## 13. Security
 
 - Webhook signatures verified on the raw body before parsing, in every adapter, enforced by contract tests (§8).
-- Cloudflare Rate Limiting binding on invite redemption, auth, and media upload URLs; invite tokens single-use and expiring; media URLs signed for 15 minutes.
+- Cloudflare Rate Limiting binding on invite redemption, auth, and media upload URLs; invite tokens single-use and expiring; media URLs signed for 15 minutes (photos from the app: proxied by the Worker, uploaded to Telegram as bytes; ADR-33).
 - Secrets only in Worker secrets, `.dev.vars`, and GitHub environment secrets for deploys (`CLOUDFLARE_API_TOKEN`, `DATABASE_URL`; never repository secrets, ADR-23); Infisical when a second environment or person needs synced secrets; no keys in the repo; Renovate for dependency updates.
 - TLS everywhere; provider encryption at rest for Neon and R2 during the pilot; field-level envelope encryption (AES-256-GCM, keys in Worker secrets) for transcripts decided before launch, not retrofitted at scale.
 - Backups: Neon point-in-time restore (plan-dependent history) plus a **quarterly restore drill** (restore to a timestamp, verify counts, discard); R2 versioning on the family-book prefix.

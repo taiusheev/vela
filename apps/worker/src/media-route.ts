@@ -41,7 +41,10 @@ export interface MediaUrlRef {
   readonly mime: string;
 }
 
-/** What the LINE adapter's `mediaUrl` option takes, once photo-asks gives it one (05 §5.2). */
+/**
+ * What the LINE adapter's `mediaUrl` option takes, once LINE's media are turned on (05 §5.2):
+ * photo-asks landed without it (ADR-33), and nothing passes it yet.
+ */
 export type MediaUrl = (ref: MediaUrlRef) => Promise<string>;
 
 /**

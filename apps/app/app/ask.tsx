@@ -7,7 +7,9 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
+import { photoRefusal } from "../src/api/upload.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
+import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import {
   Card,
   Chip,
@@ -17,6 +19,7 @@ import {
   TextField,
   Words,
 } from "../src/components/ui.tsx";
+import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
 import {
   type AskType,
   askTypes,
@@ -25,6 +28,7 @@ import {
   recipientLanguage,
   suggestedKind,
 } from "../src/data/ask.ts";
+import { askExtras, photoCount } from "../src/data/photos.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
 import { dayName, useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
@@ -43,12 +47,33 @@ export default function AskScreen() {
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
-  const { today, familyId, live } = useToday();
+  const { today, familyId, live, photos: photosOn } = useToday();
   const params = useLocalSearchParams<{ recipient?: string; suggestion?: string }>(); // suggestion
   const [kind, setKind] = useState<AskType>("question");
   const [text, setText] = useState("");
   const [when, setWhen] = useState<When>("tomorrow");
   const [taken, setTaken] = useState<ApiAskConflict | null>(null);
+  // A vote's options and a photo ask's photos (ADR-33), and what they add to the ask when sent.
+  const [options, setOptions] = useState<VoteOption[]>(freshVoteOptions);
+  const photos = useAskPhotos({
+    kind,
+    familyId,
+    demo: !apiConfigured(),
+    on: photosOn,
+    known: live,
+    text,
+    setText,
+  });
+  const optionWords = options.map((option) => option.text);
+  const extras = askExtras(kind, photos.slots, optionWords);
+  // A photo ask names its morning (B1): Whenever is not offered, and moves to the next one there is.
+  // With none free in her two weeks there is no morning to move to, and the button says so below.
+  useEffect(() => {
+    if (photos.count === 0 || when !== "whenever") return;
+    if (taken === null) setWhen("tomorrow");
+    else if (taken.date_alternative !== null) setWhen("another_day");
+  }, [photos.count, when, taken]);
+  const noMorning = photos.count > 0 && taken !== null && taken.date_alternative === null;
   const [used, setUsed] = useState<{ id: string; recipientId: string } | undefined>(); // suggestion
   const keyFor = useIdempotencyKey("ask");
   const preview = previewTranslation(text);
@@ -98,6 +123,7 @@ export default function AskScreen() {
       router.back();
     },
     onError: (error: unknown) => {
+      if (photos.refusedAsk(error)) return;
       const conflict = askConflict(error);
       if (conflict === null) return;
       setTaken(conflict);
@@ -113,6 +139,7 @@ export default function AskScreen() {
     const type = composableType[kind];
     // Never a silent close: a screen that is not ready keeps the words and says why below.
     if (!ready || type === undefined || recipient === undefined || familyId === undefined) return;
+    if (extras === undefined || noMorning) return;
     const alternative = taken?.date_alternative;
     const timing: Pick<ComposeAsk, "when" | "date"> =
       when === "another_day" && alternative !== null && alternative !== undefined
@@ -124,12 +151,16 @@ export default function AskScreen() {
       text: text.trim(),
       ...timing,
       ...(usedSuggestionId === undefined ? {} : { suggestion_id: usedSuggestionId }), // suggestion
+      ...extras,
     });
   }
 
   const name = recipient?.displayName ?? t({ comment: "stands in for her name", message: "her" });
   const written = text.trim().length > 0;
-  const trouble = compose.isError && askConflict(compose.error) === null;
+  const trouble =
+    compose.isError &&
+    askConflict(compose.error) === null &&
+    photoRefusal(compose.error) !== "missing";
   const waiting = !demo && !ready;
   const hold = waiting
     ? paused
@@ -183,11 +214,16 @@ export default function AskScreen() {
                 key={option.kind}
                 label={i18n._(option.label)}
                 selected={option.kind === kind}
-                disabled={!option.available}
+                disabled={!option.available || (photos.off && photoCount(option.kind) > 0)}
                 onPress={() => setKind(option.kind)}
               />
             ))}
           </View>
+          {photos.explain ? (
+            <Words variant="caption" tone="ink3">
+              <Trans>Photos are not switched on here yet.</Trans>
+            </Words>
+          ) : null}
         </View>
 
         <View style={{ gap: space.m }}>
@@ -207,6 +243,8 @@ export default function AskScreen() {
             </Card>
           )}
         </View>
+        <PhotoSlots photos={photos} />
+        {kind === "vote" ? <VoteOptions options={options} onChange={setOptions} /> : null}
 
         <View style={{ gap: space.m }}>
           <Words variant="heading">
@@ -231,12 +269,22 @@ export default function AskScreen() {
                 onPress={() => setWhen("another_day")}
               />
             )}
-            <Chip
-              label={t`Whenever`}
-              selected={when === "whenever"}
-              onPress={() => setWhen("whenever")}
-            />
+            {photos.count > 0 ? null : (
+              <Chip
+                label={t`Whenever`}
+                selected={when === "whenever"}
+                onPress={() => setWhen("whenever")}
+              />
+            )}
           </View>
+          {noMorning ? (
+            <Words variant="body" tone="ink2">
+              <Trans>
+                No morning in the next two weeks is free for a photo ask. Send it as words, or try
+                again later.
+              </Trans>
+            </Words>
+          ) : null}
         </View>
 
         {hold === null ? null : (
@@ -252,7 +300,12 @@ export default function AskScreen() {
         <PrimaryButton
           label={compose.isPending ? t`Sending…` : t`Into her morning`}
           onPress={send}
-          disabled={compose.isPending || (!demo && (!ready || !written))}
+          disabled={
+            compose.isPending ||
+            extras === undefined ||
+            noMorning ||
+            (!demo && (!ready || !written))
+          }
         />
       </ScrollView>
     </>

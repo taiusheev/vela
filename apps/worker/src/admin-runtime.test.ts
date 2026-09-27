@@ -46,6 +46,7 @@ const NOT_GIVEN: readonly (readonly [string, (deps: Deps) => unknown])[] = [
   ["media", (deps) => mediaOf(deps).put("key", new ArrayBuffer(1), "audio/ogg")],
   ["media", (deps) => mediaOf(deps).get("key")],
   ["media", (deps) => mediaOf(deps).delete("key")],
+  ["media", (deps) => mediaOf(deps).head("key")],
   ["channels", (deps) => deps.channels.get("telegram")],
   [
     "stt",

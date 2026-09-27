@@ -1,6 +1,8 @@
 /**
  * Renders an `OutboundMessage` as Bot API calls: media first, in order (runs of consecutive photos
- * as one album, each audio as a voice message), then the text with its buttons.
+ * as one album, each audio as a voice message), then the text with its buttons. A photo Telegram
+ * holds, or can fetch by URL, is named in JSON; a photo Vela keeps (ADR-33) is uploaded from the
+ * bytes the gateway loaded, as multipart/form-data, mixed into an album by `attach://`.
  *
  * Text is sent without `parse_mode`, so nothing in it is ever interpreted as markup, and with link
  * previews disabled. Telegram has no idempotency keys: if a later call fails after earlier media
@@ -9,7 +11,8 @@
 import {
   type Button,
   ChannelSendError,
-  type MediaRef,
+  type FetchedMedia,
+  type OutboundMediaRef,
   OutboundMessage,
   type SendResult,
 } from "@vela/contracts";
@@ -17,7 +20,9 @@ import type {
   TelegramChatId,
   TelegramClient,
   TelegramInlineKeyboardMarkup,
+  TelegramInputMediaPhoto,
   TelegramSentMessage,
+  TelegramUpload,
 } from "./client.ts";
 
 /** `callback_data` is limited to 1–64 bytes, not characters. */
@@ -25,14 +30,18 @@ const MAX_CALLBACK_DATA_BYTES = 64;
 
 const encoder = new TextEncoder();
 
+/** A photo as Telegram is given it: a file id or URL it resolves itself, or bytes to upload. */
+type PhotoSource = { readonly remote: string } | { readonly upload: TelegramUpload };
+
 type MediaStep =
-  | { readonly kind: "photo"; readonly source: string }
-  | { readonly kind: "album"; readonly sources: readonly string[] }
+  | { readonly kind: "photo"; readonly source: PhotoSource }
+  | { readonly kind: "album"; readonly sources: readonly PhotoSource[] }
   | { readonly kind: "voice"; readonly source: string; readonly durationMs: number | undefined };
 
 export async function sendTelegramMessage(
   client: TelegramClient,
   message: OutboundMessage,
+  files?: ReadonlyMap<string, FetchedMedia>,
 ): Promise<SendResult> {
   const checked = OutboundMessage.safeParse(message);
   if (!checked.success) {
@@ -56,21 +65,20 @@ export async function sendTelegramMessage(
   const replyToMessageId =
     outbound.replyToMessageId === undefined ? undefined : toMessageId(outbound.replyToMessageId);
   const replyMarkup = outbound.buttons === undefined ? undefined : inlineKeyboard(outbound.buttons);
-  const steps = planMedia(outbound.media ?? []);
+  const steps = planMedia(outbound.media ?? [], files);
 
   const sent: TelegramSentMessage[] = [];
   for (const step of steps) {
     switch (step.kind) {
       case "photo":
-        sent.push(await client.sendPhoto({ chat_id: chatId, photo: step.source }));
+        sent.push(
+          "remote" in step.source
+            ? await client.sendPhoto({ chat_id: chatId, photo: step.source.remote })
+            : await client.sendPhotoUpload({ chat_id: chatId, photo: step.source.upload }),
+        );
         break;
       case "album":
-        sent.push(
-          ...(await client.sendMediaGroup({
-            chat_id: chatId,
-            media: step.sources.map((source) => ({ type: "photo", media: source })),
-          })),
-        );
+        sent.push(...(await sendAlbum(client, chatId, step.sources)));
         break;
       case "voice":
         sent.push(
@@ -137,9 +145,40 @@ function inlineKeyboard(rows: readonly (readonly Button[])[]): TelegramInlineKey
   };
 }
 
-function planMedia(media: readonly MediaRef[]): MediaStep[] {
+/**
+ * An album in one call: named in JSON when Telegram holds every photo, else as a form whose `media`
+ * names each uploaded photo `attach://p<index>` beside the file ids, in the album's order.
+ */
+function sendAlbum(
+  client: TelegramClient,
+  chatId: TelegramChatId,
+  sources: readonly PhotoSource[],
+): Promise<TelegramSentMessage[]> {
+  const files: Record<string, TelegramUpload> = {};
+  const media = sources.map((source, index): TelegramInputMediaPhoto => {
+    if ("remote" in source) {
+      return { type: "photo", media: source.remote };
+    }
+    const name = `p${index}`;
+    files[name] = source.upload;
+    return { type: "photo", media: `attach://${name}` };
+  });
+  return Object.keys(files).length === 0
+    ? client.sendMediaGroup({ chat_id: chatId, media })
+    : client.sendMediaGroupUpload({ chat_id: chatId, media, files });
+}
+
+/**
+ * The calls the media takes, checked before any is made. A photo Vela keeps must have its bytes in
+ * `files`: the gateway loads them for each attempt, and a message missing one is refused rather
+ * than sent short of a photo its buttons count. Only photos are uploaded this way.
+ */
+function planMedia(
+  media: readonly OutboundMediaRef[],
+  files: ReadonlyMap<string, FetchedMedia> | undefined,
+): MediaStep[] {
   const steps: MediaStep[] = [];
-  let photos: string[] = [];
+  let photos: PhotoSource[] = [];
   const flushPhotos = (): void => {
     const [first, ...rest] = photos;
     if (first !== undefined) {
@@ -154,13 +193,9 @@ function planMedia(media: readonly MediaRef[]): MediaStep[] {
     // Telegram reuses its own file_id without a size limit; a URL is fetched by Telegram.
     const source = ref.providerFileId ?? ref.url;
     if (source === undefined) {
-      throw new ChannelSendError(
-        "invalid_request",
-        "media reference has neither a file id nor a url",
-      );
-    }
-    if (ref.kind === "image") {
-      photos.push(source);
+      photos.push({ upload: storedPhoto(ref, files) });
+    } else if (ref.kind === "image") {
+      photos.push({ remote: source });
     } else {
       flushPhotos();
       steps.push({ kind: "voice", source, durationMs: ref.durationMs });
@@ -168,4 +203,24 @@ function planMedia(media: readonly MediaRef[]): MediaStep[] {
   }
   flushPhotos();
   return steps;
+}
+
+function storedPhoto(
+  ref: OutboundMediaRef,
+  files: ReadonlyMap<string, FetchedMedia> | undefined,
+): TelegramUpload {
+  if (ref.storageKey === undefined) {
+    throw new ChannelSendError(
+      "invalid_request",
+      "media reference has neither a file id, a url nor a storage key",
+    );
+  }
+  if (ref.kind !== "image") {
+    throw new ChannelSendError("invalid_request", "only a photo is uploaded from storage");
+  }
+  const file = files?.get(ref.storageKey);
+  if (file === undefined) {
+    throw new ChannelSendError("invalid_request", "a stored photo was not loaded for the send");
+  }
+  return { body: file.body, mime: file.mime, name: "photo.jpg" };
 }

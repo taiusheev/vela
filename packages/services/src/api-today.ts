@@ -4,12 +4,14 @@ import {
   answers,
   type Exchange,
   type Member,
+  media,
   members,
   replies,
   suggestions,
   turns,
 } from "@vela/db";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { z } from "zod";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { loadApiLights } from "./api-lights.ts";
 import { canBeAsked } from "./askable.ts";
@@ -27,6 +29,62 @@ const answerText = sql<string | null>`coalesce(
   ${answers.transcript}, ${answers.payload} ->> 'text', ${answers.payload} ->> 'choice',
   ${answers.summary}
 )`;
+
+const Uuid = z.uuid();
+
+/**
+ * The ask's photos, in the order she was shown them (ADR-33). Only the exchange's own family's
+ * images, as the arrival reads them; an id retention has cleared is gone from `media_ids` too.
+ * `stored` is what the photo route would serve: a kept JPEG, or a Telegram photo copied to storage.
+ */
+async function photosOf(db: Queryable, exchange: Exchange): Promise<ApiTodayExchange["photos"]> {
+  if (exchange.mediaIds.length === 0) return [];
+  const rows = await db
+    .select({
+      id: media.id,
+      width: media.width,
+      height: media.height,
+      storageKey: media.storageKey,
+      mime: media.mime,
+    })
+    .from(media)
+    .where(
+      and(
+        eq(media.familyId, exchange.familyId),
+        inArray(media.id, exchange.mediaIds),
+        eq(media.kind, "image"),
+      ),
+    );
+  const byId = new Map(rows.map((row) => [row.id.toLowerCase(), row]));
+  return exchange.mediaIds.flatMap((id) => {
+    const row = byId.get(id.toLowerCase());
+    if (row === undefined) return [];
+    return [
+      {
+        id: row.id,
+        width: row.width !== null && row.width > 0 ? row.width : null,
+        height: row.height !== null && row.height > 0 ? row.height : null,
+        stored: row.storageKey !== null && (row.mime === null || row.mime === "image/jpeg"),
+      },
+    ];
+  });
+}
+
+/**
+ * The photo she picked on a photo choice: the latest pick's, whatever answer came after it, so her
+ * choice still shows when she went on to say something (ADR-33).
+ */
+async function pickedMediaId(db: Queryable, exchange: Exchange): Promise<string | null> {
+  if (exchange.type !== "photo_choice") return null;
+  const [pick] = await db
+    .select({ mediaId: sql<string | null>`${answers.payload} ->> 'media_id'` })
+    .from(answers)
+    .where(and(eq(answers.exchangeId, exchange.id), eq(answers.kind, "photo_pick")))
+    .orderBy(desc(answers.receivedAt), desc(answers.id))
+    .limit(1);
+  const id = pick?.mediaId;
+  return typeof id === "string" && Uuid.safeParse(id).success ? id : null;
+}
 
 async function nameOf(db: Queryable, memberId: string | null): Promise<string | null> {
   if (memberId === null) return null;
@@ -76,10 +134,16 @@ export async function exchangeRow(
     answer:
       answer === undefined
         ? null
-        : { kind: answer.kind, text: answer.text, at: answer.receivedAt.toISOString() },
+        : {
+            kind: answer.kind,
+            text: answer.text,
+            at: answer.receivedAt.toISOString(),
+            picked_media_id: await pickedMediaId(db, exchange),
+          },
     replies: replyRows,
     seen_at: exchange.seenAt?.toISOString() ?? null,
     replies_reach_her: (await readBackExchangeId(db, recipient.id)) === exchange.id,
+    photos: await photosOf(db, exchange),
   };
 }
 

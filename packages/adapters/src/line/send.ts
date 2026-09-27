@@ -65,7 +65,7 @@ const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 interface OutboundMedia {
   readonly kind: MediaKind;
   readonly url: string;
-  /** A smaller copy of an image made when it was stored; none exists yet (build plan 3.4). */
+  /** A smaller copy of an image made when it was stored; none exists yet (05 §5.5). */
   readonly previewUrl?: string;
   readonly mime: string;
   readonly durationMs?: number;
@@ -168,9 +168,10 @@ function mediaObject(ref: MediaRef): LineMessageObject {
 
 /**
  * Where LINE fetches one media item, and what it must know about it. LINE takes media only as an
- * HTTPS URL and cannot re-send a file by its id (05 §1 fact 14). Until photo-asks brings stored
- * objects to the contract the URL is the reference's own; then only this function changes, to ask
- * the Worker for the signed URL of the storage key.
+ * HTTPS URL and cannot re-send a file by its id (05 §1 fact 14). The URL is the reference's own:
+ * photo-asks brought stored objects to the contract (ADR-33) but not `mediaUrl`, and services send
+ * LINE no stored object yet (`uploadsStoredMedia`); when it is wired only this function changes, to
+ * ask the Worker for the signed URL of the storage key.
  */
 function resolveMedia(ref: MediaRef): OutboundMedia {
   if (ref.url === undefined) {

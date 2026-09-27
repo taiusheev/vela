@@ -57,7 +57,14 @@ export async function provisionApiUser(
   return existing;
 }
 
-export async function loadApiMe(db: Queryable, identity: SessionIdentity): Promise<ApiMe | null> {
+/**
+ * The account and its memberships. `ApiMe.photos` is not the account's but the API's (whether it
+ * keeps photos), so the route adds it.
+ */
+export async function loadApiMe(
+  db: Queryable,
+  identity: SessionIdentity,
+): Promise<Omit<ApiMe, "photos"> | null> {
   if (!hasIdentity(identity)) {
     return null;
   }

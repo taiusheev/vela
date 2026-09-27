@@ -161,6 +161,7 @@ describe("loadApiToday", () => {
           kind: "text",
           text: "The tomatoes finally turned.",
           at: answeredAt.toISOString(),
+          picked_media_id: null,
         },
         replies: [
           { from: "Mia", kind: "heart", text: null },
@@ -168,6 +169,7 @@ describe("loadApiToday", () => {
         ],
         seen_at: null,
         replies_reach_her: true,
+        photos: [],
       },
     ]);
   });
