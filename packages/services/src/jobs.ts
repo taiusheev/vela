@@ -631,6 +631,11 @@ function optionsWithout(id: string) {
  * provider file id, L4), the id's removal from `exchanges.media_ids` and `exchanges.options`, and
  * the row; the foreign keys set the other references null.
  *
+ * A photo choice keeps the id in its `media_ids`, a bare uuid that names nothing once the row is
+ * gone: her pick is read by its place there (`resolveChoice` in `answers.ts`), and an arrival's "1"
+ * and "2" answer it whenever she taps them, so removing the first photo would make her "1" name the
+ * second and her "2" nothing. Every reader already drops an id with no row.
+ *
  * With storage off (decision M) a row has no storage key and there is no object to delete, so the
  * proof and the row go as they always do. A row that was stored before storage was switched off
  * keeps an object nobody here can reach: that is logged, because only the founder can delete it.
@@ -662,7 +667,9 @@ async function deleteMedia(deps: Deps, row: Media, reason: string): Promise<void
     await tx
       .update(exchanges)
       .set({ mediaIds: sql`array_remove(${exchanges.mediaIds}, ${row.id}::uuid)` })
-      .where(sql`${row.id}::uuid = any(${exchanges.mediaIds})`);
+      .where(
+        and(sql`${row.id}::uuid = any(${exchanges.mediaIds})`, ne(exchanges.type, "photo_choice")),
+      );
     await tx
       .update(exchanges)
       .set({ options: optionsWithout(row.id) })

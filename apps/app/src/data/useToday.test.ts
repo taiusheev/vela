@@ -254,10 +254,63 @@ describe("Today's card while its ask has no answer", () => {
 
   it("has no such line once the ask has her answer", () => {
     const answered = exchange({
-      answer: { kind: "text", text: "Beans.", at: TWO_THIRTY_TWO, picked_media_id: null },
+      answer: {
+        kind: "text",
+        text: "Beans.",
+        at: TWO_THIRTY_TWO,
+        picked_media_id: null,
+        picked_number: null,
+      },
     });
     const card = cardIn("en", [light({ state: "lit", answered_at: TWO_THIRTY_TWO })], answered);
     expect(card?.answer).toEqual({ text: "Beans.", at: "14:32" });
     expect(card).not.toHaveProperty("unanswered");
+  });
+});
+
+// Her pick is shown ringed among the photos, and a photo is no longer listed once retention has
+// deleted it (ADR-33), so the card says which one she chose by the number her buttons showed.
+describe("Today's card for her pick on a photo choice", () => {
+  const FIRST = "0d5e8f1a-7b9c-4ec3-8fd6-a7b8c9d0e1f2";
+  const SECOND = "1e6f9a2b-8c0d-4fd4-90e7-b8c9d0e1f2a3";
+
+  function picked(fields: Partial<ApiTodayExchange> = {}): ApiTodayExchange {
+    return exchange({
+      type: "photo_choice",
+      ask: "Which one do you like more?",
+      answer: {
+        kind: "photo_pick",
+        text: null,
+        at: TWO_THIRTY_TWO,
+        picked_media_id: FIRST,
+        picked_number: 1,
+      },
+      photos: [{ id: SECOND, width: null, height: null, stored: false }],
+      ...fields,
+    });
+  }
+
+  it("says which photo she picked by its number, which still reads once that photo is gone", () => {
+    const lights = [light({ state: "lit", answered_at: TWO_THIRTY_TWO })];
+    expect(cardIn("en", lights, picked())?.answer).toEqual({
+      text: "picked photo 1",
+      at: "14:32",
+    });
+    expect(cardIn("zh-TW", lights, picked())?.answer?.text).toBe("選了第 1 張照片");
+    expect(cardIn("en", lights, picked())?.picked).toBe(FIRST);
+  });
+
+  it("says she picked a photo when the number is not known", () => {
+    const lights = [light({ state: "lit", answered_at: TWO_THIRTY_TWO })];
+    const unnumbered = picked({
+      answer: {
+        kind: "photo_pick",
+        text: null,
+        at: TWO_THIRTY_TWO,
+        picked_media_id: null,
+        picked_number: null,
+      },
+    });
+    expect(cardIn("en", lights, unnumbered)?.answer?.text).toBe("picked a photo");
   });
 });

@@ -162,6 +162,7 @@ describe("loadApiToday", () => {
           text: "The tomatoes finally turned.",
           at: answeredAt.toISOString(),
           picked_media_id: null,
+          picked_number: null,
         },
         replies: [
           { from: "Mia", kind: "heart", text: null },

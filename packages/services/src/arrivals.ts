@@ -9,6 +9,7 @@ import type { Channel, LocalDate, OutboundMediaRef } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
   type ArrivalAsk,
+  addDays,
   arrivalWindowEnd,
   localDateOf,
   nextExchangeState,
@@ -18,6 +19,7 @@ import {
   selectAsk,
   summariseReplies,
   type TurnHolder,
+  zonedInstant,
 } from "@vela/core";
 import {
   answers,
@@ -471,12 +473,46 @@ interface LoadedAsk {
   media: OutboundMediaRef[];
 }
 
+/** The morning an ask is loaded for: its local date and her zone. */
+export interface AskMorning {
+  date: LocalDate;
+  timeZone: string;
+}
+
 /**
- * The ask as `renderArrival` takes it, with the files to attach on `channel`. A photo choice needs
- * exactly two images (spec §4.4, core's rendering contract); with any other number it goes out as a
- * question carrying the first image, so a family's morning is never refused for a missing photo, nor
- * for photos her channel cannot be sent. Exported for the tests alone: every arrival today goes by
- * `ARRIVAL_CHANNEL`, so only a test can ask for another channel's.
+ * The rows that last while her pick on this morning is still read: to the end of the day after
+ * it, in her zone, the deadline compose checks against the morning an ask is written for
+ * (`lockAskPhotos` in `api-asks.ts`). A carried ask, or a group photo that waited, can reach a
+ * morning after which retention deletes an image before she taps, so such an image is left out as
+ * one already gone, and logged. A kept image, or one with no deletion date, lasts; so does a voice.
+ */
+function lastingRows(
+  deps: Deps,
+  ids: { familyId: string; exchangeId: string },
+  morning: AskMorning,
+  rows: readonly Media[],
+): Media[] {
+  const until = zonedInstant(addDays(morning.date, 2), "00:00", morning.timeZone).getTime();
+  const lasting = rows.filter(
+    (row) =>
+      row.kind !== "image" || row.kept || row.expiresAt === null || row.expiresAt.getTime() > until,
+  );
+  const expiring = rows.length - lasting.length;
+  if (expiring > 0) {
+    deps.logger.warn("ask_media_expiring", { ...ids, count: expiring });
+  }
+  return lasting;
+}
+
+/**
+ * The ask as `renderArrival` takes it, with the files to attach on `channel`, for `morning`. A photo
+ * choice needs exactly two images (spec §4.4, core's rendering contract); with any other number it
+ * goes out as a question carrying the first image, so a family's morning is never refused for a
+ * missing photo, nor for photos her channel cannot be sent. An image deleted before her pick on
+ * this morning can no longer be read counts as missing (`lastingRows`), so her "1" and "2" are never
+ * drawn over a photo that can vanish before she taps. The arrival and its repeat load it for the
+ * same morning, so both send the same photos. Exported for the tests alone: every arrival today
+ * goes by `ARRIVAL_CHANNEL`, so only a test can ask for another channel's.
  *
  * `exchanges.voice_hello_id` is not read here. It is a write-only column today: nothing loads it,
  * and `ArrivalAsk` has no slot for it, so no voice hello reaches anyone. Whoever gives it a slot
@@ -488,17 +524,19 @@ export async function loadAsk(
   family: Family,
   exchange: Exchange,
   channel: Channel,
+  morning: AskMorning,
 ): Promise<LoadedAsk> {
   if (exchange.type === "hello") {
     return { ask: { type: "hello" }, media: [] };
   }
   const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);
-  const files = await mediaRefsOf(
+  const rows = lastingRows(
     deps,
-    family.id,
-    channel,
+    { familyId: family.id, exchangeId: exchange.id },
+    morning,
     await mediaByIds(deps, family.id, exchange.mediaIds),
   );
+  const files = await mediaRefsOf(deps, family.id, channel, rows);
   const images = files.filter((file) => file.kind === "image");
   let type = exchange.type;
   let attached = files;
@@ -648,7 +686,10 @@ export async function deliverArrival(
     return;
   }
   const readBack = await loadReadBack(deps, member, date, link.channel);
-  const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel);
+  const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel, {
+    date,
+    timeZone: member.tz,
+  });
   const rendered = renderArrival({
     lang: member.language,
     address: member.addressForm ?? member.displayName,
@@ -723,7 +764,10 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
     return;
   }
   const { member, family, link } = await loadArrivalContext(deps, exchange.id);
-  const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel);
+  const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel, {
+    date,
+    timeZone: member.tz,
+  });
   const rendered = renderArrival({
     lang: member.language,
     address: member.addressForm ?? member.displayName,

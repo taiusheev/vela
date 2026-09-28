@@ -698,10 +698,14 @@ async function resolveChoice(
         : { content: { kind: "chip", index: action.index, choice }, label: choice };
     }
     case "pick": {
-      // A photo choice is always two photos (spec §4.4), the arrival's "1" and "2".
+      // A photo choice is always two photos (spec §4.4), the arrival's "1" and "2", read by their
+      // place in `media_ids`. Retention keeps a deleted photo's id in its place (`deleteMedia`), so
+      // her tap still names the photo she was shown there, and lights her day, when its row is gone.
       const mediaId =
-        exchange.type === "photo_choice" ? exchange.mediaIds[action.index] : undefined;
-      return mediaId === undefined || action.index > 1
+        exchange.type === "photo_choice" && (action.index === 0 || action.index === 1)
+          ? exchange.mediaIds[action.index]
+          : undefined;
+      return mediaId === undefined
         ? null
         : {
             content: { kind: "photo_pick", index: action.index, mediaId },

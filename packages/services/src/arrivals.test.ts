@@ -821,6 +821,51 @@ describe("deliverArrival", () => {
       fields: { exchangeId: ask.id, images: 1 },
     });
   });
+
+  // A photo sent to the group without a caption is an ask with no words (flows §3.5). Once
+  // retention has deleted it, the choice's places name nothing and the question names none, and
+  // her morning would read "Mia asks:" over nothing.
+  it("says a photo sent without words is no longer there once it is gone, and asks how she is", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const gone = ["00000000-0000-4000-8000-00000000000a", "00000000-0000-4000-8000-00000000000b"];
+    await h.db.insert(exchanges).values(
+      [
+        { date: TOMORROW, type: "photo_choice" as const, mediaIds: gone },
+        { date: "2026-09-16" as LocalDate, type: "question" as const, mediaIds: [] },
+      ].map((ask) => ({
+        familyId: seed.family.id,
+        recipientId: seed.member.id,
+        askerId: seed.organiser.id,
+        type: ask.type,
+        state: "scheduled" as const,
+        text: null,
+        textLang: "en" as const,
+        whenRule: "tomorrow" as const,
+        scheduledFor: ask.date,
+        mediaIds: ask.mediaIds,
+      })),
+    );
+    h.clock.set(at(TOMORROW, "08:00"));
+
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    h.clock.set(at("2026-09-16", "08:00"));
+    await deliverArrival(h.deps, seed.member.id, "2026-09-16", false);
+
+    const sent = (await outboundRows("arrival")).map(
+      (row) =>
+        row.payload as { message: { text: string; media?: unknown[]; buttons: unknown[][] } },
+    );
+    expect(sent).toHaveLength(2);
+    for (const arrival of sent) {
+      expect(arrival.message.text.split("\n\n")).toEqual([
+        "Good morning, Mrs Chen.",
+        "Mia wanted to show you a photo, but it is no longer available. How are you today?",
+        "Reply with a voice message, or tap a button.",
+      ]);
+      expect(arrival.message.media).toBeUndefined();
+      expect(arrival.message.buttons.map((buttonRow) => buttonRow.length)).toEqual([2]);
+    }
+  });
 });
 
 describe("sendRepeat", () => {

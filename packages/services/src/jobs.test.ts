@@ -1330,7 +1330,7 @@ describe("applyRetention", () => {
     }
     const exchange = await seedExchange(h.db, seed, {
       date: "2026-09-13",
-      type: "photo_choice",
+      type: "question",
       state: "delivered",
       deliveredAt: daysAgo(1),
     });
@@ -1382,6 +1382,73 @@ describe("applyRetention", () => {
       .from(answers)
       .where(eq(answers.id, answer?.id ?? ""));
     expect(answerAfter?.mediaId).toBeNull();
+  });
+
+  // Her pick is read by its place in `media_ids` (flows §3.9), and an arrival's "1" and "2" answer
+  // it whenever she taps them. Taking a deleted photo out of a photo choice moved the second photo
+  // into the first place: her "1" then named the photo she did not pick, and her "2" nothing, so the
+  // tap was ignored and a quiet notice could follow a day she answered.
+  it("keeps a deleted photo's place in a photo choice, as a bare id, and takes it out of every other exchange", async () => {
+    const seed = await seedFamily(h.db, { now: daysAgo(40) });
+    const [expired, fresh] = await h.db
+      .insert(media)
+      .values(
+        [
+          { fileId: "file-first", expiresAt: daysAgo(1) },
+          { fileId: "file-second", expiresAt: daysAgo(-1) },
+        ].map(({ fileId, expiresAt }) => ({
+          familyId: seed.family.id,
+          kind: "image" as const,
+          channel: "telegram" as const,
+          providerFileId: fileId,
+          providerUniqueId: `u-${fileId}`,
+          expiresAt,
+        })),
+      )
+      .returning({ id: media.id });
+    if (expired === undefined || fresh === undefined) {
+      throw new Error("media not inserted");
+    }
+    const choice = await seedExchange(h.db, seed, {
+      date: "2026-09-12",
+      type: "photo_choice",
+      state: "delivered",
+      deliveredAt: daysAgo(2),
+    });
+    const question = await seedExchange(h.db, seed, {
+      date: "2026-09-13",
+      type: "question",
+      text: null,
+      state: "delivered",
+      deliveredAt: daysAgo(1),
+    });
+    await h.db
+      .update(exchanges)
+      .set({
+        mediaIds: [expired.id, fresh.id],
+        options: { inbound_event_ids: ["tg:1"], photo_ids: [expired.id] },
+      })
+      .where(eq(exchanges.id, choice.id));
+    await h.db
+      .update(exchanges)
+      .set({ mediaIds: [expired.id] })
+      .where(eq(exchanges.id, question.id));
+
+    const counts = await applyRetention(h.deps);
+
+    expect(counts).toMatchObject({ media_deleted: 1 });
+    expect((await h.db.select().from(media)).map((row) => row.id)).toEqual([fresh.id]);
+    expect(
+      (await h.db.select().from(deletions)).map((row) => [row.objectType, row.objectId]),
+    ).toEqual([["media", expired.id]]);
+    const after = new Map(
+      (await h.db.select().from(exchanges)).map((row) => [row.id, row] as const),
+    );
+    expect(after.get(choice.id)).toMatchObject({
+      mediaIds: [expired.id, fresh.id],
+      options: { inbound_event_ids: ["tg:1"], photo_ids: [] },
+    });
+    expect(after.get(question.id)?.mediaIds).toEqual([]);
   });
 
   // Decision M (2026-09-20): with media storage off a row carries no storage key and there is no

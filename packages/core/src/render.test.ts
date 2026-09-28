@@ -223,10 +223,25 @@ describe("renderArrival in English", () => {
     expect(paragraphs(arrival)[1]).toBe("Mia asks:\nRemember this garden?");
   });
 
-  it("names the asker alone when an ask without images has no text", () => {
-    expect(paragraphs(render({ ask: question({ text: null }) }))[1]).toBe("Mia asks:");
-    const memory = render({ ask: question({ type: "memory_photo", text: null, imageCount: 0 }) });
-    expect(paragraphs(memory)[1]).toBe("Mia asks:");
+  // Only a photo comes as a question or an old photo without words (flows §3.5), so one with no
+  // image left lost it, and "Mia asks:" would hang over nothing.
+  it("says the photo is gone and asks how she is when a question or memory photo has no words and no image", () => {
+    const gone =
+      "Mia wanted to show you a photo, but it is no longer available. How are you today?";
+    for (const type of ["question", "memory_photo"] as const) {
+      for (const text of [null, "  "]) {
+        const arrival = render({ ask: question({ type, text, imageCount: 0 }) });
+        expect(paragraphs(arrival)).toEqual([
+          "Good morning, Mrs Chen.",
+          gone,
+          "Reply with a voice message, or tap a button.",
+        ]);
+        expect(labels(arrival)).toEqual([["❤️", "I'm fine"]]);
+        expectSendable(arrival, "en");
+      }
+    }
+    const onBehalf = render({ ask: question({ text: null, onBehalfOf: "Leo" }) });
+    expect(paragraphs(onBehalf)[1]).toBe(gone);
   });
 
   it("sends the fallback hello signed by Vela with only the heart and I'm fine", () => {
@@ -388,7 +403,7 @@ describe("renderArrival in Traditional Chinese", () => {
     expectSendable(arrival, lang);
   });
 
-  it("says a voice message or a photo was sent when the ask has no text", () => {
+  it("says a voice message or a photo was sent, or that the photo is gone, when the ask has no text", () => {
     const voice = render({
       lang,
       address: "陳奶奶",
@@ -412,6 +427,15 @@ describe("renderArrival in Traditional Chinese", () => {
       ask: question({ type: "memory_photo", askerName: "小美", text: null, imageCount: 1 }),
     });
     expect(paragraphs(memory)[1]).toBe("小美傳了一張照片給您。");
+    const gone = render({
+      lang,
+      address: "陳奶奶",
+      ask: question({ askerName: "小美", text: null }),
+    });
+    expect(paragraphs(gone)[1]).toBe(
+      "小美想給您看一張照片，可惜照片已經看不到了。您今天過得好嗎？",
+    );
+    expectSendable(gone, lang);
   });
 
   it("sends the fallback hello in Traditional Chinese", () => {

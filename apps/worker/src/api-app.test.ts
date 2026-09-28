@@ -109,6 +109,7 @@ const TODAY: ApiToday = {
         text: "The tomatoes finally turned.",
         at: "2026-09-22T00:12:00.000Z",
         picked_media_id: null,
+        picked_number: null,
       },
       replies: [{ from: "Synthetic user", kind: "heart", text: null }],
       seen_at: null,

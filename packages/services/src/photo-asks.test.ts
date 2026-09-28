@@ -3,8 +3,13 @@
  * delivering it to Telegram as an upload of the stored bytes, showing it on Today and Exchanges,
  * and deleting the photos after their 30 days. The upload itself is `api-media.test.ts`'s.
  */
-import { ApiComposedAsk, ApiUploadedMedia, type LocalDate } from "@vela/contracts";
-import { addDays, decodeButton, zonedInstant } from "@vela/core";
+import {
+  ApiComposedAsk,
+  ApiUploadedMedia,
+  type InboundEvent,
+  type LocalDate,
+} from "@vela/contracts";
+import { addDays, decodeButton, encodeButton, zonedInstant } from "@vela/core";
 import {
   answers,
   deletions,
@@ -14,11 +19,13 @@ import {
   media,
   members,
   outbound,
+  quietEvents,
   replies,
   users,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { type AnswerButtonAction, handleAnswerButton } from "./answers.ts";
 import type { SessionIdentity } from "./api-access.ts";
 import { AskPhotoMissingError, composeApiAsk } from "./api-asks.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
@@ -28,6 +35,7 @@ import { deliverArrival, loadAsk, prepareDay } from "./arrivals.ts";
 import type { Deps, MediaStore, OutboundJob } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { applyRetention } from "./jobs.ts";
+import { openQuiet } from "./quiet.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { testJpeg } from "./testing/jpeg.ts";
 import { type SeededFamily, seedExchange, seedFamily, seedGroupMember } from "./testing/seed.ts";
@@ -164,6 +172,27 @@ async function arrivalMessage(): Promise<StoredMessage> {
   const [row] = await arrivalRows();
   if (row === undefined) throw new Error("no arrival was written");
   return (row.payload as { message: StoredMessage }).message;
+}
+
+async function mediaIdsLeft(): Promise<string[]> {
+  return (await h.db.select({ id: media.id }).from(media)).map((row) => row.id).sort();
+}
+
+/** Her tap on a button of the message Telegram holds as `messageId`, in her own chat. */
+async function tapOn(messageId: string, action: AnswerButtonAction): Promise<void> {
+  keys += 1;
+  const event: InboundEvent = {
+    channel: "telegram",
+    eventId: `tg:tap-${keys}`,
+    at: h.clock.now().toISOString(),
+    sender: { externalUserId: seed.memberLink.externalId },
+    conversation: { externalId: seed.memberLink.externalId, kind: "private" },
+    messageId,
+    kind: "button",
+    buttonData: encodeButton(action),
+    callbackId: `cb-${keys}`,
+  };
+  await handleAnswerButton(h.deps, seed.member, event, action);
 }
 
 describe("composing a photo ask", () => {
@@ -428,6 +457,43 @@ describe("delivering a photo ask to Telegram", () => {
     });
   });
 
+  // Her pick is read until the day after her morning is over (flows §3.9), so a photo retention
+  // deletes by then is gone already: her "1" and "2" are never drawn over a photo that can vanish
+  // before she taps. The day ends in her zone, and a photo that lasts past it is sent.
+  it("sends a choice whose photo is deleted before the day after her morning is over as a question with the photo that lasts", async () => {
+    const ask = await composedChoice();
+    const [going, lasting] = ask.photos;
+    const lastingKey = ask.keys[1];
+    if (going === undefined || lasting === undefined) throw new Error("expected two photos");
+    const end = zonedInstant(addDays(TOMORROW, 2), "00:00", TZ);
+    await h.db.update(media).set({ expiresAt: end }).where(eq(media.id, going));
+    await h.db
+      .update(media)
+      .set({ expiresAt: new Date(end.getTime() + 1) })
+      .where(eq(media.id, lasting));
+    h.clock.set(at(TOMORROW, "08:00"));
+
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+
+    const message = await arrivalMessage();
+    expect(message.media).toEqual([expect.objectContaining({ storageKey: lastingKey })]);
+    expect(message.text).toContain("Mia asks:\nWhich one do you like more?");
+    expect(message.text).not.toContain("Tap 1 or 2");
+    expect(message.buttons.flat().map((button) => decodeButton(button.id)?.type)).not.toContain(
+      "pick",
+    );
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "ask_media_expiring",
+      fields: { familyId: seed.family.id, exchangeId: ask.id, count: 1 },
+    });
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "photo_choice_without_two_images",
+      fields: { exchangeId: ask.id, images: 1 },
+    });
+  });
+
   it("leaves stored photos out while storage is off, so the choice goes as words", async () => {
     await composedChoice();
     h.clock.set(at(TOMORROW, "08:00"));
@@ -444,7 +510,8 @@ describe("delivering a photo ask to Telegram", () => {
     const [exchange] = await herExchanges();
     if (exchange === undefined) throw new Error("expected her photo ask");
 
-    const onLine = await loadAsk(h.deps, seed.family, exchange, "line");
+    const morning = { date: TOMORROW, timeZone: TZ };
+    const onLine = await loadAsk(h.deps, seed.family, exchange, "line", morning);
 
     expect(onLine.ask).toMatchObject({ type: "question", imageCount: 0 });
     expect(onLine.media).toEqual([]);
@@ -455,7 +522,7 @@ describe("delivering a photo ask to Telegram", () => {
     });
     expect(h.logger.entries.map((entry) => entry.event)).not.toContain("media_not_sendable");
     // The same ask on Telegram still carries both photos, to be uploaded.
-    const onTelegram = await loadAsk(h.deps, seed.family, exchange, "telegram");
+    const onTelegram = await loadAsk(h.deps, seed.family, exchange, "telegram", morning);
     expect(onTelegram.ask).toMatchObject({ type: "photo_choice", imageCount: 2 });
     expect(onTelegram.media.map((ref) => ref.storageKey)).toEqual(ask.keys);
   });
@@ -569,29 +636,30 @@ describe("delivering a photo ask to Telegram", () => {
 /**
  * An ask whose morning passed unsent is carried to her next morning (flows §3.6), which can come
  * after its photos' 30 days: compose checks them only against the morning it was asked for. By
- * then retention has deleted them, or a photo's object has gone while its row stands, and the
- * choice must go as a question with what is left, once.
+ * then retention has deleted them, or a photo's object has gone while its row stands, or they are
+ * deleted before her pick on the new morning could be read, and the choice must go as a question
+ * with what is left, once.
  */
 describe("a photo ask carried past its photos' deletion", () => {
   const SKIPPED = TOMORROW;
   const CARRIED_TO = addDays(TOMORROW, 3);
 
   /**
-   * A choice of two photos for tomorrow, the ones named in `expiring` uploaded 29 days ago: their 30
-   * days end just after the day her pick would still be read. Her morning is queued at 08:00 and
-   * dropped unsent, since she said stop just before it went; she says start two days later, the
-   * photos' 30 days are over and retention deletes them, and at 22:00 her next morning carries the
-   * ask. Returns the ask and the photos it still names.
+   * A choice of two photos for tomorrow, the ones named in `expiring` deleted at `expiresAt`: by
+   * default uploaded 29 days ago, so their 30 days end just after the day her pick would still be
+   * read. Her morning is queued at 08:00 and dropped unsent, since she said stop just before it
+   * went; she says start two days later and retention runs, and at 22:00 her next morning carries
+   * the ask, which names both photos in their places whatever retention deleted.
    */
   async function carriedPastRetention(
     expiring: readonly (0 | 1)[],
-  ): Promise<{ id: string; left: string[] }> {
+    expiresAt = new Date(zonedInstant(addDays(SKIPPED, 2), "00:00", TZ).getTime() + 60_000),
+  ): Promise<{ id: string; photos: string[] }> {
     const photos = [await photo(1), await photo(2)];
-    const until = zonedInstant(addDays(SKIPPED, 2), "00:00", TZ);
     for (const index of expiring) {
       await h.db
         .update(media)
-        .set({ expiresAt: new Date(until.getTime() + 60_000) })
+        .set({ expiresAt })
         .where(eq(media.id, photos[index] ?? ""));
     }
     const { id } = ApiComposedAsk.parse((await compose({ media_ids: photos })).response.body);
@@ -610,10 +678,9 @@ describe("a photo ask carried past its photos' deletion", () => {
     h.clock.set(at(addDays(CARRIED_TO, -1), "22:00"));
     expect(await prepareDay(h.deps, seed.member.id, CARRIED_TO)).toBe(id);
 
-    const left = photos.filter((_, index) => !expiring.includes(index as 0 | 1));
     const [ask] = await herExchanges();
-    expect(ask).toMatchObject({ id, scheduledFor: CARRIED_TO, mediaIds: left });
-    return { id, left };
+    expect(ask).toMatchObject({ id, scheduledFor: CARRIED_TO, mediaIds: photos });
+    return { id, photos };
   }
 
   /** Her carried morning at 08:00, queued by two ticks, and then delivered. */
@@ -639,8 +706,9 @@ describe("a photo ask carried past its photos' deletion", () => {
 
   it("sends a choice that lost one photo once, on the morning it was carried to, as a question with the photo left", async () => {
     const ask = await carriedPastRetention([0]);
-    const [left] = ask.left;
+    const [, left] = ask.photos;
     if (left === undefined) throw new Error("expected one photo left");
+    expect(await mediaIdsLeft()).toEqual([left]);
     const leftKey = await storageKeyOf(left);
 
     await deliverTheCarriedMorning();
@@ -666,7 +734,7 @@ describe("a photo ask carried past its photos' deletion", () => {
 
   it("sends a choice that lost both photos once, on the morning it was carried to, as a plain question", async () => {
     const ask = await carriedPastRetention([0, 1]);
-    expect(ask.left).toEqual([]);
+    expect(await mediaIdsLeft()).toEqual([]);
 
     await deliverTheCarriedMorning();
 
@@ -680,14 +748,37 @@ describe("a photo ask carried past its photos' deletion", () => {
       event: "photo_choice_without_two_images",
       fields: { exchangeId: ask.id, images: 0 },
     });
-    expect((await herExchanges())[0]).toMatchObject({ state: "delivered", mediaIds: [] });
+    expect((await herExchanges())[0]).toMatchObject({ state: "delivered", mediaIds: ask.photos });
+  });
+
+  it("sends a choice whose photos are deleted the day it was carried to as a plain question, never under a 1 and 2 retention could take away", async () => {
+    // Compose checked them against the morning it was asked for, three days earlier. They are
+    // still here when this morning goes out at 08:00, and retention deletes them at 11:20.
+    const ask = await carriedPastRetention([0, 1], at(CARRIED_TO, "09:00"));
+    expect(await mediaIdsLeft()).toEqual([...ask.photos].sort());
+
+    await deliverTheCarriedMorning();
+
+    const sent = await theOneArrival();
+    expect(sent.message.media).toBeUndefined();
+    expect(sent.uploads).toEqual([]);
+    expect(sent.message.text).toContain("Mia asks:\nWhich one do you like more?");
+    expect(sent.message.text).not.toContain("Tap 1 or 2");
+    expect(
+      (sent.message.buttons ?? []).flat().map((button) => decodeButton(button.id)?.type),
+    ).not.toContain("pick");
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "ask_media_expiring",
+      fields: { familyId: seed.family.id, exchangeId: ask.id, count: 2 },
+    });
   });
 
   it("sends a choice whose photo's object expired under its row once, on the morning it was carried to, as a question with the photo left", async () => {
     // The row outlived its object: retention deleted the object and failed before the row, or the
     // bucket's own expiry of `asks/` came first. The ask still names both photos.
     const ask = await carriedPastRetention([]);
-    const [gone, left] = ask.left;
+    const [gone, left] = ask.photos;
     if (gone === undefined || left === undefined) throw new Error("expected both photos named");
     await h.media.delete(await storageKeyOf(gone));
     const leftKey = await storageKeyOf(left);
@@ -708,7 +799,124 @@ describe("a photo ask carried past its photos' deletion", () => {
       event: "photo_choice_without_two_images",
       fields: { exchangeId: ask.id, images: 1 },
     });
-    expect((await herExchanges())[0]).toMatchObject({ state: "delivered", mediaIds: ask.left });
+    expect((await herExchanges())[0]).toMatchObject({ state: "delivered", mediaIds: ask.photos });
+  });
+});
+
+/**
+ * Her pick is read by its place in `media_ids`, and an arrival's "1" and "2" answer it whenever she
+ * taps them (flows §3.9): yesterday's buttons still answer yesterday's exchange today, and an older
+ * arrival's too. So a photo can be deleted after the choice went out, once the day after her
+ * morning is over. Retention keeps a photo choice's places, so her tap still names the photo she
+ * was shown there, and lights the day it arrives on.
+ */
+describe("her pick on a choice whose photo was deleted after it went out", () => {
+  const LATER = addDays(TOMORROW, 2);
+
+  /**
+   * A choice for tomorrow whose `expiring` photos are deleted a minute after the day after her
+   * morning, sent at 08:00 with its 1 and 2. Her morning two days on is delivered at 08:00, so a tap
+   * then counts for it, and retention runs at noon. Returns the ask, its photos, and the message
+   * that carries its buttons.
+   */
+  async function sentThenDeleted(
+    expiring: readonly (0 | 1)[],
+  ): Promise<{ id: string; photos: string[]; messageId: string }> {
+    const photos = [await photo(1), await photo(2)];
+    const until = zonedInstant(addDays(TOMORROW, 2), "00:00", TZ);
+    for (const index of expiring) {
+      await h.db
+        .update(media)
+        .set({ expiresAt: new Date(until.getTime() + 60_000) })
+        .where(eq(media.id, photos[index] ?? ""));
+    }
+    const { id } = ApiComposedAsk.parse((await compose({ media_ids: photos })).response.body);
+    h.clock.set(at(TOMORROW, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    await h.run(handlers());
+    const [sent] = h.telegram.sent;
+    if (sent === undefined) throw new Error("expected her morning");
+    expect(sent.message.buttons?.[0]?.map((button) => decodeButton(button.id))).toEqual([
+      { type: "pick", exchangeId: id, index: 0 },
+      { type: "pick", exchangeId: id, index: 1 },
+    ]);
+    await seedExchange(h.db, seed, {
+      date: LATER,
+      type: "hello",
+      state: "delivered",
+      deliveredAt: at(LATER, "08:00"),
+    });
+    h.clock.set(at(LATER, "12:00"));
+    await applyRetention(h.deps);
+    expect(await mediaIdsLeft()).toEqual(
+      photos.filter((_, index) => !expiring.includes(index as 0 | 1)).sort(),
+    );
+    return { id, photos, messageId: sent.result.primaryMessageId };
+  }
+
+  async function theChoice(id: string): Promise<Exchange> {
+    const row = (await herExchanges()).find((exchange) => exchange.id === id);
+    if (row === undefined) throw new Error("expected the choice");
+    return row;
+  }
+
+  it("records her 2 as the photo shown second and lights her day when both photos are gone", async () => {
+    const ask = await sentThenDeleted([0, 1]);
+    h.clock.set(at(LATER, "12:30"));
+
+    await tapOn(ask.messageId, { type: "pick", exchangeId: ask.id, index: 1 });
+
+    expect(await h.db.select().from(answers)).toEqual([
+      expect.objectContaining({
+        exchangeId: ask.id,
+        kind: "photo_pick",
+        payload: { index: 1, media_id: ask.photos[1] },
+        receivedAt: at(LATER, "12:30"),
+      }),
+    ]);
+    expect(await theChoice(ask.id)).toMatchObject({ state: "answered", mediaIds: ask.photos });
+    expect(h.telegram.closed.map((call) => call.replacementText)).toEqual(["2"]);
+    expect(h.logger.entries.map((entry) => entry.event)).not.toContain(
+      "answer_button_option_ignored",
+    );
+    // Her answer for the day it came on: that day's silence opens nothing.
+    h.clock.set(at(LATER, "14:30"));
+    await openQuiet(h.deps, seed.member.id, LATER, true);
+    expect(await h.db.select().from(quietEvents)).toEqual([]);
+    // The family sees her pick as photo 2, with no photo left to show.
+    const shown = await exchangeRow(h.db, await theChoice(ask.id), {
+      id: seed.member.id,
+      displayName: "Mom",
+    });
+    expect(shown.photos).toEqual([]);
+    expect(shown.answer).toMatchObject({
+      kind: "photo_pick",
+      picked_media_id: ask.photos[1],
+      picked_number: 2,
+    });
+  });
+
+  it("records her 1 as the photo shown first, never the one left, when only the first is gone", async () => {
+    const ask = await sentThenDeleted([0]);
+    const [first, second] = ask.photos;
+    h.clock.set(at(LATER, "12:30"));
+
+    await tapOn(ask.messageId, { type: "pick", exchangeId: ask.id, index: 0 });
+
+    const [answer] = await h.db.select().from(answers);
+    expect(answer).toMatchObject({ kind: "photo_pick", payload: { index: 0, media_id: first } });
+    expect(h.telegram.closed.map((call) => call.replacementText)).toEqual(["1"]);
+    // The family sees her pick as photo 1 without its image, beside the photo that is left.
+    const shown = await exchangeRow(h.db, await theChoice(ask.id), {
+      id: seed.member.id,
+      displayName: "Mom",
+    });
+    expect(shown.photos.map((shownPhoto) => shownPhoto.id)).toEqual([second]);
+    expect(shown.answer).toMatchObject({
+      kind: "photo_pick",
+      picked_media_id: first,
+      picked_number: 1,
+    });
   });
 });
 
@@ -815,10 +1023,20 @@ describe("the photos Today and Exchanges show", () => {
 });
 
 describe("deleting a photo ask's photos after 30 days", () => {
-  it("deletes the objects, the rows and the ids in the ask, with a proof for each", async () => {
+  // A choice keeps each id in its place, naming nothing now, so a later pick still reads the photo
+  // she was shown there; any other ask loses the id.
+  it("deletes the objects and the rows with a proof for each, keeping the choice's places", async () => {
     const first = await photo(1);
     const second = await photo(2);
+    const old = await photo(3);
     await compose({ media_ids: [first, second] });
+    await compose({
+      type: "memory_photo",
+      text: "Do you remember this?",
+      when: "date",
+      date: addDays(TODAY, 2),
+      media_ids: [old],
+    });
     h.clock.set(new Date(h.clock.now().getTime() + 30 * DAY_MS + 60_000));
 
     await applyRetention(h.deps);
@@ -826,8 +1044,11 @@ describe("deleting a photo ask's photos after 30 days", () => {
     expect(await h.db.select().from(media)).toEqual([]);
     expect(h.media.objects.size).toBe(0);
     const proofs = await h.db.select().from(deletions);
-    expect(proofs.filter((proof) => proof.objectType === "media")).toHaveLength(2);
-    expect((await herExchanges()).map((row) => row.mediaIds)).toEqual([[]]);
+    expect(proofs.filter((proof) => proof.objectType === "media")).toHaveLength(3);
+    expect((await herExchanges()).map((row) => [row.type, row.mediaIds])).toEqual([
+      ["photo_choice", [first, second]],
+      ["memory_photo", []],
+    ]);
   });
 
   it("still deletes the rows with storage off, and says the objects are out of reach", async () => {
@@ -843,6 +1064,6 @@ describe("deleting a photo ask's photos after 30 days", () => {
     expect(
       h.logger.entries.filter((entry) => entry.event === "media_object_unreachable"),
     ).toHaveLength(2);
-    expect((await herExchanges()).map((row) => row.mediaIds)).toEqual([[]]);
+    expect((await herExchanges()).map((row) => row.mediaIds)).toEqual([[first, second]]);
   });
 });

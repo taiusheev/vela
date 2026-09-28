@@ -695,6 +695,10 @@ msgid "picked a photo"
 msgstr "選了一張照片"
 
 #: src/data/useToday.ts
+msgid "picked photo {number}"
+msgstr "選了第 {number} 張照片"
+
+#: src/data/useToday.ts
 msgid "quiet"
 msgstr "比較安靜"
 
