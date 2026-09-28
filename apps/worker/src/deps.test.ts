@@ -7,6 +7,7 @@ import {
   createAiPort,
   createChannels,
   createMediaPort,
+  createPushPort,
 } from "./deps.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
 import type { PrivacyNotices } from "./notices.ts";
@@ -125,6 +126,19 @@ describe("building deps", () => {
   });
 
   // 05 §5.10: every job, cron run and alarm refuses a LINE it could not speak, not only the webhook.
+  it("refuses push on without its access token before it opens a database connection", async () => {
+    const withoutToken: PilotEnv = {
+      ...chosenStaging,
+      PUSH_SEND: "expo",
+      EXPO_ACCESS_TOKEN: undefined,
+    };
+
+    await expect(buildDeps(withoutToken, noticesFixture())).rejects.toHaveProperty(
+      "code",
+      "EXPO_ACCESS_TOKEN",
+    );
+  });
+
   it("refuses LINE on without its inbound queue before it opens a database connection", async () => {
     const withoutQueue: PilotEnv = lineOnEnv({ INBOUND_QUEUE: undefined });
 
@@ -332,5 +346,73 @@ describe("the media port", () => {
     expect(() =>
       createMediaPort({ MEDIA_STORAGE: "s3" }, "staging", "wrangler.jsonc", recordingLogger([])),
     ).toThrow(/MEDIA_STORAGE must be one of r2, off/);
+  });
+});
+
+// ADR-34: Expo's push service where PUSH_SEND is "expo", and no port at all where it is "off".
+describe("the push port", () => {
+  // Made at run time: literals shaped like either would look like credentials to secret scanning.
+  const ACCESS_TOKEN = ["vela", "expo", "deps", "TokenNeverLogged42"].join("_");
+  const PUSH_TOKEN = `${["Exponent", "PushToken"].join("")}[deps-test]`;
+
+  it("is no port at all while push is off, and reads no access token", () => {
+    const port = createPushPort(
+      { PUSH_SEND: "off", EXPO_ACCESS_TOKEN: undefined },
+      recordingLogger([]),
+      { said: false },
+    );
+
+    expect(port).toBeNull();
+    expect(testEnv.PUSH_SEND).toBe("off");
+  });
+
+  it("sends through Expo with the access token while push is expo", async () => {
+    const calls: { url: string; authorization: string | null; body: unknown }[] = [];
+    const fakeFetch: typeof fetch = async (input, init) => {
+      calls.push({
+        url: String(input),
+        authorization: new Headers(init?.headers).get("authorization"),
+        body: JSON.parse(String(init?.body)),
+      });
+      return Response.json({ data: [{ status: "ok", id: "ticket-1" }] });
+    };
+    const port = createPushPort(
+      { PUSH_SEND: "expo", EXPO_ACCESS_TOKEN: ` ${ACCESS_TOKEN} ` },
+      recordingLogger([]),
+      { said: false },
+      fakeFetch,
+    );
+    if (port === null) throw new Error("push expo built no port");
+
+    const results = await port.send([{ to: PUSH_TOKEN, body: "Mia answered you." }]);
+
+    expect(results).toEqual([{ status: "ok", id: "ticket-1" }]);
+    expect(calls).toEqual([
+      {
+        url: "https://exp.host/--/api/v2/push/send",
+        authorization: `Bearer ${ACCESS_TOKEN}`,
+        body: [{ to: PUSH_TOKEN, body: "Mia answered you." }],
+      },
+    ]);
+  });
+
+  it("refuses push expo without the access token, naming it", () => {
+    expect(() =>
+      createPushPort({ PUSH_SEND: "expo" }, recordingLogger([]), { said: false }),
+    ).toThrow(expect.objectContaining({ code: "EXPO_ACCESS_TOKEN" }));
+  });
+
+  it("says once per Worker start that push is off, and nothing while it is on", () => {
+    const logs: LogLine[] = [];
+    const logger = recordingLogger(logs);
+    const notice = { said: false };
+
+    createPushPort({ PUSH_SEND: "off" }, logger, notice);
+    createPushPort({ PUSH_SEND: "off" }, logger, notice);
+    createPushPort({ PUSH_SEND: "expo", EXPO_ACCESS_TOKEN: ACCESS_TOKEN }, logger, { said: false });
+
+    expect(logs.map((line) => [line.level, line.event])).toEqual([["warn", "push_off"]]);
+    expect(String(logs[0]?.fields?.detail)).toMatch(/^PUSH_SEND is off: no push is made or sent/);
+    expect(JSON.stringify(logs)).not.toContain(ACCESS_TOKEN);
   });
 });

@@ -41,6 +41,8 @@ import {
   pauseApiMember,
   provisionApiAccount,
   readApiMedia,
+  registerApiPushDevice,
+  removeApiPushDevice,
   replyToApiExchange,
   resolveApiQuiet,
   startApiTrial,
@@ -103,6 +105,8 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   leaveApiFamily,
   startApiTrial,
   uploadApiMedia,
+  registerApiPushDevice,
+  removeApiPushDevice,
 };
 
 /**
@@ -267,6 +271,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const photos = apiMediaFor(env, config, logger);
   return {
     ...photos,
+    push: config.pushSend === "expo",
     verifySession: createClerkSessionVerifier({
       issuer: config.issuer,
       authorizedParties: [],
@@ -293,9 +298,24 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
               config: { telegramBotUsername: config.telegramBotUsername, regions: config.regions },
             },
             nudges: createApiNudges(env),
+            alerts: {
+              adminConversationId: adminConversationOf(env),
+              publicBaseUrl: env.PUBLIC_BASE_URL,
+              pushSending: config.pushSend === "expo",
+            },
           },
         }),
   };
+}
+
+/**
+ * The founder's chat, where a device write's or a Leave's alert goes (ADR-34), or null where
+ * there is none: a laptop may leave it out, and a deployed pilot Worker refuses to run without it
+ * (`readConfig`), which the API does not read, so it takes the secret as it finds it.
+ */
+function adminConversationOf(env: Pick<PilotEnv, "ADMIN_CONVERSATION_ID">): string | null {
+  const value = env.ADMIN_CONVERSATION_ID?.trim() ?? "";
+  return value === "" ? null : value;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -180,7 +180,20 @@ export default function TodayScreen() {
   // The event the sheet opened on stays its own until it is closed: once it is settled, Today no
   // longer shows the light quiet, and the organiser should still read how it was settled.
   const [openEventId, setOpenEventId] = useState<string | undefined>();
-  const liveQuiet = useQuiet(openEventId, live && organiser);
+  // push: a tapped quiet notice names its event (`?quiet=`), which may be of a family Today does not
+  // show; the API gives it only to that family's organisers, so the read itself decides. An event
+  // that is settled reads as settled, and one the reader may not see opens nothing.
+  const { quiet: tappedEventId } = useLocalSearchParams<{ quiet?: string }>();
+  const [fromTap, setFromTap] = useState(false);
+  useEffect(() => {
+    if (tappedEventId === undefined || tappedEventId.length === 0) return;
+    setOpenEventId(tappedEventId);
+    setFromTap(true);
+    setQuietOpen(true);
+    // Taken once: a later return to Today must not open it again.
+    router.setParams({ quiet: undefined });
+  }, [tappedEventId]);
+  const liveQuiet = useQuiet(openEventId, live && (organiser || fromTap));
   // The sheet opens itself once for each quiet morning (spec A11), and only for the family's
   // organisers, whom the notice is for. Keyed on the event, not the light, which is a new object
   // every time Today is read, so a sheet the organiser closed does not keep coming back.
@@ -276,6 +289,7 @@ export default function TodayScreen() {
           onClose={() => {
             setQuietOpen(false);
             setOpenEventId(undefined);
+            setFromTap(false);
           }}
         />
       )}

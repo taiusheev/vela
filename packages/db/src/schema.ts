@@ -51,6 +51,11 @@
  *   dates.
  * - Outside this database, a member's Durable Object storage is cleared when they stop, leave, are
  *   marked deceased, or are deleted.
+ * - Push (ADR-34): push_tickets are deleted 2 days after created_at, or once their receipt is read.
+ *   push_devices are never deleted by age (an Expo push token does not expire), only when Expo says
+ *   the device is gone (DeviceNotRegistered, for the token the ticket was sent to), when the app
+ *   signs out, when the account leaves its last active or paused membership, and when the account
+ *   is deleted.
  */
 import {
   ADMIN_ACTIONS,
@@ -74,6 +79,8 @@ import {
   OUTBOUND_STATUSES,
   type OutboundKind,
   PLANS,
+  PUSH_PERMISSIONS,
+  PUSH_PLATFORMS,
   QUIET_OUTCOMES,
   REACTION_KINDS,
   REGIONS,
@@ -184,6 +191,11 @@ export const users = pgTable(
     language: text("language", { enum: LANGS }).notNull().default("en"),
     /** IANA zone. */
     tz: text("tz").notNull().default("UTC"),
+    /**
+     * "One moment a day" (ADR-34): off stops this account's ordinary pushes (an answer's receipt,
+     * the turn prompt). It never stops the quiet notice or its close.
+     */
+    oneMomentADay: boolean("one_moment_a_day").notNull().default(true),
     createdAt: createdAt(),
     deletedAt: timestamptz("deleted_at"),
   },
@@ -1057,6 +1069,72 @@ export const messageRefs = pgTable(
 );
 
 // ---------------------------------------------------------------------------------------------
+// Push (ADR-34): the account's phones, and what Expo said it accepted
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * One installation of the app on a phone, registered for push by the account signed in on it. An
+ * outbound row on the `app` channel is one per member and is fanned out to the member's account's
+ * devices when it is sent. The installation id is a uuid the app mints once; a token or an
+ * installation registered again under another account moves to it, so both are unique. Only a
+ * device whose permission is `granted` and whose quiet channel is not blocked can be told anything.
+ * The token never leaves this table: not into logs, errors, or an API answer.
+ */
+export const pushDevices = pgTable(
+  "push_devices",
+  {
+    id: uuidv7Id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    installationId: uuid("installation_id").notNull().unique("push_devices_installation_id_key"),
+    /** `ExponentPushToken[…]`. */
+    token: text("token").notNull().unique("push_devices_token_key"),
+    platform: text("platform", { enum: PUSH_PLATFORMS }).notNull(),
+    permission: text("permission", { enum: PUSH_PERMISSIONS }).notNull(),
+    /** Android: the `quiet` notification channel is blocked in the phone's settings. */
+    quietChannelBlocked: boolean("quiet_channel_blocked").notNull().default(false),
+    /** The last registration or refresh. */
+    registeredAt: timestamptz("registered_at").notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("push_devices_user_idx").on(t.userId),
+    check("push_devices_platform_check", isOneOf(t.platform, PUSH_PLATFORMS)),
+    check("push_devices_permission_check", isOneOf(t.permission, PUSH_PERMISSIONS)),
+  ],
+);
+
+/**
+ * A push Expo accepted, until its receipt says whether Apple or Google took it. The token it was
+ * sent to is kept only as its SHA-256, so a receipt saying the device is gone deletes the device
+ * only while it still holds that token, never one the app has registered since.
+ */
+export const pushTickets = pgTable(
+  "push_tickets",
+  {
+    /** Expo's ticket id. */
+    id: text("id").primaryKey(),
+    deviceId: uuid("device_id")
+      .notNull()
+      .references(() => pushDevices.id, { onDelete: "cascade" }),
+    tokenSha256: text("token_sha256").notNull(),
+    outboundId: uuid("outbound_id")
+      .notNull()
+      .references(() => outbound.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("push_tickets_created_idx").on(t.createdAt),
+    index("push_tickets_device_idx").on(t.deviceId),
+    check(
+      "push_tickets_token_sha256_check",
+      sql`${sql.identifier(t.tokenSha256.name)} ~ '^[0-9a-f]{64}$'`,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------------------------
 // AI, events, consent, deletion, flags, billing
 // ---------------------------------------------------------------------------------------------
 
@@ -1540,6 +1618,10 @@ export type Outbound = typeof outbound.$inferSelect;
 export type NewOutbound = typeof outbound.$inferInsert;
 export type MessageRef = typeof messageRefs.$inferSelect;
 export type NewMessageRef = typeof messageRefs.$inferInsert;
+export type PushDevice = typeof pushDevices.$inferSelect;
+export type NewPushDevice = typeof pushDevices.$inferInsert;
+export type PushTicket = typeof pushTickets.$inferSelect;
+export type NewPushTicket = typeof pushTickets.$inferInsert;
 export type AiCall = typeof aiCalls.$inferSelect;
 export type NewAiCall = typeof aiCalls.$inferInsert;
 /** Named EventRecord so it never shadows the DOM `Event` type where it is imported. */

@@ -41,6 +41,7 @@ import {
   metricsDaily,
   onboardingSessions,
   outbound,
+  pushTickets,
   quietEvents,
   recipes,
   replies,
@@ -89,6 +90,8 @@ const RETENTION_MONTHS = 24;
  */
 const PROOF_RETENTION_YEARS = 5;
 const DAY_MS = 86_400_000;
+/** Push (ADR-34): a ticket Expo gave is kept this long at most; its receipt is gone after one. */
+export const PUSH_TICKET_RETENTION_DAYS = 2;
 /**
  * The `prompt_version` of a weekly read drafted while AI was off: no prompt wrote it, and prompt
  * versions are compared by what they wrote.
@@ -1048,6 +1051,21 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .delete(onboardingSessions)
       .where(lt(onboardingSessions.expiresAt, now))
       .returning({ id: onboardingSessions.conversationId })
+  ).length;
+
+  // Push (ADR-34): a ticket whose receipt was never read — push off since, or the check failing —
+  // goes 2 days after its send. The receipts check may hold a ticket as it settles it; the night
+  // skips it rather than wait, and the next night, or the check itself, deletes it.
+  const staleTickets = db
+    .select({ id: pushTickets.id })
+    .from(pushTickets)
+    .where(lt(pushTickets.createdAt, new Date(now.getTime() - PUSH_TICKET_RETENTION_DAYS * DAY_MS)))
+    .for("update", { skipLocked: true });
+  counts.push_tickets_deleted = (
+    await db
+      .delete(pushTickets)
+      .where(inArray(pushTickets.id, staleTickets))
+      .returning({ id: pushTickets.id })
   ).length;
 
   counts.events_deleted = (

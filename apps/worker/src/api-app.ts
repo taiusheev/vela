@@ -11,6 +11,8 @@ import {
   ApiLeft,
   ApiMe,
   ApiMemberPause,
+  ApiPushDevice,
+  ApiPushDeviceRemoved,
   ApiQuietNotice,
   ApiQuietState,
   ApiReply,
@@ -26,6 +28,8 @@ import {
   MemberLight,
   PauseMember,
   QuietAction,
+  RegisterPushDevice,
+  RemovePushDevice,
   StartTrial,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
@@ -40,6 +44,7 @@ import {
   type Clock,
   type composeApiAsk,
   type createApiFamily,
+  type DeviceAlerts,
   errorLabel,
   type Logger,
   type leaveApiFamily,
@@ -58,6 +63,8 @@ import {
   type Random,
   ReplyRefusedError,
   type readApiMedia,
+  type registerApiPushDevice,
+  type removeApiPushDevice,
   type replyToApiExchange,
   type resolveApiQuiet,
   runAfterCommit,
@@ -110,6 +117,8 @@ export interface ApiWriteServices {
   leaveApiFamily: typeof leaveApiFamily;
   startApiTrial: typeof startApiTrial;
   uploadApiMedia: typeof uploadApiMedia;
+  registerApiPushDevice: typeof registerApiPushDevice;
+  removeApiPushDevice: typeof removeApiPushDevice;
 }
 
 export interface ApiRuntime {
@@ -133,6 +142,12 @@ export interface ApiRuntime {
      * through these. Without them nothing is lost: `reconcile` re-drives the rows and ticks the members.
      */
     nudges?: ApiNudges;
+    /**
+     * Where the founder is told when a phone leaving an account, or an organiser leaving, leaves a
+     * family with no organiser who can be told, and whether pushes are sent here (ADR-34). Without
+     * it the device routes record devices and Leave leaves, and neither writes an alert.
+     */
+    alerts?: DeviceAlerts;
   };
   /**
    * Where photos from the app are kept (ADR-33): the store, and a token source for the keys an
@@ -142,6 +157,11 @@ export interface ApiRuntime {
   media?: { store: MediaStore; random: Random };
   /** Why `media` is undefined; "media_storage_off" when it is left out. */
   mediaOff?: MediaUnavailableReason;
+  /**
+   * Whether pushes are sent here (ADR-34, `PUSH_SEND` "expo"). `GET /v1/me` says so, and a phone
+   * counts toward how an organiser is told only when it is true. Left out, pushes are off.
+   */
+  push?: boolean;
 }
 
 interface RuntimeEnv {
@@ -157,6 +177,8 @@ const NOT_FOUND: ApiErrorBody = {
 };
 /** A media id as the read route takes one: a uuid, checked before any query. */
 const MEDIA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** An installation id as the device routes take one: a uuid, checked before the body is read. */
+const INSTALLATION_ID = MEDIA_ID;
 const FAMILY_NOT_FOUND: ApiErrorBody = {
   error: { code: "not_found", message: "Family not found." },
 };
@@ -424,7 +446,9 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     const me = await runtime.services.loadApiMe(c.get("db"), c.get("session"));
     return me === null
       ? c.json(NOT_FOUND, 404)
-      : c.json(ApiMe.parse({ ...me, photos: runtime.media !== undefined }));
+      : c.json(
+          ApiMe.parse({ ...me, photos: runtime.media !== undefined, push: runtime.push === true }),
+        );
   });
   app.get(
     "/v1/families/:familyId/plan",
@@ -494,6 +518,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         c.get("db"),
         c.get("session"),
         c.req.param("familyId"),
+        runtime.push === true,
       );
       return family === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiFamily.parse(family));
     },
@@ -710,6 +735,9 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         return c.json(state, 200);
       },
     );
+    // Where the founder is told (ADR-34): Leave, which can take a family's last organiser who can
+    // be told, and the phone routes below write the alert and hand it over after the commit.
+    const alerts = writes.alerts === undefined ? {} : { alerts: writes.alerts };
     // No family middleware: once the caller has left they are no longer a live member, and the
     // replay of the leave itself must still answer. The service checks the membership is theirs.
     app.post(
@@ -720,7 +748,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       withDatabase,
       async (c) => {
         const result = await writes.services.leaveApiFamily(
-          { db: c.get("db"), clock: writes.clock },
+          { db: c.get("db"), clock: writes.clock, ...alerts },
           c.get("session"),
           c.get("writeKey"),
           c.req.param("familyId"),
@@ -731,6 +759,10 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           throw new Error("Invalid API mutation response");
         }
         const left = ApiLeft.parse(result.response.body);
+        // Committed: now the founder's alert, when the one who left was the last who could be told.
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(left, 200);
       },
@@ -786,6 +818,66 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         const reply = ApiReply.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(reply, 201);
+      },
+    );
+    // Push (ADR-34): this installation's phone, registered or refreshed for the signed-in account,
+    // and taken away at sign-out. Account-scoped: an unknown or deleted account is 404, and there
+    // is no 403, since another account's installation answers `removed: false`. A phone leaving a
+    // family with nobody to tell writes the founder's alert, handed to the queue after the commit.
+    app.post(
+      "/v1/me/devices",
+      authenticate,
+      validateWrite(RegisterPushDevice, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.registerApiPushDevice(
+          { db: c.get("db"), clock: writes.clock, ...alerts },
+          c.get("session"),
+          c.get("writeKey"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const device = ApiPushDevice.parse(result.response.body);
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(device, 200);
+      },
+    );
+    app.post(
+      "/v1/me/devices/:installationId/remove",
+      authenticate,
+      async (c, next) => {
+        if (!INSTALLATION_ID.test(c.req.param("installationId"))) {
+          return c.json(NOT_FOUND, 404);
+        }
+        await next();
+        return c.res;
+      },
+      validateWrite(RemovePushDevice, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.removeApiPushDevice(
+          { db: c.get("db"), clock: writes.clock, ...alerts },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("installationId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const removed = ApiPushDeviceRemoved.parse(result.response.body);
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(removed, 200);
       },
     );
     // A photo for an ask (ADR-33): the JPEG's own bytes, not JSON. Every cheap refusal comes before

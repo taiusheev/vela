@@ -1,0 +1,13 @@
+{
+  "status": 429,
+  "headers": { "retry-after": "30" },
+  "body": {
+    "errors": [
+      {
+        "code": "TOO_MANY_REQUESTS",
+        "message": "Your project is sending more than 600 notifications per second.",
+        "isTransient": true
+      }
+    ]
+  }
+}

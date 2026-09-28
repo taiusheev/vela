@@ -60,6 +60,8 @@ import {
   QuietNoticeEffect,
 } from "./gateway-effects.ts";
 import { loadOutboundFiles } from "./outbound-media.ts";
+import { type PushSend, sendPush, settlePush } from "./push.ts";
+import { appRowProblem, PUSH_CHANNEL } from "./push-messages.ts";
 import {
   familyHasEnded,
   firstAnswersByDate,
@@ -258,6 +260,11 @@ export async function insertOutbound(
       cause: message.error,
     });
   }
+  // Push (ADR-34): an app row is a push of a push kind, with no buttons, files, reply or ref.
+  const notAPush = request.channel === PUSH_CHANNEL ? appRowProblem(request) : null;
+  if (notAPush !== null) {
+    throw new VelaError("invalid_outbound", `app request: ${notAPush}`);
+  }
   const delaySeconds = request.delaySeconds;
   if (
     delaySeconds !== undefined &&
@@ -359,7 +366,17 @@ export async function enqueueOutbound(
   db: Queryable,
   request: OutboundRequest,
 ): Promise<EnqueueResult> {
-  return handOverOutbound(deps, request, await insertOutbound(deps, db, request));
+  const written = await insertOutbound(deps, db, request);
+  // Push (ADR-34, D1): the budget's refusal is logged apart from a replay of the same message.
+  if ("duplicate" in written && !(await keyIsTaken(db, request.idempotencyKey))) {
+    deps.logger.warn("outbound_budget_refused", {
+      kind: request.kind,
+      memberId: request.memberId,
+      channel: request.channel,
+    });
+    return written;
+  }
+  return handOverOutbound(deps, request, written);
 }
 
 /**
@@ -599,21 +616,19 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
     );
   }
 
-  let result: SendResult;
+  let sent: RowSend;
   try {
-    // Stored photos (ADR-33) are loaded for this attempt, only those still to send; one that cannot
-    // be is a passing failure.
-    const files = await loadOutboundFiles(deps, taken.row.id, message.data);
-    const adapter = deps.channels.get(taken.row.channel);
-    result = await (files === undefined
-      ? adapter.send(message.data)
-      : adapter.send(message.data, files));
+    sent = await sendRow(deps, taken, message.data, payload.data.effect);
   } catch (error) {
     if (error instanceof ChannelSendError) {
       return handleSendError(deps, taken, heldSince, payload.data, message.data.media, error);
     }
     throw error;
   }
+  if (sent.status !== "sent") {
+    return settleUnsentPush(deps, taken, heldSince, payload.data, sent);
+  }
+  const { result, push } = sent;
 
   // The send is committed alone (D-B1): the message is out, and no later failure may undo the row
   // that proves it. The effects follow in their own transaction. The media an earlier try got out
@@ -642,6 +657,13 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
       return false;
     }
     await recordRefs(tx, taken, payload.data.ref, created);
+    // Push (ADR-34): the tickets whose receipts are read later, the phones found gone, and the
+    // alerts those call for, committed with the send or not at all.
+    if (push !== undefined) {
+      for (const notice of await settlePush(deps, tx, taken.row, push, payload.data.effect)) {
+        await enqueueOutbound(deps, tx, notice);
+      }
+    }
     return true;
   });
   if (!recorded) {
@@ -1102,10 +1124,26 @@ async function fail(
  * A row that must not go out is marked dropped unsent (flows §3.7): its family has ended, or it is
  * a morning of hers, or a notice, that has become moot on its way. It is decided before the take,
  * so it is written only on a row still held by no delivery, and recorded only then: a row another
- * delivery took in the meantime is that delivery's to finish.
+ * delivery took in the meantime is that delivery's to finish. A push nothing may or can carry
+ * (ADR-34) is decided after its take instead, so it is dropped on the row this delivery holds,
+ * and what the push came to (`settlePush`: the phones found gone, and the founder's alerts,
+ * among them a quiet notice left unheard) is written in the same transaction, after the drop.
  */
-async function drop(deps: Deps, loaded: LoadedOutbound, reason: string): Promise<"skipped"> {
-  const dropped = await deps.db.transaction((tx) => markDropped(deps, tx, loaded, reason));
+async function drop(
+  deps: Deps,
+  loaded: LoadedOutbound,
+  reason: string,
+  held: { heldSince: Date; push: PushSend; effect: unknown } | null = null,
+): Promise<"skipped"> {
+  const dropped = await deps.db.transaction(async (tx) => {
+    const mine = await markDropped(deps, tx, loaded, reason, held?.heldSince ?? null);
+    if (mine && held !== null) {
+      for (const notice of await settlePush(deps, tx, loaded.row, held.push, held.effect)) {
+        await enqueueOutbound(deps, tx, notice);
+      }
+    }
+    return mine;
+  });
   if (!dropped) {
     return holdTaken(deps, loaded.row);
   }
@@ -1118,20 +1156,22 @@ async function drop(deps: Deps, loaded: LoadedOutbound, reason: string): Promise
 }
 
 /**
- * Marks the row dropped and records it, only on a row still queued and held by no delivery; false,
- * writing nothing, when another delivery took, sent, or dropped it first.
+ * Marks the row dropped and records it, only on a row still queued and held by no delivery (or, for
+ * a push, by this one since `heldSince`); false, writing nothing, when another delivery took, sent,
+ * or dropped it first.
  */
 async function markDropped(
   deps: Deps,
   tx: VelaTransaction,
   loaded: LoadedOutbound,
   reason: string,
+  heldSince: Date | null = null,
 ): Promise<boolean> {
   const { row, family } = loaded;
   const [mine] = await tx
     .update(outbound)
-    .set({ status: "dropped", error: reason })
-    .where(heldBy(row.id, null))
+    .set({ status: "dropped", error: reason, sentAt: null })
+    .where(heldBy(row.id, heldSince))
     .returning({ id: outbound.id });
   if (mine === undefined) {
     return false;
@@ -1191,4 +1231,73 @@ async function dropWhilePaused(deps: Deps, loaded: LoadedOutbound): Promise<"ski
   }
   deps.logger.info("outbound_dropped", { outboundId: row.id, kind: row.kind, reason: PAUSED });
   return "skipped";
+}
+
+// Push (ADR-34) -----------------------------------------------------------------------------------
+
+/** What one send came to: sent with the platform's result (a push's with its tickets), or not. */
+type RowSend =
+  | { status: "sent"; result: SendResult; push?: Extract<PushSend, { status: "sent" }> }
+  | Exclude<PushSend, { status: "sent" }>;
+
+/**
+ * The one dispatch. An app row goes to the reader's phones through the push port, before any file
+ * is loaded (a push carries none) and never through a channel adapter, which the registry has none
+ * of for `app`. Any other row goes to its channel's adapter with its stored photos (ADR-33), each
+ * loaded for this attempt; one that cannot be is a passing failure.
+ */
+async function sendRow(
+  deps: Deps,
+  loaded: LoadedOutbound,
+  message: OutboundMessage,
+  effect: unknown,
+): Promise<RowSend> {
+  if (loaded.row.channel === PUSH_CHANNEL) {
+    const push = await sendPush(deps, loaded, message, effect);
+    return push.status === "sent" ? { status: "sent", result: push.result, push } : push;
+  }
+  const files = await loadOutboundFiles(deps, loaded.row.id, message);
+  const adapter = deps.channels.get(loaded.row.channel);
+  const result = await (files === undefined ? adapter.send(message) : adapter.send(message, files));
+  return { status: "sent", result };
+}
+
+/**
+ * A push that did not go, on the row this delivery holds since `heldSince`: dropped with what the
+ * drop calls for, or failed as any send fails, after its refusals are written — each phone found
+ * gone deleted with the alert its loss calls for, and Vela's credentials refused — in one
+ * transaction, so a phone is never deleted without its alert.
+ */
+async function settleUnsentPush(
+  deps: Deps,
+  taken: LoadedOutbound,
+  heldSince: Date,
+  payload: OutboundPayload,
+  push: Exclude<PushSend, { status: "sent" }>,
+): Promise<DeliveryResult> {
+  if (push.status === "dropped") {
+    return drop(deps, taken, push.reason, { heldSince, push, effect: payload.effect });
+  }
+  if (push.gone.length > 0 || push.notices.length > 0) {
+    await deps.db.transaction(async (tx) => {
+      for (const notice of await settlePush(deps, tx, taken.row, push, payload.effect)) {
+        await enqueueOutbound(deps, tx, notice);
+      }
+    });
+  }
+  return handleSendError(deps, taken, heldSince, payload, undefined, push.error);
+}
+
+/**
+ * Whether a conflicting insert met the row its own key names — a replay of the same message — or
+ * the budget index, which refused a second message of the kind for the member's day (spec §15,
+ * D1). The two are logged apart.
+ */
+async function keyIsTaken(db: Queryable, idempotencyKey: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: outbound.id })
+    .from(outbound)
+    .where(eq(outbound.idempotencyKey, idempotencyKey))
+    .limit(1);
+  return row !== undefined;
 }

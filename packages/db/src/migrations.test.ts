@@ -40,6 +40,12 @@ function migrationsUpTo(lastTag: string): string {
   return folder;
 }
 
+/**
+ * Each test boots its own PGlite and runs every migration, twice over; under a full `pnpm test`,
+ * with the other packages' suites beside it, that takes longer than vitest's default 5 s.
+ */
+const MIGRATION_TIMEOUT_MS = 60_000;
+
 const cleanups: (() => Promise<void> | void)[] = [];
 
 afterEach(async () => {
@@ -48,7 +54,7 @@ afterEach(async () => {
   }
 });
 
-describe("0003_suggestion_days", () => {
+describe("0003_suggestion_days", { timeout: MIGRATION_TIMEOUT_MS }, () => {
   it("upgrades a laptop database the old dev seed wrote a suggestion to, and clears that row", async () => {
     const earlier = migrationsUpTo("0002_account_linking");
     const client = new PGlite();
@@ -111,5 +117,30 @@ describe("0003_suggestion_days", () => {
       sql`insert into suggestions (family_id, about_member_id, local_day, bank_id, type, text, prompt_version)
           values (${family.id}, ${mom.id}, '2026-09-27', 'life.childhood.home', 'question', '', 'bank.v1')`,
     );
+  });
+});
+
+describe("0005_push", { timeout: MIGRATION_TIMEOUT_MS }, () => {
+  it("switches One moment a day on for every account that exists, and adds no device", async () => {
+    const earlier = migrationsUpTo("0004_reaction_messages");
+    const client = new PGlite();
+    cleanups.push(() => rmSync(earlier, { recursive: true, force: true }));
+    cleanups.push(() => client.close());
+    const db = drizzle({ client });
+    await migrate(db, { migrationsFolder: earlier });
+    await db.execute(
+      sql`insert into users (auth_subject, display_name) values ('user_before_push', 'Mia')`,
+    );
+
+    await migrate(db, { migrationsFolder });
+
+    const accounts = await db.execute<{ one_moment_a_day: boolean }>(
+      sql`select one_moment_a_day from users`,
+    );
+    expect(accounts.rows).toEqual([{ one_moment_a_day: true }]);
+    const devices = await db.execute<{ n: number }>(
+      sql`select count(*)::int as n from push_devices`,
+    );
+    expect(devices.rows).toEqual([{ n: 0 }]);
   });
 });

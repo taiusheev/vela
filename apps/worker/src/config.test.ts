@@ -7,6 +7,8 @@ import {
   readApiConfig,
   readConfig,
   readLineConfig,
+  readPushConfig,
+  readPushSend,
   secret,
 } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
@@ -293,6 +295,7 @@ describe("the API's configuration", () => {
       secretKey: TEST_KEY,
       telegramBotUsername: "VelaStagingBot",
       regions: ["apac"],
+      pushSend: "off",
     });
   });
 
@@ -638,6 +641,86 @@ describe("LINE's configuration", () => {
     expect(
       configErrorOf(() => checkAdminConfig({ ...admin, LINE_BOT_BASIC_ID: "velatest" })).code,
     ).toBe("LINE_BOT_BASIC_ID");
+  });
+});
+
+// ADR-34: push is off everywhere until the founder has set Expo up; "expo" needs its access token.
+describe("push's configuration", () => {
+  // Made at run time: a literal shaped like an access token looks like a credential to scanning.
+  const ACCESS_TOKEN = ["vela", "expo", "config", "TokenNeverLogged42"].join("_");
+
+  it("sends nothing as wrangler.jsonc ships every environment, and reads no push secret", () => {
+    expect(testEnv.PUSH_SEND).toBe("off");
+    expect(readPushSend(testEnv)).toBe("off");
+    expect(readPushConfig({ ...testEnv, EXPO_ACCESS_TOKEN: undefined })).toBeNull();
+    expect(readConfig({ ...chosenStaging, EXPO_ACCESS_TOKEN: undefined }, filled).environment).toBe(
+      "staging",
+    );
+  });
+
+  it("takes the switch with spaces around it, and refuses anything but expo or off", () => {
+    expect(readPushSend({ PUSH_SEND: " expo " })).toBe("expo");
+    for (const value of [undefined, "", "on", "EXPO", "fcm"]) {
+      const error = configErrorOf(() => readPushSend({ PUSH_SEND: value }));
+      expect(error.code, String(value)).toBe("PUSH_SEND");
+      expect(error.message).toContain("wrangler.jsonc");
+    }
+    expect(
+      configErrorOf(() => readConfig({ ...chosenStaging, PUSH_SEND: "on" }, filled)).code,
+    ).toBe("PUSH_SEND");
+    expect(configErrorOf(() => readApiConfig({ ...testEnv, PUSH_SEND: "on" })).code).toBe(
+      "PUSH_SEND",
+    );
+  });
+
+  it.each(["development", "staging", "production"] as const)(
+    "refuses to send in %s without the access token, naming the secret and never a value",
+    (environment) => {
+      const env = { PUSH_SEND: "expo", ENVIRONMENT: environment };
+      for (const token of [undefined, "", "   "]) {
+        const error = configErrorOf(() => readPushConfig({ ...env, EXPO_ACCESS_TOKEN: token }));
+        expect(error.code).toBe("EXPO_ACCESS_TOKEN");
+        expect(errorLabel(error)).toBe("ConfigError:EXPO_ACCESS_TOKEN");
+      }
+    },
+  );
+
+  it("refuses the pilot Worker's start with push on and no access token", () => {
+    const error = configErrorOf(() =>
+      readConfig({ ...chosenStaging, PUSH_SEND: "expo", EXPO_ACCESS_TOKEN: undefined }, filled),
+    );
+
+    expect(error.code).toBe("EXPO_ACCESS_TOKEN");
+  });
+
+  it("refuses an access token with a character Expo never issues, and never says it", () => {
+    const pasted = `${ACCESS_TOKEN}
+second line`;
+    const error = configErrorOf(() =>
+      readPushConfig({ PUSH_SEND: "expo", EXPO_ACCESS_TOKEN: pasted }),
+    );
+
+    expect(error.code).toBe("EXPO_ACCESS_TOKEN");
+    expect(error.message).not.toContain(ACCESS_TOKEN);
+  });
+
+  it("sends with the access token once it is there, trimmed", () => {
+    expect(readPushConfig({ PUSH_SEND: "expo", EXPO_ACCESS_TOKEN: ` ${ACCESS_TOKEN} ` })).toEqual({
+      accessToken: ACCESS_TOKEN,
+    });
+    expect(
+      readConfig({ ...chosenStaging, PUSH_SEND: "expo", EXPO_ACCESS_TOKEN: ACCESS_TOKEN }, filled)
+        .environment,
+    ).toBe("staging");
+  });
+
+  // The API only records devices; it needs the switch, which says whether a device counts, and
+  // never the token.
+  it("gives the API the switch and never asks it for the token", () => {
+    expect(
+      readApiConfig({ ...testEnv, PUSH_SEND: "expo", EXPO_ACCESS_TOKEN: undefined })?.pushSend,
+    ).toBe("expo");
+    expect(readApiConfig(testEnv)?.pushSend).toBe("off");
   });
 });
 

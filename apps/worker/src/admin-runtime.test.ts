@@ -74,6 +74,13 @@ describe("the ports the admin Worker hands services", () => {
     expect(deps.queues.outbound).toBe(ports.queues.outbound);
   });
 
+  // ADR-34: push off, never a port that throws. Services read a non-null port as push on and count
+  // an organiser's phone as someone who can be told, which from here would hide from the founder a
+  // family that nobody can tell while push is off.
+  it("give services no push port, which reads as push off", () => {
+    expect(servicesDeps(createFakeAdminDeps([])).push).toBeNull();
+  });
+
   // create_invite's link names the bot, and that is the one field of Config the admin Worker has.
   it("give services the bot's username as the one Config field it has", () => {
     const ports = { ...createFakeAdminDeps([]), telegramBotUsername: "VelaStagingBot" };

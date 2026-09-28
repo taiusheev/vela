@@ -30,10 +30,10 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
 import { enqueueOutbound, type OutboundRequest } from "./gateway.ts";
-import { closingNoticeFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
+import { quietPushNotice } from "./push-messages.ts";
+import { closingNoticesFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
 import {
   type AnsweredDay,
-  activeOrganisersWithLinks,
   channelLinkOfMember,
   consentedNearbyContacts,
   familyById,
@@ -43,6 +43,7 @@ import {
   memberByChannelUser,
   memberById,
   quietEventById,
+  reachableOrganisers,
   recentAnsweredDays,
 } from "./repo.ts";
 
@@ -149,9 +150,10 @@ export function usualAnswerTime(
 }
 
 /**
- * One notice per active organiser with a Telegram link, keyed by the round (the event's notify
- * count before this round), so a re-notification after "wait" is a new message and a replay of the
- * same round is not.
+ * One notice per active organiser on each channel they can be told on — their Telegram link, and,
+ * while push is on, their phones (ADR-34) — keyed by the round (the event's notify count before
+ * this round), so a re-notification after "wait" is a new message and a replay of the same round is
+ * not.
  */
 async function sendQuietNotices(
   deps: Deps,
@@ -159,10 +161,11 @@ async function sendQuietNotices(
   ctx: QuietContext & { quiet: QuietEvent },
 ): Promise<void> {
   const { member, family, exchange, quiet } = ctx;
-  const organisers = await activeOrganisersWithLinks(tx, family.id, NOTICE_CHANNEL);
+  const organisers = await reachableOrganisers(tx, family.id, NOTICE_CHANNEL, deps.push !== null);
   if (organisers.length === 0) {
-    // Nobody who could be told: an app-made family, or one whose last organiser was marked left or
-    // blocked the bot. Her silence must not end here unheard, so the founder hears it.
+    // Nobody who could be told: an app-made family with no phone that can be told (or push off),
+    // or one whose last organiser was marked left or blocked the bot. Her silence must not end here
+    // unheard, so the founder hears it.
     deps.logger.error("quiet_notice_nobody_told", { familyId: family.id, memberId: member.id });
     const alert = quietNobodyToldAlert(deps, {
       quietId: quiet.id,
@@ -182,6 +185,24 @@ async function sendQuietNotices(
 
   for (const organiser of organisers) {
     const lang = organiser.member.language;
+    // Push (ADR-34): the organiser's phones hear it too, in the fewer words a lock screen may show.
+    const userId = organiser.member.userId;
+    if (organiser.push && userId !== null) {
+      await enqueueOutbound(
+        deps,
+        tx,
+        quietPushNotice({
+          quiet,
+          reader: { member: organiser.member, userId },
+          herName: name,
+          sent,
+        }),
+      );
+    }
+    const [link] = organiser.links;
+    if (link === undefined) {
+      continue;
+    }
     const paragraphs = [
       usual === null
         ? t(lang, "quiet.notice_no_usual", { name, sent })
@@ -210,8 +231,8 @@ async function sendQuietNotices(
         suffix: String(quiet.notifyCount),
       }),
       memberId: organiser.member.id,
-      channel: organiser.link.channel,
-      conversationId: organiser.link.externalId,
+      channel: link.channel,
+      conversationId: link.externalId,
       exchangeId: exchange.id,
       lang,
       text: paragraphs.join("\n\n"),
@@ -335,8 +356,8 @@ async function tellNotified(
     if (told.has(readerId)) {
       continue;
     }
-    const notice = await closingNoticeFor(tx, closed, her, readerId);
-    if (notice !== null) {
+    // Push (ADR-34): on Telegram, and on their phone when the app's notice reached it.
+    for (const notice of await closingNoticesFor(tx, closed, her, readerId)) {
       await emit(notice);
       told.add(readerId);
     }

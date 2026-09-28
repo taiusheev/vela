@@ -1,8 +1,9 @@
 /**
  * Her answer (spec §5, flows §3.9). The light path runs first, in one transaction: the answer row,
  * the exchange to `answered`, the open quiet event resolved, her open-ended away periods ended, the
- * event. Everything the family sees follows outside it (the ack, the group post, the understanding
- * jobs) and can fail without touching the light; `reconcile` writes a group post that was lost.
+ * event. Everything the family sees follows outside it (the ack, the group post, the asker's push,
+ * the understanding jobs) and can fail without touching the light; `reconcile` writes a group post
+ * that was lost.
  *
  * Nothing she writes before she taps Yes on the consent message, or after she says no, or once she
  * is left or deceased, is stored, sent, posted, or logged: the privacy notice promises it.
@@ -48,6 +49,7 @@ import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatTime, inboundExternalId } from "./format.ts";
 import { type EnqueueResult, enqueueOutbound, finishArrivalEffects } from "./gateway.ts";
+import { answerReceiptPush, ordinaryPushReader } from "./push-messages.ts";
 import { resolveQuietOnAnswer } from "./quiet.ts";
 import {
   exchangesByIds,
@@ -163,11 +165,18 @@ interface AnswerInput {
   now: Date;
 }
 
+/** Her answer as the light path stored it, and who its closes of quiet events told. */
+interface Lit {
+  answer: Answer;
+  /** The members told that the light is lit again, on any channel (`resolveQuietOnAnswer`). */
+  told: ReadonlySet<string>;
+}
+
 /**
  * The light path (flows §3.9), in one transaction. A duplicate of the platform message (a redelivered
  * webhook, a second tap on the same arrival) ends the flow with `null`.
  */
-async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | null> {
+async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Lit | null> {
   const { member, family, event, content, now } = input;
   const localDate = localDateOf(now, member.tz);
   return deps.db.transaction(async (tx) => {
@@ -224,7 +233,7 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | n
       .set({ state, answeredAt: exchange.answeredAt ?? now })
       .where(eq(exchanges.id, exchange.id));
 
-    const told = await resolveQuietOnAnswer(deps, tx, exchange.id);
+    let told = await resolveQuietOnAnswer(deps, tx, exchange.id);
     // An answer counts for the local date it arrives on (flows §3.9), so a tap on an older
     // arrival's buttons is today's answer too, and closes today's quiet. It takes the lock the quiet
     // ladder takes before it opens or notifies, so the ladder either sees this answer or waits and
@@ -233,7 +242,7 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | n
     // answer once.
     const day = await lockDeliveredExchangeForLocalDate(tx, member.id, localDate);
     if (day !== null && day.id !== exchange.id) {
-      await resolveQuietOnAnswer(deps, tx, day.id, told);
+      told = await resolveQuietOnAnswer(deps, tx, day.id, told);
     }
 
     // An open-ended away ("until I'm back") lasts until her first answer on or after its start, on a
@@ -285,7 +294,7 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Answer | n
     );
     // Her repeat and quiet thresholds no longer apply today: the scheduler must decide again.
     await markWakeDue(tx, member.id, now);
-    return answer;
+    return { answer, told };
   });
 }
 
@@ -369,10 +378,41 @@ async function settle(
   }
 }
 
+/**
+ * Push (ADR-34, S5): "{name} answered you." on the phones of whoever asked the exchange she
+ * answered, the first answer only (the key names the exchange). Not for a hello, which nobody
+ * asked; not to her; not to an asker this answer has just told that her light is lit again (they
+ * know); not while push is off; and only to an active asker whose live account has "One moment a
+ * day" on and a phone that can be told. Its day is the reader's today, and the budget allows one a
+ * day.
+ */
+async function sendAnswerReceipt(
+  deps: Deps,
+  input: AnswerInput,
+  told: ReadonlySet<string>,
+): Promise<void> {
+  const { member, exchange } = input;
+  const askerId = exchange.askerId;
+  if (deps.push === null || askerId === null || askerId === member.id || told.has(askerId)) {
+    return;
+  }
+  const reader = await ordinaryPushReader(deps.db, askerId);
+  if (reader === null || reader.member.familyId !== member.familyId) {
+    return;
+  }
+  await enqueueOutbound(
+    deps,
+    deps.db,
+    answerReceiptPush({ reader, exchangeId: exchange.id, herName: member.displayName }),
+  );
+}
+
 /** What follows the light, outside its transaction: none of it can hold the light back. */
-async function afterLight(deps: Deps, input: AnswerInput, answer: Answer): Promise<void> {
+async function afterLight(deps: Deps, input: AnswerInput, lit: Lit): Promise<void> {
+  const { answer } = lit;
   await settle(deps, "ack", answer.id, () => sendAck(deps, input));
   await settle(deps, "post", answer.id, () => postAnswer(deps, { ...input, answer }));
+  await settle(deps, "answer_receipt", answer.id, () => sendAnswerReceipt(deps, input, lit.told));
   await settle(deps, "queue", answer.id, () =>
     input.content.kind === "voice" && answer.mediaId !== null
       ? deps.queues.media.send({ type: "ingest_answer_media", answerId: answer.id })
@@ -576,9 +616,9 @@ export async function handleParentMessage(
     media: event.media ?? null,
     now,
   };
-  const answer = await lightTheLight(deps, input);
-  if (answer !== null) {
-    await afterLight(deps, input, answer);
+  const lit = await lightTheLight(deps, input);
+  if (lit !== null) {
+    await afterLight(deps, input, lit);
   }
 }
 
@@ -729,8 +769,8 @@ export async function handleAnswerButton(
     media: null,
     now,
   };
-  const answer = await lightTheLight(deps, input);
-  if (answer === null) {
+  const lit = await lightTheLight(deps, input);
+  if (lit === null) {
     return;
   }
   if (event.messageId !== undefined) {
@@ -743,5 +783,5 @@ export async function handleAnswerButton(
       });
     }
   }
-  await afterLight(deps, input, answer);
+  await afterLight(deps, input, lit);
 }

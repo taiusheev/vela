@@ -275,6 +275,8 @@ function createFakeDeps(logs: LogLine[], line: ChannelAdapter): Deps {
       head: async () => null,
     },
     channels: { get: (channel) => (channel === "line" ? line : fakeAdapter([], "secret")) },
+    // As PUSH_SEND "off" leaves it, which every environment is (ADR-34).
+    push: null,
     ai: createFakeAi(),
     stt: createFakeStt(),
     heartbeat: { ping: async () => {} },

@@ -1,7 +1,7 @@
 import { TUNING } from "@vela/core";
 import { describe, expect, inject, it } from "vitest";
 import { API_ADDRESS_LIMIT } from "./api-runtime.ts";
-import { AI_OFF_EFFECTS, MEDIA_OFF_EFFECTS } from "./deps.ts";
+import { AI_OFF_EFFECTS, MEDIA_OFF_EFFECTS, PUSH_OFF_EFFECTS } from "./deps.ts";
 import { NOTICE_LANGS, NOTICE_PATHS, type NoticeLang } from "./notices.ts";
 import { inboundRetryDelaySeconds, NIGHTLY_CRON, RECONCILE_CRON } from "./pilot-worker.ts";
 
@@ -513,6 +513,39 @@ describe("the pilot Worker's bindings", () => {
       expect(configOf("pilot", environment).crons).toEqual([RECONCILE_CRON, NIGHTLY_CRON]);
     },
   );
+
+  // ADR-34: no environment sends a push until the founder has set up Expo (with Enhanced Push
+  // Security and its access token), Firebase and, for iPhones, Apple, and production none before a
+  // privacy notice names Expo, Apple and Google. The commit that turns one on changes this pin.
+  it("send no push in any environment, a switch the pilot Worker alone holds", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.PUSH_SEND,
+      ),
+    ).toEqual(["off", "off", "off"]);
+    for (const environment of ["development", ...DEPLOYED] as const) {
+      expect(Object.keys(configOf("admin", environment).vars), environment).not.toContain(
+        "PUSH_SEND",
+      );
+    }
+  });
+
+  // Expo's access token is a secret only the founder puts, never a value in a committed file.
+  it("never holds EXPO_ACCESS_TOKEN as a var, in either Worker or any environment", () => {
+    for (const config of configs) {
+      expect(Object.keys(config.vars), `${config.worker}:${config.environment}`).not.toContain(
+        "EXPO_ACCESS_TOKEN",
+      );
+    }
+  });
+
+  // The header is the one place that says what push off leaves out and how it is turned on.
+  it("say in the pilot header what push off leaves out, and that the token is piped in first", () => {
+    const header = pilotHeader();
+
+    expect(header).toContain(PUSH_OFF_EFFECTS);
+    expect(header).toContain("wrangler secret put EXPO_ACCESS_TOKEN --env staging");
+  });
 
   // ADR-29: production's API stays off until a Clerk production instance, a production key, a
   // privacy notice naming Clerk, and a new ADR, which changes this pin.

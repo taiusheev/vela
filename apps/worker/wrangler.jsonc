@@ -117,6 +117,17 @@
   // `pnpm --filter @vela/worker run setup -- --env staging --from resources` on that commit before
   // it is merged to main, which creates the queue and deploys. Merged first, CI would deploy a
   // binding to a queue that does not exist, and the deploy would fail.
+  //
+  // PUSH_SEND (ADR-34) is "expo" or "off", and belongs to this Worker alone: the admin Worker sends
+  // no push and has no such var. With "off" no push is made or sent and no receipt is read: an
+  // organiser is told of a quiet morning only on Telegram, a phone counts toward nobody being
+  // told, and the app's devices are still registered and kept, ready for the switch. It is "off"
+  // in every environment, and src/wrangler-config.test.ts pins it, until the founder has an Expo
+  // account with Enhanced Push Security and an access token, a Firebase project for Android, and,
+  // for iPhones, the Apple Developer Program. With "expo" src/config.ts refuses to start without
+  // EXPO_ACCESS_TOKEN, a secret of this Worker the founder puts, never a var: piped, not pasted,
+  // with `wrangler secret put EXPO_ACCESS_TOKEN --env staging`. Then set "expo" for that
+  // environment here and change the pin in the same commit.
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vela-dev",
   "main": "src/index.ts",
@@ -246,7 +257,9 @@
     "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev",
     // Off: a laptop has no media bucket, and LINE's tests run on fixtures (05 §5.10).
     "LINE_CHANNEL": "off",
-    "PILOT_PUBLIC_URL": "http://localhost:8787"
+    "PILOT_PUBLIC_URL": "http://localhost:8787",
+    // Off: no laptop reaches Expo; push is proven against a fake Expo endpoint (ADR-34).
+    "PUSH_SEND": "off"
   },
 
   "env": {
@@ -333,7 +346,9 @@
         // (05 §8, step 8): no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
         "LINE_CHANNEL": "off",
         // This Worker's origin, which the media URLs LINE fetches start with once LINE is on.
-        "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev"
+        "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev",
+        // Off until the founder has set up Expo and put EXPO_ACCESS_TOKEN (ADR-34).
+        "PUSH_SEND": "off"
       }
     },
 
@@ -399,7 +414,10 @@
         // Off until the design's last step turns it on (05 §8, step 11), and pinned off by
         // src/wrangler-config.test.ts: no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
         "LINE_CHANNEL": "off",
-        "PILOT_PUBLIC_URL": "https://vela.vela-light.workers.dev"
+        "PILOT_PUBLIC_URL": "https://vela.vela-light.workers.dev",
+        // Off, and pinned off by src/wrangler-config.test.ts: its API is off, and no family gets a
+        // push before a privacy notice names Expo, Apple and Google (ADR-34).
+        "PUSH_SEND": "off"
       }
     }
   }

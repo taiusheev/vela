@@ -8,13 +8,23 @@ import {
 } from "@vela/contracts";
 import { families, type Member, members, users, type VelaTransaction } from "@vela/db";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { organisersUnreachableAlert } from "./admin-alerts.ts";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
+import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
+import { insertOutbound } from "./gateway.ts";
+import { type DeviceAlerts, forgetDevicesOfAccountWithoutFamily } from "./push-devices.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** What Leave needs: the database and clock, and where the founder is told, as the device routes. */
+export interface ApiLeaveDeps extends Pick<Deps, "db" | "clock"> {
+  /** Where the founder is told, and whether push is on here; without it no alert is written. */
+  alerts?: DeviceAlerts;
+}
 
 export class MemberChangeRefusedError extends Error {
   override readonly name = "MemberChangeRefusedError";
@@ -134,26 +144,36 @@ export async function pauseApiMember(
  * A12): one's own membership becomes `left`, out of the turn rotation, and retention deletes it
  * thirty days on, as when the founder marks someone left. The same two refusals as pausing hold.
  *
+ * Devices belong to the account, so they are deleted only when this was its last active or paused
+ * membership: an account in another family still needs its phones for that family's notices.
+ *
+ * An organiser who leaves may have been the last one who could be told of a quiet morning (ADR-34,
+ * D4): the other active organiser that Leave requires may have neither a Telegram link nor, while
+ * push is on, a phone that can be told. Then the founder's alert (`organisersUnreachableAlert`) is
+ * written as an outbound row in the same transaction and handed to the queue after the commit,
+ * through the returned `AfterCommit`, on the first attempt only. That needs `alerts`.
+ *
  * Authorization is the service's own, not the family check's: once the caller has left they are no
  * longer a live member, and the family check would refuse the replay of the very request that made
  * them leave. So `authorize` accepts the caller's own row in a family that still exists, live or
  * already left, and `mutate` answers a member who has left as it stands.
  */
 export async function leaveApiFamily(
-  deps: Pick<Deps, "db" | "clock">,
+  deps: ApiLeaveDeps,
   identity: SessionIdentity,
   key: string,
   familyId: string,
   memberId: string,
   input: unknown,
-): Promise<{ response: ApiMutationResponse; replayed: boolean }> {
+): Promise<{ response: ApiMutationResponse; replayed: boolean; after: AfterCommit }> {
   if (!LeaveFamily.safeParse(input).success) throw new ApiIdempotencyError("invalid");
   if (!UUID.test(familyId) || !UUID.test(memberId)) throw notFound();
   const self = memberId.toLowerCase();
   const family = familyId.toLowerCase();
   const now = deps.clock.now();
+  const after = nothingAfterCommit();
 
-  return runApiMutation(
+  const result = await runApiMutation(
     deps,
     identity,
     { key, operation: "member.leave:v1", input: {}, familyId: family, memberId: self },
@@ -201,6 +221,23 @@ export async function leaveApiFamily(
             },
             now,
           );
+          // Push (ADR-34): the account's last family gone, its phones are told nothing more.
+          if (member.userId !== null) {
+            await forgetDevicesOfAccountWithoutFamily(tx, member.userId);
+          }
+          // The organiser who leaves may have been the last one who could be told (D4).
+          if (member.role === "organiser" && deps.alerts !== undefined) {
+            const alert = await organisersUnreachableAlert(
+              { config: deps.alerts, pushSending: deps.alerts.pushSending },
+              tx,
+              member.id,
+              `left:${member.id}:${now.getTime()}`,
+            );
+            if (alert !== null) {
+              const written = await insertOutbound(deps, tx, alert);
+              if ("outboundId" in written) after.outboundIds.push(written.outboundId);
+            }
+          }
           leftAt = now;
         }
         const body: ApiLeft = { member_id: member.id, left_at: leftAt.toISOString() };
@@ -208,4 +245,5 @@ export async function leaveApiFamily(
       },
     },
   );
+  return { ...result, after: result.replayed ? nothingAfterCommit() : after };
 }

@@ -244,6 +244,18 @@ msgstr "Ask them to look in"
 msgid "Asked at {time}"
 msgstr "Asked at {time}"
 
+#: src/components/push-offer.tsx
+msgid "Asking…"
+msgstr "Asking…"
+
+#: src/data/notifications.ts
+msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
+msgstr "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
+
+#: src/data/notifications.ts
+msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says."
+msgstr "At most one of each a day: when {her} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says."
+
 #. a time zone
 #: src/data/onboarding.ts
 msgid "Atlantic"
@@ -368,6 +380,10 @@ msgstr "Has not said yes yet"
 msgid "Hawaii"
 msgstr "Hawaii"
 
+#: app/ask.tsx
+msgid "Hear it on this phone when {name} answers."
+msgstr "Hear it on this phone when {name} answers."
+
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -395,6 +411,22 @@ msgstr "How Vela greets her each morning."
 msgid "I have sent it"
 msgstr "I have sent it"
 
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
+msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
+
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link, and Vela does not send notifications to phones yet."
+msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram link, and Vela does not send notifications to phones yet."
+
+#: src/push/provider.tsx
+msgid "If her morning stays quiet past her usual time, and when it is settled."
+msgstr "If her morning stays quiet past her usual time, and when it is settled."
+
 #: src/data/onboarding.ts
 msgid "India"
 msgstr "India"
@@ -404,6 +436,7 @@ msgid "Into her morning"
 msgstr "Into her morning"
 
 #: app/(tabs)/index.tsx
+#: app/ask.tsx
 msgid "Into her morning."
 msgstr "Into her morning."
 
@@ -526,6 +559,7 @@ msgstr "Nobody nearby yet"
 msgid "Not built yet."
 msgstr "Not built yet."
 
+#: app/ask.tsx
 #: app/vela-light.tsx
 msgid "Not now"
 msgstr "Not now"
@@ -546,17 +580,59 @@ msgstr "Nothing reaches her until she says yes. Send her these words; the link t
 msgid "Nothing yet."
 msgstr "Nothing yet."
 
+#: app/(tabs)/you.tsx
+msgid "Notifications"
+msgstr "Notifications"
+
+#: src/data/notifications.ts
+msgid "Notifications are not available in this build of the app."
+msgstr "Notifications are not available in this build of the app."
+
+#: src/data/notifications.ts
+msgid "Notifications are off in this phone's settings."
+msgstr "Notifications are off in this phone's settings."
+
+#: src/data/notifications.ts
+msgid "Notifications are off."
+msgstr "Notifications are off."
+
+#: src/data/notifications.ts
+msgid "Notifications are on, but quiet mornings are switched off for Vela in this phone's settings."
+msgstr "Notifications are on, but quiet mornings are switched off for Vela in this phone's settings."
+
+#: src/data/notifications.ts
+msgid "Notifications are on."
+msgstr "Notifications are on."
+
+#: src/data/notifications.ts
+msgid "Notifications come to the Vela app on a phone, not to a browser."
+msgstr "Notifications come to the Vela app on a phone, not to a browser."
+
 #: app/onboarding.tsx
 msgid "Now ask {name}"
 msgstr "Now ask {name}"
+
+#: src/data/notifications.ts
+msgid "Off: nothing when {her} answers or when your turn comes."
+msgstr "Off: nothing when {her} answers or when your turn comes."
+
+#: src/data/notifications.ts
+msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
+msgstr "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
 
 #: app/(tabs)/exchanges.tsx
 msgid "Older than thirty days lives in the family book."
 msgstr "Older than thirty days lives in the family book."
 
 #: app/(tabs)/you.tsx
+#: src/push/provider.tsx
 msgid "One moment a day"
 msgstr "One moment a day"
+
+#: app/(tabs)/you.tsx
+#: src/components/push-offer.tsx
+msgid "Open settings"
+msgstr "Open settings"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -615,13 +691,13 @@ msgstr "picked a photo"
 msgid "quiet"
 msgstr "quiet"
 
-#: app/(tabs)/you.tsx
-msgid "Quiet"
-msgstr "Quiet"
-
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
+
+#: src/data/notifications.ts
+msgid "Reading what this phone allows…"
+msgstr "Reading what this phone allows…"
 
 #: src/components/photo-slots.tsx
 #: src/components/vote-options.tsx
@@ -925,6 +1001,14 @@ msgstr "This is the example family, so nobody left."
 msgid "This is your own morning; replies are for the family."
 msgstr "This is your own morning; replies are for the family."
 
+#: app/(tabs)/you.tsx
+msgid "This phone"
+msgstr "This phone"
+
+#: src/data/notifications.ts
+msgid "This phone could not be set up for notifications just now. It tries again the next time you open the app."
+msgstr "This phone could not be set up for notifications just now. It tries again the next time you open the app."
+
 #: src/components/photo-slots.tsx
 msgid "This photo could not be used. Choose another."
 msgstr "This photo could not be used. Choose another."
@@ -987,6 +1071,18 @@ msgstr "Too many photos for now. Try again later."
 msgid "Try again"
 msgstr "Try again"
 
+#: app/(tabs)/you.tsx
+msgid "Turn on"
+msgstr "Turn on"
+
+#: src/components/push-offer.tsx
+msgid "Turn on notifications"
+msgstr "Turn on notifications"
+
+#: app/onboarding.tsx
+msgid "Turn on notifications, and this phone tells you if her morning goes quiet, and when she answers what you asked."
+msgstr "Turn on notifications, and this phone tells you if her morning goes quiet, and when she answers what you asked."
+
 #: src/data/ask.ts
 msgid "Two photos"
 msgstr "Two photos"
@@ -1024,6 +1120,10 @@ msgstr "Use this suggestion"
 msgid "Usually answers by {time}"
 msgstr "Usually answers by {time}"
 
+#: app/(tabs)/you.tsx
+msgid "Vela does not send notifications from here yet."
+msgstr "Vela does not send notifications from here yet."
+
 #: app/vela-light.tsx
 msgid "Vela Light · for {name}"
 msgstr "Vela Light · for {name}"
@@ -1047,10 +1147,6 @@ msgstr "Vela Light trial"
 #: src/data/family.ts
 msgid "Vela Light trial · ends {date}"
 msgstr "Vela Light trial · ends {date}"
-
-#: app/(tabs)/you.tsx
-msgid "Vela sends you at most one notification a day. Notifications are not on in this build yet."
-msgstr "Vela sends you at most one notification a day. Notifications are not on in this build yet."
 
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
@@ -1123,6 +1219,14 @@ msgstr "What you send her"
 #: app/ask.tsx
 msgid "When"
 msgstr "When"
+
+#: src/push/provider.tsx
+msgid "When a morning goes quiet"
+msgstr "When a morning goes quiet"
+
+#: src/push/provider.tsx
+msgid "When she answers what you asked, and the evening before your turn."
+msgstr "When she answers what you asked, and the evening before your turn."
 
 #: app/ask.tsx
 msgid "Whenever"

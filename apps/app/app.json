@@ -10,7 +10,10 @@
     "backgroundColor": "#FBF7F0",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "family.vela.light"
+      "bundleIdentifier": "family.vela.light",
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      }
     },
     "android": {
       "package": "family.vela.light",
@@ -26,7 +29,8 @@
       "expo-router",
       "expo-font",
       "expo-splash-screen",
-      ["expo-image-picker", { "cameraPermission": false, "microphonePermission": false }]
+      ["expo-image-picker", { "cameraPermission": false, "microphonePermission": false }],
+      ["expo-notifications", { "defaultChannel": "daily" }]
     ],
     "experiments": {
       "typedRoutes": true

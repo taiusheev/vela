@@ -251,6 +251,18 @@ msgstr "請對方過去看看"
 msgid "Asked at {time}"
 msgstr "提問時間 {time}"
 
+#: src/components/push-offer.tsx
+msgid "Asking…"
+msgstr "正在詢問…"
+
+#: src/data/notifications.ts
+msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
+msgstr "每種通知每天最多一則：{her}回覆您的提問時，以及輪到您提問的前一晚。"
+
+#: src/data/notifications.ts
+msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says."
+msgstr "每種通知每天最多一則：{her}回覆您的提問時，以及輪到您提問的前一晚。如果哪天早上比較安靜，不論這裡怎麼設定，都會通知您。"
+
 #. a time zone
 #: src/data/onboarding.ts
 msgid "Atlantic"
@@ -375,6 +387,10 @@ msgstr "還沒有同意"
 msgid "Hawaii"
 msgstr "夏威夷"
 
+#: app/ask.tsx
+msgid "Hear it on this phone when {name} answers."
+msgstr "{name}回覆時，在這支手機上收到通知。"
+
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -402,6 +418,22 @@ msgstr "Vela 每天早上問候時的稱呼。"
 msgid "I have sent it"
 msgstr "我已經傳了"
 
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有連結 Telegram，也沒有開啟 Vela 通知的手機。"
+
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有連結 Telegram，也沒有開啟 Vela 通知的手機。在這支手機上開啟通知，就能在這裡收到。"
+
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link, and Vela does not send notifications to phones yet."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有連結 Telegram，而 Vela 還不會傳送手機通知。"
+
+#: src/push/provider.tsx
+msgid "If her morning stays quiet past her usual time, and when it is settled."
+msgstr "早安訊息過了平常的回覆時間仍然安靜時，以及之後有了結果時。"
+
 #: src/data/onboarding.ts
 msgid "India"
 msgstr "印度"
@@ -411,6 +443,7 @@ msgid "Into her morning"
 msgstr "放進早安訊息"
 
 #: app/(tabs)/index.tsx
+#: app/ask.tsx
 msgid "Into her morning."
 msgstr "已放進早安訊息。"
 
@@ -533,6 +566,7 @@ msgstr "還沒有附近的聯絡人"
 msgid "Not built yet."
 msgstr "這裡還在製作中。"
 
+#: app/ask.tsx
 #: app/vela-light.tsx
 msgid "Not now"
 msgstr "先不要"
@@ -553,17 +587,59 @@ msgstr "在這位家人同意之前，不會傳送任何訊息。請把下面這
 msgid "Nothing yet."
 msgstr "還沒有內容。"
 
+#: app/(tabs)/you.tsx
+msgid "Notifications"
+msgstr "通知"
+
+#: src/data/notifications.ts
+msgid "Notifications are not available in this build of the app."
+msgstr "這個版本的 App 無法使用通知。"
+
+#: src/data/notifications.ts
+msgid "Notifications are off in this phone's settings."
+msgstr "這支手機的設定已關閉通知。"
+
+#: src/data/notifications.ts
+msgid "Notifications are off."
+msgstr "通知已關閉。"
+
+#: src/data/notifications.ts
+msgid "Notifications are on, but quiet mornings are switched off for Vela in this phone's settings."
+msgstr "通知已開啟，但這支手機的設定關閉了 Vela 的安靜通知。"
+
+#: src/data/notifications.ts
+msgid "Notifications are on."
+msgstr "通知已開啟。"
+
+#: src/data/notifications.ts
+msgid "Notifications come to the Vela app on a phone, not to a browser."
+msgstr "通知會送到手機上的 Vela App，不會送到瀏覽器。"
+
 #: app/onboarding.tsx
 msgid "Now ask {name}"
 msgstr "現在去問問{name}"
+
+#: src/data/notifications.ts
+msgid "Off: nothing when {her} answers or when your turn comes."
+msgstr "已關閉：{her}回覆或輪到您提問時，都不會通知。"
+
+#: src/data/notifications.ts
+msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
+msgstr "已關閉：{her}回覆或輪到您提問時，都不會通知。如果哪天早上比較安靜，仍然會通知您。"
 
 #: app/(tabs)/exchanges.tsx
 msgid "Older than thirty days lives in the family book."
 msgstr "超過三十天的內容會收進家族故事書。"
 
 #: app/(tabs)/you.tsx
+#: src/push/provider.tsx
 msgid "One moment a day"
 msgstr "一天一次"
+
+#: app/(tabs)/you.tsx
+#: src/components/push-offer.tsx
+msgid "Open settings"
+msgstr "開啟設定"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -622,13 +698,13 @@ msgstr "選了一張照片"
 msgid "quiet"
 msgstr "比較安靜"
 
-#: app/(tabs)/you.tsx
-msgid "Quiet"
-msgstr "安靜通知"
-
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記事與提醒 · 可以保存的家族故事書"
+
+#: src/data/notifications.ts
+msgid "Reading what this phone allows…"
+msgstr "正在讀取這支手機的通知設定…"
 
 #: src/components/photo-slots.tsx
 #: src/components/vote-options.tsx
@@ -932,6 +1008,14 @@ msgstr "這是範例家庭，所以沒有人離開。"
 msgid "This is your own morning; replies are for the family."
 msgstr "這是您自己的早安訊息；回覆是給家人的。"
 
+#: app/(tabs)/you.tsx
+msgid "This phone"
+msgstr "這支手機"
+
+#: src/data/notifications.ts
+msgid "This phone could not be set up for notifications just now. It tries again the next time you open the app."
+msgstr "目前無法為這支手機設定通知。下次開啟 App 時會再試一次。"
+
 #: src/components/photo-slots.tsx
 msgid "This photo could not be used. Choose another."
 msgstr "這張照片無法使用，請換一張。"
@@ -994,6 +1078,18 @@ msgstr "目前照片太多了，請稍後再試。"
 msgid "Try again"
 msgstr "再試一次"
 
+#: app/(tabs)/you.tsx
+msgid "Turn on"
+msgstr "開啟"
+
+#: src/components/push-offer.tsx
+msgid "Turn on notifications"
+msgstr "開啟通知"
+
+#: app/onboarding.tsx
+msgid "Turn on notifications, and this phone tells you if her morning goes quiet, and when she answers what you asked."
+msgstr "開啟通知後，如果這位家人的早上比較安靜，或是回覆了您的提問，這支手機都會通知您。"
+
 #: src/data/ask.ts
 msgid "Two photos"
 msgstr "兩張照片"
@@ -1031,6 +1127,10 @@ msgstr "使用這個建議"
 msgid "Usually answers by {time}"
 msgstr "通常在 {time} 前回覆"
 
+#: app/(tabs)/you.tsx
+msgid "Vela does not send notifications from here yet."
+msgstr "Vela 目前還不會從這裡傳送通知。"
+
 #: app/vela-light.tsx
 msgid "Vela Light · for {name}"
 msgstr "Vela Light · 給{name}"
@@ -1054,10 +1154,6 @@ msgstr "Vela Light 試用"
 #: src/data/family.ts
 msgid "Vela Light trial · ends {date}"
 msgstr "Vela Light 試用 · {date}結束"
-
-#: app/(tabs)/you.tsx
-msgid "Vela sends you at most one notification a day. Notifications are not on in this build yet."
-msgstr "Vela 每天最多只會傳一則通知給您。這個版本還沒有開啟通知。"
 
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
@@ -1130,6 +1226,14 @@ msgstr "您要傳給這位家人的內容"
 #: app/ask.tsx
 msgid "When"
 msgstr "什麼時候"
+
+#: src/push/provider.tsx
+msgid "When a morning goes quiet"
+msgstr "早上比較安靜時"
+
+#: src/push/provider.tsx
+msgid "When she answers what you asked, and the evening before your turn."
+msgstr "家人回覆您的提問時，以及輪到您提問的前一晚。"
 
 #: app/ask.tsx
 msgid "Whenever"

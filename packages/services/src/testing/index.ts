@@ -1,9 +1,11 @@
 /**
  * `@vela/services/testing`: everything a test outside this package needs to run the services against
  * a real database without a platform — one PGlite, a clock that moves only when told, in-memory
- * queues, recording fakes for Telegram, the AI, storage, and the scheduler, and the rows a pilot
- * family starts from. It is a separate entry point so nothing in production can import it.
+ * queues, recording fakes for Telegram, push, the AI, storage, and the scheduler, and the rows a
+ * pilot family starts from. It is a separate entry point so nothing in production can import it.
  */
+
+export { createFakePush, type FakePush, fakeTicketId, pushFailureFor } from "./fake-push.ts";
 export type {
   AcknowledgedTap,
   ClosedButtons,

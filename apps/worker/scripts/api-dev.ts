@@ -24,6 +24,9 @@
  *
  * Photos from the app (ADR-33) are kept in this process's memory and lost when it stops: the
  * upload and the photo read work as on staging, and nothing is written to disk or to any bucket.
+ *
+ * Push (ADR-34): a phone's registration is recorded as on staging, and nothing is ever sent from
+ * here; no founder's chat is known, so a phone leaving a family writes no alert.
  */
 import { serve } from "@hono/node-server";
 import { connectDatabase } from "@vela/db";
@@ -44,6 +47,8 @@ import {
   pauseApiMember,
   provisionApiAccount,
   readApiMedia,
+  registerApiPushDevice,
+  removeApiPushDevice,
   replyToApiExchange,
   resolveApiQuiet,
   startApiTrial,
@@ -177,6 +182,8 @@ const app = createApiApp({
             leaveApiFamily,
             startApiTrial,
             uploadApiMedia,
+            registerApiPushDevice,
+            removeApiPushDevice,
           },
           ...(botUsername === undefined || botUsername.length === 0
             ? {}
@@ -237,7 +244,7 @@ const server = serve({ fetch: handle, port, hostname: "127.0.0.1" }, (address) =
   );
   console.log(
     writesOn
-      ? `[api-dev] writes: the account routes, composing an ask, replying, settling a quiet morning (its messages wait for reconcile here), pausing and leaving, starting a trial${botUsername ? ", and creating a family" : ""}; sessions checked live with Clerk`
+      ? `[api-dev] writes: the account routes, this phone's push registration, composing an ask, replying, settling a quiet morning (its messages wait for reconcile here), pausing and leaving, starting a trial${botUsername ? ", and creating a family" : ""}; sessions checked live with Clerk`
       : "[api-dev] writes answer 404: set CLERK_SECRET_KEY in apps/worker/.env.local to serve them",
   );
   console.log("[api-dev] media: kept in memory, lost on restart");

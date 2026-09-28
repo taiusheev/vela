@@ -663,6 +663,7 @@ describe("applyRetention", () => {
     "outbound_deleted",
     "consents_deleted",
     "deletions_deleted",
+    "push_tickets_deleted",
   ];
 
   /** Everything the 30-day clearing touches, dated `age` days ago, around one delivered exchange. */

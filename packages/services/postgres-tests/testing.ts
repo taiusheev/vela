@@ -15,6 +15,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { type ApiMutationAction, lockApiActor } from "../src/api-idempotency.ts";
 import type { Clock, Config, Deps } from "../src/deps.ts";
 import { sha256Hex } from "../src/hash.ts";
+import { createFakePush } from "../src/testing/fake-push.ts";
 import { createFakeTelegram } from "../src/testing/fake-telegram.ts";
 import {
   createFakeHeartbeat,
@@ -149,6 +150,16 @@ export interface PostgresHarness {
     holders: readonly RaceClient[],
     operation: Promise<unknown>,
   ): Promise<"waiting" | "completed">;
+  /**
+   * `waiter` waits on any lock `holders` hold, an advisory lock or a row's: for a race whose guard
+   * is an advisory lock, where the contender waits on that lock with the guard and on a row without
+   * it, so the test reaches its verdict either way.
+   */
+  waitForLockWait(
+    waiter: RaceClient,
+    holders: readonly RaceClient[],
+    operation: Promise<unknown>,
+  ): Promise<void>;
   /**
    * Contenders queued behind a row lock that `holder` takes with `lockRow` and keeps, in the order
    * given; the holder then lets go and they serialise on that row alone. Returns each contender's
@@ -491,6 +502,16 @@ export async function openPostgresHarness(): Promise<PostgresHarness> {
       await waitForLock(waiter, holders, operation, ["transactionid", "tuple"], "a row lock");
     },
 
+    async waitForLockWait(waiter, holders, operation) {
+      await waitForLock(
+        waiter,
+        holders,
+        operation,
+        ["advisory", "transactionid", "tuple"],
+        "a lock",
+      );
+    },
+
     async waitForRowLockWaitOrCompletion(waiter, holders, operation) {
       return waitForLock(
         waiter,
@@ -571,6 +592,7 @@ export async function openPostgresHarness(): Promise<PostgresHarness> {
         scheduler: createFakeScheduler(),
         media: createFakeMediaStore(),
         channels: { get: () => telegram },
+        push: createFakePush(),
         ai: createFakeAi(),
         stt: createFakeStt(),
         heartbeat: createFakeHeartbeat(),

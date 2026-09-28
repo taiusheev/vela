@@ -9,6 +9,9 @@ import {
   LocalTime,
   MemberStatus,
   Plan,
+  PushKind,
+  PushPermission,
+  PushPlatform,
   Region,
   ReplyKind,
   Role,
@@ -98,11 +101,17 @@ export const ApiAccountProfile = z.strictObject({
 });
 export type ApiAccountProfile = z.infer<typeof ApiAccountProfile>;
 
-export const ApiAccountPatch = ApiAccountProfile.partial().refine(
-  (patch) =>
-    Object.keys(patch).length > 0 && Object.values(patch).every((value) => value !== undefined),
-  "provide at least one defined profile field",
-);
+/**
+ * `PATCH /v1/me`: the profile's own fields, and `one_moment_a_day` (ADR-34), the account's switch
+ * for its ordinary pushes. It never stops the quiet notice or its close.
+ */
+export const ApiAccountPatch = ApiAccountProfile.partial()
+  .extend({ one_moment_a_day: z.boolean().optional() })
+  .refine(
+    (patch) =>
+      Object.keys(patch).length > 0 && Object.values(patch).every((value) => value !== undefined),
+    "provide at least one defined profile field",
+  );
 export type ApiAccountPatch = z.infer<typeof ApiAccountPatch>;
 
 export const ApiUser = z.object({
@@ -129,6 +138,17 @@ export const ApiMe = z.object({
    * photo asks off before anyone picks a photo. The upload's 503 stays as the backstop.
    */
   photos: z.boolean(),
+  /**
+   * "One moment a day" (ADR-34): whether this account's ordinary pushes, an answer's receipt and
+   * the evening's turn prompt, are sent. The quiet notice and its close come whatever it says.
+   */
+  one_moment_a_day: z.boolean(),
+  /**
+   * Whether this API sends pushes at all (ADR-34, the Worker's `PUSH_SEND`): false while the switch
+   * is off, so the app says its notifications are not sent yet instead of showing them as on to an
+   * organiser who would then believe she will be told. Devices still register while it is off.
+   */
+  push: z.boolean(),
 });
 export type ApiMe = z.infer<typeof ApiMe>;
 
@@ -586,6 +606,14 @@ export const ApiFamily = z.object({
       }),
     )
     .nullable(),
+  /**
+   * How the caller would be told if her morning goes quiet (ADR-34, D4), for an organiser; null for
+   * anyone else, whom a quiet notice never goes to. `telegram`: they have a Telegram link they have
+   * not blocked. `app`: this API sends pushes and their account has a phone that can be told
+   * (notifications allowed, quiet channel not blocked). Neither means nobody tells them, and You
+   * says so plainly (principle 7).
+   */
+  told_if_quiet: z.object({ telegram: z.boolean(), app: z.boolean() }).nullable(),
 });
 export type ApiFamily = z.infer<typeof ApiFamily>;
 
@@ -676,3 +704,73 @@ export const MEDIA_UNAVAILABLE_REASONS = [
 ] as const;
 export const MediaUnavailableReason = z.enum(MEDIA_UNAVAILABLE_REASONS);
 export type MediaUnavailableReason = z.infer<typeof MediaUnavailableReason>;
+
+// ---------------------------------------------------------------------------------------------
+// Push (build plan 3.8, ADR-34)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * An Expo push token as `getExpoPushTokenAsync` gives it. It names one installation of the app to
+ * Expo, so it is never logged and never answered back.
+ */
+export const ExpoPushToken = z.string().regex(/^Expo(nent)?PushToken\[[^\]\s]{1,200}\]$/);
+export type ExpoPushToken = z.infer<typeof ExpoPushToken>;
+
+/**
+ * `POST /v1/me/devices`: this installation registers, or refreshes, the phone it runs on for the
+ * signed-in account. The installation id is a uuid the app mints once and keeps; a token or an
+ * installation seen under another account moves to this one (the phone changed hands). What the
+ * phone allows is sent every time, so an organiser who turned notifications off, or blocked the
+ * quiet channel on Android, stops counting as someone who can be told.
+ */
+export const RegisterPushDevice = z.strictObject({
+  installation_id: z.uuid(),
+  token: ExpoPushToken,
+  platform: PushPlatform,
+  permission: PushPermission,
+  /** Android: the `quiet` notification channel is blocked in the phone's settings. */
+  quiet_channel_blocked: z.boolean(),
+});
+export type RegisterPushDevice = z.infer<typeof RegisterPushDevice>;
+
+/** A registered installation as the API answers it: never its token. */
+export const ApiPushDevice = z.object({
+  installation_id: z.uuid(),
+  platform: PushPlatform,
+  permission: PushPermission,
+  quiet_channel_blocked: z.boolean(),
+  registered_at: z.iso.datetime({ offset: true }),
+});
+export type ApiPushDevice = z.infer<typeof ApiPushDevice>;
+
+/** `POST /v1/me/devices/:installationId/remove`: nothing but the installation, in its path. */
+export const RemovePushDevice = z.strictObject({});
+export type RemovePushDevice = z.infer<typeof RemovePushDevice>;
+
+/**
+ * What removing answers: whether this account had that installation. An installation of another
+ * account, or one already removed, answers `removed: false`, never 403 or 404, so the app's
+ * sign-out always finishes and nothing is learnt about anyone else's phone.
+ */
+export const ApiPushDeviceRemoved = z.object({
+  installation_id: z.uuid(),
+  removed: z.boolean(),
+});
+export type ApiPushDeviceRemoved = z.infer<typeof ApiPushDeviceRemoved>;
+
+/**
+ * What a push carries besides its text, read by the app when it is tapped: ids only, never words.
+ * Push text and data pass through Expo, Apple and Google, so neither ever holds her words, an
+ * answer, a nearby contact, or anything about her health.
+ */
+export const PushData = z.strictObject({
+  kind: PushKind,
+  family_id: z.uuid(),
+  /** The kept-light member it is about: whose morning went quiet, who answered, whose turn. */
+  member_id: z.uuid(),
+  quiet_event_id: z.uuid().optional(),
+  exchange_id: z.uuid().optional(),
+  /** A turn prompt's suggestion for her morning, which Ask opens with. */
+  suggestion_id: z.uuid().optional(),
+});
+export type PushData = z.infer<typeof PushData>;

@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { ApiFamily } from "@vela/contracts";
-import { members, subscriptions, users } from "@vela/db";
+import { channelLinks, members, pushDevices, subscriptions, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
@@ -175,6 +176,56 @@ describe("loadApiFamily", () => {
     expect(read?.me).toEqual({ member_id: samId, role: "member" });
     expect(read?.members).toHaveLength(3);
     expect(read?.nearby).toBeNull();
+  });
+
+  describe("how an organiser would be told if her morning goes quiet (ADR-34)", () => {
+    async function phoneOf(
+      identity: SessionIdentity,
+      patch: Partial<Pick<typeof pushDevices.$inferInsert, "permission" | "quietChannelBlocked">>,
+    ) {
+      const [user] = await h.db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.authSubject, identity.authSubject));
+      if (user === undefined) throw new Error("expected an account");
+      await h.db.insert(pushDevices).values({
+        userId: user.id,
+        installationId: randomUUID(),
+        token: `${["Exponent", "PushToken"].join("")}[family-test-${randomUUID()}]`,
+        platform: "android",
+        permission: "granted",
+        quietChannelBlocked: false,
+        ...patch,
+      });
+    }
+
+    it("says Telegram for an organiser with an unblocked link, and no phone while push is off", async () => {
+      await phoneOf(organiser, {});
+      expect((await family())?.told_if_quiet).toEqual({ telegram: true, app: false });
+    });
+
+    it("counts a phone that can be told only while this API sends pushes", async () => {
+      await phoneOf(organiser, {});
+      const read = await loadApiFamily(h.db, organiser, seed.family.id, true);
+      expect(read?.told_if_quiet).toEqual({ telegram: true, app: true });
+    });
+
+    it("says neither for a blocked link and phones that cannot be told", async () => {
+      await h.db
+        .update(channelLinks)
+        .set({ blockedAt: h.clock.now() })
+        .where(eq(channelLinks.memberId, seed.organiser.id));
+      await phoneOf(organiser, { permission: "denied" });
+      await phoneOf(organiser, { quietChannelBlocked: true });
+      await phoneOf(organiser, { permission: "provisional" });
+      const read = await loadApiFamily(h.db, organiser, seed.family.id, true);
+      expect(read?.told_if_quiet).toEqual({ telegram: false, app: false });
+    });
+
+    it("is null for anyone who does not organise, whom a quiet notice never reaches", async () => {
+      await phoneOf(sibling, {});
+      expect((await loadApiFamily(h.db, sibling, seed.family.id, true))?.told_if_quiet).toBeNull();
+    });
   });
 
   it("answers null for a stranger, a family that is not the caller's, and one that does not exist", async () => {

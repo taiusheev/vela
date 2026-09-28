@@ -9,6 +9,7 @@ import { alreadyOrganiser, createFamily, provisionAccount } from "../src/api/cli
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
+import { PushOffer } from "../src/components/push-offer.tsx";
 import {
   Card,
   Chip,
@@ -44,7 +45,7 @@ export default function OnboardingScreen() {
   const { locale } = useAppLocale();
   const account = useAccount();
   const queries = useQueryClient();
-  const { noAccount } = useToday();
+  const { noAccount, pushSent } = useToday();
   const [step, setStep] = useState<Step>("who");
   const [yourName, setYourName] = useState("");
   const [herName, setHerName] = useState("");
@@ -282,6 +283,13 @@ export default function OnboardingScreen() {
             <Words variant="body" tone="ink2">
               <Trans>Her first morning is the day after she says yes, at {time}.</Trans>
             </Words>
+            {/* push (A2): asked here, where the organiser has just heard what the light is for,
+                and only where this Vela sends notifications at all. */}
+            {pushSent ? (
+              <PushOffer
+                reason={t`Turn on notifications, and this phone tells you if her morning goes quiet, and when she answers what you asked.`}
+              />
+            ) : null}
             <PrimaryButton label={t`Go to Today`} onPress={() => router.replace("/")} />
           </View>
         ) : null}

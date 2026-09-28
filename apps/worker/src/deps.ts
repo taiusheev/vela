@@ -10,7 +10,7 @@
  * The pilot Worker builds every port. The admin Worker builds only the ports the admin actions and
  * reads use (`AdminDeps`), from its own, smaller set of bindings.
  */
-import { createLineAdapter, createTelegramAdapter } from "@vela/adapters";
+import { createExpoPushClient, createLineAdapter, createTelegramAdapter } from "@vela/adapters";
 import { type Ai, createClaudeAi, createDeepgramStt, createOffAi } from "@vela/ai";
 import type { Channel, ChannelAdapter } from "@vela/contracts";
 import { connectDatabase, type VelaDatabase } from "@vela/db";
@@ -23,6 +23,7 @@ import type {
   MediaStore,
   MemberScheduler as MemberSchedulerPort,
   OutboundJob,
+  PushPort,
   Random,
 } from "@vela/services";
 import {
@@ -33,6 +34,7 @@ import {
   readConfig,
   readLineConfig,
   readMediaStorage,
+  readPushConfig,
   requireVar,
   secret,
 } from "./config.ts";
@@ -216,9 +218,14 @@ export interface OffNotice {
  * built for every invocation, so kept at module scope each line is written once per start, not
  * once per request.
  */
-const thisStart: { readonly ai: OffNotice; readonly media: OffNotice } = {
+const thisStart: {
+  readonly ai: OffNotice;
+  readonly media: OffNotice;
+  readonly push: OffNotice;
+} = {
   ai: { said: false },
   media: { said: false },
+  push: { said: false },
 };
 
 /**
@@ -294,6 +301,38 @@ export function createMediaPort(
 }
 
 /**
+ * What push off leaves out, in the words of the `push_off` line. The header of wrangler.jsonc
+ * repeats it word for word, and `src/wrangler-config.test.ts` holds the two together.
+ */
+export const PUSH_OFF_EFFECTS =
+  "no push is made or sent and no receipt is read: an organiser is told of a quiet morning only on Telegram, a phone counts toward nobody being told, and the app's devices are still registered and kept, ready for the switch";
+
+/**
+ * The push port `PUSH_SEND` names (ADR-34). "expo" is Expo's push service, with the access token
+ * `EXPO_ACCESS_TOKEN` holds, which is read then and required. "off" builds no port at all (`null`),
+ * and the Worker says so once per start, since every push path then quietly makes nothing.
+ */
+export function createPushPort(
+  env: { readonly PUSH_SEND?: string; readonly EXPO_ACCESS_TOKEN?: string },
+  logger: Logger,
+  notice: OffNotice = thisStart.push,
+  fetchImpl?: typeof fetch,
+): PushPort | null {
+  const config = readPushConfig(env);
+  if (config !== null) {
+    return createExpoPushClient({
+      accessToken: config.accessToken,
+      ...(fetchImpl === undefined ? {} : { fetch: fetchImpl }),
+    });
+  }
+  if (!notice.said) {
+    notice.said = true;
+    logger.warn("push_off", { detail: `PUSH_SEND is off: ${PUSH_OFF_EFFECTS}` });
+  }
+  return null;
+}
+
+/**
  * The pilot Worker's deps for one invocation. Everything that can fail on configuration, the
  * notices included, fails before the database connection is opened, so a misconfigured Worker
  * never leaks one.
@@ -309,6 +348,7 @@ export async function buildDeps(
   const ai = createAiPort(env, config.environment, "wrangler.jsonc", logger);
   const stt = createDeepgramStt({ apiKey: secret(env, "DEEPGRAM_API_KEY") });
   const media = createMediaPort(env, config.environment, "wrangler.jsonc", logger);
+  const push = createPushPort(env, logger);
 
   const connection = await connectDatabase(env.HYPERDRIVE.connectionString);
   return {
@@ -325,6 +365,7 @@ export async function buildDeps(
       scheduler: options.scheduler ?? createSchedulerPort(env),
       media,
       channels,
+      push,
       ai,
       stt,
       heartbeat: createHeartbeat(env, logger),

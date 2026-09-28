@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "body": {
+    "errors": [
+      {
+        "code": "VALIDATION_ERROR",
+        "message": "\"to\" must be a valid push token; got \"{{token:1}}\"",
+        "isTransient": false
+      }
+    ]
+  }
+}

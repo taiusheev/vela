@@ -9,6 +9,8 @@ import type {
   ApiLeft,
   ApiMe,
   ApiMemberPause,
+  ApiPushDevice,
+  ApiPushDeviceRemoved,
   ApiQuietNotice,
   ApiQuietState,
   ApiReply,
@@ -18,6 +20,7 @@ import type {
   ComposeAsk,
   ComposeReply,
   CreateFamily,
+  RegisterPushDevice,
 } from "@vela/contracts";
 
 /**
@@ -263,4 +266,32 @@ export function settleQuiet(
   token: string | null,
 ): Promise<ApiQuietState> {
   return call<ApiQuietState>({ path: `/v1/quiet/${quietEventId}/${action}`, token, key, body: {} });
+}
+
+/**
+ * This phone, registered or refreshed for the signed-in account (ADR-34): its installation, its push
+ * token, and what the phone allows, so an organiser whose notifications are off stops counting as
+ * someone who can be told. Each attempt carries a fresh key: a replay must never answer for a phone
+ * that has since moved to another account.
+ */
+export function registerPushDevice(
+  device: RegisterPushDevice,
+  key: string,
+  token: string | null,
+): Promise<ApiPushDevice> {
+  return call<ApiPushDevice>({ path: "/v1/me/devices", token, key, body: device });
+}
+
+/** This phone taken off the account, at sign-out; an installation the account lacks answers false. */
+export function removePushDevice(
+  installationId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiPushDeviceRemoved> {
+  return call<ApiPushDeviceRemoved>({
+    path: `/v1/me/devices/${installationId}/remove`,
+    token,
+    key,
+    body: {},
+  });
 }

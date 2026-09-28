@@ -8,7 +8,7 @@
  * lower-cased uuids, dates are `YYYY-MM-DD`, and free text (conversation ids, suffixes) is
  * percent-encoded, so no part can contain the separator and the key splits back into its parts.
  */
-import { LocalDate, type OutboundKind } from "@vela/contracts";
+import { Channel, LocalDate, type OutboundKind } from "@vela/contracts";
 import { isUuid } from "./buttons.ts";
 
 export interface OutboundKeyParts {
@@ -27,8 +27,11 @@ interface KeyShape {
   /**
    * `none`: the parts alone name the message, and a suffix would let a second copy through.
    * `required`: several messages legitimately share the parts, and the suffix tells them apart.
+   * `channel`: the parts name the message on Telegram, the pilot's channel, with no suffix; the
+   * same message on another channel (the app's push, ADR-34) adds that channel's name, and only a
+   * channel's name, so no free text can let a second copy through on either.
    */
-  readonly suffix: "none" | "required";
+  readonly suffix: "none" | "required" | "channel";
 }
 
 /**
@@ -54,8 +57,11 @@ export const OUTBOUND_KEY_SHAPES: Readonly<Record<OutboundKind, KeyShape>> = {
   answer_post: { parts: ["exchangeId"], suffix: "required" },
   /** Per quiet event and organiser; the suffix is the notification round, so "wait" re-notifies. */
   quiet_notice: { parts: ["quietEventId", "memberId"], suffix: "required" },
-  /** Per quiet event and each member who was told. */
-  quiet_resolved: { parts: ["quietEventId", "memberId"], suffix: "none" },
+  /**
+   * Per quiet event and each member who was told, once per channel they were told on: Telegram
+   * with no suffix, the app's push with `app` (ADR-34).
+   */
+  quiet_resolved: { parts: ["quietEventId", "memberId"], suffix: "channel" },
   /** Whose week (the kept-light member), the week's last date, and the reader's conversation. */
   weekly_read: { parts: ["memberId", "date", "conversationId"], suffix: "none" },
   ack: { parts: ["memberId", "date"], suffix: "none" },
@@ -76,6 +82,9 @@ export const OUTBOUND_KEY_SHAPES: Readonly<Record<OutboundKind, KeyShape>> = {
    */
   system: { parts: ["conversationId"], suffix: "required" },
 };
+
+/** The channel a `channel` suffix leaves unnamed: the pilot's own, whose keys predate the suffix. */
+const UNSUFFIXED_CHANNEL: Channel = "telegram";
 
 /** `OutboundMessage.idempotencyKey` allows at most 200 characters. */
 export const OUTBOUND_KEY_MAX_LENGTH = 200;
@@ -121,6 +130,16 @@ export function outboundKey(kind: OutboundKind, parts: OutboundKeyParts): string
       throw new RangeError(`outbound key for ${kind} needs a suffix`);
     }
     segments.push(encodeURIComponent(parts.suffix));
+  } else if (shape.suffix === "channel") {
+    if (parts.suffix !== undefined) {
+      const channel = Channel.safeParse(parts.suffix);
+      if (!channel.success || channel.data === UNSUFFIXED_CHANNEL) {
+        throw new RangeError(
+          `outbound key for ${kind}: its suffix may only name a channel other than ${UNSUFFIXED_CHANNEL}`,
+        );
+      }
+      segments.push(channel.data);
+    }
   } else if (parts.suffix !== undefined) {
     throw new RangeError(`outbound key for ${kind} takes no suffix: its parts name one message`);
   }

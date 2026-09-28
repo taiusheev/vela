@@ -7,9 +7,17 @@ import { useAccount } from "../../src/auth/clerk.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { LocaleChips } from "../../src/components/locale-chips.tsx";
 import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../../src/components/ui.tsx";
+import {
+  momentLine,
+  nobodyTellsLine,
+  phoneLine,
+  toldOfQuiet,
+} from "../../src/data/notifications.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
+import { useOneMoment } from "../../src/data/useOneMoment.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { useAppLocale } from "../../src/i18n/provider.tsx";
+import { usePush } from "../../src/push/provider.tsx";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
@@ -60,7 +68,16 @@ export default function YouScreen() {
   const account = useAccount();
   const { t } = useLingui();
   const language = useAppLocale();
-  const { familyId, live: todayLive, trouble: todayTrouble, noAccount } = useToday();
+  const {
+    familyId,
+    live: todayLive,
+    trouble: todayTrouble,
+    noAccount,
+    pushSent,
+    loading: todayLoading,
+  } = useToday();
+  const push = usePush();
+  const moment = useOneMoment();
   const { family, live, trouble, setPaused, leave, changing, refused } = useFamily(
     familyId,
     familyId !== undefined,
@@ -71,6 +88,29 @@ export default function YouScreen() {
 
   const her = family.keptLight[0]?.name ?? t`Mom`;
   const { familyName } = family;
+  // push: what this phone can do about notifications, and whether it is the reader's to do.
+  const phone = push.phone;
+  const phoneAction =
+    !push.availability.available || phone === null
+      ? undefined
+      : phone.permission !== "granted"
+        ? phone.canAskAgain
+          ? "ask"
+          : "settings"
+        : phone.quietChannelBlocked
+          ? "settings"
+          : undefined;
+  // An organiser, active, whom nothing can reach: nobody would be told of a quiet morning. Said
+  // once `GET /v1/me` has answered whether this API sends pushes, which changes why.
+  const told = family.me.toldIfQuiet;
+  const nobodyTells =
+    live &&
+    !todayLoading &&
+    family.me.organiser &&
+    !family.me.paused &&
+    told !== undefined &&
+    !told.telegram &&
+    !told.app;
 
   return (
     <ScrollView
@@ -160,13 +200,53 @@ export default function YouScreen() {
 
       <View style={{ gap: space.m }}>
         <Eyebrow>
-          <Trans>Quiet</Trans>
+          <Trans>Notifications</Trans>
         </Eyebrow>
         <Row
-          title={t`One moment a day`}
-          caption={t`Vela sends you at most one notification a day. Notifications are not on in this build yet.`}
-          trailing={<Fixed on />}
+          title={t`This phone`}
+          caption={phoneLine(push)}
+          trailing={
+            phoneAction === undefined ? undefined : (
+              <Pressable
+                accessibilityRole="button"
+                disabled={push.asking}
+                onPress={() => (phoneAction === "ask" ? void push.ask() : push.openSettings())}
+              >
+                <Words variant="button" tone="action">
+                  {phoneAction === "ask" ? t`Turn on` : t`Open settings`}
+                </Words>
+              </Pressable>
+            )
+          }
         />
+        {push.availability.available && !pushSent && !todayLoading ? (
+          <Words variant="caption" tone="ink3">
+            <Trans>Vela does not send notifications from here yet.</Trans>
+          </Words>
+        ) : null}
+        {nobodyTells ? (
+          <Words variant="body" tone="ink2">
+            {nobodyTellsLine(phoneAction !== undefined && pushSent, pushSent)}
+          </Words>
+        ) : null}
+        <Row
+          title={t`One moment a day`}
+          caption={momentLine(moment.on, toldOfQuiet(family.me), her)}
+          trailing={
+            <Switch
+              value={moment.on}
+              disabled={moment.changing}
+              onValueChange={moment.set}
+              trackColor={{ false: palette.rule, true: palette.action }}
+              thumbColor={palette.surface}
+            />
+          }
+        />
+        {moment.refused ? (
+          <Words variant="caption" tone="ink2">
+            <Trans>That did not go through. Try again in a moment.</Trans>
+          </Words>
+        ) : null}
       </View>
 
       <View style={{ gap: space.m }}>
@@ -299,7 +379,8 @@ export default function YouScreen() {
                   ? t`Your family could not be reached just now.`
                   : t`Looking for your family on this account…`}
           </Words>
-          <SecondaryButton label={t`Sign out`} onPress={() => void account.signOut()} />
+          {/* push (A5): the phone is let go from the account first, so a phone handed on is not told. */}
+          <SecondaryButton label={t`Sign out`} onPress={() => void push.signOut()} />
         </Card>
       ) : (
         <Words variant="caption" tone="ink3">

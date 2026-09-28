@@ -106,6 +106,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiMe: vi.fn<ApiReadServices["loadApiMe"]>().mockResolvedValue({
       user: { id: USER_ID, display_name: "Mia", language: "en", tz: "Asia/Taipei" },
       memberships: [],
+      one_moment_a_day: true,
     }),
     loadApiFamilyPlan: vi.fn<ApiReadServices["loadApiFamilyPlan"]>(unused("the plan")),
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>(unused("the lights")),
@@ -139,6 +140,12 @@ function fixture(options: FixtureOptions = {}) {
       uploadApiMedia: vi
         .fn<Writes["services"]["uploadApiMedia"]>()
         .mockResolvedValue({ response: { status: 201, body: UPLOADED }, replayed: false }),
+      registerApiPushDevice: vi.fn<Writes["services"]["registerApiPushDevice"]>(
+        unused("register a device"),
+      ),
+      removeApiPushDevice: vi.fn<Writes["services"]["removeApiPushDevice"]>(
+        unused("remove a device"),
+      ),
     },
   };
   const logger = { error: vi.fn<ApiRuntime["logger"]["error"]>() };
@@ -789,6 +796,7 @@ describe("the media port the API runs on", () => {
     secretKey: null,
     telegramBotUsername: "VelaStagingBot",
     regions: ["apac"],
+    pushSend: "off",
   };
 
   function env(overrides: Partial<PilotEnv>): PilotEnv {

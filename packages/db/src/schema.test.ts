@@ -18,6 +18,8 @@ import {
   OUTBOUND_STATUSES,
   type OutboundKind,
   PLANS,
+  PUSH_PERMISSIONS,
+  PUSH_PLATFORMS,
   QUIET_OUTCOMES,
   REGIONS,
   REPLY_KINDS,
@@ -67,12 +69,15 @@ import {
   type NewMedia,
   type NewNearbyContact,
   type NewOutbound,
+  type NewPushDevice,
   type NewSuggestion,
   type NewWeeklyRead,
   nearbyContacts,
   onboardingSessions,
   outbound,
   PLAN_INTERVALS,
+  pushDevices,
+  pushTickets,
   quietEvents,
   RECIPE_STATUSES,
   recipes,
@@ -231,6 +236,29 @@ function outboundFor(
     payload: {},
     ...overrides,
   };
+}
+
+let deviceSequence = 0;
+
+/**
+ * A push device of `userId`. The token is made here, never written whole: a literal shaped like an
+ * Expo push token would look like a credential to secret scanning.
+ */
+function deviceFor(userId: string, overrides: Partial<NewPushDevice> = {}): NewPushDevice {
+  deviceSequence += 1;
+  const serial = String(deviceSequence).padStart(12, "0");
+  return {
+    userId,
+    installationId: `0198f6aa-0000-7000-8000-${serial}`,
+    token: `${"Exponent"}PushToken[device-${serial}]`,
+    platform: "android",
+    permission: "granted",
+    ...overrides,
+  };
+}
+
+function ticketFor(deviceId: string, outboundId: string, id = "ticket-1") {
+  return { id, deviceId, outboundId, tokenSha256: "ab".repeat(32) };
 }
 
 type ConsentSubject = { memberId: string } | { contactId: string };
@@ -412,7 +440,14 @@ async function seedEveryTable(): Promise<void> {
     stats: {},
     promptVersion: "weekly_read.v1",
   });
-  await db.insert(outbound).values(outboundFor(seed, "system", { actorId: seed.organiser.id }));
+  const sent = only(
+    await db
+      .insert(outbound)
+      .values(outboundFor(seed, "system", { actorId: seed.organiser.id }))
+      .returning(),
+  );
+  const device = only(await db.insert(pushDevices).values(deviceFor(user.id)).returning());
+  await db.insert(pushTickets).values(ticketFor(device.id, sent.id));
   await db.insert(messageRefs).values({
     channel: "telegram",
     conversationId: "1001",
@@ -2007,6 +2042,8 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "subscriptions", column: "status", values: SUBSCRIPTION_STATUSES },
     { table: "subscriptions", column: "plan_interval", values: PLAN_INTERVALS },
     { table: "admin_access_log", column: "action", values: ADMIN_ACTIONS },
+    { table: "push_devices", column: "platform", values: PUSH_PLATFORMS },
+    { table: "push_devices", column: "permission", values: PUSH_PERMISSIONS },
   ];
 
   function setColumn(table: string, column: string, value: string): Promise<unknown> {
@@ -2065,6 +2102,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "account_link_challenges_binding_check",
       "account_link_challenges_state_check",
       "account_link_challenges_timing_check",
+      "push_tickets_token_sha256_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());
@@ -2311,5 +2349,131 @@ describe("relations", () => {
     expect(loaded?.receivedExchanges[0]?.asker?.displayName).toBe("Mia");
     expect(loaded?.receivedExchanges[0]?.answers.map((answer) => answer.kind)).toEqual(["heart"]);
     expect(loaded?.receivedExchanges[0]?.quietEvent).toBeNull();
+  });
+});
+
+describe("push devices and tickets", () => {
+  async function account(name = "Mia") {
+    return only(await db.insert(users).values({ displayName: name }).returning());
+  }
+
+  it("keeps a device with its permission, its quiet channel unblocked by default", async () => {
+    const user = await account();
+    const device = only(await db.insert(pushDevices).values(deviceFor(user.id)).returning());
+
+    expect(device).toMatchObject({
+      userId: user.id,
+      platform: "android",
+      permission: "granted",
+      quietChannelBlocked: false,
+    });
+    expect(device.registeredAt).toBeInstanceOf(Date);
+  });
+
+  it("switches every account's One moment a day on unless it is turned off", async () => {
+    const user = await account();
+
+    expect(user.oneMomentADay).toBe(true);
+    const [off] = await db
+      .update(users)
+      .set({ oneMomentADay: false })
+      .where(eq(users.id, user.id))
+      .returning();
+    expect(off?.oneMomentADay).toBe(false);
+  });
+
+  it.each([
+    ["installation", "installationId", "push_devices_installation_id_key"],
+    ["token", "token", "push_devices_token_key"],
+  ] as const)(
+    "refuses a second device with the same %s, whoever it belongs to",
+    async (_, column, constraint) => {
+      const mia = await account();
+      const anna = await account("Anna");
+      const first = deviceFor(mia.id);
+      await db.insert(pushDevices).values(first);
+
+      const error = await rejection(
+        db.insert(pushDevices).values(deviceFor(anna.id, { [column]: first[column] })),
+      );
+
+      expect(error).toMatchObject({ code: UNIQUE_VIOLATION, constraint });
+    },
+  );
+
+  it.each(["permission", "platform"] as const)("requires a device's %s", async (column) => {
+    const user = await account();
+    const values = {
+      user_id: user.id,
+      installation_id: "0198f6aa-0000-7000-8000-00000000abcd",
+      token: `${"Exponent"}PushToken[required]`,
+      platform: "ios",
+      permission: "granted",
+    };
+    const given = Object.entries(values).filter(([name]) => name !== column);
+
+    const error = await rejection(
+      db.execute(
+        sql`insert into push_devices (${sql.join(
+          given.map(([name]) => sql.identifier(name)),
+          sql`, `,
+        )}) values (${sql.join(
+          given.map(([, value]) => sql`${value}`),
+          sql`, `,
+        )})`,
+      ),
+    );
+
+    expect(error).toMatchObject({ code: NOT_NULL_VIOLATION, column });
+  });
+
+  it("goes with its account, and its tickets go with it", async () => {
+    const seed = await seedFamily();
+    const user = await account();
+    const device = only(await db.insert(pushDevices).values(deviceFor(user.id)).returning());
+    const sent = only(
+      await db.insert(outbound).values(outboundFor(seed, "quiet_notice")).returning(),
+    );
+    await db.insert(pushTickets).values(ticketFor(device.id, sent.id));
+
+    await db.delete(users).where(eq(users.id, user.id));
+
+    expect(await countRows(pushDevices)).toBe(0);
+    expect(await countRows(pushTickets)).toBe(0);
+    expect(await countRows(outbound)).toBe(1);
+  });
+
+  it("drops a ticket with its outbound row, and keeps the device", async () => {
+    const seed = await seedFamily();
+    const user = await account();
+    const device = only(await db.insert(pushDevices).values(deviceFor(user.id)).returning());
+    const sent = only(
+      await db.insert(outbound).values(outboundFor(seed, "quiet_notice")).returning(),
+    );
+    await db.insert(pushTickets).values(ticketFor(device.id, sent.id));
+
+    await db.delete(outbound).where(eq(outbound.id, sent.id));
+
+    expect(await countRows(pushTickets)).toBe(0);
+    expect(await countRows(pushDevices)).toBe(1);
+  });
+
+  it("keeps only the SHA-256 of the token a ticket was sent to", async () => {
+    const seed = await seedFamily();
+    const user = await account();
+    const device = only(await db.insert(pushDevices).values(deviceFor(user.id)).returning());
+    const sent = only(
+      await db.insert(outbound).values(outboundFor(seed, "quiet_notice")).returning(),
+    );
+
+    for (const tokenSha256 of [device.token, "AB".repeat(32), "ab".repeat(31), ""]) {
+      const error = await rejection(
+        db.insert(pushTickets).values({ ...ticketFor(device.id, sent.id), tokenSha256 }),
+      );
+      expect(error, tokenSha256).toMatchObject({
+        code: CHECK_VIOLATION,
+        constraint: "push_tickets_token_sha256_check",
+      });
+    }
   });
 });

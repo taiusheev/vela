@@ -62,6 +62,7 @@ import { recordEvent } from "./events.ts";
 import { applyPendingEffects, enqueueOutbound, redriveStrandedOutbound } from "./gateway.ts";
 import { draftWeeklyRead } from "./jobs.ts";
 import { MAX_PROCESSING_ATTEMPTS } from "./pipeline.ts";
+import { checkPushReceipts } from "./push.ts";
 import { notifyQuiet, openQuiet } from "./quiet.ts";
 import {
   channelLinkOfMember,
@@ -476,7 +477,8 @@ async function noteUnderstandFailures(deps: Deps, now: Date): Promise<void> {
  * answers not understood; notes the ones that failed for good; then records the heartbeat, which
  * only a run that got this far reaches, so the watchdog outside Cloudflare sees a silence when
  * reconciliation stops. A member whose tick throws is logged and skipped, so one broken member
- * never holds the others back.
+ * never holds the others back. Last, apart, it reads the push receipts (ADR-34), whose failure is
+ * logged and changes nothing above.
  */
 export async function reconcile(deps: Deps): Promise<ReconcileResult> {
   const now = deps.clock.now();
@@ -532,5 +534,12 @@ export async function reconcile(deps: Deps): Promise<ReconcileResult> {
   const rerun = await rerunUnderstanding(deps, now);
   await noteUnderstandFailures(deps, now);
   await deps.heartbeat.ping();
+  // Push (ADR-34, S3): Apple's and Google's receipts, after everything above and the heartbeat, so
+  // a call to Expo that fails or hangs can neither hold back a quiet decision nor stale `/healthz`.
+  try {
+    await checkPushReceipts(deps, (tx, request) => enqueueOutbound(deps, tx, request));
+  } catch (error) {
+    deps.logger.error("push_receipts_failed", { error: errorLabel(error) });
+  }
   return { ticked, missed, rerun, effects };
 }

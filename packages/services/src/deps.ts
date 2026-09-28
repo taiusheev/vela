@@ -4,7 +4,15 @@
  * in production and by the harness in tests.
  */
 import type { Ai, Stt } from "@vela/ai";
-import type { Channel, ChannelAdapter, Lang, Region } from "@vela/contracts";
+import {
+  CHANNEL_SEND_ERROR_CODES,
+  type Channel,
+  type ChannelAdapter,
+  ChannelSendError,
+  type ChannelSendErrorCode,
+  type Lang,
+  type Region,
+} from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 
 export interface Clock {
@@ -54,6 +62,102 @@ export interface ChannelRegistry {
   get(channel: Channel): ChannelAdapter;
 }
 
+// Push (ADR-34) -------------------------------------------------------------------------------
+
+/**
+ * One push to one installation of the app. Its text is names and times only, and its `data` ids
+ * only (the contract's `PushData`): both pass through Expo, Apple and Google. Never a title, never
+ * a badge.
+ */
+export interface PushMessage {
+  /** The device's Expo push token. */
+  readonly to: string;
+  readonly body: string;
+  readonly data?: Readonly<Record<string, string>>;
+  /** Android's notification channel, which decides sound and importance there. */
+  readonly channelId?: string;
+  readonly priority?: "default" | "normal" | "high";
+  readonly interruptionLevel?: "active" | "passive" | "time-sensitive";
+  readonly sound?: "default" | null;
+  /** Seconds Apple or Google keep trying to deliver it. */
+  readonly ttl?: number;
+}
+
+/**
+ * Why a push was not taken, by Expo when it was sent or by Apple or Google in its receipt, or why a
+ * whole request failed.
+ */
+export interface PushFailure {
+  /**
+   * What the gateway does with it: `blocked` is a device that is gone (DeviceNotRegistered), a
+   * retryable code may pass on another try, and the rest never will.
+   */
+  readonly code: ChannelSendErrorCode;
+  /** Vela's own push credentials were refused: no retry mends it, and the founder is to be told. */
+  readonly misconfigured: boolean;
+  /** Expo's own name for it, or `http_<status>`, `network`, `timeout`: a label, safe to log. */
+  readonly reason: string;
+  /** For `outbound.error`: bounded, and never a token or what was sent. */
+  readonly message: string;
+}
+
+/** What was answered for one message: accepted, with the id its receipt is read by, or not. */
+export type PushResult =
+  | { readonly status: "ok"; readonly id: string }
+  | { readonly status: "error"; readonly failure: PushFailure };
+
+/** What Apple or Google made of an accepted push. */
+export type PushReceipt =
+  | { readonly status: "ok" }
+  | { readonly status: "error"; readonly failure: PushFailure };
+
+/**
+ * Expo's push service (ADR-34), or `null` while the Worker's `PUSH_SEND` is "off": then no push is
+ * made or sent, a device counts toward nobody being told, and no receipt is read, while devices are
+ * still registered, ready for the switch.
+ */
+export interface PushPort {
+  /**
+   * One result per message, in the order given. Throws a `ChannelSendError` only when nothing was
+   * accepted (retry it as its code says); when it carries `failure` (`pushFailureOf`), that says
+   * whether Vela's own credentials were refused.
+   */
+  send(messages: readonly PushMessage[]): Promise<readonly PushResult[]>;
+  /**
+   * The receipts that are ready, by ticket id. An id left out is not ready yet, or is older than
+   * Expo keeps receipts (24 hours). Throws when the check cannot be made; asking again is safe.
+   */
+  getReceipts(ids: readonly string[]): Promise<Readonly<Record<string, PushReceipt>>>;
+}
+
+/** The `PushFailure` a push port's thrown error carries, or null for any other error. */
+export function pushFailureOf(error: unknown): PushFailure | null {
+  if (!(error instanceof ChannelSendError) || !("failure" in error)) {
+    return null;
+  }
+  const failure: unknown = error.failure;
+  if (
+    typeof failure === "object" &&
+    failure !== null &&
+    "code" in failure &&
+    "misconfigured" in failure &&
+    "reason" in failure &&
+    "message" in failure &&
+    typeof failure.misconfigured === "boolean" &&
+    typeof failure.reason === "string" &&
+    typeof failure.message === "string" &&
+    CHANNEL_SEND_ERROR_CODES.some((code) => code === failure.code)
+  ) {
+    return {
+      code: error.code,
+      misconfigured: failure.misconfigured,
+      reason: failure.reason,
+      message: failure.message,
+    };
+  }
+  return null;
+}
+
 export type OutboundJob = { type: "deliver"; outboundId: string };
 export type MediaJob =
   | { type: "ingest_answer_media"; answerId: string }
@@ -98,6 +202,8 @@ export interface Deps {
    */
   media: MediaStore | null;
   channels: ChannelRegistry;
+  /** Expo's push service, or `null` while `PUSH_SEND` is "off" (ADR-34). */
+  push: PushPort | null;
   ai: Ai;
   stt: Stt;
   heartbeat: Heartbeat;

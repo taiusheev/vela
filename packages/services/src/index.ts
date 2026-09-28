@@ -77,6 +77,7 @@ export {
   uploadApiMedia,
 } from "./api-media.ts";
 export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
+export { type ApiPushDeps, registerApiPushDevice, removeApiPushDevice } from "./api-push.ts";
 export { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
 export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";
@@ -93,14 +94,21 @@ export type {
   MediaStore,
   MemberScheduler,
   OutboundJob,
+  PushFailure,
+  PushMessage,
+  PushPort,
+  PushReceipt,
+  PushResult,
   Random,
   UnderstandJob,
 } from "./deps.ts";
+export { pushFailureOf } from "./deps.ts";
 export { errorLabel, VelaError } from "./errors.ts";
 export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
+export type { DeviceAlerts } from "./push-devices.ts";
 export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";
 export {
   BANK_PROMPT_VERSION,

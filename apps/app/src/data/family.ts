@@ -29,6 +29,11 @@ export interface YouFamily {
     organiser: boolean;
     lightOn: boolean;
     paused: boolean;
+    /**
+     * How the reader would be told if her morning went quiet (`ApiFamily.told_if_quiet`, ADR-34),
+     * for an organiser of the real family; undefined for anyone else and for the example family.
+     */
+    toldIfQuiet?: { telegram: boolean; app: boolean };
   };
   keptLight: KeptLightRow[];
   /** Everyone else, who asks and replies; undefined when there is nobody but the reader. */
@@ -134,6 +139,7 @@ export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily
         ...(user === undefined ? [] : [languageOf(user.language), placeOf(user.tz)]),
       ].join(" · "),
       lightOn: mine?.light === "on",
+      ...(family.told_if_quiet === null ? {} : { toldIfQuiet: family.told_if_quiet }),
     },
     keptLight: keptLight.map((member) => {
       const plan = planLine(member);

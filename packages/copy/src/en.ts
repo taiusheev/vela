@@ -56,6 +56,14 @@
  * she gets the lines about her week alone, and the organiser agreement, privacy notice, and consent
  * script tell the family so, so a heading that called them the whole read would be untrue.
  *
+ * `push.*` are notifications on an organiser's or a family member's phone (ADR-34). Their text
+ * passes through Expo, Apple and Google and shows on a lock screen, so it carries names and times
+ * only: never her words, an answer, a nearby contact, or anything about health. `push.quiet_notice`
+ * ends with what the reader can do, and says "message", since a hello morning holds no ask.
+ * `push.turn_prompt` leaves out tomorrow's suggestion on purpose: a suggestion may be drafted from
+ * her answers, and her words never reach Apple or Google. The close of a quiet event on a phone
+ * reads `quiet.resolved_answered` or `quiet.resolved_fine`, as on Telegram.
+ *
  * `admin.*` messages go to the founder's Telegram chat with the bot, which sits outside
  * `admin_access_log` and outside retention (plan/materials/pilot/data-map.md, gap 15). They carry
  * the family name and a link to the admin page, where every read is logged, and never anything the
@@ -140,6 +148,10 @@ export const en = {
   "delivery.failed": "We couldn't reach {name} on {channel} today. Nothing else is known.",
   "flag.notice": '{name} said something you may want to hear: "{quote}"',
   "flag.notice_no_words": "{name} said something today that may be worth a call.",
+  "push.quiet_notice":
+    "It's been quiet at {name}'s today. The morning's message arrived at {sent}. Open Vela to call or wait.",
+  "push.answer_receipt": "{name} answered you.",
+  "push.turn_prompt": "Tomorrow morning is yours: ask {name} something.",
   "away.confirmed": "Until {date}, then. Have a lovely time.",
   "away.confirmed_open": "Understood. Have a lovely time.",
   "weekly_read.answered": "{name} answered {answered} of {days} days.",
@@ -191,4 +203,8 @@ export const en = {
   "admin.line_quota": "LINE has used {used} of this month's {limit} messages. Open: {link}",
   "admin.line_quota_exhausted":
     "LINE has used all of this month's messages: mornings and notices on LINE fail until the plan changes or the month ends, and only replies still go out. Open: {link}",
+  "admin.quiet_notice_unheard":
+    "It's been quiet at {name}'s today in {family}, and the notice to an organiser's phone did not arrive. Open: {link}",
+  "admin.push_misconfigured":
+    "Push to phones is failing: Vela's push credentials were refused, and no notice reaches a phone until they are fixed. Open: {link}",
 } satisfies Record<string, string>;

@@ -142,6 +142,19 @@ describe("outboundKey", () => {
     expect(heartAgain).toBe(heart);
   });
 
+  it("closes a quiet event once on Telegram and once on the app, named by the channel alone", () => {
+    const parts = { quietEventId: QUIET, memberId: MEMBER };
+    const telegram = outboundKey("quiet_resolved", parts);
+    const app = outboundKey("quiet_resolved", { ...parts, suffix: "app" });
+    expect(telegram).toBe(`quiet_resolved:${QUIET}:${MEMBER}`);
+    expect(app).toBe(`quiet_resolved:${QUIET}:${MEMBER}:app`);
+    expect(outboundKey("quiet_resolved", { ...parts, suffix: "app" })).toBe(app);
+    // Telegram's close has no suffix, so naming it would be a second copy; free text is no channel.
+    for (const suffix of ["telegram", "", "1", "app:2", "App", "push"]) {
+      expect(() => outboundKey("quiet_resolved", { ...parts, suffix }), suffix).toThrow(RangeError);
+    }
+  });
+
   it("keeps free text from forging another key's parts", () => {
     const joined = outboundKey("system", { conversationId: "a:b", suffix: "c" });
     const split = outboundKey("system", { conversationId: "a", suffix: "b:c" });

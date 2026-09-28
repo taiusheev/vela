@@ -46,6 +46,7 @@ type SecretName =
   | "LINE_CHANNEL_SECRET"
   | "LINE_CHANNEL_ACCESS_TOKEN"
   | "MEDIA_URL_SECRET"
+  | "EXPO_ACCESS_TOKEN"
   | "ACCESS_TEAM_DOMAIN"
   | "ACCESS_AUD";
 
@@ -425,6 +426,56 @@ export function readLineConfig(env: PilotEnv): LineConfig | null {
   };
 }
 
+/**
+ * Where pushes go (ADR-34): Expo's push service, or nowhere. "off" in every environment until the
+ * founder has set up Expo, Firebase and, for iPhones, Apple; src/wrangler-config.test.ts pins it.
+ */
+export const PUSH_SENDS = ["expo", "off"] as const;
+
+export type PushSend = (typeof PUSH_SENDS)[number];
+
+/** The var `PUSH_SEND`, which only the pilot Worker holds; any value but these two is refused. */
+export function readPushSend(env: { readonly PUSH_SEND?: string }): PushSend {
+  const value = env.PUSH_SEND?.trim() ?? "";
+  const found = PUSH_SENDS.find((candidate) => candidate === value);
+  if (found === undefined) {
+    throw new ConfigError(
+      "PUSH_SEND",
+      `PUSH_SEND must be one of ${PUSH_SENDS.join(", ")}: set it in the environment's vars in wrangler.jsonc`,
+    );
+  }
+  return found;
+}
+
+/** What the pilot Worker sends pushes with, while `PUSH_SEND` is "expo". */
+export interface PushConfig {
+  /** Expo's Enhanced Push Security token: visible ASCII, since it goes into a header. */
+  readonly accessToken: string;
+}
+
+/**
+ * Push's settings (ADR-34), or null while `PUSH_SEND` is "off", when nothing else is read. "expo"
+ * requires `EXPO_ACCESS_TOKEN` in every environment: with Enhanced Push Security off, anyone who
+ * holds an organiser's push token could send them "It's been quiet", so Vela never sends without
+ * it.
+ */
+export function readPushConfig(env: {
+  readonly PUSH_SEND?: string;
+  readonly EXPO_ACCESS_TOKEN?: string;
+}): PushConfig | null {
+  if (readPushSend(env) === "off") {
+    return null;
+  }
+  const accessToken = secret(env, "EXPO_ACCESS_TOKEN").trim();
+  if (!LINE_CREDENTIAL.test(accessToken)) {
+    throw new ConfigError(
+      "EXPO_ACCESS_TOKEN",
+      "EXPO_ACCESS_TOKEN holds a character Expo never issues (a space, a line break, a letter outside ASCII): put it again as the Expo dashboard shows it",
+    );
+  }
+  return { accessToken };
+}
+
 /** The vars that become links: the admin origin in admin messages, and the privacy notices. */
 const PILOT_URL_VARS = ["PUBLIC_BASE_URL", "PRIVACY_NOTICE_URL_EN", "PRIVACY_NOTICE_URL_ZH_TW"];
 
@@ -432,13 +483,15 @@ const PILOT_URL_VARS = ["PUBLIC_BASE_URL", "PRIVACY_NOTICE_URL_EN", "PRIVACY_NOT
  * The pilot Worker's vars and secrets as services' `Config` (code design §8), or a `ConfigError`
  * naming the first variable, or notice, a deployed environment cannot start with. Where LINE is on,
  * its settings are refused here too (05 §5.10), in every environment; services' `Config` gains the
- * basic id with the services change that first reads it (05 §8, step 4).
+ * basic id with the services change that first reads it (05 §8, step 4). So is push "expo" without
+ * its access token (ADR-34).
  */
 export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
   const environment = readEnvironment(env);
   checkDeployedEnv(env, environment, PILOT_URL_VARS, "wrangler.jsonc");
   refuseUnfilledNotices(environment, notices);
   readLineConfig(env);
+  readPushConfig(env);
   const english = env.PRIVACY_NOTICE_URL_EN;
   // A language without its own notice takes the English one, so the link is never empty.
   const privacyNoticeUrls: Record<Lang, string> = {
@@ -479,6 +532,11 @@ export interface ApiConfig {
   /** The bot a new family's invite link opens. */
   readonly telegramBotUsername: string;
   readonly regions: readonly Region[];
+  /**
+   * Whether this environment sends pushes (ADR-34). The API only records devices; it reads the
+   * switch because a device counts toward someone being told only while pushes are sent.
+   */
+  readonly pushSend: PushSend;
 }
 
 /** The hosts of Clerk's development instances, whose accounts are test accounts. */
@@ -618,6 +676,7 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
     secretKey,
     telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
     regions: readRegions(env),
+    pushSend: readPushSend(env),
   };
 }
 

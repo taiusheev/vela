@@ -4,7 +4,13 @@ import {
   type ApiMutationResponse,
   ApiUser,
 } from "@vela/contracts";
-import { accountLinkChallenges, apiRequestReceipts, users, type VelaTransaction } from "@vela/db";
+import {
+  accountLinkChallenges,
+  apiRequestReceipts,
+  pushDevices,
+  users,
+  type VelaTransaction,
+} from "@vela/db";
 import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import type { SessionIdentity } from "./api-access.ts";
 import { provisionApiUser } from "./api-accounts.ts";
@@ -20,7 +26,11 @@ const userProjection = {
   tz: users.tz,
 };
 
-async function lockAccount(tx: VelaTransaction, authSubject: string, allowAbsent = false) {
+/**
+ * The caller's account under its row lock, as every account-scoped write takes it first. An
+ * unknown or deleted account is `not_found`, unless `allowAbsent` lets provisioning find none.
+ */
+export async function lockAccount(tx: VelaTransaction, authSubject: string, allowAbsent = false) {
   const [account] = await tx
     .select({ ...userProjection, deletedAt: users.deletedAt })
     .from(users)
@@ -100,6 +110,10 @@ export async function updateApiAccount(
               : { displayName: parsed.data.display_name }),
             ...(parsed.data.language === undefined ? {} : { language: parsed.data.language }),
             ...(parsed.data.tz === undefined ? {} : { tz: parsed.data.tz }),
+            // "One moment a day" (ADR-34): the account's ordinary pushes, never the quiet notice.
+            ...(parsed.data.one_moment_a_day === undefined
+              ? {}
+              : { oneMomentADay: parsed.data.one_moment_a_day }),
           })
           .where(and(eq(users.authSubject, identity.authSubject), isNull(users.deletedAt)))
           .returning(userProjection);
@@ -139,5 +153,7 @@ export async function disableApiAccount(
     }
     await tx.delete(apiRequestReceipts).where(eq(apiRequestReceipts.actorHash, actorHash));
     await tx.delete(accountLinkChallenges).where(eq(accountLinkChallenges.userId, account.id));
+    // Its phones are told nothing more (ADR-34); the row is kept, so no cascade would take them.
+    await tx.delete(pushDevices).where(eq(pushDevices.userId, account.id));
   });
 }

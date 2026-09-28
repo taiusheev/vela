@@ -25,8 +25,10 @@ import {
   type NearbyContact,
   nearbyContacts,
   outbound,
+  pushDevices,
   type QuietEvent,
   quietEvents,
+  users,
   type VelaDatabase,
   type VelaTransaction,
 } from "@vela/db";
@@ -735,4 +737,59 @@ export async function exchangesByIds(db: Queryable, ids: readonly string[]): Pro
     .select()
     .from(exchanges)
     .where(inArray(exchanges.id, [...ids]));
+}
+
+// Push (ADR-34) -----------------------------------------------------------------------------------
+
+/** An active organiser who can be told of her silence, and on what. */
+export interface ReachableOrganiser {
+  member: Member;
+  /** Their links on the notice channel that they have not blocked, oldest first. */
+  links: ChannelLink[];
+  /** Their live account has a phone that can be told (`pushDeviceCanBeTold`), and push is on. */
+  push: boolean;
+}
+
+/**
+ * The family's active organisers who can be told anything (ADR-34, D4): with a link on `channel`
+ * they have not blocked, or, while push is on (`pushOn`, `deps.push` non-null), with a live account
+ * holding a phone whose notifications are allowed and whose quiet channel is not blocked. Push off
+ * counts Telegram alone, as before push was built. Oldest membership first.
+ */
+export async function reachableOrganisers(
+  db: Queryable,
+  familyId: string,
+  channel: Channel,
+  pushOn: boolean,
+): Promise<ReachableOrganiser[]> {
+  const push = pushOn
+    ? sql<boolean>`exists (select 1 from ${pushDevices} inner join ${users} on ${users.id} = ${pushDevices.userId} where ${pushDevices.userId} = ${members.userId} and ${users.deletedAt} is null and ${pushDevices.permission} = 'granted' and not ${pushDevices.quietChannelBlocked})`
+    : sql<boolean>`false`;
+  const rows = await db
+    .select({ member: members, link: channelLinks, push })
+    .from(members)
+    .leftJoin(
+      channelLinks,
+      and(
+        eq(channelLinks.memberId, members.id),
+        eq(channelLinks.channel, channel),
+        isNull(channelLinks.blockedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(members.familyId, familyId),
+        eq(members.role, "organiser"),
+        eq(members.status, "active"),
+      ),
+    )
+    .orderBy(members.createdAt, members.id, channelLinks.linkedAt, channelLinks.id);
+  const byMember = new Map<string, ReachableOrganiser>();
+  for (const row of rows) {
+    const known = byMember.get(row.member.id);
+    const organiser = known ?? { member: row.member, links: [], push: row.push === true };
+    if (row.link !== null) organiser.links.push(row.link);
+    if (known === undefined) byMember.set(row.member.id, organiser);
+  }
+  return [...byMember.values()].filter((organiser) => organiser.links.length > 0 || organiser.push);
 }

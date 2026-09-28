@@ -13,6 +13,8 @@ import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { LocaleProvider, useAppLocale } from "../src/i18n/provider.tsx";
+import { PushProvider } from "../src/push/provider.tsx";
+import { useOpenTapped } from "../src/push/useOpenTapped.ts";
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
 
 void SplashScreen.preventAutoHideAsync();
@@ -38,6 +40,8 @@ function Root() {
   const { palette, scheme } = useTheme();
   const { settled } = useAppLocale();
   useSignInGuard();
+  // A tapped notification opens where it points once the account and the navigator are ready.
+  useOpenTapped();
   const [ready] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -71,11 +75,13 @@ export default function RootLayout() {
     <AccountProvider>
       <QueryClientProvider client={queries}>
         <LocaleProvider>
-          <SafeAreaProvider>
-            <ThemeProvider>
-              <Root />
-            </ThemeProvider>
-          </SafeAreaProvider>
+          <PushProvider>
+            <SafeAreaProvider>
+              <ThemeProvider>
+                <Root />
+              </ThemeProvider>
+            </SafeAreaProvider>
+          </PushProvider>
         </LocaleProvider>
       </QueryClientProvider>
     </AccountProvider>

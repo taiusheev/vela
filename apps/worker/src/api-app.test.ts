@@ -7,6 +7,7 @@ import type {
   ApiLeft,
   ApiMe,
   ApiMemberPause,
+  ApiPushDevice,
   ApiQuietNotice,
   ApiQuietState,
   ApiReply,
@@ -36,8 +37,8 @@ const IDENTITY: SessionIdentity = { authSubject: "verified-user", sessionId: "ve
 const PLAN_PATH = `/v1/families/${FAMILY_ID}/plan`;
 const LIGHTS_PATH = `/v1/families/${FAMILY_ID}/lights`;
 const TODAY_PATH = `/v1/families/${FAMILY_ID}/today`;
-/** What the account service answers; the route adds `photos`, the API's own. */
-const ME: Omit<ApiMe, "photos"> = {
+/** What the account service answers; the route adds `photos` and `push`, the API's own. */
+const ME: Omit<ApiMe, "photos" | "push"> = {
   user: { id: USER_ID, display_name: "Synthetic user", language: "en", tz: "Asia/Taipei" },
   memberships: [
     {
@@ -47,9 +48,10 @@ const ME: Omit<ApiMe, "photos"> = {
       family: { id: FAMILY_ID, name: "Synthetic family", region: "apac", plan: "light" },
     },
   ],
+  one_moment_a_day: true,
 };
-/** What `GET /v1/me` answers from `ME` on a runtime that keeps no photos. */
-const ME_BODY: ApiMe = { ...ME, photos: false };
+/** What `GET /v1/me` answers from `ME` on a runtime that keeps no photos and sends no pushes. */
+const ME_BODY: ApiMe = { ...ME, photos: false, push: false };
 const PLAN: ApiFamilyPlan = {
   family_id: FAMILY_ID,
   plan: "light",
@@ -89,6 +91,7 @@ const FAMILY: ApiFamily = {
     },
   ],
   nearby: [],
+  told_if_quiet: { telegram: true, app: false },
 };
 const TODAY: ApiToday = {
   lights: LIGHTS,
@@ -202,6 +205,14 @@ const COMPOSED: ApiComposedAsk = {
   scheduled_for: "2026-09-23",
   state: "composed",
 };
+const INSTALLATION_ID = "99999999-9999-7999-8999-999999999999";
+const PUSH_DEVICE: ApiPushDevice = {
+  installation_id: INSTALLATION_ID,
+  platform: "android",
+  permission: "granted",
+  quiet_channel_blocked: false,
+  registered_at: "2026-09-22T00:00:00.000Z",
+};
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
 const FAMILY_NOT_FOUND = { error: { code: "not_found", message: "Family not found." } };
 const INTERNAL = { error: { code: "internal", message: "Internal server error." } };
@@ -213,7 +224,7 @@ function database(): VelaDatabase {
   return {} as VelaDatabase;
 }
 
-function fixture(enableWrites = false) {
+function fixture(enableWrites = false, push?: boolean) {
   const db = database();
   const close = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   const verifySession = vi.fn<ApiRuntime["verifySession"]>().mockResolvedValue(IDENTITY);
@@ -269,7 +280,11 @@ function fixture(enableWrites = false) {
         .mockResolvedValue({ response: { status: 200, body: TRIAL }, replayed: false }),
       leaveApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["leaveApiFamily"]>()
-        .mockResolvedValue({ response: { status: 200, body: LEFT }, replayed: false }),
+        .mockResolvedValue({
+          response: { status: 200, body: LEFT },
+          replayed: false,
+          after: { outboundIds: [], wakeMemberIds: [] },
+        }),
       resolveApiQuiet: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["resolveApiQuiet"]>()
         .mockResolvedValue({
@@ -280,6 +295,20 @@ function fixture(enableWrites = false) {
       uploadApiMedia: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["uploadApiMedia"]>()
         .mockRejectedValue(new Error("no photo upload in these tests")),
+      registerApiPushDevice: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["registerApiPushDevice"]>()
+        .mockResolvedValue({
+          response: { status: 200, body: PUSH_DEVICE },
+          replayed: false,
+          after: { outboundIds: [], wakeMemberIds: [] },
+        }),
+      removeApiPushDevice: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["removeApiPushDevice"]>()
+        .mockResolvedValue({
+          response: { status: 200, body: { installation_id: INSTALLATION_ID, removed: true } },
+          replayed: false,
+          after: { outboundIds: [], wakeMemberIds: [] },
+        }),
     },
     nudges: {
       deliver: vi.fn<(id: string) => Promise<void>>().mockResolvedValue(undefined),
@@ -297,6 +326,7 @@ function fixture(enableWrites = false) {
     services,
     logger,
     ...(enableWrites ? { writes } : {}),
+    ...(push === undefined ? {} : { push }),
   };
   return {
     app: createApiApp(runtime),
@@ -382,6 +412,17 @@ describe("isolated API read routes", () => {
     expect(f.services.authorizeFamilyAccess).not.toHaveBeenCalled();
     expect(f.services.loadApiFamilyPlan).not.toHaveBeenCalled();
     expect(f.close).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  // ADR-34: the app says its notifications are not sent yet while the switch is off.
+  it.each([
+    [undefined, false],
+    [false, false],
+    [true, true],
+  ] as const)("says whether pushes are sent here (push %s)", async (push, sent) => {
+    const f = fixture(false, push);
+    const response = await f.app.request("/v1/me", { headers: { authorization: "Bearer good" } });
+    await expectResponse(response, 200, { ...ME_BODY, push: sent });
   });
 
   it("authorizes and reads the path family with the signed identity, not forged request claims", async () => {
@@ -1461,8 +1502,24 @@ describe("the family", () => {
     const { app, services } = fixture();
     const response = await app.request(FAMILY_PATH, { headers: { authorization: "Bearer good" } });
     await expectResponse(response, 200, FAMILY);
-    expect(services.loadApiFamily).toHaveBeenCalledWith(expect.anything(), IDENTITY, FAMILY_ID);
+    expect(services.loadApiFamily).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      false,
+    );
     expect(services.authorizeFamilyAccess).toHaveBeenCalled();
+  });
+
+  // ADR-34: a phone counts toward how an organiser is told only where pushes are sent.
+  it.each([
+    [undefined, false],
+    [false, false],
+    [true, true],
+  ] as const)("tells the family read whether pushes are sent here (push %s)", async (push, on) => {
+    const { app, services } = fixture(false, push);
+    await app.request(FAMILY_PATH, { headers: { authorization: "Bearer good" } });
+    expect(services.loadApiFamily).toHaveBeenCalledWith(expect.anything(), IDENTITY, FAMILY_ID, on);
   });
 
   it("answers not found when the family is not the caller's", async () => {
@@ -1948,6 +2005,38 @@ describe("pausing and leaving", () => {
     );
   });
 
+  // ADR-34: an organiser who leaves may have been the last one who could be told of a quiet morning.
+  it("gives Leave where the founder is told, and hands over the alert it wrote after the commit", async () => {
+    const f = fixture(true);
+    const alerts = {
+      adminConversationId: "123456789",
+      publicBaseUrl: "https://vela-admin.vela.example",
+      pushSending: false,
+    };
+    const app = createApiApp({
+      verifySession: f.verifySession,
+      now: () => new Date("2026-09-22T00:00:00.000Z"),
+      openDatabase: f.openDatabase,
+      services: f.services,
+      logger: f.logger,
+      writes: { ...f.writes, alerts },
+    });
+    f.writes.services.leaveApiFamily.mockResolvedValue({
+      response: { status: 200, body: LEFT },
+      replayed: false,
+      after: { outboundIds: ["alert-row"], wakeMemberIds: [] },
+    });
+
+    expect((await app.request(writeRequest("POST", LEFT_PATH, "{}", good))).status).toBe(200);
+
+    expect(f.writes.services.leaveApiFamily.mock.calls[0]?.[0]).toEqual({
+      db: expect.anything(),
+      clock: f.writes.clock,
+      alerts,
+    });
+    expect(f.writes.nudges.deliver).toHaveBeenCalledExactlyOnceWith("alert-row");
+  });
+
   it("leaves without the family check, so the replay after leaving still answers", async () => {
     const { app, writes, services } = fixture(true);
     const response = await app.request(writeRequest("POST", LEFT_PATH, "{}", good));
@@ -2041,5 +2130,231 @@ describe("starting the trial", () => {
       INVALID,
     );
     expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+});
+
+// ADR-34: this installation's phone, registered for the signed-in account and removed at sign-out.
+describe("push devices", () => {
+  const REMOVE_PATH = `/v1/me/devices/${INSTALLATION_ID}/remove`;
+  const good = { authorization: "Bearer good" };
+  // Made at run time: a literal shaped like a push token looks like a credential to scanning.
+  const PUSH_TOKEN = `${["Exponent", "PushToken"].join("")}[api-app-test]`;
+  const REGISTRATION = {
+    installation_id: INSTALLATION_ID,
+    token: PUSH_TOKEN,
+    platform: "android",
+    permission: "granted",
+    quiet_channel_blocked: false,
+  };
+  const ALERTS = {
+    adminConversationId: "123456789",
+    publicBaseUrl: "https://vela-admin.vela.example",
+    pushSending: false,
+  };
+  const SIGN_IN = { error: { code: "unauthenticated", message: "Sign in required." } };
+
+  function registerRequest(body: unknown = REGISTRATION, key = "request-1") {
+    return writeRequest("POST", "/v1/me/devices", JSON.stringify(body), {
+      ...good,
+      "idempotency-key": key,
+    });
+  }
+
+  function removeRequest(path = REMOVE_PATH, body: unknown = {}) {
+    return writeRequest("POST", path, JSON.stringify(body), good);
+  }
+
+  it("registers this phone for the account, answers it without its token, and hands over what it wrote", async () => {
+    const { app, writes, services } = fixture(true);
+    writes.services.registerApiPushDevice.mockResolvedValue({
+      response: { status: 200, body: PUSH_DEVICE },
+      replayed: false,
+      after: { outboundIds: ["alert-row"], wakeMemberIds: [] },
+    });
+
+    const response = await app.request(registerRequest());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    const body = await response.json();
+    expect(body).toEqual(PUSH_DEVICE);
+    expect(JSON.stringify(body)).not.toContain("PushToken");
+    expect(writes.services.registerApiPushDevice).toHaveBeenCalledExactlyOnceWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      REGISTRATION,
+    );
+    expect(services.authorizeFamilyAccess).not.toHaveBeenCalled();
+    expect(writes.nudges.deliver).toHaveBeenCalledExactlyOnceWith("alert-row");
+  });
+
+  it("gives both device services where the founder is told and whether pushes are sent", async () => {
+    const f = fixture(true);
+    const app = createApiApp({
+      verifySession: f.verifySession,
+      now: () => new Date("2026-09-22T00:00:00.000Z"),
+      openDatabase: f.openDatabase,
+      services: f.services,
+      logger: f.logger,
+      writes: { ...f.writes, alerts: ALERTS },
+    });
+
+    expect((await app.request(registerRequest())).status).toBe(200);
+    expect((await app.request(removeRequest())).status).toBe(200);
+
+    expect(f.writes.services.registerApiPushDevice.mock.calls[0]?.[0]).toEqual({
+      db: expect.anything(),
+      clock: f.writes.clock,
+      alerts: ALERTS,
+    });
+    expect(f.writes.services.removeApiPushDevice.mock.calls[0]?.[0]).toEqual({
+      db: expect.anything(),
+      clock: f.writes.clock,
+      alerts: ALERTS,
+    });
+  });
+
+  it("says when a registration is a replay, and hands nothing over again", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.registerApiPushDevice.mockResolvedValue({
+      response: { status: 200, body: PUSH_DEVICE },
+      replayed: true,
+      after: { outboundIds: [], wakeMemberIds: [] },
+    });
+
+    const response = await app.request(registerRequest());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("idempotency-replayed")).toBe("true");
+    expect(await response.json()).toEqual(PUSH_DEVICE);
+    expect(writes.nudges.deliver).not.toHaveBeenCalled();
+  });
+
+  it("removes this installation, named by its path, and answers whether the account had it", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.removeApiPushDevice.mockResolvedValue({
+      response: { status: 200, body: { installation_id: INSTALLATION_ID, removed: true } },
+      replayed: false,
+      after: { outboundIds: ["alert-row"], wakeMemberIds: [] },
+    });
+
+    const response = await app.request(removeRequest());
+
+    await expectResponse(response, 200, { installation_id: INSTALLATION_ID, removed: true });
+    expect(writes.services.removeApiPushDevice).toHaveBeenCalledExactlyOnceWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      INSTALLATION_ID,
+      {},
+    );
+    expect(writes.nudges.deliver).toHaveBeenCalledExactlyOnceWith("alert-row");
+  });
+
+  // Account-scoped routes: nothing here is anyone else's to refuse, so there is no 403. Another
+  // account's installation is not removed, and says so with a 200.
+  it("has no 403: another account's installation answers 200 with removed false", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.removeApiPushDevice.mockResolvedValue({
+      response: { status: 200, body: { installation_id: INSTALLATION_ID, removed: false } },
+      replayed: false,
+      after: { outboundIds: [], wakeMemberIds: [] },
+    });
+
+    await expectResponse(await app.request(removeRequest()), 200, {
+      installation_id: INSTALLATION_ID,
+      removed: false,
+    });
+  });
+
+  it.each([
+    ["a token that is not Expo's", { ...REGISTRATION, token: "fcm:abc" }],
+    ["no permission", { ...REGISTRATION, permission: undefined }],
+    ["a platform the app never runs on", { ...REGISTRATION, platform: "web" }],
+    ["a field that is not the contract's", { ...REGISTRATION, user_id: USER_ID }],
+  ])("answers 400 for %s before the database is opened", async (_, body) => {
+    const f = fixture(true);
+
+    await expectResponse(await f.app.request(registerRequest(body)), 400, INVALID);
+    await expectResponse(await f.app.request(removeRequest(REMOVE_PATH, { why: 1 })), 400, INVALID);
+    expect(f.openDatabase).not.toHaveBeenCalled();
+    expect(f.writes.services.registerApiPushDevice).not.toHaveBeenCalled();
+    expect(f.writes.services.removeApiPushDevice).not.toHaveBeenCalled();
+  });
+
+  it("answers 400 without an idempotency key", async () => {
+    const f = fixture(true);
+    const request = new Request("https://api.test/v1/me/devices", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...good },
+      body: JSON.stringify(REGISTRATION),
+    });
+
+    await expectResponse(await f.app.request(request), 400, INVALID);
+    expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("answers 401 without a session, or with one no longer live, before the database is opened", async () => {
+    const signedOut = fixture(true);
+    signedOut.verifySession.mockResolvedValue(null);
+    await expectResponse(await signedOut.app.request(registerRequest()), 401, SIGN_IN);
+    await expectResponse(await signedOut.app.request(removeRequest()), 401, SIGN_IN);
+
+    const ended = fixture(true);
+    ended.writes.verifyActiveSession.mockResolvedValue(false);
+    await expectResponse(await ended.app.request(registerRequest()), 401, SIGN_IN);
+    await expectResponse(await ended.app.request(removeRequest()), 401, SIGN_IN);
+    expect(signedOut.openDatabase).not.toHaveBeenCalled();
+    expect(ended.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for an account that is not there, and for a path that is no installation", async () => {
+    const f = fixture(true);
+    f.writes.services.registerApiPushDevice.mockRejectedValue(
+      new VelaError("not_found", "Account not found"),
+    );
+    await expectResponse(await f.app.request(registerRequest()), 404, NOT_FOUND);
+
+    const g = fixture(true);
+    await expectResponse(
+      await g.app.request(removeRequest("/v1/me/devices/not-an-installation/remove")),
+      404,
+      NOT_FOUND,
+    );
+    expect(g.openDatabase).not.toHaveBeenCalled();
+    expect(g.writes.verifyActiveSession).not.toHaveBeenCalled();
+    expect(g.writes.services.removeApiPushDevice).not.toHaveBeenCalled();
+  });
+
+  it("answers 409 for a key used before with another body", async () => {
+    const f = fixture(true);
+    f.writes.services.registerApiPushDevice.mockRejectedValue(new ApiIdempotencyError("conflict"));
+    f.writes.services.removeApiPushDevice.mockRejectedValue(new ApiIdempotencyError("conflict"));
+
+    await expectResponse(await f.app.request(registerRequest()), 409, CONFLICT);
+    await expectResponse(await f.app.request(removeRequest()), 409, CONFLICT);
+  });
+
+  it("still answers 200 when handing over fails: the write committed, and reconcile finishes it", async () => {
+    const { app, writes, logger } = fixture(true);
+    writes.services.removeApiPushDevice.mockResolvedValue({
+      response: { status: 200, body: { installation_id: INSTALLATION_ID, removed: true } },
+      replayed: false,
+      after: { outboundIds: ["alert-row"], wakeMemberIds: [] },
+    });
+    writes.nudges.deliver.mockRejectedValue(new Error("queue down"));
+
+    expect((await app.request(removeRequest())).status).toBe(200);
+    expect(logger.error).toHaveBeenCalledWith("api_after_commit_deliver_failed", {
+      outboundId: "alert-row",
+    });
+  });
+
+  it("is not there without the write capability", async () => {
+    const { app } = fixture();
+
+    await expectResponse(await app.request(registerRequest()), 404, NOT_FOUND);
+    await expectResponse(await app.request(removeRequest()), 404, NOT_FOUND);
   });
 });

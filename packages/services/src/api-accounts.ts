@@ -58,13 +58,14 @@ export async function provisionApiUser(
 }
 
 /**
- * The account and its memberships. `ApiMe.photos` is not the account's but the API's (whether it
- * keeps photos), so the route adds it.
+ * The account, its memberships, and its "One moment a day" (ADR-34). `ApiMe.photos` and `push` are
+ * not the account's but the API's (whether it keeps photos, whether it sends pushes), so the
+ * route adds them.
  */
 export async function loadApiMe(
   db: Queryable,
   identity: SessionIdentity,
-): Promise<Omit<ApiMe, "photos"> | null> {
+): Promise<Omit<ApiMe, "photos" | "push"> | null> {
   if (!hasIdentity(identity)) {
     return null;
   }
@@ -72,6 +73,7 @@ export async function loadApiMe(
   const rows = await db
     .select({
       user: userProjection,
+      oneMomentADay: users.oneMomentADay,
       membership: { member_id: members.id, role: members.role, status: members.status },
       family: {
         id: families.id,
@@ -112,7 +114,7 @@ export async function loadApiMe(
       });
     }
   }
-  return { user: first.user, memberships };
+  return { user: first.user, memberships, one_moment_a_day: first.oneMomentADay };
 }
 
 export async function loadApiFamilyPlan(

@@ -199,6 +199,11 @@ export interface TodayView {
    * API and the example day shows the photos chosen without sending them anywhere.
    */
   photos: boolean;
+  /**
+   * Whether the API sends pushes (`ApiMe.push`, ADR-34). While it does not, nothing offers
+   * notifications in passing, since none would come; You still shows this phone's state.
+   */
+  pushSent: boolean;
 }
 
 /**
@@ -235,6 +240,7 @@ export function useToday(): TodayView {
       organiser: true,
       live: false,
       photos: !apiConfigured(),
+      pushSent: false,
     };
   }
   const live = day.data !== undefined;
@@ -250,5 +256,6 @@ export function useToday(): TodayView {
     organiser: membership?.role === "organiser",
     live,
     photos: me.data?.photos === true,
+    pushSent: me.data?.push === true,
   };
 }

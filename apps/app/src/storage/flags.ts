@@ -69,3 +69,14 @@ export async function writeSetting(name: string, value: string): Promise<void> {
     // Nothing to do: the next start chooses again from the account or the device.
   }
 }
+
+/** Forgets a remembered value; one that cannot be forgotten is read again, as it was. */
+export async function clearSetting(name: string): Promise<void> {
+  const key = keyOf(name);
+  try {
+    if (Platform.OS === "web") globalThis.localStorage?.removeItem(key);
+    else await SecureStore.deleteItemAsync(key);
+  } catch {
+    // Nothing to do: whoever reads it next checks it against what is true then.
+  }
+}

@@ -415,6 +415,31 @@ CREATE TABLE "outbound" (
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
 );
 
+CREATE TABLE "push_devices" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"installation_id" uuid NOT NULL,
+	"token" text NOT NULL,
+	"platform" text NOT NULL,
+	"permission" text NOT NULL,
+	"quiet_channel_blocked" boolean DEFAULT false NOT NULL,
+	"registered_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "push_devices_installation_id_key" UNIQUE("installation_id"),
+	CONSTRAINT "push_devices_token_key" UNIQUE("token"),
+	CONSTRAINT "push_devices_platform_check" CHECK ("platform" in ('ios', 'android')),
+	CONSTRAINT "push_devices_permission_check" CHECK ("permission" in ('granted', 'denied', 'provisional'))
+);
+
+CREATE TABLE "push_tickets" (
+	"id" text PRIMARY KEY NOT NULL,
+	"device_id" uuid NOT NULL,
+	"token_sha256" text NOT NULL,
+	"outbound_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "push_tickets_token_sha256_check" CHECK ("token_sha256" ~ '^[0-9a-f]{64}$')
+);
+
 CREATE TABLE "quiet_events" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"exchange_id" uuid NOT NULL,
@@ -566,6 +591,7 @@ CREATE TABLE "users" (
 	"display_name" text NOT NULL,
 	"language" text DEFAULT 'en' NOT NULL,
 	"tz" text DEFAULT 'UTC' NOT NULL,
+	"one_moment_a_day" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted_at" timestamp with time zone,
 	CONSTRAINT "users_auth_subject_key" UNIQUE("auth_subject"),
@@ -635,6 +661,9 @@ ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_member_id_members_
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_actor_id_members_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "push_devices" ADD CONSTRAINT "push_devices_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "push_tickets" ADD CONSTRAINT "push_tickets_device_id_push_devices_id_fk" FOREIGN KEY ("device_id") REFERENCES "public"."push_devices"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "push_tickets" ADD CONSTRAINT "push_tickets_outbound_id_outbound_id_fk" FOREIGN KEY ("outbound_id") REFERENCES "public"."outbound"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_resolved_by_members_id_fk" FOREIGN KEY ("resolved_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
@@ -685,6 +714,9 @@ CREATE INDEX "members_due_idx" ON "members" USING btree ("next_wake_at") WHERE "
 CREATE INDEX "members_family_idx" ON "members" USING btree ("family_id");
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';
 CREATE INDEX "outbound_pending_idx" ON "outbound" USING btree ("queued_at") WHERE "status" = 'queued';
+CREATE INDEX "push_devices_user_idx" ON "push_devices" USING btree ("user_id");
+CREATE INDEX "push_tickets_created_idx" ON "push_tickets" USING btree ("created_at");
+CREATE INDEX "push_tickets_device_idx" ON "push_tickets" USING btree ("device_id");
 CREATE INDEX "quiet_open_idx" ON "quiet_events" USING btree ("member_id") WHERE "resolved_at" is null;
 CREATE INDEX "replies_exchange_idx" ON "replies" USING btree ("exchange_id");
 CREATE UNIQUE INDEX "replies_channel_external_id_idx" ON "replies" USING btree ("channel","external_id") WHERE "external_id" is not null;

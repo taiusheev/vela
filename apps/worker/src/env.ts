@@ -80,6 +80,12 @@ export interface PilotEnv extends SharedEnv {
    * only while `LINE_CHANNEL` is "on", and required to be an https origin then.
    */
   readonly PILOT_PUBLIC_URL?: string;
+  /**
+   * Where pushes go (ADR-34; `config.ts`, `readPushSend`): "expo", Expo's push service, or "off",
+   * when none is made or sent while devices are still registered. "off" in every environment until
+   * the founder has set up Expo, Firebase and, for iPhones, Apple.
+   */
+  readonly PUSH_SEND: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;
@@ -103,6 +109,11 @@ export interface PilotEnv extends SharedEnv {
    * never typed. Read only while `LINE_CHANNEL` is "on", and required then.
    */
   readonly MEDIA_URL_SECRET?: string;
+  /**
+   * The access token Expo's Enhanced Push Security asks every send and receipt check to carry. Read
+   * only while `PUSH_SEND` is "expo", and required then.
+   */
+  readonly EXPO_ACCESS_TOKEN?: string;
 
   // Bindings.
   readonly MEDIA_QUEUE: Queue<MediaJob>;

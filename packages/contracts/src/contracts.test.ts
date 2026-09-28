@@ -683,46 +683,140 @@ describe("API accounts and plan reads", () => {
           },
         ],
         photos: true,
+        one_moment_a_day: true,
+        push: true,
         session_id: "private-session",
       }),
-    ).toEqual({ user, memberships: [membership], photos: true });
-    expect(ApiMe.parse({ user, memberships: [], photos: false })).toEqual({
+    ).toEqual({
+      user,
+      memberships: [membership],
+      photos: true,
+      one_moment_a_day: true,
+      push: true,
+    });
+    expect(
+      ApiMe.parse({ user, memberships: [], photos: false, one_moment_a_day: true, push: false }),
+    ).toEqual({
       user,
       memberships: [],
       photos: false,
+      one_moment_a_day: true,
+      push: false,
     });
   });
 
   it("says whether photos are kept, and never leaves it out", () => {
-    expect(ApiMe.safeParse({ user, memberships: [] }).success).toBe(false);
-    expect(ApiMe.safeParse({ user, memberships: [], photos: "yes" }).success).toBe(false);
+    expect(
+      ApiMe.safeParse({ user, memberships: [], one_moment_a_day: true, push: false }).success,
+    ).toBe(false);
+    expect(
+      ApiMe.safeParse({ user, memberships: [], photos: "yes", one_moment_a_day: true, push: false })
+        .success,
+    ).toBe(false);
+  });
+
+  it("says whether the account's ordinary pushes are on, and never leaves it out", () => {
+    expect(
+      ApiMe.parse({ user, memberships: [], photos: true, one_moment_a_day: false, push: true }),
+    ).toEqual({
+      user,
+      memberships: [],
+      photos: true,
+      one_moment_a_day: false,
+      push: true,
+    });
+    expect(ApiMe.safeParse({ user, memberships: [], photos: true, push: true }).success).toBe(
+      false,
+    );
+    expect(
+      ApiMe.safeParse({ user, memberships: [], photos: true, one_moment_a_day: "off", push: true })
+        .success,
+    ).toBe(false);
+  });
+
+  it("says whether this API sends pushes at all, and never leaves it out", () => {
+    const me = { user, memberships: [], photos: true, one_moment_a_day: true };
+    expect(ApiMe.parse({ ...me, push: false }).push).toBe(false);
+    expect(ApiMe.safeParse(me).success).toBe(false);
+    expect(ApiMe.safeParse({ ...me, push: "expo" }).success).toBe(false);
+  });
+
+  it("patches One moment a day alone or with the profile, and nothing looser than a boolean", () => {
+    expect(ApiAccountPatch.parse({ one_moment_a_day: false })).toEqual({ one_moment_a_day: false });
+    expect(ApiAccountPatch.parse({ one_moment_a_day: true, tz: "UTC" })).toEqual({
+      one_moment_a_day: true,
+      tz: "UTC",
+    });
+    for (const patch of [
+      { one_moment_a_day: "false" },
+      { one_moment_a_day: 0 },
+      { one_moment_a_day: null },
+      { one_moment_a_day: undefined },
+      { one_moment_a_day: true, hour: 9 },
+      { one_moment_a_day: true, push_token: "forged" },
+    ]) {
+      expect(ApiAccountPatch.safeParse(patch).success, JSON.stringify(patch)).toBe(false);
+    }
+    // The profile itself, which provisioning takes, has no such field.
+    expect(
+      ApiAccountProfile.safeParse({
+        display_name: "Mia",
+        language: "en",
+        tz: "UTC",
+        one_moment_a_day: false,
+      }).success,
+    ).toBe(false);
   });
 
   it("accepts paused memberships but not departed or invited ones", () => {
     expect(
-      ApiMe.safeParse({ user, memberships: [{ ...membership, status: "paused" }], photos: true })
-        .success,
+      ApiMe.safeParse({
+        user,
+        memberships: [{ ...membership, status: "paused" }],
+        photos: true,
+        one_moment_a_day: true,
+        push: true,
+      }).success,
     ).toBe(true);
     for (const status of ["invited", "left", "deceased", "unknown"]) {
       expect(
-        ApiMe.safeParse({ user, memberships: [{ ...membership, status }], photos: true }).success,
+        ApiMe.safeParse({
+          user,
+          memberships: [{ ...membership, status }],
+          photos: true,
+          one_moment_a_day: true,
+          push: true,
+        }).success,
       ).toBe(false);
     }
   });
 
   it("rejects malformed account and family identifiers or roles", () => {
     expect(
-      ApiMe.safeParse({ user: { ...user, id: "invalid" }, memberships: [], photos: true }).success,
+      ApiMe.safeParse({
+        user: { ...user, id: "invalid" },
+        memberships: [],
+        photos: true,
+        one_moment_a_day: true,
+        push: true,
+      }).success,
     ).toBe(false);
     expect(
-      ApiMe.safeParse({ user, memberships: [{ ...membership, role: "admin" }], photos: true })
-        .success,
+      ApiMe.safeParse({
+        user,
+        memberships: [{ ...membership, role: "admin" }],
+        photos: true,
+        one_moment_a_day: true,
+        push: true,
+      }).success,
     ).toBe(false);
     expect(
       ApiMe.safeParse({
         user,
         memberships: [{ ...membership, family: { ...membership.family, id: "invalid" } }],
         photos: true,
+        one_moment_a_day: true,
+        push: true,
       }).success,
     ).toBe(false);
   });

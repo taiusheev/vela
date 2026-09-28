@@ -3,13 +3,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { photoRefusal } from "../src/api/upload.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
+import { PushOffer } from "../src/components/push-offer.tsx";
 import {
   Card,
   Chip,
@@ -31,10 +32,15 @@ import {
 import { askExtras, photoCount } from "../src/data/photos.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
 import { dayName, useToday } from "../src/data/useToday.ts";
+import { usePush } from "../src/push/provider.tsx";
+import { readFlag, writeFlag } from "../src/storage/flags.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
 type When = "tomorrow" | "another_day" | "whenever";
+
+/** Remembered once notifications have been offered after an ask, so they are offered only once. */
+const OFFERED_AFTER_ASK = "push-offered.after-ask";
 
 /** A paused light, or one not yet said yes to, cannot be asked (`canBeAsked`). */
 function askable(light: TodayLight): boolean {
@@ -47,7 +53,20 @@ export default function AskScreen() {
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
-  const { today, familyId, live, photos: photosOn } = useToday();
+  const { today, familyId, live, photos: photosOn, organiser, pushSent } = useToday();
+  const push = usePush();
+  // push (A2): after a person's first ask, someone who does not organise is offered notifications
+  // once, in the words of what they would hear: that she answered. Organisers are asked when they
+  // set the family up, and on You.
+  const [offering, setOffering] = useState(false);
+  const offerAfterAsk = async (): Promise<boolean> => {
+    const phone = push.phone;
+    if (organiser || !pushSent || !push.availability.available) return false;
+    if (phone === null || phone.permission === "granted" || !phone.canAskAgain) return false;
+    if (await readFlag(OFFERED_AFTER_ASK)) return false;
+    await writeFlag(OFFERED_AFTER_ASK);
+    return true;
+  };
   const params = useLocalSearchParams<{ recipient?: string; suggestion?: string }>(); // suggestion
   const [kind, setKind] = useState<AskType>("question");
   const [text, setText] = useState("");
@@ -120,7 +139,8 @@ export default function AskScreen() {
       composeAsk(familyId ?? "", keyFor(ask), ask, await account.token()),
     onSuccess: async () => {
       await queries.invalidateQueries({ queryKey: ["today"] });
-      router.back();
+      if (await offerAfterAsk()) setOffering(true);
+      else router.back();
     },
     onError: (error: unknown) => {
       if (photos.refusedAsk(error)) return;
@@ -173,6 +193,36 @@ export default function AskScreen() {
   const holder = taken?.taken_by;
   // Named, never "the day after": the next free morning can be several days out.
   const day = taken?.date_alternative == null ? null : dayName(taken.date_alternative);
+
+  if (offering) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: true, title: t`Ask ${name} something` }} />
+        <ScrollView
+          style={{ backgroundColor: palette.bg }}
+          contentContainerStyle={{
+            paddingTop: space.xl,
+            paddingBottom: insets.bottom + space.xxxl,
+            paddingHorizontal: space.margin,
+            gap: space.xl,
+          }}
+        >
+          <Words variant="title">
+            <Trans>Into her morning.</Trans>
+          </Words>
+          <PushOffer
+            reason={t`Hear it on this phone when ${name} answers.`}
+            onAnswered={() => router.back()}
+          />
+          <Pressable accessibilityRole="button" onPress={() => router.back()}>
+            <Words variant="button" tone="action">
+              <Trans>Not now</Trans>
+            </Words>
+          </Pressable>
+        </ScrollView>
+      </>
+    );
+  }
 
   return (
     <>

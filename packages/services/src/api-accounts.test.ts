@@ -154,7 +154,11 @@ describe("provisionApiUser", () => {
     const user = await provisionApiUser(h.db, externalIdentity, profile);
 
     expect(await h.db.select().from(users)).toHaveLength(2);
-    expect(await loadApiMe(h.db, externalIdentity)).toEqual({ user, memberships: [] });
+    expect(await loadApiMe(h.db, externalIdentity)).toEqual({
+      user,
+      memberships: [],
+      one_moment_a_day: true,
+    });
     expect(await h.db.select().from(members)).toEqual(beforeMembers);
     expect(await h.db.select().from(channelLinks)).toEqual(beforeLinks);
   });
@@ -256,9 +260,23 @@ describe("loadApiMe", () => {
     expect(await loadApiMe(h.db, identity)).toBeNull();
   });
 
+  it("says the account's One moment a day, on unless the account turned it off", async () => {
+    const user = await provisionApiUser(h.db, identity, profile);
+    await h.db.update(users).set({ oneMomentADay: false }).where(eq(users.id, user.id));
+    expect(await loadApiMe(h.db, identity)).toEqual({
+      user,
+      memberships: [],
+      one_moment_a_day: false,
+    });
+  });
+
   it("returns the safe user with no memberships when none are linked", async () => {
     const user = await provisionApiUser(h.db, identity, profile);
-    expect(await loadApiMe(h.db, identity)).toEqual({ user, memberships: [] });
+    expect(await loadApiMe(h.db, identity)).toEqual({
+      user,
+      memberships: [],
+      one_moment_a_day: true,
+    });
   });
 
   it("returns only visible own memberships, ordered by createdAt then id", async () => {
@@ -307,7 +325,11 @@ describe("loadApiMe", () => {
       status: "paused",
       family: { id: other.family.id, name: other.family.name, region: "apac", plan: "free" },
     });
-    expect(ApiMe.parse({ ...result, photos: false })).toEqual({ ...result, photos: false });
+    expect(ApiMe.parse({ ...result, photos: false, push: false })).toEqual({
+      ...result,
+      photos: false,
+      push: false,
+    });
     expect(Object.keys(result?.user ?? {}).sort()).toEqual([
       "display_name",
       "id",
@@ -335,6 +357,7 @@ describe("loadApiMe", () => {
       expect(await loadApiMe(h.db, identity)).toEqual({
         user: { id: seed.user.id, ...profile },
         memberships: [],
+        one_moment_a_day: true,
       });
     },
   );

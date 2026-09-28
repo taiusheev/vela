@@ -26,12 +26,17 @@ import {
 } from "@vela/db";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
-import { organisersUnreachableAlert, quietNobodyToldAlert } from "./admin-alerts.ts";
+import {
+  organisersUnreachableAlert,
+  quietNobodyToldAlert,
+  quietNoticeUnheardAlert,
+} from "./admin-alerts.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { channelLabel } from "./format.ts";
 import type { OutboundRequest } from "./gateway.ts";
-import { closingNoticeFor } from "./quiet-closing.ts";
+import { PUSH_CHANNEL, PUSH_UNHEARD } from "./push-messages.ts";
+import { closingNoticesFor } from "./quiet-closing.ts";
 import { activeOrganisersWithLinks, markWakeDue, memberById } from "./repo.ts";
 
 export const ArrivalEffect = z.object({
@@ -230,7 +235,8 @@ async function turnPromptSent(deps: Deps, tx: VelaTransaction, ctx: SentContext)
     .update(turns)
     .set({
       promptedAt: sql`coalesce(${turns.promptedAt}, ${ctx.sentAt}::timestamptz)`,
-      promptMessageId: ctx.primaryMessageId,
+      // Push (ADR-34): a push's id is Expo's ticket, which no reply in the group can quote.
+      ...(ctx.row.channel === PUSH_CHANNEL ? {} : { promptMessageId: ctx.primaryMessageId }),
     })
     .where(
       and(
@@ -297,9 +303,12 @@ async function quietNoticeSent(
     return NOTHING_FOLLOWS;
   }
   const her = await memberById(tx, quiet.memberId);
+  // Push (ADR-34): the close follows on the notice's own channel, Telegram or the reader's phone.
   const closing =
-    her === null ? null : await closingNoticeFor(tx, quiet, her, effect.notifiedMemberId);
-  return { wakeMemberIds: [], notices: closing === null ? [] : [closing] };
+    her === null
+      ? []
+      : await closingNoticesFor(tx, quiet, her, effect.notifiedMemberId, ctx.row.channel);
+  return { wakeMemberIds: [], notices: closing };
 }
 
 /** The state changes after a successful send, by the row's kind. */
@@ -404,6 +413,7 @@ async function quietNoticeFailed(
   if (quiet === undefined || quiet.resolvedAt !== null || quiet.notifyCount >= effect.notifyCount) {
     return NOTHING_FOLLOWS;
   }
+  // A sent app notice whose receipts say no phone took it (ADR-34) reached nobody either.
   const [pending] = await tx
     .select({ id: outbound.id })
     .from(outbound)
@@ -415,6 +425,7 @@ async function quietNoticeFailed(
         ne(outbound.id, ctx.row.id),
         sql`${outbound.payload} -> 'effect' ->> 'quietEventId' = ${quiet.id}`,
         sql`(${outbound.payload} -> 'effect' ->> 'notifyCount')::int = ${effect.notifyCount}`,
+        sql`not (${outbound.channel} = ${PUSH_CHANNEL} and coalesce(${outbound.error}, '') like ${`${PUSH_UNHEARD}:%`})`,
       ),
     )
     .limit(1);
@@ -469,6 +480,15 @@ export async function applyFailureEffects(
     }
   }
   const byKind = await failureEffectsByKind(deps, tx, ctx);
+  // Push (ADR-34): a quiet notice of a reader the round also reached by push, which failed on
+  // either channel, may have told them nothing (S2). Not when the round told nobody at all: the
+  // founder has just heard that (`quietNoticeFailed`), which says it of this reader too.
+  if (ctx.row.kind === "quiet_notice" && byKind.notices.length === 0) {
+    const unheard = await quietNoticeUnheard(deps, tx, ctx);
+    if (unheard !== null) {
+      alerts.push(unheard);
+    }
+  }
   return { wakeMemberIds: byKind.wakeMemberIds, notices: [...byKind.notices, ...alerts] };
 }
 
@@ -485,4 +505,55 @@ function failureEffectsByKind(
     default:
       return Promise.resolve(NOTHING_FOLLOWS);
   }
+}
+
+// Push (ADR-34) -----------------------------------------------------------------------------------
+
+/**
+ * Locks the quiet event a notice belongs to (`effect`, the notice's stored effect), `for update`,
+ * as a notice of the round failing for good does first (`quietNoticeFailed`). Every decision about
+ * whether a round's notice left its reader unheard is made under it — a failure, a push dropped
+ * unsent, a push's receipt refused — so of two notices of one round settling at once, the one that
+ * locks second reads the other's final status, and the founder hears it once rather than never.
+ * Taken after the notice's own outbound row, the order every writer of both keeps. Nothing when
+ * the effect does not parse.
+ */
+export async function lockQuietEventOfNotice(tx: VelaTransaction, effect: unknown): Promise<void> {
+  const parsed = QuietNoticeEffect.safeParse(effect);
+  if (!parsed.success) {
+    return;
+  }
+  await tx
+    .select({ id: quietEvents.id })
+    .from(quietEvents)
+    .where(eq(quietEvents.id, parsed.data.quietEventId))
+    .for("update");
+}
+
+/**
+ * A quiet notice that never reached its reader — failed, or on the app dropped or refused by Apple
+ * or Google — tells the founder when the round also went to that reader's phone and nothing else
+ * of the round reached them or is still on its way (`quietNoticeUnheardAlert`, S2). Shared by the
+ * gateway's failure and drop paths and the receipts check (`push.ts`), each inside the transaction
+ * that records the notice's outcome; the quiet event is locked first (`lockQuietEventOfNotice`).
+ */
+export async function quietNoticeUnheard(
+  deps: Pick<Deps, "config" | "logger">,
+  tx: VelaTransaction,
+  ctx: Pick<RowContext, "row" | "effect">,
+): Promise<OutboundRequest | null> {
+  const parsed = QuietNoticeEffect.safeParse(ctx.effect);
+  if (!parsed.success) {
+    if (ctx.row.channel === PUSH_CHANNEL) {
+      deps.logger.error("gateway_effect_invalid", { outboundId: ctx.row.id, kind: ctx.row.kind });
+    }
+    return null;
+  }
+  await lockQuietEventOfNotice(tx, ctx.effect);
+  return quietNoticeUnheardAlert(deps, tx, {
+    quietEventId: parsed.data.quietEventId,
+    round: parsed.data.notifyCount - 1,
+    readerId: parsed.data.notifiedMemberId,
+    outboundId: ctx.row.id,
+  });
 }

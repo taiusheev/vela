@@ -1,5 +1,6 @@
 import { ApiLeft, ApiMemberPause } from "@vela/contracts";
-import { events, members, users } from "@vela/db";
+import { t } from "@vela/copy";
+import { channelLinks, events, members, outbound, users } from "@vela/db";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
@@ -186,6 +187,81 @@ describe("leaveApiFamily", () => {
     await h.db.update(members).set({ status: "paused" }).where(eq(members.id, annaId));
     expect(await refusal(leave(mia, seed.organiser.id))).toBe("last_organiser");
     expect((await statusOf(seed.organiser.id))?.status).toBe("active");
+  });
+
+  // ADR-34, D4: Leave may take the family's last organiser who can be told of a quiet morning.
+  it("tells the founder when the organiser who leaves was the last one who could be told", async () => {
+    const alerts = {
+      adminConversationId: "9001",
+      publicBaseUrl: "https://vela.test",
+      pushSending: false,
+    };
+    const toFounder = async () =>
+      h.db.select().from(outbound).where(eq(outbound.conversationId, "9001"));
+    // Anna organises too, but has no Telegram link, and push is off: nothing tells her anything.
+    await h.db.delete(channelLinks).where(eq(channelLinks.memberId, annaId));
+
+    const left = await leaveApiFamily(
+      { db: h.db, clock: h.clock, alerts },
+      mia,
+      "mia-leaves",
+      seed.family.id,
+      seed.organiser.id,
+      {},
+    );
+
+    const [alert] = await toFounder();
+    if (alert === undefined) throw new Error("expected the founder's alert");
+    expect(alert).toMatchObject({ kind: "system", status: "queued", memberId: seed.organiser.id });
+    expect((alert.payload as { message: { text: string } }).message.text).toBe(
+      t("en", "admin.organisers_unreachable", {
+        name: "Mia",
+        family: seed.family.name,
+        link: `https://vela.test/admin/families/${seed.family.id}`,
+      }),
+    );
+    expect(left.after.outboundIds).toEqual([alert.id]);
+    expect(await toFounder()).toHaveLength(1);
+
+    // The replay writes nothing again and hands nothing over.
+    const replay = await leaveApiFamily(
+      { db: h.db, clock: h.clock, alerts },
+      mia,
+      "mia-leaves",
+      seed.family.id,
+      seed.organiser.id,
+      {},
+    );
+    expect(replay.replayed).toBe(true);
+    expect(replay.after.outboundIds).toEqual([]);
+    expect(await toFounder()).toHaveLength(1);
+  });
+
+  it("says nothing when another organiser can still be told, or without where to say it", async () => {
+    const alerts = {
+      adminConversationId: "9001",
+      publicBaseUrl: "https://vela.test",
+      pushSending: false,
+    };
+    // Anna keeps her Telegram link: Mia's leaving takes nobody's last way to hear.
+    const left = await leaveApiFamily(
+      { db: h.db, clock: h.clock, alerts },
+      mia,
+      nextKey(),
+      seed.family.id,
+      seed.organiser.id,
+      {},
+    );
+    expect(left.after.outboundIds).toEqual([]);
+
+    // Without the founder's chat (a laptop's API), nothing is written either.
+    await h.db
+      .update(members)
+      .set({ status: "active", leftAt: null })
+      .where(eq(members.id, seed.organiser.id));
+    await h.db.delete(channelLinks).where(eq(channelLinks.memberId, annaId));
+    expect((await leave(mia, seed.organiser.id)).after.outboundIds).toEqual([]);
+    expect(await h.db.select().from(outbound)).toEqual([]);
   });
 
   it("refuses a kept-light member, and acts on nobody's membership but the caller's", async () => {

@@ -38,6 +38,7 @@ const STAGING_CONFIG: ApiConfig = {
   secretKey: TEST_KEY,
   telegramBotUsername: "VelaStagingBot",
   regions: ["apac"],
+  pushSend: "off",
 };
 
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
@@ -619,6 +620,33 @@ describe("the runtime staging's API app runs on", () => {
       config: { telegramBotUsername: "VelaStagingBot", regions: ["apac"] },
     });
     expect(send).toHaveBeenCalledExactlyOnceWith({ type: "deliver", outboundId: "o1" });
+  });
+
+  // ADR-34: /v1/me and the family read say whether pushes are sent, by the same switch.
+  it("tells the reads whether pushes are sent here, from PUSH_SEND alone", () => {
+    expect(apiRuntimeFor(stagingEnv(), STAGING_CONFIG).push).toBe(false);
+    expect(apiRuntimeFor(stagingEnv(), { ...STAGING_CONFIG, pushSend: "expo" }).push).toBe(true);
+    expect(
+      apiRuntimeFor(stagingEnv(), { ...STAGING_CONFIG, secretKey: null, pushSend: "expo" }).push,
+    ).toBe(true);
+  });
+
+  // ADR-34: a phone leaving a family with nobody to tell writes the founder's alert, which needs
+  // the founder's chat and the admin origin, and counts only where pushes are sent.
+  it("tells the device routes where the founder is told, and whether pushes are sent here", () => {
+    expect(writesOf(apiRuntimeFor(stagingEnv(), STAGING_CONFIG)).alerts).toEqual({
+      adminConversationId: "123456789",
+      publicBaseUrl: "https://vela-admin.vela.example",
+      pushSending: false,
+    });
+    expect(
+      writesOf(apiRuntimeFor(stagingEnv(), { ...STAGING_CONFIG, pushSend: "expo" })).alerts
+        ?.pushSending,
+    ).toBe(true);
+    expect(
+      writesOf(apiRuntimeFor(stagingEnv({ ADMIN_CONVERSATION_ID: " " }), STAGING_CONFIG)).alerts
+        ?.adminConversationId,
+    ).toBeNull();
   });
 
   it("opens the database through the environment's Hyperdrive", async () => {

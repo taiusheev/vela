@@ -111,6 +111,10 @@ export const zhTW: Record<keyof typeof en, string> = {
   "delivery.failed": "今天沒辦法透過 {channel} 把訊息送給{name}。除此之外，目前沒有別的消息。",
   "flag.notice": "{name}說了一句話，您可能會想知道：「{quote}」",
   "flag.notice_no_words": "{name}今天說了一些話，也許值得打個電話問問。",
+  "push.quiet_notice":
+    "{name}那邊今天比較安靜。早安訊息在 {sent} 送到。打開 Vela，可以打個電話，也可以再等等。",
+  "push.answer_receipt": "{name}回覆了您。",
+  "push.turn_prompt": "明天早上輪到您了：問問{name}一件事吧。",
   "away.confirmed": "好的，那就到{date}為止。祝您過得愉快。",
   "away.confirmed_open": "好的，知道了。祝您過得愉快。",
   "weekly_read.answered": "{name}這週 {days} 天中回覆了 {answered} 天。",
@@ -160,4 +164,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "admin.line_quota": "LINE 本月已用了 {used} 則訊息，上限是 {limit} 則。查看： {link}",
   "admin.line_quota_exhausted":
     "LINE 本月的訊息額度已經用完：在方案變更或下個月開始之前，LINE 上的早安訊息和通知都會傳送失敗，只有回覆還能送出。查看： {link}",
+  "admin.quiet_notice_unheard":
+    "{family}的{name}那邊今天比較安靜，但傳到一位發起人手機的通知沒有送達。查看： {link}",
+  "admin.push_misconfigured":
+    "推播通知無法送出：Vela 的推播憑證被拒絕了，修好之前，任何通知都到不了手機。查看： {link}",
 };

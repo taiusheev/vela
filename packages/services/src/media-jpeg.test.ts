@@ -470,8 +470,11 @@ describe("cleanJpeg", () => {
     const input = concat(SOI, DQT, frame(0xc0, 1600, 1200), DHT, SOS, body, EOI);
 
     const result = cleaned(input);
-    expect(result.bytes).toEqual(input);
-  });
+    // Compared as bytes, not element by element: a megabyte through toEqual alone took seconds
+    // under a loaded full run and hit the default timeout, though the cleaner itself is quick.
+    expect(result.bytes.length).toBe(input.length);
+    expect(Buffer.from(result.bytes).equals(Buffer.from(input))).toBe(true);
+  }, 30_000);
 
   describe("refuses", () => {
     it.each([

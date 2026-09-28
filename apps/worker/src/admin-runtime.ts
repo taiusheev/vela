@@ -8,7 +8,9 @@
  * code does not compile. Services' own functions still take a whole `Deps`, so `servicesDeps` hands
  * them one in which every port the admin Worker was not given throws `PortNotGivenError`, naming
  * the port, the moment it is touched. A change in services that starts using one fails loudly on
- * the admin page (`request_failed` with `PortNotGivenError:<port>`) rather than doing nothing.
+ * the admin page (`request_failed` with `PortNotGivenError:<port>`) rather than doing nothing. The
+ * push port is the one exception: it is `null`, push off, so no phone counts toward being told here
+ * (ADR-34).
  */
 import {
   type AddContactInput,
@@ -146,6 +148,14 @@ export function servicesDeps(ports: AdminDeps): Deps {
       head: () => notGiven("media"),
     },
     channels: { get: () => notGiven("channels") },
+    // `null`, which services read as PUSH_SEND "off" (ADR-34). This Worker sends no push and
+    // reads no receipt in any environment; what services decide from it here is whether a phone
+    // counts toward an organiser who can be told, when the founder marks someone left
+    // (`organisersUnreachableAlert`). With `null` only Telegram counts: while push is off, as it is
+    // everywhere, that is the truth, and while it is on the worst case is an alert the founder did
+    // not need, never one missed. A throwing port would read as push on and count phones that no
+    // notice reaches.
+    push: null,
     stt: { transcribe: () => notGiven("stt") },
     heartbeat: { ping: () => notGiven("heartbeat") },
     config: adminConfig(ports.telegramBotUsername),

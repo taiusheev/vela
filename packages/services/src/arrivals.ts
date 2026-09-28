@@ -62,6 +62,7 @@ import {
 } from "./gateway.ts";
 import { recordAiCall } from "./jobs.ts";
 import { uploadsStoredMedia } from "./outbound-media.ts";
+import { ordinaryPushReader, turnPromptPush } from "./push-messages.ts";
 import {
   channelLinkOfMember,
   exchangeForLocalDate,
@@ -771,7 +772,8 @@ async function turnHolders(db: Queryable, familyId: string): Promise<TurnHolder[
 
 /**
  * The evening prompt for `forDate`'s ask (flows §3.4). With no linked group the turn is recorded
- * with the organiser as holder and nothing is sent, so the schedule does not ask again; otherwise
+ * with the first organiser as holder (turns do not rotate there), so the schedule does not ask
+ * again, and nothing is posted: the holder's phones hear it instead when push is on (ADR-34); otherwise
  * the next holder in join order is named in the group, or anyone is invited when nobody holds turns.
  * The turn row and the outbound row are written together, so a repeated call finds the turn taken.
  */
@@ -824,7 +826,7 @@ export async function sendTurnPrompt(
         )
         .orderBy(asc(members.createdAt), asc(members.id))
         .limit(1);
-      await tx
+      const [taken] = await tx
         .insert(turns)
         .values({
           familyId: family.id,
@@ -833,8 +835,27 @@ export async function sendTurnPrompt(
           holderId: organiser?.id ?? null,
           promptedAt: now,
         })
-        .onConflictDoNothing();
+        .onConflictDoNothing()
+        .returning({ recipientId: turns.recipientId });
       deps.logger.info("turn_prompt_without_group", { recipientId, forDate });
+      // Push (ADR-34, S6): the holder hears it on their phone instead, once, when this call took
+      // the turn, and while push is on. It fires at her 19:00, as the group's prompt does.
+      if (taken !== undefined && organiser !== undefined && deps.push !== null) {
+        const holder = await ordinaryPushReader(tx, organiser.id);
+        if (holder !== null) {
+          await enqueueOutbound(
+            deps,
+            tx,
+            turnPromptPush({
+              holder,
+              familyId: family.id,
+              recipientId,
+              herName: recipient.displayName,
+              forDate,
+            }),
+          );
+        }
+      }
       return;
     }
     const holderId = nextTurnHolder(holders, previousHolderId, previousJoinedAt);

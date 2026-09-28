@@ -229,6 +229,11 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["consent.request", ["notice", "organiser"]],
   ["consent.health_words", ["organiser"]],
   ["flag.notice_no_words", ["name"]],
+  ["push.quiet_notice", ["name", "sent"]],
+  ["push.answer_receipt", ["name"]],
+  ["push.turn_prompt", ["name"]],
+  ["admin.quiet_notice_unheard", ["family", "link", "name"]],
+  ["admin.push_misconfigured", ["link"]],
   ["organiser.invite_again", ["link", "name"]],
   ["onboarding.ask_nearby", []],
   ["onboarding.nearby_no_number", []],
@@ -271,6 +276,12 @@ const ADMIN_PARAMETERS: ReadonlySet<string> = new Set(["family", "link", "name"]
 const ADMIN_COUNTS: ReadonlyMap<MessageKey, ReadonlySet<string>> = new Map([
   ["admin.line_quota", new Set(["used", "limit"])],
 ]);
+
+/**
+ * A push passes through Expo, Apple and Google and shows on a lock screen (ADR-34), so it may carry
+ * a name and a time, and nothing the family or she wrote: no quote, no suggestion, no contact.
+ */
+const PUSH_PARAMETERS: ReadonlySet<string> = new Set(["name", "sent"]);
 
 /** Placeholders that render as URLs. */
 const URL_PLACEHOLDERS = /(.?)\{(?:link|notice)\}(.?)/gsu;
@@ -360,6 +371,19 @@ describe("catalogs", () => {
         (name) => !ADMIN_PARAMETERS.has(name) && ADMIN_COUNTS.get(key)?.has(name) !== true,
       );
       expect(extra, `${lang} ${key}`).toEqual([]);
+    }
+  });
+
+  it.each(MVP_LANGS)("%s push notifications carry a name and a time, nothing else", (lang) => {
+    const pushKeys = englishKeys.filter((key) => key.startsWith("push."));
+    expect(pushKeys.length).toBeGreaterThan(0);
+    for (const key of pushKeys) {
+      const extra = placeholdersOf(catalogs[lang][key]).filter(
+        (name) => !PUSH_PARAMETERS.has(name),
+      );
+      expect(extra, `${lang} ${key}`).toEqual([]);
+      expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(QUOTE_MARKS);
+      expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(HEALTH_WORDS[lang]);
     }
   });
 

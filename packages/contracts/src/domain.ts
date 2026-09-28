@@ -283,3 +283,49 @@ export type TimeZone = z.infer<typeof TimeZone>;
 /** ISO 3166-1 alpha-2 country code, upper case. */
 export const CountryCode = z.string().regex(/^[A-Z]{2}$/, "expected ISO 3166-1 alpha-2");
 export type CountryCode = z.infer<typeof CountryCode>;
+
+// ---------------------------------------------------------------------------------------------
+// Push (build plan 3.8, ADR-34)
+// ---------------------------------------------------------------------------------------------
+
+/** The phones an app installation registers for push from. The app never registers on the web. */
+export const PUSH_PLATFORMS = ["ios", "android"] as const;
+export const PushPlatform = z.enum(PUSH_PLATFORMS);
+export type PushPlatform = z.infer<typeof PushPlatform>;
+
+/**
+ * What the phone allows the app, as the app reads it when it registers: iOS's own status on an
+ * iPhone. Only `granted` can be told anything: `denied` shows nothing, and `provisional`, which the
+ * app never asks for, delivers quietly to the notification list with no banner and no sound, which
+ * a quiet morning cannot be left to.
+ */
+export const PUSH_PERMISSIONS = ["granted", "denied", "provisional"] as const;
+export const PushPermission = z.enum(PUSH_PERMISSIONS);
+export type PushPermission = z.infer<typeof PushPermission>;
+
+/**
+ * The ordinary pushes (spec §15): at most one of each per member per local day, held by the same
+ * budget index as every other channel (`outbound_budget_idx`), and never sent while the reader's
+ * "One moment a day" is off. The weekly read joins them when it is pushed.
+ */
+export const ORDINARY_PUSH_KINDS = [
+  "answer_receipt",
+  "turn_prompt",
+] as const satisfies readonly BudgetedOutboundKind[];
+export type OrdinaryPushKind = (typeof ORDINARY_PUSH_KINDS)[number];
+
+/**
+ * The pushes that are never budgeted and never stopped by "One moment a day": that her morning has
+ * gone quiet, and that it is settled. A flag is not pushed yet (her words must not travel through
+ * Apple or Google, and the app has no screen for it), so it is not here.
+ */
+export const PUSH_EXCEPTION_KINDS = [
+  "quiet_notice",
+  "quiet_resolved",
+] as const satisfies readonly OutboundKind[];
+export type PushExceptionKind = (typeof PUSH_EXCEPTION_KINDS)[number];
+
+/** Every kind an outbound row on the `app` channel may be. */
+export const PUSH_KINDS = [...ORDINARY_PUSH_KINDS, ...PUSH_EXCEPTION_KINDS] as const;
+export const PushKind = z.enum(PUSH_KINDS);
+export type PushKind = z.infer<typeof PushKind>;

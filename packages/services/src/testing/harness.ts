@@ -1,9 +1,9 @@
 /**
  * Everything a services test runs against (code design §8): one PGlite with the real migrations,
  * a clock that moves only when told, in-memory queues the test drains, a recording Telegram fake
- * with failure injection, the fake AI and speech-to-text, a scheduler that remembers wakes, an
- * in-memory media store, and a heartbeat that counts. One harness per test file; `reset` empties
- * the database and every recorder between tests.
+ * with failure injection, a recording push port (ADR-34), the fake AI and speech-to-text, a
+ * scheduler that remembers wakes, an in-memory media store, and a heartbeat that counts. One
+ * harness per test file; `reset` empties the database and every recorder between tests.
  */
 import {
   type Ai,
@@ -17,6 +17,7 @@ import { LANGS, type Lang } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import { createTestDatabase } from "@vela/db/testing";
 import type { Config, Deps, MediaJob, OutboundJob, UnderstandJob } from "../deps.ts";
+import { createFakePush, type FakePush } from "./fake-push.ts";
 import { createFakeTelegram, type FakeTelegram } from "./fake-telegram.ts";
 import {
   createFakeClock,
@@ -55,6 +56,11 @@ export interface HarnessOptions {
   /** Overrides for the fake AI, kept across resets. */
   ai?: Partial<Ai>;
   stt?: Partial<Omit<Transcription, "record">>;
+  /**
+   * "off" gives services no push port (`deps.push` null), as the Worker's `PUSH_SEND` "off" does;
+   * the fake records sends otherwise (ADR-34).
+   */
+  push?: "fake" | "off";
 }
 
 export interface Harness {
@@ -64,6 +70,8 @@ export interface Harness {
   readonly logger: FakeLogger;
   readonly random: FakeRandom;
   readonly telegram: FakeTelegram;
+  /** The push port; `deps.push` is null instead when the harness was made with `push: "off"`. */
+  readonly push: FakePush;
   /** The current fake AI; a new one after each `reset`, so its call list starts empty. */
   readonly ai: FakeAi;
   readonly stt: Stt;
@@ -118,6 +126,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
   const logger = createFakeLogger();
   const random = createFakeRandom();
   const telegram = createFakeTelegram(clock);
+  const push = createFakePush();
   const scheduler = createFakeScheduler();
   const media = createFakeMediaStore();
   const heartbeat = createFakeHeartbeat();
@@ -151,6 +160,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
         return telegram;
       },
     },
+    push: options.push === "off" ? null : push,
     ai,
     stt,
     heartbeat,
@@ -213,6 +223,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     logger,
     random,
     telegram,
+    push,
     get ai() {
       return ai;
     },
@@ -230,6 +241,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
       logger.clear();
       random.reset();
       telegram.reset();
+      push.reset();
       scheduler.clear();
       media.clear();
       heartbeat.clear();
