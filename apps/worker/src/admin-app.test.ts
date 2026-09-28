@@ -293,6 +293,28 @@ describe("an admin action", () => {
     ]);
   });
 
+  // The founder is the one acting, and this Worker holds no chat to tell them in (ADR-26 H2): the
+  // page they come back to says it (flows §3.17).
+  it("tells the founder on the family page when the organiser marked left was the last who could be told", async () => {
+    const fake = createFakeAdminRuntime({
+      services: {
+        markLeft: async () => "nobody_to_tell",
+        loadFamilyPage: async () => familyPageFixture(),
+      },
+    });
+
+    const response = await send(fake, formRequest(path, { memberId, confirm: "left" }, ORIGIN));
+    const location = response.headers.get("location");
+    const page = await send(fake, new Request(`${ORIGIN}${location}`));
+
+    expect(response.status).toBe(303);
+    expect(location).toBe(`/admin/families/${familyId}?result=nobody_to_tell`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain(
+      '<p class="notice">Marked left. That was the last organiser who could be told anything: nobody in this family will hear if a light there goes quiet, and a quiet morning there will be told to you in your chat with the bot instead.</p>',
+    );
+  });
+
   it("sends the weekly read as the founder edited it and says what came back", async () => {
     const weeklyReadId = "33333333-3333-7333-8333-333333333333";
     const fake = createFakeAdminRuntime({ services: { sendWeeklyRead: async () => "budget" } });

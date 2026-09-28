@@ -4,7 +4,8 @@
  * decision of 24 September 2026), and, with push (ADR-34), a quiet notice that reached no phone and
  * push credentials that were refused. Every organiser who could hear of her silence is active, with
  * a Telegram link that is not blocked, or, while push is on, a phone that can be told
- * (`reachableOrganisers`); when none is left, the founder is.
+ * (`reachableOrganisers`); when none is left, the founder is: in the admin conversation, or, when
+ * the founder is the one who left nobody, on the admin page (`organisersUnreachable`).
  *
  * A leaf, importing no flow and not the gateway, so the gateway's own effects — which learn that a
  * link is blocked — can use it without an import cycle. `admin.ts` re-exports the constants.
@@ -73,13 +74,47 @@ function pushCounts(deps: AlertDeps | Pick<Deps, "config" | "push">): boolean {
   return "pushSending" in deps ? deps.pushSending : deps.push !== null;
 }
 
+/** An organiser who can no longer be told, in a family where nobody else can be either. */
+export interface OrganisersUnreachable {
+  readonly organiser: Member;
+  readonly family: Family;
+}
+
 /**
  * `memberId`, an organiser, has just stopped being one who can be told — marked left, their link
  * blocked, or, with push, their last phone that could be told gone (ADR-34) — and no other
- * organiser of the family can be. From now on a quiet morning there reaches nobody, so the founder
- * hears it at once, while the family can still be reached another way. `occasion` names what
- * happened, once. Null when `memberId` was not an organiser, anyone can still be told, the family
- * has ended, or there is no admin conversation.
+ * organiser of the family can be: from now on a quiet morning there reaches nobody. `pushOn` says
+ * whether a phone counts toward being told (D4). Null when `memberId` was not an organiser, anyone
+ * can still be told, or the family has ended.
+ *
+ * The decision alone, which needs no admin conversation: the admin page's `markLeft` answers it to
+ * the founder, who is the one acting there, on a Worker that holds no chat (ADR-26 H2, flows
+ * §3.17). Everywhere else it is `organisersUnreachableAlert`.
+ */
+export async function organisersUnreachable(
+  db: Queryable,
+  memberId: string,
+  pushOn: boolean,
+): Promise<OrganisersUnreachable | null> {
+  const organiser = await memberById(db, memberId);
+  if (organiser === null || organiser.role !== "organiser") {
+    return null;
+  }
+  const family = await familyById(db, organiser.familyId);
+  if (family === null || (await familyHasEnded(db, family.id))) {
+    return null;
+  }
+  if ((await reachableOrganisers(db, family.id, NOTICE_CHANNEL, pushOn)).length > 0) {
+    return null;
+  }
+  return { organiser, family };
+}
+
+/**
+ * The founder's message when `organisersUnreachable` finds the family has nobody left to tell,
+ * sent at once, while the family can still be reached another way: a link found blocked, the bot
+ * blocked, an organiser's Leave from the app, or a phone lost. `occasion` names what happened,
+ * once. Null when it finds nothing, and with no admin conversation, read first.
  */
 export async function organisersUnreachableAlert(
   deps: AlertDeps | Pick<Deps, "config" | "push">,
@@ -91,17 +126,11 @@ export async function organisersUnreachableAlert(
   if (admin === null) {
     return null;
   }
-  const organiser = await memberById(db, memberId);
-  if (organiser === null || organiser.role !== "organiser") {
+  const unreachable = await organisersUnreachable(db, memberId, pushCounts(deps));
+  if (unreachable === null) {
     return null;
   }
-  const family = await familyById(db, organiser.familyId);
-  if (family === null || (await familyHasEnded(db, family.id))) {
-    return null;
-  }
-  if ((await reachableOrganisers(db, family.id, NOTICE_CHANNEL, pushCounts(deps))).length > 0) {
-    return null;
-  }
+  const { organiser, family } = unreachable;
   return {
     kind: "system",
     idempotencyKey: outboundKey("system", {

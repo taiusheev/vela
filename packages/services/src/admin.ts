@@ -75,7 +75,7 @@ import {
   ADMIN_OVERVIEW_PATH,
   adminLink,
   familyPagePath,
-  organisersUnreachableAlert,
+  organisersUnreachable,
 } from "./admin-alerts.ts";
 import type { Deps } from "./deps.ts";
 import { isErrorCode, VelaError } from "./errors.ts";
@@ -965,18 +965,37 @@ export async function endAway(deps: Deps, ctx: AdminContext, awayPeriodId: strin
 // Leaving, death, deletion ----------------------------------------------------------------------------
 
 /**
+ * What the page says after `mark_left`: `nobody_to_tell` when the organiser marked left was the
+ * last one who could be told of a quiet morning, else `done`.
+ */
+export type MarkLeftResult = "done" | "nobody_to_tell";
+
+/**
  * The member leaves: out of the turn rotation, deleted by retention 30 days on; a kept-light
  * member's scheduler is cleared. A member who takes part in the group again becomes active (flows
- * §3.16). A member already left is left as they are.
+ * §3.16). A member already left is left as they are, and the answer is `done`.
+ *
+ * Marking the last organiser who could be told left is allowed — the founder may know better — but
+ * it is said, in the answer (`nobody_to_tell`), which the page shows the founder who clicked. No
+ * message goes to the admin conversation, as it does when a link is found blocked (flows §3.12):
+ * the founder is the one acting, and the admin Worker holds no chat to send to (ADR-26 H2), so
+ * this reads no `Config` field. A phone counts only while `deps.push` is non-null, and the admin
+ * Worker hands services none, so there Telegram alone counts: while push is on, the page may say
+ * it of a family whose organiser's phone could still be told, a warning not needed, never one
+ * missed.
  */
-export async function markLeft(deps: Deps, ctx: AdminContext, memberId: string): Promise<void> {
+export async function markLeft(
+  deps: Deps,
+  ctx: AdminContext,
+  memberId: string,
+): Promise<MarkLeftResult> {
   const admin = parseContext(ctx);
   const id = parse(Uuid, memberId, "mark_left");
   const at = deps.clock.now();
-  const clearScheduler = await deps.db.transaction(async (tx) => {
+  const outcome = await deps.db.transaction(async (tx) => {
     const { member, family } = await lockMember(tx, admin, id, "mark_left");
     if (member.status === "left") {
-      return false;
+      return { clearScheduler: false, nobodyToTell: false };
     }
     if (member.status === "deceased") {
       throw new VelaError("illegal_state", "mark_left: the member is deceased");
@@ -1003,21 +1022,13 @@ export async function markLeft(deps: Deps, ctx: AdminContext, memberId: string):
         props: { source: "admin", role: member.role, kept_light: keptLight },
       },
     });
-    // Marking the last organiser left is allowed — the founder may know better — but it is said.
-    const alert = await organisersUnreachableAlert(
-      deps,
-      tx,
-      member.id,
-      `left:${member.id}:${at.toISOString()}`,
-    );
-    if (alert !== null) {
-      await enqueueOutbound(deps, tx, alert);
-    }
-    return keptLight;
+    const unreachable = await organisersUnreachable(tx, member.id, deps.push !== null);
+    return { clearScheduler: keptLight, nobodyToTell: unreachable !== null };
   });
-  if (clearScheduler) {
+  if (outcome.clearScheduler) {
     await deps.scheduler.wakeAt(id, null);
   }
+  return outcome.nobodyToTell ? "nobody_to_tell" : "done";
 }
 
 /**
