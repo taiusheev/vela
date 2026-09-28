@@ -165,6 +165,7 @@ describe("the photos Today and Exchanges show", () => {
       text: null,
       at: "2026-09-23T08:12:00+08:00",
       picked_media_id: PHOTO_TWO,
+      picked_number: 2,
     },
     replies: [],
     seen_at: null,
@@ -181,7 +182,12 @@ describe("the photos Today and Exchanges show", () => {
     expect(ApiExchangeSummary.parse(summary)).toStrictEqual(summary);
   });
 
-  it("refuses a photo without a real id or size, and a pick that is not an id", () => {
+  it("names her pick by its number once its photo is deleted and no longer listed", () => {
+    const gone = { ...exchange, photos: exchange.photos.slice(0, 1) };
+    expect(ApiTodayExchange.parse(gone)).toStrictEqual(gone);
+  });
+
+  it("refuses a photo without a real id or size, and a pick that is not an id or not 1 or 2", () => {
     for (const invalid of [
       { photos: [{ id: "not-a-uuid", width: 1, height: 1, stored: true }] },
       { photos: [{ id: PHOTO_ONE, width: 0, height: 1, stored: true }] },
@@ -189,6 +195,9 @@ describe("the photos Today and Exchanges show", () => {
       { photos: undefined },
       { answer: { ...exchange.answer, picked_media_id: "2" } },
       { answer: { ...exchange.answer, picked_media_id: undefined } },
+      ...[0, 3, 1.5, "2", undefined].map((number) => ({
+        answer: { ...exchange.answer, picked_number: number },
+      })),
     ]) {
       expect(ApiTodayExchange.safeParse({ ...exchange, ...invalid }).success).toBe(false);
     }

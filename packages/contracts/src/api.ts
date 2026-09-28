@@ -175,6 +175,12 @@ export const ApiTodayAnswer = z.object({
    * deleted since, and `ApiTodayExchange.photos` then no longer lists it.
    */
   picked_media_id: z.uuid().nullable(),
+  /**
+   * Which of the two she picked, 1 or 2, as her buttons numbered them, whenever `picked_media_id`
+   * is set: the pick still reads "photo 1" once that photo is deleted. It is never a place in
+   * `ApiTodayExchange.photos`, which leaves a deleted photo out.
+   */
+  picked_number: z.number().int().min(1).max(2).nullable(),
 });
 export type ApiTodayAnswer = z.infer<typeof ApiTodayAnswer>;
 

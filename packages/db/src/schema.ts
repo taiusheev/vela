@@ -29,7 +29,9 @@
  *   member is deleted; onboarding sessions once expires_at has passed.
  * - Media is deleted when expires_at has passed and kept is false, and every media deletion writes a
  *   deletions row. Foreign-key references to it are set null; the job removes its id from
- *   exchanges.media_ids and exchanges.options, which no foreign key covers.
+ *   exchanges.media_ids and exchanges.options, which no foreign key covers, except that a photo
+ *   choice keeps it in its place in media_ids, a bare uuid naming nothing, since her pick is read
+ *   by its place.
  * - Members are deleted 30 days after left_at, and a member still invited without consent 30 days
  *   after her last invite expired, which her created_at dates once the invite cascaded away with the
  *   organiser who sent it (a no to the light deletes her at once). Rows that only credit them

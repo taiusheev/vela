@@ -29,6 +29,7 @@ const exchange = {
     text: "The tomatoes finally turned.",
     at: "2026-09-23T08:12:00+08:00",
     picked_media_id: null,
+    picked_number: null,
   },
   replies: [
     { from: "Mia", kind: "heart", text: null },

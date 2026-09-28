@@ -72,6 +72,8 @@ export const en = {
   "arrival.asks_on_behalf": "{asker} asks, for {child}:",
   "arrival.sent_photo": "{asker} sent you a photo.",
   "arrival.sent_voice": "{asker} sent you a voice message.",
+  "arrival.photo_gone":
+    "{asker} wanted to show you a photo, but it is no longer available. How are you today?",
   "arrival.photo_choice": "Which one? Tap 1 or 2.",
   "arrival.vote": "Tap one.",
   "arrival.hello": "Nothing new from the family today. How are you this morning?",

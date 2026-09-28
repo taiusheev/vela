@@ -46,6 +46,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "arrival.asks_on_behalf": "{asker}替{child}問您：",
   "arrival.sent_photo": "{asker}傳了一張照片給您。",
   "arrival.sent_voice": "{asker}傳了一則語音訊息給您。",
+  "arrival.photo_gone": "{asker}想給您看一張照片，可惜照片已經看不到了。您今天過得好嗎？",
   "arrival.photo_choice": "選哪一張呢？請按 1 或 2。",
   "arrival.vote": "請按一個選項。",
   "arrival.hello": "今天家人沒有新的消息。您早上過得好嗎？",

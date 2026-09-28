@@ -612,6 +612,10 @@ msgid "picked a photo"
 msgstr "picked a photo"
 
 #: src/data/useToday.ts
+msgid "picked photo {number}"
+msgstr "picked photo {number}"
+
+#: src/data/useToday.ts
 msgid "quiet"
 msgstr "quiet"
 

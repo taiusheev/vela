@@ -1,7 +1,13 @@
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
-import type { ApiToday, ApiTodayExchange, ApiTomorrowTurn, MemberLight } from "@vela/contracts";
+import type {
+  ApiToday,
+  ApiTodayAnswer,
+  ApiTodayExchange,
+  ApiTomorrowTurn,
+  MemberLight,
+} from "@vela/contracts";
 import { ApiError, apiConfigured, fetchMe, fetchToday } from "../api/client.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import type { LightState } from "../components/light.tsx";
@@ -56,16 +62,19 @@ export function toTodayLight(light: MemberLight): TodayLight {
 }
 
 /** What an answer that carried no words was: a tap is still something she said. */
-function wordlessAnswer(kind: string): string {
-  switch (kind) {
+function wordlessAnswer(answer: ApiTodayAnswer): string {
+  switch (answer.kind) {
     case "heart":
       return t`sent a heart`;
     case "fine":
       return t`said she is fine`;
     case "photo":
       return t`sent a photo`;
-    case "photo_pick":
-      return t`picked a photo`;
+    case "photo_pick": {
+      // By the number her buttons showed, which still says which one once the photo is deleted.
+      const number = answer.picked_number;
+      return number === null ? t`picked a photo` : t`picked photo ${number}`;
+    }
     case "sticker":
       return t`sent a sticker`;
     case "voice":
@@ -98,7 +107,7 @@ export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
       ? {}
       : {
           answer: {
-            text: answer.text ?? wordlessAnswer(answer.kind),
+            text: answer.text ?? wordlessAnswer(answer),
             at: timeOfDay(answer.at),
           },
         }),

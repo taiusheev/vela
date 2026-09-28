@@ -3,9 +3,10 @@
  *
  * Text, in paragraphs: yesterday's replies under their heading; the late note or the repeat preface;
  * the greeting; the ask (who asks, what, and how to answer it, or, for a voice note or photo without
- * words, who sent it) or the fallback hello with its signature; the hint. Buttons: the question's
- * chips one per row, the photo choice's 1 and 2, the vote's options one per row, and always a last
- * row with a heart and "I'm fine", so every arrival can be answered with one tap.
+ * words, who sent it, or that the photo is gone) or the fallback hello with its signature; the hint.
+ * Buttons: the question's chips one per row, the photo choice's 1 and 2, the vote's options one per
+ * row, and always a last row with a heart and "I'm fine", so every arrival can be answered with one
+ * tap.
  */
 import type { Button, ExchangeType, Lang } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -89,7 +90,10 @@ function optionRows(
 /**
  * Who asks, what (`text`, already trimmed), and how to answer. An ask without words would otherwise
  * leave "Mia asks:" hanging over nothing, so a voice note, or a question or memory photo that carries
- * images, says what was sent instead.
+ * images, says what was sent instead. Only a photo comes as a question or a memory photo without
+ * words (a text message is words, and the app asks with words), so one with no image left lost its
+ * photos, to retention or to her channel: it says so, and asks how she is, so her morning still asks
+ * her something. A photo choice short of two arrives here as a question.
  */
 function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text: string): string[] {
   const asker = ask.askerName;
@@ -97,8 +101,8 @@ function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text:
     if (ask.type === "voice_note") {
       return [t(lang, "arrival.sent_voice", { asker })];
     }
-    if ((ask.type === "question" || ask.type === "memory_photo") && ask.imageCount > 0) {
-      return [t(lang, "arrival.sent_photo", { asker })];
+    if (ask.type === "question" || ask.type === "memory_photo") {
+      return [t(lang, ask.imageCount > 0 ? "arrival.sent_photo" : "arrival.photo_gone", { asker })];
     }
   }
   const lines = [

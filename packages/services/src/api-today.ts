@@ -1,4 +1,11 @@
-import type { ApiToday, ApiTodayExchange, ApiTomorrowTurn, Lang, LocalDate } from "@vela/contracts";
+import type {
+  ApiToday,
+  ApiTodayAnswer,
+  ApiTodayExchange,
+  ApiTomorrowTurn,
+  Lang,
+  LocalDate,
+} from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
 import {
   answers,
@@ -34,8 +41,10 @@ const Uuid = z.uuid();
 
 /**
  * The ask's photos, in the order she was shown them (ADR-33). Only the exchange's own family's
- * images, as the arrival reads them; an id retention has cleared is gone from `media_ids` too.
- * `stored` is what the photo route would serve: a kept JPEG, or a Telegram photo copied to storage.
+ * images, as the arrival reads them. A photo retention has deleted is left out: any other ask loses
+ * its id, and a photo choice keeps it in its place naming nothing (`deleteMedia`), so no empty slot
+ * is listed for it. `stored` is what the photo route would serve: a kept JPEG, or a Telegram photo
+ * copied to storage.
  */
 async function photosOf(db: Queryable, exchange: Exchange): Promise<ApiTodayExchange["photos"]> {
   if (exchange.mediaIds.length === 0) return [];
@@ -70,20 +79,29 @@ async function photosOf(db: Queryable, exchange: Exchange): Promise<ApiTodayExch
   });
 }
 
+const NO_PICK = { picked_media_id: null, picked_number: null } as const;
+
 /**
- * The photo she picked on a photo choice: the latest pick's, whatever answer came after it, so her
- * choice still shows when she went on to say something (ADR-33).
+ * The photo she picked on a photo choice, and its number as her buttons showed it: the latest
+ * pick's, whatever answer came after it, so her choice still shows when she went on to say
+ * something (ADR-33). The number stays when the photo is deleted, so the family still reads which
+ * one she chose.
  */
-async function pickedMediaId(db: Queryable, exchange: Exchange): Promise<string | null> {
-  if (exchange.type !== "photo_choice") return null;
+async function pickedPhoto(
+  db: Queryable,
+  exchange: Exchange,
+): Promise<Pick<ApiTodayAnswer, "picked_media_id" | "picked_number">> {
+  if (exchange.type !== "photo_choice") return NO_PICK;
   const [pick] = await db
-    .select({ mediaId: sql<string | null>`${answers.payload} ->> 'media_id'` })
+    .select({ payload: answers.payload })
     .from(answers)
     .where(and(eq(answers.exchangeId, exchange.id), eq(answers.kind, "photo_pick")))
     .orderBy(desc(answers.receivedAt), desc(answers.id))
     .limit(1);
-  const id = pick?.mediaId;
-  return typeof id === "string" && Uuid.safeParse(id).success ? id : null;
+  const id = pick?.payload.media_id;
+  if (typeof id !== "string" || !Uuid.safeParse(id).success) return NO_PICK;
+  const index = pick?.payload.index;
+  return { picked_media_id: id, picked_number: index === 0 ? 1 : index === 1 ? 2 : null };
 }
 
 async function nameOf(db: Queryable, memberId: string | null): Promise<string | null> {
@@ -138,7 +156,7 @@ export async function exchangeRow(
             kind: answer.kind,
             text: answer.text,
             at: answer.receivedAt.toISOString(),
-            picked_media_id: await pickedMediaId(db, exchange),
+            ...(await pickedPhoto(db, exchange)),
           },
     replies: replyRows,
     seen_at: exchange.seenAt?.toISOString() ?? null,
