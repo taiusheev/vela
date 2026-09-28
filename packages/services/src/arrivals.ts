@@ -600,6 +600,23 @@ async function loadReadBack(
 }
 
 /**
+ * Whether her morning's row, named by `key`, is already written and not dropped. Read with her member
+ * row held, before the insert: the insert would find such a row at its key and wait there for any
+ * transaction changing it, and the effects of its send change it and then write her member row, a
+ * cycle PostgreSQL breaks by aborting one of them (code design §8). This read waits for nothing, and
+ * with her member row held no other queueing can be writing the row. A row her pause dropped is left
+ * to the insert, which queues it again (`insertOutbound`): only a queueing, under this same lock,
+ * ever changes a dropped row, so the insert finds nothing there to wait for.
+ */
+async function arrivalWritten(tx: VelaTransaction, key: string): Promise<boolean> {
+  const [row] = await tx
+    .select({ status: outbound.status })
+    .from(outbound)
+    .where(eq(outbound.idempotencyKey, key));
+  return row !== undefined && row.status !== "dropped";
+}
+
+/**
  * Enqueues her arrival for `date`, preparing the day first if nothing was (flows §3.7). The read-back
  * voices come before the ask's own files, as the read-back lines come before the ask in the text.
  * The ask's files are kept whole within the message's ten, and the voices take what is left: a
@@ -613,6 +630,9 @@ async function loadReadBack(
  * out tonight and tomorrow's morning would find it delivered. Under the lock, whichever comes second
  * sees what the first wrote: the arrival row, and the ask stays, or the ask moved, and this morning,
  * whose window has closed, sends nothing, as any morning whose window closed.
+ *
+ * A morning whose row is already written is not inserted again (`arrivalWritten`), so the insert
+ * never waits at the row's key while this holds her member row.
  */
 export async function deliverArrival(
   deps: Deps,
@@ -671,6 +691,9 @@ export async function deliverArrival(
     if (current.scheduledFor !== date) {
       deps.logger.info("arrival_carried", { memberId, date, exchangeId: exchange.id });
       return null;
+    }
+    if (await arrivalWritten(tx, request.idempotencyKey)) {
+      return { duplicate: true };
     }
     return insertOutbound(deps, tx, request);
   });

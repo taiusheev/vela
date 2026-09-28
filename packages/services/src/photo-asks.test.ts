@@ -24,7 +24,7 @@ import { AskPhotoMissingError, composeApiAsk } from "./api-asks.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
 import { uploadApiMedia } from "./api-media.ts";
 import { exchangeRow } from "./api-today.ts";
-import { deliverArrival, loadAsk } from "./arrivals.ts";
+import { deliverArrival, loadAsk, prepareDay } from "./arrivals.ts";
 import type { Deps, MediaStore, OutboundJob } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { applyRetention } from "./jobs.ts";
@@ -563,6 +563,152 @@ describe("delivering a photo ask to Telegram", () => {
     ]);
     expect(message.media?.slice(8).map((ref) => ref.storageKey)).toEqual(ask.keys);
     expect(message.text).toContain("Tap 1 or 2");
+  });
+});
+
+/**
+ * An ask whose morning passed unsent is carried to her next morning (flows §3.6), which can come
+ * after its photos' 30 days: compose checks them only against the morning it was asked for. By
+ * then retention has deleted them, or a photo's object has gone while its row stands, and the
+ * choice must go as a question with what is left, once.
+ */
+describe("a photo ask carried past its photos' deletion", () => {
+  const SKIPPED = TOMORROW;
+  const CARRIED_TO = addDays(TOMORROW, 3);
+
+  /**
+   * A choice of two photos for tomorrow, the ones named in `expiring` uploaded 29 days ago: their 30
+   * days end just after the day her pick would still be read. Her morning is queued at 08:00 and
+   * dropped unsent, since she said stop just before it went; she says start two days later, the
+   * photos' 30 days are over and retention deletes them, and at 22:00 her next morning carries the
+   * ask. Returns the ask and the photos it still names.
+   */
+  async function carriedPastRetention(
+    expiring: readonly (0 | 1)[],
+  ): Promise<{ id: string; left: string[] }> {
+    const photos = [await photo(1), await photo(2)];
+    const until = zonedInstant(addDays(SKIPPED, 2), "00:00", TZ);
+    for (const index of expiring) {
+      await h.db
+        .update(media)
+        .set({ expiresAt: new Date(until.getTime() + 60_000) })
+        .where(eq(media.id, photos[index] ?? ""));
+    }
+    const { id } = ApiComposedAsk.parse((await compose({ media_ids: photos })).response.body);
+
+    h.clock.set(at(SKIPPED, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, SKIPPED, false);
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    await h.run(handlers());
+    expect((await arrivalRows()).map((row) => [row.localDay, row.status, row.error])).toEqual([
+      [SKIPPED, "dropped", "member_paused"],
+    ]);
+
+    h.clock.set(at(addDays(SKIPPED, 2), "12:00"));
+    await h.db.update(members).set({ status: "active" }).where(eq(members.id, seed.member.id));
+    await applyRetention(h.deps);
+    h.clock.set(at(addDays(CARRIED_TO, -1), "22:00"));
+    expect(await prepareDay(h.deps, seed.member.id, CARRIED_TO)).toBe(id);
+
+    const left = photos.filter((_, index) => !expiring.includes(index as 0 | 1));
+    const [ask] = await herExchanges();
+    expect(ask).toMatchObject({ id, scheduledFor: CARRIED_TO, mediaIds: left });
+    return { id, left };
+  }
+
+  /** Her carried morning at 08:00, queued by two ticks, and then delivered. */
+  async function deliverTheCarriedMorning(): Promise<void> {
+    h.clock.set(at(CARRIED_TO, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, CARRIED_TO, false);
+    await deliverArrival(h.deps, seed.member.id, CARRIED_TO, false);
+    await h.run(handlers());
+  }
+
+  /** The one arrival that reached her, on the morning the ask was carried to. */
+  async function theOneArrival() {
+    expect((await arrivalRows()).map((row) => [row.localDay, row.status])).toEqual([
+      [SKIPPED, "dropped"],
+      [CARRIED_TO, "sent"],
+    ]);
+    const sent = h.telegram.sent.filter((entry) => entry.message.kind === "arrival");
+    expect(sent).toHaveLength(1);
+    const [only] = sent;
+    if (only === undefined) throw new Error("expected her carried morning");
+    return only;
+  }
+
+  it("sends a choice that lost one photo once, on the morning it was carried to, as a question with the photo left", async () => {
+    const ask = await carriedPastRetention([0]);
+    const [left] = ask.left;
+    if (left === undefined) throw new Error("expected one photo left");
+    const leftKey = await storageKeyOf(left);
+
+    await deliverTheCarriedMorning();
+
+    const sent = await theOneArrival();
+    expect(sent.message.media).toEqual([expect.objectContaining({ storageKey: leftKey })]);
+    expect(sent.uploads.map((upload) => upload.storageKey)).toEqual([leftKey]);
+    expect(sent.message.text).toContain("Which one do you like more?");
+    expect(sent.message.text).not.toContain("Tap 1 or 2");
+    expect(
+      (sent.message.buttons ?? []).flat().map((button) => decodeButton(button.id)?.type),
+    ).not.toContain("pick");
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "photo_choice_without_two_images",
+      fields: { exchangeId: ask.id, images: 1 },
+    });
+    expect((await herExchanges())[0]).toMatchObject({
+      state: "delivered",
+      deliveredAt: at(CARRIED_TO, "08:00"),
+    });
+  });
+
+  it("sends a choice that lost both photos once, on the morning it was carried to, as a plain question", async () => {
+    const ask = await carriedPastRetention([0, 1]);
+    expect(ask.left).toEqual([]);
+
+    await deliverTheCarriedMorning();
+
+    const sent = await theOneArrival();
+    expect(sent.message.media).toBeUndefined();
+    expect(sent.uploads).toEqual([]);
+    expect(sent.message.text).toContain("Mia asks:\nWhich one do you like more?");
+    expect(sent.message.text).not.toContain("Tap 1 or 2");
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "photo_choice_without_two_images",
+      fields: { exchangeId: ask.id, images: 0 },
+    });
+    expect((await herExchanges())[0]).toMatchObject({ state: "delivered", mediaIds: [] });
+  });
+
+  it("sends a choice whose photo's object expired under its row once, on the morning it was carried to, as a question with the photo left", async () => {
+    // The row outlived its object: retention deleted the object and failed before the row, or the
+    // bucket's own expiry of `asks/` came first. The ask still names both photos.
+    const ask = await carriedPastRetention([]);
+    const [gone, left] = ask.left;
+    if (gone === undefined || left === undefined) throw new Error("expected both photos named");
+    await h.media.delete(await storageKeyOf(gone));
+    const leftKey = await storageKeyOf(left);
+
+    await deliverTheCarriedMorning();
+
+    const sent = await theOneArrival();
+    expect(sent.message.media).toEqual([expect.objectContaining({ storageKey: leftKey })]);
+    expect(sent.uploads.map((upload) => upload.storageKey)).toEqual([leftKey]);
+    expect(sent.message.text).not.toContain("Tap 1 or 2");
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "media_not_sendable",
+      fields: { familyId: seed.family.id, count: 1 },
+    });
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "photo_choice_without_two_images",
+      fields: { exchangeId: ask.id, images: 1 },
+    });
+    expect((await herExchanges())[0]).toMatchObject({ state: "delivered", mediaIds: ask.left });
   });
 });
 
