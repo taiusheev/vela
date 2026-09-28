@@ -1,5 +1,7 @@
 # Parallel round: five sessions at once
 
+> **Done, 28 September 2026.** Five sessions at once overloaded the machine and the usage limit, so the founder had the round run one task at a time in one session instead (25–28 September). All five landed on `build/sprint-0-1`: the API on staging (6095ccf, ADR-29), the app in Traditional Chinese (2508aa1, ADR-30), tomorrow's suggestion (b6812d4, ADR-31, migration 0003), photo asks (7ddc1f2, ADR-33) and push (76c590d, ADR-34, migration 0005), beside another session's write limit, pilot audit fixes (migration 0004) and LINE (ADR-32). Staging runs 178ad44 until the founder applies migrations 0003–0005. The rules below are kept as the record of how parallel work was meant to land.
+
 Five Claude sessions build five parts of sprint 3 at the same time. Each works alone, in its own worktree, and they come together through `build/sprint-0-1` one fast-forward at a time. Every session reads this page before it starts and follows it to the end.
 
 | # | Task | Branch | `DEV_DB_PORT` | `API_PORT` | `APP_PORT` | Build plan |
