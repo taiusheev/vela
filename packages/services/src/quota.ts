@@ -8,17 +8,24 @@
  * A quota is nobody's, and an outbound row belongs to a member, so the gateway cannot carry the
  * founder's message: it goes straight to the admin conversation, as `sendOutsideGateway` in
  * `group.ts` sends to someone who is not a member yet. "Once" is a `flags` row,
- * `line_quota:<yyyy-mm>:<level>`, claimed before the send, so another reading that month finds it
- * and sends nothing. A send that failed for a reason that can pass gives the claim back, and the
- * next reading, 15 minutes later, tries again; one the platform refused for good keeps it, as the
- * gateway would not retry that send either.
+ * `line_quota:<quota month>:<level>`, claimed before the send, so another reading that quota month
+ * finds it and sends nothing. A send that failed for a reason that can pass gives the claim back,
+ * and the next reading, 15 minutes later, tries again; one the platform refused for good keeps it,
+ * as the gateway would not retry that send either.
  *
- * LINE does not say in which zone its quota month resets, so the month is the reading's calendar
- * month in Taipei, and an alert near a month's edge may count in the next month.
+ * LINE does not say in which zone its quota month resets, nor how soon its approximate count
+ * follows, and the 16:00 UTC run falls exactly at Taipei's midnight. Keyed by the reading's own
+ * month in Taipei, a reading that still showed the old month's count would take the new month's
+ * claim and silence the new month's alert, D10's decision point among them. So a reading counts in
+ * the Taipei month of the day before it: a month's first day still counts in the month before,
+ * whatever LINE's count shows, and the new month's claims open with its second day. Every zone's
+ * midnight falls between 18:00 on a month's last day and 20:00 on its first in Taipei, so a count
+ * read on either day is the old month's, or the new month's first hours, which reach no level. A
+ * level the new month reaches on its first day is told on its second.
  */
 import { type Channel, type ChannelQuota, ChannelSendError } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { localDateOf } from "@vela/core";
+import { addDays, localDateOf } from "@vela/core";
 import { flags } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -46,8 +53,17 @@ export interface ChannelQuotaSnapshot {
   readonly readAt: Date;
 }
 
-/** The pilot's families are in Taiwan, whose calendar month keys the alerts. */
+/** The pilot's families are in Taiwan, whose calendar keys the alerts. */
 const QUOTA_MONTH_ZONE = "Asia/Taipei";
+
+/**
+ * The quota month (`yyyy-mm`) a reading taken at `readAt` counts in: the Taipei month of the day
+ * before it, so a month's first day still counts in the month before (the module's comment says
+ * why).
+ */
+function quotaMonthOf(readAt: string): string {
+  return addDays(localDateOf(new Date(readAt), QUOTA_MONTH_ZONE), -1).slice(0, 7);
+}
 
 type AlertLevel = "70" | "90" | "exhausted";
 
@@ -117,8 +133,7 @@ async function tellFounderOnce(
   if (admin === null) {
     return;
   }
-  const month = localDateOf(new Date(reading.readAt), QUOTA_MONTH_ZONE).slice(0, 7);
-  const key = `${snapshotKey(channel)}:${month}:${level}`;
+  const key = `${snapshotKey(channel)}:${quotaMonthOf(reading.readAt)}:${level}`;
   const claimed = await deps.db
     .insert(flags)
     .values({ key, value: reading, updatedAt: deps.clock.now() })

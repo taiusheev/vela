@@ -47,6 +47,15 @@ async function flagRows() {
   return h.db.select().from(flags).orderBy(asc(flags.key));
 }
 
+async function flagKeys(): Promise<string[]> {
+  return (await flagRows()).map((row) => row.key);
+}
+
+/** Records a reading of `used` messages taken at `at`. */
+async function readAt(used: number, at: string): Promise<void> {
+  await recordChannelQuota(h.deps, "line", reading(used, { readAt: at }));
+}
+
 describe("recordChannelQuota", () => {
   it("keeps the reading as LINE's quota, replacing the one before, and tells nobody below 70%", async () => {
     await recordChannelQuota(h.deps, "line", reading(1200));
@@ -101,22 +110,59 @@ describe("recordChannelQuota", () => {
     await recordChannelQuota(h.deps, "line", reading(3000));
 
     expect(founderTexts()).toEqual([crossed(2800), SPENT]);
-    expect((await flagRows()).map((row) => row.key)).toEqual([
+    expect(await flagKeys()).toEqual([
       "line_quota",
       "line_quota:2026-10:90",
       "line_quota:2026-10:exhausted",
     ]);
   });
 
-  it("tells the founder again in the next quota month, which turns at midnight in Taipei", async () => {
-    await recordChannelQuota(h.deps, "line", reading(2100, { readAt: "2026-10-31T15:59:00.000Z" }));
-    await recordChannelQuota(h.deps, "line", reading(2200, { readAt: "2026-10-31T16:00:00.000Z" }));
+  it("tells the founder again in the next quota month, which opens as its second day starts in Taipei", async () => {
+    await readAt(2100, "2026-12-31T15:59:00.000Z");
+    await readAt(2150, "2027-01-01T15:59:00.000Z");
+
+    expect(founderTexts()).toEqual([crossed(2100)]);
+
+    await readAt(2200, "2027-01-01T16:00:00.000Z");
 
     expect(founderTexts()).toEqual([crossed(2100), crossed(2200)]);
-    expect((await flagRows()).map((row) => row.key)).toEqual([
+    expect(await flagKeys()).toEqual([
       "line_quota",
+      "line_quota:2026-12:70",
+      "line_quota:2027-01:70",
+    ]);
+  });
+
+  it("counts a month's first day in Taipei in the month before while LINE still shows its count, so the new month's 70% is told", async () => {
+    await readAt(2100, "2026-09-25T09:30:00.000+08:00");
+    await readAt(2450, "2026-09-30T16:00:00.000Z");
+    await readAt(2460, "2026-10-01T09:00:00.000+08:00");
+
+    expect(founderTexts()).toEqual([crossed(2100)]);
+
+    await readAt(2100, "2026-10-20T09:30:00.000+08:00");
+
+    expect(founderTexts()).toEqual([crossed(2100), crossed(2100)]);
+    expect(await flagKeys()).toEqual([
+      "line_quota",
+      "line_quota:2026-09:70",
       "line_quota:2026-10:70",
-      "line_quota:2026-11:70",
+    ]);
+  });
+
+  it("does not spend the next month's alert on its first day in Taipei when the month before ended spent", async () => {
+    await readAt(3000, "2026-09-29T09:30:00.000+08:00");
+    await readAt(3000, "2026-10-01T00:00:00.000+08:00");
+
+    expect(founderTexts()).toEqual([SPENT]);
+
+    await readAt(3000, "2026-10-28T09:30:00.000+08:00");
+
+    expect(founderTexts()).toEqual([SPENT, SPENT]);
+    expect(await flagKeys()).toEqual([
+      "line_quota",
+      "line_quota:2026-09:exhausted",
+      "line_quota:2026-10:exhausted",
     ]);
   });
 
@@ -136,7 +182,7 @@ describe("recordChannelQuota", () => {
 
     expect(founderTexts()).toEqual([]);
     expect(h.telegram.failed).toHaveLength(1);
-    expect((await flagRows()).map((row) => row.key)).toEqual(["line_quota"]);
+    expect(await flagKeys()).toEqual(["line_quota"]);
     expect(h.logger.entries).toContainEqual({
       level: "warn",
       event: "channel_quota_alert_failed",
@@ -173,7 +219,7 @@ describe("recordChannelQuota", () => {
       h.config.adminConversationId = configured;
     }
 
-    expect((await flagRows()).map((row) => row.key)).toEqual(["line_quota"]);
+    expect(await flagKeys()).toEqual(["line_quota"]);
     expect(founderTexts()).toEqual([]);
 
     await recordChannelQuota(h.deps, "line", reading(2150));
