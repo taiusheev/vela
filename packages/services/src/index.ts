@@ -30,6 +30,7 @@ export {
   loadAdminOverview,
   loadFailedOutbound,
   loadFamilyPage,
+  type MarkLeftResult,
   markDeceased,
   markLeft,
   type RecordConsentInput,

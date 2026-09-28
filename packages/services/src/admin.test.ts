@@ -42,7 +42,7 @@ import {
   sendWeeklyRead,
   setAway,
 } from "./admin.ts";
-import type { OutboundJob } from "./deps.ts";
+import type { Deps, OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
@@ -153,6 +153,62 @@ const CONSENT = {
   channel: "paper",
   evidence: { form: "signed pilot agreement, scan 12" },
 };
+
+/**
+ * The `Deps` the admin Worker hands services (code design §8, §9; `servicesDeps` in apps/worker,
+ * which services cannot import): the harness's database, clock, logger, scheduler, AI, `random`
+ * and outbound queue; push off; and every other port, and every `Config` field but the bot's
+ * username, throwing the moment it is touched. Built after `h.reset()`, which replaces the AI.
+ */
+function adminWorkerDeps(): Deps {
+  const notGiven = (port: string): never => {
+    throw new Error(`the admin Worker has no ${port} port`);
+  };
+  return {
+    db: h.deps.db,
+    clock: h.deps.clock,
+    logger: h.deps.logger,
+    random: h.deps.random,
+    scheduler: h.deps.scheduler,
+    ai: h.deps.ai,
+    queues: {
+      outbound: h.deps.queues.outbound,
+      media: { send: () => notGiven("queues.media") },
+      understand: { send: () => notGiven("queues.understand") },
+    },
+    media: {
+      put: () => notGiven("media"),
+      get: () => notGiven("media"),
+      delete: () => notGiven("media"),
+      head: () => notGiven("media"),
+    },
+    channels: { get: () => notGiven("channels") },
+    push: null,
+    stt: { transcribe: () => notGiven("stt") },
+    heartbeat: { ping: () => notGiven("heartbeat") },
+    config: {
+      telegramBotUsername: h.deps.config.telegramBotUsername,
+      get adminConversationId(): never {
+        return notGiven("config");
+      },
+      get environment(): never {
+        return notGiven("config");
+      },
+      get regions(): never {
+        return notGiven("config");
+      },
+      get publicBaseUrl(): never {
+        return notGiven("config");
+      },
+      get privacyNoticeUrls(): never {
+        return notGiven("config");
+      },
+      get privacyNoticeVersion(): never {
+        return notGiven("config");
+      },
+    },
+  };
+}
 
 describe("adminLink", () => {
   it("points at the family's page on the public origin, whatever the origin's trailing slash", () => {
@@ -1156,7 +1212,9 @@ describe("markLeft", () => {
     expect(await logRows()).toHaveLength(1);
   });
 
-  it("tells the founder when the organiser marked left was the last one who could be told", async () => {
+  // The founder is the one acting: the page says it, and the admin conversation, even where there
+  // is one, hears nothing of the founder's own click (flows §3.17).
+  it("answers nobody_to_tell when the organiser marked left was the last one who could be told, and sends the founder nothing", async () => {
     const seed = await family();
     const anna = await seedGroupMember(h.db, seed, {
       now: h.clock.now(),
@@ -1164,22 +1222,161 @@ describe("markLeft", () => {
       externalId: "1003",
       role: "organiser",
     });
-    const toFounder = async () =>
-      (
-        await h.db
-          .select()
-          .from(outbound)
-          .where(eq(outbound.conversationId, h.deps.config.adminConversationId ?? ""))
-      ).map((row) => (row.payload as { message: { text: string } }).message.text);
 
-    // One of two: Mia can still be told, so nothing is said.
-    await markLeft(h.deps, FOUNDER, anna.member.id);
-    expect(await toFounder()).toEqual([]);
-
+    // One of two: Mia can still be told.
+    expect(await markLeft(h.deps, FOUNDER, anna.member.id)).toBe("done");
     // The last one: from now on a quiet morning here reaches nobody.
-    await markLeft(h.deps, FOUNDER, seed.organiser.id);
-    expect(await toFounder()).toEqual([
-      `Mia can no longer be told anything in The Chens, and no other organiser can: nobody will hear if a light there goes quiet. Open: https://vela.test/admin/families/${seed.family.id}`,
+    expect(await markLeft(h.deps, FOUNDER, seed.organiser.id)).toBe("nobody_to_tell");
+
+    expect(h.deps.config.adminConversationId).not.toBeNull();
+    expect(await outboundRows()).toEqual([]);
+  });
+
+  it("answers done for an organiser marked left in a family that has ended", async () => {
+    const seed = await family();
+    await deleteFamily(h.deps, FOUNDER, seed.family.id);
+
+    expect(await markLeft(h.deps, FOUNDER, seed.organiser.id)).toBe("done");
+  });
+});
+
+describe("the admin actions on the ports the admin Worker gives", () => {
+  it("read both pages and run every write but mark_left, reaching for no port and no Config field the admin Worker lacks", async () => {
+    const deps = adminWorkerDeps();
+    const seed = await family();
+    const ctx = { ...FOUNDER, familyId: seed.family.id };
+    const now = h.clock.now();
+
+    await recordConsent(deps, ctx, {
+      memberId: seed.member.id,
+      kind: "privacy_notice",
+      givenAt: now,
+      ...CONSENT,
+    });
+    await addContact(deps, ctx, {
+      memberId: seed.member.id,
+      name: "Anna",
+      relation: "neighbour",
+      channel: null,
+      yes: null,
+    });
+    const [contact] = await h.db.select().from(nearbyContacts);
+    if (contact === undefined) {
+      throw new Error("add_contact added nobody");
+    }
+    await recordContactConsent(deps, ctx, {
+      contactId: contact.id,
+      answer: "yes",
+      phone: "+886912000001",
+      at: now,
+      ...CONSENT,
+    });
+    await recordContactConsent(deps, ctx, {
+      contactId: contact.id,
+      answer: "no",
+      phone: null,
+      at: now,
+      ...CONSENT,
+    });
+    await removeContact(deps, ctx, contact.id);
+    await setAway(deps, ctx, {
+      memberId: seed.member.id,
+      setBy: seed.organiser.id,
+      from: TODAY,
+      until: null,
+    });
+    const [away] = await h.db.select().from(awayPeriods);
+    if (away === undefined) {
+      throw new Error("set_away set nothing");
+    }
+    await endAway(deps, ctx, away.id);
+    const weeklyReadId = await seedWeeklyRead(seed);
+    expect(
+      await sendWeeklyRead(deps, ctx, { weeklyReadId, lines: ["She walked."], suggestion: "" }),
+    ).toBe("sent");
+    expect((await loadAdminOverview(deps, FOUNDER)).families).toHaveLength(1);
+    expect(await loadFailedOutbound(deps, FOUNDER)).toEqual([]);
+    expect(await loadFamilyPage(deps, FOUNDER, seed.family.id)).not.toBeNull();
+    await markDeceased(deps, ctx, seed.member.id);
+    await deleteFamily(deps, ctx, seed.family.id);
+    // A second family, whose kept-light member said No, is invited again.
+    const again = await seedFamily(h.db, {
+      now,
+      familyName: "The Lins",
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+    await h.db.delete(consents).where(eq(consents.memberId, again.member.id));
+    await h.db.delete(members).where(eq(members.id, again.member.id));
+    await createInvite(
+      deps,
+      { ...FOUNDER, familyId: again.family.id },
+      {
+        invitedBy: again.organiser.id,
+        replacesMemberId: null,
+        name: "Grandma",
+        address: "Mrs Lin",
+        language: "zh-TW",
+        country: "TW",
+        timeZone: "Asia/Taipei",
+        wakeTime: "06:30",
+      },
+    );
+
+    expect((await logRows()).map((row) => row.action)).toEqual([
+      "record_consent",
+      "add_contact",
+      "record_contact_consent",
+      "record_contact_consent",
+      "remove_contact",
+      "set_away",
+      "end_away",
+      "send_weekly_read",
+      "view",
+      "view",
+      "mark_deceased",
+      "delete_family",
+      "create_invite",
+    ]);
+  });
+
+  // The founder is the one acting, and the admin Worker holds no chat to tell them in (ADR-26 H2):
+  // the action's result says it, and the page shows it (flows §3.17).
+  it("mark members left, answering nobody_to_tell for the last organiser who could be told, and send nothing", async () => {
+    const deps = adminWorkerDeps();
+    const seed = await family();
+    const ctx = { ...FOUNDER, familyId: seed.family.id };
+    const sam = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Sam",
+      externalId: "1002",
+    });
+    const anna = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      externalId: "1003",
+      role: "organiser",
+    });
+
+    expect(await markLeft(deps, ctx, sam.member.id)).toBe("done");
+    // One of two: Mia can still be told.
+    expect(await markLeft(deps, ctx, anna.member.id)).toBe("done");
+    // The last one: from now on a quiet morning here reaches nobody.
+    expect(await markLeft(deps, ctx, seed.organiser.id)).toBe("nobody_to_tell");
+    // A resubmitted form changes nothing and says nothing new.
+    expect(await markLeft(deps, ctx, seed.organiser.id)).toBe("done");
+
+    expect(await outboundRows()).toEqual([]);
+    expect(h.queues.outbound.pending).toEqual([]);
+    expect((await logRows()).map((row) => [row.action, row.memberId])).toEqual([
+      ["mark_left", sam.member.id],
+      ["mark_left", anna.member.id],
+      ["mark_left", seed.organiser.id],
+    ]);
+    expect((await eventRows()).map((row) => [row.name, row.memberId, row.props])).toEqual([
+      ["member_left", sam.member.id, { source: "admin", role: "member", kept_light: false }],
+      ["member_left", anna.member.id, { source: "admin", role: "organiser", kept_light: false }],
+      ["member_left", seed.organiser.id, { source: "admin", role: "organiser", kept_light: false }],
     ]);
   });
 });

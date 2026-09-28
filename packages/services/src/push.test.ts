@@ -1330,14 +1330,14 @@ describe("who can be told", () => {
     expect(await alert()).toMatchObject({ kind: "system" });
   });
 
-  it("tells the founder when Mia, marked left, was the last Telegram could reach while push is off, whatever Sam's phone allows", async () => {
+  // The page tells the founder, who marked Mia left (flows §3.17); the admin chat hears nothing.
+  it("answers the founder that nobody is left to tell when Mia, marked left, was the last Telegram could reach while push is off, whatever Sam's phone allows", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await appOrganiser(seed, "Sam", "1002");
     const founder = { admin: "founder@vela.test" };
 
     // Push on: Sam's phone can be told, so nobody is missing.
-    await markLeft(h.deps, founder, seed.organiser.id);
-    expect(await adminTexts()).toEqual([]);
+    expect(await markLeft(h.deps, founder, seed.organiser.id)).toBe("done");
 
     // Push off, as the admin Worker hands services (`push: null`): Sam's phone counts for nothing.
     await h.reset();
@@ -1345,9 +1345,8 @@ describe("who can be told", () => {
     const again = await seedFamily(h.db, { now: h.clock.now() });
     await appOrganiser(again, "Sam", "1002");
 
-    await markLeft(h.deps, founder, again.organiser.id);
-
-    expect(await adminTexts()).toEqual([unreachableText(again, "Mia")]);
+    expect(await markLeft(h.deps, founder, again.organiser.id)).toBe("nobody_to_tell");
+    expect(await adminTexts()).toEqual([]);
   });
 });
 

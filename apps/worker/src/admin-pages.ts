@@ -472,6 +472,8 @@ export function noticeFor(result: string | null): Html | null {
       "No active organiser has a Telegram link, so nothing was sent, stored, or logged.",
     budget:
       "Each organiser already received a weekly read today, so nothing was sent, stored, or logged. Send it tomorrow.",
+    nobody_to_tell:
+      "Marked left. That was the last organiser who could be told anything: nobody in this family will hear if a light there goes quiet, and a quiet morning there will be told to you in your chat with the bot instead.",
     done: "Done.",
   };
   const message = messages[result];

@@ -28,6 +28,7 @@ import {
   loadAdminOverview,
   loadFailedOutbound,
   loadFamilyPage,
+  type MarkLeftResult,
   markDeceased,
   markLeft,
   type RecordConsentInput,
@@ -60,7 +61,7 @@ export interface AdminServices {
   removeContact(deps: AdminDeps, ctx: AdminContext, contactId: string): Promise<void>;
   setAway(deps: AdminDeps, ctx: AdminContext, input: SetAwayInput): Promise<void>;
   endAway(deps: AdminDeps, ctx: AdminContext, awayPeriodId: string): Promise<void>;
-  markLeft(deps: AdminDeps, ctx: AdminContext, memberId: string): Promise<void>;
+  markLeft(deps: AdminDeps, ctx: AdminContext, memberId: string): Promise<MarkLeftResult>;
   markDeceased(deps: AdminDeps, ctx: AdminContext, memberId: string): Promise<void>;
   deleteFamily(deps: AdminDeps, ctx: AdminContext, familyId: string): Promise<void>;
   sendWeeklyRead(
@@ -96,7 +97,9 @@ function notGiven(port: string): never {
 
 /**
  * Services' `Config` is the pilot Worker's. The admin Worker knows one field of it, the bot a new
- * invite's link opens; reading any other is reaching for a port.
+ * invite's link opens; reading any other is reaching for a port. The founder's chat is one of them
+ * (ADR-26 H2): what an admin action has to tell the founder, who is the one acting, it answers to
+ * the page (`markLeft`'s `nobody_to_tell`).
  */
 function adminConfig(telegramBotUsername: string): Config {
   return {
@@ -150,11 +153,11 @@ export function servicesDeps(ports: AdminDeps): Deps {
     channels: { get: () => notGiven("channels") },
     // `null`, which services read as PUSH_SEND "off" (ADR-34). This Worker sends no push and
     // reads no receipt in any environment; what services decide from it here is whether a phone
-    // counts toward an organiser who can be told, when the founder marks someone left
-    // (`organisersUnreachableAlert`). With `null` only Telegram counts: while push is off, as it is
-    // everywhere, that is the truth, and while it is on the worst case is an alert the founder did
-    // not need, never one missed. A throwing port would read as push on and count phones that no
-    // notice reaches.
+    // counts toward an organiser who can be told, when the founder marks someone left and the page
+    // says whether anyone is left to tell (`markLeft`, `organisersUnreachable`). With `null` only
+    // Telegram counts: while push is off, as it is everywhere, that is the truth, and while it is
+    // on the worst case is a warning the founder did not need, never one missed. A throwing port
+    // would read as push on and count phones that no notice reaches.
     push: null,
     stt: { transcribe: () => notGiven("stt") },
     heartbeat: { ping: () => notGiven("heartbeat") },

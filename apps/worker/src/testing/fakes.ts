@@ -544,7 +544,7 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
     },
     async markLeft(deps, ctx, memberId) {
       note("markLeft", ctx, memberId);
-      await given.markLeft?.(deps, ctx, memberId);
+      return given.markLeft === undefined ? "done" : given.markLeft(deps, ctx, memberId);
     },
     async markDeceased(deps, ctx, memberId) {
       note("markDeceased", ctx, memberId);
@@ -638,7 +638,7 @@ export function inboundEventFixture(overrides: Partial<InboundEvent> = {}): Inbo
 
 const FAMILY_ID = "11111111-1111-7111-8111-111111111111";
 
-function familyFixture(overrides: Partial<Family> = {}): Family {
+export function familyFixture(overrides: Partial<Family> = {}): Family {
   return {
     id: FAMILY_ID,
     name: "The Chen family",
