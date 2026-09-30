@@ -549,6 +549,7 @@ msgstr "這個帳號還沒有設定家庭。"
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr "接下來兩週都沒有空出來的早上可以放照片提問。請改用文字提問，或稍後再試一次。"
 
+#: src/data/today.ts
 #: src/data/useToday.ts
 msgid "No word yet today."
 msgstr "今天還沒有回覆。"
@@ -698,6 +699,7 @@ msgstr "選了一張照片"
 msgid "picked photo {number}"
 msgstr "選了第 {number} 張照片"
 
+#: src/data/today.ts
 #: src/data/useToday.ts
 msgid "quiet"
 msgstr "比較安靜"

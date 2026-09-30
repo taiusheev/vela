@@ -542,6 +542,7 @@ msgstr "No family is set up on this account yet."
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 
+#: src/data/today.ts
 #: src/data/useToday.ts
 msgid "No word yet today."
 msgstr "No word yet today."
@@ -691,6 +692,7 @@ msgstr "picked a photo"
 msgid "picked photo {number}"
 msgstr "picked photo {number}"
 
+#: src/data/today.ts
 #: src/data/useToday.ts
 msgid "quiet"
 msgstr "quiet"

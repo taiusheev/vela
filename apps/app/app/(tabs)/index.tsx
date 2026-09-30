@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { apiConfigured } from "../../src/api/client.ts";
 import { ExchangePhotos } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
@@ -15,7 +16,7 @@ import {
   Words,
 } from "../../src/components/ui.tsx";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
-import type { Today, TomorrowTurn } from "../../src/data/today.ts";
+import { quietExampleFixture, type Today, type TomorrowTurn } from "../../src/data/today.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
 import { useQuiet } from "../../src/data/useQuiet.ts";
 import { useToday } from "../../src/data/useToday.ts";
@@ -171,7 +172,15 @@ export default function TodayScreen() {
   // How the example notice was settled; its sentence is chosen as it renders, in the language shown.
   const [resolution, setResolution] = useState<"fine" | "wait" | undefined>();
   const insets = useSafeAreaInsets();
-  const { today, trouble, noAccount, noFamily, live, organiser, familyId } = useToday();
+  const day = useToday();
+  const { trouble, noAccount, noFamily, live, organiser, familyId } = day;
+  // `/?example=quiet` shows the example day gone quiet, only in the demo with no API: a real day,
+  // or the fixtures standing in while it loads, is never replaced.
+  const { example, quiet: tappedEventId } = useLocalSearchParams<{
+    example?: string;
+    quiet?: string;
+  }>();
+  const today = !apiConfigured() && example === "quiet" ? quietExampleFixture() : day.today;
   // A first run, or an account that belongs to no family yet: onboarding is where that starts (A1).
   useEffect(() => {
     if (noAccount || noFamily) router.replace("/onboarding");
@@ -183,7 +192,6 @@ export default function TodayScreen() {
   // push: a tapped quiet notice names its event (`?quiet=`), which may be of a family Today does not
   // show; the API gives it only to that family's organisers, so the read itself decides. An event
   // that is settled reads as settled, and one the reader may not see opens nothing.
-  const { quiet: tappedEventId } = useLocalSearchParams<{ quiet?: string }>();
   const [fromTap, setFromTap] = useState(false);
   useEffect(() => {
     if (tappedEventId === undefined || tappedEventId.length === 0) return;

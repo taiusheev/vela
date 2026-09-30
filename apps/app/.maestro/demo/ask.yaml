@@ -1,0 +1,25 @@
+# Ask in the demo (A7): a question written in the organiser's words goes into her morning, and
+# Vela's suggestion fills the field when "Use this" is pressed.
+url: ${APP_URL}
+name: An ask goes into her morning
+tags:
+  - demo
+---
+- launchApp
+- scrollUntilVisible:
+    element: "Ask Mom something"
+    direction: DOWN
+- tapOn: "Ask Mom something"
+- assertVisible: "What are you sending?"
+- tapOn: "Say it the way you would say it"
+- inputText: "What did you have for breakfast?"
+# A pattern: the language she reads is the demo's, and `?` is escaped to mean itself.
+- assertVisible: 'What did you have for breakfast\? · shown to her in .+'
+- scrollUntilVisible:
+    element: "Into her morning"
+    direction: DOWN
+- tapOn: "Into her morning"
+- assertVisible: "What did the garden look like this morning?"
+- scrollUntilVisible:
+    element: "Ask Mom something"
+    direction: DOWN

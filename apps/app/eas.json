@@ -1,8 +1,29 @@
 {
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
     "staging": {
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_API_URL": "https://vela.vela-light-staging.workers.dev" }
+      "environment": "preview",
+      "env": { "EXPO_PUBLIC_API_URL": "https://vela.vela-light-staging.workers.dev" },
+      "android": { "buildType": "apk" }
+    },
+    "e2e": {
+      "extends": "staging",
+      "ios": { "simulator": true }
+    },
+    "testflight": {
+      "extends": "staging",
+      "distribution": "store",
+      "autoIncrement": true,
+      "android": { "buildType": "app-bundle" }
+    }
+  },
+  "submit": {
+    "testflight": {
+      "android": { "track": "internal", "releaseStatus": "draft" }
     }
   }
 }

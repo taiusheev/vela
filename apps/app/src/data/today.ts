@@ -145,3 +145,25 @@ export function todayFixture(): Today {
     ],
   };
 }
+
+/**
+ * The example day with her morning gone quiet, shown at `/?example=quiet` when the app has no API:
+ * her light quiet, today's ask unanswered, and the quiet notice (A11) opening over it as it would.
+ * For the founder's look at the sheet and for the Maestro flow that walks it (build plan 3.9).
+ */
+export function quietExampleFixture(): Today {
+  const day = todayFixture();
+  const [her, ...others] = day.lights;
+  if (her === undefined || day.exchange === undefined) return day;
+  return {
+    ...day,
+    lights: [{ ...her, state: "quiet", stateText: t`quiet` }, ...others],
+    exchange: {
+      asker: day.exchange.asker,
+      recipient: day.exchange.recipient,
+      ask: day.exchange.ask,
+      unanswered: t`No word yet today.`,
+      replies: [],
+    },
+  };
+}

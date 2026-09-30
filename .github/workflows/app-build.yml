@@ -1,0 +1,59 @@
+name: app build
+
+# Builds of the app on EAS (build plan 3.9), started by hand from the Actions tab: nothing here runs
+# on a push, because the free plan allows a limited number of builds a month (expo.dev/pricing).
+# The profiles are in `apps/app/eas.json`: `staging` installs from a link (an APK on Android, and on
+# iPhones registered with `eas device:create`), `e2e` is the staging build for a simulator, where
+# the Maestro flows run, and `testflight` goes to TestFlight and Google Play's internal track.
+# Every profile talks to staging's API. EXPO_TOKEN is the Expo organisation's `github-actions`
+# token (infra/README.md, section 9); the Apple and Google credentials stay with EAS.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Build profile
+        type: choice
+        options: [staging, e2e, testflight]
+        default: staging
+      platform:
+        description: Platform
+        type: choice
+        options: [android, ios, all]
+        default: android
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: eas build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned to a commit, not a tag: these steps are handed EXPO_TOKEN.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: expo/expo-github-action@eab7a230208c952974db8c3245cfd78402c7b385 # 9.0.0
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: pnpm install --frozen-lockfile
+      # The build runs on EAS's machines; this job only hands it over and does not wait for it.
+      # A TestFlight build is submitted once it is done.
+      - name: Start the build
+        working-directory: apps/app
+        env:
+          PROFILE: ${{ inputs.profile }}
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          submit=""
+          if [ "$PROFILE" = "testflight" ]; then submit="--auto-submit"; fi
+          eas build --profile "$PROFILE" --platform "$PLATFORM" --non-interactive --no-wait $submit
