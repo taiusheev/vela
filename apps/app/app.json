@@ -12,6 +12,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "family.vela.light",
+      "infoPlist": { "ITSAppUsesNonExemptEncryption": false },
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true
       }
