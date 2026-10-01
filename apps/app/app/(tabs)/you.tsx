@@ -192,7 +192,28 @@ export default function YouScreen() {
           {family.nearby === undefined ? null : (
             <>
               <Hairline />
-              <Row title={family.nearby.names} caption={family.nearby.line} />
+              {/* Organisers only see this row, and they choose who is on it (spec A3). */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityHint={t`Change the people nearby`}
+                onPress={() =>
+                  router.push(
+                    family.keptLight[0] === undefined
+                      ? "/nearby"
+                      : { pathname: "/nearby", params: { member: family.keptLight[0].memberId } },
+                  )
+                }
+              >
+                <Row
+                  title={family.nearby.names}
+                  caption={family.nearby.line}
+                  trailing={
+                    <Words variant="button" tone="action">
+                      <Trans>Change</Trans>
+                    </Words>
+                  }
+                />
+              </Pressable>
             </>
           )}
         </Card>

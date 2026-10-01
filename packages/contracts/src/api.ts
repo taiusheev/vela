@@ -628,6 +628,16 @@ export const NEARBY_CONSENTS = ["yes", "no", "waiting"] as const;
 export const NearbyConsent = z.enum(NEARBY_CONSENTS);
 export type NearbyConsent = z.infer<typeof NearbyConsent>;
 
+/** A person nearby as You lists them, and as adding one answers: never their number. */
+export const ApiNearbyContact = z.object({
+  id: z.uuid(),
+  near_member_id: z.uuid(),
+  name: z.string(),
+  relation: z.string().nullable(),
+  consent: NearbyConsent,
+});
+export type ApiNearbyContact = z.infer<typeof ApiNearbyContact>;
+
 /**
  * The family as You shows it (`GET /v1/families/:familyId`, spec §14.1 A12). Every live member with
  * their light — on, waiting for her yes, or off — and, for a kept-light member, where her Vela Light
@@ -653,17 +663,7 @@ export const ApiFamily = z.object({
         .nullable(),
     }),
   ),
-  nearby: z
-    .array(
-      z.object({
-        id: z.uuid(),
-        near_member_id: z.uuid(),
-        name: z.string(),
-        relation: z.string().nullable(),
-        consent: NearbyConsent,
-      }),
-    )
-    .nullable(),
+  nearby: z.array(ApiNearbyContact).nullable(),
   /**
    * How the caller would be told if her morning goes quiet (ADR-34, D4), for an organiser; null for
    * anyone else, whom a quiet notice never goes to. `telegram`: they have a Telegram link they have
@@ -706,6 +706,35 @@ export type MemberChangeRefusal = z.infer<typeof MemberChangeRefusal>;
 export const TRIAL_DAYS = 30;
 
 /** "Start the 30 days" for one kept-light member (spec A13, API contract §7). */
+/**
+ * Someone nearby her, added from the app (`POST /v1/families/:familyId/nearby`, API contract
+ * § "People nearby", spec A3): a name and how they know her, each 1 to 40 characters once trimmed,
+ * and never a number. A number arrives only with the contact's own yes, which the founder records
+ * (L8); a name or relation holding one is refused (`NearbyRefusal` `number`).
+ */
+export const AddNearby = z.strictObject({
+  member_id: z.uuid(),
+  name: z.string().trim().min(1).max(40),
+  relation: z.string().trim().min(1).max(40).nullable(),
+});
+export type AddNearby = z.infer<typeof AddNearby>;
+
+/** Removing someone nearby takes no body: the contact is in the path. */
+export const RemoveNearby = z.strictObject({});
+export type RemoveNearby = z.infer<typeof RemoveNearby>;
+
+/** What removing someone nearby answers, a replay included. */
+export const ApiNearbyRemoved = z.object({ id: z.uuid(), removed: z.literal(true) });
+export type ApiNearbyRemoved = z.infer<typeof ApiNearbyRemoved>;
+
+/**
+ * Why adding someone nearby was refused, in a 409's `details.reason`: she already has two (spec
+ * §17: no contacts beyond the two nearby), or the name or relation holds a phone number.
+ */
+export const NEARBY_REFUSALS = ["full", "number"] as const;
+export const NearbyRefusal = z.enum(NEARBY_REFUSALS);
+export type NearbyRefusal = z.infer<typeof NearbyRefusal>;
+
 export const StartTrial = z.strictObject({ member_id: z.uuid() });
 export type StartTrial = z.infer<typeof StartTrial>;
 

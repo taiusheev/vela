@@ -138,6 +138,8 @@ function fixture(options: FixtureOptions = {}) {
       pauseApiMember: vi.fn<Writes["services"]["pauseApiMember"]>(unused("pause")),
       leaveApiFamily: vi.fn<Writes["services"]["leaveApiFamily"]>(unused("leave")),
       startApiTrial: vi.fn<Writes["services"]["startApiTrial"]>(unused("trial")),
+      addApiNearby: vi.fn<Writes["services"]["addApiNearby"]>(unused("nearby")),
+      removeApiNearby: vi.fn<Writes["services"]["removeApiNearby"]>(unused("nearby removal")),
       uploadApiMedia: vi
         .fn<Writes["services"]["uploadApiMedia"]>()
         .mockResolvedValue({ response: { status: 201, body: UPLOADED }, replayed: false }),

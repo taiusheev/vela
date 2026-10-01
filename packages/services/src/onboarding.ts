@@ -196,7 +196,7 @@ export function regionForCountry(regions: readonly Region[], country: string): R
  * keyboard in full-width mode types (`０９１２－３４５`, `＋`, `（）`) into the usual characters; the
  * check reads the folded text, and what the step keeps is the text as typed.
  */
-function holdsPhoneNumber(text: string): boolean {
+export function holdsPhoneNumber(text: string): boolean {
   return [...text.normalize("NFKC").matchAll(PHONE_RUN)].some(
     (match) => (match[0].match(PHONE_DIGIT) ?? []).length >= PHONE_MIN_DIGITS,
   );

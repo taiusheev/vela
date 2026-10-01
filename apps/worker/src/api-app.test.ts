@@ -21,6 +21,7 @@ import {
   ApiIdempotencyError,
   AskDayTakenError,
   MemberChangeRefusedError,
+  NearbyRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
   TrialRefusedError,
@@ -216,6 +217,14 @@ const PUSH_DEVICE: ApiPushDevice = {
   registered_at: "2026-09-22T00:00:00.000Z",
 };
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
+const CONTACT_ID = "44444444-4444-7444-8444-444444444444";
+const NEARBY_CONTACT = {
+  id: CONTACT_ID,
+  near_member_id: MEMBER_ID,
+  name: "Lena",
+  relation: "neighbour",
+  consent: "waiting",
+};
 const WEEKLY_READ = {
   member_id: MEMBER_ID,
   display_name: "Mom",
@@ -287,6 +296,15 @@ function fixture(enableWrites = false, push?: boolean) {
       startApiTrial: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["startApiTrial"]>()
         .mockResolvedValue({ response: { status: 200, body: TRIAL }, replayed: false }),
+      addApiNearby: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["addApiNearby"]>()
+        .mockResolvedValue({ response: { status: 201, body: NEARBY_CONTACT }, replayed: false }),
+      removeApiNearby: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["removeApiNearby"]>()
+        .mockResolvedValue({
+          response: { status: 200, body: { id: CONTACT_ID, removed: true } },
+          replayed: false,
+        }),
       leaveApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["leaveApiFamily"]>()
         .mockResolvedValue({
@@ -2154,6 +2172,100 @@ describe("pausing and leaving", () => {
       404,
       NOT_FOUND,
     );
+  });
+});
+
+describe("people nearby", () => {
+  const NEARBY_PATH = `/v1/families/${FAMILY_ID}/nearby`;
+  const REMOVE_PATH = `/v1/nearby/${CONTACT_ID}/remove`;
+  const good = { authorization: "Bearer good" };
+  const body = JSON.stringify({ member_id: MEMBER_ID, name: "Lena", relation: "neighbour" });
+
+  it("adds someone nearby through the family check and answers 201 with them", async () => {
+    const { app, writes, services } = fixture(true);
+    const response = await app.request(writeRequest("POST", NEARBY_PATH, body, good));
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual(NEARBY_CONTACT);
+    expect(services.authorizeFamilyAccess).toHaveBeenCalled();
+    expect(writes.services.addApiNearby).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      { member_id: MEMBER_ID, name: "Lena", relation: "neighbour" },
+    );
+  });
+
+  it("answers 200 with the contact already near her", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.addApiNearby.mockResolvedValue({
+      response: { status: 200, body: NEARBY_CONTACT },
+      replayed: false,
+    });
+    const response = await app.request(writeRequest("POST", NEARBY_PATH, body, good));
+    expect(response.status).toBe(200);
+  });
+
+  it.each([
+    ["full", "Two people nearby is the most."],
+    ["number", "Leave the number out: it is added with their yes."],
+  ] as const)("answers a %s refusal as a 409 that says why", async (reason, message) => {
+    const { app, writes } = fixture(true);
+    writes.services.addApiNearby.mockRejectedValue(new NearbyRefusedError(reason));
+    await expectResponse(await app.request(writeRequest("POST", NEARBY_PATH, body, good)), 409, {
+      error: { code: "conflict", message, details: { reason } },
+    });
+  });
+
+  it("answers 403 to a family member the guard refuses, before the service", async () => {
+    const f = fixture(true);
+    f.services.authorizeFamilyAccess.mockResolvedValue({ kind: "forbidden" });
+    await expectResponse(await f.app.request(writeRequest("POST", NEARBY_PATH, body, good)), 403, {
+      error: { code: "forbidden", message: "Access denied." },
+    });
+    expect(f.writes.services.addApiNearby).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 when the service finds nothing that is the caller's", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.addApiNearby.mockRejectedValue(new VelaError("not_found", "Not found"));
+    expect((await app.request(writeRequest("POST", NEARBY_PATH, body, good))).status).toBe(404);
+  });
+
+  it("refuses a body that is not the contract's before the database is opened", async () => {
+    const f = fixture(true);
+    const bad = JSON.stringify({ member_id: MEMBER_ID, name: "Lena", phone: "0912345678" });
+    await expectResponse(
+      await f.app.request(writeRequest("POST", NEARBY_PATH, bad, good)),
+      400,
+      INVALID,
+    );
+    expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("removes someone nearby and answers that they are removed", async () => {
+    const { app, writes } = fixture(true);
+    const response = await app.request(writeRequest("POST", REMOVE_PATH, "{}", good));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ id: CONTACT_ID, removed: true });
+    expect(writes.services.removeApiNearby).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock },
+      IDENTITY,
+      "request-1",
+      CONTACT_ID,
+    );
+  });
+
+  it("answers 404 for a contact that is not the caller's to remove", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.removeApiNearby.mockRejectedValue(new VelaError("not_found", "Not found"));
+    expect((await app.request(writeRequest("POST", REMOVE_PATH, "{}", good))).status).toBe(404);
+  });
+
+  it("is not there without the write capability", async () => {
+    const { app } = fixture();
+    expect((await app.request(writeRequest("POST", NEARBY_PATH, body, good))).status).toBe(404);
+    expect((await app.request(writeRequest("POST", REMOVE_PATH, "{}", good))).status).toBe(404);
   });
 });
 

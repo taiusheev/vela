@@ -214,6 +214,14 @@ msgstr "帳號"
 msgid "Add an option"
 msgstr "新增選項"
 
+#: src/components/nearby-editor.tsx
+msgid "Add them"
+msgstr "加入"
+
+#: src/components/nearby-editor.tsx
+msgid "Adding…"
+msgstr "加入中…"
+
 #: src/data/onboarding.ts
 msgid "Adelaide"
 msgstr "阿得雷德"
@@ -327,6 +335,14 @@ msgstr "加拿大"
 msgid "Central"
 msgstr "中部時間"
 
+#: app/(tabs)/you.tsx
+msgid "Change"
+msgstr "更改"
+
+#: app/(tabs)/you.tsx
+msgid "Change the people nearby"
+msgstr "更改附近的聯絡人"
+
 #: app/sign-in.tsx
 msgid "Checking…"
 msgstr "確認中…"
@@ -352,7 +368,9 @@ msgid "Do you remember this?"
 msgstr "您還記得這張嗎？"
 
 #. who a nearby contact is to her
+#. who a nearby contact is to her
 #: src/data/quiet.ts
+#: src/data/useNearby.ts
 msgid "downstairs"
 msgstr "樓下鄰居"
 
@@ -416,6 +434,7 @@ msgstr "{name}回覆時，在這支手機上收到通知。"
 #. stands in for her name
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
+#: app/onboarding.tsx
 msgid "her"
 msgstr "這位家人"
 
@@ -430,6 +449,10 @@ msgstr "早安訊息會在 {time} 送到，也就是起床後半小時。"
 #: app/onboarding.tsx
 msgid "Her name, as the family calls her."
 msgstr "家裡平常怎麼稱呼這位家人。"
+
+#: src/components/nearby-editor.tsx
+msgid "How they know {name}, like neighbour"
+msgstr "和{name}的關係，例如鄰居"
 
 #: app/onboarding.tsx
 msgid "How Vela greets her each morning."
@@ -504,6 +527,10 @@ msgstr "要離開{familyName}嗎？"
 msgid "Leave the family"
 msgstr "離開這個家庭"
 
+#: src/data/useNearby.ts
+msgid "Leave the number out. Vela asks them for it, with their yes."
+msgstr "請不要填電話號碼。對方同意後，Vela 會再向對方要號碼。"
+
 #: app/(tabs)/you.tsx
 msgid "Leaving…"
 msgstr "正在離開…"
@@ -522,6 +549,7 @@ msgstr "正在載入家人的問答…"
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
+#: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
 #: src/data/exchanges.ts
@@ -555,7 +583,9 @@ msgid "Nearby: {names}"
 msgstr "附近的聯絡人：{names}"
 
 #. who a nearby contact is to her
+#. who a nearby contact is to her
 #: src/data/quiet.ts
+#: src/data/useNearby.ts
 msgid "neighbour"
 msgstr "鄰居"
 
@@ -574,6 +604,10 @@ msgstr "這個帳號還沒有設定家庭。"
 #: app/ask.tsx
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr "接下來兩週都沒有空出來的早上可以放照片提問。請改用文字提問，或稍後再試一次。"
+
+#: src/components/nearby-editor.tsx
+msgid "No number here: Vela asks them for it, with their yes."
+msgstr "這裡不填電話號碼：對方同意後，Vela 會再向對方要號碼。"
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -703,6 +737,10 @@ msgstr "暫停中"
 msgid "Paused · {plan}"
 msgstr "暫停中 · {plan}"
 
+#: app/nearby.tsx
+msgid "People nearby"
+msgstr "附近的聯絡人"
+
 #: src/data/onboarding.ts
 msgid "Perth"
 msgstr "伯斯"
@@ -742,10 +780,15 @@ msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記
 msgid "Reading what this phone allows…"
 msgstr "正在讀取這支手機的通知設定…"
 
+#: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 #: src/components/vote-options.tsx
 msgid "Remove"
 msgstr "移除"
+
+#: src/components/nearby-editor.tsx
+msgid "Remove {who}"
+msgstr "移除{who}"
 
 #: src/components/photo-slots.tsx
 msgid "Replace"
@@ -769,11 +812,16 @@ msgstr "恢復"
 msgid "Russian"
 msgstr "俄文"
 
+#: src/data/useNearby.ts
+msgid "Said no"
+msgstr "已拒絕"
+
 #: src/data/useToday.ts
 msgid "said she is fine"
 msgstr "說自己很好"
 
 #: src/data/family.ts
+#: src/data/useNearby.ts
 msgid "Said yes"
 msgstr "已同意"
 
@@ -895,6 +943,10 @@ msgstr "新加坡"
 msgid "Six digits, good for ten minutes."
 msgstr "六位數字，十分鐘內有效。"
 
+#: app/onboarding.tsx
+msgid "Skip for now"
+msgstr "先跳過"
+
 #: src/data/useQuiet.ts
 msgid "Someone said {name} is fine. Everyone who was told has heard."
 msgstr "有人說{name}沒事。收到通知的每個人都已經知道了。"
@@ -968,6 +1020,7 @@ msgstr "目前無法傳送。您寫的內容都還在。"
 #: app/(tabs)/you.tsx
 #: app/vela-light.tsx
 #: src/data/useFamily.ts
+#: src/data/useNearby.ts
 msgid "That did not go through. Try again in a moment."
 msgstr "沒有成功。請稍後再試一次。"
 
@@ -1023,9 +1076,17 @@ msgstr "目前無法載入問答。"
 msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
 msgstr "家人會在這裡看到。這位家人不會收到：早安訊息只會回顧最近一天的回覆。"
 
+#: app/nearby.tsx
+msgid "The family's organisers choose the people nearby."
+msgstr "附近的聯絡人由這個家庭的發起人選定。"
+
 #: app/onboarding.tsx
 msgid "The light is ready"
 msgstr "燈已經準備好了"
+
+#: app/onboarding.tsx
+msgid "The people nearby are part of Vela Light: they appear in the quiet notice, with Call."
+msgstr "附近的聯絡人是 Vela Light 的一部分：安靜通知裡會列出對方，並可直接撥打電話。"
 
 #: src/components/family-photo.tsx
 msgid "The picked photo"
@@ -1047,6 +1108,10 @@ msgstr "每週小記會寄給這個家庭的發起人。"
 #: app/(tabs)/sunday.tsx
 msgid "The weekly read starts once she has said yes and had a week of mornings."
 msgstr "等家人答應、也過了一週的早上之後，每週小記就會開始。"
+
+#: src/components/nearby-editor.tsx
+msgid "Their name"
+msgstr "對方的名字"
 
 #: app/onboarding.tsx
 msgid "This account already runs a family."
@@ -1150,6 +1215,14 @@ msgstr "開啟通知"
 msgid "Turn on notifications, and this phone tells you if her morning goes quiet, and when she answers what you asked."
 msgstr "開啟通知後，如果這位家人的早上比較安靜，或是回覆了您的提問，這支手機都會通知您。"
 
+#: src/components/nearby-editor.tsx
+msgid "Two people nearby is the most."
+msgstr "附近的聯絡人最多兩位。"
+
+#: src/data/useNearby.ts
+msgid "Two people nearby is the most. Remove one to add someone else."
+msgstr "附近的聯絡人最多兩位。請先移除一位，再加入其他人。"
+
 #: src/data/ask.ts
 msgid "Two photos"
 msgstr "兩張照片"
@@ -1165,6 +1238,14 @@ msgstr "英國"
 #: src/data/onboarding.ts
 msgid "United States"
 msgstr "美國"
+
+#: app/onboarding.tsx
+msgid "Up to two people who could look in if a morning goes quiet: a neighbour, a friend downstairs. Vela asks each of them first, and nobody hears from Vela until then."
+msgstr "最多兩位住在附近、在早上安靜時可以過去看看的人：例如鄰居、樓下的朋友。Vela 會先徵求每一位的同意，在那之前，沒有人會收到 Vela 的訊息。"
+
+#: app/nearby.tsx
+msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Vela asks each of them first. Until they say yes, you can call them yourself."
+msgstr "最多兩位住在{name}附近、在早上安靜時可以過去看看的人。Vela 會先徵求每一位的同意。在對方同意之前，您可以自己打電話給對方。"
 
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
@@ -1186,6 +1267,10 @@ msgstr "使用這個建議"
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
 msgstr "通常在 {time} 前回覆"
+
+#: src/data/useNearby.ts
+msgid "Vela asks them first"
+msgstr "Vela 會先徵求同意"
 
 #: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."
@@ -1318,6 +1403,10 @@ msgstr "您當初是教我們哪一個做派的？"
 #: app/onboarding.tsx
 msgid "Who are you keeping a light on for?"
 msgstr "您要為誰留一盞燈？"
+
+#: app/onboarding.tsx
+msgid "Who lives close to {name}?"
+msgstr "誰住在{name}附近？"
 
 #: app/(tabs)/you.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."

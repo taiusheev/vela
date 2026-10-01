@@ -9,6 +9,8 @@ import type {
   ApiLeft,
   ApiMe,
   ApiMemberPause,
+  ApiNearbyContact,
+  ApiNearbyRemoved,
   ApiPushDevice,
   ApiPushDeviceRemoved,
   ApiQuietNotice,
@@ -222,6 +224,35 @@ export function startTrial(
 export function trialRefusal(error: unknown): "not_answered_yet" | "light_off" | null {
   const reason = refusalReason(error);
   return reason === "not_answered_yet" || reason === "light_off" ? reason : null;
+}
+
+/** Someone nearby her, by name and how they know her; never a number (spec A3). */
+export function addNearby(
+  familyId: string,
+  input: { member_id: string; name: string; relation: string | null },
+  key: string,
+  token: string | null,
+): Promise<ApiNearbyContact> {
+  return call<ApiNearbyContact>({
+    path: `/v1/families/${familyId}/nearby`,
+    token,
+    key,
+    body: input,
+  });
+}
+
+export function removeNearby(
+  contactId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiNearbyRemoved> {
+  return call<ApiNearbyRemoved>({ path: `/v1/nearby/${contactId}/remove`, token, key, body: {} });
+}
+
+/** Why someone nearby was not added: she has two already, or the words held a number. */
+export function nearbyRefusal(error: unknown): "full" | "number" | null {
+  const reason = refusalReason(error);
+  return reason === "full" || reason === "number" ? reason : null;
 }
 
 /** Whether creating a family was refused because this account already runs one. */

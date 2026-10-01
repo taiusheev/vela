@@ -9,6 +9,7 @@ import { alreadyOrganiser, createFamily, provisionAccount } from "../src/api/cli
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
+import { NearbyEditor } from "../src/components/nearby-editor.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
 import {
   Card,
@@ -26,12 +27,13 @@ import {
   languages,
   wakeTimes,
 } from "../src/data/onboarding.ts";
+import { useNearby } from "../src/data/useNearby.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { useAppLocale } from "../src/i18n/provider.tsx";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
-type Step = "who" | "invite" | "ready";
+type Step = "who" | "nearby" | "invite" | "ready";
 
 /**
  * Onboarding (spec §14.1 A1, A4, A5): who she is, the words to send her, and the light ready and
@@ -93,7 +95,7 @@ export default function OnboardingScreen() {
     },
     onSuccess: async (family) => {
       setCreated(family);
-      setStep("invite");
+      setStep("nearby");
       // Today must learn there is a family now, or it would send the organiser straight back here.
       await Promise.all([
         queries.invalidateQueries({ queryKey: ["me"] }),
@@ -112,6 +114,9 @@ export default function OnboardingScreen() {
       ? t`This account already runs a family.`
       : t`That could not be saved just now. Nothing was lost; try again.`
     : null;
+
+  // A3: the people nearby her, once she exists to be near. Read through the family, as You reads it.
+  const nearby = useNearby(created?.family.id, created?.kept_light_member.id);
 
   const share = async () => {
     if (created === null) return;
@@ -236,6 +241,33 @@ export default function OnboardingScreen() {
             {create.isError && alreadyOrganiser(create.error) ? (
               <SecondaryButton label={t`Go to Today`} onPress={() => router.replace("/")} />
             ) : null}
+          </>
+        ) : null}
+
+        {step === "nearby" && created !== null ? (
+          <>
+            <Words variant="title">
+              <Trans>Who lives close to {name}?</Trans>
+            </Words>
+            <Words variant="body" tone="ink2">
+              <Trans>
+                Up to two people who could look in if a morning goes quiet: a neighbour, a friend
+                downstairs. Vela asks each of them first, and nobody hears from Vela until then.
+              </Trans>
+            </Words>
+            <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
+              <Words variant="caption" tone="ink2">
+                <Trans>
+                  The people nearby are part of Vela Light: they appear in the quiet notice, with
+                  Call.
+                </Trans>
+              </Words>
+            </Card>
+            <NearbyEditor name={name ?? t`her`} nearby={nearby} />
+            <PrimaryButton
+              label={nearby.people.length === 0 ? t`Skip for now` : t`Next`}
+              onPress={() => setStep("invite")}
+            />
           </>
         ) : null}
 

@@ -1,4 +1,5 @@
 import {
+  AddNearby,
   ApiAccountPatch,
   ApiAccountProfile,
   ApiComposedAsk,
@@ -11,6 +12,8 @@ import {
   ApiLeft,
   ApiMe,
   ApiMemberPause,
+  ApiNearbyContact,
+  ApiNearbyRemoved,
   ApiPushDevice,
   ApiPushDeviceRemoved,
   ApiQuietNotice,
@@ -30,6 +33,7 @@ import {
   PauseMember,
   QuietAction,
   RegisterPushDevice,
+  RemoveNearby,
   RemovePushDevice,
   StartTrial,
 } from "@vela/contracts";
@@ -41,6 +45,7 @@ import {
   type ApiNudges,
   AskDayTakenError,
   AskPhotoMissingError,
+  type addApiNearby,
   type authorizeFamilyAccess,
   type Clock,
   type composeApiAsk,
@@ -60,12 +65,14 @@ import {
   MediaRefusedError,
   type MediaStore,
   MemberChangeRefusedError,
+  NearbyRefusedError,
   type pauseApiMember,
   type provisionApiAccount,
   type Random,
   ReplyRefusedError,
   type readApiMedia,
   type registerApiPushDevice,
+  type removeApiNearby,
   type removeApiPushDevice,
   type replyToApiExchange,
   type resolveApiQuiet,
@@ -119,6 +126,8 @@ export interface ApiWriteServices {
   pauseApiMember: typeof pauseApiMember;
   leaveApiFamily: typeof leaveApiFamily;
   startApiTrial: typeof startApiTrial;
+  addApiNearby: typeof addApiNearby;
+  removeApiNearby: typeof removeApiNearby;
   uploadApiMedia: typeof uploadApiMedia;
   registerApiPushDevice: typeof registerApiPushDevice;
   removeApiPushDevice: typeof removeApiPushDevice;
@@ -366,6 +375,19 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               error.reason === "last_organiser"
                 ? "Someone else who organises the family has to be active first."
                 : "A kept light is paused from her own chat.",
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(refused, 409);
+      }
+      if (error instanceof NearbyRefusedError) {
+        const refused: ApiErrorBody = {
+          error: {
+            code: "conflict",
+            message:
+              error.reason === "full"
+                ? "Two people nearby is the most."
+                : "Leave the number out: it is added with their yes.",
             details: { reason: error.reason },
           },
         };
@@ -732,6 +754,56 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         const trial = ApiTrial.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(trial, 200);
+      },
+    );
+    // Someone nearby her (spec A3), by name and relation; nobody is contacted (API contract
+    // § "People nearby"). Organisers only, which the service decides inside its transaction.
+    app.post(
+      "/v1/families/:familyId/nearby",
+      authenticate,
+      validateWrite(AddNearby, runtime.logger),
+      checkActivity,
+      withDatabase,
+      (c, next) =>
+        createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        )(c, next),
+      async (c) => {
+        const result = await writes.services.addApiNearby(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.get("writeInput"),
+        );
+        const status = result.response.status;
+        if ((status !== 200 && status !== 201) || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const contact = ApiNearbyContact.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(contact, status);
+      },
+    );
+    app.post(
+      "/v1/nearby/:contactId/remove",
+      authenticate,
+      validateWrite(RemoveNearby, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.removeApiNearby(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("contactId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const removed = ApiNearbyRemoved.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(removed, 200);
       },
     );
     app.post(

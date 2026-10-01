@@ -1,0 +1,25 @@
+# People nearby in the demo (A3, A12): opened from You, the example two with where each yes stands;
+# removing one makes room, and someone added by name waits for their yes. No number.
+url: ${APP_URL}
+name: People nearby are changed from You, by name and relation, and wait for their yes
+tags:
+  - demo
+---
+- launchApp
+- tapOn: "You"
+- tapOn: "Change"
+- assertVisible: "People nearby"
+- assertVisible: "Lena · neighbour"
+- assertVisible: "Said yes"
+- assertVisible: "Two people nearby is the most."
+# Petro's, the second of the two: on the web Maestro reads what is shown, not the button's label.
+- tapOn:
+    text: "Remove"
+    index: 1
+- assertNotVisible: "Petro · downstairs"
+# A name alone: on the web a tap on the second field's placeholder leaves the focus in the first.
+- tapOn: "Their name"
+- inputText: "Wei"
+- tapOn: "Add them"
+- assertVisible: "Wei"
+- assertVisible: "Vela asks them first"

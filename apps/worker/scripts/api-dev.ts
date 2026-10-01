@@ -31,6 +31,7 @@
 import { serve } from "@hono/node-server";
 import { connectDatabase } from "@vela/db";
 import {
+  addApiNearby,
   authorizeFamilyAccess,
   composeApiAsk,
   createApiFamily,
@@ -49,6 +50,7 @@ import {
   provisionApiAccount,
   readApiMedia,
   registerApiPushDevice,
+  removeApiNearby,
   removeApiPushDevice,
   replyToApiExchange,
   resolveApiQuiet,
@@ -183,6 +185,8 @@ const app = createApiApp({
             pauseApiMember,
             leaveApiFamily,
             startApiTrial,
+            addApiNearby,
+            removeApiNearby,
             uploadApiMedia,
             registerApiPushDevice,
             removeApiPushDevice,

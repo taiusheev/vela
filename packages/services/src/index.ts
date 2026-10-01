@@ -78,6 +78,7 @@ export {
   uploadApiMedia,
 } from "./api-media.ts";
 export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
+export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
 export { type ApiPushDeps, registerApiPushDevice, removeApiPushDevice } from "./api-push.ts";
 export { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
 export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";

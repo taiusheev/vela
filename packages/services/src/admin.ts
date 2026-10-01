@@ -104,7 +104,7 @@ import {
 const ORGANISER_CHANNEL: Channel = "telegram";
 
 /** Spec Appendix A: at most two people near her, so a quiet notice stays a short list to call. */
-const MAX_NEARBY_CONTACTS = 2;
+export const MAX_NEARBY_CONTACTS = 2;
 
 /**
  * The understanding re-run gives up after this many starts (flows §3.15); an answer that reached it

@@ -375,6 +375,12 @@ A phone can be told when it is `granted` and, for the quiet notice and its close
 - `locked` is true unless a subscription covers her: `trial` before `trial_ends_at`, `active` or `grace`. Locked, `counts`, `notes` and `suggestion` are null and the days still show (spec A9: "Free plan shows the seven lights"). The Telegram read is not gated, because the pilot is free; the app's is, and the 30-day trial opens it at no cost.
 - Read-only: nothing is written, and `POST /weekly-reads/:id/opened` is not built.
 
+### People nearby (1 October 2026, spec A3, A12, §9; L8)
+
+`POST /v1/families/:familyId/nearby` with `AddNearby` (`member_id`, `name` and `relation`, each 1 to 40 characters once trimmed, `relation` nullable) adds someone near a kept-light member by name and relation, as Telegram onboarding stores them: no number, no yes, and nobody is contacted. The founder asks each one and records their yes and number on the admin page (flows §3.17), and until then the quiet notice does not list them. It answers `ApiNearbyContact` (`id`, `near_member_id`, `name`, `relation`, `consent` `waiting`), 201 when added and 200 when a contact of that name (ignoring case and spaces at either end) is already near her, whatever their yes. Organisers only, for a kept-light member of the family who has not left, invited or not; anything else is 404. Refusals are 409 with `details.reason`: `full` when she already has two people nearby (spec §17), and `number` when the name or relation holds a phone number by onboarding's rule (`holdsPhoneNumber`), refused before the receipt, so the number is kept nowhere. Her member row is locked before the contacts are counted, so two organisers adding at once count each other (`api-nearby-race.test.ts`). Event `nearby_contact_added` (`consented` false, `source` `app`). Operation `nearby.add:v1`.
+
+`POST /v1/nearby/:contactId/remove` with `{}` removes one as the admin page does: their consent rows are forgotten, the row deleted, and a deletion proof kept (`reason` `app remove_nearby`); event `nearby_contact_removed` (`by` `organiser`). It answers `ApiNearbyRemoved` (`id`, `removed` true). Organisers of her family only; anyone else, and a contact already gone, are 404, since nothing is left to say whose family it was; a retry with the same key replays. Operation `nearby.remove:v1`.
+
 ## 8. Media
 
 | Method | Path | Purpose |

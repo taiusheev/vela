@@ -207,6 +207,14 @@ msgstr "Account"
 msgid "Add an option"
 msgstr "Add an option"
 
+#: src/components/nearby-editor.tsx
+msgid "Add them"
+msgstr "Add them"
+
+#: src/components/nearby-editor.tsx
+msgid "Adding…"
+msgstr "Adding…"
+
 #: src/data/onboarding.ts
 msgid "Adelaide"
 msgstr "Adelaide"
@@ -320,6 +328,14 @@ msgstr "Canada"
 msgid "Central"
 msgstr "Central"
 
+#: app/(tabs)/you.tsx
+msgid "Change"
+msgstr "Change"
+
+#: app/(tabs)/you.tsx
+msgid "Change the people nearby"
+msgstr "Change the people nearby"
+
 #: app/sign-in.tsx
 msgid "Checking…"
 msgstr "Checking…"
@@ -345,7 +361,9 @@ msgid "Do you remember this?"
 msgstr "Do you remember this?"
 
 #. who a nearby contact is to her
+#. who a nearby contact is to her
 #: src/data/quiet.ts
+#: src/data/useNearby.ts
 msgid "downstairs"
 msgstr "downstairs"
 
@@ -409,6 +427,7 @@ msgstr "Hear it on this phone when {name} answers."
 #. stands in for her name
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
+#: app/onboarding.tsx
 msgid "her"
 msgstr "her"
 
@@ -423,6 +442,10 @@ msgstr "Her morning comes at {time}, half an hour after she wakes."
 #: app/onboarding.tsx
 msgid "Her name, as the family calls her."
 msgstr "Her name, as the family calls her."
+
+#: src/components/nearby-editor.tsx
+msgid "How they know {name}, like neighbour"
+msgstr "How they know {name}, like neighbour"
 
 #: app/onboarding.tsx
 msgid "How Vela greets her each morning."
@@ -497,6 +520,10 @@ msgstr "Leave {familyName}?"
 msgid "Leave the family"
 msgstr "Leave the family"
 
+#: src/data/useNearby.ts
+msgid "Leave the number out. Vela asks them for it, with their yes."
+msgstr "Leave the number out. Vela asks them for it, with their yes."
+
 #: app/(tabs)/you.tsx
 msgid "Leaving…"
 msgstr "Leaving…"
@@ -515,6 +542,7 @@ msgstr "Looking for your family's days…"
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
+#: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
 #: src/data/exchanges.ts
@@ -548,7 +576,9 @@ msgid "Nearby: {names}"
 msgstr "Nearby: {names}"
 
 #. who a nearby contact is to her
+#. who a nearby contact is to her
 #: src/data/quiet.ts
+#: src/data/useNearby.ts
 msgid "neighbour"
 msgstr "neighbour"
 
@@ -567,6 +597,10 @@ msgstr "No family is set up on this account yet."
 #: app/ask.tsx
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
+
+#: src/components/nearby-editor.tsx
+msgid "No number here: Vela asks them for it, with their yes."
+msgstr "No number here: Vela asks them for it, with their yes."
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -696,6 +730,10 @@ msgstr "paused"
 msgid "Paused · {plan}"
 msgstr "Paused · {plan}"
 
+#: app/nearby.tsx
+msgid "People nearby"
+msgstr "People nearby"
+
 #: src/data/onboarding.ts
 msgid "Perth"
 msgstr "Perth"
@@ -735,10 +773,15 @@ msgstr "Quiet notices with the people nearby · away mode · the weekly read · 
 msgid "Reading what this phone allows…"
 msgstr "Reading what this phone allows…"
 
+#: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 #: src/components/vote-options.tsx
 msgid "Remove"
 msgstr "Remove"
+
+#: src/components/nearby-editor.tsx
+msgid "Remove {who}"
+msgstr "Remove {who}"
 
 #: src/components/photo-slots.tsx
 msgid "Replace"
@@ -762,11 +805,16 @@ msgstr "Resume"
 msgid "Russian"
 msgstr "Russian"
 
+#: src/data/useNearby.ts
+msgid "Said no"
+msgstr "Said no"
+
 #: src/data/useToday.ts
 msgid "said she is fine"
 msgstr "said she is fine"
 
 #: src/data/family.ts
+#: src/data/useNearby.ts
 msgid "Said yes"
 msgstr "Said yes"
 
@@ -888,6 +936,10 @@ msgstr "Singapore"
 msgid "Six digits, good for ten minutes."
 msgstr "Six digits, good for ten minutes."
 
+#: app/onboarding.tsx
+msgid "Skip for now"
+msgstr "Skip for now"
+
 #: src/data/useQuiet.ts
 msgid "Someone said {name} is fine. Everyone who was told has heard."
 msgstr "Someone said {name} is fine. Everyone who was told has heard."
@@ -961,6 +1013,7 @@ msgstr "That could not be sent just now. Your words are kept."
 #: app/(tabs)/you.tsx
 #: app/vela-light.tsx
 #: src/data/useFamily.ts
+#: src/data/useNearby.ts
 msgid "That did not go through. Try again in a moment."
 msgstr "That did not go through. Try again in a moment."
 
@@ -1016,9 +1069,17 @@ msgstr "The exchanges could not be reached just now."
 msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
 msgstr "The family sees it here. She will not hear it: her mornings read back only her latest day."
 
+#: app/nearby.tsx
+msgid "The family's organisers choose the people nearby."
+msgstr "The family's organisers choose the people nearby."
+
 #: app/onboarding.tsx
 msgid "The light is ready"
 msgstr "The light is ready"
+
+#: app/onboarding.tsx
+msgid "The people nearby are part of Vela Light: they appear in the quiet notice, with Call."
+msgstr "The people nearby are part of Vela Light: they appear in the quiet notice, with Call."
 
 #: src/components/family-photo.tsx
 msgid "The picked photo"
@@ -1040,6 +1101,10 @@ msgstr "The weekly read goes to the family's organisers."
 #: app/(tabs)/sunday.tsx
 msgid "The weekly read starts once she has said yes and had a week of mornings."
 msgstr "The weekly read starts once she has said yes and had a week of mornings."
+
+#: src/components/nearby-editor.tsx
+msgid "Their name"
+msgstr "Their name"
 
 #: app/onboarding.tsx
 msgid "This account already runs a family."
@@ -1143,6 +1208,14 @@ msgstr "Turn on notifications"
 msgid "Turn on notifications, and this phone tells you if her morning goes quiet, and when she answers what you asked."
 msgstr "Turn on notifications, and this phone tells you if her morning goes quiet, and when she answers what you asked."
 
+#: src/components/nearby-editor.tsx
+msgid "Two people nearby is the most."
+msgstr "Two people nearby is the most."
+
+#: src/data/useNearby.ts
+msgid "Two people nearby is the most. Remove one to add someone else."
+msgstr "Two people nearby is the most. Remove one to add someone else."
+
 #: src/data/ask.ts
 msgid "Two photos"
 msgstr "Two photos"
@@ -1158,6 +1231,14 @@ msgstr "United Kingdom"
 #: src/data/onboarding.ts
 msgid "United States"
 msgstr "United States"
+
+#: app/onboarding.tsx
+msgid "Up to two people who could look in if a morning goes quiet: a neighbour, a friend downstairs. Vela asks each of them first, and nobody hears from Vela until then."
+msgstr "Up to two people who could look in if a morning goes quiet: a neighbour, a friend downstairs. Vela asks each of them first, and nobody hears from Vela until then."
+
+#: app/nearby.tsx
+msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Vela asks each of them first. Until they say yes, you can call them yourself."
+msgstr "Up to two people who live close to {name} and could look in if a morning goes quiet. Vela asks each of them first. Until they say yes, you can call them yourself."
 
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
@@ -1179,6 +1260,10 @@ msgstr "Use this suggestion"
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
 msgstr "Usually answers by {time}"
+
+#: src/data/useNearby.ts
+msgid "Vela asks them first"
+msgstr "Vela asks them first"
 
 #: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."
@@ -1311,6 +1396,10 @@ msgstr "Which one of us did you teach to make the pies?"
 #: app/onboarding.tsx
 msgid "Who are you keeping a light on for?"
 msgstr "Who are you keeping a light on for?"
+
+#: app/onboarding.tsx
+msgid "Who lives close to {name}?"
+msgstr "Who lives close to {name}?"
 
 #: app/(tabs)/you.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
