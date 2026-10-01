@@ -430,6 +430,10 @@ msgstr "夏威夷"
 msgid "Hear it on this phone when {name} answers."
 msgstr "{name}回覆時，在這支手機上收到通知。"
 
+#: app/exchange/[id].tsx
+msgid "Heart"
+msgstr "愛心"
+
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -457,6 +461,10 @@ msgstr "和{name}的關係，例如鄰居"
 #: app/onboarding.tsx
 msgid "How Vela greets her each morning."
 msgstr "Vela 每天早上問候時的稱呼。"
+
+#: app/exchange/[id].tsx
+msgid "Hug"
+msgstr "抱抱"
 
 #: app/onboarding.tsx
 msgid "I have sent it"
@@ -514,6 +522,10 @@ msgstr "語言"
 #: app/(tabs)/sunday.tsx
 msgid "late"
 msgstr "較晚"
+
+#: app/exchange/[id].tsx
+msgid "Laugh"
+msgstr "大笑"
 
 #: app/(tabs)/you.tsx
 msgid "Leave"

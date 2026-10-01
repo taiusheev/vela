@@ -7,7 +7,7 @@
 import { type InboundEvent, REACTION_KINDS, type ReplyKind } from "@vela/contracts";
 import { canApply, nextExchangeState } from "@vela/core";
 import { type Exchange, exchanges, type MessageRef, replies, type VelaTransaction } from "@vela/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { inboundExternalId, reactionKindsOf } from "./format.ts";
@@ -149,7 +149,8 @@ export async function handleGroupReply(
  * each kind in it gains the message in its row's `reacted_message_ids`, or a row of its own; each
  * kind not in it loses the message, and its row goes once no message carries it. A row stored
  * before the column existed names no message and goes as before. Unmapped emoji are ignored. A
- * repeated update changes nothing and records nothing.
+ * repeated update changes nothing and records nothing. A reaction given in the app (channel `app`)
+ * is outside the set: the group never removes it, and a kind it already holds is not added again.
  */
 export async function handleReaction(
   deps: Deps,
@@ -183,6 +184,9 @@ export async function handleReaction(
           eq(replies.exchangeId, exchangeId),
           eq(replies.memberId, senderId),
           inArray(replies.kind, [...REACTION_KINDS]),
+          // The group's set is the member's reactions in the group: one given in the app is theirs
+          // there and stays, whatever the group sends (API contract §4, "Reactions").
+          ne(replies.channel, "app"),
         ),
       );
     const removed: string[] = [];

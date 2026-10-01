@@ -423,6 +423,10 @@ msgstr "Hawaii"
 msgid "Hear it on this phone when {name} answers."
 msgstr "Hear it on this phone when {name} answers."
 
+#: app/exchange/[id].tsx
+msgid "Heart"
+msgstr "Heart"
+
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -450,6 +454,10 @@ msgstr "How they know {name}, like neighbour"
 #: app/onboarding.tsx
 msgid "How Vela greets her each morning."
 msgstr "How Vela greets her each morning."
+
+#: app/exchange/[id].tsx
+msgid "Hug"
+msgstr "Hug"
 
 #: app/onboarding.tsx
 msgid "I have sent it"
@@ -507,6 +515,10 @@ msgstr "Language"
 #: app/(tabs)/sunday.tsx
 msgid "late"
 msgstr "late"
+
+#: app/exchange/[id].tsx
+msgid "Laugh"
+msgstr "Laugh"
 
 #: app/(tabs)/you.tsx
 msgid "Leave"

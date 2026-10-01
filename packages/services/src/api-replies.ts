@@ -7,7 +7,7 @@ import {
 } from "@vela/contracts";
 import { canApply, nextExchangeState } from "@vela/core";
 import { type Exchange, exchanges, members, replies, type VelaTransaction } from "@vela/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
@@ -55,7 +55,9 @@ async function lockExchange(tx: VelaTransaction, exchangeId: string): Promise<Ex
  * answer 404 alike. The lock is also what makes the state change safe: two members replying at
  * once are not serialised by the actor lock `runApiMutation` takes, only by this row.
  *
- * Words only, `to_recipient` true, channel `app`. The mutation sends nothing and wakes nothing: a
+ * Words or a reaction, `to_recipient` true, channel `app`. A reaction is one row of its kind per
+ * member and exchange (`replies_one_reaction_idx`): a second tap on the same kind answers 200 with
+ * the row already there, changing nothing and recording nothing. The mutation sends nothing and wakes nothing: a
  * reply reaches her through the next arrival's read-back, which reads the database, and the
  * callback could not reach the gateway or her scheduler if it tried (code design §8).
  */
@@ -81,7 +83,10 @@ export async function replyToApiExchange(
       key,
       operation: "exchange.reply:v1",
       // The exchange is in the fingerprint, so one key cannot be spent on two exchanges.
-      input: { exchange_id: exchangeId.toLowerCase(), text: reply.text },
+      input:
+        "text" in reply
+          ? { exchange_id: exchangeId.toLowerCase(), text: reply.text }
+          : { exchange_id: exchangeId.toLowerCase(), reaction: reply.reaction },
     },
     {
       authorize: async (tx) => {
@@ -110,19 +115,55 @@ export async function replyToApiExchange(
         if (exchange === null) throw new VelaError("not_found", "Exchange not found");
         if (!canApply(exchange.state, "reply")) throw new ReplyRefusedError("not_answered");
 
-        const [row] = await tx
+        const kind = "text" in reply ? "text" : reply.reaction;
+        const [inserted] = await tx
           .insert(replies)
           .values({
             exchangeId: exchange.id,
             memberId: replierId,
-            kind: "text",
-            text: reply.text,
+            kind,
+            text: "text" in reply ? reply.text : null,
             channel: "app",
             toRecipient: true,
             createdAt: now,
           })
+          .onConflictDoNothing()
           .returning();
-        if (row === undefined) throw new Error("reply insert returned no row");
+        const reaches = async () =>
+          (await readBackExchangeId(tx, exchange.recipientId)) === exchange.id;
+        const [replier] = await tx
+          .select({ displayName: members.displayName })
+          .from(members)
+          .where(eq(members.id, replierId))
+          .limit(1);
+        if (inserted === undefined) {
+          // Only a reaction can meet its own row: this member already gave this kind here.
+          const [held] = await tx
+            .select()
+            .from(replies)
+            .where(
+              and(
+                eq(replies.exchangeId, exchange.id),
+                eq(replies.memberId, replierId),
+                eq(replies.kind, kind),
+              ),
+            )
+            .limit(1);
+          if (held === undefined) throw new Error("reply insert returned no row");
+          return {
+            status: 200,
+            body: ApiReply.parse({
+              id: held.id,
+              exchange_id: exchange.id,
+              from: replier?.displayName ?? "",
+              kind: held.kind,
+              text: held.text,
+              created_at: held.createdAt.toISOString(),
+              reaches_her: await reaches(),
+            }),
+          };
+        }
+        const row = inserted;
 
         await tx
           .update(exchanges)
@@ -140,16 +181,10 @@ export async function replyToApiExchange(
             memberId: replierId,
             exchangeId: exchange.id,
             surface: "app",
-            props: { kind: "text", by: replierId },
+            props: { kind: kind === "text" ? "text" : "reaction", by: replierId },
           },
           now,
         );
-
-        const [replier] = await tx
-          .select({ displayName: members.displayName })
-          .from(members)
-          .where(eq(members.id, replierId))
-          .limit(1);
 
         return {
           status: 201,
@@ -160,7 +195,7 @@ export async function replyToApiExchange(
             kind: row.kind,
             text: row.text,
             created_at: row.createdAt.toISOString(),
-            reaches_her: (await readBackExchangeId(tx, exchange.recipientId)) === exchange.id,
+            reaches_her: await reaches(),
           }),
         };
       },

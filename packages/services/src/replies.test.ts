@@ -314,6 +314,33 @@ describe("handleReaction", () => {
     expect(await eventRows()).toHaveLength(2);
   });
 
+  it("leaves a reaction given in the app alone, whatever the group's set says", async () => {
+    const { seed, anna, exchangeId, ref } = await answeredMorning();
+    await h.db.insert(replies).values({
+      exchangeId,
+      memberId: anna.member.id,
+      kind: "heart",
+      channel: "app",
+      toRecipient: true,
+      createdAt: h.clock.now(),
+    });
+    const rows = async () => (await replyRows()).map((row) => `${row.kind}:${row.channel}`).sort();
+
+    // A group set with the same heart adds nothing beside the app's, and keeps it.
+    await handleReaction(
+      h.deps,
+      seed.family.id,
+      anna.member.id,
+      reaction(anna.link, ["❤️", "😂"]),
+      ref,
+    );
+    expect(await rows()).toEqual(["heart:app", "laugh:telegram"]);
+
+    // A group set without the heart never removes the one given in the app.
+    await handleReaction(h.deps, seed.family.id, anna.member.id, reaction(anna.link, []), ref);
+    expect(await rows()).toEqual(["heart:app"]);
+  });
+
   it("keeps each member's reactions apart and every row addressed to her", async () => {
     const { seed, anna, exchangeId, ref } = await answeredMorning();
     const sam = await seedGroupMember(h.db, seed, {

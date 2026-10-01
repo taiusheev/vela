@@ -1,6 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ComposeReply } from "@vela/contracts";
+import type { ComposeReply, ReactionKind } from "@vela/contracts";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -11,6 +11,7 @@ import { useAccount } from "../../src/auth/clerk.tsx";
 import { ExchangePhotos } from "../../src/components/family-photo.tsx";
 import {
   Card,
+  Chip,
   Eyebrow,
   Hairline,
   PrimaryButton,
@@ -33,8 +34,10 @@ export default function ExchangeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { exchanges, live } = useExchanges();
   const exchange = exchanges.find((candidate) => candidate.id === id);
-  // Words sent in the demo, as typed: the line around them is built in the language shown.
-  const [sent, setSent] = useState<string[]>([]);
+  // What was sent in the demo, as typed or tapped: the line around it is built in the language shown.
+  const [sent, setSent] = useState<{ kind: ExchangeReply["kind"]; text?: string }[]>([]);
+  // The reactions this reader gave here in this visit, shown chosen; a second tap gives nothing new.
+  const [reacted, setReacted] = useState<ReactionKind[]>([]);
   const [text, setText] = useState("");
   const keyFor = useIdempotencyKey("reply");
   const demo = !apiConfigured();
@@ -42,8 +45,14 @@ export default function ExchangeScreen() {
   const post = useMutation({
     mutationFn: async (reply: ComposeReply) =>
       replyTo(id ?? "", keyFor(reply), reply, await account.token()),
-    onSuccess: async () => {
-      setText("");
+    // A reaction that did not go through is not shown as given, so it can be tapped again.
+    onError: (_error, failed) => {
+      if ("reaction" in failed) {
+        setReacted((earlier) => earlier.filter((kind) => kind !== failed.reaction));
+      }
+    },
+    onSuccess: async (_reply, sentReply) => {
+      if ("text" in sentReply) setText("");
       await Promise.all([
         queries.invalidateQueries({ queryKey: ["exchanges"] }),
         queries.invalidateQueries({ queryKey: ["today"] }),
@@ -72,11 +81,11 @@ export default function ExchangeScreen() {
   const replies = [
     ...exchange.replies,
     ...sent.map(
-      (words, index): ExchangeReply => ({
+      (reply, index): ExchangeReply => ({
         id: `local-${index}`,
         from: you,
-        kind: "text",
-        text: words,
+        kind: reply.kind,
+        ...(reply.text === undefined ? {} : { text: reply.text }),
       }),
     ),
   ];
@@ -85,12 +94,26 @@ export default function ExchangeScreen() {
   const send = () => {
     if (words.length === 0) return;
     if (demo) {
-      setSent((earlier) => [...earlier, words]);
+      setSent((earlier) => [...earlier, { kind: "text", text: words }]);
       setText("");
       return;
     }
     post.mutate({ text: words });
   };
+  const react = (kind: ReactionKind) => {
+    if (reacted.includes(kind)) return;
+    setReacted((earlier) => [...earlier, kind]);
+    if (demo) {
+      setSent((earlier) => [...earlier, { kind }]);
+      return;
+    }
+    post.mutate({ reaction: kind });
+  };
+  const reactions: { kind: ReactionKind; label: string }[] = [
+    { kind: "heart", label: `❤️ ${t`Heart`}` },
+    { kind: "laugh", label: `😂 ${t`Laugh`}` },
+    { kind: "hug", label: `🤗 ${t`Hug`}` },
+  ];
 
   const refusal = post.isError ? replyRefusal(post.error) : null;
   const trouble =
@@ -168,15 +191,25 @@ export default function ExchangeScreen() {
         </View>
 
         {/*
-          Words only. A heart, a laugh or a hug is the same row a Telegram reaction writes, and the
-          Telegram path makes a member's reactions equal to their platform set, so one sent from
-          here would vanish the next time that member reacted in the group.
+          A heart, a laugh or a hug is the same row a Telegram reaction writes; the group's own set
+          never removes one given here (API contract §4, "Reactions").
         */}
         {answered ? (
           <View style={{ gap: space.m }}>
             <Words variant="heading">
               <Trans>Reply</Trans>
             </Words>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+              {reactions.map((reaction) => (
+                <Chip
+                  key={reaction.kind}
+                  label={reaction.label}
+                  selected={reacted.includes(reaction.kind)}
+                  disabled={post.isPending}
+                  onPress={() => react(reaction.kind)}
+                />
+              ))}
+            </View>
             <TextField
               value={text}
               onChangeText={setText}

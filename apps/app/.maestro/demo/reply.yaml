@@ -1,5 +1,5 @@
 # A reply in the demo (A8): an exchange opens from the list, and a reply shows under what the
-# family said, with the caption that she will not hear a reply to an older day.
+# family said, with the caption that she will not hear a reply to an older day; so does a heart.
 url: ${APP_URL}
 name: A reply shows under what the family said
 tags:
@@ -17,3 +17,5 @@ tags:
     direction: DOWN
 - tapOn: "Send"
 - assertVisible: "You: Save me a pie"
+- tapOn: "❤️ Heart"
+- assertVisible: "You sent a heart"

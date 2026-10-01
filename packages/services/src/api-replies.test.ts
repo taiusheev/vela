@@ -259,6 +259,15 @@ describe("replyToApiExchange", () => {
     await expect(
       replyToApiExchange(h.deps, identity, "bad-kind", exchange.id, { text: "hi", kind: "heart" }),
     ).rejects.toThrow(ApiIdempotencyError);
+    for (const body of [
+      { reaction: "kiss" },
+      { reaction: "heart", text: "hi" },
+      { reaction: "text" },
+    ]) {
+      await expect(
+        replyToApiExchange(h.deps, identity, `bad-${body.reaction}`, exchange.id, body),
+      ).rejects.toThrow(ApiIdempotencyError);
+    }
     expect(await replyRows()).toEqual([]);
   });
 
@@ -301,5 +310,83 @@ describe("replyToApiExchange", () => {
     await h.run({ outbound: (job: OutboundJob) => deliverOutbound(h.deps, job.outboundId) });
     const [heard] = await replyRows();
     expect(heard?.readBackAt).toEqual(h.clock.now());
+  });
+
+  it("writes a reaction as a reply of its kind, with no words, and moves the exchange to replied", async () => {
+    const exchange = await answeredDay(0);
+    const result = await replyToApiExchange(h.deps, identity, "heart-1", exchange.id, {
+      reaction: "heart",
+    });
+
+    expect(result.response.status).toBe(201);
+    expect(ApiReply.parse(result.response.body)).toMatchObject({
+      from: "Mia",
+      kind: "heart",
+      text: null,
+      reaches_her: true,
+    });
+    const [row] = await replyRows();
+    expect(row).toMatchObject({ kind: "heart", text: null, channel: "app", toRecipient: true });
+    expect((await exchangeRow(exchange.id))?.state).toBe("replied");
+    const [event] = await h.db.select().from(events).where(eq(events.name, "reply_posted"));
+    expect(event?.props).toEqual({ kind: "reaction", by: seed.organiser.id });
+  });
+
+  it("answers the heart already there for a second tap, with another key, and writes nothing", async () => {
+    const exchange = await answeredDay(0);
+    const first = await replyToApiExchange(h.deps, identity, "heart-a", exchange.id, {
+      reaction: "heart",
+    });
+    const again = await replyToApiExchange(h.deps, identity, "heart-b", exchange.id, {
+      reaction: "heart",
+    });
+
+    expect(again.response.status).toBe(200);
+    expect(again.response.body).toEqual(first.response.body);
+    expect(await replyRows()).toHaveLength(1);
+    expect(await h.db.select().from(events).where(eq(events.name, "reply_posted"))).toHaveLength(1);
+  });
+
+  it("keeps a heart and a laugh from one member, and a second text reply beside them", async () => {
+    const exchange = await answeredDay(0);
+    await replyToApiExchange(h.deps, identity, "r-heart", exchange.id, { reaction: "heart" });
+    await replyToApiExchange(h.deps, identity, "r-laugh", exchange.id, { reaction: "laugh" });
+    await reply(exchange.id, "Save me one");
+    await reply(exchange.id, "And one for Sam");
+
+    expect((await replyRows()).map((row) => row.kind)).toEqual(["heart", "laugh", "text", "text"]);
+  });
+
+  it("reads a reaction back to her in words the next morning", async () => {
+    const exchange = await answeredDay(0);
+    await replyToApiExchange(h.deps, identity, "hug", exchange.id, { reaction: "hug" });
+
+    const tomorrow = addDays(today(), 1);
+    h.clock.set(new Date(`${tomorrow}T08:00:00.000+08:00`));
+    await deliverArrival(h.deps, seed.member.id, tomorrow, false);
+
+    const [arrival] = await h.db
+      .select()
+      .from(outbound)
+      .where(eq(outbound.kind, "arrival" satisfies OutboundKind));
+    if (arrival === undefined) throw new Error("expected her arrival");
+    const text = (arrival.payload as { message: { text: string } }).message.text;
+    expect(text).toContain("Mia sent 🤗");
+  });
+
+  it("refuses her own reaction as it refuses her own words", async () => {
+    const exchange = await answeredDay(0);
+    const [herAccount] = await h.db
+      .insert(users)
+      .values({ authSubject: herIdentity.authSubject, displayName: "Mom" })
+      .returning();
+    if (herAccount === undefined) throw new Error("expected her account");
+    await h.db.update(members).set({ userId: herAccount.id }).where(eq(members.id, seed.member.id));
+
+    const error = await refused(
+      replyToApiExchange(h.deps, herIdentity, "her-heart", exchange.id, { reaction: "heart" }),
+    );
+    expect(error).toBeInstanceOf(ReplyRefusedError);
+    expect(await replyRows()).toEqual([]);
   });
 });

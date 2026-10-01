@@ -323,10 +323,14 @@ A phone can be told when it is `granted` and, for the quiet notice and its close
 | DELETE | /exchanges/:id | Withdraw before delivery only |
 | POST | /exchanges/:id/seen | Parent surface: she opened it |
 | POST | /exchanges/:id/answer | Parent surface: `{kind: voice|chip|photo_pick|vote|heart|text|fine, media_id?, payload?}` → lights the light synchronously, enqueues understanding |
-| POST | /exchanges/:id/replies | `{kind: heart|laugh|hug|text|voice|photo, text?, media_id?}` **Built** for words, see below |
+| POST | /exchanges/:id/replies | `{text}` or `{reaction: heart|laugh|hug}` **Built** for words and, since 1 October 2026, reactions (below); voice and photo replies are not built |
 | POST | /exchanges/:id/read-back | Parent surface: she heard yesterday's replies |
 | GET | /families/:id/suggestions?for=me | Replaced by Today's `tomorrow[].suggestion` and `suggestion_id` on compose (September 2026); see §1 "Tomorrow's suggestion" |
 | POST | /suggestions/:id/use | Replaced by Today's `tomorrow[].suggestion` and `suggestion_id` on compose (September 2026); see §1 "Tomorrow's suggestion" |
+
+### Reactions (1 October 2026, spec §6.1, A8)
+
+`POST /v1/exchanges/:exchangeId/replies` also takes `{"reaction": "heart" | "laugh" | "hug"}`: a `replies` row of that kind, no text, channel `app`, `to_recipient` true, under every rule a reply in words follows (her answer first, never her own, the exchange's lock, `reply_posted` with `kind` `reaction`). A member has at most one of each kind on an exchange (`replies_one_reaction_idx`): the first answers 201, and a second, with any key, answers 200 with the row already there and writes and records nothing. The read-back names reactions as Telegram's are named ("Mia sent 🤗"). The group's reaction sync (flows §3.11) makes a member's reactions in the group equal to the group's set and leaves rows of channel `app` alone: the group never removes a reaction given in the app, and a kind the app already gave is not added again. A kind the member gave in the group first is the group's row, and the group can still remove it. The receipt's fingerprint is `{exchange_id, reaction}`, so a key spent on a heart cannot be spent on words.
 
 ## 5. The light and the quiet ladder
 

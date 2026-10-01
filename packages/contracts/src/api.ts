@@ -12,6 +12,7 @@ import {
   PushKind,
   PushPermission,
   PushPlatform,
+  REACTION_KINDS,
   Region,
   ReplyKind,
   Role,
@@ -486,24 +487,27 @@ export const ApiExchangePage = z.object({
 export type ApiExchangePage = z.infer<typeof ApiExchangePage>;
 
 /**
- * A reply from the app (`POST /v1/exchanges/:exchangeId/replies`, spec §14.1 A8). Words only: a
- * heart, a laugh or a hug is the same row a Telegram reaction writes, and the Telegram path makes a
- * member's reactions equal to their platform set, so an app reaction would vanish the next time
- * that member reacted in the group.
+ * A reply from the app (`POST /v1/exchanges/:exchangeId/replies`, spec §14.1 A8): words, or a
+ * reaction (a heart, a laugh or a hug), which is the same row a Telegram reaction writes, one of
+ * each kind per member per exchange. The Telegram path makes a member's reactions in the group
+ * equal to the group's set, and leaves one given in the app alone (API contract §4, "Reactions").
  */
 export const MAX_REPLY_TEXT = 1_000;
 
-export const ComposeReply = z.strictObject({
-  text: z
-    .string()
-    .trim()
-    .min(1)
-    .max(MAX_REPLY_TEXT)
-    .refine(
-      (text) => text.isWellFormed() && !text.includes("\u0000"),
-      "a reply must be valid UTF8 text without NUL",
-    ),
-});
+export const ComposeReply = z.union([
+  z.strictObject({
+    text: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MAX_REPLY_TEXT)
+      .refine(
+        (text) => text.isWellFormed() && !text.includes("\u0000"),
+        "a reply must be valid UTF8 text without NUL",
+      ),
+  }),
+  z.strictObject({ reaction: z.enum(REACTION_KINDS) }),
+]);
 export type ComposeReply = z.infer<typeof ComposeReply>;
 
 export const ApiReply = z.object({
