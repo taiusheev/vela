@@ -2,6 +2,7 @@
   "expo": {
     "name": "Vela Light",
     "slug": "vela-light",
+    "owner": "velatwn",
     "scheme": "velalight",
     "version": "0.0.1",
     "orientation": "portrait",
@@ -34,6 +35,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a9647168-c915-4fff-8064-e25b0f075b1f"
+      }
     }
   }
 }
