@@ -1,3 +1,4 @@
+export { createDeviceAdapter, type DeviceAdapterOptions } from "./device/adapter.ts";
 export {
   createExpoPushClient,
   EXPO_PUSH_API_BASE_URL,

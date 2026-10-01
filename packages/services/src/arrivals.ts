@@ -77,6 +77,14 @@ import {
 /** The pilot's kept-light members and families are reached on Telegram. */
 export const ARRIVAL_CHANNEL: Channel = "telegram";
 
+/**
+ * The channel her mornings reach her on: her phone where an organiser set it up for the parent
+ * surface (ADR-35), else Telegram. The family group stays on `ARRIVAL_CHANNEL`.
+ */
+export function arrivalChannelOf(member: Pick<Member, "primarySurface">): Channel {
+  return member.primarySurface === "parent-surface" ? "device" : ARRIVAL_CHANNEL;
+}
+
 /** `OutboundMessage.media` allows at most ten items. */
 const MAX_MEDIA = 10;
 
@@ -341,9 +349,10 @@ async function loadArrivalContext(deps: Deps, exchangeId: string): Promise<Arriv
   if (exchange === undefined || member === null || family === null) {
     throw new VelaError("not_found", `exchange ${exchangeId} has no member or family`);
   }
-  const link = await channelLinkOfMember(deps.db, member.id, ARRIVAL_CHANNEL);
+  const channel = arrivalChannelOf(member);
+  const link = await channelLinkOfMember(deps.db, member.id, channel);
   if (link === null) {
-    throw new VelaError("no_channel_link", `member ${member.id} has no ${ARRIVAL_CHANNEL} link`);
+    throw new VelaError("no_channel_link", `member ${member.id} has no ${channel} link`);
   }
   return { member, family, link, exchange };
 }

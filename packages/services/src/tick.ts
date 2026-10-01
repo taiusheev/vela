@@ -50,7 +50,7 @@ import {
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import { postMissedAnswers } from "./answers.ts";
 import {
-  ARRIVAL_CHANNEL,
+  arrivalChannelOf,
   deliverArrival,
   prepareDay,
   sendRepeat,
@@ -223,7 +223,7 @@ export async function loadScheduleInput(
     .limit(1);
   // Her `blocked` event, or a send to her refused as blocked, marks the link; her `unblocked` event
   // clears it (flows §3.12, §5).
-  const link = await channelLinkOfMember(db, memberId, ARRIVAL_CHANNEL);
+  const link = await channelLinkOfMember(db, memberId, arrivalChannelOf(member));
   const reads = await db
     .select({ weekStart: weeklyReads.weekStart })
     .from(weeklyReads)

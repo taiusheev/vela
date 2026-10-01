@@ -25,7 +25,7 @@ import {
 } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { quietNobodyToldAlert } from "./admin-alerts.ts";
-import { ARRIVAL_CHANNEL } from "./arrivals.ts";
+import { arrivalChannelOf } from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
@@ -100,7 +100,7 @@ async function loadQuietContext(
   // Whether she blocked the bot after this morning reached her: the schedule holds such a morning
   // back (`blockedAt`), but her block can land after it decided. A morning delivered after the
   // block shows she had unblocked unheard, so that stale mark changes nothing.
-  const link = await channelLinkOfMember(tx, memberId, ARRIVAL_CHANNEL);
+  const link = await channelLinkOfMember(tx, memberId, arrivalChannelOf(member));
   const blockedSinceDelivery =
     link !== null &&
     link.blockedAt !== null &&

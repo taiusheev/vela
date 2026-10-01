@@ -10,7 +10,12 @@
  * The pilot Worker builds every port. The admin Worker builds only the ports the admin actions and
  * reads use (`AdminDeps`), from its own, smaller set of bindings.
  */
-import { createExpoPushClient, createLineAdapter, createTelegramAdapter } from "@vela/adapters";
+import {
+  createDeviceAdapter,
+  createExpoPushClient,
+  createLineAdapter,
+  createTelegramAdapter,
+} from "@vela/adapters";
 import { type Ai, createClaudeAi, createDeepgramStt, createOffAi } from "@vela/ai";
 import type { Channel, ChannelAdapter } from "@vela/contracts";
 import { connectDatabase, type VelaDatabase } from "@vela/db";
@@ -180,10 +185,15 @@ export function createChannels(env: PilotEnv): ChannelRegistry {
     botUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
   });
   let line: ChannelAdapter | null = null;
+  // Her phone on the parent surface (ADR-35): nothing to configure, nothing sent over a network.
+  const device = createDeviceAdapter();
   return {
     get(channel: Channel) {
       if (channel === "telegram") {
         return telegram;
+      }
+      if (channel === "device") {
+        return device;
       }
       if (channel === "line") {
         line ??= createLineChannel(env);

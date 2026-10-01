@@ -5,6 +5,8 @@
  * scheduler that remembers wakes, an in-memory media store, and a heartbeat that counts. One
  * harness per test file; `reset` empties the database and every recorder between tests.
  */
+
+import { createDeviceAdapter } from "@vela/adapters";
 import {
   type Ai,
   createFakeAi,
@@ -13,7 +15,7 @@ import {
   type Stt,
   type Transcription,
 } from "@vela/ai";
-import { LANGS, type Lang } from "@vela/contracts";
+import { type ChannelAdapter, LANGS, type Lang, type OutboundMessage } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
 import { createTestDatabase } from "@vela/db/testing";
 import type { Config, Deps, MediaJob, OutboundJob, UnderstandJob } from "../deps.ts";
@@ -70,6 +72,8 @@ export interface Harness {
   readonly logger: FakeLogger;
   readonly random: FakeRandom;
   readonly telegram: FakeTelegram;
+  /** Her phone on the parent surface (ADR-35): the real adapter, with what it was given. */
+  readonly device: { readonly sent: OutboundMessage[] };
   /** The push port; `deps.push` is null instead when the harness was made with `push: "off"`. */
   readonly push: FakePush;
   /** The current fake AI; a new one after each `reset`, so its call list starts empty. */
@@ -126,6 +130,15 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
   const logger = createFakeLogger();
   const random = createFakeRandom();
   const telegram = createFakeTelegram(clock);
+  const deviceSent: OutboundMessage[] = [];
+  const deviceAdapter = createDeviceAdapter();
+  const device: ChannelAdapter = {
+    ...deviceAdapter,
+    send: async (message) => {
+      deviceSent.push(message);
+      return deviceAdapter.send(message);
+    },
+  };
   const push = createFakePush();
   const scheduler = createFakeScheduler();
   const media = createFakeMediaStore();
@@ -154,6 +167,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     media,
     channels: {
       get: (channel) => {
+        if (channel === "device") return device;
         if (channel !== "telegram") {
           throw new Error(`the harness has no adapter for ${channel}`);
         }
@@ -223,6 +237,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     logger,
     random,
     telegram,
+    device: { sent: deviceSent },
     push,
     get ai() {
       return ai;
@@ -241,6 +256,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
       logger.clear();
       random.reset();
       telegram.reset();
+      deviceSent.length = 0;
       push.reset();
       scheduler.clear();
       media.clear();
