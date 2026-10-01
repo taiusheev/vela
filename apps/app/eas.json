@@ -6,8 +6,10 @@
   "build": {
     "staging": {
       "distribution": "internal",
-      "environment": "preview",
-      "env": { "EXPO_PUBLIC_API_URL": "https://vela.vela-light-staging.workers.dev" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://vela.vela-light-staging.workers.dev",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_aWRlYWwtdnVsdHVyZS05MjYyLmNsZXJrLmFjY291bnRzLmRldiQ"
+      },
       "android": { "buildType": "apk" }
     },
     "e2e": {
