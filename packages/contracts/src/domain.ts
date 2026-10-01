@@ -44,7 +44,7 @@ export const Surface = z.enum(SURFACES);
 export type Surface = z.infer<typeof Surface>;
 
 /** Transport a channel adapter implements. */
-export const CHANNELS = ["line", "whatsapp", "telegram", "voice", "app"] as const;
+export const CHANNELS = ["line", "whatsapp", "telegram", "voice", "app", "device"] as const;
 export const Channel = z.enum(CHANNELS);
 export type Channel = z.infer<typeof Channel>;
 

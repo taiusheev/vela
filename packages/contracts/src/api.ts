@@ -739,6 +739,35 @@ export const NEARBY_REFUSALS = ["full", "number"] as const;
 export const NearbyRefusal = z.enum(NEARBY_REFUSALS);
 export type NearbyRefusal = z.infer<typeof NearbyRefusal>;
 
+/**
+ * Her phone for the parent surface (ADR-35). Setting it up and removing it take no body: she is
+ * in the path. Setting up answers the token once, which her phone keeps and nothing else does.
+ */
+export const DeviceWrite = z.strictObject({});
+export type DeviceWrite = z.infer<typeof DeviceWrite>;
+
+export const ApiDeviceSetUp = z.object({
+  member_id: z.uuid(),
+  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+});
+export type ApiDeviceSetUp = z.infer<typeof ApiDeviceSetUp>;
+
+export const ApiDeviceRemoved = z.object({ member_id: z.uuid(), removed: z.literal(true) });
+export type ApiDeviceRemoved = z.infer<typeof ApiDeviceRemoved>;
+
+/**
+ * Who a device token is (`GET /v1/device`): what her phone needs to greet her and choose its
+ * language before anything else is read, and whether she has said yes yet (`invited` until then).
+ */
+export const ApiDeviceMember = z.object({
+  member_id: z.uuid(),
+  display_name: z.string(),
+  address_form: z.string(),
+  language: z.string(),
+  status: MemberStatus,
+});
+export type ApiDeviceMember = z.infer<typeof ApiDeviceMember>;
+
 export const StartTrial = z.strictObject({ member_id: z.uuid() });
 export type StartTrial = z.infer<typeof StartTrial>;
 

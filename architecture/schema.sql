@@ -77,7 +77,7 @@ CREATE TABLE "answers" (
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "answers_channel_external_id_key" UNIQUE("channel","external_id"),
 	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker', 'other')),
-	CONSTRAINT "answers_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
+	CONSTRAINT "answers_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device'))
 );
 
 CREATE TABLE "api_request_receipts" (
@@ -119,7 +119,7 @@ CREATE TABLE "channel_links" (
 	"blocked_at" timestamp with time zone,
 	"meta" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	CONSTRAINT "channel_links_channel_external_id_key" UNIQUE("channel","external_id"),
-	CONSTRAINT "channel_links_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
+	CONSTRAINT "channel_links_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device'))
 );
 
 CREATE TABLE "chips" (
@@ -170,7 +170,7 @@ CREATE TABLE "events" (
 	"surface" text,
 	"local_time" time,
 	"props" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'account_linked', 'invite_accepted', 'invite_created', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened'))
+	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'account_linked', 'invite_accepted', 'invite_created', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'device_set_up', 'device_removed', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened'))
 );
 
 CREATE TABLE "exchanges" (
@@ -231,7 +231,7 @@ CREATE TABLE "family_channels" (
 	"linked_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"unlinked_at" timestamp with time zone,
 	"linked_text_sha256" text NOT NULL,
-	CONSTRAINT "family_channels_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
+	CONSTRAINT "family_channels_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device')),
 	CONSTRAINT "family_channels_kind_check" CHECK ("kind" in ('private', 'group'))
 );
 
@@ -275,7 +275,7 @@ CREATE TABLE "media" (
 	"expires_at" timestamp with time zone,
 	CONSTRAINT "media_storage_key_key" UNIQUE("storage_key"),
 	CONSTRAINT "media_kind_check" CHECK ("kind" in ('audio', 'image')),
-	CONSTRAINT "media_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
+	CONSTRAINT "media_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device')),
 	CONSTRAINT "media_provider_unique_id_channel_check" CHECK ("provider_unique_id" is null or "channel" is not null),
 	CONSTRAINT "media_storage_key_or_provider_file_id_check" CHECK ("storage_key" is not null or "provider_file_id" is not null)
 );
@@ -340,7 +340,7 @@ CREATE TABLE "message_refs" (
 	"purpose" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "message_refs_pkey" PRIMARY KEY("channel","conversation_id","message_id"),
-	CONSTRAINT "message_refs_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
+	CONSTRAINT "message_refs_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device')),
 	CONSTRAINT "message_refs_purpose_check" CHECK ("purpose" in ('arrival', 'repeat', 'turn_prompt', 'answer_post', 'quiet_notice', 'consent', 'ask_confirmation'))
 );
 
@@ -387,7 +387,7 @@ CREATE TABLE "onboarding_sessions" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "onboarding_sessions_pkey" PRIMARY KEY("channel","conversation_id"),
-	CONSTRAINT "onboarding_sessions_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
+	CONSTRAINT "onboarding_sessions_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device'))
 );
 
 CREATE TABLE "outbound" (
@@ -410,7 +410,7 @@ CREATE TABLE "outbound" (
 	"effects_at" timestamp with time zone,
 	CONSTRAINT "outbound_idempotency_key_key" UNIQUE("idempotency_key"),
 	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')),
-	CONSTRAINT "outbound_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app')),
+	CONSTRAINT "outbound_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device')),
 	CONSTRAINT "outbound_status_check" CHECK ("status" in ('queued', 'sent', 'failed', 'dropped')),
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
 );
@@ -498,7 +498,7 @@ CREATE TABLE "replies" (
 	"read_back_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "replies_kind_check" CHECK ("kind" in ('heart', 'laugh', 'hug', 'text', 'voice', 'photo')),
-	CONSTRAINT "replies_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app'))
+	CONSTRAINT "replies_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device'))
 );
 
 CREATE TABLE "stories" (

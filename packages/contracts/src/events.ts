@@ -22,6 +22,9 @@ export const EVENT_NAMES = [
   "member_left_group",
   "member_marked_deceased",
   "family_deletion_requested",
+  /** Her phone was set up for the parent surface by an organiser, or taken off it (ADR-35). */
+  "device_set_up",
+  "device_removed",
   // the exchange
   "ask_composed",
   "ask_withdrawn",

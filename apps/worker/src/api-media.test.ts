@@ -115,6 +115,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>(unused("the weekly read")),
+    memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>(unused("a device")),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -138,6 +139,8 @@ function fixture(options: FixtureOptions = {}) {
       pauseApiMember: vi.fn<Writes["services"]["pauseApiMember"]>(unused("pause")),
       leaveApiFamily: vi.fn<Writes["services"]["leaveApiFamily"]>(unused("leave")),
       startApiTrial: vi.fn<Writes["services"]["startApiTrial"]>(unused("trial")),
+      setUpApiDevice: vi.fn<Writes["services"]["setUpApiDevice"]>(unused("a device set-up")),
+      removeApiDevice: vi.fn<Writes["services"]["removeApiDevice"]>(unused("a device removal")),
       addApiNearby: vi.fn<Writes["services"]["addApiNearby"]>(unused("nearby")),
       removeApiNearby: vi.fn<Writes["services"]["removeApiNearby"]>(unused("nearby removal")),
       uploadApiMedia: vi

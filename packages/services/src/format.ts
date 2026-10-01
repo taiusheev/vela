@@ -165,6 +165,7 @@ const CHANNEL_LABELS: Readonly<Record<Channel, string>> = {
   whatsapp: "WhatsApp",
   voice: "Voice",
   app: "Vela",
+  device: "Vela",
 };
 
 /** `{channel}` in `delivery.failed`: the platform's own name, the same in every language. */

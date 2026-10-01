@@ -389,6 +389,14 @@ A phone can be told when it is `granted` and, for the quiet notice and its close
 
 `POST /v1/nearby/:contactId/remove` with `{}` removes one as the admin page does: their consent rows are forgotten, the row deleted, and a deletion proof kept (`reason` `app remove_nearby`); event `nearby_contact_removed` (`by` `organiser`). It answers `ApiNearbyRemoved` (`id`, `removed` true). Organisers of her family only; anyone else, and a contact already gone, are 404, since nothing is left to say whose family it was; a retry with the same key replays. Operation `nearby.remove:v1`.
 
+### Her phone for the parent surface (1 October 2026, ADR-35, phase 1)
+
+`POST /v1/families/:familyId/members/:memberId/device` with `{}`, by an organiser signed in on her phone, sets it up: a new 43-character token, of which only the SHA-256 is kept, on a `channel_links` row of channel `device`; any earlier phone of hers stops working; her `primary_surface` becomes `parent-surface`; event `device_set_up`. It answers 201 `ApiDeviceSetUp` (`member_id`, `token`), once. It is the one write that is **not** kept in a receipt (`runApiMutation`), because a receipt keeps its response to replay it and this response is a credential: the `Idempotency-Key` is required as on every write and is not used, and a retry after a lost answer sets the phone up again with a new token that voids the lost one. Her member row is locked first, so two organisers at once leave one phone, the second's (`api-device-race.test.ts`). Organisers only (403 for anyone else in the family); a member who is not a kept-light member of the family who has not left, invited or not, is 404. Without `writes.devices` the route answers 404.
+
+`POST …/device/remove` with `{}` removes it through `runApiMutation` (operation `device.remove:v1`): the link goes, so the token stops working at once, and `primary_surface` goes back to `telegram` where she has a Telegram link, else `app`; event `device_removed`, only when there was a phone. It answers `ApiDeviceRemoved`.
+
+`GET /v1/device` with `Authorization: Device <token>` answers `ApiDeviceMember` (`member_id`, `display_name`, `address_form`, `language`, `status`): who her phone is, before anything else is read. A token that is not 43 characters of base64url, is unknown, was replaced or removed, or is hers after she left, and a request with a Bearer session or with no `Authorization`, are 401 alike. Her other routes (her morning, her answers, her consent) come with phase 3.
+
 ## 8. Media
 
 | Method | Path | Purpose |

@@ -15,7 +15,7 @@ import type {
   ApiTrial,
   MemberLight,
 } from "@vela/contracts";
-import type { VelaDatabase } from "@vela/db";
+import type { Member, VelaDatabase } from "@vela/db";
 import {
   AlreadyOrganiserError,
   ApiIdempotencyError,
@@ -218,6 +218,7 @@ const PUSH_DEVICE: ApiPushDevice = {
 };
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
 const CONTACT_ID = "44444444-4444-7444-8444-444444444444";
+const DEVICE_TOKEN = "d".repeat(43);
 const NEARBY_CONTACT = {
   id: CONTACT_ID,
   near_member_id: MEMBER_ID,
@@ -255,6 +256,7 @@ function fixture(enableWrites = false, push?: boolean) {
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
+    memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>().mockResolvedValue(null),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -293,6 +295,15 @@ function fixture(enableWrites = false, push?: boolean) {
       pauseApiMember: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["pauseApiMember"]>()
         .mockResolvedValue({ response: { status: 200, body: PAUSED }, replayed: false }),
+      setUpApiDevice: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["setUpApiDevice"]>()
+        .mockResolvedValue({ member_id: MEMBER_ID, token: DEVICE_TOKEN }),
+      removeApiDevice: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["removeApiDevice"]>()
+        .mockResolvedValue({
+          response: { status: 200, body: { member_id: MEMBER_ID, removed: true } },
+          replayed: false,
+        }),
       startApiTrial: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["startApiTrial"]>()
         .mockResolvedValue({ response: { status: 200, body: TRIAL }, replayed: false }),
@@ -341,6 +352,7 @@ function fixture(enableWrites = false, push?: boolean) {
       deliver: vi.fn<(id: string) => Promise<void>>().mockResolvedValue(undefined),
       wake: vi.fn<(id: string, at: Date) => Promise<void>>().mockResolvedValue(undefined),
     },
+    devices: { random: { token: () => DEVICE_TOKEN } },
     families: {
       random: { token: () => "fixture-token" },
       config: { telegramBotUsername: "VelaTestBot", regions: ["apac"] as const },
@@ -2172,6 +2184,95 @@ describe("pausing and leaving", () => {
       404,
       NOT_FOUND,
     );
+  });
+});
+
+describe("her phone for the parent surface", () => {
+  const SET_UP_PATH = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/device`;
+  const good = { authorization: "Bearer good" };
+  const her = {
+    id: MEMBER_ID,
+    displayName: "Mom",
+    addressForm: "Mrs Chen",
+    language: "zh-TW",
+    status: "invited",
+  } as unknown as Member;
+
+  it("sets her phone up through the organiser guard and answers the token once, uncached", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(writeRequest("POST", SET_UP_PATH, "{}", good));
+    expect(response.status).toBe(201);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({ member_id: MEMBER_ID, token: DEVICE_TOKEN });
+    expect(f.services.authorizeFamilyAccess).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      "organiser",
+    );
+    expect(f.writes.services.setUpApiDevice).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: f.writes.clock, random: f.writes.devices.random },
+      IDENTITY,
+      FAMILY_ID,
+      MEMBER_ID,
+    );
+  });
+
+  it("answers 403 to someone who does not organise, before anything is set up", async () => {
+    const f = fixture(true);
+    f.services.authorizeFamilyAccess.mockResolvedValue({ kind: "forbidden" });
+    expect((await f.app.request(writeRequest("POST", SET_UP_PATH, "{}", good))).status).toBe(403);
+    expect(f.writes.services.setUpApiDevice).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 when the service finds no kept-light member of hers", async () => {
+    const f = fixture(true);
+    f.writes.services.setUpApiDevice.mockRejectedValue(new VelaError("not_found", "Not found"));
+    expect((await f.app.request(writeRequest("POST", SET_UP_PATH, "{}", good))).status).toBe(404);
+  });
+
+  it("removes her phone and answers that it is removed", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(writeRequest("POST", `${SET_UP_PATH}/remove`, "{}", good));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ member_id: MEMBER_ID, removed: true });
+  });
+
+  it("is not there without the write capability", async () => {
+    const { app } = fixture();
+    expect((await app.request(writeRequest("POST", SET_UP_PATH, "{}", good))).status).toBe(404);
+  });
+
+  it("tells her phone who she is, by its token alone", async () => {
+    const f = fixture();
+    f.services.memberOfDeviceToken.mockResolvedValue(her);
+    const response = await f.app.request("/v1/device", {
+      headers: { authorization: `Device ${DEVICE_TOKEN}` },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      member_id: MEMBER_ID,
+      display_name: "Mom",
+      address_form: "Mrs Chen",
+      language: "zh-TW",
+      status: "invited",
+    });
+    expect(f.services.memberOfDeviceToken).toHaveBeenCalledWith(expect.anything(), DEVICE_TOKEN);
+  });
+
+  it("answers 401 to a token it does not know, a session's Bearer, and no token", async () => {
+    const f = fixture();
+    const asked = async (authorization?: string) =>
+      (
+        await f.app.request(
+          "/v1/device",
+          authorization === undefined ? {} : { headers: { authorization } },
+        )
+      ).status;
+    expect(await asked(`Device ${DEVICE_TOKEN}`)).toBe(401);
+    expect(await asked("Bearer good")).toBe(401);
+    expect(await asked()).toBe(401);
+    expect(await asked("Device short")).toBe(401);
   });
 });
 

@@ -4,6 +4,9 @@ import {
   ApiAccountProfile,
   ApiComposedAsk,
   ApiCreatedFamily,
+  ApiDeviceMember,
+  ApiDeviceRemoved,
+  ApiDeviceSetUp,
   type ApiErrorBody,
   ApiExchangePage,
   ApiFamily,
@@ -27,6 +30,7 @@ import {
   ComposeAsk,
   ComposeReply,
   CreateFamily,
+  DeviceWrite,
   LeaveFamily,
   type MediaUnavailableReason,
   MemberLight,
@@ -37,7 +41,7 @@ import {
   RemovePushDevice,
   StartTrial,
 } from "@vela/contracts";
-import type { VelaDatabase } from "@vela/db";
+import type { Member, VelaDatabase } from "@vela/db";
 import {
   AlreadyOrganiserError,
   type ApiFamilyDeps,
@@ -65,6 +69,7 @@ import {
   MediaRefusedError,
   type MediaStore,
   MemberChangeRefusedError,
+  type memberOfDeviceToken,
   NearbyRefusedError,
   type pauseApiMember,
   type provisionApiAccount,
@@ -72,11 +77,13 @@ import {
   ReplyRefusedError,
   type readApiMedia,
   type registerApiPushDevice,
+  type removeApiDevice,
   type removeApiNearby,
   type removeApiPushDevice,
   type replyToApiExchange,
   type resolveApiQuiet,
   runAfterCommit,
+  type setUpApiDevice,
   type startApiTrial,
   TrialRefusedError,
   type updateApiAccount,
@@ -112,6 +119,7 @@ export interface ApiReadServices {
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
   loadApiWeeklyRead: typeof loadApiWeeklyRead;
+  memberOfDeviceToken: typeof memberOfDeviceToken;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
   readApiMedia: typeof readApiMedia;
 }
@@ -127,6 +135,8 @@ export interface ApiWriteServices {
   leaveApiFamily: typeof leaveApiFamily;
   startApiTrial: typeof startApiTrial;
   addApiNearby: typeof addApiNearby;
+  setUpApiDevice: typeof setUpApiDevice;
+  removeApiDevice: typeof removeApiDevice;
   removeApiNearby: typeof removeApiNearby;
   uploadApiMedia: typeof uploadApiMedia;
   registerApiPushDevice: typeof registerApiPushDevice;
@@ -149,6 +159,11 @@ export interface ApiRuntime {
      * it `POST /v1/families` answers 404, as every write does without `writes`.
      */
     families?: Pick<ApiFamilyDeps, "random" | "config">;
+    /**
+     * Setting her phone up for the parent surface (ADR-35): the token source. Without it the device
+     * routes answer 404.
+     */
+    devices?: { random: Random };
     /**
      * What a committed write left behind — rows to hand to the queue, members to wake — is carried out
      * through these. Without them nothing is lost: `reconcile` re-drives the rows and ticks the members.
@@ -181,12 +196,16 @@ interface RuntimeEnv {
     db: VelaDatabase;
     writeKey: string;
     writeInput: unknown;
+    /** Her, on her own routes, as her phone's token names her (ADR-35). */
+    deviceMember: Member;
   };
 }
 
 const NOT_FOUND: ApiErrorBody = {
   error: { code: "not_found", message: "Not found." },
 };
+/** `Authorization: Device <token>`: her phone's 43-character token (ADR-35). */
+const DEVICE_AUTHORIZATION = /^Device ([A-Za-z0-9_-]{43})$/;
 /** A media id as the read route takes one: a uuid, checked before any query. */
 const MEDIA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** An installation id as the device routes take one: a uuid, checked before the body is read. */
@@ -465,6 +484,31 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     }
     await next();
     return c.res;
+  });
+
+  // Her phone's routes (ADR-35): no Clerk session, her device token instead, which names her.
+  const authenticateDevice: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
+    const presented = DEVICE_AUTHORIZATION.exec(c.req.header("Authorization") ?? "");
+    const member =
+      presented === null
+        ? null
+        : await runtime.services.memberOfDeviceToken(c.get("db"), presented[1] ?? "");
+    if (member === null) return c.json(UNAUTHENTICATED, 401);
+    c.set("deviceMember", member);
+    await next();
+    return c.res;
+  };
+  app.get("/v1/device", withDatabase, authenticateDevice, (c) => {
+    const her = c.get("deviceMember");
+    return c.json(
+      ApiDeviceMember.parse({
+        member_id: her.id,
+        display_name: her.displayName,
+        address_form: her.addressForm ?? her.displayName,
+        language: her.language,
+        status: her.status,
+      }),
+    );
   });
 
   app.get("/v1/me", authenticate, withDatabase, async (c) => {
@@ -756,6 +800,60 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         return c.json(trial, 200);
       },
     );
+    // Her phone for the parent surface (ADR-35), set up by an organiser signed in on it. The answer
+    // is a credential, so it is never kept in a receipt and never replayed: a retry sets up anew.
+    const devices = writes.devices;
+    if (devices) {
+      app.post(
+        "/v1/families/:familyId/members/:memberId/device",
+        authenticate,
+        validateWrite(DeviceWrite, runtime.logger),
+        checkActivity,
+        withDatabase,
+        (c, next) =>
+          createFamilyAuthorization<RuntimeEnv>(
+            (identity, familyId, requiredRole) =>
+              runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+            "organiser",
+          )(c, next),
+        async (c) => {
+          const set = await writes.services.setUpApiDevice(
+            { db: c.get("db"), clock: writes.clock, random: devices.random },
+            c.get("session"),
+            c.req.param("familyId"),
+            c.req.param("memberId"),
+          );
+          return c.json(ApiDeviceSetUp.parse(set), 201);
+        },
+      );
+      app.post(
+        "/v1/families/:familyId/members/:memberId/device/remove",
+        authenticate,
+        validateWrite(DeviceWrite, runtime.logger),
+        checkActivity,
+        withDatabase,
+        (c, next) =>
+          createFamilyAuthorization<RuntimeEnv>(
+            (identity, familyId, requiredRole) =>
+              runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+            "organiser",
+          )(c, next),
+        async (c) => {
+          const result = await writes.services.removeApiDevice(
+            { db: c.get("db"), clock: writes.clock },
+            c.get("session"),
+            c.get("writeKey"),
+            c.req.param("familyId"),
+            c.req.param("memberId"),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+            throw new Error("Invalid API mutation response");
+          }
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(ApiDeviceRemoved.parse(result.response.body), 200);
+        },
+      );
+    }
     // Someone nearby her (spec A3), by name and relation; nobody is contacted (API contract
     // § "People nearby"). Organisers only, which the service decides inside its transaction.
     app.post(
