@@ -6,7 +6,7 @@ not on the screen. Build plan 3.9.
 
 ## `demo/`: the example family, no account
 
-`today`, `ask`, `reply`, `quiet-notice`, `sunday` and `nearby` walk the app built with no API and no sign-in, the demo
+`today`, `ask`, `reply`, `quiet-notice`, `sunday`, `nearby` and `parent` walk the app built with no API and no sign-in, the demo
 that shows an example family's day. The quiet notice is reached through `/?example=quiet`,
 which only the demo answers. They run in Chrome on every push (CI job `app-flows`) and need nothing
 secret. On this machine, with the demo served on port 8082 (`vela-app-demo` in the launch

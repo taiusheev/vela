@@ -4,6 +4,9 @@ import type {
   ApiAskConflict,
   ApiComposedAsk,
   ApiCreatedFamily,
+  ApiDeviceMember,
+  ApiDeviceMessages,
+  ApiDeviceSetUp,
   ApiExchangePage,
   ApiFamily,
   ApiLeft,
@@ -253,6 +256,60 @@ export function removeNearby(
 export function nearbyRefusal(error: unknown): "full" | "number" | null {
   const reason = refusalReason(error);
   return reason === "full" || reason === "number" ? reason : null;
+}
+
+/**
+ * "Set up this phone for Mom" (ADR-35): an organiser, signed in on her phone, makes it hers. The
+ * token it answers is kept on this phone alone (`src/device/token.ts`).
+ */
+export function setUpDevice(
+  familyId: string,
+  memberId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiDeviceSetUp> {
+  return call<ApiDeviceSetUp>({
+    path: `/v1/families/${familyId}/members/${memberId}/device`,
+    token,
+    key,
+    body: {},
+  });
+}
+
+/** Her phone's own requests carry its device token, never a session. */
+async function deviceCall<T>(path: string, deviceToken: string, body?: unknown): Promise<T> {
+  if (!apiConfigured() || apiBaseUrl === undefined) {
+    throw new Error("The API is not configured");
+  }
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: body === undefined ? "GET" : "POST",
+    headers: {
+      accept: "application/json",
+      authorization: `Device ${deviceToken}`,
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  if (!response.ok) throw new ApiError(response.status, "device", undefined);
+  return (await response.json()) as T;
+}
+
+/** Who this phone is for, by its token: a 401 means it was set up again elsewhere or removed. */
+export function fetchDeviceMember(deviceToken: string): Promise<ApiDeviceMember> {
+  return deviceCall<ApiDeviceMember>("/v1/device", deviceToken);
+}
+
+/** What Vela sent her phone, newest first. */
+export function fetchDeviceMessages(deviceToken: string): Promise<ApiDeviceMessages> {
+  return deviceCall<ApiDeviceMessages>("/v1/device/messages", deviceToken);
+}
+
+/** Her tap under a message, or her own words; the pilot Worker hands them to the router. */
+export function sendDeviceMessage(
+  deviceToken: string,
+  input: { button: string; message_id: string } | { text: string },
+): Promise<{ ok: true }> {
+  return deviceCall<{ ok: true }>("/device/messages", deviceToken, input);
 }
 
 /** Whether creating a family was refused because this account already runs one. */

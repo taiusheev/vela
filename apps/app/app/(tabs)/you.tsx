@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAccount } from "../../src/auth/clerk.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { LocaleChips } from "../../src/components/locale-chips.tsx";
+import { SetUpPhone } from "../../src/components/set-up-phone.tsx";
 import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import {
   momentLine,
@@ -218,6 +219,19 @@ export default function YouScreen() {
           )}
         </Card>
       </View>
+
+      {family.me.organiser && family.keptLight[0] !== undefined ? (
+        <View style={{ gap: space.m }}>
+          <Eyebrow>
+            <Trans>Her phone</Trans>
+          </Eyebrow>
+          <SetUpPhone
+            familyId={family.familyId}
+            memberId={family.keptLight[0].memberId}
+            name={family.keptLight[0].name}
+          />
+        </View>
+      ) : null}
 
       <View style={{ gap: space.m }}>
         <Eyebrow>

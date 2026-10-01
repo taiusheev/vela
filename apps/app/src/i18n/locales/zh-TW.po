@@ -166,6 +166,10 @@ msgstr "{recipient}看過了 · {time}"
 msgid "{words} · shown to her in {language}"
 msgstr "{words} · 這位家人看到的{language}版本"
 
+#: src/device/useParent.ts
+msgid "❤️ I'm fine"
+msgstr "❤️ 我很好"
+
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "每年 79 美元"
@@ -417,6 +421,10 @@ msgstr "德國"
 msgid "Go to Today"
 msgstr "前往「今天」"
 
+#: src/device/useParent.ts
+msgid "Good morning, Mom. Mia asks: what did you have for breakfast?"
+msgstr "媽媽早安。Mia 想問：您早餐吃了什麼？"
+
 #: src/components/quiet-notice.tsx
 #: src/data/family.ts
 msgid "Has not said yes yet"
@@ -453,6 +461,10 @@ msgstr "早安訊息會在 {time} 送到，也就是起床後半小時。"
 #: app/onboarding.tsx
 msgid "Her name, as the family calls her."
 msgstr "家裡平常怎麼稱呼這位家人。"
+
+#: app/(tabs)/you.tsx
+msgid "Her phone"
+msgstr "長輩的手機"
 
 #: src/components/nearby-editor.tsx
 msgid "How they know {name}, like neighbour"
@@ -572,6 +584,7 @@ msgstr "正在載入家人的問答…"
 #: src/data/family.ts
 #: src/data/today.ts
 #: src/data/weekly.ts
+#: src/device/useParent.ts
 msgid "Mom"
 msgstr "媽媽"
 
@@ -645,6 +658,7 @@ msgstr "還沒有附近的聯絡人"
 
 #: app/ask.tsx
 #: app/vela-light.tsx
+#: src/components/set-up-phone.tsx
 msgid "Not now"
 msgstr "先不要"
 
@@ -659,6 +673,10 @@ msgstr "試辦期間不收任何費用，也不需要提供信用卡。"
 #: app/onboarding.tsx
 msgid "Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her."
 msgstr "在這位家人同意之前，不會傳送任何訊息。請把下面這段話傳給這位家人；連結會說明 Vela 是什麼，並詢問是否同意。"
+
+#: app/parent.tsx
+msgid "Nothing yet today. Your morning message will be here."
+msgstr "今天還沒有訊息。早上的訊息會出現在這裡。"
 
 #: app/exchange/[id].tsx
 msgid "Nothing yet."
@@ -717,6 +735,10 @@ msgstr "週六媽媽比平常晚回覆，是在去完市場之後。"
 msgid "One moment a day"
 msgstr "一天一次"
 
+#: app/parent.tsx
+msgid "One moment…"
+msgstr "請稍等…"
+
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
@@ -729,6 +751,10 @@ msgstr "選項 {number}"
 #: app/vela-light.tsx
 msgid "or $9.99 a month · a second person +50%"
 msgstr "或每月 9.99 美元 · 第二位 +50%"
+
+#: app/parent.tsx
+msgid "Or say it in your own words"
+msgstr "或用您自己的話說"
 
 #: app/onboarding.tsx
 msgid "Or write your own"
@@ -827,6 +853,10 @@ msgstr "休息中"
 msgid "Resume"
 msgstr "恢復"
 
+#: src/device/useParent.ts
+msgid "Rice porridge"
+msgstr "稀飯"
+
 #. the name of a language
 #: src/data/ask.ts
 msgid "Russian"
@@ -862,6 +892,7 @@ msgid "See Vela Light"
 msgstr "看看 Vela Light"
 
 #: app/exchange/[id].tsx
+#: app/parent.tsx
 msgid "Send"
 msgstr "傳送"
 
@@ -875,6 +906,7 @@ msgstr "傳驗證碼給我"
 
 #: app/ask.tsx
 #: app/exchange/[id].tsx
+#: app/parent.tsx
 #: app/sign-in.tsx
 msgid "Sending…"
 msgstr "傳送中…"
@@ -895,11 +927,20 @@ msgstr "傳了一張貼圖"
 msgid "sent a voice message"
 msgstr "傳了一則語音訊息"
 
+#: src/components/set-up-phone.tsx
+msgid "Set it up"
+msgstr "開始設定"
+
+#: src/components/set-up-phone.tsx
+msgid "Set up this phone for {name}"
+msgstr "把這支手機設定給{name}"
+
 #: app/(tabs)/index.tsx
 msgid "Setting up your family…"
 msgstr "正在設定您的家庭…"
 
 #: app/onboarding.tsx
+#: src/components/set-up-phone.tsx
 msgid "Setting up…"
 msgstr "設定中…"
 
@@ -954,6 +995,10 @@ msgstr "顯示原文"
 #: app/(tabs)/exchanges.tsx
 msgid "Show translations"
 msgstr "顯示翻譯"
+
+#: app/parent.tsx
+msgid "Sign in as family"
+msgstr "以家人身分登入"
 
 #: app/(tabs)/you.tsx
 msgid "Sign out"
@@ -1017,6 +1062,10 @@ msgstr "台灣"
 msgid "tapped an answer"
 msgstr "選了一個回答"
 
+#: src/device/useParent.ts
+msgid "Thank you. Mia knows you're fine."
+msgstr "謝謝您。Mia 知道您一切都好。"
+
 #: app/sign-in.tsx
 msgid "That account cannot receive a code yet."
 msgstr "這個帳號目前還無法接收驗證碼。"
@@ -1043,8 +1092,10 @@ msgstr "目前無法傳送。您寫的內容都還在。"
 
 #: app/(tabs)/you.tsx
 #: app/vela-light.tsx
+#: src/components/set-up-phone.tsx
 #: src/data/useFamily.ts
 #: src/data/useNearby.ts
+#: src/device/useParent.ts
 msgid "That did not go through. Try again in a moment."
 msgstr "沒有成功。請稍後再試一次。"
 
@@ -1161,9 +1212,17 @@ msgstr "這是您自己的早安訊息；回覆是給家人的。"
 msgid "This phone"
 msgstr "這支手機"
 
+#: src/components/set-up-phone.tsx
+msgid "This phone becomes {name}'s: large words, one message at a time, her answers with a tap or in her own words. You are signed out of it, and she needs no account."
+msgstr "這支手機會變成{name}專用：字很大，一次只有一則訊息，點一下或用自己的話就能回覆。您會從這支手機登出，{name}不需要任何帳號。"
+
 #: src/data/notifications.ts
 msgid "This phone could not be set up for notifications just now. It tries again the next time you open the app."
 msgstr "目前無法為這支手機設定通知。下次開啟 App 時會再試一次。"
+
+#: app/parent.tsx
+msgid "This phone is not set up for Vela any more. Ask your family to set it up again."
+msgstr "這支手機已經不再設定給 Vela 了。請家人重新設定。"
 
 #: src/components/photo-slots.tsx
 msgid "This photo could not be used. Choose another."
@@ -1173,6 +1232,10 @@ msgstr "這張照片無法使用，請換一張。"
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
 msgstr "那些就是您留下來的種子種出來的"
+
+#: src/device/useParent.ts
+msgid "Toast and tea"
+msgstr "吐司配茶"
 
 #: src/data/exchanges.ts
 msgid "Today"
@@ -1451,6 +1514,10 @@ msgstr "誰住在{name}附近？"
 #: app/(tabs)/you.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 msgstr "您的燈亮著時，家人也會看到您每天早上有沒有回覆、幾點回覆；如果一直很安靜，家人也會收到通知。"
+
+#: src/components/set-up-phone.tsx
+msgid "Yes, this is {name}'s phone"
+msgstr "是的，這是{name}的手機"
 
 #: src/data/exchanges.ts
 msgid "Yesterday"

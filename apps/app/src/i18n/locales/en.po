@@ -159,6 +159,10 @@ msgstr "{recipient} saw it · {time}"
 msgid "{words} · shown to her in {language}"
 msgstr "{words} · shown to her in {language}"
 
+#: src/device/useParent.ts
+msgid "❤️ I'm fine"
+msgstr "❤️ I'm fine"
+
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "$79 a year"
@@ -410,6 +414,10 @@ msgstr "Germany"
 msgid "Go to Today"
 msgstr "Go to Today"
 
+#: src/device/useParent.ts
+msgid "Good morning, Mom. Mia asks: what did you have for breakfast?"
+msgstr "Good morning, Mom. Mia asks: what did you have for breakfast?"
+
 #: src/components/quiet-notice.tsx
 #: src/data/family.ts
 msgid "Has not said yes yet"
@@ -446,6 +454,10 @@ msgstr "Her morning comes at {time}, half an hour after she wakes."
 #: app/onboarding.tsx
 msgid "Her name, as the family calls her."
 msgstr "Her name, as the family calls her."
+
+#: app/(tabs)/you.tsx
+msgid "Her phone"
+msgstr "Her phone"
 
 #: src/components/nearby-editor.tsx
 msgid "How they know {name}, like neighbour"
@@ -565,6 +577,7 @@ msgstr "Looking for your family's days…"
 #: src/data/family.ts
 #: src/data/today.ts
 #: src/data/weekly.ts
+#: src/device/useParent.ts
 msgid "Mom"
 msgstr "Mom"
 
@@ -638,6 +651,7 @@ msgstr "Nobody nearby yet"
 
 #: app/ask.tsx
 #: app/vela-light.tsx
+#: src/components/set-up-phone.tsx
 msgid "Not now"
 msgstr "Not now"
 
@@ -652,6 +666,10 @@ msgstr "Nothing is charged during the pilot, and no card is asked for."
 #: app/onboarding.tsx
 msgid "Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her."
 msgstr "Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her."
+
+#: app/parent.tsx
+msgid "Nothing yet today. Your morning message will be here."
+msgstr "Nothing yet today. Your morning message will be here."
 
 #: app/exchange/[id].tsx
 msgid "Nothing yet."
@@ -710,6 +728,10 @@ msgstr "On Saturday she answered later than usual, after the market."
 msgid "One moment a day"
 msgstr "One moment a day"
 
+#: app/parent.tsx
+msgid "One moment…"
+msgstr "One moment…"
+
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
@@ -722,6 +744,10 @@ msgstr "Option {number}"
 #: app/vela-light.tsx
 msgid "or $9.99 a month · a second person +50%"
 msgstr "or $9.99 a month · a second person +50%"
+
+#: app/parent.tsx
+msgid "Or say it in your own words"
+msgstr "Or say it in your own words"
 
 #: app/onboarding.tsx
 msgid "Or write your own"
@@ -820,6 +846,10 @@ msgstr "resting"
 msgid "Resume"
 msgstr "Resume"
 
+#: src/device/useParent.ts
+msgid "Rice porridge"
+msgstr "Rice porridge"
+
 #. the name of a language
 #: src/data/ask.ts
 msgid "Russian"
@@ -855,6 +885,7 @@ msgid "See Vela Light"
 msgstr "See Vela Light"
 
 #: app/exchange/[id].tsx
+#: app/parent.tsx
 msgid "Send"
 msgstr "Send"
 
@@ -868,6 +899,7 @@ msgstr "Send me a code"
 
 #: app/ask.tsx
 #: app/exchange/[id].tsx
+#: app/parent.tsx
 #: app/sign-in.tsx
 msgid "Sending…"
 msgstr "Sending…"
@@ -888,11 +920,20 @@ msgstr "sent a sticker"
 msgid "sent a voice message"
 msgstr "sent a voice message"
 
+#: src/components/set-up-phone.tsx
+msgid "Set it up"
+msgstr "Set it up"
+
+#: src/components/set-up-phone.tsx
+msgid "Set up this phone for {name}"
+msgstr "Set up this phone for {name}"
+
 #: app/(tabs)/index.tsx
 msgid "Setting up your family…"
 msgstr "Setting up your family…"
 
 #: app/onboarding.tsx
+#: src/components/set-up-phone.tsx
 msgid "Setting up…"
 msgstr "Setting up…"
 
@@ -947,6 +988,10 @@ msgstr "Show originals"
 #: app/(tabs)/exchanges.tsx
 msgid "Show translations"
 msgstr "Show translations"
+
+#: app/parent.tsx
+msgid "Sign in as family"
+msgstr "Sign in as family"
 
 #: app/(tabs)/you.tsx
 msgid "Sign out"
@@ -1010,6 +1055,10 @@ msgstr "Taiwan"
 msgid "tapped an answer"
 msgstr "tapped an answer"
 
+#: src/device/useParent.ts
+msgid "Thank you. Mia knows you're fine."
+msgstr "Thank you. Mia knows you're fine."
+
 #: app/sign-in.tsx
 msgid "That account cannot receive a code yet."
 msgstr "That account cannot receive a code yet."
@@ -1036,8 +1085,10 @@ msgstr "That could not be sent just now. Your words are kept."
 
 #: app/(tabs)/you.tsx
 #: app/vela-light.tsx
+#: src/components/set-up-phone.tsx
 #: src/data/useFamily.ts
 #: src/data/useNearby.ts
+#: src/device/useParent.ts
 msgid "That did not go through. Try again in a moment."
 msgstr "That did not go through. Try again in a moment."
 
@@ -1154,9 +1205,17 @@ msgstr "This is your own morning; replies are for the family."
 msgid "This phone"
 msgstr "This phone"
 
+#: src/components/set-up-phone.tsx
+msgid "This phone becomes {name}'s: large words, one message at a time, her answers with a tap or in her own words. You are signed out of it, and she needs no account."
+msgstr "This phone becomes {name}'s: large words, one message at a time, her answers with a tap or in her own words. You are signed out of it, and she needs no account."
+
 #: src/data/notifications.ts
 msgid "This phone could not be set up for notifications just now. It tries again the next time you open the app."
 msgstr "This phone could not be set up for notifications just now. It tries again the next time you open the app."
+
+#: app/parent.tsx
+msgid "This phone is not set up for Vela any more. Ask your family to set it up again."
+msgstr "This phone is not set up for Vela any more. Ask your family to set it up again."
 
 #: src/components/photo-slots.tsx
 msgid "This photo could not be used. Choose another."
@@ -1166,6 +1225,10 @@ msgstr "This photo could not be used. Choose another."
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
 msgstr "Those are the ones from the seeds you saved"
+
+#: src/device/useParent.ts
+msgid "Toast and tea"
+msgstr "Toast and tea"
 
 #: src/data/exchanges.ts
 msgid "Today"
@@ -1444,6 +1507,10 @@ msgstr "Who lives close to {name}?"
 #: app/(tabs)/you.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 msgstr "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
+
+#: src/components/set-up-phone.tsx
+msgid "Yes, this is {name}'s phone"
+msgstr "Yes, this is {name}'s phone"
 
 #: src/data/exchanges.ts
 msgid "Yesterday"
