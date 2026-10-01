@@ -425,6 +425,10 @@ msgstr "前往「今天」"
 msgid "Good morning, Mom. Mia asks: what did you have for breakfast?"
 msgstr "媽媽早安。Mia 想問：您早餐吃了什麼？"
 
+#: src/device/useParent.ts
+msgid "Good morning. Your message is here."
+msgstr "早安。您的訊息來了。"
+
 #: src/components/quiet-notice.tsx
 #: src/data/family.ts
 msgid "Has not said yes yet"
@@ -821,6 +825,10 @@ msgstr "比較安靜"
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記事與提醒 · 可以保存的家族故事書"
+
+#: app/parent.tsx
+msgid "Read this aloud"
+msgstr "唸給我聽"
 
 #: src/data/notifications.ts
 msgid "Reading what this phone allows…"

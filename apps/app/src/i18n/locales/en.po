@@ -418,6 +418,10 @@ msgstr "Go to Today"
 msgid "Good morning, Mom. Mia asks: what did you have for breakfast?"
 msgstr "Good morning, Mom. Mia asks: what did you have for breakfast?"
 
+#: src/device/useParent.ts
+msgid "Good morning. Your message is here."
+msgstr "Good morning. Your message is here."
+
 #: src/components/quiet-notice.tsx
 #: src/data/family.ts
 msgid "Has not said yes yet"
@@ -814,6 +818,10 @@ msgstr "quiet"
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
+
+#: app/parent.tsx
+msgid "Read this aloud"
+msgstr "Read this aloud"
 
 #: src/data/notifications.ts
 msgid "Reading what this phone allows…"

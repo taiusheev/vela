@@ -765,6 +765,8 @@ export const ApiDeviceMember = z.object({
   address_form: z.string(),
   language: z.string(),
   status: MemberStatus,
+  /** When her morning arrives, her local time: the hour her phone tells her it is there. */
+  arrival_time: LocalTime.nullable(),
 });
 export type ApiDeviceMember = z.infer<typeof ApiDeviceMember>;
 

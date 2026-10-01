@@ -2208,6 +2208,7 @@ describe("her phone for the parent surface", () => {
     addressForm: "Mrs Chen",
     language: "zh-TW",
     status: "invited",
+    arrivalTime: "08:00",
   } as unknown as Member;
 
   it("sets her phone up through the organiser guard and answers the token once, uncached", async () => {
@@ -2273,6 +2274,7 @@ describe("her phone for the parent surface", () => {
       address_form: "Mrs Chen",
       language: "zh-TW",
       status: "invited",
+      arrival_time: "08:00",
     });
     expect(f.services.memberOfDeviceToken).toHaveBeenCalledWith(expect.anything(), DEVICE_TOKEN);
   });

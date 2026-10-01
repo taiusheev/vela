@@ -10,6 +10,7 @@ import {
   fetchDeviceMessages,
   sendDeviceMessage,
 } from "../api/client.ts";
+import { scheduleHerMorning } from "./morning.ts";
 import { clearDeviceToken, readDeviceToken } from "./token.ts";
 
 /** How often her phone looks for a new message while the screen is open. */
@@ -24,6 +25,8 @@ export interface ParentView {
   linked: boolean;
   /** How Vela greets her, for the line above the message. */
   name: string;
+  /** Her language, which the message is in and is read aloud in. */
+  language: string;
   /** Vela's newest message to her, which the screen shows and reads aloud. */
   message: ApiDeviceMessage | null;
   sending: boolean;
@@ -97,6 +100,11 @@ export function useParent(): ParentView {
     refetchInterval: REFRESH_MS,
   });
   const unlinked = member.error instanceof ApiError && member.error.status === 401;
+  // Her phone tells her each morning that her message is there, at her own arrival time.
+  const arrival = member.data?.arrival_time ?? null;
+  useEffect(() => {
+    if (arrival !== null) void scheduleHerMorning(arrival, t`Good morning. Your message is here.`);
+  }, [arrival]);
   useEffect(() => {
     if (unlinked) void clearDeviceToken();
   }, [unlinked]);
@@ -118,6 +126,7 @@ export function useParent(): ParentView {
       loading: false,
       linked: true,
       name: t`Mom`,
+      language: "en",
       message: answered ? exampleThanks() : exampleMorning(),
       sending: false,
       tap: () => setAnswered(true),
@@ -134,6 +143,7 @@ export function useParent(): ParentView {
     loading: token === undefined || (live && (member.isPending || messages.isPending)),
     linked: typeof token === "string" && !unlinked,
     name: member.data?.address_form ?? "",
+    language: member.data?.language ?? "en",
     message: newest,
     sending: send.isPending,
     ...(trouble === undefined ? {} : { trouble }),

@@ -1,5 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, Stack } from "expo-router";
+import * as Speech from "expo-speech";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -64,6 +65,15 @@ export default function ParentScreen() {
             <Text style={styles.message} accessibilityRole="text">
               {view.message.text}
             </Text>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.secondary, pressed ? styles.pressed : null]}
+              onPress={() => readAloud(view.message?.text ?? "", view.language)}
+            >
+              <Text style={styles.secondaryLabel}>
+                <Trans>Read this aloud</Trans>
+              </Text>
+            </Pressable>
             <View style={styles.buttons}>
               {view.message.buttons.flat().map((button) => (
                 <Pressable
@@ -103,6 +113,16 @@ export default function ParentScreen() {
       </ScrollView>
     </>
   );
+}
+
+/**
+ * Her message in her own language with the phone's own voice (spec §14.2: every text readable
+ * aloud), free and on the phone; a second tap starts it again rather than speaking over itself.
+ */
+function readAloud(text: string, language: string): void {
+  if (text.length === 0) return;
+  void Speech.stop();
+  Speech.speak(text, { language: language === "zh-TW" ? "zh-TW" : "en-US", rate: 0.9 });
 }
 
 const styles = StyleSheet.create({

@@ -514,6 +514,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         address_form: her.addressForm ?? her.displayName,
         language: her.language,
         status: her.status,
+        arrival_time: her.arrivalTime,
       }),
     );
   });
