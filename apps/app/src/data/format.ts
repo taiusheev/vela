@@ -63,6 +63,14 @@ export function dayName(date: string): string {
     : day.toLocaleDateString(dateLocale(), { weekday: "long", timeZone: "UTC" });
 }
 
+/** A local date as its short weekday, under each of a week's seven lights: "Mon", "週一". */
+export function shortDayName(date: string): string {
+  const day = valid(`${date}T00:00:00Z`);
+  return day === null
+    ? date
+    : day.toLocaleDateString(dateLocale(), { weekday: "short", timeZone: "UTC" });
+}
+
 /**
  * Names as one list: "Lena, Petro, Igor", or "Lena、Petro、Igor" with the Chinese enumeration
  * comma. Joined by hand because Hermes has no `Intl.ListFormat`.

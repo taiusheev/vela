@@ -17,6 +17,7 @@ import type {
   ApiToday,
   ApiTrial,
   ApiUser,
+  ApiWeeklyRead,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
@@ -252,6 +253,17 @@ export function createFamily(
   token: string | null,
 ): Promise<ApiCreatedFamily> {
   return call<ApiCreatedFamily>({ path: "/v1/families", token, key, body: family });
+}
+
+export function fetchWeeklyRead(
+  familyId: string,
+  memberId: string,
+  token: string | null,
+): Promise<ApiWeeklyRead> {
+  return read<ApiWeeklyRead>(
+    `/v1/families/${familyId}/weekly-read?member=${encodeURIComponent(memberId)}`,
+    token,
+  );
 }
 
 export function fetchQuiet(quietEventId: string, token: string | null): Promise<ApiQuietNotice> {

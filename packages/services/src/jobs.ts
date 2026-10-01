@@ -150,7 +150,7 @@ interface AnswerOnDay {
   voiceMs: number | null;
 }
 
-interface WeekDay {
+export interface WeekDay {
   date: LocalDate;
   exchange: Exchange | null;
   askerName: string | null;
@@ -163,9 +163,10 @@ interface WeekDay {
 /**
  * Her days between two dates: each date's exchange, its asker, the answers attached to it, and when
  * the day counts as answered. An answer she sent on a date before that date's arrival attaches to the
- * previous exchange and still counts for the date it was sent on (flows §3.9).
+ * previous exchange and still counts for the date it was sent on (flows §3.9). The weekly read in the
+ * app (`api-weekly-read.ts`) reads her seven days with it, so they count as the draft counted them.
  */
-async function loadWeekDays(
+export async function loadWeekDays(
   db: Queryable,
   member: Member,
   from: LocalDate,

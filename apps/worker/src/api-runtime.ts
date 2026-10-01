@@ -38,6 +38,7 @@ import {
   loadApiMe,
   loadApiQuiet,
   loadApiToday,
+  loadApiWeeklyRead,
   pauseApiMember,
   provisionApiAccount,
   readApiMedia,
@@ -86,6 +87,7 @@ export const API_READ_SERVICES: ApiReadServices = {
   loadApiFamily,
   loadApiExchanges,
   loadApiQuiet,
+  loadApiWeeklyRead,
   authorizeFamilyAccess,
   readApiMedia,
 };

@@ -23,6 +23,10 @@ msgstr "{by} said {name} is fine. Everyone who was told has heard."
 msgid "{day} morning"
 msgstr "{day} morning"
 
+#: src/data/weekly.ts
+msgid "{days, plural, one {{name} answered {answered} of # day.} other {{name} answered {answered} of # days.}}"
+msgstr "{days, plural, one {{name} answered {answered} of # day.} other {{name} answered {answered} of # days.}}"
+
 #: src/data/lines.ts
 msgid "{from} replied"
 msgstr "{from} replied"
@@ -50,6 +54,10 @@ msgstr "{from} sent a voice message"
 #: src/data/lines.ts
 msgid "{from}: {text}"
 msgstr "{from}: {text}"
+
+#: src/data/weekly.ts
+msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
+msgstr "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
 
 #: app/(tabs)/you.tsx
 msgid "{her} would see your light, and you choose who else. Not in the app yet."
@@ -103,6 +111,10 @@ msgstr "{name} said no"
 msgid "{name} said yes"
 msgstr "{name} said yes"
 
+#: app/(tabs)/sunday.tsx
+msgid "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
+msgstr "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
+
 #: app/vela-light.tsx
 msgid "{name}'s light is not on."
 msgstr "{name}'s light is not on."
@@ -118,6 +130,10 @@ msgstr "{name}'s light is paused just now, so nothing can be sent into her morni
 #: app/vela-light.tsx
 msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
 msgstr "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
+
+#: app/(tabs)/sunday.tsx
+msgid "{name}'s week"
+msgstr "{name}'s week"
 
 #: src/data/useToday.ts
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
@@ -224,6 +240,7 @@ msgstr "answered {time}"
 msgid "Anyone"
 msgstr "Anyone"
 
+#: app/(tabs)/sunday.tsx
 #: app/ask.tsx
 msgid "Ask {name} something"
 msgstr "Ask {name} something"
@@ -235,6 +252,10 @@ msgstr "Ask {recipient} something"
 #: src/data/family.ts
 msgid "Ask and reply · free"
 msgstr "Ask and reply · free"
+
+#: src/data/weekly.ts
+msgid "Ask her which seeds she wants to keep for next spring."
+msgstr "Ask her which seeds she wants to keep for next spring."
 
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
@@ -460,6 +481,10 @@ msgstr "Keep a light on for me"
 msgid "Language"
 msgstr "Language"
 
+#: app/(tabs)/sunday.tsx
+msgid "late"
+msgstr "late"
+
 #: app/(tabs)/you.tsx
 msgid "Leave"
 msgstr "Leave"
@@ -495,6 +520,7 @@ msgstr "Looking for your family's days…"
 #: src/data/exchanges.ts
 #: src/data/family.ts
 #: src/data/today.ts
+#: src/data/weekly.ts
 msgid "Mom"
 msgstr "Mom"
 
@@ -552,13 +578,13 @@ msgstr "No word yet today."
 msgid "No word yet."
 msgstr "No word yet."
 
+#: src/data/weekly.ts
+msgid "Nobody in the family asked {name} anything this week."
+msgstr "Nobody in the family asked {name} anything this week."
+
 #: src/data/family.ts
 msgid "Nobody nearby yet"
 msgstr "Nobody nearby yet"
-
-#: app/(tabs)/sunday.tsx
-msgid "Not built yet."
-msgstr "Not built yet."
 
 #: app/ask.tsx
 #: app/vela-light.tsx
@@ -624,6 +650,10 @@ msgstr "Off: nothing when {her} answers or when your turn comes. If a morning go
 #: app/(tabs)/exchanges.tsx
 msgid "Older than thirty days lives in the family book."
 msgstr "Older than thirty days lives in the family book."
+
+#: src/data/weekly.ts
+msgid "On Saturday she answered later than usual, after the market."
+msgstr "On Saturday she answered later than usual, after the market."
 
 #: app/(tabs)/you.tsx
 #: src/push/provider.tsx
@@ -748,6 +778,10 @@ msgstr "Say it the way you would say it"
 msgid "Say something short"
 msgstr "Say something short"
 
+#: app/(tabs)/sunday.tsx
+msgid "See Vela Light"
+msgstr "See Vela Light"
+
 #: app/exchange/[id].tsx
 msgid "Send"
 msgstr "Send"
@@ -818,6 +852,10 @@ msgstr "She reads"
 msgid "She reads it in {language}. One question at a time."
 msgstr "She reads it in {language}. One question at a time."
 
+#: src/data/weekly.ts
+msgid "She told you about the garden on three mornings: the tomatoes, the seeds, the new bed by the fence."
+msgstr "She told you about the garden on three mornings: the tomatoes, the seeds, the new bed by the fence."
+
 #: app/onboarding.tsx
 msgid "She usually wakes at"
 msgstr "She usually wakes at"
@@ -857,6 +895,10 @@ msgstr "Someone said {name} is fine. Everyone who was told has heard."
 #: src/data/family.ts
 msgid "Someone who could look in, if it goes quiet"
 msgstr "Someone who could look in, if it goes quiet"
+
+#: app/(tabs)/sunday.tsx
+msgid "Something to ask next week"
+msgstr "Something to ask next week"
 
 #: app/vela-light.tsx
 msgid "Start the 30 days"
@@ -986,6 +1028,18 @@ msgstr "The picked photo"
 #: src/data/today.ts
 msgid "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
 msgstr "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read could not be reached just now."
+msgstr "The weekly read could not be reached just now."
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read goes to the family's organisers."
+msgstr "The weekly read goes to the family's organisers."
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read starts once she has said yes and had a week of mornings."
+msgstr "The weekly read starts once she has said yes and had a week of mornings."
 
 #: app/onboarding.tsx
 msgid "This account already runs a family."
@@ -1146,6 +1200,10 @@ msgstr "Vela Light is on for {name} until {date}. Nothing is charged, and no car
 msgid "Vela Light is on for {name}."
 msgstr "Vela Light is on for {name}."
 
+#: app/(tabs)/sunday.tsx
+msgid "Vela Light shows you the read"
+msgstr "Vela Light shows you the read"
+
 #: src/data/family.ts
 msgid "Vela Light trial"
 msgstr "Vela Light trial"
@@ -1195,6 +1253,10 @@ msgstr "We sent a code to {sentTo}."
 #: app/sign-in.tsx
 msgid "We sent a code to your email."
 msgstr "We sent a code to your email."
+
+#: app/(tabs)/sunday.tsx
+msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
+msgstr "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 
 #: app/ask.tsx
 msgid "What are you sending?"

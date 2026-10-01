@@ -357,7 +357,7 @@ A phone can be told when it is `granted` and, for the quiet notice and its close
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | /families/:id/weekly-reads?member= | Reads; free plan returns the seven lights and a `locked` flag |
+| GET | /families/:id/weekly-read?member= | **Built** (1 October 2026, below): her latest read the founder sent, organisers only; without Vela Light the seven days and `locked` |
 | POST | /weekly-reads/:id/opened | Event only |
 | GET | /me/notifications | Not built, and not to be: "One moment a day" is `one_moment_a_day` in `GET /v1/me` (27 September 2026, § "Push") |
 | PATCH | /me/notifications | Not built, and not to be: `PATCH /v1/me` takes `one_moment_a_day`, which switches the account's ordinary pushes on or off and can never raise how many there are. The `{hour}` is dropped: an ordinary push goes when there is something to say (spec §5.2, step 6), between 08:00 and 21:00 the reader's time (§ "Push") |
@@ -365,6 +365,15 @@ A phone can be told when it is `granted` and, for the quiet notice and its close
 | POST | /families/:id/plan/trial | Start the 30 days (after her first answer) `{member_id}` **Built**, see §1 "Starting the trial" |
 | POST | /families/:id/plan/checkout | Web checkout session (provider decided later) |
 | POST | /webhooks/billing/:provider | Provider events |
+
+### The weekly read (1 October 2026, spec §13, A9)
+
+`GET /v1/families/:familyId/weekly-read?member=<her member id>` answers `ApiWeeklyRead` (`api-weekly-read.ts`): her latest read whose `sent_at` is set, since the founder edits every draft before it goes (Appendix A), so the app shows what Telegram's organisers were sent. Organisers only: the family guard asks for one, and anyone else is 403, because the read carries the counts of her days, which she is never shown (§8). A family that is not the caller's is 404 `Family not found.`; a `member` that is missing, not a uuid, not a kept-light member of the family, still invited, or gone is 404 `Not found.`.
+
+- `read` is null until one of hers has been sent. `days` are its seven dates, Monday to Sunday, read again from her answers by the draft's own rule (`loadWeekDays`, flows §3.14): `answered` with her local `answered_at`, `late` when she answered only after that morning's quiet notice opened, `unanswered`, or `not_counted` before her light started. The app draws an answered or late day lit and every other day resting, never quiet.
+- `counts` are the numbers in `weekly_reads.stats` when it was drafted (`counted_days`, `answered_days`, `hello_mornings`, `family_asks`); the app words them as `renderWeeklyRead` does for Telegram. `notes` are `sent_lines`; `suggestion` is `sent_suggestion`, null when the founder removed it.
+- `locked` is true unless a subscription covers her: `trial` before `trial_ends_at`, `active` or `grace`. Locked, `counts`, `notes` and `suggestion` are null and the days still show (spec A9: "Free plan shows the seven lights"). The Telegram read is not gated, because the pilot is free; the app's is, and the 30-day trial opens it at no cost.
+- Read-only: nothing is written, and `POST /weekly-reads/:id/opened` is not built.
 
 ## 8. Media
 

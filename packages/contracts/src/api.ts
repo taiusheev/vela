@@ -178,6 +178,58 @@ export const MemberLight = z.object({
 });
 export type MemberLight = z.infer<typeof MemberLight>;
 
+/**
+ * One day of the week a weekly read covers, for its seven small lights (spec A9): answered, answered
+ * only after that morning's quiet notice opened (`late`), not answered, or before her light started
+ * (`not_counted`). `answered_at` is her local time, for an answered or late day.
+ */
+export const WEEK_DAY_STATES = ["answered", "late", "unanswered", "not_counted"] as const;
+export const WeekDayState = z.enum(WEEK_DAY_STATES);
+export type WeekDayState = z.infer<typeof WeekDayState>;
+
+export const ApiWeekDay = z.object({
+  date: LocalDate,
+  state: WeekDayState,
+  answered_at: LocalTime.nullable(),
+});
+export type ApiWeekDay = z.infer<typeof ApiWeekDay>;
+
+const WeekCount = z.number().int().min(0);
+
+/**
+ * Her latest weekly read the founder sent (`GET /v1/families/:id/weekly-read?member=`, API contract
+ * §7), for organisers. The counts are the numbers stored when it was drafted, never words of the
+ * model, and the app renders them. `locked` is true when no Vela Light trial or plan covers her: the
+ * seven days show, and the counts, the notes and the suggestion are null. `read` is null until a
+ * read of hers has been sent.
+ */
+export const ApiWeeklyRead = z.object({
+  member_id: z.uuid(),
+  display_name: z.string(),
+  locked: z.boolean(),
+  read: z
+    .object({
+      id: z.uuid(),
+      week_start: LocalDate,
+      week_end: LocalDate,
+      sent_at: z.iso.datetime({ offset: true }),
+      days: z.array(ApiWeekDay).length(7),
+      counts: z
+        .object({
+          counted_days: WeekCount.max(7),
+          answered_days: WeekCount.max(7),
+          hello_mornings: WeekCount.max(7),
+          family_asks: WeekCount,
+        })
+        .nullable(),
+      notes: z.array(z.string()).nullable(),
+      /** Null when locked, and when the founder removed it before sending. */
+      suggestion: z.string().nullable(),
+    })
+    .nullable(),
+});
+export type ApiWeeklyRead = z.infer<typeof ApiWeeklyRead>;
+
 export const SetLight = z.strictObject({ on: z.boolean() });
 export type SetLight = z.infer<typeof SetLight>;
 

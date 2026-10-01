@@ -1,0 +1,22 @@
+# Sunday in the demo (A9): the example week's seven lights with a late day marked, the count lines,
+# the founder's notes and the suggestion, and a way to ask her something.
+url: ${APP_URL}
+name: Sunday shows her week, its counts, the notes and a suggestion
+tags:
+  - demo
+---
+- launchApp
+- tapOn: "Sunday"
+- assertVisible: "MOM'S WEEK"
+- assertVisible: "late"
+- assertVisible: "Mom answered 6 of 7 days."
+- assertVisible: "On 1 morning nobody in the family asked, so Vela sent Mom a hello."
+- assertVisible: "SOMETHING TO ASK NEXT WEEK"
+# Today stays mounted behind a tab it opened, its own "Ask Mom something" stacked under this one,
+# so the button is walked on Sunday opened by itself.
+- openLink: ${APP_URL}/sunday
+- scrollUntilVisible:
+    element: "Ask Mom something"
+    direction: DOWN
+- tapOn: "Ask Mom something"
+- assertVisible: "What are you sending?"

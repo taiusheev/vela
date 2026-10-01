@@ -20,6 +20,7 @@ import {
   ApiTrial,
   ApiUploadedMedia,
   ApiUser,
+  ApiWeeklyRead,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
@@ -55,6 +56,7 @@ import {
   type loadApiMe,
   type loadApiQuiet,
   type loadApiToday,
+  type loadApiWeeklyRead,
   MediaRefusedError,
   type MediaStore,
   MemberChangeRefusedError,
@@ -102,6 +104,7 @@ export interface ApiReadServices {
   loadApiFamily: typeof loadApiFamily;
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
+  loadApiWeeklyRead: typeof loadApiWeeklyRead;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
   readApiMedia: typeof readApiMedia;
 }
@@ -544,6 +547,29 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         },
       );
       return page === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiExchangePage.parse(page));
+    },
+  );
+  // Organisers only: the read carries her week's counts, which she is never shown (spec §8). A
+  // `member` that is not her, or no `member`, is 404.
+  app.get(
+    "/v1/families/:familyId/weekly-read",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>(
+        (identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        "organiser",
+      )(c, next),
+    async (c) => {
+      const read = await runtime.services.loadApiWeeklyRead(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        c.req.query("member"),
+        runtime.now(),
+      );
+      return read === null ? c.json(NOT_FOUND, 404) : c.json(ApiWeeklyRead.parse(read));
     },
   );
   // The event names its family, so no family middleware: the service answers organisers only.

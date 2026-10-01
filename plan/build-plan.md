@@ -106,7 +106,7 @@ DoD: parent surface answered by two parents for a week each; accessibility check
 | # | Task | Spec | DoD |
 |---|---|---|---|
 | 5.1 | Story day and the family book (A10): question bank (52, en + zh-TW), voting, keep/don't keep, in-app reading; PDF export job behind the Light flag | §10 | A story recorded on Sunday appears in the book |
-| 5.2 | Weekly read in-app (A9) from the batch AI call with the free/locked state; suggestion; story of the week | §13 | Organisers open the read; Sunday batch job runs |
+| 5.2 | **Built 1 October 2026, without the story of the week.** Weekly read in-app (A9): the Sunday tab reads `GET /v1/families/:id/weekly-read` (API contract § "The weekly read"), her latest read the founder sent: seven lights with a late day marked, the count lines worded from the stored numbers, the founder's notes in Literata, the suggestion in action colour, and "Ask Mom something"; locked to the seven lights without Vela Light, with "See Vela Light". Organisers only. The story of the week waits for the family book (5.1), and the read's `opened` event is not built | §13 | Organisers open the read; Sunday batch job runs |
 | 5.3 | Memory facts and reminder suggestions (only after a tap); recipe cards | §12 | A dated fact becomes a suggested reminder |
 | 5.4 | Precision page (notices, outcomes, useful verdicts) | §8 | Page live in the app and admin |
 | 5.5 | WhatsApp Cloud API adapter in the sandbox (utility template drafted, interactive replies, statuses, opt-in in the app); Meta verification started if the entity exists | arch §8 | Sandbox loop works; template submitted |

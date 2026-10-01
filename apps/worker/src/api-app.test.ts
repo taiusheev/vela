@@ -37,6 +37,7 @@ const IDENTITY: SessionIdentity = { authSubject: "verified-user", sessionId: "ve
 const PLAN_PATH = `/v1/families/${FAMILY_ID}/plan`;
 const LIGHTS_PATH = `/v1/families/${FAMILY_ID}/lights`;
 const TODAY_PATH = `/v1/families/${FAMILY_ID}/today`;
+const WEEKLY_READ_PATH = `/v1/families/${FAMILY_ID}/weekly-read?member=${MEMBER_ID}`;
 /** What the account service answers; the route adds `photos` and `push`, the API's own. */
 const ME: Omit<ApiMe, "photos" | "push"> = {
   user: { id: USER_ID, display_name: "Synthetic user", language: "en", tz: "Asia/Taipei" },
@@ -215,6 +216,12 @@ const PUSH_DEVICE: ApiPushDevice = {
   registered_at: "2026-09-22T00:00:00.000Z",
 };
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
+const WEEKLY_READ = {
+  member_id: MEMBER_ID,
+  display_name: "Mom",
+  locked: true,
+  read: null,
+};
 const FAMILY_NOT_FOUND = { error: { code: "not_found", message: "Family not found." } };
 const INTERNAL = { error: { code: "internal", message: "Internal server error." } };
 const UNAVAILABLE = {
@@ -238,6 +245,7 @@ function fixture(enableWrites = false, push?: boolean) {
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>().mockResolvedValue(FAMILY),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
+    loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -1464,6 +1472,63 @@ describe("the lights of a family", () => {
     expect(response.status).toBe(401);
     expect(services.loadApiLights).not.toHaveBeenCalled();
     expect(openDatabase).not.toHaveBeenCalled();
+  });
+});
+
+describe("the weekly read", () => {
+  it("answers her latest read to an organiser, asking the guard for an organiser", async () => {
+    const f = fixture();
+    const response = await f.app.request(WEEKLY_READ_PATH, {
+      headers: { authorization: "Bearer good" },
+    });
+    await expectResponse(response, 200, WEEKLY_READ);
+    expect(f.services.authorizeFamilyAccess).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      "organiser",
+    );
+    expect(f.services.loadApiWeeklyRead).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      MEMBER_ID,
+      new Date("2026-09-22T00:00:00.000Z"),
+    );
+  });
+
+  it.each(["not_found", "forbidden"] as const)("a %s family guard skips the read", async (kind) => {
+    const f = fixture();
+    f.services.authorizeFamilyAccess.mockResolvedValue({ kind });
+    await expectResponse(
+      await f.app.request(WEEKLY_READ_PATH, { headers: { authorization: "Bearer good" } }),
+      kind === "not_found" ? 404 : 403,
+      kind === "not_found"
+        ? FAMILY_NOT_FOUND
+        : { error: { code: "forbidden", message: "Access denied." } },
+    );
+    expect(f.services.loadApiWeeklyRead).not.toHaveBeenCalled();
+  });
+
+  it("answers not found for a member who is not hers to read", async () => {
+    const f = fixture();
+    f.services.loadApiWeeklyRead.mockResolvedValue(null);
+    await expectResponse(
+      await f.app.request(WEEKLY_READ_PATH, { headers: { authorization: "Bearer good" } }),
+      404,
+      NOT_FOUND,
+    );
+  });
+
+  it("refuses a request without a verified session before reading anything", async () => {
+    const f = fixture();
+    f.verifySession.mockResolvedValue(null);
+    const response = await f.app.request(WEEKLY_READ_PATH, {
+      headers: { authorization: "Bearer bad" },
+    });
+    expect(response.status).toBe(401);
+    expect(f.services.loadApiWeeklyRead).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
   });
 });
 

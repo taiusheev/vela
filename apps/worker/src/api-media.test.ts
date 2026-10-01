@@ -114,6 +114,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>(unused("the family")),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
+    loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>(unused("the weekly read")),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },

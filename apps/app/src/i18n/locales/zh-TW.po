@@ -30,6 +30,10 @@ msgstr "{by}說{name}沒事。收到通知的每個人都已經知道了。"
 msgid "{day} morning"
 msgstr "{day}早上"
 
+#: src/data/weekly.ts
+msgid "{days, plural, one {{name} answered {answered} of # day.} other {{name} answered {answered} of # days.}}"
+msgstr "{days, plural, other {{name}這週 # 天中回覆了{answered}天。}}"
+
 #: src/data/lines.ts
 msgid "{from} replied"
 msgstr "{from}回覆了"
@@ -57,6 +61,10 @@ msgstr "{from}傳了一則語音訊息"
 #: src/data/lines.ts
 msgid "{from}: {text}"
 msgstr "{from}：{text}"
+
+#: src/data/weekly.ts
+msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
+msgstr "{hellos, plural, other {有 # 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。}}"
 
 #: app/(tabs)/you.tsx
 msgid "{her} would see your light, and you choose who else. Not in the app yet."
@@ -110,6 +118,10 @@ msgstr "{name}說不要"
 msgid "{name} said yes"
 msgstr "{name}同意了"
 
+#: app/(tabs)/sunday.tsx
+msgid "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
+msgstr "{name}的第一份每週小記會在週日送來，等{name}過完一週的早上之後。"
+
 #: app/vela-light.tsx
 msgid "{name}'s light is not on."
 msgstr "{name}的燈還沒有點亮。"
@@ -125,6 +137,10 @@ msgstr "{name}的燈目前暫停中，所以現在無法放進早安訊息。"
 #: app/vela-light.tsx
 msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
 msgstr "{name}的 30 天試用已經結束了。每天的提問和問答會照常進行。"
+
+#: app/(tabs)/sunday.tsx
+msgid "{name}'s week"
+msgstr "{name}的這一週"
 
 #: src/data/useToday.ts
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
@@ -231,6 +247,7 @@ msgstr "{time} 回覆了"
 msgid "Anyone"
 msgstr "大家"
 
+#: app/(tabs)/sunday.tsx
 #: app/ask.tsx
 msgid "Ask {name} something"
 msgstr "問{name}一件事"
@@ -242,6 +259,10 @@ msgstr "問{recipient}一件事"
 #: src/data/family.ts
 msgid "Ask and reply · free"
 msgstr "提問和回覆 · 免費"
+
+#: src/data/weekly.ts
+msgid "Ask her which seeds she wants to keep for next spring."
+msgstr "問問媽媽明年春天想留哪些種子。"
 
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
@@ -467,6 +488,10 @@ msgstr "也為我留一盞燈"
 msgid "Language"
 msgstr "語言"
 
+#: app/(tabs)/sunday.tsx
+msgid "late"
+msgstr "較晚"
+
 #: app/(tabs)/you.tsx
 msgid "Leave"
 msgstr "離開"
@@ -502,6 +527,7 @@ msgstr "正在載入家人的問答…"
 #: src/data/exchanges.ts
 #: src/data/family.ts
 #: src/data/today.ts
+#: src/data/weekly.ts
 msgid "Mom"
 msgstr "媽媽"
 
@@ -559,13 +585,13 @@ msgstr "今天還沒有回覆。"
 msgid "No word yet."
 msgstr "還沒有回覆。"
 
+#: src/data/weekly.ts
+msgid "Nobody in the family asked {name} anything this week."
+msgstr "這週家裡沒有人問{name}任何事。"
+
 #: src/data/family.ts
 msgid "Nobody nearby yet"
 msgstr "還沒有附近的聯絡人"
-
-#: app/(tabs)/sunday.tsx
-msgid "Not built yet."
-msgstr "這裡還在製作中。"
 
 #: app/ask.tsx
 #: app/vela-light.tsx
@@ -631,6 +657,10 @@ msgstr "已關閉：{her}回覆或輪到您提問時，都不會通知。如果�
 #: app/(tabs)/exchanges.tsx
 msgid "Older than thirty days lives in the family book."
 msgstr "超過三十天的內容會收進家族故事書。"
+
+#: src/data/weekly.ts
+msgid "On Saturday she answered later than usual, after the market."
+msgstr "週六媽媽比平常晚回覆，是在去完市場之後。"
 
 #: app/(tabs)/you.tsx
 #: src/push/provider.tsx
@@ -755,6 +785,10 @@ msgstr "用您平常說話的方式寫"
 msgid "Say something short"
 msgstr "寫一句簡短的話"
 
+#: app/(tabs)/sunday.tsx
+msgid "See Vela Light"
+msgstr "看看 Vela Light"
+
 #: app/exchange/[id].tsx
 msgid "Send"
 msgstr "傳送"
@@ -825,6 +859,10 @@ msgstr "這位家人看的語言"
 msgid "She reads it in {language}. One question at a time."
 msgstr "這位家人會用{language}閱讀。一次問一個問題。"
 
+#: src/data/weekly.ts
+msgid "She told you about the garden on three mornings: the tomatoes, the seeds, the new bed by the fence."
+msgstr "媽媽有三個早上跟你們聊到菜園：番茄、種子，還有籬笆旁新整的那一畦。"
+
 #: app/onboarding.tsx
 msgid "She usually wakes at"
 msgstr "這位家人通常起床的時間"
@@ -864,6 +902,10 @@ msgstr "有人說{name}沒事。收到通知的每個人都已經知道了。"
 #: src/data/family.ts
 msgid "Someone who could look in, if it goes quiet"
 msgstr "安靜的日子裡，可以過去看看的人"
+
+#: app/(tabs)/sunday.tsx
+msgid "Something to ask next week"
+msgstr "下週可以問問看"
 
 #: app/vela-light.tsx
 msgid "Start the 30 days"
@@ -993,6 +1035,18 @@ msgstr "選中的照片"
 #: src/data/today.ts
 msgid "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
 msgstr "番茄終於紅了。早餐前我摘了三顆，放在窗台上。"
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read could not be reached just now."
+msgstr "現在暫時無法取得每週小記。"
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read goes to the family's organisers."
+msgstr "每週小記會寄給這個家庭的發起人。"
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read starts once she has said yes and had a week of mornings."
+msgstr "等家人答應、也過了一週的早上之後，每週小記就會開始。"
 
 #: app/onboarding.tsx
 msgid "This account already runs a family."
@@ -1153,6 +1207,10 @@ msgstr "{name}的 Vela Light 已開啟，到 {date}為止。不收任何費用�
 msgid "Vela Light is on for {name}."
 msgstr "{name}的 Vela Light 已開啟。"
 
+#: app/(tabs)/sunday.tsx
+msgid "Vela Light shows you the read"
+msgstr "Vela Light 會讓您看到完整小記"
+
 #: src/data/family.ts
 msgid "Vela Light trial"
 msgstr "Vela Light 試用"
@@ -1202,6 +1260,10 @@ msgstr "我們已經把驗證碼傳到 {sentTo}。"
 #: app/sign-in.tsx
 msgid "We sent a code to your email."
 msgstr "我們已經把驗證碼寄到您的電子信箱。"
+
+#: app/(tabs)/sunday.tsx
+msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
+msgstr "{name}這週跟您說了什麼、哪些事提了兩次，以及下次可以問{name}什麼。前 30 天免費。"
 
 #: app/ask.tsx
 msgid "What are you sending?"

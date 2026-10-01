@@ -106,7 +106,7 @@ jobs:
         run: pnpm --filter @vela/app exec expo export --platform web --output-dir dist
       - name: Serve it
         run: |
-          python3 -m http.server 8082 --directory apps/app/dist > "$RUNNER_TEMP/serve.log" 2>&1 &
+          python3 apps/app/scripts/serve-web.py apps/app/dist 8082 > "$RUNNER_TEMP/serve.log" 2>&1 &
           for _ in $(seq 1 30); do curl -fs http://localhost:8082 > /dev/null && exit 0; sleep 1; done
           cat "$RUNNER_TEMP/serve.log"; exit 1
       - name: Walk the flows

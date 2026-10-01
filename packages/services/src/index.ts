@@ -83,6 +83,7 @@ export { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
 export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";
 export { startApiTrial, TrialRefusedError } from "./api-trial.ts";
+export { loadApiWeeklyRead } from "./api-weekly-read.ts";
 export type {
   ChannelRegistry,
   Clock,
