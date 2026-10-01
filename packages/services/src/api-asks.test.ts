@@ -16,11 +16,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
 import { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
+import { deliverArrival } from "./arrivals.ts";
 import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { deliverOutbound, STRANDED_AFTER_MINUTES } from "./gateway.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import {
+  acceptInvitationForDevelopment,
   type SeededFamily,
   seedExchange,
   seedFamily,
@@ -517,5 +519,61 @@ describe("the family group hears that tomorrow is taken", () => {
     await h.run({ outbound: (job: OutboundJob) => deliverOutbound(h.deps, job.outboundId) });
     expect((await groupRows())[0]?.status).toBe("sent");
     expect(h.telegram.sentTo("-100500")).toHaveLength(1);
+  });
+
+  describe("the first ask, before her yes (spec A2)", () => {
+    beforeEach(async () => {
+      await h.db
+        .update(members)
+        .set({
+          status: "invited",
+          lightOn: false,
+          lightConsentedAt: null,
+          lightConsentText: null,
+          lightStartsOn: null,
+        })
+        .where(eq(members.id, seed.member.id));
+    });
+
+    it("keeps a first ask in words for whenever, until she says yes", async () => {
+      const result = await compose({ text: "What did you have for breakfast?", when: "whenever" });
+
+      expect(result.response.status).toBe(201);
+      const [row] = await exchangeRows();
+      expect(row).toMatchObject({
+        state: "composed",
+        whenRule: "whenever",
+        scheduledFor: null,
+        text: "What did you have for breakfast?",
+      });
+    });
+
+    it("refuses a dated ask before her yes (the contract refuses photos for whenever)", async () => {
+      await expect(compose({ text: "Did it rain?", when: "tomorrow" })).rejects.toThrow(VelaError);
+      expect(await exchangeRows()).toEqual([]);
+    });
+
+    it("refuses any ask once her light has been said yes to and switched off", async () => {
+      await h.db
+        .update(members)
+        .set({ status: "active", lightConsentedAt: h.clock.now(), lightOn: false })
+        .where(eq(members.id, seed.member.id));
+      await expect(compose({ text: "Hello?", when: "whenever" })).rejects.toThrow(VelaError);
+    });
+
+    it("goes out on her first morning after she says yes", async () => {
+      await compose({ text: "What did you have for breakfast?", when: "whenever" });
+      await acceptInvitationForDevelopment(h.db, seed.member.id, h.clock.now());
+
+      const first = addDays(today(), 1);
+      h.clock.set(new Date(`${first}T08:00:00.000+08:00`));
+      await deliverArrival(h.deps, seed.member.id, first, false);
+
+      const [row] = await exchangeRows();
+      expect(row).toMatchObject({ scheduledFor: first, whenRule: "whenever" });
+      const [arrival] = await h.db.select().from(outbound).where(eq(outbound.kind, "arrival"));
+      if (arrival === undefined) throw new Error("expected her first arrival");
+      expect(JSON.stringify(arrival.payload)).toContain("What did you have for breakfast?");
+    });
   });
 });

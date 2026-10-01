@@ -499,6 +499,10 @@ msgstr "放進早安訊息"
 msgid "Into her morning."
 msgstr "已放進早安訊息。"
 
+#: app/onboarding.tsx
+msgid "It reaches her on the first morning after she says yes. Every morning after that, someone in the family asks."
+msgstr "答應之後的第一個早上就會送到。之後每天早上，都會有一位家人提問。"
+
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
 msgstr "先是麵包店，後來變成書店。冬天我們在那裡排隊買麵包。"
@@ -726,6 +730,10 @@ msgstr "選項 {number}"
 msgid "or $9.99 a month · a second person +50%"
 msgstr "或每月 9.99 美元 · 第二位 +50%"
 
+#: app/onboarding.tsx
+msgid "Or write your own"
+msgstr "或自己寫一個"
+
 #: src/data/family.ts
 msgctxt "role"
 msgid "organiser"
@@ -836,6 +844,10 @@ msgstr "說自己很好"
 #: src/data/useNearby.ts
 msgid "Said yes"
 msgstr "已同意"
+
+#: app/onboarding.tsx
+msgid "Saving…"
+msgstr "儲存中…"
 
 #: app/ask.tsx
 msgid "Say it the way you would say it"
@@ -1362,6 +1374,10 @@ msgstr "我們已經把驗證碼寄到您的電子信箱。"
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr "{name}這週跟您說了什麼、哪些事提了兩次，以及下次可以問{name}什麼。前 30 天免費。"
 
+#: app/onboarding.tsx
+msgid "What are you looking forward to this week?"
+msgstr "這週有什麼讓您期待的事嗎？"
+
 #: app/ask.tsx
 msgid "What are you sending?"
 msgstr "您要傳什麼？"
@@ -1371,9 +1387,17 @@ msgstr "您要傳什麼？"
 msgid "What did the garden look like this morning?"
 msgstr "今天早上花園看起來怎麼樣？"
 
+#: app/onboarding.tsx
+msgid "What did you have for breakfast?"
+msgstr "您早餐吃了什麼？"
+
 #: src/data/today.ts
 msgid "What seeds did you save from last year's garden?"
 msgstr "去年花園裡的種子，您留下了哪些？"
+
+#: app/onboarding.tsx
+msgid "What should {name}'s first morning ask?"
+msgstr "{name}的第一個早上要問什麼？"
 
 #: app/exchange/[id].tsx
 msgid "What the family said"
@@ -1382,6 +1406,10 @@ msgstr "家人說了什麼"
 #: app/(tabs)/you.tsx
 msgid "What the family sees about you"
 msgstr "家人看得到您的哪些資訊"
+
+#: app/onboarding.tsx
+msgid "What was your favourite meal as a child?"
+msgstr "您小時候最喜歡吃什麼？"
 
 #: app/onboarding.tsx
 msgid "What you send her"

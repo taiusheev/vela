@@ -492,6 +492,10 @@ msgstr "Into her morning"
 msgid "Into her morning."
 msgstr "Into her morning."
 
+#: app/onboarding.tsx
+msgid "It reaches her on the first morning after she says yes. Every morning after that, someone in the family asks."
+msgstr "It reaches her on the first morning after she says yes. Every morning after that, someone in the family asks."
+
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
 msgstr "It was a bakery, then a bookshop. We queued there for bread in the winter."
@@ -719,6 +723,10 @@ msgstr "Option {number}"
 msgid "or $9.99 a month · a second person +50%"
 msgstr "or $9.99 a month · a second person +50%"
 
+#: app/onboarding.tsx
+msgid "Or write your own"
+msgstr "Or write your own"
+
 #: src/data/family.ts
 msgctxt "role"
 msgid "organiser"
@@ -829,6 +837,10 @@ msgstr "said she is fine"
 #: src/data/useNearby.ts
 msgid "Said yes"
 msgstr "Said yes"
+
+#: app/onboarding.tsx
+msgid "Saving…"
+msgstr "Saving…"
 
 #: app/ask.tsx
 msgid "Say it the way you would say it"
@@ -1355,6 +1367,10 @@ msgstr "We sent a code to your email."
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 
+#: app/onboarding.tsx
+msgid "What are you looking forward to this week?"
+msgstr "What are you looking forward to this week?"
+
 #: app/ask.tsx
 msgid "What are you sending?"
 msgstr "What are you sending?"
@@ -1364,9 +1380,17 @@ msgstr "What are you sending?"
 msgid "What did the garden look like this morning?"
 msgstr "What did the garden look like this morning?"
 
+#: app/onboarding.tsx
+msgid "What did you have for breakfast?"
+msgstr "What did you have for breakfast?"
+
 #: src/data/today.ts
 msgid "What seeds did you save from last year's garden?"
 msgstr "What seeds did you save from last year's garden?"
+
+#: app/onboarding.tsx
+msgid "What should {name}'s first morning ask?"
+msgstr "What should {name}'s first morning ask?"
 
 #: app/exchange/[id].tsx
 msgid "What the family said"
@@ -1375,6 +1399,10 @@ msgstr "What the family said"
 #: app/(tabs)/you.tsx
 msgid "What the family sees about you"
 msgstr "What the family sees about you"
+
+#: app/onboarding.tsx
+msgid "What was your favourite meal as a child?"
+msgstr "What was your favourite meal as a child?"
 
 #: app/onboarding.tsx
 msgid "What you send her"

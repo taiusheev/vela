@@ -15,7 +15,7 @@ import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import { sharedWith } from "./api-media.ts";
-import { canBeAsked } from "./askable.ts";
+import { canBeAsked, canWaitForHerYes } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -219,7 +219,13 @@ export async function composeApiAsk(
           .from(members)
           .where(eq(members.id, ask.recipient_id))
           .for("update");
-        if (locked === undefined || !canBeAsked(locked, familyId)) {
+        // Before her yes, only the first ask waits for her: in words, for whenever (spec A2).
+        const waitsForHerYes =
+          locked !== undefined &&
+          ask.when === "whenever" &&
+          ask.media_ids === undefined &&
+          canWaitForHerYes(locked, familyId);
+        if (locked === undefined || !(canBeAsked(locked, familyId) || waitsForHerYes)) {
           throw new VelaError("not_found", "Recipient not found");
         }
         if (await familyHasEnded(tx, familyId)) {

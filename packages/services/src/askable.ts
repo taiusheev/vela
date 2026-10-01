@@ -17,6 +17,22 @@ export function canBeAsked(member: Member, familyId: string): boolean {
 }
 
 /**
+ * A kept-light member invited and not yet answered (spec A2): the organiser's first ask can wait for
+ * her, as a "whenever" ask in words, which her first morning after a yes takes (`chooseAsk` in
+ * core). A No deletes her and, with her, the ask (flows §3.2); a light she once said yes to and is
+ * off now is `canBeAsked`'s to refuse, not this.
+ */
+export function canWaitForHerYes(member: Member, familyId: string): boolean {
+  return (
+    member.familyId === familyId &&
+    member.leftAt === null &&
+    member.role === "member" &&
+    member.status === "invited" &&
+    member.lightConsentedAt === null
+  );
+}
+
+/**
  * `canBeAsked`, in a family that has not ended: nothing is composed for a family whose deletion was
  * requested or whose kept-light member is left or deceased (flows §3.7).
  */

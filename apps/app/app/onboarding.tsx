@@ -5,7 +5,7 @@ import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { alreadyOrganiser, createFamily, provisionAccount } from "../src/api/client.ts";
+import { alreadyOrganiser, composeAsk, createFamily, provisionAccount } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
@@ -33,7 +33,7 @@ import { useAppLocale } from "../src/i18n/provider.tsx";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
-type Step = "who" | "nearby" | "invite" | "ready";
+type Step = "who" | "first" | "nearby" | "invite" | "ready";
 
 /**
  * Onboarding (spec §14.1 A1, A4, A5): who she is, the words to send her, and the light ready and
@@ -95,7 +95,7 @@ export default function OnboardingScreen() {
     },
     onSuccess: async (family) => {
       setCreated(family);
-      setStep("nearby");
+      setStep("first");
       // Today must learn there is a family now, or it would send the organiser straight back here.
       await Promise.all([
         queries.invalidateQueries({ queryKey: ["me"] }),
@@ -117,6 +117,28 @@ export default function OnboardingScreen() {
 
   // A3: the people nearby her, once she exists to be near. Read through the family, as You reads it.
   const nearby = useNearby(created?.family.id, created?.kept_light_member.id);
+
+  // A2: the first ask, kept for whenever, which her first morning after a yes takes.
+  const [firstAsk, setFirstAsk] = useState("");
+  const firstKey = useIdempotencyKey("first-ask");
+  const first = useMutation({
+    mutationFn: async (text: string) => {
+      if (created === null) throw new Error("no family yet");
+      const ask = {
+        recipient_id: created.kept_light_member.id,
+        type: "question" as const,
+        text,
+        when: "whenever" as const,
+      };
+      return composeAsk(created.family.id, firstKey(ask), ask, await account.token());
+    },
+    onSuccess: () => setStep("nearby"),
+  });
+  const firstExamples = [
+    t`What did you have for breakfast?`,
+    t`What are you looking forward to this week?`,
+    t`What was your favourite meal as a child?`,
+  ];
 
   const share = async () => {
     if (created === null) return;
@@ -241,6 +263,47 @@ export default function OnboardingScreen() {
             {create.isError && alreadyOrganiser(create.error) ? (
               <SecondaryButton label={t`Go to Today`} onPress={() => router.replace("/")} />
             ) : null}
+          </>
+        ) : null}
+
+        {step === "first" && created !== null ? (
+          <>
+            <Words variant="title">
+              <Trans>What should {name}'s first morning ask?</Trans>
+            </Words>
+            <Words variant="body" tone="ink2">
+              <Trans>
+                It reaches her on the first morning after she says yes. Every morning after that,
+                someone in the family asks.
+              </Trans>
+            </Words>
+            <View style={{ gap: space.s }}>
+              {firstExamples.map((example) => (
+                <Chip
+                  key={example}
+                  label={example}
+                  selected={firstAsk === example}
+                  onPress={() => setFirstAsk(example)}
+                />
+              ))}
+            </View>
+            <TextField
+              value={firstAsk}
+              onChangeText={setFirstAsk}
+              placeholder={t`Or write your own`}
+              multiline
+            />
+            {first.isError ? (
+              <Words variant="body" tone="ink2">
+                <Trans>That could not be saved just now. Nothing was lost; try again.</Trans>
+              </Words>
+            ) : null}
+            <PrimaryButton
+              label={first.isPending ? t`Saving…` : t`Next`}
+              disabled={first.isPending || firstAsk.trim().length === 0}
+              onPress={() => first.mutate(firstAsk.trim())}
+            />
+            <SecondaryButton label={t`Skip for now`} onPress={() => setStep("nearby")} />
           </>
         ) : null}
 

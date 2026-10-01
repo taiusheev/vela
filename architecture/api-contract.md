@@ -328,6 +328,10 @@ A phone can be told when it is `granted` and, for the quiet notice and its close
 | GET | /families/:id/suggestions?for=me | Replaced by Today's `tomorrow[].suggestion` and `suggestion_id` on compose (September 2026); see §1 "Tomorrow's suggestion" |
 | POST | /suggestions/:id/use | Replaced by Today's `tomorrow[].suggestion` and `suggestion_id` on compose (September 2026); see §1 "Tomorrow's suggestion" |
 
+### The first ask, before her yes (1 October 2026, spec A2)
+
+`POST /v1/families/:familyId/exchanges` also composes for a kept-light member who is still `invited`, has never said yes, and has not left (`canWaitForHerYes` in `askable.ts`), when the ask is words with `when` `whenever`: onboarding's first ask. It waits, unscheduled, and her first morning after a yes takes it as the oldest whenever ask (`chooseAsk`, flows §3.6). A dated ask, and a photo ask, which the contract already keeps from `whenever`, still answer 404 until she says yes. Her No deletes her member row and the ask with it (flows §3.2), and so does `create_invite` replacing her (flows §3.17).
+
 ### Reactions (1 October 2026, spec §6.1, A8)
 
 `POST /v1/exchanges/:exchangeId/replies` also takes `{"reaction": "heart" | "laugh" | "hug"}`: a `replies` row of that kind, no text, channel `app`, `to_recipient` true, under every rule a reply in words follows (her answer first, never her own, the exchange's lock, `reply_posted` with `kind` `reaction`). A member has at most one of each kind on an exchange (`replies_one_reaction_idx`): the first answers 201, and a second, with any key, answers 200 with the row already there and writes and records nothing. The read-back names reactions as Telegram's are named ("Mia sent 🤗"). The group's reaction sync (flows §3.11) makes a member's reactions in the group equal to the group's set and leaves rows of channel `app` alone: the group never removes a reaction given in the app, and a kind the app already gave is not added again. A kind the member gave in the group first is the group's row, and the group can still remove it. The receipt's fingerprint is `{exchange_id, reaction}`, so a key spent on a heart cannot be spent on words.

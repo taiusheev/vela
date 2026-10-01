@@ -145,20 +145,28 @@ describe("createApiFamily", () => {
     expect(body.invite.text).toContain(body.invite.url);
   });
 
-  it("works with the consent flow as it is: she opens the link, says yes, and can then be asked", async () => {
+  it("works with the consent flow as it is: a first ask waits, she opens the link, says yes, and can then be asked", async () => {
     const body = ApiCreatedFamily.parse((await create()).response.body);
     const herId = body.kept_light_member.id;
     const token = new URL(body.invite.url).searchParams.get("start") ?? "";
 
-    // Before she answers, nobody may ask her anything.
+    // Before she answers, nothing is asked of her for a morning; only the first ask waits, in
+    // words, for whenever (spec A2), and her first morning after a yes takes it.
     await expect(
       composeApiAsk(h.deps, identity, "ask-early", body.family.id, {
         recipient_id: herId,
         type: "question",
         text: "Are you there?",
-        when: "whenever",
+        when: "tomorrow",
       }),
     ).rejects.toThrow(VelaError);
+    const waiting = await composeApiAsk(h.deps, identity, "ask-first", body.family.id, {
+      recipient_id: herId,
+      type: "question",
+      text: "What did you have for breakfast?",
+      when: "whenever",
+    });
+    expect(waiting.response.status).toBe(201);
 
     let sequence = 0;
     const from = (extra: Partial<InboundEvent> & Pick<InboundEvent, "kind">): InboundEvent => {
