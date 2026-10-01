@@ -788,10 +788,15 @@ msgstr "People nearby"
 msgid "Perth"
 msgstr "Perth"
 
+#: app/parent.tsx
 #: src/components/family-photo.tsx
 #: src/components/photo-slots.tsx
 msgid "Photo"
 msgstr "Photo"
+
+#: app/parent.tsx
+msgid "Photo {number}"
+msgstr "Photo {number}"
 
 #: src/components/family-photo.tsx
 msgid "Photo in the family group"

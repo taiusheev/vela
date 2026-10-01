@@ -266,6 +266,7 @@ function fixture(enableWrites = false, push?: boolean) {
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>().mockResolvedValue(null),
     loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>().mockResolvedValue([]),
+    readDeviceMedia: vi.fn<ApiReadServices["readDeviceMedia"]>().mockResolvedValue(null),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -2288,6 +2289,7 @@ describe("her phone for the parent surface", () => {
       exchange_id: null,
       text: "Good morning, Mrs Chen.",
       buttons: [[{ id: "c:1", label: "I'm fine" }]],
+      photos: [],
       sent_at: "2026-09-22T00:00:00.000Z",
     };
     f.services.loadDeviceMessages.mockResolvedValue([morning]);

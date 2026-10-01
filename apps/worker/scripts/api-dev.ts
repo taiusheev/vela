@@ -51,6 +51,7 @@ import {
   pauseApiMember,
   provisionApiAccount,
   readApiMedia,
+  readDeviceMedia,
   registerApiPushDevice,
   removeApiDevice,
   removeApiNearby,
@@ -174,6 +175,7 @@ const app = createApiApp({
     loadDeviceMessages,
     authorizeFamilyAccess,
     readApiMedia,
+    readDeviceMedia,
   },
   logger: { error: (event, fields) => console.error(`[api-dev] ${event}`, fields ?? {}) },
   ...(writesOn && secretKey !== undefined

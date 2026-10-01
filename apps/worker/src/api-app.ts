@@ -79,6 +79,7 @@ import {
   type Random,
   ReplyRefusedError,
   type readApiMedia,
+  type readDeviceMedia,
   type registerApiPushDevice,
   type removeApiDevice,
   type removeApiNearby,
@@ -126,6 +127,7 @@ export interface ApiReadServices {
   loadDeviceMessages: typeof loadDeviceMessages;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
   readApiMedia: typeof readApiMedia;
+  readDeviceMedia: typeof readDeviceMedia;
 }
 
 export interface ApiWriteServices {
@@ -524,6 +526,25 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
   app.get("/v1/device/messages", withDatabase, authenticateDevice, async (c) => {
     const messages = await runtime.services.loadDeviceMessages(c.get("db"), c.get("deviceMember"));
     return c.json(ApiDeviceMessages.parse({ messages }));
+  });
+  // A photo of her message, or of what the family sent back, by her device token (ADR-35).
+  app.get("/v1/device/media/:mediaId", withDatabase, authenticateDevice, async (c) => {
+    const store = runtime.media?.store;
+    if (store === undefined || !MEDIA_ID.test(c.req.param("mediaId"))) {
+      return c.json(NOT_FOUND, 404);
+    }
+    const photo = await runtime.services.readDeviceMedia(
+      c.get("db"),
+      c.get("deviceMember"),
+      c.req.param("mediaId"),
+      store,
+    );
+    if (photo === null) return c.json(NOT_FOUND, 404);
+    return c.body(photo.body, 200, {
+      "content-type": "image/jpeg",
+      "x-content-type-options": "nosniff",
+      "content-disposition": "inline",
+    });
   });
 
   app.get("/v1/me", authenticate, withDatabase, async (c) => {

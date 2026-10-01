@@ -45,6 +45,7 @@ import {
   pauseApiMember,
   provisionApiAccount,
   readApiMedia,
+  readDeviceMedia,
   registerApiPushDevice,
   removeApiDevice,
   removeApiNearby,
@@ -98,6 +99,7 @@ export const API_READ_SERVICES: ApiReadServices = {
   loadDeviceMessages,
   authorizeFamilyAccess,
   readApiMedia,
+  readDeviceMedia,
 };
 
 /**

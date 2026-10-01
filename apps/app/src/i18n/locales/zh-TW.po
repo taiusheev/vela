@@ -795,10 +795,15 @@ msgstr "附近的聯絡人"
 msgid "Perth"
 msgstr "伯斯"
 
+#: app/parent.tsx
 #: src/components/family-photo.tsx
 #: src/components/photo-slots.tsx
 msgid "Photo"
 msgstr "照片"
+
+#: app/parent.tsx
+msgid "Photo {number}"
+msgstr "照片 {number}"
 
 #: src/components/family-photo.tsx
 msgid "Photo in the family group"

@@ -1244,7 +1244,8 @@ type RowSend =
  * The one dispatch. An app row goes to the reader's phones through the push port, before any file
  * is loaded (a push carries none) and never through a channel adapter, which the registry has none
  * of for `app`. Any other row goes to its channel's adapter with its stored photos (ADR-33), each
- * loaded for this attempt; one that cannot be is a passing failure.
+ * loaded for this attempt unless the adapter names them by key (`mediaByUrl`); one that cannot be
+ * loaded is a passing failure.
  */
 async function sendRow(
   deps: Deps,
@@ -1256,8 +1257,11 @@ async function sendRow(
     const push = await sendPush(deps, loaded, message, effect);
     return push.status === "sent" ? { status: "sent", result: push.result, push } : push;
   }
-  const files = await loadOutboundFiles(deps, loaded.row.id, message);
   const adapter = deps.channels.get(loaded.row.channel);
+  // An adapter that names a stored file by its key (her phone, LINE) never needs its bytes.
+  const files = adapter.capabilities.mediaByUrl
+    ? undefined
+    : await loadOutboundFiles(deps, loaded.row.id, message);
   const result = await (files === undefined ? adapter.send(message) : adapter.send(message, files));
   return { status: "sent", result };
 }

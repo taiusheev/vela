@@ -1,10 +1,15 @@
 import type { ApiDeviceMessage, DeviceInput, InboundEvent } from "@vela/contracts";
-import { channelLinks, type Member, outbound } from "@vela/db";
-import { and, desc, eq } from "drizzle-orm";
+import { channelLinks, type Member, media, outbound } from "@vela/db";
+import { and, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { z } from "zod";
+import { sharedWith } from "./api-media.ts";
+import type { MediaStore } from "./deps.ts";
 import type { Queryable } from "./repo.ts";
 
 /** How many of her latest messages her phone is given: her morning, its read-back, a notice. */
 const DEVICE_MESSAGES = 10;
+
+const Uuid = z.uuid();
 
 interface StoredButton {
   id: string;
@@ -30,6 +35,23 @@ export async function loadDeviceMessages(db: Queryable, her: Member): Promise<Ap
     )
     .orderBy(desc(outbound.sentAt), desc(outbound.id))
     .limit(DEVICE_MESSAGES);
+  const keys = rows.flatMap((row) => storageKeysOf(row.payload));
+  const photoIds = new Map(
+    keys.length === 0
+      ? []
+      : (
+          await db
+            .select({ id: media.id, storageKey: media.storageKey })
+            .from(media)
+            .where(
+              and(
+                eq(media.familyId, her.familyId),
+                eq(media.kind, "image"),
+                inArray(media.storageKey, keys),
+              ),
+            )
+        ).map((photo) => [photo.storageKey, photo.id]),
+  );
   return rows.flatMap((row) => {
     const message = (row.payload as { message?: { text?: unknown; buttons?: unknown } }).message;
     const text = typeof message?.text === "string" ? message.text : "";
@@ -46,10 +68,27 @@ export async function loadDeviceMessages(db: Queryable, her: Member): Promise<Ap
         exchange_id: row.exchangeId,
         text,
         buttons,
+        photos: storageKeysOf(row.payload).flatMap((key) => {
+          const id = photoIds.get(key);
+          return id === undefined ? [] : [id];
+        }),
         sent_at: row.sentAt.toISOString(),
       },
     ];
   });
+}
+
+/**
+ * The storage keys of the photos a stored message carries, in order. Her phone is sent each stored
+ * image by its key (`readsStoredMedia`); a photo retention has since deleted has no row left, so it
+ * drops out of her message by itself.
+ */
+function storageKeysOf(payload: unknown): string[] {
+  const files = (payload as { message?: { media?: unknown } }).message?.media;
+  if (!Array.isArray(files)) return [];
+  return files.flatMap((file: { kind?: unknown; storageKey?: unknown }) =>
+    file.kind === "image" && typeof file.storageKey === "string" ? [file.storageKey] : [],
+  );
 }
 
 /**
@@ -87,4 +126,36 @@ export async function deviceInboundEvent(
         callbackId: ids.eventId,
       }
     : { ...common, kind: "text", messageId: ids.messageId, text: input.text };
+}
+
+/**
+ * A photo her phone may show (`GET /v1/device/media/:mediaId`): its bytes, always a JPEG, or null,
+ * which the API answers 404. She sees what any member of her family sees (`sharedWith`): the
+ * family's stored images that one of its exchanges, answers or replies carries, so the photos of
+ * her morning and of what the family sent back, and nothing uploaded that nobody has asked with yet.
+ */
+export async function readDeviceMedia(
+  db: Queryable,
+  her: Member,
+  mediaId: string,
+  store: MediaStore,
+): Promise<{ body: ArrayBuffer; mime: "image/jpeg" } | null> {
+  if (!Uuid.safeParse(mediaId).success) return null;
+  const [row] = await db
+    .select({ storageKey: media.storageKey })
+    .from(media)
+    .where(
+      and(
+        eq(media.id, mediaId),
+        eq(media.familyId, her.familyId),
+        eq(media.kind, "image"),
+        isNotNull(media.storageKey),
+        or(isNull(media.mime), eq(media.mime, "image/jpeg")),
+        sharedWith(db, her.familyId, her.id),
+      ),
+    )
+    .limit(1);
+  if (row === undefined || row.storageKey === null) return null;
+  const object = await store.get(row.storageKey);
+  return object === null ? null : { body: object.body, mime: "image/jpeg" };
 }

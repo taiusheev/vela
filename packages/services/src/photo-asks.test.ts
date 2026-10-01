@@ -28,11 +28,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { type AnswerButtonAction, handleAnswerButton } from "./answers.ts";
 import type { SessionIdentity } from "./api-access.ts";
 import { AskPhotoMissingError, composeApiAsk } from "./api-asks.ts";
+import { setUpApiDevice } from "./api-device.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
 import { uploadApiMedia } from "./api-media.ts";
 import { exchangeRow } from "./api-today.ts";
 import { deliverArrival, loadAsk, prepareDay } from "./arrivals.ts";
 import type { Deps, MediaStore, OutboundJob } from "./deps.ts";
+import { loadDeviceMessages, readDeviceMedia } from "./device-messages.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { applyRetention } from "./jobs.ts";
 import { openQuiet } from "./quiet.ts";
@@ -640,6 +642,109 @@ describe("delivering a photo ask to Telegram", () => {
  * deleted before her pick on the new morning could be read, and the choice must go as a question
  * with what is left, once.
  */
+describe("a photo ask on her phone (ADR-35)", () => {
+  async function herRow() {
+    const [row] = await h.db.select().from(members).where(eq(members.id, seed.member.id));
+    if (row === undefined) throw new Error("expected her");
+    return row;
+  }
+
+  it("shows both stored photos by id under her 1 and 2, and loads no bytes to send them", async () => {
+    const first = await photo(1);
+    const second = await photo(2);
+    const { id } = ApiComposedAsk.parse(
+      (await compose({ media_ids: [first, second] })).response.body,
+    );
+    await setUpApiDevice(h.deps, mia, seed.family.id, seed.member.id);
+    h.clock.set(at(TOMORROW, "08:00"));
+
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    // Her phone reads each photo itself, so a store that cannot be read does not stop her morning.
+    const unreadable: MediaStore = {
+      ...h.media,
+      get: async () => {
+        throw new Error("R2 unavailable");
+      },
+    };
+    await h.run(handlers({ ...h.deps, media: unreadable }));
+
+    const [morning] = await loadDeviceMessages(h.db, await herRow());
+    expect(morning).toMatchObject({ kind: "arrival", exchange_id: id, photos: [first, second] });
+    expect(morning?.text).toContain("Which one? Tap 1 or 2.");
+    expect(morning?.buttons[0]?.map((button) => decodeButton(button.id))).toEqual([
+      { type: "pick", exchangeId: id, index: 0 },
+      { type: "pick", exchangeId: id, index: 1 },
+    ]);
+    expect(h.telegram.sent).toEqual([]);
+    const shown = await readDeviceMedia(h.db, await herRow(), first, h.media);
+    expect(new Uint8Array(shown?.body ?? new ArrayBuffer(0))).toEqual(
+      new Uint8Array(h.media.objects.get(await storageKeyOf(first))?.body ?? new ArrayBuffer(1)),
+    );
+  });
+
+  it("leaves out a photo Telegram alone holds, so a choice short of it goes as a question", async () => {
+    const telegram = await telegramPhoto();
+    const stored = await photo(1);
+    await compose({ media_ids: [telegram, stored] });
+    const [exchange] = await herExchanges();
+    if (exchange === undefined) throw new Error("expected her photo ask");
+
+    const onPhone = await loadAsk(h.deps, seed.family, exchange, "device", {
+      date: TOMORROW,
+      timeZone: TZ,
+    });
+
+    expect(onPhone.ask).toMatchObject({ type: "question", imageCount: 1 });
+    expect(onPhone.media).toEqual([
+      {
+        kind: "image",
+        storageKey: await storageKeyOf(stored),
+        mime: "image/jpeg",
+        bytes: expect.any(Number),
+      },
+    ]);
+    expect(h.logger.entries).toContainEqual({
+      level: "warn",
+      event: "media_not_sendable_on_channel",
+      fields: { familyId: seed.family.id, channel: "device", count: 1 },
+    });
+  });
+
+  it("names a Telegram photo by its stored copy once it has one", async () => {
+    const telegram = await telegramPhoto();
+    await h.db.update(media).set({ storageKey: "copied/one.jpg" }).where(eq(media.id, telegram));
+    await h.media.put("copied/one.jpg", new Uint8Array([0xff, 0xd8]).buffer, "image/jpeg");
+    const stored = await photo(1);
+    await compose({ media_ids: [telegram, stored] });
+    const [exchange] = await herExchanges();
+    if (exchange === undefined) throw new Error("expected her photo ask");
+
+    const onPhone = await loadAsk(h.deps, seed.family, exchange, "device", {
+      date: TOMORROW,
+      timeZone: TZ,
+    });
+
+    expect(onPhone.ask).toMatchObject({ type: "photo_choice", imageCount: 2 });
+    expect(onPhone.media.map((ref) => ref.storageKey)).toEqual([
+      "copied/one.jpg",
+      await storageKeyOf(stored),
+    ]);
+    expect(onPhone.media.every((ref) => ref.providerFileId === undefined)).toBe(true);
+  });
+
+  it("shows her phone only what her family shares: not an upload nobody asked with, nor a stranger's id", async () => {
+    const unasked = await photo(3);
+    const her = await herRow();
+
+    expect(await readDeviceMedia(h.db, her, unasked, h.media)).toBeNull();
+    expect(await readDeviceMedia(h.db, her, UNKNOWN_ID, h.media)).toBeNull();
+    expect(await readDeviceMedia(h.db, her, "not-a-uuid", h.media)).toBeNull();
+
+    await compose({ media_ids: [unasked, await photo(4)] });
+    expect(await readDeviceMedia(h.db, her, unasked, h.media)).not.toBeNull();
+  });
+});
+
 describe("a photo ask carried past its photos' deletion", () => {
   const SKIPPED = TOMORROW;
   const CARRIED_TO = addDays(TOMORROW, 3);

@@ -151,3 +151,20 @@ export async function fetchPhoto(
   }
   return dataUriOf(await response.blob());
 }
+
+/**
+ * A photo of her message on her phone, `GET /v1/device/media/:mediaId`, by its device token
+ * (ADR-35), held in memory as a `data:` URI exactly as the family's photos are.
+ */
+export async function fetchDevicePhoto(mediaId: string, deviceToken: string): Promise<string> {
+  if (!apiConfigured() || apiBaseUrl === undefined) {
+    throw new Error("The API is not configured");
+  }
+  const response = await fetch(`${apiBaseUrl}/v1/device/media/${mediaId}`, {
+    headers: { authorization: `Device ${deviceToken}` },
+  });
+  if (!response.ok) {
+    throw failureOf(response.status, await response.text().catch(() => ""));
+  }
+  return dataUriOf(await response.blob());
+}

@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiDeviceMessage } from "@vela/contracts";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
   apiConfigured,
@@ -10,6 +10,8 @@ import {
   fetchDeviceMessages,
   sendDeviceMessage,
 } from "../api/client.ts";
+import { fetchDevicePhoto } from "../api/upload.ts";
+import { loadPhoto } from "../data/photos.ts";
 import { scheduleHerMorning } from "./morning.ts";
 import { clearDeviceToken, readDeviceToken } from "./token.ts";
 
@@ -29,6 +31,8 @@ export interface ParentView {
   language: string;
   /** Vela's newest message to her, which the screen shows and reads aloud. */
   message: ApiDeviceMessage | null;
+  /** Loads one photo of her message as a `data:` URI; undefined in the demo, which has none. */
+  photo?: (mediaId: string) => Promise<string>;
   sending: boolean;
   /** Why the last tap or words did not go, in words for the screen. */
   trouble?: string;
@@ -48,6 +52,7 @@ function exampleMorning(): ApiDeviceMessage {
       [{ id: "example:toast", label: t`Toast and tea` }],
       [{ id: "example:fine", label: t`❤️ I'm fine` }],
     ],
+    photos: [],
     sent_at: new Date().toISOString(),
   };
 }
@@ -59,6 +64,7 @@ function exampleThanks(): ApiDeviceMessage {
     exchange_id: null,
     text: t`Thank you. Mia knows you're fine.`,
     buttons: [],
+    photos: [],
     sent_at: new Date().toISOString(),
   };
 }
@@ -121,6 +127,13 @@ export function useParent(): ParentView {
     onError: () => setTrouble(t`That did not go through. Try again in a moment.`),
   });
 
+  // One loader per token, so a photo on screen is not asked for again on every render.
+  const photo = useCallback(
+    (mediaId: string) =>
+      loadPhoto(mediaId, () => fetchDevicePhoto(mediaId, typeof token === "string" ? token : "")),
+    [token],
+  );
+
   if (demo) {
     return {
       loading: false,
@@ -145,6 +158,7 @@ export function useParent(): ParentView {
     name: member.data?.address_form ?? "",
     language: member.data?.language ?? "en",
     message: newest,
+    photo,
     sending: send.isPending,
     ...(trouble === undefined ? {} : { trouble }),
     tap(buttonId) {

@@ -24,6 +24,16 @@ export function uploadsStoredMedia(channel: Channel): boolean {
 }
 
 /**
+ * Whether `channel` shows a file Vela keeps by its own id, read through the API: her phone on the
+ * parent surface (ADR-35), which loads each photo of her message with her device token. It is sent
+ * the file's storage key alone, and only for a stored image: a file Telegram alone holds, or a voice
+ * note, has nothing her phone can open yet, so it is left out as a missing one is.
+ */
+export function readsStoredMedia(channel: Channel): boolean {
+  return channel === "device";
+}
+
+/**
  * Loads every stored-only file of `message`, keyed by storage key, or returns undefined when it has
  * none. A file that cannot be loaded (storage is off, the object is gone, or the store fails) is
  * `ChannelSendError("unavailable")`, which the gateway retries as any passing failure and fails at

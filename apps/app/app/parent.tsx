@@ -1,8 +1,8 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, Stack } from "expo-router";
 import * as Speech from "expo-speech";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useParent } from "../src/device/useParent.ts";
 import { lightPalette as light } from "../src/theme/tokens.ts";
@@ -10,7 +10,7 @@ import { lightPalette as light } from "../src/theme/tokens.ts";
 /**
  * The parent surface (spec §14.2, ADR-35): one message at a time, Vela's newest to her, in large
  * type, with its buttons as large targets and her own words below. It is her consent (P1), her
- * morning's question (P2), a photo choice's 1 and 2 (P3), and Vela's thanks after she answers
+ * morning's question (P2), a photo choice's two photos with their 1 and 2 (P3), and Vela's thanks after she answers
  * (P5), because each is the message Vela sent her phone last. Light mode only, body 22 pt or more,
  * targets 64 pt or more, ink on cream for 7:1 contrast; no tabs, no menus.
  */
@@ -65,6 +65,16 @@ export default function ParentScreen() {
             <Text style={styles.message} accessibilityRole="text">
               {view.message.text}
             </Text>
+            {view.photo === undefined
+              ? null
+              : view.message.photos.map((mediaId, index, all) => (
+                  <HerPhoto
+                    key={mediaId}
+                    mediaId={mediaId}
+                    load={view.photo}
+                    {...(all.length > 1 ? { number: index + 1 } : {})}
+                  />
+                ))}
             <Pressable
               accessibilityRole="button"
               style={({ pressed }) => [styles.secondary, pressed ? styles.pressed : null]}
@@ -112,6 +122,54 @@ export default function ParentScreen() {
         {view.trouble === undefined ? null : <Text style={styles.body}>{view.trouble}</Text>}
       </ScrollView>
     </>
+  );
+}
+
+/**
+ * One photo of her message, the whole width, square when two are numbered for her to choose by
+ * ("1", "2" in large type in its corner, as her buttons say). It loads with her phone's token and
+ * is kept in memory only; one that cannot be loaded leaves a quiet frame, never an error.
+ */
+function HerPhoto({
+  mediaId,
+  load,
+  number,
+}: {
+  mediaId: string;
+  load: ((mediaId: string) => Promise<string>) | undefined;
+  number?: number;
+}) {
+  const { t } = useLingui();
+  const [uri, setUri] = useState<string | undefined>();
+  useEffect(() => {
+    if (load === undefined) return;
+    let current = true;
+    load(mediaId).then(
+      (next) => {
+        if (current) setUri(next);
+      },
+      () => {},
+    );
+    return () => {
+      current = false;
+    };
+  }, [load, mediaId]);
+  return (
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={number === undefined ? t`Photo` : t`Photo ${number}`}
+      style={[styles.photo, number === undefined ? styles.photoAlone : null]}
+    >
+      {uri === undefined ? null : (
+        <Image source={{ uri }} resizeMode="cover" style={styles.photoImage} />
+      )}
+      {number === undefined ? null : (
+        <View style={styles.photoNumber}>
+          <Text style={styles.photoNumberLabel}>{String(number)}</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -166,6 +224,29 @@ const styles = StyleSheet.create({
     color: light.ink,
     textAlignVertical: "top",
   },
+  photo: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: light.rule,
+    backgroundColor: light.surface2,
+    overflow: "hidden",
+  },
+  photoAlone: { aspectRatio: 4 / 3 },
+  photoImage: { width: "100%", height: "100%" },
+  photoNumber: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    minWidth: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: light.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoNumberLabel: { fontFamily: "Inter_600SemiBold", fontSize: 32, color: light.ink },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.45 },
 });

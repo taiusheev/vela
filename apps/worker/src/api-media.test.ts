@@ -6,7 +6,7 @@
  * the services.
  */
 import type { ApiComposedAsk, ApiErrorBody, ApiMe, ApiUploadedMedia } from "@vela/contracts";
-import type { VelaDatabase } from "@vela/db";
+import type { Member, VelaDatabase } from "@vela/db";
 import {
   ApiIdempotencyError,
   AskPhotoMissingError,
@@ -117,6 +117,9 @@ function fixture(options: FixtureOptions = {}) {
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>(unused("the weekly read")),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>(unused("a device")),
     loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>(unused("her messages")),
+    readDeviceMedia: vi
+      .fn<ApiReadServices["readDeviceMedia"]>()
+      .mockResolvedValue({ body: JPEG.slice().buffer, mime: "image/jpeg" }),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -778,6 +781,69 @@ describe("reading a photo", () => {
     expect(response.status).toBe(404);
     expect(f.verifySession).not.toHaveBeenCalled();
   });
+});
+
+describe("a photo on her phone (GET /v1/device/media/:mediaId)", () => {
+  const TOKEN = "d".repeat(43);
+  const DEVICE_PATH = `/v1/device/media/${MEDIA_ID}`;
+  const her = { id: MEMBER_ID, familyId: FAMILY_ID } as unknown as Member;
+  const byHerPhone = (path = DEVICE_PATH) =>
+    new Request(`https://api.test${path}`, { headers: { authorization: `Device ${TOKEN}` } });
+
+  it("answers the bytes as a JPEG to her token alone, uncached", async () => {
+    const f = fixture();
+    f.services.memberOfDeviceToken.mockResolvedValue(her);
+    const response = await f.app.request(byHerPhone());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/jpeg");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(JPEG);
+    expect(f.services.readDeviceMedia).toHaveBeenCalledExactlyOnceWith(
+      f.db,
+      her,
+      MEDIA_ID,
+      f.store,
+    );
+    expect(f.verifySession).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for a photo the service does not serve her", async () => {
+    const f = fixture();
+    f.services.memberOfDeviceToken.mockResolvedValue(her);
+    f.services.readDeviceMedia.mockResolvedValue(null);
+    await expectJson(await f.app.request(byHerPhone()), 404, NOT_FOUND);
+  });
+
+  it("answers 401 to a token it does not know and to a session's Bearer, without reading", async () => {
+    const f = fixture();
+    f.services.memberOfDeviceToken.mockResolvedValue(null);
+    await expectJson(await f.app.request(byHerPhone()), 401, UNAUTHENTICATED);
+    const bearer = new Request(`https://api.test${DEVICE_PATH}`, {
+      headers: { authorization: "Bearer good" },
+    });
+    await expectJson(await f.app.request(bearer), 401, UNAUTHENTICATED);
+    expect(f.services.readDeviceMedia).not.toHaveBeenCalled();
+  });
+
+  it.each(["off", "unavailable"] as const)(
+    "answers 404 when storage is %s, and for an id that is not one",
+    async (media) => {
+      const f = fixture({ media });
+      f.services.memberOfDeviceToken.mockResolvedValue(her);
+      await expectJson(await f.app.request(byHerPhone()), 404, NOT_FOUND);
+      const on = fixture();
+      on.services.memberOfDeviceToken.mockResolvedValue(her);
+      await expectJson(
+        await on.app.request(byHerPhone("/v1/device/media/not-a-uuid")),
+        404,
+        NOT_FOUND,
+      );
+      expect(f.services.readDeviceMedia).not.toHaveBeenCalled();
+      expect(on.services.readDeviceMedia).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("whether the API keeps photos", () => {

@@ -63,7 +63,7 @@ import {
   type OutboundRequest,
 } from "./gateway.ts";
 import { recordAiCall } from "./jobs.ts";
-import { uploadsStoredMedia } from "./outbound-media.ts";
+import { readsStoredMedia, uploadsStoredMedia } from "./outbound-media.ts";
 import { ordinaryPushReader, turnPromptPush } from "./push-messages.ts";
 import {
   channelLinkOfMember,
@@ -421,11 +421,15 @@ async function logDroppedMedia(
  * storage key: the gateway loads its bytes on each attempt and the adapter uploads them. One whose
  * object is gone, or that nothing can reach while storage is off, is null and left out, so a photo
  * choice short of two is turned into a question before her text and buttons are drawn, never sent
- * with 1 and 2 under one photo. A store that cannot answer throws, and her morning is tried again,
+ * with 1 and 2 under one photo. `byStorage` names every image by its storage key, for her phone. A store that cannot answer throws, and her morning is tried again,
  * rather than sent without a photo that is there.
  */
-async function mediaRefOf(deps: Deps, row: Media): Promise<OutboundMediaRef | null> {
-  if (row.providerFileId !== null) {
+async function mediaRefOf(
+  deps: Deps,
+  row: Media,
+  byStorage = false,
+): Promise<OutboundMediaRef | null> {
+  if (row.providerFileId !== null && !byStorage) {
     return { kind: row.kind, providerFileId: row.providerFileId };
   }
   if (row.storageKey === null || row.kind !== "image" || deps.media === null) {
@@ -448,6 +452,8 @@ async function mediaRefOf(deps: Deps, row: Media): Promise<OutboundMediaRef | nu
  * sent, which is logged. A file only Vela keeps goes only where the adapter uploads its bytes
  * (`uploadsStoredMedia`); on any other channel it is left out as a missing one is, and logged with
  * the channel, so a photo choice becomes a question there rather than a send the adapter refuses.
+ * Her phone (`readsStoredMedia`) is sent every stored image by its key, Telegram's copies included,
+ * and nothing else: a photo not yet copied from Telegram, and a voice note, are left out for it.
  */
 async function mediaRefsOf(
   deps: Deps,
@@ -457,12 +463,17 @@ async function mediaRefsOf(
 ): Promise<OutboundMediaRef[]> {
   const refs: OutboundMediaRef[] = [];
   let offChannel = 0;
+  const byStorage = readsStoredMedia(channel);
   for (const row of rows) {
-    if (row.providerFileId === null && row.storageKey !== null && !uploadsStoredMedia(channel)) {
+    if (
+      byStorage
+        ? row.kind !== "image" || row.storageKey === null
+        : row.providerFileId === null && row.storageKey !== null && !uploadsStoredMedia(channel)
+    ) {
       offChannel += 1;
       continue;
     }
-    const ref = await mediaRefOf(deps, row);
+    const ref = await mediaRefOf(deps, row, byStorage);
     if (ref !== null) {
       refs.push(ref);
     }
@@ -520,8 +531,8 @@ function lastingRows(
  * missing photo, nor for photos her channel cannot be sent. An image deleted before her pick on
  * this morning can no longer be read counts as missing (`lastingRows`), so her "1" and "2" are never
  * drawn over a photo that can vanish before she taps. The arrival and its repeat load it for the
- * same morning, so both send the same photos. Exported for the tests alone: every arrival today
- * goes by `ARRIVAL_CHANNEL`, so only a test can ask for another channel's.
+ * same morning, so both send the same photos. Exported for the tests alone: an arrival goes by her
+ * own channel (`arrivalChannelOf`), Telegram or her phone, so only a test asks for LINE's.
  *
  * `exchanges.voice_hello_id` is not read here. It is a write-only column today: nothing loads it,
  * and `ArrivalAsk` has no slot for it, so no voice hello reaches anyone. Whoever gives it a slot
