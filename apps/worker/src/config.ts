@@ -486,15 +486,10 @@ const PILOT_URL_VARS = ["PUBLIC_BASE_URL", "PRIVACY_NOTICE_URL_EN", "PRIVACY_NOT
  * basic id with the services change that first reads it (05 §8, step 4). So is push "expo" without
  * its access token (ADR-34).
  */
-export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
-  const environment = readEnvironment(env);
-  checkDeployedEnv(env, environment, PILOT_URL_VARS, "wrangler.jsonc");
-  refuseUnfilledNotices(environment, notices);
-  readLineConfig(env);
-  readPushConfig(env);
+/** Each language's privacy notice link; a language without its own takes the English one. */
+function privacyNoticeUrlsOf(env: PilotEnv): Record<Lang, string> {
   const english = env.PRIVACY_NOTICE_URL_EN;
-  // A language without its own notice takes the English one, so the link is never empty.
-  const privacyNoticeUrls: Record<Lang, string> = {
+  return {
     en: english,
     "zh-TW": env.PRIVACY_NOTICE_URL_ZH_TW,
     ja: english,
@@ -502,6 +497,15 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     hi: english,
     ru: english,
   };
+}
+
+export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
+  const environment = readEnvironment(env);
+  checkDeployedEnv(env, environment, PILOT_URL_VARS, "wrangler.jsonc");
+  refuseUnfilledNotices(environment, notices);
+  readLineConfig(env);
+  readPushConfig(env);
+  const privacyNoticeUrls = privacyNoticeUrlsOf(env);
   return {
     telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
     adminConversationId: readAdminConversationId(env, environment),
@@ -537,6 +541,11 @@ export interface ApiConfig {
    * switch because a device counts toward someone being told only while pushes are sent.
    */
   readonly pushSend: PushSend;
+  /**
+   * The privacy notice links, as the pilot Worker reads them: the consent request a phone set up
+   * for the parent surface is sent names hers (ADR-35).
+   */
+  readonly privacyNoticeUrls: Record<Lang, string>;
 }
 
 /** The hosts of Clerk's development instances, whose accounts are test accounts. */
@@ -677,6 +686,7 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
     telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
     regions: readRegions(env),
     pushSend: readPushSend(env),
+    privacyNoticeUrls: privacyNoticeUrlsOf(env),
   };
 }
 

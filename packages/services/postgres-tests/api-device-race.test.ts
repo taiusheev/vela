@@ -6,6 +6,7 @@
  * first. Without it both delete nothing they can see and both write, leaving her two phones.
  */
 
+import { LANGS, type Lang } from "@vela/contracts";
 import { channelLinks, members, users, type VelaDatabase } from "@vela/db";
 import { and, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -72,7 +73,15 @@ async function signIn(
 /** Each contender with its own token, as two phones would make. */
 function setUp(client: RaceClient, who: SessionIdentity, token: string) {
   return setUpApiDevice(
-    { ...client.deps, random: { token: () => token } },
+    {
+      ...client.deps,
+      random: { token: () => token },
+      config: {
+        privacyNoticeUrls: Object.fromEntries(
+          LANGS.map((lang) => [lang, `https://vela.test/privacy/${lang}`]),
+        ) as Record<Lang, string>,
+      },
+    },
     who,
     scope.familyId,
     scope.herId,

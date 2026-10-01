@@ -116,6 +116,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>(unused("the weekly read")),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>(unused("a device")),
+    loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>(unused("her messages")),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -803,6 +804,14 @@ describe("the media port the API runs on", () => {
     telegramBotUsername: "VelaStagingBot",
     regions: ["apac"],
     pushSend: "off",
+    privacyNoticeUrls: {
+      en: "https://vela.test/privacy",
+      "zh-TW": "https://vela.test/privacy/zh-TW",
+      ja: "https://vela.test/privacy",
+      de: "https://vela.test/privacy",
+      hi: "https://vela.test/privacy",
+      ru: "https://vela.test/privacy",
+    },
   };
 
   function env(overrides: Partial<PilotEnv>): PilotEnv {

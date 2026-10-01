@@ -172,7 +172,7 @@ async function organiserNameFor(db: Queryable, member: Member, family: Family): 
 
 /** The values filled into `consent.request` for her: who asks, and the notice in her language. */
 async function requestParams(
-  deps: Deps,
+  deps: { config: Pick<Deps["config"], "privacyNoticeUrls"> },
   db: Queryable,
   member: Member,
   family: Family,
@@ -180,6 +180,28 @@ async function requestParams(
   return {
     organiser: await organiserNameFor(db, member, family),
     notice: deps.config.privacyNoticeUrls[member.language],
+  };
+}
+
+/**
+ * The consent request as she is shown it (flows §3.2, spec §9): `consent.request` in her language
+ * with who asks and the notice, and its Yes and No. Her phone on the parent surface (ADR-35) is sent
+ * the same message as a Telegram chat, and her tap on it goes through `handleConsentButton`.
+ */
+export async function consentRequestMessage(
+  deps: { config: Pick<Deps["config"], "privacyNoticeUrls"> },
+  db: Queryable,
+  member: Member,
+  family: Family,
+): Promise<{ text: string; buttons: Button[][] }> {
+  const lang = member.language;
+  return {
+    text: t(lang, "consent.request", await requestParams(deps, db, member, family)),
+    buttons: yesNoButtons(
+      lang,
+      { type: "consent", memberId: member.id, accept: true },
+      { type: "consent", memberId: member.id, accept: false },
+    ),
   };
 }
 
@@ -232,12 +254,7 @@ async function acceptInvite(
     channel: event.channel,
     conversationId,
     lang,
-    text: t(lang, "consent.request", await requestParams(deps, tx, member, family)),
-    buttons: yesNoButtons(
-      lang,
-      { type: "consent", memberId: member.id, accept: true },
-      { type: "consent", memberId: member.id, accept: false },
-    ),
+    ...(await consentRequestMessage(deps, tx, member, family)),
     ref: { purpose: "consent", memberId: member.id },
   });
   await recordEvent(

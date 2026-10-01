@@ -8,7 +8,7 @@
  * services, and renders what came back. Services' entry points arrive through `PilotRuntime`, so a
  * test hands the routes fakes.
  */
-import type { InboundEvent } from "@vela/contracts";
+import { DeviceInput, type InboundEvent } from "@vela/contracts";
 import { errorLabel } from "@vela/services";
 import { type Context, Hono } from "hono";
 import { readEnvironment, readLineConfig, refuseUnfilledNotices } from "./config.ts";
@@ -20,6 +20,9 @@ import { MEDIA_PATH_PREFIX, openMedia } from "./media-route.ts";
 import { NOTICE_LANGS, NOTICE_PATHS } from "./notices.ts";
 import { requestFailed } from "./request-errors.ts";
 import type { PilotRuntime } from "./runtime.ts";
+
+/** `Authorization: Device <token>`: her phone's 43-character token (ADR-35). */
+const DEVICE_AUTHORIZATION = /^Device ([A-Za-z0-9_-]{43})$/;
 
 interface PilotAppEnv {
   Bindings: PilotEnv;
@@ -67,6 +70,44 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       c.executionCtx.waitUntil(handle.close());
     }
     return c.text("ok");
+  });
+
+  /**
+   * Her phone on the parent surface (ADR-35): her tap or her words, as the inbound event a Telegram
+   * chat would make, handed to the same router. Her device token is checked before anything else
+   * is read; an unknown one is 401, a body that is not the contract's 400. Nothing she sent is
+   * logged. Her phone reads what Vela sent it from the API (`GET /v1/device/messages`).
+   */
+  app.post("/device/messages", async (c) => {
+    const presented = DEVICE_AUTHORIZATION.exec(c.req.header("Authorization") ?? "");
+    if (presented === null) return c.json({ error: "unauthorized" }, 401);
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "invalid" }, 400);
+    }
+    const input = DeviceInput.safeParse(body);
+    if (!input.success) return c.json({ error: "invalid" }, 400);
+    const handle = await runtime.createDeps(c.env);
+    try {
+      const deps = handle.deps;
+      const her = await runtime.services.memberOfDeviceToken(deps.db, presented[1] ?? "");
+      if (her === null) return c.json({ error: "unauthorized" }, 401);
+      const id = crypto.randomUUID();
+      const event = await runtime.services.deviceInboundEvent(
+        deps.db,
+        her,
+        input.data,
+        { eventId: id, messageId: id },
+        deps.clock.now(),
+      );
+      if (event === null) return c.json({ error: "unauthorized" }, 401);
+      await runtime.services.handleInbound(deps, [event]);
+      return c.json({ ok: true });
+    } finally {
+      c.executionCtx.waitUntil(handle.close());
+    }
   });
 
   /**

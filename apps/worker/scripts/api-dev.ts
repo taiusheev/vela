@@ -45,6 +45,7 @@ import {
   loadApiQuiet,
   loadApiToday,
   loadApiWeeklyRead,
+  loadDeviceMessages,
   type MediaStore,
   memberOfDeviceToken,
   pauseApiMember,
@@ -170,6 +171,7 @@ const app = createApiApp({
     loadApiQuiet,
     loadApiWeeklyRead,
     memberOfDeviceToken,
+    loadDeviceMessages,
     authorizeFamilyAccess,
     readApiMedia,
   },
@@ -197,7 +199,20 @@ const app = createApiApp({
             registerApiPushDevice,
             removeApiPushDevice,
           },
-          devices: { random: createRandom() },
+          devices: {
+            random: createRandom(),
+            // No notice is served on this machine; the request names the staging one.
+            config: {
+              privacyNoticeUrls: {
+                en: "https://vela.vela-light-staging.workers.dev/privacy",
+                "zh-TW": "https://vela.vela-light-staging.workers.dev/privacy/zh-TW",
+                ja: "https://vela.vela-light-staging.workers.dev/privacy",
+                de: "https://vela.vela-light-staging.workers.dev/privacy",
+                hi: "https://vela.vela-light-staging.workers.dev/privacy",
+                ru: "https://vela.vela-light-staging.workers.dev/privacy",
+              },
+            },
+          },
           ...(botUsername === undefined || botUsername.length === 0
             ? {}
             : {

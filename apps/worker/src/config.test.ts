@@ -296,6 +296,14 @@ describe("the API's configuration", () => {
       telegramBotUsername: "VelaStagingBot",
       regions: ["apac"],
       pushSend: "off",
+      privacyNoticeUrls: {
+        en: "https://vela.vela.example/privacy",
+        "zh-TW": "https://vela.vela.example/privacy/zh-TW",
+        ja: "https://vela.vela.example/privacy",
+        de: "https://vela.vela.example/privacy",
+        hi: "https://vela.vela.example/privacy",
+        ru: "https://vela.vela.example/privacy",
+      },
     });
   });
 

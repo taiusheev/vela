@@ -3,6 +3,7 @@ import {
   runInDurableObject,
   waitOnExecutionContext,
 } from "cloudflare:test";
+import type { Member } from "@vela/db";
 import { describe, expect, it } from "vitest";
 import type { InboundJob, PilotEnv } from "./env.ts";
 import { createHeartbeat, LAST_RECONCILE_KEY } from "./heartbeat.ts";
@@ -565,5 +566,58 @@ describe("the privacy notice pages", () => {
         error: "ConfigError:privacy-notice.zh-TW.md",
       },
     ]);
+  });
+});
+
+describe("her phone's messages (ADR-35)", () => {
+  const TOKEN = "t".repeat(43);
+  const her = { id: "22222222-2222-7222-8222-222222222222" } as Member;
+
+  function deviceRequest(body: unknown, authorization: string | null = `Device ${TOKEN}`) {
+    const headers = new Headers({ "content-type": "application/json" });
+    if (authorization !== null) headers.set("Authorization", authorization);
+    return new Request(`${ORIGIN}/device/messages`, {
+      method: "POST",
+      headers,
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+  }
+
+  it("hands her tap to the router as a device event once her token names her", async () => {
+    const event = inboundEventFixture({ channel: "device", eventId: "device:1", kind: "button" });
+    const fake = createFakePilotRuntime({
+      services: {
+        memberOfDeviceToken: async () => her,
+        deviceInboundEvent: async () => event,
+      },
+    });
+
+    const response = await send(fake, deviceRequest({ button: "c:1", message_id: "m-1" }));
+
+    expect(response.status).toBe(200);
+    expect(namesOf(fake.calls)).toEqual([
+      "memberOfDeviceToken",
+      "deviceInboundEvent",
+      "handleInbound",
+    ]);
+  });
+
+  it("refuses a missing, malformed or unknown token, and hands nothing on", async () => {
+    const unknown = createFakePilotRuntime();
+    expect((await send(unknown, deviceRequest({ text: "hello" }))).status).toBe(401);
+    expect(namesOf(unknown.calls)).not.toContain("handleInbound");
+
+    const none = createFakePilotRuntime();
+    expect((await send(none, deviceRequest({ text: "hello" }, null))).status).toBe(401);
+    expect((await send(none, deviceRequest({ text: "hello" }, "Bearer x"))).status).toBe(401);
+    expect(namesOf(none.calls)).toEqual([]);
+  });
+
+  it("refuses a body that is neither a tap nor words before any database is opened", async () => {
+    const fake = createFakePilotRuntime({ services: { memberOfDeviceToken: async () => her } });
+    expect((await send(fake, deviceRequest({ text: "" }))).status).toBe(400);
+    expect((await send(fake, deviceRequest({ button: "x" }))).status).toBe(400);
+    expect((await send(fake, deviceRequest("not json"))).status).toBe(400);
+    expect(namesOf(fake.calls)).toEqual([]);
   });
 });

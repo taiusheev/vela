@@ -219,6 +219,14 @@ const PUSH_DEVICE: ApiPushDevice = {
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
 const CONTACT_ID = "44444444-4444-7444-8444-444444444444";
 const DEVICE_TOKEN = "d".repeat(43);
+const PRIVACY = {
+  en: "https://vela.test/privacy",
+  "zh-TW": "https://vela.test/privacy/zh-TW",
+  ja: "https://vela.test/privacy",
+  de: "https://vela.test/privacy",
+  hi: "https://vela.test/privacy",
+  ru: "https://vela.test/privacy",
+};
 const NEARBY_CONTACT = {
   id: CONTACT_ID,
   near_member_id: MEMBER_ID,
@@ -257,6 +265,7 @@ function fixture(enableWrites = false, push?: boolean) {
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>().mockResolvedValue(null),
+    loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>().mockResolvedValue([]),
     authorizeFamilyAccess: vi.fn<ApiReadServices["authorizeFamilyAccess"]>().mockResolvedValue({
       kind: "granted",
       access: { userId: USER_ID, memberId: MEMBER_ID, familyId: FAMILY_ID, role: "member" },
@@ -297,7 +306,10 @@ function fixture(enableWrites = false, push?: boolean) {
         .mockResolvedValue({ response: { status: 200, body: PAUSED }, replayed: false }),
       setUpApiDevice: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["setUpApiDevice"]>()
-        .mockResolvedValue({ member_id: MEMBER_ID, token: DEVICE_TOKEN }),
+        .mockResolvedValue({
+          body: { member_id: MEMBER_ID, token: DEVICE_TOKEN },
+          after: { outboundIds: [], wakeMemberIds: [] },
+        }),
       removeApiDevice: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["removeApiDevice"]>()
         .mockResolvedValue({
@@ -352,7 +364,7 @@ function fixture(enableWrites = false, push?: boolean) {
       deliver: vi.fn<(id: string) => Promise<void>>().mockResolvedValue(undefined),
       wake: vi.fn<(id: string, at: Date) => Promise<void>>().mockResolvedValue(undefined),
     },
-    devices: { random: { token: () => DEVICE_TOKEN } },
+    devices: { random: { token: () => DEVICE_TOKEN }, config: { privacyNoticeUrls: PRIVACY } },
     families: {
       random: { token: () => "fixture-token" },
       config: { telegramBotUsername: "VelaTestBot", regions: ["apac"] as const },
@@ -2211,7 +2223,12 @@ describe("her phone for the parent surface", () => {
       "organiser",
     );
     expect(f.writes.services.setUpApiDevice).toHaveBeenCalledWith(
-      { db: expect.anything(), clock: f.writes.clock, random: f.writes.devices.random },
+      {
+        db: expect.anything(),
+        clock: f.writes.clock,
+        random: f.writes.devices.random,
+        config: f.writes.devices.config,
+      },
       IDENTITY,
       FAMILY_ID,
       MEMBER_ID,
@@ -2258,6 +2275,28 @@ describe("her phone for the parent surface", () => {
       status: "invited",
     });
     expect(f.services.memberOfDeviceToken).toHaveBeenCalledWith(expect.anything(), DEVICE_TOKEN);
+  });
+
+  it("gives her phone the messages Vela sent it, newest first, by its token alone", async () => {
+    const f = fixture();
+    f.services.memberOfDeviceToken.mockResolvedValue(her);
+    const morning = {
+      message_id: "m-2",
+      kind: "arrival",
+      exchange_id: null,
+      text: "Good morning, Mrs Chen.",
+      buttons: [[{ id: "c:1", label: "I'm fine" }]],
+      sent_at: "2026-09-22T00:00:00.000Z",
+    };
+    f.services.loadDeviceMessages.mockResolvedValue([morning]);
+    const response = await f.app.request("/v1/device/messages", {
+      headers: { authorization: `Device ${DEVICE_TOKEN}` },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ messages: [morning] });
+    expect(f.services.loadDeviceMessages).toHaveBeenCalledWith(expect.anything(), her);
+
+    expect((await f.app.request("/v1/device/messages")).status).toBe(401);
   });
 
   it("answers 401 to a token it does not know, a session's Bearer, and no token", async () => {

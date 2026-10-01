@@ -451,6 +451,16 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       note("understandAnswer", answerId);
       await given.understandAnswer?.(deps, answerId);
     },
+    async memberOfDeviceToken(db, token) {
+      note("memberOfDeviceToken", token.length);
+      return given.memberOfDeviceToken === undefined ? null : given.memberOfDeviceToken(db, token);
+    },
+    async deviceInboundEvent(db, her, input, ids, at) {
+      note("deviceInboundEvent", her.id);
+      return given.deviceInboundEvent === undefined
+        ? null
+        : given.deviceInboundEvent(db, her, input, ids, at);
+    },
   };
 
   const runtime: PilotRuntime = {

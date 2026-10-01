@@ -44,8 +44,8 @@ afterAll(async () => {
   await h.close();
 });
 
-function setUp(who: SessionIdentity = mia, memberId = seed.member.id) {
-  return setUpApiDevice(h.deps, who, seed.family.id, memberId);
+async function setUp(who: SessionIdentity = mia, memberId = seed.member.id) {
+  return (await setUpApiDevice(h.deps, who, seed.family.id, memberId)).body;
 }
 
 async function deviceLinks() {

@@ -768,6 +768,36 @@ export const ApiDeviceMember = z.object({
 });
 export type ApiDeviceMember = z.infer<typeof ApiDeviceMember>;
 
+/**
+ * A message Vela sent her phone (`GET /v1/device/messages`, ADR-35): its text and its buttons as
+ * they were sent, newest first. `message_id` is what a tap under it names.
+ */
+export const ApiDeviceMessage = z.object({
+  message_id: z.string().min(1),
+  kind: z.string(),
+  exchange_id: z.uuid().nullable(),
+  text: z.string(),
+  buttons: z.array(z.array(z.object({ id: z.string(), label: z.string() }))),
+  sent_at: z.iso.datetime({ offset: true }),
+});
+export type ApiDeviceMessage = z.infer<typeof ApiDeviceMessage>;
+
+export const ApiDeviceMessages = z.object({ messages: z.array(ApiDeviceMessage) });
+export type ApiDeviceMessages = z.infer<typeof ApiDeviceMessages>;
+
+/**
+ * What her phone sends (`POST /device/messages`, ADR-35): a tap on a button of a message it was
+ * sent, or her own words, at most as long as a Telegram message.
+ */
+export const DeviceInput = z.union([
+  z.strictObject({
+    button: z.string().min(1).max(64),
+    message_id: z.string().min(1).max(64),
+  }),
+  z.strictObject({ text: z.string().trim().min(1).max(4_000) }),
+]);
+export type DeviceInput = z.infer<typeof DeviceInput>;
+
 export const StartTrial = z.strictObject({ member_id: z.uuid() });
 export type StartTrial = z.infer<typeof StartTrial>;
 

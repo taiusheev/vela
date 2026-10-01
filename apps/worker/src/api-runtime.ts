@@ -40,6 +40,7 @@ import {
   loadApiQuiet,
   loadApiToday,
   loadApiWeeklyRead,
+  loadDeviceMessages,
   memberOfDeviceToken,
   pauseApiMember,
   provisionApiAccount,
@@ -94,6 +95,7 @@ export const API_READ_SERVICES: ApiReadServices = {
   loadApiQuiet,
   loadApiWeeklyRead,
   memberOfDeviceToken,
+  loadDeviceMessages,
   authorizeFamilyAccess,
   readApiMedia,
 };
@@ -309,7 +311,10 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
               random: createRandom(),
               config: { telegramBotUsername: config.telegramBotUsername, regions: config.regions },
             },
-            devices: { random: createRandom() },
+            devices: {
+              random: createRandom(),
+              config: { privacyNoticeUrls: config.privacyNoticeUrls },
+            },
             nudges: createApiNudges(env),
             alerts: {
               adminConversationId: adminConversationOf(env),

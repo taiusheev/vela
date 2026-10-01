@@ -112,6 +112,7 @@ export type {
   UnderstandJob,
 } from "./deps.ts";
 export { pushFailureOf } from "./deps.ts";
+export { deviceInboundEvent, loadDeviceMessages } from "./device-messages.ts";
 export { errorLabel, VelaError } from "./errors.ts";
 export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";

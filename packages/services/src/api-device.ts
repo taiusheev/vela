@@ -1,12 +1,16 @@
 import type { ApiMutationResponse } from "@vela/contracts";
+import { outboundKey } from "@vela/core";
 import { channelLinks, type Member, members } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
+import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { runApiMutation } from "./api-idempotency.ts";
+import { consentRequestMessage } from "./consent.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
-import type { Queryable } from "./repo.ts";
+import { insertOutbound } from "./gateway.ts";
+import { familyById, type Queryable } from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** 32 random bytes, base64url: what her phone holds, and only its hash is kept. */
@@ -44,19 +48,26 @@ function canHaveDevice(member: Member | undefined, familyId: string): member is 
  * credential, which no receipt may hold. A retry after a lost answer sets the phone up again, with
  * a new token that voids the one that was lost, so two attempts still leave one phone set up. Her
  * member row is locked first, so two organisers setting up at once leave the second one's phone.
+ *
+ * Set up before her yes, the phone is sent the consent request a Telegram chat gets when she opens
+ * her invite (flows §3.2), as a row the caller hands to the queue after the commit (`after`); her
+ * tap on it goes through `handleConsentButton` like any other.
  */
 export async function setUpApiDevice(
-  deps: Pick<Deps, "db" | "clock" | "random">,
+  deps: Pick<Deps, "db" | "clock" | "random"> & {
+    config: Pick<Deps["config"], "privacyNoticeUrls">;
+  },
   identity: SessionIdentity,
   familyId: string,
   memberId: string,
-): Promise<{ member_id: string; token: string }> {
+): Promise<{ body: { member_id: string; token: string }; after: AfterCommit }> {
   if (!UUID.test(familyId) || !UUID.test(memberId)) throw notFound();
   const family = familyId.toLowerCase();
   const herId = memberId.toLowerCase();
   const now = deps.clock.now();
   const token = deps.random.token(DEVICE_TOKEN_BYTES);
   const hash = await deviceTokenHash(token);
+  const after = nothingAfterCommit();
 
   await deps.db.transaction(async (tx) => {
     const access = await authorizeFamilyAccess(tx, identity, family, "organiser");
@@ -71,13 +82,38 @@ export async function setUpApiDevice(
     await tx
       .delete(channelLinks)
       .where(and(eq(channelLinks.memberId, her.id), eq(channelLinks.channel, "device")));
-    await tx.insert(channelLinks).values({
-      memberId: her.id,
-      channel: "device",
-      externalId: hash,
-      linkedAt: now,
-      meta: { set_up_by: access.access.memberId },
-    });
+    const [link] = await tx
+      .insert(channelLinks)
+      .values({
+        memberId: her.id,
+        channel: "device",
+        externalId: hash,
+        linkedAt: now,
+        meta: { set_up_by: access.access.memberId },
+      })
+      .returning({ id: channelLinks.id });
+    const familyRow = await familyById(tx, family);
+    if (
+      link !== undefined &&
+      familyRow !== null &&
+      her.status === "invited" &&
+      her.lightConsentedAt === null
+    ) {
+      const written = await insertOutbound(deps, tx, {
+        kind: "consent",
+        idempotencyKey: outboundKey("consent", {
+          conversationId: hash,
+          suffix: `request:device:${link.id}`,
+        }),
+        memberId: her.id,
+        channel: "device",
+        conversationId: hash,
+        lang: her.language,
+        ...(await consentRequestMessage(deps, tx, her, familyRow)),
+        ref: { purpose: "consent", memberId: her.id },
+      });
+      if ("outboundId" in written) after.outboundIds.push(written.outboundId);
+    }
     await tx
       .update(members)
       .set({ primarySurface: "parent-surface" })
@@ -94,7 +130,7 @@ export async function setUpApiDevice(
       now,
     );
   });
-  return { member_id: herId, token };
+  return { body: { member_id: herId, token }, after };
 }
 
 /**

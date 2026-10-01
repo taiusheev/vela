@@ -13,8 +13,10 @@ import {
   type DeliveryResult,
   type Deps,
   deliverOutbound,
+  deviceInboundEvent,
   handleInbound,
   ingestAnswerMedia,
+  memberOfDeviceToken,
   type ReconcileResult,
   reconcile,
   recordChannelQuota,
@@ -42,6 +44,9 @@ export interface PilotServices {
   deliverOutbound(deps: Deps, outboundId: string): Promise<DeliveryResult>;
   ingestAnswerMedia(deps: Deps, answerId: string): Promise<void>;
   understandAnswer(deps: Deps, answerId: string): Promise<void>;
+  /** Her phone on the parent surface (ADR-35): who its token is, and her input as an event. */
+  memberOfDeviceToken: typeof memberOfDeviceToken;
+  deviceInboundEvent: typeof deviceInboundEvent;
 }
 
 export interface PilotRuntime {
@@ -73,6 +78,8 @@ const services: PilotServices = {
   deliverOutbound,
   ingestAnswerMedia,
   understandAnswer,
+  memberOfDeviceToken,
+  deviceInboundEvent,
 };
 
 export const pilotRuntime: PilotRuntime = {

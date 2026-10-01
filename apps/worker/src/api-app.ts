@@ -5,6 +5,7 @@ import {
   ApiComposedAsk,
   ApiCreatedFamily,
   ApiDeviceMember,
+  ApiDeviceMessages,
   ApiDeviceRemoved,
   ApiDeviceSetUp,
   type ApiErrorBody,
@@ -31,6 +32,7 @@ import {
   ComposeReply,
   CreateFamily,
   DeviceWrite,
+  type Lang,
   LeaveFamily,
   type MediaUnavailableReason,
   MemberLight,
@@ -66,6 +68,7 @@ import {
   type loadApiQuiet,
   type loadApiToday,
   type loadApiWeeklyRead,
+  type loadDeviceMessages,
   MediaRefusedError,
   type MediaStore,
   MemberChangeRefusedError,
@@ -120,6 +123,7 @@ export interface ApiReadServices {
   loadApiQuiet: typeof loadApiQuiet;
   loadApiWeeklyRead: typeof loadApiWeeklyRead;
   memberOfDeviceToken: typeof memberOfDeviceToken;
+  loadDeviceMessages: typeof loadDeviceMessages;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
   readApiMedia: typeof readApiMedia;
 }
@@ -163,7 +167,10 @@ export interface ApiRuntime {
      * Setting her phone up for the parent surface (ADR-35): the token source. Without it the device
      * routes answer 404.
      */
-    devices?: { random: Random };
+    devices?: {
+      random: Random;
+      config: { privacyNoticeUrls: Record<Lang, string> };
+    };
     /**
      * What a committed write left behind — rows to hand to the queue, members to wake — is carried out
      * through these. Without them nothing is lost: `reconcile` re-drives the rows and ticks the members.
@@ -511,6 +518,13 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
   });
 
+  // What Vela sent her phone, newest first; her taps and words go to the pilot Worker's
+  // /device/messages, beside the Telegram webhook, where the inbound router runs (ADR-35).
+  app.get("/v1/device/messages", withDatabase, authenticateDevice, async (c) => {
+    const messages = await runtime.services.loadDeviceMessages(c.get("db"), c.get("deviceMember"));
+    return c.json(ApiDeviceMessages.parse({ messages }));
+  });
+
   app.get("/v1/me", authenticate, withDatabase, async (c) => {
     const me = await runtime.services.loadApiMe(c.get("db"), c.get("session"));
     return me === null
@@ -818,12 +832,21 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           )(c, next),
         async (c) => {
           const set = await writes.services.setUpApiDevice(
-            { db: c.get("db"), clock: writes.clock, random: devices.random },
+            {
+              db: c.get("db"),
+              clock: writes.clock,
+              random: devices.random,
+              config: devices.config,
+            },
             c.get("session"),
             c.req.param("familyId"),
             c.req.param("memberId"),
           );
-          return c.json(ApiDeviceSetUp.parse(set), 201);
+          // Her consent request, set up before her yes, goes out now; reconcile is the backstop.
+          await runAfterCommit(writes.nudges, set.after, writes.clock.now(), (event, fields) =>
+            runtime.logger.error(event, fields),
+          );
+          return c.json(ApiDeviceSetUp.parse(set.body), 201);
         },
       );
       app.post(
