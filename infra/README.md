@@ -269,7 +269,7 @@ Needed now so the account exists; the adapter is built in sprint 2 (build plan 2
 
 ### 9. Expo
 
-1. Sign up at `expo.dev`, create the organisation `vela`, turn on two-factor authentication.
+1. Sign up at `expo.dev`, create an organisation, turn on two-factor authentication. Done: the organisation is `velatwn`, and the project `@velatwn/vela-light` was made on 1 October 2026 (step 4), its id in `apps/app/app.json`.
 2. In sprint 3: **Access tokens → Create** `github-actions`, paste into GitHub as `EXPO_TOKEN`.
 3. **Hand over:** the organisation name.
 
