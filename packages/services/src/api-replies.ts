@@ -21,8 +21,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /**
  * A reply that cannot be written, and why: `not_answered` (409) when she has not answered yet, so
  * there is nothing to reply to; `her_own` (403) when she replies to her own exchange, which would
- * read her own words back to her tomorrow; `voice_missing` (404) when the voice it names is not the
- * replier's own recording in her family, or is gone. The Telegram path keeps such a reply and logs
+ * read her own words back to her tomorrow; `voice_missing` or `photo_missing` (404) when the voice or
+ * photo it names is not the replier's own upload in her family, or is gone. The Telegram path keeps such a reply and logs
  * a warning; this one has no logger to warn with, so it says no instead.
  */
 export class ReplyRefusedError extends Error {
@@ -89,7 +89,9 @@ export async function replyToApiExchange(
           ? { exchange_id: exchangeId.toLowerCase(), text: reply.text }
           : "voice" in reply
             ? { exchange_id: exchangeId.toLowerCase(), voice: reply.voice.toLowerCase() }
-            : { exchange_id: exchangeId.toLowerCase(), reaction: reply.reaction },
+            : "photo" in reply
+              ? { exchange_id: exchangeId.toLowerCase(), photo: reply.photo.toLowerCase() }
+              : { exchange_id: exchangeId.toLowerCase(), reaction: reply.reaction },
     },
     {
       authorize: async (tx) => {
@@ -118,26 +120,36 @@ export async function replyToApiExchange(
         if (exchange === null) throw new VelaError("not_found", "Exchange not found");
         if (!canApply(exchange.state, "reply")) throw new ReplyRefusedError("not_answered");
 
-        const kind = "text" in reply ? "text" : "voice" in reply ? "voice" : reply.reaction;
+        const kind =
+          "text" in reply
+            ? "text"
+            : "voice" in reply
+              ? "voice"
+              : "photo" in reply
+                ? "photo"
+                : reply.reaction;
         let mediaId: string | null = null;
-        if ("voice" in reply) {
-          // Only the replier's own recording, kept in this family and not yet deleted.
-          const [voice] = await tx
+        if ("voice" in reply || "photo" in reply) {
+          // Only the replier's own upload from the app, kept in this family and not yet deleted.
+          const voice = "voice" in reply;
+          const [file] = await tx
             .select({ id: media.id })
             .from(media)
             .where(
               and(
-                eq(media.id, reply.voice),
+                eq(media.id, voice ? reply.voice : reply.photo),
                 eq(media.familyId, exchange.familyId),
                 eq(media.uploadedBy, replierId),
-                eq(media.kind, "audio"),
+                eq(media.kind, voice ? "audio" : "image"),
                 isNull(media.channel),
                 isNotNull(media.storageKey),
               ),
             )
             .limit(1);
-          if (voice === undefined) throw new ReplyRefusedError("voice_missing");
-          mediaId = voice.id;
+          if (file === undefined) {
+            throw new ReplyRefusedError(voice ? "voice_missing" : "photo_missing");
+          }
+          mediaId = file.id;
         }
         const [inserted] = await tx
           .insert(replies)
@@ -206,7 +218,7 @@ export async function replyToApiExchange(
             exchangeId: exchange.id,
             surface: "app",
             props: {
-              kind: kind === "text" || kind === "voice" ? kind : "reaction",
+              kind: kind === "text" || kind === "voice" || kind === "photo" ? kind : "reaction",
               by: replierId,
             },
           },

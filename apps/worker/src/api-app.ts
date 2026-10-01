@@ -397,10 +397,15 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
             status: 403,
           },
           not_answered: { code: "conflict", message: "She has not answered yet.", status: 409 },
-          // The voice a reply names is gone, or not the replier's own recording in this family.
+          // The voice or photo a reply names is gone, or not the replier's own in this family.
           voice_missing: {
             code: "not_found",
             message: "That voice is no longer here.",
+            status: 404,
+          },
+          photo_missing: {
+            code: "not_found",
+            message: "That photo is no longer here.",
             status: 404,
           },
         } as const;

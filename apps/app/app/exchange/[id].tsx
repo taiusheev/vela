@@ -7,10 +7,11 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, replyRefusal, replyTo } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
-import { uploadVoice } from "../../src/api/upload.ts";
+import { photoRefusal, uploadMedia, uploadVoice } from "../../src/api/upload.ts";
 import type { Recorded } from "../../src/audio/useRecording.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
 import { ExchangePhotos } from "../../src/components/family-photo.tsx";
+import { type ChosenPhoto, PhotoReply } from "../../src/components/photo-reply.tsx";
 import {
   Card,
   Chip,
@@ -47,6 +48,7 @@ export default function ExchangeScreen() {
   const demo = !apiConfigured();
   const { familyId } = useToday();
   const [voiceFailed, setVoiceFailed] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState<"limit" | "trouble" | null>(null);
 
   const post = useMutation({
     mutationFn: async (reply: ComposeReply) =>
@@ -132,6 +134,29 @@ export default function ExchangeScreen() {
       return false;
     }
   };
+  // The photo goes up under the key minted when it was chosen, then the reply names it.
+  const sendPhoto = async (photo: ChosenPhoto): Promise<boolean> => {
+    if (demo) {
+      setSent((earlier) => [...earlier, { kind: "photo" }]);
+      return true;
+    }
+    if (familyId === undefined) return false;
+    setPhotoFailed(null);
+    try {
+      const uploaded = await uploadMedia(
+        familyId,
+        photo.key,
+        photo.uri,
+        await account.token(),
+        () => {},
+      );
+      await post.mutateAsync({ photo: uploaded.id });
+      return true;
+    } catch (error) {
+      setPhotoFailed(photoRefusal(error) === "limit" ? "limit" : "trouble");
+      return false;
+    }
+  };
   const reactions: { kind: ReactionKind; label: string }[] = [
     { kind: "heart", label: `❤️ ${t`Heart`}` },
     { kind: "laugh", label: `😂 ${t`Laugh`}` },
@@ -148,7 +173,11 @@ export default function ExchangeScreen() {
           ? t`That could not be sent just now. Your words are kept.`
           : voiceFailed
             ? t`That voice could not be sent just now. It is kept to send again.`
-            : null;
+            : photoFailed === "limit"
+              ? t`Too many photos for now. Try again tomorrow.`
+              : photoFailed === "trouble"
+                ? t`That photo could not be sent just now. It is kept to send again.`
+                : null;
   // What the caption under the composer may promise, which depends on the day (API contract §4).
   const reach =
     exchange.repliesReachHer === true
@@ -253,6 +282,7 @@ export default function ExchangeScreen() {
               disabled={post.isPending || words.length === 0}
             />
             <VoiceReply disabled={post.isPending} send={sendVoice} />
+            <PhotoReply disabled={post.isPending} send={sendPhoto} />
           </View>
         ) : (
           <Words variant="body" tone="ink2">

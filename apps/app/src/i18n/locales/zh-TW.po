@@ -186,6 +186,10 @@ msgstr "🎙 用聲音回答"
 msgid "🎙 Reply with your voice"
 msgstr "🎙 用聲音回覆"
 
+#: src/components/photo-reply.tsx
+msgid "📷 Reply with a photo"
+msgstr "📷 用照片回覆"
+
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "每年 79 美元"
@@ -374,6 +378,10 @@ msgstr "確認中…"
 #: src/components/photo-slots.tsx
 msgid "Choose a photo"
 msgstr "選一張照片"
+
+#: src/components/photo-reply.tsx
+msgid "Choose another"
+msgstr "換一張"
 
 #: src/components/quiet-notice.tsx
 msgid "Close"
@@ -957,6 +965,10 @@ msgstr "傳驗證碼給我"
 msgid "Send my answer"
 msgstr "送出我的回答"
 
+#: src/components/photo-reply.tsx
+msgid "Send photo"
+msgstr "送出照片"
+
 #: src/components/voice-reply.tsx
 msgid "Send voice reply"
 msgstr "送出語音回覆"
@@ -965,6 +977,7 @@ msgstr "送出語音回覆"
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 #: app/sign-in.tsx
+#: src/components/photo-reply.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
@@ -1176,6 +1189,14 @@ msgstr "找不到這則問答。"
 msgid "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
 msgstr "這個號碼無法使用。從國外撥打時，國碼後面的 0 要去掉，請試試 {shorter}。"
 
+#: app/exchange/[id].tsx
+msgid "That photo could not be sent just now. It is kept to send again."
+msgstr "這張照片暫時無法送出，已為您保留，可以再送一次。"
+
+#: src/components/photo-reply.tsx
+msgid "That photo could not be used. Try another one."
+msgstr "這張照片無法使用，請換一張。"
+
 #: src/components/photo-slots.tsx
 msgid "That photo did not go up. Try again."
 msgstr "這張照片沒有傳上去，請再試一次。"
@@ -1231,6 +1252,10 @@ msgstr "燈已經準備好了"
 #: app/onboarding.tsx
 msgid "The people nearby are part of Vela Light: they appear in the quiet notice, with Call."
 msgstr "附近的聯絡人是 Vela Light 的一部分：安靜通知裡會列出對方，並可直接撥打電話。"
+
+#: src/components/photo-reply.tsx
+msgid "The photo you chose"
+msgstr "您選的照片"
 
 #: src/components/family-photo.tsx
 msgid "The picked photo"
@@ -1358,6 +1383,10 @@ msgstr "明天早上"
 #: src/components/photo-slots.tsx
 msgid "Too many photos for now. Try again later."
 msgstr "目前照片太多了，請稍後再試。"
+
+#: app/exchange/[id].tsx
+msgid "Too many photos for now. Try again tomorrow."
+msgstr "目前照片太多了，請明天再試。"
 
 #: src/components/photo-slots.tsx
 msgid "Try again"

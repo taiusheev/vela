@@ -605,7 +605,8 @@ interface ReadBack {
 
 /**
  * Yesterday's replies (spec §6.3, flows §3.7): the previous delivered exchange's replies to her that
- * were not read back yet, as lines in her language, with the family's voice replies as files.
+ * were not read back yet, as lines in her language, with the family's voice and photo replies as
+ * files.
  */
 async function loadReadBack(
   deps: Deps,
@@ -645,21 +646,24 @@ async function loadReadBack(
   if (rows.length === 0) {
     return none;
   }
-  const voiceIds = rows.flatMap((row) =>
-    row.reply.kind === "voice" && row.reply.mediaId !== null ? [row.reply.mediaId] : [],
+  // The family's voices and photos, in the order they were sent, at most a few photos a morning.
+  const fileIds = rows.flatMap((row) =>
+    (row.reply.kind === "voice" || row.reply.kind === "photo") && row.reply.mediaId !== null
+      ? [row.reply.mediaId]
+      : [],
   );
-  const voices = await mediaRefsOf(
+  const files = await mediaRefsOf(
     deps,
     member.familyId,
     channel,
-    await mediaByIds(deps, member.familyId, voiceIds),
+    await mediaByIds(deps, member.familyId, fileIds),
   );
   return {
     lines: summariseReplies({
       lang: member.language,
       replies: rows.map((row) => ({ name: row.name, kind: row.reply.kind, text: row.reply.text })),
     }),
-    media: voices,
+    media: files,
     replyIds: rows.map((row) => row.reply.id),
     previousExchangeId: previous.id,
   };
@@ -727,7 +731,13 @@ export async function deliverArrival(
     repeat: false,
   });
   const askFiles = askMedia.slice(0, MAX_MEDIA);
-  const attached = [...readBack.media.slice(0, MAX_MEDIA - askFiles.length), ...askFiles];
+  // A photo the family sent back goes only to a morning whose ask shows none: beside an ask's own
+  // photos it would join their album, and her "1" and "2" would no longer name the photos asked.
+  const askShowsPhotos = askFiles.some((file) => file.kind === "image");
+  const readBackFiles = askShowsPhotos
+    ? readBack.media.filter((file) => file.kind !== "image")
+    : readBack.media;
+  const attached = [...readBackFiles.slice(0, MAX_MEDIA - askFiles.length), ...askFiles];
   const request: OutboundRequest = {
     kind: "arrival",
     idempotencyKey: outboundKey("arrival", { memberId, date }),

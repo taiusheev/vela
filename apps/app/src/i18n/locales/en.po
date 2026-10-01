@@ -179,6 +179,10 @@ msgstr "🎙 Answer with your voice"
 msgid "🎙 Reply with your voice"
 msgstr "🎙 Reply with your voice"
 
+#: src/components/photo-reply.tsx
+msgid "📷 Reply with a photo"
+msgstr "📷 Reply with a photo"
+
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "$79 a year"
@@ -367,6 +371,10 @@ msgstr "Checking…"
 #: src/components/photo-slots.tsx
 msgid "Choose a photo"
 msgstr "Choose a photo"
+
+#: src/components/photo-reply.tsx
+msgid "Choose another"
+msgstr "Choose another"
 
 #: src/components/quiet-notice.tsx
 msgid "Close"
@@ -950,6 +958,10 @@ msgstr "Send me a code"
 msgid "Send my answer"
 msgstr "Send my answer"
 
+#: src/components/photo-reply.tsx
+msgid "Send photo"
+msgstr "Send photo"
+
 #: src/components/voice-reply.tsx
 msgid "Send voice reply"
 msgstr "Send voice reply"
@@ -958,6 +970,7 @@ msgstr "Send voice reply"
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 #: app/sign-in.tsx
+#: src/components/photo-reply.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
@@ -1169,6 +1182,14 @@ msgstr "That exchange is not here."
 msgid "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
 msgstr "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
 
+#: app/exchange/[id].tsx
+msgid "That photo could not be sent just now. It is kept to send again."
+msgstr "That photo could not be sent just now. It is kept to send again."
+
+#: src/components/photo-reply.tsx
+msgid "That photo could not be used. Try another one."
+msgstr "That photo could not be used. Try another one."
+
 #: src/components/photo-slots.tsx
 msgid "That photo did not go up. Try again."
 msgstr "That photo did not go up. Try again."
@@ -1224,6 +1245,10 @@ msgstr "The light is ready"
 #: app/onboarding.tsx
 msgid "The people nearby are part of Vela Light: they appear in the quiet notice, with Call."
 msgstr "The people nearby are part of Vela Light: they appear in the quiet notice, with Call."
+
+#: src/components/photo-reply.tsx
+msgid "The photo you chose"
+msgstr "The photo you chose"
 
 #: src/components/family-photo.tsx
 msgid "The picked photo"
@@ -1351,6 +1376,10 @@ msgstr "Tomorrow morning"
 #: src/components/photo-slots.tsx
 msgid "Too many photos for now. Try again later."
 msgstr "Too many photos for now. Try again later."
+
+#: app/exchange/[id].tsx
+msgid "Too many photos for now. Try again tomorrow."
+msgstr "Too many photos for now. Try again tomorrow."
 
 #: src/components/photo-slots.tsx
 msgid "Try again"

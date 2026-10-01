@@ -32,6 +32,7 @@ import { AskPhotoMissingError, composeApiAsk } from "./api-asks.ts";
 import { setUpApiDevice } from "./api-device.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
 import { uploadApiMedia } from "./api-media.ts";
+import { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 import { exchangeRow } from "./api-today.ts";
 import { deliverArrival, loadAsk, prepareDay } from "./arrivals.ts";
 import type { Deps, MediaStore, OutboundJob } from "./deps.ts";
@@ -776,6 +777,78 @@ describe("a photo ask on her phone (ADR-35)", () => {
 
     await compose({ media_ids: [unasked, await photo(4)] });
     expect(await readDeviceMedia(h.db, her, unasked, h.media)).not.toBeNull();
+  });
+});
+
+describe("a photo reply from the app (A8)", () => {
+  /** Today's morning, delivered and answered, so the family can reply to it. */
+  async function answeredToday() {
+    return seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "answered",
+      deliveredAt: h.clock.now(),
+      answeredAt: h.clock.now(),
+      createdAt: h.clock.now(),
+    });
+  }
+
+  async function replyWithPhoto(exchangeId: string, photoId: string, who = mia) {
+    keys += 1;
+    return replyToApiExchange(h.deps, who, `reply-${keys}`, exchangeId, { photo: photoId });
+  }
+
+  it("is a reply naming the photo, shown to her next morning as an upload", async () => {
+    const answered = await answeredToday();
+    const sent = await photo(7);
+
+    const result = await replyWithPhoto(answered.id, sent);
+
+    expect(result.response.status).toBe(201);
+    const [row] = await h.db.select().from(replies);
+    expect(row).toMatchObject({ kind: "photo", mediaId: sent, channel: "app" });
+    h.clock.set(at(TOMORROW, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    const message = await arrivalMessage();
+    expect(message.text).toContain("Mia sent a photo");
+    expect(message.media?.map((ref) => ref.storageKey)).toEqual([await storageKeyOf(sent)]);
+    await h.run(handlers());
+    const [delivered] = h.telegram.sentTo(seed.memberLink.externalId);
+    expect(delivered?.uploads.map((upload) => upload.storageKey)).toEqual([
+      await storageKeyOf(sent),
+    ]);
+  });
+
+  it("is left out of a morning whose ask shows its own photos, so her 1 and 2 still name them", async () => {
+    const answered = await answeredToday();
+    await replyWithPhoto(answered.id, await photo(7));
+    const first = await photo(1);
+    const second = await photo(2);
+    await compose({ media_ids: [first, second] });
+
+    h.clock.set(at(TOMORROW, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+
+    const message = await arrivalMessage();
+    expect(message.text).toContain("Mia sent a photo");
+    expect(message.text).toContain("Tap 1 or 2");
+    expect(message.media?.map((ref) => ref.storageKey)).toEqual([
+      await storageKeyOf(first),
+      await storageKeyOf(second),
+    ]);
+  });
+
+  it("refuses a photo that is not the replier's own upload", async () => {
+    const answered = await answeredToday();
+    const hers = await photo(5, sam);
+
+    const refused = await replyWithPhoto(answered.id, hers).then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+    expect(refused).toBeInstanceOf(ReplyRefusedError);
+    expect((refused as ReplyRefusedError).reason).toBe("photo_missing");
+    expect(await h.db.select().from(replies)).toHaveLength(0);
   });
 });
 

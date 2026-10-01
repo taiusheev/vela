@@ -112,12 +112,12 @@ export default function ParentScreen() {
             </Text>
             {view.photo === undefined
               ? null
-              : view.message.photos.map((mediaId, index, all) => (
+              : view.message.photos.map((mediaId, index) => (
                   <HerPhoto
                     key={mediaId}
                     mediaId={mediaId}
                     load={view.photo}
-                    {...(all.length > 1 ? { number: index + 1 } : {})}
+                    {...(choosesByNumber(view.message) ? { number: index + 1 } : {})}
                   />
                 ))}
             {view.voice === undefined
@@ -178,6 +178,16 @@ export default function ParentScreen() {
       </ScrollView>
     </>
   );
+}
+
+/**
+ * Whether her message asks her to choose a photo by its number, as a photo choice's "1" and "2"
+ * do; photos the family sent back are shown unnumbered.
+ */
+function choosesByNumber(message: { buttons: { label: string }[][] } | null): boolean {
+  if (message === null) return false;
+  const labels = message.buttons.flat().map((button) => button.label);
+  return labels.includes("1") && labels.includes("2");
 }
 
 /**

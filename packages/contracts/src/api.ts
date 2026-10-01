@@ -488,7 +488,7 @@ export type ApiExchangePage = z.infer<typeof ApiExchangePage>;
 
 /**
  * A reply from the app (`POST /v1/exchanges/:exchangeId/replies`, spec §14.1 A8): words, a voice,
- * or a reaction (a heart, a laugh or a hug), which is the same row a Telegram reaction writes, one of
+ * a photo, or a reaction (a heart, a laugh or a hug), which is the same row a Telegram reaction writes, one of
  * each kind per member per exchange. The Telegram path makes a member's reactions in the group
  * equal to the group's set, and leaves one given in the app alone (API contract §4, "Reactions").
  */
@@ -509,6 +509,8 @@ export const ComposeReply = z.union([
   z.strictObject({ reaction: z.enum(REACTION_KINDS) }),
   /** A voice the replier uploaded first (`POST /v1/families/:familyId/voice`), by its id. */
   z.strictObject({ voice: z.uuid() }),
+  /** A photo the replier uploaded first (`POST /v1/families/:familyId/media`), by its id. */
+  z.strictObject({ photo: z.uuid() }),
 ]);
 export type ComposeReply = z.infer<typeof ComposeReply>;
 
@@ -529,7 +531,12 @@ export type ApiReply = z.infer<typeof ApiReply>;
  * yet, so there is nothing to reply to; `her_own` (403) when the kept-light member herself replies,
  * which would read her own words back to her tomorrow.
  */
-export const REPLY_REFUSALS = ["not_answered", "her_own", "voice_missing"] as const;
+export const REPLY_REFUSALS = [
+  "not_answered",
+  "her_own",
+  "voice_missing",
+  "photo_missing",
+] as const;
 export const ReplyRefusal = z.enum(REPLY_REFUSALS);
 export type ReplyRefusal = z.infer<typeof ReplyRefusal>;
 
