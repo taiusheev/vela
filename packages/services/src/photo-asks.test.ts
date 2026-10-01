@@ -6,6 +6,7 @@
 import {
   ApiComposedAsk,
   ApiUploadedMedia,
+  ChannelSendError,
   type InboundEvent,
   type LocalDate,
 } from "@vela/contracts";
@@ -682,8 +683,11 @@ describe("a photo ask on her phone (ADR-35)", () => {
     );
   });
 
-  it("leaves out a photo Telegram alone holds, so a choice short of it goes as a question", async () => {
+  it("copies a photo Telegram alone holds into the store first, so both photos reach her phone", async () => {
     const telegram = await telegramPhoto();
+    const fileId = (await photoRow(telegram)).providerFileId ?? "";
+    const jpeg = testJpeg({ scan: [9, 9, 9] });
+    h.telegram.mediaFiles.set(fileId, { body: jpeg.slice().buffer, mime: "image/jpeg" });
     const stored = await photo(1);
     await compose({ media_ids: [telegram, stored] });
     const [exchange] = await herExchanges();
@@ -694,20 +698,50 @@ describe("a photo ask on her phone (ADR-35)", () => {
       timeZone: TZ,
     });
 
-    expect(onPhone.ask).toMatchObject({ type: "question", imageCount: 1 });
-    expect(onPhone.media).toEqual([
-      {
-        kind: "image",
-        storageKey: await storageKeyOf(stored),
-        mime: "image/jpeg",
-        bytes: expect.any(Number),
-      },
+    expect(onPhone.ask).toMatchObject({ type: "photo_choice", imageCount: 2 });
+    const copy = await photoRow(telegram);
+    expect(copy).toMatchObject({ mime: "image/jpeg", bytes: jpeg.byteLength });
+    expect(copy.storageKey).toBe(`families/${seed.family.id}/media/${telegram}.jpg`);
+    expect(onPhone.media.map((ref) => ref.storageKey)).toEqual([
+      copy.storageKey,
+      await storageKeyOf(stored),
     ]);
+    // Asked again, it is not fetched again.
+    await loadAsk(h.deps, seed.family, exchange, "device", { date: TOMORROW, timeZone: TZ });
+    expect(h.telegram.fetched.filter((id) => id === fileId)).toHaveLength(1);
+  });
+
+  it("leaves out a photo Telegram can no longer give, so a choice short of it goes as a question", async () => {
+    const telegram = await telegramPhoto();
+    const stored = await photo(1);
+    await compose({ media_ids: [telegram, stored] });
+    const [exchange] = await herExchanges();
+    if (exchange === undefined) throw new Error("expected her photo ask");
+    const gone: Deps = {
+      ...h.deps,
+      channels: {
+        get: () => ({
+          ...h.telegram,
+          fetchMedia: async () => {
+            throw new ChannelSendError("not_found", "file is gone");
+          },
+        }),
+      },
+    };
+
+    const onPhone = await loadAsk(gone, seed.family, exchange, "device", {
+      date: TOMORROW,
+      timeZone: TZ,
+    });
+
+    expect(onPhone.ask).toMatchObject({ type: "question", imageCount: 1 });
+    expect(onPhone.media.map((ref) => ref.storageKey)).toEqual([await storageKeyOf(stored)]);
     expect(h.logger.entries).toContainEqual({
       level: "warn",
-      event: "media_not_sendable_on_channel",
-      fields: { familyId: seed.family.id, channel: "device", count: 1 },
+      event: "media_copy_fetch_failed",
+      fields: { mediaId: telegram, code: "not_found" },
     });
+    expect((await photoRow(telegram)).storageKey).toBeNull();
   });
 
   it("names a Telegram photo by its stored copy once it has one", async () => {

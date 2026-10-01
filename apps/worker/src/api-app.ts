@@ -527,7 +527,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     const messages = await runtime.services.loadDeviceMessages(c.get("db"), c.get("deviceMember"));
     return c.json(ApiDeviceMessages.parse({ messages }));
   });
-  // A photo of her message, or of what the family sent back, by her device token (ADR-35).
+  // A photo or voice note of her message, by her device token (ADR-35).
   app.get("/v1/device/media/:mediaId", withDatabase, authenticateDevice, async (c) => {
     const store = runtime.media?.store;
     if (store === undefined || !MEDIA_ID.test(c.req.param("mediaId"))) {
@@ -541,7 +541,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
     if (photo === null) return c.json(NOT_FOUND, 404);
     return c.body(photo.body, 200, {
-      "content-type": "image/jpeg",
+      "content-type": photo.mime,
       "x-content-type-options": "nosniff",
       "content-disposition": "inline",
     });

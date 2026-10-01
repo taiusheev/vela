@@ -159,6 +159,14 @@ msgstr "{recipient} saw it · {time}"
 msgid "{words} · shown to her in {language}"
 msgstr "{words} · shown to her in {language}"
 
+#: app/parent.tsx
+msgid "▶ Play the voice message"
+msgstr "▶ Play the voice message"
+
+#: app/parent.tsx
+msgid "▶ Play voice message {number}"
+msgstr "▶ Play voice message {number}"
+
 #: src/device/useParent.ts
 msgid "❤️ I'm fine"
 msgstr "❤️ I'm fine"
@@ -1067,6 +1075,7 @@ msgstr "Starting…"
 msgid "Stay"
 msgstr "Stay"
 
+#: app/parent.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
 msgstr "Stop"

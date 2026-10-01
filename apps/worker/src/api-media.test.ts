@@ -809,6 +809,15 @@ describe("a photo on her phone (GET /v1/device/media/:mediaId)", () => {
     expect(f.verifySession).not.toHaveBeenCalled();
   });
 
+  it("answers a voice note with the type it was stored with", async () => {
+    const f = fixture();
+    f.services.memberOfDeviceToken.mockResolvedValue(her);
+    f.services.readDeviceMedia.mockResolvedValue({ body: JPEG.slice().buffer, mime: "audio/ogg" });
+    const response = await f.app.request(byHerPhone());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("audio/ogg");
+  });
+
   it("answers 404 for a photo the service does not serve her", async () => {
     const f = fixture();
     f.services.memberOfDeviceToken.mockResolvedValue(her);

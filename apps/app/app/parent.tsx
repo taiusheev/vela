@@ -1,4 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { router, Stack } from "expo-router";
 import * as Speech from "expo-speech";
 import { useEffect, useState } from "react";
@@ -73,6 +74,15 @@ export default function ParentScreen() {
                     key={mediaId}
                     mediaId={mediaId}
                     load={view.photo}
+                    {...(all.length > 1 ? { number: index + 1 } : {})}
+                  />
+                ))}
+            {view.voice === undefined
+              ? null
+              : view.message.voices.map((mediaId, index, all) => (
+                  <HerVoice
+                    key={mediaId}
+                    source={view.voice?.(mediaId)}
                     {...(all.length > 1 ? { number: index + 1 } : {})}
                   />
                 ))}
@@ -172,6 +182,45 @@ function HerPhoto({
         </View>
       )}
     </View>
+  );
+}
+
+/**
+ * One voice note the family sent her, played from the API with her phone's token, the whole width:
+ * one large button that plays it and, while it plays, stops it.
+ */
+function HerVoice({
+  source,
+  number,
+}: {
+  source: { uri: string; headers: Record<string, string> } | undefined;
+  number?: number;
+}) {
+  const { t } = useLingui();
+  const player = useAudioPlayer(source ?? null);
+  const status = useAudioPlayerStatus(player);
+  const toggle = async () => {
+    if (status.playing) {
+      player.pause();
+      return;
+    }
+    await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+    if (status.didJustFinish || status.currentTime >= status.duration) await player.seekTo(0);
+    player.play();
+  };
+  const label = status.playing
+    ? t`Stop`
+    : number === undefined
+      ? t`▶ Play the voice message`
+      : t`▶ Play voice message ${number}`;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.secondary, pressed ? styles.pressed : null]}
+      onPress={() => void toggle()}
+    >
+      <Text style={styles.secondaryLabel}>{label}</Text>
+    </Pressable>
   );
 }
 

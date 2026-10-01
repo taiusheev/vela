@@ -74,6 +74,7 @@ import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
 import { type InsertResult, insertOutbound } from "./gateway.ts";
+import { extensionFor } from "./media-copy.ts";
 import {
   activeOrganisersWithLinks,
   channelLinkOfMember,
@@ -87,26 +88,6 @@ import {
 
 /** `reconcile` stops re-running an answer at this many attempts; the founder is told then. */
 export const MAX_PROCESSING_ATTEMPTS = 3;
-
-/** R2 keys are named by the file's type, which Telegram voice notes and photos leave to the MIME type. */
-const EXTENSION_BY_MIME: ReadonlyMap<string, string> = new Map([
-  ["audio/ogg", "ogg"],
-  ["audio/opus", "ogg"],
-  ["audio/mpeg", "mp3"],
-  ["audio/mp4", "m4a"],
-  ["audio/x-m4a", "m4a"],
-  ["audio/aac", "aac"],
-  ["audio/wav", "wav"],
-  ["audio/webm", "webm"],
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-]);
-
-function extensionFor(mime: string): string {
-  const type = (mime.split(";")[0] ?? "").trim().toLowerCase();
-  return EXTENSION_BY_MIME.get(type) ?? "bin";
-}
 
 interface AnswerContext {
   answer: Answer;

@@ -1,4 +1,5 @@
-import { answers, exchanges, media, members, outbound, users } from "@vela/db";
+import { addDays } from "@vela/core";
+import { answers, exchanges, media, members, outbound, replies, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ANSWER_POST_LATE_MINUTES, postMissedAnswers } from "./answers.ts";
@@ -6,7 +7,7 @@ import type { SessionIdentity } from "./api-access.ts";
 import { setUpApiDevice } from "./api-device.ts";
 import { deliverArrival } from "./arrivals.ts";
 import type { OutboundJob } from "./deps.ts";
-import { deviceInboundEvent, loadDeviceMessages } from "./device-messages.ts";
+import { deviceInboundEvent, loadDeviceMessages, readDeviceMedia } from "./device-messages.ts";
 import { DeviceVoiceRefusedError, storeDeviceVoice } from "./device-voice.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { handleInbound } from "./inbound/router.ts";
@@ -279,5 +280,53 @@ describe("keeping her recording", () => {
       await storeDeviceVoice(h.deps, mother, `recording-n${n}`, m4a(n), 1);
     }
     expect(await refused(storeDeviceVoice(h.deps, mother, "recording-31", m4a(), 1))).toBe("limit");
+  });
+});
+
+describe("the family's voice on her phone (ADR-35)", () => {
+  it("reads back a voice reply from the Telegram group as a stored copy her phone plays", async () => {
+    await herMorningOnThePhone();
+    const first = (await her()).lightStartsOn;
+    if (first === null) throw new Error("expected her first morning");
+    const [exchange] = await h.db.select().from(exchanges).where(eq(exchanges.scheduledFor, first));
+    if (exchange === undefined) throw new Error("expected her first exchange");
+    const ogg = new TextEncoder().encode("OggS voice").buffer as ArrayBuffer;
+    h.telegram.mediaFiles.set("voice-file-1", { body: ogg, mime: "audio/ogg" });
+    const [voice] = await h.db
+      .insert(media)
+      .values({
+        familyId: seed.family.id,
+        uploadedBy: seed.organiser.id,
+        kind: "audio",
+        channel: "telegram",
+        providerFileId: "voice-file-1",
+        providerUniqueId: "voice-unique-1",
+        mime: "audio/ogg",
+        durationMs: 3000,
+        createdAt: h.clock.now(),
+      })
+      .returning({ id: media.id });
+    if (voice === undefined) throw new Error("expected the voice");
+    await h.db.insert(replies).values({
+      exchangeId: exchange.id,
+      memberId: seed.organiser.id,
+      kind: "voice",
+      mediaId: voice.id,
+      channel: "telegram",
+      externalId: "-100500:77",
+      toRecipient: true,
+      createdAt: h.clock.now(),
+    });
+
+    const next = addDays(first, 1);
+    h.clock.set(new Date(`${next}T08:00:00.000+08:00`));
+    await deliverArrival(h.deps, seed.member.id, next, false);
+    await h.run(handlers);
+
+    const [morning] = await loadDeviceMessages(h.db, await her());
+    expect(morning).toMatchObject({ kind: "arrival", voices: [voice.id], photos: [] });
+    const played = await readDeviceMedia(h.db, await her(), voice.id, h.media);
+    expect(played?.mime).toBe("audio/ogg");
+    expect(new Uint8Array(played?.body ?? new ArrayBuffer(0))).toEqual(new Uint8Array(ogg));
   });
 });

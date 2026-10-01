@@ -63,6 +63,7 @@ import {
   type OutboundRequest,
 } from "./gateway.ts";
 import { recordAiCall } from "./jobs.ts";
+import { storedCopyOf } from "./media-copy.ts";
 import { readsStoredMedia, uploadsStoredMedia } from "./outbound-media.ts";
 import { ordinaryPushReader, turnPromptPush } from "./push-messages.ts";
 import {
@@ -421,7 +422,8 @@ async function logDroppedMedia(
  * storage key: the gateway loads its bytes on each attempt and the adapter uploads them. One whose
  * object is gone, or that nothing can reach while storage is off, is null and left out, so a photo
  * choice short of two is turned into a question before her text and buttons are drawn, never sent
- * with 1 and 2 under one photo. `byStorage` names every image by its storage key, for her phone. A store that cannot answer throws, and her morning is tried again,
+ * with 1 and 2 under one photo. `byStorage` names every image and voice note by its storage key,
+ * for her phone. A store that cannot answer throws, and her morning is tried again,
  * rather than sent without a photo that is there.
  */
 async function mediaRefOf(
@@ -432,7 +434,9 @@ async function mediaRefOf(
   if (row.providerFileId !== null && !byStorage) {
     return { kind: row.kind, providerFileId: row.providerFileId };
   }
-  if (row.storageKey === null || row.kind !== "image" || deps.media === null) {
+  // Only her phone is sent a stored voice note; Telegram is sent the platform's own.
+  const kindSendable = row.kind === "image" || (byStorage && row.kind === "audio");
+  if (row.storageKey === null || !kindSendable || deps.media === null) {
     return null;
   }
   const object = await deps.media.head(row.storageKey);
@@ -440,10 +444,11 @@ async function mediaRefOf(
     return null;
   }
   return {
-    kind: "image",
+    kind: row.kind,
     storageKey: row.storageKey,
-    mime: row.mime ?? "image/jpeg",
+    mime: row.mime ?? object.mime ?? "image/jpeg",
     bytes: object.bytes,
+    ...(row.durationMs === null ? {} : { durationMs: row.durationMs }),
   };
 }
 
@@ -452,8 +457,8 @@ async function mediaRefOf(
  * sent, which is logged. A file only Vela keeps goes only where the adapter uploads its bytes
  * (`uploadsStoredMedia`); on any other channel it is left out as a missing one is, and logged with
  * the channel, so a photo choice becomes a question there rather than a send the adapter refuses.
- * Her phone (`readsStoredMedia`) is sent every stored image by its key, Telegram's copies included,
- * and nothing else: a photo not yet copied from Telegram, and a voice note, are left out for it.
+ * Her phone (`readsStoredMedia`) is sent every file by its stored key, a file Telegram holds copied
+ * into the store first (`storedCopyOf`); one that cannot be copied is left out as a missing one is.
  */
 async function mediaRefsOf(
   deps: Deps,
@@ -464,11 +469,15 @@ async function mediaRefsOf(
   const refs: OutboundMediaRef[] = [];
   let offChannel = 0;
   const byStorage = readsStoredMedia(channel);
-  for (const row of rows) {
+  for (const original of rows) {
+    // Her phone opens only files Vela keeps, so a file Telegram holds is copied first.
+    const row = byStorage ? await storedCopyOf(deps, original) : original;
+    if (row === null) continue;
     if (
-      byStorage
-        ? row.kind !== "image" || row.storageKey === null
-        : row.providerFileId === null && row.storageKey !== null && !uploadsStoredMedia(channel)
+      !byStorage &&
+      row.providerFileId === null &&
+      row.storageKey !== null &&
+      !uploadsStoredMedia(channel)
     ) {
       offChannel += 1;
       continue;

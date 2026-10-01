@@ -1,6 +1,6 @@
 import type { ApiDeviceMessage, DeviceInput, InboundEvent } from "@vela/contracts";
 import { channelLinks, type Member, media, outbound } from "@vela/db";
-import { and, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { sharedWith } from "./api-media.ts";
 import type { MediaStore } from "./deps.ts";
@@ -36,23 +36,25 @@ export async function loadDeviceMessages(db: Queryable, her: Member): Promise<Ap
     )
     .orderBy(desc(outbound.sentAt), desc(outbound.id))
     .limit(DEVICE_MESSAGES);
-  const keys = rows.flatMap((row) => storageKeysOf(row.payload));
-  const photoIds = new Map(
+  const keys = rows.flatMap((row) => [
+    ...storageKeysOf(row.payload, "image"),
+    ...storageKeysOf(row.payload, "audio"),
+  ]);
+  const fileIds = new Map(
     keys.length === 0
       ? []
       : (
           await db
             .select({ id: media.id, storageKey: media.storageKey })
             .from(media)
-            .where(
-              and(
-                eq(media.familyId, her.familyId),
-                eq(media.kind, "image"),
-                inArray(media.storageKey, keys),
-              ),
-            )
+            .where(and(eq(media.familyId, her.familyId), inArray(media.storageKey, keys)))
         ).map((photo) => [photo.storageKey, photo.id]),
   );
+  const idsOf = (stored: string[]) =>
+    stored.flatMap((key) => {
+      const id = fileIds.get(key);
+      return id === undefined ? [] : [id];
+    });
   return rows.flatMap((row) => {
     const message = (row.payload as { message?: { text?: unknown; buttons?: unknown } }).message;
     const text = typeof message?.text === "string" ? message.text : "";
@@ -69,10 +71,8 @@ export async function loadDeviceMessages(db: Queryable, her: Member): Promise<Ap
         exchange_id: row.exchangeId,
         text,
         buttons,
-        photos: storageKeysOf(row.payload).flatMap((key) => {
-          const id = photoIds.get(key);
-          return id === undefined ? [] : [id];
-        }),
+        photos: idsOf(storageKeysOf(row.payload, "image")),
+        voices: idsOf(storageKeysOf(row.payload, "audio")),
         sent_at: row.sentAt.toISOString(),
       },
     ];
@@ -80,15 +80,15 @@ export async function loadDeviceMessages(db: Queryable, her: Member): Promise<Ap
 }
 
 /**
- * The storage keys of the photos a stored message carries, in order. Her phone is sent each stored
+ * The storage keys of the photos, or the voice notes, a stored message carries, in order. Her phone is sent each stored
  * image by its key (`readsStoredMedia`); a photo retention has since deleted has no row left, so it
  * drops out of her message by itself.
  */
-function storageKeysOf(payload: unknown): string[] {
+function storageKeysOf(payload: unknown, kind: "image" | "audio"): string[] {
   const files = (payload as { message?: { media?: unknown } }).message?.media;
   if (!Array.isArray(files)) return [];
   return files.flatMap((file: { kind?: unknown; storageKey?: unknown }) =>
-    file.kind === "image" && typeof file.storageKey === "string" ? [file.storageKey] : [],
+    file.kind === kind && typeof file.storageKey === "string" ? [file.storageKey] : [],
   );
 }
 
@@ -166,34 +166,46 @@ export async function deviceInboundEvent(
   };
 }
 
+/** What her phone is served, by the type the file was stored with; anything else is not served. */
+const SERVED_TYPES: ReadonlySet<string> = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "audio/ogg",
+  "audio/mpeg",
+  "audio/mp4",
+]);
+
 /**
- * A photo her phone may show (`GET /v1/device/media/:mediaId`): its bytes, always a JPEG, or null,
- * which the API answers 404. She sees what any member of her family sees (`sharedWith`): the
- * family's stored images that one of its exchanges, answers or replies carries, so the photos of
- * her morning and of what the family sent back, and nothing uploaded that nobody has asked with yet.
+ * A photo or voice note her phone may open (`GET /v1/device/media/:mediaId`): its bytes and type,
+ * or null, which the API answers 404. She opens what any member of her family may see
+ * (`sharedWith`): the family's stored files that one of its exchanges, answers or replies carries,
+ * so the photos of her morning and the voices of what the family sent back, and nothing uploaded
+ * that nobody has asked with yet. A file stored with a type her phone is not served is null.
  */
 export async function readDeviceMedia(
   db: Queryable,
   her: Member,
   mediaId: string,
   store: MediaStore,
-): Promise<{ body: ArrayBuffer; mime: "image/jpeg" } | null> {
+): Promise<{ body: ArrayBuffer; mime: string } | null> {
   if (!Uuid.safeParse(mediaId).success) return null;
   const [row] = await db
-    .select({ storageKey: media.storageKey })
+    .select({ storageKey: media.storageKey, kind: media.kind, mime: media.mime })
     .from(media)
     .where(
       and(
         eq(media.id, mediaId),
         eq(media.familyId, her.familyId),
-        eq(media.kind, "image"),
         isNotNull(media.storageKey),
-        or(isNull(media.mime), eq(media.mime, "image/jpeg")),
         sharedWith(db, her.familyId, her.id),
       ),
     )
     .limit(1);
   if (row === undefined || row.storageKey === null) return null;
+  // A photo stored before its type was known is the JPEG Telegram makes of every photo.
+  const mime = (row.mime ?? (row.kind === "image" ? "image/jpeg" : "")).split(";")[0]?.trim();
+  if (mime === undefined || !SERVED_TYPES.has(mime)) return null;
   const object = await store.get(row.storageKey);
-  return object === null ? null : { body: object.body, mime: "image/jpeg" };
+  return object === null ? null : { body: object.body, mime };
 }

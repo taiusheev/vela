@@ -2290,6 +2290,7 @@ describe("her phone for the parent surface", () => {
       text: "Good morning, Mrs Chen.",
       buttons: [[{ id: "c:1", label: "I'm fine" }]],
       photos: [],
+      voices: [],
       sent_at: "2026-09-22T00:00:00.000Z",
     };
     f.services.loadDeviceMessages.mockResolvedValue([morning]);

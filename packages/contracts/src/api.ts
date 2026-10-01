@@ -782,6 +782,8 @@ export const ApiDeviceMessage = z.object({
   buttons: z.array(z.array(z.object({ id: z.string(), label: z.string() }))),
   /** The message's photos in order, each read through `GET /v1/device/media/:id`. */
   photos: z.array(z.uuid()),
+  /** The family's voice notes it reads back, in order, each played from the same route. */
+  voices: z.array(z.uuid()),
   sent_at: z.iso.datetime({ offset: true }),
 });
 export type ApiDeviceMessage = z.infer<typeof ApiDeviceMessage>;

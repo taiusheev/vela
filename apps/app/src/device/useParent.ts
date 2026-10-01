@@ -5,6 +5,7 @@ import type { ApiDeviceMessage } from "@vela/contracts";
 import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
+  apiBaseUrl,
   apiConfigured,
   fetchDeviceMember,
   fetchDeviceMessages,
@@ -33,6 +34,8 @@ export interface ParentView {
   message: ApiDeviceMessage | null;
   /** Loads one photo of her message as a `data:` URI; undefined in the demo, which has none. */
   photo?: (mediaId: string) => Promise<string>;
+  /** Where the phone plays one voice note of her message from, with her token; not in the demo. */
+  voice?: (mediaId: string) => { uri: string; headers: Record<string, string> };
   sending: boolean;
   /** Why the last tap or words did not go, in words for the screen. */
   trouble?: string;
@@ -55,6 +58,7 @@ function exampleMorning(): ApiDeviceMessage {
       [{ id: "example:fine", label: t`❤️ I'm fine` }],
     ],
     photos: [],
+    voices: [],
     sent_at: new Date().toISOString(),
   };
 }
@@ -67,6 +71,7 @@ function exampleThanks(): ApiDeviceMessage {
     text: t`Thank you. Mia knows you're fine.`,
     buttons: [],
     photos: [],
+    voices: [],
     sent_at: new Date().toISOString(),
   };
 }
@@ -137,6 +142,14 @@ export function useParent(): ParentView {
     [token],
   );
 
+  const voice = useCallback(
+    (mediaId: string) => ({
+      uri: `${apiBaseUrl ?? ""}/v1/device/media/${mediaId}`,
+      headers: { authorization: `Device ${typeof token === "string" ? token : ""}` },
+    }),
+    [token],
+  );
+
   if (demo) {
     return {
       loading: false,
@@ -166,6 +179,7 @@ export function useParent(): ParentView {
     language: member.data?.language ?? "en",
     message: newest,
     photo,
+    voice,
     sending: send.isPending,
     ...(trouble === undefined ? {} : { trouble }),
     tap(buttonId) {

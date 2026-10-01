@@ -166,6 +166,14 @@ msgstr "{recipient}看過了 · {time}"
 msgid "{words} · shown to her in {language}"
 msgstr "{words} · 這位家人看到的{language}版本"
 
+#: app/parent.tsx
+msgid "▶ Play the voice message"
+msgstr "▶ 播放語音訊息"
+
+#: app/parent.tsx
+msgid "▶ Play voice message {number}"
+msgstr "▶ 播放語音訊息 {number}"
+
 #: src/device/useParent.ts
 msgid "❤️ I'm fine"
 msgstr "❤️ 我很好"
@@ -1074,6 +1082,7 @@ msgstr "正在開啟…"
 msgid "Stay"
 msgstr "留下"
 
+#: app/parent.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
 msgstr "停止"
