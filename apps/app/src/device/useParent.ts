@@ -13,6 +13,7 @@ import {
 } from "../api/client.ts";
 import { fetchDevicePhoto, uploadDeviceVoice } from "../api/upload.ts";
 import { loadPhoto } from "../data/photos.ts";
+import { photosToCycle } from "./kitchen.ts";
 import { scheduleHerMorning } from "./morning.ts";
 import { clearDeviceToken, readDeviceToken } from "./token.ts";
 
@@ -34,6 +35,8 @@ export interface ParentView {
   message: ApiDeviceMessage | null;
   /** Loads one photo of her message as a `data:` URI; undefined in the demo, which has none. */
   photo?: (mediaId: string) => Promise<string>;
+  /** The family's photos in her latest messages, newest first, for the kitchen table to cycle. */
+  cycle: string[];
   /** Where the phone plays one voice note of her message from, with her token; not in the demo. */
   voice?: (mediaId: string) => { uri: string; headers: Record<string, string> };
   sending: boolean;
@@ -116,7 +119,12 @@ export function useParent(): ParentView {
   // Her phone tells her each morning that her message is there, at her own arrival time.
   const arrival = member.data?.arrival_time ?? null;
   useEffect(() => {
-    if (arrival !== null) void scheduleHerMorning(arrival, t`Good morning. Your message is here.`);
+    if (arrival !== null) {
+      void scheduleHerMorning(arrival, {
+        body: t`Good morning. Your message is here.`,
+        channel: t`Your morning message`,
+      });
+    }
   }, [arrival]);
   useEffect(() => {
     if (unlinked) void clearDeviceToken();
@@ -157,6 +165,7 @@ export function useParent(): ParentView {
       name: t`Mom`,
       language: "en",
       message: answered ? exampleThanks() : exampleMorning(),
+      cycle: [],
       sending: false,
       tap: () => setAnswered(true),
       say: async (words) => {
@@ -180,6 +189,7 @@ export function useParent(): ParentView {
     message: newest,
     photo,
     voice,
+    cycle: photosToCycle(messages.data?.messages ?? []),
     sending: send.isPending,
     ...(trouble === undefined ? {} : { trouble }),
     tap(buttonId) {

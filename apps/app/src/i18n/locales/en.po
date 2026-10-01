@@ -251,6 +251,10 @@ msgstr "Always free"
 msgid "An old photo"
 msgstr "An old photo"
 
+#: src/device/KitchenTable.tsx
+msgid "Answer"
+msgstr "Answer"
+
 #: src/data/useToday.ts
 msgid "answered"
 msgstr "answered"
@@ -688,6 +692,7 @@ msgid "Nothing reaches her until she says yes. Send her these words; the link te
 msgstr "Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her."
 
 #: app/parent.tsx
+#: src/device/KitchenTable.tsx
 msgid "Nothing yet today. Your morning message will be here."
 msgstr "Nothing yet today. Your morning message will be here."
 
@@ -1629,6 +1634,10 @@ msgstr "Your light is off, so nothing about your mornings is shown."
 #: src/data/useFamily.ts
 msgid "Your light is paused from your own chat, where your mornings arrive."
 msgstr "Your light is paused from your own chat, where your mornings arrive."
+
+#: src/device/useParent.ts
+msgid "Your morning message"
+msgstr "Your morning message"
 
 #: app/onboarding.tsx
 msgid "Your name, as the family says it."

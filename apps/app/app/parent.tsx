@@ -1,10 +1,23 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { router, Stack } from "expo-router";
+import * as ScreenOrientation from "expo-screen-orientation";
 import * as Speech from "expo-speech";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KitchenTable } from "../src/device/KitchenTable.tsx";
+import { IDLE_MS, isKitchenTable } from "../src/device/kitchen.ts";
 import { useParent } from "../src/device/useParent.ts";
 import { VoiceAnswer } from "../src/device/VoiceAnswer.tsx";
 import { lightPalette as light } from "../src/theme/tokens.ts";
@@ -24,6 +37,35 @@ export default function ParentScreen() {
   const send = async () => {
     if (await view.say(words)) setWords("");
   };
+  // Her screen turns with her phone or tablet; on its side it is the kitchen table (P6), until a tap
+  // wakes it, and it goes back there when left alone.
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    void ScreenOrientation.unlockAsync();
+    return () => {
+      void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    };
+  }, []);
+  const { width, height } = useWindowDimensions();
+  const sideways = isKitchenTable(width, height);
+  const [wokenAt, setWokenAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (wokenAt === null || !sideways) return;
+    const timer = setTimeout(() => setWokenAt(null), IDLE_MS);
+    return () => clearTimeout(timer);
+  }, [wokenAt, sideways]);
+  const touched = () => {
+    if (wokenAt !== null) setWokenAt(Date.now());
+  };
+
+  if (sideways && wokenAt === null && view.linked && !view.loading) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <KitchenTable view={view} wake={() => setWokenAt(Date.now())} />
+      </>
+    );
+  }
 
   return (
     <>
@@ -35,6 +77,7 @@ export default function ParentScreen() {
           { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 48 },
         ]}
         keyboardShouldPersistTaps="handled"
+        onTouchStart={touched}
       >
         {view.loading ? (
           <Text style={styles.body}>

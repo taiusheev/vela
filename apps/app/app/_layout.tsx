@@ -7,9 +7,11 @@ import {
 import { Literata_400Regular, Literata_600SemiBold } from "@expo-google-fonts/literata";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as ScreenOrientation from "expo-screen-orientation";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { readDeviceToken } from "../src/device/token.ts";
@@ -45,6 +47,12 @@ function useParentMode(): boolean | undefined {
   useEffect(() => {
     if (parent === true && !onParent) router.replace("/parent");
   }, [parent, onParent, router]);
+  // The family's screens stay upright on a phone; her screen turns, for the kitchen table (P6).
+  useEffect(() => {
+    if (parent === false && Platform.OS !== "web") {
+      void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    }
+  }, [parent]);
   return parent;
 }
 

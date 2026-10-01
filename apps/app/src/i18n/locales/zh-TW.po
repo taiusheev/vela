@@ -258,6 +258,10 @@ msgstr "永遠免費"
 msgid "An old photo"
 msgstr "一張老照片"
 
+#: src/device/KitchenTable.tsx
+msgid "Answer"
+msgstr "回答"
+
 #: src/data/useToday.ts
 msgid "answered"
 msgstr "回覆了"
@@ -695,6 +699,7 @@ msgid "Nothing reaches her until she says yes. Send her these words; the link te
 msgstr "在這位家人同意之前，不會傳送任何訊息。請把下面這段話傳給這位家人；連結會說明 Vela 是什麼，並詢問是否同意。"
 
 #: app/parent.tsx
+#: src/device/KitchenTable.tsx
 msgid "Nothing yet today. Your morning message will be here."
 msgstr "今天還沒有訊息。早上的訊息會出現在這裡。"
 
@@ -1636,6 +1641,10 @@ msgstr "您的燈沒有亮著，所以不會顯示任何關於您早上的內容
 #: src/data/useFamily.ts
 msgid "Your light is paused from your own chat, where your mornings arrive."
 msgstr "您的燈要從您自己的聊天室暫停，也就是您收到早安訊息的地方。"
+
+#: src/device/useParent.ts
+msgid "Your morning message"
+msgstr "您的早晨訊息"
 
 #: app/onboarding.tsx
 msgid "Your name, as the family says it."

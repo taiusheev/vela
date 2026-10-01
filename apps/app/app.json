@@ -5,7 +5,7 @@
     "owner": "velatwn",
     "scheme": "velalight",
     "version": "0.0.1",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

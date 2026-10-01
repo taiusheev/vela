@@ -100,13 +100,16 @@ export interface ForegroundBehaviour {
 const QUIET_KINDS: ReadonlySet<PushKind> = new Set<PushKind>(["quiet_notice", "quiet_resolved"]);
 
 /**
- * A quiet notice and its close show as a banner with their sound even with the app open: the reader
- * may be on another screen. Anything else goes quietly to the list, since what it says is in the
+ * A quiet notice and its close, and her own morning on her phone, show as a banner with their sound
+ * even with the app open: the reader may be on another screen, and she may be across the room. Anything else goes quietly to the list, since what it says is in the
  * app already. Never a badge (spec A6).
  */
 export function foregroundBehaviour(data: unknown): ForegroundBehaviour {
   const kind = pushDataOf(data)?.kind;
-  const quiet = kind !== undefined && QUIET_KINDS.has(kind);
+  // Her morning on her phone (ADR-35) chimes once, also on the kitchen table with the app open.
+  const morning =
+    typeof data === "object" && data !== null && (data as { kind?: unknown }).kind === "morning";
+  const quiet = morning || (kind !== undefined && QUIET_KINDS.has(kind));
   return {
     shouldShowBanner: quiet,
     shouldShowList: true,
