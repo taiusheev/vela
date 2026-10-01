@@ -182,6 +182,10 @@ msgstr "❤️ 我很好"
 msgid "🎙 Answer with your voice"
 msgstr "🎙 用聲音回答"
 
+#: src/components/voice-reply.tsx
+msgid "🎙 Reply with your voice"
+msgstr "🎙 用聲音回覆"
+
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "每年 79 美元"
@@ -583,6 +587,7 @@ msgstr "請不要填電話號碼。對方同意後，Vela 會再向對方要號�
 msgid "Leaving…"
 msgstr "正在離開…"
 
+#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Listen"
 msgstr "聽一聽"
@@ -860,10 +865,12 @@ msgstr "唸給我聽"
 msgid "Reading what this phone allows…"
 msgstr "正在讀取這支手機的通知設定…"
 
+#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Record again"
 msgstr "重新錄音"
 
+#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Recording… {time}"
 msgstr "錄音中… {time}"
@@ -950,10 +957,15 @@ msgstr "傳驗證碼給我"
 msgid "Send my answer"
 msgstr "送出我的回答"
 
+#: src/components/voice-reply.tsx
+msgid "Send voice reply"
+msgstr "送出語音回覆"
+
 #: app/ask.tsx
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 #: app/sign-in.tsx
+#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
 msgstr "傳送中…"
@@ -1088,6 +1100,7 @@ msgid "Stay"
 msgstr "留下"
 
 #: app/parent.tsx
+#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
 msgstr "停止"
@@ -1174,6 +1187,10 @@ msgstr "這張照片已經不在了，請重新選擇。"
 #: app/sign-in.tsx
 msgid "That took too long to check. Try the code again."
 msgstr "確認的時間太久了。請再輸入一次驗證碼。"
+
+#: app/exchange/[id].tsx
+msgid "That voice could not be sent just now. It is kept to send again."
+msgstr "這段語音暫時無法送出，已為您保留，可以再送一次。"
 
 #: app/vela-light.tsx
 msgid "The 30 days start after {name}'s first answer."
@@ -1447,6 +1464,10 @@ msgstr "Vela Light 試用"
 msgid "Vela Light trial · ends {date}"
 msgstr "Vela Light 試用 · {date}結束"
 
+#: src/components/voice-reply.tsx
+msgid "Vela needs the microphone for a voice reply. You can allow it in Settings."
+msgstr "語音回覆需要使用麥克風，您可以在「設定」中允許。"
+
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Vela suggests"
@@ -1661,3 +1682,7 @@ msgstr "輸入您的電話號碼或電子郵件，我們會傳驗證碼給您。
 #: app/(tabs)/you.tsx
 msgid "Your own light"
 msgstr "您自己的燈"
+
+#: src/components/voice-reply.tsx
+msgid "Your voice reply, {time} long."
+msgstr "您的語音回覆，共 {time}。"

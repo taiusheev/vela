@@ -56,6 +56,7 @@ import {
   startApiTrial,
   updateApiAccount,
   uploadApiMedia,
+  uploadApiVoice,
 } from "@vela/services";
 import {
   type ApiReadServices,
@@ -121,6 +122,7 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   setUpApiDevice,
   removeApiDevice,
   uploadApiMedia,
+  uploadApiVoice,
   registerApiPushDevice,
   removeApiPushDevice,
 };

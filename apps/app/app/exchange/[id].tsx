@@ -7,6 +7,8 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, replyRefusal, replyTo } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
+import { uploadVoice } from "../../src/api/upload.ts";
+import type { Recorded } from "../../src/audio/useRecording.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
 import { ExchangePhotos } from "../../src/components/family-photo.tsx";
 import {
@@ -19,9 +21,11 @@ import {
   TextField,
   Words,
 } from "../../src/components/ui.tsx";
+import { VoiceReply } from "../../src/components/voice-reply.tsx";
 import type { ExchangeReply } from "../../src/data/exchanges.ts";
 import { replyLine } from "../../src/data/lines.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
+import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
@@ -41,6 +45,8 @@ export default function ExchangeScreen() {
   const [text, setText] = useState("");
   const keyFor = useIdempotencyKey("reply");
   const demo = !apiConfigured();
+  const { familyId } = useToday();
+  const [voiceFailed, setVoiceFailed] = useState(false);
 
   const post = useMutation({
     mutationFn: async (reply: ComposeReply) =>
@@ -109,6 +115,23 @@ export default function ExchangeScreen() {
     }
     post.mutate({ reaction: kind });
   };
+  // The voice goes up under its own key, then the reply names it; false keeps it to send again.
+  const sendVoice = async (recording: Recorded): Promise<boolean> => {
+    if (demo) {
+      setSent((earlier) => [...earlier, { kind: "voice" }]);
+      return true;
+    }
+    if (familyId === undefined) return false;
+    setVoiceFailed(false);
+    try {
+      const voice = await uploadVoice(familyId, recording, await account.token());
+      await post.mutateAsync({ voice });
+      return true;
+    } catch {
+      setVoiceFailed(true);
+      return false;
+    }
+  };
   const reactions: { kind: ReactionKind; label: string }[] = [
     { kind: "heart", label: `❤️ ${t`Heart`}` },
     { kind: "laugh", label: `😂 ${t`Laugh`}` },
@@ -123,7 +146,9 @@ export default function ExchangeScreen() {
         ? t`This is your own morning; replies are for the family.`
         : post.isError
           ? t`That could not be sent just now. Your words are kept.`
-          : null;
+          : voiceFailed
+            ? t`That voice could not be sent just now. It is kept to send again.`
+            : null;
   // What the caption under the composer may promise, which depends on the day (API contract §4).
   const reach =
     exchange.repliesReachHer === true
@@ -227,6 +252,7 @@ export default function ExchangeScreen() {
               onPress={send}
               disabled={post.isPending || words.length === 0}
             />
+            <VoiceReply disabled={post.isPending} send={sendVoice} />
           </View>
         ) : (
           <Words variant="body" tone="ink2">

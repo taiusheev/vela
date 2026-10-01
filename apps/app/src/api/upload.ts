@@ -209,3 +209,33 @@ export async function uploadDeviceVoice(
   }
   return ((await response.json()) as { media_id: string }).media_id;
 }
+
+/**
+ * A voice for a reply from the app (`POST /v1/families/:familyId/voice`): the recording read from
+ * the file the phone wrote, sent under its own key, so a retry is answered from the upload's
+ * receipt. It answers the voice's media id for the reply to name; a refusal is an `ApiError`.
+ */
+export async function uploadVoice(
+  familyId: string,
+  recording: { uri: string; key: string; durationMs: number },
+  token: string | null,
+): Promise<string> {
+  if (!apiConfigured() || apiBaseUrl === undefined) {
+    throw new Error("The API is not configured");
+  }
+  const body = await (await fetch(recording.uri)).blob();
+  const response = await fetch(`${apiBaseUrl}/v1/families/${familyId}/voice`, {
+    method: "POST",
+    headers: {
+      ...(token === null ? {} : { authorization: `Bearer ${token}` }),
+      "content-type": "audio/mp4",
+      "idempotency-key": `voice:${recording.key}`,
+      "x-duration-ms": String(Math.round(recording.durationMs)),
+    },
+    body,
+  });
+  if (!response.ok) {
+    throw failureOf(response.status, await response.text().catch(() => ""));
+  }
+  return ((await response.json()) as { id: string }).id;
+}

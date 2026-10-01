@@ -346,6 +346,9 @@ function fixture(enableWrites = false, push?: boolean) {
       uploadApiMedia: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["uploadApiMedia"]>()
         .mockRejectedValue(new Error("no photo upload in these tests")),
+      uploadApiVoice: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["uploadApiVoice"]>()
+        .mockRejectedValue(new Error("no voice upload in these tests")),
       registerApiPushDevice: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["registerApiPushDevice"]>()
         .mockResolvedValue({

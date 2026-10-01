@@ -45,7 +45,14 @@ describe("ApiUploadedMedia", () => {
 
 describe("why a photo was refused", () => {
   it("names each refusal and each reason storage is unavailable, as an error body carries them", () => {
-    expect(MEDIA_REFUSALS).toEqual(["jpeg_only", "malformed", "dimensions", "photo_limit"]);
+    expect(MEDIA_REFUSALS).toEqual([
+      "jpeg_only",
+      "malformed",
+      "dimensions",
+      "photo_limit",
+      "m4a_only",
+      "voice_limit",
+    ]);
     expect(MEDIA_UNAVAILABLE_REASONS).toEqual(["media_storage_off", "media_storage_unavailable"]);
     for (const reason of MEDIA_REFUSALS) expect(MediaRefusal.parse(reason)).toBe(reason);
     for (const reason of MEDIA_UNAVAILABLE_REASONS) {

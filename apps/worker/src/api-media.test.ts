@@ -5,7 +5,13 @@
  * these hold the routes to their order of refusals, their statuses and bodies, and what they hand
  * the services.
  */
-import type { ApiComposedAsk, ApiErrorBody, ApiMe, ApiUploadedMedia } from "@vela/contracts";
+import type {
+  ApiComposedAsk,
+  ApiErrorBody,
+  ApiMe,
+  ApiUploadedMedia,
+  ApiUploadedVoice,
+} from "@vela/contracts";
 import type { Member, VelaDatabase } from "@vela/db";
 import {
   ApiIdempotencyError,
@@ -56,6 +62,15 @@ const UPLOADED: ApiUploadedMedia = {
   bytes: 412_345,
   expires_at: "2026-10-22T00:00:00.000Z",
 };
+
+const VOICE: ApiUploadedVoice = {
+  id: MEDIA_ID,
+  kind: "audio",
+  duration_ms: 4200,
+  bytes: 13,
+  expires_at: "2026-10-22T00:00:00.000Z",
+};
+const M4A = Uint8Array.of(0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20, 0);
 
 const INVALID = { error: { code: "invalid", message: "Invalid request." } };
 const NOT_FOUND = { error: { code: "not_found", message: "Not found." } };
@@ -150,6 +165,9 @@ function fixture(options: FixtureOptions = {}) {
       uploadApiMedia: vi
         .fn<Writes["services"]["uploadApiMedia"]>()
         .mockResolvedValue({ response: { status: 201, body: UPLOADED }, replayed: false }),
+      uploadApiVoice: vi
+        .fn<Writes["services"]["uploadApiVoice"]>()
+        .mockResolvedValue({ response: { status: 201, body: VOICE }, replayed: false }),
       registerApiPushDevice: vi.fn<Writes["services"]["registerApiPushDevice"]>(
         unused("register a device"),
       ),
@@ -238,6 +256,55 @@ function expectNothingDone(f: Fixture): void {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
+});
+
+describe("uploading a voice for a reply", () => {
+  const VOICE_PATH = `/v1/families/${FAMILY_ID}/voice`;
+  const voiceRequest = (headers: Headers_ = {}, body: BodyInit = M4A) =>
+    uploadRequest(
+      body,
+      { "content-type": "audio/mp4", "x-duration-ms": "4200", ...headers },
+      VOICE_PATH,
+    );
+
+  it("hands the service the recording, its length, the caller, the key and the family, and answers 201", async () => {
+    const f = fixture();
+    const response = await f.app.request(voiceRequest());
+
+    await expectJson(response, 201, VOICE);
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    expect(f.writes.services.uploadApiVoice).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock, random: f.random, store: f.store, logger: f.logger },
+      IDENTITY,
+      "media:first-pick",
+      FAMILY_ID,
+      M4A,
+      4200,
+    );
+  });
+
+  it("answers 415 for a photo's type, before reading anything", async () => {
+    const f = fixture();
+    const response = await f.app.request(voiceRequest({ "content-type": "image/jpeg" }));
+    expect(response.status).toBe(415);
+    expect(f.writes.services.uploadApiVoice).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["m4a_only", 415],
+    ["voice_limit", 429],
+  ] as const)("answers a voice the service refused as %s with %i", async (reason, status) => {
+    const f = fixture();
+    f.writes.services.uploadApiVoice.mockRejectedValue(new MediaRefusedError(reason));
+    const response = await f.app.request(voiceRequest());
+    expect(response.status).toBe(status);
+    expect(((await response.json()) as ApiErrorBody).error.details).toEqual({ reason });
+  });
+
+  it("answers 503 where nothing is stored", async () => {
+    const f = fixture({ media: "off" });
+    expect((await f.app.request(voiceRequest())).status).toBe(503);
+  });
 });
 
 describe("uploading a photo", () => {

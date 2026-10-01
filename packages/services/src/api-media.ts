@@ -62,7 +62,7 @@ export interface UploadApiMediaDeps extends Pick<Deps, "db" | "clock" | "random"
   logger: Pick<Logger, "error">;
 }
 
-async function sha256HexOfBytes(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+export async function sha256HexOfBytes(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
@@ -186,11 +186,61 @@ export async function uploadApiMedia(
   if (!cleaned.ok) throw new MediaRefusedError(cleaned.reason);
   const { bytes, width, height } = cleaned;
   const sha256 = await sha256HexOfBytes(bytes);
+  return keepUpload(deps, identity, key, familyId, {
+    bytes,
+    mime: JPEG,
+    storageKey: `asks/${familyId.toLowerCase()}/${deps.random.token(16)}.jpg`,
+    operation: "media.upload:v1",
+    input: { sha256, bytes: bytes.length, width, height },
+    checkLimits: checkPhotoLimits,
+    row: { kind: "image", width, height, durationMs: null },
+    body: (row) =>
+      ApiUploadedMedia.parse({
+        id: row.id,
+        kind: "image",
+        width,
+        height,
+        bytes: bytes.length,
+        expires_at: row.expiresAt.toISOString(),
+      }),
+  });
+}
+
+/** One upload as `keepUpload` keeps it: its bytes, where, its fingerprint, limits and row. */
+export interface PreparedUpload {
+  bytes: Uint8Array<ArrayBuffer>;
+  mime: string;
+  /** Minted for this attempt alone, so deleting it is always this attempt's to do. */
+  storageKey: string;
+  operation: string;
+  input: Record<string, unknown>;
+  checkLimits: (tx: VelaTransaction, access: FamilyAccess, now: Date) => Promise<void>;
+  row: {
+    kind: "image" | "audio";
+    width: number | null;
+    height: number | null;
+    durationMs: number | null;
+  };
+  body: (row: { id: string; expiresAt: Date }) => ApiMutationResponse["body"];
+}
+
+/**
+ * The upload's object, then its row through `runApiMutation` (the module's comment): shared by a
+ * photo for an ask and a voice for a reply, so both have one idempotency, one ordering under the
+ * account's actor lock, and one rule for deleting an attempt's own object.
+ */
+export async function keepUpload(
+  deps: UploadApiMediaDeps,
+  identity: SessionIdentity,
+  key: string,
+  familyId: string,
+  upload: PreparedUpload,
+): Promise<{ response: ApiMutationResponse; replayed: boolean }> {
   const scope = familyId.toLowerCase();
-  const storageKey = `asks/${scope}/${deps.random.token(16)}.jpg`;
+  const { bytes, storageKey } = upload;
 
   try {
-    await deps.store.put(storageKey, bytes.buffer, JPEG);
+    await deps.store.put(storageKey, bytes.buffer, upload.mime);
   } catch (error) {
     // Whether a failed put left anything is unknown; nothing can name the key yet, so it goes.
     await discard(deps, storageKey, scope);
@@ -203,12 +253,7 @@ export async function uploadApiMedia(
     result = await runApiMutation(
       deps,
       identity,
-      {
-        key,
-        operation: "media.upload:v1",
-        input: { sha256, bytes: bytes.length, width, height },
-        familyId: scope,
-      },
+      { key, operation: upload.operation, input: upload.input, familyId: scope },
       {
         authorize: async (tx) => {
           const found = await authorizeFamilyAccess(tx, identity, scope);
@@ -222,39 +267,30 @@ export async function uploadApiMedia(
             throw new VelaError("not_found", "Family not found");
           }
           const now = deps.clock.now();
-          await checkPhotoLimits(tx, uploader, now);
+          await upload.checkLimits(tx, uploader, now);
           const expiresAt = new Date(now.getTime() + MEDIA_RETENTION_DAYS * DAY_MS);
           const [row] = await tx
             .insert(media)
             .values({
               familyId: scope,
               uploadedBy: uploader.memberId,
-              kind: "image",
+              kind: upload.row.kind,
               storageKey,
               channel: null,
               providerFileId: null,
               providerUniqueId: null,
-              mime: JPEG,
+              mime: upload.mime,
               bytes: bytes.length,
-              width,
-              height,
+              width: upload.row.width,
+              height: upload.row.height,
+              durationMs: upload.row.durationMs,
               kept: false,
               createdAt: now,
               expiresAt,
             })
             .returning({ id: media.id });
           if (row === undefined) throw new Error("media insert returned no row");
-          return {
-            status: 201,
-            body: ApiUploadedMedia.parse({
-              id: row.id,
-              kind: "image",
-              width,
-              height,
-              bytes: bytes.length,
-              expires_at: expiresAt.toISOString(),
-            }),
-          };
+          return { status: 201, body: upload.body({ id: row.id, expiresAt }) };
         },
       },
     );

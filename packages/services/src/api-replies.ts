@@ -6,8 +6,8 @@ import {
   type ReplyRefusal,
 } from "@vela/contracts";
 import { canApply, nextExchangeState } from "@vela/core";
-import { type Exchange, exchanges, members, replies, type VelaTransaction } from "@vela/db";
-import { and, eq } from "drizzle-orm";
+import { type Exchange, exchanges, media, members, replies, type VelaTransaction } from "@vela/db";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
@@ -21,8 +21,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /**
  * A reply that cannot be written, and why: `not_answered` (409) when she has not answered yet, so
  * there is nothing to reply to; `her_own` (403) when she replies to her own exchange, which would
- * read her own words back to her tomorrow. The Telegram path keeps such a reply and logs a warning;
- * this one has no logger to warn with, so it says no instead.
+ * read her own words back to her tomorrow; `voice_missing` (404) when the voice it names is not the
+ * replier's own recording in her family, or is gone. The Telegram path keeps such a reply and logs
+ * a warning; this one has no logger to warn with, so it says no instead.
  */
 export class ReplyRefusedError extends Error {
   override readonly name = "ReplyRefusedError";
@@ -86,7 +87,9 @@ export async function replyToApiExchange(
       input:
         "text" in reply
           ? { exchange_id: exchangeId.toLowerCase(), text: reply.text }
-          : { exchange_id: exchangeId.toLowerCase(), reaction: reply.reaction },
+          : "voice" in reply
+            ? { exchange_id: exchangeId.toLowerCase(), voice: reply.voice.toLowerCase() }
+            : { exchange_id: exchangeId.toLowerCase(), reaction: reply.reaction },
     },
     {
       authorize: async (tx) => {
@@ -115,13 +118,34 @@ export async function replyToApiExchange(
         if (exchange === null) throw new VelaError("not_found", "Exchange not found");
         if (!canApply(exchange.state, "reply")) throw new ReplyRefusedError("not_answered");
 
-        const kind = "text" in reply ? "text" : reply.reaction;
+        const kind = "text" in reply ? "text" : "voice" in reply ? "voice" : reply.reaction;
+        let mediaId: string | null = null;
+        if ("voice" in reply) {
+          // Only the replier's own recording, kept in this family and not yet deleted.
+          const [voice] = await tx
+            .select({ id: media.id })
+            .from(media)
+            .where(
+              and(
+                eq(media.id, reply.voice),
+                eq(media.familyId, exchange.familyId),
+                eq(media.uploadedBy, replierId),
+                eq(media.kind, "audio"),
+                isNull(media.channel),
+                isNotNull(media.storageKey),
+              ),
+            )
+            .limit(1);
+          if (voice === undefined) throw new ReplyRefusedError("voice_missing");
+          mediaId = voice.id;
+        }
         const [inserted] = await tx
           .insert(replies)
           .values({
             exchangeId: exchange.id,
             memberId: replierId,
             kind,
+            mediaId,
             text: "text" in reply ? reply.text : null,
             channel: "app",
             toRecipient: true,
@@ -181,7 +205,10 @@ export async function replyToApiExchange(
             memberId: replierId,
             exchangeId: exchange.id,
             surface: "app",
-            props: { kind: kind === "text" ? "text" : "reaction", by: replierId },
+            props: {
+              kind: kind === "text" || kind === "voice" ? kind : "reaction",
+              by: replierId,
+            },
           },
           now,
         );

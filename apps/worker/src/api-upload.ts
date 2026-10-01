@@ -27,7 +27,7 @@ export const MAX_UPLOAD_READ_MS = 60_000;
 export const MAX_UPLOAD_READS = 16_384;
 
 /** `image/jpeg`, with any parameters a client adds (RFC 9110 tokens or quoted strings). */
-const JPEG_CONTENT_TYPE =
+export const JPEG_CONTENT_TYPE =
   /^image\/jpeg\s*(?:;\s*[!#$%&'*+.^_`|~0-9A-Za-z-]+\s*=\s*(?:[!#$%&'*+.^_`|~0-9A-Za-z-]+|"[^"\\]*")\s*)*$/i;
 
 // The API app's own error body (`api-app.ts`), copied as `api-runtime.ts` copies its bodies: a
@@ -35,6 +35,10 @@ const JPEG_CONTENT_TYPE =
 const INVALID: ApiErrorBody = {
   error: { code: "invalid", message: "Invalid request." },
 };
+
+/** `audio/mp4` (an `.m4a` recording), with any parameters, as `JPEG_CONTENT_TYPE` allows. */
+export const M4A_CONTENT_TYPE =
+  /^audio\/mp4\s*(?:;\s*[!#$%&'*+.^_`|~0-9A-Za-z-]+\s*=\s*(?:[!#$%&'*+.^_`|~0-9A-Za-z-]+|"[^"\\]*")\s*)*$/i;
 
 export type UploadBody = { ok: true; bytes: Uint8Array } | { ok: false; status: 400 | 408 | 413 };
 
@@ -121,18 +125,19 @@ export async function readUploadBody(
 
 /**
  * What an upload's headers must say, checked before anything is counted or opened: an
- * `Idempotency-Key` (400), `Content-Type: image/jpeg` with any parameters and no encoding but
- * `identity` (415), and no declared length over `maxBytes` (413). The key is kept for the route.
+ * `Idempotency-Key` (400), `Content-Type: image/jpeg` (or `contentType`) with any parameters and no
+ * encoding but `identity` (415), and no declared length over `maxBytes` (413). The key is kept for the route.
  */
 export function uploadHeaders<E extends { Variables: { writeKey: string } }>(
   maxBytes: number,
+  contentType: RegExp = JPEG_CONTENT_TYPE,
 ): MiddlewareHandler<E> {
   return async (c, next) => {
     const key = ApiIdempotencyKey.safeParse(c.req.header("Idempotency-Key"));
     if (!key.success) return c.json(INVALID, 400);
     const encoding = c.req.header("Content-Encoding");
     if (
-      !JPEG_CONTENT_TYPE.test(c.req.header("Content-Type") ?? "") ||
+      !contentType.test(c.req.header("Content-Type") ?? "") ||
       (encoding !== undefined && encoding.trim().toLowerCase() !== "identity")
     ) {
       return c.json(INVALID, 415);

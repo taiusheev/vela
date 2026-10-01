@@ -26,6 +26,7 @@ import {
   ApiToday,
   ApiTrial,
   ApiUploadedMedia,
+  ApiUploadedVoice,
   ApiUser,
   ApiWeeklyRead,
   ComposeAsk,
@@ -69,6 +70,7 @@ import {
   type loadApiToday,
   type loadApiWeeklyRead,
   type loadDeviceMessages,
+  MAX_VOICE_BYTES,
   MediaRefusedError,
   type MediaStore,
   MemberChangeRefusedError,
@@ -92,6 +94,7 @@ import {
   TrialRefusedError,
   type updateApiAccount,
   type uploadApiMedia,
+  type uploadApiVoice,
   VelaError,
 } from "@vela/services";
 import { Hono, type MiddlewareHandler } from "hono";
@@ -102,6 +105,7 @@ import {
   withApiErrorNoStore,
 } from "./api-security.ts";
 import {
+  M4A_CONTENT_TYPE,
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_READ_MS,
   MAX_UPLOAD_READS,
@@ -145,6 +149,7 @@ export interface ApiWriteServices {
   removeApiDevice: typeof removeApiDevice;
   removeApiNearby: typeof removeApiNearby;
   uploadApiMedia: typeof uploadApiMedia;
+  uploadApiVoice: typeof uploadApiVoice;
   registerApiPushDevice: typeof registerApiPushDevice;
   removeApiPushDevice: typeof removeApiPushDevice;
 }
@@ -250,6 +255,8 @@ const PHOTO_REFUSALS = {
   malformed: "That photo could not be read.",
   dimensions: "That photo is too large or too narrow.",
   photo_limit: "Too many photos for now.",
+  m4a_only: "Only an .m4a recording can be kept.",
+  voice_limit: "Too many voices for now.",
 } as const;
 const MAX_BODY_BYTES = 4096;
 const JSON_CONTENT_TYPE = /^application\/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?\s*$/i;
@@ -383,17 +390,25 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         return c.json(running, 409);
       }
       if (error instanceof ReplyRefusedError) {
-        const refused: ApiErrorBody = {
-          error: {
-            code: error.reason === "her_own" ? "forbidden" : "conflict",
-            message:
-              error.reason === "her_own"
-                ? "She cannot reply to her own exchange."
-                : "She has not answered yet.",
-            details: { reason: error.reason },
+        const answer = {
+          her_own: {
+            code: "forbidden",
+            message: "She cannot reply to her own exchange.",
+            status: 403,
           },
+          not_answered: { code: "conflict", message: "She has not answered yet.", status: 409 },
+          // The voice a reply names is gone, or not the replier's own recording in this family.
+          voice_missing: {
+            code: "not_found",
+            message: "That voice is no longer here.",
+            status: 404,
+          },
+        } as const;
+        const said = answer[error.reason];
+        const refused: ApiErrorBody = {
+          error: { code: said.code, message: said.message, details: { reason: error.reason } },
         };
-        return c.json(refused, error.reason === "her_own" ? 403 : 409);
+        return c.json(refused, said.status);
       }
       if (error instanceof MemberChangeRefusedError) {
         const refused: ApiErrorBody = {
@@ -450,14 +465,21 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       if (error instanceof MediaRefusedError) {
         const refused: ApiErrorBody = {
           error: {
-            code: error.reason === "photo_limit" ? "rate_limited" : "invalid",
+            code:
+              error.reason === "photo_limit" || error.reason === "voice_limit"
+                ? "rate_limited"
+                : "invalid",
             message: PHOTO_REFUSALS[error.reason],
             details: { reason: error.reason },
           },
         };
         return c.json(
           refused,
-          error.reason === "jpeg_only" ? 415 : error.reason === "photo_limit" ? 429 : 400,
+          error.reason === "jpeg_only" || error.reason === "m4a_only"
+            ? 415
+            : error.reason === "photo_limit" || error.reason === "voice_limit"
+              ? 429
+              : 400,
         );
       }
       if (error instanceof AskPhotoMissingError) {
@@ -1177,6 +1199,66 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           throw new Error("Invalid API mutation response");
         }
         const uploaded = ApiUploadedMedia.parse(result.response.body);
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(uploaded, 201);
+      },
+    );
+    // A voice for a reply from the app (spec §14.1 A8): an `.m4a` of at most 3 MiB, kept as it is,
+    // then named by the reply as `{voice}`; refused as a photo is, with its own reasons.
+    app.post(
+      "/v1/families/:familyId/voice",
+      authenticate,
+      async (c, next) => {
+        if (runtime.media === undefined) {
+          const off: ApiErrorBody = {
+            error: {
+              code: "unavailable",
+              message: "Voices are not switched on here.",
+              details: { reason: runtime.mediaOff ?? "media_storage_off" },
+            },
+          };
+          return c.json(off, 503);
+        }
+        await next();
+        return c.res;
+      },
+      uploadHeaders<RuntimeEnv>(MAX_VOICE_BYTES, M4A_CONTENT_TYPE),
+      checkActivity,
+      withDatabase,
+      (c, next) =>
+        createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        )(c, next),
+      async (c) => {
+        const media = runtime.media;
+        if (media === undefined) throw new Error("voice upload without a store");
+        const body = await readUploadBody(
+          c.req.raw,
+          runtime.logger,
+          MAX_VOICE_BYTES,
+          MAX_UPLOAD_READ_MS,
+          MAX_UPLOAD_READS,
+        );
+        if (!body.ok) return c.json(INVALID, body.status);
+        const duration = Number(c.req.header("X-Duration-Ms") ?? "");
+        const result = await writes.services.uploadApiVoice(
+          {
+            db: c.get("db"),
+            clock: writes.clock,
+            random: media.random,
+            store: media.store,
+            logger: runtime.logger,
+          },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          body.bytes,
+          Number.isFinite(duration) ? duration : null,
+        );
+        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const uploaded = ApiUploadedVoice.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(uploaded, 201);
       },

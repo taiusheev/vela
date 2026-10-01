@@ -487,8 +487,8 @@ export const ApiExchangePage = z.object({
 export type ApiExchangePage = z.infer<typeof ApiExchangePage>;
 
 /**
- * A reply from the app (`POST /v1/exchanges/:exchangeId/replies`, spec §14.1 A8): words, or a
- * reaction (a heart, a laugh or a hug), which is the same row a Telegram reaction writes, one of
+ * A reply from the app (`POST /v1/exchanges/:exchangeId/replies`, spec §14.1 A8): words, a voice,
+ * or a reaction (a heart, a laugh or a hug), which is the same row a Telegram reaction writes, one of
  * each kind per member per exchange. The Telegram path makes a member's reactions in the group
  * equal to the group's set, and leaves one given in the app alone (API contract §4, "Reactions").
  */
@@ -507,6 +507,8 @@ export const ComposeReply = z.union([
       ),
   }),
   z.strictObject({ reaction: z.enum(REACTION_KINDS) }),
+  /** A voice the replier uploaded first (`POST /v1/families/:familyId/voice`), by its id. */
+  z.strictObject({ voice: z.uuid() }),
 ]);
 export type ComposeReply = z.infer<typeof ComposeReply>;
 
@@ -527,7 +529,7 @@ export type ApiReply = z.infer<typeof ApiReply>;
  * yet, so there is nothing to reply to; `her_own` (403) when the kept-light member herself replies,
  * which would read her own words back to her tomorrow.
  */
-export const REPLY_REFUSALS = ["not_answered", "her_own"] as const;
+export const REPLY_REFUSALS = ["not_answered", "her_own", "voice_missing"] as const;
 export const ReplyRefusal = z.enum(REPLY_REFUSALS);
 export type ReplyRefusal = z.infer<typeof ReplyRefusal>;
 
@@ -840,14 +842,32 @@ export const ApiUploadedMedia = z.object({
 });
 export type ApiUploadedMedia = z.infer<typeof ApiUploadedMedia>;
 
+/** A voice kept for a reply (`POST /v1/families/:familyId/voice`), named by `{voice}` in a reply. */
+export const ApiUploadedVoice = z.object({
+  id: z.uuid(),
+  kind: z.literal("audio"),
+  duration_ms: z.number().int().positive().nullable(),
+  bytes: z.number().int().positive(),
+  expires_at: z.iso.datetime({ offset: true }),
+});
+export type ApiUploadedVoice = z.infer<typeof ApiUploadedVoice>;
+
 /**
  * Why a photo upload was refused, in `details.reason`. `jpeg_only` (415): not a JPEG, or a JPEG kind
  * Telegram and phones do not draw (lossless, arithmetic, hierarchical). `malformed` (400): a JPEG
  * that cannot be walked to its end. `dimensions` (400): a side of 0, a long side over 4096, or one
  * side over 20 times the other. `photo_limit` (429): the account's 20 photos in 24 hours, or the
- * family's 60 photos waiting to be asked about or deleted.
+ * family's 60 photos waiting to be asked about or deleted. For a voice (`POST …/voice`): `m4a_only`
+ * (415), anything but an MPEG-4 recording, and `voice_limit` (429), the account's 30 in 24 hours.
  */
-export const MEDIA_REFUSALS = ["jpeg_only", "malformed", "dimensions", "photo_limit"] as const;
+export const MEDIA_REFUSALS = [
+  "jpeg_only",
+  "malformed",
+  "dimensions",
+  "photo_limit",
+  "m4a_only",
+  "voice_limit",
+] as const;
 export const MediaRefusal = z.enum(MEDIA_REFUSALS);
 export type MediaRefusal = z.infer<typeof MediaRefusal>;
 
