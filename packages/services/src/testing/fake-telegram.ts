@@ -149,6 +149,14 @@ export function createFakeTelegram(clock: Clock): FakeTelegram {
             "fake telegram: a stored file was not loaded",
           );
         }
+        // As the real adapter: a stored voice goes only as OGG, MP3 or M4A.
+        const type = (file.mime.split(";")[0] ?? "").trim();
+        if (ref.kind === "audio" && !["audio/ogg", "audio/mpeg", "audio/mp4"].includes(type)) {
+          throw new ChannelSendError(
+            "invalid_request",
+            "fake telegram: a stored voice is not OGG, MP3 or M4A",
+          );
+        }
         return [{ storageKey: ref.storageKey, file }];
       });
       const rule = failureFor(conversationId);

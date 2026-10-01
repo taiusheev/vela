@@ -1,6 +1,6 @@
 /**
- * Photos Vela keeps (ADR-33) go to Telegram as uploads: `sendPhoto` or `sendMediaGroup` as
- * multipart/form-data, from the bytes the gateway loaded for the attempt, while a photo Telegram
+ * Photos and voices Vela keeps (ADR-33, ADR-35) go to Telegram as uploads: `sendPhoto`,
+ * `sendMediaGroup` or `sendVoice` as multipart/form-data, from the bytes the gateway loaded for the attempt, while a photo Telegram
  * already holds is still named in JSON. The error handling is the JSON path's own.
  */
 import {
@@ -175,6 +175,36 @@ describe("a photo Vela keeps, sent to Telegram", () => {
     });
   });
 
+  it("uploads a stored voice as a multipart sendVoice with its length, named for its type", async () => {
+    const { adapter, requests } = setup();
+    const m4a: FetchedMedia = {
+      body: new Uint8Array([0, 0, 0, 0x18, 0x66]).buffer,
+      mime: "audio/mp4",
+    };
+
+    const result = await adapter.send(
+      {
+        ...ARRIVAL,
+        kind: "answer_post",
+        buttons: undefined,
+        media: [{ kind: "audio", storageKey: "families/f/device/h/r.m4a", durationMs: 4200 }],
+      },
+      new Map([["families/f/device/h/r.m4a", m4a]]),
+    );
+
+    expect(requests.map((request) => request.apiMethod)).toEqual(["sendVoice", "sendMessage"]);
+    expect(requests[0]?.params).toStrictEqual({ chat_id: "6023817745", duration: "5" });
+    expect(requests[0]?.files).toStrictEqual([
+      {
+        field: "voice",
+        filename: "voice.m4a",
+        type: "audio/mp4",
+        bytes: new Uint8Array([0, 0, 0, 0x18, 0x66]),
+      },
+    ]);
+    expect(result.primaryMessageId).toBe("701");
+  });
+
   describe("refuses before calling Telegram", () => {
     const cases: [string, OutboundMessage, ReadonlyMap<string, FetchedMedia> | undefined][] = [
       [
@@ -188,7 +218,7 @@ describe("a photo Vela keeps, sent to Telegram", () => {
         FILES,
       ],
       [
-        "a stored voice note, which is never uploaded",
+        "a stored voice whose file is not OGG, MP3 or M4A",
         { ...ARRIVAL, media: [{ kind: "audio", storageKey: KEY_ONE }] },
         FILES,
       ],

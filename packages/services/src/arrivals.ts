@@ -434,9 +434,7 @@ async function mediaRefOf(
   if (row.providerFileId !== null && !byStorage) {
     return { kind: row.kind, providerFileId: row.providerFileId };
   }
-  // Only her phone is sent a stored voice note; Telegram is sent the platform's own.
-  const kindSendable = row.kind === "image" || (byStorage && row.kind === "audio");
-  if (row.storageKey === null || !kindSendable || deps.media === null) {
+  if (row.storageKey === null || deps.media === null) {
     return null;
   }
   const object = await deps.media.head(row.storageKey);
@@ -446,7 +444,7 @@ async function mediaRefOf(
   return {
     kind: row.kind,
     storageKey: row.storageKey,
-    mime: row.mime ?? object.mime ?? "image/jpeg",
+    mime: row.mime ?? object.mime,
     bytes: object.bytes,
     ...(row.durationMs === null ? {} : { durationMs: row.durationMs }),
   };

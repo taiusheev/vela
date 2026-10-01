@@ -1,8 +1,9 @@
 /**
  * Renders an `OutboundMessage` as Bot API calls: media first, in order (runs of consecutive photos
  * as one album, each audio as a voice message), then the text with its buttons. A photo Telegram
- * holds, or can fetch by URL, is named in JSON; a photo Vela keeps (ADR-33) is uploaded from the
- * bytes the gateway loaded, as multipart/form-data, mixed into an album by `attach://`.
+ * holds, or can fetch by URL, is named in JSON; a photo or voice Vela keeps (ADR-33, ADR-35) is
+ * uploaded from the bytes the gateway loaded, as multipart/form-data, a photo mixed into an album by
+ * `attach://`.
  *
  * Text is sent without `parse_mode`, so nothing in it is ever interpreted as markup, and with link
  * previews disabled. Telegram has no idempotency keys: if a later call fails after earlier media
@@ -37,7 +38,11 @@ type PhotoSource = { readonly remote: string } | { readonly upload: TelegramUplo
 type MediaStep =
   | { readonly kind: "photo"; readonly source: PhotoSource }
   | { readonly kind: "album"; readonly sources: readonly PhotoSource[] }
-  | { readonly kind: "voice"; readonly source: string; readonly durationMs: number | undefined };
+  | {
+      readonly kind: "voice";
+      readonly source: string | TelegramUpload;
+      readonly durationMs: number | undefined;
+    };
 
 export async function sendTelegramMessage(
   client: TelegramClient,
@@ -110,14 +115,15 @@ async function sendMediaStep(
       ];
     case "album":
       return sendAlbum(client, chatId, step.sources);
-    case "voice":
+    case "voice": {
+      const duration =
+        step.durationMs === undefined ? undefined : Math.ceil(step.durationMs / 1000);
       return [
-        await client.sendVoice({
-          chat_id: chatId,
-          voice: step.source,
-          duration: step.durationMs === undefined ? undefined : Math.ceil(step.durationMs / 1000),
-        }),
+        typeof step.source === "string"
+          ? await client.sendVoice({ chat_id: chatId, voice: step.source, duration })
+          : await client.sendVoiceUpload({ chat_id: chatId, voice: step.source, duration }),
       ];
+    }
   }
 }
 
@@ -194,7 +200,8 @@ function sendAlbum(
 /**
  * The calls the media takes, checked before any is made. A photo Vela keeps must have its bytes in
  * `files`: the gateway loads them for each attempt, and a message missing one is refused rather
- * than sent short of a photo its buttons count. Only photos are uploaded this way.
+ * than sent short of a photo its buttons count. A stored voice (her phone's recording, a voice reply
+ * from the app) is uploaded the same way, as a voice message.
  */
 function planMedia(
   media: readonly OutboundMediaRef[],
@@ -215,8 +222,11 @@ function planMedia(
   for (const ref of media) {
     // Telegram reuses its own file_id without a size limit; a URL is fetched by Telegram.
     const source = ref.providerFileId ?? ref.url;
-    if (source === undefined) {
-      photos.push({ upload: storedPhoto(ref, files) });
+    if (source === undefined && ref.kind === "image") {
+      photos.push({ upload: storedFile(ref, files) });
+    } else if (source === undefined) {
+      flushPhotos();
+      steps.push({ kind: "voice", source: storedFile(ref, files), durationMs: ref.durationMs });
     } else if (ref.kind === "image") {
       photos.push({ remote: source });
     } else {
@@ -228,7 +238,14 @@ function planMedia(
   return steps;
 }
 
-function storedPhoto(
+/** Telegram plays a voice from OGG/Opus, MP3 or M4A, and reads which by the part's name. */
+const VOICE_NAMES: ReadonlyMap<string, string> = new Map([
+  ["audio/ogg", "voice.ogg"],
+  ["audio/mpeg", "voice.mp3"],
+  ["audio/mp4", "voice.m4a"],
+]);
+
+function storedFile(
   ref: OutboundMediaRef,
   files: ReadonlyMap<string, FetchedMedia> | undefined,
 ): TelegramUpload {
@@ -238,12 +255,16 @@ function storedPhoto(
       "media reference has neither a file id, a url nor a storage key",
     );
   }
-  if (ref.kind !== "image") {
-    throw new ChannelSendError("invalid_request", "only a photo is uploaded from storage");
-  }
   const file = files?.get(ref.storageKey);
   if (file === undefined) {
-    throw new ChannelSendError("invalid_request", "a stored photo was not loaded for the send");
+    throw new ChannelSendError("invalid_request", "a stored file was not loaded for the send");
   }
-  return { body: file.body, mime: file.mime, name: "photo.jpg" };
+  if (ref.kind === "image") {
+    return { body: file.body, mime: file.mime, name: "photo.jpg" };
+  }
+  const name = VOICE_NAMES.get((file.mime.split(";")[0] ?? "").trim().toLowerCase());
+  if (name === undefined) {
+    throw new ChannelSendError("invalid_request", "a stored voice is not OGG, MP3 or M4A");
+  }
+  return { body: file.body, mime: file.mime, name };
 }

@@ -75,7 +75,7 @@ export interface TelegramSendMediaGroupParams {
   readonly media: readonly TelegramInputMediaPhoto[];
 }
 
-/** A file sent with a request as multipart/form-data: a photo Vela keeps, not one Telegram holds. */
+/** A file sent with a request as multipart/form-data: a photo or voice Vela keeps, not one Telegram holds. */
 export interface TelegramUpload {
   readonly body: ArrayBuffer;
   readonly mime: string;
@@ -86,6 +86,13 @@ export interface TelegramUpload {
 export interface TelegramSendPhotoUploadParams {
   readonly chat_id: TelegramChatId;
   readonly photo: TelegramUpload;
+}
+
+export interface TelegramSendVoiceUploadParams {
+  readonly chat_id: TelegramChatId;
+  readonly voice: TelegramUpload;
+  /** Seconds. */
+  readonly duration?: number;
 }
 
 export interface TelegramSendMediaGroupUploadParams {
@@ -182,6 +189,8 @@ export interface TelegramClient {
   sendMediaGroup(params: TelegramSendMediaGroupParams): Promise<TelegramSentMessage[]>;
   /** `sendPhoto` with the photo's bytes, as multipart/form-data. */
   sendPhotoUpload(params: TelegramSendPhotoUploadParams): Promise<TelegramSentMessage>;
+  /** `sendVoice` with a recording's bytes (OGG/Opus, MP3 or M4A), as multipart/form-data. */
+  sendVoiceUpload(params: TelegramSendVoiceUploadParams): Promise<TelegramSentMessage>;
   /** `sendMediaGroup` with some photos' bytes, as multipart/form-data. */
   sendMediaGroupUpload(params: TelegramSendMediaGroupUploadParams): Promise<TelegramSentMessage[]>;
   editMessageText(params: TelegramEditMessageTextParams): Promise<void>;
@@ -333,6 +342,17 @@ export function createTelegramClient(options: TelegramApiOptions): TelegramClien
         { photo: params.photo },
       );
       return readSentMessage("sendPhoto", result);
+    },
+    async sendVoiceUpload(params) {
+      const result = await callMultipart(
+        "sendVoice",
+        {
+          chat_id: String(params.chat_id),
+          ...(params.duration === undefined ? {} : { duration: String(params.duration) }),
+        },
+        { voice: params.voice },
+      );
+      return readSentMessage("sendVoice", result);
     },
     async sendMediaGroupUpload(params) {
       const result = await callMultipart(
