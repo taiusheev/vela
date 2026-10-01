@@ -57,26 +57,29 @@ describe("keeping her recording on independent PostgreSQL connections", () => {
     const storageKey = `families/${scope.familyId}/device/${scope.herId}/${KEY}.m4a`;
 
     // The holder is the first send, its row written and not yet committed; both retries have
-    // already looked for the key and found nothing.
-    const queued = await pg.queueBehindRowLock(
-      holder,
-      (tx) =>
-        tx.insert(media).values({
-          familyId: scope.familyId,
-          uploadedBy: scope.herId,
-          kind: "audio",
-          channel: "device",
-          storageKey,
-          providerFileId: `device:${KEY}`,
-          providerUniqueId: `${scope.herId}:${KEY}`,
-          mime: "audio/mp4",
-          createdAt: NOW,
-        }),
-      [first, second].map((client) => ({
-        client,
-        start: () => storeDeviceVoice(pg.jobDeps(client), mother, KEY, RECORDING, 1000),
-      })),
+    // already looked for the key and found nothing, and each waits on the holder's insert.
+    const held = await pg.holdRows(holder, (tx) =>
+      tx.insert(media).values({
+        familyId: scope.familyId,
+        uploadedBy: scope.herId,
+        kind: "audio",
+        channel: "device",
+        storageKey,
+        providerFileId: `device:${KEY}`,
+        providerUniqueId: `${scope.herId}:${KEY}`,
+        mime: "audio/mp4",
+        createdAt: NOW,
+      }),
     );
+    const queued: Promise<{ mediaId: string }>[] = [];
+    for (const client of [first, second]) {
+      const operation = pg.track(
+        storeDeviceVoice(pg.jobDeps(client), mother, KEY, RECORDING, 1000),
+      );
+      queued.push(operation);
+      await pg.waitForRowLockWait(client, [holder], operation);
+    }
+    await held.release();
     const results = await pg.settle("both retries", queued);
     expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"]);
 

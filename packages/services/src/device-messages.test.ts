@@ -203,7 +203,8 @@ describe("her voice from her phone (ADR-35, P4)", () => {
     const [row] = await h.db.select().from(outbound).where(eq(outbound.kind, "answer_post"));
     const [file] = await h.db.select().from(media).where(eq(media.id, mediaId));
     expect(row).toMatchObject({ channel: "telegram", conversationId: group.conversationId });
-    expect((row?.payload as { message: { media?: unknown[] } }).message.media).toEqual([
+    const payload = row?.payload as { message: { media?: unknown[] } } | undefined;
+    expect(payload?.message.media).toEqual([
       { kind: "audio", storageKey: file?.storageKey, mime: "audio/mp4", durationMs: 900 },
     ]);
   });
