@@ -791,7 +791,7 @@ export type ApiDeviceMessages = z.infer<typeof ApiDeviceMessages>;
 
 /**
  * What her phone sends (`POST /device/messages`, ADR-35): a tap on a button of a message it was
- * sent, or her own words, at most as long as a Telegram message.
+ * sent, her own words, at most as long as a Telegram message, or her voice.
  */
 export const DeviceInput = z.union([
   z.strictObject({
@@ -799,6 +799,8 @@ export const DeviceInput = z.union([
     message_id: z.string().min(1).max(64),
   }),
   z.strictObject({ text: z.string().trim().min(1).max(4_000) }),
+  /** Her recording, uploaded first (`POST /device/voice`), by the media id the upload answered. */
+  z.strictObject({ voice: z.uuid() }),
 ]);
 export type DeviceInput = z.infer<typeof DeviceInput>;
 

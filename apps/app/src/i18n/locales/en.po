@@ -163,6 +163,10 @@ msgstr "{words} · shown to her in {language}"
 msgid "❤️ I'm fine"
 msgstr "❤️ I'm fine"
 
+#: src/device/VoiceAnswer.tsx
+msgid "🎙 Answer with your voice"
+msgstr "🎙 Answer with your voice"
+
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "$79 a year"
@@ -560,6 +564,10 @@ msgstr "Leave the number out. Vela asks them for it, with their yes."
 msgid "Leaving…"
 msgstr "Leaving…"
 
+#: src/device/VoiceAnswer.tsx
+msgid "Listen"
+msgstr "Listen"
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr "Looking for that exchange…"
@@ -832,6 +840,14 @@ msgstr "Read this aloud"
 msgid "Reading what this phone allows…"
 msgstr "Reading what this phone allows…"
 
+#: src/device/VoiceAnswer.tsx
+msgid "Record again"
+msgstr "Record again"
+
+#: src/device/VoiceAnswer.tsx
+msgid "Recording… {time}"
+msgstr "Recording… {time}"
+
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 #: src/components/vote-options.tsx
@@ -910,10 +926,15 @@ msgstr "Send it to her"
 msgid "Send me a code"
 msgstr "Send me a code"
 
+#: src/device/VoiceAnswer.tsx
+msgid "Send my answer"
+msgstr "Send my answer"
+
 #: app/ask.tsx
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 #: app/sign-in.tsx
+#: src/device/VoiceAnswer.tsx
 msgid "Sending…"
 msgstr "Sending…"
 
@@ -1045,6 +1066,10 @@ msgstr "Starting…"
 #: app/(tabs)/you.tsx
 msgid "Stay"
 msgstr "Stay"
+
+#: src/device/VoiceAnswer.tsx
+msgid "Stop"
+msgstr "Stop"
 
 #: src/data/exchanges.ts
 msgid "Sunday"
@@ -1238,6 +1263,10 @@ msgstr "This photo could not be used. Choose another."
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
 msgstr "Those are the ones from the seeds you saved"
+
+#: src/device/VoiceAnswer.tsx
+msgid "To answer with your voice, Vela needs the microphone. Ask your family to turn it on in Settings."
+msgstr "To answer with your voice, Vela needs the microphone. Ask your family to turn it on in Settings."
 
 #: src/device/useParent.ts
 msgid "Toast and tea"
@@ -1571,6 +1600,10 @@ msgstr "You will stop seeing the family's days and taking turns. Thirty days on,
 #: app/(tabs)/you.tsx
 msgid "Your account id. Nobody but you needs it."
 msgstr "Your account id. Nobody but you needs it."
+
+#: src/device/VoiceAnswer.tsx
+msgid "Your answer, {time} long."
+msgstr "Your answer, {time} long."
 
 #: app/(tabs)/you.tsx
 msgid "Your family could not be reached just now, so this is the example one."

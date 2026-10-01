@@ -77,6 +77,7 @@ import { type InsertResult, insertOutbound } from "./gateway.ts";
 import {
   activeOrganisersWithLinks,
   channelLinkOfMember,
+  groupChannelOf,
   hasHealthWordsConsent,
   linkedGroupOfFamily,
   markWakeDue,
@@ -571,7 +572,8 @@ async function raiseFlag(
   const { answer, member, family, exchange } = ctx;
   const quote = flag.evidenceQuote ?? words;
   const written: InsertResult[] = [];
-  const organisers = await activeOrganisersWithLinks(tx, family.id, answer.channel);
+  // Organisers are told where the family is, Telegram for an answer from her phone (ADR-35).
+  const organisers = await activeOrganisersWithLinks(tx, family.id, groupChannelOf(answer.channel));
   for (const organiser of organisers) {
     const lang = organiser.member.language;
     const result = await insertOutbound(deps, tx, {
@@ -875,7 +877,8 @@ async function postWordsToGroup(
   if (lines.length === 0) {
     return;
   }
-  const group = await linkedGroupOfFamily(deps.db, family.id, answer.channel);
+  const channel = groupChannelOf(answer.channel);
+  const group = await linkedGroupOfFamily(deps.db, family.id, channel);
   if (group === null) {
     return;
   }
@@ -887,7 +890,7 @@ async function postWordsToGroup(
       suffix: `${answer.id}:transcript`,
     }),
     memberId: member.id,
-    channel: answer.channel,
+    channel,
     conversationId: group.conversationId,
     exchangeId: exchange.id,
     lang,

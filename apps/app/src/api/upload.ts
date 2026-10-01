@@ -168,3 +168,44 @@ export async function fetchDevicePhoto(mediaId: string, deviceToken: string): Pr
   }
   return dataUriOf(await response.blob());
 }
+
+/**
+ * A new recording's key on her phone, in the alphabet `POST /device/voice` takes: minted once when
+ * she stops recording, and sent again with every retry of that recording.
+ */
+export function recordingKey(): string {
+  minted += 1;
+  return `voice-${Date.now().toString(36)}-${minted}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Her recording, read from the file the phone wrote, kept by the pilot Worker (`POST /device/voice`,
+ * ADR-35): it answers the recording's media id, the same one for a retry under the same key. A
+ * refusal is an `ApiError` with the Worker's reason.
+ */
+export async function uploadDeviceVoice(
+  uri: string,
+  key: string,
+  durationMs: number,
+  deviceToken: string,
+): Promise<string> {
+  if (!apiConfigured() || apiBaseUrl === undefined) {
+    throw new Error("The API is not configured");
+  }
+  const recording = await (await fetch(uri)).blob();
+  const response = await fetch(`${apiBaseUrl}/device/voice`, {
+    method: "POST",
+    headers: {
+      authorization: `Device ${deviceToken}`,
+      "content-type": "audio/mp4",
+      "idempotency-key": key,
+      "x-duration-ms": String(Math.round(durationMs)),
+    },
+    body: recording,
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { error?: unknown };
+    throw new ApiError(response.status, String(body.error ?? "unknown"), undefined);
+  }
+  return ((await response.json()) as { media_id: string }).media_id;
+}

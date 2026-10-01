@@ -10,7 +10,7 @@ import {
   fetchDeviceMessages,
   sendDeviceMessage,
 } from "../api/client.ts";
-import { fetchDevicePhoto } from "../api/upload.ts";
+import { fetchDevicePhoto, uploadDeviceVoice } from "../api/upload.ts";
 import { loadPhoto } from "../data/photos.ts";
 import { scheduleHerMorning } from "./morning.ts";
 import { clearDeviceToken, readDeviceToken } from "./token.ts";
@@ -38,6 +38,8 @@ export interface ParentView {
   trouble?: string;
   tap(buttonId: string): void;
   say(words: string): Promise<boolean>;
+  /** Her recording, uploaded under its key and sent as her voice; false when it did not go. */
+  sendVoice(recording: { uri: string; key: string; durationMs: number }): Promise<boolean>;
 }
 
 /** The demo's morning, so the parent screen can be seen and walked without a phone set up. */
@@ -116,8 +118,9 @@ export function useParent(): ParentView {
   }, [unlinked]);
 
   const send = useMutation({
-    mutationFn: (input: { button: string; message_id: string } | { text: string }) =>
-      sendDeviceMessage(token ?? "", input),
+    mutationFn: (
+      input: { button: string; message_id: string } | { text: string } | { voice: string },
+    ) => sendDeviceMessage(token ?? "", input),
     onSuccess: () => {
       setTrouble(undefined);
       setTimeout(() => {
@@ -148,6 +151,10 @@ export function useParent(): ParentView {
         setAnswered(true);
         return true;
       },
+      sendVoice: async () => {
+        setAnswered(true);
+        return true;
+      },
     };
   }
 
@@ -164,6 +171,22 @@ export function useParent(): ParentView {
     tap(buttonId) {
       if (newest === null) return;
       send.mutate({ button: buttonId, message_id: newest.message_id });
+    },
+    async sendVoice(recording) {
+      if (typeof token !== "string") return false;
+      try {
+        const voice = await uploadDeviceVoice(
+          recording.uri,
+          recording.key,
+          recording.durationMs,
+          token,
+        );
+        await send.mutateAsync({ voice });
+        return true;
+      } catch {
+        setTrouble(t`That did not go through. Try again in a moment.`);
+        return false;
+      }
     },
     async say(words) {
       const text = words.trim();

@@ -304,10 +304,10 @@ export function fetchDeviceMessages(deviceToken: string): Promise<ApiDeviceMessa
   return deviceCall<ApiDeviceMessages>("/v1/device/messages", deviceToken);
 }
 
-/** Her tap under a message, or her own words; the pilot Worker hands them to the router. */
+/** Her tap under a message, her own words, or her uploaded voice; the pilot Worker hands them to the router. */
 export function sendDeviceMessage(
   deviceToken: string,
-  input: { button: string; message_id: string } | { text: string },
+  input: { button: string; message_id: string } | { text: string } | { voice: string },
 ): Promise<{ ok: true }> {
   return deviceCall<{ ok: true }>("/device/messages", deviceToken, input);
 }

@@ -461,6 +461,12 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
         ? null
         : given.deviceInboundEvent(db, her, input, ids, at);
     },
+    async storeDeviceVoice(deps, her, key, body, durationMs) {
+      note("storeDeviceVoice", her.id, key, body.byteLength, durationMs);
+      return given.storeDeviceVoice === undefined
+        ? { mediaId: "66666666-6666-7666-8666-666666666666" }
+        : given.storeDeviceVoice(deps, her, key, body, durationMs);
+    },
   };
 
   const runtime: PilotRuntime = {

@@ -170,6 +170,10 @@ msgstr "{words} · 這位家人看到的{language}版本"
 msgid "❤️ I'm fine"
 msgstr "❤️ 我很好"
 
+#: src/device/VoiceAnswer.tsx
+msgid "🎙 Answer with your voice"
+msgstr "🎙 用聲音回答"
+
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "每年 79 美元"
@@ -567,6 +571,10 @@ msgstr "請不要填電話號碼。對方同意後，Vela 會再向對方要號�
 msgid "Leaving…"
 msgstr "正在離開…"
 
+#: src/device/VoiceAnswer.tsx
+msgid "Listen"
+msgstr "聽一聽"
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr "正在找這則問答…"
@@ -839,6 +847,14 @@ msgstr "唸給我聽"
 msgid "Reading what this phone allows…"
 msgstr "正在讀取這支手機的通知設定…"
 
+#: src/device/VoiceAnswer.tsx
+msgid "Record again"
+msgstr "重新錄音"
+
+#: src/device/VoiceAnswer.tsx
+msgid "Recording… {time}"
+msgstr "錄音中… {time}"
+
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 #: src/components/vote-options.tsx
@@ -917,10 +933,15 @@ msgstr "傳給這位家人"
 msgid "Send me a code"
 msgstr "傳驗證碼給我"
 
+#: src/device/VoiceAnswer.tsx
+msgid "Send my answer"
+msgstr "送出我的回答"
+
 #: app/ask.tsx
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 #: app/sign-in.tsx
+#: src/device/VoiceAnswer.tsx
 msgid "Sending…"
 msgstr "傳送中…"
 
@@ -1052,6 +1073,10 @@ msgstr "正在開啟…"
 #: app/(tabs)/you.tsx
 msgid "Stay"
 msgstr "留下"
+
+#: src/device/VoiceAnswer.tsx
+msgid "Stop"
+msgstr "停止"
 
 #: src/data/exchanges.ts
 msgid "Sunday"
@@ -1245,6 +1270,10 @@ msgstr "這張照片無法使用，請換一張。"
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
 msgstr "那些就是您留下來的種子種出來的"
+
+#: src/device/VoiceAnswer.tsx
+msgid "To answer with your voice, Vela needs the microphone. Ask your family to turn it on in Settings."
+msgstr "要用聲音回答，Vela 需要使用麥克風。請家人幫您在「設定」裡打開。"
 
 #: src/device/useParent.ts
 msgid "Toast and tea"
@@ -1578,6 +1607,10 @@ msgstr "您將不再看到家人的日常，也不會再輪流提問。三十天
 #: app/(tabs)/you.tsx
 msgid "Your account id. Nobody but you needs it."
 msgstr "您的帳號 ID。只有您自己會用到。"
+
+#: src/device/VoiceAnswer.tsx
+msgid "Your answer, {time} long."
+msgstr "您的回答，共 {time}。"
 
 #: app/(tabs)/you.tsx
 msgid "Your family could not be reached just now, so this is the example one."

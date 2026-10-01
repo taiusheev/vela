@@ -113,6 +113,12 @@ export type {
 } from "./deps.ts";
 export { pushFailureOf } from "./deps.ts";
 export { deviceInboundEvent, loadDeviceMessages, readDeviceMedia } from "./device-messages.ts";
+export {
+  type DeviceVoiceRefusal,
+  DeviceVoiceRefusedError,
+  MAX_DEVICE_VOICE_BYTES,
+  storeDeviceVoice,
+} from "./device-voice.ts";
 export { errorLabel, VelaError } from "./errors.ts";
 export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";

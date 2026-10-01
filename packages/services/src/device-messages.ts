@@ -4,6 +4,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { sharedWith } from "./api-media.ts";
 import type { MediaStore } from "./deps.ts";
+import { VelaError } from "./errors.ts";
 import type { Queryable } from "./repo.ts";
 
 /** How many of her latest messages her phone is given: her morning, its read-back, a notice. */
@@ -92,10 +93,11 @@ function storageKeysOf(payload: unknown): string[] {
 }
 
 /**
- * Her tap or her words from her phone, as the inbound event a Telegram chat would make of them,
- * for `handleInbound` (ADR-35): she is the sender and the conversation is her phone, both named by
- * her `device` link's id, so the router finds her as it finds a Telegram user. A tap carries the
- * button's id and the id of the message it was under, which her consent and her answers read.
+ * Her tap, her words or her voice from her phone, as the inbound event a Telegram chat would make
+ * of them, for `handleInbound` (ADR-35): she is the sender and the conversation is her phone, both
+ * named by her `device` link's id, so the router finds her as it finds a Telegram user. A tap
+ * carries the button's id and the id of the message it was under, which her consent and her
+ * answers read. A voice names a recording she uploaded; any other id is `VelaError("not_found")`.
  */
 export async function deviceInboundEvent(
   db: Queryable,
@@ -117,15 +119,51 @@ export async function deviceInboundEvent(
     sender: { externalUserId: link.externalId },
     conversation: { externalId: link.externalId, kind: "private" as const },
   };
-  return "button" in input
-    ? {
-        ...common,
-        kind: "button",
-        messageId: input.message_id,
-        buttonData: input.button,
-        callbackId: ids.eventId,
-      }
-    : { ...common, kind: "text", messageId: ids.messageId, text: input.text };
+  if ("button" in input) {
+    return {
+      ...common,
+      kind: "button",
+      messageId: input.message_id,
+      buttonData: input.button,
+      callbackId: ids.eventId,
+    };
+  }
+  if ("text" in input) {
+    return { ...common, kind: "text", messageId: ids.messageId, text: input.text };
+  }
+  // Her voice is named by its recording, so sending it again is the same message, never a second
+  // answer: the router's duplicate check reads the message id.
+  const [file] = await db
+    .select()
+    .from(media)
+    .where(
+      and(
+        eq(media.id, input.voice),
+        eq(media.familyId, her.familyId),
+        eq(media.uploadedBy, her.id),
+        eq(media.channel, "device"),
+        eq(media.kind, "audio"),
+        isNotNull(media.storageKey),
+      ),
+    )
+    .limit(1);
+  if (file === undefined || file.providerFileId === null || file.providerUniqueId === null) {
+    throw new VelaError("not_found", "Her recording is not there");
+  }
+  return {
+    ...common,
+    eventId: `device:voice:${file.id}`,
+    kind: "voice",
+    messageId: `voice:${file.id}`,
+    media: {
+      kind: "audio",
+      providerFileId: file.providerFileId,
+      providerUniqueId: file.providerUniqueId,
+      ...(file.mime === null ? {} : { mime: file.mime }),
+      ...(file.durationMs === null ? {} : { durationMs: file.durationMs }),
+      ...(file.bytes === null ? {} : { bytes: file.bytes }),
+    },
+  };
 }
 
 /**

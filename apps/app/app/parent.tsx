@@ -5,14 +5,15 @@ import { useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useParent } from "../src/device/useParent.ts";
+import { VoiceAnswer } from "../src/device/VoiceAnswer.tsx";
 import { lightPalette as light } from "../src/theme/tokens.ts";
 
 /**
  * The parent surface (spec §14.2, ADR-35): one message at a time, Vela's newest to her, in large
- * type, with its buttons as large targets and her own words below. It is her consent (P1), her
- * morning's question (P2), a photo choice's two photos with their 1 and 2 (P3), and Vela's thanks after she answers
- * (P5), because each is the message Vela sent her phone last. Light mode only, body 22 pt or more,
- * targets 64 pt or more, ink on cream for 7:1 contrast; no tabs, no menus.
+ * type, with its buttons as large targets, her voice (P4) and her own words below. It is her consent
+ * (P1), her morning's question (P2), a photo choice's two photos with their 1 and 2 (P3), and Vela's
+ * thanks after she answers (P5), because each is the message Vela sent her phone last. Light mode
+ * only, body 22 pt or more, targets 64 pt or more, ink on cream for 7:1 contrast; no tabs, no menus.
  */
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
@@ -97,6 +98,7 @@ export default function ParentScreen() {
                 </Pressable>
               ))}
             </View>
+            <VoiceAnswer disabled={view.sending} send={view.sendVoice} />
             <TextInput
               value={words}
               onChangeText={setWords}

@@ -616,6 +616,23 @@ describe("understandAnswer", () => {
     ]);
   });
 
+  // Her phone (ADR-35) has no organisers on it: they are told on Telegram, where the family is.
+  it("tells the organisers on Telegram of a flag in an answer from her phone", async () => {
+    const scene = await morning();
+    await seedHealthWordsConsent(h.db, scene.seed, { at: h.clock.now(), answer: "yes" });
+    const answer = await herText(scene, "Not great, my chest hurts a bit");
+    await h.db.update(answers).set({ channel: "device" }).where(eq(answers.id, answer.id));
+    withAi({ flag: async () => raised() });
+
+    await understandAnswer(h.deps, answer.id);
+
+    const flags = (await outboundRows()).filter((row) => row.kind === "flag");
+    expect(flags.map((row) => [row.channel, row.conversationId])).toEqual([
+      ["telegram", scene.seed.organiserLink.externalId],
+      ["telegram", ADMIN],
+    ]);
+  });
+
   // The AI layer drops an excerpt that is not exactly hers (a curly apostrophe, re-spaced Chinese)
   // but keeps the flag: the organisers still hear it, with everything she said.
   it("tells each organiser her own words when the model kept no exact quote", async () => {

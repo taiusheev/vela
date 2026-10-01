@@ -9,7 +9,12 @@
  * test hands the routes fakes.
  */
 import { DeviceInput, type InboundEvent } from "@vela/contracts";
-import { errorLabel } from "@vela/services";
+import {
+  DeviceVoiceRefusedError,
+  errorLabel,
+  MAX_DEVICE_VOICE_BYTES,
+  VelaError,
+} from "@vela/services";
 import { type Context, Hono } from "hono";
 import { readEnvironment, readLineConfig, refuseUnfilledNotices } from "./config.ts";
 import { createLogger } from "./deps.ts";
@@ -105,6 +110,54 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       if (event === null) return c.json({ error: "unauthorized" }, 401);
       await runtime.services.handleInbound(deps, [event]);
       return c.json({ ok: true });
+    } catch (error) {
+      // A voice naming no recording of hers.
+      if (error instanceof VelaError && error.code === "not_found") {
+        return c.json({ error: "invalid" }, 400);
+      }
+      throw error;
+    } finally {
+      c.executionCtx.waitUntil(handle.close());
+    }
+  });
+
+  /**
+   * Her recording from her phone (ADR-35, P4), before it is sent as a voice: the `.m4a` bytes as
+   * the body (`Content-Type: audio/mp4`, at most 3 MiB), the recording's own key in
+   * `Idempotency-Key`, and its length in `X-Duration-Ms`. It answers 201 `{media_id}`, the same id
+   * again for the same key; 400 for anything that is not a recording, 413 past the size, 429 past a
+   * day's recordings, 404 where nothing is stored, and 401 for an unknown token.
+   */
+  app.post("/device/voice", async (c) => {
+    const presented = DEVICE_AUTHORIZATION.exec(c.req.header("Authorization") ?? "");
+    if (presented === null) return c.json({ error: "unauthorized" }, 401);
+    if ((c.req.header("Content-Type") ?? "").split(";")[0]?.trim() !== "audio/mp4") {
+      return c.json({ error: "invalid" }, 400);
+    }
+    const declared = Number(c.req.header("Content-Length") ?? "0");
+    if (declared > MAX_DEVICE_VOICE_BYTES) return c.json({ error: "too_large" }, 413);
+    const key = c.req.header("Idempotency-Key") ?? "";
+    const duration = Number(c.req.header("X-Duration-Ms") ?? "");
+    const body = new Uint8Array(await c.req.arrayBuffer());
+    const handle = await runtime.createDeps(c.env);
+    try {
+      const deps = handle.deps;
+      const her = await runtime.services.memberOfDeviceToken(deps.db, presented[1] ?? "");
+      if (her === null) return c.json({ error: "unauthorized" }, 401);
+      const stored = await runtime.services.storeDeviceVoice(
+        deps,
+        her,
+        key,
+        body,
+        Number.isFinite(duration) ? duration : null,
+      );
+      return c.json({ media_id: stored.mediaId }, 201);
+    } catch (error) {
+      if (error instanceof DeviceVoiceRefusedError) {
+        const status = { invalid: 400, too_large: 413, limit: 429, off: 404 } as const;
+        return c.json({ error: error.reason }, status[error.reason]);
+      }
+      throw error;
     } finally {
       c.executionCtx.waitUntil(handle.close());
     }

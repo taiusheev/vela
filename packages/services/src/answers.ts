@@ -15,6 +15,7 @@ import type {
   InboundKind,
   Lang,
   MediaRef,
+  OutboundMediaRef,
 } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -43,7 +44,7 @@ import {
   members,
   outbound,
 } from "@vela/db";
-import { and, asc, eq, exists, gte, inArray, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, eq, exists, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -52,8 +53,10 @@ import { type EnqueueResult, enqueueOutbound, finishArrivalEffects } from "./gat
 import { answerReceiptPush, ordinaryPushReader } from "./push-messages.ts";
 import { resolveQuietOnAnswer } from "./quiet.ts";
 import {
+  deviceFileForGroup,
   exchangesByIds,
   familyById,
+  groupChannelOf,
   latestDeliveredExchangeWithin,
   linkedGroupOfFamily,
   lockDeliveredExchangeForLocalDate,
@@ -327,11 +330,13 @@ interface AnswerPost {
 /**
  * The family sees her answer as one `answer_post` per answer (one exchange can take several): the
  * light line at the time she answered, then what she said, with her voice or photo attached by its
- * platform file id. Null when the family has no group on her channel.
+ * platform file id. Null when the family has no group on her channel; her phone's (ADR-35) is the
+ * family's Telegram group.
  */
 async function postAnswer(deps: Deps, post: AnswerPost): Promise<EnqueueResult | null> {
   const { member, family, exchange, answer } = post;
-  const group = await linkedGroupOfFamily(deps.db, family.id, answer.channel);
+  const channel = groupChannelOf(answer.channel);
+  const group = await linkedGroupOfFamily(deps.db, family.id, channel);
   if (group === null) {
     deps.logger.info("answer_post_skipped", { familyId: family.id, reason: "no_group" });
     return null;
@@ -345,18 +350,33 @@ async function postAnswer(deps: Deps, post: AnswerPost): Promise<EnqueueResult |
       ? t(lang, "group.answer_hello", { name, time })
       : t(lang, "group.answer_light", { name, asker: asker.displayName, time });
   const line = contentLine(lang, name, answer);
+  const file = await fileForGroup(deps, family.id, answer.channel, post.media);
   return enqueueOutbound(deps, deps.db, {
     kind: "answer_post",
     idempotencyKey: outboundKey("answer_post", { exchangeId: exchange.id, suffix: answer.id }),
     memberId: member.id,
-    channel: answer.channel,
+    channel,
     conversationId: group.conversationId,
     exchangeId: exchange.id,
     lang,
     text: fitMessageText(line === null ? light : `${light}\n${line}`),
-    media: post.media === null ? undefined : [post.media],
+    media: file === null ? undefined : [file],
     ref: { purpose: "answer_post", exchangeId: exchange.id, memberId: member.id },
   });
+}
+
+/**
+ * Her file as the group is sent it: as it came where the group is on her channel; from her phone
+ * (ADR-35), by the stored copy her phone uploaded, or left out when there is none.
+ */
+async function fileForGroup(
+  deps: Deps,
+  familyId: string,
+  channel: Channel,
+  ref: MediaRef | null,
+): Promise<MediaRef | OutboundMediaRef | null> {
+  if (ref === null || groupChannelOf(channel) === channel) return ref;
+  return deviceFileForGroup(deps.db, familyId, ref);
 }
 
 /**
@@ -438,7 +458,14 @@ export const ANSWER_POST_WITHIN_HOURS = 24;
 function storedMediaRef(file: Media | null, channel: Channel): MediaRef | null {
   return file === null || file.providerFileId === null || file.channel !== channel
     ? null
-    : { kind: file.kind, providerFileId: file.providerFileId };
+    : {
+        kind: file.kind,
+        providerFileId: file.providerFileId,
+        // Her phone's file is found again by it, for its stored copy (`deviceFileForGroup`).
+        ...(file.channel === "device" && file.providerUniqueId !== null
+          ? { providerUniqueId: file.providerUniqueId }
+          : {}),
+      };
 }
 
 /**
@@ -478,7 +505,11 @@ export async function postMissedAnswers(deps: Deps): Promise<number> {
             .where(
               and(
                 eq(familyChannels.familyId, families.id),
-                eq(familyChannels.channel, answers.channel),
+                // Her phone's answers go to the family's Telegram group (`groupChannelOf`).
+                eq(
+                  familyChannels.channel,
+                  sql`case when ${answers.channel} = 'device' then 'telegram' else ${answers.channel} end`,
+                ),
                 eq(familyChannels.kind, "group"),
                 isNull(familyChannels.unlinkedAt),
                 lte(familyChannels.linkedAt, answers.receivedAt),
@@ -535,16 +566,17 @@ async function postUnattached(
   now: Date,
 ): Promise<void> {
   const text = event.text?.trim() ?? "";
-  const file = event.media ?? null;
-  const group = await linkedGroupOfFamily(deps.db, family.id, event.channel);
+  const channel = groupChannelOf(event.channel);
+  const group = await linkedGroupOfFamily(deps.db, family.id, channel);
+  const file = await fileForGroup(deps, family.id, event.channel, event.media ?? null);
   const lang = family.language;
   const name = member.displayName;
   let line: string | null = null;
   if (text.length > 0) {
     line = t(lang, "group.answer_text", { name, text });
-  } else if (file?.kind === "audio") {
+  } else if (event.media?.kind === "audio") {
     line = t(lang, "readback.voice", { name });
-  } else if (file?.kind === "image") {
+  } else if (event.media?.kind === "image") {
     line = t(lang, "readback.photo", { name });
   }
   if (group !== null && line !== null) {
@@ -555,7 +587,7 @@ async function postUnattached(
         suffix: event.eventId,
       }),
       memberId: member.id,
-      channel: event.channel,
+      channel,
       conversationId: group.conversationId,
       lang,
       text: fitMessageText(line),

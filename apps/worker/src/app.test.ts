@@ -4,6 +4,7 @@ import {
   waitOnExecutionContext,
 } from "cloudflare:test";
 import type { Member } from "@vela/db";
+import { DeviceVoiceRefusedError, VelaError } from "@vela/services";
 import { describe, expect, it } from "vitest";
 import type { InboundJob, PilotEnv } from "./env.ts";
 import { createHeartbeat, LAST_RECONCILE_KEY } from "./heartbeat.ts";
@@ -611,6 +612,81 @@ describe("her phone's messages (ADR-35)", () => {
     expect((await send(none, deviceRequest({ text: "hello" }, null))).status).toBe(401);
     expect((await send(none, deviceRequest({ text: "hello" }, "Bearer x"))).status).toBe(401);
     expect(namesOf(none.calls)).toEqual([]);
+  });
+
+  function voiceRequest(
+    body: Uint8Array,
+    headers: Record<string, string> = {},
+    authorization: string | null = `Device ${TOKEN}`,
+  ) {
+    const all = new Headers({
+      "content-type": "audio/mp4",
+      "idempotency-key": "recording-0001",
+      "x-duration-ms": "4200",
+      ...headers,
+    });
+    if (authorization !== null) all.set("Authorization", authorization);
+    return new Request(`${ORIGIN}/device/voice`, { method: "POST", headers: all, body });
+  }
+  const recording = Uint8Array.of(0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20, 0);
+
+  it("keeps her recording under its key and answers its media id", async () => {
+    const fake = createFakePilotRuntime({ services: { memberOfDeviceToken: async () => her } });
+
+    const response = await send(fake, voiceRequest(recording));
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ media_id: "66666666-6666-7666-8666-666666666666" });
+    expect(fake.calls).toContainEqual({
+      name: "storeDeviceVoice",
+      args: [her.id, "recording-0001", recording.byteLength, 4200],
+    });
+  });
+
+  it.each([
+    ["invalid", 400],
+    ["too_large", 413],
+    ["limit", 429],
+    ["off", 404],
+  ] as const)("answers a recording refused as %s with %i", async (reason, status) => {
+    const fake = createFakePilotRuntime({
+      services: {
+        memberOfDeviceToken: async () => her,
+        storeDeviceVoice: async () => {
+          throw new DeviceVoiceRefusedError(reason);
+        },
+      },
+    });
+    const response = await send(fake, voiceRequest(recording));
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual({ error: reason });
+  });
+
+  it("refuses a recording with no token, an unknown one, or another type, storing nothing", async () => {
+    const unknown = createFakePilotRuntime();
+    expect((await send(unknown, voiceRequest(recording))).status).toBe(401);
+    expect((await send(unknown, voiceRequest(recording, {}, null))).status).toBe(401);
+    expect(
+      (await send(unknown, voiceRequest(recording, { "content-type": "audio/ogg" }))).status,
+    ).toBe(400);
+    expect(namesOf(unknown.calls)).not.toContain("storeDeviceVoice");
+  });
+
+  it("answers 400 to a voice naming no recording of hers", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        memberOfDeviceToken: async () => her,
+        deviceInboundEvent: async () => {
+          throw new VelaError("not_found", "Her recording is not there");
+        },
+      },
+    });
+    const response = await send(
+      fake,
+      deviceRequest({ voice: "66666666-6666-7666-8666-666666666666" }),
+    );
+    expect(response.status).toBe(400);
+    expect(namesOf(fake.calls)).not.toContain("handleInbound");
   });
 
   it("refuses a body that is neither a tap nor words before any database is opened", async () => {

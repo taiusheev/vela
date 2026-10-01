@@ -3,7 +3,7 @@
  * No business logic lives here: a flow decides what a result means. Every function accepts the
  * database or the caller's transaction, so a flow can read inside the transaction it writes in.
  */
-import type { Channel, LocalDate, MediaRef } from "@vela/contracts";
+import type { Channel, LocalDate, MediaRef, OutboundMediaRef } from "@vela/contracts";
 import { addDays, addMinutes, localDateOf, zonedInstant } from "@vela/core";
 import {
   answers,
@@ -98,6 +98,47 @@ export async function familyByLinkedGroup(
     )
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * The channel of the family group that sees what came in on `channel`: the same one, except for her
+ * phone on the parent surface (ADR-35), which has no group of its own, so what she says there is
+ * posted to the family's Telegram group, where her mornings' turn prompts already go.
+ */
+export function groupChannelOf(channel: Channel): Channel {
+  return channel === "device" ? "telegram" : channel;
+}
+
+/**
+ * Her file from her phone as a group on another channel can be sent it (ADR-35): by the storage key
+ * of the copy her phone uploaded, which Telegram is sent as an upload. Null when the row holds no
+ * stored copy, or no such row of the family's is there.
+ */
+export async function deviceFileForGroup(
+  db: Queryable,
+  familyId: string,
+  ref: Pick<MediaRef, "providerUniqueId">,
+): Promise<OutboundMediaRef | null> {
+  if (ref.providerUniqueId === undefined) return null;
+  const [row] = await db
+    .select()
+    .from(media)
+    .where(
+      and(
+        eq(media.familyId, familyId),
+        eq(media.channel, "device"),
+        eq(media.providerUniqueId, ref.providerUniqueId),
+      ),
+    )
+    .limit(1);
+  return row === undefined || row.storageKey === null
+    ? null
+    : {
+        kind: row.kind,
+        storageKey: row.storageKey,
+        ...(row.mime === null ? {} : { mime: row.mime }),
+        ...(row.durationMs === null ? {} : { durationMs: row.durationMs }),
+      };
 }
 
 /** The family's linked group on the channel, if it has one. */

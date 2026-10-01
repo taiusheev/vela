@@ -22,6 +22,7 @@ import {
   recordChannelQuota,
   rollupMetrics,
   type SuggestionsRun,
+  storeDeviceVoice,
   tickMember,
   understandAnswer,
   writeSuggestions,
@@ -47,6 +48,7 @@ export interface PilotServices {
   /** Her phone on the parent surface (ADR-35): who its token is, and her input as an event. */
   memberOfDeviceToken: typeof memberOfDeviceToken;
   deviceInboundEvent: typeof deviceInboundEvent;
+  storeDeviceVoice: typeof storeDeviceVoice;
 }
 
 export interface PilotRuntime {
@@ -80,6 +82,7 @@ const services: PilotServices = {
   understandAnswer,
   memberOfDeviceToken,
   deviceInboundEvent,
+  storeDeviceVoice,
 };
 
 export const pilotRuntime: PilotRuntime = {

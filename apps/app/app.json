@@ -13,7 +13,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "family.vela.light",
-      "infoPlist": { "ITSAppUsesNonExemptEncryption": false },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true
       }
@@ -40,11 +42,31 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 160,
           "backgroundColor": "#FBF7F0",
-          "dark": { "image": "./assets/splash-icon.png", "backgroundColor": "#1E1A16" }
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#1E1A16"
+          }
         }
       ],
-      ["expo-image-picker", { "cameraPermission": false, "microphonePermission": false }],
-      ["expo-notifications", { "defaultChannel": "daily" }]
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "daily"
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Vela records your answer when you tap Answer with your voice."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

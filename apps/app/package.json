@@ -27,6 +27,7 @@
     "@tanstack/react-query": "^5.103.2",
     "@vela/contracts": "workspace:*",
     "expo": "^57.0.24",
+    "expo-audio": "~57.0.5",
     "expo-constants": "~57.0.19",
     "expo-crypto": "~57.0.3",
     "expo-font": "~57.0.4",
