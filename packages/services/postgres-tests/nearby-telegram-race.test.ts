@@ -168,7 +168,7 @@ describe("someone nearby on Telegram, on independent PostgreSQL connections", ()
     const one = pg.track(ask(first, mia, "ask-mia"));
     await pg.waitForRowLockWaitOrCompletion(first, [holder], one);
     const two = pg.track(ask(second, anna, "ask-anna"));
-    await pg.waitForRowLockWaitOrCompletion(second, [holder, first], two);
+    await pg.waitForRowLockWaitOrCompletion(second, [first], two);
     await held.release();
     const [asked, again] = await pg.finish("both asks", Promise.all([one, two]));
 
@@ -209,7 +209,7 @@ describe("someone nearby on Telegram, on independent PostgreSQL connections", ()
     const one = pg.track(tap(first));
     await pg.waitForRowLockWaitOrCompletion(first, [holder], one);
     const two = pg.track(tap(second));
-    await pg.waitForRowLockWaitOrCompletion(second, [holder, first], two);
+    await pg.waitForRowLockWaitOrCompletion(second, [first], two);
     await held.release();
     await pg.finish("both taps", Promise.all([one, two]));
 

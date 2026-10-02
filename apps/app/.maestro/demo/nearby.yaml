@@ -22,4 +22,5 @@ tags:
 - inputText: "Wei"
 - tapOn: "Add them"
 - assertVisible: "Wei"
-- assertVisible: "Vela asks them first"
+- assertVisible: "Has not said yes yet"
+- assertVisible: "Ask on Telegram"
