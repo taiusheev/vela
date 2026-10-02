@@ -590,3 +590,14 @@ Rejected: SMS (costs money per message, and a number is more personal data than 
 
 Revisit if: a contact has no Telegram (LINE first, for Taiwan); counsel reviews text B.
 
+## ADR-37 · The voice line: the morning call is the arrival, through the gateway, after her own call to say yes
+
+Status: proposed, 2 October 2026 · build plan 4.5 · design in `06-voice-line.md`.
+
+Context: a parent with only a landline is the offline half of the over-70s, and arch §8 planned a separate `VoiceCallAdapter` composing a Twilio Studio flow. Since then her phone became a channel whose deliveries go through the gateway and whose answers go through the inbound router (ADR-35), and US law turned out to allow at most three prerecorded calls in 30 days to a residential line without the called party's prior express consent.
+
+Decision (proposed): the call is the arrival on channel `voice`, placed by a `voice` adapter and marked delivered when Twilio accepts it, so the budget, idempotency, the repeat and the quiet ladder are unchanged; a call she does not pick up is silence, not a failed delivery. The call script is TwiML served by the pilot Worker from the composed arrival, its words from `@vela/copy`, not a Studio flow. Her digits arrive as the `button` events of the arrival's own buttons and her recording as a voice answer, through `handleInbound`. Vela never makes the first call: she calls Vela's number, types the organiser's six-digit code, hears `voice-consent.v1` and presses 1. Content is never played on caller ID alone; Vela calls her back. Twilio's copy of a recording is deleted once Vela stores it.
+
+Rejected: Twilio Studio (outside version control, a second copy of the copy, billed per execution); a voice-AI platform (a fixed script needs no conversation); consent given by the organiser on her behalf (TCPA wants hers); answering-machine detection as the delivery signal (costly and wrong some of the time).
+
+Revisit if: counsel says her inbound yes is not prior express consent for daily calls; Taiwan finds a local carrier priced like the US; transcoding stays undecided, so voice replies remain read as transcripts.
