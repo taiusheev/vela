@@ -86,7 +86,12 @@ export {
 export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
 export { type ApiPushDeps, registerApiPushDevice, removeApiPushDevice } from "./api-push.ts";
-export { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
+export {
+  loadApiQuiet,
+  markApiQuietUseful,
+  QuietUsefulRefusedError,
+  resolveApiQuiet,
+} from "./api-quiet.ts";
 export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";
 export { startApiTrial, TrialRefusedError } from "./api-trial.ts";

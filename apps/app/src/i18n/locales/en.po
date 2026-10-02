@@ -722,6 +722,10 @@ msgstr "Nobody nearby yet"
 msgid "Not now"
 msgstr "Not now"
 
+#: src/components/quiet-notice.tsx
+msgid "Not this time"
+msgstr "Not this time"
+
 #: app/(tabs)/exchanges.tsx
 msgid "Nothing has happened yet. Her first morning will be here."
 msgstr "Nothing has happened yet. Her first morning will be here."
@@ -1167,6 +1171,10 @@ msgstr "tapped an answer"
 msgid "Thank you. Mia knows you're fine."
 msgstr "Thank you. Mia knows you're fine."
 
+#: src/components/quiet-notice.tsx
+msgid "Thank you. That helps Vela tell quiet mornings apart."
+msgstr "Thank you. That helps Vela tell quiet mornings apart."
+
 #: app/sign-in.tsx
 msgid "That account cannot receive a code yet."
 msgstr "That account cannot receive a code yet."
@@ -1550,6 +1558,10 @@ msgstr "Waiting two hours. You will hear again at 13:00 if it is still quiet."
 msgid "Waiting until {time}. You will hear again then if it is still quiet."
 msgstr "Waiting until {time}. You will hear again then if it is still quiet."
 
+#: src/components/quiet-notice.tsx
+msgid "Was this notice useful?"
+msgstr "Was this notice useful?"
+
 #: app/sign-in.tsx
 msgid "We sent a code to {sentTo}."
 msgstr "We sent a code to {sentTo}."
@@ -1643,6 +1655,10 @@ msgstr "With your light on, they also see whether you answered each morning and 
 #: src/components/set-up-phone.tsx
 msgid "Yes, this is {name}'s phone"
 msgstr "Yes, this is {name}'s phone"
+
+#: src/components/quiet-notice.tsx
+msgid "Yes, useful"
+msgstr "Yes, useful"
 
 #: src/data/exchanges.ts
 msgid "Yesterday"

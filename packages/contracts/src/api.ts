@@ -621,6 +621,8 @@ export const ApiQuietNotice = z.object({
       by_name: z.string().nullable(),
     })
     .nullable(),
+  /** The organisers' one-tap verdict once it is settled, for the precision page (spec §18). */
+  useful: z.boolean().nullable(),
   /**
    * The people nearby who said yes: with the number to call when they gave one, and, when they said
    * yes on Telegram, whether they can be asked to look in and how this morning's ask stands.
@@ -643,6 +645,10 @@ export const ApiQuietNotice = z.object({
   ),
 });
 export type ApiQuietNotice = z.infer<typeof ApiQuietNotice>;
+
+/** Whether the notice was useful (`POST /v1/quiet/:quietEventId/useful`), once it is settled. */
+export const QuietUseful = z.strictObject({ useful: z.boolean() });
+export type QuietUseful = z.infer<typeof QuietUseful>;
 
 /** "Ask them to look in" (`POST /v1/quiet/:quietEventId/ask-to-check`), ADR-36. */
 export const AskToLookIn = z.strictObject({ contact_id: z.uuid() });

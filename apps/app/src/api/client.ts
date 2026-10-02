@@ -370,6 +370,21 @@ export function settleQuiet(
   return call<ApiQuietState>({ path: `/v1/quiet/${quietEventId}/${action}`, token, key, body: {} });
 }
 
+/** Whether a settled quiet notice was useful, for the precision page (spec §18). */
+export function markQuietUseful(
+  quietEventId: string,
+  useful: boolean,
+  key: string,
+  token: string | null,
+): Promise<ApiQuietState> {
+  return call<ApiQuietState>({
+    path: `/v1/quiet/${quietEventId}/useful`,
+    token,
+    key,
+    body: { useful },
+  });
+}
+
 /** "Ask them to look in" (ADR-36): one contact on one quiet morning; a repeat answers the same ask. */
 export function askToLookIn(
   quietEventId: string,

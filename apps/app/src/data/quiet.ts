@@ -30,6 +30,8 @@ export interface QuietNotice {
   contacts: NearbyContact[];
   /** Set once she answers: the sheet closes itself and says so. */
   resolution?: string;
+  /** The organisers' verdict once it is settled: whether the notice was useful (spec §18). */
+  useful?: boolean | null;
 }
 
 /**

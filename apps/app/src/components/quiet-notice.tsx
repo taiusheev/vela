@@ -15,6 +15,8 @@ interface QuietNoticeSheetProps {
   /** Ask one person nearby to look in (ADR-36); absent where nobody can be asked from here. */
   onAskToLookIn?(contactId: string): void;
   asking?: boolean;
+  /** The organiser's verdict once the morning is settled (spec §18). */
+  onUseful?(useful: boolean): void;
   onClose(): void;
 }
 
@@ -30,6 +32,7 @@ export function QuietNoticeSheet({
   onWait,
   onAskToLookIn,
   asking = false,
+  onUseful,
   onClose,
 }: QuietNoticeSheetProps) {
   const palette = usePalette();
@@ -69,7 +72,41 @@ export function QuietNoticeSheet({
             </Eyebrow>
             <Words variant="title">{t`It's been quiet at ${name}'s today`}</Words>
             {answered ? (
-              <Words variant="body">{notice.resolution}</Words>
+              <>
+                <Words variant="body">{notice.resolution}</Words>
+                {onUseful === undefined ? null : notice.useful === true ||
+                  notice.useful === false ? (
+                  <Words variant="caption" tone="ink3">
+                    <Trans>Thank you. That helps Vela tell quiet mornings apart.</Trans>
+                  </Words>
+                ) : (
+                  <View style={{ gap: space.s }}>
+                    <Words variant="bodyMedium">
+                      <Trans>Was this notice useful?</Trans>
+                    </Words>
+                    <View style={{ flexDirection: "row", gap: space.l }}>
+                      <Pressable
+                        accessibilityRole="button"
+                        hitSlop={hitSlop}
+                        onPress={() => onUseful(true)}
+                      >
+                        <Words variant="button" tone="action">
+                          <Trans>Yes, useful</Trans>
+                        </Words>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        hitSlop={hitSlop}
+                        onPress={() => onUseful(false)}
+                      >
+                        <Words variant="button" tone="action">
+                          <Trans>Not this time</Trans>
+                        </Words>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </>
             ) : (
               <>
                 {notice.facts.map((fact) => (

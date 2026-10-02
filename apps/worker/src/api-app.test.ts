@@ -25,6 +25,7 @@ import {
   MemberChangeRefusedError,
   NearbyInviteRefusedError,
   NearbyRefusedError,
+  QuietUsefulRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
   TrialRefusedError,
@@ -180,6 +181,7 @@ const QUIET_STATE: ApiQuietState = {
   opened_at: "2026-09-22T03:00:00.000Z",
   wait_until: null,
   resolved: { outcome: "fine_known", at: "2026-09-22T04:00:00.000Z", by_name: "Synthetic user" },
+  useful: null,
 };
 const QUIET_NOTICE: ApiQuietNotice = {
   ...QUIET_STATE,
@@ -375,6 +377,12 @@ function fixture(enableWrites = false, push?: boolean) {
           },
           replayed: false,
           after: { outboundIds: ["row-ask"], wakeMemberIds: [] },
+        }),
+      markApiQuietUseful: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["markApiQuietUseful"]>()
+        .mockResolvedValue({
+          response: { status: 200, body: { ...QUIET_STATE, useful: true } },
+          replayed: false,
         }),
       inviteApiNearby: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["inviteApiNearby"]>()
@@ -2233,6 +2241,40 @@ describe("pausing and leaving", () => {
       404,
       NOT_FOUND,
     );
+  });
+});
+
+describe("whether a quiet notice was useful", () => {
+  const PATH = `/v1/quiet/${QUIET_ID}/useful`;
+  const good = { authorization: "Bearer good" };
+
+  it("keeps the verdict through the service and answers the state", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(
+      writeRequest("POST", PATH, JSON.stringify({ useful: true }), good),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ useful: true });
+    expect(f.writes.services.markApiQuietUseful).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      "request-1",
+      QUIET_ID,
+      { useful: true },
+    );
+  });
+
+  it("answers 409 while the morning is still quiet, and 400 for anything but a boolean", async () => {
+    const f = fixture(true);
+    f.writes.services.markApiQuietUseful.mockRejectedValue(new QuietUsefulRefusedError());
+    const open = await f.app.request(
+      writeRequest("POST", PATH, JSON.stringify({ useful: false }), good),
+    );
+    expect(open.status).toBe(409);
+    const bad = await f.app.request(
+      writeRequest("POST", PATH, JSON.stringify({ useful: "yes" }), good),
+    );
+    expect(bad.status).toBe(400);
   });
 });
 

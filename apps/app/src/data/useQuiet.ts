@@ -3,7 +3,7 @@ import { useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiQuietNotice, ApiQuietState } from "@vela/contracts";
 import { useState } from "react";
-import { askToLookIn, fetchQuiet, settleQuiet } from "../api/client.ts";
+import { askToLookIn, fetchQuiet, markQuietUseful, settleQuiet } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { timeOfDay, weekday } from "./format.ts";
@@ -101,6 +101,7 @@ export function toQuietNotice(notice: ApiQuietNotice): QuietNotice {
           }),
     })),
     ...(resolution === undefined ? {} : { resolution }),
+    useful: notice.useful,
   };
 }
 
@@ -110,6 +111,8 @@ export interface QuietView {
   /** Ask one contact to look in; the sheet then shows the ask, and later their answer. */
   askToLookIn(contactId: string): void;
   asking: boolean;
+  /** The organiser's verdict on the settled notice. */
+  markUseful(useful: boolean): void;
   settling: boolean;
   trouble: boolean;
 }
@@ -136,6 +139,18 @@ export function useQuiet(quietEventId: string | undefined, enabled: boolean): Qu
     refetchInterval: 30_000,
   });
 
+  const usefulKey = useIdempotencyKey("quiet-useful");
+  const [verdict, setVerdict] = useState<boolean | null>(null);
+  const useful = useMutation({
+    mutationFn: async (value: boolean) =>
+      markQuietUseful(
+        quietEventId ?? "",
+        value,
+        usefulKey({ quietEventId, value }),
+        await account.token(),
+      ),
+    onSuccess: (state) => setVerdict(state.useful),
+  });
   const lookInKey = useIdempotencyKey("look-in");
   const lookIn = useMutation({
     mutationFn: async (contactId: string) =>
@@ -164,7 +179,8 @@ export function useQuiet(quietEventId: string | undefined, enabled: boolean): Qu
     },
   });
 
-  const base = read.data === undefined ? undefined : toQuietNotice(read.data);
+  const read0 = read.data === undefined ? undefined : toQuietNotice(read.data);
+  const base = read0 === undefined || verdict === null ? read0 : { ...read0, useful: verdict };
   const afterSettle = settled === null ? undefined : resolutionOf(settled);
   return {
     notice:
@@ -176,6 +192,7 @@ export function useQuiet(quietEventId: string | undefined, enabled: boolean): Qu
     settle: (action) => settle.mutate(action),
     settling: settle.isPending,
     askToLookIn: (contactId) => lookIn.mutate(contactId),
+    markUseful: (value) => useful.mutate(value),
     asking: lookIn.isPending,
     trouble: read.isError || settle.isError || lookIn.isError,
   };

@@ -729,6 +729,10 @@ msgstr "還沒有附近的聯絡人"
 msgid "Not now"
 msgstr "先不要"
 
+#: src/components/quiet-notice.tsx
+msgid "Not this time"
+msgstr "這次沒有"
+
 #: app/(tabs)/exchanges.tsx
 msgid "Nothing has happened yet. Her first morning will be here."
 msgstr "還沒有任何內容。第一則早安訊息會出現在這裡。"
@@ -1174,6 +1178,10 @@ msgstr "選了一個回答"
 msgid "Thank you. Mia knows you're fine."
 msgstr "謝謝您。Mia 知道您一切都好。"
 
+#: src/components/quiet-notice.tsx
+msgid "Thank you. That helps Vela tell quiet mornings apart."
+msgstr "謝謝您，這能幫助 Vela 分辨各種安靜的早晨。"
+
 #: app/sign-in.tsx
 msgid "That account cannot receive a code yet."
 msgstr "這個帳號目前還無法接收驗證碼。"
@@ -1557,6 +1565,10 @@ msgstr "會再等 2 小時。到時候如果還是比較安靜，13:00 會再通
 msgid "Waiting until {time}. You will hear again then if it is still quiet."
 msgstr "會等到 {time}。到時候如果還是比較安靜，會再通知您。"
 
+#: src/components/quiet-notice.tsx
+msgid "Was this notice useful?"
+msgstr "這則通知有幫助嗎？"
+
 #: app/sign-in.tsx
 msgid "We sent a code to {sentTo}."
 msgstr "我們已經把驗證碼傳到 {sentTo}。"
@@ -1650,6 +1662,10 @@ msgstr "您的燈亮著時，家人也會看到您每天早上有沒有回覆、
 #: src/components/set-up-phone.tsx
 msgid "Yes, this is {name}'s phone"
 msgstr "是的，這是{name}的手機"
+
+#: src/components/quiet-notice.tsx
+msgid "Yes, useful"
+msgstr "有，很有幫助"
 
 #: src/data/exchanges.ts
 msgid "Yesterday"

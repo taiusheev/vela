@@ -3,6 +3,7 @@ import {
   ApiQuietNotice,
   ApiQuietState,
   QuietAction,
+  QuietUseful,
 } from "@vela/contracts";
 import { TUNING } from "@vela/core";
 import {
@@ -58,6 +59,7 @@ async function noticeOf(db: Queryable, quiet: QuietEvent, her: Member): Promise<
     last_answered_at: lastAnswer?.at.toISOString() ?? null,
     opened_at: quiet.openedAt.toISOString(),
     wait_until: quiet.waitUntil?.toISOString() ?? null,
+    useful: quiet.useful,
     resolved:
       quiet.resolvedAt === null
         ? null
@@ -199,4 +201,57 @@ export async function resolveApiQuiet(
     },
   );
   return { ...result, after: result.replayed ? nothingAfterCommit() : after };
+}
+
+/** Why the verdict was refused: the morning is not settled yet, so nothing can be judged. */
+export class QuietUsefulRefusedError extends Error {
+  override readonly name = "QuietUsefulRefusedError";
+  readonly reason = "not_settled" as const;
+  constructor() {
+    super("Quiet useful refused: not_settled");
+  }
+}
+
+/**
+ * "Was this notice useful?" (`POST /v1/quiet/:quietEventId/useful`, `{useful}`, spec §18): the
+ * organisers' one-tap verdict on a settled quiet morning, which the precision page counts. Any
+ * organiser of her family may give it, and a later tap replaces it, under the event's row lock.
+ * 409 `not_settled` while the morning is still quiet.
+ */
+export async function markApiQuietUseful(
+  deps: Pick<Deps, "db" | "clock">,
+  identity: SessionIdentity,
+  key: string,
+  quietEventId: string,
+  input: unknown,
+): Promise<{ response: ApiMutationResponse; replayed: boolean }> {
+  const parsed = QuietUseful.safeParse(input);
+  if (!parsed.success) throw new ApiIdempotencyError("invalid");
+  if (!UUID.test(quietEventId)) throw new VelaError("not_found", "Quiet event not found");
+  return runApiMutation(
+    deps,
+    identity,
+    {
+      key,
+      operation: "quiet.useful:v1",
+      input: { quiet_event_id: quietEventId.toLowerCase(), useful: parsed.data.useful },
+    },
+    {
+      authorize: async (tx) => {
+        await lockForOrganiser(tx, identity, quietEventId);
+      },
+      mutate: async (tx) => {
+        const { quiet, her } = await lockForOrganiser(tx, identity, quietEventId);
+        if (quiet.resolvedAt === null) throw new QuietUsefulRefusedError();
+        const [current] = await tx
+          .update(quietEvents)
+          .set({ useful: parsed.data.useful })
+          .where(eq(quietEvents.id, quiet.id))
+          .returning();
+        if (current === undefined) throw new Error("quiet event vanished under its own lock");
+        const { contacts: _contacts, ...state } = await noticeOf(tx, current, her);
+        return { status: 200, body: ApiQuietState.parse(state) };
+      },
+    },
+  );
 }

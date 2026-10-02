@@ -6,7 +6,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
 import { type ApiNudges, runAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
-import { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
+import {
+  loadApiQuiet,
+  markApiQuietUseful,
+  QuietUsefulRefusedError,
+  resolveApiQuiet,
+} from "./api-quiet.ts";
 import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { deliverOutbound, STRANDED_AFTER_MINUTES } from "./gateway.ts";
@@ -255,5 +260,35 @@ describe("runAfterCommit", () => {
         throw new Error("nothing to report without nudges");
       }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("markApiQuietUseful", () => {
+  async function useful(value: boolean, who: SessionIdentity = organiser) {
+    keys += 1;
+    return markApiQuietUseful(h.deps, who, `useful-${keys}`, quietId, { useful: value });
+  }
+
+  it("refuses a verdict while the morning is still quiet", async () => {
+    await expect(useful(true)).rejects.toBeInstanceOf(QuietUsefulRefusedError);
+    expect((await quietRow())?.useful).toBeNull();
+  });
+
+  it("keeps the organiser's verdict once it is settled, and a later tap replaces it", async () => {
+    await act("fine");
+
+    const first = await useful(true);
+    expect(ApiQuietState.parse(first.response.body).useful).toBe(true);
+    expect((await quietRow())?.useful).toBe(true);
+
+    await useful(false);
+    expect((await quietRow())?.useful).toBe(false);
+    expect((await loadApiQuiet(h.db, organiser, quietId))?.useful).toBe(false);
+  });
+
+  it("is the organisers' alone", async () => {
+    await act("fine");
+    await expect(useful(true, sibling)).rejects.toBeInstanceOf(VelaError);
+    await expect(useful(true, stranger)).rejects.toBeInstanceOf(VelaError);
   });
 });

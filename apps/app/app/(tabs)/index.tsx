@@ -174,6 +174,7 @@ export default function TodayScreen() {
   const [resolution, setResolution] = useState<"fine" | "wait" | undefined>();
   // The demo's ask to look in: answered by Lena a moment later, as a neighbour would.
   const [demoAsked, setDemoAsked] = useState<string[]>([]);
+  const [demoUseful, setDemoUseful] = useState<boolean | null>(null);
   const insets = useSafeAreaInsets();
   const day = useToday();
   const { trouble, noAccount, noFamily, live, organiser, familyId } = day;
@@ -228,6 +229,7 @@ export default function TodayScreen() {
     ? liveQuiet.notice
     : {
         ...quietFixtureFor(name),
+        useful: demoUseful,
         contacts: quietFixtureFor(name).contacts.map((contact) =>
           demoAsked.includes(contact.id)
             ? { ...contact, asked: { at: "11:20", reply: "yes" as const } }
@@ -307,6 +309,10 @@ export default function TodayScreen() {
             else setDemoAsked((earlier) => [...earlier, contactId]);
           }}
           asking={live && liveQuiet.asking}
+          onUseful={(value) => {
+            if (live) liveQuiet.markUseful(value);
+            else setDemoUseful(value);
+          }}
           onClose={() => {
             setQuietOpen(false);
             setOpenEventId(undefined);

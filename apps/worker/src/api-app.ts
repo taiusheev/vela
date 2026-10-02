@@ -43,6 +43,7 @@ import {
   MemberLight,
   PauseMember,
   QuietAction,
+  QuietUseful,
   RegisterPushDevice,
   RemoveNearby,
   RemovePushDevice,
@@ -81,11 +82,13 @@ import {
   MediaRefusedError,
   type MediaStore,
   MemberChangeRefusedError,
+  type markApiQuietUseful,
   type memberOfDeviceToken,
   NearbyInviteRefusedError,
   NearbyRefusedError,
   type pauseApiMember,
   type provisionApiAccount,
+  QuietUsefulRefusedError,
   type Random,
   ReplyRefusedError,
   type readApiMedia,
@@ -159,6 +162,7 @@ export interface ApiWriteServices {
   uploadApiMedia: typeof uploadApiMedia;
   uploadApiVoice: typeof uploadApiVoice;
   askApiToLookIn: typeof askApiToLookIn;
+  markApiQuietUseful: typeof markApiQuietUseful;
   inviteApiNearby: typeof inviteApiNearby;
   registerApiPushDevice: typeof registerApiPushDevice;
   removeApiPushDevice: typeof removeApiPushDevice;
@@ -398,6 +402,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           },
         };
         return c.json(running, 409);
+      }
+      if (error instanceof QuietUsefulRefusedError) {
+        const refused: ApiErrorBody = {
+          error: {
+            code: "conflict",
+            message: "This morning is not settled yet.",
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(refused, 409);
       }
       if (error instanceof LookInRefusedError || error instanceof NearbyInviteRefusedError) {
         const said = {
@@ -1089,6 +1103,28 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         },
       );
     }
+    // The organisers' verdict on a settled quiet morning, for the precision page (spec §18).
+    app.post(
+      "/v1/quiet/:quietEventId/useful",
+      authenticate,
+      validateWrite(QuietUseful, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.markApiQuietUseful(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("quietEventId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiQuietState.parse(result.response.body), 200);
+      },
+    );
     // "Ask them to look in" (ADR-36): the service reads the family from the event under its lock.
     app.post(
       "/v1/quiet/:quietEventId/ask-to-check",

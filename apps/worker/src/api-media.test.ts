@@ -170,6 +170,7 @@ function fixture(options: FixtureOptions = {}) {
         .mockResolvedValue({ response: { status: 201, body: VOICE }, replayed: false }),
       askApiToLookIn: vi.fn<Writes["services"]["askApiToLookIn"]>(unused("ask to look in")),
       inviteApiNearby: vi.fn<Writes["services"]["inviteApiNearby"]>(unused("nearby invite")),
+      markApiQuietUseful: vi.fn<Writes["services"]["markApiQuietUseful"]>(unused("useful")),
       registerApiPushDevice: vi.fn<Writes["services"]["registerApiPushDevice"]>(
         unused("register a device"),
       ),
