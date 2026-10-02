@@ -78,3 +78,29 @@ export function shortDayName(date: string): string {
 export function listOf(items: readonly string[]): string {
   return items.join(chinese() ? "、" : ", ");
 }
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/**
+ * "September 2026", or "2026年9月": a `YYYY-MM` month, written out by hand as `timeOfDay` writes
+ * its times, so Hermes and the browsers agree. Anything else is given back as it came.
+ */
+export function monthYear(month: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  const name = match === null ? undefined : MONTHS[Number(match[2]) - 1];
+  if (match === null || name === undefined) return month;
+  return chinese() ? `${match[1]}年${Number(match[2])}月` : `${name} ${match[1]}`;
+}

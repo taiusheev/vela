@@ -33,8 +33,6 @@ export {
   type MarkLeftResult,
   markDeceased,
   markLeft,
-  PRECISION_MONTHS,
-  type QuietPrecisionMonth,
   type RecordConsentInput,
   type RecordContactConsentInput,
   recordConsent,
@@ -92,6 +90,12 @@ export {
 } from "./api-media.ts";
 export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
+export {
+  loadApiPrecision,
+  PRECISION_MONTHS,
+  type QuietPrecisionMonth,
+  VELA_MONTH_MINIMUM,
+} from "./api-precision.ts";
 export { type ApiPushDeps, registerApiPushDevice, removeApiPushDevice } from "./api-push.ts";
 export {
   loadApiQuiet,

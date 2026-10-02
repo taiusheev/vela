@@ -1,7 +1,7 @@
 import { i18n } from "@lingui/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { AppLocale } from "../i18n/locale.ts";
-import { clockTime, dayMonth, dayName, listOf, timeOfDay, weekday } from "./format.ts";
+import { clockTime, dayMonth, dayName, listOf, monthYear, timeOfDay, weekday } from "./format.ts";
 
 // The reader's zone decides the clock time; the samples are read in Taipei.
 process.env.TZ = "Asia/Taipei";
@@ -82,5 +82,22 @@ describe("format with nothing to read", () => {
         ]),
       ).toEqual(["", "", "", "someday", ""]);
     }
+  });
+});
+
+describe("monthYear", () => {
+  it("writes a month in either language, and gives back what is not a month", () => {
+    expect(inLocale("en", () => [monthYear("2026-09"), monthYear("2026-01")])).toEqual([
+      "September 2026",
+      "January 2026",
+    ]);
+    expect(inLocale("zh-TW", () => [monthYear("2026-09"), monthYear("2026-12")])).toEqual([
+      "2026年9月",
+      "2026年12月",
+    ]);
+    expect(inLocale("en", () => [monthYear("2026-13"), monthYear("soon")])).toEqual([
+      "2026-13",
+      "soon",
+    ]);
   });
 });

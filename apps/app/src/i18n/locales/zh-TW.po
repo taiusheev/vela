@@ -22,6 +22,10 @@ msgstr "{asker}提問"
 msgid "{asker} asked {recipient}"
 msgstr "{asker}問{recipient}"
 
+#: src/data/precision.ts
+msgid "{away} away"
+msgstr "{away}次正好外出"
+
 #: src/components/quiet-notice.tsx
 msgid "{by} asked at {time}. Waiting for {name}."
 msgstr "{by}在 {time} 問了，正在等{name}回覆。"
@@ -77,6 +81,14 @@ msgstr "{her}會看到您的燈，還有誰能看到由您決定。App 裡還沒
 #: app/ask.tsx
 msgid "{holder} already has that morning."
 msgstr "那天早上已經有{holder}的提問了。"
+
+#: src/data/precision.ts
+msgid "{known} fine, and the family knew why"
+msgstr "{known}次平安（家人知道原因）"
+
+#: src/data/precision.ts
+msgid "{later} answered later"
+msgstr "{later}次稍晚回覆"
 
 #: app/vela-light.tsx
 msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
@@ -154,6 +166,18 @@ msgstr "{name}的 30 天試用已經結束了。每天的提問和問答會照�
 msgid "{name}'s week"
 msgstr "{name}的這一週"
 
+#: src/data/precision.ts
+msgid "{neverKnown} never known"
+msgstr "{neverKnown}次始終不清楚"
+
+#: src/data/precision.ts
+msgid "{notices, plural, one {# quiet notice.} other {# quiet notices.}}"
+msgstr "{notices, plural, other {# 則安靜通知。}}"
+
+#: src/data/precision.ts
+msgid "{open, plural, one {# is still open.} other {# are still open.}}"
+msgstr "{open, plural, other {# 則還沒有結果。}}"
+
 #: src/data/useToday.ts
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
 msgstr "{recipient}在 {time} 回覆了之前的提問，這則提問還沒有回覆。"
@@ -177,6 +201,10 @@ msgstr "{recipient}看過了 · {time}"
 #: src/data/ask.ts
 msgid "{words} · shown to her in {language}"
 msgstr "{words} · 這位家人看到的{language}版本"
+
+#: src/data/precision.ts
+msgid "{wrong} where something was wrong"
+msgstr "{wrong}次真的有狀況"
 
 #: app/parent.tsx
 msgid "▶ Play the voice message"
@@ -245,6 +273,10 @@ msgstr "請教一個詞"
 #: app/(tabs)/you.tsx
 msgid "Account"
 msgstr "帳號"
+
+#: app/precision.tsx
+msgid "Across Vela"
+msgstr "整個 Vela"
 
 #: src/components/vote-options.tsx
 msgid "Add an option"
@@ -552,6 +584,14 @@ msgstr "長輩的手機"
 msgid "Hong Kong"
 msgstr "香港"
 
+#: app/(tabs)/you.tsx
+msgid "How the quiet notices ended, in your family and across Vela"
+msgstr "安靜通知最後的結果，包括您家和整個 Vela"
+
+#: src/data/precision.ts
+msgid "How they ended: {ended}."
+msgstr "結果：{ended}。"
+
 #: src/components/nearby-editor.tsx
 msgid "How they know {name}, like neighbour"
 msgstr "和{name}的關係，例如鄰居"
@@ -559,6 +599,11 @@ msgstr "和{name}的關係，例如鄰居"
 #: app/onboarding.tsx
 msgid "How Vela greets her each morning."
 msgstr "Vela 每天早上問候時的稱呼。"
+
+#: app/(tabs)/you.tsx
+#: app/precision.tsx
+msgid "How Vela is doing"
+msgstr "Vela 的表現"
 
 #: app/exchange/[id].tsx
 msgid "Hug"
@@ -583,6 +628,10 @@ msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "早安訊息過了平常的回覆時間仍然安靜時，以及之後有了結果時。"
+
+#: src/data/precision.ts
+msgid "In none of them was something wrong."
+msgstr "沒有一則是真的有狀況。"
 
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
@@ -752,6 +801,10 @@ msgstr "接下來兩週都沒有空出來的早上可以放照片提問。請改
 msgid "No number here: Vela asks them for it, with their yes."
 msgstr "這裡不填電話號碼：對方同意後，Vela 會再向對方要號碼。"
 
+#: app/precision.tsx
+msgid "No quiet notice in the last 12 months."
+msgstr "過去 12 個月沒有安靜通知。"
+
 #: src/data/today.ts
 #: src/data/useToday.ts
 msgid "No word yet today."
@@ -769,6 +822,10 @@ msgstr "這週家裡沒有人問{name}任何事。"
 #: src/data/family.ts
 msgid "Nobody nearby yet"
 msgstr "還沒有附近的聯絡人"
+
+#: app/precision.tsx
+msgid "Not enough notices yet to show a month."
+msgstr "通知還不夠多，暫時無法顯示任何月份。"
 
 #: app/ask.tsx
 #: app/vela-light.tsx
@@ -857,6 +914,14 @@ msgstr "一天一次"
 #: app/parent.tsx
 msgid "One moment…"
 msgstr "請稍等…"
+
+#: app/(tabs)/you.tsx
+msgid "Open"
+msgstr "打開"
+
+#: app/(tabs)/you.tsx
+msgid "Open how the quiet notices ended"
+msgstr "打開安靜通知的結果"
 
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx
@@ -1203,6 +1268,10 @@ msgstr "安靜的日子裡，可以過去看看的人"
 msgid "Something to ask next week"
 msgstr "下週可以問問看"
 
+#: src/data/precision.ts
+msgid "Something was wrong in {wrong} of {notices}."
+msgstr "{notices}則中有{wrong}則真的有狀況。"
+
 #: src/auth/phone.ts
 msgid "South Korea"
 msgstr "韓國"
@@ -1368,6 +1437,10 @@ msgstr "每天的提問、問答、輪流提問、翻譯、故事日，還有家
 msgid "The exchanges could not be reached just now."
 msgstr "目前無法載入問答。"
 
+#: src/data/precision.ts
+msgid "The family found {found} of {verdicts} useful."
+msgstr "家人覺得{verdicts}則中有{found}則有幫助。"
+
 #: app/exchange/[id].tsx
 msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
 msgstr "家人會在這裡看到。這位家人不會收到：早安訊息只會回顧最近一天的回覆。"
@@ -1432,6 +1505,14 @@ msgstr "這是範例家庭，所以沒有人離開。"
 #: app/exchange/[id].tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "這是您自己的早安訊息；回覆是給家人的。"
+
+#: app/precision.tsx
+msgid "This page could not be reached just now."
+msgstr "目前無法開啟這一頁。"
+
+#: app/precision.tsx
+msgid "This page is for the family's organisers, who are told of quiet mornings."
+msgstr "這一頁是給這個家庭的發起人看的，早上比較安靜時，Vela 會通知發起人。"
 
 #: app/(tabs)/you.tsx
 msgid "This phone"
@@ -1642,6 +1723,10 @@ msgstr "錄語音問候需要使用麥克風，您可以在「設定」中允許
 msgid "Vela needs the microphone for a voice reply. You can allow it in Settings."
 msgstr "語音回覆需要使用麥克風，您可以在「設定」中允許。"
 
+#: src/data/precision.ts
+msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
+msgstr "一個月要至少有來自{families}個家庭的{notices}則通知，Vela 才會顯示，這樣就看不出任何一個家庭的早上。"
+
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Vela suggests"
@@ -1754,6 +1839,10 @@ msgstr "什麼時候"
 msgid "When a morning goes quiet"
 msgstr "早上比較安靜時"
 
+#: app/precision.tsx
+msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
+msgstr "早上一直很安靜時，Vela 會通知您。這裡是那些通知最後的結果。大多數是稍晚才回覆，或那天正好外出。"
+
 #: src/push/provider.tsx
 msgid "When she answers what you asked, and the evening before your turn."
 msgstr "家人回覆您的提問時，以及輪到您提問的前一晚。"
@@ -1844,6 +1933,10 @@ msgstr "您的回答，共 {time}。"
 #: app/sign-in.tsx
 msgid "Your country"
 msgstr "您的國家"
+
+#: app/precision.tsx
+msgid "Your family"
+msgstr "您的家庭"
 
 #: app/(tabs)/you.tsx
 msgid "Your family could not be reached just now, so this is the example one."

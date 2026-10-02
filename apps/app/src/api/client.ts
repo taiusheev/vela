@@ -17,6 +17,7 @@ import type {
   ApiNearbyContact,
   ApiNearbyInvite,
   ApiNearbyRemoved,
+  ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
   ApiQuietNotice,
@@ -363,6 +364,11 @@ export function fetchWeeklyRead(
     `/v1/families/${familyId}/weekly-read?member=${encodeURIComponent(memberId)}`,
     token,
   );
+}
+
+/** How Vela is doing: the family's quiet notices and Vela's, by month (spec §8). Organisers only. */
+export function fetchPrecision(familyId: string, token: string | null): Promise<ApiPrecision> {
+  return read<ApiPrecision>(`/v1/families/${familyId}/precision`, token);
 }
 
 export function fetchQuiet(quietEventId: string, token: string | null): Promise<ApiQuietNotice> {

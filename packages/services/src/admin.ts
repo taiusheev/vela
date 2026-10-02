@@ -26,7 +26,6 @@ import {
   LocalDate,
   LocalTime,
   MVP_LANGS,
-  type QuietOutcome,
 } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -78,6 +77,7 @@ import {
   familyPagePath,
   organisersUnreachable,
 } from "./admin-alerts.ts";
+import { type QuietPrecisionMonth, quietPrecision } from "./api-precision.ts";
 import type { Deps } from "./deps.ts";
 import { isErrorCode, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -1457,83 +1457,6 @@ async function overviewRow(
   return row;
 }
 
-/**
- * One month of quiet mornings across every family, for the precision page (spec §8 "Precision
- * accounting", §18): counts only. A notice is a quiet morning that told someone (`notify_count` >
- * 0); one that settled before anyone was told, as in the learning period, is not. Outcomes and
- * verdicts are counted over notices; a notice not yet settled has no outcome.
- */
-export interface QuietPrecisionMonth {
-  /** The UTC month the quiet morning opened, `YYYY-MM`. */
-  month: string;
-  quietMornings: number;
-  notices: number;
-  /** Notices not yet settled. */
-  open: number;
-  outcomes: Record<QuietOutcome, number>;
-  useful: { yes: number; no: number };
-}
-
-/** How many months back the precision page reaches, this month included. */
-export const PRECISION_MONTHS = 12;
-
-/** The first instant of the UTC month `back` months before `now`'s. */
-function utcMonthStart(now: Date, back: number): Date {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
-}
-
-/**
- * Every family's quiet mornings by the UTC month they opened, newest first, for the last
- * `PRECISION_MONTHS` months; months with none are left out. No family is named.
- */
-async function quietPrecision(db: Queryable, now: Date): Promise<QuietPrecisionMonth[]> {
-  const notice = sql`${quietEvents.notifyCount} > 0`;
-  const month = sql<string>`to_char(${quietEvents.openedAt} at time zone 'UTC', 'YYYY-MM')`;
-  const outcomeCount = (outcome: QuietOutcome) =>
-    sql<number>`count(*) filter (where ${notice} and ${quietEvents.outcome} = ${outcome})`.mapWith(
-      Number,
-    );
-  const rows = await db
-    .select({
-      month,
-      quietMornings: count(),
-      notices: sql<number>`count(*) filter (where ${notice})`.mapWith(Number),
-      open: sql<number>`count(*) filter (where ${notice} and ${quietEvents.resolvedAt} is null)`.mapWith(
-        Number,
-      ),
-      answeredLate: outcomeCount("answered_late"),
-      away: outcomeCount("away"),
-      fineKnown: outcomeCount("fine_known"),
-      trueConcern: outcomeCount("true_concern"),
-      unknown: outcomeCount("unknown"),
-      usefulYes: sql<number>`count(*) filter (where ${notice} and ${quietEvents.useful})`.mapWith(
-        Number,
-      ),
-      usefulNo:
-        sql<number>`count(*) filter (where ${notice} and not ${quietEvents.useful})`.mapWith(
-          Number,
-        ),
-    })
-    .from(quietEvents)
-    .where(gte(quietEvents.openedAt, utcMonthStart(now, PRECISION_MONTHS - 1)))
-    .groupBy(month)
-    .orderBy(desc(month));
-  return rows.map((row) => ({
-    month: row.month,
-    quietMornings: row.quietMornings,
-    notices: row.notices,
-    open: row.open,
-    outcomes: {
-      answered_late: row.answeredLate,
-      away: row.away,
-      fine_known: row.fineKnown,
-      true_concern: row.trueConcern,
-      unknown: row.unknown,
-    },
-    useful: { yes: row.usefulYes, no: row.usefulNo },
-  }));
-}
-
 /** The overview: every family, the precision counts, and LINE's quota. */
 export interface AdminOverview {
   families: AdminOverviewRow[];
@@ -1569,7 +1492,7 @@ export async function loadAdminOverview(deps: Deps, ctx: AdminContext): Promise<
   }
   return {
     families: rows,
-    precision: await quietPrecision(deps.db, now),
+    precision: await quietPrecision(deps.db, now, null),
     lineQuota: await loadChannelQuota(deps, "line"),
   };
 }

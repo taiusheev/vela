@@ -131,6 +131,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>(unused("the weekly read")),
+    loadApiPrecision: vi.fn<ApiReadServices["loadApiPrecision"]>(unused("how Vela is doing")),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>(unused("a device")),
     loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>(unused("her messages")),
     readDeviceMedia: vi

@@ -43,6 +43,7 @@ const PLAN_PATH = `/v1/families/${FAMILY_ID}/plan`;
 const LIGHTS_PATH = `/v1/families/${FAMILY_ID}/lights`;
 const TODAY_PATH = `/v1/families/${FAMILY_ID}/today`;
 const WEEKLY_READ_PATH = `/v1/families/${FAMILY_ID}/weekly-read?member=${MEMBER_ID}`;
+const PRECISION_PATH = `/v1/families/${FAMILY_ID}/precision`;
 /** What the account service answers; the route adds `photos` and `push`, the API's own. */
 const ME: Omit<ApiMe, "photos" | "push"> = {
   user: { id: USER_ID, display_name: "Synthetic user", language: "en", tz: "Asia/Taipei" },
@@ -248,6 +249,19 @@ const NEARBY_CONTACT = {
   relation: "neighbour",
   consent: "waiting",
 };
+const PRECISION = {
+  family: [
+    {
+      month: "2026-09",
+      notices: 2,
+      open: 0,
+      outcomes: { answered_late: 1, away: 1, fine_known: 0, true_concern: 0, unknown: 0 },
+      useful: { yes: 1, no: 1 },
+    },
+  ],
+  vela: [],
+  vela_minimum: { notices: 10, families: 3 },
+};
 const WEEKLY_READ = {
   member_id: MEMBER_ID,
   display_name: "Mom",
@@ -279,6 +293,7 @@ function fixture(enableWrites = false, push?: boolean) {
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
+    loadApiPrecision: vi.fn<ApiReadServices["loadApiPrecision"]>().mockResolvedValue(PRECISION),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>().mockResolvedValue(null),
     loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>().mockResolvedValue([]),
     readDeviceMedia: vi.fn<ApiReadServices["readDeviceMedia"]>().mockResolvedValue(null),
@@ -1560,6 +1575,63 @@ describe("the lights of a family", () => {
     expect(response.status).toBe(401);
     expect(services.loadApiLights).not.toHaveBeenCalled();
     expect(openDatabase).not.toHaveBeenCalled();
+  });
+});
+
+describe("how Vela is doing", () => {
+  it("answers the family's and Vela's notices to an organiser, asking the guard for an organiser", async () => {
+    const f = fixture();
+    await expectResponse(
+      await f.app.request(PRECISION_PATH, { headers: { authorization: "Bearer good" } }),
+      200,
+      PRECISION,
+    );
+    expect(f.services.authorizeFamilyAccess).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      "organiser",
+    );
+    expect(f.services.loadApiPrecision).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      new Date("2026-09-22T00:00:00.000Z"),
+    );
+  });
+
+  it.each(["not_found", "forbidden"] as const)("a %s family guard skips the read", async (kind) => {
+    const f = fixture();
+    f.services.authorizeFamilyAccess.mockResolvedValue({ kind });
+    await expectResponse(
+      await f.app.request(PRECISION_PATH, { headers: { authorization: "Bearer good" } }),
+      kind === "not_found" ? 404 : 403,
+      kind === "not_found"
+        ? FAMILY_NOT_FOUND
+        : { error: { code: "forbidden", message: "Access denied." } },
+    );
+    expect(f.services.loadApiPrecision).not.toHaveBeenCalled();
+  });
+
+  it("answers not found when the service finds nothing to answer", async () => {
+    const f = fixture();
+    f.services.loadApiPrecision.mockResolvedValue(null);
+    await expectResponse(
+      await f.app.request(PRECISION_PATH, { headers: { authorization: "Bearer good" } }),
+      404,
+      NOT_FOUND,
+    );
+  });
+
+  it("refuses a request without a verified session before reading anything", async () => {
+    const f = fixture();
+    f.verifySession.mockResolvedValue(null);
+    const response = await f.app.request(PRECISION_PATH, {
+      headers: { authorization: "Bearer bad" },
+    });
+    expect(response.status).toBe(401);
+    expect(f.services.loadApiPrecision).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
   });
 });
 

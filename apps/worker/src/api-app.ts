@@ -21,6 +21,7 @@ import {
   ApiNearbyContact,
   ApiNearbyInvite,
   ApiNearbyRemoved,
+  ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
   ApiQuietNotice,
@@ -77,6 +78,7 @@ import {
   type loadApiFamilyPlan,
   type loadApiLights,
   type loadApiMe,
+  type loadApiPrecision,
   type loadApiQuiet,
   type loadApiToday,
   type loadApiWeeklyRead,
@@ -142,6 +144,7 @@ export interface ApiReadServices {
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
   loadApiWeeklyRead: typeof loadApiWeeklyRead;
+  loadApiPrecision: typeof loadApiPrecision;
   memberOfDeviceToken: typeof memberOfDeviceToken;
   loadDeviceMessages: typeof loadDeviceMessages;
   authorizeFamilyAccess: typeof authorizeFamilyAccess;
@@ -764,6 +767,28 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         runtime.now(),
       );
       return read === null ? c.json(NOT_FOUND, 404) : c.json(ApiWeeklyRead.parse(read));
+    },
+  );
+  // Organisers only: the family's own quiet notices are hers (spec §8). Vela's months are the
+  // service's to filter, so that no one family can be read out of them.
+  app.get(
+    "/v1/families/:familyId/precision",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>(
+        (identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        "organiser",
+      )(c, next),
+    async (c) => {
+      const precision = await runtime.services.loadApiPrecision(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        runtime.now(),
+      );
+      return precision === null ? c.json(NOT_FOUND, 404) : c.json(ApiPrecision.parse(precision));
     },
   );
   // The event names its family, so no family middleware: the service answers organisers only.

@@ -217,6 +217,27 @@ export default function YouScreen() {
               </Pressable>
             </>
           )}
+          {family.me.organiser ? (
+            <>
+              <Hairline />
+              {/* Organisers only: they are the ones told of a quiet morning (spec §8). */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityHint={t`Open how the quiet notices ended`}
+                onPress={() => router.push("/precision")}
+              >
+                <Row
+                  title={t`How Vela is doing`}
+                  caption={t`How the quiet notices ended, in your family and across Vela`}
+                  trailing={
+                    <Words variant="button" tone="action">
+                      <Trans>Open</Trans>
+                    </Words>
+                  }
+                />
+              </Pressable>
+            </>
+          ) : null}
         </Card>
       </View>
 

@@ -65,6 +65,7 @@ describe("the overview's precision", () => {
     open: 1,
     outcomes: { answered_late: 1, away: 1, fine_known: 1, true_concern: 1, unknown: 0 },
     useful: { yes: 2, no: 1 },
+    families: 2,
   };
 
   it("shows each month's counts, the true-concern share of notices and the useful share of verdicts", async () => {

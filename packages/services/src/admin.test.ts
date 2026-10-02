@@ -2151,6 +2151,7 @@ describe("the precision counts on the overview", () => {
         open: 1,
         outcomes: { answered_late: 1, away: 1, fine_known: 1, true_concern: 1, unknown: 0 },
         useful: { yes: 2, no: 1 },
+        families: 2,
       },
       {
         month: "2026-08",
@@ -2159,6 +2160,7 @@ describe("the precision counts on the overview", () => {
         open: 0,
         outcomes: { ...none, unknown: 1 },
         useful: { yes: 0, no: 1 },
+        families: 1,
       },
       {
         month: "2025-10",
@@ -2167,6 +2169,7 @@ describe("the precision counts on the overview", () => {
         open: 0,
         outcomes: { ...none, away: 1 },
         useful: { yes: 0, no: 0 },
+        families: 1,
       },
     ]);
     expect(new Set((await logRows()).map((log) => log.familyId))).toEqual(

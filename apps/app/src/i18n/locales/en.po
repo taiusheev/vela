@@ -15,6 +15,10 @@ msgstr "{asker} asked"
 msgid "{asker} asked {recipient}"
 msgstr "{asker} asked {recipient}"
 
+#: src/data/precision.ts
+msgid "{away} away"
+msgstr "{away} away"
+
 #: src/components/quiet-notice.tsx
 msgid "{by} asked at {time}. Waiting for {name}."
 msgstr "{by} asked at {time}. Waiting for {name}."
@@ -70,6 +74,14 @@ msgstr "{her} would see your light, and you choose who else. Not in the app yet.
 #: app/ask.tsx
 msgid "{holder} already has that morning."
 msgstr "{holder} already has that morning."
+
+#: src/data/precision.ts
+msgid "{known} fine, and the family knew why"
+msgstr "{known} fine, and the family knew why"
+
+#: src/data/precision.ts
+msgid "{later} answered later"
+msgstr "{later} answered later"
 
 #: app/vela-light.tsx
 msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
@@ -147,6 +159,18 @@ msgstr "{name}'s thirty days have ended. The daily ask and the exchanges carry o
 msgid "{name}'s week"
 msgstr "{name}'s week"
 
+#: src/data/precision.ts
+msgid "{neverKnown} never known"
+msgstr "{neverKnown} never known"
+
+#: src/data/precision.ts
+msgid "{notices, plural, one {# quiet notice.} other {# quiet notices.}}"
+msgstr "{notices, plural, one {# quiet notice.} other {# quiet notices.}}"
+
+#: src/data/precision.ts
+msgid "{open, plural, one {# is still open.} other {# are still open.}}"
+msgstr "{open, plural, one {# is still open.} other {# are still open.}}"
+
 #: src/data/useToday.ts
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
 msgstr "{recipient} answered an earlier ask at {time}. This one has no answer yet."
@@ -170,6 +194,10 @@ msgstr "{recipient} saw it · {time}"
 #: src/data/ask.ts
 msgid "{words} · shown to her in {language}"
 msgstr "{words} · shown to her in {language}"
+
+#: src/data/precision.ts
+msgid "{wrong} where something was wrong"
+msgstr "{wrong} where something was wrong"
 
 #: app/parent.tsx
 msgid "▶ Play the voice message"
@@ -238,6 +266,10 @@ msgstr "A word to teach"
 #: app/(tabs)/you.tsx
 msgid "Account"
 msgstr "Account"
+
+#: app/precision.tsx
+msgid "Across Vela"
+msgstr "Across Vela"
 
 #: src/components/vote-options.tsx
 msgid "Add an option"
@@ -545,6 +577,14 @@ msgstr "Her phone"
 msgid "Hong Kong"
 msgstr "Hong Kong"
 
+#: app/(tabs)/you.tsx
+msgid "How the quiet notices ended, in your family and across Vela"
+msgstr "How the quiet notices ended, in your family and across Vela"
+
+#: src/data/precision.ts
+msgid "How they ended: {ended}."
+msgstr "How they ended: {ended}."
+
 #: src/components/nearby-editor.tsx
 msgid "How they know {name}, like neighbour"
 msgstr "How they know {name}, like neighbour"
@@ -552,6 +592,11 @@ msgstr "How they know {name}, like neighbour"
 #: app/onboarding.tsx
 msgid "How Vela greets her each morning."
 msgstr "How Vela greets her each morning."
+
+#: app/(tabs)/you.tsx
+#: app/precision.tsx
+msgid "How Vela is doing"
+msgstr "How Vela is doing"
 
 #: app/exchange/[id].tsx
 msgid "Hug"
@@ -576,6 +621,10 @@ msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram l
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "If her morning stays quiet past her usual time, and when it is settled."
+
+#: src/data/precision.ts
+msgid "In none of them was something wrong."
+msgstr "In none of them was something wrong."
 
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
@@ -745,6 +794,10 @@ msgstr "No morning in the next two weeks is free for a photo ask. Send it as wor
 msgid "No number here: Vela asks them for it, with their yes."
 msgstr "No number here: Vela asks them for it, with their yes."
 
+#: app/precision.tsx
+msgid "No quiet notice in the last 12 months."
+msgstr "No quiet notice in the last 12 months."
+
 #: src/data/today.ts
 #: src/data/useToday.ts
 msgid "No word yet today."
@@ -762,6 +815,10 @@ msgstr "Nobody in the family asked {name} anything this week."
 #: src/data/family.ts
 msgid "Nobody nearby yet"
 msgstr "Nobody nearby yet"
+
+#: app/precision.tsx
+msgid "Not enough notices yet to show a month."
+msgstr "Not enough notices yet to show a month."
 
 #: app/ask.tsx
 #: app/vela-light.tsx
@@ -850,6 +907,14 @@ msgstr "One moment a day"
 #: app/parent.tsx
 msgid "One moment…"
 msgstr "One moment…"
+
+#: app/(tabs)/you.tsx
+msgid "Open"
+msgstr "Open"
+
+#: app/(tabs)/you.tsx
+msgid "Open how the quiet notices ended"
+msgstr "Open how the quiet notices ended"
 
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx
@@ -1196,6 +1261,10 @@ msgstr "Someone who could look in, if it goes quiet"
 msgid "Something to ask next week"
 msgstr "Something to ask next week"
 
+#: src/data/precision.ts
+msgid "Something was wrong in {wrong} of {notices}."
+msgstr "Something was wrong in {wrong} of {notices}."
+
 #: src/auth/phone.ts
 msgid "South Korea"
 msgstr "South Korea"
@@ -1361,6 +1430,10 @@ msgstr "The daily ask, the exchanges, turns, translation, story day, everyone in
 msgid "The exchanges could not be reached just now."
 msgstr "The exchanges could not be reached just now."
 
+#: src/data/precision.ts
+msgid "The family found {found} of {verdicts} useful."
+msgstr "The family found {found} of {verdicts} useful."
+
 #: app/exchange/[id].tsx
 msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
 msgstr "The family sees it here. She will not hear it: her mornings read back only her latest day."
@@ -1425,6 +1498,14 @@ msgstr "This is the example family, so nobody left."
 #: app/exchange/[id].tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "This is your own morning; replies are for the family."
+
+#: app/precision.tsx
+msgid "This page could not be reached just now."
+msgstr "This page could not be reached just now."
+
+#: app/precision.tsx
+msgid "This page is for the family's organisers, who are told of quiet mornings."
+msgstr "This page is for the family's organisers, who are told of quiet mornings."
 
 #: app/(tabs)/you.tsx
 msgid "This phone"
@@ -1635,6 +1716,10 @@ msgstr "Vela needs the microphone for a voice hello. You can allow it in Setting
 msgid "Vela needs the microphone for a voice reply. You can allow it in Settings."
 msgstr "Vela needs the microphone for a voice reply. You can allow it in Settings."
 
+#: src/data/precision.ts
+msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
+msgstr "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
+
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Vela suggests"
@@ -1747,6 +1832,10 @@ msgstr "When"
 msgid "When a morning goes quiet"
 msgstr "When a morning goes quiet"
 
+#: app/precision.tsx
+msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
+msgstr "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
+
 #: src/push/provider.tsx
 msgid "When she answers what you asked, and the evening before your turn."
 msgstr "When she answers what you asked, and the evening before your turn."
@@ -1837,6 +1926,10 @@ msgstr "Your answer, {time} long."
 #: app/sign-in.tsx
 msgid "Your country"
 msgstr "Your country"
+
+#: app/precision.tsx
+msgid "Your family"
+msgstr "Your family"
 
 #: app/(tabs)/you.tsx
 msgid "Your family could not be reached just now, so this is the example one."

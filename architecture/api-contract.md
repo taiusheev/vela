@@ -358,7 +358,7 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 | POST | /quiet/:qid/useful | `{useful: boolean}` one-tap verdict for the precision page |
 | POST | /families/:id/members/:mid/away | `{from, to?}` or `{until_back: true}` |
 | DELETE | /families/:id/members/:mid/away | End away mode |
-| GET | /families/:id/precision | Notices, outcomes, shares (the precision page) |
+| GET | /families/:id/precision | **Built** (2 October 2026, § "How Vela is doing" in §7): the family's quiet notices and Vela's by month, outcomes and useful verdicts; organisers only |
 
 ## 6. Story day, the family book, memory
 
@@ -392,6 +392,15 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 - `counts` are the numbers in `weekly_reads.stats` when it was drafted (`counted_days`, `answered_days`, `hello_mornings`, `family_asks`); the app words them as `renderWeeklyRead` does for Telegram. `notes` are `sent_lines`; `suggestion` is `sent_suggestion`, null when the founder removed it.
 - `locked` is true unless a subscription covers her: `trial` before `trial_ends_at`, `active` or `grace`. Locked, `counts`, `notes` and `suggestion` are null and the days still show (spec A9: "Free plan shows the seven lights"). The Telegram read is not gated, because the pilot is free; the app's is, and the 30-day trial opens it at no cost.
 - Read-only: nothing is written, and `POST /weekly-reads/:id/opened` is not built.
+
+### How Vela is doing (2 October 2026, spec §8 "Precision accounting", build plan 5.4)
+
+`GET /v1/families/:familyId/precision` answers `ApiPrecision` (`api-precision.ts`): `family`, the family's own quiet notices, and `vela`, every family's, each a list of `ApiPrecisionMonth` newest first over the last twelve UTC months, by the month the quiet morning opened. Organisers only, through the family guard (anyone else 403, a family not the caller's 404 `Family not found.`), as they are the ones told of a quiet morning.
+
+- A month counts **notices**, quiet mornings that told someone (`notify_count` > 0); one that settled before anyone was told, as in the learning period, is not a notice and is not counted, and no month says how many mornings went quiet, so the page never tallies her silences (spec §8, "No guilt"). `open` is the notices not yet settled; `outcomes` counts the settled ones by outcome (`answered_late`, `away`, `fine_known`, `true_concern`, `unknown`); `useful` the organisers' verdicts (`POST /quiet/:qid/useful`). Precision is `true_concern` ÷ `notices`, and the app words it.
+- A month with no notice is left out of both lists.
+- A Vela month is in `vela` only once it has at least `vela_minimum.notices` notices (10) from at least `vela_minimum.families` families (3), so no one family's quiet morning can be read out of Vela's numbers by another family. The admin overview's Precision section shows every month, with no minimum.
+- Read-only; not gated by Vela Light: a family without it has no quiet notices of its own to count, and Vela's numbers are meant to be published (spec §8).
 
 ### People nearby (1 October 2026, spec A3, A12, §9; L8)
 

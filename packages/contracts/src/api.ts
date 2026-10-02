@@ -231,6 +231,42 @@ export const ApiWeeklyRead = z.object({
 });
 export type ApiWeeklyRead = z.infer<typeof ApiWeeklyRead>;
 
+const PrecisionCount = z.number().int().min(0);
+
+/**
+ * One month of quiet notices (spec §8 "Precision accounting"), by the UTC month the quiet morning
+ * opened. A notice is a quiet morning that told someone; `open` ones have no outcome yet. `useful`
+ * counts the organisers' verdicts on settled ones. Quiet mornings that told nobody are not counted
+ * here, so the page never tallies her silences (spec §8, "No guilt").
+ */
+export const ApiPrecisionMonth = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  notices: PrecisionCount,
+  open: PrecisionCount,
+  outcomes: z.object({
+    answered_late: PrecisionCount,
+    away: PrecisionCount,
+    fine_known: PrecisionCount,
+    true_concern: PrecisionCount,
+    unknown: PrecisionCount,
+  }),
+  useful: z.object({ yes: PrecisionCount, no: PrecisionCount }),
+});
+export type ApiPrecisionMonth = z.infer<typeof ApiPrecisionMonth>;
+
+/**
+ * How Vela is doing (`GET /v1/families/:id/precision`, API contract §7), for organisers: the
+ * family's own notices, and Vela's across every family, newest month first, the last twelve. A Vela
+ * month is shown only once it has at least `vela_minimum.notices` notices from at least
+ * `vela_minimum.families` families, so no one family's morning can be read out of it.
+ */
+export const ApiPrecision = z.object({
+  family: z.array(ApiPrecisionMonth),
+  vela: z.array(ApiPrecisionMonth),
+  vela_minimum: z.object({ notices: PrecisionCount, families: PrecisionCount }),
+});
+export type ApiPrecision = z.infer<typeof ApiPrecision>;
+
 export const SetLight = z.strictObject({ on: z.boolean() });
 export type SetLight = z.infer<typeof SetLight>;
 
