@@ -211,10 +211,6 @@ msgstr "A hello for {recipient}"
 msgid "A hello from Vela"
 msgstr "A hello from Vela"
 
-#: app/sign-in.tsx
-msgid "A number needs its country code."
-msgstr "A number needs its country code."
-
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "A photo of the street where you grew up — do you remember the shop on the corner?"
@@ -347,6 +343,7 @@ msgstr "At most one of each a day: when {her} answers what you asked, and the ev
 msgid "Atlantic"
 msgstr "Atlantic"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Australia"
 msgstr "Australia"
@@ -375,6 +372,7 @@ msgstr "Call"
 msgid "Call {name}"
 msgstr "Call {name}"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Canada"
 msgstr "Canada"
@@ -405,9 +403,18 @@ msgstr "Choose a photo"
 msgid "Choose another"
 msgstr "Choose another"
 
+#: app/sign-in.tsx
+msgid "Choose your country, type your number as you would at home, and we text you a code."
+msgstr "Choose your country, type your number as you would at home, and we text you a code."
+
+#: app/sign-in.tsx
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "Close"
+
+#: app/sign-in.tsx
+msgid "Codes by text message do not reach {where} yet. Use your email instead."
+msgstr "Codes by text message do not reach {where} yet. Use your email instead."
 
 #: src/data/today.ts
 msgid "Dad"
@@ -438,6 +445,10 @@ msgstr "Earlier this month"
 msgid "Eastern"
 msgstr "Eastern"
 
+#: app/sign-in.tsx
+msgid "Email"
+msgstr "Email"
+
 #. button: sign in with the code
 #: app/sign-in.tsx
 msgid "Enter"
@@ -458,10 +469,15 @@ msgstr "family"
 msgid "Family"
 msgstr "Family"
 
+#: src/auth/phone.ts
+msgid "France"
+msgstr "France"
+
 #: src/data/family.ts
 msgid "Free"
 msgstr "Free"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Germany"
 msgstr "Germany"
@@ -525,6 +541,10 @@ msgstr "Her name, as the family calls her."
 msgid "Her phone"
 msgstr "Her phone"
 
+#: src/auth/phone.ts
+msgid "Hong Kong"
+msgstr "Hong Kong"
+
 #: src/components/nearby-editor.tsx
 msgid "How they know {name}, like neighbour"
 msgstr "How they know {name}, like neighbour"
@@ -557,6 +577,7 @@ msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram l
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "If her morning stays quiet past her usual time, and when it is settled."
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "India"
 msgstr "India"
@@ -582,9 +603,14 @@ msgstr "It was a bakery, then a bookshop. We queued there for bread in the winte
 msgid "It's been quiet at {name}'s today"
 msgstr "It's been quiet at {name}'s today"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Japan"
 msgstr "Japan"
+
+#: src/auth/phone.ts
+msgid "Kazakhstan"
+msgstr "Kazakhstan"
 
 #: app/(tabs)/you.tsx
 msgid "Keep a light on for me"
@@ -640,6 +666,10 @@ msgstr "Looking for your family on this account…"
 msgid "Looking for your family's days…"
 msgstr "Looking for your family's days…"
 
+#: src/auth/phone.ts
+msgid "Malaysia"
+msgstr "Malaysia"
+
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
 #: app/nearby.tsx
@@ -663,6 +693,10 @@ msgstr "Mountain"
 msgid "Mrs Chen"
 msgstr "Mrs Chen"
 
+#: app/sign-in.tsx
+msgid "name@example.com"
+msgstr "name@example.com"
+
 #: src/data/useQuiet.ts
 msgctxt "relation"
 msgid "nearby"
@@ -682,6 +716,14 @@ msgstr "Nearby: {names}"
 #: src/data/useNearby.ts
 msgid "neighbour"
 msgstr "neighbour"
+
+#: src/auth/phone.ts
+msgid "Netherlands"
+msgstr "Netherlands"
+
+#: src/auth/phone.ts
+msgid "New Zealand"
+msgstr "New Zealand"
 
 #: app/onboarding.tsx
 msgid "Next"
@@ -861,6 +903,14 @@ msgstr "People nearby"
 msgid "Perth"
 msgstr "Perth"
 
+#: src/auth/phone.ts
+msgid "Philippines"
+msgstr "Philippines"
+
+#: app/sign-in.tsx
+msgid "Phone number"
+msgstr "Phone number"
+
 #: app/parent.tsx
 #: src/components/family-photo.tsx
 #: src/components/photo-slots.tsx
@@ -950,6 +1000,10 @@ msgstr "Resume"
 #: src/device/useParent.ts
 msgid "Rice porridge"
 msgstr "Rice porridge"
+
+#: src/auth/phone.ts
+msgid "Russia"
+msgstr "Russia"
 
 #. the name of a language
 #: src/data/ask.ts
@@ -1113,6 +1167,11 @@ msgstr "Sign in as family"
 msgid "Sign out"
 msgstr "Sign out"
 
+#: app/sign-in.tsx
+msgid "Signing in with a number is not open yet. Use your email instead."
+msgstr "Signing in with a number is not open yet. Use your email instead."
+
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Singapore"
 msgstr "Singapore"
@@ -1136,6 +1195,14 @@ msgstr "Someone who could look in, if it goes quiet"
 #: app/(tabs)/sunday.tsx
 msgid "Something to ask next week"
 msgstr "Something to ask next week"
+
+#: src/auth/phone.ts
+msgid "South Korea"
+msgstr "South Korea"
+
+#: src/auth/phone.ts
+msgid "Spain"
+msgstr "Spain"
 
 #: app/vela-light.tsx
 msgid "Start the 30 days"
@@ -1170,6 +1237,7 @@ msgstr "Sunday"
 msgid "Sydney"
 msgstr "Sydney"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Taiwan"
 msgstr "Taiwan"
@@ -1177,6 +1245,10 @@ msgstr "Taiwan"
 #: src/data/useToday.ts
 msgid "tapped an answer"
 msgstr "tapped an answer"
+
+#: src/auth/phone.ts
+msgid "Thailand"
+msgstr "Thailand"
 
 #: src/device/useParent.ts
 msgid "Thank you. Mia knows you're fine."
@@ -1223,13 +1295,17 @@ msgstr "That did not go through. Try again in a moment."
 msgid "That did not work. Check it and try again."
 msgstr "That did not work. Check it and try again."
 
+#: app/sign-in.tsx
+msgid "That does not look like a number in {where}. Check the country and the number."
+msgstr "That does not look like a number in {where}. Check the country and the number."
+
+#: app/sign-in.tsx
+msgid "That does not look like an email address."
+msgstr "That does not look like an email address."
+
 #: app/exchange/[id].tsx
 msgid "That exchange is not here."
 msgstr "That exchange is not here."
-
-#: app/sign-in.tsx
-msgid "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
-msgstr "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
 
 #: app/exchange/[id].tsx
 msgid "That photo could not be sent just now. It is kept to send again."
@@ -1458,14 +1534,24 @@ msgstr "Two people nearby is the most. Remove one to add someone else."
 msgid "Two photos"
 msgstr "Two photos"
 
+#: app/sign-in.tsx
+msgid "Type your email, and we send you a code."
+msgstr "Type your email, and we send you a code."
+
 #: src/data/onboarding.ts
 msgid "UK"
 msgstr "UK"
 
+#: src/auth/phone.ts
+msgid "Ukraine"
+msgstr "Ukraine"
+
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "United Kingdom"
 msgstr "United Kingdom"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "United States"
 msgstr "United States"
@@ -1481,6 +1567,10 @@ msgstr "Up to two people who live close to {name} and could look in if a morning
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
 msgstr "Uploading {percent}%"
+
+#: app/sign-in.tsx
+msgid "Use my email instead"
+msgstr "Use my email instead"
 
 #: app/sign-in.tsx
 msgid "Use something else"
@@ -1549,6 +1639,10 @@ msgstr "Vela suggests"
 msgid "Vela suggests · from her own words"
 msgstr "Vela suggests · from her own words"
 
+#: src/auth/phone.ts
+msgid "Vietnam"
+msgstr "Vietnam"
+
 #: src/components/voice-hello.tsx
 msgid "Voice hello, {time}. It plays before your ask."
 msgstr "Voice hello, {time}. It plays before your ask."
@@ -1588,6 +1682,10 @@ msgstr "We sent a code to {sentTo}."
 #: app/sign-in.tsx
 msgid "We sent a code to your email."
 msgstr "We sent a code to your email."
+
+#: app/sign-in.tsx
+msgid "We will text {phone}."
+msgstr "We will text {phone}."
 
 #: app/(tabs)/sunday.tsx
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
@@ -1730,6 +1828,10 @@ msgstr "Your account id. Nobody but you needs it."
 msgid "Your answer, {time} long."
 msgstr "Your answer, {time} long."
 
+#: app/sign-in.tsx
+msgid "Your country"
+msgstr "Your country"
+
 #: app/(tabs)/you.tsx
 msgid "Your family could not be reached just now, so this is the example one."
 msgstr "Your family could not be reached just now, so this is the example one."
@@ -1746,6 +1848,10 @@ msgstr "Your light is off, so nothing about your mornings is shown."
 msgid "Your light is paused from your own chat, where your mornings arrive."
 msgstr "Your light is paused from your own chat, where your mornings arrive."
 
+#: app/sign-in.tsx
+msgid "Your mobile number. The country code is added for you."
+msgstr "Your mobile number. The country code is added for you."
+
 #: src/device/useParent.ts
 msgid "Your morning message"
 msgstr "Your morning message"
@@ -1757,10 +1863,6 @@ msgstr "Your name, as the family says it."
 #: app/(tabs)/you.tsx
 msgid "Your name, the asks you write, and your replies."
 msgstr "Your name, the asks you write, and your replies."
-
-#: app/sign-in.tsx
-msgid "Your number or your email, and we send you a code."
-msgstr "Your number or your email, and we send you a code."
 
 #: app/(tabs)/you.tsx
 msgid "Your own light"

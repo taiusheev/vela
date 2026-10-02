@@ -1,13 +1,23 @@
 import { useSignIn, useSignUp } from "@clerk/clerk-expo";
 import { Trans, useLingui } from "@lingui/react/macro";
+import { getLocales } from "expo-localization";
 import { router, Stack } from "expo-router";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
+import {
+  COUNTRIES,
+  type Country,
+  countryName,
+  defaultCountry,
+  flagOf,
+  readable,
+  toInternational,
+} from "../src/auth/phone.ts";
 import { Light } from "../src/components/light.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
-import { PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
+import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
@@ -18,39 +28,54 @@ type Strategy = "email_code" | "phone_code";
  * What went wrong, kept as what happened and put into words only as the screen draws, so the words
  * follow the app's language when it changes (build plan 3.1).
  */
-type Trouble =
-  | {
-      kind:
-        | "cannot_receive"
-        | "did_not_work"
-        | "bot_check"
-        | "needs_more"
-        | "wrong_code"
-        | "code_took_too_long";
-    }
-  /** The number with its national 0 dropped, offered back to try. */
-  | { kind: "trunk_zero"; shorter: string };
+type Trouble = {
+  kind:
+    | "cannot_receive"
+    | "did_not_work"
+    | "bot_check"
+    | "needs_more"
+    | "wrong_code"
+    | "code_took_too_long"
+    | "number_invalid"
+    | "country_unsupported"
+    | "phone_off"
+    | "email_invalid";
+};
+
+/**
+ * In development only, Clerk's error codes (such as `form_code_incorrect`) to the bundler's log, so
+ * a sign-in that fails on a test phone can be read from the Mac. Never the message or the identifier,
+ * which can name the person.
+ */
+function logClerkCodes(step: "lookup" | "send" | "verify", error: unknown): void {
+  if (!__DEV__) return;
+  const errors = (error as { errors?: { code?: unknown }[] } | null)?.errors;
+  const codes = Array.isArray(errors) ? errors.map((entry) => String(entry.code)) : [];
+  console.warn(
+    `[sign-in] ${step} failed:`,
+    codes.length === 0 ? String((error as Error)?.name) : codes.join(", "),
+  );
+}
 
 function looksLikeEmail(identifier: string): boolean {
   return identifier.includes("@");
 }
 
-/**
- * However she wrote the number: spaces, dashes and brackets are hers, not its. An email keeps every
- * character it has — the dots in one are part of the address, not punctuation to tidy away.
- */
-function tidy(raw: string): string {
-  const trimmed = raw.trim();
-  return looksLikeEmail(trimmed) ? trimmed : trimmed.replace(/[\s()\-.‐-―]/g, "");
+/** Clerk's error codes, which name what went wrong without naming the person. */
+function codesOf(error: unknown): string[] {
+  const errors = (error as { errors?: { code?: unknown }[] } | null)?.errors;
+  return Array.isArray(errors) ? errors.map((entry) => String(entry.code)) : [];
 }
 
-/**
- * A number written the way it is said at home keeps the national 0 — 0903 224 780 in Taipei — and
- * international form drops it. Rather than guess, the screen offers the number back without it.
- */
-function withoutTrunkZero(identifier: string): string | null {
-  const match = /^(\+\d{1,3})0(\d{6,})$/.exec(identifier);
-  return match === null ? null : `${match[1]}${match[2]}`;
+/** What a refused number or address means for the person, from Clerk's codes. */
+function refusalOf(error: unknown, phone: boolean): Trouble {
+  const codes = codesOf(error).join(" ");
+  if (/country/.test(codes)) return { kind: "country_unsupported" };
+  if (/strategy|not_allowed|not_enabled/.test(codes)) {
+    return { kind: phone ? "phone_off" : "did_not_work" };
+  }
+  if (/format|invalid/.test(codes)) return { kind: phone ? "number_invalid" : "email_invalid" };
+  return { kind: "did_not_work" };
 }
 
 /** A bot check that never finishes must not leave her watching "Sending…" for ever. */
@@ -120,7 +145,16 @@ function CodeSignIn() {
   // Which half of Clerk is carrying this attempt: an account it knows, or one it is meeting.
   const [joining, setJoining] = useState(false);
   const [strategy, setStrategy] = useState<Strategy>("email_code");
-  const [identifier, setIdentifier] = useState("");
+  // A number by default, chosen country first; an email is one tap away.
+  const [mode, setMode] = useState<"phone" | "email">("phone");
+  const [country, setCountry] = useState<Country>(() =>
+    defaultCountry(getLocales()[0]?.regionCode ?? null),
+  );
+  const [picking, setPicking] = useState(false);
+  const [number, setNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const international = toInternational(country, number);
+  const identifier = mode === "phone" ? (international ?? "") : email.trim();
   const [code, setCode] = useState("");
   const [trouble, setTrouble] = useState<Trouble | undefined>();
   const [working, setWorking] = useState(false);
@@ -144,8 +178,15 @@ function CodeSignIn() {
 
   const sendCode = async () => {
     if (!ready || signIn === undefined) return;
-    const entered = tidy(identifier);
-    if (entered.length === 0) return;
+    const entered = identifier;
+    if (mode === "phone" && international === null) {
+      setTrouble({ kind: "number_invalid" });
+      return;
+    }
+    if (mode === "email" && !looksLikeEmail(entered)) {
+      setTrouble({ kind: "email_invalid" });
+      return;
+    }
     setWorking(true);
     setTrouble(undefined);
     try {
@@ -177,21 +218,18 @@ function CodeSignIn() {
       }
       setJoining(false);
       setStep("code");
-    } catch {
+    } catch (lookup: unknown) {
+      logClerkCodes("lookup", lookup);
       // The first family through the door has no account yet, so something Clerk does not know is
       // the ordinary first run, not a mistake. Only one it cannot use either is worth saying.
       try {
         if (await startJoining(entered)) setStep("code");
         else setTrouble({ kind: "did_not_work" });
       } catch (error: unknown) {
+        logClerkCodes("send", error);
         // Clerk's message can name the account; the screen says only what the person can act on.
-        const shorter = withoutTrunkZero(entered);
         setTrouble(
-          error instanceof TookTooLong
-            ? { kind: "bot_check" }
-            : shorter === null
-              ? { kind: "did_not_work" }
-              : { kind: "trunk_zero", shorter },
+          error instanceof TookTooLong ? { kind: "bot_check" } : refusalOf(error, mode === "phone"),
         );
       }
     } finally {
@@ -230,6 +268,7 @@ function CodeSignIn() {
       await setActive({ session });
       router.replace("/");
     } catch (error: unknown) {
+      logClerkCodes("verify", error);
       setTrouble(
         error instanceof TookTooLong ? { kind: "code_took_too_long" } : { kind: "wrong_code" },
       );
@@ -247,10 +286,18 @@ function CodeSignIn() {
         return t`That did not work. Check it and try again.`;
       case "bot_check":
         return t`The bot check did not finish. Try again in a moment.`;
-      case "trunk_zero": {
-        const shorter = what.shorter;
-        return t`That number did not work. The 0 after the country code is dropped abroad — try ${shorter}.`;
+      case "number_invalid": {
+        const where = countryName(country);
+        return t`That does not look like a number in ${where}. Check the country and the number.`;
       }
+      case "country_unsupported": {
+        const where = countryName(country);
+        return t`Codes by text message do not reach ${where} yet. Use your email instead.`;
+      }
+      case "phone_off":
+        return t`Signing in with a number is not open yet. Use your email instead.`;
+      case "email_invalid":
+        return t`That does not look like an email address.`;
       case "needs_more":
         return t`That code was right, but this account needs more than that to finish.`;
       case "wrong_code":
@@ -260,7 +307,8 @@ function CodeSignIn() {
     }
   }
 
-  const sentTo = tidy(identifier);
+  const sentTo = mode === "phone" ? readable(identifier) : identifier;
+  const phone = international === null ? "" : readable(international);
 
   return (
     <>
@@ -280,18 +328,73 @@ function CodeSignIn() {
         </View>
         {step === "identifier" ? (
           <>
-            <Words variant="body" tone="ink2">
-              <Trans>Your number or your email, and we send you a code.</Trans>
-            </Words>
-            <TextField
-              value={identifier}
-              onChangeText={setIdentifier}
-              placeholder="+886 900 000 000"
-              helper={t`A number needs its country code.`}
-              autoComplete="tel"
-              autoFocus
-              onSubmit={() => void sendCode()}
-            />
+            <View style={{ flexDirection: "row", gap: space.s }}>
+              <Chip
+                label={t`Phone number`}
+                selected={mode === "phone"}
+                onPress={() => {
+                  setMode("phone");
+                  setTrouble(undefined);
+                }}
+              />
+              <Chip
+                label={t`Email`}
+                selected={mode === "email"}
+                onPress={() => {
+                  setMode("email");
+                  setTrouble(undefined);
+                }}
+              />
+            </View>
+            {mode === "phone" ? (
+              <>
+                <Words variant="body" tone="ink2">
+                  <Trans>
+                    Choose your country, type your number as you would at home, and we text you a
+                    code.
+                  </Trans>
+                </Words>
+                <SecondaryButton
+                  label={`${flagOf(country)}  ${countryName(country)}  +${country.dial}  ▾`}
+                  onPress={() => setPicking(true)}
+                />
+                <TextField
+                  value={number}
+                  onChangeText={(next) => {
+                    setNumber(next);
+                    setTrouble(undefined);
+                  }}
+                  placeholder={country.example}
+                  helper={
+                    international === null
+                      ? t`Your mobile number. The country code is added for you.`
+                      : t`We will text ${phone}.`
+                  }
+                  keyboardType="phone-pad"
+                  autoComplete="tel-national"
+                  autoFocus
+                  onSubmit={() => void sendCode()}
+                />
+              </>
+            ) : (
+              <>
+                <Words variant="body" tone="ink2">
+                  <Trans>Type your email, and we send you a code.</Trans>
+                </Words>
+                <TextField
+                  value={email}
+                  onChangeText={(next) => {
+                    setEmail(next);
+                    setTrouble(undefined);
+                  }}
+                  placeholder={t`name@example.com`}
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  autoFocus
+                  onSubmit={() => void sendCode()}
+                />
+              </>
+            )}
             <PrimaryButton label={working ? t`Sending…` : t`Send me a code`} onPress={sendCode} />
           </>
         ) : (
@@ -338,6 +441,55 @@ function CodeSignIn() {
             {troubleWords(trouble)}
           </Words>
         )}
+        {trouble?.kind === "country_unsupported" || trouble?.kind === "phone_off" ? (
+          <SecondaryButton
+            label={t`Use my email instead`}
+            onPress={() => {
+              setMode("email");
+              setTrouble(undefined);
+            }}
+          />
+        ) : null}
+        <Modal visible={picking} animationType="slide" onRequestClose={() => setPicking(false)}>
+          <ScrollView
+            style={{ backgroundColor: palette.bg }}
+            contentContainerStyle={{
+              paddingTop: insets.top + space.xl,
+              paddingBottom: insets.bottom + space.xl,
+              paddingHorizontal: space.margin,
+              gap: space.s,
+            }}
+          >
+            <Words variant="heading">
+              <Trans>Your country</Trans>
+            </Words>
+            {COUNTRIES.map((candidate) => (
+              <Pressable
+                key={candidate.iso}
+                accessibilityRole="button"
+                accessibilityState={{ selected: candidate.iso === country.iso }}
+                onPress={() => {
+                  setCountry(candidate);
+                  setPicking(false);
+                  setTrouble(undefined);
+                }}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  paddingVertical: space.m,
+                  borderBottomWidth: 1,
+                  borderBottomColor: palette.rule,
+                }}
+              >
+                <Words variant={candidate.iso === country.iso ? "bodyMedium" : "body"}>
+                  {`${flagOf(candidate)}  ${countryName(candidate)}`}
+                </Words>
+                <Words variant="body" tone="ink3">{`+${candidate.dial}`}</Words>
+              </Pressable>
+            ))}
+            <SecondaryButton label={t`Close`} onPress={() => setPicking(false)} />
+          </ScrollView>
+        </Modal>
         {/* The app's language, before there is an account to keep it (build plan 3.1). */}
         {step === "identifier" ? <LocaleChips /> : null}
         {/*

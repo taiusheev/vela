@@ -218,10 +218,6 @@ msgstr "給{recipient}的問候"
 msgid "A hello from Vela"
 msgstr "來自 Vela 的問候"
 
-#: app/sign-in.tsx
-msgid "A number needs its country code."
-msgstr "電話號碼要加上國碼。"
-
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "您從小長大的那條街的照片——還記得街角那家店嗎？"
@@ -354,6 +350,7 @@ msgstr "每種通知每天最多一則：{her}回覆您的提問時，以及輪�
 msgid "Atlantic"
 msgstr "大西洋時間"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Australia"
 msgstr "澳洲"
@@ -382,6 +379,7 @@ msgstr "打電話"
 msgid "Call {name}"
 msgstr "打電話給{name}"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Canada"
 msgstr "加拿大"
@@ -412,9 +410,18 @@ msgstr "選一張照片"
 msgid "Choose another"
 msgstr "換一張"
 
+#: app/sign-in.tsx
+msgid "Choose your country, type your number as you would at home, and we text you a code."
+msgstr "選擇您的國家，照平常的方式輸入手機號碼，我們會用簡訊傳驗證碼給您。"
+
+#: app/sign-in.tsx
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "關閉"
+
+#: app/sign-in.tsx
+msgid "Codes by text message do not reach {where} yet. Use your email instead."
+msgstr "簡訊驗證碼目前還無法傳到{where}，請改用電子郵件。"
 
 #: src/data/today.ts
 msgid "Dad"
@@ -445,6 +452,10 @@ msgstr "這個月稍早"
 msgid "Eastern"
 msgstr "東部時間"
 
+#: app/sign-in.tsx
+msgid "Email"
+msgstr "電子郵件"
+
 #. button: sign in with the code
 #: app/sign-in.tsx
 msgid "Enter"
@@ -465,10 +476,15 @@ msgstr "家人"
 msgid "Family"
 msgstr "家人"
 
+#: src/auth/phone.ts
+msgid "France"
+msgstr "法國"
+
 #: src/data/family.ts
 msgid "Free"
 msgstr "免費"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Germany"
 msgstr "德國"
@@ -532,6 +548,10 @@ msgstr "家裡平常怎麼稱呼這位家人。"
 msgid "Her phone"
 msgstr "長輩的手機"
 
+#: src/auth/phone.ts
+msgid "Hong Kong"
+msgstr "香港"
+
 #: src/components/nearby-editor.tsx
 msgid "How they know {name}, like neighbour"
 msgstr "和{name}的關係，例如鄰居"
@@ -564,6 +584,7 @@ msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "早安訊息過了平常的回覆時間仍然安靜時，以及之後有了結果時。"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "India"
 msgstr "印度"
@@ -589,9 +610,14 @@ msgstr "先是麵包店，後來變成書店。冬天我們在那裡排隊買麵
 msgid "It's been quiet at {name}'s today"
 msgstr "{name}那邊今天比較安靜"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Japan"
 msgstr "日本"
+
+#: src/auth/phone.ts
+msgid "Kazakhstan"
+msgstr "哈薩克"
 
 #: app/(tabs)/you.tsx
 msgid "Keep a light on for me"
@@ -647,6 +673,10 @@ msgstr "正在找這個帳號的家庭…"
 msgid "Looking for your family's days…"
 msgstr "正在載入家人的問答…"
 
+#: src/auth/phone.ts
+msgid "Malaysia"
+msgstr "馬來西亞"
+
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
 #: app/nearby.tsx
@@ -670,6 +700,10 @@ msgstr "山區時間"
 msgid "Mrs Chen"
 msgstr "陳太太"
 
+#: app/sign-in.tsx
+msgid "name@example.com"
+msgstr "例如 name@example.com"
+
 #: src/data/useQuiet.ts
 msgctxt "relation"
 msgid "nearby"
@@ -689,6 +723,14 @@ msgstr "附近的聯絡人：{names}"
 #: src/data/useNearby.ts
 msgid "neighbour"
 msgstr "鄰居"
+
+#: src/auth/phone.ts
+msgid "Netherlands"
+msgstr "荷蘭"
+
+#: src/auth/phone.ts
+msgid "New Zealand"
+msgstr "紐西蘭"
 
 #: app/onboarding.tsx
 msgid "Next"
@@ -868,6 +910,14 @@ msgstr "附近的聯絡人"
 msgid "Perth"
 msgstr "伯斯"
 
+#: src/auth/phone.ts
+msgid "Philippines"
+msgstr "菲律賓"
+
+#: app/sign-in.tsx
+msgid "Phone number"
+msgstr "手機號碼"
+
 #: app/parent.tsx
 #: src/components/family-photo.tsx
 #: src/components/photo-slots.tsx
@@ -957,6 +1007,10 @@ msgstr "恢復"
 #: src/device/useParent.ts
 msgid "Rice porridge"
 msgstr "稀飯"
+
+#: src/auth/phone.ts
+msgid "Russia"
+msgstr "俄羅斯"
 
 #. the name of a language
 #: src/data/ask.ts
@@ -1120,6 +1174,11 @@ msgstr "以家人身分登入"
 msgid "Sign out"
 msgstr "登出"
 
+#: app/sign-in.tsx
+msgid "Signing in with a number is not open yet. Use your email instead."
+msgstr "目前還不能用手機號碼登入，請改用電子郵件。"
+
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Singapore"
 msgstr "新加坡"
@@ -1143,6 +1202,14 @@ msgstr "安靜的日子裡，可以過去看看的人"
 #: app/(tabs)/sunday.tsx
 msgid "Something to ask next week"
 msgstr "下週可以問問看"
+
+#: src/auth/phone.ts
+msgid "South Korea"
+msgstr "韓國"
+
+#: src/auth/phone.ts
+msgid "Spain"
+msgstr "西班牙"
 
 #: app/vela-light.tsx
 msgid "Start the 30 days"
@@ -1177,6 +1244,7 @@ msgstr "週日"
 msgid "Sydney"
 msgstr "雪梨"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Taiwan"
 msgstr "台灣"
@@ -1184,6 +1252,10 @@ msgstr "台灣"
 #: src/data/useToday.ts
 msgid "tapped an answer"
 msgstr "選了一個回答"
+
+#: src/auth/phone.ts
+msgid "Thailand"
+msgstr "泰國"
 
 #: src/device/useParent.ts
 msgid "Thank you. Mia knows you're fine."
@@ -1230,13 +1302,17 @@ msgstr "沒有成功。請稍後再試一次。"
 msgid "That did not work. Check it and try again."
 msgstr "沒有成功。請檢查後再試一次。"
 
+#: app/sign-in.tsx
+msgid "That does not look like a number in {where}. Check the country and the number."
+msgstr "這看起來不像是{where}的號碼。請檢查國家和號碼。"
+
+#: app/sign-in.tsx
+msgid "That does not look like an email address."
+msgstr "這看起來不像是電子郵件地址。"
+
 #: app/exchange/[id].tsx
 msgid "That exchange is not here."
 msgstr "找不到這則問答。"
-
-#: app/sign-in.tsx
-msgid "That number did not work. The 0 after the country code is dropped abroad — try {shorter}."
-msgstr "這個號碼無法使用。從國外撥打時，國碼後面的 0 要去掉，請試試 {shorter}。"
 
 #: app/exchange/[id].tsx
 msgid "That photo could not be sent just now. It is kept to send again."
@@ -1465,14 +1541,24 @@ msgstr "附近的聯絡人最多兩位。請先移除一位，再加入其他人
 msgid "Two photos"
 msgstr "兩張照片"
 
+#: app/sign-in.tsx
+msgid "Type your email, and we send you a code."
+msgstr "輸入您的電子郵件，我們會寄驗證碼給您。"
+
 #: src/data/onboarding.ts
 msgid "UK"
 msgstr "英國"
 
+#: src/auth/phone.ts
+msgid "Ukraine"
+msgstr "烏克蘭"
+
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "United Kingdom"
 msgstr "英國"
 
+#: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "United States"
 msgstr "美國"
@@ -1488,6 +1574,10 @@ msgstr "最多兩位住在{name}附近、如果哪天早上比較安靜可以過
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
 msgstr "正在上傳 {percent}%"
+
+#: app/sign-in.tsx
+msgid "Use my email instead"
+msgstr "改用我的電子郵件"
 
 #: app/sign-in.tsx
 msgid "Use something else"
@@ -1556,6 +1646,10 @@ msgstr "Vela 的建議"
 msgid "Vela suggests · from her own words"
 msgstr "Vela 的建議 · 取自這位家人說過的話"
 
+#: src/auth/phone.ts
+msgid "Vietnam"
+msgstr "越南"
+
 #: src/components/voice-hello.tsx
 msgid "Voice hello, {time}. It plays before your ask."
 msgstr "語音問候，共 {time}。會在您的提問之前播放。"
@@ -1595,6 +1689,10 @@ msgstr "我們已經把驗證碼傳到 {sentTo}。"
 #: app/sign-in.tsx
 msgid "We sent a code to your email."
 msgstr "我們已經把驗證碼寄到您的電子信箱。"
+
+#: app/sign-in.tsx
+msgid "We will text {phone}."
+msgstr "我們會傳簡訊到 {phone}。"
 
 #: app/(tabs)/sunday.tsx
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
@@ -1737,6 +1835,10 @@ msgstr "您的帳號 ID。只有您自己會用到。"
 msgid "Your answer, {time} long."
 msgstr "您的回答，共 {time}。"
 
+#: app/sign-in.tsx
+msgid "Your country"
+msgstr "您的國家"
+
 #: app/(tabs)/you.tsx
 msgid "Your family could not be reached just now, so this is the example one."
 msgstr "目前無法載入您的家庭，所以這裡顯示的是範例家庭。"
@@ -1753,6 +1855,10 @@ msgstr "您的燈沒有亮著，所以不會顯示任何關於您早上的內容
 msgid "Your light is paused from your own chat, where your mornings arrive."
 msgstr "您的燈要從您自己的聊天室暫停，也就是您收到早安訊息的地方。"
 
+#: app/sign-in.tsx
+msgid "Your mobile number. The country code is added for you."
+msgstr "您的手機號碼。國碼會自動幫您加上。"
+
 #: src/device/useParent.ts
 msgid "Your morning message"
 msgstr "您的早晨訊息"
@@ -1764,10 +1870,6 @@ msgstr "您的名字，用家人平常的叫法。"
 #: app/(tabs)/you.tsx
 msgid "Your name, the asks you write, and your replies."
 msgstr "您的名字、您寫的提問，以及您的回覆。"
-
-#: app/sign-in.tsx
-msgid "Your number or your email, and we send you a code."
-msgstr "輸入您的電話號碼或電子郵件，我們會傳驗證碼給您。"
 
 #: app/(tabs)/you.tsx
 msgid "Your own light"

@@ -194,9 +194,9 @@ export function TextField({
   helper?: string;
   multiline?: boolean;
   /** The keyboard she gets: a number pad for a phone or a code, words for an ask. */
-  keyboardType?: "phone-pad" | "number-pad";
+  keyboardType?: "phone-pad" | "number-pad" | "email-address";
   /** Lets the phone offer her own number, and fill a code from the message that carries it. */
-  autoComplete?: "tel" | "one-time-code";
+  autoComplete?: "tel" | "tel-national" | "one-time-code" | "email";
   /** For the one field a screen exists to fill, so it is ready without hunting for it. */
   autoFocus?: boolean;
   maxLength?: number;
