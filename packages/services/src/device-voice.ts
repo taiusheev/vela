@@ -95,7 +95,8 @@ export async function storeDeviceVoice(
     );
   if ((today?.n ?? 0) >= MAX_DEVICE_VOICES_PER_DAY) throw new DeviceVoiceRefusedError("limit");
 
-  const storageKey = `families/${her.familyId}/device/${her.id}/${key}.m4a`;
+  // Under `device/`, where the bucket's 32-day rule deletes an object no row names (data map 21).
+  const storageKey = `device/${her.familyId}/${her.id}/${key}.m4a`;
   try {
     await deps.media.put(storageKey, body.slice().buffer, M4A);
   } catch (error) {

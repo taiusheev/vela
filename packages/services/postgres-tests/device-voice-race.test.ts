@@ -54,7 +54,7 @@ describe("keeping her recording on independent PostgreSQL connections", () => {
       throw new Error("expected three race connections");
     }
     const mother = await her(seeder);
-    const storageKey = `families/${scope.familyId}/device/${scope.herId}/${KEY}.m4a`;
+    const storageKey = `device/${scope.familyId}/${scope.herId}/${KEY}.m4a`;
 
     // The holder is the first send, its row written and not yet committed; both retries have
     // already looked for the key and found nothing, and each waits on the holder's insert.
