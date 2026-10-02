@@ -2,7 +2,18 @@
 
 For the founder, on staging, with the Android build from 2 October (EAS build `45eb0cd4`) and the staging bot **@VelaLightstagingbot**. Staging holds test data only. Each step says what you do and what you should see; tick it off, or note what you saw instead and send it to Claude.
 
-**You need:** two Android phones (or one phone plus a second Telegram account on another device), your own Telegram, and the APK installed on both phones from the Expo build page. AI is off on staging, so there are no transcripts or summaries.
+## On an iPhone, without Android and without an Apple Developer account
+
+1. On the iPhone, install **Expo Go** from the App Store (free).
+2. The iPhone and the Mac must be on the same Wi-Fi, or the Mac on the iPhone's hotspot.
+3. On the Mac, Claude starts the tab **"Vela on iPhone"** (`pnpm --filter @vela/app start:staging`), which shows a QR code. Point the iPhone's Camera at it and tap the banner: Vela opens inside Expo Go, talking to staging.
+4. Use one iPhone for the organiser's steps. For her phone (sections 2–4), sign out and use **You → Her phone** on the same iPhone, or a second iPhone with Expo Go.
+
+What Expo Go cannot do, which a real build can: no push notifications and no morning chime; and an iPhone cannot play voice notes recorded in Telegram (Telegram's Ogg format). Voice replies recorded in the app play fine.
+
+---
+
+**You need (Android):** two Android phones (or one phone plus a second Telegram account on another device), your own Telegram, and the APK installed on both phones from the Expo build page. AI is off on staging, so there are no transcripts or summaries.
 
 ---
 
