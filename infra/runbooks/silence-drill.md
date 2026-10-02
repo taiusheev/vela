@@ -82,4 +82,4 @@ Every day in the admin page, the founder checks:
 
 | Date | Scenario | Expected | Observed (times) | Pass | Notes | By |
 |---|---|---|---|---|---|---|
-| | | | | | | |
+| 2026-10-02 | C · heartbeat and watchdog (staging) | `/healthz` 503 `stale` 35 min after the last reconcile; the watchdog fails and emails | 15-minute cron removed 12:38:59 UTC (Cloudflare API, the nightly cron kept); one more reconcile ran at 13:00:58 (cron changes take up to ~15 min to take effect); `/healthz` still `ok` at 13:29 (age 1679 s), `stale` 503 when read at 15:16; restored by redeploying the pilot Worker at 15:17:55; `ok` again at 15:31:35 (age 32 s); manual watchdog runs: failed at 15:16 ("HTTP 503, stale", three tries), green at 15:31 | Partly | **The heartbeat and the watchdog's check work; the watchdog's schedule does not.** GitHub ran the scheduled watchdog once (11:23) in about 9.5 hours, none during the outage, so no email came: the scheduled run is not an alarm. An outside uptime monitor is added (`infra/README.md`, section 6, "An outside monitor"). Repeat part C once it is set up | Co-founder |
