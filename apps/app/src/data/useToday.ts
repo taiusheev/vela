@@ -114,6 +114,7 @@ export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
     replies: exchange.replies.map((reply) => ({
       from: reply.from,
       text: replyLine(reply.from, reply.kind, reply.text),
+      ...(reply.photo === null ? {} : { photo: reply.photo }),
     })),
     ...(receipt === undefined ? {} : { receipt }),
     ...(exchange.photos.length === 0

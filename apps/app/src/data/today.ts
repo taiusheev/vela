@@ -30,6 +30,8 @@ export interface TodayReply {
    * counts: the family hears substance, not a number.
    */
   text: string;
+  /** A photo reply's photo, shown under its line. */
+  photo?: ExchangePhoto;
 }
 
 /**

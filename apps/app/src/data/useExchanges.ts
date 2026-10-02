@@ -19,6 +19,7 @@ function toReply(
     from: reply.from,
     kind: reply.kind,
     ...(words.length === 0 ? {} : { text: words }),
+    ...(reply.photo === null ? {} : { photo: reply.photo }),
   };
 }
 

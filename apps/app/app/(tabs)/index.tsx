@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../../src/api/client.ts";
-import { ExchangePhotos } from "../../src/components/family-photo.tsx";
+import { ExchangePhotos, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import {
@@ -92,6 +92,7 @@ function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }
               {reply.text}
             </Words>
           ))}
+          <ReplyThumbnails photos={exchange.replies.flatMap((reply) => reply.photo ?? [])} />
         </>
       ) : null}
       {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}

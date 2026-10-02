@@ -3,7 +3,7 @@ import { Link } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ExchangePhotos } from "../../src/components/family-photo.tsx";
+import { ExchangePhotos, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import {
   Card,
   Eyebrow,
@@ -65,6 +65,7 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
               {replies}
             </Words>
           )}
+          <ReplyThumbnails photos={exchange.replies.flatMap((reply) => reply.photo ?? [])} />
           {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
         </Card>
       </Pressable>

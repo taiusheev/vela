@@ -806,6 +806,16 @@ describe("a photo reply from the app (A8)", () => {
     expect(result.response.status).toBe(201);
     const [row] = await h.db.select().from(replies);
     expect(row).toMatchObject({ kind: "photo", mediaId: sent, channel: "app" });
+    // The family sees the photo itself, not a line about it.
+    const shown = await exchangeRow(h.db, answered, { id: seed.member.id, displayName: "Mom" });
+    expect(shown.replies).toEqual([
+      {
+        from: "Mia",
+        kind: "photo",
+        text: null,
+        photo: { id: sent, width: expect.any(Number), height: expect.any(Number), stored: true },
+      },
+    ]);
     h.clock.set(at(TOMORROW, "08:00"));
     await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
     const message = await arrivalMessage();

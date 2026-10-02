@@ -10,7 +10,7 @@ import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { photoRefusal, uploadMedia, uploadVoice } from "../../src/api/upload.ts";
 import type { Recorded } from "../../src/audio/useRecording.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
-import { ExchangePhotos } from "../../src/components/family-photo.tsx";
+import { ExchangePhotos, ReplyPhoto } from "../../src/components/family-photo.tsx";
 import { type ChosenPhoto, PhotoReply } from "../../src/components/photo-reply.tsx";
 import {
   Card,
@@ -237,9 +237,12 @@ export default function ExchangeScreen() {
             </Words>
           ) : (
             replies.map((reply) => (
-              <Words key={reply.id} variant="body" tone="ink2">
-                {replyLine(reply.from, reply.kind, reply.text)}
-              </Words>
+              <View key={reply.id} style={{ gap: space.s }}>
+                <Words variant="body" tone="ink2">
+                  {replyLine(reply.from, reply.kind, reply.text)}
+                </Words>
+                {reply.photo === undefined ? null : <ReplyPhoto photo={reply.photo} size="full" />}
+              </View>
             ))
           )}
         </View>

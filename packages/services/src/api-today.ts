@@ -47,7 +47,16 @@ const Uuid = z.uuid();
  * copied to storage.
  */
 async function photosOf(db: Queryable, exchange: Exchange): Promise<ApiTodayExchange["photos"]> {
-  if (exchange.mediaIds.length === 0) return [];
+  return photosById(db, exchange.familyId, exchange.mediaIds);
+}
+
+/** The family's images with these ids, in this order, as the app shows them; a gone one is left out. */
+async function photosById(
+  db: Queryable,
+  familyId: string,
+  ids: readonly string[],
+): Promise<ApiTodayExchange["photos"]> {
+  if (ids.length === 0) return [];
   const rows = await db
     .select({
       id: media.id,
@@ -57,15 +66,9 @@ async function photosOf(db: Queryable, exchange: Exchange): Promise<ApiTodayExch
       mime: media.mime,
     })
     .from(media)
-    .where(
-      and(
-        eq(media.familyId, exchange.familyId),
-        inArray(media.id, exchange.mediaIds),
-        eq(media.kind, "image"),
-      ),
-    );
+    .where(and(eq(media.familyId, familyId), inArray(media.id, [...ids]), eq(media.kind, "image")));
   const byId = new Map(rows.map((row) => [row.id.toLowerCase(), row]));
-  return exchange.mediaIds.flatMap((id) => {
+  return ids.flatMap((id) => {
     const row = byId.get(id.toLowerCase());
     if (row === undefined) return [];
     return [
@@ -135,6 +138,7 @@ export async function exchangeRow(
       from: members.displayName,
       kind: replies.kind,
       text: replies.text,
+      mediaId: replies.mediaId,
     })
     .from(replies)
     .innerJoin(members, eq(members.id, replies.memberId))
@@ -158,7 +162,15 @@ export async function exchangeRow(
             at: answer.receivedAt.toISOString(),
             ...(await pickedPhoto(db, exchange)),
           },
-    replies: replyRows,
+    replies: await Promise.all(
+      replyRows.map(async ({ mediaId, ...reply }) => ({
+        ...reply,
+        photo:
+          reply.kind === "photo" && mediaId !== null
+            ? ((await photosById(db, exchange.familyId, [mediaId]))[0] ?? null)
+            : null,
+      })),
+    ),
     seen_at: exchange.seenAt?.toISOString() ?? null,
     replies_reach_her: (await readBackExchangeId(db, recipient.id)) === exchange.id,
     photos: await photosOf(db, exchange),

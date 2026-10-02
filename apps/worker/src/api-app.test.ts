@@ -113,7 +113,7 @@ const TODAY: ApiToday = {
         picked_media_id: null,
         picked_number: null,
       },
-      replies: [{ from: "Synthetic user", kind: "heart", text: null }],
+      replies: [{ from: "Synthetic user", kind: "heart", text: null, photo: null }],
       seen_at: null,
       replies_reach_her: true,
       photos: [],

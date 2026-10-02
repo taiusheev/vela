@@ -32,8 +32,8 @@ const exchange = {
     picked_number: null,
   },
   replies: [
-    { from: "Mia", kind: "heart", text: null },
-    { from: "Anna", kind: "text", text: "Those are the seeds you saved" },
+    { from: "Mia", kind: "heart", text: null, photo: null },
+    { from: "Anna", kind: "text", text: "Those are the seeds you saved", photo: null },
   ],
   seen_at: "2026-09-23T08:10:00+08:00",
   replies_reach_her: true,

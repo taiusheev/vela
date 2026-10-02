@@ -257,10 +257,25 @@ export const ApiTodayAnswer = z.object({
 });
 export type ApiTodayAnswer = z.infer<typeof ApiTodayAnswer>;
 
+/**
+ * A photo of an exchange as the app shows it (ADR-33). `stored` says whether the API can show it
+ * (`GET /v1/families/:familyId/media/:id`); one Telegram alone holds cannot be, and the app shows a
+ * placeholder.
+ */
+export const ApiExchangePhoto = z.object({
+  id: z.uuid(),
+  width: z.number().int().positive().nullable(),
+  height: z.number().int().positive().nullable(),
+  stored: z.boolean(),
+});
+export type ApiExchangePhoto = z.infer<typeof ApiExchangePhoto>;
+
 export const ApiTodayReply = z.object({
   from: z.string(),
   kind: ReplyKind,
   text: z.string().nullable(),
+  /** A photo reply's photo, shown as itself; null for any other reply, or once it is deleted. */
+  photo: ApiExchangePhoto.nullable(),
 });
 export type ApiTodayReply = z.infer<typeof ApiTodayReply>;
 
@@ -288,14 +303,7 @@ export const ApiTodayExchange = z.object({
    * one Telegram alone holds cannot be, and the app shows a placeholder. A photo deleted after its
    * 30 days is no longer listed.
    */
-  photos: z.array(
-    z.object({
-      id: z.uuid(),
-      width: z.number().int().positive().nullable(),
-      height: z.number().int().positive().nullable(),
-      stored: z.boolean(),
-    }),
-  ),
+  photos: z.array(ApiExchangePhoto),
 });
 export type ApiTodayExchange = z.infer<typeof ApiTodayExchange>;
 

@@ -184,3 +184,31 @@ export function ExchangePhotos({
     </View>
   );
 }
+
+/**
+ * The photos the family sent back, each under the line that says who sent it: thumbnails on Today
+ * and in Exchanges, the whole width on one exchange. Never numbered, never ringed.
+ */
+export function ReplyPhoto({ photo, size }: { photo: ExchangePhoto; size: PhotoSize }) {
+  const { familyId } = useToday();
+  return (
+    <FamilyPhoto
+      familyId={familyId}
+      photo={photo}
+      size={size}
+      aspectRatio={size === "full" ? shapeOf(photo) : 1}
+    />
+  );
+}
+
+/** The family's reply photos on a card, as thumbnails in a row; nothing when there are none. */
+export function ReplyThumbnails({ photos }: { photos: readonly ExchangePhoto[] }) {
+  if (photos.length === 0) return null;
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+      {photos.map((photo) => (
+        <ReplyPhoto key={photo.id} photo={photo} size={72} />
+      ))}
+    </View>
+  );
+}

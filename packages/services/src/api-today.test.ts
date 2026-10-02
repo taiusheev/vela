@@ -165,8 +165,8 @@ describe("loadApiToday", () => {
           picked_number: null,
         },
         replies: [
-          { from: "Mia", kind: "heart", text: null },
-          { from: "Mia", kind: "text", text: "Those are the seeds you saved" },
+          { from: "Mia", kind: "heart", text: null, photo: null },
+          { from: "Mia", kind: "text", text: "Those are the seeds you saved", photo: null },
         ],
         seen_at: null,
         replies_reach_her: true,

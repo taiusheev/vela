@@ -18,6 +18,8 @@ export interface ExchangeReply {
    */
   kind: ReplyKind;
   text?: string;
+  /** A photo reply's photo, shown as itself rather than as words. */
+  photo?: ExchangePhoto;
 }
 
 export interface ExchangeAnswer {

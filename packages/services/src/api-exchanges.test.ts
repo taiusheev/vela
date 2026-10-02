@@ -86,7 +86,7 @@ describe("loadApiExchanges", () => {
         asker_name: "Mia",
         ask: "What did the garden look like?",
         answer: expect.objectContaining({ text: "The tomatoes turned." }),
-        replies: [{ from: "Mia", kind: "heart", text: null }],
+        replies: [{ from: "Mia", kind: "heart", text: null, photo: null }],
         scheduled_for: addDays(today(), -1),
         delivered_at: daysAgo(1).toISOString(),
       }),
