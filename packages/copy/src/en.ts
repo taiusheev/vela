@@ -165,6 +165,29 @@ export const en = {
   "weekly_read.nobody_asked": "Nobody in the family asked {name} anything this week.",
   "weekly_read.suggestion": "Something to ask next week: {suggestion}",
   "help.private": "Hello. To set up Vela for your family, send /start.",
+  "nearby.request":
+    "{organiser} asks: you live near {name}. On a day when {name} hasn't answered and {organiser} can't get through, may {organiser} ask you, through Vela, to go round? Vela never writes to you on its own: any request comes from {organiser}. If you say yes, Vela keeps your name and this Telegram account until you or {organiser} remove them. You can say no, or change your mind at any time by sending stop. Vela is a pilot run by Timur Aiusheev. How your details are used: {notice}",
+  "nearby.yes": "Yes, I'm happy to",
+  "nearby.no": "No, thank you",
+  "nearby.accepted":
+    "Thank you. Vela will write to you only if {organiser} asks you to look in on {name}. Send stop at any time to be removed.",
+  "nearby.declined": "That's fine. Your details have been deleted, and nobody will ask again.",
+  "nearby.already_listed": "You are already listed near {name}. Nothing has changed.",
+  "nearby.ask":
+    "{organiser} asks: could you look in on {name} today? {name} hasn't answered this morning.",
+  "nearby.ask_yes": "I'll look in",
+  "nearby.ask_no": "Can't today",
+  "nearby.thanks_yes": "Thank you. {organiser} knows you'll look in.",
+  "nearby.thanks_no": "Thank you for letting {organiser} know. That's completely fine.",
+  "nearby.stand_down": "{name} has answered now, so there is no need to look in. Thank you.",
+  "nearby.removed": "You have been removed. Vela will not write to you again.",
+  "nearby.help":
+    "Vela writes to you only when a family that listed you asks you to look in. Send stop to be removed.",
+  "organiser.nearby_yes":
+    "{contact} said yes. On a quiet morning you can now ask {contact} to look in on {name}.",
+  "organiser.nearby_no": "{contact} said no, so {contact} is no longer listed near {name}.",
+  "organiser.look_in_yes": "{contact} will look in on {name}.",
+  "organiser.look_in_no": "{contact} can't today.",
   "onboarding.welcome":
     "Hello, I'm Vela. Let's set up a light for someone in your family. It takes two minutes.",
   "onboarding.ask_name": "What do you call them? For example: Mom, Grandma, Dad.",

@@ -1952,7 +1952,14 @@ describe("nearby contacts' numbers", () => {
       name: "a number kept after a no",
       fields: { phone: "+886912345678", consentedAt: CONSENTED_AT, declinedAt: DECLINED_AT },
     },
-    { name: "a standing yes without a number", fields: { consentedAt: CONSENTED_AT } },
+    {
+      name: "a standing yes without a number or an account",
+      fields: { consentedAt: CONSENTED_AT },
+    },
+    {
+      name: "a Telegram account without a yes",
+      fields: { externalId: "5551234", channel: "telegram" },
+    },
   ])("rejects $name", async ({ fields }) => {
     const seed = await seedFamily();
 
@@ -1960,7 +1967,28 @@ describe("nearby contacts' numbers", () => {
 
     expect(error).toEqual({
       code: CHECK_VIOLATION,
-      constraint: "nearby_contacts_phone_consented_check",
+      constraint: "nearby_contacts_reach_consented_check",
+    });
+  });
+
+  it("keeps a Telegram account with its yes, on Telegram only", async () => {
+    const seed = await seedFamily();
+    await db
+      .insert(nearbyContacts)
+      .values(
+        contactFor(seed, { externalId: "5551234", channel: "telegram", consentedAt: CONSENTED_AT }),
+      );
+
+    const error = await rejection(
+      db
+        .insert(nearbyContacts)
+        .values(
+          contactFor(seed, { externalId: "5559876", channel: "sms", consentedAt: CONSENTED_AT }),
+        ),
+    );
+    expect(error).toEqual({
+      code: CHECK_VIOLATION,
+      constraint: "nearby_contacts_external_channel_check",
     });
   });
 });
@@ -2091,7 +2119,8 @@ describe("CHECK constraints on enumerated columns", () => {
       "consents_subject_ref_check",
       "consents_withdrawn_at_check",
       "consents_subject_deleted_check",
-      "nearby_contacts_phone_consented_check",
+      "nearby_contacts_reach_consented_check",
+      "nearby_contacts_external_channel_check",
       "deletions_content_hash_check",
       "api_request_receipts_hashes_check",
       "api_request_receipts_expiry_check",

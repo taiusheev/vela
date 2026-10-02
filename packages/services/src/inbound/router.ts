@@ -8,6 +8,7 @@
  * family's own conversation is not Vela's. And nothing the kept-light member sends counts before
  * she has tapped Yes, after a No, or once she is left or deceased (§3.9).
  */
+
 import type { InboundEvent, InboundKind } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { decodeButton, outboundKey, parseParentCommand } from "@vela/core";
@@ -34,6 +35,13 @@ import {
   resolveGroupSender,
   sendOutsideGateway,
 } from "../group.ts";
+import { handleLookInButton } from "../nearby-ask.ts";
+import {
+  handleNearbyConsentButton,
+  handleNearbyMessage,
+  handleNearbyStart,
+  isNearbyStart,
+} from "../nearby-consent.ts";
 import { handleOnboarding } from "../onboarding.ts";
 import { handleParentCommand } from "../parent-commands.ts";
 import { handleQuietButton } from "../quiet.ts";
@@ -151,11 +159,19 @@ async function routePrivate(deps: Deps, event: InboundEvent): Promise<void> {
   if (!PRIVATE_MESSAGE_KINDS.has(event.kind)) {
     return;
   }
+  if (event.kind === "start" && isNearbyStart(event.startParam)) {
+    await handleNearbyStart(deps, event);
+    return;
+  }
   if (event.kind === "start" && (event.startParam?.trim() ?? "").length > 0) {
     await handleInviteStart(deps, event);
     return;
   }
   const linked = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
+  // Someone listed near her writes only to say stop, or to ask what this is (ADR-36).
+  if (linked === null && event.kind !== "start" && (await handleNearbyMessage(deps, event))) {
+    return;
+  }
   if (linked === null || event.kind === "start") {
     // Onboarding owns a /start and everything typed into a live session; it tells us when the
     // event was none of its business.
@@ -222,6 +238,12 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
     case "pick":
     case "vote":
       await routeAnswerButton(deps, event, action);
+      return;
+    case "nearby_consent":
+      await handleNearbyConsentButton(deps, event, action);
+      return;
+    case "look_in":
+      await handleLookInButton(deps, event, action);
       return;
   }
 }

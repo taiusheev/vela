@@ -172,6 +172,8 @@ export default function TodayScreen() {
   const [quietOpen, setQuietOpen] = useState(false);
   // How the example notice was settled; its sentence is chosen as it renders, in the language shown.
   const [resolution, setResolution] = useState<"fine" | "wait" | undefined>();
+  // The demo's ask to look in: answered by Lena a moment later, as a neighbour would.
+  const [demoAsked, setDemoAsked] = useState<string[]>([]);
   const insets = useSafeAreaInsets();
   const day = useToday();
   const { trouble, noAccount, noFamily, live, organiser, familyId } = day;
@@ -226,6 +228,11 @@ export default function TodayScreen() {
     ? liveQuiet.notice
     : {
         ...quietFixtureFor(name),
+        contacts: quietFixtureFor(name).contacts.map((contact) =>
+          demoAsked.includes(contact.id)
+            ? { ...contact, asked: { at: "11:20", reply: "yes" as const } }
+            : contact,
+        ),
         resolution:
           resolution === "fine"
             ? t`You said ${name} is fine. Nothing else was sent.`
@@ -295,6 +302,11 @@ export default function TodayScreen() {
             if (live) liveQuiet.settle("wait");
             else setResolution("wait");
           }}
+          onAskToLookIn={(contactId) => {
+            if (live) liveQuiet.askToLookIn(contactId);
+            else setDemoAsked((earlier) => [...earlier, contactId]);
+          }}
+          asking={live && liveQuiet.asking}
           onClose={() => {
             setQuietOpen(false);
             setOpenEventId(undefined);

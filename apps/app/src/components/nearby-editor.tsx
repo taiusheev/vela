@@ -1,19 +1,29 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Share, View } from "react-native";
 import type { NearbyView } from "../data/useNearby.ts";
 import { hitSlop, space } from "../theme/tokens.ts";
 import { Card, Hairline, PrimaryButton, TextField, Words } from "./ui.tsx";
 
 /**
  * The people nearby one kept-light member (spec A3): who is there, where each one's yes stands,
- * Remove, and a name and relation to add someone while there is room. Never a number: the founder
- * asks each one and adds the number with their yes, so nobody hears from Vela by being added here.
+ * Ask on Telegram for anyone who has not said yes, Remove, and a name and relation to add someone
+ * while there is room. Never a number: nobody hears from Vela by being added here, only once they
+ * open the link the organiser sends them (ADR-36).
  */
 export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyView }) {
   const { t } = useLingui();
   const [person, setPerson] = useState("");
   const [relation, setRelation] = useState("");
+  // The link goes from the organiser's own phone, in their own words around it: Vela writes to
+  // nobody until they open it (ADR-36).
+  const askOnTelegram = async (contactId: string, who: string) => {
+    const link = await nearby.invite(contactId);
+    if (link === null) return;
+    await Share.share({
+      message: t`Hello ${who}. Could I list you on Vela as someone near ${name}, so I could ask you to look in on a day ${name} hasn't answered? Open this in Telegram to read what it means and say yes or no: ${link}`,
+    });
+  };
   const submit = async () => {
     if (await nearby.add(person, relation)) {
       setPerson("");
@@ -48,6 +58,19 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                       {contact.consent}
                     </Words>
                   </View>
+                  {contact.saidYes ? null : (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t`Ask ${who} on Telegram`}
+                      hitSlop={hitSlop}
+                      disabled={nearby.changing}
+                      onPress={() => void askOnTelegram(contact.id, who)}
+                    >
+                      <Words variant="button" tone="action">
+                        <Trans>Ask on Telegram</Trans>
+                      </Words>
+                    </Pressable>
+                  )}
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t`Remove ${who}`}

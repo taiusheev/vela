@@ -70,6 +70,8 @@ function randomAction(random: () => number): ButtonAction {
       "fine",
       "wait",
       "notice_read",
+      "nearby_consent",
+      "look_in",
       "onboarding",
     ])
   ) {
@@ -95,6 +97,10 @@ function randomAction(random: () => number): ButtonAction {
       return { type: "quiet_wait", quietEventId: uuidv7(random) };
     case "notice_read":
       return { type: "notice_read", familyChannelId: uuidv7(random) };
+    case "nearby_consent":
+      return { type: "nearby_consent", contactId: uuidv7(random), accept: random() < 0.5 };
+    case "look_in":
+      return { type: "look_in", quietEventId: uuidv7(random), accept: random() < 0.5 };
     default:
       return {
         type: "onboarding",

@@ -10,9 +10,11 @@ import type {
   ApiExchangePage,
   ApiFamily,
   ApiLeft,
+  ApiLookInAsk,
   ApiMe,
   ApiMemberPause,
   ApiNearbyContact,
+  ApiNearbyInvite,
   ApiNearbyRemoved,
   ApiPushDevice,
   ApiPushDeviceRemoved,
@@ -366,6 +368,33 @@ export function settleQuiet(
   token: string | null,
 ): Promise<ApiQuietState> {
   return call<ApiQuietState>({ path: `/v1/quiet/${quietEventId}/${action}`, token, key, body: {} });
+}
+
+/** "Ask them to look in" (ADR-36): one contact on one quiet morning; a repeat answers the same ask. */
+export function askToLookIn(
+  quietEventId: string,
+  contactId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiLookInAsk> {
+  return call<ApiLookInAsk>({
+    path: `/v1/quiet/${quietEventId}/ask-to-check`,
+    token,
+    key,
+    body: { contact_id: contactId },
+  });
+}
+
+/**
+ * The link to share with someone nearby so they can say yes on Telegram (ADR-36). Each call mints a
+ * new link that voids the one before, so it is asked for when the organiser taps, not ahead.
+ */
+export function inviteNearby(
+  contactId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiNearbyInvite> {
+  return call<ApiNearbyInvite>({ path: `/v1/nearby/${contactId}/invite`, token, key, body: {} });
 }
 
 /**

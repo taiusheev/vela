@@ -22,6 +22,10 @@ msgstr "{asker}提問"
 msgid "{asker} asked {recipient}"
 msgstr "{asker}問{recipient}"
 
+#: src/components/quiet-notice.tsx
+msgid "{by} asked at {time}. Waiting for {name}."
+msgstr "{by}在 {time} 問了，正在等{name}回覆。"
+
 #: src/data/useQuiet.ts
 msgid "{by} said {name} is fine. Everyone who was told has heard."
 msgstr "{by}說{name}沒事。收到通知的每個人都已經知道了。"
@@ -82,6 +86,10 @@ msgstr "{name}回覆了。接下來 30 天，Vela Light 免費開啟，讓您先
 msgid "{name} answered. The light is lit again."
 msgstr "{name}回覆了。燈又亮了。"
 
+#: src/components/quiet-notice.tsx
+msgid "{name} can't today."
+msgstr "{name}今天沒辦法。"
+
 #: src/data/family.ts
 msgid "{name} has not said yes yet"
 msgstr "{name}還沒有同意"
@@ -117,6 +125,10 @@ msgstr "{name}說不要"
 #: src/data/family.ts
 msgid "{name} said yes"
 msgstr "{name}同意了"
+
+#: src/components/quiet-notice.tsx
+msgid "{name} will look in."
+msgstr "{name}會過去看看。"
 
 #: app/(tabs)/sunday.tsx
 msgid "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
@@ -292,6 +304,10 @@ msgstr "問{name}一件事"
 msgid "Ask {recipient} something"
 msgstr "問{recipient}一件事"
 
+#: src/components/nearby-editor.tsx
+msgid "Ask {who} on Telegram"
+msgstr "在 Telegram 上問{who}"
+
 #: src/data/family.ts
 msgid "Ask and reply · free"
 msgstr "提問和回覆 · 免費"
@@ -299,6 +315,10 @@ msgstr "提問和回覆 · 免費"
 #: src/data/weekly.ts
 msgid "Ask her which seeds she wants to keep for next spring."
 msgstr "問問媽媽明年春天想留哪些種子。"
+
+#: src/components/nearby-editor.tsx
+msgid "Ask on Telegram"
+msgstr "在 Telegram 上問"
 
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
@@ -308,7 +328,12 @@ msgstr "請對方過去看看"
 msgid "Asked at {time}"
 msgstr "提問時間 {time}"
 
+#: src/components/quiet-notice.tsx
+msgid "Asked at {time}. Waiting for {name}."
+msgstr "已在 {time} 問了，正在等{name}回覆。"
+
 #: src/components/push-offer.tsx
+#: src/components/quiet-notice.tsx
 msgid "Asking…"
 msgstr "正在詢問…"
 
@@ -459,6 +484,7 @@ msgstr "早安。您的訊息來了。"
 
 #: src/components/quiet-notice.tsx
 #: src/data/family.ts
+#: src/data/useNearby.ts
 msgid "Has not said yes yet"
 msgstr "還沒有同意"
 
@@ -473,6 +499,10 @@ msgstr "{name}回覆時，在這支手機上收到通知。"
 #: app/exchange/[id].tsx
 msgid "Heart"
 msgstr "愛心"
+
+#: src/components/nearby-editor.tsx
+msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
+msgstr "{who}您好。我可以在 Vela 上把您列為住在{name}附近的人嗎？這樣如果哪天{name}沒有回覆，我可以請您過去看看。請用 Telegram 打開這個連結，看看這代表什麼，再回答好或不好： {link}"
 
 #. stands in for her name
 #. stands in for her name
@@ -1433,8 +1463,8 @@ msgid "Up to two people who could look in if a morning goes quiet: a neighbour, 
 msgstr "最多兩位住在附近、在早上安靜時可以過去看看的人：例如鄰居、樓下的朋友。Vela 會先徵求每一位的同意，在那之前，沒有人會收到 Vela 的訊息。"
 
 #: app/nearby.tsx
-msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Vela asks each of them first. Until they say yes, you can call them yourself."
-msgstr "最多兩位住在{name}附近、在早上安靜時可以過去看看的人。Vela 會先徵求每一位的同意。在對方同意之前，您可以自己打電話給對方。"
+msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
+msgstr "最多兩位住在{name}附近、如果哪天早上比較安靜可以過去看看的人。用「在 Telegram 上問」傳連結給每一位：只有在對方打開連結後，Vela 才會以您的名義傳訊息問對方。在對方同意之前，您可以自己打電話給對方。"
 
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
@@ -1456,10 +1486,6 @@ msgstr "使用這個建議"
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
 msgstr "通常在 {time} 前回覆"
-
-#: src/data/useNearby.ts
-msgid "Vela asks them first"
-msgstr "Vela 會先徵求同意"
 
 #: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."

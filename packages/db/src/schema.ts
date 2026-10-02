@@ -421,6 +421,20 @@ export const nearbyContacts = pgTable(
      */
     phone: text("phone"),
     channel: text("channel", { enum: NEARBY_CONTACT_CHANNELS }),
+    /**
+     * Their own Telegram account (the user id, which is also their private chat with the bot),
+     * stored with their yes to the message Vela sent in the organiser's name (ADR-36), so an
+     * organiser can ask them to look in on a quiet day. Like the number, held exactly while that yes
+     * stands.
+     */
+    externalId: text("external_id"),
+    /**
+     * The SHA-256 of the link an organiser shared to ask them (ADR-36), while it is waiting; cleared
+     * by their answer, and replaced when an organiser asks again, which voids the earlier link.
+     */
+    inviteTokenHash: text("invite_token_hash").unique("nearby_contacts_invite_token_hash_key"),
+    /** The organiser whose link it is, in whose name Vela asks them (ADR-36). */
+    invitedBy: uuid("invited_by").references(() => members.id, { onDelete: "set null" }),
     consentRequestedAt: timestamptz("consent_requested_at"),
     consentedAt: timestamptz("consented_at"),
     declinedAt: timestamptz("declined_at"),
@@ -428,12 +442,21 @@ export const nearbyContacts = pgTable(
   },
   (t) => [
     check("nearby_contacts_channel_check", isOneOf(t.channel, NEARBY_CONTACT_CHANNELS)),
-    // A number without a standing yes is a third person's data held without their agreement, and a
-    // yes without a number would list a contact nobody can call.
+    // A number or an account without a standing yes is a third person's data held without their
+    // agreement, and a yes with neither would list a contact nobody can reach.
     check(
-      "nearby_contacts_phone_consented_check",
-      sql`(${sql.identifier(t.phone.name)} is not null) = (${sql.identifier(t.consentedAt.name)} is not null and ${sql.identifier(t.declinedAt.name)} is null)`,
+      "nearby_contacts_reach_consented_check",
+      sql`(${sql.identifier(t.phone.name)} is not null or ${sql.identifier(t.externalId.name)} is not null) = (${sql.identifier(t.consentedAt.name)} is not null and ${sql.identifier(t.declinedAt.name)} is null)`,
     ),
+    // An account is a Telegram account, so it is reached on Telegram.
+    check(
+      "nearby_contacts_external_channel_check",
+      sql`${sql.identifier(t.externalId.name)} is null or ${sql.identifier(t.channel.name)} = 'telegram'`,
+    ),
+    // One person is near her once.
+    uniqueIndex("nearby_contacts_member_external_idx")
+      .on(t.memberId, t.externalId)
+      .where(sql`${sql.identifier(t.externalId.name)} is not null`),
   ],
 );
 

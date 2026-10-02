@@ -124,6 +124,8 @@ export { errorLabel, VelaError } from "./errors.ts";
 export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
+export { askApiToLookIn, LookInRefusedError } from "./nearby-ask.ts";
+export { inviteApiNearby, NearbyInviteRefusedError } from "./nearby-consent.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 export type { DeviceAlerts } from "./push-devices.ts";
 export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";

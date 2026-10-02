@@ -545,7 +545,7 @@ describe("recordContactConsent", () => {
         .update(nearbyContacts)
         .set({ declinedAt: h.clock.now() })
         .where(eq(nearbyContacts.id, contact.id)),
-    ).rejects.toMatchObject({ cause: { constraint: "nearby_contacts_phone_consented_check" } });
+    ).rejects.toMatchObject({ cause: { constraint: "nearby_contacts_reach_consented_check" } });
   });
 });
 

@@ -15,6 +15,10 @@ msgstr "{asker} asked"
 msgid "{asker} asked {recipient}"
 msgstr "{asker} asked {recipient}"
 
+#: src/components/quiet-notice.tsx
+msgid "{by} asked at {time}. Waiting for {name}."
+msgstr "{by} asked at {time}. Waiting for {name}."
+
 #: src/data/useQuiet.ts
 msgid "{by} said {name} is fine. Everyone who was told has heard."
 msgstr "{by} said {name} is fine. Everyone who was told has heard."
@@ -75,6 +79,10 @@ msgstr "{name} answered. For 30 days, Vela Light is on for free, so you can see 
 msgid "{name} answered. The light is lit again."
 msgstr "{name} answered. The light is lit again."
 
+#: src/components/quiet-notice.tsx
+msgid "{name} can't today."
+msgstr "{name} can't today."
+
 #: src/data/family.ts
 msgid "{name} has not said yes yet"
 msgstr "{name} has not said yes yet"
@@ -110,6 +118,10 @@ msgstr "{name} said no"
 #: src/data/family.ts
 msgid "{name} said yes"
 msgstr "{name} said yes"
+
+#: src/components/quiet-notice.tsx
+msgid "{name} will look in."
+msgstr "{name} will look in."
 
 #: app/(tabs)/sunday.tsx
 msgid "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
@@ -285,6 +297,10 @@ msgstr "Ask {name} something"
 msgid "Ask {recipient} something"
 msgstr "Ask {recipient} something"
 
+#: src/components/nearby-editor.tsx
+msgid "Ask {who} on Telegram"
+msgstr "Ask {who} on Telegram"
+
 #: src/data/family.ts
 msgid "Ask and reply · free"
 msgstr "Ask and reply · free"
@@ -292,6 +308,10 @@ msgstr "Ask and reply · free"
 #: src/data/weekly.ts
 msgid "Ask her which seeds she wants to keep for next spring."
 msgstr "Ask her which seeds she wants to keep for next spring."
+
+#: src/components/nearby-editor.tsx
+msgid "Ask on Telegram"
+msgstr "Ask on Telegram"
 
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
@@ -301,7 +321,12 @@ msgstr "Ask them to look in"
 msgid "Asked at {time}"
 msgstr "Asked at {time}"
 
+#: src/components/quiet-notice.tsx
+msgid "Asked at {time}. Waiting for {name}."
+msgstr "Asked at {time}. Waiting for {name}."
+
 #: src/components/push-offer.tsx
+#: src/components/quiet-notice.tsx
 msgid "Asking…"
 msgstr "Asking…"
 
@@ -452,6 +477,7 @@ msgstr "Good morning. Your message is here."
 
 #: src/components/quiet-notice.tsx
 #: src/data/family.ts
+#: src/data/useNearby.ts
 msgid "Has not said yes yet"
 msgstr "Has not said yes yet"
 
@@ -466,6 +492,10 @@ msgstr "Hear it on this phone when {name} answers."
 #: app/exchange/[id].tsx
 msgid "Heart"
 msgstr "Heart"
+
+#: src/components/nearby-editor.tsx
+msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
+msgstr "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
 
 #. stands in for her name
 #. stands in for her name
@@ -1426,8 +1456,8 @@ msgid "Up to two people who could look in if a morning goes quiet: a neighbour, 
 msgstr "Up to two people who could look in if a morning goes quiet: a neighbour, a friend downstairs. Vela asks each of them first, and nobody hears from Vela until then."
 
 #: app/nearby.tsx
-msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Vela asks each of them first. Until they say yes, you can call them yourself."
-msgstr "Up to two people who live close to {name} and could look in if a morning goes quiet. Vela asks each of them first. Until they say yes, you can call them yourself."
+msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
+msgstr "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
 
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
@@ -1449,10 +1479,6 @@ msgstr "Use this suggestion"
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
 msgstr "Usually answers by {time}"
-
-#: src/data/useNearby.ts
-msgid "Vela asks them first"
-msgstr "Vela asks them first"
 
 #: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."

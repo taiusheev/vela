@@ -621,16 +621,41 @@ export const ApiQuietNotice = z.object({
       by_name: z.string().nullable(),
     })
     .nullable(),
+  /**
+   * The people nearby who said yes: with the number to call when they gave one, and, when they said
+   * yes on Telegram, whether they can be asked to look in and how this morning's ask stands.
+   */
   contacts: z.array(
     z.object({
       id: z.uuid(),
       name: z.string(),
       relation: z.string().nullable(),
-      phone: z.string(),
+      phone: z.string().nullable(),
+      can_ask: z.boolean(),
+      asked: z
+        .object({
+          at: z.iso.datetime({ offset: true }),
+          by_name: z.string().nullable(),
+          reply: z.enum(["yes", "no"]).nullable(),
+        })
+        .nullable(),
     }),
   ),
 });
 export type ApiQuietNotice = z.infer<typeof ApiQuietNotice>;
+
+/** "Ask them to look in" (`POST /v1/quiet/:quietEventId/ask-to-check`), ADR-36. */
+export const AskToLookIn = z.strictObject({ contact_id: z.uuid() });
+export type AskToLookIn = z.infer<typeof AskToLookIn>;
+
+/** What asking answers: the ask as it stands, a repeat on the same morning included. */
+export const ApiLookInAsk = z.object({
+  quiet_event_id: z.uuid(),
+  contact_id: z.uuid(),
+  asked_at: z.iso.datetime({ offset: true }),
+  reply: z.enum(["yes", "no"]).nullable(),
+});
+export type ApiLookInAsk = z.infer<typeof ApiLookInAsk>;
 
 /** "She's fine" and "wait 2 hours" carry nothing but the event in their path. */
 export const QuietAction = z.strictObject({});
@@ -742,6 +767,14 @@ export type AddNearby = z.infer<typeof AddNearby>;
 
 /** Removing someone nearby takes no body: the contact is in the path. */
 export const RemoveNearby = z.strictObject({});
+
+/** Asking someone nearby on Telegram (`POST /v1/nearby/:contactId/invite`, ADR-36): no body. */
+export const InviteNearby = z.strictObject({});
+export type InviteNearby = z.infer<typeof InviteNearby>;
+
+/** The link to share with them, once: it is the only way in, and a new one voids it. */
+export const ApiNearbyInvite = z.object({ contact_id: z.uuid(), link: z.url() });
+export type ApiNearbyInvite = z.infer<typeof ApiNearbyInvite>;
 export type RemoveNearby = z.infer<typeof RemoveNearby>;
 
 /** What removing someone nearby answers, a replay included. */

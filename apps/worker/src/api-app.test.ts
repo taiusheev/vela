@@ -1,6 +1,7 @@
 import type {
   ApiComposedAsk,
   ApiCreatedFamily,
+  ApiErrorBody,
   ApiExchangePage,
   ApiFamily,
   ApiFamilyPlan,
@@ -20,7 +21,9 @@ import {
   AlreadyOrganiserError,
   ApiIdempotencyError,
   AskDayTakenError,
+  LookInRefusedError,
   MemberChangeRefusedError,
+  NearbyInviteRefusedError,
   NearbyRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
@@ -181,7 +184,16 @@ const QUIET_STATE: ApiQuietState = {
 const QUIET_NOTICE: ApiQuietNotice = {
   ...QUIET_STATE,
   resolved: null,
-  contacts: [{ id: MEMBER_ID, name: "Lena", relation: "neighbour", phone: "+886 2 1234 5678" }],
+  contacts: [
+    {
+      id: MEMBER_ID,
+      name: "Lena",
+      relation: "neighbour",
+      phone: "+886 2 1234 5678",
+      can_ask: false,
+      asked: null,
+    },
+  ],
 };
 const EXCHANGE_ID = "66666666-6666-7666-8666-666666666666";
 const REPLIES_PATH = `/v1/exchanges/${EXCHANGE_ID}/replies`;
@@ -349,6 +361,27 @@ function fixture(enableWrites = false, push?: boolean) {
       uploadApiVoice: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["uploadApiVoice"]>()
         .mockRejectedValue(new Error("no voice upload in these tests")),
+      askApiToLookIn: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["askApiToLookIn"]>()
+        .mockResolvedValue({
+          response: {
+            status: 201,
+            body: {
+              quiet_event_id: QUIET_ID,
+              contact_id: MEMBER_ID,
+              asked_at: "2026-09-22T03:10:00.000Z",
+              reply: null,
+            },
+          },
+          replayed: false,
+          after: { outboundIds: ["row-ask"], wakeMemberIds: [] },
+        }),
+      inviteApiNearby: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["inviteApiNearby"]>()
+        .mockResolvedValue({
+          contact_id: MEMBER_ID,
+          link: "https://t.me/vela_test_bot?start=nTOKEN",
+        }),
       registerApiPushDevice: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["registerApiPushDevice"]>()
         .mockResolvedValue({
@@ -2200,6 +2233,64 @@ describe("pausing and leaving", () => {
       404,
       NOT_FOUND,
     );
+  });
+});
+
+describe("someone nearby on Telegram (ADR-36)", () => {
+  const good = { authorization: "Bearer good" };
+  const ASK_PATH = `/v1/quiet/${QUIET_ID}/ask-to-check`;
+  const INVITE_PATH = `/v1/nearby/${MEMBER_ID}/invite`;
+
+  it("asks them to look in through the service, and hands its message to the queue", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(
+      writeRequest("POST", ASK_PATH, JSON.stringify({ contact_id: MEMBER_ID }), good),
+    );
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ quiet_event_id: QUIET_ID, reply: null });
+    expect(f.writes.services.askApiToLookIn).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      "request-1",
+      QUIET_ID,
+      { contact_id: MEMBER_ID },
+    );
+  });
+
+  it("answers a morning already settled, or someone who cannot be asked, with 409 and the reason", async () => {
+    for (const reason of ["settled", "cannot_be_asked"] as const) {
+      const f = fixture(true);
+      f.writes.services.askApiToLookIn.mockRejectedValue(new LookInRefusedError(reason));
+      const response = await f.app.request(
+        writeRequest("POST", ASK_PATH, JSON.stringify({ contact_id: MEMBER_ID }), good),
+      );
+      expect(response.status).toBe(409);
+      expect(((await response.json()) as ApiErrorBody).error.details).toEqual({ reason });
+    }
+  });
+
+  it("refuses an ask whose body is not one contact", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(writeRequest("POST", ASK_PATH, "{}", good));
+    expect(response.status).toBe(400);
+    expect(f.writes.services.askApiToLookIn).not.toHaveBeenCalled();
+  });
+
+  it("answers the link to share once, uncached, and 409 for someone already listed", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(writeRequest("POST", INVITE_PATH, "{}", good));
+    expect(response.status).toBe(201);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({
+      contact_id: MEMBER_ID,
+      link: "https://t.me/vela_test_bot?start=nTOKEN",
+    });
+
+    f.writes.services.inviteApiNearby.mockRejectedValue(
+      new NearbyInviteRefusedError("already_listed"),
+    );
+    const listed = await f.app.request(writeRequest("POST", INVITE_PATH, "{}", good));
+    expect(listed.status).toBe(409);
   });
 });
 

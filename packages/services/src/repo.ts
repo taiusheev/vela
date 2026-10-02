@@ -485,6 +485,24 @@ export type ListedNearbyContact = NearbyContact & { phone: string };
  * number exactly while a yes stands (`nearby_contacts_phone_consented_check`), so each has one; the
  * filter only tells the type so.
  */
+/** Everyone near her with a standing yes, by number or on Telegram, in the order they were added. */
+export async function listedNearbyContacts(
+  db: Queryable,
+  memberId: string,
+): Promise<NearbyContact[]> {
+  return db
+    .select()
+    .from(nearbyContacts)
+    .where(
+      and(
+        eq(nearbyContacts.memberId, memberId),
+        isNotNull(nearbyContacts.consentedAt),
+        isNull(nearbyContacts.declinedAt),
+      ),
+    )
+    .orderBy(nearbyContacts.createdAt, nearbyContacts.id);
+}
+
 export async function consentedNearbyContacts(
   db: Queryable,
   memberId: string,

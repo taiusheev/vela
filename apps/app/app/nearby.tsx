@@ -40,7 +40,8 @@ export default function NearbyScreen() {
             <Words variant="body" tone="ink2">
               <Trans>
                 Up to two people who live close to {name} and could look in if a morning goes quiet.
-                Vela asks each of them first. Until they say yes, you can call them yourself.
+                Send each one a link with Ask on Telegram: Vela writes to them only once they open
+                it, and asks them in your name. Until they say yes, you can call them yourself.
               </Trans>
             </Words>
             <NearbyEditor name={name} nearby={nearby} />

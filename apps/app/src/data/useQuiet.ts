@@ -3,7 +3,7 @@ import { useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiQuietNotice, ApiQuietState } from "@vela/contracts";
 import { useState } from "react";
-import { fetchQuiet, settleQuiet } from "../api/client.ts";
+import { askToLookIn, fetchQuiet, settleQuiet } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { timeOfDay, weekday } from "./format.ts";
@@ -88,9 +88,18 @@ export function toQuietNotice(notice: ApiQuietNotice): QuietNotice {
       name: contact.name,
       relation: contact.relation ?? t({ context: "relation", message: "nearby" }),
       consented: true,
-      phone: contact.phone,
+      ...(contact.phone === null ? {} : { phone: contact.phone }),
+      canAsk: contact.can_ask,
+      ...(contact.asked === null
+        ? {}
+        : {
+            asked: {
+              at: timeOfDay(contact.asked.at),
+              ...(contact.asked.by_name === null ? {} : { byName: contact.asked.by_name }),
+              reply: contact.asked.reply,
+            },
+          }),
     })),
-    canAskToCheck: false,
     ...(resolution === undefined ? {} : { resolution }),
   };
 }
@@ -98,6 +107,9 @@ export function toQuietNotice(notice: ApiQuietNotice): QuietNotice {
 export interface QuietView {
   notice: QuietNotice | undefined;
   settle(action: "fine" | "wait"): void;
+  /** Ask one contact to look in; the sheet then shows the ask, and later their answer. */
+  askToLookIn(contactId: string): void;
+  asking: boolean;
   settling: boolean;
   trouble: boolean;
 }
@@ -120,6 +132,22 @@ export function useQuiet(quietEventId: string | undefined, enabled: boolean): Qu
     queryKey: ["quiet", quietEventId],
     enabled: enabled && quietEventId !== undefined,
     queryFn: async () => fetchQuiet(quietEventId ?? "", await account.token()),
+    // Their answer to "could you look in?" arrives on its own: the sheet looks again each half minute.
+    refetchInterval: 30_000,
+  });
+
+  const lookInKey = useIdempotencyKey("look-in");
+  const lookIn = useMutation({
+    mutationFn: async (contactId: string) =>
+      askToLookIn(
+        quietEventId ?? "",
+        contactId,
+        lookInKey({ quietEventId, contactId }),
+        await account.token(),
+      ),
+    onSuccess: async () => {
+      await queries.invalidateQueries({ queryKey: ["quiet", quietEventId] });
+    },
   });
 
   const settle = useMutation({
@@ -147,6 +175,8 @@ export function useQuiet(quietEventId: string | undefined, enabled: boolean): Qu
           : { ...base, resolution: afterSettle },
     settle: (action) => settle.mutate(action),
     settling: settle.isPending,
-    trouble: read.isError || settle.isError,
+    askToLookIn: (contactId) => lookIn.mutate(contactId),
+    asking: lookIn.isPending,
+    trouble: read.isError || settle.isError || lookIn.isError,
   };
 }

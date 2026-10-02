@@ -122,7 +122,14 @@ describe("loadApiQuiet", () => {
       wait_until: null,
     });
     expect(notice.contacts).toEqual([
-      { id: expect.any(String), name: "Lena", relation: "neighbour", phone: "+886 2 1234 5678" },
+      {
+        id: expect.any(String),
+        name: "Lena",
+        relation: "neighbour",
+        phone: "+886 2 1234 5678",
+        can_ask: false,
+        asked: null,
+      },
     ]);
   });
 

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { Linking, Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +12,9 @@ interface QuietNoticeSheetProps {
   visible: boolean;
   onFine(): void;
   onWait(): void;
+  /** Ask one person nearby to look in (ADR-36); absent where nobody can be asked from here. */
+  onAskToLookIn?(contactId: string): void;
+  asking?: boolean;
   onClose(): void;
 }
 
@@ -24,6 +28,8 @@ export function QuietNoticeSheet({
   visible,
   onFine,
   onWait,
+  onAskToLookIn,
+  asking = false,
   onClose,
 }: QuietNoticeSheetProps) {
   const palette = usePalette();
@@ -78,27 +84,36 @@ export function QuietNoticeSheet({
                 {notice.contacts.map((contact) => (
                   <View key={contact.id} style={{ gap: space.s }}>
                     <Words variant="bodyMedium">{`${contact.name} · ${contact.relation}`}</Words>
-                    <View style={{ flexDirection: "row", gap: space.l }}>
-                      <Pressable
-                        accessibilityRole="button"
-                        hitSlop={hitSlop}
-                        onPress={() =>
-                          void Linking.openURL(
-                            contact.phone === undefined
-                              ? "tel:"
-                              : `tel:${contact.phone.replace(/[^\d+]/g, "")}`,
-                          )
-                        }
-                      >
-                        <Words variant="button" tone="action">
-                          <Trans>Call</Trans>
-                        </Words>
-                      </Pressable>
-                      {/* Nobody is asked to look in until they have said yes (spec §9). */}
-                      {contact.consented && notice.canAskToCheck !== false ? (
-                        <Pressable accessibilityRole="button" hitSlop={hitSlop}>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.l }}>
+                      {contact.phone === undefined ? null : (
+                        <Pressable
+                          accessibilityRole="button"
+                          hitSlop={hitSlop}
+                          onPress={() =>
+                            void Linking.openURL(
+                              `tel:${(contact.phone ?? "").replace(/[^\d+]/g, "")}`,
+                            )
+                          }
+                        >
                           <Words variant="button" tone="action">
-                            <Trans>Ask them to look in</Trans>
+                            <Trans>Call</Trans>
+                          </Words>
+                        </Pressable>
+                      )}
+                      {/* Nobody is asked to look in until they have said yes (spec §9). */}
+                      {contact.asked !== undefined ? (
+                        <Words variant="caption" tone="ink2">
+                          {askedLine(contact.name, contact.asked)}
+                        </Words>
+                      ) : contact.canAsk === true && onAskToLookIn !== undefined ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          hitSlop={hitSlop}
+                          disabled={asking}
+                          onPress={() => onAskToLookIn(contact.id)}
+                        >
+                          <Words variant="button" tone="action">
+                            {asking ? t`Asking…` : t`Ask them to look in`}
                           </Words>
                         </Pressable>
                       ) : contact.consented ? null : (
@@ -125,4 +140,18 @@ export function QuietNoticeSheet({
       </View>
     </Modal>
   );
+}
+
+/** How this morning's ask to look in stands, in one line with their name. */
+function askedLine(
+  name: string,
+  asked: { at: string; byName?: string; reply: "yes" | "no" | null },
+): string {
+  const time = asked.at;
+  if (asked.reply === "yes") return t`${name} will look in.`;
+  if (asked.reply === "no") return t`${name} can't today.`;
+  const by = asked.byName;
+  return by === undefined
+    ? t`Asked at ${time}. Waiting for ${name}.`
+    : t`${by} asked at ${time}. Waiting for ${name}.`;
 }

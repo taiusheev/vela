@@ -14,6 +14,10 @@ export interface NearbyContact {
   consented: boolean;
   /** Given with their yes, so the organiser can call; the family has no number for anyone else. */
   phone?: string;
+  /** They said yes on Telegram, so an organiser can ask them to look in from here (ADR-36). */
+  canAsk?: boolean;
+  /** This morning's ask: when, by whom, and what they answered. */
+  asked?: { at: string; byName?: string; reply: "yes" | "no" | null };
 }
 
 export interface QuietNotice {
@@ -22,8 +26,6 @@ export interface QuietNotice {
   usualTime?: string;
   /** When the ask reached her, for the label while her usual hour is not yet known. */
   sentAt?: string;
-  /** Asking a contact to look in needs a route that is not built yet; the example day shows it. */
-  canAskToCheck?: boolean;
   facts: string[];
   contacts: NearbyContact[];
   /** Set once she answers: the sheet closes itself and says so. */
@@ -47,6 +49,7 @@ export const quietFixtureFor = (name: string): QuietNotice => ({
       name: "Lena",
       relation: t({ comment: "who a nearby contact is to her", message: "neighbour" }),
       consented: true,
+      canAsk: true,
     },
     {
       id: "c2",

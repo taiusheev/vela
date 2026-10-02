@@ -37,7 +37,11 @@ export type ButtonAction =
    * "I've read it" under Vela's first group message, tapped by each adult in the group; the id is
    * the `family_channels` row the message was posted for (flows §3.3).
    */
-  | { type: "notice_read"; familyChannelId: string };
+  | { type: "notice_read"; familyChannelId: string }
+  /** A nearby contact's answer to being asked, in the organiser's name, to be asked (ADR-36). */
+  | { type: "nearby_consent"; contactId: string; accept: boolean }
+  /** A nearby contact's answer to "could you look in on her today?" on a quiet morning (ADR-36). */
+  | { type: "look_in"; quietEventId: string; accept: boolean };
 
 export const BUTTON_DATA_MAX_BYTES = 64;
 
@@ -116,6 +120,10 @@ export function encodeButton(action: ButtonAction): string {
       return `o:${action.step}:${action.value}`;
     case "notice_read":
       return `n:${compactId(action.familyChannelId, "familyChannelId")}:r`;
+    case "nearby_consent":
+      return `b:${compactId(action.contactId, "contactId")}:${action.accept ? "y" : "n"}`;
+    case "look_in":
+      return `l:${compactId(action.quietEventId, "quietEventId")}:${action.accept ? "y" : "n"}`;
   }
 }
 
@@ -171,6 +179,14 @@ export function decodeButton(data: string): ButtonAction | null {
       return null;
     case "n":
       return tail === "r" ? { type: "notice_read", familyChannelId: id } : null;
+    case "b":
+      if (tail === "y") return { type: "nearby_consent", contactId: id, accept: true };
+      if (tail === "n") return { type: "nearby_consent", contactId: id, accept: false };
+      return null;
+    case "l":
+      if (tail === "y") return { type: "look_in", quietEventId: id, accept: true };
+      if (tail === "n") return { type: "look_in", quietEventId: id, accept: false };
+      return null;
     case "q":
       if (tail === "f") return { type: "quiet_fine", quietEventId: id };
       if (tail === "w") return { type: "quiet_wait", quietEventId: id };

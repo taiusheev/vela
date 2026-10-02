@@ -14,9 +14,11 @@ import {
   ApiFamilyPlan,
   ApiIdempotencyKey,
   ApiLeft,
+  ApiLookInAsk,
   ApiMe,
   ApiMemberPause,
   ApiNearbyContact,
+  ApiNearbyInvite,
   ApiNearbyRemoved,
   ApiPushDevice,
   ApiPushDeviceRemoved,
@@ -29,10 +31,12 @@ import {
   ApiUploadedVoice,
   ApiUser,
   ApiWeeklyRead,
+  AskToLookIn,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
   DeviceWrite,
+  InviteNearby,
   type Lang,
   LeaveFamily,
   type MediaUnavailableReason,
@@ -53,13 +57,16 @@ import {
   AskDayTakenError,
   AskPhotoMissingError,
   type addApiNearby,
+  type askApiToLookIn,
   type authorizeFamilyAccess,
   type Clock,
   type composeApiAsk,
   type createApiFamily,
   type DeviceAlerts,
   errorLabel,
+  type inviteApiNearby,
   type Logger,
+  LookInRefusedError,
   type leaveApiFamily,
   type loadApiExchanges,
   type loadApiFamily,
@@ -75,6 +82,7 @@ import {
   type MediaStore,
   MemberChangeRefusedError,
   type memberOfDeviceToken,
+  NearbyInviteRefusedError,
   NearbyRefusedError,
   type pauseApiMember,
   type provisionApiAccount,
@@ -150,6 +158,8 @@ export interface ApiWriteServices {
   removeApiNearby: typeof removeApiNearby;
   uploadApiMedia: typeof uploadApiMedia;
   uploadApiVoice: typeof uploadApiVoice;
+  askApiToLookIn: typeof askApiToLookIn;
+  inviteApiNearby: typeof inviteApiNearby;
   registerApiPushDevice: typeof registerApiPushDevice;
   removeApiPushDevice: typeof removeApiPushDevice;
 }
@@ -388,6 +398,21 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           },
         };
         return c.json(running, 409);
+      }
+      if (error instanceof LookInRefusedError || error instanceof NearbyInviteRefusedError) {
+        const said = {
+          settled: "This morning is already settled.",
+          cannot_be_asked: "They have not said yes on Telegram, so they cannot be asked here.",
+          already_listed: "They have already said yes.",
+        } as const;
+        const refused: ApiErrorBody = {
+          error: {
+            code: "conflict",
+            message: said[error.reason],
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(refused, 409);
       }
       if (error instanceof ReplyRefusedError) {
         const answer = {
@@ -1061,6 +1086,61 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           );
           c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
           return c.json(state, 200);
+        },
+      );
+    }
+    // "Ask them to look in" (ADR-36): the service reads the family from the event under its lock.
+    app.post(
+      "/v1/quiet/:quietEventId/ask-to-check",
+      authenticate,
+      validateWrite(AskToLookIn, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.askApiToLookIn(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("quietEventId"),
+          c.get("writeInput"),
+        );
+        if (
+          (result.response.status !== 200 && result.response.status !== 201) ||
+          typeof result.replayed !== "boolean"
+        ) {
+          throw new Error("Invalid API mutation response");
+        }
+        const ask = ApiLookInAsk.parse(result.response.body);
+        // Committed: now the message to them, in the organiser's name.
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ask, result.response.status);
+      },
+    );
+    // The link to share with someone nearby (ADR-36). Its answer is a credential, so, like her
+    // phone's set-up, it is not kept in a receipt: a retry mints a new link that voids the old.
+    const families = writes.families;
+    if (families) {
+      app.post(
+        "/v1/nearby/:contactId/invite",
+        authenticate,
+        validateWrite(InviteNearby, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const invite = await writes.services.inviteApiNearby(
+            {
+              db: c.get("db"),
+              clock: writes.clock,
+              random: families.random,
+              config: families.config,
+            },
+            c.get("session"),
+            c.req.param("contactId"),
+          );
+          return c.json(ApiNearbyInvite.parse(invite), 201);
         },
       );
     }

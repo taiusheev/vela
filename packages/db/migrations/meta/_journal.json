@@ -50,6 +50,13 @@
       "when": 1790823259007,
       "tag": "0006_device_channel",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790904973712,
+      "tag": "0007_nearby_telegram",
+      "breakpoints": true
     }
   ]
 }

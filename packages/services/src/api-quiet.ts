@@ -20,10 +20,11 @@ import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { insertOutbound } from "./gateway.ts";
+import { asksOf, canBeAsked } from "./nearby-ask.ts";
 import { resolveQuietAsFine, usualAnswerTime, waitOnQuiet } from "./quiet.ts";
 import {
-  consentedNearbyContacts,
   familyHasEnded,
+  listedNearbyContacts,
   memberById,
   type Queryable,
   recentAnsweredDays,
@@ -45,7 +46,8 @@ async function noticeOf(db: Queryable, quiet: QuietEvent, her: Member): Promise<
     .orderBy(desc(answers.receivedAt), desc(answers.id))
     .limit(1);
   const resolver = quiet.resolvedBy === null ? null : await memberById(db, quiet.resolvedBy);
-  const contacts = await consentedNearbyContacts(db, her.id);
+  const contacts = await listedNearbyContacts(db, her.id);
+  const asks = asksOf(quiet);
   return ApiQuietNotice.parse({
     quiet_event_id: quiet.id,
     member_id: her.id,
@@ -64,12 +66,23 @@ async function noticeOf(db: Queryable, quiet: QuietEvent, her: Member): Promise<
             at: quiet.resolvedAt.toISOString(),
             by_name: resolver?.displayName ?? null,
           },
-    contacts: contacts.map((contact) => ({
-      id: contact.id,
-      name: contact.name,
-      relation: contact.relation,
-      phone: contact.phone,
-    })),
+    contacts: await Promise.all(
+      contacts.map(async (contact) => {
+        const ask = asks.find((entry) => entry.contact_id === contact.id);
+        const asker = ask === undefined ? null : await memberById(db, ask.sent_by);
+        return {
+          id: contact.id,
+          name: contact.name,
+          relation: contact.relation,
+          phone: contact.phone,
+          can_ask: canBeAsked(contact),
+          asked:
+            ask === undefined
+              ? null
+              : { at: ask.sent_at, by_name: asker?.displayName ?? null, reply: ask.reply },
+        };
+      }),
+    ),
   });
 }
 

@@ -30,6 +30,7 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
 import { enqueueOutbound, type OutboundRequest } from "./gateway.ts";
+import { lookInStandDowns } from "./nearby-ask.ts";
 import { quietPushNotice } from "./push-messages.ts";
 import { closingNoticesFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
 import {
@@ -361,6 +362,10 @@ async function tellNotified(
       await emit(notice);
       told.add(readerId);
     }
+  }
+  // Anyone asked to look in, and not refused, hears there is no need (ADR-36).
+  for (const notice of await lookInStandDowns(tx, closed, her)) {
+    await emit(notice);
   }
   return told;
 }

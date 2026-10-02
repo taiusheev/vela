@@ -37,6 +37,14 @@ A nearby contact is one of up to two people living near the person the light is 
 >
 > Buttons: **Yes, I'm happy to** · **No, thank you**
 
+## Text B on Telegram (`nearby-consent.v2`, 2 October 2026, ADR-36)
+
+Text B was never sent; before its first use it was fitted to how the app reaches a contact: through a link the organiser sends them, which they open in Telegram, so Vela holds their Telegram account, not a number. Sent by Vela, in the organiser's name, only once they open the link:
+
+> [Organiser's name] asks: you live near [Name]. On a day when [Name] hasn't answered and [organiser's name] can't get through, may [organiser's name] ask you, through Vela, to go round? Vela never writes to you on its own: any request comes from [organiser's name]. If you say yes, Vela keeps your name and this Telegram account until you or [organiser's name] remove them. You can say no, or change your mind at any time by sending stop. Vela is a pilot run by Timur Aiusheev. How your details are used: [privacy notice link]
+>
+> Buttons: **Yes, I'm happy to** · **No, thank you**
+
 ## What saying yes means
 
 **What Vela keeps:** your name, how you know [Name], your phone number, the messaging app you use, and when and how you said yes.

@@ -577,3 +577,16 @@ Phases, each landing on its own: (1) the migration, the device link and its orga
 Rejected: an account for her (the spec: nothing to sign up for); a long-lived link in a URL (it ends up in screenshots and chats); reusing channel `app` (push already owns it); delivering by push alone (a phone that silences notifications would leave her morning undelivered and the quiet ladder blind); a separate parent app (ADR-3).
 
 Revisit if: a parent's phone is shared, so one token reaches two kept-light members; Apple or Google refuse local notifications at a fixed hour without a push entitlement; the parent surface needs to work offline beyond the morning it has loaded.
+
+## ADR-36 · Someone nearby says yes on Telegram, and an organiser asks them to look in from the app
+
+Status: accepted, 2 October 2026 (founder: "yes, we can do ask them to look in").
+
+Context: spec §8 and A11 give the quiet sheet "Ask them to look in", a message in the organiser's name to a nearby contact with "I'll look in" and "Can't today". Until now nearby contacts were names, with a number only when the founder recorded a yes by hand (L8), so Vela had no way to reach them and the button was not built. The pilot's consent text already planned text B, sent by Vela in the organiser's name.
+
+Decision: a contact says yes on Telegram. An organiser taps "Ask on Telegram" on People nearby, which mints a link (`POST /v1/nearby/:contactId/invite`, `n` and 24 random bytes as the bot's start parameter, its SHA-256 kept on the row, a new link voiding the old) and shares it from their own phone. Nobody is written to until they open it: then Vela sends text B (`nearby-consent.v2`) in that organiser's name with Yes and No. Yes keeps their Telegram account (`nearby_contacts.external_id`) with the yes and a `consents` row; No records the no and deletes them at once; stop removes them from every list; a contact with no answer 14 days after the latest link is deleted by retention. The database holds "a number or an account exactly while a yes stands" (`nearby_contacts_reach_consented_check`, migration 0007). On a quiet morning an organiser taps "Ask them to look in" for a contact with a Telegram yes (`POST /v1/quiet/:id/ask-to-check`, through `runApiMutation` under the event's row lock): one `nearby_ask` per contact per morning, naming the organiser as actor, kept in `quiet_events.ask_to_check`. Their answer goes to the organiser who asked, on Telegram, and to the sheet; when the morning closes, each contact asked and not refused is told there is no need.
+
+Rejected: SMS (costs money per message, and a number is more personal data than an account); Vela writing to a contact from a name and number alone (they never asked to hear from Vela); asking without a yes (spec §9).
+
+Revisit if: a contact has no Telegram (LINE first, for Taiwan); counsel reviews text B.
+

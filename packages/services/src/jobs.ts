@@ -5,6 +5,7 @@
  * founder is told there is a draft with a link and nothing else. Retention implements the pilot
  * data map rule by rule and reports a count per rule, so the nightly run is auditable.
  */
+
 import { type AiCallRecord, isAiOff, type Mentions, type WeeklyDay } from "@vela/ai";
 import type { LocalDate, LocalTime } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -39,6 +40,7 @@ import {
   members,
   messageRefs,
   metricsDaily,
+  nearbyContacts,
   onboardingSessions,
   outbound,
   pushTickets,
@@ -72,6 +74,7 @@ import { recordEvent } from "./events.ts";
 import { clockMinutesBetween, medianTimeAround } from "./format.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { INVITE_DAYS } from "./invites.ts";
+import { deleteContact } from "./nearby-consent.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import {
   dayAnsweredAt,
@@ -928,6 +931,27 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       now,
     )
   ).length;
+
+  // Someone nearby asked on Telegram who never answered goes 14 days after the latest link to them
+  // (nearby-contact consent, "What saying no means", ADR-36), as one who said no went at once.
+  const NEARBY_UNANSWERED_DAYS = 14;
+  const unanswered = await db
+    .select()
+    .from(nearbyContacts)
+    .where(
+      and(
+        isNull(nearbyContacts.consentedAt),
+        isNotNull(nearbyContacts.consentRequestedAt),
+        lt(
+          nearbyContacts.consentRequestedAt,
+          new Date(now.getTime() - NEARBY_UNANSWERED_DAYS * DAY_MS),
+        ),
+      ),
+    );
+  for (const contact of unanswered) {
+    await db.transaction((tx) => deleteContact(tx, contact, "nearby unanswered 14 days", now));
+  }
+  counts.nearby_unanswered_deleted = unanswered.length;
 
   // The ask's own words go 30 days after delivery, and an ask still waiting for her keeps them
   // until then (`stillWaiting`), one whose morning passed unsent included, since her next morning

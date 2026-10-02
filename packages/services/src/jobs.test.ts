@@ -645,6 +645,7 @@ describe("applyRetention", () => {
     "media_deleted",
     "members_deleted",
     "invited_members_deleted",
+    "nearby_unanswered_deleted",
     "exchanges_cleared",
     "outbound_payloads_cleared",
     "chips_deleted",

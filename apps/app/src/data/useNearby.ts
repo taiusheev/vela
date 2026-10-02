@@ -7,6 +7,7 @@ import {
   addNearby,
   apiConfigured,
   fetchFamily,
+  inviteNearby,
   nearbyRefusal,
   removeNearby,
 } from "../api/client.ts";
@@ -33,6 +34,11 @@ export interface NearbyView {
   /** Add someone; resolves true once they are added, so the form can clear itself. */
   add(name: string, relation: string): Promise<boolean>;
   remove(contactId: string): void;
+  /**
+   * The link for one person who has not said yes, to send them from the organiser's own phone; they
+   * open it in Telegram and Vela asks them there (ADR-36). Null when it could not be had.
+   */
+  invite(contactId: string): Promise<string | null>;
   changing: boolean;
   /** Why the last change did not go through, in words for the screen. */
   refused?: string;
@@ -45,7 +51,7 @@ function consentOf(consent: NearbyConsent): string {
     case "no":
       return t`Said no`;
     default:
-      return t`Vela asks them first`;
+      return t`Has not said yes yet`;
   }
 }
 
@@ -93,7 +99,8 @@ function examplePeople(): NearbyPerson[] {
 /**
  * The people nearby one kept-light member (spec A3, A12): read from the family behind You, which
  * lists them for organisers, and changed through the API. Nobody is contacted by adding them: the
- * founder asks each one and records their yes and number (L8). Without an API, the example two,
+ * organiser sends each one a link from their own phone, and Vela asks them only once they open it
+ * (ADR-36), or the founder records a yes given another way (L8). Without an API, the example two,
  * changed only on this screen.
  */
 export function useNearby(familyId: string | undefined, memberId: string | undefined): NearbyView {
@@ -128,12 +135,19 @@ export function useNearby(familyId: string | undefined, memberId: string | undef
     onError: (error) => setRefused(refusedLine(error)),
   });
 
+  const inviteKey = useIdempotencyKey("nearby-invite");
+  const inviting = useMutation({
+    mutationFn: async (contactId: string) =>
+      inviteNearby(contactId, inviteKey({ contactId, at: Date.now() }), await account.token()),
+    onError: (error) => setRefused(refusedLine(error)),
+  });
+
   const people = demo
     ? (example ?? examplePeople())
     : (read.data?.nearby ?? [])
         .filter((contact) => contact.near_member_id === memberId)
         .map(personOf);
-  const changing = adding.isPending || removing.isPending;
+  const changing = adding.isPending || removing.isPending || inviting.isPending;
 
   return {
     people,
@@ -167,6 +181,14 @@ export function useNearby(familyId: string | undefined, memberId: string | undef
         return true;
       } catch {
         return false;
+      }
+    },
+    async invite(contactId) {
+      if (demo) return "https://t.me/VelaLightBot?start=nEXAMPLE";
+      try {
+        return (await inviting.mutateAsync(contactId)).link;
+      } catch {
+        return null;
       }
     },
     remove(contactId) {
