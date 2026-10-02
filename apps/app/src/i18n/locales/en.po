@@ -1323,6 +1323,12 @@ msgstr "That photo did not go up. Try again."
 msgid "That photo is no longer here. Choose it again."
 msgstr "That photo is no longer here. Choose it again."
 
+#: src/components/voice-hello.tsx
+#: src/components/voice-reply.tsx
+#: src/device/VoiceAnswer.tsx
+msgid "That recording did not save. Try again."
+msgstr "That recording did not save. Try again."
+
 #: app/sign-in.tsx
 msgid "That took too long to check. Try the code again."
 msgstr "That took too long to check. Try the code again."

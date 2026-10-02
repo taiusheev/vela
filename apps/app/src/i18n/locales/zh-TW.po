@@ -1330,6 +1330,12 @@ msgstr "這張照片沒有傳上去，請再試一次。"
 msgid "That photo is no longer here. Choose it again."
 msgstr "這張照片已經不在了，請重新選擇。"
 
+#: src/components/voice-hello.tsx
+#: src/components/voice-reply.tsx
+#: src/device/VoiceAnswer.tsx
+msgid "That recording did not save. Try again."
+msgstr "這段錄音沒有存好，請再錄一次。"
+
 #: app/sign-in.tsx
 msgid "That took too long to check. Try the code again."
 msgstr "確認的時間太久了。請再輸入一次驗證碼。"

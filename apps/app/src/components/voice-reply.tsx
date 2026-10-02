@@ -76,6 +76,11 @@ export function VoiceReply({
   return (
     <View style={{ gap: space.s }}>
       <SecondaryButton label={t`🎙 Reply with your voice`} onPress={() => void voice.start()} />
+      {voice.failed ? (
+        <Words variant="caption" tone="ink3">
+          <Trans>That recording did not save. Try again.</Trans>
+        </Words>
+      ) : null}
       {voice.refused ? (
         <Words variant="caption" tone="ink3">
           <Trans>Vela needs the microphone for a voice reply. You can allow it in Settings.</Trans>

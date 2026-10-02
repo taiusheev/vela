@@ -71,7 +71,8 @@ function codesOf(error: unknown): string[] {
 function refusalOf(error: unknown, phone: boolean): Trouble {
   const codes = codesOf(error).join(" ");
   if (/country/.test(codes)) return { kind: "country_unsupported" };
-  if (/strategy|not_allowed|not_enabled/.test(codes)) {
+  // A number this Clerk instance does not take at all answers `form_param_unknown` on sign-up.
+  if (/strategy|not_allowed|not_enabled|param_unknown/.test(codes)) {
     return { kind: phone ? "phone_off" : "did_not_work" };
   }
   if (/format|invalid/.test(codes)) return { kind: phone ? "number_invalid" : "email_invalid" };

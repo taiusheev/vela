@@ -51,6 +51,8 @@ export interface Recording {
   recorded: Recorded | null;
   /** The microphone was refused. */
   refused: boolean;
+  /** The last recording could not be kept; recording again is the way on. */
+  failed: boolean;
   start(): Promise<void>;
   stop(): Promise<void>;
   listen(): Promise<void>;
@@ -70,18 +72,27 @@ export function useRecording(options: { maxMs?: number } = {}): Recording {
   const state = useAudioRecorderState(recorder, 200);
   const [recorded, setRecorded] = useState<Recorded | null>(null);
   const [refused, setRefused] = useState(false);
+  const [failed, setFailed] = useState(false);
   const player = useAudioPlayer(recorded?.uri ?? null);
   const stopping = useRef(false);
 
   const stop = async () => {
     if (stopping.current) return;
     stopping.current = true;
+    const durationMs = state.durationMillis;
     try {
       await recorder.stop();
       const uri = recorder.uri;
       if (uri !== null) {
-        setRecorded({ uri, key: recordingKey(), durationMs: state.durationMillis });
+        setRecorded({ uri, key: recordingKey(), durationMs });
+      } else {
+        setFailed(true);
       }
+    } catch (error) {
+      // The recorder can be let go under a stop (the screen closing, a reload while developing):
+      // the recording is lost, which she is told, and nothing is thrown at the screen.
+      console.warn("[recording] stop failed", (error as Error)?.name);
+      setFailed(true);
     } finally {
       stopping.current = false;
     }
@@ -98,6 +109,7 @@ export function useRecording(options: { maxMs?: number } = {}): Recording {
     level: Math.min(Math.max(((state.metering ?? -160) + 60) / 60, 0.04), 1),
     recorded,
     refused,
+    failed,
     async start() {
       const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
@@ -105,6 +117,7 @@ export function useRecording(options: { maxMs?: number } = {}): Recording {
         return;
       }
       setRefused(false);
+      setFailed(false);
       setRecorded(null);
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();

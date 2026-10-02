@@ -109,6 +109,11 @@ export function VoiceAnswer({
           <Trans>🎙 Answer with your voice</Trans>
         </Text>
       </Pressable>
+      {voice.failed ? (
+        <Text style={styles.body}>
+          <Trans>That recording did not save. Try again.</Trans>
+        </Text>
+      ) : null}
       {voice.refused ? (
         <Text style={styles.body}>
           <Trans>
