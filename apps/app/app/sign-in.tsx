@@ -79,6 +79,12 @@ function refusalOf(error: unknown, phone: boolean): Trouble {
   return { kind: "did_not_work" };
 }
 
+/**
+ * Whether a number can sign in. Clerk texts codes only on its paid plan, so the pilot signs in by
+ * email, and the number with its country picker waits behind `EXPO_PUBLIC_PHONE_SIGN_IN=on`.
+ */
+const PHONE_SIGN_IN = process.env.EXPO_PUBLIC_PHONE_SIGN_IN === "on";
+
 /** A bot check that never finishes must not leave her watching "Sending…" for ever. */
 const PATIENCE_MS = 25_000;
 
@@ -146,8 +152,9 @@ function CodeSignIn() {
   // Which half of Clerk is carrying this attempt: an account it knows, or one it is meeting.
   const [joining, setJoining] = useState(false);
   const [strategy, setStrategy] = useState<Strategy>("email_code");
-  // A number by default, chosen country first; an email is one tap away.
-  const [mode, setMode] = useState<"phone" | "email">("phone");
+  // Email unless numbers are open for sign-in (Clerk sends texts only on its paid plan): with them,
+  // a number by default, chosen country first, and an email one tap away.
+  const [mode, setMode] = useState<"phone" | "email">(PHONE_SIGN_IN ? "phone" : "email");
   const [country, setCountry] = useState<Country>(() =>
     defaultCountry(getLocales()[0]?.regionCode ?? null),
   );
@@ -329,24 +336,26 @@ function CodeSignIn() {
         </View>
         {step === "identifier" ? (
           <>
-            <View style={{ flexDirection: "row", gap: space.s }}>
-              <Chip
-                label={t`Phone number`}
-                selected={mode === "phone"}
-                onPress={() => {
-                  setMode("phone");
-                  setTrouble(undefined);
-                }}
-              />
-              <Chip
-                label={t`Email`}
-                selected={mode === "email"}
-                onPress={() => {
-                  setMode("email");
-                  setTrouble(undefined);
-                }}
-              />
-            </View>
+            {PHONE_SIGN_IN ? (
+              <View style={{ flexDirection: "row", gap: space.s }}>
+                <Chip
+                  label={t`Phone number`}
+                  selected={mode === "phone"}
+                  onPress={() => {
+                    setMode("phone");
+                    setTrouble(undefined);
+                  }}
+                />
+                <Chip
+                  label={t`Email`}
+                  selected={mode === "email"}
+                  onPress={() => {
+                    setMode("email");
+                    setTrouble(undefined);
+                  }}
+                />
+              </View>
+            ) : null}
             {mode === "phone" ? (
               <>
                 <Words variant="body" tone="ink2">
