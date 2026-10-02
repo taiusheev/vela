@@ -17,6 +17,7 @@ import {
 } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { recordContactConsent } from "./admin.ts";
 import type { SessionIdentity } from "./api-access.ts";
 import { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
 import type { OutboundJob } from "./deps.ts";
@@ -209,6 +210,27 @@ describe("asking someone nearby on Telegram", () => {
     if (yes === undefined) throw new Error("expected Yes");
     await tap(ANNA, yes.id);
     expect((await contactRow())?.consentedAt).toBeNull();
+  });
+
+  it("lets the founder record their no on the admin page, which drops their account with the yes", async () => {
+    await annaSaysYes();
+
+    await recordContactConsent(
+      h.deps,
+      { admin: "founder@vela.test" },
+      {
+        contactId,
+        answer: "no",
+        phone: null,
+        at: h.clock.now(),
+        textVersion: NEARBY_TEXT_VERSION,
+        lang: "en",
+        channel: "telegram",
+        evidence: { call: "Anna asked to be taken off" },
+      },
+    );
+
+    expect(await contactRow()).toMatchObject({ externalId: null, declinedAt: h.clock.now() });
   });
 
   it("removes them from every list when they send stop", async () => {

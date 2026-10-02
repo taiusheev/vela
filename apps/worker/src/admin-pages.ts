@@ -86,7 +86,7 @@ function overviewRow(row: AdminOverviewRow): Html {
 <td>${kept === null ? DASH : instant(kept.nextWakeAt)}</td>
 <td>${today === null ? DASH : html`${today.type} · ${today.state}`}</td>
 <td>${today === null ? DASH : html`sent ${instant(today.deliveredAt)}<br>failed ${instant(today.deliveryFailedAt)}<br>repeat ${instant(today.repeatedAt)}<br>answered ${instant(today.answeredAt)}`}</td>
-<td>${quiet === null ? DASH : html`open ${instant(quiet.openedAt)}<br>notices ${quiet.notifyCount}<br>wait ${instant(quiet.waitUntil)}<br>${text(quiet.outcome)} ${instant(quiet.resolvedAt)}`}</td>
+<td>${quiet === null ? DASH : html`open ${instant(quiet.openedAt)}<br>notices ${quiet.notifyCount}<br>wait ${instant(quiet.waitUntil)}<br>${text(quiet.outcome)} ${instant(quiet.resolvedAt)}<br>useful ${quiet.useful === null ? DASH : quiet.useful ? "yes" : "no"}`}</td>
 <td>${row.answers.length === 0 ? DASH : row.answers.map((answer) => html`${answer.kind} · ${answer.understoodAt === null ? `not understood (${answer.processingAttempts})` : "understood"}${answer.flag ? " · flagged" : ""}<br>`)}</td>
 <td class="num">${row.ai.calls} / ${row.ai.failures}</td>
 </tr>`;
@@ -278,8 +278,8 @@ function contactsSection(data: FamilyPage): Html {
   const rows = data.nearbyContacts.map(
     (contact) => html`<tr>
 <td>${contact.name}<br><span class="muted">${text(contact.relation)}</span></td>
-<td>${text(contact.phone)}</td>
-<td>${text(contact.channel)}</td>
+<td>${contact.externalId === null ? text(contact.phone) : "Telegram account"}</td>
+<td>${text(contact.channel)}${contact.inviteTokenHash === null ? "" : html`<br><span class="muted">link sent ${instant(contact.consentRequestedAt)}</span>`}</td>
 <td>${instant(contact.consentedAt)}</td>
 <td>${instant(contact.declinedAt)}</td>
 <td>${actionForm(data.family.id, "record_contact_consent", html`${hidden("contactId", contact.id)}<label>Answer<select name="answer"><option value="yes">yes</option><option value="no">no</option></select></label><label>Phone (with a yes; empty with a no)<input name="phone"></label><label>At (UTC)<input type="datetime-local" name="at" required></label>${consentFields()}`, "Record")}
@@ -287,8 +287,8 @@ ${actionForm(data.family.id, "remove_contact", hidden("contactId", contact.id), 
 </tr>`,
   );
   return html`<section id="contacts"><h2>Nearby contacts</h2>
-<p class="muted">A contact is listed in a quiet notice only after they have said yes themselves. Their number is stored only with that yes, and a no removes it. Vela never contacts them.</p>
-${table(["Name", "Phone", "Channel", "Consented", "Declined", "Actions"], rows)}
+<p class="muted">A contact is listed in a quiet notice only after they have said yes themselves. Their number, or their Telegram account, is stored only with that yes, and a no removes it. Vela writes to them only after they open the link an organiser sent them, and then only when an organiser asks them to look in (ADR-36).</p>
+${table(["Name", "Reach", "Channel", "Consented", "Declined", "Actions"], rows)}
 <h3>Add a contact</h3>
 ${actionForm(
   data.family.id,

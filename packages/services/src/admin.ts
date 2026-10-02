@@ -543,7 +543,8 @@ export async function recordContactConsent(
       // The number goes with the yes it depended on.
       await tx
         .update(nearbyContacts)
-        .set({ phone: null, declinedAt: input.at })
+        // Whatever reached them goes with the yes: a number, or their Telegram account (ADR-36).
+        .set({ phone: null, externalId: null, inviteTokenHash: null, declinedAt: input.at })
         .where(eq(nearbyContacts.id, contact.id));
       await tx
         .update(consents)
@@ -1352,7 +1353,14 @@ export interface AdminOverviewRow {
   > | null;
   quiet: Pick<
     QuietEvent,
-    "id" | "openedAt" | "lastNotifiedAt" | "notifyCount" | "waitUntil" | "resolvedAt" | "outcome"
+    | "id"
+    | "openedAt"
+    | "lastNotifiedAt"
+    | "notifyCount"
+    | "waitUntil"
+    | "resolvedAt"
+    | "outcome"
+    | "useful"
   > | null;
   /** Today's answers: their kinds and processing state. */
   answers: Pick<
@@ -1427,6 +1435,7 @@ async function overviewRow(
       waitUntil: quietEvents.waitUntil,
       resolvedAt: quietEvents.resolvedAt,
       outcome: quietEvents.outcome,
+      useful: quietEvents.useful,
     })
     .from(quietEvents)
     .where(eq(quietEvents.exchangeId, exchange.id))
