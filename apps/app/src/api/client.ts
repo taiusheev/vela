@@ -8,6 +8,7 @@ import type {
   ApiDeviceMessages,
   ApiDeviceSetUp,
   ApiExchangePage,
+  ApiExchangeSummary,
   ApiFamily,
   ApiLeft,
   ApiLookInAsk,
@@ -138,6 +139,14 @@ export function composeAsk(
     key,
     body: ask,
   });
+}
+
+/** One exchange, for a link that names it (`GET /v1/exchanges/:exchangeId`); 404 when it is not hers to see. */
+export function fetchExchange(
+  exchangeId: string,
+  token: string | null,
+): Promise<ApiExchangeSummary> {
+  return read<ApiExchangeSummary>(`/v1/exchanges/${exchangeId}`, token);
 }
 
 export function fetchExchanges(

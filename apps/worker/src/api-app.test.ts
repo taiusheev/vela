@@ -275,6 +275,7 @@ function fixture(enableWrites = false, push?: boolean) {
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>().mockResolvedValue(LIGHTS),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>().mockResolvedValue(TODAY),
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>().mockResolvedValue(FAMILY),
+    loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
@@ -2241,6 +2242,40 @@ describe("pausing and leaving", () => {
       404,
       NOT_FOUND,
     );
+  });
+});
+
+describe("one exchange", () => {
+  const summary = EXCHANGE_PAGE.exchanges[0];
+  const path = (id: string) => `/v1/exchanges/${id}`;
+
+  it("answers the exchange the service reads, and 404 for one it does not", async () => {
+    if (summary === undefined) throw new Error("expected the fixture's exchange");
+    const { app, services } = fixture();
+    services.loadApiExchange.mockResolvedValue(summary);
+    const found = await app.request(path(summary.id), {
+      headers: { authorization: "Bearer good" },
+    });
+    expect(found.status).toBe(200);
+    expect(await found.json()).toEqual(summary);
+    expect(services.loadApiExchange).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      summary.id,
+      expect.any(Date),
+    );
+
+    services.loadApiExchange.mockResolvedValue(null);
+    const missing = await app.request(path(summary.id), {
+      headers: { authorization: "Bearer good" },
+    });
+    expect(missing.status).toBe(404);
+  });
+
+  it("answers 401 without a session", async () => {
+    const { app, verifySession } = fixture();
+    verifySession.mockResolvedValue(null);
+    expect((await app.request(path(QUIET_ID))).status).toBe(401);
   });
 });
 

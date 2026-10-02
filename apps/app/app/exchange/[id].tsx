@@ -1,11 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ComposeReply, ReactionKind } from "@vela/contracts";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiConfigured, replyRefusal, replyTo } from "../../src/api/client.ts";
+import { apiConfigured, fetchExchange, replyRefusal, replyTo } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { photoRefusal, uploadMedia, uploadVoice } from "../../src/api/upload.ts";
 import type { Recorded } from "../../src/audio/useRecording.ts";
@@ -25,7 +25,7 @@ import {
 import { VoiceReply } from "../../src/components/voice-reply.tsx";
 import type { ExchangeReply } from "../../src/data/exchanges.ts";
 import { replyLine } from "../../src/data/lines.ts";
-import { useExchanges } from "../../src/data/useExchanges.ts";
+import { toExchange, useExchanges } from "../../src/data/useExchanges.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
@@ -38,7 +38,15 @@ export default function ExchangeScreen() {
   const queries = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { exchanges, live } = useExchanges();
-  const exchange = exchanges.find((candidate) => candidate.id === id);
+  const listed = exchanges.find((candidate) => candidate.id === id);
+  // A link or a tapped notice can name an exchange the list has not loaded: it is read on its own.
+  const single = useQuery({
+    queryKey: ["exchange", id],
+    enabled: live && listed === undefined && id !== undefined,
+    queryFn: async () => toExchange(await fetchExchange(id ?? "", await account.token())),
+    retry: false,
+  });
+  const exchange = listed ?? single.data;
   // What was sent in the demo, as typed or tapped: the line around it is built in the language shown.
   const [sent, setSent] = useState<{ kind: ExchangeReply["kind"]; text?: string }[]>([]);
   // The reactions this reader gave here in this visit, shown chosen; a second tap gives nothing new.
@@ -63,6 +71,7 @@ export default function ExchangeScreen() {
       if ("text" in sentReply) setText("");
       await Promise.all([
         queries.invalidateQueries({ queryKey: ["exchanges"] }),
+        queries.invalidateQueries({ queryKey: ["exchange", id] }),
         queries.invalidateQueries({ queryKey: ["today"] }),
       ]);
     },
@@ -72,7 +81,7 @@ export default function ExchangeScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: palette.bg, padding: space.margin }}>
         <Words variant="body" tone="ink2">
-          {live || demo ? (
+          {demo || single.isError || (live && !single.isPending) ? (
             <Trans>That exchange is not here.</Trans>
           ) : (
             <Trans>Looking for that exchange…</Trans>

@@ -85,3 +85,40 @@ export async function loadApiExchanges(
     next_cursor: rows.length > size ? (page[page.length - 1]?.exchange.id ?? null) : null,
   };
 }
+
+/**
+ * One exchange (`GET /v1/exchanges/:exchangeId`), for a link or a tapped notification that names
+ * it: the same card the list carries, under the same rules — delivered, not withdrawn, within the
+ * list's thirty days, and read only by a live member of its family. Anything else is null, which
+ * the API answers 404 without saying whether the exchange exists.
+ */
+export async function loadApiExchange(
+  db: Queryable,
+  identity: SessionIdentity,
+  exchangeId: string,
+  now: Date,
+): Promise<ApiExchangeSummary | null> {
+  if (!UUID.test(exchangeId)) return null;
+  const floor = new Date(now.getTime() - EXCHANGE_LIST_DAYS * DAY_MS);
+  const [row] = await db
+    .select({ exchange: exchanges, recipient: members })
+    .from(exchanges)
+    .innerJoin(members, eq(members.id, exchanges.recipientId))
+    .where(
+      and(
+        eq(exchanges.id, exchangeId),
+        ne(exchanges.state, "withdrawn"),
+        isNotNull(exchanges.deliveredAt),
+        gte(exchanges.deliveredAt, floor),
+      ),
+    )
+    .limit(1);
+  if (row === undefined) return null;
+  const access = await authorizeFamilyAccess(db, identity, row.exchange.familyId);
+  if (access.kind !== "granted") return null;
+  return {
+    ...(await exchangeRow(db, row.exchange, row.recipient)),
+    scheduled_for: row.exchange.scheduledFor,
+    delivered_at: row.exchange.deliveredAt?.toISOString() ?? null,
+  };
+}

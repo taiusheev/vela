@@ -127,6 +127,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>(unused("the lights")),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>(unused("Today")),
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>(unused("the family")),
+    loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>(unused("the weekly read")),

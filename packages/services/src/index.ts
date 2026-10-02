@@ -72,7 +72,7 @@ export {
   removeApiDevice,
   setUpApiDevice,
 } from "./api-device.ts";
-export { type ApiExchangePageQuery, loadApiExchanges } from "./api-exchanges.ts";
+export { type ApiExchangePageQuery, loadApiExchange, loadApiExchanges } from "./api-exchanges.ts";
 export { AlreadyOrganiserError, type ApiFamilyDeps, createApiFamily } from "./api-families.ts";
 export { loadApiFamily } from "./api-family.ts";
 export {

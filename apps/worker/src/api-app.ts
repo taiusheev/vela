@@ -10,6 +10,7 @@ import {
   ApiDeviceSetUp,
   type ApiErrorBody,
   ApiExchangePage,
+  ApiExchangeSummary,
   ApiFamily,
   ApiFamilyPlan,
   ApiIdempotencyKey,
@@ -70,6 +71,7 @@ import {
   type Logger,
   LookInRefusedError,
   type leaveApiFamily,
+  type loadApiExchange,
   type loadApiExchanges,
   type loadApiFamily,
   type loadApiFamilyPlan,
@@ -136,6 +138,7 @@ export interface ApiReadServices {
   loadApiLights: typeof loadApiLights;
   loadApiToday: typeof loadApiToday;
   loadApiFamily: typeof loadApiFamily;
+  loadApiExchange: typeof loadApiExchange;
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
   loadApiWeeklyRead: typeof loadApiWeeklyRead;
@@ -729,6 +732,17 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       return page === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiExchangePage.parse(page));
     },
   );
+  // One exchange, for a link or a tapped notice: the service reads its family and answers null for
+  // anything the caller may not see, which is 404 without saying whether it exists.
+  app.get("/v1/exchanges/:exchangeId", authenticate, withDatabase, async (c) => {
+    const exchange = await runtime.services.loadApiExchange(
+      c.get("db"),
+      c.get("session"),
+      c.req.param("exchangeId"),
+      runtime.now(),
+    );
+    return exchange === null ? c.json(NOT_FOUND, 404) : c.json(ApiExchangeSummary.parse(exchange));
+  });
   // Organisers only: the read carries her week's counts, which she is never shown (spec §8). A
   // `member` that is not her, or no `member`, is 404.
   app.get(

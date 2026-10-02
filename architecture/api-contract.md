@@ -332,6 +332,10 @@ A phone can be told when it is `granted` and, for the quiet notice and its close
 
 `POST /v1/families/:familyId/exchanges` also composes for a kept-light member who is still `invited`, has never said yes, and has not left (`canWaitForHerYes` in `askable.ts`), when the ask is words with `when` `whenever`: onboarding's first ask. It waits, unscheduled, and her first morning after a yes takes it as the oldest whenever ask (`chooseAsk`, flows §3.6). A dated ask, and a photo ask, which the contract already keeps from `whenever`, still answer 404 until she says yes. Her No deletes her member row and the ask with it (flows §3.2), and so does `create_invite` replacing her (flows §3.17).
 
+### One exchange (2 October 2026)
+
+`GET /v1/exchanges/:exchangeId` answers one `ApiExchangeSummary`, the card the list carries, for a link or a tapped notice that names an exchange the list has not loaded. The same rules as the list: delivered, not withdrawn, delivered within the last 30 days, and only to a live member of its family; anything else, an id that is not a uuid included, is 404 without saying whether it exists.
+
 ### Voices for a reply (2 October 2026, spec §14.1 A8)
 
 An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in `ComposeAsk` names a recording kept by `POST …/voice`, which must be the asker's own, at most 15 seconds long where its length is known, and kept past her morning, else 404 `voice_missing`; an ask with one names its morning (`when` is not `whenever`). Her morning sends it before the ask's own photos: a voice message on Telegram, the first of `voices` on her phone.

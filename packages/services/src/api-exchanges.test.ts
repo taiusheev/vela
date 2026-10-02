@@ -4,7 +4,7 @@ import { answers, exchanges, members, replies, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
-import { loadApiExchanges } from "./api-exchanges.ts";
+import { loadApiExchange, loadApiExchanges } from "./api-exchanges.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedExchange, seedFamily } from "./testing/seed.ts";
 
@@ -182,5 +182,33 @@ describe("loadApiExchanges", () => {
   it("tells a stranger and a missing family apart from nothing at all", async () => {
     expect(await list({}, stranger)).toBeNull();
     expect(await list({}, identity, missingId)).toBeNull();
+  });
+});
+
+describe("loadApiExchange", () => {
+  async function one(id: string, who: SessionIdentity = identity) {
+    return loadApiExchange(h.db, who, id, h.clock.now());
+  }
+
+  it("carries the one exchange the list would, for a member of its family", async () => {
+    const exchange = await seedDay(3, "What did the garden look like?");
+    const shown = await one(exchange.id);
+    const [listed] = (await list())?.exchanges ?? [];
+    expect(shown).toEqual(listed);
+    expect(shown?.ask).toBe("What did the garden look like?");
+  });
+
+  it("is nothing for a stranger, a withdrawn ask, one past the list's days, or an unknown id", async () => {
+    const exchange = await seedDay(3);
+    expect(await one(exchange.id, stranger)).toBeNull();
+
+    const old = await seedDay(EXCHANGE_LIST_DAYS + 2);
+    expect(await one(old.id)).toBeNull();
+
+    await h.db.update(exchanges).set({ state: "withdrawn" }).where(eq(exchanges.id, exchange.id));
+    expect(await one(exchange.id)).toBeNull();
+
+    expect(await one(missingId)).toBeNull();
+    expect(await one("not-a-uuid")).toBeNull();
   });
 });
