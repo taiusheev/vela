@@ -10,7 +10,7 @@ import {
 import { t } from "@vela/copy";
 import { addDays, localDateOf, outboundKey, zonedInstant } from "@vela/core";
 import { exchanges, media, members, suggestions, turns, type VelaTransaction } from "@vela/db";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
@@ -100,6 +100,51 @@ async function lockAskPhotos(
       .map((row) => row.id.toLowerCase()),
   );
   if (!ids.every((id) => usable.has(id.toLowerCase()))) throw new AskPhotoMissingError();
+}
+
+/** The voice hello an ask names is not the asker's own recording, or will not last to her morning. */
+export class AskVoiceMissingError extends Error {
+  override readonly name = "AskVoiceMissingError";
+
+  constructor() {
+    super("That voice hello is no longer here");
+  }
+}
+
+/** A voice hello is about ten seconds (spec §4); a little more is allowed for a slow stop. */
+export const MAX_VOICE_HELLO_MS = 15_000;
+
+/**
+ * Takes the voice hello an ask names, `for share` as its photos are taken, and refuses the ask
+ * unless it is the asker's own recording from the app, short enough to be a hello, and kept past
+ * her morning (`AskVoiceMissingError`).
+ */
+async function lockAskVoice(
+  tx: VelaTransaction,
+  familyId: string,
+  askerId: string,
+  id: string,
+  until: Date,
+): Promise<void> {
+  const [row] = await tx
+    .select({ kept: media.kept, expiresAt: media.expiresAt, durationMs: media.durationMs })
+    .from(media)
+    .where(
+      and(
+        eq(media.id, id),
+        eq(media.familyId, familyId),
+        eq(media.uploadedBy, askerId),
+        eq(media.kind, "audio"),
+        isNull(media.channel),
+        isNotNull(media.storageKey),
+      ),
+    )
+    .for("share");
+  const lasts =
+    row !== undefined &&
+    (row.kept || (row.expiresAt !== null && row.expiresAt.getTime() > until.getTime()));
+  const short = row?.durationMs === null || (row?.durationMs ?? 0) <= MAX_VOICE_HELLO_MS;
+  if (!lasts || !short) throw new AskVoiceMissingError();
 }
 
 /**
@@ -234,7 +279,10 @@ export async function composeApiAsk(
         const asker = await memberById(tx, askerId);
         if (asker === null) throw new VelaError("not_found", "Asker not found");
         // The contract refuses photos on a whenever ask; this only keeps it from reaching the insert.
-        if (ask.media_ids !== undefined && ask.when === "whenever") {
+        if (
+          (ask.media_ids !== undefined || ask.voice_hello_id !== undefined) &&
+          ask.when === "whenever"
+        ) {
           throw new VelaError("invalid_payload", "A photo ask names its morning");
         }
 
@@ -246,9 +294,12 @@ export async function composeApiAsk(
           if (scheduledFor <= today || scheduledFor > horizon) {
             throw new VelaError("invalid_payload", "That day is outside her next two weeks");
           }
+          const until = zonedInstant(addDays(scheduledFor, 2), "00:00", locked.tz);
           if (ask.media_ids !== undefined) {
-            const until = zonedInstant(addDays(scheduledFor, 2), "00:00", locked.tz);
             await lockAskPhotos(tx, familyId, asker.id, ask.media_ids, until);
+          }
+          if (ask.voice_hello_id !== undefined) {
+            await lockAskVoice(tx, familyId, asker.id, ask.voice_hello_id, until);
           }
           const taken = await lockExchangeForLocalDate(tx, locked.id, scheduledFor);
           if (taken !== null) {
@@ -283,6 +334,7 @@ export async function composeApiAsk(
             createdAt: now,
             // In the order she is shown them: a photo choice's pick resolves by this index.
             mediaIds: ask.media_ids ?? [],
+            voiceHelloId: ask.voice_hello_id ?? null,
           })
           .returning();
         if (exchange === undefined) throw new Error("exchange insert returned no row");

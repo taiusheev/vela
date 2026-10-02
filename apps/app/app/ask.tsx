@@ -7,7 +7,8 @@ import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
-import { photoRefusal } from "../src/api/upload.ts";
+import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
+import type { Recorded } from "../src/audio/useRecording.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
@@ -20,6 +21,7 @@ import {
   TextField,
   Words,
 } from "../src/components/ui.tsx";
+import { VoiceHello } from "../src/components/voice-hello.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
 import {
   type AskType,
@@ -134,9 +136,18 @@ export default function AskScreen() {
   const ready =
     demo || (live && familyId !== undefined && recipient !== undefined && !paused && !invited);
 
+  // The voice hello goes up when the ask is sent, under the recording's own key, so a retry of the
+  // send uploads it again as the same recording and the ask names it (spec §4).
+  const [hello, setHello] = useState<Recorded | null>(null);
   const compose = useMutation({
-    mutationFn: async (ask: ComposeAsk) =>
-      composeAsk(familyId ?? "", keyFor(ask), ask, await account.token()),
+    mutationFn: async (ask: ComposeAsk) => {
+      const token = await account.token();
+      const withHello =
+        hello === null
+          ? ask
+          : { ...ask, voice_hello_id: await uploadVoice(familyId ?? "", hello, token) };
+      return composeAsk(familyId ?? "", keyFor(withHello), withHello, token);
+    },
     onSuccess: async () => {
       await queries.invalidateQueries({ queryKey: ["today"] });
       if (await offerAfterAsk()) setOffering(true);
@@ -294,6 +305,7 @@ export default function AskScreen() {
           )}
         </View>
         <PhotoSlots photos={photos} />
+        {demo ? null : <VoiceHello onChange={setHello} />}
         {kind === "vote" ? <VoteOptions options={options} onChange={setOptions} /> : null}
 
         <View style={{ gap: space.m }}>
@@ -319,7 +331,7 @@ export default function AskScreen() {
                 onPress={() => setWhen("another_day")}
               />
             )}
-            {photos.count > 0 ? null : (
+            {photos.count > 0 || hello !== null ? null : (
               <Chip
                 label={t`Whenever`}
                 selected={when === "whenever"}

@@ -190,6 +190,10 @@ msgstr "▶ 播放語音訊息 {number}"
 msgid "❤️ I'm fine"
 msgstr "❤️ 我很好"
 
+#: src/components/voice-hello.tsx
+msgid "🎙 Add a voice hello (10 seconds)"
+msgstr "🎙 加一段語音問候（10 秒）"
+
 #: src/device/VoiceAnswer.tsx
 msgid "🎙 Answer with your voice"
 msgstr "🎙 用聲音回答"
@@ -625,6 +629,7 @@ msgstr "請不要填電話號碼。對方同意後，Vela 會再向對方要號�
 msgid "Leaving…"
 msgstr "正在離開…"
 
+#: src/components/voice-hello.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Listen"
@@ -912,6 +917,10 @@ msgstr "正在讀取這支手機的通知設定…"
 msgid "Record again"
 msgstr "重新錄音"
 
+#: src/components/voice-hello.tsx
+msgid "Recording your hello… {time} of 0:10"
+msgstr "正在錄您的問候… {time}，最長 0:10"
+
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Recording… {time}"
@@ -919,6 +928,7 @@ msgstr "錄音中… {time}"
 
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
+#: src/components/voice-hello.tsx
 #: src/components/vote-options.tsx
 msgid "Remove"
 msgstr "移除"
@@ -1147,6 +1157,7 @@ msgid "Stay"
 msgstr "留下"
 
 #: app/parent.tsx
+#: src/components/voice-hello.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
@@ -1527,6 +1538,10 @@ msgstr "Vela Light 試用"
 msgid "Vela Light trial · ends {date}"
 msgstr "Vela Light 試用 · {date}結束"
 
+#: src/components/voice-hello.tsx
+msgid "Vela needs the microphone for a voice hello. You can allow it in Settings."
+msgstr "錄語音問候需要使用麥克風，您可以在「設定」中允許。"
+
 #: src/components/voice-reply.tsx
 msgid "Vela needs the microphone for a voice reply. You can allow it in Settings."
 msgstr "語音回覆需要使用麥克風，您可以在「設定」中允許。"
@@ -1540,6 +1555,10 @@ msgstr "Vela 的建議"
 #: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr "Vela 的建議 · 取自這位家人說過的話"
+
+#: src/components/voice-hello.tsx
+msgid "Voice hello, {time}. It plays before your ask."
+msgstr "語音問候，共 {time}。會在您的提問之前播放。"
 
 #: src/data/useToday.ts
 msgid "voted"

@@ -541,10 +541,9 @@ function lastingRows(
  * same morning, so both send the same photos. Exported for the tests alone: an arrival goes by her
  * own channel (`arrivalChannelOf`), Telegram or her phone, so only a test asks for LINE's.
  *
- * `exchanges.voice_hello_id` is not read here. It is a write-only column today: nothing loads it,
- * and `ArrivalAsk` has no slot for it, so no voice hello reaches anyone. Whoever gives it a slot
- * has to scope it the way `mediaByIds` is scoped above — its foreign key reaches `media.id` in
- * any family — and that belongs with the change that delivers it, not before.
+ * The asker's voice hello (`exchanges.voice_hello_id`, spec §4) goes first, before the ask's own
+ * photos, as it plays before the ask; it is read through `mediaByIds`, scoped to her family, since
+ * its foreign key reaches `media.id` in any family. It never counts as one of a choice's photos.
  */
 export async function loadAsk(
   deps: Deps,
@@ -582,6 +581,16 @@ export async function loadAsk(
       ? await deps.db.select().from(chips).where(eq(chips.exchangeId, exchange.id)).limit(1)
       : [];
   const options = ExchangeOptions.safeParse(exchange.options);
+  const hello =
+    exchange.voiceHelloId === null
+      ? []
+      : await mediaRefsOf(
+          deps,
+          family.id,
+          channel,
+          await mediaByIds(deps, family.id, [exchange.voiceHelloId]),
+        );
+  attached = [...hello.filter((file) => file.kind === "audio"), ...attached];
   return {
     ask: {
       type,

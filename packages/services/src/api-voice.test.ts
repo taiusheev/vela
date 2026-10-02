@@ -9,6 +9,7 @@ import { media, members, outbound, replies, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
+import { AskVoiceMissingError, composeApiAsk } from "./api-asks.ts";
 import { MediaRefusedError } from "./api-media.ts";
 import { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 import { MAX_VOICES_PER_ACCOUNT_DAY, uploadApiVoice } from "./api-voice.ts";
@@ -190,5 +191,54 @@ describe("a voice reply", () => {
     expect(refused).toBeInstanceOf(ReplyRefusedError);
     expect((refused as ReplyRefusedError).reason).toBe("voice_missing");
     expect(await h.db.select().from(replies)).toHaveLength(0);
+  });
+});
+
+describe("a voice hello on an ask", () => {
+  async function compose(voiceHelloId: string, who: SessionIdentity = mia) {
+    keys += 1;
+    return composeApiAsk(h.deps, who, `compose-${keys}`, seed.family.id, {
+      recipient_id: seed.member.id,
+      type: "question",
+      text: "What did you cook today?",
+      when: "tomorrow",
+      voice_hello_id: voiceHelloId,
+    });
+  }
+
+  it("plays before the ask: uploaded to her Telegram chat as a voice message ahead of the words", async () => {
+    const hello = await voice();
+    const composed = await compose(hello.body.id);
+    expect(composed.response.status).toBe(201);
+
+    const tomorrow = addDays(today(), 1);
+    h.clock.set(new Date(`${tomorrow}T08:00:00.000+08:00`));
+    await deliverArrival(h.deps, seed.member.id, tomorrow, false);
+    await h.run({ outbound: (job: OutboundJob) => deliverOutbound(h.deps, job.outboundId) });
+
+    const [sent] = h.telegram.sentTo(seed.memberLink.externalId);
+    const [file] = await h.db.select().from(media).where(eq(media.id, hello.body.id));
+    expect(sent?.message.media).toEqual([
+      expect.objectContaining({ kind: "audio", storageKey: file?.storageKey, mime: "audio/mp4" }),
+    ]);
+    expect(sent?.message.text).toContain("What did you cook today?");
+  });
+
+  it("refuses a recording that is not the asker's own, or too long to be a hello", async () => {
+    const hers = await voice(sam);
+    await expect(compose(hers.body.id)).rejects.toBeInstanceOf(AskVoiceMissingError);
+
+    keys += 1;
+    const long = await uploadApiVoice(
+      uploadDeps(),
+      mia,
+      `long-${keys}`,
+      seed.family.id,
+      m4a(9),
+      60_000,
+    );
+    await expect(compose(ApiUploadedVoice.parse(long.response.body).id)).rejects.toBeInstanceOf(
+      AskVoiceMissingError,
+    );
   });
 });

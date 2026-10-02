@@ -420,6 +420,11 @@ export const ComposeAsk = z
      * (`POST /v1/families/:familyId/media`, ADR-33). A photo choice's first is her "1".
      */
     media_ids: z.array(z.uuid()).min(1).max(2).optional(),
+    /**
+     * A voice hello the asker recorded and uploaded first (`POST /v1/families/:familyId/voice`),
+     * which plays before the ask (spec §4: about 10 seconds, on any type).
+     */
+    voice_hello_id: z.uuid().optional(),
   })
   .refine((ask) => (ask.when === "date") === (ask.date !== undefined), {
     message: "a date ask needs its date, and no other kind takes one",
@@ -442,6 +447,11 @@ export const ComposeAsk = z
   .refine((ask) => ask.media_ids === undefined || ask.when !== "whenever", {
     // A whenever ask waits for a free morning with no end, and a photo is deleted after 30 days.
     message: "a photo ask names its morning",
+    path: ["when"],
+  })
+  .refine((ask) => ask.voice_hello_id === undefined || ask.when !== "whenever", {
+    // So is a recording: the voice hello waits for no morning it might outlive.
+    message: "an ask with a voice hello names its morning",
     path: ["when"],
   });
 export type ComposeAsk = z.infer<typeof ComposeAsk>;

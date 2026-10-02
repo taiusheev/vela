@@ -58,7 +58,12 @@ export {
   nothingAfterCommit,
   runAfterCommit,
 } from "./api-after-commit.ts";
-export { AskDayTakenError, AskPhotoMissingError, composeApiAsk } from "./api-asks.ts";
+export {
+  AskDayTakenError,
+  AskPhotoMissingError,
+  AskVoiceMissingError,
+  composeApiAsk,
+} from "./api-asks.ts";
 export {
   deviceTokenHash,
   memberOfDeviceToken,

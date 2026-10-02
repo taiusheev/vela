@@ -61,10 +61,11 @@ export interface Recording {
 /**
  * One voice recorded on the phone, for her answer (P4) or a reply from the family (A8): the
  * microphone asked for on the first tap, never before; a level and the time while it records; a
- * stop of its own at five minutes; and the finished file with a key minted once, so sending it
+ * stop of its own at five minutes, or at `maxMs` (a voice hello stops at ten seconds); and the finished file with a key minted once, so sending it
  * again after trouble is the same recording, never two.
  */
-export function useRecording(): Recording {
+export function useRecording(options: { maxMs?: number } = {}): Recording {
+  const longest = options.maxMs ?? LONGEST_MS;
   const recorder = useAudioRecorder(VOICE);
   const state = useAudioRecorderState(recorder, 200);
   const [recorded, setRecorded] = useState<Recorded | null>(null);
@@ -87,7 +88,7 @@ export function useRecording(): Recording {
   };
 
   useEffect(() => {
-    if (state.isRecording && state.durationMillis >= LONGEST_MS) void stop();
+    if (state.isRecording && state.durationMillis >= longest) void stop();
   });
 
   return {

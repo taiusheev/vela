@@ -183,6 +183,10 @@ msgstr "▶ Play voice message {number}"
 msgid "❤️ I'm fine"
 msgstr "❤️ I'm fine"
 
+#: src/components/voice-hello.tsx
+msgid "🎙 Add a voice hello (10 seconds)"
+msgstr "🎙 Add a voice hello (10 seconds)"
+
 #: src/device/VoiceAnswer.tsx
 msgid "🎙 Answer with your voice"
 msgstr "🎙 Answer with your voice"
@@ -618,6 +622,7 @@ msgstr "Leave the number out. Vela asks them for it, with their yes."
 msgid "Leaving…"
 msgstr "Leaving…"
 
+#: src/components/voice-hello.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Listen"
@@ -905,6 +910,10 @@ msgstr "Reading what this phone allows…"
 msgid "Record again"
 msgstr "Record again"
 
+#: src/components/voice-hello.tsx
+msgid "Recording your hello… {time} of 0:10"
+msgstr "Recording your hello… {time} of 0:10"
+
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Recording… {time}"
@@ -912,6 +921,7 @@ msgstr "Recording… {time}"
 
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
+#: src/components/voice-hello.tsx
 #: src/components/vote-options.tsx
 msgid "Remove"
 msgstr "Remove"
@@ -1140,6 +1150,7 @@ msgid "Stay"
 msgstr "Stay"
 
 #: app/parent.tsx
+#: src/components/voice-hello.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
@@ -1520,6 +1531,10 @@ msgstr "Vela Light trial"
 msgid "Vela Light trial · ends {date}"
 msgstr "Vela Light trial · ends {date}"
 
+#: src/components/voice-hello.tsx
+msgid "Vela needs the microphone for a voice hello. You can allow it in Settings."
+msgstr "Vela needs the microphone for a voice hello. You can allow it in Settings."
+
 #: src/components/voice-reply.tsx
 msgid "Vela needs the microphone for a voice reply. You can allow it in Settings."
 msgstr "Vela needs the microphone for a voice reply. You can allow it in Settings."
@@ -1533,6 +1548,10 @@ msgstr "Vela suggests"
 #: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr "Vela suggests · from her own words"
+
+#: src/components/voice-hello.tsx
+msgid "Voice hello, {time}. It plays before your ask."
+msgstr "Voice hello, {time}. It plays before your ask."
 
 #: src/data/useToday.ts
 msgid "voted"

@@ -57,6 +57,7 @@ import {
   type ApiNudges,
   AskDayTakenError,
   AskPhotoMissingError,
+  AskVoiceMissingError,
   type addApiNearby,
   type askApiToLookIn,
   type authorizeFamilyAccess,
@@ -525,6 +526,17 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               ? 429
               : 400,
         );
+      }
+      if (error instanceof AskVoiceMissingError) {
+        // The voice hello is not the asker's own recording, or will not last to her morning.
+        const missing: ApiErrorBody = {
+          error: {
+            code: "not_found",
+            message: "That voice hello is no longer here.",
+            details: { reason: "voice_missing" },
+          },
+        };
+        return c.json(missing, 404);
       }
       if (error instanceof AskPhotoMissingError) {
         // A photo the ask names is gone or not the asker's to ask with (ADR-33): the app offers
