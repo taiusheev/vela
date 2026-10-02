@@ -26,6 +26,7 @@ import {
   LocalDate,
   LocalTime,
   MVP_LANGS,
+  type QuietOutcome,
 } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -1456,9 +1457,88 @@ async function overviewRow(
   return row;
 }
 
-/** The overview: every family, and LINE's quota. */
+/**
+ * One month of quiet mornings across every family, for the precision page (spec §8 "Precision
+ * accounting", §18): counts only. A notice is a quiet morning that told someone (`notify_count` >
+ * 0); one that settled before anyone was told, as in the learning period, is not. Outcomes and
+ * verdicts are counted over notices; a notice not yet settled has no outcome.
+ */
+export interface QuietPrecisionMonth {
+  /** The UTC month the quiet morning opened, `YYYY-MM`. */
+  month: string;
+  quietMornings: number;
+  notices: number;
+  /** Notices not yet settled. */
+  open: number;
+  outcomes: Record<QuietOutcome, number>;
+  useful: { yes: number; no: number };
+}
+
+/** How many months back the precision page reaches, this month included. */
+export const PRECISION_MONTHS = 12;
+
+/** The first instant of the UTC month `back` months before `now`'s. */
+function utcMonthStart(now: Date, back: number): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+}
+
+/**
+ * Every family's quiet mornings by the UTC month they opened, newest first, for the last
+ * `PRECISION_MONTHS` months; months with none are left out. No family is named.
+ */
+async function quietPrecision(db: Queryable, now: Date): Promise<QuietPrecisionMonth[]> {
+  const notice = sql`${quietEvents.notifyCount} > 0`;
+  const month = sql<string>`to_char(${quietEvents.openedAt} at time zone 'UTC', 'YYYY-MM')`;
+  const outcomeCount = (outcome: QuietOutcome) =>
+    sql<number>`count(*) filter (where ${notice} and ${quietEvents.outcome} = ${outcome})`.mapWith(
+      Number,
+    );
+  const rows = await db
+    .select({
+      month,
+      quietMornings: count(),
+      notices: sql<number>`count(*) filter (where ${notice})`.mapWith(Number),
+      open: sql<number>`count(*) filter (where ${notice} and ${quietEvents.resolvedAt} is null)`.mapWith(
+        Number,
+      ),
+      answeredLate: outcomeCount("answered_late"),
+      away: outcomeCount("away"),
+      fineKnown: outcomeCount("fine_known"),
+      trueConcern: outcomeCount("true_concern"),
+      unknown: outcomeCount("unknown"),
+      usefulYes: sql<number>`count(*) filter (where ${notice} and ${quietEvents.useful})`.mapWith(
+        Number,
+      ),
+      usefulNo:
+        sql<number>`count(*) filter (where ${notice} and not ${quietEvents.useful})`.mapWith(
+          Number,
+        ),
+    })
+    .from(quietEvents)
+    .where(gte(quietEvents.openedAt, utcMonthStart(now, PRECISION_MONTHS - 1)))
+    .groupBy(month)
+    .orderBy(desc(month));
+  return rows.map((row) => ({
+    month: row.month,
+    quietMornings: row.quietMornings,
+    notices: row.notices,
+    open: row.open,
+    outcomes: {
+      answered_late: row.answeredLate,
+      away: row.away,
+      fine_known: row.fineKnown,
+      true_concern: row.trueConcern,
+      unknown: row.unknown,
+    },
+    useful: { yes: row.usefulYes, no: row.usefulNo },
+  }));
+}
+
+/** The overview: every family, the precision counts, and LINE's quota. */
 export interface AdminOverview {
   families: AdminOverviewRow[];
+  /** Quiet mornings by month across every family, newest first; counts only. */
+  precision: QuietPrecisionMonth[];
   /**
    * LINE's month as the pilot Worker last read it (05-line-flows.md §6): the count, the limit and
    * the time of the reading, and nothing else of LINE; null before the first reading.
@@ -1469,8 +1549,8 @@ export interface AdminOverview {
 /**
  * The overview (`GET /admin`): every family with today's delivery, answer, and quiet states and
  * times, the answer kinds, and the AI call counts, each linking to its page; no words. Logs one
- * `view` per family listed before reading. LINE's quota is about no family, so reading it logs
- * nothing more.
+ * `view` per family listed before reading. The precision counts name no family and LINE's quota
+ * is about none, so reading them logs nothing more.
  */
 export async function loadAdminOverview(deps: Deps, ctx: AdminContext): Promise<AdminOverview> {
   const now = deps.clock.now();
@@ -1487,7 +1567,11 @@ export async function loadAdminOverview(deps: Deps, ctx: AdminContext): Promise<
   for (const family of all) {
     rows.push(await overviewRow(deps.db, family, await overviewSubject(deps.db, family.id), now));
   }
-  return { families: rows, lineQuota: await loadChannelQuota(deps, "line") };
+  return {
+    families: rows,
+    precision: await quietPrecision(deps.db, now),
+    lineQuota: await loadChannelQuota(deps, "line"),
+  };
 }
 
 /**

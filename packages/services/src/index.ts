@@ -33,6 +33,8 @@ export {
   type MarkLeftResult,
   markDeceased,
   markLeft,
+  PRECISION_MONTHS,
+  type QuietPrecisionMonth,
   type RecordConsentInput,
   type RecordContactConsentInput,
   recordConsent,

@@ -11,6 +11,7 @@ import type {
   AdminOverviewRow,
   FailedOutboundRow,
   FamilyPage,
+  QuietPrecisionMonth,
 } from "@vela/services";
 import { type Html, html, page, type Renderable } from "./html.ts";
 
@@ -138,6 +139,59 @@ function lineQuotaSection(quota: AdminOverview["lineQuota"]): Html {
 <p class="muted">Read every 15 minutes where LINE is on. The founder hears at 70% and 90% of the limit, and when it is spent.</p></section>`;
 }
 
+/** `part` of `whole` as a whole percentage, or a dash with nothing to divide by. */
+function share(part: number, whole: number): string {
+  return whole === 0 ? DASH : `${Math.round((part / whole) * 100)}%`;
+}
+
+function precisionRow(month: QuietPrecisionMonth): Html {
+  const { outcomes, useful } = month;
+  return html`<tr>
+<td>${month.month}</td>
+<td class="num">${month.quietMornings}</td>
+<td class="num">${month.notices}</td>
+<td class="num">${month.open}</td>
+<td class="num">${outcomes.answered_late}</td>
+<td class="num">${outcomes.away}</td>
+<td class="num">${outcomes.fine_known}</td>
+<td class="num">${outcomes.true_concern}</td>
+<td class="num">${outcomes.unknown}</td>
+<td class="num">${share(outcomes.true_concern, month.notices)}</td>
+<td class="num">${useful.yes} / ${useful.no}</td>
+<td class="num">${share(useful.yes, useful.yes + useful.no)}</td>
+</tr>`;
+}
+
+/**
+ * Spec §8's precision accounting and §18's "> 60% marked useful", across every family by the UTC
+ * month the quiet morning opened: counts only, no family named.
+ */
+function precisionSection(months: readonly QuietPrecisionMonth[]): Html {
+  return html`<section id="precision"><h2>Precision</h2>
+<p class="muted">Quiet mornings in every family by the month they opened (UTC). A notice is a quiet morning that told someone; outcomes and verdicts count notices only, and an open notice has neither yet. Precision is true concern ÷ notices; useful is the organisers' yes ÷ their yes and no. Targets (spec §18): under 4 notices per kept light a month by month 3, over 60% useful.</p>
+${
+  months.length === 0
+    ? html`<p class="muted">No morning has been quiet in the last 12 months.</p>`
+    : table(
+        [
+          "Month",
+          "Quiet mornings",
+          "Notices",
+          "Open",
+          "Answered late",
+          "Away",
+          "Fine, known",
+          "True concern",
+          "Unknown",
+          "Precision",
+          "Useful yes / no",
+          "Useful",
+        ],
+        months.map(precisionRow),
+      )
+}</section>`;
+}
+
 export function renderOverview(
   overview: AdminOverview,
   failedOutbound: readonly FailedOutboundRow[],
@@ -157,6 +211,7 @@ ${table(
   ],
   overview.families.map(overviewRow),
 )}
+${precisionSection(overview.precision)}
 ${lineQuotaSection(overview.lineQuota)}
 ${failedOutboundSection(failedOutbound)}`;
   return page("Vela admin", body);

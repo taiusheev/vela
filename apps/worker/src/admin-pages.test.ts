@@ -1,10 +1,10 @@
-import type { AdminOverview, FailedOutboundRow } from "@vela/services";
+import type { AdminOverview, FailedOutboundRow, QuietPrecisionMonth } from "@vela/services";
 import { describe, expect, it } from "vitest";
 import { renderFamilyPage, renderOverview } from "./admin-pages.ts";
 import { familyPageFixture, memberFixture } from "./testing/fakes.ts";
 
 /** An overview with no family and LINE never read. */
-const NO_FAMILIES: AdminOverview = { families: [], lineQuota: null };
+const NO_FAMILIES: AdminOverview = { families: [], precision: [], lineQuota: null };
 
 /** One section of a page, from its opening tag to its close. */
 function sectionOf(body: string, id: string): string {
@@ -19,6 +19,7 @@ describe("the overview's LINE quota", () => {
   it("shows the month's count, the limit and when it was read, and nothing else of LINE", async () => {
     const overview: AdminOverview = {
       families: [],
+      precision: [],
       lineQuota: { limit: 3000, used: 2100, readAt },
     };
 
@@ -30,7 +31,11 @@ describe("the overview's LINE quota", () => {
   });
 
   it("shows a plan without a limit as having none", async () => {
-    const overview: AdminOverview = { families: [], lineQuota: { limit: null, used: 194, readAt } };
+    const overview: AdminOverview = {
+      families: [],
+      precision: [],
+      lineQuota: { limit: null, used: 194, readAt },
+    };
 
     const section = sectionOf(await renderOverview(overview, []).text(), "line-quota");
 
@@ -49,6 +54,61 @@ describe("the overview's LINE quota", () => {
     const page = familyPageFixture({ members: [memberFixture()] });
 
     expect(await renderFamilyPage(page, null).text()).not.toMatch(/\bLINE\b/);
+  });
+});
+
+describe("the overview's precision", () => {
+  const september: QuietPrecisionMonth = {
+    month: "2026-09",
+    quietMornings: 6,
+    notices: 5,
+    open: 1,
+    outcomes: { answered_late: 1, away: 1, fine_known: 1, true_concern: 1, unknown: 0 },
+    useful: { yes: 2, no: 1 },
+  };
+
+  it("shows each month's counts, the true-concern share of notices and the useful share of verdicts", async () => {
+    const overview: AdminOverview = { ...NO_FAMILIES, precision: [september] };
+
+    const section = sectionOf(await renderOverview(overview, []).text(), "precision");
+
+    expect(section).toContain(`<tr>
+<td>2026-09</td>
+<td class="num">6</td>
+<td class="num">5</td>
+<td class="num">1</td>
+<td class="num">1</td>
+<td class="num">1</td>
+<td class="num">1</td>
+<td class="num">1</td>
+<td class="num">0</td>
+<td class="num">20%</td>
+<td class="num">2 / 1</td>
+<td class="num">67%</td>
+</tr>`);
+  });
+
+  it("shows a dash for a share with nothing to divide by", async () => {
+    const quietOnly: QuietPrecisionMonth = {
+      ...september,
+      notices: 0,
+      open: 0,
+      outcomes: { answered_late: 0, away: 0, fine_known: 0, true_concern: 0, unknown: 0 },
+      useful: { yes: 0, no: 0 },
+    };
+    const overview: AdminOverview = { ...NO_FAMILIES, precision: [quietOnly] };
+
+    const section = sectionOf(await renderOverview(overview, []).text(), "precision");
+
+    expect(section).toContain(`<td class="num">—</td>
+<td class="num">0 / 0</td>
+<td class="num">—</td>`);
+  });
+
+  it("says so when no morning has been quiet", async () => {
+    const section = sectionOf(await renderOverview(NO_FAMILIES, []).text(), "precision");
+
+    expect(section).toContain("No morning has been quiet in the last 12 months.");
   });
 });
 

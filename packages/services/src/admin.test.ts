@@ -17,6 +17,7 @@ import {
   members,
   nearbyContacts,
   outbound,
+  quietEvents,
   translations,
   weeklyReads,
 } from "@vela/db";
@@ -1965,6 +1966,7 @@ describe("the admin pages", () => {
 
     expect(overview).toStrictEqual({
       families: [],
+      precision: [],
       lineQuota: { limit: 3000, used: 194, readAt: new Date("2026-09-14T00:15:00.000Z") },
     });
     expect(await logRows()).toEqual([]);
@@ -2072,6 +2074,110 @@ describe("the admin pages", () => {
     await family();
     expect(await loadFamilyPage(h.deps, FOUNDER, UNKNOWN_ID)).toBeNull();
     expect(await logRows()).toHaveLength(0);
+  });
+});
+
+describe("the precision counts on the overview", () => {
+  let day = 0;
+
+  /** One quiet morning on its own exchange, opened at `openedAt`. */
+  async function quiet(
+    seed: SeededFamily,
+    openedAt: string,
+    values: Partial<typeof quietEvents.$inferInsert> = {},
+  ): Promise<void> {
+    day += 1;
+    const exchange = await seedExchange(h.db, seed, {
+      date: `2025-01-${String(day).padStart(2, "0")}` as LocalDate,
+      state: "delivered",
+      deliveredAt: new Date(openedAt),
+    });
+    await h.db.insert(quietEvents).values({
+      exchangeId: exchange.id,
+      memberId: seed.member.id,
+      openedAt: new Date(openedAt),
+      notifyCount: 1,
+      ...values,
+    });
+  }
+
+  beforeEach(() => {
+    day = 0;
+  });
+
+  it("counts every family's notices, outcomes and useful verdicts by UTC month, naming no family and logging nothing more", async () => {
+    const seed = await family();
+    const other = await seedFamily(h.db, {
+      now: h.clock.now(),
+      familyName: "The Lins",
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+    const settled = { resolvedAt: new Date("2026-09-13T12:00:00Z") };
+    await quiet(seed, "2026-09-01T00:30:00Z", {
+      ...settled,
+      outcome: "answered_late",
+      useful: true,
+    });
+    await quiet(seed, "2026-09-03T01:00:00Z", { ...settled, outcome: "away", useful: false });
+    await quiet(other, "2026-09-05T01:00:00Z", {
+      ...settled,
+      outcome: "true_concern",
+      useful: true,
+    });
+    await quiet(other, "2026-09-06T01:00:00Z", { ...settled, outcome: "fine_known" });
+    // Not settled yet: a notice with no outcome.
+    await quiet(seed, "2026-09-13T23:00:00Z");
+    // Settled before anyone was told: a quiet morning, not a notice.
+    await quiet(seed, "2026-09-07T01:00:00Z", {
+      ...settled,
+      notifyCount: 0,
+      outcome: "answered_late",
+    });
+    // 23:30 in Taipei on 1 September is still August in UTC.
+    await quiet(other, "2026-08-31T23:59:59Z", { ...settled, outcome: "unknown", useful: false });
+    // Twelve months back from September 2026 starts at October 2025.
+    await quiet(seed, "2025-10-01T00:00:00Z", { ...settled, outcome: "away" });
+    await quiet(seed, "2025-09-30T23:59:59Z", { ...settled, outcome: "away" });
+
+    const overview = await loadAdminOverview(h.deps, FOUNDER);
+
+    const none = { answered_late: 0, away: 0, fine_known: 0, true_concern: 0, unknown: 0 };
+    expect(overview.precision).toStrictEqual([
+      {
+        month: "2026-09",
+        quietMornings: 6,
+        notices: 5,
+        open: 1,
+        outcomes: { answered_late: 1, away: 1, fine_known: 1, true_concern: 1, unknown: 0 },
+        useful: { yes: 2, no: 1 },
+      },
+      {
+        month: "2026-08",
+        quietMornings: 1,
+        notices: 1,
+        open: 0,
+        outcomes: { ...none, unknown: 1 },
+        useful: { yes: 0, no: 1 },
+      },
+      {
+        month: "2025-10",
+        quietMornings: 1,
+        notices: 1,
+        open: 0,
+        outcomes: { ...none, away: 1 },
+        useful: { yes: 0, no: 0 },
+      },
+    ]);
+    expect(new Set((await logRows()).map((log) => log.familyId))).toEqual(
+      new Set([seed.family.id, other.family.id]),
+    );
+  });
+
+  it("is empty when no morning has been quiet", async () => {
+    await family();
+
+    expect((await loadAdminOverview(h.deps, FOUNDER)).precision).toEqual([]);
   });
 });
 

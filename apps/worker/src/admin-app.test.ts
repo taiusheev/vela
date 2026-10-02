@@ -145,6 +145,7 @@ describe("the admin pages", () => {
       services: {
         loadAdminOverview: async () => ({
           families: [],
+          precision: [],
           lineQuota: { limit: 3000, used: 2100, readAt: new Date("2026-10-12T01:30:00.000Z") },
         }),
       },

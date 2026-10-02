@@ -512,7 +512,7 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
 }
 
 /** An overview with no family and LINE never read, as a fresh environment's. */
-const EMPTY_OVERVIEW: AdminOverview = { families: [], lineQuota: null };
+const EMPTY_OVERVIEW: AdminOverview = { families: [], precision: [], lineQuota: null };
 
 export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): FakeAdminRuntime {
   const recording = createRecording();
