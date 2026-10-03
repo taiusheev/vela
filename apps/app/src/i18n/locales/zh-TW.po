@@ -1350,6 +1350,10 @@ msgstr "停止"
 msgid "Story day · {day}"
 msgstr "故事日 · {day}"
 
+#: src/components/story-day.tsx
+msgid "Story of the week"
+msgstr "本週的故事"
+
 #: src/data/exchanges.ts
 msgid "Sunday"
 msgstr "星期日"

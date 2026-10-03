@@ -1343,6 +1343,10 @@ msgstr "Stop"
 msgid "Story day · {day}"
 msgstr "Story day · {day}"
 
+#: src/components/story-day.tsx
+msgid "Story of the week"
+msgstr "Story of the week"
+
 #: src/data/exchanges.ts
 msgid "Sunday"
 msgstr "Sunday"

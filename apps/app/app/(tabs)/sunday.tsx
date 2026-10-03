@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Light } from "../../src/components/light.tsx";
-import { StoryDay } from "../../src/components/story-day.tsx";
+import { StoryDay, StoryOfTheWeek } from "../../src/components/story-day.tsx";
 import {
   Card,
   Eyebrow,
@@ -44,7 +44,7 @@ function WeekRow({ lights }: { lights: WeekLight[] }) {
 /**
  * Sunday (spec §13, A9): her latest weekly read the founder sent. Seven lights for her week, with a
  * late day marked; the count lines from the week's numbers; up to four notes in Literata; one
- * suggestion in action colour. Without Vela Light the lights show and the rest waits behind the
+ * suggestion in action colour; the story of the week from the family book. Without Vela Light the lights show and the rest waits behind the
  * trial. Organisers only, since the read carries the counts of her days.
  */
 export default function SundayScreen() {
@@ -146,6 +146,11 @@ export default function SundayScreen() {
                   </Words>
                 </Card>
               )}
+              <StoryOfTheWeek
+                from={read.week.lights[0]?.date ?? ""}
+                to={read.week.lights.at(-1)?.date ?? ""}
+                {...(view.memberId === undefined ? {} : { memberId: view.memberId })}
+              />
               <PrimaryButton
                 label={t`Ask ${name} something`}
                 onPress={() =>

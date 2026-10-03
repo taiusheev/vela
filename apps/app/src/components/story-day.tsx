@@ -97,3 +97,39 @@ export function StoryDay() {
     </Card>
   );
 }
+
+/**
+ * The story of the week (spec A9): in the weekly read, the newest story she told in the read's
+ * seven days, kept in the family book, with a way into the book. Nothing when the week kept none.
+ */
+export function StoryOfTheWeek({
+  from,
+  to,
+  memberId,
+}: {
+  from: string;
+  to: string;
+  memberId?: string;
+}) {
+  const { t } = useLingui();
+  const { familyId } = useToday();
+  const book = useBook(familyId);
+  const story = book.entries.find((entry) => {
+    const day = entry.kept_at.slice(0, 10);
+    return day >= from && day <= to && (memberId === undefined || entry.member_id === memberId);
+  });
+  if (story === undefined) return null;
+  const words = story.answers.flatMap((answer) => answer.text ?? []).join(" ");
+  return (
+    <Card>
+      <Eyebrow>
+        <Trans>Story of the week</Trans>
+      </Eyebrow>
+      {story.question === null ? null : <Words variant="bodyMedium">{story.question}</Words>}
+      {words.length === 0 ? null : (
+        <Words variant="voice">{words.length > 280 ? `${words.slice(0, 279)}…` : words}</Words>
+      )}
+      <SecondaryButton label={t`Read the family book`} onPress={() => router.push("/book")} />
+    </Card>
+  );
+}

@@ -676,6 +676,6 @@ Rejected:
 - **Copying her words into the book.** That would be a second copy to seal, clear and export. The entry points at the exchange instead.
 - **Deleting the entry on removal.** The next answer would then keep the story again.
 
-Not built yet: voting on questions, the PDF export (Vela Light), and the story of the week in the weekly read.
+The weekly read's story of the week is the newest entry kept in the read's seven days, found by the app from the book. Not built yet: voting on questions, and the PDF export (Vela Light).
 
 Revisit if: families want to keep an ordinary answer too; a family leaving needs to take its book with it (export comes first); her Telegram voice notes should be kept as stored copies, which today they are not, so only her words are kept from Telegram.
