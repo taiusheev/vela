@@ -1,0 +1,26 @@
+# Story day in the demo (A10): the Sunday tab offers a story question from the bank, "Another
+# question" offers the next, and the family book opens; the demo has no API, so the book says how
+# it fills and sending waits for one.
+url: ${APP_URL}
+name: Story day offers a question and opens the family book
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/sunday
+- scrollUntilVisible:
+    element: "Tell me about a day from your childhood you still remember clearly."
+    direction: DOWN
+- assertVisible: "Her answer is kept in the family book, unless she says not to."
+- scrollUntilVisible:
+    element: "Another question"
+    direction: DOWN
+- tapOn: "Another question"
+- scrollUntilVisible:
+    element: "Tell me about your first day at work."
+    direction: DOWN
+- scrollUntilVisible:
+    element: "Read the family book"
+    direction: DOWN
+- tapOn: "Read the family book"
+- assertVisible: "The family book fills with the stories she tells on story day."
