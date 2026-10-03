@@ -11,6 +11,7 @@ import { useAccount } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
 import { NearbyEditor } from "../src/components/nearby-editor.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
+import { SetUpPhone } from "../src/components/set-up-phone.tsx";
 import {
   Card,
   Chip,
@@ -58,6 +59,8 @@ export default function OnboardingScreen() {
   const [wake, setWake] = useState<string>("07:30");
   const [created, setCreated] = useState<ApiCreatedFamily | null>(null);
   const [shareTrouble, setShareTrouble] = useState(false);
+  // Where her mornings reach her (spec A4): Telegram, or her own phone with this app (ADR-35).
+  const [channel, setChannel] = useState<"telegram" | "phone">("telegram");
   const provisionKey = useIdempotencyKey("provision");
   const familyKey = useIdempotencyKey("family");
 
@@ -339,6 +342,44 @@ export default function OnboardingScreen() {
             <Words variant="title">
               <Trans>Now ask {name}</Trans>
             </Words>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+              <Chip
+                label={t`On Telegram`}
+                selected={channel === "telegram"}
+                onPress={() => setChannel("telegram")}
+              />
+              <Chip
+                label={t`On her phone, with Vela`}
+                selected={channel === "phone"}
+                onPress={() => setChannel("phone")}
+              />
+            </View>
+          </>
+        ) : null}
+
+        {step === "invite" && created !== null && channel === "phone" ? (
+          <>
+            <Words variant="body" tone="ink2">
+              <Trans>
+                When you are with {name}, sign in to Vela on her phone and set it up there. Her
+                phone then shows one message at a time in large words, and asks her first; nothing
+                reaches her until she says yes.
+              </Trans>
+            </Words>
+            <SetUpPhone
+              familyId={created.family.id}
+              memberId={created.kept_light_member.id}
+              name={name ?? t`her`}
+            />
+            <Words variant="caption" tone="ink3">
+              <Trans>You can also do it later, from You → Her phone.</Trans>
+            </Words>
+            <PrimaryButton label={t`Next`} onPress={() => setStep("ready")} />
+          </>
+        ) : null}
+
+        {step === "invite" && created !== null && channel === "telegram" ? (
+          <>
             <Words variant="body" tone="ink2">
               <Trans>
                 Nothing reaches her until she says yes. Send her these words; the link tells her
@@ -386,6 +427,13 @@ export default function OnboardingScreen() {
               />
             ) : null}
             <PrimaryButton label={t`Go to Today`} onPress={() => router.replace("/")} />
+            <SecondaryButton
+              label={t`Ask ${name} something else`}
+              onPress={() => {
+                router.replace("/");
+                router.push("/ask");
+              }}
+            />
           </View>
         ) : null}
       </ScrollView>

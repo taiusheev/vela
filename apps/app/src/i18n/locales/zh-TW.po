@@ -392,6 +392,10 @@ msgstr "問問{name}，{what}還順利嗎"
 msgid "Ask {name} something"
 msgstr "問{name}一件事"
 
+#: app/onboarding.tsx
+msgid "Ask {name} something else"
+msgstr "再問{name}一件事"
+
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
 msgstr "問{recipient}一件事"
@@ -999,6 +1003,10 @@ msgstr "已關閉：{her}回覆或輪到您提問時，都不會通知。如果�
 msgid "Older than thirty days lives in the family book."
 msgstr "超過三十天的內容會收進家族故事書。"
 
+#: app/onboarding.tsx
+msgid "On her phone, with Vela"
+msgstr "在長輩的手機上用 Vela"
+
 #: src/data/weekly.ts
 msgid "On Saturday she answered later than usual, after the market."
 msgstr "週六媽媽比平常晚回覆，是在去完市場之後。"
@@ -1006,6 +1014,10 @@ msgstr "週六媽媽比平常晚回覆，是在去完市場之後。"
 #: src/components/story-day.tsx
 msgid "On Sunday {name} is asked for this story. What she tells goes into the family book."
 msgstr "週日會請{name}說這個故事，說出的內容會收進家庭故事書。"
+
+#: app/onboarding.tsx
+msgid "On Telegram"
+msgstr "用 Telegram"
 
 #: app/(tabs)/you.tsx
 #: src/push/provider.tsx
@@ -2003,6 +2015,10 @@ msgstr "早上一直很安靜時，Vela 會通知您。這裡是那些通知最�
 msgid "When she answers what you asked, and the evening before your turn."
 msgstr "家人回覆您的提問時，以及輪到您提問的前一晚。"
 
+#: app/onboarding.tsx
+msgid "When you are with {name}, sign in to Vela on her phone and set it up there. Her phone then shows one message at a time in large words, and asks her first; nothing reaches her until she says yes."
+msgstr "和{name}在一起時，在長輩的手機上登入 Vela 並完成設定。之後那支手機一次只顯示一則大字訊息，並先徵求對方同意；對方答應之前，不會收到任何訊息。"
+
 #: app/ask.tsx
 msgid "Whenever"
 msgstr "哪天都可以"
@@ -2069,6 +2085,10 @@ msgstr "您目前暫停中：不會輪到您提問。"
 #: src/data/useFamily.ts
 msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
 msgstr "目前只有您一位發起人在使用中，而暫停的發起人在安靜的日子不會收到通知。必須先有這個家庭的另一位發起人在使用中。"
+
+#: app/onboarding.tsx
+msgid "You can also do it later, from You → Her phone."
+msgstr "也可以之後再設定：我 → 長輩的手機。"
 
 #: app/exchange/[id].tsx
 msgid "You can reply once she has answered."

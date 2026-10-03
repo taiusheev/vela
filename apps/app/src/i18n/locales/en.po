@@ -385,6 +385,10 @@ msgstr "Ask {name} how {what} went"
 msgid "Ask {name} something"
 msgstr "Ask {name} something"
 
+#: app/onboarding.tsx
+msgid "Ask {name} something else"
+msgstr "Ask {name} something else"
+
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
 msgstr "Ask {recipient} something"
@@ -992,6 +996,10 @@ msgstr "Off: nothing when {her} answers or when your turn comes. If a morning go
 msgid "Older than thirty days lives in the family book."
 msgstr "Older than thirty days lives in the family book."
 
+#: app/onboarding.tsx
+msgid "On her phone, with Vela"
+msgstr "On her phone, with Vela"
+
 #: src/data/weekly.ts
 msgid "On Saturday she answered later than usual, after the market."
 msgstr "On Saturday she answered later than usual, after the market."
@@ -999,6 +1007,10 @@ msgstr "On Saturday she answered later than usual, after the market."
 #: src/components/story-day.tsx
 msgid "On Sunday {name} is asked for this story. What she tells goes into the family book."
 msgstr "On Sunday {name} is asked for this story. What she tells goes into the family book."
+
+#: app/onboarding.tsx
+msgid "On Telegram"
+msgstr "On Telegram"
 
 #: app/(tabs)/you.tsx
 #: src/push/provider.tsx
@@ -1996,6 +2008,10 @@ msgstr "When a morning stays quiet, Vela tells you. Here is how those notices en
 msgid "When she answers what you asked, and the evening before your turn."
 msgstr "When she answers what you asked, and the evening before your turn."
 
+#: app/onboarding.tsx
+msgid "When you are with {name}, sign in to Vela on her phone and set it up there. Her phone then shows one message at a time in large words, and asks her first; nothing reaches her until she says yes."
+msgstr "When you are with {name}, sign in to Vela on her phone and set it up there. Her phone then shows one message at a time in large words, and asks her first; nothing reaches her until she says yes."
+
 #: app/ask.tsx
 msgid "Whenever"
 msgstr "Whenever"
@@ -2062,6 +2078,10 @@ msgstr "You are paused: no turns come to you."
 #: src/data/useFamily.ts
 msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
 msgstr "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
+
+#: app/onboarding.tsx
+msgid "You can also do it later, from You → Her phone."
+msgstr "You can also do it later, from You → Her phone."
 
 #: app/exchange/[id].tsx
 msgid "You can reply once she has answered."
