@@ -22,10 +22,14 @@ const format: Format = {
   serialize: (catalog, ctx) => (ctx.locale === "zh-TW" ? reviewed : plain).serialize(catalog, ctx),
 };
 
-/** English is the source; zh-TW is the one translation until phase 2 (spec §2, build plan 3.1). */
+/**
+ * English is the source; zh-TW is the one translation until phase 2 (spec §2, build plan 3.1). `ja`
+ * is extracted so a translator can work in its catalog, and is not loaded by the app until it is
+ * complete and reviewed (`plan/japanese-scope.md`, build plan 5.6).
+ */
 export default defineConfig({
   sourceLocale: "en",
-  locales: ["en", "zh-TW"],
+  locales: ["en", "zh-TW", "ja"],
   // A missing zh-TW entry shows English at runtime; `pnpm test` fails on it before that can ship.
   fallbackLocales: { default: "en" },
   catalogs: [

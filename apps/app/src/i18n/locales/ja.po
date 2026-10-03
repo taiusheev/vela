@@ -1,0 +1,2100 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-03 16:52+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#: app/exchange/[id].tsx
+msgid "{asker} asked"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "{asker} asked {recipient}"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "{away} away"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "{by} asked at {time}. Waiting for {name}."
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "{by} said {name} is fine. Everyone who was told has heard."
+msgstr ""
+
+#: app/ask.tsx
+msgid "{day} morning"
+msgstr ""
+
+#: src/data/weekly.ts
+msgid "{days, plural, one {{name} answered {answered} of # day.} other {{name} answered {answered} of # days.}}"
+msgstr ""
+
+#: src/data/lines.ts
+msgid "{from} replied"
+msgstr ""
+
+#: src/data/lines.ts
+msgid "{from} sent a heart"
+msgstr ""
+
+#: src/data/lines.ts
+msgid "{from} sent a hug"
+msgstr ""
+
+#: src/data/lines.ts
+msgid "{from} sent a laugh"
+msgstr ""
+
+#: src/data/lines.ts
+msgid "{from} sent a photo"
+msgstr ""
+
+#: src/data/lines.ts
+msgid "{from} sent a voice message"
+msgstr ""
+
+#: src/data/lines.ts
+msgid "{from}: {text}"
+msgstr ""
+
+#: src/data/weekly.ts
+msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "{her} would see your light, and you choose who else. Not in the app yet."
+msgstr ""
+
+#: app/ask.tsx
+msgid "{holder} already has that morning."
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "{holder} already has that Sunday."
+msgstr ""
+
+#: src/data/precision.ts
+msgid "{known} fine, and the family knew why"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "{later} answered later"
+msgstr ""
+
+#: app/book.tsx
+msgid "{name} · {day}"
+msgstr ""
+
+#: app/book.tsx
+msgid "{name} · {day} · {asker} asked"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "{name} answered. The light is lit again."
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "{name} can't today."
+msgstr ""
+
+#: src/data/family.ts
+msgid "{name} has not said yes yet"
+msgstr ""
+
+#: app/ask.tsx
+msgid "{name} has not said yes yet. Once she does, her first morning is the next day."
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "{name} is asked on {day}."
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "{name} is asked on {day}. Chosen by {askedBy}."
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "{name} is fine, I know why"
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "{name} last answered {day} at {time}."
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "{name} last answered today at {time}."
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "{name} last answered yesterday at {time}."
+msgstr ""
+
+#: src/data/quiet.ts
+msgid "{name} last answered yesterday at 8:41."
+msgstr ""
+
+#: src/data/family.ts
+msgid "{name} said no"
+msgstr ""
+
+#: src/data/family.ts
+msgid "{name} said yes"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "{name} will look in."
+msgstr ""
+
+#: src/components/reminders.tsx
+msgid "{name}: {what}, {day}"
+msgstr ""
+
+#: src/components/reminders.tsx
+msgid "{name}: {what}. You will be reminded to ask on {day}."
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "{name}'s light is not on."
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "{name}'s light is on"
+msgstr ""
+
+#: app/ask.tsx
+msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "{name}'s week"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "{neverKnown} never known"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "{notices, plural, one {# quiet notice.} other {# quiet notices.}}"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "{open, plural, one {# is still open.} other {# are still open.}}"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+#: app/(tabs)/index.tsx
+#: app/exchange/[id].tsx
+msgid "{recipient} answered at {time}"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "{recipient} answered at {time} · from her voice note"
+msgstr ""
+
+#: src/data/exchanges.ts
+#: src/data/today.ts
+#: src/data/useToday.ts
+msgid "{recipient} saw it · {time}"
+msgstr ""
+
+#: src/data/ask.ts
+msgid "{words} · shown to her in {language}"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "{wrong} where something was wrong"
+msgstr ""
+
+#: app/book.tsx
+msgid "▶ Her voice"
+msgstr ""
+
+#: app/parent.tsx
+msgid "▶ Play the voice message"
+msgstr ""
+
+#: app/parent.tsx
+msgid "▶ Play voice message {number}"
+msgstr ""
+
+#: src/device/useParent.ts
+msgid "❤️ I'm fine"
+msgstr ""
+
+#: src/components/voice-hello.tsx
+msgid "🎙 Add a voice hello (10 seconds)"
+msgstr ""
+
+#: src/device/VoiceAnswer.tsx
+msgid "🎙 Answer with your voice"
+msgstr ""
+
+#: src/components/voice-reply.tsx
+msgid "🎙 Reply with your voice"
+msgstr ""
+
+#: src/components/photo-reply.tsx
+msgid "📷 Reply with a photo"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "$79 a year"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "A hello for {recipient}"
+msgstr ""
+
+#: src/data/useExchanges.ts
+msgid "A hello from Vela"
+msgstr ""
+
+#: src/data/exchanges.ts
+msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
+msgstr ""
+
+#: src/data/ask.ts
+msgid "A question"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "A quiet morning"
+msgstr ""
+
+#: src/data/ask.ts
+msgid "A voice note"
+msgstr ""
+
+#: src/data/ask.ts
+msgid "A vote"
+msgstr ""
+
+#: src/data/ask.ts
+msgid "A word to teach"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Account"
+msgstr ""
+
+#: app/precision.tsx
+msgid "Across Vela"
+msgstr ""
+
+#: src/components/vote-options.tsx
+msgid "Add an option"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Add them"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Adding…"
+msgstr ""
+
+#: src/data/onboarding.ts
+msgid "Adelaide"
+msgstr ""
+
+#: src/data/onboarding.ts
+msgid "Alaska"
+msgstr ""
+
+#: src/data/family.ts
+msgid "All said yes"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "Always free"
+msgstr ""
+
+#: src/data/ask.ts
+msgid "An old photo"
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Another question"
+msgstr ""
+
+#: src/device/KitchenTable.tsx
+msgid "Answer"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "answered"
+msgstr ""
+
+#: src/data/today.ts
+#: src/data/useToday.ts
+msgid "answered {time}"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "Anyone"
+msgstr ""
+
+#: src/components/reminders.tsx
+msgid "Ask {name}"
+msgstr ""
+
+#: src/components/reminders.tsx
+msgid "Ask {name} how {what} went"
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+#: app/ask.tsx
+msgid "Ask {name} something"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Ask {recipient} something"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Ask {who} on Telegram"
+msgstr ""
+
+#: src/data/family.ts
+msgid "Ask and reply · free"
+msgstr ""
+
+#: src/data/weekly.ts
+msgid "Ask her which seeds she wants to keep for next spring."
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Ask it on Sunday"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Ask on Telegram"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Ask them to look in"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Asked at {time}"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Asked at {time}. Waiting for {name}."
+msgstr ""
+
+#: src/components/push-offer.tsx
+#: src/components/quiet-notice.tsx
+msgid "Asking…"
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says."
+msgstr ""
+
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Atlantic"
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "Australia"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "away"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "away · {day}"
+msgstr ""
+
+#: src/data/exchanges.ts
+msgid "Both of you, but only Mia listened about the butter."
+msgstr ""
+
+#: src/data/onboarding.ts
+msgid "Brisbane"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Call"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Call {name}"
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "Canada"
+msgstr ""
+
+#. a time zone
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Central"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Change"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Change the people nearby"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Checking…"
+msgstr ""
+
+#: src/components/photo-slots.tsx
+msgid "Choose a photo"
+msgstr ""
+
+#: src/components/photo-reply.tsx
+msgid "Choose another"
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Choose from the list"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Choose your country, type your number as you would at home, and we text you a code."
+msgstr ""
+
+#: app/sign-in.tsx
+#: src/components/quiet-notice.tsx
+msgid "Close"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Codes by text message do not reach {where} yet. Use your email instead."
+msgstr ""
+
+#: src/components/reminders.tsx
+msgid "Coming up"
+msgstr ""
+
+#: src/data/today.ts
+msgid "Dad"
+msgstr ""
+
+#: src/data/onboarding.ts
+msgid "Darwin"
+msgstr ""
+
+#: src/data/photos.ts
+msgid "Do you remember this?"
+msgstr ""
+
+#: src/components/reminders.tsx
+msgid "Done"
+msgstr ""
+
+#. who a nearby contact is to her
+#. who a nearby contact is to her
+#: src/data/quiet.ts
+#: src/data/useNearby.ts
+msgid "downstairs"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Earlier this month"
+msgstr ""
+
+#. a time zone
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Eastern"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Email"
+msgstr ""
+
+#. button: sign in with the code
+#: app/sign-in.tsx
+msgid "Enter"
+msgstr ""
+
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/exchanges.tsx
+msgctxt "tab"
+msgid "Exchanges"
+msgstr ""
+
+#: src/data/family.ts
+msgctxt "role"
+msgid "family"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Family"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "France"
+msgstr ""
+
+#: src/data/family.ts
+msgid "Free"
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "Germany"
+msgstr ""
+
+#: app/onboarding.tsx
+#: app/vela-light.tsx
+msgid "Go to Today"
+msgstr ""
+
+#: src/device/useParent.ts
+msgid "Good morning, Mom. Mia asks: what did you have for breakfast?"
+msgstr ""
+
+#: src/device/useParent.ts
+msgid "Good morning. Your message is here."
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+#: src/data/family.ts
+#: src/data/useNearby.ts
+msgid "Has not said yes yet"
+msgstr ""
+
+#: src/data/onboarding.ts
+msgid "Hawaii"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Hear it on this phone when {name} answers."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "Heart"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
+msgstr ""
+
+#. stands in for her name
+#. stands in for her name
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+#: app/onboarding.tsx
+msgid "her"
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Her answer is kept in the family book, unless she says not to."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Her first morning is the day after she says yes, at {time}."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Her morning comes at {time}, half an hour after she wakes."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Her name, as the family calls her."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Her phone"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Hong Kong"
+msgstr ""
+
+#: src/components/reminders.tsx
+msgid "How did {what} go?"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "How the quiet notices ended, in your family and across Vela"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "How they ended: {ended}."
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "How they know {name}, like neighbour"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "How Vela greets her each morning."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+#: app/precision.tsx
+msgid "How Vela is doing"
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "Hug"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "I have sent it"
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link, and Vela does not send notifications to phones yet."
+msgstr ""
+
+#: src/push/provider.tsx
+msgid "If her morning stays quiet past her usual time, and when it is settled."
+msgstr ""
+
+#: src/data/precision.ts
+msgid "In none of them was something wrong."
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "India"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Into her morning"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Into her morning."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "It reaches her on the first morning after she says yes. Every morning after that, someone in the family asks."
+msgstr ""
+
+#: src/data/exchanges.ts
+msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "It's been quiet at {name}'s today"
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "Japan"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Kazakhstan"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Keep a light on for me"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Language"
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "late"
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "Laugh"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Leave"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Leave {familyName}?"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Leave the family"
+msgstr ""
+
+#: src/data/useNearby.ts
+msgid "Leave the number out. Vela asks them for it, with their yes."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Leaving…"
+msgstr ""
+
+#: src/components/voice-hello.tsx
+#: src/components/voice-reply.tsx
+#: src/device/VoiceAnswer.tsx
+msgid "Listen"
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "Looking for that exchange…"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Looking for your family on this account…"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Looking for your family's days…"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Malaysia"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+#: app/(tabs)/you.tsx
+#: app/nearby.tsx
+#: app/onboarding.tsx
+#: app/vela-light.tsx
+#: src/components/story-day.tsx
+#: src/data/exchanges.ts
+#: src/data/family.ts
+#: src/data/today.ts
+#: src/data/weekly.ts
+#: src/device/useParent.ts
+msgid "Mom"
+msgstr ""
+
+#. a time zone
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Mountain"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Mrs Chen"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "name@example.com"
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgctxt "relation"
+msgid "nearby"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Nearby"
+msgstr ""
+
+#: src/data/family.ts
+msgid "Nearby: {names}"
+msgstr ""
+
+#. who a nearby contact is to her
+#. who a nearby contact is to her
+#: src/data/quiet.ts
+#: src/data/useNearby.ts
+msgid "neighbour"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Netherlands"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "New Zealand"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Next"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "No accounts yet"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "No family is set up on this account yet."
+msgstr ""
+
+#: app/ask.tsx
+msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "No number here: Vela asks them for it, with their yes."
+msgstr ""
+
+#: app/precision.tsx
+msgid "No quiet notice in the last 12 months."
+msgstr ""
+
+#: app/book.tsx
+msgid "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
+msgstr ""
+
+#: src/data/today.ts
+#: src/data/useToday.ts
+msgid "No word yet today."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+#: app/exchange/[id].tsx
+msgid "No word yet."
+msgstr ""
+
+#: src/data/weekly.ts
+msgid "Nobody in the family asked {name} anything this week."
+msgstr ""
+
+#: src/data/family.ts
+msgid "Nobody nearby yet"
+msgstr ""
+
+#: app/precision.tsx
+msgid "Not enough notices yet to show a month."
+msgstr ""
+
+#: app/ask.tsx
+#: app/vela-light.tsx
+#: src/components/set-up-phone.tsx
+msgid "Not now"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Not this time"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Nothing has happened yet. Her first morning will be here."
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "Nothing is charged during the pilot, and no card is asked for."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her."
+msgstr ""
+
+#: app/parent.tsx
+#: src/device/KitchenTable.tsx
+msgid "Nothing yet today. Your morning message will be here."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "Nothing yet."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Notifications"
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Notifications are not available in this build of the app."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Notifications are off in this phone's settings."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Notifications are off."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Notifications are on, but quiet mornings are switched off for Vela in this phone's settings."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Notifications are on."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Notifications come to the Vela app on a phone, not to a browser."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Now ask {name}"
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Off: nothing when {her} answers or when your turn comes."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Older than thirty days lives in the family book."
+msgstr ""
+
+#: src/data/weekly.ts
+msgid "On Saturday she answered later than usual, after the market."
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "On Sunday {name} is asked for this story. What she tells goes into the family book."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+#: src/push/provider.tsx
+msgid "One moment a day"
+msgstr ""
+
+#: app/parent.tsx
+msgid "One moment…"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Open"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Open how the quiet notices ended"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+#: src/components/push-offer.tsx
+msgid "Open settings"
+msgstr ""
+
+#: app/book.tsx
+msgid "Opening the book…"
+msgstr ""
+
+#: src/components/vote-options.tsx
+msgid "Option {number}"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "or $9.99 a month · a second person +50%"
+msgstr ""
+
+#: app/parent.tsx
+msgid "Or say it in your own words"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Or write your own"
+msgstr ""
+
+#: src/data/family.ts
+msgctxt "role"
+msgid "organiser"
+msgstr ""
+
+#. a time zone
+#. a time zone
+#: src/data/onboarding.ts
+msgid "Pacific"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Pause"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "paused"
+msgstr ""
+
+#: src/data/family.ts
+msgid "Paused · {plan}"
+msgstr ""
+
+#: app/nearby.tsx
+msgid "People nearby"
+msgstr ""
+
+#: src/data/onboarding.ts
+msgid "Perth"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Philippines"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Phone number"
+msgstr ""
+
+#: app/parent.tsx
+#: src/components/family-photo.tsx
+#: src/components/photo-slots.tsx
+msgid "Photo"
+msgstr ""
+
+#: app/parent.tsx
+msgid "Photo {number}"
+msgstr ""
+
+#: src/components/family-photo.tsx
+msgid "Photo in the family group"
+msgstr ""
+
+#: app/ask.tsx
+#: src/components/photo-slots.tsx
+msgid "Photos are not switched on here yet."
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "picked a photo"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "picked photo {number}"
+msgstr ""
+
+#: src/data/today.ts
+#: src/data/useToday.ts
+msgid "quiet"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Read the family book"
+msgstr ""
+
+#: app/parent.tsx
+msgid "Read this aloud"
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "Reading what this phone allows…"
+msgstr ""
+
+#: src/components/voice-reply.tsx
+#: src/device/VoiceAnswer.tsx
+msgid "Record again"
+msgstr ""
+
+#: src/components/voice-hello.tsx
+msgid "Recording your hello… {time} of 0:10"
+msgstr ""
+
+#: src/components/voice-reply.tsx
+#: src/device/VoiceAnswer.tsx
+msgid "Recording… {time}"
+msgstr ""
+
+#: src/components/reminders.tsx
+msgid "Remind me to ask how it went"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+#: src/components/photo-slots.tsx
+#: src/components/voice-hello.tsx
+#: src/components/vote-options.tsx
+msgid "Remove"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Remove {who}"
+msgstr ""
+
+#: src/components/photo-slots.tsx
+msgid "Replace"
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "Reply"
+msgstr ""
+
+#: src/data/today.ts
+#: src/data/useToday.ts
+msgid "resting"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Resume"
+msgstr ""
+
+#: src/device/useParent.ts
+msgid "Rice porridge"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Russia"
+msgstr ""
+
+#. the name of a language
+#: src/data/ask.ts
+msgid "Russian"
+msgstr ""
+
+#: src/data/useNearby.ts
+msgid "Said no"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "said she is fine"
+msgstr ""
+
+#: src/data/family.ts
+#: src/data/useNearby.ts
+msgid "Said yes"
+msgstr ""
+
+#: app/onboarding.tsx
+#: src/components/reminders.tsx
+msgid "Saving…"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Say it the way you would say it"
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "Say something short"
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "See Vela Light"
+msgstr ""
+
+#: app/exchange/[id].tsx
+#: app/parent.tsx
+msgid "Send"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Send it to her"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Send me a code"
+msgstr ""
+
+#: src/device/VoiceAnswer.tsx
+msgid "Send my answer"
+msgstr ""
+
+#: src/components/photo-reply.tsx
+msgid "Send photo"
+msgstr ""
+
+#: src/components/voice-reply.tsx
+msgid "Send voice reply"
+msgstr ""
+
+#: app/ask.tsx
+#: app/exchange/[id].tsx
+#: app/parent.tsx
+#: app/sign-in.tsx
+#: src/components/photo-reply.tsx
+#: src/components/story-day.tsx
+#: src/components/voice-reply.tsx
+#: src/device/VoiceAnswer.tsx
+msgid "Sending…"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "sent a heart"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "sent a photo"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "sent a sticker"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "sent a voice message"
+msgstr ""
+
+#: src/components/set-up-phone.tsx
+msgid "Set it up"
+msgstr ""
+
+#: src/components/set-up-phone.tsx
+msgid "Set up this phone for {name}"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Setting up your family…"
+msgstr ""
+
+#: app/onboarding.tsx
+#: src/components/set-up-phone.tsx
+msgid "Setting up…"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "She answers on Telegram for now. LINE and WhatsApp come next."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "She has not answered yet, so there is nothing to reply to."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "She hears it in her read-back tomorrow morning."
+msgstr ""
+
+#: src/data/exchanges.ts
+msgid "She is never letting that go"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "She lives in"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "She reads"
+msgstr ""
+
+#: app/ask.tsx
+msgid "She reads it in {language}. One question at a time."
+msgstr ""
+
+#: src/data/weekly.ts
+msgid "She told you about the garden on three mornings: the tomatoes, the seeds, the new bed by the fence."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "She usually wakes at"
+msgstr ""
+
+#: app/ask.tsx
+msgid "She will see · {language}"
+msgstr ""
+
+#: src/components/vote-options.tsx
+msgid "Short answers she can tap, from two to seven."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Show originals"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Show translations"
+msgstr ""
+
+#: app/parent.tsx
+msgid "Sign in as family"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Sign out"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Signing in with a number is not open yet. Use your email instead."
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "Singapore"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Six digits, good for ten minutes."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Skip for now"
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "Someone said {name} is fine. Everyone who was told has heard."
+msgstr ""
+
+#: src/data/family.ts
+msgid "Someone who could look in, if it goes quiet"
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "Something to ask next week"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "Something was wrong in {wrong} of {notices}."
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "South Korea"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Spain"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "Start the 30 days"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "Starting…"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Stay"
+msgstr ""
+
+#: app/book.tsx
+#: app/parent.tsx
+#: src/components/voice-hello.tsx
+#: src/components/voice-reply.tsx
+#: src/device/VoiceAnswer.tsx
+msgid "Stop"
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Story day · {day}"
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Story of the week"
+msgstr ""
+
+#: src/data/exchanges.ts
+msgid "Sunday"
+msgstr ""
+
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/sunday.tsx
+msgctxt "tab"
+msgid "Sunday"
+msgstr ""
+
+#: src/data/onboarding.ts
+msgid "Sydney"
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "Taiwan"
+msgstr ""
+
+#: app/book.tsx
+msgid "Take this story out of the book"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "tapped an answer"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Thailand"
+msgstr ""
+
+#: src/device/useParent.ts
+msgid "Thank you. Mia knows you're fine."
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Thank you. That helps Vela tell quiet mornings apart."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "That account cannot receive a code yet."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "That code did not work. Ask for a new one."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "That code was right, but this account needs more than that to finish."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "That could not be saved just now. Nothing was lost; try again."
+msgstr ""
+
+#: app/ask.tsx
+msgid "That could not be sent just now. Look at Today before sending it again."
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "That could not be sent just now. Try again in a moment."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "That could not be sent just now. Your words are kept."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+#: app/vela-light.tsx
+#: src/components/set-up-phone.tsx
+#: src/data/useFamily.ts
+#: src/data/useNearby.ts
+#: src/device/useParent.ts
+msgid "That did not go through. Try again in a moment."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "That did not work. Check it and try again."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "That does not look like a number in {where}. Check the country and the number."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "That does not look like an email address."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "That exchange is not here."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "That photo could not be sent just now. It is kept to send again."
+msgstr ""
+
+#: src/components/photo-reply.tsx
+msgid "That photo could not be used. Try another one."
+msgstr ""
+
+#: src/components/photo-slots.tsx
+msgid "That photo did not go up. Try again."
+msgstr ""
+
+#: src/components/photo-slots.tsx
+msgid "That photo is no longer here. Choose it again."
+msgstr ""
+
+#: src/components/voice-hello.tsx
+#: src/components/voice-reply.tsx
+#: src/device/VoiceAnswer.tsx
+msgid "That recording did not save. Try again."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "That took too long to check. Try the code again."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "That voice could not be sent just now. It is kept to send again."
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "The 30 days start after {name}'s first answer."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "The app's words. Her mornings keep the language she reads."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "The bot check did not finish. Try again in a moment."
+msgstr ""
+
+#: src/data/family.ts
+msgid "The Chens"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "The daily ask, the exchanges, turns, translation, story day, everyone in the family."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "The exchanges could not be reached just now."
+msgstr ""
+
+#: app/book.tsx
+msgid "The family book"
+msgstr ""
+
+#: app/book.tsx
+msgid "The family book could not be reached just now."
+msgstr ""
+
+#: app/book.tsx
+msgid "The family book fills with the stories she tells on story day."
+msgstr ""
+
+#: src/data/precision.ts
+msgid "The family found {found} of {verdicts} useful."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
+msgstr ""
+
+#: app/nearby.tsx
+msgid "The family's organisers choose the people nearby."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "The light is ready"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "The people nearby are part of Vela Light: they appear in the quiet notice, with Call."
+msgstr ""
+
+#: src/components/photo-reply.tsx
+msgid "The photo you chose"
+msgstr ""
+
+#: src/components/family-photo.tsx
+msgid "The picked photo"
+msgstr ""
+
+#: src/data/exchanges.ts
+#: src/data/today.ts
+msgid "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read could not be reached just now."
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read goes to the family's organisers."
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read starts once she has said yes and had a week of mornings."
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Their name"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "This account already runs a family."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "This build has no sign-in configured, so it shows example days."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "This device cannot share from here. Copy the words above and send them to her yourself."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "This is the example family, so nobody left."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "This is your own morning; replies are for the family."
+msgstr ""
+
+#: app/precision.tsx
+msgid "This page could not be reached just now."
+msgstr ""
+
+#: app/precision.tsx
+msgid "This page is for the family's organisers, who are told of quiet mornings."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "This phone"
+msgstr ""
+
+#: src/components/set-up-phone.tsx
+msgid "This phone becomes {name}'s: large words, one message at a time, her answers with a tap or in her own words. You are signed out of it, and she needs no account."
+msgstr ""
+
+#: src/data/notifications.ts
+msgid "This phone could not be set up for notifications just now. It tries again the next time you open the app."
+msgstr ""
+
+#: app/parent.tsx
+msgid "This phone is not set up for Vela any more. Ask your family to set it up again."
+msgstr ""
+
+#: src/components/photo-slots.tsx
+msgid "This photo could not be used. Choose another."
+msgstr ""
+
+#: src/data/exchanges.ts
+#: src/data/today.ts
+msgid "Those are the ones from the seeds you saved"
+msgstr ""
+
+#: src/device/VoiceAnswer.tsx
+msgid "To answer with your voice, Vela needs the microphone. Ask your family to turn it on in Settings."
+msgstr ""
+
+#: src/device/useParent.ts
+msgid "Toast and tea"
+msgstr ""
+
+#: src/data/exchanges.ts
+msgid "Today"
+msgstr ""
+
+#: app/(tabs)/_layout.tsx
+msgctxt "tab"
+msgid "Today"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Today could not be reached just now."
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "Today's ask reached {name} at {time}, and again at {timeAgain}."
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "Today's ask reached {name} at {time}."
+msgstr ""
+
+#: src/data/quiet.ts
+msgid "Today's ask reached {name} at 8:00, and again at 11:00."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · {by} asked {recipient}"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · {name}'s turn to ask {recipient}"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · {recipient}"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Tomorrow · your turn to ask {recipient}"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Tomorrow morning"
+msgstr ""
+
+#: src/components/photo-slots.tsx
+msgid "Too many photos for now. Try again later."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "Too many photos for now. Try again tomorrow."
+msgstr ""
+
+#: src/components/photo-slots.tsx
+msgid "Try again"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Turn on"
+msgstr ""
+
+#: src/components/push-offer.tsx
+msgid "Turn on notifications"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Turn on notifications, and this phone tells you if her morning goes quiet, and when she answers what you asked."
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Two people nearby is the most."
+msgstr ""
+
+#: src/data/useNearby.ts
+msgid "Two people nearby is the most. Remove one to add someone else."
+msgstr ""
+
+#: src/data/ask.ts
+msgid "Two photos"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Type your email, and we send you a code."
+msgstr ""
+
+#: src/data/onboarding.ts
+msgid "UK"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Ukraine"
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "United Kingdom"
+msgstr ""
+
+#: src/auth/phone.ts
+#: src/data/onboarding.ts
+msgid "United States"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Up to two people who could look in if a morning goes quiet: a neighbour, a friend downstairs. Vela asks each of them first, and nobody hears from Vela until then."
+msgstr ""
+
+#: app/nearby.tsx
+msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
+msgstr ""
+
+#: src/components/photo-slots.tsx
+msgid "Uploading {percent}%"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Use my email instead"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Use something else"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Use this"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Use this suggestion"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Usually answers by {time}"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Vela does not send notifications from here yet."
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "Vela Light · for {name}"
+msgstr ""
+
+#: src/data/family.ts
+msgid "Vela Light · payment due"
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "Vela Light is on for {name} until {date}. Nothing is charged, and no card was asked for."
+msgstr ""
+
+#: app/vela-light.tsx
+msgid "Vela Light is on for {name}."
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "Vela Light shows you the read"
+msgstr ""
+
+#: src/data/family.ts
+msgid "Vela Light trial"
+msgstr ""
+
+#: src/data/family.ts
+msgid "Vela Light trial · ends {date}"
+msgstr ""
+
+#: src/components/voice-hello.tsx
+msgid "Vela needs the microphone for a voice hello. You can allow it in Settings."
+msgstr ""
+
+#: src/components/voice-reply.tsx
+msgid "Vela needs the microphone for a voice reply. You can allow it in Settings."
+msgstr ""
+
+#: src/data/precision.ts
+msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Vela suggests"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "Vela suggests · from her own words"
+msgstr ""
+
+#: src/auth/phone.ts
+msgid "Vietnam"
+msgstr ""
+
+#: src/components/voice-hello.tsx
+msgid "Voice hello, {time}. It plays before your ask."
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "voted"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Wait 2 hours"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "waiting for her yes"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Waiting for today to arrive. Your words are kept."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Waiting two hours. You will hear again at 13:00 if it is still quiet."
+msgstr ""
+
+#: src/data/useQuiet.ts
+msgid "Waiting until {time}. You will hear again then if it is still quiet."
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Was this notice useful?"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "We sent a code to {sentTo}."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "We sent a code to your email."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "We will text {phone}."
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "What are you looking forward to this week?"
+msgstr ""
+
+#: app/ask.tsx
+msgid "What are you sending?"
+msgstr ""
+
+#: src/data/exchanges.ts
+#: src/data/today.ts
+msgid "What did the garden look like this morning?"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "What did you have for breakfast?"
+msgstr ""
+
+#: src/data/today.ts
+msgid "What seeds did you save from last year's garden?"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "What should {name}'s first morning ask?"
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "What the family said"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "What the family sees about you"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "What was your favourite meal as a child?"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "What you send her"
+msgstr ""
+
+#. heading over the morning the ask arrives
+#: app/ask.tsx
+msgid "When"
+msgstr ""
+
+#: src/push/provider.tsx
+msgid "When a morning goes quiet"
+msgstr ""
+
+#: app/precision.tsx
+msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
+msgstr ""
+
+#: src/push/provider.tsx
+msgid "When she answers what you asked, and the evening before your turn."
+msgstr ""
+
+#: app/ask.tsx
+msgid "Whenever"
+msgstr ""
+
+#: src/data/photos.ts
+msgid "Which one do you like more?"
+msgstr ""
+
+#: src/data/exchanges.ts
+msgid "Which one of us did you teach to make the pies?"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Who are you keeping a light on for?"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Who lives close to {name}?"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Write your own question"
+msgstr ""
+
+#: src/components/set-up-phone.tsx
+msgid "Yes, this is {name}'s phone"
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "Yes, useful"
+msgstr ""
+
+#: src/data/exchanges.ts
+msgid "Yesterday"
+msgstr ""
+
+#: app/exchange/[id].tsx
+#: src/data/family.ts
+msgid "You"
+msgstr ""
+
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/you.tsx
+msgctxt "tab"
+msgid "You"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "You are not signed in, so this is the example family."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "You are paused: no turns come to you, and you are not told if it goes quiet."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "You are paused: no turns come to you."
+msgstr ""
+
+#: src/data/useFamily.ts
+msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "You can reply once she has answered."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "You said {name} is fine. Nothing else was sent."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Your account id. Nobody but you needs it."
+msgstr ""
+
+#: src/device/VoiceAnswer.tsx
+msgid "Your answer, {time} long."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Your country"
+msgstr ""
+
+#: app/precision.tsx
+msgid "Your family"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Your family could not be reached just now, so this is the example one."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Your family could not be reached just now."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Your light is off, so nothing about your mornings is shown."
+msgstr ""
+
+#: src/data/useFamily.ts
+msgid "Your light is paused from your own chat, where your mornings arrive."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Your mobile number. The country code is added for you."
+msgstr ""
+
+#: src/device/useParent.ts
+msgid "Your morning message"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Your name, as the family says it."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Your name, the asks you write, and your replies."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Your own light"
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Your question for {name}"
+msgstr ""
+
+#: src/components/voice-reply.tsx
+msgid "Your voice reply, {time} long."
+msgstr ""
