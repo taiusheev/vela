@@ -115,6 +115,14 @@ msgstr "{name} has not said yes yet"
 msgid "{name} has not said yes yet. Once she does, her first morning is the next day."
 msgstr "{name} has not said yes yet. Once she does, her first morning is the next day."
 
+#: src/components/story-day.tsx
+msgid "{name} is asked on {day}."
+msgstr "{name} is asked on {day}."
+
+#: src/components/story-day.tsx
+msgid "{name} is asked on {day}. Chosen by {askedBy}."
+msgstr "{name} is asked on {day}. Chosen by {askedBy}."
+
 #: src/components/quiet-notice.tsx
 msgid "{name} is fine, I know why"
 msgstr "{name} is fine, I know why"
@@ -474,6 +482,10 @@ msgstr "Choose a photo"
 #: src/components/photo-reply.tsx
 msgid "Choose another"
 msgstr "Choose another"
+
+#: src/components/story-day.tsx
+msgid "Choose from the list"
+msgstr "Choose from the list"
 
 #: app/sign-in.tsx
 msgid "Choose your country, type your number as you would at home, and we text you a code."
@@ -1972,6 +1984,10 @@ msgstr "Who lives close to {name}?"
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 msgstr "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 
+#: src/components/story-day.tsx
+msgid "Write your own question"
+msgstr "Write your own question"
+
 #: src/components/set-up-phone.tsx
 msgid "Yes, this is {name}'s phone"
 msgstr "Yes, this is {name}'s phone"
@@ -2074,6 +2090,10 @@ msgstr "Your name, the asks you write, and your replies."
 #: app/(tabs)/you.tsx
 msgid "Your own light"
 msgstr "Your own light"
+
+#: src/components/story-day.tsx
+msgid "Your question for {name}"
+msgstr "Your question for {name}"
 
 #: src/components/voice-reply.tsx
 msgid "Your voice reply, {time} long."

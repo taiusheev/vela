@@ -1076,7 +1076,23 @@ export const ApiBookEntry = z.object({
 });
 export type ApiBookEntry = z.infer<typeof ApiBookEntry>;
 
-export const ApiBook = z.object({ entries: z.array(ApiBookEntry) });
+/** A story ask set for a coming morning (spec A10: "this Sunday's question with who chose it"). */
+export const ApiComingStory = z.object({
+  exchange_id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  question: z.string().nullable(),
+  /** Who chose it, or null when the asker has since been deleted. */
+  asked_by: z.string().nullable(),
+  date: LocalDate,
+});
+export type ApiComingStory = z.infer<typeof ApiComingStory>;
+
+export const ApiBook = z.object({
+  entries: z.array(ApiBookEntry),
+  /** Story asks not yet delivered, soonest first. */
+  coming: z.array(ApiComingStory),
+});
 export type ApiBook = z.infer<typeof ApiBook>;
 
 /** An organiser takes a story out of the book: no body, the exchange is in the path. */

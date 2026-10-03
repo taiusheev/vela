@@ -239,6 +239,29 @@ describe("the book in the app", () => {
     expect(await loadApiBook(h.db, stranger, seed.family.id)).toBeNull();
   });
 
+  it("shows the story asks still to come, with who chose them, and not the delivered ones", async () => {
+    await storyMorning();
+    const sunday = await seedExchange(h.db, seed, {
+      date: "2026-09-20",
+      type: "story",
+      text: "Tell me about your first day at work.",
+      state: "composed",
+    });
+
+    const book = ApiBook.parse(await loadApiBook(h.db, sam, seed.family.id));
+
+    expect(book.coming).toEqual([
+      {
+        exchange_id: sunday.id,
+        member_id: seed.member.id,
+        member_name: seed.member.displayName,
+        question: "Tell me about your first day at work.",
+        asked_by: seed.organiser.displayName,
+        date: "2026-09-20",
+      },
+    ]);
+  });
+
   it("lets an organiser take a story out, and refuses anyone else", async () => {
     const story = await storyMorning();
     await send(fromHer({ kind: "text", text: "We met at the train station in Tainan." }));

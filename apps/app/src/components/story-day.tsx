@@ -11,7 +11,7 @@ import { nextPrompt, nextSunday } from "../data/story.ts";
 import { useBook } from "../data/useBook.ts";
 import { useToday } from "../data/useToday.ts";
 import { space } from "../theme/tokens.ts";
-import { Card, Eyebrow, PrimaryButton, SecondaryButton, Words } from "./ui.tsx";
+import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
 
 /**
  * Story day (spec §10, A10) on the Sunday tab: a story question from Vela's bank, never one already
@@ -28,10 +28,14 @@ export function StoryDay() {
   const book = useBook(familyId);
   const [skip, setSkip] = useState(0);
   const [sent, setSent] = useState(false);
+  const [own, setOwn] = useState<string | null>(null);
   const keyFor = useIdempotencyKey("story");
   const her = today.lights[0];
   const lang = i18n.locale === "zh-TW" ? "zh-TW" : "en";
-  const asked = new Set(book.entries.flatMap((entry) => entry.question?.trim() ?? []));
+  const asked = new Set(
+    [...book.entries, ...book.coming].flatMap((entry) => entry.question?.trim() ?? []),
+  );
+  const chosen = book.coming.find((story) => story.member_id === her?.memberId);
   const prompt = nextPrompt(asked, skip, lang);
   const sunday = nextSunday(new Date());
   const day = dayName(sunday);
@@ -51,6 +55,7 @@ export function StoryDay() {
     onSuccess: async () => {
       setSent(true);
       await queries.invalidateQueries({ queryKey: ["today"] });
+      await queries.invalidateQueries({ queryKey: ["book", familyId] });
     },
   });
   const taken = compose.isError ? askConflict(compose.error) : null;
@@ -61,7 +66,14 @@ export function StoryDay() {
       <Eyebrow>
         <Trans>Story day · {day}</Trans>
       </Eyebrow>
-      {sent ? (
+      {chosen !== undefined ? (
+        <ChosenStory
+          question={chosen.question}
+          askedBy={chosen.asked_by}
+          day={dayName(chosen.date)}
+          name={name}
+        />
+      ) : sent ? (
         <Words variant="body" tone="ink2">
           <Trans>
             On Sunday {name} is asked for this story. What she tells goes into the family book.
@@ -69,7 +81,17 @@ export function StoryDay() {
         </Words>
       ) : prompt === undefined ? null : (
         <>
-          <Words variant="voice">{prompt.text[lang]}</Words>
+          {own === null ? (
+            <Words variant="voice">{prompt.text[lang]}</Words>
+          ) : (
+            <TextField
+              placeholder={t`Your question for ${name}`}
+              value={own}
+              onChangeText={setOwn}
+              multiline
+              autoFocus
+            />
+          )}
           <Words variant="caption" tone="ink3">
             <Trans>Her answer is kept in the family book, unless she says not to.</Trans>
           </Words>
@@ -86,10 +108,25 @@ export function StoryDay() {
           <View style={{ gap: space.s }}>
             <PrimaryButton
               label={compose.isPending ? t`Sending…` : t`Ask it on Sunday`}
-              disabled={compose.isPending || !apiConfigured() || her === undefined}
-              onPress={() => compose.mutate(prompt.text[lang])}
+              disabled={
+                compose.isPending ||
+                !apiConfigured() ||
+                her === undefined ||
+                (own !== null && own.trim().length === 0)
+              }
+              onPress={() => compose.mutate(own === null ? prompt.text[lang] : own.trim())}
             />
-            <SecondaryButton label={t`Another question`} onPress={() => setSkip((n) => n + 1)} />
+            {own === null ? (
+              <>
+                <SecondaryButton
+                  label={t`Another question`}
+                  onPress={() => setSkip((n) => n + 1)}
+                />
+                <SecondaryButton label={t`Write your own question`} onPress={() => setOwn("")} />
+              </>
+            ) : (
+              <SecondaryButton label={t`Choose from the list`} onPress={() => setOwn(null)} />
+            )}
           </View>
         </>
       )}
@@ -131,5 +168,35 @@ export function StoryOfTheWeek({
       )}
       <SecondaryButton label={t`Read the family book`} onPress={() => router.push("/book")} />
     </Card>
+  );
+}
+
+/** The story already chosen for her coming morning, with who chose it (spec A10). */
+function ChosenStory({
+  question,
+  askedBy,
+  day,
+  name,
+}: {
+  question: string | null;
+  askedBy: string | null;
+  day: string;
+  name: string;
+}) {
+  return (
+    <>
+      {question === null ? null : <Words variant="voice">{question}</Words>}
+      <Words variant="caption" tone="ink3">
+        {askedBy === null ? (
+          <Trans>
+            {name} is asked on {day}.
+          </Trans>
+        ) : (
+          <Trans>
+            {name} is asked on {day}. Chosen by {askedBy}.
+          </Trans>
+        )}
+      </Words>
+    </>
   );
 }

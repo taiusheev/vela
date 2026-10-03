@@ -24,6 +24,7 @@ import {
   members,
 } from "@vela/db";
 import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
@@ -229,7 +230,7 @@ export async function loadApiBook(
   db: Queryable,
   identity: SessionIdentity,
   familyId: string,
-): Promise<{ entries: ApiBookEntry[] } | null> {
+): Promise<{ entries: ApiBookEntry[]; coming: ApiComingStory[] } | null> {
   if (!UUID.test(familyId)) return null;
   const access = await authorizeFamilyAccess(db, identity, familyId);
   if (access.kind !== "granted") return null;
@@ -278,7 +279,53 @@ export async function loadApiBook(
       }),
     });
   }
-  return { entries };
+  return { entries, coming: await comingStories(db, familyId) };
+}
+
+/** One story ask set for a coming morning. */
+export interface ApiComingStory {
+  exchange_id: string;
+  member_id: string;
+  member_name: string;
+  question: string | null;
+  asked_by: string | null;
+  date: string;
+}
+
+/**
+ * The family's story asks still waiting for their morning, soonest first (spec A10): what story day
+ * shows as chosen, and by whom, so the family does not choose a second one for the same Sunday.
+ */
+async function comingStories(db: Queryable, familyId: string): Promise<ApiComingStory[]> {
+  const asker = alias(members, "asker");
+  const rows = await db
+    .select({ exchange: exchanges, her: members, asker: asker.displayName })
+    .from(exchanges)
+    .innerJoin(members, eq(members.id, exchanges.recipientId))
+    .leftJoin(asker, eq(asker.id, exchanges.askerId))
+    .where(
+      and(
+        eq(exchanges.familyId, familyId),
+        eq(exchanges.type, "story"),
+        inArray(exchanges.state, ["composed", "scheduled"]),
+        isNotNull(exchanges.scheduledFor),
+      ),
+    )
+    .orderBy(asc(exchanges.scheduledFor), asc(exchanges.id));
+  return rows.flatMap(({ exchange, her, asker: askedBy }) =>
+    exchange.scheduledFor === null
+      ? []
+      : [
+          {
+            exchange_id: exchange.id,
+            member_id: her.id,
+            member_name: her.displayName,
+            question: exchange.text,
+            asked_by: askedBy,
+            date: exchange.scheduledFor,
+          },
+        ],
+  );
 }
 
 /**

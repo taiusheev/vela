@@ -289,7 +289,9 @@ function fixture(enableWrites = false, push?: boolean) {
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>().mockResolvedValue(LIGHTS),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>().mockResolvedValue(TODAY),
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>().mockResolvedValue(FAMILY),
-    loadApiBook: vi.fn<ApiReadServices["loadApiBook"]>().mockResolvedValue({ entries: [] }),
+    loadApiBook: vi
+      .fn<ApiReadServices["loadApiBook"]>()
+      .mockResolvedValue({ entries: [], coming: [] }),
     loadApiReminders: vi
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
