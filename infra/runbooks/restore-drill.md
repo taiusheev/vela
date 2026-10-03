@@ -44,6 +44,7 @@ Every step runs in the Neon project `vela`, production's own project, on its def
    WHERE indexname IN ('exchanges_one_per_day', 'outbound_budget_idx');
    ```
 
+   **Once ADR-38 is built** (content sealed with `CONTENT_KEY_V1`): open one sealed value on the branch with the key from your password manager, using the script `pnpm --filter @vela/db run unseal-check` that the build adds, which prints only "opens" or "does not open", never the words. "Opens" proves the backup and the stored key belong together; "does not open" is a Sev 2 incident: the key in the password manager is not the one production uses.
 4. **Compare.** Counts must match. A difference can only come from a write that committed in the seconds around T0, or a retention deletion in the same minutes (visible as a `deletions` row); explain each one in the log.
 5. **Check media.** On the branch, list five `storage_key` values of unkept media from the last 30 days; in the "Vela" account's Cloudflare dashboard, on the **R2 object storage** page, open the bucket `vela-media-production` and confirm each object exists. R2 objects deleted after T0 cannot come back with the database; record how many are missing and why.
 6. **Stop the timer** and record the time to restore.
@@ -64,6 +65,8 @@ The log row is complete: counts matched or every difference is explained, the co
 6. Delete the backup branch within 7 days, once the restore is verified, because it holds data that may be past its retention.
 
 ## Drill log
+
+**Drill #2 (build plan 5.7), status 3 October 2026: not yet possible.** The drill runs on production's Neon project `vela`, which is not deployed, and needs the founder's Neon sign-in. Drill #1 has not been logged either. Both run after production's first deploy and before its first family. If ADR-38 is accepted and built first, drill #2 includes the sealed-value step above. A rehearsal on staging (`vela-staging`, synthetic data only) can be run by the founder at any time, following the same steps in that project, and is logged with "staging rehearsal" in the plan column.
 
 | Date | Plan and window | T0 | Counts matched | Differences explained | Media keys resolved | Time to restore | Branch deleted | By |
 |---|---|---|---|---|---|---|---|---|

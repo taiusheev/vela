@@ -601,3 +601,59 @@ Decision (proposed): the call is the arrival on channel `voice`, placed by a `vo
 Rejected: Twilio Studio (outside version control, a second copy of the copy, billed per execution); a voice-AI platform (a fixed script needs no conversation); consent given by the organiser on her behalf (TCPA wants hers); answering-machine detection as the delivery signal (costly and wrong some of the time).
 
 Revisit if: counsel says her inbound yes is not prior express consent for daily calls; Taiwan finds a local carrier priced like the US; transcoding stays undecided, so voice replies remain read as transcripts.
+
+## ADR-38 · What people wrote is sealed in the database with one key per environment, before production holds a family
+
+Status: proposed, 3 October 2026 · build plan 5.7 · architecture §13 ("field-level envelope encryption … for transcripts decided before launch, not retrofitted at scale") · ADR-24 left it to this decision.
+
+Context: during the pilot, family content is protected at rest only by the providers' own disk encryption (Neon, R2). That protects against a stolen disk, not against anyone who holds a working connection string. Production has no family yet, so it is the cheapest moment there will ever be to change how content is stored: no rows to rewrite, no downtime, no second code path for old rows. Five facts from the code decide the shape:
+
+- **Her words have many copies, not one column.** An answer's words sit in `answers.transcript`, the `text` inside `answers.payload`, `answers.summary` (kept while the family uses Vela, ADR-24), `mentions`, `mood_words` and `flag_reason` (health). They are copied into `translations.text`, into `outbound.payload` of every message that reads them back, into `ai_calls.output`, and from story day on into `stories.transcript`, which the family book keeps past 30 days by choice (build plan 5.1, in progress). Sealing only `answers.transcript`, as §13 first said, would leave the same words in plain text five columns away.
+- **Two read paths merge her words inside SQL.** `api-today.ts` (`answerText`) and `arrivals.ts` (`recentAnswerTexts`) `coalesce` the transcript, the payload's text and the summary in the query. No query searches, sorts, indexes or compares inside any of these columns, so nothing else needs the plaintext in Postgres.
+- **Retention only ever clears these columns** (sets them to null or their empty value, ADR-24). It works the same on sealed values.
+- **The columns are read through Drizzle**, whose `customType` mappings (`toDriver`, `fromDriver`) are synchronous, as `localTime` in `schema.ts` already uses. WebCrypto's AES-GCM is asynchronous and cannot sit inside them. `@noble/ciphers` (audited, pure TypeScript, already in the lockfile at 1.3.0 through another package) is synchronous and runs in Workers and Node alike.
+- **Neon's point-in-time history is short**: 6 hours on Free, at most 7 days on Launch and 30 on Scale (restore-drill runbook). A deleted value leaves every backup within that window, which is never longer than retention's 30 days.
+
+What sealing protects against, and what it does not:
+
+| Exposure | Today | Sealed |
+|---|---|---|
+| The Neon connection string leaks (it lives in two Hyperdrive configurations and two GitHub environment secrets, ADR-23), or Neon's console session does | Every word readable with one `SELECT` | Ciphertext; the key is in Worker secrets, a separate account |
+| The founder reads content in Neon's SQL editor or on a restore branch | Possible, and bypasses `admin_access_log`, which organisers are promised shows every admin read (§13) | Not possible: the logged admin page is the only door to her words |
+| A database dump, a restore branch, or a copy in a support ticket | Plain text | Ciphertext |
+| The Worker or its secrets are compromised; Cloudflare itself | Readable | **Still readable**: the key is there |
+| Telegram, LINE, Deepgram, Anthropic, Azure | Hold their own copies | **Unchanged**: sealing is about Vela's database only |
+| R2 voice notes and photos | Provider encryption | **Unchanged**: media stays as it is (below) |
+
+Decision (proposed):
+
+1. **Scope: every column that holds what a person wrote or said, or Vela's words about it.** These are the columns ADR-24 clears at 30 days, plus the long-lived ones:
+   - `answers.transcript`, the `text` inside `answers.payload`, `answers.summary`, `answers.flag_reason`, `answers.mentions`, `answers.mood_words`;
+   - `replies.text`, `exchanges.text` and `exchanges.options`, `chips.chips`, `suggestions.text`, `translations.text`;
+   - `weekly_reads.lines`, `sent_lines`, `suggestion` and `sent_suggestion`;
+   - `stories.transcript`, `recipes`' text and the rest of the family book's words (5.1);
+   - `outbound.payload`, `ai_calls.output`, and the reply text in `quiet_events.ask_to_check`.
+
+   Not sealed:
+   - names, address forms, cities and phone numbers, which the product reads constantly and which appear in every message header;
+   - consent text versions and evidence keys;
+   - ids, states, times and counts, which the precision page, the admin overview and the answer rate are computed from;
+   - `answers.payload`'s `choice`, a chip index or option id rather than words;
+   - media bytes in R2.
+2. **The form.** A sealed value is the text `v1.<nonce>.<ciphertext>`, base64url, AES-256-GCM with a fresh 96-bit nonce per value. The associated data is `<table>.<column>`, so a value pasted into another column fails to open. JSON columns are sealed whole, with their `JSON.stringify`, and the column becomes `text`. One Drizzle `customType`, `sealed`, does it in `toDriver` and `fromDriver`, so services keep reading and writing plain strings. The two SQL `coalesce`s move into TypeScript.
+3. **One key per environment, not per family.** `CONTENT_KEY_V1`, 32 random bytes, is a secret of both `vela` and `vela-admin` (the admin page reads her words), set by the setup script and never seen by the co-founder. The version in the prefix lets a later `CONTENT_KEY_V2` be added: new writes use the newest key, any version still opens, and a re-seal job moves old rows. Envelope keys per family, as §13 first said, are dropped. Their one gain over this is erasing a family by deleting its key ("crypto-shredding"). Retention already clears the words at 30 days and Neon's history ends inside that time, so the gain is a few days of backups. The cost is a key lookup per row, which a synchronous column mapping cannot make.
+4. **When.** Built before production's first deploy: one migration changes the JSON columns to `text`. Staging is re-sealed once by a script, since its rows are synthetic. Any table added before then (5.1's) is declared `sealed` from its first migration.
+5. **Losing the key loses the words.** That is the point, and also the risk. The setup script prints the key once, for the founder to store in their password manager, and nowhere else. The restore drill (`infra/runbooks/restore-drill.md`) gains a step: on the restored branch, open one sealed value with the key from the password manager, which proves the backups can actually be read.
+
+Rejected:
+- **Sealing only `answers.transcript`.** Her words stay in plain text in the payload, the summary, translations, outbound payloads and AI outputs.
+- **Postgres `pgcrypto`.** The key would travel to the database in every query, and appear in Neon's query logs and statistics.
+- **WebCrypto inside the services instead of a column type.** It is asynchronous, so every read and write path would change by hand, and a forgotten one would store plain text silently.
+- **Envelope keys per family.** See decision 3.
+- **Doing nothing until there is scale.** That is the retrofit §13 warns against, and production's empty database makes now the free moment.
+
+Revisit if:
+- a feature needs to search inside her words (the family book's search, if it comes, would need a separate index of chosen words, written knowingly);
+- Neon's restore window is raised beyond 30 days, which brings per-family keys' crypto-shredding back into question;
+- counsel in a market asks for per-person erasure from backups;
+- a second region gets its own database, and with it its own key.
