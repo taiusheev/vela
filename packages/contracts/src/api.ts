@@ -1072,6 +1072,8 @@ export const ApiBookEntry = z.object({
   asked_by: z.string().nullable(),
   /** The story ask she answered; null if its words are gone. */
   question: z.string().nullable(),
+  /** The old photo she told about (an old-photo ask), read through the family's media route. */
+  photo_ids: z.array(z.uuid()),
   kept_at: z.iso.datetime({ offset: true }),
   answers: z.array(
     z.object({

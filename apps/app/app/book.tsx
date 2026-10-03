@@ -94,6 +94,9 @@ function Story({
         {asker === null ? t`${name} · ${day}` : t`${name} · ${day} · ${asker} asked`}
       </Eyebrow>
       {entry.question === null ? null : <Words variant="voice">{entry.question}</Words>}
+      {entry.photo_ids.map((id) => (
+        <ReplyPhoto key={id} photo={{ id, width: null, height: null, stored: true }} size="full" />
+      ))}
       {entry.answers.map((answer) => (
         <View key={`${answer.at}:${answer.media_id ?? ""}`} style={{ gap: space.s }}>
           {answer.text === null ? null : <Words variant="body">{answer.text}</Words>}

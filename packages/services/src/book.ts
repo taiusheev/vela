@@ -37,11 +37,21 @@ import { memberByChannelUser, type Queryable } from "./repo.ts";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Whether an exchange's answers go into the book: a story told in answer to a story ask, where the
- * book is on (`BOOK`; off in production until the privacy notice describes it).
+ * Whether an exchange's answers go into the book, where the book is on (`BOOK`; off in production
+ * until the privacy notice describes it): a story told in answer to a story ask, and what she says
+ * about an old photo, which is kept with the photo (spec §10: "memory photos get names and stories
+ * attached").
  */
 export function keepsInBook(deps: Pick<Deps, "config">, exchange: Pick<Exchange, "type">): boolean {
-  return deps.config.book && exchange.type === "story";
+  return deps.config.book && (exchange.type === "story" || exchange.type === "memory_photo");
+}
+
+/** The files an entry keeps: her answers' own, and the photo an old-photo ask showed her. */
+function keptFiles(exchange: Pick<Exchange, "type" | "mediaIds">, answerMediaId: string | null) {
+  return [
+    ...(answerMediaId === null ? [] : [answerMediaId]),
+    ...(exchange.type === "memory_photo" ? exchange.mediaIds : []),
+  ];
 }
 
 /**
@@ -71,13 +81,16 @@ export async function keepInBook(
       .where(eq(bookEntries.exchangeId, exchange.id))
       .for("update");
     if (row === undefined || row.removedAt !== null) return null;
-    if (answer.mediaId !== null) {
-      await tx.update(media).set({ kept: true }).where(eq(media.id, answer.mediaId));
+    const files = keptFiles(exchange, answer.mediaId);
+    if (files.length > 0) {
+      await tx.update(media).set({ kept: true }).where(inArray(media.id, files));
     }
     return row;
   });
-  if (entry !== null && answer.mediaId !== null) {
-    await moveOutOfExpiring(deps, answer.mediaId);
+  if (entry !== null) {
+    for (const file of keptFiles(exchange, answer.mediaId)) {
+      await moveOutOfExpiring(deps, file);
+    }
   }
   return entry;
 }
@@ -102,7 +115,7 @@ async function moveOutOfExpiring(
   if (row === undefined || from === null || !EXPIRING.some((prefix) => from.startsWith(prefix))) {
     return;
   }
-  const mime = row.mime ?? "audio/mp4";
+  const mime = row.mime ?? (row.kind === "image" ? "image/jpeg" : "audio/mp4");
   const key = `book/${row.familyId}/${row.id}.${extensionFor(mime)}`;
   try {
     const object = await store.get(from);
@@ -136,7 +149,15 @@ async function removeEntry(
     .select({ mediaId: answers.mediaId })
     .from(answers)
     .where(and(eq(answers.exchangeId, exchangeId), isNotNull(answers.mediaId)));
-  const ids = files.flatMap((row) => (row.mediaId === null ? [] : [row.mediaId]));
+  const [exchange] = await tx
+    .select({ type: exchanges.type, mediaIds: exchanges.mediaIds })
+    .from(exchanges)
+    .where(eq(exchanges.id, exchangeId))
+    .limit(1);
+  const ids = [
+    ...files.flatMap((row) => (row.mediaId === null ? [] : [row.mediaId])),
+    ...(exchange?.type === "memory_photo" ? exchange.mediaIds : []),
+  ];
   if (ids.length > 0) {
     await tx.update(media).set({ kept: false }).where(inArray(media.id, ids));
   }
@@ -213,6 +234,8 @@ export interface ApiBookEntry {
   member_name: string;
   asked_by: string | null;
   question: string | null;
+  /** The old photo she told about, where the ask showed one and it is stored. */
+  photo_ids: string[];
   kept_at: string;
   answers: {
     kind: string;
@@ -273,6 +296,21 @@ export async function loadApiBook(
       member_name: row.her.displayName,
       asked_by: asker,
       question: row.exchange.text,
+      photo_ids:
+        row.exchange.type !== "memory_photo" || row.exchange.mediaIds.length === 0
+          ? []
+          : (
+              await db
+                .select({ id: media.id })
+                .from(media)
+                .where(
+                  and(
+                    inArray(media.id, row.exchange.mediaIds),
+                    eq(media.kind, "image"),
+                    isNotNull(media.storageKey),
+                  ),
+                )
+            ).map((photo) => photo.id),
       kept_at: row.entry.keptAt.toISOString(),
       answers: said.map(({ answer, file }) => {
         const words = (answer.payload as { text?: unknown }).text;

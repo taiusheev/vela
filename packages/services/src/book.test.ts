@@ -82,7 +82,7 @@ async function send(event: InboundEvent) {
 }
 
 /** Today's story ask, delivered at 08:00; it is now 08:12. */
-async function storyMorning(type: "story" | "question" = "story") {
+async function storyMorning(type: "story" | "question" | "memory_photo" = "story") {
   const exchange = await seedExchange(h.db, seed, {
     date: TODAY,
     type,
@@ -210,6 +210,45 @@ describe("a story she tells", () => {
     const thanks = h.telegram.sentTo(seed.memberLink.externalId).at(-1);
     expect(thanks?.message.buttons).toBeUndefined();
     expect(thanks?.message.text).not.toContain("family book");
+  });
+
+  it("keeps what she says about an old photo, with the photo, out of the folder the bucket clears", async () => {
+    const from = `asks/${seed.family.id}/old.jpg`;
+    const [photo] = await h.db
+      .insert(media)
+      .values({
+        familyId: seed.family.id,
+        uploadedBy: seed.organiser.id,
+        kind: "image",
+        storageKey: from,
+        mime: "image/jpeg",
+      })
+      .returning();
+    await h.media.put(from, new ArrayBuffer(4), "image/jpeg");
+    const ask = await storyMorning("memory_photo");
+    await h.db
+      .update(exchanges)
+      .set({ mediaIds: [photo?.id ?? ""] })
+      .where(eq(exchanges.id, ask.id));
+
+    await send(fromHer({ kind: "text", text: "That is our wedding day in Tainan." }));
+
+    const [kept] = await h.db
+      .select()
+      .from(media)
+      .where(eq(media.id, photo?.id ?? ""));
+    expect(kept).toMatchObject({
+      kept: true,
+      storageKey: `book/${seed.family.id}/${photo?.id}.jpg`,
+    });
+    const book = ApiBook.parse(await loadApiBook(h.db, sam, seed.family.id));
+    expect(book.entries).toEqual([
+      expect.objectContaining({
+        exchange_id: ask.id,
+        photo_ids: [photo?.id],
+        answers: [expect.objectContaining({ text: "That is our wedding day in Tainan." })],
+      }),
+    ]);
   });
 
   it("is not kept for an ordinary question, whose thanks has no button", async () => {
