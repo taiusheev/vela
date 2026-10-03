@@ -296,6 +296,7 @@ function createFakeDeps(logs: LogLine[], line: ChannelAdapter): Deps {
       },
       privacyNoticeVersion: "privacy-notice.v1",
       memory: true,
+      book: true,
     },
   };
 }

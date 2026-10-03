@@ -187,6 +187,11 @@ export interface Config {
    * words (data map row 29); a plan is then not kept at all.
    */
   memory: boolean;
+  /**
+   * Whether her answers to a story ask are kept in the family book beyond 30 days (ADR-39, `BOOK`).
+   * Off in production until the privacy notice describes the book: version 1 says it comes later.
+   */
+  book: boolean;
 }
 
 export interface Deps {

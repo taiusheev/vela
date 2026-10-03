@@ -35,9 +35,12 @@ import { memberByChannelUser, type Queryable } from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Whether an exchange's answers go into the book: a story told in answer to a story ask. */
-export function keepsInBook(exchange: Pick<Exchange, "type">): boolean {
-  return exchange.type === "story";
+/**
+ * Whether an exchange's answers go into the book: a story told in answer to a story ask, where the
+ * book is on (`BOOK`; off in production until the privacy notice describes it).
+ */
+export function keepsInBook(deps: Pick<Deps, "config">, exchange: Pick<Exchange, "type">): boolean {
+  return deps.config.book && exchange.type === "story";
 }
 
 /**

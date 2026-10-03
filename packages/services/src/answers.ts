@@ -315,7 +315,7 @@ async function sendAck(deps: Deps, input: AnswerInput): Promise<void> {
     conversationId: event.conversation.externalId,
     exchangeId: input.exchange.id,
     lang,
-    ...(keepsInBook(input.exchange)
+    ...(keepsInBook(deps, input.exchange)
       ? {
           // A story goes into the family book unless she says not to (spec §10, ADR-39).
           text: t(lang, "ack.story", { address: member.addressForm ?? member.displayName }),
@@ -447,7 +447,7 @@ async function afterLight(deps: Deps, input: AnswerInput, lit: Lit): Promise<voi
   const { answer } = lit;
   await settle(deps, "ack", answer.id, () => sendAck(deps, input));
   // A story is kept in the family book before anything else can touch its files (ADR-39).
-  if (keepsInBook(input.exchange)) {
+  if (keepsInBook(deps, input.exchange)) {
     await settle(deps, "book", answer.id, () => keepInBook(deps, input.exchange, answer));
   }
   await settle(deps, "post", answer.id, () => postAnswer(deps, { ...input, answer }));

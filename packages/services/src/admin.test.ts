@@ -210,6 +210,9 @@ function adminWorkerDeps(): Deps {
       get memory(): never {
         return notGiven("config");
       },
+      get book(): never {
+        return notGiven("config");
+      },
     },
   };
 }

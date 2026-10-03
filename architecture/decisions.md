@@ -677,6 +677,8 @@ Rejected:
 - **Copying her words into the book.** That would be a second copy to seal, clear and export. The entry points at the exchange instead.
 - **Deleting the entry on removal.** The next answer would then keep the story again.
 
+6. **The switch.** Privacy notice v1 says the family book comes "later in the pilot". So the pilot Worker's `BOOK` var is `on` in development and staging and `off` in production, pinned by `wrangler-config.test.ts`. With it off, no story is kept and her thanks has no button. Turning it on in production needs a notice version that describes the book.
+
 The weekly read's story of the week is the newest entry kept in the read's seven days, found by the app from the book. Not built yet: voting on questions, and the PDF export (Vela Light).
 
 Revisit if: families want to keep an ordinary answer too; a family leaving needs to take its book with it (export comes first); her Telegram voice notes should be kept as stored copies, which today they are not, so only her words are kept from Telegram.

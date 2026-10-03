@@ -261,7 +261,9 @@
     // Off: no laptop reaches Expo; push is proven against a fake Expo endpoint (ADR-34).
     "PUSH_SEND": "off",
     // On: her dated plans are kept for reminders (spec §12).
-    "MEMORY": "on"
+    "MEMORY": "on",
+    // On: her stories are kept in the family book (ADR-39).
+    "BOOK": "on"
   },
 
   "env": {
@@ -352,7 +354,9 @@
         // Off until the founder has set up Expo and put EXPO_ACCESS_TOKEN (ADR-34).
         "PUSH_SEND": "off",
         // On: staging holds test families only (spec §12).
-        "MEMORY": "on"
+        "MEMORY": "on",
+        // On: staging holds test families only (ADR-39).
+        "BOOK": "on"
       }
     },
 
@@ -424,7 +428,10 @@
         "PUSH_SEND": "off",
         // Off, and pinned off by src/wrangler-config.test.ts: no family's plans are kept before the
         // privacy notice names memory and counsel has answered on health words (data map row 29).
-        "MEMORY": "off"
+        "MEMORY": "off",
+        // Off, and pinned off by src/wrangler-config.test.ts: privacy notice v1 says the family
+        // book comes later in the pilot, so no story is kept before a notice describes it.
+        "BOOK": "off"
       }
     }
   }

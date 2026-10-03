@@ -116,6 +116,7 @@ const DEFAULT_CONFIG: Config = {
   ) as Record<Lang, string>,
   privacyNoticeVersion: "privacy-notice.v1",
   memory: true,
+  book: true,
 };
 
 interface Candidate {

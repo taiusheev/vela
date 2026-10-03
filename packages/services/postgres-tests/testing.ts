@@ -442,6 +442,7 @@ export async function openPostgresHarness(): Promise<PostgresHarness> {
     ) as Record<Lang, string>,
     privacyNoticeVersion: "privacy-notice.v1",
     memory: true,
+    book: true,
   };
 
   const harness: PostgresHarness = {

@@ -125,6 +125,9 @@ function adminConfig(telegramBotUsername: string): Config {
     get memory(): never {
       return notGiven("config");
     },
+    get book(): never {
+      return notGiven("config");
+    },
   };
 }
 

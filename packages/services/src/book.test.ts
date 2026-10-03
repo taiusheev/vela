@@ -197,6 +197,21 @@ describe("a story she tells", () => {
     expect(h.media.objects.has(moved?.storageKey ?? "")).toBe(true);
   });
 
+  it("is not kept where the book is off, and her thanks offers nothing to undo", async () => {
+    const story = await storyMorning();
+    h.deps.config = { ...h.deps.config, book: false };
+    try {
+      await send(fromHer({ kind: "text", text: "We met at the train station in Tainan." }));
+    } finally {
+      h.deps.config = { ...h.deps.config, book: true };
+    }
+
+    expect(await entryOf(story.id)).toBeUndefined();
+    const thanks = h.telegram.sentTo(seed.memberLink.externalId).at(-1);
+    expect(thanks?.message.buttons).toBeUndefined();
+    expect(thanks?.message.text).not.toContain("family book");
+  });
+
   it("is not kept for an ordinary question, whose thanks has no button", async () => {
     const question = await storyMorning("question");
     await send(fromHer({ kind: "text", text: "Rice porridge." }));

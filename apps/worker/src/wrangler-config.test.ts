@@ -540,6 +540,16 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // ADR-39: privacy notice v1 says the family book comes later in the pilot, so production keeps no
+  // story beyond 30 days before a notice describes the book. The commit that turns it on changes this.
+  it("keep stories in the family book in development and staging, and not in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.BOOK,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
   it("never holds EXPO_ACCESS_TOKEN as a var, in either Worker or any environment", () => {
     for (const config of configs) {
