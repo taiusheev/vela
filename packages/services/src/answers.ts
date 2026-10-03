@@ -22,6 +22,7 @@ import {
   addMinutes,
   type ButtonAction,
   canApply,
+  encodeButton,
   localDateOf,
   minutesBetween,
   nextExchangeState,
@@ -45,6 +46,7 @@ import {
   outbound,
 } from "@vela/db";
 import { and, asc, eq, exists, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { keepInBook, keepsInBook } from "./book.ts";
 import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -313,7 +315,20 @@ async function sendAck(deps: Deps, input: AnswerInput): Promise<void> {
     conversationId: event.conversation.externalId,
     exchangeId: input.exchange.id,
     lang,
-    text: t(lang, "ack.thanks", { address: member.addressForm ?? member.displayName }),
+    ...(keepsInBook(input.exchange)
+      ? {
+          // A story goes into the family book unless she says not to (spec §10, ADR-39).
+          text: t(lang, "ack.story", { address: member.addressForm ?? member.displayName }),
+          buttons: [
+            [
+              {
+                id: encodeButton({ type: "book_drop", exchangeId: input.exchange.id }),
+                label: t(lang, "book.dont_keep"),
+              },
+            ],
+          ],
+        }
+      : { text: t(lang, "ack.thanks", { address: member.addressForm ?? member.displayName }) }),
   });
 }
 
@@ -431,6 +446,10 @@ async function sendAnswerReceipt(
 async function afterLight(deps: Deps, input: AnswerInput, lit: Lit): Promise<void> {
   const { answer } = lit;
   await settle(deps, "ack", answer.id, () => sendAck(deps, input));
+  // A story is kept in the family book before anything else can touch its files (ADR-39).
+  if (keepsInBook(input.exchange)) {
+    await settle(deps, "book", answer.id, () => keepInBook(deps, input.exchange, answer));
+  }
   await settle(deps, "post", answer.id, () => postAnswer(deps, { ...input, answer }));
   await settle(deps, "answer_receipt", answer.id, () => sendAnswerReceipt(deps, input, lit.told));
   await settle(deps, "queue", answer.id, () =>

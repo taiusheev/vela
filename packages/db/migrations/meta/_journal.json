@@ -57,6 +57,13 @@
       "when": 1790904973712,
       "tag": "0007_nearby_telegram",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791003690131,
+      "tag": "0008_family_book",
+      "breakpoints": true
     }
   ]
 }

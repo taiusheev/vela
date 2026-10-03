@@ -20,6 +20,7 @@ import {
   handleParentMessage,
 } from "../answers.ts";
 import { handleAskCommand, handleGroupAsk, parseAskCommand } from "../asks.ts";
+import { handleBookDropButton } from "../book.ts";
 import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "../consent.ts";
 import type { Deps } from "../deps.ts";
 import { errorLabel } from "../errors.ts";
@@ -244,6 +245,9 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
       return;
     case "look_in":
       await handleLookInButton(deps, event, action);
+      return;
+    case "book_drop":
+      await handleBookDropButton(deps, event, action);
       return;
   }
 }

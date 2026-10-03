@@ -75,6 +75,10 @@ msgstr "{her} would see your light, and you choose who else. Not in the app yet.
 msgid "{holder} already has that morning."
 msgstr "{holder} already has that morning."
 
+#: src/components/story-day.tsx
+msgid "{holder} already has that Sunday."
+msgstr "{holder} already has that Sunday."
+
 #: src/data/precision.ts
 msgid "{known} fine, and the family knew why"
 msgstr "{known} fine, and the family knew why"
@@ -82,6 +86,14 @@ msgstr "{known} fine, and the family knew why"
 #: src/data/precision.ts
 msgid "{later} answered later"
 msgstr "{later} answered later"
+
+#: app/book.tsx
+msgid "{name} · {day}"
+msgstr "{name} · {day}"
+
+#: app/book.tsx
+msgid "{name} · {day} · {asker} asked"
+msgstr "{name} · {day} · {asker} asked"
 
 #: app/vela-light.tsx
 msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
@@ -199,6 +211,10 @@ msgstr "{words} · shown to her in {language}"
 msgid "{wrong} where something was wrong"
 msgstr "{wrong} where something was wrong"
 
+#: app/book.tsx
+msgid "▶ Her voice"
+msgstr "▶ Her voice"
+
 #: app/parent.tsx
 msgid "▶ Play the voice message"
 msgstr "▶ Play the voice message"
@@ -303,6 +319,10 @@ msgstr "Always free"
 msgid "An old photo"
 msgstr "An old photo"
 
+#: src/components/story-day.tsx
+msgid "Another question"
+msgstr "Another question"
+
 #: src/device/KitchenTable.tsx
 msgid "Answer"
 msgstr "Answer"
@@ -340,6 +360,10 @@ msgstr "Ask and reply · free"
 #: src/data/weekly.ts
 msgid "Ask her which seeds she wants to keep for next spring."
 msgstr "Ask her which seeds she wants to keep for next spring."
+
+#: src/components/story-day.tsx
+msgid "Ask it on Sunday"
+msgstr "Ask it on Sunday"
 
 #: src/components/nearby-editor.tsx
 msgid "Ask on Telegram"
@@ -557,6 +581,10 @@ msgstr "Hello {who}. Could I list you on Vela as someone near {name}, so I could
 msgid "her"
 msgstr "her"
 
+#: src/components/story-day.tsx
+msgid "Her answer is kept in the family book, unless she says not to."
+msgstr "Her answer is kept in the family book, unless she says not to."
+
 #: app/onboarding.tsx
 msgid "Her first morning is the day after she says yes, at {time}."
 msgstr "Her first morning is the day after she says yes, at {time}."
@@ -724,6 +752,7 @@ msgstr "Malaysia"
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
+#: src/components/story-day.tsx
 #: src/data/exchanges.ts
 #: src/data/family.ts
 #: src/data/today.ts
@@ -797,6 +826,10 @@ msgstr "No number here: Vela asks them for it, with their yes."
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
 msgstr "No quiet notice in the last 12 months."
+
+#: app/book.tsx
+msgid "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
+msgstr "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -899,6 +932,10 @@ msgstr "Older than thirty days lives in the family book."
 msgid "On Saturday she answered later than usual, after the market."
 msgstr "On Saturday she answered later than usual, after the market."
 
+#: src/components/story-day.tsx
+msgid "On Sunday {name} is asked for this story. What she tells goes into the family book."
+msgstr "On Sunday {name} is asked for this story. What she tells goes into the family book."
+
 #: app/(tabs)/you.tsx
 #: src/push/provider.tsx
 msgid "One moment a day"
@@ -920,6 +957,10 @@ msgstr "Open how the quiet notices ended"
 #: src/components/push-offer.tsx
 msgid "Open settings"
 msgstr "Open settings"
+
+#: app/book.tsx
+msgid "Opening the book…"
+msgstr "Opening the book…"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -1011,6 +1052,10 @@ msgstr "quiet"
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
+
+#: src/components/story-day.tsx
+msgid "Read the family book"
+msgstr "Read the family book"
 
 #: app/parent.tsx
 msgid "Read this aloud"
@@ -1134,6 +1179,7 @@ msgstr "Send voice reply"
 #: app/parent.tsx
 #: app/sign-in.tsx
 #: src/components/photo-reply.tsx
+#: src/components/story-day.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
@@ -1285,12 +1331,17 @@ msgstr "Starting…"
 msgid "Stay"
 msgstr "Stay"
 
+#: app/book.tsx
 #: app/parent.tsx
 #: src/components/voice-hello.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
 msgstr "Stop"
+
+#: src/components/story-day.tsx
+msgid "Story day · {day}"
+msgstr "Story day · {day}"
 
 #: src/data/exchanges.ts
 msgid "Sunday"
@@ -1310,6 +1361,10 @@ msgstr "Sydney"
 #: src/data/onboarding.ts
 msgid "Taiwan"
 msgstr "Taiwan"
+
+#: app/book.tsx
+msgid "Take this story out of the book"
+msgstr "Take this story out of the book"
 
 #: src/data/useToday.ts
 msgid "tapped an answer"
@@ -1346,6 +1401,10 @@ msgstr "That could not be saved just now. Nothing was lost; try again."
 #: app/ask.tsx
 msgid "That could not be sent just now. Look at Today before sending it again."
 msgstr "That could not be sent just now. Look at Today before sending it again."
+
+#: src/components/story-day.tsx
+msgid "That could not be sent just now. Try again in a moment."
+msgstr "That could not be sent just now. Try again in a moment."
 
 #: app/exchange/[id].tsx
 msgid "That could not be sent just now. Your words are kept."
@@ -1429,6 +1488,18 @@ msgstr "The daily ask, the exchanges, turns, translation, story day, everyone in
 #: app/(tabs)/exchanges.tsx
 msgid "The exchanges could not be reached just now."
 msgstr "The exchanges could not be reached just now."
+
+#: app/book.tsx
+msgid "The family book"
+msgstr "The family book"
+
+#: app/book.tsx
+msgid "The family book could not be reached just now."
+msgstr "The family book could not be reached just now."
+
+#: app/book.tsx
+msgid "The family book fills with the stories she tells on story day."
+msgstr "The family book fills with the stories she tells on story day."
 
 #: src/data/precision.ts
 msgid "The family found {found} of {verdicts} useful."

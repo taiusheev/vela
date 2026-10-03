@@ -127,6 +127,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>(unused("the lights")),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>(unused("Today")),
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>(unused("the family")),
+    loadApiBook: vi.fn<ApiReadServices["loadApiBook"]>().mockResolvedValue({ entries: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
@@ -170,6 +171,9 @@ function fixture(options: FixtureOptions = {}) {
       uploadApiVoice: vi
         .fn<Writes["services"]["uploadApiVoice"]>()
         .mockResolvedValue({ response: { status: 201, body: VOICE }, replayed: false }),
+      removeApiBookEntry: vi
+        .fn()
+        .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),
       askApiToLookIn: vi.fn<Writes["services"]["askApiToLookIn"]>(unused("ask to look in")),
       inviteApiNearby: vi.fn<Writes["services"]["inviteApiNearby"]>(unused("nearby invite")),
       markApiQuietUseful: vi.fn<Writes["services"]["markApiQuietUseful"]>(unused("useful")),
@@ -781,6 +785,15 @@ describe("reading a photo", () => {
       f.store,
     );
     expect(f.close).toHaveBeenCalledOnce();
+  });
+
+  it("answers a stored voice in the type the service names it", async () => {
+    const f = fixture();
+    f.services.readApiMedia.mockResolvedValue({ body: new ArrayBuffer(4), mime: "audio/mp4" });
+    const response = await f.app.request(readRequest());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("audio/mp4");
   });
 
   it("reads without writes on: a read is not a write", async () => {

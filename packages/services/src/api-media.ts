@@ -24,7 +24,19 @@
  */
 import { type ApiMutationResponse, ApiUploadedMedia, type MediaRefusal } from "@vela/contracts";
 import { answers, exchanges, media, members, replies, type VelaTransaction } from "@vela/db";
-import { and, count, eq, exists, gt, isNotNull, isNull, or, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  eq,
+  exists,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { authorizeFamilyAccess, type FamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
@@ -40,6 +52,8 @@ export const MAX_LIVE_PHOTOS_PER_FAMILY = 60;
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
 const JPEG = "image/jpeg";
+/** The voice types a family member may listen to: her phone's M4A, and stored Ogg or MP3 copies. */
+const VOICE_TYPES = ["audio/mp4", "audio/ogg", "audio/mpeg"] as const;
 const Uuid = z.uuid();
 
 /**
@@ -348,6 +362,9 @@ export function sharedWith(db: Queryable, familyId: string, memberId: string): S
  * exchanges (a photo ask), or carried by an answer or a reply in it. So an upload nobody has asked
  * with yet is its uploader's alone. A row whose object is gone, or one Telegram alone holds (no
  * storage key), is null, and the app shows its placeholder.
+ *
+ * A stored voice note shared the same way is served too, in its own audio type, so the family book
+ * (ADR-39) and a reply can be listened to; Telegram's own voices are not stored and stay null.
  */
 export async function readApiMedia(
   db: Queryable,
@@ -355,29 +372,35 @@ export async function readApiMedia(
   familyId: string,
   mediaId: string,
   store: MediaStore,
-): Promise<{ body: ArrayBuffer; mime: typeof JPEG } | null> {
+): Promise<{ body: ArrayBuffer; mime: string } | null> {
   if (typeof mediaId !== "string" || !Uuid.safeParse(mediaId).success) return null;
   const found = await authorizeFamilyAccess(db, identity, familyId);
   if (found.kind !== "granted") return null;
   const { access } = found;
   const shared = sharedWith(db, access.familyId, access.memberId);
   const [row] = await db
-    .select({ storageKey: media.storageKey })
+    .select({ storageKey: media.storageKey, kind: media.kind, mime: media.mime })
     .from(media)
     .where(
       and(
         eq(media.id, mediaId),
         eq(media.familyId, access.familyId),
-        eq(media.kind, "image"),
         isNotNull(media.storageKey),
-        // Telegram's photos carry no MIME type; anything that says it is not a JPEG is not served
-        // as one.
-        or(isNull(media.mime), eq(media.mime, JPEG)),
+        or(
+          and(
+            eq(media.kind, "image"),
+            // Telegram's photos carry no MIME type; anything that says it is not a JPEG is not
+            // served as one.
+            or(isNull(media.mime), eq(media.mime, JPEG)),
+          ),
+          and(eq(media.kind, "audio"), inArray(media.mime, [...VOICE_TYPES])),
+        ),
         shared,
       ),
     )
     .limit(1);
   if (row === undefined || row.storageKey === null) return null;
   const object = await store.get(row.storageKey);
-  return object === null ? null : { body: object.body, mime: JPEG };
+  if (object === null) return null;
+  return { body: object.body, mime: row.kind === "image" ? JPEG : (row.mime ?? JPEG) };
 }

@@ -72,6 +72,7 @@ function randomAction(random: () => number): ButtonAction {
       "notice_read",
       "nearby_consent",
       "look_in",
+      "book_drop",
       "onboarding",
     ])
   ) {
@@ -101,6 +102,8 @@ function randomAction(random: () => number): ButtonAction {
       return { type: "nearby_consent", contactId: uuidv7(random), accept: random() < 0.5 };
     case "look_in":
       return { type: "look_in", quietEventId: uuidv7(random), accept: random() < 0.5 };
+    case "book_drop":
+      return { type: "book_drop", exchangeId: uuidv7(random) };
     default:
       return {
         type: "onboarding",

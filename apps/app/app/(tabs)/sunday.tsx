@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Light } from "../../src/components/light.tsx";
+import { StoryDay } from "../../src/components/story-day.tsx";
 import {
   Card,
   Eyebrow,
@@ -159,6 +160,7 @@ export default function SundayScreen() {
           )}
         </>
       )}
+      <StoryDay />
     </ScrollView>
   );
 }

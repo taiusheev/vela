@@ -26,6 +26,7 @@ import {
   answers,
   apiRequestReceipts,
   awayPeriods,
+  bookEntries,
   chips,
   consents,
   deletions,
@@ -967,6 +968,8 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
           lt(sql`coalesce(${exchanges.deliveredAt}, ${exchanges.createdAt})`, cutoff30),
           or(isNotNull(exchanges.text), isNotNull(exchanges.options)),
           sql`not (${stillWaiting()})`,
+          // A story kept in the family book keeps its question (ADR-39).
+          sql`not exists (select 1 from ${bookEntries} where ${bookEntries.exchangeId} = ${exchanges.id} and ${bookEntries.removedAt} is null)`,
         ),
       )
       .returning({ id: exchanges.id })
@@ -1004,6 +1007,26 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   ).length;
   // The words in the payload are what she typed (`text`) and the chip or vote option she tapped
   // (`choice`), a copy of words the chips and options rules above delete; the index is no word.
+  // An answer kept in the family book keeps her words and transcript (ADR-39); what the AI drew
+  // from it (mentions, mood words, a flag's reason) goes at 30 days like any other.
+  const inBook = sql`exists (select 1 from ${bookEntries} where ${bookEntries.exchangeId} = ${answers.exchangeId} and ${bookEntries.removedAt} is null)`;
+  counts.book_answers_trimmed = (
+    await db
+      .update(answers)
+      .set({ mentions: {}, moodWords: [], flagReason: null })
+      .where(
+        and(
+          lt(answers.receivedAt, cutoff30),
+          inBook,
+          or(
+            isNotNull(answers.flagReason),
+            sql`${answers.mentions} <> '{}'::jsonb`,
+            sql`cardinality(${answers.moodWords}) > 0`,
+          ),
+        ),
+      )
+      .returning({ id: answers.id })
+  ).length;
   counts.answers_cleared = (
     await db
       .update(answers)
@@ -1017,6 +1040,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .where(
         and(
           lt(answers.receivedAt, cutoff30),
+          sql`not ${inBook}`,
           or(
             isNotNull(answers.transcript),
             isNotNull(answers.flagReason),

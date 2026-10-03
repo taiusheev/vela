@@ -657,3 +657,25 @@ Revisit if:
 - Neon's restore window is raised beyond 30 days, which brings per-family keys' crypto-shredding back into question;
 - counsel in a market asks for per-person erasure from backups;
 - a second region gets its own database, and with it its own key.
+
+## ADR-39 · The family book keeps a story by default, and keeping means only "not cleared at 30 days"
+
+Status: accepted, 3 October 2026 (build plan 5.1; spec §10, A10).
+
+Context: spec §10 promises a family book of the stories she tells on story day, kept beyond the 30 days that clear everything else, with "don't keep that one" removing a story. The privacy notice already says so. Until now nothing was kept past 30 days.
+
+Decision:
+1. **What is kept.** Her answers to an exchange of type `story`, and nothing else. Her first answer makes a `book_entries` row (one per exchange, migration 0008); later answers to the same story join it. The row holds ids and times only, no words, so ADR-38's sealing has nothing to seal in it.
+2. **Kept by default, removed by her or an organiser.** Her thanks says "Your story is kept in the family book" with a "Don't keep this one" button (`s:<exchange>:d`). An organiser can take a story out from the app (`POST /v1/book/:exchangeId/remove`, through `runApiMutation`). Removing marks the row removed rather than deleting it, so a later answer never keeps the story again. Its files lose `kept`, and retention clears it as it clears anything else.
+3. **What keeping changes.** Retention skips the question and her words for an exchange with a live entry. Her files are `kept`, which retention already skips. A recording from her phone is moved from `device/` to `book/<family>/<id>.<ext>`, which no bucket rule touches (data map 21). Everything else around the story is cleared at 30 days as before: the replies, the flags, the mood words.
+4. **Reading.** Every live member reads the book (`GET /v1/families/:id/book`); reading never needs Vela Light. Her stored voice is played through the family media route, which now also serves a shared stored voice note in its own audio type.
+5. **Story day.** The Sunday tab offers one question from a story bank in the app (`src/data/story.ts`), skipping any already in the book, for her next Sunday, sent as an ordinary ask of type `story` for that date. The question is the family's choice, as every ask is.
+
+Rejected:
+- **Opt-in keeping.** She would have to say yes to every story, and the stories most worth keeping are the ones nobody thinks to save in time.
+- **Copying her words into the book.** That would be a second copy to seal, clear and export. The entry points at the exchange instead.
+- **Deleting the entry on removal.** The next answer would then keep the story again.
+
+Not built yet: voting on questions, the PDF export (Vela Light), and the story of the week in the weekly read.
+
+Revisit if: families want to keep an ordinary answer too; a family leaving needs to take its book with it (export comes first); her Telegram voice notes should be kept as stored copies, which today they are not, so only her words are kept from Telegram.

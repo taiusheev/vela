@@ -2,6 +2,8 @@ import type {
   ApiAccountPatch,
   ApiAccountProfile,
   ApiAskConflict,
+  ApiBook,
+  ApiBookRemoved,
   ApiComposedAsk,
   ApiCreatedFamily,
   ApiDeviceMember,
@@ -140,6 +142,20 @@ export function composeAsk(
     key,
     body: ask,
   });
+}
+
+/** The family book (`GET /v1/families/:familyId/book`, ADR-39): every kept story, newest first. */
+export function fetchBook(familyId: string, token: string | null): Promise<ApiBook> {
+  return read<ApiBook>(`/v1/families/${familyId}/book`, token);
+}
+
+/** An organiser takes a story out of the book. */
+export function removeBookEntry(
+  exchangeId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiBookRemoved> {
+  return call<ApiBookRemoved>({ path: `/v1/book/${exchangeId}/remove`, token, key, body: {} });
 }
 
 /** One exchange, for a link that names it (`GET /v1/exchanges/:exchangeId`); 404 when it is not hers to see. */

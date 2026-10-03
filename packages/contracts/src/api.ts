@@ -1052,3 +1052,36 @@ export const PushData = z.strictObject({
   suggestion_id: z.uuid().optional(),
 });
 export type PushData = z.infer<typeof PushData>;
+
+/** One story kept in the family book (`GET /v1/families/:familyId/book`, spec §10, ADR-39). */
+export const ApiBookEntry = z.object({
+  exchange_id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  asked_by: z.string().nullable(),
+  /** The story ask she answered; null if its words are gone. */
+  question: z.string().nullable(),
+  kept_at: z.iso.datetime({ offset: true }),
+  answers: z.array(
+    z.object({
+      kind: z.string(),
+      /** Her words, or the transcript of her voice. */
+      text: z.string().nullable(),
+      /** Her voice note or photo, read through `GET /v1/families/:familyId/media/:id`. */
+      media_id: z.uuid().nullable(),
+      media_kind: z.enum(["audio", "image"]).nullable(),
+      at: z.iso.datetime({ offset: true }),
+    }),
+  ),
+});
+export type ApiBookEntry = z.infer<typeof ApiBookEntry>;
+
+export const ApiBook = z.object({ entries: z.array(ApiBookEntry) });
+export type ApiBook = z.infer<typeof ApiBook>;
+
+/** An organiser takes a story out of the book: no body, the exchange is in the path. */
+export const RemoveBookEntry = z.strictObject({});
+export type RemoveBookEntry = z.infer<typeof RemoveBookEntry>;
+
+export const ApiBookRemoved = z.object({ exchange_id: z.uuid(), removed: z.literal(true) });
+export type ApiBookRemoved = z.infer<typeof ApiBookRemoved>;

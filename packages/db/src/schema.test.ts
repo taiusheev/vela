@@ -39,6 +39,7 @@ import {
   answers,
   apiRequestReceipts,
   awayPeriods,
+  bookEntries,
   CONSENT_PROOF_KEYS,
   channelLinks,
   chips,
@@ -349,6 +350,12 @@ async function seedEveryTable(): Promise<void> {
     .insert(media)
     .values({ familyId, kind: "audio", storageKey: "apac/a.ogg", mime: "audio/ogg", bytes: 1 });
   const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
+  await db.insert(bookEntries).values({
+    familyId,
+    memberId: seed.parent.id,
+    exchangeId: exchange.id,
+    keptAt: new Date(),
+  });
   await db.insert(translations).values({
     objectType: "exchange",
     objectId: exchange.id,

@@ -82,6 +82,10 @@ msgstr "{her}會看到您的燈，還有誰能看到由您決定。App 裡還沒
 msgid "{holder} already has that morning."
 msgstr "那天早上已經有{holder}的提問了。"
 
+#: src/components/story-day.tsx
+msgid "{holder} already has that Sunday."
+msgstr "那個週日已經由{holder}安排了。"
+
 #: src/data/precision.ts
 msgid "{known} fine, and the family knew why"
 msgstr "{known}次平安（家人知道原因）"
@@ -89,6 +93,14 @@ msgstr "{known}次平安（家人知道原因）"
 #: src/data/precision.ts
 msgid "{later} answered later"
 msgstr "{later}次稍晚回覆"
+
+#: app/book.tsx
+msgid "{name} · {day}"
+msgstr "{name} · {day}"
+
+#: app/book.tsx
+msgid "{name} · {day} · {asker} asked"
+msgstr "{name} · {day} · {asker}問的"
 
 #: app/vela-light.tsx
 msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
@@ -206,6 +218,10 @@ msgstr "{words} · 這位家人看到的{language}版本"
 msgid "{wrong} where something was wrong"
 msgstr "{wrong}次真的有狀況"
 
+#: app/book.tsx
+msgid "▶ Her voice"
+msgstr "▶ 聽原聲"
+
 #: app/parent.tsx
 msgid "▶ Play the voice message"
 msgstr "▶ 播放語音訊息"
@@ -310,6 +326,10 @@ msgstr "永遠免費"
 msgid "An old photo"
 msgstr "一張老照片"
 
+#: src/components/story-day.tsx
+msgid "Another question"
+msgstr "換一個問題"
+
 #: src/device/KitchenTable.tsx
 msgid "Answer"
 msgstr "回答"
@@ -347,6 +367,10 @@ msgstr "提問和回覆 · 免費"
 #: src/data/weekly.ts
 msgid "Ask her which seeds she wants to keep for next spring."
 msgstr "問問媽媽明年春天想留哪些種子。"
+
+#: src/components/story-day.tsx
+msgid "Ask it on Sunday"
+msgstr "週日問這個"
 
 #: src/components/nearby-editor.tsx
 msgid "Ask on Telegram"
@@ -564,6 +588,10 @@ msgstr "{who}您好。我可以在 Vela 上把您列為住在{name}附近的人�
 msgid "her"
 msgstr "這位家人"
 
+#: src/components/story-day.tsx
+msgid "Her answer is kept in the family book, unless she says not to."
+msgstr "回答會收進家庭故事書，除非本人說不要保留。"
+
 #: app/onboarding.tsx
 msgid "Her first morning is the day after she says yes, at {time}."
 msgstr "同意之後的隔天 {time}，就會收到第一則早安訊息。"
@@ -731,6 +759,7 @@ msgstr "馬來西亞"
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
+#: src/components/story-day.tsx
 #: src/data/exchanges.ts
 #: src/data/family.ts
 #: src/data/today.ts
@@ -804,6 +833,10 @@ msgstr "這裡不填電話號碼：對方同意後，Vela 會再向對方要號�
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
 msgstr "過去 12 個月沒有安靜通知。"
+
+#: app/book.tsx
+msgid "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
+msgstr "還沒有故事。在週日分頁選一個問題，說出的故事會收在這裡。"
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -906,6 +939,10 @@ msgstr "超過三十天的內容會收進家族故事書。"
 msgid "On Saturday she answered later than usual, after the market."
 msgstr "週六媽媽比平常晚回覆，是在去完市場之後。"
 
+#: src/components/story-day.tsx
+msgid "On Sunday {name} is asked for this story. What she tells goes into the family book."
+msgstr "週日會請{name}說這個故事，說出的內容會收進家庭故事書。"
+
 #: app/(tabs)/you.tsx
 #: src/push/provider.tsx
 msgid "One moment a day"
@@ -927,6 +964,10 @@ msgstr "打開安靜通知的結果"
 #: src/components/push-offer.tsx
 msgid "Open settings"
 msgstr "開啟設定"
+
+#: app/book.tsx
+msgid "Opening the book…"
+msgstr "正在打開故事書…"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -1018,6 +1059,10 @@ msgstr "比較安靜"
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記事與提醒 · 可以保存的家族故事書"
+
+#: src/components/story-day.tsx
+msgid "Read the family book"
+msgstr "看家庭故事書"
 
 #: app/parent.tsx
 msgid "Read this aloud"
@@ -1141,6 +1186,7 @@ msgstr "送出語音回覆"
 #: app/parent.tsx
 #: app/sign-in.tsx
 #: src/components/photo-reply.tsx
+#: src/components/story-day.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
@@ -1292,12 +1338,17 @@ msgstr "正在開啟…"
 msgid "Stay"
 msgstr "留下"
 
+#: app/book.tsx
 #: app/parent.tsx
 #: src/components/voice-hello.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
 msgstr "停止"
+
+#: src/components/story-day.tsx
+msgid "Story day · {day}"
+msgstr "故事日 · {day}"
 
 #: src/data/exchanges.ts
 msgid "Sunday"
@@ -1317,6 +1368,10 @@ msgstr "雪梨"
 #: src/data/onboarding.ts
 msgid "Taiwan"
 msgstr "台灣"
+
+#: app/book.tsx
+msgid "Take this story out of the book"
+msgstr "把這個故事從書中移除"
 
 #: src/data/useToday.ts
 msgid "tapped an answer"
@@ -1353,6 +1408,10 @@ msgstr "目前無法儲存。內容都還在，請再試一次。"
 #: app/ask.tsx
 msgid "That could not be sent just now. Look at Today before sending it again."
 msgstr "目前無法傳送。再傳一次之前，請先看看「今天」。"
+
+#: src/components/story-day.tsx
+msgid "That could not be sent just now. Try again in a moment."
+msgstr "暫時無法送出，請稍後再試。"
 
 #: app/exchange/[id].tsx
 msgid "That could not be sent just now. Your words are kept."
@@ -1436,6 +1495,18 @@ msgstr "每天的提問、問答、輪流提問、翻譯、故事日，還有家
 #: app/(tabs)/exchanges.tsx
 msgid "The exchanges could not be reached just now."
 msgstr "目前無法載入問答。"
+
+#: app/book.tsx
+msgid "The family book"
+msgstr "家庭故事書"
+
+#: app/book.tsx
+msgid "The family book could not be reached just now."
+msgstr "暫時無法開啟家庭故事書。"
+
+#: app/book.tsx
+msgid "The family book fills with the stories she tells on story day."
+msgstr "故事日說出的故事會收進家庭故事書。"
 
 #: src/data/precision.ts
 msgid "The family found {found} of {verdicts} useful."

@@ -41,7 +41,9 @@ export type ButtonAction =
   /** A nearby contact's answer to being asked, in the organiser's name, to be asked (ADR-36). */
   | { type: "nearby_consent"; contactId: string; accept: boolean }
   /** A nearby contact's answer to "could you look in on her today?" on a quiet morning (ADR-36). */
-  | { type: "look_in"; quietEventId: string; accept: boolean };
+  | { type: "look_in"; quietEventId: string; accept: boolean }
+  /** Her "Don't keep this one" under the thanks for a story told for the family book (ADR-39). */
+  | { type: "book_drop"; exchangeId: string };
 
 export const BUTTON_DATA_MAX_BYTES = 64;
 
@@ -124,6 +126,8 @@ export function encodeButton(action: ButtonAction): string {
       return `b:${compactId(action.contactId, "contactId")}:${action.accept ? "y" : "n"}`;
     case "look_in":
       return `l:${compactId(action.quietEventId, "quietEventId")}:${action.accept ? "y" : "n"}`;
+    case "book_drop":
+      return `s:${compactId(action.exchangeId, "exchangeId")}:d`;
   }
 }
 
@@ -183,6 +187,8 @@ export function decodeButton(data: string): ButtonAction | null {
       if (tail === "y") return { type: "nearby_consent", contactId: id, accept: true };
       if (tail === "n") return { type: "nearby_consent", contactId: id, accept: false };
       return null;
+    case "s":
+      return tail === "d" ? { type: "book_drop", exchangeId: id } : null;
     case "l":
       if (tail === "y") return { type: "look_in", quietEventId: id, accept: true };
       if (tail === "n") return { type: "look_in", quietEventId: id, accept: false };

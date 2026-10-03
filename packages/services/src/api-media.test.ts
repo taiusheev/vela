@@ -569,7 +569,45 @@ describe("readApiMedia", () => {
     expect(await read(body.id)).toBeNull();
   });
 
-  it("serves no row Telegram alone holds, no voice note, and nothing that is not a JPEG", async () => {
+  it("serves a stored voice note in an answer to the family as audio, and one shared nowhere to nobody else", async () => {
+    const [voice, loose] = await h.db
+      .insert(media)
+      .values([
+        {
+          familyId: seed.family.id,
+          uploadedBy: seed.member.id,
+          kind: "audio",
+          storageKey: `book/${seed.family.id}/voice.m4a`,
+          mime: "audio/mp4",
+        },
+        {
+          familyId: seed.family.id,
+          uploadedBy: seed.member.id,
+          kind: "audio",
+          storageKey: `device/${seed.family.id}/loose.m4a`,
+          mime: "audio/mp4",
+        },
+      ])
+      .returning();
+    for (const row of [voice, loose]) {
+      await h.media.put(row?.storageKey ?? "", new ArrayBuffer(4), "audio/mp4");
+    }
+    const exchange = await seedExchange(h.db, seed, {
+      date: localDateOf(h.clock.now(), seed.member.tz),
+    });
+    await h.db.insert(answers).values({
+      exchangeId: exchange.id,
+      memberId: seed.member.id,
+      kind: "voice",
+      channel: "device",
+      mediaId: voice?.id ?? null,
+    });
+
+    expect((await read(voice?.id ?? unknownId, sam))?.mime).toBe("audio/mp4");
+    expect(await read(loose?.id ?? unknownId, sam)).toBeNull();
+  });
+
+  it("serves no row Telegram alone holds, no voice of an unknown type, and nothing that is not a JPEG", async () => {
     const [telegram, voice, png] = await h.db
       .insert(media)
       .values([
@@ -584,8 +622,8 @@ describe("readApiMedia", () => {
           familyId: seed.family.id,
           uploadedBy: seed.organiser.id,
           kind: "audio",
-          storageKey: `families/${seed.family.id}/voice.ogg`,
-          mime: "audio/ogg",
+          storageKey: `families/${seed.family.id}/voice.wav`,
+          mime: "audio/wav",
         },
         {
           familyId: seed.family.id,

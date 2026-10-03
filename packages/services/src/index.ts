@@ -108,6 +108,7 @@ export { loadApiToday } from "./api-today.ts";
 export { startApiTrial, TrialRefusedError } from "./api-trial.ts";
 export { MAX_VOICE_BYTES, MAX_VOICES_PER_ACCOUNT_DAY, uploadApiVoice } from "./api-voice.ts";
 export { loadApiWeeklyRead } from "./api-weekly-read.ts";
+export { type ApiBookEntry, loadApiBook, removeApiBookEntry } from "./book.ts";
 export type {
   ChannelRegistry,
   Clock,

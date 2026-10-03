@@ -2,6 +2,8 @@ import {
   AddNearby,
   ApiAccountPatch,
   ApiAccountProfile,
+  ApiBook,
+  ApiBookRemoved,
   ApiComposedAsk,
   ApiCreatedFamily,
   ApiDeviceMember,
@@ -47,6 +49,7 @@ import {
   QuietAction,
   QuietUseful,
   RegisterPushDevice,
+  RemoveBookEntry,
   RemoveNearby,
   RemovePushDevice,
   StartTrial,
@@ -72,6 +75,7 @@ import {
   type Logger,
   LookInRefusedError,
   type leaveApiFamily,
+  type loadApiBook,
   type loadApiExchange,
   type loadApiExchanges,
   type loadApiFamily,
@@ -99,6 +103,7 @@ import {
   type readApiMedia,
   type readDeviceMedia,
   type registerApiPushDevice,
+  type removeApiBookEntry,
   type removeApiDevice,
   type removeApiNearby,
   type removeApiPushDevice,
@@ -140,6 +145,7 @@ export interface ApiReadServices {
   loadApiLights: typeof loadApiLights;
   loadApiToday: typeof loadApiToday;
   loadApiFamily: typeof loadApiFamily;
+  loadApiBook: typeof loadApiBook;
   loadApiExchange: typeof loadApiExchange;
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
@@ -169,6 +175,7 @@ export interface ApiWriteServices {
   uploadApiMedia: typeof uploadApiMedia;
   uploadApiVoice: typeof uploadApiVoice;
   askApiToLookIn: typeof askApiToLookIn;
+  removeApiBookEntry: typeof removeApiBookEntry;
   markApiQuietUseful: typeof markApiQuietUseful;
   inviteApiNearby: typeof inviteApiNearby;
   registerApiPushDevice: typeof registerApiPushDevice;
@@ -735,6 +742,24 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       return page === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiExchangePage.parse(page));
     },
   );
+  // The family book (ADR-39): every live member reads it; reading never needs Vela Light.
+  app.get(
+    "/v1/families/:familyId/book",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const book = await runtime.services.loadApiBook(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+      );
+      return book === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiBook.parse(book));
+    },
+  );
   // One exchange, for a link or a tapped notice: the service reads its family and answers null for
   // anything the caller may not see, which is 404 without saying whether it exists.
   app.get("/v1/exchanges/:exchangeId", authenticate, withDatabase, async (c) => {
@@ -800,7 +825,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
     return notice === null ? c.json(NOT_FOUND, 404) : c.json(ApiQuietNotice.parse(notice));
   });
-  // A photo the family may see (ADR-33), proxied from the store: there is no signed or public URL.
+  // A photo or stored voice the family may see (ADR-33, ADR-39), proxied from the store: there is no signed or public URL.
   // Without a store, and for an id that is not a uuid, it is 404 before a connection is opened.
   app.get(
     "/v1/families/:familyId/media/:mediaId",
@@ -829,7 +854,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       );
       if (photo === null) return c.json(NOT_FOUND, 404);
       return c.body(photo.body, 200, {
-        "content-type": "image/jpeg",
+        "content-type": photo.mime,
         "x-content-type-options": "nosniff",
         "content-disposition": "inline",
       });
@@ -1174,6 +1199,27 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         }
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ApiQuietState.parse(result.response.body), 200);
+      },
+    );
+    // An organiser takes a story out of the family book (ADR-39); the service reads its family.
+    app.post(
+      "/v1/book/:exchangeId/remove",
+      authenticate,
+      validateWrite(RemoveBookEntry, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.removeApiBookEntry(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiBookRemoved.parse(result.response.body), 200);
       },
     );
     // "Ask them to look in" (ADR-36): the service reads the family from the event under its lock.

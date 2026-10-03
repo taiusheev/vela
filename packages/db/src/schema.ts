@@ -946,6 +946,36 @@ export const awayPeriods = pgTable(
   ],
 );
 
+/**
+ * The family book (spec §10, ADR-39): a story she told, kept beyond the 30 days. One entry per story
+ * exchange, made when she first answers it; all her answers to that exchange are kept with it — their
+ * words, transcript and files — until she says "don't keep that one", an organiser removes it, or the
+ * family leaves. A removed entry keeps its row as the record of the removal; what it kept then
+ * follows the ordinary 30 days from when it was said.
+ */
+export const bookEntries = pgTable(
+  "book_entries",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** Whose story it is: the kept-light member who answered. */
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    exchangeId: uuid("exchange_id")
+      .notNull()
+      .unique("book_entries_exchange_id_key")
+      .references(() => exchanges.id, { onDelete: "cascade" }),
+    keptAt: timestamptz("kept_at").notNull(),
+    removedAt: timestamptz("removed_at"),
+    /** Who removed it: her own "don't keep that one", or an organiser; null while it is kept. */
+    removedBy: uuid("removed_by").references(() => members.id, { onDelete: "set null" }),
+  },
+  (t) => [index("book_entries_family_idx").on(t.familyId, t.keptAt)],
+);
+
 export const weeklyReads = pgTable(
   "weekly_reads",
   {
@@ -1634,6 +1664,7 @@ export type NewMemoryFact = typeof memoryFacts.$inferInsert;
 export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
 export type QuietEvent = typeof quietEvents.$inferSelect;
+export type BookEntry = typeof bookEntries.$inferSelect;
 export type NewQuietEvent = typeof quietEvents.$inferInsert;
 export type AwayPeriod = typeof awayPeriods.$inferSelect;
 export type NewAwayPeriod = typeof awayPeriods.$inferInsert;
