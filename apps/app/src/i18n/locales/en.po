@@ -123,6 +123,22 @@ msgstr "{name} is asked on {day}."
 msgid "{name} is asked on {day}. Chosen by {askedBy}."
 msgstr "{name} is asked on {day}. Chosen by {askedBy}."
 
+#: app/away.tsx
+msgid "{name} is away"
+msgstr "{name} is away"
+
+#: app/(tabs)/index.tsx
+msgid "{name} is away until {day}. Her mornings still come; nobody is told they went quiet."
+msgstr "{name} is away until {day}. Her mornings still come; nobody is told they went quiet."
+
+#: app/(tabs)/index.tsx
+msgid "{name} is away until she's back. Her mornings still come; nobody is told they went quiet."
+msgstr "{name} is away until she's back. Her mornings still come; nobody is told they went quiet."
+
+#: app/(tabs)/index.tsx
+msgid "{name} is back"
+msgstr "{name} is back"
+
 #: src/components/quiet-notice.tsx
 msgid "{name} is fine, I know why"
 msgstr "{name} is fine, I know why"
@@ -452,6 +468,10 @@ msgstr "Australia"
 msgid "away"
 msgstr "away"
 
+#: app/away.tsx
+msgid "Away"
+msgstr "Away"
+
 #: src/data/useToday.ts
 msgid "away · {day}"
 msgstr "away · {day}"
@@ -589,6 +609,10 @@ msgstr "France"
 msgid "Free"
 msgstr "Free"
 
+#: app/away.tsx
+msgid "From"
+msgstr "From"
+
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Germany"
@@ -648,6 +672,10 @@ msgstr "Her first morning is the day after she says yes, at {time}."
 #: app/onboarding.tsx
 msgid "Her morning comes at {time}, half an hour after she wakes."
 msgstr "Her morning comes at {time}, half an hour after she wakes."
+
+#: app/away.tsx
+msgid "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
+msgstr "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
 
 #: app/onboarding.tsx
 msgid "Her name, as the family calls her."
@@ -731,6 +759,15 @@ msgstr "Into her morning"
 #: app/ask.tsx
 msgid "Into her morning."
 msgstr "Into her morning."
+
+#: app/(tabs)/you.tsx
+#: app/away.tsx
+msgid "Is {name} away?"
+msgstr "Is {name} away?"
+
+#: app/away.tsx
+msgid "It ends when she next answers, from a later day than today."
+msgstr "It ends when she next answers, from a later day than today."
 
 #: app/onboarding.tsx
 msgid "It reaches her on the first morning after she says yes. Every morning after that, someone in the family asks."
@@ -817,6 +854,7 @@ msgstr "Malaysia"
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
+#: app/away.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
@@ -1217,6 +1255,8 @@ msgstr "said she is fine"
 msgid "Said yes"
 msgstr "Said yes"
 
+#: app/(tabs)/index.tsx
+#: app/away.tsx
 #: app/onboarding.tsx
 #: src/components/reminders.tsx
 msgid "Saving…"
@@ -1487,6 +1527,10 @@ msgstr "That code was right, but this account needs more than that to finish."
 msgid "That could not be saved just now. Nothing was lost; try again."
 msgstr "That could not be saved just now. Nothing was lost; try again."
 
+#: app/away.tsx
+msgid "That could not be saved just now. Try again in a moment."
+msgstr "That could not be saved just now. Try again in a moment."
+
 #: app/ask.tsx
 msgid "That could not be sent just now. Look at Today before sending it again."
 msgstr "That could not be sent just now. Look at Today before sending it again."
@@ -1704,6 +1748,7 @@ msgstr "To answer with your voice, Vela needs the microphone. Ask your family to
 msgid "Toast and tea"
 msgstr "Toast and tea"
 
+#: app/away.tsx
 #: src/data/exchanges.ts
 msgid "Today"
 msgstr "Today"
@@ -1728,6 +1773,10 @@ msgstr "Today's ask reached {name} at {time}."
 #: src/data/quiet.ts
 msgid "Today's ask reached {name} at 8:00, and again at 11:00."
 msgstr "Today's ask reached {name} at 8:00, and again at 11:00."
+
+#: app/away.tsx
+msgid "Tomorrow"
+msgstr "Tomorrow"
 
 #: app/(tabs)/index.tsx
 msgid "Tomorrow · {by} asked {recipient}"
@@ -1806,6 +1855,14 @@ msgstr "United Kingdom"
 #: src/data/onboarding.ts
 msgid "United States"
 msgstr "United States"
+
+#: app/away.tsx
+msgid "Until"
+msgstr "Until"
+
+#: app/away.tsx
+msgid "Until she's back"
+msgstr "Until she's back"
 
 #: app/onboarding.tsx
 msgid "Up to two people who could look in if a morning goes quiet: a neighbour, a friend downstairs. Vela asks each of them first, and nobody hears from Vela until then."

@@ -2,6 +2,7 @@ import {
   AddNearby,
   ApiAccountPatch,
   ApiAccountProfile,
+  ApiAway,
   ApiBook,
   ApiBookRemoved,
   ApiComposedAsk,
@@ -44,6 +45,7 @@ import {
   CreateFamily,
   CreateReminder,
   DeviceWrite,
+  EndAway,
   FinishReminder,
   InviteNearby,
   type Lang,
@@ -57,6 +59,7 @@ import {
   RemoveBookEntry,
   RemoveNearby,
   RemovePushDevice,
+  SetAway,
   StartTrial,
 } from "@vela/contracts";
 import type { Member, VelaDatabase } from "@vela/db";
@@ -68,6 +71,7 @@ import {
   AskDayTakenError,
   AskPhotoMissingError,
   AskVoiceMissingError,
+  AwayRefusedError,
   type addApiNearby,
   type askApiToLookIn,
   type authorizeFamilyAccess,
@@ -76,6 +80,7 @@ import {
   type createApiFamily,
   type createApiReminder,
   type DeviceAlerts,
+  type endApiAway,
   errorLabel,
   FactMissingError,
   type finishApiReminder,
@@ -119,6 +124,7 @@ import {
   type replyToApiExchange,
   type resolveApiQuiet,
   runAfterCommit,
+  type setApiAway,
   type setUpApiDevice,
   type startApiTrial,
   TrialRefusedError,
@@ -177,6 +183,8 @@ export interface ApiWriteServices {
   resolveApiQuiet: typeof resolveApiQuiet;
   pauseApiMember: typeof pauseApiMember;
   leaveApiFamily: typeof leaveApiFamily;
+  setApiAway: typeof setApiAway;
+  endApiAway: typeof endApiAway;
   startApiTrial: typeof startApiTrial;
   addApiNearby: typeof addApiNearby;
   setUpApiDevice: typeof setUpApiDevice;
@@ -551,6 +559,17 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               ? 429
               : 400,
         );
+      }
+      if (error instanceof AwayRefusedError) {
+        // A first day before her today, or a day past the 90 days an away may reach (spec §8).
+        const refused: ApiErrorBody = {
+          error: {
+            code: "invalid",
+            message: "An away starts today or later, and within 90 days.",
+            details: { reason: "away_dates" },
+          },
+        };
+        return c.json(refused, 400);
       }
       if (error instanceof FactMissingError) {
         // The fact is gone, past, not of the family, or about the caller (spec §12).
@@ -1159,6 +1178,56 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         const state = ApiMemberPause.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(state, 200);
+      },
+    );
+    // Away mode (spec §8): any member of her family sets it or ends it; her schedule decides again
+    // after the commit.
+    app.post(
+      "/v1/families/:familyId/members/:memberId/away",
+      authenticate,
+      validateWrite(SetAway, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.setApiAway(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.req.param("memberId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiAway.parse(result.response.body), 201);
+      },
+    );
+    app.post(
+      "/v1/away/:awayId/end",
+      authenticate,
+      validateWrite(EndAway, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.endApiAway(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("awayId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiAway.parse(result.response.body), 200);
       },
     );
     // Where the founder is told (ADR-34): Leave, which can take a family's last organiser who can

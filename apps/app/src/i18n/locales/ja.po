@@ -123,6 +123,22 @@ msgstr ""
 msgid "{name} is asked on {day}. Chosen by {askedBy}."
 msgstr ""
 
+#: app/away.tsx
+msgid "{name} is away"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "{name} is away until {day}. Her mornings still come; nobody is told they went quiet."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "{name} is away until she's back. Her mornings still come; nobody is told they went quiet."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "{name} is back"
+msgstr ""
+
 #: src/components/quiet-notice.tsx
 msgid "{name} is fine, I know why"
 msgstr ""
@@ -452,6 +468,10 @@ msgstr ""
 msgid "away"
 msgstr ""
 
+#: app/away.tsx
+msgid "Away"
+msgstr ""
+
 #: src/data/useToday.ts
 msgid "away · {day}"
 msgstr ""
@@ -589,6 +609,10 @@ msgstr ""
 msgid "Free"
 msgstr ""
 
+#: app/away.tsx
+msgid "From"
+msgstr ""
+
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Germany"
@@ -647,6 +671,10 @@ msgstr ""
 
 #: app/onboarding.tsx
 msgid "Her morning comes at {time}, half an hour after she wakes."
+msgstr ""
+
+#: app/away.tsx
+msgid "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
 msgstr ""
 
 #: app/onboarding.tsx
@@ -730,6 +758,15 @@ msgstr ""
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Into her morning."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+#: app/away.tsx
+msgid "Is {name} away?"
+msgstr ""
+
+#: app/away.tsx
+msgid "It ends when she next answers, from a later day than today."
 msgstr ""
 
 #: app/onboarding.tsx
@@ -817,6 +854,7 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
+#: app/away.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
@@ -1217,6 +1255,8 @@ msgstr ""
 msgid "Said yes"
 msgstr ""
 
+#: app/(tabs)/index.tsx
+#: app/away.tsx
 #: app/onboarding.tsx
 #: src/components/reminders.tsx
 msgid "Saving…"
@@ -1487,6 +1527,10 @@ msgstr ""
 msgid "That could not be saved just now. Nothing was lost; try again."
 msgstr ""
 
+#: app/away.tsx
+msgid "That could not be saved just now. Try again in a moment."
+msgstr ""
+
 #: app/ask.tsx
 msgid "That could not be sent just now. Look at Today before sending it again."
 msgstr ""
@@ -1704,6 +1748,7 @@ msgstr ""
 msgid "Toast and tea"
 msgstr ""
 
+#: app/away.tsx
 #: src/data/exchanges.ts
 msgid "Today"
 msgstr ""
@@ -1727,6 +1772,10 @@ msgstr ""
 
 #: src/data/quiet.ts
 msgid "Today's ask reached {name} at 8:00, and again at 11:00."
+msgstr ""
+
+#: app/away.tsx
+msgid "Tomorrow"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -1805,6 +1854,14 @@ msgstr ""
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "United States"
+msgstr ""
+
+#: app/away.tsx
+msgid "Until"
+msgstr ""
+
+#: app/away.tsx
+msgid "Until she's back"
 msgstr ""
 
 #: app/onboarding.tsx

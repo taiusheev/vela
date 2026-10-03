@@ -175,6 +175,8 @@ export const MemberLight = z.object({
   answered_at: z.iso.datetime({ offset: true }).nullable(),
   usual_time: LocalTime.nullable(),
   away_until: LocalDate.nullable(),
+  /** The away period she is in today, which a member may end; null when she is not away. */
+  away_id: z.uuid().nullable(),
   quiet_event_id: z.uuid().nullable(),
 });
 export type MemberLight = z.infer<typeof MemberLight>;
@@ -1171,3 +1173,28 @@ export type FinishReminder = z.infer<typeof FinishReminder>;
 
 export const ApiReminderDone = z.object({ id: z.uuid(), done: z.literal(true) });
 export type ApiReminderDone = z.infer<typeof ApiReminderDone>;
+
+/**
+ * Away mode (spec §8): set by any member of her family. From `from` (her today or later) until
+ * `until`, or until she is back (null). Arrivals continue; repeats and quiet notices stop.
+ */
+export const SetAway = z
+  .strictObject({ from: LocalDate, until: LocalDate.nullable() })
+  .refine((away) => away.until === null || away.until >= away.from, {
+    message: "an away ends on or after its first day",
+    path: ["until"],
+  });
+export type SetAway = z.infer<typeof SetAway>;
+
+export const ApiAway = z.object({
+  id: z.uuid(),
+  member_id: z.uuid(),
+  from: LocalDate,
+  until: LocalDate.nullable(),
+  ended: z.boolean(),
+});
+export type ApiAway = z.infer<typeof ApiAway>;
+
+/** "She's back": no body, the away period is in the path. */
+export const EndAway = z.strictObject({});
+export type EndAway = z.infer<typeof EndAway>;

@@ -20,7 +20,7 @@ import { useToday } from "../../src/data/useToday.ts";
 import { useAppLocale } from "../../src/i18n/provider.tsx";
 import { usePush } from "../../src/push/provider.tsx";
 import { usePalette } from "../../src/theme/theme.tsx";
-import { space } from "../../src/theme/tokens.ts";
+import { hitSlop, space } from "../../src/theme/tokens.ts";
 
 /** One line of You: an optional glyph, a name with its caption, and whatever sits at the end. */
 function Row({
@@ -182,6 +182,8 @@ export default function YouScreen() {
                   ) : undefined
                 }
               />
+              {/* Away mode (spec §8): any member may say she is away. */}
+              {member.paused ? null : <AwayLink memberId={member.memberId} name={member.name} />}
             </View>
           ))}
           {family.others === undefined ? null : (
@@ -444,5 +446,20 @@ export default function YouScreen() {
         </Words>
       )}
     </ScrollView>
+  );
+}
+
+/** "Is Mom away?" under her row (spec §8), which opens Away for her. */
+function AwayLink({ memberId, name }: { memberId: string; name: string }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      hitSlop={hitSlop}
+      onPress={() => router.push({ pathname: "/away", params: { member: memberId } })}
+    >
+      <Words variant="button" tone="action">
+        <Trans>Is {name} away?</Trans>
+      </Words>
+    </Pressable>
   );
 }

@@ -13,6 +13,7 @@ const light = {
   answered_at: "2026-09-23T08:12:00+08:00",
   usual_time: "08:00",
   away_until: null,
+  away_id: null,
   quiet_event_id: null,
 };
 

@@ -190,6 +190,7 @@ function light(fields: Partial<MemberLight> = {}): MemberLight {
     answered_at: null,
     usual_time: "08:00",
     away_until: null,
+    away_id: null,
     quiet_event_id: null,
     ...fields,
   };

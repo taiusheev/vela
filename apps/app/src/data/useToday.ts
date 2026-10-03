@@ -59,6 +59,10 @@ export function toTodayLight(light: MemberLight): TodayLight {
     stateText: stateText(light),
     ...(invited ? { invited: true } : {}),
     ...(light.quiet_event_id === null ? {} : { quietEventId: light.quiet_event_id }),
+    ...(light.away_id == null ? {} : { awayId: light.away_id }),
+    ...(light.away_id == null || light.away_until === null
+      ? {}
+      : { awayUntil: dayName(light.away_until) }),
   };
 }
 

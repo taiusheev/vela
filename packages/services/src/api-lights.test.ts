@@ -48,6 +48,7 @@ describe("loadApiLights", () => {
       answered_at: null,
       usual_time: seed.member.arrivalTime,
       away_until: null,
+      away_id: null,
       quiet_event_id: null,
     });
   });
@@ -271,6 +272,7 @@ describe("an invited member who has not said yes", () => {
       answered_at: null,
       usual_time: "07:00",
       away_until: null,
+      away_id: null,
       quiet_event_id: null,
     });
   });

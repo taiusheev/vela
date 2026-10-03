@@ -2,6 +2,7 @@ import type {
   ApiAccountPatch,
   ApiAccountProfile,
   ApiAskConflict,
+  ApiAway,
   ApiBook,
   ApiBookRemoved,
   ApiComposedAsk,
@@ -36,6 +37,7 @@ import type {
   ComposeReply,
   CreateFamily,
   RegisterPushDevice,
+  SetAway,
 } from "@vela/contracts";
 
 /**
@@ -179,6 +181,27 @@ export function createReminder(
     key,
     body: { fact_id: factId },
   });
+}
+
+/** Away mode (spec §8): any member sets her away, from a day until a day or until she is back. */
+export function setAway(
+  familyId: string,
+  memberId: string,
+  away: SetAway,
+  key: string,
+  token: string | null,
+): Promise<ApiAway> {
+  return call<ApiAway>({
+    path: `/v1/families/${familyId}/members/${memberId}/away`,
+    token,
+    key,
+    body: away,
+  });
+}
+
+/** "She's back": ends an away period, whoever set it. */
+export function endAway(awayId: string, key: string, token: string | null): Promise<ApiAway> {
+  return call<ApiAway>({ path: `/v1/away/${awayId}/end`, token, key, body: {} });
 }
 
 /** "Done": the caller's own reminder, finished. */

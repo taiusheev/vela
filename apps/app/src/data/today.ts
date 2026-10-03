@@ -21,6 +21,10 @@ export interface TodayLight {
   invited?: boolean;
   /** The open quiet event behind a quiet light, which the sheet reads and settles. */
   quietEventId?: string;
+  /** The away period she is in today, which "She's back" ends (spec §8). */
+  awayId?: string;
+  /** The last day of that away, as a weekday ("Sunday"); absent until she is back. */
+  awayUntil?: string;
 }
 
 export interface TodayReply {

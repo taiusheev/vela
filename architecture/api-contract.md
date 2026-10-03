@@ -386,6 +386,12 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 
 A story is kept when she answers an exchange of type `story`. Story day composes one through `POST /v1/families/:familyId/asks` with `type: "story"` and `when: "date"`.
 
+### Away from the app (3 October 2026, spec §8)
+
+`POST /v1/families/:familyId/members/:memberId/away` with `{from, until}` (local dates; `until` null for "until she's back") and an `Idempotency-Key` lets any live member of her family set her away, through `runApiMutation` (operation `away.set:v1`) under her member row's lock. So two members setting the same away at once store it once (`api-away-race.test.ts`). It answers 201 `ApiAway` (`id`, `member_id`, `from`, `until`, `ended`). The same open period again answers the stored one. The source is `organiser` or `member` by the caller's role, and `set_by` is the caller. `from` must be her today or later, and both days within 90 days of it, else 400 `invalid` with `details.reason` `away_dates`. Anyone outside the family, or a member who is not her family's kept-light member, gets 404.
+
+`POST /v1/away/:awayId/end` with an `Idempotency-Key` lets any live member end it (`away.end:v1`) and answers 200 `ApiAway` with `ended: true`. One already ended answers as it stands. Both writes wake her scheduler after the commit, so repeats and quiet notices stop or resume at once. Her light carries `away_id`, the period she is in today, beside `away_until`.
+
 ### Reminders (3 October 2026, spec §12, build plan 5.3, ADR-40)
 
 Understanding (`understand.v5`) returns `dated`: up to three things she said will happen on a day it can resolve, each `{what, on}` in the family's language, from her today to 28 days after it. Where the Worker's `MEMORY` is `on` (development and staging; production is `off`), each is kept as a `memory_facts` row of kind `date`, replaced when the same answer is understood again, and deleted two days after its day. Without her health-words consent the prompt leaves out plans about her health, and the service drops any whose words name one.

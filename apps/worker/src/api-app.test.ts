@@ -80,6 +80,7 @@ const LIGHTS: MemberLight[] = [
     answered_at: "2026-09-22T00:12:00.000Z",
     usual_time: "08:00",
     away_until: null,
+    away_id: null,
     quiet_event_id: null,
   },
 ];
@@ -366,6 +367,8 @@ function fixture(enableWrites = false, push?: boolean) {
           response: { status: 200, body: { id: CONTACT_ID, removed: true } },
           replayed: false,
         }),
+      setApiAway: vi.fn().mockRejectedValue(new Error("no away in these tests")),
+      endApiAway: vi.fn().mockRejectedValue(new Error("no away in these tests")),
       leaveApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["leaveApiFamily"]>()
         .mockResolvedValue({

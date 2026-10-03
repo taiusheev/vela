@@ -33,7 +33,7 @@ export async function loadApiLights(
   for (const member of keptLight) {
     const today = localDateOf(now, member.tz);
     const [away] = await db
-      .select({ toDate: awayPeriods.toDate })
+      .select({ id: awayPeriods.id, toDate: awayPeriods.toDate })
       .from(awayPeriods)
       .where(
         and(
@@ -80,6 +80,7 @@ export async function loadApiLights(
       answered_at: answeredAt?.toISOString() ?? null,
       usual_time: member.arrivalTime,
       away_until: away?.toDate ?? null,
+      away_id: away?.id ?? null,
       quiet_event_id: quiet?.id ?? null,
     });
   }
@@ -107,6 +108,7 @@ export async function loadApiLights(
       answered_at: null,
       usual_time: member.arrivalTime,
       away_until: null,
+      away_id: null,
       quiet_event_id: null,
     });
   }

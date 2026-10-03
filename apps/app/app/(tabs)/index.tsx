@@ -14,10 +14,17 @@ import {
   Hairline,
   PrimaryButton,
   ReceiptChip,
+  SecondaryButton,
   Words,
 } from "../../src/components/ui.tsx";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
-import { quietExampleFixture, type Today, type TomorrowTurn } from "../../src/data/today.ts";
+import {
+  quietExampleFixture,
+  type Today,
+  type TodayLight,
+  type TomorrowTurn,
+} from "../../src/data/today.ts";
+import { useAway } from "../../src/data/useAway.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
 import { useQuiet } from "../../src/data/useQuiet.ts";
 import { useToday } from "../../src/data/useToday.ts";
@@ -288,6 +295,9 @@ export default function TodayScreen() {
           <Trans>Today could not be reached just now.</Trans>
         </Words>
       ) : null}
+      {today.lights.flatMap((light) =>
+        light.awayId === undefined ? [] : [<AwayLine key={light.memberId} light={light} />],
+      )}
       {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
       {today.tomorrow.map((turn) => (
         <TomorrowCard key={turn.recipientId} tomorrow={turn} />
@@ -323,5 +333,36 @@ export default function TodayScreen() {
         />
       )}
     </ScrollView>
+  );
+}
+
+/** Her away on Today (spec §8): what it is, and "She's back", which any member may tap. */
+function AwayLine({ light }: { light: TodayLight }) {
+  const { t } = useLingui();
+  const { familyId } = useToday();
+  const { end } = useAway(familyId);
+  const name = light.displayName;
+  const day = light.awayUntil;
+  return (
+    <Card>
+      <Words variant="body" tone="ink2">
+        {day === undefined ? (
+          <Trans>
+            {name} is away until she's back. Her mornings still come; nobody is told they went
+            quiet.
+          </Trans>
+        ) : (
+          <Trans>
+            {name} is away until {day}. Her mornings still come; nobody is told they went quiet.
+          </Trans>
+        )}
+      </Words>
+      <SecondaryButton
+        label={end.isPending ? t`Saving…` : t`${name} is back`}
+        onPress={() => {
+          if (light.awayId !== undefined) end.mutate(light.awayId);
+        }}
+      />
+    </Card>
   );
 }

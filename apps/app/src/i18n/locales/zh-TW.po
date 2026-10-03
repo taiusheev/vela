@@ -130,6 +130,22 @@ msgstr "{day}會問{name}。"
 msgid "{name} is asked on {day}. Chosen by {askedBy}."
 msgstr "{day}會問{name}。由{askedBy}選的。"
 
+#: app/away.tsx
+msgid "{name} is away"
+msgstr "{name}不在家"
+
+#: app/(tabs)/index.tsx
+msgid "{name} is away until {day}. Her mornings still come; nobody is told they went quiet."
+msgstr "{name}{day}前不在家。早上的訊息照常送出，這段期間不會發出安靜通知。"
+
+#: app/(tabs)/index.tsx
+msgid "{name} is away until she's back. Her mornings still come; nobody is told they went quiet."
+msgstr "{name}出門了，回來前早上的訊息照常送出，這段期間不會發出安靜通知。"
+
+#: app/(tabs)/index.tsx
+msgid "{name} is back"
+msgstr "{name}回來了"
+
 #: src/components/quiet-notice.tsx
 msgid "{name} is fine, I know why"
 msgstr "{name}沒事，我知道原因"
@@ -459,6 +475,10 @@ msgstr "澳洲"
 msgid "away"
 msgstr "外出中"
 
+#: app/away.tsx
+msgid "Away"
+msgstr "不在家"
+
 #: src/data/useToday.ts
 msgid "away · {day}"
 msgstr "外出中 · 到{day}"
@@ -596,6 +616,10 @@ msgstr "法國"
 msgid "Free"
 msgstr "免費"
 
+#: app/away.tsx
+msgid "From"
+msgstr "從"
+
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Germany"
@@ -655,6 +679,10 @@ msgstr "同意之後的隔天 {time}，就會收到第一則早安訊息。"
 #: app/onboarding.tsx
 msgid "Her morning comes at {time}, half an hour after she wakes."
 msgstr "早安訊息會在 {time} 送到，也就是起床後半小時。"
+
+#: app/away.tsx
+msgid "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
+msgstr "不在家的期間，早上的訊息照常送出；不會通知家人早上沒回應，當天也不會再補發訊息。"
 
 #: app/onboarding.tsx
 msgid "Her name, as the family calls her."
@@ -738,6 +766,15 @@ msgstr "放進早安訊息"
 #: app/ask.tsx
 msgid "Into her morning."
 msgstr "已放進早安訊息。"
+
+#: app/(tabs)/you.tsx
+#: app/away.tsx
+msgid "Is {name} away?"
+msgstr "{name}不在家嗎？"
+
+#: app/away.tsx
+msgid "It ends when she next answers, from a later day than today."
+msgstr "從明天起，長輩下次回覆時就會自動結束。"
 
 #: app/onboarding.tsx
 msgid "It reaches her on the first morning after she says yes. Every morning after that, someone in the family asks."
@@ -824,6 +861,7 @@ msgstr "馬來西亞"
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
+#: app/away.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
@@ -1224,6 +1262,8 @@ msgstr "說自己很好"
 msgid "Said yes"
 msgstr "已同意"
 
+#: app/(tabs)/index.tsx
+#: app/away.tsx
 #: app/onboarding.tsx
 #: src/components/reminders.tsx
 msgid "Saving…"
@@ -1494,6 +1534,10 @@ msgstr "驗證碼正確，但這個帳號還需要其他步驟才能完成登入
 msgid "That could not be saved just now. Nothing was lost; try again."
 msgstr "目前無法儲存。內容都還在，請再試一次。"
 
+#: app/away.tsx
+msgid "That could not be saved just now. Try again in a moment."
+msgstr "暫時無法儲存，請稍後再試。"
+
 #: app/ask.tsx
 msgid "That could not be sent just now. Look at Today before sending it again."
 msgstr "目前無法傳送。再傳一次之前，請先看看「今天」。"
@@ -1711,6 +1755,7 @@ msgstr "要用聲音回答，Vela 需要使用麥克風。請家人幫您在「�
 msgid "Toast and tea"
 msgstr "吐司配茶"
 
+#: app/away.tsx
 #: src/data/exchanges.ts
 msgid "Today"
 msgstr "今天"
@@ -1735,6 +1780,10 @@ msgstr "今天的提問在 {time} 送到{name}那裡。"
 #: src/data/quiet.ts
 msgid "Today's ask reached {name} at 8:00, and again at 11:00."
 msgstr "今天的提問在 08:00 送到{name}那裡，11:00 又送了一次。"
+
+#: app/away.tsx
+msgid "Tomorrow"
+msgstr "明天"
 
 #: app/(tabs)/index.tsx
 msgid "Tomorrow · {by} asked {recipient}"
@@ -1813,6 +1862,14 @@ msgstr "英國"
 #: src/data/onboarding.ts
 msgid "United States"
 msgstr "美國"
+
+#: app/away.tsx
+msgid "Until"
+msgstr "到"
+
+#: app/away.tsx
+msgid "Until she's back"
+msgstr "直到回來"
 
 #: app/onboarding.tsx
 msgid "Up to two people who could look in if a morning goes quiet: a neighbour, a friend downstairs. Vela asks each of them first, and nobody hears from Vela until then."

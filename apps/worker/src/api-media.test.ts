@@ -165,6 +165,8 @@ function fixture(options: FixtureOptions = {}) {
       resolveApiQuiet: vi.fn<Writes["services"]["resolveApiQuiet"]>(unused("quiet")),
       pauseApiMember: vi.fn<Writes["services"]["pauseApiMember"]>(unused("pause")),
       leaveApiFamily: vi.fn<Writes["services"]["leaveApiFamily"]>(unused("leave")),
+      setApiAway: vi.fn<Writes["services"]["setApiAway"]>(unused("away")),
+      endApiAway: vi.fn<Writes["services"]["endApiAway"]>(unused("away end")),
       startApiTrial: vi.fn<Writes["services"]["startApiTrial"]>(unused("trial")),
       setUpApiDevice: vi.fn<Writes["services"]["setUpApiDevice"]>(unused("a device set-up")),
       removeApiDevice: vi.fn<Writes["services"]["removeApiDevice"]>(unused("a device removal")),
