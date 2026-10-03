@@ -101,6 +101,13 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
         .slice(0, 4),
       suggestion: genericWeeklySuggestion(input.lang, input.elderName),
     })),
+    // Her answers as the steps, as she said them, so tests can see what flowed through.
+    recipe: method("recipe", overrides.recipe, (input) => ({
+      title: input.ask ?? "Recipe",
+      ingredients: [],
+      steps: input.answers,
+      remarks: [],
+    })),
   };
 }
 

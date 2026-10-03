@@ -25,6 +25,7 @@ export const AI_CALL_NAMES = [
   "readback",
   "hello",
   "weekly_read",
+  "recipe",
 ] as const;
 export const AiCallName = z.enum(AI_CALL_NAMES);
 export type AiCallName = z.infer<typeof AiCallName>;
@@ -445,6 +446,33 @@ export const WeeklyRead = z.object({
 });
 export type WeeklyRead = z.infer<typeof WeeklyRead>;
 
+// recipe -------------------------------------------------------------------------------------------
+
+/** Her answers to a recipe ask, oldest first, to be written down as one card (spec §10). */
+export const RecipeInput = z.object({
+  /** Her language: the card is written in it. */
+  lang: Lang,
+  addressForm: Name,
+  /** What the family asked, e.g. "How do you make your braised pork?". */
+  ask: ShortText.nullable(),
+  answers: z.array(FamilyText.min(1)).min(1).max(10),
+});
+export type RecipeInput = z.infer<typeof RecipeInput>;
+
+const RecipeLine = z.string().min(1).max(300);
+
+/**
+ * Her recipe as a card, in her own words. Empty lists, and an empty title, when her answers do not
+ * describe a dish: then nothing is offered to her.
+ */
+export const RecipeCard = z.object({
+  title: z.string().max(80),
+  ingredients: z.array(RecipeLine).max(30),
+  steps: z.array(RecipeLine).max(20),
+  remarks: z.array(RecipeLine).max(10),
+});
+export type RecipeCard = z.infer<typeof RecipeCard>;
+
 // ports --------------------------------------------------------------------------------------------
 
 /** The input and output types of each call, keyed by call name. */
@@ -457,6 +485,7 @@ export interface AiCallTypes {
   readback: { input: ReadbackInput; output: ReadbackLines };
   hello: { input: HelloInput; output: HelloLines };
   weekly_read: { input: WeeklyReadInput; output: WeeklyRead };
+  recipe: { input: RecipeInput; output: RecipeCard };
 }
 
 /** Each call's input schema; every `Ai`, the fake included, parses its input with it. */
@@ -469,6 +498,7 @@ export const INPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes[
   readback: ReadbackInput,
   hello: HelloInput,
   weekly_read: WeeklyReadInput,
+  recipe: RecipeInput,
 };
 
 /** Each call's output schema, which is also the structured-output format sent to Claude. */
@@ -481,6 +511,7 @@ export const OUTPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes
   readback: ReadbackLines,
   hello: HelloLines,
   weekly_read: WeeklyRead,
+  recipe: RecipeCard,
 };
 
 /**
@@ -498,6 +529,7 @@ export interface Ai {
   readback(input: ReadbackInput): Promise<AiOutcome<ReadbackLines>>;
   hello(input: HelloInput): Promise<AiOutcome<HelloLines>>;
   weeklyRead(input: WeeklyReadInput): Promise<AiOutcome<WeeklyRead>>;
+  recipe(input: RecipeInput): Promise<AiOutcome<RecipeCard>>;
 }
 
 export interface TranscribeInput {

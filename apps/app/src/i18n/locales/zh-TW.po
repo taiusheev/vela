@@ -186,6 +186,10 @@ msgstr "{name}的燈亮著"
 msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
 msgstr "{name}的燈目前暫停中，所以現在無法放進早安訊息。"
 
+#: app/book.tsx
+msgid "{name}'s recipe · {day}"
+msgstr "{name}的食譜 · {day}"
+
 #: app/vela-light.tsx
 msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
 msgstr "{name}的 30 天試用已經結束了。每天的提問和問答會照常進行。"
@@ -647,6 +651,10 @@ msgstr "長輩的手機"
 #: src/auth/phone.ts
 msgid "Hong Kong"
 msgstr "香港"
+
+#: app/book.tsx
+msgid "How"
+msgstr "做法"
 
 #: src/components/reminders.tsx
 msgid "How did {what} go?"
@@ -1659,6 +1667,10 @@ msgstr "這張照片無法使用，請換一張。"
 msgid "Those are the ones from the seeds you saved"
 msgstr "那些就是您留下來的種子種出來的"
 
+#: app/book.tsx
+msgid "Tips"
+msgstr "小叮嚀"
+
 #: src/device/VoiceAnswer.tsx
 msgid "To answer with your voice, Vela needs the microphone. Ask your family to turn it on in Settings."
 msgstr "要用聲音回答，Vela 需要使用麥克風。請家人幫您在「設定」裡打開。"
@@ -2037,6 +2049,10 @@ msgstr "目前只有您一位發起人在使用中，而暫停的發起人在安
 #: app/exchange/[id].tsx
 msgid "You can reply once she has answered."
 msgstr "等這位家人回覆之後，您就可以回應。"
+
+#: app/book.tsx
+msgid "You need"
+msgstr "材料"
 
 #: app/(tabs)/index.tsx
 msgid "You said {name} is fine. Nothing else was sent."

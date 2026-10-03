@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ApiBookEntry, ApiComingStory } from "@vela/contracts";
+import type { ApiBookEntry, ApiBookRecipe, ApiComingStory } from "@vela/contracts";
 import { apiConfigured, fetchBook, removeBookEntry } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
@@ -8,6 +8,8 @@ export interface BookView {
   entries: ApiBookEntry[];
   /** Story asks set for a coming morning, soonest first, with who chose them. */
   coming: ApiComingStory[];
+  /** Her kept recipe cards, newest first. */
+  recipes: ApiBookRecipe[];
   loading: boolean;
   trouble: boolean;
   /** An organiser takes a story out; Sunday and the book read again. */
@@ -39,6 +41,7 @@ export function useBook(familyId: string | undefined): BookView {
   return {
     entries: read.data?.entries ?? [],
     coming: read.data?.coming ?? [],
+    recipes: read.data?.recipes ?? [],
     loading: live && read.isPending,
     trouble: read.isError,
     remove: (exchangeId) => removing.mutate(exchangeId),

@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { ApiBookEntry } from "@vela/contracts";
+import type { ApiBookEntry, ApiBookRecipe } from "@vela/contracts";
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
@@ -51,21 +51,24 @@ export default function BookScreen() {
           <Words variant="body" tone="ink2">
             <Trans>The family book could not be reached just now.</Trans>
           </Words>
-        ) : book.entries.length === 0 ? (
+        ) : book.entries.length === 0 && book.recipes.length === 0 ? (
           <Words variant="body" tone="ink2">
             <Trans>
               No stories yet. Choose a question on the Sunday tab, and what she tells is kept here.
             </Trans>
           </Words>
         ) : (
-          book.entries.map((entry) => (
-            <Story
-              key={entry.exchange_id}
-              entry={entry}
-              {...(organiser ? { onRemove: () => book.remove(entry.exchange_id) } : {})}
-              removing={book.removing}
-            />
-          ))
+          [
+            ...book.recipes.map((recipe) => <Recipe key={recipe.id} recipe={recipe} />),
+            ...book.entries.map((entry) => (
+              <Story
+                key={entry.exchange_id}
+                entry={entry}
+                {...(organiser ? { onRemove: () => book.remove(entry.exchange_id) } : {})}
+                removing={book.removing}
+              />
+            )),
+          ]
         )}
       </ScrollView>
     </>
@@ -162,5 +165,36 @@ function BookVoice({ mediaId }: { mediaId: string }) {
         );
       }}
     />
+  );
+}
+
+/** A recipe card she kept (spec §10, ADR-41): her ingredients, steps and tips, as she told them. */
+function Recipe({ recipe }: { recipe: ApiBookRecipe }) {
+  const { t } = useLingui();
+  const name = recipe.member_name;
+  const day = dayMonth(recipe.kept_at);
+  const section = (heading: string, lines: string[]) =>
+    lines.length === 0 ? null : (
+      <View style={{ gap: space.xs }}>
+        <Words variant="bodyMedium">{heading}</Words>
+        {lines.map((line) => (
+          <Words key={line} variant="body">
+            {`• ${line}`}
+          </Words>
+        ))}
+      </View>
+    );
+  return (
+    <Card>
+      <Eyebrow>
+        <Trans>
+          {name}'s recipe · {day}
+        </Trans>
+      </Eyebrow>
+      <Words variant="voice">{recipe.title}</Words>
+      {section(t`You need`, recipe.ingredients)}
+      {section(t`How`, recipe.steps)}
+      {section(t`Tips`, recipe.remarks)}
+    </Card>
   );
 }

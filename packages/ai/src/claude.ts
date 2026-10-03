@@ -82,6 +82,7 @@ export function createClaudeAi(options: ClaudeAiOptions): Ai {
     readback: (input) => invoke(client, { call: "readback" }, input),
     hello: (input) => invoke(client, { call: "hello" }, input),
     weeklyRead: (input) => invoke(client, { call: "weekly_read" }, input),
+    recipe: (input) => invoke(client, { call: "recipe" }, input),
   };
 }
 

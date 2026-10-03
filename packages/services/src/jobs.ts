@@ -1063,6 +1063,13 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   ).length;
   // Her dated plans end two days after their day (spec §12, `keepDatedPlans`), and in any case with
   // the 30 days of the words they came from. A reminder ends two days after it was due, done or not.
+  // A recipe card she never answered goes with the 30 days of the words it came from (ADR-41).
+  counts.recipe_drafts_deleted = (
+    await db
+      .delete(recipes)
+      .where(and(eq(recipes.status, "draft"), lt(recipes.createdAt, cutoff30)))
+      .returning({ id: recipes.id })
+  ).length;
   counts.memory_facts_deleted = (
     await db
       .delete(memoryFacts)

@@ -1088,8 +1088,23 @@ export const ApiComingStory = z.object({
 });
 export type ApiComingStory = z.infer<typeof ApiComingStory>;
 
+/** A recipe card she kept (spec §10, ADR-41), in her own words. */
+export const ApiBookRecipe = z.object({
+  id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  title: z.string(),
+  ingredients: z.array(z.string()),
+  steps: z.array(z.string()),
+  remarks: z.array(z.string()),
+  kept_at: z.iso.datetime({ offset: true }),
+});
+export type ApiBookRecipe = z.infer<typeof ApiBookRecipe>;
+
 export const ApiBook = z.object({
   entries: z.array(ApiBookEntry),
+  /** Her kept recipe cards, newest first. */
+  recipes: z.array(ApiBookRecipe),
   /** Story asks not yet delivered, soonest first. */
   coming: z.array(ApiComingStory),
 });

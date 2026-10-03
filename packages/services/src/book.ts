@@ -31,6 +31,7 @@ import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { extensionFor } from "./media-copy.ts";
+import { type ApiBookRecipe, keptRecipes } from "./recipes.ts";
 import { memberByChannelUser, type Queryable } from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -233,7 +234,11 @@ export async function loadApiBook(
   db: Queryable,
   identity: SessionIdentity,
   familyId: string,
-): Promise<{ entries: ApiBookEntry[]; coming: ApiComingStory[] } | null> {
+): Promise<{
+  entries: ApiBookEntry[];
+  coming: ApiComingStory[];
+  recipes: ApiBookRecipe[];
+} | null> {
   if (!UUID.test(familyId)) return null;
   const access = await authorizeFamilyAccess(db, identity, familyId);
   if (access.kind !== "granted") return null;
@@ -282,7 +287,11 @@ export async function loadApiBook(
       }),
     });
   }
-  return { entries, coming: await comingStories(db, familyId) };
+  return {
+    entries,
+    coming: await comingStories(db, familyId),
+    recipes: await keptRecipes(db, familyId),
+  };
 }
 
 /** One story ask set for a coming morning. */

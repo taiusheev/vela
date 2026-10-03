@@ -19,6 +19,7 @@
           "cases/flag.json",
           "cases/hello.json",
           "cases/readback.json",
+          "cases/recipe.json",
           "cases/suggest.json",
           "cases/translate.json",
           "cases/understand.json",

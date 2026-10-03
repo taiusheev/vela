@@ -73,6 +73,7 @@ function randomAction(random: () => number): ButtonAction {
       "nearby_consent",
       "look_in",
       "book_drop",
+      "recipe_keep",
       "onboarding",
     ])
   ) {
@@ -104,6 +105,8 @@ function randomAction(random: () => number): ButtonAction {
       return { type: "look_in", quietEventId: uuidv7(random), accept: random() < 0.5 };
     case "book_drop":
       return { type: "book_drop", exchangeId: uuidv7(random) };
+    case "recipe_keep":
+      return { type: "recipe_keep", recipeId: uuidv7(random), keep: random() < 0.5 };
     default:
       return {
         type: "onboarding",

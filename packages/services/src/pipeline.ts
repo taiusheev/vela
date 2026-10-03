@@ -69,7 +69,7 @@ import {
   outbound,
   translations,
 } from "@vela/db";
-import { and, desc, eq, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
@@ -77,6 +77,7 @@ import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
 import { type InsertResult, insertOutbound } from "./gateway.ts";
 import { extensionFor } from "./media-copy.ts";
+import { offerRecipe } from "./recipes.ts";
 import {
   activeOrganisersWithLinks,
   channelLinkOfMember,
@@ -527,6 +528,44 @@ async function keepDatedPlans(
       expiresAt: new Date(Date.parse(`${plan.on}T00:00:00Z`) + 3 * 86_400_000),
     })),
   );
+}
+
+/**
+ * Her answers to a recipe ask written down as a card and offered to her (spec §10, ADR-41). A model
+ * failure is logged and leaves no card: her answer is understood all the same, and her next answer
+ * to the same ask writes the card from all of them.
+ */
+async function writeRecipeCard(deps: Deps, ctx: AnswerContext): Promise<void> {
+  const { exchange, member } = ctx;
+  try {
+    const said = await deps.db
+      .select({ payload: answers.payload, transcript: answers.transcript })
+      .from(answers)
+      .where(eq(answers.exchangeId, exchange.id))
+      .orderBy(asc(answers.receivedAt), asc(answers.id));
+    const words = said.flatMap(({ payload, transcript }) => {
+      const typed = (payload as { text?: unknown } | null)?.text;
+      const text = typeof typed === "string" ? typed : transcript;
+      return text === null || text.trim().length === 0 ? [] : [text];
+    });
+    if (words.length === 0) return;
+    const outcome = await deps.ai.recipe({
+      lang: member.language,
+      addressForm: member.addressForm ?? member.displayName,
+      ask: exchange.text,
+      answers: words.slice(-10),
+    });
+    await logOutcome(deps, ctx, outcome);
+    if (!outcome.ok) return;
+    const written = await offerRecipe(
+      deps,
+      { exchange, member, answerChannel: ctx.answer.channel },
+      outcome.value,
+    );
+    await handOver(deps, ctx.answer.id, written);
+  } catch (error) {
+    deps.logger.error("recipe_card_failed", { answerId: ctx.answer.id, error: errorLabel(error) });
+  }
 }
 
 /** The one health word in the mood list: without her consent it is not kept (flows §3.10). */
@@ -1061,6 +1100,9 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
   // After the family's post, which matters more than her copy of the summary.
   if (understanding.ok) {
     await translateSummaryForHer(deps, ctx, understanding.value.summary);
+  }
+  if (exchange.type === "recipe" && deps.config.book) {
+    await writeRecipeCard(deps, ctx);
   }
 
   if (!understood) {

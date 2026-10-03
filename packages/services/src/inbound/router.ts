@@ -46,6 +46,7 @@ import {
 import { handleOnboarding } from "../onboarding.ts";
 import { handleParentCommand } from "../parent-commands.ts";
 import { handleQuietButton } from "../quiet.ts";
+import { handleRecipeKeepButton } from "../recipes.ts";
 import { handleGroupReply, handleReaction } from "../replies.ts";
 import {
   familyByLinkedGroup,
@@ -248,6 +249,9 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
       return;
     case "book_drop":
       await handleBookDropButton(deps, event, action);
+      return;
+    case "recipe_keep":
+      await handleRecipeKeepButton(deps, event, action);
       return;
   }
 }

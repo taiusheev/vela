@@ -129,7 +129,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>(unused("the family")),
     loadApiBook: vi
       .fn<ApiReadServices["loadApiBook"]>()
-      .mockResolvedValue({ entries: [], coming: [] }),
+      .mockResolvedValue({ entries: [], coming: [], recipes: [] }),
     loadApiReminders: vi
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),

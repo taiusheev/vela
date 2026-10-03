@@ -699,3 +699,19 @@ Rejected: keeping plans for the weekly read and suggestions too (later, once mem
 
 Revisit if: counsel says dated health plans are medical data even with consent; families want reminders for plans further than four weeks out.
 
+## ADR-41 · Her recipe is written down as a card, shown to her, and kept only on her yes
+
+Status: accepted, 3 October 2026 (build plan 5.3; spec §10).
+
+Context: spec §10 says that recipes are assembled by the AI into one card (ingredients, steps, her remarks) and shown to her for a yes before they are kept.
+
+Decision:
+1. **One card per recipe ask.** After understanding an answer to an exchange of type `recipe`, a new model call (`recipe.v1`, Sonnet, low effort) writes all her answers to that ask, oldest first, as a card in her language and words. It adds no amount, ingredient, step or advice she did not give. It returns an empty card when she described no dish, and then nothing is offered.
+2. **Shown to her for a yes.** The card is a `recipes` row in `draft`, written under the exchange's row lock so that two answers understood at once make one card (`recipe-offer-race.test.ts`). It goes to her own chat, Telegram or her phone, with "Keep it" and "Not this one" (`r:<id>:k|n`). A later answer rewrites the draft and offers it again. The offer is keyed by the card's content, so the same card is never sent twice. "Keep it" confirms the card. "Not this one" deletes it at once. Only she can tap them, from her own chat.
+3. **Kept in the family book.** A confirmed card appears in the book (`ApiBook.recipes`) for every member and stays until the family leaves. A draft she never answers is deleted with the 30 days of the words it came from.
+4. **Behind the family book's switch.** Recipes are only written where `BOOK` is on (ADR-39). With AI off nothing is written.
+
+Rejected: accumulating one card across several asks about the same dish (later, once families show they ask that way); the family editing the card (it is her recipe as she told it); keeping the card without her yes (the spec asks for her yes).
+
+Revisit if: she wants to correct a card rather than drop it; an organiser needs to take a recipe out of the book, as for stories.
+

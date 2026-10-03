@@ -33,6 +33,7 @@ export function createOffAi(): Ai {
     suggest: off("suggest"),
     translate: off("translate"),
     readback: off("readback"),
+    recipe: off("recipe"),
     hello: off("hello"),
     weeklyRead: off("weekly_read"),
   };

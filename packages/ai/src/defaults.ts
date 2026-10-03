@@ -48,6 +48,7 @@ export const SAFE_DEFAULTS: {
   suggest: (input) => ({ type: input.rotationType, text: "", source: "rotation" }),
   translate: (input) => ({ text: input.text }),
   readback: () => ({ lines: [] }),
+  recipe: () => ({ title: "", ingredients: [], steps: [], remarks: [] }),
   hello: () => ({ lines: [] }),
   weekly_read: (input) => ({
     lines: [],

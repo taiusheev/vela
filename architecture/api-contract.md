@@ -378,6 +378,8 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 
 `POST /v1/book/:exchangeId/remove` with an `Idempotency-Key` lets an organiser take a story out, through `runApiMutation` (operation `book.remove:v1`). It answers 200 `ApiBookRemoved` (`exchange_id`, `removed: true`), the same again for a story already removed, and 404 for a story that is unknown or not of the caller's family, and for a caller who is not its organiser. She removes her own story from Telegram with "Don't keep this one".
 
+`ApiBook` also carries `recipes`: her kept recipe cards (ADR-41), newest first, each with `id`, `member_id`, `member_name`, `title`, `ingredients`, `steps`, `remarks` and `kept_at`. Each card is written from her answers to a recipe ask and kept only after she tapped "Keep it".
+
 `ApiBook` also carries `coming`: the family's story asks not yet delivered (`composed` or `scheduled`), soonest first, each with `exchange_id`, `member_id`, `member_name`, `question`, `asked_by` (who chose it, or null) and `date`. Story day shows the one chosen for her instead of offering another.
 
 A story is kept when she answers an exchange of type `story`. Story day composes one through `POST /v1/families/:familyId/asks` with `type: "story"` and `when: "date"`.

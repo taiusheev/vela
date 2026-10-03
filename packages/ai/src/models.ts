@@ -18,6 +18,7 @@ export const MODEL_FOR: Record<AiCallName, ClaudeModel> = {
   chips: "claude-haiku-4-5",
   suggest: "claude-haiku-4-5",
   hello: "claude-haiku-4-5",
+  recipe: "claude-sonnet-5",
 };
 
 export type Effort = "low" | "medium" | "high";
@@ -32,6 +33,7 @@ export const EFFORT_FOR: Record<AiCallName, Effort | null> = {
   chips: null,
   suggest: null,
   hello: null,
+  recipe: "low",
 };
 
 /**
@@ -47,6 +49,7 @@ export const MAX_TOKENS_FOR: Record<AiCallName, number> = {
   chips: 2000,
   suggest: 2000,
   hello: 2000,
+  recipe: 8000,
 };
 
 /**
@@ -65,6 +68,7 @@ export const TIMEOUT_MS_FOR: Record<AiCallName, number> = {
   chips: 30_000,
   suggest: 30_000,
   hello: 30_000,
+  recipe: 60_000,
 };
 
 /** Retries after a failed attempt (a timeout, a connection error, a 408, 409, 429, or 5xx). */

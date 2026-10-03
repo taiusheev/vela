@@ -179,6 +179,10 @@ msgstr "{name}'s light is on"
 msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
 msgstr "{name}'s light is paused just now, so nothing can be sent into her morning."
 
+#: app/book.tsx
+msgid "{name}'s recipe · {day}"
+msgstr "{name}'s recipe · {day}"
+
 #: app/vela-light.tsx
 msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
 msgstr "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
@@ -640,6 +644,10 @@ msgstr "Her phone"
 #: src/auth/phone.ts
 msgid "Hong Kong"
 msgstr "Hong Kong"
+
+#: app/book.tsx
+msgid "How"
+msgstr "How"
 
 #: src/components/reminders.tsx
 msgid "How did {what} go?"
@@ -1652,6 +1660,10 @@ msgstr "This photo could not be used. Choose another."
 msgid "Those are the ones from the seeds you saved"
 msgstr "Those are the ones from the seeds you saved"
 
+#: app/book.tsx
+msgid "Tips"
+msgstr "Tips"
+
 #: src/device/VoiceAnswer.tsx
 msgid "To answer with your voice, Vela needs the microphone. Ask your family to turn it on in Settings."
 msgstr "To answer with your voice, Vela needs the microphone. Ask your family to turn it on in Settings."
@@ -2030,6 +2042,10 @@ msgstr "You are the only organiser who is active, and an organiser who is away i
 #: app/exchange/[id].tsx
 msgid "You can reply once she has answered."
 msgstr "You can reply once she has answered."
+
+#: app/book.tsx
+msgid "You need"
+msgstr "You need"
 
 #: app/(tabs)/index.tsx
 msgid "You said {name} is fine. Nothing else was sent."
