@@ -122,6 +122,9 @@ function adminConfig(telegramBotUsername: string): Config {
     get privacyNoticeVersion(): never {
       return notGiven("config");
     },
+    get memory(): never {
+      return notGiven("config");
+    },
   };
 }
 

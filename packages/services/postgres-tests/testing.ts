@@ -441,6 +441,7 @@ export async function openPostgresHarness(): Promise<PostgresHarness> {
       LANGS.map((lang: Lang) => [lang, "https://vela.test/privacy"]),
     ) as Record<Lang, string>,
     privacyNoticeVersion: "privacy-notice.v1",
+    memory: true,
   };
 
   const harness: PostgresHarness = {

@@ -63,6 +63,7 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
       moodWords: [],
       mentions: { people: [], places: [], plans: [], health: [], dates: [] },
       away: null,
+      dated: [],
       language: input.lang,
     })),
     flag: method("flag", overrides.flag, () => ({

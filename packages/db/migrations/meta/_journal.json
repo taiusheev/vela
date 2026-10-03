@@ -64,6 +64,13 @@
       "when": 1791003690131,
       "tag": "0008_family_book",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791014769291,
+      "tag": "0009_memory_reminders",
+      "breakpoints": true
     }
   ]
 }

@@ -295,6 +295,7 @@ function createFakeDeps(logs: LogLine[], line: ChannelAdapter): Deps {
         ru: "https://vela.worker.test/privacy",
       },
       privacyNoticeVersion: "privacy-notice.v1",
+      memory: true,
     },
   };
 }

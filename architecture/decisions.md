@@ -679,3 +679,20 @@ Rejected:
 The weekly read's story of the week is the newest entry kept in the read's seven days, found by the app from the book. Not built yet: voting on questions, and the PDF export (Vela Light).
 
 Revisit if: families want to keep an ordinary answer too; a family leaving needs to take its book with it (export comes first); her Telegram voice notes should be kept as stored copies, which today they are not, so only her words are kept from Telegram.
+
+## ADR-40 · Reminders come from her dated plans, kept briefly, behind a switch that is off in production
+
+Status: accepted, 3 October 2026 (build plan 5.3; spec §12).
+
+Context: spec §12 asks that the AI pick dated facts out of her answers ("doctor on Thursday", "Mia's exam next week") and offer the family a reminder to ask how it went, with reminders existing only after a tap. The data map (row 29) holds memory back until the privacy notice names it and counsel has answered on health words (gap 9).
+
+Decision:
+1. **Extraction.** `understand.v5` adds `dated`: at most three plans, each a short phrase in the family's language and a date from her today to 28 days later. The service drops any outside that window. The health rules cover it. Without her health-words consent the prompt leaves out plans about her health, and the service drops any plan whose words name a doctor, a clinic, a test or a medicine (English and Chinese).
+2. **Kept briefly.** A plan is a `memory_facts` row of kind `date`, deleted two days after its day. 28 days plus two keeps it inside the 30 days of the words it came from. A re-run of the same answer replaces its rows.
+3. **Only after a tap.** Each family member except her sees the coming plans on Today and taps "Remind me to ask how it went". The reminder is due the day after, and Today then offers "Ask" with a question to edit, and "Done". One reminder per member and fact, by a unique key. Nothing reaches her: to her it is only a person asking.
+4. **The switch.** The pilot Worker's `MEMORY` var is `on` in development and staging and `off` in production, pinned by `wrangler-config.test.ts`. With it off, nothing is kept. Turning it on in production needs the new privacy notice and counsel's answer first.
+
+Rejected: keeping plans for the weekly read and suggestions too (later, once memory is allowed in production); reminders sent as pushes (Today is enough until push is on); keeping no plan without health consent at all (most plans are not about health).
+
+Revisit if: counsel says dated health plans are medical data even with consent; families want reminders for plans further than four weeks out.
+

@@ -28,6 +28,7 @@ import {
   type AiCallTypes,
   type AiOutcome,
   AWAY_HORIZON_DAYS,
+  DATED_HORIZON_DAYS,
   type FlagInput,
   type FlagResult,
   INPUT_SCHEMAS,
@@ -195,15 +196,18 @@ async function invoke<K extends AiCallName>(
  * starts, or starts or ends beyond the horizon is dropped rather than trusted.
  */
 function normaliseUnderstanding(output: Understanding, input: UnderstandInput): Understanding {
+  // A dated plan outside today to the horizon is a misread or an injected date: it is dropped.
+  const lastDated = addDays(input.today, DATED_HORIZON_DAYS);
+  const dated = output.dated.filter((plan) => plan.on >= input.today && plan.on <= lastDated);
   const { away } = output;
   if (away === null) {
-    return output;
+    return { ...output, dated };
   }
   const from = away.from < input.today ? input.today : away.from;
   const horizon = addDays(input.today, AWAY_HORIZON_DAYS);
   const valid =
     from <= horizon && (away.until === null || (away.until >= from && away.until <= horizon));
-  return { ...output, away: valid ? { from, until: away.until } : null };
+  return { ...output, dated, away: valid ? { from, until: away.until } : null };
 }
 
 /** `YYYY-MM-DD` dates compare as strings; adding days goes through UTC midnight, which has no DST. */

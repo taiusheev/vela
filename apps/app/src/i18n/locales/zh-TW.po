@@ -154,6 +154,14 @@ msgstr "{name}同意了"
 msgid "{name} will look in."
 msgstr "{name}會過去看看。"
 
+#: src/components/reminders.tsx
+msgid "{name}: {what}, {day}"
+msgstr "{name}：{what}，{day}"
+
+#: src/components/reminders.tsx
+msgid "{name}: {what}. You will be reminded to ask on {day}."
+msgstr "{name}：{what}。{day}會提醒您問一問。"
+
 #: app/(tabs)/sunday.tsx
 msgid "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
 msgstr "{name}的第一份每週小記會在週日送來，等{name}過完一週的早上之後。"
@@ -347,6 +355,14 @@ msgstr "{time} 回覆了"
 msgid "Anyone"
 msgstr "大家"
 
+#: src/components/reminders.tsx
+msgid "Ask {name}"
+msgstr "問{name}"
+
+#: src/components/reminders.tsx
+msgid "Ask {name} how {what} went"
+msgstr "問問{name}，{what}還順利嗎"
+
 #: app/(tabs)/sunday.tsx
 #: app/ask.tsx
 msgid "Ask {name} something"
@@ -479,6 +495,10 @@ msgstr "關閉"
 msgid "Codes by text message do not reach {where} yet. Use your email instead."
 msgstr "簡訊驗證碼目前還無法傳到{where}，請改用電子郵件。"
 
+#: src/components/reminders.tsx
+msgid "Coming up"
+msgstr "近期安排"
+
 #: src/data/today.ts
 msgid "Dad"
 msgstr "爸爸"
@@ -490,6 +510,10 @@ msgstr "達爾文"
 #: src/data/photos.ts
 msgid "Do you remember this?"
 msgstr "您還記得這張嗎？"
+
+#: src/components/reminders.tsx
+msgid "Done"
+msgstr "完成"
 
 #. who a nearby contact is to her
 #. who a nearby contact is to her
@@ -611,6 +635,10 @@ msgstr "長輩的手機"
 #: src/auth/phone.ts
 msgid "Hong Kong"
 msgstr "香港"
+
+#: src/components/reminders.tsx
+msgid "How did {what} go?"
+msgstr "{what}還順利嗎？"
 
 #: app/(tabs)/you.tsx
 msgid "How the quiet notices ended, in your family and across Vela"
@@ -1086,6 +1114,10 @@ msgstr "正在錄您的問候… {time}，最長 0:10"
 msgid "Recording… {time}"
 msgstr "錄音中… {time}"
 
+#: src/components/reminders.tsx
+msgid "Remind me to ask how it went"
+msgstr "之後提醒我問問看"
+
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 #: src/components/voice-hello.tsx
@@ -1141,6 +1173,7 @@ msgid "Said yes"
 msgstr "已同意"
 
 #: app/onboarding.tsx
+#: src/components/reminders.tsx
 msgid "Saving…"
 msgstr "儲存中…"
 

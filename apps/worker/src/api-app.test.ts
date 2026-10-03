@@ -290,6 +290,9 @@ function fixture(enableWrites = false, push?: boolean) {
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>().mockResolvedValue(TODAY),
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>().mockResolvedValue(FAMILY),
     loadApiBook: vi.fn<ApiReadServices["loadApiBook"]>().mockResolvedValue({ entries: [] }),
+    loadApiReminders: vi
+      .fn<ApiReadServices["loadApiReminders"]>()
+      .mockResolvedValue({ suggestions: [], reminders: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
@@ -380,6 +383,8 @@ function fixture(enableWrites = false, push?: boolean) {
       uploadApiVoice: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["uploadApiVoice"]>()
         .mockRejectedValue(new Error("no voice upload in these tests")),
+      createApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
+      finishApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
       removeApiBookEntry: vi
         .fn()
         .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),

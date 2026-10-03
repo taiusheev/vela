@@ -147,6 +147,12 @@ export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 export type { DeviceAlerts } from "./push-devices.ts";
 export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";
 export {
+  createApiReminder,
+  FactMissingError,
+  finishApiReminder,
+  loadApiReminders,
+} from "./reminders.ts";
+export {
   BANK_PROMPT_VERSION,
   pickBankItem,
   type RenderedSuggestion,

@@ -86,6 +86,8 @@ export interface PilotEnv extends SharedEnv {
    * the founder has set up Expo, Firebase and, for iPhones, Apple.
    */
   readonly PUSH_SEND: string;
+  /** "on" or "off": whether her dated plans are kept for reminders (spec §12). Production is "off". */
+  readonly MEMORY: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;

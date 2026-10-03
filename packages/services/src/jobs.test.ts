@@ -656,6 +656,8 @@ describe("applyRetention", () => {
     "ai_call_outputs_cleared",
     "ask_to_check_replies_cleared",
     "book_answers_trimmed",
+    "memory_facts_deleted",
+    "reminders_deleted",
     "message_refs_deleted",
     "invites_deleted",
     "onboarding_sessions_deleted",

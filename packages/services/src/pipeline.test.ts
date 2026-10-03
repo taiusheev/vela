@@ -30,6 +30,7 @@ import {
   events,
   media,
   members,
+  memoryFacts,
   type Outbound,
   outbound,
   translations,
@@ -1142,6 +1143,7 @@ describe("understandAnswer: health words (ADR-27)", () => {
           moodWords: ["tired"],
           mentions: { people: [], places: ["the market"], plans: [], health: [], dates: [] },
           away: null,
+          dated: [],
           language: "en",
         },
       ],
@@ -1482,5 +1484,76 @@ describe("ingestAnswerMedia", () => {
     expect(hints).toEqual([]);
     expect((await h.db.select().from(media))[0]?.storageKey).toBeNull();
     expect(h.logger.entries.map((entry) => entry.event)).toContain("answer_media_store_failed");
+  });
+});
+
+describe("understandAnswer: dated plans (spec §12)", () => {
+  const PLANS = [
+    { what: "lunch with Auntie Lin", on: "2026-09-17" },
+    { what: "the doctor", on: "2026-09-18" },
+  ];
+
+  function plansAi(): FakeAi {
+    return withAi({
+      understand: async (input) => ({
+        ok: true,
+        value: { ...SAFE_DEFAULTS.understand(input), summary: "Mom answered.", dated: PLANS },
+        record: fakeRecord("understand"),
+      }),
+    });
+  }
+
+  async function facts() {
+    return h.db
+      .select({ text: memoryFacts.text, onDate: memoryFacts.onDate, kind: memoryFacts.kind })
+      .from(memoryFacts)
+      .orderBy(asc(memoryFacts.onDate));
+  }
+
+  it("keeps her plans as dated memory facts once, however often the answer is understood", async () => {
+    const scene = await morning();
+    await seedHealthWordsConsent(h.db, scene.seed, {
+      at: addMinutes(h.clock.now(), -60),
+      answer: "yes",
+    });
+    const answer = await herText(scene, "Lunch with Auntie Lin on Wednesday, doctor Thursday");
+    plansAi();
+
+    await understandAnswer(h.deps, answer.id);
+    await h.db.update(answers).set({ understoodAt: null }).where(eq(answers.id, answer.id));
+    await understandAnswer(h.deps, answer.id);
+
+    expect(await facts()).toEqual([
+      { text: "lunch with Auntie Lin", onDate: "2026-09-17", kind: "date" },
+      { text: "the doctor", onDate: "2026-09-18", kind: "date" },
+    ]);
+  });
+
+  it("keeps no plan at all where memory is off", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Lunch with Auntie Lin on Wednesday");
+    plansAi();
+    h.deps.config = { ...h.deps.config, memory: false };
+
+    try {
+      await understandAnswer(h.deps, answer.id);
+    } finally {
+      h.deps.config = { ...h.deps.config, memory: true };
+    }
+
+    expect(await facts()).toEqual([]);
+    expect((await answerById(answer.id)).understoodAt).toEqual(h.clock.now());
+  });
+
+  it("without her health-words consent keeps no plan about her health, even when the model returns one", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Lunch with Auntie Lin on Wednesday, doctor Thursday");
+    plansAi();
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(await facts()).toEqual([
+      { text: "lunch with Auntie Lin", onDate: "2026-09-17", kind: "date" },
+    ]);
   });
 });

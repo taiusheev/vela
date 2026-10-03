@@ -530,6 +530,16 @@ describe("the pilot Worker's bindings", () => {
     }
   });
 
+  // Spec §12, data map row 29: memory keeps her plans in development and staging, never in
+  // production before the privacy notice names it and counsel has answered on health words.
+  it("keep her dated plans for reminders in development and staging, and not in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.MEMORY,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
   it("never holds EXPO_ACCESS_TOKEN as a var, in either Worker or any environment", () => {
     for (const config of configs) {

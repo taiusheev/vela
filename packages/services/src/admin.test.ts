@@ -207,6 +207,9 @@ function adminWorkerDeps(): Deps {
       get privacyNoticeVersion(): never {
         return notGiven("config");
       },
+      get memory(): never {
+        return notGiven("config");
+      },
     },
   };
 }

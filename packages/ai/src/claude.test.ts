@@ -49,6 +49,7 @@ const understanding: Understanding = {
     dates: ["星期三"],
   },
   away: { from: "2026-09-13", until: "2026-09-16" },
+  dated: [],
   language: "zh-TW",
 };
 
@@ -537,6 +538,24 @@ describe("createClaudeAi away dates", () => {
   }
 });
 
+describe("createClaudeAi dated plans", () => {
+  it("keeps plans from her answer's date to 28 days after it, and drops the rest", async () => {
+    const dated = [
+      { what: "yesterday's lunch", on: "2026-09-12" },
+      { what: "lunch with Auntie Lin", on: "2026-09-13" },
+      { what: "Mia's exam", on: "2026-10-12" },
+    ];
+    const { ai } = clientWith([jsonReply("claude-sonnet-5", { ...understanding, dated })]);
+
+    const outcome = await ai.understand(understandInput);
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      value: { dated: [{ what: "lunch with Auntie Lin", on: "2026-09-13" }] },
+    });
+  });
+});
+
 describe("createClaudeAi flag results", () => {
   it("drops a quote that is not an exact excerpt of her answer but keeps the flag", async () => {
     const { ai } = clientWith([
@@ -675,11 +694,12 @@ describe("createClaudeAi failures", () => {
         moodWords: [],
         mentions: { people: [], places: [], plans: [], health: [], dates: [] },
         away: null,
+        dated: [],
         language: "zh-TW",
       },
       record: expect.objectContaining({
         call: "understand",
-        promptVersion: "understand.v4",
+        promptVersion: "understand.v5",
         model: "claude-sonnet-5",
         ok: false,
         error: "http_500",

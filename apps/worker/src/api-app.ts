@@ -28,6 +28,9 @@ import {
   ApiPushDeviceRemoved,
   ApiQuietNotice,
   ApiQuietState,
+  ApiReminder,
+  ApiReminderDone,
+  ApiReminders,
   ApiReply,
   ApiToday,
   ApiTrial,
@@ -39,7 +42,9 @@ import {
   ComposeAsk,
   ComposeReply,
   CreateFamily,
+  CreateReminder,
   DeviceWrite,
+  FinishReminder,
   InviteNearby,
   type Lang,
   LeaveFamily,
@@ -69,8 +74,11 @@ import {
   type Clock,
   type composeApiAsk,
   type createApiFamily,
+  type createApiReminder,
   type DeviceAlerts,
   errorLabel,
+  FactMissingError,
+  type finishApiReminder,
   type inviteApiNearby,
   type Logger,
   LookInRefusedError,
@@ -84,6 +92,7 @@ import {
   type loadApiMe,
   type loadApiPrecision,
   type loadApiQuiet,
+  type loadApiReminders,
   type loadApiToday,
   type loadApiWeeklyRead,
   type loadDeviceMessages,
@@ -146,6 +155,7 @@ export interface ApiReadServices {
   loadApiToday: typeof loadApiToday;
   loadApiFamily: typeof loadApiFamily;
   loadApiBook: typeof loadApiBook;
+  loadApiReminders: typeof loadApiReminders;
   loadApiExchange: typeof loadApiExchange;
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
@@ -176,6 +186,8 @@ export interface ApiWriteServices {
   uploadApiVoice: typeof uploadApiVoice;
   askApiToLookIn: typeof askApiToLookIn;
   removeApiBookEntry: typeof removeApiBookEntry;
+  createApiReminder: typeof createApiReminder;
+  finishApiReminder: typeof finishApiReminder;
   markApiQuietUseful: typeof markApiQuietUseful;
   inviteApiNearby: typeof inviteApiNearby;
   registerApiPushDevice: typeof registerApiPushDevice;
@@ -540,6 +552,17 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               : 400,
         );
       }
+      if (error instanceof FactMissingError) {
+        // The fact is gone, past, not of the family, or about the caller (spec §12).
+        const missing: ApiErrorBody = {
+          error: {
+            code: "not_found",
+            message: "That is no longer coming up.",
+            details: { reason: "fact_missing" },
+          },
+        };
+        return c.json(missing, 404);
+      }
       if (error instanceof AskVoiceMissingError) {
         // The voice hello is not the asker's own recording, or will not last to her morning.
         const missing: ApiErrorBody = {
@@ -758,6 +781,26 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         c.req.param("familyId"),
       );
       return book === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiBook.parse(book));
+    },
+  );
+  // Reminders to ask her how something went (spec §12): the caller's own, and the family's coming
+  // dated facts they could be reminded of. Any live member of the family.
+  app.get(
+    "/v1/families/:familyId/reminders",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const found = await runtime.services.loadApiReminders(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        runtime.now(),
+      );
+      return found === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiReminders.parse(found));
     },
   );
   // One exchange, for a link or a tapped notice: the service reads its family and answers null for
@@ -1220,6 +1263,48 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         }
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ApiBookRemoved.parse(result.response.body), 200);
+      },
+    );
+    // "Remind me to ask" (spec §12): a reminder exists only after this tap.
+    app.post(
+      "/v1/families/:familyId/reminders",
+      authenticate,
+      validateWrite(CreateReminder, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.createApiReminder(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiReminder.parse(result.response.body), 201);
+      },
+    );
+    app.post(
+      "/v1/reminders/:reminderId/done",
+      authenticate,
+      validateWrite(FinishReminder, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.finishApiReminder(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("reminderId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiReminderDone.parse(result.response.body), 200);
       },
     );
     // "Ask them to look in" (ADR-36): the service reads the family from the event under its lock.

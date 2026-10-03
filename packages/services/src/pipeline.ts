@@ -35,6 +35,7 @@
 import {
   type AiCallRecord,
   type AiOutcome,
+  type DatedPlan,
   type FlagResult,
   isAiOff,
   type TranslateInput,
@@ -64,6 +65,7 @@ import {
   type Member,
   media,
   members,
+  memoryFacts,
   outbound,
   translations,
 } from "@vela/db";
@@ -500,6 +502,33 @@ async function setAwayFromAnswer(
   }
 }
 
+/**
+ * Her dated plans as memory facts (spec §12), replacing any an earlier run of the same answer kept,
+ * so a re-run keeps one set. Each ends two days after its day: the reminder made from it is due the
+ * day after, and a family member who never tapped has no use for it later.
+ */
+async function keepDatedPlans(
+  tx: Queryable,
+  ctx: AnswerContext,
+  dated: DatedPlan[],
+): Promise<void> {
+  await tx
+    .delete(memoryFacts)
+    .where(and(eq(memoryFacts.sourceAnswerId, ctx.answer.id), eq(memoryFacts.kind, "date")));
+  if (dated.length === 0) return;
+  await tx.insert(memoryFacts).values(
+    dated.map((plan) => ({
+      familyId: ctx.family.id,
+      memberId: ctx.member.id,
+      kind: "date" as const,
+      text: plan.what,
+      onDate: plan.on,
+      sourceAnswerId: ctx.answer.id,
+      expiresAt: new Date(Date.parse(`${plan.on}T00:00:00Z`) + 3 * 86_400_000),
+    })),
+  );
+}
+
 /** The one health word in the mood list: without her consent it is not kept (flows §3.10). */
 const HEALTH_MOOD_WORD = "unwell";
 
@@ -510,9 +539,25 @@ const HEALTH_MOOD_WORD = "unwell";
 function withoutHealthWords(understanding: Understanding): Understanding {
   return {
     ...understanding,
+    dated: datedPlansOf(understanding, false),
     moodWords: understanding.moodWords.filter((word) => word !== HEALTH_MOOD_WORD),
     mentions: { ...understanding.mentions, health: [] },
   };
+}
+
+/**
+ * Words that make a dated plan about her health: without her consent the prompt already leaves such
+ * a plan out, and this holds it without a model (ADR-27). Deliberately broad: a plan wrongly left
+ * out costs one reminder, one wrongly kept carries her health.
+ */
+const HEALTH_PLAN =
+  /doctor|clinic|hospital|dentist|dental|nurse|physio|therap|check-?up|scan|x-?ray|blood|test|medic|pharmac|surgery|operation|injection|vaccin|醫|診|藥|檢查|手術|復健|牙|看病|打針|疫苗|抽血/i;
+
+/** Her dated plans as kept: within the horizon, and none about her health without her consent. */
+function datedPlansOf(understanding: Understanding, healthWords: boolean): DatedPlan[] {
+  return healthWords
+    ? understanding.dated
+    : understanding.dated.filter((plan) => !HEALTH_PLAN.test(plan.what));
 }
 
 /** What a flag keeps without her health-words consent: whether to call, and how soon. */
@@ -992,6 +1037,9 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
             : {}),
         })
         .where(eq(answers.id, answerId));
+      if (understanding.ok && deps.config.memory) {
+        await keepDatedPlans(tx, ctx, understanding.value.dated);
+      }
       if (summaryChanged) {
         await dropSummaryForHer(tx, ctx);
       }

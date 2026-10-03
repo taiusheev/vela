@@ -93,7 +93,7 @@ describe("PROMPTS registry", () => {
     expect(system).toContain("a test or measurement result");
     expect(system).toContain("or the name of a medicine");
     expect(system).toContain(
-      "2. When healthWordsConsent is false: mentions.health is an empty list, and no other list in mentions holds anything about the elder's health or body; moodWords never include unwell; and the summary says nothing about the elder's health or body",
+      "2. When healthWordsConsent is false: mentions.health is an empty list, and no other list in mentions or dated holds anything about the elder's health or body; moodWords never include unwell; and the summary says nothing about the elder's health or body",
     );
     expect(system).toContain(
       'the summary says only that the elder answered, for example "Mom answered."',

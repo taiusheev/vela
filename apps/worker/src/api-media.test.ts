@@ -128,6 +128,9 @@ function fixture(options: FixtureOptions = {}) {
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>(unused("Today")),
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>(unused("the family")),
     loadApiBook: vi.fn<ApiReadServices["loadApiBook"]>().mockResolvedValue({ entries: [] }),
+    loadApiReminders: vi
+      .fn<ApiReadServices["loadApiReminders"]>()
+      .mockResolvedValue({ suggestions: [], reminders: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
@@ -171,6 +174,8 @@ function fixture(options: FixtureOptions = {}) {
       uploadApiVoice: vi
         .fn<Writes["services"]["uploadApiVoice"]>()
         .mockResolvedValue({ response: { status: 201, body: VOICE }, replayed: false }),
+      createApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
+      finishApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
       removeApiBookEntry: vi
         .fn()
         .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),

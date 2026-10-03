@@ -368,8 +368,9 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 | POST | /book/:exchangeId/remove | Built: an organiser takes a story out (see below) |
 | POST | /families/:id/book/questions | Add or vote a story question (not built) |
 | POST | /families/:id/book/export | Vela Light: PDF export job → `{job_id}`; GET /jobs/:id |
-| GET | /families/:id/reminders | Suggested and created reminders |
-| POST | /families/:id/reminders | Create from a suggestion (only after a tap) |
+| GET | /families/:id/reminders | Built: see "Reminders" below |
+| POST | /families/:id/reminders | Built: create from a suggestion (only after a tap) |
+| POST | /reminders/:id/done | Built: the caller's own reminder, finished |
 
 ### The family book (3 October 2026, spec §10, A10, ADR-39)
 
@@ -378,6 +379,16 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 `POST /v1/book/:exchangeId/remove` with an `Idempotency-Key` lets an organiser take a story out, through `runApiMutation` (operation `book.remove:v1`). It answers 200 `ApiBookRemoved` (`exchange_id`, `removed: true`), the same again for a story already removed, and 404 for a story that is unknown or not of the caller's family, and for a caller who is not its organiser. She removes her own story from Telegram with "Don't keep this one".
 
 A story is kept when she answers an exchange of type `story`. Story day composes one through `POST /v1/families/:familyId/asks` with `type: "story"` and `when: "date"`.
+
+### Reminders (3 October 2026, spec §12, build plan 5.3, ADR-40)
+
+Understanding (`understand.v5`) returns `dated`: up to three things she said will happen on a day it can resolve, each `{what, on}` in the family's language, from her today to 28 days after it. Where the Worker's `MEMORY` is `on` (development and staging; production is `off`), each is kept as a `memory_facts` row of kind `date`, replaced when the same answer is understood again, and deleted two days after its day. Without her health-words consent the prompt leaves out plans about her health, and the service drops any whose words name one.
+
+`GET /v1/families/:familyId/reminders` answers `ApiReminders`. `suggestions` holds the family's coming facts about anyone but the caller, from her today on, that the caller has no reminder for: `fact_id`, `about_member_id`, `about_name`, `what` and `on`. `reminders` holds the caller's reminders not yet done: `id`, `about_member_id`, `about_name`, `what`, `due_date` and `done`. Any live member reads their own; anyone else gets 404.
+
+`POST /v1/families/:familyId/reminders` with `{fact_id}` and an `Idempotency-Key` makes the caller's reminder, due the day after the fact, through `runApiMutation` (operation `reminder.create:v1`). It answers 201 `ApiReminder`. A member has one per fact (`reminders_one_per_fact`, migration 0009), so a second tap answers with the first. It answers 404 `fact_missing` for a fact that is gone, past, of another family or about the caller, and 404 for a family not the caller's.
+
+`POST /v1/reminders/:reminderId/done` with an `Idempotency-Key` finishes the caller's own reminder (operation `reminder.done:v1`) and answers 200 `ApiReminderDone` (`id`, `done: true`), or 404 for anyone else's. Retention deletes a reminder two days after it was due, and any reminder or fact older than 30 days.
 
 ## 7. Weekly read, settings, billing
 

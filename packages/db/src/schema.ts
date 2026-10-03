@@ -857,28 +857,41 @@ export const memoryFacts = pgTable(
     createdAt: createdAt(),
     expiresAt: timestamptz("expires_at"),
   },
-  (t) => [check("memory_facts_kind_check", isOneOf(t.kind, MEMORY_FACT_KINDS))],
+  (t) => [
+    check("memory_facts_kind_check", isOneOf(t.kind, MEMORY_FACT_KINDS)),
+    // The family's coming plans, read for the reminder suggestions (spec §12).
+    index("memory_facts_family_idx").on(t.familyId, t.onDate),
+    index("memory_facts_answer_idx").on(t.sourceAnswerId),
+  ],
 );
 
-export const reminders = pgTable("reminders", {
-  id: uuidv7Id(),
-  familyId: uuid("family_id")
-    .notNull()
-    .references(() => families.id, { onDelete: "cascade" }),
-  /** Who is reminded. */
-  memberId: uuid("member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  aboutMemberId: uuid("about_member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  text: text("text").notNull(),
-  dueDate: date("due_date").notNull(),
-  factId: uuid("fact_id").references(() => memoryFacts.id, { onDelete: "set null" }),
-  /** Only created after a person's tap (spec §12). */
-  createdAt: createdAt(),
-  doneAt: timestamptz("done_at"),
-});
+export const reminders = pgTable(
+  "reminders",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** Who is reminded. */
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    aboutMemberId: uuid("about_member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    dueDate: date("due_date").notNull(),
+    factId: uuid("fact_id").references(() => memoryFacts.id, { onDelete: "set null" }),
+    /** Only created after a person's tap (spec §12). */
+    createdAt: createdAt(),
+    doneAt: timestamptz("done_at"),
+  },
+  (t) => [
+    // One reminder per person per fact: a second tap, or two at once, finds the first.
+    uniqueIndex("reminders_one_per_fact").on(t.memberId, t.factId),
+    index("reminders_member_idx").on(t.memberId, t.dueDate),
+  ],
+);
 
 // ---------------------------------------------------------------------------------------------
 // The light: quiet events, away, weekly reads

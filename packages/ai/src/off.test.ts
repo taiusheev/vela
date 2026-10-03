@@ -105,6 +105,7 @@ const CALLS: readonly (readonly [string, (ai: Ai) => Promise<AiOutcome<unknown>>
       moodWords: [],
       mentions: { people: [], places: [], plans: [], health: [], dates: [] },
       away: null,
+      dated: [],
       language: "zh-TW",
     },
   ],

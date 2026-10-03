@@ -1085,3 +1085,45 @@ export type RemoveBookEntry = z.infer<typeof RemoveBookEntry>;
 
 export const ApiBookRemoved = z.object({ exchange_id: z.uuid(), removed: z.literal(true) });
 export type ApiBookRemoved = z.infer<typeof ApiBookRemoved>;
+
+/**
+ * Something she said will happen on a known day (spec §12, build plan 5.3), offered to a family
+ * member as a reminder to ask how it went. Nothing exists for the member until they tap.
+ */
+export const ApiReminderSuggestion = z.object({
+  fact_id: z.uuid(),
+  about_member_id: z.uuid(),
+  about_name: z.string(),
+  /** Her words for it, in the family's language: "lunch with Auntie Lin". */
+  what: z.string(),
+  on: LocalDate,
+});
+export type ApiReminderSuggestion = z.infer<typeof ApiReminderSuggestion>;
+
+/** A reminder the member asked for: on `due_date`, ask her how `what` went. */
+export const ApiReminder = z.object({
+  id: z.uuid(),
+  about_member_id: z.uuid(),
+  about_name: z.string(),
+  what: z.string(),
+  due_date: LocalDate,
+  done: z.boolean(),
+});
+export type ApiReminder = z.infer<typeof ApiReminder>;
+
+export const ApiReminders = z.object({
+  suggestions: z.array(ApiReminderSuggestion),
+  reminders: z.array(ApiReminder),
+});
+export type ApiReminders = z.infer<typeof ApiReminders>;
+
+/** "Remind me to ask": the fact the reminder is made from. */
+export const CreateReminder = z.strictObject({ fact_id: z.uuid() });
+export type CreateReminder = z.infer<typeof CreateReminder>;
+
+/** "Done": no body, the reminder is in the path. */
+export const FinishReminder = z.strictObject({});
+export type FinishReminder = z.infer<typeof FinishReminder>;
+
+export const ApiReminderDone = z.object({ id: z.uuid(), done: z.literal(true) });
+export type ApiReminderDone = z.infer<typeof ApiReminderDone>;

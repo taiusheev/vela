@@ -147,6 +147,14 @@ msgstr "{name} said yes"
 msgid "{name} will look in."
 msgstr "{name} will look in."
 
+#: src/components/reminders.tsx
+msgid "{name}: {what}, {day}"
+msgstr "{name}: {what}, {day}"
+
+#: src/components/reminders.tsx
+msgid "{name}: {what}. You will be reminded to ask on {day}."
+msgstr "{name}: {what}. You will be reminded to ask on {day}."
+
 #: app/(tabs)/sunday.tsx
 msgid "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
 msgstr "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
@@ -340,6 +348,14 @@ msgstr "answered {time}"
 msgid "Anyone"
 msgstr "Anyone"
 
+#: src/components/reminders.tsx
+msgid "Ask {name}"
+msgstr "Ask {name}"
+
+#: src/components/reminders.tsx
+msgid "Ask {name} how {what} went"
+msgstr "Ask {name} how {what} went"
+
 #: app/(tabs)/sunday.tsx
 #: app/ask.tsx
 msgid "Ask {name} something"
@@ -472,6 +488,10 @@ msgstr "Close"
 msgid "Codes by text message do not reach {where} yet. Use your email instead."
 msgstr "Codes by text message do not reach {where} yet. Use your email instead."
 
+#: src/components/reminders.tsx
+msgid "Coming up"
+msgstr "Coming up"
+
 #: src/data/today.ts
 msgid "Dad"
 msgstr "Dad"
@@ -483,6 +503,10 @@ msgstr "Darwin"
 #: src/data/photos.ts
 msgid "Do you remember this?"
 msgstr "Do you remember this?"
+
+#: src/components/reminders.tsx
+msgid "Done"
+msgstr "Done"
 
 #. who a nearby contact is to her
 #. who a nearby contact is to her
@@ -604,6 +628,10 @@ msgstr "Her phone"
 #: src/auth/phone.ts
 msgid "Hong Kong"
 msgstr "Hong Kong"
+
+#: src/components/reminders.tsx
+msgid "How did {what} go?"
+msgstr "How did {what} go?"
 
 #: app/(tabs)/you.tsx
 msgid "How the quiet notices ended, in your family and across Vela"
@@ -1079,6 +1107,10 @@ msgstr "Recording your hello… {time} of 0:10"
 msgid "Recording… {time}"
 msgstr "Recording… {time}"
 
+#: src/components/reminders.tsx
+msgid "Remind me to ask how it went"
+msgstr "Remind me to ask how it went"
+
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 #: src/components/voice-hello.tsx
@@ -1134,6 +1166,7 @@ msgid "Said yes"
 msgstr "Said yes"
 
 #: app/onboarding.tsx
+#: src/components/reminders.tsx
 msgid "Saving…"
 msgstr "Saving…"
 

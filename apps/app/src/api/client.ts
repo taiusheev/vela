@@ -24,6 +24,9 @@ import type {
   ApiPushDeviceRemoved,
   ApiQuietNotice,
   ApiQuietState,
+  ApiReminder,
+  ApiReminderDone,
+  ApiReminders,
   ApiReply,
   ApiToday,
   ApiTrial,
@@ -156,6 +159,35 @@ export function removeBookEntry(
   token: string | null,
 ): Promise<ApiBookRemoved> {
   return call<ApiBookRemoved>({ path: `/v1/book/${exchangeId}/remove`, token, key, body: {} });
+}
+
+/** The caller's reminders and the family's coming plans (`GET /v1/families/:familyId/reminders`, spec §12). */
+export function fetchReminders(familyId: string, token: string | null): Promise<ApiReminders> {
+  return read<ApiReminders>(`/v1/families/${familyId}/reminders`, token);
+}
+
+/** "Remind me to ask": a reminder exists only after this tap. */
+export function createReminder(
+  familyId: string,
+  factId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiReminder> {
+  return call<ApiReminder>({
+    path: `/v1/families/${familyId}/reminders`,
+    token,
+    key,
+    body: { fact_id: factId },
+  });
+}
+
+/** "Done": the caller's own reminder, finished. */
+export function finishReminder(
+  reminderId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiReminderDone> {
+  return call<ApiReminderDone>({ path: `/v1/reminders/${reminderId}/done`, token, key, body: {} });
 }
 
 /** One exchange, for a link that names it (`GET /v1/exchanges/:exchangeId`); 404 when it is not hers to see. */

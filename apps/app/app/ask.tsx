@@ -69,9 +69,10 @@ export default function AskScreen() {
     await writeFlag(OFFERED_AFTER_ASK);
     return true;
   };
-  const params = useLocalSearchParams<{ recipient?: string; suggestion?: string }>(); // suggestion
+  // `text` comes from a reminder's "Ask" (spec §12): the question it suggests, for the asker to edit.
+  const params = useLocalSearchParams<{ recipient?: string; suggestion?: string; text?: string }>(); // suggestion
   const [kind, setKind] = useState<AskType>("question");
-  const [text, setText] = useState("");
+  const [text, setText] = useState(() => params.text ?? "");
   const [when, setWhen] = useState<When>("tomorrow");
   const [taken, setTaken] = useState<ApiAskConflict | null>(null);
   // A vote's options and a photo ask's photos (ADR-33), and what they add to the ask when sent.

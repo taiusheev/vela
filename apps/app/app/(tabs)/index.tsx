@@ -7,6 +7,7 @@ import { apiConfigured } from "../../src/api/client.ts";
 import { ExchangePhotos, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
+import { RemindersCard } from "../../src/components/reminders.tsx";
 import {
   Card,
   Eyebrow,
@@ -291,6 +292,7 @@ export default function TodayScreen() {
       {today.tomorrow.map((turn) => (
         <TomorrowCard key={turn.recipientId} tomorrow={turn} />
       ))}
+      <RemindersCard familyId={familyId} />
       <PrimaryButton label={t`Ask ${recipient} something`} onPress={() => router.push("/ask")} />
       {notice === undefined ? null : (
         <QuietNoticeSheet

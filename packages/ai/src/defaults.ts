@@ -40,6 +40,7 @@ export const SAFE_DEFAULTS: {
     moodWords: [],
     mentions: { people: [], places: [], plans: [], health: [], dates: [] },
     away: null,
+    dated: [],
     language: input.lang,
   }),
   flag: () => ({ flag: false, category: null, severity: null, evidenceQuote: null }),

@@ -499,6 +499,18 @@ function privacyNoticeUrlsOf(env: PilotEnv): Record<Lang, string> {
   };
 }
 
+/** The var `MEMORY` (spec §12): "on" keeps her dated plans for reminders; any other value is refused. */
+export function readMemory(env: { readonly MEMORY?: string }): boolean {
+  const value = env.MEMORY?.trim() ?? "";
+  if (value !== "on" && value !== "off") {
+    throw new ConfigError(
+      "MEMORY",
+      "MEMORY must be one of on, off: set it in the environment's vars in wrangler.jsonc",
+    );
+  }
+  return value === "on";
+}
+
 export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
   const environment = readEnvironment(env);
   checkDeployedEnv(env, environment, PILOT_URL_VARS, "wrangler.jsonc");
@@ -515,6 +527,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     privacyNoticeUrls,
     // The generator refuses notices whose versions differ, so the English one names both.
     privacyNoticeVersion: notices.en.version,
+    memory: readMemory(env),
   };
 }
 

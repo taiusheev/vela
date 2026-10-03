@@ -181,6 +181,12 @@ export interface Config {
    * the adult actually read, so it comes from the notices rather than from a constant here.
    */
   privacyNoticeVersion: string;
+  /**
+   * Whether understanding keeps her dated plans as memory facts for reminders (spec §12, `MEMORY`).
+   * Off in production until the privacy notice names memory and counsel has answered on health
+   * words (data map row 29); a plan is then not kept at all.
+   */
+  memory: boolean;
 }
 
 export interface Deps {

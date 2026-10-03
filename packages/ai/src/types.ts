@@ -189,6 +189,19 @@ export type Mentions = z.infer<typeof Mentions>;
  */
 export const AWAY_HORIZON_DAYS = 90;
 
+/**
+ * How far ahead of her answer a dated plan may be (spec §12): within the 30 days her words are kept,
+ * so a fact and the reminder made from it end before the words they came from would have.
+ */
+export const DATED_HORIZON_DAYS = 28;
+
+/** Something she said will happen on a known day ("lunch with Auntie Lin", Thursday's date). */
+export const DatedPlan = z.object({
+  what: z.string().min(1).max(60),
+  on: LocalDate,
+});
+export type DatedPlan = z.infer<typeof DatedPlan>;
+
 export const Understanding = z.object({
   /** One neutral line in `summaryLang`. */
   summary: z.string().min(1).max(200),
@@ -203,6 +216,11 @@ export const Understanding = z.object({
    * confirmation, comes from wherever she is going and leaves it open (flows §3.9).
    */
   away: z.object({ from: LocalDate, until: LocalDate.nullable() }).nullable(),
+  /**
+   * What she said will happen on a known day, between `today` and `DATED_HORIZON_DAYS` after it, in
+   * the family's language (spec §12). A family member may tap to be reminded to ask how it went.
+   */
+  dated: z.array(DatedPlan).max(3),
   /** BCP-47 tag of the language she answered in. */
   language: z.string().min(2).max(35),
 });

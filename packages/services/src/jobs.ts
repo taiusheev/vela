@@ -39,6 +39,7 @@ import {
   type Member,
   media,
   members,
+  memoryFacts,
   messageRefs,
   metricsDaily,
   nearbyContacts,
@@ -47,6 +48,7 @@ import {
   pushTickets,
   quietEvents,
   recipes,
+  reminders,
   replies,
   stories,
   suggestions,
@@ -1058,6 +1060,25 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .set({ text: "" })
       .where(and(lt(suggestions.createdAt, cutoff30), ne(suggestions.text, "")))
       .returning({ id: suggestions.id })
+  ).length;
+  // Her dated plans end two days after their day (spec §12, `keepDatedPlans`), and in any case with
+  // the 30 days of the words they came from. A reminder ends two days after it was due, done or not.
+  counts.memory_facts_deleted = (
+    await db
+      .delete(memoryFacts)
+      .where(or(lte(memoryFacts.expiresAt, now), lt(memoryFacts.createdAt, cutoff30)))
+      .returning({ id: memoryFacts.id })
+  ).length;
+  counts.reminders_deleted = (
+    await db
+      .delete(reminders)
+      .where(
+        or(
+          lt(reminders.dueDate, sql`(${now.toISOString()}::timestamptz - interval '2 days')::date`),
+          lt(reminders.createdAt, cutoff30),
+        ),
+      )
+      .returning({ id: reminders.id })
   ).length;
   counts.ai_call_outputs_cleared = (
     await db
