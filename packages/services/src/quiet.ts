@@ -460,6 +460,40 @@ export async function resolveQuietAsFine(
 }
 
 /**
+ * Away (spec §8: "Resolution: any answer, she's fine, or away"): a member says she is away while
+ * her morning is quiet, so the event, already locked by the caller and still open, closes with
+ * `away` and who said so; everyone else who was told hears it, as for "she's fine".
+ */
+export async function resolveQuietAsAway(
+  tx: VelaTransaction,
+  now: Date,
+  input: { quiet: QuietEvent; her: Member; resolverId: string },
+  emit: EmitOutbound,
+): Promise<void> {
+  const { quiet, her, resolverId } = input;
+  const [closed] = await tx
+    .update(quietEvents)
+    .set({ resolvedAt: now, outcome: "away", resolvedBy: resolverId })
+    .where(eq(quietEvents.id, quiet.id))
+    .returning();
+  if (closed === undefined) {
+    throw new Error("quiet event vanished under its caller's lock");
+  }
+  await tellNotified(tx, closed, her, emit);
+  await recordEvent(
+    tx,
+    {
+      name: "quiet_notice_resolved",
+      familyId: her.familyId,
+      memberId: her.id,
+      exchangeId: quiet.exchangeId,
+      props: { outcome: "away", by: resolverId },
+    },
+    now,
+  );
+}
+
+/**
  * "Wait 2 hours": the event, already locked by the caller and still open, is not to be raised again
  * before the wait ends. The wait is a threshold her schedule did not know about, so her next wake is
  * marked due at once — which `reconcile` finds should nothing else wake her. Returns when it ends.

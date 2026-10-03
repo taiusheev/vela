@@ -44,11 +44,12 @@ async function closingText(
         name: her.displayName,
         time: formatTime(closed.resolvedAt, her.tz),
       });
-    case "fine_known": {
+    case "fine_known":
+    case "away": {
       const resolver = closed.resolvedBy === null ? null : await memberById(db, closed.resolvedBy);
       return resolver === null
         ? null
-        : t(lang, "quiet.resolved_fine", {
+        : t(lang, closed.outcome === "away" ? "quiet.resolved_away" : "quiet.resolved_fine", {
             organiser: resolver.displayName,
             name: her.displayName,
           });

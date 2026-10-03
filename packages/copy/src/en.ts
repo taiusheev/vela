@@ -159,6 +159,7 @@ export const en = {
   "quiet.waiting": "I'll look again at {time}.",
   "quiet.resolved_answered": "{name} answered at {time}. Everything is lit again.",
   "quiet.resolved_fine": "{organiser} says {name} is fine.",
+  "quiet.resolved_away": "{organiser} says {name} is away.",
   "delivery.failed": "We couldn't reach {name} on {channel} today. Nothing else is known.",
   "flag.notice": '{name} said something you may want to hear: "{quote}"',
   "flag.notice_no_words": "{name} said something today that may be worth a call.",

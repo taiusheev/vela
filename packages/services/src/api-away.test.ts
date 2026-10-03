@@ -3,16 +3,19 @@
  * and quiet notices stop for those days, her light shows away, and her schedule decides again.
  */
 import { ApiAway, MemberLight } from "@vela/contracts";
-import { localDateOf } from "@vela/core";
-import { awayPeriods, members, users } from "@vela/db";
+import { localDateOf, TUNING } from "@vela/core";
+import { awayPeriods, members, outbound, quietEvents, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
 import { AwayRefusedError, endApiAway, setApiAway } from "./api-away.ts";
 import { loadApiLights } from "./api-lights.ts";
+import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
+import { deliverOutbound } from "./gateway.ts";
+import { openQuiet } from "./quiet.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedFamily, seedGroupMember } from "./testing/seed.ts";
+import { type SeededFamily, seedExchange, seedFamily, seedGroupMember } from "./testing/seed.ts";
 
 let h: Harness;
 let seed: SeededFamily;
@@ -107,6 +110,21 @@ describe("away from the app", () => {
       }),
     ).rejects.toBeInstanceOf(VelaError);
     expect(await h.db.select().from(awayPeriods)).toEqual([]);
+  });
+
+  it("closes a quiet morning as away, and tells the organiser who was told", async () => {
+    await seedExchange(h.db, seed, { date: today, state: "delivered", deliveredAt: h.clock.now() });
+    h.clock.advanceMinutes(TUNING.defaultQuietAfterMinutes);
+    await openQuiet(h.deps, seed.member.id, today, true);
+    await h.run({ outbound: (job: OutboundJob) => deliverOutbound(h.deps, job.outboundId) });
+
+    const set = await away(sam, today, null);
+
+    const [quiet] = await h.db.select().from(quietEvents);
+    expect(quiet).toMatchObject({ outcome: "away", resolvedAt: h.clock.now() });
+    expect(set.after.outboundIds).toHaveLength(1);
+    const [closing] = await h.db.select().from(outbound).where(eq(outbound.kind, "quiet_resolved"));
+    expect(closing?.conversationId).toBe(seed.organiserLink.externalId);
   });
 
   it("is ended by any member, and her light is hers again", async () => {

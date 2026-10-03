@@ -7,7 +7,7 @@
  */
 import { type ApiAway, type ApiMutationResponse, SetAway } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
-import { awayPeriods, type Member, members, type VelaTransaction } from "@vela/db";
+import { awayPeriods, type Member, members, quietEvents, type VelaTransaction } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
@@ -15,6 +15,8 @@ import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
+import { insertOutbound } from "./gateway.ts";
+import { resolveQuietAsAway } from "./quiet.ts";
 import { markWakeDue } from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -90,6 +92,13 @@ export async function setApiAway(
       mutate: async (tx) => {
         const access = await authorizeFamilyAccess(tx, identity, family);
         if (access.kind !== "granted") throw notFound();
+        // Her quiet morning first, then her row: the order her answer takes them in, so the two
+        // cannot deadlock (`resolveQuietOnAnswer`).
+        const [quiet] = await tx
+          .select()
+          .from(quietEvents)
+          .where(and(eq(quietEvents.memberId, herId), isNull(quietEvents.resolvedAt)))
+          .for("update");
         const her = await lockHer(tx, family, herId);
         const today = localDateOf(now, her.tz);
         const horizon = addDays(today, AWAY_HORIZON_DAYS);
@@ -138,6 +147,18 @@ export async function setApiAway(
             now,
           );
           await decideAgain(tx, her, now, after);
+        }
+        // Away from today closes a quiet morning that is open (spec §8), and tells who was told.
+        if (quiet !== undefined && from <= today) {
+          await resolveQuietAsAway(
+            tx,
+            now,
+            { quiet, her, resolverId: access.access.memberId },
+            async (request) => {
+              const written = await insertOutbound(deps, tx, request);
+              if ("outboundId" in written) after.outboundIds.push(written.outboundId);
+            },
+          );
         }
         const body: ApiAway = {
           id: period.id,

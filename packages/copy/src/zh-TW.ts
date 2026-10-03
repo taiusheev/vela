@@ -120,6 +120,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "quiet.waiting": "我會在 {time} 再看看。",
   "quiet.resolved_answered": "{name}在 {time} 回覆了。燈又亮了。",
   "quiet.resolved_fine": "{organiser}說{name}沒事。",
+  "quiet.resolved_away": "{organiser}說{name}不在家。",
   "delivery.failed": "今天沒辦法透過 {channel} 把訊息送給{name}。除此之外，目前沒有別的消息。",
   "flag.notice": "{name}說了一句話，您可能會想知道：「{quote}」",
   "flag.notice_no_words": "{name}今天說了一些話，也許值得打個電話問問。",
