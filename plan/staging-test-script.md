@@ -1,4 +1,4 @@
-# Staging test script: everything built 1–2 October 2026
+# Staging test script: everything built 1–3 October 2026
 
 For the founder, on staging, with the Android build from 2 October (EAS build `45eb0cd4`) and the staging bot **@VelaLightstagingbot**. Staging holds test data only. Each step says what you do and what you should see; tick it off, or note what you saw instead and send it to Claude.
 
@@ -61,6 +61,19 @@ What Expo Go cannot do, which a real build can: no push notifications and no mor
 6. Now answer as Mom. ✅ Anna gets "Mom has answered now, so there is no need to look in."
 7. As Anna, send **stop**. ✅ Anna is removed, and People nearby no longer lists her.
 8. Optional: invite someone and tap **No**. ✅ They are deleted at once.
+
+## 6 · Story day and the family book
+
+1. On phone A, open the **Sunday** tab. ✅ At the bottom, "Story day" offers a story question for Mom's next Sunday.
+2. Tap **Another question** once. ✅ A different question appears. Tap **Ask it on Sunday**.
+   - ✅ It says the question is on its way for Sunday.
+3. On Sunday morning, answer as Mom: on Telegram with words or a voice note, or on her phone with **🎙 Answer with your voice**.
+   - ✅ On Telegram, her thanks says "Your story is kept in the family book." with **Don't keep this one**.
+4. On phone A, Sunday tab → **Read the family book**. ✅ The story shows: the question, who asked, her words, and **▶ Her voice** when she answered by voice on her phone.
+5. As Mom on Telegram, tap **Don't keep this one**. ✅ She is told the story is no longer in the book, and it is gone from the book on phone A.
+6. Optional, as an organiser: on another story, tap **Take this story out of the book**. ✅ It disappears.
+
+Not there yet: voting on questions, and a PDF of the book.
 
 ---
 
