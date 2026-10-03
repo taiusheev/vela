@@ -1059,7 +1059,7 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
      - `profile` by conversation letter and null on 404; leaving by letter, 404 as done.
    - Founder: nothing.
    - **Done** on `feat/line`.
-4. **Services: channels by member, Telegram unchanged.**
+4. **Services: channels by member, Telegram unchanged.** *Built 3 October 2026, except the invite link.* `repo.ts` gains `MESSENGERS`, `isMessenger` and the `MESSENGER` choice. `linkedGroupOfFamily`, `activeOrganisersWithLinks`, `reachableOrganisers` and `channelLinkOfMember` take it to mean whichever messenger the person or the family's group is on: a person's link on their primary surface, else their earliest messenger link. Every Telegram constant reads it now. Her mornings go to her primary surface. Her yes, a lazily created group member and the Telegram onboarding set it from the channel they came on. A second group on any messenger is refused (D9). The harness's `h.line` is the Telegram fake under LINE's id, and `line-family.test.ts` shows a family on LINE getting her morning, the turn prompt, a quiet notice and the post of her answer there and nothing on Telegram. `inviteLink` for LINE waits for `Config.lineBasicId`, which comes with step 5.
    - Files: the eight modules of §5.11's first item, `repo.ts`, `invites.ts`, `deps.ts` (`Config.lineBasicId`), `testing/harness.ts` (several channels), and a new `testing/fake-line.ts` with LINE's capabilities, reply and push recorded apart, settable profiles and quota.
    - Tests:
      - the existing suite unchanged;

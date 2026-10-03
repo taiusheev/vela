@@ -38,7 +38,7 @@ import {
   recordDeletion,
   subjectRef,
 } from "./proofs.ts";
-import { activeOrganisersWithLinks, type Queryable } from "./repo.ts";
+import { activeOrganisersWithLinks, MESSENGER, type Queryable } from "./repo.ts";
 
 /** The text a contact's tap answers: text B of the nearby-contact consent, on Telegram. */
 export const NEARBY_TEXT_VERSION = "nearby-consent.v2";
@@ -47,7 +47,8 @@ const NEARBY_START = /^n[A-Za-z0-9_-]{32}$/;
 const NEARBY_TOKEN_BYTES = 24;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Organisers are told on Telegram, where the pilot reaches them. */
-const ORGANISER_CHANNEL = "telegram" as const;
+/** Organisers are reached on their own messenger (05-line-flows §5.11). */
+const ORGANISER_CHANNEL = MESSENGER;
 /** What a contact sends to be removed, in either language. */
 const STOP = /^\/?(stop|停|停止)$/i;
 
@@ -237,7 +238,7 @@ async function tellOrganisers(
         suffix,
       }),
       memberId: organiser.member.id,
-      channel: ORGANISER_CHANNEL,
+      channel: organiser.link.channel,
       conversationId: organiser.link.externalId,
       lang,
       text: t(lang, key, { contact: contact.name, name: addressOf(her) }),

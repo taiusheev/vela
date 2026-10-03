@@ -84,6 +84,7 @@ import {
   groupChannelOf,
   hasHealthWordsConsent,
   linkedGroupOfFamily,
+  MESSENGER,
   markWakeDue,
   memberById,
   type Queryable,
@@ -637,8 +638,8 @@ async function raiseFlag(
   const { answer, member, family, exchange } = ctx;
   const quote = flag.evidenceQuote ?? words;
   const written: InsertResult[] = [];
-  // Organisers are told where the family is, Telegram for an answer from her phone (ADR-35).
-  const organisers = await activeOrganisersWithLinks(tx, family.id, groupChannelOf(answer.channel));
+  // Organisers are told on their own messenger, wherever her answer came from (ADR-35, 05 §5.11).
+  const organisers = await activeOrganisersWithLinks(tx, family.id, MESSENGER);
   for (const organiser of organisers) {
     const lang = organiser.member.language;
     const result = await insertOutbound(deps, tx, {
@@ -955,7 +956,7 @@ async function postWordsToGroup(
       suffix: `${answer.id}:transcript`,
     }),
     memberId: member.id,
-    channel,
+    channel: group.channel,
     conversationId: group.conversationId,
     exchangeId: exchange.id,
     lang,

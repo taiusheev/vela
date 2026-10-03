@@ -35,11 +35,12 @@ import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { summariesForHer } from "./pipeline.ts";
-import { activeOrganisersWithLinks, familyById, markWakeDue } from "./repo.ts";
+import { activeOrganisersWithLinks, familyById, MESSENGER, markWakeDue } from "./repo.ts";
 import { type TickMember, tickMember } from "./tick.ts";
 
 /** The pilot's organisers are reached on Telegram (flows §3.13). */
-const ORGANISER_CHANNEL = "telegram";
+/** Organisers are reached on their own messenger (05-line-flows §5.11). */
+const ORGANISER_CHANNEL = MESSENGER;
 
 /** "The summaries of her last seven answered days" (flows §3.13). */
 const SUMMARY_DAYS = 7;

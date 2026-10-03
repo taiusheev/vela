@@ -91,7 +91,15 @@ interface FailureRule {
   readonly options: FailureOptions;
 }
 
-export function createFakeTelegram(clock: Clock): FakeTelegram {
+/**
+ * `id` makes the same fake stand for another messenger, so a family can live on LINE in a test
+ * (05-line-flows §8, step 4): routing is what those tests prove, and LINE's own behaviour belongs
+ * to its adapter's tests.
+ */
+export function createFakeTelegram(
+  clock: Clock,
+  id: "telegram" | "line" = "telegram",
+): FakeTelegram {
   const sent: SentMessage[] = [];
   const failed: FailedSend[] = [];
   const closed: ClosedButtons[] = [];
@@ -121,7 +129,7 @@ export function createFakeTelegram(clock: Clock): FakeTelegram {
   }
 
   return {
-    id: "telegram",
+    id,
     capabilities: CAPABILITIES,
     sent,
     failed,

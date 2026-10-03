@@ -193,11 +193,12 @@ describe("the harness", () => {
     await expect(h.telegram.send(message("1001"))).resolves.toBeDefined();
   });
 
-  it("hands out deterministic tokens and a Telegram adapter through the registry", () => {
+  it("hands out deterministic tokens, and Telegram and LINE adapters through the registry", () => {
     expect(h.random.token()).toMatch(/^token-1/);
     expect(h.random.token(8)).toMatch(/^token-2/);
     expect(h.deps.channels.get("telegram")).toBe(h.telegram);
-    expect(() => h.deps.channels.get("line")).toThrow(/no adapter/);
+    expect(h.deps.channels.get("line")).toBe(h.line);
+    expect(() => h.deps.channels.get("whatsapp")).toThrow(/no adapter/);
     expect(h.config.privacyNoticeUrls["zh-TW"]).toContain("zh-TW");
     expect(h.config.privacyNoticeUrls.ja).toBe(h.config.privacyNoticeUrls.en);
   });

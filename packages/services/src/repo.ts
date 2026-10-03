@@ -103,10 +103,10 @@ export async function familyByLinkedGroup(
 /**
  * The channel of the family group that sees what came in on `channel`: the same one, except for her
  * phone on the parent surface (ADR-35), which has no group of its own, so what she says there is
- * posted to the family's Telegram group, where her mornings' turn prompts already go.
+ * posted to the family's group on whichever messenger it is, where her turn prompts already go.
  */
-export function groupChannelOf(channel: Channel): Channel {
-  return channel === "device" ? "telegram" : channel;
+export function groupChannelOf(channel: Channel): Channel | typeof MESSENGER {
+  return channel === "device" ? MESSENGER : channel;
 }
 
 /**
@@ -145,7 +145,7 @@ export async function deviceFileForGroup(
 export async function linkedGroupOfFamily(
   db: Queryable,
   familyId: string,
-  channel: Channel,
+  channel: Channel | typeof MESSENGER,
 ): Promise<FamilyChannel | null> {
   const rows = await db
     .select()
@@ -153,13 +153,49 @@ export async function linkedGroupOfFamily(
     .where(
       and(
         eq(familyChannels.familyId, familyId),
-        eq(familyChannels.channel, channel),
+        channel === MESSENGER
+          ? inArray(familyChannels.channel, [...MESSENGERS])
+          : eq(familyChannels.channel, channel),
         eq(familyChannels.kind, "group"),
         isNull(familyChannels.unlinkedAt),
       ),
     )
+    .orderBy(asc(familyChannels.linkedAt), asc(familyChannels.id))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * The messengers people talk to Vela on, as against the app and her phone (05-line-flows §5.11).
+ * A family has its group on one of them (D9), and each person is reached on their own.
+ */
+export const MESSENGERS = ["telegram", "line", "whatsapp"] as const satisfies readonly Channel[];
+export type Messenger = (typeof MESSENGERS)[number];
+
+/** In place of a channel: whichever messenger the person, or the family's group, is on. */
+export const MESSENGER = "messenger";
+
+export function isMessenger(channel: string): channel is Messenger {
+  return (MESSENGERS as readonly string[]).includes(channel);
+}
+
+/**
+ * One link per person: the one on their primary surface when that is a messenger, else their
+ * earliest messenger link. Rows come sorted by member; the order within a member is kept.
+ */
+function onePerMember<T extends { member: Member; link: ChannelLink | null }>(rows: T[]): T[] {
+  const chosen = new Map<string, T>();
+  for (const row of rows) {
+    const known = chosen.get(row.member.id);
+    if (known === undefined || known.link === null) {
+      chosen.set(row.member.id, row);
+      continue;
+    }
+    if (row.link !== null && row.link.channel === row.member.primarySurface) {
+      if (known.link.channel !== row.member.primarySurface) chosen.set(row.member.id, row);
+    }
+  }
+  return rows.filter((row) => chosen.get(row.member.id) === row);
 }
 
 export interface MemberLink {
@@ -174,14 +210,19 @@ export interface MemberLink {
 export async function activeOrganisersWithLinks(
   db: Queryable,
   familyId: string,
-  channel: Channel,
+  channel: Channel | typeof MESSENGER,
 ): Promise<MemberLink[]> {
-  return db
+  const rows = await db
     .select({ member: members, link: channelLinks })
     .from(members)
     .innerJoin(
       channelLinks,
-      and(eq(channelLinks.memberId, members.id), eq(channelLinks.channel, channel)),
+      and(
+        eq(channelLinks.memberId, members.id),
+        channel === MESSENGER
+          ? inArray(channelLinks.channel, [...MESSENGERS])
+          : eq(channelLinks.channel, channel),
+      ),
     )
     .where(
       and(
@@ -191,7 +232,8 @@ export async function activeOrganisersWithLinks(
         isNull(channelLinks.blockedAt),
       ),
     )
-    .orderBy(members.createdAt, members.id);
+    .orderBy(members.createdAt, members.id, channelLinks.linkedAt, channelLinks.id);
+  return channel === MESSENGER ? onePerMember(rows) : rows;
 }
 
 /**
@@ -263,8 +305,19 @@ export async function setChannelLinkBlocked(
 export async function channelLinkOfMember(
   db: Queryable,
   memberId: string,
-  channel: Channel,
+  channel: Channel | typeof MESSENGER,
 ): Promise<ChannelLink | null> {
+  if (channel === MESSENGER) {
+    const rows = await db
+      .select({ member: members, link: channelLinks })
+      .from(channelLinks)
+      .innerJoin(members, eq(members.id, channelLinks.memberId))
+      .where(
+        and(eq(channelLinks.memberId, memberId), inArray(channelLinks.channel, [...MESSENGERS])),
+      )
+      .orderBy(asc(channelLinks.linkedAt), asc(channelLinks.id));
+    return onePerMember(rows)[0]?.link ?? null;
+  }
   const rows = await db
     .select()
     .from(channelLinks)
@@ -818,7 +871,7 @@ export interface ReachableOrganiser {
 export async function reachableOrganisers(
   db: Queryable,
   familyId: string,
-  channel: Channel,
+  channel: Channel | typeof MESSENGER,
   pushOn: boolean,
 ): Promise<ReachableOrganiser[]> {
   const push = pushOn
@@ -831,7 +884,9 @@ export async function reachableOrganisers(
       channelLinks,
       and(
         eq(channelLinks.memberId, members.id),
-        eq(channelLinks.channel, channel),
+        channel === MESSENGER
+          ? inArray(channelLinks.channel, [...MESSENGERS])
+          : eq(channelLinks.channel, channel),
         isNull(channelLinks.blockedAt),
       ),
     )
@@ -843,8 +898,9 @@ export async function reachableOrganisers(
       ),
     )
     .orderBy(members.createdAt, members.id, channelLinks.linkedAt, channelLinks.id);
+  const chosen = channel === MESSENGER ? onePerMember(rows) : rows;
   const byMember = new Map<string, ReachableOrganiser>();
-  for (const row of rows) {
+  for (const row of chosen) {
     const known = byMember.get(row.member.id);
     const organiser = known ?? { member: row.member, links: [], push: row.push === true };
     if (row.link !== null) organiser.links.push(row.link);

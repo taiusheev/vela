@@ -70,12 +70,15 @@ import {
   channelLinkOfMember,
   exchangeForLocalDate,
   familyById,
+  isMessenger,
   linkedGroupOfFamily,
+  MESSENGER,
   memberById,
   type Queryable,
 } from "./repo.ts";
 
 /** The pilot's kept-light members and families are reached on Telegram. */
+/** Where her mornings go when her surface names no messenger: the pilot's first. */
 export const ARRIVAL_CHANNEL: Channel = "telegram";
 
 /**
@@ -83,7 +86,8 @@ export const ARRIVAL_CHANNEL: Channel = "telegram";
  * surface (ADR-35), else Telegram. The family group stays on `ARRIVAL_CHANNEL`.
  */
 export function arrivalChannelOf(member: Pick<Member, "primarySurface">): Channel {
-  return member.primarySurface === "parent-surface" ? "device" : ARRIVAL_CHANNEL;
+  if (member.primarySurface === "parent-surface") return "device";
+  return isMessenger(member.primarySurface) ? member.primarySurface : ARRIVAL_CHANNEL;
 }
 
 /** `OutboundMessage.media` allows at most ten items. */
@@ -879,7 +883,7 @@ export async function sendTurnPrompt(
     deps.logger.warn("turn_prompt_context_missing", { recipientId, forDate });
     return;
   }
-  const group = await linkedGroupOfFamily(deps.db, family.id, ARRIVAL_CHANNEL);
+  const group = await linkedGroupOfFamily(deps.db, family.id, MESSENGER);
   const holders = await turnHolders(deps.db, family.id);
   const [previous] = await deps.db
     .select({ holderId: turns.holderId })

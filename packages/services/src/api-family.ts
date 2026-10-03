@@ -10,8 +10,7 @@ import {
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { accountCanBeToldByPush } from "./push-devices.ts";
-import { NOTICE_CHANNEL } from "./quiet-closing.ts";
-import { familyById, type Queryable } from "./repo.ts";
+import { familyById, MESSENGERS, type Queryable } from "./repo.ts";
 
 type Light = ApiFamily["members"][number]["light"];
 
@@ -47,7 +46,7 @@ async function toldIfQuiet(
     .where(
       and(
         eq(channelLinks.memberId, memberId),
-        eq(channelLinks.channel, NOTICE_CHANNEL),
+        inArray(channelLinks.channel, [...MESSENGERS]),
         isNull(channelLinks.blockedAt),
       ),
     )

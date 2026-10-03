@@ -25,11 +25,13 @@ import {
   familyHasEnded,
   linkedGroupOfFamily,
   lockExchangeForLocalDate,
+  MESSENGER,
   memberById,
 } from "./repo.ts";
 
 /** The family group the app's asks are told to: the Telegram one, as the pilot's arrivals are. */
-const GROUP_CHANNEL = "telegram" as const;
+/** The family group, on whichever messenger it is (one per family, D9). */
+const GROUP_CHANNEL = MESSENGER;
 
 /**
  * That morning is already someone's (spec §14.1 A7: "the screen says so and offers the day after or
@@ -390,7 +392,7 @@ export async function composeApiAsk(
               suffix: `app-ask:${exchange.id}`,
             }),
             memberId: asker.id,
-            channel: GROUP_CHANNEL,
+            channel: group.channel,
             conversationId: group.conversationId,
             exchangeId: exchange.id,
             lang: family.language,

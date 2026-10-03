@@ -22,10 +22,11 @@ import { and, eq } from "drizzle-orm";
 import { formatTime } from "./format.ts";
 import type { OutboundRequest } from "./gateway.ts";
 import { PUSH_CHANNEL } from "./push-messages.ts";
-import { channelLinkOfMember, memberById, type Queryable } from "./repo.ts";
+import { channelLinkOfMember, isMessenger, MESSENGER, memberById, type Queryable } from "./repo.ts";
 
 /** Quiet notices go out on Telegram in the pilot, and so do the messages that close them. */
-export const NOTICE_CHANNEL: Channel = "telegram";
+/** Organisers hear of a quiet morning on their own messenger (05-line-flows §5.11). */
+export const NOTICE_CHANNEL = MESSENGER;
 
 /** The words that close `closed` for a reader in `lang`, or null for an outcome that tells no one. */
 async function closingText(
@@ -158,7 +159,7 @@ export async function closingNoticesFor(
   channel?: Channel,
 ): Promise<OutboundRequest[]> {
   const notices: OutboundRequest[] = [];
-  if (channel === undefined || channel === NOTICE_CHANNEL) {
+  if (channel === undefined || isMessenger(channel)) {
     const notice = await closingNoticeFor(db, closed, her, readerId);
     if (notice !== null) notices.push(notice);
   }

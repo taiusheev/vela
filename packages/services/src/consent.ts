@@ -13,7 +13,7 @@
  * goes straight to the adapter, as onboarding's prompts do; so does the reply to a No, since her
  * member row is gone by then.
  */
-import type { Button, Channel, InboundEvent, Lang } from "@vela/contracts";
+import type { Button, InboundEvent, Lang } from "@vela/contracts";
 import { type MessageKey, t } from "@vela/copy";
 import {
   addDays,
@@ -47,6 +47,8 @@ import {
 import {
   activeOrganisersWithLinks,
   familyById,
+  isMessenger,
+  MESSENGER,
   type MemberWithFamily,
   memberByChannelUser,
   memberById,
@@ -67,7 +69,8 @@ export const HEALTH_WORDS_TEXT_VERSION = "consent.health_words@1";
 export const HEALTH_WORDS_QUESTION_DELAY_SECONDS = 10;
 
 /** The pilot's organisers are reached on Telegram (flows §3.2). */
-const ORGANISER_CHANNEL: Channel = "telegram";
+/** Organisers are reached on their own messenger (05-line-flows §5.11). */
+const ORGANISER_CHANNEL = MESSENGER;
 
 export type ConsentButtonAction = Extract<ButtonAction, { type: "consent" }>;
 export type HealthWordsButtonAction = Extract<ButtonAction, { type: "health_words" }>;
@@ -240,6 +243,13 @@ async function acceptInvite(
     .returning({ id: channelLinks.id });
   if (link === undefined) {
     return "linked_elsewhere";
+  }
+  // Her mornings go where she said yes (05-line-flows §5.11), unless her phone is her surface.
+  if (isMessenger(event.channel) && member.primarySurface !== "parent-surface") {
+    await tx
+      .update(members)
+      .set({ primarySurface: event.channel })
+      .where(eq(members.id, member.id));
   }
   await tx
     .update(invites)

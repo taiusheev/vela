@@ -35,7 +35,9 @@ import { groupNoticeEvidence, subjectRef } from "./proofs.ts";
 import {
   familyById,
   familyHasEnded,
+  isMessenger,
   linkedGroupOfFamily,
+  MESSENGER,
   type MemberWithFamily,
   memberByChannelUser,
   type Queryable,
@@ -173,8 +175,13 @@ export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<v
     return;
   }
   const conversationId = event.conversation.externalId;
-  const current = await linkedGroupOfFamily(deps.db, sender.family.id, event.channel);
-  if (current !== null && current.conversationId === conversationId) {
+  // One group per family, on whichever messenger (D9): a group on another one is a second group.
+  const current = await linkedGroupOfFamily(deps.db, sender.family.id, MESSENGER);
+  if (
+    current !== null &&
+    current.channel === event.channel &&
+    current.conversationId === conversationId
+  ) {
     // The same group again: Telegram can report one addition twice.
     return;
   }
@@ -441,7 +448,7 @@ export async function resolveGroupSender(
         tz: her?.tz ?? "UTC",
         country: her?.country ?? family.country,
         status: "active",
-        primarySurface: "telegram",
+        primarySurface: isMessenger(event.channel) ? event.channel : "telegram",
         createdAt: now,
       })
       .returning();

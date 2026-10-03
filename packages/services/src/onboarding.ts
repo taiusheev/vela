@@ -40,7 +40,7 @@ import {
   insertInvitedMember,
   NAME_MAX_LENGTH,
 } from "./invites.ts";
-import { type MemberWithFamily, memberByChannelUser } from "./repo.ts";
+import { isMessenger, type MemberWithFamily, memberByChannelUser } from "./repo.ts";
 
 /** A session that hears nothing for a day is abandoned (flows §3.1). */
 const SESSION_HOURS = 24;
@@ -503,7 +503,7 @@ async function createFamily(
       tz: data.timeZone,
       country: data.country,
       status: "active",
-      primarySurface: "telegram",
+      primarySurface: isMessenger(event.channel) ? event.channel : "telegram",
       createdAt: now,
     })
     .returning();

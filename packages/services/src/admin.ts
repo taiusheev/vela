@@ -19,7 +19,6 @@
 import { isAiOff } from "@vela/ai";
 import {
   type AdminAction,
-  type Channel,
   type DomainEvent,
   isIanaTimeZone,
   Lang,
@@ -96,13 +95,16 @@ import {
   exchangeForLocalDate,
   familyById,
   keptLightMembersOfFamily,
+  MESSENGER,
+  MESSENGERS,
   markWakeDue,
   memberById,
   type Queryable,
 } from "./repo.ts";
 
 /** The pilot's organisers are reached on Telegram (flows §3.17). */
-const ORGANISER_CHANNEL: Channel = "telegram";
+/** Organisers are reached on their own messenger (05-line-flows §5.11). */
+const ORGANISER_CHANNEL = MESSENGER;
 
 /** Spec Appendix A: at most two people near her, so a quiet notice stays a short list to call. */
 export const MAX_NEARBY_CONTACTS = 2;
@@ -797,7 +799,7 @@ export async function createInvite(
     }
     const link = await channelLinkOfMember(tx, organiser.id, ORGANISER_CHANNEL);
     if (link === null) {
-      throw new VelaError("no_channel_link", "create_invite: the organiser has no Telegram link");
+      throw new VelaError("no_channel_link", "create_invite: the organiser has no messenger link");
     }
     const her = await insertInvitedMember(
       tx,
@@ -1727,7 +1729,7 @@ export async function loadFamilyPage(
     .from(members)
     .leftJoin(
       channelLinks,
-      and(eq(channelLinks.memberId, members.id), eq(channelLinks.channel, ORGANISER_CHANNEL)),
+      and(eq(channelLinks.memberId, members.id), inArray(channelLinks.channel, [...MESSENGERS])),
     )
     .where(eq(members.familyId, family.id))
     .orderBy(asc(members.createdAt), asc(members.id));
