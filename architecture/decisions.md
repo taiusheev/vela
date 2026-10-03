@@ -631,7 +631,7 @@ Decision (proposed):
    - `answers.transcript`, the `text` inside `answers.payload`, `answers.summary`, `answers.flag_reason`, `answers.mentions`, `answers.mood_words`;
    - `replies.text`, `exchanges.text` and `exchanges.options`, `chips.chips`, `suggestions.text`, `translations.text`;
    - `weekly_reads.lines`, `sent_lines`, `suggestion` and `sent_suggestion`;
-   - `stories.transcript`, `recipes`' text and the rest of the family book's words (5.1);
+   - `stories.transcript`, `recipes.title` and `recipes.card` (ADR-41), and the rest of the family book's words (5.1);
    - `memory_facts.text` and `reminders.text`, the plans and facts drawn from her answers (5.3, ADR-40);
    - `outbound.payload`, `ai_calls.output`, and the reply text in `quiet_events.ask_to_check`.
 
