@@ -9,6 +9,7 @@ import {
   replies,
   type Suggestion,
   suggestions,
+  translations,
   turns,
   users,
 } from "@vela/db";
@@ -163,6 +164,7 @@ describe("loadApiToday", () => {
           at: answeredAt.toISOString(),
           picked_media_id: null,
           picked_number: null,
+          translation: null,
         },
         replies: [
           { from: "Mia", kind: "heart", text: null, photo: null },
@@ -199,6 +201,35 @@ describe("loadApiToday", () => {
       receivedAt: new Date(h.clock.now().getTime() - 60_000),
     });
     expect((await load())?.exchanges[0]?.answer?.text).toBe("Sunny all day");
+  });
+
+  it("carries the family's translation of her words beside her own", async () => {
+    const exchange = await seedExchange(h.db, seed, { date: today(), state: "answered" });
+    const [answer] = await h.db
+      .insert(answers)
+      .values({
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        kind: "text",
+        channel: "telegram",
+        externalId: "2001:7",
+        payload: { text: "我煮了地瓜粥。" },
+        receivedAt: new Date(h.clock.now().getTime() - 60_000),
+      })
+      .returning();
+    expect((await load())?.exchanges[0]?.answer?.translation).toBeNull();
+
+    await h.db.insert(translations).values({
+      objectType: "answer",
+      objectId: answer?.id ?? "",
+      lang: "en",
+      text: "I made sweet potato porridge.",
+      provider: "claude:test",
+    });
+    expect((await load())?.exchanges[0]?.answer).toMatchObject({
+      text: "我煮了地瓜粥。",
+      translation: { lang: "en", text: "I made sweet potato porridge." },
+    });
   });
 
   it("keeps her latest words when she sent more than one, and the receipt once she has opened it", async () => {

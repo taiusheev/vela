@@ -1115,6 +1115,7 @@ describe("her pick on a choice whose photo was deleted after it went out", () =>
       kind: "photo_pick",
       picked_media_id: ask.photos[1],
       picked_number: 2,
+      translation: null,
     });
   });
 
@@ -1138,6 +1139,7 @@ describe("her pick on a choice whose photo was deleted after it went out", () =>
       kind: "photo_pick",
       picked_media_id: first,
       picked_number: 1,
+      translation: null,
     });
   });
 });

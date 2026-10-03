@@ -1,10 +1,10 @@
-import type {
-  ApiToday,
-  ApiTodayAnswer,
-  ApiTodayExchange,
-  ApiTomorrowTurn,
+import {
+  type ApiToday,
+  type ApiTodayAnswer,
+  type ApiTodayExchange,
+  type ApiTomorrowTurn,
   Lang,
-  LocalDate,
+  type LocalDate,
 } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
 import {
@@ -15,6 +15,7 @@ import {
   members,
   replies,
   suggestions,
+  translations,
   turns,
 } from "@vela/db";
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
@@ -117,6 +118,20 @@ async function nameOf(db: Queryable, memberId: string | null): Promise<string | 
   return row?.displayName ?? null;
 }
 
+/** Her answer in the family's language, the one translation the pipeline writes for it. */
+async function translationOf(
+  db: Queryable,
+  answerId: string,
+): Promise<{ lang: Lang; text: string } | null> {
+  const [row] = await db
+    .select({ lang: translations.lang, text: translations.text })
+    .from(translations)
+    .where(and(eq(translations.objectType, "answer"), eq(translations.objectId, answerId)))
+    .limit(1);
+  const lang = Lang.safeParse(row?.lang);
+  return row === undefined || !lang.success ? null : { lang: lang.data, text: row.text };
+}
+
 /** One exchange as a family reads it. Shared with the Exchanges list, which shows the same card. */
 export async function exchangeRow(
   db: Queryable,
@@ -125,6 +140,7 @@ export async function exchangeRow(
 ): Promise<ApiTodayExchange> {
   const [answer] = await db
     .select({
+      id: answers.id,
       kind: answers.kind,
       text: answerText,
       receivedAt: answers.receivedAt,
@@ -161,6 +177,7 @@ export async function exchangeRow(
             text: answer.text,
             at: answer.receivedAt.toISOString(),
             ...(await pickedPhoto(db, exchange)),
+            translation: answer.text === null ? null : await translationOf(db, answer.id),
           },
     replies: await Promise.all(
       replyRows.map(async ({ mediaId, ...reply }) => ({

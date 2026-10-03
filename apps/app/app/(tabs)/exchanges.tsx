@@ -79,9 +79,8 @@ export default function ExchangesScreen() {
   const { t } = useLingui();
   const [originals, setOriginals] = useState(false);
   const { exchanges, live, loading, trouble, more, loadMore } = useExchanges();
-  // Her originals come from translations the API does not carry yet, so the switch is offered
-  // only on the example days, where it has something to show.
-  const canShowOriginals = !live;
+  // The switch is offered when something listed was translated for this reader (spec A8).
+  const canShowOriginals = exchanges.some((exchange) => exchange.answer?.original !== undefined);
 
   return (
     <ScrollView

@@ -260,11 +260,35 @@ describe("Today's card while its ask has no answer", () => {
         at: TWO_THIRTY_TWO,
         picked_media_id: null,
         picked_number: null,
+        translation: null,
       },
     });
     const card = cardIn("en", [light({ state: "lit", answered_at: TWO_THIRTY_TWO })], answered);
     expect(card?.answer).toEqual({ text: "Beans.", at: "14:32" });
     expect(card).not.toHaveProperty("unanswered");
+  });
+
+  it("shows her words in the reader's language when the family's translation is in it, keeping hers as the original", () => {
+    const translated = exchange({
+      answer: {
+        kind: "text",
+        text: "我煮了地瓜粥。",
+        at: TWO_THIRTY_TWO,
+        picked_media_id: null,
+        picked_number: null,
+        translation: { lang: "en", text: "I made sweet potato porridge." },
+      },
+    });
+    const lit = [light({ state: "lit", answered_at: TWO_THIRTY_TWO })];
+    expect(cardIn("en", lit, translated)?.answer).toEqual({
+      text: "I made sweet potato porridge.",
+      at: "14:32",
+      original: "我煮了地瓜粥。",
+    });
+    expect(cardIn("zh-TW", lit, translated)?.answer).toEqual({
+      text: "我煮了地瓜粥。",
+      at: "14:32",
+    });
   });
 });
 
@@ -284,6 +308,7 @@ describe("Today's card for her pick on a photo choice", () => {
         at: TWO_THIRTY_TWO,
         picked_media_id: FIRST,
         picked_number: 1,
+        translation: null,
       },
       photos: [{ id: SECOND, width: null, height: null, stored: false }],
       ...fields,
@@ -309,6 +334,7 @@ describe("Today's card for her pick on a photo choice", () => {
         at: TWO_THIRTY_TWO,
         picked_media_id: null,
         picked_number: null,
+        translation: null,
       },
     });
     expect(cardIn("en", lights, unnumbered)?.answer?.text).toBe("picked a photo");

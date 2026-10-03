@@ -188,6 +188,7 @@ describe("the photos Today and Exchanges show", () => {
       at: "2026-09-23T08:12:00+08:00",
       picked_media_id: PHOTO_TWO,
       picked_number: 2,
+      translation: null,
     },
     replies: [],
     seen_at: null,
@@ -219,6 +220,7 @@ describe("the photos Today and Exchanges show", () => {
       { answer: { ...exchange.answer, picked_media_id: undefined } },
       ...[0, 3, 1.5, "2", undefined].map((number) => ({
         answer: { ...exchange.answer, picked_number: number },
+        translation: null,
       })),
     ]) {
       expect(ApiTodayExchange.safeParse({ ...exchange, ...invalid }).success).toBe(false);

@@ -51,7 +51,8 @@ export interface TodayExchange {
   recipient: string;
   /** A hello carries no question. */
   ask?: string;
-  answer?: { text: string; at: string };
+  /** `original` is her own words when `text` is their translation into the reader's language. */
+  answer?: { text: string; at: string; original?: string };
   /**
    * Today's line in place of her answer while this ask has none (`toToday`): "No word yet today",
    * or, when her day is answered all the same by words to an earlier ask (flows §3.9: a tap on

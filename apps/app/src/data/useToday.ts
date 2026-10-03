@@ -1,3 +1,4 @@
+import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
@@ -98,6 +99,12 @@ function receiptOf(exchange: ApiTodayExchange): string | undefined {
 
 export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
   const answer = exchange.answer;
+  // Her words in the reader's language when the family's translation is in it (flows §3.10); her
+  // own words stay as the original, which Exchanges offers.
+  const translated =
+    answer?.translation != null && answer.text !== null && answer.translation.lang === i18n.locale
+      ? answer.translation.text
+      : undefined;
   const receipt = receiptOf(exchange);
   return {
     ...(exchange.asker_name === null ? {} : { asker: exchange.asker_name }),
@@ -107,8 +114,9 @@ export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
       ? {}
       : {
           answer: {
-            text: answer.text ?? wordlessAnswer(answer),
+            text: translated ?? answer.text ?? wordlessAnswer(answer),
             at: timeOfDay(answer.at),
+            ...(translated === undefined || answer.text === null ? {} : { original: answer.text }),
           },
         }),
     replies: exchange.replies.map((reply) => ({

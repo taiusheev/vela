@@ -290,6 +290,11 @@ export const ApiTodayAnswer = z.object({
    * `ApiTodayExchange.photos`, which leaves a deleted photo out.
    */
   picked_number: z.number().int().min(1).max(2).nullable(),
+  /**
+   * Her words in the family's language, where they differ from hers and the translation is done
+   * (flows §3.10); null otherwise. `text` stays her own words, which the app offers as the original.
+   */
+  translation: z.object({ lang: Lang, text: z.string() }).nullable(),
 });
 export type ApiTodayAnswer = z.infer<typeof ApiTodayAnswer>;
 

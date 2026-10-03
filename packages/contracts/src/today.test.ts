@@ -30,6 +30,7 @@ const exchange = {
     at: "2026-09-23T08:12:00+08:00",
     picked_media_id: null,
     picked_number: null,
+    translation: null,
   },
   replies: [
     { from: "Mia", kind: "heart", text: null, photo: null },

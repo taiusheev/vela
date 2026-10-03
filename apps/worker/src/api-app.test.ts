@@ -117,6 +117,7 @@ const TODAY: ApiToday = {
         at: "2026-09-22T00:12:00.000Z",
         picked_media_id: null,
         picked_number: null,
+        translation: null,
       },
       replies: [{ from: "Synthetic user", kind: "heart", text: null, photo: null }],
       seen_at: null,

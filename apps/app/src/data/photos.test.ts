@@ -332,6 +332,7 @@ describe("photos on the cards", () => {
         at: "2026-10-13T08:12:00+08:00",
         picked_media_id: SECOND,
         picked_number: 2,
+        translation: null,
       },
     });
     expect(toTodayExchange(answered).picked).toBe(SECOND);
@@ -352,6 +353,7 @@ describe("photos on the cards", () => {
           at: "2026-10-13T08:12:00+08:00",
           picked_media_id: FIRST,
           picked_number: 1,
+          translation: null,
         },
       }),
       scheduled_for: "2026-10-13",
