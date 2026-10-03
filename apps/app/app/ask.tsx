@@ -140,6 +140,10 @@ export default function AskScreen() {
   // The voice hello goes up when the ask is sent, under the recording's own key, so a retry of the
   // send uploads it again as the same recording and the ask names it (spec §4).
   const [hello, setHello] = useState<Recorded | null>(null);
+  // A recording names its morning, as a photo does: Whenever goes when one is made.
+  useEffect(() => {
+    if (hello !== null && when === "whenever") setWhen("tomorrow");
+  }, [hello, when]);
   const compose = useMutation({
     mutationFn: async (ask: ComposeAsk) => {
       const token = await account.token();
@@ -180,7 +184,7 @@ export default function AskScreen() {
     compose.mutate({
       recipient_id: recipient.memberId,
       type,
-      text: text.trim(),
+      text: text.trim().length > 0 ? text.trim() : t`Listen to my voice note.`,
       ...timing,
       ...(usedSuggestionId === undefined ? {} : { suggestion_id: usedSuggestionId }), // suggestion
       ...extras,
@@ -188,7 +192,9 @@ export default function AskScreen() {
   }
 
   const name = recipient?.displayName ?? t({ comment: "stands in for her name", message: "her" });
-  const written = text.trim().length > 0;
+  // A voice note is its recording (spec §4): it needs one, and its words may be left to the default.
+  const voiceNote = kind === "voice_note";
+  const written = text.trim().length > 0 || (voiceNote && hello !== null);
   const trouble =
     compose.isError &&
     askConflict(compose.error) === null &&
@@ -306,7 +312,7 @@ export default function AskScreen() {
           )}
         </View>
         <PhotoSlots photos={photos} />
-        {demo ? null : <VoiceHello onChange={setHello} />}
+        {demo ? null : <VoiceHello onChange={setHello} note={voiceNote} />}
         {kind === "vote" ? <VoteOptions options={options} onChange={setOptions} /> : null}
 
         <View style={{ gap: space.m }}>
@@ -367,7 +373,7 @@ export default function AskScreen() {
             compose.isPending ||
             extras === undefined ||
             noMorning ||
-            (!demo && (!ready || !written))
+            (!demo && (!ready || !written || (voiceNote && hello === null)))
           }
         />
       </ScrollView>

@@ -12,7 +12,14 @@ const HELLO_MS = 10_000;
  * The voice hello on Ask (spec §4, A7): about ten seconds of the asker's own voice, which plays to
  * her before the ask. Recorded here, kept by the caller until the ask is sent, and uploaded then.
  */
-export function VoiceHello({ onChange }: { onChange(recorded: Recorded | null): void }) {
+export function VoiceHello({
+  onChange,
+  note = false,
+}: {
+  onChange(recorded: Recorded | null): void;
+  /** A voice note ask: the recording is the ask itself, not a hello before it (spec §4). */
+  note?: boolean;
+}) {
   const { t } = useLingui();
   const voice = useRecording({ maxMs: HELLO_MS });
   const recorded = voice.recorded;
@@ -25,7 +32,11 @@ export function VoiceHello({ onChange }: { onChange(recorded: Recorded | null): 
     return (
       <View style={{ gap: space.s }}>
         <Words variant="body" tone="ink2">
-          <Trans>Recording your hello… {time} of 0:10</Trans>
+          {note ? (
+            <Trans>Recording your voice note… {time} of 0:10</Trans>
+          ) : (
+            <Trans>Recording your hello… {time} of 0:10</Trans>
+          )}
         </Words>
         <SecondaryButton label={t`Stop`} onPress={() => void voice.stop()} />
       </View>
@@ -36,7 +47,11 @@ export function VoiceHello({ onChange }: { onChange(recorded: Recorded | null): 
     return (
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.l }}>
         <Words variant="body" tone="ink2">
-          <Trans>Voice hello, {time}. It plays before your ask.</Trans>
+          {note ? (
+            <Trans>Voice note, {time}. She hears it in her morning.</Trans>
+          ) : (
+            <Trans>Voice hello, {time}. It plays before your ask.</Trans>
+          )}
         </Words>
         <Pressable accessibilityRole="button" hitSlop={hitSlop} onPress={() => void voice.listen()}>
           <Words variant="button" tone="action">
@@ -54,7 +69,9 @@ export function VoiceHello({ onChange }: { onChange(recorded: Recorded | null): 
   return (
     <View style={{ gap: space.s }}>
       <SecondaryButton
-        label={t`🎙 Add a voice hello (10 seconds)`}
+        label={
+          note ? t`🎙 Record your voice note (10 seconds)` : t`🎙 Add a voice hello (10 seconds)`
+        }
         onPress={() => void voice.start()}
       />
       {voice.failed ? (

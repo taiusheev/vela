@@ -404,6 +404,8 @@ export const COMPOSABLE_EXCHANGE_TYPES = [
   "vote",
   "photo_choice",
   "memory_photo",
+  /** The asker's own short recording is the ask (spec §4); it needs a `voice_hello_id`. */
+  "voice_note",
 ] as const;
 export const ComposableExchangeType = z.enum(COMPOSABLE_EXCHANGE_TYPES);
 export type ComposableExchangeType = z.infer<typeof ComposableExchangeType>;
@@ -484,6 +486,10 @@ export const ComposeAsk = z
     // A whenever ask waits for a free morning with no end, and a photo is deleted after 30 days.
     message: "a photo ask names its morning",
     path: ["when"],
+  })
+  .refine((ask) => ask.type !== "voice_note" || ask.voice_hello_id !== undefined, {
+    message: "a voice note ask carries its recording",
+    path: ["voice_hello_id"],
   })
   .refine((ask) => ask.voice_hello_id === undefined || ask.when !== "whenever", {
     // So is a recording: the voice hello waits for no morning it might outlive.

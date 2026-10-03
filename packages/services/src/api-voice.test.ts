@@ -195,12 +195,17 @@ describe("a voice reply", () => {
 });
 
 describe("a voice hello on an ask", () => {
-  async function compose(voiceHelloId: string, who: SessionIdentity = mia) {
+  async function compose(
+    voiceHelloId: string,
+    who: SessionIdentity = mia,
+    type: "question" | "voice_note" = "question",
+    text = "What did you cook today?",
+  ) {
     keys += 1;
     return composeApiAsk(h.deps, who, `compose-${keys}`, seed.family.id, {
       recipient_id: seed.member.id,
-      type: "question",
-      text: "What did you cook today?",
+      type,
+      text,
       when: "tomorrow",
       voice_hello_id: voiceHelloId,
     });
@@ -222,6 +227,22 @@ describe("a voice hello on an ask", () => {
       expect.objectContaining({ kind: "audio", storageKey: file?.storageKey, mime: "audio/mp4" }),
     ]);
     expect(sent?.message.text).toContain("What did you cook today?");
+  });
+
+  it("is the whole ask for a voice note: her morning plays it, with the words and a heart to answer", async () => {
+    const note = await voice();
+    const composed = await compose(note.body.id, mia, "voice_note", "Listen to my voice note.");
+    expect(composed.response.status).toBe(201);
+
+    const tomorrow = addDays(today(), 1);
+    h.clock.set(new Date(`${tomorrow}T08:00:00.000+08:00`));
+    await deliverArrival(h.deps, seed.member.id, tomorrow, false);
+    await h.run({ outbound: (job: OutboundJob) => deliverOutbound(h.deps, job.outboundId) });
+
+    const [sent] = h.telegram.sentTo(seed.memberLink.externalId);
+    expect(sent?.message.media).toEqual([expect.objectContaining({ kind: "audio" })]);
+    expect(sent?.message.text).toContain("Listen to my voice note.");
+    expect(sent?.message.buttons?.flat().length).toBeGreaterThan(0);
   });
 
   it("refuses a recording that is not the asker's own, or too long to be a hello", async () => {

@@ -84,14 +84,16 @@ describe("the kinds with photos", () => {
     expect(photoAskText("question")).toBeUndefined();
   });
 
-  it("are sent as the contract's photo types, as is a vote", () => {
+  it("are sent as the contract's types: photos, a vote, a voice note, a story and a recipe", () => {
     expect(composableType.two_photos).toBe("photo_choice");
     expect(composableType.old_photo).toBe("memory_photo");
     expect(composableType.vote).toBe("vote");
+    expect(composableType.voice_note).toBe("voice_note");
+    expect(composableType.story).toBe("story");
+    expect(composableType.recipe).toBe("recipe");
     for (const type of Object.values(composableType)) {
       expect(COMPOSABLE_EXCHANGE_TYPES).toContain(type);
     }
-    expect(composableType.voice_note).toBeUndefined();
   });
 });
 

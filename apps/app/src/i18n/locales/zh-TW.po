@@ -262,6 +262,10 @@ msgstr "🎙 加一段語音問候（10 秒）"
 msgid "🎙 Answer with your voice"
 msgstr "🎙 用聲音回答"
 
+#: src/components/voice-hello.tsx
+msgid "🎙 Record your voice note (10 seconds)"
+msgstr "🎙 錄一段語音（10 秒）"
+
 #: src/components/voice-reply.tsx
 msgid "🎙 Reply with your voice"
 msgstr "🎙 用聲音回覆"
@@ -293,6 +297,14 @@ msgstr "一個問題"
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
 msgstr "安靜的早上"
+
+#: src/data/ask.ts
+msgid "A recipe"
+msgstr "一道菜的做法"
+
+#: src/data/ask.ts
+msgid "A story"
+msgstr "一個故事"
 
 #: src/data/ask.ts
 msgid "A voice note"
@@ -786,6 +798,10 @@ msgstr "正在離開…"
 msgid "Listen"
 msgstr "聽一聽"
 
+#: app/ask.tsx
+msgid "Listen to my voice note."
+msgstr "聽聽我的語音。"
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr "正在找這則問答…"
@@ -1128,6 +1144,10 @@ msgstr "重新錄音"
 #: src/components/voice-hello.tsx
 msgid "Recording your hello… {time} of 0:10"
 msgstr "正在錄您的問候… {time}，最長 0:10"
+
+#: src/components/voice-hello.tsx
+msgid "Recording your voice note… {time} of 0:10"
+msgstr "正在錄語音… {time}，最長 0:10"
 
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
@@ -1876,6 +1896,10 @@ msgstr "越南"
 #: src/components/voice-hello.tsx
 msgid "Voice hello, {time}. It plays before your ask."
 msgstr "語音問候，共 {time}。會在您的提問之前播放。"
+
+#: src/components/voice-hello.tsx
+msgid "Voice note, {time}. She hears it in her morning."
+msgstr "語音，{time}。早上會播給對方聽。"
 
 #: src/data/useToday.ts
 msgid "voted"

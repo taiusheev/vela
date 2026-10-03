@@ -8,14 +8,22 @@ import { i18n, type MessageDescriptor } from "@lingui/core";
 import { msg, t } from "@lingui/core/macro";
 import type { ComposableExchangeType, ExchangeType } from "@vela/contracts";
 
-export type AskType = "question" | "two_photos" | "voice_note" | "word" | "old_photo" | "vote";
+export type AskType =
+  | "question"
+  | "two_photos"
+  | "voice_note"
+  | "word"
+  | "old_photo"
+  | "vote"
+  | "story"
+  | "recipe";
 
 export interface AskTypeOption {
   kind: AskType;
   label: MessageDescriptor;
   /**
-   * Available means this screen can compose it today. A voice note needs a recording the app
-   * cannot make yet; the photo kinds are also off wherever the API keeps no photos (ADR-33).
+   * Available means this screen can compose it today. The photo kinds are off wherever the API
+   * keeps no photos (ADR-33).
    */
   available: boolean;
 }
@@ -25,8 +33,10 @@ export const askTypes: AskTypeOption[] = [
   { kind: "word", label: msg`A word to teach`, available: true },
   { kind: "vote", label: msg`A vote`, available: true },
   { kind: "two_photos", label: msg`Two photos`, available: true },
-  { kind: "voice_note", label: msg`A voice note`, available: false },
+  { kind: "voice_note", label: msg`A voice note`, available: true },
   { kind: "old_photo", label: msg`An old photo`, available: true },
+  { kind: "story", label: msg`A story`, available: true },
+  { kind: "recipe", label: msg`A recipe`, available: true },
 ];
 
 /** The name the contract gives each kind the screen can send. */
@@ -36,6 +46,11 @@ export const composableType: Partial<Record<AskType, ComposableExchangeType>> = 
   two_photos: "photo_choice",
   old_photo: "memory_photo",
   vote: "vote",
+  voice_note: "voice_note",
+  // Her answer to a story goes into the family book (ADR-39), and to a recipe becomes a card she
+  // can keep (ADR-41).
+  story: "story",
+  recipe: "recipe",
 };
 
 /**
@@ -46,7 +61,7 @@ export const VOTE_OPTIONS = { fewest: 2, most: 7, longest: 64 } as const;
 
 /**
  * The kind "Use this" selects: the suggestion's own where this screen can compose it, and a
- * question otherwise, which is how a story or a recipe ask reaches her for now.
+ * question otherwise.
  */
 export function suggestedKind(type: ExchangeType): AskType {
   const kind = askTypes.find((option) => option.kind === type)?.kind;

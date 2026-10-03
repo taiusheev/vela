@@ -255,6 +255,10 @@ msgstr "🎙 Add a voice hello (10 seconds)"
 msgid "🎙 Answer with your voice"
 msgstr "🎙 Answer with your voice"
 
+#: src/components/voice-hello.tsx
+msgid "🎙 Record your voice note (10 seconds)"
+msgstr "🎙 Record your voice note (10 seconds)"
+
 #: src/components/voice-reply.tsx
 msgid "🎙 Reply with your voice"
 msgstr "🎙 Reply with your voice"
@@ -286,6 +290,14 @@ msgstr "A question"
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
 msgstr "A quiet morning"
+
+#: src/data/ask.ts
+msgid "A recipe"
+msgstr "A recipe"
+
+#: src/data/ask.ts
+msgid "A story"
+msgstr "A story"
 
 #: src/data/ask.ts
 msgid "A voice note"
@@ -779,6 +791,10 @@ msgstr "Leaving…"
 msgid "Listen"
 msgstr "Listen"
 
+#: app/ask.tsx
+msgid "Listen to my voice note."
+msgstr "Listen to my voice note."
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr "Looking for that exchange…"
@@ -1121,6 +1137,10 @@ msgstr "Record again"
 #: src/components/voice-hello.tsx
 msgid "Recording your hello… {time} of 0:10"
 msgstr "Recording your hello… {time} of 0:10"
+
+#: src/components/voice-hello.tsx
+msgid "Recording your voice note… {time} of 0:10"
+msgstr "Recording your voice note… {time} of 0:10"
 
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
@@ -1869,6 +1889,10 @@ msgstr "Vietnam"
 #: src/components/voice-hello.tsx
 msgid "Voice hello, {time}. It plays before your ask."
 msgstr "Voice hello, {time}. It plays before your ask."
+
+#: src/components/voice-hello.tsx
+msgid "Voice note, {time}. She hears it in her morning."
+msgstr "Voice note, {time}. She hears it in her morning."
 
 #: src/data/useToday.ts
 msgid "voted"

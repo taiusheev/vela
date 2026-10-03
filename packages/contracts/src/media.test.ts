@@ -84,7 +84,7 @@ describe("a photo ask", () => {
     media_ids: [PHOTO_ONE, PHOTO_TWO],
   } as const;
 
-  it("is composable as a photo choice or an old photo, never as a voice note or a hello", () => {
+  it("is composable as a photo choice, an old photo or a voice note, never as a hello", () => {
     expect(COMPOSABLE_EXCHANGE_TYPES).toEqual([
       "question",
       "word",
@@ -93,6 +93,7 @@ describe("a photo ask", () => {
       "vote",
       "photo_choice",
       "memory_photo",
+      "voice_note",
     ]);
     expect(ASK_PHOTO_COUNT).toEqual({ photo_choice: 2, memory_photo: 1 });
   });
@@ -121,6 +122,20 @@ describe("a photo ask", () => {
       expect(result.success, JSON.stringify(invalid)).toBe(false);
       expect(result.error?.issues.map((issue) => issue.path.join("."))).toContain("media_ids");
     }
+  });
+
+  it("takes a voice note ask only with its recording, which names its morning", () => {
+    const note = {
+      recipient_id: choice.recipient_id,
+      type: "voice_note",
+      text: "Listen to my voice note.",
+      when: "tomorrow",
+      voice_hello_id: PHOTO_ONE,
+    };
+    expect(ComposeAsk.parse(note)).toStrictEqual(note);
+    const silent = ComposeAsk.safeParse({ ...note, voice_hello_id: undefined });
+    expect(silent.error?.issues.map((issue) => issue.path.join("."))).toContain("voice_hello_id");
+    expect(ComposeAsk.safeParse({ ...note, when: "whenever" }).success).toBe(false);
   });
 
   it("refuses the same photo twice, however its id is written", () => {
