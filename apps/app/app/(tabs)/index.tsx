@@ -296,6 +296,11 @@ export default function TodayScreen() {
         </Words>
       ) : null}
       {today.lights.flatMap((light) =>
+        light.unreachableOn === undefined
+          ? []
+          : [<LostLine key={`lost:${light.memberId}`} light={light} />],
+      )}
+      {today.lights.flatMap((light) =>
         light.awayId === undefined ? [] : [<AwayLine key={light.memberId} light={light} />],
       )}
       {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
@@ -363,6 +368,34 @@ function AwayLine({ light }: { light: TodayLight }) {
           if (light.awayId !== undefined) end.mutate(light.awayId);
         }}
       />
+    </Card>
+  );
+}
+
+/**
+ * Vela can no longer reach her on her messenger (spec §19, "we lost Mom's Telegram"): she blocked
+ * Vela's chat or left it. Her light waits without a quiet notice. What brings her back is hers to
+ * do, so the card says what the family can ask of her, or offers her own phone instead.
+ */
+function LostLine({ light }: { light: TodayLight }) {
+  const { t } = useLingui();
+  const name = light.displayName;
+  const channel = light.unreachableOn;
+  return (
+    <Card>
+      <Words variant="bodyMedium">
+        <Trans>
+          Vela cannot reach {name} on {channel}
+        </Trans>
+      </Words>
+      <Words variant="body" tone="ink2">
+        <Trans>
+          She may have blocked Vela's chat or changed phones. Until then her mornings cannot reach
+          her, and nobody is told they went quiet. Ask her to open Vela's chat on {channel} and tap
+          Start or Unblock, and her mornings come back. Or set up her phone with Vela instead.
+        </Trans>
+      </Words>
+      <SecondaryButton label={t`Set up her phone`} onPress={() => router.push("/you")} />
     </Card>
   );
 }

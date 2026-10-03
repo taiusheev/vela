@@ -85,6 +85,7 @@ describe("away from the app", () => {
       state: "away",
       away_until: day(3),
       away_id: period.id,
+      unreachable_on: null,
     });
   });
 

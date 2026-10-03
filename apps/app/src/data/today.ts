@@ -25,6 +25,8 @@ export interface TodayLight {
   awayId?: string;
   /** The last day of that away, as a weekday ("Sunday"); absent until she is back. */
   awayUntil?: string;
+  /** The messenger her mornings can no longer reach her on ("Telegram"), spec §19. */
+  unreachableOn?: string;
 }
 
 export interface TodayReply {

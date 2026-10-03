@@ -60,6 +60,7 @@ export function toTodayLight(light: MemberLight): TodayLight {
     ...(invited ? { invited: true } : {}),
     ...(light.quiet_event_id === null ? {} : { quietEventId: light.quiet_event_id }),
     ...(light.away_id == null ? {} : { awayId: light.away_id }),
+    ...(light.unreachable_on == null ? {} : { unreachableOn: messengerName(light.unreachable_on) }),
     ...(light.away_id == null || light.away_until === null
       ? {}
       : { awayUntil: dayName(light.away_until) }),
@@ -280,4 +281,15 @@ export function useToday(): TodayView {
     photos: me.data?.photos === true,
     pushSent: me.data?.push === true,
   };
+}
+
+/** Each messenger's own name, the same in every language: a brand, never translated. */
+const MESSENGER_NAMES: Readonly<Record<string, string>> = {
+  telegram: "Telegram",
+  line: "LINE",
+  whatsapp: "WhatsApp",
+};
+
+function messengerName(channel: string): string {
+  return MESSENGER_NAMES[channel] ?? channel;
 }

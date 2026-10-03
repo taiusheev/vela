@@ -1,6 +1,14 @@
 import { MemberLight } from "@vela/contracts";
 import { addDays, addMinutes, localDateOf } from "@vela/core";
-import { answers, awayPeriods, exchanges, members, quietEvents, users } from "@vela/db";
+import {
+  answers,
+  awayPeriods,
+  channelLinks,
+  exchanges,
+  members,
+  quietEvents,
+  users,
+} from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
@@ -49,8 +57,23 @@ describe("loadApiLights", () => {
       usual_time: seed.member.arrivalTime,
       away_until: null,
       away_id: null,
+      unreachable_on: null,
       quiet_event_id: null,
     });
+  });
+
+  it("says which messenger she can no longer be reached on, and nothing once she is back", async () => {
+    await h.db
+      .update(channelLinks)
+      .set({ blockedAt: h.clock.now() })
+      .where(eq(channelLinks.id, seed.memberLink.id));
+    expect((await lights())?.[0]?.unreachable_on).toBe("telegram");
+
+    await h.db
+      .update(channelLinks)
+      .set({ blockedAt: null })
+      .where(eq(channelLinks.id, seed.memberLink.id));
+    expect((await lights())?.[0]?.unreachable_on).toBeNull();
   });
 
   it("lights her from the day's answer and keeps the time she answered", async () => {
@@ -273,6 +296,7 @@ describe("an invited member who has not said yes", () => {
       usual_time: "07:00",
       away_until: null,
       away_id: null,
+      unreachable_on: null,
       quiet_event_id: null,
     });
   });

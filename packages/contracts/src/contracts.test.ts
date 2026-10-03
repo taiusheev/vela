@@ -877,6 +877,7 @@ describe("MemberLight", () => {
     usual_time: null,
     away_until: null,
     away_id: null,
+    unreachable_on: null,
     quiet_event_id: null,
   };
 
@@ -895,6 +896,7 @@ describe("MemberLight", () => {
         usual_time: "08:00",
         away_until: "2028-02-29",
         away_id: null,
+        unreachable_on: null,
         quiet_event_id: "0198f6aa-0000-7000-8000-000000000002",
       };
       expect(MemberLight.parse(answered)).toStrictEqual(answered);

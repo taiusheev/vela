@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   AnswerKind,
+  Channel,
   ExchangeState,
   ExchangeType,
   Lang,
@@ -177,6 +178,11 @@ export const MemberLight = z.object({
   away_until: LocalDate.nullable(),
   /** The away period she is in today, which a member may end; null when she is not away. */
   away_id: z.uuid().nullable(),
+  /**
+   * The messenger her mornings go to when Vela can no longer reach her there (she blocked Vela, or
+   * left the platform; spec §19 "we lost Mom's Telegram"); null while she can be reached.
+   */
+  unreachable_on: Channel.nullable(),
   quiet_event_id: z.uuid().nullable(),
 });
 export type MemberLight = z.infer<typeof MemberLight>;

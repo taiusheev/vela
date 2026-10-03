@@ -191,6 +191,7 @@ function light(fields: Partial<MemberLight> = {}): MemberLight {
     usual_time: "08:00",
     away_until: null,
     away_id: null,
+    unreachable_on: null,
     quiet_event_id: null,
     ...fields,
   };

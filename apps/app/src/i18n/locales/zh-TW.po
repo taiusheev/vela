@@ -1337,6 +1337,10 @@ msgstr "傳了一則語音訊息"
 msgid "Set it up"
 msgstr "開始設定"
 
+#: app/(tabs)/index.tsx
+msgid "Set up her phone"
+msgstr "設定長輩的手機"
+
 #: src/components/set-up-phone.tsx
 msgid "Set up this phone for {name}"
 msgstr "把這支手機設定給{name}"
@@ -1369,6 +1373,10 @@ msgstr "媽媽會把這件事念一輩子"
 #: app/onboarding.tsx
 msgid "She lives in"
 msgstr "這位家人住在"
+
+#: app/(tabs)/index.tsx
+msgid "She may have blocked Vela's chat or changed phones. Until then her mornings cannot reach her, and nobody is told they went quiet. Ask her to open Vela's chat on {channel} and tap Start or Unblock, and her mornings come back. Or set up her phone with Vela instead."
+msgstr "長輩可能封鎖了 Vela 的聊天室，或換了手機。在那之前早上的訊息送不到，也不會發出安靜通知。請長輩打開{channel}上 Vela 的聊天室，按「開始」或「解除封鎖」，早上的訊息就會恢復。也可以改用 Vela 設定長輩的手機。"
 
 #: app/onboarding.tsx
 msgid "She reads"
@@ -1903,6 +1911,10 @@ msgstr "使用這個建議"
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
 msgstr "通常在 {time} 前回覆"
+
+#: app/(tabs)/index.tsx
+msgid "Vela cannot reach {name} on {channel}"
+msgstr "Vela 無法在{channel}上聯絡到{name}"
 
 #: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."

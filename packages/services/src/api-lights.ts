@@ -3,7 +3,9 @@ import { localDateOf } from "@vela/core";
 import { awayPeriods, members, quietEvents } from "@vela/db";
 import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
+import { arrivalChannelOf } from "./arrivals.ts";
 import {
+  channelLinkOfMember,
   dayAnsweredAt,
   exchangeForLocalDate,
   firstAnswersByDate,
@@ -73,6 +75,9 @@ export async function loadApiLights(
               ? "quiet"
               : "resting";
 
+    // Her phone (ADR-35) has no block to lose; a messenger link can be blocked or gone.
+    const channel = arrivalChannelOf(member);
+    const link = channel === "device" ? null : await channelLinkOfMember(db, member.id, channel);
     lights.push({
       member_id: member.id,
       display_name: member.displayName,
@@ -81,6 +86,7 @@ export async function loadApiLights(
       usual_time: member.arrivalTime,
       away_until: away?.toDate ?? null,
       away_id: away?.id ?? null,
+      unreachable_on: link !== null && link.blockedAt !== null ? channel : null,
       quiet_event_id: quiet?.id ?? null,
     });
   }
@@ -109,6 +115,7 @@ export async function loadApiLights(
       usual_time: member.arrivalTime,
       away_until: null,
       away_id: null,
+      unreachable_on: null,
       quiet_event_id: null,
     });
   }

@@ -1330,6 +1330,10 @@ msgstr "sent a voice message"
 msgid "Set it up"
 msgstr "Set it up"
 
+#: app/(tabs)/index.tsx
+msgid "Set up her phone"
+msgstr "Set up her phone"
+
 #: src/components/set-up-phone.tsx
 msgid "Set up this phone for {name}"
 msgstr "Set up this phone for {name}"
@@ -1362,6 +1366,10 @@ msgstr "She is never letting that go"
 #: app/onboarding.tsx
 msgid "She lives in"
 msgstr "She lives in"
+
+#: app/(tabs)/index.tsx
+msgid "She may have blocked Vela's chat or changed phones. Until then her mornings cannot reach her, and nobody is told they went quiet. Ask her to open Vela's chat on {channel} and tap Start or Unblock, and her mornings come back. Or set up her phone with Vela instead."
+msgstr "She may have blocked Vela's chat or changed phones. Until then her mornings cannot reach her, and nobody is told they went quiet. Ask her to open Vela's chat on {channel} and tap Start or Unblock, and her mornings come back. Or set up her phone with Vela instead."
 
 #: app/onboarding.tsx
 msgid "She reads"
@@ -1896,6 +1904,10 @@ msgstr "Use this suggestion"
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
 msgstr "Usually answers by {time}"
+
+#: app/(tabs)/index.tsx
+msgid "Vela cannot reach {name} on {channel}"
+msgstr "Vela cannot reach {name} on {channel}"
 
 #: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."
