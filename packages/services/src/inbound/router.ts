@@ -24,7 +24,7 @@ import { handleBookDropButton } from "../book.ts";
 import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "../consent.ts";
 import type { Deps } from "../deps.ts";
 import { errorLabel } from "../errors.ts";
-import { enqueueOutbound } from "../gateway.ts";
+import { directReplyOf, enqueueOutbound, replyFieldOf } from "../gateway.ts";
 import {
   handleBotAdded,
   handleBotRemoved,
@@ -293,7 +293,7 @@ async function handleFollowed(deps: Deps, event: InboundEvent): Promise<void> {
     lang,
     to: { channel: event.channel, conversationId },
     text: t(lang, "help.followed"),
-    ...(event.reply === undefined ? {} : { replyToken: event.reply.token }),
+    ...directReplyOf(event, deps.clock.now()),
   });
 }
 
@@ -318,6 +318,7 @@ async function sayHowToBegin(
       idempotencyKey,
       lang,
       to: { channel: event.channel, conversationId },
+      ...directReplyOf(event, deps.clock.now()),
       text: t(lang, "help.private"),
     });
     return;
@@ -330,6 +331,7 @@ async function sayHowToBegin(
     channel: event.channel,
     conversationId,
     lang,
+    ...replyFieldOf(event),
     text: t(lang, "help.private"),
   });
 }

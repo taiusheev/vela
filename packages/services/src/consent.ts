@@ -37,7 +37,7 @@ import {
 import { and, desc, eq, isNull } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
-import { enqueueOutbound, replyOf } from "./gateway.ts";
+import { directReplyOf, enqueueOutbound, replyFieldOf, replyOf } from "./gateway.ts";
 import { languageOfSender, sendOutsideGateway } from "./group.ts";
 import {
   type ChatConsentEvidence,
@@ -108,6 +108,7 @@ async function refuseInvite(
       idempotencyKey,
       lang,
       to: { channel: event.channel, conversationId },
+      ...directReplyOf(event, deps.clock.now()),
       text: t(lang, "consent.invalid_link"),
     });
     return;
@@ -120,6 +121,7 @@ async function refuseInvite(
     channel: event.channel,
     conversationId,
     lang,
+    ...replyFieldOf(event),
     text: t(lang, "consent.invalid_link"),
   });
 }
@@ -142,6 +144,7 @@ async function refuseLinkedElsewhere(
     channel: event.channel,
     conversationId: event.conversation.externalId,
     lang,
+    ...replyFieldOf(event),
     text: t(lang, "consent.already_linked"),
   });
 }
@@ -451,6 +454,7 @@ async function acceptConsent(
     channel: event.channel,
     conversationId,
     lang,
+    ...replyFieldOf(event),
     text: t(lang, "consent.accepted", { time }),
   });
   // Keyed by the member alone, so she is asked once, whatever happens to her light later.
@@ -634,6 +638,7 @@ export async function handleConsentButton(
       }),
       lang: declined.lang,
       to: { channel: event.channel, conversationId },
+      ...directReplyOf(event, deps.clock.now()),
       text: t(declined.lang, "consent.declined"),
     });
   }

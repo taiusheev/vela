@@ -22,7 +22,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
-import { enqueueOutbound } from "./gateway.ts";
+import { enqueueOutbound, replyFieldOf } from "./gateway.ts";
 import { keptLightMemberOfFamily } from "./group.ts";
 import {
   exchangeForLocalDate,
@@ -333,6 +333,7 @@ async function composeAsk(deps: Deps, event: InboundEvent, input: ComposeInput):
       lang,
       text,
       replyToMessageId: event.messageId,
+      ...replyFieldOf(event),
       ref: { purpose: "ask_confirmation", exchangeId: exchange.id },
     });
   });

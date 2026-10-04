@@ -26,6 +26,7 @@ import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import {
+  directReplyOf,
   handOverOutbound,
   type InsertResult,
   insertOutbound,
@@ -169,6 +170,7 @@ export async function handleNearbyStart(deps: Deps, event: InboundEvent): Promis
       }),
       lang,
       to: { channel: event.channel, conversationId },
+      ...directReplyOf(event, deps.clock.now()),
       text: t(lang, "consent.invalid_link"),
     });
     deps.logger.info("nearby_start_refused", {});

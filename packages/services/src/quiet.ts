@@ -30,7 +30,7 @@ import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
-import { enqueueOutbound, type OutboundRequest } from "./gateway.ts";
+import { directReplyOf, enqueueOutbound, type OutboundRequest } from "./gateway.ts";
 import { lookInStandDowns } from "./nearby-ask.ts";
 import { quietPushNotice } from "./push-messages.ts";
 import { closingNoticesFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
@@ -589,6 +589,7 @@ export async function handleQuietButton(
         lang,
         to: { channel: event.channel, conversationId: event.conversation.externalId },
         text: replacement,
+        ...directReplyOf(event, now),
       });
     } catch (error) {
       deps.logger.warn("quiet_button_reply_failed", { error: errorLabel(error) });

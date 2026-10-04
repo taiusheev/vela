@@ -287,6 +287,28 @@ describe("free replies on LINE", () => {
     }
   });
 
+  it("answer a stranger who writes to Vela with their own token, straight from the adapter", async () => {
+    events += 1;
+    await handleInbound(h.deps, [
+      {
+        channel: "line",
+        eventId: `line:${events}`,
+        at: h.clock.now().toISOString(),
+        kind: "text",
+        text: "hello?",
+        sender: { externalUserId: "U-stranger" },
+        conversation: { externalId: "U-stranger", kind: "private" },
+        messageId: "m-hello",
+        reply: {
+          token: "stranger-token",
+          until: new Date(h.clock.now().getTime() + 50_000).toISOString(),
+        },
+      } as InboundEvent,
+    ]);
+
+    expect(h.line.sentTo("U-stranger").at(-1)?.message.replyToken).toBe("stranger-token");
+  });
+
   it("send as usual once the token has expired", async () => {
     await answerWithReply(new Date(h.clock.now().getTime() + 60_000));
 

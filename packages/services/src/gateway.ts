@@ -154,6 +154,22 @@ export function replyOf(event: InboundEvent): StoredReply | undefined {
     : { ...event.reply, conversationId: event.conversation.externalId };
 }
 
+/** The `reply` a request answering this event carries: spread into the request. */
+export function replyFieldOf(event: InboundEvent): { reply?: StoredReply } {
+  const reply = replyOf(event);
+  return reply === undefined ? {} : { reply };
+}
+
+/**
+ * The reply token a message sent straight to the adapter carries, answering this event in its own
+ * chat while the token is fresh (05-line-flows §5.11): spread into the message.
+ */
+export function directReplyOf(event: InboundEvent, now: Date): { replyToken?: string } {
+  return event.reply !== undefined && now.getTime() < Date.parse(event.reply.until)
+    ? { replyToken: event.reply.token }
+    : {};
+}
+
 const OutboundPayload = z.object({
   message: StoredMessage,
   reply: StoredReply.optional(),

@@ -29,7 +29,7 @@ import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG } from "./admin.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
-import { enqueueOutbound } from "./gateway.ts";
+import { directReplyOf, enqueueOutbound, replyFieldOf } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
 import { groupNoticeEvidence, subjectRef } from "./proofs.ts";
 import {
@@ -129,6 +129,7 @@ async function refuseLink(
       idempotencyKey,
       lang,
       to: { channel: event.channel, conversationId },
+      ...directReplyOf(event, deps.clock.now()),
       text: t(lang, "group.not_linked"),
     });
     return;
@@ -141,6 +142,7 @@ async function refuseLink(
     channel: event.channel,
     conversationId,
     lang,
+    ...replyFieldOf(event),
     text: t(lang, "group.not_linked"),
   });
 }

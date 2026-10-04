@@ -32,7 +32,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
-import { enqueueOutbound } from "./gateway.ts";
+import { enqueueOutbound, replyFieldOf } from "./gateway.ts";
 import { isKeptLightMember, languageOfSender, sendOutsideGateway } from "./group.ts";
 import {
   ADDRESS_MAX_LENGTH,
@@ -751,6 +751,7 @@ async function handleLinkedSender(
     channel: event.channel,
     conversationId: event.conversation.externalId,
     lang,
+    ...replyFieldOf(event),
     text: t(lang, "consent.already_linked"),
   });
   return true;
