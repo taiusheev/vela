@@ -27,6 +27,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { quietNobodyToldAlert } from "./admin-alerts.ts";
 import { arrivalChannelOf } from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
+import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
 import { enqueueOutbound, type OutboundRequest } from "./gateway.ts";
@@ -569,7 +570,28 @@ export async function handleQuietButton(
       await deps.scheduler.wakeAt(her.id, now);
     }
   }
-  if (event.messageId !== undefined) {
-    await adapter.closeButtons(event.conversation.externalId, event.messageId, replacement);
+  if (adapter.capabilities.editMessages) {
+    if (event.messageId !== undefined) {
+      await adapter.closeButtons(event.conversation.externalId, event.messageId, replacement);
+    }
+    return;
+  }
+  // A messenger that cannot edit its messages (LINE, 05 §4) gets the line the buttons would have
+  // become as a message of its own, so the organiser still sees what the tap did.
+  if (replacement !== undefined) {
+    try {
+      await adapter.send({
+        kind: "system",
+        idempotencyKey: outboundKey("system", {
+          conversationId: event.conversation.externalId,
+          suffix: `quiet:${quiet.id}:${action.type}:${now.getTime()}`,
+        }),
+        lang,
+        to: { channel: event.channel, conversationId: event.conversation.externalId },
+        text: replacement,
+      });
+    } catch (error) {
+      deps.logger.warn("quiet_button_reply_failed", { error: errorLabel(error) });
+    }
   }
 }

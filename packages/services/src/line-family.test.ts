@@ -5,9 +5,17 @@
  * routing by each person's messenger, and LINE's own behaviour belongs to its adapter's tests.
  */
 import type { InboundEvent, LocalDate } from "@vela/contracts";
-import { TUNING } from "@vela/core";
-import { channelLinks, familyChannels, members } from "@vela/db";
-import { eq, inArray } from "drizzle-orm";
+import { encodeButton, TUNING } from "@vela/core";
+import {
+  answers,
+  channelLinks,
+  consents,
+  familyChannels,
+  invites,
+  members,
+  outbound,
+} from "@vela/db";
+import { and, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { arrivalChannelOf, deliverArrival, prepareDay, sendTurnPrompt } from "./arrivals.ts";
 import type { OutboundJob } from "./deps.ts";
@@ -140,5 +148,116 @@ describe("a family on LINE", () => {
       .from(familyChannels)
       .where(eq(familyChannels.familyId, seed.family.id));
     expect(groups.map((group) => group.conversationId)).toEqual([GROUP]);
+  });
+});
+
+describe("taps on LINE, which name no message", () => {
+  it("count her same tap delivered twice as one answer", async () => {
+    const today = await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    h.clock.advanceMinutes(5);
+    const tap = encodeButton({ type: "answer", exchangeId: today.id, answer: "fine" });
+
+    for (let i = 0; i < 2; i += 1) {
+      await handleInbound(h.deps, [
+        onLine({ kind: "button", buttonData: tap, callbackId: `cb${i}`, messageId: undefined }),
+      ]);
+    }
+
+    expect(await h.db.select().from(answers).where(eq(answers.exchangeId, today.id))).toHaveLength(
+      1,
+    );
+  });
+
+  it("still show the organiser what Wait 2 hours did, as a message of its own", async () => {
+    await seedExchange(h.db, seed, { date: TODAY, state: "delivered", deliveredAt: h.clock.now() });
+    h.clock.advanceMinutes(TUNING.defaultQuietAfterMinutes);
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers);
+    const notice = h.line.sentTo(seed.organiserLink.externalId).at(-1);
+    const wait = notice?.message.buttons?.flat().find((button) => button.id.endsWith(":w"));
+    if (wait === undefined) throw new Error("expected Wait 2 hours");
+
+    events += 1;
+    await handleInbound(h.deps, [
+      {
+        channel: "line",
+        eventId: `line:${events}`,
+        at: h.clock.now().toISOString(),
+        kind: "button",
+        sender: { externalUserId: seed.organiserLink.externalId },
+        conversation: { externalId: seed.organiserLink.externalId, kind: "private" },
+        buttonData: wait.id,
+        callbackId: "cb-wait",
+      } as InboundEvent,
+    ]);
+
+    expect(h.line.sentTo(seed.organiserLink.externalId).at(-1)?.message.text).toMatch(
+      /look again/i,
+    );
+  });
+
+  it("prove her yes by the message that carried the buttons, and send her mornings to LINE", async () => {
+    await h.db.delete(channelLinks).where(eq(channelLinks.id, seed.memberLink.id));
+    await h.db
+      .update(members)
+      .set({
+        status: "invited",
+        lightOn: false,
+        lightConsentedAt: null,
+        primarySurface: "telegram",
+      })
+      .where(eq(members.id, seed.member.id));
+    await h.db.insert(invites).values({
+      familyId: seed.family.id,
+      invitedBy: seed.organiser.id,
+      forMemberId: seed.member.id,
+      token: "line-invite-token-0123456789abcdef0123456789",
+      channel: "link",
+      createdAt: h.clock.now(),
+      expiresAt: new Date(h.clock.now().getTime() + 7 * 86_400_000),
+    });
+    const HER = "U-her-on-line";
+    events += 1;
+    await handleInbound(h.deps, [
+      {
+        channel: "line",
+        eventId: `line:${events}`,
+        at: h.clock.now().toISOString(),
+        kind: "start",
+        sender: { externalUserId: HER, displayName: "Mom" },
+        conversation: { externalId: HER, kind: "private" },
+        messageId: "m-start",
+        startParam: "line-invite-token-0123456789abcdef0123456789",
+      } as InboundEvent,
+    ]);
+    await h.run(handlers);
+    const [request] = await h.db.select().from(outbound).where(eq(outbound.kind, "consent"));
+
+    events += 1;
+    await handleInbound(h.deps, [
+      {
+        channel: "line",
+        eventId: `line:${events}`,
+        at: h.clock.now().toISOString(),
+        kind: "button",
+        sender: { externalUserId: HER },
+        conversation: { externalId: HER, kind: "private" },
+        buttonData: encodeButton({ type: "consent", memberId: seed.member.id, accept: true }),
+        callbackId: "cb-yes",
+      } as InboundEvent,
+    ]);
+
+    const [yes] = await h.db
+      .select()
+      .from(consents)
+      .where(and(eq(consents.kind, "light"), eq(consents.channel, "line")));
+    expect(request?.externalId).not.toBeNull();
+    expect(yes?.evidence).toMatchObject({ chat_id: HER, message_id: request?.externalId });
+    const [her] = await h.db.select().from(members).where(eq(members.id, seed.member.id));
+    expect(her?.primarySurface).toBe("line");
   });
 });

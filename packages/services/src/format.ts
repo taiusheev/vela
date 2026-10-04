@@ -23,6 +23,11 @@ const MESSAGE_TEXT_MAX_LENGTH = 4000;
  * on the event id, so a redelivery of that update still finds its row.
  */
 export function inboundExternalId(event: InboundEvent): string {
+  // A tap that names no message (a LINE postback, 05 §4) is keyed by what it carries, so the same
+  // button tapped twice, or delivered twice, is one answer.
+  if (event.kind === "button" && event.messageId === undefined && event.buttonData !== undefined) {
+    return `${event.conversation.externalId}:button:${event.buttonData}`;
+  }
   return `${event.conversation.externalId}:${event.messageId ?? event.eventId}`;
 }
 

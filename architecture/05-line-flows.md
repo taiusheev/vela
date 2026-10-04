@@ -1066,7 +1066,7 @@ Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps
      - a family whose members all link on the fake LINE channel gets arrivals, repeats, quiet notices, turn prompts, weekly reads and invite links on LINE;
      - a second group on another channel is refused.
    - Founder: nothing.
-5. **Services: LINE behaviour.**
+5. **Services: LINE behaviour.** *Partly built 4 October 2026, with LINE off.* A tap without a message id is keyed `<conversation>:button:<data>`, so a repeat is one answer. Consent evidence takes `message_id` from the outbound row that carried the buttons. A quiet notice's button on a messenger that cannot edit sends the line the buttons would have become as its own message. The harness's LINE fake now has LINE's capabilities, and `line-family.test.ts` covers all three. Still to build: reply tokens, `followed`, the group probe (D2), `quota_exhausted`, media per target channel, profiles and the invite link.
    - Files: `format.ts`, `consent.ts`, `group.ts` (the probe and `actorOf`), `quiet.ts`, `gateway.ts`, `gateway-effects.ts`, `arrivals.ts`, `answers.ts`, `pipeline.ts`, `inbound/router.ts`, `packages/copy` (new keys, en and zh-TW drafts).
    - Tests on the fake LINE channel:
      - 04 §6 test 1, the loop, end to end;

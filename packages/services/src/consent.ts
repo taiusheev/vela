@@ -31,6 +31,7 @@ import {
   invites,
   type Member,
   members,
+  outbound,
   type VelaTransaction,
 } from "@vela/db";
 import { and, desc, eq, isNull } from "drizzle-orm";
@@ -342,20 +343,52 @@ function answeredText(
   return `${t(lang, key, params)}\n\n${t(lang, accept ? "consent.yes" : "consent.no")}`;
 }
 
-/** The evidence of a tap on one of her consent messages, rebuilt from what the send filled in. */
-function tapEvidence(
+/**
+ * The evidence of a tap on one of her consent messages, rebuilt from what the send filled in. A tap
+ * that names no message (a LINE postback, 05-line-flows §2.5) takes the id of the message that
+ * carried the buttons from its outbound row: the latest consent request, or her health-words
+ * question, sent to the chat the tap came from.
+ */
+async function tapEvidence(
+  tx: Queryable,
   event: InboundEvent,
+  member: Pick<Member, "id">,
   lang: Lang,
   key: MessageKey,
   params: Record<string, string>,
 ): Promise<ChatConsentEvidence> {
   return chatConsentEvidence({
     chatId: event.conversation.externalId,
-    messageId: event.messageId,
+    messageId: event.messageId ?? (await carrierMessageId(tx, event, member, key)),
     lang,
     key,
     params,
   });
+}
+
+async function carrierMessageId(
+  tx: Queryable,
+  event: InboundEvent,
+  member: Pick<Member, "id">,
+  key: MessageKey,
+): Promise<string | undefined> {
+  const marker = encodeURIComponent(
+    key === "consent.health_words" ? `health_words:${member.id}` : "request:",
+  );
+  const rows = await tx
+    .select({ key: outbound.idempotencyKey, externalId: outbound.externalId })
+    .from(outbound)
+    .where(
+      and(
+        eq(outbound.kind, "consent"),
+        eq(outbound.memberId, member.id),
+        eq(outbound.conversationId, event.conversation.externalId),
+      ),
+    )
+    .orderBy(desc(outbound.queuedAt));
+  return (
+    rows.find((row) => row.key.includes(marker) && row.externalId !== null)?.externalId ?? undefined
+  );
 }
 
 /**
@@ -395,7 +428,7 @@ async function acceptConsent(
     lang,
     channel: event.channel,
     givenAt: now,
-    evidence: await tapEvidence(event, lang, "consent.request", params),
+    evidence: await tapEvidence(tx, event, member, lang, "consent.request", params),
   });
   await tx
     .update(members)
@@ -489,7 +522,7 @@ async function declineConsent(
     lang,
     channel: event.channel,
     givenAt: now,
-    evidence: await tapEvidence(event, lang, "consent.request", params),
+    evidence: await tapEvidence(tx, event, member, lang, "consent.request", params),
   });
   await tellOrganisers(deps, tx, member, "organiser.consent_declined", `declined:${member.id}`);
   await recordEvent(
@@ -658,7 +691,7 @@ async function recordHealthWords(
     lang,
     channel: event.channel,
     givenAt: now,
-    evidence: await tapEvidence(event, lang, "consent.health_words", params),
+    evidence: await tapEvidence(tx, event, member, lang, "consent.health_words", params),
   });
   await recordEvent(
     tx,

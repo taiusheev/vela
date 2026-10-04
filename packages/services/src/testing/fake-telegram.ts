@@ -86,6 +86,20 @@ const CAPABILITIES: AdapterCapabilities = {
   mediaReplies: true,
 };
 
+/** LINE's, as its adapter declares them (05-line-flows §5.2). */
+const LINE_CAPABILITIES: AdapterCapabilities = {
+  buttons: true,
+  voiceIn: true,
+  voiceOut: true,
+  readReceipts: false,
+  reactions: false,
+  albums: false,
+  editMessages: false,
+  resendsProviderFiles: false,
+  mediaByUrl: true,
+  mediaReplies: false,
+};
+
 interface FailureRule {
   readonly code: ChannelSendErrorCode;
   readonly options: FailureOptions;
@@ -130,7 +144,7 @@ export function createFakeTelegram(
 
   return {
     id,
-    capabilities: CAPABILITIES,
+    capabilities: id === "line" ? LINE_CAPABILITIES : CAPABILITIES,
     sent,
     failed,
     closed,
