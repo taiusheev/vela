@@ -151,6 +151,7 @@ describe("tomorrow's turn", () => {
           text: " What did you plant? ",
           asker_name: "Anna",
           on_behalf_of: null,
+          withdrawable: false,
         },
       }),
     );

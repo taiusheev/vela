@@ -676,6 +676,10 @@ msgstr "回答會收進家庭故事書，除非本人說不要保留。"
 msgid "Her first morning is the day after she says yes, at {time}."
 msgstr "同意之後的隔天 {time}，就會收到第一則早安訊息。"
 
+#: app/(tabs)/index.tsx
+msgid "Her morning already holds it."
+msgstr "早上的訊息已經排好了，無法收回。"
+
 #: app/onboarding.tsx
 msgid "Her morning comes at {time}, half an hour after she wakes."
 msgstr "早安訊息會在 {time} 送到，也就是起床後半小時。"
@@ -1513,6 +1517,10 @@ msgstr "雪梨"
 #: src/data/onboarding.ts
 msgid "Taiwan"
 msgstr "台灣"
+
+#: app/(tabs)/index.tsx
+msgid "Take it back"
+msgstr "收回"
 
 #: app/book.tsx
 msgid "Take this story out of the book"

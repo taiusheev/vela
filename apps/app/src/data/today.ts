@@ -98,7 +98,12 @@ export interface TomorrowTurn {
   /** The evening prompt has not chosen a holder for that morning yet, so nobody's turn is named. */
   pending: boolean;
   /** Set once that morning is claimed: who asked, and what. A claimed morning has no suggestion. */
-  asked?: { by: string; text: string };
+  asked?: {
+    by: string;
+    text: string;
+    /** Set when the reader asked it and may still take it back (spec §19): the ask's id. */
+    withdrawableId?: string;
+  };
   suggestion?: TomorrowSuggestion;
 }
 

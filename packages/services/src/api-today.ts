@@ -293,6 +293,8 @@ async function turnOfTomorrow(
             text: composed.text,
             asker_name: await nameOf(db, composed.askerId),
             on_behalf_of: composed.onBehalfOf,
+            // The asker may take it back until her morning is prepared (spec §19).
+            withdrawable: composed.state === "composed" && composed.askerId === viewer.memberId,
           },
     suggestion,
     turn_pending: turn === undefined,

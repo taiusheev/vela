@@ -40,6 +40,7 @@ import {
   ApiUploadedVoice,
   ApiUser,
   ApiWeeklyRead,
+  ApiWithdrawn,
   AskToLookIn,
   ComposeAsk,
   ComposeReply,
@@ -63,6 +64,7 @@ import {
   RemovePushDevice,
   SetAway,
   StartTrial,
+  WithdrawAsk,
 } from "@vela/contracts";
 import type { Member, VelaDatabase } from "@vela/db";
 import {
@@ -135,6 +137,8 @@ import {
   type uploadApiMedia,
   type uploadApiVoice,
   VelaError,
+  WithdrawTooLateError,
+  type withdrawApiAsk,
 } from "@vela/services";
 import { Hono, type MiddlewareHandler } from "hono";
 import {
@@ -187,6 +191,7 @@ export interface ApiWriteServices {
   pauseApiMember: typeof pauseApiMember;
   leaveApiFamily: typeof leaveApiFamily;
   setApiAway: typeof setApiAway;
+  withdrawApiAsk: typeof withdrawApiAsk;
   markApiDeceased: typeof markApiDeceased;
   endApiAway: typeof endApiAway;
   startApiTrial: typeof startApiTrial;
@@ -563,6 +568,17 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               ? 429
               : 400,
         );
+      }
+      if (error instanceof WithdrawTooLateError) {
+        // Her morning is prepared with this ask, or it was sent (spec §19).
+        const refused: ApiErrorBody = {
+          error: {
+            code: "conflict",
+            message: "Her morning already holds this ask.",
+            details: { reason: "too_late" },
+          },
+        };
+        return c.json(refused, 409);
       }
       if (error instanceof AwayRefusedError) {
         // A first day before her today, or a day past the 90 days an away may reach (spec §8).
@@ -1209,6 +1225,27 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         );
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ApiAway.parse(result.response.body), 201);
+      },
+    );
+    // The asker takes an ask back before her morning is prepared (spec §19).
+    app.post(
+      "/v1/exchanges/:exchangeId/withdraw",
+      authenticate,
+      validateWrite(WithdrawAsk, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.withdrawApiAsk(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiWithdrawn.parse(result.response.body), 200);
       },
     );
     // She has died (spec §19): any member of her family says so, and nothing about her is sent again.

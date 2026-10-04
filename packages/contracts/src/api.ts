@@ -374,6 +374,8 @@ export const ApiTomorrowTurn = z.object({
       text: z.string().nullable(),
       asker_name: z.string().nullable(),
       on_behalf_of: z.string().nullable(),
+      /** The reader asked it and her morning is not prepared yet, so they may withdraw it. */
+      withdrawable: z.boolean(),
     })
     .nullable(),
   /**
@@ -1214,3 +1216,10 @@ export type MarkDeceased = z.infer<typeof MarkDeceased>;
 
 export const ApiDeceased = z.object({ member_id: z.uuid(), status: z.literal("deceased") });
 export type ApiDeceased = z.infer<typeof ApiDeceased>;
+
+/** Withdraw an ask before her morning is prepared: no body, the ask is in the path. */
+export const WithdrawAsk = z.strictObject({});
+export type WithdrawAsk = z.infer<typeof WithdrawAsk>;
+
+export const ApiWithdrawn = z.object({ id: z.uuid(), state: z.literal("withdrawn") });
+export type ApiWithdrawn = z.infer<typeof ApiWithdrawn>;

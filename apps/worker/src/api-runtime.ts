@@ -70,6 +70,7 @@ import {
   updateApiAccount,
   uploadApiMedia,
   uploadApiVoice,
+  withdrawApiAsk,
 } from "@vela/services";
 import {
   type ApiReadServices,
@@ -134,6 +135,7 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   pauseApiMember,
   leaveApiFamily,
   setApiAway,
+  withdrawApiAsk,
   markApiDeceased,
   endApiAway,
   startApiTrial,

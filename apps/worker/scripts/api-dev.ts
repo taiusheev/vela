@@ -76,6 +76,7 @@ import {
   updateApiAccount,
   uploadApiMedia,
   uploadApiVoice,
+  withdrawApiAsk,
 } from "@vela/services";
 import { createApiApp } from "../src/api-app.ts";
 import { createRandom } from "../src/random.ts";
@@ -211,6 +212,7 @@ const app = createApiApp({
             pauseApiMember,
             leaveApiFamily,
             setApiAway,
+            withdrawApiAsk,
             markApiDeceased,
             endApiAway,
             startApiTrial,

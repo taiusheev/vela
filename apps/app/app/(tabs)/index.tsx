@@ -1,9 +1,12 @@
 import { Trans, useLingui } from "@lingui/react/macro";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiConfigured } from "../../src/api/client.ts";
+import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
+import { useIdempotencyKey } from "../../src/api/idempotency.ts";
+import { useAccount } from "../../src/auth/clerk.tsx";
 import { ExchangePhotos, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
@@ -134,6 +137,9 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
           <Words variant="caption" tone="ink3">
             <Trans>Into her morning.</Trans>
           </Words>
+          {tomorrow.asked.withdrawableId === undefined ? null : (
+            <WithdrawLink exchangeId={tomorrow.asked.withdrawableId} />
+          )}
         </>
       ) : suggestion === undefined ? null : (
         <>
@@ -397,5 +403,34 @@ function LostLine({ light }: { light: TodayLight }) {
       </Words>
       <SecondaryButton label={t`Set up her phone`} onPress={() => router.push("/you")} />
     </Card>
+  );
+}
+
+/** "Take it back" under the reader's own ask, until her morning is prepared (spec §19). */
+function WithdrawLink({ exchangeId }: { exchangeId: string }) {
+  const account = useAccount();
+  const queries = useQueryClient();
+  const keyFor = useIdempotencyKey("withdraw");
+  const withdraw = useMutation({
+    mutationFn: async () => withdrawAsk(exchangeId, keyFor({ exchangeId }), await account.token()),
+    onSettled: async () => {
+      await queries.invalidateQueries({ queryKey: ["today"] });
+    },
+  });
+  return (
+    <Pressable
+      accessibilityRole="button"
+      hitSlop={hitSlop}
+      disabled={withdraw.isPending}
+      onPress={() => withdraw.mutate()}
+    >
+      <Words variant="button" tone="action">
+        {withdraw.isError ? (
+          <Trans>Her morning already holds it.</Trans>
+        ) : (
+          <Trans>Take it back</Trans>
+        )}
+      </Words>
+    </Pressable>
   );
 }

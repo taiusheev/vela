@@ -524,6 +524,7 @@ describe("loadApiToday", () => {
           text: "What did the garden look like this morning?",
           asker_name: "Mia",
           on_behalf_of: null,
+          withdrawable: true,
         },
       }),
     ]);

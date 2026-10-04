@@ -161,6 +161,7 @@ describe("ApiTomorrowTurn", () => {
         text: "What did the garden look like this morning?",
         asker_name: "Anna",
         on_behalf_of: null,
+        withdrawable: false,
       },
       suggestion: null,
     };

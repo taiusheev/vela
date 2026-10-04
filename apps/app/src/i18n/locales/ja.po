@@ -669,6 +669,10 @@ msgstr ""
 msgid "Her first morning is the day after she says yes, at {time}."
 msgstr ""
 
+#: app/(tabs)/index.tsx
+msgid "Her morning already holds it."
+msgstr ""
+
 #: app/onboarding.tsx
 msgid "Her morning comes at {time}, half an hour after she wakes."
 msgstr ""
@@ -1505,6 +1509,10 @@ msgstr ""
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Taiwan"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Take it back"
 msgstr ""
 
 #: app/book.tsx

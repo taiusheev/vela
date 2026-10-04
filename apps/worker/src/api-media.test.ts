@@ -166,6 +166,7 @@ function fixture(options: FixtureOptions = {}) {
       pauseApiMember: vi.fn<Writes["services"]["pauseApiMember"]>(unused("pause")),
       leaveApiFamily: vi.fn<Writes["services"]["leaveApiFamily"]>(unused("leave")),
       setApiAway: vi.fn<Writes["services"]["setApiAway"]>(unused("away")),
+      withdrawApiAsk: vi.fn<Writes["services"]["withdrawApiAsk"]>(unused("withdraw")),
       markApiDeceased: vi.fn<Writes["services"]["markApiDeceased"]>(unused("deceased")),
       endApiAway: vi.fn<Writes["services"]["endApiAway"]>(unused("away end")),
       startApiTrial: vi.fn<Writes["services"]["startApiTrial"]>(unused("trial")),

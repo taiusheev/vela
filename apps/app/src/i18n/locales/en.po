@@ -669,6 +669,10 @@ msgstr "Her answer is kept in the family book, unless she says not to."
 msgid "Her first morning is the day after she says yes, at {time}."
 msgstr "Her first morning is the day after she says yes, at {time}."
 
+#: app/(tabs)/index.tsx
+msgid "Her morning already holds it."
+msgstr "Her morning already holds it."
+
 #: app/onboarding.tsx
 msgid "Her morning comes at {time}, half an hour after she wakes."
 msgstr "Her morning comes at {time}, half an hour after she wakes."
@@ -1506,6 +1510,10 @@ msgstr "Sydney"
 #: src/data/onboarding.ts
 msgid "Taiwan"
 msgstr "Taiwan"
+
+#: app/(tabs)/index.tsx
+msgid "Take it back"
+msgstr "Take it back"
 
 #: app/book.tsx
 msgid "Take this story out of the book"

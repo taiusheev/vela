@@ -156,7 +156,13 @@ export function toTomorrowTurn(turn: ApiTomorrowTurn, viewerMemberId?: string): 
     pending: turn.turn_pending,
     ...(ask === null || words.length === 0
       ? {}
-      : { asked: { by: ask.on_behalf_of ?? ask.asker_name ?? "Vela", text: words } }),
+      : {
+          asked: {
+            by: ask.on_behalf_of ?? ask.asker_name ?? "Vela",
+            text: words,
+            ...(ask.withdrawable === true ? { withdrawableId: ask.id } : {}),
+          },
+        }),
     ...(suggestion === null
       ? {}
       : {

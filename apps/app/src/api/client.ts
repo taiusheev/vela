@@ -33,6 +33,7 @@ import type {
   ApiTrial,
   ApiUser,
   ApiWeeklyRead,
+  ApiWithdrawn,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
@@ -181,6 +182,15 @@ export function createReminder(
     key,
     body: { fact_id: factId },
   });
+}
+
+/** Takes an ask back before her morning is prepared (spec §19); only its asker may. */
+export function withdrawAsk(
+  exchangeId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiWithdrawn> {
+  return call<ApiWithdrawn>({ path: `/v1/exchanges/${exchangeId}/withdraw`, token, key, body: {} });
 }
 
 /** Away mode (spec §8): any member sets her away, from a day until a day or until she is back. */
