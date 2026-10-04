@@ -647,7 +647,7 @@ function optionsWithout(id: string) {
  * proof and the row go as they always do. A row that was stored before storage was switched off
  * keeps an object nobody here can reach: that is logged, because only the founder can delete it.
  */
-async function deleteMedia(deps: Deps, row: Media, reason: string): Promise<void> {
+export async function deleteMedia(deps: Deps, row: Media, reason: string): Promise<void> {
   if (row.storageKey !== null) {
     if (deps.media === null) {
       deps.logger.error("media_object_unreachable", { mediaId: row.id, reason });

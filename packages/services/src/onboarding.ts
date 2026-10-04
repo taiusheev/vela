@@ -676,7 +676,7 @@ async function advance(
       return { messages: [] };
     }
     // A /start restarts: whatever was answered before is dropped with the old session.
-    const lang = languageOfSender(event.sender.languageCode);
+    const lang = languageOfSender(event.sender.languageCode, event.channel);
     const data: SessionData = { organiserLanguage: lang, nearby: [], lastEventId: event.eventId };
     await saveSession(tx, event, "name", data, now);
     return { messages: [prompt(event, lang, promptFor(lang, "name", data, true), event.eventId)] };

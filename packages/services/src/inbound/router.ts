@@ -58,6 +58,7 @@ import {
   messageRefFor,
   setChannelLinkBlocked,
 } from "../repo.ts";
+import { handleUnsent } from "../unsend.ts";
 
 /** What a person can send in a private chat; anything else there (a read receipt) is not for us. */
 const PRIVATE_MESSAGE_KINDS: ReadonlySet<InboundKind> = new Set<InboundKind>([
@@ -95,8 +96,8 @@ export async function handleInbound(deps: Deps, events: InboundEvent[]): Promise
 
 async function route(deps: Deps, event: InboundEvent): Promise<void> {
   if (event.kind === "unsent") {
-    // Unsend waits for D6 (`05-line-flows.md` §8, step 9): noted by kind alone, changing nothing.
-    deps.logger.info("unsend_ignored", { conversation: event.conversation.kind });
+    // D6 (05-line-flows §4): Vela deletes its copy of what was unsent.
+    await handleUnsent(deps, event);
     return;
   }
   if (event.kind === "followed") {
@@ -285,7 +286,7 @@ async function handleFollowed(deps: Deps, event: InboundEvent): Promise<void> {
     await routePrivate(deps, { ...event, kind: "unblocked" });
     return;
   }
-  const lang = languageOfSender(event.sender.languageCode);
+  const lang = languageOfSender(event.sender.languageCode, event.channel);
   const conversationId = event.conversation.externalId;
   await sendOutsideGateway(deps, {
     kind: "system",
@@ -312,7 +313,7 @@ async function sayHowToBegin(
     suffix: `help:${event.eventId}`,
   });
   if (linked === null) {
-    const lang = languageOfSender(event.sender.languageCode);
+    const lang = languageOfSender(event.sender.languageCode, event.channel);
     await sendOutsideGateway(deps, {
       kind: "system",
       idempotencyKey,

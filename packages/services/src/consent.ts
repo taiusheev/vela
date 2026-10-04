@@ -102,7 +102,7 @@ async function refuseInvite(
     suffix: `invalid:${event.eventId}`,
   });
   if (sender === null) {
-    const lang = languageOfSender(event.sender.languageCode);
+    const lang = languageOfSender(event.sender.languageCode, event.channel);
     await sendOutsideGateway(deps, {
       kind: "consent",
       idempotencyKey,

@@ -67,6 +67,8 @@ export interface FakeTelegram extends ChannelAdapter {
   readonly mediaFiles: Map<string, FetchedMedia>;
   /** What `profile` answers per user id, on the LINE fake only; an unknown id is null. */
   readonly profiles: Map<string, ChannelProfile>;
+  /** The groups the LINE fake was told to leave. */
+  readonly left: string[];
   sentTo(conversationId: string): SentMessage[];
   /** The next `count` sends fail with `code`; a conversation rule (below) is checked first. */
   failNextSends(count: number, code: ChannelSendErrorCode, options?: FailureOptions): void;
@@ -124,6 +126,7 @@ export function createFakeTelegram(
   const fetched: string[] = [];
   const mediaFiles = new Map<string, FetchedMedia>();
   const profiles = new Map<string, ChannelProfile>();
+  const left: string[] = [];
   const nextIds = new Map<string, number>();
   const perConversation = new Map<string, FailureRule>();
   let nextFailures: { remaining: number; rule: FailureRule } | null = null;
@@ -156,7 +159,15 @@ export function createFakeTelegram(
     fetched,
     mediaFiles,
     profiles,
-    ...(id === "line" ? { profile: async (userId: string) => profiles.get(userId) ?? null } : {}),
+    left,
+    ...(id === "line"
+      ? {
+          profile: async (userId: string) => profiles.get(userId) ?? null,
+          leaveConversation: async (conversationId: string) => {
+            left.push(conversationId);
+          },
+        }
+      : {}),
 
     async verify() {
       return true;
@@ -251,6 +262,7 @@ export function createFakeTelegram(
       fetched.length = 0;
       mediaFiles.clear();
       profiles.clear();
+      left.length = 0;
       nextIds.clear();
       perConversation.clear();
       nextFailures = null;

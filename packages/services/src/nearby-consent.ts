@@ -154,7 +154,7 @@ async function requestParams(
 export async function handleNearbyStart(deps: Deps, event: InboundEvent): Promise<void> {
   const token = event.startParam?.trim() ?? "";
   const conversationId = event.conversation.externalId;
-  const lang = languageOfSender(event.sender.languageCode);
+  const lang = languageOfSender(event.sender.languageCode, event.channel);
   const hash = await deviceTokenHash(token);
   const [contact] = await deps.db
     .select()
@@ -442,7 +442,7 @@ export async function handleNearbyMessage(deps: Deps, event: InboundEvent): Prom
     .where(eq(nearbyContacts.externalId, event.sender.externalUserId));
   if (listed.length === 0) return false;
   const conversationId = event.conversation.externalId;
-  const lang = languageOfSender(event.sender.languageCode);
+  const lang = languageOfSender(event.sender.languageCode, event.channel);
   const stop = STOP.test(event.text?.trim() ?? "");
   const now = deps.clock.now();
   const first = listed[0];

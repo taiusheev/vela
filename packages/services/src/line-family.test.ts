@@ -5,11 +5,14 @@
  * routing by each person's messenger, and LINE's own behaviour belongs to its adapter's tests.
  */
 import type { InboundEvent, LocalDate } from "@vela/contracts";
+import { t } from "@vela/copy";
 import { encodeButton, TUNING } from "@vela/core";
 import {
   answers,
   channelLinks,
   consents,
+  events as eventRows,
+  exchanges,
   familyChannels,
   invites,
   members,
@@ -375,5 +378,99 @@ describe("names on LINE", () => {
       .innerJoin(channelLinks, eq(channelLinks.memberId, members.id))
       .where(eq(channelLinks.externalId, "U-cousin"));
     expect(cousin?.name).toBe("Cousin Wei");
+  });
+});
+
+describe("an unsend on LINE (D6)", () => {
+  it("deletes Vela's copy of her words and keeps her light", async () => {
+    const today = await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    h.clock.advanceMinutes(5);
+    await handleInbound(h.deps, [
+      onLine({ kind: "text", text: "My knee hurts.", messageId: "m-knee" }),
+    ]);
+    await h.run(handlers);
+
+    await handleInbound(h.deps, [onLine({ kind: "unsent", messageId: "m-knee" })]);
+
+    const [answer] = await h.db.select().from(answers).where(eq(answers.exchangeId, today.id));
+    expect(answer).toBeDefined();
+    expect(JSON.stringify(answer?.payload)).not.toContain("knee");
+    expect(answer?.transcript).toBeNull();
+    const [exchange] = await h.db.select().from(exchanges).where(eq(exchanges.id, today.id));
+    expect(exchange?.answeredAt).not.toBeNull();
+    const unsent = await h.db.select().from(eventRows).where(eq(eventRows.name, "message_unsent"));
+    expect(unsent).toHaveLength(1);
+  });
+});
+
+describe("language on LINE (D7)", () => {
+  it("greets someone with no language hint in Traditional Chinese", async () => {
+    events += 1;
+    await handleInbound(h.deps, [
+      {
+        channel: "line",
+        eventId: `line:${events}`,
+        at: h.clock.now().toISOString(),
+        kind: "followed",
+        sender: { externalUserId: "U-new" },
+        conversation: { externalId: "U-new", kind: "private" },
+      } as InboundEvent,
+    ]);
+
+    expect(h.line.sentTo("U-new").at(-1)?.message.text).toBe(t("zh-TW", "help.followed"));
+  });
+});
+
+describe("linking a LINE group whose join names nobody (D2)", () => {
+  function joined(groupId: string): InboundEvent {
+    events += 1;
+    return {
+      channel: "line",
+      eventId: `line:${events}`,
+      at: h.clock.now().toISOString(),
+      kind: "bot_added",
+      sender: { externalUserId: groupId },
+      conversation: { externalId: groupId, kind: "group" },
+    } as InboundEvent;
+  }
+
+  async function groups() {
+    return h.db
+      .select({ id: familyChannels.conversationId })
+      .from(familyChannels)
+      .where(eq(familyChannels.familyId, seed.family.id));
+  }
+
+  beforeEach(async () => {
+    await h.db.delete(familyChannels).where(eq(familyChannels.familyId, seed.family.id));
+  });
+
+  it("links it to the one family whose organiser is in it", async () => {
+    h.line.profiles.set(seed.organiserLink.externalId, { displayName: "Mia" });
+
+    await handleInbound(h.deps, [joined("C-new-family-group")]);
+
+    expect(await groups()).toEqual([{ id: "C-new-family-group" }]);
+    expect(h.line.left).toEqual([]);
+  });
+
+  it("says it cannot link and leaves when no organiser is in it", async () => {
+    await handleInbound(h.deps, [joined("C-strangers-group")]);
+
+    expect(await groups()).toEqual([]);
+    expect(h.line.left).toEqual(["C-strangers-group"]);
+  });
+
+  it("refuses and leaves a legacy multi-person chat", async () => {
+    h.line.profiles.set(seed.organiserLink.externalId, { displayName: "Mia" });
+
+    await handleInbound(h.deps, [joined("R-old-room")]);
+
+    expect(await groups()).toEqual([]);
+    expect(h.line.left).toEqual(["R-old-room"]);
   });
 });

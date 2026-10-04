@@ -7,6 +7,7 @@
  * address because they are not a member yet.
  */
 import {
+  type Channel,
   ChannelSendError,
   type InboundEvent,
   type Lang,
@@ -25,7 +26,7 @@ import {
   members,
   type VelaTransaction,
 } from "@vela/db";
-import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG } from "./admin.ts";
 import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
@@ -55,7 +56,10 @@ const NAMELESS_MEMBER = "Family member";
  * The organiser's language from the platform's hint (flows §3.1): any Chinese variant reads the
  * Traditional Chinese catalog, everything else English, the two languages the pilot has copy for.
  */
-export function languageOfSender(languageCode: string | undefined): Lang {
+export function languageOfSender(languageCode: string | undefined, channel?: Channel): Lang {
+  // LINE omits the hint until someone accepts LY's privacy policy; its market is Taiwan, so
+  // someone with no hint there is greeted in Traditional Chinese (05-line-flows D7).
+  if (languageCode === undefined && channel === "line") return "zh-TW";
   return languageCode?.toLowerCase().startsWith("zh") ? "zh-TW" : "en";
 }
 
@@ -124,7 +128,7 @@ async function refuseLink(
     suffix: `not_linked:${event.eventId}`,
   });
   if (sender === null) {
-    const lang = languageOfSender(event.sender.languageCode);
+    const lang = languageOfSender(event.sender.languageCode, event.channel);
     await sendOutsideGateway(deps, {
       kind: "system",
       idempotencyKey,
@@ -172,6 +176,14 @@ export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<v
   if (event.conversation.kind !== "group") {
     return;
   }
+  // LINE's join names nobody (05-line-flows §3.1): who is in the group decides instead (D2).
+  const unnamed = event.sender.externalUserId === event.conversation.externalId;
+  if (unnamed) {
+    const probed = await probeGroup(deps, event);
+    if (probed === null) return;
+    await linkGroup(deps, event, probed);
+    return;
+  }
   const sender = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
   if (sender === null || sender.member.role !== "organiser" || sender.family.deletedAt !== null) {
     await refuseLink(deps, event, sender, "not_organiser");
@@ -192,6 +204,92 @@ export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<v
     await refuseLink(deps, event, sender, "second_group");
     return;
   }
+  await linkGroup(deps, event, sender);
+}
+
+/** The most organisers a join is probed for, inside the Workers Free plan's 50 subrequests. */
+const PROBE_CAP = 20;
+
+/**
+ * Whose group a join that names nobody is (05-line-flows §3.1, D2): the active organisers on this
+ * messenger, in families with no group yet, newest family first, are looked up in the group by
+ * their profile there. Exactly one family's organisers present: that organiser links it. None, two
+ * families, a legacy room, or more candidates than the cap: Vela says it cannot link and leaves.
+ * Null when it was refused, or is already this group's link (a join delivered twice).
+ */
+async function probeGroup(deps: Deps, event: InboundEvent): Promise<MemberWithFamily | null> {
+  const adapter = deps.channels.get(event.channel);
+  const groupId = event.conversation.externalId;
+  const refuse = async (reason: string): Promise<null> => {
+    await refuseLink(deps, event, null, reason);
+    try {
+      await adapter.leaveConversation?.(groupId);
+    } catch (error) {
+      deps.logger.warn("group_leave_failed", { error: errorLabel(error) });
+    }
+    return null;
+  };
+  const [already] = await deps.db
+    .select({ id: familyChannels.id })
+    .from(familyChannels)
+    .where(
+      and(
+        eq(familyChannels.channel, event.channel),
+        eq(familyChannels.conversationId, groupId),
+        eq(familyChannels.kind, "group"),
+        isNull(familyChannels.unlinkedAt),
+      ),
+    )
+    .limit(1);
+  if (already !== undefined) return null;
+  if (groupId.startsWith("R")) return refuse("room");
+  if (adapter.profile === undefined) return refuse("no_organiser");
+  const rows = await deps.db
+    .select({ member: members, link: channelLinks, family: families })
+    .from(members)
+    .innerJoin(families, eq(families.id, members.familyId))
+    .innerJoin(
+      channelLinks,
+      and(eq(channelLinks.memberId, members.id), eq(channelLinks.channel, event.channel)),
+    )
+    .where(
+      and(
+        eq(members.role, "organiser"),
+        eq(members.status, "active"),
+        isNull(channelLinks.blockedAt),
+        isNull(families.deletedAt),
+      ),
+    )
+    .orderBy(desc(families.createdAt), asc(members.id));
+  const candidates: typeof rows = [];
+  for (const row of rows) {
+    if (await familyHasEnded(deps.db, row.family.id)) continue;
+    if ((await linkedGroupOfFamily(deps.db, row.family.id, MESSENGER)) !== null) continue;
+    candidates.push(row);
+  }
+  if (candidates.length > PROBE_CAP) return refuse("probe_overflow");
+  const present: typeof rows = [];
+  for (const candidate of candidates) {
+    try {
+      if ((await adapter.profile(candidate.link.externalId, groupId)) !== null) {
+        present.push(candidate);
+      }
+    } catch (error) {
+      deps.logger.warn("group_probe_failed", { error: errorLabel(error) });
+    }
+  }
+  const familiesPresent = new Set(present.map((row) => row.family.id));
+  if (familiesPresent.size === 0) return refuse("no_organiser");
+  if (familiesPresent.size > 1) return refuse("several_families");
+  const [first] = present;
+  return first === undefined
+    ? null
+    : { member: first.member, family: first.family, link: first.link };
+}
+
+/** Links the group to the organiser's family, as the founder's notice of what Vela keeps (04 §3.3). */
+async function linkGroup(deps: Deps, event: InboundEvent, sender: MemberWithFamily): Promise<void> {
+  const conversationId = event.conversation.externalId;
   const now = deps.clock.now();
   const lang = sender.member.language;
   const linked = await deps.db.transaction(async (tx) => {
@@ -220,6 +318,7 @@ export async function handleBotAdded(deps: Deps, event: InboundEvent): Promise<v
       channel: event.channel,
       conversationId,
       lang,
+      ...replyFieldOf(event),
       text,
       buttons: [
         [

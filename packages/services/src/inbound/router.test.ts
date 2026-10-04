@@ -390,7 +390,7 @@ describe("the family group's buttons", () => {
 });
 
 describe("a follow and an unsend", () => {
-  it("note an unsend by kind and change nothing, in a private chat or the group", async () => {
+  it("change nothing when an unsend names a message Vela never stored, in a private chat or the group", async () => {
     await scene();
     const before = await memberCount();
 
@@ -405,11 +405,11 @@ describe("a follow and an unsend", () => {
     expect(h.telegram.sent).toHaveLength(0);
     expect(
       h.logger.entries
-        .filter((entry) => entry.event.endsWith("_ignored"))
+        .filter((entry) => entry.event === "unsend_unknown")
         .map((entry) => [entry.event, entry.fields]),
     ).toEqual([
-      ["unsend_ignored", { conversation: "private" }],
-      ["unsend_ignored", { conversation: "group" }],
+      ["unsend_unknown", { conversation: "private" }],
+      ["unsend_unknown", { conversation: "group" }],
     ]);
   });
 

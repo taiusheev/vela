@@ -21,6 +21,8 @@ export const EVENT_NAMES = [
   /** An organiser or the kept-light member left the family group; their membership is unchanged. */
   "member_left_group",
   "member_marked_deceased",
+  /** Someone unsent a message Vela stored (LINE, 05-line-flows D6); its words and file are gone. */
+  "message_unsent",
   "family_deletion_requested",
   /** Her phone was set up for the parent surface by an organiser, or taken off it (ADR-35). */
   "device_set_up",
