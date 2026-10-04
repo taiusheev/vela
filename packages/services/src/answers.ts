@@ -51,7 +51,7 @@ import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatTime, inboundExternalId } from "./format.ts";
-import { type EnqueueResult, enqueueOutbound, finishArrivalEffects } from "./gateway.ts";
+import { type EnqueueResult, enqueueOutbound, finishArrivalEffects, replyOf } from "./gateway.ts";
 import { answerReceiptPush, ordinaryPushReader } from "./push-messages.ts";
 import { resolveQuietOnAnswer } from "./quiet.ts";
 import {
@@ -315,6 +315,8 @@ async function sendAck(deps: Deps, input: AnswerInput): Promise<void> {
     conversationId: event.conversation.externalId,
     exchangeId: input.exchange.id,
     lang,
+    // Her thanks answers her own message, so it goes as a free reply where there is one (LINE).
+    ...(replyOf(event) === undefined ? {} : { reply: replyOf(event) }),
     ...(keepsInBook(deps, input.exchange)
       ? {
           // A story goes into the family book unless she says not to (spec §10, ADR-39).

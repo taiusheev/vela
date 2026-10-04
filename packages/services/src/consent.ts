@@ -37,7 +37,7 @@ import {
 import { and, desc, eq, isNull } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
-import { enqueueOutbound } from "./gateway.ts";
+import { enqueueOutbound, replyOf } from "./gateway.ts";
 import { languageOfSender, sendOutsideGateway } from "./group.ts";
 import {
   type ChatConsentEvidence,
@@ -265,6 +265,7 @@ async function acceptInvite(
     channel: event.channel,
     conversationId,
     lang,
+    ...(replyOf(event) === undefined ? {} : { reply: replyOf(event) }),
     ...(await consentRequestMessage(deps, tx, member, family)),
     ref: { purpose: "consent", memberId: member.id },
   });

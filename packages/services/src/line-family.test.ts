@@ -261,3 +261,35 @@ describe("taps on LINE, which name no message", () => {
     expect(her?.primarySurface).toBe("line");
   });
 });
+
+describe("free replies on LINE", () => {
+  async function answerWithReply(until: Date) {
+    await seedExchange(h.db, seed, { date: TODAY, state: "delivered", deliveredAt: h.clock.now() });
+    h.clock.advanceMinutes(5);
+    await handleInbound(h.deps, [
+      onLine({
+        kind: "text",
+        text: "Rice porridge today.",
+        reply: { token: "reply-token-1", until: until.toISOString() },
+      }),
+    ]);
+    await h.run(handlers);
+  }
+
+  it("answer her with her own reply token, and never use it for the family's group", async () => {
+    await answerWithReply(new Date(h.clock.now().getTime() + 6 * 60_000 + 50_000));
+
+    expect(h.line.sentTo(seed.memberLink.externalId).at(-1)?.message.replyToken).toBe(
+      "reply-token-1",
+    );
+    for (const sent of h.line.sentTo(GROUP)) {
+      expect(sent.message.replyToken).toBeUndefined();
+    }
+  });
+
+  it("send as usual once the token has expired", async () => {
+    await answerWithReply(new Date(h.clock.now().getTime() + 60_000));
+
+    expect(h.line.sentTo(seed.memberLink.externalId).at(-1)?.message.replyToken).toBeUndefined();
+  });
+});

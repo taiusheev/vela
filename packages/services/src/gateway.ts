@@ -25,6 +25,7 @@ import {
   type Button,
   type Channel,
   ChannelSendError,
+  type InboundEvent,
   type Lang,
   LocalDate,
   type OutboundKind,
@@ -135,8 +136,27 @@ const SentMedia = z.record(z.string(), z.string());
 type SentMedia = z.infer<typeof SentMedia>;
 
 /** `outbound.payload`: the message as it will be sent, what it is about, and what its send changes. */
+/**
+ * A free reply (LINE's reply token, 05-line-flows §5.11) to the event that caused the row: used on
+ * its first attempt only, while `until` has not passed, and only in the chat the token came from.
+ */
+const StoredReply = z.object({
+  token: z.string().min(1),
+  until: z.iso.datetime({ offset: true }),
+  conversationId: z.string().min(1),
+});
+export type StoredReply = z.infer<typeof StoredReply>;
+
+/** The reply an event offers, as a row stores it; none from a platform without free replies. */
+export function replyOf(event: InboundEvent): StoredReply | undefined {
+  return event.reply === undefined
+    ? undefined
+    : { ...event.reply, conversationId: event.conversation.externalId };
+}
+
 const OutboundPayload = z.object({
   message: StoredMessage,
+  reply: StoredReply.optional(),
   ref: MessageRefIntent.optional(),
   effect: z.unknown().optional(),
   sentMedia: SentMedia.optional(),
@@ -204,6 +224,8 @@ export interface OutboundRequestBase {
   buttons?: Button[][];
   media?: OutboundMediaRef[];
   replyToMessageId?: string;
+  /** The event's free reply (`replyOf`), for the kinds that answer someone's own message. */
+  reply?: StoredReply;
   ref?: MessageRefIntent;
   /**
    * Whole seconds, 1 to 60, before the row is due and its delivery runs. Cloudflare Queues promise no
@@ -212,6 +234,27 @@ export interface OutboundRequestBase {
    * row's `queued_at` is the due time, so `redriveStrandedOutbound` counts from it too.
    */
   delaySeconds?: number;
+}
+
+/**
+ * The reply token for this attempt: only the first (a retry may follow a reply that was delivered
+ * after all), only before it expires, and only to the chat it came from, since a reply always lands
+ * there, so an organiser's notice caused by her tap never carries her token.
+ */
+function freeReply(
+  reply: StoredReply | undefined,
+  row: { attempts: number; conversationId: string },
+  now: Date,
+): { replyToken?: string } {
+  if (
+    reply === undefined ||
+    row.attempts !== 0 ||
+    reply.conversationId !== row.conversationId ||
+    now.getTime() >= Date.parse(reply.until)
+  ) {
+    return {};
+  }
+  return { replyToken: reply.token };
 }
 
 /** The longest delay a request may ask for: long enough to follow a message, short enough to feel prompt. */
@@ -288,6 +331,7 @@ export async function insertOutbound(
       media: message.data.media,
       replyToMessageId: message.data.replyToMessageId,
     },
+    ...(request.reply === undefined ? {} : { reply: request.reply }),
     ref: request.ref,
     effect: request.effect,
   };
@@ -603,6 +647,7 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
     buttons: payload.data.message.buttons,
     media: unsentMedia(payload.data.message.media, sentMedia),
     replyToMessageId: payload.data.message.replyToMessageId,
+    ...freeReply(payload.data.reply, taken.row, deps.clock.now()),
   });
   if (!message.success) {
     return fail(
