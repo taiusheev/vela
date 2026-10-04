@@ -34,7 +34,12 @@ afterAll(async () => {
 
 async function seedAwayFamily(db: VelaDatabase) {
   const family = await seedFamily(db, { now: NOW });
-  const brother = await seedGroupMember(db, family, { now: NOW, name: "Sam", externalId: "3001" });
+  const brother = await seedGroupMember(db, family, {
+    now: NOW,
+    name: "Sam",
+    externalId: "3001",
+    role: "organiser",
+  });
   const [account] = await db
     .insert(users)
     .values({ authSubject: sam.authSubject, displayName: "Sam" })

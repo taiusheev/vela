@@ -145,11 +145,15 @@ describe("away from the app", () => {
 });
 
 describe("she has died", () => {
-  it("is said by any member: her light goes and her schedule is cleared, once", async () => {
+  it("is said by an organiser only: her light goes and her schedule is cleared, once", async () => {
+    keys += 1;
+    await expect(
+      markApiDeceased(h.deps, sam, `deceased-${keys}`, seed.family.id, seed.member.id),
+    ).rejects.toBeInstanceOf(VelaError);
     keys += 1;
     const said = await markApiDeceased(
       h.deps,
-      sam,
+      mia,
       `deceased-${keys}`,
       seed.family.id,
       seed.member.id,

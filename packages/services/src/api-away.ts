@@ -251,8 +251,9 @@ export async function endApiAway(
 }
 
 /**
- * She has died (spec §19, `POST /v1/families/:familyId/members/:memberId/deceased`): any live
- * member of her family says so. Her light goes off and her schedule is cleared, and from here
+ * She has died (spec §19, `POST /v1/families/:familyId/members/:memberId/deceased`): an organiser
+ * of her family says so. The app offers no way to it yet: the founder decides how it is confirmed
+ * and worded first (3 October 2026), and until then the founder marks it from the admin page. Her light goes off and her schedule is cleared, and from here
  * nothing is sent about her to anyone, as when the founder marks it (`markDeceased`). Saying it
  * again answers as it stands. It cannot be undone from the app.
  */
@@ -280,11 +281,11 @@ export async function markApiDeceased(
     },
     {
       authorize: async (tx) => {
-        const access = await authorizeFamilyAccess(tx, identity, family);
+        const access = await authorizeFamilyAccess(tx, identity, family, "organiser");
         if (access.kind !== "granted") throw notFound();
       },
       mutate: async (tx) => {
-        const access = await authorizeFamilyAccess(tx, identity, family);
+        const access = await authorizeFamilyAccess(tx, identity, family, "organiser");
         if (access.kind !== "granted") throw notFound();
         const her = await lockHer(tx, family, herId);
         if (her.status !== "deceased") {

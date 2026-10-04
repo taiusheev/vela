@@ -394,7 +394,9 @@ A story is kept when she answers an exchange of type `story`. Story day composes
 
 ### When she has died (4 October 2026, spec §19)
 
-`POST /v1/families/:familyId/members/:memberId/deceased` with an empty body and an `Idempotency-Key` lets any live member of her family say she has died, through `runApiMutation` (operation `member.deceased:v1`) under her member row's lock. Her light goes off, `status` becomes `deceased`, and her schedule is cleared, as the founder's `mark_deceased` does. From then on nothing about her is sent to anyone (flows §3.5, §3.7, §3.9, §3.11). It answers 200 `ApiDeceased` (`member_id`, `status: "deceased"`), and a second time answers as it stands with one event recorded (`api-away-race.test.ts`). Anyone outside the family, or a member who is not its kept-light member, gets 404. Her light is no longer listed, and the family book stays.
+The app offers no way to this route yet. The founder decides first how it is confirmed and worded, and marks it from the admin page meanwhile.
+
+`POST /v1/families/:familyId/members/:memberId/deceased` with an empty body and an `Idempotency-Key` lets an organiser of her family say she has died, through `runApiMutation` (operation `member.deceased:v1`) under her member row's lock. Her light goes off, `status` becomes `deceased`, and her schedule is cleared, as the founder's `mark_deceased` does. From then on nothing about her is sent to anyone (flows §3.5, §3.7, §3.9, §3.11). It answers 200 `ApiDeceased` (`member_id`, `status: "deceased"`), and a second time answers as it stands with one event recorded (`api-away-race.test.ts`). Anyone outside the family, or a member who is not its kept-light member, gets 404. Her light is no longer listed, and the family book stays.
 
 ### Reminders (3 October 2026, spec §12, build plan 5.3, ADR-40)
 
