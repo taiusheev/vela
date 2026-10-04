@@ -63,6 +63,7 @@ import {
 import { loadOutboundFiles } from "./outbound-media.ts";
 import { type PushSend, sendPush, settlePush } from "./push.ts";
 import { appRowProblem, PUSH_CHANNEL } from "./push-messages.ts";
+import { channelQuotaRefused } from "./quota.ts";
 import {
   familyHasEnded,
   firstAnswersByDate,
@@ -1038,6 +1039,14 @@ async function handleSendError(
   error: ChannelSendError,
 ): Promise<DeliveryResult> {
   const { row } = loaded;
+  if (error.code === "quota_exhausted" && row.channel === "line") {
+    // The month's LINE quota is spent: the founder hears once, and the row retries as usual.
+    try {
+      await channelQuotaRefused(deps, "line");
+    } catch (alertError) {
+      deps.logger.warn("channel_quota_refusal_alert_failed", { error: errorLabel(alertError) });
+    }
+  }
   const progress: { payload?: OutboundPayload } =
     error.sentMediaMessageIds.length === 0
       ? {}

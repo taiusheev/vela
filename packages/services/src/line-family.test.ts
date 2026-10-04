@@ -332,3 +332,20 @@ describe("a follow on LINE", () => {
     expect(link?.blockedAt).toBeNull();
   });
 });
+
+describe("a spent LINE quota", () => {
+  it("tells the founder once, however many sends it refuses, and the sends wait to retry", async () => {
+    await prepareDay(h.deps, seed.member.id, TOMORROW);
+    h.clock.set(new Date(`${TOMORROW}T08:00:00.000+08:00`));
+    h.line.failNextSends(2, "quota_exhausted");
+
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+    await h.run(handlers);
+
+    const alerts = h.telegram
+      .sentTo(h.config.adminConversationId ?? "")
+      .filter((sent) => sent.message.text.includes("LINE"));
+    expect(alerts).toHaveLength(1);
+  });
+});

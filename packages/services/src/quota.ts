@@ -126,14 +126,15 @@ async function tellFounderOnce(
   deps: Deps,
   channel: BilledChannel,
   level: AlertLevel,
-  reading: QuotaReading,
-  limit: number,
+  reading: QuotaReading | { refusedAt: string },
+  limit: number | null,
 ): Promise<void> {
   const admin = deps.config.adminConversationId;
   if (admin === null) {
     return;
   }
-  const key = `${snapshotKey(channel)}:${quotaMonthOf(reading.readAt)}:${level}`;
+  const at = "readAt" in reading ? reading.readAt : reading.refusedAt;
+  const key = `${snapshotKey(channel)}:${quotaMonthOf(at)}:${level}`;
   const claimed = await deps.db
     .insert(flags)
     .values({ key, value: reading, updatedAt: deps.clock.now() })
@@ -146,7 +147,11 @@ async function tellFounderOnce(
   const text =
     level === "exhausted"
       ? t(ADMIN_LANG, "admin.line_quota_exhausted", { link })
-      : t(ADMIN_LANG, "admin.line_quota", { used: reading.used, limit, link });
+      : t(ADMIN_LANG, "admin.line_quota", {
+          used: "used" in reading ? reading.used : 0,
+          limit: limit ?? 0,
+          link,
+        });
   try {
     await deps.channels.get(ADMIN_CHANNEL).send({
       kind: "system",
@@ -168,6 +173,21 @@ async function tellFounderOnce(
     throw error;
   }
   deps.logger.info("channel_quota_alert_sent", { channel, level });
+}
+
+/**
+ * A send the channel refused because the month's quota is spent (05-line-flows §5.11): the founder
+ * hears once a quota month, through the same claim a reading that shows the month spent takes, so
+ * whichever sees it first tells, keyed by the quota month of the refusal's time.
+ */
+export async function channelQuotaRefused(deps: Deps, channel: BilledChannel): Promise<void> {
+  await tellFounderOnce(
+    deps,
+    channel,
+    "exhausted",
+    { refusedAt: deps.clock.now().toISOString() },
+    null,
+  );
 }
 
 /**
