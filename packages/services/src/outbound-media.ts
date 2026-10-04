@@ -14,13 +14,14 @@ import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
 
 /**
- * Whether `channel`'s adapter sends a file Vela keeps by uploading its bytes: Telegram's alone.
- * LINE (ADR-32, off everywhere) takes a file only by URL, and no URL is made for an app photo yet,
- * so a message on any other channel carries no storage-key file: an arrival leaves those photos out
- * and a photo choice goes as words, rather than failing her morning at the adapter for good.
+ * Whether `channel`'s adapter sends a file Vela keeps by its storage key: Telegram uploads its
+ * bytes, and LINE (ADR-32) fetches it by the pilot Worker's signed URL (`mediaUrl`). A message on
+ * any other channel carries no storage-key file: an arrival leaves those photos out and a photo
+ * choice goes as words, rather than failing her morning at the adapter for good.
  */
 export function uploadsStoredMedia(channel: Channel): boolean {
-  return channel === "telegram";
+  // LINE is sent the same reference, and fetches the file by the Worker's signed URL (05 §5.2).
+  return channel === "telegram" || channel === "line";
 }
 
 /**

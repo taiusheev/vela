@@ -79,16 +79,42 @@ export interface LinePlan {
   readonly textIndex: number;
 }
 
+/**
+ * The Worker's signed URL to a stored object (05-line-flows §5.2, `media-route.ts`): LINE fetches
+ * media only by HTTPS URL, so a file Vela keeps is sent by a link to it.
+ */
+export type LineMediaUrl = (ref: { storageKey: string; mime: string }) => Promise<string>;
+
+/**
+ * The message with each stored file named by its signed URL, where the adapter was given a way to
+ * sign them; a file already named by a URL, or with no storage key, is left as it is.
+ */
+async function withMediaUrls(
+  message: OutboundMessage,
+  mediaUrl: LineMediaUrl | undefined,
+): Promise<OutboundMessage> {
+  if (mediaUrl === undefined || message.media === undefined) return message;
+  const media = await Promise.all(
+    message.media.map(async (ref) =>
+      ref.url === undefined && ref.storageKey !== undefined && ref.mime !== undefined
+        ? { ...ref, url: await mediaUrl({ storageKey: ref.storageKey, mime: ref.mime }) }
+        : ref,
+    ),
+  );
+  return { ...message, media };
+}
+
 export async function sendLineMessage(
   client: LineClient,
   message: OutboundMessage,
+  mediaUrl?: LineMediaUrl,
 ): Promise<SendResult> {
   const checked = OutboundMessage.safeParse(message);
   if (!checked.success) {
     const fields = checked.error.issues.map((issue) => issue.path.join(".") || "message");
     throw refused(`outbound message is invalid: ${fields.join(", ")}`);
   }
-  const outbound = checked.data;
+  const outbound = await withMediaUrls(checked.data, mediaUrl);
   if (outbound.to.channel !== "line") {
     throw refused(`cannot send a ${outbound.to.channel} message on line`);
   }

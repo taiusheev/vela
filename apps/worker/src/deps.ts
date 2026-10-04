@@ -46,6 +46,7 @@ import {
 } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
 import { createHeartbeat } from "./heartbeat.ts";
+import { createMediaUrl } from "./media-route.ts";
 import type { PrivacyNotices } from "./notices.ts";
 import { createRandom } from "./random.ts";
 
@@ -218,6 +219,8 @@ function createLineChannel(env: PilotEnv): ChannelAdapter {
   return createLineAdapter({
     channelSecret: config.channelSecret,
     channelAccessToken: config.channelAccessToken,
+    // LINE fetches a voice note or photo Vela keeps by this Worker's signed URL (05 §5.2).
+    mediaUrl: createMediaUrl(config),
   });
 }
 

@@ -296,6 +296,33 @@ describe("adapter.send", () => {
     });
   });
 
+  it("sends a file Vela keeps by the signed URL the Worker gives for its storage key", async () => {
+    const recording = createRecordingFetch(sequentialSends(FIRST_ID));
+    const signed: string[] = [];
+    const adapter = createLineAdapter({
+      channelSecret: TEST_CHANNEL_SECRET,
+      channelAccessToken: TEST_CHANNEL_ACCESS_TOKEN,
+      fetch: recording.fetch,
+      mediaUrl: async ({ storageKey }) => {
+        signed.push(storageKey);
+        return `https://vela-light.example.workers.dev/m/${storageKey}`;
+      },
+    });
+
+    await adapter.send({
+      ...ARRIVAL,
+      buttons: undefined,
+      media: [{ kind: "audio", storageKey: "book/f/v.m4a", mime: "audio/mp4", durationMs: 4_000 }],
+    });
+
+    expect(signed).toEqual(["book/f/v.m4a"]);
+    expect(objectsOf(recording.requests)[0]?.[0]).toStrictEqual({
+      type: "audio",
+      originalContentUrl: "https://vela-light.example.workers.dev/m/book/f/v.m4a",
+      duration: 4_000,
+    });
+  });
+
   it("puts quick replies only on the last object, even when media fills a request before the text", async () => {
     const { adapter, requests } = setup();
 

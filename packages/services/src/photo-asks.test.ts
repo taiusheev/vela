@@ -509,21 +509,25 @@ describe("delivering a photo ask to Telegram", () => {
     expect(message.text).not.toContain("Tap 1 or 2");
   });
 
-  it("leaves stored photos out for a channel that cannot upload them, such as LINE, so the choice goes as words", async () => {
+  it("leaves stored photos out for a channel that cannot send them, such as WhatsApp, so the choice goes as words", async () => {
     const ask = await composedChoice();
     const [exchange] = await herExchanges();
     if (exchange === undefined) throw new Error("expected her photo ask");
 
     const morning = { date: TOMORROW, timeZone: TZ };
-    const onLine = await loadAsk(h.deps, seed.family, exchange, "line", morning);
+    const onWhatsApp = await loadAsk(h.deps, seed.family, exchange, "whatsapp", morning);
 
-    expect(onLine.ask).toMatchObject({ type: "question", imageCount: 0 });
-    expect(onLine.media).toEqual([]);
+    expect(onWhatsApp.ask).toMatchObject({ type: "question", imageCount: 0 });
+    expect(onWhatsApp.media).toEqual([]);
     expect(h.logger.entries).toContainEqual({
       level: "warn",
       event: "media_not_sendable_on_channel",
-      fields: { familyId: seed.family.id, channel: "line", count: 2 },
+      fields: { familyId: seed.family.id, channel: "whatsapp", count: 2 },
     });
+    // LINE is sent both photos by storage key, which it fetches by the Worker's signed URL.
+    const onLine = await loadAsk(h.deps, seed.family, exchange, "line", morning);
+    expect(onLine.ask).toMatchObject({ type: "photo_choice", imageCount: 2 });
+    expect(onLine.media.map((ref) => ref.storageKey)).toEqual(ask.keys);
     expect(h.logger.entries.map((entry) => entry.event)).not.toContain("media_not_sendable");
     // The same ask on Telegram still carries both photos, to be uploaded.
     const onTelegram = await loadAsk(h.deps, seed.family, exchange, "telegram", morning);

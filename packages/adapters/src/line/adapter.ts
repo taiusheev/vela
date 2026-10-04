@@ -9,7 +9,7 @@ import { GROUP_ID, ROOM_ID, USER_ID } from "./ids.ts";
 import { fetchLineMedia, fetchLinePreview, type Wait } from "./media.ts";
 import { parseLineWebhook } from "./parse.ts";
 import { readLineQuota } from "./quota.ts";
-import { sendLineMessage } from "./send.ts";
+import { type LineMediaUrl, sendLineMessage } from "./send.ts";
 import { createLineSignatureVerifier } from "./verify.ts";
 
 export interface LineAdapterOptions extends LineApiOptions {
@@ -25,6 +25,8 @@ export interface LineAdapterOptions extends LineApiOptions {
    * that records the wait and resolves at once.
    */
   readonly wait?: Wait;
+  /** Signs a stored file's URL for LINE to fetch (`media-route.ts`); without it only URLs send. */
+  readonly mediaUrl?: LineMediaUrl;
 }
 
 const LINE_CAPABILITIES: AdapterCapabilities = {
@@ -76,7 +78,7 @@ export function createLineAdapter(options: LineAdapterOptions): ChannelAdapter {
     },
 
     send(message) {
-      return sendLineMessage(client, message);
+      return sendLineMessage(client, message, options.mediaUrl);
     },
 
     // A postback shows no spinner, so there is nothing to stop. Four flows call this without a
