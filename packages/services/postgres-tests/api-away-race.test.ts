@@ -6,11 +6,11 @@
  * and stores another.
  */
 import { localDateOf } from "@vela/core";
-import { awayPeriods, members, users, type VelaDatabase } from "@vela/db";
+import { awayPeriods, events, members, users, type VelaDatabase } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "../src/api-access.ts";
-import { setApiAway } from "../src/api-away.ts";
+import { markApiDeceased, setApiAway } from "../src/api-away.ts";
 import { seedFamily, seedGroupMember } from "../src/testing/seed.ts";
 import { NOW, openPostgresHarness, type PostgresHarness, type RaceClient } from "./testing.ts";
 
@@ -74,5 +74,41 @@ describe("away from the app on independent PostgreSQL connections", () => {
 
     expect(result?.status).toBe("fulfilled");
     expect(await seeder.db.select().from(awayPeriods)).toHaveLength(1);
+  });
+});
+
+describe("she has died, said on independent PostgreSQL connections", () => {
+  it("is recorded once when two members say it at once", async () => {
+    const family = await seedAwayFamily(seeder.db);
+    const [writer, holder] = await pg.clientPool("deceased", 2);
+    if (writer === undefined || holder === undefined) throw new Error("expected two connections");
+
+    // The holder is the first member saying it: her row locked and marked, not yet committed.
+    const held = await pg.holdRows(holder, async (tx) => {
+      await tx.select().from(members).where(eq(members.id, family.member.id)).for("update");
+      await tx
+        .update(members)
+        .set({ lightOn: false, status: "deceased", nextWakeAt: null })
+        .where(eq(members.id, family.member.id));
+      await tx.insert(events).values({
+        name: "member_marked_deceased",
+        familyId: family.family.id,
+        memberId: family.member.id,
+        at: NOW,
+      });
+    });
+    const said = pg.track(
+      markApiDeceased(pg.jobDeps(writer), sam, "deceased-sam", family.family.id, family.member.id),
+    );
+    await pg.waitForRowLockWaitOrCompletion(writer, [holder], said);
+    await held.release();
+    const [result] = await pg.settle("Sam's word", [said]);
+
+    expect(result?.status).toBe("fulfilled");
+    const recorded = await seeder.db
+      .select()
+      .from(events)
+      .where(eq(events.name, "member_marked_deceased"));
+    expect(recorded).toHaveLength(1);
   });
 });

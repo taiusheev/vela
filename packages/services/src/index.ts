@@ -64,7 +64,7 @@ export {
   AskVoiceMissingError,
   composeApiAsk,
 } from "./api-asks.ts";
-export { AwayRefusedError, endApiAway, setApiAway } from "./api-away.ts";
+export { AwayRefusedError, endApiAway, markApiDeceased, setApiAway } from "./api-away.ts";
 export {
   deviceTokenHash,
   memberOfDeviceToken,

@@ -618,6 +618,10 @@ msgstr "From"
 msgid "Germany"
 msgstr "Germany"
 
+#: app/deceased.tsx
+msgid "Go back"
+msgstr "Go back"
+
 #: app/onboarding.tsx
 #: app/vela-light.tsx
 msgid "Go to Today"
@@ -657,6 +661,7 @@ msgstr "Hello {who}. Could I list you on Vela as someone near {name}, so I could
 #. stands in for her name
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
+#: app/deceased.tsx
 #: app/onboarding.tsx
 msgid "her"
 msgstr "her"
@@ -725,6 +730,14 @@ msgstr "Hug"
 #: app/onboarding.tsx
 msgid "I have sent it"
 msgstr "I have sent it"
+
+#: app/(tabs)/you.tsx
+msgid "If {name} has died"
+msgstr "If {name} has died"
+
+#: app/deceased.tsx
+msgid "If {name} has died, Vela stops now. No more mornings, and no message of any kind about {name}, to anyone. The family book stays, for everyone in the family to read."
+msgstr "If {name} has died, Vela stops now. No more mornings, and no message of any kind about {name}, to anyone. The family book stays, for everyone in the family to read."
 
 #: src/data/notifications.ts
 msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
@@ -1472,6 +1485,14 @@ msgstr "Stay"
 msgid "Stop"
 msgstr "Stop"
 
+#: app/deceased.tsx
+msgid "Stop Vela for {name}"
+msgstr "Stop Vela for {name}"
+
+#: app/deceased.tsx
+msgid "Stopping…"
+msgstr "Stopping…"
+
 #: src/components/story-day.tsx
 msgid "Story day · {day}"
 msgstr "Story day · {day}"
@@ -1552,6 +1573,7 @@ msgid "That could not be sent just now. Your words are kept."
 msgstr "That could not be sent just now. Your words are kept."
 
 #: app/(tabs)/you.tsx
+#: app/deceased.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
 #: src/data/useFamily.ts
@@ -1698,6 +1720,10 @@ msgstr "This account already runs a family."
 #: app/sign-in.tsx
 msgid "This build has no sign-in configured, so it shows example days."
 msgstr "This build has no sign-in configured, so it shows example days."
+
+#: app/deceased.tsx
+msgid "This cannot be undone from the app."
+msgstr "This cannot be undone from the app."
 
 #: app/onboarding.tsx
 msgid "This device cannot share from here. Copy the words above and send them to her yourself."
@@ -2002,6 +2028,10 @@ msgstr "Waiting until {time}. You will hear again then if it is still quiet."
 #: src/components/quiet-notice.tsx
 msgid "Was this notice useful?"
 msgstr "Was this notice useful?"
+
+#: app/deceased.tsx
+msgid "We are very sorry."
+msgstr "We are very sorry."
 
 #: app/sign-in.tsx
 msgid "We sent a code to {sentTo}."

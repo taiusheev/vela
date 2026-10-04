@@ -369,6 +369,7 @@ function fixture(enableWrites = false, push?: boolean) {
           replayed: false,
         }),
       setApiAway: vi.fn().mockRejectedValue(new Error("no away in these tests")),
+      markApiDeceased: vi.fn().mockRejectedValue(new Error("no deceased in these tests")),
       endApiAway: vi.fn().mockRejectedValue(new Error("no away in these tests")),
       leaveApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["leaveApiFamily"]>()

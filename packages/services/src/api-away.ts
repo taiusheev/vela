@@ -249,3 +249,66 @@ export async function endApiAway(
   );
   return { ...result, after: result.replayed ? nothingAfterCommit() : after };
 }
+
+/**
+ * She has died (spec §19, `POST /v1/families/:familyId/members/:memberId/deceased`): any live
+ * member of her family says so. Her light goes off and her schedule is cleared, and from here
+ * nothing is sent about her to anyone, as when the founder marks it (`markDeceased`). Saying it
+ * again answers as it stands. It cannot be undone from the app.
+ */
+export async function markApiDeceased(
+  deps: Pick<Deps, "db" | "clock">,
+  identity: SessionIdentity,
+  key: string,
+  familyId: string,
+  memberId: string,
+): Promise<{ response: ApiMutationResponse; replayed: boolean; after: AfterCommit }> {
+  if (!UUID.test(familyId) || !UUID.test(memberId)) throw notFound();
+  const family = familyId.toLowerCase();
+  const herId = memberId.toLowerCase();
+  const now = deps.clock.now();
+  const after = nothingAfterCommit();
+  const result = await runApiMutation(
+    deps,
+    identity,
+    {
+      key,
+      operation: "member.deceased:v1",
+      input: { member_id: herId },
+      familyId: family,
+      memberId: herId,
+    },
+    {
+      authorize: async (tx) => {
+        const access = await authorizeFamilyAccess(tx, identity, family);
+        if (access.kind !== "granted") throw notFound();
+      },
+      mutate: async (tx) => {
+        const access = await authorizeFamilyAccess(tx, identity, family);
+        if (access.kind !== "granted") throw notFound();
+        const her = await lockHer(tx, family, herId);
+        if (her.status !== "deceased") {
+          await tx
+            .update(members)
+            .set({ lightOn: false, status: "deceased", nextWakeAt: null })
+            .where(eq(members.id, her.id));
+          await recordEvent(
+            tx,
+            {
+              name: "member_marked_deceased",
+              familyId: family,
+              memberId: her.id,
+              surface: "app",
+              props: { by: access.access.memberId },
+            },
+            now,
+          );
+          // Her alarm, if one is set, finds her deceased and does nothing more.
+          after.wakeMemberIds.push(her.id);
+        }
+        return { status: 200, body: { member_id: her.id, status: "deceased" } };
+      },
+    },
+  );
+  return { ...result, after: result.replayed ? nothingAfterCommit() : after };
+}

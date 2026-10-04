@@ -7,6 +7,7 @@ import {
   ApiBookRemoved,
   ApiComposedAsk,
   ApiCreatedFamily,
+  ApiDeceased,
   ApiDeviceMember,
   ApiDeviceMessages,
   ApiDeviceRemoved,
@@ -50,6 +51,7 @@ import {
   InviteNearby,
   type Lang,
   LeaveFamily,
+  MarkDeceased,
   type MediaUnavailableReason,
   MemberLight,
   PauseMember,
@@ -105,6 +107,7 @@ import {
   MediaRefusedError,
   type MediaStore,
   MemberChangeRefusedError,
+  type markApiDeceased,
   type markApiQuietUseful,
   type memberOfDeviceToken,
   NearbyInviteRefusedError,
@@ -184,6 +187,7 @@ export interface ApiWriteServices {
   pauseApiMember: typeof pauseApiMember;
   leaveApiFamily: typeof leaveApiFamily;
   setApiAway: typeof setApiAway;
+  markApiDeceased: typeof markApiDeceased;
   endApiAway: typeof endApiAway;
   startApiTrial: typeof startApiTrial;
   addApiNearby: typeof addApiNearby;
@@ -1205,6 +1209,31 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         );
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ApiAway.parse(result.response.body), 201);
+      },
+    );
+    // She has died (spec §19): any member of her family says so, and nothing about her is sent again.
+    app.post(
+      "/v1/families/:familyId/members/:memberId/deceased",
+      authenticate,
+      validateWrite(MarkDeceased, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.markApiDeceased(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.req.param("memberId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiDeceased.parse(result.response.body), 200);
       },
     );
     app.post(

@@ -7,6 +7,7 @@ import type {
   ApiBookRemoved,
   ApiComposedAsk,
   ApiCreatedFamily,
+  ApiDeceased,
   ApiDeviceMember,
   ApiDeviceMessages,
   ApiDeviceSetUp,
@@ -196,6 +197,21 @@ export function setAway(
     token,
     key,
     body: away,
+  });
+}
+
+/** She has died (spec §19): any member says so, and nothing about her is sent again. */
+export function markDeceased(
+  familyId: string,
+  memberId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiDeceased> {
+  return call<ApiDeceased>({
+    path: `/v1/families/${familyId}/members/${memberId}/deceased`,
+    token,
+    key,
+    body: {},
   });
 }
 

@@ -625,6 +625,10 @@ msgstr "從"
 msgid "Germany"
 msgstr "德國"
 
+#: app/deceased.tsx
+msgid "Go back"
+msgstr "返回"
+
 #: app/onboarding.tsx
 #: app/vela-light.tsx
 msgid "Go to Today"
@@ -664,6 +668,7 @@ msgstr "{who}您好。我可以在 Vela 上把您列為住在{name}附近的人�
 #. stands in for her name
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
+#: app/deceased.tsx
 #: app/onboarding.tsx
 msgid "her"
 msgstr "這位家人"
@@ -732,6 +737,14 @@ msgstr "抱抱"
 #: app/onboarding.tsx
 msgid "I have sent it"
 msgstr "我已經傳了"
+
+#: app/(tabs)/you.tsx
+msgid "If {name} has died"
+msgstr "如果{name}已經過世"
+
+#: app/deceased.tsx
+msgid "If {name} has died, Vela stops now. No more mornings, and no message of any kind about {name}, to anyone. The family book stays, for everyone in the family to read."
+msgstr "如果{name}已經過世，Vela 會立即停止。不再有早上的訊息，也不會再向任何人發出任何關於{name}的訊息。家庭故事書會留著，家人都能閱讀。"
 
 #: src/data/notifications.ts
 msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
@@ -1479,6 +1492,14 @@ msgstr "留下"
 msgid "Stop"
 msgstr "停止"
 
+#: app/deceased.tsx
+msgid "Stop Vela for {name}"
+msgstr "停止{name}的 Vela"
+
+#: app/deceased.tsx
+msgid "Stopping…"
+msgstr "正在停止…"
+
 #: src/components/story-day.tsx
 msgid "Story day · {day}"
 msgstr "故事日 · {day}"
@@ -1559,6 +1580,7 @@ msgid "That could not be sent just now. Your words are kept."
 msgstr "目前無法傳送。您寫的內容都還在。"
 
 #: app/(tabs)/you.tsx
+#: app/deceased.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
 #: src/data/useFamily.ts
@@ -1705,6 +1727,10 @@ msgstr "這個帳號已經有一個家庭了。"
 #: app/sign-in.tsx
 msgid "This build has no sign-in configured, so it shows example days."
 msgstr "這個版本沒有設定登入，所以顯示的是範例內容。"
+
+#: app/deceased.tsx
+msgid "This cannot be undone from the app."
+msgstr "這個動作無法在 App 裡復原。"
 
 #: app/onboarding.tsx
 msgid "This device cannot share from here. Copy the words above and send them to her yourself."
@@ -2009,6 +2035,10 @@ msgstr "會等到 {time}。到時候如果還是比較安靜，會再通知您�
 #: src/components/quiet-notice.tsx
 msgid "Was this notice useful?"
 msgstr "這則通知有幫助嗎？"
+
+#: app/deceased.tsx
+msgid "We are very sorry."
+msgstr "我們深感遺憾。"
 
 #: app/sign-in.tsx
 msgid "We sent a code to {sentTo}."

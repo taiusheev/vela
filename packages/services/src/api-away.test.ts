@@ -8,7 +8,7 @@ import { awayPeriods, members, outbound, quietEvents, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
-import { AwayRefusedError, endApiAway, setApiAway } from "./api-away.ts";
+import { AwayRefusedError, endApiAway, markApiDeceased, setApiAway } from "./api-away.ts";
 import { loadApiLights } from "./api-lights.ts";
 import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
@@ -141,5 +141,37 @@ describe("away from the app", () => {
     await expect(endApiAway(h.deps, stranger, `end-${keys}`, period.id)).rejects.toBeInstanceOf(
       VelaError,
     );
+  });
+});
+
+describe("she has died", () => {
+  it("is said by any member: her light goes and her schedule is cleared, once", async () => {
+    keys += 1;
+    const said = await markApiDeceased(
+      h.deps,
+      sam,
+      `deceased-${keys}`,
+      seed.family.id,
+      seed.member.id,
+    );
+    keys += 1;
+    const again = await markApiDeceased(
+      h.deps,
+      mia,
+      `deceased-${keys}`,
+      seed.family.id,
+      seed.member.id,
+    );
+
+    expect(said.response.body).toEqual({ member_id: seed.member.id, status: "deceased" });
+    expect(said.after.wakeMemberIds).toEqual([seed.member.id]);
+    expect(again.after.wakeMemberIds).toEqual([]);
+    const [her] = await h.db.select().from(members).where(eq(members.id, seed.member.id));
+    expect(her).toMatchObject({ status: "deceased", lightOn: false, nextWakeAt: null });
+    expect(await loadApiLights(h.db, mia, seed.family.id, h.clock.now())).toEqual([]);
+    keys += 1;
+    await expect(
+      markApiDeceased(h.deps, stranger, `deceased-${keys}`, seed.family.id, seed.member.id),
+    ).rejects.toBeInstanceOf(VelaError);
   });
 });

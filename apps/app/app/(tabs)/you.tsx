@@ -184,6 +184,7 @@ export default function YouScreen() {
               />
               {/* Away mode (spec §8): any member may say she is away. */}
               {member.paused ? null : <AwayLink memberId={member.memberId} name={member.name} />}
+              <DeceasedLink memberId={member.memberId} name={member.name} />
             </View>
           ))}
           {family.others === undefined ? null : (
@@ -459,6 +460,21 @@ function AwayLink({ memberId, name }: { memberId: string; name: string }) {
     >
       <Words variant="button" tone="action">
         <Trans>Is {name} away?</Trans>
+      </Words>
+    </Pressable>
+  );
+}
+
+/** Understated, at the end of her row (spec §19): when she has died. */
+function DeceasedLink({ memberId, name }: { memberId: string; name: string }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      hitSlop={hitSlop}
+      onPress={() => router.push({ pathname: "/deceased", params: { member: memberId } })}
+    >
+      <Words variant="caption" tone="ink3">
+        <Trans>If {name} has died</Trans>
       </Words>
     </Pressable>
   );

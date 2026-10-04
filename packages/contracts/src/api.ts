@@ -1204,3 +1204,10 @@ export type ApiAway = z.infer<typeof ApiAway>;
 /** "She's back": no body, the away period is in the path. */
 export const EndAway = z.strictObject({});
 export type EndAway = z.infer<typeof EndAway>;
+
+/** "She has died" (spec §19): no body, she is in the path. */
+export const MarkDeceased = z.strictObject({});
+export type MarkDeceased = z.infer<typeof MarkDeceased>;
+
+export const ApiDeceased = z.object({ member_id: z.uuid(), status: z.literal("deceased") });
+export type ApiDeceased = z.infer<typeof ApiDeceased>;

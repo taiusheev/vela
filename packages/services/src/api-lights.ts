@@ -33,6 +33,8 @@ export async function loadApiLights(
   const keptLight = await keptLightMembersOfFamily(db, familyId);
   const lights: MemberLight[] = [];
   for (const member of keptLight) {
+    // A light is for someone living: once she has died she has none to show (spec §19).
+    if (member.status === "deceased") continue;
     const today = localDateOf(now, member.tz);
     const [away] = await db
       .select({ id: awayPeriods.id, toDate: awayPeriods.toDate })

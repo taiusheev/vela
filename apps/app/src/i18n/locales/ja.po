@@ -618,6 +618,10 @@ msgstr ""
 msgid "Germany"
 msgstr ""
 
+#: app/deceased.tsx
+msgid "Go back"
+msgstr ""
+
 #: app/onboarding.tsx
 #: app/vela-light.tsx
 msgid "Go to Today"
@@ -657,6 +661,7 @@ msgstr ""
 #. stands in for her name
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
+#: app/deceased.tsx
 #: app/onboarding.tsx
 msgid "her"
 msgstr ""
@@ -724,6 +729,14 @@ msgstr ""
 
 #: app/onboarding.tsx
 msgid "I have sent it"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "If {name} has died"
+msgstr ""
+
+#: app/deceased.tsx
+msgid "If {name} has died, Vela stops now. No more mornings, and no message of any kind about {name}, to anyone. The family book stays, for everyone in the family to read."
 msgstr ""
 
 #: src/data/notifications.ts
@@ -1472,6 +1485,14 @@ msgstr ""
 msgid "Stop"
 msgstr ""
 
+#: app/deceased.tsx
+msgid "Stop Vela for {name}"
+msgstr ""
+
+#: app/deceased.tsx
+msgid "Stopping…"
+msgstr ""
+
 #: src/components/story-day.tsx
 msgid "Story day · {day}"
 msgstr ""
@@ -1552,6 +1573,7 @@ msgid "That could not be sent just now. Your words are kept."
 msgstr ""
 
 #: app/(tabs)/you.tsx
+#: app/deceased.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
 #: src/data/useFamily.ts
@@ -1697,6 +1719,10 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "This build has no sign-in configured, so it shows example days."
+msgstr ""
+
+#: app/deceased.tsx
+msgid "This cannot be undone from the app."
 msgstr ""
 
 #: app/onboarding.tsx
@@ -2001,6 +2027,10 @@ msgstr ""
 
 #: src/components/quiet-notice.tsx
 msgid "Was this notice useful?"
+msgstr ""
+
+#: app/deceased.tsx
+msgid "We are very sorry."
 msgstr ""
 
 #: app/sign-in.tsx
