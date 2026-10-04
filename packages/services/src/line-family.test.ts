@@ -349,3 +349,31 @@ describe("a spent LINE quota", () => {
     expect(alerts).toHaveLength(1);
   });
 });
+
+describe("names on LINE", () => {
+  it("names a new group member from their LINE profile when their message carries no name", async () => {
+    h.line.profiles.set("U-cousin", { displayName: "Cousin Wei" });
+    await seedExchange(h.db, seed, { date: TODAY, state: "delivered", deliveredAt: h.clock.now() });
+    events += 1;
+
+    await handleInbound(h.deps, [
+      {
+        channel: "line",
+        eventId: `line:${events}`,
+        at: h.clock.now().toISOString(),
+        kind: "text",
+        text: "/ask What did you cook today?",
+        sender: { externalUserId: "U-cousin" },
+        conversation: { externalId: GROUP, kind: "group" },
+        messageId: `m-${events}`,
+      } as InboundEvent,
+    ]);
+
+    const [cousin] = await h.db
+      .select({ name: members.displayName })
+      .from(members)
+      .innerJoin(channelLinks, eq(channelLinks.memberId, members.id))
+      .where(eq(channelLinks.externalId, "U-cousin"));
+    expect(cousin?.name).toBe("Cousin Wei");
+  });
+});

@@ -8,6 +8,7 @@
 import {
   type AdapterCapabilities,
   type ChannelAdapter,
+  type ChannelProfile,
   ChannelSendError,
   type ChannelSendErrorCode,
   type FetchedMedia,
@@ -64,6 +65,8 @@ export interface FakeTelegram extends ChannelAdapter {
   readonly fetched: readonly string[];
   /** What `fetchMedia` returns per provider file id; unknown ids get a small octet stream. */
   readonly mediaFiles: Map<string, FetchedMedia>;
+  /** What `profile` answers per user id, on the LINE fake only; an unknown id is null. */
+  readonly profiles: Map<string, ChannelProfile>;
   sentTo(conversationId: string): SentMessage[];
   /** The next `count` sends fail with `code`; a conversation rule (below) is checked first. */
   failNextSends(count: number, code: ChannelSendErrorCode, options?: FailureOptions): void;
@@ -120,6 +123,7 @@ export function createFakeTelegram(
   const acknowledged: AcknowledgedTap[] = [];
   const fetched: string[] = [];
   const mediaFiles = new Map<string, FetchedMedia>();
+  const profiles = new Map<string, ChannelProfile>();
   const nextIds = new Map<string, number>();
   const perConversation = new Map<string, FailureRule>();
   let nextFailures: { remaining: number; rule: FailureRule } | null = null;
@@ -151,6 +155,8 @@ export function createFakeTelegram(
     acknowledged,
     fetched,
     mediaFiles,
+    profiles,
+    ...(id === "line" ? { profile: async (userId: string) => profiles.get(userId) ?? null } : {}),
 
     async verify() {
       return true;
@@ -244,6 +250,7 @@ export function createFakeTelegram(
       acknowledged.length = 0;
       fetched.length = 0;
       mediaFiles.clear();
+      profiles.clear();
       nextIds.clear();
       perConversation.clear();
       nextFailures = null;

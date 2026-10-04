@@ -28,6 +28,7 @@ import {
 import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG } from "./admin.ts";
 import type { Deps } from "./deps.ts";
+import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
@@ -395,6 +396,27 @@ export async function handleMemberLeft(
 }
 
 /**
+ * A group member's name from the platform's profile, for a message that carries none (LINE, 05-line-flows
+ * §5.11), looked up through the group. Null when the platform has no profiles or does not answer: a
+ * failed lookup never holds the message back.
+ */
+async function profileName(deps: Deps, event: InboundEvent): Promise<string | null> {
+  const adapter = deps.channels.get(event.channel);
+  if (adapter.profile === undefined) return null;
+  try {
+    const profile = await adapter.profile(
+      event.sender.externalUserId,
+      event.conversation.externalId,
+    );
+    const name = profile?.displayName?.trim() ?? "";
+    return name.length > 0 ? name : null;
+  } catch (error) {
+    deps.logger.warn("profile_lookup_failed", { channel: event.channel, error: errorLabel(error) });
+    return null;
+  }
+}
+
+/**
  * The member behind a group sender (flows §2, §3.16): the linked member, made active again when
  * they had left; or a member created on their first act, named as the platform names them, in the
  * family's language and her zone. Null for a person linked to another family.
@@ -439,13 +461,14 @@ export async function resolveGroupSender(
     return null;
   }
   const her = await keptLightMemberOfFamily(deps.db, familyId);
+  const name = event.sender.displayName ?? (await profileName(deps, event)) ?? NAMELESS_MEMBER;
   const created = await deps.db.transaction(async (tx) => {
     const [member] = await tx
       .insert(members)
       .values({
         familyId,
         role: "member",
-        displayName: event.sender.displayName ?? NAMELESS_MEMBER,
+        displayName: name,
         language: family.language,
         tz: her?.tz ?? "UTC",
         country: her?.country ?? family.country,
