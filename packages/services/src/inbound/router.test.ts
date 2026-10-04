@@ -390,12 +390,11 @@ describe("the family group's buttons", () => {
 });
 
 describe("a follow and an unsend", () => {
-  it("are noted by kind and change nothing until their flows exist, in a private chat or the group", async () => {
+  it("note an unsend by kind and change nothing, in a private chat or the group", async () => {
     await scene();
     const before = await memberCount();
 
     await inbound(
-      privately(STRANGER, { kind: "followed" }),
       privately(HER, { kind: "unsent", messageId: "77" }),
       inGroup(STRANGER, { kind: "unsent", messageId: "78" }),
     );
@@ -403,16 +402,27 @@ describe("a follow and an unsend", () => {
     expect(await memberCount()).toBe(before);
     expect(await h.db.select().from(answers)).toHaveLength(0);
     expect(await h.db.select().from(outbound)).toHaveLength(0);
-    expect(await h.db.select().from(events)).toHaveLength(0);
     expect(h.telegram.sent).toHaveLength(0);
     expect(
       h.logger.entries
         .filter((entry) => entry.event.endsWith("_ignored"))
         .map((entry) => [entry.event, entry.fields]),
     ).toEqual([
-      ["follow_ignored", { conversation: "private" }],
       ["unsend_ignored", { conversation: "private" }],
       ["unsend_ignored", { conversation: "group" }],
+    ]);
+  });
+
+  it("tell a stranger who follows how to begin, without starting onboarding or keeping them", async () => {
+    await scene();
+    const before = await memberCount();
+
+    await inbound(privately(STRANGER, { kind: "followed" }));
+
+    expect(await memberCount()).toBe(before);
+    expect(await h.db.select().from(outbound)).toHaveLength(0);
+    expect(h.telegram.sentTo(STRANGER).map((sent) => sent.message.text)).toEqual([
+      t("en", "help.followed"),
     ]);
   });
 });

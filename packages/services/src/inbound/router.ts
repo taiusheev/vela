@@ -94,12 +94,13 @@ export async function handleInbound(deps: Deps, events: InboundEvent[]): Promise
 }
 
 async function route(deps: Deps, event: InboundEvent): Promise<void> {
-  if (event.kind === "followed" || event.kind === "unsent") {
-    // LINE reports these before Vela has flows for them (`05-line-flows.md` §8, steps 5 and 9).
-    // Until then each is noted by kind alone and changes nothing.
-    deps.logger.info(event.kind === "followed" ? "follow_ignored" : "unsend_ignored", {
-      conversation: event.conversation.kind,
-    });
+  if (event.kind === "unsent") {
+    // Unsend waits for D6 (`05-line-flows.md` §8, step 9): noted by kind alone, changing nothing.
+    deps.logger.info("unsend_ignored", { conversation: event.conversation.kind });
+    return;
+  }
+  if (event.kind === "followed") {
+    await handleFollowed(deps, event);
     return;
   }
   if (event.conversation.kind === "group") {
@@ -269,6 +270,31 @@ async function routeAnswerButton(
     return;
   }
   await handleAnswerButton(deps, linked.member, event, action);
+}
+
+/**
+ * A follow (a new friend on LINE, or someone unblocking, 05-line-flows §2.4): someone Vela knows is
+ * unblocked, as `unblocked` does; someone it does not is told how to begin, as a free reply. A
+ * follow never starts onboarding, since her own follow on the way to her invite would otherwise be
+ * asked "What do you call them?".
+ */
+async function handleFollowed(deps: Deps, event: InboundEvent): Promise<void> {
+  if (event.conversation.kind !== "private") return;
+  const linked = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
+  if (linked !== null) {
+    await routePrivate(deps, { ...event, kind: "unblocked" });
+    return;
+  }
+  const lang = languageOfSender(event.sender.languageCode);
+  const conversationId = event.conversation.externalId;
+  await sendOutsideGateway(deps, {
+    kind: "system",
+    idempotencyKey: outboundKey("system", { conversationId, suffix: `followed:${event.eventId}` }),
+    lang,
+    to: { channel: event.channel, conversationId },
+    text: t(lang, "help.followed"),
+    ...(event.reply === undefined ? {} : { replyToken: event.reply.token }),
+  });
 }
 
 /**

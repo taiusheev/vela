@@ -178,6 +178,8 @@ export const en = {
   "weekly_read.nobody_asked": "Nobody in the family asked {name} anything this week.",
   "weekly_read.suggestion": "Something to ask next week: {suggestion}",
   "help.private": "Hello. To set up Vela for your family, send /start.",
+  "help.followed":
+    "Hello, I'm Vela. If someone in your family sent you an invitation, open it now. To set up Vela for your own family, send /start.",
   "nearby.request":
     "{organiser} asks: you live near {name}. On a day when {name} hasn't answered and {organiser} can't get through, may {organiser} ask you, through Vela, to go round? Vela never writes to you on its own: any request comes from {organiser}. If you say yes, Vela keeps your name and this Telegram account until you or {organiser} remove them. You can say no, or change your mind at any time by sending stop. Vela is a pilot run by Timur Aiusheev. How your details are used: {notice}",
   "nearby.yes": "Yes, I'm happy to",

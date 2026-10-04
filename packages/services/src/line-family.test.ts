@@ -293,3 +293,20 @@ describe("free replies on LINE", () => {
     expect(h.line.sentTo(seed.memberLink.externalId).at(-1)?.message.replyToken).toBeUndefined();
   });
 });
+
+describe("a follow on LINE", () => {
+  it("unblocks her link when she adds Vela again", async () => {
+    await h.db
+      .update(channelLinks)
+      .set({ blockedAt: h.clock.now() })
+      .where(eq(channelLinks.id, seed.memberLink.id));
+
+    await handleInbound(h.deps, [onLine({ kind: "followed", messageId: undefined })]);
+
+    const [link] = await h.db
+      .select()
+      .from(channelLinks)
+      .where(eq(channelLinks.id, seed.memberLink.id));
+    expect(link?.blockedAt).toBeNull();
+  });
+});
