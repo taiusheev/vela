@@ -29,7 +29,7 @@ import {
  * the bot username reaches services as `Config.telegramBotUsername`.
  */
 const WHOLE_PORTS: Readonly<
-  Record<Exclude<keyof AdminDeps, "queues" | "telegramBotUsername">, true>
+  Record<Exclude<keyof AdminDeps, "queues" | "telegramBotUsername" | "lineBasicId">, true>
 > = {
   db: true,
   clock: true,

@@ -166,6 +166,8 @@ export type UnderstandJob = { type: "understand_answer"; answerId: string };
 
 export interface Config {
   telegramBotUsername: string;
+  /** The LINE Official Account's basic id (`@…`) a LINE invite link opens; null while LINE is off. */
+  lineBasicId: string | null;
   /** The founder's chat with the bot; `null` sends no admin messages. */
   adminConversationId: string | null;
   environment: "development" | "staging" | "production";

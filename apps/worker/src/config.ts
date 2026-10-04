@@ -293,6 +293,14 @@ export function readLineSwitch(
 /** A basic id as LINE shows it: `@`, then the account's characters, with no space. */
 const LINE_BASIC_ID = /^@\S+$/;
 
+/** The LINE account invite links open, where LINE is on; null where it is off. */
+export function readLineBasicIdIfOn(
+  env: { readonly LINE_CHANNEL?: string; readonly LINE_BOT_BASIC_ID?: string },
+  configFile: string,
+): string | null {
+  return readLineSwitch(env, configFile) === "on" ? readLineBasicId(env, configFile) : null;
+}
+
 function readLineBasicId(env: { readonly LINE_BOT_BASIC_ID?: string }, configFile: string): string {
   const value = env.LINE_BOT_BASIC_ID?.trim() ?? "";
   if (!LINE_BASIC_ID.test(value)) {
@@ -524,11 +532,12 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
   const environment = readEnvironment(env);
   checkDeployedEnv(env, environment, PILOT_URL_VARS, "wrangler.jsonc");
   refuseUnfilledNotices(environment, notices);
-  readLineConfig(env);
+  const line = readLineConfig(env);
   readPushConfig(env);
   const privacyNoticeUrls = privacyNoticeUrlsOf(env);
   return {
     telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
+    lineBasicId: line?.basicId ?? null,
     adminConversationId: readAdminConversationId(env, environment),
     environment,
     regions: readRegions(env),
@@ -558,6 +567,8 @@ export interface ApiConfig {
   readonly secretKey: string | null;
   /** The bot a new family's invite link opens. */
   readonly telegramBotUsername: string;
+  /** The LINE account a new family's LINE invite link opens; null while LINE is off. */
+  readonly lineBasicId: string | null;
   readonly regions: readonly Region[];
   /**
    * Whether this environment sends pushes (ADR-34). The API only records devices; it reads the
@@ -707,6 +718,10 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
     issuer,
     secretKey,
     telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
+    lineBasicId:
+      readLineSwitch(env, "wrangler.jsonc") === "on"
+        ? readLineBasicId(env, "wrangler.jsonc")
+        : null,
     regions: readRegions(env),
     pushSend: readPushSend(env),
     privacyNoticeUrls: privacyNoticeUrlsOf(env),

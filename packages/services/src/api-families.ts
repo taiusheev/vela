@@ -13,7 +13,8 @@ import { regionForCountry } from "./onboarding.ts";
 /** What creating a family needs beyond the database: a token for her invite, the bot it opens, and
  * the regions whose database exists here. */
 export type ApiFamilyDeps = Pick<Deps, "db" | "clock" | "random"> & {
-  config: Pick<Deps["config"], "telegramBotUsername" | "regions">;
+  config: Pick<Deps["config"], "telegramBotUsername" | "regions"> &
+    Partial<Pick<Deps["config"], "lineBasicId">>;
 };
 
 /**
@@ -136,7 +137,7 @@ export async function createApiFamily(
           },
           now,
         );
-        const { invite, link } = await insertInvite(
+        const { invite, link, lineLink } = await insertInvite(
           deps,
           tx,
           { familyId: family.id, invitedBy: organiser.id, forMemberId: her.id },
@@ -175,6 +176,15 @@ export async function createApiFamily(
                 organiser: organiser.displayName,
                 link,
               }),
+              line_url: lineLink,
+              line_text:
+                lineLink === null
+                  ? null
+                  : t(her.language, "invite.for_her", {
+                      name: her.displayName,
+                      organiser: organiser.displayName,
+                      link: lineLink,
+                    }),
             },
           }),
         };

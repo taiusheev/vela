@@ -972,6 +972,7 @@ describe("the media port the API runs on", () => {
     issuer: "https://ideal-vulture-9262.clerk.accounts.dev",
     secretKey: null,
     telegramBotUsername: "VelaStagingBot",
+    lineBasicId: null,
     regions: ["apac"],
     pushSend: "off",
     privacyNoticeUrls: {

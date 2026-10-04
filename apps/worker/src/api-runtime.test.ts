@@ -37,6 +37,7 @@ const STAGING_CONFIG: ApiConfig = {
   issuer: DEV_ISSUER,
   secretKey: TEST_KEY,
   telegramBotUsername: "VelaStagingBot",
+  lineBasicId: null,
   regions: ["apac"],
   pushSend: "off",
   privacyNoticeUrls: {
@@ -625,7 +626,7 @@ describe("the runtime staging's API app runs on", () => {
     expect(writesOf(runtime).services).toBe(API_WRITE_SERVICES);
     expect(writesOf(runtime).families).toEqual({
       random: expect.anything(),
-      config: { telegramBotUsername: "VelaStagingBot", regions: ["apac"] },
+      config: { telegramBotUsername: "VelaStagingBot", lineBasicId: null, regions: ["apac"] },
     });
     expect(send).toHaveBeenCalledExactlyOnceWith({ type: "deliver", outboundId: "o1" });
   });

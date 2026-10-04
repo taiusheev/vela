@@ -189,6 +189,7 @@ function adminWorkerDeps(): Deps {
     heartbeat: { ping: () => notGiven("heartbeat") },
     config: {
       telegramBotUsername: h.deps.config.telegramBotUsername,
+      lineBasicId: null,
       get adminConversationId(): never {
         return notGiven("config");
       },

@@ -248,7 +248,11 @@ const app = createApiApp({
             : {
                 families: {
                   random: createRandom(),
-                  config: { telegramBotUsername: botUsername, regions: ["apac"] as const },
+                  config: {
+                    telegramBotUsername: botUsername,
+                    lineBasicId: null,
+                    regions: ["apac"] as const,
+                  },
                 },
               }),
         },

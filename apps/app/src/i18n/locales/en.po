@@ -1038,6 +1038,10 @@ msgstr "Older than thirty days lives in the family book."
 msgid "On her phone, with Vela"
 msgstr "On her phone, with Vela"
 
+#: app/onboarding.tsx
+msgid "On LINE"
+msgstr "On LINE"
+
 #: src/data/weekly.ts
 msgid "On Saturday she answered later than usual, after the market."
 msgstr "On Saturday she answered later than usual, after the market."
@@ -1348,8 +1352,12 @@ msgid "Setting up…"
 msgstr "Setting up…"
 
 #: app/onboarding.tsx
-msgid "She answers on Telegram for now. LINE and WhatsApp come next."
-msgstr "She answers on Telegram for now. LINE and WhatsApp come next."
+msgid "She answers on LINE, in Vela's chat."
+msgstr "She answers on LINE, in Vela's chat."
+
+#: app/onboarding.tsx
+msgid "She answers on Telegram, in Vela's chat."
+msgstr "She answers on Telegram, in Vela's chat."
 
 #: app/exchange/[id].tsx
 msgid "She has not answered yet, so there is nothing to reply to."

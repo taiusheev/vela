@@ -658,6 +658,9 @@ export const ApiCreatedFamily = z.object({
     expires_at: z.iso.datetime({ offset: true }),
     /** What the organiser sends her, in her language (spec A4). */
     text: z.string(),
+    /** The same invite on LINE, where LINE is on here (05-line-flows §2.3); null otherwise. */
+    line_url: z.url().nullable(),
+    line_text: z.string().nullable(),
   }),
 });
 export type ApiCreatedFamily = z.infer<typeof ApiCreatedFamily>;

@@ -124,8 +124,26 @@ describe("createApiFamily", () => {
           organiser: "Mia",
           link: `https://t.me/${h.config.telegramBotUsername}?start=${invite?.token}`,
         }),
+        line_url: null,
+        line_text: null,
       },
     });
+  });
+
+  it("carries her invite on LINE too where LINE is on, opening Vela's chat with /start typed", async () => {
+    keys += 1;
+    const result = await createApiFamily(
+      { ...h.deps, config: { ...h.deps.config, lineBasicId: "@vela-test" } },
+      identity,
+      `key-${keys}`,
+      REQUEST,
+    );
+    const body = ApiCreatedFamily.parse(result.response.body);
+    const [invite] = await h.db.select().from(invites);
+    const line = `https://line.me/R/oaMessage/%40vela-test/?${encodeURIComponent(`/start ${invite?.token}`)}`;
+
+    expect(body.invite.line_url).toBe(line);
+    expect(body.invite.line_text).toContain(line);
   });
 
   it("writes the words she is sent in her own language", async () => {

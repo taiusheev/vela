@@ -282,6 +282,7 @@ function createFakeDeps(logs: LogLine[], line: ChannelAdapter): Deps {
     heartbeat: { ping: async () => {} },
     config: {
       telegramBotUsername: "VelaTestBot",
+      lineBasicId: null,
       adminConversationId: null,
       environment: "development",
       regions: ["apac"],
@@ -312,6 +313,7 @@ export function createFakeAdminDeps(logs: LogLine[]): AdminDeps {
     ai: createFakeAi(),
     random: { token: () => "token" },
     telegramBotUsername: "VelaTestBot",
+    lineBasicId: null,
   };
 }
 

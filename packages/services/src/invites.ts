@@ -78,7 +78,16 @@ export async function insertInvitedMember(
  */
 export interface InviteDeps {
   random: Deps["random"];
-  config: Pick<Deps["config"], "telegramBotUsername">;
+  config: Pick<Deps["config"], "telegramBotUsername"> &
+    Partial<Pick<Deps["config"], "lineBasicId">>;
+}
+
+/**
+ * Her invite link on LINE (05-line-flows §2.3): LINE opens Vela's chat with `/start <token>` typed,
+ * and her Send is the start the Telegram link makes.
+ */
+export function lineInviteLink(basicId: string, token: string): string {
+  return `https://line.me/R/oaMessage/${encodeURIComponent(basicId)}/?${encodeURIComponent(`/start ${token}`)}`;
 }
 
 /**
@@ -90,7 +99,7 @@ export async function insertInvite(
   tx: VelaTransaction,
   input: { familyId: string; invitedBy: string; forMemberId: string },
   now: Date,
-): Promise<{ invite: Invite; link: string }> {
+): Promise<{ invite: Invite; link: string; lineLink: string | null }> {
   const token = deps.random.token();
   const [invite] = await tx
     .insert(invites)
@@ -107,5 +116,10 @@ export async function insertInvite(
   if (invite === undefined) {
     throw new Error("invite insert returned no row");
   }
-  return { invite, link: `https://t.me/${deps.config.telegramBotUsername}?start=${token}` };
+  const basicId = deps.config.lineBasicId ?? null;
+  return {
+    invite,
+    link: `https://t.me/${deps.config.telegramBotUsername}?start=${token}`,
+    lineLink: basicId === null ? null : lineInviteLink(basicId, token),
+  };
 }

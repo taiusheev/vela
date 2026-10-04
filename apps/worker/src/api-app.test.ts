@@ -154,6 +154,8 @@ const CREATED: ApiCreatedFamily = {
     url: "https://t.me/VelaTestBot?start=fixture-token",
     expires_at: "2026-09-29T00:00:00.000Z",
     text: "Hello",
+    line_url: null,
+    line_text: null,
   },
 };
 const NEW_FAMILY = {

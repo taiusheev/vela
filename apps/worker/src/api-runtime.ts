@@ -339,7 +339,11 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
             services: API_WRITE_SERVICES,
             families: {
               random: createRandom(),
-              config: { telegramBotUsername: config.telegramBotUsername, regions: config.regions },
+              config: {
+                telegramBotUsername: config.telegramBotUsername,
+                lineBasicId: config.lineBasicId,
+                regions: config.regions,
+              },
             },
             devices: {
               random: createRandom(),

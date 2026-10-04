@@ -106,6 +106,7 @@ const MAX_JOBS_PER_RUN = 10_000;
 
 const DEFAULT_CONFIG: Config = {
   telegramBotUsername: "VelaLightBot",
+  lineBasicId: null,
   adminConversationId: "9001",
   environment: "development",
   regions: ["apac"],

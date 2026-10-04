@@ -60,7 +60,12 @@ export default function OnboardingScreen() {
   const [created, setCreated] = useState<ApiCreatedFamily | null>(null);
   const [shareTrouble, setShareTrouble] = useState(false);
   // Where her mornings reach her (spec A4): Telegram, or her own phone with this app (ADR-35).
-  const [channel, setChannel] = useState<"telegram" | "phone">("telegram");
+  const [channel, setChannel] = useState<"telegram" | "line" | "phone">("telegram");
+  // The invite in the words she gets, on the messenger chosen: LINE's only where LINE is on here.
+  const inviteText =
+    channel === "line" && created?.invite.line_text != null
+      ? created.invite.line_text
+      : created?.invite.text;
   const provisionKey = useIdempotencyKey("provision");
   const familyKey = useIdempotencyKey("family");
 
@@ -146,7 +151,7 @@ export default function OnboardingScreen() {
   const share = async () => {
     if (created === null) return;
     try {
-      await Share.share({ message: created.invite.text });
+      await Share.share({ message: inviteText ?? created.invite.text });
     } catch {
       setShareTrouble(true);
     }
@@ -348,6 +353,13 @@ export default function OnboardingScreen() {
                 selected={channel === "telegram"}
                 onPress={() => setChannel("telegram")}
               />
+              {created.invite.line_url == null ? null : (
+                <Chip
+                  label={t`On LINE`}
+                  selected={channel === "line"}
+                  onPress={() => setChannel("line")}
+                />
+              )}
               <Chip
                 label={t`On her phone, with Vela`}
                 selected={channel === "phone"}
@@ -378,7 +390,7 @@ export default function OnboardingScreen() {
           </>
         ) : null}
 
-        {step === "invite" && created !== null && channel === "telegram" ? (
+        {step === "invite" && created !== null && channel !== "phone" ? (
           <>
             <Words variant="body" tone="ink2">
               <Trans>
@@ -391,11 +403,15 @@ export default function OnboardingScreen() {
                 <Trans>What you send her</Trans>
               </Eyebrow>
               <Words variant="voice" selectable>
-                {created.invite.text}
+                {inviteText}
               </Words>
             </Card>
             <Words variant="caption" tone="ink3">
-              <Trans>She answers on Telegram for now. LINE and WhatsApp come next.</Trans>
+              {channel === "line" ? (
+                <Trans>She answers on LINE, in Vela's chat.</Trans>
+              ) : (
+                <Trans>She answers on Telegram, in Vela's chat.</Trans>
+              )}
             </Words>
             {shareTrouble ? (
               <Words variant="body" tone="ink2">

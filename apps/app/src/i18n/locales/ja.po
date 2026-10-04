@@ -1038,6 +1038,10 @@ msgstr ""
 msgid "On her phone, with Vela"
 msgstr ""
 
+#: app/onboarding.tsx
+msgid "On LINE"
+msgstr ""
+
 #: src/data/weekly.ts
 msgid "On Saturday she answered later than usual, after the market."
 msgstr ""
@@ -1348,7 +1352,11 @@ msgid "Setting up…"
 msgstr ""
 
 #: app/onboarding.tsx
-msgid "She answers on Telegram for now. LINE and WhatsApp come next."
+msgid "She answers on LINE, in Vela's chat."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "She answers on Telegram, in Vela's chat."
 msgstr ""
 
 #: app/exchange/[id].tsx

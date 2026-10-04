@@ -433,6 +433,7 @@ export async function openPostgresHarness(): Promise<PostgresHarness> {
 
   const config: Config = {
     telegramBotUsername: "VelaRaceBot",
+    lineBasicId: null,
     adminConversationId: null,
     environment: "development",
     regions: ["apac"],

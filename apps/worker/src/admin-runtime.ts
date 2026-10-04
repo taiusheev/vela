@@ -101,9 +101,10 @@ function notGiven(port: string): never {
  * (ADR-26 H2): what an admin action has to tell the founder, who is the one acting, it answers to
  * the page (`markLeft`'s `nobody_to_tell`).
  */
-function adminConfig(telegramBotUsername: string): Config {
+function adminConfig(telegramBotUsername: string, lineBasicId: string | null): Config {
   return {
     telegramBotUsername,
+    lineBasicId,
     get adminConversationId(): never {
       return notGiven("config");
     },
@@ -167,7 +168,7 @@ export function servicesDeps(ports: AdminDeps): Deps {
     push: null,
     stt: { transcribe: () => notGiven("stt") },
     heartbeat: { ping: () => notGiven("heartbeat") },
-    config: adminConfig(ports.telegramBotUsername),
+    config: adminConfig(ports.telegramBotUsername, ports.lineBasicId),
   };
 }
 

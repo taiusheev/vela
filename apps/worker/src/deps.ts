@@ -37,6 +37,7 @@ import {
   type Environment,
   readAiProvider,
   readConfig,
+  readLineBasicIdIfOn,
   readLineConfig,
   readMediaStorage,
   readPushConfig,
@@ -75,6 +76,8 @@ export interface AdminDeps {
   readonly random: Random;
   /** The pilot Worker's bot in this environment, `Config.telegramBotUsername` for services. */
   readonly telegramBotUsername: string;
+  /** The LINE account an invite link opens, `Config.lineBasicId`; null while LINE is off. */
+  readonly lineBasicId: string | null;
 }
 
 export type AdminDepsHandle = Handle<AdminDeps>;
@@ -403,6 +406,7 @@ export async function buildAdminDeps(env: AdminEnv): Promise<AdminDepsHandle> {
       ai,
       random: createRandom(),
       telegramBotUsername,
+      lineBasicId: readLineBasicIdIfOn(env, "wrangler.admin.jsonc"),
     },
     close: () => connection.close(),
   };

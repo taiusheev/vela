@@ -294,6 +294,7 @@ describe("the API's configuration", () => {
       issuer: DEV_ISSUER,
       secretKey: TEST_KEY,
       telegramBotUsername: "VelaStagingBot",
+      lineBasicId: null,
       regions: ["apac"],
       pushSend: "off",
       privacyNoticeUrls: {

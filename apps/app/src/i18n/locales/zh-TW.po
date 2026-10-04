@@ -1045,6 +1045,10 @@ msgstr "超過三十天的內容會收進家族故事書。"
 msgid "On her phone, with Vela"
 msgstr "在長輩的手機上用 Vela"
 
+#: app/onboarding.tsx
+msgid "On LINE"
+msgstr "用 LINE"
+
 #: src/data/weekly.ts
 msgid "On Saturday she answered later than usual, after the market."
 msgstr "週六媽媽比平常晚回覆，是在去完市場之後。"
@@ -1355,8 +1359,12 @@ msgid "Setting up…"
 msgstr "設定中…"
 
 #: app/onboarding.tsx
-msgid "She answers on Telegram for now. LINE and WhatsApp come next."
-msgstr "這位家人目前會在 Telegram 上回覆。接下來會支援 LINE 和 WhatsApp。"
+msgid "She answers on LINE, in Vela's chat."
+msgstr "長輩在 LINE 上 Vela 的聊天室回覆。"
+
+#: app/onboarding.tsx
+msgid "She answers on Telegram, in Vela's chat."
+msgstr "長輩在 Telegram 上 Vela 的聊天室回覆。"
 
 #: app/exchange/[id].tsx
 msgid "She has not answered yet, so there is nothing to reply to."
