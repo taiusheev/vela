@@ -137,3 +137,7 @@ export function registerAudioStop(stop: () => void): () => void {
 export function stopOtherAudio(keep: () => void): void {
   for (const stop of listeners) if (stop !== keep) stop();
 }
+
+// RootLayout imports this module at startup, including when no voice is opened. Clear leftovers
+// from an interrupted previous run now; prepare() also waits for and retries the private sweep.
+void clearAudioCache().catch(() => {});
