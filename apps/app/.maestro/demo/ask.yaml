@@ -1,5 +1,5 @@
-# Ask in the demo (A7): a question written in the organiser's words goes into her morning, and
-# Vela's suggestion fills the field when "Use this" is pressed.
+# Ask in the explicit demo (A7): the organiser writes one question in English, sees the truthful
+# as-written language explanation and returns to Today after the simulated send.
 url: ${APP_URL}
 name: An ask goes into her morning
 tags:
@@ -13,8 +13,8 @@ tags:
 - assertVisible: "What are you sending?"
 - tapOn: "Say it the way you would say it"
 - inputText: "What did you have for breakfast?"
-# A pattern: the language she reads is the demo's, and `?` is escaped to mean itself.
-- assertVisible: 'What did you have for breakfast\? · shown to her in .+'
+- assertVisible: "One question at a time. The English pilot sends your words as written."
+- assertNotVisible: 'shown to her in .+'
 - scrollUntilVisible:
     element: "Into her morning"
     direction: DOWN

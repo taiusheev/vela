@@ -12,7 +12,8 @@ tags:
 - assertVisible: "Today's ask reached Mom at 8:00, and again at 11:00."
 - assertVisible: "Lena · neighbour"
 - assertVisible: "Has not said yes yet"
-- assertVisible: "Call Mom"
+- assertNotVisible: "Call Mom"
+- assertVisible: "Contact Mom using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
 - tapOn: "Mom is fine, I know why"
 - assertVisible: "You said Mom is fine. Nothing else was sent."
 - openLink: ${APP_URL}/?example=quiet

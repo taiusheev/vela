@@ -1,8 +1,7 @@
-# Story day in the demo (A10): the Sunday tab offers a story question from the bank, "Another
-# question" offers the next, and the family book opens; the demo has no API, so the book says how
-# it fills and sending waits for one.
+# Story day in the explicit demo (A10): questions can be chosen and edited without promising
+# long-term retention or offering an unavailable book. Sending still requires the live API.
 url: ${APP_URL}
-name: Story day offers a question and opens the family book
+name: Story questions can be chosen and edited without a retention promise
 tags:
   - demo
 ---
@@ -11,7 +10,8 @@ tags:
 - scrollUntilVisible:
     element: "Tell me about a day from your childhood you still remember clearly."
     direction: DOWN
-- assertVisible: "Her answer is kept in the family book, unless she says not to."
+- assertVisible: "Her answer stays with the exchange. Long-term story saving is not switched on here."
+- assertNotVisible: "Her answer is kept in the family book, unless she says not to."
 - scrollUntilVisible:
     element: "Another question"
     direction: DOWN
@@ -20,7 +20,12 @@ tags:
     element: "Tell me about your first day at work."
     direction: DOWN
 - scrollUntilVisible:
-    element: "Read the family book"
+    element: "Write your own question"
     direction: DOWN
-- tapOn: "Read the family book"
-- assertVisible: "The family book fills with the stories she tells on story day."
+- tapOn: "Write your own question"
+- assertVisible: "Your question for Mom"
+- inputText: "How did you learn to make soup?"
+- assertVisible: 'How did you learn to make soup\?'
+- tapOn: "Choose from the list"
+- assertVisible: "Tell me about your first day at work."
+- assertNotVisible: "Read the family book"
