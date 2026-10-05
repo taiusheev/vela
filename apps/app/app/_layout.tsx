@@ -14,6 +14,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { sessionRequests } from "../src/api/request-session.ts";
+import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { sessionScope } from "../src/data/live-state.ts";
@@ -71,6 +72,10 @@ function useParentMode(): boolean | undefined {
   const segments = useSegments();
   const router = useRouter();
   useEffect(() => {
+    if (englishTrialBuild) {
+      setParent(false);
+      return;
+    }
     let current = true;
     void readDeviceToken().then((token) => {
       if (current) setParent(token !== null);
@@ -100,7 +105,11 @@ function useSignInGuard(parent: boolean | undefined): void {
   const onSignIn = segments[0] === "sign-in";
   const onParent = segments[0] === "parent";
   useEffect(() => {
-    if (!accountsConfigured() || !account.ready || parent !== false || onParent) return;
+    if (!accountsConfigured() || !account.ready || parent !== false) return;
+    if (onParent) {
+      if (englishTrialBuild) router.replace(account.signedIn ? "/" : "/sign-in");
+      return;
+    }
     if (!account.signedIn && !onSignIn) router.replace("/sign-in");
     if (account.signedIn && onSignIn) router.replace("/");
   }, [account.ready, account.signedIn, onSignIn, onParent, parent, router]);
@@ -110,6 +119,7 @@ function Root() {
   const { palette, scheme } = useTheme();
   const { settled } = useAppLocale();
   const parent = useParentMode();
+  const segments = useSegments();
   useSignInGuard(parent);
   // A tapped notification opens where it points once the account and the navigator are ready.
   useOpenTapped();
@@ -127,6 +137,9 @@ function Root() {
   useEffect(() => {
     if (ready && settled) void SplashScreen.hideAsync();
   }, [ready, settled]);
+
+  // An old parent-device route must not mount or read its retained token in a trial organiser build.
+  if (englishTrialBuild && segments[0] === "parent") return null;
 
   return (
     <>

@@ -16,6 +16,18 @@
       "extends": "staging",
       "ios": { "simulator": true }
     },
+    "trial-staging": {
+      "extends": "staging",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_TRIAL_ENGLISH": "true",
+        "EXPO_PUBLIC_TRIAL_TARGET": "staging"
+      }
+    },
+    "trial-simulator": {
+      "extends": "trial-staging",
+      "ios": { "simulator": true }
+    },
     "testflight": {
       "extends": "staging",
       "distribution": "store",
@@ -28,7 +40,8 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://vela.vela-light.workers.dev",
-        "EXPO_PUBLIC_TRIAL_ENGLISH": "true"
+        "EXPO_PUBLIC_TRIAL_ENGLISH": "true",
+        "EXPO_PUBLIC_TRIAL_TARGET": "production"
       }
     }
   },

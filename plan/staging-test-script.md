@@ -4,6 +4,8 @@ This script tests the invitation-only, free English iPhone organiser and Telegra
 
 A web demo proves only its example interactions. Expo Go cannot load Vela’s native Telegram Ogg/Opus decoder. Voice acceptance requires a signed iPhone build containing that module. Parent app screens, tablets, kitchen-table mode, billing, memory automation and book export are outside this trial.
 
+Build the synthetic iPhone with EAS profile `trial-staging`, or use `trial-simulator` for compiler/simulator checks. These profiles keep English and the trial’s hidden-feature rules fixed while targeting staging development authentication. The production profile `trial` requires production API/authentication and cannot use the staging exception. An old parent-device token/route must not reopen a parent screen in any trial organiser build. A simulator result is not signed-device playback proof.
+
 ## Record the run
 
 | Field | Record |

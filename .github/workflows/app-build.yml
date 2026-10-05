@@ -14,7 +14,7 @@ on:
       profile:
         description: Build profile
         type: choice
-        options: [staging, e2e, testflight, trial]
+        options: [staging, e2e, testflight, trial-staging, trial-simulator, trial]
         default: staging
       platform:
         description: Platform
@@ -37,6 +37,11 @@ jobs:
     timeout-minutes: 20
     environment: ${{ inputs.profile == 'trial' && 'production' || 'staging' }}
     steps:
+      - name: Require iOS for the English trial profiles
+        if: inputs.profile == 'trial' || inputs.profile == 'trial-staging' || inputs.profile == 'trial-simulator'
+        env:
+          PLATFORM: ${{ inputs.platform }}
+        run: test "$PLATFORM" = ios
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0

@@ -28,7 +28,9 @@ cache before interpreting a result.
 
 ## `signed-in/`: a real account against staging
 
-The trial flows use an already signed-in **synthetic** staging account and a signed native build.
+The trial flows use an already signed-in **synthetic** staging account and a native build made with
+`trial-staging` (signed iPhone) or `trial-simulator` (iOS simulator). Both are fixed English,
+iPhone-only builds against staging development authentication; `trial` remains production-only.
 Check the backend declares pilot/Telegram-first/English capabilities before running them:
 
 ```bash

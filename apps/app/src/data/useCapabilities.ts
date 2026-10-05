@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiConfigured, fetchCapabilities } from "../api/client.ts";
-import { englishTrialBuild, requiresEnglish } from "../api/trial.ts";
+import { englishTrialBuild, requiresEnglish, trialCapabilities } from "../api/trial.ts";
 
 export function useCapabilities() {
   const query = useQuery({
@@ -11,7 +11,7 @@ export function useCapabilities() {
   });
   return {
     ...query,
-    capabilities: query.data,
+    capabilities: trialCapabilities(query.data),
     pilot: englishTrialBuild || query.data?.pilot === true,
     englishOnly: requiresEnglish(apiConfigured(), query.data?.english_only),
   };
