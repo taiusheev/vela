@@ -99,14 +99,15 @@ function wordlessAnswer(answer: ApiTodayAnswer): string {
 }
 
 /** "Mom saw it · 8:12", once she has. */
-function receiptOf(exchange: ApiTodayExchange): string | undefined {
+function receiptOf(exchange: ApiTodayExchange, timeZone?: string): string | undefined {
   if (exchange.seen_at === null) return undefined;
   const recipient = exchange.recipient_name;
-  const time = timeOfDay(exchange.seen_at);
+  const time = timeOfDay(exchange.seen_at, timeZone);
   return t`${recipient} saw it · ${time}`;
 }
 
 export function toTodayExchange(exchange: ApiTodayExchange, timeZone?: string): TodayExchange {
+  const recipientZone = exchange.recipient_tz ?? timeZone;
   const answer = exchange.answer;
   // Her words in the reader's language when the family's translation is in it (flows §3.10); her
   // own words stay as the original, which Exchanges offers.
@@ -114,7 +115,7 @@ export function toTodayExchange(exchange: ApiTodayExchange, timeZone?: string): 
     answer?.translation != null && answer.text !== null && answer.translation.lang === i18n.locale
       ? answer.translation.text
       : undefined;
-  const receipt = receiptOf(exchange);
+  const receipt = receiptOf(exchange, recipientZone);
   return {
     ...(exchange.asker_name === null ? {} : { asker: exchange.asker_name }),
     recipient: exchange.recipient_name,
@@ -125,7 +126,7 @@ export function toTodayExchange(exchange: ApiTodayExchange, timeZone?: string): 
       : {
           answer: {
             text: translated ?? answer.text ?? wordlessAnswer(answer),
-            at: timeOfDay(answer.at, timeZone),
+            at: timeOfDay(answer.at, recipientZone),
             ...(answer.audio == null ? {} : { audio: answer.audio }),
             ...(answer.photo == null ? {} : { photo: answer.photo }),
             ...(translated === undefined || answer.text === null ? {} : { original: answer.text }),
@@ -230,7 +231,7 @@ export interface TodayView {
   noFamily: boolean;
   /** The reader organises this family, so the quiet notice is for them (spec A11). */
   organiser: boolean;
-  /** True only once the real day has arrived: until then `today` is the example one. */
+  /** True only once the real day has arrived; pending live data is empty. */
   live: boolean;
   /**
    * Whether photo asks can be sent: the API keeps photos (`ApiMe.photos`, ADR-33), or there is no

@@ -55,6 +55,17 @@ async function list(query = {}, who: SessionIdentity = identity, familyId = seed
 }
 
 describe("loadApiExchanges", () => {
+  it("carries the Vietnam recipient's clock through list and directly opened exchanges", async () => {
+    await h.db
+      .update(members)
+      .set({ tz: "Asia/Ho_Chi_Minh" })
+      .where(eq(members.id, seed.member.id));
+    const exchange = await seedDay(1);
+    expect((await list())?.exchanges[0]?.recipient_tz).toBe("Asia/Ho_Chi_Minh");
+    expect((await loadApiExchange(h.db, identity, exchange.id, h.clock.now()))?.recipient_tz).toBe(
+      "Asia/Ho_Chi_Minh",
+    );
+  });
   it("answers an empty page for a family whose days have not happened yet", async () => {
     expect(ApiExchangePage.parse(await list())).toEqual({ exchanges: [], next_cursor: null });
   });
@@ -83,6 +94,7 @@ describe("loadApiExchanges", () => {
       expect.objectContaining({
         id: exchange.id,
         recipient_name: "Mom",
+        recipient_tz: "Asia/Taipei",
         asker_name: "Mia",
         ask: "What did the garden look like?",
         answer: expect.objectContaining({ text: "The tomatoes turned." }),

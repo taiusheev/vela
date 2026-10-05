@@ -325,6 +325,7 @@ describe("loadApiToday", () => {
         id: exchange.id,
         recipient_id: seed.member.id,
         recipient_name: "Mom",
+        recipient_tz: "Asia/Taipei",
         asker_name: "Mia",
         on_behalf_of: null,
         type: "question",

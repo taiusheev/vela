@@ -1,8 +1,8 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useState } from "react";
-import { Linking, View } from "react-native";
+import { useEffect, useState } from "react";
+import { AppState, Linking, View } from "react-native";
 import { completeTelegramLink, provisionAccount, startTelegramLink } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
@@ -37,6 +37,22 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       return startTelegramLink(startKey({ attempt }), token);
     },
   });
+  const [clock, setClock] = useState(Date.now);
+  const expiresAt = start.data?.expires_at;
+  useEffect(() => {
+    if (expiresAt === undefined) return;
+    const check = () => setClock(Date.now());
+    check();
+    const remaining = Date.parse(expiresAt) - Date.now();
+    const timer = setTimeout(check, Math.max(0, remaining));
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") check();
+    });
+    return () => {
+      clearTimeout(timer);
+      subscription.remove();
+    };
+  }, [expiresAt]);
   const complete = useMutation({
     mutationFn: async () => {
       if (start.data === undefined) throw new Error("No link challenge");
@@ -50,7 +66,8 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
     },
   });
   const expired =
-    start.data !== undefined && new Date(start.data.expires_at).getTime() <= Date.now();
+    expiresAt !== undefined &&
+    (!Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= clock);
   const open = async () => {
     if (start.data === undefined) return;
     setOpenFailed(false);
@@ -132,6 +149,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
           ) : null}
           <SecondaryButton
             label={t`Create a new connection`}
+            disabled={complete.isPending}
             onPress={() => {
               setAttempt((value) => value + 1);
               setCode("");

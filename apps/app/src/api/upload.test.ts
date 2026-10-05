@@ -6,6 +6,7 @@ vi.hoisted(() => {
 });
 
 import { ApiError } from "./client.ts";
+import { sessionRequests } from "./request-session.ts";
 import { fetchPhoto, uploadMedia } from "./upload.ts";
 
 const FAMILY = "3b4c5d6e-7f8a-4b9c-8d0e-1f2a3b4c5d6e";
@@ -25,6 +26,9 @@ class FakeRequest {
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
   ontimeout: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+  aborted = false;
+  timeout = 0;
 
   constructor() {
     FakeRequest.last = this;
@@ -38,6 +42,10 @@ class FakeRequest {
   }
   send(body: unknown) {
     this.body = body;
+  }
+  abort() {
+    this.aborted = true;
+    this.onabort?.();
   }
   answer(status: number, body: unknown) {
     this.status = status;
@@ -71,6 +79,7 @@ async function sent(): Promise<FakeRequest> {
 }
 
 beforeEach(() => {
+  sessionRequests.activate("synthetic:first");
   FakeRequest.last = undefined;
   vi.stubGlobal("XMLHttpRequest", FakeRequest);
   vi.stubGlobal("FileReader", FakeFileReader);
@@ -85,6 +94,35 @@ afterEach(() => {
 });
 
 describe("uploading a photo", () => {
+  it("aborts an upload at account change and ignores late progress and success", async () => {
+    const progress = vi.fn();
+    const upload = uploadMedia(FAMILY, "media:cancel", "file:///photo.jpg", "token", progress);
+    const request = await sent();
+    const refused = expect(upload).rejects.toMatchObject({ reason: "session" });
+    sessionRequests.activate("synthetic:second");
+    expect(request.aborted).toBe(true);
+    request.upload.onprogress?.({ lengthComputable: true, loaded: 4, total: 4 } as ProgressEvent);
+    request.answer(201, { id: MEDIA });
+    await refused;
+    expect(progress).not.toHaveBeenCalled();
+  });
+
+  it("never starts a departed account's upload after a delayed local file read", async () => {
+    let answer: (response: Response) => void = () => {};
+    vi.mocked(fetch).mockImplementationOnce(
+      () =>
+        new Promise<Response>((done) => {
+          answer = done;
+        }),
+    );
+    const upload = uploadMedia(FAMILY, "media:cancel", "file:///photo.jpg", "token", () => {});
+    const refused = expect(upload).rejects.toMatchObject({ reason: "session" });
+    sessionRequests.activate("synthetic:second");
+    answer(new Response(new Blob([JPEG])));
+    await refused;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(FakeRequest.last).toBeUndefined();
+  });
   it("sends the JPEG's own bytes with its key and the session", async () => {
     const progress: number[] = [];
     const upload = uploadMedia(FAMILY, "media:abc", "file:///photo.jpg", "token-1", (fraction) =>
@@ -164,7 +202,7 @@ describe("showing a photo", () => {
     expect(uri).toBe(`data:image/jpeg;base64,${Buffer.from(JPEG).toString("base64")}`);
     expect(fetch).toHaveBeenCalledWith(
       `https://api.vela.test/v1/families/${FAMILY}/media/${MEDIA}`,
-      { headers: { authorization: "Bearer token-2" } },
+      { signal: expect.any(AbortSignal), headers: { authorization: "Bearer token-2" } },
     );
   });
 

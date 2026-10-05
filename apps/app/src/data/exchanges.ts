@@ -62,8 +62,7 @@ function seen(recipient: string, time: string): string {
 
 /**
  * The example days in the language active when called, so they read as one language with the
- * screen around them. Given names stay as they are, a role such as Mom is translated, and her
- * original stays in the Russian she wrote.
+ * screen around them. Given names stay as they are, and a role such as Mom is translated.
  */
 export function exchangesFixture(): Exchange[] {
   const mom = t`Mom`;
@@ -77,7 +76,6 @@ export function exchangesFixture(): Exchange[] {
       answer: {
         text: t`The tomatoes finally turned. I picked three before breakfast and left them on the sill.`,
         at: clockTime(8, 12),
-        original: "Помидоры наконец покраснели. Сняла три до завтрака, оставила на подоконнике.",
       },
       replies: [
         { id: "r1", from: "Mia", kind: "heart" },

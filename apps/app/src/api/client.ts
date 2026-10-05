@@ -42,6 +42,8 @@ import type {
   SetAway,
 } from "@vela/contracts";
 
+import { sessionRequests } from "./request-session.ts";
+
 /**
  * The worker the app talks to. Without it the screens read their fixtures, so a checkout with no
  * backend still runs; with it every call carries the Clerk session as a bearer token.
@@ -96,30 +98,32 @@ async function call<T>({ path, token, key, body, method, signal }: Call): Promis
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: body === undefined ? "GET" : (method ?? "POST"),
-    headers: {
-      accept: "application/json",
-      ...(token === null ? {} : { authorization: `Bearer ${token}` }),
-      ...(body === undefined
-        ? {}
-        : {
-            "content-type": "application/json",
-            ...(key === undefined ? {} : { "idempotency-key": key }),
-          }),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    ...(signal === undefined ? {} : { signal }),
-  });
-  if (!response.ok) {
-    const failure: unknown = await response.json().catch(() => undefined);
-    const error =
-      typeof failure === "object" && failure !== null && "error" in failure
-        ? (failure as { error: { code?: unknown; details?: unknown } }).error
-        : undefined;
-    throw new ApiError(response.status, String(error?.code ?? "unknown"), error?.details);
-  }
-  return (await response.json()) as T;
+  return sessionRequests.run(async (requestSignal) => {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      method: body === undefined ? "GET" : (method ?? "POST"),
+      headers: {
+        accept: "application/json",
+        ...(token === null ? {} : { authorization: `Bearer ${token}` }),
+        ...(body === undefined
+          ? {}
+          : {
+              "content-type": "application/json",
+              ...(key === undefined ? {} : { "idempotency-key": key }),
+            }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: requestSignal,
+    });
+    if (!response.ok) {
+      const failure: unknown = await response.json().catch(() => undefined);
+      const error =
+        typeof failure === "object" && failure !== null && "error" in failure
+          ? (failure as { error: { code?: unknown; details?: unknown } }).error
+          : undefined;
+      throw new ApiError(response.status, String(error?.code ?? "unknown"), error?.details);
+    }
+    return (await response.json()) as T;
+  }, signal);
 }
 
 function read<T>(path: string, token: string | null): Promise<T> {
@@ -407,17 +411,20 @@ async function deviceCall<T>(path: string, deviceToken: string, body?: unknown):
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: body === undefined ? "GET" : "POST",
-    headers: {
-      accept: "application/json",
-      authorization: `Device ${deviceToken}`,
-      ...(body === undefined ? {} : { "content-type": "application/json" }),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  return sessionRequests.run(async (signal) => {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      signal,
+      method: body === undefined ? "GET" : "POST",
+      headers: {
+        accept: "application/json",
+        authorization: `Device ${deviceToken}`,
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    if (!response.ok) throw new ApiError(response.status, "device", undefined);
+    return (await response.json()) as T;
   });
-  if (!response.ok) throw new ApiError(response.status, "device", undefined);
-  return (await response.json()) as T;
 }
 
 /** Who this phone is for, by its token: a 401 means it was set up again elsewhere or removed. */

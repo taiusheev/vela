@@ -28,14 +28,29 @@ cache before interpreting a result.
 
 ## `signed-in/`: a real account against staging
 
-`onboarding` is the older non-pilot app-first flow: it signs up a new account with one of Clerk's test addresses (`…+clerk_test@example.com`,
+The trial flows use an already signed-in **synthetic** staging account and a signed native build.
+Check the backend declares pilot/Telegram-first/English capabilities before running them:
+
+```bash
+maestro test apps/app/.maestro/signed-in/trial-link-entry.yaml
+maestro test -e TEST_PARENT_NAME="Synthetic parent" apps/app/.maestro/signed-in/trial-current-family.yaml
+```
+
+`trial-link-entry` requires an unlinked account; it checks the real challenge UI and resets its unused
+challenge. `trial-current-family` requires an already linked approved family; its label must match the
+synthetic fixture. These are separate account states, not a directory-wide batch. No private proof
+code, bearer token or participant name goes in test arguments. Complete linking privately and run
+the full exchange/media/device script in `plan/staging-test-script.md`. These native flows are prepared;
+they have not been run on a signed iPhone and are not CI's eight web demo flows.
+
+`onboarding` remains the older **non-pilot** app-first flow: it signs up a new account with one of Clerk's test addresses (`…+clerk_test@example.com`,
 answered with the code 424242 by Clerk's development instance, which never sends an email), sets up
 a kept-light member called Grandma Test, and reaches Today. It needs a phone build of the app, the
 `e2e` profile in `eas.json` (an iPhone simulator build, or the Android APK), installed on a
 simulator or emulator:
 
 ```bash
-maestro test apps/app/.maestro/signed-in
+maestro test apps/app/.maestro/signed-in/onboarding.yaml
 ```
 
 It is not the English trial's acceptance flow: pilot admission denies app-first family creation.

@@ -1,0 +1,32 @@
+# Precondition: signed into a dedicated synthetic account with no linked family, on a staging
+# build whose capabilities declare English Telegram-first pilot mode. Never pass tokens/codes here.
+appId: family.vela.light
+name: The English trial offers linking an existing Telegram family
+tags:
+  - signed-in
+  - trial
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Connect your Telegram family"
+    timeout: 20000
+- assertNotVisible: "Who are you keeping a light on for?"
+- runFlow:
+    when:
+      visible: "Your name, as the family says it."
+    commands:
+      - tapOn: "Your name, as the family says it."
+      - inputText: "Synthetic organiser"
+      - hideKeyboard
+- tapOn: "Connect existing family"
+- extendedWaitUntil:
+    visible: "Open Vela on Telegram"
+    timeout: 20000
+- assertVisible: "Connection code from your own Vela chat. It expires after 15 minutes."
+- assertVisible: "Finish connecting"
+- assertVisible: "Create a new connection"
+- assertNotVisible: "Who are you keeping a light on for?"
+# The proof code is entered privately during the manual full-loop check; do not capture it in
+# Maestro input arguments, screenshots, CI logs or a saved environment file. Reset this unused proof.
+- tapOn: "Create a new connection"
+- assertVisible: "Connect existing family"

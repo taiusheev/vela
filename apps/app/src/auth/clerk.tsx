@@ -1,7 +1,10 @@
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
-import { clearSessionDrafts } from "../storage/drafts.ts";
+import { sessionRequests } from "../api/request-session.ts";
+import { clearAudioCache } from "../audio/cache.ts";
+import { clearPhotoCache } from "../data/photos.ts";
+import { activatePrivateSession, clearSessionDrafts } from "../storage/drafts.ts";
 
 /**
  * Sign-in is Clerk's (build plan 3.1). The key is public by design and arrives through the
@@ -45,19 +48,32 @@ const AccountContext = createContext<Account>(noAccount);
 /** Inside the provider, so Clerk's own hook is the only thing that reads its state. */
 function ClerkAccount({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, userId, sessionId, getToken, signOut } = useAuth();
+  const scope = `${userId ?? "unknown"}:${sessionId ?? "session"}`;
   const account = useMemo<Account>(
     () => ({
       ready: isLoaded,
       signedIn: isSignedIn === true,
       userId: userId ?? null,
       sessionId: sessionId ?? null,
-      token: (options) => getToken(options?.fresh === true ? { skipCache: true } : undefined),
+      token: (options) =>
+        sessionRequests.runInScope(scope, () =>
+          getToken(options?.fresh === true ? { skipCache: true } : undefined),
+        ),
       signOut: async () => {
-        await clearSessionDrafts(`${userId ?? "unknown"}:${sessionId ?? "session"}`);
-        await signOut();
+        sessionRequests.end(scope);
+        clearPhotoCache();
+        void clearAudioCache().catch(() => {});
+        await clearSessionDrafts(scope);
+        try {
+          await signOut();
+        } catch (error) {
+          // A failed provider sign-out leaves this identity active, but never resumes old work.
+          if (sessionRequests.resume(scope)) activatePrivateSession(scope);
+          throw error;
+        }
       },
     }),
-    [isLoaded, isSignedIn, userId, sessionId, getToken, signOut],
+    [isLoaded, isSignedIn, userId, sessionId, getToken, signOut, scope],
   );
   return <AccountContext.Provider value={account}>{children}</AccountContext.Provider>;
 }

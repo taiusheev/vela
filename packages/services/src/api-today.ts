@@ -156,7 +156,7 @@ async function translationOf(
 export async function exchangeRow(
   db: Queryable,
   exchange: Exchange,
-  recipient: { id: string; displayName: string },
+  recipient: { id: string; displayName: string; tz?: string },
   now?: Date,
 ): Promise<ApiTodayExchange> {
   const [answer] = await db
@@ -205,6 +205,7 @@ export async function exchangeRow(
     id: exchange.id,
     recipient_id: recipient.id,
     recipient_name: recipient.displayName,
+    ...(recipient.tz === undefined ? {} : { recipient_tz: recipient.tz }),
     asker_name: await nameOf(db, exchange.askerId),
     on_behalf_of: exchange.onBehalfOf,
     type: exchange.type,

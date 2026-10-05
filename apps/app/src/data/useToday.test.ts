@@ -7,7 +7,7 @@ import {
 } from "@vela/contracts";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { AppLocale } from "../i18n/locale.ts";
-import { toToday, toTomorrowTurn } from "./useToday.ts";
+import { toToday, toTodayExchange, toTomorrowTurn } from "./useToday.ts";
 
 // The Lingui macros compile away as the app is bundled, and nothing compiles them here. `t` stands
 // in for what the macro compiles to: in English the words as written, and in Traditional Chinese
@@ -354,6 +354,41 @@ describe("Today's card for her pick on a photo choice", () => {
 });
 
 describe("parent clock and original media", () => {
+  it("uses the recipient clock for both answer and seen receipts without a loaded Today", () => {
+    const result = inLocale("en", () =>
+      toTodayExchange(
+        exchange({
+          recipient_tz: "Asia/Ho_Chi_Minh",
+          seen_at: "2026-10-05T01:15:00Z",
+          answer: {
+            kind: "text",
+            text: "Synthetic answer",
+            at: "2026-10-05T01:12:00Z",
+            picked_media_id: null,
+            picked_number: null,
+            translation: null,
+            audio: null,
+            photo: null,
+          },
+        }),
+        "Asia/Taipei",
+      ),
+    );
+    expect(result.answer?.at).toBe("8:12");
+    expect(result.receipt).toBe("Mom saw it · 8:15");
+  });
+
+  it("uses the light's recipient clock for receipts from an older API response", () => {
+    const result = inLocale("en", () =>
+      toTodayExchange(
+        exchange({
+          seen_at: "2026-10-05T01:15:00Z",
+        }),
+        "Asia/Ho_Chi_Minh",
+      ),
+    );
+    expect(result.receipt).toBe("Mom saw it · 8:15");
+  });
   it("uses Vietnam’s morning clock and keeps authenticated media descriptors intact", () => {
     const audio = {
       id: MOM,

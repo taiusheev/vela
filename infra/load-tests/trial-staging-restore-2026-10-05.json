@@ -1,0 +1,51 @@
+{
+  "kind": "staging-restored-database-key-and-media-proof",
+  "sourceCommit": "f3f9a500e49bdb22c263e77baeeee9cdafbf6f63",
+  "environment": "synthetic staging",
+  "attemptId": "2e3bad2b-8a91-4c63-8d45-b2ae504d3488",
+  "startedAt": "2026-10-05T07:15:04.900Z",
+  "databaseVerifiedAt": "2026-10-05T07:18:49.248Z",
+  "databaseVerificationElapsedSeconds": 224,
+  "counts": {
+    "families": "2",
+    "members": "4",
+    "exchanges": "16",
+    "answers": "16",
+    "replies": "1",
+    "media": "4",
+    "consents": "3",
+    "quiet_events": "0",
+    "outbound": "80",
+    "deletions": "0"
+  },
+  "countsMatched": true,
+  "migration": {
+    "hash": "57e54df9d7cee33c61c595413d07a8b7f7e97a5f99712ed1e899a4b38997cd34",
+    "createdAt": "1791090514237"
+  },
+  "migrationMatched": true,
+  "indexesMatched": true,
+  "keyProof": "opens",
+  "mediaEvidence": {
+    "bucket": "vela-media-staging",
+    "method": "cloudflare_r2_list_objects_metadata_only",
+    "status": "verified",
+    "sampledCount": 2,
+    "foundCount": 2,
+    "missingCount": 0,
+    "unverifiedCount": 0,
+    "metadataValidatedCount": 2,
+    "sizeComparedCount": 2,
+    "sizeMismatchCount": 0,
+    "checkedAt": "2026-10-05T07:18:49.248Z"
+  },
+  "cleanup": {
+    "branchId": "br-odd-term-b3pgt54h",
+    "branchName": "restore-drill-2026-10-05-2e3bad2b",
+    "autoDelete": "after 1 day",
+    "deleted": false,
+    "evidencePending": true
+  },
+  "fullDrillComplete": false,
+  "scope": "Database, encryption-key and R2 metadata correctness only; branch cleanup and the complete drill timer remain open. No production recovery or real content used."
+}

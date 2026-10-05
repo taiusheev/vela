@@ -1,5 +1,6 @@
 import type { ApiUploadedMedia } from "@vela/contracts";
 import { ApiError, apiBaseUrl, apiConfigured } from "./client.ts";
+import { assertRequestActive, sessionRequests } from "./request-session.ts";
 
 /**
  * Photos travel as their own bytes, never as JSON (ADR-33): up for an ask, as the JPEG the phone
@@ -50,34 +51,55 @@ export async function uploadMedia(
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
-  // The re-encoded file on the phone (or a blob: URL in a browser), read as it is sent.
-  const body = await (await fetch(uri)).blob();
-  const url = `${apiBaseUrl}/v1/families/${familyId}/media`;
-  return new Promise<ApiUploadedMedia>((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.open("POST", url);
-    request.setRequestHeader("accept", "application/json");
-    request.setRequestHeader("content-type", "image/jpeg");
-    request.setRequestHeader("idempotency-key", key);
-    if (token !== null) request.setRequestHeader("authorization", `Bearer ${token}`);
-    request.upload.onprogress = (event) => {
-      if (event.lengthComputable && event.total > 0) onProgress(event.loaded / event.total);
-    };
-    request.onload = () => {
-      if (request.status < 200 || request.status >= 300) {
-        reject(failureOf(request.status, request.responseText));
-        return;
-      }
-      try {
-        resolve(JSON.parse(request.responseText) as ApiUploadedMedia);
-      } catch {
-        reject(failureOf(request.status, ""));
-      }
-    };
-    // No answer at all: the network, not the API. Status 0 says so, and the photo can be sent again.
-    request.onerror = () => reject(new ApiError(0, "network"));
-    request.ontimeout = () => reject(new ApiError(0, "network"));
-    request.send(body);
+
+  return sessionRequests.run(async (signal) => {
+    // The re-encoded file on the phone (or a blob: URL in a browser), read as it is sent.
+    const body = await (await fetch(uri, { signal })).blob();
+    assertRequestActive(signal);
+    const url = `${apiBaseUrl}/v1/families/${familyId}/media`;
+    return new Promise<ApiUploadedMedia>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      assertRequestActive(signal);
+      const abort = () => request.abort();
+      signal.addEventListener("abort", abort, { once: true });
+      const finish = () => signal.removeEventListener("abort", abort);
+      request.open("POST", url);
+      request.setRequestHeader("accept", "application/json");
+      request.setRequestHeader("content-type", "image/jpeg");
+      request.setRequestHeader("idempotency-key", key);
+      if (token !== null) request.setRequestHeader("authorization", `Bearer ${token}`);
+      request.upload.onprogress = (event) => {
+        if (!signal.aborted && event.lengthComputable && event.total > 0)
+          onProgress(event.loaded / event.total);
+      };
+      request.onload = () => {
+        finish();
+        if (request.status < 200 || request.status >= 300) {
+          reject(failureOf(request.status, request.responseText));
+          return;
+        }
+        try {
+          resolve(JSON.parse(request.responseText) as ApiUploadedMedia);
+        } catch {
+          reject(failureOf(request.status, ""));
+        }
+      };
+      // No answer at all: the network, not the API. Status 0 says so, and the photo can be sent again.
+      request.onerror = () => {
+        finish();
+        reject(new ApiError(0, "network"));
+      };
+      request.ontimeout = () => {
+        finish();
+        reject(new ApiError(0, "network"));
+      };
+      request.onabort = () => {
+        finish();
+        reject(new ApiError(0, "cancelled"));
+      };
+      request.timeout = 30_000;
+      request.send(body);
+    });
   });
 }
 
@@ -143,13 +165,17 @@ export async function fetchPhoto(
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
-  const response = await fetch(`${apiBaseUrl}/v1/families/${familyId}/media/${mediaId}`, {
-    headers: token === null ? {} : { authorization: `Bearer ${token}` },
+
+  return sessionRequests.run(async (signal) => {
+    const response = await fetch(`${apiBaseUrl}/v1/families/${familyId}/media/${mediaId}`, {
+      signal,
+      headers: token === null ? {} : { authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      throw failureOf(response.status, await response.text().catch(() => ""));
+    }
+    return dataUriOf(await response.blob());
   });
-  if (!response.ok) {
-    throw failureOf(response.status, await response.text().catch(() => ""));
-  }
-  return dataUriOf(await response.blob());
 }
 
 /**
@@ -160,13 +186,17 @@ export async function fetchDevicePhoto(mediaId: string, deviceToken: string): Pr
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
-  const response = await fetch(`${apiBaseUrl}/v1/device/media/${mediaId}`, {
-    headers: { authorization: `Device ${deviceToken}` },
+
+  return sessionRequests.run(async (signal) => {
+    const response = await fetch(`${apiBaseUrl}/v1/device/media/${mediaId}`, {
+      signal,
+      headers: { authorization: `Device ${deviceToken}` },
+    });
+    if (!response.ok) {
+      throw failureOf(response.status, await response.text().catch(() => ""));
+    }
+    return dataUriOf(await response.blob());
   });
-  if (!response.ok) {
-    throw failureOf(response.status, await response.text().catch(() => ""));
-  }
-  return dataUriOf(await response.blob());
 }
 
 /**
@@ -192,22 +222,27 @@ export async function uploadDeviceVoice(
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
-  const recording = await (await fetch(uri)).blob();
-  const response = await fetch(`${apiBaseUrl}/device/voice`, {
-    method: "POST",
-    headers: {
-      authorization: `Device ${deviceToken}`,
-      "content-type": "audio/mp4",
-      "idempotency-key": key,
-      "x-duration-ms": String(Math.round(durationMs)),
-    },
-    body: recording,
+
+  return sessionRequests.run(async (signal) => {
+    const recording = await (await fetch(uri, { signal })).blob();
+    assertRequestActive(signal);
+    const response = await fetch(`${apiBaseUrl}/device/voice`, {
+      method: "POST",
+      signal,
+      headers: {
+        authorization: `Device ${deviceToken}`,
+        "content-type": "audio/mp4",
+        "idempotency-key": key,
+        "x-duration-ms": String(Math.round(durationMs)),
+      },
+      body: recording,
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { error?: unknown };
+      throw new ApiError(response.status, String(body.error ?? "unknown"), undefined);
+    }
+    return ((await response.json()) as { media_id: string }).media_id;
   });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: unknown };
-    throw new ApiError(response.status, String(body.error ?? "unknown"), undefined);
-  }
-  return ((await response.json()) as { media_id: string }).media_id;
 }
 
 /**
@@ -223,19 +258,24 @@ export async function uploadVoice(
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
-  const body = await (await fetch(recording.uri)).blob();
-  const response = await fetch(`${apiBaseUrl}/v1/families/${familyId}/voice`, {
-    method: "POST",
-    headers: {
-      ...(token === null ? {} : { authorization: `Bearer ${token}` }),
-      "content-type": "audio/mp4",
-      "idempotency-key": `voice:${recording.key}`,
-      "x-duration-ms": String(Math.round(recording.durationMs)),
-    },
-    body,
+
+  return sessionRequests.run(async (signal) => {
+    const body = await (await fetch(recording.uri, { signal })).blob();
+    assertRequestActive(signal);
+    const response = await fetch(`${apiBaseUrl}/v1/families/${familyId}/voice`, {
+      method: "POST",
+      signal,
+      headers: {
+        ...(token === null ? {} : { authorization: `Bearer ${token}` }),
+        "content-type": "audio/mp4",
+        "idempotency-key": `voice:${recording.key}`,
+        "x-duration-ms": String(Math.round(recording.durationMs)),
+      },
+      body,
+    });
+    if (!response.ok) {
+      throw failureOf(response.status, await response.text().catch(() => ""));
+    }
+    return ((await response.json()) as { id: string }).id;
   });
-  if (!response.ok) {
-    throw failureOf(response.status, await response.text().catch(() => ""));
-  }
-  return ((await response.json()) as { id: string }).id;
 }

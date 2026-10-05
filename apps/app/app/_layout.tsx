@@ -13,6 +13,7 @@ import { StatusBar } from "expo-status-bar";
 import { type ReactNode, useEffect, useState } from "react";
 import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { sessionRequests } from "../src/api/request-session.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { sessionScope } from "../src/data/live-state.ts";
@@ -28,16 +29,19 @@ void SplashScreen.preventAutoHideAsync();
 
 function SessionQueries({ children, scope }: { children: ReactNode; scope: string }) {
   const [queries] = useState(() => {
+    sessionRequests.activate(scope);
     clearPhotoCache();
     activatePrivateSession(scope);
     return new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 60_000 } } });
   });
   useEffect(() => {
+    sessionRequests.activate(scope);
     activatePrivateSession(scope);
     const subscription = AppState.addEventListener("change", (state) =>
       focusManager.setFocused(state === "active"),
     );
     return () => {
+      sessionRequests.end(scope);
       subscription.remove();
       void queries.cancelQueries();
       queries.clear();

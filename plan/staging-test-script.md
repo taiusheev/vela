@@ -1,82 +1,78 @@
-# Staging test script: everything built 1–3 October 2026
+# English trial: synthetic staging acceptance script
 
-For the founder, on staging, with the Android build from 2 October (EAS build `45eb0cd4`) and the staging bot **@VelaLightstagingbot**. Staging holds test data only. Each step says what you do and what you should see; tick it off, or note what you saw instead and send it to Claude.
+This script tests the invitation-only, free English iPhone organiser and Telegram parent experience. Use synthetic content and the staging bot **@VelaLightstagingbot**. Record each result in [the active readiness checklist](english-trial-readiness.md); engineering owns running checks and collecting evidence. Completed account and provider setup is reused. Repeat a setup step only when its configuration changed or a specific check failed.
 
-## On an iPhone, without Android and without an Apple Developer account
+A web demo proves only its example interactions. Expo Go cannot load Vela’s native Telegram Ogg/Opus decoder. Voice acceptance requires a signed iPhone build containing that module. Parent app screens, tablets, kitchen-table mode, billing, memory automation and book export are outside this trial.
 
-1. On the iPhone, install **Expo Go** from the App Store (free).
-2. The iPhone and the Mac must be on the same Wi-Fi, or the Mac on the iPhone's hotspot.
-3. On the Mac, Claude starts the tab **"Vela on iPhone"** (`pnpm --filter @vela/app start:staging`), which shows a QR code. Point the iPhone's Camera at it and tap the banner: Vela opens inside Expo Go, talking to staging.
-4. Use one iPhone for the organiser's steps. For her phone (sections 2–4), sign out and use **You → Her phone** on the same iPhone, or a second iPhone with Expo Go.
+## Record the run
 
-What Expo Go cannot do, which a real build can: no push notifications and no morning chime; and an iPhone cannot play voice notes recorded in Telegram (Telegram's Ogg format). Voice replies recorded in the app play fine.
+| Field | Record |
+|---|---|
+| Source | Full tested commit SHA and its wholly green CI run |
+| App | Signed iOS build ID/number and embedded `releaseCommit` |
+| Backend | Staging Worker versions, capability response and migration revision |
+| Devices | iPhone model/iOS version, Telegram devices, network and accessibility settings |
+| Fixture | Approved synthetic family/account identifiers; never tokens, private phone numbers or real content |
+| Operator | Date, verifier and evidence links |
+| Outcome | Pass/fail/blocked for every numbered case, with exact counts and remaining defects |
 
----
+Do not count skipped or blocked cases as passing. Keep failed deliveries and failed attempts visible. Engineering verifies trial capabilities before this run: `pilot`, `telegram_first` and `english_only` are true; `memory`, `book`, `parent_app` and `billing` are false. Use an approved synthetic Telegram roster, private media storage and the already configured account services. Live AI checks require the actual enabled provider; off/fake-provider tests are separate evidence.
 
-**You need (Android):** two Android phones (or one phone plus a second Telegram account on another device), your own Telegram, and the APK installed on both phones from the Expo build page. AI is off on staging, so there are no transcripts or summaries.
+## 1. Connect the existing Telegram family
 
----
+1. Use the existing founder-approved synthetic organiser account. Resume interrupted Telegram onboarding if necessary. Set the organiser, parent and family group language to English; select Vietnam and **Asia/Ho_Chi_Minh** for the parent while the organiser is in Taiwan.
+2. Verify a private organiser notification was actually delivered before activating the parent. A queued message or group message alone does not pass this check.
+3. In the parent’s private Telegram chat, review the English consent text and the separate health-word choice. Run Yes and No as separate cases. No must not start the daily schedule; Yes must activate only after the organiser notification check succeeds.
+4. Sign into the iPhone app with the approved organiser’s app account. With no connected membership, see **Connect your Telegram family**, with no app-first family-creation form.
+5. Tap **Connect existing family**. Open Vela on Telegram using the identity that already belongs to that family. Tap Start, then paste the private connection code into the app and tap **Finish connecting**.
+6. Confirm Today opens the existing family, with the organiser’s existing permissions and no duplicate family. Repeat for an approved contributor: they may ask and reply but cannot perform organiser-only actions.
+7. Separately test a wrong code, wrong Telegram account, expired connection, replayed code and unapproved participant. They must not grant access. Create a new connection after expiry and verify it works. Closing Telegram or failing to open its link must leave a usable retry/link path.
 
-## 1 · Set up a family (once)
+Record proof-code outcomes without recording the codes themselves.
 
-1. On phone A, open Vela and sign up with a test email. Create a family for a kept-light member, "Mom", in Taipei.
-2. Send the invite to your second Telegram account and tap **Start**, then **Yes, that's fine**.
-   - ✅ The app's Today shows Mom's light as waiting, then lit after her first morning.
-3. In You, add the family's Telegram group if you use one (optional: answers then show there).
+## 2. One complete scheduled exchange
 
-## 2 · Her phone (parent surface)
+1. In the app, write an English ask for the synthetic parent’s next morning. Check the date follows the parent’s Vietnam day. The ask remains as written; no translation preview or translation promise appears.
+2. Let the scheduled arrival reach the parent’s Telegram chat. Verify exactly one arrival, the English buttons and the intended local time. Telegram accepting delivery does not prove the parent read or listened.
+3. Answer with text in Telegram. With Today visible, verify genuine answer words and a lit light appear within the 30-second refresh interval. Leave and return to Today, then background/foreground the app and verify it refreshes.
+4. Open Exchanges and the exchange directly. Check the original answer, parent-local answer/read-receipt times and photo-choice context. No fixture household may appear while loading or after a failed request.
+5. Reply with text from the app and from an approved relative in the Telegram group. Verify both genuine replies appear in the app.
+6. On the next scheduled morning, verify the parent receives those human replies as the read-back. Record arrival, answer, reply and read-back counts separately.
+7. Repeat the loop with a two-photo ask and **photo 2**, a Telegram answer photo, a Telegram Ogg/Opus voice answer, and app/group voice/photo replies. Verify originals appear in Today and Exchanges and voice plays inside the signed iPhone app.
+8. Test M4A/MP3 playback, unavailable/pending media, expired media, cancellation and a failed download. Neither credentials nor provider/storage URLs may be displayed to participants. Expired originals remain unavailable even when cleanup has not yet run.
+9. Deliberately fail AI on synthetic content: the raw answer still lights the light. With the real provider enabled, separately verify English transcription, summary, flag wording and reviewed weekly reads.
 
-1. On phone B, sign in as you, go to **You → Her phone → Set up this phone**. Allow notifications when asked.
-   - ✅ Phone B now shows Mom's screen: her message in large type, big buttons, "Read this aloud".
-2. Tap **Read this aloud**. ✅ The phone speaks the message.
-3. Tap **🎙 Answer with your voice**, allow the microphone, say a sentence, tap **Stop**, **Listen**, then **Send my answer**.
-   - ✅ Phone A's Today shows Mom answered.
-   - ✅ If the family has a Telegram group, the voice message appears there.
-4. Type a few words and **Send**. ✅ They show on Today too.
+## 3. Retry, authentication and account isolation
 
-## 3 · Photos and voice to her phone
+1. Interrupt the network during an ask/reply save. Show an actionable error and preserve unsent text. Retry unchanged content using the same mutation identifier; verify there is only one saved write. Repeated taps while saving must not create duplicates.
+2. Interrupt a photo or voice upload. Show progress/failure, stop the request after its timeout, and retry the same selected attachment without creating duplicate media. Unsent recordings and photos are screen-local; do not promise they survive restarting the app.
+3. Sign out during a pending read, write, local file read, photo upload and voice playback/download. Switch to a second synthetic account. The previous family, calling number, drafts, pending work and media must not appear or resume in the new account. A delayed successful response must not redirect or repopulate that account.
+4. Expire authentication and test a refused membership. The app must show a recoverable failure without borrowing example content. Test an ordinary failed sign-out separately: the still-active identity can retry, but cancelled old requests do not resume.
+5. Deny microphone/photo permission; retry after changing the permission. Cancel recording/sharing. Test interrupted onboarding and a failed Telegram prompt delivery, then resume without a duplicate family, invite or arrival.
 
-1. On phone A, **Ask** Mom with two photos ("Which one do you like more?") for tomorrow.
-2. The next morning on phone B: ✅ both photos show, numbered 1 and 2, with buttons 1 and 2. Tap one.
-3. On phone A, open today's exchange and use **🎙 Reply with your voice** and **📷 Reply with a photo**.
-   - ✅ The photo shows as a picture under "What the family said".
-4. The morning after: ✅ phone B shows the photo and a **▶ Play the voice message** button that plays your voice.
-5. If someone sends a photo or voice note in the family's Telegram group as a reply, it should also reach phone B the next morning.
+## 4. Consent, quiet mornings and rights
 
-## 4 · Kitchen table
+Use only synthetic content for deliberately silent days, health words and flags.
 
-1. Turn phone B on its side (or stand a tablet). ✅ It shows the clock, the date, the message and **Answer**, and the screen stays on.
-2. Tap anywhere. ✅ Her normal screen opens. Leave it alone for 6 minutes. ✅ It goes back to the table.
-3. At her morning time: ✅ one chime.
+1. Withdraw health-word permission while AI is processing and while a quoted notice is queued. Derived sensitive content must not be committed or delivered after withdrawal. Repeat Stop during processing. A message already accepted by Telegram is recorded separately.
+2. Test consent No, health permission both ways, symmetry, Stop/Start, away/back, expired invites and failed delivery. Check all parent confirmations, buttons, notices and help are English. Removed participants must still be able to stop, withdraw permissions and request deletion.
+3. Rehearse an unanswered scheduled morning. Verify the quiet notice reaches the verified organiser route at the intended parent-local time; a failed delivery or paused/away parent must not manufacture a quiet alert.
+4. Test **She’s fine**, **Wait two hours**, later resolution and any consented nearby route actually enabled for the cohort. Failed quiet actions must show failure, and successful ones must show their real outcome.
+5. Without a permitted saved calling number, Call is absent. With an optional, consented valid international number configured on the organiser’s device, Call has that destination. Sign-out removes it. Privacy, support and data-request links have usable destinations.
+6. Request deletion during media ingestion and playback, then verify access is revoked and no newly written orphan is retained. Exercise delayed cleanup and expired reads. Use the engineering concurrency and deletion checks as supporting evidence, alongside the live result.
+7. Delete a synthetic Clerk account through the configured provider. Verify the signed lifecycle delivery, denied API access and replay/link refusal. This account-access check is separate from family-content deletion.
 
-## 5 · Someone nearby, and "Ask them to look in"
+## 5. Weekly read and iPhone usability
 
-1. On phone A, **You → People nearby**, add "Anna, neighbour". Tap **Ask on Telegram** and send the message to a Telegram account that plays Anna (not your organiser account).
-2. As Anna, open the link in Telegram. ✅ The bot asks, in your name, with **Yes, I'm happy to** / **No, thank you**. Tap Yes.
-   - ✅ You get "Anna said yes…" on Telegram; People nearby shows Anna as "Said yes".
-3. Make a quiet morning: don't answer as Mom on her next morning. After her quiet time, phone A shows the quiet sheet.
-4. On the sheet, tap **Ask them to look in** next to Anna.
-   - ✅ Anna gets "Mia asks: could you look in on Mom today?" with **I'll look in** / **Can't today**.
-5. As Anna, tap **I'll look in**. ✅ You get "Anna will look in on Mom." and the sheet says so.
-6. Now answer as Mom. ✅ Anna gets "Mom has answered now, so there is no need to look in."
-7. As Anna, send **stop**. ✅ Anna is removed, and People nearby no longer lists her.
-8. Optional: invite someone and tap **No**. ✅ They are deleted at once.
+1. Open the weekly read throughout the free pilot, including after day 30 in synthetic time. It remains accessible without payment details. Check the week follows the parent’s timezone and unavailable AI is described honestly.
+2. Verify unavailable parent-phone, language/translation, memory, billing and export features are hidden. Existing genuine story records may be readable; new long-term saving is not promised.
+3. Run VoiceOver through sign-in, linking, Today, Exchanges, playback, ask/reply, quiet actions and help. Repeat with large text on the smallest supported iPhone. Controls must remain reachable, named and readable; errors must be perceivable.
+4. Record a signed-device result for the native decoder, permission denial, app resume, poor network and account switching. Web checks or host C-decoder tests do not substitute for these cases.
 
-## 6 · Story day and the family book
+## 6. Seven synthetic mornings and release evidence
 
-1. On phone A, open the **Sunday** tab. ✅ At the bottom, "Story day" offers a story question for Mom's next Sunday.
-2. Tap **Another question** once. ✅ A different question appears. Tap **Ask it on Sunday**.
-   - ✅ It says the question is on its way for Sunday.
-3. On Sunday morning, answer as Mom: on Telegram with words or a voice note, or on her phone with **🎙 Answer with your voice**.
-   - ✅ On Telegram, her thanks says "Your story is kept in the family book." with **Don't keep this one**.
-4. On phone A, Sunday tab → **Read the family book**. ✅ The story shows: the question, who asked, her words, and **▶ Her voice** when she answered by voice on her phone.
-5. As Mom on Telegram, tap **Don't keep this one**. ✅ She is told the story is no longer in the book, and it is gone from the book on phone A.
-6. Optional, as an organiser: on another story, tap **Take this story out of the book**. ✅ It disappears.
+Complete seven scheduled staging mornings and the exchange loop before real content. Record each ask’s origin (family-written/fallback), arrival attempts/successes, answers and latency, contentful answers, human replies, read-back delivery, quiet outcomes, stop reasons and assistance required. Deliberate silence and flags use synthetic content. Preserve exact per-family denominators.
 
-Not there yet: voting on questions, and a PDF of the book.
+Engineering records the under-hour restore, production recovery rehearsal, external alert receipt, silence drills and continuous load result separately. Tie the final deployment and TestFlight build to the wholly tested source commit. The readiness checklist retains every remaining production, device, distribution, eligibility and actual Vietnam-network gate; this script does not approve activation by itself.
 
----
-
-## If something is wrong
-
-Write down the step number, what you did, and what you saw (a screenshot helps), and send it to Claude. Nothing here touches real families: staging is separate from production.
+For a defect, record the numbered case, expected/observed outcome, commit/build, synthetic evidence and retry count. Engineering reproduces and fixes it. Cross-family disclosure, invented answers, ignored Stop, duplicate arrivals or Vela-caused false quiet notices pause expansion until corrected and reverified.

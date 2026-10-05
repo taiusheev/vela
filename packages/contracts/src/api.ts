@@ -379,6 +379,8 @@ export const ApiTodayExchange = z.object({
   id: z.uuid(),
   recipient_id: z.uuid(),
   recipient_name: z.string(),
+  /** Recipient clock for answer/read receipts, including a directly opened exchange. */
+  recipient_tz: TimeZone.optional(),
   /** Null for Vela's own hello, and for an ask whose asker has since been deleted. */
   asker_name: z.string().nullable(),
   on_behalf_of: z.string().nullable(),
