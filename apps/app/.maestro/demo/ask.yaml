@@ -14,7 +14,7 @@ tags:
 - tapOn: "Say it the way you would say it"
 - inputText: "What did you have for breakfast?"
 - assertVisible: "One question at a time. The English pilot sends your words as written."
-- assertNotVisible: 'shown to her in .+'
+- assertNotVisible: '.*shown to her in .+'
 - scrollUntilVisible:
     element: "Into her morning"
     direction: DOWN
