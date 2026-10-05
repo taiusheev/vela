@@ -52,8 +52,9 @@
       [
         "expo-image-picker",
         {
+          "photosPermission": "Vela uses the photos you choose for an ask or reply to your family.",
           "cameraPermission": false,
-          "microphonePermission": false
+          "microphonePermission": "Vela uses your microphone when you choose to record a voice message for your family."
         }
       ],
       [
@@ -65,7 +66,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Vela records your answer when you tap Answer with your voice."
+          "microphonePermission": "Vela uses your microphone when you choose to record a voice message for your family."
         }
       ]
     ],

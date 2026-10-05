@@ -33,6 +33,20 @@ jobs:
       group: deploy-staging
       cancel-in-progress: false
     steps:
+      - name: Require staging deployment credentials
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=0
+          for name in DATABASE_URL CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing staging environment secret: $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
       - uses: actions/checkout@v7
       # Pinned to a commit, not a tag: this step installs the pnpm that the credentialed migrate
       # and deploy steps below then run.
@@ -63,6 +77,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Verify public release routes and protection
+        run: pnpm --filter @vela/worker run release:smoke staging
 
   production:
     name: production
@@ -76,6 +92,20 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     steps:
+      - name: Require production deployment credentials
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=0
+          for name in DATABASE_URL CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing production environment secret: $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -115,3 +145,5 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Verify public release routes and protection
+        run: pnpm --filter @vela/worker run release:smoke production

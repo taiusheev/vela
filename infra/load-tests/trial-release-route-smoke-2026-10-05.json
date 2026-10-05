@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "source": "public-release-smoke",
+  "verifier_source": "precommit worktree based on ae95d9ac6b84fe44472b69cb8938fe437481d535",
+  "credentials_or_content_included": false,
+  "limitations": [
+    "Public routes only; no signed-in app, queue, provider or device proof.",
+    "Synthetic staging capability availability does not establish English pilot admission.",
+    "No production deployment was performed."
+  ],
+  "staging": {
+    "environment": "staging",
+    "checked_at_utc": "2026-10-05T13:00:56.324Z",
+    "passed": true,
+    "checks": [
+      {
+        "name": "reconcile_heartbeat",
+        "passed": true,
+        "http_status": 200
+      },
+      {
+        "name": "english_privacy_public",
+        "passed": true,
+        "http_status": 200
+      },
+      {
+        "name": "existing_privacy_public",
+        "passed": true,
+        "http_status": 200
+      },
+      {
+        "name": "api_requires_authentication",
+        "passed": true,
+        "http_status": 401
+      },
+      {
+        "name": "pilot_has_no_admin",
+        "passed": true,
+        "http_status": 404
+      },
+      {
+        "name": "admin_access_login",
+        "passed": true,
+        "http_status": 302
+      },
+      {
+        "name": "capabilities_available",
+        "passed": true,
+        "http_status": 200
+      }
+    ]
+  },
+  "production": {
+    "environment": "production",
+    "checked_at_utc": "2026-10-05T13:00:56.179Z",
+    "passed": false,
+    "checks": [
+      {
+        "name": "reconcile_heartbeat",
+        "passed": false,
+        "http_status": 404
+      },
+      {
+        "name": "english_privacy_public",
+        "passed": false,
+        "http_status": 404
+      },
+      {
+        "name": "existing_privacy_public",
+        "passed": false,
+        "http_status": 404
+      },
+      {
+        "name": "api_requires_authentication",
+        "passed": false,
+        "http_status": 404
+      },
+      {
+        "name": "pilot_has_no_admin",
+        "passed": true,
+        "http_status": 404
+      },
+      {
+        "name": "admin_access_login",
+        "passed": false,
+        "http_status": 404
+      },
+      {
+        "name": "english_trial_capabilities",
+        "passed": false,
+        "http_status": 404
+      }
+    ]
+  }
+}
