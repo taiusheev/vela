@@ -174,7 +174,7 @@ export default function YouScreen() {
           onPress={() => router.push("/onboarding")}
         />
       ) : null}
-      {!apiConfigured() || capabilities?.pilot === false ? (
+      {!apiConfigured() || (!pilot && capabilities?.pilot === false) ? (
         <View style={{ gap: space.m }}>
           <Eyebrow>
             <Trans>Your own light</Trans>
