@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source": "external-monitor-mailbox-verification",
+  "verified_at_utc": "2026-10-05T13:03:41.559543Z",
+  "environment": "staging",
+  "monitor_id": "804160172",
+  "monitor_type": "keyword",
+  "origin": "https://vela.vela-light-staging.workers.dev/healthz",
+  "verification": "Targeted Gmail search showed actual DOWN and UP incident emails in the founder inbox; TEST subjects were excluded from this proof.",
+  "down_email_received": true,
+  "down_mailbox_displayed_time": "2026-10-03 13:39 Asia/Taipei",
+  "recovery_email_received": true,
+  "recovery_mailbox_displayed_time": "2026-10-03 14:05 Asia/Taipei",
+  "time_precision": "minute, as displayed by Gmail",
+  "email_opened_or_human_acknowledged": false,
+  "monitor_currently_up": true,
+  "monitor_interval_minutes": 5,
+  "credentials_personal_content_or_message_urls_included": false,
+  "limitations": [
+    "Verifies delivery to the mailbox, not that the founder read or acted on it.",
+    "The earlier documented heartbeat outage supplies the failure-injection context.",
+    "Does not prove a production monitor, production recovery, or the other live silence scenarios."
+  ]
+}

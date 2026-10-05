@@ -167,7 +167,8 @@ describe("loadApiFamily", () => {
         consent: "no",
       },
     ]);
-    expect(JSON.stringify(read)).not.toContain("1234");
+    // Match the complete phone, allowing formatting; random UUIDs may contain its digits.
+    expect(JSON.stringify(read)).not.toMatch(/\+886\s*2\s*1234\s*5678/);
   });
 
   it("leaves the people nearby out for anyone who is not an organiser", async () => {

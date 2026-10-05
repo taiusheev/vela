@@ -8,6 +8,7 @@
     "dev": "wrangler dev",
     "dev:admin": "wrangler dev -c wrangler.admin.jsonc -c wrangler.jsonc",
     "deploy": "wrangler deploy",
+    "release:smoke": "node scripts/release-smoke.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "setup": "node scripts/setup-environment.ts",

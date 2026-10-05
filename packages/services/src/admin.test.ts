@@ -533,10 +533,8 @@ describe("recordContactConsent", () => {
       name: "VelaError",
       code: "not_found",
     });
-    for (const log of await logRows()) {
-      expect(log.what).not.toContain("Anna");
-      expect(log.what).not.toContain("912");
-    }
+    // A phone fragment can occur in a UUID; whitelist the complete content-free log instead.
+    expect((await logRows()).map((log) => log.what)).toEqual([`nearby yes contact=${contact.id}`]);
   });
 
   // The database holds a number exactly while a yes stands, whichever path writes it.
@@ -640,7 +638,7 @@ describe("addContact", () => {
     });
     const logs = await logRows();
     expect(logs).toHaveLength(1);
-    expect(logs[0]?.what).not.toContain("912");
+    expect(logs[0]?.what).toBe(`contact=${row?.id}`);
     expect(await eventRows()).toEqual([
       {
         name: "nearby_contact_added",
