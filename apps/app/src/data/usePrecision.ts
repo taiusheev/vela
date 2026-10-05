@@ -1,12 +1,13 @@
 import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { apiConfigured, fetchPrecision } from "../api/client.ts";
-import { useAccount } from "../auth/clerk.tsx";
+import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
+import { demoDataAllowed } from "./live-state.ts";
 import { type Precision, precisionFixture, toPrecision } from "./precision.ts";
 import { useToday } from "./useToday.ts";
 
 export interface PrecisionView {
-  /** The example page until the real one arrives, and with no API. */
+  /** The real page, or an empty page while a live read is pending. */
   precision: Precision;
   live: boolean;
   loading: boolean;
@@ -29,7 +30,7 @@ export function usePrecision(): PrecisionView {
     queryFn: async () => fetchPrecision(day.familyId ?? "", await account.token()),
   });
 
-  if (!apiConfigured()) {
+  if (demoDataAllowed(apiConfigured(), accountsConfigured())) {
     return {
       precision: precisionFixture(),
       live: false,
@@ -40,7 +41,7 @@ export function usePrecision(): PrecisionView {
   }
   const live = query.data !== undefined;
   return {
-    precision: live ? toPrecision(query.data) : precisionFixture(),
+    precision: live ? toPrecision(query.data) : { family: [], vela: [], velaRule: "" },
     live,
     loading: day.loading || (enabled && query.isPending),
     trouble: day.trouble || query.isError,

@@ -11,6 +11,7 @@
  * Needs, in apps/worker/.env.local or the environment:
  *   DATABASE_URL          a local Postgres, for example the one `pnpm --filter @vela/db dev-db` serves
  *   CLERK_ISSUER          the Clerk Frontend API URL, https://<something>.clerk.accounts.dev
+ *   CONTENT_KEY_V1        the local environment's AES-256 content key, also used by wrangler dev
  *   API_PORT              optional, 8787 by default
  *   APP_PORT              optional, 8081 by default: the port the app's web build is served on,
  *                         the only browser origin besides this server that may call it
@@ -59,6 +60,7 @@ import {
   markApiDeceased,
   markApiQuietUseful,
   memberOfDeviceToken,
+  openApiWeeklyRead,
   pauseApiMember,
   provisionApiAccount,
   readApiMedia,
@@ -165,7 +167,7 @@ function memoryMediaStore(): MediaStore {
   };
 }
 
-const connection = await connectDatabase(databaseUrl);
+const connection = await connectDatabase(databaseUrl, required("CONTENT_KEY_V1"));
 const app = createApiApp({
   // Expo's native builds send no Origin and no `azp`; the loopback origins above cover the web
   // preview. This is the development posture the contract describes, not the deployed one.
@@ -216,6 +218,7 @@ const app = createApiApp({
             markApiDeceased,
             endApiAway,
             startApiTrial,
+            openApiWeeklyRead,
             addApiNearby,
             removeApiNearby,
             setUpApiDevice,

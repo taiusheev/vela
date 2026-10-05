@@ -209,6 +209,7 @@ function exchange(fields: Partial<ApiTodayExchange> = {}): ApiTodayExchange {
     ask: "What did you plant?",
     answer: null,
     replies: [],
+    voice_hello: null,
     seen_at: null,
     replies_reach_her: true,
     photos: [],
@@ -263,6 +264,8 @@ describe("Today's card while its ask has no answer", () => {
         at: TWO_THIRTY_TWO,
         picked_media_id: null,
         picked_number: null,
+        audio: null,
+        photo: null,
         translation: null,
       },
     });
@@ -279,6 +282,8 @@ describe("Today's card while its ask has no answer", () => {
         at: TWO_THIRTY_TWO,
         picked_media_id: null,
         picked_number: null,
+        audio: null,
+        photo: null,
         translation: { lang: "en", text: "I made sweet potato porridge." },
       },
     });
@@ -311,6 +316,8 @@ describe("Today's card for her pick on a photo choice", () => {
         at: TWO_THIRTY_TWO,
         picked_media_id: FIRST,
         picked_number: 1,
+        audio: null,
+        photo: null,
         translation: null,
       },
       photos: [{ id: SECOND, width: null, height: null, stored: false }],
@@ -337,9 +344,59 @@ describe("Today's card for her pick on a photo choice", () => {
         at: TWO_THIRTY_TWO,
         picked_media_id: null,
         picked_number: null,
+        audio: null,
+        photo: null,
         translation: null,
       },
     });
     expect(cardIn("en", lights, unnumbered)?.answer?.text).toBe("picked a photo");
+  });
+});
+
+describe("parent clock and original media", () => {
+  it("uses Vietnam’s morning clock and keeps authenticated media descriptors intact", () => {
+    const audio = {
+      id: MOM,
+      mime: "audio/ogg" as const,
+      duration_ms: 6000,
+      expires_at: "2026-10-06T01:12:00Z",
+      state: "pending" as const,
+      role: "original" as const,
+    };
+    const card = exchange({
+      voice_hello: audio,
+      answer: {
+        kind: "voice",
+        text: "My answer",
+        at: "2026-10-05T01:12:00Z",
+        picked_media_id: null,
+        picked_number: null,
+        translation: null,
+        audio,
+        photo: null,
+      },
+    });
+    const result = inLocale("en", () =>
+      toToday(
+        ApiToday.parse({
+          lights: [
+            light({
+              tz: "Asia/Ho_Chi_Minh",
+              local_date: "2026-10-05",
+              state: "lit",
+              answered_at: "2026-10-05T01:12:00Z",
+            }),
+          ],
+          exchanges: [card],
+          tomorrow: [],
+        }),
+        ANNA,
+      ),
+    );
+    expect(result.lights[0]?.stateText).toBe("answered 8:12");
+    expect(result.lights[0]?.localDate).toBe("2026-10-05");
+    expect(result.exchange?.answer?.at).toBe("8:12");
+    expect(result.exchange?.answer?.audio).toEqual(audio);
+    expect(result.exchange?.voiceHello).toEqual(audio);
   });
 });

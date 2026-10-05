@@ -486,7 +486,7 @@ async function otherFamily(): Promise<{ id: string; identity: SessionIdentity }>
 
 describe("readApiMedia", () => {
   async function read(mediaId: string, who: SessionIdentity = mia, familyId = seed.family.id) {
-    return readApiMedia(h.db, who, familyId, mediaId, h.media);
+    return readApiMedia(h.db, who, familyId, mediaId, h.media, "original", h.clock.now());
   }
 
   async function exchangeNaming(mediaId: string) {
@@ -500,6 +500,44 @@ describe("readApiMedia", () => {
       .where(eq(exchanges.id, exchange.id));
     return exchange;
   }
+
+  it("serves an original Ogg greeting shared by the ask but refuses expired and ended access", async () => {
+    const [voice] = await h.db
+      .insert(media)
+      .values({
+        familyId: seed.family.id,
+        uploadedBy: seed.organiser.id,
+        kind: "audio",
+        storageKey: "greeting.ogg",
+        mime: "audio/ogg",
+        expiresAt: new Date(h.clock.now().getTime() + 1000),
+      })
+      .returning();
+    if (voice === undefined) throw new Error("missing voice");
+    await h.media.put("greeting.ogg", new ArrayBuffer(4), "audio/ogg");
+    const exchange = await seedExchange(h.db, seed, {
+      date: localDateOf(h.clock.now(), seed.member.tz),
+    });
+    await h.db
+      .update(exchanges)
+      .set({ voiceHelloId: voice.id })
+      .where(eq(exchanges.id, exchange.id));
+    expect((await read(voice.id, sam))?.mime).toBe("audio/ogg");
+    h.clock.advance(1000);
+    expect(await read(voice.id, sam)).toBeNull();
+    await h.db.update(media).set({ kept: true }).where(eq(media.id, voice.id));
+    expect(await read(voice.id, sam)).not.toBeNull();
+    await h.db
+      .update(members)
+      .set({ status: "left", leftAt: h.clock.now() })
+      .where(eq(members.id, samMemberId));
+    expect(await read(voice.id, sam)).toBeNull();
+    await h.db
+      .update(families)
+      .set({ deletedAt: h.clock.now() })
+      .where(eq(families.id, seed.family.id));
+    expect(await read(voice.id)).toBeNull();
+  });
 
   it("serves the uploader the photo as it was kept", async () => {
     const body = await uploaded();

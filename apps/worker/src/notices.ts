@@ -36,6 +36,8 @@ export const NOTICE_PATHS: Readonly<Record<NoticeLang, string>> = {
 
 /** One notice, as the generator wrote it. */
 export interface PrivacyNotice {
+  /** Content language; the legacy Chinese URL serves English during this cohort. */
+  readonly language?: NoticeLang;
   /** The notice's `#` heading as plain text, for the page's `<title>`. */
   readonly title: string;
   /** The notice as HTML, every character of the Markdown's text already escaped. */

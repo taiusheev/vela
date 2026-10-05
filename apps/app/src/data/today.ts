@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import type { ExchangeType } from "@vela/contracts";
+import type { ApiExchangeAudio, ExchangeType } from "@vela/contracts";
 import type { LightState } from "../components/light.tsx";
 import { clockTime } from "./format.ts";
 import { reactionLine, replyLine } from "./lines.ts";
@@ -14,6 +14,8 @@ import { reactionLine, replyLine } from "./lines.ts";
 export interface TodayLight {
   memberId: string;
   displayName: string;
+  timeZone?: string;
+  localDate?: string;
   state: LightState;
   /** The state line under the name: "answered 8:12", "quiet", "away · Sunday", "resting". */
   stateText: string;
@@ -38,6 +40,7 @@ export interface TodayReply {
   text: string;
   /** A photo reply's photo, shown under its line. */
   photo?: ExchangePhoto;
+  audio?: ApiExchangeAudio;
 }
 
 /**
@@ -49,6 +52,8 @@ export interface ExchangePhoto {
   width: number | null;
   height: number | null;
   stored: boolean;
+  /** Null for a kept story photo; absent only in older cached responses. */
+  expires_at?: string | null;
 }
 
 export interface TodayExchange {
@@ -58,7 +63,14 @@ export interface TodayExchange {
   /** A hello carries no question. */
   ask?: string;
   /** `original` is her own words when `text` is their translation into the reader's language. */
-  answer?: { text: string; at: string; original?: string };
+  answer?: {
+    text: string;
+    at: string;
+    original?: string;
+    audio?: ApiExchangeAudio;
+    photo?: ExchangePhoto;
+  };
+  voiceHello?: ApiExchangeAudio;
   /**
    * Today's line in place of her answer while this ask has none (`toToday`): "No word yet today",
    * or, when her day is answered all the same by words to an earlier ask (flows §3.9: a tap on

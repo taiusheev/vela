@@ -29,6 +29,10 @@ const DEV_NAMES = { pilot: "vela-dev", admin: "vela-admin-dev" } as const;
 
 const DEPLOYED = ["staging", "production"] as const;
 
+it("requires the private English trial roster in production", () => {
+  expect(configOf("pilot", "production").vars.PILOT_ADMISSION).toBe("on");
+});
+
 /**
  * A deployed Worker's one address (H3): `https://<Worker name>.<subdomain>.workers.dev`, which is
  * what families, Telegram, and the founder's browser are sent to.

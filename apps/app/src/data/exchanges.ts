@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import type { ReplyKind } from "@vela/contracts";
+import type { ApiExchangeAudio, ReplyKind } from "@vela/contracts";
 import { clockTime } from "./format.ts";
 import type { ExchangePhoto } from "./today.ts";
 
@@ -20,6 +20,7 @@ export interface ExchangeReply {
   text?: string;
   /** A photo reply's photo, shown as itself rather than as words. */
   photo?: ExchangePhoto;
+  audio?: ApiExchangeAudio;
 }
 
 export interface ExchangeAnswer {
@@ -28,6 +29,8 @@ export interface ExchangeAnswer {
   /** Her own words before translation, shown by the language switch. */
   original?: string;
   transcript?: boolean;
+  audio?: ApiExchangeAudio;
+  photo?: ExchangePhoto;
 }
 
 export interface Exchange {
@@ -49,6 +52,7 @@ export interface Exchange {
   photos?: ExchangePhoto[];
   /** The photo she picked on a photo choice, which the detail screen rings. */
   picked?: string;
+  voiceHello?: ApiExchangeAudio;
 }
 
 /** The receipt in the words `useToday` gives a real one, so the two share one translation. */

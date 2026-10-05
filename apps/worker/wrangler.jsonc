@@ -416,6 +416,8 @@
         "REGIONS": "apac",
         "AI_PROVIDER": "anthropic",
         "MEDIA_STORAGE": "r2",
+        // Invitation-only English trial. Missing private roster refuses family work.
+        "PILOT_ADMISSION": "on",
         // Off until a new ADR turns it on (ADR-29): no CLERK_ISSUER, no ratelimits, and no
         // ACCOUNT_WRITE_LIMITER binding until then.
         "API_V1": "off",

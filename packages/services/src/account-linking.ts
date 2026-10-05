@@ -6,22 +6,29 @@ import {
   type ApiMutationResponse,
   InboundEvent,
 } from "@vela/contracts";
+import { t } from "@vela/copy";
+import { outboundKey } from "@vela/core";
 import {
   accountLinkChallenges,
   channelLinks,
   families,
   members,
+  outbound,
   users,
   type VelaTransaction,
 } from "@vela/db";
-import { and, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, lockApiActor, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
+import { enqueueOutbound } from "./gateway.ts";
+import { sendOutsideGateway } from "./group.ts";
 import { sha256Hex } from "./hash.ts";
+import { type PilotAdmission, pilotAllowsTelegram } from "./pilot-admission.ts";
+import { memberByChannelUser, type Queryable } from "./repo.ts";
 
 const lifetime = 15 * 60 * 1_000;
 const uuid = z.uuid();
@@ -215,7 +222,7 @@ export async function startAccountLink(
 }
 
 export async function issueAccountLinkCode(
-  deps: Pick<Deps, "db" | "clock" | "random">,
+  deps: Pick<Deps, "clock" | "random"> & { db: Queryable },
   id: string,
   event: InboundEvent,
 ): Promise<{ code: string; expires_at: string }> {
@@ -285,7 +292,7 @@ export async function issueAccountLinkCode(
 }
 
 export async function completeAccountLink(
-  deps: Pick<Deps, "db" | "clock">,
+  deps: Pick<Deps, "db" | "clock"> & { pilotAdmission?: PilotAdmission | null },
   identity: SessionIdentity,
   key: string,
   id: string,
@@ -337,6 +344,19 @@ export async function completeAccountLink(
         }
         const target = await lockTarget(tx, proof.memberId, proof.channelLinkId);
         member = target.member;
+        if (
+          deps.pilotAdmission != null &&
+          (member.language !== "en" ||
+            !pilotAllowsTelegram(deps.pilotAdmission, target.link.externalId))
+        )
+          denied();
+        if (deps.pilotAdmission != null) {
+          const [family] = await tx
+            .select({ language: families.language })
+            .from(families)
+            .where(eq(families.id, member.familyId));
+          if (family?.language !== "en") denied();
+        }
         if (
           member.familyId !== proof.familyId ||
           (await sha256Hex(target.link.externalId)) !== proof.channelIdentityHash
@@ -404,4 +424,85 @@ export async function completeAccountLink(
       },
     },
   );
+}
+
+export function isAccountLinkStart(param: string | undefined): boolean {
+  return param?.startsWith("link_") === true;
+}
+
+/** The private code is delivered through the durable gateway; retries reuse the same queued code. */
+export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): Promise<void> {
+  if (
+    event.channel !== "telegram" ||
+    event.kind !== "start" ||
+    event.conversation.kind !== "private" ||
+    event.sender.externalUserId !== event.conversation.externalId
+  )
+    return;
+  const linked = await memberByChannelUser(deps.db, "telegram", event.sender.externalUserId);
+  const lang = deps.config.pilotAdmission == null ? (linked?.member.language ?? "en") : "en";
+  const id = event.startParam?.slice(5) ?? "";
+  if (
+    linked === null ||
+    !pilotAllowsTelegram(deps.config.pilotAdmission, event.sender.externalUserId)
+  ) {
+    await sendOutsideGateway(deps, {
+      kind: "system",
+      idempotencyKey: outboundKey("system", {
+        conversationId: event.conversation.externalId,
+        suffix: `account_link_refused:${event.eventId}`,
+      }),
+      lang,
+      to: { channel: "telegram", conversationId: event.conversation.externalId },
+      text: t(lang, "account_link.unavailable"),
+    });
+    return;
+  }
+  const key = outboundKey("system", {
+    conversationId: event.conversation.externalId,
+    suffix: `account_link:${id}:${event.eventId}`,
+  });
+  await deps.db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`account-link-outbound:${key}`}, 0))`,
+    );
+    const [existing] = await tx
+      .select({ id: outbound.id })
+      .from(outbound)
+      .where(
+        and(
+          eq(outbound.idempotencyKey, key),
+          eq(outbound.memberId, linked.member.id),
+          eq(outbound.conversationId, event.conversation.externalId),
+        ),
+      )
+      .limit(1);
+    if (existing !== undefined) {
+      await deps.queues.outbound.send({ type: "deliver", outboundId: existing.id });
+      return;
+    }
+    try {
+      const proof = await issueAccountLinkCode({ ...deps, db: tx }, id, event);
+      await enqueueOutbound(deps, tx, {
+        kind: "system",
+        idempotencyKey: key,
+        memberId: linked.member.id,
+        channel: "telegram",
+        conversationId: event.conversation.externalId,
+        lang,
+        text: t(lang, "account_link.code", { code: proof.code }),
+      });
+    } catch (error) {
+      if (!(error instanceof ApiIdempotencyError) && !(error instanceof VelaError)) throw error;
+      await enqueueOutbound(deps, tx, {
+        kind: "system",
+        idempotencyKey: key,
+        memberId: linked.member.id,
+        channel: "telegram",
+        conversationId: event.conversation.externalId,
+        lang,
+        text: t(lang, "account_link.unavailable"),
+      });
+    }
+  });
 }

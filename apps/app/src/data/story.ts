@@ -9,19 +9,33 @@ export const STORY_PROMPTS: readonly AskBankItem[] = ASK_BANK.filter(
   (item) => item.type === "story",
 );
 
-/** The prompt to offer, skipping the ones already asked (by their words), in the bank's order. */
+/** Skip questions already asked in either language; an exhausted list offers no repeat. */
 export function nextPrompt(
   asked: ReadonlySet<string>,
   skip: number,
-  lang: "en" | "zh-TW",
+  _lang: "en" | "zh-TW",
 ): AskBankItem | undefined {
-  const fresh = STORY_PROMPTS.filter((item) => !asked.has(item.text[lang].trim()));
-  const pool = fresh.length > 0 ? fresh : STORY_PROMPTS;
-  return pool.length === 0 ? undefined : pool[skip % pool.length];
+  const fresh = STORY_PROMPTS.filter((item) =>
+    Object.values(item.text).every((text) => !asked.has(text.trim())),
+  );
+  return fresh.length === 0 ? undefined : fresh[skip % fresh.length];
 }
 
 /** The coming Sunday as a local date, never today: a story ask names a morning still ahead. */
-export function nextSunday(today: Date): string {
+export function nextSunday(today: Date, timeZone?: string): string {
+  if (timeZone !== undefined) {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(today);
+    const part = (name: string) => Number(parts.find((item) => item.type === name)?.value);
+    const local = new Date(Date.UTC(part("year"), part("month") - 1, part("day")));
+    const days = (7 - local.getUTCDay()) % 7 || 7;
+    local.setUTCDate(local.getUTCDate() + days);
+    return local.toISOString().slice(0, 10);
+  }
   const days = (7 - today.getDay()) % 7 || 7;
   const sunday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
   const month = String(sunday.getMonth() + 1).padStart(2, "0");

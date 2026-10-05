@@ -12,7 +12,12 @@ import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
 /** The phone's date `days` from today, as the API writes dates. */
-function dateIn(days: number): string {
+function dateIn(days: number, localDate?: string): string {
+  if (localDate !== undefined) {
+    const date = new Date(`${localDate}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  }
   const at = new Date();
   at.setDate(at.getDate() + days);
   const month = String(at.getMonth() + 1).padStart(2, "0");
@@ -88,7 +93,7 @@ export default function AwayScreen() {
             {days.map((offset) => (
               <Chip
                 key={offset}
-                label={chipDay(dateIn(offset))}
+                label={chipDay(dateIn(offset, her?.localDate))}
                 selected={until === offset}
                 onPress={() => setUntil(offset)}
               />
@@ -118,8 +123,8 @@ export default function AwayScreen() {
               {
                 memberId: her.memberId,
                 away: {
-                  from: dateIn(from),
-                  until: until === null ? null : dateIn(Math.max(until, from)),
+                  from: dateIn(from, her.localDate),
+                  until: until === null ? null : dateIn(Math.max(until, from), her.localDate),
                 },
               },
               { onSuccess: () => router.back() },

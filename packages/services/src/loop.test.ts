@@ -169,9 +169,12 @@ describe("the pilot loop", () => {
       [ORGANISER, t("en", "onboarding.ask_language")],
     ]);
 
-    const tapLast = (user: string, index: number, row = 0): InboundEvent => {
+    const tapLast = (user: string, index: number | string, row = 0): InboundEvent => {
       const buttons = h.telegram.sentTo(user).at(-1)?.message.buttons ?? [];
-      const button = buttons[row]?.[index];
+      const button =
+        typeof index === "string"
+          ? buttons.flat().find((candidate) => candidate.label === index)
+          : buttons[row]?.[index];
       if (button === undefined) {
         throw new Error(`no button ${row}:${index} in the last message to ${user}`);
       }
@@ -185,7 +188,7 @@ describe("the pilot loop", () => {
 
     // English, Taiwan, awake at 07:30, nobody nearby to note yet.
     await inbound(tapLast(ORGANISER, 0));
-    await inbound(tapLast(ORGANISER, 0));
+    await inbound(tapLast(ORGANISER, t("en", "onboarding.country_tw")));
     await inbound(tapLast(ORGANISER, 3));
     await inbound(tapLast(ORGANISER, 0));
 

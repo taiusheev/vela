@@ -1,7 +1,9 @@
 import { t } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
+import { useState } from "react";
 import { Linking, Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { callingNumber as validCallingNumber } from "../data/calling-number.ts";
 import type { QuietNotice } from "../data/quiet.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, sheetShadow, space } from "../theme/tokens.ts";
@@ -15,6 +17,9 @@ interface QuietNoticeSheetProps {
   /** Ask one person nearby to look in (ADR-36); absent where nobody can be asked from here. */
   onAskToLookIn?(contactId: string): void;
   asking?: boolean;
+  settling?: boolean;
+  callingNumber?: string;
+  trouble?: boolean;
   /** The organiser's verdict once the morning is settled (spec §18). */
   onUseful?(useful: boolean): void;
   onClose(): void;
@@ -34,8 +39,25 @@ export function QuietNoticeSheet({
   asking = false,
   onUseful,
   onClose,
+  settling = false,
+  callingNumber,
+  trouble = false,
 }: QuietNoticeSheetProps) {
   const palette = usePalette();
+  const [callFailed, setCallFailed] = useState(false);
+  const call = async (phone: string) => {
+    setCallFailed(false);
+    const number = validCallingNumber(phone);
+    if (number === null) {
+      setCallFailed(true);
+      return;
+    }
+    try {
+      await Linking.openURL(`tel:${number}`);
+    } catch {
+      setCallFailed(true);
+    }
+  };
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const answered = notice.resolution !== undefined;
@@ -46,7 +68,12 @@ export function QuietNoticeSheet({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(30,26,22,0.32)" }}>
-        <Pressable accessibilityRole="button" style={{ flex: 1 }} onPress={onClose} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t`Close quiet notice`}
+          style={{ flex: 1 }}
+          onPress={onClose}
+        />
         <View
           style={[
             {
@@ -88,6 +115,7 @@ export function QuietNoticeSheet({
                       <Pressable
                         accessibilityRole="button"
                         hitSlop={hitSlop}
+                        disabled={settling}
                         onPress={() => onUseful(true)}
                       >
                         <Words variant="button" tone="action">
@@ -97,6 +125,7 @@ export function QuietNoticeSheet({
                       <Pressable
                         accessibilityRole="button"
                         hitSlop={hitSlop}
+                        disabled={settling}
                         onPress={() => onUseful(false)}
                       >
                         <Words variant="button" tone="action">
@@ -122,15 +151,12 @@ export function QuietNoticeSheet({
                   <View key={contact.id} style={{ gap: space.s }}>
                     <Words variant="bodyMedium">{`${contact.name} · ${contact.relation}`}</Words>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.l }}>
-                      {contact.phone === undefined ? null : (
+                      {contact.phone === undefined ||
+                      validCallingNumber(contact.phone) === null ? null : (
                         <Pressable
                           accessibilityRole="button"
                           hitSlop={hitSlop}
-                          onPress={() =>
-                            void Linking.openURL(
-                              `tel:${(contact.phone ?? "").replace(/[^\d+]/g, "")}`,
-                            )
-                          }
+                          onPress={() => void call(contact.phone ?? "")}
                         >
                           <Words variant="button" tone="action">
                             <Trans>Call</Trans>
@@ -146,7 +172,7 @@ export function QuietNoticeSheet({
                         <Pressable
                           accessibilityRole="button"
                           hitSlop={hitSlop}
-                          disabled={asking}
+                          disabled={asking || settling}
                           onPress={() => onAskToLookIn(contact.id)}
                         >
                           <Words variant="button" tone="action">
@@ -164,13 +190,37 @@ export function QuietNoticeSheet({
               </>
             )}
           </ScrollView>
+          {trouble || callFailed ? (
+            <Words variant="body" tone="ink2">
+              <Trans>
+                That action did not go through. Try again, or contact the person directly.
+              </Trans>
+            </Words>
+          ) : null}
           {answered ? (
             <PrimaryButton label={t`Close`} onPress={onClose} />
           ) : (
             <>
-              <PrimaryButton label={t`Call ${name}`} onPress={() => void Linking.openURL("tel:")} />
-              <SecondaryButton label={t`${name} is fine, I know why`} onPress={onFine} />
-              <SecondaryButton label={t`Wait 2 hours`} onPress={onWait} />
+              {callingNumber === undefined ? (
+                <Words variant="body" tone="ink2">
+                  <Trans>
+                    Contact {name} using your usual phone call or Telegram chat. You can add their
+                    calling number in You, with their permission.
+                  </Trans>
+                </Words>
+              ) : (
+                <PrimaryButton label={t`Call ${name}`} onPress={() => void call(callingNumber)} />
+              )}
+              <SecondaryButton
+                label={settling ? t`Saving…` : t`${name} is fine, I know why`}
+                disabled={settling || asking}
+                onPress={onFine}
+              />
+              <SecondaryButton
+                label={t`Wait 2 hours`}
+                disabled={settling || asking}
+                onPress={onWait}
+              />
             </>
           )}
         </View>

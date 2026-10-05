@@ -20,6 +20,7 @@ export interface CountryChoice {
 }
 
 export const countries: CountryChoice[] = [
+  { code: "VN", label: msg`Vietnam`, zones: [{ label: msg`Vietnam`, zone: "Asia/Ho_Chi_Minh" }] },
   { code: "TW", label: msg`Taiwan`, zones: [{ label: msg`Taiwan`, zone: "Asia/Taipei" }] },
   {
     code: "US",

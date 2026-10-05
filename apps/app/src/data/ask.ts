@@ -4,8 +4,8 @@
  * descriptors, so a screen shows them in the app's language (build plan 3.1).
  */
 
-import { i18n, type MessageDescriptor } from "@lingui/core";
-import { msg, t } from "@lingui/core/macro";
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
 import type { ComposableExchangeType, ExchangeType } from "@vela/contracts";
 
 export type AskType =
@@ -66,21 +66,4 @@ export const VOTE_OPTIONS = { fewest: 2, most: 7, longest: 64 } as const;
 export function suggestedKind(type: ExchangeType): AskType {
   const kind = askTypes.find((option) => option.kind === type)?.kind;
   return kind !== undefined && composableType[kind] !== undefined ? kind : "question";
-}
-
-export const recipientLanguage: MessageDescriptor = msg({
-  comment: "the name of a language",
-  message: "Russian",
-});
-
-/**
- * The live preview the composer shows in her language. The real screen calls the translation
- * endpoint; until that exists this stands in so the layout and the rule ("she reads her own
- * language") are real.
- */
-export function previewTranslation(text: string): string {
-  const words = text.trim();
-  if (words.length === 0) return "";
-  const language = i18n._(recipientLanguage);
-  return t`${words} · shown to her in ${language}`;
 }

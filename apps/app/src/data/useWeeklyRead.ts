@@ -1,12 +1,13 @@
 import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { apiConfigured, fetchWeeklyRead } from "../api/client.ts";
-import { useAccount } from "../auth/clerk.tsx";
+import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
+import { demoDataAllowed } from "./live-state.ts";
 import { useToday } from "./useToday.ts";
 import { toWeeklyRead, type WeeklyRead, weeklyFixture } from "./weekly.ts";
 
 export interface WeeklyReadView {
-  /** The example week until a real one arrives, and with no API. */
+  /** A real week once loaded; live builds carry no example week. */
   read: WeeklyRead;
   live: boolean;
   loading: boolean;
@@ -17,6 +18,8 @@ export interface WeeklyReadView {
   nobody: boolean;
   /** Whose read it is, for "Start the 30 days" when it is locked. */
   memberId?: string;
+  /** Only a live read has an identity; examples and disabled queries cannot record an opening. */
+  readId?: string;
 }
 
 /**
@@ -38,12 +41,12 @@ export function useWeeklyRead(): WeeklyReadView {
     her !== undefined;
 
   const query = useQuery({
-    queryKey: ["weekly-read", day.familyId, her],
+    queryKey: ["weekly-read", account.userId, day.familyId, her],
     enabled,
     queryFn: async () => fetchWeeklyRead(day.familyId ?? "", her ?? "", await account.token()),
   });
 
-  if (!apiConfigured()) {
+  if (demoDataAllowed(apiConfigured(), accountsConfigured())) {
     return {
       read: weeklyFixture(),
       live: false,
@@ -53,14 +56,15 @@ export function useWeeklyRead(): WeeklyReadView {
       nobody: false,
     };
   }
-  const live = query.data !== undefined;
+  const live = enabled && query.data !== undefined;
   return {
-    read: live ? toWeeklyRead(query.data) : weeklyFixture(),
+    read: live ? toWeeklyRead(query.data) : { name: "", locked: false, week: null },
     live,
     loading: day.loading || (enabled && query.isPending),
     trouble: day.trouble || query.isError,
     organiser: day.organiser,
     nobody: day.live && her === undefined,
     ...(her === undefined ? {} : { memberId: her }),
+    ...(!live || query.data.read === null ? {} : { readId: query.data.read.id }),
   };
 }

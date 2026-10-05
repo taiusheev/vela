@@ -23,6 +23,8 @@ export interface InboundJob {
 
 /** What both Workers are given: the environment, the admin origin, and the admin's reach. */
 interface SharedEnv {
+  /** AES-256-GCM content key shared by this environment's pilot and admin Workers (ADR-38). */
+  readonly CONTENT_KEY_V1?: string;
   readonly ENVIRONMENT: string;
   /**
    * The admin Worker's origin. The pilot Worker puts it in front of `/admin/...` in the links of
@@ -57,6 +59,11 @@ interface SharedEnv {
  * the scheduler, the heartbeat, and the API under /v1.
  */
 export interface PilotEnv extends SharedEnv {
+  /** Endpoint-specific Svix signing key for verified Clerk account deletion events. */
+  readonly CLERK_WEBHOOK_SIGNING_SECRET?: string;
+  /** Opt-in closed trial; absent is off. Participant IDs belong in a private Worker secret. */
+  readonly PILOT_ADMISSION?: string;
+  readonly PILOT_TELEGRAM_ALLOWLIST?: string;
   // Vars.
   readonly TELEGRAM_BOT_USERNAME: string;
   readonly PRIVACY_NOTICE_URL_EN: string;

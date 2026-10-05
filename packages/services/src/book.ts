@@ -20,6 +20,7 @@ import {
   bookEntries,
   type Exchange,
   exchanges,
+  families,
   media,
   members,
 } from "@vela/db";
@@ -32,7 +33,7 @@ import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { extensionFor } from "./media-copy.ts";
 import { type ApiBookRecipe, keptRecipes } from "./recipes.ts";
-import { memberByChannelUser, type Queryable } from "./repo.ts";
+import { familyHasEnded, memberByChannelUser, type Queryable } from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -60,18 +61,60 @@ function keptFiles(exchange: Pick<Exchange, "type" | "mediaIds">, answerMediaId:
  * the entry, or null when it was removed before this answer, which keeps nothing.
  */
 export async function keepInBook(
-  deps: Pick<Deps, "db" | "clock" | "media" | "logger">,
+  deps: Pick<Deps, "db" | "clock" | "media" | "logger" | "random">,
   exchange: Exchange,
   answer: Answer,
 ): Promise<BookEntry | null> {
   const now = deps.clock.now();
-  const entry = await deps.db.transaction(async (tx) => {
+  const kept = await deps.db.transaction(async (tx) => {
+    // Family before member matches family deletion. Record key locks prevent a deleted answer
+    // from creating an entry, without blocking retention's updates to its media reference.
+    const [family] = await tx
+      .select()
+      .from(families)
+      .where(eq(families.id, exchange.familyId))
+      .for("share");
+    if (family === undefined || family.deletedAt !== null) return null;
+    const [subject] = await tx
+      .select()
+      .from(members)
+      .where(and(eq(members.id, answer.memberId), eq(members.familyId, family.id)))
+      .for("share");
+    if (
+      subject === undefined ||
+      subject.leftAt !== null ||
+      subject.status === "left" ||
+      subject.status === "deceased"
+    )
+      return null;
+    const [currentExchange] = await tx
+      .select()
+      .from(exchanges)
+      .where(and(eq(exchanges.id, exchange.id), eq(exchanges.familyId, family.id)))
+      .for("key share");
+    const [currentAnswer] = await tx
+      .select()
+      .from(answers)
+      .where(
+        and(
+          eq(answers.id, answer.id),
+          eq(answers.exchangeId, exchange.id),
+          eq(answers.memberId, subject.id),
+        ),
+      )
+      .for("key share");
+    if (
+      currentExchange === undefined ||
+      currentAnswer === undefined ||
+      currentExchange.recipientId !== subject.id
+    )
+      return null;
     await tx
       .insert(bookEntries)
       .values({
-        familyId: exchange.familyId,
-        memberId: answer.memberId,
-        exchangeId: exchange.id,
+        familyId: family.id,
+        memberId: subject.id,
+        exchangeId: currentExchange.id,
         keptAt: now,
       })
       .onConflictDoNothing();
@@ -80,19 +123,42 @@ export async function keepInBook(
       .from(bookEntries)
       .where(eq(bookEntries.exchangeId, exchange.id))
       .for("update");
-    if (row === undefined || row.removedAt !== null) return null;
-    const files = keptFiles(exchange, answer.mediaId);
+    if (
+      row === undefined ||
+      row.removedAt !== null ||
+      row.familyId !== family.id ||
+      row.memberId !== subject.id
+    )
+      return null;
+    const files = keptFiles(currentExchange, currentAnswer.mediaId);
     if (files.length > 0) {
-      await tx.update(media).set({ kept: true }).where(inArray(media.id, files));
+      await tx
+        .update(media)
+        .set({ kept: true })
+        .where(and(eq(media.familyId, family.id), inArray(media.id, files)));
     }
-    return row;
+    return { entry: row, files };
   });
-  if (entry !== null) {
-    for (const file of keptFiles(exchange, answer.mediaId)) {
-      await moveOutOfExpiring(deps, file);
-    }
+  if (kept === null) return null;
+  for (const file of kept.files) {
+    await moveOutOfExpiring(deps, kept.entry, file);
   }
-  return entry;
+  // Copying runs outside the transaction. A removal during that wait must not answer "saved".
+  const [live] = await deps.db
+    .select({ entry: bookEntries })
+    .from(bookEntries)
+    .innerJoin(families, eq(families.id, bookEntries.familyId))
+    .innerJoin(members, eq(members.id, bookEntries.memberId))
+    .where(
+      and(
+        eq(bookEntries.id, kept.entry.id),
+        isNull(bookEntries.removedAt),
+        isNull(families.deletedAt),
+        isNull(members.leftAt),
+        inArray(members.status, ["active", "paused"]),
+      ),
+    );
+  return live?.entry ?? null;
 }
 
 /** The bucket's prefixes a lifecycle rule clears 32 days after writing (data map 21). */
@@ -100,31 +166,129 @@ const EXPIRING = ["device/", "asks/", "replies/"] as const;
 
 /**
  * A kept file under a prefix the bucket clears (her phone's recordings are under `device/`), moved
- * to `book/<family>/<id>.<ext>` so the bucket's 32-day rule never reaches it. The object is copied, the row pointed at the copy, and the
- * old object deleted; a failure leaves the row where it was, logged, for the next answer or the
- * founder, since the row still names an object that exists.
+ * to a unique attempt under `book/<family>/` so the bucket's 32-day rule never reaches it. The
+ * copy is adopted only while the family, entry and kept file still exist. A losing attempt
+ * deletes only its own object; the winner then deletes the old object. Existing book keys stay
+ * readable. A failed copy leaves the original for a later answer or the founder.
  */
 async function moveOutOfExpiring(
-  deps: Pick<Deps, "db" | "media" | "logger">,
+  deps: Pick<Deps, "db" | "clock" | "media" | "logger" | "random">,
+  entry: BookEntry,
   mediaId: string,
 ): Promise<void> {
   const store = deps.media;
   if (store === null) return;
   const [row] = await deps.db.select().from(media).where(eq(media.id, mediaId)).limit(1);
   const from = row?.storageKey ?? null;
-  if (row === undefined || from === null || !EXPIRING.some((prefix) => from.startsWith(prefix))) {
+  if (
+    row === undefined ||
+    row.familyId !== entry.familyId ||
+    !row.kept ||
+    from === null ||
+    !EXPIRING.some((prefix) => from.startsWith(prefix))
+  ) {
     return;
   }
+  if (await familyHasEnded(deps.db, row.familyId)) return;
+  const startedAt = deps.clock.now();
   const mime = row.mime ?? (row.kind === "image" ? "image/jpeg" : "audio/mp4");
-  const key = `book/${row.familyId}/${row.id}.${extensionFor(mime)}`;
+  const key = `book/${row.familyId}/${row.id}-${deps.random.token(16)}.${extensionFor(mime)}`;
+  const discard = async () => {
+    try {
+      await store.delete(key);
+    } catch (error) {
+      deps.logger.warn("book_media_cleanup_failed", { mediaId, error: errorLabel(error) });
+    }
+  };
   try {
     const object = await store.get(from);
     if (object === null) return;
     await store.put(key, object.body, mime);
-    await deps.db.update(media).set({ storageKey: key }).where(eq(media.id, row.id));
+  } catch (error) {
+    await discard();
+    deps.logger.warn("book_media_move_failed", { mediaId, error: errorLabel(error) });
+    return;
+  }
+  let adopted = false;
+  try {
+    adopted = await deps.db.transaction(async (tx) => {
+      const [family] = await tx
+        .select()
+        .from(families)
+        .where(eq(families.id, entry.familyId))
+        .for("share");
+      if (family === undefined || family.deletedAt !== null) return false;
+      const [subject] = await tx
+        .select()
+        .from(members)
+        .where(and(eq(members.id, entry.memberId), eq(members.familyId, family.id)))
+        .for("share");
+      if (
+        subject === undefined ||
+        subject.leftAt !== null ||
+        subject.status === "left" ||
+        subject.status === "deceased"
+      )
+        return false;
+      const [currentEntry] = await tx
+        .select()
+        .from(bookEntries)
+        .where(and(eq(bookEntries.id, entry.id), eq(bookEntries.familyId, family.id)))
+        .for("share");
+      if (
+        currentEntry === undefined ||
+        currentEntry.removedAt !== null ||
+        currentEntry.memberId !== subject.id
+      )
+        return false;
+      const [current] = await tx
+        .select()
+        .from(media)
+        .where(and(eq(media.id, mediaId), eq(media.familyId, family.id)))
+        .for("update");
+      if (
+        current === undefined ||
+        !current.kept ||
+        current.storageKey !== from ||
+        startedAt.getTime() + 24 * 60 * 60 * 1_000 <= deps.clock.now().getTime()
+      )
+        return false;
+      const [updated] = await tx
+        .update(media)
+        .set({ storageKey: key })
+        .where(and(eq(media.id, current.id), eq(media.storageKey, from), eq(media.kept, true)))
+        .returning({ id: media.id });
+      return updated !== undefined;
+    });
+  } catch (error) {
+    // An ambiguous commit may have adopted the object. Preserve it if its row names it, or the
+    // lookup also fails; the bounded orphan sweep can remove an unreferenced attempt later.
+    try {
+      const [current] = await deps.db
+        .select({ storageKey: media.storageKey })
+        .from(media)
+        .where(eq(media.id, mediaId))
+        .limit(1);
+      adopted = current?.storageKey === key;
+      if (!adopted) await discard();
+    } catch {
+      deps.logger.warn("book_media_commit_unknown", { mediaId });
+      return;
+    }
+    deps.logger.warn("book_media_move_failed", { mediaId, error: errorLabel(error) });
+    if (!adopted) return;
+  }
+  if (!adopted) {
+    await discard();
+    return;
+  }
+  try {
     await store.delete(from);
   } catch (error) {
-    deps.logger.warn("book_media_move_failed", { mediaId, error: errorLabel(error) });
+    // The old object is no longer referenced; only its existing 32-day prefix lifecycle can
+    // clean a failed deletion. BOOK stays off for the real-family trial until a durable retry
+    // covers this long-term retention path. The current book copy remains deletion-safe.
+    deps.logger.warn("book_media_source_delete_failed", { mediaId, error: errorLabel(error) });
   }
 }
 
@@ -159,7 +323,10 @@ async function removeEntry(
     ...(exchange?.type === "memory_photo" ? exchange.mediaIds : []),
   ];
   if (ids.length > 0) {
-    await tx.update(media).set({ kept: false }).where(inArray(media.id, ids));
+    await tx
+      .update(media)
+      .set({ kept: false })
+      .where(and(eq(media.familyId, entry.familyId), inArray(media.id, ids)));
   }
   return entry;
 }
@@ -287,7 +454,7 @@ export async function loadApiBook(
     const said = await db
       .select({ answer: answers, file: media })
       .from(answers)
-      .leftJoin(media, eq(media.id, answers.mediaId))
+      .leftJoin(media, and(eq(media.id, answers.mediaId), eq(media.familyId, familyId)))
       .where(eq(answers.exchangeId, row.exchange.id))
       .orderBy(asc(answers.receivedAt), asc(answers.id));
     entries.push({
@@ -305,6 +472,7 @@ export async function loadApiBook(
                 .from(media)
                 .where(
                   and(
+                    eq(media.familyId, familyId),
                     inArray(media.id, row.exchange.mediaIds),
                     eq(media.kind, "image"),
                     isNotNull(media.storageKey),

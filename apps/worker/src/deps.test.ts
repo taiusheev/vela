@@ -318,6 +318,53 @@ describe("the media port", () => {
     expect(objects.size).toBe(0);
   });
 
+  it("maps bounded R2 metadata pages without fetching object contents", async () => {
+    const bucket = fakeR2Bucket(new Map());
+    const uploaded = new Date("2026-10-01T00:00:00.000Z");
+    const list = vi.spyOn(bucket, "list").mockResolvedValue({
+      objects: [
+        {
+          key: "families/f/media/m/attempt.ogg",
+          version: "v1",
+          size: 4,
+          etag: "test-etag",
+          httpEtag: '"test-etag"',
+          uploaded,
+          checksums: { toJSON: () => ({}) },
+          storageClass: "Standard",
+          writeHttpMetadata: () => {},
+        },
+      ],
+      truncated: true,
+      cursor: "next-page",
+      delimitedPrefixes: [],
+    });
+    const get = vi.spyOn(bucket, "get");
+    const port = createMediaPort(
+      { MEDIA_STORAGE: "r2", MEDIA_BUCKET: bucket },
+      "production",
+      "wrangler.jsonc",
+      recordingLogger([]),
+      { said: false },
+    );
+    if (port?.list === undefined) throw new Error("Missing R2 metadata listing");
+    expect(await port.list({ prefix: "families/", limit: 50, cursor: "page-one" })).toEqual({
+      objects: [{ key: "families/f/media/m/attempt.ogg", uploadedAt: uploaded }],
+      cursor: "next-page",
+    });
+    expect(list).toHaveBeenCalledExactlyOnceWith({
+      prefix: "families/",
+      limit: 50,
+      cursor: "page-one",
+    });
+    expect(get).not.toHaveBeenCalled();
+    list.mockResolvedValue({ objects: [], truncated: false, delimitedPrefixes: [] });
+    expect(await port.list({ prefix: "families/", limit: 50 })).toEqual({
+      objects: [],
+      cursor: null,
+    });
+  });
+
   it("says once per Worker start that media storage is off, and nothing while it is on", () => {
     const logs: LogLine[] = [];
     const logger = recordingLogger(logs);

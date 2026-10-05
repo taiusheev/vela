@@ -15,14 +15,24 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
   const { t } = useLingui();
   const [person, setPerson] = useState("");
   const [relation, setRelation] = useState("");
+  const [shareTrouble, setShareTrouble] = useState(false);
+  const [sharing, setSharing] = useState(false);
   // The link goes from the organiser's own phone, in their own words around it: Vela writes to
   // nobody until they open it (ADR-36).
   const askOnTelegram = async (contactId: string, who: string) => {
-    const link = await nearby.invite(contactId);
-    if (link === null) return;
-    await Share.share({
-      message: t`Hello ${who}. Could I list you on Vela as someone near ${name}, so I could ask you to look in on a day ${name} hasn't answered? Open this in Telegram to read what it means and say yes or no: ${link}`,
-    });
+    setSharing(true);
+    setShareTrouble(false);
+    try {
+      const link = await nearby.invite(contactId);
+      if (link === null) return;
+      await Share.share({
+        message: t`Hello ${who}. Could I list you on Vela as someone near ${name}, so I could ask you to look in on a day ${name} hasn't answered? Open this in Telegram to read what it means and say yes or no: ${link}`,
+      });
+    } catch {
+      setShareTrouble(true);
+    } finally {
+      setSharing(false);
+    }
   };
   const submit = async () => {
     if (await nearby.add(person, relation)) {
@@ -63,7 +73,7 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                       accessibilityRole="button"
                       accessibilityLabel={t`Ask ${who} on Telegram`}
                       hitSlop={hitSlop}
-                      disabled={nearby.changing}
+                      disabled={nearby.changing || sharing}
                       onPress={() => void askOnTelegram(contact.id, who)}
                     >
                       <Words variant="button" tone="action">
@@ -75,7 +85,7 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                     accessibilityRole="button"
                     accessibilityLabel={t`Remove ${who}`}
                     hitSlop={hitSlop}
-                    disabled={nearby.changing}
+                    disabled={nearby.changing || sharing}
                     onPress={() => nearby.remove(contact.id)}
                   >
                     <Words variant="button" tone="action">
@@ -106,6 +116,7 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
           />
           <PrimaryButton
             label={nearby.changing ? t`Adding…` : t`Add them`}
+            disabled={!nearby.canAdd || person.trim().length === 0}
             onPress={() => void submit()}
           />
         </View>
@@ -114,6 +125,13 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
           <Trans>Two people nearby is the most.</Trans>
         </Words>
       )}
+      {shareTrouble ? (
+        <Words variant="body" tone="ink2">
+          <Trans>
+            The invite could not be shared. Try Ask on Telegram again; nobody has been contacted.
+          </Trans>
+        </Words>
+      ) : null}
       {nearby.refused === undefined ? null : (
         <Words variant="body" tone="ink2">
           {nearby.refused}

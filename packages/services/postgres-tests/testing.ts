@@ -11,6 +11,7 @@ import {
   type VelaDatabase,
   type VelaTransaction,
 } from "@vela/db";
+import { TEST_CONTENT_KEY_V1 } from "@vela/db/testing";
 import { asc, eq, sql } from "drizzle-orm";
 import { type ApiMutationAction, lockApiActor } from "../src/api-idempotency.ts";
 import type { Clock, Config, Deps } from "../src/deps.ts";
@@ -286,7 +287,10 @@ interface Opened {
 }
 
 async function open(settings: Settings, applicationName: string): Promise<Opened> {
-  const connecting = connectDatabase(connectionString(settings, applicationName));
+  const connecting = connectDatabase(
+    connectionString(settings, applicationName),
+    TEST_CONTENT_KEY_V1,
+  );
   let connection: DatabaseConnection;
   try {
     connection = await within(connecting, WAIT_MS, `connection ${applicationName}`);

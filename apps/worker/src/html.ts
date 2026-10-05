@@ -137,15 +137,18 @@ th { font-weight: 600; }
  * generator escaped every character of the notice's text; the page itself adds only the document.
  */
 export function noticePage(lang: NoticeLang, notice: PrivacyNotice): Response {
-  return new Response(htmlDocument(lang, notice.title, NOTICE_STYLE, raw(notice.html)), {
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      // Public text that changes only with a deploy; a short cache still shows a fix within minutes.
-      "cache-control": "public, max-age=300",
-      "referrer-policy": "no-referrer",
-      "x-content-type-options": "nosniff",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  return new Response(
+    htmlDocument(notice.language ?? lang, notice.title, NOTICE_STYLE, raw(notice.html)),
+    {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        // Public text that changes only with a deploy; a short cache still shows a fix within minutes.
+        "cache-control": "public, max-age=300",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+        "content-security-policy":
+          "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      },
     },
-  });
+  );
 }

@@ -6,10 +6,10 @@ import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, fetchExchange, replyRefusal, replyTo } from "../../src/api/client.ts";
-import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { photoRefusal, uploadMedia, uploadVoice } from "../../src/api/upload.ts";
 import type { Recorded } from "../../src/audio/useRecording.ts";
-import { useAccount } from "../../src/auth/clerk.tsx";
+import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
+import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../../src/components/family-photo.tsx";
 import { type ChosenPhoto, PhotoReply } from "../../src/components/photo-reply.tsx";
 import {
@@ -25,8 +25,10 @@ import {
 import { VoiceReply } from "../../src/components/voice-reply.tsx";
 import type { ExchangeReply } from "../../src/data/exchanges.ts";
 import { replyLine } from "../../src/data/lines.ts";
+import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { toExchange, useExchanges } from "../../src/data/useExchanges.ts";
 import { useToday } from "../../src/data/useToday.ts";
+import { useDraft } from "../../src/storage/useDraft.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
@@ -42,7 +44,12 @@ export default function ExchangeScreen() {
   // A link or a tapped notice can name an exchange the list has not loaded: it is read on its own.
   const single = useQuery({
     queryKey: ["exchange", id],
-    enabled: live && listed === undefined && id !== undefined,
+    enabled:
+      apiConfigured() &&
+      account.ready &&
+      account.signedIn &&
+      listed === undefined &&
+      id !== undefined,
     queryFn: async () => toExchange(await fetchExchange(id ?? "", await account.token())),
     retry: false,
   });
@@ -51,16 +58,16 @@ export default function ExchangeScreen() {
   const [sent, setSent] = useState<{ kind: ExchangeReply["kind"]; text?: string }[]>([]);
   // The reactions this reader gave here in this visit, shown chosen; a second tap gives nothing new.
   const [reacted, setReacted] = useState<ReactionKind[]>([]);
-  const [text, setText] = useState("");
-  const keyFor = useIdempotencyKey("reply");
-  const demo = !apiConfigured();
+  const draft = useDraft(`reply.${id ?? ""}`);
+  const { text, setText } = draft;
+  const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
   const { familyId } = useToday();
   const [voiceFailed, setVoiceFailed] = useState(false);
   const [photoFailed, setPhotoFailed] = useState<"limit" | "trouble" | null>(null);
 
   const post = useMutation({
     mutationFn: async (reply: ComposeReply) =>
-      replyTo(id ?? "", keyFor(reply), reply, await account.token()),
+      replyTo(id ?? "", await draft.keyFor(reply), reply, await account.token()),
     // A reaction that did not go through is not shown as given, so it can be tapped again.
     onError: (_error, failed) => {
       if ("reaction" in failed) {
@@ -68,7 +75,8 @@ export default function ExchangeScreen() {
       }
     },
     onSuccess: async (_reply, sentReply) => {
-      if ("text" in sentReply) setText("");
+      if ("text" in sentReply) await draft.clear();
+      else await draft.clearAttempt();
       await Promise.all([
         queries.invalidateQueries({ queryKey: ["exchanges"] }),
         queries.invalidateQueries({ queryKey: ["exchange", id] }),
@@ -213,6 +221,17 @@ export default function ExchangeScreen() {
           </Eyebrow>
           <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size="full" />
           <Words variant="voice">{exchange.ask}</Words>
+          {exchange.voiceHello === undefined || familyId === undefined ? null : (
+            <VoicePlayback
+              familyId={familyId}
+              mediaId={exchange.voiceHello.id}
+              durationMs={exchange.voiceHello.duration_ms}
+              expiresAt={exchange.voiceHello.expires_at}
+              state={exchange.voiceHello.state}
+              ready={exchange.voiceHello.state === "ready"}
+              label={t`Listen to the family’s voice ask`}
+            />
+          )}
           {exchange.answer === undefined ? (
             <Words variant="body" tone="ink2">
               <Trans>No word yet.</Trans>
@@ -221,6 +240,19 @@ export default function ExchangeScreen() {
             <>
               <Hairline />
               <Words variant="voice">{exchange.answer.text}</Words>
+              {exchange.answer.photo === undefined ? null : (
+                <ReplyPhoto photo={exchange.answer.photo} size="full" />
+              )}
+              {exchange.answer.audio === undefined || familyId === undefined ? null : (
+                <VoicePlayback
+                  familyId={familyId}
+                  mediaId={exchange.answer.audio.id}
+                  durationMs={exchange.answer.audio.duration_ms}
+                  expiresAt={exchange.answer.audio.expires_at}
+                  state={exchange.answer.audio.state}
+                  ready={exchange.answer.audio.state === "ready"}
+                />
+              )}
               <Words variant="caption" tone="ink3">
                 <Trans>
                   {recipient} answered at {time}
@@ -245,14 +277,30 @@ export default function ExchangeScreen() {
               <Trans>Nothing yet.</Trans>
             </Words>
           ) : (
-            replies.map((reply) => (
-              <View key={reply.id} style={{ gap: space.s }}>
-                <Words variant="body" tone="ink2">
-                  {replyLine(reply.from, reply.kind, reply.text)}
-                </Words>
-                {reply.photo === undefined ? null : <ReplyPhoto photo={reply.photo} size="full" />}
-              </View>
-            ))
+            replies.map((reply) => {
+              const from = reply.from;
+              return (
+                <View key={reply.id} style={{ gap: space.s }}>
+                  <Words variant="body" tone="ink2">
+                    {replyLine(reply.from, reply.kind, reply.text)}
+                  </Words>
+                  {reply.photo === undefined ? null : (
+                    <ReplyPhoto photo={reply.photo} size="full" />
+                  )}
+                  {reply.audio === undefined || familyId === undefined ? null : (
+                    <VoicePlayback
+                      familyId={familyId}
+                      mediaId={reply.audio.id}
+                      durationMs={reply.audio.duration_ms}
+                      expiresAt={reply.audio.expires_at}
+                      state={reply.audio.state}
+                      ready={reply.audio.state === "ready"}
+                      label={t`Listen to ${from}’s voice reply`}
+                    />
+                  )}
+                </View>
+              );
+            })
           )}
         </View>
 
@@ -282,16 +330,36 @@ export default function ExchangeScreen() {
               placeholder={t`Say something short`}
               helper={reach}
               multiline
+              maxLength={1000}
+              disabled={!draft.ready || post.isPending}
             />
+            {draft.saveFailed ? (
+              <Words variant="body" tone="ink2">
+                <Trans>
+                  This iPhone could not keep a draft. Leave this screen open until your send
+                  succeeds.
+                </Trans>
+              </Words>
+            ) : null}
             {trouble === null ? null : (
               <Words variant="body" tone="ink2">
                 {trouble}
               </Words>
             )}
+            {draft.savedBody<ComposeReply>() === null ? null : (
+              <PrimaryButton
+                label={t`Retry saved reply`}
+                disabled={post.isPending}
+                onPress={() => {
+                  const reply = draft.savedBody<ComposeReply>();
+                  if (reply !== null) post.mutate(reply);
+                }}
+              />
+            )}
             <PrimaryButton
               label={post.isPending ? t`Sending…` : t`Send`}
               onPress={send}
-              disabled={post.isPending || words.length === 0}
+              disabled={post.isPending || !draft.ready || words.length === 0}
             />
             <VoiceReply disabled={post.isPending} send={sendVoice} />
             <PhotoReply disabled={post.isPending} send={sendPhoto} />

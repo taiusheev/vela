@@ -1,11 +1,11 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v1` · last updated 17 September 2026 · English is the source text; the [Traditional Chinese notice](https://vela.vela-light.workers.dev/privacy/zh-TW) says the same thing.
+Version `privacy-notice.v2` · last updated 5 October 2026 · This invitation-only research trial operates entirely in English. Everyone taking part must be comfortable using English.
 
 ## In short
 
 - Vela carries one question a day from a family to someone they love, and brings that person's answer back to the family.
-- We keep as little as we can. Voice notes, photos and the words of answers are deleted after 30 days. (Later in the pilot, a family will be able to keep chosen stories in a family book.)
+- We keep as little as we can. Voice notes, photos and the words of answers are deleted after 30 days. Book export is outside this trial. Stories are kept only when that feature is enabled and you choose to keep them.
 - When an answer mentions something like a fall or pain, Vela sends the organiser a separate note with the person's own words only if the person the light is for has agreed to that separately; otherwise the note carries none of their words. Their answers still reach the family group, organiser included, as they sent them.
 - Vela never contacts anyone on its own. Every message to a neighbour or friend is sent by a person in the family.
 - Vela is not a medical or emergency service.
@@ -36,8 +36,10 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 
 - The name the family uses, how to greet them each morning (for example "Mrs Chen"), language, country, time zone and usual wake-up time. The organiser gives us these, and we confirm them with the person on the onboarding call.
 - Their answers: button taps, voice notes, text, photos and stickers, and when each answer came.
-- What our software works out from an answer: a written transcript of a voice note, translations, a one-line summary, mentions of people, places, plans or dates, mentions of health only with the separate yes described under "Health words", and whether the answer mentions something the organiser should hear, such as a fall or pain.
+- What our software works out from an answer: a written English transcript of a voice note, a one-line summary, mentions of people, places, plans or dates, mentions of health only with the separate yes described under "Health words", and whether the answer mentions something the organiser should hear, such as a fall or pain.
 - When the morning messages went out, days away, and days without an answer.
+
+**Optional calling number in the iPhone app:** With the person’s permission, an organiser may save their calling number on that device to open its dialler from a quiet notice. Vela does not upload that number. It is removed when cleared, when the organiser signs out or switches accounts, and when this app’s private storage is removed. The organiser can contact the founder to request help with deletion. Temporary audio and photo downloads in the app are scoped to its signed-in account and removed on account changes. Audio playback files are removed on completion or cancellation, with a startup sweep for interrupted sessions.
 
 **About nearby contacts:** the name and how they know the person, which the organiser gives; once the contact has said yes, also their phone number and the messaging app they use; and whether they agreed.
 
@@ -62,7 +64,7 @@ In the family's Vela group, Vela keeps only the messages meant for it: replies t
 5. **To send the organiser a short weekly read** on Sunday.
 6. **To run the service safely:** send every message once and on time, fix failures, prove that deleted information was deleted, and show what each person agreed to.
 7. **To learn whether the pilot works:** answer rates, answer times and how often days stay quiet, counted without names. Results are shared only as totals.
-8. **To decide who can join the pilot:** for now the pilot takes only families in which everyone lives in Taiwan or in a US state other than Washington and no one is a Russian citizen, because the data protection laws that apply elsewhere, or to Russian citizens, ask for steps Vela cannot take yet. Other families wait.
+8. **To decide who can join the pilot:** the planned cohort is the founder’s family in Vietnam for seven days, then 3–5 friends’ families in Taiwan for 30 days. This describes the proposed cohort, not legal clearance. The founder checks each participant’s residence and any relevant citizenship restrictions before approving participation. The Vietnam family waits until the review of its actual participants, consent and processing flows is complete. Existing restrictions remain in force until that review is recorded.
 
 We do not sell information, show advertising, or use anyone's words or voice to train AI models. We do not use a real answer or voice note to test or improve Vela's AI unless the person who said it agrees separately, for that one item.
 
@@ -87,7 +89,7 @@ Words about health, such as a fall, pain, not eating, a visit to the doctor or w
 
 ## Who sees it
 
-- **The family in the Vela group** sees the asks, the answers with their transcripts and translations, and the replies.
+- **The family in the Vela group** sees the asks, the answers with their English transcripts, and the replies.
 - **The person the light is for** hears or reads the family's replies the next morning, and can ask "what does the family see" at any time.
 - **Organisers** also receive notices on quiet days, the words or notes passed on under purpose 4, the weekly read, and the details of the nearby contacts who have agreed.
 - **A nearby contact** sees only a message an organiser chooses to send them on a quiet day. They never see answers.
@@ -96,6 +98,7 @@ Words about health, such as a fall, pain, not eating, a visit to the doctor or w
 
 | Provider | What it does for Vela | What it receives | Where |
 |---|---|---|---|
+| Clerk | App sign-in and session verification | Account identifier, name/email supplied for sign-in, session activity; no family message content | United States |
 | Neon (part of Databricks) | Database | Everything we store except voice notes and photos | Singapore |
 | Cloudflare | Runs Vela's software; stores voice notes and photos | Everything while it is processed; voice notes and photos at rest | Stored in its Asia-Pacific region as we request, which Cloudflare treats as a preference, not a guarantee; processed on its worldwide network |
 | Anthropic (Claude) | AI: summaries, translations, suggested answers, drafts of the weekly read, noticing words that matter | Answers, asks, replies, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
@@ -104,7 +107,7 @@ Words about health, such as a fall, pain, not eating, a visit to the doctor or w
 | Telegram, and LINE from later in the pilot | Carry the messages | Everything sent in the chat | Their own data centres, under their own privacy policies |
 | Google Drive, in the founder's own Google account | The founder's pilot notes | Only a family code instead of a name, dates, the versions of the texts people agreed to, yes or no answers, the country (or US state) where each person lives and whether they are a Russian citizen, as codes, and questionnaire scores; never quotes or anything about health. In a private folder shared with no one | On Google's servers in the United States and other countries, under Google's own terms for personal accounts |
 
-Telegram and LINE are apps your family uses under their own terms. Messages in those chats stay in the app until you delete them there; deleting your information in Vela does not remove them from your chat history.
+Telegram is the messaging app used in this trial under its own terms. LINE and multilingual translation are outside this trial. Messages in those chats stay in the app until you delete them there; deleting your information in Vela does not remove them from your chat history.
 
 We will tell organisers at least 14 days before a new provider starts receiving family messages.
 
@@ -118,7 +121,7 @@ Our database is in Singapore. We ask Cloudflare to store voice notes and photos 
 |---|---|
 | Voice notes and photos (in answers, asks and replies) | 30 days, then deleted |
 | The words of answers, asks and replies: text, transcripts, translations, suggested answers, and health mentions where the person agreed to them | 30 days, then deleted |
-| Stories the family keeps in the family book (later in the pilot, once the book exists) | Until the family removes them or leaves Vela. Saying "don't keep that one" removes a story |
+| Existing stories previously kept in the family book (the book is unavailable in this trial) | Until the family removes them or leaves Vela. Saying "don't keep that one" removes a story |
 | One-line summaries of answers, answer times, records of quiet days, weekly reads | While the family uses Vela |
 | Names, greeting, language, time zone, wake-up time, messaging account | While you are in Vela; deleted 30 days after you leave (leaving the family's Vela group counts, except for organisers, who tell the founder), or within 24 hours if the family is deleted |
 | What the organiser gave about the person the light is for, before the person answers the invitation | Deleted at once if the person says no; deleted 30 days after the invitation link expired if the person never answers |
@@ -132,7 +135,7 @@ Our database is in Singapore. We ask Cloudflare to store voice notes and photos 
 | Log of the founder opening or changing family records | 24 months |
 | Deletion fingerprints | 5 years |
 | The founder's pilot notes (including where each person lives and whether they are a Russian citizen) and research answers | Under a family code, not a name; deleted within 12 months after the pilot ends |
-| **When the pilot ends** | If your family does not continue, we delete your family's information within 30 days. The only things kept longer are those this table already keeps longer, for the periods it gives: usage events and daily counts without content, the AI call log without names or content, error reports, the log of the founder opening or changing records, records of consent without anyone's words, name or number, deletion fingerprints, and the founder's pilot notes under a family code. If the family book exists by then, we first offer the organiser the stories the family kept |
+| **When the pilot ends** | If your family does not continue, we delete your family's information within 30 days. The only things kept longer are those this table already keeps longer, for the periods it gives: usage events and daily counts without content, the AI call log without names or content, error reports, the log of the founder opening or changing records, records of consent without anyone's words, name or number, deletion fingerprints, and the founder's pilot notes under a family code. If the family already has retained stories, the founder handles requests for them directly |
 | Backups | Deleted information can stay in the database's restore history for up to 7 days before it is gone |
 
 When we delete something, we keep a short record of what kind of record it was, its reference number and when it was deleted, with a fingerprint (a hash) of the kind and the number, never of what it said. We keep records of consent and of deletions for 5 years because Taiwan's law makes us prove what people agreed to, and a claim for damages can be made for up to 5 years after the damage (Personal Data Protection Act, Articles 7 and 30).

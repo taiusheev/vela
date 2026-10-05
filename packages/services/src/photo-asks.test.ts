@@ -817,7 +817,14 @@ describe("a photo reply from the app (A8)", () => {
         from: "Mia",
         kind: "photo",
         text: null,
-        photo: { id: sent, width: expect.any(Number), height: expect.any(Number), stored: true },
+        photo: {
+          id: sent,
+          width: expect.any(Number),
+          height: expect.any(Number),
+          stored: true,
+          expires_at: new Date(h.clock.now().getTime() + 30 * DAY_MS).toISOString(),
+        },
+        audio: null,
       },
     ]);
     h.clock.set(at(TOMORROW, "08:00"));
@@ -1173,8 +1180,20 @@ describe("the photos Today and Exchanges show", () => {
     const shown = await exchangeRow(h.db, row, { id: seed.member.id, displayName: "Mom" });
 
     expect(shown.photos).toEqual([
-      { id: telegram, width: 1280, height: 960, stored: false },
-      { id: stored, width: 640, height: 480, stored: true },
+      {
+        id: telegram,
+        width: 1280,
+        height: 960,
+        stored: false,
+        expires_at: new Date(h.clock.now().getTime() + 30 * DAY_MS).toISOString(),
+      },
+      {
+        id: stored,
+        width: 640,
+        height: 480,
+        stored: true,
+        expires_at: new Date(h.clock.now().getTime() + 30 * DAY_MS).toISOString(),
+      },
     ]);
     expect(shown.answer).toBeNull();
   });
@@ -1279,19 +1298,27 @@ describe("deleting a photo ask's photos after 30 days", () => {
     ]);
   });
 
-  it("still deletes the rows with storage off, and says the objects are out of reach", async () => {
+  it("preserves the owning rows and objects without false deletion proof when storage is off", async () => {
     const first = await photo(1);
     const second = await photo(2);
     await compose({ media_ids: [first, second] });
     h.clock.set(new Date(h.clock.now().getTime() + 30 * DAY_MS + 60_000));
+    const before = await h.db.select().from(media);
+    const objects = [...h.media.objects.keys()];
 
-    await applyRetention({ ...h.deps, media: null });
+    await expect(applyRetention({ ...h.deps, media: null })).rejects.toThrow(
+      "Cannot delete retained media while storage is disabled",
+    );
 
-    expect(await h.db.select().from(media)).toEqual([]);
-    expect(h.media.objects.size).toBe(2);
+    expect(await h.db.select().from(media)).toEqual(before);
+    expect([...h.media.objects.keys()]).toEqual(objects);
+    const failure = h.logger.entries.filter((entry) => entry.event === "media_object_unreachable");
+    expect(failure).toHaveLength(1);
+    expect(failure[0]).toMatchObject({ level: "error", fields: { reason: "expired" } });
+    expect([first, second]).toContain(failure[0]?.fields?.mediaId);
     expect(
-      h.logger.entries.filter((entry) => entry.event === "media_object_unreachable"),
-    ).toHaveLength(2);
+      (await h.db.select().from(deletions)).filter((proof) => proof.objectType === "media"),
+    ).toEqual([]);
     expect((await herExchanges()).map((row) => row.mediaIds)).toEqual([[first, second]]);
   });
 });

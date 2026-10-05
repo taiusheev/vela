@@ -53,4 +53,6 @@ Rules every change follows are in `architecture/03-code-design.md` §2. Secrets 
 
 ## Status
 
+**2026-10-05.** The active release scope is the English-only, free, invitation-only iPhone/Telegram trial: a seven-day Vietnam own-family week after eligibility review, then 30 days with 3–5 Taiwan families. Implementation and live release gates are tracked in [`plan/english-trial-readiness.md`](plan/english-trial-readiness.md). Real-family activation stays on hold until its evidence gates are complete.
+
 **2026-09-13.** Sprint 0 done: the monorepo, CI, and the foundation packages (contracts, copy, core, db, adapters, ai) with their tests. Sprint 1 in progress: the services layer and the Worker for the Telegram pilot. The living plan is published at https://claude.ai/code/artifact/b20dcd01-518a-406c-9bca-3b40906bf193.

@@ -4,6 +4,7 @@ import { addDays, localDateOf } from "@vela/core";
 import {
   answers,
   exchanges,
+  media,
   members,
   type NewSuggestion,
   replies,
@@ -102,6 +103,176 @@ async function seedSuggestion(values: Partial<NewSuggestion> = {}): Promise<Sugg
 }
 
 describe("loadApiToday", () => {
+  it("describes original answer, greeting and reply recordings independently of AI text", async () => {
+    const exchange = await seedExchange(h.db, seed, { date: today(), state: "answered" });
+    const [voice, greeting, replied] = await h.db
+      .insert(media)
+      .values([
+        {
+          familyId: seed.family.id,
+          kind: "audio",
+          channel: "telegram",
+          providerFileId: "answer-source",
+          mime: "audio/ogg",
+          durationMs: 42000,
+          createdAt: h.clock.now(),
+          expiresAt: new Date(h.clock.now().getTime() + 86400000),
+        },
+        {
+          familyId: seed.family.id,
+          kind: "audio",
+          mime: "audio/mp4",
+          storageKey: "greeting.m4a",
+          createdAt: h.clock.now(),
+        },
+        {
+          familyId: seed.family.id,
+          kind: "audio",
+          mime: "audio/mp4",
+          storageKey: "reply.m4a",
+          createdAt: h.clock.now(),
+        },
+      ])
+      .returning();
+    await h.db
+      .update(exchanges)
+      .set({ voiceHelloId: greeting?.id })
+      .where(eq(exchanges.id, exchange.id));
+    await h.db.insert(answers).values({
+      exchangeId: exchange.id,
+      memberId: seed.member.id,
+      channel: "telegram",
+      kind: "voice",
+      mediaId: voice?.id,
+      receivedAt: h.clock.now(),
+    });
+    await h.db.insert(replies).values({
+      exchangeId: exchange.id,
+      memberId: seed.organiser.id,
+      channel: "app",
+      kind: "voice",
+      mediaId: replied?.id,
+    });
+    const shown = (await load())?.exchanges[0];
+    expect(shown?.answer).toMatchObject({
+      text: null,
+      audio: {
+        id: voice?.id,
+        role: "original",
+        mime: "audio/ogg",
+        state: "pending",
+        duration_ms: 42000,
+      },
+    });
+    expect(shown?.voice_hello).toMatchObject({ id: greeting?.id, state: "ready" });
+    expect(shown?.replies[0]?.audio).toMatchObject({ id: replied?.id, state: "ready" });
+    h.clock.advance(86400000);
+    // The older exchange still reads through exchangeRow, but an expired source is never offered.
+    const { exchangeRow } = await import("./api-today.ts");
+    expect(
+      (await exchangeRow(h.db, exchange, seed.member, h.clock.now())).answer?.audio,
+    ).toBeNull();
+  });
+
+  it("shows a photo answer and a failed source copy as unavailable after its retry day", async () => {
+    const exchange = await seedExchange(h.db, seed, { date: today(), state: "answered" });
+    const [photo, voice] = await h.db
+      .insert(media)
+      .values([
+        {
+          familyId: seed.family.id,
+          kind: "image",
+          mime: "image/jpeg",
+          storageKey: "answer.jpg",
+          width: 640,
+          height: 480,
+        },
+        {
+          familyId: seed.family.id,
+          kind: "audio",
+          channel: "telegram",
+          providerFileId: "reply-source",
+          mime: "audio/ogg",
+          createdAt: new Date(h.clock.now().getTime() - 86400001),
+        },
+      ])
+      .returning();
+    await h.db.insert(answers).values({
+      exchangeId: exchange.id,
+      memberId: seed.member.id,
+      channel: "telegram",
+      kind: "photo",
+      mediaId: photo?.id,
+      receivedAt: h.clock.now(),
+    });
+    await h.db.insert(replies).values({
+      exchangeId: exchange.id,
+      memberId: seed.organiser.id,
+      channel: "telegram",
+      kind: "voice",
+      mediaId: voice?.id,
+    });
+    const shown = (await load())?.exchanges[0];
+    expect(shown?.answer?.photo).toMatchObject({ id: photo?.id, stored: true });
+    expect(shown?.replies[0]?.audio?.state).toBe("unavailable");
+  });
+
+  it("stops offering expired photos in an answer, reply and ask while keeping book photos", async () => {
+    const exchange = await seedExchange(h.db, seed, { date: today(), state: "answered" });
+    const [photo, keptPhoto] = await h.db
+      .insert(media)
+      .values([
+        {
+          familyId: seed.family.id,
+          kind: "image",
+          mime: "image/jpeg",
+          storageKey: "expiring.jpg",
+          expiresAt: new Date(h.clock.now().getTime() + 60_000),
+          kept: false,
+        },
+        {
+          familyId: seed.family.id,
+          kind: "image",
+          mime: "image/jpeg",
+          storageKey: "kept.jpg",
+          expiresAt: new Date(h.clock.now().getTime() - 60_000),
+          kept: true,
+        },
+      ])
+      .returning();
+    if (photo === undefined || keptPhoto === undefined) throw new Error("Expected two photos");
+    await h.db
+      .update(exchanges)
+      .set({ mediaIds: [photo.id, keptPhoto.id] })
+      .where(eq(exchanges.id, exchange.id));
+    await h.db.insert(answers).values({
+      exchangeId: exchange.id,
+      memberId: seed.member.id,
+      channel: "telegram",
+      kind: "photo",
+      mediaId: photo.id,
+      receivedAt: h.clock.now(),
+    });
+    await h.db.insert(replies).values({
+      exchangeId: exchange.id,
+      memberId: seed.organiser.id,
+      channel: "telegram",
+      kind: "photo",
+      mediaId: photo.id,
+    });
+    const before = (await load())?.exchanges[0];
+    expect(before?.answer?.photo?.id).toBe(photo.id);
+    expect(before?.answer?.photo?.expires_at).toBe(photo.expiresAt?.toISOString());
+    expect(before?.replies[0]?.photo?.id).toBe(photo.id);
+    expect(before?.photos.map((shown) => shown.id)).toEqual([photo.id, keptPhoto.id]);
+    h.clock.advance(60_000);
+    const expired = (await load())?.exchanges[0];
+    expect(expired?.answer?.photo).toBeNull();
+    expect(expired?.replies[0]?.photo).toBeNull();
+    expect(expired?.photos.map((shown) => shown.id)).toEqual([keptPhoto.id]);
+    expect(expired?.photos[0]?.expires_at).toBeNull();
+  });
+
   it("answers an empty day with the lights row and nothing else", async () => {
     const day = await load();
     expect(ApiToday.parse(day)).toEqual({
@@ -158,6 +329,7 @@ describe("loadApiToday", () => {
         on_behalf_of: null,
         type: "question",
         ask: "What did the garden look like this morning?",
+        voice_hello: null,
         answer: {
           kind: "text",
           text: "The tomatoes finally turned.",
@@ -165,10 +337,18 @@ describe("loadApiToday", () => {
           picked_media_id: null,
           picked_number: null,
           translation: null,
+          audio: null,
+          photo: null,
         },
         replies: [
-          { from: "Mia", kind: "heart", text: null, photo: null },
-          { from: "Mia", kind: "text", text: "Those are the seeds you saved", photo: null },
+          { from: "Mia", kind: "heart", text: null, photo: null, audio: null },
+          {
+            from: "Mia",
+            kind: "text",
+            text: "Those are the seeds you saved",
+            photo: null,
+            audio: null,
+          },
         ],
         seen_at: null,
         replies_reach_her: true,

@@ -4,12 +4,14 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { startTrial, trialRefusal } from "../src/api/client.ts";
+import { apiConfigured, startTrial, trialRefusal } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
-import { useAccount } from "../src/auth/clerk.tsx";
+import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
-import { Card, PrimaryButton, Words } from "../src/components/ui.tsx";
+import { Card, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { dayMonth } from "../src/data/format.ts";
+import { demoDataAllowed } from "../src/data/live-state.ts";
+import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { useFamily } from "../src/data/useFamily.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
@@ -26,6 +28,7 @@ export default function VelaLightScreen() {
   const account = useAccount();
   const queries = useQueryClient();
   const { t } = useLingui();
+  const caps = useCapabilities();
   const trialKey = useIdempotencyKey("trial");
   const { member } = useLocalSearchParams<{ member?: string }>();
   const { familyId } = useToday();
@@ -62,6 +65,36 @@ export default function VelaLightScreen() {
   const ended = live && her?.plan === "ended";
   const refusal = trialRefusal(start.error);
   const close = () => (router.canGoBack() ? router.back() : router.replace("/"));
+
+  if (
+    !demoDataAllowed(apiConfigured(), accountsConfigured()) &&
+    (caps.capabilities === undefined || caps.pilot || !live)
+  ) {
+    return (
+      <ScrollView
+        style={{ backgroundColor: palette.bg }}
+        contentContainerStyle={{
+          paddingTop: insets.top + space.xxl,
+          paddingBottom: insets.bottom + space.xxl,
+          paddingHorizontal: space.margin,
+          gap: space.l,
+        }}
+      >
+        <Words variant="title">
+          <Trans>Vela pilot</Trans>
+        </Words>
+        <Words variant="body" tone="ink2">
+          {caps.pilot
+            ? t`The pilot is free. No payment or card is required. Your family’s asks, replies, quiet notices and weekly read continue throughout the pilot.`
+            : t`Loading your family’s plan…`}
+        </Words>
+        {caps.isError ? (
+          <SecondaryButton label={t`Try again`} onPress={() => void caps.refetch()} />
+        ) : null}
+        <PrimaryButton label={t`Go to Today`} onPress={close} />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView

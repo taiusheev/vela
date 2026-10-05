@@ -1,12 +1,16 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
-import { Pressable, ScrollView, Switch, View } from "react-native";
+import { Linking, Pressable, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { apiBaseUrl, apiConfigured } from "../../src/api/client.ts";
+import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL, SUPPORT_URL } from "../../src/api/support.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
+import { CallingNumberEditor } from "../../src/components/calling-number-editor.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { LocaleChips } from "../../src/components/locale-chips.tsx";
 import { SetUpPhone } from "../../src/components/set-up-phone.tsx";
+import { TestSignInDetails } from "../../src/components/test-sign-in-details.tsx";
 import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import {
   momentLine,
@@ -14,6 +18,7 @@ import {
   phoneLine,
   toldOfQuiet,
 } from "../../src/data/notifications.ts";
+import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
 import { useOneMoment } from "../../src/data/useOneMoment.ts";
 import { useToday } from "../../src/data/useToday.ts";
@@ -67,22 +72,31 @@ export default function YouScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const account = useAccount();
+  const { capabilities, pilot, englishOnly } = useCapabilities();
+  const [linkFailed, setLinkFailed] = useState(false);
+  const openLink = async (url: string) => {
+    setLinkFailed(false);
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setLinkFailed(true);
+    }
+  };
   const { t } = useLingui();
   const language = useAppLocale();
-  const {
-    familyId,
-    live: todayLive,
-    trouble: todayTrouble,
-    noAccount,
-    pushSent,
-    loading: todayLoading,
-  } = useToday();
+  const { familyId, noAccount, pushSent, loading: todayLoading } = useToday();
   const push = usePush();
   const moment = useOneMoment();
-  const { family, live, trouble, setPaused, leave, changing, refused } = useFamily(
-    familyId,
-    familyId !== undefined,
-  );
+  const {
+    family,
+    live,
+    trouble,
+    loading: familyLoading,
+    setPaused,
+    leave,
+    changing,
+    refused,
+  } = useFamily(familyId, familyId !== undefined);
   const [seesOpen, setSeesOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [exampleNote, setExampleNote] = useState(false);
@@ -135,22 +149,43 @@ export default function YouScreen() {
       </View>
       {trouble ? (
         <Words variant="body" tone="ink2">
-          <Trans>Your family could not be reached just now, so this is the example one.</Trans>
+          <Trans>Your family could not be reached just now.</Trans>
         </Words>
       ) : null}
 
-      <View style={{ gap: space.m }}>
-        <Eyebrow>
-          <Trans>Your own light</Trans>
-        </Eyebrow>
-        {/* Symmetry (spec §9): anyone can keep a light, and would be seen as she is. */}
-        <Row
-          leading={<Light state={family.me.lightOn ? "lit" : "resting"} height={24} />}
-          title={t`Keep a light on for me`}
-          caption={t`${her} would see your light, and you choose who else. Not in the app yet.`}
-          trailing={<Fixed on={family.me.lightOn} />}
+      {familyLoading || todayLoading ? (
+        <Words variant="body" tone="ink2">
+          <Trans>Loading your family…</Trans>
+        </Words>
+      ) : null}
+      {pilot ? (
+        <Words variant="body" tone="ink2">
+          <Trans>
+            Your pilot is free. Quiet notices and important updates arrive in the organiser’s
+            private Telegram chat.
+          </Trans>
+        </Words>
+      ) : null}
+      {noAccount ? (
+        <SecondaryButton
+          label={t`Connect your Telegram family`}
+          onPress={() => router.push("/onboarding")}
         />
-      </View>
+      ) : null}
+      {!apiConfigured() || capabilities?.pilot === false ? (
+        <View style={{ gap: space.m }}>
+          <Eyebrow>
+            <Trans>Your own light</Trans>
+          </Eyebrow>
+          {/* Symmetry (spec §9): anyone can keep a light, and would be seen as she is. */}
+          <Row
+            leading={<Light state={family.me.lightOn ? "lit" : "resting"} height={24} />}
+            title={t`Keep a light on for me`}
+            caption={t`${her} would see your light, and you choose who else. Not in the app yet.`}
+            trailing={<Fixed on={family.me.lightOn} />}
+          />
+        </View>
+      ) : null}
 
       <View style={{ gap: space.m }}>
         <Eyebrow>
@@ -163,9 +198,9 @@ export default function YouScreen() {
               <Row
                 leading={<Light state={member.paused ? "paused" : "resting"} height={24} />}
                 title={member.name}
-                caption={member.line}
+                caption={pilot && member.light === "on" ? t`Free pilot` : member.line}
                 trailing={
-                  family.me.organiser && member.light === "on" ? (
+                  capabilities?.billing === true && family.me.organiser && member.light === "on" ? (
                     <Pressable
                       accessibilityRole="button"
                       onPress={() =>
@@ -243,7 +278,20 @@ export default function YouScreen() {
         </Card>
       </View>
 
-      {family.me.organiser && family.keptLight[0] !== undefined ? (
+      {live && family.me.organiser
+        ? family.keptLight.map((member) => (
+            <CallingNumberEditor
+              key={member.memberId}
+              familyId={family.familyId}
+              memberId={member.memberId}
+              name={member.name}
+            />
+          ))
+        : null}
+
+      {capabilities?.parent_app === true &&
+      family.me.organiser &&
+      family.keptLight[0] !== undefined ? (
         <View style={{ gap: space.m }}>
           <Eyebrow>
             <Trans>Her phone</Trans>
@@ -311,7 +359,13 @@ export default function YouScreen() {
         <Eyebrow>
           <Trans>Language</Trans>
         </Eyebrow>
-        <LocaleChips />
+        {englishOnly ? (
+          <Words variant="body">
+            <Trans>English pilot</Trans>
+          </Words>
+        ) : (
+          <LocaleChips />
+        )}
         <Words variant="caption" tone="ink3">
           <Trans>The app's words. Her mornings keep the language she reads.</Trans>
         </Words>
@@ -344,8 +398,42 @@ export default function YouScreen() {
         </Card>
       ) : null}
 
+      <Card>
+        <Eyebrow>
+          <Trans>Privacy and help</Trans>
+        </Eyebrow>
+        <Words variant="body" tone="ink2">
+          <Trans>
+            Your parent can ask “what does the family see” in their own Telegram chat. Health-word
+            sharing is their separate choice, and saying stop pauses their light.
+          </Trans>
+        </Words>
+        <SecondaryButton
+          label={t`Read the privacy notice`}
+          onPress={() => void openLink(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`)}
+        />
+        <SecondaryButton
+          label={t`Get help or request your data`}
+          onPress={() => void openLink(SUPPORT_URL)}
+        />
+        <Words variant="caption" selectable>
+          {SUPPORT_EMAIL}
+        </Words>
+        <Words variant="caption" tone="ink2">
+          <Trans>
+            Ask the founder for access, correction, deletion, or to withdraw consent. Never include
+            private family content in a support message.
+          </Trans>
+        </Words>
+        {linkFailed ? (
+          <Words variant="body" tone="ink2">
+            <Trans>That link could not open. Use the address above to contact the founder.</Trans>
+          </Words>
+        ) : null}
+      </Card>
+
       {/* A kept light pauses and stops in her own chat, where her mornings arrive (spec §9). */}
-      {family.me.lightOn ? null : (
+      {(!live && apiConfigured()) || family.me.lightOn ? null : (
         <View style={{ gap: space.m }}>
           {family.me.paused ? (
             <Words variant="body" tone="ink2">
@@ -424,25 +512,16 @@ export default function YouScreen() {
           <Eyebrow>
             <Trans>Account</Trans>
           </Eyebrow>
-          {/* The id the development seed takes, so setting a family up needs no dashboard. */}
-          <Words variant="bodyMedium" selectable>
-            {account.userId ?? "—"}
-          </Words>
           <Words variant="caption" tone="ink3">
-            {live || todayLive
-              ? t`Your account id. Nobody but you needs it.`
-              : noAccount
-                ? t`No family is set up on this account yet.`
-                : todayTrouble
-                  ? t`Your family could not be reached just now.`
-                  : t`Looking for your family on this account…`}
+            <Trans>You are signed in to Vela.</Trans>
           </Words>
+          <TestSignInDetails />
           {/* push (A5): the phone is let go from the account first, so a phone handed on is not told. */}
           <SecondaryButton label={t`Sign out`} onPress={() => void push.signOut()} />
         </Card>
       ) : (
         <Words variant="caption" tone="ink3">
-          <Trans>You are not signed in, so this is the example family.</Trans>
+          <Trans>Sign in to connect your family.</Trans>
         </Words>
       )}
     </ScrollView>

@@ -23,7 +23,16 @@
  * kept because its row exists or could not be looked for).
  */
 import { type ApiMutationResponse, ApiUploadedMedia, type MediaRefusal } from "@vela/contracts";
-import { answers, exchanges, media, members, replies, type VelaTransaction } from "@vela/db";
+import {
+  answers,
+  exchanges,
+  families,
+  media,
+  members,
+  replies,
+  users,
+  type VelaTransaction,
+} from "@vela/db";
 import {
   and,
   count,
@@ -53,7 +62,7 @@ export const MAX_LIVE_PHOTOS_PER_FAMILY = 60;
 const DAY_MS = 24 * 60 * 60 * 1_000;
 const JPEG = "image/jpeg";
 /** The voice types a family member may listen to: her phone's M4A, and stored Ogg or MP3 copies. */
-const VOICE_TYPES = ["audio/mp4", "audio/ogg", "audio/mpeg"] as const;
+const VOICE_TYPES = ["audio/mp4", "audio/ogg", "audio/opus", "audio/mpeg"] as const;
 const Uuid = z.uuid();
 
 /**
@@ -270,6 +279,26 @@ export async function keepUpload(
       { key, operation: upload.operation, input: upload.input, familyId: scope },
       {
         authorize: async (tx) => {
+          // The API actor lock is already held. Account, then family, then member matches account
+          // and family deletion, so an upload waiting on either rechecks the committed lifecycle.
+          const [account] = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(and(eq(users.authSubject, identity.authSubject), isNull(users.deletedAt)))
+            .for("share");
+          if (account === undefined) throw new VelaError("not_found", "Family not found");
+          const [family] = await tx
+            .select({ id: families.id, deletedAt: families.deletedAt })
+            .from(families)
+            .where(eq(families.id, scope))
+            .for("share");
+          if (family === undefined || family.deletedAt !== null)
+            throw new VelaError("not_found", "Family not found");
+          await tx
+            .select({ id: members.id })
+            .from(members)
+            .where(and(eq(members.userId, account.id), eq(members.familyId, scope)))
+            .for("share");
           const found = await authorizeFamilyAccess(tx, identity, scope);
           if (found.kind !== "granted") throw new VelaError("not_found", "Family not found");
           access = found.access;
@@ -334,7 +363,10 @@ export function sharedWith(db: Queryable, familyId: string, memberId: string): S
         .select({ one: sql`1` })
         .from(exchanges)
         .where(
-          and(eq(exchanges.familyId, familyId), sql`${media.id} = any(${exchanges.mediaIds})`),
+          and(
+            eq(exchanges.familyId, familyId),
+            or(sql`${media.id} = any(${exchanges.mediaIds})`, eq(exchanges.voiceHelloId, media.id)),
+          ),
         ),
     ),
     exists(
@@ -364,7 +396,7 @@ export function sharedWith(db: Queryable, familyId: string, memberId: string): S
  * storage key), is null, and the app shows its placeholder.
  *
  * A stored voice note shared the same way is served too, in its own audio type, so the family book
- * (ADR-39) and a reply can be listened to; Telegram's own voices are not stored and stay null.
+ * (ADR-39) and a reply can be listened to, including original Telegram voices copied to storage.
  */
 export async function readApiMedia(
   db: Queryable,
@@ -372,7 +404,10 @@ export async function readApiMedia(
   familyId: string,
   mediaId: string,
   store: MediaStore,
+  role: "original" = "original",
+  now: Date = new Date(),
 ): Promise<{ body: ArrayBuffer; mime: string } | null> {
+  if (role !== "original") return null;
   if (typeof mediaId !== "string" || !Uuid.safeParse(mediaId).success) return null;
   const found = await authorizeFamilyAccess(db, identity, familyId);
   if (found.kind !== "granted") return null;
@@ -395,6 +430,7 @@ export async function readApiMedia(
           ),
           and(eq(media.kind, "audio"), inArray(media.mime, [...VOICE_TYPES])),
         ),
+        or(eq(media.kept, true), isNull(media.expiresAt), gt(media.expiresAt, now)),
         shared,
       ),
     )
@@ -402,5 +438,9 @@ export async function readApiMedia(
   if (row === undefined || row.storageKey === null) return null;
   const object = await store.get(row.storageKey);
   if (object === null) return null;
-  return { body: object.body, mime: row.kind === "image" ? JPEG : (row.mime ?? JPEG) };
+  return {
+    body: object.body,
+    mime:
+      row.kind === "image" ? JPEG : row.mime === "audio/opus" ? "audio/ogg" : (row.mime ?? JPEG),
+  };
 }

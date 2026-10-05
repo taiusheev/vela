@@ -26,9 +26,25 @@ function twoDigits(value: number): string {
 }
 
 /** "8:12", or "08:12" in Chinese: the clock time of an instant, in the reader's own zone. */
-export function timeOfDay(instant: string): string {
+export function timeOfDay(instant: string, timeZone?: string): string {
   const at = valid(instant);
   if (at === null) return "";
+  if (timeZone !== undefined) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone,
+        hour: "numeric",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).formatToParts(at);
+      return clockTime(
+        Number(parts.find((part) => part.type === "hour")?.value ?? 0),
+        Number(parts.find((part) => part.type === "minute")?.value ?? 0),
+      );
+    } catch {
+      /* Older cached zones fall back to the reader’s clock. */
+    }
+  }
   // Written out rather than asked of Intl: plain zh-TW formats as 上午8:12, and whether an engine
   // honours a 24-hour cycle for it differs between Hermes and the browsers.
   if (chinese()) return clockTime(at.getHours(), at.getMinutes());

@@ -14,7 +14,9 @@ import {
 import { Platform, Text } from "react-native";
 import { ApiError, apiConfigured, fetchMe, updateAccount } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
+import { requiresEnglish } from "../api/trial.ts";
 import { useAccount } from "../auth/clerk.tsx";
+import { useCapabilities } from "../data/useCapabilities.ts";
 import { readSetting, readSettingNow, writeSetting } from "../storage/flags.ts";
 import { activate, i18n } from "./i18n.ts";
 import { type AppLocale, fromDevice, fromLang, isAppLocale } from "./locale.ts";
@@ -23,11 +25,11 @@ import { type AppLocale, fromDevice, fromLang, isAppLocale } from "./locale.ts";
 const SETTING = "locale";
 
 /**
- * The language before anything renders, so the first screen already has its words: what this web
- * page remembers, or the device's own. A phone reads what it remembers a moment later, under the
- * splash screen (`settled`).
+ * Trial and live API builds render English before the first network request. Explicit demo builds
+ * use a remembered or device language; native storage settles beneath the splash screen.
  */
 function initialLocale(): AppLocale {
+  if (requiresEnglish(apiConfigured(), undefined)) return "en";
   const remembered = readSettingNow(SETTING);
   return isAppLocale(remembered) ? remembered : fromDevice(getLocales());
 }
@@ -75,12 +77,12 @@ function PlainText({ children }: TransRenderProps) {
 }
 
 /**
- * The app's language: the account's once `GET /v1/me` has said, before that the one this device
- * remembers, and before anything the device's own (build plan 3.1). Switching re-renders every
- * reader of `useLingui` in place, so navigation and what was typed are kept.
+ * English throughout a trial; other builds may use the account language after the server permits
+ * it. Switching re-renders every reader in place, keeping navigation and drafts.
  */
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const account = useAccount();
+  const { englishOnly } = useCapabilities();
   const queries = useQueryClient();
   const keyFor = useIdempotencyKey("language");
   const [locale, setLocale] = useState<AppLocale>(currentLocale);
@@ -98,13 +100,14 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     let current = true;
     void readSetting(SETTING).then((remembered) => {
       if (!current) return;
-      if (isAppLocale(remembered) && !fromAccount.current) apply(remembered, false);
+      if (englishOnly) apply("en", false);
+      else if (isAppLocale(remembered) && !fromAccount.current) apply(remembered, false);
       setSettled(true);
     });
     return () => {
       current = false;
     };
-  }, [apply]);
+  }, [apply, englishOnly]);
 
   // The same query as Today's, so react-query makes the one request for both.
   const enabled = apiConfigured() && account.ready && account.signedIn;
@@ -113,12 +116,12 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     enabled,
     queryFn: async () => fetchMe(await account.token()),
   });
-  const language = me.data?.user.language;
+  const language = englishOnly ? "en" : me.data?.user.language;
   useEffect(() => {
     if (language === undefined) return;
-    fromAccount.current = true;
+    if (!englishOnly) fromAccount.current = true;
     apply(fromLang(language), true);
-  }, [language, apply]);
+  }, [language, apply, englishOnly]);
 
   const patch = useMutation({
     mutationFn: async (next: AppLocale) =>
@@ -135,11 +138,12 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const { mutate } = patch;
   const choose = useCallback(
     (next: AppLocale) => {
+      if (englishOnly && next !== "en") return;
       if (next === locale) return;
       if (viaAccount) mutate(next);
       else apply(next, true);
     },
-    [locale, viaAccount, mutate, apply],
+    [locale, viaAccount, mutate, apply, englishOnly],
   );
 
   const value = useMemo<AppLocaleState>(

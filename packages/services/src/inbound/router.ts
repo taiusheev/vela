@@ -12,6 +12,7 @@
 import type { InboundEvent, InboundKind } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { decodeButton, outboundKey, parseParentCommand } from "@vela/core";
+import { handleAccountLinkStart, isAccountLinkStart } from "../account-linking.ts";
 import { organisersUnreachableAlert } from "../admin-alerts.ts";
 import {
   type AnswerButtonAction,
@@ -45,6 +46,7 @@ import {
 } from "../nearby-consent.ts";
 import { handleOnboarding } from "../onboarding.ts";
 import { handleParentCommand } from "../parent-commands.ts";
+import { pilotAllowsInbound } from "../pilot-admission.ts";
 import { handleQuietButton } from "../quiet.ts";
 import { handleRecipeKeepButton } from "../recipes.ts";
 import { handleGroupReply, handleReaction } from "../replies.ts";
@@ -95,6 +97,52 @@ export async function handleInbound(deps: Deps, events: InboundEvent[]): Promise
 }
 
 async function route(deps: Deps, event: InboundEvent): Promise<void> {
+  // Roster removal must never suppress withdrawal, rights, or removal of a platform copy.
+  const command = event.text === undefined ? null : parseParentCommand(event.text);
+  const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
+  const declines =
+    (action?.type === "consent" ||
+      action?.type === "health_words" ||
+      action?.type === "nearby_consent") &&
+    !action.accept;
+  const rights =
+    event.conversation.kind === "private" &&
+    (command === "stop" ||
+      command === "what_family_sees" ||
+      declines ||
+      action?.type === "book_drop");
+  if (
+    !pilotAllowsInbound(deps.config.pilotAdmission, event) &&
+    !rights &&
+    event.kind !== "unsent" &&
+    event.kind !== "member_left" &&
+    event.kind !== "bot_removed" &&
+    event.kind !== "blocked" &&
+    event.kind !== "unblocked"
+  ) {
+    if (
+      event.channel === "telegram" &&
+      event.kind === "start" &&
+      event.conversation.kind === "private" &&
+      event.sender.externalUserId === event.conversation.externalId &&
+      /^[1-9][0-9]{0,15}$/.test(event.sender.externalUserId)
+    ) {
+      // Only the person who owns this private chat sees their own invitation identifier.
+      await sendOutsideGateway(deps, {
+        kind: "system",
+        lang: "en",
+        to: { channel: "telegram", conversationId: event.sender.externalUserId },
+        idempotencyKey: outboundKey("system", {
+          conversationId: event.sender.externalUserId,
+          suffix: `pilot_invitation:${event.eventId}`,
+        }),
+        text: t("en", "pilot.invitation_only", { telegram_id: event.sender.externalUserId }),
+      });
+    }
+    if (event.kind === "button") await acknowledge(deps, event);
+    deps.logger.info("pilot_event_refused", { kind: event.kind, channel: event.channel });
+    return;
+  }
   if (event.kind === "unsent") {
     // D6 (05-line-flows §4): Vela deletes its copy of what was unsent.
     await handleUnsent(deps, event);
@@ -165,6 +213,10 @@ async function routePrivate(deps: Deps, event: InboundEvent): Promise<void> {
   }
   if (event.kind === "start" && isNearbyStart(event.startParam)) {
     await handleNearbyStart(deps, event);
+    return;
+  }
+  if (event.kind === "start" && isAccountLinkStart(event.startParam)) {
+    await handleAccountLinkStart(deps, event);
     return;
   }
   if (event.kind === "start" && (event.startParam?.trim() ?? "").length > 0) {

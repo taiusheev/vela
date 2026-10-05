@@ -12,7 +12,9 @@ import {
   SecondaryButton,
   Words,
 } from "../../src/components/ui.tsx";
+import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
+import { useWeeklyReadOpened } from "../../src/data/useWeeklyReadOpened.ts";
 import type { WeekLight } from "../../src/data/weekly.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
@@ -52,7 +54,19 @@ export default function SundayScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const view = useWeeklyRead();
+  const { capabilities } = useCapabilities();
   const { read } = view;
+  useWeeklyReadOpened(
+    view.live &&
+      !view.loading &&
+      view.organiser &&
+      !view.nobody &&
+      !view.trouble &&
+      read.week !== null &&
+      !read.locked
+      ? view.readId
+      : undefined,
+  );
   const name = read.name;
 
   return (
@@ -69,7 +83,11 @@ export default function SundayScreen() {
       <Words variant="title">
         <Trans context="tab">Sunday</Trans>
       </Words>
-      {!view.organiser ? (
+      {view.loading ? (
+        <Words variant="body" tone="ink2">
+          <Trans>One moment…</Trans>
+        </Words>
+      ) : !view.organiser ? (
         <Words variant="body" tone="ink2">
           <Trans>The weekly read goes to the family's organisers.</Trans>
         </Words>
@@ -93,7 +111,11 @@ export default function SundayScreen() {
             </Eyebrow>
             <WeekRow lights={read.week.lights} />
           </Card>
-          {read.locked ? (
+          {read.locked && capabilities?.billing !== true ? (
+            <Words variant="body" tone="ink2">
+              <Trans>The weekly read could not be reached just now.</Trans>
+            </Words>
+          ) : read.locked ? (
             <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
               <Words variant="bodyMedium">
                 <Trans>Vela Light shows you the read</Trans>

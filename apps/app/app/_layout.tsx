@@ -5,26 +5,58 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { Literata_400Regular, Literata_600SemiBold } from "@expo-google-fonts/literata";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { type ReactNode, useEffect, useState } from "react";
+import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { clearAudioCache } from "../src/audio/cache.ts";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
+import { sessionScope } from "../src/data/live-state.ts";
+import { clearPhotoCache } from "../src/data/photos.ts";
 import { readDeviceToken } from "../src/device/token.ts";
 import { LocaleProvider, useAppLocale } from "../src/i18n/provider.tsx";
 import { PushProvider } from "../src/push/provider.tsx";
 import { useOpenTapped } from "../src/push/useOpenTapped.ts";
+import { activatePrivateSession, clearSessionDrafts } from "../src/storage/drafts.ts";
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
 
 void SplashScreen.preventAutoHideAsync();
 
-const queries = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 60_000 } },
-});
+function SessionQueries({ children, scope }: { children: ReactNode; scope: string }) {
+  const [queries] = useState(() => {
+    clearPhotoCache();
+    activatePrivateSession(scope);
+    return new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 60_000 } } });
+  });
+  useEffect(() => {
+    activatePrivateSession(scope);
+    const subscription = AppState.addEventListener("change", (state) =>
+      focusManager.setFocused(state === "active"),
+    );
+    return () => {
+      subscription.remove();
+      void queries.cancelQueries();
+      queries.clear();
+      clearPhotoCache();
+      void clearAudioCache();
+      void clearSessionDrafts(scope);
+    };
+  }, [queries, scope]);
+  return <QueryClientProvider client={queries}>{children}</QueryClientProvider>;
+}
+function AccountQueries({ children }: { children: ReactNode }) {
+  const account = useAccount();
+  const scope = sessionScope(account);
+  return (
+    <SessionQueries key={scope} scope={scope}>
+      {children}
+    </SessionQueries>
+  );
+}
 
 /**
  * A phone set up for her (ADR-35) opens on her screen and nowhere else; the token it keeps is read
@@ -108,7 +140,7 @@ function Root() {
 export default function RootLayout() {
   return (
     <AccountProvider>
-      <QueryClientProvider client={queries}>
+      <AccountQueries>
         <LocaleProvider>
           <PushProvider>
             <SafeAreaProvider>
@@ -118,7 +150,7 @@ export default function RootLayout() {
             </SafeAreaProvider>
           </PushProvider>
         </LocaleProvider>
-      </QueryClientProvider>
+      </AccountQueries>
     </AccountProvider>
   );
 }

@@ -80,7 +80,9 @@ export function PrimaryButton({
         backgroundColor: palette.action,
         opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
         borderRadius: radius.button,
-        height: 56,
+        minHeight: 56,
+        paddingVertical: space.m,
+        paddingHorizontal: space.l,
         alignItems: "center",
         justifyContent: "center",
       })}
@@ -184,8 +186,11 @@ export function TextField({
   multiline = false,
   keyboardType,
   autoComplete,
+  autoCapitalize,
+  autoCorrect,
   autoFocus = false,
   maxLength,
+  disabled = false,
   onSubmit,
 }: {
   value: string;
@@ -197,9 +202,12 @@ export function TextField({
   keyboardType?: "phone-pad" | "number-pad" | "email-address";
   /** Lets the phone offer her own number, and fill a code from the message that carries it. */
   autoComplete?: "tel" | "tel-national" | "one-time-code" | "email";
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  autoCorrect?: boolean;
   /** For the one field a screen exists to fill, so it is ready without hunting for it. */
   autoFocus?: boolean;
   maxLength?: number;
+  disabled?: boolean;
   /** Enter, or the keyboard's own go key, rather than reaching for the button. */
   onSubmit?: () => void;
 }) {
@@ -208,6 +216,8 @@ export function TextField({
   return (
     <View style={{ gap: space.s }}>
       <TextInput
+        editable={!disabled}
+        accessibilityLabel={helper ?? placeholder}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -215,6 +225,8 @@ export function TextField({
         multiline={multiline}
         {...(keyboardType === undefined ? {} : { keyboardType })}
         {...(autoComplete === undefined ? {} : { autoComplete })}
+        {...(autoCapitalize === undefined ? {} : { autoCapitalize })}
+        {...(autoCorrect === undefined ? {} : { autoCorrect })}
         {...(maxLength === undefined ? {} : { maxLength })}
         {...(onSubmit === undefined ? {} : { onSubmitEditing: onSubmit, returnKeyType: "go" })}
         autoFocus={autoFocus}
@@ -244,20 +256,32 @@ export function TextField({
   );
 }
 
-export function SecondaryButton({ label, onPress }: { label: string; onPress?: () => void }) {
+export function SecondaryButton({
+  label,
+  onPress,
+  disabled = false,
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+}) {
   const palette = usePalette();
   return (
     <Pressable
       accessibilityRole="button"
       hitSlop={hitSlop}
+      disabled={disabled}
+      accessibilityState={{ disabled }}
       onPress={onPress}
       style={({ pressed }) => ({
         backgroundColor: palette.surface,
         borderColor: palette.rule,
         borderWidth: 1,
-        opacity: pressed ? 0.9 : 1,
+        opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
         borderRadius: radius.button,
-        height: 56,
+        minHeight: 56,
+        paddingVertical: space.m,
+        paddingHorizontal: space.l,
         alignItems: "center",
         justifyContent: "center",
       })}

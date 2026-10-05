@@ -7,7 +7,8 @@
  * Every refusal is a `ConfigError` naming the variable (or the notice file) to fix, never its value.
  */
 import { type Lang, REGIONS, type Region } from "@vela/contracts";
-import type { Config } from "@vela/services";
+import { decodeContentKey } from "@vela/db";
+import type { Config, PilotAdmission } from "@vela/services";
 import type { AdminEnv, InboundJob, PilotEnv } from "./env.ts";
 import {
   NOTICE_FILES,
@@ -37,6 +38,7 @@ export class ConfigError extends Error {
 
 /** The secrets in `.dev.vars.example`; each is read through `secret()`, which names a missing one. */
 type SecretName =
+  | "CONTENT_KEY_V1"
   | "TELEGRAM_BOT_TOKEN"
   | "TELEGRAM_WEBHOOK_SECRET"
   | "ANTHROPIC_API_KEY"
@@ -60,6 +62,20 @@ export function secret<N extends SecretName>(env: { readonly [K in N]?: string }
     throw new ConfigError(
       name,
       `${name} is not set: add it to .dev.vars locally, or as a secret of this Worker with "wrangler secret put ${name} --env <environment>" (add -c wrangler.admin.jsonc for the admin Worker)`,
+    );
+  }
+  return value;
+}
+
+/** The environment's AES-256 key; one key belongs to both Workers in that environment. */
+function readContentKeyV1(env: PilotEnv | AdminEnv): string {
+  const value = secret(env, "CONTENT_KEY_V1");
+  try {
+    decodeContentKey(value);
+  } catch {
+    throw new ConfigError(
+      "CONTENT_KEY_V1",
+      "CONTENT_KEY_V1 must be a base64url encoded 32-byte key: generate one and install it on both Workers",
     );
   }
   return value;
@@ -528,8 +544,48 @@ function readOnOff(raw: string | undefined, name: "MEMORY" | "BOOK"): boolean {
   return value === "on";
 }
 
+export function readPilotAdmission(
+  env: Pick<PilotEnv, "PILOT_ADMISSION" | "PILOT_TELEGRAM_ALLOWLIST">,
+): PilotAdmission | null {
+  const mode = env.PILOT_ADMISSION?.trim() ?? "off";
+  if (mode === "off") return null;
+  if (mode !== "on") throw new ConfigError("PILOT_ADMISSION", "PILOT_ADMISSION must be on or off");
+  const ids = env.PILOT_TELEGRAM_ALLOWLIST?.split(",").map((id) => id.trim()) ?? [];
+  if (
+    ids.length === 0 ||
+    ids.length > 100 ||
+    ids.some((id) => !/^[1-9][0-9]{0,12}$/.test(id) || Number(id) > 1099511627775)
+  ) {
+    throw new ConfigError(
+      "PILOT_TELEGRAM_ALLOWLIST",
+      "A closed pilot requires a private roster of valid Telegram user IDs",
+    );
+  }
+  return { telegramUserIds: [...new Set(ids)] };
+}
+
+/** Only the account webhook reads this endpoint-specific secret; no payload supplies its key. */
+export function readClerkWebhookSigningSecret(
+  env: Pick<PilotEnv, "CLERK_WEBHOOK_SIGNING_SECRET">,
+): Uint8Array<ArrayBuffer> {
+  const value = env.CLERK_WEBHOOK_SIGNING_SECRET?.trim() ?? "";
+  try {
+    if (!/^whsec_[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length > 128) throw new Error();
+    const decoded = atob(value.slice(6));
+    if (decoded.length < 16 || decoded.length > 64) throw new Error();
+    return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+  } catch {
+    throw new ConfigError(
+      "CLERK_WEBHOOK_SIGNING_SECRET",
+      "The Clerk webhook requires its own valid Svix signing secret",
+    );
+  }
+}
+
 export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
+  const pilotAdmission = readPilotAdmission(env);
   const environment = readEnvironment(env);
+  readContentKeyV1(env);
   checkDeployedEnv(env, environment, PILOT_URL_VARS, "wrangler.jsonc");
   refuseUnfilledNotices(environment, notices);
   const line = readLineConfig(env);
@@ -545,8 +601,9 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     privacyNoticeUrls,
     // The generator refuses notices whose versions differ, so the English one names both.
     privacyNoticeVersion: notices.en.version,
-    memory: readMemory(env),
+    memory: readMemory(env) && pilotAdmission === null,
     book: readBook(env),
+    pilotAdmission,
   };
 }
 
@@ -560,6 +617,7 @@ export type ApiSwitch = (typeof API_SWITCHES)[number];
 
 /** What the API under /v1 runs with (`src/api-runtime.ts`), and nothing of the pilot's `Config`. */
 export interface ApiConfig {
+  readonly pilotAdmission?: PilotAdmission | null;
   readonly environment: Environment;
   /** The Clerk Frontend API origin: https, no path, no trailing slash. */
   readonly issuer: string;
@@ -696,6 +754,7 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
   if (readApiSwitch(env) === "off") {
     return null;
   }
+  readContentKeyV1(env);
   checkDeployedEnv(env, environment, ["CLERK_ISSUER"], "wrangler.jsonc");
   const issuer = readClerkIssuer(env, environment);
   const secretKey = readClerkSecretKey(env, environment);
@@ -725,6 +784,7 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
     regions: readRegions(env),
     pushSend: readPushSend(env),
     privacyNoticeUrls: privacyNoticeUrlsOf(env),
+    pilotAdmission: readPilotAdmission(env),
   };
 }
 
@@ -736,6 +796,7 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
  */
 export function checkAdminConfig(env: AdminEnv): Environment {
   const environment = readEnvironment(env);
+  readContentKeyV1(env);
   checkDeployedEnv(env, environment, ["PUBLIC_BASE_URL"], "wrangler.admin.jsonc");
   requireVar(env, "TELEGRAM_BOT_USERNAME", "wrangler.admin.jsonc");
   if (readLineSwitch(env, "wrangler.admin.jsonc") === "on") {

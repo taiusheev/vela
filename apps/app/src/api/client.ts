@@ -33,6 +33,7 @@ import type {
   ApiTrial,
   ApiUser,
   ApiWeeklyRead,
+  ApiWeeklyReadOpened,
   ApiWithdrawn,
   ComposeAsk,
   ComposeReply,
@@ -88,9 +89,10 @@ interface Call {
   body?: unknown;
   /** A write is a POST unless it changes part of something that already exists. */
   method?: "POST" | "PATCH";
+  signal?: AbortSignal;
 }
 
-async function call<T>({ path, token, key, body, method }: Call): Promise<T> {
+async function call<T>({ path, token, key, body, method, signal }: Call): Promise<T> {
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
@@ -107,6 +109,7 @@ async function call<T>({ path, token, key, body, method }: Call): Promise<T> {
           }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(signal === undefined ? {} : { signal }),
   });
   if (!response.ok) {
     const failure: unknown = await response.json().catch(() => undefined);
@@ -125,6 +128,36 @@ function read<T>(path: string, token: string | null): Promise<T> {
 
 export function fetchMe(token: string | null): Promise<ApiMe> {
   return read<ApiMe>("/v1/me", token);
+}
+
+export interface ApiCapabilities {
+  pilot: boolean;
+  telegram_first: boolean;
+  english_only: boolean;
+  memory: boolean;
+  book: boolean;
+  parent_app: boolean;
+  billing: boolean;
+}
+
+export function fetchCapabilities(): Promise<ApiCapabilities> {
+  return read<ApiCapabilities>("/v1/capabilities", null);
+}
+
+export interface LinkChallenge {
+  challenge_id: string;
+  telegram_url: string;
+  expires_at: string;
+}
+export function startTelegramLink(key: string, token: string | null): Promise<LinkChallenge> {
+  return call<LinkChallenge>({ path: "/v1/me/link", token, key, body: {} });
+}
+export function completeTelegramLink(
+  input: { challenge_id: string; code: string },
+  key: string,
+  token: string | null,
+): Promise<{ linked: false } | { linked: true; family_id: string; member_id: string }> {
+  return call({ path: "/v1/me/link/complete", token, key, body: input });
 }
 
 /** The family behind You: members, their lights and plans, and for organisers the people nearby. */
@@ -445,6 +478,22 @@ export function fetchWeeklyRead(
     `/v1/families/${familyId}/weekly-read?member=${encodeURIComponent(memberId)}`,
     token,
   );
+}
+
+/** Record an organiser's visible opening, independently of background read requests. */
+export function openWeeklyRead(
+  weeklyReadId: string,
+  key: string,
+  token: string,
+  signal: AbortSignal,
+): Promise<ApiWeeklyReadOpened> {
+  return call<ApiWeeklyReadOpened>({
+    path: `/v1/weekly-reads/${weeklyReadId}/opened`,
+    token,
+    key,
+    body: {},
+    signal,
+  });
 }
 
 /** How Vela is doing: the family's quiet notices and Vela's, by month (spec §8). Organisers only. */

@@ -3,8 +3,9 @@ import { useLingui } from "@lingui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ApiExchangeSummary } from "@vela/contracts";
 import { apiConfigured, fetchExchanges } from "../api/client.ts";
-import { useAccount } from "../auth/clerk.tsx";
+import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { type Exchange, type ExchangeReply, exchangesFixture } from "./exchanges.ts";
+import { demoDataAllowed } from "./live-state.ts";
 import { dayName, toTodayExchange, useToday } from "./useToday.ts";
 
 /** A reply keeps its kind, so one with no words reads as what it was: "Anna sent a photo". */
@@ -19,13 +20,14 @@ function toReply(
     from: reply.from,
     kind: reply.kind,
     ...(words.length === 0 ? {} : { text: words }),
-    ...(reply.photo === null ? {} : { photo: reply.photo }),
+    ...(reply.photo == null ? {} : { photo: reply.photo }),
+    ...(reply.audio == null ? {} : { audio: reply.audio }),
   };
 }
 
 /** One listed exchange in the screen's idiom: the same card Today shows, with its day. */
-export function toExchange(summary: ApiExchangeSummary): Exchange {
-  const card = toTodayExchange(summary);
+export function toExchange(summary: ApiExchangeSummary, timeZone?: string): Exchange {
+  const card = toTodayExchange(summary, timeZone);
   return {
     id: summary.id,
     asker: card.asker ?? "Vela",
@@ -38,12 +40,13 @@ export function toExchange(summary: ApiExchangeSummary): Exchange {
     repliesReachHer: summary.replies_reach_her,
     ...(card.photos === undefined ? {} : { photos: card.photos }),
     ...(card.picked === undefined ? {} : { picked: card.picked }),
+    ...(card.voiceHello === undefined ? {} : { voiceHello: card.voiceHello }),
   };
 }
 
 export interface ExchangesView {
   exchanges: Exchange[];
-  /** True once the real list has arrived; until then, and with no API, the example days show. */
+  /** True once the real list has arrived; until then live builds carry an empty list. */
   live: boolean;
   loading: boolean;
   trouble: boolean;
@@ -61,7 +64,7 @@ export function useExchanges(): ExchangesView {
   // The days are worded as they are built, so a change of language builds them again.
   useLingui();
   const account = useAccount();
-  const { familyId } = useToday();
+  const { familyId, today } = useToday();
   const enabled = apiConfigured() && account.ready && account.signedIn && familyId !== undefined;
 
   const pages = useInfiniteQuery({
@@ -75,9 +78,9 @@ export function useExchanges(): ExchangesView {
 
   if (!enabled) {
     return {
-      exchanges: exchangesFixture(),
+      exchanges: demoDataAllowed(apiConfigured(), accountsConfigured()) ? exchangesFixture() : [],
       live: false,
-      loading: false,
+      loading: apiConfigured() && account.ready && account.signedIn && familyId === undefined,
       trouble: false,
       more: false,
       loadMore: () => {},
@@ -85,7 +88,16 @@ export function useExchanges(): ExchangesView {
   }
   const live = pages.data !== undefined;
   return {
-    exchanges: live ? pages.data.pages.flatMap((page) => page.exchanges.map(toExchange)) : [],
+    exchanges: live
+      ? pages.data.pages.flatMap((page) =>
+          page.exchanges.map((summary) =>
+            toExchange(
+              summary,
+              today.lights.find((light) => light.memberId === summary.recipient_id)?.timeZone,
+            ),
+          ),
+        )
+      : [],
     live,
     loading: pages.isPending,
     trouble: pages.isError,

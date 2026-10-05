@@ -143,6 +143,50 @@ describe("the Telegram webhook", () => {
   });
 });
 
+describe("parent-device routes excluded from the closed trial", () => {
+  it.each(["/device/messages", "/device/voice"])(
+    "returns 404 before reading %s or constructing dependencies",
+    async (path) => {
+      const fake = createFakePilotRuntime();
+      const input = new Request(`${ORIGIN}${path}`, {
+        method: "POST",
+        headers: { authorization: `Device ${"a".repeat(43)}` },
+        body: "private parent content",
+      });
+      const response = await send(fake, input, {
+        ...testEnv,
+        PILOT_ADMISSION: "on",
+        PILOT_TELEGRAM_ALLOWLIST: "12345",
+      });
+      expect(response.status).toBe(404);
+      expect(input.bodyUsed).toBe(false);
+      expect(fake.built()).toBe(0);
+      expect(fake.channelsBuilt()).toBe(0);
+      expect(fake.calls).toEqual([]);
+    },
+  );
+
+  it.each(["/device/messages", "/device/voice"])(
+    "fails closed for invalid trial admission configuration at %s",
+    async (path) => {
+      const fake = createFakePilotRuntime();
+      const input = new Request(`${ORIGIN}${path}`, {
+        method: "POST",
+        body: "private parent content",
+      });
+      const response = await send(fake, input, {
+        ...testEnv,
+        PILOT_ADMISSION: "on",
+        PILOT_TELEGRAM_ALLOWLIST: "",
+      });
+      expect(response.status).toBe(503);
+      expect(input.bodyUsed).toBe(false);
+      expect(fake.built()).toBe(0);
+      expect(fake.calls).toEqual([]);
+    },
+  );
+});
+
 /** The kept-light member's LINE user id and her words, which no log line or answer may carry. */
 const HER_LINE_ID = "U3bf020427417f5c0decf3c1612d4e59a";
 const HER_WORDS = "今天去市場買了空心菜";

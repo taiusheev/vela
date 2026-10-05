@@ -1,6 +1,7 @@
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
+import { clearSessionDrafts } from "../storage/drafts.ts";
 
 /**
  * Sign-in is Clerk's (build plan 3.1). The key is public by design and arrives through the
@@ -19,6 +20,8 @@ export interface Account {
   signedIn: boolean;
   /** The account id Clerk knows this person by; the seed and Clerk’s own Users page use it. */
   userId: string | null;
+  /** Development-only identifier for the private staging load runner; never a bearer token. */
+  sessionId?: string | null;
   /**
    * The bearer token for the API, or null when there is no session. Clerk hands back the token it
    * holds while it is still good; `fresh` asks Clerk for a new one, for a retry after the API has
@@ -32,6 +35,7 @@ const noAccount: Account = {
   ready: true,
   signedIn: false,
   userId: null,
+  sessionId: null,
   token: async () => null,
   signOut: async () => {},
 };
@@ -40,16 +44,20 @@ const AccountContext = createContext<Account>(noAccount);
 
 /** Inside the provider, so Clerk's own hook is the only thing that reads its state. */
 function ClerkAccount({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn, userId, getToken, signOut } = useAuth();
+  const { isLoaded, isSignedIn, userId, sessionId, getToken, signOut } = useAuth();
   const account = useMemo<Account>(
     () => ({
       ready: isLoaded,
       signedIn: isSignedIn === true,
       userId: userId ?? null,
+      sessionId: sessionId ?? null,
       token: (options) => getToken(options?.fresh === true ? { skipCache: true } : undefined),
-      signOut: () => signOut(),
+      signOut: async () => {
+        await clearSessionDrafts(`${userId ?? "unknown"}:${sessionId ?? "session"}`);
+        await signOut();
+      },
     }),
-    [isLoaded, isSignedIn, userId, getToken, signOut],
+    [isLoaded, isSignedIn, userId, sessionId, getToken, signOut],
   );
   return <AccountContext.Provider value={account}>{children}</AccountContext.Provider>;
 }

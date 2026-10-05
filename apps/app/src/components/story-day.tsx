@@ -9,6 +9,7 @@ import { useAccount } from "../auth/clerk.tsx";
 import { dayName } from "../data/format.ts";
 import { nextPrompt, nextSunday } from "../data/story.ts";
 import { useBook } from "../data/useBook.ts";
+import { useCapabilities } from "../data/useCapabilities.ts";
 import { useToday } from "../data/useToday.ts";
 import { space } from "../theme/tokens.ts";
 import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
@@ -24,7 +25,8 @@ export function StoryDay() {
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
-  const { today, familyId } = useToday();
+  const { today, familyId, live } = useToday();
+  const { capabilities } = useCapabilities();
   const book = useBook(familyId);
   const [skip, setSkip] = useState(0);
   const [sent, setSent] = useState(false);
@@ -37,7 +39,8 @@ export function StoryDay() {
   );
   const chosen = book.coming.find((story) => story.member_id === her?.memberId);
   const prompt = nextPrompt(asked, skip, lang);
-  const sunday = nextSunday(new Date());
+  const question = own ?? prompt?.text[lang] ?? "";
+  const sunday = nextSunday(new Date(), her?.timeZone);
   const day = dayName(sunday);
   const name = her?.displayName ?? t`Mom`;
 
@@ -75,25 +78,29 @@ export function StoryDay() {
         />
       ) : sent ? (
         <Words variant="body" tone="ink2">
-          <Trans>
-            On Sunday {name} is asked for this story. What she tells goes into the family book.
-          </Trans>
+          <Trans>On Sunday {name} is asked for this story.</Trans>
         </Words>
-      ) : prompt === undefined ? null : (
+      ) : (
         <>
-          {own === null ? (
+          {own === null && prompt !== undefined ? (
             <Words variant="voice">{prompt.text[lang]}</Words>
           ) : (
             <TextField
               placeholder={t`Your question for ${name}`}
-              value={own}
+              value={own ?? ""}
               onChangeText={setOwn}
               multiline
               autoFocus
             />
           )}
           <Words variant="caption" tone="ink3">
-            <Trans>Her answer is kept in the family book, unless she says not to.</Trans>
+            {capabilities?.book === true ? (
+              <Trans>Her answer is kept in the family book, unless she says not to.</Trans>
+            ) : (
+              <Trans>
+                Her answer stays with the exchange. Long-term story saving is not switched on here.
+              </Trans>
+            )}
           </Words>
           {taken === null ? null : (
             <Words variant="body" tone="ink2">
@@ -111,12 +118,18 @@ export function StoryDay() {
               disabled={
                 compose.isPending ||
                 !apiConfigured() ||
+                !live ||
+                familyId === undefined ||
+                book.loading ||
+                book.trouble ||
+                her?.invited === true ||
+                her?.state === "paused" ||
                 her === undefined ||
-                (own !== null && own.trim().length === 0)
+                question.trim().length === 0
               }
-              onPress={() => compose.mutate(own === null ? prompt.text[lang] : own.trim())}
+              onPress={() => compose.mutate(question.trim())}
             />
-            {own === null ? (
+            {own === null && prompt !== undefined ? (
               <>
                 <SecondaryButton
                   label={t`Another question`}
@@ -124,13 +137,15 @@ export function StoryDay() {
                 />
                 <SecondaryButton label={t`Write your own question`} onPress={() => setOwn("")} />
               </>
-            ) : (
+            ) : prompt !== undefined ? (
               <SecondaryButton label={t`Choose from the list`} onPress={() => setOwn(null)} />
-            )}
+            ) : null}
           </View>
         </>
       )}
-      <SecondaryButton label={t`Read the family book`} onPress={() => router.push("/book")} />
+      {capabilities?.book === true || book.entries.length > 0 || book.recipes.length > 0 ? (
+        <SecondaryButton label={t`Read the family book`} onPress={() => router.push("/book")} />
+      ) : null}
     </Card>
   );
 }

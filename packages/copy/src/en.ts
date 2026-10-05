@@ -72,6 +72,14 @@
  * (05-line-flows.md §6), which say nothing about anyone.
  */
 export const en = {
+  "account_link.code":
+    "Enter this code in Vela to connect your Telegram account: {code}\nKeep it private; it expires soon.",
+  "account_link.unavailable":
+    "This account link could not be opened. Finish setting up your family in Telegram, then start a new link in Vela.",
+  "pilot.activation_wait":
+    "Your light is not on yet. Your family organiser needs an approved Telegram account that can receive messages. Please ask your organiser to finish setup, then try again.",
+  "pilot.invitation_only":
+    "Vela’s English trial is invitation-only. Contact the founder for access. Your Telegram ID: {telegram_id}.",
   "arrival.greeting": "Good morning, {address}.",
   "arrival.late": "Sorry this is late.",
   "arrival.repeat": "In case you missed it:",
@@ -210,6 +218,7 @@ export const en = {
   "onboarding.ask_language": "Which language should their messages be in?",
   "onboarding.ask_country": "Which country do they live in?",
   "onboarding.country_tw": "Taiwan",
+  "onboarding.country_vn": "Vietnam",
   "onboarding.country_us": "United States",
   "onboarding.country_gb": "United Kingdom",
   "onboarding.country_ca": "Canada",

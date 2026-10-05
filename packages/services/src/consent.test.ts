@@ -20,7 +20,7 @@ import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "./consent.ts";
 import type { OutboundJob } from "./deps.ts";
-import { deliverOutbound } from "./gateway.ts";
+import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
 import { handleParentCommand } from "./parent-commands.ts";
 import { hasHealthWordsConsent } from "./repo.ts";
@@ -338,6 +338,44 @@ describe("handleInviteStart", () => {
 });
 
 describe("handleConsentButton: Yes", () => {
+  it("waits for approved organiser delivery without recording consent or closing the parent buttons", async () => {
+    const seed = await linked();
+    const deps = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: { telegramUserIds: [ORGANISER, HER] } },
+    };
+    await handleConsentButton(deps, tapEvent(seed.her.id, true), {
+      type: "consent",
+      memberId: seed.her.id,
+      accept: true,
+    });
+    expect(await herRow(seed.her.id)).toMatchObject({
+      status: "invited",
+      lightOn: false,
+      lightConsentedAt: null,
+    });
+    expect(await h.db.select().from(consents)).toHaveLength(0);
+    expect(h.telegram.closed).toHaveLength(0);
+    const probe = await enqueueOutbound(deps, h.db, {
+      kind: "system",
+      idempotencyKey: "trial-organiser-ready",
+      memberId: seed.organiser.id,
+      channel: "telegram",
+      conversationId: ORGANISER,
+      lang: "en",
+      text: "Trial setup ready.",
+    });
+    if (!("outboundId" in probe)) throw new Error("Duplicate organiser proof");
+    await deliverOutbound(deps, probe.outboundId);
+    await handleConsentButton(
+      deps,
+      { ...tapEvent(seed.her.id, true), eventId: "retry-after-organiser-delivery" },
+      { type: "consent", memberId: seed.her.id, accept: true },
+    );
+    expect(await herRow(seed.her.id)).toMatchObject({ status: "active", lightOn: true });
+    expect(await h.db.select().from(consents)).toHaveLength(1);
+    expect(h.telegram.closed).toHaveLength(1);
+  });
   it("switches the light on from tomorrow, records the consent with its evidence, thanks her, and tells the organiser", async () => {
     const seed = await linked();
     h.clock.advanceMinutes(5);

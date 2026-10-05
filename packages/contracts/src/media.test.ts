@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ApiErrorBody,
+  ApiExchangeAudio,
+  ApiExchangePhoto,
   ApiExchangeSummary,
   ApiTodayExchange,
   ApiUploadedMedia,
@@ -74,6 +76,20 @@ describe("why a photo was refused", () => {
 const RECIPIENT = "0199a0b2-4c5d-7e6f-8a9b-000000000001";
 const PHOTO_ONE = "0199a0b2-4c5d-7e6f-8a9b-0c1d2e3f4a51";
 const PHOTO_TWO = "0199a0b2-4c5d-7e6f-8a9b-0c1d2e3f4a52";
+
+describe("original photo expiry descriptors", () => {
+  const photo = { id: PHOTO_ONE, width: 640, height: 480, stored: true };
+  it("reads older responses and validates nullable retention without exposing storage fields", () => {
+    expect(ApiExchangePhoto.parse(photo)).toEqual(photo);
+    expect(ApiExchangePhoto.parse({ ...photo, expires_at: null })).toEqual({
+      ...photo,
+      expires_at: null,
+    });
+    const expiring = { ...photo, expires_at: "2026-10-26T00:00:00.000Z" };
+    expect(ApiExchangePhoto.parse({ ...expiring, storage_key: "private.jpg" })).toEqual(expiring);
+    expect(ApiExchangePhoto.safeParse({ ...photo, expires_at: "tomorrow" }).success).toBe(false);
+  });
+});
 
 describe("a photo ask", () => {
   const choice = {
@@ -182,6 +198,7 @@ describe("the photos Today and Exchanges show", () => {
     on_behalf_of: null,
     type: "photo_choice",
     ask: "Which one do you like more?",
+    voice_hello: null,
     answer: {
       kind: "photo_pick",
       text: null,
@@ -189,6 +206,8 @@ describe("the photos Today and Exchanges show", () => {
       picked_media_id: PHOTO_TWO,
       picked_number: 2,
       translation: null,
+      audio: null,
+      photo: null,
     },
     replies: [],
     seen_at: null,
@@ -224,6 +243,45 @@ describe("the photos Today and Exchanges show", () => {
       })),
     ]) {
       expect(ApiTodayExchange.safeParse({ ...exchange, ...invalid }).success).toBe(false);
+    }
+  });
+});
+
+describe("original audio descriptors", () => {
+  const audio = {
+    id: PHOTO_ONE,
+    mime: "audio/ogg",
+    duration_ms: 12_000,
+    expires_at: "2026-10-26T00:00:00.000Z",
+    state: "ready",
+    role: "original",
+  };
+  it("exposes only the original's authenticated API identifier and playback state", () => {
+    expect(
+      ApiExchangeAudio.parse({
+        ...audio,
+        storage_key: "private/original.ogg",
+        provider_file_id: "telegram-secret",
+        url: "https://private.test",
+        transcript: "Private words",
+      }),
+    ).toStrictEqual(audio);
+    expect(
+      ApiExchangeAudio.parse({ ...audio, duration_ms: null, expires_at: null, state: "pending" }),
+    ).toMatchObject({ duration_ms: null, expires_at: null, state: "pending" });
+  });
+  it("refuses other roles, malformed expiry and unsupported audio", () => {
+    for (const invalid of [
+      { role: "translated" },
+      { role: undefined },
+      { expires_at: "tomorrow" },
+      { expires_at: undefined },
+      { mime: "text/html" },
+      { mime: "audio/opus" },
+      { duration_ms: 0 },
+      { state: "stored" },
+    ]) {
+      expect(ApiExchangeAudio.safeParse({ ...audio, ...invalid }).success).toBe(false);
     }
   });
 });

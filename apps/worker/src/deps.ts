@@ -150,6 +150,20 @@ function createMediaStore(bucket: R2Bucket): MediaStore {
         mime: object.httpMetadata?.contentType ?? "application/octet-stream",
       };
     },
+    async list(options) {
+      const page = await bucket.list({
+        prefix: options.prefix,
+        limit: options.limit,
+        ...(options.cursor === undefined ? {} : { cursor: options.cursor }),
+      });
+      return {
+        objects: page.objects.map((object) => ({
+          key: object.key,
+          uploadedAt: object.uploaded,
+        })),
+        cursor: page.truncated ? page.cursor : null,
+      };
+    },
   };
 }
 
@@ -366,7 +380,10 @@ export async function buildDeps(
   const media = createMediaPort(env, config.environment, "wrangler.jsonc", logger);
   const push = createPushPort(env, logger);
 
-  const connection = await connectDatabase(env.HYPERDRIVE.connectionString);
+  const connection = await connectDatabase(
+    env.HYPERDRIVE.connectionString,
+    secret(env, "CONTENT_KEY_V1"),
+  );
   return {
     deps: {
       db: connection.db,
@@ -398,7 +415,10 @@ export async function buildAdminDeps(env: AdminEnv): Promise<AdminDepsHandle> {
   const ai = createAiPort(env, environment, "wrangler.admin.jsonc", logger);
   const telegramBotUsername = requireVar(env, "TELEGRAM_BOT_USERNAME", "wrangler.admin.jsonc");
 
-  const connection = await connectDatabase(env.HYPERDRIVE.connectionString);
+  const connection = await connectDatabase(
+    env.HYPERDRIVE.connectionString,
+    secret(env, "CONTENT_KEY_V1"),
+  );
   return {
     deps: {
       db: connection.db,

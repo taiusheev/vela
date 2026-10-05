@@ -1,8 +1,18 @@
-import { type ApiWeekDay, ApiWeeklyRead, type WeekDayState } from "@vela/contracts";
+import {
+  type ApiMutationResponse,
+  type ApiWeekDay,
+  ApiWeeklyRead,
+  OpenWeeklyRead,
+  type WeekDayState,
+} from "@vela/contracts";
 import { addDays, localTimeOf } from "@vela/core";
-import { quietEvents, subscriptions, weeklyReads } from "@vela/db";
+import { members, quietEvents, subscriptions, type VelaTransaction, weeklyReads } from "@vela/db";
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
+import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
+import type { Deps } from "./deps.ts";
+import { VelaError } from "./errors.ts";
+import { recordEvent } from "./events.ts";
 import { loadWeekDays } from "./jobs.ts";
 import { memberById, type Queryable } from "./repo.ts";
 
@@ -27,6 +37,7 @@ export async function loadApiWeeklyRead(
   familyId: string,
   memberId: string | undefined,
   now: Date,
+  options: { pilotFree?: boolean } = {},
 ): Promise<ApiWeeklyRead | null> {
   const access = await authorizeFamilyAccess(db, identity, familyId, "organiser");
   if (access.kind !== "granted" || memberId === undefined) return null;
@@ -46,19 +57,26 @@ export async function loadApiWeeklyRead(
   const [subscription] = await db
     .select({ status: subscriptions.status, trialEndsAt: subscriptions.trialEndsAt })
     .from(subscriptions)
-    .where(eq(subscriptions.memberId, her.id))
+    .where(and(eq(subscriptions.memberId, her.id), eq(subscriptions.familyId, familyId)))
     .limit(1);
   const covered =
-    subscription !== undefined &&
-    COVERING.has(subscription.status) &&
-    (subscription.status !== "trial" ||
-      subscription.trialEndsAt === null ||
-      subscription.trialEndsAt > now);
+    options.pilotFree === true ||
+    (subscription !== undefined &&
+      COVERING.has(subscription.status) &&
+      (subscription.status !== "trial" ||
+        subscription.trialEndsAt === null ||
+        subscription.trialEndsAt > now));
 
   const [read] = await db
     .select()
     .from(weeklyReads)
-    .where(and(eq(weeklyReads.memberId, her.id), isNotNull(weeklyReads.sentAt)))
+    .where(
+      and(
+        eq(weeklyReads.memberId, her.id),
+        eq(weeklyReads.familyId, familyId),
+        isNotNull(weeklyReads.sentAt),
+      ),
+    )
     .orderBy(desc(weeklyReads.weekStart))
     .limit(1);
   const base = { member_id: her.id, display_name: her.displayName, locked: !covered };
@@ -128,4 +146,138 @@ export async function loadApiWeeklyRead(
           : null,
     },
   });
+}
+
+/**
+ * Record a visible opening separately from GET: a fetch or a locked preview is not an opening.
+ * Authorisation runs again before every replay. Only identifiers and the organiser's local time
+ * enter the event or the receipt; neither query needs the read's sealed content.
+ */
+export async function openApiWeeklyRead(
+  deps: Pick<Deps, "db" | "clock">,
+  identity: SessionIdentity,
+  key: string,
+  weeklyReadId: string,
+  input: unknown,
+  options: { pilotFree?: boolean } = {},
+): Promise<{ response: ApiMutationResponse; replayed: boolean }> {
+  if (!OpenWeeklyRead.safeParse(input).success) throw new ApiIdempotencyError("invalid");
+  const parsedId = ApiWeeklyRead.shape.read.unwrap().shape.id.safeParse(weeklyReadId);
+  if (!parsedId.success) throw new VelaError("not_found", "Weekly read not found");
+  const id = parsedId.data.toLowerCase();
+  const [found] = await deps.db
+    .select({ familyId: weeklyReads.familyId, memberId: weeklyReads.memberId })
+    .from(weeklyReads)
+    .where(eq(weeklyReads.id, id))
+    .limit(1);
+
+  const authorize = async (tx: VelaTransaction) => {
+    if (found === undefined) throw new VelaError("not_found", "Weekly read not found");
+    const access = await authorizeFamilyAccess(tx, identity, found.familyId, "organiser");
+    if (access.kind !== "granted") throw new VelaError("not_found", "Weekly read not found");
+    // Keep both memberships stable while recording, including when another organiser changes one.
+    const memberships = await tx
+      .select({
+        id: members.id,
+        role: members.role,
+        status: members.status,
+        leftAt: members.leftAt,
+        tz: members.tz,
+      })
+      .from(members)
+      .where(
+        and(
+          eq(members.familyId, found.familyId),
+          inArray(members.id, [access.access.memberId, found.memberId]),
+        ),
+      )
+      .for("share");
+    const organiser = memberships.find((member) => member.id === access.access.memberId);
+    const her = memberships.find((member) => member.id === found.memberId);
+    const live = (member: (typeof memberships)[number] | undefined) =>
+      member !== undefined &&
+      member.leftAt === null &&
+      (member.status === "active" || member.status === "paused");
+    if (
+      !live(organiser) ||
+      organiser?.role !== "organiser" ||
+      !live(her) ||
+      her?.role !== "member"
+    ) {
+      throw new VelaError("not_found", "Weekly read not found");
+    }
+    const [read] = await tx
+      .select({ sentAt: weeklyReads.sentAt })
+      .from(weeklyReads)
+      .where(
+        and(
+          eq(weeklyReads.id, id),
+          eq(weeklyReads.familyId, found.familyId),
+          eq(weeklyReads.memberId, found.memberId),
+        ),
+      )
+      .for("share");
+    const [subscription] = await tx
+      .select({ status: subscriptions.status, trialEndsAt: subscriptions.trialEndsAt })
+      .from(subscriptions)
+      .where(
+        and(eq(subscriptions.familyId, found.familyId), eq(subscriptions.memberId, found.memberId)),
+      )
+      .for("share");
+    const now = deps.clock.now();
+    if (
+      read === undefined ||
+      read.sentAt === null ||
+      read.sentAt > now ||
+      (options.pilotFree !== true &&
+        (subscription === undefined ||
+          !COVERING.has(subscription.status) ||
+          (subscription.status === "trial" &&
+            subscription.trialEndsAt !== null &&
+            subscription.trialEndsAt <= now)))
+    ) {
+      throw new VelaError("not_found", "Weekly read not found");
+    }
+    // The current account/family rules also apply after waiting for the membership locks.
+    const current = await authorizeFamilyAccess(tx, identity, found.familyId, "organiser");
+    if (current.kind !== "granted" || current.access.memberId !== organiser.id) {
+      throw new VelaError("not_found", "Weekly read not found");
+    }
+    return { familyId: found.familyId, memberId: found.memberId, organiser, now };
+  };
+
+  return runApiMutation(
+    deps,
+    identity,
+    {
+      key,
+      operation: "weekly-read.opened:v1",
+      input: { weekly_read_id: id },
+      ...(found === undefined ? {} : { familyId: found.familyId, memberId: found.memberId }),
+    },
+    {
+      authorize: async (tx) => {
+        await authorize(tx);
+      },
+      mutate: async (tx) => {
+        const allowed = await authorize(tx);
+        await recordEvent(
+          tx,
+          {
+            name: "weekly_read_opened",
+            familyId: allowed.familyId,
+            memberId: allowed.organiser.id,
+            surface: "app",
+            props: {
+              weekly_read_id: id,
+              recipient_member_id: allowed.memberId,
+              local_time: localTimeOf(allowed.now, allowed.organiser.tz),
+            },
+          },
+          allowed.now,
+        );
+        return { status: 200, body: { weekly_read_id: id, opened: true } };
+      },
+    },
+  );
 }

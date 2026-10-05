@@ -76,7 +76,8 @@ import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
 import { type InsertResult, insertOutbound } from "./gateway.ts";
-import { extensionFor } from "./media-copy.ts";
+import { storeInboundCopy } from "./inbound-media-copy.ts";
+import { pilotFamilyAllowed, pilotMemberAllowed } from "./pilot-admission.ts";
 import { offerRecipe } from "./recipes.ts";
 import {
   activeOrganisersWithLinks,
@@ -115,6 +116,16 @@ async function loadAnswer(deps: Deps, answerId: string): Promise<AnswerContext |
     deps.logger.warn("answer_missing", { answerId });
     return null;
   }
+  if (
+    row.family.deletedAt !== null ||
+    row.member.status !== "active" ||
+    row.member.leftAt !== null ||
+    !(await pilotFamilyAllowed(deps.db, deps.config.pilotAdmission, row.family.id)) ||
+    !(await pilotMemberAllowed(deps.db, deps.config.pilotAdmission, row.family.id, row.member.id))
+  ) {
+    deps.logger.info("answer_processing_paused", { answerId });
+    return null;
+  }
   const asker =
     row.exchange.askerId === null ? null : await memberById(deps.db, row.exchange.askerId);
   return { ...row, asker };
@@ -136,8 +147,9 @@ async function logAiCall(
   ctx: AnswerContext,
   record: AiCallRecord,
   output: unknown,
+  db: Queryable = deps.db,
 ): Promise<void> {
-  await deps.db.insert(aiCalls).values({
+  await db.insert(aiCalls).values({
     familyId: ctx.family.id,
     memberId: ctx.member.id,
     call: record.call,
@@ -242,8 +254,10 @@ async function loadAudio(
 ): Promise<FetchedMedia | null> {
   const answerId = ctx.answer.id;
   const store = deps.media;
-  if (store !== null && file.storageKey !== null) {
-    const stored = await store.get(file.storageKey);
+  if (store !== null) {
+    const copy = await storeInboundCopy(deps, file.id);
+    if (copy?.storageKey === null || copy === null) return null;
+    const stored = await store.get(copy.storageKey);
     if (stored === null) {
       deps.logger.error("answer_media_object_missing", { answerId, mediaId: file.id });
     }
@@ -266,23 +280,6 @@ async function loadAudio(
   // The message's own MIME type (a voice note's audio/ogg) is more exact than the one a download
   // path yields, so it is kept when the platform gave one.
   const mime = file.mime ?? fetched.mime;
-  if (store === null) {
-    return { body: fetched.body, mime };
-  }
-  const key = `families/${ctx.family.id}/answers/${answerId}.${extensionFor(mime)}`;
-  try {
-    await store.put(key, fetched.body, mime);
-  } catch (error) {
-    deps.logger.error("answer_media_store_failed", {
-      answerId,
-      error: errorLabel(error),
-    });
-    return null;
-  }
-  await deps.db
-    .update(media)
-    .set({ storageKey: key, mime, bytes: fetched.body.byteLength })
-    .where(eq(media.id, file.id));
   return { body: fetched.body, mime };
 }
 
@@ -321,12 +318,49 @@ export async function ingestAnswerMedia(deps: Deps, answerId: string): Promise<v
     mime: audio.mime,
     languageHint: ctx.member.language,
   });
-  await logAiCall(deps, ctx, transcription.record, {
-    language: transcription.language,
-    confidence: transcription.confidence,
-  });
   const text = transcription.text.trim();
-  if (!transcription.ok || text.length === 0) {
+  const committed = await deps.db.transaction(async (tx) => {
+    const [family] = await tx
+      .select()
+      .from(families)
+      .where(eq(families.id, ctx.family.id))
+      .for("share");
+    const [member] = await tx
+      .select()
+      .from(members)
+      .where(eq(members.id, ctx.member.id))
+      .for("update");
+    const [answer] = await tx.select().from(answers).where(eq(answers.id, answerId)).for("update");
+    if (
+      member === undefined ||
+      family === undefined ||
+      answer === undefined ||
+      family.deletedAt !== null ||
+      member.status !== "active" ||
+      member.leftAt !== null ||
+      !(await pilotFamilyAllowed(tx, deps.config.pilotAdmission, ctx.family.id)) ||
+      !(await pilotMemberAllowed(tx, deps.config.pilotAdmission, ctx.family.id, ctx.member.id))
+    )
+      return false;
+    if (hasTranscript(answer)) return true;
+    await logAiCall(
+      deps,
+      ctx,
+      transcription.record,
+      {
+        language: transcription.language,
+        confidence: transcription.confidence,
+      },
+      tx,
+    );
+    if (!transcription.ok || text.length === 0) return false;
+    await tx
+      .update(answers)
+      .set({ transcript: text, transcriptLang: transcription.language ?? member.language })
+      .where(eq(answers.id, answerId));
+    return true;
+  });
+  if (!committed) {
     deps.logger.warn("transcription_failed", {
       answerId,
       attempts,
@@ -335,10 +369,6 @@ export async function ingestAnswerMedia(deps: Deps, answerId: string): Promise<v
     await endAttemptUnresolved(deps, ctx, attempts);
     return;
   }
-  await deps.db
-    .update(answers)
-    .set({ transcript: text, transcriptLang: transcription.language ?? ctx.member.language })
-    .where(eq(answers.id, answerId));
   await deps.queues.understand.send({ type: "understand_answer", answerId });
 }
 
@@ -657,6 +687,15 @@ async function raiseFlag(
       text: healthWords
         ? fitMessageText(t(lang, "flag.notice", { name: member.displayName, quote }))
         : t(lang, "flag.notice_no_words", { name: member.displayName }),
+      ...(healthWords
+        ? {
+            healthWordsFor: {
+              memberId: member.id,
+              answerId: answer.id,
+              receivedAt: answer.receivedAt.toISOString(),
+            },
+          }
+        : {}),
     });
     written.push(result);
   }
@@ -968,9 +1007,14 @@ async function postWordsToGroup(
 }
 
 /** Logs the call behind a model step; with AI off there was none, so nothing is logged. */
-async function logOutcome<T>(deps: Deps, ctx: AnswerContext, outcome: AiOutcome<T>): Promise<void> {
+async function logOutcome<T>(
+  deps: Deps,
+  ctx: AnswerContext,
+  outcome: AiOutcome<T>,
+  db: Queryable = deps.db,
+): Promise<void> {
   if (!isAiOff(outcome)) {
-    await logAiCall(deps, ctx, outcome.record, outcome.value);
+    await logAiCall(deps, ctx, outcome.record, outcome.value, db);
   }
 }
 
@@ -1039,10 +1083,6 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
     recentSummaries: summaries,
     healthWordsConsent: healthWords,
   });
-  const understanding = healthWords
-    ? modelUnderstanding
-    : { ...modelUnderstanding, value: withoutHealthWords(modelUnderstanding.value) };
-  await logOutcome(deps, ctx, understanding);
   const modelFlag = await deps.ai.flag({
     lang: member.language,
     addressForm,
@@ -1050,14 +1090,66 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
     answer: content,
     recentSummaries: summaries,
   });
-  const flag = healthWords ? modelFlag : { ...modelFlag, value: flagWithoutWords(modelFlag.value) };
-  await logOutcome(deps, ctx, flag);
-
-  const understood = settled(understanding) && settled(flag);
-  const summaryChanged = understanding.ok && understanding.value.summary !== answer.summary;
-  // When both calls failed, or AI is off, the models returned nothing to store.
-  if (understanding.ok || flag.ok) {
-    const notices = await deps.db.transaction(async (tx) => {
+  // Provider calls run outside the lock. Their output is not retained until the same member lock
+  // used by Stop/withdrawal has revalidated the current permission and family lifecycle.
+  const committed = await deps.db.transaction(async (tx) => {
+    const [currentFamily] = await tx
+      .select()
+      .from(families)
+      .where(eq(families.id, family.id))
+      .for("share");
+    const [currentMember] = await tx
+      .select()
+      .from(members)
+      .where(eq(members.id, member.id))
+      .for("update");
+    const [currentAnswer] = await tx
+      .select()
+      .from(answers)
+      .where(eq(answers.id, answerId))
+      .for("update");
+    if (
+      currentMember === undefined ||
+      currentFamily === undefined ||
+      currentAnswer === undefined ||
+      currentFamily.deletedAt !== null ||
+      currentMember.leftAt !== null ||
+      currentMember.status !== "active" ||
+      !(await pilotFamilyAllowed(tx, deps.config.pilotAdmission, family.id)) ||
+      !(await pilotMemberAllowed(tx, deps.config.pilotAdmission, family.id, member.id)) ||
+      currentAnswer.understoodAt !== null
+    ) {
+      if (currentAnswer !== undefined && currentMember?.status === "paused") {
+        await tx.update(answers).set({ understoodAt: now }).where(eq(answers.id, answerId));
+      }
+      return null;
+    }
+    const mayKeepHealth =
+      healthWords && (await hasHealthWordsConsent(tx, member.id, answer.receivedAt));
+    const safeUnderstanding = withoutHealthWords(modelUnderstanding.value);
+    // A summary generated with permission may itself contain health words. A late withdrawal
+    // discards all derived text, rather than asking a heuristic to decide which words are safe.
+    const understanding = mayKeepHealth
+      ? modelUnderstanding
+      : {
+          ...modelUnderstanding,
+          value: healthWords
+            ? {
+                ...safeUnderstanding,
+                summary: "",
+                mentions: { people: [], places: [], plans: [], health: [], dates: [] },
+                away: null,
+                dated: [],
+              }
+            : safeUnderstanding,
+        };
+    const flag = mayKeepHealth
+      ? modelFlag
+      : { ...modelFlag, value: flagWithoutWords(modelFlag.value) };
+    await logOutcome(deps, ctx, understanding, tx);
+    await logOutcome(deps, ctx, flag, tx);
+    let notices: InsertResult[] = [];
+    if (understanding.ok || flag.ok) {
       await tx
         .update(answers)
         .set({
@@ -1072,7 +1164,7 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
           ...(flag.ok
             ? {
                 flag: flag.value.flag,
-                flagReason: flag.value.flag ? flagReasonOf(flag.value, healthWords) : null,
+                flagReason: flag.value.flag ? flagReasonOf(flag.value, mayKeepHealth) : null,
               }
             : {}),
         })
@@ -1080,16 +1172,21 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
       if (understanding.ok && deps.config.memory) {
         await keepDatedPlans(tx, ctx, understanding.value.dated);
       }
-      if (summaryChanged) {
+      if (understanding.ok && understanding.value.summary !== answer.summary) {
         await dropSummaryForHer(tx, ctx);
       }
       // First, with the flag itself: a flag that reached no one is the expensive failure.
-      return flag.ok && flag.value.flag
-        ? raiseFlag(deps, tx, ctx, flag.value, words, healthWords, now)
-        : [];
-    });
-    await handOver(deps, answerId, notices);
-  }
+      notices =
+        flag.ok && flag.value.flag
+          ? await raiseFlag(deps, tx, ctx, flag.value, words, mayKeepHealth, now)
+          : [];
+    }
+    return { understanding, flag, notices };
+  });
+  if (committed === null) return;
+  const { understanding, flag, notices } = committed;
+  const understood = settled(understanding) && settled(flag);
+  await handOver(deps, answerId, notices);
 
   if (understanding.ok && understanding.value.away !== null) {
     await setAwayFromAnswer(deps, ctx, understanding.value.away, now);

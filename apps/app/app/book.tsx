@@ -1,16 +1,15 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { ApiBookEntry, ApiBookRecipe } from "@vela/contracts";
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { Stack } from "expo-router";
-import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiBaseUrl, apiConfigured } from "../src/api/client.ts";
-import { useAccount } from "../src/auth/clerk.tsx";
+import { apiConfigured } from "../src/api/client.ts";
+import { VoicePlayback } from "../src/audio/VoicePlayback.tsx";
 import { ReplyPhoto } from "../src/components/family-photo.tsx";
-import { Card, Eyebrow, SecondaryButton, Words } from "../src/components/ui.tsx";
+import { Card, Eyebrow, Words } from "../src/components/ui.tsx";
 import { dayMonth } from "../src/data/format.ts";
 import { useBook } from "../src/data/useBook.ts";
+import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { hitSlop, space } from "../src/theme/tokens.ts";
@@ -25,6 +24,7 @@ export default function BookScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const { familyId, organiser } = useToday();
+  const { capabilities } = useCapabilities();
   const book = useBook(familyId);
 
   return (
@@ -39,6 +39,11 @@ export default function BookScreen() {
           gap: space.xl,
         }}
       >
+        {book.removeFailed ? (
+          <Words variant="body" tone="ink2">
+            <Trans>That story could not be removed. Try again.</Trans>
+          </Words>
+        ) : null}
         {!apiConfigured() ? (
           <Words variant="body" tone="ink2">
             <Trans>The family book fills with the stories she tells on story day.</Trans>
@@ -53,9 +58,14 @@ export default function BookScreen() {
           </Words>
         ) : book.entries.length === 0 && book.recipes.length === 0 ? (
           <Words variant="body" tone="ink2">
-            <Trans>
-              No stories yet. Choose a question on the Sunday tab, and what she tells is kept here.
-            </Trans>
+            {capabilities?.book === true ? (
+              <Trans>
+                No stories yet. Choose a question on the Sunday tab, and what she tells is kept
+                here.
+              </Trans>
+            ) : (
+              <Trans>No stories have been kept here yet.</Trans>
+            )}
           </Words>
         ) : (
           [
@@ -129,46 +139,8 @@ function Story({
 
 /** Her voice, played from the family's media route with the reader's own sign-in. */
 function BookVoice({ mediaId }: { mediaId: string }) {
-  const { t } = useLingui();
-  const account = useAccount();
   const { familyId } = useToday();
-  const [token, setToken] = useState<string | null>(null);
-  useEffect(() => {
-    let current = true;
-    void account.token().then((next) => {
-      if (current) setToken(next);
-    });
-    return () => {
-      current = false;
-    };
-  }, [account]);
-  const source =
-    token === null || familyId === undefined
-      ? null
-      : {
-          uri: `${apiBaseUrl ?? ""}/v1/families/${familyId}/media/${mediaId}`,
-          headers: { authorization: `Bearer ${token}` },
-        };
-  const player = useAudioPlayer(source);
-  const status = useAudioPlayerStatus(player);
-  return (
-    <SecondaryButton
-      label={status.playing ? t`Stop` : t`▶ Her voice`}
-      onPress={() => {
-        if (status.playing) {
-          player.pause();
-          return;
-        }
-        void setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).then(
-          async () => {
-            if (status.didJustFinish || status.currentTime >= status.duration)
-              await player.seekTo(0);
-            player.play();
-          },
-        );
-      }}
-    />
-  );
+  return familyId === undefined ? null : <VoicePlayback familyId={familyId} mediaId={mediaId} />;
 }
 
 /** A recipe card she kept (spec §10, ADR-41): her ingredients, steps and tips, as she told them. */

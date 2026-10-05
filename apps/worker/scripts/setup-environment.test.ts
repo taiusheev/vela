@@ -48,6 +48,10 @@ const SECRETS = {
 
 /** A direct string as Neon's Connect shows it for a new project: database neondb, role neondb_owner. */
 const DATABASE_URL = `postgresql://neondb_owner:${SECRETS.databasePassword}@ep-quiet-sky-a1b2c3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`;
+const ENVIRONMENT_DATABASE_URLS: Readonly<Record<Environment, string>> = {
+  staging: `postgresql://neondb_owner:${SECRETS.databasePassword}@ep-frosty-night-b31xz5dh.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`,
+  production: `postgresql://neondb_owner:${SECRETS.databasePassword}@ep-late-mode-b3bfn7bh.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`,
+};
 const ACCOUNT_ID = "0123456789abcdef0123456789abcdef";
 const HYPERDRIVE_ID = "fedcba9876543210fedcba9876543210";
 const TEAM_DOMAIN = "vela-founder.cloudflareaccess.com";
@@ -211,7 +215,13 @@ function wranglerTexts(overrides: SwitchOverrides = {}): {
 interface HyperdriveConfig {
   readonly id: string;
   readonly name: string;
-  readonly origin: { readonly host: string; readonly database: string; readonly user: string };
+  readonly origin: {
+    readonly host: string;
+    readonly port: number;
+    readonly scheme: string;
+    readonly database: string;
+    readonly user: string;
+  };
   caching: { disabled: boolean };
 }
 
@@ -373,6 +383,13 @@ function cloudflare(
     world.queues.add(String(body.queue_name));
     return cloudflareOk({ queue_name: body.queue_name });
   }
+  const metricsQueue = path.match(/^\/accounts\/\w+\/queues\/(.+)\/metrics$/)?.[1];
+  if (method === "GET" && metricsQueue !== undefined) {
+    const queueId = decodeURIComponent(metricsQueue);
+    return world.queues.has(queueId.slice(3)) && queueId.startsWith("id-")
+      ? cloudflareOk({ backlog_count: 0 })
+      : cloudflareError(404, 10000, "Queue not found");
+  }
   const bucket = path.match(/^\/accounts\/\w+\/r2\/buckets\/(.+)$/)?.[1];
   if (method === "GET" && bucket !== undefined) {
     return world.buckets.has(decodeURIComponent(bucket))
@@ -404,6 +421,8 @@ function cloudflare(
       name: String(body.name),
       origin: {
         host: String(origin.host),
+        port: Number(origin.port),
+        scheme: String(origin.scheme),
         database: String(origin.database),
         user: String(origin.user),
       },
@@ -532,6 +551,7 @@ function site(world: World, url: URL): Response {
  * one, would be on screen, which no printed line, argument or file would reveal.
  */
 function promptsOf(world: World): readonly (readonly [string, string, "shown" | "hidden"])[] {
+  const contentKeyV1 = world.workers.get("vela")?.get("CONTENT_KEY_V1");
   return [
     ["send /start", "", "shown"],
     ['Is "Timur" you?', "yes", "shown"],
@@ -540,7 +560,9 @@ function promptsOf(world: World): readonly (readonly [string, string, "shown" | 
     ["Account ID", ACCOUNT_ID, "hidden"],
     ["Team domain", `https://${TEAM_DOMAIN}/`, "hidden"],
     ["Cloudflare API token", SECRETS.cloudflareToken, "hidden"],
-    ["Neon connection string", DATABASE_URL, "hidden"],
+    ["Neon connection string", ENVIRONMENT_DATABASE_URLS[world.environment], "hidden"],
+    ["Key saved?", "SAVED", "hidden"],
+    ...(contentKeyV1 === undefined ? [] : [["CONTENT_KEY_V1", contentKeyV1, "hidden"] as const]),
     ["Telegram bot token", SECRETS.botToken, "hidden"],
     ["Anthropic API key", SECRETS.anthropic, "hidden"],
     ["Clerk secret key", SECRETS.clerk, "hidden"],
@@ -605,6 +627,14 @@ function fakeIo(world: World): SetupIo {
         world.migrations += 1;
         return 0;
       }
+      if (command.tool === "seal") {
+        expect(command.args).toEqual([]);
+        expect(command.env.DATABASE_URL).toBe(ENVIRONMENT_DATABASE_URLS[world.environment]);
+        expect(command.env.CONTENT_KEY_V1).toMatch(/^[A-Za-z0-9_-]{43}$/);
+        expect(command.stdin).toBe("");
+        onLine("answers.transcript: 0");
+        return 0;
+      }
       if (
         command.env.CLOUDFLARE_API_TOKEN !== SECRETS.cloudflareToken ||
         command.env.CLOUDFLARE_ACCOUNT_ID !== ACCOUNT_ID ||
@@ -648,15 +678,20 @@ function leaks(world: World): string[] {
   const secrets = [
     ...Object.values(SECRETS),
     DATABASE_URL,
+    ...Object.values(ENVIRONMENT_DATABASE_URLS),
     // The team domain is an identifier the resource register records (infra/README.md, section
     // 12), put as a secret only because the admin Worker reads it with ACCESS_AUD.
     ...[...world.workers.values()].flatMap((secrets) =>
-      [...secrets].filter(([name]) => name !== "ACCESS_TEAM_DOMAIN").map(([, value]) => value),
+      [...secrets]
+        .filter(([name]) => name !== "ACCESS_TEAM_DOMAIN" && name !== "CONTENT_KEY_V1_INITIALIZED")
+        .map(([, value]) => value),
     ),
     ...(world.webhook === null ? [] : [world.webhook.secret]),
   ];
   const surfaces: [string, string][] = [
-    ...world.printed.map((line): [string, string] => ["printed line", line]),
+    ...world.printed
+      .filter((line) => line !== `  ${world.workers.get("vela")?.get("CONTENT_KEY_V1")}`)
+      .map((line): [string, string] => ["printed line", line]),
     ...world.prompts.map((question): [string, string] => ["prompt", question]),
     ...world.commands.map((command): [string, string] => ["argument", command.args.join(" ")]),
     ...world.writes
@@ -712,6 +747,8 @@ describe("a whole setup", () => {
       config.adminBotUsername,
     ]).toEqual([HYPERDRIVE_ID, HYPERDRIVE_ID, "VelaStagingTestBot", "VelaStagingTestBot"]);
     expect(Object.fromEntries(world.workers.get("vela") ?? [])).toEqual({
+      CONTENT_KEY_V1: world.workers.get("vela")?.get("CONTENT_KEY_V1"),
+      CONTENT_KEY_V1_INITIALIZED: "v1",
       TELEGRAM_BOT_TOKEN: SECRETS.botToken,
       TELEGRAM_WEBHOOK_SECRET: world.webhook?.secret,
       ADMIN_CONVERSATION_ID: SECRETS.chatId,
@@ -720,6 +757,8 @@ describe("a whole setup", () => {
       DEEPGRAM_API_KEY: SECRETS.deepgram,
     });
     expect(Object.fromEntries(world.workers.get("vela-admin") ?? [])).toEqual({
+      CONTENT_KEY_V1: world.workers.get("vela")?.get("CONTENT_KEY_V1"),
+      CONTENT_KEY_V1_INITIALIZED: "v1",
       ANTHROPIC_API_KEY: SECRETS.anthropic,
       ACCESS_TEAM_DOMAIN: TEAM_DOMAIN,
       ACCESS_AUD: SECRETS.accessAud,
@@ -760,6 +799,8 @@ describe("a whole setup", () => {
     expect([...(world.workers.get("vela")?.keys() ?? [])].sort()).toEqual([
       "ADMIN_CONVERSATION_ID",
       "CLERK_SECRET_KEY",
+      "CONTENT_KEY_V1",
+      "CONTENT_KEY_V1_INITIALIZED",
       "DEEPGRAM_API_KEY",
       "TELEGRAM_BOT_TOKEN",
       "TELEGRAM_WEBHOOK_SECRET",
@@ -767,6 +808,8 @@ describe("a whole setup", () => {
     expect([...(world.workers.get("vela-admin")?.keys() ?? [])].sort()).toEqual([
       "ACCESS_AUD",
       "ACCESS_TEAM_DOMAIN",
+      "CONTENT_KEY_V1",
+      "CONTENT_KEY_V1_INITIALIZED",
     ]);
     // The key goes on before the switch reaches main, or CI deploys staging without it.
     expect(world.printed.filter((line) => line.includes("AI is off"))).toEqual([
@@ -1231,13 +1274,14 @@ describe("a whole setup", () => {
     expect(world.writes).toEqual([]);
     expect(world.prompts.map((question) => question.trim())).toEqual([
       "Neon connection string (hidden):",
+      "CONTENT_KEY_V1 (hidden):",
       "Telegram bot token (hidden):",
     ]);
     expect(
       world.commands
         .filter((command) => command.args[0] === "secret")
         .map((command) => command.args[2]),
-    ).toEqual(["TELEGRAM_WEBHOOK_SECRET"]);
+    ).toEqual(["TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET"]);
     // The webhook secret the Worker checks is the one Telegram now sends.
     expect(world.workers.get("vela")?.get("TELEGRAM_WEBHOOK_SECRET")).toBe(world.webhook?.secret);
     // No bucket: media storage is off above, so none was created the first time either.
@@ -1273,19 +1317,23 @@ describe("a whole setup", () => {
       world.printed.filter((line) => /^\w+: /.test(line)).map((line) => line.split(":")[0]),
     ).toEqual(["deploy", "access", "webhook", "check"]);
     expect(world.migrations).toBe(0);
-    expect(world.requests.map((request) => request.url).join("\n")).not.toMatch(
-      /queues|hyperdrive|r2/,
-    );
+    expect(
+      world.requests
+        .filter((request) => request.method !== "GET")
+        .map((request) => request.url)
+        .join("\n"),
+    ).not.toMatch(/queues|hyperdrive|r2/);
     expect(world.commands.map((command) => command.args.slice(0, 2).join(" "))).toEqual([
       "deploy --env",
       "deploy -c",
+      "secret put",
       "secret put",
     ]);
   });
 
   it("hides a secret that a failing service quotes in its refusal, and says where to resume", async () => {
     const world = newWorld("staging");
-    world.hyperdriveError = `password authentication failed for ${DATABASE_URL}`;
+    world.hyperdriveError = `password authentication failed for ${ENVIRONMENT_DATABASE_URLS[world.environment]}`;
 
     const code = await setUp(world);
 
@@ -1858,6 +1906,7 @@ describe("the values the setup keeps", () => {
     );
 
     expect(plan.map((entry) => [entry.name, entry.source, entry.workers])).toEqual([
+      ["CONTENT_KEY_V1", "generated", ["pilot", "admin"]],
       ["TELEGRAM_BOT_TOKEN", "run", ["pilot"]],
       ["TELEGRAM_WEBHOOK_SECRET", "missing", ["pilot"]],
       ["ADMIN_CONVERSATION_ID", "missing", ["pilot"]],

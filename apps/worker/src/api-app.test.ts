@@ -120,11 +120,14 @@ const TODAY: ApiToday = {
         picked_media_id: null,
         picked_number: null,
         translation: null,
+        audio: null,
+        photo: null,
       },
-      replies: [{ from: "Synthetic user", kind: "heart", text: null, photo: null }],
+      replies: [{ from: "Synthetic user", kind: "heart", text: null, photo: null, audio: null }],
       seen_at: null,
       replies_reach_her: true,
       photos: [],
+      voice_hello: null,
     },
   ],
   tomorrow: [],
@@ -283,7 +286,11 @@ function database(): VelaDatabase {
   return {} as VelaDatabase;
 }
 
-function fixture(enableWrites = false, push?: boolean) {
+function fixture(
+  enableWrites = false,
+  push?: boolean,
+  options: Pick<ApiRuntime, "admission" | "capabilities"> = {},
+) {
   const db = database();
   const close = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   const verifySession = vi.fn<ApiRuntime["verifySession"]>().mockResolvedValue(IDENTITY);
@@ -319,6 +326,27 @@ function fixture(enableWrites = false, push?: boolean) {
   };
   const logger = { error: vi.fn<ApiRuntime["logger"]["error"]>() };
   const writes = {
+    links: {
+      start: vi
+        .fn<NonNullable<NonNullable<ApiRuntime["writes"]>["links"]>["start"]>()
+        .mockResolvedValue({
+          response: {
+            status: 201,
+            body: { challenge_id: USER_ID, expires_at: "2026-09-22T00:15:00.000Z" },
+          },
+          replayed: false,
+        }),
+      complete: vi
+        .fn<NonNullable<NonNullable<ApiRuntime["writes"]>["links"]>["complete"]>()
+        .mockResolvedValue({
+          response: {
+            status: 200,
+            body: { linked: true, member_id: MEMBER_ID, family_id: FAMILY_ID },
+          },
+          replayed: false,
+        }),
+      telegramBotUsername: "VelaTestBot",
+    },
     verifyActiveSession: vi
       .fn<NonNullable<ApiRuntime["writes"]>["verifyActiveSession"]>()
       .mockResolvedValue(true),
@@ -361,6 +389,9 @@ function fixture(enableWrites = false, push?: boolean) {
       startApiTrial: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["startApiTrial"]>()
         .mockResolvedValue({ response: { status: 200, body: TRIAL }, replayed: false }),
+      openApiWeeklyRead: vi
+        .fn<NonNullable<ApiRuntime["writes"]>["services"]["openApiWeeklyRead"]>()
+        .mockRejectedValue(new Error("no weekly read opening in these tests")),
       addApiNearby: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["addApiNearby"]>()
         .mockResolvedValue({ response: { status: 201, body: NEARBY_CONTACT }, replayed: false }),
@@ -457,6 +488,7 @@ function fixture(enableWrites = false, push?: boolean) {
     openDatabase,
     services,
     logger,
+    ...options,
     ...(enableWrites ? { writes } : {}),
     ...(push === undefined ? {} : { push }),
   };
@@ -471,6 +503,174 @@ function fixture(enableWrites = false, push?: boolean) {
     writes,
   };
 }
+
+describe("pilot capabilities and secure Telegram linking", () => {
+  const admission = {
+    config: { telegramUserIds: ["1001", "2001"] },
+    permitsAccount: vi.fn<NonNullable<ApiRuntime["admission"]>["permitsAccount"]>(),
+  };
+  const capabilities = {
+    pilot: true,
+    telegram_first: true,
+    english_only: true,
+    memory: false,
+    book: false,
+    parent_app: false,
+    billing: false,
+  };
+
+  it("returns public capabilities without opening a database or checking an identity", async () => {
+    const f = fixture(true, false, { capabilities });
+    await expectResponse(await f.app.request("/v1/capabilities"), 200, capabilities);
+    expect(f.verifySession).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
+    expect((await f.app.request("/v1/capabilities", { method: "HEAD" })).status).toBe(404);
+  });
+
+  it("starts a session-bound proof with a configured HTTPS Telegram link", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(
+      writeRequest("POST", "/v1/me/link", "{}", { authorization: "Bearer good" }),
+    );
+    await expectResponse(response, 201, {
+      challenge_id: USER_ID,
+      expires_at: "2026-09-22T00:15:00.000Z",
+      telegram_url: `https://t.me/VelaTestBot?start=link_${USER_ID}`,
+    });
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    expect(f.writes.links.start).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock },
+      IDENTITY,
+      "request-1",
+    );
+  });
+
+  it("completes through the proof service with the approved roster and honours replay", async () => {
+    admission.permitsAccount.mockResolvedValue(true);
+    const f = fixture(true, false, { admission });
+    f.writes.links.complete.mockResolvedValue({
+      response: { status: 200, body: { linked: false } },
+      replayed: true,
+    });
+    const input = { challenge_id: USER_ID, code: "Q".repeat(22) };
+    const response = await f.app.request(
+      writeRequest("POST", "/v1/me/link/complete", JSON.stringify(input), {
+        authorization: "Bearer good",
+      }),
+    );
+    await expectResponse(response, 200, { linked: false });
+    expect(response.headers.get("idempotency-replayed")).toBe("true");
+    expect(f.writes.links.complete).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock, pilotAdmission: admission.config },
+      IDENTITY,
+      "request-1",
+      USER_ID,
+      input.code,
+    );
+  });
+
+  it("rejects malformed proof input and inactive sessions before opening a database", async () => {
+    const malformed = fixture(true);
+    expect(
+      (
+        await malformed.app.request(
+          writeRequest(
+            "POST",
+            "/v1/me/link/complete",
+            JSON.stringify({ challenge_id: USER_ID, code: "short" }),
+            { authorization: "Bearer good" },
+          ),
+        )
+      ).status,
+    ).toBe(400);
+    expect(malformed.openDatabase).not.toHaveBeenCalled();
+    const inactive = fixture(true);
+    inactive.writes.verifyActiveSession.mockResolvedValue(false);
+    expect(
+      (
+        await inactive.app.request(
+          writeRequest("POST", "/v1/me/link", "{}", { authorization: "Bearer good" }),
+        )
+      ).status,
+    ).toBe(401);
+    expect(inactive.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid bot path without issuing a challenge", async () => {
+    const f = fixture(true);
+    f.writes.links.telegramBotUsername = "evil/path";
+    await expectResponse(
+      await f.app.request(
+        writeRequest("POST", "/v1/me/link", "{}", { authorization: "Bearer good" }),
+      ),
+      503,
+      UNAVAILABLE,
+    );
+    expect(f.writes.links.start).not.toHaveBeenCalled();
+  });
+
+  it("denies unapproved family reads while preserving account removal", async () => {
+    admission.permitsAccount.mockResolvedValue(false);
+    const f = fixture(true, false, { admission });
+    await expectResponse(
+      await f.app.request("/v1/me", { headers: { authorization: "Bearer good" } }),
+      404,
+      NOT_FOUND,
+    );
+    expect(f.services.loadApiMe).not.toHaveBeenCalled();
+    expect(f.close).toHaveBeenCalledOnce();
+    const removed = await f.app.request(
+      writeRequest("POST", `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/left`, "{}", {
+        authorization: "Bearer good",
+      }),
+    );
+    expect(removed.status).toBe(200);
+    expect(f.writes.services.leaveApiFamily).toHaveBeenCalledOnce();
+  });
+
+  it("enforces English profiles and Telegram-first family setup", async () => {
+    admission.permitsAccount.mockResolvedValue(true);
+    const f = fixture(true, false, { admission });
+    const profile = await f.app.request(
+      writeRequest(
+        "POST",
+        "/v1/me/provision",
+        JSON.stringify({ display_name: "Mia", language: "zh-TW", tz: "Asia/Taipei" }),
+        { authorization: "Bearer good" },
+      ),
+    );
+    expect(profile.status).toBe(400);
+    expect(f.writes.services.provisionApiAccount).not.toHaveBeenCalled();
+    const family = await f.app.request(
+      writeRequest("POST", "/v1/families", JSON.stringify(NEW_FAMILY), {
+        authorization: "Bearer good",
+      }),
+    );
+    expect(family.status).toBe(403);
+    expect(f.writes.services.createApiFamily).not.toHaveBeenCalled();
+  });
+
+  it("disables billing trials and parent device enrolment on the server", async () => {
+    admission.permitsAccount.mockResolvedValue(true);
+    const f = fixture(true, false, { admission });
+    const headers = { authorization: "Bearer good" };
+    const trial = await f.app.request(
+      writeRequest(
+        "POST",
+        `/v1/families/${FAMILY_ID}/plan/trial`,
+        JSON.stringify({ member_id: MEMBER_ID }),
+        headers,
+      ),
+    );
+    expect(trial.status).toBe(404);
+    expect(f.writes.services.startApiTrial).not.toHaveBeenCalled();
+    const device = await f.app.request(
+      writeRequest("POST", `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/device`, "{}", headers),
+    );
+    expect(device.status).toBe(404);
+    expect(f.writes.services.setUpApiDevice).not.toHaveBeenCalled();
+  });
+});
 
 async function expectResponse(response: Response, status: number, body: unknown) {
   expect(response.status).toBe(status);
@@ -1476,7 +1676,6 @@ describe("isolated API account writes", () => {
     ["POST", "/v1/me"],
     ["DELETE", "/v1/me"],
     ["PUT", "/v1/me"],
-    ["POST", "/v1/me/link"],
     ["POST", "/v1/link"],
     ["PUT", "/v1/families"],
     ["PATCH", PLAN_PATH],

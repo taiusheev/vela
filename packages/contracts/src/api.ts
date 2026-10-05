@@ -66,6 +66,7 @@ export type ApiMutationResponse = z.infer<typeof ApiMutationResponse>;
 export const ApiLinkChallenge = z.object({
   challenge_id: z.uuid(),
   expires_at: z.iso.datetime({ offset: true }),
+  telegram_url: z.url().optional(),
 });
 export type ApiLinkChallenge = z.infer<typeof ApiLinkChallenge>;
 
@@ -74,6 +75,23 @@ export const ApiLinkCode = z
   .length(22)
   .regex(/^[A-Za-z0-9_-]+$/);
 export type ApiLinkCode = z.infer<typeof ApiLinkCode>;
+
+export const ApiLinkStartInput = z.strictObject({});
+export type ApiLinkStartInput = z.infer<typeof ApiLinkStartInput>;
+export const ApiLinkCompleteInput = z.strictObject({ challenge_id: z.uuid(), code: ApiLinkCode });
+export type ApiLinkCompleteInput = z.infer<typeof ApiLinkCompleteInput>;
+
+/** Public capabilities contain only product switches, never account or provider details. */
+export const ApiCapabilities = z.strictObject({
+  pilot: z.boolean(),
+  telegram_first: z.boolean(),
+  english_only: z.boolean(),
+  memory: z.boolean(),
+  book: z.boolean().default(false),
+  parent_app: z.boolean(),
+  billing: z.boolean(),
+});
+export type ApiCapabilities = z.infer<typeof ApiCapabilities>;
 
 export const ApiLinkOutcome = z.union([
   z.strictObject({ linked: z.literal(false) }),
@@ -172,6 +190,9 @@ export type ApiFamilyPlan = z.infer<typeof ApiFamilyPlan>;
 export const MemberLight = z.object({
   member_id: z.uuid(),
   display_name: z.string(),
+  /** The recipient's clock; optional only for older cached responses. */
+  tz: TimeZone.optional(),
+  local_date: LocalDate.optional(),
   state: LightState,
   answered_at: z.iso.datetime({ offset: true }).nullable(),
   usual_time: LocalTime.nullable(),
@@ -239,6 +260,16 @@ export const ApiWeeklyRead = z.object({
 });
 export type ApiWeeklyRead = z.infer<typeof ApiWeeklyRead>;
 
+/** An organiser opened a sent, unlocked read on screen; its id is in the path. */
+export const OpenWeeklyRead = z.strictObject({});
+export type OpenWeeklyRead = z.infer<typeof OpenWeeklyRead>;
+
+export const ApiWeeklyReadOpened = z.strictObject({
+  weekly_read_id: z.uuid(),
+  opened: z.literal(true),
+});
+export type ApiWeeklyReadOpened = z.infer<typeof ApiWeeklyReadOpened>;
+
 const PrecisionCount = z.number().int().min(0);
 
 /**
@@ -281,6 +312,27 @@ export type SetLight = z.infer<typeof SetLight>;
 export const PauseMember = z.strictObject({ paused: z.boolean() });
 export type PauseMember = z.infer<typeof PauseMember>;
 
+/** The original shared recording; availability changes as its source copy is kept or expires. */
+export const ApiExchangeAudio = z.object({
+  id: z.uuid(),
+  mime: z.enum(["audio/mp4", "audio/ogg", "audio/mpeg"]),
+  duration_ms: z.number().int().positive().nullable(),
+  expires_at: z.iso.datetime({ offset: true }).nullable(),
+  state: z.enum(["pending", "ready", "unavailable"]),
+  role: z.literal("original"),
+});
+export type ApiExchangeAudio = z.infer<typeof ApiExchangeAudio>;
+
+export const ApiExchangePhoto = z.object({
+  id: z.uuid(),
+  width: z.number().int().positive().nullable(),
+  height: z.number().int().positive().nullable(),
+  stored: z.boolean(),
+  /** Kept photos have no expiry; omitted only by an older server or cached response. */
+  expires_at: z.iso.datetime({ offset: true }).nullable().optional(),
+});
+export type ApiExchangePhoto = z.infer<typeof ApiExchangePhoto>;
+
 export const ApiTodayAnswer = z.object({
   kind: AnswerKind,
   /** Her words: what she said, else what she wrote, else what she tapped. */
@@ -303,6 +355,8 @@ export const ApiTodayAnswer = z.object({
    * (flows §3.10); null otherwise. `text` stays her own words, which the app offers as the original.
    */
   translation: z.object({ lang: Lang, text: z.string() }).nullable(),
+  audio: ApiExchangeAudio.nullable().default(null),
+  photo: ApiExchangePhoto.nullable().default(null),
 });
 export type ApiTodayAnswer = z.infer<typeof ApiTodayAnswer>;
 
@@ -311,20 +365,13 @@ export type ApiTodayAnswer = z.infer<typeof ApiTodayAnswer>;
  * (`GET /v1/families/:familyId/media/:id`); one Telegram alone holds cannot be, and the app shows a
  * placeholder.
  */
-export const ApiExchangePhoto = z.object({
-  id: z.uuid(),
-  width: z.number().int().positive().nullable(),
-  height: z.number().int().positive().nullable(),
-  stored: z.boolean(),
-});
-export type ApiExchangePhoto = z.infer<typeof ApiExchangePhoto>;
-
 export const ApiTodayReply = z.object({
   from: z.string(),
   kind: ReplyKind,
   text: z.string().nullable(),
   /** A photo reply's photo, shown as itself; null for any other reply, or once it is deleted. */
   photo: ApiExchangePhoto.nullable(),
+  audio: ApiExchangeAudio.nullable().default(null),
 });
 export type ApiTodayReply = z.infer<typeof ApiTodayReply>;
 
@@ -337,6 +384,7 @@ export const ApiTodayExchange = z.object({
   on_behalf_of: z.string().nullable(),
   type: ExchangeType,
   ask: z.string().nullable(),
+  voice_hello: ApiExchangeAudio.nullable().default(null),
   answer: ApiTodayAnswer.nullable(),
   replies: z.array(ApiTodayReply),
   /** The receipt chip: she opened it. */

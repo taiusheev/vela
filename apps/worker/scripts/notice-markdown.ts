@@ -287,8 +287,8 @@ export function renderNotices(sources: Readonly<Record<NoticeLang, string>>): Pr
     );
   }
   return {
-    en: { ...renderNotice(sources.en), version: en },
-    "zh-TW": { ...renderNotice(sources["zh-TW"]), version: zhTw },
+    en: { ...renderNotice(sources.en), version: en, language: "en" },
+    "zh-TW": { ...renderNotice(sources["zh-TW"]), version: zhTw, language: "en" },
   };
 }
 
@@ -305,6 +305,7 @@ export function noticesModule(sources: Readonly<Record<NoticeLang, string>>): st
       `  ${key}: {`,
       `    title: ${JSON.stringify(notice.title)},`,
       `    html: ${JSON.stringify(notice.html)},`,
+      `    language: ${JSON.stringify(notice.language)},`,
       `    version: ${JSON.stringify(notice.version)},`,
       "  },",
     ].join("\n");

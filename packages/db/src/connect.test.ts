@@ -3,6 +3,7 @@ import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { connectDatabase } from "./connect.ts";
+import { TEST_CONTENT_KEY_V1 } from "./testing.ts";
 
 let postgres: PGlite;
 let server: PGLiteSocketServer;
@@ -33,7 +34,7 @@ function connectionString(): string {
 
 describe("connectDatabase", () => {
   it("runs queries and can be closed more than once", async () => {
-    const connection = await connectDatabase(connectionString());
+    const connection = await connectDatabase(connectionString(), TEST_CONTENT_KEY_V1);
 
     const result = await connection.db.execute<{ answer: number }>(sql`select 42 as answer`);
     expect(result.rows).toEqual([{ answer: 42 }]);
@@ -48,15 +49,12 @@ describe("connectDatabase", () => {
         resolve(args);
       });
     });
-    const connection = await connectDatabase(connectionString());
+    const connection = await connectDatabase(connectionString(), TEST_CONTENT_KEY_V1);
     await connection.db.execute(sql`select 1`);
 
     await server.stop();
 
-    expect(await logged).toEqual([
-      "database_connection_error",
-      { message: "Connection terminated unexpectedly" },
-    ]);
+    expect(await logged).toEqual(["database_connection_error"]);
     await expect(connection.db.execute(sql`select 1`)).rejects.toThrow();
     await expect(connection.close()).resolves.toBeUndefined();
   });

@@ -49,7 +49,11 @@ export default function PrecisionScreen() {
           gap: space.xl,
         }}
       >
-        {!view.organiser ? (
+        {view.loading ? (
+          <Words variant="body" tone="ink2">
+            <Trans>Loading the quiet notices…</Trans>
+          </Words>
+        ) : !view.organiser ? (
           <Words variant="body" tone="ink2">
             <Trans>This page is for the family's organisers, who are told of quiet mornings.</Trans>
           </Words>

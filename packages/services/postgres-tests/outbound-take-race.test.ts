@@ -36,7 +36,7 @@ import {
   type VelaDatabase,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { deliverArrival } from "../src/arrivals.ts";
 import type { Clock, Deps, OutboundJob } from "../src/deps.ts";
@@ -394,10 +394,15 @@ describe("one queued row, several deliveries", () => {
   }
 
   it("sends each photo once when the retry of a morning whose voice note went out meets a second delivery of it", async () => {
+    const payload = (await theArrival()).payload;
+    if (typeof payload.message !== "object" || payload.message === null) {
+      throw new Error("Expected the arrival's message");
+    }
     await seeder.db
       .update(outbound)
       .set({
-        payload: sql`jsonb_set(${outbound.payload}, '{message,media}', ${JSON.stringify(MORNING_MEDIA)}::jsonb)`,
+        // Use the mapped JSON column so provider identifiers receive the same sealing as writes.
+        payload: { ...payload, message: { ...payload.message, media: MORNING_MEDIA } },
       })
       .where(eq(outbound.id, scope.arrivalId));
     // The first try: the voice note goes out, then the next call fails for a reason that can pass.

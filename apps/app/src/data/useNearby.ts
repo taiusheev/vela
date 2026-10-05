@@ -12,9 +12,11 @@ import {
   removeNearby,
 } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
-import { useAccount } from "../auth/clerk.tsx";
+import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 
 /** The most people nearby one kept-light member has (spec §17). */
+import { demoDataAllowed } from "./live-state.ts";
+
 export const NEARBY_MAX = 2;
 
 export interface NearbyPerson {
@@ -111,7 +113,7 @@ export function useNearby(familyId: string | undefined, memberId: string | undef
   const removeKey = useIdempotencyKey("nearby-remove");
   const [example, setExample] = useState<NearbyPerson[] | null>(null);
   const [refused, setRefused] = useState<string | undefined>();
-  const demo = !apiConfigured();
+  const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
 
   const read = useQuery({
     queryKey: ["family", familyId],
@@ -152,9 +154,14 @@ export function useNearby(familyId: string | undefined, memberId: string | undef
   return {
     people,
     loading: !demo && read.isPending,
-    canAdd: people.length < NEARBY_MAX && !changing && (demo || memberId !== undefined),
+    canAdd:
+      people.length < NEARBY_MAX &&
+      !changing &&
+      (demo || (read.data !== undefined && memberId !== undefined)),
     changing,
-    ...(refused === undefined ? {} : { refused }),
+    ...(refused === undefined && !read.isError
+      ? {}
+      : { refused: refused ?? t`The people nearby could not be reached just now.` }),
     async add(name, relation) {
       const trimmed = { name: name.trim(), relation: relation.trim() };
       if (trimmed.name.length === 0) return false;

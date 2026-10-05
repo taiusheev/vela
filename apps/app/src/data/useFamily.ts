@@ -3,6 +3,7 @@ import { useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
+  apiConfigured,
   fetchFamily,
   fetchMe,
   leaveFamily,
@@ -10,14 +11,16 @@ import {
   pauseSelf,
 } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
-import { useAccount } from "../auth/clerk.tsx";
+import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { toYouFamily, type YouFamily, youFixture } from "./family.ts";
+import { demoDataAllowed } from "./live-state.ts";
 
 export interface FamilyView {
   family: YouFamily;
-  /** True only once the real family has arrived: until then `family` is the example one. */
+  /** True only once the real family has arrived: until then a live build carries an empty family. */
   live: boolean;
   trouble: boolean;
+  loading: boolean;
   /** Pause or resume oneself; the example family answers at once, with nothing sent. */
   setPaused(paused: boolean): void;
   /** Leave the family; `onLeft` runs once the membership is closed. */
@@ -66,8 +69,25 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
     enabled: enabled && familyId !== undefined,
     queryFn: async () => fetchFamily(familyId ?? "", await account.token()),
   });
-  const live = read.data !== undefined;
-  const family = live ? toYouFamily(read.data, me.data) : exampleFamily(examplePaused);
+  const live = enabled && read.data !== undefined;
+  const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
+  const family: YouFamily = live
+    ? toYouFamily(read.data, me.data)
+    : demo
+      ? exampleFamily(examplePaused)
+      : {
+          familyId: "",
+          familyName: "",
+          me: {
+            memberId: "",
+            name: t`You`,
+            line: "",
+            organiser: false,
+            lightOn: false,
+            paused: false,
+          },
+          keptLight: [],
+        };
 
   const pause = useMutation({
     mutationFn: async (paused: boolean) =>
@@ -99,8 +119,10 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
     family,
     live,
     trouble: read.isError,
+    loading: enabled && (read.isPending || me.isPending),
     setPaused: (paused) => {
-      if (!live) setExamplePaused(paused);
+      if (demo) setExamplePaused(paused);
+      else if (!live) return;
       else pause.mutate(paused);
     },
     leave: (onLeft) => {

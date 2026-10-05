@@ -304,7 +304,7 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Lit | null
 }
 
 /** `ack.thanks`, at most once per local day: the budget index refuses a second row. */
-async function sendAck(deps: Deps, input: AnswerInput): Promise<void> {
+async function sendAck(deps: Deps, input: AnswerInput, kept: boolean): Promise<void> {
   const { member, event, now } = input;
   const lang = member.language;
   await enqueueOutbound(deps, deps.db, {
@@ -317,7 +317,7 @@ async function sendAck(deps: Deps, input: AnswerInput): Promise<void> {
     lang,
     // Her thanks answers her own message, so it goes as a free reply where there is one (LINE).
     ...(replyOf(event) === undefined ? {} : { reply: replyOf(event) }),
-    ...(keepsInBook(deps, input.exchange)
+    ...(kept
       ? {
           // A story goes into the family book unless she says not to (spec §10, ADR-39).
           text: t(lang, "ack.story", { address: member.addressForm ?? member.displayName }),
@@ -447,13 +447,22 @@ async function sendAnswerReceipt(
 /** What follows the light, outside its transaction: none of it can hold the light back. */
 async function afterLight(deps: Deps, input: AnswerInput, lit: Lit): Promise<void> {
   const { answer } = lit;
-  await settle(deps, "ack", answer.id, () => sendAck(deps, input));
+  let kept = false;
   // A story is kept in the family book before anything else can touch its files (ADR-39).
   if (keepsInBook(deps, input.exchange)) {
-    await settle(deps, "book", answer.id, () => keepInBook(deps, input.exchange, answer));
+    await settle(deps, "book", answer.id, async () => {
+      kept = (await keepInBook(deps, input.exchange, answer)) !== null;
+    });
   }
+  await settle(deps, "ack", answer.id, () => sendAck(deps, input, kept));
   await settle(deps, "post", answer.id, () => postAnswer(deps, { ...input, answer }));
   await settle(deps, "answer_receipt", answer.id, () => sendAnswerReceipt(deps, input, lit.told));
+  const copiedMediaId = answer.mediaId;
+  if (input.content.kind !== "voice" && copiedMediaId !== null) {
+    await settle(deps, "media_copy", answer.id, () =>
+      deps.queues.media.send({ type: "ingest_exchange_media", mediaId: copiedMediaId }),
+    );
+  }
   await settle(deps, "queue", answer.id, () =>
     input.content.kind === "voice" && answer.mediaId !== null
       ? deps.queues.media.send({ type: "ingest_answer_media", answerId: answer.id })

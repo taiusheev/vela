@@ -6,6 +6,10 @@
 # `wrangler secret put <NAME> --env <staging|production>` (add `-c wrangler.admin.jsonc` for the
 # admin Worker).
 
+# Both local Workers and direct dev scripts: 32 random bytes encoded as unpadded base64url. Generate
+# a development-only value once and keep the same value in `.dev.vars` and `.env.local`.
+CONTENT_KEY_V1=
+
 # Pilot Worker (`vela`): Telegram bot token from BotFather, `<bot id>:<secret>`.
 TELEGRAM_BOT_TOKEN=
 # Pilot Worker: the `secret_token` registered with setWebhook: 1-256 characters of A-Z a-z 0-9 _ -
@@ -24,6 +28,13 @@ ADMIN_CONVERSATION_ID=
 # Optional on a laptop: without it /v1 serves reads only. Deployed, the founder puts it with
 # `wrangler secret put CLERK_SECRET_KEY --env staging`; never in a file that is committed.
 CLERK_SECRET_KEY=
+# Pilot Worker: endpoint-specific whsec_ signing secret from Clerk's /webhooks/clerk endpoint.
+# Subscribe user.deleted; keep this separate from CLERK_SECRET_KEY and the Telegram secret.
+CLERK_WEBHOOK_SIGNING_SECRET=
+# Trial admission: set PILOT_ADMISSION=on in the selected environment's vars only after preparing
+# the founder-approved private Telegram roster. Production's source config already requires it.
+# IDs stay private; install this secret on the pilot Worker before activating the trial.
+PILOT_TELEGRAM_ALLOWLIST=
 # Pilot Worker: the LINE channel's secret (Basic settings) and long-lived access token (Messaging
 # API) from the LINE Developers Console. Read only while the var LINE_CHANNEL is "on", and required
 # then; development's LINE_CHANNEL is "off" in both wrangler files, so leave them empty.

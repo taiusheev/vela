@@ -34,6 +34,7 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
 import { enqueueOutbound } from "./gateway.ts";
+import { pilotCanActivate } from "./pilot-admission.ts";
 import { summariesForHer } from "./pipeline.ts";
 import { activeOrganisersWithLinks, familyById, MESSENGER, markWakeDue } from "./repo.ts";
 import { type TickMember, tickMember } from "./tick.ts";
@@ -149,6 +150,10 @@ async function start(deps: Deps, member: Member, event: InboundEvent, now: Date)
   return deps.db.transaction(async (tx) => {
     const [locked] = await tx.select().from(members).where(eq(members.id, member.id)).for("update");
     if (locked === undefined || locked.status !== "paused") {
+      return false;
+    }
+    if (!(await pilotCanActivate(tx, deps.config.pilotAdmission, locked.familyId, locked.id))) {
+      await reply(deps, tx, locked, event, "pilot_wait", t("en", "pilot.activation_wait"));
       return false;
     }
     const today = localDateOf(now, locked.tz);

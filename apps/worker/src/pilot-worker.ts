@@ -172,9 +172,7 @@ async function runJob(services: PilotServices, deps: Deps, job: WorkerJob): Prom
       await services.handleInbound(deps, job.events);
       return;
     case "ingest_exchange_media":
-      // Reserved in the job union; no flow enqueues it and services expose no handler, so a retry
-      // could never succeed. It is recorded and acked rather than filling the dead-letter queue.
-      deps.logger.warn("queue_job_unhandled", { type: job.type });
+      await services.ingestExchangeMedia(deps, job.mediaId);
       return;
   }
 }

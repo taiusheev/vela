@@ -3,6 +3,7 @@ import type { ComposeAsk } from "@vela/contracts";
 import { ApiError } from "../api/client.ts";
 import { photoRefusal } from "../api/upload.ts";
 import type { AskType } from "./ask.ts";
+import type { ExchangePhoto } from "./today.ts";
 
 /**
  * Photos in an ask (ADR-33), apart from the phone's picker and the screens: how many each kind
@@ -106,43 +107,142 @@ export function askExtras(
   return {};
 }
 
-/** Photos shown this session, by media id; the oldest are let go past this many. */
+/** Bind cached bytes to the identity and family that authorised them, even before cleanup runs. */
+export function familyPhotoKey(
+  account: { userId: string | null; sessionId?: string | null },
+  familyId: string | undefined,
+  mediaId: string,
+): string {
+  return JSON.stringify([account.userId, account.sessionId ?? null, familyId ?? null, mediaId]);
+}
+
+function expiryTime(expiresAt: string | null | undefined): number | null {
+  if (expiresAt == null) return null;
+  const parsed = Date.parse(expiresAt);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function photoAvailable(photo: Pick<ExchangePhoto, "stored" | "expires_at">): boolean {
+  const expiry = expiryTime(photo.expires_at);
+  return photo.stored && (expiry === null || expiry > Date.now());
+}
+
+export interface PhotoSnapshot {
+  selection: string;
+  uri?: string;
+  failed: boolean;
+}
+
+/** A changed selection must hide the previous URI in the render before its effect runs. */
+export function selectedPhoto(
+  selection: string,
+  photo: Pick<ExchangePhoto, "stored" | "expires_at">,
+  snapshot: PhotoSnapshot,
+): string | undefined {
+  return snapshot.selection === selection && !snapshot.failed && photoAvailable(photo)
+    ? snapshot.uri
+    : undefined;
+}
+
+/** Photos shown this session, by scoped selection; the oldest are let go past this many. */
 const KEPT_PHOTOS = 24;
-const shown = new Map<string, string>();
+const MAX_TIMER_MS = 2_147_483_647;
+interface CachedPhoto {
+  uri: string;
+  expiresAt: number | null;
+  timer?: ReturnType<typeof setTimeout>;
+}
+const shown = new Map<string, CachedPhoto>();
 const loading = new Map<string, Promise<string>>();
+let generation = 0;
+
+/** Also invalidates an in-flight load, so expiry cannot put the bytes back into memory. */
+export function forgetPhoto(key: string): void {
+  const kept = shown.get(key);
+  if (kept?.timer !== undefined) clearTimeout(kept.timer);
+  shown.delete(key);
+  loading.delete(key);
+}
+
+/** A departed account's files and late requests never populate the next account's cache. */
+export function clearPhotoCache(): void {
+  generation += 1;
+  for (const key of shown.keys()) forgetPhoto(key);
+  loading.clear();
+}
 
 /** A photo already shown in this session, as the `data:` URI it was shown from. */
-export function shownPhoto(mediaId: string): string | undefined {
-  return shown.get(mediaId);
+export function shownPhoto(key: string): string | undefined {
+  const kept = shown.get(key);
+  if (kept !== undefined && kept.expiresAt !== null && kept.expiresAt <= Date.now()) {
+    forgetPhoto(key);
+    return undefined;
+  }
+  return kept?.uri;
+}
+
+function expirePhoto(key: string, kept: CachedPhoto): void {
+  if (kept.expiresAt === null || shown.get(key) !== kept) return;
+  const remaining = kept.expiresAt - Date.now();
+  if (remaining <= 0) {
+    forgetPhoto(key);
+    return;
+  }
+  // Ordinary retention can exceed setTimeout's 32-bit maximum; check again in a bounded chunk.
+  kept.timer = setTimeout(() => expirePhoto(key, kept), Math.min(remaining, MAX_TIMER_MS));
 }
 
 /**
  * A photo from memory when it has been shown this session, else loaded once however many screens
- * ask for it at the same moment. Only memory: nothing is written to the phone. A media id is the
- * same photo for everyone who may see it, and each load is authorised by the API, so the key needs
- * no account or family.
+ * ask for it at the same moment. Only memory: nothing is written to the phone. The cache is purged on every account/session boundary, including in-flight loads. Each fetch is
+ * authorised again by the family media route.
  */
-export function loadPhoto(mediaId: string, load: () => Promise<string>): Promise<string> {
-  const kept = shown.get(mediaId);
+export function loadPhoto(
+  key: string,
+  load: () => Promise<string>,
+  expiresAt?: string | null,
+): Promise<string> {
+  const started = generation;
+  const expiry = expiryTime(expiresAt);
+  if (expiry !== null && expiry <= Date.now()) {
+    forgetPhoto(key);
+    return Promise.reject(new Error("The photo expired"));
+  }
+  const kept = shownPhoto(key);
   if (kept !== undefined) {
     // Seen again: it moves to the back of the queue to be let go.
-    shown.delete(mediaId);
-    shown.set(mediaId, kept);
+    const cached = shown.get(key);
+    if (cached !== undefined) {
+      shown.delete(key);
+      shown.set(key, cached);
+      if (expiry !== null && (cached.expiresAt === null || expiry < cached.expiresAt)) {
+        if (cached.timer !== undefined) clearTimeout(cached.timer);
+        cached.expiresAt = expiry;
+        expirePhoto(key, cached);
+      }
+    }
     return Promise.resolve(kept);
   }
-  const pending = loading.get(mediaId);
+  const pending = loading.get(key);
   if (pending !== undefined) return pending;
   const next = load()
     .then((uri) => {
-      shown.set(mediaId, uri);
+      if (started !== generation) throw new Error("The photo's session ended");
+      if (loading.get(key) !== next) throw new Error("The photo was forgotten");
+      if (expiry !== null && expiry <= Date.now()) throw new Error("The photo expired");
+      const cached: CachedPhoto = { uri, expiresAt: expiry };
+      shown.set(key, cached);
+      expirePhoto(key, cached);
       for (const oldest of shown.keys()) {
         if (shown.size <= KEPT_PHOTOS) break;
-        shown.delete(oldest);
+        forgetPhoto(oldest);
       }
       return uri;
     })
-    .finally(() => loading.delete(mediaId));
-  loading.set(mediaId, next);
+    .finally(() => {
+      if (loading.get(key) === next) loading.delete(key);
+    });
+  loading.set(key, next);
   return next;
 }
 

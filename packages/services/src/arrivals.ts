@@ -37,20 +37,7 @@ import {
   turns,
   type VelaTransaction,
 } from "@vela/db";
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  ne,
-  notExists,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, notExists, or } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
@@ -259,16 +246,22 @@ async function settle(
 async function recentAnswerTexts(db: Queryable, memberId: string): Promise<string[]> {
   const rows = await db
     .select({
-      text: sql<string | null>`coalesce(
-        ${answers.transcript}, ${answers.payload} ->> 'text', ${answers.summary}
-      )`,
+      payload: answers.payload,
+      transcript: answers.transcript,
+      summary: answers.summary,
     })
     .from(answers)
     .where(eq(answers.memberId, memberId))
     .orderBy(desc(answers.receivedAt), desc(answers.id))
     .limit(PAST_ANSWERS);
   return rows.flatMap((row) => {
-    const text = row.text?.trim() ?? "";
+    const payloadText = row.payload.text;
+    const text =
+      (
+        row.transcript ??
+        (typeof payloadText === "string" ? payloadText : null) ??
+        row.summary
+      )?.trim() ?? "";
     return text.length === 0 ? [] : [text];
   });
 }

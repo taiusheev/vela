@@ -26,6 +26,7 @@ const exchange = {
   on_behalf_of: null,
   type: "question",
   ask: "What did the garden look like this morning?",
+  voice_hello: null,
   answer: {
     kind: "text",
     text: "The tomatoes finally turned.",
@@ -33,10 +34,12 @@ const exchange = {
     picked_media_id: null,
     picked_number: null,
     translation: null,
+    audio: null,
+    photo: null,
   },
   replies: [
-    { from: "Mia", kind: "heart", text: null, photo: null },
-    { from: "Anna", kind: "text", text: "Those are the seeds you saved", photo: null },
+    { from: "Mia", kind: "heart", text: null, photo: null, audio: null },
+    { from: "Anna", kind: "text", text: "Those are the seeds you saved", photo: null, audio: null },
   ],
   seen_at: "2026-09-23T08:10:00+08:00",
   replies_reach_her: true,
@@ -101,11 +104,21 @@ describe("ApiTodayExchange", () => {
 
   it("requires nullable fields to be present rather than silently defaulting them", () => {
     for (const field of Object.keys(exchange)) {
+      if (field === "voice_hello") continue;
       const incomplete = Object.fromEntries(
         Object.entries(exchange).filter(([key]) => key !== field),
       );
       expect(ApiTodayExchange.safeParse(incomplete).success, field).toBe(false);
     }
+  });
+
+  it("reads older cached exchanges by defaulting only their new media descriptors", () => {
+    const { voice_hello: _hello, ...old } = exchange;
+    const { audio: _audio, photo: _photo, ...oldAnswer } = old.answer;
+    const oldReplies = old.replies.map(({ audio: _replyAudio, ...reply }) => reply);
+    expect(
+      ApiTodayExchange.parse({ ...old, answer: oldAnswer, replies: oldReplies }),
+    ).toStrictEqual(exchange);
   });
 
   it("returns only the day's fields, never what else the row holds about her", () => {

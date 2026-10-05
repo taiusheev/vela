@@ -1,0 +1,7 @@
+{
+  "name": "vela-opus-decoder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-only bounded Ogg Opus decoder for iPhone playback",
+  "license": "BSD-3-Clause"
+}

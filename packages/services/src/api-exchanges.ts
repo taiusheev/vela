@@ -75,7 +75,7 @@ export async function loadApiExchanges(
   for (const row of page) {
     const recipient: Member = row.recipient;
     summaries.push({
-      ...(await exchangeRow(db, row.exchange, recipient)),
+      ...(await exchangeRow(db, row.exchange, recipient, now)),
       scheduled_for: row.exchange.scheduledFor,
       delivered_at: row.exchange.deliveredAt?.toISOString() ?? null,
     });
@@ -117,7 +117,7 @@ export async function loadApiExchange(
   const access = await authorizeFamilyAccess(db, identity, row.exchange.familyId);
   if (access.kind !== "granted") return null;
   return {
-    ...(await exchangeRow(db, row.exchange, row.recipient)),
+    ...(await exchangeRow(db, row.exchange, row.recipient, now)),
     scheduled_for: row.exchange.scheduledFor,
     delivered_at: row.exchange.deliveredAt?.toISOString() ?? null,
   };

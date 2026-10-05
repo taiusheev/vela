@@ -28,6 +28,7 @@ import {
   addApiNearby,
   askApiToLookIn,
   authorizeFamilyAccess,
+  completeAccountLink,
   composeApiAsk,
   createApiFamily,
   createApiReminder,
@@ -53,7 +54,9 @@ import {
   markApiDeceased,
   markApiQuietUseful,
   memberOfDeviceToken,
+  openApiWeeklyRead,
   pauseApiMember,
+  pilotApiAccountAllowed,
   provisionApiAccount,
   readApiMedia,
   readDeviceMedia,
@@ -66,6 +69,7 @@ import {
   resolveApiQuiet,
   setApiAway,
   setUpApiDevice,
+  startAccountLink,
   startApiTrial,
   updateApiAccount,
   uploadApiMedia,
@@ -78,7 +82,7 @@ import {
   type ApiWriteServices,
   createApiApp,
 } from "./api-app.ts";
-import { type ApiConfig, readApiConfig } from "./config.ts";
+import { type ApiConfig, readApiConfig, secret } from "./config.ts";
 import { createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { createRandom } from "./random.ts";
@@ -140,6 +144,7 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   endApiAway,
   startApiTrial,
   addApiNearby,
+  openApiWeeklyRead,
   removeApiNearby,
   setUpApiDevice,
   removeApiDevice,
@@ -317,6 +322,18 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const photos = apiMediaFor(env, config, logger);
   return {
     ...photos,
+    capabilities: {
+      pilot: config.pilotAdmission != null,
+      telegram_first: config.pilotAdmission != null,
+      english_only: config.pilotAdmission != null,
+      memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
+      book: env.BOOK?.trim() === "on",
+      parent_app: config.pilotAdmission == null,
+      billing: config.pilotAdmission == null,
+    },
+    ...(config.pilotAdmission == null
+      ? {}
+      : { admission: { config: config.pilotAdmission, permitsAccount: pilotApiAccountAllowed } }),
     push: config.pushSend === "expo",
     verifySession: createClerkSessionVerifier({
       issuer: config.issuer,
@@ -325,20 +342,44 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
       allowLocalHttpParties: false,
     }),
     now: () => new Date(),
-    openDatabase: async () => connectDatabase(env.HYPERDRIVE.connectionString),
-    services: API_READ_SERVICES,
+    openDatabase: async () =>
+      connectDatabase(env.HYPERDRIVE.connectionString, secret(env, "CONTENT_KEY_V1")),
+    services:
+      config.pilotAdmission == null
+        ? API_READ_SERVICES
+        : {
+            ...API_READ_SERVICES,
+            loadApiWeeklyRead: (db, identity, familyId, memberId, now) =>
+              loadApiWeeklyRead(db, identity, familyId, memberId, now, {
+                pilotFree: config.pilotAdmission != null,
+              }),
+          },
     logger,
     ...(secretKey === null
       ? {}
       : {
           writes: {
+            links: {
+              start: startAccountLink,
+              complete: completeAccountLink,
+              telegramBotUsername: config.telegramBotUsername,
+            },
             verifyActiveSession: limitWrites(
               env.ACCOUNT_WRITE_LIMITER,
               createClerkSessionActivityChecker({ secretKey }),
               logger,
             ),
             clock: { now: () => new Date() },
-            services: API_WRITE_SERVICES,
+            services:
+              config.pilotAdmission == null
+                ? API_WRITE_SERVICES
+                : {
+                    ...API_WRITE_SERVICES,
+                    openApiWeeklyRead: (deps, identity, key, weeklyReadId, input) =>
+                      openApiWeeklyRead(deps, identity, key, weeklyReadId, input, {
+                        pilotFree: true,
+                      }),
+                  },
             families: {
               random: createRandom(),
               config: {

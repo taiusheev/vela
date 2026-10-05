@@ -8,3 +8,4 @@ export type {
   VelaTransaction,
 } from "./database.ts";
 export * from "./schema.ts";
+export * from "./sealed.ts";

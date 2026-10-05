@@ -10,8 +10,9 @@
  * or in its environment. An identifier the founder pastes is read without echo too, and shown only
  * once it passes its check: pasted before it was copied, it would be the key the clipboard still
  * holds. A secret is never printed (every printed line is also redacted against every
- * secret the run has seen), never put in a command-line argument, and never written to disk, with
- * one exception: for staging, the "Vela staging" API token and account id go to apps/worker/.env,
+ * secret the run has seen), except the generated CONTENT_KEY_V1, which is shown once so the
+ * founder can store it in the password manager. Secrets are never put in a command-line argument,
+ * and never written to disk, with one exception: for staging, the "Vela staging" API token and account id go to apps/worker/.env,
  * which git ignores (checked with `git check-ignore` before writing), so wrangler on this laptop
  * reaches the staging account afterwards (infra/README.md, section 1). Production saves nothing.
  * The check covers the one name written here; apps/worker/.gitignore covers `.env.*` as well, so a
@@ -34,6 +35,7 @@ import {
   MEDIA_STORAGES,
   type MediaStorage,
 } from "../src/config.ts";
+import { assertQueueBacklogsEmpty } from "./queue-backlog.ts";
 import { SetupError, setUpTelegram, type TelegramSetupApi } from "./telegram-webhook.ts";
 
 export const ENVIRONMENTS = ["staging", "production"] as const;
@@ -45,6 +47,7 @@ export const STEPS = [
   "database",
   "telegram",
   "secrets",
+  "seal",
   "deploy",
   "access",
   "webhook",
@@ -61,7 +64,8 @@ const STEP_DESCRIPTIONS: Readonly<Record<Step, string>> = {
   telegram:
     "check the bot token, write the bot's username to both files, read your chat id, generate the webhook secret",
   secrets:
-    "put each secret on the Worker that reads it (the Anthropic key only while AI_PROVIDER is anthropic, Clerk's only while API_V1 is on)",
+    "generate and install the environment content key on both Workers, then put each other secret where it is read",
+  seal: "re-seal any legacy content rows in one transaction before deploying the codecs",
   deploy: "deploy the pilot Worker, then the admin Worker",
   access: "turn on Cloudflare Access for the admin Worker and put its two secrets",
   webhook: "register the Telegram webhook and command menu",
@@ -77,7 +81,7 @@ const DOT_ENV = ".env";
 
 /** A program the script starts: wrangler and the migrations run under this Node, git from PATH. */
 export interface Command {
-  readonly tool: "wrangler" | "migrate" | "git";
+  readonly tool: "wrangler" | "migrate" | "seal" | "git";
   readonly args: readonly string[];
   /** Added to the child's environment. Secrets travel here or on stdin, never in `args`. */
   readonly env: Readonly<Record<string, string>>;
@@ -110,6 +114,8 @@ interface EnvironmentFacts {
   readonly accountName: string;
   /** Each environment has a Neon project of its own, so staging never copies production data. */
   readonly neonProject: string;
+  /** Direct endpoint independently matched to this project/default branch in the Neon console. */
+  readonly neonHost: string;
   readonly hyperdriveName: string;
   readonly botName: string;
   readonly anthropicWorkspace: string;
@@ -120,6 +126,7 @@ const FACTS: Readonly<Record<Environment, EnvironmentFacts>> = {
   staging: {
     accountName: "Vela staging",
     neonProject: "vela-staging",
+    neonHost: "ep-frosty-night-b31xz5dh.c-4.ap-southeast-1.aws.neon.tech",
     hyperdriveName: "vela-apac-staging",
     botName: "Vela Light staging",
     anthropicWorkspace: "vela-staging",
@@ -128,6 +135,7 @@ const FACTS: Readonly<Record<Environment, EnvironmentFacts>> = {
   production: {
     accountName: "Vela",
     neonProject: "vela",
+    neonHost: "ep-late-mode-b3bfn7bh.c-4.ap-southeast-1.aws.neon.tech",
     hyperdriveName: "vela-apac",
     botName: "Vela Light",
     anthropicWorkspace: "vela-production",
@@ -228,7 +236,7 @@ export function usage(): readonly string[] {
     "Steps, in order (each skips what already exists; --from starts at one after a failure):",
     ...STEPS.map((step) => `  ${step.padEnd(10)}${STEP_DESCRIPTIONS[step]}`),
     "",
-    "Run it in a terminal that can hide what you type (Windows Terminal or PowerShell). Every",
+    "Run it in an interactive terminal that supports hidden input (macOS Terminal, iTerm2, or Windows Terminal). Every",
     "secret is read at a hidden prompt; infra/README.md, section 11, lists each prompt in order.",
   ];
 }
@@ -747,6 +755,47 @@ export function parseConnectionString(value: string): DatabaseOrigin {
   };
 }
 
+/**
+ * A valid URL is not enough: first setup must use the independently verified environment endpoint.
+ * Only Neon's TLS options are accepted, so driver query options cannot override the checked host.
+ */
+export function parseEnvironmentConnectionString(
+  value: string,
+  environment: Environment,
+): DatabaseOrigin {
+  let origin: DatabaseOrigin;
+  let url: URL;
+  try {
+    origin = parseConnectionString(value);
+    url = new URL(value);
+  } catch (error) {
+    if (error instanceof SetupError) throw error;
+    throw new SetupError(
+      "That connection could not be read. Copy it again from Neon's Connect window.",
+    );
+  }
+  const facts = FACTS[environment];
+  const queryKeys = [...url.searchParams.keys()];
+  if (
+    origin.host !== facts.neonHost ||
+    origin.port !== 5432 ||
+    origin.database !== NEON_DEFAULTS.database ||
+    origin.user !== NEON_DEFAULTS.role ||
+    url.pathname !== `/${NEON_DEFAULTS.database}` ||
+    value.includes("#") ||
+    queryKeys.some((key) => !["sslmode", "channel_binding"].includes(key)) ||
+    queryKeys.length !== new Set(queryKeys).size ||
+    !["require", "verify-full"].includes(url.searchParams.get("sslmode") ?? "") ||
+    (url.searchParams.has("channel_binding") &&
+      url.searchParams.get("channel_binding") !== "require")
+  ) {
+    throw new SetupError(
+      `That connection does not match Vela's ${environment === "staging" ? "test" : "production"} database. In Neon, select ${facts.neonProject}, its default branch, database ${NEON_DEFAULTS.database}, and role ${NEON_DEFAULTS.role}; turn Connection pooling off, then copy the connection again. If it still fails, keep the connection private and tell engineering the database step stopped.`,
+    );
+  }
+  return origin;
+}
+
 /** The refusal a check throws, as the text a prompt shows before asking again, or null. */
 function problemOf(check: () => unknown): string | null {
   try {
@@ -871,6 +920,7 @@ export function startChats(updates: unknown): {
 // Worker secrets
 
 export const WORKER_SECRETS = [
+  "CONTENT_KEY_V1",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_WEBHOOK_SECRET",
   "ADMIN_CONVERSATION_ID",
@@ -883,6 +933,7 @@ export type WorkerRole = "pilot" | "admin";
 
 /** Which Worker reads each secret: src/env.ts and src/config.ts. */
 const SECRET_HOMES: Readonly<Record<WorkerSecret, readonly WorkerRole[]>> = {
+  CONTENT_KEY_V1: ["pilot", "admin"],
   TELEGRAM_BOT_TOKEN: ["pilot"],
   TELEGRAM_WEBHOOK_SECRET: ["pilot"],
   ADMIN_CONVERSATION_ID: ["pilot"],
@@ -907,11 +958,24 @@ export interface SecretPlan {
   readonly workers: readonly WorkerRole[];
   /**
    * `run`: this run holds the value; `prompt`: ask for it; `kept`: every Worker has it;
-   * `missing`: a Worker lacks one of the telegram step's values and this run has none; `ai_off`:
+   * `missing`: a Worker lacks one of the telegram step's values and this run has none;
+   * `generated`: a new environment content key must be created once and put on both Workers;
+   * `mark`, `partial` and `lost`: recover the known key from the password manager and reinstall
+   * it on both Workers before setting its marker; `ai_off`:
    * the Anthropic key while AI is off, which no Worker reads, so it is neither asked for nor put;
    * `api_off`: Clerk's secret key while `API_V1` is off, which nothing reads either.
    */
-  readonly source: "run" | "prompt" | "kept" | "missing" | "ai_off" | "api_off";
+  readonly source:
+    | "run"
+    | "prompt"
+    | "kept"
+    | "missing"
+    | "generated"
+    | "mark"
+    | "partial"
+    | "lost"
+    | "ai_off"
+    | "api_off";
 }
 
 /**
@@ -930,6 +994,27 @@ export function planSecrets(
 ): readonly SecretPlan[] {
   return WORKER_SECRETS.map((name) => {
     const homes = SECRET_HOMES[name];
+    if (name === "CONTENT_KEY_V1") {
+      const present = homes.filter((role) => existing[role].has(name));
+      if (present.length === homes.length) {
+        const unmarked = homes.filter((role) => !existing[role].has("CONTENT_KEY_V1_INITIALIZED"));
+        if (unmarked.length > 0) {
+          return { name, workers: unmarked, source: "mark" };
+        }
+        return { name, workers: [], source: "kept" };
+      }
+      if (present.length > 0) {
+        return {
+          name,
+          workers: homes.filter((role) => !present.includes(role)),
+          source: "partial",
+        };
+      }
+      if (homes.some((role) => existing[role].has("CONTENT_KEY_V1_INITIALIZED"))) {
+        return { name, workers: homes, source: "lost" };
+      }
+      return { name, workers: homes, source: "generated" };
+    }
     if (name === "ANTHROPIC_API_KEY" && aiProvider === "off") {
       return { name, workers: [], source: "ai_off" };
     }
@@ -998,6 +1083,10 @@ export const cloudflareApi = {
     method: "POST",
     path: `/accounts/${accountId}/queues`,
     body: { queue_name: name },
+  }),
+  queueMetrics: (accountId: string, queueId: string): ApiRequest => ({
+    method: "GET",
+    path: `/accounts/${accountId}/queues/${encodeURIComponent(queueId)}/metrics`,
   }),
   bucket: (accountId: string, name: string): ApiRequest => ({
     method: "GET",
@@ -1299,6 +1388,20 @@ function secretPrompts(environment: Environment): Partial<Record<WorkerSecret, S
   };
 }
 
+/** An existing content key must come from the password manager; setup never invents a replacement. */
+function contentKeyPrompt(environment: Environment): SecretPrompt {
+  return {
+    label: "CONTENT_KEY_V1",
+    where: [
+      `The existing ${environment} content-sealing key from the password manager. Do not generate a replacement: the database may already contain values encrypted with it.`,
+    ],
+    check: (value) =>
+      /^[A-Za-z0-9_-]{43}$/.test(value)
+        ? null
+        : "CONTENT_KEY_V1 must be a base64url encoded 32-byte key; copy it from the password manager",
+  };
+}
+
 class Setup {
   readonly #environment: Environment;
   readonly #facts: EnvironmentFacts;
@@ -1308,6 +1411,8 @@ class Setup {
   readonly #fromRun = new Map<WorkerSecret, string>();
   #account: Account | null = null;
   #bot: Bot | null = null;
+  #databaseUrl: string | null = null;
+  #contentKeyV1: string | null = null;
   #step: Step = "account";
   #headed = false;
 
@@ -1337,6 +1442,8 @@ class Setup {
         return this.#telegramStep();
       case "secrets":
         return this.#secretsStep();
+      case "seal":
+        return this.#sealStep();
       case "deploy":
         return this.#deployStep();
       case "access":
@@ -1674,6 +1781,53 @@ class Setup {
 
   // --- database
 
+  #databaseBindingRefusal(): SetupError {
+    return new SetupError(
+      "Vela's saved database connection could not be verified for this environment. Setup stopped. Keep this window private and tell engineering which step stopped.",
+    );
+  }
+
+  #assertHyperdriveOrigin(candidate: unknown, requireCachingDisabled: boolean): void {
+    const origin = isRecord(candidate) && isRecord(candidate.origin) ? candidate.origin : null;
+    const caching = isRecord(candidate) && isRecord(candidate.caching) ? candidate.caching : null;
+    if (
+      !isRecord(candidate) ||
+      candidate.name !== this.#facts.hyperdriveName ||
+      origin === null ||
+      origin.host !== this.#facts.neonHost ||
+      origin.port !== 5432 ||
+      origin.database !== NEON_DEFAULTS.database ||
+      origin.user !== NEON_DEFAULTS.role ||
+      (origin.scheme !== "postgres" && origin.scheme !== "postgresql") ||
+      (requireCachingDisabled && caching?.disabled !== true)
+    ) {
+      throw this.#databaseBindingRefusal();
+    }
+  }
+
+  #assertBoundHyperdrives(
+    config: EnvironmentConfig,
+    inventory: readonly unknown[],
+    allowPlaceholders: boolean,
+    requireCachingDisabled: boolean,
+  ): void {
+    for (const id of new Set([config.pilotHyperdriveId, config.adminHyperdriveId])) {
+      if (id.startsWith(PLACEHOLDER) && allowPlaceholders) continue;
+      if (!HYPERDRIVE_ID.test(id)) throw this.#databaseBindingRefusal();
+      const matches = inventory.filter((candidate) => isRecord(candidate) && candidate.id === id);
+      if (matches.length !== 1) throw this.#databaseBindingRefusal();
+      this.#assertHyperdriveOrigin(matches[0], requireCachingDisabled);
+    }
+  }
+
+  /** Resuming after database must verify existing bindings instead of trusting their presence. */
+  async #assertConfiguredDatabase(): Promise<void> {
+    const config = await this.#config();
+    const { accountId } = await this.#ensureAccount();
+    const inventory = await this.#all((page) => cloudflareApi.hyperdriveConfigs(accountId, page));
+    this.#assertBoundHyperdrives(config, inventory, false, true);
+  }
+
   async #databaseStep(): Promise<string> {
     const { neonProject, hyperdriveName } = this.#facts;
     const account = await this.#ensureAccount();
@@ -1684,24 +1838,41 @@ class Setup {
         `Keep the default branch the dialog selects (production or main), database ${NEON_DEFAULTS.database} and role ${NEON_DEFAULTS.role}, turn Connection pooling off, and copy the connection string.`,
         "The direct string, not the pooled one: the migrations need a session, and Hyperdrive pools connections itself.",
       ],
-      check: (value) => problemOf(() => parseConnectionString(value)),
+      check: (value) => problemOf(() => parseEnvironmentConnectionString(value, this.#environment)),
     });
-    const origin = parseConnectionString(connectionString);
+    this.#databaseUrl = connectionString;
+    const origin = parseEnvironmentConnectionString(connectionString, this.#environment);
     this.#secrets.add(origin.password);
+
+    const config = await this.#config();
+    const configs = await this.#all((page) =>
+      cloudflareApi.hyperdriveConfigs(account.accountId, page),
+    );
+    this.#assertBoundHyperdrives(config, configs, true, false);
+    const matchingConfigs = configs.filter(
+      (candidate) => isRecord(candidate) && candidate.name === hyperdriveName,
+    );
+    if (matchingConfigs.length > 1) throw this.#databaseBindingRefusal();
+    const found = matchingConfigs[0];
+    if (found !== undefined) this.#assertHyperdriveOrigin(found, false);
 
     this.#say(`Applying the migrations to the Neon project ${neonProject}.`);
     const exitCode = await this.#io.run(
-      { tool: "migrate", args: [], env: { DATABASE_URL: connectionString }, stdin: "" },
+      {
+        tool: "migrate",
+        args: [],
+        env: {
+          DATABASE_URL: connectionString,
+          VELA_DATABASE_ENVIRONMENT: this.#environment,
+        },
+        stdin: "",
+      },
       (line) => this.#say(`  ${line}`),
     );
     if (exitCode !== 0) {
       throw new SetupError(`The migrations failed (exit ${exitCode}): read the lines above`);
     }
 
-    const configs = await this.#all((page) =>
-      cloudflareApi.hyperdriveConfigs(account.accountId, page),
-    );
-    const found = configs.find((config) => field(config, "name", "hyperdrive") === hyperdriveName);
     let id: string;
     let hyperdrive: string;
     if (found === undefined) {
@@ -1735,7 +1906,6 @@ class Setup {
       );
     }
     const written: string[] = [];
-    const config = await this.#config();
     const placeholder = placeholdersOf(this.#environment).hyperdriveId;
     for (const [file, current] of [
       [PILOT_FILE, config.pilotHyperdriveId],
@@ -1796,13 +1966,27 @@ class Setup {
           : "A bot token is the bot's number, a colon, then letters, digits, _ and -",
     });
     let username: string;
+    let status: number | undefined;
+    const fetchImpl = this.#io.fetch;
+    const identityFetch: typeof fetch = async (input, init) => {
+      const response = await fetchImpl(input, init);
+      status = response.status;
+      return response;
+    };
     try {
-      username = (await getMe({ botToken: token, fetch: this.#io.fetch })).username;
+      username = (await getMe({ botToken: token, fetch: identityFetch })).username;
     } catch (error) {
-      throw new SetupError(
-        "Telegram did not accept this bot token (getMe failed): copy it again from @BotFather",
-        { cause: error },
-      );
+      const message =
+        status === 401 || status === 404
+          ? "Telegram rejected this bot token: copy the CURRENT token from @BotFather. Do not regenerate it yet."
+          : status === 429
+            ? "Telegram asks us to wait: wait a moment, then retry with the same bot token."
+            : status !== undefined && status >= 500
+              ? "Telegram is temporarily unavailable: retry with the same bot token."
+              : status === undefined
+                ? "Could not connect to Telegram (the connection, DNS or TLS may be unavailable): retry with the same bot token. Do not regenerate it."
+                : "Telegram's bot identity could not be read: tell engineering that the webhook step stopped.";
+      throw new SetupError(message, { cause: error });
     }
     if (!BOT_USERNAME.test(username)) {
       throw new SetupError("Telegram answered with a bot username this script cannot write");
@@ -1840,6 +2024,7 @@ class Setup {
   }
 
   async #telegramStep(): Promise<string> {
+    await this.#assertConfiguredDatabase();
     const config = await this.#config();
     const pilotSecrets = await this.#workerSecrets(config.pilotWorker);
     if (
@@ -1879,6 +2064,42 @@ class Setup {
     const secret = generateWebhookSecret(this.#io.randomBytes);
     this.#secrets.add(secret);
     return secret;
+  }
+
+  /** Generated once per environment and printed once for the founder's password manager. */
+  async #newContentKeyV1(): Promise<string> {
+    const value = Buffer.from(this.#io.randomBytes(32)).toString("base64url");
+    if (!/^[A-Za-z0-9_-]{43}$/.test(value)) {
+      throw new SetupError("Could not generate a 32-byte CONTENT_KEY_V1");
+    }
+    this.#say(
+      `This key protects saved messages. Save the next line in your password manager as "Vela — ${this.#environment === "staging" ? "test system" : "production"} — content encryption key (CONTENT_KEY_V1)":`,
+    );
+    this.#io.print(`  ${value}`);
+    this.#secrets.add(value);
+    this.#say(
+      "You will need this saved key to recover messages from a backup. It will not be shown again.",
+    );
+    let saved = false;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const answer = (
+        await this.#io.askHidden(
+          "  Key saved? Type SAVED after saving it in your password manager (hidden): ",
+        )
+      ).trim();
+      if (answer.toUpperCase() === "SAVED") {
+        saved = true;
+        break;
+      }
+      this.#say("Save the key shown above, then type SAVED and press Return.");
+    }
+    if (!saved) {
+      throw new SetupError(
+        "Setup stopped before installing the new key: its password-manager save was not confirmed",
+      );
+    }
+    this.#contentKeyV1 = value;
+    return value;
   }
 
   /**
@@ -1952,6 +2173,7 @@ class Setup {
   }
 
   async #secretsStep(): Promise<string> {
+    await this.#assertConfiguredDatabase();
     const config = await this.#config();
     const worker = (role: WorkerRole): string =>
       role === "pilot" ? config.pilotWorker : config.adminWorker;
@@ -1986,6 +2208,34 @@ class Setup {
         this.#say(apiOffLine(this.#environment));
         continue;
       }
+      if (entry.source === "generated") {
+        const value = await this.#newContentKeyV1();
+        this.#secrets.add("CONTENT_KEY_V1_INITIALIZED");
+        for (const role of entry.workers) {
+          await this.#putSecret(role, "CONTENT_KEY_V1_INITIALIZED", "v1");
+        }
+        for (const role of entry.workers) {
+          await this.#putSecret(role, entry.name, value);
+        }
+        put.push(`${entry.name} on ${entry.workers.map(worker).join(" and ")}`);
+        continue;
+      }
+      if (entry.source === "mark" || entry.source === "partial" || entry.source === "lost") {
+        // Cloudflare cannot reveal an installed secret, so presence alone cannot prove both
+        // Workers share the same value. Reinstall the founder's saved key on both before marking
+        // it initialized; the following seal step fails closed if it cannot open existing rows.
+        const value = await this.#askSecret(contentKeyPrompt(this.#environment));
+        this.#contentKeyV1 = value;
+        for (const role of SECRET_HOMES.CONTENT_KEY_V1) {
+          await this.#putSecret(role, "CONTENT_KEY_V1", value);
+        }
+        this.#secrets.add("CONTENT_KEY_V1_INITIALIZED");
+        for (const role of SECRET_HOMES.CONTENT_KEY_V1) {
+          await this.#putSecret(role, "CONTENT_KEY_V1_INITIALIZED", "v1");
+        }
+        put.push("CONTENT_KEY_V1 and its initialization marker on both Workers");
+        continue;
+      }
       const prompt = prompts[entry.name];
       const value =
         this.#fromRun.get(entry.name) ??
@@ -2003,6 +2253,54 @@ class Setup {
     return changes(put, kept, "put", "already there");
   }
 
+  async #sealStep(): Promise<string> {
+    const contentKeyV1 =
+      this.#contentKeyV1 ?? (await this.#askSecret(contentKeyPrompt(this.#environment)));
+    this.#contentKeyV1 = contentKeyV1;
+    const databaseUrl =
+      this.#databaseUrl ??
+      (await this.#askSecret({
+        label: "Neon connection string",
+        where: [
+          `Neon console, project ${this.#facts.neonProject}: select Connect, keep the default branch, database ${NEON_DEFAULTS.database} and role ${NEON_DEFAULTS.role}, turn Connection pooling off, and copy the direct string.`,
+        ],
+        check: (value) =>
+          problemOf(() => parseEnvironmentConnectionString(value, this.#environment)),
+      }));
+    this.#databaseUrl = databaseUrl;
+    this.#secrets.add(parseEnvironmentConnectionString(databaseUrl, this.#environment).password);
+    await this.#assertConfiguredDatabase();
+
+    const config = await this.#config();
+    const { accountId } = await this.#ensureAccount();
+    this.#say(
+      "Checking that Vela's background jobs report no unfinished work before changing saved messages.",
+    );
+    await assertQueueBacklogsEmpty(
+      config.queues,
+      () => this.#all((page) => cloudflareApi.queues(accountId, page)),
+      (queueId) => this.#required(cloudflareApi.queueMetrics(accountId, queueId)),
+    );
+    this.#say("Re-sealing existing content rows before the Worker deploy.");
+    const exitCode = await this.#io.run(
+      {
+        tool: "seal",
+        args: [],
+        env: {
+          DATABASE_URL: databaseUrl,
+          CONTENT_KEY_V1: contentKeyV1,
+          VELA_DATABASE_ENVIRONMENT: this.#environment,
+        },
+        stdin: "",
+      },
+      (line) => this.#say(`  ${line}`),
+    );
+    if (exitCode !== 0) {
+      throw new SetupError(`The content re-seal failed (exit ${exitCode}): read the lines above`);
+    }
+    return `existing content rows sealed for ${this.#environment}; no values were printed`;
+  }
+
   // --- deploy
 
   async #deployStep(): Promise<string> {
@@ -2018,6 +2316,7 @@ class Setup {
         `The wrangler files still hold ${[...new Set(left)].join(", ")} for ${this.#environment}: run the database and telegram steps first`,
       );
     }
+    await this.#assertConfiguredDatabase();
     if (this.#environment === "production") {
       this.#say(
         "This deploys production from this laptop, once, to set it up. From now on production deploys go through the GitHub deploy workflow (infra/runbooks/release.md).",
@@ -2035,6 +2334,7 @@ class Setup {
   // --- access
 
   async #accessStep(): Promise<string> {
+    await this.#assertConfiguredDatabase();
     const config = await this.#config();
     const adminSecrets = await this.#workerSecrets(config.adminWorker);
     if (adminSecrets.has("ACCESS_TEAM_DOMAIN") && adminSecrets.has("ACCESS_AUD")) {
@@ -2068,8 +2368,14 @@ class Setup {
   // --- webhook
 
   async #webhookStep(): Promise<string> {
+    await this.#assertConfiguredDatabase();
     const config = await this.#config();
     const bot = await this.#ensureBot();
+    // A resumed setup may receive a replacement credential after BotFather revoked the old
+    // one. Keep outbound calls on the Worker and webhook registration on the same verified
+    // credential; the username check in ensureBot refuses another environment's bot first.
+    await this.#putSecret("pilot", "TELEGRAM_BOT_TOKEN", bot.token);
+    this.#say("The verified Telegram bot credential is now on Vela's running service.");
     let secret = this.#fromRun.get("TELEGRAM_WEBHOOK_SECRET");
     let note = "";
     if (secret === undefined) {
@@ -2101,6 +2407,7 @@ class Setup {
   // --- check
 
   async #checkStep(): Promise<string> {
+    await this.#assertConfiguredDatabase();
     const config = await this.#config();
     const checks: readonly SiteCheck[] = [
       { url: `${config.pilotOrigin}/healthz`, expect: "health" },
@@ -2198,12 +2505,15 @@ export async function runSetup(argv: readonly string[], io: SetupIo): Promise<nu
     }
     if (!io.interactive) {
       throw new SetupError(
-        "This terminal cannot hide what you type (standard input is not a terminal): run the setup from Windows Terminal or PowerShell",
+        "This terminal cannot hide what you type (standard input is not an interactive terminal): run setup from macOS Terminal, iTerm2, or Windows Terminal",
       );
     }
     const setup = new Setup(command.environment, io, secrets);
     io.print(
-      `Setting up ${command.environment} in the "${FACTS[command.environment].accountName}" Cloudflare account. Secrets are read at hidden prompts and never shown.`,
+      `Setting up ${command.environment} in the "${FACTS[command.environment].accountName}" Cloudflare account. Provider credentials are entered privately. A new content encryption key is shown once for your password manager.`,
+    );
+    io.print(
+      "At a hidden prompt, seeing no characters as you type or paste is normal. Press Return after pasting.",
     );
     for (const step of stepsFrom(command.from)) {
       resume = `pnpm --filter @vela/worker run setup -- --env ${command.environment} --from ${step}`;
@@ -2251,19 +2561,35 @@ async function nodeIo(): Promise<SetupIo> {
       prefix: [pathOf("../../packages/db/src/migrate.ts")],
       cwd: pathOf("../../packages/db"),
     },
+    seal: {
+      program: process.execPath,
+      prefix: [pathOf("../../packages/db/scripts/seal-existing.ts")],
+      cwd: pathOf("../../packages/db"),
+    },
     git: { program: "git", prefix: [], cwd: pathOf(".") },
   };
   // Credentials the founder's shell may already hold never reach a child: only the ones this run
-  // was given do, so a stray variable cannot point wrangler at another account or database.
+  // was given do, so a stray variable cannot point wrangler at another account or database or leak
+  // an unrelated provider/content key to a child process.
   const withheld = new Set([
     "CLOUDFLARE_API_TOKEN",
     "CLOUDFLARE_ACCOUNT_ID",
     "CLOUDFLARE_API_KEY",
     "CLOUDFLARE_EMAIL",
     "DATABASE_URL",
+    "ACCESS_AUD",
+    "ACCESS_TEAM_DOMAIN",
+    "ADMIN_CONVERSATION_ID",
   ]);
   const inherited = Object.fromEntries(
-    Object.entries(process.env).filter(([name]) => !withheld.has(name.toUpperCase())),
+    Object.entries(process.env).filter(([name]) => {
+      const normalizedName = name.toUpperCase();
+      const containsCredential =
+        /(?:^|_)(?:API_KEY|API_TOKEN|AUTH_TOKEN|TOKEN|SECRET|PASSWORD|PASS|PRIVATE_KEY|CONTENT_KEY(?:_V\d+)?)(?:_|$)/.test(
+          normalizedName,
+        );
+      return !withheld.has(normalizedName) && !containsCredential;
+    }),
   );
 
   const readLine = (question: string, echo: boolean): Promise<string> => {

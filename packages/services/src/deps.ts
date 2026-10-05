@@ -14,6 +14,7 @@ import {
   type Region,
 } from "@vela/contracts";
 import type { VelaDatabase } from "@vela/db";
+import type { PilotAdmission } from "./pilot-admission.ts";
 
 export interface Clock {
   now(): Date;
@@ -47,6 +48,11 @@ export interface MediaStore {
   delete(key: string): Promise<void>;
   /** Whether an object is there, without its bytes: its size and type, or null (ADR-33). */
   head(key: string): Promise<{ bytes: number; mime: string } | null>;
+  /** Optional metadata listing for orphan cleanup; no object content is returned. */
+  list?(input: { prefix: string; cursor?: string; limit: number }): Promise<{
+    objects: { key: string; uploadedAt: Date }[];
+    cursor: string | null;
+  }>;
 }
 
 /**
@@ -165,6 +171,8 @@ export type MediaJob =
 export type UnderstandJob = { type: "understand_answer"; answerId: string };
 
 export interface Config {
+  /** Explicit private trial admission; absent or null preserves the normal product behavior. */
+  pilotAdmission?: PilotAdmission | null;
   telegramBotUsername: string;
   /** The LINE Official Account's basic id (`@…`) a LINE invite link opens; null while LINE is off. */
   lineBasicId: string | null;

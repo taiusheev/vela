@@ -47,6 +47,7 @@ import { canBeAsked, isAskable } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
 import { recordAiCall } from "./jobs.ts";
+import { pilotFamilyAllowed } from "./pilot-admission.ts";
 import { exchangeForLocalDate, familyById, familyHasEnded, memberById } from "./repo.ts";
 
 /** The `prompt_version` of a row that holds the bank item alone: no prompt wrote it. */
@@ -110,7 +111,9 @@ export interface SuggestionsRun {
   failed: number;
 }
 
-type WriterDeps = Pick<Deps, "db" | "clock" | "ai" | "logger">;
+type WriterDeps = Pick<Deps, "db" | "clock" | "ai" | "logger"> & {
+  readonly config: Pick<Deps["config"], "pilotAdmission">;
+};
 
 /** One stored suggestion, as the pick reads it: its day and its bank item. */
 export interface SuggestedDay {
@@ -600,12 +603,10 @@ function acceptedDraft(outcome: AiOutcome<SuggestDraft> | null): AcceptedDraft |
  * model asked, and the row written under her member row's lock, re-checking that she can be asked
  * and that nobody has claimed the day since it was read.
  *
- * Lock order is her family row (`for key share`, the lock the row's foreign keys take anyway), then
- * her member row (`for no key update`, which a compose's `for update` excludes), then the new row.
- * Compose locks her member row first and takes the family's key share only through its inserts'
- * foreign keys; the two key shares never conflict, so the writer and a compose queue on her member
- * row. Taking the family first also leaves no cycle with a family deletion, which locks the family
- * `for update` before it updates her member row.
+ * Lock order is her family row (`for share`, excluding soft deletion), then her member row
+ * (`for no key update`, which Stop and a compose's `for update` exclude), then the new row.
+ * The family's share remains compatible with a compose's foreign-key key-share lock. Provider
+ * output is retained only after current permission, family lifecycle and trial admission agree.
  */
 async function writeDay(
   deps: WriterDeps,
@@ -614,6 +615,15 @@ async function writeDay(
   forDate: LocalDate,
 ): Promise<SuggestionOutcome> {
   const { member, family } = plan;
+  const currentMember = await memberById(deps.db, member.id);
+  if (
+    currentMember === null ||
+    !canBeAsked(currentMember, family.id) ||
+    !(await isAskable(deps.db, currentMember)) ||
+    !(await pilotFamilyAllowed(deps.db, deps.config.pilotAdmission, family.id))
+  ) {
+    return "inactive";
+  }
   const settled = dayState(context, member.id, forDate);
   if (settled !== null) {
     return settled;
@@ -644,33 +654,34 @@ async function writeDay(
 
   const result = await deps.db.transaction(async (tx): Promise<SuggestionOutcome> => {
     const [lockedFamily] = await tx
-      .select({ id: families.id })
+      .select()
       .from(families)
       .where(eq(families.id, family.id))
-      .for("key share");
+      .for("share");
     const [locked] = await tx
       .select()
       .from(members)
       .where(eq(members.id, member.id))
       .for("no key update");
-    // Every call the model answered was paid for, so it is logged whatever the day turns out to be.
+    if (
+      lockedFamily === undefined ||
+      locked === undefined ||
+      lockedFamily.deletedAt !== null ||
+      !canBeAsked(locked, family.id) ||
+      (await familyHasEnded(tx, family.id)) ||
+      !(await pilotFamilyAllowed(tx, deps.config.pilotAdmission, family.id))
+    ) {
+      return "inactive";
+    }
     if (outcome !== null && !isAiOff(outcome)) {
       await recordAiCall(tx, {
-        familyId: lockedFamily === undefined ? null : family.id,
-        memberId: locked?.id ?? null,
+        familyId: family.id,
+        memberId: locked.id,
         record: outcome.record,
         inputRef: { member_id: member.id, for_date: forDate, bank_id: item.id },
         output: outcome.value,
         at: now,
       });
-    }
-    if (
-      lockedFamily === undefined ||
-      locked === undefined ||
-      !canBeAsked(locked, family.id) ||
-      (await familyHasEnded(tx, family.id))
-    ) {
-      return "inactive";
     }
     if ((await exchangeForLocalDate(tx, locked.id, forDate)) !== null) {
       return "claimed";
@@ -722,7 +733,12 @@ export async function writeSuggestionFor(
 ): Promise<SuggestionOutcome> {
   const member = await memberById(deps.db, memberId);
   const family = member === null ? null : await familyById(deps.db, member.familyId);
-  if (member === null || family === null || !(await isAskable(deps.db, member))) {
+  if (
+    member === null ||
+    family === null ||
+    !(await isAskable(deps.db, member)) ||
+    !(await pilotFamilyAllowed(deps.db, deps.config.pilotAdmission, family.id))
+  ) {
     return "inactive";
   }
   const plan: Plan = { member, family, dates: [forDate] };
@@ -746,12 +762,22 @@ export async function writeSuggestions(deps: WriterDeps): Promise<SuggestionsRun
     .where(and(isNull(families.deletedAt), eq(members.lightOn, true)))
     .orderBy(asc(members.createdAt), asc(members.id));
   const ended = new Map<string, boolean>();
+  const admitted = new Map<string, boolean>();
   const plans: Plan[] = [];
   for (const { member, family } of rows) {
     if (!canBeAsked(member, family.id)) {
       continue;
     }
     try {
+      let familyAdmitted = admitted.get(family.id);
+      if (familyAdmitted === undefined) {
+        familyAdmitted = await pilotFamilyAllowed(deps.db, deps.config.pilotAdmission, family.id);
+        admitted.set(family.id, familyAdmitted);
+      }
+      if (!familyAdmitted) {
+        run.inactive += SUGGESTION_DAYS_AHEAD.length;
+        continue;
+      }
       let familyEnded = ended.get(family.id);
       if (familyEnded === undefined) {
         familyEnded = await familyHasEnded(deps.db, family.id);

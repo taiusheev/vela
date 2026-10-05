@@ -38,6 +38,14 @@
 import type { en } from "./en.ts";
 
 export const zhTW: Record<keyof typeof en, string> = {
+  "account_link.code":
+    "請在 Vela 輸入這個代碼，連結您的 Telegram 帳號：{code}\n請保密；代碼即將到期。",
+  "account_link.unavailable":
+    "無法開啟這個帳號連結。請先在 Telegram 完成家人的設定，再從 Vela 建立新的連結。",
+  "pilot.activation_wait":
+    "您的燈還沒亮起。家人的安排人需要一個已獲准、且能收到訊息的 Telegram 帳號。請安排人完成設定，再試一次。",
+  "pilot.invitation_only":
+    "Vela 的英語試用僅限受邀者。請聯絡創辦人申請使用。您的 Telegram ID：{telegram_id}。",
   "arrival.greeting": "{address}，早安。",
   "arrival.late": "不好意思，這則訊息晚到了。",
   "arrival.repeat": "怕您沒看到，再傳一次：",
@@ -167,6 +175,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "onboarding.ask_language": "要用哪一種語言傳訊息給這位家人？",
   "onboarding.ask_country": "這位家人住在哪個國家或地區？",
   "onboarding.country_tw": "台灣",
+  "onboarding.country_vn": "越南",
   "onboarding.country_us": "美國",
   "onboarding.country_gb": "英國",
   "onboarding.country_ca": "加拿大",

@@ -41,6 +41,7 @@ import {
   seedExchange,
   seedFamily,
   seedGroupMember,
+  seedHealthWordsConsent,
   seedNearbyContact,
 } from "./testing/seed.ts";
 
@@ -171,6 +172,61 @@ async function eventRows() {
 }
 
 describe("draftWeeklyRead", () => {
+  it("discards sensitive model output and log content if health permission is withdrawn during drafting", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedHealthWordsConsent(h.db, seed, { at: h.clock.now(), answer: "yes" });
+    await setStartsOn(seed, "2026-09-14");
+    await seedMorning(seed, {
+      date: "2026-09-18",
+      answeredAt: "09:00",
+      summary: "Synthetic knee discomfort.",
+    });
+    h.clock.set(at("2026-09-20", "18:00"));
+    const ai = createFakeAi({
+      weeklyRead: async () => {
+        await h.db
+          .update(consents)
+          .set({ withdrawnAt: h.clock.now() })
+          .where(eq(consents.memberId, seed.member.id));
+        return {
+          ok: true,
+          value: {
+            lines: ["Synthetic sensitive knee output."],
+            suggestion: "Ask about synthetic knee pain.",
+          },
+          record: fakeRecord("weekly_read"),
+        };
+      },
+    });
+    await draftWeeklyRead({ ...h.deps, ai }, seed.member.id, "2026-09-20");
+    const [read] = await h.db.select().from(weeklyReads);
+    expect(read?.lines).toEqual([]);
+    expect(read?.stats).toMatchObject({ answered_days: 1, topics: [] });
+    expect(read?.suggestion).not.toContain("knee");
+    expect(JSON.stringify(await h.db.select().from(aiCalls))).not.toContain("knee");
+  });
+
+  it("excludes old consented summaries after withdrawal while preserving answer counts", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedHealthWordsConsent(h.db, seed, { at: h.clock.now(), answer: "yes" });
+    await setStartsOn(seed, "2026-09-14");
+    await seedMorning(seed, {
+      date: "2026-09-18",
+      answeredAt: "09:00",
+      summary: "Synthetic knee discomfort.",
+    });
+    h.clock.set(at("2026-09-20", "18:00"));
+    await h.db
+      .update(consents)
+      .set({ withdrawnAt: h.clock.now() })
+      .where(eq(consents.memberId, seed.member.id));
+    await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
+    const [call] = h.ai.calls.filter((call) => call.call === "weekly_read");
+    expect(JSON.stringify(call?.input)).not.toContain("knee");
+    const [read] = await h.db.select().from(weeklyReads);
+    expect(read?.stats).toMatchObject({ answered_days: 1 });
+  });
+
   it("counts the days from her start, stores the numbers, and gives the model only the days she answered", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     // Her light started on the Friday, so the week holds three of her days.
@@ -643,6 +699,7 @@ describe("applyRetention", () => {
     "family_translations_deleted",
     "family_ai_call_outputs_cleared",
     "media_deleted",
+    "media_orphans_deleted",
     "members_deleted",
     "invited_members_deleted",
     "nearby_unanswered_deleted",
@@ -1492,7 +1549,7 @@ describe("applyRetention", () => {
 
   // An object stored before storage was switched off outlives its row, and only the founder can
   // reach it, so the run names it rather than leaving it unsaid.
-  it("names the object it cannot reach when media storage is off and the row was stored", async () => {
+  it("keeps the owning row and reports failure if storage cannot complete deletion", async () => {
     const seed = await seedFamily(h.db, { now: daysAgo(40) });
     const storedKey = `families/${seed.family.id}/answers/left.ogg`;
     await h.media.put(storedKey, new ArrayBuffer(3), "audio/ogg");
@@ -1509,10 +1566,10 @@ describe("applyRetention", () => {
       })
       .returning({ id: media.id });
 
-    const counts = await applyRetention({ ...h.deps, media: null });
-
-    expect(counts).toMatchObject({ media_deleted: 1 });
-    expect(await h.db.select().from(media)).toEqual([]);
+    await expect(applyRetention({ ...h.deps, media: null })).rejects.toThrow(
+      "Cannot delete retained media",
+    );
+    expect((await h.db.select().from(media)).map((row) => row.id)).toEqual([expired?.id]);
     expect(h.logger.entries.filter((entry) => entry.event === "media_object_unreachable")).toEqual([
       {
         level: "error",

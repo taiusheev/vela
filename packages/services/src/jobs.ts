@@ -6,7 +6,7 @@
  * data map rule by rule and reports a count per rule, so the nightly run is auditable.
  */
 
-import { type AiCallRecord, isAiOff, type Mentions, type WeeklyDay } from "@vela/ai";
+import { type AiCallRecord, isAiOff, type Mentions, SAFE_DEFAULTS, type WeeklyDay } from "@vela/ai";
 import type { LocalDate, LocalTime } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -77,11 +77,14 @@ import { recordEvent } from "./events.ts";
 import { clockMinutesBetween, medianTimeAround } from "./format.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { INVITE_DAYS } from "./invites.ts";
+import { sweepInboundMediaOrphans } from "./media-orphans.ts";
 import { deleteContact } from "./nearby-consent.ts";
+import { pilotFamilyAllowed } from "./pilot-admission.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import {
   dayAnsweredAt,
   familyById,
+  hasHealthWordsConsent,
   memberById,
   type Queryable,
   recentAnsweredDays,
@@ -386,7 +389,14 @@ export async function draftWeeklyRead(
 ): Promise<void> {
   const member = await memberById(deps.db, memberId);
   const family = member === null ? null : await familyById(deps.db, member.familyId);
-  if (member === null || family === null || family.deletedAt !== null) {
+  if (
+    member === null ||
+    family === null ||
+    family.deletedAt !== null ||
+    member.leftAt !== null ||
+    member.status !== "active" ||
+    !(await pilotFamilyAllowed(deps.db, deps.config.pilotAdmission, family.id))
+  ) {
     deps.logger.warn("weekly_read_context_missing", { memberId, weekEnd });
     return;
   }
@@ -411,7 +421,29 @@ export async function draftWeeklyRead(
   // Before the model is asked anything, so a week whose draft fails still retunes her threshold.
   await tuneQuietAfter(deps, member);
   const lastWeekStart = addDays(weekStart, -DAYS_IN_WEEK);
-  const allDays = await loadWeekDays(deps.db, member, lastWeekStart, weekEnd);
+  const healthPermissions = await deps.db
+    .select({ givenAt: consents.givenAt, withdrawnAt: consents.withdrawnAt })
+    .from(consents)
+    .where(
+      and(
+        eq(consents.memberId, member.id),
+        eq(consents.kind, "health_words"),
+        eq(consents.answer, "yes"),
+      ),
+    );
+  const healthAtStart = await hasHealthWordsConsent(deps.db, member.id, deps.clock.now());
+  // Old consented summaries can contain health words. After withdrawal, omit their derived
+  // text entirely; counts and original family answers remain unaffected.
+  const allDays = (await loadWeekDays(deps.db, member, lastWeekStart, weekEnd)).map((day) => ({
+    ...day,
+    answers: day.answers.map((answer) =>
+      healthPermissions.some(
+        (permission) => permission.withdrawnAt !== null && permission.givenAt <= answer.receivedAt,
+      )
+        ? { ...answer, summary: null, mentions: {} }
+        : answer,
+    ),
+  }));
   const lastWeek = allDays.filter((day) => day.date < weekStart);
   const counted = allDays.filter((day) => day.date >= firstCounted);
 
@@ -435,7 +467,7 @@ export async function draftWeeklyRead(
       : Math.round(((voiceMs - lastVoiceMs) / lastVoiceMs) * 100);
   const topics = repeatedMentions(counted);
 
-  const outcome = await deps.ai.weeklyRead({
+  const weeklyInput = {
     lang: family.language,
     elderName: member.displayName,
     weekEnd,
@@ -446,7 +478,8 @@ export async function draftWeeklyRead(
     answerTimeDriftMinutes: driftMin,
     voiceLengthDriftPercent: voiceLenDrift,
     repeatedMentions: topics,
-  });
+  };
+  const outcome = await deps.ai.weeklyRead(weeklyInput);
   // AI off is not a failure: the draft is the safe default, and nothing is logged as a failed call.
   if (!outcome.ok && !isAiOff(outcome)) {
     deps.logger.warn("weekly_read_draft_failed", { memberId, weekEnd, error: outcome.error });
@@ -463,13 +496,34 @@ export async function draftWeeklyRead(
     voice_len_drift: voiceLenDrift,
   };
   await deps.db.transaction(async (tx) => {
+    const [currentFamily] = await tx
+      .select()
+      .from(families)
+      .where(eq(families.id, family.id))
+      .for("share");
+    const [currentMember] = await tx
+      .select()
+      .from(members)
+      .where(eq(members.id, member.id))
+      .for("update");
+    if (
+      currentFamily === undefined ||
+      currentFamily.deletedAt !== null ||
+      currentMember === undefined ||
+      currentMember.status !== "active" ||
+      currentMember.leftAt !== null ||
+      !(await pilotFamilyAllowed(tx, deps.config.pilotAdmission, family.id))
+    )
+      return;
+    const withdrewHealth = healthAtStart && !(await hasHealthWordsConsent(tx, member.id, now));
+    const value = withdrewHealth ? SAFE_DEFAULTS.weekly_read(weeklyInput) : outcome.value;
     if (!isAiOff(outcome)) {
       await recordAiCall(tx, {
         familyId: family.id,
         memberId: member.id,
         record: outcome.record,
         inputRef: { member_id: member.id, week_end: weekEnd },
-        output: outcome.value,
+        output: value,
         at: now,
       });
     }
@@ -479,9 +533,9 @@ export async function draftWeeklyRead(
         familyId: family.id,
         memberId: member.id,
         weekStart,
-        lines: outcome.value.lines,
-        suggestion: outcome.value.suggestion,
-        stats,
+        lines: value.lines,
+        suggestion: value.suggestion,
+        stats: withdrewHealth ? { ...stats, topics: [] } : stats,
         promptVersion: isAiOff(outcome) ? DRAFTED_WITH_AI_OFF : outcome.record.promptVersion,
         createdAt: now,
       })
@@ -500,7 +554,7 @@ export async function draftWeeklyRead(
           week_end: weekEnd,
           counted_days: counted.length,
           answered_days: answered.length,
-          lines: outcome.value.lines.length,
+          lines: value.lines.length,
           ok: outcome.ok,
           // Tells a draft made while AI was off from one whose call failed; both are not ok.
           ai_off: isAiOff(outcome),
@@ -648,23 +702,26 @@ function optionsWithout(id: string) {
  * keeps an object nobody here can reach: that is logged, because only the founder can delete it.
  */
 export async function deleteMedia(deps: Deps, row: Media, reason: string): Promise<void> {
-  if (row.storageKey !== null) {
-    if (deps.media === null) {
-      deps.logger.error("media_object_unreachable", { mediaId: row.id, reason });
-    } else {
-      await deps.media.delete(row.storageKey);
-    }
-  }
   await deps.db.transaction(async (tx) => {
     // The row first (ADR-33): an ask being composed holds it `for share` until it commits, so the
     // ids are removed below only after its exchange exists, and never left naming a deleted photo.
     // Media before exchanges, as compose takes them. A row already gone went in another run.
-    const [held] = await tx
-      .select({ id: media.id })
-      .from(media)
-      .where(eq(media.id, row.id))
-      .for("update");
+    const [held] = await tx.select().from(media).where(eq(media.id, row.id)).for("update");
     if (held === undefined) return;
+    if (
+      reason === "expired" &&
+      (held.kept || held.expiresAt === null || held.expiresAt > deps.clock.now())
+    )
+      return;
+    // An ingestion attempt may have adopted a key since this sweep selected the row. Delete
+    // the current object while holding the same row lock used by ingestion's adoption.
+    if (held.storageKey !== null) {
+      if (deps.media === null) {
+        deps.logger.error("media_object_unreachable", { mediaId: row.id, reason });
+        throw new Error("Cannot delete retained media while storage is disabled");
+      }
+      await deps.media.delete(held.storageKey);
+    }
     await recordDeletion(tx, {
       objectType: "media",
       objectId: row.id,
@@ -899,6 +956,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
     await deleteMedia(deps, file, "expired");
   }
   counts.media_deleted = expired.length;
+  counts.media_orphans_deleted = await sweepInboundMediaOrphans(deps);
 
   const gone = await deleteMembers(
     deps,

@@ -52,6 +52,8 @@ describe("loadApiLights", () => {
     expect(MemberLight.parse(row)).toEqual({
       member_id: seed.member.id,
       display_name: seed.member.displayName,
+      tz: seed.member.tz,
+      local_date: today(),
       state: "resting",
       answered_at: null,
       usual_time: seed.member.arrivalTime,
@@ -291,6 +293,8 @@ describe("an invited member who has not said yes", () => {
     expect(MemberLight.parse(rows?.[1])).toEqual({
       member_id: invited.id,
       display_name: "Dad",
+      tz: invited.tz,
+      local_date: localDateOf(h.clock.now(), invited.tz),
       state: "none",
       answered_at: null,
       usual_time: "07:00",

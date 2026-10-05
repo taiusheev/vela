@@ -9,6 +9,7 @@ import { canApply, nextExchangeState } from "@vela/core";
 import { type Exchange, exchanges, type MessageRef, replies, type VelaTransaction } from "@vela/db";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
+import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { inboundExternalId, reactionKindsOf } from "./format.ts";
 import { familyHasEnded, recordInboundMedia } from "./repo.ts";
@@ -93,10 +94,10 @@ export async function handleGroupReply(
   }
   const now = deps.clock.now();
   const text = event.text?.trim() ?? "";
-  await deps.db.transaction(async (tx) => {
+  const copiedMediaId = await deps.db.transaction(async (tx) => {
     const exchange = await lockExchange(deps, tx, familyId, exchangeId);
     if (exchange === null) {
-      return;
+      return null;
     }
     const file =
       event.media === undefined
@@ -124,7 +125,7 @@ export async function handleGroupReply(
       .returning({ id: replies.id });
     if (reply === undefined) {
       deps.logger.info("reply_duplicate", { familyId, exchangeId });
-      return;
+      return file?.id ?? null;
     }
     await markReplied(deps, tx, exchange, now);
     await recordEvent(
@@ -139,7 +140,19 @@ export async function handleGroupReply(
       },
       now,
     );
+    return file?.id ?? null;
   });
+  if (copiedMediaId !== null) {
+    try {
+      await deps.queues.media.send({ type: "ingest_exchange_media", mediaId: copiedMediaId });
+    } catch (error) {
+      // Reconciliation re-drives the stored source when the queue handover is interrupted.
+      deps.logger.warn("reply_media_queue_failed", {
+        mediaId: copiedMediaId,
+        error: errorLabel(error),
+      });
+    }
+  }
 }
 
 /**

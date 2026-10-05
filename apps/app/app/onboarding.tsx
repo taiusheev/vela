@@ -5,13 +5,21 @@ import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { alreadyOrganiser, composeAsk, createFamily, provisionAccount } from "../src/api/client.ts";
+import {
+  alreadyOrganiser,
+  apiConfigured,
+  composeAsk,
+  createFamily,
+  provisionAccount,
+} from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
 import { NearbyEditor } from "../src/components/nearby-editor.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
 import { SetUpPhone } from "../src/components/set-up-phone.tsx";
+import { TelegramFamilyLink } from "../src/components/telegram-family-link.tsx";
+import { TestSignInDetails } from "../src/components/test-sign-in-details.tsx";
 import {
   Card,
   Chip,
@@ -28,6 +36,7 @@ import {
   languages,
   wakeTimes,
 } from "../src/data/onboarding.ts";
+import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { useNearby } from "../src/data/useNearby.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { useAppLocale } from "../src/i18n/provider.tsx";
@@ -49,6 +58,7 @@ export default function OnboardingScreen() {
   const account = useAccount();
   const queries = useQueryClient();
   const { noAccount, pushSent } = useToday();
+  const capabilities = useCapabilities();
   const [step, setStep] = useState<Step>("who");
   const [yourName, setYourName] = useState("");
   const [herName, setHerName] = useState("");
@@ -156,6 +166,36 @@ export default function OnboardingScreen() {
       setShareTrouble(true);
     }
   };
+
+  if (
+    apiConfigured() &&
+    (capabilities.capabilities === undefined || capabilities.capabilities.telegram_first)
+  ) {
+    return (
+      <ScrollView
+        style={{ backgroundColor: palette.bg }}
+        contentContainerStyle={{
+          paddingTop: insets.top + space.xl,
+          paddingBottom: insets.bottom + space.xxxl,
+          paddingHorizontal: space.margin,
+          gap: space.l,
+        }}
+      >
+        {capabilities.capabilities?.telegram_first ? (
+          <TelegramFamilyLink noAccount={noAccount} />
+        ) : (
+          <>
+            <Words variant="body" tone="ink2">
+              {capabilities.isError
+                ? t`Pilot setup could not be reached just now.`
+                : t`Loading pilot setup…`}
+            </Words>
+            <SecondaryButton label={t`Try again`} onPress={() => void capabilities.refetch()} />
+          </>
+        )}
+      </ScrollView>
+    );
+  }
 
   return (
     <>
@@ -452,6 +492,7 @@ export default function OnboardingScreen() {
             />
           </View>
         ) : null}
+        <TestSignInDetails />
       </ScrollView>
     </>
   );

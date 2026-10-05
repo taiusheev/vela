@@ -143,15 +143,86 @@ describe("handleOnboarding: starting", () => {
     expect((await session())?.step).toBe("name");
   });
 
-  it("starts over on a fresh /start in the middle of a session", async () => {
+  it("resumes a fresh /start in the middle of a session", async () => {
     await handleOnboarding(h.deps, start());
     await handleOnboarding(h.deps, text("Mom"));
     expect((await session())?.step).toBe("address");
 
     await handleOnboarding(h.deps, start());
 
+    expect((await session())?.step).toBe("address");
+    expect((await session())?.data).toMatchObject({ name: "Mom" });
+    expect(lastPrompt()?.text).toContain(t("en", "onboarding.ask_address"));
+  });
+
+  it("retries a saved initial prompt when Telegram delivery fails", async () => {
+    const first = start();
+    h.telegram.failNextSends(1, "unavailable");
+    await expect(handleOnboarding(h.deps, first)).rejects.toMatchObject({ code: "illegal_state" });
     expect((await session())?.step).toBe("name");
-    expect(lastPrompt()?.text).toContain(t("en", "onboarding.welcome"));
+    await handleOnboarding(h.deps, first);
+    expect(h.telegram.sentTo(USER)).toHaveLength(1);
+    await handleOnboarding(h.deps, first);
+    expect(h.telegram.sentTo(USER)).toHaveLength(1);
+  });
+
+  it("retries a saved next prompt without applying the same answer twice", async () => {
+    await handleOnboarding(h.deps, start());
+    const answer = text("Mom");
+    h.telegram.failNextSends(1, "unavailable");
+    await expect(handleOnboarding(h.deps, answer)).rejects.toMatchObject({ code: "illegal_state" });
+    expect((await session())?.step).toBe("address");
+    await handleOnboarding(h.deps, answer);
+    expect((await session())?.step).toBe("address");
+    expect((await session())?.data).toMatchObject({ name: "Mom" });
+    expect(h.telegram.sentTo(USER)).toHaveLength(2);
+  });
+
+  it("offers only English Vietnam/Taiwan setup to approved pilot accounts", async () => {
+    const deps = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: { telegramUserIds: [USER] } },
+    };
+    await handleOnboarding(
+      deps,
+      event({ kind: "start", sender: { externalUserId: USER, languageCode: "zh-TW" } }),
+    );
+    expect(lastPrompt()?.lang).toBe("en");
+    await handleOnboarding(deps, text("Mom"));
+    await handleOnboarding(deps, text("Mother"));
+    expect((await session())?.step).toBe("country");
+    expect(lastButtons().map(([action]) => action)).toEqual([
+      { type: "onboarding", step: "country", value: "VN" },
+      { type: "onboarding", step: "country", value: "TW" },
+    ]);
+    await handleOnboarding(deps, tap("country", "US"));
+    expect((await session())?.step).toBe("country");
+    await handleOnboarding(deps, tap("country", "VN"));
+    expect((await session())?.data).toMatchObject({
+      language: "en",
+      organiserLanguage: "en",
+      country: "VN",
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+    await handleOnboarding(deps, tap("wake", "07:30"));
+    await handleOnboarding(deps, tap("nearby", "skip"));
+    const [family] = await h.db.select().from(families);
+    expect(family).toMatchObject({ country: "VN", language: "en", region: "apac" });
+    expect(
+      (await h.db.select().from(members)).every(
+        (member) => member.language === "en" && member.tz === "Asia/Ho_Chi_Minh",
+      ),
+    ).toBe(true);
+  });
+
+  it("creates no onboarding state for an account outside the pilot roster", async () => {
+    const deps = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: { telegramUserIds: ["9999"] } },
+    };
+    expect(await handleOnboarding(deps, start())).toBe(true);
+    expect(await session()).toBeUndefined();
+    expect(h.telegram.sent).toHaveLength(0);
   });
 
   it("belongs to nobody without a session: a text or a group message is not onboarding", async () => {
@@ -213,6 +284,7 @@ describe("handleOnboarding: validation", () => {
     expect(h.telegram.acknowledged).toHaveLength(1);
     expect(lastPrompt()?.text).toBe(t("en", "onboarding.ask_country"));
     expect(lastButtons().map(([, label]) => label)).toEqual([
+      "Vietnam",
       "Taiwan",
       "United States",
       "United Kingdom",
@@ -224,7 +296,7 @@ describe("handleOnboarding: validation", () => {
       "India",
       "Other",
     ]);
-    expect(lastPrompt()?.buttons?.map((row) => row.length)).toEqual([4, 4, 2]);
+    expect(lastPrompt()?.buttons?.map((row) => row.length)).toEqual([4, 4, 3]);
 
     await handleOnboarding(h.deps, tap("language", "en"));
     expect((await session())?.step).toBe("country");

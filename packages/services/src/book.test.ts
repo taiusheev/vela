@@ -6,7 +6,7 @@
  */
 import { ApiBook, type InboundEvent } from "@vela/contracts";
 import { decodeButton } from "@vela/core";
-import { answers, bookEntries, exchanges, media, members, users } from "@vela/db";
+import { answers, bookEntries, exchanges, families, media, members, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
@@ -157,6 +157,12 @@ describe("a story she tells", () => {
     expect(h.telegram.sentTo(seed.memberLink.externalId).at(-1)?.message.text).toBe(
       "That's fine. This story is no longer in the family book.",
     );
+    await send(fromHer({ kind: "text", text: "It was raining that morning." }));
+    const later = h.telegram.sentTo(seed.memberLink.externalId).at(-1)?.message;
+    expect(later?.text).not.toContain("Your story is kept in the family book.");
+    expect(
+      later?.buttons?.flat().map((button) => decodeButton(button.id)) ?? [],
+    ).not.toContainEqual({ type: "book_drop", exchangeId: story.id });
   });
 
   it("moves a recording from her phone out of device/, which the bucket clears at 32 days, into book/", async () => {
@@ -191,7 +197,9 @@ describe("a story she tells", () => {
       .select()
       .from(media)
       .where(eq(media.id, file?.id ?? ""));
-    expect(moved?.storageKey).toBe(`book/${seed.family.id}/${file?.id}.m4a`);
+    expect(moved?.storageKey).toMatch(
+      new RegExp(`^book/${seed.family.id}/${file?.id}-[A-Za-z0-9_-]+\\.m4a$`),
+    );
     expect(moved?.kept).toBe(true);
     expect(h.media.objects.has(from)).toBe(false);
     expect(h.media.objects.has(moved?.storageKey ?? "")).toBe(true);
@@ -239,7 +247,9 @@ describe("a story she tells", () => {
       .where(eq(media.id, photo?.id ?? ""));
     expect(kept).toMatchObject({
       kept: true,
-      storageKey: `book/${seed.family.id}/${photo?.id}.jpg`,
+      storageKey: expect.stringMatching(
+        new RegExp(`^book/${seed.family.id}/${photo?.id}-[A-Za-z0-9_-]+\\.jpg$`),
+      ),
     });
     const book = ApiBook.parse(await loadApiBook(h.db, sam, seed.family.id));
     expect(book.entries).toEqual([
@@ -256,6 +266,93 @@ describe("a story she tells", () => {
     await send(fromHer({ kind: "text", text: "Rice porridge." }));
     expect(await entryOf(question.id)).toBeUndefined();
     expect(h.telegram.sentTo(seed.memberLink.externalId).at(-1)?.message.buttons).toBeUndefined();
+  });
+});
+
+async function phoneStory() {
+  const story = await storyMorning();
+  const from = `device/${seed.family.id}/${seed.member.id}/original.m4a`;
+  const [file] = await h.db
+    .insert(media)
+    .values({
+      familyId: seed.family.id,
+      uploadedBy: seed.member.id,
+      kind: "audio",
+      storageKey: from,
+      mime: "audio/mp4",
+    })
+    .returning();
+  if (file === undefined) throw new Error("Expected a recording");
+  await h.media.put(from, new ArrayBuffer(4), "audio/mp4");
+  const [answer] = await h.db
+    .insert(answers)
+    .values({
+      exchangeId: story.id,
+      memberId: seed.member.id,
+      kind: "voice",
+      channel: "device",
+      mediaId: file.id,
+    })
+    .returning();
+  if (answer === undefined) throw new Error("Expected a voice answer");
+  return { story, file, answer, from };
+}
+
+describe("a book copy interrupted before adoption", () => {
+  it("discards its own attempt when the family is deleted while storage writes", async () => {
+    const { story, file, answer, from } = await phoneStory();
+    const interrupted = {
+      ...h.media,
+      async put(key: string, body: ArrayBuffer, mime: string) {
+        await h.media.put(key, body, mime);
+        await h.db
+          .update(families)
+          .set({ deletedAt: h.clock.now() })
+          .where(eq(families.id, seed.family.id));
+      },
+    };
+    await keepInBook({ ...h.deps, media: interrupted }, story, answer);
+    const [after] = await h.db.select().from(media).where(eq(media.id, file.id));
+    expect(after?.storageKey).toBe(from);
+    expect([...h.media.objects.keys()]).toEqual([from]);
+  });
+
+  it("does not adopt or retain a copy after Don't keep this one", async () => {
+    const { story, file, answer, from } = await phoneStory();
+    const interrupted = {
+      ...h.media,
+      async put(key: string, body: ArrayBuffer, mime: string) {
+        await h.media.put(key, body, mime);
+        await h.db.transaction(async (tx) => {
+          await tx
+            .update(bookEntries)
+            .set({ removedAt: h.clock.now() })
+            .where(eq(bookEntries.exchangeId, story.id));
+          await tx.update(media).set({ kept: false }).where(eq(media.id, file.id));
+        });
+      },
+    };
+    await keepInBook({ ...h.deps, media: interrupted }, story, answer);
+    const [after] = await h.db.select().from(media).where(eq(media.id, file.id));
+    expect(after).toMatchObject({ storageKey: from, kept: false });
+    expect([...h.media.objects.keys()]).toEqual([from]);
+    expect(await keepInBook(h.deps, story, answer)).toBeNull();
+    expect(after?.kept).toBe(false);
+  });
+
+  it("cannot keep or expose media from another family even if an answer names it", async () => {
+    const { story, file, answer } = await phoneStory();
+    const other = await seedFamily(h.db, {
+      now: h.clock.now(),
+      organiserExternalId: "book-other-organiser",
+      memberExternalId: "book-other-parent",
+    });
+    await h.db.update(media).set({ familyId: other.family.id }).where(eq(media.id, file.id));
+    await keepInBook(h.deps, story, answer);
+    const [after] = await h.db.select().from(media).where(eq(media.id, file.id));
+    expect(after?.kept).toBe(false);
+    const book = ApiBook.parse(await loadApiBook(h.db, sam, seed.family.id));
+    expect(book.entries[0]?.answers[0]).toMatchObject({ media_id: null, media_kind: null });
   });
 });
 

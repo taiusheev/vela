@@ -41,6 +41,7 @@ import { z } from "zod";
 import { type AnswerButtonAction, handleAnswerButton, handleParentMessage } from "./answers.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { deliverOutbound, STRANDED_AFTER_MINUTES } from "./gateway.ts";
+import { handleParentCommand } from "./parent-commands.ts";
 import { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 import { repointFamilyGroup } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -1225,6 +1226,105 @@ describe("understandAnswer: health words (ADR-27)", () => {
     }
   });
 
+  it("revalidates consent after model latency before retaining health output or queueing a quote", async () => {
+    const scene = await morning();
+    const consent = await seedHealthWordsConsent(h.db, scene.seed, {
+      at: addMinutes(h.clock.now(), -60),
+      answer: "yes",
+    });
+    const answer = await herText(scene, WORDS);
+    const ai = healthAi();
+    h.deps.ai = {
+      ...ai,
+      flag: async (input) => {
+        const result = await ai.flag(input);
+        await h.db
+          .update(consents)
+          .set({ withdrawnAt: h.clock.now() })
+          .where(eq(consents.id, consent.id));
+        return result;
+      },
+    };
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(ai.calls[0]?.input).toMatchObject({ healthWordsConsent: true });
+    expect(await answerById(answer.id)).toMatchObject({
+      summary: "",
+      moodWords: ["tired"],
+      mentions: { health: [] },
+      flagReason: "urgent",
+    });
+    expect(JSON.stringify(await aiCallRows())).not.toContain("fell");
+    expect(JSON.stringify(await aiCallRows())).not.toContain("knee");
+    expect((await flagNotices())[0]).toEqual([
+      scene.seed.organiserLink.externalId,
+      t("en", "flag.notice_no_words", { name: "Mom" }),
+    ]);
+  });
+
+  it("discards model results when Stop arrives while a provider call is running", async () => {
+    const scene = await morning();
+    await seedHealthWordsConsent(h.db, scene.seed, {
+      at: addMinutes(h.clock.now(), -60),
+      answer: "yes",
+    });
+    const answer = await herText(scene, WORDS);
+    const ai = healthAi();
+    h.deps.ai = {
+      ...ai,
+      flag: async (input) => {
+        await handleParentCommand(
+          h.deps,
+          scene.seed.member,
+          "stop",
+          fromHer(scene.seed.memberLink, { kind: "text", text: "stop" }),
+        );
+        return ai.flag(input);
+      },
+    };
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(await aiCallRows()).toHaveLength(0);
+    expect(await flagNotices()).toHaveLength(0);
+    expect(await answerById(answer.id)).toMatchObject({
+      summary: null,
+      flag: false,
+      understoodAt: h.clock.now(),
+    });
+  });
+
+  it("replaces a queued quoted flag after consent is withdrawn before delivery", async () => {
+    const scene = await morning();
+    const consent = await seedHealthWordsConsent(h.db, scene.seed, {
+      at: addMinutes(h.clock.now(), -60),
+      answer: "yes",
+    });
+    const answer = await herText(scene, WORDS);
+    healthAi();
+    await understandAnswer(h.deps, answer.id);
+    const notice = (await outboundRows()).find(
+      (row) => row.kind === "flag" && row.conversationId === scene.seed.organiserLink.externalId,
+    );
+    expect(notice).toBeDefined();
+    await h.db
+      .update(consents)
+      .set({ withdrawnAt: h.clock.now() })
+      .where(eq(consents.id, consent.id));
+
+    await deliverOutbound(h.deps, notice?.id ?? "");
+
+    expect(h.telegram.sentTo(scene.seed.organiserLink.externalId).at(-1)?.message.text).toBe(
+      t("en", "flag.notice_no_words", { name: "Mom" }),
+    );
+    const [stored] = await h.db
+      .select()
+      .from(outbound)
+      .where(eq(outbound.id, notice?.id ?? ""));
+    expect(JSON.stringify(stored?.payload)).not.toContain("fell");
+  });
+
   it("sends no second notice when a re-run finds her consent changed", async () => {
     const scene = await morning();
     const answer = await herText(scene, WORDS);
@@ -1266,9 +1366,10 @@ describe("ingestAnswerMedia", () => {
     await ingestAnswerMedia(h.deps, answer.id);
 
     expect(h.telegram.fetched).toEqual(["voice-1"]);
-    const key = `families/${scene.seed.family.id}/answers/${answer.id}.ogg`;
-    expect(h.media.objects.get(key)).toEqual({ body: VOICE_BYTES, mime: "audio/ogg" });
     const [file] = await h.db.select().from(media);
+    const key = file?.storageKey;
+    expect(key).toMatch(new RegExp(`^families/${scene.seed.family.id}/media/.*\\.ogg$`));
+    expect(h.media.objects.get(key ?? "")).toEqual({ body: VOICE_BYTES, mime: "audio/ogg" });
     // With a store, `bytes` becomes the length of what was stored, over the size Telegram reported.
     expect(file).toMatchObject({ storageKey: key, mime: "audio/ogg", bytes: 3 });
     expect(hints).toEqual(["zh-TW"]);
@@ -1469,7 +1570,7 @@ describe("ingestAnswerMedia", () => {
 
     expect(hints).toEqual([]);
     expect(await answerById(answer.id)).toMatchObject({ transcript: null, processingAttempts: 1 });
-    expect(h.logger.entries.map((entry) => entry.event)).toContain("answer_media_fetch_failed");
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("inbound_media_copy_failed");
 
     const fullStore: Deps = {
       ...h.deps,
@@ -1483,7 +1584,7 @@ describe("ingestAnswerMedia", () => {
     await expect(ingestAnswerMedia(fullStore, answer.id)).resolves.toBeUndefined();
     expect(hints).toEqual([]);
     expect((await h.db.select().from(media))[0]?.storageKey).toBeNull();
-    expect(h.logger.entries.map((entry) => entry.event)).toContain("answer_media_store_failed");
+    expect(h.logger.entries.map((entry) => entry.event)).toContain("inbound_media_copy_failed");
   });
 });
 

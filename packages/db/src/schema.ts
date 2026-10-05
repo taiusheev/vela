@@ -113,6 +113,14 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { isOneOf, quoteLiteral } from "./checks.ts";
+import {
+  ANSWER_PAYLOAD_SEALING,
+  EXCHANGE_OPTIONS_SEALING,
+  OUTBOUND_PAYLOAD_SEALING,
+  sealedJsonb,
+  sealedText,
+  sealedTextArray,
+} from "./sealed.ts";
 
 // Sets that belong to a single table and are not part of the shared domain vocabulary.
 export const FAMILY_CHANNEL_KINDS = [
@@ -546,10 +554,10 @@ export const exchanges = pgTable(
     type: text("type", { enum: EXCHANGE_TYPES }).notNull(),
     state: text("state", { enum: EXCHANGE_STATES }).notNull().default("composed"),
     /** The ask, in the asker's language. */
-    text: text("text"),
+    text: sealedText("exchanges.text"),
     textLang: text("text_lang").notNull().default("en"),
     /** Vote options, photo ids for a choice, the word to teach, the story question id. */
-    options: jsonb("options"),
+    options: sealedJsonb<JsonObject>("exchanges.options", EXCHANGE_OPTIONS_SEALING),
     mediaIds: uuid("media_ids").array().notNull().default([]),
     /** The asker's 10-second hello. */
     voiceHelloId: uuid("voice_hello_id").references(() => media.id, { onDelete: "set null" }),
@@ -593,7 +601,7 @@ export const translations = pgTable(
     objectType: text("object_type", { enum: TRANSLATION_OBJECT_TYPES }).notNull(),
     objectId: uuid("object_id").notNull(),
     lang: text("lang").notNull(),
-    text: text("text").notNull(),
+    text: sealedText("translations.text").notNull(),
     /** "claude:v3" etc. */
     provider: text("provider").notNull(),
     createdAt: createdAt(),
@@ -623,17 +631,20 @@ export const answers = pgTable(
      */
     externalId: text("external_id"),
     /** Chip text, picked option, vote, sticker id. */
-    payload: jsonb("payload").$type<JsonObject>().notNull().default({}),
+    payload: sealedJsonb<JsonObject>("answers.payload", ANSWER_PAYLOAD_SEALING)
+      .$type<JsonObject>()
+      .notNull()
+      .default({}),
     mediaId: uuid("media_id").references(() => media.id, { onDelete: "set null" }),
-    transcript: text("transcript"),
+    transcript: sealedText("answers.transcript"),
     transcriptLang: text("transcript_lang"),
     /** One neutral line (AI). */
-    summary: text("summary"),
-    moodWords: text("mood_words").array().notNull().default([]),
+    summary: sealedText("answers.summary"),
+    moodWords: sealedTextArray("answers.mood_words").notNull().default([]),
     /** {people[], places[], plans[], health[], dates[]} */
-    mentions: jsonb("mentions").$type<JsonObject>().notNull().default({}),
+    mentions: sealedJsonb<JsonObject>("answers.mentions").$type<JsonObject>().notNull().default({}),
     flag: boolean("flag").notNull().default(false),
-    flagReason: text("flag_reason"),
+    flagReason: sealedText("answers.flag_reason"),
     /** Detected "going to my sister's until Sunday". */
     awayUntil: date("away_until"),
     /** Set only when understand and flag both succeeded; a failed translation does not block it. */
@@ -666,7 +677,7 @@ export const replies = pgTable(
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: REPLY_KINDS }).notNull(),
-    text: text("text"),
+    text: sealedText("replies.text"),
     mediaId: uuid("media_id").references(() => media.id, { onDelete: "set null" }),
     channel: text("channel", { enum: CHANNELS }).notNull(),
     /**
@@ -707,7 +718,7 @@ export const chips = pgTable("chips", {
   exchangeId: uuid("exchange_id")
     .primaryKey()
     .references(() => exchanges.id, { onDelete: "cascade" }),
-  chips: text("chips").array().notNull(),
+  chips: sealedTextArray("chips.chips").notNull(),
   promptVersion: text("prompt_version").notNull(),
   createdAt: createdAt(),
 });
@@ -770,7 +781,7 @@ export const suggestions = pgTable(
     bankId: text("bank_id").notNull(),
     type: text("type", { enum: EXCHANGE_TYPES }).notNull(),
     /** An AI draft; '' for a bank row, and once retention has cleared the draft. */
-    text: text("text").notNull(),
+    text: sealedText("suggestions.text").notNull(),
     /** The language an AI draft is written in; NULL for a bank row. */
     lang: text("lang", { enum: LANGS }),
     /** {ai_source?: "mention" | "date" | "last_ask" | "rotation"}: names, never words. */
@@ -808,9 +819,9 @@ export const stories = pgTable("stories", {
     .notNull()
     .references(() => members.id, { onDelete: "cascade" }),
   exchangeId: uuid("exchange_id").references(() => exchanges.id),
-  question: text("question").notNull(),
+  question: sealedText("stories.question").notNull(),
   askedBy: uuid("asked_by").references(() => members.id, { onDelete: "set null" }),
-  transcript: text("transcript"),
+  transcript: sealedText("stories.transcript"),
   mediaId: uuid("media_id").references(() => media.id, { onDelete: "set null" }),
   /** "Don't keep that one" flips it and deletes the media. */
   kept: boolean("kept").notNull().default(true),
@@ -827,9 +838,9 @@ export const recipes = pgTable(
     memberId: uuid("member_id")
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
+    title: sealedText("recipes.title").notNull(),
     /** {ingredients[], steps[], remarks[]} */
-    card: jsonb("card").$type<JsonObject>().notNull().default({}),
+    card: sealedJsonb<JsonObject>("recipes.card").$type<JsonObject>().notNull().default({}),
     status: text("status", { enum: RECIPE_STATUSES }).notNull().default("draft"),
     exchangeIds: uuid("exchange_ids").array().notNull().default([]),
     createdAt: createdAt(),
@@ -849,7 +860,7 @@ export const memoryFacts = pgTable(
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: MEMORY_FACT_KINDS }).notNull(),
-    text: text("text").notNull(),
+    text: sealedText("memory_facts.text").notNull(),
     onDate: date("on_date"),
     sourceAnswerId: uuid("source_answer_id").references(() => answers.id, {
       onDelete: "set null",
@@ -879,7 +890,7 @@ export const reminders = pgTable(
     aboutMemberId: uuid("about_member_id")
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
-    text: text("text").notNull(),
+    text: sealedText("reminders.text").notNull(),
     dueDate: date("due_date").notNull(),
     factId: uuid("fact_id").references(() => memoryFacts.id, { onDelete: "set null" }),
     /** Only created after a person's tap (spec §12). */
@@ -918,7 +929,10 @@ export const quietEvents = pgTable(
     notifiedMemberIds: uuid("notified_member_ids").array().notNull().default([]),
     waitUntil: timestamptz("wait_until"),
     /** [{contact_id, sent_by, sent_at, reply}] */
-    askToCheck: jsonb("ask_to_check").$type<unknown[]>().notNull().default([]),
+    askToCheck: sealedJsonb<unknown[]>("quiet_events.ask_to_check")
+      .$type<unknown[]>()
+      .notNull()
+      .default([]),
     resolvedAt: timestamptz("resolved_at"),
     outcome: text("outcome", { enum: QUIET_OUTCOMES }),
     resolvedBy: uuid("resolved_by").references(() => members.id, { onDelete: "set null" }),
@@ -1005,15 +1019,15 @@ export const weeklyReads = pgTable(
      * The draft lines about her week, zero to four, one string per line, as `ai.weeklyRead` returned
      * them and never edited, so prompt versions can be compared; other languages via translations.
      */
-    lines: jsonb("lines").$type<string[]>().notNull(),
+    lines: sealedJsonb<string[]>("weekly_reads.lines").$type<string[]>().notNull(),
     /** The draft suggestion as the model wrote it, kept unedited like `lines`. */
-    suggestion: text("suggestion"),
+    suggestion: sealedText("weekly_reads.suggestion"),
     /**
      * {answered_days, counted_days, hello_mornings, family_asks, usual_time, drift_min, topics[],
      * voice_len_drift}. The first four are the counts `renderWeeklyRead` in @vela/core writes for
      * organisers; the model never writes a count, and she never sees one (spec §8, §13).
      */
-    stats: jsonb("stats").$type<JsonObject>().notNull(),
+    stats: sealedJsonb<JsonObject>("weekly_reads.stats").$type<JsonObject>().notNull(),
     promptVersion: text("prompt_version").notNull(),
     createdAt: createdAt(),
     /**
@@ -1021,12 +1035,12 @@ export const weeklyReads = pgTable(
      * one-string-per-line shape as `lines`. NULL until sent; "what does the family see" shows her
      * the lines of the most recent sent read, without its counts or suggestion.
      */
-    sentLines: jsonb("sent_lines").$type<string[]>(),
+    sentLines: sealedJsonb<string[]>("weekly_reads.sent_lines").$type<string[]>(),
     /**
      * The suggestion as the founder sent it to organisers; '' when the founder removed it. NULL
      * until sent.
      */
-    sentSuggestion: text("sent_suggestion"),
+    sentSuggestion: sealedText("weekly_reads.sent_suggestion"),
     sentAt: timestamptz("sent_at"),
   },
   (t) => [
@@ -1066,7 +1080,9 @@ export const outbound = pgTable(
      * Deleting the actor deletes the row, since setting it null would break that rule.
      */
     actorId: uuid("actor_id").references(() => members.id, { onDelete: "cascade" }),
-    payload: jsonb("payload").$type<JsonObject>().notNull(),
+    payload: sealedJsonb<JsonObject>("outbound.payload", OUTBOUND_PAYLOAD_SEALING)
+      .$type<JsonObject>()
+      .notNull(),
     status: text("status", { enum: OUTBOUND_STATUSES }).notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),
     externalId: text("external_id"),
@@ -1218,7 +1234,7 @@ export const aiCalls = pgTable(
     model: text("model").notNull(),
     /** {answer_id | exchange_id | ...}; inputs are referenced, never copied. */
     inputRef: jsonb("input_ref").$type<JsonObject>().notNull(),
-    output: jsonb("output"),
+    output: sealedJsonb<unknown>("ai_calls.output"),
     ok: boolean("ok").notNull(),
     tokensIn: integer("tokens_in"),
     tokensOut: integer("tokens_out"),
@@ -1424,7 +1440,8 @@ export const apiRequestReceipts = pgTable(
     actorHash: text("actor_hash").notNull(),
     keyHash: text("key_hash").notNull(),
     requestHash: text("request_hash").notNull(),
-    result: jsonb("result").$type<JsonObject>(),
+    /** The cached mutation response can repeat an ask or reply's words for the idempotency window. */
+    result: sealedJsonb<JsonObject>("api_request_receipts.result").$type<JsonObject>(),
     familyId: uuid("family_id").references(() => families.id, { onDelete: "cascade" }),
     memberId: uuid("member_id").references(() => members.id, { onDelete: "cascade" }),
     createdAt: createdAt(),

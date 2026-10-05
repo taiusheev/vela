@@ -8,7 +8,13 @@
  * including the helpers these call themselves, is a flow's own business. The test harness is not
  * here: it lives behind `@vela/services/testing`, so production code cannot reach it.
  */
-export { completeAccountLink, issueAccountLinkCode, startAccountLink } from "./account-linking.ts";
+export {
+  completeAccountLink,
+  handleAccountLinkStart,
+  isAccountLinkStart,
+  issueAccountLinkCode,
+  startAccountLink,
+} from "./account-linking.ts";
 export {
   ADMIN_OVERVIEW_PATH,
   type AddContactInput,
@@ -108,7 +114,7 @@ export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";
 export { startApiTrial, TrialRefusedError } from "./api-trial.ts";
 export { MAX_VOICE_BYTES, MAX_VOICES_PER_ACCOUNT_DAY, uploadApiVoice } from "./api-voice.ts";
-export { loadApiWeeklyRead } from "./api-weekly-read.ts";
+export { loadApiWeeklyRead, openApiWeeklyRead } from "./api-weekly-read.ts";
 export { WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
 export { type ApiBookEntry, loadApiBook, removeApiBookEntry } from "./book.ts";
 export type {
@@ -142,9 +148,19 @@ export {
 export { errorLabel, VelaError } from "./errors.ts";
 export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
+export { ingestExchangeMedia, storeInboundCopy } from "./inbound-media-copy.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
 export { askApiToLookIn, LookInRefusedError } from "./nearby-ask.ts";
 export { inviteApiNearby, NearbyInviteRefusedError } from "./nearby-consent.ts";
+export {
+  type PilotAdmission,
+  pilotAllowsInbound,
+  pilotAllowsTelegram,
+  pilotApiAccountAllowed,
+  pilotCanActivate,
+  pilotFamilyAllowed,
+  pilotMemberAllowed,
+} from "./pilot-admission.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 export type { DeviceAlerts } from "./push-devices.ts";
 export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";

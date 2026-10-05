@@ -18,10 +18,11 @@ import {
   translations,
   turns,
 } from "@vela/db";
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { loadApiLights } from "./api-lights.ts";
+import { sourceAudio, sourcePhoto } from "./api-media-descriptors.ts";
 import { canBeAsked } from "./askable.ts";
 import {
   exchangeForLocalDate,
@@ -33,10 +34,20 @@ import {
 import { renderSuggestion } from "./suggestions.ts";
 
 /** Her words, in the order the read-back uses: what she said, else wrote, else tapped. */
-const answerText = sql<string | null>`coalesce(
-  ${answers.transcript}, ${answers.payload} ->> 'text', ${answers.payload} ->> 'choice',
-  ${answers.summary}
-)`;
+function answerText(answer: {
+  transcript: string | null;
+  payload: Record<string, unknown>;
+  summary: string | null;
+}): string | null {
+  const payloadText = answer.payload.text;
+  const choice = answer.payload.choice;
+  return (
+    answer.transcript ??
+    (typeof payloadText === "string" ? payloadText : null) ??
+    (typeof choice === "string" ? choice : null) ??
+    answer.summary
+  );
+}
 
 const Uuid = z.uuid();
 
@@ -47,8 +58,12 @@ const Uuid = z.uuid();
  * is listed for it. `stored` is what the photo route would serve: a kept JPEG, or a Telegram photo
  * copied to storage.
  */
-async function photosOf(db: Queryable, exchange: Exchange): Promise<ApiTodayExchange["photos"]> {
-  return photosById(db, exchange.familyId, exchange.mediaIds);
+async function photosOf(
+  db: Queryable,
+  exchange: Exchange,
+  now?: Date,
+): Promise<ApiTodayExchange["photos"]> {
+  return photosById(db, exchange.familyId, exchange.mediaIds, now);
 }
 
 /** The family's images with these ids, in this order, as the app shows them; a gone one is left out. */
@@ -56,6 +71,7 @@ async function photosById(
   db: Queryable,
   familyId: string,
   ids: readonly string[],
+  now?: Date,
 ): Promise<ApiTodayExchange["photos"]> {
   if (ids.length === 0) return [];
   const rows = await db
@@ -65,6 +81,8 @@ async function photosById(
       height: media.height,
       storageKey: media.storageKey,
       mime: media.mime,
+      kept: media.kept,
+      expiresAt: media.expiresAt,
     })
     .from(media)
     .where(and(eq(media.familyId, familyId), inArray(media.id, [...ids]), eq(media.kind, "image")));
@@ -72,12 +90,14 @@ async function photosById(
   return ids.flatMap((id) => {
     const row = byId.get(id.toLowerCase());
     if (row === undefined) return [];
+    if (now !== undefined && !row.kept && row.expiresAt !== null && row.expiresAt <= now) return [];
     return [
       {
         id: row.id,
         width: row.width !== null && row.width > 0 ? row.width : null,
         height: row.height !== null && row.height > 0 ? row.height : null,
         stored: row.storageKey !== null && (row.mime === null || row.mime === "image/jpeg"),
+        expires_at: row.kept ? null : (row.expiresAt?.toISOString() ?? null),
       },
     ];
   });
@@ -137,13 +157,17 @@ export async function exchangeRow(
   db: Queryable,
   exchange: Exchange,
   recipient: { id: string; displayName: string },
+  now?: Date,
 ): Promise<ApiTodayExchange> {
   const [answer] = await db
     .select({
       id: answers.id,
       kind: answers.kind,
-      text: answerText,
+      payload: answers.payload,
+      transcript: answers.transcript,
+      summary: answers.summary,
       receivedAt: answers.receivedAt,
+      mediaId: answers.mediaId,
     })
     .from(answers)
     .where(eq(answers.exchangeId, exchange.id))
@@ -161,6 +185,22 @@ export async function exchangeRow(
     .where(eq(replies.exchangeId, exchange.id))
     .orderBy(asc(replies.createdAt), asc(replies.id));
 
+  const ids = [
+    answer?.mediaId,
+    exchange.voiceHelloId,
+    ...replyRows.map((reply) => reply.mediaId),
+  ].filter((id): id is string => typeof id === "string");
+  const files =
+    ids.length === 0
+      ? []
+      : await db
+          .select()
+          .from(media)
+          .where(and(eq(media.familyId, exchange.familyId), inArray(media.id, ids)));
+  const byId = new Map(files.map((file) => [file.id, file]));
+  const fileOf = (id: string | null | undefined) =>
+    id === null || id === undefined ? undefined : byId.get(id);
+
   return {
     id: exchange.id,
     recipient_id: recipient.id,
@@ -169,28 +209,32 @@ export async function exchangeRow(
     on_behalf_of: exchange.onBehalfOf,
     type: exchange.type,
     ask: exchange.text,
+    voice_hello: sourceAudio(fileOf(exchange.voiceHelloId), now),
     answer:
       answer === undefined
         ? null
         : {
             kind: answer.kind,
-            text: answer.text,
+            text: answerText(answer),
             at: answer.receivedAt.toISOString(),
             ...(await pickedPhoto(db, exchange)),
-            translation: answer.text === null ? null : await translationOf(db, answer.id),
+            translation: answerText(answer) === null ? null : await translationOf(db, answer.id),
+            audio: sourceAudio(fileOf(answer.mediaId), now),
+            photo: sourcePhoto(fileOf(answer.mediaId), now),
           },
     replies: await Promise.all(
       replyRows.map(async ({ mediaId, ...reply }) => ({
         ...reply,
+        audio: sourceAudio(fileOf(mediaId), now),
         photo:
           reply.kind === "photo" && mediaId !== null
-            ? ((await photosById(db, exchange.familyId, [mediaId]))[0] ?? null)
+            ? ((await photosById(db, exchange.familyId, [mediaId], now))[0] ?? null)
             : null,
       })),
     ),
     seen_at: exchange.seenAt?.toISOString() ?? null,
     replies_reach_her: (await readBackExchangeId(db, recipient.id)) === exchange.id,
-    photos: await photosOf(db, exchange),
+    photos: await photosOf(db, exchange, now),
   };
 }
 
@@ -333,7 +377,7 @@ export async function loadApiToday(
   for (const member of keptLight) {
     const today = localDateOf(now, member.tz);
     const exchange = await exchangeForLocalDate(db, member.id, today);
-    if (exchange !== null) exchanges.push(await exchangeRow(db, exchange, member));
+    if (exchange !== null) exchanges.push(await exchangeRow(db, exchange, member, now));
     const turn = await turnOfTomorrow(db, familyId, member, addDays(today, 1), viewer, familyEnded);
     if (turn !== null) tomorrow.push(turn);
   }

@@ -15,6 +15,7 @@ export interface BookView {
   /** An organiser takes a story out; Sunday and the book read again. */
   remove(exchangeId: string): void;
   removing: boolean;
+  removeFailed: boolean;
 }
 
 /**
@@ -44,6 +45,7 @@ export function useBook(familyId: string | undefined): BookView {
     recipes: read.data?.recipes ?? [],
     loading: live && read.isPending,
     trouble: read.isError,
+    removeFailed: removing.isError,
     remove: (exchangeId) => removing.mutate(exchangeId),
     removing: removing.isPending,
   };

@@ -8,6 +8,7 @@ import type { InboundEvent, InboundKind, LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { encodeButton } from "@vela/core";
 import {
+  accountLinkChallenges,
   answers,
   consents,
   events,
@@ -17,15 +18,23 @@ import {
   invites,
   members,
   messageRefs,
+  onboardingSessions,
   outbound,
   replies,
+  users,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Deps, OutboundJob } from "../deps.ts";
 import { deliverOutbound } from "../gateway.ts";
 import { createHarness, type Harness } from "../testing/harness.ts";
-import { type SeededFamily, seedExchange, seedFamily, seedLinkedGroup } from "../testing/seed.ts";
+import {
+  type SeededFamily,
+  seedExchange,
+  seedFamily,
+  seedGroupMember,
+  seedLinkedGroup,
+} from "../testing/seed.ts";
 import { handleInbound } from "./router.ts";
 
 let h: Harness;
@@ -126,6 +135,104 @@ async function memberCount(): Promise<number> {
 }
 
 describe("the private chat", () => {
+  it("privately shows an unapproved starter only their own Telegram ID without creating onboarding or proof rows", async () => {
+    const deps = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: { telegramUserIds: [ORGANISER] } },
+    };
+    await handleInbound(deps, [
+      privately(STRANGER, {
+        kind: "start",
+        sender: { externalUserId: STRANGER, languageCode: "ru" },
+      }),
+      privately(STRANGER, {
+        kind: "start",
+        startParam: "link_01990000-0000-7000-8000-000000000001",
+      }),
+    ]);
+    expect(
+      h.telegram.sentTo(STRANGER).map((entry) => [entry.message.lang, entry.message.text]),
+    ).toEqual([
+      ["en", t("en", "pilot.invitation_only", { telegram_id: STRANGER })],
+      ["en", t("en", "pilot.invitation_only", { telegram_id: STRANGER })],
+    ]);
+    for (const table of [
+      families,
+      members,
+      users,
+      invites,
+      consents,
+      events,
+      outbound,
+      onboardingSessions,
+      accountLinkChallenges,
+    ])
+      expect(await h.db.select().from(table)).toEqual([]);
+    expect(h.queues.outbound.pending).toEqual([]);
+    expect(JSON.stringify(h.logger.entries)).not.toContain(STRANGER);
+  });
+
+  it("discloses no invitation identity in groups, another person's chat or arbitrary text", async () => {
+    const deps = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: { telegramUserIds: [ORGANISER] } },
+    };
+    await handleInbound(deps, [
+      inGroup(STRANGER, { kind: "start", startParam: "link_01990000-0000-7000-8000-000000000001" }),
+      event(STRANGER, { id: HER, kind: "private" }, { kind: "start" }),
+      privately(STRANGER, { kind: "text", text: "hello" }),
+    ]);
+    expect(h.telegram.sent).toEqual([]);
+    expect(await h.db.select().from(outbound)).toEqual([]);
+    expect(await h.db.select().from(onboardingSessions)).toEqual([]);
+    expect(await h.db.select().from(accountLinkChallenges)).toEqual([]);
+    expect(JSON.stringify(h.logger.entries)).not.toContain(STRANGER);
+  });
+
+  it("refuses non-rostered onboarding and content while keeping private stop and rights available", async () => {
+    const { seed } = await scene();
+    const deps = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: { telegramUserIds: [ORGANISER] } },
+    };
+    await handleInbound(deps, [
+      privately(STRANGER, { kind: "start" }),
+      privately(HER, { kind: "text", text: "I am answering this morning." }),
+    ]);
+    expect(await h.db.select().from(answers)).toHaveLength(0);
+    expect(await memberCount()).toBe(2);
+    await handleInbound(deps, [privately(HER, { kind: "text", text: "stop" })]);
+    const [parent] = await h.db.select().from(members).where(eq(members.id, seed.member.id));
+    expect(parent?.status).toBe("paused");
+    await handleInbound(deps, [privately(HER, { kind: "text", text: "what does my family see" })]);
+    await h.run(handlers());
+    expect(
+      h.telegram
+        .sentTo(HER)
+        .some((entry) => entry.message.text === t("en", "parent.family_sees_empty")),
+    ).toBe(true);
+  });
+  it("keeps the parent's No available after pilot roster removal", async () => {
+    const { seed } = await scene();
+    await h.db
+      .update(members)
+      .set({ status: "invited", lightOn: false, lightConsentedAt: null })
+      .where(eq(members.id, seed.member.id));
+    const deps = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: { telegramUserIds: [ORGANISER] } },
+    };
+    await handleInbound(deps, [
+      privately(HER, {
+        kind: "button",
+        buttonData: encodeButton({ type: "consent", memberId: seed.member.id, accept: false }),
+        callbackId: "decline-after-roster-removal",
+      }),
+    ]);
+    expect(await h.db.select().from(members).where(eq(members.id, seed.member.id))).toHaveLength(0);
+    expect(h.telegram.acknowledged).toHaveLength(1);
+  });
+
   it("tells the founder once when the family's last organiser blocks the bot, and not for her", async () => {
     const { seed } = await scene();
     const founder = h.deps.config.adminConversationId ?? "";
@@ -337,6 +444,31 @@ describe("the family group", () => {
 
     expect(await h.db.select().from(exchanges)).toHaveLength(1);
     expect(await h.db.select().from(events)).toHaveLength(0);
+  });
+
+  it("still handles departures and bot removal from a roster-removed sender", async () => {
+    const { seed } = await scene();
+    const contributor = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      externalId: STRANGER,
+      name: "Contributor",
+    });
+    const deps = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: { telegramUserIds: [ORGANISER, HER] } },
+    };
+    await handleInbound(deps, [
+      inGroup(STRANGER, { kind: "member_left", subject: { externalUserId: STRANGER } }),
+    ]);
+    expect(
+      (await h.db.select().from(members).where(eq(members.id, contributor.member.id)))[0],
+    ).toMatchObject({ status: "left", leftAt: h.clock.now() });
+    await handleInbound(deps, [inGroup(STRANGER, { kind: "bot_removed" })]);
+    expect(
+      (
+        await h.db.select().from(familyChannels).where(eq(familyChannels.familyId, seed.family.id))
+      )[0]?.unlinkedAt,
+    ).toEqual(h.clock.now());
   });
 
   it("ignores the group once the family's deletion has been requested", async () => {

@@ -39,6 +39,7 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf, replyOf } from "./gateway.ts";
 import { languageOfSender, sendOutsideGateway } from "./group.ts";
+import { pilotCanActivate } from "./pilot-admission.ts";
 import {
   type ChatConsentEvidence,
   chatConsentEvidence,
@@ -420,6 +421,21 @@ async function acceptConsent(
   if (family === null) {
     return null;
   }
+  if (!(await pilotCanActivate(tx, deps.config.pilotAdmission, member.familyId, member.id))) {
+    await enqueueOutbound(deps, tx, {
+      kind: "consent",
+      idempotencyKey: outboundKey("consent", {
+        conversationId: event.conversation.externalId,
+        suffix: `pilot_wait:${event.eventId}`,
+      }),
+      memberId: member.id,
+      channel: event.channel,
+      conversationId: event.conversation.externalId,
+      lang: "en",
+      text: t("en", "pilot.activation_wait"),
+    });
+    return null;
+  }
   const lang = member.language;
   const params = await requestParams(deps, tx, member, family);
   const today = localDateOf(now, member.tz);
@@ -613,7 +629,10 @@ export async function handleConsentButton(
     const answered = await deps.db.transaction((tx) =>
       acceptConsent(deps, tx, event, action.memberId, now),
     );
-    if (event.messageId !== undefined) {
+    if (
+      event.messageId !== undefined &&
+      (answered !== null || sender.member.lightConsentedAt !== null)
+    ) {
       await adapter.closeButtons(conversationId, event.messageId, answered ?? undefined);
     }
     const changed = answered !== null;

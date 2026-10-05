@@ -5,8 +5,10 @@ import {
   checkAdminConfig,
   readAiProvider,
   readApiConfig,
+  readClerkWebhookSigningSecret,
   readConfig,
   readLineConfig,
+  readPilotAdmission,
   readPushConfig,
   readPushSend,
   secret,
@@ -54,6 +56,31 @@ function configErrorOf(run: () => unknown): ConfigError {
 
 type StringVar = "TELEGRAM_BOT_USERNAME" | "ADMIN_CONVERSATION_ID" | "REGIONS" | "DEEPGRAM_API_KEY";
 type UrlVar = "PUBLIC_BASE_URL" | "PRIVACY_NOTICE_URL_EN" | "PRIVACY_NOTICE_URL_ZH_TW";
+
+describe("the endpoint-specific Clerk webhook signing secret", () => {
+  it("decodes the private Svix key without requiring Telegram or AI configuration", () => {
+    const value = "a synthetic webhook signing key";
+    expect(
+      readClerkWebhookSigningSecret({ CLERK_WEBHOOK_SIGNING_SECRET: ` whsec_${btoa(value)} ` }),
+    ).toEqual(new TextEncoder().encode(value));
+  });
+
+  it.each([
+    undefined,
+    "",
+    "wrong-prefix",
+    "whsec_!!!!",
+    `whsec_${btoa("short")}`,
+    `whsec_${btoa("a".repeat(65))}`,
+    `whsec_${"a".repeat(130)}`,
+  ])("refuses an absent or malformed key without exposing its value", (value) => {
+    const error = configErrorOf(() =>
+      readClerkWebhookSigningSecret({ CLERK_WEBHOOK_SIGNING_SECRET: value }),
+    );
+    expect(error.code).toBe("CLERK_WEBHOOK_SIGNING_SECRET");
+    if (value) expect(error.message).not.toContain(value);
+  });
+});
 
 describe("the configuration a deployed pilot Worker starts with", () => {
   it("starts staging once every value is chosen, every link is https, and both notices are filled", () => {
@@ -297,6 +324,7 @@ describe("the API's configuration", () => {
       lineBasicId: null,
       regions: ["apac"],
       pushSend: "off",
+      pilotAdmission: null,
       privacyNoticeUrls: {
         en: "https://vela.vela.example/privacy",
         "zh-TW": "https://vela.vela.example/privacy/zh-TW",
@@ -446,6 +474,60 @@ describe("the API's configuration", () => {
     expectRefused({ ...testEnv, CLERK_SECRET_KEY: LIVE_KEY }, "CLERK_SECRET_KEY");
     expectRefused({ ...testEnv, CLERK_ISSUER: "https://clerk.vela.example" }, "CLERK_ISSUER");
     expect(readApiConfig({ ...testEnv, CLERK_SECRET_KEY: TEST_KEY })?.secretKey).toBe(TEST_KEY);
+  });
+});
+
+describe("closed pilot admission", () => {
+  it("is off unless explicitly enabled and validates a private roster when enabled", () => {
+    expect(readPilotAdmission({})).toBeNull();
+    expect(
+      readPilotAdmission({ PILOT_ADMISSION: "off", PILOT_TELEGRAM_ALLOWLIST: "bad" }),
+    ).toBeNull();
+    expect(
+      readPilotAdmission({ PILOT_ADMISSION: " on ", PILOT_TELEGRAM_ALLOWLIST: "1001, 2001,1001" }),
+    ).toEqual({ telegramUserIds: ["1001", "2001"] });
+  });
+
+  it.each([undefined, "", " ", "1001,", "1001,private-name", "-1001", "01", "1099511627776"])(
+    "fails closed for invalid roster %j without including its value",
+    (roster) => {
+      const error = configErrorOf(() =>
+        readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_TELEGRAM_ALLOWLIST: roster }),
+      );
+      expect(error.code).toBe("PILOT_TELEGRAM_ALLOWLIST");
+      if (roster !== undefined && roster.trim() !== "") expect(error.message).not.toContain(roster);
+    },
+  );
+
+  it("rejects misspelled admission mode and excessive rosters", () => {
+    expect(configErrorOf(() => readPilotAdmission({ PILOT_ADMISSION: "yes" })).code).toBe(
+      "PILOT_ADMISSION",
+    );
+    expect(
+      configErrorOf(() =>
+        readPilotAdmission({
+          PILOT_ADMISSION: "on",
+          PILOT_TELEGRAM_ALLOWLIST: Array.from({ length: 101 }, (_, index) =>
+            String(index + 1),
+          ).join(","),
+        }),
+      ).code,
+    ).toBe("PILOT_TELEGRAM_ALLOWLIST");
+  });
+
+  it("applies the same admission setting to the API and webhook runtime", () => {
+    const configured = {
+      ...apiStaging,
+      PILOT_ADMISSION: "on",
+      PILOT_TELEGRAM_ALLOWLIST: "1001,2001",
+    };
+    expect(readApiConfig(configured)?.pilotAdmission).toEqual({
+      telegramUserIds: ["1001", "2001"],
+    });
+    expect(readConfig(configured, filled).pilotAdmission).toEqual({
+      telegramUserIds: ["1001", "2001"],
+    });
+    expect(readConfig({ ...configured, MEMORY: "on" }, filled).memory).toBe(false);
   });
 });
 

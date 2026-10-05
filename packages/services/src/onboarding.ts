@@ -4,8 +4,8 @@
  * contacts, and the single-use invite link in one transaction.
  *
  * Until the family exists there is no member to address an outbound row to, so the prompts go to
- * the adapter directly; the session remembers the last event it handled, so a redelivered update
- * neither moves a step nor repeats a prompt. Only `onboarding.done`, sent once the organiser is a
+ * the adapter directly; the session keeps an unsent prompt so redelivery retries without moving a
+ * step. A fresh /start resumes a live session. Only `onboarding.done`, sent once the organiser is a
  * member, goes through the gateway.
  */
 import {
@@ -14,7 +14,7 @@ import {
   Lang,
   type LocalTime,
   type MVP_LANGS,
-  type OutboundMessage,
+  OutboundMessage,
   type Region,
 } from "@vela/contracts";
 import { type MessageKey, t } from "@vela/copy";
@@ -31,6 +31,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps } from "./deps.ts";
+import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound, replyFieldOf } from "./gateway.ts";
 import { isKeptLightMember, languageOfSender, sendOutsideGateway } from "./group.ts";
@@ -40,6 +41,7 @@ import {
   insertInvitedMember,
   NAME_MAX_LENGTH,
 } from "./invites.ts";
+import { pilotAllowsInbound } from "./pilot-admission.ts";
 import { isMessenger, type MemberWithFamily, memberByChannelUser } from "./repo.ts";
 
 /** A session that hears nothing for a day is abandoned (flows §3.1). */
@@ -85,6 +87,8 @@ const SessionData = z.object({
   organiserLanguage: Lang,
   /** The last platform event applied, so a redelivered update changes nothing. */
   lastEventId: z.string().optional(),
+  /** Removed only after the platform accepted the prompt. */
+  pendingPrompt: OutboundMessage.optional(),
   name: z.string().optional(),
   address: z.string().optional(),
   language: Lang.optional(),
@@ -166,6 +170,7 @@ interface CountryOption {
 }
 
 const COUNTRIES: readonly CountryOption[] = [
+  { code: "VN", key: "onboarding.country_vn", region: "apac", zone: "Asia/Ho_Chi_Minh" },
   { code: "TW", key: "onboarding.country_tw", region: "apac", zone: "Asia/Taipei" },
   { code: "US", key: "onboarding.country_us", region: "us", zone: null },
   { code: "GB", key: "onboarding.country_gb", region: "eu", zone: "Europe/London" },
@@ -246,7 +251,13 @@ interface Prompt {
 }
 
 /** The question for a step, with its buttons; the name step opens with the welcome when `first`. */
-function promptFor(lang: Lang, step: OnboardingStep, data: SessionData, first: boolean): Prompt {
+function promptFor(
+  lang: Lang,
+  step: OnboardingStep,
+  data: SessionData,
+  first: boolean,
+  pilot = false,
+): Prompt {
   switch (step) {
     case "name":
       return {
@@ -260,14 +271,18 @@ function promptFor(lang: Lang, step: OnboardingStep, data: SessionData, first: b
       return {
         text: t(lang, "onboarding.ask_language"),
         buttons: rows(
-          LANGUAGE_OPTIONS.map((option) => button("language", option.value, option.label)),
+          LANGUAGE_OPTIONS.filter((option) => !pilot || option.value === "en").map((option) =>
+            button("language", option.value, option.label),
+          ),
         ),
       };
     case "country":
       return {
         text: t(lang, "onboarding.ask_country"),
         buttons: rows(
-          COUNTRIES.map((country) => button("country", country.code, t(lang, country.key))),
+          COUNTRIES.filter(
+            (country) => !pilot || country.code === "VN" || country.code === "TW",
+          ).map((country) => button("country", country.code, t(lang, country.key))),
         ),
       };
     case "zone": {
@@ -671,15 +686,36 @@ async function advance(
 ): Promise<Outcome | null> {
   const session = await lockSession(tx, event, now);
   const stored = session === null ? null : SessionData.safeParse(session.data);
+  const pilot = deps.config.pilotAdmission != null;
   if (input.kind === "start") {
     if (stored?.success === true && stored.data.lastEventId === event.eventId) {
-      return { messages: [] };
+      return {
+        messages: stored.data.pendingPrompt === undefined ? [] : [stored.data.pendingPrompt],
+      };
     }
-    // A /start restarts: whatever was answered before is dropped with the old session.
-    const lang = languageOfSender(event.sender.languageCode, event.channel);
+    const oldStep = session === null ? null : Step.safeParse(session.step);
+    if (
+      stored?.success === true &&
+      oldStep?.success === true &&
+      (!pilot ||
+        (stored.data.organiserLanguage === "en" &&
+          (stored.data.language === undefined || stored.data.language === "en")))
+    ) {
+      const data = { ...stored.data, lastEventId: event.eventId };
+      const message = prompt(
+        event,
+        data.organiserLanguage,
+        promptFor(data.organiserLanguage, oldStep.data, data, false, pilot),
+        event.eventId,
+      );
+      await saveSession(tx, event, oldStep.data, { ...data, pendingPrompt: message }, now);
+      return { messages: [message] };
+    }
+    const lang = pilot ? "en" : languageOfSender(event.sender.languageCode, event.channel);
     const data: SessionData = { organiserLanguage: lang, nearby: [], lastEventId: event.eventId };
-    await saveSession(tx, event, "name", data, now);
-    return { messages: [prompt(event, lang, promptFor(lang, "name", data, true), event.eventId)] };
+    const message = prompt(event, lang, promptFor(lang, "name", data, true, pilot), event.eventId);
+    await saveSession(tx, event, "name", { ...data, pendingPrompt: message }, now);
+    return { messages: [message] };
   }
   if (session === null) {
     return null;
@@ -692,28 +728,75 @@ async function advance(
   }
   const data = stored.data;
   if (data.lastEventId === event.eventId) {
-    return { messages: [] };
+    return { messages: data.pendingPrompt === undefined ? [] : [data.pendingPrompt] };
   }
-  const lang = data.organiserLanguage;
-  const result = applyOnboardingStep(step.data, data, input, lang);
+  const lang = pilot ? "en" : data.organiserLanguage;
+  const applied: StepResult =
+    pilot &&
+    step.data === "country" &&
+    input.kind === "button" &&
+    !["VN", "TW"].includes(input.value)
+      ? { kind: "repeat" }
+      : applyOnboardingStep(step.data, data, input, lang);
+  const result =
+    pilot && applied.kind === "next" && applied.step === "language"
+      ? {
+          ...applied,
+          step: "country" as const,
+          data: { ...applied.data, organiserLanguage: "en" as const, language: "en" as const },
+        }
+      : applied;
   switch (result.kind) {
     case "repeat": {
-      await saveSession(tx, event, step.data, { ...data, lastEventId: event.eventId }, now);
       const body =
         result.notice === undefined
-          ? promptFor(lang, step.data, data, false)
+          ? promptFor(lang, step.data, data, false, pilot)
           : { text: t(lang, result.notice) };
-      return { messages: [prompt(event, lang, body, event.eventId)] };
+      const message = prompt(event, lang, body, event.eventId);
+      await saveSession(
+        tx,
+        event,
+        step.data,
+        { ...data, lastEventId: event.eventId, pendingPrompt: message },
+        now,
+      );
+      return { messages: [message] };
     }
     case "next": {
       const next = { ...result.data, lastEventId: event.eventId };
-      await saveSession(tx, event, result.step, next, now);
+      const message = prompt(
+        event,
+        lang,
+        promptFor(lang, result.step, next, false, pilot),
+        event.eventId,
+      );
+      await saveSession(tx, event, result.step, { ...next, pendingPrompt: message }, now);
       return {
-        messages: [prompt(event, lang, promptFor(lang, result.step, next, false), event.eventId)],
+        messages: [message],
         chosen: result.chosen,
       };
     }
     case "complete": {
+      if (
+        pilot &&
+        (result.data.language !== "en" ||
+          result.data.organiserLanguage !== "en" ||
+          !["VN", "TW"].includes(result.data.country))
+      ) {
+        const next: SessionData = {
+          organiserLanguage: "en",
+          nearby: [],
+          lastEventId: event.eventId,
+        };
+        const message = prompt(
+          event,
+          "en",
+          promptFor("en", "name", next, true, true),
+          event.eventId,
+        );
+        await saveSession(tx, event, "name", { ...next, pendingPrompt: message }, now);
+        return { messages: [message] };
+      }
       await createFamily(deps, tx, event, result.data, now);
       await deleteSession(tx, event);
       return { messages: [], chosen: result.chosen };
@@ -766,6 +849,7 @@ export async function handleOnboarding(deps: Deps, event: InboundEvent): Promise
   if (event.conversation.kind !== "private") {
     return false;
   }
+  if (!pilotAllowsInbound(deps.config.pilotAdmission, event)) return true;
   const adapter = deps.channels.get(event.channel);
   const input = readInput(event);
   if (event.kind === "button") {
@@ -784,7 +868,21 @@ export async function handleOnboarding(deps: Deps, event: InboundEvent): Promise
     await adapter.closeButtons(event.conversation.externalId, event.messageId, outcome.chosen);
   }
   for (const message of outcome.messages) {
-    await sendOutsideGateway(deps, message);
+    if (!(await sendOutsideGateway(deps, message)))
+      throw new VelaError("illegal_state", "Onboarding prompt delivery failed");
+    await deps.db.transaction(async (tx) => {
+      const current = await lockSession(tx, event, deps.clock.now());
+      const parsed = current === null ? null : SessionData.safeParse(current.data);
+      const step = current === null ? null : Step.safeParse(current.step);
+      if (
+        parsed?.success !== true ||
+        step?.success !== true ||
+        parsed.data.pendingPrompt?.idempotencyKey !== message.idempotencyKey
+      )
+        return;
+      const { pendingPrompt: _sent, ...data } = parsed.data;
+      await saveSession(tx, event, step.data, data, deps.clock.now());
+    });
   }
   return true;
 }

@@ -21,11 +21,23 @@
       "distribution": "store",
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" }
+    },
+    "trial": {
+      "environment": "production",
+      "distribution": "store",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://vela.vela-light.workers.dev",
+        "EXPO_PUBLIC_TRIAL_ENGLISH": "true"
+      }
     }
   },
   "submit": {
     "testflight": {
       "android": { "track": "internal", "releaseStatus": "draft" }
+    },
+    "trial": {
+      "ios": {}
     }
   }
 }

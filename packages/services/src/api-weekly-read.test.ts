@@ -2,7 +2,7 @@ import { members, quietEvents, subscriptions, users, weeklyReads } from "@vela/d
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
-import { loadApiWeeklyRead } from "./api-weekly-read.ts";
+import { loadApiWeeklyRead, openApiWeeklyRead } from "./api-weekly-read.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedExchange, seedFamily, seedGroupMember } from "./testing/seed.ts";
 
@@ -187,6 +187,45 @@ describe("loadApiWeeklyRead", () => {
     await covered("active");
 
     expect((await load())?.read?.suggestion).toBeNull();
+  });
+
+  it("keeps reviewed notes available for the free pilot after a commercial trial ends", async () => {
+    await readOfHerWeek();
+    await covered("trial", new Date("2026-09-13T00:00:00.000Z"));
+    const read = () =>
+      loadApiWeeklyRead(h.db, mia, seed.family.id, seed.member.id, h.clock.now(), {
+        pilotFree: true,
+      });
+    expect(await read()).toMatchObject({
+      locked: false,
+      read: {
+        notes: ["She told you about the garden twice."],
+        counts: { counted_days: 5 },
+      },
+    });
+    await h.db.delete(subscriptions);
+    expect((await read())?.locked).toBe(false);
+    expect(
+      await loadApiWeeklyRead(h.db, sam, seed.family.id, seed.member.id, h.clock.now(), {
+        pilotFree: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("records a free pilot opening without a subscription while keeping organiser permission", async () => {
+    const read = await readOfHerWeek();
+    await expect(
+      openApiWeeklyRead(h.deps, mia, "free-read-1", read.id, {}, { pilotFree: true }),
+    ).resolves.toMatchObject({ replayed: false });
+    await expect(
+      openApiWeeklyRead(h.deps, mia, "free-read-1", read.id, {}, { pilotFree: true }),
+    ).resolves.toMatchObject({ replayed: true });
+    await expect(
+      openApiWeeklyRead(h.deps, sam, "free-read-2", read.id, {}, { pilotFree: true }),
+    ).rejects.toMatchObject({ code: "not_found" });
+    await expect(openApiWeeklyRead(h.deps, mia, "paid-read-1", read.id, {})).rejects.toMatchObject({
+      code: "not_found",
+    });
   });
 
   it("shows no read until one has been sent, and the newest sent one after that", async () => {

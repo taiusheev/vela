@@ -26,7 +26,11 @@ import type { PilotRuntime, PilotServices } from "../runtime.ts";
  * The bindings wrangler.jsonc declares, as the pilot Worker's own `Env`. The runtime only knows
  * them as the generated `Cloudflare.Env`, which this package does not generate.
  */
-export const testEnv = env as unknown as PilotEnv;
+export const TEST_CONTENT_KEY_V1 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+export const testEnv = {
+  ...(env as unknown as Record<string, unknown>),
+  CONTENT_KEY_V1: TEST_CONTENT_KEY_V1,
+} as unknown as PilotEnv;
 
 /**
  * A local R2 bucket of the test runtime's own (vitest.config.ts), which no wrangler file declares:
@@ -110,6 +114,7 @@ export async function signLineBody(
  * Hyperdrive) are the pilot's own, as in a deployed environment, where they name the same resources.
  */
 export const adminTestEnv: AdminEnv = {
+  CONTENT_KEY_V1: TEST_CONTENT_KEY_V1,
   ENVIRONMENT: "development",
   PUBLIC_BASE_URL: "http://localhost:8787",
   TELEGRAM_BOT_USERNAME: testEnv.TELEGRAM_BOT_USERNAME,
@@ -136,6 +141,7 @@ export interface FakeR2Object {
  */
 export function fakeR2Bucket(objects: Map<string, FakeR2Object>): R2Bucket {
   return {
+    list: async () => ({ objects: [], truncated: false }),
     put: async (
       key: string,
       body: ArrayBuffer,
@@ -451,6 +457,10 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       note("ingestAnswerMedia", answerId);
       await given.ingestAnswerMedia?.(deps, answerId);
     },
+    async ingestExchangeMedia(deps, mediaId) {
+      note("ingestExchangeMedia", mediaId);
+      await given.ingestExchangeMedia?.(deps, mediaId);
+    },
     async understandAnswer(deps, answerId) {
       note("understandAnswer", answerId);
       await given.understandAnswer?.(deps, answerId);
@@ -503,6 +513,7 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       apiRequests.push(`${request.method} ${new URL(request.url).pathname}`);
       return api === undefined ? new Response(null, { status: 204 }) : api(request, env);
     },
+    clerk: async () => Response.json({ ok: true }),
   };
 
   return {

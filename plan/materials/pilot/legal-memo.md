@@ -4,6 +4,20 @@ This memo is research by Vela's tech co-founder, an AI. It is not legal advice, 
 
 Version `legal-memo.v1` · 17 September 2026, with dated notes of 18 September 2026 · for the founder and counsel · reviews the pack at `privacy-notice.v1`, `consent-script.v1`, `nearby-consent.v1`, `organiser-agreement.v1` and `data-map.v1`, and the code at commit 8991fdf with the working tree of 17 September 2026
 
+## 5 October 2026 addendum: proposed English Vietnam/Taiwan cohort
+
+The active pack is now English `privacy-notice.v2`, `consent-script.v2` and `organiser-agreement.v2`. The proposed cohort is seven days with the founder’s family in Vietnam, then 30 days with 3–5 Taiwan families. Earlier location assumptions about the founder’s parent are superseded; citizenship and eligibility have not been inferred. This addendum records review tasks and does **not** approve participation.
+
+Vietnam’s [Law 91/2025/QH15](https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/7/91qh.signed.pdf) and [Decree 356/2025/NĐ-CP](https://chinhphu.vn/?classid=0&docid=216387&pageid=27160) took effect on 1 January 2026. Use these current official texts for the review, including their actor/scope rules, consent and sensitive-data handling, rights, security duties and international processing provisions. The existing Taiwan analysis alone does not resolve them.
+
+Before roster approval, a qualified reviewer should record: the actual adults’ residence and relevant citizenship; who determines Vela’s processing purposes; whether the software/provider/research flows are within applicable scope; the consent and notice requirements; sensitive health/voice treatment; any required processing/transfer assessments or filings; retention/deletion and incident duties; and whether required safeguards are actually in place for Neon Singapore, Cloudflare’s worldwide network, US AI/transcription and founder research notes. Do not assume the private family relationship or free participation creates an exemption for this product.
+
+Existing citizenship and other jurisdiction exclusions remain until the review explicitly resolves them. Russian 152-FZ’s [official published text](https://mintrud.gov.ru/docs/laws/130) includes a natural-person personal/family-purpose exception and provisions relevant to foreign processing. Applying any exception to the founder’s product, research and providers requires classification of the actual roles and flows; the earlier shorthand “law follows citizenship” is insufficient for that decision.
+
+The founder files only minimal eligibility codes and the review decision under the family code, without passport copies. Record reviewer/date, scope, required safeguards, approval or hold, and notice versions. English comprehension is checked separately and does not establish legal eligibility. The active checklist is [`../../english-trial-readiness.md`](../../english-trial-readiness.md).
+
+The family reports Telegram works without VPN in Vietnam. That is operational input, not proof of scheduled delivery, callbacks, uploads or background notifications, nor legal clearance. Verify their actual phones and networks before quiet notices. Preserve the synthetic staging-first rule and the founder-only production account/content boundary.
+
 Six questions about the pilot under Taiwan's Personal Data Protection Act (個人資料保護法, "the Act") and its Enforcement Rules (施行細則, "the Rules"), plus the laws of the countries where a pilot family might live. Each answer gives the short answer, the reasoning with sources, a confidence level, and what Vela's documents or code should change. All the changes are collected in the table at the end, followed by the questions for a lawyer.
 
 ## How this memo was made

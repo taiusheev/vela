@@ -4,6 +4,8 @@
 
 Reading order for someone new: §1 constraints → §2 overview → §6 scheduling → §7 gateway → §8 adapters → §9 AI → §10 app. The rest is reference.
 
+**Current release boundary, 5 October 2026:** the approved English-only Telegram/iPhone cohort and its bounded native audio exception are described at the start of §10 and in ADR-42. The wider blueprint is a roadmap, not evidence that every listed feature is ready. `plan/english-trial-readiness.md` controls real-family activation.
+
 ---
 
 ## 1. Constraints that shape everything
@@ -267,7 +269,23 @@ Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` wit
 
 ## 10. The mobile app
 
-- **Expo SDK 55** (React Native 0.83, React 19.2, New Architecture only), Expo Router, EAS Build/Submit/Update. One app, three modes chosen per member: family, parent surface, kitchen table.
+### Approved English trial implementation
+
+The current manifest uses Expo SDK 57, React Native 0.86.3 and React 19.2.3 with Expo Router and `expo-audio`. Parents use Telegram; the iPhone app serves approved organisers and contributors. Telegram setup/consent precedes session-bound app proof-code linking. No app-created duplicate family, parent app/tablet/widget, payment, memory automation, book export or multilingual release is part of this cohort. Genuine account stories/recipes remain readable when available; `BOOK` stays off during the real-family trial, so new long-term story retention is deferred.
+
+TanStack Query is isolated per Clerk account/session; React holds small screen state. SecureStore holds encrypted text drafts/uncertain write identifiers and permission-based optional calling numbers, cleared on sign-out/account changes. There is no background offline sync engine. Actual Today data refreshes on focus/foreground and a 30-second active interval, with recipient timezone/local-date labels. Fixture data requires explicit `EXPO_PUBLIC_DEMO_MODE=true` with both API/auth configuration absent; a development build alone never activates fixtures.
+
+English is enforced before first paint and while public capabilities are pending/fail. Lingui source/catalog synchronization and English ICU checks stay required; Traditional Chinese completeness/native review is an open separate future gate. `/v1/capabilities` controls pilot/Telegram-first/English, memory, book, parent-app and billing visibility; server admission and role checks remain authoritative. Pilot weekly reads are free.
+
+Incoming original Ogg/Opus is downloaded through the authenticated family media route, locally decoded off the main thread into temporary bounded PCM by the narrow `VelaOpusDecoder` Expo module, then played with `expo-audio`. It adds no remote processor. Inputs over 20 MiB or five minutes fail visibly; every replay reauthorises and session changes invalidate pending work. Original M4A/MP3 use native playback. The custom module requires a native build; host C tests/autolinking are partial evidence, not Swift/CocoaPods/iPhone proof. See ADR-42, `03-code-design.md` and `apps/app/modules/vela-opus/README.md`.
+
+The `trial` EAS profile targets production, forces English, refuses a development Clerk key or staging API, disables tablets and embeds the source commit. Production deployment and build require the tested main-derived `v*` tag, green exact-commit CI and founder environment approval. GitHub's build handoff does not prove completed EAS/TestFlight processing or device acceptance. EAS Update runtime/channels are not yet configured; trial app fixes require signed builds. The full release, eligibility and observed-family gates are recorded separately in `plan/english-trial-readiness.md`.
+
+### Wider app blueprint after the trial
+
+The following modes and tooling are the broader blueprint, not evidence that they are enabled in the English trial. Its earlier SDK 55/React Native 0.83 baseline is superseded by the current manifest above.
+
+- **One Expo app**, Expo Router and EAS Build/Submit; EAS Update only after its separate configuration and release policy are verified. Three intended modes chosen per member: family, parent surface, kitchen table.
 - **Widgets**: the light on the home screen. iOS via `expo-widgets` (alpha) with a hand-written WidgetKit target as the budgeted fallback; Android via `react-native-android-widget`. Both refresh from a push carrying `{member_id, state, answered_at}`; the widget endpoint `/families/:id/lights` is cacheable for 60 s.
 - **Audio**: `expo-audio` (not `expo-av`, removed in SDK 55); AAC/M4A; `isMeteringEnabled` drives the visible level meter; `expo-speech-recognition` as an offline dictation fallback; pre-rendered TTS files with `expo-speech` fallback.
 - **State**: TanStack Query for server state, Zustand for the little client state, `expo-sqlite` cache, `expo-secure-store` for tokens. No offline-first sync engine in v1 (revisit only if the parent must compose offline for hours).
@@ -285,6 +303,7 @@ Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` wit
 - **Clerk** for organisers and members with accounts: phone OTP (no per-message surcharge), email magic link, Sign in with Apple and Google; Expo SDK; free to 50,000 monthly retained users. The Worker verifies Clerk session JWTs (JWKS cached in the Worker). Better Auth (MIT, self-hosted, Expo plugin) is the fallback if Clerk's retained-user pricing bites past 50k.
 - **Kept-light members have no account.** Their identity is a `channel_links` row (LINE userId, WhatsApp number, Telegram id, phone) or, on the parent surface, a device-bound token issued when a visiting child signs in and hands over the phone (`primary_surface = parent-surface`; no password, no email; re-issued by any organiser).
 - **Roles** are per membership (organiser, member) plus a global admin allow-list read by the admin routes; every admin read of a family writes `admin_access_log` and an event visible to the organiser on request. In the pilot, before accounts exist, the admin identity is the founder's Cloudflare Access sign-in: Access covers the whole admin Worker `vela-admin`, and the Worker verifies the Access token itself (ADR-22, ADR-26).
+- **Deleted Clerk accounts** are revoked through signed `POST /webhooks/clerk`: `user.deleted` creates a permanent account-access tombstone, clears actor receipts/link challenges/push devices and blocks API read/write/provision/link/replay. It does not erase shared family content. The endpoint-specific private Svix signing key and a real provider-delivered synthetic deletion are release gates; reversible `user.updated` bans/locks are ignored.
 
 ---
 
@@ -359,7 +378,7 @@ The founder's daily view reads `metrics_daily` and `quiet_events` in the admin S
 
 DST cases in Vitest with fake timers: spring-forward gap (exactly one arrival), fall-back repeat (no double), a half-hour-offset zone, a zone without DST. **Silence drill** (runs in CI on a schedule): adapter throws for a cohort → organiser told once, `quiet_events` empty; missed tick → next tick respects the one-per-day gate and the heartbeat would have paged; Postgres down during the tick → clean skip, admin alert, no quiet event; AI down → light lit, no quiet event. Contract tests: every adapter's fixtures, valid and tampered. Load: k6 locally against staging at 10× expected peak.
 
-CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite) → contract → Promptfoo (on prompt changes) → Wrangler deploy to staging on main → production on tag. Migrations: Drizzle Kit generates SQL into `packages/db/migrations/`, reviewed in the PR, and applied by each environment's deploy job before `wrangler deploy` (ADR-23); until that job exists, the founder runs them. Mobile: EAS Build (Linux CI never runs macOS), EAS Submit to TestFlight and Play internal testing, EAS Update for JS-only fixes under a written OTA policy (bug fixes, copy, layout; never features or entitlements outside review).
+CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite) → contract → Promptfoo (on prompt changes) → Wrangler deploy to staging on main → production on tag. Current required checks additionally include real PostgreSQL 18 contention and Maestro web demo; the demo does not prove native or signed-in behaviour. Migrations: Drizzle Kit generates SQL into `packages/db/migrations/`, reviewed in the PR, and applied by each environment's deploy job before `wrangler deploy` (ADR-23); until that job exists, the founder runs them. Mobile: EAS Build (Linux CI never runs macOS) and EAS Submit. The English trial uses new signed iOS builds; EAS Update for JS-only fixes remains a future configuration gate under the written OTA policy (bug fixes, copy, layout; never features or entitlements outside review).
 
 ---
 
@@ -369,9 +388,9 @@ CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite
 |---|---|---|---|---|
 | dev | `wrangler dev` (`vela-dev`; `vela-admin-dev` beside it with `pnpm --filter @vela/worker dev:admin`) | PGlite locally (`pnpm --filter @vela/db dev-db`); no Neon branch: each Neon project is one environment's (`infra/README.md`, section 2) | Telegram test bot; LINE test OA | Expo dev client on the founder's phone |
 | staging | `vela` (`https://vela.vela-light-staging.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light-staging.workers.dev`), in the "Vela staging" Cloudflare account | Neon projects of their own, one per region (apac: `vela-staging`), so staging never copies production data | Telegram test bot; LINE test OA; WhatsApp sandbox | Expo Go against `vela`'s `/v1` (`start:staging`) until EAS; TestFlight / Play internal (dev client) |
-| prod | `vela` (`https://vela.vela-light.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light.workers.dev`), in the "Vela" Cloudflare account | Neon projects, one per region (apac: `vela`; eu and us from sprint 2), each on its default branch `main` | Real accounts | Store builds; EAS Update channel `production` |
+| prod | `vela` (`https://vela.vela-light.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light.workers.dev`), in the "Vela" Cloudflare account | Neon projects, one per region (apac: `vela`; eu and us from sprint 2), each on its default branch `main` | Real accounts | Signed `trial` iOS builds after release gates; no configured EAS Update channel |
 
-Release: trunk-based; PRs run the full CI; `main` deploys to staging; a tag deploys to production after the founder's approval, its deploy job migrating once, then deploying `vela`, then `vela-admin` (ADR-26); mobile releases weekly during the pilot, with EAS Update for JS-only fixes.
+Release: trunk-based; PRs run the full CI; `main` deploys to staging; a main-derived `v*` tag with green non-nightly CI on its exact SHA deploys to production after the founder's approval, its deploy job migrating once, then deploying `vela`, then `vela-admin` (ADR-26, ADR-42). The trial build uses the same tested source and protected environment. Trial fixes ship as signed builds until a separate EAS Update setup is verified.
 
 ---
 
@@ -409,9 +428,9 @@ At 10,000 families with 10% on Light at $79/year the gross margin is thin; at 20
 
 1. Legal entity (Singapore likely): gates WhatsApp Business verification, Apple and Google organisation accounts (D-U-N-S number takes 30+ days; start now), payments.
 2. Accounts in the founder's name now: Cloudflare, Neon, Anthropic, Deepgram, Azure (TTS), Clerk, Sentry, PostHog, Expo, a LINE Official Account (unverified is allowed for individuals), Telegram bot, Twilio (later).
-3. The name decision (ship as "Vela Light" until clearance). No domain is needed for the pilot: each Cloudflare account's workers.dev subdomain (`vela-light`, `vela-light-staging`) is chosen when the account is set up (ADR-26).
-4. Native reviewers for Traditional Chinese now, Japanese in phase 2.
-5. The first families (revised 2026-09-18): a dogfooding week on staging, then families living in Taiwan on Telegram once production is deployed, then English- and Chinese-speaking families on the app, then Taiwan on LINE (`plan/market-order.md`). The founder's own parent waits: Russia's 152-FZ forbids storing Russian citizens' data in databases outside Russia, and Telegram has been largely inaccessible in Russia since mid-March 2026 (`plan/materials/pilot/legal-memo.md` Q6).
+3. The name decision (ship as "Vela Light" until clearance). Workers use the accounts' workers.dev subdomains (`vela-light`, `vela-light-staging`), but the production app's Clerk instance needs a domain Vela owns. Domain purchase, provider account setup and Apple signing are founder-owned trial gates (ADR-26, ADR-42).
+4. Native reviewers for Traditional Chinese and other future locales before enabling them; the first cohort stays in English.
+5. The active sequence (2026-10-05) is synthetic staging dogfooding, then seven own-family days in Vietnam after eligibility/provider/consent and device review, then 3–5 English-comfortable Taiwan families for 30 days. It supersedes the earlier market-order sequence for this cohort. Residence alone does not settle citizenship/provider/data-flow eligibility; the founder and reviewer must close the specific family's review before activation (`plan/english-trial-readiness.md`).
 
 ---
 

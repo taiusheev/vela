@@ -1,4 +1,4 @@
-import { ApiUser } from "@vela/contracts";
+import { ApiLinkChallenge, ApiUser } from "@vela/contracts";
 import {
   accountLinkChallenges,
   apiRequestReceipts,
@@ -12,8 +12,10 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionIdentity } from "./api-access.ts";
+import { completeAccountLink, issueAccountLinkCode, startAccountLink } from "./account-linking.ts";
+import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { disableApiAccount, provisionApiAccount, updateApiAccount } from "./api-account-writes.ts";
+import { loadApiMe } from "./api-accounts.ts";
 import { runApiMutation } from "./api-idempotency.ts";
 import { sha256Hex } from "./hash.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -346,6 +348,51 @@ describe("account input boundaries", () => {
 });
 
 describe("disableApiAccount", () => {
+  it("blocks profile and family reads, writes and pending account linking after deletion", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const account = ApiUser.parse((await provision()).response.body);
+    await h.db.update(members).set({ userId: account.id }).where(eq(members.id, seed.member.id));
+    const proof = ApiLinkChallenge.parse(
+      (await startAccountLink(h.deps, identity, "link")).response.body,
+    );
+    const issued = await issueAccountLinkCode(h.deps, proof.challenge_id, {
+      channel: "telegram",
+      eventId: "verified-link-before-deletion",
+      at: h.clock.now().toISOString(),
+      kind: "start",
+      sender: { externalUserId: seed.memberLink.externalId },
+      conversation: { externalId: seed.memberLink.externalId, kind: "private" },
+    });
+    expect(await loadApiMe(h.db, identity)).toMatchObject({ user: { id: account.id } });
+    expect(await authorizeFamilyAccess(h.db, identity, seed.family.id)).toMatchObject({
+      kind: "granted",
+    });
+    await disableApiAccount(h.deps, identity.authSubject);
+    h.clock.advance(1000);
+    await disableApiAccount(h.deps, identity.authSubject);
+    expect(await loadApiMe(h.db, identity)).toBeNull();
+    expect(await authorizeFamilyAccess(h.db, identity, seed.family.id)).toEqual({
+      kind: "not_found",
+    });
+    await expect(provision()).rejects.toMatchObject(denied);
+    await expect(update()).rejects.toMatchObject(denied);
+    await expect(startAccountLink(h.deps, identity, "link-after-delete")).rejects.toMatchObject({
+      name: "VelaError",
+      code: "not_found",
+    });
+    await expect(
+      completeAccountLink(
+        h.deps,
+        identity,
+        "complete-after-delete",
+        proof.challenge_id,
+        issued.code,
+      ),
+    ).rejects.toMatchObject({ name: "VelaError", code: "not_found" });
+    expect(await receipts()).toEqual([]);
+    expect(await challenges()).toEqual([]);
+  });
+
   it("takes the shared actor lock before touching users or receipts", async () => {
     const transaction = h.db.transaction.bind(h.db);
     const actorHash = await sha256Hex(identity.authSubject);
@@ -499,6 +546,10 @@ describe("disableApiAccount", () => {
     expect(await receipts()).toEqual(savedReceipts);
     expect(await challenges()).toEqual(savedChallenges);
     expect(await sideEffects()).toEqual(before);
+    expect(await loadApiMe(h.db, identity)).toBeNull();
+    await expect(
+      startAccountLink(h.deps, identity, "link-after-early-delete"),
+    ).rejects.toMatchObject({ name: "VelaError", code: "not_found" });
   });
 
   it.each([apiRequestReceipts, accountLinkChallenges])(

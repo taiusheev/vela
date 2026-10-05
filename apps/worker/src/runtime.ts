@@ -16,6 +16,7 @@ import {
   deviceInboundEvent,
   handleInbound,
   ingestAnswerMedia,
+  ingestExchangeMedia,
   memberOfDeviceToken,
   type ReconcileResult,
   reconcile,
@@ -28,6 +29,7 @@ import {
   writeSuggestions,
 } from "@vela/services";
 import { type ApiHandler, createApiHandler } from "./api-runtime.ts";
+import { type ClerkWebhookHandler, createClerkWebhookHandler } from "./clerk-webhook.ts";
 import { buildDeps, createChannels, type DepsHandle, type DepsOptions } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { PRIVACY_NOTICES } from "./notices.generated.ts";
@@ -44,6 +46,7 @@ export interface PilotServices {
   writeSuggestions(deps: Deps): Promise<SuggestionsRun>;
   deliverOutbound(deps: Deps, outboundId: string): Promise<DeliveryResult>;
   ingestAnswerMedia(deps: Deps, answerId: string): Promise<void>;
+  ingestExchangeMedia(deps: Deps, mediaId: string): Promise<void>;
   understandAnswer(deps: Deps, answerId: string): Promise<void>;
   /** Her phone on the parent surface (ADR-35): who its token is, and her input as an event. */
   memberOfDeviceToken: typeof memberOfDeviceToken;
@@ -67,6 +70,7 @@ export interface PilotRuntime {
   readonly notices: PrivacyNotices;
   /** The API under /v1 (ADR-29): its own config check, limits and app; never `createDeps`. */
   readonly api: ApiHandler;
+  readonly clerk: ClerkWebhookHandler;
 }
 
 const services: PilotServices = {
@@ -79,6 +83,7 @@ const services: PilotServices = {
   writeSuggestions,
   deliverOutbound,
   ingestAnswerMedia,
+  ingestExchangeMedia,
   understandAnswer,
   memberOfDeviceToken,
   deviceInboundEvent,
@@ -91,4 +96,5 @@ export const pilotRuntime: PilotRuntime = {
   createChannels,
   notices: PRIVACY_NOTICES,
   api: createApiHandler(),
+  clerk: createClerkWebhookHandler(),
 };

@@ -1,9 +1,18 @@
 import { useLingui } from "@lingui/react/macro";
 import { useEffect, useState } from "react";
-import { Image, Text, View } from "react-native";
+import { AppState, Image, Text, View } from "react-native";
 import { fetchPhoto } from "../api/upload.ts";
 import { useAccount } from "../auth/clerk.tsx";
-import { loadPhoto, shownPhoto, withFreshToken } from "../data/photos.ts";
+import {
+  familyPhotoKey,
+  forgetPhoto,
+  loadPhoto,
+  type PhotoSnapshot,
+  photoAvailable,
+  selectedPhoto,
+  shownPhoto,
+  withFreshToken,
+} from "../data/photos.ts";
 import type { ExchangePhoto } from "../data/today.ts";
 import { useToday } from "../data/useToday.ts";
 import { usePalette } from "../theme/theme.tsx";
@@ -44,46 +53,89 @@ export function FamilyPhoto({
 }) {
   const palette = usePalette();
   const { t } = useLingui();
-  const token = useAccount().token;
+  const account = useAccount();
+  const token = account.token;
   const mediaId = photo.id;
   const stored = photo.stored;
-  const [uri, setUri] = useState<string | undefined>(() => shownPhoto(mediaId));
-  const [failed, setFailed] = useState(false);
+  const expiresAt = photo.expires_at;
+  const cacheKey = familyPhotoKey(account, familyId, mediaId);
+  const selection = JSON.stringify([cacheKey, stored, expiresAt ?? null]);
+  const authorised = account.ready && account.signedIn && familyId !== undefined;
+  const available = authorised && photoAvailable(photo);
+  const [snapshot, setSnapshot] = useState<PhotoSnapshot>(() => ({
+    selection,
+    uri: available ? shownPhoto(cacheKey) : undefined,
+    failed: false,
+  }));
+  // Re-render at expiry and on foreground; suspended background timers may resume late.
+  const [, setClock] = useState(0);
 
   useEffect(() => {
-    if (!stored || familyId === undefined) return;
-    const kept = shownPhoto(mediaId);
+    if (expiresAt == null) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const check = () => {
+      const remaining = Date.parse(expiresAt) - Date.now();
+      if (!Number.isFinite(remaining) || remaining <= 0) {
+        forgetPhoto(cacheKey);
+        setSnapshot({ selection, failed: false });
+      } else {
+        timer = setTimeout(check, Math.min(remaining, 2_147_483_647));
+      }
+      setClock((tick) => tick + 1);
+    };
+    check();
+    const listener = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        if (timer !== undefined) clearTimeout(timer);
+        check();
+      }
+    });
+    return () => {
+      if (timer !== undefined) clearTimeout(timer);
+      listener.remove();
+    };
+  }, [cacheKey, expiresAt, selection]);
+
+  useEffect(() => {
+    if (!available || familyId === undefined) {
+      forgetPhoto(cacheKey);
+      setSnapshot({ selection, failed: false });
+      return;
+    }
+    const kept = shownPhoto(cacheKey);
+    setSnapshot({ selection, uri: kept, failed: false });
     if (kept !== undefined) {
-      setUri(kept);
       return;
     }
     let current = true;
-    setFailed(false);
-    loadPhoto(mediaId, () =>
-      withFreshToken(token, (fresh) => fetchPhoto(familyId, mediaId, fresh)),
+    loadPhoto(
+      cacheKey,
+      () => withFreshToken(token, (fresh) => fetchPhoto(familyId, mediaId, fresh)),
+      expiresAt,
     ).then(
       (next) => {
-        if (current) setUri(next);
+        if (current) setSnapshot({ selection, uri: next, failed: false });
       },
       () => {
-        if (current) setFailed(true);
+        if (current) setSnapshot({ selection, failed: true });
       },
     );
     return () => {
       current = false;
     };
-  }, [familyId, mediaId, stored, token]);
+  }, [available, cacheKey, expiresAt, familyId, mediaId, selection, token]);
 
   const label = picked ? t`The picked photo` : t`Photo`;
   // A lone photo with nothing to show keeps to a strip at full width; one on its way keeps its
   // shape, so the screen does not jump when it arrives, and a numbered pair stays square.
-  const nothing = !stored || failed;
+  const failed = snapshot.selection === selection && snapshot.failed;
+  const nothing = !available || failed;
   const strip = nothing && number === undefined;
   const frame =
     size === "full"
       ? { flex: 1, aspectRatio: strip ? Math.max(aspectRatio, 3) : aspectRatio }
       : { width: size, height: size, flexShrink: 0 };
-  const shown = stored && !failed ? uri : undefined;
+  const shown = authorised ? selectedPhoto(selection, photo, snapshot) : undefined;
   const words = size === "full" || size >= WORDS_FROM;
   return (
     <View

@@ -6,10 +6,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
-import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
 import type { Recorded } from "../src/audio/useRecording.ts";
-import { useAccount } from "../src/auth/clerk.tsx";
+import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
 import {
@@ -23,19 +22,14 @@ import {
 } from "../src/components/ui.tsx";
 import { VoiceHello } from "../src/components/voice-hello.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
-import {
-  type AskType,
-  askTypes,
-  composableType,
-  previewTranslation,
-  recipientLanguage,
-  suggestedKind,
-} from "../src/data/ask.ts";
+import { type AskType, askTypes, composableType, suggestedKind } from "../src/data/ask.ts";
+import { demoDataAllowed } from "../src/data/live-state.ts";
 import { askExtras, photoCount } from "../src/data/photos.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
 import { dayName, useToday } from "../src/data/useToday.ts";
 import { usePush } from "../src/push/provider.tsx";
 import { readFlag, writeFlag } from "../src/storage/flags.ts";
+import { useDraft } from "../src/storage/useDraft.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
@@ -43,6 +37,8 @@ type When = "tomorrow" | "another_day" | "whenever";
 
 /** Remembered once notifications have been offered after an ask, so they are offered only once. */
 const OFFERED_AFTER_ASK = "push-offered.after-ask";
+/** A draft storage key before a family is linked, never visible copy. */
+const UNLINKED_FAMILY = "pending";
 
 /** A paused light, or one not yet said yes to, cannot be asked (`canBeAsked`). */
 function askable(light: TodayLight): boolean {
@@ -72,7 +68,8 @@ export default function AskScreen() {
   // `text` comes from a reminder's "Ask" (spec §12): the question it suggests, for the asker to edit.
   const params = useLocalSearchParams<{ recipient?: string; suggestion?: string; text?: string }>(); // suggestion
   const [kind, setKind] = useState<AskType>("question");
-  const [text, setText] = useState(() => params.text ?? "");
+  const draft = useDraft(`ask.${familyId ?? UNLINKED_FAMILY}`, params.text ?? "");
+  const { text, setText } = draft;
   const [when, setWhen] = useState<When>("tomorrow");
   const [taken, setTaken] = useState<ApiAskConflict | null>(null);
   // A vote's options and a photo ask's photos (ADR-33), and what they add to the ask when sent.
@@ -80,7 +77,7 @@ export default function AskScreen() {
   const photos = useAskPhotos({
     kind,
     familyId,
-    demo: !apiConfigured(),
+    demo: demoDataAllowed(apiConfigured(), accountsConfigured()),
     on: photosOn,
     known: live,
     text,
@@ -97,12 +94,10 @@ export default function AskScreen() {
   }, [photos.count, when, taken]);
   const noMorning = photos.count > 0 && taken !== null && taken.date_alternative === null;
   const [used, setUsed] = useState<{ id: string; recipientId: string } | undefined>(); // suggestion
-  const keyFor = useIdempotencyKey("ask");
-  const preview = previewTranslation(text);
 
   // With no API this screen is the example day and sends nothing. With one, it must wait for the
   // real day: `today` is the fixture until it arrives, and its people are nobody's family.
-  const demo = !apiConfigured();
+  const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
   const lights = demo || live ? today.lights : [];
   // The screen asks the person Today's card was for when she can be asked, and otherwise the first
   // who can; it says why when nobody can.
@@ -118,11 +113,14 @@ export default function AskScreen() {
   const usedSuggestionId =
     used !== undefined && used.recipientId === recipient?.memberId ? used.id : undefined;
   // "Use this": the suggestion's words and its kind, remembered with whose morning it was for.
-  const fill = useCallback((chosen: TomorrowSuggestion, recipientId: string) => {
-    setText(chosen.text);
-    setKind(suggestedKind(chosen.type));
-    setUsed({ id: chosen.id, recipientId });
-  }, []);
+  const fill = useCallback(
+    (chosen: TomorrowSuggestion, recipientId: string) => {
+      setText(chosen.text);
+      setKind(suggestedKind(chosen.type));
+      setUsed({ id: chosen.id, recipientId });
+    },
+    [setText],
+  );
   // Today's card sends its suggestion along. The live day can arrive after the screen opens, so it
   // fills the field once, when it is there, and never over words already typed.
   const offered = useRef(false);
@@ -145,15 +143,16 @@ export default function AskScreen() {
     if (hello !== null && when === "whenever") setWhen("tomorrow");
   }, [hello, when]);
   const compose = useMutation({
-    mutationFn: async (ask: ComposeAsk) => {
+    mutationFn: async ({ ask, saved = false }: { ask: ComposeAsk; saved?: boolean }) => {
       const token = await account.token();
       const withHello =
-        hello === null
+        hello === null || saved
           ? ask
           : { ...ask, voice_hello_id: await uploadVoice(familyId ?? "", hello, token) };
-      return composeAsk(familyId ?? "", keyFor(withHello), withHello, token);
+      return composeAsk(familyId ?? "", await draft.keyFor(withHello), withHello, token);
     },
     onSuccess: async () => {
+      await draft.clear();
       await queries.invalidateQueries({ queryKey: ["today"] });
       if (await offerAfterAsk()) setOffering(true);
       else router.back();
@@ -182,12 +181,14 @@ export default function AskScreen() {
         ? { when: "date", date: alternative }
         : { when: when === "whenever" ? "whenever" : "tomorrow" };
     compose.mutate({
-      recipient_id: recipient.memberId,
-      type,
-      text: text.trim().length > 0 ? text.trim() : t`Listen to my voice note.`,
-      ...timing,
-      ...(usedSuggestionId === undefined ? {} : { suggestion_id: usedSuggestionId }), // suggestion
-      ...extras,
+      ask: {
+        recipient_id: recipient.memberId,
+        type,
+        text: text.trim().length > 0 ? text.trim() : t`Listen to my voice note.`,
+        ...timing,
+        ...(usedSuggestionId === undefined ? {} : { suggestion_id: usedSuggestionId }), // suggestion
+        ...extras,
+      },
     });
   }
 
@@ -207,7 +208,6 @@ export default function AskScreen() {
         ? t`${name} has not said yes yet. Once she does, her first morning is the next day.`
         : t`Waiting for today to arrive. Your words are kept.`
     : null;
-  const language = i18n._(recipientLanguage);
   const holder = taken?.taken_by;
   // Named, never "the day after": the next free morning can be several days out.
   const day = taken?.date_alternative == null ? null : dayName(taken.date_alternative);
@@ -299,17 +299,11 @@ export default function AskScreen() {
             value={text}
             onChangeText={setText}
             placeholder={t`Say it the way you would say it`}
-            helper={t`She reads it in ${language}. One question at a time.`}
+            helper={t`One question at a time. The English pilot sends your words as written.`}
             multiline
+            maxLength={1000}
+            disabled={!draft.ready || compose.isPending}
           />
-          {preview.length === 0 ? null : (
-            <Card>
-              <Eyebrow>
-                <Trans>She will see · {language}</Trans>
-              </Eyebrow>
-              <Words variant="voice">{preview}</Words>
-            </Card>
-          )}
         </View>
         <PhotoSlots photos={photos} />
         {demo ? null : <VoiceHello onChange={setHello} note={voiceNote} />}
@@ -361,16 +355,37 @@ export default function AskScreen() {
             {hold}
           </Words>
         )}
-        {trouble ? (
+        {draft.saveFailed ? (
           <Words variant="body" tone="ink2">
-            <Trans>That could not be sent just now. Look at Today before sending it again.</Trans>
+            <Trans>
+              This iPhone could not keep a draft. Leave this screen open until your send succeeds.
+            </Trans>
           </Words>
         ) : null}
+        {trouble ? (
+          <Words variant="body" tone="ink2">
+            <Trans>
+              The send could not be confirmed. Retry the saved attempt to finish the same send.
+            </Trans>
+          </Words>
+        ) : null}
+        {draft.savedBody<ComposeAsk>() === null || !ready ? null : (
+          <SecondaryButton
+            label={t`Retry saved ask`}
+            disabled={compose.isPending}
+            onPress={() => {
+              const ask = draft.savedBody<ComposeAsk>();
+              if (ask !== null && lights.some((light) => light.memberId === ask.recipient_id))
+                compose.mutate({ ask, saved: true });
+            }}
+          />
+        )}
         <PrimaryButton
           label={compose.isPending ? t`Sending…` : t`Into her morning`}
           onPress={send}
           disabled={
             compose.isPending ||
+            !draft.ready ||
             extras === undefined ||
             noMorning ||
             (!demo && (!ready || !written || (voiceNote && hello === null)))

@@ -9,11 +9,13 @@ import type {
   ApiTomorrowTurn,
   MemberLight,
 } from "@vela/contracts";
+import { useCallback } from "react";
 import { ApiError, apiConfigured, fetchMe, fetchToday } from "../api/client.ts";
-import { useAccount } from "../auth/clerk.tsx";
+import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import type { LightState } from "../components/light.tsx";
 import { dayName, timeOfDay } from "./format.ts";
 import { replyLine } from "./lines.ts";
+import { demoDataAllowed } from "./live-state.ts";
 import {
   type Today,
   type TodayExchange,
@@ -30,7 +32,7 @@ export function stateText(light: MemberLight): string {
   switch (light.state) {
     case "lit": {
       if (light.answered_at === null) return t`answered`;
-      const time = timeOfDay(light.answered_at);
+      const time = timeOfDay(light.answered_at, light.tz);
       return t`answered ${time}`;
     }
     case "quiet":
@@ -55,6 +57,8 @@ export function toTodayLight(light: MemberLight): TodayLight {
   return {
     memberId: light.member_id,
     displayName: light.display_name,
+    ...(light.tz === undefined ? {} : { timeZone: light.tz }),
+    ...(light.local_date === undefined ? {} : { localDate: light.local_date }),
     state: invited ? "resting" : (light.state as LightState),
     stateText: stateText(light),
     ...(invited ? { invited: true } : {}),
@@ -102,7 +106,7 @@ function receiptOf(exchange: ApiTodayExchange): string | undefined {
   return t`${recipient} saw it · ${time}`;
 }
 
-export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
+export function toTodayExchange(exchange: ApiTodayExchange, timeZone?: string): TodayExchange {
   const answer = exchange.answer;
   // Her words in the reader's language when the family's translation is in it (flows §3.10); her
   // own words stay as the original, which Exchanges offers.
@@ -114,20 +118,24 @@ export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
   return {
     ...(exchange.asker_name === null ? {} : { asker: exchange.asker_name }),
     recipient: exchange.recipient_name,
+    ...(exchange.voice_hello == null ? {} : { voiceHello: exchange.voice_hello }),
     ...(exchange.ask === null ? {} : { ask: exchange.ask }),
     ...(answer === null
       ? {}
       : {
           answer: {
             text: translated ?? answer.text ?? wordlessAnswer(answer),
-            at: timeOfDay(answer.at),
+            at: timeOfDay(answer.at, timeZone),
+            ...(answer.audio == null ? {} : { audio: answer.audio }),
+            ...(answer.photo == null ? {} : { photo: answer.photo }),
             ...(translated === undefined || answer.text === null ? {} : { original: answer.text }),
           },
         }),
     replies: exchange.replies.map((reply) => ({
       from: reply.from,
       text: replyLine(reply.from, reply.kind, reply.text),
-      ...(reply.photo === null ? {} : { photo: reply.photo }),
+      ...(reply.photo == null ? {} : { photo: reply.photo }),
+      ...(reply.audio == null ? {} : { audio: reply.audio }),
     })),
     ...(receipt === undefined ? {} : { receipt }),
     ...(exchange.photos.length === 0
@@ -138,6 +146,7 @@ export function toTodayExchange(exchange: ApiTodayExchange): TodayExchange {
             width: photo.width,
             height: photo.height,
             stored: photo.stored,
+            ...(photo.expires_at === undefined ? {} : { expires_at: photo.expires_at }),
           })),
         }),
     ...(answer?.picked_media_id == null ? {} : { picked: answer.picked_media_id }),
@@ -185,7 +194,7 @@ export function toTomorrowTurn(turn: ApiTomorrowTurn, viewerMemberId?: string): 
 function unansweredLine(exchange: ApiTodayExchange, light: MemberLight | undefined): string {
   if (light === undefined || light.answered_at === null) return t`No word yet today.`;
   const recipient = exchange.recipient_name;
-  const time = timeOfDay(light.answered_at);
+  const time = timeOfDay(light.answered_at, light.tz);
   return t`${recipient} answered an earlier ask at ${time}. This one has no answer yet.`;
 }
 
@@ -199,7 +208,7 @@ export function toToday(day: ApiToday, viewerMemberId?: string): Today {
       ? {}
       : {
           exchange: {
-            ...toTodayExchange(exchange),
+            ...toTodayExchange(exchange, light?.tz),
             ...(exchange.answer === null ? { unanswered: unansweredLine(exchange, light) } : {}),
           },
         }),
@@ -211,7 +220,7 @@ export interface TodayView {
   today: Today;
   /** The family the screens are showing, once the API has said which; Ask writes to it. */
   familyId?: string;
-  /** True while the real day is on its way; the fixtures show in the meantime. */
+  /** True while the real day is on its way; live screens show a loading state. */
   loading: boolean;
   /** Set when the API is configured but would not answer, so the screen can say so plainly. */
   trouble: boolean;
@@ -228,6 +237,8 @@ export interface TodayView {
    * API and the example day shows the photos chosen without sending them anywhere.
    */
   photos: boolean;
+  updatedAt: number;
+  refresh(): void;
   /**
    * Whether the API sends pushes (`ApiMe.push`, ADR-34). While it does not, nothing offers
    * notifications in passing, since none would come; You still shows this phone's state.
@@ -257,28 +268,44 @@ export function useToday(): TodayView {
     queryKey: ["today", familyId],
     enabled: enabled && familyId !== undefined,
     queryFn: async () => fetchToday(familyId ?? "", await account.token()),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: "always",
   });
+
+  const refetchMe = me.refetch;
+  const refetchDay = day.refetch;
+  const refresh = useCallback(() => {
+    if (!enabled) return;
+    void refetchMe();
+    if (familyId !== undefined) void refetchDay();
+  }, [enabled, familyId, refetchMe, refetchDay]);
 
   if (!enabled) {
     return {
-      today: todayFixture(),
+      today: demoDataAllowed(apiConfigured(), accountsConfigured())
+        ? todayFixture()
+        : { lights: [], tomorrow: [] },
       loading: false,
       trouble: false,
       noAccount: false,
       noFamily: false,
       organiser: true,
       live: false,
-      photos: !apiConfigured(),
+      photos: demoDataAllowed(apiConfigured(), accountsConfigured()),
+      updatedAt: 0,
+      refresh,
       pushSent: false,
     };
   }
-  const live = day.data !== undefined;
+  const live = enabled && day.data !== undefined;
   // A 404 from /v1/me is the ordinary first run: the account signed in before anything was set up.
   const noAccount = me.error instanceof ApiError && me.error.status === 404;
   return {
-    today: live ? toToday(day.data, membership?.member_id) : todayFixture(),
+    today: live ? toToday(day.data, membership?.member_id) : { lights: [], tomorrow: [] },
     ...(familyId === undefined ? {} : { familyId }),
-    loading: me.isPending || day.isPending,
+    loading: me.isPending || (familyId !== undefined && day.isPending),
+    updatedAt: day.dataUpdatedAt,
+    refresh,
     trouble: (me.isError && !noAccount) || day.isError,
     noAccount,
     noFamily: me.data !== undefined && me.data.memberships.length === 0,

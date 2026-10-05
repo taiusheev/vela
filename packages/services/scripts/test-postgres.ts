@@ -9,6 +9,7 @@ import { basename, dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { connectDatabase, type DatabaseConnection } from "@vela/db";
+import { TEST_CONTENT_KEY_V1 } from "@vela/db/testing";
 import { sql } from "drizzle-orm";
 
 const IMAGE = "postgres:18";
@@ -527,7 +528,7 @@ function connectionString(port: number, database: string): string {
 }
 
 async function connect(port: number, database: string): Promise<DatabaseConnection> {
-  const connecting = connectDatabase(connectionString(port, database));
+  const connecting = connectDatabase(connectionString(port, database), TEST_CONTENT_KEY_V1);
   const cancel = new AbortController();
   const timeout = delay(5_000, undefined, { signal: cancel.signal }).then(() => {
     throw new Error("connection attempt timed out");
@@ -588,8 +589,12 @@ async function prepareDatabase(port: number): Promise<string[]> {
   }
 
   ensureRunning();
+  // The migration entry point accepts only target options, not client metadata. This child
+  // always migrates the disposable local database and cannot inherit a remote environment.
+  const migrationUrl = new URL(connectionString(port, credentials.database));
+  migrationUrl.searchParams.delete("application_name");
   const migration = await capture(process.execPath, [join(dbDir, "src", "migrate.ts")], {
-    env: { ...process.env, DATABASE_URL: connectionString(port, credentials.database) },
+    env: { ...process.env, VELA_DATABASE_ENVIRONMENT: undefined, DATABASE_URL: migrationUrl.href },
     timeoutMs: 120_000,
   });
   if (migration.code !== 0) {

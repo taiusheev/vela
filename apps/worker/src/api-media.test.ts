@@ -170,6 +170,9 @@ function fixture(options: FixtureOptions = {}) {
       markApiDeceased: vi.fn<Writes["services"]["markApiDeceased"]>(unused("deceased")),
       endApiAway: vi.fn<Writes["services"]["endApiAway"]>(unused("away end")),
       startApiTrial: vi.fn<Writes["services"]["startApiTrial"]>(unused("trial")),
+      openApiWeeklyRead: vi.fn<Writes["services"]["openApiWeeklyRead"]>(
+        unused("weekly read opening"),
+      ),
       setUpApiDevice: vi.fn<Writes["services"]["setUpApiDevice"]>(unused("a device set-up")),
       removeApiDevice: vi.fn<Writes["services"]["removeApiDevice"]>(unused("a device removal")),
       addApiNearby: vi.fn<Writes["services"]["addApiNearby"]>(unused("nearby")),
@@ -784,7 +787,7 @@ describe("reading a photo", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("image/jpeg");
-    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(response.headers.get("content-disposition")).toBe("inline");
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(JPEG);
@@ -794,6 +797,7 @@ describe("reading a photo", () => {
       FAMILY_ID,
       MEDIA_ID,
       f.store,
+      "original",
     );
     expect(f.close).toHaveBeenCalledOnce();
   });
@@ -805,6 +809,18 @@ describe("reading a photo", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("audio/mp4");
+  });
+
+  it("accepts only the original media role", async () => {
+    const f = fixture();
+    expect((await f.app.request(readRequest(`${READ_PATH}?role=original`))).status).toBe(200);
+    const invalid = fixture();
+    await expectJson(
+      await invalid.app.request(readRequest(`${READ_PATH}?role=playable`)),
+      404,
+      NOT_FOUND,
+    );
+    expect(invalid.services.readApiMedia).not.toHaveBeenCalled();
   });
 
   it("reads without writes on: a read is not a write", async () => {
@@ -893,7 +909,7 @@ describe("a photo on her phone (GET /v1/device/media/:mediaId)", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("image/jpeg");
-    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(JPEG);
     expect(f.services.readDeviceMedia).toHaveBeenCalledExactlyOnceWith(

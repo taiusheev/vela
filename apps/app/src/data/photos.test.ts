@@ -5,20 +5,24 @@ import {
   ComposeAsk,
   MAX_VOTE_OPTIONS,
 } from "@vela/contracts";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/client.ts";
 import { photoKey, photoRefusal } from "../api/upload.ts";
 import { composableType, VOTE_OPTIONS } from "./ask.ts";
 import {
   askExtras,
+  clearPhotoCache,
   EMPTY_SLOT,
+  familyPhotoKey,
   fitWithin,
+  forgetPhoto,
   LONG_SIDE,
   loadPhoto,
   type PhotoSlot,
   photoAskText,
   photoCount,
   retryable,
+  selectedPhoto,
   shownPhoto,
   slotError,
   slotsReady,
@@ -51,6 +55,11 @@ const MOM = "4d9e2f5a-1b3c-4e6d-8f70-a1b2c3d4e5f6";
 const FIRST = "0e1f2a3b-4c5d-4e6f-8a7b-8c9d0e1f2a3b";
 const SECOND = "1f2a3b4c-5d6e-4f7a-9b8c-9d0e1f2a3b4c";
 const EXCHANGE = "2a3b4c5d-6e7f-4a8b-8c9d-0e1f2a3b4c5d";
+
+afterEach(() => {
+  clearPhotoCache();
+  vi.useRealTimers();
+});
 
 function done(mediaId: string): PhotoSlot {
   return { status: "done", uri: `file:///${mediaId}.jpg`, key: `media:${mediaId}`, mediaId };
@@ -307,6 +316,7 @@ describe("photos on the cards", () => {
       ask: "Which one do you like more?",
       answer: null,
       replies: [],
+      voice_hello: null,
       seen_at: null,
       replies_reach_her: true,
       photos: [
@@ -332,6 +342,8 @@ describe("photos on the cards", () => {
         at: "2026-10-13T08:12:00+08:00",
         picked_media_id: SECOND,
         picked_number: 2,
+        audio: null,
+        photo: null,
         translation: null,
       },
     });
@@ -353,6 +365,8 @@ describe("photos on the cards", () => {
           at: "2026-10-13T08:12:00+08:00",
           picked_media_id: FIRST,
           picked_number: 1,
+          audio: null,
+          photo: null,
           translation: null,
         },
       }),
@@ -362,5 +376,154 @@ describe("photos on the cards", () => {
     const listed = toExchange(summary);
     expect(listed.photos?.map((photo) => photo.id)).toEqual([FIRST, SECOND]);
     expect(listed.picked).toBe(FIRST);
+  });
+
+  it("preserves photo expiry through Today and Exchanges, including ask, answer and reply photos", () => {
+    const photo = {
+      id: FIRST,
+      width: 1600,
+      height: 1200,
+      stored: true,
+      expires_at: "2026-11-04T00:00:00Z",
+    };
+    const source = exchange({
+      photos: [photo],
+      answer: {
+        kind: "photo",
+        text: null,
+        at: "2026-10-05T08:12:00+08:00",
+        picked_media_id: null,
+        picked_number: null,
+        audio: null,
+        photo,
+        translation: null,
+      },
+      replies: [{ from: "Anna", kind: "photo", text: null, audio: null, photo }],
+    });
+    const today = toTodayExchange(source);
+    expect(today.photos).toEqual([photo]);
+    expect(today.answer?.photo).toEqual(photo);
+    expect(today.replies[0]?.photo).toEqual(photo);
+    const listed = toExchange({ ...source, scheduled_for: "2026-10-05", delivered_at: null });
+    expect(listed.photos).toEqual([photo]);
+    expect(listed.answer?.photo).toEqual(photo);
+    expect(listed.replies[0]?.photo).toEqual(photo);
+  });
+});
+
+describe("photo session cleanup", () => {
+  it("forgets shown photos and refuses a late photo from the departed account", async () => {
+    clearPhotoCache();
+    await loadPhoto("previous", async () => "data:private");
+    let finish: (value: string) => void = () => {};
+    const late = loadPhoto(
+      "late",
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const refusal = expect(late).rejects.toThrow("session ended");
+    clearPhotoCache();
+    finish("data:previous-account");
+    await refusal;
+    expect(shownPhoto("previous")).toBeUndefined();
+    expect(shownPhoto("late")).toBeUndefined();
+    expect(await loadPhoto("late", async () => "data:current-account")).toBe(
+      "data:current-account",
+    );
+  });
+
+  it("never borrows cached bytes or the rendered URI after an account, session, family or media change", async () => {
+    const account = { userId: "organiser", sessionId: "session-a" };
+    const key = familyPhotoKey(account, "family-a", FIRST);
+    const uri = await loadPhoto(key, async () => "data:family-a-private");
+    const snapshot = { selection: key, uri, failed: false };
+    const photo = { stored: true, expires_at: null };
+    expect(selectedPhoto(key, photo, snapshot)).toBe(uri);
+
+    for (const next of [
+      familyPhotoKey({ ...account, userId: "contributor" }, "family-a", FIRST),
+      familyPhotoKey({ ...account, sessionId: "session-b" }, "family-a", FIRST),
+      familyPhotoKey(account, "family-b", FIRST),
+      familyPhotoKey(account, "family-a", SECOND),
+    ]) {
+      expect(shownPhoto(next)).toBeUndefined();
+      expect(selectedPhoto(next, photo, snapshot)).toBeUndefined();
+    }
+    expect(selectedPhoto(key, { stored: false }, snapshot)).toBeUndefined();
+  });
+
+  it("cannot restore forgotten bytes or remove a replacement load when an earlier download finishes", async () => {
+    let finish: (value: string) => void = () => {};
+    const old = loadPhoto("replaced", () => new Promise((resolve) => (finish = resolve)));
+    const refusal = expect(old).rejects.toThrow("forgotten");
+    forgetPhoto("replaced");
+    let finishCurrent: (value: string) => void = () => {};
+    const current = loadPhoto(
+      "replaced",
+      () => new Promise((resolve) => (finishCurrent = resolve)),
+    );
+    finish("data:old");
+    await refusal;
+    const duplicate = loadPhoto("replaced", async () => "data:incorrect-duplicate");
+    expect(duplicate).toBe(current);
+    finishCurrent("data:current");
+    expect(await current).toBe("data:current");
+    expect(shownPhoto("replaced")).toBe("data:current");
+  });
+
+  it("hides and removes expired photos even when the query has not refreshed or a timer was suspended", async () => {
+    vi.useFakeTimers();
+    const start = new Date("2026-10-05T00:00:00Z");
+    vi.setSystemTime(start);
+    const expiry = new Date(start.getTime() + 1_000).toISOString();
+    const uri = await loadPhoto("expires", async () => "data:expires", expiry);
+    const snapshot = { selection: "expires", uri, failed: false };
+    const photo = { stored: true, expires_at: expiry };
+    expect(selectedPhoto("expires", photo, snapshot)).toBe(uri);
+    // Moving the clock without running timers models a phone returning from the background.
+    vi.setSystemTime(new Date(start.getTime() + 1_000));
+    expect(selectedPhoto("expires", photo, snapshot)).toBeUndefined();
+    expect(shownPhoto("expires")).toBeUndefined();
+    const fetch = vi.fn(async () => "data:should-not-download");
+    await expect(loadPhoto("expires", fetch, expiry)).rejects.toThrow("expired");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("refuses a download completing after expiry, but kept and older compatible descriptors remain readable", async () => {
+    vi.useFakeTimers();
+    const start = new Date("2026-10-05T00:00:00Z");
+    vi.setSystemTime(start);
+    let finish: (value: string) => void = () => {};
+    const late = loadPhoto(
+      "late-expiry",
+      () => new Promise((resolve) => (finish = resolve)),
+      new Date(start.getTime() + 1_000).toISOString(),
+    );
+    const refusal = expect(late).rejects.toThrow("expired");
+    vi.setSystemTime(new Date(start.getTime() + 1_000));
+    finish("data:expired");
+    await refusal;
+    expect(shownPhoto("late-expiry")).toBeUndefined();
+    expect(await loadPhoto("kept", async () => "data:kept", null)).toBe("data:kept");
+    expect(await loadPhoto("legacy", async () => "data:legacy")).toBe("data:legacy");
+  });
+
+  it("evicts at the retention boundary without overflowing a 30-day native timer", async () => {
+    vi.useFakeTimers();
+    const start = new Date("2026-10-05T00:00:00Z");
+    vi.setSystemTime(start);
+    const retention = 30 * 24 * 60 * 60 * 1_000;
+    await loadPhoto(
+      "thirty-days",
+      async () => "data:retained",
+      new Date(+start + retention).toISOString(),
+    );
+    vi.advanceTimersByTime(2_147_483_647);
+    expect(shownPhoto("thirty-days")).toBe("data:retained");
+    vi.advanceTimersByTime(retention - 2_147_483_647);
+    expect(shownPhoto("thirty-days")).toBeUndefined();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -111,23 +111,32 @@ export function useRecording(options: { maxMs?: number } = {}): Recording {
     refused,
     failed,
     async start() {
-      const permission = await requestRecordingPermissionsAsync();
-      if (!permission.granted) {
-        setRefused(true);
-        return;
+      try {
+        const permission = await requestRecordingPermissionsAsync();
+        if (!permission.granted) {
+          setRefused(true);
+          return;
+        }
+        setRefused(false);
+        setFailed(false);
+        setRecorded(null);
+        await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+        await recorder.prepareToRecordAsync();
+        recorder.record();
+      } catch {
+        setRecorded(null);
+        setFailed(true);
       }
-      setRefused(false);
-      setFailed(false);
-      setRecorded(null);
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-      await recorder.prepareToRecordAsync();
-      recorder.record();
     },
     stop,
     async listen() {
-      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
-      await player.seekTo(0);
-      player.play();
+      try {
+        await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+        await player.seekTo(0);
+        player.play();
+      } catch {
+        setFailed(true);
+      }
     },
     clear() {
       setRecorded(null);

@@ -1,0 +1,109 @@
+# English-only trial readiness
+
+Updated 5 October 2026. This is the active trial checklist. The broader sprint requirements remain in `build-plan.md` and `sprint-6-readiness.md`.
+
+**Release decision: hold real-family activation until every applicable gate below has evidence.** Code tests, host decoding and a healthy staging endpoint do not establish iPhone or production readiness.
+
+## Scope and sequence
+
+Seven days with the founder’s family in Vietnam after its eligibility review, then 30 days with 3–5 friends’ families in Taiwan. One adult receives a daily ask and has a light per family. Relatives contribute asks and human replies. All app screens, Telegram messages, consent and help are in English; participants must be comfortable with English. Participation is invitation-only and free, without payment details.
+
+Parents use Telegram. Organisers use the iPhone app and Telegram; approved contributors can link the same Telegram identity to the app. App-first family creation is disabled. Russian localisation, multilingual translation, parent app screens, tablets, widgets, LINE, WhatsApp, billing, memory automation and book export are deferred. Existing genuine story records may be read when available; never promise an unavailable retention or export feature.
+
+Engineering owns implementation, verification, release preparation and recorded evidence. The founder owns private account entry, purchases, participant relationships and production approval.
+
+1. Finish the existing scripted **synthetic staging dogfooding week**.
+2. Complete eligibility/privacy review, production recovery and the signed iPhone gates.
+3. Founder approves the actual adults; engineering configures their private Telegram roster.
+4. Finish organiser Telegram setup, link the family group and successfully deliver a private organiser notification. Complete the signed iPhone checks and the actual Vietnam Telegram phone/network checks before inviting the parent to activate their light; a Yes starts the daily schedule and its quiet ladder.
+5. Sign into the app, open **Connect your Telegram family**, follow the expiring private proof-code challenge and open the existing family. Contributors join the approved Telegram group first, then link their existing identity the same way if using the app.
+6. Invite the approved parent for their own consent, including the separate health-word choice. Complete seven scheduled mornings and repeat the full loop. Failed or skipped mornings remain in the evidence register.
+7. Resolve core failures, onboard one Taiwan family, observe two clean mornings, then expand to 3–5 families for 30 days.
+
+## Evidence register
+
+Never enter credentials, provider URLs containing secrets or real family content here. Screenshots and fixtures must be synthetic or separately authorised. For each gate record a commit, build number, environment, date, operator, counts and an evidence link. CI records `github.sha`; production app metadata records `releaseCommit`. A passing run on an earlier commit does not cover the release candidate.
+
+| Gate | Current evidence and remaining work | Status |
+|---|---|---|
+| Release checks | Targeted regressions cover account admission/linking, media auth/expiry, copy/deletion races, consent withdrawal, free weekly reads and app cache/draft/media behaviour. Local `pnpm check` passes (lint, nine package typechecks and nine package test suites); PostgreSQL 18.6 passes 109 tests in 35 files with a stable source digest. Exact candidate CI must still be recorded. See the local receipts below. | Passed locally; candidate CI pending |
+| Repository controls | GitHub metadata rechecked 5 October: production requires reviewer `taiusheev` and `v*` tags; staging permits branch `main` only. `main` now requires strict current-head checks for lint/typecheck/tests, PostgreSQL contention and Maestro web demo, including administrators; force pushes and branch deletion are disabled. No extra pull-request reviewer is imposed. This configuration is evidence of controls, not a green candidate run. | Configured; candidate CI pending |
+| Complete exchange | App ask → Telegram scheduled arrival → parent text/photo/voice answer → real Today/Exchanges display → human text/photo/voice reply → next-morning read-back. Include photo 2 context, duplicate delivery, AI failure, a failed media download and a free weekly read with AI off/unavailable. | Pending live synthetic proof |
+| Consent and failures | Yes/no; health permission both ways; withdrawal during AI and queued delivery; symmetry; stop/start; away; expired invite; interrupted onboarding; failed delivery; quiet wait/resolution; deletion including mid-copy. Code regressions are partial evidence. | Pending live synthetic proof |
+| Live AI provider | Staging's `AI_PROVIDER` is `off` on both Workers. Secret-name metadata checked 5 October contains no `ANTHROPIC_API_KEY`; fake/off-provider tests do not establish real AI behaviour. Founder account/credit/key setup is required before a reviewed switch of both staging configurations and synthetic live-provider tests. Do not deploy an enabled configuration without its private key. | Pending private provider setup |
+| Clerk lifecycle delivery | Source implements signed public `POST /webhooks/clerk` for `user.deleted`, creating a permanent account-access tombstone and clearing account receipts/link challenges/push devices; other events are ignored. Staging's secret-name metadata has no `CLERK_WEBHOOK_SIGNING_SECRET`. The founder must configure the endpoint and install its dedicated signing key, then observe a real signed deletion of a synthetic account and verify API access/replays/linking are refused. Signature/source tests cannot close the provider delivery gate. | Pending private key and provider delivery |
+| Signed iPhone | Original Ogg/Opus voice in app; M4A/MP3; expired auth; sign-out/account switch; microphone/photos denial; offline/retry; cancellation; VoiceOver; large text; small screen. Host decoder checks do not cover Swift/iOS integration. | Pending signed build |
+| Native host preparation | Pinned codec C sources pass synthetic mono/chained-stream, corrupt/missing/oversized input, duration-bound and WAV checks on the macOS host. Apple autolinking resolves the module. This machine has no Xcode; Swift, CocoaPods integration and simulator/device compilation are not established. Record candidate-specific receipts separately. | Host only |
+| Operational proof | Restore correctness was demonstrated, but a recorded run took 8h58m, beyond the under-hour target; the next attempt was interrupted. Repeat timed restore, rehearse production recovery, confirm external alert receipt, perform silence drills and prepared continuous load test. | Blocked on evidence |
+| Production proof | Production environment now requires founder review and `v*` tags; staging deploys only `main`. Production credentials/resources, Clerk instance/domain and API activation, protected admin, clean queues, tagged deployment and smoke checks remain required. | Pending private setup |
+| TestFlight distribution | `trial` build profile targets production, uses production EAS environment, refuses development Clerk keys, is iPhone-only and embeds source commit. Existing `testflight` profile remains a staging test build. Apple account/signing/App Store Connect entry, review information and external TestFlight review remain required. | Pending private setup/review |
+| Eligibility and device route | Vietnam review under the current law/decree; actual residence/citizenship and provider/research flows; English comfort; seven-day own-family consent; Telegram schedule/buttons/upload/background checks on actual networks. | Pending founder/reviewer evidence |
+| Future translations | Catalogue completeness, ICU/style checks and native review for Traditional Chinese and other locales remain required before a multilingual release. The English cohort does not activate those locales. | Deferred; open for future release |
+
+Local engineering evidence, 5 October: [`pnpm check` receipt](../infra/load-tests/trial-repository-check-local-2026-10-05.json), [full output](../infra/load-tests/trial-repository-check-local-2026-10-05.txt), [PostgreSQL 18.6 receipt](../infra/load-tests/trial-postgres18-local-2026-10-05.json) and [eight-case native host receipt](../infra/load-tests/trial-opus-host-2026-10-05.json). The repository run used the pre-commit working tree (including unrelated local adapter drafts); candidate CI must verify only the committed release source. No iPhone, live provider, staging dogfooding or production gate is closed by these receipts.
+
+Candidate record:
+
+| Field | Value to record before activation |
+|---|---|
+| Tested source | Candidate commit SHA from green CI; all required jobs on that SHA |
+| Build | EAS build ID, iOS build number, TestFlight group and embedded `releaseCommit` |
+| Environments | Synthetic staging proof; production tag/Worker versions and protected admin |
+| Operator/date | Engineering verifier and founder release approval |
+| Open blockers | Exact unresolved rows above; no “ready” label while any applicable row is open |
+
+## Implementation controls
+
+- `PILOT_ADMISSION=on` plus the private `PILOT_TELEGRAM_ALLOWLIST` is required for real trial deployments. Missing/malformed rosters fail closed. Removal does not suppress Stop, privacy or deletion paths. App family creation, commercial trial activation and parent device setup are denied in pilot mode.
+- Linking uses `/v1/me/link`, `/v1/me/link/complete` and a distinct private `/start link_<challenge_id>` path. Existing expiry, attempt limits, session binding and replay protection apply. A Telegram link alone is insufficient for activation: an organiser notification must have been successfully delivered to that identity.
+- Public `GET /v1/capabilities` reports only product switches: `pilot`, `telegram_first`, `english_only`, `memory`, `book`, `parent_app` and `billing`. Trial deployment requires the first three to be true and `memory`, `book`, `parent_app` and `billing` false. `book` reflects `BOOK`, which stays off during the real-family trial; long-term story retention is deferred. Reading genuine existing stories or recipes never grants export or a promise to retain new content.
+- The live app displays account data or explicit loading/error/unavailable states. Demo fixtures require explicit demo mode. Queries, text drafts, pending mutation identifiers, calling numbers, images and playback files are scoped to the authenticated session and purged on sign-out/account changes.
+- The EAS `trial` profile sets `EXPO_PUBLIC_TRIAL_ENGLISH=true`; dynamic app configuration recognises that flag locally as well as `EAS_BUILD_PROFILE` remotely. English applies before the first screen, including pending or failed capability reads and a Chinese device preference. Language choices stay hidden; the commercial trial and unavailable parent/memory entries are not offered.
+- Catalogue synchronization and English ICU checks remain release gates. Chinese translation completeness/native review is deferred and retained explicitly as `pnpm --filter @vela/app test:i18n:future`; new English-only strings are intentionally untranslated there. The future multilingual release must pass that gate before enabling its locales.
+- Today refreshes on focus/foreground and every 30 seconds while the app is active, with freshness and retry states. Ordinary failed writes preserve encrypted text drafts and reuse the uncertain mutation’s identifier when manually retried. This is not a background offline delivery queue: recordings and selected photos not yet uploaded remain screen-local and are not promised to survive an app restart. Recording, sharing and uploads expose actionable failure.
+- Vietnam uses `Asia/Ho_Chi_Minh`; Today labels and scheduling use the recipient’s zone even when the organiser is in Taiwan. Weekly reads remain free throughout the pilot.
+- Original incoming answer photos and reply attachments are copied to private storage. API descriptors expose authorised IDs/readiness/expiry, never storage keys or provider credentials. Reads enforce retention even when cleanup is delayed. Cached photo bytes and render state are bound to account/session/family/media; changing selection immediately hides the previous URI. Local expiry timers and foreground clock checks hide and forget expired photos without waiting for query refresh.
+- Incoming copies use a unique key per attempt and revalidate family/media ownership under locks before adoption. Deletion locks and deletes the current key; failures retain the owning record for retry. A daily bounded metadata sweep removes unreferenced incoming attempt objects older than 24 hours, retaining referenced objects and legacy book keys; a private cursor advances through later pages. Queue reconciliation re-drives missing copies within one day.
+- Ogg/Opus decodes locally off the main thread through the local Expo module using pinned official libraries and retained licences (ADR-42). Input is bounded to 20 MiB and decoded audio to five minutes; oversized/unsupported notes show a failure. Every replay reauthorises; a 401 gets one fresh bearer token, while a refused membership does not retry. Downloads cancel after 30 seconds or session change. At most three temporary playback files remain; they are removed on player replacement/unmount or cache purge, including account/session boundaries and before first playback after startup. Late downloads/decodes cannot revive a departed session. Expo Go and a JavaScript-only update cannot supply the decoder; the signed iPhone acceptance test is mandatory.
+- Health permission is checked again under the member lock before derived AI output is stored, and before queued quoted notices are handed to the provider. Stop during processing prevents committing derived content. Messages already accepted by Telegram cannot be retracted by a later withdrawal.
+- Clerk lifecycle uses a separate public webhook, not Cloudflare Access or a bearer session: `/webhooks/clerk` validates the endpoint-specific Svix HMAC over the bounded raw body with a five-minute timestamp window before database access. Missing/invalid signing configuration fails closed. Only `user.deleted` creates the idempotent permanent account tombstone; `user.updated` and other events are ignored, because a ban/lock may be reversed. This revokes account access and is not a family-content deletion action; existing data-request/deletion procedures still apply.
+- Calling numbers are optional, require the person’s permission, remain on the organiser’s device and are cleared with its private account data. Show Call only for a configured valid international number. Privacy/support/data-request links use the founder’s contact.
+
+## Production handoff
+
+1. Founder provides only nonsecret domain/account status to engineering; private keys stay in dashboards/password manager. Create Clerk production on an owned domain, configure DNS/certificates and register `family.vela.light` as the native application. Use `pk_live_` for EAS and `sk_live_` only on the production Worker.
+2. Complete the existing one-time founder production setup. Configure the verified Neon target and content key, R2 cleanup rules, Telegram webhook, rate limiting and Cloudflare Access on **vela-admin only**. Do not expose family content to engineering or staging.
+3. Before enabling production API, replace the guarded `API_V1=off` configuration through a reviewed commit with the actual production issuer and bindings. Add the private pilot roster. Keep LINE, push, parent app and billing off unless their separate gates are completed.
+4. Populate each protected GitHub environment’s private deployment secrets. The newly configured environment rules do not create credentials. `deploy.yml` runs release checks and PostgreSQL contention before migrations/deploy.
+5. Configure each used Clerk instance's endpoint as `https://vela.<environment-subdomain>.workers.dev/webhooks/clerk`, initially subscribing only to `user.deleted`. The founder privately installs that endpoint's `CLERK_WEBHOOK_SIGNING_SECRET` on its `vela` Worker and verifies the dashboard endpoint belongs to the right instance/environment. Observe a signed provider deletion of a synthetic account and record content-free delivery/outcome evidence before trial activation.
+6. Test the complete source commit in staging, publish the founder-approved `v*` tag and approve the production deployment. Workflow guards check the tag is an ancestor of `origin/main` and require the latest completed successful non-nightly `ci` run for that exact SHA. Run the smoke/recovery/queue/admin checks and record Worker versions.
+7. Create the App Store Connect app, finish Apple/EAS signing and submission credentials, set the production publishable key in the EAS production environment and protected build environment, and build profile `trial` for iOS from the same tested tag. Keep the build’s source metadata with its EAS/TestFlight evidence.
+8. Prepare external tester review information: English app description, free invitation-only research purpose, reviewer login/linking assistance, microphone/photo usage, privacy/support URL, test instructions and known limits. Obtain Apple’s required external TestFlight review before inviting friends’ families. Neither an EAS submission nor an upload alone proves review approval.
+
+The founder alone approves a domain purchase, provider account/billing decisions, Apple membership and signing/submission credentials, participant admission and production environment runs. Engineering prepares the exact configuration and reviews nonsecret identifiers and status. Private keys are entered only in the relevant dashboards/password manager or approved hidden setup prompts; no production connection string, bot token, content key or family content belongs in chat, source control or a test fixture.
+
+The app build workflow is a dispatch-only handoff with `--no-wait`: a green GitHub job proves neither EAS build completion nor TestFlight availability. For `trial`, choose the tested main-derived `v*` tag and platform `ios`; exact-SHA non-nightly CI, the protected production environment, `pk_live_` check, production API/capability check and full source checks run before EAS submission. Follow the EAS build through completion, obtain external review where applicable, install it and record the embedded `releaseCommit`. The staging `testflight` profile is not a real-family production build. No EAS Update/runtime/channel setup is present in this app configuration; ship trial app fixes as new signed builds until that separate setup and policy are verified.
+
+Private setup snapshot, 5 October (secret names only): staging has the Telegram, Clerk API, content-key, Deepgram and admin-conversation secrets; no `ANTHROPIC_API_KEY`, `PILOT_TELEGRAM_ALLOWLIST` or `CLERK_WEBHOOK_SIGNING_SECRET` was present. Their existence or a later successful put must be checked without exposing values. These missing private resources are founder dependencies, not code changes engineering can substitute with fake credentials. Keep `AI_PROVIDER=off` on both staging Workers until its setup is complete.
+
+References: [Clerk production deployment](https://clerk.com/docs/guides/development/deployment/production), [Apple TestFlight](https://developer.apple.com/testflight/), [Expo native libraries](https://docs.expo.dev/modules/third-party-library/), [official Opus libraries](https://opus-codec.org/downloads/), [`release.md`](../infra/runbooks/release.md), [`restore-drill.md`](../infra/runbooks/restore-drill.md).
+
+## Operation and measurement
+
+Use synthetic content for deliberate silence/flag drills. Record each scheduled eligible day and failed delivery separately. Telegram delivery proves delivery only, not reading or listening.
+
+| Measure | Definition / directional target |
+|---|---|
+| Delivery | Scheduled, attempted, delivered and failed counts per family; duplicate arrivals counted as incidents |
+| Answers | Answered eligible scheduled days / eligible scheduled days; ≥75%. Show missed deliveries in the denominator/register rather than silently dropping them |
+| Latency | Delivered arrival to first answer, with exact counts; median <60 minutes |
+| Content | Contentful answers / answers; >70%, using an agreed rubric and minimal authorised review |
+| Human replies | Human text/photo/voice replies / answers; ≥1.5, excluding system posts and synthetic/automated reactions |
+| Ask origin | Family-written versus fallback eligible days; <20% fallback |
+| Read-back | Eligible, attempted, delivered and failed; never label it listened without evidence |
+| Quiet | Opened, waited, resolved, late answered, false notice and delivery failure, with exact counts |
+| Burden | Assistance required, stop reasons and time spent fixing/onboarding |
+
+At the end of the own-family seven days, review assistance, comfort and whether the family completed ask → answer → human reply → read-back plus the free weekly read; resolve core failures before expansion. For the Taiwan cohort, ask comfort, usefulness and willingness to continue at days 14 and 30; at day 30 ask willingness to pay without collecting payment details. Questions are optional and notes use family codes without quotes, contact details or health information. These few families provide early evidence, not proof of loneliness reduction or product-market fit.
+
+Cross-family disclosure, invented answer states, ignored Stop, duplicate arrivals or Vela-caused false quiet notices **pause expansion** until corrected and reverified. Preserve incident counts and failed deliveries. Resume only after the founder and engineering review the evidence.

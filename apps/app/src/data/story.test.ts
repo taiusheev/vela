@@ -8,6 +8,12 @@ describe("story day", () => {
     expect(nextSunday(new Date(2026, 9, 5))).toBe("2026-10-11"); // a Monday
   });
 
+  it("uses the parent’s Sunday even when the organiser’s date is already Monday", () => {
+    expect(nextSunday(new Date("2026-10-04T17:30:00Z"), "Asia/Ho_Chi_Minh")).toBe("2026-10-11");
+    expect(nextSunday(new Date("2026-10-03T17:30:00Z"), "Asia/Ho_Chi_Minh")).toBe("2026-10-11");
+    expect(nextSunday(new Date("2026-10-03T16:30:00Z"), "Asia/Ho_Chi_Minh")).toBe("2026-10-04");
+  });
+
   it("offers the bank's stories in order, skipping the ones already asked", () => {
     const [first, second] = STORY_PROMPTS;
     if (first === undefined || second === undefined) throw new Error("expected story prompts");

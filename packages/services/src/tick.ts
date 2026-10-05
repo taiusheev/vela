@@ -26,6 +26,7 @@ import {
   events,
   exchanges,
   families,
+  media,
   members,
   type QuietEvent,
   quietEvents,
@@ -37,8 +38,10 @@ import {
   asc,
   desc,
   eq,
+  gt,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lt,
   lte,
@@ -61,6 +64,7 @@ import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { applyPendingEffects, enqueueOutbound, redriveStrandedOutbound } from "./gateway.ts";
 import { draftWeeklyRead } from "./jobs.ts";
+import { pilotFamilyAllowed, pilotMemberAllowed } from "./pilot-admission.ts";
 import { MAX_PROCESSING_ATTEMPTS } from "./pipeline.ts";
 import { checkPushReceipts } from "./push.ts";
 import { notifyQuiet, openQuiet } from "./quiet.ts";
@@ -147,6 +151,11 @@ export async function loadScheduleInput(
   if (member === null || family === null || family.deletedAt !== null) {
     return null;
   }
+  if (
+    !(await pilotFamilyAllowed(db, deps.config.pilotAdmission, family.id)) ||
+    !(await pilotMemberAllowed(db, deps.config.pilotAdmission, family.id, member.id))
+  )
+    return null;
   const timeZone = member.tz;
   const today = localDateOf(now, timeZone);
   const yesterday = addDays(today, -1);
@@ -470,6 +479,38 @@ async function noteUnderstandFailures(deps: Deps, now: Date): Promise<void> {
   }
 }
 
+/** Recover a lost queue handover, bounded to one day's live media and fifty sources per sweep. */
+async function redriveInboundMedia(deps: Deps): Promise<void> {
+  if (deps.media === null) return;
+  const now = deps.clock.now();
+  const sources = await deps.db
+    .select({ id: media.id })
+    .from(media)
+    .innerJoin(families, eq(families.id, media.familyId))
+    .where(
+      and(
+        isNull(families.deletedAt),
+        isNull(media.storageKey),
+        isNotNull(media.providerFileId),
+        gte(media.createdAt, addMinutes(now, -24 * 60)),
+        lte(media.createdAt, addMinutes(now, -15)),
+        or(eq(media.kept, true), isNull(media.expiresAt), gt(media.expiresAt, now)),
+      ),
+    )
+    .orderBy(asc(media.createdAt), asc(media.id))
+    .limit(50);
+  for (const source of sources) {
+    try {
+      await deps.queues.media.send({ type: "ingest_exchange_media", mediaId: source.id });
+    } catch (error) {
+      deps.logger.warn("inbound_media_redrive_failed", {
+        mediaId: source.id,
+        error: errorLabel(error),
+      });
+    }
+  }
+}
+
 /**
  * Every 15 minutes (flows §3.15): finishes the sends whose effects never landed; re-drives the
  * queued sends whose delivery job was lost; writes the group posts of answers whose post was lost;
@@ -488,6 +529,7 @@ export async function reconcile(deps: Deps): Promise<ReconcileResult> {
   const effects = await applyPendingEffects(deps);
   await redriveStrandedOutbound(deps);
   await postMissedAnswers(deps);
+  await redriveInboundMedia(deps);
   const lateBefore = addMinutes(now, -RECONCILE_LATE_MINUTES);
   const due = await deps.db
     .select({ member: members })

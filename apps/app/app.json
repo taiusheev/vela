@@ -34,6 +34,7 @@
       "output": "single"
     },
     "plugins": [
+      "./modules/vela-opus/app.plugin.js",
       "expo-router",
       "expo-font",
       [

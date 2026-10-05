@@ -66,6 +66,7 @@
         "**/*.test.ts",
         "**/*.config.ts",
         "**/*.config.js",
+        "apps/app/modules/vela-opus/app.plugin.js",
         "**/testing.ts",
         "**/scripts/**",
         "scripts/**",

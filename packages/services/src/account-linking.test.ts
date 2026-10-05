@@ -7,13 +7,20 @@ import {
   events,
   families,
   members,
+  outbound,
   users,
 } from "@vela/db";
 import { eq, sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { completeAccountLink, issueAccountLinkCode, startAccountLink } from "./account-linking.ts";
+import {
+  completeAccountLink,
+  handleAccountLinkStart,
+  issueAccountLinkCode,
+  startAccountLink,
+} from "./account-linking.ts";
 import type { SessionIdentity } from "./api-access.ts";
+import { deliverOutbound } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts } from "./proofs.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -96,6 +103,54 @@ async function ancillary() {
 }
 
 describe("account linking proof", () => {
+  it("delivers the private proof through the gateway and reuses it on webhook retries", async () => {
+    const pointer = await start();
+    const inbound = { ...event(), startParam: `link_${pointer.challenge_id}` };
+    await Promise.all([
+      handleAccountLinkStart(h.deps, inbound),
+      handleAccountLinkStart(h.deps, inbound),
+    ]);
+    const [queued] = await h.db.select().from(outbound);
+    expect(queued).toBeDefined();
+    const hash = (await challenge(pointer.challenge_id)).codeHash;
+    await handleAccountLinkStart(h.deps, inbound);
+    expect(await h.db.select().from(outbound)).toHaveLength(1);
+    expect((await challenge(pointer.challenge_id)).codeHash).toBe(hash);
+    await h.run({ outbound: (job) => deliverOutbound(h.deps, job.outboundId) });
+    const [sent] = h.telegram.sentTo(seed.memberLink.externalId);
+    const code = sent?.message.text.match(/[A-Za-z0-9_-]{22}/)?.[0];
+    expect(code).toBeDefined();
+    if (code === undefined) throw new Error("Missing delivered proof");
+    expect(await complete(pointer.challenge_id, code)).toMatchObject({
+      response: { body: { linked: true } },
+    });
+    expect(JSON.stringify(h.logger.entries)).not.toContain(code);
+  });
+
+  it("requires an approved English Telegram identity when the pilot is enabled", async () => {
+    const proof = await issued();
+    const allowed = {
+      ...h.deps,
+      pilotAdmission: { telegramUserIds: [seed.memberLink.externalId] },
+    };
+    await h.db.update(members).set({ language: "zh-TW" }).where(eq(members.id, seed.member.id));
+    await expect(
+      completeAccountLink(allowed, identity, "denied-language", proof.id, proof.code),
+    ).rejects.toMatchObject(denied);
+    await h.db.update(members).set({ language: "en" }).where(eq(members.id, seed.member.id));
+    await expect(
+      completeAccountLink(
+        { ...allowed, pilotAdmission: { telegramUserIds: ["9999"] } },
+        identity,
+        "denied-roster",
+        proof.id,
+        proof.code,
+      ),
+    ).rejects.toMatchObject(denied);
+    expect(
+      await completeAccountLink(allowed, identity, "allowed", proof.id, proof.code),
+    ).toMatchObject({ response: { body: { linked: true } } });
+  });
   it("requires both original app session and private Telegram code, preserving all other state", async () => {
     const before = await ancillary();
     const memberRows = await h.db.select().from(members);

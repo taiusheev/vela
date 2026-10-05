@@ -17,6 +17,7 @@ on:
 # Read the code; the deploy credentials come from the environment.
 permissions:
   contents: read
+  actions: read
 
 jobs:
   staging:
@@ -44,10 +45,12 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm --filter @vela/services run test:postgres
       - name: Apply migrations
         run: pnpm --filter @vela/db migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VELA_DATABASE_ENVIRONMENT: staging
       # The pilot Worker first: it exports the MemberScheduler class that the admin Worker binds by
       # script_name, so the admin Worker never binds a class that is not deployed.
       - name: Deploy the pilot Worker
@@ -74,6 +77,16 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Require a tested release commit on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_TYPE" = tag && [[ "$GITHUB_REF_NAME" == v* ]]
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&per_page=20" | jq -e --arg sha "$GITHUB_SHA" '.workflow_runs | map(select(.head_sha == $sha and .event != "schedule")) | sort_by(.run_number, .run_attempt) | last | .status == "completed" and .conclusion == "success"'
       # Pinned to a commit, not a tag: this step installs the pnpm that the credentialed migrate
       # and deploy steps below then run.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -85,10 +98,12 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm --filter @vela/services run test:postgres
       - name: Apply migrations
         run: pnpm --filter @vela/db migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VELA_DATABASE_ENVIRONMENT: production
       # As in staging: the pilot Worker, whose class the admin Worker binds, before the admin Worker.
       - name: Deploy the pilot Worker
         run: pnpm --filter @vela/worker exec wrangler deploy --env production

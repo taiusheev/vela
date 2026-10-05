@@ -10,8 +10,11 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import type { VelaDatabase } from "./database.ts";
 import * as schema from "./schema.ts";
+import { configureContentKey } from "./sealed.ts";
 
 const migrationsFolder = fileURLToPath(new URL("../migrations", import.meta.url));
+/** Fixed key for ephemeral tests only; never use it for a local or deployed application database. */
+export const TEST_CONTENT_KEY_V1 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 export interface TestDatabase {
   readonly db: VelaDatabase;
@@ -21,6 +24,7 @@ export interface TestDatabase {
 }
 
 export async function createTestDatabase(): Promise<TestDatabase> {
+  configureContentKey(TEST_CONTENT_KEY_V1);
   const client = new PGlite();
   const db = drizzle({ client, schema });
   await migrate(db, { migrationsFolder });

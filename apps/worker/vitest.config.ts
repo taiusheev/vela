@@ -187,6 +187,7 @@ export default defineConfig({
           ANTHROPIC_API_KEY: "test-anthropic-key",
           DEEPGRAM_API_KEY: "test-deepgram-key",
           CLERK_SECRET_KEY: "",
+          CLERK_WEBHOOK_SIGNING_SECRET: "",
           LINE_CHANNEL_SECRET: "",
           LINE_CHANNEL_ACCESS_TOKEN: "",
           MEDIA_URL_SECRET: "",

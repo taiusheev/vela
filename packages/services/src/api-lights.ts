@@ -83,6 +83,8 @@ export async function loadApiLights(
     lights.push({
       member_id: member.id,
       display_name: member.displayName,
+      tz: member.tz,
+      local_date: today,
       state,
       answered_at: answeredAt?.toISOString() ?? null,
       usual_time: member.arrivalTime,
@@ -112,6 +114,8 @@ export async function loadApiLights(
     lights.push({
       member_id: member.id,
       display_name: member.displayName,
+      tz: member.tz,
+      local_date: localDateOf(now, member.tz),
       state: "none",
       answered_at: null,
       usual_time: member.arrivalTime,

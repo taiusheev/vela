@@ -14,7 +14,7 @@
  * one bucket and never mint the same key: two fresh fakes would both mint `token-1`, and a broken
  * rule would show as a unique-key failure instead of as itself.
  */
-import { media, members, users, type VelaDatabase } from "@vela/db";
+import { families, media, members, users, type VelaDatabase } from "@vela/db";
 import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "../src/api-access.ts";
@@ -198,6 +198,38 @@ async function waitUntilBlocked(
 }
 
 describe("uploading a photo on independent PostgreSQL connections", () => {
+  it.each(["family deletion", "membership ending", "account deletion"] as const)(
+    "refuses adoption and removes its object after %s commits while authorization waits",
+    async (change) => {
+      const holder = await pg.client("lifecycle-change");
+      const writer = await pg.client("photo-upload");
+      const held = await pg.holdRows(holder, async (tx) => {
+        if (change === "family deletion") {
+          await tx.update(families).set({ deletedAt: NOW }).where(eq(families.id, scope.familyId));
+        } else if (change === "membership ending") {
+          await tx
+            .update(members)
+            .set({ leftAt: NOW, status: "left" })
+            .where(eq(members.id, scope.miaMemberId));
+        } else {
+          await tx
+            .update(users)
+            .set({ deletedAt: NOW })
+            .where(eq(users.authSubject, mia.authSubject));
+        }
+      });
+      const operation = pg.track(upload(writer, mia, "lifecycle-pick"));
+      await pg.waitForRowLockWaitOrCompletion(writer, [holder], operation);
+      expect(uploadedObjects()).toHaveLength(1);
+      await held.release();
+      const [result] = await pg.settle("photo adoption", [operation]);
+      expect(result).toMatchObject({ status: "rejected", reason: { code: "not_found" } });
+      expect(await appPhotos()).toBe(0);
+      expect(uploadedObjects()).toEqual([]);
+      expect(await pg.receipts(mia.authSubject)).toEqual([]);
+    },
+  );
+
   it("keeps one row and one object when the same upload arrives twice, answering the second as a replay", async () => {
     const [holder, first, second] = await pg.clientPool("upload", 3);
     if (holder === undefined || first === undefined || second === undefined) {
@@ -292,23 +324,22 @@ describe("uploading a photo on independent PostgreSQL connections", () => {
     ) {
       throw new Error("expected four race connections");
     }
-    // Mia and Sam are different actors, so no actor lock orders them. The holder keeps the family
-    // row `for update`, which each upload's insert waits on for its foreign key, after it has
-    // counted: without the family's advisory lock both would count 59 and both would insert.
-    const entered = pg.latch("the holder to take the family row");
-    const release = pg.latch("the holder to let the family row go", HOLD_MS);
+    // Mia and Sam are different actors; both pass their lifecycle row locks before queueing on
+    // the family's advisory lock. With that guard missing neither waits, so the test fails.
+    const entered = pg.latch("the holder to take the family upload lock");
+    const release = pg.latch("the holder to let the family upload lock go", HOLD_MS);
     const held = pg.track(
       holder.db.transaction(async (tx) => {
-        await tx.execute(sql`select id from families where id = ${scope.familyId} for update`);
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${`vela-media:${scope.familyId}`}, 0))`,
+        );
         entered.release();
         await release.wait();
       }),
     );
     await entered.wait();
     const first = pg.track(upload(miaClient, mia, "mia-pick"));
-    await pg.waitForRowLockWait(miaClient, [holder], first);
-    // Sam waits on the family's advisory lock, which Mia holds; with that guard broken he would
-    // count past it and wait on the row instead, and both would then insert.
+    await pg.waitForLockWait(miaClient, [holder], first);
     const second = pg.track(upload(samClient, sam, "sam-pick", testJpeg({ scan: [7, 8, 9] })));
     await waitUntilBlocked(observer, samClient, second);
 

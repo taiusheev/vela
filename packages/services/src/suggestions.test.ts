@@ -718,28 +718,137 @@ describe("writeSuggestions with AI on", () => {
         await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
       },
     ],
-  ] as const)("logs a paid call for a day that turned out %s", async (outcome, landing) => {
-    const forDate = addDays(today(), 1);
-    h.deps.ai = createFakeAi({
-      suggest: async (input) => {
-        await landing(input.forDate);
-        return {
-          ok: true,
-          value: { type: "question", text: "What is growing in the garden?", source: "rotation" },
-          record: fakeRecord("suggest"),
-        };
-      },
+  ] as const)(
+    "keeps paid-call output only while permission remains after a day turned out %s",
+    async (outcome, landing) => {
+      const forDate = addDays(today(), 1);
+      h.deps.ai = createFakeAi({
+        suggest: async (input) => {
+          await landing(input.forDate);
+          return {
+            ok: true,
+            value: { type: "question", text: "What is growing in the garden?", source: "rotation" },
+            record: fakeRecord("suggest"),
+          };
+        },
+      });
+
+      expect(await writeSuggestionFor(h.deps, seed.member.id, forDate)).toBe(outcome);
+
+      const stored = await rows();
+      expect(stored.filter((row) => row.bankId !== "life.family.name")).toEqual([]);
+      const calls = await h.db.select().from(aiCalls);
+      expect(calls.map((call) => call.inputRef)).toEqual(
+        outcome === "inactive"
+          ? []
+          : [{ member_id: seed.member.id, for_date: forDate, bank_id: expect.any(String) }],
+      );
+    },
+  );
+});
+
+describe("trial admission and lifecycle during suggestion writing", () => {
+  function approveFamily() {
+    h.deps.config.pilotAdmission = {
+      telegramUserIds: [seed.organiserLink.externalId, seed.memberLink.externalId],
+    };
+    h.deps.ai = h.ai;
+  }
+
+  it("prevents single-day and nightly providers from seeing a family outside the current roster", async () => {
+    h.deps.config.pilotAdmission = { telegramUserIds: [seed.memberLink.externalId] };
+    h.deps.ai = h.ai;
+    expect(await writeSuggestionFor(h.deps, seed.member.id, addDays(today(), 1))).toBe("inactive");
+    expect(await writeSuggestions(h.deps)).toEqual({
+      written: 0,
+      existing: 0,
+      claimed: 0,
+      inactive: 3,
+      failed: 0,
     });
-
-    expect(await writeSuggestionFor(h.deps, seed.member.id, forDate)).toBe(outcome);
-
-    const stored = await rows();
-    expect(stored.filter((row) => row.bankId !== "life.family.name")).toEqual([]);
-    const calls = await h.db.select().from(aiCalls);
-    expect(calls.map((call) => call.inputRef)).toEqual([
-      { member_id: seed.member.id, for_date: forDate, bank_id: expect.any(String) },
-    ]);
+    expect(h.ai.calls).toEqual([]);
+    expect(await rows()).toEqual([]);
+    expect(await h.db.select().from(aiCalls)).toEqual([]);
   });
+
+  it("continues approved families while excluding unapproved families from a nightly batch", async () => {
+    approveFamily();
+    await otherFamily(1);
+    expect(await writeSuggestions(h.deps)).toEqual({
+      written: 3,
+      existing: 0,
+      claimed: 0,
+      inactive: 3,
+      failed: 0,
+    });
+    expect(h.ai.calls).toHaveLength(3);
+    expect(new Set((await rows()).map((row) => row.familyId))).toEqual(new Set([seed.family.id]));
+  });
+
+  it.each(["single", "nightly"] as const)(
+    "drops %s draft output when the organiser loses approval during the provider call",
+    async (kind) => {
+      approveFamily();
+      let called = 0;
+      h.deps.ai = createFakeAi({
+        suggest: async () => {
+          called += 1;
+          h.deps.config.pilotAdmission = { telegramUserIds: [seed.memberLink.externalId] };
+          return {
+            ok: true,
+            value: { type: "question", text: "A synthetic discarded draft", source: "rotation" },
+            record: fakeRecord("suggest"),
+          };
+        },
+      });
+      if (kind === "single")
+        expect(await writeSuggestionFor(h.deps, seed.member.id, addDays(today(), 1))).toBe(
+          "inactive",
+        );
+      else
+        expect(await writeSuggestions(h.deps)).toEqual({
+          written: 0,
+          existing: 0,
+          claimed: 0,
+          inactive: 3,
+          failed: 0,
+        });
+      expect(called).toBe(1);
+      expect(await rows()).toEqual([]);
+      expect(await h.db.select().from(aiCalls)).toEqual([]);
+    },
+  );
+
+  it.each(["stop", "family_deleted", "light_off"] as const)(
+    "retains neither suggestion nor AI output when %s lands during drafting",
+    async (action) => {
+      approveFamily();
+      h.deps.ai = createFakeAi({
+        suggest: async () => {
+          if (action === "family_deleted")
+            await h.db
+              .update(families)
+              .set({ deletedAt: h.clock.now() })
+              .where(eq(families.id, seed.family.id));
+          else
+            await h.db
+              .update(members)
+              .set(action === "stop" ? { status: "paused" } : { lightOn: false })
+              .where(eq(members.id, seed.member.id));
+          return {
+            ok: true,
+            value: { type: "question", text: "A synthetic discarded draft", source: "rotation" },
+            record: fakeRecord("suggest"),
+          };
+        },
+      });
+      expect(await writeSuggestionFor(h.deps, seed.member.id, addDays(today(), 1))).toBe(
+        "inactive",
+      );
+      expect(await rows()).toEqual([]);
+      expect(await h.db.select().from(aiCalls)).toEqual([]);
+    },
+  );
 });
 
 describe("writeSuggestionFor", () => {

@@ -39,6 +39,11 @@ if (databaseUrl === undefined || databaseUrl.length === 0) {
   console.error("[seed] DATABASE_URL is not set. See infra/README.md, section 9a.");
   process.exit(2);
 }
+const contentKeyV1 = process.env.CONTENT_KEY_V1?.trim();
+if (contentKeyV1 === undefined || contentKeyV1.length === 0) {
+  console.error("[seed] CONTENT_KEY_V1 is not set. See infra/README.md, section 9a.");
+  process.exit(2);
+}
 const { hostname } = new URL(databaseUrl);
 if (hostname !== "localhost" && hostname !== "127.0.0.1" && hostname !== "::1") {
   console.error(
@@ -47,7 +52,7 @@ if (hostname !== "localhost" && hostname !== "127.0.0.1" && hostname !== "::1") 
   process.exit(2);
 }
 
-const connection = await connectDatabase(databaseUrl);
+const connection = await connectDatabase(databaseUrl, contentKeyV1);
 const db = connection.db;
 const now = new Date();
 
@@ -175,6 +180,8 @@ try {
     .onConflictDoNothing();
   const written = await writeSuggestions({
     db,
+    // This script has already refused non-local databases and seeds synthetic people only.
+    config: { pilotAdmission: null },
     clock: { now: () => now },
     ai: createOffAi(),
     logger: {

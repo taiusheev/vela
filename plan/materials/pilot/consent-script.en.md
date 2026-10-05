@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v1` · 17 September 2026 · goes with `privacy-notice.v1` · spoken meaning matches the `consent.request@2` and `consent.health_words@1` messages (architecture/03-code-design.md §4, spec §9)
+Version `consent-script.v2` · 5 October 2026 · goes with `privacy-notice.v2` · spoken meaning matches the `consent.request@2` and `consent.health_words@1` messages (architecture/03-code-design.md §4, spec §9)
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes, that's fine" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
@@ -12,12 +12,12 @@ Neither the founder nor the organiser can make Vela send the consent message: a 
 
 - [ ] The organiser has already talked about Vela with the person. The call is never the first they hear of it.
 - [ ] The organiser has agreed to the pilot (`organiser-agreement.en.md`) and has the privacy notice.
-- [ ] **Who can join.** Under the family code you have recorded the country where the person and each family member in the group live, and whether any of them is a Russian citizen (pilot pack README, "Who can join the pilot"). Until a lawyer advises otherwise, go ahead only if everyone lives in Taiwan or in a US state other than Washington and no one is a Russian citizen. Otherwise do not hold the call: tell the organiser kindly that their family has to wait.
+- [ ] **Who can join.** Under the family code you have recorded the country where the person and each family member in the group live, and whether any of them is a Russian citizen (pilot pack README, "Who can join the pilot"). Use the English-only cohort and eligibility review in the pilot pack README. Vietnam participation requires a recorded review of the actual participants and processing flows first; language alone does not clear residence or citizenship restrictions. Otherwise do not hold the call: tell the organiser kindly that their family has to wait.
 - [ ] The organiser has finished Vela's setup in their private chat with the bot within the last 7 days, and has the invite link from its last message (the link stops working after 7 days). They have **not** sent it to the person yet, and can send it during the call, so the consent message never arrives before the person has heard this script.
 - [ ] You know: the name the family uses, how they like to be greeted, the language, the morning time, the messaging app, the names of any nearby contacts, the names of the people in the family group, and the emergency number where the person lives.
 - [ ] Ten quiet minutes. The organiser may join, but the person answers for themselves.
 - [ ] You are **not** recording. Take notes by hand, or in the "Vela pilot" folder in Google Drive, under the family code. Notes in Google Drive hold only the family code, dates, the versions of the texts used, yes or no answers, the country codes and citizenship answers of "Who can join", and questionnaire scores: never a quote, and nothing about anyone's health.
-- [ ] If the person prefers another language, stop and reschedule with the right script.
+- [ ] If the person is not comfortable using English, do not enrol them in this cohort. A later multilingual trial needs reviewed materials.
 
 ## How to speak
 
@@ -43,7 +43,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 ### 3. How answering works
 
-"The message comes at about [time] in [Telegram / LINE]. It might be a question from [a family member's name], two photos to choose between, or a voice message. You answer with one tap on a button. If you feel like talking, you can send a voice message, but you never have to. The next morning, you'll hear what the family said back to you."
+"The message comes at about [time] in Telegram. It might be a question from [a family member's name], two photos to choose between, or a voice message. You answer with one tap on a button. If you feel like talking, you can send a voice message, but you never have to. The next morning, you'll hear what the family said back to you."
 
 ### 4. What else you should know
 
@@ -54,7 +54,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 - "Right after you say yes, Vela asks you one more question, on its own, with its own buttons. It asks whether Vela may pass on your words about your health, for example a fall or pain, to [organiser], so they can call you. You can say yes or no, and Vela works the same either way. If you say yes, [organiser] sees your own words that same day. If you say no, Vela keeps no separate notes about your health and leaves your health out of the one-line summary. Your own messages still reach the family as you sent them, and their words are deleted after 30 days. When something you said may be worth a call, [organiser] gets a short note without your words. Tapping the button is your agreement in writing; if you'd rather answer on paper, tell me. Whatever you answer, Vela's notes never keep the name of an illness, a test result or a medicine."
 - "Vela is not a doctor and never gives medical advice. If you need help quickly, call [local emergency number: 119 in Taiwan, 911 in the United States, 999 or 112 in the United Kingdom, 112 in the European Union] or [organiser] straight away. Don't wait for the morning message."
 - "If [organiser] can't reach you on a quiet day, they might ask [nearby contact's name] to come by. That is always [organiser]'s own decision. Vela never contacts anyone by itself."
-- "A computer program helps with the messages: it writes down voice messages as text, translates for [family member who speaks another language], and suggests short answers you can tap."
+- "A computer program helps with the messages: it writes down voice messages as text, and suggests short answers you can tap."
 - "Companies that run Vela process your messages for it: the database is in Singapore, the program that writes down and understands voice messages works in the United States, Cloudflare's network, which runs Vela, works worldwide, and Telegram carries the messages."
 - "Your voice messages, photos and the words of your answers are deleted after 30 days. A one-line summary of each answer stays while the family uses Vela."
 - "While we test Vela over these first weeks, I read the messages too, only to make sure everything works."
@@ -81,7 +81,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 *Ask only after step 6, and only if they said yes to Vela.*
 
-"One more thing, separate from Vela. For this test I'm asking a few people three short questions about how connected they feel: today, in about a month and in three months. You can say no, and it changes nothing about Vela."
+"One more thing, separate from Vela. For this test I'm asking a few people three short questions about how connected they feel: at days 14 and 30. You can say no, and it changes nothing about Vela."
 
 *If yes, ask the questions from the pilot's research sheet and record the scores under the family code only. If no, do not ask again.*
 
@@ -89,7 +89,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 **1. "Who will see what I say?"**
 
-"The family in the Vela group: [names]. They see your answer, and a written version if you sent a voice message. On quiet days and on Sundays, [organiser] gets a short note. I read the messages during this test to make sure it works. Companies that run Vela for me process the messages: the database in Singapore, the program in the United States that writes down, translates and understands the words, and Telegram. They use them only to run Vela. Nobody else sees your answers: not neighbours, not advertisers, not anyone selling anything."
+"The family in the Vela group: [names]. They see your answer, and a written version if you sent a voice message. On quiet days and on Sundays, [organiser] gets a short note. I read the messages during this test to make sure it works. Companies that run Vela for me process the messages: the database in Singapore, the program in the United States that writes down and understands the words, and Telegram. They use them only to run Vela. Nobody else sees your answers: not neighbours, not advertisers, not anyone selling anything."
 
 **2. "What happens if I don't answer one day? Will everyone worry?"**
 
@@ -101,7 +101,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 **4. "Is a computer reading my messages? Is it a robot talking to me?"**
 
-"The questions come from real people in your family, with their names on them. Vela carries them. A computer program helps: it turns voice messages into writing, translates when someone speaks another language, and suggests short answers you can tap. If a message mentions something like a fall or pain, it makes sure [organiser] hears about it: with your own words if you said yes to the health question, and otherwise with a short note without them. It never gives advice, never pretends to be someone in your family, and never contacts anyone. On days when nobody in the family has asked anything, Vela sends a short hello signed 'Vela, from your family'."
+"The questions come from real people in your family, with their names on them. Vela carries them. A computer program helps: it turns voice messages into writing, and suggests short answers you can tap. If a message mentions something like a fall or pain, it makes sure [organiser] hears about it: with your own words if you said yes to the health question, and otherwise with a short note without them. It never gives advice, never pretends to be someone in your family, and never contacts anyone. On days when nobody in the family has asked anything, Vela sends a short hello signed 'Vela, from your family'."
 
 **5. "What if I want to stop? Will [organiser] be upset?"**
 

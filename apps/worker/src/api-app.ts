@@ -5,6 +5,7 @@ import {
   ApiAway,
   ApiBook,
   ApiBookRemoved,
+  ApiCapabilities,
   ApiComposedAsk,
   ApiCreatedFamily,
   ApiDeceased,
@@ -19,6 +20,10 @@ import {
   ApiFamilyPlan,
   ApiIdempotencyKey,
   ApiLeft,
+  ApiLinkChallenge,
+  ApiLinkCompleteInput,
+  ApiLinkOutcome,
+  ApiLinkStartInput,
   ApiLookInAsk,
   ApiMe,
   ApiMemberPause,
@@ -40,6 +45,7 @@ import {
   ApiUploadedVoice,
   ApiUser,
   ApiWeeklyRead,
+  ApiWeeklyReadOpened,
   ApiWithdrawn,
   AskToLookIn,
   ComposeAsk,
@@ -55,6 +61,7 @@ import {
   MarkDeceased,
   type MediaUnavailableReason,
   MemberLight,
+  OpenWeeklyRead,
   PauseMember,
   QuietAction,
   QuietUseful,
@@ -80,6 +87,7 @@ import {
   type askApiToLookIn,
   type authorizeFamilyAccess,
   type Clock,
+  type completeAccountLink,
   type composeApiAsk,
   type createApiFamily,
   type createApiReminder,
@@ -114,7 +122,10 @@ import {
   type memberOfDeviceToken,
   NearbyInviteRefusedError,
   NearbyRefusedError,
+  type openApiWeeklyRead,
+  type PilotAdmission,
   type pauseApiMember,
+  type pilotApiAccountAllowed,
   type provisionApiAccount,
   QuietUsefulRefusedError,
   type Random,
@@ -131,6 +142,7 @@ import {
   runAfterCommit,
   type setApiAway,
   type setUpApiDevice,
+  type startAccountLink,
   type startApiTrial,
   TrialRefusedError,
   type updateApiAccount,
@@ -195,6 +207,7 @@ export interface ApiWriteServices {
   markApiDeceased: typeof markApiDeceased;
   endApiAway: typeof endApiAway;
   startApiTrial: typeof startApiTrial;
+  openApiWeeklyRead: typeof openApiWeeklyRead;
   addApiNearby: typeof addApiNearby;
   setUpApiDevice: typeof setUpApiDevice;
   removeApiDevice: typeof removeApiDevice;
@@ -212,6 +225,8 @@ export interface ApiWriteServices {
 }
 
 export interface ApiRuntime {
+  capabilities?: ApiCapabilities;
+  admission?: { config: PilotAdmission; permitsAccount: typeof pilotApiAccountAllowed };
   verifySession: SessionVerifier;
   /** Reads that answer in a member's own local day need the hour it is now. */
   now(): Date;
@@ -219,6 +234,11 @@ export interface ApiRuntime {
   services: ApiReadServices;
   logger: Pick<Logger, "error">;
   writes?: {
+    links?: {
+      start: typeof startAccountLink;
+      complete: typeof completeAccountLink;
+      telegramBotUsername: string;
+    };
     verifyActiveSession: SessionActivityChecker;
     clock: Clock;
     services: ApiWriteServices;
@@ -415,7 +435,18 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     const handle = await runtime.openDatabase();
     try {
       c.set("db", handle.db);
+      const admission = runtime.admission;
+      const identity = c.get("session");
+      const removal = c.req.path.endsWith("/left") || c.req.path.endsWith("/remove");
+      if (
+        admission !== undefined &&
+        !removal &&
+        (identity === undefined ||
+          !(await admission.permitsAccount(handle.db, identity, admission.config)))
+      )
+        return c.json(NOT_FOUND, 404);
       await next();
+      return;
     } finally {
       try {
         await handle.close();
@@ -424,6 +455,24 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       }
     }
   };
+  app.get("/v1/capabilities", (c) => {
+    c.header("cache-control", "no-store");
+    if (c.req.method === "HEAD") return c.json(NOT_FOUND, 404);
+    return c.json(
+      ApiCapabilities.parse(
+        runtime.capabilities ?? {
+          pilot: false,
+          telegram_first: false,
+          english_only: false,
+          memory: false,
+          book: false,
+          parent_app: true,
+          billing: true,
+        },
+      ),
+      200,
+    );
+  });
 
   app.onError(
     withApiErrorNoStore<RuntimeEnv>((error, c) => {
@@ -645,6 +694,9 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       return c.json(NOT_FOUND, 404);
     }
     await next();
+    if (c.res.headers.get("content-disposition") === "inline") {
+      c.res.headers.set("cache-control", "private, no-store");
+    }
     return c.res;
   });
 
@@ -927,15 +979,20 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     async (c) => {
       const media = runtime.media;
       if (media === undefined) return c.json(NOT_FOUND, 404);
+      const role = c.req.query("role") ?? "original";
+      if (role !== "original") return c.json(NOT_FOUND, 404);
       const photo = await runtime.services.readApiMedia(
         c.get("db"),
         c.get("session"),
         c.req.param("familyId"),
         c.req.param("mediaId"),
         media.store,
+        "original",
       );
       if (photo === null) return c.json(NOT_FOUND, 404);
+      c.header("cache-control", "private, no-store");
       return c.body(photo.body, 200, {
+        "cache-control": "private, no-store",
         "content-type": photo.mime,
         "x-content-type-options": "nosniff",
         "content-disposition": "inline",
@@ -964,6 +1021,24 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         checkActivity,
         withDatabase,
         async (c) => {
+          const input = c.get("writeInput");
+          if (
+            runtime.admission !== undefined &&
+            typeof input === "object" &&
+            input !== null &&
+            "language" in input &&
+            input.language !== "en"
+          )
+            return c.json(
+              {
+                error: {
+                  code: "invalid",
+                  message: "This trial uses English.",
+                  details: { reason: "pilot_english_only" },
+                },
+              },
+              400,
+            );
           const result = await service(
             { db: c.get("db"), clock: writes.clock },
             c.get("session"),
@@ -976,6 +1051,62 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           const user = ApiUser.parse(result.response.body);
           c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
           return c.json(user, 200);
+        },
+      );
+    }
+    const links = writes.links;
+    if (links !== undefined) {
+      app.post(
+        "/v1/me/link",
+        authenticate,
+        validateWrite(ApiLinkStartInput, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          if (!/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(links.telegramBotUsername))
+            return c.json(UNAVAILABLE, 503);
+          const result = await links.start(
+            { db: c.get("db"), clock: writes.clock },
+            c.get("session"),
+            c.get("writeKey"),
+          );
+          if (result.response.status !== 201 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid account link response");
+          const challenge = ApiLinkChallenge.parse(result.response.body);
+          const telegramUrl = new URL(`https://t.me/${links.telegramBotUsername}`);
+          telegramUrl.searchParams.set("start", `link_${challenge.challenge_id}`);
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(
+            ApiLinkChallenge.parse({ ...challenge, telegram_url: telegramUrl.toString() }),
+            201,
+          );
+        },
+      );
+      app.post(
+        "/v1/me/link/complete",
+        authenticate,
+        validateWrite(ApiLinkCompleteInput, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const input = ApiLinkCompleteInput.parse(c.get("writeInput"));
+          const result = await links.complete(
+            {
+              db: c.get("db"),
+              clock: writes.clock,
+              ...(runtime.admission === undefined
+                ? {}
+                : { pilotAdmission: runtime.admission.config }),
+            },
+            c.get("session"),
+            c.get("writeKey"),
+            input.challenge_id,
+            input.code,
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid account link response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(ApiLinkOutcome.parse(result.response.body), 200);
         },
       );
     }
@@ -1019,6 +1150,17 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         checkActivity,
         withDatabase,
         async (c) => {
+          if (runtime.admission !== undefined)
+            return c.json(
+              {
+                error: {
+                  code: "forbidden",
+                  message: "Start your trial family in Telegram, then link it here.",
+                  details: { reason: "pilot_telegram_first" },
+                },
+              },
+              403,
+            );
           const result = await writes.services.createApiFamily(
             { db: c.get("db"), clock: writes.clock, ...familyDeps },
             c.get("session"),
@@ -1045,6 +1187,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
         )(c, next),
       async (c) => {
+        if (runtime.admission !== undefined) return c.json(NOT_FOUND, 404);
         const result = await writes.services.startApiTrial(
           { db: c.get("db"), clock: writes.clock },
           c.get("session"),
@@ -1077,6 +1220,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
             "organiser",
           )(c, next),
         async (c) => {
+          if (runtime.admission !== undefined) return c.json(NOT_FOUND, 404);
           const set = await writes.services.setUpApiDevice(
             {
               db: c.get("db"),
@@ -1377,6 +1521,28 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         }
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ApiQuietState.parse(result.response.body), 200);
+      },
+    );
+    // A visible, unlocked Weekly Read opening; fetching the read above never records an event.
+    app.post(
+      "/v1/weekly-reads/:weeklyReadId/opened",
+      authenticate,
+      validateWrite(OpenWeeklyRead, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.openApiWeeklyRead(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("weeklyReadId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiWeeklyReadOpened.parse(result.response.body), 200);
       },
     );
     // An organiser takes a story out of the family book (ADR-39); the service reads its family.

@@ -84,6 +84,7 @@ jobs:
       MAESTRO_SHA256: 5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a
       EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ""
       EXPO_PUBLIC_API_URL: ""
+      EXPO_PUBLIC_DEMO_MODE: "true"
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

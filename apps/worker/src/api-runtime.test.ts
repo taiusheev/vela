@@ -40,6 +40,7 @@ const STAGING_CONFIG: ApiConfig = {
   lineBasicId: null,
   regions: ["apac"],
   pushSend: "off",
+  pilotAdmission: null,
   privacyNoticeUrls: {
     en: "https://vela.vela.example/privacy",
     "zh-TW": "https://vela.vela.example/privacy/zh-TW",
@@ -561,6 +562,26 @@ describe("the API as staging serves it", () => {
 // authentication, and a write that reaches the limit, the nudges or the database needs a token
 // Clerk signed.
 describe("the runtime staging's API app runs on", () => {
+  it("publishes closed trial capabilities without opening a database", async () => {
+    const runtime = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on" }), {
+      ...STAGING_CONFIG,
+      pilotAdmission: { telegramUserIds: ["1001", "2001"] },
+    });
+    expect(runtime.capabilities).toEqual({
+      pilot: true,
+      telegram_first: true,
+      english_only: true,
+      memory: false,
+      book: true,
+      parent_app: false,
+      billing: false,
+    });
+    expect(runtime.admission?.config).toEqual({ telegramUserIds: ["1001", "2001"] });
+    expect(runtime.writes?.links?.telegramBotUsername).toBe("VelaStagingBot");
+    const response = await createApiApp(runtime).request("/v1/capabilities");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(runtime.capabilities);
+  });
   let network: Mock<typeof fetch>;
 
   beforeEach(() => {

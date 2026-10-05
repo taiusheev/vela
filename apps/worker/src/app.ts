@@ -1,6 +1,6 @@
 /**
  * Every HTTP route the pilot Worker serves (code design §9, H1): the health check, the Telegram and
- * LINE webhooks, the media LINE fetches, and the privacy notices. The admin pages are another
+ * LINE and Clerk webhooks, the media LINE fetches, and the privacy notices. The admin pages are another
  * Worker's (`admin-app.ts`), so anything under `/admin` here is 404. `/v1` never reaches this app;
  * `pilot-worker.ts` hands it to `PilotRuntime.api`.
  *
@@ -16,7 +16,13 @@ import {
   VelaError,
 } from "@vela/services";
 import { type Context, Hono } from "hono";
-import { readEnvironment, readLineConfig, refuseUnfilledNotices } from "./config.ts";
+import {
+  ConfigError,
+  readEnvironment,
+  readLineConfig,
+  readPilotAdmission,
+  refuseUnfilledNotices,
+} from "./config.ts";
 import { createLogger } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { readHealth } from "./heartbeat.ts";
@@ -36,6 +42,17 @@ interface PilotAppEnv {
 /** The one 404 the Worker answers, whatever was not there. */
 function notFound(c: Context<PilotAppEnv>): Response {
   return c.text("not found", 404);
+}
+
+/** Legacy parent-device tokens cannot reopen a surface excluded from the closed trial. */
+function pilotDeviceRefusal(c: Context<PilotAppEnv>): Response | null {
+  try {
+    return readPilotAdmission(c.env) === null ? null : notFound(c);
+  } catch (error) {
+    if (!(error instanceof ConfigError)) throw error;
+    createLogger(c.env).error("parent_device_config_refused", { error: errorLabel(error) });
+    return c.json({ error: "unavailable" }, 503, { "cache-control": "no-store" });
+  }
 }
 
 export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
@@ -77,6 +94,8 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
     return c.text("ok");
   });
 
+  app.post("/webhooks/clerk", (c) => runtime.clerk(c.req.raw, c.env));
+
   /**
    * Her phone on the parent surface (ADR-35): her tap or her words, as the inbound event a Telegram
    * chat would make, handed to the same router. Her device token is checked before anything else
@@ -84,6 +103,8 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
    * logged. Her phone reads what Vela sent it from the API (`GET /v1/device/messages`).
    */
   app.post("/device/messages", async (c) => {
+    const refused = pilotDeviceRefusal(c);
+    if (refused !== null) return refused;
     const presented = DEVICE_AUTHORIZATION.exec(c.req.header("Authorization") ?? "");
     if (presented === null) return c.json({ error: "unauthorized" }, 401);
     let body: unknown;
@@ -129,6 +150,8 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
    * day's recordings, 404 where nothing is stored, and 401 for an unknown token.
    */
   app.post("/device/voice", async (c) => {
+    const refused = pilotDeviceRefusal(c);
+    if (refused !== null) return refused;
     const presented = DEVICE_AUTHORIZATION.exec(c.req.header("Authorization") ?? "");
     if (presented === null) return c.json({ error: "unauthorized" }, 401);
     if ((c.req.header("Content-Type") ?? "").split(";")[0]?.trim() !== "audio/mp4") {

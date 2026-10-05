@@ -33,8 +33,10 @@ import {
   OutboundMessage,
   type SendResult,
 } from "@vela/contracts";
+import { t } from "@vela/copy";
 import { localDateOf } from "@vela/core";
 import {
+  answers,
   events,
   exchanges,
   type Family,
@@ -48,7 +50,7 @@ import {
   quietEvents,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, eq, gt, isNull, lt, type SQL, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lt, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
@@ -61,12 +63,14 @@ import {
   QuietNoticeEffect,
 } from "./gateway-effects.ts";
 import { loadOutboundFiles } from "./outbound-media.ts";
+import { pilotFamilyAllowed, pilotMemberAllowed } from "./pilot-admission.ts";
 import { type PushSend, sendPush, settlePush } from "./push.ts";
 import { appRowProblem, PUSH_CHANNEL } from "./push-messages.ts";
 import { channelQuotaRefused } from "./quota.ts";
 import {
   familyHasEnded,
   firstAnswersByDate,
+  hasHealthWordsConsent,
   memberById,
   type Queryable,
   repointFamilyGroup,
@@ -171,12 +175,19 @@ export function directReplyOf(event: InboundEvent, now: Date): { replyToken?: st
     : {};
 }
 
+const HealthWordsFor = z.object({
+  memberId: z.uuid(),
+  answerId: z.uuid(),
+  receivedAt: z.iso.datetime({ offset: true }),
+});
+
 const OutboundPayload = z.object({
   message: StoredMessage,
   reply: StoredReply.optional(),
   ref: MessageRefIntent.optional(),
   effect: z.unknown().optional(),
   sentMedia: SentMedia.optional(),
+  healthWordsFor: HealthWordsFor.optional(),
 });
 type OutboundPayload = z.infer<typeof OutboundPayload>;
 
@@ -244,6 +255,8 @@ export interface OutboundRequestBase {
   /** The event's free reply (`replyOf`), for the kinds that answer someone's own message. */
   reply?: StoredReply;
   ref?: MessageRefIntent;
+  /** A quoted flag must revalidate its subject's permission when delivery takes the row. */
+  healthWordsFor?: z.infer<typeof HealthWordsFor>;
   /**
    * Whole seconds, 1 to 60, before the row is due and its delivery runs. Cloudflare Queues promise no
    * order between two jobs sent one after the other, so a message that must follow another in the
@@ -351,6 +364,9 @@ export async function insertOutbound(
     ...(request.reply === undefined ? {} : { reply: request.reply }),
     ref: request.ref,
     effect: request.effect,
+    ...(request.healthWordsFor === undefined
+      ? {}
+      : { healthWordsFor: HealthWordsFor.parse(request.healthWordsFor) }),
   };
   const queuedAt = new Date(deps.clock.now().getTime() + (delaySeconds ?? 0) * 1000);
   const inserted = await db
@@ -393,13 +409,30 @@ async function requeueArrivalHeldByPause(
   if (request.kind !== "arrival") {
     return undefined;
   }
+  const [previous] = await db
+    .select({ payload: outbound.payload })
+    .from(outbound)
+    .where(
+      and(
+        eq(outbound.idempotencyKey, request.idempotencyKey),
+        eq(outbound.status, "dropped"),
+        eq(outbound.error, PAUSED),
+      ),
+    )
+    .limit(1);
+  if (previous === undefined) return undefined;
+  const sentMedia = previous.payload.sentMedia;
+  const nextPayload: OutboundPayload =
+    sentMedia === null || sentMedia === undefined
+      ? payload
+      : { ...payload, sentMedia: SentMedia.parse(sentMedia) };
   const [row] = await db
     .update(outbound)
     .set({
       exchangeId: request.exchangeId ?? null,
       channel: request.channel,
       conversationId: request.conversationId,
-      payload: sql`${JSON.stringify(payload)}::jsonb || jsonb_strip_nulls(jsonb_build_object('sentMedia', ${outbound.payload} -> 'sentMedia'))`,
+      payload: nextPayload,
       status: "queued",
       attempts: 0,
       error: null,
@@ -604,6 +637,7 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
   if (await familyHasEnded(deps.db, family.id)) {
     return drop(deps, loaded, "family_ended");
   }
+  if (!(await pilotDeliveryAllowed(deps, loaded))) return drop(deps, loaded, "pilot_not_approved");
   // She said stop after the tick that read her active, or while the row waited for a retry or a
   // re-drive: nothing of her morning goes to her until she says start (flows §3.13). Her start can
   // land after this read, and another delivery can take the row, so the drop is decided again under
@@ -620,7 +654,7 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
     return drop(deps, loaded, "quiet_resolved");
   }
 
-  const held = await takeOutbound(deps, row);
+  const held = await takeOutbound(deps, row, loaded.family.id);
   if (held === null) {
     deps.logger.info("outbound_skipped", { outboundId, kind: row.kind, status: row.status });
     return "skipped";
@@ -749,8 +783,87 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
 async function takeOutbound(
   deps: Deps,
   row: Outbound,
+  familyId: string,
 ): Promise<{ row: Outbound; heldSince: Date } | null> {
   const heldSince = deps.clock.now();
+  const parsed = OutboundPayload.safeParse(row.payload);
+  if (row.kind === "flag" && parsed.success && parsed.data.healthWordsFor !== undefined) {
+    const proof = parsed.data.healthWordsFor;
+    return deps.db.transaction(async (tx) => {
+      // Family first matches deleteFamily's lock order and prevents a stale lifecycle read.
+      const [family] = await tx
+        .select()
+        .from(families)
+        .where(eq(families.id, familyId))
+        .for("share");
+      // This is the same lock that serializes Stop and consent withdrawal. A send already handed
+      // to the platform cannot be retracted, but a queued/retried quote uses current permission.
+      const [subject] = await tx
+        .select()
+        .from(members)
+        .where(eq(members.id, proof.memberId))
+        .for("update");
+      const [source] = await tx.select().from(answers).where(eq(answers.id, proof.answerId));
+      const [exchange] =
+        row.exchangeId === null
+          ? []
+          : await tx
+              .select({ familyId: exchanges.familyId })
+              .from(exchanges)
+              .where(eq(exchanges.id, row.exchangeId));
+      const currentConsent =
+        subject !== undefined &&
+        source !== undefined &&
+        family !== undefined &&
+        family.deletedAt === null &&
+        subject.familyId === family.id &&
+        exchange?.familyId === family.id &&
+        source.memberId === subject.id &&
+        source.exchangeId === row.exchangeId &&
+        (await hasHealthWordsConsent(tx, subject.id, source.receivedAt));
+      const payload: OutboundPayload = currentConsent
+        ? parsed.data
+        : {
+            ...parsed.data,
+            message: {
+              ...parsed.data.message,
+              text: t(parsed.data.message.lang, "flag.notice_no_words", {
+                name: subject?.displayName ?? "Your family member",
+              }),
+            },
+            healthWordsFor: undefined,
+          };
+      const stopped =
+        family === undefined ||
+        family.deletedAt !== null ||
+        subject === undefined ||
+        source === undefined ||
+        subject.familyId !== family.id ||
+        exchange?.familyId !== family.id ||
+        source.memberId !== subject.id ||
+        source.exchangeId !== row.exchangeId ||
+        subject.status !== "active" ||
+        subject.leftAt !== null;
+      const [taken] = await tx
+        .update(outbound)
+        .set({
+          payload,
+          ...(stopped
+            ? { status: "dropped" as const, error: "subject_stopped" }
+            : { sentAt: heldSince }),
+        })
+        .where(
+          and(
+            eq(outbound.id, row.id),
+            eq(outbound.status, "queued"),
+            isNull(outbound.sentAt),
+            eq(outbound.attempts, row.attempts),
+          ),
+        )
+        .returning();
+      return taken === undefined || stopped ? null : { row: taken, heldSince };
+    });
+  }
   const [taken] = await deps.db
     .update(outbound)
     .set({ sentAt: heldSince })
@@ -764,6 +877,47 @@ async function takeOutbound(
     )
     .returning();
   return taken === undefined ? null : { row: taken, heldSince };
+}
+
+/** Admission applies to automatic content, while Stop/privacy/deletion confirmations remain usable. */
+async function pilotDeliveryAllowed(deps: Deps, loaded: LoadedOutbound): Promise<boolean> {
+  const admission = deps.config.pilotAdmission;
+  if (admission == null) return true;
+  const { row, family } = loaded;
+  if (row.channel === "telegram" && row.conversationId === deps.config.adminConversationId)
+    return true;
+  const sensitive = new Set<OutboundKind>([
+    "arrival",
+    "repeat",
+    "turn_prompt",
+    "answer_receipt",
+    "answer_post",
+    "quiet_notice",
+    "quiet_resolved",
+    "weekly_read",
+    "ack",
+    "flag",
+  ]);
+  const payload = OutboundPayload.safeParse(row.payload);
+  if (
+    !sensitive.has(row.kind) &&
+    !(row.kind === "system" && payload.success && payload.data.ref?.purpose === "answer_post")
+  )
+    return true;
+  if (!(await pilotFamilyAllowed(deps.db, admission, family.id))) return false;
+  if (!(await pilotMemberAllowed(deps.db, admission, family.id, row.memberId))) return false;
+  if (row.exchangeId !== null) {
+    const [exchange] = await deps.db
+      .select({ recipientId: exchanges.recipientId })
+      .from(exchanges)
+      .where(eq(exchanges.id, row.exchangeId));
+    if (
+      exchange === undefined ||
+      !(await pilotMemberAllowed(deps.db, admission, family.id, exchange.recipientId))
+    )
+      return false;
+  }
+  return true;
 }
 
 /**
