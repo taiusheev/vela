@@ -1,0 +1,259 @@
+/**
+ * English is the source catalog (spec §20): every other catalog translates these keys one for one,
+ * and `MessageKey` is derived from this object, so a key exists only once it has English wording.
+ *
+ * Wording rules the tests enforce (spec §9, §14.4, §20): the kept-light member is named, never
+ * referred to by a gendered pronoun, because the product never assumes gender; nothing says
+ * "monitor", "check on", or "track", because elders refuse a product framed as surveillance.
+ *
+ * `consent.request`, `consent.yes`, and `consent.no` are what the founder reads aloud on the consent
+ * call (plan/materials/pilot/consent-script.en.md, sections 2 and 6): change the script with them.
+ * A tap records the text version of the message it answers (`consent.request@2`,
+ * `consent.health_words@1`, in services' consent.ts) and a hash of the text as rendered, so a change
+ * of wording here is also a new text version there. `consent.request` names who runs Vela and links
+ * the notice in her language, so the message she taps holds what she agrees to (ADR-28).
+ * `consent.health_words` is its own message with its own buttons, labelled `consent.yes` and
+ * `consent.no`, because a consent to carry words that may be medical must be given separately
+ * (ADR-27); it says a no changes nothing else, so saying no is a free choice.
+ *
+ * `flag.notice_no_words` is the organisers' flag notice when she has not agreed to health words: her
+ * name and nothing she said, no quote and no category, so it carries no health data and still gives
+ * the organiser a reason to call.
+ *
+ * `group.notice_read` labels the button under `group.linked`; each adult who taps it is recorded as
+ * having read the notice (flows §3.3).
+ *
+ * `onboarding.done` asks for a new group without the kept-light member (spec Appendix A): group
+ * posts name the member in the third person, and only the family who received the privacy notice
+ * may see the answers, so the family's existing chat is the wrong place for Vela. `group.linked`
+ * ends with the privacy notice link for the same reason: everyone who will see the answers is in
+ * that group.
+ *
+ * `onboarding.ask_nearby` tells the organiser to ask the contact themselves, and asks only for a name
+ * and how the contact knows her: a contact's number is stored only with their yes, which the founder
+ * records on the admin page (flows §3.17), and Vela never contacts anyone on its own (the privacy
+ * notice says so), so a contact nobody in the family asks never appears in a note.
+ * `onboarding.nearby_no_number` answers a setup reply that holds a phone number, which is not kept.
+ *
+ * `invite.for_her` is what the app hands the organiser to send her, in her language (spec A4): it names
+ * the organiser, carries the link and the "say stop" line, and leaves everything else to the bot's own
+ * `consent.request`, which she reads when she opens the link and which is what she agrees to.
+ *
+ * `organiser.invite_again` carries the link the founder's `create_invite` makes, after she said no
+ * or never answered; like `onboarding.done`, it goes to the organiser, who sends it on.
+ *
+ * The weekly read is "weekly read", the name the English privacy notice and the spec give it.
+ *
+ * `weekly_read.*` are the organisers' weekly read around the lines the founder sends, rendered by
+ * `renderWeeklyRead` in @vela/core: the counts come from numbers, never from the model, and only
+ * organisers see them or the suggestion, because she is never shown missed days (spec §8, §13). A
+ * count that decides between "day" and "days" has a plural key and a `_one` key for exactly one; a
+ * language with one form repeats the plural wording under `_one`.
+ *
+ * `parent.family_sees_heading` and `parent.family_sees_empty` never say "this week": the command
+ * returns her last seven answered days, which reach back further after a pause or a quiet spell.
+ * `parent.family_sees_weekly_read` says the lines under it are *from* the read, not the read itself:
+ * she gets the lines about her week alone, and the organiser agreement, privacy notice, and consent
+ * script tell the family so, so a heading that called them the whole read would be untrue.
+ *
+ * `push.*` are notifications on an organiser's or a family member's phone (ADR-34). Their text
+ * passes through Expo, Apple and Google and shows on a lock screen, so it carries names and times
+ * only: never her words, an answer, a nearby contact, or anything about health. `push.quiet_notice`
+ * ends with what the reader can do, and says "message", since a hello morning holds no ask.
+ * `push.turn_prompt` leaves out tomorrow's suggestion on purpose: a suggestion may be drafted from
+ * her answers, and her words never reach Apple or Google. The close of a quiet event on a phone
+ * reads `quiet.resolved_answered` or `quiet.resolved_fine`, as on Telegram.
+ *
+ * `admin.*` messages go to the founder's Telegram chat with the bot, which sits outside
+ * `admin_access_log` and outside retention (plan/materials/pilot/data-map.md, gap 15). They carry
+ * the family name and a link to the admin page, where every read is logged, and never anything the
+ * family wrote. `admin.line_quota` and `admin.line_quota_exhausted` are about no family: they link
+ * to the overview, and the first carries two counts of Vela's own LINE messages this month
+ * (05-line-flows.md §6), which say nothing about anyone.
+ */
+export const en = {
+  "account_link.code":
+    "Enter this code in Vela to connect your Telegram account: {code}\nKeep it private; it expires soon.",
+  "account_link.unavailable":
+    "This account link could not be opened. Finish setting up your family in Telegram, then start a new link in Vela.",
+  "pilot.activation_wait":
+    "Your light is not on yet. Your family organiser needs an approved Telegram account that can receive messages. Please ask your organiser to finish setup, then try again.",
+  "pilot.invitation_only":
+    "Vela’s English trial is invitation-only. Contact the founder for access. Your Telegram ID: {telegram_id}.",
+  "arrival.greeting": "Good morning, {address}.",
+  "arrival.late": "Sorry this is late.",
+  "arrival.repeat": "In case you missed it:",
+  "arrival.readback_heading": "From yesterday:",
+  "arrival.asks": "{asker} asks:",
+  "arrival.asks_on_behalf": "{asker} asks, for {child}:",
+  "arrival.sent_photo": "{asker} sent you a photo.",
+  "arrival.sent_voice": "{asker} sent you a voice message.",
+  "arrival.photo_gone":
+    "{asker} wanted to show you a photo, but it is no longer available. How are you today?",
+  "arrival.photo_choice": "Which one? Tap 1 or 2.",
+  "arrival.vote": "Tap one.",
+  "arrival.hello": "Nothing new from the family today. How are you this morning?",
+  "arrival.hello_signature": "Vela, from your family",
+  "arrival.hint": "Reply with a voice message, or tap a button.",
+  "button.fine": "I'm fine",
+  "button.heart": "❤️",
+  "button.choice": "{n}",
+  "ack.thanks": "Thank you, {address}. The family will hear it.",
+  "ack.story": "Thank you, {address}. Your story is kept in the family book.",
+  "book.dont_keep": "Don't keep this one",
+  "book.dropped": "That's fine. This story is no longer in the family book.",
+  "recipe.offer":
+    "{address}, here is your recipe for {title}, as you told it:\n\n{card}\n\nShall we keep it in the family book?",
+  "recipe.ingredients": "You need:",
+  "recipe.steps": "How:",
+  "recipe.remarks": "Your tips:",
+  "recipe.keep": "Keep it",
+  "recipe.not_this": "Not this one",
+  "recipe.kept": "Kept. Your {title} is in the family book now.",
+  "recipe.dropped": "That's fine. This recipe is not kept.",
+  "readback.replied": "{name}: {text}",
+  "readback.voice": "{name} sent a voice message.",
+  "readback.photo": "{name} sent a photo.",
+  "readback.reactions": "{names} sent {emoji}",
+  "consent.invalid_link":
+    "This link is no longer valid. Please ask the person who sent it for a new one.",
+  "consent.already_linked": "This Telegram account is already connected to another family on Vela.",
+  "consent.request":
+    "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time. Vela is run by Timur Aiusheev. How your information is used: {notice}",
+  "consent.health_words":
+    "One more question. If you mention your health, for example a fall or pain, may Vela pass your words on to {organiser} so they can call you? Vela works the same if you say no.",
+  "consent.yes": "Yes, that's fine",
+  "consent.no": "No, thank you",
+  "consent.accepted": "Thank you. Your first morning arrives tomorrow at {time}.",
+  "consent.declined": "That's fine. Nothing will arrive.",
+  "organiser.consent_given": "{name} said yes. The first morning arrives tomorrow at {time}.",
+  "organiser.consent_declined": "{name} said no for now. Nothing will be sent.",
+  "invite.for_her":
+    "Hello {name}, it is {organiser}. I would like to keep a light on for you: one small question from the family each morning. Open this to hear about it, and say yes if you would like it: {link} You can say stop at any time.",
+  "organiser.invite_again":
+    "Here is a new invite. Send this link to {name}: {link} It works for 7 days.",
+  "parent.stopped": "Everything is paused. Say start whenever you would like it back.",
+  "parent.started": "Welcome back. Your next morning arrives at {time}.",
+  "organiser.stopped": "{name} asked to pause. Nothing is wrong with the app.",
+  "parent.family_sees_heading": "What the family saw from your latest answers:",
+  "parent.family_sees_empty":
+    "Nothing yet. When you answer a morning message, the family will see it.",
+  "parent.family_sees_weekly_read": "From the latest weekly read sent to the family:",
+  "group.linked":
+    "Hello, family. I'm Vela. Each evening I will say whose turn it is to ask {name} something for the morning. How Vela handles your messages: {notice}",
+  "group.notice_read": "I've read it",
+  "group.not_linked": "Only the family organiser can connect Vela to a group.",
+  "group.turn_prompt":
+    "Tomorrow is {holder}'s turn with {name}. Reply to this message with a question, a photo, or a voice note.",
+  "group.turn_prompt_open":
+    "Tomorrow, anyone can ask {name} something. Reply to this message with a question, a photo, or a voice note.",
+  "group.ask_confirmed": "Into {name}'s morning.",
+  "group.ask_queued": "Tomorrow already has {asker}'s ask. This one is saved for another morning.",
+  "group.ask_from_app": "{asker} asked {name} something for tomorrow morning.",
+  "group.answer_light": "☀️ {name} answered {asker} · {time}",
+  "group.answer_hello": "☀️ {name} is fine · {time}",
+  "group.answer_chip": "{name} chose: {choice}",
+  "group.answer_pick": "{name} picked photo {n}.",
+  "group.answer_vote": "{name} voted: {choice}",
+  "group.answer_text": "{name}: {text}",
+  "group.answer_transcript": "{name} (voice): {text}",
+  "quiet.notice":
+    "It's been quiet at {name}'s today. The morning message went out at {sent}; {name} usually answers by {usual}. Nothing worrying is known.",
+  "quiet.notice_no_usual":
+    "It's been quiet at {name}'s today. The morning message went out at {sent}. Nothing worrying is known.",
+  "quiet.nearby": "Nearby: {contacts}",
+  "quiet.fine_button": "{name} is fine, I know why",
+  "quiet.wait_button": "Wait 2 hours",
+  "quiet.waiting": "I'll look again at {time}.",
+  "quiet.resolved_answered": "{name} answered at {time}. Everything is lit again.",
+  "quiet.resolved_fine": "{organiser} says {name} is fine.",
+  "quiet.resolved_away": "{organiser} says {name} is away.",
+  "delivery.failed": "We couldn't reach {name} on {channel} today. Nothing else is known.",
+  "flag.notice": '{name} said something you may want to hear: "{quote}"',
+  "flag.notice_no_words": "{name} said something today that may be worth a call.",
+  "push.quiet_notice":
+    "It's been quiet at {name}'s today. The morning's message arrived at {sent}. Open Vela to call or wait.",
+  "push.answer_receipt": "{name} answered you.",
+  "push.turn_prompt": "Tomorrow morning is yours: ask {name} something.",
+  "away.confirmed": "Until {date}, then. Have a lovely time.",
+  "away.confirmed_open": "Understood. Have a lovely time.",
+  "weekly_read.answered": "{name} answered {answered} of {days} days.",
+  "weekly_read.answered_one": "{name} answered {answered} of {days} day.",
+  "weekly_read.hello_mornings":
+    "On {mornings} mornings nobody in the family asked, so Vela sent {name} a hello.",
+  "weekly_read.hello_mornings_one":
+    "On {mornings} morning nobody in the family asked, so Vela sent {name} a hello.",
+  "weekly_read.nobody_asked": "Nobody in the family asked {name} anything this week.",
+  "weekly_read.suggestion": "Something to ask next week: {suggestion}",
+  "help.private": "Hello. To set up Vela for your family, send /start.",
+  "help.followed":
+    "Hello, I'm Vela. If someone in your family sent you an invitation, open it now. To set up Vela for your own family, send /start.",
+  "nearby.request":
+    "{organiser} asks: you live near {name}. On a day when {name} hasn't answered and {organiser} can't get through, may {organiser} ask you, through Vela, to go round? Vela never writes to you on its own: any request comes from {organiser}. If you say yes, Vela keeps your name and this Telegram account until you or {organiser} remove them. You can say no, or change your mind at any time by sending stop. Vela is a pilot run by Timur Aiusheev. How your details are used: {notice}",
+  "nearby.yes": "Yes, I'm happy to",
+  "nearby.no": "No, thank you",
+  "nearby.accepted":
+    "Thank you. Vela will write to you only if {organiser} asks you to look in on {name}. Send stop at any time to be removed.",
+  "nearby.declined": "That's fine. Your details have been deleted, and nobody will ask again.",
+  "nearby.already_listed": "You are already listed near {name}. Nothing has changed.",
+  "nearby.ask":
+    "{organiser} asks: could you look in on {name} today? {name} hasn't answered this morning.",
+  "nearby.ask_yes": "I'll look in",
+  "nearby.ask_no": "Can't today",
+  "nearby.thanks_yes": "Thank you. {organiser} knows you'll look in.",
+  "nearby.thanks_no": "Thank you for letting {organiser} know. That's completely fine.",
+  "nearby.stand_down": "{name} has answered now, so there is no need to look in. Thank you.",
+  "nearby.removed": "You have been removed. Vela will not write to you again.",
+  "nearby.help":
+    "Vela writes to you only when a family that listed you asks you to look in. Send stop to be removed.",
+  "organiser.nearby_yes":
+    "{contact} said yes. On a quiet morning you can now ask {contact} to look in on {name}.",
+  "organiser.nearby_no": "{contact} said no, so {contact} is no longer listed near {name}.",
+  "organiser.look_in_yes": "{contact} will look in on {name}.",
+  "organiser.look_in_no": "{contact} can't today.",
+  "onboarding.welcome":
+    "Hello, I'm Vela. Let's set up a light for someone in your family. It takes two minutes.",
+  "onboarding.ask_name": "What do you call them? For example: Mom, Grandma, Dad.",
+  "onboarding.ask_address": "How should I greet them each morning? For example: Mrs Chen, Mom.",
+  "onboarding.ask_language": "Which language should their messages be in?",
+  "onboarding.ask_country": "Which country do they live in?",
+  "onboarding.country_tw": "Taiwan",
+  "onboarding.country_vn": "Vietnam",
+  "onboarding.country_us": "United States",
+  "onboarding.country_gb": "United Kingdom",
+  "onboarding.country_ca": "Canada",
+  "onboarding.country_au": "Australia",
+  "onboarding.country_sg": "Singapore",
+  "onboarding.country_jp": "Japan",
+  "onboarding.country_de": "Germany",
+  "onboarding.country_in": "India",
+  "onboarding.country_other": "Other",
+  "onboarding.ask_zone": "Which time zone?",
+  "onboarding.ask_zone_other":
+    "Which time zone do they live in? Type its name, like Asia/Seoul or Europe/Paris.",
+  "onboarding.invalid_zone": "Please send a time zone name like Asia/Seoul or Europe/Paris.",
+  "onboarding.ask_wake": "When do they usually wake up? Tap one or type a time like 07:30.",
+  "onboarding.ask_nearby":
+    "Who lives nearby and could look in if needed? Send a name and, if you like, how they know each other, for example: Anna, neighbour. Or tap Skip. Please ask them yourself first. Only their name goes here: their number is added after they say yes.",
+  "onboarding.nearby_no_number":
+    "Please send only a name and, if you like, how they know each other, for example: Anna, neighbour. Their number is added after they say yes.",
+  "onboarding.skip": "Skip",
+  "onboarding.invalid_time": "Please send a time like 07:30.",
+  "onboarding.done":
+    "All set. Send this link to {name}: {link} Then start a new group for the family, without {name}, and add me to it, so the family can take turns asking.",
+  "admin.weekly_read_draft": "Weekly read draft for {family} is ready: {link}",
+  "admin.flag": "Flag in {family}. Open: {link}",
+  "admin.understand_failed": "Could not read an answer in {family} after three tries. Open: {link}",
+  "admin.member_left_group": "{name} left the family group in {family}. Nothing changed for them.",
+  "admin.organisers_unreachable":
+    "{name} can no longer be told anything in {family}, and no other organiser can: nobody will hear if a light there goes quiet. Open: {link}",
+  "admin.quiet_nobody_told":
+    "It's been quiet at {name}'s today in {family}, and no organiser can be told. Open: {link}",
+  "admin.line_quota": "LINE has used {used} of this month's {limit} messages. Open: {link}",
+  "admin.line_quota_exhausted":
+    "LINE has used all of this month's messages: mornings and notices on LINE fail until the plan changes or the month ends, and only replies still go out. Open: {link}",
+  "admin.quiet_notice_unheard":
+    "It's been quiet at {name}'s today in {family}, and the notice to an organiser's phone did not arrive. Open: {link}",
+  "admin.push_misconfigured":
+    "Push to phones is failing: Vela's push credentials were refused, and no notice reaches a phone until they are fixed. Open: {link}",
+} satisfies Record<string, string>;

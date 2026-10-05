@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-05T04:58:24.881346+00:00",
+  "kind": "local-repository-check",
+  "gitHead": "b212e9dcaf3785ccc1fcf357e2a7d9b7adeb8f12",
+  "workingTreeChangesIncluded": true,
+  "command": "pnpm check",
+  "exitCode": 0,
+  "lintPassed": true,
+  "typecheckPackagesPassed": 9,
+  "testPackagesPassed": 9,
+  "testPackagesCached": 6,
+  "packageTests": {
+    "core": {
+      "passed": 446,
+      "skipped": 0
+    },
+    "ai": {
+      "passed": 190,
+      "skipped": 0
+    },
+    "worker": {
+      "passed": 1059,
+      "skipped": 0
+    },
+    "adapters": {
+      "passed": 418,
+      "skipped": 0
+    },
+    "db": {
+      "passed": 199,
+      "skipped": 0
+    },
+    "contracts": {
+      "passed": 115,
+      "skipped": 0
+    },
+    "copy": {
+      "passed": 92,
+      "skipped": 0
+    },
+    "app": {
+      "passed": 198,
+      "skipped": 1
+    },
+    "services": {
+      "passed": 1392,
+      "skipped": 0
+    }
+  },
+  "stdout": "infra/load-tests/trial-repository-check-local-2026-10-05.txt",
+  "stdoutSha256": "51f48fbd775b61cf241ef748a47e89c2aeafc5783ddbfb848efdb01fb215d60b",
+  "notes": [
+    "Local pre-commit working-tree evidence; exact candidate CI is still required.",
+    "The local adapter check also includes unrelated pre-existing WhatsApp drafts, which are excluded from the candidate commit.",
+    "The one skipped app test is the deliberately deferred future multilingual completeness gate; English catalogue synchronization, ICU and style checks passed.",
+    "No production credentials, real family content, signed iPhone build or production deployment were used."
+  ],
+  "stdoutNormalization": "ANSI escapes and trailing whitespace removed; cached logs retain their original test timestamps."
+}

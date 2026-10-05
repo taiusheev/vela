@@ -1,0 +1,23 @@
+{
+  "kind": "cloud-ios-simulator-native-build",
+  "environment": "synthetic staging",
+  "buildId": "ae46ad4c-6505-4a87-8383-d3ea0e1ae55a",
+  "buildUrl": "https://expo.dev/accounts/velatwn/projects/vela-light/builds/ae46ad4c-6505-4a87-8383-d3ea0e1ae55a",
+  "buildProfile": "e2e",
+  "sourceCommit": "a4208bfa1596dcf260f81dc52d36378d40085a68",
+  "status": "FINISHED",
+  "completedAt": "2026-10-05T07:41:43.135Z",
+  "nativeModuleTree": "83187ded5df3394eb9c1b4b44681ed3d40225bf7",
+  "proof": {
+    "buildSucceeded": true,
+    "swiftDecoderCompiled": true,
+    "cDecoderCompiled": true,
+    "codecLicencesPackaged": true
+  },
+  "scope": {
+    "signedIPhone": false,
+    "actualPlayback": false,
+    "production": false
+  },
+  "notes": "Swift/CocoaPods/codec compilation and linking on EAS iOS simulator only; actual signed iPhone playback remains required. The codec module tree is unchanged in follow-up English trial profiles."
+}

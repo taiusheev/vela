@@ -1,0 +1,27 @@
+{
+  "update_id": 873920412,
+  "message": {
+    "message_id": 319,
+    "from": {
+      "id": 6023817745,
+      "is_bot": false,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "language_code": "zh-hant"
+    },
+    "chat": {
+      "id": 6023817745,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "type": "private"
+    },
+    "date": 1789258480,
+    "voice": {
+      "duration": 23,
+      "mime_type": "audio/ogg",
+      "file_id": "AwACAgUAAxkBAAIBP2bj8x1kQz0vT6yWm3Hn2pLr5sUAAl8TAAKj3yBXkQ7ZsYw1d8o2BA",
+      "file_unique_id": "AgADXxMAAqPfIFc",
+      "file_size": 61234
+    }
+  }
+}

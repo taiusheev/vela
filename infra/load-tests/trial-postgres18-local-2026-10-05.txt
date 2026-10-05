@@ -1,0 +1,124 @@
+[postgres-tests] run f9fb8d4d5ea8: starting a disposable PostgreSQL 18 (local binaries)
+[postgres-tests] postgres (PostgreSQL) 18.6 from --pg-bin in a temporary data directory, listening on 127.0.0.1:49813
+[postgres-tests] PostgreSQL 18.6 is ready
+[postgres-tests] applied 11 migrations: 0000_init, 0001_api_request_receipts, 0002_account_linking, 0003_suggestion_days, 0004_reaction_messages, 0005_push, 0006_device_channel, 0007_nearby_telegram, 0008_family_book, 0009_memory_reminders, 0010_message_unsent
+
+ RUN  v4.1.11 /Users/timuraiusheev/Documents/Vela/vela/packages/services
+
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > replays the committed response to identical requests queued behind an in-flight mutation 76ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > commits exactly one mutation for unsynchronised identical requests from refreshed sessions 202ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > rejects a changed input queued behind the same key without a second mutation 39ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > commits one mutation and conflicts or replays the rest for unsynchronised mixed inputs 193ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > hides a pending mutation's writes and rolls back its domain write and receipt before a queued retry 36ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > rolls back earlier writes and the reservation when the database rejects a mutation 33ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > authorizes different keys for one actor only after each earlier holder commits, in lock order 41ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > completes another actor's request with the same key while the first actor holds its lock 38ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > still replays a matching key at the receipt cap while refusing a fresh one 97ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > rate limits fresh keys queued behind the request that takes the last receipt slot 102ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > never exceeds the receipt cap for unsynchronised fresh keys with 1 free slots 268ms
+ ✓ postgres-tests/api-idempotency.test.ts > runApiMutation on independent PostgreSQL connections > never exceeds the receipt cap for unsynchronised fresh keys with 3 free slots 269ms
+ ✓ postgres-tests/api-account-writes.test.ts > first-run provisioning on independent PostgreSQL connections > gives a racing provision the account that wins once a pending first insert 'commits' 45ms
+ ✓ postgres-tests/api-account-writes.test.ts > first-run provisioning on independent PostgreSQL connections > gives a racing provision the account that wins once a pending first insert 'rolls back' 34ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > creates one account and replays its response to identical provisions queued on the actor lock 48ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > rejects a changed 'provision' queued under the same key without writing it 65ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > rejects a changed 'update' queued under the same key without writing it 72ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > leaves a tombstone and no actor receipts when a disable is queued 'behind' a pending 'provision' 56ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > leaves a tombstone and no actor receipts when a disable is queued 'ahead of' a pending 'provision' 55ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > leaves a tombstone and no actor receipts when a disable is queued 'behind' a pending 'update' 60ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > leaves a tombstone and no actor receipts when a disable is queued 'ahead of' a pending 'update' 68ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > never leaves a live account or an actor receipt when unsynchronised provision and disable calls race 174ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > never leaves a live account or an actor receipt when unsynchronised update and disable calls race 193ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > refuses to replay a saved profile once another connection soft-deletes the account 47ms
+ ✓ postgres-tests/api-account-writes.test.ts > account writes on independent PostgreSQL connections > disables one actor while another actor holds its lock and leaves that actor untouched 40ms
+ ✓ postgres-tests/answer-today-quiet-race.test.ts > her tap on yesterday's arrival and today's quiet ladder > closes today's quiet once when her tap comes while the ladder is opening it 92ms
+ ✓ postgres-tests/answer-today-quiet-race.test.ts > her tap on yesterday's arrival and today's quiet ladder > opens no quiet for today when her tap is first to today's exchange 72ms
+ ✓ postgres-tests/answer-today-quiet-race.test.ts > her tap on yesterday's arrival and today's quiet ladder > tells each organiser once, that she answered, when her tap comes while the notice is due again 75ms
+ ✓ postgres-tests/answer-today-quiet-race.test.ts > her tap on yesterday's arrival and today's quiet ladder > sends no second notice, and tells each organiser once, when her tap is first to today's exchange 67ms
+ ✓ postgres-tests/answer-today-quiet-race.test.ts > her tap on yesterday's arrival and "she's fine" on today's quiet > closes once, without a deadlock, when Mia says she's fine as her tap comes 78ms
+ ✓ postgres-tests/answer-today-quiet-race.test.ts > her tap on yesterday's arrival and "she's fine" on today's quiet > closes once, as answered, when her tap is first to today's quiet and Mia says she's fine 90ms
+ ✓ postgres-tests/api-media-upload-race.test.ts > uploading a photo on independent PostgreSQL connections > refuses adoption and removes its object after family deletion commits while authorization waits 67ms
+ ✓ postgres-tests/api-media-upload-race.test.ts > uploading a photo on independent PostgreSQL connections > refuses adoption and removes its object after membership ending commits while authorization waits 53ms
+ ✓ postgres-tests/api-media-upload-race.test.ts > uploading a photo on independent PostgreSQL connections > refuses adoption and removes its object after account deletion commits while authorization waits 52ms
+ ✓ postgres-tests/api-media-upload-race.test.ts > uploading a photo on independent PostgreSQL connections > keeps one row and one object when the same upload arrives twice, answering the second as a replay 80ms
+ ✓ postgres-tests/api-media-upload-race.test.ts > uploading a photo on independent PostgreSQL connections > refuses another photo under the same key as a conflict and deletes that attempt's object 70ms
+ ✓ postgres-tests/api-media-upload-race.test.ts > uploading a photo on independent PostgreSQL connections > gives an account's last place of 20 a day to one of two uploads queued together 72ms
+ ✓ postgres-tests/api-media-upload-race.test.ts > uploading a photo on independent PostgreSQL connections > gives a family's last place of 60 to one of two members uploading at once 70ms
+ ✓ postgres-tests/outbound-take-race.test.ts > one queued row, several deliveries > sends her morning once, with its effects once, when three deliveries of it reach the take together 107ms
+ ✓ postgres-tests/outbound-take-race.test.ts > one queued row, several deliveries > leaves a row a late delivery took to that delivery when reconcile's re-drive, which read it free, reaches it 74ms
+ ✓ postgres-tests/outbound-take-race.test.ts > one queued row, several deliveries > leaves her morning to the delivery at Telegram with it when a delivery that read her paused reaches it 77ms
+ ✓ postgres-tests/outbound-take-race.test.ts > one queued row, several deliveries > leaves her morning sent when a delivery that read her paused reaches it after the send was recorded 74ms
+ ✓ postgres-tests/outbound-take-race.test.ts > one queued row, several deliveries > sends each photo once when the retry of a morning whose voice note went out meets a second delivery of it 74ms
+ ✓ postgres-tests/account-linking.test.ts > account linking on independent PostgreSQL connections > links the member once when two connections complete the same challenge with the same code 115ms
+ ✓ postgres-tests/account-linking.test.ts > account linking on independent PostgreSQL connections > keeps only the newest code valid when two connections issue on the actor lock 84ms
+ ✓ postgres-tests/account-linking.test.ts > account linking on independent PostgreSQL connections > invalidates the earlier challenge when two starts are queued on the actor lock 69ms
+ ✓ postgres-tests/account-linking.test.ts > account linking on independent PostgreSQL connections > refuses a completion queued behind a disable of the same account 62ms
+ ✓ postgres-tests/account-linking.test.ts > account linking on independent PostgreSQL connections > purges the challenge and receipts when a disable follows a completion, leaving the membership pointing at the tombstone 75ms
+ ✓ postgres-tests/quiet-notice-race.test.ts > the quiet notice closing on independent PostgreSQL connections > closes once, and loses neither, when her answer arrives as an organiser says she's fine 100ms
+ ✓ postgres-tests/quiet-notice-race.test.ts > the quiet notice closing on independent PostgreSQL connections > shows the organiser she answered when her answer reaches the notice before the tap 84ms
+ ✓ postgres-tests/quiet-notice-race.test.ts > the quiet notice closing on independent PostgreSQL connections > closes once, and loses neither, when the detector comes back to the notice as an organiser says she's fine 72ms
+ ✓ postgres-tests/quiet-notice-race.test.ts > the quiet notice closing on independent PostgreSQL connections > closes once when two organisers say she's fine at the same moment 76ms
+ ✓ postgres-tests/book-media-copy-race.test.ts > moving a kept book file on independent PostgreSQL connections > preserves a file kept after an expiry sweep selected its old unkept state 55ms
+ ✓ postgres-tests/book-media-copy-race.test.ts > moving a kept book file on independent PostgreSQL connections > discards its own copy after a family deletion commits while adoption waits 49ms
+ ✓ postgres-tests/book-media-copy-race.test.ts > moving a kept book file on independent PostgreSQL connections > discards the new object when retention deletes the original row 59ms
+ ✓ postgres-tests/book-media-copy-race.test.ts > moving a kept book file on independent PostgreSQL connections > cannot adopt a copy after Don't keep this one removes the entry and clears kept 60ms
+ ✓ postgres-tests/book-media-copy-race.test.ts > moving a kept book file on independent PostgreSQL connections > retains one winning book copy and removes only the competing attempt and old object 70ms
+ ✓ postgres-tests/pause-drop-race.test.ts > her morning dropped for her pause, and her start > sends the morning her start asks for when a delivery read her paused just before her start 105ms
+ ✓ postgres-tests/pause-drop-race.test.ts > her morning dropped for her pause, and her start > queues the morning again when her start comes while a delivery is dropping it 89ms
+ ✓ postgres-tests/pause-drop-race.test.ts > her morning dropped for her pause, and her start > keeps her morning sent by the delivery that took it when a delivery that read her paused reaches it 75ms
+ ✓ postgres-tests/arrival-queueing-race.test.ts > her morning queued as the 22:00 preparation carries its ask > keeps the ask on this morning, and gives the next its own, when this morning's queueing holds her row as the preparation reaches it 95ms
+ ✓ postgres-tests/arrival-queueing-race.test.ts > her morning queued as the 22:00 preparation carries its ask > sends the ask once, on the next morning, when the preparation carrying it holds her row as this morning's queueing reaches it 84ms
+ ✓ postgres-tests/arrival-queueing-race.test.ts > her morning queued again as the effects of its send are written > queues nothing more, and both commit, when a second tick queues the morning while the effects hold its row 70ms
+ ✓ postgres-tests/suggestions-race.test.ts > tomorrow's suggestion on independent PostgreSQL connections > marks a suggestion used once, at the first ask, when two asks for different mornings start from it 89ms
+ ✓ postgres-tests/suggestions-race.test.ts > tomorrow's suggestion on independent PostgreSQL connections > writes one suggestion for a day two writers reach at once, without the unique key firing 71ms
+ ✓ postgres-tests/suggestions-race.test.ts > tomorrow's suggestion on independent PostgreSQL connections > writes no suggestion for a morning an ask took while the writer waited 71ms
+ ✓ postgres-tests/push-send-race.test.ts > a receipt saying a phone is gone, as the app registers a new token on it > keeps the phone with its new token 82ms
+ ✓ postgres-tests/push-send-race.test.ts > a send whose phone signs out before its tickets are recorded > commits the send with no ticket, and never sends it again 69ms
+ ✓ postgres-tests/push-send-race.test.ts > a phone's quiet notice dropped with every phone gone, as the round's Telegram notice fails blocked > tells the founder once that nothing of the round reached Mia 76ms
+ ✓ postgres-tests/api-push-device-race.test.ts > registering phones on independent PostgreSQL connections > gives one token, registered from two installations at once, to the last and answers both 82ms
+ ✓ postgres-tests/api-push-device-race.test.ts > a phone handed to another account as the old one lets it go > keeps the phone with the account it moved to when the old account signs out 67ms
+ ✓ postgres-tests/api-push-device-race.test.ts > a phone handed to another account as the old one lets it go > keeps the phone with the account it moved to when the old account leaves its last family 83ms
+ ✓ postgres-tests/api-receipt-cleanup.test.ts > receipt cleanup on independent PostgreSQL connections > reports unavailable without authorizing or mutating when another connection deletes the receipt it waits to lock 60ms
+ ✓ postgres-tests/api-receipt-cleanup.test.ts > receipt cleanup on independent PostgreSQL connections > keeps a receipt reused at expiry when the nightly retention job waits behind the reusing request 64ms
+ ✓ postgres-tests/api-receipt-cleanup.test.ts > receipt cleanup on independent PostgreSQL connections > finishes both a request reusing an expired receipt and the nightly retention job when both delete the actor's older expired receipt 51ms
+ ✓ postgres-tests/api-receipt-cleanup.test.ts > receipt cleanup on independent PostgreSQL connections > rolls back a scoped mutation whose family another connection deletes while it is pending 49ms
+ ✓ postgres-tests/inbound-media-copy-race.test.ts > original source copying on independent PostgreSQL connections > waits for a family deletion and discards the attempt's object 62ms
+ ✓ postgres-tests/inbound-media-copy-race.test.ts > original source copying on independent PostgreSQL connections > waits for retention deleting the row and discards the attempt's object 57ms
+ ✓ postgres-tests/inbound-media-copy-race.test.ts > original source copying on independent PostgreSQL connections > adopts one original across simultaneous deliveries and deletes only the losing object 72ms
+ ✓ postgres-tests/health-words-delivery-race.test.ts > quoted health-word notices on independent PostgreSQL connections > drops a notice after family deletion commits while delivery waits 71ms
+ ✓ postgres-tests/health-words-delivery-race.test.ts > quoted health-word notices on independent PostgreSQL connections > sends a content-free notice after consent withdrawal commits while delivery waits 59ms
+ ✓ postgres-tests/health-words-delivery-race.test.ts > quoted health-word notices on independent PostgreSQL connections > finishes model commit and family deletion without a family/member lock cycle 57ms
+ ✓ postgres-tests/nearby-telegram-race.test.ts > someone nearby on Telegram, on independent PostgreSQL connections > sends one ask to look in when two organisers ask the same person at once 93ms
+ ✓ postgres-tests/nearby-telegram-race.test.ts > someone nearby on Telegram, on independent PostgreSQL connections > records one yes when their Yes arrives twice at once 77ms
+ ✓ postgres-tests/quiet-notice-flight-race.test.ts > a quiet notice on its way as her answer closes the event > tells the reader through the notice's effect when her answer closes the event first 92ms
+ ✓ postgres-tests/quiet-notice-flight-race.test.ts > a quiet notice on its way as her answer closes the event > tells the reader through the close when the notice's effect counts them first 77ms
+ ✓ postgres-tests/api-compose-photo-race.test.ts > a photo ask composed while retention deletes its photo > lets retention, waiting on the ask, remove the photo from the ask that just named it 93ms
+ ✓ postgres-tests/api-compose-photo-race.test.ts > a photo ask composed while retention deletes its photo > refuses the ask that waited on retention, which finds its photo gone 72ms
+ ✓ postgres-tests/api-compose-race.test.ts > composing an ask on independent PostgreSQL connections > gives one morning to one asker and tells the other who holds it, without the constraint firing 86ms
+ ✓ postgres-tests/api-compose-race.test.ts > composing an ask on independent PostgreSQL connections > gives both askers their own morning when they reach for different days on the same row 71ms
+ ✓ postgres-tests/api-voice-upload-race.test.ts > keeping a voice on independent PostgreSQL connections > keeps one row and one object when the same voice arrives twice, answering the second as a replay 82ms
+ ✓ postgres-tests/api-voice-upload-race.test.ts > keeping a voice on independent PostgreSQL connections > gives an account's last place of 30 a day to one of two voices queued together 71ms
+ ✓ postgres-tests/answer-arrival-effects-race.test.ts > her answer as her arrival's delivery effects land > passes over today's morning while its effects are written, so her tap on yesterday's arrival and the effects both commit 81ms
+ ✓ postgres-tests/answer-arrival-effects-race.test.ts > her answer as her arrival's delivery effects land > applies the effects once when her message finishes them as the queue's retry does 74ms
+ ✓ postgres-tests/api-member-leave-race.test.ts > pausing and leaving on independent PostgreSQL connections > lets one of two organisers leaving at once go, and keeps the other as the last 81ms
+ ✓ postgres-tests/api-member-leave-race.test.ts > pausing and leaving on independent PostgreSQL connections > refuses the leave queued behind the other organiser's pause 68ms
+ ✓ postgres-tests/api-away-race.test.ts > away from the app on independent PostgreSQL connections > stores one away when two members set the same one at once 65ms
+ ✓ postgres-tests/api-away-race.test.ts > she has died, said on independent PostgreSQL connections > is recorded once when two members say it at once 55ms
+ ✓ postgres-tests/api-device-race.test.ts > setting her phone up on independent PostgreSQL connections > leaves her one phone, the second organiser's, when two set it up at once 85ms
+ ✓ postgres-tests/api-reply-race.test.ts > replying to an exchange on independent PostgreSQL connections > keeps both replies and the first one's time when two people reply to her at once 91ms
+ ✓ postgres-tests/recipe-offer-race.test.ts > writing her recipe card on independent PostgreSQL connections > makes one card when two answers to the same ask write it at once 66ms
+ ✓ postgres-tests/api-trial-race.test.ts > starting the thirty days on independent PostgreSQL connections > makes one trial when two organisers start it at once, and answers the second with it 83ms
+ ✓ postgres-tests/api-nearby-race.test.ts > adding someone nearby on independent PostgreSQL connections > keeps her at two when two organisers add the last place at once, refusing the second 80ms
+ ✓ postgres-tests/book-keep-race.test.ts > keeping a story on independent PostgreSQL connections > makes one entry when two answers to the same story keep it at once 103ms
+ ✓ postgres-tests/api-family-create-race.test.ts > creating a family on independent PostgreSQL connections > makes one family when one account asks twice at once, and the refusal leaves nothing behind 194ms
+ ✓ postgres-tests/unblock-wake-race.test.ts > her unblock and a tick of her schedule > keeps the wake her unblock marked due when a tick that read her blocked stores its wake after it 103ms
+ ✓ postgres-tests/device-voice-race.test.ts > keeping her recording on independent PostgreSQL connections > is one row when a retry arrives while the first is still writing it 84ms
+ ✓ postgres-tests/reminder-create-race.test.ts > Remind me to ask on independent PostgreSQL connections > answers with the one reminder when another write of the member's makes it at the same time 119ms
+ ✓ postgres-tests/api-withdraw-race.test.ts > withdrawing an ask on independent PostgreSQL connections > refuses once her morning was prepared with it at the same time 69ms
+
+ Test Files  35 passed (35)
+      Tests  109 passed (109)
+   Start at  12:54:19
+   Duration  21.82s (transform 594ms, setup 0ms, import 10.70s, tests 9.22s, environment 1ms)
+
+[postgres-tests] run f9fb8d4d5ea8: removing the disposable PostgreSQL
+[postgres-tests] run f9fb8d4d5ea8: removed the disposable PostgreSQL

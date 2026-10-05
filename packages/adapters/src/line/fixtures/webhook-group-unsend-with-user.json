@@ -1,0 +1,22 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "type": "unsend",
+      "mode": "active",
+      "timestamp": 1790464010507,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff",
+        "userId": "U8f8c4117e99b1a4fa8346f3d1c56731b"
+      },
+      "webhookEventId": "01M3FZHA8BXPHKHXF7HKCKB3KW",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "unsend": {
+        "messageId": "530253224766452121"
+      }
+    }
+  ]
+}

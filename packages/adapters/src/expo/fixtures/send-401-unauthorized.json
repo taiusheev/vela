@@ -1,0 +1,12 @@
+{
+  "status": 401,
+  "body": {
+    "errors": [
+      {
+        "code": "UNAUTHORIZED",
+        "message": "The bearer token is invalid; access token \"{{access_token}}\" was revoked or never existed.",
+        "isTransient": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "status": 200,
+  "body": {
+    "data": [{ "status": "ok", "id": "{{ticket:1}}" }, { "status": "ok", "id": "{{ticket:2}}" }]
+  }
+}

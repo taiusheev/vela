@@ -1,0 +1,4 @@
+vendor/
+generated/
+.archives/
+.host-build/

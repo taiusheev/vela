@@ -1,0 +1,17 @@
+# Today in the demo (A6): her light, today's exchange with her answer and the family's replies, and
+# tomorrow's turn with Vela's suggestion.
+url: ${APP_URL}
+name: Today shows her light, her answer and tomorrow's turn
+tags:
+  - demo
+---
+- launchApp
+- assertVisible: "Mom"
+- assertVisible: "answered 8:12"
+- assertVisible: "What did the garden look like this morning?"
+- assertVisible: "Mom saw it · 8:12"
+- assertVisible: "Anna: Those are the ones from the seeds you saved"
+- assertVisible: "TOMORROW · ANNA'S TURN TO ASK MOM"
+- scrollUntilVisible:
+    element: "Ask Mom something"
+    direction: DOWN

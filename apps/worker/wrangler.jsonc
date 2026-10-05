@@ -1,0 +1,440 @@
+{
+  // The pilot Worker (code design §9, H1): Telegram's and LINE's webhooks, the media LINE fetches,
+  // the privacy notices, the health check, the API under /v1 (ADR-29), the queues (LINE's inbound
+  // queue only where LINE is on, and in development), cron, and three Durable Objects:
+  // MemberScheduler, ReconcileHeartbeat, which /healthz reads for the watchdog
+  // (.github/workflows/watchdog.yml), and AccountWriteLimiter, which counts each account's API
+  // writes. The admin pages are a second Worker from this package,
+  // configured in wrangler.admin.jsonc, because Cloudflare Access protects every hostname of a
+  // Worker and would close this one to Telegram, and to the app on a phone.
+  //
+  // Three environments: the top level is local development (`wrangler dev`), `staging` and
+  // `production` are what deploy.yml deploys. Named environments inherit nothing that binds a
+  // resource, so every environment repeats its bindings with its own resource names.
+  //
+  // Hosts (H3). Each deployed Worker answers only on its workers.dev address,
+  // https://<Worker name>.<account subdomain>.workers.dev, where the subdomain is the one each
+  // Cloudflare account chose at sign-up: `vela-light` for production ("Vela"), `vela-light-staging`
+  // for staging ("Vela staging"). There is no domain, zone, or route.
+  //
+  // This is the one list of what changes if an account's subdomain is not the one above. First,
+  // what src/wrangler-config.test.ts holds together, and fails on until every place agrees:
+  //   - WORKERS_DEV_SUBDOMAINS in that test, from which it derives every host it expects;
+  //   - the four URL vars of that environment here, PILOT_PUBLIC_URL among them;
+  //   - PUBLIC_BASE_URL of that environment in wrangler.admin.jsonc;
+  //   - every workers.dev link written into the Markdown of plan/materials/pilot: the two privacy
+  //     notices' links to each other, the notice links in the nearby-contact consent texts (en and
+  //     zh-TW), which families are sent, in the organiser agreements (en and zh-TW), and in the
+  //     pilot README;
+  //   - src/notices.generated.ts, which src/notices.test.ts holds to the notices: after changing
+  //     their links, run `pnpm --filter @vela/worker notices`.
+  // Then what no test can see:
+  //   - the privacy policy link of that environment's bot in @BotFather (infra/README.md section 7);
+  //   - the Telegram webhook, which the setup script's `webhook` step registers on the origin of
+  //     that environment's notice URLs here: run it again with
+  //     `pnpm --filter @vela/worker run setup -- --env <environment> --from webhook`;
+  //   - the watchdog's URL for that environment in .github/watchdog.json;
+  //   - the webhook URL in that environment's LINE Developers Console, once its LINE_CHANNEL is on
+  //     (architecture/05-line-flows.md §2.7);
+  //   - the documents that write the hosts out, which `git grep vela-light` lists.
+  //
+  // Every `id` or username the founder has not created yet is written as a PLACEHOLDER: replace
+  // each with the value Cloudflare or BotFather returns, never a guess. Outside development the
+  // Worker refuses to start while any var or secret still holds PLACEHOLDER_, a URL var is not
+  // https, or a privacy notice still holds a bracketed blank (src/config.ts).
+  //
+  // ADMIN_CONVERSATION_ID, the founder's own Telegram chat id, is a secret of this Worker (H5),
+  // never a var: `.dev.vars.example` lists it with the other secrets.
+  //
+  // AI_PROVIDER (decision X, 2026-09-18) is "anthropic" or "off", the same in wrangler.admin.jsonc
+  // for each environment. With "off" no AI provider is called: answers get no summary, flag check,
+  // or translation, questions no chips, weekly read drafts no lines, and a sent weekly read no
+  // translation for her; speech-to-text stays on. ANTHROPIC_API_KEY is needed only with
+  // "anthropic". Development defaults to "off", so local work needs no key; staging is "off" for
+  // the dogfooding week; production must be "anthropic", and src/config.ts refuses to start it
+  // otherwise, because families' answers need the flag check. To switch staging on: set
+  // "anthropic" for staging here and in wrangler.admin.jsonc and commit, then run
+  // `pnpm --filter @vela/worker run setup -- --env staging --from secrets` on that commit before
+  // it is merged to main, which asks for the key and deploys. Merged first, CI would deploy
+  // staging without the key, and both Workers would refuse to run (ConfigError:ANTHROPIC_API_KEY).
+  //
+  // MEDIA_STORAGE (decision M, 2026-09-20) is "r2" or "off", and belongs to this Worker alone: the
+  // admin Worker stores no media and has no such var. With "off" nothing she sends is copied into
+  // Vela's own storage: the light, the family group, and the transcript of a voice answer are
+  // unchanged, because Telegram carries the file and the pipeline fetches it from there, but each
+  // media row keeps only what Telegram said about the file, its id, its type and its size, with no
+  // storage key and no copy of the file itself; and a photo from the app has nowhere to be kept, so
+  // the API answers its upload 503 with media_storage_off, GET /v1/me says photos is false, and the
+  // app keeps its photo asks switched off. An environment that is "off" binds no R2 bucket at
+  // all, because a binding to a bucket that does not exist fails the deploy, and src/deps.ts then
+  // builds no media port. Development is "off", so a laptop needs no bucket and keeps no copy.
+  // Staging is "r2" since 26 September 2026: the founder enabled R2 on the "Vela staging" account
+  // (R2 needs a payment method even though the pilot's use stays inside its free monthly
+  // allowance), and the co-founder created its bucket, vela-media-staging, so photo asks and
+  // voice-note copies run there as in production. Production must be "r2", and src/config.ts
+  // refuses to start it otherwise, because the privacy notice promises families that media is kept
+  // in Vela's own storage for 30 days and then deleted. To switch an environment on: enable R2 in
+  // the Cloudflare dashboard for that account, set "r2" for that environment here and add its
+  // r2_buckets binding, commit, then run
+  // `pnpm --filter @vela/worker run setup -- --env <environment> --from resources` on that commit
+  // before it is merged to main, which creates the bucket and deploys.
+  //
+  // API_V1 (ADR-29) is "on" or "off": whether this Worker serves the API under /v1, which
+  // src/pilot-worker.ts hands to src/api-runtime.ts before any other route, and which checks its
+  // own settings (src/config.ts, readApiConfig), so a refusal there answers 503 on /v1 alone.
+  // Development and staging are "on"; production is "off", where /v1 answers 404 and nothing below
+  // is read, and src/wrangler-config.test.ts pins it off until a new ADR turns it on. CLERK_ISSUER
+  // is the Clerk Frontend API origin session tokens are verified against: the development instance
+  // in development and staging, and absent in production while its API is off. CLERK_SECRET_KEY,
+  // for the live session check on every write, is a secret only the founder puts, never a var: in
+  // apps/worker, `pnpm exec wrangler secret put CLERK_SECRET_KEY --env staging`. Staging refuses an
+  // issuer that is not *.clerk.accounts.dev or a key that is not a development key (sk_test_), and
+  // answers 503 on /v1 without the key; production, once on, refuses a development issuer or key.
+  // Two limits admit the API's requests: API_IP_LIMIT, a Workers Rate Limiting binding, which
+  // creates no resource, 120 a minute per client address (per /64 for IPv6), a best effort that was
+  // never shown to act on workers.dev; and ACCOUNT_WRITE_LIMITER, the AccountWriteLimiter Durable
+  // Object, one per account, 20 writes a minute, before the call to Clerk. Production binds neither
+  // while its API is off, and readApiConfig refuses to serve the API without them. /v1 has no CORS:
+  // OPTIONS answers 404, no Access-Control- header is sent, and a request carrying Origin is refused.
+  //
+  // LINE_CHANNEL (architecture/05-line-flows.md §5.10) is "on" or "off", the same in
+  // wrangler.admin.jsonc for each environment, and "off" everywhere for now;
+  // src/wrangler-config.test.ts pins production off. With "off", /webhooks/line and /media answer
+  // 404 and nothing reads a LINE setting. With "on", /webhooks/line checks LINE's signature, puts
+  // the events on INBOUND_QUEUE and answers, this Worker consumes that queue with handleInbound,
+  // and /media serves the copies LINE is sent by signed URL. Then src/config.ts refuses to start
+  // without: MEDIA_STORAGE "r2" and its bucket, since LINE sends a voice note or photo only as a
+  // URL to Vela's own copy; the INBOUND_QUEUE binding; PILOT_PUBLIC_URL, this Worker's https
+  // origin, which every media URL starts with; LINE_BOT_BASIC_ID, the Official Account's basic id
+  // (@ and its characters), in both files, and absent while LINE is off; and three secrets of this
+  // Worker: LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN from the LINE Developers Console,
+  // and MEDIA_URL_SECRET, 32 random bytes that sign the media URLs, generated and never typed. A
+  // binding to a queue that does not exist fails the deploy, so development binds vela-inbound,
+  // which is local there, and a deployed environment binds vela-inbound-<environment> only in the
+  // commit that turns its LINE on. To switch staging on: put the three secrets on this Worker, set
+  // LINE_CHANNEL to "on" for staging here and in wrangler.admin.jsonc with LINE_BOT_BASIC_ID, add
+  // the INBOUND_QUEUE producer and the vela-inbound-staging consumer here, commit, then run
+  // `pnpm --filter @vela/worker run setup -- --env staging --from resources` on that commit before
+  // it is merged to main, which creates the queue and deploys. Merged first, CI would deploy a
+  // binding to a queue that does not exist, and the deploy would fail.
+  //
+  // PUSH_SEND (ADR-34) is "expo" or "off", and belongs to this Worker alone: the admin Worker sends
+  // no push and has no such var. With "off" no push is made or sent and no receipt is read: an
+  // organiser is told of a quiet morning only on Telegram, a phone counts toward nobody being
+  // told, and the app's devices are still registered and kept, ready for the switch. It is "off"
+  // in every environment, and src/wrangler-config.test.ts pins it, until the founder has an Expo
+  // account with Enhanced Push Security and an access token, a Firebase project for Android, and,
+  // for iPhones, the Apple Developer Program. With "expo" src/config.ts refuses to start without
+  // EXPO_ACCESS_TOKEN, a secret of this Worker the founder puts, never a var: piped, not pasted,
+  // with `wrangler secret put EXPO_ACCESS_TOKEN --env staging`. Then set "expo" for that
+  // environment here and change the pin in the same commit.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vela-dev",
+  "main": "src/index.ts",
+  // The newest date the Workers Vitest pool's runtime accepts; raise it together with
+  // @cloudflare/vitest-pool-workers, or `pnpm test` cannot start its runtime.
+  "compatibility_date": "2026-08-22",
+  // node-postgres reaches Postgres through Hyperdrive with the Node compatibility layer.
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // Development is never deployed, so it has no address: `workers_dev` defaults to true and is
+  // inherited, and a `wrangler deploy` without --env deploys this top level, which is ENVIRONMENT
+  // development, where config.ts skips its refusals. `staging` and `production` turn workers.dev on
+  // as their only address. Preview URLs stay off everywhere: a Worker with a Durable Object gets
+  // none anyway, and every hostname the Worker answers on is one more to reason about.
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // The admin Worker binds MemberScheduler by `script_name`; only this Worker, which exports the
+  // classes, declares their migrations, which every environment inherits. ReconcileHeartbeat (v2)
+  // holds one time, the last finished reconciliation, in a Durable Object rather than in Postgres,
+  // so /healthz never wakes Neon. AccountWriteLimiter (v3) counts each account's API writes in an
+  // object of its own (src/write-limit.ts); production declares the class but binds none while its
+  // API is off.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["MemberScheduler"] },
+    { "tag": "v2", "new_sqlite_classes": ["ReconcileHeartbeat"] },
+    { "tag": "v3", "new_sqlite_classes": ["AccountWriteLimiter"] }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" },
+      { "name": "RECONCILE_HEARTBEAT", "class_name": "ReconcileHeartbeat" },
+      { "name": "ACCOUNT_WRITE_LIMITER", "class_name": "AccountWriteLimiter" }
+    ]
+  },
+
+  "queues": {
+    "producers": [
+      { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound" },
+      { "binding": "MEDIA_QUEUE", "queue": "vela-media" },
+      { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand" },
+      // LINE's webhook queue, local here; a deployed environment binds its own only with LINE on.
+      { "binding": "INBOUND_QUEUE", "queue": "vela-inbound" }
+    ],
+    // A message is retried until the send or the AI call stops failing, then parked in the
+    // dead-letter queue, where the founder can see it rather than lose it.
+    "consumers": [
+      {
+        "queue": "vela-outbound",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 5,
+        "retry_delay": 30,
+        "dead_letter_queue": "vela-dead-letter"
+      },
+      {
+        "queue": "vela-media",
+        "max_batch_size": 5,
+        "max_batch_timeout": 10,
+        "max_retries": 3,
+        "retry_delay": 60,
+        "dead_letter_queue": "vela-dead-letter"
+      },
+      {
+        "queue": "vela-understand",
+        "max_batch_size": 5,
+        "max_batch_timeout": 10,
+        "max_retries": 3,
+        "retry_delay": 60,
+        "dead_letter_queue": "vela-dead-letter"
+      },
+      // A batch waits at most a second: a reply token is free for a minute only (05 §1 fact 7).
+      // LINE was answered 200 and redelivers nothing, so a job is the only copy of her answer: the
+      // consumer retries it 30 seconds after its first attempt, doubling to every 10 minutes
+      // (inboundRetryDelaySeconds in src/pilot-worker.ts), and 64 retries last 10 hours, T_quiet's
+      // cap, so an outage that ends before her quiet deadline never costs her answer (05 §5.10).
+      // retry_delay applies only if the handler itself throws.
+      {
+        "queue": "vela-inbound",
+        "max_batch_size": 10,
+        "max_batch_timeout": 1,
+        "max_retries": 64,
+        "retry_delay": 30,
+        "dead_letter_queue": "vela-dead-letter"
+      }
+    ]
+  },
+
+  // No r2_buckets binding: MEDIA_STORAGE is "off" here, so `wrangler dev` needs no bucket and
+  // nothing a laptop run keeps a copy of.
+
+  // `localConnectionString` is `pnpm --filter @vela/db dev-db` (packages/db/scripts/dev-db.ts).
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "PLACEHOLDER_HYPERDRIVE_ID_DEV",
+      "localConnectionString": "postgresql://postgres:postgres@127.0.0.1:54320/postgres"
+    }
+  ],
+
+  // Every 15 minutes: reconcile (pending send effects, stranded sends, late ticks, the understanding
+  // re-run and the founder's note, then the heartbeat; flows §3.15). Not every 5: each run wakes
+  // Neon, and a 5-minute run would spend the free plan's compute hours (src/pilot-worker.ts).
+  // Nightly at 03:20 UTC: yesterday's metrics and retention.
+  "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
+
+  // The API's address limit (ADR-29, API_ADDRESS_LIMIT in src/api-runtime.ts): per client address
+  // (per /64 for IPv6) before the app, a best effort. The per-account write limit is the
+  // ACCOUNT_WRITE_LIMITER binding above.
+  "ratelimits": [
+    { "name": "API_IP_LIMIT", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } }
+  ],
+
+  "vars": {
+    "ENVIRONMENT": "development",
+    "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_DEV_BOT_USERNAME",
+    // `pnpm dev` serves this Worker on port 8787; `pnpm dev:admin` serves the admin Worker there
+    // instead. On a laptop a link only has to be there.
+    "PUBLIC_BASE_URL": "http://localhost:8787",
+    "PRIVACY_NOTICE_URL_EN": "http://localhost:8787/privacy",
+    "PRIVACY_NOTICE_URL_ZH_TW": "http://localhost:8787/privacy/zh-TW",
+    "REGIONS": "apac",
+    "AI_PROVIDER": "off",
+    "MEDIA_STORAGE": "off",
+    "API_V1": "on",
+    // Clerk's development instance for Vela Light: public, since the publishable key encodes it.
+    "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev",
+    // Off: a laptop has no media bucket, and LINE's tests run on fixtures (05 §5.10).
+    "LINE_CHANNEL": "off",
+    "PILOT_PUBLIC_URL": "http://localhost:8787",
+    // Off: no laptop reaches Expo; push is proven against a fake Expo endpoint (ADR-34).
+    "PUSH_SEND": "off",
+    // On: her dated plans are kept for reminders (spec §12).
+    "MEMORY": "on",
+    // On: her stories are kept in the family book (ADR-39).
+    "BOOK": "on"
+  },
+
+  "env": {
+    "staging": {
+      "name": "vela",
+      "workers_dev": true,
+      "preview_urls": false,
+      "observability": { "enabled": true },
+      "durable_objects": {
+        "bindings": [
+          { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" },
+          { "name": "RECONCILE_HEARTBEAT", "class_name": "ReconcileHeartbeat" },
+          { "name": "ACCOUNT_WRITE_LIMITER", "class_name": "AccountWriteLimiter" }
+        ]
+      },
+      "queues": {
+        "producers": [
+          { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-staging" },
+          { "binding": "MEDIA_QUEUE", "queue": "vela-media-staging" },
+          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-staging" }
+        ],
+        "consumers": [
+          {
+            "queue": "vela-outbound-staging",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 5,
+            "retry_delay": 30,
+            "dead_letter_queue": "vela-dead-letter-staging"
+          },
+          {
+            "queue": "vela-media-staging",
+            "max_batch_size": 5,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-staging"
+          },
+          {
+            "queue": "vela-understand-staging",
+            "max_batch_size": 5,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-staging"
+          }
+        ]
+      },
+      // MEDIA_STORAGE is "r2" here since 26 September 2026: the founder enabled R2 on the staging
+      // account, and the co-founder created this bucket (private, Asia-Pacific). Photos from the app
+      // are kept under asks/<family id>/ (ADR-33). The bucket, not this file, is to hold a lifecycle
+      // rule that deletes objects under asks/ after 32 days, the backstop for an upload whose row was
+      // never written; it is not set yet, it is added once with `wrangler r2 bucket lifecycle add`,
+      // and production's bucket needs the same rule before its API is switched on.
+      "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-staging" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "e9e9837d1eee47528304916a1ac2d1e9" }],
+      "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
+      "ratelimits": [
+        {
+          "name": "API_IP_LIMIT",
+          "namespace_id": "1001",
+          "simple": { "limit": 120, "period": 60 }
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
+        // The admin Worker's origin: links in the founder's admin messages open it.
+        "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev",
+        // This Worker's origin and the notice paths it serves (src/notices.ts).
+        "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light-staging.workers.dev/privacy",
+        "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light-staging.workers.dev/privacy/zh-TW",
+        "REGIONS": "apac",
+        // Off for the dogfooding week, until the founder approves buying Anthropic credit.
+        "AI_PROVIDER": "off",
+        // On since 26 September 2026, bound to vela-media-staging above: voice notes and photos
+        // are copied there and deleted after 30 days, as in production.
+        "MEDIA_STORAGE": "r2",
+        // Staging's app accounts are all test accounts (the dogfooding week's friend has none),
+        // so it verifies tokens from Clerk's development instance, as development does.
+        "API_V1": "on",
+        "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev",
+        // Off until the founder's test Official Account is set up and vela-inbound-staging exists
+        // (05 §8, step 8): no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
+        "LINE_CHANNEL": "off",
+        // This Worker's origin, which the media URLs LINE fetches start with once LINE is on.
+        "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev",
+        // Off until the founder has set up Expo and put EXPO_ACCESS_TOKEN (ADR-34).
+        "PUSH_SEND": "off",
+        // On: staging holds test families only (spec §12).
+        "MEMORY": "on",
+        // On: staging holds test families only (ADR-39).
+        "BOOK": "on"
+      }
+    },
+
+    "production": {
+      "name": "vela",
+      "workers_dev": true,
+      "preview_urls": false,
+      "observability": { "enabled": true },
+      "durable_objects": {
+        "bindings": [
+          { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" },
+          { "name": "RECONCILE_HEARTBEAT", "class_name": "ReconcileHeartbeat" }
+        ]
+      },
+      "queues": {
+        "producers": [
+          { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-production" },
+          { "binding": "MEDIA_QUEUE", "queue": "vela-media-production" },
+          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-production" }
+        ],
+        "consumers": [
+          {
+            "queue": "vela-outbound-production",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 5,
+            "retry_delay": 30,
+            "dead_letter_queue": "vela-dead-letter-production"
+          },
+          {
+            "queue": "vela-media-production",
+            "max_batch_size": 5,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-production"
+          },
+          {
+            "queue": "vela-understand-production",
+            "max_batch_size": 5,
+            "max_batch_timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-production"
+          }
+        ]
+      },
+      "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-production" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION" }],
+      "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
+      "vars": {
+        "ENVIRONMENT": "production",
+        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
+        "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
+        "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light.workers.dev/privacy",
+        "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light.workers.dev/privacy/zh-TW",
+        "REGIONS": "apac",
+        "AI_PROVIDER": "anthropic",
+        "MEDIA_STORAGE": "r2",
+        // Invitation-only English trial. Missing private roster refuses family work.
+        "PILOT_ADMISSION": "on",
+        // Off until a new ADR turns it on (ADR-29): no CLERK_ISSUER, no ratelimits, and no
+        // ACCOUNT_WRITE_LIMITER binding until then.
+        "API_V1": "off",
+        // Off until the design's last step turns it on (05 §8, step 11), and pinned off by
+        // src/wrangler-config.test.ts: no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
+        "LINE_CHANNEL": "off",
+        "PILOT_PUBLIC_URL": "https://vela.vela-light.workers.dev",
+        // Off, and pinned off by src/wrangler-config.test.ts: its API is off, and no family gets a
+        // push before a privacy notice names Expo, Apple and Google (ADR-34).
+        "PUSH_SEND": "off",
+        // Off, and pinned off by src/wrangler-config.test.ts: no family's plans are kept before the
+        // privacy notice names memory and counsel has answered on health words (data map row 29).
+        "MEMORY": "off",
+        // Off, and pinned off by src/wrangler-config.test.ts: privacy notice v1 says the family
+        // book comes later in the pilot, so no story is kept before a notice describes it.
+        "BOOK": "off"
+      }
+    }
+  }
+}

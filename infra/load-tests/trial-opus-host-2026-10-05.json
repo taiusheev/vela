@@ -1,0 +1,98 @@
+{
+  "checkedAt": "2026-10-05T04:27:17.243Z",
+  "kind": "local-native-opus-host-proof",
+  "gitHead": "23a257d4ebec7ce6072312faed512b8c09a72037",
+  "workingTreeChangesIncluded": true,
+  "command": "node apps/app/modules/vela-opus/scripts/check-host.mjs",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+  "pins": {
+    "opus": {
+      "version": "1.6.1",
+      "url": "https://downloads.xiph.org/releases/opus/opus-1.6.1.tar.gz",
+      "sha256": "6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1"
+    },
+    "ogg": {
+      "version": "1.3.6",
+      "url": "https://downloads.xiph.org/releases/ogg/libogg-1.3.6.tar.gz",
+      "sha256": "83e6704730683d004d20e21b8f7f55dcb3383cdf84c0daedf30bde175f774638"
+    },
+    "opusfile": {
+      "version": "0.12",
+      "url": "https://downloads.xiph.org/releases/opus/opusfile-0.12.tar.gz",
+      "sha256": "118d8601c12dd6a44f52423e68ca9083cc9f2bfe72da7a8c1acb22a80ae3550b"
+    }
+  },
+  "codecsCSourceFiles": 143,
+  "decoderTests": [
+    "mono Opus",
+    "chained mono/stereo Opus",
+    "stereo 48 kHz 16-bit WAV header",
+    "malformed source",
+    "missing source",
+    "20 MiB source size limit",
+    "five-minute duration bound",
+    "unwritable destination"
+  ],
+  "result": {
+    "exitCode": 0,
+    "passed": true,
+    "iosAutolinking": {
+      "packageName": "vela-opus-decoder",
+      "pods": [
+        {
+          "podName": "VelaOpusDecoder",
+          "podspecDir": "/Users/timuraiusheev/Documents/Vela/vela/apps/app/modules/vela-opus"
+        }
+      ],
+      "swiftModuleNames": [
+        "VelaOpusDecoder"
+      ],
+      "modules": [
+        {
+          "name": null,
+          "class": "VelaOpusDecoderModule"
+        }
+      ],
+      "appDelegateSubscribers": [],
+      "reactDelegateHandlers": [],
+      "debugOnly": false,
+      "packageVersion": "0.1.0"
+    }
+  },
+  "limits": {
+    "sourceBytes": 20971520,
+    "maxSeconds": 300,
+    "downloadTimeoutSeconds": 30,
+    "cachedPlaybackFiles": 3
+  },
+  "licenseNoticesBundled": true,
+  "sourceTreeDigest": {
+    "algorithm": "sha256 of sorted relative filename, NUL, bytes, NUL",
+    "files": 16,
+    "sha256": "d281691e2931479cb3bfe61febed33607fd1b3e1b9a7b808fbce5c03d77decb9",
+    "collectedAt": "2026-10-05T04:28:52.179Z"
+  },
+  "stdout": "infra/load-tests/trial-opus-host-2026-10-05.txt",
+  "stdoutSha256": "892ed1b4abf89a34e2bf22c086f6a161308257abe12c75f0d87ff599890cfd48",
+  "iosProof": {
+    "compiled": false,
+    "signedDeviceBuild": false,
+    "devicePlayback": false,
+    "xcodeCommandExitCode": 1,
+    "blocker": "No Xcode installation; only Apple Command Line Tools available."
+  },
+  "providerUse": {
+    "originalFamilyDataUsed": false,
+    "newProcessorAdded": false,
+    "productionCredentialsUsed": false
+  },
+  "requiredBeforeTrial": [
+    "Compile iOS simulator and device build with Xcode",
+    "Install a signed build on the organiser iPhone",
+    "Play fresh original Telegram Ogg and exercise pause, replay, background/foreground, expiry, deletion and account switch"
+  ],
+  "notes": [
+    "The C codec/decoder host build passed. Swift/iOS compilation was not performed.",
+    "The inspected Swift cache root and file paths all resolve symlinks to support Darwin /var -> /private/var while confining files to the app cache."
+  ]
+}

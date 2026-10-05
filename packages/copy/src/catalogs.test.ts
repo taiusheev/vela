@@ -1,0 +1,613 @@
+import { MVP_LANGS, TimeZone } from "@vela/contracts";
+import { describe, expect, it } from "vitest";
+import { catalogs, type MessageKey } from "./index.ts";
+import {
+  FORBIDDEN_ZH_TW,
+  GENDERED_PRONOUNS,
+  LATIN_TOUCHING_HAN,
+  MAINLAND_TERMS,
+  SIMPLIFIED_ONLY,
+  SURVEILLANCE_WORDS,
+} from "./rules.ts";
+
+const PLACEHOLDER = /\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
+
+function placeholdersOf(text: string): string[] {
+  const names = new Set<string>();
+  for (const match of text.matchAll(PLACEHOLDER)) {
+    const name = match[1];
+    if (name !== undefined) {
+      names.add(name);
+    }
+  }
+  return [...names].sort();
+}
+
+const englishKeys = Object.keys(catalogs.en) as MessageKey[];
+
+const translations = MVP_LANGS.filter((lang) => lang !== "en");
+
+/** Every country button of organiser onboarding (flows §3.1); Other leads to a typed time zone. */
+const COUNTRY_BUTTONS: MessageKey[] = [
+  "onboarding.country_tw",
+  "onboarding.country_us",
+  "onboarding.country_gb",
+  "onboarding.country_ca",
+  "onboarding.country_au",
+  "onboarding.country_sg",
+  "onboarding.country_jp",
+  "onboarding.country_de",
+  "onboarding.country_in",
+  "onboarding.country_other",
+];
+
+/** A `Region/City` name as written inside a sentence. */
+const ZONE_NAME = /\b[A-Z][A-Za-z]+\/[A-Za-z_]+\b/g;
+
+/**
+ * Wording that dates the first send to moments ago. The repeat goes out 150 minutes after delivery
+ * (flows §3.8), so its preface cannot say "just now".
+ */
+const JUST_NOW: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(just now|a moment ago|moments ago)\b/i,
+  "zh-TW": /剛才|剛剛|方才/,
+};
+
+/**
+ * Vela belongs in a new group without the kept-light member (spec Appendix A), not in the family
+ * chat that already exists, which usually includes the elders.
+ */
+const SEPARATE_GROUP: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bnew group\b.*\bwithout \{name\}/,
+  "zh-TW": /另外建立.*群組.*不要加\{name\}/,
+};
+
+/**
+ * Times of day and durations. The quiet threshold is learned per member and waits longer while Vela
+ * learns, so the consent text cannot promise when the organiser hears of a quiet morning.
+ */
+const TIME_OF_DAY: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(evening|night|noon|afternoon|o'clock|hours?)\b/i,
+  "zh-TW": /傍晚|晚上|中午|下午|小時|點前|點以前/,
+};
+
+/**
+ * Vela never contacts anyone on its own (the privacy notice says so): the organiser sends the consent
+ * message from their own phone (nearby-contact-consent.en.md), so the setup step tells the organiser
+ * to ask.
+ */
+const ORGANISER_ASKS_CONTACT: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bask them yourself\b/,
+  "zh-TW": /請您先親自問過對方/,
+};
+
+/**
+ * A contact's number is stored only with their recorded yes, which the founder adds on the admin page
+ * (2026-09-17, L8), so setup asks for a name and says where the number comes from. This sentence is
+ * the only place a nearby step may mention a number.
+ */
+const NUMBER_AFTER_YES: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b[Tt]heir number is added after they say yes\./,
+  "zh-TW": /對方同意之後，才會加上電話號碼。/,
+};
+
+/** Words for a phone number, which a nearby step must not ask for. */
+const NUMBER_WORDS: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(phone|numbers?|mobile|digits?)\b/i,
+  "zh-TW": /電話|號碼|手機/,
+};
+
+/** The nearby step before 17 September 2026, which asked for a number at setup. */
+const ASKS_FOR_NUMBER_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "Send a name and phone number, or tap Skip. Their number is added after they say yes.",
+  "zh-TW": "請傳送名字和電話號碼，或按「略過」。對方同意之後，才會加上電話號碼。",
+};
+
+/** The keys of the nearby step. */
+const NEARBY_KEYS: readonly MessageKey[] = ["onboarding.ask_nearby", "onboarding.nearby_no_number"];
+
+/** The founder's legal name, written the same in every language (pilot pack README). */
+const FOUNDER_NAME = "Timur Aiusheev";
+
+/**
+ * A no to health words must leave Vela working, or the consent would not be freely given (PDPA
+ * Article 6(1)(6), ADR-27), and the question says so.
+ */
+const NO_CHANGES_NOTHING: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bVela works the same if you say no\./,
+  "zh-TW": /就算您說不要，Vela 也會照常運作。/,
+};
+
+/**
+ * Words about her health or body. The flag notice sent without her health-words consent names
+ * nothing she said (ADR-27), neither her words nor the kind of signal.
+ */
+const HEALTH_WORDS: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(health|fall|fell|pain|hurts?|doctor|hospital|medicine|ill|sick|unwell)\b/i,
+  "zh-TW": /健康|身體|跌|痛|醫|藥|病|不舒服/,
+};
+
+/** A notice that would carry the kind of signal. */
+const HEALTH_NOTICE_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "{name} mentioned a health problem today that may be worth a call.",
+  "zh-TW": "{name}今天提到身體不舒服，也許值得打個電話問問。",
+};
+
+/** Quotation marks around words she said. */
+const QUOTE_MARKS = /["“”「」『』]/;
+
+/**
+ * Wording in which Vela ("we", "I", or the name) asks or contacts the nearby contact, which it never
+ * does: an organiser who believes it would never ask, and the contact would never appear in a note.
+ */
+const VELA_ASKS_CONTACT: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\b(we|I|Vela)( will|'ll)? (ask|contact|message|text)\b/i,
+  "zh-TW": /(我們|我|Vela ?)(會|將)?(先)?(問|詢問|聯絡|傳訊息)/,
+};
+
+/** The wording the review found, which had Vela ask the contact. */
+const VELA_ASKS_CONTACT_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "We ask them first, before their number appears in any note.",
+  "zh-TW": "我們會先問過對方，電話號碼才會出現在任何通知裡。",
+};
+
+/**
+ * The name each language's privacy notice gives the weekly read (privacy-notice.en.md and
+ * privacy-notice.zh-TW.md). The notice promises her the most recent weekly read when she asks what
+ * the family sees, so the label she receives must use the same name.
+ */
+const WEEKLY_READ_NAME: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bweekly read\b/i,
+  "zh-TW": /每週小記/,
+};
+
+/** Other names a writer might give the weekly read. */
+const OTHER_WEEKLY_READ_NAME: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bweekly (note|summary|digest|report|update|letter|recap)\b/i,
+  "zh-TW": /[週周](記|報|摘要|筆記|紀錄|回顧)/,
+};
+
+/** Labels that give the weekly read another name; the English one is the wording the review found. */
+const OTHER_WEEKLY_READ_NAME_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "The family's weekly note:",
+  "zh-TW": "家人收到的週記：",
+};
+
+/** The keys that name the weekly read. */
+const WEEKLY_READ_KEYS: readonly MessageKey[] = [
+  "parent.family_sees_weekly_read",
+  "admin.weekly_read_draft",
+];
+
+/**
+ * Wording that presents what follows as a part taken from the weekly read. She gets only the lines
+ * about her week, never the counts or the suggestion (spec §8, §13), and the organiser agreement,
+ * privacy notice, and consent script promise the family "the lines about her week from" the read,
+ * so her heading must not claim the lines are the whole read the family received.
+ */
+const PART_OF_WEEKLY_READ: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /^From the latest weekly read\b/i,
+  "zh-TW": /每週小記裡.*幾行/,
+};
+
+/** The heading before Decision W, when her copy was the whole read. */
+const WHOLE_WEEKLY_READ_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "The latest weekly read sent to the family:",
+  "zh-TW": "最近一次傳給家人的每週小記：",
+};
+
+/**
+ * The fallback hello asks how she is this morning (spec §4.5: "How are you this morning?"), the
+ * morning it arrives. 早上好 is a mainland greeting (MAINLAND_TERMS), so zh-TW asks 早上過得好嗎.
+ */
+const THIS_MORNING: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bthis morning\b/i,
+  "zh-TW": /早上|今早/,
+};
+
+/** A hello that asks about the day instead: the zh-TW wording the review found, and its English. */
+const ABOUT_THE_DAY_SAMPLE: Record<(typeof MVP_LANGS)[number], string> = {
+  en: "Nothing new from the family today. How are you today?",
+  "zh-TW": "今天家人沒有新的消息。您今天好嗎？",
+};
+
+/** "What the family sees" returns her last seven answered days, which can span more than a week. */
+const WEEK: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bweek/i,
+  "zh-TW": /星期|週|周|禮拜/,
+};
+
+/**
+ * The parameters services pass for keys whose parameters the Sprint 1 contract and the decisions of
+ * 17 September 2026 fixed. A catalog edit that adds or drops one breaks those call sites at run time,
+ * so the sets are pinned here; `flag.notice_no_words` takes only her name, so it can never carry a
+ * quote.
+ */
+const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] = [
+  ["group.linked", ["name", "notice"]],
+  ["group.notice_read", []],
+  ["consent.request", ["notice", "organiser"]],
+  ["consent.health_words", ["organiser"]],
+  ["flag.notice_no_words", ["name"]],
+  ["push.quiet_notice", ["name", "sent"]],
+  ["push.answer_receipt", ["name"]],
+  ["push.turn_prompt", ["name"]],
+  ["admin.quiet_notice_unheard", ["family", "link", "name"]],
+  ["admin.push_misconfigured", ["link"]],
+  ["organiser.invite_again", ["link", "name"]],
+  ["onboarding.ask_nearby", []],
+  ["onboarding.nearby_no_number", []],
+  ["parent.family_sees_heading", []],
+  ["parent.family_sees_empty", []],
+  ["parent.family_sees_weekly_read", []],
+  ["admin.flag", ["family", "link"]],
+  ["admin.weekly_read_draft", ["family", "link"]],
+  ["admin.understand_failed", ["family", "link"]],
+  ["admin.member_left_group", ["family", "name"]],
+  ["admin.line_quota", ["limit", "link", "used"]],
+  ["admin.line_quota_exhausted", ["link"]],
+  ["weekly_read.answered", ["answered", "days", "name"]],
+  ["weekly_read.answered_one", ["answered", "days", "name"]],
+  ["weekly_read.hello_mornings", ["mornings", "name"]],
+  ["weekly_read.hello_mornings_one", ["mornings", "name"]],
+  ["weekly_read.nobody_asked", ["name"]],
+  ["weekly_read.suggestion", ["suggestion"]],
+];
+
+/**
+ * Each weekly read count as its plural key and its `_one` key. English says "1 of 1 day" and "on 1
+ * morning"; Traditional Chinese has one form.
+ */
+const COUNT_KEYS: readonly (readonly [plural: MessageKey, one: MessageKey, noun: string])[] = [
+  ["weekly_read.answered", "weekly_read.answered_one", "day"],
+  ["weekly_read.hello_mornings", "weekly_read.hello_mornings_one", "morning"],
+];
+
+/**
+ * The admin conversation on Telegram is outside `admin_access_log` and retention, so an admin
+ * message may name the family and a member and link to the admin page, and nothing else.
+ */
+const ADMIN_PARAMETERS: ReadonlySet<string> = new Set(["family", "link", "name"]);
+
+/**
+ * The one admin message that carries more: LINE's quota alert, whose two counts are of Vela's own
+ * messages this month (05-line-flows.md §6), about no family and nothing anyone wrote.
+ */
+const ADMIN_COUNTS: ReadonlyMap<MessageKey, ReadonlySet<string>> = new Map([
+  ["admin.line_quota", new Set(["used", "limit"])],
+]);
+
+/**
+ * A push passes through Expo, Apple and Google and shows on a lock screen (ADR-34), so it may carry
+ * a name and a time, and nothing the family or she wrote: no quote, no suggestion, no contact.
+ */
+const PUSH_PARAMETERS: ReadonlySet<string> = new Set(["name", "sent"]);
+
+/** Placeholders that render as URLs. */
+const URL_PLACEHOLDERS = /(.?)\{(?:link|notice)\}(.?)/gsu;
+
+/** The characters directly around each URL placeholder that are not whitespace. */
+function crowdedUrlNeighbours(text: string): string[] {
+  return [...text.matchAll(URL_PLACEHOLDERS)]
+    .flatMap((match) => [match[1] ?? "", match[2] ?? ""])
+    .filter((neighbour) => neighbour !== "" && !/\s/.test(neighbour));
+}
+
+/** Placeholders the zh-TW header says always render as Latin text or digits. */
+const LATIN_PLACEHOLDERS: ReadonlySet<string> = new Set([
+  "time",
+  "sent",
+  "usual",
+  "n",
+  "answered",
+  "days",
+  "mornings",
+  "used",
+  "limit",
+  "channel",
+  "link",
+  "notice",
+]);
+
+/**
+ * A zh-TW template with Latin placeholders rendered as a digit and every other placeholder as a
+ * Chinese character, so spacing can be read off the result.
+ */
+function withSampleValues(template: string): string {
+  return template.replace(PLACEHOLDER, (_placeholder: string, name: string) =>
+    LATIN_PLACEHOLDERS.has(name) ? "0" : "名",
+  );
+}
+
+/** Name placeholders set apart from a neighbouring Chinese character by a space. */
+const SPACED_NAME =
+  /\p{Script=Han}\s\{(?:name|names|asker|holder|organiser|child|address|family)\}|\{(?:name|names|asker|holder|organiser|child|address|family)\}\s\p{Script=Han}/u;
+
+describe("catalogs", () => {
+  it("cover exactly the MVP languages", () => {
+    expect(Object.keys(catalogs).sort()).toEqual([...MVP_LANGS].sort());
+  });
+
+  it.each(translations)("%s has every English key and no other", (lang) => {
+    expect(Object.keys(catalogs[lang]).sort()).toEqual([...englishKeys].sort());
+  });
+
+  it.each(MVP_LANGS)("%s has no empty strings", (lang) => {
+    for (const key of englishKeys) {
+      expect(catalogs[lang][key].trim(), `${lang} ${key}`).not.toBe("");
+    }
+  });
+
+  it.each(translations)("%s uses exactly the English placeholders for every key", (lang) => {
+    for (const key of englishKeys) {
+      expect(placeholdersOf(catalogs[lang][key]), `${lang} ${key}`).toEqual(
+        placeholdersOf(catalogs.en[key]),
+      );
+    }
+  });
+
+  it.each(MVP_LANGS)("%s uses braces only as well-formed placeholders", (lang) => {
+    for (const key of englishKeys) {
+      expect(catalogs[lang][key].replace(PLACEHOLDER, ""), `${lang} ${key}`).not.toMatch(/[{}]/);
+    }
+  });
+
+  it.each(MVP_LANGS)("%s labels every onboarding country button differently", (lang) => {
+    const labels = COUNTRY_BUTTONS.map((key) => catalogs[lang][key]);
+    expect(new Set(labels).size).toBe(COUNTRY_BUTTONS.length);
+  });
+
+  it.each(MVP_LANGS)("%s takes exactly the parameters services pass for pinned keys", (lang) => {
+    for (const [key, parameters] of PINNED_PARAMETERS) {
+      expect(placeholdersOf(catalogs[lang][key]), `${lang} ${key}`).toEqual([...parameters].sort());
+    }
+  });
+
+  it.each(MVP_LANGS)("%s admin messages carry names and links, never family words", (lang) => {
+    const adminKeys = englishKeys.filter((key) => key.startsWith("admin."));
+    expect(adminKeys.length).toBeGreaterThan(0);
+    for (const key of adminKeys) {
+      const extra = placeholdersOf(catalogs[lang][key]).filter(
+        (name) => !ADMIN_PARAMETERS.has(name) && ADMIN_COUNTS.get(key)?.has(name) !== true,
+      );
+      expect(extra, `${lang} ${key}`).toEqual([]);
+    }
+  });
+
+  it.each(MVP_LANGS)("%s push notifications carry a name and a time, nothing else", (lang) => {
+    const pushKeys = englishKeys.filter((key) => key.startsWith("push."));
+    expect(pushKeys.length).toBeGreaterThan(0);
+    for (const key of pushKeys) {
+      const extra = placeholdersOf(catalogs[lang][key]).filter(
+        (name) => !PUSH_PARAMETERS.has(name),
+      );
+      expect(extra, `${lang} ${key}`).toEqual([]);
+      expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(QUOTE_MARKS);
+      expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(HEALTH_WORDS[lang]);
+    }
+  });
+
+  it.each(MVP_LANGS)("%s sets every link apart with whitespace", (lang) => {
+    for (const key of englishKeys) {
+      expect(crowdedUrlNeighbours(catalogs[lang][key]), `${lang} ${key}`).toEqual([]);
+    }
+  });
+});
+
+describe("wording with a fixed meaning in every language", () => {
+  it.each(MVP_LANGS)("%s consent request promises no time for the quiet note", (lang) => {
+    expect(catalogs[lang]["consent.request"]).not.toMatch(TIME_OF_DAY[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s private-chat help names the literal /start command", (lang) => {
+    // Telegram recognises only the Latin command, so a translated command would do nothing.
+    expect(catalogs[lang]["help.private"]).toMatch(/(^|\s)\/start(?!\w)/);
+  });
+
+  it.each(MVP_LANGS)("%s typed time-zone prompts give only real IANA names as examples", (lang) => {
+    for (const key of ["onboarding.ask_zone_other", "onboarding.invalid_zone"] as const) {
+      const examples = [...catalogs[lang][key].matchAll(ZONE_NAME)].map((match) => match[0]);
+      expect(examples.length, `${lang} ${key}`).toBeGreaterThan(0);
+      for (const example of examples) {
+        expect(TimeZone.safeParse(example).success, `${lang} ${key} ${example}`).toBe(true);
+      }
+    }
+  });
+
+  it.each(MVP_LANGS)("%s fallback hello asks how she is this morning, not today", (lang) => {
+    expect(ABOUT_THE_DAY_SAMPLE[lang]).not.toMatch(THIS_MORNING[lang]);
+    expect(catalogs[lang]["arrival.hello"]).toMatch(THIS_MORNING[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s repeat preface does not say the message went out just now", (lang) => {
+    expect(catalogs[lang]["arrival.repeat"]).not.toMatch(JUST_NOW[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s setup asks for a new group without the kept-light member", (lang) => {
+    expect(catalogs[lang]["onboarding.done"]).toMatch(SEPARATE_GROUP[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s nearby guards recognise wording in which Vela asks", (lang) => {
+    expect(VELA_ASKS_CONTACT_SAMPLE[lang]).toMatch(VELA_ASKS_CONTACT[lang]);
+    expect(VELA_ASKS_CONTACT_SAMPLE[lang]).not.toMatch(ORGANISER_ASKS_CONTACT[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s nearby step tells the organiser to ask the contact first", (lang) => {
+    expect(catalogs[lang]["onboarding.ask_nearby"]).toMatch(ORGANISER_ASKS_CONTACT[lang]);
+    for (const key of NEARBY_KEYS) {
+      expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(VELA_ASKS_CONTACT[lang]);
+    }
+  });
+
+  it.each(MVP_LANGS)("%s nearby guard recognises a request for a phone number", (lang) => {
+    const sample = ASKS_FOR_NUMBER_SAMPLE[lang];
+    expect(sample).toMatch(NUMBER_AFTER_YES[lang]);
+    expect(sample.replace(NUMBER_AFTER_YES[lang], "")).toMatch(NUMBER_WORDS[lang]);
+  });
+
+  it.each(MVP_LANGS)(
+    "%s nearby step never asks for a phone number and says it is added after a yes",
+    (lang) => {
+      for (const key of NEARBY_KEYS) {
+        const text = catalogs[lang][key];
+        expect(text, `${lang} ${key}`).toMatch(NUMBER_AFTER_YES[lang]);
+        expect(text.replace(NUMBER_AFTER_YES[lang], ""), `${lang} ${key}`).not.toMatch(
+          NUMBER_WORDS[lang],
+        );
+      }
+    },
+  );
+
+  it.each(MVP_LANGS)("%s consent request says who runs Vela and links the notice", (lang) => {
+    expect(catalogs[lang]["consent.request"]).toContain(FOUNDER_NAME);
+    expect(catalogs[lang]["consent.request"]).toContain("{notice}");
+  });
+
+  it.each(MVP_LANGS)("%s health-words question says Vela works the same after a no", (lang) => {
+    expect(catalogs[lang]["consent.health_words"]).toMatch(NO_CHANGES_NOTHING[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s flag notice guard recognises a notice that names the signal", (lang) => {
+    expect(HEALTH_NOTICE_SAMPLE[lang]).toMatch(HEALTH_WORDS[lang]);
+    expect(catalogs[lang]["flag.notice"]).toMatch(QUOTE_MARKS);
+  });
+
+  it.each(MVP_LANGS)(
+    "%s flag notice without health-words consent carries no words, quote, or kind of signal",
+    (lang) => {
+      const text = catalogs[lang]["flag.notice_no_words"];
+      expect(text).not.toMatch(HEALTH_WORDS[lang]);
+      expect(text).not.toMatch(QUOTE_MARKS);
+    },
+  );
+
+  it.each(MVP_LANGS)("%s weekly read guard recognises another name for it", (lang) => {
+    expect(OTHER_WEEKLY_READ_NAME_SAMPLE[lang]).toMatch(OTHER_WEEKLY_READ_NAME[lang]);
+    expect(OTHER_WEEKLY_READ_NAME_SAMPLE[lang]).not.toMatch(WEEKLY_READ_NAME[lang]);
+  });
+
+  it.each(MVP_LANGS)("%s calls the weekly read by the name its privacy notice uses", (lang) => {
+    for (const key of WEEKLY_READ_KEYS) {
+      expect(catalogs[lang][key], `${lang} ${key}`).toMatch(WEEKLY_READ_NAME[lang]);
+    }
+    for (const key of englishKeys) {
+      expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(OTHER_WEEKLY_READ_NAME[lang]);
+    }
+  });
+
+  it.each(MVP_LANGS)("%s what-the-family-sees replies do not claim a week", (lang) => {
+    for (const key of ["parent.family_sees_heading", "parent.family_sees_empty"] as const) {
+      expect(catalogs[lang][key], `${lang} ${key}`).not.toMatch(WEEK[lang]);
+    }
+  });
+
+  it.each(MVP_LANGS)(
+    "%s heading over her lines calls them part of the weekly read, not the read",
+    (lang) => {
+      expect(WHOLE_WEEKLY_READ_SAMPLE[lang]).not.toMatch(PART_OF_WEEKLY_READ[lang]);
+      expect(catalogs[lang]["parent.family_sees_weekly_read"]).toMatch(PART_OF_WEEKLY_READ[lang]);
+    },
+  );
+});
+
+describe("English wording", () => {
+  it("words each weekly read count in the singular for one and the plural otherwise", () => {
+    for (const [plural, one, noun] of COUNT_KEYS) {
+      const pluralNoun = new RegExp(`\\b${noun}s\\b`);
+      const singularNoun = new RegExp(`\\b${noun}\\b`);
+      // Placeholder names such as {days} are not wording.
+      const words = (key: MessageKey): string => catalogs.en[key].replace(PLACEHOLDER, "");
+      expect(words(plural), plural).toMatch(pluralNoun);
+      expect(words(plural), plural).not.toMatch(singularNoun);
+      expect(words(one), one).toMatch(singularNoun);
+      expect(words(one), one).not.toMatch(pluralNoun);
+      // Nothing but the noun differs, so the two sentences cannot drift apart.
+      expect(catalogs.en[one].replace(singularNoun, `${noun}s`), one).toBe(catalogs.en[plural]);
+    }
+  });
+
+  it("the guards recognise the words they forbid", () => {
+    expect("Anna keeps an eye on her").toMatch(SURVEILLANCE_WORDS);
+    expect("We are checking on Mom").toMatch(SURVEILLANCE_WORDS);
+    expect("She answered").toMatch(GENDERED_PRONOUNS);
+    expect("The family will hear it; there, whenever").not.toMatch(GENDERED_PRONOUNS);
+  });
+
+  it("never frames the product as monitoring, tracking, or checking on anyone", () => {
+    for (const key of englishKeys) {
+      expect(catalogs.en[key], key).not.toMatch(SURVEILLANCE_WORDS);
+    }
+  });
+
+  it("never uses a gendered pronoun", () => {
+    for (const key of englishKeys) {
+      expect(catalogs.en[key], key).not.toMatch(GENDERED_PRONOUNS);
+    }
+  });
+});
+
+describe("Traditional Chinese wording", () => {
+  const zhTW = catalogs["zh-TW"];
+
+  it("the guards recognise the words they forbid", () => {
+    expect("她回覆了").toMatch(FORBIDDEN_ZH_TW);
+    expect("他們都好").toMatch(FORBIDDEN_ZH_TW);
+    expect("其他").not.toMatch(FORBIDDEN_ZH_TW);
+    expect("有人在監看").toMatch(FORBIDDEN_ZH_TW);
+    expect("家人會盯著").toMatch(FORBIDDEN_ZH_TW);
+    expect("我們會看著您").toMatch(FORBIDDEN_ZH_TW);
+    expect("過去看看您").not.toMatch(FORBIDDEN_ZH_TW);
+    expect("您今天早上好嗎？").toMatch(MAINLAND_TERMS);
+  });
+
+  it("the spacing guards recognise the spacing they forbid", () => {
+    expect(withSampleValues("明天{time}送到")).toMatch(LATIN_TOUCHING_HAN);
+    expect(withSampleValues("我是Vela")).toMatch(LATIN_TOUCHING_HAN);
+    expect(withSampleValues("明天 {time} 送到，問{name}")).not.toMatch(LATIN_TOUCHING_HAN);
+    expect("問 {name}一件事").toMatch(SPACED_NAME);
+    expect("{family} 的草稿").toMatch(SPACED_NAME);
+    expect("☀️ {name}回覆了{asker} · {time}").not.toMatch(SPACED_NAME);
+    expect(crowdedUrlNeighbours("查看：{link}")).toEqual(["："]);
+    expect(crowdedUrlNeighbours("查看： {link}")).toEqual([]);
+  });
+
+  it("words each weekly read count once, since Chinese has no plural", () => {
+    for (const [plural, one] of COUNT_KEYS) {
+      expect(zhTW[one], one).toBe(zhTW[plural]);
+    }
+  });
+
+  it("never uses 他 or 她, or words for monitoring, tracking, or watching over anyone", () => {
+    for (const key of englishKeys) {
+      expect(zhTW[key], key).not.toMatch(FORBIDDEN_ZH_TW);
+    }
+  });
+
+  it("is written in Traditional characters with Taiwanese vocabulary", () => {
+    for (const key of englishKeys) {
+      expect(zhTW[key], key).not.toMatch(SIMPLIFIED_ONLY);
+      expect(zhTW[key], key).not.toMatch(MAINLAND_TERMS);
+    }
+  });
+
+  it("separates Latin text, digits, and Latin placeholders from Chinese characters with a space", () => {
+    for (const key of englishKeys) {
+      expect(withSampleValues(zhTW[key]), key).not.toMatch(LATIN_TOUCHING_HAN);
+    }
+  });
+
+  it("writes name placeholders against the Chinese characters around them", () => {
+    for (const key of englishKeys) {
+      expect(zhTW[key], key).not.toMatch(SPACED_NAME);
+    }
+  });
+
+  it("translates every string that has English words in it", () => {
+    for (const key of englishKeys) {
+      const englishWords = catalogs.en[key].replace(PLACEHOLDER, "");
+      if (/[A-Za-z]/.test(englishWords)) {
+        expect(zhTW[key].replace(PLACEHOLDER, ""), key).toMatch(/\p{Script=Han}/u);
+      }
+    }
+  });
+});

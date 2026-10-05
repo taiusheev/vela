@@ -1,0 +1,19 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "21108343e0b9e1cca623a0a4b14dc51c",
+      "type": "join",
+      "mode": "active",
+      "timestamp": 1790463688281,
+      "source": {
+        "type": "room",
+        "roomId": "Rca6e8caf2a1ec2403b3dd52ecccd098a"
+      },
+      "webhookEventId": "01M3FZ7FJSASCN96JMS5Z2ABHJ",
+      "deliveryContext": {
+        "isRedelivery": false
+      }
+    }
+  ]
+}

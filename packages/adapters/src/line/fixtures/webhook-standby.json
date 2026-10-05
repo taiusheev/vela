@@ -1,0 +1,24 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "type": "message",
+      "mode": "standby",
+      "timestamp": 1790464059509,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZJT3N0XHECCHTWE2X8W5B",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "571147350115361117",
+        "type": "text",
+        "quoteToken": "Wc2Xn6Qb0Rd4Ka8Vf1Tg5Lh9Mj3Pe7Sk1Yo4Oi8Cu2Bm6Zs0Ew3Hq7Dt1Ax5Gl9N",
+        "text": "早安"
+      }
+    }
+  ]
+}

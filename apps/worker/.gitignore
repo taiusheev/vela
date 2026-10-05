@@ -1,0 +1,7 @@
+# Secrets of this Worker. `scripts/setup-environment.ts` saves staging's Cloudflare API token and
+# account id to .env, and checks `git check-ignore` before it writes. That check sees only the one
+# name it writes: a copy made by hand under another suffix, such as .env.txt or .env.bak, is not
+# matched by the root .gitignore's `.env` line, so `git add -A` would commit the token. The second
+# rule below covers the whole family of names, so no copy of it can be staged.
+.env
+.env.*

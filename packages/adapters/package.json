@@ -1,0 +1,22 @@
+{
+  "name": "@vela/adapters",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Channel adapters behind the contract in @vela/contracts. Telegram first.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vela/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

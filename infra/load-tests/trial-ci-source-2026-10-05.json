@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-10-05T05:06:30.578758+00:00",
+  "kind": "candidate-ci-source-and-postgresql-proof",
+  "gitHead": "0d95b04e946f136698d63801de8bf05b5e9e4016",
+  "runUrl": "https://github.com/taiusheev/vela/actions/runs/37265784285",
+  "event": "push",
+  "overallConclusion": "failure",
+  "jobs": [
+    {
+      "name": "lint \u00b7 typecheck \u00b7 test",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/taiusheev/vela/actions/runs/37265784285/job/111622205673"
+    },
+    {
+      "name": "contention drill (PostgreSQL 18)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/taiusheev/vela/actions/runs/37265784285/job/111622205848"
+    },
+    {
+      "name": "app flows (Maestro, demo on the web)",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/taiusheev/vela/actions/runs/37265784285/job/111622205930"
+    },
+    {
+      "name": "silence drill",
+      "status": "completed",
+      "conclusion": "skipped",
+      "url": "https://github.com/taiusheev/vela/actions/runs/37265784285/job/111622206578"
+    }
+  ],
+  "sourceCheck": {
+    "lintPassed": true,
+    "typecheckPackagesPassed": 9,
+    "testPackagesPassed": 9,
+    "testsPassed": 4109,
+    "testsSkipped": 1,
+    "skipReason": "Future multilingual completeness only; English catalogue and ICU/style checks passed."
+  },
+  "postgresql": {
+    "majorVersion": 18,
+    "testFilesPassed": 35,
+    "testsPassed": 109,
+    "durationSeconds": 46.19
+  },
+  "demoFlows": {
+    "passed": 4,
+    "failed": 4,
+    "followUp": "Update assertions for intentionally removed translation preview, unconditional book retention, unconfigured calling and deferred parent-device setup; require green CI on the next candidate."
+  },
+  "scope": {
+    "syntheticDataOnly": true,
+    "signedIPhoneProved": false,
+    "productionReadinessProved": false
+  },
+  "notes": [
+    "The overall run failed; source lint/typecheck/test and fresh PostgreSQL succeeded. This is not an overall release pass.",
+    "The latest candidate head and all required job conclusions are available from the linked pull-request checks.",
+    "Production release must still have a completed successful non-nightly ci run for the exact tagged SHA."
+  ]
+}

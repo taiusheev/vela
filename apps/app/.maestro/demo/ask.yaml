@@ -1,0 +1,25 @@
+# Ask in the explicit demo (A7): the organiser writes one question in English, sees the truthful
+# as-written language explanation and returns to Today after the simulated send.
+url: ${APP_URL}
+name: An ask goes into her morning
+tags:
+  - demo
+---
+- launchApp
+- scrollUntilVisible:
+    element: "Ask Mom something"
+    direction: DOWN
+- tapOn: "Ask Mom something"
+- assertVisible: "What are you sending?"
+- tapOn: "Say it the way you would say it"
+- inputText: "What did you have for breakfast?"
+- assertVisible: "One question at a time. The English pilot sends your words as written."
+- assertNotVisible: '.*shown to her in .+'
+- scrollUntilVisible:
+    element: "Into her morning"
+    direction: DOWN
+- tapOn: "Into her morning"
+- assertVisible: "What did the garden look like this morning?"
+- scrollUntilVisible:
+    element: "Ask Mom something"
+    direction: DOWN

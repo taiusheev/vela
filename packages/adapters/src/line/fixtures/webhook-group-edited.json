@@ -1,0 +1,26 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "dc3b7052b229ea005138a7fed7e72292",
+      "type": "messageEdited",
+      "mode": "active",
+      "timestamp": 1790463984500,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff",
+        "userId": "Ua848d9bbd60485659b74a9478b390c6f"
+      },
+      "webhookEventId": "01M3FZGGVMV96BEY4T2YEWZQ1Z",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "502621186619914619",
+        "type": "text",
+        "quoteToken": "Tm1Xc5Qa9Wd3Nb7Rf0Kg4Vh8Lj2Pe6Si0Ou3Ya7Cn1Bk5Zw9Er2Hx6Dq0Mt4Af8G",
+        "text": "/ask What did you cook for lunch today?"
+      }
+    }
+  ]
+}

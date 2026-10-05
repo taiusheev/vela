@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "headers": { "x-line-request-id": "5f0b7c2e-1d3a-4b8c-9e6f-7a2d4c1b3e90" },
+  "body": {
+    "sentMessages": [
+      {
+        "id": "533817201984417330",
+        "quoteToken": "yHAz4Ua2wx7s6Dd9EhKXPi0bF3cJtNvW8gLmR1oQpSuZkTjBeYn"
+      }
+    ]
+  }
+}

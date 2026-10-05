@@ -1,0 +1,25 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "134ace864f6224aa7c5cad8ff96184d0",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463734913,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff"
+      },
+      "webhookEventId": "01M3FZ8X418PS7SFB4VTRACAZ0",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "518941970529376963",
+        "type": "text",
+        "quoteToken": "KwfTlfs_zcqHSzNWH8sQh9efcMOF3ddESZLbsZ15wtIKKcJNO-KF-iUuEPfOb5WI",
+        "text": "/ask Did you sleep well?"
+      }
+    }
+  ]
+}

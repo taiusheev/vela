@@ -1,0 +1,16 @@
+{
+  "status": 400,
+  "body": {
+    "errors": [
+      {
+        "code": "PUSH_TOO_MANY_EXPERIENCE_IDS",
+        "message": "All push notification messages in the same request must be for the same project; separate your push notifications by project. {{token:1}} and {{token:2}} are from different projects.",
+        "details": {
+          "@vela/vela-light": ["{{token:1}}"],
+          "@vela/vela-light-dev": ["{{token:2}}"]
+        },
+        "isTransient": false
+      }
+    ]
+  }
+}

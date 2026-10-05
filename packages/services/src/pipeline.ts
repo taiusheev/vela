@@ -1,0 +1,1221 @@
+/**
+ * Understanding her answer (spec §5.2, flows §3.10): the voice is fetched, stored, and transcribed
+ * in her language; the words go to `ai.understand` and `ai.flag`, are translated into the family's
+ * language when it differs, and reach the group as a reply to the answer post; the summary line is
+ * translated into her language when it differs; a flag reaches the organisers, with her words only
+ * when she agreed that Vela may carry her health words, and the founder with a link and no words; a
+ * detected away sets a period and is confirmed to her once.
+ *
+ * Without that agreement (ADR-27) nothing understanding stores holds her health: no health mention,
+ * no `unwell`, no flag category or quote, in the answer or in `ai_calls`. The flag check still runs,
+ * because it is the safety feature.
+ *
+ * Every step is keyed per answer, so a re-run never repeats a post, a translation, a notice, or an
+ * away; and `understood_at` is written after all of them, so a run that stops half way is not taken
+ * for done. Every message the jobs write is a `queued` outbound row, written with what it is about
+ * (a flag's notices in the flag's transaction, the away's confirmation in the away's), and its
+ * delivery job goes to the queue only after the commit: a send the queue refuses is logged, not
+ * thrown, and `reconcile` re-drives the row, so no flag, away, or post waits on the outbound queue.
+ *
+ * Both jobs count an attempt when they start work on an answer (a redelivered job for a voice
+ * already transcribed or an answer already understood does nothing); the attempt that ends without
+ * a transcript or without `understood_at` at three or more tells the founder once (flows §3.15). The
+ * queue retries a job that throws up to three times, a minute apart, and every retry counts;
+ * `reconcile` re-runs only an answer with fewer than three attempts, so it takes up a run that ended
+ * without throwing, or a job that never ran, but not one that threw on every delivery, which the
+ * founder hears of from `reconcile`'s note a day later. Provider failures never throw: the light is
+ * long since on, and the queue must not retry them.
+ *
+ * While AI is off (the Workers' `AI_PROVIDER` "off") every model step takes the path of a failed
+ * call, so nothing is summarised, flagged, or translated and her words reach the group as she wrote
+ * or said them; but it is not a failure. No `ai_calls` row is written for a call that was never
+ * made, the first understanding run sets `understood_at`, and so neither the re-run nor the
+ * founder's note follows. Speech-to-text is not affected.
+ */
+import {
+  type AiCallRecord,
+  type AiOutcome,
+  type DatedPlan,
+  type FlagResult,
+  isAiOff,
+  type TranslateInput,
+  type Understanding,
+  WEEKDAYS,
+  type Weekday,
+} from "@vela/ai";
+import {
+  type AnswerKind,
+  ChannelSendError,
+  type FetchedMedia,
+  type Lang,
+  type LocalDate,
+} from "@vela/contracts";
+import { t } from "@vela/copy";
+import { localDateOf, outboundKey, weekdayOf } from "@vela/core";
+import {
+  type Answer,
+  aiCalls,
+  answers,
+  awayPeriods,
+  type Exchange,
+  exchanges,
+  type Family,
+  families,
+  type Media,
+  type Member,
+  media,
+  members,
+  memoryFacts,
+  outbound,
+  translations,
+} from "@vela/db";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
+import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
+import type { Deps, OutboundJob } from "./deps.ts";
+import { errorLabel } from "./errors.ts";
+import { recordEvent } from "./events.ts";
+import { fitMessageText, formatAwayDate } from "./format.ts";
+import { type InsertResult, insertOutbound } from "./gateway.ts";
+import { storeInboundCopy } from "./inbound-media-copy.ts";
+import { pilotFamilyAllowed, pilotMemberAllowed } from "./pilot-admission.ts";
+import { offerRecipe } from "./recipes.ts";
+import {
+  activeOrganisersWithLinks,
+  channelLinkOfMember,
+  groupChannelOf,
+  hasHealthWordsConsent,
+  linkedGroupOfFamily,
+  MESSENGER,
+  markWakeDue,
+  memberById,
+  type Queryable,
+} from "./repo.ts";
+
+/** `reconcile` stops re-running an answer at this many attempts; the founder is told then. */
+export const MAX_PROCESSING_ATTEMPTS = 3;
+
+interface AnswerContext {
+  answer: Answer;
+  member: Member;
+  family: Family;
+  exchange: Exchange;
+  asker: Member | null;
+}
+
+async function loadAnswer(deps: Deps, answerId: string): Promise<AnswerContext | null> {
+  const rows = await deps.db
+    .select({ answer: answers, member: members, family: families, exchange: exchanges })
+    .from(answers)
+    .innerJoin(exchanges, eq(exchanges.id, answers.exchangeId))
+    .innerJoin(members, eq(members.id, answers.memberId))
+    .innerJoin(families, eq(families.id, members.familyId))
+    .where(eq(answers.id, answerId))
+    .limit(1);
+  const row = rows[0];
+  if (row === undefined) {
+    deps.logger.warn("answer_missing", { answerId });
+    return null;
+  }
+  if (
+    row.family.deletedAt !== null ||
+    row.member.status !== "active" ||
+    row.member.leftAt !== null ||
+    !(await pilotFamilyAllowed(deps.db, deps.config.pilotAdmission, row.family.id)) ||
+    !(await pilotMemberAllowed(deps.db, deps.config.pilotAdmission, row.family.id, row.member.id))
+  ) {
+    deps.logger.info("answer_processing_paused", { answerId });
+    return null;
+  }
+  const asker =
+    row.exchange.askerId === null ? null : await memberById(deps.db, row.exchange.askerId);
+  return { ...row, asker };
+}
+
+/** One more start of ingestion or understanding for the answer; returns the count so far. */
+async function countAttempt(deps: Deps, answerId: string): Promise<number> {
+  const [row] = await deps.db
+    .update(answers)
+    .set({ processingAttempts: sql`${answers.processingAttempts} + 1` })
+    .where(eq(answers.id, answerId))
+    .returning({ attempts: answers.processingAttempts });
+  return row?.attempts ?? 0;
+}
+
+/** Every provider call is logged from its record: counts and codes, never content. */
+async function logAiCall(
+  deps: Deps,
+  ctx: AnswerContext,
+  record: AiCallRecord,
+  output: unknown,
+  db: Queryable = deps.db,
+): Promise<void> {
+  await db.insert(aiCalls).values({
+    familyId: ctx.family.id,
+    memberId: ctx.member.id,
+    call: record.call,
+    promptVersion: record.promptVersion,
+    model: record.model,
+    inputRef: { answer_id: ctx.answer.id },
+    output: record.ok ? output : { error: record.error ?? "failed" },
+    ok: record.ok,
+    tokensIn: record.tokensIn,
+    tokensOut: record.tokensOut,
+    tokensCached: record.tokensCached,
+    latencyMs: record.latencyMs,
+    costUsd: record.costUsd,
+    at: deps.clock.now(),
+  });
+}
+
+/**
+ * Hands the rows a job wrote, once they are committed, to the delivery queue; a duplicate was handed
+ * over by the run that wrote it. A send the queue refuses is logged and not thrown: the row is
+ * `queued`, so `reconcile` re-drives it once it is past due (`redriveStrandedOutbound`). A throw
+ * would fail the job over a message already kept, and each retry of it would count an attempt and
+ * find the row written, so it would hand nothing over; once the retries were spent, `reconcile`
+ * would not run the answer again.
+ */
+async function handOver(
+  deps: Deps,
+  answerId: string,
+  written: readonly InsertResult[],
+): Promise<void> {
+  for (const row of written) {
+    if ("duplicate" in row) {
+      continue;
+    }
+    const job: OutboundJob = { type: "deliver", outboundId: row.outboundId };
+    try {
+      await (row.delaySeconds === undefined
+        ? deps.queues.outbound.send(job)
+        : deps.queues.outbound.send(job, { delaySeconds: row.delaySeconds }));
+    } catch (error) {
+      deps.logger.error("understand_handover_failed", {
+        answerId,
+        outboundId: row.outboundId,
+        error: errorLabel(error),
+      });
+    }
+  }
+}
+
+/**
+ * After the third failed attempt the founder is told once, with a link and no content: the key
+ * names the answer, so later attempts add nothing.
+ */
+async function tellAdminUnderstandFailed(deps: Deps, ctx: AnswerContext): Promise<void> {
+  const admin = deps.config.adminConversationId;
+  if (admin === null) {
+    return;
+  }
+  const written = await insertOutbound(deps, deps.db, {
+    kind: "system",
+    idempotencyKey: outboundKey("system", {
+      conversationId: admin,
+      suffix: `understand_failed:${ctx.answer.id}`,
+    }),
+    memberId: ctx.member.id,
+    channel: ADMIN_CHANNEL,
+    conversationId: admin,
+    exchangeId: ctx.exchange.id,
+    lang: ADMIN_LANG,
+    text: t(ADMIN_LANG, "admin.understand_failed", {
+      family: ctx.family.name,
+      link: adminLink(deps.config, ctx.family.id),
+    }),
+  });
+  await handOver(deps, ctx.answer.id, [written]);
+}
+
+async function endAttemptUnresolved(
+  deps: Deps,
+  ctx: AnswerContext,
+  attempts: number,
+): Promise<void> {
+  if (attempts >= MAX_PROCESSING_ATTEMPTS) {
+    await tellAdminUnderstandFailed(deps, ctx);
+  }
+}
+
+/**
+ * The voice as bytes: from Vela's own storage when a row is already stored (a re-forwarded file, a
+ * re-run after a failed transcription), otherwise fetched from the platform and stored first. Null,
+ * logged, when neither is possible; the attempt then ends without a transcript.
+ *
+ * With storage off (`deps.media` null, decision M) the bytes come from the platform every time and
+ * no copy is kept: the row keeps the provider file id it arrived with, its storage key stays null,
+ * and speech-to-text is given the same bytes it would have been given from storage. A row stored
+ * while storage was on is read the same way, since nothing here can open its object any more.
+ */
+async function loadAudio(
+  deps: Deps,
+  ctx: AnswerContext,
+  file: Media,
+): Promise<FetchedMedia | null> {
+  const answerId = ctx.answer.id;
+  const store = deps.media;
+  if (store !== null) {
+    const copy = await storeInboundCopy(deps, file.id);
+    if (copy?.storageKey === null || copy === null) return null;
+    const stored = await store.get(copy.storageKey);
+    if (stored === null) {
+      deps.logger.error("answer_media_object_missing", { answerId, mediaId: file.id });
+    }
+    return stored;
+  }
+  if (file.providerFileId === null) {
+    deps.logger.error("answer_media_unreachable", { answerId, mediaId: file.id });
+    return null;
+  }
+  let fetched: FetchedMedia;
+  try {
+    fetched = await deps.channels.get(ctx.answer.channel).fetchMedia(file.providerFileId);
+  } catch (error) {
+    deps.logger.error("answer_media_fetch_failed", {
+      answerId,
+      code: error instanceof ChannelSendError ? error.code : "unknown",
+    });
+    return null;
+  }
+  // The message's own MIME type (a voice note's audio/ogg) is more exact than the one a download
+  // path yields, so it is kept when the platform gave one.
+  const mime = file.mime ?? fetched.mime;
+  return { body: fetched.body, mime };
+}
+
+/**
+ * `ingest_answer_media` (flows §3.10): store her voice, transcribe it with her language as the hint,
+ * keep the transcript, and hand the answer to understanding. A failed transcription is logged and
+ * ends the attempt; the voice itself is already in the group.
+ */
+export async function ingestAnswerMedia(deps: Deps, answerId: string): Promise<void> {
+  const ctx = await loadAnswer(deps, answerId);
+  if (ctx === null) {
+    return;
+  }
+  if (hasTranscript(ctx.answer)) {
+    // A redelivered job: the words are known, so the voice is not transcribed (and paid for) twice,
+    // and understanding, which stops by itself once done, is the only step left.
+    await deps.queues.understand.send({ type: "understand_answer", answerId });
+    return;
+  }
+  const attempts = await countAttempt(deps, answerId);
+  const file =
+    ctx.answer.mediaId === null
+      ? undefined
+      : (await deps.db.select().from(media).where(eq(media.id, ctx.answer.mediaId)).limit(1))[0];
+  if (file === undefined || file.kind !== "audio") {
+    deps.logger.warn("answer_media_not_audio", { answerId, kind: ctx.answer.kind });
+    return;
+  }
+  const audio = await loadAudio(deps, ctx, file);
+  if (audio === null) {
+    await endAttemptUnresolved(deps, ctx, attempts);
+    return;
+  }
+  const transcription = await deps.stt.transcribe({
+    audio: audio.body,
+    mime: audio.mime,
+    languageHint: ctx.member.language,
+  });
+  const text = transcription.text.trim();
+  const committed = await deps.db.transaction(async (tx) => {
+    const [family] = await tx
+      .select()
+      .from(families)
+      .where(eq(families.id, ctx.family.id))
+      .for("share");
+    const [member] = await tx
+      .select()
+      .from(members)
+      .where(eq(members.id, ctx.member.id))
+      .for("update");
+    const [answer] = await tx.select().from(answers).where(eq(answers.id, answerId)).for("update");
+    if (
+      member === undefined ||
+      family === undefined ||
+      answer === undefined ||
+      family.deletedAt !== null ||
+      member.status !== "active" ||
+      member.leftAt !== null ||
+      !(await pilotFamilyAllowed(tx, deps.config.pilotAdmission, ctx.family.id)) ||
+      !(await pilotMemberAllowed(tx, deps.config.pilotAdmission, ctx.family.id, ctx.member.id))
+    )
+      return false;
+    if (hasTranscript(answer)) return true;
+    await logAiCall(
+      deps,
+      ctx,
+      transcription.record,
+      {
+        language: transcription.language,
+        confidence: transcription.confidence,
+      },
+      tx,
+    );
+    if (!transcription.ok || text.length === 0) return false;
+    await tx
+      .update(answers)
+      .set({ transcript: text, transcriptLang: transcription.language ?? member.language })
+      .where(eq(answers.id, answerId));
+    return true;
+  });
+  if (!committed) {
+    deps.logger.warn("transcription_failed", {
+      answerId,
+      attempts,
+      error: transcription.record.error ?? "empty",
+    });
+    await endAttemptUnresolved(deps, ctx, attempts);
+    return;
+  }
+  await deps.queues.understand.send({ type: "understand_answer", answerId });
+}
+
+function stringField(payload: Record<string, unknown>, key: string): string | null {
+  const value = Object.hasOwn(payload, key) ? payload[key] : undefined;
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function hasTranscript(answer: Answer): boolean {
+  return answer.transcript !== null && answer.transcript.trim().length > 0;
+}
+
+/**
+ * The kinds whose words are in her language and so are translated for the family and posted under
+ * the answer post: what she wrote, said, or captioned, and a chip, which is drafted in her language.
+ * A vote option is the family's own words, and the "I'm fine", heart, and photo labels say nothing
+ * the light line does not already say in the family's language.
+ */
+const WORDS_IN_HER_LANGUAGE: ReadonlySet<AnswerKind> = new Set<AnswerKind>([
+  "text",
+  "voice",
+  "photo",
+  "sticker",
+  "other",
+  "chip",
+]);
+
+/**
+ * Her answer as words for the model: her text or transcript, the option she tapped, or the button
+ * she pressed in her language. Null when there is nothing to read (a photo without a caption).
+ */
+function wordsOf(ctx: AnswerContext): string | null {
+  const { answer, member } = ctx;
+  const lang = member.language;
+  switch (answer.kind) {
+    case "voice":
+      return hasTranscript(answer) ? answer.transcript : null;
+    case "fine":
+      return t(lang, "button.fine");
+    case "heart":
+      return t(lang, "button.heart");
+    case "chip":
+    case "vote":
+      return stringField(answer.payload, "choice");
+    case "photo_pick": {
+      const index = Object.hasOwn(answer.payload, "index") ? answer.payload.index : undefined;
+      return typeof index === "number" ? t(lang, "button.choice", { n: index + 1 }) : null;
+    }
+    default:
+      return stringField(answer.payload, "text");
+  }
+}
+
+function weekdayName(date: LocalDate): Weekday {
+  const name = WEEKDAYS[weekdayOf(date)];
+  if (name === undefined) {
+    throw new RangeError(`no weekday for ${date}`);
+  }
+  return name;
+}
+
+/** Her last three summary lines before this answer, oldest first. */
+async function recentSummaries(deps: Deps, ctx: AnswerContext): Promise<string[]> {
+  const rows = await deps.db
+    .select({ summary: answers.summary })
+    .from(answers)
+    .where(
+      and(
+        eq(answers.memberId, ctx.member.id),
+        ne(answers.id, ctx.answer.id),
+        isNotNull(answers.summary),
+        lte(answers.receivedAt, ctx.answer.receivedAt),
+      ),
+    )
+    .orderBy(desc(answers.receivedAt))
+    .limit(3);
+  return rows.flatMap((row) => (row.summary === null ? [] : [row.summary])).reverse();
+}
+
+/**
+ * A detected away becomes a period from `away.from` (never before her answer's date), unless an
+ * unended one from an answer already starts that day, and is confirmed to her once, keyed by the
+ * answer. Her scheduler decides again: the away suppresses today's repeat and quiet. The period, her
+ * wake marked due, and the confirmation's row commit together, and the queue and her scheduler are
+ * told only after, so neither can roll the away back.
+ */
+async function setAwayFromAnswer(
+  deps: Deps,
+  ctx: AnswerContext,
+  away: NonNullable<Understanding["away"]>,
+  now: Date,
+): Promise<void> {
+  const { answer, member, family, exchange } = ctx;
+  const link = await channelLinkOfMember(deps.db, member.id, answer.channel);
+  const written = await deps.db.transaction(async (tx): Promise<InsertResult[] | null> => {
+    const existing = await tx
+      .select({ id: awayPeriods.id })
+      .from(awayPeriods)
+      .where(
+        and(
+          eq(awayPeriods.memberId, member.id),
+          eq(awayPeriods.fromDate, away.from),
+          eq(awayPeriods.source, "answer"),
+          isNull(awayPeriods.endedAt),
+        ),
+      )
+      .limit(1);
+    if (existing.length > 0) {
+      return null;
+    }
+    await tx.insert(awayPeriods).values({
+      memberId: member.id,
+      fromDate: away.from,
+      toDate: away.until,
+      source: "answer",
+      createdAt: now,
+    });
+    await recordEvent(
+      tx,
+      {
+        name: "away_set",
+        familyId: family.id,
+        memberId: member.id,
+        exchangeId: exchange.id,
+        props: { source: "answer", open: away.until === null },
+      },
+      now,
+    );
+    await markWakeDue(tx, member.id, now);
+    if (link === null || link.blockedAt !== null) {
+      return [];
+    }
+    const lang = member.language;
+    const confirmation = await insertOutbound(deps, tx, {
+      kind: "system",
+      idempotencyKey: outboundKey("system", {
+        conversationId: link.externalId,
+        suffix: `away:${answer.id}`,
+      }),
+      memberId: member.id,
+      channel: link.channel,
+      conversationId: link.externalId,
+      exchangeId: exchange.id,
+      lang,
+      text:
+        away.until === null
+          ? t(lang, "away.confirmed_open")
+          : t(lang, "away.confirmed", { date: formatAwayDate(away.until, lang) }),
+    });
+    return [confirmation];
+  });
+  if (written === null) {
+    return;
+  }
+  await handOver(deps, answer.id, written);
+  try {
+    await deps.scheduler.wakeAt(member.id, now);
+  } catch (error) {
+    // Her scheduler is a Durable Object, and a call to one can fail (a deploy resets it). The
+    // transaction above marked her wake due, so `reconcile` ticks her; failing the job for the
+    // alarm would only ask the models again.
+    deps.logger.error("away_wake_failed", { answerId: answer.id, error: errorLabel(error) });
+  }
+}
+
+/**
+ * Her dated plans as memory facts (spec §12), replacing any an earlier run of the same answer kept,
+ * so a re-run keeps one set. Each ends two days after its day: the reminder made from it is due the
+ * day after, and a family member who never tapped has no use for it later.
+ */
+async function keepDatedPlans(
+  tx: Queryable,
+  ctx: AnswerContext,
+  dated: DatedPlan[],
+): Promise<void> {
+  await tx
+    .delete(memoryFacts)
+    .where(and(eq(memoryFacts.sourceAnswerId, ctx.answer.id), eq(memoryFacts.kind, "date")));
+  if (dated.length === 0) return;
+  await tx.insert(memoryFacts).values(
+    dated.map((plan) => ({
+      familyId: ctx.family.id,
+      memberId: ctx.member.id,
+      kind: "date" as const,
+      text: plan.what,
+      onDate: plan.on,
+      sourceAnswerId: ctx.answer.id,
+      expiresAt: new Date(Date.parse(`${plan.on}T00:00:00Z`) + 3 * 86_400_000),
+    })),
+  );
+}
+
+/**
+ * Her answers to a recipe ask written down as a card and offered to her (spec §10, ADR-41). A model
+ * failure is logged and leaves no card: her answer is understood all the same, and her next answer
+ * to the same ask writes the card from all of them.
+ */
+async function writeRecipeCard(deps: Deps, ctx: AnswerContext): Promise<void> {
+  const { exchange, member } = ctx;
+  try {
+    const said = await deps.db
+      .select({ payload: answers.payload, transcript: answers.transcript })
+      .from(answers)
+      .where(eq(answers.exchangeId, exchange.id))
+      .orderBy(asc(answers.receivedAt), asc(answers.id));
+    const words = said.flatMap(({ payload, transcript }) => {
+      const typed = (payload as { text?: unknown } | null)?.text;
+      const text = typeof typed === "string" ? typed : transcript;
+      return text === null || text.trim().length === 0 ? [] : [text];
+    });
+    if (words.length === 0) return;
+    const outcome = await deps.ai.recipe({
+      lang: member.language,
+      addressForm: member.addressForm ?? member.displayName,
+      ask: exchange.text,
+      answers: words.slice(-10),
+    });
+    await logOutcome(deps, ctx, outcome);
+    if (!outcome.ok) return;
+    const written = await offerRecipe(
+      deps,
+      { exchange, member, answerChannel: ctx.answer.channel },
+      outcome.value,
+    );
+    await handOver(deps, ctx.answer.id, written);
+  } catch (error) {
+    deps.logger.error("recipe_card_failed", { answerId: ctx.answer.id, error: errorLabel(error) });
+  }
+}
+
+/** The one health word in the mood list: without her consent it is not kept (flows §3.10). */
+const HEALTH_MOOD_WORD = "unwell";
+
+/**
+ * What understanding keeps without her health-words consent: no health mention and no `unwell`.
+ * The prompt already leaves them out; this holds it without a model.
+ */
+function withoutHealthWords(understanding: Understanding): Understanding {
+  return {
+    ...understanding,
+    dated: datedPlansOf(understanding, false),
+    moodWords: understanding.moodWords.filter((word) => word !== HEALTH_MOOD_WORD),
+    mentions: { ...understanding.mentions, health: [] },
+  };
+}
+
+/**
+ * Words that make a dated plan about her health: without her consent the prompt already leaves such
+ * a plan out, and this holds it without a model (ADR-27). Deliberately broad: a plan wrongly left
+ * out costs one reminder, one wrongly kept carries her health.
+ */
+const HEALTH_PLAN =
+  /doctor|clinic|hospital|dentist|dental|nurse|physio|therap|check-?up|scan|x-?ray|blood|test|medic|pharmac|surgery|operation|injection|vaccin|醫|診|藥|檢查|手術|復健|牙|看病|打針|疫苗|抽血/i;
+
+/** Her dated plans as kept: within the horizon, and none about her health without her consent. */
+function datedPlansOf(understanding: Understanding, healthWords: boolean): DatedPlan[] {
+  return healthWords
+    ? understanding.dated
+    : understanding.dated.filter((plan) => !HEALTH_PLAN.test(plan.what));
+}
+
+/** What a flag keeps without her health-words consent: whether to call, and how soon. */
+function flagWithoutWords(flag: FlagResult): FlagResult {
+  return { flag: flag.flag, severity: flag.severity, category: null, evidenceQuote: null };
+}
+
+/**
+ * The content-free reason stored with a flag: `<category>:<severity>` with her health-words
+ * consent, the severity alone without it.
+ */
+function flagReasonOf(flag: FlagResult, healthWords: boolean): string {
+  const severity = flag.severity ?? "concern";
+  return healthWords ? `${flag.category ?? "unspecified"}:${severity}` : severity;
+}
+
+/**
+ * A flag reaches each organiser (flows §3.10), and the founder with the family's name and a link,
+ * never her words (ADR-21). With her health-words consent the organisers read her words verbatim:
+ * the model's excerpt when it kept an exact one, and otherwise everything she said, because the AI
+ * layer drops an excerpt that is not an exact substring of her words but keeps the flag, and a
+ * missed signal is the expensive failure. Without it they read only that she said something worth
+ * a call. Both are `flag` rows keyed by the exchange, the reader's conversation, and the answer, and
+ * not by her consent, so a re-run after her answer changed sends nothing twice; the event is
+ * recorded once, with them. `understandAnswer` calls it in the transaction that stores the flag, so
+ * the flag and its notices are stored together or not at all, and hands the rows it returns to the
+ * queue after the commit, so a refused send cannot roll the flag back.
+ */
+async function raiseFlag(
+  deps: Deps,
+  tx: Queryable,
+  ctx: AnswerContext,
+  flag: FlagResult,
+  words: string,
+  healthWords: boolean,
+  now: Date,
+): Promise<InsertResult[]> {
+  const { answer, member, family, exchange } = ctx;
+  const quote = flag.evidenceQuote ?? words;
+  const written: InsertResult[] = [];
+  // Organisers are told on their own messenger, wherever her answer came from (ADR-35, 05 §5.11).
+  const organisers = await activeOrganisersWithLinks(tx, family.id, MESSENGER);
+  for (const organiser of organisers) {
+    const lang = organiser.member.language;
+    const result = await insertOutbound(deps, tx, {
+      kind: "flag",
+      idempotencyKey: outboundKey("flag", {
+        exchangeId: exchange.id,
+        conversationId: organiser.link.externalId,
+        suffix: answer.id,
+      }),
+      memberId: organiser.member.id,
+      channel: organiser.link.channel,
+      conversationId: organiser.link.externalId,
+      exchangeId: exchange.id,
+      lang,
+      text: healthWords
+        ? fitMessageText(t(lang, "flag.notice", { name: member.displayName, quote }))
+        : t(lang, "flag.notice_no_words", { name: member.displayName }),
+      ...(healthWords
+        ? {
+            healthWordsFor: {
+              memberId: member.id,
+              answerId: answer.id,
+              receivedAt: answer.receivedAt.toISOString(),
+            },
+          }
+        : {}),
+    });
+    written.push(result);
+  }
+  const admin = deps.config.adminConversationId;
+  if (admin !== null) {
+    const result = await insertOutbound(deps, tx, {
+      kind: "flag",
+      idempotencyKey: outboundKey("flag", {
+        exchangeId: exchange.id,
+        conversationId: admin,
+        suffix: answer.id,
+      }),
+      memberId: member.id,
+      channel: ADMIN_CHANNEL,
+      conversationId: admin,
+      exchangeId: exchange.id,
+      lang: ADMIN_LANG,
+      text: t(ADMIN_LANG, "admin.flag", {
+        family: family.name,
+        link: adminLink(deps.config, family.id),
+      }),
+    });
+    written.push(result);
+  }
+  if (written.some((result) => "outboundId" in result)) {
+    await recordEvent(
+      tx,
+      {
+        name: "flag_raised",
+        familyId: family.id,
+        memberId: member.id,
+        exchangeId: exchange.id,
+        props: healthWords
+          ? {
+              severity: flag.severity,
+              words: true,
+              category: flag.category,
+              excerpt: flag.evidenceQuote !== null,
+            }
+          : { severity: flag.severity, words: false },
+      },
+      now,
+    );
+  }
+  return written;
+}
+
+/**
+ * One `ai.translate` call about the answer, logged: the translation with the provider it is stored
+ * under, or null when the call failed, which is warned as `failure`, or when AI is off, when no call
+ * was made and nothing is logged.
+ */
+async function translated(
+  deps: Deps,
+  ctx: AnswerContext,
+  input: TranslateInput,
+  failure: "translation_failed" | "summary_translation_failed",
+): Promise<{ text: string; provider: string } | null> {
+  const outcome = await deps.ai.translate(input);
+  if (isAiOff(outcome)) {
+    return null;
+  }
+  await logAiCall(deps, ctx, outcome.record, outcome.value);
+  if (!outcome.ok) {
+    deps.logger.warn(failure, { answerId: ctx.answer.id, error: outcome.error });
+    return null;
+  }
+  return { text: outcome.value.text, provider: `claude:${outcome.record.promptVersion}` };
+}
+
+/**
+ * Her words in the family's language when it differs from hers: the stored translation when one
+ * exists (a re-run), otherwise one `ai.translate` call whose result is kept per answer and language.
+ */
+async function translateWords(
+  deps: Deps,
+  ctx: AnswerContext,
+  words: string,
+): Promise<string | null> {
+  const { answer, member, family } = ctx;
+  if (family.language === member.language) {
+    return null;
+  }
+  const [existing] = await deps.db
+    .select({ text: translations.text })
+    .from(translations)
+    .where(
+      and(
+        eq(translations.objectType, "answer"),
+        eq(translations.objectId, answer.id),
+        eq(translations.lang, family.language),
+      ),
+    )
+    .limit(1);
+  if (existing !== undefined) {
+    return existing.text;
+  }
+  const translation = await translated(
+    deps,
+    ctx,
+    {
+      text: words,
+      from: member.language,
+      to: family.language,
+      speaker: {
+        name: member.displayName,
+        ageBand: member.ageBand ?? "elder",
+        addressForm: member.addressForm,
+      },
+      listener: { name: family.name, ageBand: "adult", addressForm: null },
+      relationship: "a family elder to the family group that keeps a light on for them",
+    },
+    "translation_failed",
+  );
+  if (translation === null) {
+    return null;
+  }
+  await deps.db
+    .insert(translations)
+    .values({
+      objectType: "answer",
+      objectId: answer.id,
+      lang: family.language,
+      text: translation.text,
+      provider: translation.provider,
+      createdAt: deps.clock.now(),
+    })
+    .onConflictDoNothing();
+  return translation.text;
+}
+
+/**
+ * Removes her copy of a summary that is being rewritten. `understandAnswer` calls it in the
+ * transaction that writes the new summary, so no read finds the old translation next to the new
+ * summary, and a job that stops before the new one is translated cannot leave the old one behind.
+ */
+async function dropSummaryForHer(tx: Queryable, ctx: AnswerContext): Promise<void> {
+  const { answer, member, family } = ctx;
+  if (family.language === member.language) {
+    return;
+  }
+  await tx
+    .delete(translations)
+    .where(
+      and(
+        eq(translations.objectType, "answer"),
+        eq(translations.objectId, answer.id),
+        eq(translations.lang, member.language),
+      ),
+    );
+}
+
+/**
+ * The summary line in her language, for "what does the family see" (flows §3.13): `ai.understand`
+ * writes it in the family's language, so when hers differs it is translated and kept as the
+ * answer's `translations` row in her language. That row can only be the summary, since her words
+ * are in her language already (their translation is the row in the family's). A re-run that keeps
+ * the summary keeps the row; one that rewrites it has already removed the row with the summary
+ * write (`dropSummaryForHer`) and stores the new translation here, so she never reads a summary the
+ * family no longer has. A failed translation stores nothing, and she reads the summary as the
+ * family does.
+ */
+async function translateSummaryForHer(
+  deps: Deps,
+  ctx: AnswerContext,
+  summary: string,
+): Promise<void> {
+  const { answer, member, family } = ctx;
+  if (family.language === member.language) {
+    return;
+  }
+  if (answer.summary === summary) {
+    const kept = await summariesForHer(deps.db, [answer.id], member.language);
+    if (kept.has(answer.id)) {
+      return;
+    }
+  }
+  const translation = await translated(
+    deps,
+    ctx,
+    {
+      text: summary,
+      from: family.language,
+      to: member.language,
+      speaker: { name: family.name, ageBand: "adult", addressForm: null },
+      listener: {
+        name: member.displayName,
+        ageBand: member.ageBand ?? "elder",
+        addressForm: member.addressForm,
+      },
+      relationship: "the family's one-line note on the listener's answer, shown to her",
+    },
+    "summary_translation_failed",
+  );
+  if (translation === null) {
+    return;
+  }
+  const row = { ...translation, createdAt: deps.clock.now() };
+  await deps.db
+    .insert(translations)
+    .values({ objectType: "answer", objectId: answer.id, lang: member.language, ...row })
+    .onConflictDoUpdate({
+      target: [translations.objectType, translations.objectId, translations.lang],
+      set: row,
+    });
+}
+
+/**
+ * Her answers' summaries in her language, by answer id: the `translations` row in her language that
+ * `understandAnswer` writes for the summary when the family writes in another. An answer without
+ * one (the languages match, the translation failed, or retention removed it after 30 days) is
+ * missing from the map, and its summary is read as stored.
+ */
+export async function summariesForHer(
+  db: Queryable,
+  answerIds: readonly string[],
+  lang: Lang,
+): Promise<Map<string, string>> {
+  if (answerIds.length === 0) {
+    return new Map();
+  }
+  const rows = await db
+    .select({ answerId: translations.objectId, text: translations.text })
+    .from(translations)
+    .where(
+      and(
+        eq(translations.objectType, "answer"),
+        inArray(translations.objectId, [...answerIds]),
+        eq(translations.lang, lang),
+      ),
+    );
+  return new Map(rows.map((row) => [row.answerId, row.text]));
+}
+
+/**
+ * The platform id of the sent answer post, so the transcript can reply to it; null until sent, and
+ * null when it went to the group before an upgrade moved it to `conversationId`, where that id names
+ * another message (flows §3.3).
+ */
+async function answerPostMessageId(
+  deps: Deps,
+  ctx: AnswerContext,
+  conversationId: string,
+): Promise<string | null> {
+  const [row] = await deps.db
+    .select({ externalId: outbound.externalId })
+    .from(outbound)
+    .where(
+      and(
+        eq(
+          outbound.idempotencyKey,
+          outboundKey("answer_post", { exchangeId: ctx.exchange.id, suffix: ctx.answer.id }),
+        ),
+        eq(outbound.status, "sent"),
+        eq(outbound.conversationId, conversationId),
+      ),
+    )
+    .limit(1);
+  return row?.externalId ?? null;
+}
+
+/**
+ * The transcript of a voice answer, with its translation, or the translation alone of a written
+ * one, as a reply to the answer post: one `answer_post` keyed by the exchange and `<answer>:transcript`.
+ */
+async function postWordsToGroup(
+  deps: Deps,
+  ctx: AnswerContext,
+  words: string,
+  translation: string | null,
+): Promise<void> {
+  const { answer, member, family, exchange } = ctx;
+  const lang = family.language;
+  const name = member.displayName;
+  const lines: string[] = [];
+  if (answer.kind === "voice") {
+    lines.push(t(lang, "group.answer_transcript", { name, text: words }));
+    if (translation !== null) {
+      lines.push(translation);
+    }
+  } else if (translation !== null) {
+    lines.push(t(lang, "group.answer_text", { name, text: translation }));
+  }
+  if (lines.length === 0) {
+    return;
+  }
+  const channel = groupChannelOf(answer.channel);
+  const group = await linkedGroupOfFamily(deps.db, family.id, channel);
+  if (group === null) {
+    return;
+  }
+  const replyTo = await answerPostMessageId(deps, ctx, group.conversationId);
+  const written = await insertOutbound(deps, deps.db, {
+    kind: "answer_post",
+    idempotencyKey: outboundKey("answer_post", {
+      exchangeId: exchange.id,
+      suffix: `${answer.id}:transcript`,
+    }),
+    memberId: member.id,
+    channel: group.channel,
+    conversationId: group.conversationId,
+    exchangeId: exchange.id,
+    lang,
+    text: fitMessageText(lines.join("\n")),
+    replyToMessageId: replyTo ?? undefined,
+    ref: { purpose: "answer_post", exchangeId: exchange.id, memberId: member.id },
+  });
+  await handOver(deps, answer.id, [written]);
+}
+
+/** Logs the call behind a model step; with AI off there was none, so nothing is logged. */
+async function logOutcome<T>(
+  deps: Deps,
+  ctx: AnswerContext,
+  outcome: AiOutcome<T>,
+  db: Queryable = deps.db,
+): Promise<void> {
+  if (!isAiOff(outcome)) {
+    await logAiCall(deps, ctx, outcome.record, outcome.value, db);
+  }
+}
+
+/**
+ * Whether a model step leaves nothing to try again: it succeeded, or AI is off, which is a setting
+ * rather than a failure, so the answer is neither re-run nor reported to the founder as unreadable.
+ * A step that failed is tried again by `reconcile`.
+ */
+function settled<T>(outcome: AiOutcome<T>): boolean {
+  return outcome.ok || isAiOff(outcome);
+}
+
+/**
+ * `understand_answer` (flows §3.10). `understood_at` is set only when `ai.understand` and `ai.flag`
+ * both returned ok, or AI is off; a failed translation does not hold it back. It is written last,
+ * after the rows of the flag's notices, the away, and the post to the group, so a run that stops on
+ * the way is run again rather than taken for done; each row goes to the delivery queue after its
+ * commit, and a refused send is logged, not thrown (`handOver`). With AI off nothing the models
+ * return is stored: no summary, mentions, mood words, away, or flag. An answer with nothing to read
+ * (a photo without words) is understood at once, so it is never re-run.
+ */
+export async function understandAnswer(deps: Deps, answerId: string): Promise<void> {
+  const ctx = await loadAnswer(deps, answerId);
+  if (ctx === null) {
+    return;
+  }
+  if (ctx.answer.understoodAt !== null) {
+    // A redelivered job: the model is not asked twice, and every message it could produce was
+    // written before `understood_at` was.
+    deps.logger.info("understand_already_done", { answerId });
+    return;
+  }
+  const attempts = await countAttempt(deps, answerId);
+  const { answer, member, family, exchange, asker } = ctx;
+  const now = deps.clock.now();
+  const words = wordsOf(ctx);
+  if (words === null) {
+    if (answer.kind === "voice") {
+      // Understanding follows a transcript; without one, ingestion is the job to re-run.
+      deps.logger.warn("understand_without_transcript", { answerId, attempts });
+      return;
+    }
+    await deps.db.update(answers).set({ understoodAt: now }).where(eq(answers.id, answerId));
+    return;
+  }
+
+  const today = localDateOf(answer.receivedAt, member.tz);
+  const addressForm = member.addressForm ?? member.displayName;
+  const ask =
+    exchange.type === "hello"
+      ? null
+      : { askerName: asker?.displayName ?? family.name, type: exchange.type, text: exchange.text };
+  const content = { kind: answer.kind, text: words };
+  const summaries = await recentSummaries(deps, ctx);
+  // Read on every attempt: a yes given after the answer arrived, or withdrawn since, counts as none.
+  const healthWords = await hasHealthWordsConsent(deps.db, member.id, answer.receivedAt);
+
+  const modelUnderstanding = await deps.ai.understand({
+    lang: member.language,
+    summaryLang: family.language,
+    addressForm,
+    today,
+    todayWeekday: weekdayName(today),
+    ask,
+    answer: content,
+    recentSummaries: summaries,
+    healthWordsConsent: healthWords,
+  });
+  const modelFlag = await deps.ai.flag({
+    lang: member.language,
+    addressForm,
+    ask,
+    answer: content,
+    recentSummaries: summaries,
+  });
+  // Provider calls run outside the lock. Their output is not retained until the same member lock
+  // used by Stop/withdrawal has revalidated the current permission and family lifecycle.
+  const committed = await deps.db.transaction(async (tx) => {
+    const [currentFamily] = await tx
+      .select()
+      .from(families)
+      .where(eq(families.id, family.id))
+      .for("share");
+    const [currentMember] = await tx
+      .select()
+      .from(members)
+      .where(eq(members.id, member.id))
+      .for("update");
+    const [currentAnswer] = await tx
+      .select()
+      .from(answers)
+      .where(eq(answers.id, answerId))
+      .for("update");
+    if (
+      currentMember === undefined ||
+      currentFamily === undefined ||
+      currentAnswer === undefined ||
+      currentFamily.deletedAt !== null ||
+      currentMember.leftAt !== null ||
+      currentMember.status !== "active" ||
+      !(await pilotFamilyAllowed(tx, deps.config.pilotAdmission, family.id)) ||
+      !(await pilotMemberAllowed(tx, deps.config.pilotAdmission, family.id, member.id)) ||
+      currentAnswer.understoodAt !== null
+    ) {
+      if (currentAnswer !== undefined && currentMember?.status === "paused") {
+        await tx.update(answers).set({ understoodAt: now }).where(eq(answers.id, answerId));
+      }
+      return null;
+    }
+    const mayKeepHealth =
+      healthWords && (await hasHealthWordsConsent(tx, member.id, answer.receivedAt));
+    const safeUnderstanding = withoutHealthWords(modelUnderstanding.value);
+    // A summary generated with permission may itself contain health words. A late withdrawal
+    // discards all derived text, rather than asking a heuristic to decide which words are safe.
+    const understanding = mayKeepHealth
+      ? modelUnderstanding
+      : {
+          ...modelUnderstanding,
+          value: healthWords
+            ? {
+                ...safeUnderstanding,
+                summary: "",
+                mentions: { people: [], places: [], plans: [], health: [], dates: [] },
+                away: null,
+                dated: [],
+              }
+            : safeUnderstanding,
+        };
+    const flag = mayKeepHealth
+      ? modelFlag
+      : { ...modelFlag, value: flagWithoutWords(modelFlag.value) };
+    await logOutcome(deps, ctx, understanding, tx);
+    await logOutcome(deps, ctx, flag, tx);
+    let notices: InsertResult[] = [];
+    if (understanding.ok || flag.ok) {
+      await tx
+        .update(answers)
+        .set({
+          ...(understanding.ok
+            ? {
+                summary: understanding.value.summary,
+                moodWords: understanding.value.moodWords,
+                mentions: understanding.value.mentions,
+                awayUntil: understanding.value.away?.until ?? null,
+              }
+            : {}),
+          ...(flag.ok
+            ? {
+                flag: flag.value.flag,
+                flagReason: flag.value.flag ? flagReasonOf(flag.value, mayKeepHealth) : null,
+              }
+            : {}),
+        })
+        .where(eq(answers.id, answerId));
+      if (understanding.ok && deps.config.memory) {
+        await keepDatedPlans(tx, ctx, understanding.value.dated);
+      }
+      if (understanding.ok && understanding.value.summary !== answer.summary) {
+        await dropSummaryForHer(tx, ctx);
+      }
+      // First, with the flag itself: a flag that reached no one is the expensive failure.
+      notices =
+        flag.ok && flag.value.flag
+          ? await raiseFlag(deps, tx, ctx, flag.value, words, mayKeepHealth, now)
+          : [];
+    }
+    return { understanding, flag, notices };
+  });
+  if (committed === null) return;
+  const { understanding, flag, notices } = committed;
+  const understood = settled(understanding) && settled(flag);
+  await handOver(deps, answerId, notices);
+
+  if (understanding.ok && understanding.value.away !== null) {
+    await setAwayFromAnswer(deps, ctx, understanding.value.away, now);
+  }
+  if (WORDS_IN_HER_LANGUAGE.has(answer.kind)) {
+    const translation = await translateWords(deps, ctx, words);
+    await postWordsToGroup(deps, ctx, words, translation);
+  }
+  // After the family's post, which matters more than her copy of the summary.
+  if (understanding.ok) {
+    await translateSummaryForHer(deps, ctx, understanding.value.summary);
+  }
+  if (exchange.type === "recipe" && deps.config.book) {
+    await writeRecipeCard(deps, ctx);
+  }
+
+  if (!understood) {
+    deps.logger.warn("understanding_incomplete", {
+      answerId,
+      attempts,
+      understand: understanding.ok,
+      flag: flag.ok,
+    });
+    await endAttemptUnresolved(deps, ctx, attempts);
+    return;
+  }
+  // Last: a run that stops before this line (a lost connection, a Worker stopped mid-run) throws or
+  // dies with `understood_at` still null, so the queue's retry runs the answer again, and the keys
+  // above let that run write only what is missing. A refused hand-over is not such a stop: its row
+  // is written, and `reconcile` re-drives it.
+  await deps.db.update(answers).set({ understoodAt: now }).where(eq(answers.id, answerId));
+}

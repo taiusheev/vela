@@ -1,0 +1,24 @@
+{
+  "update_id": 873920393,
+  "message": {
+    "message_id": 1,
+    "from": {
+      "id": 1087968824,
+      "is_bot": true,
+      "first_name": "Group",
+      "username": "GroupAnonymousBot"
+    },
+    "sender_chat": {
+      "id": -1002214567890,
+      "title": "Chen family",
+      "type": "supergroup"
+    },
+    "chat": {
+      "id": -1002214567890,
+      "title": "Chen family",
+      "type": "supergroup"
+    },
+    "date": 1789038060,
+    "migrate_from_chat_id": -4567812390
+  }
+}

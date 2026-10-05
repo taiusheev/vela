@@ -1,0 +1,18 @@
+{
+  "update_id": 873920430,
+  "channel_post": {
+    "message_id": 42,
+    "sender_chat": {
+      "id": -1001987654321,
+      "title": "Vela updates",
+      "type": "channel"
+    },
+    "chat": {
+      "id": -1001987654321,
+      "title": "Vela updates",
+      "type": "channel"
+    },
+    "date": 1789275600,
+    "text": "Vela is back online."
+  }
+}

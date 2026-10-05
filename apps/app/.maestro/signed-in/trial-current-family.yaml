@@ -1,0 +1,20 @@
+# Precondition: already linked to an approved synthetic Telegram family in trial-mode staging.
+# TEST_PARENT_NAME is a synthetic label, never a participant name or private account identifier.
+appId: family.vela.light
+name: A linked trial organiser sees genuine family data
+tags:
+  - signed-in
+  - trial
+---
+- launchApp
+- tapOn: "Today"
+- extendedWaitUntil:
+    visible: ${TEST_PARENT_NAME}
+    timeout: 20000
+- assertVisible: "Updated .*"
+- assertNotVisible: "Connect your Telegram family"
+- assertNotVisible: "Start the 30 days"
+- tapOn: "Exchanges"
+- assertNotVisible: "Who are you keeping a light on for?"
+- tapOn: "Today"
+- assertVisible: ${TEST_PARENT_NAME}

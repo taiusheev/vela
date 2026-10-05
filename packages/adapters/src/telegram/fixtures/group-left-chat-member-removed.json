@@ -1,0 +1,32 @@
+{
+  "update_id": 873920443,
+  "message": {
+    "message_id": 1242,
+    "from": {
+      "id": 5829174630,
+      "is_bot": false,
+      "first_name": "Anna",
+      "last_name": "Chen",
+      "username": "anna_chen",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": -1002214567890,
+      "title": "Chen family",
+      "type": "supergroup"
+    },
+    "date": 1789311900,
+    "left_chat_participant": {
+      "id": 1938475620,
+      "is_bot": false,
+      "first_name": "Sam",
+      "username": "samlin88"
+    },
+    "left_chat_member": {
+      "id": 1938475620,
+      "is_bot": false,
+      "first_name": "Sam",
+      "username": "samlin88"
+    }
+  }
+}

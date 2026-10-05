@@ -1,0 +1,36 @@
+{
+  "update_id": 873920416,
+  "message": {
+    "message_id": 1216,
+    "from": {
+      "id": 1938475620,
+      "is_bot": false,
+      "first_name": "Sam",
+      "username": "samlin88",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": -1002214567890,
+      "title": "Chen family",
+      "type": "supergroup"
+    },
+    "date": 1789261200,
+    "reply_to_message": {
+      "message_id": 1215,
+      "from": {
+        "id": 7412589630,
+        "is_bot": true,
+        "first_name": "Vela Light",
+        "username": "VelaLightBot"
+      },
+      "chat": {
+        "id": -1002214567890,
+        "title": "Chen family",
+        "type": "supergroup"
+      },
+      "date": 1789258530,
+      "text": "Mom answered Anna:\n“今天去市場買了空心菜”\n(Today I went to the market and bought water spinach.)"
+    },
+    "text": "Water spinach with garlic, my favourite! 😋"
+  }
+}

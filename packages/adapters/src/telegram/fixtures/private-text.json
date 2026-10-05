@@ -1,0 +1,21 @@
+{
+  "update_id": 873920411,
+  "message": {
+    "message_id": 318,
+    "from": {
+      "id": 6023817745,
+      "is_bot": false,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "language_code": "zh-hant"
+    },
+    "chat": {
+      "id": 6023817745,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "type": "private"
+    },
+    "date": 1789258325,
+    "text": "今天去市場買了空心菜"
+  }
+}

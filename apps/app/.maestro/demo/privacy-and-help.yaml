@@ -1,0 +1,19 @@
+# The English cohort keeps parents on Telegram: unavailable parent-phone setup is hidden, while
+# privacy, separate health consent and the founder's data-request/help routes remain visible.
+url: ${APP_URL}
+name: Privacy and help remain available while parent phone setup is deferred
+tags:
+  - demo
+---
+- launchApp
+- tapOn: "You"
+- assertNotVisible: "Set it up"
+- scrollUntilVisible:
+    element: "PRIVACY AND HELP"
+    direction: DOWN
+- assertVisible: "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
+- assertVisible: "Read the privacy notice"
+- assertVisible: "Get help or request your data"
+- assertVisible: "t.aiusheev@gmail.com"
+- assertVisible: "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
+- assertNotVisible: "Set it up"

@@ -1,0 +1,598 @@
+/**
+ * Silence (spec §8, flows §3.12): a quiet event opens when her morning goes unanswered past
+ * T_quiet, organisers are told (at once, or after the learning period's eight hours), a "wait 2
+ * hours" tap brings the notice back, and any answer or a "she's fine" tap closes it and tells
+ * everyone who was told. Nothing is ever sent to a nearby contact: their names and numbers are
+ * listed for the organiser to call.
+ */
+import type { Button, InboundEvent, LocalDate } from "@vela/contracts";
+import { t } from "@vela/copy";
+import {
+  addMinutes,
+  type ButtonAction,
+  encodeButton,
+  outboundKey,
+  SCHEDULE,
+  TUNING,
+} from "@vela/core";
+import {
+  type Exchange,
+  type Family,
+  type Member,
+  type QuietEvent,
+  quietEvents,
+  type VelaTransaction,
+} from "@vela/db";
+import { and, eq, isNull } from "drizzle-orm";
+import { quietNobodyToldAlert } from "./admin-alerts.ts";
+import { arrivalChannelOf } from "./arrivals.ts";
+import type { Deps } from "./deps.ts";
+import { errorLabel } from "./errors.ts";
+import { recordEvent } from "./events.ts";
+import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
+import { directReplyOf, enqueueOutbound, type OutboundRequest } from "./gateway.ts";
+import { lookInStandDowns } from "./nearby-ask.ts";
+import { quietPushNotice } from "./push-messages.ts";
+import { closingNoticesFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
+import {
+  type AnsweredDay,
+  channelLinkOfMember,
+  consentedNearbyContacts,
+  familyById,
+  firstAnswersByDate,
+  lockExchangeForLocalDate,
+  markWakeDue,
+  memberByChannelUser,
+  memberById,
+  quietEventById,
+  reachableOrganisers,
+  recentAnsweredDays,
+} from "./repo.ts";
+
+/** `Button.label` allows at most 64 characters, and her name is the family's own words. */
+const LABEL_MAX_LENGTH = 64;
+
+export type QuietButtonAction = Extract<ButtonAction, { type: "quiet_fine" | "quiet_wait" }>;
+
+interface QuietContext {
+  member: Member;
+  family: Family;
+  exchange: Exchange;
+  /**
+   * She blocked the bot after this morning reached her, and her link is still blocked: the light
+   * pauses without a quiet notice (architecture §14), so no quiet opens and nobody is told for the
+   * first time, while a notice a wait asked for still goes (flows §3.12).
+   */
+  blockedSinceDelivery: boolean;
+}
+
+async function loadQuietContext(
+  deps: Deps,
+  tx: VelaTransaction,
+  memberId: string,
+  date: LocalDate,
+): Promise<QuietContext | null> {
+  const member = await memberById(tx, memberId);
+  const family = member === null ? null : await familyById(tx, member.familyId);
+  // Locked, so the answer that lands while the tick is deciding is either already visible here or
+  // waits for this transaction and then resolves what it opened.
+  const exchange = await lockExchangeForLocalDate(tx, memberId, date);
+  if (member === null || family === null || exchange === null) {
+    deps.logger.warn("quiet_context_missing", { memberId, date });
+    return null;
+  }
+  // Silence is measured from a delivery: a morning that never reached her, or whose delivery
+  // failed, opens no quiet event (flows §3.7), however the decision that got here was made.
+  if (exchange.deliveredAt === null || exchange.deliveryFailedAt !== null) {
+    deps.logger.warn("quiet_without_delivery", { memberId, date, exchangeId: exchange.id });
+    return null;
+  }
+  // A morning she has answered is never quiet (flows §3.12), and an answer counts for the local date
+  // it arrives on, whichever exchange it attached to (flows §3.9): a message before the arrival, or
+  // a tap on an older arrival's buttons. The schedule decided this from state read before the
+  // transaction, so a day answered since then is caught only here. An answer to another exchange
+  // takes this lock too (`lightTheLight`), so it is visible here or closes what this opens.
+  if (
+    exchange.answeredAt !== null ||
+    (await firstAnswersByDate(tx, memberId, member.tz, date, date)).has(date)
+  ) {
+    deps.logger.info("quiet_after_answer", { memberId, date, exchangeId: exchange.id });
+    return null;
+  }
+  // Whether she blocked the bot after this morning reached her: the schedule holds such a morning
+  // back (`blockedAt`), but her block can land after it decided. A morning delivered after the
+  // block shows she had unblocked unheard, so that stale mark changes nothing.
+  const link = await channelLinkOfMember(tx, memberId, arrivalChannelOf(member));
+  const blockedSinceDelivery =
+    link !== null &&
+    link.blockedAt !== null &&
+    exchange.deliveredAt.getTime() <= link.blockedAt.getTime();
+  return { member, family, exchange, blockedSinceDelivery };
+}
+
+function logHeldByBlock(deps: Deps, ctx: QuietContext, date: LocalDate): void {
+  deps.logger.info("quiet_link_blocked", {
+    memberId: ctx.member.id,
+    date,
+    exchangeId: ctx.exchange.id,
+  });
+}
+
+function fitLabel(text: string): string {
+  if (text.length <= LABEL_MAX_LENGTH) {
+    return text;
+  }
+  let kept = "";
+  for (const character of text) {
+    if (kept.length + character.length > LABEL_MAX_LENGTH - 1) {
+      break;
+    }
+    kept += character;
+  }
+  return `${kept.trimEnd()}…`;
+}
+
+/**
+ * When she usually answers: the median wall-clock time of her last answered days, in her zone,
+ * around her arrival time (`medianTimeAround`), so answers on both sides of midnight give a time
+ * near midnight. Null until her rhythm is known (spec §8: from the 14th answered day).
+ */
+export function usualAnswerTime(
+  days: readonly AnsweredDay[],
+  her: Pick<Member, "tz" | "arrivalTime">,
+): string | null {
+  if (days.length < TUNING.minSamples) {
+    return null;
+  }
+  return medianTimeAround(
+    days.map((day) => day.answeredAt),
+    her.tz,
+    her.arrivalTime,
+  );
+}
+
+/**
+ * One notice per active organiser on each channel they can be told on — their Telegram link, and,
+ * while push is on, their phones (ADR-34) — keyed by the round (the event's notify count before
+ * this round), so a re-notification after "wait" is a new message and a replay of the same round is
+ * not.
+ */
+async function sendQuietNotices(
+  deps: Deps,
+  tx: VelaTransaction,
+  ctx: QuietContext & { quiet: QuietEvent },
+): Promise<void> {
+  const { member, family, exchange, quiet } = ctx;
+  const organisers = await reachableOrganisers(tx, family.id, NOTICE_CHANNEL, deps.push !== null);
+  if (organisers.length === 0) {
+    // Nobody who could be told: an app-made family with no phone that can be told (or push off),
+    // or one whose last organiser was marked left or blocked the bot. Her silence must not end here
+    // unheard, so the founder hears it.
+    deps.logger.error("quiet_notice_nobody_told", { familyId: family.id, memberId: member.id });
+    const alert = quietNobodyToldAlert(deps, {
+      quietId: quiet.id,
+      round: quiet.notifyCount,
+      her: member,
+      family,
+    });
+    if (alert !== null) {
+      await enqueueOutbound(deps, tx, alert);
+    }
+    return;
+  }
+  const contacts = await consentedNearbyContacts(tx, member.id);
+  const usual = usualAnswerTime(await recentAnsweredDays(tx, member, TUNING.minSamples), member);
+  const sent = formatTime(exchange.deliveredAt ?? quiet.openedAt, member.tz);
+  const name = member.displayName;
+
+  for (const organiser of organisers) {
+    const lang = organiser.member.language;
+    // Push (ADR-34): the organiser's phones hear it too, in the fewer words a lock screen may show.
+    const userId = organiser.member.userId;
+    if (organiser.push && userId !== null) {
+      await enqueueOutbound(
+        deps,
+        tx,
+        quietPushNotice({
+          quiet,
+          reader: { member: organiser.member, userId },
+          herName: name,
+          sent,
+        }),
+      );
+    }
+    const [link] = organiser.links;
+    if (link === undefined) {
+      continue;
+    }
+    const paragraphs = [
+      usual === null
+        ? t(lang, "quiet.notice_no_usual", { name, sent })
+        : t(lang, "quiet.notice", { name, sent, usual }),
+    ];
+    if (contacts.length > 0) {
+      paragraphs.push(t(lang, "quiet.nearby", { contacts: formatNearbyContacts(lang, contacts) }));
+    }
+    const buttons: Button[][] = [
+      [
+        {
+          id: encodeButton({ type: "quiet_fine", quietEventId: quiet.id }),
+          label: fitLabel(t(lang, "quiet.fine_button", { name })),
+        },
+        {
+          id: encodeButton({ type: "quiet_wait", quietEventId: quiet.id }),
+          label: t(lang, "quiet.wait_button"),
+        },
+      ],
+    ];
+    await enqueueOutbound(deps, tx, {
+      kind: "quiet_notice",
+      idempotencyKey: outboundKey("quiet_notice", {
+        quietEventId: quiet.id,
+        memberId: organiser.member.id,
+        suffix: String(quiet.notifyCount),
+      }),
+      memberId: organiser.member.id,
+      channel: link.channel,
+      conversationId: link.externalId,
+      exchangeId: exchange.id,
+      lang,
+      text: paragraphs.join("\n\n"),
+      buttons,
+      ref: { purpose: "quiet_notice", exchangeId: exchange.id, quietEventId: quiet.id },
+      effect: {
+        quietEventId: quiet.id,
+        notifyCount: quiet.notifyCount + 1,
+        notifiedMemberId: organiser.member.id,
+      },
+    });
+  }
+}
+
+/**
+ * Opens the quiet event for her exchange of that date and, when `notify`, tells the organisers in
+ * the same transaction. `last_notified_at` is set as the notices are enqueued, so the next schedule
+ * decision does not ask again before they are out. An event already open is left as it is.
+ */
+export async function openQuiet(
+  deps: Deps,
+  memberId: string,
+  date: LocalDate,
+  notify: boolean,
+): Promise<void> {
+  const now = deps.clock.now();
+  await deps.db.transaction(async (tx) => {
+    const ctx = await loadQuietContext(deps, tx, memberId, date);
+    if (ctx === null) {
+      return;
+    }
+    if (ctx.blockedSinceDelivery) {
+      logHeldByBlock(deps, ctx, date);
+      return;
+    }
+    const [quiet] = await tx
+      .insert(quietEvents)
+      .values({
+        exchangeId: ctx.exchange.id,
+        memberId,
+        openedAt: now,
+        lastNotifiedAt: notify ? now : null,
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (quiet === undefined) {
+      return;
+    }
+    if (notify) {
+      await sendQuietNotices(deps, tx, { ...ctx, quiet });
+    }
+  });
+}
+
+/**
+ * The schedule's own rule (core's `decideSchedule`), checked again under the row lock: a notice is
+ * due when nobody was told yet, or a wait has passed since the last notice. Two ticks deciding at
+ * once, or a decision made on stale state, then cannot send a round twice.
+ */
+function notificationDue(quiet: QuietEvent, now: Date): boolean {
+  return quiet.lastNotifiedAt === null || waitHasRunOut(quiet, now);
+}
+
+/** A "wait 2 hours" asked for since the last notice, if any, has run out. */
+function waitHasRunOut(quiet: QuietEvent, now: Date): boolean {
+  return (
+    quiet.waitUntil !== null &&
+    (quiet.lastNotifiedAt === null || quiet.waitUntil.getTime() > quiet.lastNotifiedAt.getTime()) &&
+    now.getTime() >= quiet.waitUntil.getTime()
+  );
+}
+
+/** Tells the organisers about an open, unresolved quiet event whose notice is due. */
+export async function notifyQuiet(deps: Deps, memberId: string, date: LocalDate): Promise<void> {
+  const now = deps.clock.now();
+  await deps.db.transaction(async (tx) => {
+    const ctx = await loadQuietContext(deps, tx, memberId, date);
+    if (ctx === null) {
+      return;
+    }
+    const [quiet] = await tx
+      .select()
+      .from(quietEvents)
+      .where(eq(quietEvents.exchangeId, ctx.exchange.id))
+      .for("update");
+    if (quiet === undefined || quiet.resolvedAt !== null || !notificationDue(quiet, now)) {
+      return;
+    }
+    // Her block holds back a first notice, not the one a wait asked for: the organisers already
+    // know of this quiet and were told when Vela would look again (`quiet.waiting`, spec §8).
+    if (ctx.blockedSinceDelivery && !waitHasRunOut(quiet, now)) {
+      logHeldByBlock(deps, ctx, date);
+      return;
+    }
+    await tx.update(quietEvents).set({ lastNotifiedAt: now }).where(eq(quietEvents.id, quiet.id));
+    await sendQuietNotices(deps, tx, { ...ctx, quiet });
+  });
+}
+
+/**
+ * How a message leaves a transaction: enqueued at once from the pilot Worker, or written alone by an
+ * API mutation, which hands the rows over after it commits (`insertOutbound`).
+ */
+export type EmitOutbound = (request: OutboundRequest) => Promise<unknown>;
+
+/**
+ * One `quiet_resolved` to each member the closed event counts as told, except whoever closed it and
+ * those in `alreadyTold`, in their own language (`closingNoticeFor`). A notice still on its way is
+ * not counted yet; the gateway tells its reader once it lands (`quietNoticeSent`), and drops one not
+ * yet sent. Returns everyone told of the close, `alreadyTold` included.
+ */
+async function tellNotified(
+  tx: VelaTransaction,
+  closed: QuietEvent,
+  her: Member,
+  emit: EmitOutbound,
+  alreadyTold: ReadonlySet<string> = new Set(),
+): Promise<ReadonlySet<string>> {
+  const told = new Set(alreadyTold);
+  for (const readerId of closed.notifiedMemberIds) {
+    if (told.has(readerId)) {
+      continue;
+    }
+    // Push (ADR-34): on Telegram, and on their phone when the app's notice reached it.
+    for (const notice of await closingNoticesFor(tx, closed, her, readerId)) {
+      await emit(notice);
+      told.add(readerId);
+    }
+  }
+  // Anyone asked to look in, and not refused, hears there is no need (ADR-36).
+  for (const notice of await lookInStandDowns(tx, closed, her)) {
+    await emit(notice);
+  }
+  return told;
+}
+
+/**
+ * Her answer closes the exchange's open quiet event (`answered_late`) inside the answer's own
+ * transaction, and everyone who was told hears that the light is lit again, once per answer: one
+ * answer can close two events (flows §3.9, step 3), whose closing notices read the same words at the
+ * same minute, so a reader in `alreadyTold`, told by the other close, is not told again. Returns the
+ * readers this answer has told, `alreadyTold` included.
+ */
+export async function resolveQuietOnAnswer(
+  deps: Deps,
+  tx: VelaTransaction,
+  exchangeId: string,
+  alreadyTold: ReadonlySet<string> = new Set(),
+): Promise<ReadonlySet<string>> {
+  const now = deps.clock.now();
+  const [quiet] = await tx
+    .select()
+    .from(quietEvents)
+    .where(and(eq(quietEvents.exchangeId, exchangeId), isNull(quietEvents.resolvedAt)))
+    .for("update");
+  if (quiet === undefined) {
+    return alreadyTold;
+  }
+  const member = await memberById(tx, quiet.memberId);
+  if (member === null) {
+    return alreadyTold;
+  }
+  const [closed] = await tx
+    .update(quietEvents)
+    .set({ resolvedAt: now, outcome: "answered_late" })
+    .where(eq(quietEvents.id, quiet.id))
+    .returning();
+  if (closed === undefined) {
+    throw new Error("quiet event vanished under its own lock");
+  }
+  const told = await tellNotified(
+    tx,
+    closed,
+    member,
+    (request) => enqueueOutbound(deps, tx, request),
+    alreadyTold,
+  );
+  await recordEvent(
+    tx,
+    {
+      name: "quiet_notice_resolved",
+      familyId: member.familyId,
+      memberId: member.id,
+      exchangeId,
+      props: { outcome: "answered_late", told: quiet.notifiedMemberIds.length },
+    },
+    now,
+  );
+  return told;
+}
+
+/**
+ * "She's fine" (spec §8, flows §3.12): the event, already locked by the caller and still open, closes
+ * with `fine_known` and who said so; everyone else who was told hears it, through `emit`. Shared by
+ * the Telegram tap and the app, so the two cannot close an event differently.
+ */
+export async function resolveQuietAsFine(
+  tx: VelaTransaction,
+  now: Date,
+  input: { quiet: QuietEvent; her: Member; resolver: Member },
+  emit: EmitOutbound,
+): Promise<void> {
+  const { quiet, her, resolver } = input;
+  const [closed] = await tx
+    .update(quietEvents)
+    .set({ resolvedAt: now, outcome: "fine_known", resolvedBy: resolver.id })
+    .where(eq(quietEvents.id, quiet.id))
+    .returning();
+  if (closed === undefined) {
+    throw new Error("quiet event vanished under its caller's lock");
+  }
+  await tellNotified(tx, closed, her, emit);
+  await recordEvent(
+    tx,
+    {
+      name: "quiet_notice_resolved",
+      familyId: her.familyId,
+      memberId: her.id,
+      exchangeId: quiet.exchangeId,
+      props: { outcome: "fine_known", by: resolver.id },
+    },
+    now,
+  );
+}
+
+/**
+ * Away (spec §8: "Resolution: any answer, she's fine, or away"): a member says she is away while
+ * her morning is quiet, so the event, already locked by the caller and still open, closes with
+ * `away` and who said so; everyone else who was told hears it, as for "she's fine".
+ */
+export async function resolveQuietAsAway(
+  tx: VelaTransaction,
+  now: Date,
+  input: { quiet: QuietEvent; her: Member; resolverId: string },
+  emit: EmitOutbound,
+): Promise<void> {
+  const { quiet, her, resolverId } = input;
+  const [closed] = await tx
+    .update(quietEvents)
+    .set({ resolvedAt: now, outcome: "away", resolvedBy: resolverId })
+    .where(eq(quietEvents.id, quiet.id))
+    .returning();
+  if (closed === undefined) {
+    throw new Error("quiet event vanished under its caller's lock");
+  }
+  await tellNotified(tx, closed, her, emit);
+  await recordEvent(
+    tx,
+    {
+      name: "quiet_notice_resolved",
+      familyId: her.familyId,
+      memberId: her.id,
+      exchangeId: quiet.exchangeId,
+      props: { outcome: "away", by: resolverId },
+    },
+    now,
+  );
+}
+
+/**
+ * "Wait 2 hours": the event, already locked by the caller and still open, is not to be raised again
+ * before the wait ends. The wait is a threshold her schedule did not know about, so her next wake is
+ * marked due at once — which `reconcile` finds should nothing else wake her. Returns when it ends.
+ */
+export async function waitOnQuiet(
+  tx: VelaTransaction,
+  now: Date,
+  input: { quiet: QuietEvent; her: Member },
+): Promise<Date> {
+  const waitUntil = addMinutes(now, SCHEDULE.waitMinutes);
+  await tx.update(quietEvents).set({ waitUntil }).where(eq(quietEvents.id, input.quiet.id));
+  await markWakeDue(tx, input.her.id, now);
+  return waitUntil;
+}
+
+/**
+ * An organiser's tap on a quiet notice. The payload names the event, but the tapper must be a
+ * member of her family, or the tap is acknowledged and ignored. A tap on an event already resolved
+ * only takes the buttons away.
+ */
+export async function handleQuietButton(
+  deps: Deps,
+  event: InboundEvent,
+  action: QuietButtonAction,
+): Promise<void> {
+  const adapter = deps.channels.get(event.channel);
+  await adapter.acknowledgeButton(event);
+  const sender = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
+  const quiet = await quietEventById(deps.db, action.quietEventId);
+  const her = quiet === null ? null : await memberById(deps.db, quiet.memberId);
+  if (sender === null || quiet === null || her === null || her.familyId !== sender.family.id) {
+    deps.logger.warn("quiet_button_ignored", { action: action.type, known: quiet !== null });
+    return;
+  }
+  const now = deps.clock.now();
+  const lang = sender.member.language;
+  let replacement: string | undefined;
+  if (action.type === "quiet_fine") {
+    const resolved = await deps.db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(quietEvents)
+        .where(eq(quietEvents.id, quiet.id))
+        .for("update");
+      if (locked === undefined || locked.resolvedAt !== null) {
+        return false;
+      }
+      await resolveQuietAsFine(
+        tx,
+        now,
+        { quiet: locked, her, resolver: sender.member },
+        (request) => enqueueOutbound(deps, tx, request),
+      );
+      return true;
+    });
+    if (resolved) {
+      replacement = t(lang, "quiet.fine_button", { name: her.displayName });
+    }
+  } else {
+    const waitUntil = await deps.db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(quietEvents)
+        .where(eq(quietEvents.id, quiet.id))
+        .for("update");
+      if (locked === undefined || locked.resolvedAt !== null) {
+        return null;
+      }
+      return waitOnQuiet(tx, now, { quiet: locked, her });
+    });
+    if (waitUntil !== null) {
+      replacement = t(lang, "quiet.waiting", { time: formatTime(waitUntil, her.tz) });
+      await deps.scheduler.wakeAt(her.id, now);
+    }
+  }
+  if (adapter.capabilities.editMessages) {
+    if (event.messageId !== undefined) {
+      await adapter.closeButtons(event.conversation.externalId, event.messageId, replacement);
+    }
+    return;
+  }
+  // A messenger that cannot edit its messages (LINE, 05 §4) gets the line the buttons would have
+  // become as a message of its own, so the organiser still sees what the tap did.
+  if (replacement !== undefined) {
+    try {
+      await adapter.send({
+        kind: "system",
+        idempotencyKey: outboundKey("system", {
+          conversationId: event.conversation.externalId,
+          suffix: `quiet:${quiet.id}:${action.type}:${now.getTime()}`,
+        }),
+        lang,
+        to: { channel: event.channel, conversationId: event.conversation.externalId },
+        text: replacement,
+        ...directReplyOf(event, now),
+      });
+    } catch (error) {
+      deps.logger.warn("quiet_button_reply_failed", { error: errorLabel(error) });
+    }
+  }
+}

@@ -1,0 +1,199 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
+import { unstable_readConfig } from "wrangler";
+import { NOTICE_DIRECTORY, NOTICE_FILES, type NoticeLang } from "./src/notices.ts";
+
+/**
+ * The tests' runtime is built from the wrangler files, and from a developer's `.dev.vars` when there
+ * is one; the fake secrets below win over the same names in it. Without a `.dev.vars`, wrangler
+ * would read `.env` and `.env.local` into it instead, as `wrangler dev` does, and those hold a
+ * developer's own settings for the local scripts — a bot name, a Clerk key — which would then
+ * quietly become the tests' inputs. This turns that fallback off.
+ */
+process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
+
+/** The pilot Worker's configuration, which the tests' runtime is built from. */
+const PILOT_CONFIG = fileURLToPath(new URL("./wrangler.jsonc", import.meta.url));
+/** The admin Worker's configuration, read here only for its own tests. */
+const ADMIN_CONFIG = fileURLToPath(new URL("./wrangler.admin.jsonc", import.meta.url));
+
+const WORKERS = { pilot: PILOT_CONFIG, admin: ADMIN_CONFIG } as const;
+
+/** Development is each file's top level; the others are what deploy.yml deploys. */
+const ENVIRONMENTS = ["development", "staging", "production"] as const;
+
+/**
+ * One Worker in one environment, as `wrangler deploy [-c <file>] --env <environment>` reads it: the
+ * fields its tests hold, nothing else.
+ */
+interface WorkerConfig {
+  readonly worker: keyof typeof WORKERS;
+  readonly environment: (typeof ENVIRONMENTS)[number];
+  readonly name: unknown;
+  readonly main: unknown;
+  readonly workersDev: unknown;
+  readonly previewUrls: unknown;
+  readonly routes: unknown;
+  readonly vars: Readonly<Record<string, unknown>>;
+  readonly durableObjects: unknown;
+  readonly migrations: unknown;
+  readonly queues: unknown;
+  readonly hyperdrive: unknown;
+  readonly r2Buckets: unknown;
+  readonly crons: unknown;
+  readonly ratelimits: unknown;
+}
+
+declare module "vitest" {
+  export interface ProvidedContext {
+    workerConfigs: readonly WorkerConfig[];
+    noticeSources: Readonly<Record<NoticeLang, string>>;
+    pilotMaterials: Readonly<Record<string, string>>;
+    pilotConfigSource: string;
+    workerIgnoreRules: readonly string[];
+  }
+}
+
+/**
+ * Read here, with wrangler's own reader and its environment inheritance, because the tests run
+ * inside workerd, which cannot read the files. wrangler's config type lives in a package it bundles
+ * without its types, so the fields arrive as unknown and the tests check their shape.
+ */
+function workerConfig(
+  worker: keyof typeof WORKERS,
+  environment: (typeof ENVIRONMENTS)[number],
+): WorkerConfig {
+  const config: {
+    readonly name?: unknown;
+    readonly main?: unknown;
+    readonly workers_dev?: unknown;
+    readonly preview_urls?: unknown;
+    readonly routes?: unknown;
+    readonly vars?: Readonly<Record<string, unknown>>;
+    readonly durable_objects?: unknown;
+    readonly migrations?: unknown;
+    readonly queues?: unknown;
+    readonly hyperdrive?: unknown;
+    readonly r2_buckets?: unknown;
+    readonly triggers?: { readonly crons?: unknown };
+    readonly ratelimits?: unknown;
+  } = unstable_readConfig(
+    {
+      config: WORKERS[worker],
+      env: environment === "development" ? undefined : environment,
+    },
+    { hideWarnings: true },
+  );
+  return {
+    worker,
+    environment,
+    name: config.name,
+    main: typeof config.main === "string" ? config.main.replace(/\\/g, "/") : config.main,
+    workersDev: config.workers_dev,
+    previewUrls: config.preview_urls,
+    routes: config.routes,
+    vars: config.vars ?? {},
+    durableObjects: config.durable_objects,
+    migrations: config.migrations,
+    queues: config.queues,
+    hyperdrive: config.hyperdrive,
+    r2Buckets: config.r2_buckets,
+    crons: config.triggers?.crons,
+    ratelimits: config.ratelimits,
+  };
+}
+
+/** The pilot pack, from the repository root. */
+const MATERIALS = new URL(`../../${NOTICE_DIRECTORY}/`, import.meta.url);
+
+/** The notices as the founder wrote them, for the test that holds the generated module to them. */
+function noticeSource(lang: NoticeLang): string {
+  return readFileSync(new URL(NOTICE_FILES[lang], MATERIALS), "utf8");
+}
+
+/**
+ * Every Markdown file of the pilot pack by file name, for the test that holds the notice links
+ * written into them (the ones families are sent) to the pilot Worker's notice URLs.
+ */
+function pilotMaterials(): Record<string, string> {
+  return Object.fromEntries(
+    readdirSync(MATERIALS)
+      .filter((name) => name.endsWith(".md"))
+      .map((name) => [name, readFileSync(new URL(name, MATERIALS), "utf8")]),
+  );
+}
+
+/**
+ * This directory's own ignore rules, comments and blank lines dropped. The tests run inside workerd
+ * and can neither read a file nor run git, so the rules are read here for the test that no copy of
+ * the Cloudflare token the setup script saves can be committed (`scripts/setup-environment.ts`).
+ */
+function workerIgnoreRules(): readonly string[] {
+  return readFileSync(fileURLToPath(new URL("./.gitignore", import.meta.url)), "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+}
+
+/**
+ * The Worker's tests run inside workerd, against the bindings in wrangler.jsonc, so the Durable
+ * Object and the queues behave as they will in production. No media bucket is bound: this file's
+ * environment is development, whose MEDIA_STORAGE is off (decision M), so the media port is covered
+ * against `fakeR2Bucket` in `src/deps.test.ts` instead. The media route LINE fetches from is
+ * covered against a local bucket of the runtime's own, `TEST_MEDIA_BUCKET`, which no wrangler file
+ * declares, so a range is answered as R2 answers one (`src/media-route.test.ts`). The secrets below
+ * are fakes, and they win over the same names in a developer's `.dev.vars`, which the pool does
+ * read (only `.env` and `.env.local` are kept out, above). `CLERK_SECRET_KEY` is blank, so
+ * development serves the API's reads only, as a laptop without a key does, whatever a `.dev.vars`
+ * holds, and so are LINE's three, which a test that turns LINE on gives its own. Every test injects
+ * fake services through its runtime, so none of them reaches a database, Telegram, LINE, Anthropic,
+ * or the network. The admin Worker's tests build its environment from these same bindings
+ * (`src/testing/fakes.ts`).
+ */
+export default defineConfig({
+  resolve: {
+    // node-postgres reaches `pg-protocol` with a CommonJS `require`, which this runtime resolves
+    // to that package's ESM wrapper and then cannot evaluate. Naming its CommonJS build here
+    // affects the test runtime only; wrangler's bundler resolves the package by itself.
+    alias: { "pg-protocol": "pg-protocol/dist/index.js" },
+  },
+  test: {
+    include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
+    // The Durable Object tests call their objects across isolates, and on a busy laptop, with the
+    // runtime still importing the other test files, one such call has taken more than Vitest's
+    // default 5 seconds, failing tests that pass in milliseconds alone. A real hang still fails.
+    testTimeout: 20_000,
+    provide: {
+      workerConfigs: (["pilot", "admin"] as const).flatMap((worker) =>
+        ENVIRONMENTS.map((environment) => workerConfig(worker, environment)),
+      ),
+      noticeSources: { en: noticeSource("en"), "zh-TW": noticeSource("zh-TW") },
+      pilotMaterials: pilotMaterials(),
+      // As written, comments included: wrangler's reader drops them, and the header is prose the
+      // tests hold to the code it describes.
+      pilotConfigSource: readFileSync(PILOT_CONFIG, "utf8"),
+      workerIgnoreRules: workerIgnoreRules(),
+    },
+  },
+  plugins: [
+    cloudflareTest({
+      wrangler: { configPath: PILOT_CONFIG },
+      miniflare: {
+        bindings: {
+          TELEGRAM_BOT_TOKEN: "12345:test-token",
+          TELEGRAM_WEBHOOK_SECRET: "test-webhook-secret",
+          ANTHROPIC_API_KEY: "test-anthropic-key",
+          DEEPGRAM_API_KEY: "test-deepgram-key",
+          CLERK_SECRET_KEY: "",
+          CLERK_WEBHOOK_SIGNING_SECRET: "",
+          LINE_CHANNEL_SECRET: "",
+          LINE_CHANNEL_ACCESS_TOKEN: "",
+          MEDIA_URL_SECRET: "",
+        },
+        r2Buckets: ["TEST_MEDIA_BUCKET"],
+      },
+    }),
+  ],
+});

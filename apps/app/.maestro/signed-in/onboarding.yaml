@@ -1,0 +1,38 @@
+# Sign-in and onboarding (A1, A4, A5) on a build of the app pointed at an API with Clerk's
+# development instance: staging's, or `api:dev` on this machine. Each run signs up a new account
+# with one of Clerk's test addresses (`+clerk_test`, which a development instance answers with the
+# fixed code 424242 and never emails), so the account has no family and onboarding opens. Nothing
+# here is a secret. Her invite is left unanswered: nothing is sent to anyone.
+appId: family.vela.light
+name: A new organiser signs in, sets up her light and reaches Today
+tags:
+  - signed-in
+---
+- launchApp:
+    clearState: true
+- evalScript: ${output.email = 'vela.e2e.' + Date.now() + '+clerk_test@example.com'}
+- assertVisible: "Your number or your email, and we send you a code."
+- tapOn: "+886 900 000 000"
+- inputText: ${output.email}
+- tapOn: "Send me a code"
+- assertVisible: "We sent a code to your email."
+- tapOn: "123456"
+- inputText: "424242"
+- tapOn: "Enter"
+- extendedWaitUntil:
+    visible: "Who are you keeping a light on for?"
+    timeout: 20000
+- tapOn: "Mia"
+- inputText: "Maestro"
+- tapOn: "Mom"
+- inputText: "Grandma Test"
+- hideKeyboard
+- tapOn: "Next"
+- extendedWaitUntil:
+    visible: "Now ask Grandma Test"
+    timeout: 20000
+- assertVisible: "She answers on Telegram for now. LINE and WhatsApp come next."
+- tapOn: "I have sent it"
+- assertVisible: "The light is ready"
+- tapOn: "Go to Today"
+- assertVisible: "Grandma Test"

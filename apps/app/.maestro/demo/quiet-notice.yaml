@@ -1,0 +1,21 @@
+# The quiet notice in the demo (A11), on the example day gone quiet (`/?example=quiet`): the sheet
+# opens by itself with the facts and the people nearby, and each way of settling it says what
+# happened.
+url: ${APP_URL}
+name: The quiet notice opens by itself and says how it was settled
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/?example=quiet
+- assertVisible: "It's been quiet at Mom's today"
+- assertVisible: "Today's ask reached Mom at 8:00, and again at 11:00."
+- assertVisible: "Lena · neighbour"
+- assertVisible: "Has not said yes yet"
+- assertNotVisible: "Call Mom"
+- assertVisible: "Contact Mom using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
+- tapOn: "Mom is fine, I know why"
+- assertVisible: "You said Mom is fine. Nothing else was sent."
+- openLink: ${APP_URL}/?example=quiet
+- tapOn: "Wait 2 hours"
+- assertVisible: "Waiting two hours. You will hear again at 13:00 if it is still quiet."

@@ -1,0 +1,12 @@
+{
+  "status": 500,
+  "body": {
+    "errors": [
+      {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "An unknown error occurred.",
+        "isTransient": true
+      }
+    ]
+  }
+}

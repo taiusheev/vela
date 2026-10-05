@@ -1,0 +1,806 @@
+/**
+ * What both Workers check before they run anything: the environment, the secrets, and the vars a
+ * deployed environment cannot run with. The pilot Worker reads services' `Config` here, and the API
+ * it serves under /v1 its own `ApiConfig`; the admin Worker only needs its environment and its own
+ * origin checked.
+ *
+ * Every refusal is a `ConfigError` naming the variable (or the notice file) to fix, never its value.
+ */
+import { type Lang, REGIONS, type Region } from "@vela/contracts";
+import { decodeContentKey } from "@vela/db";
+import type { Config, PilotAdmission } from "@vela/services";
+import type { AdminEnv, InboundJob, PilotEnv } from "./env.ts";
+import {
+  NOTICE_FILES,
+  NOTICE_LANGS,
+  type PrivacyNotices,
+  unfilledPlaceholders,
+} from "./notices.ts";
+
+const ENVIRONMENTS = ["development", "staging", "production"] as const;
+
+export type Environment = (typeof ENVIRONMENTS)[number];
+
+/**
+ * A configuration a Worker cannot run with. The variable to fix is the error's `code`, because
+ * failures are logged through `errorLabel`, which keeps a code and never a message: the log line
+ * then reads `ConfigError:PUBLIC_BASE_URL` rather than a bare `Error`.
+ */
+export class ConfigError extends Error {
+  override readonly name = "ConfigError";
+  readonly code: string;
+
+  constructor(variable: string, message: string) {
+    super(message);
+    this.code = variable;
+  }
+}
+
+/** The secrets in `.dev.vars.example`; each is read through `secret()`, which names a missing one. */
+type SecretName =
+  | "CONTENT_KEY_V1"
+  | "TELEGRAM_BOT_TOKEN"
+  | "TELEGRAM_WEBHOOK_SECRET"
+  | "ANTHROPIC_API_KEY"
+  | "DEEPGRAM_API_KEY"
+  | "ADMIN_CONVERSATION_ID"
+  | "CLERK_SECRET_KEY"
+  | "LINE_CHANNEL_SECRET"
+  | "LINE_CHANNEL_ACCESS_TOKEN"
+  | "MEDIA_URL_SECRET"
+  | "EXPO_ACCESS_TOKEN"
+  | "ACCESS_TEAM_DOMAIN"
+  | "ACCESS_AUD";
+
+/**
+ * A secret, or a clear failure naming it. Deployment is the only place it can be fixed, so the
+ * message says where to put it rather than leaving a stack trace about an empty string.
+ */
+export function secret<N extends SecretName>(env: { readonly [K in N]?: string }, name: N): string {
+  const value = env[name];
+  if (value === undefined || value.trim() === "") {
+    throw new ConfigError(
+      name,
+      `${name} is not set: add it to .dev.vars locally, or as a secret of this Worker with "wrangler secret put ${name} --env <environment>" (add -c wrangler.admin.jsonc for the admin Worker)`,
+    );
+  }
+  return value;
+}
+
+/** The environment's AES-256 key; one key belongs to both Workers in that environment. */
+function readContentKeyV1(env: PilotEnv | AdminEnv): string {
+  const value = secret(env, "CONTENT_KEY_V1");
+  try {
+    decodeContentKey(value);
+  } catch {
+    throw new ConfigError(
+      "CONTENT_KEY_V1",
+      "CONTENT_KEY_V1 must be a base64url encoded 32-byte key: generate one and install it on both Workers",
+    );
+  }
+  return value;
+}
+
+export function requireVar(
+  env: { readonly [K in "PUBLIC_BASE_URL" | "TELEGRAM_BOT_USERNAME"]?: string },
+  name: "PUBLIC_BASE_URL" | "TELEGRAM_BOT_USERNAME",
+  configFile = "wrangler.jsonc",
+): string {
+  const value = env[name]?.trim() ?? "";
+  if (value === "") {
+    throw new ConfigError(
+      name,
+      `${name} is not set: add it to the environment's vars in ${configFile}`,
+    );
+  }
+  return value;
+}
+
+export function readEnvironment(env: { readonly ENVIRONMENT: string }): Environment {
+  const found = ENVIRONMENTS.find((candidate) => candidate === env.ENVIRONMENT);
+  if (found === undefined) {
+    throw new ConfigError("ENVIRONMENT", `ENVIRONMENT must be one of ${ENVIRONMENTS.join(", ")}`);
+  }
+  return found;
+}
+
+/** Where a Worker's AI calls go (decision X, 2026-09-18): Anthropic, or nowhere while AI is off. */
+export const AI_PROVIDERS = ["anthropic", "off"] as const;
+
+export type AiProvider = (typeof AI_PROVIDERS)[number];
+
+/**
+ * The var `AI_PROVIDER`. With "off" no AI provider is called and every AI step takes its safe
+ * default, which staging and development may run with. Production refuses it: there real families
+ * answer, and with AI off nothing they say is checked for a flag.
+ */
+export function readAiProvider(
+  env: { readonly AI_PROVIDER?: string },
+  environment: Environment,
+  configFile: string,
+): AiProvider {
+  const value = env.AI_PROVIDER?.trim() ?? "";
+  const provider = AI_PROVIDERS.find((candidate) => candidate === value);
+  if (provider === undefined) {
+    throw new ConfigError(
+      "AI_PROVIDER",
+      `AI_PROVIDER must be one of ${AI_PROVIDERS.join(", ")}: set it in the environment's vars in ${configFile}`,
+    );
+  }
+  if (provider === "off" && environment === "production") {
+    throw new ConfigError(
+      "AI_PROVIDER",
+      `AI_PROVIDER is off in production, where families' answers need the flag check: set it to anthropic in ${configFile}`,
+    );
+  }
+  return provider;
+}
+
+/**
+ * Where the media a family sends is kept (decision M, 2026-09-20): Vela's own R2 bucket, or
+ * nowhere while R2 is not subscribed to.
+ */
+export const MEDIA_STORAGES = ["r2", "off"] as const;
+
+export type MediaStorage = (typeof MEDIA_STORAGES)[number];
+
+/**
+ * The var `MEDIA_STORAGE`. With "off" no bucket is bound and Vela keeps no copy of a voice note or
+ * photo: the channel it arrived on holds it, and the media row keeps only what that channel said
+ * about the file, its provider file id, its mime and its size, with `storage_key` null.
+ * Production refuses it, because the privacy notice promises families that media is kept in Vela's
+ * own storage for 30 days and then deleted, which no copy at all cannot be.
+ */
+export function readMediaStorage(
+  env: { readonly MEDIA_STORAGE?: string },
+  environment: Environment,
+  configFile: string,
+): MediaStorage {
+  const value = env.MEDIA_STORAGE?.trim() ?? "";
+  const storage = MEDIA_STORAGES.find((candidate) => candidate === value);
+  if (storage === undefined) {
+    throw new ConfigError(
+      "MEDIA_STORAGE",
+      `MEDIA_STORAGE must be one of ${MEDIA_STORAGES.join(", ")}: set it in the environment's vars in ${configFile}`,
+    );
+  }
+  if (storage === "off" && environment === "production") {
+    throw new ConfigError(
+      "MEDIA_STORAGE",
+      `MEDIA_STORAGE is off in production, where the privacy notice promises families that media is kept in Vela's own storage for 30 days and then deleted: set it to r2 in ${configFile}`,
+    );
+  }
+  return storage;
+}
+
+/** How a wrangler config writes a value nobody has chosen yet: whole, or as a URL's host. */
+const PLACEHOLDER = "PLACEHOLDER_";
+
+function isHttpsUrl(value: unknown): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+  try {
+    return new URL(value.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Refuses to run a deployed environment on a value nobody chose. Filled with a guess, a
+ * placeholder can send families' privacy notice links, or the founder's admin links, to a host
+ * Vela does not own; a link that is not https opens the admin page or the notice in the clear.
+ * Every string the platform hands over is checked, vars and secrets alike, so a var added later
+ * is covered without being listed here; the error names the variable and never its value.
+ * Development runs on localhost with the placeholders the wrangler configs ship, so it is not
+ * checked.
+ */
+function checkDeployedEnv(
+  env: object,
+  environment: Environment,
+  urlVars: readonly string[],
+  configFile: string,
+): void {
+  if (environment === "development") {
+    return;
+  }
+  const entries: [string, unknown][] = Object.entries(env);
+  for (const [name, value] of entries) {
+    if (typeof value === "string" && value.includes(PLACEHOLDER)) {
+      throw new ConfigError(
+        name,
+        `${name} still holds a placeholder: set the value chosen for ${environment} in ${configFile}, or as a secret of this Worker for a secret`,
+      );
+    }
+  }
+  const values = new Map(entries);
+  for (const name of urlVars) {
+    if (!isHttpsUrl(values.get(name))) {
+      throw new ConfigError(
+        name,
+        `${name} must be an https URL in ${environment}: set it in the environment's vars in ${configFile}`,
+      );
+    }
+  }
+}
+
+/**
+ * Refuses a notice that still holds a blank, such as `[FOUNDER FULL NAME]`, outside development:
+ * no family may ever read an unfilled notice, and the pilot Worker links and serves them. The
+ * error's code is the notice's file name, which is what the founder fills in.
+ */
+export function refuseUnfilledNotices(environment: Environment, notices: PrivacyNotices): void {
+  if (environment === "development") {
+    return;
+  }
+  for (const lang of NOTICE_LANGS) {
+    const file = NOTICE_FILES[lang];
+    if (unfilledPlaceholders(notices[lang].html).length > 0) {
+      throw new ConfigError(
+        file,
+        `${file} still holds a bracketed placeholder: fill it in, run "pnpm --filter @vela/worker notices", and deploy again`,
+      );
+    }
+  }
+}
+
+function readRegions(env: PilotEnv): readonly Region[] {
+  const names = env.REGIONS.split(",")
+    .map((name) => name.trim())
+    .filter((name) => name !== "");
+  const regions = names.map((name) => {
+    const region = REGIONS.find((candidate) => candidate === name);
+    if (region === undefined) {
+      throw new ConfigError(
+        "REGIONS",
+        `REGIONS lists "${name}", which is not one of ${REGIONS.join(", ")}`,
+      );
+    }
+    return region;
+  });
+  if (regions.length === 0) {
+    throw new ConfigError(
+      "REGIONS",
+      "REGIONS is empty: list the regions whose database exists, such as apac",
+    );
+  }
+  return regions;
+}
+
+/**
+ * The founder's personal chat with the bot (H5), a secret. A laptop may leave it out and sends no
+ * admin messages; a deployed pilot Worker refuses to run without it, because the founder would
+ * then never hear of a flag, a weekly read to check, or an answer nobody could read.
+ */
+function readAdminConversationId(env: PilotEnv, environment: Environment): string | null {
+  if (environment !== "development") {
+    return secret(env, "ADMIN_CONVERSATION_ID").trim();
+  }
+  const value = env.ADMIN_CONVERSATION_ID?.trim() ?? "";
+  return value === "" ? null : value;
+}
+
+/**
+ * Whether an environment speaks LINE (05 §5.10): "off" everywhere until the staging loop (05 §8,
+ * step 8), and in production until the design's last step turns it on (src/wrangler-config.test.ts
+ * pins it).
+ */
+export const LINE_SWITCHES = ["on", "off"] as const;
+
+export type LineSwitch = (typeof LINE_SWITCHES)[number];
+
+/** The var `LINE_CHANNEL`, which both Workers hold; any value but "on" or "off" is refused. */
+export function readLineSwitch(
+  env: { readonly LINE_CHANNEL?: string },
+  configFile: string,
+): LineSwitch {
+  const value = env.LINE_CHANNEL?.trim() ?? "";
+  const found = LINE_SWITCHES.find((candidate) => candidate === value);
+  if (found === undefined) {
+    throw new ConfigError(
+      "LINE_CHANNEL",
+      `LINE_CHANNEL must be one of ${LINE_SWITCHES.join(", ")}: set it in the environment's vars in ${configFile}`,
+    );
+  }
+  return found;
+}
+
+/** A basic id as LINE shows it: `@`, then the account's characters, with no space. */
+const LINE_BASIC_ID = /^@\S+$/;
+
+/** The LINE account invite links open, where LINE is on; null where it is off. */
+export function readLineBasicIdIfOn(
+  env: { readonly LINE_CHANNEL?: string; readonly LINE_BOT_BASIC_ID?: string },
+  configFile: string,
+): string | null {
+  return readLineSwitch(env, configFile) === "on" ? readLineBasicId(env, configFile) : null;
+}
+
+function readLineBasicId(env: { readonly LINE_BOT_BASIC_ID?: string }, configFile: string): string {
+  const value = env.LINE_BOT_BASIC_ID?.trim() ?? "";
+  if (!LINE_BASIC_ID.test(value)) {
+    throw new ConfigError(
+      "LINE_BOT_BASIC_ID",
+      `LINE_BOT_BASIC_ID must be the Official Account's basic id, @ and its characters, while LINE_CHANNEL is on: set it in the environment's vars in ${configFile}`,
+    );
+  }
+  return value;
+}
+
+/**
+ * The channel secret and access token as the adapter takes them: visible ASCII and nothing else,
+ * since the token goes into a header, where a space or a pasted line break breaks every request.
+ */
+const LINE_CREDENTIAL = /^[\x21-\x7e]+$/;
+
+function readLineCredential(
+  env: PilotEnv,
+  name: "LINE_CHANNEL_SECRET" | "LINE_CHANNEL_ACCESS_TOKEN",
+): string {
+  const value = secret(env, name).trim();
+  if (!LINE_CREDENTIAL.test(value)) {
+    throw new ConfigError(
+      name,
+      `${name} holds a character LINE never issues (a space, a line break, a letter outside ASCII): put it again as the LINE Developers Console shows it`,
+    );
+  }
+  return value;
+}
+
+/**
+ * The media URLs' signing key: 32 random bytes, which is 43 or 44 characters as base64 and 64 as
+ * hex. A shorter value is refused, since whoever guesses it can read every stored voice note.
+ */
+const MIN_MEDIA_URL_SECRET_LENGTH = 43;
+
+function readMediaUrlSecret(env: PilotEnv): string {
+  const value = secret(env, "MEDIA_URL_SECRET").trim();
+  if (value.length < MIN_MEDIA_URL_SECRET_LENGTH || !LINE_CREDENTIAL.test(value)) {
+    throw new ConfigError(
+      "MEDIA_URL_SECRET",
+      `MEDIA_URL_SECRET must be 32 random bytes as base64 or hex, at least ${MIN_MEDIA_URL_SECRET_LENGTH} visible characters: generate one, never type one`,
+    );
+  }
+  return value;
+}
+
+/**
+ * This Worker's own https origin, which every media URL starts with: LINE fetches media only over
+ * https (05 §1 fact 14). One trailing `/` is stripped; a path is refused, since the media route
+ * answers at the origin.
+ */
+function readPilotOrigin(env: PilotEnv): string {
+  const given = env.PILOT_PUBLIC_URL?.trim() ?? "";
+  const origin = given.endsWith("/") ? given.slice(0, -1) : given;
+  let url: URL | null;
+  try {
+    url = new URL(origin);
+  } catch {
+    url = null;
+  }
+  if (url === null || url.protocol !== "https:" || url.origin !== origin) {
+    throw new ConfigError(
+      "PILOT_PUBLIC_URL",
+      "PILOT_PUBLIC_URL must be this Worker's own https origin, with no path, while LINE_CHANNEL is on: set it in the environment's vars in wrangler.jsonc",
+    );
+  }
+  return origin;
+}
+
+/** What the pilot Worker speaks LINE with, and the two bindings only LINE needs. */
+export interface LineConfig {
+  readonly channelSecret: string;
+  readonly channelAccessToken: string;
+  /** Keys the signature in every media URL (`media-route.ts`). */
+  readonly mediaUrlSecret: string;
+  /** `@…`: the account a LINE invite link opens. */
+  readonly basicId: string;
+  /** This Worker's https origin, without a trailing slash: the start of every media URL. */
+  readonly pilotOrigin: string;
+  /** Where the webhook hands its events. */
+  readonly inboundQueue: Queue<InboundJob>;
+  /** Where the copies LINE is sent by URL are read from. */
+  readonly mediaBucket: R2Bucket;
+}
+
+/**
+ * LINE's settings (05 §5.10), or null while `LINE_CHANNEL` is "off", when nothing else is read: an
+ * environment that does not speak LINE needs none of its secrets. Otherwise a `ConfigError` names
+ * the first setting LINE cannot run with. LINE sends media only by URL, so it needs the R2 copy,
+ * and the webhook needs its queue.
+ */
+export function readLineConfig(env: PilotEnv): LineConfig | null {
+  if (readLineSwitch(env, "wrangler.jsonc") === "off") {
+    return null;
+  }
+  if (readMediaStorage(env, readEnvironment(env), "wrangler.jsonc") === "off") {
+    throw new ConfigError(
+      "LINE_CHANNEL",
+      "LINE_CHANNEL is on while MEDIA_STORAGE is off: LINE sends a voice note or photo only by a URL to Vela's own copy, so set MEDIA_STORAGE to r2 and bind its bucket in wrangler.jsonc, or LINE_CHANNEL to off",
+    );
+  }
+  const mediaBucket = env.MEDIA_BUCKET;
+  if (mediaBucket === undefined) {
+    throw new ConfigError(
+      "MEDIA_BUCKET",
+      "MEDIA_STORAGE is r2 but no bucket is bound: add the environment's r2_buckets binding in wrangler.jsonc",
+    );
+  }
+  const inboundQueue = env.INBOUND_QUEUE;
+  if (inboundQueue === undefined) {
+    throw new ConfigError(
+      "INBOUND_QUEUE",
+      "LINE_CHANNEL is on but INBOUND_QUEUE is not bound: create the environment's vela-inbound queue, then add its producer and consumer in wrangler.jsonc",
+    );
+  }
+  const pilotOrigin = readPilotOrigin(env);
+  const basicId = readLineBasicId(env, "wrangler.jsonc");
+  const channelSecret = readLineCredential(env, "LINE_CHANNEL_SECRET");
+  const channelAccessToken = readLineCredential(env, "LINE_CHANNEL_ACCESS_TOKEN");
+  const mediaUrlSecret = readMediaUrlSecret(env);
+  return {
+    channelSecret,
+    channelAccessToken,
+    mediaUrlSecret,
+    basicId,
+    pilotOrigin,
+    inboundQueue,
+    mediaBucket,
+  };
+}
+
+/**
+ * Where pushes go (ADR-34): Expo's push service, or nowhere. "off" in every environment until the
+ * founder has set up Expo, Firebase and, for iPhones, Apple; src/wrangler-config.test.ts pins it.
+ */
+export const PUSH_SENDS = ["expo", "off"] as const;
+
+export type PushSend = (typeof PUSH_SENDS)[number];
+
+/** The var `PUSH_SEND`, which only the pilot Worker holds; any value but these two is refused. */
+export function readPushSend(env: { readonly PUSH_SEND?: string }): PushSend {
+  const value = env.PUSH_SEND?.trim() ?? "";
+  const found = PUSH_SENDS.find((candidate) => candidate === value);
+  if (found === undefined) {
+    throw new ConfigError(
+      "PUSH_SEND",
+      `PUSH_SEND must be one of ${PUSH_SENDS.join(", ")}: set it in the environment's vars in wrangler.jsonc`,
+    );
+  }
+  return found;
+}
+
+/** What the pilot Worker sends pushes with, while `PUSH_SEND` is "expo". */
+export interface PushConfig {
+  /** Expo's Enhanced Push Security token: visible ASCII, since it goes into a header. */
+  readonly accessToken: string;
+}
+
+/**
+ * Push's settings (ADR-34), or null while `PUSH_SEND` is "off", when nothing else is read. "expo"
+ * requires `EXPO_ACCESS_TOKEN` in every environment: with Enhanced Push Security off, anyone who
+ * holds an organiser's push token could send them "It's been quiet", so Vela never sends without
+ * it.
+ */
+export function readPushConfig(env: {
+  readonly PUSH_SEND?: string;
+  readonly EXPO_ACCESS_TOKEN?: string;
+}): PushConfig | null {
+  if (readPushSend(env) === "off") {
+    return null;
+  }
+  const accessToken = secret(env, "EXPO_ACCESS_TOKEN").trim();
+  if (!LINE_CREDENTIAL.test(accessToken)) {
+    throw new ConfigError(
+      "EXPO_ACCESS_TOKEN",
+      "EXPO_ACCESS_TOKEN holds a character Expo never issues (a space, a line break, a letter outside ASCII): put it again as the Expo dashboard shows it",
+    );
+  }
+  return { accessToken };
+}
+
+/** The vars that become links: the admin origin in admin messages, and the privacy notices. */
+const PILOT_URL_VARS = ["PUBLIC_BASE_URL", "PRIVACY_NOTICE_URL_EN", "PRIVACY_NOTICE_URL_ZH_TW"];
+
+/**
+ * The pilot Worker's vars and secrets as services' `Config` (code design §8), or a `ConfigError`
+ * naming the first variable, or notice, a deployed environment cannot start with. Where LINE is on,
+ * its settings are refused here too (05 §5.10), in every environment; services' `Config` gains the
+ * basic id with the services change that first reads it (05 §8, step 4). So is push "expo" without
+ * its access token (ADR-34).
+ */
+/** Each language's privacy notice link; a language without its own takes the English one. */
+function privacyNoticeUrlsOf(env: PilotEnv): Record<Lang, string> {
+  const english = env.PRIVACY_NOTICE_URL_EN;
+  return {
+    en: english,
+    "zh-TW": env.PRIVACY_NOTICE_URL_ZH_TW,
+    ja: english,
+    de: english,
+    hi: english,
+    ru: english,
+  };
+}
+
+/** The var `MEMORY` (spec §12): "on" keeps her dated plans for reminders; any other value is refused. */
+export function readMemory(env: { readonly MEMORY?: string }): boolean {
+  return readOnOff(env.MEMORY, "MEMORY");
+}
+
+/** The var `BOOK` (ADR-39): "on" keeps her stories in the family book; any other value is refused. */
+export function readBook(env: { readonly BOOK?: string }): boolean {
+  return readOnOff(env.BOOK, "BOOK");
+}
+
+function readOnOff(raw: string | undefined, name: "MEMORY" | "BOOK"): boolean {
+  const value = raw?.trim() ?? "";
+  if (value !== "on" && value !== "off") {
+    throw new ConfigError(
+      name,
+      `${name} must be one of on, off: set it in the environment's vars in wrangler.jsonc`,
+    );
+  }
+  return value === "on";
+}
+
+export function readPilotAdmission(
+  env: Pick<PilotEnv, "PILOT_ADMISSION" | "PILOT_TELEGRAM_ALLOWLIST">,
+): PilotAdmission | null {
+  const mode = env.PILOT_ADMISSION?.trim() ?? "off";
+  if (mode === "off") return null;
+  if (mode !== "on") throw new ConfigError("PILOT_ADMISSION", "PILOT_ADMISSION must be on or off");
+  const ids = env.PILOT_TELEGRAM_ALLOWLIST?.split(",").map((id) => id.trim()) ?? [];
+  if (
+    ids.length === 0 ||
+    ids.length > 100 ||
+    ids.some((id) => !/^[1-9][0-9]{0,12}$/.test(id) || Number(id) > 1099511627775)
+  ) {
+    throw new ConfigError(
+      "PILOT_TELEGRAM_ALLOWLIST",
+      "A closed pilot requires a private roster of valid Telegram user IDs",
+    );
+  }
+  return { telegramUserIds: [...new Set(ids)] };
+}
+
+/** Only the account webhook reads this endpoint-specific secret; no payload supplies its key. */
+export function readClerkWebhookSigningSecret(
+  env: Pick<PilotEnv, "CLERK_WEBHOOK_SIGNING_SECRET">,
+): Uint8Array<ArrayBuffer> {
+  const value = env.CLERK_WEBHOOK_SIGNING_SECRET?.trim() ?? "";
+  try {
+    if (!/^whsec_[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length > 128) throw new Error();
+    const decoded = atob(value.slice(6));
+    if (decoded.length < 16 || decoded.length > 64) throw new Error();
+    return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+  } catch {
+    throw new ConfigError(
+      "CLERK_WEBHOOK_SIGNING_SECRET",
+      "The Clerk webhook requires its own valid Svix signing secret",
+    );
+  }
+}
+
+export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
+  const pilotAdmission = readPilotAdmission(env);
+  const environment = readEnvironment(env);
+  readContentKeyV1(env);
+  checkDeployedEnv(env, environment, PILOT_URL_VARS, "wrangler.jsonc");
+  refuseUnfilledNotices(environment, notices);
+  const line = readLineConfig(env);
+  readPushConfig(env);
+  const privacyNoticeUrls = privacyNoticeUrlsOf(env);
+  return {
+    telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
+    lineBasicId: line?.basicId ?? null,
+    adminConversationId: readAdminConversationId(env, environment),
+    environment,
+    regions: readRegions(env),
+    publicBaseUrl: requireVar(env, "PUBLIC_BASE_URL"),
+    privacyNoticeUrls,
+    // The generator refuses notices whose versions differ, so the English one names both.
+    privacyNoticeVersion: notices.en.version,
+    memory: readMemory(env) && pilotAdmission === null,
+    book: readBook(env),
+    pilotAdmission,
+  };
+}
+
+/**
+ * Whether the pilot Worker serves the API under /v1 (ADR-29): "on" in development and staging,
+ * "off" in production until a new ADR turns it on (src/wrangler-config.test.ts pins it).
+ */
+export const API_SWITCHES = ["on", "off"] as const;
+
+export type ApiSwitch = (typeof API_SWITCHES)[number];
+
+/** What the API under /v1 runs with (`src/api-runtime.ts`), and nothing of the pilot's `Config`. */
+export interface ApiConfig {
+  readonly pilotAdmission?: PilotAdmission | null;
+  readonly environment: Environment;
+  /** The Clerk Frontend API origin: https, no path, no trailing slash. */
+  readonly issuer: string;
+  /** Clerk's secret key, for the live session check; null only in development, which then reads. */
+  readonly secretKey: string | null;
+  /** The bot a new family's invite link opens. */
+  readonly telegramBotUsername: string;
+  /** The LINE account a new family's LINE invite link opens; null while LINE is off. */
+  readonly lineBasicId: string | null;
+  readonly regions: readonly Region[];
+  /**
+   * Whether this environment sends pushes (ADR-34). The API only records devices; it reads the
+   * switch because a device counts toward someone being told only while pushes are sent.
+   */
+  readonly pushSend: PushSend;
+  /**
+   * The privacy notice links, as the pilot Worker reads them: the consent request a phone set up
+   * for the parent surface is sent names hers (ADR-35).
+   */
+  readonly privacyNoticeUrls: Record<Lang, string>;
+}
+
+/** The hosts of Clerk's development instances, whose accounts are test accounts. */
+const CLERK_DEVELOPMENT_HOST = ".clerk.accounts.dev";
+
+/**
+ * A Clerk secret key as Clerk issues one: its instance's prefix and printable characters, no longer
+ * than the session activity checker accepts (`session.ts`).
+ */
+const CLERK_SECRET_KEY_SHAPE = /^sk_(test|live)_[!-~]+$/;
+const MAX_CLERK_SECRET_KEY_LENGTH = 4096;
+
+/**
+ * `API_V1` as the environment sets it. Read by the API before anything else, and by the nightly
+ * cron, which writes tomorrow's suggestions only where the API that shows them is served.
+ */
+export function readApiSwitch(env: { readonly API_V1?: string }): ApiSwitch {
+  const value = env.API_V1?.trim() ?? "";
+  const found = API_SWITCHES.find((candidate) => candidate === value);
+  if (found === undefined) {
+    throw new ConfigError(
+      "API_V1",
+      `API_V1 must be one of ${API_SWITCHES.join(", ")}: set it in the environment's vars in wrangler.jsonc`,
+    );
+  }
+  return found;
+}
+
+/**
+ * The issuer tokens are verified against, as an origin. Development and staging hold only test
+ * accounts, so they take only a development instance; production's accounts are real people's, so
+ * it refuses one.
+ */
+function readClerkIssuer(env: PilotEnv, environment: Environment): string {
+  const given = env.CLERK_ISSUER?.trim() ?? "";
+  if (given === "") {
+    throw new ConfigError(
+      "CLERK_ISSUER",
+      "CLERK_ISSUER is not set: add the Clerk Frontend API origin to the environment's vars in wrangler.jsonc",
+    );
+  }
+  const issuer = given.endsWith("/") ? given.slice(0, -1) : given;
+  let url: URL | null;
+  try {
+    url = new URL(issuer);
+  } catch {
+    url = null;
+  }
+  if (url === null || url.protocol !== "https:" || url.origin !== issuer) {
+    throw new ConfigError(
+      "CLERK_ISSUER",
+      "CLERK_ISSUER must be an https origin with no path, the Frontend API URL in Clerk's dashboard: set it in the environment's vars in wrangler.jsonc",
+    );
+  }
+  const development = url.hostname.endsWith(CLERK_DEVELOPMENT_HOST);
+  if (environment === "production" && development) {
+    throw new ConfigError(
+      "CLERK_ISSUER",
+      "CLERK_ISSUER is a Clerk development instance, which production refuses: set production's own Clerk instance in wrangler.jsonc",
+    );
+  }
+  if (environment !== "production" && !development) {
+    throw new ConfigError(
+      "CLERK_ISSUER",
+      `CLERK_ISSUER must be a Clerk development instance (*${CLERK_DEVELOPMENT_HOST}) in ${environment}: set it in the environment's vars in wrangler.jsonc`,
+    );
+  }
+  return issuer;
+}
+
+/**
+ * The secret key of the issuer's own instance: a development key (`sk_test_`) in development and
+ * staging, so a live key can never sit where the co-founder deploys from a laptop, and a production
+ * key (`sk_live_`) in production. Only development may go without one, and then serves reads only.
+ */
+function readClerkSecretKey(env: PilotEnv, environment: Environment): string | null {
+  if (environment === "development" && (env.CLERK_SECRET_KEY?.trim() ?? "") === "") {
+    return null;
+  }
+  const key = secret(env, "CLERK_SECRET_KEY").trim();
+  if (key.length > MAX_CLERK_SECRET_KEY_LENGTH || !CLERK_SECRET_KEY_SHAPE.test(key)) {
+    throw new ConfigError(
+      "CLERK_SECRET_KEY",
+      "CLERK_SECRET_KEY is not a Clerk secret key (sk_test_… or sk_live_…, printable characters only): put the one Clerk's dashboard shows under API keys",
+    );
+  }
+  const expected = environment === "production" ? "sk_live_" : "sk_test_";
+  if (!key.startsWith(expected)) {
+    const where =
+      environment === "development"
+        ? "put one in .dev.vars"
+        : `put one with "wrangler secret put CLERK_SECRET_KEY --env ${environment}"`;
+    throw new ConfigError(
+      "CLERK_SECRET_KEY",
+      `CLERK_SECRET_KEY must be a Clerk ${environment === "production" ? "production" : "development"} secret key in ${environment} (${expected}…): ${where}`,
+    );
+  }
+  return key;
+}
+
+/**
+ * The API's configuration (ADR-29), or null while `API_V1` is "off", when nothing else is read: so
+ * production needs no Clerk var or secret while its API is off. Otherwise a `ConfigError` names the
+ * first variable the API cannot run with, and the Worker answers 503 on /v1 alone.
+ *
+ * It never reads the privacy notices or the founder's chat id, and never builds the pilot's deps,
+ * so a refusal of the pilot's own settings leaves /v1 answering, and a refusal here leaves the
+ * webhook and the notices answering. The one check both share is `checkDeployedEnv`'s: a
+ * placeholder in any value, the pilot's included, refuses /v1 too, because it means nobody has
+ * finished setting up this environment, and a value added later is covered without being listed.
+ */
+export function readApiConfig(env: PilotEnv): ApiConfig | null {
+  const environment = readEnvironment(env);
+  if (readApiSwitch(env) === "off") {
+    return null;
+  }
+  readContentKeyV1(env);
+  checkDeployedEnv(env, environment, ["CLERK_ISSUER"], "wrangler.jsonc");
+  const issuer = readClerkIssuer(env, environment);
+  const secretKey = readClerkSecretKey(env, environment);
+  if (environment !== "development") {
+    if (env.API_IP_LIMIT === undefined) {
+      throw new ConfigError(
+        "API_IP_LIMIT",
+        `API_IP_LIMIT is not bound in ${environment}: add the ratelimits binding in wrangler.jsonc (API_ADDRESS_LIMIT in src/api-runtime.ts)`,
+      );
+    }
+    if (env.ACCOUNT_WRITE_LIMITER === undefined) {
+      throw new ConfigError(
+        "ACCOUNT_WRITE_LIMITER",
+        `ACCOUNT_WRITE_LIMITER is not bound in ${environment}: add its durable_objects binding in wrangler.jsonc (AccountWriteLimiter in src/write-limit.ts)`,
+      );
+    }
+  }
+  return {
+    environment,
+    issuer,
+    secretKey,
+    telegramBotUsername: requireVar(env, "TELEGRAM_BOT_USERNAME"),
+    lineBasicId:
+      readLineSwitch(env, "wrangler.jsonc") === "on"
+        ? readLineBasicId(env, "wrangler.jsonc")
+        : null,
+    regions: readRegions(env),
+    pushSend: readPushSend(env),
+    privacyNoticeUrls: privacyNoticeUrlsOf(env),
+    pilotAdmission: readPilotAdmission(env),
+  };
+}
+
+/**
+ * The admin Worker's environment, checked as the pilot's is: no placeholder anywhere, its own
+ * origin, the one a form may be posted from, is https outside development, and the bot the link a
+ * new invite carries opens is named, in every environment. Where LINE is on, the account its
+ * invite links open must be named too. Returns the environment it checked.
+ */
+export function checkAdminConfig(env: AdminEnv): Environment {
+  const environment = readEnvironment(env);
+  readContentKeyV1(env);
+  checkDeployedEnv(env, environment, ["PUBLIC_BASE_URL"], "wrangler.admin.jsonc");
+  requireVar(env, "TELEGRAM_BOT_USERNAME", "wrangler.admin.jsonc");
+  if (readLineSwitch(env, "wrangler.admin.jsonc") === "on") {
+    readLineBasicId(env, "wrangler.admin.jsonc");
+  }
+  return environment;
+}

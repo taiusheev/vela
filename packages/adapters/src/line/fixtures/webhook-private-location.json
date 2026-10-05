@@ -1,0 +1,27 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "c314c05c208bbb2ee175a97aea92222c",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463833572,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZBXF4YNS73HA21GCH3CBX",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "546644395973635865",
+        "type": "location",
+        "title": "迪化街",
+        "address": "台北市大同區迪化街一段",
+        "latitude": 25.0559,
+        "longitude": 121.5098
+      }
+    }
+  ]
+}

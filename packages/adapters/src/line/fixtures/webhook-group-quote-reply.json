@@ -1,0 +1,27 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "8dfe80e2f4a7316682026109dfb7bda9",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463879049,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff",
+        "userId": "U8f8c4117e99b1a4fa8346f3d1c56731b"
+      },
+      "webhookEventId": "01M3FZD9W9VT4VY2EFTYDHFEKD",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "530253224766452121",
+        "type": "text",
+        "quoteToken": "Rt2Kv6Nw9Xa3Mc7Pb0Ld5Sj8Hf1Qz4Gy6Ue2Oi9Wm3Tk7Bn0Cx5Vp8Ah1Dr4Es7J",
+        "text": "Water spinach with garlic, my favourite! 😋",
+        "quotedMessageId": "501968441952665100"
+      }
+    }
+  ]
+}

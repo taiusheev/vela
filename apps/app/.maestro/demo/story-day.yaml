@@ -1,0 +1,31 @@
+# Story day in the explicit demo (A10): questions can be chosen and edited without promising
+# long-term retention or offering an unavailable book. Sending still requires the live API.
+url: ${APP_URL}
+name: Story questions can be chosen and edited without a retention promise
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/sunday
+- scrollUntilVisible:
+    element: "Tell me about a day from your childhood you still remember clearly."
+    direction: DOWN
+- assertVisible: "Her answer stays with the exchange. Long-term story saving is not switched on here."
+- assertNotVisible: "Her answer is kept in the family book, unless she says not to."
+- scrollUntilVisible:
+    element: "Another question"
+    direction: DOWN
+- tapOn: "Another question"
+- scrollUntilVisible:
+    element: "Tell me about your first day at work."
+    direction: DOWN
+- scrollUntilVisible:
+    element: "Write your own question"
+    direction: DOWN
+- tapOn: "Write your own question"
+- assertVisible: "Your question for Mom"
+- inputText: "How did you learn to make soup?"
+- assertVisible: 'How did you learn to make soup\?'
+- tapOn: "Choose from the list"
+- assertVisible: "Tell me about your first day at work."
+- assertNotVisible: "Read the family book"

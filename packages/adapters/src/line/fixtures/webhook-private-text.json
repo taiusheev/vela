@@ -1,0 +1,26 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "c49772f8bb2228e107007ca23b93a3b3",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463748405,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZ9A9NW73PK6SZ3PDQ7PYS",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "552078231551808266",
+        "type": "text",
+        "quoteToken": "APejW5U9cbQdINY4_w03HpEMk0NtrwBecnVXejNmemfyI7Y9GF3XLvw1_69ULaLk",
+        "markAsReadToken": "TVcwmYMs9J3A68-M4CEdm2GTMxAplsS8bhgSepKVKl9SlMfmx865mWtqBQ5ottoHBapkmg",
+        "text": "今天去市場買了空心菜"
+      }
+    }
+  ]
+}

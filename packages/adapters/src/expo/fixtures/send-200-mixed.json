@@ -1,0 +1,33 @@
+{
+  "status": 200,
+  "body": {
+    "data": [
+      { "status": "ok", "id": "{{ticket:1}}" },
+      {
+        "status": "error",
+        "message": "\"{{token:2}}\" is not a registered push notification recipient",
+        "details": { "error": "DeviceNotRegistered", "expoPushToken": "{{token:2}}" }
+      },
+      {
+        "status": "error",
+        "message": "Message too big. Max payload size is 4096 bytes.",
+        "details": { "error": "MessageTooBig" }
+      },
+      {
+        "status": "error",
+        "message": "Too many messages sent to {{token:4}} too quickly.",
+        "details": { "error": "MessageRateExceeded", "expoPushToken": "{{token:4}}" }
+      },
+      {
+        "status": "error",
+        "message": "Could not find APNs credentials for the experience that sent to {{token:5}}.",
+        "details": { "error": "InvalidCredentials", "expoPushToken": "{{token:5}}" }
+      },
+      {
+        "status": "error",
+        "message": "The FCM server key does not match the sender of {{token:6}}.",
+        "details": { "error": "MismatchSenderId", "expoPushToken": "{{token:6}}" }
+      }
+    ]
+  }
+}

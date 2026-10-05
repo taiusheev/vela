@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-10-05T04:55:09.643Z",
+  "kind": "local-disposable-postgresql-contention",
+  "gitHead": "b212e9dcaf3785ccc1fcf357e2a7d9b7adeb8f12",
+  "workingTreeChangesIncluded": true,
+  "release": "18.6",
+  "source": "https://ftp.postgresql.org/pub/source/v18.6/postgresql-18.6.tar.bz2",
+  "upstreamChecksum": "https://ftp.postgresql.org/pub/source/v18.6/postgresql-18.6.tar.bz2.sha256",
+  "sourceSha256": "555610c24d53e4316da5b7d3fc25c279d96856d5e0e23ee308c328c5fa881d9f",
+  "sourceReleaseNotes": "https://www.postgresql.org/docs/release/18.6/",
+  "compiledWith": "Apple Command Line Tools Clang and GNU make",
+  "configure": [
+    "--without-icu",
+    "--without-readline",
+    "--without-zlib"
+  ],
+  "command": "node scripts/test-postgres.ts --pg-bin /tmp/vela-pg18-build-gvo6PV/install/bin",
+  "commandCwd": "packages/services",
+  "result": {
+    "exitCode": 0,
+    "testFilesPassed": 35,
+    "testsPassed": 109,
+    "durationSeconds": 21.82,
+    "disposableClusterRemoved": true
+  },
+  "stdout": "infra/load-tests/trial-postgres18-local-2026-10-05.txt",
+  "stdoutSha256": "e13810fb2141eba7af1f1f1b9d971a3de1c5f265bc0861e3a9ade451fe394fdb",
+  "sourceTreeDigest": {
+    "algorithm": "sha256 of sorted relative filename, NUL, bytes, NUL",
+    "files": 349,
+    "sha256": "81f17f6c820365ad5626d9a842fe8929ef6ff8c49b88ff2b9ad8a04574c7b35c",
+    "collectedAt": "2026-10-05T04:54:18.527Z",
+    "collectedAfterAt": "2026-10-05T04:54:49.157Z",
+    "unchangedDuringRun": true,
+    "scope": [
+      "Production src for services, db, contracts, adapters, core, copy and AI",
+      "DB migrations",
+      "PostgreSQL tests, runner and Vitest configuration",
+      "Package manifests and pnpm-lock.yaml"
+    ],
+    "excluded": [
+      "Unit tests not loaded by the PostgreSQL runner",
+      "Unrelated WhatsApp work",
+      "App, native/generated/vendor/build output"
+    ]
+  },
+  "newCoverage": [
+    "Original source upload waits for family deletion and discards its losing object",
+    "Original source upload waits for retention deletion and discards its losing object",
+    "Simultaneous source deliveries retain exactly one original object",
+    "Quoted notice is dropped after family deletion commits while delivery waits",
+    "Queued quoted notice removes health words after consent withdrawal commits",
+    "Model commit and family deletion finish without a family/member lock cycle",
+    "Kept file survives an expiry sweep selected before keeping committed",
+    "Book copy refuses family deletion, media deletion and book removal during storage/adoption",
+    "Competing book copies retain one winning object and delete only their own losing attempts",
+    "App upload waits for account/family/membership lifecycle changes and deletes rejected objects"
+  ],
+  "scope": {
+    "syntheticDataOnly": true,
+    "productionProvidersUsed": false,
+    "productionCredentialsUsed": false,
+    "productionReadinessProved": false,
+    "iPhoneBuildOrPlaybackProved": false
+  },
+  "notes": [
+    "This is local PostgreSQL evidence, not staging or production delivery evidence.",
+    "The runner creates, migrates, tests and removes only its own disposable local cluster.",
+    "Migration target validation was preserved; the runner omits optional application_name only for the local migration child.",
+    "The outbound media fixture uses typed JSON writes so provider identifiers receive normal content sealing.",
+    "The final evidence source digest matched before and after the successful run.",
+    "The real-family trial keeps BOOK off; failed deletion of a migrated book source still relies on its old 32-day lifecycle until durable cleanup retry exists."
+  ],
+  "runId": "f9fb8d4d5ea8"
+}

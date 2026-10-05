@@ -1,0 +1,21 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "type": "unsend",
+      "mode": "active",
+      "timestamp": 1790463860051,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZCQAKV20T7JZS9R28K4J7",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "unsend": {
+        "messageId": "552078231551808266"
+      }
+    }
+  ]
+}

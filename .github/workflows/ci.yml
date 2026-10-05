@@ -1,0 +1,122 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  # Nightly, so a regression in a package nobody touched is still caught: the checks run again and
+  # the silence drill runs with them.
+  schedule:
+    - cron: "40 2 * * *"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: lint · typecheck · test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  silence-drill:
+    name: silence drill
+    # The drill is part of `pnpm test` on every push; this run is the nightly proof that the light
+    # still survives a failing adapter, a missed wake, and a failing model, with no push to trigger it.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vela/services exec vitest run src/silence-drill.test.ts
+
+  contention-drill:
+    name: contention drill (PostgreSQL 18)
+    # The same writes on independent connections of a real PostgreSQL (code design §8), which PGlite,
+    # one connection, cannot give; `pnpm test` never runs it. It found her answer and "she's fine"
+    # deadlocking, and it rots unrun: its runner once could not start at all and nothing noticed. On
+    # every push, since minutes are free on a public repository. The runner starts `postgres:18` in
+    # Docker here, the path a machine without Docker never exercises.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vela/services run test:postgres
+
+  app-flows:
+    name: app flows (Maestro, demo on the web)
+    # The Maestro flows of the app's demo (build plan 3.9, `apps/app/.maestro/demo`): Today, an ask,
+    # a reply and the quiet notice, walked in Chrome on a web export built with no API and no
+    # sign-in, so they need no account and no secret. Chrome is a phone's width and tall enough for
+    # each screen, because Maestro scrolls only the window on the web and the app scrolls inside it.
+    # The signed-in flows run on a phone build
+    # against staging (`apps/app/.maestro/README.md`).
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MAESTRO_VERSION: cli-2.11.0
+      MAESTRO_SHA256: 5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ""
+      EXPO_PUBLIC_API_URL: ""
+      EXPO_PUBLIC_DEMO_MODE: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: pnpm install --frozen-lockfile
+      - name: Install Maestro
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/$MAESTRO_VERSION/maestro.zip"
+          echo "$MAESTRO_SHA256  $RUNNER_TEMP/maestro.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+      - name: Build the demo for the web
+        run: pnpm --filter @vela/app exec expo export --platform web --output-dir dist
+      - name: Serve it
+        run: |
+          python3 apps/app/scripts/serve-web.py apps/app/dist 8082 > "$RUNNER_TEMP/serve.log" 2>&1 &
+          for _ in $(seq 1 30); do curl -fs http://localhost:8082 > /dev/null && exit 0; sleep 1; done
+          cat "$RUNNER_TEMP/serve.log"; exit 1
+      - name: Walk the flows
+        run: maestro test --headless --screen-size 430x1600 --format junit --output "$RUNNER_TEMP/maestro.xml" -e APP_URL=http://localhost:8082 apps/app/.maestro/demo
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maestro
+          path: |
+            ${{ runner.temp }}/maestro.xml
+            ~/.maestro/tests
+          retention-days: 7

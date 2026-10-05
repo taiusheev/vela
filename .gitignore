@@ -3,3 +3,19 @@ Thumbs.db
 node_modules/
 .env
 *.log
+
+# Build output and local state
+.turbo/
+.wrangler/
+dist/
+coverage/
+*.tsbuildinfo
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.pglite/
+
+# Private rehearsal process coordination, never a deliverable
+infra/load-tests/*.lock
+infra/load-tests/*.lock.reclaim
+infra/load-tests/*.json.tmp-*

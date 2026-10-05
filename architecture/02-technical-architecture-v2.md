@@ -1,8 +1,10 @@
 # Vela technical architecture, v2
 
-2026-09-13. **This is the build blueprint.** It replaces `01-technical-design.md` wherever they differ. Every tool choice in it was checked against the alternatives in September 2026 by five due-diligence sweeps (`architecture/research/`); the ten records that changed are appended to `decisions.md` (ADR-11 to ADR-20). The product it builds is `product/05-product-spec-v2.md`; the markets and their order are `plan/market-order.md`; the data model is `schema.sql` (validated in a real Postgres engine); the interface is `api-contract.md`; the sprint order is `plan/build-plan.md`.
+2026-09-18. **This is the build blueprint.** It replaces the v1 technical design (`archive/architecture/01-technical-design.md`). Every tool choice in it was checked against the alternatives in September 2026 by five due-diligence sweeps (`architecture/research/`); the ten records that changed are appended to `decisions.md` (ADR-11 to ADR-20). The product it builds is `product/05-product-spec-v2.md`; the markets and their order are `plan/market-order.md`; the data model is `schema.sql` (validated in a real Postgres engine); the interface is `api-contract.md`; the sprint order is `plan/build-plan.md`.
 
 Reading order for someone new: §1 constraints → §2 overview → §6 scheduling → §7 gateway → §8 adapters → §9 AI → §10 app. The rest is reference.
+
+**Current release boundary, 5 October 2026:** the approved English-only Telegram/iPhone cohort and its bounded native audio exception are described at the start of §10 and in ADR-42. The wider blueprint is a roadmap, not evidence that every listed feature is ready. `plan/english-trial-readiness.md` controls real-family activation.
 
 ---
 
@@ -32,13 +34,13 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
                        └───────────────┬───────────────────────────────────────┬────────────────┘
                                        │ HTTPS (Clerk session)                  │ push (Expo → APNs/FCM)
 ┌──────────────────────────────────────▼───────────────────────────────────────▼──────────────────────┐
-│  Cloudflare Worker "vela-api" (Hono, TypeScript)                                                     │
-│  ├─ /v1/* API (api-contract.md)            ├─ /webhooks/{line,whatsapp,telegram,voice,billing}     │
+│  Cloudflare Workers "vela" and "vela-admin" (Hono, TypeScript; on workers.dev in the pilot, ADR-26) │
+│  ├─ /v1/* API on "vela" (api-contract.md)  ├─ /webhooks/{line,whatsapp,telegram,voice,billing}     │
 │  ├─ Member Durable Objects  (one per member with arrivals: alarms for arrival · repeat · quiet ·   │
 │  │   turn prompt · weekly read; recomputed from the IANA zone on every fire)                        │
 │  ├─ Queues: "outbound" (gateway sends) · "understand" (AI) · "media" · dead-letter                  │
-│  ├─ Cron Triggers (housekeeping only): reconciliation every 5 min · retention nightly · metrics    │
-│  └─ Static assets: admin SPA                                                                        │
+│  ├─ Cron Triggers (housekeeping only): reconciliation every 15 min · retention nightly · metrics   │
+│  └─ Admin: pages in the Worker "vela-admin", behind Cloudflare Access; later the admin SPA          │
 │      bindings: Hyperdrive ×3 (apac · eu · us) · R2 ×3 · Queues · DO · Rate Limiting · secrets      │
 └──────┬────────────────┬───────────────────┬─────────────────────┬───────────────────────────────────┘
        │                │                   │                     │
@@ -52,25 +54,25 @@ Reading order for someone new: §1 constraints → §2 overview → §6 scheduli
        ▲
        │ read-only
 ┌──────┴───────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Ops: Sentry (errors, cron monitor) · Healthchecks.io heartbeat (outside Cloudflare) · Workers Logs   │
+│ Ops: Sentry (errors) · heartbeat Durable Object read by a GitHub Actions watchdog · Workers Logs     │
 │ PostHog Cloud EU (app funnels, flags) · founder dashboard reads metrics_daily · GitHub Actions + EAS  │
 └───────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 | Component | Responsibility | Technology (2026 pick) | Alternatives checked |
 |---|---|---|---|
-| Worker | API, webhooks, scheduler, gateway, adapters, AI orchestration, admin assets | Cloudflare Workers, Hono 4, TypeScript 5.7 strict | Vercel, AWS Lambda + EventBridge Scheduler, Cloud Run, Fly.io, Railway, Render, Supabase Edge (research/platform-and-data §2a) |
+| Worker | API, webhooks, scheduler, gateway, adapters, AI orchestration, admin assets. In the pilot, two Workers from one package, each on its workers.dev hostname only: `vela` (the API under `/v1`, ADR-29; webhooks, privacy notice pages, scheduler, queues, cron) and `vela-admin` (the admin pages, with Cloudflare Access on the whole Worker) (ADR-26) | Cloudflare Workers, Hono 4, TypeScript 7 strict | Vercel, AWS Lambda + EventBridge Scheduler, Cloud Run, Fly.io, Railway, Render, Supabase Edge (research/platform-and-data §2a) |
 | Per-member scheduler | Precise wake-ups per member in her time zone | Durable Objects with alarms | Per-minute cron scan (v1), EventBridge one-off schedules, pg_cron |
 | Queues | Decouple sends and AI from webhooks; retries; dead-letter | Cloudflare Queues (at-least-once, no dedup: the outbox gates) | SQS FIFO (dedup, but a second cloud), Cloud Tasks |
-| Database | System of record, one per region | Neon Postgres 17, projects in Singapore, Frankfurt, US-East; Hyperdrive pooling | Supabase (Tokyo region; fallback for Japan), PlanetScale Postgres, Crunchy, Aurora v2, Cloud SQL, D1 (ruled out: free-tier row caps enforced 2026-09-01) |
-| Media | Voice notes, photos; signed URLs; 30-day lifecycle | R2, one bucket per region, jurisdiction flag where available | S3 (egress), B2 (archive tier later), Supabase Storage |
+| Database | System of record, one per region | Neon Postgres 18 (native `uuidv7()`), projects in Singapore, Frankfurt, US-East; Hyperdrive pooling with query caching off | Supabase (Tokyo region; fallback for Japan), PlanetScale Postgres, Crunchy, Aurora v2, Cloud SQL, D1 (ruled out: free-tier row caps enforced 2026-09-01) |
+| Media | Voice notes, photos; signed URLs (photos from the app: proxied by the Worker, uploaded to Telegram as bytes; ADR-33); 30-day lifecycle | R2, one bucket per region, jurisdiction flag where available | S3 (egress), B2 (archive tier later), Supabase Storage |
 | Mobile | Family app, parent surface, kitchen table, widgets | Expo SDK 55 (RN 0.83, React 19.2, New Architecture) | Flutter, Compose Multiplatform, native, Capacitor, PWA (research/mobile-stack §2) |
 | Auth | Organisers and members with accounts | Clerk (phone OTP, email, Apple, Google; Expo SDK); Better Auth as the self-hosted fallback | Supabase Auth, Firebase, Auth0, Cognito, Stytch |
 | AI | Understanding, flags, chips, suggestions, translation, weekly read, hello | Anthropic Claude via the Messages API, structured outputs, batch, caching | OpenAI GPT-5.6 family, Gemini 3.x (as fallback providers) |
 | Speech | STT and TTS | Deepgram Nova-3 batch (STT), gpt-4o-transcribe as second opinion, SenseVoice/Groq Whisper benchmarked in the pilot; Azure Neural TTS (zh-TW, en, ja) with on-device `expo-speech` fallback | AssemblyAI, Google Chirp 3, ElevenLabs, Fish Audio, MiniMax (residency caution) |
 | Channels | LINE, WhatsApp, Telegram, voice/SMS, push | LINE Messaging API direct; WhatsApp Cloud API direct (after the entity); Telegram Bot API; Twilio Studio + Gather for the voice line; Expo Push | BSPs (markup), Vapi/Retell/Bland (not needed for a fixed script), OneSignal (not needed) |
-| Admin | Founder's daily ops view, evals browser, flags | Small React SPA (Vite) served by the Worker, same API with an admin role | Retool, Forest Admin, Appsmith (seat pricing, third-party data path) |
-| Observability | Errors, traces, cron liveness, alerts | Sentry free tier (+ Crons), Workers Logs, Healthchecks.io heartbeat | Grafana Cloud, Honeycomb, Axiom, Better Stack |
+| Admin | Founder's daily ops view, evals browser, flags | Small React SPA (Vite) served by the Worker, same API with an admin role; in the pilot, server-rendered pages in the admin Worker `vela-admin` behind Cloudflare Access (ADR-22, ADR-26) | Retool, Forest Admin, Appsmith (seat pricing, third-party data path) |
+| Observability | Errors, traces, cron liveness, alerts | Sentry free tier, Workers Logs, a heartbeat the pilot Worker keeps in a Durable Object and serves at `/healthz`, read every 15 minutes by a GitHub Actions watchdog outside Cloudflare (ADR-18, update of 2026-09-18) | Grafana Cloud, Honeycomb, Axiom, Better Stack; hosted cron monitors (a third-party account for one signal) |
 | Analytics | Product funnels, flags, replay | PostHog Cloud EU (free tier); the founder's KPIs come from `metrics_daily` | Amplitude, Mixpanel, Segment |
 | CI/CD | Tests, migrations, deploys, mobile builds | GitHub Actions; Wrangler; Drizzle migrations; Neon branch per PR; EAS Build/Submit/Update | macOS runners (10× Linux cost), Prisma (needs a proxy on Workers) |
 
@@ -108,7 +110,8 @@ vela/
       src/do/               # MemberScheduler Durable Object
       src/queues/           # outbound, understand, media consumers
       src/cron/             # reconcile, retention, metrics, heartbeat
-      wrangler.toml         # bindings per environment (dev, staging, prod)
+      wrangler.jsonc        # the pilot Worker "vela": bindings per environment (dev, staging, production)
+      wrangler.admin.jsonc  # the admin Worker "vela-admin", from the same package (ADR-26)
     mobile/                 # Expo SDK 55 app; Expo Router; modes family/, parent-surface/, kitchen-table/
       ios/                  # WidgetKit target (Swift) — the fallback if expo-widgets churns
       android/              # react-native-android-widget output
@@ -116,16 +119,16 @@ vela/
   packages/
     contracts/              # Zod schemas: API request/response, events, adapter types (api-contract.md §11–12)
     core/                   # pure domain logic: composer, ladder, budget, time math, state machine — no I/O
-    db/                     # Drizzle schema mirroring schema.sql, migrations, region router
+    db/                     # Drizzle schema (source of truth), migrations/, clients, PGlite test helper
     adapters/               # line/, whatsapp/, telegram/, voice/, app/ — one folder per channel, fixtures/
-    ai/                     # prompts/<call>.v<N>.md, schemas, client, cost accounting
+    ai/                     # prompts/<call>.v<N>.ts, schemas, client, speech, cost accounting, evals/
+    copy/                   # messenger strings in en and zh-TW, t()
+    services/               # application services behind ports: tick, gateway, flows, pipeline, jobs
     i18n/                   # Lingui catalogs: en (source), zh-TW, ja, de, hi
     ui/                     # NativeWind components (family) + StyleSheet kit (parent surface)
     audio/                  # expo-audio wrappers, waveform, TTS/STT adapters
   evals/                    # Promptfoo config + golden set (anonymised, consented)
-  db/migrations/            # generated SQL, reviewed in PRs
-  infra/                    # wrangler envs, Neon project ids, R2 buckets, Healthchecks ids
-  docs/                     # runbooks: incident, restore drill, release, OTA policy
+  infra/                    # environments, account checklist, sub-processors, runbooks/
 ```
 
 Rules: `packages/core` has no imports from I/O packages and is 100% unit-tested; adapters import only `contracts`; the app imports only `contracts` and `ui`/`audio`; every AI call goes through `packages/ai` (no direct SDK use elsewhere).
@@ -134,16 +137,16 @@ Rules: `packages/core` has no imports from I/O packages and is 100% unit-tested;
 
 ## 5. Domain model
 
-The schema is `schema.sql` (32 tables; validated). The invariants the code relies on:
+The schema is defined in `packages/db/src/schema.ts` (34 tables) and exported to `schema.sql`. The invariants the code relies on:
 
 - **`exchanges_one_per_day`**: a partial unique index on `(recipient_id, scheduled_for)` for every state from scheduled onward. This is the idempotency backbone: two Durable Object fires, two queue deliveries, or a replayed cron cannot create a second delivery for the same local day.
 - **`outbound_budget_idx`**: a partial unique index on `(member_id, local_day, kind)` for the budgeted kinds. The budget is a database constraint, not a check in code.
 - **`outbound.actor_id` CHECK** for `nearby_ask`: a message to a third person cannot exist without a person's id.
 - **`answers (channel, external_id)` unique**: duplicate webhooks are no-ops.
 - **`quiet_events.exchange_id` unique**: one quiet event per exchange; its `outcome` is never null after resolution and feeds the precision page.
-- **`members.next_arrival_at`** is the reconciliation index (§6.4), not the primary scheduler.
+- **`members.next_wake_at`** is the reconciliation index (§6.4), not the primary scheduler.
 - Media rows carry `expires_at`; the retention job deletes and writes a `deletions` row with a content hash, so deletion is provable without keeping the content.
-- `events` is append-only and partitioned monthly; it carries kinds and durations, never content.
+- `events` is append-only (a plain table until volume justifies partitioning); it carries kinds and durations, never content.
 
 The exchange state machine (spec §3) is implemented as a pure function in `packages/core/exchange.ts`: `transition(exchange, event) → exchange | Error`. Illegal transitions throw; the API and the consumers call the same function.
 
@@ -169,7 +172,7 @@ On `alarm()`: read state, pick every pending item whose time has passed, and for
 
 ### 6.2 Why not the v1 cron scan
 
-A per-minute scan of `members.next_arrival_at` is fine at 100 families and increasingly wrong at 100,000: Cloudflare Cron Triggers neither retry nor alert on a missed tick (and had a degraded incident on 2026-09-09), UTC-only cron granularity makes the 5-minute promise a coin toss, and a shared scan is where double sends come from. The DO alarm is per member, retried by the platform, and cheap.
+A per-minute scan of `members.next_wake_at` is fine at 100 families and increasingly wrong at 100,000: Cloudflare Cron Triggers neither retry nor alert on a missed tick (and had a degraded incident on 2026-09-09), UTC-only cron granularity makes the 5-minute promise a coin toss, and a shared scan is where double sends come from. The DO alarm is per member, retried by the platform, and cheap.
 
 ### 6.3 Composition at arrival time
 
@@ -177,7 +180,7 @@ The `arrival` consumer runs `compose(member, day)` from `packages/core`: pick th
 
 ### 6.4 Reconciliation (the safety net)
 
-A Cron Trigger every 5 minutes runs one query per region: members whose `next_arrival_at < now() − 10 min` with no exchange delivered for today's local date. For each: log `scheduler.missed` to Sentry, re-arm the DO, deliver with the "sorry this is late" line if more than 3 h late. The same tick pings the Healthchecks.io heartbeat; if the ping stops, the founder is paged from outside Cloudflare (the application cannot know it missed its own wake-up).
+A Cron Trigger every 15 minutes (every 5 until 2026-09-18: a run every 5 minutes would keep the Neon database awake all month, `03-code-design.md` §10, "Reconcile interval") runs one query per region: members whose `next_wake_at < now() − 10 min` with no exchange delivered for today's local date. For each: log `scheduler.missed` to Sentry, re-arm the DO, deliver with the "sorry this is late" line if more than 3 h late. When a run finishes, the Worker records the time in a singleton Durable Object, and `/healthz` answers `ok` only while that time is at most 35 minutes old; a GitHub Actions watchdog reads `/healthz` every 15 minutes, so if the runs stop, the founder is emailed from outside Cloudflare (the application cannot know it missed its own wake-up; ADR-18, update of 2026-09-18).
 
 ### 6.5 Tuning
 
@@ -191,7 +194,7 @@ Every message to a person passes through `gateway.send(kind, member, message, ac
 
 1. Compute `local_day` from the member's zone.
 2. `INSERT INTO outbound (…) ON CONFLICT DO NOTHING` with the idempotency key `${kind}:${member}:${day}` (nearby asks: `${quiet}:${contact}`). If nothing was inserted, return `duplicate`. The budget index rejects a second `arrival`, `repeat`, `turn_prompt`, `weekly_read`, `ack`, or `answer_receipt` for the same day; the CHECK rejects a `nearby_ask` without an actor.
-3. Enqueue `{outbound_id}` to the `outbound` queue. The consumer loads the row, calls `adapter.send()`, sets `sent_at` and `external_id`; on failure retries 3× with backoff (5, 15, 30 min); then `failed`, the organiser is told once ("we couldn't reach Mom on LINE today"), and the quiet ladder is **not** armed for that day (constraint 5).
+3. Enqueue `{outbound_id}` to the `outbound` queue. The consumer loads the row, takes it (`sent_at` set on the queued row in one conditional update, so a second delivery of the row finds it taken and sends nothing), calls `adapter.send()`, sets `status sent`, `sent_at`, and `external_id`; on failure retries 3× with backoff (5, 15, 30 min), resending only the media that did not go out, and a row whose delivery stopped mid-send is failed, never sent again (`04-instrument-flows.md` §3.7); then `failed`, the organiser is told once ("we couldn't reach Mom on LINE today"), and the quiet ladder is **not** armed for that day (constraint 5).
 4. Every outcome writes an event.
 
 Flags (`kind = flag`) are the single exception to the budget and are logged as such. Nothing else in the codebase calls an adapter.
@@ -207,7 +210,7 @@ Contract: `api-contract.md` §12. Each adapter is a folder with `send.ts`, `webh
 | **LINE** (Taiwan, Japan) | 1 | Quick replies ≤13, template buttons ≤3, Flex cards | In: audio via `api-data.line.me` (m4a); out: HTTPS URL + duration, m4a ≤200 MB | **None**; "seen" is unknown on LINE | Push messages count against the plan; replies are free; Light free/200, Standard NT$1,000/3,000 (from 2026-11-01), High NT$1,400/6,000; ~NT$12 per parent-month at Standard scale | Follow the Official Account via the invite link (`?ref=token`); account linking without LINE Login; `unfollow` = blocked | No read receipts, so the ladder counts from delivery; quota tracked in `adapters/line/quota.ts` and degrades to reply-only when exhausted; an unverified OA runs in the founder's name pre-entity |
 | **WhatsApp Cloud API** (Germany, UK, India, US as available) | 2, after the entity | Reply buttons ≤3, lists ≤10; only in-window or in an approved template | In: OGG/Opus ≤16 MB; out: same, in-window or template | Yes (`read` status, unless the user disabled it) | The daily ask is a **Utility template** outside the 24 h window ($0.004–0.046 per message by country); in-window replies free until 2026-10-01, billed after; ~$0.35–1.80 per parent-month | Phone number is identity; opt-in collected in the app before the first message; STOP honoured immediately | Two wire shapes for one `Arrival` (template vs free-form) chosen at send time by window state; Meta Business Verification needs the legal entity; messaging tiers cap unique recipients per day |
 | **Telegram** (instrument; families who already use it) | 0 | Inline keyboards | OGG/Opus ≤50 MB both ways | None; reactions are a bonus signal | Free; ~30 msg/s global soft cap | `/start <token>` deep link | Kept trivial to retire; never a market's primary channel |
-| **Voice line** (Twilio Studio + `<Play>`/`<Gather>`) | phase 2 | DTMF digits | Out: plays the family's voice notes; in: recording (extra cost) or keypress | Call events only | Per-minute: Taiwan $0.12–0.20, US landline ~$0.014, Japan $0.07–0.19; number rental $1.15/month | Phone number; explicit consent captured at onboarding (US TCPA informational calls still need prior express consent) | Does not fit `Arrival`; a separate `VoiceCallAdapter` composes the day's audio into a Studio flow; legal review per country before launch (Japan, Germany, India have open gaps) |
+| **Voice line** (Twilio Studio + `<Play>`/`<Gather>`) | phase 2 | DTMF digits | Out: plays the family's voice notes; in: recording (extra cost) or keypress | Call events only | Per-minute: Taiwan $0.12–0.20, US landline ~$0.014, Japan $0.07–0.19; number rental $1.15/month | Phone number; explicit consent captured at onboarding (US TCPA informational calls still need prior express consent) | Does not fit `Arrival`; a separate `VoiceCallAdapter` composes the day's audio into a Studio flow; legal review per country before launch (Japan, Germany, India have open gaps); proposed design, with TwiML from the Worker instead of Studio, in `06-voice-line.md` (ADR-37) |
 | **SMS** (US fallback) | phase 2 | "reply 1 or 2" | None | Delivery only | 10DLC brand $4.50–46 one-off + campaign; ~$0.0083 per segment + carrier fees | Phone number; STOP/UNSUBSCRIBE mandatory | Buttons flattened to numbered replies |
 | **App / push** | 1 | Native | Native | App reports `seen` | Expo Push, free; iOS time-sensitive entitlement for the quiet notice | Clerk session | Push is delivery-only; the app's `seen`/`answer` calls are the inbound path; a reconciliation job, not push delivery, is the failure signal |
 
@@ -235,7 +238,7 @@ All calls go through `packages/ai`, use the Anthropic SDK (`@anthropic-ai/sdk`),
 | `hello` | yesterday's replies, address form | `{lines[2]}` | `claude-haiku-4-5` | — | batch | Only when nothing was queued |
 | `recipe` | the recipe exchanges | `{title, ingredients[], steps[], remarks[]}` | `claude-sonnet-5` | low | batch | Occasional |
 
-Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks: "default"` so a refusal by the safety classifiers routes to a fallback model instead of failing; `stop_reason` is checked before reading content; a schema parse failure logs and returns the safe default (no flag, summary "answered").
+Requests to `claude-opus-5` set `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks: "default"` (the reference documents fallbacks for Opus 5, not for Sonnet 5 or Haiku 4.5) so a refusal by the safety classifiers routes to a fallback model instead of failing; `stop_reason` is checked before reading content; a schema parse failure logs and returns the safe default (no flag, summary "answered").
 
 ### 9.2 Speech
 
@@ -245,7 +248,7 @@ Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks:
 
 ### 9.3 Prompt registry, evals, tracing
 
-- Prompts live in `packages/ai/prompts/<call>.v<N>.md` with a frozen system prompt first (cacheable) and volatile content last. The version string is logged on every `ai_calls` row with tokens, cache reads, latency, and cost.
+- Prompts live in `packages/ai/src/prompts/<call>.v<N>.ts` with a frozen system prompt first (cacheable) and volatile content last. The version string is logged on every `ai_calls` row with tokens, cache reads, latency, and cost.
 - **Golden set** in `evals/` (Promptfoo, YAML, runs in CI, exit code fails the PR): 50 cases at sprint 1 growing to 200, over-weighted toward Taiwanese-accented Mandarin, code-switched Mandarin/English, a grandchild's casual register that must become respectful for a grandparent, borderline health mentions (over-flagging) and clear ones (under-flagging), away detection, and prompt-injection attempts inside family text. Flag recall must not drop; flag precision, chip usefulness, and translation register are judged by a rubric.
 - Tracing: `ai_calls` in Postgres from day one; Langfuse (self-hosted, free) added when volume makes the admin view too thin.
 - Safety rails, in prompts and tested: never diagnose, never advise, never speak as a family member, never mention monitoring or notes to the family, treat every family message as untrusted data (no instruction-following from content), and no autonomous action of any kind: the model only drafts what a person sends or reads.
@@ -266,13 +269,29 @@ Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks:
 
 ## 10. The mobile app
 
-- **Expo SDK 55** (React Native 0.83, React 19.2, New Architecture only), Expo Router, EAS Build/Submit/Update. One app, three modes chosen per member: family, parent surface, kitchen table.
+### Approved English trial implementation
+
+The current manifest uses Expo SDK 57, React Native 0.86.3 and React 19.2.3 with Expo Router and `expo-audio`. Parents use Telegram; the iPhone app serves approved organisers and contributors. Telegram setup/consent precedes session-bound app proof-code linking. No app-created duplicate family, parent app/tablet/widget, payment, memory automation, book export or multilingual release is part of this cohort. Genuine account stories/recipes remain readable when available; `BOOK` stays off during the real-family trial, so new long-term story retention is deferred.
+
+TanStack Query is isolated per Clerk account/session; React holds small screen state. SecureStore holds encrypted text drafts/uncertain write identifiers and permission-based optional calling numbers, cleared on sign-out/account changes. There is no background offline sync engine. Actual Today data refreshes on focus/foreground and a 30-second active interval, with recipient timezone/local-date labels. Fixture data requires explicit `EXPO_PUBLIC_DEMO_MODE=true` with both API/auth configuration absent; a development build alone never activates fixtures.
+
+English is enforced before first paint and while public capabilities are pending/fail. Lingui source/catalog synchronization and English ICU checks stay required; Traditional Chinese completeness/native review is an open separate future gate. `/v1/capabilities` controls pilot/Telegram-first/English, memory, book, parent-app and billing visibility; server admission and role checks remain authoritative. Pilot weekly reads are free.
+
+Incoming original Ogg/Opus is downloaded through the authenticated family media route, locally decoded off the main thread into temporary bounded PCM by the narrow `VelaOpusDecoder` Expo module, then played with `expo-audio`. It adds no remote processor. Inputs over 20 MiB or five minutes fail visibly; every replay reauthorises and session changes invalidate pending work. Original M4A/MP3 use native playback. The custom module requires a native build; host C tests/autolinking are partial evidence, not Swift/CocoaPods/iPhone proof. See ADR-42, `03-code-design.md` and `apps/app/modules/vela-opus/README.md`.
+
+The `trial` EAS profile targets production, forces English, refuses a development Clerk key or staging API, disables tablets and embeds the source commit. Production deployment and build require the tested main-derived `v*` tag, green exact-commit CI and founder environment approval. GitHub's build handoff does not prove completed EAS/TestFlight processing or device acceptance. EAS Update runtime/channels are not yet configured; trial app fixes require signed builds. The full release, eligibility and observed-family gates are recorded separately in `plan/english-trial-readiness.md`.
+
+### Wider app blueprint after the trial
+
+The following modes and tooling are the broader blueprint, not evidence that they are enabled in the English trial. Its earlier SDK 55/React Native 0.83 baseline is superseded by the current manifest above.
+
+- **One Expo app**, Expo Router and EAS Build/Submit; EAS Update only after its separate configuration and release policy are verified. Three intended modes chosen per member: family, parent surface, kitchen table.
 - **Widgets**: the light on the home screen. iOS via `expo-widgets` (alpha) with a hand-written WidgetKit target as the budgeted fallback; Android via `react-native-android-widget`. Both refresh from a push carrying `{member_id, state, answered_at}`; the widget endpoint `/families/:id/lights` is cacheable for 60 s.
 - **Audio**: `expo-audio` (not `expo-av`, removed in SDK 55); AAC/M4A; `isMeteringEnabled` drives the visible level meter; `expo-speech-recognition` as an offline dictation fallback; pre-rendered TTS files with `expo-speech` fallback.
 - **State**: TanStack Query for server state, Zustand for the little client state, `expo-sqlite` cache, `expo-secure-store` for tokens. No offline-first sync engine in v1 (revisit only if the parent must compose offline for hours).
 - **UI**: the parent surface in plain `StyleSheet` so every size is explicit (22 pt body, 64 pt targets, 88 pt primary, 7:1 contrast, light mode only, `maxFontSizeMultiplier` set deliberately, `AccessibilityInfo` for screen reader and reduced motion); the family app in NativeWind with the Candle & Ink tokens; Literata and Inter via `@expo-google-fonts`, Noto Sans TC/JP as CJK fallbacks.
 - **i18n**: Lingui (compile-time ICU; zh/ja plural rules), English as source, `zh-TW` at MVP, `ja`, `de`, `hi` in phase 2. `date-fns` v4 + `@date-fns/tz` for zones.
-- **Push**: Expo Push Service; the quiet notice uses the iOS time-sensitive interruption level (not critical alerts); Android channel "Vela" with one importance level.
+- **Push**: Expo Push Service; the quiet notice uses the iOS time-sensitive interruption level (not critical alerts). Android has two channels, since a channel, not the message, decides sound and importance there: `quiet` (high, with sound) for the quiet notice and its close, and `daily` (default, silent) for the rest (ADR-34, which built it on 27 September 2026, off in every environment until the founder's Expo set-up).
 - **Kitchen-table mode**: landscape route, `expo-keep-awake`, photos cycling from the family book, one chime, tested on a 2019 Android 8 tablet before phase 2.
 - **Payments**: none in the app until the entity exists. When it does: RevenueCat (`react-native-purchases`, free to $2,500 tracked revenue/month) for App Store and Play billing; a web checkout link may appear only where store rules allow external links (US, EU, Japan), never in Taiwan or India; in those storefronts the trial is opened from a Settings-level link, not an in-app "Buy".
 - **Quality**: Biome; Jest + React Native Testing Library; Maestro CLI flows (readable by the founder); Sentry; PostHog (EU); Apple accessibility label and Google health-app disclaimer completed at first submission.
@@ -283,16 +302,17 @@ Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks:
 
 - **Clerk** for organisers and members with accounts: phone OTP (no per-message surcharge), email magic link, Sign in with Apple and Google; Expo SDK; free to 50,000 monthly retained users. The Worker verifies Clerk session JWTs (JWKS cached in the Worker). Better Auth (MIT, self-hosted, Expo plugin) is the fallback if Clerk's retained-user pricing bites past 50k.
 - **Kept-light members have no account.** Their identity is a `channel_links` row (LINE userId, WhatsApp number, Telegram id, phone) or, on the parent surface, a device-bound token issued when a visiting child signs in and hands over the phone (`primary_surface = parent-surface`; no password, no email; re-issued by any organiser).
-- **Roles** are per membership (organiser, member) plus a global admin allow-list read by the admin routes; every admin read of a family writes `admin_access_log` and an event visible to the organiser on request.
+- **Roles** are per membership (organiser, member) plus a global admin allow-list read by the admin routes; every admin read of a family writes `admin_access_log` and an event visible to the organiser on request. In the pilot, before accounts exist, the admin identity is the founder's Cloudflare Access sign-in: Access covers the whole admin Worker `vela-admin`, and the Worker verifies the Access token itself (ADR-22, ADR-26).
+- **Deleted Clerk accounts** are revoked through signed `POST /webhooks/clerk`: `user.deleted` creates a permanent account-access tombstone, clears actor receipts/link challenges/push devices and blocks API read/write/provision/link/replay. It does not erase shared family content. The endpoint-specific private Svix signing key and a real provider-delivered synthetic deletion are release gates; reversible `user.updated` bans/locks are ignored.
 
 ---
 
 ## 12. Data residency and privacy engineering
 
-- **Regions**: `apac` (Neon Singapore, R2 APAC), `eu` (Neon Frankfurt, R2 with EU jurisdiction), `us` (Neon US-East, R2 US). A family's region is fixed at creation from the kept-light member's country and never moves without export and import. Japan volume that requires in-country hosting gets a Supabase Tokyo project behind the same region router.
+- **Regions**: `apac` (Neon Singapore, R2 APAC), `eu` (Neon Frankfurt, R2 with EU jurisdiction), `us` (Neon US-East, R2 US). A family's region is fixed at creation and never moves without export and import: the kept-light member's country picks the preferred region, and a family whose preferred region does not exist yet is created in `apac` (in the pilot only `apac` exists, so every family is `apac`; ADR-7, update of 2026-09-14). Japan volume that requires in-country hosting gets a Supabase Tokyo project behind the same region router.
 - **Region router**: `packages/db/region.ts` resolves `family_id → region` from a small global lookup (family id → region) kept in a Durable Object/KV so a request never touches the wrong database; every query is scoped by family.
 - **What the AI sees**: the answer, the ask, the family's replies, the member list with roles and languages, memory facts. Never billing, never nearby contacts' numbers, never the whole archive.
-- **Minimum data and retention**: names, address forms, cities, hours, 30 days of answers and media, the family book by choice, summaries, weekly reads, precision outcomes. Retention jobs (nightly cron per region): media past `expires_at`, answers' transcripts and media past 30 days unless kept, members `left` past 30 days, families past `deleted_at`, event partitions past 24 months. Every deletion writes a `deletions` row with a content hash.
+- **Minimum data and retention**: names, address forms, cities, hours, 30 days of answers and media, the family book by choice, summaries, weekly reads, precision outcomes. Retention jobs (nightly cron per region, ADR-24): after 30 days, the text of asks, replies, translations, chips, and suggestions, answers' text, transcripts, mentions, mood words, and flag reasons, outbound payloads, AI outputs, and nearby-ask replies are cleared, and message refs are deleted; media past `expires_at` unless kept; invites 30 days after expiry or acceptance, and expired onboarding sessions; members `left` past 30 days; families within 24 hours of `deleted_at`; `events`, `metrics_daily`, `ai_calls`, and `outbound` rows past 24 months; a member's Durable Object storage when they stop, leave, die, or are deleted. Summaries, the flag boolean, and away dates stay while the family uses Vela. Every media deletion writes a `deletions` row with a content hash.
 - **Consent records**: `consents` rows with the exact text version, language, channel, and evidence; light consent, nearby-contact consent, the privacy notice, and the pilot agreement. The silence notice to another family member is itself a disclosure and is named in her consent text.
 - **Legal minimums by market** (research/platform-and-data §4): GDPR (DPA with every sub-processor, sub-processor list with 30 days' notice, data map, breach notice within 72 h, deletion windows); Taiwan PDPA as amended November 2025 (privacy notice updated within 90 days, breach notification rules, DPO where warranted); Japan APPI as amended January 2026 (prior consent and a 3-year transfer record for data leaving Japan; no small-business exemption); India DPDP (cross-border allowed by default; 48-hour pre-deletion notice to data principals). Sub-processors at launch: Cloudflare, Neon, Anthropic, Deepgram, Microsoft (Azure TTS), Clerk, LINE, Meta, Twilio, Sentry, PostHog, Expo.
 - **Never built**: location tracking, camera or microphone monitoring, contact-list upload, advertising identifiers, voice cloning.
@@ -302,11 +322,11 @@ Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks:
 ## 13. Security
 
 - Webhook signatures verified on the raw body before parsing, in every adapter, enforced by contract tests (§8).
-- Cloudflare Rate Limiting binding on invite redemption, auth, and media upload URLs; invite tokens single-use and expiring; media URLs signed for 15 minutes.
-- Secrets only in Worker secrets and `.dev.vars`; Infisical when a second environment or person needs synced secrets; no keys in the repo; Renovate for dependency updates.
-- TLS everywhere; provider encryption at rest for Neon and R2 during the pilot; field-level envelope encryption (AES-256-GCM, keys in Worker secrets) for transcripts decided before launch, not retrofitted at scale.
+- Cloudflare Rate Limiting binding on invite redemption, auth, and media upload URLs; invite tokens single-use and expiring; media URLs signed for 15 minutes (photos from the app: proxied by the Worker, uploaded to Telegram as bytes; ADR-33).
+- Secrets only in Worker secrets, `.dev.vars`, and GitHub environment secrets for deploys (`CLOUDFLARE_API_TOKEN`, `DATABASE_URL`; never repository secrets, ADR-23); Infisical when a second environment or person needs synced secrets; no keys in the repo; Renovate for dependency updates.
+- TLS everywhere; provider encryption at rest for Neon and R2 during the pilot. Field-level encryption, proposed 3 October 2026 (ADR-38): every column holding what a person wrote or said, and Vela's words about it, not transcripts alone, sealed with AES-256-GCM by a Drizzle column type, under one key per environment in Worker secrets (`CONTENT_KEY_V1`, versioned for rotation), built before production's first deploy so nothing is retrofitted. Per-family envelope keys were dropped: retention and Neon's short restore window already give what crypto-shredding would.
 - Backups: Neon point-in-time restore (plan-dependent history) plus a **quarterly restore drill** (restore to a timestamp, verify counts, discard); R2 versioning on the family-book prefix.
-- Admin reads logged and visible to organisers; MFA on every provider account; a one-page incident runbook (notify, rotate, status update) and a one-page sub-processor list written in sprint 1.
+- Admin reads logged and visible to organisers; in the pilot the admin pages are a Worker of their own, `vela-admin`, so Cloudflare Access covers every hostname they answer on while Telegram's webhook stays on the public Worker `vela` (ADR-26); MFA on every provider account; a one-page incident runbook (notify, rotate, status update) and a one-page sub-processor list written in sprint 1.
 - Status page: Instatus free tier at pilot; alerts in §15.
 
 ---
@@ -316,7 +336,7 @@ Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks:
 | Failure | Effect | Handling |
 |---|---|---|
 | Channel API down or account throttled | Arrival undelivered | Gateway retries 3× over 50 min; then `failed`; organiser told once; **no quiet ladder that day**; the app offers the next channel |
-| Durable Object alarm missed or Cloudflare cron degraded | Late arrival | Reconciliation cron re-arms and delivers with the late note; Healthchecks.io pages the founder if ticks stop; `exchanges_one_per_day` prevents doubles |
+| Durable Object alarm missed or Cloudflare cron degraded | Late arrival | Reconciliation cron re-arms and delivers with the late note; the watchdog emails the founder if reconcile runs stop; `exchanges_one_per_day` prevents doubles |
 | Postgres unreachable in one region | That region pauses | Webhooks return 503 (providers retry); alarms re-arm with backoff; Sentry critical alert; other regions unaffected |
 | AI provider down or slow | Answers not understood | The light lit already (constraint 2); `understand` queue drains later; the family sees "Mom answered" with the media |
 | STT fails on her audio | No transcript | Answer still counts; the family hears the voice; transcript retried with the second provider; logged for the pilot benchmark |
@@ -330,18 +350,18 @@ Every request sets `betas: ["server-side-fallback-2026-07-01"]` with `fallbacks:
 
 ## 15. Observability, SLOs, alerts
 
-SLOs: arrival sent P95 ≤ 5 min and P99 ≤ 15 min after her hour; a scheduler tick recorded at least every 10 minutes per region; duplicate sends zero (constraint, alert as backstop); quiet notices attributable to our own outage zero (silence drill, §16); webhook ack P95 ≤ 1 s.
+SLOs: arrival sent P95 ≤ 5 min and P99 ≤ 15 min after her hour (the Durable Object alarm carries both; an arrival whose alarm is lost is caught by reconciliation 10 to 25 min late); a reconcile run recorded at least every 15 minutes per region (the watchdog alerts once none has finished for 35 minutes); duplicate sends zero (constraint, alert as backstop); quiet notices attributable to our own outage zero (silence drill, §16); webhook ack P95 ≤ 1 s.
 
 | Signal | Threshold | Where | Severity |
 |---|---|---|---|
-| Heartbeat missing | > 10 min | Healthchecks.io (outside Cloudflare) | Page |
-| Arrival unsent past hour + 5 min | any | reconciliation cron → Sentry | High |
+| Heartbeat stale (`/healthz` not `ok`) | no successful reconcile for > 35 min | GitHub Actions watchdog (outside Cloudflare), every 15 min | Email to the founder |
+| Arrival unsent past hour + 5 min | any | reconciliation logs `scheduler_missed` in the pilot Worker's logs (Sentry once connected); a cron or Worker that stops leaves `/healthz` stale for the watchdog | High |
 | Budget index rejection for `arrival`/`quiet_notice` | any | Sentry log alert | Medium (should never happen) |
 | Adapter send failure rate | > 5% in 15 min on one channel | Sentry | High |
 | Dead-letter queue growth | any | Queues DLQ → Sentry | High |
 | Quiet notice fired | every | `quiet_events`, reviewed daily in the admin | Informational |
 | Provider spend | 50/80/100% of tier | Cloudflare, Neon (hard cap), Anthropic, Twilio budget alerts | Medium |
-| Postgres unreachable | 5xx spike | Sentry + synthetic `/readyz` | Critical |
+| Postgres unreachable | reconcile stops finishing, so `/healthz` answers `stale` after 35 min; the webhook answers 5xx | GitHub Actions watchdog (a stale `/healthz`, read from outside Cloudflare), plus the Workers' error logs (`cron_failed`, `request_failed`, `queue_job_failed`, `queue_deps_failed`; Sentry once connected) | Critical |
 
 The founder's daily view reads `metrics_daily` and `quiet_events` in the admin SPA: answer rate, latency, quiet notices and outcomes, stop rate, families per market, AI cost. PostHog (EU) carries app funnels, flags, and replay; it never receives content.
 
@@ -358,7 +378,7 @@ The founder's daily view reads `metrics_daily` and `quiet_events` in the admin S
 
 DST cases in Vitest with fake timers: spring-forward gap (exactly one arrival), fall-back repeat (no double), a half-hour-offset zone, a zone without DST. **Silence drill** (runs in CI on a schedule): adapter throws for a cohort → organiser told once, `quiet_events` empty; missed tick → next tick respects the one-per-day gate and the heartbeat would have paged; Postgres down during the tick → clean skip, admin alert, no quiet event; AI down → light lit, no quiet event. Contract tests: every adapter's fixtures, valid and tampered. Load: k6 locally against staging at 10× expected peak.
 
-CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite) → contract → Promptfoo (on prompt changes) → Wrangler deploy to staging on main → production on tag. Migrations: Drizzle Kit generates SQL into `db/migrations/`, reviewed in the PR, applied to a Neon branch of each region in CI, then to production by the release job. Mobile: EAS Build (Linux CI never runs macOS), EAS Submit to TestFlight and Play internal testing, EAS Update for JS-only fixes under a written OTA policy (bug fixes, copy, layout; never features or entitlements outside review).
+CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite) → contract → Promptfoo (on prompt changes) → Wrangler deploy to staging on main → production on tag. Current required checks additionally include real PostgreSQL 18 contention and Maestro web demo; the demo does not prove native or signed-in behaviour. Migrations: Drizzle Kit generates SQL into `packages/db/migrations/`, reviewed in the PR, and applied by each environment's deploy job before `wrangler deploy` (ADR-23); until that job exists, the founder runs them. Mobile: EAS Build (Linux CI never runs macOS) and EAS Submit. The English trial uses new signed iOS builds; EAS Update for JS-only fixes remains a future configuration gate under the written OTA policy (bug fixes, copy, layout; never features or entitlements outside review).
 
 ---
 
@@ -366,17 +386,17 @@ CI (GitHub Actions, Linux): typecheck → Biome → unit → integration (pglite
 
 | Env | Worker | Databases | Channels | Mobile |
 |---|---|---|---|---|
-| dev | `wrangler dev` | pglite locally; a personal Neon branch | Telegram test bot; LINE test OA | Expo dev client on the founder's phone |
-| staging | `vela-api-staging` | Neon branches of each region | Telegram test bot; LINE test OA; WhatsApp sandbox | TestFlight / Play internal (dev client) |
-| prod | `vela-api` | Neon main branches (apac, eu, us) | Real accounts | Store builds; EAS Update channel `production` |
+| dev | `wrangler dev` (`vela-dev`; `vela-admin-dev` beside it with `pnpm --filter @vela/worker dev:admin`) | PGlite locally (`pnpm --filter @vela/db dev-db`); no Neon branch: each Neon project is one environment's (`infra/README.md`, section 2) | Telegram test bot; LINE test OA | Expo dev client on the founder's phone |
+| staging | `vela` (`https://vela.vela-light-staging.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light-staging.workers.dev`), in the "Vela staging" Cloudflare account | Neon projects of their own, one per region (apac: `vela-staging`), so staging never copies production data | Telegram test bot; LINE test OA; WhatsApp sandbox | Expo Go against `vela`'s `/v1` (`start:staging`) until EAS; TestFlight / Play internal (dev client) |
+| prod | `vela` (`https://vela.vela-light.workers.dev`) and `vela-admin` (`https://vela-admin.vela-light.workers.dev`), in the "Vela" Cloudflare account | Neon projects, one per region (apac: `vela`; eu and us from sprint 2), each on its default branch `main` | Real accounts | Signed `trial` iOS builds after release gates; no configured EAS Update channel |
 
-Release: trunk-based; PRs run the full CI; `main` deploys to staging; a tag deploys to production with the migration job first; mobile releases weekly during the pilot, with EAS Update for JS-only fixes.
+Release: trunk-based; PRs run the full CI; `main` deploys to staging; a main-derived `v*` tag with green non-nightly CI on its exact SHA deploys to production after the founder's approval, its deploy job migrating once, then deploying `vela`, then `vela-admin` (ADR-26, ADR-42). The trial build uses the same tested source and protected environment. Trial fixes ship as signed builds until a separate EAS Update setup is verified.
 
 ---
 
 ## 18. Cost model (monthly, order of magnitude, before volume discounts)
 
-| Families | Cloudflare | Neon ×3 | R2 | AI + speech | Channels (LINE/WhatsApp mix) | Tools (Sentry, PostHog, Healthchecks, Clerk, Expo) | Total |
+| Families | Cloudflare | Neon ×3 | R2 | AI + speech | Channels (LINE/WhatsApp mix) | Tools (Sentry, PostHog, Clerk, Expo) | Total |
 |---|---|---|---|---|---|---|---|
 | 100 | $5 | $0 | $0 | ~$55 | ~$40 | $0 (free tiers) | **≈ $100** |
 | 1,000 | $5–10 | ~$60 | ~$5 | ~$550 | ~$400 | ~$50 | **≈ $1,100** |
@@ -396,7 +416,7 @@ At 10,000 families with 10% on Light at $79/year the gross margin is thin; at 20
 | `expo-widgets` is alpha | API churn before ship | Hand-written WidgetKit target (already in the repo layout) |
 | WhatsApp pricing moving (in-window utility billed from 2026-10-01) | Cost per parent-month above $2 | Prefer LINE and the app where possible; re-price Light in India |
 | LINE has no read receipts | Ladder timing on LINE noisier than on WhatsApp | Longer T_quiet floor on LINE (300 min) after pilot data |
-| Cloudflare cron degraded (2026-09-09 incident) | Heartbeat pages | Reconciliation and the DO alarms already carry the load; EventBridge Scheduler is the fallback design |
+| Cloudflare cron degraded (2026-09-09 incident) | The watchdog emails that `/healthz` is stale | Reconciliation and the DO alarms already carry the load; EventBridge Scheduler is the fallback design |
 | Clerk pricing is per retained user, not MAU | Bill above $500/month | Better Auth (Expo plugin, self-hosted) |
 | Old Android 8 tablets and the New Architecture | Jank in kitchen-table mode | A minimal native shell for that mode only (ADR-3 fallback) |
 | No published STT accuracy for elderly Taiwanese Mandarin | Pilot WER above 20% | Self-hosted SenseVoice or fine-tuning on consented pilot audio |
@@ -407,13 +427,13 @@ At 10,000 families with 10% on Light at $79/year the gross margin is thin; at 20
 ## 20. What only the founder can do
 
 1. Legal entity (Singapore likely): gates WhatsApp Business verification, Apple and Google organisation accounts (D-U-N-S number takes 30+ days; start now), payments.
-2. Accounts in the founder's name now: Cloudflare, Neon, Anthropic, Deepgram, Azure (TTS), Clerk, Sentry, PostHog, Healthchecks.io, Expo, a LINE Official Account (unverified is allowed for individuals), Telegram bot, Twilio (later).
-3. Domain and the name decision (ship as "Vela Light" until clearance).
-4. Native reviewers for Traditional Chinese now, Japanese in phase 2.
-5. The first families: own parent, three to five friend families, five Taiwanese families.
+2. Accounts in the founder's name now: Cloudflare, Neon, Anthropic, Deepgram, Azure (TTS), Clerk, Sentry, PostHog, Expo, a LINE Official Account (unverified is allowed for individuals), Telegram bot, Twilio (later).
+3. The name decision (ship as "Vela Light" until clearance). Workers use the accounts' workers.dev subdomains (`vela-light`, `vela-light-staging`), but the production app's Clerk instance needs a domain Vela owns. Domain purchase, provider account setup and Apple signing are founder-owned trial gates (ADR-26, ADR-42).
+4. Native reviewers for Traditional Chinese and other future locales before enabling them; the first cohort stays in English.
+5. The active sequence (2026-10-05) is synthetic staging dogfooding, then seven own-family days in Vietnam after eligibility/provider/consent and device review, then 3–5 English-comfortable Taiwan families for 30 days. It supersedes the earlier market-order sequence for this cohort. Residence alone does not settle citizenship/provider/data-flow eligibility; the founder and reviewer must close the specific family's review before activation (`plan/english-trial-readiness.md`).
 
 ---
 
 ## 21. Decision records added
 
-ADR-11 Durable Object alarms plus outbox replace the cron scan · ADR-12 Drizzle for schema and migrations · ADR-13 Clerk for auth, Better Auth as fallback · ADR-14 Speech stack (Deepgram default, pilot benchmark decides; Azure TTS with on-device fallback) · ADR-15 Model routing by call (Opus 5 for flags, Sonnet 5 for judgment, Haiku 4.5 for drafting; batch and cache) · ADR-16 Adapter order LINE → WhatsApp → voice; Telegram instrument only; MAX dropped · ADR-17 Custom admin SPA · ADR-18 Heartbeat monitoring outside Cloudflare · ADR-19 Expo SDK 55 with native widget targets · ADR-20 External payment links only where store rules allow; RevenueCat when the entity exists. See `decisions.md`.
+ADR-11 Durable Object alarms plus outbox replace the cron scan · ADR-12 Drizzle for schema and migrations · ADR-13 Clerk for auth, Better Auth as fallback · ADR-14 Speech stack (Deepgram default, pilot benchmark decides; Azure TTS with on-device fallback) · ADR-15 Model routing by call (Opus 5 for flags, Sonnet 5 for judgment, Haiku 4.5 for drafting; batch and cache) · ADR-16 Adapter order LINE → WhatsApp → voice; Telegram instrument only; MAX dropped · ADR-17 Custom admin SPA · ADR-18 Heartbeat monitoring outside Cloudflare · ADR-19 Expo SDK 55 with native widget targets · ADR-20 External payment links only where store rules allow; RevenueCat when the entity exists. Later records that change what this document names: ADR-22 and ADR-26 (the pilot's admin pages in their own Worker `vela-admin` behind Cloudflare Access, both Workers on workers.dev). See `decisions.md`.

@@ -1,10 +1,10 @@
 # Market order, v2
 
-2026-09-13. Founder's decision: **Russia is deferred.** We focus on markets without strong platform or legal restrictions: Taiwan, the United States, Japan, Europe (Germany and the UK first), and India. This document sets the order, the channel and language per market, and what it changes in the build. Numbers come from `research/08–14`.
+2026-09-18 (written 2026-09-13; the first pilot families and the state of Telegram in Russia revised 2026-09-18). Founder's decision: **Russia is deferred.** We focus on markets without strong platform or legal restrictions: Taiwan, the United States, Japan, Europe (Germany and the UK first), and India. This document sets the order, the channel and language per market, and what it changes in the build. Numbers come from `research/08–14`.
 
 ## Why Russia waits
 
-WhatsApp lost 56% of its Russian daily users to the 2026 block; Telegram is throttled since February 2026; the state messenger MAX opens its bot platform only to Russian legal entities and stores chats in plaintext under the Yarovaya law; Western remittance apps do not serve Russia; the data-localisation law would need a Russian entity and Russian hosting. Every one of these is outside our control. Russian-speaking families outside Russia (Israel, Germany, Cyprus, Serbia, the Baltics, the US) remain reachable through the ordinary channels and are served by the Russian localisation when it ships; the Russian market itself is revisited when a channel is stable and an entity exists. [research/10, /13]
+WhatsApp lost 56% of its Russian daily users to the 2026 block; Telegram has been largely inaccessible in Russia since mid-March 2026 (`plan/materials/pilot/legal-memo.md` Q6); the state messenger MAX opens its bot platform only to Russian legal entities and stores chats in plaintext under the Yarovaya law; Western remittance apps do not serve Russia; the data-localisation law would need a Russian entity and Russian hosting. Every one of these is outside our control. Russian-speaking families outside Russia (Israel, Germany, Cyprus, Serbia, the Baltics, the US) remain reachable through the ordinary channels and are served by the Russian localisation when it ships; the Russian market itself is revisited when a channel is stable and an entity exists. [research/10, /13]
 
 ## How markets were ranked
 
@@ -24,7 +24,7 @@ Five criteria, each sourced: (1) elders living alone, (2) a reachable channel am
 |---|---|---|
 | Adapter order | Telegram → LINE → WhatsApp → MAX | **Telegram (instrument only) → LINE → WhatsApp → voice/SMS**; MAX dropped |
 | MVP languages | en, ru, zh-TW | **en, zh-TW**; phase 2: ja, de, hi; ru as a localisation when Russian-speaking families abroad justify it |
-| First pilot families | Russian-speaking diaspora with a parent in Russia | **The founder's own family on Telegram, then English- and Chinese-speaking families anywhere on the app, then Taiwan on LINE** |
+| First pilot families | Russian-speaking diaspora with a parent in Russia | **A dogfooding week on staging, then families living in Taiwan on Telegram once production is deployed, then English- and Chinese-speaking families on the app, then Taiwan on LINE.** The founder's parent waits: Russia's 152-FZ forbids storing Russian citizens' data in databases outside Russia, and Telegram has been largely inaccessible in Russia since mid-March 2026 (`plan/materials/pilot/legal-memo.md` Q6) |
 | The parent surface | Phase 2 | Sprint 3–4: it is the only channel that works in every market, and the US path depends on it |
 | The voice line | Phase 3 | Phase 2: the offline half of Taiwan's 70+, the US landline parent, Japan's 80+ |
 | Entity | Deferred | Still deferred, but it now gates two things: WhatsApp Business (Meta verification) and the app stores. Week 6 is the latest sensible date |

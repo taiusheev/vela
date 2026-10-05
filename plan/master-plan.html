@@ -116,7 +116,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
     <li><a href="#model">Business model</a></li>
     <li><a href="#gtm">Go to market</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#phase0">Phase 0 checklist</a></li>
+    <li><a href="#phase0">Build checklist</a></li>
     <li><a href="#metrics">Metrics</a></li>
     <li><a href="#risks">Risks</a></li>
     <li><a href="#decisions">Decisions</a></li>
@@ -128,7 +128,7 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
 
 <main>
 <header class="memo">
-  <p class="eyebrow">Vela · master plan · updated 2026-09-12</p>
+  <p class="eyebrow">Vela · master plan · updated 2026-09-21</p>
   <h1>One family, three generations, and a light kept on</h1>
   <p class="lede">Everything we know, everything we decided, and everything we're about to do, in one place. Edited by the founder and the tech co-founder; the checklist remembers what you tick.</p>
 </header>
@@ -137,10 +137,10 @@ footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);font-si
   <h2>Where we are</h2>
   <p class="sub">A snapshot, refreshed with every edit.</p>
   <div class="status">
-    <div><div class="k">Phase</div><div class="v">0 · prove the loop</div></div>
-    <div><div class="k">Day</div><div class="v">3</div></div>
+    <div><div class="k">Phase</div><div class="v">0 · prove the loop, free for families</div></div>
+    <div><div class="k">Day</div><div class="v">5</div></div>
     <div><div class="k">Research</div><div class="v">14 reports, ~750 sources</div></div>
-    <div><div class="k">Build</div><div class="v">Blueprint locked; sprint 0</div></div>
+    <div><div class="k">Build</div><div class="v">Staging deployed; first exchange founder-confirmed; dogfooding week in progress, next-morning reply read-back pending</div></div>
     <div><div class="k">Applications</div><div class="v">ikigai Launchpad, submitted</div></div>
     <div><div class="k">Families</div><div class="v">0 of 20</div></div>
     <div><div class="k">Budget</div><div class="v">&lt; $25 / month</div></div>
@@ -436,11 +436,11 @@ flowchart LR
       <tr><td><b>1</b></td><td>Taiwan, and English-speaking families anywhere on the app</td><td>Super-aged since 2025, ~1M elders living alone, LINE at 99.4%; the founder lives there. The app and parent surface work in every English-speaking country from day one</td><td>LINE official account, university networks, the ikigai cohort; caregiver forums and subreddits for adult children</td></tr>
       <tr><td><b>2</b></td><td>Japan; Germany and the UK</td><td>Japan: 19.4% of 65+ alone, LINE at 69% of people in their 60s, a mimamori culture and a ¥980/mo anchor. Germany: 34% of 65+ alone, WhatsApp; UK: 4.3M people 65+ alone, WhatsApp at 92%; Hausnotruf reimbursement €25.50/mo</td><td>LINE with Japanese copy; WhatsApp Business once the entity exists; GDPR first</td></tr>
       <tr><td><b>3</b></td><td>The United States at scale; India</td><td>US: 16.2M people 65+ alone, caregivers spend $7,242/yr, Life360 proves the payer; India: 36% of older parents have a migrant child, WhatsApp, remittance rails live</td><td>The voice line and SMS for the landline parent; WhatsApp and Hindi; remittance-app partnerships</td></tr>
-      <tr><td><b>Deferred</b></td><td>Russia</td><td>WhatsApp blocked, Telegram throttled, MAX plaintext and entity-only, remittance rails closed, data-localisation law</td><td>Russian-speaking families abroad are served by the ordinary channels; the market is revisited when a channel is stable</td></tr>
+      <tr><td><b>Deferred</b></td><td>Russia</td><td>WhatsApp blocked, Telegram largely inaccessible, MAX plaintext and entity-only, remittance rails closed, data-localisation law</td><td>Russian-speaking families abroad are served by the ordinary channels; the market is revisited when a channel is stable</td></tr>
     </tbody>
   </table></div>
   <p><b>The growth loop.</b> A 20-year-old installs Vela for his grandmother, invites his mother and aunt, the mother switches on the light and pays, the aunt tells her own family. Every family is five to eight people; every member is a potential organiser of another family. Famileo grew to 260,000 families with 70% of subscriptions by word of mouth (research/08).</p>
-  <p><b>Channel caution.</b> WhatsApp lost 56% of its Russian daily users to the 2026 block, Telegram is throttled since February 2026, and the state messenger MAX (83M reach) stores chats in plaintext and opens its bot platform only to Russian legal entities (research/10). Telegram is the first adapter; the parent surface in our own app is the floor under every market; the voice line moves to phase 2 because half of Taiwan's 70+ are offline. Remittance apps do not serve Russia, so wave 1 is reached through Telegram relocant communities, not payment rails (research/13).</p>
+  <p><b>Channel caution.</b> WhatsApp lost 56% of its Russian daily users to the 2026 block, Telegram has been largely inaccessible in Russia since mid-March 2026 (plan/materials/pilot/legal-memo.md Q6), and the state messenger MAX (83M reach) stores chats in plaintext and opens its bot platform only to Russian legal entities (research/10). Telegram is the first adapter; the parent surface in our own app is the floor under every market; the voice line moves to phase 2 because half of Taiwan's 70+ are offline. Remittance apps do not serve Russia, which stays deferred; wave 1 is Taiwan and English-speaking families on the app, reached through university networks, LINE communities and caregiver forums, and the first pilot families live in Taiwan, after a dogfooding week on staging (plan/market-order.md).</p>
 </section>
 
 <section id="roadmap">
@@ -470,7 +470,7 @@ gantt
   <div class="tablewrap"><table>
     <thead><tr><th>Phase</th><th>Ships</th><th>Families</th><th>Exit test</th></tr></thead>
     <tbody>
-      <tr><td><b>0 · Prove the loop</b><br><span class="tag g">now</span></td><td>No app. Eldest via the Telegram prototype; family in a Telegram group; each family with an under-30 member; weekly read written by hand</td><td class="num">10–20 paying $15</td><td>Answer rate &gt; 85%; family-content days &gt; 30% by week two; ≥ 4 families paying; parents not refusing</td></tr>
+      <tr><td><b>0 · Prove the loop</b><br><span class="tag g">now</span></td><td>No app. Eldest via the Telegram prototype; family in a Telegram group; each family with an under-30 member; weekly read written by hand</td><td class="num">10–20, free</td><td>Answer rate &gt; 85%; family-content days &gt; 30% by week two; ≥ 4 organisers saying on their day-30 call that they would pay for Vela Light at US$9.99/mo; parents not refusing</td></tr>
       <tr><td><b>1 · MVP</b></td><td>The app: setup, lights, thread, queue, turns, prompts, quiet notice, away mode, weekly read, Light; Telegram + WhatsApp + LINE</td><td class="num">100</td><td>Conversion &gt; 25%; D30 &gt; 85%; answer rate &gt; 85%; members per family ≥ 5</td></tr>
       <tr><td><b>2 · The bridge</b></td><td>Parent surface, kitchen-table mode, grandchildren tools, translation both ways, story day and archive, memory, MAX and Viber, referral loop; Taiwan on LINE</td><td class="num">1,000</td><td>Contributors ≥ 3; family-content days &gt; 60%; 2–4 min/day; Sean Ellis &gt; 40%</td></tr>
       <tr><td><b>3 · The read</b></td><td>Drift with published precision; voice line; second-member plans; first channel partner</td><td class="num">10,000</td><td>Read trusted and paid; a partner signed or rejected with reasons; seed round on evidence</td></tr>
@@ -479,12 +479,12 @@ gantt
 </section>
 
 <section id="phase0">
-  <h2>Phase 0 checklist</h2>
-  <p class="sub">Four weeks. Tick things here; both of us see the same state.</p>
+  <h2>Build checklist</h2>
+  <p class="sub">Sprints 0 to 2 of plan/build-plan.md. Tick things here; both of us see the same state.</p>
   <div class="progress" aria-hidden="true"><div id="bar"></div></div>
   <p class="sync" id="sync">Loading saved ticks…</p>
   <div id="tasks"></div>
-  <p style="margin-top:18px"><b>Kill signals.</b> Fewer than 4 families paying after 20 interviews. More than 30% of parents refusing or going silent in week one for reasons other than being away. Family-content days under 30% by week two despite prompts.</p>
+  <p style="margin-top:18px"><b>Kill signals.</b> Answer rate under 50% by week 4 of any cohort. Stop rate over 30% in the first month. Fewer than 4 organisers saying on their day-30 call that they would pay for Vela Light at US$9.99 a month (the pilot is free; the day-90 paying signal, under 4% of families paying, applies once billing opens). A double send or a false quiet notice caused by us that the tests did not catch: stop and fix before any new family.</p>
 </section>
 
 <section id="metrics">
@@ -499,7 +499,7 @@ gantt
       <tr><td>Members / active contributors per family</td><td>Growth engine</td><td class="num">≥ 5 / ≥ 3</td></tr>
       <tr><td>Under-30 member in family</td><td>Is "closer" landing with the young?</td><td class="num">60% of families</td></tr>
       <tr><td>Quiet notices per member per month; share marked useful</td><td>Information, not alarm; true-concern share published</td><td class="num">&lt; 4 by month 3; &gt; 60%</td></tr>
-      <tr><td>Kept-light families paying at day 90; monthly paid retention</td><td>The business (research/09: freemium 2%, hard paywall 11%, Tinybeans 93% monthly retention)</td><td class="num">≥ 10%; ≥ 90%</td></tr>
+      <tr><td>Kept-light families paying at day 90; monthly paid retention</td><td>The business (research/09: freemium 2%, hard paywall 11%, Tinybeans 93% monthly retention). Counted once billing opens; while the pilot is free, each organiser's day-30 answer on paying stands in</td><td class="num">≥ 10%; ≥ 90%</td></tr>
       <tr><td>"не надо" rate in month 1</td><td>Dignity (research/11: monitoring framing is refused by 30–40%; family framing is not)</td><td class="num">&lt; 10%</td></tr>
       <tr><td>Minutes in app per member per day</td><td>The anti-addiction promise</td><td class="num">2–4</td></tr>
       <tr><td>"If Vela stopped tomorrow…" very disappointed</td><td>Product-market fit</td><td class="num">&gt; 40%</td></tr>
@@ -520,7 +520,7 @@ gantt
       <tr><td>False quiet notices erode trust</td><td>Per-person tuning, away mode, never before +4 h, published precision, notice as information not alarm</td></tr>
       <tr><td>Messenger platform risk</td><td>Adapters; never single-channel in a market; the app and the voice line as floors</td></tr>
       <tr><td>A kept-light member is found late despite Vela</td><td>Honest promise from day one; the language written before the first customer</td></tr>
-      <tr><td>Data law (Russia localisation, GDPR, PDPA)</td><td>Minimum data, per-region storage, legal review per market</td></tr>
+      <tr><td>Data law (Russia localisation, GDPR, PDPA)</td><td>Minimum data, per-region storage, legal review per market; health words only with their own written consent; the pilot takes only families in Taiwan or US states other than Washington with no Russian citizen until a lawyer advises (plan/materials/pilot/legal-memo.md)</td></tr>
       <tr><td>Solo non-technical founder; consumer AgeTech funding down 48% in 2026</td><td>AI co-founder builds; prototype exists; revenue from day one; a human technical co-founder from the batch or network</td></tr>
     </tbody>
   </table></div>
@@ -540,7 +540,7 @@ gantt
   <div class="dec"><span class="d">2026-09-12</span><span><b>Phase 0 before the app.</b> Prove the loop with the prototype and 10–20 paying three-generation families.</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>English first.</b> All copy, wireframes, bot defaults, and documents are authored in English; Russian and Chinese are localisations.</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>This page's checklist is the one task tracker.</b> Asana CSV kept as an optional export; Trello dropped. Draw.io for diagrams, Figma for wireframes, Gource for the repo history.</span></div>
-  <div class="dec"><span class="d">2026-09-12</span><span><b>Interaction-first product.</b> Every arrival is an ask from a person (a question, two photos, a voice note, a word to teach, a story); her answer is a post the family replies to; she hears the replies next morning; "I'm fine" is the fallback. See product/04-interaction-model.md.</span></div>
+  <div class="dec"><span class="d">2026-09-12</span><span><b>Interaction-first product.</b> Every arrival is an ask from a person (a question, two photos, a voice note, a word to teach, a story); her answer is a post the family replies to; she hears the replies next morning; "I'm fine" is the fallback. See archive/product/04-interaction-model.md (absorbed into product/05-product-spec-v2.md).</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>Identity chosen from research, not from the old logo.</b> Candle &amp; Ink: cream #FBF7F0, charcoal #1E1A16, amber light #E9A23B (never as text), teal actions #1F5C66; Literata + Inter (Cyrillic and Greek covered); the mark is a window with a light on. See design/research-identity.md and design/design-system.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Published evidence instead of surveys before building.</b> Six research workstreams (reports 08–13) replace the survey and interview wave as the evidence base; interviews move into the pilot itself.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Spec v2 is the only spec.</b> Asks from people, the reply loop, no automatic contact of third parties, acceptance criteria for every screen, the phase-0 instrument on Telegram. v1 spec, interaction model, and bot spec superseded.</span></div>
@@ -548,7 +548,12 @@ gantt
   <div class="dec"><span class="d">2026-09-13</span><span><b>Russia deferred; Taiwan, the US, Japan, Europe, India in that order.</b> Markets without strong platform or legal restrictions first. LINE first, WhatsApp after the entity, Telegram only for the instrument; MVP languages English and Traditional Chinese. See plan/market-order.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Ready to build, in a changed order.</b> Evidence (research/14) and spec v2 remove the two blockers. Sprint 1 is the phase-0 instrument with consent pack, prompts and evals, and logging; the platform foundation follows; the parent surface moves up to sprint 3 and the voice line to phase 2; targets revised (answer rate ≥ 75%, conversion ≥ 10%, quiet notices &lt; 4/month). See plan/pre-build-readiness.md.</span></div>
   <div class="dec"><span class="d">2026-09-13</span><span><b>Payments deferred; entity probably Singapore.</b> Stripe does not onboard Taiwan-registered businesses; Singapore is supported. Provider chosen when the entity exists.</span></div>
+  <div class="dec"><span class="d">2026-09-14</span><span><b>Foundation reviewed and the contract debt closed before services.</b> Six packages (contracts, copy, core, db, adapters, ai) reviewed on two lenses with adversarial verification: 120 findings, 90 confirmed and fixed. Seventeen contract decisions recorded in architecture/03 §10: one time-zone rule, media identity per family, supergroup migration on both paths, departures noticed, nearby contacts listed only after their yes, every pilot family in apac, an understanding re-run, no family content in the founder's chat with the bot, admin write actions logged, retention per the data map, environment-scoped deploy secrets.</span></div>
+  <div class="dec"><span class="d">2026-09-14</span><span><b>The weekly read never shows her missed days.</b> Spec §8 wins over §13: the count of answered days is rendered from numbers for organisers only; the model writes zero to four notes and one suggestion from the days she answered, and her own copy of the read carries only the notes.</span></div>
   <div class="dec"><span class="d">2026-09-12</span><span><b>Name risk recorded.</b> "Vela" collides with vela.family (a family-calendar app in beta) and a former eldercare app, and means "idle" in Hindi slang. Ship as "Vela Light", clear the mark in EUIPO/WIPO/Rospatent/TIPO before it is final, prepare one backup name. Founder to decide.</span></div>
+  <div class="dec"><span class="d">2026-09-17</span><span><b>The pilot is free; hosting on workers.dev; the legal memo applied.</b> Families pay nothing and no payment data is collected until an entity and billing exist; willingness to pay is asked on each organiser's day-30 call, and fewer than 4 organisers saying they would pay US$9.99 a month is a kill signal. The Workers run on free workers.dev addresses with the admin page in its own Access-protected Worker. On the founder's instruction the tech co-founder decided the legal memo's 24 recommendations (L1 to L14): health words get their own written consent and are otherwise not kept; consent records outlive deletion for 5 years without anyone's words; a No deletes what setup stored; nearby contacts are names until they say yes; every adult gets the notice individually; a security plan and the breach rule in force; minimal Drive notes; and, until a lawyer advises, only families in Taiwan or US states other than Washington with no Russian citizen.</span></div>
+  <div class="dec"><span class="d">2026-09-18</span><span><b>The heartbeat moves inside the Worker, read from outside Cloudflare.</b> No outside monitoring service: the pilot Worker keeps the time of its last successful reconcile in a Durable Object and reports it at /healthz without touching the database; a GitHub Actions workflow reads it every 15 minutes from outside Cloudflare, and GitHub emails the founder when it is stale. Reconcile runs every 15 minutes instead of 5, so Neon's free compute hours last the month; the founder watches usage and moves to a paid plan before families beyond the dogfooding week if it nears the limit.</span></div>
+  <div class="dec"><span class="d">2026-09-18</span><span><b>A dogfooding week first, then families living in Taiwan; the founder's parent waits.</b> The founder's parent lives in Russia and is a Russian citizen, so cannot be the first pilot family (plan/materials/pilot/legal-memo.md Q6): Russia's Federal Law 152-FZ reaches a foreign individual who processes a Russian citizen's data by consent, and since Law 23-FZ of 28 February 2025 forbids storing it in databases outside Russia, while Vela stores in Singapore; and Telegram has been largely inaccessible in Russia since mid-March 2026, so arrivals would not arrive reliably and quiet notices would fire on the platform's failure. Week one is a dogfooding week on staging: the founder is the organiser, and a second Telegram account of the founder's, or a friend living in Taiwan who agrees, is the kept-light member; a friend takes part only once the providers' data processing terms are in place and uses only scripted test content, so staging holds only synthetic data and that friend's name, Telegram account and consent rows, deleted when the week ends; it exercises onboarding, consent, the health-words question, arrivals, answers, the quiet ladder, the weekly read, stop and start, the admin page, and the watchdog. The first real families are families living in Taiwan, the founder's friends and their families, onboarded only after that week passes and production is deployed, within the pilot's "who can join" rule. The founder's parent waits until there is a channel that works in Russia and a lawyer has advised on 152-FZ; Russia stays a deferred market (plan/market-order.md).</span></div>
 </section>
 
 <section id="open">
@@ -559,7 +564,7 @@ gantt
     <li><b>Is the existing family group the whole onboarding?</b> A bot added to an existing Telegram family group needs no link and no explainer. Cheapest install imaginable; test with two families.</li>
     <li><b>Grandchildren as the content engine.</b> Famileo says they post more than children. Does that hold with a 20-year-old on Telegram?</li>
     <li><b>Free tier or trial only?</b> Contributors spread the product; but a free daily thread may be enough for many families. Conversion at 90 days decides.</li>
-    <li><b>Where the founder's own family sits.</b> Which pair do we test on first, and what does the founder's parent say when shown the arrival?</li>
+    <li><b>What the first kept-light members say when shown the arrival.</b> Who tests first is decided (2026-09-18): a dogfooding week on staging, then families living in Taiwan, while the founder's parent waits (see Decisions). How the arrival lands with an older person comes from the first families' onboarding calls.</li>
     <li><b>What we say when it goes wrong.</b> The first time a kept-light member is found late, what did we promise? Written before the first customer.</li>
   </ul>
 </section>
@@ -577,27 +582,25 @@ gantt
       <tr><td><code>plan/pre-build-readiness.md</code></td><td>The readiness verdict and the twelve-week build plan</td></tr>
       <tr><td><code>plan/market-order.md</code></td><td>Market order v2: Taiwan and the English app path, then Japan and Germany/UK, then the US at scale and India; Russia deferred; channel, language, price and regulation per market</td></tr>
       <tr><td><code>product/02-app-plan.md</code></td><td>The product, v2: people, loop, features, surfaces, AI, privacy, pricing, metrics, architecture, roadmap, risks</td></tr>
-      <tr><td><code>product/03-product-spec.md</code></td><td>The functional contract: member states, the arrival, answers, the quiet ladder, consent, turns, story day, translation, memory, weekly read, surfaces, edge cases, copy, accessibility</td></tr>
       <tr><td><code>architecture/02-technical-architecture-v2.md</code></td><td>The build blueprint: constraints, overview, platform decision with alternatives, repo layout, domain invariants, per-member scheduling, gateway, adapters, AI and speech, mobile, auth, residency, security, failure modes, SLOs, testing, environments, cost, risks</td></tr>
       <tr><td><code>architecture/schema.sql</code> · <code>api-contract.md</code></td><td>The data model (32 tables, validated in Postgres) and the API with Zod contracts</td></tr>
       <tr><td><code>architecture/research/</code></td><td>Five tool-selection sweeps: platform and data, speech and AI, channels and voice, mobile stack, ops and quality</td></tr>
-      <tr><td><code>architecture/decisions.md</code></td><td>Twenty architecture decision records with rejected alternatives</td></tr>
+      <tr><td><code>architecture/decisions.md</code></td><td>Architecture decision records (ADR-1 to ADR-28) with rejected alternatives, and their dated updates</td></tr>
       <tr><td><code>plan/build-plan.md</code></td><td>Six sprints, task by task, with definitions of done and the founder's tasks</td></tr>
-      <tr><td><code>product/01-solution-thinking.md</code></td><td>Problem anatomy and solution space (partly superseded)</td></tr>
       <tr><td><code>plan/execution-plan.md</code></td><td>Phase 0 to 3, week by week, with owners</td></tr>
-      <tr><td><code>plan/materials/</code></td><td>Surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer</td></tr>
-      <tr><td><code>bot/</code></td><td>Phase-0 prototype: Telegram + Cloudflare Workers + D1 + Claude, type-checked, not deployed</td></tr>
+      <tr><td><code>plan/materials/</code></td><td>Surveys (RU, EN, ZH-TW), interview script, recruitment posts, parent explainer; the pilot consent pack in <code>pilot/</code> (privacy notice, consent script, nearby-contact consent, organiser agreement, data map, legal memo)</td></tr>
+      <tr><td><code>apps/</code> · <code>packages/</code></td><td>The product code: the Cloudflare Worker and the shared TypeScript packages (contracts, core, db, copy, adapters, ai, services)</td></tr>
       <tr><td><code>pitch/</code></td><td>Accelerator application answers</td></tr>
       <tr><td><code>design/diagrams/master-plan.drawio</code></td><td>This plan as a 15-page Draw.io map, editable at app.diagrams.net; regenerated from <code>tools/build-master-plan-drawio.mjs</code></td></tr>
-      <tr><td><code>design/</code></td><td>Draw.io diagrams (architecture, database, daily loop) and Figma-ready wireframes of the six key screens</td></tr>
-      <tr><td><code>plan/tasks-asana.csv</code>, <code>tools/gource.ps1</code></td><td>Optional Asana export of this checklist; Gource script for the repo history</td></tr>
+      <tr><td><code>design/</code></td><td>Design system, brand files, the clickable prototype, Draw.io diagrams</td></tr>
+      <tr><td><code>archive/</code> · <code>tools/</code></td><td>Superseded documents and the phase-0 D1 prototype, kept for history; generators for the Draw.io map and the brand files, and the Gource script</td></tr>
       <tr><td><code>plan/master-plan.html</code></td><td>The source of this page</td></tr>
     </tbody>
   </table></div>
 </section>
 
 <footer>
-  <p>Vela · founder and tech co-founder · updated 2026-09-12 · <a href="https://github.com/taiusheev/vela">github.com/taiusheev/vela</a></p>
+  <p>Vela · founder and tech co-founder · updated 2026-09-18 · <a href="https://github.com/taiusheev/vela">github.com/taiusheev/vela</a></p>
 </footer>
 </main>
 </div>
@@ -606,38 +609,39 @@ gantt
 (function(){
   // Task definitions live in the page; only the done-state lives in the shared store.
   var TASKS = [
-    {w:"Week 1 · survey out, first interviews", items:[
-      {id:"w1-accounts", who:"founder", t:"Create the Telegram bot (BotFather), a Cloudflare account, and an Anthropic API key (20 min, see bot/README.md)"},
-      {id:"w1-repo", who:"founder", t:"Decide repo visibility: public or private"},
-      {id:"w1-survey-post", who:"founder", t:"Post the survey in three places today: own network, a Russian-speaking Telegram group, Taiwanese friends (ZH-TW)"},
-      {id:"w1-interviews-book", who:"founder", t:"Book 8 interviews from survey respondents who opted in"},
-      {id:"w1-parent-mock", who:"founder", t:"Show your parent a mock of the morning arrival; write down her exact words"},
-      {id:"w1-survey-update", who:"me", t:"Update survey intro and recruitment posts for the all-families framing"},
-      {id:"w1-proto", who:"me", t:"Prototype changes for phase 0: family content in the arrival, quiet notice to the child with nearby contacts, away mode by keyword"},
-      {id:"w1-landing", who:"me", t:"Landing page: the light, the promise, waitlist with two questions, two price points shown alternately"},
-      {id:"w1-review", who:"me", t:"Weekly review template and decisions log in the repo"}
+    {w:"Sprint 0 · foundation", items:[
+      {id:"s0-repo", who:"me", t:"Monorepo: pnpm workspace with pinned versions, TypeScript 7 strict, Biome, Turborepo, Vitest, CI on GitHub Actions"},
+      {id:"s0-contracts", who:"me", t:"Shared contracts: domain vocabulary, channel adapter contract, event names"},
+      {id:"s0-design", who:"me", t:"Code design and pilot flow documents (architecture/03 and 04)"},
+      {id:"s0-archive", who:"me", t:"Superseded documents and the first prototype moved to archive/"},
+      {id:"s0-runbooks", who:"me", t:"Runbooks, sub-processor list, account checklist (infra/)"},
+      {id:"s0-accounts", who:"founder", t:"Create the accounts in infra/README.md: Cloudflare, Neon (Postgres 18, Singapore), Anthropic, Deepgram, Expo, Telegram bot, LINE Official Account; turn on GitHub email for failed workflows (the watchdog); record each provider's data processing terms; secrets go straight into Cloudflare or GitHub, never into chat"},
+      {id:"s0-duns", who:"founder", t:"Start the D-U-N-S number for the app stores (takes about a month)"}
     ]},
-    {w:"Week 2 · interviews, close pilot families", items:[
-      {id:"w2-interviews", who:"founder", t:"Interviews 9–16; each ends with the pilot offer: $15 for the month, refundable, starts Monday"},
-      {id:"w2-families", who:"founder", t:"10 families confirmed with three generations where possible: eldest, organiser, an under-30 member; parents' messengers, wake times, two nearby contacts each"},
-      {id:"w2-deploy", who:"me", t:"Deploy the prototype; three-day test with the founder's own parent before any other family"},
-      {id:"w2-onboard-script", who:"me", t:"Onboarding script: five minutes with the child, five with the parent, in Russian"},
-      {id:"w2-synthesis", who:"me", t:"Interview synthesis: top objections, reasons to say yes, price points named, wish/worry clustering"}
+    {w:"Sprint 1 · the instrument on the real platform", items:[
+      {id:"s1-consent", who:"me", t:"Pilot consent pack in English and Traditional Chinese: privacy notice, consent script, nearby-contact consent, organiser agreement, data map"},
+      {id:"s1-consent-review", who:"founder", t:"Fill the placeholders in plan/materials/pilot and confirm the decisions listed in its README; ask a native speaker to read the Traditional Chinese"},
+      {id:"s1-db", who:"me", t:"Database: schema for 34 tables, migrations, clients, invariant tests"},
+      {id:"s1-core", who:"me", t:"Core: DST-safe local time, the daily schedule with a 400-day simulation, state machine, rendering, buttons, commands"},
+      {id:"s1-copy", who:"me", t:"Every messenger string in English and Traditional Chinese"},
+      {id:"s1-telegram", who:"me", t:"Telegram adapter verified against the current Bot API, with fixtures"},
+      {id:"s1-ai", who:"me", t:"AI layer: versioned prompts, structured outputs, model routing, speech-to-text, evaluation set"},
+      {id:"s1-review", who:"me", t:"Foundation reviewed on two lenses, findings verified and fixed, gate green"},
+      {id:"s1-services", who:"me", t:"Services: scheduling tick, outbound gateway, onboarding, consent, asks, answers, replies, quiet ladder, understanding pipeline, jobs"},
+      {id:"s1-worker", who:"me", t:"Worker: webhook, member scheduler Durable Object, queues, cron, admin page, local development"},
+      {id:"s1-drill", who:"me", t:"End-to-end pilot loop test and the silence drill passing in CI"},
+      {id:"s1-deploy", who:"founder", t:"Run the setup script for staging from your own terminal (infra/README.md section 11): secrets at hidden prompts, both Workers deployed, webhook registered"},
+      {id:"s1-own-family", who:"founder", t:"Dogfooding week on staging, starting by day 7: you are the organiser, and a second Telegram account of yours, or a friend living in Taiwan who agrees, is the kept-light member; a friend only once the providers' data processing terms are recorded, with scripted test content only, and their name, account and consent rows deleted from staging when the week ends; never your parent; run onboarding, consent, the health-words question, arrivals, answers, the quiet ladder, the weekly read, stop and start, the admin page and the watchdog; make the bot a group admin so reactions count"},
+      {id:"s1-production", who:"founder", t:"Once staging has passed, run the setup script for production on the commit proven on staging, with a setup token for the 'Vela' account that expires the next day, then the 30-minute watch (build plan, sprint 1 status, item 4; infra/README.md section 11)"},
+      {id:"s1-families", who:"founder", t:"After the dogfooding week passes and production is deployed: the first three to five families living in Taiwan (your friends and their families) from day 14, each checked against 'Who can join' in the pilot README; each onboarding call doubles as an interview; loneliness score (UCLA-3) at week 0"}
     ]},
-    {w:"Week 3 · pilot live", items:[
-      {id:"w3-onboard", who:"founder", t:"Onboard 10–15 families; do the parent call yourself for the first five"},
-      {id:"w3-daily", who:"founder", t:"Daily 15-minute check: read every conversation, log every false quiet notice and every parent complaint"},
-      {id:"w3-weekly-read", who:"founder", t:"Write the weekly read by hand for each family on Sunday (AI drafts, you edit; every edit logged)"},
-      {id:"w3-declines", who:"founder", t:"Interview anyone who declined or dropped; their reasons matter more than the yeses"},
-      {id:"w3-metrics", who:"me", t:"Daily metrics: answer rate, latency, family-content days, quiet notices and whether true, opt-outs"}
-    ]},
-    {w:"Week 4 · measure and decide", items:[
-      {id:"w4-checkin", who:"founder", t:"Day-14 check-in with every family: \"If Vela stopped tomorrow, how would you feel?\""},
-      {id:"w4-parent-q", who:"founder", t:"Ask each parent through the chat: \"Нравится ли вам получать это по утрам?\""},
-      {id:"w4-referrals", who:"founder", t:"Ask each paying family for two introductions"},
-      {id:"w4-report", who:"me", t:"Phase-0 report: the metrics, what the arrival must contain, what the weekly read must say, MVP scope cut to what was proven"},
-      {id:"w4-deck", who:"me", t:"Pitch deck v1 from phase-0 evidence (ten slides)"},
-      {id:"w4-decision", who:"founder", t:"Decision: build the MVP, or change one variable and rerun phase 0"}
+    {w:"Sprint 2 · foundation and LINE", items:[
+      {id:"s2-api", who:"me", t:"API v1 with Clerk sign-in, region router across apac, eu, us"},
+      {id:"s2-line", who:"me", t:"LINE adapter on the paid plan, Traditional Chinese messenger path"},
+      {id:"s2-stt", who:"me", t:"Speech-to-text benchmark on 30 consented pilot clips; default chosen on measured accuracy"},
+      {id:"s2-tts", who:"me", t:"Read-back as pre-rendered voice (Azure) with on-device fallback"},
+      {id:"s2-retention", who:"me", t:"Retention jobs with deletion proofs; first restore drill"},
+      {id:"s2-tw-families", who:"founder", t:"Five Taiwanese families recruited; three live on LINE by week 4; native reviewer for Chinese copy"}
     ]}
   ];
   var state = {};

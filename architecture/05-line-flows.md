@@ -1,0 +1,1181 @@
+# The LINE channel: flows, adapter, and cost
+
+2026-09-26 · proposed design for build plan 2.3, awaiting the founder's decisions in §9. Steps 1 to 3, 6 and 7 of §8 are built: the contract; the whole adapter (webhook verification and events; sending, errors, downloads, profiles, leaving and quota); the Worker's wiring, with LINE off in every environment (the webhook, the inbound queue, the media route and LINE's configuration); and the quota in admin (the cron's reading, the overview's LINE line and the founder's alerts), inert while LINE is off. Nothing else is yet. This document covers four things. First, how the phase-0 instrument of `04-instrument-flows.md` runs when the kept-light member, her organisers and the family group use LINE. Second, what the LINE adapter in `@vela/adapters` does. Third, what services, the two Workers, the admin page and the pilot materials must change. Fourth, what it costs.
+
+Read it with:
+- `04-instrument-flows.md`. Any flow this document does not change works exactly as written there.
+- `03-code-design.md` §6, §8 and §9.
+- ADR-16.
+- `02-technical-architecture-v2.md` §8. Its LINE row is corrected here (§7).
+
+**Sources.** LINE's facts were read on 26 September 2026 from:
+- the Messaging API reference and docs at developers.line.biz;
+- LINE's OpenAPI files (github.com/line/line-openapi);
+- LINE for Business Taiwan;
+- LINE's terms.
+
+No developers.line.biz page shows a last-updated date, so dated facts come from LINE's news pages. Where LINE says nothing, or two readings of it disagree, this document says so and names the test on the founder's test account that settles it (§9, question 15).
+
+**Who decides what.** Technical choices are made in this document. Every product or legal choice is marked **FOUNDER DECISION** with a recommended default. There are fourteen, D1 to D14, and all of them are collected in §9.
+
+**The photo-asks change has landed** (build plan 3.4, ADR-33) with:
+- `ChannelAdapter.send(message, files?)`, where `files` maps storage keys to bytes;
+- an outbound media schema, `OutboundMediaRef`, whose items carry a `storageKey`, `mime` and `bytes`. It is separate from `MediaRef`, which stays the inbound reference and gains no `storageKey`;
+- `MediaStore.head(key)`.
+
+It landed without the adapter's `mediaUrl` option and without a preview storage key on the outbound item, and services put a stored photo only into a message on a channel whose adapter uploads bytes (`uploadsStoredMedia`, Telegram alone). So no photo from the app reaches LINE yet: a photo choice to someone on LINE would go as words. Wiring `mediaUrl` is part of turning LINE's media on, and it makes each app photo a signed, non-expiring URL that anyone holding it can open until retention deletes the object: a trade-off ADR-33 leaves to that decision (its Revisit if). The LINE adapter never reads `files` (§5.5), and its `send` declares one parameter, which satisfies both signatures (§5.9).
+
+## 1. LINE facts that shape the flows
+
+1. **LINE has no group privacy mode.** A bot in a group gets a message event for every message anyone posts. LINE documents no setting that limits this to mentions or replies. Three more group rules:
+   - The bot can join groups only after "Allow bot to join group chats" is switched on in the Developers Console. It is off by default.
+   - Only one Official Account can be in a group.
+   - The person who invites the account must have it as a friend.
+
+   Sources: https://developers.line.biz/en/docs/messaging-api/group-chats/ · https://help2.line.me/official_account_tw/web/pc?lang=zh-Hant&contentId=20011847
+2. **Group events do not say who acted.**
+   - `join` carries only the group id and a reply token.
+   - `leave` and `memberLeft` name no one who acted.
+   - In a group, `source.userId` is documented only on message events, and only for users of LINE for iOS or Android. Every LINE account created since April 2020 is one.
+   - LINE contradicts itself here: its own examples of a group `unsend` and `messageEdited` include `source.userId`. So the adapter reads a user wherever LINE sends one, and requires one only where §5.4 says an event needs it.
+   - Whether a postback tapped in a group carries `source.userId` is not documented (question 15).
+
+   Sources: https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects · https://github.com/line/line-openapi/blob/main/webhook.yml · https://developers.line.biz/en/docs/messaging-api/user-consent/
+3. **An unverified account cannot list a group's members.** The member-id list answers 403 unless the account is verified or premium. The account can still read any member's profile by user id (`GET /v2/bot/group/{groupId}/member/{userId}`, 404 when that user is not in the group), whether or not the member added or blocked the account. Sources: https://developers.line.biz/en/reference/messaging-api/#get-group-member-user-ids · https://developers.line.biz/en/reference/messaging-api/#get-group-member-profile
+4. **Adding the account as a friend carries nothing.**
+   - The add-friend URL `https://line.me/R/ti/p/%40<basic id>` passes no parameter.
+   - The `follow` event carries a reply token and `follow.isUnblocked`, and LINE says that flag is not guaranteed to be accurate.
+   - The `oaMessage` URL `https://line.me/R/oaMessage/%40<basic id>/?<text>` opens the account's chat with the text already typed in the input box. The person must tap Send.
+   - LINE does not document what `oaMessage` shows someone who is not yet a friend.
+   - LINE's URL schemes do not work in LINE for PC.
+   - So the invite link `?ref=token` in `02-technical-architecture-v2.md` §8 does not exist.
+
+   Sources: https://developers.line.biz/en/docs/messaging-api/using-line-url-scheme/ · https://developers.line.biz/en/faq/ · https://developers.line.biz/en/reference/messaging-api/#follow-event
+5. **Webhook signature.** `x-line-signature` is Base64(HMAC-SHA256(key = the channel secret, message = the request body exactly as received, UTF-8)).
+   - Verify it before any parsing. Reformatting the body first breaks it.
+   - The header's letter case may change without notice.
+   - LINE publishes no source IP addresses.
+
+   Sources: https://developers.line.biz/en/docs/messaging-api/verify-webhook-signature/ · https://developers.line.biz/en/reference/messaging-api/#webhooks
+6. **Webhook delivery.**
+   - A response later than 2 seconds is recorded as `request_timeout`.
+   - Redelivery of failed webhooks is off by default. LINE does not disclose how often or how long it retries.
+   - Duplicates can arrive even with redelivery off.
+   - `webhookEventId` (a ULID) identifies an event and stays the same on redelivery.
+   - Events can arrive out of order.
+   - `events` may be empty. The console's Verify button sends such a body and expects 200.
+
+   Sources: https://developers.line.biz/en/docs/messaging-api/receiving-messages/ · https://developers.line.biz/en/docs/messaging-api/check-webhook-error-statistics/ · https://developers.line.biz/en/docs/messaging-api/verify-webhook-url/
+7. **Replies are free; pushes are billed per person.**
+   - A reply token works once, within one minute of receipt. On a redelivered event it works within one minute of the redelivery, but never after the original token was used or 20 minutes after the event. LINE says this limit can change without notice.
+   - Replies are not counted against the quota.
+   - A push counts once per recipient, and a push to a group counts once per person in it.
+   - One request carries at most 5 message objects, and costs the same whether it holds one or five.
+
+   Sources: https://developers.line.biz/en/reference/messaging-api/#send-reply-message · https://developers.line.biz/en/docs/messaging-api/pricing/
+8. **Pushes can be made idempotent.** The `X-Line-Retry-Key` header takes a UUID in hexadecimal notation, "generated by any method"; LINE's own example key, `123e4567-e89b-12d3-a456-426614174000`, is a version-1 UUID, so any version in that form qualifies.
+   - Push accepts it; reply refuses it with 400.
+   - LINE remembers a key for 24 hours.
+   - Sending a key again returns 409, with the accepted request's `sentMessages` for a push.
+   - A retried request must have exactly the same body.
+
+   Sources: https://developers.line.biz/en/docs/messaging-api/retrying-api-request/ · https://developers.line.biz/en/reference/messaging-api/#retry-api-request
+9. **A push that cannot arrive still answers 200.** It is neither delivered nor counted, and nothing in the response says so. LINE documents four such cases:
+   - the user blocked the account, of which the `unfollow` event is the only sign;
+   - the user deleted their LINE account;
+   - the user is not a friend and never wrote to the account;
+   - the user is not a friend and last wrote to the account in a one-to-one chat more than 7 days ago. A push to a non-friend is allowed only within those 7 days.
+
+   Sources: https://developers.line.biz/en/reference/messaging-api/#send-push-message (Conditions for sending push message) · https://developers.line.biz/en/faq/#what-error-is-returned-when-a-message-is-sent-to-a-nonfriend-user · https://developers.line.biz/en/docs/messaging-api/pricing/
+10. **Buttons.**
+    - Quick replies: up to 13 buttons, labels up to 20 characters counted as grapheme clusters, shown on iOS and Android only. They disappear when one is tapped or when anyone sends a new message in the chat. Only the last message object's quick replies are shown.
+    - Postback `data` is up to 300 characters.
+    - Postback `displayText` is up to 300 characters and appears in the chat as the tapper's own message.
+    - Flex Message buttons take labels up to 40 characters.
+    - A postback event does not say which message held the button.
+
+    Sources: https://developers.line.biz/en/docs/messaging-api/using-quick-reply/ · https://developers.line.biz/en/reference/messaging-api/#postback-action · https://developers.line.biz/en/reference/messaging-api/#action-object-label-spec · https://github.com/line/line-openapi/blob/main/webhook.yml (`PostbackEvent`)
+11. **Nothing Vela sends can be changed afterwards.** A bot cannot edit or delete its own messages. There are no read receipts and no reaction events. Source: https://developers.line.biz/en/faq/
+12. **Quoting and message ids.**
+    - `quotedMessageId` appears only on text and sticker message events. Audio events carry neither `quoteToken` nor `quotedMessageId`.
+    - Push and reply responses return `sentMessages[].id`, one per object. LINE promises their order only for quotable objects (text, sticker, image, video, template, Flex); audio is not quotable, and how a request mixing audio and text orders its ids is not documented. The adapter reads them in the order sent (question 15d).
+    - Those ids exceed 2^53, so they are treated as strings. The HTML reference types `sentMessages.id` as a number, 409 body included, while the OpenAPI file types it as a string and every example quotes it; a fixture pins the string form, and a numeric id is read as unreadable.
+    - That a quote of Vela's message carries the id push returned is implied by LINE's docs, not shown (question 15).
+
+    Sources: https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects · https://developers.line.biz/en/docs/messaging-api/get-quote-tokens/ · https://developers.line.biz/en/reference/messaging-api/#send-push-message-response · https://github.com/line/line-openapi/blob/main/messaging-api.yml (`SentMessage`)
+13. **Downloading what people send.** `GET https://api-data.line.me/v2/bot/message/{messageId}/content` works only when `contentProvider.type` is `line`.
+    - It answers 202 while a large audio or video is still being prepared; poll `…/content/transcoding`, which answers 200 with `status` `processing`, `succeeded` or `failed` (`failed` is final), and 400 for content that is not audio or video, 404 for an unknown id and 410 once unsent.
+    - It answers 404 for an unknown id and 410 once the sender unsent the message.
+    - The format comes from `Content-Type`. The FAQ gives `audio/x-m4a` for audio.
+    - Content is deleted after a period LINE does not publish.
+    - Text cannot be fetched again after the webhook.
+    - `…/content/preview` returns a smaller image.
+
+    Sources: https://developers.line.biz/en/reference/messaging-api/#get-content · https://developers.line.biz/en/faq/#how-can-i-find-out-content-file-format
+14. **Sending media.** Media goes out only as an HTTPS URL (TLS 1.2 or later), percent-encoded in UTF-8 and at most 2,000 characters, for `originalContentUrl` and `previewImageUrl` alike.
+    - Audio: mp3 or m4a, up to 200 MB, with `duration` in milliseconds required.
+    - Images: JPEG or PNG up to 10 MB, plus a preview image up to 1 MB.
+    - LINE does not say how long the URL must stay reachable, or whether it copies the file.
+
+    Sources: https://developers.line.biz/en/reference/messaging-api/#audio-message · https://developers.line.biz/en/reference/messaging-api/#image-message
+15. **User ids belong to a provider.** Each provider sees a different id for the same person. Channels cannot move between providers, and an Official Account's provider can never change. Sources: https://developers.line.biz/en/docs/messaging-api/getting-user-ids/ · https://developers.line.biz/en/docs/line-developers-console/best-practices-for-provider-and-channel-management/
+16. **Quota and Taiwan's plans.**
+    - `GET /v2/bot/message/quota` gives this month's limit. `GET /v2/bot/message/quota/consumption` gives usage so far, which LINE calls approximate.
+    - Once the limit is reached, a push answers 429 "You have reached your monthly limit."
+    - Plans from 1 November 2026:
+
+      | Plan | Monthly fee | Messages | Extra messages |
+      |---|---|---|---|
+      | 輕用量 (light) | NT$0 | 200 | none |
+      | 中用量 (the repository's "Standard") | NT$1,000 (was NT$800) | 3,000 | **none** |
+      | 高用量 (high) | NT$1,400 | 6,000 | NT$0.2 each |
+
+    - Plans cannot be bought or changed from 2026-10-28 08:00 to 11-02, or on 11-24 and 11-25.
+
+    Sources: https://developers.line.biz/en/docs/messaging-api/pricing/ · https://developers.line.biz/en/reference/messaging-api/#get-quota · https://tw.linebiz.com/column/LINEOA-2026-Price-Plan/ (2026-09-01)
+17. **Unsends and edits.** LINE sends `unsend` events and recommends making unsent content unusable. Since 12 August 2026 it also sends `messageEdited`, in groups only. Sources: https://developers.line.biz/en/docs/messaging-api/development-guidelines/ · https://developers.line.biz/en/news/2026/08/12/messaging-api-edit-event/
+18. **Chat off marks her messages read.** With "Chat" off in Response settings, messages people send show as read at once. The mark-as-read endpoint needs Chat on. Source: https://developers.line.biz/en/docs/messaging-api/mark-as-read/
+19. **Recent outages lasted longer than Vela's retries.** The Messaging API answered 5xx for about 4½ hours on 28 July 2026 and about 3¾ hours on 15–16 September 2026. Vela's retry schedule is 5, 15 and 30 minutes. Sources: https://developers.line.biz/en/news/2026/07/28/messaging-api-outage/ · https://developers.line.biz/en/news/2026/09/16/messaging-api-outage/
+
+## 2. Identity and onboarding
+
+### 2.1 The gap
+
+On Telegram an invite is `https://t.me/<bot>?start=<token>`. The token arrives as `/start <token>` in her private chat, and `handleInviteStart` links her and sends `consent.request` (04 §3.1, §3.2). LINE has nothing like it (fact 4).
+
+### 2.2 The candidates
+
+| | (a) Add-friend URL or QR | (b) `oaMessage` pre-filled message | (c) Messaging API account link | (d) LIFF or LINE Login | (e) A code she types |
+|---|---|---|---|---|---|
+| Carries the invite | No | Yes, as text she sends | Only through a login page of Vela's, and she has no login | Yes, in the path or `state` | Yes |
+| Her steps | Tap, Add | Tap the link, tap Send | Add friend, tap a button, a web page, a LINE dialog | Tap, Allow on LINE's permission screen, Add friend | Add friend, then type a code |
+| Before she is a friend | Makes her one | Documented that users may message an account they have not added, and Vela may then push to them for 7 days. What the link shows is untested | Fails: she must already be a friend | Adds her as a friend on the consent screen (unchecked by default for Vela, since pre-ticking is for certified providers) | After (a) |
+| New LINE setup | None | None | A web page of Vela's | A LINE Login channel that must be Published, which cannot be undone; a LIFF app, which LINE now steers towards LINE MINI App; a second Login channel for the test account | None |
+| Consent in her chat, as a free reply | — | Yes | Yes | By push, or as a reply to the follow | Yes |
+| Against it | Names no invite | She must tap Send and leave the text alone; not on LINE for PC | Her missing login; a 10-minute token across several hops | A permission screen naming the founder as provider; outside ADR-16's "without LINE Login" | Typing on a Zhuyin keyboard at 70+; a short code invites guessing |
+
+### 2.3 The choice: (b), a `/start` message pre-filled by an `oaMessage` link
+
+**The link.** Her invite link on LINE is `https://line.me/R/oaMessage/<basic id, percent-encoded>/?<"/start <token>", percent-encoded>`. The token is `Random.token()` as today (43 base64url characters) and passes through the URL unchanged.
+
+**What happens when she taps it.**
+1. LINE opens Vela's chat with `/start <token>` already typed.
+2. She taps Send.
+3. The adapter parses that private text as `start` with `startParam`, exactly as Telegram's `/start <param>` (§5.4).
+4. Every row of 04 §5 from there on is unchanged: `handleInviteStart`, `consent.invalid_link`, refusing a user already linked elsewhere, and `consent.request`.
+5. Her message carries a reply token, so `consent.request` goes out as a free reply (§5.5).
+
+**Why this one.**
+- It needs no new LINE channel, no permission screen and no web page. ADR-16 already chose "account linking without LINE Login".
+- Consent stays in her private chat, where the evidence of 04 §3.2 is built (§2.5).
+- It costs nothing against the quota.
+- It reuses the invite token, its single use, its 7-day expiry and its retention exactly.
+- (c) cannot identify her without a login she does not have. (d) buys stronger binding for a Published channel, a screen with the founder's name on it, and a LIFF surface LINE is folding into MINI Apps. (e) is hard for her.
+
+**Fallback.**
+- If she edits the text or sends something else, nothing links. She taps the link again, as the consent script already has the founder guide her (consent script §6).
+- A typed code is not built. It would need a short code table, which means a migration and guessing limits.
+- If the test (question 15a) shows that `oaMessage` does not open for a non-friend, the invite instructions lead with the add-friend link, `https://line.me/R/ti/p/<basic id>`, then the start link. The consent script has the founder confirm "Vela Light" is in her friends list before the call ends.
+- Why this matters: a push to a non-friend more than 7 days after her last message answers 200 and is not received (fact 9). An arrival that never reached her would then open a quiet event instead of `delivery.failed`.
+
+**What the founder sets up for it:** the account's basic id (`@…`), handed over for `LINE_BOT_BASIC_ID` (§5.10). Nothing else.
+
+### 2.4 Organiser onboarding on LINE (04 §3.1)
+
+**Trigger.** A private text `/start` with no parameter, from a user with no link or with an active onboarding session. The organiser reaches it in one of three ways:
+- typing `/start`;
+- a link on a Vela page, `https://line.me/R/oaMessage/<basic id>/?%2Fstart`;
+- the reply to their `follow` (below).
+
+**The steps** are 04 §3.1's, with LINE's shapes:
+- Onboarding buttons are quick replies. The largest list, ten countries, fits LINE's 13.
+- Each step answers the organiser's own message, so its prompt goes out as a free reply.
+- `onboarding.done` carries the LINE invite link of §2.3.
+- Quick replies do not show on LINE for PC. So onboarding on LINE needs the phone app; only the wake step (`HH:MM`) and the zone step (an IANA name) also accept typed answers.
+
+**The organiser's name and language.**
+- The name comes from `profile()` (§5.8), which reads LINE's `displayName`.
+- The language hint comes from LINE's profile `language`, which LINE omits until the user has accepted LY's privacy policy. `zh*` becomes `zh-TW`, as `languageOfSender` does.
+- **FOUNDER DECISION D7.** A LINE user with no language hint is greeted in zh-TW, not English. Recommended: yes, because the LINE market is Taiwan and the `language` step asks anyway.
+
+**`follow`** (a new friend, or someone unblocking) becomes the new kind `followed`:
+- A linked user: `blocked_at` is cleared, as `unblocked` does today.
+- A user Vela does not know gets `help.followed` as a free reply: "Hello, I'm Vela. If someone in your family sent you an invitation, open it now. To set up Vela for your own family, send /start." This is a new copy key.
+- A follow never starts onboarding. Otherwise her own follow, made on the way to her invite, would ask her "What do you call them?".
+
+### 2.5 Her invitation and consent (04 §3.2 on LINE)
+
+**The request.** `handleInviteStart` is unchanged. It sends `consent.request` in two message objects in one reply:
+1. the rendered request text as a text message, as on Telegram;
+2. a Flex bubble holding the Yes and No buttons.
+
+Buttons that must outlast her typing are never quick replies, which vanish on any new message (fact 10). 04 §3.2 ignores her typing before the tap, so the buttons must stay.
+
+**Evidence, `chatConsentEvidence`, with the same keys as Telegram:**
+
+| Key | Telegram | LINE |
+|---|---|---|
+| `chat_id` | Her chat | Her LINE user id (the private conversation) |
+| `message_id` | The message carrying the buttons, from the event | A postback carries no message id (fact 10). Services take the `external_id` of the outbound row that carried the buttons, found by its idempotency key: `request:<invite id>` for the light, `health_words:<member id>` for the health-words question. That id is the text message's `sentMessages` id (§5.5) |
+| `params` | Rebuilt at the tap | Same |
+| `text_sha256` | SHA-256 of the rendered text | Same |
+| `given_at` | The tap | The postback's own timestamp |
+| `channel` | `telegram` | `line` |
+
+`CONSENT_PROOF_KEYS` and the `consents` CHECKs are unchanged. So her consent on LINE proves what it proves on Telegram:
+- the text version and the parameters rebuild the exact text;
+- the hash shows it is the text she saw;
+- the message id names the message it came in.
+
+One difference remains. On LINE the buttons sit in a second bubble directly under the text, delivered in the same request, not in the same bubble. The notice and the consent script say so (§3.4).
+
+**After the tap.**
+- The buttons cannot be closed (fact 11).
+- The postback's `displayText`, the button's label, shows her choice in the chat as her own message. It replaces "close the buttons, keeping the request's text with the chosen label" of 04 §3.2 (see question 15c).
+- A later tap is ignored by the rules that already exist: `consent_button_ignored`, and `health_words_button_ignored` with `already_answered`.
+- `consent.accepted` goes out as a free reply. The health-words question, delayed 10 seconds, is a push.
+- `consent.declined` goes out through `sendOutsideGateway` with the tap's reply token.
+
+### 2.6 Identity rules on LINE
+
+- A LINE user id is linked to at most one member (`channel_links (channel, external_id)`). A private conversation's id is the user id.
+- A member's `primary_surface` is set to the channel of the event that linked them: onboarding, her `/start`, or a lazily created group member. It is no longer the constant `telegram`.
+- Flows address people by their messenger link, not by constants (§5.11).
+- **FOUNDER DECISION D9.** A family lives on one messenger: her chat, the family group and the organisers' notices all on LINE, or all on Telegram. Mixed families are not supported in the pilot, because Telegram's OGG voice notes cannot be played on LINE and a Worker has no transcoder. Recommended: yes.
+- Group members created lazily are named from `profile()` (LINE's `displayName`), falling back to `NAMELESS_MEMBER` if the lookup fails. The picture URL is never stored.
+- Staging's and production's accounts must never share ids.
+  - **FOUNDER DECISION D1.** Each account gets its own provider, named for the service: "Vela Light" and "Vela Light test", not the founder's own name. A provider is permanent and every user id belongs to it (fact 15). Recommended: yes, decided before `infra/README.md` §8 step 3.
+  - Whether a provider made now can later pass to the Singapore entity is open (question 1).
+
+### 2.7 What the founder sets up (`infra/README.md` §8, amended)
+
+On each account, test first:
+
+1. **Provider** per D1.
+2. **Developers Console → Messaging API:**
+   - "Allow bot to join group chats": on.
+   - Webhook URL: `https://vela.vela-light-staging.workers.dev/webhooks/line`, or the production origin. Then "Use webhook": on, and **Verify**, which must answer success.
+   - "Webhook redelivery": on. Handlers are idempotent, and it turns Vela's 500 into a retry.
+   - "Error statistics aggregation": on.
+3. **LINE Official Account Manager → Response settings:** Chat off (**FOUNDER DECISION D8**, recommended: off, so nobody reads her chat in Manager), auto-response off, greeting off. Vela answers `follow` itself.
+   - The Taiwan help centre says group invitations need manual chat mode. Whether the bot joins groups with Chat off is question 15f.
+4. **The account's profile** links the privacy notice. LINE's API terms, Art. 5.4, require a privacy policy reachable at any time.
+5. **Hand over** the basic id, for `LINE_BOT_BASIC_ID`.
+6. **Put the secrets** `LINE_CHANNEL_SECRET` and `LINE_CHANNEL_ACCESS_TOKEN` on `vela`:
+   - through the setup script's `line` step (§5.10), or `wrangler secret put … --env <environment>`;
+   - from Git Bash, or piped in, because the hidden prompt of PowerShell 5.1 has stored a garbled value before (ADR-29 update of 2026-09-25);
+   - never pasted into a chat.
+7. **The plan**, per D10 (§6).
+
+## 3. The family group on LINE
+
+### 3.1 Linking
+
+`join` names nobody (fact 2), so the Telegram rule "`bot_added` by a user linked as an organiser" (04 §3.3) cannot run. Its LINE equivalent works from who is in the group.
+
+**Rule on `join`.**
+1. The group is already linked (the same `join` redelivered): nothing happens.
+2. A multi-person chat (`R…` id), which is legacy: refused (below).
+3. Otherwise the **candidates** are the active organisers who have an unblocked LINE link, in families that:
+   - have no `deleted_at`,
+   - have not ended (`familyHasEnded` false),
+   - and have no group linked on any channel.
+4. For each candidate, newest family first and at most 20, Vela asks `profile(userId, groupId)`, which is LINE's group member profile (fact 3).
+   - The cap of 20 keeps the queue job inside the Workers Free plan's 50 subrequests.
+   - If there are more than 20 candidates, the join is refused and logged as `group_probe_overflow`, which is the signal to add an explicit claim step.
+5. **Exactly one family's organisers are in the group:** the group is linked exactly as 04 §3.3 links it:
+   - `family_channels (kind group, linked_by_member_id = that organiser, linked_text_sha256)`;
+   - `families.language` set to that organiser's language;
+   - `group.linked` with the `notice_read` button, sent as a free reply to the join: a text message, then a Flex bubble holding the button.
+6. **None, or organisers of two families:** `group.not_linked` as a free reply, then `leaveConversation` (§5.8). The log `group_link_refused` records the reason: `no_organiser`, `several_families`, `room`, `probe_overflow` or `linked_elsewhere`.
+
+No profile is stored, and no id is logged.
+
+This covers Telegram's other cases too. A second group finds no candidate, because the family already has a group, so it is refused and left. `leave` becomes `bot_removed`, which sets `unlinked_at`. A group re-added after removal is probed again. There are no migrations on LINE.
+
+**FOUNDER DECISION D2.** On LINE a group is linked when an organiser of a family without a group is in it, whoever invited Vela. On Telegram it is when the organiser added the bot.
+- The difference: a sibling who is Vela's friend can create the family group with the organiser and add Vela.
+- The risk: someone adds Vela to a large group the organiser is in, before the family has its own group. That group then sees `group.linked`, including her name.
+- Recommended: accept, because only people who have Vela as a friend can invite it. The alternative is a `/connect` command the organiser types in the group, which adds a step and leaves an unclaimed group receiving messages until then.
+
+**The notice button (04 §3.3, L9).**
+- A tap is a group postback. It counts only if LINE names the tapper (question 15b). If not, the adapter drops the tap, and the founder records the `privacy_notice` row with `record_consent` for each adult, as 04 §3.3 already provides for adults who never tap.
+- Evidence is `groupNoticeEvidence`, with `message_id` the `external_id` of the `group.linked` outbound row (`linked:<family_channels id>`) and the hash kept on `family_channels`.
+- The button is a Flex button, so it stays for the next adult.
+
+### 3.2 What Vela reads, what it drops unread, and what it never keeps
+
+LINE sends Vela everything said in the family group (fact 1). Vela's rule on LINE has three parts.
+
+**First, the adapter decides.** A group or multi-person chat event becomes an `InboundEvent` only when it is one of these:
+- `join`, `leave` or `memberLeft`;
+- `unsend` (its message id only);
+- a postback that names its user;
+- a **text** message from a named user that starts with `/`, after any leading whitespace (services trim a command too), or quotes a message (`quotedMessageId`).
+
+Everything else produces nothing. That includes:
+- ordinary text;
+- images, audio, video, files and locations;
+- stickers;
+- edits (`messageEdited`);
+- `memberJoined`;
+- anything from a user LINE does not name.
+
+`parse` drops each of these before it leaves the adapter. They are never queued and never reach services. Nothing about them is logged: not the text, not the sender, not even that they arrived. No media is ever downloaded from a group.
+
+**Second, services decide.** Of what reaches them, the router keeps only what 04 §5 keeps:
+- `/ask` and `/later`;
+- a quote of a `turn_prompt` or `answer_post` Vela sent (looked up in `message_refs`);
+- a tap on `group.notice_read`;
+- departures;
+- unsends of messages Vela stored.
+
+Everything else is ignored, as the last row of 04 §5 says, and logged as `group_event_ignored` with its kind only. One consequence: a text quoting another family member's message, or a `/` text meant for something else, passes through the inbound queue and the router before it is discarded. The notice says so.
+
+**Third, the webhook body stays in memory.** It is held only for the signature check and parsing. The route logs no body, header, id or reply token.
+
+### 3.3 How asks, replies and taps are recognised
+
+| What | Telegram (04) | LINE |
+|---|---|---|
+| Ask by reply | Reply to the turn prompt with text, a photo, two photos or a voice note | Quote the turn prompt (long-press → Reply) with **text**. The adapter sets `replyToMessageId` from `quotedMessageId`, and `message_refs` holds every `sentMessages` id of the prompt |
+| `/ask`, `/later` | Commands, with `@bot` optional | The same text. LINE has no command menu |
+| Photo or voice ask | Reply with media | **Not offered in the first cut** (D3): media carries no quote (fact 12), so it cannot be tied to the prompt. Photo and voice asks come from the app (build plan 3.4) |
+| Family reply | Reply to the answer post with text, voice or photo | Quote the answer post with **text** only (D3) |
+| Reaction | `message_reaction` (bot an administrator) | None: LINE sends no reaction events |
+| Sticker | Ignored as a reply (`replies.ts`) | Dropped in the adapter (**FOUNDER DECISION D4**: stickers mean nothing to Vela in the first cut; recommended: yes. Mapping stickers to hearts would lean on LINE's experimental, randomised `keywords`) |
+| Mention of Vela | Addresses a command | Not read: a text that only mentions Vela is ordinary text and is dropped |
+| Edit | Edited messages yield nothing | `messageEdited` is dropped (**FOUNDER DECISION D5**: the original ask or reply stands; recommended: yes) |
+| Tap | `callback_query` with the message id | Postback with `data`, no message id (§2.5, §5.4) |
+
+The turn prompt on LINE uses new keys that do not invite media: `group.turn_prompt_text` ("Tomorrow is {holder}'s turn with {name}. Reply to this message with a question.") and `group.turn_prompt_open_text`. Services choose them when the adapter reports `mediaReplies: false` (§5.9).
+
+**FOUNDER DECISION D3.** No photo or voice asks, and no voice or photo replies, in LINE groups in the first cut. Her read-back on LINE is therefore text (`summariseReplies`). Recommended: yes, with the media paths from the app.
+
+### 3.4 What the privacy notice and the data map must say
+
+These are the facts the texts must carry. The founder decides the wording and when the new version starts (**FOUNDER DECISION D11**: recommended, `privacy-notice.v2` and the matching zh-TW version before the first real LINE family, with organisers told 14 days ahead as notice line 109 promises).
+
+**Privacy notice.**
+- **The group paragraph (line 54), for LINE:**
+  - LINE delivers every message in the family's Vela group to Vela, and Vela cannot ask it to deliver less.
+  - Vela's software keeps only replies made with LINE's Reply to its own messages, messages starting with `/ask` or `/later`, and taps on its buttons, and notices when someone leaves the group.
+  - Everything else (messages, photos, voice notes, stickers, edits) is discarded as it arrives, before anything else in Vela sees it, without being stored or logged.
+  - A text that quotes another person's message is read only to see whether it quotes Vela, then discarded.
+- **"What we collect" (lines 31 to 33):**
+  - On LINE, the name LINE shows, read from LINE for people who take part.
+  - No username.
+  - A language only when LINE shares it.
+  - No reactions.
+- **Providers and storage (lines 97 to 113):**
+  - LINE (LY Corporation) carries the messages under its own terms.
+  - LINE keeps its own copies of voice notes and photos for a period it does not publish.
+  - Vela copies them to Cloudflare R2 at once and deletes its copy after 30 days, as today.
+- **Unsend** (per D6): Vela deletes its copy of what was unsent, and cannot remove what it already posted to the group, because LINE lets no bot delete its messages.
+- **Consent on LINE** (lines 48, 81, 127): the request is a message with its Yes and No buttons directly beneath it, and the record holds that message's id.
+
+**Data map.**
+
+| Row | Change |
+|---|---|
+| 4 | LINE user, group and multi-person chat ids; LINE message ids; reply tokens, which ride in `outbound.payload`, are useless after a minute, and are cleared with the payload at 30 days |
+| 5 | The evidence's message id comes from the outbound row |
+| 6 | Numbers in a LINE organiser's quiet notice sit in their LINE chat |
+| 7–15 | Sub-processor LINE added |
+| New | The inbound queue holds minimised events (which can include her words) for seconds, for up to about 10 hours while the database is unreachable (§5.10), and in the dead-letter queue until the founder re-sends or clears it or the queue's retention ends |
+| New | Media URLs are capability links to R2 copies, valid until retention deletes the object |
+| Gap 6 | Reopened for LINE |
+| Gap 14 | Departures come from `memberLeft` |
+
+**Other pilot materials.**
+- **Consent script:** the LINE steps are "tap the link, then Send" (§2.3), and "LINE carries the messages".
+- **Organiser agreement, step 3 on LINE:** no administrator, no reactions, and "Vela receives everything said in that group, so keep other family conversation elsewhere".
+
+**FOUNDER DECISION D12.** LY's Taiwan Official Account terms, Art. 8.2, forbid giving user information to any third party without LY's prior written consent. The User Data Policy §3.2.3 limits storing "Friend and Group information" to 24 hours, without defining the term. How Anthropic, Deepgram and Azure as processors, and Vela's stored group and member ids, fit these is not settled. Recommended: ask LY support and the memo's counsel before the first real LINE family, and dogfood on staging meanwhile.
+
+## 4. The flows of `04-instrument-flows.md` §3 on LINE
+
+| 04 | Flow | On LINE |
+|---|---|---|
+| §1 | Two Telegram facts | Replaced by §1 here |
+| §3.1 | Organiser onboarding | **Different:** trigger `/start` text, quick replies, free replies, LINE invite link, name and language from `profile()`; `follow` answered with `help.followed` (§2.4) |
+| §3.2 | Consent | **Different:** `/start <token>` via `oaMessage`; request as text plus a Flex bubble; evidence `message_id` from the outbound row; `displayText` instead of closing; free replies (§2.5) |
+| §3.3 | Linking the group | **Different:** linked by probing on `join`; refused groups are left; `migrated` does not exist (§3.1) |
+| §3.4 | Evening turn prompt | **Same**, with `group.turn_prompt_text`; a push counted once per person in the group |
+| §3.5 | Composing an ask | **Different:** text quotes and `/ask`, `/later` only; no media asks (D3) |
+| §3.6 | Preparing the morning | **Same** |
+| §3.7 | The arrival | **Different in the send** (below) |
+| §3.8 | The repeat | **Same**, a push with the same quick replies, counted |
+| §3.9 | Her answer | **Different:** keys, the post of her voice or photo after ingestion, a free ack (below) |
+| §3.10 | Understanding | **Same**, with ingestion from `api-data.line.me`, photos ingested too, and no quoting of the answer post (below) |
+| §3.11 | Replies and reactions | **Different:** text quotes only; no reactions |
+| §3.12 | Silence | **Mostly same:** the notice is text plus Flex buttons; `quiet_wait` answered with a reply (below) |
+| §3.13 | Stop, start, what the family sees | **Same:** plain words; organiser notices by their messenger link |
+| §3.14 | Weekly read draft | **Same:** the admin conversation stays on Telegram (ADR-21); a sent read is a LINE push to each organiser |
+| §3.15 | Operations | **Same**, plus the quota snapshot (§6); retention deletes a photo's preview object with the photo |
+| §3.16 | Departures | **Different:** `memberLeft`, one event per person, who acted unknown (below) |
+| §3.17 | Admin actions | **Mostly same:** `create_invite` and `send_weekly_read` by messenger link; quota shown (below) |
+| — | Unsend | **New:** D6 (below) |
+
+**§3.7 The arrival on LINE.**
+
+What goes out: one push to her user id.
+- Media objects first, then the text message.
+- The quick replies sit on the text, the last object: heart, "I'm fine", and the chips, picks or vote options, at most 9 of LINE's 13.
+- Each label is cut to 20 grapheme clusters, and its postback `displayText` is the full label.
+- The request carries `X-Line-Retry-Key` (§5.5).
+
+Where the media come from:
+- Images: an ask's photos, by R2 URL, once `mediaUrl` is wired; build plan 3.4 landed without it, so none are sent to LINE yet.
+- Audio: m4a or mp3 by R2 URL with its duration. Sources are her own voice re-posted to the group, and later app voice hellos (3.4) and TTS read-backs (2.6, which must render m4a or mp3). A family's Telegram voice note never goes to LINE (D9).
+- Media the target channel cannot send is left out and logged `media_unsendable`, and the morning still goes out. That covers a row with only another channel's file id, or no stored copy (§5.11).
+
+Effects, D-B1, the stranded-row re-drive and the drops are unchanged.
+
+Failures:
+- **She blocked Vela.** LINE would answer 200 and deliver nothing (fact 9). So the gateway fails a send to a private conversation whose link has `blocked_at` set as `blocked`, without calling LINE: `delivery_failed_at`, `delivery.failed` to each organiser, no quiet event. That is what Telegram's 403 produces.
+- **The quota is spent.** The refusal is `quota_exhausted`: retried at 5, 15 and 30 minutes, then failed like any failed send, with `admin.line_quota_exhausted` to the founder once a month (§6).
+- **A long LINE outage** (fact 19) fails the arrival after 30 minutes as today. The retry key would make later retries safe; widening the schedule for LINE is left for pilot data.
+
+There is no read receipt, so the ladder counts from delivery, as on Telegram. A webhook delay at LINE (the 28 July 2026 outage delayed webhooks) can make her answer late and open a quiet event. The first cut does not consult LINE's status feed.
+
+**§3.9 Her answer.**
+- **Kinds:**
+  - text → `text`;
+  - audio → `voice`;
+  - image → `image`;
+  - sticker → `sticker`, whose text is the sticker's own `text` when LINE sends one (message stickers only), else none;
+  - video, file, location → `other`;
+  - a tap → `button`.
+- **`answers.external_id`:** `<her user id>:<LINE message id>` for messages. For a tap, `<her user id>:button:<postback data>`, because a postback has no message id (§5.11). The same button tapped twice, or delivered twice, is one answer.
+- **The ack** (`ack.thanks`) goes out as a free reply while her token is fresh, else as a push.
+- **The answer post to the group:**
+  - For text and taps, it is enqueued at once, as today.
+  - For voice and photos, LINE cannot re-send its own files (fact 14). The post is enqueued by `ingestAnswerMedia` once the copy is in R2, with its `storageKey`.
+  - The same holds for an unattached message.
+- **Unsent before it was copied:** a voice or photo she unsent before the copy was made is never posted (the download answers 410; §5.7).
+
+**§3.10 Understanding.**
+- **`ingestAnswerMedia` on LINE:**
+  - fetches the content;
+  - for a photo, also its preview, stored at the storage key plus `.preview`;
+  - stores both in R2;
+  - sets `duration_ms` for a voice note from the webhook's `duration`, or when LINE gave none from the m4a header of the stored copy (`mvhd`, a pure function in services);
+  - enqueues the answer post;
+  - then transcribes voice as today.
+- **Ingestion now also runs for photos on LINE** (no transcription). The understanding re-run sends a voice or photo answer whose media has no `storage_key`, on a channel that cannot re-send provider files, back to ingestion.
+- **`MEDIA_STORAGE` `off` is refused wherever LINE is on** (§5.10).
+- **The transcript and translation post** goes as its own push, not as a reply to the answer post: quoting needs a quote token that Vela does not store.
+  - **FOUNDER DECISION D14b.** Merge the transcript into a single answer post on LINE, which saves about 15 group messages per adult a month (§6). Recommended: not now; revisit past six LINE families.
+
+**§3.11 Family replies.** A quote of an `answer_post` with text becomes a `replies` row (`external_id` `<group id>:<message id>`), and the exchange moves to `replied`. There are no reactions. Everything else is §3.2.
+
+**§3.12 Silence.**
+- **The notice** goes to each LINE organiser by push:
+  - the text as a text message, so a nearby contact's number can be tapped;
+  - then a Flex bubble with `quiet_fine` and `quiet_wait`. Flex labels allow 40 characters; "She's fine, I know why" is 22, too long for a quick reply.
+- **`quiet_fine`** works as in 04. The tapper sees their own `displayText`.
+- **`quiet_wait`** has lost its closing text. Services send `quiet.waiting` with the time as a free reply, because `editMessages` is false (§5.11).
+- **The buttons stay.**
+  - A tap on a resolved event changes nothing, as today.
+  - A second "wait" on an open event moves `wait_until` again. **FOUNDER DECISION D13**: recommended, accept, since each tap is an organiser's deliberate choice.
+- **"Nobody to tell"** counts organisers with any unblocked messenger link, not only Telegram.
+
+**§3.16 Departures.**
+- `memberLeft` carries `left.members[]` and nobody who acted. The adapter makes one `member_left` per person, with `eventId` `line:<webhookEventId>:<user id>`. The sender is the conversation itself, which is how the contract marks "who acted is unknown" (§5.9).
+- `handleMemberLeft` records `removed: null` instead of a guess.
+- The rules of 04 §3.16 are unchanged.
+- `unfollow` becomes `blocked`, and `leave` becomes `bot_removed`.
+- `memberJoined` is dropped: rejoining is noticed when the person next acts, as today.
+- **Group changes:** a rename sends nothing. A second Official Account in the group makes LINE remove Vela, which arrives as `leave`.
+
+**§3.17 Admin actions.**
+- **Unchanged:** `view`, `record_consent` (with channel `line` where the founder records one), `record_contact_consent`, `add_contact`, `remove_contact`, `set_away`, `end_away`, `mark_left`, `mark_deceased`, `delete_family`.
+- **`create_invite`:** needs the asking organiser's messenger link, not specifically a Telegram one, and sends `organiser.invite_again` with the link for that channel. The admin Worker gains `LINE_BOT_BASIC_ID` and nothing else. It still calls no channel.
+- **`send_weekly_read`:** goes to each active organiser with an unblocked messenger link.
+- **The overview** shows LINE's quota (§6).
+
+**Unsend (new).** **FOUNDER DECISION D6.** When someone unsends a message Vela stored (her answer, a family reply, an ask made by quoting), Vela deletes what it kept of it:
+- the R2 object and preview, with a `deletions` row;
+- the answer's text and transcript;
+- its translations.
+
+The answer row, its light, and the exchange state stay: her answer was still a sign she is there. What Vela already posted to the group stays too, because a bot cannot delete. The unsend is recorded as the event `message_unsent`, which needs migration `0003` (§7). Recommended: yes, built before the first real LINE family. Until then the adapter still emits `unsent`, and the router ignores it and logs `unsend_ignored`.
+
+## 5. The adapter
+
+### 5.1 Module layout (mirroring `src/telegram/`)
+
+```
+packages/adapters/src/line/
+  adapter.ts     createLineAdapter(options): ChannelAdapter; capabilities; the no-op acknowledgeButton and closeButtons;
+                 profile and leaveConversation, which choose the endpoint by the conversation id's letter
+  client.ts      a typed client for api.line.me and api-data.line.me: push, reply, content, transcoding status, preview,
+                 profile, group member profile, leave group or room, quota, consumption; lineErrorCode and
+                 lineContentErrorCode (status → ChannelSendError code)
+  ids.ts         LINE's id shapes (U, C, R + 32 hex; decimal message ids), shared by parse and the client
+  verify.ts      LINE_SIGNATURE_HEADER; createLineSignatureVerifier(channelSecret): (headers, rawBody) => Promise<boolean>
+  parse.ts       parseLineWebhook(rawBody, receivedAt): InboundEvent[]
+  send.ts        sendLineMessage(client, message); planLineRequests (shapes, labels, chunks); fitLabel
+  retry-key.ts   LINE_RETRY_KEY_NAMESPACE; lineRetryKey(idempotencyKey, requestIndex): a v5 UUID; uuidV5
+  media.ts       fetchLineMedia(client, messageId, wait), fetchLinePreview(client, messageId); mediaTypeOf
+  quota.ts       readLineQuota(client, now): ChannelQuota
+  testing.ts     readFixture, signWebhook(body, secret), signedWebhook(body) (step 2); a recording fake fetch,
+                 lineApiFixture, lineApi (routes), sequentialSends (step 3)
+  fixtures/      webhook-*.json (bodies) and api-*.json (responses as { status, headers?, body? }), below
+  *.test.ts      one per module, as Telegram has
+```
+
+`constantTimeEqual` moves from `telegram/verify.ts` to `src/constant-time.ts`, shared by both channels, so neither channel's folder imports from the other's.
+
+`src/index.ts` exports `LINE_SIGNATURE_HEADER` from step 2, and `createLineAdapter`, `LineAdapterOptions` and `LineApiOptions` from step 3, where they are written. The adapters package keeps its single dependency, `@vela/contracts`.
+
+**The recorder** (step 3) is not a copy of Telegram's. Telegram's keeps the last path segment and the parsed JSON body, which cannot show two sends byte-identical, the `X-Line-Retry-Key` and `Authorization` headers, or a LINE path whose last segment is an id. LINE's `RecordedRequest` keeps the method, the host, the full `pathname`, the `Headers`, the raw body string and the abort signal.
+
+**Fixtures.** They are built from the shapes in LINE's reference examples and `webhook.yml`, with made-up ids and no real person's data, and signed in the test with a test secret, so no LINE account is needed. Step 2 has 41 webhook bodies: one for each row of §5.4, one for each group message the adapter drops, a standby event, two users' events in one body, and one body holding every event type Vela ignores. LINE's own worked signature example sits in `verify.test.ts` as a string rather than a fixture, because Biome formats the JSON fixtures and would change its bytes:
+- body `{"destination":"U8e742f61d673b39c7fff3cecb7536ef0","events":[]}`;
+- secret `8c570fa6dd201bb328f1c1eac23a96d8`;
+- signature `GhRKmvmHys4Pi8DxkF4+EayaH0OqtJtaZxgTD9fMDLs=`, which the research recomputed.
+
+Plan step 8 adds real recordings from the test account beside them (`webhook-recorded-*.json`, with ids replaced).
+
+### 5.2 Construction and capabilities
+
+```ts
+createLineAdapter({
+  channelSecret, channelAccessToken,
+  fetch?, apiBaseUrl?, dataApiBaseUrl?,         // trailing slashes are stripped, as Telegram's client does
+  now?,                                         // reply tokens' minute and quota readings
+  wait?: (milliseconds: number) => Promise<void>, // between transcoding polls; a timer by default
+}): ChannelAdapter
+```
+
+`mediaUrl: (ref: { storageKey: string; mime: string }) => Promise<string>`, the Worker's signed R2 URL (§5.10), is still to come. Photo-asks (build plan 3.4, ADR-33) brought the outbound media schema that carries storage keys but not this option, and services give LINE no item named by a storage key (`uploadsStoredMedia`), so the option is added with the step that turns LINE's media on, together with the change to `uploadsStoredMedia`.
+
+**Refusals at construction.** It throws on an empty secret or token, and on anything but visible ASCII in either (a space, a control character, a non-ASCII letter), because the token goes into a header, where such a character breaks every request. LINE documents no shape for either, so nothing more is checked. The error never repeats the value.
+
+**Timeouts.** Every call passes `AbortSignal.timeout`: 10 s for API calls, 30 s for downloads, which carry up to 20 MB. A timeout is `unavailable`.
+
+**Capabilities:**
+
+| Capability | Value | Why |
+|---|---|---|
+| `buttons` | true | |
+| `voiceIn` | true | |
+| `voiceOut` | true | By URL |
+| `readReceipts` | false | |
+| `reactions` | false | |
+| `albums` | false | Images go as separate objects |
+| `editMessages` | false | New: fact 11 |
+| `resendsProviderFiles` | false | New: fact 14 |
+| `mediaByUrl` | true | New: fact 14 |
+| `mediaReplies` | false | New: fact 12 |
+
+Telegram sets the four new ones to `true, true, false, true`.
+
+**Stubs.**
+- `acknowledgeButton` resolves and never throws. LINE has nothing to acknowledge, and four flows call it without a catch.
+- `closeButtons` resolves; services no longer call it when `editMessages` is false.
+
+**`destination` is ignored.** The signature already binds a body to a channel's secret, and each environment has its own channel.
+
+### 5.3 Webhook verification
+
+`verify({ headers, rawBody })` calls a verifier built once per adapter by `createLineSignatureVerifier(channelSecret)`, which throws on an empty secret:
+1. Read `headers.get("x-line-signature")`. `Headers` is case-insensitive.
+2. Check that it is `^[A-Za-z0-9+/]{43}=$`, the only canonical Base64 form of 32 bytes; anything else is `false`. The form is checked rather than decoded, because `atob` accepts whitespace and missing padding.
+3. Compute HMAC-SHA256 with the channel secret, as UTF-8 bytes, over `TextEncoder().encode(rawBody)`, using Web Crypto. The adapter is built synchronously and the key import is not, so the verifier imports the key on the first webhook and keeps the promise. A rejected import is forgotten, and the next webhook tries again.
+4. Base64-encode the result and compare the two strings with `constantTimeEqual` (§5.1): no early return, the length folded in. Another Base64 spelling of the right bytes, one that differs only in the unused bits of the last character, is refused.
+5. Any throw returns `false`.
+
+The route reads the body once with `c.req.text()`, as the Telegram route does. LINE sends UTF-8, so re-encoding yields the received bytes. A body that is not valid UTF-8 would decode with replacement characters, re-encode differently and fail verification: the safe direction.
+
+**Tests:**
+- LINE's worked example;
+- a valid fixture, and the Verify body `{"events":[]}` with a valid signature;
+- one character of the body changed;
+- whitespace reformatted;
+- `\n` rewritten as `\r\n`;
+- the wrong secret;
+- the header missing, empty, not Base64, 31 bytes, without its padding, or another spelling of the right bytes;
+- the header's name in three letter cases;
+- the key imported once for many webhooks, and a failed import refused, then retried on the next webhook;
+- headers that throw when read, answered with `false`.
+
+### 5.4 Events (`parse`)
+
+`parseLineWebhook(rawBody, receivedAt)`, where `receivedAt` is the adapter's `now()` at parse. Common to every event:
+
+| Field | Value |
+|---|---|
+| `channel` | `"line"` |
+| `eventId` | `line:<webhookEventId>` |
+| `at` | `timestamp` (milliseconds) as ISO |
+| `conversation` | A user source → `{ externalId: userId, kind: "private" }`; a group → `{ externalId: groupId, kind: "group" }`; a multi-person chat → `{ externalId: roomId, kind: "group" }` |
+| `sender.externalUserId` | `source.userId`, or the conversation's own id where LINE names no one (the unknown actor, §5.9) |
+| `messageId` | `message.id`, on every message event the adapter emits: text, start, image, audio, sticker, other, and group text. `inboundExternalId` is `<conversation>:<messageId ?? eventId>`, so without it an image or voice answer would be keyed by the webhook event, and D6's unsend, which names only the message id, could never find it |
+| `replyToMessageId` | `quotedMessageId`, which LINE sends only on text and stickers |
+| `reply` | `{ token: replyToken, until }`, where `until` = min(receipt + 50 s, event time + 19 min). Carried whenever the event has a reply token, even when `until` is already past |
+
+**Which events need a user.**
+- `message`, `postback`, `follow` and `unfollow` need `source.userId`. In a group LINE documents it on message events only (fact 2), so a group postback without one yields nothing (question 15b).
+- `join`, `leave` and `memberLeft` never read one: their sender is always the conversation.
+- `unsend` needs none. Its message id is unique across LINE's whole Messaging API, and LINE asks that unsent content be made unusable, so a group or room unsend without a user is still reported, with the unknown actor as sender. Services match an unsend on channel, conversation and message id only.
+- A user source without a `userId` has no conversation, so nothing from it becomes an event.
+
+**Rules for the whole body.**
+- Malformed JSON, or a body without an `events` array, throws.
+- An event with `mode: "standby"` yields nothing; Vela uses no module channel.
+- **An event's own shape:** an object with a non-empty string `webhookEventId`, a string `type`, a `timestamp` that is a non-negative safe integer a `Date` can hold, and a source of a known type whose id has LINE's documented shape (`U`, `C` or `R`, then 32 lowercase hex digits). Message ids, quoted ids and unsent ids must be decimal, since content downloads put them in a URL path. An event that fails its shape is skipped; no event id is ever made up.
+- Each drafted event goes through `InboundEvent.safeParse`, and one that fails is skipped. Telegram's parser calls `InboundEvent.parse`, which throws; on LINE a throw would answer 500 for a whole body of other people's events.
+- `destination` is ignored (§5.2).
+
+| LINE event | Source | `InboundEvent` |
+|---|---|---|
+| `message` text | user | `start` with `startParam` when the text, without trailing whitespace, is `^/start(?:[^\S\r\n]+(\S[^\r\n]*))?$`; otherwise `text`. Any parameter on the first line counts, as on Telegram, so a damaged or edited token (an extra character, a trailing line break) reaches `handleInviteStart`, which answers `consent.invalid_link`, instead of onboarding and `help.private` |
+| `message` text | group or room | `text`, only when `text.trimStart()` starts with `/` (services trim before `parseAskCommand`) or it has `quotedMessageId` (§3.2); otherwise nothing. `/start` in a group stays `text` |
+| `message` image | user | `image`, `media { kind: "image", providerFileId: message.id, providerUniqueId: message.id }`, `mediaGroupId` = `imageSet.id`; `other` when `contentProvider.type` is not `line` |
+| `message` audio | user | `voice`, `media { kind: "audio", providerFileId, providerUniqueId, durationMs: duration }`; `other` when not `line` |
+| `message` video, file, location | user | `other` |
+| `message` sticker | user | `sticker`, `text` = `sticker.text` when present |
+| `message` of any other type | user | nothing, so a type LINE adds later never arrives by accident |
+| `message` of any content other than the text above | group or room | nothing, read no further than its type |
+| `messageEdited` | any | nothing (D5) |
+| `unsend` | any | `unsent`, `messageId` = `unsend.messageId`; the sender is `source.userId`, or the conversation when a group or room names no one |
+| `follow` | user | `followed` (`isUnblocked` is not read) |
+| `unfollow` | user | `blocked` |
+| `join` | group or room | `bot_added`; sender is the conversation (§5.9) |
+| `leave` | group or room | `bot_removed`; sender is the conversation |
+| `memberJoined` | group or room | nothing |
+| `memberLeft` | group or room | one `member_left` per member of type `user` with a `userId`, each person once: `subject` that user, sender the conversation, `eventId` `line:<webhookEventId>:<userId>` |
+| `postback` | user | `button`, `buttonData` = `postback.data` (not empty), no `messageId`; `params` ignored |
+| `postback` | group or room | `button` when `source.userId` is present; otherwise nothing |
+| `follow` or `unfollow` from a group; `join`, `leave` or `memberLeft` from a user | — | nothing |
+| `accountLink`, `beacon`, `membership`, `videoPlayComplete`, module events, `delivery`, any unknown type | — | nothing |
+
+**`providerUniqueId` is the message id.** LINE has no file identity, but its message id stays the same when an event is delivered again. `lightTheLight` records the media before inserting the answer, and `recordInboundMedia` deduplicates only on `providerUniqueId`, so without it a redelivered image or voice event would add a second media row that no answer references. Unlike Telegram's `file_unique_id`, it changes when a file is forwarded, which Vela does not rely on.
+
+Rules the tests prove:
+- every row above, one fixture each, compared exactly;
+- every dropped group message kind: ordinary text, a text that only mentions Vela, a command from a user LINE does not name, a tap that names no one, an image, a voice note, a video, a file, a location, a message sticker whose words quote Vela, an edit, and a member joining;
+- a group message of any type but text is dropped on its type: an image, voice note, video, file, location or unknown type given words and a quote still yields nothing, while the same fields on text make an event;
+- a body with two users' events yields both, in order;
+- an empty `events` array yields `[]`;
+- a redelivered event yields the same `eventId`;
+- the `until` arithmetic for a fresh event, for one delivered 18½ minutes after it happened (capped at 19 minutes), and for one redelivered 25 minutes after it happened (already past);
+- the start variants: a bare `/start`, the invite, a trailing line break, a damaged token, an ideographic space, `/starting`, and a second line;
+- a malformed event between good ones is skipped: no id, an empty or numeric id, a timestamp that is a string, fractional, negative or out of range, an unknown source type, and ids of the wrong shape;
+- every event from every fixture passes `InboundEvent.parse` unchanged.
+
+### 5.5 Sending
+
+`send(message)` validates with `OutboundMessage.safeParse`, refuses a `to.channel` other than `line`, and refuses a `to.conversationId` that is not `^[UCR][0-9a-f]{32}$`. It declares one parameter and so never reads photo-asks' `files` (§5.9).
+
+**Local refusals.** These are `invalid_request`, raised while the requests are planned, before any network call, so a bad item after good ones sends nothing:
+- a media ref without a `url` (only a `providerFileId`), since LINE cannot re-send by id;
+- a URL that is not `https:`, or longer than 2,000 characters once percent-encoded (fact 14). The adapter sends `new URL(url).href`, which is the UTF-8 percent-encoded form and the same on every attempt;
+- a media item without a MIME type (parameters are dropped and case is folded before comparing);
+- audio without `durationMs`, over 200,000,000 bytes, or with a MIME type other than m4a (`audio/mp4`, `audio/x-m4a`, `audio/m4a`) or mp3 (`audio/mpeg`);
+- an image that is not JPEG or PNG, or over 10,000,000 bytes;
+- an image without a preview (below).
+
+LINE's sizes say "MB"; the decimal reading is the smaller, so it is the one used. Text over 5,000 UTF-16 code units needs no check of its own: the contract's 4,000, counted in the same units, already keeps within it.
+
+**Message objects.**
+
+Media, in order. Each item is first resolved by one function, `resolveMedia`, to `{ url, previewUrl?, mime, durationMs?, bytes? }`. In step 3 it reads `MediaRef.url`, and it still does: photo-asks landed without `mediaUrl`. When `mediaUrl` is wired only that function changes, to call `mediaUrl({ storageKey, mime })` for the item's storage key, and its preview's.
+- An image is `{ type: "image", originalContentUrl, previewImageUrl }`. The preview is `previewUrl` when the item has one; otherwise the original, but only when `bytes` is known and at most 1,000,000; otherwise the image is refused. The outbound media item must therefore carry a preview storage key where ingestion stored one (§3.10 for LINE's own photos), set by services, rather than the adapter deriving a `.preview` key and its MIME type by convention. Photo-asks landed without that key. It carries `bytes`, but the app's upload takes up to 1 MiB (1,048,576 bytes; the phone sends about 300 to 700 KB), so a photo from the app over 1,000,000 bytes needs a preview copy, or the upload cap lowered to 1,000,000, before LINE can send it.
+- Audio is `{ type: "audio", originalContentUrl, duration }`.
+
+Then the text as `{ type: "text", text }`, and the buttons in one of two shapes:
+- **Transient buttons**, used for kinds `arrival`, `repeat`, `onboarding` and any other private message with at most 13 buttons: `quickReply.items` on the text, rows flattened in order. The text is then the last object, so no other object carries quick replies.
+- **Persistent buttons**, used for kinds `consent` and `quiet_notice`, for any message to a group or multi-person chat (a `C…` or `R…` id), and for a private message with more than 13 buttons, which LINE's quick replies cannot hold. The contract allows 8 rows of 4; today's largest private sets (arrival 9, onboarding countries 10, wake times 7, US zones 6) fit 13, and a bubble in the same request costs nothing more where a refusal would fail the send. The buttons go in a following Flex message:
+
+  ```json
+  { "type": "flex", "altText": "<labels joined by \" · \">",
+    "contents": { "type": "bubble",
+      "body": { "type": "box", "layout": "vertical", "spacing": "sm",
+        "contents": [ { "type": "button", "style": "secondary", "height": "sm",
+                        "action": { "type": "postback", "label": "…", "data": "…", "displayText": "…" } } ] } } }
+  ```
+
+  - One button per line, rows flattened: two 40-character buttons side by side are cut off on a phone ("She's fine, I know why" beside "Wait 2 hours").
+  - `altText` is cut to 1,500 UTF-16 code units, as LINE counts it, ending in an ellipsis, and never inside a grapheme cluster, so an emoji is never split into a lone surrogate.
+  - The 30 KB limit on a bubble is not checked at run time: the contract's own limits (32 buttons, 64-character ids and labels) keep the largest possible bubble at about 20 KB in three-byte characters (about 25 KB with its alt text), and a test builds that bubble and holds it under 30,000 bytes. A check that no valid message can fail would be dead code.
+
+Every button is a postback action:
+- `data` = `Button.id` verbatim (at most 64 characters, within LINE's 300);
+- `displayText` = the full label (at most 64, within LINE's 300);
+- `label` fitted to 20 grapheme clusters (quick reply) or 40 (Flex) by `fitLabel`, which uses `Intl.Segmenter`, trims the cut end and adds an ellipsis.
+
+`replyToMessageId` is ignored: LINE quotes by quote token, which Vela does not keep.
+
+**Requests.** The objects are cut into requests of at most 5, in order, from the first; the buttons are on the last object.
+- Each push carries `X-Line-Retry-Key: lineRetryKey(message.idempotencyKey, index)`. That is a v5 UUID over `"<idempotencyKey>#<index>"` under a fixed namespace constant, `LINE_RETRY_KEY_NAMESPACE` = `4bb5ce48-b344-4a40-ba0d-47ccf5a221c2`, generated once and never changed; a test pins three keys it gives. It is SHA-1 through Web Crypto, lowercase hex with dashes, and a known-answer test checks the algorithm against RFC 9562's DNS example (`www.example.com` → `2ed6657d-e927-568b-95e1-2665a8aea6a2`).
+- The key is a pure function of the outbound row's idempotency key. The body is a pure function of the stored payload, and media URLs carry no time. So a retry of the same row re-sends byte-for-byte the same request, as LINE requires (fact 8); a test sends one message twice and compares bodies and keys.
+- LINE documents that any UUID in hexadecimal form is accepted (fact 8), so a v5 key needs no live test; the first staging push is a smoke check (question 15h).
+
+**Replies.** With `message.replyToken`, and when the message fits one request, the adapter calls reply with no retry key.
+- On 400 (an expired, used or invalid token) it pushes at once, in the same call, with the retry key of request 0.
+- On 5xx or a timeout it throws `unavailable`. The gateway's retry then comes without the token (§5.11), so the message goes as a push. It can repeat only if the timed-out reply was in fact delivered, which is accepted for the kinds that use replies (§5.11).
+- On a 2xx without readable ids it throws `unknown`, which is not retried: the reply went out, has no retry key, and a retry would push it a second time.
+- A message of more than one request is always pushed.
+
+**Result.**
+- `externalMessageIds` are all `sentMessages[].id` in order, as strings; each request must answer exactly one decimal-string id per object sent, or its answer is unreadable.
+- `primaryMessageId` is the text message's id, the one a family member quotes, taken by the text's position among the objects (fact 12, question 15d).
+- The ids come from a 2xx, or from a 409's `sentMessages`.
+- When a later request of a message fails, the error is thrown and nothing is returned; the gateway's retry sends every request again under the same keys, and LINE answers the ones it accepted with 409 and their ids.
+
+### 5.6 Errors (`ChannelSendError`)
+
+| Response | Code | Retryable | Note |
+|---|---|---|---|
+| 2xx (push or reply) with one readable id per object | success | — | |
+| 409 on push with readable `sentMessages` | success | — | The key was already accepted; ids from the body |
+| 400 on reply | — | — | Push in the same call (§5.5) |
+| 400 on push | `invalid_request` | no | Includes a user id from another provider |
+| 401 | `unavailable` | yes | A wrong or revoked token: retrying gives the founder time to fix it; the error text, and so the row's `error`, says `line_auth` |
+| 403 | `invalid_request` | no | Plan or verification |
+| 404 | `not_found` | no | |
+| 413, 415 | `invalid_request` | no | |
+| 429 "You have reached your monthly limit." | `quota_exhausted` (new) | yes | LINE says this can be temporary while another delivery reserves quota |
+| Other 429 | `rate_limited` | yes | LINE sends no `Retry-After` |
+| 5xx, network failure, 10-second timeout | `unavailable` | yes | The retry key makes a retry safe |
+| A push's 2xx or 409 without readable `sentMessages` (missing, numeric ids, or a count that differs from the objects sent) | `unavailable` | yes | LINE promises the ids on a 409 "for push only"; a later retry under the same key normally returns them |
+| A reply's 2xx without readable `sentMessages` | `unknown` | no | It went out and has no key (§5.5) |
+| A lookup's 2xx with an unexpected body (profile, quota, transcoding status) | `unknown` | no | A changed API does not heal by retrying |
+| Anything else | `unknown` | no | |
+
+Error text is `line <call> failed: <status>[ line_auth][ <LINE's message> (<properties LINE names>)]`, at most 300 characters of LINE's part. It never contains a URL, a request or response body beyond LINE's `message` and `details[].property`, the token, or a LINE id: the token and anything shaped like a `U`, `C` or `R` id are replaced in whatever LINE or the runtime says, and a path id of the wrong shape is refused before any request, with an error that does not repeat it.
+
+### 5.7 Content download (`fetchMedia`, `fetchPreview`)
+
+`fetchMedia(providerFileId)` refuses an id that is not decimal before any request, then calls `GET https://api-data.line.me/v2/bot/message/{id}/content`:
+- **200:** the bytes and the `Content-Type`'s media type, lowercased without parameters; without a `Content-Type`, `application/octet-stream`, as Telegram's adapter does. Over 20 MB it is `invalid_request`, checked on `Content-Length` and on the bytes read.
+- **202:** poll `…/content/transcoding` up to three times, waiting 2 seconds between polls through the adapter's `wait` (tests pass one that records `[2000, 2000]` and resolves at once):
+  - `succeeded`: fetch the content again; a second 202 is `unavailable`;
+  - `processing` after the third poll: `unavailable`, so the media job tries later;
+  - `failed`: `invalid_request`, not retried, since the content can never be downloaded;
+  - the transcoding call's own 400, 404 and 410 map as the content call's do.
+- **404 or 410:** `not_found`.
+- **400, 401, 5xx:** `unavailable`. On 3 February 2026 content returned 400 for about 1½ hours during an outage.
+
+`fetchPreview(id)` calls `…/content/preview`, for images, with the same mapping; a 202 there is `unavailable`.
+
+Downloads run in the media job enqueued when the answer arrives. The content is deleted at LINE after an unpublished period, so the design never counts on 30 days there. `FetchedMedia` stays an `ArrayBuffer` under the 20 MB cap. A download's timeout is 30 s (§5.2).
+
+### 5.8 Profiles, leaving, quota
+
+- **`profile(externalUserId, conversationId?)`** returns `{ displayName?, languageCode? }`, or `null` on 404.
+  - With no conversation, or a `U…` one, it calls `GET /v2/bot/profile/{userId}`, which gives the name and `language`.
+  - With a `C…` group id it calls `GET /v2/bot/group/{groupId}/member/{userId}`, which gives the name only.
+  - With an `R…` multi-person chat it returns `null` without a request: those chats are never asked.
+  - Any other conversation id is `invalid_request`, and so is a user id that is not `U…` where a request would carry it, both before any request.
+  - Other failures throw `ChannelSendError`, and callers treat them as unknown.
+  - The picture URL and status message are never returned.
+- **`leaveConversation(id)`** calls `POST /v2/bot/group/{id}/leave` for `C…` and `POST /v2/bot/room/{id}/leave` for `R…`, with no body. A 404 counts as done. A `U…` id, or anything else, is `invalid_request`: a person's own chat cannot be left.
+- **`quota()`** calls `GET /v2/bot/message/quota` and then `GET /v2/bot/message/quota/consumption` and returns `{ limit: type === "limited" ? value : null, used: totalUsage, readAt }`, `readAt` being the adapter's `now()` after both answered.
+
+Every path is written exactly, with no trailing slash (LINE news of 17 August 2026). The client authenticates with `Authorization: Bearer <LINE_CHANNEL_ACCESS_TOKEN>`, the long-lived token of `infra/README.md` §8. Stateless 15-minute tokens, issued from the channel id and secret, are later hardening and not part of this row.
+
+### 5.9 Contract changes (`packages/contracts/src/adapter.ts`)
+
+Built in step 1 (§8). `03-code-design.md` §6 summarises them.
+
+- **`INBOUND_KINDS`** gains two kinds:
+  - `followed`: a person added the account or unblocked it (LINE `follow`);
+  - `unsent`: the sender withdrew the message `messageId`.
+
+  Until steps 5 and 9, services' router logs `follow_ignored` or `unsend_ignored` (the conversation kind only) and does nothing else.
+- **The sender convention.** `sender` stays required. For `bot_added`, `bot_removed` and `member_left` on a platform that does not say who acted, and for an `unsent` in a group or room that names no user (§5.4), `sender.externalUserId` equals `conversation.externalId`, and services read that as "unknown". A helper in services, `actorOf(event)` (step 5), returns null in that case, and only when `event.conversation.kind` is `group`. On Telegram a private chat's id equals the user's id, so a test of the ids alone would call every private sender unknown. Group ids never equal user ids on either platform: Telegram's group ids are negative, LINE's start with `C` or `R`.
+- **`InboundEvent.reply?: { token, until }`**: a free reply handle and the time after which it must not be used. `token` is a non-empty string; `until` is an ISO datetime with an offset.
+- **`OutboundMessage.replyToken?`**, a non-empty string. The adapter replies with it when it can and pushes when LINE refuses it; adapters without free replies ignore it. A LINE reply has no `to`: it always lands in the chat the token came from, and neither the adapter nor LINE can catch a mismatch. So the token is set only when its conversation is `to.conversationId`, the gateway's rule in §5.11.
+- **`AdapterCapabilities`** gains four flags. Each is defined by a doc comment in `adapter.ts`, because Telegram already sends a `MediaRef.url` by URL and a looser reading would set its `mediaByUrl` true:
+  - `editMessages`: `closeButtons` really edits; when false it resolves without doing anything;
+  - `resendsProviderFiles`: a `providerFileId` received on this channel can be sent again on it;
+  - `mediaByUrl`: the adapter turns a storage key into an HTTPS URL itself and needs no bytes, so the gateway loads none for it;
+  - `mediaReplies`: an inbound voice note or image can carry `replyToMessageId`.
+- **`CHANNEL_SEND_ERROR_CODES`** gains `quota_exhausted`, which is retryable. `retryable` is derived from the code in `ChannelSendError`'s constructor, so the constructor names it beside `rate_limited` and `unavailable`. Nothing in services or the Worker switches over the codes exhaustively.
+- **Optional methods on `ChannelAdapter`:**
+  - `profile?(externalUserId, conversationId?)`, null when the platform does not know the person there;
+  - `leaveConversation?(conversationId)`, where a conversation already left counts as left;
+  - `quota?()`;
+  - `fetchPreview?(providerFileId)`.
+
+  They come with the types `ChannelProfile { displayName?; languageCode? }` and `ChannelQuota { limit: number | null; used: number; readAt: string }`. Telegram implements none of them.
+- **Stated semantics** that the LINE adapter relies on:
+  - `acknowledgeButton`: a platform with nothing to acknowledge resolves for any event, while Telegram's refuses an event that is not one of its taps;
+  - `closeButtons`: see `editMessages`;
+  - `SendResult.primaryMessageId`: always the text message, even where the platform puts the buttons in a following message;
+  - `member_left`: `sender` may be the unknown actor.
+- **The `Button.id` comment** notes LINE's 300-character postback data. The 64 limit stays.
+- **The `MediaRef.providerUniqueId` comment** says that on LINE it is the message id: stable across redelivery, not across forwards. Services deduplicate inbound media on it, so a redelivered image or voice event adds no second media row (§5.4 sets it in step 2).
+- **Photo-asks.** Step 1 adds no `storageKey` to `MediaRef`, leaves its refine alone, and does not touch `send`'s signature:
+  - Photo-asks brought its own outbound media schema, `OutboundMediaRef`, carrying `storageKey`, and `send(message, files?)` (ADR-33).
+  - The LINE adapter implements `send(message)` with one parameter. `noUnusedParameters` would refuse a declared but unread `files`, and one parameter satisfies both signatures.
+  - Outbound media resolution lives in one function in `line/send.ts`, `resolveMedia` (item → `{ url, previewUrl?, mime, durationMs?, bytes? }`). Since step 3 it reads `MediaRef.url` (https only), and it still does, since photo-asks landed without `mediaUrl`; when that is wired only this function changes, to `mediaUrl({ storageKey, mime })`.
+  - `OutboundMediaRef` covers audio and carries `mime`, `durationMs` (audio) and `bytes`, but no preview storage key yet. Without one, an image over 1,000,000 bytes trips LINE's local refusal (§5.5), and a photo from the app can be up to 1 MiB; until `mediaUrl` is wired, services send LINE no stored photo at all.
+
+### 5.10 Worker wiring
+
+Built in step 6 (§8), with LINE off in every environment. Where this section differs from the first proposal, the co-founder decided it: the inbound queue is bound per environment, the webhook answers 500 only for what a redelivery can fix, the media route ships now, and the quota cron moved to step 7.
+
+**Route `POST /webhooks/line`** in `app.ts`:
+1. `readLineConfig(env)` (`config.ts`). Where `LINE_CHANNEL` is `off`, answer the Worker's one 404 and read nothing else: not the body, not a secret, not the channel registry.
+2. Read `c.req.text()`.
+3. Build the registry through `PilotRuntime.createChannels` and call `get("line").verify` before building deps or opening a database connection. A failure (a changed body, no signature, another channel's secret) is 401, and LINE is told nothing more.
+4. `parse`. A body LINE signed that still cannot be read (not JSON, or no `events` array) is answered 200 with nothing queued, and logged as `line_webhook_unreadable` with its error label alone. A redelivery would carry the same body, and a 500 would only count against redelivery: LINE may switch it off after many.
+5. With no events, answer 200. That covers the Verify button's body, and a body holding only what the adapter drops, such as the family's own talk in their group.
+6. Otherwise send one job `{ type: "handle_inbound", events }` to `INBOUND_QUEUE` and answer 200.
+
+A 500 comes only from what a retry can fix: a failed enqueue, or a LINE setting refused (`ConfigError:<variable>`). It is logged as `request_failed` with the path, method and label only, and LINE redelivers because redelivery is on. The route opens no database connection, so it answers well inside LINE's 2 seconds whatever Neon's state. This is the "verify, parse, acknowledge within 1 s, do all work from the queue" rule of `api-contract.md` §9, applied first to LINE. The Telegram route is unchanged. Nothing about an event's content, a user or group id, a reply token or a storage key is ever logged, by this route or by anything after it.
+
+**Queue `vela-inbound`** (`vela-inbound-staging`, `vela-inbound-production` when deployed):
+- A binding to a queue that does not exist fails the deploy. So development's top level binds the producer `INBOUND_QUEUE` and the consumer, local there, and a deployed environment binds its queue only in the commit that turns its LINE on, once the queue exists. In step 6 no deployed environment binds it, and `readConfig` refuses LINE on without the binding (`ConfigError:INBOUND_QUEUE`).
+- The pilot Worker consumes it with `max_batch_size` 10, `max_batch_timeout` 1 (a reply token is free for a minute only), `max_retries` 64, `retry_delay` 30, and the environment's dead-letter queue.
+- `parseJob` (`pilot-worker.ts`) accepts `handle_inbound` only when `events` passes `InboundEvent.array()`. Anything else is acked and logged as `queue_message_unreadable` with the queue and the message id alone. A job calls `services.handleInbound(deps, events)`, and one that throws is retried and logged as `queue_job_failed` with its label, as every job is.
+- **Retries last until the latest quiet deadline has passed** (co-founder's fix of 2026-09-26). Once the webhook has answered 200, the job is the only copy of the events: LINE redelivers nothing it was answered 200 for, and no row holds them yet, so `reconcile`, which re-drives a lost send from its row, has nothing to find. With 3 retries at 30 seconds, a database away for three minutes would have put her tap on the dead-letter queue and sent every organiser a false quiet notice at her deadline, where Telegram's route answers 500 and Telegram delivers again. So an inbound job is retried `inboundRetryDelaySeconds(attempts)` later: 30 seconds after its first attempt, while the reply token may still be fresh, then 1, 2, 4 and 8 minutes, then every 10 minutes. 64 retries last just over 10 hours, T_quiet's cap (`TUNING.capMinutes`), the latest quiet deadline after a delivery; `wrangler-config.test.ts` pins the two together. An outage that ends before her deadline therefore costs her answer at most 10 minutes, and a job that cannot succeed stops waking the database soon after. The other queues keep `retry_delay`, since each of their jobs has a row that `reconcile` drives again. `retry_delay` applies to this queue only if the handler itself throws.
+- Deps that cannot be built (Hyperdrive, Neon or a setting refused) ran nothing: every message in the batch is retried on its job's schedule, and the batch is logged once as `queue_deps_failed` with the queue and the label alone. The handler does not throw, since that would retry the batch at the queue's 30 seconds and have the runtime log the error's message.
+- One webhook's events are handled in order in one job, and redeliveries and retries are safe because every handler is idempotent (04 §5). A retried job can be handled after a later webhook's job, as LINE's own delivery can be out of order (fact 6).
+- A job that spends its retries (an outage of more than 10 hours, or a job no retry can fix) lands in the dead-letter queue with the events whole: her words, LINE user and group ids, reply tokens. `infra/runbooks/incident.md` (Dead-letter growth) has the founder re-send it to `vela-inbound-<environment>` once its cause is fixed, only on the day it was sent and before her next arrival, never copy its body anywhere else, and correct any quiet notice it caused; a re-sent answer still resolves her open quiet event (04 §3.9, step 3).
+- **A known limit, shared with Telegram's redeliveries.** An answer is recorded at the time it is handled, not at its event's `at`. So a message she sends in the evening, held by an outage that lasts past her next arrival time, counts as that next day's answer (04 §3.9: a message before the day's arrival counts for that day), and that day's silence goes unnoticed. Recording answers at the event's `at` would close this for both channels; it is a services change, left open.
+
+**Route `GET /media/<base64url(storage key)>/<signature>.<ext>`** (`media-route.ts`):
+- Where LINE is off it answers the one 404 and reads nothing.
+- The signature is the base64url HMAC-SHA256 of the storage key's UTF-8 bytes under `MEDIA_URL_SECRET`, checked with `crypto.subtle.verify`, which compares in constant time.
+- Only the one base64url spelling the Worker writes is taken, for the key and for the signature, so no object has two URLs. The key must decode to UTF-8 of at most 1,024 bytes (R2's limit on a key).
+- The extension is `m4a`, `mp3`, `jpg` or `png`, from the MIME type. It is not signed: LINE and the phones read the object's own `Content-Type`.
+- It streams the R2 object with its stored `Content-Type`, `cache-control: private`, `accept-ranges: bytes`, `x-content-type-options: nosniff` and its `etag`. The request's headers go to R2 as its `range`, so a `Range` header is answered 206 with `content-range`, as R2 reads it.
+- A bad signature, a malformed key, a missing object and LINE off all answer the same 404, and nothing is logged. A failure (R2 unreachable, a LINE setting refused) answers 500 and is logged as `media_request_failed` with its label alone, never as `request_failed`, whose path would hold the key and the signature that opens it.
+- The URL carries no expiry: a LINE retry must send the same body (fact 8), and phones fetch it later (fact 14). It stops working when retention deletes the object at 30 days.
+- `createMediaUrl({ pilotOrigin, mediaUrlSecret })` returns the function the adapter's `mediaUrl` option will take once it is wired (§5.2; photo-asks landed without it): `({ storageKey, mime }) => Promise<string>`, the same URL for the same object every time. A type LINE plays no media of (`audio/ogg`, say) is `ChannelSendError` `invalid_request`. `packages/adapters` is unchanged in step 6, so nothing passes it yet.
+- **Open for step 8.** Cloudflare's own invocation logs (Workers Logs, with `observability` on in `wrangler.jsonc`) record each request's URL, so a media URL's key and signature would sit there for the logs' retention. The route itself logs nothing. Before staging turns LINE on, the co-founder either turns invocation logs off for `vela` (`observability.logs.invocation_logs: false`, which drops them for every route) or accepts that record.
+
+**Registry.** `createChannels(env)` builds Telegram as today, since the admin conversation stays on Telegram (ADR-21). It builds LINE on the first `get("line")`, from `readLineConfig`, and keeps it. Where `LINE_CHANNEL` is `off`, `get("line")` throws `ConfigError:LINE_CHANNEL` ("LINE is off in this environment"), and nothing reads a LINE secret. `mediaUrl` will be passed to the adapter, built by `createMediaUrl` from `PILOT_PUBLIC_URL` and `MEDIA_URL_SECRET`, when LINE's media are turned on; photo-asks landed without it.
+
+**Env, secrets and vars:**
+
+| Name | Kind | Holder | Notes |
+|---|---|---|---|
+| `LINE_CHANNEL_SECRET` | Secret | `vela` | Read only while `LINE_CHANNEL` is `on`. In `SecretName`, `env.ts` and `.dev.vars.example`; the test runtime blanks it, as it does `CLERK_SECRET_KEY` |
+| `LINE_CHANNEL_ACCESS_TOKEN` | Secret | `vela` | Same |
+| `MEDIA_URL_SECRET` | Secret | `vela` | Same. 32 random bytes as base64 or hex, at least 43 characters, generated and never typed |
+| `LINE_CHANNEL` | Var | Both Workers | `on` or `off`, the same in both files for each environment; `off` everywhere in step 6 |
+| `LINE_BOT_BASIC_ID` | Var | Both Workers | `@…`, the same in both files; absent where LINE is off, which `wrangler-config.test.ts` pins |
+| `PILOT_PUBLIC_URL` | Var | `vela` | The pilot origin, in every environment (`http://localhost:8787` in development), and the fourth URL var `wrangler-config.test.ts` checks against `WORKERS_DEV_SUBDOMAINS`. Read only while LINE is on |
+| `INBOUND_QUEUE` | Binding | `vela` | Development, and a deployed environment once its LINE is on |
+
+`Config` gains `lineBasicId: string | null` with step 4, the services change that first reads it, and `AdminDeps` passes it then. `readConfig` and `checkAdminConfig` already refuse a bad basic id where LINE is on.
+
+**Refusals.** Each is a `ConfigError` naming the variable, never its value, in every environment, development included.
+- `readConfig` refuses an unknown `LINE_CHANNEL`, and so does `checkAdminConfig`.
+- Where LINE is on, `readConfig` (through `readLineConfig`) refuses:
+  - `MEDIA_STORAGE` `off` (`ConfigError:LINE_CHANNEL`, since LINE media needs the R2 copy), or no bucket bound (`MEDIA_BUCKET`);
+  - no `INBOUND_QUEUE` binding;
+  - a `PILOT_PUBLIC_URL` that is not an https origin with no path (one trailing `/` is stripped);
+  - a `LINE_BOT_BASIC_ID` that is not `@` followed by non-space characters;
+  - a missing LINE secret, or one with anything but visible ASCII (a space, a pasted line break, a letter outside ASCII);
+  - a missing `MEDIA_URL_SECRET`, or one shorter than 43 characters.
+- Where LINE is on, `checkAdminConfig` refuses a bad or missing `LINE_BOT_BASIC_ID`.
+
+Because `buildDeps` calls `readConfig`, every job, cron run and alarm refuses a LINE it could not speak, not only the webhook. The placeholder rule already refuses `PLACEHOLDER_` values, in `LINE_BOT_BASIC_ID` and `PILOT_PUBLIC_URL` as in any var, with LINE on or off.
+
+**Per environment.**
+- **Development:** `off`, since it has no bucket. It binds the inbound queue locally. Tests turn LINE on in their own environment, with fixtures, the test runtime's own local bucket `TEST_MEDIA_BUCKET`, and a recording queue.
+- **Staging:** `off` in step 6. `on` in step 8's commit, with the `INBOUND_QUEUE` producer and the `vela-inbound-staging` consumer, `LINE_BOT_BASIC_ID` in both files, and the three secrets already put. The setup script runs `--from resources` on that commit before it is merged to main, which creates the queue and deploys.
+- **Production:** `off`, pinned by `wrangler-config.test.ts` until step 11 turns it on, as `API_V1` is pinned.
+
+**Cron** (step 7, built). In the `RECONCILE_CRON` branch, after `reconcile` (and so after the heartbeat), where LINE is on:
+
+```ts
+services.recordChannelQuota(deps, "line", await channels.get("line").quota())
+```
+
+It runs in its own try/catch that logs `line_quota_failed` with the label, so a LINE outage, or a reading services refuse, never fails reconcile; a reconcile that throws fails the run as before, and no quota is read. The admin Worker never calls LINE: its overview reads the `flags` row the cron wrote.
+
+**Setup script.**
+- `resources` creates `vela-inbound-<environment>` only where that environment's `LINE_CHANNEL` is `on`. `readEnvironmentConfig` reads `LINE_CHANNEL` from both files into `EnvironmentConfig.lineChannel`. It refuses (`SetupError`) two values that differ, a value that is neither `on` nor `off`, and a value that disagrees with the pilot's binding: `on` must produce `INBOUND_QUEUE` onto `vela-inbound-<environment>` and consume it, `off` must bind no inbound queue. The queue is then among those the step creates, like any other. With `off` the step prints `lineOffLine` instead, which says how to switch it on. So a run today creates nothing new.
+- A new step, `line`, puts the two LINE secrets at a hidden prompt and generates and puts `MEDIA_URL_SECRET`. It is not built in step 6; it comes with step 8. Until then the secrets go on with `wrangler secret put … --env staging` from Git Bash, with `MEDIA_URL_SECRET` piped in from `openssl rand -base64 32`.
+
+### 5.11 Services changes
+
+- **Channels by member, not by constant.** Eight Telegram constants are replaced:
+  - `arrivals.ts`, `consent.ts`, `parent-commands.ts`, `admin.ts`, `quiet-closing.ts`, `quiet.ts`, `api-asks.ts`, and `primarySurface` in `group.ts`, `invites.ts` and `onboarding.ts`;
+  - each is replaced by `messengerLinkOf(db, memberId)`: the member's link on their `primary_surface` when that is a messenger, else their one messenger link;
+  - the family's group is its linked group on any channel, and `handleBotAdded` refuses a second group on any channel (D9).
+  - `ADMIN_CHANNEL` stays `telegram`. `account-linking.ts` stays Telegram-only; app account linking over LINE is later.
+- **Invite links:** `inviteLink(config, channel, token)`, t.me or `oaMessage` (§2.3).
+- **Taps without a message id:** `inboundExternalId` keys a `button` event without `messageId` as `<conversation>:button:<buttonData>`.
+- **Consent evidence:** `message_id` falls back to the outbound row's `external_id` (§2.5), and `groupNoticeEvidence` does the same (§3.1).
+- **Closing buttons:** with `editMessages` false, services skip `closeButtons`, and send `quiet.waiting` as a reply (§4).
+- **Gateway:**
+  - A `payload.reply = { token, until, conversationId: event.conversation.externalId }` is stored from the event. It is passed as `replyToken` only on a row's first attempt, only while `now < until`, and only when its `conversationId` equals the row's conversation (§5.9): a reply lands in the chat the token came from, so an organiser notice caused by her tap must never carry her token. A test proves the last rule.
+  - Replies are used for `ack`, `help.private`, `help.followed`, `consent.invalid_link`, `consent.already_linked`, `consent.request`, `consent.accepted`, `consent.declined`, onboarding prompts, `group.ask_confirmed`, `group.ask_queued`, `group.linked`, `group.not_linked` and `quiet.waiting`. A second message on one token falls back to a push.
+  - A private conversation whose link is blocked fails as `blocked` unsent.
+  - `quota_exhausted` sends `admin.line_quota_exhausted` once per quota month, through the claim `line_quota:<quota month>:exhausted` that `quota.ts` already takes when a reading shows the month spent (§6), keyed by the quota month of the refusal's time, so the founder hears once whichever sees it first.
+  - With `mediaByUrl`, no bytes are loaded.
+  - Media refs are built for the target channel: `storageKey` when stored; `providerFileId` only when the media row's channel is the target and the adapter re-sends provider files; otherwise dropped with `media_unsendable`.
+- **Router:**
+  - `followed`;
+  - `bot_added` with an unknown actor goes to the probe (§3.1);
+  - `unsent`, per D6;
+  - the turn prompt copy chosen by `mediaReplies`.
+- **Answers and pipeline:** the post after ingestion, photo ingestion with preview, and duration from the m4a header (§4).
+- **Names and language:** `profile()` lookups for the organiser at onboarding (name and language) and for lazily created group members (name), with D7's fallback.
+- **Copy:** new keys `help.followed`, `group.turn_prompt_text` and `group.turn_prompt_open_text`; `admin.line_quota` `{used, limit, link}` and `admin.line_quota_exhausted` `{link}` came with step 7. `consent.already_linked` loses "Telegram" ("This account is already connected to another family on Vela."). The zh-TW texts go to the native reviewer of build plan 2.4.
+
+## 6. Cost
+
+**The monthly loop of one LINE family.** A is the number of adults in the family group; she is not in it, per `onboarding.done`. O is the number of organisers on LINE. The assumptions are a 30-day month, 6 repeat days, 15 voice days and 2 quiet events. Counting is per recipient (fact 7).
+
+| Send | Per month | Billed |
+|---|---|---|
+| Arrival to her | 30 | 30 |
+| Repeat | 6 | 6 |
+| Ack, ask confirmation, onboarding and consent messages, `group.linked` | — | 0 while the reply token is fresh (up to 30 more if every ack misses its minute) |
+| Turn prompt to the group | 30 | 30 × A |
+| Answer post to the group | 30 | 30 × A |
+| Transcript or translation post | 15 | 15 × A |
+| Weekly read | 4.3 | 4.3 × O |
+| Quiet notices and closings | 4 | 4 × O |
+| **Total** | | **≈ 36 + 75·A + 8.3·O** |
+
+With O = 1:
+
+| Adults in the group | Billed a month | Families on 中用量 (3,000) | Families on 高用量 (6,000), before NT$0.2 each |
+|---|---|---|---|
+| 2 | about 194 | 15 | 30 |
+| 3 | about 269 | 11 | 22 |
+| 4 | about 344 | 8 | 17 |
+
+At three adults, a full 中用量 costs about NT$91 per family-month. The "~NT$12 per parent-month" of `02-technical-architecture-v2.md` §8 counted only her 36 sends. The free 輕用量 (200) cannot carry one real family. The founder's staging dogfood with one adult in the test group comes to about 111 a month, which fits it.
+
+**Unknowns, measured in plan step 8** by reading consumption before and after one group push on the test account:
+- whether the Official Account itself counts as a person in the group;
+- whether members who blocked the account, or never added it, count.
+
+**Quota tracking** (built in step 7, `packages/services/src/quota.ts`).
+- The pilot Worker reads LINE's quota every 15 minutes, after reconcile (§5.10).
+- `recordChannelQuota` checks the reading (whole counts, a limit or null, a time with its offset; anything else is `VelaError` `invalid_payload`) and writes the `flags` row `line_quota` with `{ limit, used, readAt }`, replacing the one before. That table existed unused, so no migration was needed.
+- It tells the founder the highest level the reading has reached, once per quota month each: `admin.line_quota` `{used, limit, link}` at 70% and at 90% of the limit, and `admin.line_quota_exhausted` `{link}` once `used` reaches it; `{link}` is the overview. A reading that jumps past two levels sends one message, so a first reading at 95% says 90% and not 70% as well. A plan with no limit tells nothing.
+- "Once" is a `flags` row claimed before the send, keyed `line_quota:<quota month>:<level>` (`70`, `90`, `exhausted`). A quota belongs to no member, and an outbound row does, so the message cannot go through the gateway: it goes straight to the admin conversation on Telegram, as `sendOutsideGateway` sends to someone not yet a member. A send that fails for a reason that can pass gives the claim back, and the next reading tries again 15 minutes later; one Telegram refuses for good keeps it, as the gateway would not retry it. With no admin conversation nothing is claimed. A plan changed mid-month keeps the month's claims: after a move to 高用量 at the 70% alert, the founder next hears at 90% of the new limit.
+- The quota month (`yyyy-mm`) a reading counts in is the Taipei month of the day before it: a month's first day in Taipei still counts in the month before, and the new month's claims open as its second day starts. LINE does not document the zone its quota month resets in, nor how soon its approximate count follows, and the 16:00 UTC run falls exactly at Taipei's midnight. Keyed by its own Taipei month, a reading at that run could still show the month before's count, take the new month's claim, and silence the new month's 70% (D10's decision point) or its spent quota. Every zone's midnight falls between 18:00 on a month's last day and 20:00 on its first in Taipei, so a reading on either day shows the old month's count or the new month's first hours, which reach no level. The rule needs no state, so a count that dips or readings missed across the edge cannot move it, and step 5's refusal can key its claim by its own time. The one cost: a level the new month reaches on its first day is told on its second.
+- `quota_exhausted` from a send (step 5) will take the same `exhausted` claim.
+- The admin overview shows "LINE: used of limit this month, read at …", "with no limit" for a plan without one, or "not read yet". It reads only the `flags` row and writes the usual `view` rows, none for LINE. No other LINE data is on any page.
+- When the quota runs out, replies still work, because they are free. Vela degrades to reply-only by itself, which is what `02-technical-architecture-v2.md` §8 asked of `adapters/line/quota.ts`. An adapter never holds state, so that module does not exist.
+
+**FOUNDER DECISION D10 (the plan).**
+- Buy 中用量 only when a real LINE family is scheduled. That needs the founder's explicit yes at the time; Vela buys nothing.
+- It cannot be bought from 2026-10-28 08:00 to 11-02 or on 11-24 and 11-25, so for a family starting in early November, buy before 10-28.
+- Move to 高用量 at the 70% alert, since 中用量 cannot buy extra messages and a spent quota fails her arrivals.
+- Staging stays on the free plan.
+- Recommended: yes.
+
+**FOUNDER DECISION D14a.** Keep the turn prompt on LINE (30·A a month). Recommended: keep; revisit at the first 70% alert. The deferred degradation policy is at 90%: drop turn prompts, and keep arrivals, repeats, quiet notices and answer posts.
+
+## 7. Migration and ADR
+
+**No migration is needed** for plan steps 1 to 8:
+- Every channel CHECK and unique index already accepts `line` (`CHANNELS`, `SURFACES`, `INVITE_CHANNELS`).
+- `consents.channel` and `events.surface` are unchecked.
+- LINE ids fit the `text` columns.
+- Reply tokens ride in `outbound.payload`.
+- The quota snapshot lives in `flags`.
+- Consent evidence keeps `CONSENT_PROOF_KEYS`.
+- LINE media rows leave `provider_unique_id` null, so LINE has no re-forward dedup, and `media_provider_unique_id_channel_check` is untouched.
+
+One migration comes only with D6: **`00NN_message_unsent`**, numbered at its landing (0004 at the earliest: `0003_suggestion_days` is tomorrow's suggestion's), which regenerates `events_name_check` for the event name `message_unsent`, followed by `pnpm --filter @vela/db export-sql`. It is incremental, since staging already holds `0001` and `0002`.
+
+**The ADR.** It is ADR-32, appended to `decisions.md` on 26 September 2026 as proposed (ADR-31 is tomorrow's suggestion). Its text:
+
+> ## ADR-32 · LINE: invites by a pre-filled start message, groups linked by an organiser's presence, the family's ordinary group messages dropped in the adapter
+> **2026-09-26 · proposed · refines ADR-16 · corrects `02-technical-architecture-v2.md` §8 (LINE row)**
+>
+> Context: LINE passes nothing from an add-friend link to the webhook, its `join` names nobody, a bot in a group receives every message, a bot cannot edit what it sent, pushes are billed per person in a group, and Taiwan's 中用量 plan cannot buy messages beyond its 3,000 (`05-line-flows.md` §1).
+>
+> Decision:
+> - **Invites.** Her invite is `https://line.me/R/oaMessage/<basic id>/?/start <token>`; the message she sends is parsed as `/start <token>` and every flow after it is Telegram's. No LINE Login, LIFF, or Messaging API account link. Consent is a text message with a Flex bubble of buttons under it; the evidence keeps its keys, `message_id` being the outbound row's LINE id.
+> - **Groups.** On `join`, Vela probes the group member profile of each organiser of a family without a group, at most 20; exactly one family present links the group, anything else is refused and left.
+> - **Minimisation.** The adapter turns group events into events only for `join`, `leave`, `memberLeft`, `unsend`, named postbacks, and text that starts with `/` or quotes a message; everything else is dropped unread, unqueued, and unlogged. No media asks or replies in LINE groups.
+> - **Webhook.** `POST /webhooks/line` verifies the HMAC before anything, parses, enqueues to `vela-inbound`, and answers 200 without touching the database; redelivery is on.
+> - **Sending.** Push carries `X-Line-Retry-Key`, a v5 UUID of the outbound row's idempotency key and request index, and a 409 is success; replies use the event's token while fresh and fall back to push. Media goes by signed, non-expiring URLs to R2 copies on the pilot Worker, so LINE needs `MEDIA_STORAGE` `r2`; LINE content is copied when it arrives.
+> - **Quota.** The pilot Worker snapshots LINE's quota into `flags` every 15 minutes; the admin overview shows it; the founder hears at 70%, 90%, and exhaustion; `quota_exhausted` is its own error code.
+> - **Switch.** `LINE_CHANNEL` is `on` in staging and `off` in production until an update of this record; one messenger per family.
+>
+> Why: it is the only path that needs no new LINE channel, keeps consent and its evidence in her own chat, costs nothing against the quota, and reuses the invite token as it is; the probe gives the organiser rule without a claim step; dropping in the adapter keeps the family's conversation out of the queue, the database, and the logs; queue-first meets LINE's 2 seconds whatever Neon's state; the retry key turns every ambiguous push into a safe retry.
+>
+> Rejected: `?ref=` on the add-friend link (does not exist); LIFF or LINE Login (a Published channel that cannot be unpublished, a permission screen naming the founder, LIFF being folded into MINI Apps); the account-link API (needs a login she lacks); a typed code (hard at 70+; a code table); a `/connect` command in the group (an extra step, and an unclaimed group receiving messages meanwhile); processing inside the webhook request (Neon's cold start against 2 seconds); expiring media URLs (a retry must re-send the same body, and phones fetch later); quick replies for consent and quiet notices (they vanish on any new message).
+>
+> Consequences: three new secrets on `vela` and one queue per environment; the adapter contract gains two inbound kinds, reply handles, four capabilities, one error code, and four optional methods; every flow addresses members by their messenger link; the privacy notice needs a new version before a real LINE family; 中用量 carries about 11 families of three adults.
+>
+> Revisit if: LINE adds a privacy mode, a referral on follow, or group postbacks without users; the probe overflows; quota passes 70% twice; or the entity forms (a new provider means new user ids).
+
+## 8. Implementation plan
+
+Each step lands alone through `build/sprint-0-1`, with `pnpm check` green. Steps 1 to 7 need nothing from the founder.
+
+1. **The contract.**
+   - Files:
+     - `packages/contracts/src/adapter.ts` and its test (§5.9);
+     - `packages/adapters/src/telegram/adapter.ts` and its test, the new capabilities;
+     - the two fakes that build `AdapterCapabilities` by hand, with Telegram's values: `packages/services/src/testing/fake-telegram.ts` and `apps/worker/src/testing/fakes.ts`;
+     - `packages/services/src/inbound/router.ts` and its test, where `followed` and `unsent` are logged and otherwise ignored for now;
+     - `03-code-design.md` §6.
+   - Tests:
+     - schemas accept and refuse `reply`, `replyToken` and the new kinds;
+     - `quota_exhausted` is retryable, and exactly three codes are;
+     - Telegram's capabilities, and none of the optional methods on Telegram;
+     - the router changes nothing for a follow or an unsend;
+     - `pnpm --filter` typecheck of contracts, adapters, services and worker;
+     - the whole suite unchanged.
+   - Founder: nothing.
+   - **Done** on `feat/line`.
+2. **The LINE adapter: verification and events.**
+   - Files: `packages/adapters/src/line/{verify,parse,testing}.ts`, `fixtures/webhook-*.json`, tests; `src/constant-time.ts` and its test, moved out of `telegram/verify.ts`; `index.ts`, which exports only `LINE_SIGNATURE_HEADER`, since the adapter itself is written in step 3.
+   - Tests: §5.3 and §5.4, with no LINE account.
+   - Founder: nothing.
+   - **Done** on `feat/line`.
+3. **The LINE adapter: sending, errors, media, profiles, quota.**
+   - Files: `line/{client,send,retry-key,media,quota,adapter,ids}.ts` (`ids.ts` holds the id shapes `parse.ts` and the client share), the recording fake `fetch` in `line/testing.ts` (§5.1), `index.ts` (`createLineAdapter`, `LineAdapterOptions`, `LineApiOptions`), and `fixtures/api-*.json`:
+     - push 200, 200 with a numeric id, 409, 409 without `sentMessages`; reply 200 and 400;
+     - errors 400 (plain and with `details`), 401, 403, 404, 413, 415, 429 monthly, 429 rate, 500;
+     - content 202, 400, 404, 410; transcoding `processing`, `succeeded`, `failed`;
+     - profile 200 and 404; group member profile 200 and 404; leave 200 and 404;
+     - quota limited and none; quota consumption.
+
+     Content and preview 200 carry bytes, so their tests build them.
+   - Tests, through a recording fake `fetch`:
+     - the request shapes per kind and conversation, the Flex bubble exactly;
+     - quick replies only on the last object, and a bubble past 13 buttons;
+     - labels fitted by grapheme with the full `displayText`; the alt text cut in UTF-16 units without a lone surrogate; the largest bubble the contract allows under 30 KB;
+     - chunks over 5, each with its own key; the v5 known answer and pinned keys;
+     - two sends of one message byte-identical, key included; a retry after a failed second request answered 409 for the first;
+     - no retry key on reply, push after a reply's 400, no push after a reply's 5xx, timeout or unreadable 2xx;
+     - 409 read as success;
+     - every row of §5.6, and error text free of the token, ids and what was sent;
+     - local refusals made before any call, ids of the wrong shape included;
+     - 202 polling with the recorded waits, `failed` not retried, the 20 MB cap, a timeout;
+     - `profile` by conversation letter and null on 404; leaving by letter, 404 as done.
+   - Founder: nothing.
+   - **Done** on `feat/line`.
+4. **Services: channels by member, Telegram unchanged.** *Built 3 October 2026, except the invite link.* `repo.ts` gains `MESSENGERS`, `isMessenger` and the `MESSENGER` choice. `linkedGroupOfFamily`, `activeOrganisersWithLinks`, `reachableOrganisers` and `channelLinkOfMember` take it to mean whichever messenger the person or the family's group is on: a person's link on their primary surface, else their earliest messenger link. Every Telegram constant reads it now. Her mornings go to her primary surface. Her yes, a lazily created group member and the Telegram onboarding set it from the channel they came on. A second group on any messenger is refused (D9). The harness's `h.line` is the Telegram fake under LINE's id, and `line-family.test.ts` shows a family on LINE getting her morning, the turn prompt, a quiet notice and the post of her answer there and nothing on Telegram. `inviteLink` for LINE came with step 5 (`lineInviteLink`).
+   - Files: the eight modules of §5.11's first item, `repo.ts`, `invites.ts`, `deps.ts` (`Config.lineBasicId`), `testing/harness.ts` (several channels), and a new `testing/fake-line.ts` with LINE's capabilities, reply and push recorded apart, settable profiles and quota.
+   - Tests:
+     - the existing suite unchanged;
+     - a family whose members all link on the fake LINE channel gets arrivals, repeats, quiet notices, turn prompts, weekly reads and invite links on LINE;
+     - a second group on another channel is refused.
+   - Founder: nothing.
+5. **Services: LINE behaviour.** *Partly built 4 October 2026, with LINE off.* A tap without a message id is keyed `<conversation>:button:<data>`, so a repeat is one answer. Consent evidence takes `message_id` from the outbound row that carried the buttons. A quiet notice's button on a messenger that cannot edit sends the line the buttons would have become as its own message. The harness's LINE fake now has LINE's capabilities, and `line-family.test.ts` covers all three. Reply tokens too: a row stores the event's `reply` as `{token, until, conversationId}` and passes `replyToken` only on its first attempt, before `until`, and to the same chat. Every kind §5.11 names uses it now: rows through `replyFieldOf`, and messages sent straight to the adapter through `directReplyOf` while the token is fresh. `followed` too: someone Vela knows is unblocked, and a stranger gets `help.followed` as a free reply, never onboarding. The invite link too: `Config.lineBasicId` (both Workers, null while LINE is off) and `lineInviteLink`. `POST /v1/families` answers `invite.line_url` and `line_text` beside the Telegram link, and onboarding offers "On LINE" when they are there. A send refused with `quota_exhausted` tells the founder once a quota month through `channelQuotaRefused`, with the claim a reading takes, and the row retries as usual. A group member Vela creates from a message without a name is named from the platform's profile (`profileName`), looked up through the group. With the founder's decisions of 4 October 2026: the group probe (D2, `probeGroup` in `group.ts`, capped at 20 candidates, refusing rooms and leaving); unsend (D6, `unsend.ts`, with event `message_unsent` and migration `0010_message_unsent`); zh-TW for a LINE user with no hint (D7, `languageOfSender`). Stored media goes to LINE too: the adapter's `mediaUrl` option signs a stored file's URL (`createMediaUrl`, passed by the pilot Worker), and `uploadsStoredMedia` includes LINE. Still to build: the group probe (D2), the organiser's name and language from the profile at onboarding.
+   - Files: `format.ts`, `consent.ts`, `group.ts` (the probe and `actorOf`), `quiet.ts`, `gateway.ts`, `gateway-effects.ts`, `arrivals.ts`, `answers.ts`, `pipeline.ts`, `inbound/router.ts`, `packages/copy` (new keys, en and zh-TW drafts).
+   - Tests on the fake LINE channel:
+     - 04 §6 test 1, the loop, end to end;
+     - consent evidence with `message_id` from the outbound row and a hash equal to the rendered request;
+     - a double tap is one answer;
+     - the probe: one family, none, two families, the cap, a room, the same group again;
+     - `followed` for a stranger and for a linked member;
+     - a blocked link fails the arrival unsent with one `delivery.failed` and no quiet event;
+     - a reply used while fresh, a push after `until`, a push on retry;
+     - `quota_exhausted` retried, then failed, with one founder alert;
+     - her voice posted only after its copy, with its duration;
+     - a photo stored with its preview;
+     - `quiet.waiting` sent as a reply;
+     - every LINE fixture handled twice changes nothing the second time (04 §6 test 4).
+   - Founder: the zh-TW reviewer for the new keys (build plan 2.4).
+6. **The Worker.**
+   - Files:
+     - `apps/worker/src/{app,deps,config,env,pilot-worker,runtime}.ts` and a new `media-route.ts` (`openMedia`, and `createMediaUrl`, the signing helper the adapter's `mediaUrl` option will take);
+     - `wrangler.jsonc` and `wrangler.admin.jsonc`, with LINE off everywhere and the inbound queue bound in development alone; the header of `wrangler.jsonc` says what each LINE var and secret means and how to switch staging on;
+     - `.dev.vars.example`, `vitest.config.ts` (blank LINE secrets and a local bucket, `TEST_MEDIA_BUCKET`, for the media route), `scripts/setup-environment.ts` and its test, `testing/fakes.ts`, `wrangler-config.test.ts`; `infra/README.md`'s Worker configuration table and `03-code-design.md` §9.
+   - Tests in workerd:
+     - a tampered, missing or wrong-secret signature is 401 with no deps built and nothing queued or logged;
+     - LINE off means the Worker's one 404, with no channel registry, deps or service call;
+     - Verify's empty body, and a body holding only the family's own group talk, are 200 with nothing queued;
+     - a signed body that cannot be read is 200 with nothing queued and `line_webhook_unreadable` logged with its label alone; a failed enqueue is 500, logged with no words or ids; LINE on without its secret is 500 naming the variable;
+     - her message goes to `INBOUND_QUEUE` as one job with no deps built, and the consumer calls `handleInbound` with the events in order; a job whose handling throws is retried 30 seconds later, doubling to 10 minutes, while other jobs keep their queue's delay; a batch whose deps cannot be built is retried on the same schedules and logged by label alone, without throwing; an unreadable job (no events, not a list, an event the contract refuses) is acked and logged with its queue and id alone;
+     - the media route: a good signature streams with its stored `Content-Type` and `cache-control: private`; `Range` is answered 206 with `content-range` for a span, an open end and a suffix; a changed or foreign signature, another key under a signature, a key that is not base64url, a second spelling of a stored key, a key that is not UTF-8, another extension, a missing object and LINE off each get the Worker's one 404, with nothing logged; an R2 failure is 500 logged by label, never by path; `createMediaUrl` gives the same URL every time, the extension of each type, and refuses a type LINE cannot play;
+     - each config refusal of §5.10, in either Worker, the placeholder rule on the two new vars, and `buildDeps` refusing LINE on without its queue before a connection opens; the registry building LINE once and refusing it where it is off;
+     - the wrangler pins: `LINE_CHANNEL` the same in both Workers, production `off`, the basic id where LINE is on and nowhere else, `PILOT_PUBLIC_URL` the pilot host, LINE's secrets never vars, the inbound queue bound in development and exactly where LINE is on, its retries lasting until T_quiet's cap has passed and not a retry longer, and the header on the order of the switch;
+     - the setup script: LINE off creates no inbound queue and says how to switch it on (production: that it stays off), switching it on and running `--from resources` creates `vela-inbound-staging`, and `readEnvironmentConfig` refuses a `LINE_CHANNEL` that differs between the files, is unknown or missing, or disagrees with the inbound binding.
+   - Not in this step, as the co-founder decided: the quota cron and `recordChannelQuota` (step 7); the setup script's `line` step (step 8); `Config.lineBasicId` (step 4). `packages/adapters` is unchanged.
+   - Founder: nothing.
+   - **Done** on `feat/line`.
+7. **Quota in admin.**
+   - Files: `packages/services/src/quota.ts` (`recordChannelQuota`, `loadChannelQuota`), `admin-alerts.ts` (`adminOverviewLink`), `admin.ts` (`loadAdminOverview` returns `{ families, lineQuota }`), `packages/copy` (`admin.line_quota`, `admin.line_quota_exhausted`, en and zh-TW drafts), `apps/worker/src/admin-pages.ts`, and the quota cron in `apps/worker/src/pilot-worker.ts` (§5.10, "Cron").
+   - Tests:
+     - the snapshot is written;
+     - alerts at 70% and 90%, each once a month;
+     - the overview shows used, limit and time, or "not read yet";
+     - no page shows anything else of LINE;
+     - the quota cron runs after reconcile only where LINE is on, and its failure is logged without failing the run.
+   - Founder: nothing.
+   - **Done** on `feat/line-quota`, 27 September 2026:
+     - `recordChannelQuota` and the alerts as §6 "Quota tracking" says: the reading kept in `flags`, the highest level reached told once per quota month (a month's first day in Taipei still counting in the month before) through a claim row, sent outside the gateway because a quota belongs to no member, and a claim given back when the send failed for a reason that can pass;
+     - the overview's "LINE quota" section, after the families and before the failed sends;
+     - the cron's `recordLineQuota`, in its own try, logging `line_quota_failed` with the label; `PilotServices` gains `recordChannelQuota`, its tenth entry point;
+     - the copy's admin rule now lets `admin.line_quota` alone carry its two counts, which are of Vela's own messages, and the zh-TW spacing rule counts `{used}` and `{limit}` as digits;
+     - tests: services (`quota.test.ts`: the snapshot replaced, 70% and 90% once each, a spent month once and without the 90% before it, one message for a jump past two levels, the next quota month opened as its second day starts in Taipei (across a year's edge), a first day that still shows the month before's count leaving the new month's 70% and its spent quota to be told, no limit, a passing failure retried at the next reading, a lasting refusal not retried, no admin conversation, bad readings refused; `admin.test.ts`: the overview's reading, no reading, no limit, an unreadable row, no `view` row for LINE); the Worker (`pilot-worker.test.ts`: the reading after reconcile where LINE is on, none in development, staging and production, none nightly, a LINE failure and a services failure logged by label with the run succeeding, none after a failed reconcile; `admin-pages.test.ts` and `admin-app.test.ts`: the section's exact text, no limit, not read yet, and no `LINE` on the family page). The claim, its release, the quota month (tried as the reading's own Taipei month, and as the day before in UTC), the highest level, the LINE switch, the try and the order after reconcile were each shown to fail their tests when broken.
+8. **The staging loop: build plan 2.3's definition of done.**
+   - Founder:
+     - D1;
+     - §2.7 steps 1 to 6 on the test account;
+     - a 30-minute session with the co-founder to run the tests of question 15 on his phone and in a test group.
+   - Co-founder:
+     - the setup script's `line` step (§5.10), then the secrets put before the switch;
+     - the decision on Cloudflare's invocation logs for media URLs (§5.10, "Open for step 8");
+     - the commit that turns staging `on`, with the `vela-inbound-staging` binding and the basic id, the setup script run `--from resources` on it before it is merged, then the deploy;
+     - real fixtures recorded;
+     - any adapter correction the answers call for.
+   - Proof: the founder's test account completes 04 §6 test 1 on LINE, and the admin overview shows the quota.
+9. **Unsend (D6).**
+   - Files: migration `00NN_message_unsent` (the next free number) and the regenerated `schema.sql`, `packages/contracts/src/events.ts`, a `handleUnsend` in services.
+   - Tests:
+     - an unsent answer loses its object, text, transcript and translations, and keeps its light;
+     - an unsent reply loses its text;
+     - an unsent message Vela never stored changes nothing;
+     - the `deletions` rows.
+   - Founder: the D6 decision.
+10. **Pilot materials and docs.**
+    - Files:
+      - the privacy notice v2 in both languages, the data map, the consent script, the organiser agreement, the pilot README (§3.4), then the regenerated notices;
+      - `infra/README.md` §8 (§2.7) and `infra/sub-processors.md`;
+      - the LINE row of `02-technical-architecture-v2.md` §8;
+      - `api-contract.md` §9 and §12;
+      - `architecture/research/channels-and-voice.md`, whose Japan plan names and three-button template are outdated;
+      - ADR-32, accepted.
+    - Founder: D11, D12, and the 14-day notice to organisers.
+11. **Production on.**
+    - An ADR-32 update.
+    - Founder: D10 (the purchase, with an explicit yes); §2.7 on the production account; secrets.
+    - Co-founder: the switch commit and a tagged deploy.
+
+## 9. Open questions for the founder
+
+**Decided by the founder, 4 October 2026:** D2 yes (a group links when an organiser of a family without a group is in it, whoever added Vela); D3 yes (no photo or voice asks or replies in the LINE group in the first cut; the app has them); D6 yes (unsend deletes Vela's copy and keeps her light; the group post stays); D7 yes (a LINE user without a language hint is greeted in zh-TW). The rest stay open.
+
+1. **Providers (D1).** Create "Vela Light" and "Vela Light test" as separate providers named for the service, not in your name. Also ask LINE support whether a provider made now can later pass to the Singapore entity. *Recommended: yes to both, before `infra/README.md` §8 step 3.*
+2. **Linking a group (D2).** Accept that a group is linked when an organiser of a family without a group is in it, whoever added Vela. *Recommended: yes.*
+3. **Media in LINE groups (D3).** No photo or voice asks and no voice or photo replies in the group in the first cut; these come from the app. *Recommended: yes.*
+4. **Stickers (D4).** Ignore them, as on Telegram. *Recommended: yes.*
+5. **Edits (D5).** Ignore edits in the group; the original stands. *Recommended: yes.*
+6. **Unsend (D6).** Delete Vela's copy, keep her light, and accept that the group post cannot be removed. Build it before the first real LINE family. *Recommended: yes.*
+7. **Language (D7).** Greet a LINE user without a language hint in zh-TW. *Recommended: yes.*
+8. **Chat mode (D8).** Keep "Chat" off. Her messages show as read at once, and nobody reads her chat in Manager. *Recommended: off.*
+9. **One messenger per family (D9).** *Recommended: yes for the pilot.*
+10. **The plan (D10).** Buy 中用量 only when a real LINE family is scheduled, before 2026-10-28 if they start in early November. Move to 高用量 at the 70% alert. *Recommended: yes. The purchase waits for your explicit yes each time.*
+11. **Privacy notice v2 (D11).** Issue it, with the 14-day notice to organisers, before the first real LINE family. *Recommended: yes.*
+12. **LY's terms (D12).** Ask LY support and counsel about Art. 8.2 (AI and speech processors) and User Data Policy §3.2.3 (24 hours for "Friend and Group information"). *Recommended: yes, and dogfood on staging meanwhile.*
+13. **Quiet notice buttons (D13).** Let a second "Wait 2 hours" tap extend the wait. *Recommended: accept.*
+14. **Cost levers (D14).** Keep the turn prompt on LINE, and do not merge the transcript into the answer post yet. *Recommended: keep both as they are; revisit at the first 70% alert.*
+15. **Tests on your phone (plan step 8).** Each item has the assumption this design makes until the test settles it:
+    - (a) `oaMessage` for someone who is not yet a friend. *Assumed: it opens the chat; if not, invites lead with the add-friend link.*
+    - (b) Whether a postback tapped in a group names the tapper. *Assumed: yes; if not, the founder records notice reads.*
+    - (c) Whether `displayText` also arrives as a separate message event. *Assumed: no; if yes, `displayText` is dropped.*
+    - (d) Whether a quote of Vela's message carries the id push returned, and whether `sentMessages` lists ids in the order sent when a request mixes audio, which is not quotable, with text. *Assumed: yes to both; the adapter takes the text's id by its position.*
+    - (e) The `Content-Type` of a voice note, and that it plays back from R2. *Assumed: `audio/x-m4a`.*
+    - (f) Whether the bot can join groups with Chat off. *Assumed: yes; if not, D8 is revisited.*
+    - (g) Whether a group push counts the account itself, and members who blocked it.
+    - (h) A smoke check that the first push with a v5 retry key is accepted. LINE documents that any UUID in hexadecimal form is (fact 8).
+    - (i) How the Flex buttons show on LINE for PC.
+16. **Account linking in build plan 2.3.** Read "account linking" as the invite's start message. LINE's account-link API is not used, and app account linking over LINE comes later with the app. *Recommended: yes.*
+17. **When LINE families start.** Build plan 2.9 says "live on LINE by week 4", while `plan/market-order.md` and `02-technical-architecture-v2.md` put LINE after the app families. *Recommended: dogfood on staging now; the first real LINE family after questions 6, 11 and 12 are settled and the plan is bought.*

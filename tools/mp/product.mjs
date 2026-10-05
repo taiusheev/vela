@@ -44,7 +44,7 @@ export function product() {
   // 3.2 Daily loop
   {
     const p = new Page("3.2 · The daily loop");
-    let y = p.title("The daily loop and the quiet ladder", "product/03-product-spec.md §3–5. Silence only matters for members with a light.");
+    let y = p.title("The daily loop and the quiet ladder", "product/05-product-spec-v2.md §3–8. Silence only matters for members with a light.");
     const lanes = [["THE FAMILY (any member, any time)", y, S.lane], ["VELA (scheduler + AI)", y + 150, S.lane], ["THE KEPT-LIGHT MEMBER", y + 360, S.lane], ["THE ORGANISER (when the light stays dark)", y + 510, S.laneAmber]];
     lanes.forEach(([t, yy, st]) => p.box(40, yy, 1320, 130, t, st));
     const q = p.box(60, y + 30, 260, 80, h("Queue something", ["voice · photo · drawing · question", "for today or “whenever”"]), S.card);

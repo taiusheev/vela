@@ -1,0 +1,535 @@
+import { Trans, useLingui } from "@lingui/react/macro";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
+import { useIdempotencyKey } from "../../src/api/idempotency.ts";
+import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
+import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
+import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
+import { Light } from "../../src/components/light.tsx";
+import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
+import { RemindersCard } from "../../src/components/reminders.tsx";
+import {
+  Card,
+  Eyebrow,
+  Hairline,
+  PrimaryButton,
+  ReceiptChip,
+  SecondaryButton,
+  Words,
+} from "../../src/components/ui.tsx";
+import { demoDataAllowed } from "../../src/data/live-state.ts";
+import { quietFixtureFor } from "../../src/data/quiet.ts";
+import {
+  quietExampleFixture,
+  type Today,
+  type TodayLight,
+  type TomorrowTurn,
+} from "../../src/data/today.ts";
+import { useAway } from "../../src/data/useAway.ts";
+import { useCallingNumber } from "../../src/data/useCallingNumber.ts";
+import { useCapabilities } from "../../src/data/useCapabilities.ts";
+import { useFamily } from "../../src/data/useFamily.ts";
+import { useQuiet } from "../../src/data/useQuiet.ts";
+import { useToday } from "../../src/data/useToday.ts";
+import { readFlag, writeFlag } from "../../src/storage/flags.ts";
+import { usePalette } from "../../src/theme/theme.tsx";
+import { hitSlop, space } from "../../src/theme/tokens.ts";
+
+function LightsRow({
+  lights,
+  onQuiet,
+}: {
+  lights: Today["lights"];
+  /** A quiet light opens its notice again, once the sheet that opened by itself was closed. */
+  onQuiet: () => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", gap: space.xl }}>
+      {lights.map((light) => (
+        <Pressable
+          key={light.memberId}
+          accessibilityRole={light.state === "quiet" ? "button" : undefined}
+          disabled={light.state !== "quiet"}
+          onPress={onQuiet}
+          style={{ alignItems: "center", gap: space.s }}
+        >
+          <Light state={light.state} height={40} />
+          <Words variant="heading">{light.displayName}</Words>
+          <Words variant="caption" tone="ink3">
+            {light.stateText}
+          </Words>
+          {light.localDate === undefined ? null : (
+            <Words
+              variant="caption"
+              tone="ink3"
+            >{`${light.localDate} · ${light.timeZone ?? ""}`}</Words>
+          )}
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }) {
+  const { t } = useLingui();
+  const { familyId } = useToday();
+  const asker = exchange.asker;
+  const recipient = exchange.recipient;
+  const time = exchange.answer?.at;
+  return (
+    <Card>
+      <Eyebrow>
+        {asker === undefined ? t`A hello for ${recipient}` : t`${asker} asked ${recipient}`}
+      </Eyebrow>
+      <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
+      {exchange.ask === undefined ? null : <Words variant="voice">{exchange.ask}</Words>}
+      {exchange.voiceHello === undefined || familyId === undefined ? null : (
+        <VoicePlayback
+          familyId={familyId}
+          mediaId={exchange.voiceHello.id}
+          durationMs={exchange.voiceHello.duration_ms}
+          expiresAt={exchange.voiceHello.expires_at}
+          state={exchange.voiceHello.state}
+          ready={exchange.voiceHello.state === "ready"}
+          label={t`Listen to the family’s voice ask`}
+        />
+      )}
+      {exchange.answer === undefined ? (
+        // Chosen with her light (`toToday`): her day can be answered by words to an earlier ask.
+        exchange.unanswered === undefined ? null : (
+          <Words variant="body" tone="ink2">
+            {exchange.unanswered}
+          </Words>
+        )
+      ) : (
+        <>
+          <Hairline />
+          <Words variant="voice">{exchange.answer.text}</Words>
+          {exchange.answer.photo === undefined ? null : (
+            <ReplyPhoto photo={exchange.answer.photo} size="full" />
+          )}
+          {exchange.answer.audio === undefined || familyId === undefined ? null : (
+            <VoicePlayback
+              familyId={familyId}
+              mediaId={exchange.answer.audio.id}
+              durationMs={exchange.answer.audio.duration_ms}
+              expiresAt={exchange.answer.audio.expires_at}
+              state={exchange.answer.audio.state}
+              ready={exchange.answer.audio.state === "ready"}
+            />
+          )}
+          <Words variant="caption" tone="ink3">
+            <Trans>
+              {recipient} answered at {time}
+            </Trans>
+          </Words>
+        </>
+      )}
+      {exchange.replies.length > 0 ? (
+        <>
+          <Hairline />
+          {/* Each reply is its whole line already, with the name inside it. */}
+          {exchange.replies.map((reply) => (
+            <Words key={`${reply.from}:${reply.text}`} variant="body" tone="ink2">
+              {reply.text}
+            </Words>
+          ))}
+          <ReplyThumbnails photos={exchange.replies.flatMap((reply) => reply.photo ?? [])} />
+          {familyId === undefined
+            ? null
+            : exchange.replies.flatMap((reply) => {
+                const from = reply.from;
+                return reply.audio === undefined
+                  ? []
+                  : [
+                      <VoicePlayback
+                        key={reply.audio.id}
+                        familyId={familyId}
+                        mediaId={reply.audio.id}
+                        durationMs={reply.audio.duration_ms}
+                        expiresAt={reply.audio.expires_at}
+                        state={reply.audio.state}
+                        ready={reply.audio.state === "ready"}
+                        label={t`Listen to ${from}’s voice reply`}
+                      />,
+                    ];
+              })}
+        </>
+      ) : null}
+      {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
+    </Card>
+  );
+}
+
+function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
+  const palette = usePalette();
+  const { t } = useLingui();
+  const by = tomorrow.asked?.by;
+  const name = tomorrow.name;
+  // Each card names whose morning it is: a family where two keep a light sees two.
+  const recipient = tomorrow.recipient;
+  // A claimed morning shows the ask that claimed it; only a free one offers a suggestion.
+  const suggestion = tomorrow.asked === undefined ? tomorrow.suggestion : undefined;
+  const card = (
+    <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
+      <Eyebrow>
+        {tomorrow.asked !== undefined
+          ? t`Tomorrow · ${by} asked ${recipient}`
+          : tomorrow.pending
+            ? t`Tomorrow · ${recipient}`
+            : tomorrow.mine
+              ? t`Tomorrow · your turn to ask ${recipient}`
+              : t`Tomorrow · ${name}'s turn to ask ${recipient}`}
+      </Eyebrow>
+      {tomorrow.asked !== undefined ? (
+        <>
+          <Words variant="voice">{tomorrow.asked.text}</Words>
+          <Words variant="caption" tone="ink3">
+            <Trans>Into her morning.</Trans>
+          </Words>
+          {tomorrow.asked.withdrawableId === undefined ? null : (
+            <WithdrawLink exchangeId={tomorrow.asked.withdrawableId} />
+          )}
+        </>
+      ) : suggestion === undefined ? null : (
+        <>
+          {/* Vela's, as on Ask: without it a suggestion reads like an ask already on its way. */}
+          <Words variant="caption" tone="ink2">
+            {suggestion.fromHerWords ? (
+              <Trans>Vela suggests · from her own words</Trans>
+            ) : (
+              <Trans>Vela suggests</Trans>
+            )}
+          </Words>
+          <Words variant="voice">{suggestion.text}</Words>
+          <Words variant="button" tone="action">
+            <Trans>Use this</Trans>
+          </Words>
+        </>
+      )}
+    </Card>
+  );
+  if (suggestion === undefined) return card;
+  // The whole card is the way in, as in the prototype. Only ids travel in the route, never her
+  // words: Ask reads the suggestion from the same Today, and asks the person it is for.
+  return (
+    <Pressable
+      accessibilityRole="button"
+      // A hint, not a label, so a screen reader still reads the suggestion itself.
+      accessibilityHint={t`Use this suggestion`}
+      hitSlop={hitSlop}
+      onPress={() =>
+        router.push({
+          pathname: "/ask",
+          params: { recipient: tomorrow.recipientId, suggestion: suggestion.id },
+        })
+      }
+    >
+      {card}
+    </Pressable>
+  );
+}
+
+export default function TodayScreen() {
+  const palette = usePalette();
+  const { t } = useLingui();
+  const [quietOpen, setQuietOpen] = useState(false);
+  // How the example notice was settled; its sentence is chosen as it renders, in the language shown.
+  const [resolution, setResolution] = useState<"fine" | "wait" | undefined>();
+  // The demo's ask to look in: answered by Lena a moment later, as a neighbour would.
+  const [demoAsked, setDemoAsked] = useState<string[]>([]);
+  const [demoUseful, setDemoUseful] = useState<boolean | null>(null);
+  const insets = useSafeAreaInsets();
+  const day = useToday();
+  const { capabilities } = useCapabilities();
+  useFocusEffect(
+    useCallback(() => {
+      if (apiConfigured()) day.refresh();
+    }, [day.refresh]),
+  );
+  const { trouble, noAccount, noFamily, live, organiser, familyId } = day;
+  const time = new Date(day.updatedAt).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  // `/?example=quiet` shows the example day gone quiet, only in the demo with no API: a real day,
+  // or the fixtures standing in while it loads, is never replaced.
+  const { example, quiet: tappedEventId } = useLocalSearchParams<{
+    example?: string;
+    quiet?: string;
+  }>();
+  const today =
+    demoDataAllowed(apiConfigured(), accountsConfigured()) && example === "quiet"
+      ? quietExampleFixture()
+      : day.today;
+  // A first run, or an account that belongs to no family yet: onboarding is where that starts (A1).
+  useEffect(() => {
+    if (noAccount || noFamily) router.replace("/onboarding");
+  }, [noAccount, noFamily]);
+  const quiet = today.lights.find((light) => light.state === "quiet");
+  // The event the sheet opened on stays its own until it is closed: once it is settled, Today no
+  // longer shows the light quiet, and the organiser should still read how it was settled.
+  const [openEventId, setOpenEventId] = useState<string | undefined>();
+  // push: a tapped quiet notice names its event (`?quiet=`), which may be of a family Today does not
+  // show; the API gives it only to that family's organisers, so the read itself decides. An event
+  // that is settled reads as settled, and one the reader may not see opens nothing.
+  const [fromTap, setFromTap] = useState(false);
+  useEffect(() => {
+    if (tappedEventId === undefined || tappedEventId.length === 0) return;
+    setOpenEventId(tappedEventId);
+    setFromTap(true);
+    setQuietOpen(true);
+    // Taken once: a later return to Today must not open it again.
+    router.setParams({ quiet: undefined });
+  }, [tappedEventId]);
+  const liveQuiet = useQuiet(openEventId, live && (organiser || fromTap));
+  const calling = useCallingNumber(familyId, liveQuiet.memberId);
+  // The sheet opens itself once for each quiet morning (spec A11), and only for the family's
+  // organisers, whom the notice is for. Keyed on the event, not the light, which is a new object
+  // every time Today is read, so a sheet the organiser closed does not keep coming back.
+  const quietKey = quiet === undefined ? undefined : (quiet.quietEventId ?? quiet.memberId);
+  const quietEvent = quiet?.quietEventId;
+  const mayOpen = demoDataAllowed(apiConfigured(), accountsConfigured()) || (live && organiser);
+  const openQuiet = () => {
+    if (quietEvent !== undefined) setOpenEventId(quietEvent);
+    setQuietOpen(true);
+  };
+  useEffect(() => {
+    if (quietKey !== undefined && mayOpen) {
+      if (quietEvent !== undefined) setOpenEventId(quietEvent);
+      setQuietOpen(true);
+    } else if (quietKey === undefined && !live) {
+      setResolution(undefined);
+    }
+  }, [quietKey, quietEvent, mayOpen, live]);
+  const name = quiet?.displayName ?? t`Mom`;
+  const notice = !demoDataAllowed(apiConfigured(), accountsConfigured())
+    ? liveQuiet.notice
+    : {
+        ...quietFixtureFor(name),
+        useful: demoUseful,
+        contacts: quietFixtureFor(name).contacts.map((contact) =>
+          demoAsked.includes(contact.id)
+            ? { ...contact, asked: { at: "11:20", reply: "yes" as const } }
+            : contact,
+        ),
+        resolution:
+          resolution === "fine"
+            ? t`You said ${name} is fine. Nothing else was sent.`
+            : resolution === "wait"
+              ? t`Waiting two hours. You will hear again at 13:00 if it is still quiet.`
+              : undefined,
+      };
+  // A13: the first time an organiser sees her lit with no Vela Light yet, the offer opens, once on
+  // this device; You opens it again whenever they want it.
+  const lit = today.lights.find((light) => light.state === "lit");
+  const plans = useFamily(familyId, live && organiser && lit !== undefined);
+  const offerFor =
+    capabilities?.billing === true && live && organiser && plans.live
+      ? plans.family.keptLight.find((row) => row.memberId === lit?.memberId && row.plan === "none")
+          ?.memberId
+      : undefined;
+  useEffect(() => {
+    if (offerFor === undefined) return;
+    let current = true;
+    const flag = `light-offered.${offerFor}`;
+    void readFlag(flag).then(async (shown) => {
+      if (!current || shown) return;
+      await writeFlag(flag);
+      router.push({ pathname: "/vela-light", params: { member: offerFor } });
+    });
+    return () => {
+      current = false;
+    };
+  }, [offerFor]);
+  const recipient =
+    today.lights[0]?.displayName ?? t({ comment: "stands in for her name", message: "her" });
+
+  return (
+    <ScrollView
+      refreshControl={<RefreshControl refreshing={day.loading} onRefresh={day.refresh} />}
+      style={{ backgroundColor: palette.bg }}
+      contentContainerStyle={{
+        paddingTop: insets.top + space.xl,
+        paddingBottom: space.xxxl,
+        paddingHorizontal: space.margin,
+        gap: space.xl,
+      }}
+    >
+      {day.loading ? (
+        <Words variant="body" tone="ink2">
+          <Trans>Loading your family’s morning…</Trans>
+        </Words>
+      ) : null}
+      {day.updatedAt > 0 ? <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words> : null}
+      <LightsRow lights={today.lights} onQuiet={() => (mayOpen ? openQuiet() : undefined)} />
+      {noAccount || noFamily ? (
+        <Words variant="body" tone="ink2">
+          <Trans>Setting up your family…</Trans>
+        </Words>
+      ) : trouble ? (
+        <Words variant="body" tone="ink2">
+          <Trans>Today could not be reached just now.</Trans>
+        </Words>
+      ) : null}
+      {today.lights.flatMap((light) =>
+        light.unreachableOn === undefined
+          ? []
+          : [<LostLine key={`lost:${light.memberId}`} light={light} />],
+      )}
+      {today.lights.flatMap((light) =>
+        light.awayId === undefined ? [] : [<AwayLine key={light.memberId} light={light} />],
+      )}
+      {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
+      {today.tomorrow.map((turn) => (
+        <TomorrowCard key={turn.recipientId} tomorrow={turn} />
+      ))}
+      {capabilities?.memory === true || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
+        <RemindersCard familyId={familyId} />
+      ) : null}
+      <PrimaryButton
+        label={t`Ask ${recipient} something`}
+        disabled={apiConfigured() && (!live || today.lights.length === 0)}
+        onPress={() => router.push("/ask")}
+      />
+      {trouble ? <SecondaryButton label={t`Try again`} onPress={day.refresh} /> : null}
+      {quietOpen && liveQuiet.trouble && notice === undefined ? (
+        <Words variant="body" tone="ink2">
+          <Trans>
+            The quiet notice could not be reached just now. Contact your parent directly if you are
+            concerned.
+          </Trans>
+        </Words>
+      ) : null}
+      {notice === undefined ? null : (
+        <QuietNoticeSheet
+          notice={notice}
+          visible={quietOpen && (live ? openEventId !== undefined : quiet !== undefined)}
+          onFine={() => {
+            if (live) liveQuiet.settle("fine");
+            else setResolution("fine");
+          }}
+          onWait={() => {
+            if (live) liveQuiet.settle("wait");
+            else setResolution("wait");
+          }}
+          onAskToLookIn={(contactId) => {
+            if (live) liveQuiet.askToLookIn(contactId);
+            else setDemoAsked((earlier) => [...earlier, contactId]);
+          }}
+          asking={live && liveQuiet.asking}
+          settling={live && liveQuiet.settling}
+          callingNumber={calling.number ?? undefined}
+          trouble={live && liveQuiet.trouble}
+          onUseful={(value) => {
+            if (live) liveQuiet.markUseful(value);
+            else setDemoUseful(value);
+          }}
+          onClose={() => {
+            setQuietOpen(false);
+            setOpenEventId(undefined);
+            setFromTap(false);
+          }}
+        />
+      )}
+    </ScrollView>
+  );
+}
+
+/** Her away on Today (spec §8): what it is, and "She's back", which any member may tap. */
+function AwayLine({ light }: { light: TodayLight }) {
+  const { t } = useLingui();
+  const { familyId } = useToday();
+  const { end } = useAway(familyId);
+  const name = light.displayName;
+  const day = light.awayUntil;
+  return (
+    <Card>
+      <Words variant="body" tone="ink2">
+        {day === undefined ? (
+          <Trans>
+            {name} is away until she's back. Her mornings still come; nobody is told they went
+            quiet.
+          </Trans>
+        ) : (
+          <Trans>
+            {name} is away until {day}. Her mornings still come; nobody is told they went quiet.
+          </Trans>
+        )}
+      </Words>
+      <SecondaryButton
+        label={end.isPending ? t`Saving…` : t`${name} is back`}
+        disabled={end.isPending}
+        onPress={() => {
+          if (light.awayId !== undefined) end.mutate(light.awayId);
+        }}
+      />
+      {end.isError ? (
+        <Words variant="body" tone="ink2">
+          <Trans>That change did not go through. Try again.</Trans>
+        </Words>
+      ) : null}
+    </Card>
+  );
+}
+
+/**
+ * Vela can no longer reach her on her messenger (spec §19, "we lost Mom's Telegram"): she blocked
+ * Vela's chat or left it. Her light waits without a quiet notice. What brings her back is hers to
+ * do, so the card says what the family can ask of her, or offers her own phone instead.
+ */
+function LostLine({ light }: { light: TodayLight }) {
+  const name = light.displayName;
+  const channel = light.unreachableOn;
+  return (
+    <Card>
+      <Words variant="bodyMedium">
+        <Trans>
+          Vela cannot reach {name} on {channel}
+        </Trans>
+      </Words>
+      <Words variant="body" tone="ink2">
+        <Trans>
+          She may have blocked Vela's chat or changed phones. Until then her mornings cannot reach
+          her, and nobody is told they went quiet. Ask her to open Vela's chat on {channel} and tap
+          Start or Unblock, and her mornings come back.
+        </Trans>
+      </Words>
+    </Card>
+  );
+}
+
+/** "Take it back" under the reader's own ask, until her morning is prepared (spec §19). */
+function WithdrawLink({ exchangeId }: { exchangeId: string }) {
+  const account = useAccount();
+  const queries = useQueryClient();
+  const keyFor = useIdempotencyKey("withdraw");
+  const withdraw = useMutation({
+    mutationFn: async () => withdrawAsk(exchangeId, keyFor({ exchangeId }), await account.token()),
+    onSettled: async () => {
+      await queries.invalidateQueries({ queryKey: ["today"] });
+    },
+  });
+  return (
+    <Pressable
+      accessibilityRole="button"
+      hitSlop={hitSlop}
+      disabled={withdraw.isPending}
+      onPress={() => withdraw.mutate()}
+    >
+      <Words variant="button" tone="action">
+        {withdraw.isError ? (
+          <Trans>Her morning already holds it.</Trans>
+        ) : (
+          <Trans>Take it back</Trans>
+        )}
+      </Words>
+    </Pressable>
+  );
+}

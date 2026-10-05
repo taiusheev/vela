@@ -1,0 +1,6 @@
+{
+  "status": 401,
+  "body": {
+    "message": "Authentication failed. Confirm that the access token in the authorization header is valid."
+  }
+}

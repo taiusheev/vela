@@ -1,0 +1,521 @@
+/**
+ * The one door every platform event comes through (flows §5, the routing table). It decides which
+ * flow an event belongs to and hands it over; it holds no flow of its own, so a rule that changes
+ * changes in one place.
+ *
+ * Two rules shape it. A group message that is not an ask, a reply to an answer post, or a reaction
+ * on one is dropped where it arrives: nothing about it is stored, sent, or logged, because the
+ * family's own conversation is not Vela's. And nothing the kept-light member sends counts before
+ * she has tapped Yes, after a No, or once she is left or deceased (§3.9).
+ */
+
+import type { InboundEvent, InboundKind } from "@vela/contracts";
+import { t } from "@vela/copy";
+import { decodeButton, outboundKey, parseParentCommand } from "@vela/core";
+import { handleAccountLinkStart, isAccountLinkStart } from "../account-linking.ts";
+import { organisersUnreachableAlert } from "../admin-alerts.ts";
+import {
+  type AnswerButtonAction,
+  canAnswer,
+  handleAnswerButton,
+  handleParentMessage,
+} from "../answers.ts";
+import { handleAskCommand, handleGroupAsk, parseAskCommand } from "../asks.ts";
+import { handleBookDropButton } from "../book.ts";
+import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "../consent.ts";
+import type { Deps } from "../deps.ts";
+import { errorLabel } from "../errors.ts";
+import { directReplyOf, enqueueOutbound, replyFieldOf } from "../gateway.ts";
+import {
+  handleBotAdded,
+  handleBotRemoved,
+  handleGroupMigrated,
+  handleMemberLeft,
+  handleNoticeReadButton,
+  isKeptLightMember,
+  languageOfSender,
+  resolveGroupSender,
+  sendOutsideGateway,
+} from "../group.ts";
+import { handleLookInButton } from "../nearby-ask.ts";
+import {
+  handleNearbyConsentButton,
+  handleNearbyMessage,
+  handleNearbyStart,
+  isNearbyStart,
+} from "../nearby-consent.ts";
+import { handleOnboarding } from "../onboarding.ts";
+import { handleParentCommand } from "../parent-commands.ts";
+import { pilotAllowsInbound } from "../pilot-admission.ts";
+import { handleQuietButton } from "../quiet.ts";
+import { handleRecipeKeepButton } from "../recipes.ts";
+import { handleGroupReply, handleReaction } from "../replies.ts";
+import {
+  familyByLinkedGroup,
+  familyHasEnded,
+  type MemberWithFamily,
+  markWakeDue,
+  memberByChannelUser,
+  memberById,
+  messageRefFor,
+  setChannelLinkBlocked,
+} from "../repo.ts";
+import { handleUnsent } from "../unsend.ts";
+
+/** What a person can send in a private chat; anything else there (a read receipt) is not for us. */
+const PRIVATE_MESSAGE_KINDS: ReadonlySet<InboundKind> = new Set<InboundKind>([
+  "start",
+  "text",
+  "voice",
+  "image",
+  "sticker",
+  "other",
+]);
+
+/**
+ * Routes each event in the batch. One event that throws does not hold the others back; the first
+ * failure is thrown on when the batch is done, so the platform delivers the update again and every
+ * handler, being idempotent, finds its work already done.
+ */
+export async function handleInbound(deps: Deps, events: InboundEvent[]): Promise<void> {
+  let failure: unknown = null;
+  for (const event of events) {
+    try {
+      await route(deps, event);
+    } catch (error) {
+      deps.logger.error("inbound_failed", {
+        kind: event.kind,
+        conversation: event.conversation.kind,
+        error: errorLabel(error),
+      });
+      failure ??= error;
+    }
+  }
+  if (failure !== null) {
+    throw failure;
+  }
+}
+
+async function route(deps: Deps, event: InboundEvent): Promise<void> {
+  // Roster removal must never suppress withdrawal, rights, or removal of a platform copy.
+  const command = event.text === undefined ? null : parseParentCommand(event.text);
+  const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
+  const declines =
+    (action?.type === "consent" ||
+      action?.type === "health_words" ||
+      action?.type === "nearby_consent") &&
+    !action.accept;
+  const rights =
+    event.conversation.kind === "private" &&
+    (command === "stop" ||
+      command === "what_family_sees" ||
+      declines ||
+      action?.type === "book_drop");
+  if (
+    !pilotAllowsInbound(deps.config.pilotAdmission, event) &&
+    !rights &&
+    event.kind !== "unsent" &&
+    event.kind !== "member_left" &&
+    event.kind !== "bot_removed" &&
+    event.kind !== "blocked" &&
+    event.kind !== "unblocked"
+  ) {
+    if (
+      event.channel === "telegram" &&
+      event.kind === "start" &&
+      event.conversation.kind === "private" &&
+      event.sender.externalUserId === event.conversation.externalId &&
+      /^[1-9][0-9]{0,15}$/.test(event.sender.externalUserId)
+    ) {
+      // Only the person who owns this private chat sees their own invitation identifier.
+      await sendOutsideGateway(deps, {
+        kind: "system",
+        lang: "en",
+        to: { channel: "telegram", conversationId: event.sender.externalUserId },
+        idempotencyKey: outboundKey("system", {
+          conversationId: event.sender.externalUserId,
+          suffix: `pilot_invitation:${event.eventId}`,
+        }),
+        text: t("en", "pilot.invitation_only", { telegram_id: event.sender.externalUserId }),
+      });
+    }
+    if (event.kind === "button") await acknowledge(deps, event);
+    deps.logger.info("pilot_event_refused", { kind: event.kind, channel: event.channel });
+    return;
+  }
+  if (event.kind === "unsent") {
+    // D6 (05-line-flows §4): Vela deletes its copy of what was unsent.
+    await handleUnsent(deps, event);
+    return;
+  }
+  if (event.kind === "followed") {
+    await handleFollowed(deps, event);
+    return;
+  }
+  if (event.conversation.kind === "group") {
+    await routeGroup(deps, event);
+    return;
+  }
+  await routePrivate(deps, event);
+}
+
+// the private chat ---------------------------------------------------------------------------------
+
+async function routePrivate(deps: Deps, event: InboundEvent): Promise<void> {
+  if (event.kind === "blocked" || event.kind === "unblocked") {
+    const blocked = event.kind === "blocked";
+    const now = deps.clock.now();
+    const { known, wake } = await deps.db.transaction(async (tx) => {
+      const change = await setChannelLinkBlocked(
+        tx,
+        event.channel,
+        event.sender.externalUserId,
+        blocked ? new Date(event.at) : null,
+      );
+      // An organiser who blocks the bot can no longer be told her light went quiet; if none is
+      // left who can be, the founder hears it now (`admin-alerts.ts`).
+      for (const memberId of change.newlyBlockedMemberIds) {
+        const alert = await organisersUnreachableAlert(
+          deps,
+          tx,
+          memberId,
+          `blocked:${memberId}:${event.eventId}`,
+        );
+        if (alert !== null) {
+          await enqueueOutbound(deps, tx, alert);
+        }
+      }
+      // While her mark lasted, her schedule woke for none of the repeat and quiet thresholds of a
+      // morning delivered before it (flows §3.12), so a tick in the block stored a later, unrelated
+      // wake. Clearing the mark can make one due sooner, so her schedule is decided again now.
+      const wake: string[] = [];
+      for (const memberId of change.unblockedMemberIds) {
+        const member = await memberById(tx, memberId);
+        if (member !== null && isKeptLightMember(member) && member.status === "active") {
+          await markWakeDue(tx, memberId, now);
+          wake.push(memberId);
+        }
+      }
+      return { known: change.known, wake };
+    });
+    for (const memberId of wake) {
+      await deps.scheduler.wakeAt(memberId, now);
+    }
+    deps.logger.info("channel_link_blocked", { blocked, known });
+    return;
+  }
+  if (event.kind === "button") {
+    await routeButton(deps, event);
+    return;
+  }
+  if (!PRIVATE_MESSAGE_KINDS.has(event.kind)) {
+    return;
+  }
+  if (event.kind === "start" && isNearbyStart(event.startParam)) {
+    await handleNearbyStart(deps, event);
+    return;
+  }
+  if (event.kind === "start" && isAccountLinkStart(event.startParam)) {
+    await handleAccountLinkStart(deps, event);
+    return;
+  }
+  if (event.kind === "start" && (event.startParam?.trim() ?? "").length > 0) {
+    await handleInviteStart(deps, event);
+    return;
+  }
+  const linked = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
+  // Someone listed near her writes only to say stop, or to ask what this is (ADR-36).
+  if (linked === null && event.kind !== "start" && (await handleNearbyMessage(deps, event))) {
+    return;
+  }
+  if (linked === null || event.kind === "start") {
+    // Onboarding owns a /start and everything typed into a live session; it tells us when the
+    // event was none of its business.
+    if (await handleOnboarding(deps, event)) {
+      return;
+    }
+    await sayHowToBegin(deps, event, linked);
+    return;
+  }
+  if (!isKeptLightMember(linked.member)) {
+    // An organiser writing in their own chat: Vela answers only there, and only with how to begin.
+    await sayHowToBegin(deps, event, linked);
+    return;
+  }
+  if (!canAnswer(linked.member, linked.family)) {
+    deps.logger.info("her_message_ignored", { status: linked.member.status });
+    return;
+  }
+  const command = event.text === undefined ? null : parseParentCommand(event.text);
+  if (command !== null) {
+    await handleParentCommand(deps, linked.member, command, event);
+    return;
+  }
+  await handleParentMessage(deps, linked.member, event);
+}
+
+/** A tap is always acknowledged, whatever it turns out to mean, so her phone stops spinning. */
+async function acknowledge(deps: Deps, event: InboundEvent): Promise<void> {
+  try {
+    await deps.channels.get(event.channel).acknowledgeButton(event);
+  } catch (error) {
+    deps.logger.error("button_ack_failed", { error: errorLabel(error) });
+  }
+}
+
+async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
+  const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
+  if (action === null) {
+    await acknowledge(deps, event);
+    deps.logger.warn("button_unreadable", { hasData: event.buttonData !== undefined });
+    return;
+  }
+  switch (action.type) {
+    case "consent":
+      await handleConsentButton(deps, event, action);
+      return;
+    case "health_words":
+      await handleHealthWordsButton(deps, event, action);
+      return;
+    case "quiet_fine":
+    case "quiet_wait":
+      await handleQuietButton(deps, event, action);
+      return;
+    case "onboarding":
+      await handleOnboarding(deps, event);
+      return;
+    case "notice_read":
+      // Only the family group carries this button: in a private chat it means nothing.
+      await acknowledge(deps, event);
+      deps.logger.warn("button_ignored", { action: action.type, conversation: "private" });
+      return;
+    case "answer":
+    case "chip":
+    case "pick":
+    case "vote":
+      await routeAnswerButton(deps, event, action);
+      return;
+    case "nearby_consent":
+      await handleNearbyConsentButton(deps, event, action);
+      return;
+    case "look_in":
+      await handleLookInButton(deps, event, action);
+      return;
+    case "book_drop":
+      await handleBookDropButton(deps, event, action);
+      return;
+    case "recipe_keep":
+      await handleRecipeKeepButton(deps, event, action);
+      return;
+  }
+}
+
+async function routeAnswerButton(
+  deps: Deps,
+  event: InboundEvent,
+  action: AnswerButtonAction,
+): Promise<void> {
+  const linked = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
+  if (linked === null || !isKeptLightMember(linked.member)) {
+    // The tap is answered and nothing else happens: only her arrivals carry these buttons.
+    await acknowledge(deps, event);
+    deps.logger.warn("answer_button_ignored", { action: action.type, known: linked !== null });
+    return;
+  }
+  await handleAnswerButton(deps, linked.member, event, action);
+}
+
+/**
+ * A follow (a new friend on LINE, or someone unblocking, 05-line-flows §2.4): someone Vela knows is
+ * unblocked, as `unblocked` does; someone it does not is told how to begin, as a free reply. A
+ * follow never starts onboarding, since her own follow on the way to her invite would otherwise be
+ * asked "What do you call them?".
+ */
+async function handleFollowed(deps: Deps, event: InboundEvent): Promise<void> {
+  if (event.conversation.kind !== "private") return;
+  const linked = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
+  if (linked !== null) {
+    await routePrivate(deps, { ...event, kind: "unblocked" });
+    return;
+  }
+  const lang = languageOfSender(event.sender.languageCode, event.channel);
+  const conversationId = event.conversation.externalId;
+  await sendOutsideGateway(deps, {
+    kind: "system",
+    idempotencyKey: outboundKey("system", { conversationId, suffix: `followed:${event.eventId}` }),
+    lang,
+    to: { channel: event.channel, conversationId },
+    text: t(lang, "help.followed"),
+    ...directReplyOf(event, deps.clock.now()),
+  });
+}
+
+/**
+ * `help.private`, keyed by the event so a redelivered message answers once. A person Vela has no
+ * member row for cannot own an outbound row, so their one line goes straight to the adapter.
+ */
+async function sayHowToBegin(
+  deps: Deps,
+  event: InboundEvent,
+  linked: MemberWithFamily | null,
+): Promise<void> {
+  const conversationId = event.conversation.externalId;
+  const idempotencyKey = outboundKey("system", {
+    conversationId,
+    suffix: `help:${event.eventId}`,
+  });
+  if (linked === null) {
+    const lang = languageOfSender(event.sender.languageCode, event.channel);
+    await sendOutsideGateway(deps, {
+      kind: "system",
+      idempotencyKey,
+      lang,
+      to: { channel: event.channel, conversationId },
+      ...directReplyOf(event, deps.clock.now()),
+      text: t(lang, "help.private"),
+    });
+    return;
+  }
+  const lang = linked.member.language;
+  await enqueueOutbound(deps, deps.db, {
+    kind: "system",
+    idempotencyKey,
+    memberId: linked.member.id,
+    channel: event.channel,
+    conversationId,
+    lang,
+    ...replyFieldOf(event),
+    text: t(lang, "help.private"),
+  });
+}
+
+// the family group ---------------------------------------------------------------------------------
+
+async function routeGroup(deps: Deps, event: InboundEvent): Promise<void> {
+  if (event.kind === "bot_added") {
+    await handleBotAdded(deps, event);
+    return;
+  }
+  if (event.kind === "bot_removed") {
+    await handleBotRemoved(deps, event);
+    return;
+  }
+  if (event.kind === "migrated") {
+    await handleGroupMigrated(deps, event);
+    return;
+  }
+  const linked = await familyByLinkedGroup(deps.db, event.channel, event.conversation.externalId);
+  if (linked === null) {
+    // Not a group Vela belongs to: a departure, an ask, a reply there mean nothing (flows §3.16).
+    return;
+  }
+  const familyId = linked.family.id;
+  if (event.kind === "member_left") {
+    await handleMemberLeft(deps, familyId, event);
+    return;
+  }
+  if (event.kind === "button") {
+    await routeGroupButton(deps, familyId, event);
+    return;
+  }
+  if (await familyHasEnded(deps.db, familyId)) {
+    deps.logger.info("group_event_ignored", { familyId, reason: "family_ended" });
+    return;
+  }
+  if (parseAskCommand(event.text, deps.config.telegramBotUsername) !== null) {
+    await withGroupSender(deps, familyId, event, (senderId) =>
+      handleAskCommand(deps, event, familyId, senderId),
+    );
+    return;
+  }
+  if (event.replyToMessageId !== undefined) {
+    await routeGroupReply(deps, familyId, event, event.replyToMessageId);
+    return;
+  }
+  if (event.kind === "reaction" && event.messageId !== undefined) {
+    await routeReaction(deps, familyId, event, event.messageId);
+    return;
+  }
+  deps.logger.info("group_event_ignored", { familyId, kind: event.kind });
+}
+
+/**
+ * A tap in the family group. The one button Vela posts there is "I've read it" under its first
+ * message (flows §3.3), which decides for itself what a tap in a family that has ended means; any
+ * other tap is answered and nothing else happens.
+ */
+async function routeGroupButton(deps: Deps, familyId: string, event: InboundEvent): Promise<void> {
+  const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
+  if (action?.type === "notice_read") {
+    await handleNoticeReadButton(deps, familyId, event, action);
+    return;
+  }
+  await acknowledge(deps, event);
+  deps.logger.warn("button_ignored", { action: action?.type ?? null, conversation: "group" });
+}
+
+/**
+ * The member behind the sender, created on their first act (flows §2), then the handler. Only the
+ * events Vela acts on get this far, so an unrelated message never creates a member.
+ */
+async function withGroupSender(
+  deps: Deps,
+  familyId: string,
+  event: InboundEvent,
+  handle: (senderId: string) => Promise<void>,
+): Promise<void> {
+  const sender = await resolveGroupSender(deps, familyId, event);
+  if (sender === null) {
+    return;
+  }
+  await handle(sender.id);
+}
+
+/** A reply in the group counts when it answers the evening prompt or an answer post. */
+async function routeGroupReply(
+  deps: Deps,
+  familyId: string,
+  event: InboundEvent,
+  repliedToMessageId: string,
+): Promise<void> {
+  const ref = await messageRefFor(
+    deps.db,
+    event.channel,
+    event.conversation.externalId,
+    repliedToMessageId,
+  );
+  if (ref === null || ref.familyId !== familyId) {
+    return;
+  }
+  if (ref.purpose === "turn_prompt") {
+    const recipientId = ref.memberId;
+    if (recipientId === null) {
+      deps.logger.warn("turn_prompt_ref_without_member", { familyId });
+      return;
+    }
+    await withGroupSender(deps, familyId, event, (senderId) =>
+      handleGroupAsk(deps, event, { familyId, recipientId, senderId, date: ref.localDate }),
+    );
+    return;
+  }
+  if (ref.purpose === "answer_post") {
+    await withGroupSender(deps, familyId, event, (senderId) =>
+      handleGroupReply(deps, familyId, senderId, event, ref),
+    );
+  }
+}
+
+async function routeReaction(
+  deps: Deps,
+  familyId: string,
+  event: InboundEvent,
+  messageId: string,
+): Promise<void> {
+  const ref = await messageRefFor(deps.db, event.channel, event.conversation.externalId, messageId);
+  if (ref === null || ref.familyId !== familyId || ref.purpose !== "answer_post") {
+    return;
+  }
+  await withGroupSender(deps, familyId, event, (senderId) =>
+    handleReaction(deps, familyId, senderId, event, ref),
+  );
+}

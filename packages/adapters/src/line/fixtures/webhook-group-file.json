@@ -1,0 +1,26 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "8644051784f194ba9bed4b9d6457c91f",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463955283,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff",
+        "userId": "Ua848d9bbd60485659b74a9478b390c6f"
+      },
+      "webhookEventId": "01M3FZFMAKBXET9DP5KM1C5Q7S",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "551122089676357381",
+        "type": "file",
+        "fileName": "family-trip.xlsx",
+        "fileSize": 18342
+      }
+    }
+  ]
+}

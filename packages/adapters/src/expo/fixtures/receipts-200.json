@@ -1,0 +1,23 @@
+{
+  "status": 200,
+  "body": {
+    "data": {
+      "{{ticket:1}}": { "status": "ok" },
+      "{{ticket:2}}": {
+        "status": "error",
+        "message": "\"{{token:2}}\" is not a registered push notification recipient",
+        "details": { "error": "DeviceNotRegistered" }
+      },
+      "{{ticket:3}}": {
+        "status": "error",
+        "message": "The Apple Push Notification service key is invalid.",
+        "details": { "error": "InvalidCredentials" }
+      },
+      "{{ticket:4}}": {
+        "status": "error",
+        "message": "Too many messages sent too quickly.",
+        "details": { "error": "MessageRateExceeded" }
+      }
+    }
+  }
+}

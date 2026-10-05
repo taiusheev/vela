@@ -1,0 +1,54 @@
+# Every secret the two Workers read, by name and with no value. Copy to `.dev.vars` for
+# `wrangler dev` and fill it in there; `.dev.vars` is git-ignored and never committed. Both
+# Workers' local sessions read this one file.
+# In staging and production each is a secret of the Worker named below, set once per environment
+# in that Worker's settings in the Cloudflare dashboard, or with
+# `wrangler secret put <NAME> --env <staging|production>` (add `-c wrangler.admin.jsonc` for the
+# admin Worker).
+
+# Both local Workers and direct dev scripts: 32 random bytes encoded as unpadded base64url. Generate
+# a development-only value once and keep the same value in `.dev.vars` and `.env.local`.
+CONTENT_KEY_V1=
+
+# Pilot Worker (`vela`): Telegram bot token from BotFather, `<bot id>:<secret>`.
+TELEGRAM_BOT_TOKEN=
+# Pilot Worker: the `secret_token` registered with setWebhook: 1-256 characters of A-Z a-z 0-9 _ -
+# Written by scripts/telegram-setup.ts and echoed by Telegram on every webhook request.
+TELEGRAM_WEBHOOK_SECRET=
+# Pilot Worker and admin Worker (`vela-admin`, which translates a sent weekly read): Anthropic API key.
+# Read only while the var AI_PROVIDER is "anthropic". Development's AI_PROVIDER is "off" in both
+# wrangler files, so leave this empty unless you switch it on there.
+ANTHROPIC_API_KEY=
+# Pilot Worker: Deepgram API key for speech-to-text.
+DEEPGRAM_API_KEY=
+# Pilot Worker: the founder's personal chat id with the bot. Leave it empty on a laptop, which then
+# sends no admin messages; a deployed pilot Worker refuses to start without it.
+ADMIN_CONVERSATION_ID=
+# Pilot Worker: Clerk's secret key (sk_test_… locally), for the live session check on API writes.
+# Optional on a laptop: without it /v1 serves reads only. Deployed, the founder puts it with
+# `wrangler secret put CLERK_SECRET_KEY --env staging`; never in a file that is committed.
+CLERK_SECRET_KEY=
+# Pilot Worker: endpoint-specific whsec_ signing secret from Clerk's /webhooks/clerk endpoint.
+# Subscribe user.deleted; keep this separate from CLERK_SECRET_KEY and the Telegram secret.
+CLERK_WEBHOOK_SIGNING_SECRET=
+# Trial admission: set PILOT_ADMISSION=on in the selected environment's vars only after preparing
+# the founder-approved private Telegram roster. Production's source config already requires it.
+# IDs stay private; install this secret on the pilot Worker before activating the trial.
+PILOT_TELEGRAM_ALLOWLIST=
+# Pilot Worker: the LINE channel's secret (Basic settings) and long-lived access token (Messaging
+# API) from the LINE Developers Console. Read only while the var LINE_CHANNEL is "on", and required
+# then; development's LINE_CHANNEL is "off" in both wrangler files, so leave them empty.
+LINE_CHANNEL_SECRET=
+LINE_CHANNEL_ACCESS_TOKEN=
+# Pilot Worker: the key that signs the media URLs LINE fetches: 32 random bytes as base64 or hex,
+# at least 43 characters, generated (for example `openssl rand -base64 32`) and never typed. Read
+# only while LINE_CHANNEL is "on", and required then.
+MEDIA_URL_SECRET=
+# Pilot Worker: the access token of Expo's Enhanced Push Security (Expo dashboard, Access tokens).
+# Read only while the var PUSH_SEND is "expo", and required then; PUSH_SEND is "off" everywhere, so
+# leave it empty. No laptop sends a push.
+EXPO_ACCESS_TOKEN=
+# Admin Worker: Cloudflare Access team domain, e.g. vela.cloudflareaccess.com (no scheme, no path).
+ACCESS_TEAM_DOMAIN=
+# Admin Worker: the Audience (AUD) tag of the Access application that covers the admin Worker.
+ACCESS_AUD=

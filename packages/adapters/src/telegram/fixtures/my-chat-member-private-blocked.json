@@ -1,0 +1,38 @@
+{
+  "update_id": 873920425,
+  "my_chat_member": {
+    "chat": {
+      "id": 6023817745,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "type": "private"
+    },
+    "from": {
+      "id": 6023817745,
+      "is_bot": false,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "language_code": "zh-hant"
+    },
+    "date": 1789272133,
+    "old_chat_member": {
+      "user": {
+        "id": 7412589630,
+        "is_bot": true,
+        "first_name": "Vela Light",
+        "username": "VelaLightBot"
+      },
+      "status": "member"
+    },
+    "new_chat_member": {
+      "user": {
+        "id": 7412589630,
+        "is_bot": true,
+        "first_name": "Vela Light",
+        "username": "VelaLightBot"
+      },
+      "status": "kicked",
+      "until_date": 0
+    }
+  }
+}

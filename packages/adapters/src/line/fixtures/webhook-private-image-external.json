@@ -1,0 +1,29 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "83f34858dfb022eed2e2f9bfaa1f4023",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463784566,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZADKPSVS61TK8PGMWT97X",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "514245091421792905",
+        "type": "image",
+        "quoteToken": "Lm3Qx8vT0aKpW5sYc2dN9fRgH6jB1eUoZ4iXrC7tAyVbE0wPqSkD3nMhJ8uGl5Fz",
+        "contentProvider": {
+          "type": "external",
+          "originalContentUrl": "https://example.com/original.jpg",
+          "previewImageUrl": "https://example.com/preview.jpg"
+        }
+      }
+    }
+  ]
+}

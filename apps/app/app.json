@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "Vela Light",
+    "slug": "vela-light",
+    "owner": "velatwn",
+    "scheme": "velalight",
+    "version": "0.0.1",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "backgroundColor": "#FBF7F0",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "family.vela.light",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      }
+    },
+    "android": {
+      "package": "family.vela.light",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-monochrome.png",
+        "backgroundColor": "#FBF7F0"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "./modules/vela-opus/app.plugin.js",
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#FBF7F0",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#1E1A16"
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "daily"
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Vela records your answer when you tap Answer with your voice."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a9647168-c915-4fff-8064-e25b0f075b1f"
+      }
+    }
+  }
+}

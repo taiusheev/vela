@@ -5,13 +5,16 @@ Free tools, as agreed, and how each one is used for Vela. Everything is authored
 | Tool | What it holds | Files here | How to open |
 |---|---|---|---|
 | **Draw.io (diagrams.net)** | System architecture, database schema, the daily loop | `design/diagrams/*.drawio` | Go to app.diagrams.net → Open Existing Diagram → GitHub → `taiusheev/vela` → `design/diagrams/`. Edits save straight back to the repo as commits. Or install the "Draw.io Integration" extension in VS Code and open the files locally. |
-| **Figma** | App wireframes and, later, the real UI | `design/wireframes/*.svg` | Create a Figma file "Vela · wireframes". Drag each SVG from this folder onto the canvas; Figma imports it as editable vectors. Screens are 390×844 (iPhone). The onboarding sheet is three screens side by side. |
-| **Asana** | Optional export of the phase-0 checklist; the master plan page is the tracker | `plan/tasks-asana.csv` | New project → Import → CSV → choose the file. Sections become the four weeks; assignee `t.aiusheev@gmail.com` is you, blank rows are the co-founder's. |
+| **Figma** | The UI in identity v3 | Figma file "Vela · Design" (link in `figma-state.json`); `prototype/vela-app.html` is the full 20-screen reference | Open the file in Figma; the v1 wireframes are in `archive/design/wireframes/` for history only. |
 | **Gource** | An animated tree of the repository's history | `tools/gource.ps1` | Install gource and ffmpeg, then run the script from the repo root. `-Record` writes an MP4 for a demo or the deck. |
 
 The living master plan (mission, research, product, roadmap, checklist) is the published page linked from the root README. These files are its working material.
 
-## Wireframes
+## Wireframes (v1, archived)
+
+The six v1 wireframes moved to `archive/design/wireframes/`. They used the superseded sage/amber palette and the "I'm fine" model; the prototype and the Figma file replace them.
+
+<details><summary>What the v1 wireframes showed</summary>
 
 | # | Screen | What it shows |
 |---|---|---|
@@ -22,7 +25,9 @@ The living master plan (mission, research, product, roadmap, checklist) is the p
 | 05 | Weekly read | Seven lights, four neutral lines, one suggestion, the story of the week |
 | 06 | Onboarding | Who to keep a light on for, who is nearby, how she receives the morning (messenger or the app), the invite text |
 
-Colours in the wireframes are the superseded v1 palette (sage/amber); the prototype `prototype/vela-app.html` and the Figma file carry identity v3 (Candle & Ink: cream #FBF7F0, ink #1E1A16, light #E9A23B, teal #1F5C66; Literata + Inter). See `design-system.md`.
+</details>
+
+The prototype `prototype/vela-app.html` and the Figma file carry identity v3 (Candle & Ink: cream #FBF7F0, ink #1E1A16, light #E9A23B, teal #1F5C66; Literata + Inter). See `design-system.md`.
 
 ## Diagrams
 

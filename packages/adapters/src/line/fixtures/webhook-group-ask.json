@@ -1,0 +1,26 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "9d6614ad733db6cab0bca149bbe5d021",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463722876,
+      "source": {
+        "type": "group",
+        "groupId": "Ce5f4dcc362130dc312c78866466c6fff",
+        "userId": "Ua848d9bbd60485659b74a9478b390c6f"
+      },
+      "webhookEventId": "01M3FZ8HBWCP5V9RA2V8JCXF50",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "502621186619914619",
+        "type": "text",
+        "quoteToken": "9hNhaCFSCbBTHsDKVJhLDqatKUMUEqn_WixlrlEBY0mgsDtgnvF0pdbqKldlDg60",
+        "text": "/ask What did you cook today?"
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "efce7b948cf82a629239a11721de4a82",
+      "type": "postback",
+      "mode": "active",
+      "timestamp": 1790463666720,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZ6TH07787SEBPP3BCNAJY",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "postback": {
+        "data": "k:0192a4c8e1f37b6d9a2c5e8f1b4d7a3c:y"
+      }
+    }
+  ]
+}

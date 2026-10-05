@@ -1,0 +1,111 @@
+{
+  "kind": "english-trial-tested-source-and-staging-evidence",
+  "recordedAt": "2026-10-05T08:14:45.736Z",
+  "sourceCommit": "a41dfd59184c2a83ec53ba9cea68371ad6afcab0",
+  "sourceCheck": {
+    "runUrl": "https://github.com/taiusheev/vela/actions/runs/37280807627",
+    "pushRunUrl": "https://github.com/taiusheev/vela/actions/runs/37280803335",
+    "conclusion": "success",
+    "lint": true,
+    "typecheckPackages": 9,
+    "sourceTestsPassed": 4131,
+    "sourceTestsSkipped": 1,
+    "skipReason": "Future multilingual completeness; English catalogue checks pass.",
+    "postgresqlMajorVersion": 18,
+    "postgresqlTestsPassed": 109,
+    "postgresqlTestFilesPassed": 35,
+    "maestroWebDemoFlowsPassed": 8,
+    "cleanCheckoutCheckPassed": true,
+    "jobs": [
+      {
+        "name": "lint · typecheck · test",
+        "conclusion": "success"
+      },
+      {
+        "name": "app flows (Maestro, demo on the web)",
+        "conclusion": "success"
+      },
+      {
+        "name": "contention drill (PostgreSQL 18)",
+        "conclusion": "success"
+      },
+      {
+        "name": "silence drill",
+        "conclusion": "skipped"
+      }
+    ]
+  },
+  "stagingDeployment": {
+    "environment": "synthetic staging",
+    "cleanCheckout": true,
+    "pilotWorkerVersion": "e2d2d530-52a1-468b-94bf-0590bd8fd125",
+    "adminWorkerVersion": "bdbd6b5d-799a-4207-9e50-96c97d79a954",
+    "migrationChangesSinceVerifiedRestore": false,
+    "smoke": {
+      "healthStatus": 200,
+      "heartbeat": {
+        "status": "ok",
+        "lastReconcileAgeSeconds": 850
+      },
+      "capabilitiesStatus": 200,
+      "capabilities": {
+        "pilot": false,
+        "telegram_first": false,
+        "english_only": false,
+        "memory": true,
+        "book": true,
+        "parent_app": true,
+        "billing": true
+      },
+      "unauthenticatedMeStatus": 401,
+      "privacyStatus": 200,
+      "publicAdminStatus": 404,
+      "adminStatus": 302,
+      "adminRedirectsToCloudflareAccess": true
+    },
+    "pilotConfigurationReady": false
+  },
+  "nativeSimulatorBuild": {
+    "id": "b726702a-a1f6-4fc9-94ce-424273a94ef2",
+    "url": "https://expo.dev/accounts/velatwn/projects/vela-light/builds/b726702a-a1f6-4fc9-94ce-424273a94ef2",
+    "sourceCommit": "a41dfd59184c2a83ec53ba9cea68371ad6afcab0",
+    "profile": "trial-simulator",
+    "status": "FINISHED",
+    "completedAt": "2026-10-05T08:10:50.944Z",
+    "nativeModuleTree": "83187ded5df3394eb9c1b4b44681ed3d40225bf7",
+    "compileProof": {
+      "buildSucceeded": true,
+      "swiftDecoderCompiled": true,
+      "cDecoderCompiled": true,
+      "codecLicencesPackaged": true,
+      "nativeModuleLinkFlagPresent": true
+    },
+    "archiveProof": {
+      "releaseCommit": "a41dfd59184c2a83ec53ba9cea68371ad6afcab0",
+      "trial": true,
+      "trialTarget": "staging",
+      "supportsTablet": false,
+      "deviceFamily": [
+        1
+      ],
+      "platforms": [
+        "iPhoneSimulator"
+      ],
+      "version": "0.0.1",
+      "buildNumber": "1",
+      "codecLicencesPackaged": true
+    }
+  },
+  "scope": {
+    "signedIPhonePlaybackProved": false,
+    "completeTelegramExchangeProved": false,
+    "productionReleased": false,
+    "realFamilyActivation": false
+  },
+  "notes": [
+    "Public staging smoke and simulator compilation are partial verification only.",
+    "The archive embeds the tested source commit and fixed iPhone-only staging trial scope.",
+    "Staging still advertises broader synthetic capabilities; production heartbeat and capabilities returned 404.",
+    "Existing setup is reused; no private values, real family content, archive download URL or signed build-log URLs are recorded."
+  ]
+}

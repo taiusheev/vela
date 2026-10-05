@@ -1,0 +1,29 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "fee249f9295eb042ec81e49b3d9c43a2",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790463842536,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZC678GAPH9A62F80RZNBB",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "559873372611860523",
+        "type": "sticker",
+        "quoteToken": "Hx5Nc8Qa2Wv7Ks0Dj3Bf6Gt9Lm1Rp4Yu8Ze2Ci5Oo7Xw0Tn3Sb6Vq9Ah1Kd4Mf7J",
+        "stickerId": "738839",
+        "packageId": "12287",
+        "stickerResourceType": "MESSAGE",
+        "keywords": ["thanks", "grateful", "bow"],
+        "text": "謝謝你"
+      }
+    }
+  ]
+}

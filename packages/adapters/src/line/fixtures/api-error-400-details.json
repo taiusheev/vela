@@ -1,0 +1,16 @@
+{
+  "status": 400,
+  "body": {
+    "message": "The request body has 2 error(s)",
+    "details": [
+      {
+        "message": "Length must be between 0 and 20",
+        "property": "messages[0].quickReply.items[0].action.label"
+      },
+      {
+        "message": "The property, 'to', in the request body is invalid (line: -, column: -)",
+        "property": "to"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1866 @@
+import type { ChannelAdapter, InboundEvent, LocalDate, MediaRef } from "@vela/contracts";
+import { t } from "@vela/copy";
+import { encodeButton, outboundKey } from "@vela/core";
+import type { VelaDatabase } from "@vela/db";
+import {
+  channelLinks,
+  events,
+  exchanges,
+  families,
+  familyChannels,
+  members,
+  messageRefs,
+  outbound,
+  quietEvents,
+  replies,
+  turns,
+} from "@vela/db";
+import { and, asc, eq } from "drizzle-orm";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { handleAnswerButton, handleParentMessage } from "./answers.ts";
+import { sendRepeat } from "./arrivals.ts";
+import type { Deps, OutboundJob } from "./deps.ts";
+import { VelaError } from "./errors.ts";
+import {
+  CLAIM_LOST_AFTER_MINUTES,
+  deliverOutbound,
+  enqueueOutbound,
+  type OutboundRequest,
+  RETRY_DELAY_MINUTES,
+  redriveStrandedOutbound,
+  STRANDED_AFTER_MINUTES,
+} from "./gateway.ts";
+import { handleGroupMigrated } from "./group.ts";
+import { handleParentCommand } from "./parent-commands.ts";
+import { openQuiet } from "./quiet.ts";
+import { messageRefFor } from "./repo.ts";
+import { createHarness, type Harness } from "./testing/harness.ts";
+import {
+  type SeededFamily,
+  seedExchange,
+  seedFamily,
+  seedGroupMember,
+  seedLinkedGroup,
+} from "./testing/seed.ts";
+import { reconcile } from "./tick.ts";
+
+let h: Harness;
+
+beforeAll(async () => {
+  h = await createHarness();
+}, 60_000);
+
+beforeEach(async () => {
+  await h.reset();
+});
+
+afterAll(async () => {
+  await h.close();
+});
+
+const TODAY: LocalDate = "2026-09-14";
+const YESTERDAY: LocalDate = "2026-09-13";
+
+function handlers(): { outbound: (job: OutboundJob) => Promise<unknown> } {
+  return { outbound: (job) => deliverOutbound(h.deps, job.outboundId) };
+}
+
+async function family(): Promise<SeededFamily> {
+  return seedFamily(h.db, { now: h.clock.now() });
+}
+
+function systemTo(seed: SeededFamily, suffix: string, text = "Hello"): OutboundRequest {
+  return {
+    kind: "system",
+    idempotencyKey: outboundKey("system", {
+      conversationId: seed.memberLink.externalId,
+      suffix,
+    }),
+    memberId: seed.member.id,
+    channel: "telegram",
+    conversationId: seed.memberLink.externalId,
+    lang: "en",
+    text,
+  };
+}
+
+async function outboundRows() {
+  return h.db.select().from(outbound).orderBy(asc(outbound.queuedAt), asc(outbound.id));
+}
+
+async function enqueued(request: OutboundRequest): Promise<string> {
+  const result = await enqueueOutbound(h.deps, h.db, request);
+  if (!("outboundId" in result)) {
+    throw new Error("expected the row to be inserted");
+  }
+  return result.outboundId;
+}
+
+async function eventNames(): Promise<string[]> {
+  const rows = await h.db.select({ name: events.name }).from(events).orderBy(asc(events.id));
+  return rows.map((row) => row.name);
+}
+
+/** Today's arrival for her, with the effect the gateway applies on send. */
+function arrivalRequest(
+  seed: SeededFamily,
+  exchangeId: string,
+  text = "Good morning, Mrs Chen.",
+): OutboundRequest {
+  return {
+    kind: "arrival",
+    idempotencyKey: outboundKey("arrival", { memberId: seed.member.id, date: TODAY }),
+    memberId: seed.member.id,
+    channel: "telegram",
+    conversationId: seed.memberLink.externalId,
+    localDay: TODAY,
+    exchangeId,
+    lang: "en",
+    text,
+    ref: { purpose: "arrival", exchangeId },
+    effect: { exchangeId, late: false, readBackReplyIds: [], previousExchangeId: null },
+  };
+}
+
+/** Today's arrival for her, queued. */
+async function arrivalFor(seed: SeededFamily): Promise<{ id: string; exchangeId: string }> {
+  const exchange = await seedExchange(h.db, seed, { date: TODAY });
+  const id = await enqueued(arrivalRequest(seed, exchange.id));
+  return { id, exchangeId: exchange.id };
+}
+
+async function exchangeState(exchangeId: string) {
+  const [row] = await h.db.select().from(exchanges).where(eq(exchanges.id, exchangeId));
+  return row;
+}
+
+describe("enqueueOutbound", () => {
+  it("inserts a row once for the same idempotency key and enqueues one delivery", async () => {
+    const seed = await family();
+    const first = await enqueueOutbound(h.deps, h.db, systemTo(seed, "hello"));
+    const second = await enqueueOutbound(h.deps, h.db, systemTo(seed, "hello", "Different text"));
+
+    expect(first).toHaveProperty("outboundId");
+    expect(second).toEqual({ duplicate: true });
+    expect(await outboundRows()).toHaveLength(1);
+    expect(h.queues.outbound.pending).toHaveLength(1);
+  });
+
+  // The health-words question must follow consent.accepted, and Cloudflare Queues promise no order
+  // between two jobs sent back to back (flows §3.2).
+  it("delays a request that asks for it: the row is due then, the job waits as long, and a re-drive counts from then", async () => {
+    const seed = await family();
+    const now = h.clock.now();
+
+    const id = await enqueued({ ...systemTo(seed, "later"), delaySeconds: 10 });
+
+    const [row] = await outboundRows();
+    expect(row).toMatchObject({ id, queuedAt: new Date(now.getTime() + 10_000), status: "queued" });
+    expect(h.queues.outbound.pending.map((entry) => [entry.job, entry.delaySeconds])).toEqual([
+      [{ type: "deliver", outboundId: id }, 10],
+    ]);
+    h.queues.outbound.clear();
+
+    h.clock.set(new Date(now.getTime() + 10 * 60_000 + 5_000));
+    await redriveStrandedOutbound(h.deps);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+    h.clock.set(new Date(now.getTime() + 10 * 60_000 + 11_000));
+    await redriveStrandedOutbound(h.deps);
+    expect(h.queues.outbound.pending).toHaveLength(1);
+  });
+
+  it("refuses a delay that is not a whole number of seconds from 1 to 60, storing nothing", async () => {
+    const seed = await family();
+
+    for (const delaySeconds of [0, 61, 1.5, -10]) {
+      await expect(
+        enqueueOutbound(h.deps, h.db, { ...systemTo(seed, `delay-${delaySeconds}`), delaySeconds }),
+      ).rejects.toMatchObject({ name: "VelaError", code: "invalid_outbound" });
+    }
+    expect(await outboundRows()).toHaveLength(0);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+  });
+
+  it("refuses a second budgeted message of the same kind for the member's local day", async () => {
+    const seed = await family();
+    // Two different keys, so only the budget index can refuse the second row.
+    const ack = (suffix: string): OutboundRequest => ({
+      kind: "ack",
+      idempotencyKey: `ack-test:${suffix}`,
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: seed.memberLink.externalId,
+      lang: "en",
+      text: "Thank you.",
+    });
+    const first = await enqueueOutbound(h.deps, h.db, ack("one"));
+    const second = await enqueueOutbound(h.deps, h.db, ack("two"));
+
+    expect(first).toHaveProperty("outboundId");
+    expect(second).toEqual({ duplicate: true });
+    const [row] = await outboundRows();
+    // 00:00Z is 08:00 in Taipei: the budget day is hers, not UTC's.
+    expect(row?.localDay).toBe(TODAY);
+    expect(h.queues.outbound.pending).toHaveLength(1);
+  });
+
+  it("takes the date the message is about as the budget day when the request gives one", async () => {
+    const seed = await family();
+    const exchange = await seedExchange(h.db, seed, { date: YESTERDAY });
+    await enqueued({
+      kind: "repeat",
+      idempotencyKey: outboundKey("repeat", { memberId: seed.member.id, date: YESTERDAY }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: seed.memberLink.externalId,
+      localDay: YESTERDAY,
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "In case you missed it",
+      effect: { exchangeId: exchange.id },
+    });
+    const [row] = await outboundRows();
+    expect(row?.localDay).toBe(YESTERDAY);
+    expect(row?.exchangeId).toBe(exchange.id);
+  });
+
+  it("stores the message, the ref intent, and the effect in the payload", async () => {
+    const seed = await family();
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const buttons = [
+      [
+        {
+          id: encodeButton({ type: "answer", exchangeId: exchange.id, answer: "fine" }),
+          label: "I'm fine",
+        },
+      ],
+    ];
+    await enqueued({
+      kind: "arrival",
+      idempotencyKey: outboundKey("arrival", { memberId: seed.member.id, date: TODAY }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: seed.memberLink.externalId,
+      localDay: TODAY,
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "Good morning, Mrs Chen.",
+      buttons,
+      ref: { purpose: "arrival", exchangeId: exchange.id },
+      effect: {
+        exchangeId: exchange.id,
+        late: false,
+        readBackReplyIds: [],
+        previousExchangeId: null,
+      },
+    });
+    const [row] = await outboundRows();
+    expect(row?.payload).toEqual({
+      message: { lang: "en", text: "Good morning, Mrs Chen.", buttons },
+      ref: { purpose: "arrival", exchangeId: exchange.id },
+      effect: {
+        exchangeId: exchange.id,
+        late: false,
+        readBackReplyIds: [],
+        previousExchangeId: null,
+      },
+    });
+  });
+
+  it("throws for a request that cannot be a valid message", async () => {
+    const seed = await family();
+    await expect(enqueueOutbound(h.deps, h.db, systemTo(seed, "empty", ""))).rejects.toThrow(
+      VelaError,
+    );
+    expect(await outboundRows()).toHaveLength(0);
+  });
+
+  it("works inside the caller's transaction", async () => {
+    const seed = await family();
+    await h.db.transaction(async (tx) => {
+      await enqueueOutbound(h.deps, tx, systemTo(seed, "in-tx"));
+    });
+    expect(await outboundRows()).toHaveLength(1);
+    expect(h.queues.outbound.pending).toHaveLength(1);
+  });
+});
+
+describe("deliverOutbound", () => {
+  it("sends the row, records the send, and maps every platform message to what it was about", async () => {
+    const seed = await family();
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const id = await enqueued({
+      kind: "answer_post",
+      idempotencyKey: outboundKey("answer_post", { exchangeId: exchange.id, suffix: "a1" }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: "-100500",
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "☀️ Mom answered Mia · 08:12",
+      media: [{ kind: "audio", providerFileId: "voice-1" }],
+      ref: { purpose: "answer_post", exchangeId: exchange.id },
+    });
+    h.clock.advanceMinutes(12);
+
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [row] = await outboundRows();
+    expect(row?.status).toBe("sent");
+    expect(row?.sentAt).toEqual(h.clock.now());
+    expect(row?.attempts).toBe(1);
+    // The voice note is message 1, the text with the buttons message 2.
+    expect(row?.externalId).toBe("2");
+    const refs = await h.db.select().from(messageRefs).orderBy(asc(messageRefs.messageId));
+    expect(refs.map((ref) => [ref.messageId, ref.purpose, ref.exchangeId])).toEqual([
+      ["1", "answer_post", exchange.id],
+      ["2", "answer_post", exchange.id],
+    ]);
+    expect(h.telegram.sent).toHaveLength(1);
+    expect(h.telegram.sent[0]?.message.idempotencyKey).toBe(row?.idempotencyKey);
+  });
+
+  it("skips a row that is not queued, so a redelivered job sends nothing twice", async () => {
+    const seed = await family();
+    const id = await enqueued(systemTo(seed, "once"));
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+    expect(await deliverOutbound(h.deps, id)).toBe("skipped");
+    expect(h.telegram.sent).toHaveLength(1);
+  });
+
+  it("throws for a row that does not exist, so the queue retries a not-yet-committed insert", async () => {
+    await expect(
+      deliverOutbound(h.deps, "01990000-0000-7000-8000-000000000000"),
+    ).rejects.toMatchObject({ name: "VelaError", code: "not_found" });
+  });
+
+  it("applies an arrival's effects: delivered, replies read back, the previous exchange closed, the scheduler woken", async () => {
+    const seed = await family();
+    const previous = await seedExchange(h.db, seed, {
+      date: YESTERDAY,
+      state: "answered",
+      deliveredAt: new Date("2026-09-13T00:00:00Z"),
+      answeredAt: new Date("2026-09-13T01:00:00Z"),
+    });
+    const [reply] = await h.db
+      .insert(replies)
+      .values({
+        exchangeId: previous.id,
+        memberId: seed.organiser.id,
+        kind: "text",
+        text: "Yum",
+        channel: "telegram",
+      })
+      .returning();
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const id = await enqueued({
+      kind: "arrival",
+      idempotencyKey: outboundKey("arrival", { memberId: seed.member.id, date: TODAY }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: seed.memberLink.externalId,
+      localDay: TODAY,
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "From yesterday:\nMia: Yum\n\nSorry this is late.\nGood morning, Mrs Chen.",
+      ref: { purpose: "arrival", exchangeId: exchange.id },
+      effect: {
+        exchangeId: exchange.id,
+        late: true,
+        readBackReplyIds: reply === undefined ? [] : [reply.id],
+        previousExchangeId: previous.id,
+      },
+    });
+    h.clock.advanceMinutes(200);
+    const sentAt = h.clock.now();
+
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [delivered] = await h.db.select().from(exchanges).where(eq(exchanges.id, exchange.id));
+    expect(delivered?.state).toBe("delivered");
+    expect(delivered?.deliveredAt).toEqual(sentAt);
+    expect(delivered?.deliveryLate).toBe(true);
+    const [readBack] = await h.db.select().from(exchanges).where(eq(exchanges.id, previous.id));
+    expect(readBack?.state).toBe("read_back");
+    expect(readBack?.readBackAt).toEqual(sentAt);
+    const [stamped] = await h.db.select().from(replies);
+    expect(stamped?.readBackAt).toEqual(sentAt);
+    expect(h.scheduler.wakes.get(seed.member.id)).toEqual(sentAt);
+    const [her] = await h.db.select().from(members).where(eq(members.id, seed.member.id));
+    expect(her?.nextWakeAt).toEqual(sentAt);
+    expect(await eventNames()).toEqual(["arrival_delivered", "readback_delivered"]);
+  });
+
+  it("stamps repeated_at when a repeat is sent", async () => {
+    const seed = await family();
+    const exchange = await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    const id = await enqueued({
+      kind: "repeat",
+      idempotencyKey: outboundKey("repeat", { memberId: seed.member.id, date: TODAY }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: seed.memberLink.externalId,
+      localDay: TODAY,
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "In case you missed it:",
+      effect: { exchangeId: exchange.id },
+    });
+    h.clock.advanceMinutes(150);
+
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [row] = await h.db.select().from(exchanges).where(eq(exchanges.id, exchange.id));
+    expect(row?.repeatedAt).toEqual(h.clock.now());
+    expect(row?.state).toBe("delivered");
+    expect(await eventNames()).toEqual(["repeat_sent"]);
+    expect(h.scheduler.wakes.size).toBe(0);
+  });
+
+  it("stamps the turn with the prompt's time and message id when a turn prompt is sent", async () => {
+    const seed = await family();
+    const group = await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    const tomorrow: LocalDate = "2026-09-15";
+    await h.db.insert(turns).values({
+      familyId: seed.family.id,
+      localDay: tomorrow,
+      recipientId: seed.member.id,
+      holderId: seed.organiser.id,
+    });
+    const id = await enqueued({
+      kind: "turn_prompt",
+      idempotencyKey: outboundKey("turn_prompt", { memberId: seed.member.id, date: tomorrow }),
+      memberId: seed.organiser.id,
+      channel: "telegram",
+      conversationId: group.conversationId,
+      lang: "en",
+      text: "Tomorrow is Mia's turn with Mom.",
+      ref: { purpose: "turn_prompt", memberId: seed.member.id, localDate: tomorrow },
+      effect: { familyId: seed.family.id, recipientId: seed.member.id, localDay: tomorrow },
+    });
+
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [turn] = await h.db.select().from(turns);
+    expect(turn?.promptedAt).toEqual(h.clock.now());
+    expect(turn?.promptMessageId).toBe("1");
+    const [ref] = await h.db.select().from(messageRefs);
+    expect(ref).toMatchObject({
+      conversationId: group.conversationId,
+      messageId: "1",
+      purpose: "turn_prompt",
+      memberId: seed.member.id,
+      localDate: tomorrow,
+    });
+    expect(await eventNames()).toEqual(["turn_prompt_sent"]);
+  });
+
+  it("counts a sent quiet notice on the event and remembers who was told", async () => {
+    const seed = await family();
+    const exchange = await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    const [quiet] = await h.db
+      .insert(quietEvents)
+      .values({ exchangeId: exchange.id, memberId: seed.member.id, openedAt: h.clock.now() })
+      .returning();
+    if (quiet === undefined) {
+      throw new Error("quiet event not inserted");
+    }
+    const id = await enqueued({
+      kind: "quiet_notice",
+      idempotencyKey: outboundKey("quiet_notice", {
+        quietEventId: quiet.id,
+        memberId: seed.organiser.id,
+        suffix: "0",
+      }),
+      memberId: seed.organiser.id,
+      channel: "telegram",
+      conversationId: seed.organiserLink.externalId,
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "It's been quiet at Mom's today.",
+      ref: { purpose: "quiet_notice", exchangeId: exchange.id, quietEventId: quiet.id },
+      effect: { quietEventId: quiet.id, notifyCount: 1, notifiedMemberId: seed.organiser.id },
+    });
+    h.clock.advanceMinutes(360);
+
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [updated] = await h.db.select().from(quietEvents);
+    expect(updated?.notifyCount).toBe(1);
+    expect(updated?.lastNotifiedAt).toEqual(h.clock.now());
+    expect(updated?.notifiedMemberIds).toEqual([seed.organiser.id]);
+    expect(await eventNames()).toEqual(["quiet_notice_sent"]);
+  });
+});
+
+describe("deliverOutbound retries", () => {
+  it("retries a passing failure at 5, 15, and 30 minutes and sends when the platform recovers", async () => {
+    const seed = await family();
+    const id = await enqueued(systemTo(seed, "flaky"));
+    h.telegram.failNextSends(3, "unavailable");
+
+    expect(await h.runDue(handlers())).toBe(1);
+    const delays: number[] = [];
+    for (const minutes of RETRY_DELAY_MINUTES) {
+      const [pending] = h.queues.outbound.pending;
+      expect(pending?.delaySeconds).toBe(minutes * 60);
+      delays.push(pending?.delaySeconds ?? 0);
+      // Not due yet: nothing runs until the delay has passed.
+      h.clock.advanceMinutes(minutes - 1);
+      expect(await h.runDue(handlers())).toBe(0);
+      h.clock.advanceMinutes(1);
+      expect(await h.runDue(handlers())).toBe(1);
+    }
+
+    expect(delays).toEqual([300, 900, 1800]);
+    const [row] = await outboundRows();
+    expect(row?.status).toBe("sent");
+    expect(row?.attempts).toBe(4);
+    expect(row?.error).toBeNull();
+    expect(h.telegram.sent).toHaveLength(1);
+    expect(h.telegram.failed).toHaveLength(3);
+    expect(row?.id).toBe(id);
+  });
+
+  it("marks the row failed once the last retry fails", async () => {
+    const seed = await family();
+    await enqueued(systemTo(seed, "down"));
+    h.telegram.failSendsTo(seed.memberLink.externalId, "unavailable");
+
+    expect(await h.run(handlers())).toBe(4);
+
+    const [row] = await outboundRows();
+    expect(row?.status).toBe("failed");
+    expect(row?.attempts).toBe(4);
+    expect(row?.error).toMatch(/^unavailable: /);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+    expect(h.telegram.sent).toHaveLength(0);
+  });
+
+  it("waits for the platform's retry-after when it is longer than the schedule", async () => {
+    const seed = await family();
+    await enqueued(systemTo(seed, "limited"));
+    h.telegram.failNextSends(1, "rate_limited", { retryAfterSeconds: 600 });
+
+    expect(await h.runDue(handlers())).toBe(1);
+
+    expect(h.queues.outbound.pending[0]?.delaySeconds).toBe(600);
+    const [row] = await outboundRows();
+    expect(row?.status).toBe("queued");
+    expect(row?.attempts).toBe(1);
+  });
+
+  /** Her morning's files: a family voice note read back, then a photo choice's two photos. */
+  const MORNING_MEDIA: MediaRef[] = [
+    { kind: "audio", providerFileId: "voice-sam" },
+    { kind: "image", providerFileId: "photo-a" },
+    { kind: "image", providerFileId: "photo-b" },
+  ];
+
+  /** Every file that reached the chat, from the sends that failed part way and those that went out. */
+  function filesTo(conversationId: string): string[] {
+    const partly = h.telegram.failed
+      .filter((entry) => entry.message.to.conversationId === conversationId)
+      .flatMap((entry) => entry.sentMedia);
+    const whole = h.telegram.sentTo(conversationId).flatMap((entry) => entry.message.media ?? []);
+    return [...partly, ...whole].map((ref) => ref.providerFileId ?? ref.url ?? "");
+  }
+
+  // Telegram has no idempotency keys: sent again whole, the retry would give her the voice note and
+  // the photos a second time (flows §3.7).
+  it("sends only what did not go out on the retry of a message whose text failed after its media", async () => {
+    const seed = await family();
+    const her = seed.memberLink.externalId;
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const id = await enqueued({ ...arrivalRequest(seed, exchange.id), media: MORNING_MEDIA });
+    h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 3 });
+
+    expect(await h.runDue(handlers())).toBe(1);
+    h.clock.advanceMinutes(5);
+    expect(await h.runDue(handlers())).toBe(1);
+
+    expect(filesTo(her)).toEqual(["voice-sam", "photo-a", "photo-b"]);
+    expect(h.telegram.sentTo(her).map((entry) => entry.message.media)).toEqual([undefined]);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 2 }]);
+    // Each message of the morning, from either try, leads back to it.
+    const refs = await h.db.select().from(messageRefs).orderBy(asc(messageRefs.messageId));
+    expect(refs.map((ref) => [ref.messageId, ref.purpose, ref.exchangeId])).toEqual([
+      ["1", "arrival", exchange.id],
+      ["2", "arrival", exchange.id],
+      ["3", "arrival", exchange.id],
+      ["4", "arrival", exchange.id],
+    ]);
+  });
+
+  it("keeps what went out when her start queues again the morning her pause dropped on its retry", async () => {
+    const seed = await family();
+    const her = seed.memberLink.externalId;
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const request: OutboundRequest = { ...arrivalRequest(seed, exchange.id), media: MORNING_MEDIA };
+    const id = await enqueued(request);
+    h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 1 });
+    expect(await h.runDue(handlers())).toBe(1);
+
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    h.clock.advanceMinutes(5);
+    expect(await h.runDue(handlers())).toBe(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "dropped", error: "member_paused" }]);
+    await h.db.update(members).set({ status: "active" }).where(eq(members.id, seed.member.id));
+    expect(await enqueueOutbound(h.deps, h.db, request)).toEqual({ outboundId: id });
+    await h.run(handlers());
+
+    expect(filesTo(her)).toEqual(["voice-sam", "photo-a", "photo-b"]);
+    expect(h.telegram.sentTo(her).map((entry) => entry.message.media)).toEqual([
+      MORNING_MEDIA.slice(1),
+    ]);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
+  // A photo Vela keeps is named by its storage key (ADR-33), the key `sentMedia` holds it by, and
+  // only the photos still to send are loaded: the retry neither reads nor uploads one that went out,
+  // even once its object is gone from the store.
+  it("keeps the stored photos that went out by their storage keys, so the retry neither loads nor uploads them", async () => {
+    const seed = await family();
+    const her = seed.memberLink.externalId;
+    const keys = ["asks/family/one.jpg", "asks/family/two.jpg"];
+    for (const key of keys) {
+      await h.media.put(key, new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer, "image/jpeg");
+    }
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    const id = await enqueued({
+      ...arrivalRequest(seed, exchange.id),
+      media: keys.map((storageKey) => ({ kind: "image" as const, storageKey, mime: "image/jpeg" })),
+    });
+    h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 2 });
+    expect(await h.runDue(handlers())).toBe(1);
+    for (const key of keys) {
+      await h.media.delete(key);
+    }
+    h.clock.advanceMinutes(5);
+    expect(await h.runDue(handlers())).toBe(1);
+
+    expect(
+      h.telegram.failed.flatMap((entry) => entry.sentMedia.map((ref) => ref.storageKey)),
+    ).toEqual(keys);
+    expect(
+      h.telegram.sentTo(her).map((entry) => [entry.message.media, entry.uploads.length]),
+    ).toEqual([[undefined, 0]]);
+    const [one, two] = keys;
+    expect(await outboundRows()).toMatchObject([
+      {
+        id,
+        status: "sent",
+        attempts: 2,
+        payload: { sentMedia: { [one ?? ""]: "1", [two ?? ""]: "2" } },
+      },
+    ]);
+  });
+
+  it("fails at once on an error that cannot pass", async () => {
+    const seed = await family();
+    await enqueued(systemTo(seed, "bad"));
+    h.telegram.failNextSends(1, "invalid_request");
+
+    expect(await h.runDue(handlers())).toBe(1);
+
+    const [row] = await outboundRows();
+    expect(row?.status).toBe("failed");
+    expect(row?.attempts).toBe(1);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+  });
+
+  it("marks the link blocked when the person has blocked the bot", async () => {
+    const seed = await family();
+    const id = await enqueued(systemTo(seed, "blocked"));
+    h.telegram.failNextSends(1, "blocked");
+    h.clock.advanceMinutes(3);
+
+    expect(await deliverOutbound(h.deps, id)).toBe("failed");
+
+    const [link] = await h.db
+      .select()
+      .from(channelLinks)
+      .where(eq(channelLinks.id, seed.memberLink.id));
+    expect(link?.blockedAt).toEqual(h.clock.now());
+    const [organiserLink] = await h.db
+      .select()
+      .from(channelLinks)
+      .where(eq(channelLinks.id, seed.organiserLink.id));
+    expect(organiserLink?.blockedAt).toBeNull();
+  });
+
+  /** A system message to Mia, the family's organiser, in her private chat. */
+  function systemToOrganiser(seed: SeededFamily, suffix: string): OutboundRequest {
+    return {
+      ...systemTo(seed, suffix),
+      idempotencyKey: outboundKey("system", {
+        conversationId: seed.organiserLink.externalId,
+        suffix,
+      }),
+      memberId: seed.organiser.id,
+      conversationId: seed.organiserLink.externalId,
+    };
+  }
+
+  async function toFounder(): Promise<string[]> {
+    const rows = await h.db
+      .select()
+      .from(outbound)
+      .where(eq(outbound.conversationId, h.deps.config.adminConversationId ?? ""));
+    return rows.map((row) => (row.payload as { message: { text: string } }).message.text);
+  }
+
+  it("tells the founder when the last organiser who could be told blocks the bot", async () => {
+    const seed = await family();
+    const id = await enqueued(systemToOrganiser(seed, "blocked"));
+    h.telegram.failNextSends(1, "blocked");
+
+    expect(await deliverOutbound(h.deps, id)).toBe("failed");
+
+    expect(await toFounder()).toEqual([
+      `Mia can no longer be told anything in The Chens, and no other organiser can: nobody will hear if a light there goes quiet. Open: https://vela.test/admin/families/${seed.family.id}`,
+    ]);
+  });
+
+  it("says nothing to the founder while another organiser can still be told", async () => {
+    const seed = await family();
+    await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      externalId: "1003",
+      role: "organiser",
+    });
+    const id = await enqueued(systemToOrganiser(seed, "blocked"));
+    h.telegram.failNextSends(1, "blocked");
+
+    expect(await deliverOutbound(h.deps, id)).toBe("failed");
+
+    expect(await toFounder()).toEqual([]);
+  });
+});
+
+describe("deliverOutbound and the upgraded group", () => {
+  const OLD_GROUP = "-100500";
+  const NEW_GROUP = "-1001000500";
+
+  async function groupPost(seed: SeededFamily, suffix: string): Promise<string> {
+    return enqueued({
+      kind: "system",
+      idempotencyKey: outboundKey("system", { conversationId: OLD_GROUP, suffix }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: OLD_GROUP,
+      lang: "en",
+      text: "Into Mom's morning.",
+      ref: { purpose: "ask_confirmation" },
+    });
+  }
+
+  it("re-points the family group and sends to the new id at once without counting an attempt", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    await h.db.insert(messageRefs).values({
+      channel: "telegram",
+      conversationId: OLD_GROUP,
+      messageId: "7",
+      familyId: seed.family.id,
+      memberId: seed.member.id,
+      localDate: TODAY,
+      purpose: "turn_prompt",
+    });
+    const id = await groupPost(seed, "confirm");
+    const other = await groupPost(seed, "another");
+    h.telegram.failSendsTo(OLD_GROUP, "invalid_request", { migratedToConversationId: NEW_GROUP });
+
+    expect(await deliverOutbound(h.deps, id)).toBe("retry");
+
+    const [group] = await h.db.select().from(familyChannels);
+    expect(group?.conversationId).toBe(NEW_GROUP);
+    // The old group's refs go: its message ids name other messages in the supergroup.
+    expect(await h.db.select().from(messageRefs)).toEqual([]);
+    // The other row queued for the old group follows it, so it never hits the same error.
+    const rows = await outboundRows();
+    expect(rows.map((row) => [row.id, row.conversationId, row.attempts, row.status])).toEqual([
+      [id, NEW_GROUP, 0, "queued"],
+      [other, NEW_GROUP, 0, "queued"],
+    ]);
+    // Re-enqueued at once, behind the two original jobs (the first was run by hand above): all
+    // due now, and the duplicate job finds its row already sent.
+    expect(
+      h.queues.outbound.pending.map((entry) => [entry.job.outboundId, entry.delaySeconds]),
+    ).toEqual([
+      [id, 0],
+      [other, 0],
+      [id, 0],
+    ]);
+
+    expect(await h.runDue(handlers())).toBe(3);
+
+    expect(h.telegram.sentTo(OLD_GROUP)).toHaveLength(0);
+    expect(h.telegram.sentTo(NEW_GROUP)).toHaveLength(2);
+    const sent = await outboundRows();
+    expect(sent.map((row) => [row.status, row.attempts])).toEqual([
+      ["sent", 1],
+      ["sent", 1],
+    ]);
+    const refs = await h.db
+      .select()
+      .from(messageRefs)
+      .where(
+        and(eq(messageRefs.conversationId, NEW_GROUP), eq(messageRefs.purpose, "ask_confirmation")),
+      );
+    expect(refs).toHaveLength(2);
+    // A reply to the message as re-sent resolves, because its ref was written under the new id.
+    const resent = h.telegram.sentTo(NEW_GROUP)[0];
+    expect(
+      await messageRefFor(h.db, "telegram", NEW_GROUP, resent?.result.primaryMessageId ?? ""),
+    ).toMatchObject({ purpose: "ask_confirmation", familyId: seed.family.id });
+  });
+
+  /** Her photo answer's post to the old group, replying to the old group's message 2. */
+  async function photoPost(seed: SeededFamily): Promise<string> {
+    // The old group had three messages before, so its numbers run ahead of the new chat's.
+    for (const suffix of ["a", "b", "c"]) {
+      await deliverOutbound(h.deps, await groupPost(seed, suffix));
+    }
+    const exchange = await seedExchange(h.db, seed, { date: TODAY, state: "answered" });
+    return enqueued({
+      kind: "answer_post",
+      idempotencyKey: outboundKey("answer_post", { exchangeId: exchange.id, suffix: "photo" }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: OLD_GROUP,
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "Mom answered · 08:12",
+      media: [{ kind: "image", providerFileId: "photo-her" }],
+      replyToMessageId: "2",
+      ref: { purpose: "answer_post", exchangeId: exchange.id, memberId: seed.member.id },
+    });
+  }
+
+  async function refsIn(conversationId: string): Promise<string[]> {
+    const refs = await h.db
+      .select()
+      .from(messageRefs)
+      .where(eq(messageRefs.conversationId, conversationId))
+      .orderBy(asc(messageRefs.messageId));
+    return refs.map((ref) => ref.messageId);
+  }
+
+  // The supergroup numbers its own messages, so neither the photo that reached the old group nor
+  // the old message the post replied to has an id there: the post goes to the new chat whole, as
+  // a message of its own, and only what went out there is mapped.
+  it("sends a post the upgrade caught part way to the new chat whole, mapping only what went out there", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    const id = await photoPost(seed);
+    // The photo goes out as the old group's message 4; the text finds the group upgraded.
+    h.telegram.failNextSends(1, "invalid_request", {
+      migratedToConversationId: NEW_GROUP,
+      mediaDelivered: 1,
+    });
+
+    expect(await deliverOutbound(h.deps, id)).toBe("retry");
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [post] = h.telegram.sentTo(NEW_GROUP);
+    expect(post?.message.media).toEqual([{ kind: "image", providerFileId: "photo-her" }]);
+    expect(post?.message.replyToMessageId).toBeUndefined();
+    expect(await refsIn(NEW_GROUP)).toEqual(["1", "2"]);
+  });
+
+  function upgraded(seed: SeededFamily): InboundEvent {
+    return {
+      channel: "telegram",
+      eventId: "tg:migrated",
+      at: h.clock.now().toISOString(),
+      kind: "migrated",
+      sender: { externalUserId: seed.organiserLink.externalId },
+      conversation: { externalId: OLD_GROUP, kind: "group" },
+      migratedToConversationId: NEW_GROUP,
+    };
+  }
+
+  it("sends a post waiting for its retry when the group is upgraded to the new chat whole", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    const id = await photoPost(seed);
+    h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 1 });
+    expect(await deliverOutbound(h.deps, id)).toBe("retry");
+
+    await handleGroupMigrated(h.deps, upgraded(seed));
+    h.clock.advanceMinutes(RETRY_DELAY_MINUTES[0] ?? 5);
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [post] = h.telegram.sentTo(NEW_GROUP);
+    expect(post?.message.media).toEqual([{ kind: "image", providerFileId: "photo-her" }]);
+    expect(post?.message.replyToMessageId).toBeUndefined();
+    expect(await refsIn(NEW_GROUP)).toEqual(["1", "2"]);
+  });
+
+  // Her words' post replies to her answer post only in the chat that post went to (flows §3.3).
+  it("records the chat a send went to when the upgrade moved its row while the send was out", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    const id = await groupPost(seed, "confirm");
+    const adapter: ChannelAdapter = {
+      ...h.telegram,
+      async send(message) {
+        const result = await h.telegram.send(message);
+        await handleGroupMigrated(h.deps, upgraded(seed));
+        return result;
+      },
+    };
+
+    expect(await deliverOutbound({ ...h.deps, channels: { get: () => adapter } }, id)).toBe("sent");
+
+    const [row] = await outboundRows();
+    expect(row).toMatchObject({ id, status: "sent", conversationId: OLD_GROUP, externalId: "1" });
+    const [group] = await h.db.select().from(familyChannels);
+    expect(group?.conversationId).toBe(NEW_GROUP);
+  });
+
+  // The upgrade notice can be handled while a delivery of the row is at Telegram: the photo reaches
+  // the old group, the text fails for a retry, and the row already addresses the new chat.
+  it("keeps nothing of a send that was out when the upgrade moved its row, so the retry goes to the new chat whole", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    const id = await photoPost(seed);
+    const adapter: ChannelAdapter = {
+      ...h.telegram,
+      async send(message) {
+        await handleGroupMigrated(h.deps, upgraded(seed));
+        h.telegram.failNextSends(1, "unavailable", { mediaDelivered: 1 });
+        return h.telegram.send(message);
+      },
+    };
+    expect(await deliverOutbound({ ...h.deps, channels: { get: () => adapter } }, id)).toBe(
+      "retry",
+    );
+    const [row] = (await outboundRows()).filter((candidate) => candidate.id === id);
+    expect(row).toMatchObject({ conversationId: NEW_GROUP, status: "queued", attempts: 1 });
+    expect(row?.payload).not.toHaveProperty("sentMedia");
+
+    h.clock.advanceMinutes(RETRY_DELAY_MINUTES[0] ?? 5);
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    const [post] = h.telegram.sentTo(NEW_GROUP);
+    expect(post?.message.media).toEqual([{ kind: "image", providerFileId: "photo-her" }]);
+    expect(post?.message.replyToMessageId).toBeUndefined();
+    expect(await refsIn(NEW_GROUP)).toEqual(["1", "2"]);
+  });
+
+  it("fails a row the platform says to move to the id it already addresses, so a send cannot loop", async () => {
+    const seed = await family();
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), conversationId: OLD_GROUP });
+    await groupPost(seed, "loop");
+    h.telegram.failSendsTo(OLD_GROUP, "invalid_request", { migratedToConversationId: OLD_GROUP });
+
+    expect(await h.runDue(handlers())).toBe(1);
+
+    const [row] = await outboundRows();
+    expect(row?.status).toBe("failed");
+    expect(row?.attempts).toBe(1);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+  });
+});
+
+describe("deliverOutbound and a failed arrival", () => {
+  async function failingArrival(seed: SeededFamily) {
+    const exchange = await seedExchange(h.db, seed, { date: TODAY });
+    await enqueued({
+      kind: "arrival",
+      idempotencyKey: outboundKey("arrival", { memberId: seed.member.id, date: TODAY }),
+      memberId: seed.member.id,
+      channel: "telegram",
+      conversationId: seed.memberLink.externalId,
+      localDay: TODAY,
+      exchangeId: exchange.id,
+      lang: "en",
+      text: "Good morning, Mrs Chen.",
+      ref: { purpose: "arrival", exchangeId: exchange.id },
+      effect: {
+        exchangeId: exchange.id,
+        late: false,
+        readBackReplyIds: [],
+        previousExchangeId: null,
+      },
+    });
+    h.telegram.failSendsTo(seed.memberLink.externalId, "unavailable");
+    return exchange;
+  }
+
+  it("tells each organiser once, marks the day failed, wakes the scheduler, and opens no quiet event", async () => {
+    const seed = await family();
+    const second = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Sam",
+      externalId: "1002",
+      role: "organiser",
+    });
+    const exchange = await failingArrival(seed);
+
+    // Four tries for the arrival, then the two notices.
+    expect(await h.run(handlers())).toBe(6);
+    const failedAt = h.clock.now();
+
+    const [row] = await h.db.select().from(exchanges).where(eq(exchanges.id, exchange.id));
+    expect(row?.deliveryFailedAt).toEqual(failedAt);
+    expect(row?.state).toBe("scheduled");
+    for (const link of [seed.organiserLink, second.link]) {
+      const notices = h.telegram.sentTo(link.externalId);
+      expect(notices).toHaveLength(1);
+      expect(notices[0]?.message.text).toBe(
+        "We couldn't reach Mom on Telegram today. Nothing else is known.",
+      );
+      expect(notices[0]?.message.kind).toBe("system");
+    }
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(0);
+    expect(h.scheduler.wakes.get(seed.member.id)).toEqual(failedAt);
+    expect(await eventNames()).toEqual(["arrival_delivery_failed"]);
+
+    // The schedule never opens a quiet event for a failed day, and neither does the flow when asked.
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    expect(await h.db.select().from(quietEvents)).toHaveLength(0);
+    expect(await outboundRows()).toHaveLength(3);
+  });
+
+  it("never sends the notice twice for the same morning", async () => {
+    const seed = await family();
+    const exchange = await failingArrival(seed);
+    await h.run(handlers());
+
+    // The same failure reported again enqueues nothing new: the notice is keyed by the exchange.
+    const again = await enqueueOutbound(h.deps, h.db, {
+      kind: "system",
+      idempotencyKey: outboundKey("system", {
+        conversationId: seed.organiserLink.externalId,
+        suffix: `delivery_failed:${exchange.id}`,
+      }),
+      memberId: seed.organiser.id,
+      channel: "telegram",
+      conversationId: seed.organiserLink.externalId,
+      lang: "en",
+      text: "We couldn't reach Mom on Telegram today. Nothing else is known.",
+    });
+    expect(again).toEqual({ duplicate: true });
+    expect(h.telegram.sentTo(seed.organiserLink.externalId)).toHaveLength(1);
+  });
+});
+
+/**
+ * Deps whose database rejects the `failFrom`-th transaction and every one after it. The send is
+ * committed in the first transaction, so the second is the one a kind's effects run in (D-B1).
+ * Every other call reaches the real database with the real receiver, private fields included.
+ */
+function failsTransactionsFrom(failFrom: number): Deps {
+  let calls = 0;
+  const real = h.deps.db;
+  const db = new Proxy(real, {
+    get(target, property) {
+      if (property === "transaction") {
+        const wrapped: VelaDatabase["transaction"] = (...args) => {
+          calls += 1;
+          if (calls >= failFrom) {
+            return Promise.reject(new Error("the effects transaction failed"));
+          }
+          return target.transaction(...args);
+        };
+        return wrapped;
+      }
+      const value: unknown = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  return { ...h.deps, db };
+}
+
+describe("deliverOutbound and the effects of a send", () => {
+  it("keeps the row sent when its effects fail, and applies them on the retry without sending again", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    const sentAt = h.clock.now();
+
+    await expect(deliverOutbound(failsTransactionsFrom(2), id)).rejects.toThrow(
+      "the effects transaction failed",
+    );
+
+    // The message is out and the row proves it; the morning is not delivered yet.
+    const [row] = await outboundRows();
+    expect(row).toMatchObject({ status: "sent", attempts: 1, sentAt, effectsAt: null });
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await exchangeState(exchangeId)).toMatchObject({
+      state: "scheduled",
+      deliveredAt: null,
+    });
+    expect(await eventNames()).toEqual([]);
+
+    h.clock.advanceMinutes(1);
+    expect(await deliverOutbound(h.deps, id)).toBe("sent");
+
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await exchangeState(exchangeId)).toMatchObject({
+      state: "delivered",
+      deliveredAt: sentAt,
+    });
+    const [applied] = await outboundRows();
+    expect(applied?.effectsAt).toEqual(h.clock.now());
+    expect(applied?.attempts).toBe(1);
+    expect(await eventNames()).toEqual(["arrival_delivered"]);
+    expect(h.scheduler.wakes.get(seed.member.id)).toEqual(sentAt);
+  });
+
+  it("finishes a send whose effects never landed on the sweep two minutes later, once", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    await expect(deliverOutbound(failsTransactionsFrom(2), id)).rejects.toThrow();
+    h.queues.outbound.clear();
+
+    // A minute later the row is still young enough to be on its way through the queue.
+    h.clock.advanceMinutes(1);
+    expect(await reconcile(h.deps)).toMatchObject({ effects: 0 });
+    expect(await exchangeState(exchangeId)).toMatchObject({ state: "scheduled" });
+
+    h.clock.advanceMinutes(2);
+    expect(await reconcile(h.deps)).toMatchObject({ effects: 1 });
+
+    expect(await exchangeState(exchangeId)).toMatchObject({ state: "delivered" });
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(
+      h.logger.entries.filter((entry) => entry.event === "outbound_effects_late"),
+    ).toHaveLength(1);
+
+    // Nothing is left for the next sweep, and nothing is sent again.
+    expect(await reconcile(h.deps)).toMatchObject({ effects: 0 });
+    expect(await eventNames()).toEqual(["arrival_delivered"]);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+  });
+});
+
+describe("deliverOutbound drops rows for a family that has ended", () => {
+  it("drops a queued row once the family's deletion was requested", async () => {
+    const seed = await family();
+    const id = await enqueued(systemTo(seed, "late"));
+    await h.db
+      .update(families)
+      .set({ deletedAt: h.clock.now() })
+      .where(eq(families.id, seed.family.id));
+
+    expect(await deliverOutbound(h.deps, id)).toBe("skipped");
+
+    const [row] = await outboundRows();
+    expect(row?.status).toBe("dropped");
+    expect(h.telegram.sent).toHaveLength(0);
+    expect(await eventNames()).toEqual(["gateway_dropped"]);
+  });
+
+  it("drops an organiser's row once the kept-light member is deceased", async () => {
+    const seed = await family();
+    const id = await enqueued({
+      ...systemTo(seed, "notice"),
+      idempotencyKey: outboundKey("system", {
+        conversationId: seed.organiserLink.externalId,
+        suffix: "notice",
+      }),
+      memberId: seed.organiser.id,
+      conversationId: seed.organiserLink.externalId,
+    });
+    await h.db
+      .update(members)
+      .set({ status: "deceased", lightOn: false })
+      .where(eq(members.id, seed.member.id));
+
+    expect(await deliverOutbound(h.deps, id)).toBe("skipped");
+
+    const [row] = await outboundRows();
+    expect(row?.status).toBe("dropped");
+    expect(h.telegram.sent).toHaveLength(0);
+  });
+
+  it("drops her own row once she is left", async () => {
+    const seed = await family();
+    const id = await enqueued(systemTo(seed, "gone"));
+    await h.db.update(members).set({ status: "left" }).where(eq(members.id, seed.member.id));
+
+    expect(await deliverOutbound(h.deps, id)).toBe("skipped");
+    expect(h.telegram.sent).toHaveLength(0);
+  });
+});
+
+describe("deliverOutbound and her morning once she has answered or said stop", () => {
+  let messages = 0;
+
+  /** Her message in her private chat; the message id counts up, as Telegram's do. */
+  function fromHer(seed: SeededFamily, extra: Partial<InboundEvent>): InboundEvent {
+    messages += 1;
+    return {
+      channel: "telegram",
+      eventId: `tg:her:${messages}`,
+      at: h.clock.now().toISOString(),
+      kind: "text",
+      sender: { externalUserId: seed.memberLink.externalId },
+      conversation: { externalId: seed.memberLink.externalId, kind: "private" },
+      messageId: String(500 + messages),
+      ...extra,
+    };
+  }
+
+  async function command(seed: SeededFamily, word: "stop" | "start"): Promise<void> {
+    const [her] = await h.db.select().from(members).where(eq(members.id, seed.member.id));
+    if (her === undefined) {
+      throw new Error("her row is gone");
+    }
+    await handleParentCommand(h.deps, her, word, fromHer(seed, { text: word }));
+  }
+
+  function toHer(seed: SeededFamily): string[] {
+    return h.telegram.sentTo(seed.memberLink.externalId).map((entry) => entry.message.text);
+  }
+
+  async function rowsOf(kind: "arrival" | "repeat") {
+    return (await outboundRows()).filter((row) => row.kind === kind);
+  }
+
+  async function drops(): Promise<unknown[]> {
+    const rows = await h.db
+      .select({ props: events.props })
+      .from(events)
+      .where(eq(events.name, "gateway_dropped"))
+      .orderBy(asc(events.id));
+    return rows.map((row) => row.props);
+  }
+
+  /**
+   * Today's morning, delivered at 08:00, and its repeat, queued by the schedule at 10:30 through
+   * the flow itself: its first send failed, so it waits five minutes for its retry.
+   */
+  async function repeatWaitingForItsRetry(seed: SeededFamily): Promise<string> {
+    const exchange = await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+    h.clock.advanceMinutes(150);
+    await sendRepeat(h.deps, seed.member.id, TODAY);
+    h.telegram.failNextSends(1, "unavailable");
+    expect(await h.runDue(handlers())).toBe(1);
+    expect((await rowsOf("repeat")).map((row) => [row.status, row.attempts])).toEqual([
+      ["queued", 1],
+    ]);
+    return exchange.id;
+  }
+
+  // Flows §3.8: nothing goes out for a day answered meanwhile. Sent, "in case you missed it" would
+  // reach her after she wrote, and a tap on its buttons would post her answer a second time.
+  it("drops a repeat waiting for its retry once she has answered, and only her thanks follows her answer", async () => {
+    const seed = await family();
+    const exchangeId = await repeatWaitingForItsRetry(seed);
+
+    h.clock.advanceMinutes(2);
+    await handleParentMessage(h.deps, seed.member, fromHer(seed, { text: "All good here" }));
+    h.clock.advanceMinutes(3);
+    await h.runDue(handlers());
+
+    expect(await rowsOf("repeat")).toMatchObject([{ status: "dropped", error: "answered" }]);
+    expect(toHer(seed)).toEqual([t("en", "ack.thanks", { address: "Mrs Chen" })]);
+    expect(await exchangeState(exchangeId)).toMatchObject({ state: "answered", repeatedAt: null });
+    expect(await drops()).toEqual([{ kind: "repeat", reason: "answered" }]);
+  });
+
+  // Flows §3.9: an answer counts for the local date it arrives on, so a tap on yesterday's arrival
+  // answers today too, and no repeat follows it.
+  it("drops a repeat waiting for its retry once a tap on yesterday's arrival answers its day", async () => {
+    const seed = await family();
+    const yesterday = await seedExchange(h.db, seed, {
+      date: YESTERDAY,
+      state: "delivered",
+      deliveredAt: new Date("2026-09-13T00:00:00Z"),
+    });
+    const exchangeId = await repeatWaitingForItsRetry(seed);
+
+    h.clock.advanceMinutes(2);
+    const action = { type: "answer", exchangeId: yesterday.id, answer: "fine" } as const;
+    await handleAnswerButton(
+      h.deps,
+      seed.member,
+      fromHer(seed, {
+        kind: "button",
+        messageId: "400",
+        buttonData: encodeButton(action),
+        callbackId: "cb-yesterday",
+      }),
+      action,
+    );
+    h.clock.advanceMinutes(3);
+    await h.runDue(handlers());
+
+    expect(await rowsOf("repeat")).toMatchObject([{ status: "dropped", error: "answered" }]);
+    expect(toHer(seed).some((text) => text.startsWith(t("en", "arrival.repeat")))).toBe(false);
+    expect(await exchangeState(exchangeId)).toMatchObject({ answeredAt: null, repeatedAt: null });
+  });
+
+  // Flows §3.13: stop pauses everything. Sent, the morning would reach her after "Everything is
+  // paused", and its effects would wake the scheduler her stop had cleared.
+  it("drops her arrival waiting for its retry once she has said stop, and sends her the stopped reply", async () => {
+    const seed = await family();
+    const { exchangeId } = await arrivalFor(seed);
+    h.telegram.failNextSends(1, "unavailable");
+    expect(await h.runDue(handlers())).toBe(1);
+
+    h.clock.advanceMinutes(2);
+    await command(seed, "stop");
+    h.clock.advanceMinutes(3);
+    await h.runDue(handlers());
+
+    expect(await rowsOf("arrival")).toMatchObject([{ status: "dropped", error: "member_paused" }]);
+    expect(toHer(seed)).toEqual([t("en", "parent.stopped")]);
+    expect(await exchangeState(exchangeId)).toMatchObject({
+      state: "scheduled",
+      deliveredAt: null,
+    });
+    const [her] = await h.db.select().from(members).where(eq(members.id, seed.member.id));
+    expect(her?.nextWakeAt).toBeNull();
+    expect(h.scheduler.wakes.get(seed.member.id)).toBeNull();
+    expect(await drops()).toEqual([{ kind: "arrival", reason: "member_paused" }]);
+  });
+
+  it("drops her arrival queued in the seconds before her stop, before its first send", async () => {
+    const seed = await family();
+    await arrivalFor(seed);
+
+    await command(seed, "stop");
+    await h.runDue(handlers());
+
+    expect(await rowsOf("arrival")).toMatchObject([{ status: "dropped", error: "member_paused" }]);
+    expect(toHer(seed)).toEqual([t("en", "parent.stopped")]);
+  });
+
+  it("drops a repeat waiting for its retry once she has said stop", async () => {
+    const seed = await family();
+    const exchangeId = await repeatWaitingForItsRetry(seed);
+
+    h.clock.advanceMinutes(2);
+    await command(seed, "stop");
+    h.clock.advanceMinutes(3);
+    await h.runDue(handlers());
+
+    expect(await rowsOf("repeat")).toMatchObject([{ status: "dropped", error: "member_paused" }]);
+    expect(toHer(seed)).toEqual([t("en", "parent.stopped")]);
+    expect((await exchangeState(exchangeId))?.repeatedAt).toBeNull();
+  });
+
+  // Flows §3.13: a morning delivered before her start has no repeat, at the start or later.
+  it("drops a repeat waiting for its retry when she said stop and then start since its morning went out", async () => {
+    const seed = await family();
+    await repeatWaitingForItsRetry(seed);
+
+    h.clock.advanceMinutes(1);
+    await command(seed, "stop");
+    h.clock.advanceMinutes(1);
+    await command(seed, "start");
+    h.clock.advanceMinutes(3);
+    await h.runDue(handlers());
+
+    expect(await rowsOf("repeat")).toMatchObject([{ status: "dropped", error: "resumed" }]);
+    expect(toHer(seed)).toEqual([
+      t("en", "parent.stopped"),
+      t("en", "parent.started", { time: "08:00" }),
+    ]);
+  });
+
+  it("still sends a repeat when she has neither answered nor said stop", async () => {
+    const seed = await family();
+    const exchangeId = await repeatWaitingForItsRetry(seed);
+
+    h.clock.advanceMinutes(5);
+    await h.runDue(handlers());
+
+    expect(await rowsOf("repeat")).toMatchObject([{ status: "sent", attempts: 2 }]);
+    expect(toHer(seed)).toEqual([expect.stringContaining(t("en", "arrival.repeat"))]);
+    expect((await exchangeState(exchangeId))?.repeatedAt).toEqual(h.clock.now());
+  });
+
+  // Flows §3.13: after her start, a morning not sent before it goes out while its window is open.
+  // The key names that one morning, so the row her stop dropped is the one that goes.
+  it("queues an arrival her pause dropped again when it is asked for once more, with what the new request holds, and sends it once", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    expect(await h.runDue(handlers())).toBe(1);
+    expect(await rowsOf("arrival")).toMatchObject([{ status: "dropped", error: "member_paused" }]);
+
+    await h.db.update(members).set({ status: "active" }).where(eq(members.id, seed.member.id));
+    h.clock.advanceMinutes(90);
+    const again = await enqueueOutbound(
+      h.deps,
+      h.db,
+      arrivalRequest(seed, exchangeId, "Good morning again, Mrs Chen."),
+    );
+    expect(again).toEqual({ outboundId: id });
+    expect(
+      await enqueueOutbound(h.deps, h.db, arrivalRequest(seed, exchangeId, "A third time")),
+    ).toEqual({ duplicate: true });
+    await h.run(handlers());
+
+    expect(toHer(seed)).toEqual(["Good morning again, Mrs Chen."]);
+    expect(await rowsOf("arrival")).toMatchObject([
+      { id, status: "sent", attempts: 1, error: null, sentAt: h.clock.now() },
+    ]);
+    expect(await exchangeState(exchangeId)).toMatchObject({
+      state: "delivered",
+      deliveredAt: h.clock.now(),
+    });
+  });
+
+  /**
+   * Deps whose database runs `between` once, just before the first transaction a flow opens: for a
+   * delivery, after it read the row and her, and before it writes a drop or a send.
+   */
+  function withBeforeFirstTransaction(between: () => Promise<void>): Deps {
+    let done = false;
+    const real = h.deps.db;
+    const db = new Proxy(real, {
+      get(target, property) {
+        if (property === "transaction") {
+          const wrapped = ((...args: Parameters<VelaDatabase["transaction"]>) => {
+            if (done) {
+              return target.transaction(...args);
+            }
+            done = true;
+            return between().then(() => target.transaction(...args));
+          }) as VelaDatabase["transaction"];
+          return wrapped;
+        }
+        const value: unknown = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    return { ...h.deps, db };
+  }
+
+  function morningsToHer(seed: SeededFamily): string[] {
+    return h.telegram
+      .sentTo(seed.memberLink.externalId)
+      .filter((entry) => entry.message.kind === "arrival")
+      .map((entry) => entry.message.text);
+  }
+
+  // Flows §3.13, and the contention drill's `pause-drop-race`: her start can land between a
+  // delivery's read of her pause and its drop. The start's tick asks for the morning, finds its row
+  // still queued, and leaves it to that delivery, which must not drop it then.
+  it("sends her morning when her start lands after a delivery read her paused and before its drop", async () => {
+    const seed = await family();
+    await h.db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-01" })
+      .where(eq(members.id, seed.member.id));
+    const { id } = await arrivalFor(seed);
+    await command(seed, "stop");
+    h.clock.advanceMinutes(5);
+
+    const delivered = await deliverOutbound(
+      withBeforeFirstTransaction(() => command(seed, "start")),
+      id,
+    );
+
+    expect(delivered).toBe("sent");
+    expect(await rowsOf("arrival")).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+    expect(morningsToHer(seed)).toEqual(["Good morning, Mrs Chen."]);
+    expect(await drops()).toEqual([]);
+  });
+
+  // A second delivery of the row, a re-drive beside a late job, can send it after this one read her
+  // paused. `dropped` over `sent` would hide the send from `reconcile`, whose effects never land, and
+  // her start would queue the morning again and send it twice.
+  it("keeps her morning sent when another delivery sent it after this one read her paused", async () => {
+    const seed = await family();
+    await h.db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-01" })
+      .where(eq(members.id, seed.member.id));
+    const { id, exchangeId } = await arrivalFor(seed);
+    await command(seed, "stop");
+    const sentAt = h.clock.now();
+
+    const delivered = await deliverOutbound(
+      withBeforeFirstTransaction(async () => {
+        await h.db
+          .update(outbound)
+          .set({ status: "sent", sentAt, attempts: 1, externalId: "900" })
+          .where(eq(outbound.id, id));
+      }),
+      id,
+    );
+
+    // The send is kept, and this delivery finished its effects instead.
+    expect(delivered).toBe("sent");
+    expect(await rowsOf("arrival")).toMatchObject([{ id, status: "sent", error: null }]);
+    expect(await exchangeState(exchangeId)).toMatchObject({
+      state: "delivered",
+      deliveredAt: sentAt,
+    });
+    expect(await drops()).toEqual([]);
+
+    h.clock.advanceMinutes(5);
+    await command(seed, "start");
+    await h.run(handlers());
+    expect(morningsToHer(seed)).toEqual([]);
+  });
+
+  // The take decides (flows §3.7): a second delivery of the row that took it after this one read her
+  // paused is sending it, and a drop over its hold would leave that delivery's record nowhere to go.
+  it("leaves her morning to another delivery that took it after this one read her paused", async () => {
+    const seed = await family();
+    await h.db
+      .update(members)
+      .set({ lightStartsOn: "2026-09-01" })
+      .where(eq(members.id, seed.member.id));
+    const { id } = await arrivalFor(seed);
+    await command(seed, "stop");
+    const takenAt = h.clock.now();
+
+    const delivered = await deliverOutbound(
+      withBeforeFirstTransaction(async () => {
+        await h.db.update(outbound).set({ sentAt: takenAt }).where(eq(outbound.id, id));
+      }),
+      id,
+    );
+
+    expect(delivered).toBe("skipped");
+    expect(await rowsOf("arrival")).toMatchObject([
+      { id, status: "queued", sentAt: takenAt, error: null },
+    ]);
+    expect(await drops()).toEqual([]);
+    expect(morningsToHer(seed)).toEqual([]);
+  });
+
+  it("never queues again an arrival dropped for an ended family", async () => {
+    const seed = await family();
+    const { exchangeId } = await arrivalFor(seed);
+    await h.db
+      .update(families)
+      .set({ deletedAt: h.clock.now() })
+      .where(eq(families.id, seed.family.id));
+    await h.runDue(handlers());
+
+    expect(await enqueueOutbound(h.deps, h.db, arrivalRequest(seed, exchangeId))).toEqual({
+      duplicate: true,
+    });
+    expect(await rowsOf("arrival")).toMatchObject([{ status: "dropped", error: "family_ended" }]);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+  });
+});
+
+describe("reconcile and a delivery job that was lost", () => {
+  it("re-drives a queued arrival whose job never ran, once, and it goes out exactly once", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    // The job is gone: the queue send failed after the insert, or the dead-letter queue took it.
+    h.queues.outbound.clear();
+
+    // Within the grace a job may still be on its way.
+    h.clock.advanceMinutes(STRANDED_AFTER_MINUTES - 1);
+    await reconcile(h.deps);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+
+    h.clock.advanceMinutes(2);
+    await reconcile(h.deps);
+    await reconcile(h.deps);
+
+    expect(h.queues.outbound.pending.map((entry) => entry.job)).toEqual([
+      { type: "deliver", outboundId: id },
+    ]);
+    const [claimed] = await outboundRows();
+    expect(claimed).toMatchObject({
+      status: "queued",
+      attempts: 1,
+      queuedAt: h.clock.now(),
+      error: "stranded: no delivery ran by its due time",
+    });
+    expect(
+      h.logger.entries.filter((entry) => entry.event === "outbound_stranded").map((e) => e.fields),
+    ).toEqual([{ outboundId: id, kind: "arrival", attempts: 1 }]);
+
+    await h.runDue(handlers());
+
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await exchangeState(exchangeId)).toMatchObject({ state: "delivered" });
+    h.clock.advanceMinutes(STRANDED_AFTER_MINUTES + 1);
+    await reconcile(h.deps);
+    await h.runDue(handlers());
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect((await outboundRows()).map((row) => [row.status, row.attempts])).toEqual([["sent", 2]]);
+  });
+
+  it("leaves a row waiting for its retry alone until the retry itself is overdue", async () => {
+    const seed = await family();
+    const id = await enqueued(systemTo(seed, "flaky"));
+    h.telegram.failNextSends(1, "unavailable");
+    await h.runDue(handlers());
+    const [waiting] = await outboundRows();
+    expect(waiting?.queuedAt).toEqual(new Date(h.clock.now().getTime() + 5 * 60_000));
+
+    // Twelve minutes after the insert, but only seven after the retry was due.
+    h.clock.advanceMinutes(12);
+    await reconcile(h.deps);
+    expect(h.queues.outbound.pending.map((entry) => entry.delaySeconds)).toEqual([300]);
+    expect((await outboundRows())[0]?.attempts).toBe(1);
+
+    // The retry job is lost too.
+    h.queues.outbound.clear();
+    h.clock.advanceMinutes(4);
+    await reconcile(h.deps);
+
+    expect(h.queues.outbound.pending.map((entry) => [entry.job, entry.delaySeconds])).toEqual([
+      [{ type: "deliver", outboundId: id }, 0],
+    ]);
+    await h.runDue(handlers());
+    expect((await outboundRows()).map((row) => [row.status, row.attempts])).toEqual([["sent", 3]]);
+    expect(h.telegram.sent).toHaveLength(1);
+  });
+
+  it("fails an arrival whose every delivery is lost once its tries are spent, and tells each organiser once", async () => {
+    const seed = await family();
+    const { exchangeId } = await arrivalFor(seed);
+
+    for (let lost = 0; lost < RETRY_DELAY_MINUTES.length + 1; lost += 1) {
+      h.queues.outbound.clear();
+      h.clock.advanceMinutes(STRANDED_AFTER_MINUTES + 1);
+      await reconcile(h.deps);
+    }
+
+    const [arrival] = (await outboundRows()).filter((row) => row.kind === "arrival");
+    expect(arrival).toMatchObject({ status: "failed", attempts: 4 });
+    expect(arrival?.error).toMatch(/^stranded: /);
+    expect(await exchangeState(exchangeId)).toMatchObject({ deliveryFailedAt: h.clock.now() });
+    await h.run(handlers());
+    expect(
+      h.telegram.sentTo(seed.organiserLink.externalId).map((sent) => sent.message.text),
+    ).toEqual(["We couldn't reach Mom on Telegram today. Nothing else is known."]);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(0);
+    expect((await eventNames()).filter((name) => name === "arrival_delivery_failed")).toHaveLength(
+      1,
+    );
+  });
+
+  it("drops a spent arrival whose family has ended instead of failing it, and tells nobody", async () => {
+    const seed = await family();
+    const { exchangeId } = await arrivalFor(seed);
+    for (let lost = 0; lost < RETRY_DELAY_MINUTES.length; lost += 1) {
+      h.queues.outbound.clear();
+      h.clock.advanceMinutes(STRANDED_AFTER_MINUTES + 1);
+      await reconcile(h.deps);
+    }
+    await h.db
+      .update(families)
+      .set({ deletedAt: h.clock.now() })
+      .where(eq(families.id, seed.family.id));
+    h.queues.outbound.clear();
+    h.clock.advanceMinutes(STRANDED_AFTER_MINUTES + 1);
+
+    await reconcile(h.deps);
+    await h.run(handlers());
+
+    expect((await outboundRows()).map((row) => [row.kind, row.status])).toEqual([
+      ["arrival", "dropped"],
+    ]);
+    expect(await exchangeState(exchangeId)).toMatchObject({ deliveryFailedAt: null });
+    expect(h.telegram.sent).toHaveLength(0);
+  });
+});
+
+describe("deliverOutbound takes the row before it sends", () => {
+  /**
+   * Deps whose Telegram holds every send until `release`, as the network holds a send in flight, so
+   * a second delivery of the row can run while the first is at the platform. `entered(n)` resolves
+   * once `n` sends have begun.
+   */
+  function holdingSends(): {
+    deps: Deps;
+    entered: (count: number) => Promise<void>;
+    release: () => void;
+  } {
+    let calls = 0;
+    const waiting: { count: number; resolve: () => void }[] = [];
+    let open = (): void => undefined;
+    const released = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    const adapter: ChannelAdapter = {
+      ...h.telegram,
+      async send(message) {
+        calls += 1;
+        for (const waiter of waiting) {
+          if (calls >= waiter.count) {
+            waiter.resolve();
+          }
+        }
+        await released;
+        return h.telegram.send(message);
+      },
+    };
+    return {
+      deps: { ...h.deps, channels: { get: () => adapter } },
+      entered: (count) =>
+        new Promise((resolve) => {
+          if (calls >= count) {
+            resolve();
+          } else {
+            waiting.push({ count, resolve });
+          }
+        }),
+      release: () => open(),
+    };
+  }
+
+  // Flows §3.7: a duplicate of the job (the queue delivers at least once), or a re-driven job beside
+  // a late one, can run while the first delivery's send is out. Telegram has no idempotency keys.
+  it("sends a row once when a second delivery of it runs while the first is at Telegram", async () => {
+    const seed = await family();
+    const { id } = await arrivalFor(seed);
+    const held = holdingSends();
+
+    const first = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    const second = deliverOutbound(held.deps, id);
+    await Promise.race([second, held.entered(2)]);
+    held.release();
+
+    expect(await Promise.all([first, second])).toEqual(["sent", "skipped"]);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
+  it("sends a row once when two deliveries read it before either takes it", async () => {
+    const seed = await family();
+    const { id } = await arrivalFor(seed);
+    const held = holdingSends();
+
+    const first = deliverOutbound(held.deps, id);
+    const second = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    // The one that did not take the row returns; without the take, both would be at Telegram.
+    await Promise.race([first, second, held.entered(2)]);
+    held.release();
+
+    expect((await Promise.all([first, second])).sort()).toEqual(["sent", "skipped"]);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
+  // The morning her pause dropped is the same row when her start queues it again, so the job of
+  // the delivery that dropped it, delivered once more, finds it queued beside the new one.
+  it("sends once the morning her start queued again while a job of its dropped delivery runs beside the new one", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    expect(await h.runDue(handlers())).toBe(1);
+    await h.db.update(members).set({ status: "active" }).where(eq(members.id, seed.member.id));
+    expect(await enqueueOutbound(h.deps, h.db, arrivalRequest(seed, exchangeId))).toEqual({
+      outboundId: id,
+    });
+    const held = holdingSends();
+
+    const fresh = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    const old = deliverOutbound(held.deps, id);
+    await Promise.race([old, held.entered(2)]);
+    held.release();
+
+    expect(await Promise.all([fresh, old])).toEqual(["sent", "skipped"]);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+  });
+
+  // The take decides (flows §3.7, §3.13): a morning a delivery took before her stop goes out, as one
+  // already at Telegram would, and a delivery of the row that reads her paused leaves it to the one
+  // that holds it.
+  it("sends the morning a delivery took before she said stop, and a delivery that reads her paused leaves it", async () => {
+    const seed = await family();
+    const { id } = await arrivalFor(seed);
+    const held = holdingSends();
+
+    const first = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    expect(await deliverOutbound(h.deps, id)).toBe("skipped");
+    held.release();
+
+    expect(await first).toBe("sent");
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 1 }]);
+    expect(await h.db.select().from(events).where(eq(events.name, "gateway_dropped"))).toEqual([]);
+  });
+
+  // The message went out and the commit that records it failed. Nothing can tell that send from one
+  // that never happened, so the row is never sent again, and it ends failed (flows §3.7).
+  it("never sends again a row whose send went out unrecorded, and fails it once no delivery can hold it", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    h.queues.outbound.clear();
+
+    await expect(deliverOutbound(failsTransactionsFrom(1), id)).rejects.toThrow();
+    // The queue delivers the job again half a minute later.
+    h.clock.advance(30_000);
+    expect(await deliverOutbound(h.deps, id)).toBe("skipped");
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+
+    // Past its due time, but held for less than any delivery runs: no re-drive, no failure yet.
+    h.clock.advanceMinutes(CLAIM_LOST_AFTER_MINUTES - 1);
+    await reconcile(h.deps);
+    expect(await outboundRows()).toMatchObject([{ id, status: "queued", attempts: 0 }]);
+    expect(h.queues.outbound.pending).toHaveLength(0);
+
+    h.clock.advanceMinutes(1);
+    await reconcile(h.deps);
+    const [row] = await outboundRows();
+    expect(row).toMatchObject({ id, status: "failed", attempts: 1, sentAt: null });
+    expect(row?.error).toMatch(/^interrupted: /);
+    expect(await exchangeState(exchangeId)).toMatchObject({ deliveryFailedAt: h.clock.now() });
+
+    await h.run(handlers());
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+    expect(
+      h.telegram.sentTo(seed.organiserLink.externalId).map((sent) => sent.message.text),
+    ).toEqual(["We couldn't reach Mom on Telegram today. Nothing else is known."]);
+  });
+
+  // Flows §3.7: a late job that has taken the row is sending it, so the row is not lost, and it
+  // must not be failed, or its organisers told of a failure, while the morning reaches her.
+  it("leaves a row a delivery is sending to that delivery when reconcile finds it overdue", async () => {
+    const seed = await family();
+    const { id, exchangeId } = await arrivalFor(seed);
+    h.queues.outbound.clear();
+    // Three tries have failed, and the job of the last retry runs more than 10 minutes late.
+    await h.db.update(outbound).set({ attempts: 3 }).where(eq(outbound.id, id));
+    h.clock.advanceMinutes(STRANDED_AFTER_MINUTES + 1);
+    const held = holdingSends();
+
+    const late = deliverOutbound(held.deps, id);
+    await held.entered(1);
+    await redriveStrandedOutbound(h.deps);
+    expect(await outboundRows()).toMatchObject([
+      { id, status: "queued", attempts: 3, error: null },
+    ]);
+    expect(h.logger.entries.filter((entry) => entry.event === "outbound_stranded")).toEqual([]);
+    held.release();
+
+    expect(await late).toBe("sent");
+    expect(await outboundRows()).toMatchObject([{ id, status: "sent", attempts: 4 }]);
+    expect(await exchangeState(exchangeId)).toMatchObject({
+      state: "delivered",
+      deliveryFailedAt: null,
+    });
+    expect(h.queues.outbound.pending).toHaveLength(0);
+    expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+  });
+});

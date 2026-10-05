@@ -1,0 +1,39 @@
+{
+  "update_id": 873920422,
+  "message": {
+    "message_id": 322,
+    "from": {
+      "id": 6023817745,
+      "is_bot": false,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "language_code": "zh-hant"
+    },
+    "chat": {
+      "id": 6023817745,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "type": "private"
+    },
+    "date": 1789267200,
+    "sticker": {
+      "width": 512,
+      "height": 512,
+      "emoji": "😊",
+      "set_name": "HotCherry",
+      "is_animated": false,
+      "is_video": false,
+      "type": "regular",
+      "thumbnail": {
+        "file_id": "AAMCAgADGQEAAgFGZuP3AAG1kQABfW8yAAHqAAFwsQACGgADwDZPEwABB20AAzYE",
+        "file_unique_id": "AQADGgADwDZPE3I",
+        "file_size": 5240,
+        "width": 320,
+        "height": 320
+      },
+      "file_id": "CAACAgIAAxkBAAIBRmbj9wABtZEAAX1vMgAB6gABcLEAAhoAA8A2TxMB",
+      "file_unique_id": "AgADGgADwDZPEw",
+      "file_size": 28154
+    }
+  }
+}

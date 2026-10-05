@@ -1,0 +1,38 @@
+{
+  "update_id": 873920435,
+  "message": {
+    "message_id": 323,
+    "from": {
+      "id": 6023817745,
+      "is_bot": false,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "language_code": "zh-hant"
+    },
+    "chat": {
+      "id": 6023817745,
+      "first_name": "Mei-hua",
+      "last_name": "Lin",
+      "type": "private"
+    },
+    "date": 1789266600,
+    "video": {
+      "duration": 18,
+      "width": 720,
+      "height": 1280,
+      "file_name": "VID_20260913_103000.mp4",
+      "mime_type": "video/mp4",
+      "thumbnail": {
+        "file_id": "AAMCBQADGQEAAgFDZuP7hQABHc1r9pWm0Q2xVnY4pZ3wAAJvEwACo98gVwABjM2yH8oPAQAHbQADNgQ",
+        "file_unique_id": "AQADbxMAAqPfIFdy",
+        "file_size": 14920,
+        "width": 180,
+        "height": 320
+      },
+      "file_id": "BAACAgUAAxkBAAIBQ2bj-4UAAR3Na_aVptENsVZ2OKWd8AACbxMAAqPfIFeMzbIfyg8BAAc2BA",
+      "file_unique_id": "AgADbxMAAqPfIFc",
+      "file_size": 4183262
+    },
+    "caption": "孫子第一次騎腳踏車"
+  }
+}

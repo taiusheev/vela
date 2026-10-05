@@ -1,8 +1,12 @@
 # Vela: execution plan
 
+> **Revised 2026-09-18.** The founder's own parent, a Russian citizen living in Russia, is not the first pilot family. Russia's Federal Law 152-FZ reaches a foreign individual who processes a Russian citizen's data by consent and, since Law 23-FZ of 28 February 2025, forbids storing it in databases outside Russia, while Vela stores in Singapore; and Telegram has been largely inaccessible in Russia since mid-March 2026, so arrivals would not arrive reliably and quiet notices would fire on the platform's failure (`plan/materials/pilot/legal-memo.md` Q6). The three-day test with the founder's parent becomes a dogfooding week on staging, and the first real families are families living in Taiwan, onboarded after that week passes and production is deployed (week 2 and week 3 below). The elder-acceptance check moves to the first families' onboarding calls, and the onboarding script and the week-4 question to each parent are in English or Traditional Chinese (weeks 1, 2 and 4, and the founder's list at the end). The parent waits until there is a channel that works in Russia and a lawyer has advised on 152-FZ; Russia stays deferred (`market-order.md`).
+>
+> **Revised 2026-09-17.** The pilot is free for families: there is no fee and no payment, because Vela has no entity yet and payments wait for one (decision of 2026-09-13). Willingness to pay is measured instead by asking each organiser on the day-30 call whether they would pay for Vela Light at $9.99/mo, and by who joins a paid plan once it exists; the goal, the pilot offer, and the kill signals below say so.
+>
 > **Revised 2026-09-13.** Markets reordered: Taiwan and the English-speaking app path first, then Japan and Germany/UK, then the US at scale and India; Russia deferred (`market-order.md`). The survey and interview wave is replaced by published evidence (research/08–14); the twelve-week build order now lives in `pre-build-readiness.md` (instrument first, foundation, family app, parent surface, Taiwan on LINE, measure). Phase exit tests below stand, with targets revised in spec v2 §18.
 
-v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, Taipei, Russian and English, 40–60 h/week, near-zero budget) and the tech co-founder (AI, always on). The product is defined in `product/02-app-plan.md`.
+v1, 2026-09-12. Supersedes the 30-day plan (`archive/plan/`). Two people: the founder (business, Taipei, Russian and English, 40–60 h/week, near-zero budget) and the tech co-founder (AI, always on). The product is defined in `product/02-app-plan.md`.
 
 ## The order of things
 
@@ -12,14 +16,14 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 
 ## Phase 0: prove the loop (weeks 1–4)
 
-**Goal.** Twenty conversations and ten to twenty families living the daily loop for at least two weeks, with paying money on the table, so that the MVP is built from evidence. Each pilot family should have three generations where possible: the eldest as the kept-light member, the organiser in the middle, and at least one member under 30 as a contributor, so we test both promises (closer, calmer) at once.
+**Goal.** Twenty conversations and ten to twenty families living the daily loop for at least two weeks, with every organiser asked whether they would pay for it, so that the MVP is built from evidence. Each pilot family should have three generations where possible: the eldest as the kept-light member, the organiser in the middle, and at least one member under 30 as a contributor, so we test both promises (closer, calmer) at once.
 
 **Two questions every interview and survey must answer.** Who in your family do you *wish* you heard from more often? Who do you *worry* about when they go quiet? If wishes cluster on the 20–45 pair and worries on the eldest, the three-generation design is confirmed.
 
 **Founder, week 1**
 - Post the survey (materials in `plan/materials/`, update the intro line so it speaks to all families, not only abroad). Channels: your own network first, Russian-speaking Telegram groups in Taiwan and the relocation cities, Taiwanese friends with the Chinese version, r/AgingParents with the English version.
-- Book the first eight interviews from respondents who opted in. The script is in `plan/materials/interview-script.md`; add the five bridge questions from `product/01-solution-thinking.md` §6.
-- Talk to your own parent about the morning arrival. Show a mock. This is the elder-acceptance check.
+- Book the first eight interviews from respondents who opted in. The script is in `plan/materials/interview-script.md`; add the five bridge questions from `archive/product/01-solution-thinking.md` §6.
+- Prepare a mock of the morning arrival to show the kept-light member on each first family's onboarding call (families living in Taiwan, week 3). This is the elder-acceptance check. Your own parent waits (revision note of 2026-09-18 above).
 - Make the repo public or keep it private; decide, don't drift.
 - Time: 30 h.
 
@@ -30,25 +34,25 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 - Weekly review template and a decisions log.
 
 **Founder, week 2**
-- Interviews 9–16. Every interview ends with the pilot offer: $15 for the month, refundable, starts next Monday. Take payment on the spot through whatever the person already has (Wise, Revolut, PayPal).
+- Interviews 9–16. Every interview ends with the pilot offer: free for families, starts next Monday. No payment is taken; whether the organiser would pay is asked on the day-30 call.
 - Ten families confirmed with parents' names, messengers, wake times, and two nearby contacts each.
 - Time: 40 h.
 
 **Tech co-founder, week 2**
-- Deploy the prototype once you've created the Telegram bot, the Cloudflare account, and the Anthropic key (20 minutes; see `bot/README.md`).
-- Three-day test with your own parent before any other family.
-- Onboarding script for you: five minutes with the child, five minutes with the parent, in Russian.
+- Deploy the prototype once you've created the Telegram bot, the Cloudflare account, and the Anthropic key (20 minutes; see `plan/build-plan.md` sprint 0).
+- A dogfooding week on staging before any family: you as the organiser, and a second Telegram account of yours, or a friend living in Taiwan who agrees, as the kept-light member. A friend takes part only once the providers' data processing terms are in place, and uses only scripted test content, so staging holds nothing real but the friend's name, Telegram account and consent rows, deleted when the week ends (`plan/materials/pilot/README.md`, "Before any family"). It runs onboarding, consent, the health-words question, arrivals, answers, the quiet ladder, the weekly read, stop and start, the admin page, and the watchdog. Your own parent is not onboarded (revision note of 2026-09-18 above).
+- Onboarding script for you: five minutes with the child, five minutes with the parent, in English or Traditional Chinese, from the pilot pack's consent script (`plan/materials/pilot/consent-script.en.md` and its `.zh-TW` twin, which waits for native review before a Taiwanese family hears it).
 
 **Week 3: pilot live**
-- Founder: onboard families; read every conversation daily; write the weekly read by hand for each family on Sunday (the AI drafts, you edit; every edit is logged as a product lesson); interview anyone who declines or drops.
+- Founder: onboard families living in Taiwan (your friends and their families), once the dogfooding week has passed and production is deployed, each within "Who can join" in `plan/materials/pilot/README.md`; read every conversation daily; write the weekly read by hand for each family on Sunday (the AI drafts, you edit; every edit is logged as a product lesson); interview anyone who declines or drops.
 - Tech co-founder: run the daily loop, tune quiet times, log reply rate, latency, family-content days, quiet notices and whether they were true.
 
 **Week 4: measure and decide**
-- Founder: day-14 check-in with every family, one question: "If Vela stopped tomorrow, how would you feel?" Ask each parent, through the chat, one question: "Нравится ли вам получать это по утрам?"
+- Founder: day-14 check-in with every family, one question: "If Vela stopped tomorrow, how would you feel?" Ask each parent, through the chat, one question in their language: "Do you like getting this in the morning?", or its Traditional Chinese version once the native reviewer has checked it.
 - Tech co-founder: phase-0 report with the numbers in `product/02-app-plan.md` §9; what the arrival must contain; what the weekly read must say; the MVP scope cut to what was proven.
 - Decision: build the MVP, or change one variable and rerun phase 0.
 
-**Kill signals.** Fewer than 4 families paying after 20 interviews. More than 30% of parents refusing or going silent in week one for reasons other than being away. Family-content days under 30% by week two despite prompts.
+**Kill signals.** Fewer than 4 organisers of the ten to twenty pilot families saying on their day-30 call that they would pay for Vela Light at $9.99/mo (the same threshold as `build-plan.md` and `pre-build-readiness.md`). More than 30% of parents refusing or going silent in week one for reasons other than being away. Family-content days under 30% by week two despite prompts.
 
 ## Phase 1: MVP (months 2–3)
 
@@ -59,7 +63,8 @@ v1, 2026-09-12. Supersedes `30-day-plan.md`. Two people: the founder (business, 
 - Admin view for the first months.
 
 **Founder**
-- Convert phase-0 families to the app; recruit toward 100 families through their referrals (ask each paying family for two introductions; contributors are the referral engine).
+- Day-30 call with every phase-0 organiser: "If Vela stopped tomorrow, how would you feel?" and "Would you pay for Vela Light at $9.99/mo?"
+- Convert phase-0 families to the app; recruit toward 100 families through their referrals (ask each pilot family for two introductions; contributors are the referral engine).
 - Pricing test: $9.99/mo vs $79/yr vs $14.99/mo across cohorts.
 - Ten more interviews with families who declined, to learn the objections.
 - Taiwan groundwork: five conversations with Taiwanese families with a parent living alone; LINE is the channel.
@@ -95,7 +100,7 @@ The founder asked for these as the first MVP. They are built from the same mater
 6. Closer and calmer: what makes it more than a group chat (turns, prompts, grandchildren, translation, story day) and what makes silence mean something.
 7. Why now (messengers everywhere, multilingual AI, super-aged crossover in Taiwan/Korea/Japan).
 8. Business model (free layer spreads, Vigil pays; comparables: Famileo, Snug, Docomo).
-9. Phase-0 evidence (reply rate, family-content days, what parents said, what children paid).
+9. Phase-0 evidence (reply rate, family-content days, what parents said, how many organisers said they would pay).
 10. The founder, the ask, the plan to 1,000 families.
 
 ## Cadence
@@ -106,7 +111,7 @@ The founder asked for these as the first MVP. They are built from the same mater
 
 ## What the founder needs to do this week, in order
 
-1. Create the Telegram bot, the Cloudflare account, and the Anthropic key (20 minutes, `bot/README.md`).
+1. Create the Telegram bot, the Cloudflare account, and the Anthropic key (20 minutes, `plan/build-plan.md` sprint 0).
 2. Post the survey in three places today.
 3. Book eight interviews.
-4. Show your parent a mock of the morning arrival and write down her exact words.
+4. Prepare the morning arrival mock to show on the first families' onboarding calls.

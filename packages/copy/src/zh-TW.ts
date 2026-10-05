@@ -1,0 +1,216 @@
+/**
+ * Traditional Chinese as written in Taiwan. These strings await native review before launch
+ * (spec §20); until a native speaker signs them off, treat every line here as a draft.
+ *
+ * Register: warm and plain, 您 toward the kept-light member and organisers, Taiwanese vocabulary
+ * (訊息, 設定, 群組, 略過, 早安) rather than mainland terms. The kept-light member is always
+ * named or called 這位家人, never 他 or 她 (其他, "other", is not a pronoun), and nothing uses 監控,
+ * 監看, 監視, 追蹤, 盯著, or 看著您 (the surveillance words the consent script forbids), for the
+ * same reasons as the English rules. `onboarding.done` asks for a separate new group without the
+ * member, not the 家族群組 the family already has, which usually includes the elders (see the note
+ * in en.ts). The stop and start words the member is told to say (「停」,
+ * 「開始」) must stay in step with the zh-TW keywords of `parseParentCommand` in @vela/core.
+ * `consent.request`, `consent.yes`, and `consent.no` are what the founder reads aloud on the consent
+ * call (plan/materials/pilot/consent-script.zh-TW.md, sections 2 and 6): change the script with
+ * them. A tap records the message's text version and a hash of the text as rendered, so a change of
+ * meaning here is a new text version in services, as in English (see the note in en.ts). The
+ * founder's name stays in its Latin spelling, as in every language. `consent.health_words` speaks of
+ * 身體狀況 (the state of one's body), the everyday way to say "your health" in a question, and keeps
+ * the English promise that a no changes nothing else (就算您說不要，Vela 也會照常運作).
+ *
+ * `onboarding.ask_nearby` and `onboarding.nearby_no_number` ask for a name and the contact's
+ * relation to 這位家人, never a number; the example 王小姐，鄰居 uses the full-width comma that
+ * onboarding splits the name and the relation at.
+ *
+ * The weekly read is 每週小記, the name the zh-TW privacy notice and consent script give it. Chinese
+ * counts have one form, so each `weekly_read.*_one` key repeats its plural key (see the note in
+ * en.ts). `parent.family_sees_weekly_read` says 每週小記裡…的幾行, the lines from the read, because
+ * the lines are all she gets (see the note in en.ts).
+ *
+ * Latin text, digits, and placeholders that always render as Latin or digits ({time}, {sent},
+ * {usual}, {n}, {answered}, {days}, {mornings}, {used}, {limit}, {channel}, {link}, {notice}) are
+ * separated from Chinese characters by a space. The URLs {link} and {notice} also keep a space after the full-width
+ * colon, so a messenger's link detection cannot take a neighbouring character as part of the URL.
+ * Placeholders for names ({name}, {names}, {asker}, {holder}, {organiser}, {child}, {address},
+ * {family}) touch the Chinese characters around them, as a written name would, and so does
+ * {suggestion}, an ask worded as the family would send it.
+ */
+import type { en } from "./en.ts";
+
+export const zhTW: Record<keyof typeof en, string> = {
+  "account_link.code":
+    "請在 Vela 輸入這個代碼，連結您的 Telegram 帳號：{code}\n請保密；代碼即將到期。",
+  "account_link.unavailable":
+    "無法開啟這個帳號連結。請先在 Telegram 完成家人的設定，再從 Vela 建立新的連結。",
+  "pilot.activation_wait":
+    "您的燈還沒亮起。家人的安排人需要一個已獲准、且能收到訊息的 Telegram 帳號。請安排人完成設定，再試一次。",
+  "pilot.invitation_only":
+    "Vela 的英語試用僅限受邀者。請聯絡創辦人申請使用。您的 Telegram ID：{telegram_id}。",
+  "arrival.greeting": "{address}，早安。",
+  "arrival.late": "不好意思，這則訊息晚到了。",
+  "arrival.repeat": "怕您沒看到，再傳一次：",
+  "arrival.readback_heading": "昨天家人的回覆：",
+  "arrival.asks": "{asker}想問您：",
+  "arrival.asks_on_behalf": "{asker}替{child}問您：",
+  "arrival.sent_photo": "{asker}傳了一張照片給您。",
+  "arrival.sent_voice": "{asker}傳了一則語音訊息給您。",
+  "arrival.photo_gone": "{asker}想給您看一張照片，可惜照片已經看不到了。您今天過得好嗎？",
+  "arrival.photo_choice": "選哪一張呢？請按 1 或 2。",
+  "arrival.vote": "請按一個選項。",
+  "arrival.hello": "今天家人沒有新的消息。您早上過得好嗎？",
+  "arrival.hello_signature": "Vela，代表您的家人",
+  "arrival.hint": "您可以傳語音訊息回覆，或按下面的按鈕。",
+  "button.fine": "我很好",
+  "button.heart": "❤️",
+  "button.choice": "{n}",
+  "ack.thanks": "謝謝您，{address}。家人會收到的。",
+  "ack.story": "謝謝您，{address}。您說的故事已經收進家庭故事書了。",
+  "book.dont_keep": "這則不要保留",
+  "book.dropped": "沒問題，這則故事已經從家庭故事書拿掉了。",
+  "recipe.offer": "{address}，這是您說的{title}做法：\n\n{card}\n\n要收進家庭故事書嗎？",
+  "recipe.ingredients": "材料：",
+  "recipe.steps": "做法：",
+  "recipe.remarks": "小叮嚀：",
+  "recipe.keep": "保留",
+  "recipe.not_this": "這個不要",
+  "recipe.kept": "好的，{title}已經收進家庭故事書了。",
+  "recipe.dropped": "沒問題，這份食譜不保留。",
+  "readback.replied": "{name}：{text}",
+  "readback.voice": "{name}傳了一則語音訊息。",
+  "readback.photo": "{name}傳了一張照片。",
+  "readback.reactions": "{names}送上{emoji}",
+  "consent.invalid_link": "這個連結已經失效了。請跟傳連結給您的人再要一個新的。",
+  "consent.already_linked": "這個 Telegram 帳號已經連結到 Vela 上的另一個家庭。",
+  "consent.request":
+    "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。Vela 由 Timur Aiusheev 經營。您的資料會怎麼使用，請看： {notice}",
+  "consent.health_words":
+    "還有一個問題。如果您提到身體狀況，例如跌倒或哪裡痛，Vela 可以把您說的話轉告{organiser}，讓{organiser}打電話給您嗎？就算您說不要，Vela 也會照常運作。",
+  "consent.yes": "好，沒問題",
+  "consent.no": "不用了，謝謝",
+  "consent.accepted": "謝謝您。第一則早安訊息會在明天 {time} 送到。",
+  "consent.declined": "沒關係，不會傳任何訊息給您。",
+  "organiser.consent_given": "{name}同意了。第一則早安訊息會在明天 {time} 送到。",
+  "organiser.consent_declined": "{name}說暫時先不要。不會傳送任何訊息。",
+  "invite.for_her":
+    "{name}您好，我是{organiser}。我想為您留一盞燈：每天早上，家人會問您一件小事。打開這個連結看看，願意的話就說好： {link} 您隨時都可以說「停」。",
+  "organiser.invite_again": "這是新的邀請連結。請把這個連結傳給{name}： {link} 連結 7 天內有效。",
+  "parent.stopped": "已經全部暫停了。想恢復的時候，隨時說「開始」就可以了。",
+  "parent.started": "歡迎回來。下一則早安訊息會在 {time} 送到。",
+  "organiser.stopped": "{name}想先暫停。系統一切正常。",
+  "parent.family_sees_heading": "家人從您最近的回覆看到的是：",
+  "parent.family_sees_empty": "還沒有內容。您回覆早安訊息之後，家人就會看到。",
+  "parent.family_sees_weekly_read": "最近一次傳給家人的每週小記裡，關於您這一週的幾行：",
+  "group.linked":
+    "大家好，我是 Vela。每天晚上，我會告訴大家明天早上輪到誰問{name}一件事。Vela 如何處理大家的訊息： {notice}",
+  "group.notice_read": "我看過了",
+  "group.not_linked": "只有家庭的發起人才能把 Vela 連結到群組。",
+  "group.turn_prompt":
+    "明天輪到{holder}問{name}。請直接回覆這則訊息，傳一個問題、一張照片或一段語音。",
+  "group.turn_prompt_open":
+    "明天大家都可以問{name}一件事。請直接回覆這則訊息，傳一個問題、一張照片或一段語音。",
+  "group.ask_confirmed": "已放進{name}的早安訊息。",
+  "group.ask_queued": "明天已經有{asker}的提問了。這則先保留，改天早上再送出。",
+  "group.ask_from_app": "{asker}已經為{name}準備好明天早上的提問。",
+  "group.answer_light": "☀️ {name}回覆了{asker} · {time}",
+  "group.answer_hello": "☀️ {name}一切都好 · {time}",
+  "group.answer_chip": "{name}選了：{choice}",
+  "group.answer_pick": "{name}選了第 {n} 張照片。",
+  "group.answer_vote": "{name}投票：{choice}",
+  "group.answer_text": "{name}：{text}",
+  "group.answer_transcript": "{name}（語音）：{text}",
+  "quiet.notice":
+    "{name}那邊今天比較安靜。早安訊息在 {sent} 送出；{name}通常會在 {usual} 前回覆。目前沒有任何令人擔心的消息。",
+  "quiet.notice_no_usual":
+    "{name}那邊今天比較安靜。早安訊息在 {sent} 送出。目前沒有任何令人擔心的消息。",
+  "quiet.nearby": "附近的聯絡人：{contacts}",
+  "quiet.fine_button": "{name}沒事，我知道原因",
+  "quiet.wait_button": "再等 2 小時",
+  "quiet.waiting": "我會在 {time} 再看看。",
+  "quiet.resolved_answered": "{name}在 {time} 回覆了。燈又亮了。",
+  "quiet.resolved_fine": "{organiser}說{name}沒事。",
+  "quiet.resolved_away": "{organiser}說{name}不在家。",
+  "delivery.failed": "今天沒辦法透過 {channel} 把訊息送給{name}。除此之外，目前沒有別的消息。",
+  "flag.notice": "{name}說了一句話，您可能會想知道：「{quote}」",
+  "flag.notice_no_words": "{name}今天說了一些話，也許值得打個電話問問。",
+  "push.quiet_notice":
+    "{name}那邊今天比較安靜。早安訊息在 {sent} 送到。打開 Vela，可以打個電話，也可以再等等。",
+  "push.answer_receipt": "{name}回覆了您。",
+  "push.turn_prompt": "明天早上輪到您了：問問{name}一件事吧。",
+  "away.confirmed": "好的，那就到{date}為止。祝您過得愉快。",
+  "away.confirmed_open": "好的，知道了。祝您過得愉快。",
+  "weekly_read.answered": "{name}這週 {days} 天中回覆了 {answered} 天。",
+  "weekly_read.answered_one": "{name}這週 {days} 天中回覆了 {answered} 天。",
+  "weekly_read.hello_mornings": "有 {mornings} 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。",
+  "weekly_read.hello_mornings_one":
+    "有 {mornings} 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。",
+  "weekly_read.nobody_asked": "這週家裡沒有人問{name}任何事。",
+  "weekly_read.suggestion": "下週可以問問看：{suggestion}",
+  "help.private": "您好。想為家人設定 Vela 的話，請傳送 /start。",
+  "help.followed":
+    "您好，我是 Vela。如果家人傳了邀請給您，請現在打開。想為自己的家人設定 Vela，請傳 /start。",
+  "nearby.request":
+    "{organiser}想問您：您住在{name}附近。如果哪天{name}一直沒有回覆，{organiser}又聯絡不上，{organiser}可以透過 Vela 請您過去看看嗎？Vela 不會自己傳訊息給您：任何請求都來自{organiser}。如果您同意，Vela 會保存您的名字和這個 Telegram 帳號，直到您或{organiser}把它們移除。您可以說不，也可以隨時傳送「停」改變主意。Vela 是由 Timur Aiusheev 經營的試辦服務。您的資料會怎麼使用，請看： {notice}",
+  "nearby.yes": "好，我願意",
+  "nearby.no": "不用了，謝謝",
+  "nearby.accepted":
+    "謝謝您。只有在{organiser}請您過去看看{name}的時候，Vela 才會傳訊息給您。隨時傳送「停」就可以移除。",
+  "nearby.declined": "沒關係。您的資料已經刪除，不會再有人問您。",
+  "nearby.already_listed": "您已經列在{name}附近的人裡了，沒有任何變更。",
+  "nearby.ask": "{organiser}想問您：今天可以過去看看{name}嗎？{name}今天早上還沒有回覆。",
+  "nearby.ask_yes": "我會過去看看",
+  "nearby.ask_no": "今天沒辦法",
+  "nearby.thanks_yes": "謝謝您。{organiser}已經知道您會過去。",
+  "nearby.thanks_no": "謝謝您讓{organiser}知道，完全沒關係。",
+  "nearby.stand_down": "{name}已經回覆了，不用過去了。謝謝您。",
+  "nearby.removed": "已經為您移除，Vela 不會再傳訊息給您。",
+  "nearby.help": "只有在列出您的家庭請您過去看看時，Vela 才會傳訊息給您。傳送「停」就可以移除。",
+  "organiser.nearby_yes":
+    "{contact}同意了。之後如果哪天早上比較安靜，您可以請{contact}過去看看{name}。",
+  "organiser.nearby_no": "{contact}說不用了，所以{contact}已經不在{name}附近的人裡。",
+  "organiser.look_in_yes": "{contact}會過去看看{name}。",
+  "organiser.look_in_no": "{contact}今天沒辦法。",
+  "onboarding.welcome": "您好，我是 Vela。我們一起為一位家人留一盞燈吧。大約兩分鐘就能完成。",
+  "onboarding.ask_name": "您平常怎麼稱呼這位家人？例如：媽媽、阿嬤、爸爸。",
+  "onboarding.ask_address": "我每天早上問候時，要怎麼稱呼這位家人？例如：陳太太、媽媽。",
+  "onboarding.ask_language": "要用哪一種語言傳訊息給這位家人？",
+  "onboarding.ask_country": "這位家人住在哪個國家或地區？",
+  "onboarding.country_tw": "台灣",
+  "onboarding.country_vn": "越南",
+  "onboarding.country_us": "美國",
+  "onboarding.country_gb": "英國",
+  "onboarding.country_ca": "加拿大",
+  "onboarding.country_au": "澳洲",
+  "onboarding.country_sg": "新加坡",
+  "onboarding.country_jp": "日本",
+  "onboarding.country_de": "德國",
+  "onboarding.country_in": "印度",
+  "onboarding.country_other": "其他",
+  "onboarding.ask_zone": "在哪個時區？",
+  "onboarding.ask_zone_other":
+    "這位家人住在哪個時區？請輸入時區名稱，例如 Asia/Seoul 或 Europe/Paris。",
+  "onboarding.invalid_zone": "請輸入像 Asia/Seoul 或 Europe/Paris 這樣的時區名稱。",
+  "onboarding.ask_wake": "這位家人通常幾點起床？請按一個選項，或輸入像 07:30 這樣的時間。",
+  "onboarding.ask_nearby":
+    "有沒有住在附近、需要的時候可以過去看看的人？請傳送對方的名字，也可以加上對方和這位家人的關係，例如：王小姐，鄰居。或按「略過」。請您先親自問過對方。這裡只填名字：對方同意之後，才會加上電話號碼。",
+  "onboarding.nearby_no_number":
+    "請只傳送名字，也可以加上對方和這位家人的關係，例如：王小姐，鄰居。對方同意之後，才會加上電話號碼。",
+  "onboarding.skip": "略過",
+  "onboarding.invalid_time": "請輸入像 07:30 這樣的時間。",
+  "onboarding.done":
+    "設定完成。請把這個連結傳給{name}： {link} 然後另外建立一個家人群組（不要加{name}），把我加進去，讓家人可以輪流提問。",
+  "admin.weekly_read_draft": "{family}的每週小記草稿已經準備好了： {link}",
+  "admin.flag": "{family}有一則標記。查看： {link}",
+  "admin.understand_failed": "{family}有一則回覆試了三次仍無法讀取。查看： {link}",
+  "admin.member_left_group": "{name}退出了{family}的家人群組。{name}這邊沒有任何變動。",
+  "admin.organisers_unreachable":
+    "{family}已經無法再通知{name}，也沒有其他發起人能收到通知：那裡有人安靜下來時，不會有人知道。查看： {link}",
+  "admin.quiet_nobody_told":
+    "{family}的{name}那邊今天比較安靜，但沒有任何發起人能收到通知。查看： {link}",
+  "admin.line_quota": "LINE 本月已用了 {used} 則訊息，上限是 {limit} 則。查看： {link}",
+  "admin.line_quota_exhausted":
+    "LINE 本月的訊息額度已經用完：在方案變更或下個月開始之前，LINE 上的早安訊息和通知都會傳送失敗，只有回覆還能送出。查看： {link}",
+  "admin.quiet_notice_unheard":
+    "{family}的{name}那邊今天比較安靜，但傳到一位發起人手機的通知沒有送達。查看： {link}",
+  "admin.push_misconfigured":
+    "推播通知無法送出：Vela 的推播憑證被拒絕了，修好之前，任何通知都到不了手機。查看： {link}",
+};

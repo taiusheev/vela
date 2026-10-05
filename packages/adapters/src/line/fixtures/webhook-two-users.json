@@ -1,0 +1,42 @@
+{
+  "destination": "U2ba6561a468b4afe9fa1df6d946e23de",
+  "events": [
+    {
+      "replyToken": "52cda1cec6ca1481babfa4686c05ace6",
+      "type": "message",
+      "mode": "active",
+      "timestamp": 1790464068935,
+      "source": {
+        "type": "user",
+        "userId": "U3bf020427417f5c0decf3c1612d4e59a"
+      },
+      "webhookEventId": "01M3FZK3A7MQ64X9EMG0VMD9GX",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "message": {
+        "id": "560279695737337817",
+        "type": "text",
+        "quoteToken": "Qd5Wr9Xc3Na7Kb1Vg4Tf8Lm2Hj6Pi0Sk4Yu7Oe1Cn5Bs9Zw2Et6Hx0Dq3Ma7Gl1V",
+        "text": "早安"
+      }
+    },
+    {
+      "replyToken": "f452095ec7e2129b91bf24a4e829bf04",
+      "type": "follow",
+      "mode": "active",
+      "timestamp": 1790464086655,
+      "source": {
+        "type": "user",
+        "userId": "U8f8c4117e99b1a4fa8346f3d1c56731b"
+      },
+      "webhookEventId": "01M3FZKMKZ42PQMSR6W2KA1A7N",
+      "deliveryContext": {
+        "isRedelivery": false
+      },
+      "follow": {
+        "isUnblocked": true
+      }
+    }
+  ]
+}
