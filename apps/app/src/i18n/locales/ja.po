@@ -1576,8 +1576,16 @@ msgstr ""
 msgid "Sign out"
 msgstr ""
 
+#: app/(tabs)/you.tsx
+msgid "Sign-out did not finish. You are still signed in. Try again."
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "Signing in with a number is not open yet. Use your email instead."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Signing out…"
 msgstr ""
 
 #: src/auth/phone.ts

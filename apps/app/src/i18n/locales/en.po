@@ -1576,9 +1576,17 @@ msgstr "Sign in to connect your family."
 msgid "Sign out"
 msgstr "Sign out"
 
+#: app/(tabs)/you.tsx
+msgid "Sign-out did not finish. You are still signed in. Try again."
+msgstr "Sign-out did not finish. You are still signed in. Try again."
+
 #: app/sign-in.tsx
 msgid "Signing in with a number is not open yet. Use your email instead."
 msgstr "Signing in with a number is not open yet. Use your email instead."
+
+#: app/(tabs)/you.tsx
+msgid "Signing out…"
+msgstr "Signing out…"
 
 #: src/auth/phone.ts
 #: src/data/onboarding.ts

@@ -1,4 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
+import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
 import { Linking, Pressable, ScrollView, Switch, View } from "react-native";
@@ -86,6 +87,7 @@ export default function YouScreen() {
   const language = useAppLocale();
   const { familyId, noAccount, pushSent, loading: todayLoading } = useToday();
   const push = usePush();
+  const signingOut = useMutation({ mutationFn: () => push.signOut() });
   const moment = useOneMoment();
   const {
     family,
@@ -517,7 +519,16 @@ export default function YouScreen() {
           </Words>
           <TestSignInDetails />
           {/* push (A5): the phone is let go from the account first, so a phone handed on is not told. */}
-          <SecondaryButton label={t`Sign out`} onPress={() => void push.signOut()} />
+          <SecondaryButton
+            label={signingOut.isPending ? t`Signing out…` : t`Sign out`}
+            disabled={signingOut.isPending}
+            onPress={() => signingOut.mutate()}
+          />
+          {signingOut.isError ? (
+            <Words variant="body" tone="ink2">
+              <Trans>Sign-out did not finish. You are still signed in. Try again.</Trans>
+            </Words>
+          ) : null}
         </Card>
       ) : (
         <Words variant="caption" tone="ink3">

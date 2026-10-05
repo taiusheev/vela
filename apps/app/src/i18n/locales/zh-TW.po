@@ -1583,9 +1583,17 @@ msgstr ""
 msgid "Sign out"
 msgstr "登出"
 
+#: app/(tabs)/you.tsx
+msgid "Sign-out did not finish. You are still signed in. Try again."
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "Signing in with a number is not open yet. Use your email instead."
 msgstr "目前還不能用手機號碼登入，請改用電子郵件。"
+
+#: app/(tabs)/you.tsx
+msgid "Signing out…"
+msgstr ""
 
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
