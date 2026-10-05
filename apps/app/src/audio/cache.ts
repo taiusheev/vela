@@ -2,6 +2,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { requireOptionalNativeModule } from "expo-modules-core";
 import { Platform } from "react-native";
 import { ApiError, apiBaseUrl } from "../api/client.ts";
+import { sessionRequests } from "../api/request-session.ts";
 import { createAudioCache } from "./session-cache.ts";
 
 interface Decoder {
@@ -17,6 +18,7 @@ const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 
 export const audioCache = createAudioCache({
   async download(path, token) {
+    sessionRequests.assertToken(token);
     if (apiBaseUrl === undefined) throw new Error("Audio unavailable");
     if (Platform.OS === "web") {
       const controller = new AbortController();
@@ -56,6 +58,7 @@ export const audioCache = createAudioCache({
     }
     if (FileSystem.cacheDirectory === null) throw new Error("Audio unavailable");
     await FileSystem.makeDirectoryAsync(root, { intermediates: true });
+    sessionRequests.assertToken(token);
     const uri = `${temporary()}.source`;
     const download = FileSystem.createDownloadResumable(
       `${apiBaseUrl}${path}`,

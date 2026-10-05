@@ -1,7 +1,7 @@
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
-import { sessionRequests } from "../api/request-session.ts";
+import { RequestInterrupted, sessionRequests } from "../api/request-session.ts";
 import { clearAudioCache } from "../audio/cache.ts";
 import { clearPhotoCache } from "../data/photos.ts";
 import { activatePrivateSession, clearSessionDrafts } from "../storage/drafts.ts";
@@ -56,16 +56,19 @@ function ClerkAccount({ children }: { children: ReactNode }) {
       userId: userId ?? null,
       sessionId: sessionId ?? null,
       token: (options) =>
-        sessionRequests.runInScope(scope, () =>
+        sessionRequests.credential(scope, () =>
           getToken(options?.fresh === true ? { skipCache: true } : undefined),
         ),
       signOut: async () => {
+        sessionRequests.assertScope(scope);
+        if (sessionId == null) throw new RequestInterrupted("session");
         sessionRequests.end(scope);
         clearPhotoCache();
         void clearAudioCache().catch(() => {});
         await clearSessionDrafts(scope);
         try {
-          await signOut();
+          sessionRequests.assertEndingScope(scope);
+          await signOut({ sessionId });
         } catch (error) {
           // A failed provider sign-out leaves this identity active, but never resumes old work.
           if (sessionRequests.resume(scope)) activatePrivateSession(scope);

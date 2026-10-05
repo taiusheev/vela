@@ -19,6 +19,7 @@ export class SessionRequests {
   private generation = 0;
   private closed = false;
   private pending = new Set<AbortController>();
+  private credentials = new Set<string>();
 
   activate(scope: string): void {
     if (this.scope === scope && !this.closed) return;
@@ -44,6 +45,48 @@ export class SessionRequests {
     if (this.closed || this.scope !== scope) throw new RequestInterrupted("session");
   }
 
+  assertEndingScope(scope: string): void {
+    if (this.scope !== scope || !this.closed) throw new RequestInterrupted("session");
+  }
+
+  assertToken(token: string | null): void {
+    if (
+      this.closed ||
+      (this.scope !== undefined && token !== null && !this.credentials.has(token))
+    ) {
+      throw new RequestInterrupted("session");
+    }
+  }
+
+  async credential(scope: string, read: () => Promise<string | null>): Promise<string | null> {
+    this.assertScope(scope);
+    const generation = this.generation;
+    return this.run(async (signal) => {
+      const token = await read();
+      assertRequestActive(signal);
+      if (generation !== this.generation) throw new RequestInterrupted("session");
+      this.assertScope(scope);
+      if (token !== null) {
+        this.credentials.add(token);
+        // Keep session tokens only in bounded memory. An evicted caller obtains a fresh token.
+        if (this.credentials.size > 32) {
+          const oldest = this.credentials.values().next().value;
+          if (oldest !== undefined) this.credentials.delete(oldest);
+        }
+      }
+      return token;
+    });
+  }
+
+  async authenticated<T>(
+    token: string | null,
+    operation: (signal: AbortSignal) => Promise<T>,
+    external?: AbortSignal,
+  ): Promise<T> {
+    this.assertToken(token);
+    return this.run(operation, external);
+  }
+
   async runInScope<T>(scope: string, operation: () => Promise<T>): Promise<T> {
     this.assertScope(scope);
     return this.run(async () => {
@@ -57,6 +100,7 @@ export class SessionRequests {
     this.generation += 1;
     for (const controller of this.pending) controller.abort();
     this.pending.clear();
+    this.credentials.clear();
   }
 
   async run<T>(

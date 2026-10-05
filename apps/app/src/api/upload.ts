@@ -52,7 +52,7 @@ export async function uploadMedia(
     throw new Error("The API is not configured");
   }
 
-  return sessionRequests.run(async (signal) => {
+  return sessionRequests.authenticated(token, async (signal) => {
     // The re-encoded file on the phone (or a blob: URL in a browser), read as it is sent.
     const body = await (await fetch(uri, { signal })).blob();
     assertRequestActive(signal);
@@ -166,7 +166,7 @@ export async function fetchPhoto(
     throw new Error("The API is not configured");
   }
 
-  return sessionRequests.run(async (signal) => {
+  return sessionRequests.authenticated(token, async (signal) => {
     const response = await fetch(`${apiBaseUrl}/v1/families/${familyId}/media/${mediaId}`, {
       signal,
       headers: token === null ? {} : { authorization: `Bearer ${token}` },
@@ -259,7 +259,7 @@ export async function uploadVoice(
     throw new Error("The API is not configured");
   }
 
-  return sessionRequests.run(async (signal) => {
+  return sessionRequests.authenticated(token, async (signal) => {
     const body = await (await fetch(recording.uri, { signal })).blob();
     assertRequestActive(signal);
     const response = await fetch(`${apiBaseUrl}/v1/families/${familyId}/voice`, {

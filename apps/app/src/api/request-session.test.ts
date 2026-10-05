@@ -12,6 +12,50 @@ function deferred<T>() {
 }
 
 describe("session-owned requests", () => {
+  it("refuses an already returned credential if its caller resumes after an account switch", async () => {
+    const requests = new SessionRequests();
+    requests.activate("first:session");
+    const token = await requests.credential("first:session", async () => "synthetic-first-token");
+    requests.activate("second:session");
+    const operation = vi.fn(async () => "must not send");
+    await expect(requests.authenticated(token, operation)).rejects.toMatchObject({
+      reason: "session",
+    });
+    expect(operation).not.toHaveBeenCalled();
+    const current = await requests.credential(
+      "second:session",
+      async () => "synthetic-second-token",
+    );
+    await expect(requests.authenticated(current, async () => "current account")).resolves.toBe(
+      "current account",
+    );
+  });
+
+  it("does not register a cancelled credential read after the same scope reopens", async () => {
+    const requests = new SessionRequests();
+    requests.activate("first:session");
+    const response = deferred<string>();
+    const pending = requests.credential("first:session", () => response.promise);
+    const refused = expect(pending).rejects.toMatchObject({ reason: "session" });
+    requests.end("first:session");
+    requests.resume("first:session");
+    response.resolve("synthetic-cancelled-token");
+    await refused;
+    await expect(
+      requests.authenticated("synthetic-cancelled-token", async () => "must not send"),
+    ).rejects.toMatchObject({ reason: "session" });
+  });
+
+  it("refuses a delayed provider sign-out after another identity becomes active", () => {
+    const requests = new SessionRequests();
+    requests.activate("first:session");
+    requests.end("first:session");
+    expect(() => requests.assertEndingScope("first:session")).not.toThrow();
+    requests.activate("second:session");
+    expect(() => requests.assertEndingScope("first:session")).toThrow("cancelled");
+    expect(() => requests.assertScope("first:session")).toThrow("cancelled");
+    expect(() => requests.assertScope("second:session")).not.toThrow();
+  });
   it("aborts outstanding work and refuses a late response when the account changes", async () => {
     const requests = new SessionRequests();
     requests.activate("first:session");

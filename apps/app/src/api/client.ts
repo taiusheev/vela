@@ -98,32 +98,36 @@ async function call<T>({ path, token, key, body, method, signal }: Call): Promis
   if (!apiConfigured() || apiBaseUrl === undefined) {
     throw new Error("The API is not configured");
   }
-  return sessionRequests.run(async (requestSignal) => {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      method: body === undefined ? "GET" : (method ?? "POST"),
-      headers: {
-        accept: "application/json",
-        ...(token === null ? {} : { authorization: `Bearer ${token}` }),
-        ...(body === undefined
-          ? {}
-          : {
-              "content-type": "application/json",
-              ...(key === undefined ? {} : { "idempotency-key": key }),
-            }),
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      signal: requestSignal,
-    });
-    if (!response.ok) {
-      const failure: unknown = await response.json().catch(() => undefined);
-      const error =
-        typeof failure === "object" && failure !== null && "error" in failure
-          ? (failure as { error: { code?: unknown; details?: unknown } }).error
-          : undefined;
-      throw new ApiError(response.status, String(error?.code ?? "unknown"), error?.details);
-    }
-    return (await response.json()) as T;
-  }, signal);
+  return sessionRequests.authenticated(
+    token,
+    async (requestSignal) => {
+      const response = await fetch(`${apiBaseUrl}${path}`, {
+        method: body === undefined ? "GET" : (method ?? "POST"),
+        headers: {
+          accept: "application/json",
+          ...(token === null ? {} : { authorization: `Bearer ${token}` }),
+          ...(body === undefined
+            ? {}
+            : {
+                "content-type": "application/json",
+                ...(key === undefined ? {} : { "idempotency-key": key }),
+              }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        signal: requestSignal,
+      });
+      if (!response.ok) {
+        const failure: unknown = await response.json().catch(() => undefined);
+        const error =
+          typeof failure === "object" && failure !== null && "error" in failure
+            ? (failure as { error: { code?: unknown; details?: unknown } }).error
+            : undefined;
+        throw new ApiError(response.status, String(error?.code ?? "unknown"), error?.details);
+      }
+      return (await response.json()) as T;
+    },
+    signal,
+  );
 }
 
 function read<T>(path: string, token: string | null): Promise<T> {

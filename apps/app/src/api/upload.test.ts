@@ -78,8 +78,11 @@ async function sent(): Promise<FakeRequest> {
   return request;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   sessionRequests.activate("synthetic:first");
+  for (const token of ["token", "token-1", "token-2", "fresh", "stale", "t"]) {
+    await sessionRequests.credential("synthetic:first", async () => token);
+  }
   FakeRequest.last = undefined;
   vi.stubGlobal("XMLHttpRequest", FakeRequest);
   vi.stubGlobal("FileReader", FakeFileReader);

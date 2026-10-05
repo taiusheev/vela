@@ -15,6 +15,7 @@ describe("API request cancellation", () => {
     const { sessionRequests } = await import("./request-session.ts");
     const { fetchMe } = await import("./client.ts");
     sessionRequests.activate("first:session");
+    await sessionRequests.credential("first:session", async () => "synthetic-session");
     let finish: (value: unknown) => void = () => {};
     const body = new Promise<unknown>((resolve) => {
       finish = resolve;
