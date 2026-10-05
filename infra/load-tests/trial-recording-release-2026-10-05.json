@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "source": "english-trial-recording-release-verification",
+  "credentials_or_content_included": false,
+  "repository": {
+    "tested_source": "95373782faa1b845e76cf74039b58a253e996ee3",
+    "ci_run": "https://github.com/taiusheev/vela/actions/runs/37316605978",
+    "source_test_count": 4157,
+    "package_count": 9,
+    "postgres_concurrency_test_count": 109,
+    "maestro_demo_flows": "8/8",
+    "future_multilingual_skips": 1,
+    "signed_device_or_production_proof": false
+  },
+  "native": {
+    "build_id": "0a0ba33e-8736-4a32-85bd-1c02fa091bee",
+    "build_status": "FINISHED",
+    "build_source": "fd0f614ea4f5e405a064310d7ce0ec8b61b54e9a",
+    "app_source_tree": "0ae7f0c8db506c2fcabfed2c501b59bf135bd41e",
+    "current_app_tree_matches": true,
+    "profile": "trial-simulator",
+    "trial": true,
+    "trial_target": "staging",
+    "microphone_permission": "Vela uses your microphone when you choose to record a voice message for your family.",
+    "photos_permission": "Vela uses the photos you choose for an ask or reply to your family.",
+    "camera_permission_present": false,
+    "device_family": [
+      1
+    ],
+    "platforms": [
+      "iPhoneSimulator"
+    ],
+    "version": "0.0.1",
+    "build_number": "1",
+    "licence_files": [
+      "VelaOpusLicenses.bundle/ogg.txt",
+      "VelaOpusLicenses.bundle/opus.txt",
+      "VelaOpusLicenses.bundle/opusfile.txt"
+    ],
+    "actual_device_playback_verified": false,
+    "production_or_testflight_verified": false,
+    "compiled_decoder_symbol_present": true,
+    "compiled_swift_module_present": true,
+    "linked_codec_symbols": {
+      "op_open_file": true,
+      "op_read_stereo": true,
+      "opus_multistream_decode": true,
+      "ogg_sync_init": true
+    }
+  },
+  "deployment": {
+    "run": "https://github.com/taiusheev/vela/actions/runs/37316605988",
+    "outcome": "missing-staging-credentials-preflight-refused-before-migrations",
+    "missing_secret_names": [
+      "DATABASE_URL",
+      "CLOUDFLARE_API_TOKEN",
+      "CLOUDFLARE_ACCOUNT_ID"
+    ],
+    "workers_changed": false,
+    "production_deployment_performed": false
+  },
+  "limitations": [
+    "Simulator compilation and bundle inspection do not prove signed actual-iPhone playback or permission behaviour.",
+    "Native build embeds fd0f614; its complete app tree matches tested main 9537378. A production release requires its own exact-tested-SHA build.",
+    "Provider, full exchange, production, recovery and eligibility gates remain in the readiness checklist."
+  ]
+}
