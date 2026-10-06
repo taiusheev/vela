@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "eval": "node evals/gate.ts preflight && pnpm dlx promptfoo@0.123.0 eval --config evals/promptfooconfig.json --output evals/results/latest.json && node evals/gate.ts check"
+    "eval": "node evals/gate.ts preflight && pnpm dlx promptfoo@0.123.0 eval --config evals/promptfooconfig.json --output evals/results/latest.json && node evals/gate.ts check",
+    "eval:openai": "EVAL_PROVIDER=openai node evals/gate.ts preflight && EVAL_PROVIDER=openai pnpm dlx promptfoo@0.123.0 eval --config evals/promptfooconfig.openai.json --output evals/results/latest.json && node evals/gate.ts check"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",

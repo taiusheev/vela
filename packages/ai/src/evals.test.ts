@@ -1034,4 +1034,18 @@ describe("eval provider", () => {
     expect(() => requireApiKey({ ANTHROPIC_API_KEY: "  " })).toThrow(/cannot run without it/);
     expect(requireApiKey({ ANTHROPIC_API_KEY: " sk-test " })).toBe("sk-test");
   });
+
+  it("runs on OpenAI with its own key when EVAL_PROVIDER is openai", () => {
+    expect(() => requireApiKey({ EVAL_PROVIDER: "openai", ANTHROPIC_API_KEY: "sk-ant" })).toThrow(
+      /^OPENAI_API_KEY is not set\./,
+    );
+    expect(requireApiKey({ EVAL_PROVIDER: "openai", OPENAI_API_KEY: " sk-o " })).toBe("sk-o");
+    expect(() => requireApiKey({ EVAL_PROVIDER: "gemini" })).toThrow(/anthropic or openai/);
+    const config = JSON.parse(
+      readFileSync(new URL("../evals/promptfooconfig.openai.json", import.meta.url), "utf8"),
+    );
+    expect(config.defaultTest.options.provider.id).toBe("openai:chat:gpt-5");
+    expect(config.env.EVAL_PROVIDER).toBe("openai");
+    expect(config.tests).toEqual(readPromptfooConfig().tests);
+  });
 });
