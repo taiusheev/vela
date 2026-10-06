@@ -10,7 +10,7 @@ Seven days with the founder’s family in Vietnam after its eligibility review, 
 
 Parents use Telegram. Organisers use the iPhone app and Telegram; approved contributors can link the same Telegram identity to the app. App-first family creation is disabled. Russian localisation, multilingual translation, parent app screens, tablets, widgets, LINE, WhatsApp, billing, memory automation and book export are deferred. Existing genuine story records may be read when available; never promise an unavailable retention or export feature.
 
-Engineering owns implementation, verification, release preparation and recorded evidence. Reuse completed account/provider setup and its recorded checks; repeat it only for a changed configuration or a specific failed verification. The founder owns private account entry, purchases, participant relationships and production approval.
+Your private setup steps, in order and with the launchers that take keys at hidden prompts, are in [founder-setup-now.md](founder-setup-now.md). Engineering owns implementation, verification, release preparation and recorded evidence. Reuse completed account/provider setup and its recorded checks; repeat it only for a changed configuration or a specific failed verification. The founder owns private account entry, purchases, participant relationships and production approval.
 
 1. Finish the existing scripted **synthetic staging dogfooding week**.
 2. Complete eligibility/privacy review, production recovery and the signed iPhone gates.
