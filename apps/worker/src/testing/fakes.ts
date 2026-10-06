@@ -535,6 +535,12 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
   const given = options.services ?? {};
 
   const services: AdminServices = {
+    async loadAdminTrialReport(deps, ctx, familyId, days) {
+      note("loadAdminTrialReport", ctx, familyId, days);
+      return given.loadAdminTrialReport === undefined
+        ? null
+        : given.loadAdminTrialReport(deps, ctx, familyId, days);
+    },
     async loadAdminOverview(deps, ctx) {
       note("loadAdminOverview", ctx);
       return given.loadAdminOverview === undefined

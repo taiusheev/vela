@@ -26,6 +26,7 @@ import {
   type FailedOutboundRow,
   type FamilyPage,
   loadAdminOverview,
+  loadAdminTrialReport,
   loadFailedOutbound,
   loadFamilyPage,
   type MarkLeftResult,
@@ -41,6 +42,7 @@ import {
   type SetAwayInput,
   sendWeeklyRead,
   setAway,
+  type TrialReport,
 } from "@vela/services";
 import { type AccessVerifier, createAccessVerifier } from "./access.ts";
 import { type AdminDeps, type AdminDepsHandle, buildAdminDeps } from "./deps.ts";
@@ -48,6 +50,12 @@ import type { AdminEnv } from "./env.ts";
 
 /** Every services entry point the admin Worker calls, on the ports it holds (code design §9). */
 export interface AdminServices {
+  loadAdminTrialReport(
+    deps: AdminDeps,
+    ctx: AdminContext,
+    familyId: string,
+    days: 7 | 30,
+  ): Promise<TrialReport | null>;
   loadAdminOverview(deps: AdminDeps, ctx: AdminContext): Promise<AdminOverview>;
   loadFailedOutbound(deps: AdminDeps, ctx: AdminContext): Promise<FailedOutboundRow[]>;
   loadFamilyPage(deps: AdminDeps, ctx: AdminContext, familyId: string): Promise<FamilyPage | null>;
@@ -173,6 +181,8 @@ export function servicesDeps(ports: AdminDeps): Deps {
 }
 
 const services: AdminServices = {
+  loadAdminTrialReport: (deps, ctx, familyId, days) =>
+    loadAdminTrialReport(servicesDeps(deps), ctx, familyId, days),
   loadAdminOverview: (deps, ctx) => loadAdminOverview(servicesDeps(deps), ctx),
   loadFailedOutbound: (deps, ctx) => loadFailedOutbound(servicesDeps(deps), ctx),
   loadFamilyPage: (deps, ctx, familyId) => loadFamilyPage(servicesDeps(deps), ctx, familyId),
