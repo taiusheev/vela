@@ -38,13 +38,17 @@ print 'Which key?'
 print '  1. Clerk webhook signing key   (starts whsec_)   → the vela Worker'
 print '  2. Anthropic API key           (starts sk-ant-)  → both vela and vela-admin'
 print '  3. OpenAI API key              (starts sk-)      → both vela and vela-admin'
+print '  4. LINE channel secret         (32 letters/digits, Basic settings)   → the vela Worker'
+print '  5. LINE channel access token   (long, Messaging API tab)             → the vela Worker'
 print ''
-read -r 'choice?Type 1, 2 or 3, then Return: '
+read -r 'choice?Type 1, 2, 3, 4 or 5, then Return: '
 
 case "$choice" in
   1) name=CLERK_WEBHOOK_SIGNING_SECRET; pattern='^whsec_[A-Za-z0-9+/]+={0,2}$'; workers=(pilot) ;;
   2) name=ANTHROPIC_API_KEY; pattern='^sk-ant-[A-Za-z0-9_-]{20,}$'; workers=(pilot admin) ;;
   3) name=OPENAI_API_KEY; pattern='^sk-[A-Za-z0-9_-]{20,}$'; workers=(pilot admin) ;;
+  4) name=LINE_CHANNEL_SECRET; pattern='^[0-9a-f]{32}$'; workers=(pilot) ;;
+  5) name=LINE_CHANNEL_ACCESS_TOKEN; pattern='^[A-Za-z0-9+/=]{100,}$'; workers=(pilot) ;;
   *) print 'Nothing was changed.'; finish 0 ;;
 esac
 
