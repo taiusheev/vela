@@ -257,6 +257,45 @@ describe("the AI port", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("sends an openai Worker's calls to OpenAI with its own key, and requires that key", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 401 }));
+    try {
+      const ai = createAiPort(
+        { AI_PROVIDER: "openai", OPENAI_API_KEY: "test-openai-key" },
+        "staging",
+        "wrangler.jsonc",
+        recordingLogger([]),
+        { said: false },
+      );
+
+      const outcome = await ai.flag(flagInput);
+
+      expect(outcome).toMatchObject({ ok: false, error: "http_401" });
+      const [resource, init] = fetchSpy.mock.calls[0] ?? [];
+      expect(String(resource)).toBe("https://api.openai.com/v1/chat/completions");
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer test-openai-key");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+
+    let refusal: unknown;
+    try {
+      createAiPort(
+        { AI_PROVIDER: "openai", ANTHROPIC_API_KEY: "test-anthropic-key" },
+        "staging",
+        "wrangler.jsonc",
+        recordingLogger([]),
+        { said: false },
+      );
+    } catch (error) {
+      refusal = error;
+    }
+    expect(refusal).toBeInstanceOf(ConfigError);
+    expect(refusal).toHaveProperty("code", "OPENAI_API_KEY");
+  });
+
   it("says once per Worker start that AI is off, and nothing while it is on", () => {
     const logs: LogLine[] = [];
     const logger = recordingLogger(logs);

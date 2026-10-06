@@ -32,12 +32,14 @@ interface SharedEnv {
    */
   readonly PUBLIC_BASE_URL: string;
   /**
-   * Where AI calls go: "anthropic", or "off", when none is made (`config.ts`, `readAiProvider`).
+   * Where AI calls go: "anthropic", "openai", or "off", when none is made (`config.ts`, `readAiProvider`).
    * The same in both Workers of an environment; production refuses "off".
    */
   readonly AI_PROVIDER: string;
   /** Read only while `AI_PROVIDER` is "anthropic", and required then. */
   readonly ANTHROPIC_API_KEY?: string;
+  /** Read only while `AI_PROVIDER` is "openai", and required then. */
+  readonly OPENAI_API_KEY?: string;
   /**
    * "on" or "off": whether this environment speaks LINE (05 §5.10; `config.ts`, `readLineSwitch`).
    * The same in both Workers of an environment; "off" everywhere until the staging loop (05 §8).

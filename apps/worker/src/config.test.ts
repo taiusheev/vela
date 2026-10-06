@@ -238,7 +238,9 @@ describe("the AI provider", () => {
     ["development", "anthropic"],
     ["staging", "off"],
     ["staging", "anthropic"],
+    ["staging", "openai"],
     ["production", "anthropic"],
+    ["production", "openai"],
   ] as const)("runs %s with %s", (environment, provider) => {
     expect(readAiProvider({ AI_PROVIDER: ` ${provider} ` }, environment, "wrangler.jsonc")).toBe(
       provider,

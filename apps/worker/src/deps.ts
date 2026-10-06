@@ -16,7 +16,7 @@ import {
   createLineAdapter,
   createTelegramAdapter,
 } from "@vela/adapters";
-import { type Ai, createClaudeAi, createDeepgramStt, createOffAi } from "@vela/ai";
+import { type Ai, createClaudeAi, createDeepgramStt, createOffAi, createOpenAiAi } from "@vela/ai";
 import type { Channel, ChannelAdapter } from "@vela/contracts";
 import { connectDatabase, type VelaDatabase } from "@vela/db";
 import type {
@@ -268,18 +268,26 @@ export const AI_OFF_EFFECTS =
 
 /**
  * The AI port `AI_PROVIDER` names (decision X, 2026-09-18). "anthropic" is Claude, and only then is
- * `ANTHROPIC_API_KEY` read, and required. "off" calls no provider at all (`createOffAi`), and the
+ * `ANTHROPIC_API_KEY` read, and required; "openai" is OpenAI, and only then is `OPENAI_API_KEY`. "off" calls no provider at all (`createOffAi`), and the
  * Worker says so once per start, since every AI step then quietly takes its safe default.
  */
 export function createAiPort(
-  env: { readonly AI_PROVIDER?: string; readonly ANTHROPIC_API_KEY?: string },
+  env: {
+    readonly AI_PROVIDER?: string;
+    readonly ANTHROPIC_API_KEY?: string;
+    readonly OPENAI_API_KEY?: string;
+  },
   environment: Environment,
   configFile: string,
   logger: Logger,
   notice: OffNotice = thisStart.ai,
 ): Ai {
-  if (readAiProvider(env, environment, configFile) === "anthropic") {
+  const provider = readAiProvider(env, environment, configFile);
+  if (provider === "anthropic") {
     return createClaudeAi({ apiKey: secret(env, "ANTHROPIC_API_KEY") });
+  }
+  if (provider === "openai") {
+    return createOpenAiAi({ apiKey: secret(env, "OPENAI_API_KEY") });
   }
   if (!notice.said) {
     notice.said = true;

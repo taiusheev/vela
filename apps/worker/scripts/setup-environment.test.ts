@@ -1589,7 +1589,7 @@ describe("the wrangler files", () => {
   );
 
   // One Worker calling Anthropic while the other is off would need a key the setup never asked for.
-  it("refuse Workers whose AI_PROVIDER differs, or is neither anthropic nor off", () => {
+  it("refuse Workers whose AI_PROVIDER differs, or is not anthropic, openai or off", () => {
     const texts = wranglerTexts({ ai: { staging: "off" } });
     const differing = {
       ...texts,
@@ -1602,7 +1602,7 @@ describe("the wrangler files", () => {
 
     for (const broken of [differing, unknown]) {
       expect(() => readEnvironmentConfig(broken, "staging")).toThrow(
-        /must set AI_PROVIDER for staging to the same value, one of anthropic, off/,
+        /must set AI_PROVIDER for staging to the same value, one of anthropic, openai, off/,
       );
     }
   });
@@ -1911,9 +1911,26 @@ describe("the values the setup keeps", () => {
       ["TELEGRAM_WEBHOOK_SECRET", "missing", ["pilot"]],
       ["ADMIN_CONVERSATION_ID", "missing", ["pilot"]],
       ["ANTHROPIC_API_KEY", "prompt", ["pilot", "admin"]],
+      ["OPENAI_API_KEY", "other_provider", []],
       ["CLERK_SECRET_KEY", "prompt", ["pilot"]],
       ["DEEPGRAM_API_KEY", "kept", []],
     ]);
+  });
+
+  it("with openai, ask for the OpenAI key on both Workers and never the Anthropic one", () => {
+    const plan = planSecrets(
+      { pilot: new Set(["DEEPGRAM_API_KEY"]), admin: new Set<string>() },
+      new Map(),
+      "openai",
+      "on",
+    );
+
+    expect(plan.find((entry) => entry.name === "OPENAI_API_KEY")).toEqual({
+      name: "OPENAI_API_KEY",
+      workers: ["pilot", "admin"],
+      source: "prompt",
+    });
+    expect(plan.find((entry) => entry.name === "ANTHROPIC_API_KEY")?.source).toBe("other_provider");
   });
 
   it("neither ask for nor put the Anthropic key while AI is off, even on a Worker without it", () => {

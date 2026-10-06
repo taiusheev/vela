@@ -37,12 +37,14 @@ print ''
 print 'Which key?'
 print '  1. Clerk webhook signing key   (starts whsec_)   → the vela Worker'
 print '  2. Anthropic API key           (starts sk-ant-)  → both vela and vela-admin'
+print '  3. OpenAI API key              (starts sk-)      → both vela and vela-admin'
 print ''
-read -r 'choice?Type 1 or 2, then Return: '
+read -r 'choice?Type 1, 2 or 3, then Return: '
 
 case "$choice" in
   1) name=CLERK_WEBHOOK_SIGNING_SECRET; pattern='^whsec_[A-Za-z0-9+/]+={0,2}$'; workers=(pilot) ;;
   2) name=ANTHROPIC_API_KEY; pattern='^sk-ant-[A-Za-z0-9_-]{20,}$'; workers=(pilot admin) ;;
+  3) name=OPENAI_API_KEY; pattern='^sk-[A-Za-z0-9_-]{20,}$'; workers=(pilot admin) ;;
   *) print 'Nothing was changed.'; finish 0 ;;
 esac
 
@@ -52,7 +54,7 @@ print 'Never paste it into chat.'
 read -rs 'secret?Key: '
 print ''
 secret="${secret//[[:space:]]/}"
-if [[ ! "$secret" =~ $pattern ]]; then
+if [[ ! "$secret" =~ $pattern || ( $name == OPENAI_API_KEY && "$secret" == sk-ant-* ) ]]; then
   unset secret
   print 'That does not look like the right kind of key, so nothing was changed.'
   print 'Copy it again from the dashboard and reopen this launcher.'
