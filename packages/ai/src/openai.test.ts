@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { createOpenAiAi, OPENAI_MODEL_FOR, openAiPriceFor, responseSchema } from "./openai.ts";
+import {
+  createOpenAiAi,
+  OPENAI_MODEL_FOR,
+  OPENAI_REMINDERS,
+  openAiPriceFor,
+  responseSchema,
+} from "./openai.ts";
 import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
 import { createRecordingFetch, jsonResponse, type Reply } from "./testing.ts";
 import {
@@ -99,7 +105,10 @@ describe("createOpenAiAi request shape", () => {
     expect(body.store).toBe(false);
     expect(body.reasoning_effort).toBe("low");
     expect(body.messages).toEqual([
-      { role: "developer", content: PROMPTS.understand.system },
+      {
+        role: "developer",
+        content: `${PROMPTS.understand.system}\n\nReminders (they repeat rules above; follow them exactly):\n${OPENAI_REMINDERS.understand}`,
+      },
       { role: "user", content: renderUserTurn(understandInput) },
     ]);
     expect(body.response_format.type).toBe("json_schema");
@@ -114,6 +123,17 @@ describe("createOpenAiAi request shape", () => {
       expect(json.type, call).toBe("object");
       expect(json.$schema, call).toBeUndefined();
     }
+  });
+
+  it("leaves the flag check's prompt exactly as Claude gets it, with no reminder", async () => {
+    const { ai, requests } = clientWith([
+      completion({ flag: false, category: null, severity: null, evidenceQuote: null }),
+    ]);
+
+    const outcome = await ai.flag(flagInput);
+
+    expect(JSON.parse(requests[0]?.text ?? "").messages[0].content).toBe(PROMPTS.flag.system);
+    expect(outcome.record.promptVersion).toBe(PROMPTS.flag.version);
   });
 
   it("routes the flag check to the stronger model and drafting to the small one", () => {
@@ -131,7 +151,7 @@ describe("createOpenAiAi usage and cost", () => {
     // gpt-5: 600 uncached × $1.25 + 400 cached × $0.125 + 200 out × $10, per million.
     expect(outcome.record).toMatchObject({
       call: "understand",
-      promptVersion: PROMPTS.understand.version,
+      promptVersion: `${PROMPTS.understand.version}+openai.1`,
       model: "gpt-5-2025-08-07",
       ok: true,
       tokensIn: 1_000,
