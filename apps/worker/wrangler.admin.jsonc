@@ -18,8 +18,8 @@
   //
   // It has no queue consumer, cron, R2 bucket, Telegram token, or Durable Object class of its own,
   // and it builds only the ports the admin actions and reads use (src/deps.ts, AdminDeps). Its
-  // secrets are ACCESS_TEAM_DOMAIN, ACCESS_AUD, and, while AI_PROVIDER is "anthropic",
-  // ANTHROPIC_API_KEY (a sent weekly read is translated for her); it does not read
+  // secrets are ACCESS_TEAM_DOMAIN, ACCESS_AUD, and the AI_PROVIDER's key, ANTHROPIC_API_KEY or
+  // OPENAI_API_KEY (a sent weekly read is translated for her); it does not read
   // ADMIN_CONVERSATION_ID. Its var TELEGRAM_BOT_USERNAME is the pilot Worker's bot in the same
   // environment, which the link create_invite sends an organiser opens: a PLACEHOLDER_ until the
   // founder creates the bot, and the setup script's telegram step writes it into both files. Its
@@ -119,7 +119,7 @@
         "ENVIRONMENT": "production",
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
-        "AI_PROVIDER": "anthropic",
+        "AI_PROVIDER": "openai",
         "LINE_CHANNEL": "off"
       }
     }

@@ -94,7 +94,7 @@ The sprint 1 contract decisions (14 September 2026) close the design gaps this g
 
 ## Versions: when to ask again
 
-- Every document carries a version (`privacy-notice.v2`, `consent-script.v2`, `nearby-consent.v1`, `organiser-agreement.v2`, `data-map.v1`). The version is what goes into `consents.text_version`. The in-chat texts carry their own: `consent.request@2` and `consent.health_words@1` (`@vela/copy`, services' `consent.ts`).
+- Every document carries a version (`privacy-notice.v3`, `consent-script.v2`, `nearby-consent.v1`, `organiser-agreement.v2`, `data-map.v1`). The version is what goes into `consents.text_version`. The in-chat texts carry their own: `consent.request@2` and `consent.health_words@1` (`@vela/copy`, services' `consent.ts`).
 - A wording change that keeps the meaning keeps the version. A change of meaning (new data, new purpose, new recipient, longer retention, a new provider that receives family messages) needs a new version, and everyone affected is told before it applies, and asked again where consent covers it.
 - English and Traditional Chinese change together and share version numbers.
 - The 14 September 2026 revision changed the meaning of the notice, the nearby-contact message and the agreement (contacts stored before their yes, departures noticed, no family content in the founder's Telegram chat, the weekly read's lines, without its counts or suggestion, in "what does the family see") and kept `v1`, because the instrument had not run for any family. Anyone who already received the 13 September text receives this revision before Vela starts for their family.

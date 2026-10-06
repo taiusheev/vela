@@ -249,8 +249,8 @@ describe("the two Workers' configurations", () => {
 
   // config.ts refuses to start production with AI off: families' answers need the flag check.
   it("run production with AI on in both Workers", () => {
-    expect(configOf("pilot", "production").vars.AI_PROVIDER).toBe("anthropic");
-    expect(configOf("admin", "production").vars.AI_PROVIDER).toBe("anthropic");
+    expect(configOf("pilot", "production").vars.AI_PROVIDER).toBe("openai");
+    expect(configOf("admin", "production").vars.AI_PROVIDER).toBe("openai");
   });
 
   // Local work needs no Anthropic key.
