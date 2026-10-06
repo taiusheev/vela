@@ -20,9 +20,9 @@ fi
 
 print 'Check Vela’s AI on OpenAI with made-up test cases'
 print ''
-print 'This sends 88 made-up family messages to OpenAI, and asks OpenAI to grade the answers.'
-print 'It costs roughly US$2–8 of OpenAI credit and takes about 10–20 minutes.'
-print 'The first run downloads the test tool Promptfoo (about 100 MB) into pnpm’s cache.'
+print 'This sends 88 made-up family messages to OpenAI and checks every answer automatically,'
+print 'including that every fall, chest pain or scam call is flagged.'
+print 'It costs roughly US$1–3 of OpenAI credit and takes about 5–10 minutes. Nothing is downloaded.'
 print 'No real family message is used.'
 print ''
 print 'Paste your OpenAI API key (the vela-staging one is fine) at the hidden prompt.'
@@ -36,7 +36,7 @@ if [[ ! "$secret" =~ '^sk-[A-Za-z0-9_-]{20,}$' || "$secret" == sk-ant-* ]]; then
   finish 1
 fi
 
-OPENAI_API_KEY="$secret" pnpm --filter @vela/ai eval:openai 2>&1 | grep -v -i 'api[_-]key'
+OPENAI_API_KEY="$secret" pnpm --filter @vela/ai eval:openai:quick 2>&1 | grep -v -i 'api[_-]key'
 run_status=${pipestatus[1]}
 unset secret
 
