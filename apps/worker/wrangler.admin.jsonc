@@ -96,8 +96,9 @@
         "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
         // As in wrangler.jsonc: OpenAI since 6 October 2026.
         "AI_PROVIDER": "openai",
-        // As in wrangler.jsonc; its LINE_BOT_BASIC_ID comes with the commit that turns it on.
-        "LINE_CHANNEL": "off"
+        // As in wrangler.jsonc: on since 6 October 2026, with the same Official Account.
+        "LINE_CHANNEL": "on",
+        "LINE_BOT_BASIC_ID": "@661oqjkt"
       }
     },
 

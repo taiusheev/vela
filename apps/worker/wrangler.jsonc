@@ -283,7 +283,9 @@
         "producers": [
           { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-staging" },
           { "binding": "MEDIA_QUEUE", "queue": "vela-media-staging" },
-          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-staging" }
+          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-staging" },
+          // LINE on since 6 October 2026 (the founder's test Official Account "Vela Light test").
+          { "binding": "INBOUND_QUEUE", "queue": "vela-inbound-staging" }
         ],
         "consumers": [
           {
@@ -308,6 +310,15 @@
             "max_batch_timeout": 10,
             "max_retries": 3,
             "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-staging"
+          },
+          // As vela-inbound in development: LINE's answers retried up to T_quiet's cap (05 §5.10).
+          {
+            "queue": "vela-inbound-staging",
+            "max_batch_size": 10,
+            "max_batch_timeout": 1,
+            "max_retries": 64,
+            "retry_delay": 30,
             "dead_letter_queue": "vela-dead-letter-staging"
           }
         ]
@@ -347,9 +358,10 @@
         // so it verifies tokens from Clerk's development instance, as development does.
         "API_V1": "on",
         "CLERK_ISSUER": "https://ideal-vulture-9262.clerk.accounts.dev",
-        // Off until the founder's test Official Account is set up and vela-inbound-staging exists
-        // (05 §8, step 8): no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
-        "LINE_CHANNEL": "off",
+        // On since 6 October 2026: the founder's test Official Account "Vela Light test", its channel
+        // secret and access token on this Worker, and vela-inbound-staging created (05 §8, step 8).
+        "LINE_CHANNEL": "on",
+        "LINE_BOT_BASIC_ID": "@661oqjkt",
         // This Worker's origin, which the media URLs LINE fetches start with once LINE is on.
         "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev",
         // Off until the founder has set up Expo and put EXPO_ACCESS_TOKEN (ADR-34).

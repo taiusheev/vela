@@ -280,11 +280,13 @@ function newWorld(
   // Staging runs OpenAI since 6 October 2026; the whole-setup scenarios below start from AI off
   // unless they name a provider, as the staging account was first set up.
   const ai = switches.ai ?? (environment === "staging" ? "off" : undefined);
+  // LINE is on in staging since 6 October 2026; these scenarios start from it off, likewise.
+  const line = switches.line ?? (environment === "staging" ? "off" : undefined);
   const texts = wranglerTexts({
     ...(ai === undefined ? {} : { ai: { [environment]: ai } }),
     ...(switches.media === undefined ? {} : { media: { [environment]: switches.media } }),
     ...(switches.api === undefined ? {} : { api: { [environment]: switches.api } }),
-    ...(switches.line === undefined ? {} : { line: { [environment]: switches.line } }),
+    ...(line === undefined ? {} : { line: { [environment]: line } }),
   });
   return {
     environment,
@@ -1586,6 +1588,8 @@ describe("the wrangler files", () => {
           `vela-outbound-${environment}`,
           `vela-media-${environment}`,
           `vela-understand-${environment}`,
+          // Staging's LINE is on since 6 October 2026, so its inbound queue is among them.
+          ...(environment === "staging" ? ["vela-inbound-staging"] : []),
           `vela-dead-letter-${environment}`,
         ],
         pilotOrigin: `https://vela.${SUBDOMAINS[environment]}.workers.dev`,
@@ -1714,8 +1718,8 @@ describe("the wrangler files", () => {
 
   // Both are off until the staging loop (05 §8, step 8), and production is pinned off by
   // src/wrangler-config.test.ts; the commit that turns staging on changes this with the files.
-  it("give each environment's LINE_CHANNEL as the real files set it: off in staging and production", () => {
-    expect(readEnvironmentConfig(wranglerTexts(), "staging").lineChannel).toBe("off");
+  it("give each environment's LINE_CHANNEL as the real files set it: on in staging, off in production", () => {
+    expect(readEnvironmentConfig(wranglerTexts(), "staging").lineChannel).toBe("on");
     expect(readEnvironmentConfig(wranglerTexts(), "production").lineChannel).toBe("off");
   });
 
