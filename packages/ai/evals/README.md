@@ -36,6 +36,15 @@ $env:ANTHROPIC_API_KEY = "sk-ant-..."
 pnpm --filter @vela/ai eval
 ```
 
+**On OpenAI** (founder decision of 6 October 2026: Vela's AI runs on OpenAI): `EVAL_PROVIDER=openai` runs every case through `createOpenAiAi` instead, and `evals/promptfooconfig.openai.json` has GPT-5 judge the rubric criteria. The founder starts it with `infra/scripts/run-ai-evals.command`, which reads the key at a hidden prompt; from a shell:
+
+```sh
+export OPENAI_API_KEY=sk-...
+pnpm --filter @vela/ai eval:openai
+```
+
+The gate and the baseline are the same: flag recall must stay at `1` on either provider.
+
 The script does three things, stopping at the first failure:
 
 1. `node evals/gate.ts preflight` fails in the first second with an instruction when `ANTHROPIC_API_KEY` is missing, and deletes the previous results file so an old run can never be read as this one.
