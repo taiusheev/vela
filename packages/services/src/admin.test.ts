@@ -1518,6 +1518,19 @@ describe("deleteFamily", () => {
     });
   });
 
+  it("releases the links of a family marked before, on a repeated request, and logs nothing new", async () => {
+    const seed = await family();
+    await h.db
+      .update(families)
+      .set({ deletedAt: h.clock.now() })
+      .where(eq(families.id, seed.family.id));
+
+    await deleteFamily(h.deps, FOUNDER, seed.family.id);
+
+    expect(await h.db.select().from(channelLinks)).toEqual([]);
+    expect(await logRows()).toEqual([]);
+  });
+
   it("refuses a family other than the page's, and an unknown one", async () => {
     const seed = await family();
     await expect(

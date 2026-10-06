@@ -1073,7 +1073,7 @@ export async function markDeceased(deps: Deps, ctx: AdminContext, memberId: stri
 /**
  * The family asked to leave Vela: `deleted_at` now, every kept-light member's scheduler cleared;
  * ticks, reconcile, and the gateway skip the family from here and retention deletes it within 24
- * hours (flows §3.15). A family already marked is left as it is.
+ * hours (flows §3.15). A family already marked is left as it is, but for its links.
  *
  * Its members' channel links go at once, in the same transaction: a messenger account is linked to
  * one member at most (`channel_links_channel_external_id_key`), so a link kept until retention ran
@@ -1092,10 +1092,7 @@ export async function deleteFamily(deps: Deps, ctx: AdminContext, familyId: stri
       throw new VelaError("not_found", "delete_family: family does not exist");
     }
     assertInScope(admin, family.id, "delete_family");
-    if (family.deletedAt !== null) {
-      return [];
-    }
-    await tx.update(families).set({ deletedAt: at }).where(eq(families.id, family.id));
+    // Also on a repeat: a family marked before links were released here still holds its links.
     await tx
       .delete(channelLinks)
       .where(
@@ -1104,6 +1101,10 @@ export async function deleteFamily(deps: Deps, ctx: AdminContext, familyId: stri
           tx.select({ id: members.id }).from(members).where(eq(members.familyId, family.id)),
         ),
       );
+    if (family.deletedAt !== null) {
+      return [];
+    }
+    await tx.update(families).set({ deletedAt: at }).where(eq(families.id, family.id));
     const keptLight = await keptLightMembersOfFamily(tx, family.id);
     const ids = keptLight.map((member) => member.id);
     if (ids.length > 0) {
