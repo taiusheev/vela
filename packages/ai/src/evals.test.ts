@@ -30,6 +30,7 @@ import {
 } from "../evals/gate.ts";
 import * as providerModule from "../evals/provider.ts";
 import { createEvalProvider, PROVIDER_ID } from "../evals/provider.ts";
+import { runCase } from "../evals/quick.ts";
 import * as suiteModule from "../evals/suite.ts";
 import {
   CALL_CHECKS,
@@ -1033,6 +1034,33 @@ describe("eval provider", () => {
     expect(() => requireApiKey({})).toThrow(/^ANTHROPIC_API_KEY is not set\./);
     expect(() => requireApiKey({ ANTHROPIC_API_KEY: "  " })).toThrow(/cannot run without it/);
     expect(requireApiKey({ ANTHROPIC_API_KEY: " sk-test " })).toBe("sk-test");
+  });
+
+  it("runs the quick set's deterministic checks and writes rows the gate reads", async () => {
+    const [flagCase] = listCaseFiles()
+      .flatMap(readCaseFile)
+      .filter((evalCase) => mustFlag(evalCase) === true);
+    if (flagCase === undefined) throw new Error("expected a must-flag case");
+    const answering = (output: unknown) => ({
+      id: () => "stub",
+      callApi: async () => ({ output, cost: 0.001 }),
+    });
+    const missed = await runCase(
+      answering({ flag: false, category: null, severity: null, evidenceQuote: null }),
+      flagCase,
+    );
+    const errored = await runCase(
+      { id: () => "stub", callApi: async () => ({ error: "flag failed: http_500" }) },
+      flagCase,
+    );
+    expect(missed).toMatchObject({ success: false, failureReason: 1, cost: 0.001 });
+    expect(missed.failedChecks.length).toBeGreaterThan(0);
+    expect(errored).toMatchObject({ success: false, failureReason: 2 });
+    const report = evaluateGate([flagCase], ResultsFile.parse({ results: { results: [missed] } }), {
+      flagRecall: 1,
+      note: "test",
+    });
+    expect(report).toMatchObject({ passed: false, missed: [flagCase.id] });
   });
 
   it("runs on OpenAI with its own key when EVAL_PROVIDER is openai", () => {
