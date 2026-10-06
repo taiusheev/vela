@@ -235,6 +235,7 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["admin.quiet_notice_unheard", ["family", "link", "name"]],
   ["admin.push_misconfigured", ["link"]],
   ["organiser.invite_again", ["link", "name"]],
+  ["organiser.invite_again_line", ["line_link", "link", "name"]],
   ["onboarding.ask_nearby", []],
   ["onboarding.nearby_no_number", []],
   ["parent.family_sees_heading", []],
