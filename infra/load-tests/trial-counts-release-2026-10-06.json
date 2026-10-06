@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-06T00:50:38.976Z",
+  "operator": "engineering",
+  "change": "Protected per-family seven/30-day trial counts and Vietnam organiser invitations",
+  "pull_request": "https://github.com/taiusheev/vela/pull/5",
+  "tested_source_commit": "d59c008f9719e3c4315ab201e1b0748a41a172e8",
+  "integrated_commit": "27b49e96bd1738085c2da767d23b07d0e57e15cc",
+  "integrated_tree_matches_tested_source": true,
+  "checks": {
+    "local_pnpm_check": {
+      "passed": true,
+      "source_tests": 4177,
+      "packages": 9,
+      "future_multilingual_skipped": 1
+    },
+    "local_postgresql": {
+      "version": "18.6",
+      "passed": true,
+      "tests": 111,
+      "files": 36,
+      "run_id": "26ebb32c3fbe",
+      "disposable_cluster_removed": true
+    },
+    "exact_source_ci": [
+      {
+        "url": "https://github.com/taiusheev/vela/actions/runs/37395303635",
+        "passed": true
+      },
+      {
+        "url": "https://github.com/taiusheev/vela/actions/runs/37395317371",
+        "passed": true
+      }
+    ],
+    "ci_source_tests": 4177,
+    "ci_postgresql_tests": 111,
+    "ci_maestro_demo_flows": 8,
+    "nightly_silence_drill_run": false,
+    "staging_admin_dry_run": {
+      "passed": true
+    }
+  },
+  "deployment": {
+    "environment": "synthetic staging",
+    "worker": "vela-admin",
+    "version_id": "d032ba16-2b54-4905-bd62-ac77309e3d04",
+    "version_number": 20,
+    "created_at_utc": "2026-10-06T00:48:57.206288Z",
+    "source_annotation": "Protected trial counts and Vietnam invites; source d59c008f9719e3c4315ab201e1b0748a41a172e8",
+    "tag": "trial-counts-d59c008",
+    "migrations": false,
+    "pilot_worker_deployed": false,
+    "provider_or_admission_changes": false,
+    "github_deploy": {
+      "url": "https://github.com/taiusheev/vela/actions/runs/37395932088",
+      "passed": false,
+      "stopped_at_credential_preflight": true,
+      "missing_secret_names": [
+        "DATABASE_URL",
+        "CLOUDFLARE_API_TOKEN",
+        "CLOUDFLARE_ACCOUNT_ID"
+      ]
+    }
+  },
+  "public_smoke": {
+    "environment": "staging",
+    "checked_at_utc": "2026-10-06T00:49:06.718Z",
+    "passed": true,
+    "checks": [
+      {
+        "name": "reconcile_heartbeat",
+        "passed": true,
+        "http_status": 200
+      },
+      {
+        "name": "english_privacy_public",
+        "passed": true,
+        "http_status": 200
+      },
+      {
+        "name": "existing_privacy_public",
+        "passed": true,
+        "http_status": 200
+      },
+      {
+        "name": "api_requires_authentication",
+        "passed": true,
+        "http_status": 401
+      },
+      {
+        "name": "pilot_has_no_admin",
+        "passed": true,
+        "http_status": 404
+      },
+      {
+        "name": "admin_access_login",
+        "passed": true,
+        "http_status": 302
+      },
+      {
+        "name": "capabilities_available",
+        "passed": true,
+        "http_status": 200
+      }
+    ]
+  },
+  "new_report_routes": {
+    "checkedAt": "2026-10-06T00:49:18.411Z",
+    "authenticated": false,
+    "familyDataRead": false,
+    "passed": true,
+    "checks": [
+      {
+        "days": 7,
+        "status": 302,
+        "loginOrigin": "https://square-meadow-34c5.cloudflareaccess.com",
+        "passed": true
+      },
+      {
+        "days": 30,
+        "status": 302,
+        "loginOrigin": "https://square-meadow-34c5.cloudflareaccess.com",
+        "passed": true
+      }
+    ]
+  },
+  "app": {
+    "changed": false,
+    "tree": "0ae7f0c8db506c2fcabfed2c501b59bf135bd41e",
+    "existing_simulator_build_id": "0a0ba33e-8736-4a32-85bd-1c02fa091bee",
+    "new_build_required_for_this_change": false
+  },
+  "limitations": {
+    "signed_in_staging_report_verified": false,
+    "production_deployed": false,
+    "signed_iphone_verified": false,
+    "testflight_available": false,
+    "live_telegram_exchange_verified": false,
+    "seven_morning_dogfooding_completed": false,
+    "real_family_activation_ready": false
+  },
+  "privacy": {
+    "synthetic_metadata_checks_only": true,
+    "family_content_read": false,
+    "secret_values_read": false
+  }
+}
