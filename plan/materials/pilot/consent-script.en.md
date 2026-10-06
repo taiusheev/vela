@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v2` · 5 October 2026 · goes with `privacy-notice.v2` · spoken meaning matches the `consent.request@2` and `consent.health_words@1` messages (architecture/03-code-design.md §4, spec §9)
+Version `consent-script.v2` · 5 October 2026 · goes with `privacy-notice.v3` · spoken meaning matches the `consent.request@2` and `consent.health_words@1` messages (architecture/03-code-design.md §4, spec §9)
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes, that's fine" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 

@@ -1,6 +1,6 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v2` · last updated 5 October 2026 · This invitation-only research trial operates entirely in English. Everyone taking part must be comfortable using English.
+Version `privacy-notice.v3` · last updated 6 October 2026 · This invitation-only research trial operates entirely in English. Everyone taking part must be comfortable using English.
 
 ## In short
 
@@ -84,7 +84,7 @@ Words about health, such as a fall, pain, not eating, a visit to the doctor or w
 - **If they say yes.** The organisers see the person's own words that day when an answer suggests something like a fall or pain. Health mentions are kept with the answer for 30 days, like its other words, and are never copied into the weekly read's list of things mentioned more than once. The one-line summary of an answer, kept while the family uses Vela, may say they mentioned their health, never with the name of an illness, a test result or a medicine.
 - **If they say no.** Vela works the same way. It keeps no health mentions and leaves health out of the one-line summary. Vela still notices words that may matter, because that is how the family knows when to call, but the organisers then get only a short note, with none of the person's words, saying that something they said may be worth a call. The person's own message still reaches the family group as they sent it, and its words are deleted after 30 days.
 - **For everyone.** Whatever the answer, Vela's summaries and notes never keep the name of an illness, a test result or a medicine.
-- **Who handles them.** Anthropic and Deepgram, in the United States, turn voice into text and notice these words for Vela, and the database is in Singapore (see "Who sees it").
+- **Who handles them.** OpenAI and Deepgram, in the United States, turn voice into text and notice these words for Vela, and the database is in Singapore (see "Who sees it").
 - **Changing your mind.** Saying "stop" withdraws a yes to health words as well as pausing the light, and saying "start" does not bring that yes back. To agree again, or to withdraw only this consent, tell the founder or your organiser.
 
 ## Who sees it
@@ -101,7 +101,7 @@ Words about health, such as a fall, pain, not eating, a visit to the doctor or w
 | Clerk | App sign-in and session verification | Account identifier, name/email supplied for sign-in, session activity; no family message content | United States |
 | Neon (part of Databricks) | Database | Everything we store except voice notes and photos | Singapore |
 | Cloudflare | Runs Vela's software; stores voice notes and photos | Everything while it is processed; voice notes and photos at rest | Stored in its Asia-Pacific region as we request, which Cloudflare treats as a preference, not a guarantee; processed on its worldwide network |
-| Anthropic (Claude) | AI: summaries, translations, suggested answers, drafts of the weekly read, noticing words that matter | Answers, asks, replies, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
+| OpenAI | AI: summaries, translations, suggested answers, drafts of the weekly read, noticing words that matter. Vela asks OpenAI not to store these requests, and OpenAI does not use them to train its models | Answers, asks, replies, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
 | Deepgram | Turns voice notes into text | Voice notes | United States |
 | Sentry | Error reports | Technical details and record numbers; no message content | Germany (EU) |
 | Telegram, and LINE from later in the pilot | Carry the messages | Everything sent in the chat | Their own data centres, under their own privacy policies |
