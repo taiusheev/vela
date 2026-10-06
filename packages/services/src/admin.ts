@@ -1074,6 +1074,13 @@ export async function markDeceased(deps: Deps, ctx: AdminContext, memberId: stri
  * The family asked to leave Vela: `deleted_at` now, every kept-light member's scheduler cleared;
  * ticks, reconcile, and the gateway skip the family from here and retention deletes it within 24
  * hours (flows §3.15). A family already marked is left as it is.
+ *
+ * Its members' channel links go at once, in the same transaction: a messenger account is linked to
+ * one member at most (`channel_links_channel_external_id_key`), so a link kept until retention ran
+ * would hold the person out of any other family for up to a day, and the bot's "already connected"
+ * answer would be addressed to a family whose messages are dropped, so they would hear nothing. A
+ * link inserted concurrently into this family (an invite accepted, a group join) is ordered by the
+ * family row: those writers lock it for share and refuse a family already marked.
  */
 export async function deleteFamily(deps: Deps, ctx: AdminContext, familyId: string): Promise<void> {
   const admin = parseContext(ctx);
@@ -1089,6 +1096,14 @@ export async function deleteFamily(deps: Deps, ctx: AdminContext, familyId: stri
       return [];
     }
     await tx.update(families).set({ deletedAt: at }).where(eq(families.id, family.id));
+    await tx
+      .delete(channelLinks)
+      .where(
+        inArray(
+          channelLinks.memberId,
+          tx.select({ id: members.id }).from(members).where(eq(members.familyId, family.id)),
+        ),
+      );
     const keptLight = await keptLightMembersOfFamily(tx, family.id);
     const ids = keptLight.map((member) => member.id);
     if (ids.length > 0) {
