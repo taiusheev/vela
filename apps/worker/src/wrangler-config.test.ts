@@ -238,11 +238,11 @@ describe("the two Workers' configurations", () => {
   // Decision X (2026-09-18): one setting per environment, so the admin Worker never calls Anthropic
   // while the pilot Worker is off, or needs a key the pilot Worker does not.
   it.each(["development", ...DEPLOYED] as const)(
-    "set AI_PROVIDER to anthropic or off, the same in both Workers, in %s",
+    "set AI_PROVIDER to anthropic, openai or off, the same in both Workers, in %s",
     (environment) => {
       const provider = configOf("pilot", environment).vars.AI_PROVIDER;
 
-      expect(["anthropic", "off"]).toContain(provider);
+      expect(["anthropic", "openai", "off"]).toContain(provider);
       expect(configOf("admin", environment).vars.AI_PROVIDER).toBe(provider);
     },
   );

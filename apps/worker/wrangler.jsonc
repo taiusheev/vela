@@ -337,8 +337,9 @@
         "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light-staging.workers.dev/privacy",
         "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light-staging.workers.dev/privacy/zh-TW",
         "REGIONS": "apac",
-        // Off for the dogfooding week, until the founder approves buying Anthropic credit.
-        "AI_PROVIDER": "off",
+        // OpenAI since 6 October 2026 (founder: use the existing OpenAI account rather than buy
+        // Anthropic credit); OPENAI_API_KEY is on both staging Workers. Scripted test words only.
+        "AI_PROVIDER": "openai",
         // On since 26 September 2026, bound to vela-media-staging above: voice notes and photos
         // are copied there and deleted after 30 days, as in production.
         "MEDIA_STORAGE": "r2",

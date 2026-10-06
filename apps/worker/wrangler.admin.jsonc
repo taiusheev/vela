@@ -94,8 +94,8 @@
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev",
         // The pilot Worker's bot in staging, as in wrangler.jsonc.
         "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
-        // As in wrangler.jsonc: off for the dogfooding week.
-        "AI_PROVIDER": "off",
+        // As in wrangler.jsonc: OpenAI since 6 October 2026.
+        "AI_PROVIDER": "openai",
         // As in wrangler.jsonc; its LINE_BOT_BASIC_ID comes with the commit that turns it on.
         "LINE_CHANNEL": "off"
       }

@@ -36,6 +36,7 @@ const SECRETS = {
   databasePassword: "npgSENTINELdatabasepassword",
   botToken: "7000000001:SENTINELbotTokenAAAAAAAAAAAAAAAAAAAAAA",
   anthropic: "sk-ant-SENTINEL-anthropic-key",
+  openai: "sk-proj-SENTINEL-openai-key-000000",
   // Clerk keys share Stripe's sk_test_/sk_live_ prefixes, so these two are joined at run time:
   // a literal would be taken for a real key by secret scanning (GitHub push protection).
   clerk: ["sk", "test", "SENTINELclerkSecretKey000000000000000"].join("_"),
@@ -276,8 +277,11 @@ function newWorld(
     readonly line?: LineSwitch;
   } = {},
 ): World {
+  // Staging runs OpenAI since 6 October 2026; the whole-setup scenarios below start from AI off
+  // unless they name a provider, as the staging account was first set up.
+  const ai = switches.ai ?? (environment === "staging" ? "off" : undefined);
   const texts = wranglerTexts({
-    ...(switches.ai === undefined ? {} : { ai: { [environment]: switches.ai } }),
+    ...(ai === undefined ? {} : { ai: { [environment]: ai } }),
     ...(switches.media === undefined ? {} : { media: { [environment]: switches.media } }),
     ...(switches.api === undefined ? {} : { api: { [environment]: switches.api } }),
     ...(switches.line === undefined ? {} : { line: { [environment]: switches.line } }),
@@ -565,6 +569,7 @@ function promptsOf(world: World): readonly (readonly [string, string, "shown" | 
     ...(contentKeyV1 === undefined ? [] : [["CONTENT_KEY_V1", contentKeyV1, "hidden"] as const]),
     ["Telegram bot token", SECRETS.botToken, "hidden"],
     ["Anthropic API key", SECRETS.anthropic, "hidden"],
+    ["OpenAI API key", SECRETS.openai, "hidden"],
     ["Clerk secret key", SECRETS.clerk, "hidden"],
     ["Deepgram API key", SECRETS.deepgram, "hidden"],
     ["Application Audience (AUD) tag", SECRETS.accessAud, "hidden"],
@@ -816,6 +821,30 @@ describe("a whole setup", () => {
       '  AI is off in staging (AI_PROVIDER "off" in wrangler.jsonc and wrangler.admin.jsonc), so no Anthropic key is asked for. To switch it on later: set AI_PROVIDER to "anthropic" for staging in both files and commit, then run pnpm --filter @vela/worker run setup -- --env staging --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy staging without the key, and both Workers would refuse to run.',
     ]);
     expect(world.deployed).toEqual(["vela", "vela-admin"]);
+  });
+
+  it("asks for the OpenAI key on both Workers, and not the Anthropic one, when staging runs openai", async () => {
+    const world = newWorld("staging", { ai: "off" });
+    await setUp(world);
+    for (const file of ["wrangler.jsonc", "wrangler.admin.jsonc"] as const) {
+      const text = world.files.get(file) ?? "";
+      world.files.set(file, text.replace('"AI_PROVIDER": "off"', '"AI_PROVIDER": "openai"'));
+    }
+    expect(configOf(world).aiProvider).toBe("openai");
+    resetLog(world);
+
+    const code = await setUp(world, "--from", "secrets");
+
+    expect(code, world.printed.join("\n")).toBe(0);
+    expect(world.prompts.filter((question) => question.includes("OpenAI API key"))).toHaveLength(1);
+    expect(world.prompts.filter((question) => question.includes("Anthropic API key"))).toHaveLength(
+      0,
+    );
+    expect(world.workers.get("vela")?.get("OPENAI_API_KEY")).toBe(SECRETS.openai);
+    expect(world.workers.get("vela-admin")?.get("OPENAI_API_KEY")).toBe(SECRETS.openai);
+    expect(world.workers.get("vela")?.has("ANTHROPIC_API_KEY")).toBe(false);
+    expect(world.deployed).toEqual(["vela", "vela-admin"]);
+    expect(leaks(world)).toEqual([]);
   });
 
   it("asks for the Anthropic key and deploys when run from secrets once AI is switched on", async () => {
