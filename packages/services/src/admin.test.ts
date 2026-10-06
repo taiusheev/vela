@@ -829,6 +829,32 @@ describe("createInvite", () => {
     return { seed, contactId: contact.id };
   }
 
+  it("sends the organiser both the LINE and the Telegram link where LINE is on", async () => {
+    const seed = await afterNo();
+    h.deps.config.lineBasicId = "@661oqjkt";
+    try {
+      await createInvite(
+        h.deps,
+        { ...FOUNDER, familyId: seed.family.id },
+        { invitedBy: seed.organiser.id, replacesMemberId: null, ...PROFILE },
+      );
+    } finally {
+      h.deps.config.lineBasicId = null;
+    }
+
+    const [invite] = await h.db.select().from(invites);
+    await h.run(handlers());
+    expect(
+      h.telegram.sentTo(seed.organiserLink.externalId).map((sent) => sent.message.text),
+    ).toEqual([
+      t("en", "organiser.invite_again_line", {
+        name: "Grandma",
+        link: `https://t.me/VelaLightBot?start=${invite?.token}`,
+        line_link: `https://line.me/R/oaMessage/%40661oqjkt/?%2Fstart%20${invite?.token}`,
+      }),
+    ]);
+  });
+
   it("creates an invited member with the given profile and an invite, sends the organiser the link, and logs one row with its event", async () => {
     const seed = await afterNo();
 

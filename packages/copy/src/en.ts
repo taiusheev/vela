@@ -132,6 +132,8 @@ export const en = {
     "Hello {name}, it is {organiser}. I would like to keep a light on for you: one small question from the family each morning. Open this to hear about it, and say yes if you would like it: {link} You can say stop at any time.",
   "organiser.invite_again":
     "Here is a new invite. Send this link to {name}: {link} It works for 7 days.",
+  "organiser.invite_again_line":
+    "Here is a new invite. Send {name} the link for the app they use. LINE: {line_link} Telegram: {link} Either works for 7 days.",
   "parent.stopped": "Everything is paused. Say start whenever you would like it back.",
   "parent.started": "Welcome back. Your next morning arrives at {time}.",
   "organiser.stopped": "{name} asked to pause. Nothing is wrong with the app.",

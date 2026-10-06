@@ -2,7 +2,7 @@
 
 6 October 2026 · for the native reviewer of Vela's Taiwan launch · regenerate the sheet after any copy change
 
-[`review-sheet.csv`](review-sheet.csv) opens in Excel, Numbers or Google Sheets. It lists every message a parent or an organiser can see: 147 Telegram/LINE bot messages and 590 texts in the organiser app, English beside the Traditional Chinese draft. Mark each row **Y**, or write the better wording in "Reviewer note". `{name}`-style placeholders are filled in by the app and must stay exactly as written, with no space around them.
+[`review-sheet.csv`](review-sheet.csv) opens in Excel, Numbers or Google Sheets. It lists every message a parent or an organiser can see: 148 Telegram/LINE bot messages and 590 texts in the organiser app, English beside the Traditional Chinese draft. Mark each row **Y**, or write the better wording in "Reviewer note". `{name}`-style placeholders are filled in by the app and must stay exactly as written, with no space around them.
 
 ## What the reviewer checks
 

@@ -839,7 +839,15 @@ export async function createInvite(
       channel: link.channel,
       conversationId: link.externalId,
       lang,
-      text: t(lang, "organiser.invite_again", { name: her.displayName, link: invited.link }),
+      // Where LINE is on, she may use either messenger: the organiser gets both links (05 §2.3).
+      text:
+        invited.lineLink === null
+          ? t(lang, "organiser.invite_again", { name: her.displayName, link: invited.link })
+          : t(lang, "organiser.invite_again_line", {
+              name: her.displayName,
+              link: invited.link,
+              line_link: invited.lineLink,
+            }),
     });
     await logChange(tx, admin, at, {
       action: "create_invite",
