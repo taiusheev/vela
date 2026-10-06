@@ -1,0 +1,49 @@
+{
+  "kind": "staging-restore-drill-complete",
+  "environment": "synthetic staging",
+  "attemptId": "2e3bad2b-8a91-4c63-8d45-b2ae504d3488",
+  "correctnessReceipt": "trial-staging-restore-2026-10-05.json",
+  "projectId": "autumn-brook-64741032",
+  "sourceBranchId": "br-odd-mud-b3lnl35f",
+  "plan": "Neon Free, 6-hour history window",
+  "t0": "2026-10-05T07:09:00Z",
+  "recoveryBranch": {
+    "branchId": "br-odd-term-b3pgt54h",
+    "branchName": "restore-drill-2026-10-05-2e3bad2b",
+    "computeCU": 0.25
+  },
+  "recoveryTimerStartedAt": "2026-10-05T07:15:04.900Z",
+  "recoveryTimerStoppedAt": "2026-10-05T07:18:49.248Z",
+  "recoveryTimerStopEvent": "database, migration, index, key and R2 metadata checks all verified (runbook step 6)",
+  "recoveryElapsedSeconds": 224,
+  "recoveryTargetSeconds": 3600,
+  "recoveryTargetMet": true,
+  "countsMatched": true,
+  "differences": [],
+  "migrationMatched": true,
+  "indexesMatched": true,
+  "keyProof": "opens",
+  "mediaSampled": 2,
+  "mediaFound": 2,
+  "privateSessionExited": true,
+  "sessionLockReleased": true,
+  "configurationCleanupVerified": true,
+  "configurationCleanupCheckedAt": "2026-10-06T02:07:00Z",
+  "configurationCleanupMethod": "helper process absent, infra/load-tests/adr-38-staging-restore-session.lock absent, no .env files in the repository root, packages/db or apps/worker/.env.local; the helper reads private inputs from the terminal only",
+  "branchDeletion": {
+    "approvedBy": "founder, in chat, 2026-10-06",
+    "deletedBy": "engineering, Neon console",
+    "deletedBranches": [
+      "restore-drill-2026-10-05-2e3bad2b (this attempt)",
+      "restore-drill-2026-10-05-436e931f (earlier incomplete attempt, preserved manifest only)"
+    ],
+    "verifiedAt": "2026-10-06T02:10:55Z",
+    "verificationSource": "neon-console",
+    "branchListAfter": ["production (default)"],
+    "deletedSameDay": false,
+    "note": "Deleted the next morning (about 19 hours after creation), before Neon's one-day expiry; the copy held synthetic staging data only."
+  },
+  "drillComplete": true,
+  "drillPassed": true,
+  "scope": "Synthetic staging rehearsal only. Production drill #1/#2 remain pending until production is deployed. No real family content, connection strings or keys are recorded here."
+}
