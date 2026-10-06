@@ -51,6 +51,12 @@ export {
   setAway,
 } from "./admin.ts";
 export {
+  loadAdminTrialReport,
+  type TrialDay,
+  type TrialRecipientReport,
+  type TrialReport,
+} from "./admin-trial-report.ts";
+export {
   authorizeFamilyAccess,
   type FamilyAccess,
   type FamilyAccessResult,

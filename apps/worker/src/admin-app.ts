@@ -22,6 +22,7 @@ import {
   renderOverview,
 } from "./admin-pages.ts";
 import type { AdminRuntime } from "./admin-runtime.ts";
+import { renderTrialReport } from "./admin-trial-page.ts";
 import { ConfigError } from "./config.ts";
 import type { AdminDeps } from "./deps.ts";
 import type { AdminEnv } from "./env.ts";
@@ -237,6 +238,32 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
         statusForDomainError(code),
         "No such family",
         `That address is not a family (${code}).`,
+      );
+    }
+  });
+
+  admin.get("/families/:familyId/trial", async (c) => {
+    const familyId = c.req.param("familyId");
+    const rawDays = c.req.query("days") ?? "30";
+    const dayValues = c.req.queries("days") ?? [];
+    if ((rawDays !== "7" && rawDays !== "30") || dayValues.length > 1) {
+      return renderMessage(400, "Choose a report period", "Use seven or 30 complete local days.");
+    }
+    const ctx: AdminContext = { admin: c.get("admin"), familyId };
+    try {
+      const report = await withDeps(c, (deps) =>
+        runtime.services.loadAdminTrialReport(deps, ctx, familyId, rawDays === "7" ? 7 : 30),
+      );
+      return report === null
+        ? renderMessage(404, "No trial report", "The family is unavailable or being deleted.")
+        : renderTrialReport(report);
+    } catch (error) {
+      const code = domainErrorCode(error);
+      if (code === null) throw error;
+      return renderMessage(
+        statusForDomainError(code),
+        "No trial report",
+        "That report address is invalid.",
       );
     }
   });

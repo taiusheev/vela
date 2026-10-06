@@ -94,6 +94,10 @@ References: [Clerk production deployment](https://clerk.com/docs/guides/developm
 
 Use synthetic content for deliberate silence/flag drills. Record each scheduled eligible day and failed delivery separately. Telegram delivery proves delivery only, not reading or listening.
 
+The Access-protected founder family page links to **Trial counts** at `/admin/families/:familyId/trial`. Choose seven or 30 complete recipient-local days. The report reads metadata only, records its access in the family audit log and includes arrival attempts/send states, terminal day failures, answers, latency samples, family/fallback asks, human text/photo/voice replies, read-back attempts/send states, delivered reply stamps and quiet outcomes. Reactions and replies between other members are excluded from the human-reply measure. No family words, phone numbers, conversation identifiers, tokens or media are included.
+
+Counts from stored exchanges are provisional until the eligibility register is reconciled: a calendar day without a prepared exchange is shown as unobserved, not silently labelled an eligible unanswered day. Current incomplete local days are excluded; late answers/read-backs update the report on refresh. Negative pre-arrival latency is listed separately from the median. A retained reply stamp proves read-back delivery, never listening. If retention has removed arrival effect metadata, a visible warning marks read-back send-state/attempt counts as potentially incomplete. Keep contentful-answer reviews, assistance, stop reasons, comfort and willingness responses in the authorised notes; the report does not invent these assessments or replace the live seven-morning evidence.
+
 | Measure | Definition / directional target |
 |---|---|
 | Delivery | Scheduled, attempted, delivered and failed counts per family; duplicate arrivals counted as incidents |
