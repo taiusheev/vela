@@ -27,6 +27,19 @@ export {
 } from "./models.ts";
 export { createOffAi } from "./off.ts";
 export {
+  createOpenAiAi,
+  OPENAI_CHAT_URL,
+  OPENAI_EFFORT_FOR,
+  OPENAI_MODEL_FOR,
+  OPENAI_MODELS,
+  OPENAI_PRICES,
+  type OpenAiModel,
+  type OpenAiOptions,
+  type OpenAiPrice,
+  type OpenAiReasoningEffort,
+  openAiPriceFor,
+} from "./openai.ts";
+export {
   INPUT_CLOSE_TAG,
   INPUT_OPEN_TAG,
   PROMPTS,

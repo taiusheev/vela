@@ -196,7 +196,10 @@ async function invoke<K extends AiCallName>(
  * her answer's date: a start already past becomes today, and an away that has ended, ends before it
  * starts, or starts or ends beyond the horizon is dropped rather than trusted.
  */
-function normaliseUnderstanding(output: Understanding, input: UnderstandInput): Understanding {
+export function normaliseUnderstanding(
+  output: Understanding,
+  input: UnderstandInput,
+): Understanding {
   // A dated plan outside today to the horizon is a misread or an injected date: it is dropped.
   const lastDated = addDays(input.today, DATED_HORIZON_DAYS);
   const dated = output.dated.filter((plan) => plan.on >= input.today && plan.on <= lastDated);
@@ -221,7 +224,7 @@ function addDays(date: string, days: number): string {
  * answer is dropped rather than shown as something she said; the flag itself stands, because a
  * missed signal is the expensive failure. A cleared flag carries no category, severity, or quote.
  */
-function normaliseFlag(output: FlagResult, input: FlagInput): FlagResult {
+export function normaliseFlag(output: FlagResult, input: FlagInput): FlagResult {
   if (!output.flag) {
     return { flag: false, category: null, severity: null, evidenceQuote: null };
   }

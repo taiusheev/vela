@@ -42,6 +42,7 @@ type SecretName =
   | "TELEGRAM_BOT_TOKEN"
   | "TELEGRAM_WEBHOOK_SECRET"
   | "ANTHROPIC_API_KEY"
+  | "OPENAI_API_KEY"
   | "DEEPGRAM_API_KEY"
   | "ADMIN_CONVERSATION_ID"
   | "CLERK_SECRET_KEY"
@@ -104,8 +105,11 @@ export function readEnvironment(env: { readonly ENVIRONMENT: string }): Environm
   return found;
 }
 
-/** Where a Worker's AI calls go (decision X, 2026-09-18): Anthropic, or nowhere while AI is off. */
-export const AI_PROVIDERS = ["anthropic", "off"] as const;
+/**
+ * Where a Worker's AI calls go (decision X, 2026-09-18): Anthropic, OpenAI (founder, 2026-10-06:
+ * the account Vela already has), or nowhere while AI is off.
+ */
+export const AI_PROVIDERS = ["anthropic", "openai", "off"] as const;
 
 export type AiProvider = (typeof AI_PROVIDERS)[number];
 
@@ -130,7 +134,7 @@ export function readAiProvider(
   if (provider === "off" && environment === "production") {
     throw new ConfigError(
       "AI_PROVIDER",
-      `AI_PROVIDER is off in production, where families' answers need the flag check: set it to anthropic in ${configFile}`,
+      `AI_PROVIDER is off in production, where families' answers need the flag check: set it to anthropic or openai in ${configFile}`,
     );
   }
   return provider;

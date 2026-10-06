@@ -9,7 +9,7 @@ The active checklist these unblock is [english-trial-readiness.md](english-trial
 | 1 | GitHub deploys staging by itself | free | 3 min | every merge to `main` reaches staging without Claude deploying by hand |
 | 2 | Clerk tells Vela when a test account is deleted | free | 5 min | "Clerk lifecycle delivery" gate |
 | 3 | A second Telegram account to play the parent | free (needs a second phone number) | 10 min | the synthetic dogfooding week: complete exchange, consent and failure cases |
-| 4 | Anthropic key for staging | your call: prepaid credit, e.g. US$10 | 15 min | "Live AI provider" gate; flag check with real AI |
+| 4 | OpenAI key for staging | uses your existing OpenAI account | 10 min | "Live AI provider" gate; flag check with real AI |
 | 5 | Apple Developer Program | US$99/year, your call | 15 min + Apple's review (1–2 days) | signed iPhone build, voice playback on a real phone, TestFlight |
 | 6 | Production | domain + Neon/Clerk production, your call | later | real families |
 
@@ -45,17 +45,16 @@ The parent role in the test week must be a Telegram account that isn't your main
 
 Tell Claude: **"second Telegram account ready"**. Claude then sends you the day-by-day script ([staging-test-script.md](staging-test-script.md)) and checks each result on staging as you go.
 
-## 4. Anthropic key for staging (only if you approve buying credit)
+## 4. OpenAI key for staging (you already have an OpenAI account)
 
-AI is off on staging, so summaries, flag checks and translations have never run against the real provider. Production cannot run with AI off.
+Decided 6 October: Vela uses OpenAI instead of buying Anthropic credit. AI is off on staging, so summaries, flag checks and translations have never run against a real provider. Production cannot run with AI off.
 
-1. platform.claude.com → sign up, organisation **Vela**.
-2. **Billing**: add a small prepaid credit (e.g. US$10), switch **auto-reload off**, and set an organisation spend limit.
-3. **Workspaces**: create `vela-staging` with a monthly limit (e.g. US$10). Later, `vela-production` (e.g. US$50).
-4. In `vela-staging` → **API keys → Create key** named `vela-staging` → copy it (starts `sk-ant-`).
-5. Double-click `infra/scripts/put-staging-secret.command`, type `2`, and paste it. It goes on both staging Workers. It does nothing until Claude switches staging's AI on, so the order is safe.
+1. platform.openai.com → **Settings → Limits** (or **Billing**): check there is credit, and set a monthly budget (e.g. US$10).
+2. **Projects → Create project** named `vela-staging`. Later, `vela-production`.
+3. In project `vela-staging` → **API keys → Create new secret key**, name it `vela-staging` → copy it (starts `sk-`).
+4. Double-click `infra/scripts/put-staging-secret.command`, type `3`, and paste it. It goes on both staging Workers. It does nothing until Claude switches staging's AI on, so the order is safe.
 
-Tell Claude: **"Anthropic key is on staging"**. Claude switches `AI_PROVIDER` to `anthropic` on staging in a reviewed change and runs the AI test cases.
+Tell Claude: **"OpenAI key is on staging"**. Claude switches `AI_PROVIDER` to `openai` on staging in a reviewed change and runs the AI test cases with scripted test words. Before any real family, the privacy notice must name OpenAI instead of Anthropic: Claude drafts that change for your approval.
 
 ## 5. Apple Developer Program (only if you approve US$99/year)
 

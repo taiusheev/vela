@@ -418,7 +418,7 @@ function aiProviderOf(
   }
   if (provider === "off" && environment === "production") {
     throw new SetupError(
-      `AI_PROVIDER is off for production, which its Workers refuse to start with: set it to anthropic in ${PILOT_FILE} and ${ADMIN_FILE}`,
+      `AI_PROVIDER is off for production, which its Workers refuse to start with: set it to anthropic or openai in ${PILOT_FILE} and ${ADMIN_FILE}`,
     );
   }
   return provider;
@@ -925,6 +925,7 @@ export const WORKER_SECRETS = [
   "TELEGRAM_WEBHOOK_SECRET",
   "ADMIN_CONVERSATION_ID",
   "ANTHROPIC_API_KEY",
+  "OPENAI_API_KEY",
   "CLERK_SECRET_KEY",
   "DEEPGRAM_API_KEY",
 ] as const;
@@ -938,6 +939,7 @@ const SECRET_HOMES: Readonly<Record<WorkerSecret, readonly WorkerRole[]>> = {
   TELEGRAM_WEBHOOK_SECRET: ["pilot"],
   ADMIN_CONVERSATION_ID: ["pilot"],
   ANTHROPIC_API_KEY: ["pilot", "admin"],
+  OPENAI_API_KEY: ["pilot", "admin"],
   // The API under /v1 is the pilot Worker's alone (ADR-29).
   CLERK_SECRET_KEY: ["pilot"],
   DEEPGRAM_API_KEY: ["pilot"],
@@ -963,7 +965,8 @@ export interface SecretPlan {
    * `mark`, `partial` and `lost`: recover the known key from the password manager and reinstall
    * it on both Workers before setting its marker; `ai_off`:
    * the Anthropic key while AI is off, which no Worker reads, so it is neither asked for nor put;
-   * `api_off`: Clerk's secret key while `API_V1` is off, which nothing reads either.
+   * `api_off`: Clerk's secret key while `API_V1` is off, which nothing reads either;
+   * `other_provider`: an AI key of the provider `AI_PROVIDER` does not name, which no Worker reads.
    */
   readonly source:
     | "run"
@@ -975,7 +978,8 @@ export interface SecretPlan {
     | "partial"
     | "lost"
     | "ai_off"
-    | "api_off";
+    | "api_off"
+    | "other_provider";
 }
 
 /**
@@ -1015,8 +1019,18 @@ export function planSecrets(
       }
       return { name, workers: homes, source: "generated" };
     }
-    if (name === "ANTHROPIC_API_KEY" && aiProvider === "off") {
-      return { name, workers: [], source: "ai_off" };
+    if ((name === "ANTHROPIC_API_KEY" || name === "OPENAI_API_KEY") && aiProvider === "off") {
+      return {
+        name,
+        workers: [],
+        source: name === "ANTHROPIC_API_KEY" ? "ai_off" : "other_provider",
+      };
+    }
+    if (name === "ANTHROPIC_API_KEY" && aiProvider !== "anthropic") {
+      return { name, workers: [], source: "other_provider" };
+    }
+    if (name === "OPENAI_API_KEY" && aiProvider !== "openai") {
+      return { name, workers: [], source: "other_provider" };
     }
     if (name === "CLERK_SECRET_KEY" && apiV1 === "off") {
       return { name, workers: [], source: "api_off" };
@@ -1360,6 +1374,14 @@ function secretPrompts(environment: Environment): Partial<Record<WorkerSecret, S
       ],
       check: (value) =>
         value.startsWith("sk-ant-") ? noSpaces(value) : "An Anthropic API key starts with sk-ant-",
+    },
+    OPENAI_API_KEY: {
+      label: "OpenAI API key",
+      where: [
+        `OpenAI platform (platform.openai.com), project ${facts.anthropicWorkspace}: API keys > Create new secret key, named ${facts.anthropicWorkspace}. It goes on both Workers.`,
+      ],
+      check: (value) =>
+        value.startsWith("sk-") ? noSpaces(value) : "An OpenAI API key starts with sk-",
     },
     CLERK_SECRET_KEY: {
       label: "Clerk secret key",
@@ -2206,6 +2228,9 @@ class Setup {
       }
       if (entry.source === "api_off") {
         this.#say(apiOffLine(this.#environment));
+        continue;
+      }
+      if (entry.source === "other_provider") {
         continue;
       }
       if (entry.source === "generated") {

@@ -19,6 +19,8 @@ TELEGRAM_WEBHOOK_SECRET=
 # Read only while the var AI_PROVIDER is "anthropic". Development's AI_PROVIDER is "off" in both
 # wrangler files, so leave this empty unless you switch it on there.
 ANTHROPIC_API_KEY=
+# Pilot Worker and admin Worker: OpenAI API key. Read only while AI_PROVIDER is "openai".
+OPENAI_API_KEY=
 # Pilot Worker: Deepgram API key for speech-to-text.
 DEEPGRAM_API_KEY=
 # Pilot Worker: the founder's personal chat id with the bot. Leave it empty on a laptop, which then
