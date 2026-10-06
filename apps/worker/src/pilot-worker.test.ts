@@ -432,7 +432,8 @@ describe("cron", () => {
     expect(fake.closed()).toBe(1);
   });
 
-  it.each(["development", "staging", "production"] as const)(
+  // Staging's LINE is on since 6 October 2026, so it reads the quota as lineOnEnv does.
+  it.each(["development", "production"] as const)(
     "reads no quota in %s, where LINE is off",
     async (environment) => {
       const fake = createFakePilotRuntime();
