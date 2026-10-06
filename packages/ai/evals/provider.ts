@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { createClaudeAi } from "../src/claude.ts";
+import { createOpenAiAi } from "../src/openai.ts";
 import {
   AI_CALL_NAMES,
   type Ai,
@@ -12,7 +13,7 @@ import {
   INPUT_SCHEMAS,
   isAiOff,
 } from "../src/types.ts";
-import { requireApiKey } from "./env.ts";
+import { evalProviderOf, requireApiKey } from "./env.ts";
 
 /** Promptfoo's provider response, as far as this provider fills it in. */
 export interface ProviderResponse {
@@ -121,14 +122,19 @@ export function createEvalProvider(ai: Ai): EvalProvider {
 
 /**
  * Promptfoo instantiates a custom provider from the file's default export, which is why this module
- * breaks the named-exports rule. Construction fails without `ANTHROPIC_API_KEY`, so a run without a
+ * breaks the named-exports rule. Construction fails without the `EVAL_PROVIDER`'s key, so a run without a
  * key stops while loading providers instead of erroring on every case.
  */
 export default class VelaAiProvider implements EvalProvider {
   readonly #provider: EvalProvider;
 
   constructor() {
-    this.#provider = createEvalProvider(createClaudeAi({ apiKey: requireApiKey(process.env) }));
+    const apiKey = requireApiKey(process.env);
+    const ai =
+      evalProviderOf(process.env) === "openai"
+        ? createOpenAiAi({ apiKey })
+        : createClaudeAi({ apiKey });
+    this.#provider = createEvalProvider(ai);
   }
 
   id(): string {

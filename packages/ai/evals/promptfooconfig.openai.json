@@ -1,0 +1,43 @@
+{
+  "description": "Vela AI golden set on OpenAI: each case runs through createOpenAiAi (EVAL_PROVIDER=openai) with the shipped prompts and output schemas; deterministic checks run as javascript assertions and rubric criteria as llm-rubric assertions graded by GPT-5. Run with pnpm --filter @vela/ai eval:openai.",
+  "prompts": ["{{call}} {{caseId}}"],
+  "providers": [
+    {
+      "id": "file://./provider.ts",
+      "label": "vela-ai"
+    }
+  ],
+  "defaultTest": {
+    "options": {
+      "provider": {
+        "id": "openai:chat:gpt-5"
+      }
+    }
+  },
+  "tests": [
+    {
+      "path": "file://suite.ts:loadTests",
+      "config": {
+        "caseFiles": [
+          "cases/chips.json",
+          "cases/flag.json",
+          "cases/hello.json",
+          "cases/readback.json",
+          "cases/recipe.json",
+          "cases/suggest.json",
+          "cases/translate.json",
+          "cases/understand.json",
+          "cases/weekly_read.json"
+        ]
+      }
+    }
+  ],
+  "evaluateOptions": {
+    "maxConcurrency": 4
+  },
+  "sharing": false,
+  "env": {
+    "PROMPTFOO_FAILED_TEST_EXIT_CODE": "0",
+    "EVAL_PROVIDER": "openai"
+  }
+}
