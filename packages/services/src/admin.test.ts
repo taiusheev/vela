@@ -1494,6 +1494,30 @@ describe("deleteFamily", () => {
     ]);
   });
 
+  it("releases its members' messenger links at once, and leaves other families' links alone", async () => {
+    const seed = await family();
+    const other = await seedFamily(h.db, {
+      now: h.clock.now(),
+      familyName: "The Lins",
+      organiserExternalId: "1101",
+      memberExternalId: "2101",
+    });
+
+    await deleteFamily(h.deps, FOUNDER, seed.family.id);
+
+    const links = await h.db.select({ memberId: channelLinks.memberId }).from(channelLinks);
+    expect(links.map((link) => link.memberId).sort()).toEqual(
+      [other.organiser.id, other.member.id].sort(),
+    );
+    // Her account and the organiser's are free: a new link for either goes in.
+    await h.db.insert(channelLinks).values({
+      memberId: other.organiser.id,
+      channel: "telegram",
+      externalId: seed.organiserLink.externalId,
+      linkedAt: h.clock.now(),
+    });
+  });
+
   it("refuses a family other than the page's, and an unknown one", async () => {
     const seed = await family();
     await expect(

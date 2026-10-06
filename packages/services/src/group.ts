@@ -565,6 +565,15 @@ export async function resolveGroupSender(
   const her = await keptLightMemberOfFamily(deps.db, familyId);
   const name = event.sender.displayName ?? (await profileName(deps, event)) ?? NAMELESS_MEMBER;
   const created = await deps.db.transaction(async (tx) => {
+    // As with an invite (consent.ts, acceptInvite): no member or link joins a family being deleted.
+    const [current] = await tx
+      .select({ deletedAt: families.deletedAt })
+      .from(families)
+      .where(eq(families.id, familyId))
+      .for("share");
+    if (current === undefined || current.deletedAt !== null) {
+      return null;
+    }
     const [member] = await tx
       .insert(members)
       .values({

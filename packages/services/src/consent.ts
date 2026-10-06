@@ -27,6 +27,7 @@ import {
   channelLinks,
   consents,
   type Family,
+  families,
   type Invite,
   invites,
   type Member,
@@ -231,8 +232,13 @@ async function acceptInvite(
     return "unusable";
   }
   const member = await memberById(tx, invite.forMemberId);
-  const family = member === null ? null : await familyById(tx, member.familyId);
-  if (member === null || family === null || family.deletedAt !== null) {
+  // Shared with a deletion's update of this row: a family marked deleted is refused, and one being
+  // marked waits until this link is in, so the deletion removes it (`deleteFamily`).
+  const [family] =
+    member === null
+      ? []
+      : await tx.select().from(families).where(eq(families.id, member.familyId)).for("share");
+  if (member === null || family === undefined || family.deletedAt !== null) {
     return "unusable";
   }
   const [link] = await tx
