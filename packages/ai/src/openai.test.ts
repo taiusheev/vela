@@ -133,7 +133,7 @@ describe("createOpenAiAi request shape", () => {
     const outcome = await ai.flag(flagInput);
 
     expect(JSON.parse(requests[0]?.text ?? "").messages[0].content).toBe(PROMPTS.flag.system);
-    expect(outcome.record.promptVersion).toBe(PROMPTS.flag.version);
+    expect(outcome.record?.promptVersion).toBe(PROMPTS.flag.version);
   });
 
   it("routes the flag check to the stronger model and drafting to the small one", () => {
