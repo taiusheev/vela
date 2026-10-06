@@ -12,6 +12,7 @@ The active checklist these unblock is [english-trial-readiness.md](english-trial
 | 4 | OpenAI key for staging | uses your existing OpenAI account | 10 min | "Live AI provider" gate; flag check with real AI |
 | 5 | Apple Developer Program | US$99/year, your call | 15 min + Apple's review (1–2 days) | signed iPhone build, voice playback on a real phone, TestFlight |
 | 6 | Production | domain + Neon/Clerk production, your call | later | real families |
+| 7 | LINE test account for staging | free | 15 min | launch gate 7: Vela on LINE, tested with a test parent before any Taiwan family |
 
 ## 1. GitHub deploys staging by itself (free)
 
@@ -68,3 +69,20 @@ Tell Claude: **"Apple Developer is active"**. Claude then prepares the App Store
 ## 6. Production (later, after 1–5)
 
 This needs your decisions on a domain, Clerk production and production Neon/R2. The exact sequence is in [english-trial-readiness.md](english-trial-readiness.md), "Production handoff". Claude prepares each configuration change for review. You only enter private keys at hidden prompts and approve the protected deployment.
+
+## 7. LINE test account for staging (free)
+
+Vela's Taiwan launch runs on LINE (decided 6 October). This first account is only for testing on staging; the real one comes before the first Taiwan family.
+
+1. Go to `manager.line.biz` → sign in with your LINE account (or create a LINE Business ID) → turn on two-step verification.
+2. **Create a LINE Official Account:** unverified account (未認證帳號), country **Taiwan**, name **Vela Light test**, any category close to "Lifestyle".
+3. In the new account: **Settings → Messaging API → Enable Messaging API** → create a provider in your own name → agree to the terms.
+4. **Settings → Response settings:** chat **off**, auto-response **off**, greeting message **off**, webhooks **on**.
+5. Go to `developers.line.biz` → your provider → the **Vela Light test** channel:
+   - **Basic settings** tab → copy the **Channel secret** (32 letters and digits).
+   - Double-click `infra/scripts/put-staging-secret.command`, type `4`, paste it.
+   - **Messaging API** tab → at the bottom, **Channel access token (long-lived) → Issue** → copy it.
+   - Double-click the launcher again, type `5`, paste it.
+6. On the **Messaging API** tab, note the **Bot basic ID** (it starts with `@`). It is not secret.
+
+Tell Claude: **"LINE keys are on staging, basic ID @…"** (the basic ID is fine to send in chat). Claude then switches LINE on for staging, sets the webhook address in the LINE console with you, and runs the full morning loop with a test parent on LINE.
