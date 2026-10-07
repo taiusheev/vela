@@ -16,6 +16,7 @@ export interface KeptLightRow {
   plan: "none" | "trial" | "active" | "ended";
   /** When the trial ends, as a day and month, while it runs. */
   trialEnds?: string;
+  nearby?: { names: string; line: string };
 }
 
 /** The family as You shows it: whose light is kept, who else asks and replies, who is nearby. */
@@ -150,6 +151,25 @@ export function toYouFamily(family: ApiFamily, me: ApiMe | undefined): YouFamily
         paused: member.status === "paused",
         line: member.status === "paused" ? t`Paused · ${plan}` : plan,
         plan: planOf(member),
+        ...(nearby === null
+          ? {}
+          : (() => {
+              const people = nearby.filter(
+                (contact) => contact.near_member_id === member.member_id,
+              );
+              return {
+                nearby:
+                  people.length === 0
+                    ? {
+                        names: t`Nobody nearby yet`,
+                        line: t`Someone who could look in, if it goes quiet`,
+                      }
+                    : {
+                        names: nearbyNames(people.map((contact) => contact.name)),
+                        line: nearbyLine(people),
+                      },
+              };
+            })()),
         ...(member.subscription?.trial_ends_at == null
           ? {}
           : { trialEnds: dayMonth(member.subscription.trial_ends_at) }),

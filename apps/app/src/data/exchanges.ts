@@ -35,6 +35,7 @@ export interface ExchangeAnswer {
 
 export interface Exchange {
   id: string;
+  recipientId?: string;
   asker: string;
   recipient: string;
   ask: string;

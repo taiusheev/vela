@@ -5,13 +5,18 @@ import { Pressable } from "react-native";
 import { space } from "../theme/tokens.ts";
 import { Words } from "./ui.tsx";
 
+export function backToFamily(): void {
+  if (router.canGoBack()) router.back();
+  else router.replace("/");
+}
+
 /** A cold notification/deep link has no previous screen, so Back still takes the family home. */
 export function BackButton(): ReactNode {
   return (
     <Pressable
       accessibilityRole="button"
       style={{ minHeight: 44, justifyContent: "center", paddingRight: space.m }}
-      onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+      onPress={backToFamily}
     >
       <Words variant="button" tone="action">
         <Trans>Back</Trans>

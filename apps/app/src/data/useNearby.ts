@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiNearbyContact, NearbyConsent } from "@vela/contracts";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   addNearby,
   apiConfigured,
@@ -31,6 +31,8 @@ export interface NearbyPerson {
 export interface NearbyView {
   people: NearbyPerson[];
   loading: boolean;
+  readFailed: boolean;
+  refresh(): void;
   /** Whether another person can be added: fewer than two, and not while a change is on its way. */
   canAdd: boolean;
   /** Add someone; resolves true once they are added, so the form can clear itself. */
@@ -115,11 +117,17 @@ export function useNearby(familyId: string | undefined, memberId: string | undef
   const [refused, setRefused] = useState<string | undefined>();
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
 
+  const enabled = !demo && account.signedIn && familyId !== undefined;
   const read = useQuery({
     queryKey: ["family", familyId],
-    enabled: !demo && account.signedIn && familyId !== undefined,
+    enabled,
+    refetchOnWindowFocus: "always",
     queryFn: async () => fetchFamily(familyId ?? "", await account.token()),
   });
+  const refetch = read.refetch;
+  const refresh = useCallback(() => {
+    if (enabled) void refetch();
+  }, [enabled, refetch]);
   const after = async () => {
     setRefused(undefined);
     await queries.invalidateQueries({ queryKey: ["family", familyId] });
@@ -153,11 +161,13 @@ export function useNearby(familyId: string | undefined, memberId: string | undef
 
   return {
     people,
-    loading: !demo && read.isPending,
+    loading: enabled && read.isPending,
+    readFailed: read.isError,
+    refresh,
     canAdd:
       people.length < NEARBY_MAX &&
       !changing &&
-      (demo || (read.data !== undefined && memberId !== undefined)),
+      (demo || (!read.isError && read.data !== undefined && memberId !== undefined)),
     changing,
     ...(refused === undefined && !read.isError
       ? {}

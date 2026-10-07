@@ -31,6 +31,7 @@ export function toExchange(summary: ApiExchangeSummary, timeZone?: string): Exch
   const card = toTodayExchange(summary, timeZone);
   return {
     id: summary.id,
+    recipientId: summary.recipient_id,
     asker: card.asker ?? "Vela",
     recipient: card.recipient,
     ask: card.ask ?? t`A hello from Vela`,

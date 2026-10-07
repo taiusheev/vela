@@ -1,8 +1,10 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { router } from "expo-router";
-import { ScrollView, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Light } from "../../src/components/light.tsx";
+import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryDay, StoryOfTheWeek } from "../../src/components/story-day.tsx";
 import {
   Card,
@@ -13,6 +15,7 @@ import {
   Words,
 } from "../../src/components/ui.tsx";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
+import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
 import { useWeeklyReadOpened } from "../../src/data/useWeeklyReadOpened.ts";
 import type { WeekLight } from "../../src/data/weekly.ts";
@@ -50,10 +53,21 @@ function WeekRow({ lights }: { lights: WeekLight[] }) {
  * trial. Organisers only, since the read carries the counts of her days.
  */
 export default function SundayScreen() {
+  const day = useToday();
+  return <FamilySunday key={day.familyId ?? ""} day={day} />;
+}
+
+function FamilySunday({ day }: { day: TodayView }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
-  const view = useWeeklyRead();
+  const [selected, select] = useState<string | undefined>();
+  const view = useWeeklyRead(selected);
+  useFocusEffect(
+    useCallback(() => {
+      view.refresh();
+    }, [view.refresh]),
+  );
   const { capabilities } = useCapabilities();
   const { read } = view;
   useWeeklyReadOpened(
@@ -71,6 +85,8 @@ export default function SundayScreen() {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={view.refreshing} onRefresh={view.refresh} />}
       style={{ backgroundColor: palette.bg }}
       contentContainerStyle={{
         paddingTop: insets.top + space.xl,
@@ -83,6 +99,8 @@ export default function SundayScreen() {
       <Words variant="title">
         <Trans context="tab">Sunday</Trans>
       </Words>
+      <ParentChooser lights={day.today.lights} selected={view.memberId} onSelect={select} />
+      {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}
       {view.loading ? (
         <Words variant="body" tone="ink2">
           <Trans>One moment…</Trans>
@@ -99,9 +117,11 @@ export default function SundayScreen() {
         <Words variant="body" tone="ink2">
           <Trans>The weekly read could not be reached just now.</Trans>
         </Words>
-      ) : view.live && read.week === null ? (
+      ) : read.week === null && name.length > 0 ? (
         <Words variant="body" tone="ink2">
-          <Trans>{name}'s first weekly read comes on a Sunday, after a week of her mornings.</Trans>
+          <Trans>
+            {name}'s first weekly read comes on a Sunday, after a week of their mornings.
+          </Trans>
         </Words>
       ) : read.week === null ? null : (
         <>
@@ -187,7 +207,7 @@ export default function SundayScreen() {
           )}
         </>
       )}
-      <StoryDay />
+      <StoryDay key={`${day.familyId}:${view.memberId}`} memberId={view.memberId} />
     </ScrollView>
   );
 }

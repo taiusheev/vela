@@ -13,9 +13,11 @@ import { useCallback } from "react";
 import { ApiError, apiConfigured, fetchMe, fetchToday } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import type { LightState } from "../components/light.tsx";
+import { useFamilySelection } from "./family-selection.tsx";
 import { dayName, timeOfDay } from "./format.ts";
 import { replyLine } from "./lines.ts";
 import { demoDataAllowed } from "./live-state.ts";
+import { selectedMembership } from "./membership.ts";
 import {
   type Today,
   type TodayExchange,
@@ -219,6 +221,8 @@ export interface TodayView {
   today: Today;
   /** The family the screens are showing, once the API has said which; Ask writes to it. */
   familyId?: string;
+  families: { id: string; name: string }[];
+  selectFamily(id: string): void;
   /** True while the real day is on its way; live screens show a loading state. */
   loading: boolean;
   /** Set when the API is configured but would not answer, so the screen can say so plainly. */
@@ -247,7 +251,7 @@ export interface TodayView {
 
 /**
  * Today reads the API when the app is pointed at one and someone is signed in, and its fixtures
- * otherwise. The first membership is the family shown; a second one waits for the family switcher.
+ * otherwise. Family selection is session-scoped and restricted to memberships returned by the API.
  */
 export function useToday(): TodayView {
   // Read so a change of language renders Today again with its lines in the new one.
@@ -260,7 +264,15 @@ export function useToday(): TodayView {
     enabled,
     queryFn: async () => fetchMe(await account.token()),
   });
-  const membership = me.data?.memberships[0];
+  const selection = useFamilySelection();
+  const membership = selectedMembership(me.data?.memberships ?? [], selection.familyId);
+  const families = (me.data?.memberships ?? []).map(({ family }) => ({
+    id: family.id,
+    name: family.name,
+  }));
+  const selectFamily = (id: string) => {
+    if (families.some((family) => family.id === id)) selection.select(id);
+  };
   const familyId = membership?.family.id;
 
   const day = useQuery({
@@ -284,6 +296,8 @@ export function useToday(): TodayView {
       today: demoDataAllowed(apiConfigured(), accountsConfigured())
         ? todayFixture()
         : { lights: [], exchanges: [], tomorrow: [] },
+      families: [],
+      selectFamily,
       loading: false,
       trouble: false,
       noAccount: false,
@@ -304,6 +318,8 @@ export function useToday(): TodayView {
       ? toToday(day.data, membership?.member_id)
       : { lights: [], exchanges: [], tomorrow: [] },
     ...(familyId === undefined ? {} : { familyId }),
+    families,
+    selectFamily,
     loading: me.isPending || (familyId !== undefined && day.isPending),
     updatedAt: day.dataUpdatedAt,
     refresh,

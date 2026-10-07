@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Pressable, Share, View } from "react-native";
 import type { NearbyView } from "../data/useNearby.ts";
 import { hitSlop, space } from "../theme/tokens.ts";
-import { Card, Hairline, PrimaryButton, TextField, Words } from "./ui.tsx";
+import { ConfirmationDialog } from "./confirmation-dialog.tsx";
+import { Card, Hairline, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
 
 /**
  * The people nearby one kept-light member (spec A3): who is there, where each one's yes stands,
@@ -13,6 +14,8 @@ import { Card, Hairline, PrimaryButton, TextField, Words } from "./ui.tsx";
  */
 export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyView }) {
   const { t } = useLingui();
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+  const whoToRemove = removing?.name ?? "";
   const [person, setPerson] = useState("");
   const [relation, setRelation] = useState("");
   const [shareTrouble, setShareTrouble] = useState(false);
@@ -86,7 +89,7 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                     accessibilityLabel={t`Remove ${who}`}
                     hitSlop={hitSlop}
                     disabled={nearby.changing || sharing}
-                    onPress={() => nearby.remove(contact.id)}
+                    onPress={() => setRemoving({ id: contact.id, name: who })}
                   >
                     <Words variant="button" tone="action">
                       <Trans>Remove</Trans>
@@ -98,7 +101,42 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
           })}
         </Card>
       )}
-      {nearby.canAdd || nearby.changing ? (
+      {removing === null ? null : (
+        <ConfirmationDialog
+          onClose={() => {
+            if (!nearby.changing) setRemoving(null);
+          }}
+        >
+          <Words variant="heading">
+            <Trans>Remove {whoToRemove} from the people nearby?</Trans>
+          </Words>
+          <Words variant="body" tone="ink2">
+            <Trans>
+              They will no longer receive requests to look in. You can invite someone else.
+            </Trans>
+          </Words>
+          <SecondaryButton
+            label={t`Confirm removal`}
+            disabled={nearby.changing}
+            onPress={() => {
+              nearby.remove(removing.id);
+              setRemoving(null);
+            }}
+          />
+          <SecondaryButton
+            label={t`Keep them`}
+            disabled={nearby.changing}
+            onPress={() => setRemoving(null)}
+          />
+        </ConfirmationDialog>
+      )}
+      {nearby.loading ? (
+        <Words variant="body" tone="ink2">
+          <Trans>Loading the people nearby…</Trans>
+        </Words>
+      ) : nearby.readFailed ? (
+        <SecondaryButton label={t`Try again`} onPress={nearby.refresh} />
+      ) : nearby.canAdd || nearby.changing ? (
         <View style={{ gap: space.m }}>
           <TextField
             value={person}
@@ -120,11 +158,11 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
             onPress={() => void submit()}
           />
         </View>
-      ) : (
+      ) : nearby.people.length >= 2 ? (
         <Words variant="caption" tone="ink3">
           <Trans>Two people nearby is the most.</Trans>
         </Words>
-      )}
+      ) : null}
       {shareTrouble ? (
         <Words variant="body" tone="ink2">
           <Trans>

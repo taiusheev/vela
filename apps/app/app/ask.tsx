@@ -24,6 +24,7 @@ import {
 import { VoiceHello } from "../src/components/voice-hello.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
 import { type AskType, askTypes, composableType, suggestedKind } from "../src/data/ask.ts";
+import { acceptedAsk, useAskOutcome } from "../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../src/data/ask-target.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { askExtras, photoCount } from "../src/data/photos.ts";
@@ -87,6 +88,7 @@ function AskComposer({
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
+  const outcome = useAskOutcome();
   const { today, familyId, live, photos: photosOn, organiser, pushSent } = view;
   const push = usePush();
   // push (A2): after a person's first ask, someone who does not organise is offered notifications
@@ -181,11 +183,12 @@ function AskComposer({
           : { ...ask, voice_hello_id: await uploadVoice(familyId ?? "", hello, token) };
       return composeAsk(familyId ?? "", await draft.keyFor(withHello), withHello, token);
     },
-    onSuccess: async () => {
+    onSuccess: async (accepted) => {
+      outcome.remember(acceptedAsk(accepted));
       await draft.clear();
       await queries.invalidateQueries({ queryKey: ["today"] });
       if (await offerAfterAsk()) setOffering(true);
-      else router.back();
+      else router.replace("/");
     },
     onError: (error: unknown) => {
       if (photos.refusedAsk(error)) return;
@@ -198,7 +201,13 @@ function AskComposer({
 
   function send() {
     if (demo) {
-      router.back();
+      outcome.remember({
+        familyId,
+        recipient: recipient?.displayName ?? "",
+        date: null,
+        demo: true,
+      });
+      router.replace("/");
       return;
     }
     const type = composableType[kind];
@@ -269,9 +278,9 @@ function AskComposer({
           </Words>
           <PushOffer
             reason={t`Hear it on this phone when ${name} answers.`}
-            onAnswered={() => router.back()}
+            onAnswered={() => router.replace("/")}
           />
-          <Pressable accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable accessibilityRole="button" onPress={() => router.replace("/")}>
             <Words variant="button" tone="action">
               <Trans>Not now</Trans>
             </Words>

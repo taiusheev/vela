@@ -8,6 +8,7 @@ import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
+import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
@@ -21,7 +22,8 @@ import {
   SecondaryButton,
   Words,
 } from "../../src/components/ui.tsx";
-import { askRecipient } from "../../src/data/ask-target.ts";
+import { useAskOutcome } from "../../src/data/ask-outcome.tsx";
+import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
 import {
@@ -36,7 +38,7 @@ import { useCallingNumber } from "../../src/data/useCallingNumber.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
 import { useQuiet } from "../../src/data/useQuiet.ts";
-import { useToday } from "../../src/data/useToday.ts";
+import { dayName, type TodayView, useToday } from "../../src/data/useToday.ts";
 import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, space } from "../../src/theme/tokens.ts";
@@ -251,6 +253,11 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
 }
 
 export default function TodayScreen() {
+  const day = useToday();
+  return <FamilyToday key={day.familyId ?? ""} day={day} />;
+}
+
+function FamilyToday({ day }: { day: TodayView }) {
   const palette = usePalette();
   const { t, i18n } = useLingui();
   const [quietOpen, setQuietOpen] = useState(false);
@@ -260,7 +267,6 @@ export default function TodayScreen() {
   const [demoAsked, setDemoAsked] = useState<string[]>([]);
   const [demoUseful, setDemoUseful] = useState<boolean | null>(null);
   const insets = useSafeAreaInsets();
-  const day = useToday();
   const { capabilities } = useCapabilities();
   useFocusEffect(
     useCallback(() => {
@@ -364,6 +370,10 @@ export default function TodayScreen() {
       current = false;
     };
   }, [offerFor]);
+  const feedback = useAskOutcome();
+  const outcome = feedback.outcome?.familyId === familyId ? feedback.outcome : null;
+  const outcomeRecipient = outcome?.recipient ?? "";
+  const date = outcome?.date === null || outcome?.date === undefined ? "" : dayName(outcome.date);
   const target = askRecipient(today.lights);
   const recipient = target?.displayName ?? t({ comment: "stands in for her name", message: "her" });
 
@@ -386,6 +396,7 @@ export default function TodayScreen() {
           <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words>
         ) : null}
       </View>
+      <FamilyChooser day={day} />
       {day.loading ? (
         <Words variant="body" tone="ink2">
           <Trans>Loading your family’s morning…</Trans>
@@ -405,7 +416,56 @@ export default function TodayScreen() {
         </Words>
       ) : null}
       {trouble ? <SecondaryButton label={t`Try again`} onPress={day.refresh} /> : null}
-      {target === undefined ? null : (
+      {outcome === null ? null : (
+        <Card>
+          <Words variant="bodyMedium">
+            {outcome.demo
+              ? t`You tried an example ask. No message was sent.`
+              : outcome.date === null
+                ? t`Your ask for ${outcomeRecipient} is waiting for an available morning.`
+                : t`Your ask for ${outcomeRecipient} is ready for ${date}.`}
+          </Words>
+          {outcome.demo ? null : (
+            <Words variant="caption" tone="ink2">
+              <Trans>It has been accepted. Delivery happens in the parent's morning.</Trans>
+            </Words>
+          )}
+          <SecondaryButton label={t`Dismiss`} onPress={() => feedback.remember(null)} />
+        </Card>
+      )}
+      {!day.loading && !trouble && !noAccount && !noFamily && today.exchanges.length === 0 ? (
+        <Card>
+          {target?.invited === true ? (
+            <Words variant="body">
+              <Trans>
+                {recipient} has been invited. Their mornings begin after they say yes in their own
+                chat.
+              </Trans>
+            </Words>
+          ) : target?.state === "paused" ? (
+            <Words variant="body">
+              <Trans>
+                {recipient} has paused their mornings. They can start again in Vela's chat when they
+                are ready.
+              </Trans>
+            </Words>
+          ) : target === undefined ? (
+            <>
+              <Words variant="body">
+                <Trans>Your family's first parent connection is still being set up.</Trans>
+              </Words>
+              <SecondaryButton label={t`Go to You`} onPress={() => router.push("/(tabs)/you")} />
+            </>
+          ) : (
+            <Words variant="body">
+              <Trans>
+                The next morning will appear here once it arrives. You can get an ask ready now.
+              </Trans>
+            </Words>
+          )}
+        </Card>
+      ) : null}
+      {target === undefined || !canAsk(target) ? null : (
         <PrimaryButton
           label={t`Ask ${recipient} something`}
           disabled={apiConfigured() && !live}

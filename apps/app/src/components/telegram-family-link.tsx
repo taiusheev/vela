@@ -9,6 +9,7 @@ import { useAccount } from "../auth/clerk.tsx";
 import { connectionCode } from "../data/connection-code.ts";
 import { deviceZone } from "../data/onboarding.ts";
 import { space } from "../theme/tokens.ts";
+import { SetupHelp } from "./setup-help.tsx";
 import { Card, PrimaryButton, SecondaryButton, SetupProgress, TextField, Words } from "./ui.tsx";
 
 /** A challenge proves this app session and the existing Telegram member control both identities. */
@@ -99,8 +100,15 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
           agrees in their own Telegram chat.
         </Trans>
       </Words>
+      <Words variant="caption" tone="ink2">
+        <Trans>
+          If you are joining as a relative, join the approved Telegram family group first.
+          Connecting here keeps your existing family role.
+        </Trans>
+      </Words>
       {noAccount && start.data === undefined ? (
         <TextField
+          label={t`Your name`}
           value={name}
           onChangeText={setName}
           helper={t`Your name, as the family says it.`}
@@ -138,6 +146,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
             {start.data.telegram_url}
           </Words>
           <TextField
+            label={t`Connection code`}
             value={code}
             onChangeText={(value) => setCode(connectionCode(value))}
             placeholder={t`Paste your connection code`}
@@ -178,6 +187,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
           </Trans>
         </Words>
       ) : null}
+      <SetupHelp />
       {complete.data?.linked === false ? (
         <Words variant="body" tone="ink2">
           <Trans>
