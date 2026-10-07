@@ -90,6 +90,11 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly PILOT_PUBLIC_URL?: string;
   /**
+   * The public website's custom domain, without scheme (`site-host.ts`): that address serves only
+   * the website, `www.` redirects to it, and it is the one address search engines may index.
+   */
+  readonly SITE_HOST?: string;
+  /**
    * Where pushes go (ADR-34; `config.ts`, `readPushSend`): "expo", Expo's push service, or "off",
    * when none is made or sent while devices are still registered. "off" in every environment until
    * the founder has set up Expo, Firebase and, for iPhones, Apple.

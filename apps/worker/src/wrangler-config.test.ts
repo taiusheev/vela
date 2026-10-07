@@ -151,17 +151,30 @@ describe("the two Workers' configurations", () => {
     }
   });
 
-  // Each deployed Worker answers on its workers.dev address and nowhere else: no route, no custom
-  // domain, and no preview URL, because every hostname a Worker answers on is one more to reason
-  // about (Access on the admin Worker would cover a preview URL too).
-  it.each(DEPLOYED)("serve %s on workers.dev only", (environment) => {
-    for (const worker of ["pilot", "admin"] as const) {
-      const config = configOf(worker, environment);
-      expect(config.workersDev, worker).toBe(true);
-      expect(config.previewUrls, worker).toBe(false);
-      expect(config.routes ?? [], worker).toEqual([]);
-    }
-  });
+  // Each deployed Worker answers on its workers.dev address, with no route and no preview URL,
+  // because every hostname a Worker answers on is one more to reason about (Access on the admin
+  // Worker would cover a preview URL too). The one exception is the public website's domain on
+  // staging's pilot Worker, where src/site-host.ts answers only the website's paths.
+  it.each(DEPLOYED)(
+    "serve %s on workers.dev, plus only the website's own domain",
+    (environment) => {
+      for (const worker of ["pilot", "admin"] as const) {
+        const config = configOf(worker, environment);
+        expect(config.workersDev, worker).toBe(true);
+        expect(config.previewUrls, worker).toBe(false);
+        const site = worker === "pilot" && environment === "staging" ? "vela-light.com" : null;
+        expect(config.routes ?? [], worker).toEqual(
+          site === null
+            ? []
+            : [
+                { pattern: site, custom_domain: true },
+                { pattern: `www.${site}`, custom_domain: true },
+              ],
+        );
+        expect(config.vars.SITE_HOST ?? null, worker).toBe(site);
+      }
+    },
+  );
 
   // `workers_dev` defaults to true and is inherited, and `wrangler deploy` without --env deploys the
   // top level, which is development: there a request with no Access token passes as the admin

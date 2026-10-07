@@ -41,6 +41,7 @@ import {
   unfilledSiteBlanks,
   WAITLIST_PATH,
 } from "./site.ts";
+import { canonicalOrigin, robotsTxt, siteIndexable, sitemapXml } from "./site-host.ts";
 
 /** How long the edge keeps a rendered precision page: the figures change once a month. */
 const PRECISION_CACHE_SECONDS = 3600;
@@ -293,8 +294,8 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
           alternates: SITE_LANGS.map((other) => ({ lang: other, path: SITE_PATHS[other][page] })),
         },
         {
-          indexable: readEnvironment(c.env) === "production",
-          origin: new URL(c.req.url).origin,
+          indexable: siteIndexable(c.env, new URL(c.req.url)),
+          origin: canonicalOrigin(c.env, new URL(c.req.url)),
         },
       );
 
@@ -330,6 +331,21 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       }
     });
   }
+
+  /** Where search engines may go: the site on its own address, nowhere anywhere else. */
+  app.get("/robots.txt", (c) => {
+    const url = new URL(c.req.url);
+    return c.text(robotsTxt(siteIndexable(c.env, url), canonicalOrigin(c.env, url)), 200, {
+      "cache-control": "public, max-age=3600",
+    });
+  });
+
+  app.get("/sitemap.xml", (c) =>
+    c.body(sitemapXml(canonicalOrigin(c.env, new URL(c.req.url))), 200, {
+      "content-type": "application/xml; charset=utf-8",
+      "cache-control": "public, max-age=3600",
+    }),
+  );
 
   /**
    * The website's waitlist form. A browser without script posts the form and is sent back to the
