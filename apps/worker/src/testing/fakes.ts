@@ -481,6 +481,12 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
         ? { mediaId: "66666666-6666-7666-8666-666666666666" }
         : given.storeDeviceVoice(deps, her, key, body, durationMs);
     },
+    async loadPublicPrecision(db, now) {
+      note("loadPublicPrecision");
+      return given.loadPublicPrecision === undefined
+        ? { months: [], minimum: { notices: 10, families: 3 }, through: "2026-08" }
+        : given.loadPublicPrecision(db, now);
+    },
   };
 
   const runtime: PilotRuntime = {

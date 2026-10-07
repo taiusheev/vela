@@ -105,6 +105,7 @@ export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
 export {
   loadApiPrecision,
+  loadPublicPrecision,
   PRECISION_MONTHS,
   type QuietPrecisionMonth,
   VELA_MONTH_MINIMUM,

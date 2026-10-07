@@ -306,6 +306,19 @@ export const ApiPrecision = z.object({
 });
 export type ApiPrecision = z.infer<typeof ApiPrecision>;
 
+/**
+ * Vela's monthly precision as the public website publishes it (spec §8 "Precision accounting"):
+ * only months that have ended, newest first, and only those with at least `minimum.notices`
+ * notices from at least `minimum.families` families, the same floor as the app's Vela months. No
+ * family is named and nothing is per family. `through` is the last month that could appear.
+ */
+export const PublicPrecision = z.object({
+  months: z.array(ApiPrecisionMonth),
+  minimum: z.object({ notices: PrecisionCount, families: PrecisionCount }),
+  through: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+});
+export type PublicPrecision = z.infer<typeof PublicPrecision>;
+
 export const SetLight = z.strictObject({ on: z.boolean() });
 export type SetLight = z.infer<typeof SetLight>;
 

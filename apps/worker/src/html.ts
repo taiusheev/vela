@@ -152,3 +152,71 @@ export function noticePage(lang: NoticeLang, notice: PrivacyNotice): Response {
     },
   );
 }
+
+/** The public site in the brand's colours (Brand 2026-10, tokens.css), light and dark, phone first. */
+const SITE_STYLE = `
+:root { color-scheme: light dark; --paper: #FBF7F0; --ink: #1E1A16; --muted: #5A534B; --soft: #F3EDE4; --rule: #E8E1D6; --amber: #E9A23B; --teal: #1F5C66; --light: #FBEBCF; }
+@media (prefers-color-scheme: dark) { :root { --paper: #1B1714; --ink: #F6F0E6; --muted: #C9BFB2; --soft: #2A241F; --rule: #3A322B; --teal: #7FC2CC; --light: #3A2C17; } }
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body { margin: 0; padding: 1rem 1rem 3rem; background: var(--paper); color: var(--ink); font: 17px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", sans-serif; }
+main { max-width: 46rem; margin: 0 auto; overflow-wrap: anywhere; }
+h1, h2, h3 { font-family: Literata, Georgia, "Noto Serif TC", "Songti TC", serif; font-weight: 600; line-height: 1.25; }
+h1 { font-size: clamp(2rem, 7vw, 2.9rem); margin: 0 0 0.75rem; }
+h2 { font-size: 1.45rem; margin: 0 0 0.6rem; }
+h3 { font-size: 1.15rem; margin: 0 0 0.25rem; }
+a { color: var(--teal); }
+header { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; padding: 0.25rem 0 1.5rem; }
+.brand { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--ink); text-decoration: none; font: 600 1.35rem/1 Literata, Georgia, serif; }
+.mark { width: 1.6rem; height: 2rem; }
+.langs { display: flex; gap: 0.75rem; font-size: 0.95rem; }
+.langs [aria-current] { font-weight: 600; }
+section { padding: 1.75rem 0; border-top: 1px solid var(--rule); }
+section.hero { border-top: 0; padding-top: 0.5rem; }
+.lede { font-size: 1.15rem; color: var(--muted); margin: 0; }
+ol.steps { padding-left: 1.4rem; margin: 0; }
+ol.steps li, ul li { margin: 0.5rem 0; }
+ul { padding-left: 1.3rem; }
+.plans { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin-bottom: 1rem; }
+.plan { background: var(--soft); border-radius: 16px; padding: 1.1rem 1.2rem; }
+.plan.paid { background: var(--light); }
+.plan .price { font-weight: 600; margin: 0 0 0.5rem; }
+.email { font-size: 1.15rem; font-weight: 600; }
+.blank { background: var(--amber); color: #1E1A16; padding: 0 0.3rem; border-radius: 4px; }
+.scroll { overflow-x: auto; margin: 1rem 0 0.5rem; }
+table { border-collapse: collapse; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child { text-align: left; }
+thead th { font-weight: 600; vertical-align: bottom; white-space: normal; min-width: 5.5rem; }
+.empty { background: var(--soft); border-radius: 16px; padding: 1rem 1.2rem; }
+.small, footer { font-size: 0.9rem; color: var(--muted); }
+footer { border-top: 1px solid var(--rule); margin-top: 1rem; padding-top: 1rem; }
+footer p { margin: 0.25rem 0; }
+`;
+
+/**
+ * A page of the public website. No scripts and no requests to another origin. Only production asks
+ * to be indexed; staging and development keep search engines out, so a test site never ranks.
+ */
+export function sitePage(
+  lang: string,
+  title: string,
+  body: Html,
+  options: { readonly indexable: boolean; readonly status?: number },
+): Response {
+  const document = htmlDocument(lang, title, SITE_STYLE, body);
+  return new Response(
+    options.indexable ? document.replace(/<meta name="robots"[^>]*>\n/, "") : document,
+    {
+      status: options.status ?? 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "public, max-age=300",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+        "content-security-policy":
+          "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      },
+    },
+  );
+}

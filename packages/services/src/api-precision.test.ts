@@ -3,7 +3,7 @@ import { members, quietEvents, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
-import { loadApiPrecision } from "./api-precision.ts";
+import { loadApiPrecision, loadPublicPrecision } from "./api-precision.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedExchange, seedFamily, seedGroupMember } from "./testing/seed.ts";
 
@@ -33,7 +33,7 @@ async function quiet(
 ): Promise<void> {
   day += 1;
   const exchange = await seedExchange(h.db, family, {
-    date: `2025-01-${String(day).padStart(2, "0")}` as LocalDate,
+    date: new Date(Date.UTC(2025, 0, day)).toISOString().slice(0, 10) as LocalDate,
     state: "delivered",
     deliveredAt: new Date(openedAt),
   });
@@ -159,6 +159,57 @@ describe("loadApiPrecision", () => {
       family: [],
       vela: [],
       vela_minimum: { notices: 10, families: 3 },
+    });
+  });
+});
+
+describe("loadPublicPrecision", () => {
+  it("publishes only ended months with ten notices from three families, naming no family", async () => {
+    const families = [seed, ...others];
+    // September is the clock's month (14 September): never published while it runs, however big.
+    for (let n = 0; n < 12; n += 1) {
+      await quiet(families[n % 3] as SeededFamily, `2026-09-0${(n % 9) + 1}T01:00:00Z`);
+    }
+    // August: ten notices from three families, one still open, two marked useful.
+    for (let n = 0; n < 10; n += 1) {
+      await quiet(families[n % 3] as SeededFamily, `2026-08-${10 + n}T01:00:00Z`, {
+        ...(n === 0 ? { outcome: "true_concern", useful: true } : {}),
+        ...(n === 1 ? { outcome: "away", useful: true } : {}),
+        ...(n === 2 ? { resolvedAt: null, outcome: null } : {}),
+      });
+    }
+    // July: nine notices from three families; June: ten from two. Neither reaches the floor.
+    for (let n = 0; n < 9; n += 1) {
+      await quiet(families[n % 3] as SeededFamily, `2026-07-${10 + n}T01:00:00Z`);
+    }
+    for (let n = 0; n < 10; n += 1) {
+      await quiet(families[n % 2] as SeededFamily, `2026-06-${10 + n}T01:00:00Z`);
+    }
+    // A quiet morning that told nobody is no notice, so it never makes a month publishable.
+    await quiet(families[2] as SeededFamily, "2026-06-25T01:00:00Z", { notifyCount: 0 });
+
+    expect(await loadPublicPrecision(h.db, h.clock.now())).toStrictEqual({
+      months: [
+        {
+          month: "2026-08",
+          notices: 10,
+          open: 1,
+          outcomes: { ...NONE, answered_late: 7, away: 1, true_concern: 1 },
+          useful: { yes: 2, no: 0 },
+        },
+      ],
+      minimum: { notices: 10, families: 3 },
+      through: "2026-08",
+    });
+  });
+
+  it("publishes nothing before any month qualifies", async () => {
+    await quiet(seed, "2026-08-02T01:00:00Z");
+
+    expect(await loadPublicPrecision(h.db, h.clock.now())).toStrictEqual({
+      months: [],
+      minimum: { notices: 10, families: 3 },
+      through: "2026-08",
     });
   });
 });

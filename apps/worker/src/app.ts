@@ -1,6 +1,6 @@
 /**
  * Every HTTP route the pilot Worker serves (code design §9, H1): the health check, the Telegram and
- * LINE and Clerk webhooks, the media LINE fetches, and the privacy notices. The admin pages are another
+ * LINE and Clerk webhooks, the media LINE fetches, the privacy notices, and the public website. The admin pages are another
  * Worker's (`admin-app.ts`), so anything under `/admin` here is 404. `/v1` never reaches this app;
  * `pilot-worker.ts` hands it to `PilotRuntime.api`.
  *
@@ -26,11 +26,15 @@ import {
 import { createLogger } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { readHealth } from "./heartbeat.ts";
-import { noticePage } from "./html.ts";
+import { noticePage, sitePage } from "./html.ts";
 import { MEDIA_PATH_PREFIX, openMedia } from "./media-route.ts";
 import { NOTICE_LANGS, NOTICE_PATHS } from "./notices.ts";
 import { requestFailed } from "./request-errors.ts";
 import type { PilotRuntime } from "./runtime.ts";
+import { SITE_LANGS, SITE_PATHS, siteHome, sitePrecision, unfilledSiteBlanks } from "./site.ts";
+
+/** How long the edge keeps a rendered precision page: the figures change once a month. */
+const PRECISION_CACHE_SECONDS = 3600;
 
 /** `Authorization: Device <token>`: her phone's 43-character token (ADR-35). */
 const DEVICE_AUTHORIZATION = /^Device ([A-Za-z0-9_-]{43})$/;
@@ -249,6 +253,54 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
     app.get(NOTICE_PATHS[lang], (c) => {
       refuseUnfilledNotices(readEnvironment(c.env), runtime.notices);
       return noticePage(lang, runtime.notices[lang]);
+    });
+  }
+
+  /**
+   * The public website (launch gate 14), in each language. Production serves no page whose copy
+   * still holds a founder's blank (`[price]`); it answers 503 and logs which blanks remain, so the
+   * site is never published half-chosen. Development and staging show the blanks highlighted.
+   */
+  for (const lang of SITE_LANGS) {
+    const refusal = (c: Context<PilotAppEnv>): Response | null => {
+      if (readEnvironment(c.env) !== "production") return null;
+      const blanks = unfilledSiteBlanks(lang);
+      if (blanks.length === 0) return null;
+      createLogger(c.env).error("site_unfilled", { lang, blanks: blanks.join(",") });
+      return c.text("unavailable", 503, { "cache-control": "no-store" });
+    };
+    const indexable = (c: Context<PilotAppEnv>) => readEnvironment(c.env) === "production";
+
+    app.get(SITE_PATHS[lang].home, (c) => {
+      const refused = refusal(c);
+      if (refused !== null) return refused;
+      const { title, body } = siteHome(lang);
+      return sitePage(lang, title, body, { indexable: indexable(c) });
+    });
+
+    /**
+     * How Vela is doing: every family's ended months that reach the floor (`loadPublicPrecision`).
+     * It reads the database, so a rendered page is kept at the edge for an hour: a crawler or a
+     * busy day costs one query an hour per language, not one per visit.
+     */
+    app.get(SITE_PATHS[lang].precision, async (c) => {
+      const refused = refusal(c);
+      if (refused !== null) return refused;
+      const cache = caches.default;
+      const key = new Request(new URL(c.req.url).origin + SITE_PATHS[lang].precision);
+      const kept = await cache.match(key);
+      if (kept !== undefined) return kept;
+      const handle = await runtime.createDeps(c.env);
+      try {
+        const precision = await runtime.services.loadPublicPrecision(handle.deps.db, new Date());
+        const { title, body } = sitePrecision(lang, precision);
+        const response = sitePage(lang, title, body, { indexable: indexable(c) });
+        response.headers.set("cache-control", `public, max-age=${PRECISION_CACHE_SECONDS}`);
+        c.executionCtx.waitUntil(cache.put(key, response.clone()));
+        return response;
+      } finally {
+        c.executionCtx.waitUntil(handle.close());
+      }
     });
   }
 

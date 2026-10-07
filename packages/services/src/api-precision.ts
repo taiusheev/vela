@@ -1,4 +1,4 @@
-import { ApiPrecision, type QuietOutcome } from "@vela/contracts";
+import { ApiPrecision, PublicPrecision, type QuietOutcome } from "@vela/contracts";
 import { members, quietEvents } from "@vela/db";
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
@@ -91,6 +91,18 @@ export async function quietPrecision(
   }));
 }
 
+/** `YYYY-MM` of a UTC month start. */
+function monthKey(start: Date): string {
+  return `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Whether a month across every family is big enough to show beside other families' (no one family readable). */
+function meetsVelaMinimum(month: QuietPrecisionMonth): boolean {
+  return (
+    month.notices >= VELA_MONTH_MINIMUM.notices && month.families >= VELA_MONTH_MINIMUM.families
+  );
+}
+
 /** A month as the app is given it: notices only, never her quiet mornings or the family count. */
 function apiMonth(month: QuietPrecisionMonth): ApiPrecision["family"][number] {
   return {
@@ -120,13 +132,25 @@ export async function loadApiPrecision(
   const vela = await quietPrecision(db, now, null);
   return ApiPrecision.parse({
     family: family.filter((month) => month.notices > 0).map(apiMonth),
-    vela: vela
-      .filter(
-        (month) =>
-          month.notices >= VELA_MONTH_MINIMUM.notices &&
-          month.families >= VELA_MONTH_MINIMUM.families,
-      )
-      .map(apiMonth),
+    vela: vela.filter(meetsVelaMinimum).map(apiMonth),
     vela_minimum: VELA_MONTH_MINIMUM,
+  });
+}
+
+/**
+ * Vela's precision for the public website (spec §8: "published monthly … on the website"). A month
+ * is published once it has ended, so a figure never changes under a reader while the month runs,
+ * and only at `VELA_MONTH_MINIMUM`, as in the app. Notices still open in an ended month are shown as
+ * open. Needs no caller: it names no family and counts nothing per family.
+ */
+export async function loadPublicPrecision(db: Queryable, now: Date): Promise<PublicPrecision> {
+  const current = monthKey(utcMonthStart(now, 0));
+  const months = await quietPrecision(db, now, null);
+  return PublicPrecision.parse({
+    months: months
+      .filter((month) => month.month < current && meetsVelaMinimum(month))
+      .map(apiMonth),
+    minimum: VELA_MONTH_MINIMUM,
+    through: monthKey(utcMonthStart(now, 1)),
   });
 }
