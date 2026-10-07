@@ -65,6 +65,14 @@ export function dayMonth(instant: string): string {
   return at === null ? "" : at.toLocaleDateString(dateLocale(), { day: "numeric", month: "short" });
 }
 
+/** A scheduled parent's calendar date, never shifted by the reader's time zone. */
+export function localDayMonth(date: string): string {
+  const day = valid(`${date}T00:00:00Z`);
+  return day === null
+    ? date
+    : day.toLocaleDateString(dateLocale(), { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
 /** "Thursday", or "星期四": the weekday of an instant, in the reader's own zone. */
 export function weekday(instant: string): string {
   const at = valid(instant);
