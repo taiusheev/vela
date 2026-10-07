@@ -124,7 +124,7 @@ export function Eyebrow({ children }: { children: ReactNode }) {
       style={[
         type.label,
         english ? { textTransform: "uppercase" } : { letterSpacing: 0 },
-        { color: palette.ink3 },
+        { color: palette.ink2 },
       ]}
     >
       {children}

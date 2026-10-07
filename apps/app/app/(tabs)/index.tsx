@@ -78,13 +78,13 @@ function LightsRow({
           <Light state={light.state} height={36} />
           <View style={{ flex: 1, gap: space.xs }}>
             <Words variant="heading">{light.displayName}</Words>
-            <Words variant="caption" tone="ink3">
+            <Words variant="caption" tone="ink2">
               {light.stateText}
             </Words>
             {light.localDate === undefined ? null : (
               <Words
                 variant="caption"
-                tone="ink3"
+                tone="ink2"
               >{`${light.localDate} · ${light.timeZone ?? ""}`}</Words>
             )}
           </View>
