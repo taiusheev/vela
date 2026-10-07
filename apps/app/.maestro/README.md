@@ -30,6 +30,11 @@ flows prove synthetic web interactions only, not Telegram delivery, account link
 audio or parent-app functionality. If local environment flags change, restart with a cleared Metro
 cache before interpreting a result.
 
+The runner targets a 430×2000 window so the longer You page reaches Pause/Leave without relying
+on Maestro's outer-window scrolling. Headless Chrome can enforce a minimum width and subtract
+browser chrome from that requested size; CI screenshot dimensions are not phone-size proof.
+Review normal 320/390 pt phone viewports independently; the app's own scroll view works there.
+
 ## `signed-in/`: a real account against staging
 
 The trial flows use an already signed-in **synthetic** staging account and a native build made with
