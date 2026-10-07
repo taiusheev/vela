@@ -86,6 +86,17 @@ export function Light({ state, height = 40, style }: LightProps) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
+      {state === "lit" ? (
+        <Svg
+          width={width}
+          height={height}
+          viewBox={`0 0 ${WINDOW_WIDTH} ${WINDOW_HEIGHT}`}
+          style={{ position: "absolute", top: 0, left: 0 }}
+        >
+          <Path d={windowPath()} stroke={outline} strokeWidth={FRAME} fill={palette.lightSoft} />
+          {width >= 32 ? <Path d="M50 10v112M10 58h80" stroke={outline} strokeWidth={8} /> : null}
+        </Svg>
+      ) : null}
       <Animated.View style={{ opacity: state === "lit" ? bloom : 1 }}>
         <Svg width={width} height={height} viewBox={`0 0 ${WINDOW_WIDTH} ${WINDOW_HEIGHT}`}>
           <Path
