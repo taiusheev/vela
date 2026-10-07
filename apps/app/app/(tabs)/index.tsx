@@ -27,6 +27,7 @@ import {
 } from "../../src/components/ui.tsx";
 import { useAskOutcome } from "../../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
+import { localDayMonth } from "../../src/data/format.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
 import {
@@ -41,7 +42,7 @@ import { useCallingNumber } from "../../src/data/useCallingNumber.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
 import { useQuiet } from "../../src/data/useQuiet.ts";
-import { dayName, type TodayView, useToday } from "../../src/data/useToday.ts";
+import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, space } from "../../src/theme/tokens.ts";
@@ -404,7 +405,8 @@ function FamilyToday({ day }: { day: TodayView }) {
   const feedback = useAskOutcome();
   const outcome = feedback.outcome?.familyId === familyId ? feedback.outcome : null;
   const outcomeRecipient = outcome?.recipient ?? "";
-  const date = outcome?.date === null || outcome?.date === undefined ? "" : dayName(outcome.date);
+  const date =
+    outcome?.date === null || outcome?.date === undefined ? "" : localDayMonth(outcome.date);
   const target = askRecipient(today.lights);
   const recipient = target?.displayName ?? t({ comment: "stands in for her name", message: "her" });
 

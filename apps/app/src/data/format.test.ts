@@ -1,7 +1,16 @@
 import { i18n } from "@lingui/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { AppLocale } from "../i18n/locale.ts";
-import { clockTime, dayMonth, dayName, listOf, monthYear, timeOfDay, weekday } from "./format.ts";
+import {
+  clockTime,
+  dayMonth,
+  dayName,
+  listOf,
+  localDayMonth,
+  monthYear,
+  timeOfDay,
+  weekday,
+} from "./format.ts";
 
 // The reader's zone decides the clock time; the samples are read in Taipei.
 process.env.TZ = "Asia/Taipei";
@@ -99,5 +108,22 @@ describe("monthYear", () => {
       "2026-13",
       "soon",
     ]);
+  });
+});
+
+describe("a scheduled parent's local date", () => {
+  it("names the month and day without shifting to a reader's previous or next date", () => {
+    const previous = process.env.TZ;
+    try {
+      for (const zone of ["America/Los_Angeles", "Pacific/Kiritimati"]) {
+        process.env.TZ = zone;
+        expect(inLocale("en", () => localDayMonth("2026-10-09"))).toBe("9 Oct");
+        expect(inLocale("zh-TW", () => localDayMonth("2026-10-09"))).toBe("10月9日");
+      }
+    } finally {
+      if (previous === undefined) delete process.env.TZ;
+      else process.env.TZ = previous;
+      i18n.activate("en");
+    }
   });
 });
