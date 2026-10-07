@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
 import { VoicePlayback } from "../src/audio/VoicePlayback.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
+import { ConfirmationDialog } from "../src/components/confirmation-dialog.tsx";
 import { ReplyPhoto } from "../src/components/family-photo.tsx";
 import { Card, Eyebrow, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { dayMonth } from "../src/data/format.ts";
@@ -146,7 +147,11 @@ function Story({
         </Pressable>
       )}
       {confirming ? (
-        <>
+        <ConfirmationDialog
+          onClose={() => {
+            if (!removing) confirm(false);
+          }}
+        >
           <Words variant="body">
             <Trans>Take this story out of the family book?</Trans>
           </Words>
@@ -169,7 +174,7 @@ function Story({
             disabled={removing}
             onPress={() => confirm(false)}
           />
-        </>
+        </ConfirmationDialog>
       ) : null}
     </Card>
   );

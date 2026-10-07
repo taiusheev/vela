@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Pressable, Share, View } from "react-native";
 import type { NearbyView } from "../data/useNearby.ts";
 import { hitSlop, space } from "../theme/tokens.ts";
+import { ConfirmationDialog } from "./confirmation-dialog.tsx";
 import { Card, Hairline, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
 
 /**
@@ -101,7 +102,11 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
         </Card>
       )}
       {removing === null ? null : (
-        <Card>
+        <ConfirmationDialog
+          onClose={() => {
+            if (!nearby.changing) setRemoving(null);
+          }}
+        >
           <Words variant="heading">
             <Trans>Remove {whoToRemove} from the people nearby?</Trans>
           </Words>
@@ -123,7 +128,7 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
             disabled={nearby.changing}
             onPress={() => setRemoving(null)}
           />
-        </Card>
+        </ConfirmationDialog>
       )}
       {nearby.loading ? (
         <Words variant="body" tone="ink2">

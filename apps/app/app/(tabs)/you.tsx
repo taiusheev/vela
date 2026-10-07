@@ -8,6 +8,7 @@ import { apiBaseUrl, apiConfigured } from "../../src/api/client.ts";
 import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL, SUPPORT_URL } from "../../src/api/support.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
 import { CallingNumberEditor } from "../../src/components/calling-number-editor.tsx";
+import { ConfirmationDialog } from "../../src/components/confirmation-dialog.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { LocaleChips } from "../../src/components/locale-chips.tsx";
@@ -503,7 +504,11 @@ function FamilyYou({ day }: { day: TodayView }) {
             </Pressable>
           </View>
           {pausing ? (
-            <Card>
+            <ConfirmationDialog
+              onClose={() => {
+                if (!changing) confirmPause(false);
+              }}
+            >
               <Words variant="heading">
                 <Trans>Pause your turns in {familyName}?</Trans>
               </Words>
@@ -525,7 +530,7 @@ function FamilyYou({ day }: { day: TodayView }) {
                 disabled={changing}
                 onPress={() => confirmPause(false)}
               />
-            </Card>
+            </ConfirmationDialog>
           ) : null}
           {refused === undefined ? null : (
             <Words variant="caption" tone="ink2">
@@ -533,7 +538,11 @@ function FamilyYou({ day }: { day: TodayView }) {
             </Words>
           )}
           {leaving ? (
-            <Card>
+            <ConfirmationDialog
+              onClose={() => {
+                if (!changing) setLeaving(false);
+              }}
+            >
               <Words variant="heading">
                 <Trans>Leave {familyName}?</Trans>
               </Words>
@@ -543,6 +552,11 @@ function FamilyYou({ day }: { day: TodayView }) {
                   kept about you is deleted.
                 </Trans>
               </Words>
+              {refused === undefined ? null : (
+                <Words variant="body" tone="ink2">
+                  {refused}
+                </Words>
+              )}
               <SecondaryButton
                 label={changing ? t`Leaving…` : t`Leave the family`}
                 disabled={changing}
@@ -564,7 +578,7 @@ function FamilyYou({ day }: { day: TodayView }) {
                   <Trans>Stay</Trans>
                 </Words>
               </Pressable>
-            </Card>
+            </ConfirmationDialog>
           ) : null}
           {exampleNote ? (
             <Words variant="caption" tone="ink3">
