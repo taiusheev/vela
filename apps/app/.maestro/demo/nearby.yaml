@@ -16,6 +16,8 @@ tags:
 - tapOn:
     text: "Remove"
     index: 1
+- assertVisible: "Remove Petro from the people nearby?"
+- tapOn: "Confirm removal"
 - assertNotVisible: "Petro · downstairs"
 # A name alone: on the web a tap on the second field's placeholder leaves the focus in the first.
 - tapOn: "Their name"

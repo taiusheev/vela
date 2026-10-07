@@ -1,0 +1,23 @@
+url: ${APP_URL}
+name: Sunday and the story question stay with the selected parent
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/sunday
+- assertVisible: "Mom answered 6 of 7 days."
+- tapOn: "Dad"
+- assertNotVisible: "Mom answered 6 of 7 days."
+- scrollUntilVisible:
+    element: "Write your own question"
+    direction: DOWN
+- tapOn: "Write your own question"
+- assertVisible: "Your question for Dad"
+- inputText: "What was your first job like?"
+- tapOn: "Mom"
+- scrollUntilVisible:
+    element: "Write your own question"
+    direction: DOWN
+- tapOn: "Write your own question"
+- assertVisible: "Your question for Mom"
+- assertNotVisible: 'What was your first job like\?'

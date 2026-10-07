@@ -31,6 +31,7 @@ import {
   Words,
 } from "../../src/components/ui.tsx";
 import { VoiceReply } from "../../src/components/voice-reply.tsx";
+import { exchangeFamily } from "../../src/data/exchange-family.ts";
 import type { ExchangeReply } from "../../src/data/exchanges.ts";
 import { replyLine } from "../../src/data/lines.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
@@ -41,12 +42,16 @@ import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
 export default function ExchangeScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return <ExchangeReader key={id} id={id} />;
+}
+
+function ExchangeReader({ id }: { id: string }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const account = useAccount();
   const { t } = useLingui();
   const queries = useQueryClient();
-  const { id } = useLocalSearchParams<{ id: string }>();
   const { exchanges, live } = useExchanges();
   const listed = exchanges.find((candidate) => candidate.id === id);
   // A link or a tapped notice can name an exchange the list has not loaded: it is read on its own.
@@ -69,7 +74,8 @@ export default function ExchangeScreen() {
   const draft = useDraft(`reply.${id ?? ""}`);
   const { text, setText } = draft;
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
-  const { familyId } = useToday();
+  const day = useToday();
+  const familyId = exchangeFamily(day.familyId, day.today.lights, exchange?.recipientId);
   const [voiceFailed, setVoiceFailed] = useState(false);
   const [photoFailed, setPhotoFailed] = useState<"limit" | "trouble" | null>(null);
 
@@ -239,11 +245,18 @@ export default function ExchangeScreen() {
           gap: space.xl,
         }}
       >
+        {!demo && familyId === undefined ? (
+          <Words variant="body" tone="ink2">
+            <Trans>Choose this exchange's family on Today to play or send attachments.</Trans>
+          </Words>
+        ) : null}
         <Card>
           <Eyebrow>
             {[exchange.day, t`${asker} asked`].filter((part) => part.length > 0).join(" · ")}
           </Eyebrow>
-          <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size="full" />
+          {demo || familyId !== undefined ? (
+            <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size="full" />
+          ) : null}
           <Words variant="voice">{exchange.ask}</Words>
           {exchange.voiceHello === undefined || familyId === undefined ? null : (
             <VoicePlayback
@@ -264,7 +277,7 @@ export default function ExchangeScreen() {
             <>
               <Hairline />
               <Words variant="voice">{exchange.answer.text}</Words>
-              {exchange.answer.photo === undefined ? null : (
+              {exchange.answer.photo === undefined || (!demo && familyId === undefined) ? null : (
                 <ReplyPhoto photo={exchange.answer.photo} size="full" />
               )}
               {exchange.answer.audio === undefined || familyId === undefined ? null : (
@@ -308,7 +321,7 @@ export default function ExchangeScreen() {
                   <Words variant="body" tone="ink2">
                     {replyLine(reply.from, reply.kind, reply.text)}
                   </Words>
-                  {reply.photo === undefined ? null : (
+                  {reply.photo === undefined || (!demo && familyId === undefined) ? null : (
                     <ReplyPhoto photo={reply.photo} size="full" />
                   )}
                   {reply.audio === undefined || familyId === undefined ? null : (
@@ -385,8 +398,14 @@ export default function ExchangeScreen() {
               onPress={send}
               disabled={post.isPending || !draft.ready || words.length === 0}
             />
-            <VoiceReply disabled={post.isPending} send={sendVoice} />
-            <PhotoReply disabled={post.isPending} send={sendPhoto} />
+            <VoiceReply
+              disabled={post.isPending || (!demo && familyId === undefined)}
+              send={sendVoice}
+            />
+            <PhotoReply
+              disabled={post.isPending || (!demo && familyId === undefined)}
+              send={sendPhoto}
+            />
           </View>
         ) : (
           <Words variant="body" tone="ink2">

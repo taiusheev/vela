@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiBookEntry, ApiBookRecipe, ApiComingStory } from "@vela/contracts";
+import { useCallback } from "react";
 import { apiConfigured, fetchBook, removeBookEntry } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
@@ -12,6 +13,8 @@ export interface BookView {
   recipes: ApiBookRecipe[];
   loading: boolean;
   trouble: boolean;
+  refreshing: boolean;
+  refresh(): void;
   /** An organiser takes a story out; Sunday and the book read again. */
   remove(exchangeId: string): void;
   removing: boolean;
@@ -30,8 +33,13 @@ export function useBook(familyId: string | undefined): BookView {
   const read = useQuery({
     queryKey: ["book", familyId],
     enabled: live,
+    refetchOnWindowFocus: "always",
     queryFn: async () => fetchBook(familyId ?? "", await account.token()),
   });
+  const refetch = read.refetch;
+  const refresh = useCallback(() => {
+    if (live) void refetch();
+  }, [live, refetch]);
   const removing = useMutation({
     mutationFn: async (exchangeId: string) =>
       removeBookEntry(exchangeId, removeKey({ exchangeId }), await account.token()),
@@ -45,6 +53,8 @@ export function useBook(familyId: string | undefined): BookView {
     recipes: read.data?.recipes ?? [],
     loading: live && read.isPending,
     trouble: read.isError,
+    refreshing: read.isRefetching,
+    refresh,
     removeFailed: removing.isError,
     remove: (exchangeId) => removing.mutate(exchangeId),
     removing: removing.isPending,

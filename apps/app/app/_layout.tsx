@@ -17,6 +17,8 @@ import { sessionRequests } from "../src/api/request-session.ts";
 import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
+import { AskOutcomeProvider } from "../src/data/ask-outcome.tsx";
+import { FamilySelectionProvider } from "../src/data/family-selection.tsx";
 import { sessionScope } from "../src/data/live-state.ts";
 import { clearPhotoCache } from "../src/data/photos.ts";
 import { readDeviceToken } from "../src/device/token.ts";
@@ -51,7 +53,13 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
       void clearSessionDrafts(scope);
     };
   }, [queries, scope]);
-  return <QueryClientProvider client={queries}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queries}>
+      <FamilySelectionProvider>
+        <AskOutcomeProvider>{children}</AskOutcomeProvider>
+      </FamilySelectionProvider>
+    </QueryClientProvider>
+  );
 }
 function AccountQueries({ children }: { children: ReactNode }) {
   const account = useAccount();

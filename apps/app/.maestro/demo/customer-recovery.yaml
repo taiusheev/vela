@@ -1,0 +1,37 @@
+# Every action here is an explicit synthetic demo. No account, participant or message is changed.
+url: ${APP_URL}
+name: Pause and leave are deliberate and unknown parent links recover safely
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/you
+- scrollUntilVisible:
+    element: "Pause"
+    direction: DOWN
+- tapOn: "Pause"
+- assertVisible: 'Pause your turns in The Chens\?'
+- tapOn: "Keep my turns"
+- assertNotVisible: "Resume"
+- tapOn: "Pause"
+- tapOn: "Pause my turns"
+- assertVisible: "You are paused: no turns come to you, and you are not told if it goes quiet."
+- tapOn: "Resume"
+- tapOn: "Leave"
+- assertVisible: 'Leave The Chens\?'
+- tapOn: "Stay"
+- assertNotVisible: "Leave the family"
+- openLink: ${APP_URL}/away?member=unknown
+- assertVisible: "Choose a parent from You before changing away dates."
+- assertNotVisible: "Mom is away"
+- tapOn: "Go to You"
+- assertVisible: "Anna"
+- openLink: ${APP_URL}/nearby?member=unknown
+- assertVisible: "Choose a parent from You before changing the people nearby."
+- assertNotVisible: "Add them"
+- tapOn: "Go to You"
+- openLink: ${APP_URL}/sign-in
+- assertVisible: "Sign-in is unavailable in this build"
+- assertVisible: "You can explore an example family. No messages are sent."
+- tapOn: "Go to Today"
+- assertVisible: "What did the garden look like this morning?"

@@ -1,12 +1,15 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { ApiBookEntry, ApiBookRecipe } from "@vela/contracts";
-import { Stack } from "expo-router";
-import { Pressable, ScrollView, View } from "react-native";
+import { Stack, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
 import { VoicePlayback } from "../src/audio/VoicePlayback.tsx";
+import { BackButton } from "../src/components/back-button.tsx";
+import { ConfirmationDialog } from "../src/components/confirmation-dialog.tsx";
 import { ReplyPhoto } from "../src/components/family-photo.tsx";
-import { Card, Eyebrow, Words } from "../src/components/ui.tsx";
+import { Card, Eyebrow, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { dayMonth } from "../src/data/format.ts";
 import { useBook } from "../src/data/useBook.ts";
 import { useCapabilities } from "../src/data/useCapabilities.ts";
@@ -26,11 +29,19 @@ export default function BookScreen() {
   const { familyId, organiser } = useToday();
   const { capabilities } = useCapabilities();
   const book = useBook(familyId);
+  useFocusEffect(
+    useCallback(() => {
+      book.refresh();
+    }, [book.refresh]),
+  );
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: t`The family book` }} />
+      <Stack.Screen
+        options={{ headerShown: true, title: t`The family book`, headerLeft: () => <BackButton /> }}
+      />
       <ScrollView
+        refreshControl={<RefreshControl refreshing={book.refreshing} onRefresh={book.refresh} />}
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: space.xl,
@@ -39,6 +50,7 @@ export default function BookScreen() {
           gap: space.xl,
         }}
       >
+        {book.trouble ? <SecondaryButton label={t`Try again`} onPress={book.refresh} /> : null}
         {book.removeFailed ? (
           <Words variant="body" tone="ink2">
             <Trans>That story could not be removed. Try again.</Trans>
@@ -95,6 +107,7 @@ function Story({
   removing: boolean;
 }) {
   const { t } = useLingui();
+  const [confirming, confirm] = useState(false);
   const day = dayMonth(entry.kept_at);
   const name = entry.member_name;
   const asker = entry.asked_by;
@@ -126,13 +139,43 @@ function Story({
           accessibilityRole="button"
           hitSlop={hitSlop}
           disabled={removing}
-          onPress={onRemove}
+          onPress={() => confirm(true)}
         >
           <Words variant="caption" tone="ink3">
             <Trans>Take this story out of the book</Trans>
           </Words>
         </Pressable>
       )}
+      {confirming ? (
+        <ConfirmationDialog
+          onClose={() => {
+            if (!removing) confirm(false);
+          }}
+        >
+          <Words variant="body">
+            <Trans>Take this story out of the family book?</Trans>
+          </Words>
+          <Words variant="caption" tone="ink2">
+            <Trans>
+              It will stop being kept as a story. The exchange still follows the usual retention
+              period.
+            </Trans>
+          </Words>
+          <SecondaryButton
+            label={t`Take it out`}
+            disabled={removing}
+            onPress={() => {
+              onRemove?.();
+              confirm(false);
+            }}
+          />
+          <SecondaryButton
+            label={t`Keep this story`}
+            disabled={removing}
+            onPress={() => confirm(false)}
+          />
+        </ConfirmationDialog>
+      ) : null}
     </Card>
   );
 }

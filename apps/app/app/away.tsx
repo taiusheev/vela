@@ -4,8 +4,10 @@ import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
-import { Chip, PrimaryButton, Words } from "../src/components/ui.tsx";
+import { BackButton, backToFamily } from "../src/components/back-button.tsx";
+import { Chip, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { dayMonth, shortDayName } from "../src/data/format.ts";
+import { selectedLight } from "../src/data/selected-light.ts";
 import { useAway } from "../src/data/useAway.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
@@ -40,18 +42,44 @@ export default function AwayScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const { member } = useLocalSearchParams<{ member?: string }>();
-  const { today, familyId } = useToday();
-  const her = today.lights.find((light) => light.memberId === member) ?? today.lights[0];
+  const day = useToday();
+  const { today, familyId } = day;
+  const her = selectedLight(today.lights, member);
   const name = her?.displayName ?? t`Mom`;
   const { set } = useAway(familyId);
   const [from, setFrom] = useState(0);
   const [until, setUntil] = useState<number | null>(null);
   const days = Array.from({ length: 14 }, (_, index) => index + from);
 
+  if (her === undefined)
+    return (
+      <>
+        <Stack.Screen
+          options={{ headerShown: true, title: t`Away`, headerLeft: () => <BackButton /> }}
+        />
+        <View style={{ padding: space.margin, gap: space.l }}>
+          <Words variant="body">
+            {day.loading ? (
+              <Trans>Loading your family…</Trans>
+            ) : day.trouble ? (
+              <Trans>Your family could not be reached just now.</Trans>
+            ) : (
+              <Trans>Choose a parent from You before changing away dates.</Trans>
+            )}
+          </Words>
+          {day.trouble ? <SecondaryButton label={t`Try again`} onPress={day.refresh} /> : null}
+          <SecondaryButton label={t`Go to You`} onPress={() => router.replace("/(tabs)/you")} />
+        </View>
+      </>
+    );
+
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: t`Away` }} />
+      <Stack.Screen
+        options={{ headerShown: true, title: t`Away`, headerLeft: () => <BackButton /> }}
+      />
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: space.xl,
@@ -116,7 +144,7 @@ export default function AwayScreen() {
           disabled={set.isPending || her === undefined}
           onPress={() => {
             if (!apiConfigured() || her === undefined) {
-              router.back();
+              backToFamily();
               return;
             }
             set.mutate(
@@ -127,7 +155,7 @@ export default function AwayScreen() {
                   until: until === null ? null : dateIn(Math.max(until, from), her.localDate),
                 },
               },
-              { onSuccess: () => router.back() },
+              { onSuccess: backToFamily },
             );
           }}
         />

@@ -56,6 +56,7 @@ const LATIN_PLACEHOLDERS: ReadonlySet<string> = new Set([
   "date",
   "price",
   "count",
+  "seconds",
   "phone",
   "email",
   "sentTo",

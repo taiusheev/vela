@@ -1,8 +1,10 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Stack } from "expo-router";
-import { ScrollView, View } from "react-native";
+import { Stack, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Card, Eyebrow, Words } from "../src/components/ui.tsx";
+import { BackButton } from "../src/components/back-button.tsx";
+import { Card, Eyebrow, SecondaryButton, Words } from "../src/components/ui.tsx";
 import type { PrecisionMonth } from "../src/data/precision.ts";
 import { usePrecision } from "../src/data/usePrecision.ts";
 import { usePalette } from "../src/theme/theme.tsx";
@@ -36,11 +38,23 @@ export default function PrecisionScreen() {
   const { t } = useLingui();
   const view = usePrecision();
   const { precision } = view;
+  useFocusEffect(
+    useCallback(() => {
+      view.refresh();
+    }, [view.refresh]),
+  );
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: t`How Vela is doing` }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: t`How Vela is doing`,
+          headerLeft: () => <BackButton />,
+        }}
+      />
       <ScrollView
+        refreshControl={<RefreshControl refreshing={view.refreshing} onRefresh={view.refresh} />}
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: space.xl,
@@ -49,6 +63,7 @@ export default function PrecisionScreen() {
           gap: space.xl,
         }}
       >
+        {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}
         {view.loading ? (
           <Words variant="body" tone="ink2">
             <Trans>Loading the quiet notices…</Trans>

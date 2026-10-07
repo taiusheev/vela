@@ -1,5 +1,6 @@
 import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { apiConfigured, fetchPrecision } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { demoDataAllowed } from "./live-state.ts";
@@ -12,6 +13,8 @@ export interface PrecisionView {
   live: boolean;
   loading: boolean;
   trouble: boolean;
+  refreshing: boolean;
+  refresh(): void;
   /** The page is for organisers, who are told of quiet mornings: anyone else is told so. */
   organiser: boolean;
 }
@@ -27,8 +30,15 @@ export function usePrecision(): PrecisionView {
   const query = useQuery({
     queryKey: ["precision", day.familyId],
     enabled,
+    refetchOnWindowFocus: "always",
     queryFn: async () => fetchPrecision(day.familyId ?? "", await account.token()),
   });
+
+  const refetch = query.refetch;
+  const refresh = useCallback(() => {
+    day.refresh();
+    if (enabled) void refetch();
+  }, [day.refresh, enabled, refetch]);
 
   if (demoDataAllowed(apiConfigured(), accountsConfigured())) {
     return {
@@ -36,6 +46,8 @@ export function usePrecision(): PrecisionView {
       live: false,
       loading: false,
       trouble: false,
+      refreshing: false,
+      refresh,
       organiser: true,
     };
   }
@@ -45,6 +57,8 @@ export function usePrecision(): PrecisionView {
     live,
     loading: day.loading || (enabled && query.isPending),
     trouble: day.trouble || query.isError,
+    refreshing: query.isRefetching,
+    refresh,
     organiser: day.organiser,
   };
 }
