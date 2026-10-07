@@ -1493,3 +1493,15 @@ footer.site .run-by {
 .back {
   margin: 2rem 0 4rem;
 }
+
+/* The website privacy notice. */
+.notice h2 {
+  font-size: 1.35rem;
+  margin: 2rem 0 0.6rem;
+}
+.notice ul {
+  padding-left: 1.3rem;
+}
+.notice li {
+  margin: 0.45rem 0;
+}

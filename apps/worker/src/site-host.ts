@@ -5,7 +5,7 @@
  * workers.dev address, so a public domain adds no way in to them. `www.` sends a visitor to the
  * bare domain. Only the site's own address is indexed; every other address keeps search engines out.
  */
-import { SITE_LANGS, SITE_PATHS, WAITLIST_PATH } from "./site.ts";
+import { SITE_LANGS, SITE_PATHS, SUPPORT_EMAIL, WAITLIST_PATH } from "./site.ts";
 
 /** The paths the public address answers; static files under /site/ are the platform's. */
 export const PUBLIC_SITE_PATHS: ReadonlySet<string> = new Set([
@@ -14,6 +14,8 @@ export const PUBLIC_SITE_PATHS: ReadonlySet<string> = new Set([
   "/privacy",
   "/privacy/zh-TW",
   "/robots.txt",
+  "/.well-known/security.txt",
+  ...SITE_LANGS.map((lang) => SITE_PATHS[lang].privacy),
   "/sitemap.xml",
 ]);
 
@@ -70,7 +72,7 @@ export function robotsTxt(indexable: boolean, origin: string): string {
 
 /** The site's pages in both languages, each naming the other as its alternate. */
 export function sitemapXml(origin: string): string {
-  const pages = (["home", "precision"] as const).flatMap((page) =>
+  const pages = (["home", "precision", "privacy"] as const).flatMap((page) =>
     SITE_LANGS.map((lang) => {
       const alternates = SITE_LANGS.map(
         (other) =>
@@ -80,4 +82,29 @@ export function sitemapXml(origin: string): string {
     }),
   );
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${pages.join("")}</urlset>\n`;
+}
+
+/** Whether a form's `Origin` is this address or the website's own. */
+export function sameSiteOrigin(
+  origin: string,
+  url: URL,
+  env: { readonly SITE_HOST?: string },
+): boolean {
+  if (origin === url.origin) return true;
+  const site = siteHostOf(env);
+  return site !== null && (origin === `https://${site}` || origin === `https://www.${site}`);
+}
+
+/** security.txt (RFC 9116): who to write to, valid for a year from the request. */
+export function securityTxt(origin: string, now: Date): string {
+  const expires = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+  expires.setUTCHours(0, 0, 0, 0);
+  return [
+    `Contact: mailto:${SUPPORT_EMAIL}`,
+    `Expires: ${expires.toISOString()}`,
+    "Preferred-Languages: en, zh-TW",
+    `Canonical: ${origin}/.well-known/security.txt`,
+    `Policy: ${origin}${SITE_PATHS.en.privacy}`,
+    "",
+  ].join("\n");
 }

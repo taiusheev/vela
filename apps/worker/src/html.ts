@@ -158,7 +158,23 @@ export function noticePage(lang: NoticeLang, notice: PrivacyNotice): Response {
  * and a fetch back to this origin for the waitlist. Nothing from another origin, no inline script.
  */
 export const SITE_CSP =
-  "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+  "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests";
+
+/**
+ * The headers every public site page carries beyond its CSP: HTTPS only for a year, no framing,
+ * no sniffing, no referrer path to other sites, and no camera, microphone, location or payment
+ * access for anything on the page. `_headers` in site-assets gives the static files the same.
+ */
+export const SITE_SECURITY_HEADERS: Readonly<Record<string, string>> = {
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "cross-origin-opener-policy": "same-origin",
+  "cross-origin-resource-policy": "same-origin",
+  "permissions-policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()",
+};
 
 /** A page of the public website, in its language, with its social preview and alternate language. */
 export function sitePage(
@@ -204,8 +220,7 @@ ${page.alternates.map(
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "public, max-age=300",
-      "referrer-policy": "strict-origin-when-cross-origin",
-      "x-content-type-options": "nosniff",
+      ...SITE_SECURITY_HEADERS,
       "content-security-policy": SITE_CSP,
     },
   });

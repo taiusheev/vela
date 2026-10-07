@@ -13,14 +13,21 @@
  */
 import type { PublicPrecision } from "@vela/contracts";
 import { type Html, html } from "./html.ts";
+import { WEBSITE_PRIVACY } from "./site-privacy.ts";
 
 export const SITE_LANGS = ["en", "zh-TW"] as const;
 export type SiteLang = (typeof SITE_LANGS)[number];
 
 /** Where each page lives, by language. */
-export const SITE_PATHS: Readonly<Record<SiteLang, { home: string; precision: string }>> = {
-  en: { home: "/", precision: "/how-vela-is-doing" },
-  "zh-TW": { home: "/zh-TW", precision: "/zh-TW/how-vela-is-doing" },
+export const SITE_PATHS: Readonly<
+  Record<SiteLang, { home: string; precision: string; privacy: string }>
+> = {
+  en: { home: "/", precision: "/how-vela-is-doing", privacy: "/website-privacy" },
+  "zh-TW": {
+    home: "/zh-TW",
+    precision: "/zh-TW/how-vela-is-doing",
+    privacy: "/zh-TW/website-privacy",
+  },
 };
 
 /** Where the waitlist form posts, in every language. */
@@ -85,6 +92,9 @@ interface Demo {
   };
   readonly join: { readonly ok: string; readonly badEmail: string; readonly failed: string };
 }
+
+/** A page of the site that exists in every language. */
+type SitePage = "home" | "precision" | "privacy";
 
 type Icon = "consent" | "symmetry" | "health" | "calm";
 
@@ -198,6 +208,7 @@ interface SiteCopy {
     readonly roles: Readonly<Record<"organiser" | "parent" | "other", string>>;
     readonly submit: string;
     readonly fine: string;
+    readonly fineLink: string;
     readonly joined: string;
     readonly badEmail: string;
     readonly alt: string;
@@ -213,6 +224,7 @@ interface SiteCopy {
     readonly precision: string;
     readonly contact: string;
     readonly images: string;
+    readonly sitePrivacy: string;
   };
   readonly precisionPage: {
     readonly eyebrow: string;
@@ -442,6 +454,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       },
       submit: "Join the waitlist",
       fine: `We use your email only to tell you when Vela opens. To be removed, write to ${SUPPORT_EMAIL}.`,
+      fineLink: "How we handle it",
       joined: "You’re on the list. We’ll write when your family can start.",
       badEmail: "That email doesn’t look right. Please check it and try again.",
       alt: "Illustration: a quiet table with a tea cup, a small plant and two postcards by an arched window.",
@@ -478,7 +491,8 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     },
     footer: {
       runBy: "Vela is run by Timur Aiusheev, Taipei.",
-      privacy: "Privacy notice",
+      privacy: "Pilot families’ notice",
+      sitePrivacy: "Website privacy",
       precision: "How Vela is doing",
       contact: "Contact",
       images: "Photographs are illustrative scenes, not Vela families.",
@@ -905,6 +919,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       },
       submit: "加入等候名單",
       fine: `您的電子郵件只會用來通知您 Vela 開放的消息。如需移除，請寫信到 ${SUPPORT_EMAIL}。`,
+      fineLink: "我們如何處理",
       joined: "您已加入名單。等您的家人可以開始時，我們會寫信給您。",
       badEmail: "這個電子郵件看起來不太對，請檢查後再試一次。",
       alt: "插畫：拱形窗邊一張安靜的桌子，上面有茶杯、小盆栽和兩張明信片。",
@@ -941,7 +956,8 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     },
     footer: {
       runBy: "Vela 由 Timur Aiusheev 在台北經營。",
-      privacy: "隱私權告知事項",
+      privacy: "試辦家庭告知事項",
+      sitePrivacy: "網站隱私權",
       precision: "Vela 的表現",
       contact: "聯絡我們",
       images: "照片為示意情境，並非 Vela 的使用家庭。",
@@ -1206,7 +1222,7 @@ function phone(head: { title: string; sub: string }, extra = ""): Html {
   return html`<div class="phone${extra}" aria-hidden="true"><div class="screen"><div class="bar"><span class="ava">${MARK}</span><span><b>${head.title}</b><small>${head.sub}</small></span></div><div class="chat"></div></div></div>`;
 }
 
-function languageSwitch(lang: SiteLang, page: "home" | "precision"): Html {
+function languageSwitch(lang: SiteLang, page: SitePage): Html {
   return html`<nav class="langs" aria-label="Language / 語言">${SITE_LANGS.map((other) =>
     other === lang
       ? html`<span aria-current="true">${COPY[other].languageName}</span>`
@@ -1214,7 +1230,7 @@ function languageSwitch(lang: SiteLang, page: "home" | "precision"): Html {
   )}</nav>`;
 }
 
-function header(lang: SiteLang, page: "home" | "precision"): Html {
+function header(lang: SiteLang, page: SitePage): Html {
   const copy = COPY[lang];
   const home = SITE_PATHS[lang].home;
   const at = (id: string) => (page === "home" ? `#${id}` : `${home}#${id}`);
@@ -1224,7 +1240,7 @@ function header(lang: SiteLang, page: "home" | "precision"): Html {
 
 function footer(lang: SiteLang): Html {
   const copy = COPY[lang].footer;
-  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}">${MARK}<span>Vela</span></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a><a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
+  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}">${MARK}<span>Vela</span></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a><a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
 }
 
 /** The demo script `site.js` reads. A data block, never executed, so the page's CSP still holds. */
@@ -1373,7 +1389,7 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
       <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
       <button class="btn btn-primary" type="submit">${c.join.submit}</button>
       ${flashMessage(lang, flash)}
-      <p class="fine">${c.join.fine}</p>
+      <p class="fine">${c.join.fine} <a href="${SITE_PATHS[lang].privacy}">${c.join.fineLink}</a></p>
     </form>
   </div>
 </div></section>
@@ -1414,6 +1430,29 @@ export function sitePrecision(lang: SiteLang, precision: PublicPrecision): SiteP
 <section class="prose">${copy.explain.map((p) => html`<p>${p}</p>`)}</section>
 ${table}
 <p class="back"><a class="btn btn-ghost" href="${SITE_PATHS[lang].home}">${copy.back}</a></p>
+</div></main>
+${footer(lang)}`,
+  };
+}
+
+/** The website's privacy notice (`site-privacy.ts`). */
+export function sitePrivacy(lang: SiteLang): SitePageContent {
+  const notice = WEBSITE_PRIVACY[lang];
+  return {
+    title: `${notice.title} · Vela`,
+    description: notice.lede,
+    body: html`${header(lang, "privacy")}
+<main id="main"><div class="wrap">
+<section class="page-head"><p class="eyebrow">${notice.updated}</p><h1>${notice.title}</h1><p class="lede">${notice.lede}</p></section>
+<section class="prose notice">${notice.sections.map(
+      (section) =>
+        html`<h2>${section.heading}</h2>${(section.paragraphs ?? []).map((p) => html`<p>${p}</p>`)}${
+          section.items === undefined
+            ? null
+            : html`<ul>${section.items.map((i) => html`<li>${i}</li>`)}</ul>`
+        }`,
+    )}<p>${notice.pilotNote} <a href="${PRIVACY_PATHS[lang]}">${COPY[lang].footer.privacy}</a></p></section>
+<p class="back"><a class="btn btn-ghost" href="${SITE_PATHS[lang].home}">${COPY[lang].precisionPage.back}</a></p>
 </div></main>
 ${footer(lang)}`,
   };
