@@ -54,7 +54,7 @@
   "limits": [
     "Delivery metadata proves provider acceptance, not reading or listening.",
     "No family message content, external identifiers, credentials or provider request bodies were read or retained.",
-    "Human reply, group linking, next-morning read-back, photos, voice, consent races, live AI quality, seven mornings, iPhone and production remain open."
+    "Human reply, group linking, next-morning read-back, photos, voice, consent races, live AI safety/quality scenarios, seven mornings, iPhone and production remain open."
   ],
   "fix": {
     "pullRequest": "https://github.com/taiusheev/vela/pull/22",
@@ -111,6 +111,111 @@
     "policy": "fixed HTTP/status codes only; arbitrary provider text becomes provider_failure",
     "localSourceTestsPassed": 4206,
     "targetedPipelineTestsPassed": 45,
-    "liveDiagnosticEvidence": "pending deployment of the follow-up"
+    "liveDiagnosticEvidence": {
+      "observedAt": "2026-10-07T05:33:39.716Z",
+      "kind": "fine",
+      "attempt": 6,
+      "understandError": "http_401",
+      "flagError": "http_401"
+    },
+    "pullRequest": "https://github.com/taiusheev/vela/pull/23",
+    "testedSource": "10ac6e93232ece8daae2bf94af5fbc6d76f50999",
+    "mergeCommit": "588bb2aafbf3dcfa2b52821a8b036f65d8def16d",
+    "pushCi": "https://github.com/taiusheev/vela/actions/runs/37575546271",
+    "pullRequestCi": "https://github.com/taiusheev/vela/actions/runs/37575550818",
+    "mainCi": "https://github.com/taiusheev/vela/actions/runs/37576102045",
+    "deployment": "https://github.com/taiusheev/vela/actions/runs/37576102048",
+    "deploymentPassed": true,
+    "workerVersion": "c53defb6-128f-47c3-9dfb-2e37ca43e007",
+    "deployedAt": "2026-10-07T05:31:10.523512Z"
+  },
+  "status": "original answer processing recovered on the deployed staging Worker after runtime fix and founder credential update",
+  "authenticationLimits": "HTTP 401 was observed before the founder updated the key; successful calls after the update establish recovery without reading the old or new key or provider error body.",
+  "beforeKeyUpdateSnapshot": {
+    "checkedAt": "2026-10-07T05:34:34.606392Z",
+    "answers": [
+      {
+        "kind": "fine",
+        "attempts": 6,
+        "understoodAt": null,
+        "summaryPresent": false
+      },
+      {
+        "kind": "text",
+        "attempts": 4,
+        "understoodAt": null,
+        "summaryPresent": false
+      }
+    ],
+    "aiSinceDiagnosticDeployment": [
+      {
+        "call": "understand",
+        "model": "gpt-5",
+        "calls": 2,
+        "ok": false,
+        "tokensIn": 0,
+        "tokensOut": 0
+      },
+      {
+        "call": "flag",
+        "model": "gpt-5",
+        "calls": 2,
+        "ok": false,
+        "tokensIn": 0,
+        "tokensOut": 0
+      }
+    ]
+  },
+  "credentialUpdate": {
+    "method": "founder entered the existing-account key at the hidden prompt; no credential read, printed or written locally by this verification",
+    "pilotVersion": "fc0f1d51-97f2-4903-84e5-04d812438de4",
+    "pilotPublishedAt": "2026-10-07T05:37:39.237757Z",
+    "adminVersion": "37185e73-538b-43b1-b4f7-fe18a6fccbef",
+    "adminPublishedAt": "2026-10-07T05:37:46.26882Z"
+  },
+  "recovery": {
+    "jobsQueuedAt": "2026-10-07T05:38:44.777Z",
+    "checkedAt": "2026-10-07T05:39:34.520747Z",
+    "answers": [
+      {
+        "kind": "fine",
+        "attempts": 7,
+        "understoodAt": "2026-10-07T05:38:55.612Z",
+        "summaryPresent": true
+      },
+      {
+        "kind": "text",
+        "attempts": 5,
+        "understoodAt": "2026-10-07T05:39:02.697Z",
+        "summaryPresent": true
+      }
+    ],
+    "aiCalls": [
+      {
+        "call": "understand",
+        "calls": 2,
+        "ok": true,
+        "model": "gpt-5-2025-08-07",
+        "tokensIn": 3977,
+        "tokensOut": 569
+      },
+      {
+        "call": "flag",
+        "calls": 2,
+        "ok": true,
+        "model": "gpt-5-2025-08-07",
+        "tokensIn": 2389,
+        "tokensOut": 126
+      }
+    ],
+    "smokeCheckedAt": "2026-10-07T05:38:46.143Z",
+    "smokeChecksPassed": 7,
+    "failureHistoryPreserved": true,
+    "loopCheckedAt": "2026-10-07T05:40:44.000297Z",
+    "arrivalMessagesSent": 1,
+    "ackMessagesSent": 1,
+    "groupRoutes": 0,
+    "humanReplies": 0,
+    "readBackExchanges": 0
   }
 }
