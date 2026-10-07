@@ -144,7 +144,9 @@ interface CallSpec<K extends AiCallName> {
 export function createOpenAiAi(options: OpenAiOptions): Ai {
   const client: Client = {
     apiKey: options.apiKey,
-    fetch: options.fetch ?? fetch,
+    // workerd's native fetch requires its global receiver. Calling a stored native function
+    // as client.fetch() throws before the request leaves the Worker; Node does not catch this.
+    fetch: options.fetch ?? ((input, init) => fetch(input, init)),
     retryBaseMs: options.retryBaseMs ?? 500,
   };
   return {
