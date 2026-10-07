@@ -3,15 +3,10 @@ import { Link, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { FamilyScene } from "../../src/components/brand/scene.tsx";
 import { ExchangePhotos, ReplyThumbnails } from "../../src/components/family-photo.tsx";
-import {
-  Card,
-  Eyebrow,
-  Hairline,
-  ReceiptChip,
-  SecondaryButton,
-  Words,
-} from "../../src/components/ui.tsx";
+import { Card, Eyebrow, ReceiptChip, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import type { Exchange } from "../../src/data/exchanges.ts";
 import { replyLine } from "../../src/data/lines.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
@@ -38,14 +33,15 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
         <Card>
           <Eyebrow>{heading}</Eyebrow>
           <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
-          <Words variant="voice">{exchange.ask}</Words>
+          <Words variant="body" tone="ink2">
+            {exchange.ask}
+          </Words>
           {shown === undefined ? (
             <Words variant="body" tone="ink2">
               <Trans>No word yet.</Trans>
             </Words>
           ) : (
-            <>
-              <Hairline />
+            <AnswerPanel>
               <Words variant="voice">{shown}</Words>
               <Words variant="caption" tone="ink3">
                 {answer?.transcript === true ? (
@@ -58,7 +54,7 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
                   </Trans>
                 )}
               </Words>
-            </>
+            </AnswerPanel>
           )}
           {replies === undefined ? null : (
             <Words variant="body" tone="ink2">
@@ -99,9 +95,7 @@ export default function ExchangesScreen() {
       }}
     >
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Words variant="title">
-          <Trans context="tab">Exchanges</Trans>
-        </Words>
+        <ScreenHeading title={<Trans context="tab">Exchanges</Trans>} />
         {canShowOriginals ? (
           <Pressable
             accessibilityRole="button"
@@ -123,9 +117,12 @@ export default function ExchangesScreen() {
           <Trans>Looking for your family's days…</Trans>
         </Words>
       ) : live && exchanges.length === 0 ? (
-        <Words variant="body" tone="ink2">
-          <Trans>Nothing has happened yet. Her first morning will be here.</Trans>
-        </Words>
+        <View style={{ gap: space.xl, paddingVertical: space.xl }}>
+          <FamilyScene kind="letter" width={184} />
+          <Words variant="body" tone="ink2">
+            <Trans>Nothing has happened yet. Her first morning will be here.</Trans>
+          </Words>
+        </View>
       ) : null}
       {trouble ? <SecondaryButton label={t`Try again`} onPress={refresh} /> : null}
       {exchanges.map((exchange) => (

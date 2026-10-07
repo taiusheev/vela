@@ -14,6 +14,7 @@ import {
 } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
+import { FamilyScene } from "../src/components/brand/scene.tsx";
 import { Light } from "../src/components/light.tsx";
 import { NearbyEditor } from "../src/components/nearby-editor.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
@@ -227,6 +228,7 @@ export default function OnboardingScreen() {
         />
         {step === "who" ? (
           <>
+            <FamilyScene kind="table" width={152} />
             <Words variant="title">
               <Trans>Who are you keeping a light on for?</Trans>
             </Words>
@@ -415,6 +417,7 @@ export default function OnboardingScreen() {
 
         {step === "invite" && created !== null ? (
           <>
+            <FamilyScene kind="letter" width={152} />
             <Words variant="title">
               <Trans>Now ask {name}</Trans>
             </Words>

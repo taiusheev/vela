@@ -8,6 +8,9 @@ import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
+import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { BrandIcon } from "../../src/components/brand/icon.tsx";
+import { FamilyScene } from "../../src/components/brand/scene.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
@@ -52,27 +55,39 @@ function LightsRow({
   /** A quiet light opens its notice again, once the sheet that opened by itself was closed. */
   onQuiet: (light: TodayLight) => void;
 }) {
+  const palette = usePalette();
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.xl }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.m }}>
       {lights.map((light) => (
         <Pressable
           key={light.memberId}
           accessibilityRole={light.state === "quiet" ? "button" : undefined}
           disabled={light.state !== "quiet"}
           onPress={() => onQuiet(light)}
-          style={{ alignItems: "center", gap: space.s }}
+          style={{
+            flexGrow: 1,
+            flexBasis: 140,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.m,
+            backgroundColor: palette.surface2,
+            padding: space.l,
+            borderRadius: 16,
+          }}
         >
-          <Light state={light.state} height={40} />
-          <Words variant="heading">{light.displayName}</Words>
-          <Words variant="caption" tone="ink3">
-            {light.stateText}
-          </Words>
-          {light.localDate === undefined ? null : (
-            <Words
-              variant="caption"
-              tone="ink3"
-            >{`${light.localDate} · ${light.timeZone ?? ""}`}</Words>
-          )}
+          <Light state={light.state} height={36} />
+          <View style={{ flex: 1, gap: space.xs }}>
+            <Words variant="heading">{light.displayName}</Words>
+            <Words variant="caption" tone="ink2">
+              {light.stateText}
+            </Words>
+            {light.localDate === undefined ? null : (
+              <Words
+                variant="caption"
+                tone="ink2"
+              >{`${light.localDate} · ${light.timeZone ?? ""}`}</Words>
+            )}
+          </View>
         </Pressable>
       ))}
     </View>
@@ -81,6 +96,7 @@ function LightsRow({
 
 function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
   const { t } = useLingui();
+  const palette = usePalette();
   const { familyId } = useToday();
   const asker = exchange.asker;
   const recipient = exchange.recipient;
@@ -91,7 +107,11 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
         {asker === undefined ? t`A hello for ${recipient}` : t`${asker} asked ${recipient}`}
       </Eyebrow>
       <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
-      {exchange.ask === undefined ? null : <Words variant="voice">{exchange.ask}</Words>}
+      {exchange.ask === undefined ? null : (
+        <Words variant="body" tone="ink2">
+          {exchange.ask}
+        </Words>
+      )}
       {exchange.voiceHello === undefined || familyId === undefined ? null : (
         <VoicePlayback
           familyId={familyId}
@@ -111,8 +131,7 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
           </Words>
         )
       ) : (
-        <>
-          <Hairline />
+        <AnswerPanel>
           <Words variant="voice">{exchange.answer.text}</Words>
           {exchange.answer.photo === undefined ? null : (
             <ReplyPhoto photo={exchange.answer.photo} size="full" />
@@ -132,7 +151,7 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
               {recipient} answered at {time}
             </Trans>
           </Words>
-        </>
+        </AnswerPanel>
       )}
       {exchange.replies.length > 0 ? (
         <>
@@ -170,15 +189,27 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
         accessibilityRole="button"
         hitSlop={hitSlop}
         onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
-        style={{ minHeight: 44, justifyContent: "center" }}
+        style={{
+          minHeight: 52,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: space.m,
+          backgroundColor: palette.actionSoft,
+          borderRadius: 12,
+          paddingHorizontal: space.l,
+        }}
       >
-        <Words variant="button" tone="action">
-          {exchange.answer === undefined ? (
-            <Trans>Open this exchange</Trans>
-          ) : (
-            <Trans>Reply to {recipient}</Trans>
-          )}
-        </Words>
+        <BrandIcon name="reply" color={palette.action} size={20} />
+        <View style={{ flex: 1 }}>
+          <Words variant="button" tone="action">
+            {exchange.answer === undefined ? (
+              <Trans>Open this exchange</Trans>
+            ) : (
+              <Trans>Reply to {recipient}</Trans>
+            )}
+          </Words>
+        </View>
+        <BrandIcon name="arrow" color={palette.action} size={20} />
       </Pressable>
     </Card>
   );
@@ -391,9 +422,7 @@ function FamilyToday({ day }: { day: TodayView }) {
       }}
     >
       <View style={{ gap: space.s }}>
-        <Words variant="title">
-          <Trans context="tab">Today</Trans>
-        </Words>
+        <ScreenHeading title={<Trans context="tab">Today</Trans>} />
         {day.updatedAt > 0 ? (
           <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words>
         ) : null}
@@ -437,6 +466,7 @@ function FamilyToday({ day }: { day: TodayView }) {
       )}
       {!day.loading && !trouble && !noAccount && !noFamily && today.exchanges.length === 0 ? (
         <Card>
+          <FamilyScene kind="table" width={152} />
           {target?.invited === true ? (
             <Words variant="body">
               <Trans>
@@ -467,13 +497,6 @@ function FamilyToday({ day }: { day: TodayView }) {
           )}
         </Card>
       ) : null}
-      {target === undefined || !canAsk(target) ? null : (
-        <PrimaryButton
-          label={t`Ask ${recipient} something`}
-          disabled={apiConfigured() && !live}
-          onPress={() => router.push({ pathname: "/ask", params: { recipient: target.memberId } })}
-        />
-      )}
       {today.lights.flatMap((light) =>
         light.unreachableOn === undefined
           ? []
@@ -485,6 +508,13 @@ function FamilyToday({ day }: { day: TodayView }) {
       {today.exchanges.map((exchange) => (
         <ExchangeCard key={exchange.id} exchange={exchange} />
       ))}
+      {target === undefined || !canAsk(target) ? null : (
+        <PrimaryButton
+          label={t`Ask ${recipient} something`}
+          disabled={apiConfigured() && !live}
+          onPress={() => router.push({ pathname: "/ask", params: { recipient: target.memberId } })}
+        />
+      )}
       {today.tomorrow.map((turn) => (
         <TomorrowCard key={turn.recipientId} tomorrow={turn} />
       ))}

@@ -3,6 +3,8 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { FamilyScene } from "../../src/components/brand/scene.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryDay, StoryOfTheWeek } from "../../src/components/story-day.tsx";
@@ -25,9 +27,19 @@ import { space } from "../../src/theme/tokens.ts";
 /** Seven small lights, Monday to Sunday, each with its day and the time she answered (A9). */
 function WeekRow({ lights }: { lights: WeekLight[] }) {
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        rowGap: space.l,
+      }}
+    >
       {lights.map((light) => (
-        <View key={light.date} style={{ alignItems: "center", gap: space.xs, flex: 1 }}>
+        <View
+          key={light.date}
+          style={{ alignItems: "center", gap: space.xs, flex: 1, minWidth: 40 }}
+        >
           <Light state={light.state} height={28} />
           <Words variant="caption" tone="ink2">
             {light.day}
@@ -96,9 +108,10 @@ function FamilySunday({ day }: { day: TodayView }) {
       }}
     >
       {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
-      <Words variant="title">
-        <Trans context="tab">Sunday</Trans>
-      </Words>
+      <ScreenHeading
+        title={<Trans context="tab">Sunday</Trans>}
+        trailing={<FamilyScene kind="book" width={94} />}
+      />
       <ParentChooser lights={day.today.lights} selected={view.memberId} onSelect={select} />
       {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}
       {view.loading ? (
@@ -169,13 +182,13 @@ function FamilySunday({ day }: { day: TodayView }) {
               {read.week.notes.length === 0 ? null : (
                 <>
                   <Hairline />
-                  <View style={{ gap: space.m }}>
+                  <AnswerPanel>
                     {read.week.notes.map((note) => (
                       <Words key={note} variant="voice">
                         {note}
                       </Words>
                     ))}
-                  </View>
+                  </AnswerPanel>
                 </>
               )}
               {read.week.suggestion === null ? null : (

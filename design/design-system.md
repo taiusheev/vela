@@ -1,5 +1,7 @@
 # Vela design system
 
+October 2026 app presentation update: see [app-experience.md](app-experience.md) for the implemented hierarchy, graphics, contrast and control changes. The September identity remains the foundation; the newer app rules supersede older component sizing and caption contrast values.
+
 v3, 2026-09-12. Decided from `research-identity.md` (colour vision after 65, cultural meaning across our six markets, legibility research, script coverage, logo trends, name check) and `research-best-apps.md` (interaction and accessibility patterns). Supersedes v1 (sage/amber flame, rejected) and v2 (navy/blue from the radar-concept logo, withdrawn). Figma: "Vela · Design", https://www.figma.com/design/eJxG0c9ZHNSlY794RA9nrL.
 
 ## The identity in one paragraph

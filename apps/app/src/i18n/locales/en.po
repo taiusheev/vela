@@ -285,10 +285,6 @@ msgstr "❤️ I'm fine"
 msgid "🎙 Add a voice hello (10 seconds)"
 msgstr "🎙 Add a voice hello (10 seconds)"
 
-#: src/device/VoiceAnswer.tsx
-msgid "🎙 Answer with your voice"
-msgstr "🎙 Answer with your voice"
-
 #: src/components/voice-hello.tsx
 msgid "🎙 Record your voice note (10 seconds)"
 msgstr "🎙 Record your voice note (10 seconds)"
@@ -396,6 +392,10 @@ msgstr "Another question"
 #: src/device/KitchenTable.tsx
 msgid "Answer"
 msgstr "Answer"
+
+#: src/device/VoiceAnswer.tsx
+msgid "Answer with your voice"
+msgstr "Answer with your voice"
 
 #: src/data/useToday.ts
 msgid "answered"
@@ -548,10 +548,6 @@ msgstr "Change country"
 #: app/sign-in.tsx
 msgid "Change email or number"
 msgstr "Change email or number"
-
-#: app/(tabs)/you.tsx
-msgid "Change the people nearby"
-msgstr "Change the people nearby"
 
 #: app/sign-in.tsx
 msgid "Checking…"
@@ -1305,14 +1301,6 @@ msgstr "One moment…"
 #: app/ask.tsx
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr "One question at a time. The English pilot sends your words as written."
-
-#: app/(tabs)/you.tsx
-msgid "Open"
-msgstr "Open"
-
-#: app/(tabs)/you.tsx
-msgid "Open how the quiet notices ended"
-msgstr "Open how the quiet notices ended"
 
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx

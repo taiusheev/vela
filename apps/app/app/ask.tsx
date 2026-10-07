@@ -3,24 +3,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
 import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
 import type { Recorded } from "../src/audio/useRecording.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
+import { ChoiceTile } from "../src/components/brand/experience.tsx";
+import { SuggestionDisclosure } from "../src/components/brand/suggestion.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
-import {
-  Card,
-  Chip,
-  Eyebrow,
-  PrimaryButton,
-  SecondaryButton,
-  TextField,
-  Words,
-} from "../src/components/ui.tsx";
+import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
 import { VoiceHello } from "../src/components/voice-hello.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
 import { type AskType, askTypes, composableType, suggestedKind } from "../src/data/ask.ts";
@@ -299,201 +293,225 @@ function AskComposer({
           headerLeft: () => <BackButton />,
         }}
       />
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        style={{ backgroundColor: palette.bg }}
-        contentContainerStyle={{
-          paddingTop: space.xl,
-          paddingBottom: insets.bottom + space.xxxl,
-          paddingHorizontal: space.margin,
-          gap: space.xl,
-        }}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={insets.top + 56}
       >
-        {lights.length > 1 ? (
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={{ flex: 1, backgroundColor: palette.bg }}
+          contentContainerStyle={{
+            paddingTop: space.xl,
+            paddingBottom: space.xl,
+            paddingHorizontal: space.margin,
+            gap: space.xl,
+          }}
+        >
+          {lights.length > 1 ? (
+            <View style={{ gap: space.m }}>
+              <Words variant="heading">
+                <Trans>Who is this for?</Trans>
+              </Words>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+                {lights.map((light) => (
+                  <Chip
+                    key={light.memberId}
+                    label={light.displayName}
+                    selected={recipient?.memberId === light.memberId}
+                    disabled={compose.isPending || savedAsk !== null || !canAsk(light)}
+                    onPress={() =>
+                      router.setParams({
+                        recipient: light.memberId,
+                        suggestion: undefined,
+                        text: undefined,
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
+
           <View style={{ gap: space.m }}>
             <Words variant="heading">
-              <Trans>Who is this for?</Trans>
+              <Trans>What are you sending?</Trans>
             </Words>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-              {lights.map((light) => (
-                <Chip
-                  key={light.memberId}
-                  label={light.displayName}
-                  selected={recipient?.memberId === light.memberId}
-                  disabled={compose.isPending || savedAsk !== null || !canAsk(light)}
-                  onPress={() =>
-                    router.setParams({
-                      recipient: light.memberId,
-                      suggestion: undefined,
-                      text: undefined,
-                    })
-                  }
-                />
-              ))}
+              {askTypes
+                .filter(
+                  (option) =>
+                    moreTypes ||
+                    option.kind === kind ||
+                    ["question", "two_photos", "voice_note"].includes(option.kind),
+                )
+                .map((option) => (
+                  <ChoiceTile
+                    key={option.kind}
+                    icon={
+                      option.kind === "voice_note"
+                        ? "mic"
+                        : photoCount(option.kind) > 0
+                          ? "photo"
+                          : "ask"
+                    }
+                    label={i18n._(option.label)}
+                    selected={option.kind === kind}
+                    disabled={!option.available || (photos.off && photoCount(option.kind) > 0)}
+                    onPress={() => setKind(option.kind)}
+                  />
+                ))}
             </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: moreTypes }}
+              style={{ minHeight: 44, justifyContent: "center" }}
+              onPress={() => setMoreTypes((shown) => !shown)}
+            >
+              <Words variant="button" tone="action">
+                {moreTypes ? <Trans>Fewer choices</Trans> : <Trans>More ways to ask</Trans>}
+              </Words>
+            </Pressable>
+            {photos.explain ? (
+              <Words variant="caption" tone="ink3">
+                <Trans>Photos are not switched on here yet.</Trans>
+              </Words>
+            ) : null}
           </View>
-        ) : null}
-        {/* Live with no suggestion for her morning, there is no card. */}
-        {suggestion === undefined || recipient === undefined ? null : (
-          <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
-            <Eyebrow>
-              {suggestion.fromHerWords ? (
-                <Trans>Vela suggests · from her own words</Trans>
-              ) : (
-                <Trans>Vela suggests</Trans>
-              )}
-            </Eyebrow>
-            <Words variant="voice">{suggestion.text}</Words>
-            <SecondaryButton
-              label={t`Use this`}
+
+          <View style={{ gap: space.m }}>
+            <TextField
+              value={text}
+              onChangeText={setText}
+              placeholder={t`Say it the way you would say it`}
+              helper={t`One question at a time. The English pilot sends your words as written.`}
+              multiline
+              maxLength={1000}
               disabled={!draft.ready || compose.isPending || savedElsewhere}
-              onPress={() => fill(suggestion, recipient.memberId)}
             />
-          </Card>
-        )}
-
-        <View style={{ gap: space.m }}>
-          <Words variant="heading">
-            <Trans>What are you sending?</Trans>
-          </Words>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-            {askTypes
-              .filter(
-                (option) =>
-                  moreTypes ||
-                  option.kind === kind ||
-                  ["question", "two_photos", "voice_note"].includes(option.kind),
-              )
-              .map((option) => (
-                <Chip
-                  key={option.kind}
-                  label={i18n._(option.label)}
-                  selected={option.kind === kind}
-                  disabled={!option.available || (photos.off && photoCount(option.kind) > 0)}
-                  onPress={() => setKind(option.kind)}
-                />
-              ))}
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: moreTypes }}
-            style={{ minHeight: 44, justifyContent: "center" }}
-            onPress={() => setMoreTypes((shown) => !shown)}
-          >
-            <Words variant="button" tone="action">
-              {moreTypes ? <Trans>Fewer choices</Trans> : <Trans>More ways to ask</Trans>}
-            </Words>
-          </Pressable>
-          {photos.explain ? (
-            <Words variant="caption" tone="ink3">
-              <Trans>Photos are not switched on here yet.</Trans>
-            </Words>
-          ) : null}
-        </View>
+          {/* Live with no suggestion for her morning, there is no card. */}
+          {suggestion === undefined || recipient === undefined ? null : (
+            <SuggestionDisclosure
+              label={
+                suggestion.fromHerWords ? t`Vela suggests · from her own words` : t`Vela suggests`
+              }
+            >
+              <Words variant="voice">{suggestion.text}</Words>
+              <SecondaryButton
+                label={t`Use this`}
+                disabled={!draft.ready || compose.isPending || savedElsewhere}
+                onPress={() => fill(suggestion, recipient.memberId)}
+              />
+            </SuggestionDisclosure>
+          )}
 
-        <View style={{ gap: space.m }}>
-          <TextField
-            value={text}
-            onChangeText={setText}
-            placeholder={t`Say it the way you would say it`}
-            helper={t`One question at a time. The English pilot sends your words as written.`}
-            multiline
-            maxLength={1000}
-            disabled={!draft.ready || compose.isPending || savedElsewhere}
-          />
-        </View>
-        <PhotoSlots photos={photos} />
-        {demo ? null : <VoiceHello onChange={setHello} note={voiceNote} />}
-        {kind === "vote" ? <VoteOptions options={options} onChange={setOptions} /> : null}
+          <PhotoSlots photos={photos} />
+          {demo ? null : <VoiceHello onChange={setHello} note={voiceNote} />}
+          {kind === "vote" ? <VoteOptions options={options} onChange={setOptions} /> : null}
 
-        <View style={{ gap: space.m }}>
-          <Words variant="heading">
-            <Trans comment="heading over the morning the ask arrives">When</Trans>
-          </Words>
-          {taken === null ? null : (
+          <View style={{ gap: space.m }}>
+            <Words variant="heading">
+              <Trans comment="heading over the morning the ask arrives">When</Trans>
+            </Words>
+            {taken === null ? null : (
+              <Words variant="body" tone="ink2">
+                <Trans>{holder} already has that morning.</Trans>
+              </Words>
+            )}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+              <Chip
+                label={t`Tomorrow morning`}
+                selected={when === "tomorrow"}
+                disabled={taken !== null}
+                onPress={() => setWhen("tomorrow")}
+              />
+              {day === null ? null : (
+                <Chip
+                  label={t`${day} morning`}
+                  selected={when === "another_day"}
+                  onPress={() => setWhen("another_day")}
+                />
+              )}
+              {photos.count > 0 || hello !== null ? null : (
+                <Chip
+                  label={t`Whenever`}
+                  selected={when === "whenever"}
+                  onPress={() => setWhen("whenever")}
+                />
+              )}
+            </View>
+            {noMorning ? (
+              <Words variant="body" tone="ink2">
+                <Trans>
+                  No morning in the next two weeks is free for a photo ask. Send it as words, or try
+                  again later.
+                </Trans>
+              </Words>
+            ) : null}
+          </View>
+
+          {hold === null ? null : (
             <Words variant="body" tone="ink2">
-              <Trans>{holder} already has that morning.</Trans>
+              {hold}
             </Words>
           )}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-            <Chip
-              label={t`Tomorrow morning`}
-              selected={when === "tomorrow"}
-              disabled={taken !== null}
-              onPress={() => setWhen("tomorrow")}
-            />
-            {day === null ? null : (
-              <Chip
-                label={t`${day} morning`}
-                selected={when === "another_day"}
-                onPress={() => setWhen("another_day")}
-              />
-            )}
-            {photos.count > 0 || hello !== null ? null : (
-              <Chip
-                label={t`Whenever`}
-                selected={when === "whenever"}
-                onPress={() => setWhen("whenever")}
-              />
-            )}
-          </View>
-          {noMorning ? (
+          {draft.saveFailed ? (
             <Words variant="body" tone="ink2">
               <Trans>
-                No morning in the next two weeks is free for a photo ask. Send it as words, or try
-                again later.
+                This iPhone could not keep a draft. Leave this screen open until your send succeeds.
               </Trans>
             </Words>
           ) : null}
-        </View>
-
-        {hold === null ? null : (
-          <Words variant="body" tone="ink2">
-            {hold}
-          </Words>
-        )}
-        {draft.saveFailed ? (
-          <Words variant="body" tone="ink2">
-            <Trans>
-              This iPhone could not keep a draft. Leave this screen open until your send succeeds.
-            </Trans>
-          </Words>
-        ) : null}
-        {trouble ? (
-          <Words variant="body" tone="ink2">
-            <Trans>
-              The send could not be confirmed. Retry the saved attempt to finish the same send.
-            </Trans>
-          </Words>
-        ) : null}
-        {savedAsk === null || savedRecipient === undefined || !canAsk(savedRecipient) ? null : (
-          <SecondaryButton
-            label={savedElsewhere ? t`Continue your saved ask to ${savedName}` : t`Retry saved ask`}
-            disabled={compose.isPending || !draft.ready}
-            onPress={() => {
-              if (savedElsewhere)
-                router.setParams({
-                  recipient: savedAsk.recipient_id,
-                  suggestion: undefined,
-                  text: undefined,
-                });
-              else if (ready) compose.mutate({ ask: savedAsk, saved: true });
-            }}
+          {trouble ? (
+            <Words variant="body" tone="ink2">
+              <Trans>
+                The send could not be confirmed. Retry the saved attempt to finish the same send.
+              </Trans>
+            </Words>
+          ) : null}
+          {savedAsk === null || savedRecipient === undefined || !canAsk(savedRecipient) ? null : (
+            <SecondaryButton
+              label={
+                savedElsewhere ? t`Continue your saved ask to ${savedName}` : t`Retry saved ask`
+              }
+              disabled={compose.isPending || !draft.ready}
+              onPress={() => {
+                if (savedElsewhere)
+                  router.setParams({
+                    recipient: savedAsk.recipient_id,
+                    suggestion: undefined,
+                    text: undefined,
+                  });
+                else if (ready) compose.mutate({ ask: savedAsk, saved: true });
+              }}
+            />
+          )}
+        </ScrollView>
+        <View
+          style={{
+            backgroundColor: palette.bg,
+            borderTopWidth: 1,
+            borderTopColor: palette.rule,
+            paddingHorizontal: space.margin,
+            paddingTop: space.m,
+            paddingBottom: insets.bottom + space.l,
+          }}
+        >
+          <PrimaryButton
+            label={compose.isPending ? t`Sending…` : t`Into her morning`}
+            onPress={send}
+            disabled={
+              compose.isPending ||
+              savedElsewhere ||
+              !draft.ready ||
+              extras === undefined ||
+              noMorning ||
+              (!demo && (!ready || !written || (voiceNote && hello === null)))
+            }
           />
-        )}
-        <PrimaryButton
-          label={compose.isPending ? t`Sending…` : t`Into her morning`}
-          onPress={send}
-          disabled={
-            compose.isPending ||
-            savedElsewhere ||
-            !draft.ready ||
-            extras === undefined ||
-            noMorning ||
-            (!demo && (!ready || !written || (voiceNote && hello === null)))
-          }
-        />
-      </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </>
   );
 }

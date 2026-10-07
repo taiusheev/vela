@@ -286,10 +286,6 @@ msgstr "❤️ 我很好"
 msgid "🎙 Add a voice hello (10 seconds)"
 msgstr "🎙 加一段語音問候（10 秒）"
 
-#: src/device/VoiceAnswer.tsx
-msgid "🎙 Answer with your voice"
-msgstr "🎙 用聲音回答"
-
 #: src/components/voice-hello.tsx
 msgid "🎙 Record your voice note (10 seconds)"
 msgstr "🎙 錄一段語音（10 秒）"
@@ -397,6 +393,10 @@ msgstr "換一個問題"
 #: src/device/KitchenTable.tsx
 msgid "Answer"
 msgstr "回答"
+
+#: src/device/VoiceAnswer.tsx
+msgid "Answer with your voice"
+msgstr "用聲音回答"
 
 #: src/data/useToday.ts
 msgid "answered"
@@ -549,10 +549,6 @@ msgstr "更改國家"
 #: app/sign-in.tsx
 msgid "Change email or number"
 msgstr "更換電子郵件或電話號碼"
-
-#: app/(tabs)/you.tsx
-msgid "Change the people nearby"
-msgstr "更改附近的聯絡人"
 
 #: app/sign-in.tsx
 msgid "Checking…"
@@ -1306,14 +1302,6 @@ msgstr "請稍等…"
 #: app/ask.tsx
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr "一次一個問題。英語試辦會照您寫的原文送出。"
-
-#: app/(tabs)/you.tsx
-msgid "Open"
-msgstr "打開"
-
-#: app/(tabs)/you.tsx
-msgid "Open how the quiet notices ended"
-msgstr "打開安靜通知的結果"
 
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx

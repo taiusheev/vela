@@ -36,7 +36,7 @@ export function Words({
   );
 }
 
-/** Surface, 16 radius, one hairline: the card the whole app is built from. */
+/** Surface, generous radius, one hairline: the card the whole app is built from. */
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const palette = usePalette();
   return (
@@ -124,7 +124,7 @@ export function Eyebrow({ children }: { children: ReactNode }) {
       style={[
         type.label,
         english ? { textTransform: "uppercase" } : { letterSpacing: 0 },
-        { color: palette.ink3 },
+        { color: palette.ink2 },
       ]}
     >
       {children}
@@ -171,7 +171,7 @@ export function SetupProgress({
   );
 }
 
-/** A tappable chip: the ask types, the reactions, the "when" choices. Chips are 999 radius. */
+/** A tappable chip: the ask types, the reactions, the "when" choices. Chips have a compact rounded rectangle. */
 export function Chip({
   label,
   selected = false,
@@ -194,7 +194,7 @@ export function Chip({
       style={{
         borderRadius: radius.chip,
         borderWidth: 1,
-        borderColor: selected ? palette.action : palette.rule,
+        borderColor: selected ? palette.action : palette.control,
         backgroundColor: selected ? palette.actionSoft : palette.surface,
         paddingVertical: space.m,
         paddingHorizontal: space.l,
@@ -277,7 +277,7 @@ export function TextField({
             backgroundColor: palette.surface,
             borderRadius: radius.button,
             borderWidth: focused ? 2 : 1,
-            borderColor: focused ? palette.action : palette.rule,
+            borderColor: focused ? palette.action : palette.control,
             paddingHorizontal: space.l,
             paddingVertical: space.m,
             minHeight: multiline ? 112 : 56,
@@ -313,7 +313,7 @@ export function SecondaryButton({
       onPress={onPress}
       style={({ pressed }) => ({
         backgroundColor: palette.surface,
-        borderColor: palette.rule,
+        borderColor: palette.control,
         borderWidth: 1,
         opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
         borderRadius: radius.button,
