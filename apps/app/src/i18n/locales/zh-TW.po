@@ -195,8 +195,8 @@ msgid "{name}: {what}. You will be reminded to ask on {day}."
 msgstr "{name}：{what}。{day}會提醒您問一問。"
 
 #: app/(tabs)/sunday.tsx
-msgid "{name}'s first weekly read comes on a Sunday, after a week of her mornings."
-msgstr "{name}的第一份每週小記會在週日送來，等{name}過完一週的早上之後。"
+msgid "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
+msgstr "{name}的第一份每週回顧會在星期日到來，回顧一週的晨間訊息。"
 
 #: app/vela-light.tsx
 msgid "{name}'s light is not on."
@@ -209,6 +209,10 @@ msgstr "{name}的燈亮著"
 #: app/ask.tsx
 msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
 msgstr "{name}的燈目前暫停中，所以現在無法放進早安訊息。"
+
+#: app/(tabs)/you.tsx
+msgid "{name}'s phone"
+msgstr "{name}的手機"
 
 #: app/book.tsx
 msgid "{name}'s recipe · {day}"
@@ -247,6 +251,14 @@ msgstr "{recipient}在 {time} 回覆了"
 #: app/(tabs)/exchanges.tsx
 msgid "{recipient} answered at {time} · from her voice note"
 msgstr "{recipient}在 {time} 回覆了 · 由語音轉成文字"
+
+#: app/(tabs)/index.tsx
+msgid "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
+msgstr "已邀請{recipient}。在自己的聊天室答應後，晨間訊息才會開始。"
+
+#: app/(tabs)/index.tsx
+msgid "{recipient} has paused their mornings. They can start again in Vela's chat when they are ready."
+msgstr "{recipient}已暫停晨間訊息。準備好時，可以在 Vela 的聊天室重新開始。"
 
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -317,6 +329,10 @@ msgstr "安靜的早上"
 #: src/data/ask.ts
 msgid "A recipe"
 msgstr "一道菜的做法"
+
+#: app/sign-in.tsx
+msgid "A small moment with your family, every day."
+msgstr "每天，與家人相伴一小刻。"
 
 #: src/data/ask.ts
 msgid "A story"
@@ -530,6 +546,10 @@ msgstr "更改"
 msgid "Change country"
 msgstr "更改國家"
 
+#: app/sign-in.tsx
+msgid "Change email or number"
+msgstr "更換電子郵件或電話號碼"
+
 #: app/(tabs)/you.tsx
 msgid "Change the people nearby"
 msgstr "更改附近的聯絡人"
@@ -537,6 +557,14 @@ msgstr "更改附近的聯絡人"
 #: app/sign-in.tsx
 msgid "Checking…"
 msgstr "確認中…"
+
+#: app/away.tsx
+msgid "Choose a parent from You before changing away dates."
+msgstr "請先在「你」選擇一位家人，再更改外出日期。"
+
+#: app/nearby.tsx
+msgid "Choose a parent from You before changing the people nearby."
+msgstr "請先在「你」選擇一位家人，再更改附近的人。"
 
 #: src/components/photo-slots.tsx
 msgid "Choose a photo"
@@ -553,6 +581,10 @@ msgstr "從題庫選"
 #: app/ask.tsx
 msgid "Choose someone in your family, or return to Today. Your words are kept."
 msgstr "請選擇一位家人，或回到「今天」。您的文字已保留。"
+
+#: app/exchange/[id].tsx
+msgid "Choose this exchange's family on Today to play or send attachments."
+msgstr "請在「今天」選擇這段對話所屬的家庭，再播放或傳送附件。"
 
 #: app/sign-in.tsx
 msgid "Choose your country, type your number as you would at home, and we text you a code."
@@ -574,6 +606,10 @@ msgstr "簡訊驗證碼目前還無法傳到{where}，請改用電子郵件。"
 #: src/components/reminders.tsx
 msgid "Coming up"
 msgstr "近期安排"
+
+#: src/components/nearby-editor.tsx
+msgid "Confirm removal"
+msgstr "確認移除"
 
 #: src/components/telegram-family-link.tsx
 msgid "Connect existing family"
@@ -620,6 +656,10 @@ msgstr "爸爸"
 msgid "Darwin"
 msgstr "達爾文"
 
+#: app/(tabs)/index.tsx
+msgid "Dismiss"
+msgstr "關閉"
+
 #: src/data/photos.ts
 msgid "Do you remember this?"
 msgstr "您還記得這張嗎？"
@@ -657,6 +697,10 @@ msgstr "英語試辦"
 #: app/sign-in.tsx
 msgid "Enter"
 msgstr "登入"
+
+#: app/sign-in.tsx
+msgid "Enter the six digits from your message."
+msgstr "請輸入訊息中的六位數字。"
 
 #: app/exchange/[id].tsx
 msgid "Exchange"
@@ -710,14 +754,25 @@ msgstr "從"
 msgid "Germany"
 msgstr "德國"
 
+#: src/components/setup-help.tsx
+msgid "Get help connecting"
+msgstr "取得連結協助"
+
 #: app/(tabs)/you.tsx
 msgid "Get help or request your data"
 msgstr "尋求協助或索取您的資料"
 
 #: app/onboarding.tsx
+#: app/sign-in.tsx
 #: app/vela-light.tsx
 msgid "Go to Today"
 msgstr "前往「今天」"
+
+#: app/(tabs)/index.tsx
+#: app/away.tsx
+#: app/nearby.tsx
+msgid "Go to You"
+msgstr "前往「你」"
 
 #: src/device/useParent.ts
 msgid "Good morning, Mom. Mia asks: what did you have for breakfast?"
@@ -785,10 +840,6 @@ msgstr "不在家的期間，早上的訊息照常送出；不會通知家人早
 msgid "Her name, as the family calls her."
 msgstr "家裡平常怎麼稱呼這位家人。"
 
-#: app/(tabs)/you.tsx
-msgid "Her phone"
-msgstr "長輩的手機"
-
 #: src/components/test-sign-in-details.tsx
 msgid "Hide test sign-in details"
 msgstr "隱藏測試登入資訊"
@@ -851,6 +902,10 @@ msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "早安訊息過了平常的回覆時間仍然安靜時，以及之後有了結果時。"
 
 #: src/components/telegram-family-link.tsx
+msgid "If you are joining as a relative, join the approved Telegram family group first. Connecting here keeps your existing family role."
+msgstr "若你是親人，請先加入已核准的 Telegram 家庭群組。在這裡連結後，你仍保有原來的家庭角色。"
+
+#: src/components/telegram-family-link.tsx
 msgid "If your family has not been set up yet, contact the founder before continuing. Your parent agrees in their own Telegram chat."
 msgstr "如果您的家庭還沒設定好，請先聯絡創辦人再繼續。您的父母會在自己的 Telegram 聊天室裡表示同意。"
 
@@ -889,6 +944,10 @@ msgstr "{name}不在家嗎？"
 msgid "It ends when she next answers, from a later day than today."
 msgstr "從明天起，長輩下次回覆時就會自動結束。"
 
+#: app/(tabs)/index.tsx
+msgid "It has been accepted. Delivery happens in the parent's morning."
+msgstr "問題已收妥，會在家人的早晨送達。"
+
 #: app/onboarding.tsx
 msgid "It reaches her on the first morning after she says yes. Every morning after that, someone in the family asks."
 msgstr "答應之後的第一個早上就會送到。之後每天早上，都會有一位家人提問。"
@@ -896,6 +955,10 @@ msgstr "答應之後的第一個早上就會送到。之後每天早上，都會
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
 msgstr "先是麵包店，後來變成書店。冬天我們在那裡排隊買麵包。"
+
+#: app/book.tsx
+msgid "It will stop being kept as a story. The exchange still follows the usual retention period."
+msgstr "這段故事將不再長期保存。原本的對話仍依一般保存期限保留。"
 
 #: src/components/quiet-notice.tsx
 msgid "It's been quiet at {name}'s today"
@@ -914,9 +977,21 @@ msgstr "哈薩克"
 msgid "Keep a light on for me"
 msgstr "也為我留一盞燈"
 
+#: app/(tabs)/you.tsx
+msgid "Keep my turns"
+msgstr "保留我的輪次"
+
+#: src/components/nearby-editor.tsx
+msgid "Keep them"
+msgstr "保留這位聯絡人"
+
 #: app/onboarding.tsx
 msgid "Keep this country"
 msgstr "保留這個國家"
+
+#: app/book.tsx
+msgid "Keep this story"
+msgstr "保留這段故事"
 
 #: app/(tabs)/you.tsx
 msgid "Language"
@@ -978,6 +1053,10 @@ msgstr "聽原始語音"
 msgid "Loading pilot setup…"
 msgstr "正在載入試辦設定…"
 
+#: src/components/nearby-editor.tsx
+msgid "Loading the people nearby…"
+msgstr "正在讀取附近的人⋯"
+
 #: app/precision.tsx
 msgid "Loading the quiet notices…"
 msgstr "正在載入安靜通知…"
@@ -987,6 +1066,8 @@ msgid "Loading voice…"
 msgstr "正在載入語音…"
 
 #: app/(tabs)/you.tsx
+#: app/away.tsx
+#: app/nearby.tsx
 msgid "Loading your family…"
 msgstr "正在載入您的家庭…"
 
@@ -1074,10 +1155,6 @@ msgstr "紐西蘭"
 #: app/onboarding.tsx
 msgid "Next"
 msgstr "下一步"
-
-#: app/sign-in.tsx
-msgid "No accounts yet"
-msgstr "目前還沒有開放帳號"
 
 #: app/ask.tsx
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
@@ -1298,9 +1375,17 @@ msgstr "貼上您的連結碼"
 msgid "Pause"
 msgstr "暫停"
 
+#: app/(tabs)/you.tsx
+msgid "Pause my turns"
+msgstr "暫停我的輪次"
+
 #: src/audio/VoicePlayback.tsx
 msgid "Pause voice"
 msgstr "暫停語音"
+
+#: app/(tabs)/you.tsx
+msgid "Pause your turns in {familyName}?"
+msgstr "要暫停你在{familyName}的輪次嗎？"
 
 #: src/data/useToday.ts
 msgid "paused"
@@ -1309,6 +1394,10 @@ msgstr "暫停中"
 #: src/data/family.ts
 msgid "Paused · {plan}"
 msgstr "暫停中 · {plan}"
+
+#: app/(tabs)/you.tsx
+msgid "People near {name}"
+msgstr "{name}附近的人"
 
 #: app/nearby.tsx
 #: app/onboarding.tsx
@@ -1380,6 +1469,7 @@ msgid "Read the family book"
 msgstr "看家庭故事書"
 
 #: app/(tabs)/you.tsx
+#: src/components/setup-help.tsx
 msgid "Read the privacy notice"
 msgstr "閱讀隱私權告知事項"
 
@@ -1428,6 +1518,10 @@ msgstr "移除"
 msgid "Remove {who}"
 msgstr "移除{who}"
 
+#: src/components/nearby-editor.tsx
+msgid "Remove {whoToRemove} from the people nearby?"
+msgstr "要從附近的人移除{whoToRemove}嗎？"
+
 #: src/components/calling-number-editor.tsx
 msgid "Remove calling number"
 msgstr "移除電話號碼"
@@ -1443,6 +1537,14 @@ msgstr "回覆"
 #: app/(tabs)/index.tsx
 msgid "Reply to {recipient}"
 msgstr "回覆{recipient}"
+
+#: app/sign-in.tsx
+msgid "Resend code"
+msgstr "重新傳送驗證碼"
+
+#: app/sign-in.tsx
+msgid "Resend code in {seconds}s"
+msgstr "{seconds} 秒後可重新傳送驗證碼"
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -1644,6 +1746,18 @@ msgstr "登入後即可連結您的家庭。"
 msgid "Sign out"
 msgstr "登出"
 
+#: app/sign-in.tsx
+msgid "Sign-in code"
+msgstr "登入驗證碼"
+
+#: app/sign-in.tsx
+msgid "Sign-in could not be configured. Contact Vela for help."
+msgstr "登入設定未完成。請聯絡 Vela 取得協助。"
+
+#: app/sign-in.tsx
+msgid "Sign-in is unavailable in this build"
+msgstr "這個版本目前無法登入"
+
 #: app/(tabs)/you.tsx
 msgid "Sign-out did not finish. You are still signed in. Try again."
 msgstr "登出沒有完成，您仍在登入狀態。請再試一次。"
@@ -1713,8 +1827,8 @@ msgid "Stop"
 msgstr "停止"
 
 #: src/components/story-day.tsx
-msgid "Story day · {day}"
-msgstr "故事日 · {day}"
+msgid "Story day · {name} · {day}"
+msgstr "故事日・{name}・{day}"
 
 #: src/components/story-day.tsx
 msgid "Story of the week"
@@ -1744,8 +1858,16 @@ msgid "Take it back"
 msgstr "收回"
 
 #: app/book.tsx
+msgid "Take it out"
+msgstr "移除故事"
+
+#: app/book.tsx
 msgid "Take this story out of the book"
 msgstr "把這個故事從書中移除"
+
+#: app/book.tsx
+msgid "Take this story out of the family book?"
+msgstr "要從家庭故事書移除這段故事嗎？"
 
 #: src/data/useToday.ts
 msgid "tapped an answer"
@@ -1784,8 +1906,8 @@ msgid "That code did not connect a family. Use the code from the Telegram accoun
 msgstr "這個連結碼沒有連到任何家庭。請使用已加入您那個獲准試辦家庭的 Telegram 帳號所收到的連結碼。"
 
 #: app/sign-in.tsx
-msgid "That code did not work. Ask for a new one."
-msgstr "這組驗證碼無法使用。請重新索取一組。"
+msgid "That code did not work. Check it or resend the code below."
+msgstr "驗證碼未通過。請確認，或在下方重新傳送。"
 
 #: app/sign-in.tsx
 msgid "That code was right, but this account needs more than that to finish."
@@ -1839,6 +1961,10 @@ msgstr "暫時無法載入這次交流。"
 #: app/exchange/[id].tsx
 msgid "That exchange is not here."
 msgstr "找不到這則問答。"
+
+#: src/components/setup-help.tsx
+msgid "That link could not open. Contact Vela at the address below."
+msgstr "連結無法開啟。請透過下方地址聯絡 Vela。"
 
 #: app/(tabs)/you.tsx
 msgid "That link could not open. Use the address above to contact the founder."
@@ -1942,6 +2068,10 @@ msgstr "無法分享邀請。請再試一次「在 Telegram 上問」；目前�
 msgid "The light is ready"
 msgstr "燈已經準備好了"
 
+#: app/(tabs)/index.tsx
+msgid "The next morning will appear here once it arrives. You can get an ask ready now."
+msgstr "下一則晨間訊息到來後，會顯示在這裡。你現在就可以準備一個問題。"
+
 #: src/components/calling-number-editor.tsx
 msgid "The number could not be saved or removed. Try again."
 msgstr "無法儲存或移除號碼，請再試一次。"
@@ -1999,13 +2129,13 @@ msgstr "等家人答應、也過了一週的早上之後，每週小記就會開
 msgid "Their name"
 msgstr "對方的名字"
 
+#: src/components/nearby-editor.tsx
+msgid "They will no longer receive requests to look in. You can invite someone else."
+msgstr "這位聯絡人將不再收到探望請求。你可以邀請其他人。"
+
 #: app/onboarding.tsx
 msgid "This account already runs a family."
 msgstr "這個帳號已經有一個家庭了。"
-
-#: app/sign-in.tsx
-msgid "This build has no sign-in configured, so it shows example days."
-msgstr "這個版本沒有設定登入，所以顯示的是範例內容。"
 
 #: src/components/telegram-family-link.tsx
 msgid "This connection expired. Create a new one and use its new code."
@@ -2138,9 +2268,16 @@ msgstr "目前照片太多了，請明天再試。"
 
 #: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
+#: app/(tabs)/sunday.tsx
+#: app/(tabs)/you.tsx
+#: app/away.tsx
+#: app/book.tsx
 #: app/exchange/[id].tsx
+#: app/nearby.tsx
 #: app/onboarding.tsx
+#: app/precision.tsx
 #: app/vela-light.tsx
+#: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 msgid "Try again"
 msgstr "再試一次"
@@ -2218,10 +2355,6 @@ msgstr "正在上傳 {percent}%"
 #: app/sign-in.tsx
 msgid "Use my email instead"
 msgstr "改用我的電子郵件"
-
-#: app/sign-in.tsx
-msgid "Use something else"
-msgstr "改用其他方式"
 
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
@@ -2342,10 +2475,6 @@ msgstr "這則通知有幫助嗎？"
 #: app/sign-in.tsx
 msgid "We sent a code to {sentTo}."
 msgstr "我們已經把驗證碼傳到 {sentTo}。"
-
-#: app/sign-in.tsx
-msgid "We sent a code to your email."
-msgstr "我們已經把驗證碼寄到您的電子信箱。"
 
 #: app/sign-in.tsx
 msgid "We will text {phone}."
@@ -2497,6 +2626,10 @@ msgstr "目前只有您一位發起人在使用中，而暫停的發起人在安
 msgid "You can also do it later, from You → Her phone."
 msgstr "也可以之後再設定：我 → 長輩的手機。"
 
+#: app/sign-in.tsx
+msgid "You can explore an example family. No messages are sent."
+msgstr "你可以探索範例家庭。這裡不會傳送任何訊息。"
+
 #: app/exchange/[id].tsx
 msgid "You can reply once she has answered."
 msgstr "等這位家人回覆之後，您就可以回應。"
@@ -2509,6 +2642,18 @@ msgstr "材料"
 msgid "You said {name} is fine. Nothing else was sent."
 msgstr "您說{name}沒事。沒有再傳送其他訊息。"
 
+#: app/(tabs)/index.tsx
+msgid "You tried an example ask. No message was sent."
+msgstr "你試用了範例提問。沒有傳送任何訊息。"
+
+#: app/(tabs)/you.tsx
+msgid "You will not receive turns or quiet notices while paused. Another active organiser must stay reachable."
+msgstr "暫停期間，你不會收到輪次或安靜通知。必須有另一位未暫停的召集人可以聯絡。"
+
+#: app/(tabs)/you.tsx
+msgid "You will stop receiving turns. You can resume whenever you are ready."
+msgstr "你將不再收到輪次。準備好時，隨時可以恢復。"
+
 #: app/(tabs)/you.tsx
 msgid "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
 msgstr "您將不再看到家人的日常，也不會再輪流提問。三十天後，保存的關於您的資料會被刪除。"
@@ -2517,18 +2662,32 @@ msgstr "您將不再看到家人的日常，也不會再輪流提問。三十天
 msgid "Your answer, {time} long."
 msgstr "您的回答，共 {time}。"
 
+#: app/(tabs)/index.tsx
+msgid "Your ask for {outcomeRecipient} is ready for {date}."
+msgstr "給{outcomeRecipient}的問題已準備好，將於 {date}傳送。"
+
+#: app/(tabs)/index.tsx
+msgid "Your ask for {outcomeRecipient} is waiting for an available morning."
+msgstr "給{outcomeRecipient}的問題正在等待有空的早晨。"
+
 #: app/sign-in.tsx
 msgid "Your country"
 msgstr "您的國家"
 
 #: app/precision.tsx
+#: src/components/family-chooser.tsx
 #: src/components/telegram-family-link.tsx
 msgid "Your family"
 msgstr "您的家庭"
 
 #: app/(tabs)/you.tsx
+#: app/away.tsx
 msgid "Your family could not be reached just now."
 msgstr "目前無法載入您的家庭。"
+
+#: app/(tabs)/index.tsx
+msgid "Your family's first parent connection is still being set up."
+msgstr "你的家庭仍在設定第一位家人的連結。"
 
 #: app/(tabs)/you.tsx
 msgid "Your light is off, so nothing about your mornings is shown."
@@ -2545,6 +2704,10 @@ msgstr "您的手機號碼。國碼會自動幫您加上。"
 #: src/device/useParent.ts
 msgid "Your morning message"
 msgstr "您的早晨訊息"
+
+#: src/components/telegram-family-link.tsx
+msgid "Your name"
+msgstr "你的名字"
 
 #: app/onboarding.tsx
 #: src/components/telegram-family-link.tsx

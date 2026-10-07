@@ -1,13 +1,14 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
-import { router } from "expo-router";
-import { type ReactNode, useState } from "react";
-import { Linking, Pressable, ScrollView, Switch, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { type ReactNode, useCallback, useState } from "react";
+import { Linking, Pressable, RefreshControl, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiBaseUrl, apiConfigured } from "../../src/api/client.ts";
 import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL, SUPPORT_URL } from "../../src/api/support.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
 import { CallingNumberEditor } from "../../src/components/calling-number-editor.tsx";
+import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { LocaleChips } from "../../src/components/locale-chips.tsx";
 import { SetUpPhone } from "../../src/components/set-up-phone.tsx";
@@ -22,7 +23,7 @@ import {
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
 import { useOneMoment } from "../../src/data/useOneMoment.ts";
-import { useToday } from "../../src/data/useToday.ts";
+import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { useAppLocale } from "../../src/i18n/provider.tsx";
 import { usePush } from "../../src/push/provider.tsx";
 import { usePalette } from "../../src/theme/theme.tsx";
@@ -70,6 +71,11 @@ function Fixed({ on }: { on: boolean }) {
 }
 
 export default function YouScreen() {
+  const day = useToday();
+  return <FamilyYou key={day.familyId ?? ""} day={day} />;
+}
+
+function FamilyYou({ day }: { day: TodayView }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const account = useAccount();
@@ -85,12 +91,14 @@ export default function YouScreen() {
   };
   const { t } = useLingui();
   const language = useAppLocale();
-  const { familyId, noAccount, pushSent, loading: todayLoading } = useToday();
+  const { familyId, noAccount, pushSent, loading: todayLoading } = day;
   const push = usePush();
   const signingOut = useMutation({ mutationFn: () => push.signOut() });
   const moment = useOneMoment();
   const {
     family,
+    refresh,
+    refreshing,
     live,
     trouble,
     loading: familyLoading,
@@ -99,7 +107,18 @@ export default function YouScreen() {
     changing,
     refused,
   } = useFamily(familyId, familyId !== undefined);
+  useFocusEffect(
+    useCallback(() => {
+      day.refresh();
+      refresh();
+    }, [day.refresh, refresh]),
+  );
+  const retry = () => {
+    day.refresh();
+    refresh();
+  };
   const [seesOpen, setSeesOpen] = useState(false);
+  const [pausing, confirmPause] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [exampleNote, setExampleNote] = useState(false);
 
@@ -131,6 +150,8 @@ export default function YouScreen() {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={retry} />}
       style={{ backgroundColor: palette.bg }}
       contentContainerStyle={{
         paddingTop: insets.top + space.xl,
@@ -143,18 +164,20 @@ export default function YouScreen() {
       <Words variant="title">
         <Trans context="tab">You</Trans>
       </Words>
+      <FamilyChooser day={day} />
       <View style={{ gap: space.xs }}>
         <Words variant="heading">{family.me.name}</Words>
         <Words variant="caption" tone="ink3">
           {family.me.line}
         </Words>
       </View>
-      {trouble ? (
+      {trouble || day.trouble ? (
         <Words variant="body" tone="ink2">
           <Trans>Your family could not be reached just now.</Trans>
         </Words>
       ) : null}
 
+      {trouble || day.trouble ? <SecondaryButton label={t`Try again`} onPress={retry} /> : null}
       {familyLoading || todayLoading ? (
         <Words variant="body" tone="ink2">
           <Trans>Loading your family…</Trans>
@@ -168,7 +191,7 @@ export default function YouScreen() {
           </Trans>
         </Words>
       ) : null}
-      {noAccount ? (
+      {noAccount || day.noFamily ? (
         <SecondaryButton
           label={t`Connect your Telegram family`}
           onPress={() => router.push("/onboarding")}
@@ -229,33 +252,39 @@ export default function YouScreen() {
               <Row title={family.others.names} caption={family.others.line} />
             </>
           )}
-          {family.nearby === undefined ? null : (
-            <>
-              <Hairline />
-              {/* Organisers only see this row, and they choose who is on it (spec A3). */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityHint={t`Change the people nearby`}
-                onPress={() =>
-                  router.push(
-                    family.keptLight[0] === undefined
-                      ? "/nearby"
-                      : { pathname: "/nearby", params: { member: family.keptLight[0].memberId } },
-                  )
-                }
-              >
-                <Row
-                  title={family.nearby.names}
-                  caption={family.nearby.line}
-                  trailing={
-                    <Words variant="button" tone="action">
-                      <Trans>Change</Trans>
-                    </Words>
-                  }
-                />
-              </Pressable>
-            </>
-          )}
+          {family.me.organiser
+            ? family.keptLight.map((member) => {
+                const nearby = member.nearby ?? family.nearby;
+                if (nearby === undefined) return null;
+                const name = member.name;
+                return (
+                  <View key={`nearby:${member.memberId}`} style={{ gap: space.m }}>
+                    <Hairline />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityHint={t`Change the people nearby`}
+                      onPress={() =>
+                        router.push({ pathname: "/nearby", params: { member: member.memberId } })
+                      }
+                    >
+                      <Row
+                        title={family.keptLight.length > 1 ? t`People near ${name}` : nearby.names}
+                        caption={
+                          family.keptLight.length > 1
+                            ? `${nearby.names} · ${nearby.line}`
+                            : nearby.line
+                        }
+                        trailing={
+                          <Words variant="button" tone="action">
+                            <Trans>Change</Trans>
+                          </Words>
+                        }
+                      />
+                    </Pressable>
+                  </View>
+                );
+              })
+            : null}
           {family.me.organiser ? (
             <>
               <Hairline />
@@ -291,20 +320,21 @@ export default function YouScreen() {
           ))
         : null}
 
-      {capabilities?.parent_app === true &&
-      family.me.organiser &&
-      family.keptLight[0] !== undefined ? (
-        <View style={{ gap: space.m }}>
-          <Eyebrow>
-            <Trans>Her phone</Trans>
-          </Eyebrow>
-          <SetUpPhone
-            familyId={family.familyId}
-            memberId={family.keptLight[0].memberId}
-            name={family.keptLight[0].name}
-          />
-        </View>
-      ) : null}
+      {capabilities?.parent_app === true && family.me.organiser
+        ? family.keptLight.map((member) => {
+            const name = member.name;
+            return (
+              <View key={`phone:${member.memberId}`} style={{ gap: space.m }}>
+                <Eyebrow>{t`${name}'s phone`}</Eyebrow>
+                <SetUpPhone
+                  familyId={family.familyId}
+                  memberId={member.memberId}
+                  name={member.name}
+                />
+              </View>
+            );
+          })
+        : null}
 
       <View style={{ gap: space.m }}>
         <Eyebrow>
@@ -448,7 +478,11 @@ export default function YouScreen() {
             <Pressable
               accessibilityRole="button"
               disabled={changing}
-              onPress={() => setPaused(!family.me.paused)}
+              onPress={() => {
+                setLeaving(false);
+                if (family.me.paused) setPaused(false);
+                else confirmPause(true);
+              }}
             >
               <Words variant="button" tone="action">
                 {family.me.paused ? t`Resume` : t`Pause`}
@@ -459,6 +493,7 @@ export default function YouScreen() {
               disabled={changing}
               onPress={() => {
                 setExampleNote(false);
+                confirmPause(false);
                 setLeaving(true);
               }}
             >
@@ -467,6 +502,31 @@ export default function YouScreen() {
               </Words>
             </Pressable>
           </View>
+          {pausing ? (
+            <Card>
+              <Words variant="heading">
+                <Trans>Pause your turns in {familyName}?</Trans>
+              </Words>
+              <Words variant="body" tone="ink2">
+                {family.me.organiser
+                  ? t`You will not receive turns or quiet notices while paused. Another active organiser must stay reachable.`
+                  : t`You will stop receiving turns. You can resume whenever you are ready.`}
+              </Words>
+              <SecondaryButton
+                label={t`Pause my turns`}
+                disabled={changing}
+                onPress={() => {
+                  setPaused(true);
+                  confirmPause(false);
+                }}
+              />
+              <SecondaryButton
+                label={t`Keep my turns`}
+                disabled={changing}
+                onPress={() => confirmPause(false)}
+              />
+            </Card>
+          ) : null}
           {refused === undefined ? null : (
             <Words variant="caption" tone="ink2">
               {refused}
@@ -485,6 +545,7 @@ export default function YouScreen() {
               </Words>
               <SecondaryButton
                 label={changing ? t`Leaving…` : t`Leave the family`}
+                disabled={changing}
                 onPress={() => {
                   if (!live) {
                     setLeaving(false);
@@ -494,7 +555,11 @@ export default function YouScreen() {
                   leave(() => router.replace("/"));
                 }}
               />
-              <Pressable accessibilityRole="button" onPress={() => setLeaving(false)}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={changing}
+                onPress={() => setLeaving(false)}
+              >
                 <Words variant="button" tone="action">
                   <Trans>Stay</Trans>
                 </Words>

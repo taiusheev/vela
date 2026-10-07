@@ -19,6 +19,8 @@ tags:
     element: "Into her morning"
     direction: DOWN
 - tapOn: "Into her morning"
+- assertVisible: "You tried an example ask. No message was sent."
+- tapOn: "Dismiss"
 - assertVisible: "What did the garden look like this morning?"
 - scrollUntilVisible:
     element: "Ask Mom something"

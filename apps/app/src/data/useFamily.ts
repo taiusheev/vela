@@ -1,7 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   apiConfigured,
   fetchFamily,
@@ -21,6 +21,8 @@ export interface FamilyView {
   live: boolean;
   trouble: boolean;
   loading: boolean;
+  refreshing: boolean;
+  refresh(): void;
   /** Pause or resume oneself; the example family answers at once, with nothing sent. */
   setPaused(paused: boolean): void;
   /** Leave the family; `onLeft` runs once the membership is closed. */
@@ -47,7 +49,7 @@ function exampleFamily(paused: boolean): YouFamily {
 }
 
 /**
- * The family behind You, for the family Today shows (the first membership). It shares `["me"]`
+ * The family behind You, for the family Today shows. It shares `["me"]`
  * with Today, so opening You costs one read, not two. Pausing and leaving read everything again,
  * since both change what Today and the tabs show.
  */
@@ -67,8 +69,16 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
   const read = useQuery({
     queryKey: ["family", familyId],
     enabled: enabled && familyId !== undefined,
+    refetchOnWindowFocus: "always",
     queryFn: async () => fetchFamily(familyId ?? "", await account.token()),
   });
+  const refetchRead = read.refetch;
+  const refetchMe = me.refetch;
+  const refresh = useCallback(() => {
+    if (!enabled) return;
+    void refetchMe();
+    if (familyId !== undefined) void refetchRead();
+  }, [enabled, familyId, refetchMe, refetchRead]);
   const live = enabled && read.data !== undefined;
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
   const family: YouFamily = live
@@ -118,7 +128,9 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
   return {
     family,
     live,
-    trouble: read.isError,
+    trouble: read.isError || me.isError,
+    refreshing: read.isRefetching,
+    refresh,
     loading: enabled && (read.isPending || me.isPending),
     setPaused: (paused) => {
       if (demo) setExamplePaused(paused);

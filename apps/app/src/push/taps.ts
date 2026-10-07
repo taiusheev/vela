@@ -37,9 +37,8 @@ export function pushDataOf(data: unknown): PushData | null {
 }
 
 /**
- * Where a tap goes. The app shows one family (the first membership) until it has a family switcher,
- * so an exchange or a turn of another family opens Today rather than a screen that would show, or
- * ask, the wrong family's people. A quiet notice opens its sheet whichever family it is: the sheet
+ * Where a tap goes after a matching available family has been selected. An exchange or a turn
+ * without that membership opens Today rather than showing or asking another family's people. A quiet notice opens its sheet whichever family it is: the sheet
  * is read by its event, which the API gives only to that family's organisers.
  */
 export function tapTargetOf(data: PushData, shownFamilyId: string | undefined): TapTarget {

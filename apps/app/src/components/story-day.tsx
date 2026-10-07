@@ -7,6 +7,7 @@ import { apiConfigured, askConflict, composeAsk } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { dayName } from "../data/format.ts";
+import { selectedLight } from "../data/selected-light.ts";
 import { nextPrompt, nextSunday } from "../data/story.ts";
 import { useBook } from "../data/useBook.ts";
 import { useCapabilities } from "../data/useCapabilities.ts";
@@ -21,7 +22,7 @@ import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from 
  * not to. The question is the family's choice, never Vela's own (spec: Vela authors nothing but the
  * fallback hello).
  */
-export function StoryDay() {
+export function StoryDay({ memberId }: { memberId?: string }) {
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
@@ -32,7 +33,7 @@ export function StoryDay() {
   const [sent, setSent] = useState(false);
   const [own, setOwn] = useState<string | null>(null);
   const keyFor = useIdempotencyKey("story");
-  const her = today.lights[0];
+  const her = selectedLight(today.lights, memberId);
   const lang = i18n.locale === "zh-TW" ? "zh-TW" : "en";
   const asked = new Set(
     [...book.entries, ...book.coming].flatMap((entry) => entry.question?.trim() ?? []),
@@ -67,7 +68,9 @@ export function StoryDay() {
   return (
     <Card>
       <Eyebrow>
-        <Trans>Story day · {day}</Trans>
+        <Trans>
+          Story day · {name} · {day}
+        </Trans>
       </Eyebrow>
       {chosen !== undefined ? (
         <ChosenStory

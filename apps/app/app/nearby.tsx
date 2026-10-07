@@ -1,9 +1,12 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback } from "react";
 import { ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BackButton } from "../src/components/back-button.tsx";
 import { NearbyEditor } from "../src/components/nearby-editor.tsx";
-import { Words } from "../src/components/ui.tsx";
+import { SecondaryButton, Words } from "../src/components/ui.tsx";
+import { selectedLight } from "../src/data/selected-light.ts";
 import { useNearby } from "../src/data/useNearby.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
@@ -18,15 +21,26 @@ export default function NearbyScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const { member } = useLocalSearchParams<{ member?: string }>();
-  const { today, familyId, organiser } = useToday();
-  const her = today.lights.find((light) => light.memberId === member) ?? today.lights[0];
+  const day = useToday();
+  const { today, familyId, organiser } = day;
+  const her = selectedLight(today.lights, member);
   const name = her?.displayName ?? t`Mom`;
   const nearby = useNearby(familyId, her?.memberId);
 
+  useFocusEffect(
+    useCallback(() => {
+      day.refresh();
+      nearby.refresh();
+    }, [day.refresh, nearby.refresh]),
+  );
+
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: t`People nearby` }} />
+      <Stack.Screen
+        options={{ headerShown: true, title: t`People nearby`, headerLeft: () => <BackButton /> }}
+      />
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: space.xl,
@@ -35,7 +49,20 @@ export default function NearbyScreen() {
           gap: space.xl,
         }}
       >
-        {organiser ? (
+        {day.loading ? (
+          <Words variant="body">
+            <Trans>Loading your family…</Trans>
+          </Words>
+        ) : day.trouble ? (
+          <SecondaryButton label={t`Try again`} onPress={day.refresh} />
+        ) : her === undefined ? (
+          <>
+            <Words variant="body">
+              <Trans>Choose a parent from You before changing the people nearby.</Trans>
+            </Words>
+            <SecondaryButton label={t`Go to You`} onPress={() => router.replace("/(tabs)/you")} />
+          </>
+        ) : organiser ? (
           <>
             <Words variant="body" tone="ink2">
               <Trans>

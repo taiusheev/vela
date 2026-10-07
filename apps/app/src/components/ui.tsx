@@ -213,6 +213,7 @@ export function Chip({
  * field in a list, such as a vote's options, may share one helper written under the list instead.
  */
 export function TextField({
+  label,
   value,
   onChangeText,
   placeholder,
@@ -227,6 +228,7 @@ export function TextField({
   disabled = false,
   onSubmit,
 }: {
+  label?: string;
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
@@ -249,9 +251,11 @@ export function TextField({
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: space.s }}>
+      {label === undefined ? null : <Words variant="bodyMedium">{label}</Words>}
       <TextInput
         editable={!disabled}
-        accessibilityLabel={helper ?? placeholder}
+        accessibilityLabel={label ?? placeholder ?? helper}
+        accessibilityHint={helper}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

@@ -2,10 +2,18 @@ import { useSignIn, useSignUp } from "@clerk/clerk-expo";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { getLocales } from "expo-localization";
 import { router, Stack } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { apiConfigured } from "../src/api/client.ts";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
+import {
+  preferredCodeFactor,
+  resendDelay,
+  unknownIdentity,
+  validVerificationCode,
+  verificationCode,
+} from "../src/auth/code.ts";
 import {
   COUNTRIES,
   type Country,
@@ -17,13 +25,18 @@ import {
 } from "../src/auth/phone.ts";
 import { Light } from "../src/components/light.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
+import { SetupHelp } from "../src/components/setup-help.tsx";
 import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
+import { demoDataAllowed } from "../src/data/live-state.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
 type Step = "identifier" | "code";
 /** Which of Clerk's two one-time codes this attempt is carrying. */
 type Strategy = "email_code" | "phone_code";
+type Destination =
+  | { strategy: "email_code"; emailAddressId: string; safeIdentifier: string }
+  | { strategy: "phone_code"; phoneNumberId: string; safeIdentifier: string };
 /**
  * What went wrong, kept as what happened and put into words only as the screen draws, so the words
  * follow the app's language when it changes (build plan 3.1).
@@ -117,6 +130,7 @@ export default function SignInScreen() {
 }
 
 function NoAccounts() {
+  const { t } = useLingui();
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   return (
@@ -132,12 +146,20 @@ function NoAccounts() {
     >
       <Light state="resting" height={120} />
       <Words variant="title">
-        <Trans>No accounts yet</Trans>
+        <Trans>Sign-in is unavailable in this build</Trans>
       </Words>
       <Words variant="body" tone="ink2">
-        <Trans>This build has no sign-in configured, so it shows example days.</Trans>
+        {demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
+          <Trans>You can explore an example family. No messages are sent.</Trans>
+        ) : (
+          <Trans>Sign-in could not be configured. Contact Vela for help.</Trans>
+        )}
       </Words>
+      {demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
+        <SecondaryButton label={t`Go to Today`} onPress={() => router.replace("/")} />
+      ) : null}
       <LocaleChips />
+      <SetupHelp />
     </View>
   );
 }
@@ -166,6 +188,24 @@ function CodeSignIn() {
   const [code, setCode] = useState("");
   const [trouble, setTrouble] = useState<Trouble | undefined>();
   const [working, setWorking] = useState(false);
+  const inFlight = useRef(false);
+  const [destination, setDestination] = useState<Destination | null>(null);
+  const [sentTo, setSentTo] = useState("");
+  const [sentAt, setSentAt] = useState(0);
+  const [clock, setClock] = useState(Date.now);
+  const seconds = resendDelay(sentAt, clock);
+  useEffect(() => {
+    if (step !== "code") return;
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [step]);
+  const markSent = () => {
+    const now = Date.now();
+    setClock(now);
+    setSentAt(now);
+    setCode("");
+    setStep("code");
+  };
   const ready = isLoaded && signUpLoaded && signIn !== undefined && signUp !== undefined;
 
   /** Not yet an account: the same code, through the other door. */
@@ -180,12 +220,14 @@ function CodeSignIn() {
       await within(signUp.preparePhoneNumberVerification({ strategy: "phone_code" }));
       setStrategy("phone_code");
     }
+    setDestination(null);
+    setSentTo(entered);
     setJoining(true);
     return true;
   };
 
   const sendCode = async () => {
-    if (!ready || signIn === undefined) return;
+    if (!ready || signIn === undefined || inFlight.current) return;
     const entered = identifier;
     if (mode === "phone" && international === null) {
       setTrouble({ kind: "number_invalid" });
@@ -195,14 +237,13 @@ function CodeSignIn() {
       setTrouble({ kind: "email_invalid" });
       return;
     }
+    inFlight.current = true;
     setWorking(true);
     setTrouble(undefined);
     try {
       const attempt = await within(signIn.create({ identifier: entered }));
       // Whichever way this account can be reached; an account made with an email has no number.
-      const factor = attempt.supportedFirstFactors?.find(
-        (candidate) => candidate.strategy === "email_code" || candidate.strategy === "phone_code",
-      );
+      const factor = preferredCodeFactor(attempt.supportedFirstFactors ?? [], mode);
       if (factor === undefined) {
         setTrouble({ kind: "cannot_receive" });
         return;
@@ -215,6 +256,8 @@ function CodeSignIn() {
           }),
         );
         setStrategy("email_code");
+        setDestination(factor);
+        setSentTo(factor.safeIdentifier);
       } else if (factor.strategy === "phone_code") {
         await within(
           signIn.prepareFirstFactor({
@@ -223,15 +266,24 @@ function CodeSignIn() {
           }),
         );
         setStrategy("phone_code");
+        setDestination(factor);
+        setSentTo(factor.safeIdentifier);
       }
       setJoining(false);
-      setStep("code");
+      markSent();
     } catch (lookup: unknown) {
       logClerkCodes("lookup", lookup);
-      // The first family through the door has no account yet, so something Clerk does not know is
-      // the ordinary first run, not a mistake. Only one it cannot use either is worth saying.
+      if (!unknownIdentity(lookup)) {
+        setTrouble(
+          lookup instanceof TookTooLong
+            ? { kind: "bot_check" }
+            : refusalOf(lookup, mode === "phone"),
+        );
+        return;
+      }
+      // A new identity uses registration; an outage or refused login must not start another account.
       try {
-        if (await startJoining(entered)) setStep("code");
+        if (await startJoining(entered)) markSent();
         else setTrouble({ kind: "did_not_work" });
       } catch (error: unknown) {
         logClerkCodes("send", error);
@@ -241,12 +293,21 @@ function CodeSignIn() {
         );
       }
     } finally {
+      inFlight.current = false;
       setWorking(false);
     }
   };
 
   const enter = async () => {
-    if (!ready || signIn === undefined || signUp === undefined) return;
+    if (
+      !ready ||
+      signIn === undefined ||
+      signUp === undefined ||
+      inFlight.current ||
+      !validVerificationCode(code)
+    )
+      return;
+    inFlight.current = true;
     setWorking(true);
     setTrouble(undefined);
     try {
@@ -281,6 +342,38 @@ function CodeSignIn() {
         error instanceof TookTooLong ? { kind: "code_took_too_long" } : { kind: "wrong_code" },
       );
     } finally {
+      inFlight.current = false;
+      setWorking(false);
+    }
+  };
+
+  const resend = async () => {
+    if (
+      !ready ||
+      signIn === undefined ||
+      signUp === undefined ||
+      inFlight.current ||
+      resendDelay(sentAt, Date.now()) > 0
+    )
+      return;
+    inFlight.current = true;
+    setWorking(true);
+    setTrouble(undefined);
+    try {
+      if (joining) {
+        if (strategy === "email_code")
+          await within(signUp.prepareEmailAddressVerification({ strategy }));
+        else await within(signUp.preparePhoneNumberVerification({ strategy }));
+      } else {
+        if (destination === null) return;
+        await within(signIn.prepareFirstFactor(destination));
+      }
+      markSent();
+    } catch (error: unknown) {
+      logClerkCodes("send", error);
+      setTrouble(error instanceof TookTooLong ? { kind: "bot_check" } : { kind: "did_not_work" });
+    } finally {
+      inFlight.current = false;
       setWorking(false);
     }
   };
@@ -309,19 +402,19 @@ function CodeSignIn() {
       case "needs_more":
         return t`That code was right, but this account needs more than that to finish.`;
       case "wrong_code":
-        return t`That code did not work. Ask for a new one.`;
+        return t`That code did not work. Check it or resend the code below.`;
       case "code_took_too_long":
         return t`That took too long to check. Try the code again.`;
     }
   }
 
-  const sentTo = mode === "phone" ? readable(identifier) : identifier;
   const phone = international === null ? "" : readable(international);
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: insets.top + space.xxxl,
@@ -333,6 +426,9 @@ function CodeSignIn() {
         <View style={{ alignItems: "center", gap: space.l }}>
           <Light state="lit" height={120} />
           <Words variant="title">Vela Light</Words>
+          <Words variant="body" tone="ink2">
+            <Trans>A small moment with your family, every day.</Trans>
+          </Words>
         </View>
         {step === "identifier" ? (
           <>
@@ -341,6 +437,7 @@ function CodeSignIn() {
                 <Chip
                   label={t`Phone number`}
                   selected={mode === "phone"}
+                  disabled={working}
                   onPress={() => {
                     setMode("phone");
                     setTrouble(undefined);
@@ -349,6 +446,7 @@ function CodeSignIn() {
                 <Chip
                   label={t`Email`}
                   selected={mode === "email"}
+                  disabled={working}
                   onPress={() => {
                     setMode("email");
                     setTrouble(undefined);
@@ -366,10 +464,13 @@ function CodeSignIn() {
                 </Words>
                 <SecondaryButton
                   label={`${flagOf(country)}  ${countryName(country)}  +${country.dial}  ▾`}
+                  disabled={working}
                   onPress={() => setPicking(true)}
                 />
                 <TextField
+                  label={t`Phone number`}
                   value={number}
+                  disabled={working}
                   onChangeText={(next) => {
                     setNumber(next);
                     setTrouble(undefined);
@@ -392,7 +493,11 @@ function CodeSignIn() {
                   <Trans>Type your email, and we send you a code.</Trans>
                 </Words>
                 <TextField
+                  label={t`Email`}
                   value={email}
+                  disabled={working}
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   onChangeText={(next) => {
                     setEmail(next);
                     setTrouble(undefined);
@@ -405,26 +510,38 @@ function CodeSignIn() {
                 />
               </>
             )}
-            <PrimaryButton label={working ? t`Sending…` : t`Send me a code`} onPress={sendCode} />
+            <PrimaryButton
+              label={working ? t`Sending…` : t`Send me a code`}
+              disabled={working || !ready || identifier.length === 0}
+              onPress={sendCode}
+            />
           </>
         ) : (
           <>
             <Words variant="body" tone="ink2">
               {strategy === "email_code" ? (
-                <Trans>We sent a code to your email.</Trans>
+                <Trans>We sent a code to {sentTo}.</Trans>
               ) : (
                 <Trans>We sent a code to {sentTo}.</Trans>
               )}
             </Words>
             <TextField
+              label={t`Sign-in code`}
               value={code}
-              onChangeText={setCode}
+              onChangeText={(value) => {
+                setCode(verificationCode(value));
+                setTrouble(undefined);
+              }}
+              disabled={working}
               placeholder="123456"
-              helper={t`Six digits, good for ten minutes.`}
+              helper={
+                code.length > 0 && !validVerificationCode(code)
+                  ? t`Enter the six digits from your message.`
+                  : t`Six digits, good for ten minutes.`
+              }
               keyboardType="number-pad"
               autoComplete="one-time-code"
               autoFocus
-              maxLength={6}
               onSubmit={() => void enter()}
             />
             <PrimaryButton
@@ -434,9 +551,16 @@ function CodeSignIn() {
                   : t({ comment: "button: sign in with the code", message: "Enter" })
               }
               onPress={enter}
+              disabled={working || !ready || !validVerificationCode(code)}
             />
             <SecondaryButton
-              label={t`Use something else`}
+              label={seconds > 0 ? t`Resend code in ${seconds}s` : t`Resend code`}
+              disabled={working || seconds > 0}
+              onPress={() => void resend()}
+            />
+            <SecondaryButton
+              label={t`Change email or number`}
+              disabled={working}
               onPress={() => {
                 setStep("identifier");
                 setCode("");
@@ -507,6 +631,7 @@ function CodeSignIn() {
           so loudly when it cannot find one. On the web this renders that element; on a phone it is
           an empty view, and Clerk uses its own native check there.
         */}
+        <SetupHelp />
         <View nativeID="clerk-captcha" style={{ alignItems: "center" }} />
       </ScrollView>
     </>
