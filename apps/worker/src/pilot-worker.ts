@@ -18,6 +18,7 @@ import { readApiSwitch, readLineSwitch } from "./config.ts";
 import { createLogger, type DepsHandle } from "./deps.ts";
 import type { InboundJob, PilotEnv } from "./env.ts";
 import type { PilotRuntime, PilotServices } from "./runtime.ts";
+import { publicHostAnswer } from "./site-host.ts";
 
 /**
  * Reconciliation: pending send effects, stranded sends, late ticks, the understanding re-run and the
@@ -202,6 +203,9 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
      * and its own JSON errors, so neither app's refusal or failure reaches the other's routes.
      */
     async fetch(request, env, ctx) {
+      // The public website's own address answers only the website (`site-host.ts`).
+      const publicAnswer = publicHostAnswer(request, env);
+      if (publicAnswer !== null) return publicAnswer;
       if (isApiPath(new URL(request.url).pathname)) {
         return runtime.api(request, env);
       }
