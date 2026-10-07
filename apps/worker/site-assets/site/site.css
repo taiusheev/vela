@@ -333,12 +333,13 @@ p {
   height: 100%;
   object-fit: cover;
 }
+/* The photo on the right, where she sits; the phone overlaps only the window side on the left. */
 .stage .arch {
   position: absolute;
-  inset: 0 3.5rem 2rem 0;
+  inset: 0 0 2rem 6rem;
 }
 .stage .arch img {
-  object-position: 72% center;
+  object-position: 80% center;
   animation: slowzoom 18s ease-in-out infinite alternate;
 }
 @keyframes slowzoom {
@@ -348,14 +349,14 @@ p {
 }
 .stage .phone {
   position: absolute;
-  right: 0;
+  left: 0;
   bottom: 0;
-  width: 15.5rem;
+  width: 14rem;
 }
 .badge-light {
   position: absolute;
-  left: -1rem;
-  top: 3.5rem;
+  right: -1rem;
+  top: 2.5rem;
   background: #fff;
   border-radius: 16px;
   padding: 0.7rem 0.95rem 0.7rem 0.75rem;
@@ -404,13 +405,13 @@ p {
     margin-inline: auto;
   }
   .stage .arch {
-    inset: 0 4.5rem 3rem 0;
+    inset: 0 0 3rem 4rem;
   }
   .stage .phone {
-    width: min(13.5rem, 56%);
+    width: min(12rem, 44%);
   }
   .badge-light {
-    left: 0.5rem;
+    right: 0.5rem;
     top: 1rem;
   }
 }
