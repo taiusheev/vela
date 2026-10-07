@@ -284,6 +284,7 @@ function FamilyYou({ day }: { day: TodayView }) {
                     <Hairline />
                     <FamilyAction
                       icon="nearby"
+                      actionLabel={t`Change`}
                       title={family.keptLight.length > 1 ? t`People near ${name}` : nearby.names}
                       detail={
                         family.keptLight.length > 1

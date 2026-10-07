@@ -106,12 +106,14 @@ export function FamilyAction({
   icon,
   onPress,
   disabled = false,
+  actionLabel,
 }: {
   title: string;
   detail?: string;
   icon: BrandIconName;
   onPress: () => void;
   disabled?: boolean;
+  actionLabel?: string;
 }) {
   const p = usePalette();
   return (
@@ -149,7 +151,13 @@ export function FamilyAction({
           </Words>
         )}
       </View>
-      <BrandIcon name="chevron" color={p.ink3} size={20} />
+      {actionLabel === undefined ? (
+        <BrandIcon name="chevron" color={p.ink3} size={20} />
+      ) : (
+        <Words variant="button" tone="action">
+          {actionLabel}
+        </Words>
+      )}
     </Pressable>
   );
 }

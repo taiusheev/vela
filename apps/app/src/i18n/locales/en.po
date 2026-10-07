@@ -537,6 +537,10 @@ msgstr "Canada"
 msgid "Central"
 msgstr "Central"
 
+#: app/(tabs)/you.tsx
+msgid "Change"
+msgstr "Change"
+
 #: app/onboarding.tsx
 msgid "Change country"
 msgstr "Change country"

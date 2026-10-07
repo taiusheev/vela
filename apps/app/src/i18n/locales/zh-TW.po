@@ -538,6 +538,10 @@ msgstr "加拿大"
 msgid "Central"
 msgstr "中部時間"
 
+#: app/(tabs)/you.tsx
+msgid "Change"
+msgstr "更改"
+
 #: app/onboarding.tsx
 msgid "Change country"
 msgstr "更改國家"
