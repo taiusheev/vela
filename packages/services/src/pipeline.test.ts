@@ -720,7 +720,28 @@ describe("understandAnswer", () => {
       understoodAt: null,
       processingAttempts: 1,
     });
-    expect(h.logger.entries.map((entry) => entry.event)).toContain("understanding_incomplete");
+    expect(
+      h.logger.entries.find((entry) => entry.event === "understanding_incomplete")?.fields,
+    ).toMatchObject({ understandError: "http_529", flagError: "http_529" });
+  });
+
+  it("keeps arbitrary provider error text out of operational logs", async () => {
+    const scene = await morning();
+    const answer = await herText(scene, "Cooking soup");
+    const privateError = "Request contained a private family message and sk-secret-key";
+    withAi({
+      flag: async (input) => ({
+        ...failed("flag", SAFE_DEFAULTS.flag(input)),
+        error: privateError,
+      }),
+    });
+
+    await understandAnswer(h.deps, answer.id);
+
+    expect(
+      h.logger.entries.find((entry) => entry.event === "understanding_incomplete")?.fields,
+    ).toMatchObject({ understandError: null, flagError: "provider_failure" });
+    expect(JSON.stringify(h.logger.entries)).not.toContain(privateError);
   });
 
   it("sets an away period from the model's dates, confirms it to her once, and wakes her scheduler", async () => {

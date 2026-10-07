@@ -1027,6 +1027,17 @@ function settled<T>(outcome: AiOutcome<T>): boolean {
   return outcome.ok || isAiOff(outcome);
 }
 
+/** Only fixed diagnostic codes may leave the encrypted AI record for operational logs. */
+function aiFailureCode<T>(outcome: AiOutcome<T>): string | null {
+  if (outcome.ok || isAiOff(outcome)) return null;
+  const code = outcome.error;
+  return /^(http_[1-5][0-9]{2}|timeout|network|api_error|refusal|truncated|empty_output|schema_invalid)$/.test(
+    code,
+  )
+    ? code
+    : "provider_failure";
+}
+
 /**
  * `understand_answer` (flows §3.10). `understood_at` is set only when `ai.understand` and `ai.flag`
  * both returned ok, or AI is off; a failed translation does not hold it back. It is written last,
@@ -1209,6 +1220,8 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
       attempts,
       understand: understanding.ok,
       flag: flag.ok,
+      understandError: aiFailureCode(understanding),
+      flagError: aiFailureCode(flag),
     });
     await endAttemptUnresolved(deps, ctx, attempts);
     return;
