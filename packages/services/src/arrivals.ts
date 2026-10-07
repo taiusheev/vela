@@ -610,68 +610,70 @@ interface ReadBack {
 }
 
 /**
- * Yesterday's replies (spec §6.3, flows §3.7): the previous delivered exchange's replies to her that
- * were not read back yet, as lines in her language, with the family's voice and photo replies as
- * files.
+ * Pending replies explicitly addressed to her, oldest exchange first. Replies omitted by an
+ * earlier morning's photo album or attachment limit remain eligible after a newer day is delivered.
+ * Only lines whose attachments fit and can be sent are included in the delivery effect.
  */
 async function loadReadBack(
   deps: Deps,
   member: Member,
   date: LocalDate,
   channel: Channel,
+  askFiles: readonly OutboundMediaRef[],
 ): Promise<ReadBack> {
   const none: ReadBack = { lines: [], media: [], replyIds: [], previousExchangeId: null };
-  const [previous] = await deps.db
-    .select()
-    .from(exchanges)
-    .where(
-      and(
-        eq(exchanges.recipientId, member.id),
-        lt(exchanges.scheduledFor, date),
-        isNotNull(exchanges.deliveredAt),
-        ne(exchanges.state, "withdrawn"),
-      ),
-    )
-    .orderBy(desc(exchanges.scheduledFor))
-    .limit(1);
-  if (previous === undefined) {
-    return none;
-  }
   const rows = await deps.db
     .select({ reply: replies, name: members.displayName })
     .from(replies)
     .innerJoin(members, eq(members.id, replies.memberId))
+    .innerJoin(exchanges, eq(exchanges.id, replies.exchangeId))
     .where(
       and(
-        eq(replies.exchangeId, previous.id),
+        eq(exchanges.familyId, member.familyId),
+        eq(exchanges.recipientId, member.id),
+        lt(exchanges.scheduledFor, date),
+        isNotNull(exchanges.deliveredAt),
+        ne(exchanges.state, "withdrawn"),
         eq(replies.toRecipient, true),
         isNull(replies.readBackAt),
       ),
     )
-    .orderBy(asc(replies.createdAt), asc(replies.id));
-  if (rows.length === 0) {
-    return none;
+    .orderBy(asc(exchanges.scheduledFor), asc(replies.createdAt), asc(replies.id));
+  const fileIds = rows.flatMap((row) => (row.reply.mediaId === null ? [] : [row.reply.mediaId]));
+  const files = await mediaByIds(deps, member.familyId, fileIds);
+  const askShowsPhotos = askFiles.some((file) => file.kind === "image");
+  const attached: OutboundMediaRef[] = [];
+  const included: typeof rows = [];
+  let previousExchangeId: string | null = null;
+  for (const row of rows) {
+    // One exchange per delivery effect; an unavailable older attachment must not hold later words.
+    if (previousExchangeId !== null && row.reply.exchangeId !== previousExchangeId) continue;
+    if (row.reply.kind === "voice" || row.reply.kind === "photo") {
+      if (attached.length >= MAX_MEDIA - askFiles.length) continue;
+      if (row.reply.kind === "photo" && askShowsPhotos) continue;
+      const file = files.find((file) => file.id === row.reply.mediaId);
+      if (file === undefined) continue;
+      const refs = await mediaRefsOf(deps, member.familyId, channel, [file]);
+      const ref = refs[0];
+      if (ref === undefined) continue;
+      attached.push(ref);
+    }
+    included.push(row);
+    previousExchangeId = row.reply.exchangeId;
   }
-  // The family's voices and photos, in the order they were sent, at most a few photos a morning.
-  const fileIds = rows.flatMap((row) =>
-    (row.reply.kind === "voice" || row.reply.kind === "photo") && row.reply.mediaId !== null
-      ? [row.reply.mediaId]
-      : [],
-  );
-  const files = await mediaRefsOf(
-    deps,
-    member.familyId,
-    channel,
-    await mediaByIds(deps, member.familyId, fileIds),
-  );
+  if (included.length === 0) return none;
   return {
     lines: summariseReplies({
       lang: member.language,
-      replies: rows.map((row) => ({ name: row.name, kind: row.reply.kind, text: row.reply.text })),
+      replies: included.map((row) => ({
+        name: row.name,
+        kind: row.reply.kind,
+        text: row.reply.text,
+      })),
     }),
-    media: files,
-    replyIds: rows.map((row) => row.reply.id),
-    previousExchangeId: previous.id,
+    media: attached,
+    replyIds: included.map((row) => row.reply.id),
+    previousExchangeId,
   };
 }
 
@@ -722,11 +724,12 @@ export async function deliverArrival(
     deps.logger.info("arrival_already_out", { memberId, date });
     return;
   }
-  const readBack = await loadReadBack(deps, member, date, link.channel);
   const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel, {
     date,
     timeZone: member.tz,
   });
+  const askFiles = askMedia.slice(0, MAX_MEDIA);
+  const readBack = await loadReadBack(deps, member, date, link.channel, askFiles);
   const rendered = renderArrival({
     lang: member.language,
     address: member.addressForm ?? member.displayName,
@@ -736,14 +739,7 @@ export async function deliverArrival(
     late,
     repeat: false,
   });
-  const askFiles = askMedia.slice(0, MAX_MEDIA);
-  // A photo the family sent back goes only to a morning whose ask shows none: beside an ask's own
-  // photos it would join their album, and her "1" and "2" would no longer name the photos asked.
-  const askShowsPhotos = askFiles.some((file) => file.kind === "image");
-  const readBackFiles = askShowsPhotos
-    ? readBack.media.filter((file) => file.kind !== "image")
-    : readBack.media;
-  const attached = [...readBackFiles.slice(0, MAX_MEDIA - askFiles.length), ...askFiles];
+  const attached = [...readBack.media, ...askFiles];
   const request: OutboundRequest = {
     kind: "arrival",
     idempotencyKey: outboundKey("arrival", { memberId, date }),

@@ -825,3 +825,7 @@ The user-approved trial is English Telegram for parents and the iPhone family ap
 A change is done when `pnpm check` passes locally and in CI, new behaviour has tests that would fail without it, no rule in §2 is broken, and any change to a contract is reflected here and in the architecture document in the same commit.
 
 This is source completion only. Native decoder changes additionally need simulator and signed-device build/playback receipts; activating the English trial needs every applicable gate in `plan/english-trial-readiness.md`.
+
+### Pending family reply attachments (7 October 2026)
+
+Morning read-back selects pending replies explicitly addressed to the parent from delivered, non-withdrawn exchanges in the same family, oldest eligible exchange first. A photo reply waits while the ask has photos, preserving the ask album and its numbered choices. Voice/photo replies beyond the ten-file message limit, or without a sendable attachment, remain pending; their lines and IDs are omitted from that morning’s delivery effect. A newer delivered exchange does not discard these replies. The heading says “From your family” because a deferred reply may be older than yesterday. Read-back timestamps cover only replies actually included in a successfully sent morning.
