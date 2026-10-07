@@ -105,6 +105,7 @@ export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
 export {
   loadApiPrecision,
+  loadPublicPrecision,
   PRECISION_MONTHS,
   type QuietPrecisionMonth,
   VELA_MONTH_MINIMUM,
@@ -187,3 +188,12 @@ export {
   writeSuggestions,
 } from "./suggestions.ts";
 export { type ReconcileResult, reconcile, tickMember } from "./tick.ts";
+export {
+  joinWaitlist,
+  loadWaitlist,
+  WAITLIST_LANGS,
+  WAITLIST_ROLES,
+  WaitlistInput,
+  type WaitlistLang,
+  type WaitlistRole,
+} from "./waitlist.ts";

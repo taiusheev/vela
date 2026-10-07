@@ -206,7 +206,7 @@ function answer(
  * authentication and, for a write, the per-account limit still stand behind it. No limiter at all is
  * development's, since `readApiConfig` refuses a deployed environment without one.
  */
-async function addressAdmitted(
+export async function addressAdmitted(
   limiter: RateLimit | undefined,
   address: string,
   logger: Pick<Logger, "error">,
@@ -230,7 +230,7 @@ async function addressAdmitted(
  * IPv4 address, written inside IPv6 or not, is counted alone, and every request without an address
  * shares one count.
  */
-function addressOf(request: Request): string {
+export function addressOf(request: Request): string {
   const address = request.headers.get("cf-connecting-ip")?.trim() ?? "";
   if (address === "") {
     return "unknown";

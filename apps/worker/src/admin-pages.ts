@@ -198,7 +198,7 @@ export function renderOverview(
   failedOutbound: readonly FailedOutboundRow[],
 ): Response {
   const body = html`<h1>Vela admin</h1>
-<p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, counts, and codes only.</p>
+<p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, counts, and codes only. <a href="${ADMIN_PATH}/waitlist">The website's waitlist</a>.</p>
 ${table(
   [
     "Family",
@@ -216,6 +216,40 @@ ${precisionSection(overview.precision)}
 ${lineQuotaSection(overview.lineQuota)}
 ${failedOutboundSection(failedOutbound)}`;
   return page("Vela admin", body);
+}
+
+// The waitlist ------------------------------------------------------------------------------------
+
+/** One person who asked on the website to hear when Vela opens. */
+export interface WaitlistRow {
+  readonly email: string;
+  readonly language: string;
+  readonly role: string | null;
+  readonly createdAt: Date;
+}
+
+/** The website's waitlist (`/admin/waitlist`): counts by language, then every address, newest first. */
+export function renderWaitlist(list: {
+  readonly total: number;
+  readonly byLanguage: Readonly<Record<string, number>>;
+  readonly latest: readonly WaitlistRow[];
+}): Response {
+  const roles: Record<string, string> = {
+    organiser: "for a parent",
+    parent: "a parent",
+    other: "curious",
+  };
+  const body = html`<p><a href="${ADMIN_PATH}">Back to the overview</a></p>
+<h1>Waitlist</h1>
+<p class="lede">People who asked on the website to hear when Vela opens: ${list.total} in all, ${list.byLanguage.en ?? 0} on the English page and ${list.byLanguage["zh-TW"] ?? 0} on the Chinese page. Use these addresses only to say Vela is open. To remove someone who asks, delete their row in the database.</p>
+${table(
+  ["Email", "Page", "Joining as", "Joined (UTC)"],
+  list.latest.map(
+    (row) =>
+      html`<tr><td>${row.email}</td><td>${row.language}</td><td>${row.role === null ? DASH : (roles[row.role] ?? row.role)}</td><td>${instant(row.createdAt)}</td></tr>`,
+  ),
+)}`;
+  return page("Waitlist · Vela admin", body);
 }
 
 // The family page -----------------------------------------------------------------------------------

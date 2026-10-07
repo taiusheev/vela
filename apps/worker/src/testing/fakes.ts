@@ -481,6 +481,16 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
         ? { mediaId: "66666666-6666-7666-8666-666666666666" }
         : given.storeDeviceVoice(deps, her, key, body, durationMs);
     },
+    async loadPublicPrecision(db, now) {
+      note("loadPublicPrecision");
+      return given.loadPublicPrecision === undefined
+        ? { months: [], minimum: { notices: 10, families: 3 }, through: "2026-08" }
+        : given.loadPublicPrecision(db, now);
+    },
+    async joinWaitlist(db, input) {
+      note("joinWaitlist", input);
+      await given.joinWaitlist?.(db, input);
+    },
   };
 
   const runtime: PilotRuntime = {
@@ -550,6 +560,12 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
     async loadFailedOutbound(deps, ctx) {
       note("loadFailedOutbound", ctx);
       return given.loadFailedOutbound === undefined ? [] : given.loadFailedOutbound(deps, ctx);
+    },
+    async loadWaitlist(deps) {
+      note("loadWaitlist");
+      return given.loadWaitlist === undefined
+        ? { total: 0, byLanguage: { en: 0, "zh-TW": 0 }, latest: [] }
+        : given.loadWaitlist(deps);
     },
     async loadFamilyPage(deps, ctx, familyId) {
       note("loadFamilyPage", ctx, familyId);

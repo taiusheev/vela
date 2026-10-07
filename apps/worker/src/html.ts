@@ -152,3 +152,61 @@ export function noticePage(lang: NoticeLang, notice: PrivacyNotice): Response {
     },
   );
 }
+
+/**
+ * What a public site page may load: its own stylesheet, script, fonts and pictures under `/site/`,
+ * and a fetch back to this origin for the waitlist. Nothing from another origin, no inline script.
+ */
+export const SITE_CSP =
+  "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+
+/** A page of the public website, in its language, with its social preview and alternate language. */
+export function sitePage(
+  page: {
+    readonly lang: string;
+    readonly title: string;
+    readonly description: string;
+    readonly body: Html;
+    readonly path: string;
+    readonly alternates: readonly { readonly lang: string; readonly path: string }[];
+  },
+  options: { readonly indexable: boolean; readonly origin: string; readonly status?: number },
+): Response {
+  const url = (path: string) => `${options.origin}${path}`;
+  const document = html`<!doctype html>
+<html lang="${page.lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${options.indexable ? null : raw('<meta name="robots" content="noindex, nofollow">\n')}<title>${page.title}</title>
+<meta name="description" content="${page.description}">
+<meta name="theme-color" content="#FBF7F0">
+<link rel="canonical" href="${url(page.path)}">
+${page.alternates.map(
+  (a) => html`<link rel="alternate" hreflang="${a.lang}" href="${url(a.path)}">
+`,
+)}<meta property="og:type" content="website">
+<meta property="og:title" content="${page.title}">
+<meta property="og:description" content="${page.description}">
+<meta property="og:url" content="${url(page.path)}">
+<meta property="og:image" content="${url("/site/img/open-graph.png")}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/site/favicon.svg">
+<link rel="preload" href="/site/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site/site.css">
+<script src="/site/boot.js"></script>
+<script src="/site/site.js" defer></script>
+</head>
+<body>${page.body}</body>
+</html>`.markup;
+  return new Response(document, {
+    status: options.status ?? 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "public, max-age=300",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "x-content-type-options": "nosniff",
+      "content-security-policy": SITE_CSP,
+    },
+  });
+}

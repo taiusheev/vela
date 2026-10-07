@@ -29,6 +29,7 @@ import {
   loadAdminTrialReport,
   loadFailedOutbound,
   loadFamilyPage,
+  loadWaitlist,
   type MarkLeftResult,
   markDeceased,
   markLeft,
@@ -48,6 +49,9 @@ import { type AccessVerifier, createAccessVerifier } from "./access.ts";
 import { type AdminDeps, type AdminDepsHandle, buildAdminDeps } from "./deps.ts";
 import type { AdminEnv } from "./env.ts";
 
+/** What the admin waitlist page shows (`loadWaitlist`). */
+export type WaitlistView = Awaited<ReturnType<typeof loadWaitlist>>;
+
 /** Every services entry point the admin Worker calls, on the ports it holds (code design §9). */
 export interface AdminServices {
   loadAdminTrialReport(
@@ -58,6 +62,8 @@ export interface AdminServices {
   ): Promise<TrialReport | null>;
   loadAdminOverview(deps: AdminDeps, ctx: AdminContext): Promise<AdminOverview>;
   loadFailedOutbound(deps: AdminDeps, ctx: AdminContext): Promise<FailedOutboundRow[]>;
+  /** The website's waitlist: who asked to hear when Vela opens, newest first. */
+  loadWaitlist(deps: AdminDeps): Promise<WaitlistView>;
   loadFamilyPage(deps: AdminDeps, ctx: AdminContext, familyId: string): Promise<FamilyPage | null>;
   recordConsent(deps: AdminDeps, ctx: AdminContext, input: RecordConsentInput): Promise<void>;
   recordContactConsent(
@@ -185,6 +191,7 @@ const services: AdminServices = {
     loadAdminTrialReport(servicesDeps(deps), ctx, familyId, days),
   loadAdminOverview: (deps, ctx) => loadAdminOverview(servicesDeps(deps), ctx),
   loadFailedOutbound: (deps, ctx) => loadFailedOutbound(servicesDeps(deps), ctx),
+  loadWaitlist: (deps) => loadWaitlist(deps.db),
   loadFamilyPage: (deps, ctx, familyId) => loadFamilyPage(servicesDeps(deps), ctx, familyId),
   recordConsent: (deps, ctx, input) => recordConsent(servicesDeps(deps), ctx, input),
   recordContactConsent: (deps, ctx, input) => recordContactConsent(servicesDeps(deps), ctx, input),

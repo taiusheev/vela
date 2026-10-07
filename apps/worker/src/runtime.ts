@@ -17,6 +17,8 @@ import {
   handleInbound,
   ingestAnswerMedia,
   ingestExchangeMedia,
+  joinWaitlist,
+  loadPublicPrecision,
   memberOfDeviceToken,
   type ReconcileResult,
   reconcile,
@@ -52,6 +54,10 @@ export interface PilotServices {
   memberOfDeviceToken: typeof memberOfDeviceToken;
   deviceInboundEvent: typeof deviceInboundEvent;
   storeDeviceVoice: typeof storeDeviceVoice;
+  /** Vela's monthly precision for the public website's "How Vela is doing". */
+  loadPublicPrecision: typeof loadPublicPrecision;
+  /** Someone asks, on the website, to hear when Vela opens. */
+  joinWaitlist: typeof joinWaitlist;
 }
 
 export interface PilotRuntime {
@@ -88,6 +94,8 @@ const services: PilotServices = {
   memberOfDeviceToken,
   deviceInboundEvent,
   storeDeviceVoice,
+  loadPublicPrecision,
+  joinWaitlist,
 };
 
 export const pilotRuntime: PilotRuntime = {

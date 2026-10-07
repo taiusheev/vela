@@ -1,6 +1,6 @@
 /**
  * Every HTTP route the pilot Worker serves (code design §9, H1): the health check, the Telegram and
- * LINE and Clerk webhooks, the media LINE fetches, and the privacy notices. The admin pages are another
+ * LINE and Clerk webhooks, the media LINE fetches, the privacy notices, and the public website. The admin pages are another
  * Worker's (`admin-app.ts`), so anything under `/admin` here is 404. `/v1` never reaches this app;
  * `pilot-worker.ts` hands it to `PilotRuntime.api`.
  *
@@ -14,8 +14,10 @@ import {
   errorLabel,
   MAX_DEVICE_VOICE_BYTES,
   VelaError,
+  WaitlistInput,
 } from "@vela/services";
 import { type Context, Hono } from "hono";
+import { addressAdmitted, addressOf } from "./api-runtime.ts";
 import {
   ConfigError,
   readEnvironment,
@@ -26,11 +28,22 @@ import {
 import { createLogger } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { readHealth } from "./heartbeat.ts";
-import { noticePage } from "./html.ts";
+import { type Html, noticePage, sitePage } from "./html.ts";
 import { MEDIA_PATH_PREFIX, openMedia } from "./media-route.ts";
 import { NOTICE_LANGS, NOTICE_PATHS } from "./notices.ts";
 import { requestFailed } from "./request-errors.ts";
 import type { PilotRuntime } from "./runtime.ts";
+import {
+  SITE_LANGS,
+  SITE_PATHS,
+  siteHome,
+  sitePrecision,
+  unfilledSiteBlanks,
+  WAITLIST_PATH,
+} from "./site.ts";
+
+/** How long the edge keeps a rendered precision page: the figures change once a month. */
+const PRECISION_CACHE_SECONDS = 3600;
 
 /** `Authorization: Device <token>`: her phone's 43-character token (ADR-35). */
 const DEVICE_AUTHORIZATION = /^Device ([A-Za-z0-9_-]{43})$/;
@@ -251,6 +264,116 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       return noticePage(lang, runtime.notices[lang]);
     });
   }
+
+  /**
+   * The public website (launch gate 14), in each language. Production serves no page whose copy
+   * still holds a founder's blank (`[price]`); it answers 503 and logs which blanks remain, so the
+   * site is never published half-chosen. Development and staging show them. Only production may be
+   * indexed. The stylesheet, script and pictures are static assets the platform serves before this
+   * app (`assets` in wrangler.jsonc).
+   */
+  for (const lang of SITE_LANGS) {
+    const refusal = (c: Context<PilotAppEnv>): Response | null => {
+      if (readEnvironment(c.env) !== "production") return null;
+      const blanks = unfilledSiteBlanks(lang);
+      if (blanks.length === 0) return null;
+      createLogger(c.env).error("site_unfilled", { lang, blanks: blanks.join(",") });
+      return c.text("unavailable", 503, { "cache-control": "no-store" });
+    };
+    const render = (
+      c: Context<PilotAppEnv>,
+      page: "home" | "precision",
+      content: { title: string; description: string; body: Html },
+    ) =>
+      sitePage(
+        {
+          lang,
+          ...content,
+          path: SITE_PATHS[lang][page],
+          alternates: SITE_LANGS.map((other) => ({ lang: other, path: SITE_PATHS[other][page] })),
+        },
+        {
+          indexable: readEnvironment(c.env) === "production",
+          origin: new URL(c.req.url).origin,
+        },
+      );
+
+    app.get(SITE_PATHS[lang].home, (c) => {
+      const refused = refusal(c);
+      if (refused !== null) return refused;
+      const joined = c.req.query("joined");
+      const flash = joined === "1" ? "joined" : joined === "email" ? "email" : null;
+      return render(c, "home", siteHome(lang, flash));
+    });
+
+    /**
+     * How Vela is doing: every family's ended months that reach the floor (`loadPublicPrecision`).
+     * It reads the database, so a rendered page is kept at the edge for an hour: a crawler or a
+     * busy day costs one query an hour per language, not one per visit.
+     */
+    app.get(SITE_PATHS[lang].precision, async (c) => {
+      const refused = refusal(c);
+      if (refused !== null) return refused;
+      const cache = caches.default;
+      const key = new Request(new URL(c.req.url).origin + SITE_PATHS[lang].precision);
+      const kept = await cache.match(key);
+      if (kept !== undefined) return kept;
+      const handle = await runtime.createDeps(c.env);
+      try {
+        const precision = await runtime.services.loadPublicPrecision(handle.deps.db, new Date());
+        const response = render(c, "precision", sitePrecision(lang, precision));
+        response.headers.set("cache-control", `public, max-age=${PRECISION_CACHE_SECONDS}`);
+        c.executionCtx.waitUntil(cache.put(key, response.clone()));
+        return response;
+      } finally {
+        c.executionCtx.waitUntil(handle.close());
+      }
+    });
+  }
+
+  /**
+   * The website's waitlist form. A browser without script posts the form and is sent back to the
+   * page with the answer (`?joined=1#join`); the page's script asks for JSON instead. Joining twice
+   * answers the same as joining once, so the answer never says whether an address was on the list.
+   * A filled-in hidden field is a robot's: answered as joined, nothing stored. Each address is
+   * counted by the same best-effort per-address limit as the API, under its own key.
+   */
+  app.post(WAITLIST_PATH, async (c) => {
+    const wantsJson = (c.req.header("accept") ?? "").includes("application/json");
+    const form = await c.req.parseBody().catch(() => ({}) as Record<string, unknown>);
+    const field = (name: string) => (typeof form[name] === "string" ? (form[name] as string) : "");
+    const lang = (SITE_LANGS as readonly string[]).includes(field("lang"))
+      ? (field("lang") as (typeof SITE_LANGS)[number])
+      : "en";
+    const back = (answer: "1" | "email") =>
+      c.redirect(`${SITE_PATHS[lang].home}?joined=${answer}#join`, 303);
+    const done = () =>
+      wantsJson ? c.json({ joined: true }, 200, { "cache-control": "no-store" }) : back("1");
+
+    const logger = createLogger(c.env);
+    if (!(await addressAdmitted(c.env.API_IP_LIMIT, `waitlist:${addressOf(c.req.raw)}`, logger))) {
+      return c.json({ error: "rate_limited" }, 429, { "cache-control": "no-store" });
+    }
+    if (field("website") !== "") return done();
+    const input = WaitlistInput.safeParse({
+      email: field("email"),
+      lang,
+      role: ["organiser", "parent", "other"].includes(field("role")) ? field("role") : null,
+    });
+    if (!input.success) {
+      return wantsJson
+        ? c.json({ error: "email" }, 400, { "cache-control": "no-store" })
+        : back("email");
+    }
+    const handle = await runtime.createDeps(c.env);
+    try {
+      await runtime.services.joinWaitlist(handle.deps.db, input.data);
+    } finally {
+      c.executionCtx.waitUntil(handle.close());
+    }
+    logger.info("waitlist_joined", { lang });
+    return done();
+  });
 
   app.notFound(notFound);
   app.onError(requestFailed);
