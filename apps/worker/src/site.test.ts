@@ -321,3 +321,115 @@ describe("How Vela is doing", () => {
     expect(fake.built()).toBe(1);
   });
 });
+
+describe("the website's privacy notice", () => {
+  it.each(SITE_LANGS)("serves it in %s, linked from every page and from the form", async (lang) => {
+    const fake = createFakePilotRuntime();
+    const at = origin();
+
+    const notice = await send(fake, `${at}${SITE_PATHS[lang].privacy}`);
+    const home = await (await send(fake, `${at}${SITE_PATHS[lang].home}`)).text();
+    const body = await notice.text();
+
+    expect(notice.status).toBe(200);
+    expect(body).toContain(`<html lang="${lang}">`);
+    // The Art. 8 items: who, what, why, how long, where and by whom, rights, and if not given.
+    expect(body.match(/<h2>/g)?.length).toBeGreaterThanOrEqual(8);
+    expect(body).toContain("t.aiusheev@gmail.com");
+    expect(body).toContain(lang === "en" ? "within 15 days" : "15 日內");
+    expect(body).toContain(lang === "en" ? "Singapore" : "新加坡");
+    expect(body).toContain(`href="/privacy${lang === "en" ? "" : "/zh-TW"}"`);
+    expect(home.match(new RegExp(`href="${SITE_PATHS[lang].privacy}"`, "g"))).toHaveLength(2);
+  });
+
+  it("promises no cookies, and the pages set none", async () => {
+    const fake = createFakePilotRuntime();
+    const at = origin();
+
+    const notice = await (await send(fake, `${at}/website-privacy`)).text();
+    for (const path of ["/", "/zh-TW", "/how-vela-is-doing", "/website-privacy"]) {
+      expect((await send(fake, `${at}${path}`)).headers.get("set-cookie")).toBeNull();
+    }
+
+    expect(notice).toContain("We do not use cookies, analytics, advertising or tracking tools");
+  });
+});
+
+describe("the website's protections", () => {
+  it.each(["/", "/zh-TW/how-vela-is-doing", "/website-privacy"])(
+    "sends %s with HTTPS-only, no framing, no sniffing and no device access",
+    async (path) => {
+      const fake = createFakePilotRuntime();
+
+      const headers = (await send(fake, `${origin()}${path}`)).headers;
+
+      expect(headers.get("strict-transport-security")).toBe("max-age=31536000; includeSubDomains");
+      expect(headers.get("x-frame-options")).toBe("DENY");
+      expect(headers.get("x-content-type-options")).toBe("nosniff");
+      expect(headers.get("cross-origin-opener-policy")).toBe("same-origin");
+      expect(headers.get("permissions-policy")).toContain("camera=()");
+      expect(headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+      expect(headers.get("content-security-policy")).toContain("upgrade-insecure-requests");
+    },
+  );
+
+  it("refuses a waitlist form sent from another site", async () => {
+    const fake = createFakePilotRuntime();
+    const request = waitlistPost(origin(), { email: "a@b.co", lang: "en" });
+    request.headers.set("origin", "https://evil.example");
+
+    const response = await send(fake, request);
+
+    expect(response.status).toBe(403);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("takes a form from this address and from the website's own domain", async () => {
+    const fake = createFakePilotRuntime();
+    const at = origin();
+    const own = waitlistPost(at, { email: "a@b.co", lang: "en" });
+    own.headers.set("origin", at);
+    const site = waitlistPost(at, { email: "c@d.co", lang: "en" });
+    site.headers.set("origin", "https://vela-light.com");
+
+    const ownAnswer = await send(fake, own, { ...testEnv, SITE_HOST: "vela-light.com" });
+    const siteAnswer = await send(fake, site, { ...testEnv, SITE_HOST: "vela-light.com" });
+
+    expect([ownAnswer.status, siteAnswer.status]).toEqual([303, 303]);
+    expect(namesOf(fake.calls)).toEqual(["joinWaitlist", "joinWaitlist"]);
+  });
+
+  it("refuses a body that is not this form, or larger than it could be", async () => {
+    const fake = createFakePilotRuntime();
+    const at = origin();
+    const json = new Request(`${at}/waitlist`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "a@b.co" }),
+    });
+
+    const wrongType = await send(fake, json);
+    const tooBig = await send(
+      fake,
+      waitlistPost(at, { email: "a@b.co", lang: "en", pad: "x".repeat(3000) }),
+    );
+
+    expect([wrongType.status, tooBig.status]).toEqual([415, 413]);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("says where to report a security problem", async () => {
+    const fake = createFakePilotRuntime();
+
+    const response = await send(fake, "https://vela-light.com/.well-known/security.txt", {
+      ...testEnv,
+      SITE_HOST: "vela-light.com",
+    });
+    const body = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(body).toContain("Contact: mailto:t.aiusheev@gmail.com");
+    expect(body).toMatch(/Expires: \d{4}-\d{2}-\d{2}T00:00:00\.000Z/);
+    expect(body).toContain("Canonical: https://vela-light.com/.well-known/security.txt");
+  });
+});

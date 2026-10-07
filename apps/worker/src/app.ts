@@ -38,10 +38,21 @@ import {
   SITE_PATHS,
   siteHome,
   sitePrecision,
+  sitePrivacy,
   unfilledSiteBlanks,
   WAITLIST_PATH,
 } from "./site.ts";
-import { canonicalOrigin, robotsTxt, siteIndexable, sitemapXml } from "./site-host.ts";
+import {
+  canonicalOrigin,
+  robotsTxt,
+  sameSiteOrigin,
+  securityTxt,
+  siteIndexable,
+  sitemapXml,
+} from "./site-host.ts";
+
+/** The most a waitlist form may send, in characters. */
+const WAITLIST_MAX_BODY = 2048;
 
 /** How long the edge keeps a rendered precision page: the figures change once a month. */
 const PRECISION_CACHE_SECONDS = 3600;
@@ -283,7 +294,7 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
     };
     const render = (
       c: Context<PilotAppEnv>,
-      page: "home" | "precision",
+      page: "home" | "precision" | "privacy",
       content: { title: string; description: string; body: Html },
     ) =>
       sitePage(
@@ -298,6 +309,12 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
           origin: canonicalOrigin(c.env, new URL(c.req.url)),
         },
       );
+
+    app.get(SITE_PATHS[lang].privacy, (c) => {
+      const refused = refusal(c);
+      if (refused !== null) return refused;
+      return render(c, "privacy", sitePrivacy(lang));
+    });
 
     app.get(SITE_PATHS[lang].home, (c) => {
       const refused = refusal(c);
@@ -340,6 +357,13 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
     });
   });
 
+  /** How to report a security problem (RFC 9116), on every address. */
+  app.get("/.well-known/security.txt", (c) =>
+    c.text(securityTxt(canonicalOrigin(c.env, new URL(c.req.url)), new Date()), 200, {
+      "cache-control": "public, max-age=86400",
+    }),
+  );
+
   app.get("/sitemap.xml", (c) =>
     c.body(sitemapXml(canonicalOrigin(c.env, new URL(c.req.url))), 200, {
       "content-type": "application/xml; charset=utf-8",
@@ -356,8 +380,22 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
    */
   app.post(WAITLIST_PATH, async (c) => {
     const wantsJson = (c.req.header("accept") ?? "").includes("application/json");
-    const form = await c.req.parseBody().catch(() => ({}) as Record<string, unknown>);
-    const field = (name: string) => (typeof form[name] === "string" ? (form[name] as string) : "");
+    // A form from another site is refused: browsers name the page a form was sent from, and only
+    // this address and the website's own may post here.
+    const origin = c.req.header("origin");
+    if (origin !== undefined && !sameSiteOrigin(origin, new URL(c.req.url), c.env)) {
+      return c.json({ error: "forbidden" }, 403, { "cache-control": "no-store" });
+    }
+    if (!(c.req.header("content-type") ?? "").startsWith("application/x-www-form-urlencoded")) {
+      return c.json({ error: "unsupported" }, 415, { "cache-control": "no-store" });
+    }
+    // An address, a language and a choice fit in far less; anything bigger is not this form.
+    const raw = await c.req.text();
+    if (raw.length > WAITLIST_MAX_BODY) {
+      return c.json({ error: "too_large" }, 413, { "cache-control": "no-store" });
+    }
+    const form = new URLSearchParams(raw);
+    const field = (name: string) => form.get(name) ?? "";
     const lang = (SITE_LANGS as readonly string[]).includes(field("lang"))
       ? (field("lang") as (typeof SITE_LANGS)[number])
       : "en";

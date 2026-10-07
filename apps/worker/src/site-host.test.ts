@@ -92,6 +92,6 @@ describe("the website's own address", () => {
     expect(own).toBe("User-agent: *\nAllow: /\nSitemap: https://vela-light.com/sitemap.xml\n");
     expect(other).toBe("User-agent: *\nDisallow: /\n");
     expect(map).toContain("<loc>https://vela-light.com/zh-TW/how-vela-is-doing</loc>");
-    expect(map.match(/<url>/g)).toHaveLength(4);
+    expect(map.match(/<url>/g)).toHaveLength(6);
   });
 });

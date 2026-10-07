@@ -1,0 +1,14 @@
+# Headers for the website's static files (src/site.ts). The platform serves these files before
+# the Worker runs, so they carry the same protections the pages do (SITE_SECURITY_HEADERS).
+/site/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Cross-Origin-Resource-Policy: same-origin
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/site/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/site/img/*
+  Cache-Control: public, max-age=604800
