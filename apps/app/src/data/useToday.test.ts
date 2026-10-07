@@ -221,9 +221,48 @@ function exchange(fields: Partial<ApiTodayExchange> = {}): ApiTodayExchange {
 function cardIn(locale: AppLocale, lights: MemberLight[], card: ApiTodayExchange) {
   return inLocale(
     locale,
-    () => toToday(ApiToday.parse({ lights, exchanges: [card], tomorrow: [] }), ANNA).exchange,
+    () => toToday(ApiToday.parse({ lights, exchanges: [card], tomorrow: [] }), ANNA).exchanges[0],
   );
 }
+
+describe("a morning with two parents", () => {
+  it("keeps both exchanges, their reply destinations and each parent's own clock", () => {
+    const secondId = "0d5e8f1a-7b9c-4ec3-8fd6-a7b8c9d0e1f2";
+    const day = ApiToday.parse({
+      lights: [
+        light({ tz: "Asia/Taipei", state: "lit", answered_at: TWO_THIRTY_TWO }),
+        light({
+          member_id: DAD,
+          display_name: "Dad",
+          tz: "America/Los_Angeles",
+          state: "lit",
+          answered_at: TWO_THIRTY_TWO,
+        }),
+      ],
+      exchanges: [exchange(), exchange({ id: secondId, recipient_id: DAD, recipient_name: "Dad" })],
+      tomorrow: [],
+    });
+    expect(toToday(day).exchanges).toMatchObject([
+      {
+        id: EXCHANGE,
+        recipientId: MOM,
+        recipient: "Mom",
+        unanswered: "Mom answered an earlier ask at 14:32. This one has no answer yet.",
+      },
+      {
+        id: secondId,
+        recipientId: DAD,
+        recipient: "Dad",
+        unanswered: "Dad answered an earlier ask at 23:32. This one has no answer yet.",
+      },
+    ]);
+  });
+  it("has no invented exchange when the API has no delivered day", () => {
+    expect(
+      toToday(ApiToday.parse({ lights: [light()], exchanges: [], tomorrow: [] })).exchanges,
+    ).toEqual([]);
+  });
+});
 
 // Flows §3.9: an answer counts for the local date it arrives on, whichever exchange it attaches
 // to. Her tap today on yesterday's arrival, or her message before today's arrival, lights her day
@@ -430,8 +469,8 @@ describe("parent clock and original media", () => {
     );
     expect(result.lights[0]?.stateText).toBe("answered 8:12");
     expect(result.lights[0]?.localDate).toBe("2026-10-05");
-    expect(result.exchange?.answer?.at).toBe("8:12");
-    expect(result.exchange?.answer?.audio).toEqual(audio);
-    expect(result.exchange?.voiceHello).toEqual(audio);
+    expect(result.exchanges[0]?.answer?.at).toBe("8:12");
+    expect(result.exchanges[0]?.answer?.audio).toEqual(audio);
+    expect(result.exchanges[0]?.voiceHello).toEqual(audio);
   });
 });

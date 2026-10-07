@@ -137,6 +137,40 @@ export function Hairline() {
   return <View style={{ height: 1, backgroundColor: palette.rule }} />;
 }
 
+/** A quiet guide through setup, with the current task named rather than a row of badges. */
+export function SetupProgress({
+  steps,
+  current,
+}: {
+  steps: readonly string[];
+  current: number;
+}): ReactNode {
+  const palette = usePalette();
+  return (
+    <View
+      style={{ gap: space.m }}
+      accessibilityRole="progressbar"
+      accessibilityLabel={steps[current]}
+      accessibilityValue={{ min: 1, max: steps.length, now: current + 1 }}
+    >
+      <Eyebrow>{steps[current]}</Eyebrow>
+      <View style={{ flexDirection: "row", gap: space.s }}>
+        {steps.map((step, index) => (
+          <View
+            key={step}
+            style={{
+              flex: 1,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: index <= current ? palette.action : palette.rule,
+            }}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 /** A tappable chip: the ask types, the reactions, the "when" choices. Chips are 999 radius. */
 export function Chip({
   label,

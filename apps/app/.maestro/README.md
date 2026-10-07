@@ -6,7 +6,7 @@ not on the screen. Build plan 3.9.
 
 ## `demo/`: the example family, no account
 
-The eight flows `today`, `ask`, `reply`, `quiet-notice`, `sunday`, `story-day`, `nearby` and
+The nine flows `today`, `ask`, `reply`, `recipient-and-reply`, `quiet-notice`, `sunday`, `story-day`, `nearby` and
 `privacy-and-help` walk the app built with explicit `EXPO_PUBLIC_DEMO_MODE=true`, no API and no
 sign-in. A development build alone does not activate fixtures. The quiet notice is reached through
 `/?example=quiet`, which only the demo answers. They run in Chrome on every push (CI job
@@ -18,10 +18,12 @@ pnpm --filter @vela/app e2e:demo
 ```
 
 The ask checks that English words are sent as written, with no fabricated translation preview.
+The recipient flow switches between parents without losing the written draft, resets vote state,
+and opens a reply straight from Today.
 Story questions can be chosen and edited without promising long-term saving or offering an
 unavailable book. The quiet sheet offers ordinary contact guidance without a saved permitted calling
 number, while fine/wait resolutions still work. `privacy-and-help` checks consent/help copy and the
-absence of unavailable parent-phone setup; it replaces the former `parent` demo flow. These eight
+absence of unavailable parent-phone setup; it replaces the former `parent` demo flow. These nine
 flows prove synthetic web interactions only, not Telegram delivery, account linking, signed-device
 audio or parent-app functionality. If local environment flags change, restart with a cleared Metro
 cache before interpreting a result.
@@ -43,7 +45,7 @@ challenge. `trial-current-family` requires an already linked approved family; it
 synthetic fixture. These are separate account states, not a directory-wide batch. No private proof
 code, bearer token or participant name goes in test arguments. Complete linking privately and run
 the full exchange/media/device script in `plan/staging-test-script.md`. These native flows are prepared;
-they have not been run on a signed iPhone and are not CI's eight web demo flows.
+they have not been run on a signed iPhone and are not CI's nine web demo flows.
 
 `onboarding` remains the older **non-pilot** app-first flow: it signs up a new account with one of Clerk's test addresses (`…+clerk_test@example.com`,
 answered with the code 424242 by Clerk's development instance, which never sends an email), sets up

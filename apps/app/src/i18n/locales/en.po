@@ -484,6 +484,10 @@ msgstr "Away"
 msgid "away · {day}"
 msgstr "away · {day}"
 
+#: src/components/back-button.tsx
+msgid "Back"
+msgstr "Back"
+
 #: src/data/exchanges.ts
 msgid "Both of you, but only Mia listened about the butter."
 msgstr "Both of you, but only Mia listened about the butter."
@@ -515,6 +519,10 @@ msgstr "Central"
 msgid "Change"
 msgstr "Change"
 
+#: app/onboarding.tsx
+msgid "Change country"
+msgstr "Change country"
+
 #: app/(tabs)/you.tsx
 msgid "Change the people nearby"
 msgstr "Change the people nearby"
@@ -534,6 +542,10 @@ msgstr "Choose another"
 #: src/components/story-day.tsx
 msgid "Choose from the list"
 msgstr "Choose from the list"
+
+#: app/ask.tsx
+msgid "Choose someone in your family, or return to Today. Your words are kept."
+msgstr "Choose someone in your family, or return to Today. Your words are kept."
 
 #: app/sign-in.tsx
 msgid "Choose your country, type your number as you would at home, and we text you a code."
@@ -570,12 +582,20 @@ msgid "Connecting…"
 msgstr "Connecting…"
 
 #: src/components/telegram-family-link.tsx
+msgid "Connection code"
+msgstr "Connection code"
+
+#: src/components/telegram-family-link.tsx
 msgid "Connection code from your own Vela chat. It expires after 15 minutes."
 msgstr "Connection code from your own Vela chat. It expires after 15 minutes."
 
 #: src/components/quiet-notice.tsx
 msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
 msgstr "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
+
+#: app/ask.tsx
+msgid "Continue your saved ask to {savedName}"
+msgstr "Continue your saved ask to {savedName}"
 
 #: src/components/test-sign-in-details.tsx
 msgid "Copy these ids into the private Terminal helper for the dedicated test account."
@@ -631,6 +651,10 @@ msgstr "English pilot"
 msgid "Enter"
 msgstr "Enter"
 
+#: app/exchange/[id].tsx
+msgid "Exchange"
+msgstr "Exchange"
+
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/exchanges.tsx
 msgctxt "tab"
@@ -646,9 +670,17 @@ msgstr "family"
 msgid "Family"
 msgstr "Family"
 
+#: app/ask.tsx
+msgid "Fewer choices"
+msgstr "Fewer choices"
+
 #: src/components/telegram-family-link.tsx
 msgid "Finish connecting"
 msgstr "Finish connecting"
+
+#: app/onboarding.tsx
+msgid "First ask"
+msgstr "First ask"
 
 #: src/auth/phone.ts
 msgid "France"
@@ -837,6 +869,10 @@ msgstr "Into her morning"
 msgid "Into her morning."
 msgstr "Into her morning."
 
+#: app/onboarding.tsx
+msgid "Invite"
+msgstr "Invite"
+
 #: app/(tabs)/you.tsx
 #: app/away.tsx
 msgid "Is {name} away?"
@@ -870,6 +906,10 @@ msgstr "Kazakhstan"
 #: app/(tabs)/you.tsx
 msgid "Keep a light on for me"
 msgstr "Keep a light on for me"
+
+#: app/onboarding.tsx
+msgid "Keep this country"
+msgstr "Keep this country"
 
 #: app/(tabs)/you.tsx
 msgid "Language"
@@ -977,6 +1017,10 @@ msgstr "Malaysia"
 #: src/device/useParent.ts
 msgid "Mom"
 msgstr "Mom"
+
+#: app/ask.tsx
+msgid "More ways to ask"
+msgstr "More ways to ask"
 
 #. a time zone
 #. a time zone
@@ -1196,6 +1240,10 @@ msgstr "Open settings"
 msgid "Open Telegram with the account that already belongs to your approved pilot family. Tap Start, copy the connection code Vela sends you, and paste it below."
 msgstr "Open Telegram with the account that already belongs to your approved pilot family. Tap Start, copy the connection code Vela sends you, and paste it below."
 
+#: app/(tabs)/index.tsx
+msgid "Open this exchange"
+msgstr "Open this exchange"
+
 #: src/components/telegram-family-link.tsx
 msgid "Open Vela on Telegram"
 msgstr "Open Vela on Telegram"
@@ -1235,6 +1283,10 @@ msgstr "organiser"
 msgid "Pacific"
 msgstr "Pacific"
 
+#: src/components/telegram-family-link.tsx
+msgid "Paste your connection code"
+msgstr "Paste your connection code"
+
 #: app/(tabs)/you.tsx
 msgid "Pause"
 msgstr "Pause"
@@ -1252,6 +1304,7 @@ msgid "Paused · {plan}"
 msgstr "Paused · {plan}"
 
 #: app/nearby.tsx
+#: app/onboarding.tsx
 msgid "People nearby"
 msgstr "People nearby"
 
@@ -1331,6 +1384,10 @@ msgstr "Read this aloud"
 msgid "Reading what this phone allows…"
 msgstr "Reading what this phone allows…"
 
+#: app/onboarding.tsx
+msgid "Ready"
+msgstr "Ready"
+
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Record again"
@@ -1375,6 +1432,10 @@ msgstr "Replace"
 #: app/exchange/[id].tsx
 msgid "Reply"
 msgstr "Reply"
+
+#: app/(tabs)/index.tsx
+msgid "Reply to {recipient}"
+msgstr "Reply to {recipient}"
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -1765,6 +1826,10 @@ msgid "That does not look like an email address."
 msgstr "That does not look like an email address."
 
 #: app/exchange/[id].tsx
+msgid "That exchange could not be reached just now."
+msgstr "That exchange could not be reached just now."
+
+#: app/exchange/[id].tsx
 msgid "That exchange is not here."
 msgstr "That exchange is not here."
 
@@ -2011,6 +2076,7 @@ msgid "Today"
 msgstr "Today"
 
 #: app/(tabs)/_layout.tsx
+#: app/(tabs)/index.tsx
 msgctxt "tab"
 msgid "Today"
 msgstr "Today"
@@ -2063,7 +2129,9 @@ msgstr "Too many photos for now. Try again later."
 msgid "Too many photos for now. Try again tomorrow."
 msgstr "Too many photos for now. Try again tomorrow."
 
+#: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
+#: app/exchange/[id].tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
 #: src/components/photo-slots.tsx
@@ -2355,8 +2423,16 @@ msgid "Which one of us did you teach to make the pies?"
 msgstr "Which one of us did you teach to make the pies?"
 
 #: app/onboarding.tsx
+msgid "Who"
+msgstr "Who"
+
+#: app/onboarding.tsx
 msgid "Who are you keeping a light on for?"
 msgstr "Who are you keeping a light on for?"
+
+#: app/ask.tsx
+msgid "Who is this for?"
+msgstr "Who is this for?"
 
 #: app/onboarding.tsx
 msgid "Who lives close to {name}?"
@@ -2439,6 +2515,7 @@ msgid "Your country"
 msgstr "Your country"
 
 #: app/precision.tsx
+#: src/components/telegram-family-link.tsx
 msgid "Your family"
 msgstr "Your family"
 
@@ -2486,6 +2563,10 @@ msgstr "Your pilot is free. Quiet notices and important updates arrive in the or
 #: src/components/story-day.tsx
 msgid "Your question for {name}"
 msgstr "Your question for {name}"
+
+#: src/components/telegram-family-link.tsx
+msgid "Your Telegram chat"
+msgstr "Your Telegram chat"
 
 #: src/components/voice-reply.tsx
 msgid "Your voice reply, {time} long."

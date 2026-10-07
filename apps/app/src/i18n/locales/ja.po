@@ -484,6 +484,10 @@ msgstr ""
 msgid "away · {day}"
 msgstr ""
 
+#: src/components/back-button.tsx
+msgid "Back"
+msgstr ""
+
 #: src/data/exchanges.ts
 msgid "Both of you, but only Mia listened about the butter."
 msgstr ""
@@ -515,6 +519,10 @@ msgstr ""
 msgid "Change"
 msgstr ""
 
+#: app/onboarding.tsx
+msgid "Change country"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "Change the people nearby"
 msgstr ""
@@ -533,6 +541,10 @@ msgstr ""
 
 #: src/components/story-day.tsx
 msgid "Choose from the list"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Choose someone in your family, or return to Today. Your words are kept."
 msgstr ""
 
 #: app/sign-in.tsx
@@ -570,11 +582,19 @@ msgid "Connecting…"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
+msgid "Connection code"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
 msgid "Connection code from your own Vela chat. It expires after 15 minutes."
 msgstr ""
 
 #: src/components/quiet-notice.tsx
 msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
+msgstr ""
+
+#: app/ask.tsx
+msgid "Continue your saved ask to {savedName}"
 msgstr ""
 
 #: src/components/test-sign-in-details.tsx
@@ -631,6 +651,10 @@ msgstr ""
 msgid "Enter"
 msgstr ""
 
+#: app/exchange/[id].tsx
+msgid "Exchange"
+msgstr ""
+
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/exchanges.tsx
 msgctxt "tab"
@@ -646,8 +670,16 @@ msgstr ""
 msgid "Family"
 msgstr ""
 
+#: app/ask.tsx
+msgid "Fewer choices"
+msgstr ""
+
 #: src/components/telegram-family-link.tsx
 msgid "Finish connecting"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "First ask"
 msgstr ""
 
 #: src/auth/phone.ts
@@ -837,6 +869,10 @@ msgstr ""
 msgid "Into her morning."
 msgstr ""
 
+#: app/onboarding.tsx
+msgid "Invite"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 #: app/away.tsx
 msgid "Is {name} away?"
@@ -869,6 +905,10 @@ msgstr ""
 
 #: app/(tabs)/you.tsx
 msgid "Keep a light on for me"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Keep this country"
 msgstr ""
 
 #: app/(tabs)/you.tsx
@@ -976,6 +1016,10 @@ msgstr ""
 #: src/data/weekly.ts
 #: src/device/useParent.ts
 msgid "Mom"
+msgstr ""
+
+#: app/ask.tsx
+msgid "More ways to ask"
 msgstr ""
 
 #. a time zone
@@ -1196,6 +1240,10 @@ msgstr ""
 msgid "Open Telegram with the account that already belongs to your approved pilot family. Tap Start, copy the connection code Vela sends you, and paste it below."
 msgstr ""
 
+#: app/(tabs)/index.tsx
+msgid "Open this exchange"
+msgstr ""
+
 #: src/components/telegram-family-link.tsx
 msgid "Open Vela on Telegram"
 msgstr ""
@@ -1235,6 +1283,10 @@ msgstr ""
 msgid "Pacific"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Paste your connection code"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "Pause"
 msgstr ""
@@ -1252,6 +1304,7 @@ msgid "Paused · {plan}"
 msgstr ""
 
 #: app/nearby.tsx
+#: app/onboarding.tsx
 msgid "People nearby"
 msgstr ""
 
@@ -1331,6 +1384,10 @@ msgstr ""
 msgid "Reading what this phone allows…"
 msgstr ""
 
+#: app/onboarding.tsx
+msgid "Ready"
+msgstr ""
+
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Record again"
@@ -1374,6 +1431,10 @@ msgstr ""
 
 #: app/exchange/[id].tsx
 msgid "Reply"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Reply to {recipient}"
 msgstr ""
 
 #: src/data/today.ts
@@ -1765,6 +1826,10 @@ msgid "That does not look like an email address."
 msgstr ""
 
 #: app/exchange/[id].tsx
+msgid "That exchange could not be reached just now."
+msgstr ""
+
+#: app/exchange/[id].tsx
 msgid "That exchange is not here."
 msgstr ""
 
@@ -2011,6 +2076,7 @@ msgid "Today"
 msgstr ""
 
 #: app/(tabs)/_layout.tsx
+#: app/(tabs)/index.tsx
 msgctxt "tab"
 msgid "Today"
 msgstr ""
@@ -2063,7 +2129,9 @@ msgstr ""
 msgid "Too many photos for now. Try again tomorrow."
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
+#: app/exchange/[id].tsx
 #: app/onboarding.tsx
 #: app/vela-light.tsx
 #: src/components/photo-slots.tsx
@@ -2355,7 +2423,15 @@ msgid "Which one of us did you teach to make the pies?"
 msgstr ""
 
 #: app/onboarding.tsx
+msgid "Who"
+msgstr ""
+
+#: app/onboarding.tsx
 msgid "Who are you keeping a light on for?"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Who is this for?"
 msgstr ""
 
 #: app/onboarding.tsx
@@ -2439,6 +2515,7 @@ msgid "Your country"
 msgstr ""
 
 #: app/precision.tsx
+#: src/components/telegram-family-link.tsx
 msgid "Your family"
 msgstr ""
 
@@ -2485,6 +2562,10 @@ msgstr ""
 
 #: src/components/story-day.tsx
 msgid "Your question for {name}"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Your Telegram chat"
 msgstr ""
 
 #: src/components/voice-reply.tsx

@@ -6,9 +6,10 @@ import { AppState, Linking, View } from "react-native";
 import { completeTelegramLink, provisionAccount, startTelegramLink } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
+import { connectionCode } from "../data/connection-code.ts";
 import { deviceZone } from "../data/onboarding.ts";
 import { space } from "../theme/tokens.ts";
-import { Card, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
+import { Card, PrimaryButton, SecondaryButton, SetupProgress, TextField, Words } from "./ui.tsx";
 
 /** A challenge proves this app session and the existing Telegram member control both identities. */
 export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
@@ -79,6 +80,10 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
   };
   return (
     <View style={{ gap: space.l }}>
+      <SetupProgress
+        steps={[t`Your family`, t`Your Telegram chat`, t`Connection code`]}
+        current={start.data === undefined ? 0 : code.length === 0 ? 1 : 2}
+      />
       <Words variant="title">
         <Trans>Connect your Telegram family</Trans>
       </Words>
@@ -100,6 +105,9 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
           onChangeText={setName}
           helper={t`Your name, as the family says it.`}
           maxLength={40}
+          onSubmit={() => {
+            if (!start.isPending && name.trim().length > 0) start.mutate();
+          }}
         />
       ) : null}
       {start.data === undefined ? (
@@ -131,11 +139,15 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
           </Words>
           <TextField
             value={code}
-            onChangeText={setCode}
+            onChangeText={(value) => setCode(connectionCode(value))}
+            placeholder={t`Paste your connection code`}
             helper={t`Connection code from your own Vela chat. It expires after 15 minutes.`}
             autoCapitalize="none"
             autoCorrect={false}
-            maxLength={22}
+            disabled={complete.isPending || expired}
+            onSubmit={() => {
+              if (!complete.isPending && !expired && code.length === 22) complete.mutate();
+            }}
           />
           <PrimaryButton
             label={complete.isPending ? t`Connecting…` : t`Finish connecting`}

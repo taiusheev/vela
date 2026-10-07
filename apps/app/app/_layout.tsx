@@ -147,6 +147,10 @@ function Root() {
       <Stack
         screenOptions={{
           headerShown: false,
+          headerStyle: { backgroundColor: palette.bg },
+          headerTintColor: palette.ink,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
           contentStyle: { backgroundColor: palette.bg },
         }}
       />

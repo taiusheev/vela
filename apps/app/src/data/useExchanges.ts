@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ApiExchangeSummary } from "@vela/contracts";
+import { useCallback } from "react";
 import { apiConfigured, fetchExchanges } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { type Exchange, type ExchangeReply, exchangesFixture } from "./exchanges.ts";
@@ -49,6 +50,8 @@ export interface ExchangesView {
   /** True once the real list has arrived; until then live builds carry an empty list. */
   live: boolean;
   loading: boolean;
+  refreshing: boolean;
+  refresh(): void;
   trouble: boolean;
   /** Another page exists within the thirty days; the list never scrolls past them. */
   more: boolean;
@@ -74,13 +77,20 @@ export function useExchanges(): ExchangesView {
     queryFn: async ({ pageParam }) =>
       fetchExchanges(familyId ?? "", pageParam, await account.token()),
     getNextPageParam: (last) => last.next_cursor,
+    refetchOnWindowFocus: "always",
   });
+  const refetch = pages.refetch;
+  const refresh = useCallback(() => {
+    if (enabled) void refetch();
+  }, [enabled, refetch]);
 
   if (!enabled) {
     return {
       exchanges: demoDataAllowed(apiConfigured(), accountsConfigured()) ? exchangesFixture() : [],
       live: false,
       loading: apiConfigured() && account.ready && account.signedIn && familyId === undefined,
+      refreshing: false,
+      refresh,
       trouble: false,
       more: false,
       loadMore: () => {},
@@ -100,6 +110,8 @@ export function useExchanges(): ExchangesView {
       : [],
     live,
     loading: pages.isPending,
+    refreshing: pages.isRefetching,
+    refresh,
     trouble: pages.isError,
     more: pages.hasNextPage,
     loadMore: () => {

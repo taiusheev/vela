@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Link } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Link, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ExchangePhotos, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import {
@@ -78,12 +78,18 @@ export default function ExchangesScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const [originals, setOriginals] = useState(false);
-  const { exchanges, live, loading, trouble, more, loadMore } = useExchanges();
+  const { exchanges, live, loading, refreshing, refresh, trouble, more, loadMore } = useExchanges();
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
   // The switch is offered when something listed was translated for this reader (spec A8).
   const canShowOriginals = exchanges.some((exchange) => exchange.answer?.original !== undefined);
 
   return (
     <ScrollView
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
       style={{ backgroundColor: palette.bg }}
       contentContainerStyle={{
         paddingTop: insets.top + space.xl,
@@ -121,6 +127,7 @@ export default function ExchangesScreen() {
           <Trans>Nothing has happened yet. Her first morning will be here.</Trans>
         </Words>
       ) : null}
+      {trouble ? <SecondaryButton label={t`Try again`} onPress={refresh} /> : null}
       {exchanges.map((exchange) => (
         <ExchangeRow key={exchange.id} exchange={exchange} originals={originals} />
       ))}

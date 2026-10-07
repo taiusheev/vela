@@ -117,6 +117,8 @@ export function toTodayExchange(exchange: ApiTodayExchange, timeZone?: string): 
       : undefined;
   const receipt = receiptOf(exchange, recipientZone);
   return {
+    id: exchange.id,
+    recipientId: exchange.recipient_id,
     ...(exchange.asker_name === null ? {} : { asker: exchange.asker_name }),
     recipient: exchange.recipient_name,
     ...(exchange.voice_hello == null ? {} : { voiceHello: exchange.voice_hello }),
@@ -200,19 +202,15 @@ function unansweredLine(exchange: ApiTodayExchange, light: MemberLight | undefin
 }
 
 export function toToday(day: ApiToday, viewerMemberId?: string): Today {
-  const exchange = day.exchanges[0];
-  // The light of the person the ask is for, whose day it is, not the first one in the row.
-  const light = day.lights.find((row) => row.member_id === exchange?.recipient_id);
   return {
     lights: day.lights.map(toTodayLight),
-    ...(exchange === undefined
-      ? {}
-      : {
-          exchange: {
-            ...toTodayExchange(exchange, light?.tz),
-            ...(exchange.answer === null ? { unanswered: unansweredLine(exchange, light) } : {}),
-          },
-        }),
+    exchanges: day.exchanges.map((exchange) => {
+      const light = day.lights.find((row) => row.member_id === exchange.recipient_id);
+      return {
+        ...toTodayExchange(exchange, light?.tz),
+        ...(exchange.answer === null ? { unanswered: unansweredLine(exchange, light) } : {}),
+      };
+    }),
     tomorrow: day.tomorrow.map((turn) => toTomorrowTurn(turn, viewerMemberId)),
   };
 }
@@ -285,7 +283,7 @@ export function useToday(): TodayView {
     return {
       today: demoDataAllowed(apiConfigured(), accountsConfigured())
         ? todayFixture()
-        : { lights: [], tomorrow: [] },
+        : { lights: [], exchanges: [], tomorrow: [] },
       loading: false,
       trouble: false,
       noAccount: false,
@@ -302,7 +300,9 @@ export function useToday(): TodayView {
   // A 404 from /v1/me is the ordinary first run: the account signed in before anything was set up.
   const noAccount = me.error instanceof ApiError && me.error.status === 404;
   return {
-    today: live ? toToday(day.data, membership?.member_id) : { lights: [], tomorrow: [] },
+    today: live
+      ? toToday(day.data, membership?.member_id)
+      : { lights: [], exchanges: [], tomorrow: [] },
     ...(familyId === undefined ? {} : { familyId }),
     loading: me.isPending || (familyId !== undefined && day.isPending),
     updatedAt: day.dataUpdatedAt,

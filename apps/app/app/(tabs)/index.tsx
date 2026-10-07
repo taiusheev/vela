@@ -21,11 +21,13 @@ import {
   SecondaryButton,
   Words,
 } from "../../src/components/ui.tsx";
+import { askRecipient } from "../../src/data/ask-target.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
 import {
   quietExampleFixture,
   type Today,
+  type TodayExchange,
   type TodayLight,
   type TomorrowTurn,
 } from "../../src/data/today.ts";
@@ -45,16 +47,16 @@ function LightsRow({
 }: {
   lights: Today["lights"];
   /** A quiet light opens its notice again, once the sheet that opened by itself was closed. */
-  onQuiet: () => void;
+  onQuiet: (light: TodayLight) => void;
 }) {
   return (
-    <View style={{ flexDirection: "row", gap: space.xl }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.xl }}>
       {lights.map((light) => (
         <Pressable
           key={light.memberId}
           accessibilityRole={light.state === "quiet" ? "button" : undefined}
           disabled={light.state !== "quiet"}
-          onPress={onQuiet}
+          onPress={() => onQuiet(light)}
           style={{ alignItems: "center", gap: space.s }}
         >
           <Light state={light.state} height={40} />
@@ -74,7 +76,7 @@ function LightsRow({
   );
 }
 
-function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }) {
+function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
   const { t } = useLingui();
   const { familyId } = useToday();
   const asker = exchange.asker;
@@ -161,6 +163,20 @@ function ExchangeCard({ exchange }: { exchange: NonNullable<Today["exchange"]> }
         </>
       ) : null}
       {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
+      <Pressable
+        accessibilityRole="button"
+        hitSlop={hitSlop}
+        onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
+        style={{ minHeight: 44, justifyContent: "center" }}
+      >
+        <Words variant="button" tone="action">
+          {exchange.answer === undefined ? (
+            <Trans>Open this exchange</Trans>
+          ) : (
+            <Trans>Reply to {recipient}</Trans>
+          )}
+        </Words>
+      </Pressable>
     </Card>
   );
 }
@@ -236,7 +252,7 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
 
 export default function TodayScreen() {
   const palette = usePalette();
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const [quietOpen, setQuietOpen] = useState(false);
   // How the example notice was settled; its sentence is chosen as it renders, in the language shown.
   const [resolution, setResolution] = useState<"fine" | "wait" | undefined>();
@@ -252,7 +268,7 @@ export default function TodayScreen() {
     }, [day.refresh]),
   );
   const { trouble, noAccount, noFamily, live, organiser, familyId } = day;
-  const time = new Date(day.updatedAt).toLocaleString("en-GB", {
+  const time = new Date(day.updatedAt).toLocaleString(i18n.locale, {
     day: "numeric",
     month: "short",
     hour: "numeric",
@@ -296,8 +312,8 @@ export default function TodayScreen() {
   const quietKey = quiet === undefined ? undefined : (quiet.quietEventId ?? quiet.memberId);
   const quietEvent = quiet?.quietEventId;
   const mayOpen = demoDataAllowed(apiConfigured(), accountsConfigured()) || (live && organiser);
-  const openQuiet = () => {
-    if (quietEvent !== undefined) setOpenEventId(quietEvent);
+  const openQuiet = (light: TodayLight) => {
+    if (light.quietEventId !== undefined) setOpenEventId(light.quietEventId);
     setQuietOpen(true);
   };
   useEffect(() => {
@@ -348,8 +364,8 @@ export default function TodayScreen() {
       current = false;
     };
   }, [offerFor]);
-  const recipient =
-    today.lights[0]?.displayName ?? t({ comment: "stands in for her name", message: "her" });
+  const target = askRecipient(today.lights);
+  const recipient = target?.displayName ?? t({ comment: "stands in for her name", message: "her" });
 
   return (
     <ScrollView
@@ -362,13 +378,23 @@ export default function TodayScreen() {
         gap: space.xl,
       }}
     >
+      <View style={{ gap: space.s }}>
+        <Words variant="title">
+          <Trans context="tab">Today</Trans>
+        </Words>
+        {day.updatedAt > 0 ? (
+          <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words>
+        ) : null}
+      </View>
       {day.loading ? (
         <Words variant="body" tone="ink2">
           <Trans>Loading your family’s morning…</Trans>
         </Words>
       ) : null}
-      {day.updatedAt > 0 ? <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words> : null}
-      <LightsRow lights={today.lights} onQuiet={() => (mayOpen ? openQuiet() : undefined)} />
+      <LightsRow
+        lights={today.lights}
+        onQuiet={(light) => (mayOpen ? openQuiet(light) : undefined)}
+      />
       {noAccount || noFamily ? (
         <Words variant="body" tone="ink2">
           <Trans>Setting up your family…</Trans>
@@ -378,6 +404,14 @@ export default function TodayScreen() {
           <Trans>Today could not be reached just now.</Trans>
         </Words>
       ) : null}
+      {trouble ? <SecondaryButton label={t`Try again`} onPress={day.refresh} /> : null}
+      {target === undefined ? null : (
+        <PrimaryButton
+          label={t`Ask ${recipient} something`}
+          disabled={apiConfigured() && !live}
+          onPress={() => router.push({ pathname: "/ask", params: { recipient: target.memberId } })}
+        />
+      )}
       {today.lights.flatMap((light) =>
         light.unreachableOn === undefined
           ? []
@@ -386,19 +420,15 @@ export default function TodayScreen() {
       {today.lights.flatMap((light) =>
         light.awayId === undefined ? [] : [<AwayLine key={light.memberId} light={light} />],
       )}
-      {today.exchange === undefined ? null : <ExchangeCard exchange={today.exchange} />}
+      {today.exchanges.map((exchange) => (
+        <ExchangeCard key={exchange.id} exchange={exchange} />
+      ))}
       {today.tomorrow.map((turn) => (
         <TomorrowCard key={turn.recipientId} tomorrow={turn} />
       ))}
       {capabilities?.memory === true || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
         <RemindersCard familyId={familyId} />
       ) : null}
-      <PrimaryButton
-        label={t`Ask ${recipient} something`}
-        disabled={apiConfigured() && (!live || today.lights.length === 0)}
-        onPress={() => router.push("/ask")}
-      />
-      {trouble ? <SecondaryButton label={t`Try again`} onPress={day.refresh} /> : null}
       {quietOpen && liveQuiet.trouble && notice === undefined ? (
         <Words variant="body" tone="ink2">
           <Trans>
