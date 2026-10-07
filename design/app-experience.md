@@ -35,7 +35,7 @@ The visual design uses a quiet window, named content and specific receipt wordin
 
 ### Relative or contributor
 
-Connect approved membership → Today → reply, or select the parent and compose a question. Three common formats lead: words, two photos and voice. Less common formats remain reachable. The default timing is explained close to the send action; schedule changes are optional and never silently override a conflict.
+Connect approved membership → Today → reply, or select the parent and compose a question. Three common formats lead: words, two photos and voice. Less common formats remain reachable. The send action stays visible in a footer while the form scrolls, with keyboard avoidance on iOS. The default timing is explained close to the send action; schedule changes are optional and never silently override a conflict.
 
 Changing parent preserves written words while resetting parent-bound media and timing as defined by the behavior pass. A failed or uncertain send keeps its original retry identity. The success result names the actual returned recipient and timing and distinguishes acceptance from delivery. A demo clearly says it sent no message.
 
