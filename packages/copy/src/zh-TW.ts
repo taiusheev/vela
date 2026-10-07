@@ -49,7 +49,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "arrival.greeting": "{address}，早安。",
   "arrival.late": "不好意思，這則訊息晚到了。",
   "arrival.repeat": "怕您沒看到，再傳一次：",
-  "arrival.readback_heading": "昨天家人的回覆：",
+  "arrival.readback_heading": "家人的回覆：",
   "arrival.asks": "{asker}想問您：",
   "arrival.asks_on_behalf": "{asker}替{child}問您：",
   "arrival.sent_photo": "{asker}傳了一張照片給您。",

@@ -81,7 +81,7 @@ describe("renderArrival in English", () => {
       ask: question({ chips: ["Soup", "Pancakes", "Nothing yet"] }),
     });
     expect(paragraphs(arrival)).toEqual([
-      "From yesterday:\nSam: The borscht turned out well.\nAnna and Sam sent ❤️",
+      "From your family:\nSam: The borscht turned out well.\nAnna and Sam sent ❤️",
       "Good morning, Mrs Chen.",
       "Mia asks:\nWhat did you cook today?",
       "Reply with a voice message, or tap a button.",
@@ -104,7 +104,7 @@ describe("renderArrival in English", () => {
   it("apologises for a late arrival before the greeting", () => {
     const arrival = render({ late: true, readBack: ["Sam: Hello"] });
     expect(paragraphs(arrival).slice(0, 2)).toEqual([
-      "From yesterday:\nSam: Hello",
+      "From your family:\nSam: Hello",
       "Sorry this is late.\nGood morning, Mrs Chen.",
     ]);
   });
@@ -247,7 +247,7 @@ describe("renderArrival in English", () => {
   it("sends the fallback hello signed by Vela with only the heart and I'm fine", () => {
     const arrival = render({ ask: { type: "hello" }, readBack: ["Sam: See you Sunday"] });
     expect(paragraphs(arrival)).toEqual([
-      "From yesterday:\nSam: See you Sunday",
+      "From your family:\nSam: See you Sunday",
       "Good morning, Mrs Chen.",
       "Nothing new from the family today. How are you this morning?\nVela, from your family",
       "Reply with a voice message, or tap a button.",
@@ -368,7 +368,7 @@ describe("renderArrival in Traditional Chinese", () => {
       ask: question({ askerName: "小美", text: "今天煮了什麼？", chips: ["湯", "麵"] }),
     });
     expect(paragraphs(arrival)).toEqual([
-      "昨天家人的回覆：\n小明：奶奶的湯很好喝",
+      "家人的回覆：\n小明：奶奶的湯很好喝",
       "不好意思，這則訊息晚到了。\n陳奶奶，早安。",
       "小美想問您：\n今天煮了什麼？",
       "您可以傳語音訊息回覆，或按下面的按鈕。",

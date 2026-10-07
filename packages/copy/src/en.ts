@@ -83,7 +83,7 @@ export const en = {
   "arrival.greeting": "Good morning, {address}.",
   "arrival.late": "Sorry this is late.",
   "arrival.repeat": "In case you missed it:",
-  "arrival.readback_heading": "From yesterday:",
+  "arrival.readback_heading": "From your family:",
   "arrival.asks": "{asker} asks:",
   "arrival.asks_on_behalf": "{asker} asks, for {child}:",
   "arrival.sent_photo": "{asker} sent you a photo.",
