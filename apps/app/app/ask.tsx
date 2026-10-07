@@ -9,6 +9,7 @@ import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
 import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
 import type { Recorded } from "../src/audio/useRecording.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
+import { BackButton } from "../src/components/back-button.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
 import {
@@ -23,10 +24,11 @@ import {
 import { VoiceHello } from "../src/components/voice-hello.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
 import { type AskType, askTypes, composableType, suggestedKind } from "../src/data/ask.ts";
+import { askRecipient, canAsk } from "../src/data/ask-target.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { askExtras, photoCount } from "../src/data/photos.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
-import { dayName, useToday } from "../src/data/useToday.ts";
+import { dayName, type TodayView, useToday } from "../src/data/useToday.ts";
 import { usePush } from "../src/push/provider.tsx";
 import { readFlag, writeFlag } from "../src/storage/flags.ts";
 import { useDraft } from "../src/storage/useDraft.ts";
@@ -40,18 +42,48 @@ const OFFERED_AFTER_ASK = "push-offered.after-ask";
 /** A draft storage key before a family is linked, never visible copy. */
 const UNLINKED_FAMILY = "pending";
 
-/** A paused light, or one not yet said yes to, cannot be asked (`canBeAsked`). */
-function askable(light: TodayLight): boolean {
-  return light.state !== "paused" && light.invited !== true;
-}
+type AskParams = { recipient?: string; suggestion?: string; text?: string };
 
 export default function AskScreen() {
+  const view = useToday();
+  const params = useLocalSearchParams<AskParams>();
+  const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
+  const lights = demo || view.live ? view.today.lights : [];
+  const recipient = askRecipient(lights, params.recipient);
+  const composerKey = `${view.familyId ?? UNLINKED_FAMILY}:${recipient?.memberId ?? UNLINKED_FAMILY}`;
+  // A different parent starts a fresh media/when/suggestion state. Written words remain in the
+  // family's existing encrypted draft, including the identity of any unconfirmed send.
+  return (
+    <AskComposer
+      key={composerKey}
+      view={view}
+      params={params}
+      lights={lights}
+      recipient={recipient}
+      demo={demo}
+    />
+  );
+}
+
+function AskComposer({
+  view,
+  params,
+  lights,
+  recipient,
+  demo,
+}: {
+  view: TodayView;
+  params: AskParams;
+  lights: TodayLight[];
+  recipient: TodayLight | undefined;
+  demo: boolean;
+}) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
-  const { today, familyId, live, photos: photosOn, organiser, pushSent } = useToday();
+  const { today, familyId, live, photos: photosOn, organiser, pushSent } = view;
   const push = usePush();
   // push (A2): after a person's first ask, someone who does not organise is offered notifications
   // once, in the words of what they would hear: that she answered. Organisers are asked when they
@@ -66,8 +98,8 @@ export default function AskScreen() {
     return true;
   };
   // `text` comes from a reminder's "Ask" (spec §12): the question it suggests, for the asker to edit.
-  const params = useLocalSearchParams<{ recipient?: string; suggestion?: string; text?: string }>(); // suggestion
   const [kind, setKind] = useState<AskType>("question");
+  const [moreTypes, setMoreTypes] = useState(false);
   const draft = useDraft(`ask.${familyId ?? UNLINKED_FAMILY}`, params.text ?? "");
   const { text, setText } = draft;
   const [when, setWhen] = useState<When>("tomorrow");
@@ -95,16 +127,6 @@ export default function AskScreen() {
   const noMorning = photos.count > 0 && taken !== null && taken.date_alternative === null;
   const [used, setUsed] = useState<{ id: string; recipientId: string } | undefined>(); // suggestion
 
-  // With no API this screen is the example day and sends nothing. With one, it must wait for the
-  // real day: `today` is the fixture until it arrives, and its people are nobody's family.
-  const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
-  const lights = demo || live ? today.lights : [];
-  // The screen asks the person Today's card was for when she can be asked, and otherwise the first
-  // who can; it says why when nobody can.
-  const recipient =
-    lights.find((light) => light.memberId === params.recipient && askable(light)) ??
-    lights.find(askable) ??
-    lights[0];
   // Vela's suggestion for her own morning, and never another's (a claimed morning has none).
   const suggestion = (demo || live ? today.tomorrow : []).find(
     (turn) => turn.recipientId === recipient?.memberId && turn.asked === undefined,
@@ -125,11 +147,16 @@ export default function AskScreen() {
   // fills the field once, when it is there, and never over words already typed.
   const offered = useRef(false);
   useEffect(() => {
-    if (offered.current || recipient === undefined || suggestion === undefined) return;
+    if (!draft.ready || offered.current || recipient === undefined || suggestion === undefined)
+      return;
     if (suggestion.id !== params.suggestion) return;
     offered.current = true;
     if (text.trim().length === 0) fill(suggestion, recipient.memberId);
-  }, [recipient, suggestion, params.suggestion, text, fill]);
+  }, [draft.ready, recipient, suggestion, params.suggestion, text, fill]);
+  const savedAsk = draft.savedBody<ComposeAsk>();
+  const savedRecipient = lights.find((light) => light.memberId === savedAsk?.recipient_id);
+  const savedElsewhere = savedAsk !== null && savedAsk.recipient_id !== recipient?.memberId;
+  const savedName = savedRecipient?.displayName;
   const paused = recipient !== undefined && recipient.state === "paused";
   const invited = recipient !== undefined && recipient.invited === true;
   const ready =
@@ -206,7 +233,9 @@ export default function AskScreen() {
       ? t`${name}'s light is paused just now, so nothing can be sent into her morning.`
       : invited
         ? t`${name} has not said yes yet. Once she does, her first morning is the next day.`
-        : t`Waiting for today to arrive. Your words are kept.`
+        : live
+          ? t`Choose someone in your family, or return to Today. Your words are kept.`
+          : t`Waiting for today to arrive. Your words are kept.`
     : null;
   const holder = taken?.taken_by;
   // Named, never "the day after": the next free morning can be several days out.
@@ -215,8 +244,15 @@ export default function AskScreen() {
   if (offering) {
     return (
       <>
-        <Stack.Screen options={{ headerShown: true, title: t`Ask ${name} something` }} />
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: t`Ask ${name} something`,
+            headerLeft: () => <BackButton />,
+          }}
+        />
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           style={{ backgroundColor: palette.bg }}
           contentContainerStyle={{
             paddingTop: space.xl,
@@ -244,8 +280,15 @@ export default function AskScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: t`Ask ${name} something` }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: t`Ask ${name} something`,
+          headerLeft: () => <BackButton />,
+        }}
+      />
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: space.xl,
@@ -254,6 +297,30 @@ export default function AskScreen() {
           gap: space.xl,
         }}
       >
+        {lights.length > 1 ? (
+          <View style={{ gap: space.m }}>
+            <Words variant="heading">
+              <Trans>Who is this for?</Trans>
+            </Words>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+              {lights.map((light) => (
+                <Chip
+                  key={light.memberId}
+                  label={light.displayName}
+                  selected={recipient?.memberId === light.memberId}
+                  disabled={compose.isPending || savedAsk !== null || !canAsk(light)}
+                  onPress={() =>
+                    router.setParams({
+                      recipient: light.memberId,
+                      suggestion: undefined,
+                      text: undefined,
+                    })
+                  }
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
         {/* Live with no suggestion for her morning, there is no card. */}
         {suggestion === undefined || recipient === undefined ? null : (
           <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
@@ -267,6 +334,7 @@ export default function AskScreen() {
             <Words variant="voice">{suggestion.text}</Words>
             <SecondaryButton
               label={t`Use this`}
+              disabled={!draft.ready || compose.isPending || savedElsewhere}
               onPress={() => fill(suggestion, recipient.memberId)}
             />
           </Card>
@@ -277,16 +345,33 @@ export default function AskScreen() {
             <Trans>What are you sending?</Trans>
           </Words>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-            {askTypes.map((option) => (
-              <Chip
-                key={option.kind}
-                label={i18n._(option.label)}
-                selected={option.kind === kind}
-                disabled={!option.available || (photos.off && photoCount(option.kind) > 0)}
-                onPress={() => setKind(option.kind)}
-              />
-            ))}
+            {askTypes
+              .filter(
+                (option) =>
+                  moreTypes ||
+                  option.kind === kind ||
+                  ["question", "two_photos", "voice_note"].includes(option.kind),
+              )
+              .map((option) => (
+                <Chip
+                  key={option.kind}
+                  label={i18n._(option.label)}
+                  selected={option.kind === kind}
+                  disabled={!option.available || (photos.off && photoCount(option.kind) > 0)}
+                  onPress={() => setKind(option.kind)}
+                />
+              ))}
           </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: moreTypes }}
+            style={{ minHeight: 44, justifyContent: "center" }}
+            onPress={() => setMoreTypes((shown) => !shown)}
+          >
+            <Words variant="button" tone="action">
+              {moreTypes ? <Trans>Fewer choices</Trans> : <Trans>More ways to ask</Trans>}
+            </Words>
+          </Pressable>
           {photos.explain ? (
             <Words variant="caption" tone="ink3">
               <Trans>Photos are not switched on here yet.</Trans>
@@ -302,7 +387,7 @@ export default function AskScreen() {
             helper={t`One question at a time. The English pilot sends your words as written.`}
             multiline
             maxLength={1000}
-            disabled={!draft.ready || compose.isPending}
+            disabled={!draft.ready || compose.isPending || savedElsewhere}
           />
         </View>
         <PhotoSlots photos={photos} />
@@ -369,14 +454,18 @@ export default function AskScreen() {
             </Trans>
           </Words>
         ) : null}
-        {draft.savedBody<ComposeAsk>() === null || !ready ? null : (
+        {savedAsk === null || savedRecipient === undefined || !canAsk(savedRecipient) ? null : (
           <SecondaryButton
-            label={t`Retry saved ask`}
-            disabled={compose.isPending}
+            label={savedElsewhere ? t`Continue your saved ask to ${savedName}` : t`Retry saved ask`}
+            disabled={compose.isPending || !draft.ready}
             onPress={() => {
-              const ask = draft.savedBody<ComposeAsk>();
-              if (ask !== null && lights.some((light) => light.memberId === ask.recipient_id))
-                compose.mutate({ ask, saved: true });
+              if (savedElsewhere)
+                router.setParams({
+                  recipient: savedAsk.recipient_id,
+                  suggestion: undefined,
+                  text: undefined,
+                });
+              else if (ready) compose.mutate({ ask: savedAsk, saved: true });
             }}
           />
         )}
@@ -385,6 +474,7 @@ export default function AskScreen() {
           onPress={send}
           disabled={
             compose.isPending ||
+            savedElsewhere ||
             !draft.ready ||
             extras === undefined ||
             noMorning ||

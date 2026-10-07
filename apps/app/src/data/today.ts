@@ -57,6 +57,8 @@ export interface ExchangePhoto {
 }
 
 export interface TodayExchange {
+  id: string;
+  recipientId: string;
   /** Undefined for Vela's own hello, and for an ask whose asker has since been deleted. */
   asker?: string;
   recipient: string;
@@ -121,7 +123,7 @@ export interface TomorrowTurn {
 
 export interface Today {
   lights: TodayLight[];
-  exchange?: TodayExchange;
+  exchanges: TodayExchange[];
   tomorrow: TomorrowTurn[];
 }
 
@@ -137,23 +139,27 @@ export function todayFixture(): Today {
       { memberId: "m1", displayName: recipient, state: "lit", stateText: t`answered ${time}` },
       { memberId: "m2", displayName: t`Dad`, state: "resting", stateText: t`resting` },
     ],
-    exchange: {
-      asker: "Mia",
-      recipient,
-      ask: t`What did the garden look like this morning?`,
-      answer: {
-        text: t`The tomatoes finally turned. I picked three before breakfast and left them on the sill.`,
-        at: time,
-      },
-      replies: [
-        { from: "Mia", text: reactionLine("Mia", "heart") },
-        {
-          from: "Anna",
-          text: replyLine("Anna", "text", t`Those are the ones from the seeds you saved`),
+    exchanges: [
+      {
+        id: "x1",
+        recipientId: "m1",
+        asker: "Mia",
+        recipient,
+        ask: t`What did the garden look like this morning?`,
+        answer: {
+          text: t`The tomatoes finally turned. I picked three before breakfast and left them on the sill.`,
+          at: time,
         },
-      ],
-      receipt: t`${recipient} saw it · ${time}`,
-    },
+        replies: [
+          { from: "Mia", text: reactionLine("Mia", "heart") },
+          {
+            from: "Anna",
+            text: replyLine("Anna", "text", t`Those are the ones from the seeds you saved`),
+          },
+        ],
+        receipt: t`${recipient} saw it · ${time}`,
+      },
+    ],
     tomorrow: [
       {
         recipientId: "m1",
@@ -180,16 +186,21 @@ export function todayFixture(): Today {
 export function quietExampleFixture(): Today {
   const day = todayFixture();
   const [her, ...others] = day.lights;
-  if (her === undefined || day.exchange === undefined) return day;
+  const exchange = day.exchanges[0];
+  if (her === undefined || exchange === undefined) return day;
   return {
     ...day,
     lights: [{ ...her, state: "quiet", stateText: t`quiet` }, ...others],
-    exchange: {
-      asker: day.exchange.asker,
-      recipient: day.exchange.recipient,
-      ask: day.exchange.ask,
-      unanswered: t`No word yet today.`,
-      replies: [],
-    },
+    exchanges: [
+      {
+        id: exchange.id,
+        recipientId: exchange.recipientId,
+        asker: exchange.asker,
+        recipient: exchange.recipient,
+        ask: exchange.ask,
+        unanswered: t`No word yet today.`,
+        replies: [],
+      },
+    ],
   };
 }

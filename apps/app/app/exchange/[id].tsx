@@ -5,11 +5,18 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiConfigured, fetchExchange, replyRefusal, replyTo } from "../../src/api/client.ts";
+import {
+  ApiError,
+  apiConfigured,
+  fetchExchange,
+  replyRefusal,
+  replyTo,
+} from "../../src/api/client.ts";
 import { photoRefusal, uploadMedia, uploadVoice } from "../../src/api/upload.ts";
 import type { Recorded } from "../../src/audio/useRecording.ts";
 import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
+import { BackButton } from "../../src/components/back-button.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../../src/components/family-photo.tsx";
 import { type ChosenPhoto, PhotoReply } from "../../src/components/photo-reply.tsx";
 import {
@@ -19,6 +26,7 @@ import {
   Hairline,
   PrimaryButton,
   ReceiptChip,
+  SecondaryButton,
   TextField,
   Words,
 } from "../../src/components/ui.tsx";
@@ -87,15 +95,26 @@ export default function ExchangeScreen() {
 
   if (exchange === undefined) {
     return (
-      <View style={{ flex: 1, backgroundColor: palette.bg, padding: space.margin }}>
-        <Words variant="body" tone="ink2">
-          {demo || single.isError || (live && !single.isPending) ? (
-            <Trans>That exchange is not here.</Trans>
-          ) : (
-            <Trans>Looking for that exchange…</Trans>
-          )}
-        </Words>
-      </View>
+      <>
+        <Stack.Screen
+          options={{ headerShown: true, title: t`Exchange`, headerLeft: () => <BackButton /> }}
+        />
+        <View style={{ flex: 1, backgroundColor: palette.bg, padding: space.margin, gap: space.l }}>
+          <Words variant="body" tone="ink2">
+            {single.isError &&
+            !(single.error instanceof ApiError && single.error.status === 404) ? (
+              <Trans>That exchange could not be reached just now.</Trans>
+            ) : demo || single.isError || (live && !single.isPending) ? (
+              <Trans>That exchange is not here.</Trans>
+            ) : (
+              <Trans>Looking for that exchange…</Trans>
+            )}
+          </Words>
+          {single.isError ? (
+            <SecondaryButton label={t`Try again`} onPress={() => void single.refetch()} />
+          ) : null}
+        </View>
+      </>
     );
   }
 
@@ -204,9 +223,14 @@ export default function ExchangeScreen() {
   return (
     <>
       <Stack.Screen
-        options={{ headerShown: true, title: `${exchange.asker} → ${exchange.recipient}` }}
+        options={{
+          headerShown: true,
+          title: `${exchange.asker} → ${exchange.recipient}`,
+          headerLeft: () => <BackButton />,
+        }}
       />
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: space.xl,

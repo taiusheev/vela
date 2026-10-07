@@ -2,8 +2,8 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiCreatedFamily, CreateFamily } from "@vela/contracts";
 import { router, Stack } from "expo-router";
-import { useState } from "react";
-import { ScrollView, Share, View } from "react-native";
+import { useRef, useState } from "react";
+import { Pressable, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   alreadyOrganiser,
@@ -26,6 +26,7 @@ import {
   Eyebrow,
   PrimaryButton,
   SecondaryButton,
+  SetupProgress,
   TextField,
   Words,
 } from "../src/components/ui.tsx";
@@ -60,11 +61,17 @@ export default function OnboardingScreen() {
   const { noAccount, pushSent } = useToday();
   const capabilities = useCapabilities();
   const [step, setStep] = useState<Step>("who");
+  const scroll = useRef<ScrollView>(null);
+  const goToStep = (next: Step) => {
+    setStep(next);
+    scroll.current?.scrollTo({ y: 0, animated: false });
+  };
   const [yourName, setYourName] = useState("");
   const [herName, setHerName] = useState("");
   const [address, setAddress] = useState("");
   const [language, setLanguage] = useState<"en" | "zh-TW">("en");
   const [countryCode, setCountryCode] = useState("TW");
+  const [showCountries, setShowCountries] = useState(false);
   const [zone, setZone] = useState("Asia/Taipei");
   const [wake, setWake] = useState<string>("07:30");
   const [created, setCreated] = useState<ApiCreatedFamily | null>(null);
@@ -82,6 +89,7 @@ export default function OnboardingScreen() {
   const country = countries.find((choice) => choice.code === countryCode) ?? countries[0];
   const chooseCountry = (code: string) => {
     setCountryCode(code);
+    setShowCountries(false);
     const first = countries.find((choice) => choice.code === code)?.zones[0];
     if (first !== undefined) setZone(first.zone);
   };
@@ -113,7 +121,7 @@ export default function OnboardingScreen() {
     },
     onSuccess: async (family) => {
       setCreated(family);
-      setStep("first");
+      goToStep("first");
       // Today must learn there is a family now, or it would send the organiser straight back here.
       await Promise.all([
         queries.invalidateQueries({ queryKey: ["me"] }),
@@ -150,7 +158,7 @@ export default function OnboardingScreen() {
       };
       return composeAsk(created.family.id, firstKey(ask), ask, await account.token());
     },
-    onSuccess: () => setStep("nearby"),
+    onSuccess: () => goToStep("nearby"),
   });
   const firstExamples = [
     t`What did you have for breakfast?`,
@@ -173,6 +181,8 @@ export default function OnboardingScreen() {
   ) {
     return (
       <ScrollView
+        ref={scroll}
+        keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: insets.top + space.xl,
@@ -201,6 +211,8 @@ export default function OnboardingScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
+        ref={scroll}
+        keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: insets.top + space.xl,
@@ -209,6 +221,10 @@ export default function OnboardingScreen() {
           gap: space.xl,
         }}
       >
+        <SetupProgress
+          steps={[t`Who`, t`First ask`, t`People nearby`, t`Invite`, t`Ready`]}
+          current={["who", "first", "nearby", "invite", "ready"].indexOf(step)}
+        />
         {step === "who" ? (
           <>
             <Words variant="title">
@@ -227,12 +243,14 @@ export default function OnboardingScreen() {
               onChangeText={setHerName}
               placeholder={t`Mom`}
               helper={t`Her name, as the family calls her.`}
+              maxLength={40}
             />
             <TextField
               value={address}
               onChangeText={setAddress}
               placeholder={t`Mrs Chen`}
               helper={t`How Vela greets her each morning.`}
+              maxLength={40}
             />
 
             <View style={{ gap: space.m }}>
@@ -256,7 +274,10 @@ export default function OnboardingScreen() {
                 <Trans>She lives in</Trans>
               </Words>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-                {countries.map((choice) => (
+                {(showCountries
+                  ? countries
+                  : countries.filter((choice) => choice.code === countryCode)
+                ).map((choice) => (
                   <Chip
                     key={choice.code}
                     label={i18n._(choice.label)}
@@ -265,6 +286,16 @@ export default function OnboardingScreen() {
                   />
                 ))}
               </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showCountries }}
+                onPress={() => setShowCountries((shown) => !shown)}
+                style={{ minHeight: 44, justifyContent: "center" }}
+              >
+                <Words variant="button" tone="action">
+                  {showCountries ? <Trans>Keep this country</Trans> : <Trans>Change country</Trans>}
+                </Words>
+              </Pressable>
               {country !== undefined && country.zones.length > 1 ? (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
                   {country.zones.map((choice) => (
@@ -351,7 +382,7 @@ export default function OnboardingScreen() {
               disabled={first.isPending || firstAsk.trim().length === 0}
               onPress={() => first.mutate(firstAsk.trim())}
             />
-            <SecondaryButton label={t`Skip for now`} onPress={() => setStep("nearby")} />
+            <SecondaryButton label={t`Skip for now`} onPress={() => goToStep("nearby")} />
           </>
         ) : null}
 
@@ -377,7 +408,7 @@ export default function OnboardingScreen() {
             <NearbyEditor name={name ?? t`her`} nearby={nearby} />
             <PrimaryButton
               label={nearby.people.length === 0 ? t`Skip for now` : t`Next`}
-              onPress={() => setStep("invite")}
+              onPress={() => goToStep("invite")}
             />
           </>
         ) : null}
@@ -426,7 +457,7 @@ export default function OnboardingScreen() {
             <Words variant="caption" tone="ink3">
               <Trans>You can also do it later, from You → Her phone.</Trans>
             </Words>
-            <PrimaryButton label={t`Next`} onPress={() => setStep("ready")} />
+            <PrimaryButton label={t`Next`} onPress={() => goToStep("ready")} />
           </>
         ) : null}
 
@@ -462,7 +493,7 @@ export default function OnboardingScreen() {
               </Words>
             ) : null}
             <PrimaryButton label={t`Send it to her`} onPress={() => void share()} />
-            <SecondaryButton label={t`I have sent it`} onPress={() => setStep("ready")} />
+            <SecondaryButton label={t`I have sent it`} onPress={() => goToStep("ready")} />
           </>
         ) : null}
 
