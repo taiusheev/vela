@@ -1,0 +1,59 @@
+{
+  "kind": "synthetic-line-morning-verification",
+  "environment": "staging",
+  "date": "2026-10-07",
+  "sourceCommit": "cba84e38e3df84c58a84b5400caf67efa150d08d",
+  "operator": "Codex",
+  "method": "Neon staging SQL editor; BEGIN READ ONLY; content-free metadata scoped to the founder-approved synthetic family",
+  "checkedAt": "2026-10-07T04:54:40.310377Z",
+  "recipient": {
+    "timezone": "Asia/Taipei",
+    "language": "en",
+    "lightOn": true,
+    "status": "active",
+    "channel": "line",
+    "blocked": false,
+    "consentedAt": "2026-10-06T09:05:43.745Z",
+    "startsOn": "2026-10-07",
+    "arrivalTime": "08:00:00"
+  },
+  "morning": {
+    "type": "hello",
+    "state": "answered",
+    "arrivalQueuedAt": "2026-10-07T00:00:06.254Z",
+    "arrivalDeliveredAt": "2026-10-07T00:00:14.338Z",
+    "arrivalAttempts": 1,
+    "arrivalEffectsAt": "2026-10-07T00:00:15.337Z",
+    "firstAnswerAt": "2026-10-07T01:56:15.211Z",
+    "answerCount": 2,
+    "answerKinds": [
+      "fine",
+      "text"
+    ],
+    "answerChannel": "line",
+    "ackDeliveredAt": "2026-10-07T01:56:24.935Z",
+    "ackAttempts": 1,
+    "quietCount": 0,
+    "humanReplies": 0,
+    "readBackAt": null,
+    "groupRoutePresent": false,
+    "tomorrowAsks": 0
+  },
+  "aiBeforeFix": {
+    "understoodAnswers": 0,
+    "attemptsPerAnswer": 3,
+    "understandCallsFailed": 6,
+    "flagCallsFailed": 6,
+    "suggestCallsFailed": 3,
+    "tokensIn": 0,
+    "tokensOut": 0,
+    "rootCause": "OpenAI client stores native fetch and invokes it with the client receiver; workerd throws Illegal invocation before network access",
+    "runtimeRegressionBeforeFix": "failed with network outcome and zero tokens",
+    "runtimeRegressionAfterFix": "passed with intercepted native outbound response"
+  },
+  "limits": [
+    "Delivery metadata proves provider acceptance, not reading or listening.",
+    "No family message content, external identifiers, credentials or provider request bodies were read or retained.",
+    "Human reply, group linking, next-morning read-back, photos, voice, consent races, live AI quality, seven mornings, iPhone and production remain open."
+  ]
+}

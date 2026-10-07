@@ -1,6 +1,6 @@
 # Founder setup: what only you can do, in order
 
-6 October 2026. Every step below needs your own account, money or a private key, so engineering cannot do it for you. Each one ends with the exact words to send Claude. Private keys go only into the hidden prompts of the launchers in `infra/scripts/` (double-click in Finder; macOS may ask once to allow Terminal). **Never paste a key, password or connection string into chat.**
+Updated 7 October 2026. Every step below needs your own account, money or a private key, so engineering cannot do it for you. Each one ends with the exact words to send Claude. Private keys go only into the hidden prompts of the launchers in `infra/scripts/` (double-click in Finder; macOS may ask once to allow Terminal). **Never paste a key, password or connection string into chat.**
 
 The active checklist these unblock is [english-trial-readiness.md](english-trial-readiness.md).
 
@@ -13,6 +13,12 @@ The active checklist these unblock is [english-trial-readiness.md](english-trial
 | 5 | Apple Developer Program | US$99/year, your call | 15 min + Apple's review (1–2 days) | signed iPhone build, voice playback on a real phone, TestFlight |
 | 6 | Production | domain + Neon/Clerk production, your call | later | real families |
 | 7 | LINE test account for staging | free | 15 min | launch gate 7: Vela on LINE, tested with a test parent before any Taiwan family |
+
+## Current status — reuse completed setup
+
+Steps 1, 2, 3, 4 and 7 have their account/key setup completed; keep the instructions below for a specific failed configuration check, and do not repeat them during ordinary testing. Current main CI and automatic staging deployment passed. Clerk signed example delivery is verified; deletion of a real synthetic signed-in account is still open. The second Telegram account is the organiser, and the founder's LINE account plays the synthetic parent. LINE consent, the first scheduled arrival, two answers and the acknowledgement are verified on 7 October.
+
+Engineering found and reproduced a Worker-runtime bug that prevented OpenAI calls from reaching the provider, and is repairing it. This is not evidence that a new key or more credit is needed. The complete family loop still needs a linked synthetic group, a human reply and its next-morning read-back. Signed iPhone/TestFlight and production remain open. See [the morning receipt](../infra/load-tests/trial-line-morning-2026-10-07.json) for recovery evidence and its limits.
 
 ## 1. GitHub deploys staging by itself (free)
 
@@ -48,7 +54,7 @@ Tell Claude: **"second Telegram account ready"**. Claude then sends you the day-
 
 ## 4. OpenAI key for staging (you already have an OpenAI account)
 
-Decided 6 October: Vela uses OpenAI instead of buying Anthropic credit. AI is off on staging, so summaries, flag checks and translations have never run against a real provider. Production cannot run with AI off.
+Decided 6 October: Vela uses OpenAI instead of buying Anthropic credit. OpenAI is enabled on both staging Workers and its local 92-case golden set passed. The 7 October live calls exposed a Worker-runtime bug; engineering owns the fix and live retry verification. Production cannot run with AI off.
 
 1. platform.openai.com → **Settings → Limits** (or **Billing**): check there is credit, and set a monthly budget (e.g. US$10).
 2. **Projects → Create project** named `vela-staging`. Later, `vela-production`.

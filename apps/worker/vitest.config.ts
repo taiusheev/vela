@@ -181,6 +181,34 @@ export default defineConfig({
     cloudflareTest({
       wrangler: { configPath: PILOT_CONFIG },
       miniflare: {
+        // Exercise OpenAI through workerd's native fetch, rather than replacing the global
+        // with a JavaScript spy. No request may leave the test runtime.
+        outboundService(request) {
+          if (
+            request.url !== "https://api.openai.com/v1/chat/completions" ||
+            request.method !== "POST" ||
+            request.headers.get("authorization") !== "Bearer synthetic-runtime-key"
+          ) {
+            throw new Error("Unexpected outbound request in Worker tests");
+          }
+          return Response.json({
+            model: "gpt-5-2025-08-07",
+            choices: [
+              {
+                finish_reason: "stop",
+                message: {
+                  content: JSON.stringify({
+                    flag: false,
+                    category: null,
+                    severity: null,
+                    evidenceQuote: null,
+                  }),
+                },
+              },
+            ],
+            usage: { prompt_tokens: 20, completion_tokens: 10 },
+          });
+        },
         bindings: {
           TELEGRAM_BOT_TOKEN: "12345:test-token",
           TELEGRAM_WEBHOOK_SECRET: "test-webhook-secret",
