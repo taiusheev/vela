@@ -275,13 +275,6 @@
     "staging": {
       "name": "vela",
       "workers_dev": true,
-      // The public website's domain (founder bought vela-light.com on Cloudflare, 7 October 2026),
-      // served from staging until production is set up. On it the Worker answers only the website
-      // (src/site-host.ts, SITE_HOST below); webhooks, media and the API stay on workers.dev.
-      "routes": [
-        { "pattern": "vela-light.com", "custom_domain": true },
-        { "pattern": "www.vela-light.com", "custom_domain": true }
-      ],
       "preview_urls": false,
       "observability": { "enabled": true },
       "durable_objects": {
