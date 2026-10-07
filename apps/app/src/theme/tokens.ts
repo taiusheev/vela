@@ -13,6 +13,7 @@ export interface Palette {
   ink2: string;
   ink3: string;
   rule: string;
+  control: string;
   light: string;
   lightDeep: string;
   lightSoft: string;
@@ -27,8 +28,9 @@ export const lightPalette: Palette = {
   surface2: "#F3EDE4",
   ink: "#1E1A16",
   ink2: "#5A534B",
-  ink3: "#7A7267",
+  ink3: "#756D62",
   rule: "#E8E1D6",
+  control: "#948779",
   light: "#E9A23B",
   lightDeep: "#C27612",
   lightSoft: "#FBEBCF",
@@ -45,6 +47,7 @@ export const darkPalette: Palette = {
   ink2: "#B9B0A5",
   ink3: "#8F867B",
   rule: "#3A332C",
+  control: "#8F867B",
   light: "#E9A23B",
   lightDeep: "#F0B65A",
   lightSoft: "#3B2E19",
@@ -59,7 +62,7 @@ export const space = {
   s: 8,
   m: 12,
   l: 16,
-  margin: 20,
+  margin: 24,
   xl: 24,
   xxl: 32,
   xxxl: 40,
@@ -67,11 +70,11 @@ export const space = {
 } as const;
 
 export const radius = {
-  card: 16,
+  card: 20,
   sheet: 24,
   button: 14,
   parentButton: 22,
-  chip: 999,
+  chip: 12,
 } as const;
 
 export interface TextStyle {
@@ -103,13 +106,13 @@ function face(name: string, fallback: string): string {
  */
 export const type = {
   display: { fontFamily: face("Literata_600SemiBold", SERIF_TC), fontSize: 34, lineHeight: 40 },
-  title: { fontFamily: face("Literata_600SemiBold", SERIF_TC), fontSize: 26, lineHeight: 32 },
-  voice: { fontFamily: face("Literata_400Regular", SERIF_TC), fontSize: 19, lineHeight: 27 },
+  title: { fontFamily: face("Literata_600SemiBold", SERIF_TC), fontSize: 28, lineHeight: 36 },
+  voice: { fontFamily: face("Literata_400Regular", SERIF_TC), fontSize: 20, lineHeight: 29 },
   heading: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 17, lineHeight: 24 },
   body: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 17, lineHeight: 24 },
   bodyMedium: { fontFamily: face("Inter_500Medium", SANS_TC), fontSize: 17, lineHeight: 24 },
   button: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 16, lineHeight: 20 },
-  caption: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 13, lineHeight: 18 },
+  caption: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 14, lineHeight: 20 },
   label: {
     fontFamily: face("Inter_600SemiBold", SANS_TC),
     fontSize: 12,
