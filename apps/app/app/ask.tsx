@@ -50,6 +50,7 @@ export default function AskScreen() {
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
   const lights = demo || view.live ? view.today.lights : [];
   const recipient = askRecipient(lights, params.recipient);
+  const draft = useDraft(`ask.${view.familyId ?? UNLINKED_FAMILY}`, params.text ?? "");
   const composerKey = `${view.familyId ?? UNLINKED_FAMILY}:${recipient?.memberId ?? UNLINKED_FAMILY}`;
   // A different parent starts a fresh media/when/suggestion state. Written words remain in the
   // family's existing encrypted draft, including the identity of any unconfirmed send.
@@ -60,6 +61,7 @@ export default function AskScreen() {
       params={params}
       lights={lights}
       recipient={recipient}
+      draft={draft}
       demo={demo}
     />
   );
@@ -70,12 +72,14 @@ function AskComposer({
   params,
   lights,
   recipient,
+  draft,
   demo,
 }: {
   view: TodayView;
   params: AskParams;
   lights: TodayLight[];
   recipient: TodayLight | undefined;
+  draft: ReturnType<typeof useDraft>;
   demo: boolean;
 }) {
   const palette = usePalette();
@@ -100,7 +104,6 @@ function AskComposer({
   // `text` comes from a reminder's "Ask" (spec §12): the question it suggests, for the asker to edit.
   const [kind, setKind] = useState<AskType>("question");
   const [moreTypes, setMoreTypes] = useState(false);
-  const draft = useDraft(`ask.${familyId ?? UNLINKED_FAMILY}`, params.text ?? "");
   const { text, setText } = draft;
   const [when, setWhen] = useState<When>("tomorrow");
   const [taken, setTaken] = useState<ApiAskConflict | null>(null);
