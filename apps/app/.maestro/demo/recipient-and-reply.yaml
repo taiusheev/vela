@@ -6,8 +6,9 @@ tags:
 ---
 - launchApp
 - tapOn: "Ask Mom something"
-- tapOn: "One question at a time. The English pilot sends your words as written."
+- tapOn: "Say it the way you would say it"
 - inputText: "What is growing by your window?"
+- assertVisible: "What is growing by your window?"
 - tapOn: "Dad"
 - assertVisible: "Ask Dad something"
 - assertVisible: "What is growing by your window?"
@@ -21,7 +22,7 @@ tags:
 - assertNotVisible: "Option 1"
 - tapOn: "Back"
 - tapOn: "Reply to Mom"
-- tapOn: "She hears it in her read-back tomorrow morning."
+- tapOn: "Say something short"
 - inputText: "Save some seeds for our next visit."
 - tapOn: "Send"
 - assertVisible: "You: Save some seeds for our next visit."
