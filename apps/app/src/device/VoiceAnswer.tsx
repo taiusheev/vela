@@ -2,6 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { clock, type Recorded, useRecording } from "../audio/useRecording.ts";
+import { BrandIcon } from "../components/brand/icon.tsx";
 import { lightPalette as light } from "../theme/tokens.ts";
 
 /**
@@ -105,8 +106,9 @@ export function VoiceAnswer({
         style={({ pressed }) => [styles.secondary, pressed ? styles.pressed : null]}
         onPress={() => void start()}
       >
+        <BrandIcon name="mic" color={light.action} size={24} />
         <Text style={styles.secondaryLabel}>
-          <Trans>🎙 Answer with your voice</Trans>
+          <Trans>Answer with your voice</Trans>
         </Text>
       </Pressable>
       {voice.failed ? (
@@ -148,6 +150,8 @@ const styles = StyleSheet.create({
   primaryLabel: { fontFamily: "Inter_600SemiBold", fontSize: 22, color: light.surface },
   secondary: {
     minHeight: 64,
+    flexDirection: "row",
+    gap: 12,
     borderRadius: 18,
     borderWidth: 2,
     borderColor: light.action,

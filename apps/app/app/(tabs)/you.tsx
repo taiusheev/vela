@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiBaseUrl, apiConfigured } from "../../src/api/client.ts";
 import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL, SUPPORT_URL } from "../../src/api/support.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
+import { FamilyAction, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import { CallingNumberEditor } from "../../src/components/calling-number-editor.tsx";
 import { ConfirmationDialog } from "../../src/components/confirmation-dialog.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
@@ -162,15 +164,34 @@ function FamilyYou({ day }: { day: TodayView }) {
       }}
     >
       {/* The tab's own name, so the title reads as the tab bar does. */}
-      <Words variant="title">
-        <Trans context="tab">You</Trans>
-      </Words>
+      <ScreenHeading title={<Trans context="tab">You</Trans>} />
       <FamilyChooser day={day} />
-      <View style={{ gap: space.xs }}>
-        <Words variant="heading">{family.me.name}</Words>
-        <Words variant="caption" tone="ink3">
-          {family.me.line}
-        </Words>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: space.l,
+          paddingVertical: space.m,
+        }}
+      >
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: palette.actionSoft,
+          }}
+        >
+          <BrandIcon name="you" size={26} color={palette.action} />
+        </View>
+        <View style={{ flex: 1, gap: space.xs }}>
+          <Words variant="title">{family.me.name}</Words>
+          <Words variant="caption" tone="ink2">
+            {family.me.line}
+          </Words>
+        </View>
       </View>
       {trouble || day.trouble ? (
         <Words variant="body" tone="ink2">
@@ -261,27 +282,18 @@ function FamilyYou({ day }: { day: TodayView }) {
                 return (
                   <View key={`nearby:${member.memberId}`} style={{ gap: space.m }}>
                     <Hairline />
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityHint={t`Change the people nearby`}
+                    <FamilyAction
+                      icon="nearby"
+                      title={family.keptLight.length > 1 ? t`People near ${name}` : nearby.names}
+                      detail={
+                        family.keptLight.length > 1
+                          ? `${nearby.names} · ${nearby.line}`
+                          : nearby.line
+                      }
                       onPress={() =>
                         router.push({ pathname: "/nearby", params: { member: member.memberId } })
                       }
-                    >
-                      <Row
-                        title={family.keptLight.length > 1 ? t`People near ${name}` : nearby.names}
-                        caption={
-                          family.keptLight.length > 1
-                            ? `${nearby.names} · ${nearby.line}`
-                            : nearby.line
-                        }
-                        trailing={
-                          <Words variant="button" tone="action">
-                            <Trans>Change</Trans>
-                          </Words>
-                        }
-                      />
-                    </Pressable>
+                    />
                   </View>
                 );
               })
@@ -290,21 +302,12 @@ function FamilyYou({ day }: { day: TodayView }) {
             <>
               <Hairline />
               {/* Organisers only: they are the ones told of a quiet morning (spec §8). */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityHint={t`Open how the quiet notices ended`}
+              <FamilyAction
+                icon="today"
+                title={t`How Vela is doing`}
+                detail={t`How the quiet notices ended, in your family and across Vela`}
                 onPress={() => router.push("/precision")}
-              >
-                <Row
-                  title={t`How Vela is doing`}
-                  caption={t`How the quiet notices ended, in your family and across Vela`}
-                  trailing={
-                    <Words variant="button" tone="action">
-                      <Trans>Open</Trans>
-                    </Words>
-                  }
-                />
-              </Pressable>
+              />
             </>
           ) : null}
         </Card>
@@ -441,12 +444,14 @@ function FamilyYou({ day }: { day: TodayView }) {
             sharing is their separate choice, and saying stop pauses their light.
           </Trans>
         </Words>
-        <SecondaryButton
-          label={t`Read the privacy notice`}
+        <FamilyAction
+          icon="privacy"
+          title={t`Read the privacy notice`}
           onPress={() => void openLink(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`)}
         />
-        <SecondaryButton
-          label={t`Get help or request your data`}
+        <FamilyAction
+          icon="mail"
+          title={t`Get help or request your data`}
           onPress={() => void openLink(SUPPORT_URL)}
         />
         <Words variant="caption" selectable>

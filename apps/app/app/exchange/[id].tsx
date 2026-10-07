@@ -17,13 +17,13 @@ import type { Recorded } from "../../src/audio/useRecording.ts";
 import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { BackButton } from "../../src/components/back-button.tsx";
+import { AnswerPanel } from "../../src/components/brand/experience.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../../src/components/family-photo.tsx";
 import { type ChosenPhoto, PhotoReply } from "../../src/components/photo-reply.tsx";
 import {
   Card,
   Chip,
   Eyebrow,
-  Hairline,
   PrimaryButton,
   ReceiptChip,
   SecondaryButton,
@@ -257,7 +257,9 @@ function ExchangeReader({ id }: { id: string }) {
           {demo || familyId !== undefined ? (
             <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size="full" />
           ) : null}
-          <Words variant="voice">{exchange.ask}</Words>
+          <Words variant="body" tone="ink2">
+            {exchange.ask}
+          </Words>
           {exchange.voiceHello === undefined || familyId === undefined ? null : (
             <VoicePlayback
               familyId={familyId}
@@ -274,8 +276,7 @@ function ExchangeReader({ id }: { id: string }) {
               <Trans>No word yet.</Trans>
             </Words>
           ) : (
-            <>
-              <Hairline />
+            <AnswerPanel>
               <Words variant="voice">{exchange.answer.text}</Words>
               {exchange.answer.photo === undefined || (!demo && familyId === undefined) ? null : (
                 <ReplyPhoto photo={exchange.answer.photo} size="full" />
@@ -300,7 +301,7 @@ function ExchangeReader({ id }: { id: string }) {
                   {exchange.answer.original}
                 </Words>
               )}
-            </>
+            </AnswerPanel>
           )}
           {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
         </Card>

@@ -1,4 +1,4 @@
-import type { ColorValue } from "react-native";
+import { type ColorValue, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 /** Drawn on one 24-unit grid. Decorative; the enclosing control provides its label. */
@@ -44,15 +44,21 @@ export function BrandIcon({
   strokeWidth?: number;
 }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
-      <Path
-        d={drawings[name]}
-        stroke={color}
-        strokeWidth={strokeWidth}
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
+    <View
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Svg width={size} height={size} viewBox="0 0 24 24">
+        <Path
+          d={drawings[name]}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    </View>
   );
 }

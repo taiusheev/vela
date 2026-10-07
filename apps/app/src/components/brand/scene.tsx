@@ -1,3 +1,4 @@
+import { View } from "react-native";
 import Svg, { Circle, G, Path, Rect } from "react-native-svg";
 import { usePalette } from "../../theme/theme.tsx";
 
@@ -104,8 +105,14 @@ export function FamilyScene({ kind = "table", width = 216 }: { kind?: SceneKind;
       </G>
     );
   return (
-    <Svg width={width} height={(width * 180) / 244} viewBox="0 0 244 180" accessible={false}>
-      {art}
-    </Svg>
+    <View
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Svg width={width} height={(width * 180) / 244} viewBox="0 0 244 180">
+        {art}
+      </Svg>
+    </View>
   );
 }

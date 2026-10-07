@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, type StyleProp, View, type ViewStyle } from "react-native";
-import Svg, { Circle, Ellipse, Path } from "react-native-svg";
+import Svg, { Circle, Path } from "react-native-svg";
 import { usePalette } from "../theme/theme.tsx";
 import { motion } from "../theme/tokens.ts";
 
@@ -80,44 +80,27 @@ export function Light({ state, height = 40, style }: LightProps) {
   const outline = state === "lit" ? palette.ink : state === "paused" ? palette.rule : palette.ink3;
 
   return (
-    <View style={style}>
-      <Svg width={width} height={height} viewBox={`0 0 ${WINDOW_WIDTH} ${WINDOW_HEIGHT}`}>
-        {state === "lit" ? (
-          <Ellipse
-            cx={WINDOW_WIDTH / 2}
-            cy={WINDOW_HEIGHT / 2}
-            rx={WINDOW_WIDTH / 2 - FRAME}
-            ry={WINDOW_HEIGHT / 2 - FRAME}
-            fill={palette.lightSoft}
+    <View
+      style={style}
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Animated.View style={{ opacity: state === "lit" ? bloom : 1 }}>
+        <Svg width={width} height={height} viewBox={`0 0 ${WINDOW_WIDTH} ${WINDOW_HEIGHT}`}>
+          <Path
+            d={windowPath()}
+            stroke={outline}
+            strokeWidth={FRAME}
+            fill={state === "lit" ? palette.light : palette.surface2}
+            strokeDasharray={state === "away" ? "18 14" : undefined}
           />
-        ) : null}
-        <Path
-          d={windowPath()}
-          stroke={outline}
-          strokeWidth={FRAME}
-          fill="none"
-          strokeDasharray={state === "away" ? "18 14" : undefined}
-        />
-        {state === "quiet" ? (
-          <Circle cx={WINDOW_WIDTH - 12} cy={12} r={11} fill={palette.lightDeep} />
-        ) : null}
-      </Svg>
-      {state === "lit" ? (
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            left: width * 0.28,
-            top: height * 0.3,
-            width: width * 0.44,
-            height: height * 0.4,
-            borderRadius: 999,
-            backgroundColor: palette.light,
-            opacity: bloom,
-            transform: [{ scale: bloom }],
-          }}
-        />
-      ) : null}
+          {width >= 32 ? <Path d="M50 10v112M10 58h80" stroke={outline} strokeWidth={8} /> : null}
+          {state === "quiet" ? (
+            <Circle cx={WINDOW_WIDTH - 12} cy={12} r={11} fill={palette.lightDeep} />
+          ) : null}
+        </Svg>
+      </Animated.View>
     </View>
   );
 }

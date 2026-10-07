@@ -6,6 +6,50 @@ import { Words } from "../ui.tsx";
 import { BrandIcon, type BrandIconName } from "./icon.tsx";
 import { FamilyScene, type SceneKind } from "./scene.tsx";
 
+export function ChoiceTile({
+  label,
+  icon,
+  selected,
+  disabled = false,
+  onPress,
+}: {
+  label: string;
+  icon: BrandIconName;
+  selected: boolean;
+  disabled?: boolean;
+  onPress(): void;
+}) {
+  const p = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexGrow: 1,
+        flexBasis: 90,
+        minHeight: 80,
+        gap: space.s,
+        padding: space.m,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: radius.button,
+        borderWidth: 1,
+        borderColor: selected ? p.action : p.control,
+        backgroundColor: selected ? p.actionSoft : p.surface,
+        opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
+      })}
+    >
+      <BrandIcon name={icon} size={22} color={selected ? p.action : p.ink2} />
+      <Words variant="caption" tone={selected ? "action" : "ink"}>
+        {label}
+      </Words>
+    </Pressable>
+  );
+}
+
 export function ScreenHeading({
   title,
   subtitle,

@@ -10,17 +10,11 @@ import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
 import type { Recorded } from "../src/audio/useRecording.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
+import { ChoiceTile } from "../src/components/brand/experience.tsx";
+import { SuggestionDisclosure } from "../src/components/brand/suggestion.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
-import {
-  Card,
-  Chip,
-  Eyebrow,
-  PrimaryButton,
-  SecondaryButton,
-  TextField,
-  Words,
-} from "../src/components/ui.tsx";
+import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
 import { VoiceHello } from "../src/components/voice-hello.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
 import { type AskType, askTypes, composableType, suggestedKind } from "../src/data/ask.ts";
@@ -333,24 +327,6 @@ function AskComposer({
             </View>
           </View>
         ) : null}
-        {/* Live with no suggestion for her morning, there is no card. */}
-        {suggestion === undefined || recipient === undefined ? null : (
-          <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
-            <Eyebrow>
-              {suggestion.fromHerWords ? (
-                <Trans>Vela suggests · from her own words</Trans>
-              ) : (
-                <Trans>Vela suggests</Trans>
-              )}
-            </Eyebrow>
-            <Words variant="voice">{suggestion.text}</Words>
-            <SecondaryButton
-              label={t`Use this`}
-              disabled={!draft.ready || compose.isPending || savedElsewhere}
-              onPress={() => fill(suggestion, recipient.memberId)}
-            />
-          </Card>
-        )}
 
         <View style={{ gap: space.m }}>
           <Words variant="heading">
@@ -365,8 +341,15 @@ function AskComposer({
                   ["question", "two_photos", "voice_note"].includes(option.kind),
               )
               .map((option) => (
-                <Chip
+                <ChoiceTile
                   key={option.kind}
+                  icon={
+                    option.kind === "voice_note"
+                      ? "mic"
+                      : photoCount(option.kind) > 0
+                        ? "photo"
+                        : "ask"
+                  }
                   label={i18n._(option.label)}
                   selected={option.kind === kind}
                   disabled={!option.available || (photos.off && photoCount(option.kind) > 0)}
@@ -402,6 +385,22 @@ function AskComposer({
             disabled={!draft.ready || compose.isPending || savedElsewhere}
           />
         </View>
+        {/* Live with no suggestion for her morning, there is no card. */}
+        {suggestion === undefined || recipient === undefined ? null : (
+          <SuggestionDisclosure
+            label={
+              suggestion.fromHerWords ? t`Vela suggests · from her own words` : t`Vela suggests`
+            }
+          >
+            <Words variant="voice">{suggestion.text}</Words>
+            <SecondaryButton
+              label={t`Use this`}
+              disabled={!draft.ready || compose.isPending || savedElsewhere}
+              onPress={() => fill(suggestion, recipient.memberId)}
+            />
+          </SuggestionDisclosure>
+        )}
+
         <PhotoSlots photos={photos} />
         {demo ? null : <VoiceHello onChange={setHello} note={voiceNote} />}
         {kind === "vote" ? <VoteOptions options={options} onChange={setOptions} /> : null}

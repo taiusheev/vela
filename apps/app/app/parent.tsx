@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BrandIcon } from "../src/components/brand/icon.tsx";
 import { KitchenTable } from "../src/device/KitchenTable.tsx";
 import { IDLE_MS, isKitchenTable } from "../src/device/kitchen.ts";
 import { useParent } from "../src/device/useParent.ts";
@@ -34,6 +35,7 @@ export default function ParentScreen() {
   const { t } = useLingui();
   const view = useParent();
   const [words, setWords] = useState("");
+  const [focused, setFocused] = useState(false);
   const send = async () => {
     if (await view.say(words)) setWords("");
   };
@@ -106,7 +108,14 @@ export default function ParentScreen() {
           </Text>
         ) : (
           <>
-            {view.name.length > 0 ? <Text style={styles.greeting}>{view.name}</Text> : null}
+            {view.name.length > 0 ? (
+              <View style={styles.identity}>
+                <View style={styles.mark}>
+                  <BrandIcon name="mail" color={light.action} size={26} />
+                </View>
+                <Text style={styles.greeting}>{view.name}</Text>
+              </View>
+            ) : null}
             <Text style={styles.message} accessibilityRole="text">
               {view.message.text}
             </Text>
@@ -134,6 +143,7 @@ export default function ParentScreen() {
               style={({ pressed }) => [styles.secondary, pressed ? styles.pressed : null]}
               onPress={() => readAloud(view.message?.text ?? "", view.language)}
             >
+              <BrandIcon name="play" color={light.action} size={24} />
               <Text style={styles.secondaryLabel}>
                 <Trans>Read this aloud</Trans>
               </Text>
@@ -143,11 +153,19 @@ export default function ParentScreen() {
                 <Pressable
                   key={button.id}
                   accessibilityRole="button"
+                  accessibilityLabel={button.label}
                   disabled={view.sending}
-                  style={({ pressed }) => [styles.primary, pressed ? styles.pressed : null]}
+                  style={({ pressed }) => [
+                    styles.primary,
+                    view.sending ? styles.disabled : null,
+                    pressed ? styles.pressed : null,
+                  ]}
                   onPress={() => view.tap(button.id)}
                 >
-                  <Text style={styles.primaryLabel}>{button.label}</Text>
+                  {button.label.startsWith("❤️") ? (
+                    <BrandIcon name="heart" size={24} color={light.ink} />
+                  ) : null}
+                  <Text style={styles.primaryLabel}>{button.label.replace(/^❤️\s*/, "")}</Text>
                 </Pressable>
               ))}
             </View>
@@ -155,22 +173,26 @@ export default function ParentScreen() {
             <TextInput
               value={words}
               onChangeText={setWords}
+              accessibilityLabel={t`Or say it in your own words`}
+              editable={!view.sending}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               placeholder={t`Or say it in your own words`}
               placeholderTextColor={light.ink3}
               multiline
-              style={styles.input}
+              style={[styles.input, focused ? { borderColor: light.action } : null]}
             />
             <Pressable
               accessibilityRole="button"
               disabled={view.sending || words.trim().length === 0}
               style={({ pressed }) => [
-                styles.secondary,
+                styles.send,
                 words.trim().length === 0 ? styles.disabled : null,
                 pressed ? styles.pressed : null,
               ]}
               onPress={() => void send()}
             >
-              <Text style={styles.secondaryLabel}>{view.sending ? t`Sending…` : t`Send`}</Text>
+              <Text style={styles.sendLabel}>{view.sending ? t`Sending…` : t`Send`}</Text>
             </Pressable>
           </>
         )}
@@ -290,22 +312,44 @@ function readAloud(text: string, language: string): void {
 const styles = StyleSheet.create({
   page: { backgroundColor: light.bg },
   content: { paddingHorizontal: 24, gap: 24 },
+  identity: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: light.rule,
+  },
+  mark: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: light.actionSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   greeting: { fontFamily: "Inter_500Medium", fontSize: 22, lineHeight: 30, color: light.ink2 },
   message: { fontFamily: "Literata_400Regular", fontSize: 28, lineHeight: 40, color: light.ink },
   body: { fontFamily: "Inter_400Regular", fontSize: 22, lineHeight: 32, color: light.ink },
   buttons: { gap: 16 },
   primary: {
     minHeight: 72,
+    flexDirection: "row",
+    gap: 12,
     borderRadius: 18,
-    backgroundColor: light.action,
+    backgroundColor: light.surface,
+    borderWidth: 2,
+    borderColor: light.control,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  primaryLabel: { fontFamily: "Inter_600SemiBold", fontSize: 22, color: light.surface },
+  primaryLabel: { fontFamily: "Inter_600SemiBold", fontSize: 22, color: light.ink },
   secondary: {
     minHeight: 64,
+    flexDirection: "row",
+    gap: 12,
     borderRadius: 18,
     borderWidth: 2,
     borderColor: light.action,
@@ -315,11 +359,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   secondaryLabel: { fontFamily: "Inter_600SemiBold", fontSize: 22, color: light.action },
+  send: {
+    minHeight: 72,
+    borderRadius: 18,
+    backgroundColor: light.action,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  sendLabel: { fontFamily: "Inter_600SemiBold", fontSize: 22, color: light.surface },
   input: {
     minHeight: 112,
     borderRadius: 18,
     borderWidth: 2,
-    borderColor: light.rule,
+    borderColor: light.control,
     backgroundColor: light.surface,
     paddingHorizontal: 20,
     paddingVertical: 16,
