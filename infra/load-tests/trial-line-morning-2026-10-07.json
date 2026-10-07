@@ -55,5 +55,62 @@
     "Delivery metadata proves provider acceptance, not reading or listening.",
     "No family message content, external identifiers, credentials or provider request bodies were read or retained.",
     "Human reply, group linking, next-morning read-back, photos, voice, consent races, live AI quality, seven mornings, iPhone and production remain open."
-  ]
+  ],
+  "fix": {
+    "pullRequest": "https://github.com/taiusheev/vela/pull/22",
+    "testedSource": "dcf193ad3305d5e722f964bc13fc4a13670ae3ff",
+    "mergeCommit": "d20313997c7c37d1d82d45322fb45302dc61ff7f",
+    "localSourceTestsPassed": 4205,
+    "pushCi": "https://github.com/taiusheev/vela/actions/runs/37574131111",
+    "pullRequestCi": "https://github.com/taiusheev/vela/actions/runs/37574153606",
+    "checks": "lint, typecheck, source tests, PostgreSQL contention and Maestro app flows passed; scheduled silence drill skipped",
+    "mainCi": "https://github.com/taiusheev/vela/actions/runs/37574629773",
+    "stagingDeployment": {
+      "run": "https://github.com/taiusheev/vela/actions/runs/37574629801",
+      "passed": true,
+      "workerVersion": "034947e2-c191-426d-a7ae-e5e0149a236d",
+      "createdAt": "2026-10-07T05:10:30.354588Z",
+      "postDeploymentSmokeChecksPassed": 7,
+      "smokeCheckedAt": "2026-10-07T05:11:33.421Z"
+    }
+  },
+  "iosBuildCheck": {
+    "method": "read-only EAS build:list for ios, latest three and profiles trial-staging/trial",
+    "latestProfile": "trial-simulator",
+    "latestBuild": "0a0ba33e-8736-4a32-85bd-1c02fa091bee",
+    "latestCompletedAt": "2026-10-05T13:19:26.941Z",
+    "trialStagingBuildsFound": 0,
+    "trialBuildsFound": 0,
+    "signedDeviceEvidence": false
+  },
+  "aiAfterFirstDeployment": {
+    "retryQueuedAt": "2026-10-07T05:11:21.936Z",
+    "checkedAt": "2026-10-07T05:11:46.473854Z",
+    "attemptsPerAnswer": 4,
+    "understoodAnswers": 0,
+    "summariesPresent": 0,
+    "understandCallsFailed": 2,
+    "flagCallsFailed": 2,
+    "tokensIn": 0,
+    "tokensOut": 0,
+    "latencyMs": [
+      348,
+      87,
+      83,
+      72
+    ],
+    "errorCodes": "encrypted at rest; live codes need safe diagnostic logs or authenticated admin access",
+    "status": "runtime defect fixed; live provider recovery remains open"
+  },
+  "failureDiagnostics": {
+    "event": "understanding_incomplete",
+    "fields": [
+      "understandError",
+      "flagError"
+    ],
+    "policy": "fixed HTTP/status codes only; arbitrary provider text becomes provider_failure",
+    "localSourceTestsPassed": 4206,
+    "targetedPipelineTestsPassed": 45,
+    "liveDiagnosticEvidence": "pending deployment of the follow-up"
+  }
 }
