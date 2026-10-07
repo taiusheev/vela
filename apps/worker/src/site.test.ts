@@ -2,11 +2,10 @@ import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test"
 import type { PublicPrecision } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
 import type { PilotEnv } from "./env.ts";
-import { html, sitePage } from "./html.ts";
+import { SITE_CSP } from "./html.ts";
 import { createWorker } from "./pilot-worker.ts";
-import { SITE_LANGS, SITE_PATHS, unfilledSiteBlanks } from "./site.ts";
+import { SITE_LANGS, SITE_PATHS, siteDemo, unfilledSiteBlanks } from "./site.ts";
 import {
-  consoleLinesDuring,
   createFakePilotRuntime,
   type FakePilotRuntime,
   namesOf,
@@ -18,11 +17,15 @@ const production: PilotEnv = { ...testEnv, ENVIRONMENT: "production" };
 
 async function send(
   fake: FakePilotRuntime,
-  url: string,
+  request: Request | string,
   env: PilotEnv = testEnv,
 ): Promise<Response> {
   const ctx = createExecutionContext();
-  const response = await createWorker(fake.runtime).fetch(new Request(url), env, ctx);
+  const response = await createWorker(fake.runtime).fetch(
+    typeof request === "string" ? new Request(request) : request,
+    env,
+    ctx,
+  );
   await waitOnExecutionContext(ctx);
   return response;
 }
@@ -42,42 +45,71 @@ const AUGUST: PublicPrecision["months"][number] = {
   useful: { yes: 9, no: 3 },
 };
 
-/** The page's words without its markup. */
+const published = (months: PublicPrecision["months"]) => async () => ({
+  months,
+  minimum: { notices: 10, families: 3 },
+  through: "2026-08",
+});
+
+/** The page's words, its demo script's included, without markup. */
 function textOf(body: string): string {
-  return body
-    .replace(/<style>[\s\S]*?<\/style>/, "")
-    .replace(/<svg[\s\S]*?<\/svg>/g, "")
-    .replace(/<[^>]+>/g, " ");
+  return body.replace(/<svg[\s\S]*?<\/svg>/g, "").replace(/<[^>]+>/g, " ");
+}
+
+function waitlistPost(at: string, fields: Record<string, string>, json = false): Request {
+  return new Request(`${at}/waitlist`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      ...(json ? { accept: "application/json" } : {}),
+    },
+    body: new URLSearchParams(fields),
+  });
 }
 
 describe("the public website", () => {
   it.each(SITE_LANGS)(
-    "serves the %s home page with no scripts, no other origin, and out of search engines outside production",
+    "serves the %s home page under a strict policy, loading only its own files",
     async (lang) => {
       const fake = createFakePilotRuntime();
+      const at = origin();
 
-      const response = await send(fake, `${origin()}${SITE_PATHS[lang].home}`, staging);
+      const response = await send(fake, `${at}${SITE_PATHS[lang].home}`, staging);
       const body = await response.text();
 
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
-      expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
+      expect(response.headers.get("content-security-policy")).toBe(SITE_CSP);
+      expect(SITE_CSP).not.toContain("unsafe-inline");
       expect(body).toContain(`<html lang="${lang}">`);
       expect(body).toContain('<meta name="robots" content="noindex, nofollow">');
-      expect(body).not.toContain("<script");
-      expect(body).not.toMatch(/(src|href)="(https?:)?\/\//);
+      // Scripts only from this origin's files, plus the one data block the script reads.
+      expect(body.match(/<script[^>]*>/g)).toEqual([
+        '<script src="/site/boot.js">',
+        '<script src="/site/site.js" defer>',
+        '<script type="application/json" id="vela-demo">',
+      ]);
+      expect(body).not.toContain("style=");
+      for (const [, url] of body.matchAll(/(?:src|href|content)="(https?:[^"]+)"/g)) {
+        expect(url?.startsWith(at)).toBe(true);
+      }
       expect(body).toContain(`href="/privacy${lang === "en" ? "" : "/zh-TW"}"`);
       expect(body).toContain(`href="${SITE_PATHS[lang].precision}"`);
+      expect(body).toContain('href="mailto:t.aiusheev@gmail.com"');
+      expect(body).toContain('<form class="waitlist" method="post" action="/waitlist">');
       expect(fake.built()).toBe(0);
     },
   );
 
-  it("links each language's page to the other's", async () => {
+  it("names each language's page as the other's alternate, and links between them", async () => {
     const fake = createFakePilotRuntime();
+    const at = origin();
 
-    const en = await (await send(fake, `${origin()}/`)).text();
-    const zh = await (await send(fake, `${origin()}/zh-TW/how-vela-is-doing`)).text();
+    const en = await (await send(fake, `${at}/`)).text();
+    const zh = await (await send(fake, `${at}/zh-TW/how-vela-is-doing`)).text();
 
+    expect(en).toContain(`<link rel="alternate" hreflang="zh-TW" href="${at}/zh-TW">`);
+    expect(en).toContain(`<link rel="canonical" href="${at}/">`);
     expect(en).toContain('href="/zh-TW" hreflang="zh-TW"');
     expect(zh).toContain('href="/how-vela-is-doing" hreflang="en"');
   });
@@ -87,70 +119,141 @@ describe("the public website", () => {
     "never describes her as monitored, checked on or tracked (%s)",
     async (lang) => {
       const fake = createFakePilotRuntime({
-        services: {
-          loadPublicPrecision: async () => ({
-            months: [AUGUST],
-            minimum: { notices: 10, families: 3 },
-            through: "2026-08",
-          }),
-        },
+        services: { loadPublicPrecision: published([AUGUST]) },
       });
       for (const page of ["home", "precision"] as const) {
         const words = textOf(
           await (await send(fake, `${origin()}${SITE_PATHS[lang][page]}`)).text(),
         );
-        expect(words).not.toMatch(/monitor|check(s|ed|ing)? (in )?on|track|keep an eye|surveil/i);
+        expect(words).not.toMatch(
+          /monitor|check(s|ed|ing)? (in )?on|tracking|tracked|keep an eye|surveil/i,
+        );
         expect(words).not.toMatch(/監控|監視|追蹤|定位/);
       }
     },
   );
 
-  it("shows the founder's blanks in staging, highlighted, until they are chosen", async () => {
-    const fake = createFakePilotRuntime();
-
-    const body = await (await send(fake, `${origin()}/`, staging)).text();
-
-    expect(body).toContain("[price] per parent");
-    expect(body).toContain('<span class="blank">[support email]</span>');
+  it("embeds a demo script no string of which can close its element", () => {
+    for (const lang of SITE_LANGS) {
+      expect(JSON.stringify(siteDemo(lang))).not.toMatch(/<\/?script/i);
+    }
   });
 
-  it("refuses every page in production while its copy holds a blank, and logs which", async () => {
-    expect(unfilledSiteBlanks("en")).toEqual(["[price]", "[support email]"]);
+  it("has no founder's blank left, so production serves every page, and only production is indexed", async () => {
+    expect(SITE_LANGS.map(unfilledSiteBlanks)).toEqual([[], []]);
+    const fake = createFakePilotRuntime();
+
+    const response = await send(fake, `${origin()}/zh-TW`, production);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).not.toContain('name="robots"');
+  });
+
+  it("thanks a person who joined without script, and asks again after a bad address", async () => {
+    const fake = createFakePilotRuntime();
+
+    const joined = await (await send(fake, `${origin()}/?joined=1`)).text();
+    const bad = await (await send(fake, `${origin()}/zh-TW?joined=email`)).text();
+
+    expect(joined).toContain(
+      '<div class="flash ok" role="status">You’re on the list. We’ll write when your family can start.</div>',
+    );
+    expect(bad).toContain('<div class="flash err" role="alert">');
+  });
+});
+
+describe("the waitlist form", () => {
+  it("keeps the address and sends a browser without script back to the page's thanks", async () => {
+    const fake = createFakePilotRuntime();
+
+    const response = await send(
+      fake,
+      waitlistPost(origin(), { email: " Mia@Example.com ", lang: "zh-TW", role: "organiser" }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("/zh-TW?joined=1#join");
+    expect(fake.calls).toEqual([
+      {
+        name: "joinWaitlist",
+        args: [{ email: "mia@example.com", lang: "zh-TW", role: "organiser" }],
+      },
+    ]);
+    expect(fake.closed()).toBe(fake.built());
+  });
+
+  it("answers the page's script in JSON", async () => {
+    const fake = createFakePilotRuntime();
+
+    const response = await send(
+      fake,
+      waitlistPost(origin(), { email: "a@b.co", lang: "en" }, true),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ joined: true });
+    expect(fake.calls[0]?.args).toEqual([{ email: "a@b.co", lang: "en", role: null }]);
+  });
+
+  it("asks again for an address that is not one, storing nothing", async () => {
     const fake = createFakePilotRuntime();
     const at = origin();
 
-    const { result, lines } = await consoleLinesDuring(async () => ({
-      home: await send(fake, `${at}/`, production),
-      precision: await send(fake, `${at}/zh-TW/how-vela-is-doing`, production),
-    }));
+    const form = await send(fake, waitlistPost(at, { email: "mia@", lang: "en" }));
+    const json = await send(fake, waitlistPost(at, { email: "", lang: "en" }, true));
 
-    expect([result.home.status, result.precision.status]).toEqual([503, 503]);
-    expect(await result.home.text()).toBe("unavailable");
-    expect(lines).toEqual([
-      {
-        level: "error",
-        environment: "production",
-        event: "site_unfilled",
-        lang: "en",
-        blanks: "[price],[support email]",
-      },
-      {
-        level: "error",
-        environment: "production",
-        event: "site_unfilled",
-        lang: "zh-TW",
-        blanks: "[price],[support email]",
-      },
-    ]);
+    expect(form.status).toBe(303);
+    expect(form.headers.get("location")).toBe("/?joined=email#join");
+    expect(json.status).toBe(400);
+    expect(await json.json()).toEqual({ error: "email" });
+    expect(namesOf(fake.calls)).toEqual([]);
     expect(fake.built()).toBe(0);
   });
 
-  it("lets search engines index a page only when asked to", async () => {
-    const page = (indexable: boolean) =>
-      sitePage("en", "Vela", html`<h1>Vela</h1>`, { indexable }).text();
+  it("answers a robot that filled the hidden field as if it joined, and stores nothing", async () => {
+    const fake = createFakePilotRuntime();
 
-    expect(await page(true)).not.toContain('name="robots"');
-    expect(await page(false)).toContain('<meta name="robots" content="noindex, nofollow">');
+    const response = await send(
+      fake,
+      waitlistPost(origin(), { email: "bot@spam.example", lang: "en", website: "http://spam" }),
+    );
+
+    expect(response.headers.get("location")).toBe("/?joined=1#join");
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("falls back to English for a language the site does not have, and drops an unknown role", async () => {
+    const fake = createFakePilotRuntime();
+
+    const response = await send(
+      fake,
+      waitlistPost(origin(), { email: "a@b.co", lang: "fr", role: "admin" }),
+    );
+
+    expect(response.headers.get("location")).toBe("/?joined=1#join");
+    expect(fake.calls[0]?.args).toEqual([{ email: "a@b.co", lang: "en", role: null }]);
+  });
+
+  it("refuses an address over the per-address limit before reading the database", async () => {
+    const fake = createFakePilotRuntime();
+    const keys: string[] = [];
+    const limited: PilotEnv = {
+      ...testEnv,
+      API_IP_LIMIT: {
+        limit: async ({ key }: { key: string }) => {
+          keys.push(key);
+          return { success: false };
+        },
+      } as RateLimit,
+    };
+    const request = waitlistPost(origin(), { email: "a@b.co", lang: "en" }, true);
+    request.headers.set("cf-connecting-ip", "203.0.113.9");
+
+    const response = await send(fake, request, limited);
+
+    expect(response.status).toBe(429);
+    expect(keys).toEqual(["waitlist:203.0.113.9"]);
+    expect(fake.built()).toBe(0);
   });
 });
 
@@ -158,20 +261,16 @@ describe("How Vela is doing", () => {
   it("publishes each month's notices, outcomes, precision and useful share", async () => {
     const fake = createFakePilotRuntime({
       services: {
-        loadPublicPrecision: async () => ({
-          months: [
-            AUGUST,
-            {
-              ...AUGUST,
-              month: "2026-07",
-              notices: 10,
-              outcomes: { ...AUGUST.outcomes, true_concern: 0 },
-              useful: { yes: 0, no: 0 },
-            },
-          ],
-          minimum: { notices: 10, families: 3 },
-          through: "2026-08",
-        }),
+        loadPublicPrecision: published([
+          AUGUST,
+          {
+            ...AUGUST,
+            month: "2026-07",
+            notices: 10,
+            outcomes: { ...AUGUST.outcomes, true_concern: 0 },
+            useful: { yes: 0, no: 0 },
+          },
+        ]),
       },
     });
 
@@ -203,15 +302,7 @@ describe("How Vela is doing", () => {
   });
 
   it("names the month in the reader's language", async () => {
-    const fake = createFakePilotRuntime({
-      services: {
-        loadPublicPrecision: async () => ({
-          months: [AUGUST],
-          minimum: { notices: 10, families: 3 },
-          through: "2026-08",
-        }),
-      },
-    });
+    const fake = createFakePilotRuntime({ services: { loadPublicPrecision: published([AUGUST]) } });
 
     const zh = await (await send(fake, `${origin()}/zh-TW/how-vela-is-doing`)).text();
 

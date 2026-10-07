@@ -14,8 +14,10 @@ import {
   errorLabel,
   MAX_DEVICE_VOICE_BYTES,
   VelaError,
+  WaitlistInput,
 } from "@vela/services";
 import { type Context, Hono } from "hono";
+import { addressAdmitted, addressOf } from "./api-runtime.ts";
 import {
   ConfigError,
   readEnvironment,
@@ -26,12 +28,19 @@ import {
 import { createLogger } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { readHealth } from "./heartbeat.ts";
-import { noticePage, sitePage } from "./html.ts";
+import { type Html, noticePage, sitePage } from "./html.ts";
 import { MEDIA_PATH_PREFIX, openMedia } from "./media-route.ts";
 import { NOTICE_LANGS, NOTICE_PATHS } from "./notices.ts";
 import { requestFailed } from "./request-errors.ts";
 import type { PilotRuntime } from "./runtime.ts";
-import { SITE_LANGS, SITE_PATHS, siteHome, sitePrecision, unfilledSiteBlanks } from "./site.ts";
+import {
+  SITE_LANGS,
+  SITE_PATHS,
+  siteHome,
+  sitePrecision,
+  unfilledSiteBlanks,
+  WAITLIST_PATH,
+} from "./site.ts";
 
 /** How long the edge keeps a rendered precision page: the figures change once a month. */
 const PRECISION_CACHE_SECONDS = 3600;
@@ -259,7 +268,9 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
   /**
    * The public website (launch gate 14), in each language. Production serves no page whose copy
    * still holds a founder's blank (`[price]`); it answers 503 and logs which blanks remain, so the
-   * site is never published half-chosen. Development and staging show the blanks highlighted.
+   * site is never published half-chosen. Development and staging show them. Only production may be
+   * indexed. The stylesheet, script and pictures are static assets the platform serves before this
+   * app (`assets` in wrangler.jsonc).
    */
   for (const lang of SITE_LANGS) {
     const refusal = (c: Context<PilotAppEnv>): Response | null => {
@@ -269,13 +280,30 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       createLogger(c.env).error("site_unfilled", { lang, blanks: blanks.join(",") });
       return c.text("unavailable", 503, { "cache-control": "no-store" });
     };
-    const indexable = (c: Context<PilotAppEnv>) => readEnvironment(c.env) === "production";
+    const render = (
+      c: Context<PilotAppEnv>,
+      page: "home" | "precision",
+      content: { title: string; description: string; body: Html },
+    ) =>
+      sitePage(
+        {
+          lang,
+          ...content,
+          path: SITE_PATHS[lang][page],
+          alternates: SITE_LANGS.map((other) => ({ lang: other, path: SITE_PATHS[other][page] })),
+        },
+        {
+          indexable: readEnvironment(c.env) === "production",
+          origin: new URL(c.req.url).origin,
+        },
+      );
 
     app.get(SITE_PATHS[lang].home, (c) => {
       const refused = refusal(c);
       if (refused !== null) return refused;
-      const { title, body } = siteHome(lang);
-      return sitePage(lang, title, body, { indexable: indexable(c) });
+      const joined = c.req.query("joined");
+      const flash = joined === "1" ? "joined" : joined === "email" ? "email" : null;
+      return render(c, "home", siteHome(lang, flash));
     });
 
     /**
@@ -293,8 +321,7 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       const handle = await runtime.createDeps(c.env);
       try {
         const precision = await runtime.services.loadPublicPrecision(handle.deps.db, new Date());
-        const { title, body } = sitePrecision(lang, precision);
-        const response = sitePage(lang, title, body, { indexable: indexable(c) });
+        const response = render(c, "precision", sitePrecision(lang, precision));
         response.headers.set("cache-control", `public, max-age=${PRECISION_CACHE_SECONDS}`);
         c.executionCtx.waitUntil(cache.put(key, response.clone()));
         return response;
@@ -303,6 +330,50 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       }
     });
   }
+
+  /**
+   * The website's waitlist form. A browser without script posts the form and is sent back to the
+   * page with the answer (`?joined=1#join`); the page's script asks for JSON instead. Joining twice
+   * answers the same as joining once, so the answer never says whether an address was on the list.
+   * A filled-in hidden field is a robot's: answered as joined, nothing stored. Each address is
+   * counted by the same best-effort per-address limit as the API, under its own key.
+   */
+  app.post(WAITLIST_PATH, async (c) => {
+    const wantsJson = (c.req.header("accept") ?? "").includes("application/json");
+    const form = await c.req.parseBody().catch(() => ({}) as Record<string, unknown>);
+    const field = (name: string) => (typeof form[name] === "string" ? (form[name] as string) : "");
+    const lang = (SITE_LANGS as readonly string[]).includes(field("lang"))
+      ? (field("lang") as (typeof SITE_LANGS)[number])
+      : "en";
+    const back = (answer: "1" | "email") =>
+      c.redirect(`${SITE_PATHS[lang].home}?joined=${answer}#join`, 303);
+    const done = () =>
+      wantsJson ? c.json({ joined: true }, 200, { "cache-control": "no-store" }) : back("1");
+
+    const logger = createLogger(c.env);
+    if (!(await addressAdmitted(c.env.API_IP_LIMIT, `waitlist:${addressOf(c.req.raw)}`, logger))) {
+      return c.json({ error: "rate_limited" }, 429, { "cache-control": "no-store" });
+    }
+    if (field("website") !== "") return done();
+    const input = WaitlistInput.safeParse({
+      email: field("email"),
+      lang,
+      role: ["organiser", "parent", "other"].includes(field("role")) ? field("role") : null,
+    });
+    if (!input.success) {
+      return wantsJson
+        ? c.json({ error: "email" }, 400, { "cache-control": "no-store" })
+        : back("email");
+    }
+    const handle = await runtime.createDeps(c.env);
+    try {
+      await runtime.services.joinWaitlist(handle.deps.db, input.data);
+    } finally {
+      c.executionCtx.waitUntil(handle.close());
+    }
+    logger.info("waitlist_joined", { lang });
+    return done();
+  });
 
   app.notFound(notFound);
   app.onError(requestFailed);

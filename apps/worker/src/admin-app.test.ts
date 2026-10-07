@@ -736,3 +736,58 @@ describe("an admin action", () => {
     expect(await response.text()).not.toContain("not in this family");
   });
 });
+
+describe("the waitlist page", () => {
+  it("lists every address, newest first, with the counts by page language", async () => {
+    const fake = createFakeAdminRuntime({
+      services: {
+        loadWaitlist: async () => ({
+          total: 2,
+          byLanguage: { en: 1, "zh-TW": 1 },
+          latest: [
+            {
+              email: "mia@example.com",
+              language: "zh-TW",
+              role: "organiser",
+              createdAt: new Date("2026-10-07T12:00:00Z"),
+            },
+            {
+              email: "a<b@example.com",
+              language: "en",
+              role: null,
+              createdAt: new Date("2026-10-06T08:00:00Z"),
+            },
+          ],
+        }),
+      },
+    });
+
+    const response = await send(fake, new Request(`${ORIGIN}/admin/waitlist`));
+    const body = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(body).toContain("2 in all, 1 on the English page and 1 on the Chinese page");
+    expect(body).toContain(
+      "<tr><td>mia@example.com</td><td>zh-TW</td><td>for a parent</td><td>2026-10-07T12:00:00Z</td></tr>",
+    );
+    expect(body).toContain("<td>a&lt;b@example.com</td>");
+    expect(namesOf(fake.calls)).toEqual(["loadWaitlist"]);
+  });
+
+  it("opens nothing without an Access sign-in", async () => {
+    const fake = createFakeAdminRuntime({ admin: null });
+
+    const response = await send(fake, new Request(`${ORIGIN}/admin/waitlist`));
+
+    expect(response.status).toBe(401);
+    expect(fake.built()).toBe(0);
+  });
+
+  it("is linked from the overview", async () => {
+    const fake = createFakeAdminRuntime();
+
+    const body = await (await send(fake, new Request(`${ORIGIN}/admin`))).text();
+
+    expect(body).toContain('<a href="/admin/waitlist">The website\'s waitlist</a>');
+  });
+});

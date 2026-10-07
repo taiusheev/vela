@@ -95,6 +95,7 @@ import {
   turns,
   users,
   type WeeklyRead,
+  waitlistSignups,
   weeklyReads,
 } from "./schema.ts";
 import { createTestDatabase, type TestDatabase } from "./testing.ts";
@@ -493,6 +494,7 @@ async function seedEveryTable(): Promise<void> {
     what: "family view",
   });
   await db.insert(metricsDaily).values({ day: "2026-09-13", familyId, memberId: seed.parent.id });
+  await db.insert(waitlistSignups).values({ email: "mia@example.com", language: "en" });
 }
 
 describe("migrations", () => {
@@ -2035,6 +2037,8 @@ describe("deletion proofs", () => {
 describe("CHECK constraints on enumerated columns", () => {
   const enumerated: { table: string; column: string; values: readonly string[] }[] = [
     { table: "users", column: "language", values: LANGS },
+    { table: "waitlist_signups", column: "language", values: ["en", "zh-TW"] },
+    { table: "waitlist_signups", column: "role", values: ["organiser", "parent", "other"] },
     { table: "families", column: "region", values: REGIONS },
     { table: "families", column: "language", values: LANGS },
     { table: "families", column: "plan", values: PLANS },
@@ -2110,6 +2114,15 @@ describe("CHECK constraints on enumerated columns", () => {
     expect(error).toEqual({ code: CHECK_VIOLATION, constraint: "families_story_day_check" });
   });
 
+  it("keeps a waitlist address lowercased and no longer than an address can be", async () => {
+    await seedEveryTable();
+
+    for (const email of ["Mia@example.com", `${"a".repeat(250)}@b.co`]) {
+      const error = await rejection(db.update(waitlistSignups).set({ email }));
+      expect(error).toEqual({ code: CHECK_VIOLATION, constraint: "waitlist_signups_email_check" });
+    }
+  });
+
   it("covers every CHECK constraint in the database", async () => {
     const result = await db.execute<{ conname: string }>(
       sql`select conname from pg_constraint
@@ -2139,6 +2152,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "account_link_challenges_state_check",
       "account_link_challenges_timing_check",
       "push_tickets_token_sha256_check",
+      "waitlist_signups_email_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());

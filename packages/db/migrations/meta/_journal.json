@@ -78,6 +78,13 @@
       "when": 1791090514237,
       "tag": "0010_message_unsent",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791382478871,
+      "tag": "0011_waitlist",
+      "breakpoints": true
     }
   ]
 }

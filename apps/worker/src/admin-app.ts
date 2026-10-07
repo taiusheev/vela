@@ -20,6 +20,7 @@ import {
   renderFamilyPage,
   renderMessage,
   renderOverview,
+  renderWaitlist,
 } from "./admin-pages.ts";
 import type { AdminRuntime } from "./admin-runtime.ts";
 import { renderTrialReport } from "./admin-trial-page.ts";
@@ -213,6 +214,15 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
       failedOutbound: await runtime.services.loadFailedOutbound(deps, ctx),
     }));
     return renderOverview(read.overview, read.failedOutbound);
+  });
+
+  /**
+   * The website's waitlist: addresses only, no family. Reading it records nothing in the access
+   * log, which is about families; a person who asks to be removed is deleted from the database.
+   */
+  admin.get("/waitlist", async (c) => {
+    const list = await withDeps(c, (deps) => runtime.services.loadWaitlist(deps));
+    return renderWaitlist(list);
   });
 
   admin.get("/families/:familyId", async (c) => {

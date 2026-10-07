@@ -144,6 +144,11 @@
   // none anyway, and every hostname the Worker answers on is one more to reason about.
   "workers_dev": false,
   "preview_urls": false,
+  // The public website's stylesheet, script, fonts and pictures (src/site.ts), every one under
+  // /site/. The platform serves a path that names a file there before this Worker runs, free and
+  // without waking it; every other path, the site's pages included, reaches the Worker. Inherited
+  // by every environment.
+  "assets": { "directory": "./site-assets" },
 
   // The admin Worker binds MemberScheduler by `script_name`; only this Worker, which exports the
   // classes, declares their migrations, which every environment inherits. ReconcileHeartbeat (v2)

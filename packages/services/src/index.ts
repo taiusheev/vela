@@ -188,3 +188,12 @@ export {
   writeSuggestions,
 } from "./suggestions.ts";
 export { type ReconcileResult, reconcile, tickMember } from "./tick.ts";
+export {
+  joinWaitlist,
+  loadWaitlist,
+  WAITLIST_LANGS,
+  WAITLIST_ROLES,
+  WaitlistInput,
+  type WaitlistLang,
+  type WaitlistRole,
+} from "./waitlist.ts";

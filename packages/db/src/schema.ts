@@ -1525,6 +1525,35 @@ export const metricsDaily = pgTable(
 // Relations (for db.query; they add no constraints)
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * People who asked to hear when Vela opens, from the public website's form (launch gate 14). An
+ * address is kept once, lowercased, so asking twice changes nothing. No family, member or account
+ * is linked; a row is deleted when its person asks (they write to the support address).
+ */
+export const waitlistSignups = pgTable(
+  "waitlist_signups",
+  {
+    id: uuidv7Id(),
+    email: text("email").notNull().unique("waitlist_signups_email_key"),
+    /** The page's language when they joined, so the opening note can be in it. */
+    language: text("language", { enum: ["en", "zh-TW"] }).notNull(),
+    /** Who they are joining as, if they said: a family member who would set it up, or not said. */
+    role: text("role", { enum: ["organiser", "parent", "other"] }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check(
+      "waitlist_signups_email_check",
+      sql`${t.email} = lower(${t.email}) and length(${t.email}) <= 254`,
+    ),
+    check("waitlist_signups_language_check", isOneOf(t.language, ["en", "zh-TW"])),
+    check(
+      "waitlist_signups_role_check",
+      sql`${t.role} is null or ${isOneOf(t.role, ["organiser", "parent", "other"])}`,
+    ),
+  ],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   members: many(members),
 }));
@@ -1727,5 +1756,6 @@ export type Flag = typeof flags.$inferSelect;
 export type NewFlag = typeof flags.$inferInsert;
 export type AdminAccessLogEntry = typeof adminAccessLog.$inferSelect;
 export type NewAdminAccessLogEntry = typeof adminAccessLog.$inferInsert;
+export type WaitlistSignup = typeof waitlistSignups.$inferSelect;
 export type MetricsDaily = typeof metricsDaily.$inferSelect;
 export type NewMetricsDaily = typeof metricsDaily.$inferInsert;

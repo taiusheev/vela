@@ -109,6 +109,17 @@ CREATE TABLE "away_periods" (
 	CONSTRAINT "away_periods_source_check" CHECK ("source" in ('organiser', 'member', 'answer', 'pattern'))
 );
 
+CREATE TABLE "book_entries" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"exchange_id" uuid NOT NULL,
+	"kept_at" timestamp with time zone NOT NULL,
+	"removed_at" timestamp with time zone,
+	"removed_by" uuid,
+	CONSTRAINT "book_entries_exchange_id_key" UNIQUE("exchange_id")
+);
+
 CREATE TABLE "channel_links" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"member_id" uuid NOT NULL,
@@ -170,7 +181,7 @@ CREATE TABLE "events" (
 	"surface" text,
 	"local_time" time,
 	"props" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'account_linked', 'invite_accepted', 'invite_created', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'family_deletion_requested', 'device_set_up', 'device_removed', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened'))
+	CONSTRAINT "events_name_check" CHECK ("name" in ('family_created', 'member_joined', 'account_linked', 'invite_accepted', 'invite_created', 'consent_given', 'consent_declined', 'stop_said', 'start_said', 'member_left', 'member_left_group', 'member_marked_deceased', 'message_unsent', 'family_deletion_requested', 'device_set_up', 'device_removed', 'ask_composed', 'ask_withdrawn', 'exchange_prepared', 'arrival_delivered', 'arrival_delivery_failed', 'arrival_seen', 'answer_recorded', 'reply_posted', 'readback_delivered', 'readback_played', 'repeat_sent', 'turn_prompt_sent', 'quiet_notice_sent', 'quiet_notice_resolved', 'ask_to_check_sent', 'away_set', 'away_ended', 'flag_raised', 'nearby_contact_added', 'nearby_contact_removed', 'weekly_read_drafted', 'weekly_read_sent', 'weekly_read_opened', 'story_saved', 'trial_started', 'plan_started', 'plan_lapsed', 'scheduler_missed', 'scheduler_tick', 'gateway_dropped', 'retention_deleted', 'admin_page_opened'))
 );
 
 CREATE TABLE "exchanges" (
@@ -369,12 +380,17 @@ CREATE TABLE "nearby_contacts" (
 	"relation" text,
 	"phone" text,
 	"channel" text,
+	"external_id" text,
+	"invite_token_hash" text,
+	"invited_by" uuid,
 	"consent_requested_at" timestamp with time zone,
 	"consented_at" timestamp with time zone,
 	"declined_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "nearby_contacts_invite_token_hash_key" UNIQUE("invite_token_hash"),
 	CONSTRAINT "nearby_contacts_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'sms')),
-	CONSTRAINT "nearby_contacts_phone_consented_check" CHECK (("phone" is not null) = ("consented_at" is not null and "declined_at" is null))
+	CONSTRAINT "nearby_contacts_reach_consented_check" CHECK (("phone" is not null or "external_id" is not null) = ("consented_at" is not null and "declined_at" is null)),
+	CONSTRAINT "nearby_contacts_external_channel_check" CHECK ("external_id" is null or "channel" = 'telegram')
 );
 
 CREATE TABLE "onboarding_sessions" (
@@ -600,6 +616,18 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_language_check" CHECK ("language" in ('en', 'zh-TW', 'ja', 'de', 'hi', 'ru'))
 );
 
+CREATE TABLE "waitlist_signups" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"email" text NOT NULL,
+	"language" text NOT NULL,
+	"role" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "waitlist_signups_email_key" UNIQUE("email"),
+	CONSTRAINT "waitlist_signups_email_check" CHECK ("waitlist_signups"."email" = lower("waitlist_signups"."email") and length("waitlist_signups"."email") <= 254),
+	CONSTRAINT "waitlist_signups_language_check" CHECK ("language" in ('en', 'zh-TW')),
+	CONSTRAINT "waitlist_signups_role_check" CHECK ("waitlist_signups"."role" is null or "role" in ('organiser', 'parent', 'other'))
+);
+
 CREATE TABLE "weekly_reads" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"family_id" uuid NOT NULL,
@@ -630,6 +658,10 @@ ALTER TABLE "api_request_receipts" ADD CONSTRAINT "api_request_receipts_family_i
 ALTER TABLE "api_request_receipts" ADD CONSTRAINT "api_request_receipts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FOREIGN KEY ("set_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_removed_by_members_id_fk" FOREIGN KEY ("removed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "channel_links" ADD CONSTRAINT "channel_links_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "chips" ADD CONSTRAINT "chips_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "consents" ADD CONSTRAINT "consents_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
@@ -658,6 +690,7 @@ ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_quiet_event_id_quiet_eve
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_invited_by_members_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_actor_id_members_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
@@ -700,6 +733,7 @@ CREATE INDEX "answers_exchange_idx" ON "answers" USING btree ("exchange_id");
 CREATE INDEX "answers_member_recent_idx" ON "answers" USING btree ("member_id","received_at" DESC NULLS FIRST);
 CREATE INDEX "api_request_receipts_expiry_idx" ON "api_request_receipts" USING btree ("expires_at");
 CREATE INDEX "away_active_idx" ON "away_periods" USING btree ("member_id") WHERE "ended_at" is null;
+CREATE INDEX "book_entries_family_idx" ON "book_entries" USING btree ("family_id","kept_at");
 CREATE INDEX "channel_links_member_idx" ON "channel_links" USING btree ("member_id");
 CREATE INDEX "consents_subject_ref_idx" ON "consents" USING btree ("subject_ref");
 CREATE INDEX "events_family_at_idx" ON "events" USING btree ("family_id","at");
@@ -712,12 +746,17 @@ CREATE INDEX "media_expiry_idx" ON "media" USING btree ("expires_at") WHERE "kep
 CREATE UNIQUE INDEX "media_family_id_channel_provider_unique_id_idx" ON "media" USING btree ("family_id","channel","provider_unique_id") WHERE "provider_unique_id" is not null;
 CREATE INDEX "members_due_idx" ON "members" USING btree ("next_wake_at") WHERE "status" = 'active';
 CREATE INDEX "members_family_idx" ON "members" USING btree ("family_id");
+CREATE INDEX "memory_facts_family_idx" ON "memory_facts" USING btree ("family_id","on_date");
+CREATE INDEX "memory_facts_answer_idx" ON "memory_facts" USING btree ("source_answer_id");
+CREATE UNIQUE INDEX "nearby_contacts_member_external_idx" ON "nearby_contacts" USING btree ("member_id","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';
 CREATE INDEX "outbound_pending_idx" ON "outbound" USING btree ("queued_at") WHERE "status" = 'queued';
 CREATE INDEX "push_devices_user_idx" ON "push_devices" USING btree ("user_id");
 CREATE INDEX "push_tickets_created_idx" ON "push_tickets" USING btree ("created_at");
 CREATE INDEX "push_tickets_device_idx" ON "push_tickets" USING btree ("device_id");
 CREATE INDEX "quiet_open_idx" ON "quiet_events" USING btree ("member_id") WHERE "resolved_at" is null;
+CREATE UNIQUE INDEX "reminders_one_per_fact" ON "reminders" USING btree ("member_id","fact_id");
+CREATE INDEX "reminders_member_idx" ON "reminders" USING btree ("member_id","due_date");
 CREATE INDEX "replies_exchange_idx" ON "replies" USING btree ("exchange_id");
 CREATE UNIQUE INDEX "replies_channel_external_id_idx" ON "replies" USING btree ("channel","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "replies_one_reaction_idx" ON "replies" USING btree ("exchange_id","member_id","kind") WHERE "kind" in ('heart', 'laugh', 'hug');
