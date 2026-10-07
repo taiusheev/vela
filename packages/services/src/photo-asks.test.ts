@@ -850,12 +850,14 @@ describe("a photo reply from the app (A8)", () => {
     await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
 
     const message = await arrivalMessage();
-    expect(message.text).toContain("Mia sent a photo");
+    expect(message.text).not.toContain("Mia sent a photo");
     expect(message.text).toContain("Tap 1 or 2");
     expect(message.media?.map((ref) => ref.storageKey)).toEqual([
       await storageKeyOf(first),
       await storageKeyOf(second),
     ]);
+    await h.run(handlers());
+    expect((await h.db.select().from(replies))[0]?.readBackAt).toBeNull();
   });
 
   it("refuses a photo that is not the replier's own upload", async () => {

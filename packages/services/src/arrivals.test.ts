@@ -627,7 +627,7 @@ describe("deliverArrival", () => {
     expect(row?.payload).toMatchObject({
       message: {
         text: [
-          "From yesterday:\nSam: Looks great, Mom!\nMia sent a voice message.",
+          "From your family:\nSam: Looks great, Mom!\nMia sent a voice message.",
           "Sorry this is late.\nGood morning, Mrs Chen.",
           "Mia asks:\nWhich soup today?",
           "Reply with a voice message, or tap a button.",
@@ -698,7 +698,7 @@ describe("deliverArrival", () => {
     expect(row?.payload).toMatchObject({
       message: {
         text: [
-          "From yesterday:\nSam: Looks great, Mom!\nMia sent a voice message.",
+          "From your family:\nSam: Looks great, Mom!\nMia sent a voice message.",
           "Good morning, Mrs Chen.",
           "Nothing new from the family today. How are you this morning?\nVela, from your family",
           "Reply with a voice message, or tap a button.",
@@ -708,6 +708,132 @@ describe("deliverArrival", () => {
       effect: { readBackReplyIds: replyIds },
     });
     expect(await h.db.select().from(aiCalls)).toHaveLength(0);
+  });
+
+  it("keeps a photo reply pending beside an ask photo, then delivers it after a newer morning", async () => {
+    h.deps.ai = createOffAi();
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const { previous, replyIds } = await seedYesterdayWithReplies(seed);
+    const photoId = await seedMedia(seed, "image", "family-reply-photo");
+    const [photoReply] = await h.db
+      .insert(replies)
+      .values({
+        exchangeId: previous.id,
+        memberId: seed.organiser.id,
+        kind: "photo",
+        mediaId: photoId,
+        channel: "telegram",
+        externalId: `${GROUP}:13`,
+        toRecipient: true,
+        createdAt: at(TODAY, "14:00"),
+      })
+      .returning();
+    if (photoReply === undefined) throw new Error("reply not inserted");
+    await seedSoupQuestion(seed, TOMORROW);
+    h.clock.set(at(TOMORROW, "08:00"));
+
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    await h.run(handlers());
+
+    const [first] = await outboundRows("arrival");
+    expect(first?.payload).toMatchObject({ effect: { readBackReplyIds: replyIds } });
+    expect(JSON.stringify(first?.payload)).not.toContain("family-reply-photo");
+    expect(
+      (await h.db.select().from(replies).where(eq(replies.id, photoReply.id)))[0]?.readBackAt,
+    ).toBeNull();
+
+    h.clock.set(at(DAY_AFTER, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, DAY_AFTER, false);
+    // Preparing the same morning twice must not queue the pending reply twice.
+    await deliverArrival(h.deps, seed.member.id, DAY_AFTER, false);
+    await h.run(handlers());
+
+    const arrivals = await outboundRows("arrival");
+    expect(arrivals).toHaveLength(2);
+    expect(arrivals[1]?.payload).toMatchObject({
+      message: { media: [{ kind: "image", providerFileId: "family-reply-photo" }] },
+      effect: { readBackReplyIds: [photoReply.id], previousExchangeId: previous.id },
+    });
+    expect(
+      (await h.db.select().from(replies).where(eq(replies.id, photoReply.id)))[0]?.readBackAt,
+    ).toEqual(h.clock.now());
+  });
+
+  it("does not claim a missing older attachment was delivered or let it block newer words", async () => {
+    h.deps.ai = createOffAi();
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const previous = await seedExchange(h.db, seed, {
+      date: YESTERDAY,
+      state: "answered",
+      deliveredAt: at(YESTERDAY, "08:00"),
+      answeredAt: at(YESTERDAY, "09:00"),
+    });
+    const [missing] = await h.db
+      .insert(replies)
+      .values({
+        exchangeId: previous.id,
+        memberId: seed.organiser.id,
+        kind: "voice",
+        mediaId: null,
+        channel: "telegram",
+        externalId: `${GROUP}:missing`,
+        toRecipient: true,
+        createdAt: at(YESTERDAY, "12:00"),
+      })
+      .returning();
+    if (missing === undefined) throw new Error("reply not inserted");
+    const { replyIds } = await seedYesterdayWithReplies(seed);
+    h.clock.set(at(TOMORROW, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    await h.run(handlers());
+    const [arrival] = await outboundRows("arrival");
+    expect(arrival?.payload).toMatchObject({ effect: { readBackReplyIds: replyIds } });
+    expect(
+      (await h.db.select().from(replies).where(eq(replies.id, missing.id)))[0]?.readBackAt,
+    ).toBeNull();
+    expect((await exchangeById(previous.id)).readBackAt).toBeNull();
+  });
+
+  it("marks only the ten attached voice replies delivered and carries the rest into the next morning", async () => {
+    h.deps.ai = createOffAi();
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const previous = await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "answered",
+      deliveredAt: at(TODAY, "08:00"),
+      answeredAt: at(TODAY, "09:00"),
+    });
+    for (let index = 0; index < 11; index += 1) {
+      const file = await seedMedia(seed, "audio", `reply-voice-${index}`);
+      await h.db.insert(replies).values({
+        exchangeId: previous.id,
+        memberId: seed.organiser.id,
+        kind: "voice",
+        mediaId: file,
+        channel: "telegram",
+        externalId: `${GROUP}:voice-${index}`,
+        toRecipient: true,
+        createdAt: new Date(at(TODAY, "12:00").getTime() + index * 1000),
+      });
+    }
+    h.clock.set(at(TOMORROW, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+    await h.run(handlers());
+    const afterFirst = await h.db.select().from(replies).orderBy(asc(replies.createdAt));
+    expect(afterFirst.filter((reply) => reply.readBackAt !== null)).toHaveLength(10);
+    expect(afterFirst[10]?.readBackAt).toBeNull();
+
+    h.clock.set(at(DAY_AFTER, "08:00"));
+    await deliverArrival(h.deps, seed.member.id, DAY_AFTER, false);
+    await h.run(handlers());
+    const arrivals = await outboundRows("arrival");
+    expect(arrivals[1]?.payload).toMatchObject({
+      message: { media: [{ kind: "audio", providerFileId: "reply-voice-10" }] },
+      effect: { readBackReplyIds: [afterFirst[10]?.id] },
+    });
+    expect((await h.db.select().from(replies)).every((reply) => reply.readBackAt !== null)).toBe(
+      true,
+    );
   });
 
   it("sends a photo choice with exactly two images, and one image as a question", async () => {
