@@ -151,7 +151,7 @@ describe("createOpenAiAi usage and cost", () => {
     // gpt-5: 600 uncached × $1.25 + 400 cached × $0.125 + 200 out × $10, per million.
     expect(outcome.record).toMatchObject({
       call: "understand",
-      promptVersion: `${PROMPTS.understand.version}+openai.2`,
+      promptVersion: `${PROMPTS.understand.version}+openai.3`,
       model: "gpt-5-2025-08-07",
       ok: true,
       tokensIn: 1_000,
