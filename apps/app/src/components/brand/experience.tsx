@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { Pressable, useWindowDimensions, View } from "react-native";
+import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { usePalette } from "../../theme/theme.tsx";
-import { hitSlop, radius, space } from "../../theme/tokens.ts";
+import { hitSlop, radius, space, type } from "../../theme/tokens.ts";
 import { Words } from "../ui.tsx";
 import { BrandIcon, type BrandIconName } from "./icon.tsx";
 import { FamilyScene, type SceneKind } from "./scene.tsx";
@@ -20,6 +20,7 @@ export function ChoiceTile({
   onPress(): void;
 }) {
   const p = usePalette();
+  const { fontScale } = useWindowDimensions();
   return (
     <Pressable
       accessibilityRole="button"
@@ -29,10 +30,10 @@ export function ChoiceTile({
       onPress={onPress}
       style={({ pressed }) => ({
         flexGrow: 1,
-        flexBasis: 90,
-        minHeight: 80,
-        gap: space.s,
-        padding: space.m,
+        flexBasis: fontScale > 1.3 ? "100%" : 76,
+        minHeight: 52,
+        gap: space.xs,
+        padding: space.s,
         alignItems: "center",
         justifyContent: "center",
         borderRadius: radius.button,
@@ -43,9 +44,9 @@ export function ChoiceTile({
       })}
     >
       <BrandIcon name={icon} size={22} color={selected ? p.action : p.ink2} />
-      <Words variant="caption" tone={selected ? "action" : "ink"}>
+      <Text style={[type.caption, { color: selected ? p.action : p.ink, textAlign: "center" }]}>
         {label}
-      </Words>
+      </Text>
     </Pressable>
   );
 }
@@ -91,9 +92,9 @@ export function AnswerPanel({ children }: { children: ReactNode }) {
   return (
     <View
       style={{
-        borderLeftWidth: 3,
-        borderLeftColor: p.light,
-        paddingLeft: space.l,
+        borderTopWidth: 1,
+        borderTopColor: p.rule,
+        paddingTop: space.l,
         paddingVertical: space.s,
         gap: space.m,
       }}
@@ -119,6 +120,7 @@ export function FamilyAction({
   actionLabel?: string;
 }) {
   const p = usePalette();
+  const { fontScale } = useWindowDimensions();
   return (
     <Pressable
       accessibilityRole="button"
@@ -127,8 +129,8 @@ export function FamilyAction({
       hitSlop={hitSlop}
       onPress={onPress}
       style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: fontScale > 1.3 ? "column" : "row",
+        alignItems: fontScale > 1.3 ? "flex-start" : "center",
         gap: space.l,
         paddingVertical: space.l,
         opacity: disabled ? 0.45 : pressed ? 0.75 : 1,
@@ -146,7 +148,7 @@ export function FamilyAction({
       >
         <BrandIcon name={icon} color={p.action} />
       </View>
-      <View style={{ flex: 1, gap: space.xs }}>
+      <View style={{ flex: fontScale > 1.3 ? undefined : 1, alignSelf: "stretch", gap: space.xs }}>
         <Words variant="heading">{title}</Words>
         {detail === undefined ? null : (
           <Words variant="caption" tone="ink2">

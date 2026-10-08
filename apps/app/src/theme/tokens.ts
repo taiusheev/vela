@@ -1,8 +1,8 @@
 import { Platform } from "react-native";
 
 /**
- * The Candle & Ink tokens, from design/design-system.md v3. Values live here once; nothing in the
- * app writes a colour or a size of its own.
+ * Shared Kept Light tokens. Modern task hierarchy is documented in
+ * design/modern-practical-research.md; the palette preserves teal actions and warm human receipts.
  */
 
 export interface Palette {
@@ -24,9 +24,9 @@ export interface Palette {
 }
 
 export const lightPalette: Palette = {
-  bg: "#FBF7F0",
+  bg: "#F7F8F6",
   surface: "#FFFFFF",
-  surface2: "#F3EDE4",
+  surface2: "#EFF2EE",
   ink: "#1E1A16",
   ink2: "#5A534B",
   ink3: "#6D655B",
@@ -65,7 +65,7 @@ export const space = {
   s: 8,
   m: 12,
   l: 16,
-  margin: 24,
+  margin: 20,
   xl: 24,
   xxl: 32,
   xxxl: 40,
@@ -73,11 +73,11 @@ export const space = {
 } as const;
 
 export const radius = {
-  card: 20,
+  card: 18,
   sheet: 24,
-  button: 14,
+  button: 12,
   parentButton: 22,
-  chip: 12,
+  chip: 24,
 } as const;
 
 export interface TextStyle {
@@ -97,20 +97,18 @@ export interface TextStyle {
  */
 const SANS_TC =
   '"Noto Sans TC", "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
-const SERIF_TC = '"Noto Serif TC", "Noto Serif CJK TC", "Songti TC", "PMingLiU", serif';
 
 function face(name: string, fallback: string): string {
   return Platform.OS === "web" ? `${name}, ${fallback}` : name;
 }
 
 /**
- * One serif moment per screen at most, and never a serif on a control: Literata carries people's
- * own words, Inter carries the interface.
+ * Sans-led hierarchy for daily tasks; brand artwork retains its expressive wordmark.
  */
 export const type = {
-  display: { fontFamily: face("Literata_600SemiBold", SERIF_TC), fontSize: 34, lineHeight: 40 },
-  title: { fontFamily: face("Literata_600SemiBold", SERIF_TC), fontSize: 28, lineHeight: 36 },
-  voice: { fontFamily: face("Literata_400Regular", SERIF_TC), fontSize: 20, lineHeight: 29 },
+  display: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 30, lineHeight: 38 },
+  title: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 24, lineHeight: 32 },
+  voice: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 20, lineHeight: 29 },
   heading: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 17, lineHeight: 24 },
   body: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 17, lineHeight: 24 },
   bodyMedium: { fontFamily: face("Inter_500Medium", SANS_TC), fontSize: 17, lineHeight: 24 },

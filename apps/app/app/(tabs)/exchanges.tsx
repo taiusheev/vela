@@ -3,47 +3,51 @@ import { Link, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import { FamilyScene } from "../../src/components/brand/scene.tsx";
-import { ExchangePhotos, ReplyThumbnails } from "../../src/components/family-photo.tsx";
-import { Card, Eyebrow, ReceiptChip, SecondaryButton, Words } from "../../src/components/ui.tsx";
+import { ExchangePhotos } from "../../src/components/family-photo.tsx";
+import { Card, ReceiptChip, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import type { Exchange } from "../../src/data/exchanges.ts";
-import { replyLine } from "../../src/data/lines.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, space } from "../../src/theme/tokens.ts";
 
-function repliesLine(exchange: Exchange): string | undefined {
-  const lines = exchange.replies.map((reply) => replyLine(reply.from, reply.kind, reply.text));
-  return lines.length === 0 ? undefined : lines.join(" · ");
-}
-
 function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: boolean }) {
+  const palette = usePalette();
   const answer = exchange.answer;
   const shown = originals ? (answer?.original ?? answer?.text) : answer?.text;
-  const replies = repliesLine(exchange);
-  const heading = [exchange.day, `${exchange.asker} → ${exchange.recipient}`]
-    .filter((part) => part.length > 0)
-    .join(" · ");
   const recipient = exchange.recipient;
   const time = answer?.at ?? "";
   return (
     <Link href={{ pathname: "/exchange/[id]", params: { id: exchange.id } }} asChild>
-      <Pressable accessibilityRole="button" hitSlop={hitSlop}>
+      <Pressable
+        accessibilityRole="button"
+        hitSlop={hitSlop}
+        style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+      >
         <Card>
-          <Eyebrow>{heading}</Eyebrow>
-          <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
-          <Words variant="body" tone="ink2">
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
+            <View style={{ flex: 1, gap: space.xs }}>
+              <Words variant="heading">{recipient}</Words>
+              <Words variant="caption" tone="ink2">{`${exchange.day} · ${exchange.asker}`}</Words>
+            </View>
+            <BrandIcon name="chevron" color={palette.action} size={20} />
+          </View>
+          <Words variant="body" tone="ink2" numberOfLines={2}>
             {exchange.ask}
           </Words>
+          <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={56} />
           {shown === undefined ? (
-            <Words variant="body" tone="ink2">
+            <Words variant="caption" tone="ink2">
               <Trans>No word yet.</Trans>
             </Words>
           ) : (
-            <AnswerPanel>
-              <Words variant="voice">{shown}</Words>
+            <View style={{ gap: space.s }}>
+              <Words variant="bodyMedium" numberOfLines={3}>
+                {shown}
+              </Words>
               <Words variant="caption" tone="ink3">
                 {answer?.transcript === true ? (
                   <Trans>
@@ -55,14 +59,8 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
                   </Trans>
                 )}
               </Words>
-            </AnswerPanel>
+            </View>
           )}
-          {replies === undefined ? null : (
-            <Words variant="body" tone="ink2">
-              {replies}
-            </Words>
-          )}
-          <ReplyThumbnails photos={exchange.replies.flatMap((reply) => reply.photo ?? [])} />
           {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
         </Card>
       </Pressable>

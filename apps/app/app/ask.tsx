@@ -264,7 +264,7 @@ function AskComposer({
             paddingTop: space.xl,
             paddingBottom: insets.bottom + space.xxxl,
             paddingHorizontal: space.margin,
-            gap: space.xl,
+            gap: space.l,
           }}
         >
           <Words variant="title">
@@ -305,7 +305,7 @@ function AskComposer({
             paddingTop: space.xl,
             paddingBottom: space.xl,
             paddingHorizontal: space.margin,
-            gap: space.xl,
+            gap: space.l,
           }}
         >
           {lights.length > 1 ? (
@@ -365,7 +365,7 @@ function AskComposer({
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ expanded: moreTypes }}
-              style={{ minHeight: 44, justifyContent: "center" }}
+              style={{ minHeight: 48, justifyContent: "center" }}
               onPress={() => setMoreTypes((shown) => !shown)}
             >
               <Words variant="button" tone="action">
@@ -381,6 +381,7 @@ function AskComposer({
 
           <View style={{ gap: space.m }}>
             <TextField
+              label={t`Your question`}
               value={text}
               onChangeText={setText}
               placeholder={t`Say it the way you would say it`}
@@ -496,10 +497,14 @@ function AskComposer({
             paddingHorizontal: space.margin,
             paddingTop: space.m,
             paddingBottom: insets.bottom + space.l,
+            gap: space.s,
           }}
         >
+          <Words variant="caption" tone="ink2">
+            {`${name} · ${when === "tomorrow" ? t`Tomorrow morning` : when === "another_day" ? t`${day} morning` : t`Whenever`}`}
+          </Words>
           <PrimaryButton
-            label={compose.isPending ? t`Sending…` : t`Into her morning`}
+            label={compose.isPending ? t`Sending…` : t`Send to ${name}`}
             onPress={send}
             disabled={
               compose.isPending ||

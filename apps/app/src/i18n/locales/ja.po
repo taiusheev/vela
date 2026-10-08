@@ -75,10 +75,6 @@ msgstr ""
 msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
 msgstr ""
 
-#: app/(tabs)/you.tsx
-msgid "{her} would see your light, and you choose who else. Not in the app yet."
-msgstr ""
-
 #: app/ask.tsx
 msgid "{holder} already has that morning."
 msgstr ""
@@ -927,10 +923,6 @@ msgstr ""
 msgid "India"
 msgstr ""
 
-#: app/ask.tsx
-msgid "Into her morning"
-msgstr ""
-
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Into her morning."
@@ -976,10 +968,6 @@ msgstr ""
 
 #: src/auth/phone.ts
 msgid "Kazakhstan"
-msgstr ""
-
-#: app/(tabs)/you.tsx
-msgid "Keep a light on for me"
 msgstr ""
 
 #: app/(tabs)/you.tsx
@@ -1621,6 +1609,10 @@ msgstr ""
 
 #: src/components/photo-reply.tsx
 msgid "Send photo"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Send to {name}"
 msgstr ""
 
 #: src/components/voice-reply.tsx
@@ -2712,15 +2704,15 @@ msgid "Your name, the asks you write, and your replies."
 msgstr ""
 
 #: app/(tabs)/you.tsx
-msgid "Your own light"
-msgstr ""
-
-#: app/(tabs)/you.tsx
 msgid "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 msgstr ""
 
 #: app/(tabs)/you.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
+msgstr ""
+
+#: app/ask.tsx
+msgid "Your question"
 msgstr ""
 
 #: src/components/story-day.tsx

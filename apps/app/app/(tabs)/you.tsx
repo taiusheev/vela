@@ -2,7 +2,15 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
 import { router, useFocusEffect } from "expo-router";
 import { type ReactNode, useCallback, useState } from "react";
-import { Linking, Pressable, RefreshControl, ScrollView, Switch, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Switch,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiBaseUrl, apiConfigured } from "../../src/api/client.ts";
 import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL, SUPPORT_URL } from "../../src/api/support.ts";
@@ -44,10 +52,17 @@ function Row({
   caption?: string;
   trailing?: ReactNode;
 }) {
+  const { fontScale } = useWindowDimensions();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
+    <View
+      style={{
+        flexDirection: fontScale > 1.3 ? "column" : "row",
+        alignItems: fontScale > 1.3 ? "flex-start" : "center",
+        gap: space.m,
+      }}
+    >
       {leading}
-      <View style={{ flex: 1, gap: space.xs }}>
+      <View style={{ flex: fontScale > 1.3 ? undefined : 1, alignSelf: "stretch", gap: space.xs }}>
         <Words variant="bodyMedium">{title}</Words>
         {caption === undefined ? null : (
           <Words variant="caption" tone="ink3">
@@ -57,19 +72,6 @@ function Row({
       </View>
       {trailing}
     </View>
-  );
-}
-
-/** A switch that shows where a setting stands while the app cannot change it yet. */
-function Fixed({ on }: { on: boolean }) {
-  const palette = usePalette();
-  return (
-    <Switch
-      value={on}
-      disabled
-      trackColor={{ false: palette.rule, true: palette.action }}
-      thumbColor={palette.surface}
-    />
   );
 }
 
@@ -219,21 +221,6 @@ function FamilyYou({ day }: { day: TodayView }) {
           onPress={() => router.push("/onboarding")}
         />
       ) : null}
-      {!apiConfigured() || (!pilot && capabilities?.pilot === false) ? (
-        <View style={{ gap: space.m }}>
-          <Eyebrow>
-            <Trans>Your own light</Trans>
-          </Eyebrow>
-          {/* Symmetry (spec §9): anyone can keep a light, and would be seen as she is. */}
-          <Row
-            leading={<Light state={family.me.lightOn ? "lit" : "resting"} height={24} />}
-            title={t`Keep a light on for me`}
-            caption={t`${her} would see your light, and you choose who else. Not in the app yet.`}
-            trailing={<Fixed on={family.me.lightOn} />}
-          />
-        </View>
-      ) : null}
-
       <View style={{ gap: space.m }}>
         <Eyebrow>
           <Trans>Family</Trans>
@@ -341,7 +328,7 @@ function FamilyYou({ day }: { day: TodayView }) {
           })
         : null}
 
-      <View style={{ gap: space.m }}>
+      <Card>
         <Eyebrow>
           <Trans>Notifications</Trans>
         </Eyebrow>
@@ -390,9 +377,9 @@ function FamilyYou({ day }: { day: TodayView }) {
             <Trans>That did not go through. Try again in a moment.</Trans>
           </Words>
         ) : null}
-      </View>
+      </Card>
 
-      <View style={{ gap: space.m }}>
+      <Card>
         <Eyebrow>
           <Trans>Language</Trans>
         </Eyebrow>
@@ -411,7 +398,7 @@ function FamilyYou({ day }: { day: TodayView }) {
             <Trans>That did not go through. Try again in a moment.</Trans>
           </Words>
         ) : null}
-      </View>
+      </Card>
 
       <Pressable
         accessibilityRole="button"

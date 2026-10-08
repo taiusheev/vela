@@ -7,11 +7,11 @@ tags:
 ---
 - launchApp
 - tapOn: "Sunday"
-- assertVisible: "MOM'S WEEK"
+- assertVisible: "Mom's week"
 - assertVisible: "late"
 - assertVisible: "Mom answered 6 of 7 days."
 - assertVisible: "On 1 morning nobody in the family asked, so Vela sent Mom a hello."
-- assertVisible: "SOMETHING TO ASK NEXT WEEK"
+- assertVisible: "Something to ask next week"
 # Today stays mounted behind a tab it opened, its own "Ask Mom something" stacked under this one,
 # so the button is walked on Sunday opened by itself.
 - openLink: ${APP_URL}/sunday
