@@ -314,6 +314,14 @@ msgstr "給{recipient}的問候"
 msgid "A hello from Vela"
 msgstr "來自 Vela 的問候"
 
+#: src/components/service-status.tsx
+msgid "A live connection has not been set up."
+msgstr "尚未設定即時連線。"
+
+#: app/help.tsx
+msgid "A morning message is missing"
+msgstr "早晨訊息沒有送達"
+
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "您從小長大的那條街的照片——還記得街角那家店嗎？"
@@ -325,6 +333,10 @@ msgstr "一個問題"
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
 msgstr "安靜的早上"
+
+#: app/help.tsx
+msgid "A quiet notice means Vela has not recorded an answer. Call or message your parent yourself. Vela cannot visit your parent or send help."
+msgstr "安靜通知表示 Vela 尚未記錄到回覆。請自行打電話或傳訊息給爸媽。Vela 無法探訪爸媽，也無法派人提供協助。"
 
 #: src/data/ask.ts
 msgid "A recipe"
@@ -349,6 +361,10 @@ msgstr "投票"
 #: src/data/ask.ts
 msgid "A word to teach"
 msgstr "請教一個詞"
+
+#: app/help.tsx
+msgid "About a quiet notice"
+msgstr "關於安靜通知"
 
 #: app/(tabs)/you.tsx
 msgid "Account"
@@ -461,6 +477,7 @@ msgid "Ask on Telegram"
 msgstr "在 Telegram 上問"
 
 #: app/(tabs)/you.tsx
+#: app/help.tsx
 msgid "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
 msgstr "如需查閱、更正、刪除資料或撤回同意，請聯絡創辦人。請勿在客服訊息中附上家人的私人內容。"
 
@@ -511,6 +528,7 @@ msgstr "不在家"
 msgid "away · {day}"
 msgstr "外出中 · 到{day}"
 
+#: app/help.tsx
 #: src/components/back-button.tsx
 msgid "Back"
 msgstr "返回"
@@ -553,6 +571,22 @@ msgstr "更改國家"
 #: app/sign-in.tsx
 msgid "Change email or number"
 msgstr "更換電子郵件或電話號碼"
+
+#: src/components/service-status.tsx
+msgid "Check again"
+msgstr "再檢查一次"
+
+#: app/help.tsx
+msgid "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
+msgstr "請確認你使用的是加入時的電子郵件地址。如果沒有收到驗證碼，請查看垃圾郵件資料夾，再試一次。"
+
+#: app/help.tsx
+msgid "Check Today and your parent's usual chat. If the message still has not arrived, contact Vela support. You can always contact your family directly."
+msgstr "請查看「今天」和爸媽平常使用的聊天室。如果訊息仍未送達，請聯絡 Vela 支援。你隨時都可以直接聯絡家人。"
+
+#: src/components/service-status.tsx
+msgid "Checking Vela…"
+msgstr "正在檢查 Vela…"
 
 #: app/sign-in.tsx
 msgid "Checking…"
@@ -681,6 +715,10 @@ msgstr "刪除帳號會移除您的登入、這支手機的通知，以及您在
 msgid "Deleting…"
 msgstr "刪除中…"
 
+#: app/help.tsx
+msgid "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
+msgstr "請說明發生了什麼問題，以及發生的時間。請勿傳送密碼、登入驗證碼、家人的私人訊息或照片。"
+
 #: app/(tabs)/index.tsx
 msgid "Dismiss"
 msgstr "關閉"
@@ -713,6 +751,10 @@ msgstr "東部時間"
 #: app/sign-in.tsx
 msgid "Email"
 msgstr "電子郵件"
+
+#: app/help.tsx
+msgid "Email Vela support"
+msgstr "寄信給 Vela 支援"
 
 #: app/(tabs)/you.tsx
 msgid "English pilot"
@@ -766,6 +808,10 @@ msgstr "完成連結"
 msgid "First ask"
 msgstr "第一個提問"
 
+#: src/components/service-status.tsx
+msgid "For a particular morning message, check Today or your parent's chat."
+msgstr "若要確認某則早晨訊息，請查看「今天」或爸媽的聊天室。"
+
 #: src/auth/phone.ts
 msgid "France"
 msgstr "法國"
@@ -792,6 +838,7 @@ msgid "Get help connecting"
 msgstr "取得連結協助"
 
 #: app/(tabs)/you.tsx
+#: app/help.tsx
 msgid "Get help or request your data"
 msgstr "尋求協助或索取您的資料"
 
@@ -836,6 +883,11 @@ msgstr "愛心"
 #: src/components/nearby-editor.tsx
 msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
 msgstr "{who}您好。我可以在 Vela 上把您列為住在{name}附近的人嗎？這樣如果哪天{name}沒有回覆，我可以請您過去看看。請用 Telegram 打開這個連結，看看這代表什麼，再回答好或不好： {link}"
+
+#: app/help.tsx
+#: app/sign-in.tsx
+msgid "Help"
+msgstr "說明"
 
 #. stands in for her name
 #. stands in for her name
@@ -1996,6 +2048,7 @@ msgid "That link could not open. Contact Vela at the address below."
 msgstr "連結無法開啟。請透過下方地址聯絡 Vela。"
 
 #: app/(tabs)/you.tsx
+#: app/help.tsx
 msgid "That link could not open. Use the address above to contact the founder."
 msgstr "無法打開這個連結。請使用上方的地址聯絡創辦人。"
 
@@ -2183,6 +2236,10 @@ msgstr "這台裝置無法從這裡分享。請複製上面的文字，自己傳
 msgid "This iPhone could not keep a draft. Leave this screen open until your send succeeds."
 msgstr "這支 iPhone 無法保存草稿。請保持這個畫面開著，直到送出成功。"
 
+#: src/components/service-status.tsx
+msgid "This is an example. No live status is checked."
+msgstr "這是範例，不會檢查即時狀態。"
+
 #: app/(tabs)/you.tsx
 msgid "This is the example family, so nobody left."
 msgstr "這是範例家庭，所以沒有人離開。"
@@ -2298,6 +2355,10 @@ msgstr "目前照片太多了，請稍後再試。"
 #: app/exchange/[id].tsx
 msgid "Too many photos for now. Try again tomorrow."
 msgstr "目前照片太多了，請明天再試。"
+
+#: app/help.tsx
+msgid "Trouble signing in?"
+msgstr "無法登入嗎？"
 
 #: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
@@ -2450,9 +2511,21 @@ msgstr "語音回覆需要使用麥克風，您可以在「設定」中允許。
 msgid "Vela pilot"
 msgstr "Vela 試辦"
 
+#: src/components/service-status.tsx
+msgid "Vela reports a service problem. Messages may be delayed."
+msgstr "Vela 回報服務出現問題。訊息可能會延遲。"
+
 #: src/data/precision.ts
 msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
 msgstr "一個月要至少有來自{families}個家庭的{notices}則通知，Vela 才會顯示，這樣就看不出任何一個家庭的早上。"
+
+#: app/help.tsx
+msgid "Vela status"
+msgstr "Vela 狀態"
+
+#: src/components/service-status.tsx
+msgid "Vela status is unavailable. Try again shortly."
+msgstr "目前無法取得 Vela 狀態。請稍後再試。"
 
 #: app/delete-account.tsx
 msgid "Vela still writes to you on Telegram or LINE in a family where you are the only organiser or have your own light. Say stop there to end it."
@@ -2467,6 +2540,10 @@ msgstr "Vela 的建議"
 #: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr "Vela 的建議 · 取自這位家人說過的話"
+
+#: src/components/service-status.tsx
+msgid "Vela's last scheduled check completed."
+msgstr "Vela 最近一次的排程檢查已完成。"
 
 #: src/auth/phone.ts
 #: src/data/onboarding.ts

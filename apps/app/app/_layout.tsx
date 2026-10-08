@@ -111,6 +111,7 @@ function useSignInGuard(parent: boolean | undefined): void {
   const segments = useSegments();
   const router = useRouter();
   const onSignIn = segments[0] === "sign-in";
+  const onHelp = segments[0] === "help";
   const onParent = segments[0] === "parent";
   useEffect(() => {
     if (!accountsConfigured() || !account.ready || parent !== false) return;
@@ -118,9 +119,9 @@ function useSignInGuard(parent: boolean | undefined): void {
       if (englishTrialBuild) router.replace(account.signedIn ? "/" : "/sign-in");
       return;
     }
-    if (!account.signedIn && !onSignIn) router.replace("/sign-in");
+    if (!account.signedIn && !onSignIn && !onHelp) router.replace("/sign-in");
     if (account.signedIn && onSignIn) router.replace("/");
-  }, [account.ready, account.signedIn, onSignIn, onParent, parent, router]);
+  }, [account.ready, account.signedIn, onSignIn, onHelp, onParent, parent, router]);
 }
 
 function Root() {
