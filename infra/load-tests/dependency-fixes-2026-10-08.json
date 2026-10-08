@@ -33,5 +33,28 @@
   ],
   "auditExitCode": 1,
   "advisorySuppressions": false,
-  "status": "Compatible fixes prepared; complete source/CI validation pending. Unpatched high advisories remain open in scanner PR #43."
+  "status": "Compatible fixes prepared; complete source/CI validation pending. Unpatched high advisories remain open in scanner PR #43.",
+  "advisoryFixes": {
+    "shell-quote": [
+      "GHSA-pqg4-j6r4-53mv"
+    ],
+    "sharp": [
+      "GHSA-rgj7-g3m4-5g8c",
+      "GHSA-wq5f-xc86-pv6w"
+    ],
+    "source-map-js": [
+      "GHSA-68fv-2mgg-jv7q"
+    ],
+    "undici": [
+      "GHSA-rfgv-xxqx-mfg5",
+      "GHSA-w293-vg96-wgc3"
+    ]
+  },
+  "removalRule": "Remove an override when every parent in the active lockfile natively resolves a non-vulnerable version and a fresh audit confirms it. Sharp override covers only the current 0.35 line.",
+  "validation": {
+    "frozenInstall": "passed with original equivalent resolution; final selector metadata must be rechecked",
+    "sharpNativePng": "passed",
+    "undiciLoopbackHttp": "passed",
+    "claudeReadOnlyReview": "no blocking findings; narrowed Sharp override to existing 0.35 line"
+  }
 }
