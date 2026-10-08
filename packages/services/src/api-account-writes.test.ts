@@ -508,7 +508,14 @@ describe("disableApiAccount", () => {
     ).toEqual([{ ...before, deletedAt: timestamp }]);
     expect(await receipts()).toEqual(others);
     expect(await challenges()).toEqual(otherChallenges);
-    expect(await sideEffects()).toEqual(effects);
+    // Her own light is kept in the family (ADR-43): only its account link goes.
+    const unlinked = {
+      ...effects,
+      members: effects.members.map((row) =>
+        row.id === seed.member.id ? { ...row, userId: null } : row,
+      ),
+    };
+    expect(await sideEffects()).toEqual(unlinked);
     h.clock.advance(1_000);
     await disableApiAccount(h.deps, identity.authSubject);
     expect(
@@ -518,7 +525,7 @@ describe("disableApiAccount", () => {
     await expect(update()).rejects.toMatchObject(denied);
     expect(await receipts()).toEqual(others);
     expect(await challenges()).toEqual(otherChallenges);
-    expect(await sideEffects()).toEqual(effects);
+    expect(await sideEffects()).toEqual(unlinked);
   });
 
   it("deposits an idempotent tombstone for an unknown subject without ancillary writes", async () => {

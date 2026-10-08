@@ -14,10 +14,13 @@ import {
 import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import type { SessionIdentity } from "./api-access.ts";
 import { provisionApiUser } from "./api-accounts.ts";
+import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, lockApiActor, runApiMutation } from "./api-idempotency.ts";
+import { type ReleasedMembership, releaseAccountMemberships } from "./api-members.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { sha256Hex } from "./hash.ts";
+import type { DeviceAlerts } from "./push-devices.ts";
 
 const userProjection = {
   id: users.id,
@@ -124,10 +127,19 @@ export async function updateApiAccount(
   );
 }
 
+/**
+ * Deletes the account (ADR-43): the `users` row becomes a tombstone, its receipts, link challenges
+ * and phones go, and each live membership is let go by `releaseAccountMemberships` (left where Leave
+ * would allow it, otherwise kept as a messenger-only member with no account link). Shared family
+ * content stays with the family. Run by `DELETE /v1/me` after Clerk has deleted the user, and by
+ * Clerk's signed `user.deleted`, so either path alone ends in the same state, and running it again
+ * changes nothing. Founder alerts it writes are returned for the queue; `reconcile` sends them
+ * anyway when nobody hands them over.
+ */
 export async function disableApiAccount(
-  deps: Pick<Deps, "db" | "clock">,
+  deps: Pick<Deps, "db" | "clock"> & { alerts?: DeviceAlerts },
   authSubject: string,
-): Promise<void> {
+): Promise<{ released: ReleasedMembership[]; after: AfterCommit }> {
   if (typeof authSubject !== "string" || authSubject.trim().length === 0) {
     throw new ApiIdempotencyError("invalid");
   }
@@ -136,7 +148,8 @@ export async function disableApiAccount(
     throw new Error("Invalid API mutation clock");
   }
   const actorHash = await sha256Hex(authSubject);
-  await deps.db.transaction(async (tx) => {
+  const after = nothingAfterCommit();
+  const released = await deps.db.transaction(async (tx) => {
     await lockApiActor(tx, actorHash);
     await tx
       .insert(users)
@@ -155,5 +168,7 @@ export async function disableApiAccount(
     await tx.delete(accountLinkChallenges).where(eq(accountLinkChallenges.userId, account.id));
     // Its phones are told nothing more (ADR-34); the row is kept, so no cascade would take them.
     await tx.delete(pushDevices).where(eq(pushDevices.userId, account.id));
+    return releaseAccountMemberships(deps, tx, account.id, now, after);
   });
+  return { released, after };
 }

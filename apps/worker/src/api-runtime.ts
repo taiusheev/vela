@@ -32,6 +32,7 @@ import {
   composeApiAsk,
   createApiFamily,
   createApiReminder,
+  disableApiAccount,
   endApiAway,
   errorLabel,
   finishApiReminder,
@@ -89,6 +90,7 @@ import { createRandom } from "./random.ts";
 import {
   createClerkSessionActivityChecker,
   createClerkSessionVerifier,
+  createClerkUserDeleter,
   type SessionActivityChecker,
 } from "./session.ts";
 import { type AccountWriteLimiter, writeLimiterOf } from "./write-limit.ts";
@@ -391,6 +393,10 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
             devices: {
               random: createRandom(),
               config: { privacyNoticeUrls: config.privacyNoticeUrls },
+            },
+            accounts: {
+              deleteClerkUser: createClerkUserDeleter({ secretKey }),
+              deleteAccount: disableApiAccount,
             },
             nudges: createApiNudges(env),
             alerts: {

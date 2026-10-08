@@ -177,7 +177,19 @@ export function createClerkWebhookHandler(
         return answer(400, "invalid");
       const handle = await ports.openDatabase(env);
       try {
-        await ports.disableAccount({ db: handle.db, clock: ports.clock }, data.id);
+        // The founder hears of a family left with no organiser to tell, as after the app's delete.
+        await ports.disableAccount(
+          {
+            db: handle.db,
+            clock: ports.clock,
+            alerts: {
+              adminConversationId: env.ADMIN_CONVERSATION_ID?.trim() || null,
+              publicBaseUrl: env.PUBLIC_BASE_URL,
+              pushSending: env.PUSH_SEND?.trim() === "expo",
+            },
+          },
+          data.id,
+        );
       } finally {
         try {
           await handle.close();

@@ -601,6 +601,16 @@ function FamilyYou({ day }: { day: TodayView }) {
               <Trans>Sign-out did not finish. You are still signed in. Try again.</Trans>
             </Words>
           ) : null}
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={hitSlop}
+            disabled={signingOut.isPending}
+            onPress={() => router.push("/delete-account")}
+          >
+            <Words variant="button" tone="action">
+              <Trans>Delete account</Trans>
+            </Words>
+          </Pressable>
         </Card>
       ) : (
         <Words variant="caption" tone="ink3">

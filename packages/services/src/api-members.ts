@@ -247,3 +247,83 @@ export async function leaveApiFamily(
   );
   return { ...result, after: result.replayed ? nothingAfterCommit() : after };
 }
+
+/** What account deletion did with each of the account's live memberships. */
+export interface ReleasedMembership {
+  readonly memberId: string;
+  /** `left` as Leave leaves; `kept` stays in the family, reached on its messenger, unlinked. */
+  readonly outcome: "left" | "kept";
+}
+
+/**
+ * Account deletion's half for families (`DELETE /v1/me`, ADR-43): every active or paused membership
+ * of the account is let go inside the deletion's transaction. One Leave would allow leaves, as Leave
+ * leaves it. One Leave would refuse — her own light, or the last active organiser — is kept: the
+ * member stays in the family as a messenger-only member whose account link is cleared, so a
+ * parent's light never loses its only organiser because an app account went, and the person goes on
+ * being told on Telegram or LINE. Either way the founder is told, as after Leave, when the family is
+ * left with no organiser who can be told. Families are taken in id order and, within one, the
+ * organisers in id order before the member (as `lockSelf` does), so two deletions never wait on each
+ * other in a circle. Runs under the caller's actor lock, after the account's phones are deleted.
+ */
+export async function releaseAccountMemberships(
+  deps: Pick<Deps, "clock"> & { alerts?: DeviceAlerts },
+  tx: VelaTransaction,
+  userId: string,
+  now: Date,
+  after: AfterCommit,
+): Promise<ReleasedMembership[]> {
+  const live = await tx
+    .select({ id: members.id })
+    .from(members)
+    .where(
+      and(
+        eq(members.userId, userId),
+        inArray(members.status, ["active", "paused"]),
+        isNull(members.leftAt),
+      ),
+    )
+    .orderBy(asc(members.familyId), asc(members.id));
+  const released: ReleasedMembership[] = [];
+  for (const { id } of live) {
+    const member = await lockSelf(tx, id);
+    if (member.userId !== userId || member.leftAt !== null) continue;
+    if (member.status !== "active" && member.status !== "paused") continue;
+    const keep =
+      isKeptLight(member) ||
+      (member.role === "organiser" && !(await anotherActiveOrganiser(tx, member)));
+    if (keep) {
+      await tx.update(members).set({ userId: null }).where(eq(members.id, member.id));
+    } else {
+      await tx
+        .update(members)
+        .set({ status: "left", leftAt: now, turnsIn: false })
+        .where(eq(members.id, member.id));
+      await recordEvent(
+        tx,
+        {
+          name: "member_left",
+          familyId: member.familyId,
+          memberId: member.id,
+          surface: "app",
+          props: { source: "account_deleted", role: member.role, kept_light: false },
+        },
+        now,
+      );
+    }
+    if (member.role === "organiser" && deps.alerts !== undefined) {
+      const alert = await organisersUnreachableAlert(
+        { config: deps.alerts, pushSending: deps.alerts.pushSending },
+        tx,
+        member.id,
+        `account_deleted:${member.id}:${now.getTime()}`,
+      );
+      if (alert !== null) {
+        const written = await insertOutbound(deps, tx, alert);
+        if ("outboundId" in written) after.outboundIds.push(written.outboundId);
+      }
+    }
+    released.push({ memberId: member.id, outcome: keep ? "kept" : "left" });
+  }
+  return released;
+}

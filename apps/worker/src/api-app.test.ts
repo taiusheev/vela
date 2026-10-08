@@ -351,6 +351,20 @@ function fixture(
       .fn<NonNullable<ApiRuntime["writes"]>["verifyActiveSession"]>()
       .mockResolvedValue(true),
     clock: { now: () => new Date("2026-09-22T00:00:00.000Z") },
+    accounts: {
+      deleteClerkUser: vi
+        .fn<NonNullable<NonNullable<ApiRuntime["writes"]>["accounts"]>["deleteClerkUser"]>()
+        .mockResolvedValue("deleted"),
+      deleteAccount: vi
+        .fn<NonNullable<NonNullable<ApiRuntime["writes"]>["accounts"]>["deleteAccount"]>()
+        .mockResolvedValue({
+          released: [
+            { memberId: MEMBER_ID, outcome: "left" },
+            { memberId: USER_ID, outcome: "kept" },
+          ],
+          after: { outboundIds: [], wakeMemberIds: [] },
+        }),
+    },
     services: {
       provisionApiAccount: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["provisionApiAccount"]>()
@@ -525,6 +539,49 @@ describe("pilot capabilities and secure Telegram linking", () => {
     expect(f.verifySession).not.toHaveBeenCalled();
     expect(f.openDatabase).not.toHaveBeenCalled();
     expect((await f.app.request("/v1/capabilities", { method: "HEAD" })).status).toBe(404);
+  });
+
+  // ADR-43: deleting one's account from the app, Clerk's user first.
+  it("deletes Clerk's user, then the account, and says how the families were let go", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(
+      writeRequest("POST", "/v1/me/delete", "{}", { authorization: "Bearer good" }),
+    );
+    await expectResponse(response, 200, { deleted: true, left: 1, kept: 1 });
+    expect(f.writes.accounts.deleteClerkUser).toHaveBeenCalledExactlyOnceWith("verified-user");
+    expect(f.writes.accounts.deleteAccount).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock },
+      "verified-user",
+    );
+    const clerkOrder = f.writes.accounts.deleteClerkUser.mock.invocationCallOrder[0] ?? 0;
+    const accountOrder = f.writes.accounts.deleteAccount.mock.invocationCallOrder[0] ?? 0;
+    expect(clerkOrder).toBeLessThan(accountOrder);
+  });
+
+  it("changes nothing when Clerk cannot be reached, so the app can try again", async () => {
+    const f = fixture(true);
+    f.writes.accounts.deleteClerkUser.mockRejectedValue(new SessionVerificationUnavailable());
+    const response = await f.app.request(
+      writeRequest("POST", "/v1/me/delete", "{}", { authorization: "Bearer good" }),
+    );
+    await expectResponse(response, 503, UNAVAILABLE);
+    expect(f.writes.accounts.deleteAccount).not.toHaveBeenCalled();
+  });
+
+  it("deletes nothing for a session that is no longer active or a body that is not empty", async () => {
+    const f = fixture(true);
+    f.writes.verifyActiveSession.mockResolvedValue(false);
+    const inactive = await f.app.request(
+      writeRequest("POST", "/v1/me/delete", "{}", { authorization: "Bearer good" }),
+    );
+    expect(inactive.status).toBe(401);
+    f.writes.verifyActiveSession.mockResolvedValue(true);
+    const extra = await f.app.request(
+      writeRequest("POST", "/v1/me/delete", '{"why":"x"}', { authorization: "Bearer good" }),
+    );
+    expect(extra.status).toBe(400);
+    expect(f.writes.accounts.deleteClerkUser).not.toHaveBeenCalled();
+    expect(f.writes.accounts.deleteAccount).not.toHaveBeenCalled();
   });
 
   it("starts a session-bound proof with a configured HTTPS Telegram link", async () => {

@@ -1,5 +1,6 @@
 import {
   AddNearby,
+  ApiAccountDeleted,
   ApiAccountPatch,
   ApiAccountProfile,
   ApiAway,
@@ -52,6 +53,7 @@ import {
   ComposeReply,
   CreateFamily,
   CreateReminder,
+  DeleteAccount,
   DeviceWrite,
   EndAway,
   FinishReminder,
@@ -92,6 +94,7 @@ import {
   type createApiFamily,
   type createApiReminder,
   type DeviceAlerts,
+  type disableApiAccount,
   type endApiAway,
   errorLabel,
   FactMissingError,
@@ -168,6 +171,7 @@ import {
   uploadHeaders,
 } from "./api-upload.ts";
 import {
+  type ClerkUserDeleter,
   type SessionActivityChecker,
   SessionVerificationUnavailable,
   type SessionVerifier,
@@ -241,6 +245,14 @@ export interface ApiRuntime {
     };
     verifyActiveSession: SessionActivityChecker;
     clock: Clock;
+    /**
+     * Deleting one's account (ADR-43): Clerk's user first, then Vela's account. Without it
+     * `POST /v1/me/delete` answers 404, as every write does without `writes`.
+     */
+    accounts?: {
+      deleteClerkUser: ClerkUserDeleter;
+      deleteAccount: typeof disableApiAccount;
+    };
     services: ApiWriteServices;
     /**
      * Creating a family: a token source for her invite, and the bot and regions it needs. Without
@@ -1051,6 +1063,42 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           const user = ApiUser.parse(result.response.body);
           c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
           return c.json(user, 200);
+        },
+      );
+    }
+    const accounts = writes.accounts;
+    if (accounts !== undefined) {
+      // Clerk first: once its user is gone no session of it can write again, and Clerk's signed
+      // user.deleted runs the same deletion here should this request end before it does. Clerk
+      // unreachable is a 503 with nothing changed, so the app can simply try again.
+      app.post(
+        "/v1/me/delete",
+        authenticate,
+        validateWrite(DeleteAccount, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const identity = c.get("session");
+          await accounts.deleteClerkUser(identity.authSubject);
+          const { released, after } = await accounts.deleteAccount(
+            {
+              db: c.get("db"),
+              clock: writes.clock,
+              ...(writes.alerts === undefined ? {} : { alerts: writes.alerts }),
+            },
+            identity.authSubject,
+          );
+          await runAfterCommit(writes.nudges, after, writes.clock.now(), (event, fields) =>
+            runtime.logger.error(event, fields),
+          );
+          return c.json(
+            ApiAccountDeleted.parse({
+              deleted: true,
+              left: released.filter((one) => one.outcome === "left").length,
+              kept: released.filter((one) => one.outcome === "kept").length,
+            }),
+            200,
+          );
         },
       );
     }

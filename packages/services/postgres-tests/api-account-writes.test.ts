@@ -208,7 +208,7 @@ describe("account writes on independent PostgreSQL connections", () => {
       const later = await pg.client("later");
       const lock = await pg.holdActorLock(blocker, identity.authSubject);
       let written: ReturnType<typeof write>;
-      let disabled: Promise<void>;
+      let disabled: ReturnType<typeof disable>;
       if (order === "behind") {
         written = (await queue(writer, blocker, () => write(kind, writer, "race-key"))).operation;
         disabled = (await queue(disabler, blocker, () => disable(disabler))).operation;

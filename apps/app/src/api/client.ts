@@ -1,4 +1,5 @@
 import type {
+  ApiAccountDeleted,
   ApiAccountPatch,
   ApiAccountProfile,
   ApiAskConflict,
@@ -340,6 +341,14 @@ export function leaveFamily(
     key,
     body: {},
   });
+}
+
+/**
+ * Delete the account (ADR-43): its sign-in and its Vela account go; each family is left, or kept
+ * on Telegram or LINE where leaving would leave a family without its only organiser or her light.
+ */
+export function deleteAccount(key: string, token: string | null): Promise<ApiAccountDeleted> {
+  return call<ApiAccountDeleted>({ path: "/v1/me/delete", token, key, body: {} });
 }
 
 /** "Start the 30 days" of Vela Light for one kept-light member (spec A13). */

@@ -4,6 +4,7 @@ import {
   type ClerkSessionOptions,
   createClerkSessionActivityChecker,
   createClerkSessionVerifier,
+  createClerkUserDeleter,
   SessionVerificationUnavailable,
 } from "./session.ts";
 
@@ -529,5 +530,48 @@ describe("Clerk session verification", () => {
       "Invalid session verifier configuration",
     );
     expect(() => verifier({ audience: "" })).toThrow("Invalid session verifier configuration");
+  });
+});
+
+describe("createClerkUserDeleter", () => {
+  const secretKey = "sk_test_deleter";
+
+  it("deletes the user with the pinned backend and the configured key only", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (resource, init) => {
+      expect(String(resource)).toBe("https://api.clerk.com/v1/users/user_abc123");
+      expect(init?.method).toBe("DELETE");
+      expect(init?.redirect).toBe("manual");
+      expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${secretKey}`);
+      return Response.json({ object: "user", id: "user_abc123", deleted: true });
+    });
+    expect(await createClerkUserDeleter({ secretKey, fetch: fetchImpl })("user_abc123")).toBe(
+      "deleted",
+    );
+  });
+
+  it("reads Clerk's 404 as already gone, and anything else as unavailable", async () => {
+    const answer = (status: number) =>
+      createClerkUserDeleter({
+        secretKey,
+        fetch: async () => new Response("{}", { status }),
+      })("user_abc123");
+    expect(await answer(404)).toBe("gone");
+    await expect(answer(500)).rejects.toBeInstanceOf(SessionVerificationUnavailable);
+    await expect(answer(401)).rejects.toBeInstanceOf(SessionVerificationUnavailable);
+    await expect(
+      createClerkUserDeleter({
+        secretKey,
+        fetch: async () => {
+          throw new TypeError("network");
+        },
+      })("user_abc123"),
+    ).rejects.toBeInstanceOf(SessionVerificationUnavailable);
+  });
+
+  it("never sends a request for an id that is not a Clerk user id", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const remove = createClerkUserDeleter({ secretKey, fetch: fetchImpl });
+    await expect(remove("../sessions/x")).rejects.toBeInstanceOf(SessionVerificationUnavailable);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

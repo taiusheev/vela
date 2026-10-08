@@ -598,6 +598,10 @@ msgstr "Close"
 msgid "Close quiet notice"
 msgstr "Close quiet notice"
 
+#: app/delete-account.tsx
+msgid "Close Vela and open it again to finish signing out on this phone."
+msgstr "Close Vela and open it again to finish signing out on this phone."
+
 #: app/sign-in.tsx
 msgid "Codes by text message do not reach {where} yet. Use your email instead."
 msgstr "Codes by text message do not reach {where} yet. Use your email instead."
@@ -654,6 +658,27 @@ msgstr "Dad"
 #: src/data/onboarding.ts
 msgid "Darwin"
 msgstr "Darwin"
+
+#: app/(tabs)/you.tsx
+#: app/delete-account.tsx
+msgid "Delete account"
+msgstr "Delete account"
+
+#: app/delete-account.tsx
+msgid "Delete my account"
+msgstr "Delete my account"
+
+#: app/delete-account.tsx
+msgid "Delete your account?"
+msgstr "Delete your account?"
+
+#: app/delete-account.tsx
+msgid "Deleting your account removes your sign-in, this phone's notifications and your place in each family. Thirty days on, what is kept about you in a family is deleted."
+msgstr "Deleting your account removes your sign-in, this phone's notifications and your place in each family. Thirty days on, what is kept about you in a family is deleted."
+
+#: app/delete-account.tsx
+msgid "Deleting…"
+msgstr "Deleting…"
 
 #: app/(tabs)/index.tsx
 msgid "Dismiss"
@@ -908,6 +933,10 @@ msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram l
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "If her morning stays quiet past her usual time, and when it is settled."
 
+#: app/delete-account.tsx
+msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
+msgstr "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
+
 #: src/components/telegram-family-link.tsx
 msgid "If you are joining as a relative, join the approved Telegram family group first. Connecting here keeps your existing family role."
 msgstr "If you are joining as a relative, join the approved Telegram family group first. Connecting here keeps your existing family role."
@@ -975,6 +1004,10 @@ msgstr "Japan"
 #: src/auth/phone.ts
 msgid "Kazakhstan"
 msgstr "Kazakhstan"
+
+#: app/delete-account.tsx
+msgid "Keep my account"
+msgstr "Keep my account"
 
 #: app/(tabs)/you.tsx
 msgid "Keep my turns"
@@ -1733,6 +1766,10 @@ msgstr "Sign in as family"
 msgid "Sign in to connect your family."
 msgstr "Sign in to connect your family."
 
+#: app/delete-account.tsx
+msgid "Sign in to delete your account."
+msgstr "Sign in to delete your account."
+
 #: app/(tabs)/you.tsx
 msgid "Sign out"
 msgstr "Sign out"
@@ -2128,6 +2165,10 @@ msgstr "They will no longer receive requests to look in. You can invite someone 
 msgid "This account already runs a family."
 msgstr "This account already runs a family."
 
+#: app/delete-account.tsx
+msgid "This cannot be undone."
+msgstr "This cannot be undone."
+
 #: src/components/telegram-family-link.tsx
 msgid "This connection expired. Create a new one and use its new code."
 msgstr "This connection expired. Create a new one and use its new code."
@@ -2412,6 +2453,10 @@ msgstr "Vela pilot"
 msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
 msgstr "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
 
+#: app/delete-account.tsx
+msgid "Vela still writes to you on Telegram or LINE in a family where you are the only organiser or have your own light. Say stop there to end it."
+msgstr "Vela still writes to you on Telegram or LINE in a family where you are the only organiser or have your own light. Say stop there to end it."
+
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Vela suggests"
@@ -2569,6 +2614,10 @@ msgstr "Who lives close to {name}?"
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 msgstr "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 
+#: app/delete-account.tsx
+msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
+msgstr "Words, photos and voice messages you sent stay with the family, as they are part of their days."
+
 #: src/components/story-day.tsx
 msgid "Write your own question"
 msgstr "Write your own question"
@@ -2649,6 +2698,14 @@ msgstr "You will stop receiving turns. You can resume whenever you are ready."
 msgid "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
 msgstr "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
 
+#: app/delete-account.tsx
+msgid "Your account could not be deleted just now. Nothing was changed. Try again."
+msgstr "Your account could not be deleted just now. Nothing was changed. Try again."
+
+#: app/delete-account.tsx
+msgid "Your account is deleted."
+msgstr "Your account is deleted."
+
 #: src/device/VoiceAnswer.tsx
 msgid "Your answer, {time} long."
 msgstr "Your answer, {time} long."
@@ -2724,6 +2781,10 @@ msgstr "Your question"
 #: src/components/story-day.tsx
 msgid "Your question for {name}"
 msgstr "Your question for {name}"
+
+#: app/delete-account.tsx
+msgid "Your sign-in has expired. Sign in again, then delete your account."
+msgstr "Your sign-in has expired. Sign in again, then delete your account."
 
 #: src/components/telegram-family-link.tsx
 msgid "Your Telegram chat"

@@ -4,6 +4,7 @@ import { channelLinks, events, members, outbound, users } from "@vela/db";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
+import { disableApiAccount } from "./api-account-writes.ts";
 import { loadApiFamily } from "./api-family.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
 import { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
@@ -270,5 +271,82 @@ describe("leaveApiFamily", () => {
     expect(await refusal(leave(stranger, samId))).toBe("not_found");
     expect((await statusOf(samId))?.status).toBe("active");
     expect((await statusOf(seed.member.id))?.status).toBe("active");
+  });
+});
+
+// ADR-43: deleting an account lets go of its families as Leave would, keeping what Leave refuses.
+describe("account deletion and families", () => {
+  const alerts = {
+    adminConversationId: "9001",
+    publicBaseUrl: "https://vela.test",
+    pushSending: false,
+  };
+  const toFounder = async () =>
+    h.db.select().from(outbound).where(eq(outbound.conversationId, "9001"));
+  const accountOf = async (identity: SessionIdentity) => {
+    const [row] = await h.db
+      .select()
+      .from(users)
+      .where(eq(users.authSubject, identity.authSubject));
+    return row;
+  };
+
+  it("leaves where Leave would allow it, and records why", async () => {
+    const result = await disableApiAccount({ db: h.db, clock: h.clock, alerts }, sam.authSubject);
+    expect(result.released).toEqual([{ memberId: samId, outcome: "left" }]);
+    expect(await statusOf(samId)).toMatchObject({ status: "left", turnsIn: false });
+    expect((await accountOf(sam))?.deletedAt).toEqual(h.clock.now());
+    const [left] = await h.db
+      .select()
+      .from(events)
+      .where(and(eq(events.memberId, samId), eq(events.name, "member_left")));
+    expect(left?.props).toMatchObject({ source: "account_deleted" });
+  });
+
+  it("lets an organiser go while another organiser is active", async () => {
+    const result = await disableApiAccount({ db: h.db, clock: h.clock, alerts }, mia.authSubject);
+    expect(result.released).toEqual([{ memberId: seed.organiser.id, outcome: "left" }]);
+    expect((await statusOf(seed.organiser.id))?.status).toBe("left");
+    expect(await toFounder()).toEqual([]);
+  });
+
+  it("keeps the last organiser and her own light in the family, with no account, on Telegram", async () => {
+    await disableApiAccount({ db: h.db, clock: h.clock, alerts }, mia.authSubject);
+    const anna2 = await disableApiAccount({ db: h.db, clock: h.clock, alerts }, anna.authSubject);
+    expect(anna2.released).toEqual([{ memberId: annaId, outcome: "kept" }]);
+    expect(await statusOf(annaId)).toMatchObject({ status: "active", userId: null, leftAt: null });
+
+    const momGone = await disableApiAccount({ db: h.db, clock: h.clock, alerts }, mom.authSubject);
+    expect(momGone.released).toEqual([{ memberId: seed.member.id, outcome: "kept" }]);
+    expect(await statusOf(seed.member.id)).toMatchObject({ status: "active", userId: null });
+    // Anna keeps her Telegram link, so she can still be told: the founder hears nothing.
+    expect(await toFounder()).toEqual([]);
+  });
+
+  it("tells the founder when the organiser kept has no way left to be told", async () => {
+    await h.db
+      .update(members)
+      .set({ status: "left", leftAt: h.clock.now() })
+      .where(eq(members.id, annaId));
+    await h.db.delete(channelLinks).where(eq(channelLinks.memberId, seed.organiser.id));
+    const result = await disableApiAccount({ db: h.db, clock: h.clock, alerts }, mia.authSubject);
+    expect(result.released).toEqual([{ memberId: seed.organiser.id, outcome: "kept" }]);
+    const [alert] = await toFounder();
+    expect(alert).toMatchObject({ kind: "system", memberId: seed.organiser.id });
+    expect(result.after.outboundIds).toEqual([alert?.id]);
+  });
+
+  it("changes nothing more when run again, as Clerk's user.deleted would after the app", async () => {
+    await disableApiAccount({ db: h.db, clock: h.clock, alerts }, sam.authSubject);
+    const again = await disableApiAccount({ db: h.db, clock: h.clock, alerts }, sam.authSubject);
+    expect(again.released).toEqual([]);
+    expect(again.after.outboundIds).toEqual([]);
+    expect((await statusOf(samId))?.status).toBe("left");
+  });
+
+  it("leaves a deleted account no way back into a family", async () => {
+    await disableApiAccount({ db: h.db, clock: h.clock, alerts }, sam.authSubject);
+    expect(await refusal(leave(sam, samId))).toBe("not_found");
+    expect(await refusal(pause(sam, samId, true))).toBe("not_found");
   });
 });

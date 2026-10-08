@@ -28,7 +28,9 @@ function fixture() {
   const openDatabase = vi
     .fn<ClerkWebhookRuntime["openDatabase"]>()
     .mockResolvedValue({ db, close });
-  const disableAccount = vi.fn<ClerkWebhookRuntime["disableAccount"]>().mockResolvedValue();
+  const disableAccount = vi
+    .fn<ClerkWebhookRuntime["disableAccount"]>()
+    .mockResolvedValue({ released: [], after: { outboundIds: [], wakeMemberIds: [] } });
   const error = vi.fn<ReturnType<ClerkWebhookRuntime["logger"]>["error"]>();
   const clock = { now: () => NOW };
   const ports: ClerkWebhookRuntime = {
@@ -187,7 +189,15 @@ describe("the verified Clerk account lifecycle endpoint", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({ ok: true });
     expect(f.disableAccount).toHaveBeenCalledExactlyOnceWith(
-      { db: f.db, clock: f.clock },
+      {
+        db: f.db,
+        clock: f.clock,
+        alerts: {
+          adminConversationId: ENV.ADMIN_CONVERSATION_ID?.trim() || null,
+          publicBaseUrl: ENV.PUBLIC_BASE_URL,
+          pushSending: false,
+        },
+      },
       "user_trial",
     );
     expect(f.close).toHaveBeenCalledOnce();
