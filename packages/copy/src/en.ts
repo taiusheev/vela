@@ -258,4 +258,14 @@ export const en = {
     "It's been quiet at {name}'s today in {family}, and the notice to an organiser's phone did not arrive. Open: {link}",
   "admin.push_misconfigured":
     "Push to phones is failing: Vela's push credentials were refused, and no notice reaches a phone until they are fixed. Open: {link}",
+  "admin.ops_arrival_failed":
+    "{count} morning arrivals could not be delivered since {since} UTC ({environment}). Open: {link}",
+  "admin.ops_dropped":
+    "{count} messages were dropped before sending since {since} UTC ({environment}). Open: {link}",
+  "admin.ops_scheduler_missed":
+    "The scheduler missed {count} runs since {since} UTC ({environment}): mornings may be late. Open: {link}",
+  "admin.ops_ai_failing":
+    "AI calls are failing: {failed} of {total} in the last hour ({environment}). Answers still light the light. Open: {link}",
+  "admin.ops_digest":
+    "Vela {environment}, last 24 hours: {delivered} mornings delivered, {failed} failed; {answers} answers, {replies} replies, {readbacks} read-backs; {quiet} quiet notices, {resolved} resolved; {flags} flags, {stops} stops; AI {ai_calls} calls, {ai_failed} failed, US${ai_cost}; {dropped} dropped sends, {missed} missed scheduler runs. Open: {link}",
 } satisfies Record<string, string>;

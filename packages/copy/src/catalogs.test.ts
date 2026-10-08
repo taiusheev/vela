@@ -247,6 +247,31 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["admin.member_left_group", ["family", "name"]],
   ["admin.line_quota", ["limit", "link", "used"]],
   ["admin.line_quota_exhausted", ["link"]],
+  ["admin.ops_arrival_failed", ["count", "environment", "link", "since"]],
+  ["admin.ops_dropped", ["count", "environment", "link", "since"]],
+  ["admin.ops_scheduler_missed", ["count", "environment", "link", "since"]],
+  ["admin.ops_ai_failing", ["environment", "failed", "link", "total"]],
+  [
+    "admin.ops_digest",
+    [
+      "ai_calls",
+      "ai_cost",
+      "ai_failed",
+      "answers",
+      "delivered",
+      "dropped",
+      "environment",
+      "failed",
+      "flags",
+      "link",
+      "missed",
+      "quiet",
+      "readbacks",
+      "replies",
+      "resolved",
+      "stops",
+    ],
+  ],
   ["weekly_read.answered", ["answered", "days", "name"]],
   ["weekly_read.answered_one", ["answered", "days", "name"]],
   ["weekly_read.hello_mornings", ["mornings", "name"]],
@@ -271,11 +296,37 @@ const COUNT_KEYS: readonly (readonly [plural: MessageKey, one: MessageKey, noun:
 const ADMIN_PARAMETERS: ReadonlySet<string> = new Set(["family", "link", "name"]);
 
 /**
- * The one admin message that carries more: LINE's quota alert, whose two counts are of Vela's own
- * messages this month (05-line-flows.md §6), about no family and nothing anyone wrote.
+ * Admin messages that carry more, all counts of Vela's own operations, about no family and nothing
+ * anyone wrote: LINE's quota alert (05-line-flows.md §6), and the ops alerts and daily digest
+ * (technical plan 2.1, 2.2), which also name the environment.
  */
+const OPS_ALERT = new Set(["count", "since", "environment"]);
 const ADMIN_COUNTS: ReadonlyMap<MessageKey, ReadonlySet<string>> = new Map([
   ["admin.line_quota", new Set(["used", "limit"])],
+  ["admin.ops_arrival_failed", OPS_ALERT],
+  ["admin.ops_dropped", OPS_ALERT],
+  ["admin.ops_scheduler_missed", OPS_ALERT],
+  ["admin.ops_ai_failing", new Set(["failed", "total", "environment"])],
+  [
+    "admin.ops_digest",
+    new Set([
+      "environment",
+      "delivered",
+      "failed",
+      "answers",
+      "replies",
+      "readbacks",
+      "quiet",
+      "resolved",
+      "flags",
+      "stops",
+      "ai_calls",
+      "ai_failed",
+      "ai_cost",
+      "dropped",
+      "missed",
+    ]),
+  ],
 ]);
 
 /**
