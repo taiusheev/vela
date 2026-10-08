@@ -415,7 +415,7 @@ describe("cron", () => {
     expect(RECONCILE_CRON).toBe("*/15 * * * *");
     await runCron(createWorker(fake.runtime), RECONCILE_CRON);
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile"]);
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts"]);
     expect(fake.closed()).toBe(1);
   });
 
@@ -425,7 +425,7 @@ describe("cron", () => {
 
     await runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv());
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile", "recordChannelQuota"]);
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "recordChannelQuota", "opsAlerts"]);
     expect(argsOf(fake.calls, "recordChannelQuota")).toEqual([["line", LINE_QUOTA]]);
     expect(fake.quotaReads()).toBe(1);
     expect(fake.logs).toEqual([]);
@@ -442,7 +442,7 @@ describe("cron", () => {
       await runCron(createWorker(fake.runtime), RECONCILE_CRON, env);
 
       expect(env.LINE_CHANNEL).toBe("off");
-      expect(namesOf(fake.calls)).toEqual(["reconcile"]);
+      expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts"]);
       expect(fake.quotaReads()).toBe(0);
     },
   );
@@ -470,7 +470,7 @@ describe("cron", () => {
       runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv()),
     );
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile"]);
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts"]);
     expect(fake.logs).toEqual([
       {
         level: "error",
@@ -496,12 +496,32 @@ describe("cron", () => {
       runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv()),
     );
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile", "recordChannelQuota"]);
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "recordChannelQuota", "opsAlerts"]);
     expect(fake.logs).toEqual([
       { level: "error", event: "line_quota_failed", fields: { error: FAILED_QUERY_LABEL } },
     ]);
     expect(lines).toEqual([]);
     expect(JSON.stringify([lines, fake.logs])).not.toContain(FAILED_QUERY_WORDS);
+    expect(fake.closed()).toBe(1);
+  });
+
+  // Technical plan 2.1: an alert that cannot be sent never fails the reconcile.
+  it("logs an ops alert failure by its label alone, and the reconcile still succeeds", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        opsAlerts: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+
+    await runCron(createWorker(fake.runtime), RECONCILE_CRON);
+
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts"]);
+    expect(fake.logs).toEqual([
+      { level: "error", event: "ops_alerts_failed", fields: { error: FAILED_QUERY_LABEL } },
+    ]);
+    expect(JSON.stringify(fake.logs)).not.toContain(FAILED_QUERY_WORDS);
     expect(fake.closed()).toBe(1);
   });
 
@@ -528,14 +548,19 @@ describe("cron", () => {
 
     await runCron(createWorker(fake.runtime), NIGHTLY_CRON);
 
-    expect(namesOf(fake.calls)).toEqual(["rollupMetrics", "applyRetention", "writeSuggestions"]);
+    expect(namesOf(fake.calls)).toEqual([
+      "rollupMetrics",
+      "applyRetention",
+      "opsDigest",
+      "writeSuggestions",
+    ]);
   });
 
   // ADR-29: production's API is off, and its database has none of the API's migrations, so the
   // suggestions the app shows are written, and drafted by the model, only where the API is on.
   it.each([
-    ["staging", ["rollupMetrics", "applyRetention", "writeSuggestions"]],
-    ["production", ["rollupMetrics", "applyRetention"]],
+    ["staging", ["rollupMetrics", "applyRetention", "opsDigest", "writeSuggestions"]],
+    ["production", ["rollupMetrics", "applyRetention", "opsDigest"]],
   ] as const)(
     "writes tomorrow's suggestions in %s only if its API is served",
     async (environment, calls) => {
@@ -553,7 +578,7 @@ describe("cron", () => {
 
     await runCron(createWorker(fake.runtime), NIGHTLY_CRON, { ...testEnv, API_V1: "off" });
 
-    expect(namesOf(fake.calls)).toEqual(["rollupMetrics", "applyRetention"]);
+    expect(namesOf(fake.calls)).toEqual(["rollupMetrics", "applyRetention", "opsDigest"]);
   });
 
   it("still writes tomorrow's suggestions after retention failed, and fails the run by retention's label", async () => {
@@ -569,7 +594,12 @@ describe("cron", () => {
       cronFailure(createWorker(fake.runtime), NIGHTLY_CRON),
     );
 
-    expect(namesOf(fake.calls)).toEqual(["rollupMetrics", "applyRetention", "writeSuggestions"]);
+    expect(namesOf(fake.calls)).toEqual([
+      "rollupMetrics",
+      "applyRetention",
+      "opsDigest",
+      "writeSuggestions",
+    ]);
     expect(fake.logs).toEqual([
       {
         level: "error",

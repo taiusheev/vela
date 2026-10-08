@@ -443,6 +443,14 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       note("applyRetention");
       return given.applyRetention === undefined ? {} : given.applyRetention(deps);
     },
+    async opsAlerts(deps) {
+      note("opsAlerts");
+      return given.opsAlerts === undefined ? 0 : given.opsAlerts(deps);
+    },
+    async opsDigest(deps) {
+      note("opsDigest");
+      return given.opsDigest === undefined ? false : given.opsDigest(deps);
+    },
     async writeSuggestions(deps) {
       note("writeSuggestions");
       return given.writeSuggestions === undefined

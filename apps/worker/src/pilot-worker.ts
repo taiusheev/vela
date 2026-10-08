@@ -113,6 +113,7 @@ function parseJob(body: unknown): WorkerJob | null {
 async function runNightlyJobs(services: PilotServices, deps: Deps, env: PilotEnv): Promise<void> {
   const jobs: [job: string, run: () => Promise<unknown>][] = [
     ["applyRetention", () => services.applyRetention(deps)],
+    ["opsDigest", () => services.opsDigest(deps)],
     [
       "writeSuggestions",
       async () => {
@@ -281,6 +282,12 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
         if (controller.cron === RECONCILE_CRON) {
           await runtime.services.reconcile(handle.deps);
           await recordLineQuota(runtime.services, handle.deps, env);
+          // An alert that cannot be sent must never fail the reconcile that keeps mornings going.
+          try {
+            await runtime.services.opsAlerts(handle.deps);
+          } catch (error) {
+            handle.deps.logger.error("ops_alerts_failed", { error: errorLabel(error) });
+          }
         } else if (controller.cron === NIGHTLY_CRON) {
           await runtime.services.rollupMetrics(handle.deps);
           await runNightlyJobs(runtime.services, handle.deps, env);
