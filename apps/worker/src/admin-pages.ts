@@ -7,8 +7,10 @@
  * Nothing here queries or decides: it renders what `@vela/services` returned, escaped.
  */
 import type {
+  AdminAiWatch,
   AdminOverview,
   AdminOverviewRow,
+  AiWatchCounts,
   DeadLetterRow,
   FailedOutboundRow,
   FamilyPage,
@@ -226,6 +228,39 @@ ${
 }</section>`;
 }
 
+function aiWatchCells(row: AiWatchCounts): Html {
+  const failureRate = row.calls === 0 ? DASH : `${((row.failures / row.calls) * 100).toFixed(1)}%`;
+  const ms = (value: number | null) => (value === null ? DASH : `${Math.round(value)} ms`);
+  return html`<td>${row.calls}</td><td>${row.failures} (${failureRate})</td><td>US$${row.knownCostUsd.toFixed(6)} (${row.costRecorded}/${row.calls} recorded)</td><td>${ms(row.averageLatencyMs)}</td><td>${ms(row.p95LatencyMs)}</td><td>${row.latencyRecorded}/${row.calls}</td>`;
+}
+
+function aiWatchSection(data: AdminAiWatch): Html {
+  const headings = [
+    "Calls",
+    "Failures (rate)",
+    "Recorded estimated cost",
+    "Average latency",
+    "p95 latency",
+    "Latency recorded",
+  ];
+  return html`<section id="ai-watch"><h2>AI cost and failures</h2>
+<p>Seven UTC calendar days, read at ${instant(data.asOf)}. Today is partial. Costs are recorded estimates, not a provider bill; calls without a cost are omitted from the sum. Latency includes failed calls when recorded; p95 estimates the response time below which 95% of calls fall.</p>
+${table(
+  ["UTC day", ...headings],
+  data.days.map((row) => html`<tr><td>${row.day}</td>${aiWatchCells(row)}</tr>`),
+)}
+<h3>Today's calls by kind (UTC)</h3>
+${
+  data.byCall.length === 0
+    ? html`<p>No AI calls recorded today.</p>`
+    : table(
+        ["Call kind", ...headings],
+        data.byCall.map((row) => html`<tr><td>${row.call}</td>${aiWatchCells(row)}</tr>`),
+      )
+}
+<p class="muted">No family messages, prompts, outputs or provider error text are read for these totals. This view reports usage; it does not enforce a spending cap.</p></section>`;
+}
+
 export function renderOverview(
   overview: AdminOverview,
   failedOutbound: readonly FailedOutboundRow[],
@@ -246,6 +281,7 @@ ${table(
   ],
   overview.families.map(overviewRow),
 )}
+${aiWatchSection(overview.aiWatch)}
 ${precisionSection(overview.precision)}
 ${lineQuotaSection(overview.lineQuota)}
 ${failedOutboundSection(failedOutbound)}

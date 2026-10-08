@@ -68,6 +68,7 @@ import {
 } from "@vela/db";
 import { and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
+import { type AdminAiWatch, loadAdminAiWatch } from "./admin-ai-watch.ts";
 import {
   ADMIN_CHANNEL,
   ADMIN_LANG,
@@ -1485,6 +1486,7 @@ async function overviewRow(
 
 /** The overview: every family, the precision counts, and LINE's quota. */
 export interface AdminOverview {
+  aiWatch: AdminAiWatch;
   families: AdminOverviewRow[];
   /** Quiet mornings by month across every family, newest first; counts only. */
   precision: QuietPrecisionMonth[];
@@ -1518,6 +1520,7 @@ export async function loadAdminOverview(deps: Deps, ctx: AdminContext): Promise<
   }
   return {
     families: rows,
+    aiWatch: await loadAdminAiWatch(deps),
     precision: await quietPrecision(deps.db, now, null),
     lineQuota: await loadChannelQuota(deps, "line"),
   };

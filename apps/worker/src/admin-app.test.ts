@@ -150,6 +150,7 @@ describe("the admin pages", () => {
         loadAdminOverview: async () => ({
           families: [],
           precision: [],
+          aiWatch: { asOf: new Date("2026-10-08T00:00:00Z"), days: [], byCall: [] },
           lineQuota: { limit: 3000, used: 2100, readAt: new Date("2026-10-12T01:30:00.000Z") },
         }),
       },
