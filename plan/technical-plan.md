@@ -29,7 +29,7 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 
 | # | Step | Done when | Needs | Status |
 |---|---|---|---|---|
-| 1.1 | Production preflight command | One command lists every production variable, secret, binding, notice blank, R2 lifecycle rule and migration state, and says PASS or what is missing; no values printed | — | Next |
+| 1.1 | Production preflight command | `pnpm --filter @vela/worker preflight -- --env production`, or the manual `preflight` workflow: placeholders, the Workers' own config readers on real secret names, queues, Hyperdrive, bucket lifecycle; PASS or what is missing, no values printed (migrations are applied by the deploy job) | — | Done: staging passes 18/18 |
 | 1.2 | Domain to the Vela Cloudflare account | vela-light.com in the Workers account; routes, Full-strict SSL, HSTS, DNSSEC | F (17 Oct) | Waiting |
 | 1.3 | Clerk production instance on the domain | `sk_live_` on production; webhook signed; `user.deleted` proven | F | — |
 | 1.4 | Production secrets and storage | content key, OpenAI key, Telegram/LINE secrets, R2 bucket with 32-day lifecycle on asks/replies/device | F (keys at hidden prompts) | — |
@@ -77,7 +77,7 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 | 5.4 | Push on | Expo + APNs + FCM; quiet notice and flags reach app-only organisers; "one moment a day" respected | F (Expo/Firebase/Apple) | — |
 | 5.5 | Fast fixes without a store review | EAS Update channel per environment, JS-only fixes, policy in `infra/runbooks/ota-policy.md` | — | — |
 | 5.6 | Android | Play internal track; same journeys | F (Play US$25) | — |
-| 5.7 | Store and privacy pack | listings en/zh-TW, Apple privacy answers, Google data safety, review notes, checked against the code | — | Next |
+| 5.7 | Store and privacy pack | listings en/zh-TW, Apple privacy answers, Google data safety, review notes, checked against the code | — | Done: `plan/materials/stores/` (zh-TW to native review; Health answer for counsel) |
 
 ### 6. Data, privacy and security
 
