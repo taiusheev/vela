@@ -17,3 +17,17 @@ tags:
 - assertVisible: "t.aiusheev@gmail.com"
 - assertVisible: "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
 - assertNotVisible: "Set it up"
+- tapOn: "Get help or request your data"
+- assertVisible: "Help"
+- assertVisible: "Vela status"
+- assertVisible: "This is an example. No live status is checked."
+- assertVisible: "Trouble signing in?"
+- scrollUntilVisible:
+    element: "Email Vela support"
+    direction: DOWN
+- assertVisible: "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
+- scrollUntilVisible:
+    element: "Back"
+    direction: UP
+- tapOn: "Back"
+- assertVisible: "You"

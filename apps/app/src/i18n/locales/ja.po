@@ -307,6 +307,14 @@ msgstr ""
 msgid "A hello from Vela"
 msgstr ""
 
+#: src/components/service-status.tsx
+msgid "A live connection has not been set up."
+msgstr ""
+
+#: app/help.tsx
+msgid "A morning message is missing"
+msgstr ""
+
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr ""
@@ -317,6 +325,10 @@ msgstr ""
 
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
+msgstr ""
+
+#: app/help.tsx
+msgid "A quiet notice means Vela has not recorded an answer. Call or message your parent yourself. Vela cannot visit your parent or send help."
 msgstr ""
 
 #: src/data/ask.ts
@@ -341,6 +353,10 @@ msgstr ""
 
 #: src/data/ask.ts
 msgid "A word to teach"
+msgstr ""
+
+#: app/help.tsx
+msgid "About a quiet notice"
 msgstr ""
 
 #: app/(tabs)/you.tsx
@@ -454,6 +470,7 @@ msgid "Ask on Telegram"
 msgstr ""
 
 #: app/(tabs)/you.tsx
+#: app/help.tsx
 msgid "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
 msgstr ""
 
@@ -504,6 +521,7 @@ msgstr ""
 msgid "away · {day}"
 msgstr ""
 
+#: app/help.tsx
 #: src/components/back-button.tsx
 msgid "Back"
 msgstr ""
@@ -545,6 +563,22 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Change email or number"
+msgstr ""
+
+#: src/components/service-status.tsx
+msgid "Check again"
+msgstr ""
+
+#: app/help.tsx
+msgid "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
+msgstr ""
+
+#: app/help.tsx
+msgid "Check Today and your parent's usual chat. If the message still has not arrived, contact Vela support. You can always contact your family directly."
+msgstr ""
+
+#: src/components/service-status.tsx
+msgid "Checking Vela…"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -674,6 +708,10 @@ msgstr ""
 msgid "Deleting…"
 msgstr ""
 
+#: app/help.tsx
+msgid "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
+msgstr ""
+
 #: app/(tabs)/index.tsx
 msgid "Dismiss"
 msgstr ""
@@ -705,6 +743,10 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Email"
+msgstr ""
+
+#: app/help.tsx
+msgid "Email Vela support"
 msgstr ""
 
 #: app/(tabs)/you.tsx
@@ -759,6 +801,10 @@ msgstr ""
 msgid "First ask"
 msgstr ""
 
+#: src/components/service-status.tsx
+msgid "For a particular morning message, check Today or your parent's chat."
+msgstr ""
+
 #: src/auth/phone.ts
 msgid "France"
 msgstr ""
@@ -785,6 +831,7 @@ msgid "Get help connecting"
 msgstr ""
 
 #: app/(tabs)/you.tsx
+#: app/help.tsx
 msgid "Get help or request your data"
 msgstr ""
 
@@ -828,6 +875,11 @@ msgstr ""
 
 #: src/components/nearby-editor.tsx
 msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
+msgstr ""
+
+#: app/help.tsx
+#: app/sign-in.tsx
+msgid "Help"
 msgstr ""
 
 #. stands in for her name
@@ -1989,6 +2041,7 @@ msgid "That link could not open. Contact Vela at the address below."
 msgstr ""
 
 #: app/(tabs)/you.tsx
+#: app/help.tsx
 msgid "That link could not open. Use the address above to contact the founder."
 msgstr ""
 
@@ -2176,6 +2229,10 @@ msgstr ""
 msgid "This iPhone could not keep a draft. Leave this screen open until your send succeeds."
 msgstr ""
 
+#: src/components/service-status.tsx
+msgid "This is an example. No live status is checked."
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "This is the example family, so nobody left."
 msgstr ""
@@ -2290,6 +2347,10 @@ msgstr ""
 
 #: app/exchange/[id].tsx
 msgid "Too many photos for now. Try again tomorrow."
+msgstr ""
+
+#: app/help.tsx
+msgid "Trouble signing in?"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
@@ -2443,8 +2504,20 @@ msgstr ""
 msgid "Vela pilot"
 msgstr ""
 
+#: src/components/service-status.tsx
+msgid "Vela reports a service problem. Messages may be delayed."
+msgstr ""
+
 #: src/data/precision.ts
 msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
+msgstr ""
+
+#: app/help.tsx
+msgid "Vela status"
+msgstr ""
+
+#: src/components/service-status.tsx
+msgid "Vela status is unavailable. Try again shortly."
 msgstr ""
 
 #: app/delete-account.tsx
@@ -2459,6 +2532,10 @@ msgstr ""
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Vela suggests · from her own words"
+msgstr ""
+
+#: src/components/service-status.tsx
+msgid "Vela's last scheduled check completed."
 msgstr ""
 
 #: src/auth/phone.ts

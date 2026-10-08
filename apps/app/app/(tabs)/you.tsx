@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiBaseUrl, apiConfigured } from "../../src/api/client.ts";
-import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL, SUPPORT_URL } from "../../src/api/support.ts";
+import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL } from "../../src/api/support.ts";
 import { useAccount } from "../../src/auth/clerk.tsx";
 import { FamilyAction, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
@@ -22,6 +22,7 @@ import { ConfirmationDialog } from "../../src/components/confirmation-dialog.tsx
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { LocaleChips } from "../../src/components/locale-chips.tsx";
+import { ServiceStatus } from "../../src/components/service-status.tsx";
 import { SetUpPhone } from "../../src/components/set-up-phone.tsx";
 import { TestSignInDetails } from "../../src/components/test-sign-in-details.tsx";
 import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../../src/components/ui.tsx";
@@ -168,6 +169,7 @@ function FamilyYou({ day }: { day: TodayView }) {
       {/* The tab's own name, so the title reads as the tab bar does. */}
       <ScreenHeading title={<Trans context="tab">You</Trans>} />
       <FamilyChooser day={day} />
+      <ServiceStatus compact />
       <View
         style={{
           flexDirection: "row",
@@ -440,7 +442,7 @@ function FamilyYou({ day }: { day: TodayView }) {
         <FamilyAction
           icon="mail"
           title={t`Get help or request your data`}
-          onPress={() => void openLink(SUPPORT_URL)}
+          onPress={() => router.push("/help")}
         />
         <Words variant="caption" selectable>
           {SUPPORT_EMAIL}

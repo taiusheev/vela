@@ -160,6 +160,7 @@ function NoAccounts() {
       ) : null}
       <LocaleChips />
       <SetupHelp />
+      <SecondaryButton label={t`Help`} onPress={() => router.push("/help")} />
     </View>
   );
 }
@@ -632,6 +633,7 @@ function CodeSignIn() {
           an empty view, and Clerk uses its own native check there.
         */}
         <SetupHelp />
+        <SecondaryButton label={t`Help`} onPress={() => router.push("/help")} />
         <View nativeID="clerk-captcha" style={{ alignItems: "center" }} />
       </ScrollView>
     </>
