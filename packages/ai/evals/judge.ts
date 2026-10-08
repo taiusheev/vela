@@ -10,7 +10,7 @@
  * failed or errored case output, so it cannot move flag recall.
  */
 import { z } from "zod";
-import { OPENAI_CHAT_URL, openAiPriceFor } from "../src/openai.ts";
+import { OPENAI_CHAT_URL, OPENAI_SNAPSHOT_FOR, openAiPriceFor } from "../src/openai.ts";
 import type { EvalCase } from "./cases.ts";
 import { judgeRubric } from "./suite.ts";
 
@@ -76,7 +76,7 @@ export function createJudge(options: JudgeOptions): Judge {
     output: unknown,
   ): Promise<{ judgement: Judgement; cost: number }> {
     const body = JSON.stringify({
-      model: JUDGE_MODEL,
+      model: OPENAI_SNAPSHOT_FOR[JUDGE_MODEL],
       store: false,
       max_completion_tokens: JUDGE_MAX_TOKENS,
       reasoning_effort: "low",
