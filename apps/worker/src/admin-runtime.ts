@@ -26,6 +26,7 @@ import {
   type FailedOutboundRow,
   type FamilyPage,
   loadAdminOverview,
+  loadAdminTestWeek,
   loadAdminTrialReport,
   loadFailedOutbound,
   loadFamilyPage,
@@ -43,6 +44,7 @@ import {
   type SetAwayInput,
   sendWeeklyRead,
   setAway,
+  type TestWeekReport,
   type TrialReport,
 } from "@vela/services";
 import { type AccessVerifier, createAccessVerifier } from "./access.ts";
@@ -54,6 +56,12 @@ export type WaitlistView = Awaited<ReturnType<typeof loadWaitlist>>;
 
 /** Every services entry point the admin Worker calls, on the ports it holds (code design §9). */
 export interface AdminServices {
+  /** The test week as a checklist (launch gate 1). */
+  loadAdminTestWeek(
+    deps: AdminDeps,
+    ctx: AdminContext,
+    familyId: string,
+  ): Promise<TestWeekReport | null>;
   loadAdminTrialReport(
     deps: AdminDeps,
     ctx: AdminContext,
@@ -187,6 +195,7 @@ export function servicesDeps(ports: AdminDeps): Deps {
 }
 
 const services: AdminServices = {
+  loadAdminTestWeek: (deps, ctx, familyId) => loadAdminTestWeek(servicesDeps(deps), ctx, familyId),
   loadAdminTrialReport: (deps, ctx, familyId, days) =>
     loadAdminTrialReport(servicesDeps(deps), ctx, familyId, days),
   loadAdminOverview: (deps, ctx) => loadAdminOverview(servicesDeps(deps), ctx),

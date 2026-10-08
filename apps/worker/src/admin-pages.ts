@@ -573,7 +573,7 @@ export function noticeFor(result: string | null): Html | null {
 export function renderFamilyPage(data: FamilyPage, notice: Html | null): Response {
   const body = html`<h1>${data.family.name}</h1>
 <p class="lede"><a href="${ADMIN_PATH}">All families</a> ·${data.family.region} · ${data.family.language} · ${data.family.country} · created ${instant(data.family.createdAt)}</p>
-<p><a href="${familyHref(data.family.id)}/trial">Trial counts</a></p>
+<p><a href="${familyHref(data.family.id)}/trial">Trial counts</a> · <a href="${familyHref(data.family.id)}/test-week">Test week checklist</a></p>
 ${notice}
 ${membersSection(data)}
 ${inviteSection(data)}
