@@ -86,3 +86,7 @@ Before real-family activation, delete a synthetic Clerk account through the prov
 ## How to know it worked
 
 For a Worker release: the CI production job is green; each Worker's version in the Cloudflare dashboard matches the tag; the smoke test passed; the 30-minute watch was clean; and the next eligible arrival is delivered on time. For trial activation, every applicable readiness gate also has evidence, the signed iPhone build matches the tested commit and the actual family loop has been observed. None of those results is inferred from `/healthz`, a capability response, a host decoder test or an EAS handoff.
+
+## Migrations: expand, then contract
+
+The deploy job migrates the database before it deploys the Workers, so for a few minutes the previous Workers run against the new schema, and a rollback runs older code against it for longer. A migration must be safe for the code released before it: add tables and nullable or defaulted columns first, switch the code in that release, and drop, rename or retype only in a later release once nothing reads the old shape. `packages/db/src/migration-safety.test.ts` fails `pnpm check` for a migration after 0012 that drops, renames or retypes without a `-- contract: <reason>` line, or adds a required column without a default (or sets one required) without a `-- reviewed: <reason>` line (technical plan 8.2).
