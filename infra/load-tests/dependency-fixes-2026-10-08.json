@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-08",
+  "changes": {
+    "shell-quote": "1.11.0",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2",
+    "undici": "7.29.1"
+  },
+  "auditBefore": {
+    "critical": 1,
+    "high": 7,
+    "moderate": 11,
+    "low": 3
+  },
+  "auditAfter": {
+    "info": 0,
+    "low": 0,
+    "moderate": 6,
+    "high": 2,
+    "critical": 0
+  },
+  "remainingHigh": [
+    {
+      "package": "node-forge",
+      "patchedVersions": null,
+      "url": "https://github.com/advisories/GHSA-86w9-cpqp-85rv"
+    },
+    {
+      "package": "braces",
+      "patchedVersions": null,
+      "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+    }
+  ],
+  "auditExitCode": 1,
+  "advisorySuppressions": false,
+  "status": "Compatible fixes prepared; complete source/CI validation pending. Unpatched high advisories remain open in scanner PR #43.",
+  "advisoryFixes": {
+    "shell-quote": [
+      "GHSA-pqg4-j6r4-53mv"
+    ],
+    "sharp": [
+      "GHSA-rgj7-g3m4-5g8c",
+      "GHSA-wq5f-xc86-pv6w"
+    ],
+    "source-map-js": [
+      "GHSA-68fv-2mgg-jv7q"
+    ],
+    "undici": [
+      "GHSA-rfgv-xxqx-mfg5",
+      "GHSA-w293-vg96-wgc3"
+    ]
+  },
+  "removalRule": "Remove an override when every parent in the active lockfile natively resolves a non-vulnerable version and a fresh audit confirms it. Sharp override covers only the current 0.35 line.",
+  "validation": {
+    "frozenInstall": "passed with original equivalent resolution; final selector metadata must be rechecked",
+    "sharpNativePng": "passed",
+    "undiciLoopbackHttp": "passed",
+    "claudeReadOnlyReview": "no blocking findings; narrowed Sharp override to existing 0.35 line"
+  }
+}
