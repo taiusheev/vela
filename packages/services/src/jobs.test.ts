@@ -692,6 +692,7 @@ describe("rollupMetrics", () => {
 
 describe("applyRetention", () => {
   const RULES = [
+    "dead_letters_deleted",
     "account_link_challenges_deleted",
     "api_request_receipts_deleted",
     "families_deleted",

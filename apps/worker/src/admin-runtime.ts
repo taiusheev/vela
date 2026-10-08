@@ -20,6 +20,7 @@ import {
   type Config,
   type CreateInviteInput,
   createInvite,
+  type DeadLetterRow,
   type Deps,
   deleteFamily,
   endAway,
@@ -28,6 +29,7 @@ import {
   loadAdminOverview,
   loadAdminTestWeek,
   loadAdminTrialReport,
+  loadDeadLetters,
   loadFailedOutbound,
   loadFamilyPage,
   loadWaitlist,
@@ -36,9 +38,11 @@ import {
   markLeft,
   type RecordConsentInput,
   type RecordContactConsentInput,
+  type ReplayRequest,
   recordConsent,
   recordContactConsent,
   removeContact,
+  requestDeadLetterReplay,
   type SendWeeklyReadInput,
   type SendWeeklyReadResult,
   type SetAwayInput,
@@ -69,6 +73,9 @@ export interface AdminServices {
     days: 7 | 30,
   ): Promise<TrialReport | null>;
   loadAdminOverview(deps: AdminDeps, ctx: AdminContext): Promise<AdminOverview>;
+  /** Jobs that failed every retry, without their content, and asking for one to be sent again. */
+  loadDeadLetters(deps: AdminDeps): Promise<DeadLetterRow[]>;
+  requestDeadLetterReplay(deps: AdminDeps, id: string): Promise<ReplayRequest>;
   loadFailedOutbound(deps: AdminDeps, ctx: AdminContext): Promise<FailedOutboundRow[]>;
   /** The website's waitlist: who asked to hear when Vela opens, newest first. */
   loadWaitlist(deps: AdminDeps): Promise<WaitlistView>;
@@ -199,6 +206,8 @@ const services: AdminServices = {
   loadAdminTrialReport: (deps, ctx, familyId, days) =>
     loadAdminTrialReport(servicesDeps(deps), ctx, familyId, days),
   loadAdminOverview: (deps, ctx) => loadAdminOverview(servicesDeps(deps), ctx),
+  loadDeadLetters: (deps) => loadDeadLetters(deps),
+  requestDeadLetterReplay: (deps, id) => requestDeadLetterReplay(servicesDeps(deps), id),
   loadFailedOutbound: (deps, ctx) => loadFailedOutbound(servicesDeps(deps), ctx),
   loadWaitlist: (deps) => loadWaitlist(deps.db),
   loadFamilyPage: (deps, ctx, familyId) => loadFamilyPage(servicesDeps(deps), ctx, familyId),

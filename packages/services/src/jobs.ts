@@ -72,6 +72,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
+import { deleteOldDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { clockMinutesBetween, medianTimeAround } from "./format.ts";
@@ -855,6 +856,9 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   cutoff5y.setUTCFullYear(cutoff5y.getUTCFullYear() - PROOF_RETENTION_YEARS);
   const counts: Record<string, number> = {};
   const db = deps.db;
+
+  // Dead jobs, which may hold a family's words, are kept 14 days at most (technical plan 2.7).
+  counts.dead_letters_deleted = await deleteOldDeadLetters(deps);
 
   counts.account_link_challenges_deleted = (
     await db

@@ -213,8 +213,9 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
     const read = await withDeps(c, async (deps) => ({
       overview: await runtime.services.loadAdminOverview(deps, ctx),
       failedOutbound: await runtime.services.loadFailedOutbound(deps, ctx),
+      deadLetters: await runtime.services.loadDeadLetters(deps),
     }));
-    return renderOverview(read.overview, read.failedOutbound);
+    return renderOverview(read.overview, read.failedOutbound, read.deadLetters);
   });
 
   /**
@@ -294,6 +295,17 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
         "That report address is invalid.",
       );
     }
+  });
+
+  // Technical plan 2.7: the founder asks for one dead job to be sent again; the pilot Worker's next
+  // reconcile sends it, since only it holds every queue. Asking twice changes nothing.
+  admin.post("/dead-letters/:id/replay", async (c) => {
+    const id = c.req.param("id");
+    const result = await withDeps(c, (deps) => runtime.services.requestDeadLetterReplay(deps, id));
+    if (result === "not_found") {
+      return renderMessage(404, "No such dead letter", "It may have been deleted after 14 days.");
+    }
+    return c.redirect(`${ADMIN_PATH}#dead-letters`, 303);
   });
 
   admin.post("/families/:familyId/:action", async (c) => {

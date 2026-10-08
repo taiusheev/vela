@@ -44,6 +44,8 @@ import {
   channelLinks,
   chips,
   consents,
+  DEAD_LETTER_JOB_TYPES,
+  deadLetters,
   deletions,
   events,
   exchanges,
@@ -495,6 +497,11 @@ async function seedEveryTable(): Promise<void> {
   });
   await db.insert(metricsDaily).values({ day: "2026-09-13", familyId, memberId: seed.parent.id });
   await db.insert(waitlistSignups).values({ email: "mia@example.com", language: "en" });
+  await db.insert(deadLetters).values({
+    messageId: "dead-1",
+    jobType: "deliver",
+    job: { type: "deliver", outboundId: "o-1" },
+  });
 }
 
 describe("migrations", () => {
@@ -2039,6 +2046,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "users", column: "language", values: LANGS },
     { table: "waitlist_signups", column: "language", values: ["en", "zh-TW"] },
     { table: "waitlist_signups", column: "role", values: ["organiser", "parent", "other"] },
+    { table: "dead_letters", column: "job_type", values: DEAD_LETTER_JOB_TYPES },
     { table: "families", column: "region", values: REGIONS },
     { table: "families", column: "language", values: LANGS },
     { table: "families", column: "plan", values: PLANS },

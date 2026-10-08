@@ -221,6 +221,8 @@ export const zhTW: Record<keyof typeof en, string> = {
     "自 UTC {since} 起，有 {count} 則訊息在送出前被丟棄（{environment}）。查看： {link}",
   "admin.ops_scheduler_missed":
     "自 UTC {since} 起，排程漏跑了 {count} 次（{environment}），早上的訊息可能會延遲。查看： {link}",
+  "admin.ops_dead_letter":
+    "自 UTC {since} 起，有 {count} 個佇列工作重試全部失敗，已保存為無法投遞的工作（{environment}）。請到總覽查看，必要時重新送出。查看： {link}",
   "admin.ops_ai_failing":
     "AI 呼叫正在失敗：過去一小時 {total} 次中有 {failed} 次失敗（{environment}）。回答仍會點亮燈。查看： {link}",
   "admin.ops_digest":

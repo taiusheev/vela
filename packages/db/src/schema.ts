@@ -1554,6 +1554,41 @@ export const waitlistSignups = pgTable(
   ],
 );
 
+/** The job types a queue carries, as the pilot Worker's queue handler reads them. */
+export const DEAD_LETTER_JOB_TYPES = [
+  "deliver",
+  "ingest_answer_media",
+  "ingest_exchange_media",
+  "understand_answer",
+  "handle_inbound",
+] as const;
+
+/**
+ * Queue jobs that failed every retry and reached the environment's dead-letter queue (technical
+ * plan 2.7). Most jobs name a row reconcile drives again, but a LINE inbound job is the only copy
+ * of her answer once LINE has been answered, so each dead job is kept here, sealed, for 14 days,
+ * shown to the founder, and sent again once when the founder asks (`replay_requested_at`, then
+ * reconcile sets `replayed_at` as it re-sends). `message_id` is the queue's id, so a dead-letter
+ * message delivered twice is kept once.
+ */
+export const deadLetters = pgTable(
+  "dead_letters",
+  {
+    id: uuidv7Id(),
+    messageId: text("message_id").notNull(),
+    jobType: text("job_type", { enum: DEAD_LETTER_JOB_TYPES }).notNull(),
+    job: sealedJsonb<JsonObject>("dead_letters.job").$type<JsonObject>().notNull(),
+    failedAt: timestamptz("failed_at").notNull().defaultNow(),
+    replayRequestedAt: timestamptz("replay_requested_at"),
+    replayedAt: timestamptz("replayed_at"),
+  },
+  (t) => [
+    unique("dead_letters_message_id_key").on(t.messageId),
+    index("dead_letters_failed_at_idx").on(t.failedAt),
+    check("dead_letters_job_type_check", isOneOf(t.jobType, DEAD_LETTER_JOB_TYPES)),
+  ],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   members: many(members),
 }));
@@ -1757,5 +1792,6 @@ export type NewFlag = typeof flags.$inferInsert;
 export type AdminAccessLogEntry = typeof adminAccessLog.$inferSelect;
 export type NewAdminAccessLogEntry = typeof adminAccessLog.$inferInsert;
 export type WaitlistSignup = typeof waitlistSignups.$inferSelect;
+export type DeadLetter = typeof deadLetters.$inferSelect;
 export type MetricsDaily = typeof metricsDaily.$inferSelect;
 export type NewMetricsDaily = typeof metricsDaily.$inferInsert;

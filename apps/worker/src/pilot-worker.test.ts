@@ -415,7 +415,7 @@ describe("cron", () => {
     expect(RECONCILE_CRON).toBe("*/15 * * * *");
     await runCron(createWorker(fake.runtime), RECONCILE_CRON);
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts"]);
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts", "claimDeadLetterReplays"]);
     expect(fake.closed()).toBe(1);
   });
 
@@ -425,7 +425,12 @@ describe("cron", () => {
 
     await runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv());
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile", "recordChannelQuota", "opsAlerts"]);
+    expect(namesOf(fake.calls)).toEqual([
+      "reconcile",
+      "recordChannelQuota",
+      "opsAlerts",
+      "claimDeadLetterReplays",
+    ]);
     expect(argsOf(fake.calls, "recordChannelQuota")).toEqual([["line", LINE_QUOTA]]);
     expect(fake.quotaReads()).toBe(1);
     expect(fake.logs).toEqual([]);
@@ -442,7 +447,7 @@ describe("cron", () => {
       await runCron(createWorker(fake.runtime), RECONCILE_CRON, env);
 
       expect(env.LINE_CHANNEL).toBe("off");
-      expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts"]);
+      expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts", "claimDeadLetterReplays"]);
       expect(fake.quotaReads()).toBe(0);
     },
   );
@@ -470,7 +475,7 @@ describe("cron", () => {
       runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv()),
     );
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts"]);
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts", "claimDeadLetterReplays"]);
     expect(fake.logs).toEqual([
       {
         level: "error",
@@ -496,7 +501,12 @@ describe("cron", () => {
       runCron(createWorker(fake.runtime), RECONCILE_CRON, lineOnEnv()),
     );
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile", "recordChannelQuota", "opsAlerts"]);
+    expect(namesOf(fake.calls)).toEqual([
+      "reconcile",
+      "recordChannelQuota",
+      "opsAlerts",
+      "claimDeadLetterReplays",
+    ]);
     expect(fake.logs).toEqual([
       { level: "error", event: "line_quota_failed", fields: { error: FAILED_QUERY_LABEL } },
     ]);
@@ -517,7 +527,7 @@ describe("cron", () => {
 
     await runCron(createWorker(fake.runtime), RECONCILE_CRON);
 
-    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts"]);
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts", "claimDeadLetterReplays"]);
     expect(fake.logs).toEqual([
       { level: "error", event: "ops_alerts_failed", fields: { error: FAILED_QUERY_LABEL } },
     ]);
@@ -823,5 +833,90 @@ describe("the API under /v1", () => {
       },
     ]);
     expect(notice.status).toBe(200);
+  });
+});
+
+// Technical plan 2.7: jobs that failed every retry are kept, and sent again once when asked.
+describe("dead letters", () => {
+  const INBOUND_JOB = {
+    type: "deliver",
+    outboundId: "01a10fac-fe51-7e19-bd6c-257bca3b83f7",
+  };
+
+  it("keeps each dead job and acks it", async () => {
+    const fake = createFakePilotRuntime();
+    const outcome = batchOf("vela-dead-letter-staging", [INBOUND_JOB]);
+
+    await runQueue(createWorker(fake.runtime), outcome);
+
+    expect(namesOf(fake.calls)).toEqual(["keepDeadLetter"]);
+    expect(argsOf(fake.calls, "keepDeadLetter")).toEqual([["message-0", "deliver"]]);
+    expect(outcome.acked).toEqual(["message-0"]);
+  });
+
+  it("retries a dead job it could not keep in five minutes, logging the label alone", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        keepDeadLetter: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+    const outcome = batchOf("vela-dead-letter", [INBOUND_JOB]);
+
+    await runQueue(createWorker(fake.runtime), outcome);
+
+    expect(outcome.retried).toEqual(["message-0"]);
+    expect(outcome.delays.get("message-0")).toBe(300);
+    expect(JSON.stringify(fake.logs)).not.toContain(FAILED_QUERY_WORDS);
+  });
+
+  it("sends an asked-for dead job again to its own queue after reconcile", async () => {
+    const sent: unknown[] = [];
+    const fake = createFakePilotRuntime({
+      services: {
+        claimDeadLetterReplays: async () => [
+          { id: "dead-1", jobType: "deliver", job: INBOUND_JOB },
+        ],
+      },
+    });
+    const env = {
+      ...testEnv,
+      OUTBOUND_QUEUE: {
+        send: async (body: unknown) => {
+          sent.push(body);
+        },
+      },
+    } as unknown as PilotEnv;
+
+    await runCron(createWorker(fake.runtime), RECONCILE_CRON, env);
+
+    expect(sent).toEqual([INBOUND_JOB]);
+    expect(namesOf(fake.calls)).not.toContain("releaseDeadLetterReplay");
+  });
+
+  it("gives a replay back when its send fails or its queue is not bound here", async () => {
+    const fake = createFakePilotRuntime({
+      services: {
+        claimDeadLetterReplays: async () => [
+          { id: "dead-1", jobType: "deliver", job: INBOUND_JOB },
+          { id: "dead-2", jobType: "handle_inbound", job: { type: "handle_inbound", events: [] } },
+        ],
+      },
+    });
+    const env = {
+      ...testEnv,
+      OUTBOUND_QUEUE: {
+        send: async () => {
+          throw new Error("queue down");
+        },
+      },
+      INBOUND_QUEUE: undefined,
+    } as unknown as PilotEnv;
+
+    await runCron(createWorker(fake.runtime), RECONCILE_CRON, env);
+
+    expect(argsOf(fake.calls, "releaseDeadLetterReplay")).toEqual([["dead-1"], ["dead-2"]]);
+    expect(fake.closed()).toBe(1);
   });
 });
