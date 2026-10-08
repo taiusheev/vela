@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, radius, space } from "../../theme/tokens.ts";
 import { Words } from "../ui.tsx";
@@ -53,12 +53,13 @@ export function ChoiceTile({
 export function ScreenHeading({
   title,
   subtitle,
-  trailing,
+  illustration,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
-  trailing?: ReactNode;
+  illustration?: ReactNode;
 }) {
+  const { fontScale } = useWindowDimensions();
   return (
     <View style={{ gap: space.s }}>
       <View
@@ -70,9 +71,11 @@ export function ScreenHeading({
         }}
       >
         <View style={{ flex: 1 }}>
-          <Words variant="display">{title}</Words>
+          <Words variant="display" accessibilityRole="header">
+            {title}
+          </Words>
         </View>
-        {trailing}
+        {fontScale > 1.3 ? null : illustration}
       </View>
       {subtitle === undefined ? null : (
         <Words variant="body" tone="ink2">
@@ -177,7 +180,9 @@ export function EmptyMoment({
     <View style={{ alignItems: "center", gap: space.xl, paddingVertical: space.xxl }}>
       <FamilyScene kind={kind} width={184} />
       <View style={{ alignSelf: "stretch", gap: space.m }}>
-        <Words variant="title">{title}</Words>
+        <Words variant="title" accessibilityRole="header">
+          {title}
+        </Words>
         <Words variant="body" tone="ink2">
           {detail}
         </Words>

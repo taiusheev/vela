@@ -25,12 +25,13 @@ Warm cream, deep warm charcoal, one amber light, and a cool teal for the things 
 | `color/surface-2` | #F3EDE4 | #302A25 | secondary fills | — |
 | `color/ink` | #1E1A16 | #F3EDE4 | primary text | 16.2:1 on bg |
 | `color/ink-2` | #5A534B | #B9B0A5 | secondary text | 7.1:1 on bg |
-| `color/ink-3` | #7A7267 | #8F867B | captions and labels, 13 pt and up only | 4.6:1 on bg |
+| `color/ink-3` | #6D655B | #A79B8D | captions and labels | ≥4.5:1 on app text surfaces |
 | `color/rule` | #E8E1D6 | #3A332C | hairlines, borders | — |
 | `color/light` | #E9A23B | #E9A23B | the light when lit (fill), halo, chips | 2.0:1 on bg: never text, never the only signal |
 | `color/light-deep` | #C27612 | #F0B65A | the light's ring, small icons, amber text when unavoidable | 3.3:1 on bg |
 | `color/light-soft` | #FBEBCF | #3B2E19 | halo, selected states, amber cards | — |
 | `color/action` | #1F5C66 | #7FC3CC | primary buttons, links, focus rings | 7.1:1 as text; white on it 7.6:1 |
+| `color/on-action` | #FFFFFF | #1B1714 | primary button labels | ≥4.5:1 on action in both appearances |
 | `color/action-soft` | #E1EEF0 | #17383E | selected controls, soft teal cards | — |
 | `color/error` | #B3261E | #F28B82 | true errors only | 6.1:1 |
 

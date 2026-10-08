@@ -31,6 +31,14 @@ msgstr ""
 msgid "{day} morning"
 msgstr ""
 
+#: app/(tabs)/sunday.tsx
+msgid "{day}: answered at {time}"
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "{day}: no answer"
+msgstr ""
+
 #: src/data/weekly.ts
 msgid "{days, plural, one {{name} answered {answered} of # day.} other {{name} answered {answered} of # days.}}"
 msgstr ""
@@ -701,6 +709,10 @@ msgctxt "tab"
 msgid "Exchanges"
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "Exchanges stay here for thirty days."
+msgstr ""
+
 #: src/data/family.ts
 msgctxt "role"
 msgid "family"
@@ -708,6 +720,10 @@ msgstr ""
 
 #: app/(tabs)/you.tsx
 msgid "Family"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Family book"
 msgstr ""
 
 #: app/ask.tsx
@@ -1256,10 +1272,6 @@ msgstr ""
 
 #: src/data/notifications.ts
 msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Older than thirty days lives in the family book."
 msgstr ""
 
 #: app/onboarding.tsx

@@ -18,6 +18,7 @@ export interface Palette {
   lightDeep: string;
   lightSoft: string;
   action: string;
+  onAction: string;
   actionSoft: string;
   error: string;
 }
@@ -28,13 +29,14 @@ export const lightPalette: Palette = {
   surface2: "#F3EDE4",
   ink: "#1E1A16",
   ink2: "#5A534B",
-  ink3: "#756D62",
+  ink3: "#6D655B",
   rule: "#E8E1D6",
   control: "#948779",
   light: "#E9A23B",
   lightDeep: "#C27612",
   lightSoft: "#FBEBCF",
   action: "#1F5C66",
+  onAction: "#FFFFFF",
   actionSoft: "#E1EEF0",
   error: "#B3261E",
 };
@@ -45,13 +47,14 @@ export const darkPalette: Palette = {
   surface2: "#302A25",
   ink: "#F3EDE4",
   ink2: "#B9B0A5",
-  ink3: "#8F867B",
+  ink3: "#A79B8D",
   rule: "#3A332C",
   control: "#8F867B",
   light: "#E9A23B",
   lightDeep: "#F0B65A",
   lightSoft: "#3B2E19",
   action: "#7FC3CC",
+  onAction: "#1B1714",
   actionSoft: "#17383E",
   error: "#F28B82",
 };
