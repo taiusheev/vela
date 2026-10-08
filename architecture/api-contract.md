@@ -575,3 +575,10 @@ export type InboundEvent = {
 **The app's channel has no adapter (27 September 2026, ADR-34).** `app` is a `Channel`, and an outbound row on it is a push to the reader's phones, but `ChannelRegistry.get("app")` stays unwired: the gateway sends such a row through services' push port (`Deps.push`, Expo's push service; code design §6 and §8), which adapters never touch, since they never touch the database and the row must first be fanned out to the account's phones. No inbound event arrives on it.
 
 Deviations recorded per adapter in `architecture/02-technical-architecture-v2.md` §6.
+
+
+### Morning preferences (plan 7.3)
+
+`GET /v1/families/:familyId/members/:memberId/morning` reads `ApiMorningPreferences` for an active or paused kept-light parent, only for a live organiser of that family. Unknown, departed, deceased, cross-family and non-organiser targets/callers receive 404. The body names the parent, IANA time zone, selected `arrival_time`, effective `today_arrival_time`, nullable future `effective_from` local date, and message `language`.
+
+`POST` to the same route requires an active session and `Idempotency-Key`, with strict `{arrival_time: "HH:MM", language: "en" | "zh-TW"}`. The English pilot rejects non-English writes. Time edits take effect tomorrow in the parent's zone, using two additive nullable member columns (`pending_arrival_time`, `pending_arrival_date`). Repeated edits preserve today's effective time; a later day's edit promotes the preceding choice before scheduling its replacement. Language applies to subsequently prepared messages; a message already being prepared or queued retains its language, and existing outbound payloads are immutable. The service locks the parent, stores the receipt and marks the schedule due atomically, then wakes after commit; reconciliation recovers a failed nudge. Replays retain the original receipt and never reapply settings. Morning enqueue revalidates a pending time under the same lock, preventing a stale due decision from sending early. Existing arrival keys allow one morning per local date; repeat and quiet thresholds remain anchored to delivery.

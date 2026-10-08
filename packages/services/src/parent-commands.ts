@@ -34,6 +34,7 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
 import { enqueueOutbound } from "./gateway.ts";
+import { morningTimeOn } from "./morning-time.ts";
 import { pilotCanActivate } from "./pilot-admission.ts";
 import { summariesForHer } from "./pipeline.ts";
 import { activeOrganisersWithLinks, familyById, MESSENGER, markWakeDue } from "./repo.ts";
@@ -168,7 +169,9 @@ async function start(deps: Deps, member: Member, event: InboundEvent, now: Date)
       locked,
       event,
       "started",
-      t(locked.language, "parent.started", { time: locked.arrivalTime }),
+      t(locked.language, "parent.started", {
+        time: morningTimeOn(locked, localDateOf(now, locked.tz)),
+      }),
     );
     await recordEvent(
       tx,

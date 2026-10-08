@@ -11,6 +11,7 @@ import {
   addMinutes,
   type ButtonAction,
   encodeButton,
+  localDateOf,
   outboundKey,
   SCHEDULE,
   TUNING,
@@ -31,6 +32,7 @@ import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
 import { directReplyOf, enqueueOutbound, type OutboundRequest } from "./gateway.ts";
+import { morningTimeOn } from "./morning-time.ts";
 import { lookInStandDowns } from "./nearby-ask.ts";
 import { quietPushNotice } from "./push-messages.ts";
 import { closingNoticesFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
@@ -181,7 +183,10 @@ async function sendQuietNotices(
     return;
   }
   const contacts = await consentedNearbyContacts(tx, member.id);
-  const usual = usualAnswerTime(await recentAnsweredDays(tx, member, TUNING.minSamples), member);
+  const usual = usualAnswerTime(await recentAnsweredDays(tx, member, TUNING.minSamples), {
+    ...member,
+    arrivalTime: morningTimeOn(member, localDateOf(deps.clock.now(), member.tz)),
+  });
   const sent = formatTime(exchange.deliveredAt ?? quiet.openedAt, member.tz);
   const name = member.displayName;
 

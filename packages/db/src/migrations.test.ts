@@ -12,7 +12,7 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterEach, describe, expect, it } from "vitest";
-import { families, members } from "./schema.ts";
+import { families } from "./schema.ts";
 
 const migrationsFolder = fileURLToPath(new URL("../migrations", import.meta.url));
 
@@ -68,27 +68,15 @@ describe("0003_suggestion_days", { timeout: MIGRATION_TIMEOUT_MS }, () => {
       .values({ name: "Your family", region: "apac", country: "TW" })
       .returning();
     if (family === undefined) throw new Error("expected a family");
-    const [organiser, mom] = await db
-      .insert(members)
-      .values([
-        {
-          familyId: family.id,
-          role: "organiser",
-          displayName: "You",
-          tz: "Asia/Taipei",
-          country: "TW",
-          status: "active",
-        },
-        {
-          familyId: family.id,
-          displayName: "Mom",
-          tz: "Asia/Taipei",
-          country: "TW",
-          status: "active",
-          lightOn: true,
-        },
-      ])
-      .returning();
+    // Seed the historical shape, rather than today's Drizzle columns on a 0002 database.
+    const {
+      rows: [organiser, mom],
+    } = await db.execute<{ id: string }>(sql`
+      insert into members (family_id, role, display_name, tz, country, status, light_on)
+      values (${family.id}, 'organiser', 'You', 'Asia/Taipei', 'TW', 'active', false),
+             (${family.id}, 'member', 'Mom', 'Asia/Taipei', 'TW', 'active', true)
+      returning id
+    `);
     if (organiser === undefined || mom === undefined) throw new Error("expected two members");
     // The row the dev seed wrote before 0003 (`git show 2508aa1:apps/worker/scripts/seed-dev-family.ts`),
     // in the table's shape at 0002: a type no CHECK held to, and a turn holder.

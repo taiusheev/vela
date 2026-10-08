@@ -51,6 +51,7 @@ import {
 } from "./gateway.ts";
 import { recordAiCall } from "./jobs.ts";
 import { storedCopyOf } from "./media-copy.ts";
+import { morningTimeOn } from "./morning-time.ts";
 import { readsStoredMedia, uploadsStoredMedia } from "./outbound-media.ts";
 import { ordinaryPushReader, turnPromptPush } from "./push-messages.ts";
 import {
@@ -116,7 +117,11 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
         candidate.scheduledFor === null ||
         candidate.scheduledFor >= date ||
         now.getTime() >=
-          arrivalWindowEnd(candidate.scheduledFor, member.arrivalTime, member.tz).getTime(),
+          arrivalWindowEnd(
+            candidate.scheduledFor,
+            morningTimeOn(member, candidate.scheduledFor),
+            member.tz,
+          ).getTime(),
     );
     // The pilot has no story day (flows §3.6): the choice is the date's ask, an ask its own morning
     // left, a whenever ask, or the hello.
@@ -761,7 +766,20 @@ export async function deliverArrival(
     },
   };
   const written = await deps.db.transaction(async (tx): Promise<InsertResult | null> => {
-    await tx.select({ id: members.id }).from(members).where(eq(members.id, memberId)).for("update");
+    const [lockedMember] = await tx
+      .select()
+      .from(members)
+      .where(eq(members.id, memberId))
+      .for("update");
+    // A tick that began before the edit may hold a stale due decision. Revalidate pending times
+    // at the enqueue lock; later edits today never alter today's effective time.
+    if (
+      lockedMember === undefined ||
+      (lockedMember.pendingArrivalDate !== null &&
+        date >= lockedMember.pendingArrivalDate &&
+        deps.clock.now() < zonedInstant(date, morningTimeOn(lockedMember, date), lockedMember.tz))
+    )
+      return null;
     const [current] = await tx
       .select({ scheduledFor: exchanges.scheduledFor })
       .from(exchanges)

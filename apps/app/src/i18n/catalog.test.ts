@@ -53,6 +53,8 @@ const LATIN_PLACEHOLDERS: ReadonlySet<string> = new Set([
   "time",
   // The second time in one sentence (the quiet notice's "and again at…").
   "timeAgain",
+  // IANA zone names displayed beside the parent's morning settings.
+  "zone",
   "date",
   "price",
   "count",

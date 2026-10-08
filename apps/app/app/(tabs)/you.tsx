@@ -1,3 +1,4 @@
+import { t as translate } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
 import { router, useFocusEffect } from "expo-router";
@@ -253,6 +254,18 @@ function FamilyYou({ day }: { day: TodayView }) {
                   ) : undefined
                 }
               />
+              {family.me.organiser ? (
+                <FamilyAction
+                  icon="today"
+                  title={morningTitle(member.name)}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/morning-settings",
+                      params: { member: member.memberId },
+                    })
+                  }
+                />
+              ) : null}
               {/* Away mode (spec §8): any member may say she is away. */}
               {member.paused ? null : <AwayLink memberId={member.memberId} name={member.name} />}
             </View>
@@ -636,4 +649,8 @@ function AwayLink({ memberId, name }: { memberId: string; name: string }) {
       </Words>
     </Pressable>
   );
+}
+
+function morningTitle(name: string) {
+  return translate`Change ${name}'s morning`;
 }

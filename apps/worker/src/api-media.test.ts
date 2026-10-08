@@ -118,6 +118,7 @@ function fixture(options: FixtureOptions = {}) {
   if (store === null) throw new Error("expected a media store");
   const random = { token: vi.fn(() => "minted-token") };
   const services = {
+    loadApiMorningPreferences: vi.fn().mockResolvedValue(null),
     loadApiMe: vi.fn<ApiReadServices["loadApiMe"]>().mockResolvedValue({
       user: { id: USER_ID, display_name: "Mia", language: "en", tz: "Asia/Taipei" },
       memberships: [],
@@ -163,6 +164,7 @@ function fixture(options: FixtureOptions = {}) {
       replyToApiExchange: vi.fn<Writes["services"]["replyToApiExchange"]>(unused("reply")),
       createApiFamily: vi.fn<Writes["services"]["createApiFamily"]>(unused("create")),
       resolveApiQuiet: vi.fn<Writes["services"]["resolveApiQuiet"]>(unused("quiet")),
+      setApiMorningPreferences: vi.fn().mockRejectedValue(new Error("no morning in these tests")),
       pauseApiMember: vi.fn<Writes["services"]["pauseApiMember"]>(unused("pause")),
       leaveApiFamily: vi.fn<Writes["services"]["leaveApiFamily"]>(unused("leave")),
       setApiAway: vi.fn<Writes["services"]["setApiAway"]>(unused("away")),

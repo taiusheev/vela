@@ -1302,3 +1302,20 @@ export type WithdrawAsk = z.infer<typeof WithdrawAsk>;
 
 export const ApiWithdrawn = z.object({ id: z.uuid(), state: z.literal("withdrawn") });
 export type ApiWithdrawn = z.infer<typeof ApiWithdrawn>;
+
+/** Organisers edit only languages with complete morning copy. */
+export const SetMorningPreferences = z.strictObject({
+  arrival_time: LocalTime,
+  language: z.enum(["en", "zh-TW"]),
+});
+export type SetMorningPreferences = z.infer<typeof SetMorningPreferences>;
+export const ApiMorningPreferences = z.object({
+  member_id: z.uuid(),
+  display_name: z.string(),
+  time_zone: TimeZone,
+  arrival_time: LocalTime,
+  today_arrival_time: LocalTime,
+  effective_from: LocalDate.nullable(),
+  language: Lang,
+});
+export type ApiMorningPreferences = z.infer<typeof ApiMorningPreferences>;

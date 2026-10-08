@@ -4,6 +4,7 @@ import { awayPeriods, members, quietEvents } from "@vela/db";
 import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { arrivalChannelOf } from "./arrivals.ts";
+import { morningTimeOn } from "./morning-time.ts";
 import {
   channelLinkOfMember,
   dayAnsweredAt,
@@ -87,7 +88,7 @@ export async function loadApiLights(
       local_date: today,
       state,
       answered_at: answeredAt?.toISOString() ?? null,
-      usual_time: member.arrivalTime,
+      usual_time: morningTimeOn(member, localDateOf(now, member.tz)),
       away_until: away?.toDate ?? null,
       away_id: away?.id ?? null,
       unreachable_on: link !== null && link.blockedAt !== null ? channel : null,
@@ -118,7 +119,7 @@ export async function loadApiLights(
       local_date: localDateOf(now, member.tz),
       state: "none",
       answered_at: null,
-      usual_time: member.arrivalTime,
+      usual_time: morningTimeOn(member, localDateOf(now, member.tz)),
       away_until: null,
       away_id: null,
       unreachable_on: null,

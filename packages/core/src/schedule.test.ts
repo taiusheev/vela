@@ -21,6 +21,7 @@ interface Scenario {
   now: Date;
   zone?: string;
   arrivalTime?: LocalTime;
+  nextArrivalTime?: LocalTime;
   status?: MemberStatus;
   lightOn?: boolean;
   quietAfterMinutes?: number;
@@ -47,6 +48,7 @@ function decide(scenario: Scenario): ScheduleDecision {
     member: {
       timeZone: scenario.zone ?? ZONE,
       arrivalTime: scenario.arrivalTime ?? "08:00",
+      nextArrivalTime: scenario.nextArrivalTime,
       status: scenario.status ?? "active",
       lightOn: scenario.lightOn ?? true,
       quietAfterMinutes: scenario.quietAfterMinutes ?? 360,
@@ -921,5 +923,25 @@ describe("due order and wakes", () => {
         }
       }
     }
+  });
+});
+
+describe("a morning time edited for tomorrow", () => {
+  it("keeps today's due threshold while waking for tomorrow's earlier time", () => {
+    const before = decide({ now: taipei("07:30"), nextArrivalTime: "06:00" });
+    expect(before.due).toEqual([]);
+    expect(before.nextWakeAt).toEqual(taipei("08:00"));
+    const tonight = decide({
+      now: taipei("23:00"),
+      nextArrivalTime: "06:00",
+      days: [deliveredToday()],
+      prepared: true,
+      turnPromptSent: true,
+    });
+    expect(tonight.nextWakeAt).toEqual(taipei("06:00", TOMORROW));
+  });
+  it("does not move repeat or quiet thresholds when tomorrow's time changes", () => {
+    const options = { now: taipei("14:00"), days: [deliveredToday()] };
+    expect(decide({ ...options, nextArrivalTime: "10:00" }).due).toEqual(decide(options).due);
   });
 });

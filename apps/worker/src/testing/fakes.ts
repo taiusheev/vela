@@ -777,6 +777,8 @@ export function memberFixture(overrides: Partial<Member> = {}): FamilyPage["memb
       lightStartsOn: null,
       wakeTime: null,
       arrivalTime: "08:00",
+      pendingArrivalTime: null,
+      pendingArrivalDate: null,
       nextWakeAt: null,
       quietAfterMin: 360,
       learningUntil: null,
