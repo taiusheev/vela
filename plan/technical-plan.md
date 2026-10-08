@@ -46,7 +46,7 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 | 2.4 | Log access | Cloudflare token with Workers Observability read, or Logpush to R2, so failures can be investigated without the dashboard | F (token scope) | — |
 | 2.5 | Silence drill parts A, B, D | each run once on staging, receipts saved | F (2nd Telegram) | — |
 | 2.6 | 10× load report | 10× expected morning peak through queues and Postgres; p95, errors and duplicates recorded | — | — |
-| 2.7 | Queue dead-letter review | a failed message is visible on the admin page and replayable once, never silently lost | — | — |
+| 2.7 | Queue dead-letter review | a failed message is visible on the admin page and replayable once, never silently lost | — | Done: dead jobs kept sealed 14 days, hourly alert, admin replay-once |
 
 ### 3. Channels
 

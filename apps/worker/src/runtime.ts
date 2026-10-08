@@ -10,6 +10,7 @@ import type { ChannelQuota, InboundEvent } from "@vela/contracts";
 import {
   applyRetention,
   type BilledChannel,
+  claimDeadLetterReplays,
   type DeliveryResult,
   type Deps,
   deliverOutbound,
@@ -18,6 +19,7 @@ import {
   ingestAnswerMedia,
   ingestExchangeMedia,
   joinWaitlist,
+  keepDeadLetter,
   loadPublicPrecision,
   memberOfDeviceToken,
   opsAlerts,
@@ -25,6 +27,7 @@ import {
   type ReconcileResult,
   reconcile,
   recordChannelQuota,
+  releaseDeadLetterReplay,
   rollupMetrics,
   type SuggestionsRun,
   storeDeviceVoice,
@@ -49,6 +52,10 @@ export interface PilotServices {
   applyRetention(deps: Deps): Promise<Record<string, number>>;
   /** The founder's ops alerts (each reconcile) and daily digest (nightly): plan 2.1 and 2.2. */
   opsAlerts(deps: Deps): Promise<number>;
+  /** Dead jobs (plan 2.7): kept from the dead-letter queue, and the founder's replays. */
+  keepDeadLetter: typeof keepDeadLetter;
+  claimDeadLetterReplays: typeof claimDeadLetterReplays;
+  releaseDeadLetterReplay: typeof releaseDeadLetterReplay;
   opsDigest(deps: Deps): Promise<boolean>;
   writeSuggestions(deps: Deps): Promise<SuggestionsRun>;
   deliverOutbound(deps: Deps, outboundId: string): Promise<DeliveryResult>;
@@ -91,6 +98,9 @@ const services: PilotServices = {
   recordChannelQuota,
   rollupMetrics,
   applyRetention,
+  keepDeadLetter,
+  claimDeadLetterReplays,
+  releaseDeadLetterReplay,
   opsAlerts,
   opsDigest,
   writeSuggestions,

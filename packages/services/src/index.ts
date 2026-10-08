@@ -130,6 +130,18 @@ export { MAX_VOICE_BYTES, MAX_VOICES_PER_ACCOUNT_DAY, uploadApiVoice } from "./a
 export { loadApiWeeklyRead, openApiWeeklyRead } from "./api-weekly-read.ts";
 export { WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
 export { type ApiBookEntry, loadApiBook, removeApiBookEntry } from "./book.ts";
+export {
+  claimDeadLetterReplays,
+  DEAD_LETTER_RETENTION_DAYS,
+  type DeadLetterJobType,
+  type DeadLetterRow,
+  isDeadLetterJobType,
+  keepDeadLetter,
+  loadDeadLetters,
+  type ReplayRequest,
+  releaseDeadLetterReplay,
+  requestDeadLetterReplay,
+} from "./dead-letters.ts";
 export type {
   ChannelRegistry,
   Clock,

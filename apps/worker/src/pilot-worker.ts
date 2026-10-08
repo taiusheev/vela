@@ -6,6 +6,7 @@
  * that wrangler deploys is `index.ts`.
  */
 import { InboundEvent } from "@vela/contracts";
+import type { DeadLetterJobType } from "@vela/services";
 import {
   type Deps,
   errorLabel,
@@ -103,6 +104,53 @@ function parseJob(body: unknown): WorkerJob | null {
   return null;
 }
 
+/** The environment's dead-letter queue: `vela-dead-letter`, `-staging` or `-production`. */
+export function isDeadLetterQueue(name: string): boolean {
+  return name === "vela-dead-letter" || name.startsWith("vela-dead-letter-");
+}
+
+/** Where a dead job goes when the founder asks for it again: the queue it came from. */
+function queueForJob(env: PilotEnv, type: DeadLetterJobType): Queue<unknown> | undefined {
+  switch (type) {
+    case "deliver":
+      return env.OUTBOUND_QUEUE as Queue<unknown>;
+    case "ingest_answer_media":
+    case "ingest_exchange_media":
+      return env.MEDIA_QUEUE as Queue<unknown>;
+    case "understand_answer":
+      return env.UNDERSTAND_QUEUE as Queue<unknown>;
+    case "handle_inbound":
+      return env.INBOUND_QUEUE as Queue<unknown> | undefined;
+  }
+}
+
+/**
+ * Technical plan 2.7: the dead jobs the founder asked for are sent again once, each to the queue
+ * it came from. A job whose queue is not bound here, or whose send fails, is given back so the
+ * next reconcile tries it again; neither failure fails the reconcile.
+ */
+async function replayDeadLetters(
+  services: PilotServices,
+  deps: Deps,
+  env: PilotEnv,
+): Promise<void> {
+  for (const row of await services.claimDeadLetterReplays(deps)) {
+    const queue = queueForJob(env, row.jobType);
+    try {
+      if (queue === undefined) throw new Error("queue_not_bound");
+      await queue.send(row.job);
+      deps.logger.info("dead_letter_replayed", { id: row.id, type: row.jobType });
+    } catch (error) {
+      deps.logger.error("dead_letter_replay_failed", {
+        id: row.id,
+        type: row.jobType,
+        error: errorLabel(error),
+      });
+      await services.releaseDeadLetterReplay(deps, row.id);
+    }
+  }
+}
+
 /**
  * The nightly jobs after the metrics, each run whatever the one before it did, since neither needs
  * the other: retention, then tomorrow's suggestions, only where the API that shows them is served
@@ -196,6 +244,42 @@ export function isApiPath(pathname: string): boolean {
   return pathname === "/v1" || pathname.startsWith("/v1/");
 }
 
+/**
+ * A batch from the dead-letter queue (technical plan 2.7): each job that failed every retry is
+ * kept, sealed, for the founder to see and send again, and acked once kept. A job that cannot be
+ * kept yet (the database is down) is retried in five minutes; the consumer's own `max_retries`
+ * outlasts a long outage. An unreadable body is logged and acked, as on every queue.
+ */
+async function keepDeadJobs(
+  services: PilotServices,
+  deps: Deps,
+  batch: MessageBatch<unknown>,
+): Promise<void> {
+  for (const message of batch.messages) {
+    const job = parseJob(message.body);
+    if (job === null) {
+      deps.logger.error("queue_message_unreadable", { queue: batch.queue, messageId: message.id });
+      message.ack();
+      continue;
+    }
+    try {
+      await services.keepDeadLetter(deps, {
+        messageId: message.id,
+        jobType: job.type,
+        job: message.body as Record<string, unknown>,
+      });
+      message.ack();
+    } catch (error) {
+      deps.logger.error("dead_letter_keep_failed", {
+        messageId: message.id,
+        type: job.type,
+        error: errorLabel(error),
+      });
+      message.retry({ delaySeconds: 300 });
+    }
+  }
+}
+
 export function createWorker(runtime: PilotRuntime): VelaWorker {
   const app = createApp(runtime);
   return {
@@ -237,6 +321,10 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
         return;
       }
       try {
+        if (isDeadLetterQueue(batch.queue)) {
+          await keepDeadJobs(runtime.services, handle.deps, batch);
+          return;
+        }
         for (const message of batch.messages) {
           const job = parseJob(message.body);
           if (job === null) {
@@ -287,6 +375,11 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
             await runtime.services.opsAlerts(handle.deps);
           } catch (error) {
             handle.deps.logger.error("ops_alerts_failed", { error: errorLabel(error) });
+          }
+          try {
+            await replayDeadLetters(runtime.services, handle.deps, env);
+          } catch (error) {
+            handle.deps.logger.error("dead_letter_replays_failed", { error: errorLabel(error) });
           }
         } else if (controller.cron === NIGHTLY_CRON) {
           await runtime.services.rollupMetrics(handle.deps);

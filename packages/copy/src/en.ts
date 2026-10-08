@@ -264,6 +264,8 @@ export const en = {
     "{count} messages were dropped before sending since {since} UTC ({environment}). Open: {link}",
   "admin.ops_scheduler_missed":
     "The scheduler missed {count} runs since {since} UTC ({environment}): mornings may be late. Open: {link}",
+  "admin.ops_dead_letter":
+    "{count} queue jobs failed every retry since {since} UTC ({environment}) and were kept as dead letters. Look at them on the overview and replay if needed. Open: {link}",
   "admin.ops_ai_failing":
     "AI calls are failing: {failed} of {total} in the last hour ({environment}). Answers still light the light. Open: {link}",
   "admin.ops_digest":

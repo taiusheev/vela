@@ -131,7 +131,11 @@ describe("the admin pages", () => {
     const body = await response.text();
 
     expect(response.status).toBe(200);
-    expect(namesOf(fake.calls)).toEqual(["loadAdminOverview", "loadFailedOutbound"]);
+    expect(namesOf(fake.calls)).toEqual([
+      "loadAdminOverview",
+      "loadFailedOutbound",
+      "loadDeadLetters",
+    ]);
     expect(argsOf(fake.calls, "loadAdminOverview")).toEqual([[{ admin: "founder@vela.test" }]]);
     expect(argsOf(fake.calls, "loadFailedOutbound")).toEqual([[{ admin: "founder@vela.test" }]]);
     expect(body).toContain(`<span class="muted">${failed.id}</span>`);
@@ -789,5 +793,71 @@ describe("the waitlist page", () => {
     const body = await (await send(fake, new Request(`${ORIGIN}/admin`))).text();
 
     expect(body).toContain('<a href="/admin/waitlist">The website\'s waitlist</a>');
+  });
+});
+
+// Technical plan 2.7: dead jobs on the overview, and asking for one to be sent again.
+describe("dead letters on the admin overview", () => {
+  const DEAD_ID = "01a10fac-fe51-7e19-bd6c-257bca3b83f7";
+
+  it("lists dead jobs without content and offers a replay only for one not yet asked for", async () => {
+    const fake = createFakeAdminRuntime({
+      admin: "founder@vela.test",
+      services: {
+        loadDeadLetters: async () => [
+          {
+            id: DEAD_ID,
+            jobType: "handle_inbound",
+            failedAt: new Date("2026-10-08T03:00:00Z"),
+            replayRequestedAt: null,
+            replayedAt: null,
+          },
+          {
+            id: "02a10fac-fe51-7e19-bd6c-257bca3b83f7",
+            jobType: "deliver",
+            failedAt: new Date("2026-10-08T02:00:00Z"),
+            replayRequestedAt: new Date("2026-10-08T04:00:00Z"),
+            replayedAt: new Date("2026-10-08T04:15:00Z"),
+          },
+        ],
+      },
+    });
+    const body = await (await send(fake, new Request(`${ORIGIN}/admin`))).text();
+    expect(body).toContain("Dead letters");
+    expect(body).toContain("An incoming LINE message");
+    expect(body).toContain(`/admin/dead-letters/${DEAD_ID}/replay`);
+    expect(body).toContain("Sent again");
+    expect(body.match(/Send again once/g)).toHaveLength(1);
+  });
+
+  it("asks for a replay from the admin's own origin and returns to the overview", async () => {
+    const fake = createFakeAdminRuntime({ admin: "founder@vela.test" });
+    const response = await send(
+      fake,
+      formRequest(`/admin/dead-letters/${DEAD_ID}/replay`, {}, ORIGIN),
+    );
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("/admin#dead-letters");
+    expect(argsOf(fake.calls, "requestDeadLetterReplay")).toEqual([[DEAD_ID]]);
+  });
+
+  it("refuses a replay posted from another origin, and answers 404 for an unknown one", async () => {
+    const foreign = createFakeAdminRuntime({ admin: "founder@vela.test" });
+    const refused = await send(
+      foreign,
+      formRequest(`/admin/dead-letters/${DEAD_ID}/replay`, {}, "https://evil.example"),
+    );
+    expect(refused.status).toBeGreaterThanOrEqual(400);
+    expect(namesOf(foreign.calls)).not.toContain("requestDeadLetterReplay");
+
+    const missing = createFakeAdminRuntime({
+      admin: "founder@vela.test",
+      services: { requestDeadLetterReplay: async () => "not_found" },
+    });
+    const response = await send(
+      missing,
+      formRequest(`/admin/dead-letters/${DEAD_ID}/replay`, {}, ORIGIN),
+    );
+    expect(response.status).toBe(404);
   });
 });

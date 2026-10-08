@@ -249,6 +249,7 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["admin.line_quota_exhausted", ["link"]],
   ["admin.ops_arrival_failed", ["count", "environment", "link", "since"]],
   ["admin.ops_dropped", ["count", "environment", "link", "since"]],
+  ["admin.ops_dead_letter", ["count", "environment", "link", "since"]],
   ["admin.ops_scheduler_missed", ["count", "environment", "link", "since"]],
   ["admin.ops_ai_failing", ["environment", "failed", "link", "total"]],
   [
@@ -305,6 +306,7 @@ const ADMIN_COUNTS: ReadonlyMap<MessageKey, ReadonlySet<string>> = new Map([
   ["admin.line_quota", new Set(["used", "limit"])],
   ["admin.ops_arrival_failed", OPS_ALERT],
   ["admin.ops_dropped", OPS_ALERT],
+  ["admin.ops_dead_letter", OPS_ALERT],
   ["admin.ops_scheduler_missed", OPS_ALERT],
   ["admin.ops_ai_failing", new Set(["failed", "total", "environment"])],
   [

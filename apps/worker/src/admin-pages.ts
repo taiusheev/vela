@@ -9,6 +9,7 @@
 import type {
   AdminOverview,
   AdminOverviewRow,
+  DeadLetterRow,
   FailedOutboundRow,
   FamilyPage,
   QuietPrecisionMonth,
@@ -111,6 +112,38 @@ function failedOutboundRow(row: FailedOutboundRow): Html {
  * code in front of the stored error. What was sent, and the platform's own description, never
  * reach this page. The id matches the `what` of the view rows services write for this section.
  */
+const DEAD_JOB_LABELS: Readonly<Record<string, string>> = {
+  deliver: "A send",
+  ingest_answer_media: "Her answer's media",
+  ingest_exchange_media: "An ask's media",
+  understand_answer: "Understanding an answer",
+  handle_inbound: "An incoming LINE message (her words may be only here)",
+};
+
+function deadLetterRow(row: DeadLetterRow): Html {
+  const state =
+    row.replayedAt !== null
+      ? html`Sent again ${instant(row.replayedAt)}`
+      : row.replayRequestedAt !== null
+        ? html`Replay asked ${instant(row.replayRequestedAt)}; the next reconcile sends it`
+        : html`<form class="action" method="post" action="${ADMIN_PATH}/dead-letters/${row.id}/replay"><button type="submit">Send again once</button></form>`;
+  return html`<tr><td>${instant(row.failedAt)}</td><td>${DEAD_JOB_LABELS[row.jobType] ?? row.jobType}</td><td>${state}</td></tr>`;
+}
+
+/**
+ * Jobs that failed every retry (technical plan 2.7), kept 14 days. A replay sends the job again
+ * once, through the pilot Worker's next reconcile. No job's content is shown.
+ */
+function deadLettersSection(rows: readonly DeadLetterRow[]): Html {
+  return html`<section id="dead-letters"><h2>Dead letters</h2>
+<p class="muted">Queue jobs that failed every retry, newest first, kept 14 days. Fix the cause first (the failed sends and the logs say what), then send a job again; a send or an answer's processing that already happened again through reconcile is not repeated, because every step checks what is already done.</p>
+${
+  rows.length === 0
+    ? html`<p class="muted">No job has failed every retry.</p>`
+    : table(["Failed (UTC)", "Job", "State"], rows.map(deadLetterRow))
+}</section>`;
+}
+
 function failedOutboundSection(rows: readonly FailedOutboundRow[]): Html {
   return html`<section id="failed-outbound"><h2>Failed sends</h2>
 <p class="muted">The most recent sends that failed or were dropped, newest first. The time is when the last attempt was due; the code is the platform's or the gateway's reason.</p>
@@ -196,6 +229,7 @@ ${
 export function renderOverview(
   overview: AdminOverview,
   failedOutbound: readonly FailedOutboundRow[],
+  deadLetters: readonly DeadLetterRow[] = [],
 ): Response {
   const body = html`<h1>Vela admin</h1>
 <p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, counts, and codes only. <a href="${ADMIN_PATH}/waitlist">The website's waitlist</a>.</p>
@@ -214,7 +248,8 @@ ${table(
 )}
 ${precisionSection(overview.precision)}
 ${lineQuotaSection(overview.lineQuota)}
-${failedOutboundSection(failedOutbound)}`;
+${failedOutboundSection(failedOutbound)}
+${deadLettersSection(deadLetters)}`;
   return page("Vela admin", body);
 }
 

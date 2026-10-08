@@ -122,6 +122,12 @@ async function main(): Promise<void> {
       },
       {
         query:
+          "select job as value from dead_letters where jsonb_path_exists(job, '$.** ? (@.type() == \"string\")') limit 1",
+        column: "dead_letters.job",
+        policy: undefined,
+      },
+      {
+        query:
           "select lines as value from weekly_reads where jsonb_path_exists(lines, '$.** ? (@.type() == \"string\")') limit 1",
         column: "weekly_reads.lines",
         policy: undefined,

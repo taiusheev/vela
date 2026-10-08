@@ -443,6 +443,19 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       note("applyRetention");
       return given.applyRetention === undefined ? {} : given.applyRetention(deps);
     },
+    async keepDeadLetter(deps, input) {
+      note("keepDeadLetter", input.messageId, input.jobType);
+      return given.keepDeadLetter === undefined ? true : given.keepDeadLetter(deps, input);
+    },
+    async claimDeadLetterReplays(deps) {
+      note("claimDeadLetterReplays");
+      return given.claimDeadLetterReplays === undefined ? [] : given.claimDeadLetterReplays(deps);
+    },
+    async releaseDeadLetterReplay(deps, id) {
+      note("releaseDeadLetterReplay", id);
+      if (given.releaseDeadLetterReplay !== undefined)
+        await given.releaseDeadLetterReplay(deps, id);
+    },
     async opsAlerts(deps) {
       note("opsAlerts");
       return given.opsAlerts === undefined ? 0 : given.opsAlerts(deps);
@@ -564,6 +577,16 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
       return given.loadAdminTrialReport === undefined
         ? null
         : given.loadAdminTrialReport(deps, ctx, familyId, days);
+    },
+    async loadDeadLetters(deps) {
+      note("loadDeadLetters");
+      return given.loadDeadLetters === undefined ? [] : given.loadDeadLetters(deps);
+    },
+    async requestDeadLetterReplay(deps, id) {
+      note("requestDeadLetterReplay", id);
+      return given.requestDeadLetterReplay === undefined
+        ? "requested"
+        : given.requestDeadLetterReplay(deps, id);
     },
     async loadAdminOverview(deps, ctx) {
       note("loadAdminOverview", ctx);

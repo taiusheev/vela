@@ -14,6 +14,7 @@ import { t } from "@vela/copy";
 import { aiCalls, events, flags } from "@vela/db";
 import { and, eq, gte, like, lt, sql } from "drizzle-orm";
 import { ADMIN_CHANNEL, ADMIN_LANG, adminOverviewLink } from "./admin-alerts.ts";
+import { countDeadLettersSince } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -122,6 +123,16 @@ export async function opsAlerts(deps: Deps): Promise<number> {
     if (count === 0) continue;
     const text = t(ADMIN_LANG, key, { count, since: sinceText, environment, link });
     if (await tellFounderOnce(deps, `${CLAIM_PREFIX}${name}:${hour}`, text)) sent += 1;
+  }
+  const dead = await countDeadLettersSince(deps, since);
+  if (dead > 0) {
+    const text = t(ADMIN_LANG, "admin.ops_dead_letter", {
+      count: dead,
+      since: sinceText,
+      environment,
+      link,
+    });
+    if (await tellFounderOnce(deps, `${CLAIM_PREFIX}dead_letter:${hour}`, text)) sent += 1;
   }
   const ai = await aiTotals(deps, new Date(now.getTime() - HOUR_MS), new Date(now.getTime() + 1));
   if (ai.total >= AI_ALERT_MIN_CALLS && ai.failed / ai.total > AI_ALERT_SHARE) {

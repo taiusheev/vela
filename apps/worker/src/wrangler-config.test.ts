@@ -459,7 +459,16 @@ describe("the pilot Worker's bindings", () => {
         `vela-media${suffix}`,
         `vela-understand${suffix}`,
         ...inbound,
+        `vela-dead-letter${suffix}`,
       ]);
+      // Technical plan 2.7: dead jobs are kept for the founder, with nowhere further to go.
+      expect(consumers(pilot).at(-1)).toEqual({
+        queue: `vela-dead-letter${suffix}`,
+        max_batch_size: 10,
+        max_batch_timeout: 30,
+        max_retries: 100,
+        retry_delay: 300,
+      });
     },
   );
 
