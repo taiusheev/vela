@@ -16,7 +16,7 @@ Conventions: JSON over HTTPS; `Authorization: Bearer <session>`; ids are uuids; 
 | PATCH | /me | display_name, language, tz, one_moment_a_day | Opt-in isolated route; existing live account only, Idempotency-Key and online session activity required; `one_moment_a_day` from 27 September 2026 (§ "Push") |
 | POST | /me/devices | Register or refresh this phone for push: `{installation_id, token, platform, permission, quiet_channel_blocked}` → the device without its token | **Built**, and push off everywhere; see § "Push" |
 | POST | /me/devices/:installationId/remove | Take this phone off the account at sign-out → `{installation_id, removed}` | **Built**; see § "Push" |
-| DELETE | /me | Leave every family and delete the account | Retention rules apply (spec §17) |
+| POST | /me/delete | Delete the account: Clerk's user, then Vela's, leaving each family where Leave would and keeping the member on Telegram or LINE where Leave would refuse → `{deleted, left, kept}` | **Built** 8 October 2026, ADR-43; replaces the planned `DELETE /me` |
 
 ### Authentication and family-access foundation (21 September 2026)
 

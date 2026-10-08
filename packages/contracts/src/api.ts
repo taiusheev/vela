@@ -877,6 +877,22 @@ export const ApiLeft = z.object({
 });
 export type ApiLeft = z.infer<typeof ApiLeft>;
 
+/** Deleting one's account carries nothing: the session names the account (ADR-43). */
+export const DeleteAccount = z.strictObject({});
+export type DeleteAccount = z.infer<typeof DeleteAccount>;
+
+/**
+ * What account deletion answers. `left`: memberships left as Leave leaves them. `kept`: memberships
+ * Leave would refuse (her own light, or the family's last active organiser), kept in the family as
+ * messenger-only members with no account, so the person is still told on Telegram or LINE there.
+ */
+export const ApiAccountDeleted = z.object({
+  deleted: z.literal(true),
+  left: z.int().nonnegative(),
+  kept: z.int().nonnegative(),
+});
+export type ApiAccountDeleted = z.infer<typeof ApiAccountDeleted>;
+
 /**
  * Why pausing or leaving was refused, in a 409's `details.reason`. `last_organiser`: nobody else
  * who organises the family is active, and an organiser who is paused or gone is not told when her

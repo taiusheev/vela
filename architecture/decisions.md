@@ -740,3 +740,15 @@ Current evidence: host C codec and autolinking checks exist; this workstation ha
 Revisit when a participant needs another language/channel, recordings exceed the bounded decoder, a parent app or offline queue is needed, or paid/export/memory features are proposed. Each change needs its own product, privacy, provider and release evidence.
 
 Broader book follow-up before enabling retention: adoption is guarded against concurrent deletion, but after a successful move into `book/`, failure to delete the old `asks/`, `replies/` or `device/` source leaves unreferenced source bytes until their existing 32-day lifecycle. Add durable old-key deletion retry and prove its failure/recovery path before making a stronger cleanup promise. This does not open a book-retention feature or add a trial activation gate while `BOOK` is off.
+
+## ADR-43 · Deleting an account from the app lets go of its families as Leave would, and keeps what Leave refuses
+
+8 October 2026. Accepted. App Store guideline 5.1.1(v) requires an app with sign-up to offer account deletion inside the app; Vela deleted accounts only on Clerk's signed `user.deleted`, and `DELETE /me` in the contract was never built.
+
+Decision: `POST /v1/me/delete` (body `{}`, `Idempotency-Key`, a live session) deletes the Clerk user through the Backend API first, then runs `disableApiAccount`, which Clerk's `user.deleted` also runs, so either path alone ends in the same state and a repeat changes nothing. Clerk unreachable answers 503 with nothing changed. Beyond the existing tombstone and purges (receipts, link challenges, phones), each active or paused membership is let go in the same transaction: left, as Leave leaves it (`member_left`, source `account_deleted`), where Leave would allow it; where Leave would refuse — her own light, or the family's last active organiser — the member stays in the family as a messenger-only member with `user_id` cleared. A parent's light therefore never loses its only organiser because an app account went, and the person is still told on Telegram or LINE, where stop ends it. When an organiser leaves or is kept with no way to be told, the founder gets `admin.organisers_unreachable`, as after Leave. Families are taken in id order and each family's organiser rows in id order before the member, so two organisers deleting at once queue, and exactly one leaves (`postgres-tests/account-delete-race.test.ts`). Shared family content (her answers, others' replies, what this person sent) stays with the family; retention deletes left members 30 days on.
+
+The app's You screen has Delete account, a page that says what goes and what stays, a second confirmation, and then signs the phone out.
+
+Rejected: refusing deletion until the person hands over organising (fails 5.1.1(v)'s "easy to find and complete"); leaving the last organiser's family with no organiser (a quiet morning would tell nobody); deleting the family with the account (other members' days are theirs).
+
+Open: the privacy notice should say what account deletion keeps (counsel, launch gate 12); signed-device proof of the flow belongs to the signed iPhone gate.

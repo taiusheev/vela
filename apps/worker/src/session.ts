@@ -247,3 +247,46 @@ export function createClerkSessionVerifier(options: ClerkSessionOptions): Sessio
     }
   };
 }
+
+/** Deletes a Clerk user by id: `deleted`, or `gone` when Clerk no longer has it. */
+export type ClerkUserDeleter = (userId: string) => Promise<"deleted" | "gone">;
+
+/**
+ * Account deletion's Clerk half (ADR-43): `DELETE https://api.clerk.com/v1/users/:id` with the
+ * instance's secret key. Clerk's 404 means the user is already gone, which a retry after a lost
+ * answer meets; any other answer, a timeout or a network failure is `SessionVerificationUnavailable`,
+ * so nothing in Vela changes and the app can try again.
+ */
+export function createClerkUserDeleter(options: ClerkSessionActivityOptions): ClerkUserDeleter {
+  const { secretKey } = options;
+  if (!nonblank(secretKey) || secretKey.length > 4096 || /[^!-~]/.test(secretKey)) {
+    throw new Error("Invalid account deletion configuration");
+  }
+  const fetchImpl: typeof fetch = options.fetch ?? ((resource, init) => fetch(resource, init));
+  return async (userId) => {
+    if (!/^user_[A-Za-z0-9]{1,200}$/.test(userId)) throw new SessionVerificationUnavailable();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const response = await fetchImpl(
+        `https://api.clerk.com/v1/users/${encodeURIComponent(userId)}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${secretKey}`, Accept: "application/json" },
+          redirect: "manual",
+          cache: "no-store",
+          signal: controller.signal,
+        },
+      );
+      await response.body?.cancel();
+      if (response.status === 200) return "deleted";
+      if (response.status === 404) return "gone";
+      throw new SessionVerificationUnavailable();
+    } catch (error) {
+      if (error instanceof SessionVerificationUnavailable) throw error;
+      throw new SessionVerificationUnavailable();
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+}

@@ -599,6 +599,10 @@ msgstr "關閉"
 msgid "Close quiet notice"
 msgstr "關閉安靜通知"
 
+#: app/delete-account.tsx
+msgid "Close Vela and open it again to finish signing out on this phone."
+msgstr "請關閉 Vela 再重新開啟，完成這支手機的登出。"
+
 #: app/sign-in.tsx
 msgid "Codes by text message do not reach {where} yet. Use your email instead."
 msgstr "簡訊驗證碼目前還無法傳到{where}，請改用電子郵件。"
@@ -655,6 +659,27 @@ msgstr "爸爸"
 #: src/data/onboarding.ts
 msgid "Darwin"
 msgstr "達爾文"
+
+#: app/(tabs)/you.tsx
+#: app/delete-account.tsx
+msgid "Delete account"
+msgstr "刪除帳號"
+
+#: app/delete-account.tsx
+msgid "Delete my account"
+msgstr "刪除我的帳號"
+
+#: app/delete-account.tsx
+msgid "Delete your account?"
+msgstr "要刪除您的帳號嗎？"
+
+#: app/delete-account.tsx
+msgid "Deleting your account removes your sign-in, this phone's notifications and your place in each family. Thirty days on, what is kept about you in a family is deleted."
+msgstr "刪除帳號會移除您的登入、這支手機的通知，以及您在每個家庭中的位置。三十天後，家庭中保存的關於您的資料會被刪除。"
+
+#: app/delete-account.tsx
+msgid "Deleting…"
+msgstr "刪除中…"
 
 #: app/(tabs)/index.tsx
 msgid "Dismiss"
@@ -909,6 +934,10 @@ msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "早安訊息過了平常的回覆時間仍然安靜時，以及之後有了結果時。"
 
+#: app/delete-account.tsx
+msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
+msgstr "如果您是某個家庭唯一的發起人，或 Vela 為您自己留著一盞燈，您會繼續透過 Telegram 或 LINE 留在那個家庭，這樣就不會有人沒被通知。若也想離開，請在那裡說「停止」，或先請另一位家人擔任發起人。"
+
 #: src/components/telegram-family-link.tsx
 msgid "If you are joining as a relative, join the approved Telegram family group first. Connecting here keeps your existing family role."
 msgstr "若你是親人，請先加入已核准的 Telegram 家庭群組。在這裡連結後，你仍保有原來的家庭角色。"
@@ -976,6 +1005,10 @@ msgstr "日本"
 #: src/auth/phone.ts
 msgid "Kazakhstan"
 msgstr "哈薩克"
+
+#: app/delete-account.tsx
+msgid "Keep my account"
+msgstr "保留我的帳號"
 
 #: app/(tabs)/you.tsx
 msgid "Keep my turns"
@@ -1734,6 +1767,10 @@ msgstr "以家人身分登入"
 msgid "Sign in to connect your family."
 msgstr "登入後即可連結您的家庭。"
 
+#: app/delete-account.tsx
+msgid "Sign in to delete your account."
+msgstr "請先登入，再刪除您的帳號。"
+
 #: app/(tabs)/you.tsx
 msgid "Sign out"
 msgstr "登出"
@@ -2129,6 +2166,10 @@ msgstr "這位聯絡人將不再收到探望請求。你可以邀請其他人。
 msgid "This account already runs a family."
 msgstr "這個帳號已經有一個家庭了。"
 
+#: app/delete-account.tsx
+msgid "This cannot be undone."
+msgstr "刪除後無法復原。"
+
 #: src/components/telegram-family-link.tsx
 msgid "This connection expired. Create a new one and use its new code."
 msgstr "這個連結已經失效。請建立新的連結，使用新的連結碼。"
@@ -2413,6 +2454,10 @@ msgstr "Vela 試辦"
 msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
 msgstr "一個月要至少有來自{families}個家庭的{notices}則通知，Vela 才會顯示，這樣就看不出任何一個家庭的早上。"
 
+#: app/delete-account.tsx
+msgid "Vela still writes to you on Telegram or LINE in a family where you are the only organiser or have your own light. Say stop there to end it."
+msgstr "在您是唯一發起人、或有自己一盞燈的家庭裡，Vela 仍會透過 Telegram 或 LINE 傳訊息給您。在那裡說「停止」即可結束。"
+
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Vela suggests"
@@ -2570,6 +2615,10 @@ msgstr "誰住在{name}附近？"
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 msgstr "您的燈亮著時，家人也會看到您每天早上有沒有回覆、幾點回覆；如果一直很安靜，家人也會收到通知。"
 
+#: app/delete-account.tsx
+msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
+msgstr "您傳過的文字、照片和語音訊息會留在家庭中，因為那是家人日常的一部分。"
+
 #: src/components/story-day.tsx
 msgid "Write your own question"
 msgstr "自己寫一個問題"
@@ -2650,6 +2699,14 @@ msgstr "你將不再收到輪次。準備好時，隨時可以恢復。"
 msgid "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
 msgstr "您將不再看到家人的日常，也不會再輪流提問。三十天後，保存的關於您的資料會被刪除。"
 
+#: app/delete-account.tsx
+msgid "Your account could not be deleted just now. Nothing was changed. Try again."
+msgstr "目前無法刪除您的帳號，所有內容都沒有變動。請再試一次。"
+
+#: app/delete-account.tsx
+msgid "Your account is deleted."
+msgstr "您的帳號已刪除。"
+
 #: src/device/VoiceAnswer.tsx
 msgid "Your answer, {time} long."
 msgstr "您的回答，共 {time}。"
@@ -2725,6 +2782,10 @@ msgstr "你的問題"
 #: src/components/story-day.tsx
 msgid "Your question for {name}"
 msgstr "想問{name}的問題"
+
+#: app/delete-account.tsx
+msgid "Your sign-in has expired. Sign in again, then delete your account."
+msgstr "您的登入已過期。請重新登入，再刪除帳號。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Your Telegram chat"
