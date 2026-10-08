@@ -45,6 +45,8 @@ pnpm --filter @vela/ai eval:openai
 
 The gate and the baseline are the same: flag recall must stay at `1` on either provider.
 
+**Without Promptfoo** (the founder's network cannot fetch it): `eval:openai:quick` runs every case and its deterministic checks (including the call's `CALL_CHECKS`) through `evals/quick.ts`, writes results in Promptfoo's shape, and `gate.ts check` decides as usual. `eval:openai:judged` adds `EVAL_JUDGE=on`: `evals/judge.ts` asks GPT-5 one question per rubric criterion, with the same grading text Promptfoo's `llm-rubric` receives (`judgeRubric`), the output passed as escaped data, `store: false`, and a strict `{reason, pass}` answer. A failed criterion is listed for review as `judge: …` and never moves flag recall; a criterion the judge could not answer (timeout, HTTP error, bad JSON) is counted as not judged, not as failed. The founder runs it with `infra/scripts/run-ai-evals-from-keychain.sh --judge`.
+
 The script does three things, stopping at the first failure:
 
 1. `node evals/gate.ts preflight` fails in the first second with an instruction when `ANTHROPIC_API_KEY` is missing, and deletes the previous results file so an old run can never be read as this one.
