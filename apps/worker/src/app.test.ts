@@ -741,3 +741,87 @@ describe("her phone's messages (ADR-35)", () => {
     expect(namesOf(fake.calls)).toEqual([]);
   });
 });
+
+// Security review (technical plan 6.5): no route reads more of a body than it can use, whatever
+// Content-Length says or leaves out, and Telegram's secret is checked before any body is read.
+describe("bounded request bodies", () => {
+  /** A body sent in 64 KiB pieces with no Content-Length, `total` bytes in all, counting reads. */
+  function streamOf(total: number): { stream: ReadableStream<Uint8Array>; pulled: () => number } {
+    let sent = 0;
+    let pulls = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        if (sent >= total) {
+          controller.close();
+          return;
+        }
+        const size = Math.min(64 * 1024, total - sent);
+        sent += size;
+        controller.enqueue(new Uint8Array(size).fill(0x20));
+      },
+    });
+    return { stream, pulled: () => pulls };
+  }
+
+  it("refuses an unsigned Telegram request without reading its body", async () => {
+    const fake = createFakePilotRuntime({ webhookSecret: "right" });
+    const body = streamOf(8 * 1024 * 1024);
+    const request = new Request(`${ORIGIN}/webhooks/telegram`, {
+      method: "POST",
+      headers: { "X-Telegram-Bot-Api-Secret-Token": "wrong" },
+      body: body.stream,
+    });
+    expect((await send(fake, request)).status).toBe(401);
+    expect(body.pulled()).toBeLessThanOrEqual(1);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("answers a signed Telegram body past 1 MiB without handling it", async () => {
+    const fake = createFakePilotRuntime({ webhookSecret: "right" });
+    const request = new Request(`${ORIGIN}/webhooks/telegram`, {
+      method: "POST",
+      headers: { "X-Telegram-Bot-Api-Secret-Token": "right" },
+      body: streamOf(2 * 1024 * 1024).stream,
+    });
+    expect((await send(fake, request)).status).toBe(200);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("refuses a LINE body past 1 MiB as unsigned", async () => {
+    const fake = createFakePilotRuntime();
+    const sent: InboundJob[] = [];
+    const request = new Request(`${ORIGIN}/webhooks/line`, {
+      method: "POST",
+      headers: { "x-line-signature": "A".repeat(43) + "=" },
+      body: streamOf(2 * 1024 * 1024).stream,
+    });
+    const response = await send(fake, request, lineOnEnv({ INBOUND_QUEUE: recordingQueue(sent) }));
+    expect(response.status).toBe(401);
+    expect(sent).toEqual([]);
+  });
+
+  it("refuses her phone's message past 64 KiB, and a recording past 3 MiB with no length given", async () => {
+    const fake = createFakePilotRuntime();
+    const token = `Device ${"t".repeat(43)}`;
+    const message = await send(
+      fake,
+      new Request(`${ORIGIN}/device/messages`, {
+        method: "POST",
+        headers: { Authorization: token, "content-type": "application/json" },
+        body: streamOf(128 * 1024).stream,
+      }),
+    );
+    const voice = await send(
+      fake,
+      new Request(`${ORIGIN}/device/voice`, {
+        method: "POST",
+        headers: { Authorization: token, "content-type": "audio/mp4", "idempotency-key": "k" },
+        body: streamOf(4 * 1024 * 1024).stream,
+      }),
+    );
+    expect(message.status).toBe(413);
+    expect(voice.status).toBe(413);
+    expect(namesOf(fake.calls)).not.toContain("storeDeviceVoice");
+  });
+});

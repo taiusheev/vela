@@ -18,6 +18,7 @@ import {
 } from "@vela/services";
 import { type Context, Hono } from "hono";
 import { addressAdmitted, addressOf } from "./api-runtime.ts";
+import { MAX_UPLOAD_READ_MS, readUploadBody } from "./api-upload.ts";
 import {
   ConfigError,
   readEnvironment,
@@ -80,6 +81,26 @@ function pilotDeviceRefusal(c: Context<PilotAppEnv>): Response | null {
   }
 }
 
+/** The largest body a webhook may send (Telegram's and LINE's are a few kilobytes). */
+export const MAX_WEBHOOK_BYTES = 1024 * 1024;
+/** The largest body her phone's tap or words may send. */
+export const MAX_DEVICE_MESSAGE_BYTES = 64 * 1024;
+const BODY_READ_MS = 10_000;
+
+/**
+ * A request body as text, read in bounded pieces (security review, technical plan 6.5): never past
+ * `maxBytes` whatever Content-Length says, and never past ten seconds. A failure says why.
+ */
+async function readBoundedText(
+  request: Request,
+  env: PilotEnv,
+  maxBytes: number,
+): Promise<string | { status: 400 | 408 | 413 }> {
+  const read = await readUploadBody(request, createLogger(env), maxBytes, BODY_READ_MS);
+  if (!read.ok) return { status: read.status };
+  return new TextDecoder().decode(read.bytes);
+}
+
 export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
   const app = new Hono<PilotAppEnv>();
 
@@ -99,13 +120,20 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
    * handler behind `handleInbound` is idempotent, so a redelivery changes nothing twice.
    */
   app.post("/webhooks/telegram", async (c) => {
-    const rawBody = await c.req.text();
     const channels = runtime.createChannels(c.env);
     const adapter = channels.get("telegram");
-    const input = { headers: c.req.raw.headers, rawBody };
-    if (!(await adapter.verify(input))) {
+    // Telegram's secret is a header, so nothing of an unsigned request's body is read at all.
+    if (!(await adapter.verify({ headers: c.req.raw.headers, rawBody: "" }))) {
       return c.text("unauthorized", 401);
     }
+    const body = await readBoundedText(c.req.raw, c.env, MAX_WEBHOOK_BYTES);
+    if (typeof body !== "string") {
+      // A signed body that is too big or unreadable would come back the same: answered, not retried.
+      if (body.status === 408) return c.text("timeout", 500);
+      createLogger(c.env).error("telegram_webhook_unreadable", { status: body.status });
+      return c.text("ok");
+    }
+    const input = { headers: c.req.raw.headers, rawBody: body };
     const events = adapter.parse(input);
     if (events.length === 0) {
       return c.text("ok");
@@ -132,9 +160,12 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
     if (refused !== null) return refused;
     const presented = DEVICE_AUTHORIZATION.exec(c.req.header("Authorization") ?? "");
     if (presented === null) return c.json({ error: "unauthorized" }, 401);
+    const text = await readBoundedText(c.req.raw, c.env, MAX_DEVICE_MESSAGE_BYTES);
+    if (typeof text !== "string")
+      return c.json({ error: "invalid" }, text.status === 413 ? 413 : 400);
     let body: unknown;
     try {
-      body = await c.req.json();
+      body = JSON.parse(text);
     } catch {
       return c.json({ error: "invalid" }, 400);
     }
@@ -182,11 +213,20 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
     if ((c.req.header("Content-Type") ?? "").split(";")[0]?.trim() !== "audio/mp4") {
       return c.json({ error: "invalid" }, 400);
     }
-    const declared = Number(c.req.header("Content-Length") ?? "0");
-    if (declared > MAX_DEVICE_VOICE_BYTES) return c.json({ error: "too_large" }, 413);
     const key = c.req.header("Idempotency-Key") ?? "";
     const duration = Number(c.req.header("X-Duration-Ms") ?? "");
-    const body = new Uint8Array(await c.req.arrayBuffer());
+    // Read in bounded pieces, never past 3 MiB, whatever Content-Length says or leaves out.
+    const read = await readUploadBody(
+      c.req.raw,
+      createLogger(c.env),
+      MAX_DEVICE_VOICE_BYTES,
+      MAX_UPLOAD_READ_MS,
+    );
+    if (!read.ok) {
+      const error = read.status === 413 ? "too_large" : "invalid";
+      return c.json({ error }, read.status);
+    }
+    const body = read.bytes;
     const handle = await runtime.createDeps(c.env);
     try {
       const deps = handle.deps;
@@ -225,7 +265,11 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
     if (line === null) {
       return notFound(c);
     }
-    const rawBody = await c.req.text();
+    const rawBody = await readBoundedText(c.req.raw, c.env, MAX_WEBHOOK_BYTES);
+    if (typeof rawBody !== "string") {
+      // Nothing can be verified without the body; LINE's own bodies are far smaller than the cap.
+      return rawBody.status === 408 ? c.text("timeout", 500) : c.text("unauthorized", 401);
+    }
     const adapter = runtime.createChannels(c.env).get("line");
     const input = { headers: c.req.raw.headers, rawBody };
     if (!(await adapter.verify(input))) {
