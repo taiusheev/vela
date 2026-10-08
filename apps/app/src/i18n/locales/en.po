@@ -213,6 +213,10 @@ msgstr "{name}'s light is on"
 msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
 msgstr "{name}'s light is paused just now, so nothing can be sent into her morning."
 
+#: app/morning-settings.tsx
+msgid "{name}'s morning"
+msgstr "{name}'s morning"
+
 #: app/(tabs)/you.tsx
 msgid "{name}'s phone"
 msgstr "{name}'s phone"
@@ -553,6 +557,10 @@ msgstr "Call {name}"
 msgid "Canada"
 msgstr "Canada"
 
+#: app/morning-settings.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
 #. a time zone
 #. a time zone
 #: src/data/onboarding.ts
@@ -562,6 +570,10 @@ msgstr "Central"
 #: app/(tabs)/you.tsx
 msgid "Change"
 msgstr "Change"
+
+#: app/(tabs)/you.tsx
+msgid "Change {name}'s morning"
+msgstr "Change {name}'s morning"
 
 #: app/onboarding.tsx
 msgid "Change country"
@@ -594,6 +606,10 @@ msgstr "Checking…"
 #: app/away.tsx
 msgid "Choose a parent from You before changing away dates."
 msgstr "Choose a parent from You before changing away dates."
+
+#: app/morning-settings.tsx
+msgid "Choose a parent from You before changing morning settings."
+msgstr "Choose a parent from You before changing morning settings."
 
 #: app/nearby.tsx
 msgid "Choose a parent from You before changing the people nearby."
@@ -764,9 +780,17 @@ msgstr "English pilot"
 msgid "Enter"
 msgstr "Enter"
 
+#: app/morning-settings.tsx
+msgid "Enter a time such as 08:30 and choose a supported language."
+msgstr "Enter a time such as 08:30 and choose a supported language."
+
 #: app/sign-in.tsx
 msgid "Enter the six digits from your message."
 msgstr "Enter the six digits from your message."
+
+#: app/morning-settings.tsx
+msgid "Example settings previewed."
+msgstr "Example settings previewed."
 
 #: app/exchange/[id].tsx
 msgid "Exchange"
@@ -849,6 +873,7 @@ msgstr "Go to Today"
 
 #: app/(tabs)/index.tsx
 #: app/away.tsx
+#: app/morning-settings.tsx
 #: app/nearby.tsx
 msgid "Go to You"
 msgstr "Go to You"
@@ -1133,6 +1158,10 @@ msgstr "Listen to the family’s voice ask"
 msgid "Listen to the original voice"
 msgstr "Listen to the original voice"
 
+#: app/morning-settings.tsx
+msgid "Loading morning settings…"
+msgstr "Loading morning settings…"
+
 #: app/onboarding.tsx
 msgid "Loading pilot setup…"
 msgstr "Loading pilot setup…"
@@ -1193,6 +1222,26 @@ msgstr "Mom"
 #: app/ask.tsx
 msgid "More ways to ask"
 msgstr "More ways to ask"
+
+#: app/morning-settings.tsx
+msgid "Morning language"
+msgstr "Morning language"
+
+#: app/morning-settings.tsx
+msgid "Morning settings"
+msgstr "Morning settings"
+
+#: app/morning-settings.tsx
+msgid "Morning settings could not be reached. Your changes have not been saved."
+msgstr "Morning settings could not be reached. Your changes have not been saved."
+
+#: app/morning-settings.tsx
+msgid "Morning settings saved."
+msgstr "Morning settings saved."
+
+#: app/morning-settings.tsx
+msgid "Morning time (24-hour HH:MM)"
+msgstr "Morning time (24-hour HH:MM)"
 
 #. a time zone
 #. a time zone
@@ -1523,6 +1572,10 @@ msgstr "Pilot setup could not be reached just now."
 msgid "Preparing…"
 msgstr "Preparing…"
 
+#: app/morning-settings.tsx
+msgid "Preview settings"
+msgstr "Preview settings"
+
 #: app/(tabs)/you.tsx
 msgid "Privacy and help"
 msgstr "Privacy and help"
@@ -1660,8 +1713,13 @@ msgstr "Said yes"
 msgid "Save calling number"
 msgstr "Save calling number"
 
+#: app/morning-settings.tsx
+msgid "Save morning settings"
+msgstr "Save morning settings"
+
 #: app/(tabs)/index.tsx
 #: app/away.tsx
+#: app/morning-settings.tsx
 #: app/onboarding.tsx
 #: src/components/calling-number-editor.tsx
 #: src/components/quiet-notice.tsx
@@ -2005,6 +2063,10 @@ msgstr "That could not be saved just now. Nothing was lost; try again."
 msgid "That could not be saved just now. Try again in a moment."
 msgstr "That could not be saved just now. Try again in a moment."
 
+#: app/morning-settings.tsx
+msgid "That could not be saved just now. Your changes are still here. Try again."
+msgstr "That could not be saved just now. Your changes are still here. Try again."
+
 #: src/components/story-day.tsx
 msgid "That could not be sent just now. Try again in a moment."
 msgstr "That could not be sent just now. Try again in a moment."
@@ -2145,6 +2207,10 @@ msgstr "The free English pilot starts with the founder setting up your family on
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 
+#: app/morning-settings.tsx
+msgid "The language applies to future messages. Messages already sent stay as they are."
+msgstr "The language applies to future messages. Messages already sent stay as they are."
+
 #: app/onboarding.tsx
 msgid "The light is ready"
 msgstr "The light is ready"
@@ -2239,6 +2305,10 @@ msgstr "This iPhone could not keep a draft. Leave this screen open until your se
 msgid "This is an example. No live status is checked."
 msgstr "This is an example. No live status is checked."
 
+#: app/morning-settings.tsx
+msgid "This is an example. No settings are sent to a family."
+msgstr "This is an example. No settings are sent to a family."
+
 #: app/(tabs)/you.tsx
 msgid "This is the example family, so nobody left."
 msgstr "This is the example family, so nobody left."
@@ -2283,6 +2353,10 @@ msgstr "This voice is no longer available."
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
 msgstr "Those are the ones from the seeds you saved"
+
+#: app/morning-settings.tsx
+msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
+msgstr "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 
 #: app/book.tsx
 msgid "Tips"
@@ -2366,6 +2440,7 @@ msgstr "Trouble signing in?"
 #: app/away.tsx
 #: app/book.tsx
 #: app/exchange/[id].tsx
+#: app/morning-settings.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/precision.tsx

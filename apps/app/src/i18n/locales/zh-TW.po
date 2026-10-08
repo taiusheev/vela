@@ -214,6 +214,10 @@ msgstr "{name}的燈亮著"
 msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
 msgstr "{name}的燈目前暫停中，所以現在無法放進早安訊息。"
 
+#: app/morning-settings.tsx
+msgid "{name}'s morning"
+msgstr "{name}的早安訊息"
+
 #: app/(tabs)/you.tsx
 msgid "{name}'s phone"
 msgstr "{name}的手機"
@@ -554,6 +558,10 @@ msgstr "打電話給{name}"
 msgid "Canada"
 msgstr "加拿大"
 
+#: app/morning-settings.tsx
+msgid "Cancel"
+msgstr "取消"
+
 #. a time zone
 #. a time zone
 #: src/data/onboarding.ts
@@ -563,6 +571,10 @@ msgstr "中部時間"
 #: app/(tabs)/you.tsx
 msgid "Change"
 msgstr "更改"
+
+#: app/(tabs)/you.tsx
+msgid "Change {name}'s morning"
+msgstr "更改{name}的早安訊息"
 
 #: app/onboarding.tsx
 msgid "Change country"
@@ -595,6 +607,10 @@ msgstr "確認中…"
 #: app/away.tsx
 msgid "Choose a parent from You before changing away dates."
 msgstr "請先在「你」選擇一位家人，再更改外出日期。"
+
+#: app/morning-settings.tsx
+msgid "Choose a parent from You before changing morning settings."
+msgstr "請先在「你」選擇一位家人，再更改早安設定。"
 
 #: app/nearby.tsx
 msgid "Choose a parent from You before changing the people nearby."
@@ -765,9 +781,17 @@ msgstr "英語試辦"
 msgid "Enter"
 msgstr "登入"
 
+#: app/morning-settings.tsx
+msgid "Enter a time such as 08:30 and choose a supported language."
+msgstr "請輸入時間，例如 08:30，並選擇支援的語言。"
+
 #: app/sign-in.tsx
 msgid "Enter the six digits from your message."
 msgstr "請輸入訊息中的六位數字。"
+
+#: app/morning-settings.tsx
+msgid "Example settings previewed."
+msgstr "已預覽範例設定。"
 
 #: app/exchange/[id].tsx
 msgid "Exchange"
@@ -850,6 +874,7 @@ msgstr "前往「今天」"
 
 #: app/(tabs)/index.tsx
 #: app/away.tsx
+#: app/morning-settings.tsx
 #: app/nearby.tsx
 msgid "Go to You"
 msgstr "前往「你」"
@@ -1134,6 +1159,10 @@ msgstr "聽家人的語音提問"
 msgid "Listen to the original voice"
 msgstr "聽原始語音"
 
+#: app/morning-settings.tsx
+msgid "Loading morning settings…"
+msgstr "正在載入早安設定…"
+
 #: app/onboarding.tsx
 msgid "Loading pilot setup…"
 msgstr "正在載入試辦設定…"
@@ -1194,6 +1223,26 @@ msgstr "媽媽"
 #: app/ask.tsx
 msgid "More ways to ask"
 msgstr "更多提問方式"
+
+#: app/morning-settings.tsx
+msgid "Morning language"
+msgstr "早安訊息的語言"
+
+#: app/morning-settings.tsx
+msgid "Morning settings"
+msgstr "早安設定"
+
+#: app/morning-settings.tsx
+msgid "Morning settings could not be reached. Your changes have not been saved."
+msgstr "暫時無法取得早安設定。目前尚未儲存任何更改。"
+
+#: app/morning-settings.tsx
+msgid "Morning settings saved."
+msgstr "早安設定已儲存。"
+
+#: app/morning-settings.tsx
+msgid "Morning time (24-hour HH:MM)"
+msgstr "早安時間（24 小時制 HH:MM）"
 
 #. a time zone
 #. a time zone
@@ -1524,6 +1573,10 @@ msgstr "暫時無法取得試辦設定。"
 msgid "Preparing…"
 msgstr "準備中…"
 
+#: app/morning-settings.tsx
+msgid "Preview settings"
+msgstr "預覽設定"
+
 #: app/(tabs)/you.tsx
 msgid "Privacy and help"
 msgstr "隱私與協助"
@@ -1661,8 +1714,13 @@ msgstr "已同意"
 msgid "Save calling number"
 msgstr "儲存電話號碼"
 
+#: app/morning-settings.tsx
+msgid "Save morning settings"
+msgstr "儲存早安設定"
+
 #: app/(tabs)/index.tsx
 #: app/away.tsx
+#: app/morning-settings.tsx
 #: app/onboarding.tsx
 #: src/components/calling-number-editor.tsx
 #: src/components/quiet-notice.tsx
@@ -2006,6 +2064,10 @@ msgstr "目前無法儲存。內容都還在，請再試一次。"
 msgid "That could not be saved just now. Try again in a moment."
 msgstr "暫時無法儲存，請稍後再試。"
 
+#: app/morning-settings.tsx
+msgid "That could not be saved just now. Your changes are still here. Try again."
+msgstr "暫時無法儲存。更改的內容都還在，請再試一次。"
+
 #: src/components/story-day.tsx
 msgid "That could not be sent just now. Try again in a moment."
 msgstr "暫時無法送出，請稍後再試。"
@@ -2146,6 +2208,10 @@ msgstr "免費的英語試辦，會先由創辦人在 Telegram 上幫您設定�
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr "無法分享邀請。請再試一次「在 Telegram 上問」；目前沒有聯絡任何人。"
 
+#: app/morning-settings.tsx
+msgid "The language applies to future messages. Messages already sent stay as they are."
+msgstr "所選語言適用於之後的訊息。已送出的訊息不會更改。"
+
 #: app/onboarding.tsx
 msgid "The light is ready"
 msgstr "燈已經準備好了"
@@ -2240,6 +2306,10 @@ msgstr "這支 iPhone 無法保存草稿。請保持這個畫面開著，直到�
 msgid "This is an example. No live status is checked."
 msgstr "這是範例，不會檢查即時狀態。"
 
+#: app/morning-settings.tsx
+msgid "This is an example. No settings are sent to a family."
+msgstr "這是範例，不會將設定送至任何家庭。"
+
 #: app/(tabs)/you.tsx
 msgid "This is the example family, so nobody left."
 msgstr "這是範例家庭，所以沒有人離開。"
@@ -2284,6 +2354,10 @@ msgstr "這段語音已經無法使用。"
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
 msgstr "那些就是您留下來的種子種出來的"
+
+#: app/morning-settings.tsx
+msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
+msgstr "時間以 {zone} 為準。今天的早安訊息維持在 {timeAgain}，新時間從明天開始。"
 
 #: app/book.tsx
 msgid "Tips"
@@ -2367,6 +2441,7 @@ msgstr "無法登入嗎？"
 #: app/away.tsx
 #: app/book.tsx
 #: app/exchange/[id].tsx
+#: app/morning-settings.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/precision.tsx

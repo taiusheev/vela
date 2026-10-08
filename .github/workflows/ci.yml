@@ -111,7 +111,7 @@ jobs:
           for _ in $(seq 1 30); do curl -fs http://localhost:8082 > /dev/null && exit 0; sleep 1; done
           cat "$RUNNER_TEMP/serve.log"; exit 1
       - name: Walk the flows
-        run: maestro test --headless --screen-size 430x2000 --format junit --output "$RUNNER_TEMP/maestro.xml" -e APP_URL=http://localhost:8082 apps/app/.maestro/demo
+        run: maestro test --headless --screen-size 430x2400 --format junit --output "$RUNNER_TEMP/maestro.xml" -e APP_URL=http://localhost:8082 apps/app/.maestro/demo
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

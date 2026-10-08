@@ -604,3 +604,25 @@ export function removePushDevice(
     body: {},
   });
 }
+
+export function fetchMorningPreferences(
+  familyId: string,
+  memberId: string,
+  token: string | null,
+): Promise<import("@vela/contracts").ApiMorningPreferences> {
+  return read(`/v1/families/${familyId}/members/${memberId}/morning`, token);
+}
+export function setMorningPreferences(
+  familyId: string,
+  memberId: string,
+  preferences: import("@vela/contracts").SetMorningPreferences,
+  key: string,
+  token: string | null,
+): Promise<import("@vela/contracts").ApiMorningPreferences> {
+  return call({
+    path: `/v1/families/${familyId}/members/${memberId}/morning`,
+    token,
+    key,
+    body: preferences,
+  });
+}

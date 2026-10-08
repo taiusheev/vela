@@ -1,3 +1,4 @@
+import { morningTimeOn } from "./morning-time.ts";
 /**
  * The scheduled jobs beyond one member's morning (flows §3.14, §3.15): the weekly read draft, the
  * nightly metrics rollup, and retention. The weekly read's counts are numbers services compute and
@@ -453,8 +454,14 @@ export async function draftWeeklyRead(
   const familyAsks = counted.filter(
     (day) => day.exchange !== null && day.exchange.type !== "hello",
   ).length;
-  const usualTime = usualTimeOf(counted, member);
-  const lastUsualTime = usualTimeOf(lastWeek, member);
+  const usualTime = usualTimeOf(counted, {
+    ...member,
+    arrivalTime: morningTimeOn(member, weekEnd),
+  });
+  const lastUsualTime = usualTimeOf(lastWeek, {
+    ...member,
+    arrivalTime: morningTimeOn(member, weekEnd),
+  });
   // The short way round the clock: from 23:55 to 00:05 is ten minutes later.
   const driftMin =
     usualTime === null || lastUsualTime === null

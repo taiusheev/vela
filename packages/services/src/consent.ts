@@ -40,6 +40,7 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf, replyOf } from "./gateway.ts";
 import { languageOfSender, sendOutsideGateway } from "./group.ts";
+import { morningTimeOn } from "./morning-time.ts";
 import { pilotCanActivate } from "./pilot-admission.ts";
 import {
   type ChatConsentEvidence,
@@ -467,7 +468,7 @@ async function acceptConsent(
       learningUntil: learningUntil(today),
     })
     .where(eq(members.id, member.id));
-  const time = member.arrivalTime;
+  const time = morningTimeOn(member, addDays(today, 1));
   const conversationId = event.conversation.externalId;
   await enqueueOutbound(deps, tx, {
     kind: "consent",

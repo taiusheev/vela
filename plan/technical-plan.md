@@ -95,7 +95,7 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 |---|---|---|---|---|
 | 7.1 | Test-week checklist | admin page ticks gate 1 from events | — | PR #39 |
 | 7.2 | App-only organisers are told everything | flags, stop, failed delivery and consent answers reach app organisers (today Telegram only) | 5.4 | — |
-| 7.3 | Change her morning time and language from the app | organiser edits; schedule moves without a double or missed morning | — | — |
+| 7.3 | Change her morning time and language from the app | organiser edits; schedule moves without a double or missed morning | Signed iPhone + real messenger timing, native zh-TW copy review | Implemented: organiser settings, tomorrow-effective time, receipt replay and locked enqueue; synthetic checks and PostgreSQL lock overlap (PR #53). |
 | 7.4 | Help and support | in-app help, support inbox, status line when Vela has a problem | Native iPhone navigation/status and email handoff, inbox receipt, native zh-TW copy review | In-app help from You/sign-in; existing support inbox; bounded public heartbeat status without family credentials (PR #47). |
 | 7.5 | Weekly read in the app with a push | read opens from a notification | 5.4 | — |
 

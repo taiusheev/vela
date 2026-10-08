@@ -296,6 +296,7 @@ function fixture(
   const verifySession = vi.fn<ApiRuntime["verifySession"]>().mockResolvedValue(IDENTITY);
   const openDatabase = vi.fn<ApiRuntime["openDatabase"]>().mockResolvedValue({ db, close });
   const services = {
+    loadApiMorningPreferences: vi.fn().mockResolvedValue(null),
     loadApiMe: vi.fn<ApiReadServices["loadApiMe"]>().mockResolvedValue(ME),
     loadApiFamilyPlan: vi.fn<ApiReadServices["loadApiFamilyPlan"]>().mockResolvedValue(PLAN),
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>().mockResolvedValue(LIGHTS),
@@ -385,6 +386,7 @@ function fixture(
       createApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["createApiFamily"]>()
         .mockResolvedValue({ response: { status: 201, body: CREATED }, replayed: false }),
+      setApiMorningPreferences: vi.fn().mockRejectedValue(new Error("no morning in these tests")),
       pauseApiMember: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["pauseApiMember"]>()
         .mockResolvedValue({ response: { status: 200, body: PAUSED }, replayed: false }),
@@ -3198,5 +3200,51 @@ describe("push devices", () => {
 
     await expectResponse(await app.request(registerRequest()), 404, NOT_FOUND);
     await expectResponse(await app.request(removeRequest()), 404, NOT_FOUND);
+  });
+});
+
+describe("morning preferences routes", () => {
+  const path = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/morning`;
+  const preferences = {
+    member_id: MEMBER_ID,
+    display_name: "Mom",
+    time_zone: "Asia/Taipei",
+    arrival_time: "07:30",
+    today_arrival_time: "08:00",
+    effective_from: "2026-09-15",
+    language: "en",
+  };
+  it("reads only after authentication and returns the settings schema", async () => {
+    const f = fixture();
+    f.services.loadApiMorningPreferences.mockResolvedValue(preferences);
+    const response = await f.app.request(path, { headers: { authorization: "Bearer good" } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(preferences);
+  });
+  it("saves an idempotent edit and wakes after commit", async () => {
+    const f = fixture(true);
+    f.writes.services.setApiMorningPreferences.mockResolvedValue({
+      response: { status: 200, body: preferences },
+      replayed: false,
+      after: { outboundIds: [], wakeMemberIds: [MEMBER_ID] },
+    });
+    const response = await f.app.request(
+      writeRequest("POST", path, JSON.stringify({ arrival_time: "07:30", language: "en" }), {
+        authorization: "Bearer good",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Idempotency-Replayed")).toBe("false");
+    expect(f.writes.nudges.wake).toHaveBeenCalledWith(MEMBER_ID, expect.any(Date));
+  });
+  it("rejects invalid times before opening the database", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(
+      writeRequest("POST", path, JSON.stringify({ arrival_time: "24:00", language: "en" }), {
+        authorization: "Bearer good",
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(f.openDatabase).not.toHaveBeenCalled();
   });
 });

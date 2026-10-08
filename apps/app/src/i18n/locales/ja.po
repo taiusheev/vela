@@ -207,6 +207,10 @@ msgstr ""
 msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "{name}'s morning"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "{name}'s phone"
 msgstr ""
@@ -547,6 +551,10 @@ msgstr ""
 msgid "Canada"
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "Cancel"
+msgstr ""
+
 #. a time zone
 #. a time zone
 #: src/data/onboarding.ts
@@ -555,6 +563,10 @@ msgstr ""
 
 #: app/(tabs)/you.tsx
 msgid "Change"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Change {name}'s morning"
 msgstr ""
 
 #: app/onboarding.tsx
@@ -587,6 +599,10 @@ msgstr ""
 
 #: app/away.tsx
 msgid "Choose a parent from You before changing away dates."
+msgstr ""
+
+#: app/morning-settings.tsx
+msgid "Choose a parent from You before changing morning settings."
 msgstr ""
 
 #: app/nearby.tsx
@@ -758,8 +774,16 @@ msgstr ""
 msgid "Enter"
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "Enter a time such as 08:30 and choose a supported language."
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "Enter the six digits from your message."
+msgstr ""
+
+#: app/morning-settings.tsx
+msgid "Example settings previewed."
 msgstr ""
 
 #: app/exchange/[id].tsx
@@ -843,6 +867,7 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 #: app/away.tsx
+#: app/morning-settings.tsx
 #: app/nearby.tsx
 msgid "Go to You"
 msgstr ""
@@ -1127,6 +1152,10 @@ msgstr ""
 msgid "Listen to the original voice"
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "Loading morning settings…"
+msgstr ""
+
 #: app/onboarding.tsx
 msgid "Loading pilot setup…"
 msgstr ""
@@ -1186,6 +1215,26 @@ msgstr ""
 
 #: app/ask.tsx
 msgid "More ways to ask"
+msgstr ""
+
+#: app/morning-settings.tsx
+msgid "Morning language"
+msgstr ""
+
+#: app/morning-settings.tsx
+msgid "Morning settings"
+msgstr ""
+
+#: app/morning-settings.tsx
+msgid "Morning settings could not be reached. Your changes have not been saved."
+msgstr ""
+
+#: app/morning-settings.tsx
+msgid "Morning settings saved."
+msgstr ""
+
+#: app/morning-settings.tsx
+msgid "Morning time (24-hour HH:MM)"
 msgstr ""
 
 #. a time zone
@@ -1517,6 +1566,10 @@ msgstr ""
 msgid "Preparing…"
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "Preview settings"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "Privacy and help"
 msgstr ""
@@ -1654,8 +1707,13 @@ msgstr ""
 msgid "Save calling number"
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "Save morning settings"
+msgstr ""
+
 #: app/(tabs)/index.tsx
 #: app/away.tsx
+#: app/morning-settings.tsx
 #: app/onboarding.tsx
 #: src/components/calling-number-editor.tsx
 #: src/components/quiet-notice.tsx
@@ -1999,6 +2057,10 @@ msgstr ""
 msgid "That could not be saved just now. Try again in a moment."
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "That could not be saved just now. Your changes are still here. Try again."
+msgstr ""
+
 #: src/components/story-day.tsx
 msgid "That could not be sent just now. Try again in a moment."
 msgstr ""
@@ -2139,6 +2201,10 @@ msgstr ""
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "The language applies to future messages. Messages already sent stay as they are."
+msgstr ""
+
 #: app/onboarding.tsx
 msgid "The light is ready"
 msgstr ""
@@ -2233,6 +2299,10 @@ msgstr ""
 msgid "This is an example. No live status is checked."
 msgstr ""
 
+#: app/morning-settings.tsx
+msgid "This is an example. No settings are sent to a family."
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "This is the example family, so nobody left."
 msgstr ""
@@ -2276,6 +2346,10 @@ msgstr ""
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
+msgstr ""
+
+#: app/morning-settings.tsx
+msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 msgstr ""
 
 #: app/book.tsx
@@ -2360,6 +2434,7 @@ msgstr ""
 #: app/away.tsx
 #: app/book.tsx
 #: app/exchange/[id].tsx
+#: app/morning-settings.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/precision.tsx

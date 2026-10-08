@@ -46,6 +46,7 @@ import {
   loadApiFamilyPlan,
   loadApiLights,
   loadApiMe,
+  loadApiMorningPreferences,
   loadApiPrecision,
   loadApiQuiet,
   loadApiReminders,
@@ -69,6 +70,7 @@ import {
   replyToApiExchange,
   resolveApiQuiet,
   setApiAway,
+  setApiMorningPreferences,
   setUpApiDevice,
   startAccountLink,
   startApiTrial,
@@ -109,6 +111,7 @@ export interface ApiApp {
  */
 export const API_READ_SERVICES: ApiReadServices = {
   loadApiMe,
+  loadApiMorningPreferences,
   loadApiFamilyPlan,
   loadApiLights,
   loadApiToday,
@@ -139,6 +142,7 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   createApiFamily,
   resolveApiQuiet,
   pauseApiMember,
+  setApiMorningPreferences,
   leaveApiFamily,
   setApiAway,
   withdrawApiAsk,

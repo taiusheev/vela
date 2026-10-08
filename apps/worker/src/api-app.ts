@@ -28,6 +28,7 @@ import {
   ApiLookInAsk,
   ApiMe,
   ApiMemberPause,
+  ApiMorningPreferences,
   ApiNearbyContact,
   ApiNearbyInvite,
   ApiNearbyRemoved,
@@ -72,6 +73,7 @@ import {
   RemoveNearby,
   RemovePushDevice,
   SetAway,
+  SetMorningPreferences,
   StartTrial,
   WithdrawAsk,
 } from "@vela/contracts";
@@ -110,6 +112,7 @@ import {
   type loadApiFamilyPlan,
   type loadApiLights,
   type loadApiMe,
+  type loadApiMorningPreferences,
   type loadApiPrecision,
   type loadApiQuiet,
   type loadApiReminders,
@@ -144,6 +147,7 @@ import {
   type resolveApiQuiet,
   runAfterCommit,
   type setApiAway,
+  type setApiMorningPreferences,
   type setUpApiDevice,
   type startAccountLink,
   type startApiTrial,
@@ -179,6 +183,7 @@ import {
 
 export interface ApiReadServices {
   loadApiMe: typeof loadApiMe;
+  loadApiMorningPreferences: typeof loadApiMorningPreferences;
   loadApiFamilyPlan: typeof loadApiFamilyPlan;
   loadApiLights: typeof loadApiLights;
   loadApiToday: typeof loadApiToday;
@@ -205,6 +210,7 @@ export interface ApiWriteServices {
   createApiFamily: typeof createApiFamily;
   resolveApiQuiet: typeof resolveApiQuiet;
   pauseApiMember: typeof pauseApiMember;
+  setApiMorningPreferences: typeof setApiMorningPreferences;
   leaveApiFamily: typeof leaveApiFamily;
   setApiAway: typeof setApiAway;
   withdrawApiAsk: typeof withdrawApiAsk;
@@ -790,6 +796,23 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     },
   );
   app.get(
+    "/v1/families/:familyId/members/:memberId/morning",
+    authenticate,
+    withDatabase,
+    async (c) => {
+      const preferences = await runtime.services.loadApiMorningPreferences(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        c.req.param("memberId"),
+        runtime.now(),
+      );
+      return preferences === null
+        ? c.json(FAMILY_NOT_FOUND, 404)
+        : c.json(ApiMorningPreferences.parse(preferences));
+    },
+  );
+  app.get(
     "/v1/families/:familyId/lights",
     authenticate,
     withDatabase,
@@ -1363,6 +1386,38 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         const removed = ApiNearbyRemoved.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(removed, 200);
+      },
+    );
+    app.post(
+      "/v1/families/:familyId/members/:memberId/morning",
+      authenticate,
+      validateWrite(SetMorningPreferences, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        if (
+          runtime.capabilities?.english_only === true &&
+          (c.get("writeInput") as { language: string }).language !== "en"
+        )
+          return c.json(
+            { error: { code: "invalid", message: "This pilot supports English mornings." } },
+            400,
+          );
+        const result = await writes.services.setApiMorningPreferences(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.req.param("memberId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+          throw new Error("Invalid API mutation response");
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiMorningPreferences.parse(result.response.body), 200);
       },
     );
     app.post(

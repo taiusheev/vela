@@ -109,6 +109,7 @@ export {
   uploadApiMedia,
 } from "./api-media.ts";
 export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
+export { loadApiMorningPreferences, setApiMorningPreferences } from "./api-morning-preferences.ts";
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
 export {
   loadApiPrecision,

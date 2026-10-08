@@ -35,6 +35,8 @@ export interface ScheduleInput {
   member: {
     timeZone: string;
     arrivalTime: LocalTime;
+    /** A pending edit may give tomorrow a different time from today. */
+    nextArrivalTime?: LocalTime;
     status: MemberStatus;
     lightOn: boolean;
     quietAfterMinutes: number;
@@ -242,7 +244,7 @@ function arrivalRule(ctx: Context, out: Collector): boolean {
   }
   const { startsOn } = ctx.input.member;
   const nextArrivalDate = startsOn !== null && startsOn > ctx.tomorrow ? startsOn : ctx.tomorrow;
-  out.wakes.push(ctx.at(nextArrivalDate, arrivalTime));
+  out.wakes.push(ctx.at(nextArrivalDate, ctx.input.member.nextArrivalTime ?? arrivalTime));
   return due;
 }
 

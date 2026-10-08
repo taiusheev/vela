@@ -277,6 +277,9 @@ export const members = pgTable(
     wakeTime: localTime("wake_time"),
     /** Local arrival time (wake + 30 min for kept-light members). */
     arrivalTime: localTime("arrival_time").notNull().default("08:00"),
+    /** A time edit takes effect on this local date; today keeps its previous time. */
+    pendingArrivalTime: localTime("pending_arrival_time"),
+    pendingArrivalDate: date("pending_arrival_date"),
     /**
      * When this member's scheduler should next wake (UTC). The Durable Object alarm is the primary
      * scheduler; this column lets the reconciliation job find members whose wake was missed.

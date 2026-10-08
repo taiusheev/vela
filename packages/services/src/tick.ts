@@ -64,6 +64,7 @@ import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { applyPendingEffects, enqueueOutbound, redriveStrandedOutbound } from "./gateway.ts";
 import { draftWeeklyRead } from "./jobs.ts";
+import { morningTimeOn } from "./morning-time.ts";
 import { pilotFamilyAllowed, pilotMemberAllowed } from "./pilot-admission.ts";
 import { MAX_PROCESSING_ATTEMPTS } from "./pipeline.ts";
 import { checkPushReceipts } from "./push.ts";
@@ -245,7 +246,8 @@ export async function loadScheduleInput(
     now,
     member: {
       timeZone,
-      arrivalTime: member.arrivalTime,
+      arrivalTime: morningTimeOn(member, today),
+      nextArrivalTime: morningTimeOn(member, tomorrow),
       status: member.status,
       lightOn: member.lightOn,
       quietAfterMinutes: member.quietAfterMin,
