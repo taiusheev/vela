@@ -23,3 +23,11 @@ Engineering reviews the [repository security dashboard](https://github.com/taius
 The [content-free receipt](../load-tests/repository-security-2026-10-08.json) records 1 critical, 7 high, 11 moderate and 3 low advisories in the active lockfile. The audit fails as intended; an unavailable local registry also exits 1. `braces` and `node-forge` have no patched version in that audit response. Do not suppress these findings or declare 6.3 done. Remediation needs dependency-path assessment, compatible fixes and validation. GitHub dependency alerts currently identify an archived npm lockfile, so they do not establish coverage of the active pnpm workspace.
 
 Secret alerts 1 and 2 were traced to an explicit fake Telegram fixture and a public Svix known-answer test vector and resolved as `used_in_tests`. No operational credential was shown or rotated. No open secret alerts remained at this read-back; that does not establish exhaustive credential coverage.
+
+## Compatible dependency fixes
+
+[PR #45](https://github.com/taiusheev/vela/pull/45) merged affected-range overrides for shell-quote 1.11.0 (GHSA-pqg4-j6r4-53mv), Sharp 0.35.5 (GHSA-rgj7-g3m4-5g8c and GHSA-wq5f-xc86-pv6w), source-map-js 1.2.2 (GHSA-68fv-2mgg-jv7q), and Undici 7.29.1 (including GHSA-rfgv-xxqx-mfg5 and GHSA-w293-vg96-wgc3). Sharp is restricted to the existing Miniflare 0.35 dependency line. Remove an override once all active parent-tool resolutions naturally use a non-vulnerable version and a fresh audit confirms it. Framework versions remain the same.
+
+The post-fix audit is 0 critical, 2 high, 6 moderate and 0 low. The [node-forge](https://github.com/advisories/GHSA-86w9-cpqp-85rv) and [braces](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) high findings have no published patched version as of 8 October 2026. No exceptions or ignore lists were added; the audit continues to fail on these findings. This preserves the unresolved work and does not close 6.3 or the launch security review.
+
+The first CodeQL PR scan uploaded all three language analyses successfully with zero findings and no upload errors. This is one scan at the recorded merge-ref commit; future integrated commits need their own scan.

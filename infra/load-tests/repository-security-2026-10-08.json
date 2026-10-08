@@ -194,5 +194,30 @@
     ]
   },
   "claudeReview": "Read-only review of scanner configuration; scheduling, permissions, SHA pins, cooldown and evidence documentation addressed. Actual CI scan remains required.",
-  "status": "Baseline not clean. High/critical dependency advisories remain; pnpm Dependabot resolution and first CodeQL upload pending."
+  "status": "Compatible fixes merged in PR #45; two unpatched high and six moderate findings remain. Scanner configuration remains draft PR #43; npm updater resolution not yet verified.",
+  "remediation": {
+    "pullRequest": "https://github.com/taiusheev/vela/pull/45",
+    "mergeCommit": "22101a2559b010414c59cbd0f87c09ce37dbdda0",
+    "auditAfter": {
+      "critical": 0,
+      "high": 2,
+      "moderate": 6,
+      "low": 0,
+      "info": 0
+    },
+    "suppressions": false,
+    "finalHeadChecks": "Both push and PR CI on de8c718 passed full source tests, PostgreSQL contention and app journeys. Automatic staging release is being observed separately."
+  },
+  "initialCodeql": {
+    "run": "https://github.com/taiusheev/vela/actions/runs/37726862443",
+    "mergeRefCommit": "65fb2a853efe32a4e85f3d31ac2d1fdca64aaf2f",
+    "languages": [
+      "javascript-typescript",
+      "actions",
+      "python"
+    ],
+    "allUploaded": true,
+    "findings": 0,
+    "uploadErrors": 0
+  }
 }
