@@ -23,6 +23,7 @@ import {
   renderWaitlist,
 } from "./admin-pages.ts";
 import type { AdminRuntime } from "./admin-runtime.ts";
+import { renderTestWeek } from "./admin-test-week-page.ts";
 import { renderTrialReport } from "./admin-trial-page.ts";
 import { ConfigError } from "./config.ts";
 import type { AdminDeps } from "./deps.ts";
@@ -249,6 +250,23 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
         "No such family",
         `That address is not a family (${code}).`,
       );
+    }
+  });
+
+  admin.get("/families/:familyId/test-week", async (c) => {
+    const familyId = c.req.param("familyId");
+    const ctx: AdminContext = { admin: c.get("admin"), familyId };
+    try {
+      const report = await withDeps(c, (deps) =>
+        runtime.services.loadAdminTestWeek(deps, ctx, familyId),
+      );
+      return report === null
+        ? renderMessage(404, "No test week", "The family is unavailable or being deleted.")
+        : renderTestWeek(report);
+    } catch (error) {
+      const code = domainErrorCode(error);
+      if (code === null) throw error;
+      return renderMessage(statusForDomainError(code), "No test week", "That address is invalid.");
     }
   });
 

@@ -51,6 +51,12 @@ export {
   setAway,
 } from "./admin.ts";
 export {
+  loadAdminTestWeek,
+  type TestWeekGroup,
+  type TestWeekReport,
+  type TestWeekStep,
+} from "./admin-test-week.ts";
+export {
   loadAdminTrialReport,
   type TrialDay,
   type TrialRecipientReport,
