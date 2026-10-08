@@ -215,4 +215,14 @@ export const zhTW: Record<keyof typeof en, string> = {
     "{family}的{name}那邊今天比較安靜，但傳到一位發起人手機的通知沒有送達。查看： {link}",
   "admin.push_misconfigured":
     "推播通知無法送出：Vela 的推播憑證被拒絕了，修好之前，任何通知都到不了手機。查看： {link}",
+  "admin.ops_arrival_failed":
+    "自 UTC {since} 起，有 {count} 則早上的訊息無法送達（{environment}）。查看： {link}",
+  "admin.ops_dropped":
+    "自 UTC {since} 起，有 {count} 則訊息在送出前被丟棄（{environment}）。查看： {link}",
+  "admin.ops_scheduler_missed":
+    "自 UTC {since} 起，排程漏跑了 {count} 次（{environment}），早上的訊息可能會延遲。查看： {link}",
+  "admin.ops_ai_failing":
+    "AI 呼叫正在失敗：過去一小時 {total} 次中有 {failed} 次失敗（{environment}）。回答仍會點亮燈。查看： {link}",
+  "admin.ops_digest":
+    "Vela {environment}，過去 24 小時：送達 {delivered} 個早晨、失敗 {failed} 個；{answers} 則回答、{replies} 則回覆、{readbacks} 次讀回；{quiet} 次安靜通知、已解決 {resolved} 次；{flags} 個標記、{stops} 次停止；AI 呼叫 {ai_calls} 次、失敗 {ai_failed} 次、US${ai_cost}；丟棄 {dropped} 則、排程漏跑 {missed} 次。查看： {link}",
 };

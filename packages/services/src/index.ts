@@ -165,6 +165,7 @@ export { ingestExchangeMedia, storeInboundCopy } from "./inbound-media-copy.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
 export { askApiToLookIn, LookInRefusedError } from "./nearby-ask.ts";
 export { inviteApiNearby, NearbyInviteRefusedError } from "./nearby-consent.ts";
+export { AI_ALERT_MIN_CALLS, AI_ALERT_SHARE, opsAlerts, opsDigest } from "./ops.ts";
 export {
   type PilotAdmission,
   pilotAllowsInbound,

@@ -40,8 +40,8 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 
 | # | Step | Done when | Needs | Status |
 |---|---|---|---|---|
-| 2.1 | Ops alerts to the founder | the founder's admin chat gets one message when arrivals fail, sends drop, the scheduler misses, AI fails over 20% in an hour, or LINE quota passes 80%; never content | — | — |
-| 2.2 | Daily ops digest | 08:00 Taipei message: mornings delivered/failed, answers, quiet notices and outcomes, AI failures and cost, per environment; content-free | — | — |
+| 2.1 | Ops alerts to the founder | the founder's admin chat gets one message when arrivals fail, sends drop, the scheduler misses, AI fails over 20% in an hour, or LINE quota passes 80%; never content | — | Done (`packages/services/src/ops.ts`; LINE quota alert already existed) |
+| 2.2 | Daily ops digest | after the nightly run (03:20 UTC, 11:20 Taipei): mornings delivered/failed, answers, quiet notices and outcomes, AI failures and cost, per environment; content-free | — | Done (`opsDigest`) |
 | 2.3 | External uptime monitor | free monitor on `/healthz` keyword `"status":"ok"` every 5 min for staging and production | F (account) | Waiting |
 | 2.4 | Log access | Cloudflare token with Workers Observability read, or Logpush to R2, so failures can be investigated without the dashboard | F (token scope) | — |
 | 2.5 | Silence drill parts A, B, D | each run once on staging, receipts saved | F (2nd Telegram) | — |

@@ -20,6 +20,8 @@ import {
   joinWaitlist,
   loadPublicPrecision,
   memberOfDeviceToken,
+  opsAlerts,
+  opsDigest,
   type ReconcileResult,
   reconcile,
   recordChannelQuota,
@@ -45,6 +47,9 @@ export interface PilotServices {
   recordChannelQuota(deps: Deps, channel: BilledChannel, quota: ChannelQuota): Promise<void>;
   rollupMetrics(deps: Deps): Promise<number>;
   applyRetention(deps: Deps): Promise<Record<string, number>>;
+  /** The founder's ops alerts (each reconcile) and daily digest (nightly): plan 2.1 and 2.2. */
+  opsAlerts(deps: Deps): Promise<number>;
+  opsDigest(deps: Deps): Promise<boolean>;
   writeSuggestions(deps: Deps): Promise<SuggestionsRun>;
   deliverOutbound(deps: Deps, outboundId: string): Promise<DeliveryResult>;
   ingestAnswerMedia(deps: Deps, answerId: string): Promise<void>;
@@ -86,6 +91,8 @@ const services: PilotServices = {
   recordChannelQuota,
   rollupMetrics,
   applyRetention,
+  opsAlerts,
+  opsDigest,
   writeSuggestions,
   deliverOutbound,
   ingestAnswerMedia,
