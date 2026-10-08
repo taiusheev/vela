@@ -27,6 +27,16 @@ export const OPENAI_MODELS = ["gpt-5", "gpt-5-mini"] as const;
 export type OpenAiModel = (typeof OPENAI_MODELS)[number];
 
 /**
+ * The dated snapshot each model is asked for (technical plan 4.5), so OpenAI moving the alias to a
+ * newer model never changes what Vela says without the golden set judging it first. Change a
+ * snapshot only together with an eval run on it (`eval:openai:judged`), recorded in the change.
+ */
+export const OPENAI_SNAPSHOT_FOR: Readonly<Record<OpenAiModel, string>> = {
+  "gpt-5": "gpt-5-2025-08-07",
+  "gpt-5-mini": "gpt-5-mini-2025-08-07",
+};
+
+/**
  * The same routing idea as `MODEL_FOR` (ADR-15): a missed health or safety signal is the expensive
  * failure, so `flag` and the judgment calls run on the stronger model; templated drafting runs on
  * the small one.
@@ -191,7 +201,7 @@ async function invoke<K extends AiCallName>(
   const prompt = systemFor(spec.call);
 
   const body = JSON.stringify({
-    model,
+    model: OPENAI_SNAPSHOT_FOR[model],
     store: false,
     max_completion_tokens: MAX_TOKENS_FOR[spec.call],
     reasoning_effort: OPENAI_EFFORT_FOR[spec.call],

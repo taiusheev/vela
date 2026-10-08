@@ -1104,7 +1104,7 @@ describe("eval provider", () => {
     );
     expect(bodies).toHaveLength(3);
     const [first] = bodies;
-    expect(first).toMatchObject({ model: "gpt-5", store: false });
+    expect(first).toMatchObject({ model: "gpt-5-2025-08-07", store: false });
     const messages = first?.messages as Array<{ role: string; content: string }>;
     expect(messages[0]?.content).toContain("criterion one is long enough");
     expect(messages[1]?.content).toBe(judgedOutput(output));

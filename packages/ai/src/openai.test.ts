@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createOpenAiAi,
   OPENAI_MODEL_FOR,
+  OPENAI_MODELS,
   OPENAI_REMINDERS,
+  OPENAI_SNAPSHOT_FOR,
   openAiPriceFor,
   responseSchema,
 } from "./openai.ts";
@@ -101,7 +103,8 @@ describe("createOpenAiAi request shape", () => {
     expect(request?.url.href).toBe("https://api.openai.com/v1/chat/completions");
     expect(request?.headers.get("authorization")).toBe("Bearer test-key");
     const body = JSON.parse(request?.text ?? "");
-    expect(body.model).toBe(OPENAI_MODEL_FOR.understand);
+    expect(body.model).toBe(OPENAI_SNAPSHOT_FOR[OPENAI_MODEL_FOR.understand]);
+    expect(body.model).toBe("gpt-5-2025-08-07");
     expect(body.store).toBe(false);
     expect(body.reasoning_effort).toBe("low");
     expect(body.messages).toEqual([
@@ -139,6 +142,14 @@ describe("createOpenAiAi request shape", () => {
   it("routes the flag check to the stronger model and drafting to the small one", () => {
     expect(OPENAI_MODEL_FOR.flag).toBe("gpt-5");
     expect(OPENAI_MODEL_FOR.chips).toBe("gpt-5-mini");
+  });
+
+  // Technical plan 4.5: an alias OpenAI moves never changes what Vela says unjudged.
+  it("asks for a dated snapshot of every model, never a moving alias", () => {
+    for (const snapshot of Object.values(OPENAI_SNAPSHOT_FOR)) {
+      expect(snapshot).toMatch(/-\d{4}-\d{2}-\d{2}$/);
+    }
+    expect(Object.keys(OPENAI_SNAPSHOT_FOR).sort()).toEqual([...OPENAI_MODELS].sort());
   });
 });
 
