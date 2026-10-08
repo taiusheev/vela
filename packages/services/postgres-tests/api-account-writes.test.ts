@@ -263,7 +263,7 @@ describe("account writes on independent PostgreSQL connections", () => {
           else expect(result.value).toMatchObject({ response: { status: 200 }, replayed: false });
         }
         expect(disableResults).toEqual(
-          disables.map(() => ({ status: "fulfilled", value: undefined })),
+          disables.map(() => ({ status: "fulfilled", value: expect.anything() })),
         );
         expect(await pg.accounts()).toEqual([
           expect.objectContaining({ authSubject: identity.authSubject, deletedAt: NOW }),

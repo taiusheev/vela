@@ -220,7 +220,7 @@ describe("account linking on independent PostgreSQL connections", () => {
     ]);
   });
 
-  it("purges the challenge and receipts when a disable follows a completion, leaving the membership pointing at the tombstone", async () => {
+  it("purges the challenge and receipts when a disable follows a completion, leaving the membership with no account", async () => {
     const opener = await pg.client("opener");
     const completer = await pg.client("completer");
     const disabler = await pg.client("disabler");
@@ -246,8 +246,8 @@ describe("account linking on independent PostgreSQL connections", () => {
     expect(await pg.accounts()).toEqual([
       expect.objectContaining({ authSubject: identity.authSubject, deletedAt: NOW }),
     ]);
-    // Disable is a tombstone, not erasure (API contract §1): the membership it linked still names
-    // the deleted account, which the erasure work still has to clear.
-    expect(await linkedMember()).toBe(ownerId);
+    // Deletion lets go of the membership it linked (ADR-43): this one is kept in the family on
+    // Telegram, so it no longer names the deleted account.
+    expect(await linkedMember()).toBeNull();
   });
 });
