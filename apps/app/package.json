@@ -11,7 +11,7 @@
     "ios": "expo start --ios",
     "start:staging": "node --env-file=.env.staging ../../node_modules/expo/bin/cli start --clear",
     "e2e:serve": "EXPO_PUBLIC_DEMO_MODE=true EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY= EXPO_PUBLIC_API_URL= expo start --web --port 8082",
-    "e2e:demo": "maestro test --headless --screen-size 430x2000 -e APP_URL=http://localhost:8082 .maestro/demo",
+    "e2e:demo": "maestro test --headless --screen-size 430x2400 -e APP_URL=http://localhost:8082 .maestro/demo",
     "typecheck": "tsc -p tsconfig.json",
     "i18n:extract": "lingui extract --clean",
     "i18n:review": "node scripts/i18n-review.mts",

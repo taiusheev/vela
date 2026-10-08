@@ -12,11 +12,13 @@ tags:
 - assertVisible: "Morning settings"
 - assertVisible: "This is an example. No settings are sent to a family."
 - assertVisible: "Times are in Asia/Taipei. Today's morning stays at 08:00. A new time starts tomorrow."
-- tapOn: "Morning time (24-hour HH:MM)"
+- tapOn:
+    id: 'Morning time \(24-hour HH:MM\)'
 - eraseText
 - inputText: "24:00"
 - assertVisible: "Enter a time such as 08:30 and choose a supported language."
-- tapOn: "Morning time (24-hour HH:MM)"
+- tapOn:
+    id: 'Morning time \(24-hour HH:MM\)'
 - eraseText
 - inputText: "07:30"
 - scrollUntilVisible:

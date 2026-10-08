@@ -6,8 +6,8 @@ not on the screen. Build plan 3.9.
 
 ## `demo/`: the example family, no account
 
-The eleven flows `today`, `ask`, `reply`, `recipient-and-reply`, `quiet-notice`, `sunday`, `story-day`, `nearby` and
-`privacy-and-help`, `customer-recovery` and `weekly-recipient` walk the app built with explicit `EXPO_PUBLIC_DEMO_MODE=true`, no API and no
+The twelve flows `today`, `ask`, `reply`, `recipient-and-reply`, `quiet-notice`, `sunday`, `story-day`, `nearby` and
+`privacy-and-help`, `customer-recovery`, `weekly-recipient` and `morning-settings` walk the app built with explicit `EXPO_PUBLIC_DEMO_MODE=true`, no API and no
 sign-in. A development build alone does not activate fixtures. The quiet notice is reached through
 `/?example=quiet`, which only the demo answers. They run in Chrome on every push (CI job
 `app-flows`) and need nothing secret. On this machine, with the demo served on port 8082 (`vela-app-demo` in the launch
@@ -31,7 +31,7 @@ audio or parent-app functionality. If local environment flags change, restart wi
 cache before interpreting a result.
 
 The runner targets a 430×2000 window so the longer You page reaches Pause/Leave without relying
-on Maestro's outer-window scrolling. Headless Chrome can enforce a minimum width and subtract
+on Maestro's outer-window scrolling. The morning-settings flow targets the input by its accessibility id, so the visible label is not mistaken for the editable field. Headless Chrome can enforce a minimum width and subtract
 browser chrome from that requested size; CI screenshot dimensions are not phone-size proof.
 Review normal 320/390 pt phone viewports independently; the app's own scroll view works there.
 
@@ -52,7 +52,7 @@ challenge. `trial-current-family` requires an already linked approved family; it
 synthetic fixture. These are separate account states, not a directory-wide batch. No private proof
 code, bearer token or participant name goes in test arguments. Complete linking privately and run
 the full exchange/media/device script in `plan/staging-test-script.md`. These native flows are prepared;
-they have not been run on a signed iPhone and are not CI's eleven web demo flows.
+they have not been run on a signed iPhone and are not CI's twelve web demo flows.
 
 `onboarding` remains the older **non-pilot** app-first flow: it signs up a new account with one of Clerk's test addresses (`…+clerk_test@example.com`,
 answered with the code 424242 by Clerk's development instance, which never sends an email), sets up
