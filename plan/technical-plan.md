@@ -103,7 +103,7 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 
 | # | Step | Done when | Status |
 |---|---|---|---|
-| 8.1 | Release train | weekly production release from a tag after 24 h on staging; hotfix path documented | — |
+| 8.1 | Release train | weekly production release from a tag after 24 h on staging; hotfix path documented | Done: rhythm section in `infra/runbooks/release.md` |
 | 8.2 | Migration safety | expand/contract rule and a check that fails a migration dropping or renaming a column in one step | Done: `packages/db/src/migration-safety.test.ts` |
 | 8.3 | Incident practice | `infra/runbooks/incident.md` drilled once on staging; who is woken and how | — |
 | 8.4 | Two-agent coordination | Claude and Codex claim files in `AGENT-CLAIMS.md`, one deploy at a time | Running |
