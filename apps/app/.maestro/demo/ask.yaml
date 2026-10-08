@@ -16,9 +16,9 @@ tags:
 - assertVisible: "One question at a time. The English pilot sends your words as written."
 - assertNotVisible: '.*shown to her in .+'
 - scrollUntilVisible:
-    element: "Into her morning"
+    element: "Send to Mom"
     direction: DOWN
-- tapOn: "Into her morning"
+- tapOn: "Send to Mom"
 - assertVisible: "You tried an example ask. No message was sent."
 - tapOn: "Dismiss"
 - assertVisible: "What did the garden look like this morning?"

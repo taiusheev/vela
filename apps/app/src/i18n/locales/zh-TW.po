@@ -82,10 +82,6 @@ msgstr "{from}：{text}"
 msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
 msgstr "{hellos, plural, other {有 # 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。}}"
 
-#: app/(tabs)/you.tsx
-msgid "{her} would see your light, and you choose who else. Not in the app yet."
-msgstr "{her}會看到您的燈，還有誰能看到由您決定。App 裡還沒有這個功能。"
-
 #: app/ask.tsx
 msgid "{holder} already has that morning."
 msgstr "那天早上已經有{holder}的提問了。"
@@ -934,10 +930,6 @@ msgstr "請加上國碼，以 + 開頭，例如越南是 +84。"
 msgid "India"
 msgstr "印度"
 
-#: app/ask.tsx
-msgid "Into her morning"
-msgstr "放進早安訊息"
-
 #: app/(tabs)/index.tsx
 #: app/ask.tsx
 msgid "Into her morning."
@@ -984,10 +976,6 @@ msgstr "日本"
 #: src/auth/phone.ts
 msgid "Kazakhstan"
 msgstr "哈薩克"
-
-#: app/(tabs)/you.tsx
-msgid "Keep a light on for me"
-msgstr "也為我留一盞燈"
 
 #: app/(tabs)/you.tsx
 msgid "Keep my turns"
@@ -1629,6 +1617,10 @@ msgstr "送出我的回答"
 #: src/components/photo-reply.tsx
 msgid "Send photo"
 msgstr "送出照片"
+
+#: app/ask.tsx
+msgid "Send to {name}"
+msgstr "傳給{name}"
 
 #: src/components/voice-reply.tsx
 msgid "Send voice reply"
@@ -2719,16 +2711,16 @@ msgid "Your name, the asks you write, and your replies."
 msgstr "您的名字、您寫的提問，以及您的回覆。"
 
 #: app/(tabs)/you.tsx
-msgid "Your own light"
-msgstr "您自己的燈"
-
-#: app/(tabs)/you.tsx
 msgid "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 msgstr "您的父母可以在自己的 Telegram 聊天室裡問「家人看到什麼」。是否轉告身體狀況由長輩另外決定，說「停止」就會暫停長輩的燈。"
 
 #: app/(tabs)/you.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 msgstr "試辦免費。安靜通知和重要訊息會送到發起人的 Telegram 私人聊天室。"
+
+#: app/ask.tsx
+msgid "Your question"
+msgstr "你的問題"
 
 #: src/components/story-day.tsx
 msgid "Your question for {name}"

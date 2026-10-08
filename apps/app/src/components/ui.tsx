@@ -1,4 +1,3 @@
-import { useLingui } from "@lingui/react";
 import { type ReactNode, useState } from "react";
 import { Pressable, type StyleProp, Text, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
@@ -11,10 +10,13 @@ export function Words({
   variant = "body",
   tone = "ink",
   selectable = false,
+  numberOfLines,
   accessibilityRole,
   children,
 }: {
   variant?: Role;
+  /** Only use for list previews; full content remains available in the detail screen. */
+  numberOfLines?: number;
   tone?: Tone;
   /** For the few strings a person has to copy rather than read, such as an account id. */
   selectable?: boolean;
@@ -33,6 +35,7 @@ export function Words({
           : palette.ink;
   return (
     <Text
+      numberOfLines={numberOfLines}
       accessibilityRole={accessibilityRole}
       selectable={selectable}
       style={[style, { color: colour }]}
@@ -53,7 +56,7 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
           borderRadius: radius.card,
           borderWidth: 1,
           borderColor: palette.rule,
-          padding: space.margin,
+          padding: space.l + space.xs,
           gap: space.m,
         },
         style,
@@ -118,25 +121,11 @@ export function ReceiptChip({ label }: { label: string }) {
   );
 }
 
-/**
- * The small label over a card. Its words are written in sentence case: English shows them in
- * capitals, and Chinese as written with no extra tracking, since the design system never sets CJK in
- * capitals (Typography, Label).
- */
+/** A quiet sentence-case context label, readable in both languages. */
 export function Eyebrow({ children }: { children: ReactNode }) {
   const palette = usePalette();
-  const { i18n } = useLingui();
-  const english = i18n.locale === "en";
   return (
-    <Text
-      style={[
-        type.label,
-        english ? { textTransform: "uppercase" } : { letterSpacing: 0 },
-        { color: palette.ink2 },
-      ]}
-    >
-      {children}
-    </Text>
+    <Text style={[type.label, { letterSpacing: 0 }, { color: palette.ink2 }]}>{children}</Text>
   );
 }
 

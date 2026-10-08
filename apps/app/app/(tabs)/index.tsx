@@ -2,7 +2,14 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
@@ -20,7 +27,6 @@ import {
   Card,
   Eyebrow,
   Hairline,
-  PrimaryButton,
   ReceiptChip,
   SecondaryButton,
   Words,
@@ -45,7 +51,7 @@ import { useQuiet } from "../../src/data/useQuiet.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
-import { hitSlop, space } from "../../src/theme/tokens.ts";
+import { hitSlop, space, type } from "../../src/theme/tokens.ts";
 
 function LightsRow({
   lights,
@@ -56,6 +62,7 @@ function LightsRow({
   onQuiet: (light: TodayLight) => void;
 }) {
   const palette = usePalette();
+  const { fontScale } = useWindowDimensions();
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.m }}>
       {lights.map((light) => (
@@ -66,7 +73,7 @@ function LightsRow({
           onPress={() => onQuiet(light)}
           style={{
             flexGrow: 1,
-            flexBasis: 140,
+            flexBasis: fontScale > 1.3 ? "100%" : 120,
             flexDirection: "row",
             alignItems: "center",
             gap: space.m,
@@ -153,6 +160,45 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
           </Words>
         </AnswerPanel>
       )}
+      <Pressable
+        accessibilityRole="button"
+        hitSlop={hitSlop}
+        onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
+        style={{
+          minHeight: 52,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: space.m,
+          backgroundColor: exchange.answer === undefined ? palette.actionSoft : palette.action,
+          borderRadius: 12,
+          paddingHorizontal: space.l,
+        }}
+      >
+        <BrandIcon
+          name="reply"
+          color={exchange.answer === undefined ? palette.action : palette.onAction}
+          size={20}
+        />
+        <View style={{ flex: 1 }}>
+          <Text
+            style={[
+              type.button,
+              { color: exchange.answer === undefined ? palette.action : palette.onAction },
+            ]}
+          >
+            {exchange.answer === undefined ? (
+              <Trans>Open this exchange</Trans>
+            ) : (
+              <Trans>Reply to {recipient}</Trans>
+            )}
+          </Text>
+        </View>
+        <BrandIcon
+          name="arrow"
+          color={exchange.answer === undefined ? palette.action : palette.onAction}
+          size={20}
+        />
+      </Pressable>
       {exchange.replies.length > 0 ? (
         <>
           <Hairline />
@@ -185,32 +231,6 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
         </>
       ) : null}
       {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
-      <Pressable
-        accessibilityRole="button"
-        hitSlop={hitSlop}
-        onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
-        style={{
-          minHeight: 52,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: space.m,
-          backgroundColor: palette.actionSoft,
-          borderRadius: 12,
-          paddingHorizontal: space.l,
-        }}
-      >
-        <BrandIcon name="reply" color={palette.action} size={20} />
-        <View style={{ flex: 1 }}>
-          <Words variant="button" tone="action">
-            {exchange.answer === undefined ? (
-              <Trans>Open this exchange</Trans>
-            ) : (
-              <Trans>Reply to {recipient}</Trans>
-            )}
-          </Words>
-        </View>
-        <BrandIcon name="arrow" color={palette.action} size={20} />
-      </Pressable>
     </Card>
   );
 }
@@ -225,7 +245,7 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
   // A claimed morning shows the ask that claimed it; only a free one offers a suggestion.
   const suggestion = tomorrow.asked === undefined ? tomorrow.suggestion : undefined;
   const card = (
-    <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
+    <Card style={{ backgroundColor: palette.surface2, borderColor: palette.rule }}>
       <Eyebrow>
         {tomorrow.asked !== undefined
           ? t`Tomorrow · ${by} asked ${recipient}`
@@ -509,7 +529,7 @@ function FamilyToday({ day }: { day: TodayView }) {
         <ExchangeCard key={exchange.id} exchange={exchange} />
       ))}
       {target === undefined || !canAsk(target) ? null : (
-        <PrimaryButton
+        <SecondaryButton
           label={t`Ask ${recipient} something`}
           disabled={apiConfigured() && !live}
           onPress={() => router.push({ pathname: "/ask", params: { recipient: target.memberId } })}

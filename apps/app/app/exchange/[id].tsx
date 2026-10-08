@@ -363,6 +363,7 @@ function ExchangeReader({ id }: { id: string }) {
               ))}
             </View>
             <TextField
+              label={t`Reply`}
               value={text}
               onChangeText={setText}
               placeholder={t`Say something short`}
@@ -394,11 +395,19 @@ function ExchangeReader({ id }: { id: string }) {
                 }}
               />
             )}
-            <PrimaryButton
-              label={post.isPending ? t`Sending…` : t`Send`}
-              onPress={send}
-              disabled={post.isPending || !draft.ready || words.length === 0}
-            />
+            {draft.savedBody<ComposeReply>() === null ? (
+              <PrimaryButton
+                label={post.isPending ? t`Sending…` : t`Send`}
+                onPress={send}
+                disabled={post.isPending || !draft.ready || words.length === 0}
+              />
+            ) : (
+              <SecondaryButton
+                label={post.isPending ? t`Sending…` : t`Send`}
+                onPress={send}
+                disabled={post.isPending || !draft.ready || words.length === 0}
+              />
+            )}
             <VoiceReply
               disabled={post.isPending || (!demo && familyId === undefined)}
               send={sendVoice}
