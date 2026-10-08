@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Link, useFocusEffect } from "expo-router";
+import { Link, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,6 +9,7 @@ import { ExchangePhotos, ReplyThumbnails } from "../../src/components/family-pho
 import { Card, Eyebrow, ReceiptChip, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import type { Exchange } from "../../src/data/exchanges.ts";
 import { replyLine } from "../../src/data/lines.ts";
+import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, space } from "../../src/theme/tokens.ts";
@@ -74,6 +75,7 @@ export default function ExchangesScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const [originals, setOriginals] = useState(false);
+  const { capabilities } = useCapabilities();
   const { exchanges, live, loading, refreshing, refresh, trouble, more, loadMore } = useExchanges();
   useFocusEffect(
     useCallback(() => {
@@ -94,12 +96,14 @@ export default function ExchangesScreen() {
         gap: space.l,
       }}
     >
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <View style={{ gap: space.s }}>
         <ScreenHeading title={<Trans context="tab">Exchanges</Trans>} />
         {canShowOriginals ? (
           <Pressable
             accessibilityRole="button"
             hitSlop={hitSlop}
+            accessibilityState={{ selected: originals }}
+            style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
             onPress={() => setOriginals((shown) => !shown)}
           >
             <Words variant="button" tone="action">
@@ -129,10 +133,12 @@ export default function ExchangesScreen() {
         <ExchangeRow key={exchange.id} exchange={exchange} originals={originals} />
       ))}
       {more ? <SecondaryButton label={t`Earlier this month`} onPress={loadMore} /> : null}
-      {/* No infinite scroll: after thirty days the list ends in the family book (spec A8). */}
       <Words variant="body" tone="ink2">
-        <Trans>Older than thirty days lives in the family book.</Trans>
+        <Trans>Exchanges stay here for thirty days.</Trans>
       </Words>
+      {capabilities?.book === true ? (
+        <SecondaryButton label={t`Family book`} onPress={() => router.push("/book")} />
+      ) : null}
     </ScrollView>
   );
 }

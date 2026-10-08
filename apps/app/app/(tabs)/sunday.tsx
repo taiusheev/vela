@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { RefreshControl, ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { FamilyScene } from "../../src/components/brand/scene.tsx";
@@ -26,34 +26,57 @@ import { space } from "../../src/theme/tokens.ts";
 
 /** Seven small lights, Monday to Sunday, each with its day and the time she answered (A9). */
 function WeekRow({ lights }: { lights: WeekLight[] }) {
+  const { t } = useLingui();
+  const { width, fontScale } = useWindowDimensions();
+  const [available, setAvailable] = useState(width - space.margin * 4 - 2);
+  // Keep calendar columns aligned when the phone or text size needs a second row.
+  const columns =
+    available >= 40 * fontScale * 7
+      ? 7
+      : available >= 40 * fontScale * 4
+        ? 4
+        : available >= 40 * fontScale * 2
+          ? 2
+          : 1;
   return (
     <View
+      onLayout={(event) => setAvailable(event.nativeEvent.layout.width)}
       style={{
         flexDirection: "row",
-        justifyContent: "space-between",
         flexWrap: "wrap",
         rowGap: space.l,
       }}
     >
-      {lights.map((light) => (
-        <View
-          key={light.date}
-          style={{ alignItems: "center", gap: space.xs, flex: 1, minWidth: 40 }}
-        >
-          <Light state={light.state} height={28} />
-          <Words variant="caption" tone="ink2">
-            {light.day}
-          </Words>
-          <Words variant="caption" tone="ink3">
-            {light.note}
-          </Words>
-          {light.late ? (
-            <Words variant="caption" tone="ink3">
-              <Trans>late</Trans>
+      {lights.map((light) => {
+        const day = light.day;
+        const time = light.note;
+        return (
+          <View
+            key={light.date}
+            accessible
+            accessibilityLabel={[
+              light.note.length > 0 ? t`${day}: answered at ${time}` : t`${day}: no answer`,
+              light.late ? t`late` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            style={{ alignItems: "center", gap: space.xs, width: `${100 / columns}%` }}
+          >
+            <Light state={light.state} height={28} />
+            <Words variant="caption" tone="ink2">
+              {light.day}
             </Words>
-          ) : null}
-        </View>
-      ))}
+            <Words variant="caption" tone="ink3">
+              {light.note || "—"}
+            </Words>
+            {light.late ? (
+              <Words variant="caption" tone="ink3">
+                <Trans>late</Trans>
+              </Words>
+            ) : null}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -110,7 +133,7 @@ function FamilySunday({ day }: { day: TodayView }) {
       {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
       <ScreenHeading
         title={<Trans context="tab">Sunday</Trans>}
-        trailing={<FamilyScene kind="book" width={94} />}
+        illustration={<FamilyScene kind="book" width={94} />}
       />
       <ParentChooser lights={day.today.lights} selected={view.memberId} onSelect={select} />
       {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}

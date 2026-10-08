@@ -38,6 +38,14 @@ msgstr "{by}說{name}沒事。收到通知的每個人都已經知道了。"
 msgid "{day} morning"
 msgstr "{day}早上"
 
+#: app/(tabs)/sunday.tsx
+msgid "{day}: answered at {time}"
+msgstr "{day}：於 {time} 回覆"
+
+#: app/(tabs)/sunday.tsx
+msgid "{day}: no answer"
+msgstr "{day}：尚未回覆"
+
 #: src/data/weekly.ts
 msgid "{days, plural, one {{name} answered {answered} of # day.} other {{name} answered {answered} of # days.}}"
 msgstr "{days, plural, other {{name}這週 # 天中回覆了{answered}天。}}"
@@ -708,6 +716,10 @@ msgctxt "tab"
 msgid "Exchanges"
 msgstr "問答"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Exchanges stay here for thirty days."
+msgstr "問答會在這裡保留三十天。"
+
 #: src/data/family.ts
 msgctxt "role"
 msgid "family"
@@ -716,6 +728,10 @@ msgstr "家人"
 #: app/(tabs)/you.tsx
 msgid "Family"
 msgstr "家人"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Family book"
+msgstr "家庭故事書"
 
 #: app/ask.tsx
 msgid "Fewer choices"
@@ -1264,10 +1280,6 @@ msgstr "已關閉：{her}回覆或輪到您提問時，都不會通知。"
 #: src/data/notifications.ts
 msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
 msgstr "已關閉：{her}回覆或輪到您提問時，都不會通知。如果哪天早上比較安靜，仍然會通知您。"
-
-#: app/(tabs)/exchanges.tsx
-msgid "Older than thirty days lives in the family book."
-msgstr "超過三十天的內容會收進家族故事書。"
 
 #: app/onboarding.tsx
 msgid "On her phone, with Vela"

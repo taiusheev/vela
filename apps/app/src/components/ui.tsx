@@ -11,12 +11,14 @@ export function Words({
   variant = "body",
   tone = "ink",
   selectable = false,
+  accessibilityRole,
   children,
 }: {
   variant?: Role;
   tone?: Tone;
   /** For the few strings a person has to copy rather than read, such as an account id. */
   selectable?: boolean;
+  accessibilityRole?: "header";
   children: ReactNode;
 }) {
   const palette = usePalette();
@@ -30,7 +32,11 @@ export function Words({
           ? palette.action
           : palette.ink;
   return (
-    <Text selectable={selectable} style={[style, { color: colour }]}>
+    <Text
+      accessibilityRole={accessibilityRole}
+      selectable={selectable}
+      style={[style, { color: colour }]}
+    >
       {children}
     </Text>
   );
@@ -87,7 +93,9 @@ export function PrimaryButton({
         justifyContent: "center",
       })}
     >
-      <Text style={[type.button, { color: "#FFFFFF" }]}>{label}</Text>
+      <Text style={[type.button, { color: palette.onAction, textAlign: "center", flexShrink: 1 }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -191,17 +199,26 @@ export function Chip({
       disabled={disabled}
       hitSlop={hitSlop}
       onPress={onPress}
-      style={{
+      style={({ pressed }) => ({
         borderRadius: radius.chip,
+        minHeight: 48,
+        maxWidth: "100%",
+        flexShrink: 1,
+        justifyContent: "center",
         borderWidth: 1,
         borderColor: selected ? palette.action : palette.control,
         backgroundColor: selected ? palette.actionSoft : palette.surface,
         paddingVertical: space.m,
         paddingHorizontal: space.l,
-        opacity: disabled ? 0.45 : 1,
-      }}
+        opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
+      })}
     >
-      <Text style={[type.bodyMedium, { color: selected ? palette.action : palette.ink }]}>
+      <Text
+        style={[
+          type.bodyMedium,
+          { color: selected ? palette.action : palette.ink, textAlign: "center" },
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -276,7 +293,7 @@ export function TextField({
             color: palette.ink,
             backgroundColor: palette.surface,
             borderRadius: radius.button,
-            borderWidth: focused ? 2 : 1,
+            borderWidth: 2,
             borderColor: focused ? palette.action : palette.control,
             paddingHorizontal: space.l,
             paddingVertical: space.m,
@@ -324,7 +341,9 @@ export function SecondaryButton({
         justifyContent: "center",
       })}
     >
-      <Text style={[type.button, { color: palette.ink }]}>{label}</Text>
+      <Text style={[type.button, { color: palette.ink, textAlign: "center", flexShrink: 1 }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
