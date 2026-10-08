@@ -50,6 +50,7 @@ export {
   sendWeeklyRead,
   setAway,
 } from "./admin.ts";
+export { type AdminAiWatch, type AiWatchCounts, loadAdminAiWatch } from "./admin-ai-watch.ts";
 export {
   loadAdminTestWeek,
   type TestWeekGroup,

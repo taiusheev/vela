@@ -4,7 +4,12 @@ import { renderFamilyPage, renderOverview } from "./admin-pages.ts";
 import { familyPageFixture, memberFixture } from "./testing/fakes.ts";
 
 /** An overview with no family and LINE never read. */
-const NO_FAMILIES: AdminOverview = { families: [], precision: [], lineQuota: null };
+const NO_FAMILIES: AdminOverview = {
+  families: [],
+  precision: [],
+  aiWatch: { asOf: new Date("2026-10-08T00:00:00Z"), days: [], byCall: [] },
+  lineQuota: null,
+};
 
 /** One section of a page, from its opening tag to its close. */
 function sectionOf(body: string, id: string): string {
@@ -20,6 +25,7 @@ describe("the overview's LINE quota", () => {
     const overview: AdminOverview = {
       families: [],
       precision: [],
+      aiWatch: { asOf: new Date("2026-10-08T00:00:00Z"), days: [], byCall: [] },
       lineQuota: { limit: 3000, used: 2100, readAt },
     };
 
@@ -34,6 +40,7 @@ describe("the overview's LINE quota", () => {
     const overview: AdminOverview = {
       families: [],
       precision: [],
+      aiWatch: { asOf: new Date("2026-10-08T00:00:00Z"), days: [], byCall: [] },
       lineQuota: { limit: null, used: 194, readAt },
     };
 
@@ -380,5 +387,61 @@ describe("the nearby contacts section", () => {
     for (const name of ["phone", "consentAt", "textVersion", "lang", "consentChannel", "note"]) {
       expect(yes).toContain(`name="${name}"`);
     }
+  });
+});
+
+describe("the overview's AI watch", () => {
+  it("distinguishes measured costs and latency from missing values without exposing content", async () => {
+    const counts = {
+      calls: 4,
+      failures: 1,
+      knownCostUsd: 0.001234,
+      costRecorded: 2,
+      latencyRecorded: 3,
+      averageLatencyMs: 123.4,
+      p95LatencyMs: 456.7,
+    };
+    const overview: AdminOverview = {
+      ...NO_FAMILIES,
+      aiWatch: {
+        asOf: new Date("2026-10-08T10:00:00Z"),
+        days: [{ day: "2026-10-08", ...counts }],
+        byCall: [{ call: "understand", ...counts }],
+      },
+    };
+    const section = sectionOf(await renderOverview(overview, []).text(), "ai-watch");
+    expect(section).toContain("US$0.001234 (2/4 recorded)");
+    expect(section).toContain("1 (25.0%)");
+    expect(section).toContain("123 ms");
+    expect(section).toContain("457 ms");
+    expect(section).toContain("3/4");
+    expect(section).toContain("Today is partial");
+    expect(section).toContain("does not enforce a spending cap");
+    expect(section).toContain("not a provider bill");
+  });
+  it("shows empty daily latency as unavailable and says when no calls exist", async () => {
+    const overview: AdminOverview = {
+      ...NO_FAMILIES,
+      aiWatch: {
+        ...NO_FAMILIES.aiWatch,
+        days: [
+          {
+            day: "2026-10-08",
+            calls: 0,
+            failures: 0,
+            knownCostUsd: 0,
+            costRecorded: 0,
+            latencyRecorded: 0,
+            averageLatencyMs: null,
+            p95LatencyMs: null,
+          },
+        ],
+      },
+    };
+    const section = sectionOf(await renderOverview(overview, []).text(), "ai-watch");
+    expect(section).toContain("No AI calls recorded today.");
+    expect(section).toContain("0 (—)");
+    expect(section).toContain("<td>—</td><td>—</td>");
+    expect(section).not.toContain("0 ms");
   });
 });

@@ -2032,7 +2032,11 @@ describe("the admin pages", () => {
 
     const overview = await loadAdminOverview(h.deps, FOUNDER);
 
-    expect(overview).toStrictEqual({
+    const { aiWatch, ...withoutAiWatch } = overview;
+    expect(aiWatch.asOf).toEqual(h.clock.now());
+    expect(aiWatch.days).toHaveLength(7);
+    expect(aiWatch.byCall).toEqual([]);
+    expect(withoutAiWatch).toStrictEqual({
       families: [],
       precision: [],
       lineQuota: { limit: 3000, used: 194, readAt: new Date("2026-09-14T00:15:00.000Z") },
