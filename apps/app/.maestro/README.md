@@ -25,13 +25,15 @@ The weekly recipient flow chooses Dad, then Mom, without keeping the former pare
 Story questions can be chosen and edited without promising long-term saving or offering an
 unavailable book. The quiet sheet offers ordinary contact guidance without a saved permitted calling
 number, while fine/wait resolutions still work. `privacy-and-help` checks consent/help copy and the
-absence of unavailable parent-phone setup; it replaces the former `parent` demo flow. These eleven
+absence of unavailable parent-phone setup; it replaces the former `parent` demo flow. These twelve
 flows prove synthetic web interactions only, not Telegram delivery, account linking, signed-device
 audio or parent-app functionality. If local environment flags change, restart with a cleared Metro
 cache before interpreting a result.
 
-The runner targets a 430×2000 window so the longer You page reaches Pause/Leave without relying
-on Maestro's outer-window scrolling. The morning-settings flow targets the input by its accessibility id, so the visible label is not mistaken for the editable field. Headless Chrome can enforce a minimum width and subtract
+The runner targets a 430×2400 window so the longer You page reaches Pause/Leave without relying
+on Maestro's outer-window scrolling. The morning-settings flow targets the input by its
+accessibility id, so the visible label is not mistaken for the editable field. Headless Chrome
+can enforce a minimum width and subtract
 browser chrome from that requested size; CI screenshot dimensions are not phone-size proof.
 Review normal 320/390 pt phone viewports independently; the app's own scroll view works there.
 
