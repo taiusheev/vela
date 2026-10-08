@@ -1,0 +1,37 @@
+name: preflight
+
+# Release preflight (plan/technical-plan.md step 1.1): read-only. Checks an environment's wrangler
+# configuration and, with that environment's own Cloudflare credentials, which Workers, secret
+# names, queues, Hyperdrive config and bucket lifecycle rules exist. Prints names and PASS/FAIL,
+# never a value. Production's run waits for the founder's approval like its deploy, because it
+# reads the production environment's credentials.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which environment to check
+        type: choice
+        options: [staging, production]
+        default: production
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Preflight
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm --filter @vela/worker preflight -- --env "${{ inputs.environment }}"
