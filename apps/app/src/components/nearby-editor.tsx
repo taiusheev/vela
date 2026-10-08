@@ -55,13 +55,11 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                 {index === 0 ? null : <Hairline />}
                 <View
                   style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: space.m,
+                    gap: space.s,
+                    paddingVertical: space.s,
                   }}
                 >
-                  <View style={{ flex: 1, gap: space.xs }}>
+                  <View style={{ gap: space.xs }}>
                     <Words variant="bodyMedium">
                       {contact.relation === null
                         ? contact.name
@@ -71,30 +69,36 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                       {contact.consent}
                     </Words>
                   </View>
-                  {contact.saidYes ? null : (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: space.xl }}>
+                    {contact.saidYes ? null : (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t`Ask ${who} on Telegram`}
+                        hitSlop={hitSlop}
+                        disabled={nearby.changing || sharing}
+                        accessibilityState={{ disabled: nearby.changing || sharing }}
+                        style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%" }}
+                        onPress={() => void askOnTelegram(contact.id, who)}
+                      >
+                        <Words variant="button" tone="action">
+                          <Trans>Ask on Telegram</Trans>
+                        </Words>
+                      </Pressable>
+                    )}
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={t`Ask ${who} on Telegram`}
+                      accessibilityLabel={t`Remove ${who}`}
                       hitSlop={hitSlop}
                       disabled={nearby.changing || sharing}
-                      onPress={() => void askOnTelegram(contact.id, who)}
+                      accessibilityState={{ disabled: nearby.changing || sharing }}
+                      style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%" }}
+                      onPress={() => setRemoving({ id: contact.id, name: who })}
                     >
                       <Words variant="button" tone="action">
-                        <Trans>Ask on Telegram</Trans>
+                        <Trans>Remove</Trans>
                       </Words>
                     </Pressable>
-                  )}
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t`Remove ${who}`}
-                    hitSlop={hitSlop}
-                    disabled={nearby.changing || sharing}
-                    onPress={() => setRemoving({ id: contact.id, name: who })}
-                  >
-                    <Words variant="button" tone="action">
-                      <Trans>Remove</Trans>
-                    </Words>
-                  </Pressable>
+                  </View>
                 </View>
               </View>
             );

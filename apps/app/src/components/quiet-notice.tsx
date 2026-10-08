@@ -7,6 +7,7 @@ import { callingNumber as validCallingNumber } from "../data/calling-number.ts";
 import type { QuietNotice } from "../data/quiet.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, sheetShadow, space } from "../theme/tokens.ts";
+import { BrandIcon } from "./brand/icon.tsx";
 import { Eyebrow, Hairline, PrimaryButton, SecondaryButton, Words } from "./ui.tsx";
 
 interface QuietNoticeSheetProps {
@@ -69,12 +70,14 @@ export function QuietNoticeSheet({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(30,26,22,0.32)" }}>
         <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t`Close quiet notice`}
+          accessible={false}
+          focusable={false}
+          tabIndex={-1}
           style={{ flex: 1 }}
           onPress={onClose}
         />
         <View
+          accessibilityViewIsModal
           style={[
             {
               backgroundColor: palette.surface,
@@ -89,15 +92,39 @@ export function QuietNoticeSheet({
             sheetShadow,
           ]}
         >
-          <ScrollView contentContainerStyle={{ gap: space.l }}>
-            <Eyebrow>
-              {notice.usualTime !== undefined
-                ? t`Usually answers by ${time}`
-                : time !== undefined
-                  ? t`Asked at ${time}`
-                  : t`A quiet morning`}
-            </Eyebrow>
-            <Words variant="title">{t`It's been quiet at ${name}'s today`}</Words>
+          <ScrollView
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={{ gap: space.l }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
+              <View style={{ flex: 1 }}>
+                <Eyebrow>
+                  {notice.usualTime !== undefined
+                    ? t`Usually answers by ${time}`
+                    : time !== undefined
+                      ? t`Asked at ${time}`
+                      : t`A quiet morning`}
+                </Eyebrow>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t`Close quiet notice`}
+                onPress={onClose}
+                style={{
+                  minWidth: 44,
+                  minHeight: 44,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <BrandIcon name="close" color={palette.ink2} />
+              </Pressable>
+            </View>
+            <Words
+              variant="title"
+              accessibilityRole="header"
+            >{t`It's been quiet at ${name}'s today`}</Words>
             {answered ? (
               <>
                 <Words variant="body">{notice.resolution}</Words>
@@ -111,11 +138,12 @@ export function QuietNoticeSheet({
                     <Words variant="bodyMedium">
                       <Trans>Was this notice useful?</Trans>
                     </Words>
-                    <View style={{ flexDirection: "row", gap: space.l }}>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.l }}>
                       <Pressable
                         accessibilityRole="button"
                         hitSlop={hitSlop}
                         disabled={settling}
+                        style={{ minHeight: 44, justifyContent: "center" }}
                         onPress={() => onUseful(true)}
                       >
                         <Words variant="button" tone="action">
@@ -126,6 +154,7 @@ export function QuietNoticeSheet({
                         accessibilityRole="button"
                         hitSlop={hitSlop}
                         disabled={settling}
+                        style={{ minHeight: 44, justifyContent: "center" }}
                         onPress={() => onUseful(false)}
                       >
                         <Words variant="button" tone="action">
@@ -156,6 +185,7 @@ export function QuietNoticeSheet({
                         <Pressable
                           accessibilityRole="button"
                           hitSlop={hitSlop}
+                          style={{ minHeight: 44, justifyContent: "center" }}
                           onPress={() => void call(contact.phone ?? "")}
                         >
                           <Words variant="button" tone="action">
@@ -173,6 +203,7 @@ export function QuietNoticeSheet({
                           accessibilityRole="button"
                           hitSlop={hitSlop}
                           disabled={asking || settling}
+                          style={{ minHeight: 44, justifyContent: "center" }}
                           onPress={() => onAskToLookIn(contact.id)}
                         >
                           <Words variant="button" tone="action">
@@ -189,40 +220,40 @@ export function QuietNoticeSheet({
                 ))}
               </>
             )}
+            {trouble || callFailed ? (
+              <Words variant="body" tone="ink2">
+                <Trans>
+                  That action did not go through. Try again, or contact the person directly.
+                </Trans>
+              </Words>
+            ) : null}
+            {answered ? (
+              <PrimaryButton label={t`Close`} onPress={onClose} />
+            ) : (
+              <>
+                {callingNumber === undefined ? (
+                  <Words variant="body" tone="ink2">
+                    <Trans>
+                      Contact {name} using your usual phone call or Telegram chat. You can add their
+                      calling number in You, with their permission.
+                    </Trans>
+                  </Words>
+                ) : (
+                  <PrimaryButton label={t`Call ${name}`} onPress={() => void call(callingNumber)} />
+                )}
+                <SecondaryButton
+                  label={settling ? t`Saving…` : t`${name} is fine, I know why`}
+                  disabled={settling || asking}
+                  onPress={onFine}
+                />
+                <SecondaryButton
+                  label={t`Wait 2 hours`}
+                  disabled={settling || asking}
+                  onPress={onWait}
+                />
+              </>
+            )}
           </ScrollView>
-          {trouble || callFailed ? (
-            <Words variant="body" tone="ink2">
-              <Trans>
-                That action did not go through. Try again, or contact the person directly.
-              </Trans>
-            </Words>
-          ) : null}
-          {answered ? (
-            <PrimaryButton label={t`Close`} onPress={onClose} />
-          ) : (
-            <>
-              {callingNumber === undefined ? (
-                <Words variant="body" tone="ink2">
-                  <Trans>
-                    Contact {name} using your usual phone call or Telegram chat. You can add their
-                    calling number in You, with their permission.
-                  </Trans>
-                </Words>
-              ) : (
-                <PrimaryButton label={t`Call ${name}`} onPress={() => void call(callingNumber)} />
-              )}
-              <SecondaryButton
-                label={settling ? t`Saving…` : t`${name} is fine, I know why`}
-                disabled={settling || asking}
-                onPress={onFine}
-              />
-              <SecondaryButton
-                label={t`Wait 2 hours`}
-                disabled={settling || asking}
-                onPress={onWait}
-              />
-            </>
-          )}
         </View>
       </View>
     </Modal>

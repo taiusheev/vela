@@ -18,6 +18,7 @@ export function ConfirmationDialog({
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View
+        accessibilityViewIsModal
         style={{
           flex: 1,
           justifyContent: "center",
