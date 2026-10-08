@@ -87,7 +87,7 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 | 6.2 | Deletion end to end | account, family and data-request deletion proven on production with synthetic data | — | Partly |
 | 6.3 | Dependency and secret scanning | Dependabot + CodeQL + secret scanning on the repo; weekly review | — | — |
 | 6.4 | Notice and consent updates | notice says what deletion keeps, names push/crash processors; Taiwan zh-TW notice | F (counsel) | — |
-| 6.5 | Security review before launch | auth, admin access, webhooks, media URLs, rate limits reviewed; findings fixed | — | — |
+| 6.5 | Security review before launch | auth, admin access, webhooks, media URLs, rate limits reviewed; findings fixed | — | First pass done: `infra/security-review-2026-10.md`, 3 fixes; repeat before launch |
 
 ### 7. Product gaps for daily use
 
