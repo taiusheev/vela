@@ -49,6 +49,19 @@ describe("opsAlerts", () => {
     expect(toFounder()).toHaveLength(1);
   });
 
+  it("tells a failure after an hour's last run in the next hour's first run, once", async () => {
+    h.clock.advance(45 * 60 * 1000);
+    expect(await opsAlerts(h.deps)).toBe(0); // 00:45, nothing yet
+    h.clock.advance(5 * 60 * 1000);
+    await happened("arrival_delivery_failed"); // 00:50
+    h.clock.advance(10 * 60 * 1000);
+    expect(await opsAlerts(h.deps)).toBe(1); // 01:00
+    expect(toFounder()[0]).toMatch(/since 00:00 UTC/);
+    h.clock.advance(15 * 60 * 1000);
+    expect(await opsAlerts(h.deps)).toBe(0); // 01:15
+    expect(toFounder()).toHaveLength(1);
+  });
+
   it("stays quiet when nothing went wrong, and says nothing without an admin chat", async () => {
     expect(await opsAlerts(h.deps)).toBe(0);
     await happened("gateway_dropped");

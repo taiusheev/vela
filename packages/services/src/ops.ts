@@ -3,8 +3,9 @@
  * 2.1 and 2.2). Both read only content-free records — the events, the AI call log — and send a
  * system message to the admin chat, never a family's words, names or ids beyond the overview link.
  *
- * Alerts run with every reconcile: a kind that happened in the current UTC hour is told once that
- * hour, with its count so far. The digest runs with the nightly jobs and covers the last 24 hours,
+ * Alerts run with every reconcile: a kind that happened in a UTC hour is told once for that hour,
+ * with its count so far, by the first run that sees it, which for the hour's last minutes is the
+ * next hour's first run. The digest runs with the nightly jobs and covers the last 24 hours,
  * once a UTC day. Each message is claimed in `flags` before it is sent, as LINE's quota alert is
  * (`quota.ts`), so two runs never both send it; a send that fails and may succeed later gives the
  * claim back. Claims older than a week are cleared by the digest.
@@ -104,35 +105,43 @@ async function tellFounderOnce(deps: Deps, key: string, text: string): Promise<b
 }
 
 /**
- * Step 2.1: failed arrivals, dropped sends and missed scheduler runs in the current UTC hour, and
- * AI failing in the last hour, each told at most once an hour. Returns how many messages it sent.
+ * Step 2.1: failed arrivals, dropped sends, missed scheduler runs and dead jobs in this or the
+ * previous UTC hour, and AI failing in the last hour, each told at most once an hour. Returns how many messages it sent.
  */
 export async function opsAlerts(deps: Deps): Promise<number> {
   const now = deps.clock.now();
-  const since = hourOf(now);
-  const hour = hourKey(since);
+  const current = hourOf(now);
+  const hour = hourKey(current);
   const link = adminOverviewLink(deps.config);
   const environment = deps.config.environment;
-  const sinceText = since.toISOString().slice(11, 16);
+  const until = new Date(now.getTime() + 1);
   let sent = 0;
-  for (const [name, key] of Object.entries(EVENT_ALERTS) as [
-    EventAlert,
-    (typeof EVENT_ALERTS)[EventAlert],
-  ][]) {
-    const count = await countEvents(deps, name, since, new Date(now.getTime() + 1));
-    if (count === 0) continue;
-    const text = t(ADMIN_LANG, key, { count, since: sinceText, environment, link });
-    if (await tellFounderOnce(deps, `${CLAIM_PREFIX}${name}:${hour}`, text)) sent += 1;
-  }
-  const dead = await countDeadLettersSince(deps, since);
-  if (dead > 0) {
-    const text = t(ADMIN_LANG, "admin.ops_dead_letter", {
-      count: dead,
-      since: sinceText,
-      environment,
-      link,
-    });
-    if (await tellFounderOnce(deps, `${CLAIM_PREFIX}dead_letter:${hour}`, text)) sent += 1;
+  // The previous hour too: a reconcile runs every 15 minutes, so what happened after an hour's
+  // last run is told by the next hour's first, under the previous hour's own claim. An hour
+  // already told is not told again.
+  for (const from of [new Date(current.getTime() - HOUR_MS), current]) {
+    const to = new Date(Math.min(from.getTime() + HOUR_MS, until.getTime()));
+    const since = from.toISOString().slice(11, 16);
+    for (const [name, key] of Object.entries(EVENT_ALERTS) as [
+      EventAlert,
+      (typeof EVENT_ALERTS)[EventAlert],
+    ][]) {
+      const count = await countEvents(deps, name, from, to);
+      if (count === 0) continue;
+      const text = t(ADMIN_LANG, key, { count, since, environment, link });
+      if (await tellFounderOnce(deps, `${CLAIM_PREFIX}${name}:${hourKey(from)}`, text)) sent += 1;
+    }
+    const dead = await countDeadLettersSince(deps, from, to);
+    if (dead > 0) {
+      const text = t(ADMIN_LANG, "admin.ops_dead_letter", {
+        count: dead,
+        since,
+        environment,
+        link,
+      });
+      if (await tellFounderOnce(deps, `${CLAIM_PREFIX}dead_letter:${hourKey(from)}`, text))
+        sent += 1;
+    }
   }
   const ai = await aiTotals(deps, new Date(now.getTime() - HOUR_MS), new Date(now.getTime() + 1));
   if (ai.total >= AI_ALERT_MIN_CALLS && ai.failed / ai.total > AI_ALERT_SHARE) {

@@ -132,11 +132,15 @@ export async function deleteOldDeadLetters(deps: Pick<Deps, "db" | "clock">): Pr
   return deleted.length;
 }
 
-/** New dead jobs since `from`, for the founder's hourly ops alert. */
-export async function countDeadLettersSince(deps: Pick<Deps, "db">, from: Date): Promise<number> {
+/** Dead jobs kept from `from` until before `to`, for the founder's hourly ops alert. */
+export async function countDeadLettersSince(
+  deps: Pick<Deps, "db">,
+  from: Date,
+  to: Date = new Date(8.64e15),
+): Promise<number> {
   const [row] = await deps.db
     .select({ count: sql<number>`count(*)::int` })
     .from(deadLetters)
-    .where(sql`${deadLetters.failedAt} >= ${from}`);
+    .where(sql`${deadLetters.failedAt} >= ${from} and ${deadLetters.failedAt} < ${to}`);
   return row?.count ?? 0;
 }
