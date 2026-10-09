@@ -289,7 +289,7 @@ export const members = pgTable(
     quietAfterMin: integer("quiet_after_min").notNull().default(360),
     /** The first 14 days: quiet shows in the app only, push after 8 h. */
     learningUntil: date("learning_until"),
-    /** {median_latency_min, sunday_median_min, n_days, updated_at} */
+    /** {median_latency_min, late_latency_min, sunday_median_min, n_days, updated_at} */
     answerStats: jsonb("answer_stats").$type<JsonObject>().notNull().default({}),
     createdAt: createdAt(),
     /** Data is deleted 30 days later by the retention job. */
