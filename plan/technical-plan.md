@@ -75,7 +75,7 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 | 5.2 | Signed iPhone build and TestFlight | build on a real iPhone; voice plays; VoiceOver pass; TestFlight review passed | F (Apple US$99) | — |
 | 5.3 | Crash reporting | crash-free rate visible; no family content, names or tokens in reports; notice names the processor | F (provider choice, notice) | — |
 | 5.4 | Push on | Expo + APNs + FCM; quiet notice and flags reach app-only organisers; "one moment a day" respected | F (Expo/Firebase/Apple) | — |
-| 5.5 | Fast fixes without a store review | EAS Update channel per environment, JS-only fixes, policy in `infra/runbooks/ota-policy.md` | — | — |
+| 5.5 | Fast fixes without a store review | EAS Update channel per environment, JS-only fixes, policy in `infra/runbooks/ota-policy.md` | — | Done: `expo-updates`, fingerprint runtime, channels preview/production; from the next build |
 | 5.6 | Android | Play internal track; same journeys | F (Play US$25) | — |
 | 5.7 | Store and privacy pack | listings en/zh-TW, Apple privacy answers, Google data safety, review notes, checked against the code | — | Done: `plan/materials/stores/` (zh-TW to native review; Health answer for counsel) |
 
