@@ -14,5 +14,6 @@
 
 ## Not in this sheet yet
 
+- The question bank: 98 asks in `packages/copy/src/ask-bank.ts`, sent to the parent on mornings nobody in the family asked (spec §4.5) and offered to the family as ideas. 46 were added on 10 October 2026 and none has had a native review.
 - The privacy notice and consent script for the Taiwan LINE pilot. The current English notice (v3) is written for the English-only trial; the Taiwan version is drafted with the founder's cohort decisions, then translated and added here.
 - The 70 app texts translated on 6 October 2026 are new drafts; the rest were drafted earlier and have not had a native review either.
