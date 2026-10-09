@@ -84,11 +84,15 @@ const NAMED_GROUPS: Record<string, readonly string[]> = {
   neighbourhood: ["life.place.street", "life.home.neighbours"],
 };
 
+/**
+ * Twelve weeks of the writer's rotation (three questions, two stories, a recipe and a word a week)
+ * without a repeat, with room for the asks the family composed from and the topic gaps.
+ */
 const MINIMUM_PER_TYPE: Record<AskBankType, number> = {
-  question: 20,
-  story: 16,
-  recipe: 8,
-  word: 8,
+  question: 40,
+  story: 28,
+  recipe: 15,
+  word: 15,
 };
 
 const MAX_ENGLISH_WORDS = 25;
@@ -109,8 +113,8 @@ describe("the question bank", () => {
     );
   });
 
-  it("holds at least 52 asks: 20 questions, 16 stories, 8 recipes and 8 words", () => {
-    expect(ASK_BANK.length).toBeGreaterThanOrEqual(52);
+  it("holds at least 98 asks: 40 questions, 28 stories, 15 recipes and 15 words", () => {
+    expect(ASK_BANK.length).toBeGreaterThanOrEqual(98);
     for (const type of ASK_BANK_TYPES) {
       const count = ASK_BANK.filter((entry) => entry.type === type).length;
       expect(count, type).toBeGreaterThanOrEqual(MINIMUM_PER_TYPE[type]);

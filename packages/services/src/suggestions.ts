@@ -3,7 +3,7 @@
  * the nightly job for her next three days and shown on Today until someone composes an ask.
  *
  * Each day starts from Vela's question bank (`ASK_BANK` in `@vela/copy`): the weekday's type in a
- * rotation, never an item or its near-duplicates within six weeks, never one an ask was composed
+ * rotation, never an item or its near-duplicates within twelve weeks, never one an ask was composed
  * from, while the bank has another, and not what her days nearby or the family's other members were
  * given. The pick is a pure function of what is stored, so a run repeated or raced picks the same
  * item. While AI is on, the model may draft a warmer ask on the same day from her recent answers; a
@@ -57,7 +57,7 @@ export const BANK_PROMPT_VERSION = "bank.v1";
  * No bank item, or another of its group, is suggested to her twice in this many days running, while
  * the bank has another.
  */
-export const SUGGESTION_REPEAT_DAYS = 42;
+export const SUGGESTION_REPEAT_DAYS = 84;
 /**
  * The days ahead of her local today each nightly run writes. Tomorrow's suggestion is there by the
  * morning before it, and a night the job misses still leaves tomorrow written by an earlier one.
@@ -65,7 +65,7 @@ export const SUGGESTION_REPEAT_DAYS = 42;
 export const SUGGESTION_DAYS_AHEAD = [1, 2, 3] as const;
 /**
  * The type each weekday proposes, Sunday first: three questions, two stories, a recipe and a word a
- * week, which the bank covers for six weeks without a repeat while few of its items are used.
+ * week, which the bank covers for twelve weeks without a repeat while few of its items are used.
  * Sunday, the default story day, is a question, since Vela's own story question may take that
  * morning.
  */
@@ -218,7 +218,7 @@ function leastRecent(input: BankPickInput): AskBankItem {
  * rotation's type, any type kept apart, any type (`rotationTypeFor`); so the type holds before a
  * topic is kept apart, and changes before an item repeats. Among them, an item of no group comes
  * before a near-duplicate, since giving one holds its siblings back too; this keeps every type in
- * the rotation through six weeks. They are sorted by id and one is taken by a hash of her id and the
+ * the rotation through twelve weeks. They are sorted by id and one is taken by a hash of her id and the
  * day, so members of one family differ and a second run agrees with the first.
  */
 export function pickBankItem(input: BankPickInput): AskBankItem {
@@ -293,7 +293,7 @@ export function renderSuggestion(
  * The question Vela asks on a morning nobody in the family asked (product week, 10 October 2026):
  * her unused suggestion for `date`, as its bank item in her language, never an AI draft, which is
  * written as a family member would send it. Taking it marks it used, so the family is not offered
- * it again and the writer's rules keep it from coming back for six weeks. Null when the day has no
+ * it again and the writer's rules keep it from coming back for twelve weeks. Null when the day has no
  * suggestion, and the morning keeps the plain hello.
  */
 export async function takeFallbackQuestion(
