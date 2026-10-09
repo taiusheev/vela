@@ -621,3 +621,53 @@ describe("handleOnboarding: people who are already linked", () => {
     expect(await session()).toBeUndefined();
   });
 });
+
+// 05-line-flows §2.4: LINE sends no name with a message, so the organiser's comes from the profile.
+describe("handleOnboarding on LINE", () => {
+  const LINE_USER = "U4af4980629ccd5e9f2d6c5e1b2d3e4f5";
+  const onLine = (extra: Partial<InboundEvent> & { kind: InboundEvent["kind"] }) =>
+    event({
+      channel: "line",
+      sender: { externalUserId: LINE_USER },
+      conversation: { externalId: LINE_USER, kind: "private" },
+      ...extra,
+    });
+  async function onboardOnLine(): Promise<void> {
+    await handleOnboarding(h.deps, onLine({ kind: "start" }));
+    await handleOnboarding(h.deps, onLine({ kind: "text", text: "Mom" }));
+    await handleOnboarding(h.deps, onLine({ kind: "text", text: "Mrs Chen" }));
+    for (const [step, value] of [
+      ["language", "zh-TW"],
+      ["country", "TW"],
+      ["wake", "07:30"],
+    ] as const) {
+      await handleOnboarding(
+        h.deps,
+        onLine({
+          kind: "button",
+          buttonData: encodeButton({ type: "onboarding", step, value }),
+        }),
+      );
+    }
+    await handleOnboarding(h.deps, onLine({ kind: "text", text: "Anna, neighbour" }));
+    await handleOnboarding(h.deps, onLine({ kind: "text", text: "王小姐、樓下的鄰居" }));
+  }
+
+  it("names the organiser and the family from the LINE profile, never after her", async () => {
+    h.line.profiles.set(LINE_USER, { displayName: "Wei" });
+    await onboardOnLine();
+
+    const [family] = await h.db.select().from(families);
+    const organiser = (await h.db.select().from(members)).find((row) => row.role === "organiser");
+    expect(family?.name).toBe("Wei");
+    expect(organiser?.displayName).toBe("Wei");
+  });
+
+  it("falls back to a neutral name when LINE gives no profile", async () => {
+    await onboardOnLine();
+
+    const organiser = (await h.db.select().from(members)).find((row) => row.role === "organiser");
+    expect(organiser?.displayName).toBe("Family member");
+    expect(organiser?.displayName).not.toBe("Mom");
+  });
+});
