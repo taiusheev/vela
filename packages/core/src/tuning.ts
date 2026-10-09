@@ -10,6 +10,13 @@ export const TUNING = {
   defaultQuietAfterMinutes: 360,
   /** Two hours past her usual answer time. */
   marginMinutes: 120,
+  /**
+   * Her late days: the answer time she beats on nine days in ten. With 14 samples this is her
+   * second-latest day, so one outlier does not stretch the threshold but a loose rhythm does.
+   */
+  lateQuantile: 0.9,
+  /** One hour past her late days. */
+  lateMarginMinutes: 60,
   floorMinutes: 240,
   capMinutes: 600,
   /** Spec §8: her rhythm counts as known only from the 14th answered day. */
@@ -47,19 +54,39 @@ function samplesOf(latencies: readonly number[]): readonly number[] {
   return latencies;
 }
 
-function clampQuiet(medianMinutes: number): number {
-  const minutes = Math.ceil(medianMinutes + TUNING.marginMinutes);
+/** The nearest-rank quantile: the smallest sample with at least `q` of the samples at or below it. */
+function quantile(values: readonly number[], q: number): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const rank = Math.max(1, Math.ceil(q * sorted.length));
+  return sorted[rank - 1] ?? 0;
+}
+
+/** Her late-day latency (the 90th percentile), or null with no samples; stored beside the median. */
+export function lateLatencyMinutes(latencies: readonly number[]): number | null {
+  const samples = samplesOf(latencies);
+  return samples.length === 0 ? null : quantile(samples, TUNING.lateQuantile);
+}
+
+/**
+ * Her usual time plus two hours, or her late days plus one hour when her rhythm is loose, whichever
+ * is later, clamped to [240, 600]. A steady parent keeps the median rule; a parent whose answers
+ * spread over the morning is not reported quiet on her ordinary late days.
+ */
+function clampQuiet(samples: readonly number[]): number {
+  const usual = median(samples) + TUNING.marginMinutes;
+  const late = quantile(samples, TUNING.lateQuantile) + TUNING.lateMarginMinutes;
+  const minutes = Math.ceil(Math.max(usual, late));
   return Math.min(TUNING.capMinutes, Math.max(TUNING.floorMinutes, minutes));
 }
 
 /**
- * Minutes from delivery until an unanswered exchange turns quiet: the median answer latency plus two
- * hours, clamped to [240, 600]. With fewer than 14 samples (answered days) her rhythm is not known yet
+ * Minutes from delivery until an unanswered exchange turns quiet: the later of the median answer
+ * latency plus two hours and her 90th-percentile latency plus one hour, clamped to [240, 600]. With fewer than 14 samples (answered days) her rhythm is not known yet
  * and the default of 360 applies.
  *
  * `latencies` are minutes from delivery to answer over her recent answered days (the caller passes
  * the last 14). On Sundays and her country's holidays (`sunday: true`), the median of
- * `sundayLatencies` replaces the overall median when there are at least three such samples and the
+ * `sundayLatencies` replace the overall samples when there are at least three such samples and the
  * two medians differ by more than an hour. The result is rounded up to a whole minute so the
  * threshold never falls before the computed time.
  */
@@ -76,10 +103,10 @@ export function quietAfterMinutes(
   if (options.sunday === true && sundaySamples.length >= TUNING.minSundaySamples) {
     const sunday = median(sundaySamples);
     if (Math.abs(sunday - overall) > TUNING.sundayDifferenceMinutes) {
-      return clampQuiet(sunday);
+      return clampQuiet(sundaySamples);
     }
   }
-  return clampQuiet(overall);
+  return clampQuiet(samples);
 }
 
 /**
