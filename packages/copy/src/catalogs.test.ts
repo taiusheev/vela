@@ -232,6 +232,7 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["push.quiet_notice", ["name", "sent"]],
   ["push.answer_receipt", ["name"]],
   ["push.turn_prompt", ["name"]],
+  ["group.turn_prompt_idea", ["idea"]],
   ["admin.quiet_notice_unheard", ["family", "link", "name"]],
   ["admin.push_misconfigured", ["link"]],
   ["organiser.invite_again", ["link", "name"]],

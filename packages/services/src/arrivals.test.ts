@@ -13,6 +13,7 @@ import {
   messageRefs,
   outbound,
   replies,
+  suggestions,
   turns,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
@@ -1081,6 +1082,59 @@ describe("sendTurnPrompt", () => {
       },
     ]);
     expect(await h.db.select().from(outbound)).toHaveLength(0);
+  });
+
+  it("offers tomorrow's unused suggestion as an idea, an AI draft only in the family's language", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    const suggestion = {
+      familyId: seed.family.id,
+      aboutMemberId: seed.member.id,
+      type: "question" as const,
+      promptVersion: "test",
+    };
+    await h.db.insert(suggestions).values([
+      { ...suggestion, localDay: TOMORROW, bankId: "life.childhood.home", text: "" },
+      {
+        ...suggestion,
+        localDay: "2026-09-16",
+        bankId: "life.childhood.games",
+        text: "How did the tomatoes do this week?",
+        lang: "en",
+        source: { ai_source: "mention" },
+      },
+      {
+        ...suggestion,
+        localDay: "2026-09-17",
+        bankId: "life.childhood.games",
+        text: "Used already",
+        lang: "en",
+        usedAt: h.clock.now(),
+      },
+    ]);
+    const textOf = async (date: LocalDate) => {
+      const rows = await outboundRows("turn_prompt");
+      const payload = rows
+        .map((row) => row.payload as { message: { text: string }; ref: { localDate: string } })
+        .find((p) => p.ref.localDate === date);
+      return payload;
+    };
+
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+    expect((await textOf(TOMORROW))?.message.text).toBe(
+      "Tomorrow is Mia's turn with Mom. Reply to this message with a question, a photo, or a voice note.\n\nIf you'd like an idea: “What did the house you grew up in look like?”",
+    );
+    h.clock.advanceMinutes(24 * 60);
+    await sendTurnPrompt(h.deps, seed.member.id, "2026-09-16");
+    expect((await textOf("2026-09-16"))?.message.text).toContain(
+      "If you'd like an idea: “How did the tomatoes do this week?”",
+    );
+    // A suggestion someone already composed from is not offered again, and no idea is invented.
+    h.clock.advanceMinutes(24 * 60);
+    await sendTurnPrompt(h.deps, seed.member.id, "2026-09-17");
+    expect((await textOf("2026-09-17"))?.message.text).toBe(
+      "Tomorrow is Mia's turn with Mom. Reply to this message with a question, a photo, or a voice note.",
+    );
   });
 
   it("names the holders in join order, wrapping round, and records the prompt when it is sent", async () => {
