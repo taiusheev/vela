@@ -62,7 +62,7 @@ Steps are ordered within each workstream. "F" marks a step that needs the founde
 | # | Step | Done when | Needs | Status |
 |---|---|---|---|---|
 | 4.1 | Rubric judge and OpenAI reminders | judged golden set without Promptfoo; reminders v3 | — | Done (PR #34, #36) |
-| 4.2 | Eval on every prompt change | CI runs the golden set (with the founder's key as a GitHub secret) when `packages/ai/src/prompts` or OpenAI routing changes; weekly judged run | F (key as secret, ~US$1/run) | — |
+| 4.2 | Eval on every prompt change | CI runs the golden set (with the founder's key as a GitHub secret) when `packages/ai/src/prompts` or OpenAI routing changes; weekly judged run | F (key as secret, ~US$1/run) | Built: `.github/workflows/ai-evals.yml`; waits for the key (`infra/scripts/set-github-eval-key.command`) |
 | 4.3 | Live safety scenarios | synthetic fall with and without health-words consent, scam call, weekly read draft: each with a receipt | F (test parent sends scripted words) | — |
 | 4.4 | AI cost and failure watch | `ai_calls` cost/day, failure rate and latency by call on the admin overview; per-family daily cost cap | Daily cap amount and reached-cap behavior | Admin telemetry implemented; cap pending product choice and enforcement proof. |
 | 4.5 | Model pinning | dated snapshot pinned (`gpt-5-2025-08-07`), upgrade only through 4.2 | — | Done: `OPENAI_SNAPSHOT_FOR` (gpt-5-2025-08-07, gpt-5-mini-2025-08-07), live-checked |
