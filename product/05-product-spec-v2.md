@@ -6,7 +6,7 @@
 
 | Decision | Final form |
 |---|---|
-| What arrives | An **ask from a person**: a question, two photos to choose from, a voice note to answer, a word to teach, a story prompt, a recipe step, an old photo to name, a vote. Vela authors nothing except the fallback hello. |
+| What arrives | An **ask from a person**: a question, two photos to choose from, a voice note to answer, a word to teach, a story prompt, a recipe step, an old photo to name, a vote. Vela authors nothing except the fallback hello, which asks a question from Vela's question bank (§4.5). |
 | What she does | One gesture: speak, tap a chip, tap a photo, tap a heart. "Just say hi" is the small fallback, never the hero. |
 | What comes back | Her answer is a post. The family reacts and replies. **She hears the replies at the start of tomorrow's arrival.** Receipts both ways. |
 | The light | Lights on any answer, on the raw event, before any AI runs. Paid layer "Vela Light" carries the light, quiet notices, nearby contacts, away mode, the weekly read, memory, and the family book export. |
@@ -113,7 +113,7 @@ Then the **opening**: if yesterday's exchange has replies, the arrival opens wit
 | Recipe | "Sam wants your borscht. How do you start?" | Voice, over one or several days | A recipe card assembled from her answers |
 | Memory photo | An old photo: "Who is this?" | Voice | Names and the story attached to the photo |
 | Vote | "Sunday call at 6 or 7?" | Tap one | The result to everyone |
-| Fallback hello | A warm morning from Vela on the family's behalf | Heart, or "I'm fine" | The light; the organiser sees "quiet day, she's fine" |
+| Fallback hello | A question from Vela's question bank, signed by Vela (§4.5) | Voice or words; or heart, or "I'm fine" | The light, her answer with the question; the organiser sees a quiet day |
 
 Every type has a **just say hi** at the bottom on the parent surface and an equivalent button on messengers.
 
@@ -127,7 +127,7 @@ Every type has a **just say hi** at the bottom on the parent surface and an equi
 
 ### 4.5 Fallback hello
 
-Two lines signed "Vela, from your family": yesterday's replies if any, then "Nothing new from the family today. How are you this morning?" with heart and "I'm fine". The composer logs a **quiet day** for the family. Target: under 20% of days per family; the turn prompts (§7) exist to make this rare. Ordinary members get no arrival on an empty day; their app simply shows the exchanges.
+Signed "Vela, from your family", after yesterday's replies if any. Since 10 October 2026 (founder decision, product week) it asks the day's unused suggestion from the question bank, in her language: "Something to share with the family today:" and the question, with heart and "I'm fine", so a morning nobody asked still gives her something new to tell instead of the same "how are you". The bank never repeats an item or its near-duplicates within six weeks, and the question taken is marked used. Only the bank item is used, never an AI draft, which is written as a family member would send it. With no suggestion for the day (the writer runs only where the API is on), it keeps "Nothing new from the family today. How are you this morning?". The family group sees her answer with the question it answered; a heart or "I'm fine" posts as "is fine". The composer logs a **quiet day** for the family. Target: under 20% of days per family; the turn prompts (§7) exist to make this rare. Ordinary members get no arrival on an empty day; their app simply shows the exchanges.
 
 ### 4.6 Repeat
 

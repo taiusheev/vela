@@ -65,7 +65,7 @@ import {
   memberById,
   type Queryable,
 } from "./repo.ts";
-import { renderSuggestion } from "./suggestions.ts";
+import { renderSuggestion, takeFallbackQuestion } from "./suggestions.ts";
 
 /** The pilot's kept-light members and families are reached on Telegram. */
 /** Where her mornings go when her surface names no messenger: the pilot's first. */
@@ -224,6 +224,8 @@ async function settle(
     }
     return row;
   }
+  // Nobody asked: Vela asks her something new from the question bank rather than the same hello.
+  const question = await takeFallbackQuestion(tx, member, date, now);
   const [hello] = await tx
     .insert(exchanges)
     .values({
@@ -232,7 +234,7 @@ async function settle(
       askerId: null,
       type: "hello",
       state: "scheduled",
-      text: null,
+      text: question,
       textLang: member.language,
       whenRule: "date",
       scheduledFor: date,
@@ -557,7 +559,7 @@ export async function loadAsk(
   morning: AskMorning,
 ): Promise<LoadedAsk> {
   if (exchange.type === "hello") {
-    return { ask: { type: "hello" }, media: [] };
+    return { ask: { type: "hello", question: exchange.text }, media: [] };
   }
   const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);
   const rows = lastingRows(

@@ -384,6 +384,50 @@ describe("prepareDay", () => {
     expect(prepared?.props).toEqual({ date: TOMORROW, type: "hello", source: "hello" });
   });
 
+  it("asks her the day's bank question when nobody asked, in her language, and uses it up", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db.insert(suggestions).values({
+      familyId: seed.family.id,
+      aboutMemberId: seed.member.id,
+      localDay: TOMORROW,
+      bankId: "life.work.first_job",
+      type: "question",
+      // An AI draft is written as a family member would send it: Vela never sends it as its own.
+      text: "Mom, what was your first job like?",
+      lang: "en",
+      promptVersion: "test",
+    });
+
+    const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+    expect(await exchangeById(id)).toMatchObject({
+      type: "hello",
+      askerId: null,
+      text: "What was your very first job?",
+    });
+    const [used] = await h.db.select().from(suggestions);
+    expect(used?.usedAt).toEqual(h.clock.now());
+    expect(h.ai.calls).toHaveLength(0);
+  });
+
+  it("keeps the plain hello when the day has no unused suggestion", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db.insert(suggestions).values({
+      familyId: seed.family.id,
+      aboutMemberId: seed.member.id,
+      localDay: TOMORROW,
+      bankId: "life.work.first_job",
+      type: "question",
+      text: "",
+      promptVersion: "test",
+      usedAt: h.clock.now(),
+    });
+
+    const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+    expect((await exchangeById(id))?.text).toBeNull();
+  });
+
   it("gives the chips her twenty latest answers in her words: what she said, else wrote, else the summary", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const answeredToday = await seedExchange(h.db, seed, {
