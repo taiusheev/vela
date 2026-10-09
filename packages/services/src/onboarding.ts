@@ -34,7 +34,13 @@ import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { enqueueOutbound, replyFieldOf } from "./gateway.ts";
-import { isKeptLightMember, languageOfSender, sendOutsideGateway } from "./group.ts";
+import {
+  isKeptLightMember,
+  languageOfSender,
+  NAMELESS_MEMBER,
+  profileName,
+  sendOutsideGateway,
+} from "./group.ts";
 import {
   ADDRESS_MAX_LENGTH,
   insertInvite,
@@ -483,7 +489,9 @@ function applyOnboardingStep(
 /**
  * Creates everything a finished session describes, in the caller's transaction, and returns the
  * organiser's member id. The family's name is the organiser's own display name, because nothing in
- * the flow asks for one and the admin messages need a name the founder recognises.
+ * the flow asks for one and the admin messages need a name the founder recognises. LINE sends no
+ * name with a message, so there it is read from the organiser's profile (05-line-flows §2.4); never
+ * from what they call her, which named the organiser and the family after their parent.
  */
 async function createFamily(
   deps: Deps,
@@ -492,7 +500,8 @@ async function createFamily(
   data: CompleteData,
   now: Date,
 ): Promise<string> {
-  const organiserName = event.sender.displayName ?? data.name;
+  const organiserName =
+    event.sender.displayName ?? (await profileName(deps, event)) ?? NAMELESS_MEMBER;
   const region = regionForCountry(deps.config.regions, data.country);
   const [family] = await tx
     .insert(families)
