@@ -38,10 +38,10 @@ Ownership is by path, so Claude and Codex never edit the same files. API contrac
 
 | # | Task | Done when |
 |---|---|---|
-| C1 | Quiet threshold from her own spread, not median + 2 h | Threshold from a high quantile of her recent answer times (per weekday when there is data), floor/cap kept; tests show the expected false notices per month stays under budget on irregular rhythms |
-| C2 | The four numbers on the admin trial report | Answer rate (week 1–4, rolling), useful share and notices per month, stop events, fallback share, replies heard; content-free |
+| C1 | Quiet threshold from her own spread, not median + 2 h | Done (PR #61): later of median + 2 h and her 90th-percentile latency + 1 h, floor/cap kept |
+| C2 | The four numbers on the admin trial report | `/admin/trial` (every kept-light member) and each family's trial page: answer rate outside away days, useful share, notices per 30 days, true concerns, stops, fallback share, replies heard, each against its target |
 | C3 | Ask supply: the family keeps asking | The organiser is told (once, calmly) when the next two mornings would be a fallback hello; turn prompt shows two ready suggestions; fallback share on the report |
-| C4 | Delivery failure is never silence | A failed or undelivered arrival never starts the quiet ladder; the organiser sees "we couldn't reach her messenger" instead (checked against PR #59) |
+| C4 | Delivery failure is never silence | Verified on main 10 Oct: a failed arrival sets `delivery_failed_at`, tells the organisers on that channel (`delivery.failed`), and no repeat or quiet can follow (`gateway-effects.ts` `arrivalFailed`, `quiet.ts`); the app shows it separately (PR #59) |
 | C5 | Production `v0.1.0` | Preflight PASS on production, deploy, smoke, restore drill; needs founder keys |
 | C6 | First-family runbook | `plan/materials/trial/first-families.md`: the onboarding call script, what to set up, what to check on day 1, 3, 7, 14 |
 | C7 | Real-device test week | Admin test-week checklist green with the founder's iPhone and LINE test parent |
