@@ -1137,6 +1137,53 @@ describe("sendTurnPrompt", () => {
     );
   });
 
+  it("says first, once, when her answer today has no reply yet", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    const today = await seedExchange(h.db, seed, {
+      date: TODAY,
+      state: "answered",
+      deliveredAt: h.clock.now(),
+      answeredAt: h.clock.now(),
+    });
+    const textOf = async (date: LocalDate) =>
+      (await outboundRows("turn_prompt"))
+        .map((row) => row.payload as { message: { text: string }; ref: { localDate: string } })
+        .find((p) => p.ref.localDate === date)?.message.text;
+
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+    expect(await textOf(TOMORROW)).toBe(
+      "Mom answered this morning and nobody has replied yet. A reply to that answer is the first thing Mom gets tomorrow morning.\n\nTomorrow is Mia's turn with Mom. Reply to this message with a question, a photo, or a voice note.",
+    );
+
+    // Once someone has replied to her, even with a heart, the evening message is the plain prompt.
+    await h.db.insert(replies).values({
+      exchangeId: today.id,
+      memberId: seed.organiser.id,
+      kind: "heart",
+      channel: "telegram",
+    });
+    await seedExchange(h.db, seed, {
+      date: TOMORROW,
+      state: "answered",
+      deliveredAt: h.clock.now(),
+      answeredAt: h.clock.now(),
+    });
+    await h.db.insert(replies).values({
+      exchangeId: (await h.db.select().from(exchanges)).find((e) => e.scheduledFor === TOMORROW)
+        ?.id as string,
+      memberId: seed.organiser.id,
+      kind: "text",
+      text: "Lovely",
+      channel: "app",
+    });
+    h.clock.advanceMinutes(24 * 60);
+    await sendTurnPrompt(h.deps, seed.member.id, "2026-09-16");
+    expect(await textOf("2026-09-16")).toBe(
+      "Tomorrow is Mia's turn with Mom. Reply to this message with a question, a photo, or a voice note.",
+    );
+  });
+
   it("names the holders in join order, wrapping round, and records the prompt when it is sent", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await seedLinkedGroup(h.db, seed, { now: h.clock.now() });

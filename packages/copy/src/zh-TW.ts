@@ -111,6 +111,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "group.turn_prompt_open":
     "明天大家都可以問{name}一件事。請直接回覆這則訊息，傳一個問題、一張照片或一段語音。",
   "group.turn_prompt_idea": "需要一點靈感的話：「{idea}」",
+  "group.turn_prompt_reply_first":
+    "{name}今天早上回答了，還沒有人回覆。回覆那則回答，會是{name}明天早上第一個收到的。",
   "group.ask_confirmed": "已放進{name}的早安訊息。",
   "group.ask_queued": "明天已經有{asker}的提問了。這則先保留，改天早上再送出。",
   "group.ask_from_app": "{asker}已經為{name}準備好明天早上的提問。",

@@ -873,6 +873,25 @@ async function turnHolders(db: Queryable, familyId: string): Promise<TurnHolder[
   return rows.map((row) => ({ memberId: row.id, joinedAt: row.createdAt }));
 }
 
+/**
+ * Whether her exchange of `day` was answered and nobody has replied to her about it yet (any reply
+ * addressed to her counts, a heart included, as the read-back does).
+ */
+async function answeredWithoutReply(
+  tx: VelaTransaction,
+  recipientId: string,
+  day: LocalDate,
+): Promise<boolean> {
+  const exchange = await exchangeForLocalDate(tx, recipientId, day);
+  if (exchange === null || exchange.answeredAt === null) return false;
+  const [reply] = await tx
+    .select({ id: replies.id })
+    .from(replies)
+    .where(and(eq(replies.exchangeId, exchange.id), eq(replies.toRecipient, true)))
+    .limit(1);
+  return reply === undefined;
+}
+
 /** Her unused suggestion for `forDate` in the family's language, or null when there is none. */
 async function turnPromptIdea(
   tx: VelaTransaction,
@@ -1010,10 +1029,14 @@ export async function sendTurnPrompt(
     // fallback hello (product week C3). The group already reads her answers, so a draft built on
     // something she mentioned may be shown here; push never carries one.
     const idea = await turnPromptIdea(tx, family, recipientId, forDate);
-    const text =
-      idea === null
-        ? prompt
-        : `${prompt}\n\n${t(family.language, "group.turn_prompt_idea", { idea })}`;
+    // Her answer today with nothing back yet: the reply is what she hears first tomorrow, and the
+    // family side is the one that lapses (research/08), so the evening message says so, once.
+    const unreplied = await answeredWithoutReply(tx, recipientId, addDays(forDate, -1));
+    const text = [
+      ...(unreplied ? [t(family.language, "group.turn_prompt_reply_first", { name })] : []),
+      prompt,
+      ...(idea === null ? [] : [t(family.language, "group.turn_prompt_idea", { idea })]),
+    ].join("\n\n");
     const rowMember = holder ?? recipient;
     await enqueueOutbound(deps, tx, {
       kind: "turn_prompt",
