@@ -23,7 +23,11 @@ An update may ship over the air only if **every** answer is yes. Copy this table
 
 Anything else needs a store build and review: new features, permission prompts (including the microphone text), SDK upgrades, widget changes (native targets), payments, and any change of consent meaning, which also needs a new consent version (`plan/materials/pilot/README.md`).
 
-## Setup (once, in sprint 3)
+## Setup (done 9 October 2026, technical plan 5.5)
+
+Built into `apps/app/app.json` and `eas.json`: `expo-updates` 57, the update URL of EAS project `a9647168-…`, and the channels below. It takes effect from the first build made after it (the native module must be in the binary); builds before it never receive updates. EAS Update needs no secret beyond the founder's EAS login.
+
+- `staging`, `e2e`, `trial-staging`, `trial-simulator` and `testflight` builds read the `preview` channel; the `trial` (production) build reads `production`.
 
 - `runtimeVersion` uses the **fingerprint** policy, so an update can only reach builds with identical native code.
 - Channels: `development`, `preview` (TestFlight and Play internal testing), `production`.
