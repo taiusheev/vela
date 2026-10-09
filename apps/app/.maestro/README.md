@@ -87,3 +87,9 @@ failures, background/resume and landscape/tablet accessibility. The English pilo
 
 The flows find things by their English words, so a change of copy in `src/i18n/locales/en.po` can
 break a flow: `pnpm --filter @vela/app e2e:demo` says which step.
+
+
+## Product-week iPhone audit
+
+See `../docs/product-week-audit.md` for the screen inventory, measured-tap template and current setup limits.
+Run `pnpm --filter @vela/app audit:doctor`, then `pnpm --filter @vela/app audit:ios` for the explicit no-account Expo Go demo. The separate `audit-simulator` EAS profile prepares a custom native demo build on the `audit` update channel. Neither reuses staging credentials. These commands/profile are prepared; no native journey has passed yet. Web demo receipts do not close X1 or X8.

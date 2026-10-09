@@ -10,12 +10,16 @@
         "EXPO_PUBLIC_API_URL": "https://vela.vela-light-staging.workers.dev",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_aWRlYWwtdnVsdHVyZS05MjYyLmNsZXJrLmFjY291bnRzLmRldiQ"
       },
-      "android": { "buildType": "apk" },
+      "android": {
+        "buildType": "apk"
+      },
       "channel": "preview"
     },
     "e2e": {
       "extends": "staging",
-      "ios": { "simulator": true }
+      "ios": {
+        "simulator": true
+      }
     },
     "trial-staging": {
       "extends": "staging",
@@ -27,13 +31,17 @@
     },
     "trial-simulator": {
       "extends": "trial-staging",
-      "ios": { "simulator": true }
+      "ios": {
+        "simulator": true
+      }
     },
     "testflight": {
       "extends": "staging",
       "distribution": "store",
       "autoIncrement": true,
-      "android": { "buildType": "app-bundle" },
+      "android": {
+        "buildType": "app-bundle"
+      },
       "channel": "preview"
     },
     "trial": {
@@ -46,11 +54,29 @@
         "EXPO_PUBLIC_TRIAL_TARGET": "production"
       },
       "channel": "production"
+    },
+    "audit-simulator": {
+      "environment": "preview",
+      "distribution": "internal",
+      "channel": "audit",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_NO_DOTENV": "1",
+        "EXPO_PUBLIC_DEMO_MODE": "true",
+        "EXPO_PUBLIC_API_URL": "",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "",
+        "EXPO_PUBLIC_TRIAL_ENGLISH": "false"
+      }
     }
   },
   "submit": {
     "testflight": {
-      "android": { "track": "internal", "releaseStatus": "draft" }
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
     },
     "trial": {
       "ios": {}
