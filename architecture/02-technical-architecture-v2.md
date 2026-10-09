@@ -184,7 +184,7 @@ A Cron Trigger every 15 minutes (every 5 until 2026-09-18: a run every 5 minutes
 
 ### 6.5 Tuning
 
-Weekly, per kept-light member: `quiet_after_min = clamp(median(latency of last 14 answered days) + 120, 240, 600)`; Sunday median used on Sundays and her country's holidays if it differs by more than 60 min. `learning_until = light_consented_at + 14 days`. `arrival_time` learned from the first 14 answer times if the organiser never set a wake time.
+Weekly, per kept-light member: `quiet_after_min = clamp(max(median(L) + 120, p90(L) + 60), 240, 600)` over L = latency of the last 14 answered days (p90 nearest-rank); Sunday median used on Sundays and her country's holidays if it differs by more than 60 min. `learning_until = light_consented_at + 14 days`. `arrival_time` learned from the first 14 answer times if the organiser never set a wake time.
 
 ---
 
