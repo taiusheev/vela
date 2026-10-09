@@ -12,6 +12,7 @@ import type { LocalDate, LocalTime } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
   addDays,
+  lateLatencyMinutes,
   localDateOf,
   localTimeOf,
   minutesBetween,
@@ -340,8 +341,9 @@ function weeklyDayOf(day: WeekDay, answeredAt: Date, timeZone: string): WeeklyDa
 const SUNDAY = 0;
 
 /**
- * T_quiet from her own rhythm (spec §8): the median answer latency of her last 14 answered days
- * plus two hours, floored at 4 h and capped at 10 h, recomputed once a week with her read, so
+ * T_quiet from her own rhythm (spec §8): the later of the median answer latency of her last 14
+ * answered days plus two hours and her late-day (90th percentile) latency plus one hour, floored at
+ * 4 h and capped at 10 h, recomputed once a week with her read, so
  * silence is measured against the person rather than against the six-hour default she starts on.
  * Below 14 answered days `quietAfterMinutes` keeps that default. A day's latency runs from its
  * delivery to the answer the day counts (`recentAnsweredDays`), which is negative for a message
@@ -364,6 +366,7 @@ async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
       quietAfterMin: minutes,
       answerStats: {
         median_latency_min: median(latencies),
+        late_latency_min: lateLatencyMinutes(latencies),
         sunday_median_min: median(sundays),
         n_days: latencies.length,
         updated_at: deps.clock.now().toISOString(),

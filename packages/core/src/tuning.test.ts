@@ -54,6 +54,31 @@ describe("quietAfterMinutes", () => {
     ).toBe(240);
   });
 
+  it("waits past her late days when her rhythm is loose", () => {
+    // Usually within the hour, but about one day in five she answers near noon: the median rule
+    // alone (60 + 120 = 180, floored to 240) would report her quiet on each of those days.
+    const loose = [20, 30, 40, 45, 50, 55, 60, 60, 65, 70, 80, 230, 250, 270];
+    expect(quietAfterMinutes(loose)).toBe(310);
+    const threshold = quietAfterMinutes(loose);
+    expect(loose.filter((latency) => latency >= threshold)).toEqual([]);
+  });
+
+  it("does not let one very late day stretch the threshold", () => {
+    const steady = [...fortnight(60).slice(0, 13), 540];
+    expect(quietAfterMinutes(steady)).toBe(240);
+  });
+
+  it("keeps the ten-hour cap for a parent who answers in the evening as often as the morning", () => {
+    const scattered = [30, 60, 90, 120, 180, 240, 300, 360, 420, 480, 540, 560, 580, 590];
+    expect(quietAfterMinutes(scattered)).toBe(600);
+  });
+
+  it("uses her late Sundays, not only the Sunday median", () => {
+    expect(
+      quietAfterMinutes(fortnight(60), { sunday: true, sundayLatencies: [150, 160, 400] }),
+    ).toBe(460);
+  });
+
   it("rejects latencies that are not finite numbers", () => {
     expect(() => quietAfterMinutes([...fortnight(200), Number.NaN])).toThrow(RangeError);
     expect(() => quietAfterMinutes([Number.POSITIVE_INFINITY])).toThrow(RangeError);
