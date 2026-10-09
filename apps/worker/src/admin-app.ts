@@ -24,7 +24,7 @@ import {
 } from "./admin-pages.ts";
 import type { AdminRuntime } from "./admin-runtime.ts";
 import { renderTestWeek } from "./admin-test-week-page.ts";
-import { renderTrialReport } from "./admin-trial-page.ts";
+import { renderTrialOverview, renderTrialReport } from "./admin-trial-page.ts";
 import { ConfigError } from "./config.ts";
 import type { AdminDeps } from "./deps.ts";
 import type { AdminEnv } from "./env.ts";
@@ -269,6 +269,19 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
       if (code === null) throw error;
       return renderMessage(statusForDomainError(code), "No test week", "That address is invalid.");
     }
+  });
+
+  admin.get("/trial", async (c) => {
+    const rawDays = c.req.query("days") ?? "30";
+    const dayValues = c.req.queries("days") ?? [];
+    if ((rawDays !== "7" && rawDays !== "30") || dayValues.length > 1) {
+      return renderMessage(400, "Choose a report period", "Use seven or 30 complete local days.");
+    }
+    const ctx: AdminContext = { admin: c.get("admin") };
+    const overview = await withDeps(c, (deps) =>
+      runtime.services.loadAdminTrialOverview(deps, ctx, rawDays === "7" ? 7 : 30),
+    );
+    return renderTrialOverview(overview);
   });
 
   admin.get("/families/:familyId/trial", async (c) => {

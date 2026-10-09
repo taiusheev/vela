@@ -7,7 +7,7 @@ import { env } from "cloudflare:test";
 import { createFakeAi, createFakeStt } from "@vela/ai";
 import type { ChannelAdapter, ChannelQuota, InboundEvent } from "@vela/contracts";
 import type { Family, Member, VelaDatabase } from "@vela/db";
-import type { AdminOverview, Deps, FamilyPage, Logger } from "@vela/services";
+import type { AdminOverview, Deps, FamilyPage, Logger, TrialOverview } from "@vela/services";
 import { vi } from "vitest";
 import type { AdminRuntime, AdminServices } from "../admin-runtime.ts";
 import type { ApiHandler } from "../api-runtime.ts";
@@ -565,6 +565,30 @@ const EMPTY_OVERVIEW: AdminOverview = {
   lineQuota: null,
 };
 
+/** Trial totals with nothing recorded, as an environment with no kept-light member has. */
+export const EMPTY_TRIAL_TOTALS: TrialOverview["totals"] = {
+  recordedDays: 0,
+  deliveredDays: 0,
+  failedDays: 0,
+  answeredDays: 0,
+  fallbackDays: 0,
+  answerCount: 0,
+  humanReplies: 0,
+  repliesReadBack: 0,
+  medianLatencyMin: null,
+  latencySamples: 0,
+  preArrivalAnswers: 0,
+  eligibleDays: 0,
+  eligibleAnsweredDays: 0,
+  awayDays: 0,
+  repliesHeardDays: 0,
+  quietNoticeDays: 0,
+  usefulYes: 0,
+  usefulNo: 0,
+  trueConcern: 0,
+  stopsSaid: 0,
+};
+
 export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): FakeAdminRuntime {
   const recording = createRecording();
   const { note } = recording;
@@ -582,6 +606,18 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
       return given.loadAdminTrialReport === undefined
         ? null
         : given.loadAdminTrialReport(deps, ctx, familyId, days);
+    },
+    async loadAdminTrialOverview(deps, ctx, days) {
+      note("loadAdminTrialOverview", ctx, days);
+      return given.loadAdminTrialOverview === undefined
+        ? {
+            generatedAt: new Date("2026-10-10T00:00:00Z"),
+            windowDays: days,
+            parents: [],
+            totals: EMPTY_TRIAL_TOTALS,
+            parentsWhoStopped: 0,
+          }
+        : given.loadAdminTrialOverview(deps, ctx, days);
     },
     async loadDeadLetters(deps) {
       note("loadDeadLetters");

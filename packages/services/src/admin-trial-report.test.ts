@@ -2,6 +2,8 @@ import type { LocalDate } from "@vela/contracts";
 import {
   adminAccessLog,
   answers,
+  awayPeriods,
+  events,
   exchanges,
   families,
   members,
@@ -11,7 +13,12 @@ import {
 } from "@vela/db";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { loadAdminTrialReport } from "./admin-trial-report.ts";
+import {
+  loadAdminTrialOverview,
+  loadAdminTrialReport,
+  type TrialRecipientReport,
+  trialNumbers,
+} from "./admin-trial-report.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedExchange, seedFamily } from "./testing/seed.ts";
 
@@ -313,5 +320,207 @@ describe("founder trial counts", () => {
     await expect(loadAdminTrialReport(h.deps, { admin: "" }, seed.family.id)).rejects.toMatchObject(
       { code: "invalid_payload" },
     );
+  });
+
+  describe("the four numbers", () => {
+    const delivered = (day: LocalDate) => new Date(`${day}T01:00:00Z`);
+    const answered = (day: LocalDate) => new Date(`${day}T02:00:00Z`);
+
+    // Ten delivered mornings 25 Sep – 4 Oct (Vietnam). She is away 1–2 Oct and does not answer;
+    // 3 Oct is a true concern the organiser found useful; 27 Sep was answered late after a notice
+    // the organiser did not find useful. Two answered days had replies read back. She said stop once.
+    async function seedFortnight() {
+      const ids = new Map<LocalDate, string>();
+      const days: LocalDate[] = [
+        "2026-09-25",
+        "2026-09-26",
+        "2026-09-27",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-01",
+        "2026-10-02",
+        "2026-10-03",
+        "2026-10-04",
+      ];
+      for (const day of days) {
+        const silent = day === "2026-10-01" || day === "2026-10-02" || day === "2026-10-03";
+        const row = await exchange(day, {
+          date: day,
+          type: day === "2026-09-29" ? "hello" : "question",
+          state: silent ? "delivered" : "answered",
+          deliveredAt: delivered(day),
+          ...(silent ? {} : { answeredAt: answered(day) }),
+        });
+        ids.set(day, row.id);
+      }
+      await h.db.insert(awayPeriods).values({
+        memberId: seed.member.id,
+        fromDate: "2026-10-01",
+        toDate: "2026-10-02",
+        source: "organiser",
+      });
+      await h.db.insert(quietEvents).values([
+        {
+          memberId: seed.member.id,
+          exchangeId: ids.get("2026-10-03") ?? "",
+          notifyCount: 1,
+          outcome: "true_concern",
+          resolvedAt: NOW,
+          useful: true,
+        },
+        {
+          memberId: seed.member.id,
+          exchangeId: ids.get("2026-09-27") ?? "",
+          notifyCount: 1,
+          outcome: "answered_late",
+          resolvedAt: NOW,
+          useful: false,
+        },
+      ]);
+      await h.db.insert(replies).values(
+        (["2026-09-25", "2026-09-26"] as const).map((day) => ({
+          exchangeId: ids.get(day) ?? "",
+          memberId: seed.organiser.id,
+          kind: "text" as const,
+          text: PRIVATE,
+          channel: "app" as const,
+          readBackAt: NOW,
+        })),
+      );
+      await h.db.insert(events).values({
+        name: "stop_said",
+        familyId: seed.family.id,
+        memberId: seed.member.id,
+        at: new Date("2026-10-04T03:00:00Z"),
+      });
+    }
+
+    it("keeps away days out of the answer rate and counts verdicts, concerns and stops", async () => {
+      await seedFortnight();
+      const result = (await report(30))?.recipients[0];
+      expect(result?.lightOn).toBe(true);
+      expect(result?.summary).toMatchObject({
+        recordedDays: 10,
+        deliveredDays: 10,
+        answeredDays: 7,
+        awayDays: 2,
+        eligibleDays: 8,
+        eligibleAnsweredDays: 7,
+        fallbackDays: 1,
+        repliesHeardDays: 2,
+        quietNoticeDays: 2,
+        usefulYes: 1,
+        usefulNo: 1,
+        trueConcern: 1,
+        stopsSaid: 1,
+      });
+      expect(result?.days.filter((day) => day.away).map((day) => day.day)).toEqual([
+        "2026-10-01",
+        "2026-10-02",
+      ]);
+      const numbers = Object.fromEntries(
+        trialNumbers(result?.summary as TrialRecipientReport["summary"]).map((n) => [n.key, n]),
+      );
+      expect(numbers.answer_rate).toMatchObject({ value: 7 / 8, status: "on_track" });
+      // Two verdicts are not enough to judge usefulness.
+      expect(numbers.useful_notices).toMatchObject({ value: 0.5, status: "too_early" });
+      expect(numbers.notices_per_month).toMatchObject({ value: 6, status: "watch" });
+      expect(numbers.missed_trouble).toMatchObject({ value: 1, status: "founder_check" });
+      expect(numbers.stops).toMatchObject({ value: 1, status: "watch" });
+      expect(numbers.fallback_share).toMatchObject({ value: 0.1, status: "on_track" });
+      expect(numbers.replies_heard).toMatchObject({ value: 2 / 7, status: "watch" });
+    });
+
+    it("ends an open-ended away period on the day it was ended", async () => {
+      await seedFortnight();
+      await h.db.delete(awayPeriods);
+      await h.db.insert(awayPeriods).values({
+        memberId: seed.member.id,
+        fromDate: "2026-10-01",
+        source: "member",
+        endedAt: new Date("2026-10-01T05:00:00Z"),
+      });
+      const result = (await report(30))?.recipients[0];
+      expect(result?.days.filter((day) => day.away).map((day) => day.day)).toEqual(["2026-10-01"]);
+    });
+
+    it("judges each number against its target and says when it is too early", () => {
+      const base = {
+        recordedDays: 20,
+        deliveredDays: 20,
+        failedDays: 0,
+        answeredDays: 9,
+        fallbackDays: 8,
+        answerCount: 9,
+        humanReplies: 0,
+        repliesReadBack: 0,
+        medianLatencyMin: null,
+        latencySamples: 9,
+        preArrivalAnswers: 0,
+        eligibleDays: 20,
+        eligibleAnsweredDays: 9,
+        awayDays: 0,
+        repliesHeardDays: 6,
+        quietNoticeDays: 2,
+        usefulYes: 3,
+        usefulNo: 0,
+        trueConcern: 0,
+        stopsSaid: 0,
+      };
+      const byKey = (summary: typeof base) =>
+        Object.fromEntries(trialNumbers(summary).map((n) => [n.key, n.status]));
+      expect(byKey(base)).toEqual({
+        answer_rate: "kill",
+        useful_notices: "on_track",
+        notices_per_month: "on_track",
+        missed_trouble: "founder_check",
+        stops: "on_track",
+        fallback_share: "kill",
+        replies_heard: "on_track",
+      });
+      expect(byKey({ ...base, eligibleDays: 6, eligibleAnsweredDays: 1 }).answer_rate).toBe(
+        "too_early",
+      );
+      expect(byKey({ ...base, eligibleAnsweredDays: 12 }).answer_rate).toBe("watch");
+    });
+
+    it("gathers every kept-light member across families into one overview", async () => {
+      await seedFortnight();
+      const other = await seedFamily(h.db, {
+        now: new Date("2026-09-01T00:00:00Z"),
+        organiserExternalId: "other-organiser",
+        memberExternalId: "other-parent",
+        timeZone: "Asia/Ho_Chi_Minh",
+      });
+      await seedExchange(h.db, other, {
+        date: "2026-10-04",
+        state: "answered",
+        deliveredAt: delivered("2026-10-04"),
+        answeredAt: answered("2026-10-04"),
+        text: PRIVATE,
+      });
+      const overview = await loadAdminTrialOverview(h.deps, ctx, 30);
+      expect(overview.parents.map((p) => p.familyId).sort()).toEqual(
+        [seed.family.id, other.family.id].sort(),
+      );
+      expect(overview.totals).toMatchObject({
+        recordedDays: 11,
+        eligibleDays: 9,
+        eligibleAnsweredDays: 8,
+        stopsSaid: 1,
+        medianLatencyMin: null,
+      });
+      expect(overview.parentsWhoStopped).toBe(1);
+      const logged = await h.db.select().from(adminAccessLog);
+      expect(logged).toHaveLength(2);
+      expect(JSON.stringify(overview)).not.toContain(PRIVATE);
+    });
+
+    it("refuses a family-scoped overview", async () => {
+      await expect(
+        loadAdminTrialOverview(h.deps, { ...ctx, familyId: seed.family.id }, 30),
+      ).rejects.toThrow(/scope/);
+    });
   });
 });
