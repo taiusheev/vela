@@ -50,7 +50,7 @@ import {
  * The name a lazily created member gets when the platform sent none. Telegram always carries a
  * first name, so this is a guard, not copy the family will read.
  */
-const NAMELESS_MEMBER = "Family member";
+export const NAMELESS_MEMBER = "Family member";
 
 /**
  * The organiser's language from the platform's hint (flows §3.1): any Chinese variant reads the
@@ -502,7 +502,7 @@ export async function handleMemberLeft(
  * §5.11), looked up through the group. Null when the platform has no profiles or does not answer: a
  * failed lookup never holds the message back.
  */
-async function profileName(deps: Deps, event: InboundEvent): Promise<string | null> {
+export async function profileName(deps: Deps, event: InboundEvent): Promise<string | null> {
   const adapter = deps.channels.get(event.channel);
   if (adapter.profile === undefined) return null;
   try {
