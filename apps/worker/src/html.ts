@@ -76,6 +76,9 @@ textarea { min-width: 28rem; min-height: 5rem; }
 button { font: inherit; padding: 0.3rem 0.8rem; cursor: pointer; }
 .notice { padding: 0.5rem 0.75rem; border: 1px solid rgba(128,128,128,0.6); margin-bottom: 1rem; }
 .muted { opacity: 0.6; }
+td.status-on_track { background: rgba(60,160,90,0.16); }
+td.status-watch { background: rgba(230,170,40,0.2); }
+td.status-kill { background: rgba(220,60,60,0.2); font-weight: 600; }
 @media (max-width: 40rem) { textarea { min-width: 100%; } table { display: block; overflow-x: auto; } }
 `;
 
