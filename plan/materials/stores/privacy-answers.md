@@ -15,6 +15,7 @@ Prepared 8 October 2026 (technical plan step 5.7) from the code as built, for th
 | Photos they choose | Ask or reply with a photo | `POST /v1/families/:id/media` | R2, deleted after 30 days unless kept by the family | Yes |
 | Voice messages they record | Voice reply or voice hello | `POST /v1/families/:id/voice` | R2, deleted after 30 days; transcribed by Deepgram | Yes |
 | Nearby contact name and phone | Only if an organiser adds one (off in the English trial) | `POST /v1/families/:id/members/:mid/nearby` | Vela database, 14 days unless they say yes | Yes (the organiser's family) |
+| App update checks (Expo, `expo-updates`) | Each launch | `apps/app/app.json` `updates` | Expo, request logs only | No (a random install id, not the account) |
 | Push installation id and Expo push token | When notifications are allowed (push is off until step 5.4) | `apps/app/src/push/device.ts`, `POST /v1/me/devices` | Vela database until sign-out | Yes |
 | What they did in the app (sent a reply, opened a weekly read) | As events, no content | `events` table, `surface: "app"` | Vela database | Yes |
 
