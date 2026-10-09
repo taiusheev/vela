@@ -308,9 +308,15 @@ describe("Today's card while its ask has no answer", () => {
         translation: null,
       },
     });
-    const card = cardIn("en", [light({ state: "lit", answered_at: TWO_THIRTY_TWO })], answered);
-    expect(card?.answer).toEqual({ text: "Beans.", at: "14:32" });
-    expect(card).not.toHaveProperty("unanswered");
+    for (const fields of [{}, { delivery_status: "failed" as const }]) {
+      const card = cardIn("en", [light({ state: "lit", answered_at: TWO_THIRTY_TWO })], {
+        ...answered,
+        ...fields,
+      });
+      expect(card?.answer).toEqual({ text: "Beans.", at: "14:32" });
+      expect(card).not.toHaveProperty("unanswered");
+      if (fields.delivery_status === "failed") expect(card?.deliveryNotice).toBeTruthy();
+    }
   });
 
   it("shows her words in the reader's language when the family's translation is in it, keeping hers as the original", () => {
@@ -472,5 +478,30 @@ describe("parent clock and original media", () => {
     expect(result.exchanges[0]?.answer?.at).toBe("8:12");
     expect(result.exchanges[0]?.answer?.audio).toEqual(audio);
     expect(result.exchanges[0]?.voiceHello).toEqual(audio);
+  });
+});
+
+describe("arrival delivery outcome", () => {
+  it("does not describe a delivery failure or pending arrival as silence", () => {
+    for (const delivery_status of ["pending", "failed"] as const) {
+      for (const locale of ["en", "zh-TW"] as const) {
+        const card = cardIn(locale, [light()], exchange({ delivery_status }));
+        expect(card?.deliveryNotice).toBeTruthy();
+        expect(card).not.toHaveProperty("unanswered");
+      }
+    }
+    expect(
+      cardIn("en", [light()], exchange({ delivery_status: "failed" }))?.deliveryNotice,
+    ).toContain("could not finish delivering Mom");
+    expect(cardIn("en", [light()], exchange({ delivery_status: "pending" }))?.deliveryNotice).toBe(
+      "Delivery of Mom’s morning is still pending.",
+    );
+  });
+  it("keeps the ordinary unanswered line only after delivery or for older responses", () => {
+    for (const fields of [{}, { delivery_status: "delivered" as const }]) {
+      const card = cardIn("en", [light()], exchange(fields));
+      expect(card?.unanswered).toBe("No word yet today.");
+      expect(card).not.toHaveProperty("deliveryNotice");
+    }
   });
 });

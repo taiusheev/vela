@@ -731,6 +731,10 @@ msgstr "刪除帳號會移除您的登入、這支手機的通知，以及您在
 msgid "Deleting…"
 msgstr "刪除中…"
 
+#: src/data/useToday.ts
+msgid "Delivery of {recipient}’s morning is still pending."
+msgstr "{recipient}的早安訊息仍待傳送。"
+
 #: app/help.tsx
 msgid "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
 msgstr "請說明發生了什麼問題，以及發生的時間。請勿傳送密碼、登入驗證碼、家人的私人訊息或照片。"
@@ -2541,6 +2545,10 @@ msgstr "通常在 {time} 前回覆"
 #: app/(tabs)/index.tsx
 msgid "Vela cannot reach {name} on {channel}"
 msgstr "Vela 無法在{channel}上聯絡到{name}"
+
+#: src/data/useToday.ts
+msgid "Vela could not finish delivering {recipient}’s morning. Contact them directly if you are concerned. No quiet notice will be sent for this morning."
+msgstr "Vela 未能完成傳送{recipient}的早安訊息。如果你擔心，請直接聯絡對方。這次早晨不會發出未回覆通知。"
 
 #: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."

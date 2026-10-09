@@ -724,6 +724,10 @@ msgstr ""
 msgid "Deleting…"
 msgstr ""
 
+#: src/data/useToday.ts
+msgid "Delivery of {recipient}’s morning is still pending."
+msgstr ""
+
 #: app/help.tsx
 msgid "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
 msgstr ""
@@ -2533,6 +2537,10 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Vela cannot reach {name} on {channel}"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "Vela could not finish delivering {recipient}’s morning. Contact them directly if you are concerned. No quiet notice will be sent for this morning."
 msgstr ""
 
 #: app/(tabs)/you.tsx
