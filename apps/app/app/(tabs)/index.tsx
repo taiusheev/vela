@@ -23,6 +23,7 @@ import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/component
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import { RemindersCard } from "../../src/components/reminders.tsx";
+import { TodayHeart } from "../../src/components/today-heart.tsx";
 import {
   Card,
   Eyebrow,
@@ -203,6 +204,9 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
             size={20}
           />
         </Pressable>
+      )}
+      {exchange.answer === undefined || exchange.deliveryPending === true ? null : (
+        <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} />
       )}
       {exchange.replies.length > 0 ? (
         <>

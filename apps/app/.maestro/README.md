@@ -6,8 +6,8 @@ not on the screen. Build plan 3.9.
 
 ## `demo/`: the example family, no account
 
-The twelve flows `today`, `ask`, `reply`, `recipient-and-reply`, `quiet-notice`, `sunday`, `story-day`, `nearby` and
-`privacy-and-help`, `customer-recovery`, `weekly-recipient` and `morning-settings` walk the app built with explicit `EXPO_PUBLIC_DEMO_MODE=true`, no API and no
+The thirteen flows `today`, `ask`, `reply`, `recipient-and-reply`, `quiet-notice`, `sunday`, `story-day`, `nearby` and
+`privacy-and-help`, `customer-recovery`, `weekly-recipient` and `morning-settings`, plus `today-heart`, walk the app built with explicit `EXPO_PUBLIC_DEMO_MODE=true`, no API and no
 sign-in. A development build alone does not activate fixtures. The quiet notice is reached through
 `/?example=quiet`, which only the demo answers. They run in Chrome on every push (CI job
 `app-flows`) and need nothing secret. On this machine, with the demo served on port 8082 (`vela-app-demo` in the launch
@@ -18,6 +18,7 @@ pnpm --filter @vela/app e2e:demo
 ```
 
 The ask checks that English words are sent as written, with no fabricated translation preview.
+The Today heart flow checks a single-tap acknowledgement with explicit demo feedback.
 The recipient flow switches between parents without losing the written draft, resets vote state,
 and opens a reply straight from Today.
 The recovery flow confirms and cancels pause/leave, rejects unknown parent links and explains demo sign-in.
@@ -25,7 +26,7 @@ The weekly recipient flow chooses Dad, then Mom, without keeping the former pare
 Story questions can be chosen and edited without promising long-term saving or offering an
 unavailable book. The quiet sheet offers ordinary contact guidance without a saved permitted calling
 number, while fine/wait resolutions still work. `privacy-and-help` checks consent/help copy and the
-absence of unavailable parent-phone setup; it replaces the former `parent` demo flow. These twelve
+absence of unavailable parent-phone setup; it replaces the former `parent` demo flow. These thirteen
 flows prove synthetic web interactions only, not Telegram delivery, account linking, signed-device
 audio or parent-app functionality. If local environment flags change, restart with a cleared Metro
 cache before interpreting a result.

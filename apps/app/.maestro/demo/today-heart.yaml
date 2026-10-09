@@ -1,0 +1,13 @@
+# Acknowledgement directly from Today; the demo cannot imply an actual provider send.
+url: ${APP_URL}
+name: Today heart takes one tap and labels its demo receipt
+tags:
+  - demo
+---
+- launchApp
+- tapOn: "Heart for Mom"
+- assertVisible: "Example · heart sent"
+- assertNotVisible: "Heart for Mom"
+- tapOn: "Reply to Mom"
+- assertVisible: "Say something short"
+- assertVisible: "What the family said"

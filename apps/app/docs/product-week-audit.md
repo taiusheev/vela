@@ -8,7 +8,7 @@ X1 is **in progress**, not complete. This is a source review and a native-audit 
 
 This Mac currently selects `/Library/Developer/CommandLineTools`; `xcrun --find simctl` fails. Spotlight found no Xcode application. `pnpm --filter @vela/app audit:doctor` reports the missing simulator and exits unsuccessfully without launching an app.
 
-[Simulator setup reference](https://docs.expo.dev/workflow/ios-simulator/). Install Xcode from the Mac App Store, open it once to finish setup, choose Xcode’s tools in Settings → Locations → Command Line Tools, and install an iOS simulator runtime in Xcode Settings → Components. Then engineering can resume the native walkthrough. Apple Developer paid membership is needed for the later signed/TestFlight work, not for this simulator setup.
+[Simulator setup reference](https://docs.expo.dev/workflow/ios-simulator/). Install Xcode from the Mac App Store, open it once to finish setup, choose Xcode’s tools in Settings → Locations → Command Line Tools, and install an iOS simulator runtime in Xcode Settings → Components. Then engineering can resume the native walkthrough. The founder deferred OS/device setup on 10 October; app work continues with source, automated and synthetic web checks, while native gates remain open. Apple Developer paid membership is needed for the later signed/TestFlight work, not for this simulator setup.
 
 ## Repeatable setup
 
@@ -32,8 +32,8 @@ These findings come from code inspection; native reproduction is pending.
 | Priority | Finding | Customer effect | Next step |
 |---|---|---|---|
 | P1 | Today offers an exchange link for an arrival with `delivery_status: pending`; single-exchange API accepts only delivered, retained exchanges | Opens a failure screen before the morning arrives | X2: draft now suppresses the unavailable link while pending; native screenshot verification is still required. Ask Claude C8 for an explicit openability field for wholly failed vs partly delivered arrivals |
-| P2 | Today has a reply link but no heart control | A quick acknowledgement requires opening the exchange | X3: add a heart action using the existing reply API and request-identity behavior; confirm recipient and sending/result feedback |
-| P2 | Reply controls appear below the ask, media and prior replies | Long exchanges can require substantial scrolling | X2/X3: measure actual keyboard/scroll friction before changing layout |
+| P2 | Today has a reply link but no heart control | A quick acknowledgement requires opening the exchange | X3 draft: one-tap named heart, sending/accepted/refusal/retry feedback; separate encrypted saved attempt; native check pending |
+| P2 | Reply controls appear below the ask, media and prior replies | Long exchanges can require substantial scrolling | X2 draft: reply composer moved directly after the answer, before family history; web draft/reply checks pass, actual native keyboard/scroll measurement pending |
 | P1 release gate | No app-level privacy manifest configuration found in `app.json` | X5 remains unproven for store submission | Review actual native dependency manifests and collected-data declarations; generate and inspect the final archive before claiming completion |
 
 Already present in source: pending/failed delivery wording (PR #59), pull/focus refresh on Today, reply draft preservation/retry, family-scoped selection, visible pause/leave/delete confirmations, Help and bounded service status. These need native verification, not replacement merely because an audit is starting.
@@ -46,7 +46,7 @@ Count action taps from the stated starting screen to visible success. Record key
 |---|---|---|---|
 | Onboarding/linking | Signed out → approved synthetic family on Today | Multiple branches: sign-in, OTP, challenge/linking; external actions must be recorded | Pending |
 | Ask | Today → accepted ask naming parent and date | Ask action, text focus, Send: at least 3 taps with default options; recipient/date changes add steps | Pending |
-| Reply/heart | Answer on Today → visible accepted reply | Heart: open exchange then Heart (2); text: open, focus, Send (3), excluding typing | Pending |
+| Reply/heart | Answer on Today → visible accepted reply | Draft heart: Heart on Today (1 in synthetic web); text: open, focus, Send (3), excluding typing | Pending |
 | Quiet notice | Quiet sheet → settled fine/wait outcome | Sheet auto-opens for the authorised organiser; settlement is 1 action; closed sheet must be reopened | Pending |
 | Away | Today → saved away state for the named parent | You, parent Away, Save: at least 3; changing dates adds actions | Pending |
 
@@ -68,6 +68,14 @@ For every screen record: loading, empty, offline, error and retry; cancel/back; 
 ## Local validation
 
 `pnpm check` passes all nine package tasks (300 app tests, one existing future gate skipped). `audit:doctor` correctly fails on this Mac’s missing simulator. The app configuration introspection resolves iPhone-only support, the microphone/photo purpose text and disabled camera access. This is generated configuration evidence, not a built archive or a permission prompt observed on iOS.
+
+## Synthetic web checks while native setup is deferred
+
+At 390×844, one tap on “Heart for Mom” becomes a readable “Example · heart sent” receipt. Demo mode makes no API request. The existing server reaction endpoint deduplicates each member/exchange/kind, and this app action retains a separate encrypted `heart.<exchange>` attempt for retries; it cannot overwrite the text-reply draft. A successful API response means accepted, not heard by the parent.
+
+At 390×844 and 320×568, Reply precedes family history. Typed words survived Back → Reply; Send added the demo reply and cleared the field. These checks do not test real request failure, device keyboard, encrypted native storage, messenger delivery, VoiceOver or native text scaling.
+
+Captures: [Today heart](product-week-captures/today-heart-web-390.jpg), [Reply 390](product-week-captures/reply-web-390.jpg), [Reply 320](product-week-captures/reply-web-320.jpg). Source changes remain in draft PR #62.
 
 ## Completion gates
 
