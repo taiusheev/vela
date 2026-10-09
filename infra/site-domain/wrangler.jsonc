@@ -1,0 +1,10 @@
+{
+  "name": "vela-website",
+  "main": "worker.mjs",
+  "account_id": "36c483ebea452f45cb3e568f726d044a",
+  "compatibility_date": "2026-10-10",
+  "routes": [
+    { "pattern": "vela-light.com", "custom_domain": true },
+    { "pattern": "www.vela-light.com", "custom_domain": true }
+  ]
+}
