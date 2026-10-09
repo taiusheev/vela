@@ -1,0 +1,63 @@
+name: ai-evals
+
+# Technical plan 4.2: the AI golden set reruns whenever what Vela asks the model changes (prompts,
+# OpenAI routing and reminders, the eval cases), and once a week with GPT-5 judging the rubric, so
+# a model or prompt change can never lower flag recall unnoticed. It spends real OpenAI money
+# (about US$0.55 a quick run, US$1.10 a judged one), so it runs only on those paths and weekly.
+# Until the founder puts the key (infra/scripts/set-github-eval-key.command) it says so and passes.
+on:
+  pull_request:
+    paths:
+      - "packages/ai/src/**"
+      - "packages/ai/evals/**"
+  schedule:
+    - cron: "0 1 * * 1" # Mondays 09:00 Taipei
+  workflow_dispatch:
+    inputs:
+      judged:
+        description: Judge the rubric with GPT-5 too (about twice the cost)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Forks never receive the key, so their pull requests skip rather than fail.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Is the eval key there?
+        id: key
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_EVAL_API_KEY }}
+        run: |
+          if [[ -z "$OPENAI_API_KEY" ]]; then
+            echo "::notice::OPENAI_EVAL_API_KEY is not set yet, so the AI evals did not run. The founder puts it with infra/scripts/set-github-eval-key.command."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.key.outputs.present == 'true'
+        uses: actions/checkout@v7
+      - if: steps.key.outputs.present == 'true'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - if: steps.key.outputs.present == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - if: steps.key.outputs.present == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Golden set (flag recall must not drop)
+        if: steps.key.outputs.present == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_EVAL_API_KEY }}
+          SCRIPT: ${{ (github.event_name == 'schedule' || inputs.judged) && 'eval:openai:judged' || 'eval:openai:quick' }}
+        run: pnpm --filter @vela/ai "$SCRIPT"
