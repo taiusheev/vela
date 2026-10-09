@@ -34,6 +34,7 @@ import {
   members,
   outbound,
   replies,
+  suggestions,
   turns,
   type VelaTransaction,
 } from "@vela/db";
@@ -64,6 +65,7 @@ import {
   memberById,
   type Queryable,
 } from "./repo.ts";
+import { renderSuggestion } from "./suggestions.ts";
 
 /** The pilot's kept-light members and families are reached on Telegram. */
 /** Where her mornings go when her surface names no messenger: the pilot's first. */
@@ -871,6 +873,36 @@ async function turnHolders(db: Queryable, familyId: string): Promise<TurnHolder[
   return rows.map((row) => ({ memberId: row.id, joinedAt: row.createdAt }));
 }
 
+/** Her unused suggestion for `forDate` in the family's language, or null when there is none. */
+async function turnPromptIdea(
+  tx: VelaTransaction,
+  family: Family,
+  recipientId: string,
+  forDate: LocalDate,
+): Promise<string | null> {
+  const [row] = await tx
+    .select({
+      bankId: suggestions.bankId,
+      type: suggestions.type,
+      text: suggestions.text,
+      lang: suggestions.lang,
+      source: suggestions.source,
+    })
+    .from(suggestions)
+    .where(
+      and(
+        eq(suggestions.familyId, family.id),
+        eq(suggestions.aboutMemberId, recipientId),
+        eq(suggestions.localDay, forDate),
+        isNull(suggestions.usedAt),
+      ),
+    )
+    .limit(1);
+  if (row === undefined) return null;
+  const text = renderSuggestion(row, family.language)?.text.trim() ?? "";
+  return text === "" ? null : text;
+}
+
 /**
  * The evening prompt for `forDate`'s ask (flows §3.4). With no linked group the turn is recorded
  * with the first organiser as holder (turns do not rotate there), so the schedule does not ask
@@ -970,10 +1002,18 @@ export async function sendTurnPrompt(
     }
     const holder = holderId === null ? null : await memberById(tx, holderId);
     const name = recipient.displayName;
-    const text =
+    const prompt =
       holder === null
         ? t(family.language, "group.turn_prompt_open", { name })
         : t(family.language, "group.turn_prompt", { holder: holder.displayName, name });
+    // Tomorrow's suggestion, so whoever holds the turn can ask in seconds instead of leaving her a
+    // fallback hello (product week C3). The group already reads her answers, so a draft built on
+    // something she mentioned may be shown here; push never carries one.
+    const idea = await turnPromptIdea(tx, family, recipientId, forDate);
+    const text =
+      idea === null
+        ? prompt
+        : `${prompt}\n\n${t(family.language, "group.turn_prompt_idea", { idea })}`;
     const rowMember = holder ?? recipient;
     await enqueueOutbound(deps, tx, {
       kind: "turn_prompt",
