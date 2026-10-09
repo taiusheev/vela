@@ -62,6 +62,8 @@ export interface TodayExchange {
   /** Undefined for Vela's own hello, and for an ask whose asker has since been deleted. */
   asker?: string;
   recipient: string;
+  /** Arrival outcome, distinct from whether the parent has answered. */
+  deliveryNotice?: string;
   /** A hello carries no question. */
   ask?: string;
   /** `original` is her own words when `text` is their translation into the reader's language. */

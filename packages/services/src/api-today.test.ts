@@ -103,6 +103,22 @@ async function seedSuggestion(values: Partial<NewSuggestion> = {}): Promise<Sugg
 }
 
 describe("loadApiToday", () => {
+  it("reports pending, delivered and partial failed arrivals from gateway receipts", async () => {
+    const exchange = await seedExchange(h.db, seed, { date: today() });
+    expect((await load())?.exchanges[0]?.delivery_status).toBe("pending");
+    await h.db
+      .update(exchanges)
+      .set({ deliveredAt: h.clock.now() })
+      .where(eq(exchanges.id, exchange.id));
+    expect((await load())?.exchanges[0]?.delivery_status).toBe("delivered");
+    await h.db
+      .update(exchanges)
+      .set({ deliveryFailedAt: h.clock.now() })
+      .where(eq(exchanges.id, exchange.id));
+    expect((await load())?.exchanges[0]?.delivery_status).toBe("failed");
+    expect(await load(stranger)).toBeNull();
+  });
+
   it("describes original answer, greeting and reply recordings independently of AI text", async () => {
     const exchange = await seedExchange(h.db, seed, { date: today(), state: "answered" });
     const [voice, greeting, replied] = await h.db
@@ -351,6 +367,7 @@ describe("loadApiToday", () => {
             audio: null,
           },
         ],
+        delivery_status: "delivered",
         seen_at: null,
         replies_reach_her: true,
         photos: [],

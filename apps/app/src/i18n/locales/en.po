@@ -730,6 +730,10 @@ msgstr "Deleting your account removes your sign-in, this phone's notifications a
 msgid "Deleting…"
 msgstr "Deleting…"
 
+#: src/data/useToday.ts
+msgid "Delivery of {recipient}’s morning is still pending."
+msgstr "Delivery of {recipient}’s morning is still pending."
+
 #: app/help.tsx
 msgid "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
 msgstr "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
@@ -2540,6 +2544,10 @@ msgstr "Usually answers by {time}"
 #: app/(tabs)/index.tsx
 msgid "Vela cannot reach {name} on {channel}"
 msgstr "Vela cannot reach {name} on {channel}"
+
+#: src/data/useToday.ts
+msgid "Vela could not finish delivering {recipient}’s morning. Contact them directly if you are concerned. No quiet notice will be sent for this morning."
+msgstr "Vela could not finish delivering {recipient}’s morning. Contact them directly if you are concerned. No quiet notice will be sent for this morning."
 
 #: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."

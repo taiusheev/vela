@@ -30,6 +30,7 @@ function toReply(
 export function toExchange(summary: ApiExchangeSummary, timeZone?: string): Exchange {
   const card = toTodayExchange(summary, timeZone);
   return {
+    ...(card.deliveryNotice === undefined ? {} : { deliveryNotice: card.deliveryNotice }),
     id: summary.id,
     recipientId: summary.recipient_id,
     asker: card.asker ?? "Vela",

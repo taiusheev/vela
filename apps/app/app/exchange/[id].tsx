@@ -271,10 +271,15 @@ function ExchangeReader({ id }: { id: string }) {
               label={t`Listen to the family’s voice ask`}
             />
           )}
+          {exchange.deliveryNotice === undefined ? null : (
+            <Words variant="bodyMedium">{exchange.deliveryNotice}</Words>
+          )}
           {exchange.answer === undefined ? (
-            <Words variant="body" tone="ink2">
-              <Trans>No word yet.</Trans>
-            </Words>
+            exchange.deliveryNotice === undefined ? (
+              <Words variant="body" tone="ink2">
+                <Trans>No word yet.</Trans>
+              </Words>
+            ) : null
           ) : (
             <AnswerPanel>
               <Words variant="voice">{exchange.answer.text}</Words>

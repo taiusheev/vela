@@ -38,6 +38,8 @@ export interface Exchange {
   recipientId?: string;
   asker: string;
   recipient: string;
+  /** Arrival outcome, distinct from whether the parent has answered. */
+  deliveryNotice?: string;
   ask: string;
   askOriginal?: string;
   day: string;

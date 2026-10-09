@@ -38,11 +38,16 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
           <Words variant="body" tone="ink2" numberOfLines={2}>
             {exchange.ask}
           </Words>
+          {exchange.deliveryNotice === undefined ? null : (
+            <Words variant="bodyMedium">{exchange.deliveryNotice}</Words>
+          )}
           <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={56} />
           {shown === undefined ? (
-            <Words variant="caption" tone="ink2">
-              <Trans>No word yet.</Trans>
-            </Words>
+            exchange.deliveryNotice === undefined ? (
+              <Words variant="caption" tone="ink2">
+                <Trans>No word yet.</Trans>
+              </Words>
+            ) : null
           ) : (
             <View style={{ gap: space.s }}>
               <Words variant="bodyMedium" numberOfLines={3}>

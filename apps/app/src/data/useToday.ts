@@ -118,7 +118,15 @@ export function toTodayExchange(exchange: ApiTodayExchange, timeZone?: string): 
       ? answer.translation.text
       : undefined;
   const receipt = receiptOf(exchange, recipientZone);
+  const recipient = exchange.recipient_name;
+  const deliveryNotice =
+    exchange.delivery_status === "failed"
+      ? t`Vela could not finish delivering ${recipient}’s morning. Contact them directly if you are concerned. No quiet notice will be sent for this morning.`
+      : exchange.delivery_status === "pending"
+        ? t`Delivery of ${recipient}’s morning is still pending.`
+        : undefined;
   return {
+    ...(deliveryNotice === undefined ? {} : { deliveryNotice }),
     id: exchange.id,
     recipientId: exchange.recipient_id,
     ...(exchange.asker_name === null ? {} : { asker: exchange.asker_name }),
@@ -210,7 +218,11 @@ export function toToday(day: ApiToday, viewerMemberId?: string): Today {
       const light = day.lights.find((row) => row.member_id === exchange.recipient_id);
       return {
         ...toTodayExchange(exchange, light?.tz),
-        ...(exchange.answer === null ? { unanswered: unansweredLine(exchange, light) } : {}),
+        ...(exchange.answer === null &&
+        exchange.delivery_status !== "pending" &&
+        exchange.delivery_status !== "failed"
+          ? { unanswered: unansweredLine(exchange, light) }
+          : {}),
       };
     }),
     tomorrow: day.tomorrow.map((turn) => toTomorrowTurn(turn, viewerMemberId)),

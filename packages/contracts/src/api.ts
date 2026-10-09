@@ -402,6 +402,8 @@ export const ApiTodayExchange = z.object({
   voice_hello: ApiExchangeAudio.nullable().default(null),
   answer: ApiTodayAnswer.nullable(),
   replies: z.array(ApiTodayReply),
+  /** Arrival outcome; absent only in older responses. Failure may mean partial delivery. */
+  delivery_status: z.enum(["pending", "delivered", "failed"]).optional(),
   /** The receipt chip: she opened it. */
   seen_at: z.iso.datetime({ offset: true }).nullable(),
   /**

@@ -233,6 +233,12 @@ export async function exchangeRow(
             : null,
       })),
     ),
+    delivery_status:
+      exchange.deliveryFailedAt !== null
+        ? "failed"
+        : exchange.deliveredAt !== null
+          ? "delivered"
+          : "pending",
     seen_at: exchange.seenAt?.toISOString() ?? null,
     replies_reach_her: (await readBackExchangeId(db, recipient.id)) === exchange.id,
     photos: await photosOf(db, exchange, now),

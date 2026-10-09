@@ -113,6 +113,9 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
       <Eyebrow>
         {asker === undefined ? t`A hello for ${recipient}` : t`${asker} asked ${recipient}`}
       </Eyebrow>
+      {exchange.deliveryNotice === undefined ? null : (
+        <Words variant="bodyMedium">{exchange.deliveryNotice}</Words>
+      )}
       <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
       {exchange.ask === undefined ? null : (
         <Words variant="body" tone="ink2">

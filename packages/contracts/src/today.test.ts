@@ -63,6 +63,18 @@ const turn = {
 };
 
 describe("ApiTodayExchange", () => {
+  it("accepts bounded delivery outcomes and preserves older responses", () => {
+    for (const delivery_status of ["pending", "delivered", "failed"]) {
+      expect(ApiTodayExchange.parse({ ...exchange, delivery_status }).delivery_status).toBe(
+        delivery_status,
+      );
+    }
+    expect(ApiTodayExchange.parse(exchange)).not.toHaveProperty("delivery_status");
+    expect(
+      ApiTodayExchange.safeParse({ ...exchange, delivery_status: "provider_error_secret" }).success,
+    ).toBe(false);
+  });
+
   it("accepts a whole day: the ask, her words, the replies in order and the receipt", () => {
     expect(ApiTodayExchange.parse(exchange)).toStrictEqual(exchange);
   });
