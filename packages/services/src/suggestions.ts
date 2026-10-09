@@ -41,6 +41,7 @@ import {
   members,
   type Suggestion,
   suggestions,
+  type VelaTransaction,
 } from "@vela/db";
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import { canBeAsked, isAskable } from "./askable.ts";
@@ -286,6 +287,38 @@ export function renderSuggestion(
   return item === undefined
     ? null
     : { text: item.text[lang], type: item.type, fromHerWords: false };
+}
+
+/**
+ * The question Vela asks on a morning nobody in the family asked (product week, 10 October 2026):
+ * her unused suggestion for `date`, as its bank item in her language, never an AI draft, which is
+ * written as a family member would send it. Taking it marks it used, so the family is not offered
+ * it again and the writer's rules keep it from coming back for six weeks. Null when the day has no
+ * suggestion, and the morning keeps the plain hello.
+ */
+export async function takeFallbackQuestion(
+  tx: VelaTransaction,
+  member: Pick<Member, "id" | "language">,
+  date: LocalDate,
+  now: Date,
+): Promise<string | null> {
+  const [row] = await tx
+    .select({ id: suggestions.id, bankId: suggestions.bankId })
+    .from(suggestions)
+    .where(
+      and(
+        eq(suggestions.aboutMemberId, member.id),
+        eq(suggestions.localDay, date),
+        isNull(suggestions.usedAt),
+      ),
+    )
+    .limit(1)
+    .for("update");
+  const text =
+    row === undefined ? "" : (askBankItem(row.bankId)?.text[readerLang(member.language)] ?? "");
+  if (row === undefined || text.trim() === "") return null;
+  await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, row.id));
+  return text.trim();
 }
 
 // the writer --------------------------------------------------------------------------------------

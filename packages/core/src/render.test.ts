@@ -257,6 +257,29 @@ describe("renderArrival in English", () => {
   });
 });
 
+describe("renderArrival on a morning nobody asked, with Vela's question", () => {
+  it("asks the bank question, signed by Vela, with the heart and I'm fine", () => {
+    const arrival = render({
+      ask: { type: "hello", question: "What was your very first job?" },
+      readBack: [],
+    });
+    expect(paragraphs(arrival)).toEqual([
+      "Good morning, Mrs Chen.",
+      "Something to share with the family today:\nWhat was your very first job?\nVela, from your family",
+      "Reply with a voice message, or tap a button.",
+    ]);
+    expect(actions(arrival)).toEqual([FINAL_ACTIONS]);
+    expectSendable(arrival, "en");
+  });
+
+  it("keeps the plain hello for an empty question", () => {
+    const arrival = render({ ask: { type: "hello", question: "  " }, readBack: [] });
+    expect(paragraphs(arrival)[1]).toBe(
+      "Nothing new from the family today. How are you this morning?\nVela, from your family",
+    );
+  });
+});
+
 describe("renderArrival with more words than one message holds", () => {
   const TEXT_LIMIT = 4000;
   /** The longest text a Telegram message carries, as a family member could write it. */
