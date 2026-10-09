@@ -207,7 +207,7 @@ Applies to kept-light members only.
 
 **No automatic messages to nearby contacts, ever.** Every contact to a third person is a person's tap. This is the product's promise and it is enforced in the outbound gateway (technical design §5) by requiring an actor id on every nearby-contact message.
 
-**T_quiet.** Start at 6 h. After 14 answered days: median answer latency over the last 14 answered days + 2 h, floor 4 h, cap 10 h, recomputed weekly. Sundays and her country's holidays use the Sunday median if it differs by more than 1 h. The organiser can widen it, never narrow it below 4 h.
+**T_quiet.** Start at 6 h. After 14 answered days: the later of the median answer latency over the last 14 answered days + 2 h and her late-day latency (90th percentile, her second-latest of 14) + 1 h, floor 4 h, cap 10 h, recomputed weekly, so a parent whose answers spread over the morning is not reported quiet on her ordinary late days (product week, 2026-10-10). Sundays and her country's holidays use the Sunday samples if their median differs by more than 1 h. The organiser can widen it, never narrow it below 4 h.
 
 **Learning period.** For the first 14 days the quiet state shows in the app and the widget without a push; a push goes out only after 8 h of silence. The evidence (research/08) says one day in four or five goes unanswered even when everything works, so the ladder must treat silence as expected information and learn her rhythm before it interrupts anyone.
 
