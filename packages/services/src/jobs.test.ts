@@ -513,11 +513,13 @@ describe("draftWeeklyRead", () => {
 
     await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
 
-    // Median 180 minutes + two hours, inside the 240 to 600 band, instead of the 360 default.
+    // Her late days are her Sundays at 360 minutes, so 360 + one hour beats the median 180 + two
+    // hours: the old rule would have reported her quiet on both Sundays at five hours.
     expect(await memberRow(seed.member.id)).toMatchObject({
-      quietAfterMin: 300,
+      quietAfterMin: 420,
       answerStats: {
         median_latency_min: 180,
+        late_latency_min: 360,
         sunday_median_min: 360,
         n_days: 14,
         updated_at: at("2026-09-20", "18:00").toISOString(),
