@@ -150,6 +150,8 @@ export const en = {
   "group.turn_prompt_open":
     "Tomorrow, anyone can ask {name} something. Reply to this message with a question, a photo, or a voice note.",
   "group.turn_prompt_idea": "If you'd like an idea: “{idea}”",
+  "group.turn_prompt_reply_first":
+    "{name} answered this morning and nobody has replied yet. A reply to that answer is the first thing {name} gets tomorrow morning.",
   "group.ask_confirmed": "Into {name}'s morning.",
   "group.ask_queued": "Tomorrow already has {asker}'s ask. This one is saved for another morning.",
   "group.ask_from_app": "{asker} asked {name} something for tomorrow morning.",
