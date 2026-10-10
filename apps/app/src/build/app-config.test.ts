@@ -67,3 +67,27 @@ describe("trial build configuration", () => {
     expect(configureApp(context).ios?.supportsTablet).toBe(true);
   });
 });
+
+describe("audit simulator isolation", () => {
+  function audit() {
+    vi.stubEnv("EAS_BUILD_PROFILE", "audit-simulator");
+    vi.stubEnv("EXPO_PUBLIC_DEMO_MODE", "true");
+    vi.stubEnv("EXPO_PUBLIC_API_URL", "");
+    vi.stubEnv("EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
+    vi.stubEnv("EXPO_PUBLIC_TRIAL_ENGLISH", "false");
+  }
+  it("is iPhone-only and refuses inherited live credentials or trial mode", () => {
+    audit();
+    expect(configureApp(context).ios?.supportsTablet).toBe(false);
+    for (const [key, value] of [
+      ["EXPO_PUBLIC_API_URL", "https://vela.vela-light-staging.workers.dev"],
+      ["EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_fixture"],
+      ["EXPO_PUBLIC_TRIAL_ENGLISH", "true"],
+      ["EXPO_PUBLIC_DEMO_MODE", "false"],
+    ] as const) {
+      audit();
+      vi.stubEnv(key, value);
+      expect(() => configureApp(context)).toThrow("audit simulator requires demo mode");
+    }
+  });
+});

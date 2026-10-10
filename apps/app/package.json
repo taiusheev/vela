@@ -16,7 +16,9 @@
     "i18n:extract": "lingui extract --clean",
     "i18n:review": "node scripts/i18n-review.mts",
     "test": "lingui check sync --clean && vitest run",
-    "test:i18n:future": "lingui check missing --locale zh-TW --mode catalog && VELA_CHECK_TRANSLATIONS=1 vitest run src/i18n/catalog.test.ts"
+    "test:i18n:future": "lingui check missing --locale zh-TW --mode catalog && VELA_CHECK_TRANSLATIONS=1 vitest run src/i18n/catalog.test.ts",
+    "audit:doctor": "node scripts/iphone-audit.mts --check",
+    "audit:ios": "node scripts/iphone-audit.mts"
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.20.0",

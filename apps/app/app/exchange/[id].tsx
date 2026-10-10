@@ -311,42 +311,6 @@ function ExchangeReader({ id }: { id: string }) {
           {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
         </Card>
 
-        <View style={{ gap: space.m }}>
-          <Words variant="heading">
-            <Trans>What the family said</Trans>
-          </Words>
-          {replies.length === 0 ? (
-            <Words variant="body" tone="ink3">
-              <Trans>Nothing yet.</Trans>
-            </Words>
-          ) : (
-            replies.map((reply) => {
-              const from = reply.from;
-              return (
-                <View key={reply.id} style={{ gap: space.s }}>
-                  <Words variant="body" tone="ink2">
-                    {replyLine(reply.from, reply.kind, reply.text)}
-                  </Words>
-                  {reply.photo === undefined || (!demo && familyId === undefined) ? null : (
-                    <ReplyPhoto photo={reply.photo} size="full" />
-                  )}
-                  {reply.audio === undefined || familyId === undefined ? null : (
-                    <VoicePlayback
-                      familyId={familyId}
-                      mediaId={reply.audio.id}
-                      durationMs={reply.audio.duration_ms}
-                      expiresAt={reply.audio.expires_at}
-                      state={reply.audio.state}
-                      ready={reply.audio.state === "ready"}
-                      label={t`Listen to ${from}’s voice reply`}
-                    />
-                  )}
-                </View>
-              );
-            })
-          )}
-        </View>
-
         {/*
           A heart, a laugh or a hug is the same row a Telegram reaction writes; the group's own set
           never removes one given here (API contract §4, "Reactions").
@@ -427,6 +391,42 @@ function ExchangeReader({ id }: { id: string }) {
             <Trans>You can reply once she has answered.</Trans>
           </Words>
         )}
+
+        <View style={{ gap: space.m }}>
+          <Words variant="heading">
+            <Trans>What the family said</Trans>
+          </Words>
+          {replies.length === 0 ? (
+            <Words variant="body" tone="ink3">
+              <Trans>Nothing yet.</Trans>
+            </Words>
+          ) : (
+            replies.map((reply) => {
+              const from = reply.from;
+              return (
+                <View key={reply.id} style={{ gap: space.s }}>
+                  <Words variant="body" tone="ink2">
+                    {replyLine(reply.from, reply.kind, reply.text)}
+                  </Words>
+                  {reply.photo === undefined || (!demo && familyId === undefined) ? null : (
+                    <ReplyPhoto photo={reply.photo} size="full" />
+                  )}
+                  {reply.audio === undefined || familyId === undefined ? null : (
+                    <VoicePlayback
+                      familyId={familyId}
+                      mediaId={reply.audio.id}
+                      durationMs={reply.audio.duration_ms}
+                      expiresAt={reply.audio.expires_at}
+                      state={reply.audio.state}
+                      ready={reply.audio.state === "ready"}
+                      label={t`Listen to ${from}’s voice reply`}
+                    />
+                  )}
+                </View>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
     </>
   );

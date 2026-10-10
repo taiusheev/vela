@@ -2,6 +2,17 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 
 /** Fail closed if a production trial build would contain staging authentication. */
 export default function configureApp({ config }: ConfigContext): ExpoConfig {
+  const audit = process.env.EAS_BUILD_PROFILE === "audit-simulator";
+  if (
+    audit &&
+    (process.env.EXPO_PUBLIC_DEMO_MODE !== "true" ||
+      Boolean(process.env.EXPO_PUBLIC_API_URL) ||
+      Boolean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY) ||
+      process.env.EXPO_PUBLIC_TRIAL_ENGLISH === "true")
+  )
+    throw new Error(
+      "The audit simulator requires demo mode with no API, authentication or trial target",
+    );
   const trial =
     process.env.EAS_BUILD_PROFILE === "trial" || process.env.EXPO_PUBLIC_TRIAL_ENGLISH === "true";
   const trialTarget = process.env.EXPO_PUBLIC_TRIAL_TARGET ?? "production";
@@ -27,7 +38,7 @@ export default function configureApp({ config }: ConfigContext): ExpoConfig {
     ...config,
     name: config.name ?? "Vela Light",
     slug: config.slug ?? "vela-light",
-    ios: { ...config.ios, supportsTablet: trial ? false : config.ios?.supportsTablet },
+    ios: { ...config.ios, supportsTablet: trial || audit ? false : config.ios?.supportsTablet },
     extra: {
       ...config.extra,
       releaseCommit:
