@@ -39,13 +39,15 @@ Ownership is by path, so Claude and Codex never edit the same files. API contrac
 | # | Task | Done when |
 |---|---|---|
 | C1 | Quiet threshold from her own spread, not median + 2 h | Done (PR #61): later of median + 2 h and her 90th-percentile latency + 1 h, floor/cap kept |
-| C2 | The four numbers on the admin trial report | `/admin/trial` (every kept-light member) and each family's trial page: answer rate outside away days, useful share, notices per 30 days, true concerns, stops, fallback share, replies heard, each against its target |
-| C3 | Ask supply: the family keeps asking | The organiser is told (once, calmly) when the next two mornings would be a fallback hello; turn prompt shows two ready suggestions; fallback share on the report |
+| C2 | The four numbers on the admin trial report | Done (PR #63): `/admin/trial` (every kept-light member) and each family's trial page: answer rate outside away days, useful share, notices per 30 days, true concerns, stops, fallback share, replies heard, each against its target |
+| C3 | Ask supply: the family keeps asking | Done: the 19:00 group prompt carries tomorrow's idea (PR #64) and opens with "nobody has replied yet" when her answer has no reply (PR #67); fallback share on the report (PR #63) |
 | C4 | Delivery failure is never silence | Verified on main 10 Oct: a failed arrival sets `delivery_failed_at`, tells the organisers on that channel (`delivery.failed`), and no repeat or quiet can follow (`gateway-effects.ts` `arrivalFailed`, `quiet.ts`); the app shows it separately (PR #59) |
 | C5 | Production `v0.1.0` | Preflight PASS on production, deploy, smoke, restore drill; needs founder keys |
-| C6 | First-family runbook | `plan/materials/trial/first-families.md`: the onboarding call script, what to set up, what to check on day 1, 3, 7, 14 |
+| C6 | First-family runbook | Done (PR #65): `plan/materials/trial/first-families.md` |
 | C7 | Real-device test week | Admin test-week checklist green with the founder's iPhone and LINE test parent |
 | C8 | API support for Codex | Any endpoint Codex needs for the app work (e.g. Today summary fields, push registration checks) within half a day of asking |
+| C9 | Nothing repeats word for word | Done (founder, 10 Oct: "we cannot ask the same question"): a morning nobody asked brings Vela's question from the bank instead of the same hello (PR #68); bank 52 → 98 asks, no repeat for 12 weeks (PR #69); her thanks worded four ways in turn (PR #70) |
+| C10 | The first trial mornings proven end to end | Done (PR #71): one test drives idea → ask → reply → fallback question → "no reply yet" → quiet → late answer → trial report |
 
 ### Codex: the app and the App Store
 
