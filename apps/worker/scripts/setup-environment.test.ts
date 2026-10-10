@@ -572,7 +572,12 @@ function promptsOf(world: World): readonly (readonly [string, string, "shown" | 
     ["Telegram bot token", SECRETS.botToken, "hidden"],
     ["Anthropic API key", SECRETS.anthropic, "hidden"],
     ["OpenAI API key", SECRETS.openai, "hidden"],
-    ["Clerk secret key", SECRETS.clerk, "hidden"],
+    // Production's API is on (ADR-44): its prompt takes the Production instance's sk_live_ key.
+    [
+      "Clerk secret key",
+      world.environment === "production" ? SECRETS.clerkLive : SECRETS.clerk,
+      "hidden",
+    ],
     ["Deepgram API key", SECRETS.deepgram, "hidden"],
     ["Application Audience (AUD) tag", SECRETS.accessAud, "hidden"],
   ];
@@ -1687,10 +1692,10 @@ describe("the wrangler files", () => {
   });
 
   // Unlike the switches above, both environments' API_V1 are pinned already, by
-  // src/wrangler-config.test.ts (ADR-29): staging on, production off until a new ADR.
-  it("give each environment's API_V1 as the real files set it: staging on, production off", () => {
+  // src/wrangler-config.test.ts: staging on, production on for the English trial (ADR-44).
+  it("give each environment's API_V1 as the real files set it: on in both", () => {
     expect(readEnvironmentConfig(wranglerTexts(), "staging").apiV1).toBe("on");
-    expect(readEnvironmentConfig(wranglerTexts(), "production").apiV1).toBe("off");
+    expect(readEnvironmentConfig(wranglerTexts(), "production").apiV1).toBe("on");
   });
 
   it.each(["on", "off"] as const)(

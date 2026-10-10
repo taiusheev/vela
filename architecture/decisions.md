@@ -752,3 +752,15 @@ The app's You screen has Delete account, a page that says what goes and what sta
 Rejected: refusing deletion until the person hands over organising (fails 5.1.1(v)'s "easy to find and complete"); leaving the last organiser's family with no organiser (a quiet morning would tell nobody); deleting the family with the account (other members' days are theirs).
 
 Open: the privacy notice should say what account deletion keeps (counsel, launch gate 12); signed-device proof of the flow belongs to the signed iPhone gate.
+
+## ADR-44 · Production serves the app's API for the English trial, with Clerk's Production instance on vela-light.com
+
+10 October 2026. Proposed; takes effect only with the founder's approval of this change and the private setup below. Supersedes ADR-29's "off in production" for the trial, as ADR-42 decision 5 anticipated.
+
+Context: the English trial's organisers and contributors use the iPhone app (ADR-42), which needs `/v1` in production. Production kept `API_V1` off until a Clerk production instance on a domain Vela owns, its `sk_live_` key and a privacy notice naming Clerk existed. The founder bought vela-light.com on 7 October 2026; privacy notice v3 already names Clerk as a sub-processor.
+
+Decision: production sets `API_V1` to `on` with `CLERK_ISSUER` `https://clerk.vela-light.com` (the Frontend API Clerk assigns to a Production instance on that domain), binds the address limiter (`API_IP_LIMIT`, 120 a minute) and the write limiter's objects (`ACCOUNT_WRITE_LIMITER`, whose class every environment already declares in migration v3), as staging does. `config.ts` keeps refusing a development issuer in production. `PUSH_SEND`, `BOOK`, `MEMORY` and `LINE_CHANNEL` stay off.
+
+Founder's private steps before the release that carries it: create the Production instance of the Clerk application on vela-light.com and add the DNS records Clerk lists (the domain's zone accepts them in either Cloudflare account); confirm its Frontend API is `clerk.vela-light.com`, or tell engineering the one Clerk shows; put its `sk_live_` key on the production pilot Worker (setup script, `secrets` step); register the production webhook for `user.deleted` with its signing secret; and set the `pk_live_` key in the EAS production environment for the `trial` build profile.
+
+Rejected: keeping the trial on staging (staging never holds a real family, infra/README "Environments"); a Clerk development instance in production (its sessions and limits are for development, and `config.ts` refuses it).
