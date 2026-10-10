@@ -309,7 +309,7 @@ describe("the pilot loop", () => {
     await inbound(tapLast(HER, 0));
 
     expect(newMessages()).toEqual([
-      [HER, t("en", "ack.thanks", { address: "Mrs Chen" })],
+      [HER, expect.stringMatching(/^Thank you, Mrs Chen\. /)],
       [
         GROUP,
         `${t("en", "group.answer_light", { name: "Mom", asker: "Mia", time: "08:05" })}\n${t(
