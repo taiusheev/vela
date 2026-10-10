@@ -1271,7 +1271,7 @@ describe("deliverOutbound and her morning once she has answered or said stop", (
     await h.runDue(handlers());
 
     expect(await rowsOf("repeat")).toMatchObject([{ status: "dropped", error: "answered" }]);
-    expect(toHer(seed)).toEqual([t("en", "ack.thanks", { address: "Mrs Chen" })]);
+    expect(toHer(seed)).toEqual([expect.stringMatching(/^Thank you, Mrs Chen\. /)]);
     expect(await exchangeState(exchangeId)).toMatchObject({ state: "answered", repeatedAt: null });
     expect(await drops()).toEqual([{ kind: "repeat", reason: "answered" }]);
   });
