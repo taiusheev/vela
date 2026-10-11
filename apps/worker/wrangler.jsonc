@@ -453,7 +453,7 @@
         ]
       },
       "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-production" }],
-      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "ddbc8bf17b41490c87075a67b30051c3" }],
       "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
       "ratelimits": [
         {
@@ -464,7 +464,7 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
-        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
+        "TELEGRAM_BOT_USERNAME": "VelaLightbot",
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
         "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light.workers.dev/privacy",
         "PRIVACY_NOTICE_URL_ZH_TW": "https://vela.vela-light.workers.dev/privacy/zh-TW",
