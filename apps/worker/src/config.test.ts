@@ -490,14 +490,25 @@ describe("closed pilot admission", () => {
     ).toEqual({ telegramUserIds: ["1001", "2001"] });
   });
 
-  it.each([undefined, "", " ", "1001,", "1001,private-name", "-1001", "01", "1099511627776"])(
+  // ADR-45: the founder approves ids on the admin page too, so an empty private allowlist is a
+  // closed pilot whose roster lives there; it admits nobody until an id is approved.
+  it.each([undefined, "", " "])(
+    "reads an empty private allowlist %j as a roster of none",
+    (roster) => {
+      expect(
+        readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_TELEGRAM_ALLOWLIST: roster }),
+      ).toEqual({ telegramUserIds: [] });
+    },
+  );
+
+  it.each(["1001,", "1001,private-name", "-1001", "01", "1099511627776"])(
     "fails closed for invalid roster %j without including its value",
     (roster) => {
       const error = configErrorOf(() =>
         readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_TELEGRAM_ALLOWLIST: roster }),
       );
       expect(error.code).toBe("PILOT_TELEGRAM_ALLOWLIST");
-      if (roster !== undefined && roster.trim() !== "") expect(error.message).not.toContain(roster);
+      expect(error.message).not.toContain(roster);
     },
   );
 

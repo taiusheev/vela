@@ -236,6 +236,8 @@ interface World {
   firstAnswers: [label: string, answer: string][];
   readonly queues: Set<string>;
   readonly buckets: Set<string>;
+  /** Each bucket's lifecycle rules, as Cloudflare's lifecycle API holds them. */
+  readonly lifecycles: Map<string, unknown[]>;
   readonly hyperdrives: HyperdriveConfig[];
   /** Worker name to its secrets; a Worker exists once a secret is put or it is deployed. */
   readonly workers: Map<string, Map<string, string>>;
@@ -296,6 +298,7 @@ function newWorld(
     firstAnswers: [],
     queues: new Set(),
     buckets: new Set(),
+    lifecycles: new Map(),
     hyperdrives: [],
     workers: new Map(),
     files: new Map<WorkerFile, string>([
@@ -395,6 +398,18 @@ function cloudflare(
     return world.queues.has(queueId.slice(3)) && queueId.startsWith("id-")
       ? cloudflareOk({ backlog_count: 0 })
       : cloudflareError(404, 10000, "Queue not found");
+  }
+  const lifecycle = path.match(/^\/accounts\/\w+\/r2\/buckets\/([^/]+)\/lifecycle$/)?.[1];
+  if (lifecycle !== undefined) {
+    const name = decodeURIComponent(lifecycle);
+    if (!world.buckets.has(name)) {
+      return cloudflareError(404, 10006, "The specified bucket does not exist.");
+    }
+    if (method === "PUT") {
+      world.lifecycles.set(name, (body.rules as unknown[]) ?? []);
+      return cloudflareOk({});
+    }
+    return cloudflareOk({ rules: world.lifecycles.get(name) ?? [] });
   }
   const bucket = path.match(/^\/accounts\/\w+\/r2\/buckets\/(.+)$/)?.[1];
   if (method === "GET" && bucket !== undefined) {
@@ -572,7 +587,12 @@ function promptsOf(world: World): readonly (readonly [string, string, "shown" | 
     ["Telegram bot token", SECRETS.botToken, "hidden"],
     ["Anthropic API key", SECRETS.anthropic, "hidden"],
     ["OpenAI API key", SECRETS.openai, "hidden"],
-    ["Clerk secret key", SECRETS.clerk, "hidden"],
+    // Production's API is on (ADR-44): its prompt takes the Production instance's sk_live_ key.
+    [
+      "Clerk secret key",
+      world.environment === "production" ? SECRETS.clerkLive : SECRETS.clerk,
+      "hidden",
+    ],
     ["Deepgram API key", SECRETS.deepgram, "hidden"],
     ["Application Audience (AUD) tag", SECRETS.accessAud, "hidden"],
   ];
@@ -924,10 +944,41 @@ describe("a whole setup", () => {
     expect(code, world.printed.join("\n")).toBe(0);
     expect([...world.buckets]).toEqual(["vela-media-staging"]);
     expect(world.printed).toContain(
-      "resources: created bucket vela-media-staging; already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging",
+      "resources: created bucket vela-media-staging, media expiry on vela-media-staging (asks/, replies/, device/ after 32 days); already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging",
     );
     expect(world.printed.join("\n")).not.toContain("Media storage is off");
     expect(world.deployed).toEqual(["vela", "vela-admin"]);
+  });
+
+  // The privacy notice keeps voice notes and photos 30 days; preflight checks these three rules.
+  it("gives production's media bucket the 32-day expiry rules, keeps a rule already there, and adds nothing twice", async () => {
+    const world = newWorld("production");
+    world.buckets.add("vela-media-production");
+    const own = { id: "founder-archive", enabled: true, conditions: { prefix: "exports/" } };
+    world.lifecycles.set("vela-media-production", [own]);
+
+    expect(await setUp(world), world.printed.join("\n")).toBe(0);
+
+    const rules = (world.lifecycles.get("vela-media-production") ?? []) as {
+      id: string;
+      conditions: { prefix: string };
+      deleteObjectsTransition?: { condition: { type: string; maxAge: number } };
+    }[];
+    expect(rules[0]).toEqual(own);
+    expect(rules.slice(1).map((rule) => [rule.id, rule.conditions.prefix])).toEqual([
+      ["vela-asks-32-days", "asks/"],
+      ["vela-replies-32-days", "replies/"],
+      ["vela-device-32-days", "device/"],
+    ]);
+    for (const rule of rules.slice(1)) {
+      expect(rule.deleteObjectsTransition?.condition).toEqual({ type: "Age", maxAge: 32 * 86_400 });
+    }
+
+    resetLog(world);
+    expect(await setUp(world, "--from", "resources")).toBe(0);
+    expect(world.lifecycles.get("vela-media-production")).toHaveLength(4);
+    expect(world.printed.join("\n")).toContain("media expiry on vela-media-production");
+    expect(world.printed.join("\n")).not.toContain("(asks/");
   });
 
   // Its Worker would refuse to start: the privacy notice promises families that media is kept in
@@ -989,7 +1040,7 @@ describe("a whole setup", () => {
     expect(code, world.printed.join("\n")).toBe(0);
     expect(world.queues.has("vela-inbound-staging")).toBe(true);
     expect(world.printed).toContain(
-      "resources: created vela-inbound-staging; already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging, bucket vela-media-staging",
+      "resources: created vela-inbound-staging; already there: vela-outbound-staging, vela-media-staging, vela-understand-staging, vela-dead-letter-staging, bucket vela-media-staging, media expiry on vela-media-staging",
     );
     expect(world.printed.join("\n")).not.toContain("LINE is off");
     expect(world.deployed).toEqual(["vela", "vela-admin"]);
@@ -1687,10 +1738,10 @@ describe("the wrangler files", () => {
   });
 
   // Unlike the switches above, both environments' API_V1 are pinned already, by
-  // src/wrangler-config.test.ts (ADR-29): staging on, production off until a new ADR.
-  it("give each environment's API_V1 as the real files set it: staging on, production off", () => {
+  // src/wrangler-config.test.ts: staging on, production on for the English trial (ADR-44).
+  it("give each environment's API_V1 as the real files set it: on in both", () => {
     expect(readEnvironmentConfig(wranglerTexts(), "staging").apiV1).toBe("on");
-    expect(readEnvironmentConfig(wranglerTexts(), "production").apiV1).toBe("off");
+    expect(readEnvironmentConfig(wranglerTexts(), "production").apiV1).toBe("on");
   });
 
   it.each(["on", "off"] as const)(

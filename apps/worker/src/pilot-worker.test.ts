@@ -566,11 +566,11 @@ describe("cron", () => {
     ]);
   });
 
-  // ADR-29: production's API is off, and its database has none of the API's migrations, so the
-  // suggestions the app shows are written, and drafted by the model, only where the API is on.
+  // The suggestions the app shows, and Vela's question on a morning nobody asked, are written only
+  // where the API is served: staging, and production for the English trial (ADR-44).
   it.each([
     ["staging", ["rollupMetrics", "applyRetention", "opsDigest", "writeSuggestions"]],
-    ["production", ["rollupMetrics", "applyRetention", "opsDigest"]],
+    ["production", ["rollupMetrics", "applyRetention", "opsDigest", "writeSuggestions"]],
   ] as const)(
     "writes tomorrow's suggestions in %s only if its API is served",
     async (environment, calls) => {

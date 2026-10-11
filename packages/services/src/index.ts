@@ -195,6 +195,15 @@ export {
   pilotFamilyAllowed,
   pilotMemberAllowed,
 } from "./pilot-admission.ts";
+export {
+  addToRoster,
+  admissionWithRoster,
+  loadRoster,
+  type RosterEntry,
+  removeFromRoster,
+  rosterIds,
+  TelegramUserId,
+} from "./pilot-roster.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 export type { DeviceAlerts } from "./push-devices.ts";
 export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";
