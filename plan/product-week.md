@@ -42,7 +42,7 @@ Ownership is by path, so Claude and Codex never edit the same files. API contrac
 | C2 | The four numbers on the admin trial report | Done (PR #63): `/admin/trial` (every kept-light member) and each family's trial page: answer rate outside away days, useful share, notices per 30 days, true concerns, stops, fallback share, replies heard, each against its target |
 | C3 | Ask supply: the family keeps asking | Done: the 19:00 group prompt carries tomorrow's idea (PR #64) and opens with "nobody has replied yet" when her answer has no reply (PR #67); fallback share on the report (PR #63) |
 | C4 | Delivery failure is never silence | Verified on main 10 Oct: a failed arrival sets `delivery_failed_at`, tells the organisers on that channel (`delivery.failed`), and no repeat or quiet can follow (`gateway-effects.ts` `arrivalFailed`, `quiet.ts`); the app shows it separately (PR #59) |
-| C5 | Production `v0.1.0` | Preflight PASS on production, deploy, smoke, restore drill; needs founder keys |
+| C5 | Production `v0.1.0` | Done 11 Oct: founder ran production setup (`setup-production.command`, PR #78) from `e470169`; Clerk Production on vela-light.com (DNS by Claude), API on (ADR-44), roster on the admin page (ADR-45); preflight 17/17 PASS on tag `v0.1.0` (`cbd1c8f`), deploy run 38122320469 green with smoke; GitHub production secrets in place (PR #82). Restore drill on production still open |
 | C6 | First-family runbook | Done (PR #65): `plan/materials/trial/first-families.md` |
 | C7 | Real-device test week | Admin test-week checklist green with the founder's iPhone and LINE test parent |
 | C8 | API support for Codex | Any endpoint Codex needs for the app work (e.g. Today summary fields, push registration checks) within half a day of asking |
