@@ -320,6 +320,8 @@ describe("ADMIN_ACTIONS", () => {
       "delete_family",
       "send_weekly_read",
       "create_invite",
+      "roster_add",
+      "roster_remove",
     ]);
     expect(AdminAction.safeParse("export_family").success).toBe(false);
   });
@@ -340,6 +342,9 @@ describe("ADMIN_ACTIONS", () => {
       delete_family: ["family_deletion_requested"],
       send_weekly_read: ["weekly_read_sent"],
       create_invite: ["invite_created"],
+      // The roster is about an identity, not a family: the admin log is its whole record.
+      roster_add: [],
+      roster_remove: [],
     };
     for (const [action, names] of Object.entries(recorded)) {
       for (const name of names) {
