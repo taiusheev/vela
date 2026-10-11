@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-10",
+  "workerVersionPrefix": "b64158ef",
+  "publicDns": "1.1.1.1 returns 104.21.83.195 and 172.67.181.5",
+  "httpsVerification": "verified certificates using public DNS address; local resolver still caches NXDOMAIN",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/zh-TW",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/how-vela-is-doing",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/zh-TW/how-vela-is-doing",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/website-privacy",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/zh-TW/website-privacy",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/robots.txt",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/sitemap.xml",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/v1/me",
+      "status": 404,
+      "expected": 404
+    },
+    {
+      "path": "/admin",
+      "status": 404,
+      "expected": 404
+    },
+    {
+      "path": "/webhooks/telegram",
+      "status": 404,
+      "expected": 404
+    },
+    {
+      "path": "/site/boot.js",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/favicon.svg",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/fonts/InterVariable.woff2",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/img/a-light-at-home.jpg",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/img/across-the-table.jpg",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/img/daughter-city.jpg",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/img/family-dinner.jpg",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/img/morning-tea.jpg",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/img/voice-note.jpg",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/site.css",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/site/site.js",
+      "status": 200,
+      "expected": 200
+    }
+  ],
+  "wwwRedirect": {
+    "status": 301,
+    "location": "https://vela-light.com/zh-TW?ref=launch"
+  },
+  "waitlistInvalidEmailForm": {
+    "status": 303,
+    "signupCreated": false
+  },
+  "foreignOrigin": 403,
+  "publicResolvers": [
+    "1.1.1.1",
+    "8.8.8.8"
+  ],
+  "localTests": "3 passed"
+}
