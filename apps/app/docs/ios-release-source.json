@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-11",
+  "scope": "generated-ios-source-project-only",
+  "profile": "audit-simulator",
+  "appConfigSha256": "8537376d364fbbcdbdf6fd132fb160eb77c984402b3c849f9e137580197eceaa",
+  "generatedManifestMatchesAppConfig": true,
+  "manifestInTargetResources": true,
+  "requiredReasonCategories": 4,
+  "collectedDataTypes": 10,
+  "tracking": false,
+  "iPhoneTarget": true,
+  "microphonePurposeVerified": true,
+  "photoPurposeVerified": true,
+  "cameraPermissionPresent": false,
+  "appIconCatalogFilesPresent": true,
+  "compiled": false,
+  "podsInstalled": false,
+  "signed": false,
+  "storeScreenshotsPresent": false,
+  "appleProcessed": false
+}

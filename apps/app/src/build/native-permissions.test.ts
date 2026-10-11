@@ -1,9 +1,11 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 
-it("keeps the recording permission through all native plugins without enabling the camera", () => {
+it("resolves native permissions and dependency privacy reasons without enabling the camera", () => {
   const require = createRequire(import.meta.url);
   const result = spawnSync(
     process.execPath,
@@ -27,7 +29,17 @@ it("keeps the recording permission through all native plugins without enabling t
   // Keep arbitrary CLI output out of failures: only the selected native permission fields matter.
   if (result.status !== 0) throw new Error("Expo native configuration did not resolve");
   let config: {
-    ios?: { supportsTablet?: boolean };
+    ios?: {
+      supportsTablet?: boolean;
+      privacyManifests?: {
+        NSPrivacyTracking?: boolean;
+        NSPrivacyTrackingDomains?: string[];
+        NSPrivacyAccessedAPITypes?: {
+          NSPrivacyAccessedAPIType: string;
+          NSPrivacyAccessedAPITypeReasons: string[];
+        }[];
+      };
+    };
     android?: { blockedPermissions?: string[] };
     _internal?: {
       modResults?: { ios?: { infoPlist?: Record<string, unknown> } };
@@ -48,4 +60,44 @@ it("keeps the recording permission through all native plugins without enabling t
   expect(plist?.NSCameraUsageDescription).toBeUndefined();
   expect(config.android?.blockedPermissions ?? []).not.toContain("android.permission.RECORD_AUDIO");
   expect(config.ios?.supportsTablet).toBe(false);
+  const manifest = config.ios?.privacyManifests;
+  expect(manifest?.NSPrivacyTracking).toBe(false);
+  expect(manifest?.NSPrivacyTrackingDomains).toEqual([]);
+  const pluginRequire = createRequire(require.resolve("@expo/config-plugins"));
+  const { default: plistReader } = pluginRequire("@expo/plist");
+  // A library upgrade adding a required reason must also reach the app-level declaration.
+  const libraries = [
+    "expo-application",
+    "expo-file-system",
+    "expo-eas-client",
+    "expo-localization",
+    "expo-notifications",
+    "expo-constants",
+  ];
+  const manifests = libraries.map((library) => ({
+    library,
+    path: resolve(dirname(require.resolve(`${library}/package.json`)), "ios/PrivacyInfo.xcprivacy"),
+  }));
+  const reactNative = dirname(require.resolve("react-native/package.json"));
+  manifests.push(
+    {
+      library: "React Native",
+      path: resolve(reactNative, "React/Resources/PrivacyInfo.xcprivacy"),
+    },
+    {
+      library: "React Native timing",
+      path: resolve(reactNative, "ReactCommon/react/timing/PrivacyInfo.xcprivacy"),
+    },
+  );
+  for (const { library, path } of manifests) {
+    const sdkManifest = plistReader.parse(readFileSync(path, "utf8"));
+    for (const api of sdkManifest.NSPrivacyAccessedAPITypes ?? []) {
+      const declared = manifest?.NSPrivacyAccessedAPITypes?.find(
+        (entry) => entry.NSPrivacyAccessedAPIType === api.NSPrivacyAccessedAPIType,
+      );
+      expect(declared, library).toBeDefined();
+      for (const reason of api.NSPrivacyAccessedAPITypeReasons)
+        expect(declared?.NSPrivacyAccessedAPITypeReasons, library).toContain(reason);
+    }
+  }
 }, 35_000);

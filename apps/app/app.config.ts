@@ -16,6 +16,8 @@ export default function configureApp({ config }: ConfigContext): ExpoConfig {
   const trial =
     process.env.EAS_BUILD_PROFILE === "trial" || process.env.EXPO_PUBLIC_TRIAL_ENGLISH === "true";
   const trialTarget = process.env.EXPO_PUBLIC_TRIAL_TARGET ?? "production";
+  if (trial && trialTarget === "production" && process.env.EXPO_PUBLIC_DEMO_MODE === "true")
+    throw new Error("The production trial build cannot contain example family mode");
   if (trial) {
     if (trialTarget === "staging" && process.env.EAS_BUILD_PROFILE !== "trial") {
       if (process.env.EXPO_PUBLIC_API_URL !== "https://vela.vela-light-staging.workers.dev") {
