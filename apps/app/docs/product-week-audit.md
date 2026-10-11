@@ -77,6 +77,12 @@ At 390×844 and 320×568, Reply precedes family history. Typed words survived Ba
 
 Captures: [Today heart](product-week-captures/today-heart-web-390.jpg), [Reply 390](product-week-captures/reply-web-390.jpg), [Reply 320](product-week-captures/reply-web-320.jpg). Source changes remain in draft PR #62.
 
+## X4 source preparation — 11 October
+
+The light, confirmation dialogs, quiet notice and sign-in country picker now share the system Reduce Motion preference. They begin without animation while that setting loads, follow live preference changes, and retain the safe default if the platform read fails. A late startup result cannot override a newer accessibility setting, and the light stops an active bloom when motion is reduced. Automated preference tests cover startup, the asynchronous race, unmount cleanup and read failure.
+
+Quiet-notice call actions include the contact's name for VoiceOver, and disabled verdict/look-in actions expose their disabled state. This is source preparation: Dynamic Type, VoiceOver focus/order, native modal transitions, 44 pt targets and dark-mode comfort still need the simulator/device walkthrough. X4 remains open.
+
 ## Completion gates
 
 X1 closes only after both simulator and Expo Go walkthrough receipts exist and measured tap counts are filled. X2 fixes need native screenshots per the week plan. X4 needs native accessibility evidence. X5 needs the actual manifest/archive, store screenshots, signed build and review account path. X6/X7 depend on account/provider choices; they are not enabled by this audit setup.

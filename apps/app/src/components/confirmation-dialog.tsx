@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Modal, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReducedMotion } from "../accessibility/use-reduced-motion.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
 import { Card } from "./ui.tsx";
@@ -15,8 +16,14 @@ export function ConfirmationDialog({
 }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible
+      transparent
+      animationType={reducedMotion ? "none" : "fade"}
+      onRequestClose={onClose}
+    >
       <View
         accessibilityViewIsModal
         style={{
