@@ -1055,7 +1055,7 @@ const CLOUDFLARE_API = "https://api.cloudflare.com/client/v4";
 const TELEGRAM_API = "https://api.telegram.org";
 
 export interface ApiRequest {
-  readonly method: "GET" | "POST" | "PATCH";
+  readonly method: "GET" | "POST" | "PATCH" | "PUT";
   readonly path: string;
   readonly body?: unknown;
 }
@@ -1105,6 +1105,16 @@ export const cloudflareApi = {
   bucket: (accountId: string, name: string): ApiRequest => ({
     method: "GET",
     path: `/accounts/${accountId}/r2/buckets/${encodeURIComponent(name)}`,
+  }),
+  bucketLifecycle: (accountId: string, name: string): ApiRequest => ({
+    method: "GET",
+    path: `/accounts/${accountId}/r2/buckets/${encodeURIComponent(name)}/lifecycle`,
+  }),
+  /** Replaces the bucket's rules: the caller passes the ones it keeps beside its own. */
+  putBucketLifecycle: (accountId: string, name: string, rules: readonly unknown[]): ApiRequest => ({
+    method: "PUT",
+    path: `/accounts/${accountId}/r2/buckets/${encodeURIComponent(name)}/lifecycle`,
+    body: { rules },
   }),
   /** Asia-Pacific, near the families and the database in Singapore (infra/README.md). */
   createBucket: (accountId: string, name: string): ApiRequest => ({
@@ -1317,6 +1327,48 @@ function tokenTemplate(environment: Environment): readonly string[] {
  */
 function aiOffLine(environment: Environment): string {
   return `AI is off in ${environment} (AI_PROVIDER "off" in ${PILOT_FILE} and ${ADMIN_FILE}), so no Anthropic key is asked for. To switch it on later: set AI_PROVIDER to "anthropic" for ${environment} in both files and commit, then run pnpm --filter @vela/worker run setup -- --env ${environment} --from secrets on that commit before it is merged to main, which asks for the key and deploys. Merged first, CI would deploy staging without the key, and both Workers would refuse to run.`;
+}
+
+/** The prefixes whose objects expire 32 days on, as preflight checks them. */
+const EXPIRING_PREFIXES = ["asks/", "replies/", "device/"] as const;
+const EXPIRY_SECONDS = 32 * 86_400;
+
+interface StoredRule {
+  readonly id?: unknown;
+  readonly enabled?: unknown;
+  readonly conditions?: unknown;
+  readonly deleteObjectsTransition?: unknown;
+}
+
+function rulesOf(result: unknown): StoredRule[] {
+  const rules = isRecord(result) && Array.isArray(result.rules) ? result.rules : [];
+  return rules.filter(isRecord) as StoredRule[];
+}
+
+function expires(rule: StoredRule, prefix: string): boolean {
+  const conditions = isRecord(rule.conditions) ? rule.conditions : {};
+  const transition = isRecord(rule.deleteObjectsTransition) ? rule.deleteObjectsTransition : {};
+  const condition = isRecord(transition.condition) ? transition.condition : {};
+  return (
+    rule.enabled === true &&
+    conditions.prefix === prefix &&
+    condition.type === "Age" &&
+    typeof condition.maxAge === "number" &&
+    condition.maxAge <= EXPIRY_SECONDS
+  );
+}
+
+function expiryRuleId(prefix: string): string {
+  return `vela-${prefix.replace("/", "")}-32-days`;
+}
+
+function expiryRule(prefix: string): unknown {
+  return {
+    id: expiryRuleId(prefix),
+    enabled: true,
+    conditions: { prefix },
+    deleteObjectsTransition: { condition: { type: "Age", maxAge: EXPIRY_SECONDS } },
+  };
 }
 
 /**
@@ -1796,6 +1848,24 @@ class Setup {
       } else {
         await this.#required(cloudflareApi.createBucket(accountId, bucket));
         created.push(`bucket ${bucket}`);
+      }
+      // The privacy notice keeps voice notes and photos 30 days: the bucket deletes what it holds
+      // under asks/, replies/ and device/ 32 days on, a backstop for an object whose row was never
+      // written (ADR-33). Rules already there are kept; only the missing ones are added.
+      const rules = rulesOf(await this.#required(cloudflareApi.bucketLifecycle(accountId, bucket)));
+      const missing = EXPIRING_PREFIXES.filter(
+        (prefix) => !rules.some((rule) => expires(rule, prefix)),
+      );
+      if (missing.length === 0) {
+        kept.push(`media expiry on ${bucket}`);
+      } else {
+        await this.#required(
+          cloudflareApi.putBucketLifecycle(accountId, bucket, [
+            ...rules.filter((rule) => !missing.some((prefix) => rule.id === expiryRuleId(prefix))),
+            ...missing.map(expiryRule),
+          ]),
+        );
+        created.push(`media expiry on ${bucket} (${missing.join(", ")} after 32 days)`);
       }
     }
     return changes(created, kept);
