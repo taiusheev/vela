@@ -554,9 +554,11 @@ export function readPilotAdmission(
   const mode = env.PILOT_ADMISSION?.trim() ?? "off";
   if (mode === "off") return null;
   if (mode !== "on") throw new ConfigError("PILOT_ADMISSION", "PILOT_ADMISSION must be on or off");
-  const ids = env.PILOT_TELEGRAM_ALLOWLIST?.split(",").map((id) => id.trim()) ?? [];
+  // The private allowlist may be empty: the founder approves identities on the admin page too
+  // (ADR-45), and the two together are the roster. An empty roster admits nobody.
+  const raw = env.PILOT_TELEGRAM_ALLOWLIST?.trim() ?? "";
+  const ids = raw === "" ? [] : raw.split(",").map((id) => id.trim());
   if (
-    ids.length === 0 ||
     ids.length > 100 ||
     ids.some((id) => !/^[1-9][0-9]{0,12}$/.test(id) || Number(id) > 1099511627775)
   ) {

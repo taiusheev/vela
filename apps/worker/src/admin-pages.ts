@@ -267,7 +267,7 @@ export function renderOverview(
   deadLetters: readonly DeadLetterRow[] = [],
 ): Response {
   const body = html`<h1>Vela admin</h1>
-<p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, counts, and codes only. <a href="${ADMIN_PATH}/trial">The trial's four numbers</a> · <a href="${ADMIN_PATH}/waitlist">The website's waitlist</a>.</p>
+<p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, counts, and codes only. <a href="${ADMIN_PATH}/trial">The trial's four numbers</a> · <a href="${ADMIN_PATH}/roster">The trial roster</a> · <a href="${ADMIN_PATH}/waitlist">The website's waitlist</a>.</p>
 ${table(
   [
     "Family",
@@ -321,6 +321,37 @@ ${table(
   ),
 )}`;
   return page("Waitlist · Vela admin", body);
+}
+
+// The trial roster ----------------------------------------------------------------------------------
+
+const ROSTER_RESULTS: Record<string, string> = {
+  added: "Approved. It counts from the next message.",
+  already: "That id was already approved.",
+  removed: "Removed. Their family's automatic work pauses; stop and deletion still answer them.",
+  absent: "That id was not on the roster.",
+};
+
+/** The English trial's approved Telegram ids (ADR-45), with a form to add one and a button to remove. */
+export function renderRoster(
+  entries: readonly { readonly telegramUserId: string; readonly addedAt: Date }[],
+  result: string | null,
+): Response {
+  const path = `${ADMIN_PATH}/roster`;
+  const note = result === null ? null : ROSTER_RESULTS[result];
+  const body = html`<p><a href="${ADMIN_PATH}">Back to the overview</a></p>
+<h1>Trial roster</h1>
+<p class="lede">Telegram ids approved for the invitation-only trial: ${entries.length} here. Each person opens the trial bot, presses Start, sees their own numeric id, and sends it to you privately. Add it once you have checked who can join (plan/materials/pilot/README.md). Ids in the pilot Worker's private allowlist are approved too and are not listed here.</p>
+${note === undefined || note === null ? null : html`<p class="notice">${note}</p>`}
+<form class="action" method="post" action="${path}"><label>Telegram id<input name="telegramUserId" inputmode="numeric" pattern="[1-9][0-9]{0,12}" required></label><button type="submit">Approve</button></form>
+${table(
+  ["Telegram id", "Approved (UTC)", ""],
+  entries.map(
+    (entry) =>
+      html`<tr><td>${entry.telegramUserId}</td><td>${instant(entry.addedAt)}</td><td><form method="post" action="${path}/${entry.telegramUserId}/remove"><button type="submit">Remove</button></form></td></tr>`,
+  ),
+)}`;
+  return page("Trial roster · Vela admin", body);
 }
 
 // The family page -----------------------------------------------------------------------------------

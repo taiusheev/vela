@@ -177,7 +177,7 @@ describe("parent-device routes excluded from the closed trial", () => {
       const response = await send(fake, input, {
         ...testEnv,
         PILOT_ADMISSION: "on",
-        PILOT_TELEGRAM_ALLOWLIST: "",
+        PILOT_TELEGRAM_ALLOWLIST: "1001,private-name",
       });
       expect(response.status).toBe(503);
       expect(input.bodyUsed).toBe(false);

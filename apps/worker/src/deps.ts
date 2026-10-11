@@ -19,17 +19,21 @@ import {
 import { type Ai, createClaudeAi, createDeepgramStt, createOffAi, createOpenAiAi } from "@vela/ai";
 import type { Channel, ChannelAdapter } from "@vela/contracts";
 import { connectDatabase, type VelaDatabase } from "@vela/db";
-import type {
-  ChannelRegistry,
-  Clock,
-  Deps,
-  JobQueue,
-  Logger,
-  MediaStore,
-  MemberScheduler as MemberSchedulerPort,
-  OutboundJob,
-  PushPort,
-  Random,
+import {
+  admissionWithRoster,
+  type ChannelRegistry,
+  type Clock,
+  type Config,
+  type Deps,
+  errorLabel,
+  type JobQueue,
+  type Logger,
+  type MediaStore,
+  type MemberScheduler as MemberSchedulerPort,
+  type OutboundJob,
+  type PilotAdmission,
+  type PushPort,
+  type Random,
 } from "@vela/services";
 import {
   ConfigError,
@@ -410,10 +414,28 @@ export async function buildDeps(
       ai,
       stt,
       heartbeat: createHeartbeat(env, logger),
-      config,
+      config: { ...config, pilotAdmission: await rosterAdmission(connection.db, config, logger) },
     },
     close: () => connection.close(),
   };
+}
+
+/**
+ * The closed pilot's admission with the founder's admin-page roster added (ADR-45). A roster that
+ * cannot be read leaves the private allowlist alone, which admits fewer, never more.
+ */
+async function rosterAdmission(
+  db: VelaDatabase,
+  config: Config,
+  logger: Logger,
+): Promise<PilotAdmission | null> {
+  const base = config.pilotAdmission ?? null;
+  try {
+    return await admissionWithRoster(db, base);
+  } catch (error) {
+    logger.error("pilot_roster_unread", { error: errorLabel(error) });
+    return base;
+  }
 }
 
 /** The admin Worker's ports for one request, checked the same way before a connection opens. */
