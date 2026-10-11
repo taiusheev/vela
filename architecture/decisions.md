@@ -755,7 +755,7 @@ Open: the privacy notice should say what account deletion keeps (counsel, launch
 
 ## ADR-44 · Production serves the app's API for the English trial, with Clerk's Production instance on vela-light.com
 
-10 October 2026. Proposed; takes effect only with the founder's approval of this change and the private setup below. Supersedes ADR-29's "off in production" for the trial, as ADR-42 decision 5 anticipated.
+10 October 2026. Accepted by the founder on 11 October 2026; takes effect with the private setup below. Supersedes ADR-29's "off in production" for the trial, as ADR-42 decision 5 anticipated.
 
 Context: the English trial's organisers and contributors use the iPhone app (ADR-42), which needs `/v1` in production. Production kept `API_V1` off until a Clerk production instance on a domain Vela owns, its `sk_live_` key and a privacy notice naming Clerk existed. The founder bought vela-light.com on 7 October 2026; privacy notice v3 already names Clerk as a sub-processor.
 
