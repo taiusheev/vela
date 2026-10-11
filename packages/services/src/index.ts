@@ -58,10 +58,16 @@ export {
   type TestWeekStep,
 } from "./admin-test-week.ts";
 export {
+  loadAdminTrialOverview,
   loadAdminTrialReport,
+  TRIAL_TARGETS,
   type TrialDay,
+  type TrialNumber,
+  type TrialOverview,
   type TrialRecipientReport,
   type TrialReport,
+  type TrialStatus,
+  trialNumbers,
 } from "./admin-trial-report.ts";
 export {
   authorizeFamilyAccess,

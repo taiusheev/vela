@@ -34,6 +34,7 @@ import {
   members,
   outbound,
   replies,
+  suggestions,
   turns,
   type VelaTransaction,
 } from "@vela/db";
@@ -64,6 +65,7 @@ import {
   memberById,
   type Queryable,
 } from "./repo.ts";
+import { renderSuggestion, takeFallbackQuestion } from "./suggestions.ts";
 
 /** The pilot's kept-light members and families are reached on Telegram. */
 /** Where her mornings go when her surface names no messenger: the pilot's first. */
@@ -222,6 +224,8 @@ async function settle(
     }
     return row;
   }
+  // Nobody asked: Vela asks her something new from the question bank rather than the same hello.
+  const question = await takeFallbackQuestion(tx, member, date, now);
   const [hello] = await tx
     .insert(exchanges)
     .values({
@@ -230,7 +234,7 @@ async function settle(
       askerId: null,
       type: "hello",
       state: "scheduled",
-      text: null,
+      text: question,
       textLang: member.language,
       whenRule: "date",
       scheduledFor: date,
@@ -555,7 +559,7 @@ export async function loadAsk(
   morning: AskMorning,
 ): Promise<LoadedAsk> {
   if (exchange.type === "hello") {
-    return { ask: { type: "hello" }, media: [] };
+    return { ask: { type: "hello", question: exchange.text }, media: [] };
   }
   const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);
   const rows = lastingRows(
@@ -872,6 +876,55 @@ async function turnHolders(db: Queryable, familyId: string): Promise<TurnHolder[
 }
 
 /**
+ * Whether her exchange of `day` was answered and nobody has replied to her about it yet (any reply
+ * addressed to her counts, a heart included, as the read-back does).
+ */
+async function answeredWithoutReply(
+  tx: VelaTransaction,
+  recipientId: string,
+  day: LocalDate,
+): Promise<boolean> {
+  const exchange = await exchangeForLocalDate(tx, recipientId, day);
+  if (exchange === null || exchange.answeredAt === null) return false;
+  const [reply] = await tx
+    .select({ id: replies.id })
+    .from(replies)
+    .where(and(eq(replies.exchangeId, exchange.id), eq(replies.toRecipient, true)))
+    .limit(1);
+  return reply === undefined;
+}
+
+/** Her unused suggestion for `forDate` in the family's language, or null when there is none. */
+async function turnPromptIdea(
+  tx: VelaTransaction,
+  family: Family,
+  recipientId: string,
+  forDate: LocalDate,
+): Promise<string | null> {
+  const [row] = await tx
+    .select({
+      bankId: suggestions.bankId,
+      type: suggestions.type,
+      text: suggestions.text,
+      lang: suggestions.lang,
+      source: suggestions.source,
+    })
+    .from(suggestions)
+    .where(
+      and(
+        eq(suggestions.familyId, family.id),
+        eq(suggestions.aboutMemberId, recipientId),
+        eq(suggestions.localDay, forDate),
+        isNull(suggestions.usedAt),
+      ),
+    )
+    .limit(1);
+  if (row === undefined) return null;
+  const text = renderSuggestion(row, family.language)?.text.trim() ?? "";
+  return text === "" ? null : text;
+}
+
+/**
  * The evening prompt for `forDate`'s ask (flows §3.4). With no linked group the turn is recorded
  * with the first organiser as holder (turns do not rotate there), so the schedule does not ask
  * again, and nothing is posted: the holder's phones hear it instead when push is on (ADR-34); otherwise
@@ -970,10 +1023,22 @@ export async function sendTurnPrompt(
     }
     const holder = holderId === null ? null : await memberById(tx, holderId);
     const name = recipient.displayName;
-    const text =
+    const prompt =
       holder === null
         ? t(family.language, "group.turn_prompt_open", { name })
         : t(family.language, "group.turn_prompt", { holder: holder.displayName, name });
+    // Tomorrow's suggestion, so whoever holds the turn can ask in seconds instead of leaving her a
+    // fallback hello (product week C3). The group already reads her answers, so a draft built on
+    // something she mentioned may be shown here; push never carries one.
+    const idea = await turnPromptIdea(tx, family, recipientId, forDate);
+    // Her answer today with nothing back yet: the reply is what she hears first tomorrow, and the
+    // family side is the one that lapses (research/08), so the evening message says so, once.
+    const unreplied = await answeredWithoutReply(tx, recipientId, addDays(forDate, -1));
+    const text = [
+      ...(unreplied ? [t(family.language, "group.turn_prompt_reply_first", { name })] : []),
+      prompt,
+      ...(idea === null ? [] : [t(family.language, "group.turn_prompt_idea", { idea })]),
+    ].join("\n\n");
     const rowMember = holder ?? recipient;
     await enqueueOutbound(deps, tx, {
       kind: "turn_prompt",

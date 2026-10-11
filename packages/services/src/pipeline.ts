@@ -1074,9 +1074,12 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
 
   const today = localDateOf(answer.receivedAt, member.tz);
   const addressForm = member.addressForm ?? member.displayName;
+  // A hello carries Vela's bank question when nobody asked; the model reads it as a question.
   const ask =
     exchange.type === "hello"
-      ? null
+      ? exchange.text === null || exchange.text.trim() === ""
+        ? null
+        : { askerName: "Vela", type: "question" as const, text: exchange.text }
       : { askerName: asker?.displayName ?? family.name, type: exchange.type, text: exchange.text };
   const content = { kind: answer.kind, text: words };
   const summaries = await recentSummaries(deps, ctx);

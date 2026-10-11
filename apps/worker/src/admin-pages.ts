@@ -267,7 +267,7 @@ export function renderOverview(
   deadLetters: readonly DeadLetterRow[] = [],
 ): Response {
   const body = html`<h1>Vela admin</h1>
-<p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, counts, and codes only. <a href="${ADMIN_PATH}/waitlist">The website's waitlist</a>.</p>
+<p class="lede">Every family, as of this page load. No words from any family appear here: states, times, kinds, counts, and codes only. <a href="${ADMIN_PATH}/trial">The trial's four numbers</a> · <a href="${ADMIN_PATH}/waitlist">The website's waitlist</a>.</p>
 ${table(
   [
     "Family",

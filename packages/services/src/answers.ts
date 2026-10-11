@@ -14,6 +14,7 @@ import type {
   InboundEvent,
   InboundKind,
   Lang,
+  LocalDate,
   MediaRef,
   OutboundMediaRef,
 } from "@vela/contracts";
@@ -303,7 +304,18 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Lit | null
   });
 }
 
-/** `ack.thanks`, at most once per local day: the budget index refuses a second row. */
+/**
+ * Her thanks, worded four ways in turn by her local date, so two mornings running never read the
+ * same (product week: a daily ritual that repeats itself word for word wears thin).
+ */
+const THANKS = ["ack.thanks", "ack.thanks_2", "ack.thanks_3", "ack.thanks_4"] as const;
+
+export function thanksKeyFor(date: LocalDate): (typeof THANKS)[number] {
+  const day = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
+  return THANKS[((day % THANKS.length) + THANKS.length) % THANKS.length] ?? "ack.thanks";
+}
+
+/** Her thanks, at most once per local day: the budget index refuses a second row. */
 async function sendAck(deps: Deps, input: AnswerInput, kept: boolean): Promise<void> {
   const { member, event, now } = input;
   const lang = member.language;
@@ -330,7 +342,11 @@ async function sendAck(deps: Deps, input: AnswerInput, kept: boolean): Promise<v
             ],
           ],
         }
-      : { text: t(lang, "ack.thanks", { address: member.addressForm ?? member.displayName }) }),
+      : {
+          text: t(lang, thanksKeyFor(localDateOf(now, member.tz)), {
+            address: member.addressForm ?? member.displayName,
+          }),
+        }),
   });
 }
 
@@ -362,10 +378,18 @@ async function postAnswer(deps: Deps, post: AnswerPost): Promise<EnqueueResult |
   const lang = family.language;
   const name = member.displayName;
   const time = formatTime(answer.receivedAt, member.tz);
+  // Vela's question on a morning nobody asked: the family sees what she was asked, unless she only
+  // said she is fine.
+  const velaQuestion =
+    exchange.type === "hello" && answer.kind !== "fine" && answer.kind !== "heart"
+      ? (exchange.text?.trim() ?? "")
+      : "";
   const light =
-    exchange.type === "hello" || answer.kind === "fine" || asker === null
-      ? t(lang, "group.answer_hello", { name, time })
-      : t(lang, "group.answer_light", { name, asker: asker.displayName, time });
+    velaQuestion !== ""
+      ? t(lang, "group.answer_question", { name, time, question: velaQuestion })
+      : exchange.type === "hello" || answer.kind === "fine" || asker === null
+        ? t(lang, "group.answer_hello", { name, time })
+        : t(lang, "group.answer_light", { name, asker: asker.displayName, time });
   const line = contentLine(lang, name, answer);
   const file = await fileForGroup(deps, family.id, answer.channel, post.media);
   return enqueueOutbound(deps, deps.db, {

@@ -14,7 +14,15 @@ import { type ButtonAction, encodeButton } from "./buttons.ts";
 import { lineCap, shorten, TEXT_MAX_LENGTH } from "./text.ts";
 
 export type ArrivalAsk =
-  | { type: "hello" }
+  | {
+      type: "hello";
+      /**
+       * Vela's question from the question bank on a morning nobody in the family asked, in her
+       * language, so the fallback asks something new instead of the same "how are you" each time;
+       * null or absent keeps the plain hello.
+       */
+      question?: string | null;
+    }
   | {
       type: Exclude<ExchangeType, "hello">;
       askerName: string;
@@ -121,6 +129,14 @@ function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text:
   return lines;
 }
 
+/** The fallback: Vela's question when there is one, else the plain hello; always signed by Vela. */
+function helloLines(lang: Lang, ask: Extract<ArrivalAsk, { type: "hello" }>): string[] {
+  const question = ask.question?.trim() ?? "";
+  return question.length === 0
+    ? [t(lang, "arrival.hello"), t(lang, "arrival.hello_signature")]
+    : [t(lang, "arrival.hello_question"), question, t(lang, "arrival.hello_signature")];
+}
+
 /** The ask's own buttons, above the heart and "I'm fine". */
 function askRows(lang: Lang, exchangeId: string, ask: ArrivalAsk): Button[][] {
   switch (ask.type) {
@@ -167,11 +183,7 @@ function composeText(
   opening.push(t(lang, "arrival.greeting", { address: input.address }));
   paragraphs.push(opening);
 
-  paragraphs.push(
-    ask.type === "hello"
-      ? [t(lang, "arrival.hello"), t(lang, "arrival.hello_signature")]
-      : askLines(lang, ask, askText),
-  );
+  paragraphs.push(ask.type === "hello" ? helloLines(lang, ask) : askLines(lang, ask, askText));
   paragraphs.push([t(lang, "arrival.hint")]);
   return paragraphs.map((lines) => lines.join("\n")).join("\n\n");
 }

@@ -274,7 +274,7 @@ describe("silence", () => {
 
     expect(newMessages()).toEqual([
       [ORGANISER, t("en", "quiet.resolved_answered", { name: "Mom", time: "18:30" })],
-      [HER, t("en", "ack.thanks", { address: "Mrs Chen" })],
+      [HER, expect.stringMatching(/^Thank you, Mrs Chen\. /)],
       [
         GROUP,
         `${t("en", "group.answer_hello", { name: "Mom", time: "18:30" })}\n${t(
@@ -316,7 +316,7 @@ describe("silence", () => {
         .sentTo(HER)
         .slice(herMessagesSoFar)
         .map((entry) => entry.message.text),
-    ).toEqual([t("en", "ack.thanks", { address: "Mrs Chen" }), HELLO_ARRIVAL]);
+    ).toEqual([expect.stringMatching(/^Thank you, Mrs Chen\. /), HELLO_ARRIVAL]);
   });
 });
 
@@ -532,7 +532,7 @@ describe("the silence drill", () => {
       answeredAt: at("2026-09-14", "08:10"),
     });
     expect(newMessages()).toEqual([
-      [HER, t("en", "ack.thanks", { address: "Mrs Chen" })],
+      [HER, expect.stringMatching(/^Thank you, Mrs Chen\. /)],
       [GROUP, t("en", "group.answer_hello", { name: "Mom", time: "08:10" })],
     ]);
     expect(h.telegram.sentTo(GROUP).at(-1)?.message.media).toEqual([VOICE]);

@@ -26,6 +26,7 @@ import {
   handleAnswerButton,
   handleParentMessage,
   postMissedAnswers,
+  thanksKeyFor,
 } from "./answers.ts";
 import { loadApiLights } from "./api-lights.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
@@ -109,12 +110,17 @@ interface Scene {
 }
 
 /** Her family with its group; today's question was delivered at 08:00 and it is now 08:12. */
-async function morning(options: { type?: "question" | "hello" } = {}): Promise<Scene> {
+async function morning(
+  options: { type?: "question" | "hello"; text?: string | null } = {},
+): Promise<Scene> {
   const seed = await seedFamily(h.db, { now: h.clock.now() });
   await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+  const type = options.type ?? "question";
   const exchange = await seedExchange(h.db, seed, {
     date: TODAY,
-    type: options.type ?? "question",
+    type,
+    // A plain hello carries no words; one with Vela's bank question carries the question.
+    text: options.text !== undefined ? options.text : type === "hello" ? null : undefined,
     state: "delivered",
     deliveredAt: h.clock.now(),
   });
@@ -217,7 +223,7 @@ describe("handleParentMessage", () => {
 
     const rows = await outboundRows();
     expect(rows.map((row) => [row.kind, row.conversationId, textOf(row)])).toEqual([
-      ["ack", seed.memberLink.externalId, "Thank you, Mrs Chen. The family will hear it."],
+      ["ack", seed.memberLink.externalId, expect.stringMatching(/^Thank you, Mrs Chen\. /)],
       ["answer_post", GROUP, "☀️ Mom answered Mia · 08:12\nMom: Cooking soup"],
     ]);
     expect(rows[1]?.idempotencyKey).toBe(
@@ -275,6 +281,25 @@ describe("handleParentMessage", () => {
     const [post] = h.telegram.sentTo(GROUP);
     expect(post?.message.text).toBe("☀️ Mom is fine · 08:12");
     expect(post?.message.media).toEqual([VOICE]);
+  });
+
+  it("shows the family Vela's question with her answer on a morning nobody asked", async () => {
+    const { seed } = await morning({
+      type: "hello",
+      text: "What was your very first job?",
+    });
+
+    await handleParentMessage(
+      h.deps,
+      seed.member,
+      privateEvent(seed.memberLink, { kind: "text", text: "Selling bread at the market" }),
+    );
+    await h.run(handlers());
+
+    const [post] = h.telegram.sentTo(GROUP);
+    expect(post?.message.text).toBe(
+      "☀️ Mom answered today's question from Vela · 08:12\n“What was your very first job?”\nMom: Selling bread at the market",
+    );
   });
 
   it("attaches a message sent before today's arrival to yesterday's exchange and leaves today's untouched", async () => {
@@ -747,6 +772,17 @@ describe("handleParentMessage", () => {
   });
 });
 
+describe("her thanks", () => {
+  it("is worded four ways in turn, never the same two days running", () => {
+    const days = ["2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14"] as const;
+    const keys = days.map((day) => thanksKeyFor(day));
+    expect(new Set(keys.slice(0, 4)).size).toBe(4);
+    expect(keys[4]).toBe(keys[0]);
+    for (let i = 1; i < keys.length; i += 1) expect(keys[i]).not.toBe(keys[i - 1]);
+    expect(thanksKeyFor("2026-10-10")).toBe(thanksKeyFor("2026-10-10"));
+  });
+});
+
 describe("handleAnswerButton", () => {
   const ARRIVAL_MESSAGE = "7";
 
@@ -762,6 +798,15 @@ describe("handleAnswerButton", () => {
       action,
     );
   }
+
+  it("keeps the plain fine line when she only taps fine on Vela's question", async () => {
+    const scene = await morning({ type: "hello", text: "What was your very first job?" });
+    await tapped(scene, { type: "answer", exchangeId: scene.exchangeId, answer: "fine" });
+    await h.run(handlers());
+
+    const [post] = h.telegram.sentTo(GROUP);
+    expect(post?.message.text).toBe("☀️ Mom is fine · 08:12");
+  });
 
   it("answers 'I'm fine': acknowledged, closed with the label, posted as a hello", async () => {
     const scene = await morning();
@@ -789,7 +834,7 @@ describe("handleAnswerButton", () => {
     expect((await exchangeById(exchangeId))?.state).toBe("answered");
     const rows = await outboundRows();
     expect(rows.map((row) => [row.kind, textOf(row)])).toEqual([
-      ["ack", "Thank you, Mrs Chen. The family will hear it."],
+      ["ack", expect.stringMatching(/^Thank you, Mrs Chen\. /)],
       ["answer_post", "☀️ Mom is fine · 08:12"],
     ]);
     expect(h.queues.understand.pending).toHaveLength(1);

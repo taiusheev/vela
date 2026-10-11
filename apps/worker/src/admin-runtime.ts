@@ -28,6 +28,7 @@ import {
   type FamilyPage,
   loadAdminOverview,
   loadAdminTestWeek,
+  loadAdminTrialOverview,
   loadAdminTrialReport,
   loadDeadLetters,
   loadFailedOutbound,
@@ -49,6 +50,7 @@ import {
   sendWeeklyRead,
   setAway,
   type TestWeekReport,
+  type TrialOverview,
   type TrialReport,
 } from "@vela/services";
 import { type AccessVerifier, createAccessVerifier } from "./access.ts";
@@ -72,6 +74,8 @@ export interface AdminServices {
     familyId: string,
     days: 7 | 30,
   ): Promise<TrialReport | null>;
+  /** The trial's four numbers over every kept-light member (product week C2). */
+  loadAdminTrialOverview(deps: AdminDeps, ctx: AdminContext, days: 7 | 30): Promise<TrialOverview>;
   loadAdminOverview(deps: AdminDeps, ctx: AdminContext): Promise<AdminOverview>;
   /** Jobs that failed every retry, without their content, and asking for one to be sent again. */
   loadDeadLetters(deps: AdminDeps): Promise<DeadLetterRow[]>;
@@ -205,6 +209,8 @@ const services: AdminServices = {
   loadAdminTestWeek: (deps, ctx, familyId) => loadAdminTestWeek(servicesDeps(deps), ctx, familyId),
   loadAdminTrialReport: (deps, ctx, familyId, days) =>
     loadAdminTrialReport(servicesDeps(deps), ctx, familyId, days),
+  loadAdminTrialOverview: (deps, ctx, days) =>
+    loadAdminTrialOverview(servicesDeps(deps), ctx, days),
   loadAdminOverview: (deps, ctx) => loadAdminOverview(servicesDeps(deps), ctx),
   loadDeadLetters: (deps) => loadDeadLetters(deps),
   requestDeadLetterReplay: (deps, id) => requestDeadLetterReplay(servicesDeps(deps), id),

@@ -56,6 +56,10 @@
  * she gets the lines about her week alone, and the organiser agreement, privacy notice, and consent
  * script tell the family so, so a heading that called them the whole read would be untrue.
  *
+ * `arrival.hello_question` heads Vela's question from the question bank on a morning nobody in the
+ * family asked (spec §4.5): she shares the answer with the family, and the question, not a person,
+ * asks. `group.answer_question` shows the family the question her answer goes with.
+ *
  * `push.*` are notifications on an organiser's or a family member's phone (ADR-34). Their text
  * passes through Expo, Apple and Google and shows on a lock screen, so it carries names and times
  * only: never her words, an answer, a nearby contact, or anything about health. `push.quiet_notice`
@@ -94,11 +98,15 @@ export const en = {
   "arrival.vote": "Tap one.",
   "arrival.hello": "Nothing new from the family today. How are you this morning?",
   "arrival.hello_signature": "Vela, from your family",
+  "arrival.hello_question": "Something to share with the family today:",
   "arrival.hint": "Reply with a voice message, or tap a button.",
   "button.fine": "I'm fine",
   "button.heart": "❤️",
   "button.choice": "{n}",
   "ack.thanks": "Thank you, {address}. The family will hear it.",
+  "ack.thanks_2": "Thank you, {address}. It's on its way to the family.",
+  "ack.thanks_3": "Thank you, {address}. Your family will have it in a moment.",
+  "ack.thanks_4": "Thank you, {address}. Passing it on to the family now.",
   "ack.story": "Thank you, {address}. Your story is kept in the family book.",
   "book.dont_keep": "Don't keep this one",
   "book.dropped": "That's fine. This story is no longer in the family book.",
@@ -149,11 +157,15 @@ export const en = {
     "Tomorrow is {holder}'s turn with {name}. Reply to this message with a question, a photo, or a voice note.",
   "group.turn_prompt_open":
     "Tomorrow, anyone can ask {name} something. Reply to this message with a question, a photo, or a voice note.",
+  "group.turn_prompt_idea": "If you'd like an idea: “{idea}”",
+  "group.turn_prompt_reply_first":
+    "{name} answered this morning and nobody has replied yet. A reply to that answer is the first thing {name} gets tomorrow morning.",
   "group.ask_confirmed": "Into {name}'s morning.",
   "group.ask_queued": "Tomorrow already has {asker}'s ask. This one is saved for another morning.",
   "group.ask_from_app": "{asker} asked {name} something for tomorrow morning.",
   "group.answer_light": "☀️ {name} answered {asker} · {time}",
   "group.answer_hello": "☀️ {name} is fine · {time}",
+  "group.answer_question": "☀️ {name} answered today's question from Vela · {time}\n“{question}”",
   "group.answer_chip": "{name} chose: {choice}",
   "group.answer_pick": "{name} picked photo {n}.",
   "group.answer_vote": "{name} voted: {choice}",
