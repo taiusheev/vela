@@ -13,7 +13,7 @@ Aim for 3–5 families. Book a 30-minute call with each organiser and a 15-minut
 
 ## Before the organiser call (10 minutes)
 
-1. The family's Telegram IDs are on the approved roster (engineering adds them; ask Claude in chat).
+1. Each adult in the family (organiser, relatives, the parent) has opened the trial bot, pressed Start and sent you the numeric ID it showed; you approved each one on the admin page, **Trial roster** (`/admin/roster`). It counts from their next message.
 2. Production `/healthz` is green and `/admin/trial` opens.
 3. Have open: the organiser agreement, the privacy notice and the [consent script](../pilot/consent-script.en.md).
 

@@ -17,6 +17,7 @@ import {
   type AdminContext,
   type AdminOverview,
   addContact,
+  addToRoster,
   type Config,
   type CreateInviteInput,
   createInvite,
@@ -33,6 +34,7 @@ import {
   loadDeadLetters,
   loadFailedOutbound,
   loadFamilyPage,
+  loadRoster,
   loadWaitlist,
   type MarkLeftResult,
   markDeceased,
@@ -40,9 +42,11 @@ import {
   type RecordConsentInput,
   type RecordContactConsentInput,
   type ReplayRequest,
+  type RosterEntry,
   recordConsent,
   recordContactConsent,
   removeContact,
+  removeFromRoster,
   requestDeadLetterReplay,
   type SendWeeklyReadInput,
   type SendWeeklyReadResult,
@@ -83,6 +87,10 @@ export interface AdminServices {
   loadFailedOutbound(deps: AdminDeps, ctx: AdminContext): Promise<FailedOutboundRow[]>;
   /** The website's waitlist: who asked to hear when Vela opens, newest first. */
   loadWaitlist(deps: AdminDeps): Promise<WaitlistView>;
+  /** The trial roster the founder keeps (ADR-45): approved Telegram ids, and changes to it. */
+  loadRoster(deps: AdminDeps): Promise<RosterEntry[]>;
+  addToRoster(deps: AdminDeps, ctx: AdminContext, id: string): Promise<"added" | "already">;
+  removeFromRoster(deps: AdminDeps, ctx: AdminContext, id: string): Promise<"removed" | "absent">;
   loadFamilyPage(deps: AdminDeps, ctx: AdminContext, familyId: string): Promise<FamilyPage | null>;
   recordConsent(deps: AdminDeps, ctx: AdminContext, input: RecordConsentInput): Promise<void>;
   recordContactConsent(
@@ -216,6 +224,9 @@ const services: AdminServices = {
   requestDeadLetterReplay: (deps, id) => requestDeadLetterReplay(servicesDeps(deps), id),
   loadFailedOutbound: (deps, ctx) => loadFailedOutbound(servicesDeps(deps), ctx),
   loadWaitlist: (deps) => loadWaitlist(deps.db),
+  loadRoster: (deps) => loadRoster(deps),
+  addToRoster: (deps, ctx, id) => addToRoster(deps, ctx, id),
+  removeFromRoster: (deps, ctx, id) => removeFromRoster(deps, ctx, id),
   loadFamilyPage: (deps, ctx, familyId) => loadFamilyPage(servicesDeps(deps), ctx, familyId),
   recordConsent: (deps, ctx, input) => recordConsent(servicesDeps(deps), ctx, input),
   recordContactConsent: (deps, ctx, input) => recordContactConsent(servicesDeps(deps), ctx, input),

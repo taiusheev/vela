@@ -862,3 +862,78 @@ describe("dead letters on the admin overview", () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe("the trial roster page (ADR-45)", () => {
+  it("lists the approved ids with a form to add one and a button to remove each", async () => {
+    const fake = createFakeAdminRuntime({
+      admin: "founder@vela.test",
+      services: {
+        loadRoster: async () => [
+          { telegramUserId: "2001", addedAt: new Date("2026-10-11T02:00:00Z") },
+        ],
+      },
+    });
+    const body = await (await send(fake, new Request(`${ORIGIN}/admin/roster`))).text();
+    expect(body).toContain("Trial roster");
+    expect(body).toContain("2001");
+    expect(body).toContain('action="/admin/roster/2001/remove"');
+    expect(body).toContain('name="telegramUserId"');
+  });
+
+  it("is linked from the overview", async () => {
+    const fake = createFakeAdminRuntime({ admin: "founder@vela.test" });
+    const body = await (await send(fake, new Request(`${ORIGIN}/admin`))).text();
+    expect(body).toContain('href="/admin/roster"');
+  });
+
+  it("approves an id with the Access identity and returns to the roster with the result", async () => {
+    const fake = createFakeAdminRuntime({ admin: "founder@vela.test" });
+    const response = await send(
+      fake,
+      formRequest("/admin/roster", { telegramUserId: " 2001 " }, ORIGIN),
+    );
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("/admin/roster?result=added");
+    expect(argsOf(fake.calls, "addToRoster")).toEqual([[{ admin: "founder@vela.test" }, "2001"]]);
+  });
+
+  it("removes an id and says so", async () => {
+    const fake = createFakeAdminRuntime({ admin: "founder@vela.test" });
+    const response = await send(fake, formRequest("/admin/roster/2001/remove", {}, ORIGIN));
+    expect(response.headers.get("location")).toBe("/admin/roster?result=removed");
+    expect(argsOf(fake.calls, "removeFromRoster")).toEqual([
+      [{ admin: "founder@vela.test" }, "2001"],
+    ]);
+    const page = await (
+      await send(fake, new Request(`${ORIGIN}/admin/roster?result=removed`))
+    ).text();
+    expect(page).toContain("Removed.");
+  });
+
+  it("answers 400 for an id that is not one, changing nothing", async () => {
+    const fake = createFakeAdminRuntime({
+      admin: "founder@vela.test",
+      services: {
+        addToRoster: async () => {
+          throw new VelaError("invalid_payload", "not an id");
+        },
+      },
+    });
+    const response = await send(
+      fake,
+      formRequest("/admin/roster", { telegramUserId: "Mia" }, ORIGIN),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("Nothing was changed.");
+  });
+
+  it("refuses a roster change posted from another origin", async () => {
+    const fake = createFakeAdminRuntime({ admin: "founder@vela.test" });
+    const refused = await send(
+      fake,
+      formRequest("/admin/roster", { telegramUserId: "2001" }, "https://evil.example"),
+    );
+    expect(refused.status).toBeGreaterThanOrEqual(400);
+    expect(namesOf(fake.calls)).not.toContain("addToRoster");
+  });
+});

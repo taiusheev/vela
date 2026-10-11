@@ -1557,6 +1557,23 @@ export const waitlistSignups = pgTable(
   ],
 );
 
+/**
+ * The English trial's approved Telegram identities (ADR-45), added and removed by the founder on
+ * the admin page, each change in `admin_access_log`. With `PILOT_ADMISSION` on, a Telegram user
+ * takes part only when listed here or in the pilot Worker's private `PILOT_TELEGRAM_ALLOWLIST`;
+ * an empty roster admits nobody. A numeric Telegram id, never a name or a phone number.
+ */
+export const pilotRoster = pgTable(
+  "pilot_roster",
+  {
+    telegramUserId: text("telegram_user_id").primaryKey(),
+    addedAt: timestamptz("added_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check("pilot_roster_telegram_user_id_check", sql`${t.telegramUserId} ~ '^[1-9][0-9]{0,12}$'`),
+  ],
+);
+
 /** The job types a queue carries, as the pilot Worker's queue handler reads them. */
 export const DEAD_LETTER_JOB_TYPES = [
   "deliver",

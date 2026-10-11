@@ -236,7 +236,12 @@ export interface ApiWriteServices {
 
 export interface ApiRuntime {
   capabilities?: ApiCapabilities;
-  admission?: { config: PilotAdmission; permitsAccount: typeof pilotApiAccountAllowed };
+  admission?: {
+    config: PilotAdmission;
+    permitsAccount: typeof pilotApiAccountAllowed;
+    /** The allowlist with the founder's admin-page roster added (ADR-45); absent, the allowlist. */
+    withRoster?: (db: VelaDatabase, config: PilotAdmission) => Promise<PilotAdmission>;
+  };
   verifySession: SessionVerifier;
   /** Reads that answer in a member's own local day need the hour it is now. */
   now(): Date;
@@ -307,6 +312,8 @@ interface RuntimeEnv {
     writeInput: unknown;
     /** Her, on her own routes, as her phone's token names her (ADR-35). */
     deviceMember: Member;
+    /** The closed pilot's roster for this request: the allowlist and the admin page's (ADR-45). */
+    pilotAdmission: PilotAdmission | undefined;
   };
 }
 
@@ -454,13 +461,21 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     try {
       c.set("db", handle.db);
       const admission = runtime.admission;
+      // The roster the founder keeps on the admin page joins the private allowlist (ADR-45).
+      const roster =
+        admission === undefined
+          ? undefined
+          : admission.withRoster === undefined
+            ? admission.config
+            : await admission.withRoster(handle.db, admission.config);
+      c.set("pilotAdmission", roster);
       const identity = c.get("session");
       const removal = c.req.path.endsWith("/left") || c.req.path.endsWith("/remove");
       if (
         admission !== undefined &&
+        roster !== undefined &&
         !removal &&
-        (identity === undefined ||
-          !(await admission.permitsAccount(handle.db, identity, admission.config)))
+        (identity === undefined || !(await admission.permitsAccount(handle.db, identity, roster)))
       )
         return c.json(NOT_FOUND, 404);
       await next();
@@ -1167,7 +1182,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               clock: writes.clock,
               ...(runtime.admission === undefined
                 ? {}
-                : { pilotAdmission: runtime.admission.config }),
+                : { pilotAdmission: c.get("pilotAdmission") ?? runtime.admission.config }),
             },
             c.get("session"),
             c.get("writeKey"),
