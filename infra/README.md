@@ -513,19 +513,19 @@ Fill in as resources are created. Identifiers only, never secrets.
 
 | Resource | Identifier |
 |---|---|
-| Cloudflare account id ("Vela", production) | |
-| Cloudflare account id ("Vela staging") | |
-| workers.dev subdomain ("Vela" · "Vela staging"; planned `vela-light` · `vela-light-staging`) | |
-| Worker hosts, pilot and admin (staging · production) | |
+| Cloudflare account id ("Vela", production) | `012bda634ba44b6c13c6bba300a65eac` (R2 enabled 11 October 2026) |
+| Cloudflare account id ("Vela staging") | `bc94bcf058bcf6b9c4930d9138feda86` |
+| workers.dev subdomain ("Vela" · "Vela staging"; planned `vela-light` · `vela-light-staging`) | `vela-light` · `vela-light-staging` |
+| Worker hosts, pilot and admin (staging · production) | `vela.vela-light-staging.workers.dev`, `vela-admin.vela-light-staging.workers.dev` · `vela.vela-light.workers.dev`, `vela-admin.vela-light.workers.dev` (production set up 11 October 2026 from `e470169`) |
 | Privacy notice URLs (English · Traditional Chinese; production) | |
-| Cloudflare Access team domains (staging · production) | |
+| Cloudflare Access team domains (staging · production) | `square-meadow-34c5.cloudflareaccess.com` · `hidden-tooth-9a02.cloudflareaccess.com` |
 | Neon project ids (`vela-staging` · `vela`) | Staging: `autumn-brook-64741032`, default `production` (`br-odd-mud-b3lnl35f`). Production: `bitter-voice-44831192`, default `production` (`br-steep-pond-b32mc1ox`). Verified in Neon 5 October 2026. |
 | Neon direct hosts (identifiers only) | Staging: `ep-frosty-night-b31xz5dh.c-4.ap-southeast-1.aws.neon.tech`. Production: `ep-late-mode-b3bfn7bh.c-4.ap-southeast-1.aws.neon.tech`. Production metadata is verified; no database connection or schema check was made. |
 | Hyperdrive `vela-apac-staging` id | `e9e9837d1eee47528304916a1ac2d1e9`, matched to staging's direct host on 4 October 2026. |
-| Hyperdrive `vela-apac` id | |
+| Hyperdrive `vela-apac` id | `ddbc8bf17b41490c87075a67b30051c3` (caching off), created by production setup 11 October 2026 |
 | R2: which account has it enabled, each environment's `MEDIA_STORAGE`, and the media bucket where it is `r2` (`vela-media-production`; `vela-media-staging`, since 26 September 2026, section 1, step 3), with the date its `asks/` lifecycle rule was set | |
 | R2 bucket `vela-benchmark` ("Vela", production, sprint 2) | |
-| Telegram bots (dev · staging · production) | |
+| Telegram bots (dev · staging · production) | — · `@VelaLightstagingbot` · `@VelaLightbot` |
 | LINE accounts (test · production) | |
 | Sentry organisation and project | |
 | Watchdog environments enabled in `.github/watchdog.json` (staging · production), with the commit | |
