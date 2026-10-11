@@ -79,6 +79,7 @@ import {
   onboardingSessions,
   outbound,
   PLAN_INTERVALS,
+  pilotRoster,
   pushDevices,
   pushTickets,
   quietEvents,
@@ -497,6 +498,7 @@ async function seedEveryTable(): Promise<void> {
   });
   await db.insert(metricsDaily).values({ day: "2026-09-13", familyId, memberId: seed.parent.id });
   await db.insert(waitlistSignups).values({ email: "mia@example.com", language: "en" });
+  await db.insert(pilotRoster).values({ telegramUserId: "2001" });
   await db.insert(deadLetters).values({
     messageId: "dead-1",
     jobType: "deliver",
@@ -2131,6 +2133,18 @@ describe("CHECK constraints on enumerated columns", () => {
     }
   });
 
+  it("keeps the trial roster to numeric Telegram ids", async () => {
+    await seedEveryTable();
+
+    for (const telegramUserId of ["0123", "abc", "12345678901234", "Mia"]) {
+      const error = await rejection(db.update(pilotRoster).set({ telegramUserId }));
+      expect(error).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "pilot_roster_telegram_user_id_check",
+      });
+    }
+  });
+
   it("covers every CHECK constraint in the database", async () => {
     const result = await db.execute<{ conname: string }>(
       sql`select conname from pg_constraint
@@ -2161,6 +2175,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "account_link_challenges_timing_check",
       "push_tickets_token_sha256_check",
       "waitlist_signups_email_check",
+      "pilot_roster_telegram_user_id_check",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());

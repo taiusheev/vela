@@ -764,3 +764,15 @@ Decision: production sets `API_V1` to `on` with `CLERK_ISSUER` `https://clerk.ve
 Founder's private steps before the release that carries it: create the Production instance of the Clerk application on vela-light.com and add the DNS records Clerk lists (the domain's zone accepts them in either Cloudflare account); confirm its Frontend API is `clerk.vela-light.com`, or tell engineering the one Clerk shows; put its `sk_live_` key on the production pilot Worker (setup script, `secrets` step); register the production webhook for `user.deleted` with its signing secret; and set the `pk_live_` key in the EAS production environment for the `trial` build profile.
 
 Rejected: keeping the trial on staging (staging never holds a real family, infra/README "Environments"); a Clerk development instance in production (its sessions and limits are for development, and `config.ts` refuses it).
+
+## ADR-45 · The founder keeps the trial roster on the admin page
+
+11 October 2026. Accepted (founder: "do the tech side"; product week).
+
+Context: the closed English trial admits only founder-approved Telegram identities (ADR-42). The roster was the pilot Worker's private secret `PILOT_TELEGRAM_ALLOWLIST`, so approving each relative meant putting a production secret from a terminal with a production Cloudflare token, which setup deletes after one day. The setup script never put the roster either, so a fresh production Worker refused every family until it was put by hand. With three to five families and their relatives joining over days, that is a dozen secret changes on the critical path of every onboarding call.
+
+Decision: a table `pilot_roster` (migration 0014) holds approved numeric Telegram ids and nothing else. The founder adds and removes ids on the Access-protected admin page `/admin/roster`; each change writes one `admin_access_log` row (`roster_add`, `roster_remove`) with the id and the Access identity. With `PILOT_ADMISSION` on, admission is the private allowlist and the table together: the pilot Worker reads the table once per invocation, the API once per request, so an approval counts from the next message with no deploy. The private allowlist may now be empty; an empty roster still admits nobody, a malformed allowlist still refuses to start, and a roster that cannot be read leaves the allowlist alone (fewer admitted, never more). Removal pauses a family's automatic work at once, as removal from the allowlist did; stop, privacy and deletion still answer.
+
+Data: a Telegram id is personal data. The founder removes an id when its person leaves the trial or asks for deletion (data-requests runbook); the table holds no name, number or content.
+
+Rejected: a launcher that rewrites the secret (needs a production token on the founder's laptop for every approval); approving from Telegram itself (a bot command anyone could try, against Access's single sign-in).

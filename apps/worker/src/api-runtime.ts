@@ -26,6 +26,7 @@ import {
   ApiIdempotencyError,
   type ApiNudges,
   addApiNearby,
+  admissionWithRoster,
   askApiToLookIn,
   authorizeFamilyAccess,
   completeAccountLink,
@@ -339,7 +340,21 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
     },
     ...(config.pilotAdmission == null
       ? {}
-      : { admission: { config: config.pilotAdmission, permitsAccount: pilotApiAccountAllowed } }),
+      : {
+          admission: {
+            config: config.pilotAdmission,
+            permitsAccount: pilotApiAccountAllowed,
+            // A roster that cannot be read leaves the allowlist alone, which admits fewer.
+            withRoster: async (db, base) => {
+              try {
+                return (await admissionWithRoster(db, base)) ?? base;
+              } catch (error) {
+                logger.error("pilot_roster_unread", { error: errorLabel(error) });
+                return base;
+              }
+            },
+          },
+        }),
     push: config.pushSend === "expo",
     verifySession: createClerkSessionVerifier({
       issuer: config.issuer,

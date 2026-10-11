@@ -230,6 +230,9 @@ export const ADMIN_ACTIONS = [
    * deletes her profile (ADR-28), so inviting again starts from a new member.
    */
   "create_invite",
+  /** The trial roster (ADR-45): a Telegram identity approved, or no longer approved, for the pilot. */
+  "roster_add",
+  "roster_remove",
 ] as const;
 export const AdminAction = z.enum(ADMIN_ACTIONS);
 export type AdminAction = z.infer<typeof AdminAction>;
