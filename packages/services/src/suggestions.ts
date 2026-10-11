@@ -646,6 +646,7 @@ async function writeDay(
   context: WriterContext,
   plan: Plan,
   forDate: LocalDate,
+  options: { readonly draft?: boolean } = {},
 ): Promise<SuggestionOutcome> {
   const { member, family } = plan;
   const currentMember = await memberById(deps.db, member.id);
@@ -667,7 +668,7 @@ async function writeDay(
   // the bank item. AI being off is a setting, not a failure, and logs nothing.
   let outcome: AiOutcome<SuggestDraft> | null = null;
   try {
-    outcome = await deps.ai.suggest(input);
+    outcome = options.draft === false ? null : await deps.ai.suggest(input);
   } catch (error) {
     deps.logger.warn("suggestion_ai_failed", {
       memberId: member.id,
@@ -763,6 +764,7 @@ export async function writeSuggestionFor(
   deps: WriterDeps,
   memberId: string,
   forDate: LocalDate,
+  options: { readonly draft?: boolean } = {},
 ): Promise<SuggestionOutcome> {
   const member = await memberById(deps.db, memberId);
   const family = member === null ? null : await familyById(deps.db, member.familyId);
@@ -776,7 +778,35 @@ export async function writeSuggestionFor(
   }
   const plan: Plan = { member, family, dates: [forDate] };
   const context = await loadContext(deps.db, deps.clock.now(), [plan]);
-  return writeDay(deps, context, plan, forDate);
+  return writeDay(deps, context, plan, forDate, options);
+}
+
+/**
+ * Her day's suggestion where the nightly writer has not written one yet: the evening she says yes
+ * (the writer ran that morning, before her light was on) or a night the job missed. The bank item
+ * alone, with no model call, so the evening prompt and the 22:00 preparation never wait on AI.
+ * Never throws: a failure leaves the day without a suggestion, as before.
+ */
+export async function ensureSuggestion(
+  deps: WriterDeps,
+  memberId: string,
+  forDate: LocalDate,
+): Promise<void> {
+  try {
+    const [row] = await deps.db
+      .select({ id: suggestions.id })
+      .from(suggestions)
+      .where(and(eq(suggestions.aboutMemberId, memberId), eq(suggestions.localDay, forDate)))
+      .limit(1);
+    if (row !== undefined) return;
+    await writeSuggestionFor(deps, memberId, forDate, { draft: false });
+  } catch (error) {
+    deps.logger.warn("suggestion_on_the_spot_failed", {
+      memberId,
+      forDate,
+      error: errorLabel(error),
+    });
+  }
 }
 
 /**
