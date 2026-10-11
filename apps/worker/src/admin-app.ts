@@ -20,6 +20,7 @@ import {
   renderFamilyPage,
   renderMessage,
   renderOverview,
+  renderRoster,
   renderWaitlist,
 } from "./admin-pages.ts";
 import type { AdminRuntime } from "./admin-runtime.ts";
@@ -310,6 +311,28 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
     }
   });
 
+  // ADR-45: the founder approves and removes trial participants' Telegram ids here.
+  admin.get("/roster", async (c) => {
+    const entries = await withDeps(c, (deps) => runtime.services.loadRoster(deps));
+    return renderRoster(entries, c.req.query("result") ?? null);
+  });
+
+  admin.post("/roster", async (c) => {
+    const form = await c.req.formData();
+    const ctx: AdminContext = { admin: c.get("admin") };
+    return rosterChange(c.redirect.bind(c), () =>
+      withDeps(c, (deps) => runtime.services.addToRoster(deps, ctx, field(form, "telegramUserId"))),
+    );
+  });
+
+  admin.post("/roster/:id/remove", async (c) => {
+    const ctx: AdminContext = { admin: c.get("admin") };
+    const id = c.req.param("id");
+    return rosterChange(c.redirect.bind(c), () =>
+      withDeps(c, (deps) => runtime.services.removeFromRoster(deps, ctx, id)),
+    );
+  });
+
   // Technical plan 2.7: the founder asks for one dead job to be sent again; the pilot Worker's next
   // reconcile sends it, since only it holds every queue. Asking twice changes nothing.
   admin.post("/dead-letters/:id/replay", async (c) => {
@@ -358,6 +381,25 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
   app.onError(requestFailed);
 
   return app;
+}
+
+/** A roster change, then back to the roster with what happened; an id no form allows is a 400. */
+async function rosterChange(
+  redirect: (location: string, status: 303) => Response,
+  change: () => Promise<string>,
+): Promise<Response> {
+  try {
+    const result = await change();
+    return redirect(`${ADMIN_PATH}/roster?result=${result}`, 303);
+  } catch (error) {
+    const code = domainErrorCode(error);
+    if (code === null) throw error;
+    return renderMessage(
+      statusForDomainError(code),
+      "Not saved",
+      "That is not a Telegram user id. Nothing was changed.",
+    );
+  }
 }
 
 /** The admin Worker's one handler, not optional, so a test that calls it always runs it. */

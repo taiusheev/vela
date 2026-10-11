@@ -639,6 +639,20 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
       note("loadFailedOutbound", ctx);
       return given.loadFailedOutbound === undefined ? [] : given.loadFailedOutbound(deps, ctx);
     },
+    async loadRoster(deps) {
+      note("loadRoster");
+      return given.loadRoster === undefined ? [] : given.loadRoster(deps);
+    },
+    async addToRoster(deps, ctx, id) {
+      note("addToRoster", ctx, id);
+      return given.addToRoster === undefined ? "added" : given.addToRoster(deps, ctx, id);
+    },
+    async removeFromRoster(deps, ctx, id) {
+      note("removeFromRoster", ctx, id);
+      return given.removeFromRoster === undefined
+        ? "removed"
+        : given.removeFromRoster(deps, ctx, id);
+    },
     async loadWaitlist(deps) {
       note("loadWaitlist");
       return given.loadWaitlist === undefined
