@@ -17,6 +17,11 @@ function trial() {
   vi.stubEnv("EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_live_test_fixture");
 }
 describe("trial build configuration", () => {
+  it("refuses a production trial that would show an example family", () => {
+    trial();
+    vi.stubEnv("EXPO_PUBLIC_DEMO_MODE", "true");
+    expect(() => configureApp(context)).toThrow("example family mode");
+  });
   it("permits the explicit synthetic English trial only with staging API and development auth", () => {
     trial();
     vi.stubEnv("EXPO_PUBLIC_TRIAL_TARGET", "staging");
