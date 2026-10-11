@@ -588,33 +588,33 @@ describe("the pilot Worker's bindings", () => {
     expect(header).toContain("wrangler secret put EXPO_ACCESS_TOKEN --env staging");
   });
 
-  // ADR-29: production's API stays off until a Clerk production instance, a production key, a
-  // privacy notice naming Clerk, and a new ADR, which changes this pin.
-  it("serve the API in development and staging, and not in production", () => {
+  // ADR-44: production serves the API for the English trial's iPhone app, with Clerk's Production
+  // instance, its sk_live_ key, and privacy notice v3 naming Clerk.
+  it("serve the API in development, staging and production", () => {
     expect(
       (["development", ...DEPLOYED] as const).map(
         (environment) => configOf("pilot", environment).vars.API_V1,
       ),
-    ).toEqual(["on", "on", "off"]);
+    ).toEqual(["on", "on", "on"]);
   });
 
   // Staging holds only synthetic families and test accounts, so it verifies tokens from the same
-  // development instance as a laptop; production names none while its API is off.
-  it("verify tokens from Clerk's development instance in development and staging, and name no issuer in production", () => {
+  // development instance as a laptop; production verifies its own instance on Vela's domain.
+  it("verify tokens from Clerk's development instance in development and staging, and production's own on vela-light.com", () => {
     expect(configOf("pilot", "development").vars.CLERK_ISSUER).toBe(
       "https://ideal-vulture-9262.clerk.accounts.dev",
     );
     expect(configOf("pilot", "staging").vars.CLERK_ISSUER).toBe(
       configOf("pilot", "development").vars.CLERK_ISSUER,
     );
-    expect(Object.keys(configOf("pilot", "production").vars)).not.toContain("CLERK_ISSUER");
+    expect(configOf("pilot", "production").vars.CLERK_ISSUER).toBe("https://clerk.vela-light.com");
   });
 
   // Named environments inherit no binding, so each environment that serves the API repeats both
   // limits: the address limiter, the one Rate Limiting binding, and the write limiter's objects.
-  // Production binds neither while its API is off, and config.ts refuses to turn it on without them.
-  it("bind both of the API's limits in development and staging, and neither in production", () => {
-    for (const environment of ["development", "staging"] as const) {
+  // config.ts refuses to turn the API on without them.
+  it("bind both of the API's limits in every environment that serves the API", () => {
+    for (const environment of ["development", "staging", "production"] as const) {
       const pilot = configOf("pilot", environment);
 
       expect(pilot.ratelimits, environment).toEqual([API_ADDRESS_LIMIT]);
@@ -622,12 +622,6 @@ describe("the pilot Worker's bindings", () => {
         { name: "ACCOUNT_WRITE_LIMITER", class_name: "AccountWriteLimiter" },
       ]);
     }
-    const production = configOf("pilot", "production");
-    expect(production.ratelimits ?? []).toEqual([]);
-    expect(doBindings(production).map((binding) => binding.name)).toEqual([
-      "MEMBER_SCHEDULER",
-      "RECONCILE_HEARTBEAT",
-    ]);
   });
 
   // A migration once deployed is never rewritten: each class arrives with one of its own. Every
