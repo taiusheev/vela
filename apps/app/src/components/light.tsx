@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, type StyleProp, View, type ViewStyle } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, type StyleProp, View, type ViewStyle } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
+import { useReducedMotion } from "../accessibility/use-reduced-motion.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { motion } from "../theme/tokens.ts";
 
@@ -45,23 +46,12 @@ function windowPath(): string {
  */
 export function Light({ state, height = 40, style }: LightProps) {
   const palette = usePalette();
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useReducedMotion();
   const bloom = useRef(new Animated.Value(state === "lit" ? 0 : 1)).current;
   const width = (height * WINDOW_WIDTH) / WINDOW_HEIGHT;
 
   useEffect(() => {
-    let current = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (current) setReduceMotion(enabled);
-    });
-    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
-    return () => {
-      current = false;
-      subscription.remove();
-    };
-  }, []);
-
-  useEffect(() => {
+    bloom.stopAnimation();
     if (state !== "lit") {
       bloom.setValue(1);
       return;
@@ -75,6 +65,7 @@ export function Light({ state, height = 40, style }: LightProps) {
       duration: motion.lightBloom,
       useNativeDriver: true,
     }).start();
+    return () => bloom.stopAnimation();
   }, [bloom, reduceMotion, state]);
 
   const outline = state === "lit" ? palette.ink : state === "paused" ? palette.rule : palette.ink3;

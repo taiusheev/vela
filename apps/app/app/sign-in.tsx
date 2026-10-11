@@ -5,6 +5,7 @@ import { router, Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReducedMotion } from "../src/accessibility/use-reduced-motion.ts";
 import { apiConfigured } from "../src/api/client.ts";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
 import {
@@ -167,6 +168,7 @@ function NoAccounts() {
 
 function CodeSignIn() {
   const palette = usePalette();
+  const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const { isLoaded, signIn, setActive } = useSignIn();
@@ -585,7 +587,11 @@ function CodeSignIn() {
             }}
           />
         ) : null}
-        <Modal visible={picking} animationType="slide" onRequestClose={() => setPicking(false)}>
+        <Modal
+          visible={picking}
+          animationType={reducedMotion ? "none" : "slide"}
+          onRequestClose={() => setPicking(false)}
+        >
           <ScrollView
             style={{ backgroundColor: palette.bg }}
             contentContainerStyle={{

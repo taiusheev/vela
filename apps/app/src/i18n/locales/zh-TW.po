@@ -793,6 +793,10 @@ msgstr "請輸入時間，例如 08:30，並選擇支援的語言。"
 msgid "Enter the six digits from your message."
 msgstr "請輸入訊息中的六位數字。"
 
+#: src/components/today-heart.tsx
+msgid "Example · heart sent"
+msgstr "示範 · 愛心已送出"
+
 #: app/morning-settings.tsx
 msgid "Example settings previewed."
 msgstr "已預覽範例設定。"
@@ -908,6 +912,14 @@ msgstr "{name}回覆時，在這支手機上收到通知。"
 #: app/exchange/[id].tsx
 msgid "Heart"
 msgstr "愛心"
+
+#: src/components/today-heart.tsx
+msgid "Heart for {recipient}"
+msgstr "給{recipient}一顆愛心"
+
+#: src/components/today-heart.tsx
+msgid "Heart sent"
+msgstr "愛心已送出"
 
 #: src/components/nearby-editor.tsx
 msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
@@ -1779,6 +1791,7 @@ msgstr "送出語音回覆"
 #: app/sign-in.tsx
 #: src/components/photo-reply.tsx
 #: src/components/story-day.tsx
+#: src/components/today-heart.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
@@ -1826,6 +1839,7 @@ msgid "She answers on Telegram, in Vela's chat."
 msgstr "長輩在 Telegram 上 Vela 的聊天室回覆。"
 
 #: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
 msgid "She has not answered yet, so there is nothing to reply to."
 msgstr "這位家人還沒有回覆，所以目前沒有可以回應的內容。"
 
@@ -2109,6 +2123,10 @@ msgstr "暫時無法載入這次交流。"
 msgid "That exchange is not here."
 msgstr "找不到這則問答。"
 
+#: src/components/today-heart.tsx
+msgid "That heart could not be sent just now. Tap to try again."
+msgstr "剛才未能送出愛心。點一下再試一次。"
+
 #: src/components/setup-help.tsx
 msgid "That link could not open. Contact Vela at the address below."
 msgstr "連結無法開啟。請透過下方地址聯絡 Vela。"
@@ -2319,6 +2337,7 @@ msgid "This is the example family, so nobody left."
 msgstr "這是範例家庭，所以沒有人離開。"
 
 #: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "這是您自己的早安訊息；回覆是給家人的。"
 

@@ -487,6 +487,8 @@ describe("arrival delivery outcome", () => {
       for (const locale of ["en", "zh-TW"] as const) {
         const card = cardIn(locale, [light()], exchange({ delivery_status }));
         expect(card?.deliveryNotice).toBeTruthy();
+        if (delivery_status === "pending") expect(card?.deliveryPending).toBe(true);
+        else expect(card).not.toHaveProperty("deliveryPending");
         expect(card).not.toHaveProperty("unanswered");
       }
     }
@@ -502,6 +504,7 @@ describe("arrival delivery outcome", () => {
       const card = cardIn("en", [light()], exchange(fields));
       expect(card?.unanswered).toBe("No word yet today.");
       expect(card).not.toHaveProperty("deliveryNotice");
+      expect(card).not.toHaveProperty("deliveryPending");
     }
   });
 });

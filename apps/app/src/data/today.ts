@@ -64,6 +64,8 @@ export interface TodayExchange {
   recipient: string;
   /** Arrival outcome, distinct from whether the parent has answered. */
   deliveryNotice?: string;
+  /** Pending arrivals cannot be opened through the delivered-exchange API. */
+  deliveryPending?: true;
   /** A hello carries no question. */
   ask?: string;
   /** `original` is her own words when `text` is their translation into the reader's language. */

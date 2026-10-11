@@ -3,6 +3,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 import { Linking, Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReducedMotion } from "../accessibility/use-reduced-motion.ts";
 import { callingNumber as validCallingNumber } from "../data/calling-number.ts";
 import type { QuietNotice } from "../data/quiet.ts";
 import { usePalette } from "../theme/theme.tsx";
@@ -45,6 +46,7 @@ export function QuietNoticeSheet({
   trouble = false,
 }: QuietNoticeSheetProps) {
   const palette = usePalette();
+  const reducedMotion = useReducedMotion();
   const [callFailed, setCallFailed] = useState(false);
   const call = async (phone: string) => {
     setCallFailed(false);
@@ -63,11 +65,17 @@ export function QuietNoticeSheet({
   const { t } = useLingui();
   const answered = notice.resolution !== undefined;
   const name = notice.memberName;
+  const callLabel = (name: string) => t`Call ${name}`;
   // Her usual hour once it is known, and until then the hour the ask reached her.
   const time = notice.usualTime ?? notice.sentAt;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reducedMotion ? "none" : "fade"}
+      onRequestClose={onClose}
+    >
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(30,26,22,0.32)" }}>
         <Pressable
           accessible={false}
@@ -143,6 +151,7 @@ export function QuietNoticeSheet({
                         accessibilityRole="button"
                         hitSlop={hitSlop}
                         disabled={settling}
+                        accessibilityState={{ disabled: settling }}
                         style={{ minHeight: 44, justifyContent: "center" }}
                         onPress={() => onUseful(true)}
                       >
@@ -154,6 +163,7 @@ export function QuietNoticeSheet({
                         accessibilityRole="button"
                         hitSlop={hitSlop}
                         disabled={settling}
+                        accessibilityState={{ disabled: settling }}
                         style={{ minHeight: 44, justifyContent: "center" }}
                         onPress={() => onUseful(false)}
                       >
@@ -184,6 +194,7 @@ export function QuietNoticeSheet({
                       validCallingNumber(contact.phone) === null ? null : (
                         <Pressable
                           accessibilityRole="button"
+                          accessibilityLabel={callLabel(contact.name)}
                           hitSlop={hitSlop}
                           style={{ minHeight: 44, justifyContent: "center" }}
                           onPress={() => void call(contact.phone ?? "")}
@@ -203,6 +214,7 @@ export function QuietNoticeSheet({
                           accessibilityRole="button"
                           hitSlop={hitSlop}
                           disabled={asking || settling}
+                          accessibilityState={{ disabled: asking || settling, busy: asking }}
                           style={{ minHeight: 44, justifyContent: "center" }}
                           onPress={() => onAskToLookIn(contact.id)}
                         >

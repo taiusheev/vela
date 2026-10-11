@@ -23,6 +23,7 @@ import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/component
 import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import { RemindersCard } from "../../src/components/reminders.tsx";
+import { TodayHeart } from "../../src/components/today-heart.tsx";
 import {
   Card,
   Eyebrow,
@@ -163,45 +164,50 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
           </Words>
         </AnswerPanel>
       )}
-      <Pressable
-        accessibilityRole="button"
-        hitSlop={hitSlop}
-        onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
-        style={{
-          minHeight: 52,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: space.m,
-          backgroundColor: exchange.answer === undefined ? palette.actionSoft : palette.action,
-          borderRadius: 12,
-          paddingHorizontal: space.l,
-        }}
-      >
-        <BrandIcon
-          name="reply"
-          color={exchange.answer === undefined ? palette.action : palette.onAction}
-          size={20}
-        />
-        <View style={{ flex: 1 }}>
-          <Text
-            style={[
-              type.button,
-              { color: exchange.answer === undefined ? palette.action : palette.onAction },
-            ]}
-          >
-            {exchange.answer === undefined ? (
-              <Trans>Open this exchange</Trans>
-            ) : (
-              <Trans>Reply to {recipient}</Trans>
-            )}
-          </Text>
-        </View>
-        <BrandIcon
-          name="arrow"
-          color={exchange.answer === undefined ? palette.action : palette.onAction}
-          size={20}
-        />
-      </Pressable>
+      {exchange.deliveryPending === true ? null : (
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={hitSlop}
+          onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
+          style={{
+            minHeight: 52,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.m,
+            backgroundColor: exchange.answer === undefined ? palette.actionSoft : palette.action,
+            borderRadius: 12,
+            paddingHorizontal: space.l,
+          }}
+        >
+          <BrandIcon
+            name="reply"
+            color={exchange.answer === undefined ? palette.action : palette.onAction}
+            size={20}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                type.button,
+                { color: exchange.answer === undefined ? palette.action : palette.onAction },
+              ]}
+            >
+              {exchange.answer === undefined ? (
+                <Trans>Open this exchange</Trans>
+              ) : (
+                <Trans>Reply to {recipient}</Trans>
+              )}
+            </Text>
+          </View>
+          <BrandIcon
+            name="arrow"
+            color={exchange.answer === undefined ? palette.action : palette.onAction}
+            size={20}
+          />
+        </Pressable>
+      )}
+      {exchange.answer === undefined || exchange.deliveryPending === true ? null : (
+        <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} />
+      )}
       {exchange.replies.length > 0 ? (
         <>
           <Hairline />

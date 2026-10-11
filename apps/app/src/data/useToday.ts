@@ -127,6 +127,7 @@ export function toTodayExchange(exchange: ApiTodayExchange, timeZone?: string): 
         : undefined;
   return {
     ...(deliveryNotice === undefined ? {} : { deliveryNotice }),
+    ...(exchange.delivery_status === "pending" ? { deliveryPending: true as const } : {}),
     id: exchange.id,
     recipientId: exchange.recipient_id,
     ...(exchange.asker_name === null ? {} : { asker: exchange.asker_name }),

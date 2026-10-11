@@ -792,6 +792,10 @@ msgstr "Enter a time such as 08:30 and choose a supported language."
 msgid "Enter the six digits from your message."
 msgstr "Enter the six digits from your message."
 
+#: src/components/today-heart.tsx
+msgid "Example · heart sent"
+msgstr "Example · heart sent"
+
 #: app/morning-settings.tsx
 msgid "Example settings previewed."
 msgstr "Example settings previewed."
@@ -907,6 +911,14 @@ msgstr "Hear it on this phone when {name} answers."
 #: app/exchange/[id].tsx
 msgid "Heart"
 msgstr "Heart"
+
+#: src/components/today-heart.tsx
+msgid "Heart for {recipient}"
+msgstr "Heart for {recipient}"
+
+#: src/components/today-heart.tsx
+msgid "Heart sent"
+msgstr "Heart sent"
 
 #: src/components/nearby-editor.tsx
 msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
@@ -1778,6 +1790,7 @@ msgstr "Send voice reply"
 #: app/sign-in.tsx
 #: src/components/photo-reply.tsx
 #: src/components/story-day.tsx
+#: src/components/today-heart.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
@@ -1825,6 +1838,7 @@ msgid "She answers on Telegram, in Vela's chat."
 msgstr "She answers on Telegram, in Vela's chat."
 
 #: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
 msgid "She has not answered yet, so there is nothing to reply to."
 msgstr "She has not answered yet, so there is nothing to reply to."
 
@@ -2108,6 +2122,10 @@ msgstr "That exchange could not be reached just now."
 msgid "That exchange is not here."
 msgstr "That exchange is not here."
 
+#: src/components/today-heart.tsx
+msgid "That heart could not be sent just now. Tap to try again."
+msgstr "That heart could not be sent just now. Tap to try again."
+
 #: src/components/setup-help.tsx
 msgid "That link could not open. Contact Vela at the address below."
 msgstr "That link could not open. Contact Vela at the address below."
@@ -2318,6 +2336,7 @@ msgid "This is the example family, so nobody left."
 msgstr "This is the example family, so nobody left."
 
 #: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "This is your own morning; replies are for the family."
 

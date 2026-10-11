@@ -786,6 +786,10 @@ msgstr ""
 msgid "Enter the six digits from your message."
 msgstr ""
 
+#: src/components/today-heart.tsx
+msgid "Example · heart sent"
+msgstr ""
+
 #: app/morning-settings.tsx
 msgid "Example settings previewed."
 msgstr ""
@@ -900,6 +904,14 @@ msgstr ""
 
 #: app/exchange/[id].tsx
 msgid "Heart"
+msgstr ""
+
+#: src/components/today-heart.tsx
+msgid "Heart for {recipient}"
+msgstr ""
+
+#: src/components/today-heart.tsx
+msgid "Heart sent"
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -1772,6 +1784,7 @@ msgstr ""
 #: app/sign-in.tsx
 #: src/components/photo-reply.tsx
 #: src/components/story-day.tsx
+#: src/components/today-heart.tsx
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
@@ -1819,6 +1832,7 @@ msgid "She answers on Telegram, in Vela's chat."
 msgstr ""
 
 #: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
 msgid "She has not answered yet, so there is nothing to reply to."
 msgstr ""
 
@@ -2102,6 +2116,10 @@ msgstr ""
 msgid "That exchange is not here."
 msgstr ""
 
+#: src/components/today-heart.tsx
+msgid "That heart could not be sent just now. Tap to try again."
+msgstr ""
+
 #: src/components/setup-help.tsx
 msgid "That link could not open. Contact Vela at the address below."
 msgstr ""
@@ -2312,6 +2330,7 @@ msgid "This is the example family, so nobody left."
 msgstr ""
 
 #: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
 msgid "This is your own morning; replies are for the family."
 msgstr ""
 
