@@ -24,7 +24,7 @@ Aim for 3–5 families. Book a 30-minute call with each organiser and a 15-minut
 | 0–5 | Why they want it. Ask: "When did you last worry because she didn't pick up?" Write down the answer in their words (private notes, family code only). | A specific recent moment |
 | 5–10 | The promise, honestly: one ask a day from the family, her one-tap answer lights the light, a calm notice if a morning stays quiet. Vela is not an emergency service. | They can say it back in one sentence |
 | 10–20 | Setup together: `/start` with the bot (her name, greeting, time zone, wake time), create the family group with relatives only, add the bot, install the app from TestFlight and connect the Telegram family. | Group shows Vela's first message; app shows Today |
-| 20–25 | Who asks: agree the turn order in the group and write tomorrow's first ask together. Show the evening prompt and its idea. | First ask queued for her first morning |
+| 20–25 | Who asks: agree the turn order in the group and write tomorrow's first ask together. Show the 19:00 message: whose turn it is, an idea they can send as it is, and, when her answer that morning has no reply yet, a line saying so first. Explain that if nobody asks, Vela asks her a question from its own list (signed by Vela, never the same one within 12 weeks), so a forgotten evening is fine but a family ask is better. | First ask queued for her first morning |
 | 25–30 | What happens on a quiet morning, nearby contacts (names only for now), away dates. Book the parent call within 7 days. | They know the one thing to do when a notice comes |
 
 ## The parent call (15 minutes)
@@ -45,6 +45,13 @@ Look at `/admin/trial?days=7` each morning after her arrival hour (two minutes).
 | 7 | Seven-day numbers: answer rate, fallback share, replies heard. 10-minute call with the organiser: what was the best moment, what annoyed them | Write each annoyance in the AGENT-CLAIMS notes for Claude and Codex |
 | 14 | Learning period ends: quiet notices start to push. Call: "If Vela stopped tomorrow, how would you feel?" (very / somewhat / not disappointed) | Answer rate under 50%: talk to the organiser about her hour and the ask types she likes |
 | 30 | 30-day numbers; day-30 call: the same question, and "would you pay US$9.99 a month for the light?" (yes / no / maybe) | Record answers without quotes under the family code |
+
+## What the family will see each day
+
+- **19:00 in the group:** whose turn it is tomorrow, and an idea. If her answer that morning has no reply yet, the message opens with that.
+- **Her morning:** yesterday's family replies first, then the ask with the asker's name. On a morning nobody asked, a question from Vela's list, signed "Vela, from your family".
+- **Her answer in the group:** "Mom answered Mia" with what she said, or "Mom answered today's question from Vela" with the question, or "Mom is fine" for a heart or "I'm fine".
+- **Her thanks** after she answers changes its wording from day to day.
 
 ## Reading the numbers
 
