@@ -173,6 +173,11 @@ export type UnderstandJob = { type: "understand_answer"; answerId: string };
 export interface Config {
   /** Explicit private trial admission; absent or null preserves the normal product behavior. */
   pilotAdmission?: PilotAdmission | null;
+  /**
+   * Suggestions are written where the app's API is served (ADR-29, ADR-44): nightly, and on the
+   * spot for an evening prompt or a morning that has none yet. Absent means not.
+   */
+  suggestions?: boolean;
   telegramBotUsername: string;
   /** The LINE Official Account's basic id (`@…`) a LINE invite link opens; null while LINE is off. */
   lineBasicId: string | null;

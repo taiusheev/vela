@@ -410,6 +410,25 @@ describe("prepareDay", () => {
     expect(h.ai.calls).toHaveLength(0);
   });
 
+  it("asks her a bank question on a morning the nightly writer never reached, where the API is served", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const config = h.deps.config as { suggestions?: boolean };
+    config.suggestions = true;
+    let id: string;
+    try {
+      id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+    } finally {
+      config.suggestions = undefined;
+    }
+
+    const hello = await exchangeById(id);
+    expect(hello?.type).toBe("hello");
+    expect(hello?.text).toMatch(/\S/);
+    const [used] = await h.db.select().from(suggestions);
+    expect(used?.usedAt).toEqual(h.clock.now());
+    expect(h.ai.calls).toHaveLength(0);
+  });
+
   it("keeps the plain hello when the day has no unused suggestion", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await h.db.insert(suggestions).values({
@@ -1179,6 +1198,34 @@ describe("sendTurnPrompt", () => {
     expect((await textOf("2026-09-17"))?.message.text).toBe(
       "Tomorrow is Mia's turn with Mom. Reply to this message with a question, a photo, or a voice note.",
     );
+  });
+
+  it("writes the day's idea on the spot where the API is served, from the bank, with no model call", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+    const config = h.deps.config as { suggestions?: boolean };
+    config.suggestions = true;
+    try {
+      await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+    } finally {
+      config.suggestions = undefined;
+    }
+
+    const [row] = await h.db.select().from(suggestions);
+    expect(row).toMatchObject({ aboutMemberId: seed.member.id, localDay: TOMORROW, text: "" });
+    expect(h.ai.calls.map((call) => call.call)).not.toContain("suggest");
+    const [prompt] = await outboundRows("turn_prompt");
+    const payload = prompt?.payload as { message: { text: string } } | undefined;
+    expect(payload?.message.text).toContain("If you'd like an idea:");
+  });
+
+  it("writes no idea on the spot where the API is not served", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now() });
+
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+
+    expect(await h.db.select().from(suggestions)).toEqual([]);
   });
 
   it("says first, once, when her answer today has no reply yet", async () => {
