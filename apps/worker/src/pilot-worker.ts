@@ -154,8 +154,8 @@ async function replayDeadLetters(
 /**
  * The nightly jobs after the metrics, each run whatever the one before it did, since neither needs
  * the other: retention, then tomorrow's suggestions, only where the API that shows them is served
- * (ADR-29). Production's API is off and its database has none of the API's tables, so it writes no
- * suggestion and never asks the model to draft one. A job that throws is logged by its label, and
+ * (ADR-29, ADR-44). With the API off an environment writes no suggestion and never asks the model
+ * to draft one. A job that throws is logged by its label, and
  * the first failure fails the run once every job has had its turn.
  */
 async function runNightlyJobs(services: PilotServices, deps: Deps, env: PilotEnv): Promise<void> {

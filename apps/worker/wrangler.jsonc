@@ -406,7 +406,8 @@
       "durable_objects": {
         "bindings": [
           { "name": "MEMBER_SCHEDULER", "class_name": "MemberScheduler" },
-          { "name": "RECONCILE_HEARTBEAT", "class_name": "ReconcileHeartbeat" }
+          { "name": "RECONCILE_HEARTBEAT", "class_name": "ReconcileHeartbeat" },
+          { "name": "ACCOUNT_WRITE_LIMITER", "class_name": "AccountWriteLimiter" }
         ]
       },
       "queues": {
@@ -454,6 +455,13 @@
       "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "vela-media-production" }],
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION" }],
       "triggers": { "crons": ["*/15 * * * *", "20 3 * * *"] },
+      "ratelimits": [
+        {
+          "name": "API_IP_LIMIT",
+          "namespace_id": "1001",
+          "simple": { "limit": 120, "period": 60 }
+        }
+      ],
       "vars": {
         "ENVIRONMENT": "production",
         "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
@@ -466,9 +474,11 @@
         "MEDIA_STORAGE": "r2",
         // Invitation-only English trial. Missing private roster refuses family work.
         "PILOT_ADMISSION": "on",
-        // Off until a new ADR turns it on (ADR-29): no CLERK_ISSUER, no ratelimits, and no
-        // ACCOUNT_WRITE_LIMITER binding until then.
-        "API_V1": "off",
+        // On for the English trial's iPhone app (ADR-44): Clerk's Production instance on
+        // vela-light.com, whose Frontend API is clerk.vela-light.com; its sk_live_ key goes on the
+        // pilot Worker at setup. Privacy notice v3 names Clerk.
+        "API_V1": "on",
+        "CLERK_ISSUER": "https://clerk.vela-light.com",
         // Off until the design's last step turns it on (05 §8, step 11), and pinned off by
         // src/wrangler-config.test.ts: no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
         "LINE_CHANNEL": "off",
