@@ -115,11 +115,11 @@
       "queues": {
         "producers": [{ "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-production" }]
       },
-      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "PLACEHOLDER_HYPERDRIVE_ID_PRODUCTION" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "ddbc8bf17b41490c87075a67b30051c3" }],
       "vars": {
         "ENVIRONMENT": "production",
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
-        "TELEGRAM_BOT_USERNAME": "PLACEHOLDER_PRODUCTION_BOT_USERNAME",
+        "TELEGRAM_BOT_USERNAME": "VelaLightbot",
         "AI_PROVIDER": "openai",
         "LINE_CHANNEL": "off"
       }
