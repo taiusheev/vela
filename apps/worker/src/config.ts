@@ -610,6 +610,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     memory: readMemory(env) && pilotAdmission === null,
     book: readBook(env),
     pilotAdmission,
+    suggestions: readApiSwitch(env) === "on",
   };
 }
 

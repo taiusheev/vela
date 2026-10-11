@@ -65,7 +65,7 @@ import {
   memberById,
   type Queryable,
 } from "./repo.ts";
-import { renderSuggestion, takeFallbackQuestion } from "./suggestions.ts";
+import { ensureSuggestion, renderSuggestion, takeFallbackQuestion } from "./suggestions.ts";
 
 /** The pilot's kept-light members and families are reached on Telegram. */
 /** Where her mornings go when her surface names no messenger: the pilot's first. */
@@ -104,6 +104,13 @@ interface Prepared {
  * A day already prepared is left as it is.
  */
 export async function prepareDay(deps: Deps, memberId: string, date: LocalDate): Promise<string> {
+  // A morning that may still become a fallback needs its question from the bank (spec §4.5).
+  if (deps.config.suggestions === true) {
+    const settledAlready = await exchangeForLocalDate(deps.db, memberId, date);
+    if (settledAlready === null || settledAlready.state === "composed") {
+      await ensureSuggestion(deps, memberId, date);
+    }
+  }
   const now = deps.clock.now();
   const prepared = await deps.db.transaction(async (tx): Promise<Prepared> => {
     const [member] = await tx.select().from(members).where(eq(members.id, memberId)).for("update");
@@ -944,6 +951,10 @@ export async function sendTurnPrompt(
     return;
   }
   const group = await linkedGroupOfFamily(deps.db, family.id, MESSENGER);
+  // The evening she said yes, the nightly writer has not reached her yet: the idea comes from here.
+  if (group !== null && deps.config.suggestions === true) {
+    await ensureSuggestion(deps, recipientId, forDate);
+  }
   const holders = await turnHolders(deps.db, family.id);
   const [previous] = await deps.db
     .select({ holderId: turns.holderId })
