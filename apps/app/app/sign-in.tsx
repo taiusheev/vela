@@ -24,7 +24,7 @@ import {
   readable,
   toInternational,
 } from "../src/auth/phone.ts";
-import { Light } from "../src/components/light.tsx";
+import { BrandHeader } from "../src/components/brand/header.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { SetupHelp } from "../src/components/setup-help.tsx";
 import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
@@ -142,10 +142,10 @@ function NoAccounts() {
         paddingTop: insets.top + space.xxxl,
         paddingHorizontal: space.margin,
         gap: space.l,
-        alignItems: "center",
+        alignItems: "stretch",
       }}
     >
-      <Light state="resting" height={120} />
+      <BrandHeader />
       <Words variant="title">
         <Trans>Sign-in is unavailable in this build</Trans>
       </Words>
@@ -426,9 +426,11 @@ function CodeSignIn() {
           gap: space.xl,
         }}
       >
-        <View style={{ alignItems: "center", gap: space.l }}>
-          <Light state="lit" height={120} />
-          <Words variant="title">Vela Light</Words>
+        <View style={{ gap: space.xl }}>
+          <BrandHeader />
+          <Words variant="display">
+            <Trans>A little closer, every day.</Trans>
+          </Words>
           <Words variant="body" tone="ink2">
             <Trans>A small moment with your family, every day.</Trans>
           </Words>

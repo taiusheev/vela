@@ -311,6 +311,10 @@ msgstr ""
 msgid "A hello from Vela"
 msgstr ""
 
+#: app/sign-in.tsx
+msgid "A little closer, every day."
+msgstr ""
+
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr ""
@@ -1321,6 +1325,11 @@ msgstr ""
 
 #: src/data/today.ts
 #: src/data/useToday.ts
+msgid "No word yet today"
+msgstr ""
+
+#: src/data/today.ts
+#: src/data/useToday.ts
 msgid "No word yet today."
 msgstr ""
 
@@ -1679,11 +1688,6 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Resend code in {seconds}s"
-msgstr ""
-
-#: src/data/today.ts
-#: src/data/useToday.ts
-msgid "resting"
 msgstr ""
 
 #: app/(tabs)/you.tsx

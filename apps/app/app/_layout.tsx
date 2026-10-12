@@ -4,7 +4,11 @@ import {
   Inter_600SemiBold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { Literata_400Regular, Literata_600SemiBold } from "@expo-google-fonts/literata";
+import {
+  Literata_400Regular,
+  Literata_500Medium,
+  Literata_600SemiBold,
+} from "@expo-google-fonts/literata";
 import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
@@ -137,6 +141,7 @@ function Root() {
     Inter_500Medium,
     Inter_600SemiBold,
     Literata_400Regular,
+    Literata_500Medium,
     Literata_600SemiBold,
   });
 

@@ -4,7 +4,6 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
-import { FamilyScene } from "../../src/components/brand/scene.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryDay, StoryOfTheWeek } from "../../src/components/story-day.tsx";
@@ -131,10 +130,7 @@ function FamilySunday({ day }: { day: TodayView }) {
       }}
     >
       {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
-      <ScreenHeading
-        title={<Trans context="tab">Sunday</Trans>}
-        illustration={<FamilyScene kind="book" width={94} />}
-      />
+      <ScreenHeading title={<Trans context="tab">Sunday</Trans>} />
       <ParentChooser lights={day.today.lights} selected={view.memberId} onSelect={select} />
       {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}
       {view.loading ? (
@@ -172,7 +168,13 @@ function FamilySunday({ day }: { day: TodayView }) {
               <Trans>The weekly read could not be reached just now.</Trans>
             </Words>
           ) : read.locked ? (
-            <Card style={{ backgroundColor: palette.lightSoft, borderColor: palette.lightSoft }}>
+            <Card
+              style={{
+                backgroundColor: palette.lightSoft,
+                borderColor: palette.lightSoft,
+                padding: space.l,
+              }}
+            >
               <Words variant="bodyMedium">
                 <Trans>Vela Light shows you the read</Trans>
               </Words>
@@ -207,7 +209,7 @@ function FamilySunday({ day }: { day: TodayView }) {
                   <Hairline />
                   <AnswerPanel>
                     {read.week.notes.map((note) => (
-                      <Words key={note} variant="voice">
+                      <Words key={note} variant="story">
                         {note}
                       </Words>
                     ))}

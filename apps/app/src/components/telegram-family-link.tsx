@@ -9,7 +9,7 @@ import { useAccount } from "../auth/clerk.tsx";
 import { connectionCode } from "../data/connection-code.ts";
 import { deviceZone } from "../data/onboarding.ts";
 import { space } from "../theme/tokens.ts";
-import { FamilyScene } from "./brand/scene.tsx";
+import { BrandHeader } from "./brand/header.tsx";
 import { SetupHelp } from "./setup-help.tsx";
 import { Card, PrimaryButton, SecondaryButton, SetupProgress, TextField, Words } from "./ui.tsx";
 
@@ -82,11 +82,11 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
   };
   return (
     <View style={{ gap: space.l }}>
+      <BrandHeader />
       <SetupProgress
         steps={[t`Your family`, t`Your Telegram chat`, t`Connection code`]}
         current={start.data === undefined ? 0 : code.length === 0 ? 1 : 2}
       />
-      {start.data === undefined ? <FamilyScene kind="table" width={152} /> : null}
       <Words variant="title">
         <Trans>Connect your Telegram family</Trans>
       </Words>

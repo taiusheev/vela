@@ -7,7 +7,7 @@ import {
 } from "@vela/contracts";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { AppLocale } from "../i18n/locale.ts";
-import { toToday, toTodayExchange, toTomorrowTurn } from "./useToday.ts";
+import { toToday, toTodayExchange, toTodayLight, toTomorrowTurn } from "./useToday.ts";
 
 // The Lingui macros compile away as the app is bundled, and nothing compiles them here. `t` stands
 // in for what the macro compiles to: in English the words as written, and in Traditional Chinese
@@ -507,4 +507,29 @@ describe("arrival delivery outcome", () => {
       expect(card).not.toHaveProperty("deliveryPending");
     }
   });
+});
+
+// Away/paused describe participation; neither should erase a real answer on the local day.
+describe("answer window while participation is paused or away", () => {
+  for (const state of ["away", "paused"] as const) {
+    it(`keeps ${state} as the label while retaining today's answer`, () => {
+      const row: MemberLight = {
+        member_id: MOM,
+        display_name: "Mom",
+        tz: "Asia/Taipei",
+        local_date: "2026-10-12",
+        state,
+        answered_at: "2026-10-12T00:12:00Z",
+        usual_time: "08:00",
+        away_until: null,
+        quiet_event_id: null,
+        away_id: null,
+        unreachable_on: null,
+      };
+      const result = toTodayLight(row);
+      expect(result.state).toBe(state);
+      expect(result.answerReceived).toBe(true);
+      expect(toTodayLight({ ...row, answered_at: null }).answerReceived).toBeUndefined();
+    });
+  }
 });
