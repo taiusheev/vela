@@ -6,7 +6,7 @@ tags:
 ---
 - launchApp
 - tapOn:
-    id: "today-heart-x1"
+    css: '[data-testid="today-heart-x1"]'
 - assertVisible: "Example · heart sent"
 - assertNotVisible: "Heart for Mom"
 - tapOn: "Reply to Mom"
