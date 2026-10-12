@@ -74,6 +74,7 @@ export function TodayHeart({
     >
       {compact && !post.isSuccess ? (
         <Pressable
+          testID={`today-heart-${id}`}
           accessibilityRole="button"
           accessibilityLabel={t`Heart for ${recipient}`}
           accessibilityState={{ disabled: !draft.ready || post.isPending || post.isSuccess }}

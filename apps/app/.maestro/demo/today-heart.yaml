@@ -5,7 +5,8 @@ tags:
   - demo
 ---
 - launchApp
-- tapOn: "Heart for Mom"
+- tapOn:
+    id: "today-heart-x1"
 - assertVisible: "Example · heart sent"
 - assertNotVisible: "Heart for Mom"
 - tapOn: "Reply to Mom"
