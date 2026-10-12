@@ -85,3 +85,15 @@ The review bundle lives beside the brand book in `15-app-design/`, containing be
 ## 8 October quality follow-up
 
 The [UI quality audit](audit/2026-10-08/README.md) records narrow-screen contact repairs, deliberate weekly-grid reflow, semantic headings and day states, scrollable quiet-notice recovery, stable field borders and capability-aware history copy. Native device accessibility remains a separate acceptance gate.
+
+## Founder-approved conversation-first implementation · 12 October 2026
+
+The approved direction now lives in the Expo components, rather than only the independent HTML prototype. The founder-selected outlined wordmark appears in tab headings, sign-in and setup. Warm paper replaces cool grey, Literata carries titles and family answers, and Inter carries controls. Flat ruled sections replace ordinary boxed cards. Decorative scenes are removed from the active flows; the identity's window and type supply the visual character.
+
+Today preserves every kept-light person. Each has a window: warm amber panes for a received answer on that person's local day, neutral panes otherwise. Quiet, away, paused, consent pending, unreachable and delivery states keep their factual words and actions. Away or paused can coexist with a local-day answer: `answerReceived` preserves the actual API answer receipt for colour while the participation label remains. There is no health/safety inference, pulse, alarm dot or dash treatment. Small weekly windows use the optical undivided mark, with day and answer information accessible through their surrounding cells.
+
+The named reply and one-tap heart sit together; heart acceptance retains its separate encrypted attempt identity and a visible truthful acknowledgement. The composer keeps explicit recipient selection and timing, gives the person's text an editorial field, and keeps suggestions behind their existing disclosure. All existing capability gates, consent sequencing, account connection, media handling, cancel/retry/help paths and protected drafts remain in place. This pass does not enable the proposed self-serve onboarding path for the free English Telegram pilot or change billing.
+
+Typography: titles 34/42 and 28/36 in Literata Medium, family answer 27/40 in Literata Regular, story notes 20/34, list previews 20/30. Standard margins 24, primary controls 54, parent controls at least 64. The parent surface remains light with large text; its wordmark explicitly uses the light palette even if the organiser has selected dark appearance. The caption token stays darker than the brand-sheet example so the existing contrast tests pass on every supported tinted surface.
+
+Synthetic app captures and verification are retained under `design/audit/conversation-first/`. Browser review of the actual Expo app is separate from signed-iPhone, Dynamic Type, VoiceOver, native media/permissions, live messenger receipts and family-comprehension evidence. Production app distribution requires the existing signed build/update process; merging source does not install a new iPhone app.

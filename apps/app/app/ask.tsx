@@ -382,6 +382,7 @@ function AskComposer({
           <View style={{ gap: space.m }}>
             <TextField
               label={t`Your question`}
+              editorial
               value={text}
               onChangeText={setText}
               placeholder={t`Say it the way you would say it`}

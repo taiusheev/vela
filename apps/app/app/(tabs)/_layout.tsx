@@ -21,10 +21,11 @@ function TabIcon({
       style={{
         width: 56,
         height: 32,
-        borderRadius: 16,
+        borderTopWidth: focused ? 2 : 0,
+        borderTopColor: palette.action,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: focused ? palette.actionSoft : "transparent",
+        backgroundColor: "transparent",
       }}
     >
       <BrandIcon name={name} color={color} size={22} />
@@ -45,7 +46,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: palette.action,
         tabBarInactiveTintColor: palette.ink3,
         tabBarStyle: {
-          backgroundColor: palette.surface,
+          backgroundColor: palette.bg,
           borderTopColor: palette.rule,
           height: 76 + Math.max(0, fontScale - 1) * 24 + insets.bottom,
           paddingTop: space.s,

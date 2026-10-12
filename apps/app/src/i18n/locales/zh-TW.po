@@ -318,6 +318,10 @@ msgstr "給{recipient}的問候"
 msgid "A hello from Vela"
 msgstr "來自 Vela 的問候"
 
+#: app/sign-in.tsx
+msgid "A little closer, every day."
+msgstr "每天，再靠近一點。"
+
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "尚未設定即時連線。"
@@ -1328,6 +1332,11 @@ msgstr "還沒有故事。在週日分頁選一個問題，說出的故事會收
 
 #: src/data/today.ts
 #: src/data/useToday.ts
+msgid "No word yet today"
+msgstr "今天還沒有回覆"
+
+#: src/data/today.ts
+#: src/data/useToday.ts
 msgid "No word yet today."
 msgstr "今天還沒有回覆。"
 
@@ -1687,11 +1696,6 @@ msgstr "重新傳送驗證碼"
 #: app/sign-in.tsx
 msgid "Resend code in {seconds}s"
 msgstr "{seconds} 秒後可重新傳送驗證碼"
-
-#: src/data/today.ts
-#: src/data/useToday.ts
-msgid "resting"
-msgstr "休息中"
 
 #: app/(tabs)/you.tsx
 msgid "Resume"

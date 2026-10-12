@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { usePalette } from "../../theme/theme.tsx";
-import { radius, space } from "../../theme/tokens.ts";
+import { space } from "../../theme/tokens.ts";
 import { Words } from "../ui.tsx";
 import { BrandIcon } from "./icon.tsx";
 
@@ -17,20 +17,19 @@ export function SuggestionDisclosure({
   const p = usePalette();
   const [open, setOpen] = useState(false);
   return (
-    <View style={{ borderRadius: radius.card, backgroundColor: p.lightSoft, overflow: "hidden" }}>
+    <View style={{ borderTopWidth: 1, borderTopColor: p.rule }}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen((value) => !value)}
         style={{
           minHeight: 56,
-          padding: space.l,
+          paddingVertical: space.l,
           flexDirection: "row",
           alignItems: "center",
           gap: space.m,
         }}
       >
-        <BrandIcon name="mail" color={p.ink2} size={20} />
         <View style={{ flex: 1 }}>
           <Words variant="bodyMedium">{label}</Words>
         </View>
@@ -38,11 +37,7 @@ export function SuggestionDisclosure({
           <BrandIcon name="chevron" color={p.ink2} size={20} />
         </View>
       </Pressable>
-      {open ? (
-        <View style={{ paddingHorizontal: space.l, paddingBottom: space.l, gap: space.l }}>
-          {children}
-        </View>
-      ) : null}
+      {open ? <View style={{ paddingBottom: space.l, gap: space.l }}>{children}</View> : null}
     </View>
   );
 }

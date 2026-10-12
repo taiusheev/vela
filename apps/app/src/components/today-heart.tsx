@@ -1,16 +1,27 @@
 import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { apiConfigured, replyRefusal, replyTo } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { demoDataAllowed } from "../data/live-state.ts";
 import { useDraft } from "../storage/useDraft.ts";
-import { space } from "../theme/tokens.ts";
+import { usePalette } from "../theme/theme.tsx";
+import { radius, space } from "../theme/tokens.ts";
+import { BrandIcon } from "./brand/icon.tsx";
 import { Chip, ReceiptChip, Words } from "./ui.tsx";
 
 /** A separate attempt cannot overwrite a text reply the reader has already saved. */
-export function TodayHeart({ id, recipient }: { id: string; recipient: string }) {
+export function TodayHeart({
+  id,
+  recipient,
+  compact = false,
+}: {
+  id: string;
+  recipient: string;
+  compact?: boolean;
+}) {
+  const palette = usePalette();
   const { t } = useLingui();
   const account = useAccount();
   const draft = useDraft(`heart.${id}`);
@@ -41,24 +52,54 @@ export function TodayHeart({ id, recipient }: { id: string; recipient: string })
         : post.isError
           ? t`That heart could not be sent just now. Tap to try again.`
           : null;
+  const sendHeart = () => {
+    if (busy.current || post.isSuccess || !draft.ready) return;
+    busy.current = true;
+    void post
+      .mutateAsync()
+      .catch(() => {})
+      .finally(() => {
+        busy.current = false;
+      });
+  };
   return (
-    <View accessibilityLiveRegion="polite" style={{ gap: space.s, alignItems: "flex-start" }}>
-      {post.isSuccess ? (
+    <View
+      accessibilityLiveRegion="polite"
+      style={{
+        gap: space.s,
+        alignItems: "flex-start",
+        flexShrink: 1,
+        maxWidth: compact ? 160 : undefined,
+      }}
+    >
+      {compact && !post.isSuccess ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t`Heart for ${recipient}`}
+          accessibilityState={{ disabled: !draft.ready || post.isPending || post.isSuccess }}
+          disabled={!draft.ready || post.isPending || post.isSuccess}
+          onPress={sendHeart}
+          style={({ pressed }) => ({
+            minHeight: 54,
+            minWidth: 54,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: palette.control,
+            borderRadius: radius.button,
+            backgroundColor: "transparent",
+            opacity: post.isPending ? 0.45 : pressed ? 0.8 : 1,
+          })}
+        >
+          <BrandIcon name="heart" color={palette.ink} size={22} />
+        </Pressable>
+      ) : post.isSuccess ? (
         <ReceiptChip label={demo ? t`Example · heart sent` : t`Heart sent`} />
       ) : (
         <Chip
           label={post.isPending ? t`Sending…` : t`Heart for ${recipient}`}
           disabled={!draft.ready || post.isPending}
-          onPress={() => {
-            if (busy.current || post.isSuccess || !draft.ready) return;
-            busy.current = true;
-            void post
-              .mutateAsync()
-              .catch(() => {})
-              .finally(() => {
-                busy.current = false;
-              });
-          }}
+          onPress={sendHeart}
         />
       )}
       {trouble === null ? null : (

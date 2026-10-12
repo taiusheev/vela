@@ -45,18 +45,17 @@ export function Words({
   );
 }
 
-/** Surface, generous radius, one hairline: the card the whole app is built from. */
+/** A quiet ruled section. Explicit tinted notices may add their own inset and surface. */
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const palette = usePalette();
   return (
     <View
       style={[
         {
-          backgroundColor: palette.surface,
-          borderRadius: radius.card,
-          borderWidth: 1,
+          backgroundColor: "transparent",
+          borderTopWidth: 1,
           borderColor: palette.rule,
-          padding: space.l + space.xs,
+          paddingVertical: space.xl,
           gap: space.m,
         },
         style,
@@ -89,7 +88,7 @@ export function PrimaryButton({
         backgroundColor: palette.action,
         opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
         borderRadius: radius.button,
-        minHeight: 56,
+        minHeight: 54,
         paddingVertical: space.m,
         paddingHorizontal: space.l,
         alignItems: "center",
@@ -110,10 +109,7 @@ export function ReceiptChip({ label }: { label: string }) {
     <View
       style={{
         alignSelf: "flex-start",
-        backgroundColor: palette.lightSoft,
-        borderRadius: radius.chip,
-        paddingVertical: space.xs + 2,
-        paddingHorizontal: space.m,
+        paddingVertical: space.xs,
       }}
     >
       <Text style={[type.caption, { color: palette.ink }]}>{label}</Text>
@@ -157,7 +153,7 @@ export function SetupProgress({
             key={step}
             style={{
               flex: 1,
-              height: 4,
+              height: 2,
               borderRadius: 2,
               backgroundColor: index <= current ? palette.action : palette.rule,
             }}
@@ -225,6 +221,7 @@ export function TextField({
   placeholder,
   helper,
   multiline = false,
+  editorial = false,
   keyboardType,
   autoComplete,
   autoCapitalize,
@@ -240,6 +237,8 @@ export function TextField({
   placeholder?: string;
   helper?: string;
   multiline?: boolean;
+  /** The composer gives the person’s own words the family-reading typeface. */
+  editorial?: boolean;
   /** The keyboard she gets: a number pad for a phone or a code, words for an ask. */
   keyboardType?: "phone-pad" | "number-pad" | "email-address";
   /** Lets the phone offer her own number, and fill a code from the message that carries it. */
@@ -277,16 +276,17 @@ export function TextField({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={[
-          type.body,
+          editorial ? type.voice : type.body,
           {
             color: palette.ink,
-            backgroundColor: palette.surface,
-            borderRadius: radius.button,
-            borderWidth: 2,
+            backgroundColor: editorial ? "transparent" : palette.bg,
+            borderRadius: editorial ? 0 : radius.button,
+            borderWidth: editorial ? 0 : 2,
+            borderBottomWidth: editorial ? 2 : undefined,
             borderColor: focused ? palette.action : palette.control,
-            paddingHorizontal: space.l,
-            paddingVertical: space.m,
-            minHeight: multiline ? 112 : 56,
+            paddingHorizontal: editorial ? 0 : space.l,
+            paddingVertical: editorial ? space.xl : space.m,
+            minHeight: editorial ? 200 : multiline ? 112 : 56,
             textAlignVertical: multiline ? "top" : "center",
           },
         ]}
@@ -318,12 +318,12 @@ export function SecondaryButton({
       accessibilityState={{ disabled }}
       onPress={onPress}
       style={({ pressed }) => ({
-        backgroundColor: palette.surface,
+        backgroundColor: palette.bg,
         borderColor: palette.control,
         borderWidth: 1,
         opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
         borderRadius: radius.button,
-        minHeight: 56,
+        minHeight: 54,
         paddingVertical: space.m,
         paddingHorizontal: space.l,
         alignItems: "center",

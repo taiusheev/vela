@@ -24,9 +24,9 @@ export interface Palette {
 }
 
 export const lightPalette: Palette = {
-  bg: "#F7F8F6",
+  bg: "#FBF7F0",
   surface: "#FFFFFF",
-  surface2: "#EFF2EE",
+  surface2: "#F3EDE4",
   ink: "#1E1A16",
   ink2: "#5A534B",
   ink3: "#6D655B",
@@ -59,13 +59,13 @@ export const darkPalette: Palette = {
   error: "#F28B82",
 };
 
-/** The 4 pt grid: 4, 8, 12, 16, 20, 24, 32, 40, 56, with 20 pt app margins. */
+/** The 4 pt grid: 4, 8, 12, 16, 20, 24, 32, 40, 56, with 24 pt app margins. */
 export const space = {
   xs: 4,
   s: 8,
   m: 12,
   l: 16,
-  margin: 20,
+  margin: 24,
   xl: 24,
   xxl: 32,
   xxxl: 40,
@@ -73,10 +73,10 @@ export const space = {
 } as const;
 
 export const radius = {
-  card: 18,
+  card: 10,
   sheet: 24,
-  button: 12,
-  parentButton: 22,
+  button: 10,
+  parentButton: 10,
   chip: 24,
 } as const;
 
@@ -103,12 +103,14 @@ function face(name: string, fallback: string): string {
 }
 
 /**
- * Sans-led hierarchy for daily tasks; brand artwork retains its expressive wordmark.
+ * Conversation-first hierarchy: family words and titles in Literata; controls in Inter.
  */
 export const type = {
-  display: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 30, lineHeight: 38 },
-  title: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 24, lineHeight: 32 },
-  voice: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 20, lineHeight: 29 },
+  display: { fontFamily: face("Literata_500Medium", SANS_TC), fontSize: 34, lineHeight: 42 },
+  title: { fontFamily: face("Literata_500Medium", SANS_TC), fontSize: 28, lineHeight: 36 },
+  voice: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 27, lineHeight: 40 },
+  story: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 20, lineHeight: 34 },
+  preview: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 20, lineHeight: 30 },
   heading: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 17, lineHeight: 24 },
   body: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 17, lineHeight: 24 },
   bodyMedium: { fontFamily: face("Inter_500Medium", SANS_TC), fontSize: 17, lineHeight: 24 },

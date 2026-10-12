@@ -49,7 +49,7 @@ export function stateText(light: MemberLight): string {
     case "none":
       return t`waiting for her yes`;
     default:
-      return t`resting`;
+      return t`No word yet today`;
   }
 }
 
@@ -63,6 +63,9 @@ export function toTodayLight(light: MemberLight): TodayLight {
     ...(light.local_date === undefined ? {} : { localDate: light.local_date }),
     state: invited ? "resting" : (light.state as LightState),
     stateText: stateText(light),
+    ...(light.answered_at !== null && light.state !== "lit"
+      ? { answerReceived: true as const }
+      : {}),
     ...(invited ? { invited: true } : {}),
     ...(light.quiet_event_id === null ? {} : { quietEventId: light.quiet_event_id }),
     ...(light.away_id == null ? {} : { awayId: light.away_id }),

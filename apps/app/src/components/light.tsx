@@ -1,75 +1,21 @@
-import { useEffect, useRef } from "react";
-import { Animated, type StyleProp, View, type ViewStyle } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
-import { useReducedMotion } from "../accessibility/use-reduced-motion.ts";
+import { type StyleProp, View, type ViewStyle } from "react-native";
+import Svg, { Path, Rect } from "react-native-svg";
 import { usePalette } from "../theme/theme.tsx";
-import { motion } from "../theme/tokens.ts";
 
-/** The five states a kept light can be in (design system, The light). */
 export type LightState = "lit" | "resting" | "quiet" | "away" | "paused";
-
 interface LightProps {
   state: LightState;
-  /** 28, 40 or 120 pt tall in the system; the row uses 40. */
   height?: number;
   style?: StyleProp<ViewStyle>;
 }
 
-const WINDOW_WIDTH = 100;
-const WINDOW_HEIGHT = 132;
-const FRAME = 16;
-const TOP_RADIUS = 34;
-const BOTTOM_RADIUS = 14;
-
-function windowPath(): string {
-  const half = FRAME / 2;
-  const left = half;
-  const right = WINDOW_WIDTH - half;
-  const top = half;
-  const bottom = WINDOW_HEIGHT - half;
-  return [
-    `M ${left} ${top + TOP_RADIUS}`,
-    `A ${TOP_RADIUS} ${TOP_RADIUS} 0 0 1 ${left + TOP_RADIUS} ${top}`,
-    `L ${right - TOP_RADIUS} ${top}`,
-    `A ${TOP_RADIUS} ${TOP_RADIUS} 0 0 1 ${right} ${top + TOP_RADIUS}`,
-    `L ${right} ${bottom - BOTTOM_RADIUS}`,
-    `A ${BOTTOM_RADIUS} ${BOTTOM_RADIUS} 0 0 1 ${right - BOTTOM_RADIUS} ${bottom}`,
-    `L ${left + BOTTOM_RADIUS} ${bottom}`,
-    `A ${BOTTOM_RADIUS} ${BOTTOM_RADIUS} 0 0 1 ${left} ${bottom - BOTTOM_RADIUS}`,
-    "Z",
-  ].join(" ");
-}
-
-/**
- * A soft-arch window with a light inside. It blooms once when it lights and never pulses; with
- * Reduce Motion on it simply appears.
+/** Original Kept Light window: amber only for an answer; all other states are unlit.
+ * The enclosing name and factual state label provide its accessible meaning.
  */
-export function Light({ state, height = 40, style }: LightProps) {
-  const palette = usePalette();
-  const reduceMotion = useReducedMotion();
-  const bloom = useRef(new Animated.Value(state === "lit" ? 0 : 1)).current;
-  const width = (height * WINDOW_WIDTH) / WINDOW_HEIGHT;
-
-  useEffect(() => {
-    bloom.stopAnimation();
-    if (state !== "lit") {
-      bloom.setValue(1);
-      return;
-    }
-    if (reduceMotion) {
-      bloom.setValue(1);
-      return;
-    }
-    Animated.timing(bloom, {
-      toValue: 1,
-      duration: motion.lightBloom,
-      useNativeDriver: true,
-    }).start();
-    return () => bloom.stopAnimation();
-  }, [bloom, reduceMotion, state]);
-
-  const outline = state === "lit" ? palette.ink : state === "paused" ? palette.rule : palette.ink3;
-
+export function Light({ state, height = 44, style }: LightProps) {
+  const p = usePalette();
+  const width = (height * 100) / 132;
+  const lit = state === "lit";
   return (
     <View
       style={style}
@@ -77,32 +23,20 @@ export function Light({ state, height = 40, style }: LightProps) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      {state === "lit" ? (
-        <Svg
-          width={width}
-          height={height}
-          viewBox={`0 0 ${WINDOW_WIDTH} ${WINDOW_HEIGHT}`}
-          style={{ position: "absolute", top: 0, left: 0 }}
-        >
-          <Path d={windowPath()} stroke={outline} strokeWidth={FRAME} fill={palette.lightSoft} />
-          {width >= 32 ? <Path d="M50 10v112M10 58h80" stroke={outline} strokeWidth={8} /> : null}
-        </Svg>
-      ) : null}
-      <Animated.View style={{ opacity: state === "lit" ? bloom : 1 }}>
-        <Svg width={width} height={height} viewBox={`0 0 ${WINDOW_WIDTH} ${WINDOW_HEIGHT}`}>
-          <Path
-            d={windowPath()}
-            stroke={outline}
-            strokeWidth={FRAME}
-            fill={state === "lit" ? palette.light : palette.surface2}
-            strokeDasharray={state === "away" ? "18 14" : undefined}
-          />
-          {width >= 32 ? <Path d="M50 10v112M10 58h80" stroke={outline} strokeWidth={8} /> : null}
-          {state === "quiet" ? (
-            <Circle cx={WINDOW_WIDTH - 12} cy={12} r={11} fill={palette.lightDeep} />
-          ) : null}
-        </Svg>
-      </Animated.View>
+      <Svg width={width} height={height} viewBox="-5.5 -5.5 111 143">
+        <Path
+          d="M34 0h32a34 34 0 0 1 34 34v84a14 14 0 0 1-14 14H14A14 14 0 0 1 0 118V34A34 34 0 0 1 34 0Z"
+          fill={lit ? p.light : p.surface2}
+          stroke={p.ink}
+          strokeWidth={11}
+        />
+        {width >= 32 ? (
+          <>
+            <Rect x={47} y={5.5} width={6} height={121} fill={p.ink} />
+            <Rect x={5.5} y={49.8} width={89} height={6} fill={p.ink} />
+          </>
+        ) : null}
+      </Svg>
     </View>
   );
 }

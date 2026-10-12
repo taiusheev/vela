@@ -9,6 +9,7 @@ import type { QuietNotice } from "../data/quiet.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, sheetShadow, space } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
+import { Light } from "./light.tsx";
 import { Eyebrow, Hairline, PrimaryButton, SecondaryButton, Words } from "./ui.tsx";
 
 interface QuietNoticeSheetProps {
@@ -88,7 +89,7 @@ export function QuietNoticeSheet({
           accessibilityViewIsModal
           style={[
             {
-              backgroundColor: palette.surface,
+              backgroundColor: palette.bg,
               borderTopLeftRadius: radius.sheet,
               borderTopRightRadius: radius.sheet,
               paddingTop: space.xl,
@@ -129,6 +130,7 @@ export function QuietNoticeSheet({
                 <BrandIcon name="close" color={palette.ink2} />
               </Pressable>
             </View>
+            {notice.resolution === undefined ? <Light state="quiet" height={44} /> : null}
             <Words
               variant="title"
               accessibilityRole="header"

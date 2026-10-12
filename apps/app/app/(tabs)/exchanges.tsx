@@ -5,7 +5,6 @@ import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
-import { FamilyScene } from "../../src/components/brand/scene.tsx";
 import { ExchangePhotos } from "../../src/components/family-photo.tsx";
 import { Card, ReceiptChip, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import type { Exchange } from "../../src/data/exchanges.ts";
@@ -50,7 +49,7 @@ function ExchangeRow({ exchange, originals }: { exchange: Exchange; originals: b
             ) : null
           ) : (
             <View style={{ gap: space.s }}>
-              <Words variant="bodyMedium" numberOfLines={3}>
+              <Words variant="preview" numberOfLines={2}>
                 {shown}
               </Words>
               <Words variant="caption" tone="ink3">
@@ -125,7 +124,6 @@ export default function ExchangesScreen() {
         </Words>
       ) : live && exchanges.length === 0 ? (
         <View style={{ gap: space.xl, paddingVertical: space.xl }}>
-          <FamilyScene kind="letter" width={184} />
           <Words variant="body" tone="ink2">
             <Trans>Nothing has happened yet. Her first morning will be here.</Trans>
           </Words>

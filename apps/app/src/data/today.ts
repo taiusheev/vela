@@ -17,6 +17,8 @@ export interface TodayLight {
   timeZone?: string;
   localDate?: string;
   state: LightState;
+  /** An answer arrived on this local day even when away/paused is the primary label. */
+  answerReceived?: true;
   /** The state line under the name: "answered 8:12", "quiet", "away · Sunday", "resting". */
   stateText: string;
   /** Invited and not yet answered: shown, but nobody may ask her anything until she says yes. */
@@ -141,7 +143,7 @@ export function todayFixture(): Today {
   return {
     lights: [
       { memberId: "m1", displayName: recipient, state: "lit", stateText: t`answered ${time}` },
-      { memberId: "m2", displayName: t`Dad`, state: "resting", stateText: t`resting` },
+      { memberId: "m2", displayName: t`Dad`, state: "resting", stateText: t`No word yet today` },
     ],
     exchanges: [
       {

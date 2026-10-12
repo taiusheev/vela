@@ -3,8 +3,9 @@ import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../../theme/tokens.ts";
 import { Words } from "../ui.tsx";
+import { BrandHeader } from "./header.tsx";
 import { BrandIcon, type BrandIconName } from "./icon.tsx";
-import { FamilyScene, type SceneKind } from "./scene.tsx";
+import type { SceneKind } from "./scene.tsx";
 
 export function ChoiceTile({
   label,
@@ -36,10 +37,9 @@ export function ChoiceTile({
         padding: space.s,
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: radius.button,
-        borderWidth: 1,
-        borderColor: selected ? p.action : p.control,
-        backgroundColor: selected ? p.actionSoft : p.surface,
+        borderBottomWidth: selected ? 2 : 1,
+        borderColor: selected ? p.action : p.rule,
+        backgroundColor: "transparent",
         opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
       })}
     >
@@ -54,15 +54,14 @@ export function ChoiceTile({
 export function ScreenHeading({
   title,
   subtitle,
-  illustration,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   illustration?: ReactNode;
 }) {
-  const { fontScale } = useWindowDimensions();
   return (
     <View style={{ gap: space.s }}>
+      <BrandHeader />
       <View
         style={{
           flexDirection: "row",
@@ -76,7 +75,6 @@ export function ScreenHeading({
             {title}
           </Words>
         </View>
-        {fontScale > 1.3 ? null : illustration}
       </View>
       {subtitle === undefined ? null : (
         <Words variant="body" tone="ink2">
@@ -88,14 +86,10 @@ export function ScreenHeading({
 }
 
 export function AnswerPanel({ children }: { children: ReactNode }) {
-  const p = usePalette();
   return (
     <View
       style={{
-        borderTopWidth: 1,
-        borderTopColor: p.rule,
-        paddingTop: space.l,
-        paddingVertical: space.s,
+        paddingVertical: space.m,
         gap: space.m,
       }}
     >
@@ -141,7 +135,7 @@ export function FamilyAction({
           width: 44,
           height: 44,
           borderRadius: radius.button,
-          backgroundColor: p.actionSoft,
+          backgroundColor: "transparent",
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -170,7 +164,6 @@ export function FamilyAction({
 export function EmptyMoment({
   title,
   detail,
-  kind = "window",
   children,
 }: {
   title: ReactNode;
@@ -180,7 +173,6 @@ export function EmptyMoment({
 }) {
   return (
     <View style={{ alignItems: "center", gap: space.xl, paddingVertical: space.xxl }}>
-      <FamilyScene kind={kind} width={184} />
       <View style={{ alignSelf: "stretch", gap: space.m }}>
         <Words variant="title" accessibilityRole="header">
           {title}

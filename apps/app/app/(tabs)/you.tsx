@@ -183,10 +183,10 @@ function FamilyYou({ day }: { day: TodayView }) {
           style={{
             width: 52,
             height: 52,
-            borderRadius: 16,
+            borderRadius: 26,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: palette.actionSoft,
+            backgroundColor: palette.surface2,
           }}
         >
           <BrandIcon name="you" size={26} color={palette.action} />

@@ -17,7 +17,6 @@ import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
-import { FamilyScene } from "../../src/components/brand/scene.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
@@ -62,7 +61,6 @@ function LightsRow({
   /** A quiet light opens its notice again, once the sheet that opened by itself was closed. */
   onQuiet: (light: TodayLight) => void;
 }) {
-  const palette = usePalette();
   const { fontScale } = useWindowDimensions();
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.m }}>
@@ -78,12 +76,10 @@ function LightsRow({
             flexDirection: "row",
             alignItems: "center",
             gap: space.m,
-            backgroundColor: palette.surface2,
-            padding: space.l,
-            borderRadius: 16,
+            paddingVertical: space.s,
           }}
         >
-          <Light state={light.state} height={36} />
+          <Light state={light.answerReceived === true ? "lit" : light.state} height={44} />
           <View style={{ flex: 1, gap: space.xs }}>
             <Words variant="heading">{light.displayName}</Words>
             <Words variant="caption" tone="ink2">
@@ -103,6 +99,7 @@ function LightsRow({
 }
 
 function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
+  const { fontScale } = useWindowDimensions();
   const { t } = useLingui();
   const palette = usePalette();
   const { familyId } = useToday();
@@ -110,7 +107,7 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
   const recipient = exchange.recipient;
   const time = exchange.answer?.at;
   return (
-    <Card>
+    <View style={{ gap: space.m, paddingBottom: space.xl }}>
       <Eyebrow>
         {asker === undefined ? t`A hello for ${recipient}` : t`${asker} asked ${recipient}`}
       </Eyebrow>
@@ -165,48 +162,58 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
         </AnswerPanel>
       )}
       {exchange.deliveryPending === true ? null : (
-        <Pressable
-          accessibilityRole="button"
-          hitSlop={hitSlop}
-          onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
+        <View
           style={{
-            minHeight: 52,
-            flexDirection: "row",
-            alignItems: "center",
+            flexDirection: fontScale > 1.3 ? "column" : "row",
+            alignItems: "flex-start",
             gap: space.m,
-            backgroundColor: exchange.answer === undefined ? palette.actionSoft : palette.action,
-            borderRadius: 12,
-            paddingHorizontal: space.l,
           }}
         >
-          <BrandIcon
-            name="reply"
-            color={exchange.answer === undefined ? palette.action : palette.onAction}
-            size={20}
-          />
-          <View style={{ flex: 1 }}>
-            <Text
-              style={[
-                type.button,
-                { color: exchange.answer === undefined ? palette.action : palette.onAction },
-              ]}
-            >
-              {exchange.answer === undefined ? (
-                <Trans>Open this exchange</Trans>
-              ) : (
-                <Trans>Reply to {recipient}</Trans>
-              )}
-            </Text>
-          </View>
-          <BrandIcon
-            name="arrow"
-            color={exchange.answer === undefined ? palette.action : palette.onAction}
-            size={20}
-          />
-        </Pressable>
-      )}
-      {exchange.answer === undefined || exchange.deliveryPending === true ? null : (
-        <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} />
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={hitSlop}
+            onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
+            style={{
+              flex: fontScale > 1.3 ? undefined : 1,
+              alignSelf: "stretch",
+              minHeight: 54,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.m,
+              backgroundColor: exchange.answer === undefined ? palette.actionSoft : palette.action,
+              borderRadius: 12,
+              paddingHorizontal: space.l,
+            }}
+          >
+            <BrandIcon
+              name="reply"
+              color={exchange.answer === undefined ? palette.action : palette.onAction}
+              size={20}
+            />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  type.button,
+                  { color: exchange.answer === undefined ? palette.action : palette.onAction },
+                ]}
+              >
+                {exchange.answer === undefined ? (
+                  <Trans>Open this exchange</Trans>
+                ) : (
+                  <Trans>Reply to {recipient}</Trans>
+                )}
+              </Text>
+            </View>
+            <BrandIcon
+              name="arrow"
+              color={exchange.answer === undefined ? palette.action : palette.onAction}
+              size={20}
+            />
+          </Pressable>
+          {exchange.answer === undefined ? null : (
+            <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} compact />
+          )}
+        </View>
       )}
       {exchange.replies.length > 0 ? (
         <>
@@ -240,12 +247,11 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
         </>
       ) : null}
       {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
-    </Card>
+    </View>
   );
 }
 
 function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
-  const palette = usePalette();
   const { t } = useLingui();
   const by = tomorrow.asked?.by;
   const name = tomorrow.name;
@@ -254,7 +260,7 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
   // A claimed morning shows the ask that claimed it; only a free one offers a suggestion.
   const suggestion = tomorrow.asked === undefined ? tomorrow.suggestion : undefined;
   const card = (
-    <Card style={{ backgroundColor: palette.surface2, borderColor: palette.rule }}>
+    <Card>
       <Eyebrow>
         {tomorrow.asked !== undefined
           ? t`Tomorrow · ${by} asked ${recipient}`
@@ -284,7 +290,9 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
               <Trans>Vela suggests</Trans>
             )}
           </Words>
-          <Words variant="voice">{suggestion.text}</Words>
+          <Words variant="body" tone="ink2">
+            {suggestion.text}
+          </Words>
           <Words variant="button" tone="action">
             <Trans>Use this</Trans>
           </Words>
@@ -495,7 +503,6 @@ function FamilyToday({ day }: { day: TodayView }) {
       )}
       {!day.loading && !trouble && !noAccount && !noFamily && today.exchanges.length === 0 ? (
         <Card>
-          <FamilyScene kind="table" width={152} />
           {target?.invited === true ? (
             <Words variant="body">
               <Trans>

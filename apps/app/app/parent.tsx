@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BrandHeader } from "../src/components/brand/header.tsx";
 import { BrandIcon } from "../src/components/brand/icon.tsx";
 import { KitchenTable } from "../src/device/KitchenTable.tsx";
 import { IDLE_MS, isKitchenTable } from "../src/device/kitchen.ts";
@@ -81,6 +82,7 @@ export default function ParentScreen() {
         keyboardShouldPersistTaps="handled"
         onTouchStart={touched}
       >
+        <BrandHeader forceLight />
         {view.loading ? (
           <Text style={styles.body}>
             <Trans>One moment…</Trans>
@@ -110,9 +112,6 @@ export default function ParentScreen() {
           <>
             {view.name.length > 0 ? (
               <View style={styles.identity}>
-                <View style={styles.mark}>
-                  <BrandIcon name="mail" color={light.action} size={26} />
-                </View>
                 <Text style={styles.greeting}>{view.name}</Text>
               </View>
             ) : null}
@@ -323,7 +322,7 @@ const styles = StyleSheet.create({
   mark: {
     width: 48,
     height: 48,
-    borderRadius: 16,
+    borderRadius: 10,
     backgroundColor: light.actionSoft,
     alignItems: "center",
     justifyContent: "center",
@@ -336,7 +335,7 @@ const styles = StyleSheet.create({
     minHeight: 72,
     flexDirection: "row",
     gap: 12,
-    borderRadius: 18,
+    borderRadius: 10,
     backgroundColor: light.surface,
     borderWidth: 2,
     borderColor: light.control,
@@ -350,7 +349,7 @@ const styles = StyleSheet.create({
     minHeight: 64,
     flexDirection: "row",
     gap: 12,
-    borderRadius: 18,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: light.action,
     backgroundColor: light.surface,
@@ -361,7 +360,7 @@ const styles = StyleSheet.create({
   secondaryLabel: { fontFamily: "Inter_600SemiBold", fontSize: 22, color: light.action },
   send: {
     minHeight: 72,
-    borderRadius: 18,
+    borderRadius: 10,
     backgroundColor: light.action,
     alignItems: "center",
     justifyContent: "center",
@@ -370,7 +369,7 @@ const styles = StyleSheet.create({
   sendLabel: { fontFamily: "Inter_600SemiBold", fontSize: 22, color: light.surface },
   input: {
     minHeight: 112,
-    borderRadius: 18,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: light.control,
     backgroundColor: light.surface,
@@ -384,7 +383,7 @@ const styles = StyleSheet.create({
   photo: {
     width: "100%",
     aspectRatio: 1,
-    borderRadius: 18,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: light.rule,
     backgroundColor: light.surface2,
