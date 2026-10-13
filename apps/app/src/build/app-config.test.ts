@@ -95,4 +95,17 @@ describe("audit simulator isolation", () => {
       expect(() => configureApp(context)).toThrow("audit simulator requires demo mode");
     }
   });
+  it("disables downloaded updates so the audit always uses its bundled synthetic fixtures", () => {
+    audit();
+    const withUpdates = {
+      ...context,
+      config: {
+        ...context.config,
+        updates: { enabled: true, url: "https://u.expo.dev/synthetic-project" },
+      },
+    };
+    expect(configureApp(withUpdates).updates?.enabled).toBe(false);
+    vi.stubEnv("EAS_BUILD_PROFILE", "staging");
+    expect(configureApp(withUpdates).updates?.enabled).toBe(true);
+  });
 });
