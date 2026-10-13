@@ -378,19 +378,22 @@ async function postAnswer(deps: Deps, post: AnswerPost): Promise<EnqueueResult |
   const lang = family.language;
   const name = member.displayName;
   const time = formatTime(answer.receivedAt, member.tz);
-  // Vela's question on a morning nobody asked: the family sees what she was asked, unless she only
-  // said she is fine.
-  const velaQuestion =
-    exchange.type === "hello" && answer.kind !== "fine" && answer.kind !== "heart"
-      ? (exchange.text?.trim() ?? "")
-      : "";
+  // Vela's question on a morning nobody asked: the family sees what she was asked. When she only
+  // tapped a heart or "I'm fine", the question comes after the light with an invitation to ask it in
+  // their own words, since a reply opens her next morning and a person's question is the one she
+  // answers (plan/why-vela.md §2).
+  const velaQuestion = exchange.type === "hello" ? (exchange.text?.trim() ?? "") : "";
+  const tapOnly = answer.kind === "fine" || answer.kind === "heart";
   const light =
-    velaQuestion !== ""
+    velaQuestion !== "" && !tapOnly
       ? t(lang, "group.answer_question", { name, time, question: velaQuestion })
       : exchange.type === "hello" || answer.kind === "fine" || asker === null
         ? t(lang, "group.answer_hello", { name, time })
         : t(lang, "group.answer_light", { name, asker: asker.displayName, time });
-  const line = contentLine(lang, name, answer);
+  const line =
+    velaQuestion !== "" && tapOnly
+      ? t(lang, "group.answer_question_tap", { name, question: velaQuestion })
+      : contentLine(lang, name, answer);
   const file = await fileForGroup(deps, family.id, answer.channel, post.media);
   return enqueueOutbound(deps, deps.db, {
     kind: "answer_post",

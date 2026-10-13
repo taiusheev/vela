@@ -278,6 +278,35 @@ describe("renderArrival on a morning nobody asked, with Vela's question", () => 
       "Nothing new from the family today. How are you this morning?\nVela, from your family",
     );
   });
+
+  it("puts the bank question's chips above the heart and I'm fine, as a family question's", () => {
+    const arrival = render({
+      ask: {
+        type: "hello",
+        question: "Which season do you like best, and why?",
+        chips: ["Spring", "Autumn", "Tell you later"],
+      },
+      readBack: [],
+    });
+    expect(labels(arrival)).toEqual([
+      ["Spring"],
+      ["Autumn"],
+      ["Tell you later"],
+      ["❤️", "I'm fine"],
+    ]);
+    expect(actions(arrival).slice(0, 3)).toEqual(
+      [0, 1, 2].map((index) => [{ type: "chip", exchangeId: EXCHANGE, index }]),
+    );
+    expectSendable(arrival, "en");
+  });
+
+  it("shows no chips on the plain hello, which asks nothing to choose from", () => {
+    const arrival = render({
+      ask: { type: "hello", question: null, chips: ["Spring"] },
+      readBack: [],
+    });
+    expect(actions(arrival)).toEqual([FINAL_ACTIONS]);
+  });
 });
 
 describe("renderArrival with more words than one message holds", () => {

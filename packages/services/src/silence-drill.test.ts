@@ -47,6 +47,8 @@ import {
 } from "./testing/seed.ts";
 import { reconcile, tickMember } from "./tick.ts";
 
+/** Her quiet notice in the learning period, to an organiser with no nearby contacts listed. */
+const NOTICE_NO_NEARBY = `${t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })}\n\n${t("en", "quiet.next_step", { name: "Mom" })}`;
 let h: Harness;
 
 beforeAll(async () => {
@@ -238,7 +240,7 @@ describe("silence", () => {
           "en",
           "quiet.nearby",
           { contacts: "Anna +886912000001" },
-        )}`,
+        )}\n\n${t("en", "quiet.next_step_nearby", { name: "Mom" })}`,
       ],
     ]);
 
@@ -412,9 +414,7 @@ describe("the silence drill", () => {
     ]);
 
     await runSchedulerUntil(seed.member.id, at("2026-09-14", "16:00"));
-    expect(newMessages()).toEqual([
-      [ORGANISER, t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })],
-    ]);
+    expect(newMessages()).toEqual([[ORGANISER, NOTICE_NO_NEARBY]]);
   });
 
   it("brings the notice back when the wait the organiser asked for runs out, although she blocked the bot since", async () => {
@@ -423,7 +423,7 @@ describe("the silence drill", () => {
     expect(newMessages()).toEqual([
       [HER, HELLO_ARRIVAL],
       [HER, HELLO_REPEAT],
-      [ORGANISER, t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })],
+      [ORGANISER, NOTICE_NO_NEARBY],
     ]);
     h.clock.set(at("2026-09-14", "16:05"));
     await inbound(
@@ -445,9 +445,7 @@ describe("the silence drill", () => {
 
     // Vela said it would look again at 18:05, and she is still quiet.
     await runSchedulerUntil(seed.member.id, at("2026-09-14", "18:05"));
-    expect(newMessages()).toEqual([
-      [ORGANISER, t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })],
-    ]);
+    expect(newMessages()).toEqual([[ORGANISER, NOTICE_NO_NEARBY]]);
     expect(await h.db.select().from(quietEvents)).toMatchObject([
       { notifyCount: 2, resolvedAt: null },
     ]);
@@ -466,7 +464,7 @@ describe("the silence drill", () => {
     expect(newMessages()).toEqual([
       [HER, HELLO_ARRIVAL],
       [HER, HELLO_REPEAT],
-      [ORGANISER, t("en", "quiet.notice_no_usual", { name: "Mom", sent: "08:00" })],
+      [ORGANISER, NOTICE_NO_NEARBY],
     ]);
   });
 

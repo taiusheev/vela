@@ -747,3 +747,6 @@ Shall we keep it in the family book?","{address}，這是您說的{title}做法�
 "736","Organiser app","","Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat.","試辦免費。安靜通知和重要訊息會送到發起人的 Telegram 私人聊天室。","",""
 "737","Organiser app","","Your question for {name}","想問{name}的問題","",""
 "738","Organiser app","","Your voice reply, {time} long.","您的語音回覆，共 {time}。","",""
+"739","Telegram/LINE bot message","group.answer_question_tap","Vela asked: “{question}” Reply here to ask it yourself: a reply is the first thing {name} gets tomorrow morning.","Vela 問了：「{question}」直接回覆這則訊息，親自問問看：回覆會是{name}明天早上第一個收到的。","",""
+"740","Telegram/LINE bot message","quiet.next_step","If you can, give {name} a call.","方便的話，打個電話給{name}。","",""
+"741","Telegram/LINE bot message","quiet.next_step_nearby","If you can, give {name} a call. If {name} doesn't pick up, someone nearby could look in.","方便的話，打個電話給{name}。如果{name}沒有接，可以請附近的人去看看。","",""

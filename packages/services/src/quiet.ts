@@ -218,6 +218,10 @@ async function sendQuietNotices(
     if (contacts.length > 0) {
       paragraphs.push(t(lang, "quiet.nearby", { contacts: formatNearbyContacts(lang, contacts) }));
     }
+    // Spec §20: every notice ends with the one thing the reader can do.
+    paragraphs.push(
+      t(lang, contacts.length > 0 ? "quiet.next_step_nearby" : "quiet.next_step", { name }),
+    );
     const buttons: Button[][] = [
       [
         {

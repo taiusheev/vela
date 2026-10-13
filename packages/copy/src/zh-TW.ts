@@ -123,6 +123,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "group.answer_light": "☀️ {name}回覆了{asker} · {time}",
   "group.answer_hello": "☀️ {name}一切都好 · {time}",
   "group.answer_question": "☀️ {name}回答了 Vela 今天的問題 · {time}\n「{question}」",
+  "group.answer_question_tap":
+    "Vela 問了：「{question}」直接回覆這則訊息，親自問問看：回覆會是{name}明天早上第一個收到的。",
   "group.answer_chip": "{name}選了：{choice}",
   "group.answer_pick": "{name}選了第 {n} 張照片。",
   "group.answer_vote": "{name}投票：{choice}",
@@ -133,6 +135,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "quiet.notice_no_usual":
     "{name}那邊今天比較安靜。早安訊息在 {sent} 送出。目前沒有任何令人擔心的消息。",
   "quiet.nearby": "附近的聯絡人：{contacts}",
+  "quiet.next_step": "方便的話，打個電話給{name}。",
+  "quiet.next_step_nearby": "方便的話，打個電話給{name}。如果{name}沒有接，可以請附近的人去看看。",
   "quiet.fine_button": "{name}沒事，我知道原因",
   "quiet.wait_button": "再等 2 小時",
   "quiet.waiting": "我會在 {time} 再看看。",
