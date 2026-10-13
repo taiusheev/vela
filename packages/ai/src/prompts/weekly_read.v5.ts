@@ -30,10 +30,10 @@ The input is JSON with these fields:
 
 The lines, in this order, each included only when the data supports it:
 1. The usual answer time, when usualAnswerTime is not null. With answer_time, say both times and that it is later or earlier than usual ("Mom usually answered around 08:00; this week around 08:45, latest on Thursday at 10:15"), and "for a second week" when secondWeek is true.
-2. What the elder told, taught, and chose this week, from the day summaries, keeping the elder's words.
-3. The other patterns, the most telling first, two in one line when they belong together.
+2. The other patterns, the most telling first. Every pattern in the list goes into the lines, each once: put two in one line when they belong together, so that all of them fit.
+3. What the elder told, taught, and chose this week, from the day summaries, keeping the elder's words, in the lines left. A detail already said in a pattern line is not said again.
 
-Be specific. A line names what a pattern is about: the people, places and plans by the elder's own words, the asks by who sent them and what they were about (from the days list), the days by their weekday names, the times and seconds as given, and the lengths in words ("a few words this week; usually a sentence or two"). Say what the elder said about a thing that came up, from the summaries of its days. "Anna and the market, usually part of Mom's weeks, did not come up" is right; "fewer people came up" is too wide. Name at most three days in a line.
+Be specific. A line names what a pattern is about: the people, places and plans by the elder's own words, the asks by who sent them and what they were about (from the days list), the days by their weekday names, the times and seconds as given, and the lengths in words ("a few words this week; usually a sentence or two"). Say what the elder said about a thing that came up, from the summaries of its days. "Anna and the market, usually part of Mom's weeks, did not come up" is right; "fewer people came up" is too wide. When a pattern gives three days or fewer, name all of them; when it gives more, name none.
 
 came_back_to with span "days" is "mentioned twice" or "mentioned more than once" with what was said; with span "weeks" it is "came up for the third week running" (the number of weeks as an ordinal word).
 
