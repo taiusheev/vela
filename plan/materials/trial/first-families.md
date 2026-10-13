@@ -7,7 +7,7 @@
 - An adult child (the organiser) who already worries about a parent living alone and has an iPhone.
 - The parent uses Telegram on their own phone, reads English comfortably, and would tap a button or send a short message once a day.
 - At least one more relative who will take turns asking. A family with only one asker runs dry by week two.
-- Not this cohort: a parent who has not heard of Vela from their own child, anyone the pilot pack's "Who can join" excludes, or the founder's own parent.
+- Not this cohort: a parent who has not heard of Vela from their own child, anyone the pilot pack's "Who can join" excludes, or the founder's own parent, whose family has its own week first ([`vietnam-week.md`](vietnam-week.md)).
 
 Aim for 3–5 families. Book a 30-minute call with each organiser and a 15-minute call with each parent.
 
