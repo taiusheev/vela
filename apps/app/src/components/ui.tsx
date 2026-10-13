@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, type Ref, useState } from "react";
 import { Pressable, type StyleProp, Text, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
@@ -230,6 +230,8 @@ export function TextField({
   maxLength,
   disabled = false,
   onSubmit,
+  inputRef,
+  onContentSizeChange,
 }: {
   label?: string;
   value: string;
@@ -251,6 +253,8 @@ export function TextField({
   disabled?: boolean;
   /** Enter, or the keyboard's own go key, rather than reaching for the button. */
   onSubmit?: () => void;
+  inputRef?: Ref<TextInput>;
+  onContentSizeChange?: () => void;
 }) {
   const palette = usePalette();
   const [focused, setFocused] = useState(false);
@@ -258,11 +262,13 @@ export function TextField({
     <View style={{ gap: space.s }}>
       {label === undefined ? null : <Words variant="bodyMedium">{label}</Words>}
       <TextInput
+        ref={inputRef}
         editable={!disabled}
         accessibilityLabel={label ?? placeholder ?? helper}
         accessibilityHint={helper}
         value={value}
         onChangeText={onChangeText}
+        onContentSizeChange={onContentSizeChange}
         placeholder={placeholder}
         placeholderTextColor={palette.ink3}
         multiline={multiline}

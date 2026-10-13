@@ -4,10 +4,12 @@ import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  findNodeHandle,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  type TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -88,6 +90,19 @@ function AskComposer({
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
   const inlineSend = fontScale > 1.3;
+  const formRef = useRef<ScrollView>(null);
+  const questionRef = useRef<TextInput>(null);
+  const keepQuestionVisible = useCallback(() => {
+    if (!inlineSend || Platform.OS === "web") return;
+    // Placeholder wrapping and typing can resize a large editor. Measure after layout settles.
+    requestAnimationFrame(() => {
+      const input = questionRef.current;
+      const node = input === null ? null : findNodeHandle(input);
+      if (input?.isFocused() && node !== null) {
+        formRef.current?.scrollResponderScrollNativeHandleToKeyboard(node, space.l, true);
+      }
+    });
+  }, [inlineSend]);
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
@@ -340,6 +355,7 @@ function AskComposer({
         keyboardVerticalOffset={insets.top + 56}
       >
         <ScrollView
+          ref={formRef}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           style={{ flex: 1, backgroundColor: palette.bg }}
@@ -424,6 +440,8 @@ function AskComposer({
           <View style={{ gap: space.m }}>
             <TextField
               label={t`Your question`}
+              inputRef={questionRef}
+              onContentSizeChange={keepQuestionVisible}
               editorial
               value={text}
               onChangeText={setText}
