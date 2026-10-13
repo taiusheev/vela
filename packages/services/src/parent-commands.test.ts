@@ -28,7 +28,12 @@ import { deliverOutbound } from "./gateway.ts";
 import { handleParentCommand } from "./parent-commands.ts";
 import { understandAnswer } from "./pipeline.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedExchange, seedFamily } from "./testing/seed.ts";
+import {
+  type SeededFamily,
+  seedExchange,
+  seedFamily,
+  seedHealthWordsConsent,
+} from "./testing/seed.ts";
 import { tickMember } from "./tick.ts";
 
 let h: Harness;
@@ -137,7 +142,13 @@ async function answeredDay(
 
 async function sentWeeklyRead(
   seed: SeededFamily,
-  options: { lines: string[]; sentAt: Date | null; suggestion?: string; weekStart?: LocalDate },
+  options: {
+    lines: string[];
+    sentAt: Date | null;
+    suggestion?: string;
+    weekStart?: LocalDate;
+    healthSent?: boolean;
+  },
 ): Promise<string> {
   const [row] = await h.db
     .insert(weeklyReads)
@@ -147,7 +158,13 @@ async function sentWeeklyRead(
       weekStart: options.weekStart ?? "2026-09-07",
       lines: ["A draft line the founder rewrote"],
       suggestion: "A draft suggestion",
-      stats: { counted_days: 7, answered_days: 5, hello_mornings: 2, family_asks: 5 },
+      stats: {
+        counted_days: 7,
+        answered_days: 5,
+        hello_mornings: 2,
+        family_asks: 5,
+        ...(options.healthSent === undefined ? {} : { health_sent: options.healthSent }),
+      },
       promptVersion: "weekly_read.v4",
       createdAt: options.sentAt ?? h.clock.now(),
       sentLines: options.sentAt === null ? null : options.lines,
@@ -436,6 +453,59 @@ describe("start", () => {
 });
 
 describe("what the family sees", () => {
+  /** Her yes for the weekly read, and "knee hurts" on Tuesday 8 and Thursday 10 September. */
+  async function kneeOnTwoDays(seed: SeededFamily): Promise<void> {
+    await seedHealthWordsConsent(h.db, seed, {
+      at: new Date("2026-09-01T01:00:00Z"),
+      answer: "yes",
+      textVersion: "consent.health_words@2",
+    });
+    for (const date of ["2026-09-08", "2026-09-10"] as const) {
+      const id = await answeredDay(seed, date, "Mom watered the garden.");
+      await h.db
+        .update(answers)
+        .set({ mentions: { people: [], places: [], plans: [], health: ["knee hurts"], dates: [] } })
+        .where(eq(answers.id, id));
+    }
+  }
+
+  it("shows her the health line the family was sent, while her words are kept (ADR-47)", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await kneeOnTwoDays(seed);
+    await sentWeeklyRead(seed, {
+      lines: ["Mom watered the garden twice."],
+      sentAt: h.clock.now(),
+      healthSent: true,
+    });
+
+    await say(seed.member, "what does my family see");
+
+    const [message] = await herMessages();
+    expect(message).toContain(
+      [
+        t("en", "parent.family_sees_weekly_read"),
+        "Mom watered the garden twice.",
+        "Mom mentioned “knee hurts” on Tuesday and Thursday.",
+      ].join("\n"),
+    );
+  });
+
+  it("shows no health line from a read sent without one", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await kneeOnTwoDays(seed);
+    await sentWeeklyRead(seed, {
+      lines: ["Mom watered the garden twice."],
+      sentAt: h.clock.now(),
+      healthSent: false,
+    });
+
+    await say(seed.member, "what does my family see");
+
+    const [message] = await herMessages();
+    expect(message).toContain("Mom watered the garden twice.");
+    expect(message).not.toContain("knee");
+  });
+
   it("says there is nothing yet before any answer, and adds no weekly read heading", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
 

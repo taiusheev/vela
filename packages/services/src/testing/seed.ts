@@ -316,7 +316,7 @@ export async function seedNearbyContact(
 export async function seedHealthWordsConsent(
   db: VelaDatabase,
   seed: SeededFamily,
-  options: { at: Date; answer: "yes" | "no" },
+  options: { at: Date; answer: "yes" | "no"; textVersion?: string },
 ): Promise<Consent> {
   return only(
     await db
@@ -326,7 +326,7 @@ export async function seedHealthWordsConsent(
         subjectRef: `member:${seed.member.id}`,
         kind: "health_words",
         answer: options.answer,
-        textVersion: "consent.health_words@1",
+        textVersion: options.textVersion ?? "consent.health_words@1",
         lang: seed.member.language,
         channel: "telegram",
         givenAt: options.at,

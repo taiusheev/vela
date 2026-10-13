@@ -348,3 +348,53 @@ describe("renderWeeklyRead family patterns (ADR-46)", () => {
     expect(shown).toBe(LINES.join("\n"));
   });
 });
+
+describe("renderWeeklyRead health words (ADR-47)", () => {
+  const KNEE = { words: "knee hurts", dates: ["2026-10-12", "2026-10-15"] };
+  const HEALTH = [
+    KNEE,
+    { words: "slept badly", dates: ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-16"] },
+  ];
+
+  it("quotes her words after the lines, for organisers and for her alike", () => {
+    const healthLines = [
+      "Mom mentioned “knee hurts” on Monday and Thursday.",
+      "Mom mentioned “slept badly” more than once this week.",
+    ];
+    expect(text({ health: HEALTH })).toBe(
+      [
+        "Mom answered 6 of 7 days.",
+        "On 2 mornings nobody in the family asked, so Vela sent Mom a hello.",
+        "",
+        [...LINES, ...healthLines].join("\n"),
+        "",
+        `Something to ask next week: ${SUGGESTION}`,
+      ].join("\n"),
+    );
+    expect(text({ audience: "kept_light_member", health: HEALTH })).toBe(
+      [...LINES, ...healthLines].join("\n"),
+    );
+  });
+
+  it("gives her a read of her health line alone when the read has no other lines", () => {
+    expect(text({ audience: "kept_light_member", lines: [], health: [KNEE] })).toBe(
+      "Mom mentioned “knee hurts” on Monday and Thursday.",
+    );
+  });
+
+  it("reads in Traditional Chinese", () => {
+    expect(
+      text({
+        lang: "zh-TW",
+        name: "阿嬤",
+        audience: "kept_light_member",
+        lines: [],
+        health: HEALTH,
+      }),
+    ).toBe(
+      ["阿嬤在星期一和星期四提到「knee hurts」。", "阿嬤這週不只一次提到「slept badly」。"].join(
+        "\n",
+      ),
+    );
+  });
+});

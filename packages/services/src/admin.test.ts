@@ -55,6 +55,7 @@ import {
   seedExchange,
   seedFamily,
   seedGroupMember,
+  seedHealthWordsConsent,
   seedNearbyContact,
 } from "./testing/seed.ts";
 
@@ -1624,6 +1625,91 @@ describe("sendWeeklyRead", () => {
     suggestion: "Ask about the dumpling recipe.",
   };
 
+  /** Her yes for the weekly read, and "knee hurts" on Tuesday 8 and Thursday 10 September. */
+  async function kneeOnTwoDays(seed: SeededFamily): Promise<void> {
+    await seedHealthWordsConsent(h.db, seed, {
+      at: new Date("2026-09-01T01:00:00Z"),
+      answer: "yes",
+      textVersion: "consent.health_words@2",
+    });
+    for (const date of ["2026-09-08", "2026-09-10"] as const) {
+      const answeredAt = new Date(`${date}T01:00:00Z`);
+      const exchange = await seedExchange(h.db, seed, {
+        date,
+        state: "answered",
+        deliveredAt: new Date(`${date}T00:00:00Z`),
+        answeredAt,
+      });
+      await h.db.insert(answers).values({
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        kind: "text",
+        channel: "telegram",
+        externalId: `2001:${date}`,
+        payload: { text: "My knee hurts" },
+        mentions: { people: [], places: [], plans: [], health: ["knee hurts"], dates: [] },
+        receivedAt: answeredAt,
+      });
+    }
+  }
+
+  it("sends her health words after the lines when the founder leaves them in (ADR-47)", async () => {
+    const seed = await family();
+    await kneeOnTwoDays(seed);
+    const readId = await seedWeeklyRead(seed);
+
+    const page = await loadFamilyPage(h.deps, FOUNDER, seed.family.id);
+    expect(page?.weeklyReads.find((entry) => entry.read.id === readId)?.healthLines).toEqual([
+      "Mom mentioned “knee hurts” on Tuesday and Thursday.",
+    ]);
+    expect(
+      await sendWeeklyRead(h.deps, FOUNDER, {
+        weeklyReadId: readId,
+        ...EDITED,
+        includeHealth: true,
+      }),
+    ).toBe("sent");
+    await h.run(handlers());
+
+    expect(h.telegram.sentTo("1001")[0]?.message.text).toBe(
+      [
+        "Mom answered 5 of 7 days.",
+        "On 2 mornings nobody in the family asked, so Vela sent Mom a hello.",
+        "",
+        "She cooked dumplings on Tuesday.",
+        "Her sister visited on Friday.",
+        "Mom mentioned “knee hurts” on Tuesday and Thursday.",
+        "",
+        "Something to ask next week: Ask about the dumpling recipe.",
+      ].join("\n"),
+    );
+    const [read] = await h.db.select().from(weeklyReads).where(eq(weeklyReads.id, readId));
+    // Only that it went out with them; her words stay in her answers, for their 30 days.
+    expect(read?.stats).toMatchObject({ health_sent: true });
+    expect(JSON.stringify(read)).not.toContain("knee");
+    const page2 = await loadFamilyPage(h.deps, FOUNDER, seed.family.id);
+    expect(page2?.weeklyReads.find((entry) => entry.read.id === readId)?.healthSent).toBe(true);
+  });
+
+  it("leaves her health words out when the founder unticks them", async () => {
+    const seed = await family();
+    await kneeOnTwoDays(seed);
+    const readId = await seedWeeklyRead(seed);
+
+    expect(
+      await sendWeeklyRead(h.deps, FOUNDER, {
+        weeklyReadId: readId,
+        ...EDITED,
+        includeHealth: false,
+      }),
+    ).toBe("sent");
+    await h.run(handlers());
+
+    expect(h.telegram.sentTo("1001")[0]?.message.text).not.toContain("knee");
+    const [read] = await h.db.select().from(weeklyReads).where(eq(weeklyReads.id, readId));
+    expect(read?.stats).toMatchObject({ health_sent: false });
+  });
+
   it("gives organisers the family lines after the counts, and never her (ADR-46)", async () => {
     const seed = await family();
     const readId = await seedWeeklyRead(seed, {
@@ -1792,6 +1878,7 @@ describe("sendWeeklyRead", () => {
           organisers: 2,
           lines: 2,
           suggestion: true,
+          health_lines: 0,
         },
       },
     ]);

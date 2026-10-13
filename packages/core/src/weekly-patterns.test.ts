@@ -6,6 +6,7 @@ import {
   detectWeeklyPatterns,
   PATTERNS,
   type PatternDay,
+  recurringHealthWords,
   type WeeklyPatternInput,
 } from "./weekly-patterns.ts";
 
@@ -579,5 +580,36 @@ describe("detectWeeklyPatterns", () => {
     for (const date of datesIn(found.notes)) {
       expect(answeredDates.has(date), date).toBe(true);
     }
+  });
+});
+
+describe("recurringHealthWords (ADR-47)", () => {
+  it("names her health words said on two or more days, most days first, in her first spelling", () => {
+    expect(
+      recurringHealthWords([
+        { date: "2026-10-12", words: ["knee hurts", "tired"] },
+        { date: "2026-10-12", words: ["Knee hurts"] },
+        { date: "2026-10-14", words: ["slept badly"] },
+        { date: "2026-10-15", words: ["knee hurts ", "slept badly"] },
+        { date: "2026-10-17", words: ["Knee hurts", "dizzy"] },
+      ]),
+    ).toEqual([
+      { words: "knee hurts", dates: [D[0], D[3], D[5]] },
+      { words: "slept badly", dates: [D[2], D[3]] },
+    ]);
+  });
+
+  it("names nothing said on one day only, twice that day included", () => {
+    expect(recurringHealthWords([{ date: "2026-10-13", words: ["fell", "fell"] }])).toEqual([]);
+  });
+
+  it("keeps at most three", () => {
+    const words = ["a", "b", "c", "d"];
+    expect(
+      recurringHealthWords([
+        { date: "2026-10-12", words },
+        { date: "2026-10-13", words },
+      ]),
+    ).toHaveLength(PATTERNS.maxHealthWords);
   });
 });

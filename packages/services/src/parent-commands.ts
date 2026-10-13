@@ -39,6 +39,7 @@ import { pilotCanActivate } from "./pilot-admission.ts";
 import { summariesForHer } from "./pipeline.ts";
 import { activeOrganisersWithLinks, familyById, MESSENGER, markWakeDue } from "./repo.ts";
 import { type TickMember, tickMember } from "./tick.ts";
+import { weeklyHealthMentions } from "./weekly-health.ts";
 
 /** The pilot's organisers are reached on Telegram (flows §3.13). */
 /** Organisers are reached on their own messenger (05-line-flows §5.11). */
@@ -54,6 +55,7 @@ const Stats = z
     answered_days: z.number().int().optional(),
     hello_mornings: z.number().int().optional(),
     family_asks: z.number().int().optional(),
+    health_sent: z.boolean().optional(),
   })
   .loose();
 
@@ -279,6 +281,12 @@ async function latestWeeklyReadLines(deps: Deps, member: Member): Promise<string
   if (read === undefined || read.sentLines === null) {
     return null;
   }
+  const parsed = Stats.safeParse(read.stats);
+  // Her health words as the family got them, while her yes and the words themselves still stand.
+  const health =
+    parsed.success && parsed.data.health_sent === true
+      ? await weeklyHealthMentions(deps.db, member, read.weekStart, deps.clock.now())
+      : [];
   const [translation] = await deps.db
     .select({ text: translations.text })
     .from(translations)
@@ -291,7 +299,6 @@ async function latestWeeklyReadLines(deps: Deps, member: Member): Promise<string
     )
     .limit(1);
   const lines = translation === undefined ? read.sentLines : translation.text.split("\n");
-  const parsed = Stats.safeParse(read.stats);
   const stats: WeeklyReadStats = {
     countedDays: parsed.success ? (parsed.data.counted_days ?? 0) : 0,
     answeredDays: parsed.success ? (parsed.data.answered_days ?? 0) : 0,
@@ -304,6 +311,7 @@ async function latestWeeklyReadLines(deps: Deps, member: Member): Promise<string
     stats,
     lines,
     suggestion: read.sentSuggestion ?? "",
+    health,
     audience: "kept_light_member",
   });
 }

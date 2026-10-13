@@ -519,6 +519,8 @@ async function runAction(
         weeklyReadId: field(form, "weeklyReadId"),
         lines: lines(form, "lines"),
         suggestion: field(form, "suggestion"),
+        // Her health words go only when the founder saw them on the page and left them ticked.
+        includeHealth: form.get("includeHealth") === "on",
       });
     case "create_invite":
       // A new member, and a link that stops any earlier one working, so the word is typed out first.

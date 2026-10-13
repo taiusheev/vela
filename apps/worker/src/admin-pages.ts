@@ -687,6 +687,18 @@ function patternsFound(patterns: readonly WeeklyNotePattern[]): Html {
 <ul>${patterns.map((pattern) => html`<li>${describePattern(pattern)}</li>`)}</ul>`;
 }
 
+/**
+ * Her own health words that came up more than once (ADR-47), shown as they would go out, with a box
+ * to leave them out. Her words are not editable; nothing shows without her yes for the weekly read.
+ */
+function healthChoice(lines: readonly string[]): Html | null {
+  return lines.length === 0
+    ? null
+    : html`<p class="muted">Her own health words, with her yes for the weekly read. Not editable; they go after 30 days, and she sees them too:</p>
+<pre>${lines.join("\n")}</pre>
+<label><input type="checkbox" name="includeHealth" checked> Include these lines</label>`;
+}
+
 function weeklyReadsSection(data: FamilyPage): Html {
   const reads = data.weeklyReads.map((entry) => {
     const { read } = entry;
@@ -698,12 +710,13 @@ function weeklyReadsSection(data: FamilyPage): Html {
 ${sent ? null : patternsFound(entry.patterns)}
 ${
   sent
-    ? html`<p>Sent lines:</p><pre>${(read.sentLines ?? []).join("\n")}</pre><p>Sent suggestion: ${text(read.sentSuggestion)}</p>`
+    ? html`<p>Sent lines:</p><pre>${(read.sentLines ?? []).join("\n")}</pre><p>Sent suggestion: ${text(read.sentSuggestion)}</p>${entry.healthSent === true ? html`<p class="muted">Sent with her health words, which go after 30 days.</p>` : null}`
     : actionForm(
         data.family.id,
         "send_weekly_read",
         html`${hidden("weeklyReadId", read.id)}
 <label>Lines (one per line, at most four)<textarea name="lines">${read.lines.join("\n")}</textarea></label>
+${healthChoice(entry.healthLines)}
 <label>Suggestion (empty removes it)<input name="suggestion" value="${text(read.suggestion) === DASH ? "" : read.suggestion}"></label>`,
         "Send to organisers",
       )

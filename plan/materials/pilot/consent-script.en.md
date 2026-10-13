@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v2` · 5 October 2026 · goes with `privacy-notice.v3` · spoken meaning matches the `consent.request@2` and `consent.health_words@1` messages (architecture/03-code-design.md §4, spec §9)
+Version `consent-script.v3` · 13 October 2026 · goes with `privacy-notice.v4` · spoken meaning matches the `consent.request@2` and `consent.health_words@2` messages (architecture/03-code-design.md §4, spec §9)
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes, that's fine" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
@@ -51,7 +51,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 - "What you send goes to the family in the Vela group: [names of the people in the group]."
 - "[Organiser] gave me your name, your morning time and how to greet you. Tell me if anything is wrong."
-- "Right after you say yes, Vela asks you one more question, on its own, with its own buttons. It asks whether Vela may pass on your words about your health, for example a fall or pain, to [organiser], so they can call you. You can say yes or no, and Vela works the same either way. If you say yes, [organiser] sees your own words that same day. If you say no, Vela keeps no separate notes about your health and leaves your health out of the one-line summary. Your own messages still reach the family as you sent them, and their words are deleted after 30 days. When something you said may be worth a call, [organiser] gets a short note without your words. Tapping the button is your agreement in writing; if you'd rather answer on paper, tell me. Whatever you answer, Vela's notes never keep the name of an illness, a test result or a medicine."
+- "Right after you say yes, Vela asks you one more question, on its own, with its own buttons. It asks whether Vela may pass on your words about your health, for example a fall or pain, to [organiser], so they can call you, and say in the Sunday lines which of those words came up more than once. You can say yes or no, and Vela works the same either way. If you say yes, [organiser] sees your own words that same day, and on Sundays which of them you said on two or more days that week, such as 'knee hurts' on Monday and Thursday. You can see those Sunday lines too, and they go with your words after 30 days. If you say no, Vela keeps no separate notes about your health and leaves your health out of the one-line summary. Your own messages still reach the family as you sent them, and their words are deleted after 30 days. When something you said may be worth a call, [organiser] gets a short note without your words. Tapping the button is your agreement in writing; if you'd rather answer on paper, tell me. Whatever you answer, Vela's notes never keep the name of an illness, a test result or a medicine."
 - "Vela is not a doctor and never gives medical advice. If you need help quickly, call [local emergency number: 119 in Taiwan, 911 in the United States, 999 or 112 in the United Kingdom, 112 in the European Union] or [organiser] straight away. Don't wait for the morning message."
 - "If [organiser] can't reach you on a quiet day, they might ask [nearby contact's name] to come by. That is always [organiser]'s own decision. Vela never contacts anyone by itself."
 - "A computer program helps with the messages: it writes down voice messages as text, and suggests short answers you can tap."
@@ -59,7 +59,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 - "Your voice messages, photos and the words of your answers are deleted after 30 days. A one-line summary of each answer stays while the family uses Vela."
 - "While we test Vela over these first weeks, I read the messages too, only to make sure everything works."
 - "You can ask me at any time to see what Vela has about you, to get a copy, to correct it or to delete it."
-- "On Sundays [organiser] gets a few lines about your week. Whenever you like, write 'what does the family see', and you'll get what the family saw from your latest answers and the lines about your week."
+- "On Sundays [organiser] gets a few lines about your week: what you told the family, and what changed in how you answered, compared only with your own earlier weeks. It is never a score and never advice. Whenever you like, write 'what does the family see', and you'll get what the family saw from your latest answers and the lines about your week."
 
 ### 5. Questions
 

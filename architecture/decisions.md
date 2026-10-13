@@ -792,3 +792,17 @@ The model words patterns and decides none: it gets no numbers to restate, may no
 
 Consequences: a first week has no usual, so it gets only what she came back to, what drew her out and the family lines. Organiser lines join the counts as the one part of the read she never sees, as the counts already were (spec §8, §13). The app's weekly read (A9) shows the family lines only once its API carries them. Rejected: letting the model find patterns in raw days (it cannot be tested, and it invents); comparing with other families (no norm fits one person, and it reads as a score); hiding wellbeing patterns from her (breaks what the consent call promises about "what does the family see").
 
+## ADR-47 · The weekly read quotes her own health words that came up on two or more days, under a yes that named it
+
+13 October 2026. Accepted (founder: "yes, but make sure we are following the restrictions … as efficient as possible, with all legal concerns, as convenient as possible").
+
+Context: ADR-46 left health words out of the weekly read because `privacy-notice.v3` promised they are never copied into it, and because the health-words question (`consent.health_words@1`) asked only to pass her words on "so they can call you" the same day. Taiwan's PDPA Article 6(1)(6) needs written consent for medical information, specific to its use, and the notice promises health mentions are kept 30 days.
+
+Decision: when the read is shown, Vela quotes her own health words (`mentions.health`, body words only, never a diagnosis, test result or medicine name, L2) that she said on two or more days of the week, with the days, as a line from copy (`weekly_read.health_days`, `weekly_read.health_more`) after the other lines, for organisers and for her in "what does the family see". It never involves the model.
+
+- **Consent.** Only under a current yes to `consent.health_words@2`, whose text adds "and say in the Sunday read which of them came up more than once", and only from answers given after that yes. A yes to `@1` keeps its same-day meaning and never puts health words in a read; including that person means asking the `@2` question afresh, on a call or on paper. `privacy-notice.v4` and `consent-script.v3` say the same. No family had answered the question in production when this was decided, so nobody is asked again.
+- **No storage.** `weeklyHealthMentions` reads the words from her answers each time the read is shown (send, draft page, "what does the family see", the app), so they go when retention clears the answers' mentions at 30 days, and at once when she withdraws (stop withdraws the yes). `weekly_reads.stats.health_sent` records only whether the sent read quoted them. The sent message's payload is cleared 30 days after sending, as every delivery record's is.
+- **Founder control.** The draft page shows the lines, not editable, with a box that is ticked by default; they go out only if the founder saw them and left the box ticked.
+
+Consequences: a family whose parent said yes under `@1` sees no health words in the read until asked again. The health line can only quote, never interpret; same-day flags (purpose 4) are unchanged. Rejected: AI-worded health lines (a paraphrase can drift toward a diagnosis); storing the health lines with the read and adding a retention rule (more to delete, and a withdrawal would leave copies); treating `@1` as covering the read (it did not name it).
+

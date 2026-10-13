@@ -9,7 +9,7 @@
  * `consent.request`, `consent.yes`, and `consent.no` are what the founder reads aloud on the consent
  * call (plan/materials/pilot/consent-script.en.md, sections 2 and 6): change the script with them.
  * A tap records the text version of the message it answers (`consent.request@2`,
- * `consent.health_words@1`, in services' consent.ts) and a hash of the text as rendered, so a change
+ * `consent.health_words@2`, in services' consent.ts) and a hash of the text as rendered, so a change
  * of wording here is also a new text version there. `consent.request` names who runs Vela and links
  * the notice in her language, so the message she taps holds what she agrees to (ADR-28).
  * `consent.health_words` is its own message with its own buttons, labelled `consent.yes` and
@@ -129,7 +129,7 @@ export const en = {
   "consent.request":
     "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time. Vela is run by Timur Aiusheev. How your information is used: {notice}",
   "consent.health_words":
-    "One more question. If you mention your health, for example a fall or pain, may Vela pass your words on to {organiser} so they can call you? Vela works the same if you say no.",
+    "One more question. If you mention your health, for example a fall or pain, may Vela pass your words on to {organiser} so they can call you, and say in the Sunday read which of them came up more than once? Vela works the same if you say no.",
   "consent.yes": "Yes, that's fine",
   "consent.no": "No, thank you",
   "consent.accepted": "Thank you. Your first morning arrives tomorrow at {time}.",
@@ -208,6 +208,8 @@ export const en = {
     "{name}'s answers on {weekdays} got no reply or reaction from the family.",
   "weekly_read.asks_by_item": "{name} {asks}",
   "weekly_read.asks_none": "No ask from {names} this week.",
+  "weekly_read.health_days": "{name} mentioned “{words}” on {weekdays}.",
+  "weekly_read.health_more": "{name} mentioned “{words}” more than once this week.",
   "weekly_read.list_separator": ", ",
   "weekly_read.list_and": " and ",
   "weekly_read.after_second": "On {weekdays}, {name} answered only after the second message.",

@@ -88,7 +88,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "consent.request":
     "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。Vela 由 Timur Aiusheev 經營。您的資料會怎麼使用，請看： {notice}",
   "consent.health_words":
-    "還有一個問題。如果您提到身體狀況，例如跌倒或哪裡痛，Vela 可以把您說的話轉告{organiser}，讓{organiser}打電話給您嗎？就算您說不要，Vela 也會照常運作。",
+    "還有一個問題。如果您提到身體狀況，例如跌倒或哪裡痛，Vela 可以把您說的話轉告{organiser}，讓{organiser}打電話給您，並在週日的每週小記裡寫出這週不只一次提到的話嗎？就算您說不要，Vela 也會照常運作。",
   "consent.yes": "好，沒問題",
   "consent.no": "不用了，謝謝",
   "consent.accepted": "謝謝您。第一則早安訊息會在明天 {time} 送到。",
@@ -162,6 +162,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "weekly_read.no_reply_days": "{name}{weekdays}的回覆，沒有收到家人的回應或表情。",
   "weekly_read.asks_by_item": "{name} {asks} 次",
   "weekly_read.asks_none": "{names}這週沒有提問。",
+  "weekly_read.health_days": "{name}在{weekdays}提到「{words}」。",
+  "weekly_read.health_more": "{name}這週不只一次提到「{words}」。",
   "weekly_read.list_separator": "、",
   "weekly_read.list_and": "和",
   "weekly_read.after_second": "{weekdays}，{name}在第二次訊息之後才回覆。",

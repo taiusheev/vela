@@ -34,7 +34,9 @@ import {
   localDateOf,
   outboundKey,
   renderWeeklyRead,
+  type WeeklyHealthMention,
   type WeeklyReadStats,
+  weeklyHealthLines,
 } from "@vela/core";
 import {
   type AiCall,
@@ -104,6 +106,7 @@ import {
   memberById,
   type Queryable,
 } from "./repo.ts";
+import { weeklyHealthMentions } from "./weekly-health.ts";
 
 /** The pilot's organisers are reached on Telegram (flows §3.17). */
 /** Organisers are reached on their own messenger (05-line-flows §5.11). */
@@ -269,6 +272,11 @@ const SendWeeklyReadSchema = z.object({
     .max(4)
     .transform((lines) => lines.filter((line) => line.length > 0)),
   suggestion: z.string().trim().max(200),
+  /**
+   * Whether her own health words that came up more than once go in (ADR-47); on unless the founder
+   * leaves them out. Nothing goes in without her yes to the question that named the weekly read.
+   */
+  includeHealth: z.boolean().default(true),
 });
 export type SendWeeklyReadInput = z.input<typeof SendWeeklyReadSchema>;
 
@@ -300,6 +308,8 @@ const StoredWeeklyReadStats = z.object({
   family_asks: z.number().int().min(0),
   patterns: readablePatterns(WeeklyNotePattern),
   family_patterns: readablePatterns(FamilyPattern),
+  /** Whether the read went out with her health words (ADR-47); absent on reads before it. */
+  health_sent: z.boolean().optional().catch(undefined),
 });
 
 /** A form that does not parse is refused before anything is read; the cause never reaches a page. */
@@ -1189,6 +1199,7 @@ function organiserText(
   stats: WeeklyReadStats,
   lines: readonly string[],
   suggestion: string,
+  health: readonly WeeklyHealthMention[],
 ): string {
   const text = renderWeeklyRead({
     lang: family.language,
@@ -1196,6 +1207,7 @@ function organiserText(
     stats,
     lines,
     suggestion,
+    health,
     audience: "organiser",
   });
   if (text === null) {
@@ -1320,7 +1332,10 @@ export async function sendWeeklyRead(
       if (organisers.length === 0) {
         return "no_organiser";
       }
-      const text = organiserText(family, member, stats, input.lines, input.suggestion);
+      const health = input.includeHealth
+        ? await weeklyHealthMentions(tx, member, read.weekStart, at)
+        : [];
+      const text = organiserText(family, member, stats, input.lines, input.suggestion, health);
       const weekEnd = weekEndOf(read);
       let sentTo = 0;
       for (const organiser of organisers) {
@@ -1346,7 +1361,13 @@ export async function sendWeeklyRead(
       }
       await tx
         .update(weeklyReads)
-        .set({ sentLines: input.lines, sentSuggestion: input.suggestion, sentAt: at })
+        .set({
+          sentLines: input.lines,
+          sentSuggestion: input.suggestion,
+          sentAt: at,
+          // Her health words are never stored here: only that the read went out with them.
+          stats: { ...read.stats, health_sent: health.length > 0 },
+        })
         .where(eq(weeklyReads.id, read.id));
       await logChange(tx, admin, at, {
         action: "send_weekly_read",
@@ -1363,6 +1384,7 @@ export async function sendWeeklyRead(
             organisers: sentTo,
             lines: input.lines.length,
             suggestion: input.suggestion.length > 0,
+            health_lines: health.length,
           },
         },
       });
@@ -1671,6 +1693,13 @@ export interface FamilyPageWeeklyRead {
   countLines: string | null;
   /** What the week's patterns were (ADR-46), for the founder checking the draft lines that word them. */
   patterns: readonly WeeklyNotePattern[];
+  /**
+   * Her health-word lines as they would go out now (ADR-47), for a read not yet sent; empty when
+   * she has no yes that covers the weekly read or nothing came up twice.
+   */
+  healthLines: readonly string[];
+  /** For a sent read, whether it went out with her health words; null before ADR-47 or unsent. */
+  healthSent: boolean | null;
 }
 
 export interface FamilyPage {
@@ -1735,6 +1764,7 @@ function pageWeeklyRead(
   read: WeeklyRead,
   family: Family,
   member: Member | undefined,
+  health: readonly WeeklyHealthMention[],
 ): FamilyPageWeeklyRead {
   const stats = StoredWeeklyReadStats.safeParse(read.stats);
   const countLines =
@@ -1759,6 +1789,9 @@ function pageWeeklyRead(
     weekEnd: weekEndOf(read),
     countLines,
     patterns: stats.success ? (stats.data.patterns ?? []) : [],
+    healthLines:
+      member === undefined ? [] : weeklyHealthLines(family.language, member.displayName, health),
+    healthSent: read.sentAt === null || !stats.success ? null : (stats.data.health_sent ?? null),
   };
 }
 
@@ -1843,7 +1876,17 @@ export async function loadFamilyPage(
     answers: await familyAnswers(db, family.id, "all"),
     flagged: await familyAnswers(db, family.id, "flagged"),
     notUnderstood: await familyAnswers(db, family.id, "not_understood"),
-    weeklyReads: reads.map((read) => pageWeeklyRead(read, family, membersById.get(read.memberId))),
+    weeklyReads: await Promise.all(
+      reads.map(async (read) => {
+        const member = membersById.get(read.memberId);
+        // Only a draft shows what would go out now; a sent read says whether it went out with them.
+        const health =
+          member === undefined || read.sentAt !== null
+            ? []
+            : await weeklyHealthMentions(db, member, read.weekStart, deps.clock.now());
+        return pageWeeklyRead(read, family, member, health);
+      }),
+    ),
     aiCalls: calls,
   };
 }
