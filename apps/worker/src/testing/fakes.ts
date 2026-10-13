@@ -571,6 +571,7 @@ export const EMPTY_TRIAL_TOTALS: TrialOverview["totals"] = {
   deliveredDays: 0,
   failedDays: 0,
   answeredDays: 0,
+  saidSomethingDays: 0,
   fallbackDays: 0,
   answerCount: 0,
   humanReplies: 0,

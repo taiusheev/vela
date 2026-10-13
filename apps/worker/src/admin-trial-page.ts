@@ -53,6 +53,10 @@ const NUMBER_LABEL: Record<TrialNumber["key"], { name: string; target: string }>
     name: "Answered days with replies heard next morning",
     target: `≥ ${pct(T.repliesHeard.onTrack)}`,
   },
+  said_something: {
+    name: "Answered days she said something",
+    target: `Words, voice, a photo or a choice, not only ❤️ or “I'm fine”. No published benchmark: read the trend from ${T.saidSomething.minDays} answered days; a falling share means mornings are becoming a check-in (plan/why-vela.md)`,
+  },
 };
 
 function numberValue(n: TrialNumber): string {
@@ -80,7 +84,7 @@ function dayRow(day: TrialDay): Html {
   return html`<tr><td>${day.day}</td><td>${day.fallback ? "Fallback" : "Family ask"}</td>
 <td>${day.arrivalAttempts} / ${day.arrivalUnsuccessfulAttempts}</td><td>${day.arrivalSent} / ${day.arrivalFailed} / ${day.arrivalDropped} / ${day.arrivalPending}</td>
 <td>${day.delivered ? "Delivered" : day.failed ? "Failed" : "Not delivered"}${day.delivered && day.failed ? " · earlier failure" : ""}</td>
-<td>${day.answered ? "Answered" : "No answer"} · ${day.answerCount}</td>
+<td>${day.answered ? (day.saidSomething ? "Said something" : "Tap only") : "No answer"} · ${day.answerCount}</td>
 <td>${day.latencyMin === null ? "Unavailable" : day.latencyMin.toFixed(1)}</td>
 <td>${day.humanReplies}</td><td>${day.repliesReadBack} / ${day.humanReplies}</td>
 <td>${day.readBackAttempts} / ${day.readBackUnsuccessfulAttempts} · ${day.readBackSent} / ${day.readBackFailed} / ${day.readBackDropped} / ${day.readBackPending}</td>
@@ -94,6 +98,7 @@ ${data.lightOn ? html`<h3>The four numbers</h3>${numbersTable(s)}` : null}
 <p>${data.from} through ${data.through} · ${data.timezone}. ${data.unobservedDays} calendar days have no prepared exchange; review consent, pauses, away periods and scheduling evidence before assigning an eligible-day denominator.</p>
 <dl><dt>Recorded scheduled days</dt><dd>${s.recordedDays} · delivered ${s.deliveredDays} · terminal delivery failures ${s.failedDays}</dd>
 <dt>Answered recorded days</dt><dd>${rate(s.answeredDays, s.recordedDays)}; this retains failed deliveries and is provisional until eligibility is reconciled.</dd>
+<dt>Answered days she said something</dt><dd>${rate(s.saidSomethingDays, s.answeredDays)}. Counted from answer kinds only, never from what she said.</dd>
 <dt>Family / fallback asks</dt><dd>${s.recordedDays - s.fallbackDays} / ${s.fallbackDays}. Fallback share: ${rate(s.fallbackDays, s.recordedDays)}</dd>
 <dt>Answer records</dt><dd>${s.answerCount}</dd>
 <dt>Median answer latency</dt><dd>${s.medianLatencyMin === null ? "Unavailable" : `${s.medianLatencyMin.toFixed(1)} minutes`} · ${s.latencySamples} nonnegative samples; ${s.preArrivalAnswers} answers before arrival are shown separately.</dd>
@@ -112,7 +117,7 @@ export function renderTrialReport(report: TrialReport): Response {
     html`<h1>Trial counts</h1>
 <p><a href="${familyHref(report.familyId)}">Family page</a> · <a href="${path}?days=7">Seven days</a> · <a href="${path}?days=30">30 days</a></p>
 <p class="lede">Last ${report.windowDays} complete recipient-local days. Generated ${report.generatedAt.toISOString()}. Refresh to include later answers and read-backs.</p>
-<p>Counts only. No family words or media are included. Failed deliveries stay visible. Contentful-answer assessment, comfort, usefulness, assistance, stop reasons and eligibility reconciliation require the separately authorised trial notes. These results are early evidence; they do not establish loneliness reduction or product-market fit.</p>
+<p>Counts only. No family words or media are included; "said something" comes from the kind of answer, not its words. Failed deliveries stay visible. What her answers were about, comfort, usefulness, assistance, stop reasons and eligibility reconciliation require the separately authorised trial notes. These results are early evidence; they do not establish loneliness reduction or product-market fit.</p>
 ${report.recipients.length === 0 ? html`<p>No prepared exchanges are recorded in this period. This does not prove scheduled delivery or consent.</p>` : report.recipients.map(recipient)}`,
   );
 }

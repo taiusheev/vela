@@ -271,6 +271,8 @@ describe("a family's first trial mornings", () => {
       quietNoticeDays: 1,
       trueConcern: 0,
       stopsSaid: 0,
+      // A chip, then words twice: every answer this week said something.
+      saidSomethingDays: 3,
     });
     const numbers = Object.fromEntries(
       trialNumbers(mom?.summary ?? ({} as never)).map((n) => [n.key, n.status]),
@@ -281,6 +283,7 @@ describe("a family's first trial mornings", () => {
       fallback_share: "too_early",
       stops: "on_track",
       missed_trouble: "founder_check",
+      said_something: "too_early",
     });
   });
 });

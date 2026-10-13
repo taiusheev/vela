@@ -1,4 +1,4 @@
-import type { LocalDate, QuietOutcome } from "@vela/contracts";
+import type { AnswerKind, LocalDate, QuietOutcome } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
 import {
   answers,
@@ -30,6 +30,11 @@ export interface TrialDay {
   arrivalDropped: number;
   arrivalPending: number;
   answerCount: number;
+  /**
+   * One of her answers carried something: words, voice, a photo, or a choice she made. A heart,
+   * "I'm fine", or a sticker alone light the light but give the family nothing to answer.
+   */
+  saidSomething: boolean;
   latencyMin: number | null;
   humanReplies: number;
   repliesReadBack: number;
@@ -63,6 +68,8 @@ export interface TrialRecipientReport {
     deliveredDays: number;
     failedDays: number;
     answeredDays: number;
+    /** Answered days on which she said something (`TrialDay.saidSomething`). */
+    saidSomethingDays: number;
     fallbackDays: number;
     answerCount: number;
     humanReplies: number;
@@ -97,7 +104,8 @@ export interface TrialNumber {
     | "missed_trouble"
     | "stops"
     | "fallback_share"
-    | "replies_heard";
+    | "replies_heard"
+    | "said_something";
   /** The measured share or count; null when there is no denominator yet. */
   value: number | null;
   numerator: number;
@@ -115,7 +123,26 @@ export const TRIAL_TARGETS = {
   noticesPerMonth: { onTrack: 4, minDays: 7 },
   fallbackShare: { onTrack: 0.15, kill: 0.3, minDays: 7 },
   repliesHeard: { onTrack: 0.5, minDays: 7 },
+  /**
+   * No published benchmark separates a contentful answer from a bare tap (plan/why-vela.md §6), so
+   * the share has no target yet: from a week of answered days the founder reads its trend.
+   */
+  saidSomething: { minDays: 7 },
 } as const;
+
+/**
+ * The answer kinds that carry something of hers (`TrialDay.saidSomething`). "other" (a video, a
+ * document, a location, a contact) is left out: it is a sign of life, but its kind alone does not say
+ * whether she told the family anything.
+ */
+export const SAID_SOMETHING_KINDS: ReadonlySet<AnswerKind> = new Set([
+  "voice",
+  "text",
+  "photo",
+  "chip",
+  "photo_pick",
+  "vote",
+]);
 
 function share(numerator: number, denominator: number): number | null {
   return denominator === 0 ? null : numerator / denominator;
@@ -135,6 +162,7 @@ export function trialNumbers(summary: TrialRecipientReport["summary"]): TrialNum
   const perMonth = s.recordedDays === 0 ? null : (s.quietNoticeDays * 30) / s.recordedDays;
   const fallback = share(s.fallbackDays, s.recordedDays);
   const heard = share(s.repliesHeardDays, s.answeredDays);
+  const saidSomething = share(s.saidSomethingDays, s.answeredDays);
   const band = (
     value: number | null,
     enough: boolean,
@@ -222,6 +250,16 @@ export function trialNumbers(summary: TrialRecipientReport["summary"]): TrialNum
         (v) => v >= t.repliesHeard.onTrack,
         () => false,
       ),
+    },
+    {
+      key: "said_something",
+      value: saidSomething,
+      numerator: s.saidSomethingDays,
+      denominator: s.answeredDays,
+      status:
+        saidSomething === null || s.answeredDays < t.saidSomething.minDays
+          ? "too_early"
+          : "founder_check",
     },
   ];
 }
@@ -321,7 +359,7 @@ export async function loadAdminTrialReport(
           if (rows.length === 0) continue;
           const ids = rows.map((row) => row.id);
           const answerRows = await tx
-            .select({ exchangeId: answers.exchangeId })
+            .select({ exchangeId: answers.exchangeId, kind: answers.kind })
             .from(answers)
             .where(and(inArray(answers.exchangeId, ids), eq(answers.memberId, person.id)));
           const replyRows = await tx
@@ -419,6 +457,7 @@ export async function loadAdminTrialReport(
             const readBacks = readBackRows.filter((item) => item.exchangeId === row.id);
             const human = replyRows.filter((item) => item.exchangeId === row.id);
             const quiet = quietRows.find((item) => item.exchangeId === row.id);
+            const given = answerRows.filter((item) => item.exchangeId === row.id);
             return {
               day: row.day as LocalDate,
               fallback: row.type === "hello",
@@ -431,7 +470,8 @@ export async function loadAdminTrialReport(
               arrivalFailed: arrivals.filter((item) => item.status === "failed").length,
               arrivalDropped: arrivals.filter((item) => item.status === "dropped").length,
               arrivalPending: arrivals.filter((item) => item.status === "queued").length,
-              answerCount: answerRows.filter((item) => item.exchangeId === row.id).length,
+              answerCount: given.length,
+              saidSomething: given.some((item) => SAID_SOMETHING_KINDS.has(item.kind)),
               latencyMin:
                 row.deliveredAt === null || row.answeredAt === null
                   ? null
@@ -468,6 +508,7 @@ export async function loadAdminTrialReport(
               deliveredDays: days.filter((day) => day.delivered).length,
               failedDays: days.filter((day) => day.failed).length,
               answeredDays: days.filter((day) => day.answered).length,
+              saidSomethingDays: days.filter((day) => day.answered && day.saidSomething).length,
               fallbackDays: days.filter((day) => day.fallback).length,
               answerCount: days.reduce((n, day) => n + day.answerCount, 0),
               humanReplies: days.reduce((n, day) => n + day.humanReplies, 0),
@@ -525,6 +566,7 @@ const SUMMED_KEYS = [
   "deliveredDays",
   "failedDays",
   "answeredDays",
+  "saidSomethingDays",
   "fallbackDays",
   "answerCount",
   "humanReplies",
