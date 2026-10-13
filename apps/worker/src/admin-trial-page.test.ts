@@ -24,6 +24,7 @@ const EMPTY: TrialReport = {
 
 /** The four-number counts of a parent with nothing recorded yet. */
 const COUNTS = {
+  saidSomethingDays: 0,
   eligibleDays: 0,
   eligibleAnsweredDays: 0,
   awayDays: 0,
@@ -143,7 +144,8 @@ describe("protected trial reports", () => {
     expect(body).toContain("2 nonnegative samples");
     expect(body).toContain("26 calendar days have no prepared exchange");
     expect(body).toContain("Read-back attempt and send-state counts below may be incomplete");
-    expect(body).toContain("Contentful-answer assessment");
+    expect(body).toContain("What her answers were about");
+    expect(body).toContain("Counted from answer kinds only, never from what she said.");
     expect(body).not.toContain("contentful answers: 100%");
   });
 
@@ -176,6 +178,7 @@ describe("protected trial reports", () => {
             eligibleDays: 9,
             eligibleAnsweredDays: 4,
             awayDays: 1,
+            saidSomethingDays: 3,
           },
         },
       ],
@@ -186,6 +189,8 @@ describe("protected trial reports", () => {
     expect(body).toContain('class="status-kill">Kill signal');
     expect(body).toContain("Mornings nobody asked");
     expect(body).toContain("Founder check");
+    expect(body).toContain("Answered days she said something");
+    expect(body).toContain('3 / 4 (75.0%)</td><td class="status-too_early">Too early');
   });
 });
 
@@ -268,6 +273,7 @@ describe("the trial overview", () => {
               eligibleDays: 30,
               eligibleAnsweredDays: 24,
               repliesHeardDays: 15,
+              saidSomethingDays: 18,
             },
           },
         },
@@ -288,6 +294,7 @@ describe("the trial overview", () => {
         eligibleDays: 30,
         eligibleAnsweredDays: 24,
         repliesHeardDays: 15,
+        saidSomethingDays: 18,
       },
       parentsWhoStopped: 0,
     }).text();
@@ -295,5 +302,6 @@ describe("the trial overview", () => {
     expect(body).toContain("24 / 30 (80.0%)");
     expect(body).toContain(`/admin/families/${FAMILY_ID}/trial?days=30`);
     expect(body).toContain("On track");
+    expect(body).toContain("18 / 24 (75.0%) · On track");
   });
 });
