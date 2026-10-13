@@ -199,6 +199,22 @@ export const en = {
     "On {mornings} morning nobody in the family asked, so Vela sent {name} a hello.",
   "weekly_read.nobody_asked": "Nobody in the family asked {name} anything this week.",
   "weekly_read.suggestion": "Something to ask next week: {suggestion}",
+  "weekly_read.no_reply":
+    "{count} of {name}'s {answered} answers got no reply or reaction from the family.",
+  "weekly_read.asks_by": "Asks this week: {askers}.",
+  "weekly_read.asks_by_item": "{name} {asks}",
+  "weekly_read.asks_by_separator": ", ",
+  "weekly_read.after_second": "{count} answers came only after the second message.",
+  "weekly_read.after_second_usual":
+    "{count} answers came only after the second message; usually about {usual} a week.",
+  "weekly_read.quiet_weekday": "{weekday} mornings have stayed quiet {weeks} weeks in a row.",
+  "weekday.0": "Sunday",
+  "weekday.1": "Monday",
+  "weekday.2": "Tuesday",
+  "weekday.3": "Wednesday",
+  "weekday.4": "Thursday",
+  "weekday.5": "Friday",
+  "weekday.6": "Saturday",
   "help.private": "Hello. To set up Vela for your family, send /start.",
   "help.followed":
     "Hello, I'm Vela. If someone in your family sent you an invitation, open it now. To set up Vela for your own family, send /start.",

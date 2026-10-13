@@ -128,9 +128,7 @@ const weeklyReadInput: WeeklyReadInput = {
     },
   ],
   usualAnswerTime: "08:30",
-  answerTimeDriftMinutes: null,
-  voiceLengthDriftPercent: null,
-  repeatedMentions: ["the tomatoes"],
+  patterns: [{ kind: "came_back_to", text: "the tomatoes", span: "days", times: 2 }],
 };
 
 interface Case {

@@ -776,3 +776,19 @@ Decision: a table `pilot_roster` (migration 0014) holds approved numeric Telegra
 Data: a Telegram id is personal data. The founder removes an id when its person leaves the trial or asks for deletion (data-requests runbook); the table holds no name, number or content.
 
 Rejected: a launcher that rewrites the secret (needs a production token on the founder's laptop for every approval); approving from Telegram itself (a bot command anyone could try, against Access's single sign-in).
+
+## ADR-46 · The weekly read reports patterns Vela's code finds against her own earlier weeks
+
+13 October 2026. Accepted (founder: "detect any patterns and report it, not medical advice"; no AI mood labels; wellbeing patterns in the lines she can read; four organiser-only lines; production after the Vietnam week).
+
+Context: the weekly read's notes compared one number with last week (answer time over 30 minutes, voice length over 40 percent) and listed things mentioned twice. One week is a noisy usual, the read missed changes a family would want to know (more taps and fewer words, fewer people and places coming up, which asks drew her out), and the organisers had no view of the family's own part (answers nobody replied to, who asked) beyond the counts.
+
+Decision: `detectWeeklyPatterns` in @vela/core compares her week with her own three earlier weeks (her answer times look back four), inside the 30 days her words are kept, with fixed thresholds and minimum samples (`PATTERNS`): at least three answered days this week and six in her usual before any comparison. It returns two lists, typed in @vela/contracts (`WeeklyNotePattern`, `FamilyPattern`) and stored in `weekly_reads.stats` as `patterns` and `family_patterns`.
+
+- **Note patterns**, worded by the model (`weekly_read.v5`) into the lines she can also read: answer time moved by more than 30 minutes (and whether the week before moved the same way); a form of answer (voice, written, taps, photos) up or down by 40 points of her answered days; words per answer or voice length up or down by 40 percent; the kind of ask that drew her fullest answers; something she came back to on two or more days or three or more weeks in a row; people, places and plans per answered day halved or doubled. They read only her answered days, so no line can point to a day without an answer.
+- **Family patterns**, rendered from copy after the counts for organisers only, never shown to her or the model: her answers with no reply or reaction from the family; who asked, most first; answers that came only after the second message, against her usual week; a weekday quiet three or more weeks in a row, away days and undelivered mornings breaking the run.
+
+The model words patterns and decides none: it gets no numbers to restate, may not add a pattern, a cause, praise, concern or advice, and never names a feeling she did not put into words. AI mood labels (`answers.mood_words`) are not used. Health words are not used: the privacy notice promises they are never copied into the weekly read, so a health-word pattern needs a new notice version, told to families before it applies. The founder still reviews every draft; the admin page lists what was found beside the editable lines.
+
+Consequences: a first week has no usual, so it gets only what she came back to, what drew her out and the family lines. Organiser lines join the counts as the one part of the read she never sees, as the counts already were (spec §8, §13). The app's weekly read (A9) shows the family lines only once its API carries them. Rejected: letting the model find patterns in raw days (it cannot be tested, and it invents); comparing with other families (no norm fits one person, and it reads as a score); hiding wellbeing patterns from her (breaks what the consent call promises about "what does the family see").
+

@@ -6,6 +6,7 @@
  *
  * Nothing here queries or decides: it renders what `@vela/services` returned, escaped.
  */
+import type { WeeklyNotePattern } from "@vela/contracts";
 import type {
   AdminAiWatch,
   AdminOverview,
@@ -595,14 +596,69 @@ ${table(ANSWER_HEADINGS, data.notUnderstood.map(answerRow))}
 </section>`;
 }
 
+const ASK_TYPE_NAMES: Readonly<Record<string, string>> = {
+  question: "questions",
+  photo_choice: "photo choices",
+  voice_note: "voice notes from the family",
+  word: "words to teach",
+  story: "story questions",
+  recipe: "recipes",
+  memory_photo: "old photos",
+  vote: "votes",
+};
+
+const FORM_NAMES: Readonly<Record<string, string>> = {
+  voice: "voice messages",
+  words: "written answers",
+  taps: "taps",
+  photos: "photos",
+};
+
+/** A pattern as the founder checks it against the draft lines: the fact, in plain English. */
+export function describePattern(pattern: WeeklyNotePattern): string {
+  switch (pattern.kind) {
+    case "answer_time":
+      return `Answered ${pattern.direction} than usual, by about ${pattern.minutes} minutes${pattern.secondWeek ? ", for a second week" : ""}.`;
+    case "answer_form":
+      return [
+        pattern.more === null ? null : `more ${FORM_NAMES[pattern.more]}`,
+        pattern.fewer === null ? null : `fewer ${FORM_NAMES[pattern.fewer]}`,
+      ]
+        .filter((part) => part !== null)
+        .join(" and ")
+        .replace(/^./, (first) => first.toUpperCase())
+        .concat(" than usual.");
+    case "answer_length":
+      return `Answers ${pattern.direction} than usual.`;
+    case "voice_length":
+      return `Voice messages ${pattern.direction} than usual.`;
+    case "drew_out":
+      return `Fullest answers came to ${ASK_TYPE_NAMES[pattern.askType] ?? pattern.askType}.`;
+    case "came_back_to":
+      return pattern.span === "days"
+        ? `Came back to "${pattern.text}" on ${pattern.times} days.`
+        : `"${pattern.text}" came up ${pattern.times} weeks in a row.`;
+    case "mentions_level":
+      return `${pattern.direction === "more" ? "More" : "Fewer"} people, places and plans came up than usual.`;
+  }
+}
+
+function patternsFound(patterns: readonly WeeklyNotePattern[]): Html {
+  return patterns.length === 0
+    ? html`<p class="muted">Vela found no pattern against her earlier weeks.</p>`
+    : html`<p class="muted">What Vela found against her earlier weeks; the draft lines word these, and she can read the lines:</p>
+<ul>${patterns.map((pattern) => html`<li>${describePattern(pattern)}</li>`)}</ul>`;
+}
+
 function weeklyReadsSection(data: FamilyPage): Html {
   const reads = data.weeklyReads.map((entry) => {
     const { read } = entry;
     const sent = read.sentAt !== null;
     return html`<article id="weekly-read-${read.id}">
 <h3>Week ${read.weekStart} → ${entry.weekEnd}${sent ? html` <span class="muted">sent ${instant(read.sentAt)}</span>` : null}</h3>
-<p class="muted">Counts, as organisers will read them (not editable):</p>
+<p class="muted">Counts and family lines, as organisers will read them (not editable; she never sees these):</p>
 <pre>${text(entry.countLines)}</pre>
+${sent ? null : patternsFound(entry.patterns)}
 ${
   sent
     ? html`<p>Sent lines:</p><pre>${(read.sentLines ?? []).join("\n")}</pre><p>Sent suggestion: ${text(read.sentSuggestion)}</p>`

@@ -155,6 +155,22 @@ export const zhTW: Record<keyof typeof en, string> = {
     "有 {mornings} 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。",
   "weekly_read.nobody_asked": "這週家裡沒有人問{name}任何事。",
   "weekly_read.suggestion": "下週可以問問看：{suggestion}",
+  "weekly_read.no_reply":
+    "{name}這週的 {answered} 則回覆中，有 {count} 則沒有收到家人的回應或表情。",
+  "weekly_read.asks_by": "這週的提問：{askers}。",
+  "weekly_read.asks_by_item": "{name} {asks} 次",
+  "weekly_read.asks_by_separator": "、",
+  "weekly_read.after_second": "有 {count} 則回覆是在第二次訊息之後才收到。",
+  "weekly_read.after_second_usual":
+    "有 {count} 則回覆是在第二次訊息之後才收到；平常一週大約 {usual} 則。",
+  "weekly_read.quiet_weekday": "已經連續 {weeks} 週，{weekday}早上都很安靜。",
+  "weekday.0": "星期日",
+  "weekday.1": "星期一",
+  "weekday.2": "星期二",
+  "weekday.3": "星期三",
+  "weekday.4": "星期四",
+  "weekday.5": "星期五",
+  "weekday.6": "星期六",
   "help.private": "您好。想為家人設定 Vela 的話，請傳送 /start。",
   "help.followed":
     "您好，我是 Vela。如果家人傳了邀請給您，請現在打開。想為自己的家人設定 Vela，請傳 /start。",

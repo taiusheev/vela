@@ -125,9 +125,7 @@ describe("createFakeAi", () => {
       weekEnd: "2026-09-20",
       days,
       usualAnswerTime: "08:10",
-      answerTimeDriftMinutes: null,
-      voiceLengthDriftPercent: null,
-      repeatedMentions: [],
+      patterns: [],
     });
 
     expect(WeeklyRead.safeParse(read.value).success).toBe(true);

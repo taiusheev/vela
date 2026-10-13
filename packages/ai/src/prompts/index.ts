@@ -7,7 +7,7 @@ import * as recipe from "./recipe.v1.ts";
 import * as suggest from "./suggest.v1.ts";
 import * as translate from "./translate.v1.ts";
 import * as understand from "./understand.v5.ts";
-import * as weeklyRead from "./weekly_read.v4.ts";
+import * as weeklyRead from "./weekly_read.v5.ts";
 
 export interface Prompt {
   readonly version: string;

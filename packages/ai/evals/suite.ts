@@ -152,6 +152,17 @@ export const CALL_CHECKS: Readonly<Record<AiCallName, readonly Check[]>> = {
         "問了\\s*[0-9０-９一兩三四五六七八九十]+\\s*次",
       ],
     },
+    {
+      // ADR-46: a pattern is stated as a fact, never as a feeling or health the elder did not put
+      // into words, and never with advice.
+      kind: "notMatches",
+      path: "lines",
+      patterns: [
+        String.raw`\b(?:lonely|loneliness|isolated|withdrawn|depressed|depression|unwell)\b`,
+        String.raw`\b(?:should|needs? to|try to|make sure)\b`,
+        "孤單|寂寞|憂鬱|退縮|應該|最好要",
+      ],
+    },
   ],
 };
 

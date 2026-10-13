@@ -87,9 +87,7 @@ const weeklyReadInput: WeeklyReadInput = {
     },
   ],
   usualAnswerTime: "08:40",
-  answerTimeDriftMinutes: null,
-  voiceLengthDriftPercent: null,
-  repeatedMentions: [],
+  patterns: [],
 };
 
 /**

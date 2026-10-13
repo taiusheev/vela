@@ -510,9 +510,9 @@ describe("tickMember", () => {
         hello_mornings: 6,
         family_asks: 0,
         usual_time: null,
-        drift_min: null,
         topics: [],
-        voice_len_drift: null,
+        patterns: [],
+        family_patterns: [],
       },
     });
     expect(texts(ADMIN_CHAT)).toEqual([

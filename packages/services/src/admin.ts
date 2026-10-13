@@ -20,11 +20,13 @@ import { isAiOff } from "@vela/ai";
 import {
   type AdminAction,
   type DomainEvent,
+  FamilyPattern,
   isIanaTimeZone,
   Lang,
   LocalDate,
   LocalTime,
   MVP_LANGS,
+  WeeklyNotePattern,
 } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -272,12 +274,32 @@ export type SendWeeklyReadInput = z.input<typeof SendWeeklyReadSchema>;
 
 export type SendWeeklyReadResult = "sent" | "already_sent" | "no_organiser" | "budget";
 
-/** `weekly_reads.stats` as `renderWeeklyRead` needs it; the other numbers in the column are ignored. */
+/** A stored list of patterns, keeping each entry this version can read and dropping the others. */
+function readablePatterns<P extends z.ZodType>(pattern: P) {
+  return z
+    .array(z.unknown())
+    .optional()
+    .catch(undefined)
+    .transform((items) =>
+      items?.flatMap((item) => {
+        const parsed = pattern.safeParse(item);
+        return parsed.success ? [parsed.data as z.output<P>] : [];
+      }),
+    );
+}
+
+/**
+ * `weekly_reads.stats` as `renderWeeklyRead` and the page need it; the other numbers in the column
+ * are ignored. Patterns are absent from reads drafted before ADR-46, and a stored pattern this
+ * version cannot read is left out rather than stopping the read.
+ */
 const StoredWeeklyReadStats = z.object({
   counted_days: z.number().int().min(1).max(DAYS_IN_WEEK),
   answered_days: z.number().int().min(0).max(DAYS_IN_WEEK),
   hello_mornings: z.number().int().min(0).max(DAYS_IN_WEEK),
   family_asks: z.number().int().min(0),
+  patterns: readablePatterns(WeeklyNotePattern),
+  family_patterns: readablePatterns(FamilyPattern),
 });
 
 /** A form that does not parse is refused before anything is read; the cause never reaches a page. */
@@ -1151,6 +1173,7 @@ function parseStats(read: WeeklyRead): WeeklyReadStats {
     answeredDays: stats.data.answered_days,
     helloMornings: stats.data.hello_mornings,
     familyAsks: stats.data.family_asks,
+    familyPatterns: stats.data.family_patterns ?? [],
   };
 }
 
@@ -1641,8 +1664,13 @@ export type FamilyPageAnswer = Pick<
 export interface FamilyPageWeeklyRead {
   read: WeeklyRead;
   weekEnd: LocalDate;
-  /** The count lines as organisers read them, not editable on the page; null when `stats` is corrupt. */
+  /**
+   * The count lines and the family lines as organisers read them, not editable on the page; null
+   * when `stats` is corrupt.
+   */
   countLines: string | null;
+  /** What the week's patterns were (ADR-46), for the founder checking the draft lines that word them. */
+  patterns: readonly WeeklyNotePattern[];
 }
 
 export interface FamilyPage {
@@ -1719,13 +1747,19 @@ function pageWeeklyRead(
             answeredDays: stats.data.answered_days,
             helloMornings: stats.data.hello_mornings,
             familyAsks: stats.data.family_asks,
+            familyPatterns: stats.data.family_patterns ?? [],
           },
           lines: [],
           suggestion: "",
           audience: "organiser",
         })
       : null;
-  return { read, weekEnd: weekEndOf(read), countLines };
+  return {
+    read,
+    weekEnd: weekEndOf(read),
+    countLines,
+    patterns: stats.success ? (stats.data.patterns ?? []) : [],
+  };
 }
 
 /**

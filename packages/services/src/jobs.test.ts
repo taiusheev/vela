@@ -34,7 +34,7 @@ import {
 import { asc, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { deliverArrival } from "./arrivals.ts";
-import { applyRetention, draftWeeklyRead, rollupMetrics } from "./jobs.ts";
+import { applyRetention, draftWeeklyRead, rollupMetrics, wordsIn } from "./jobs.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import {
   type SeededFamily,
@@ -272,9 +272,13 @@ describe("draftWeeklyRead", () => {
         hello_mornings: 1,
         family_asks: 2,
         usual_time: "09:15",
-        drift_min: null,
         topics: ["Auntie Lin"],
-        voice_len_drift: null,
+        patterns: [{ kind: "came_back_to", text: "Auntie Lin", span: "days", times: 2 }],
+        // Nobody replied to either answer, and Mia asked both mornings.
+        family_patterns: [
+          { kind: "no_reply", answers: 2, of: 2 },
+          { kind: "asks_by", askers: [{ name: "Mia", asks: 2 }] },
+        ],
       },
       promptVersion: fakeRecord("weekly_read").promptVersion,
       sentLines: null,
@@ -304,9 +308,8 @@ describe("draftWeeklyRead", () => {
         },
       ],
       usualAnswerTime: "09:15",
-      answerTimeDriftMinutes: null,
-      voiceLengthDriftPercent: null,
-      repeatedMentions: ["Auntie Lin"],
+      // Her first week: nothing to compare with, so only what she came back to.
+      patterns: [{ kind: "came_back_to", text: "Auntie Lin", span: "days", times: 2 }],
     });
     const [logged] = await h.db.select().from(aiCalls);
     expect(logged).toMatchObject({
@@ -371,26 +374,42 @@ describe("draftWeeklyRead", () => {
 
     const [read] = await h.db.select().from(weeklyReads);
     expect(read?.stats).toMatchObject({ topics: ["the park"] });
-    expect(h.ai.calls[0]?.input).toMatchObject({ repeatedMentions: ["the park"] });
+    expect(h.ai.calls[0]?.input).toMatchObject({
+      patterns: [{ kind: "came_back_to", text: "the park", span: "days", times: 2 }],
+    });
     expect(JSON.stringify(read)).not.toContain("knee");
   });
 
-  it("measures the drifts against last week", async () => {
+  it("finds her patterns against her own three earlier weeks, and the family's part for organisers", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
-    await setStartsOn(seed, "2026-09-01");
-    for (const date of ["2026-09-08", "2026-09-10"] as const) {
-      await seedMorning(seed, { date, answeredAt: "08:30", kind: "voice", voiceMs: 10_000 });
+    await setStartsOn(seed, "2026-08-24");
+    // Three earlier weeks: Monday, Wednesday and Friday at 08:30, ten-second voice answers.
+    for (let offset = 0; offset < 21; offset += 1) {
+      const date = addDays("2026-08-24", offset);
+      if (offset % 7 === 0 || offset % 7 === 2 || offset % 7 === 4) {
+        await seedMorning(seed, { date, answeredAt: "08:30", kind: "voice", voiceMs: 10_000 });
+      }
     }
+    // This week: Vela's own morning on Monday, then three answers an hour later, twice as long.
     await seedMorning(seed, { date: "2026-09-14", type: "hello" });
-    for (const date of ["2026-09-15", "2026-09-17"] as const) {
-      await seedMorning(seed, {
-        date,
-        answeredAt: "09:00",
-        kind: "voice",
-        voiceMs: 15_000,
-        summary: "A long chat",
-      });
+    const exchangesThisWeek: Exchange[] = [];
+    for (const date of ["2026-09-15", "2026-09-16", "2026-09-17"] as const) {
+      exchangesThisWeek.push(
+        await seedMorning(seed, {
+          date,
+          answeredAt: "09:30",
+          kind: "voice",
+          voiceMs: 20_000,
+          summary: "A long chat",
+        }),
+      );
     }
+    await h.db.insert(replies).values({
+      exchangeId: exchangesThisWeek[0]?.id ?? "",
+      memberId: seed.organiser.id,
+      kind: "heart",
+      channel: "telegram",
+    });
     h.clock.set(at("2026-09-20", "18:00"));
 
     await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
@@ -398,26 +417,44 @@ describe("draftWeeklyRead", () => {
     const [read] = await h.db.select().from(weeklyReads);
     expect(read?.stats).toEqual({
       counted_days: 7,
-      answered_days: 2,
+      answered_days: 3,
       hello_mornings: 1,
-      family_asks: 2,
-      usual_time: "09:00",
-      drift_min: 30,
+      family_asks: 3,
+      usual_time: "09:30",
       topics: [],
-      voice_len_drift: 50,
+      patterns: [
+        { kind: "answer_time", direction: "later", minutes: 60, secondWeek: false },
+        { kind: "voice_length", direction: "longer" },
+      ],
+      family_patterns: [
+        { kind: "no_reply", answers: 2, of: 3 },
+        { kind: "asks_by", askers: [{ name: "Mia", asks: 3 }] },
+      ],
     });
     expect(h.ai.calls[0]?.input).toMatchObject({
-      usualAnswerTime: "09:00",
-      answerTimeDriftMinutes: 30,
-      voiceLengthDriftPercent: 50,
-      days: [{ date: "2026-09-15" }, { date: "2026-09-17" }],
+      usualAnswerTime: "09:30",
+      patterns: [
+        { kind: "answer_time", direction: "later", minutes: 60, secondWeek: false },
+        { kind: "voice_length", direction: "longer" },
+      ],
+      days: [{ date: "2026-09-15" }, { date: "2026-09-16" }, { date: "2026-09-17" }],
     });
+    // The family's part never reaches the model, which writes the lines she can read.
+    expect(JSON.stringify(h.ai.calls[0]?.input)).not.toContain("no_reply");
+  });
+
+  it("counts words in her own text, each Chinese character as one", () => {
+    expect(wordsIn("Cooking soup today")).toBe(3);
+    expect(wordsIn("阿嬤說很好")).toBe(5);
+    expect(wordsIn("去 Costco 買奇異果!")).toBe(6);
+    expect(wordsIn("  ...  ")).toBe(0);
   });
 
   // Her morning comes at 23:00. Last week she answered at 23:55; this week around midnight, from
-  // 23:40 to 00:20. Read from midnight, this week's middle answer is 00:20 and the drift is 1415
-  // minutes earlier; read around her arrival, it is 00:05, ten minutes later.
-  it("reads her usual time and its drift around her arrival when her answers cross midnight", async () => {
+  // 23:40 to 00:20. Read from midnight, this week's middle answer is 00:20, 1415 minutes earlier;
+  // read around her arrival it is 00:05, and each answer counted from its own morning's date is
+  // ten minutes after last week's: no move to report.
+  it("reads her usual time around her arrival when her answers cross midnight, and sees no move in it", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now(), arrivalTime: "23:00" });
     await setStartsOn(seed, "2026-09-07");
     const thisWeek = ["23:40", "23:50", "23:55", "00:05", "00:10", "00:15", "00:20"] as const;
@@ -435,11 +472,8 @@ describe("draftWeeklyRead", () => {
     await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
 
     const [read] = await h.db.select().from(weeklyReads);
-    expect(read?.stats).toMatchObject({ answered_days: 7, usual_time: "00:05", drift_min: 10 });
-    expect(h.ai.calls[0]?.input).toMatchObject({
-      usualAnswerTime: "00:05",
-      answerTimeDriftMinutes: 10,
-    });
+    expect(read?.stats).toMatchObject({ answered_days: 7, usual_time: "00:05", patterns: [] });
+    expect(h.ai.calls[0]?.input).toMatchObject({ usualAnswerTime: "00:05", patterns: [] });
   });
 
   it("stores the safe default when the model fails, so the week is still marked done", async () => {

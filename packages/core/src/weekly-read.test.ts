@@ -255,3 +255,65 @@ describe("renderWeeklyRead length", () => {
     expect(text({ audience: "kept_light_member", lines })).toBe(lines.join("\n"));
   });
 });
+
+describe("renderWeeklyRead family patterns (ADR-46)", () => {
+  const PATTERNS_FOUND: WeeklyReadStats["familyPatterns"] = [
+    { kind: "no_reply", answers: 2, of: 6 },
+    {
+      kind: "asks_by",
+      askers: [
+        { name: "Anna", asks: 3 },
+        { name: "Minh", asks: 2 },
+      ],
+    },
+    { kind: "after_second", answers: 3, usual: 1 },
+    { kind: "quiet_weekday", weekday: 3, weeks: 3 },
+  ];
+
+  it("follows the counts for organisers, from copy, before the lines", () => {
+    expect(text({ stats: { ...FULL_WEEK, familyPatterns: PATTERNS_FOUND } })).toBe(
+      [
+        "Mom answered 6 of 7 days.",
+        "On 2 mornings nobody in the family asked, so Vela sent Mom a hello.",
+        "2 of Mom's 6 answers got no reply or reaction from the family.",
+        "Asks this week: Anna 3, Minh 2.",
+        "3 answers came only after the second message; usually about 1 a week.",
+        "Wednesday mornings have stayed quiet 3 weeks in a row.",
+        "",
+        LINES.join("\n"),
+        "",
+        `Something to ask next week: ${SUGGESTION}`,
+      ].join("\n"),
+    );
+  });
+
+  it("says no usual when there is none yet, and reads in Traditional Chinese", () => {
+    const stats: WeeklyReadStats = {
+      ...FULL_WEEK,
+      familyPatterns: [
+        { kind: "after_second", answers: 2, usual: null },
+        {
+          kind: "asks_by",
+          askers: [
+            { name: "小芳", asks: 4 },
+            { name: "Mia", asks: 1 },
+          ],
+        },
+      ],
+    };
+    expect(text({ stats, lines: [], suggestion: "" })).toContain(
+      "2 answers came only after the second message.",
+    );
+    const zh = text({ lang: "zh-TW", name: "阿嬤", stats, lines: [], suggestion: "" });
+    expect(zh).toContain("有 2 則回覆是在第二次訊息之後才收到。");
+    expect(zh).toContain("這週的提問：小芳 4 次、Mia 1 次。");
+  });
+
+  it("never reaches her", () => {
+    const shown = text({
+      audience: "kept_light_member",
+      stats: { ...FULL_WEEK, familyPatterns: PATTERNS_FOUND },
+    });
+    expect(shown).toBe(LINES.join("\n"));
+  });
+});

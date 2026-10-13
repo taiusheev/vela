@@ -11,8 +11,8 @@
  * §8), so the counts and the nobody-asked line never reach her, and neither does the suggestion: it
  * is an ask meant to reach her as a surprise. A read with no lines has nothing to show her.
  */
-import type { Lang } from "@vela/contracts";
-import { t } from "@vela/copy";
+import type { FamilyPattern, Lang } from "@vela/contracts";
+import { type MessageKey, t } from "@vela/copy";
 import { lineCap, shorten, TEXT_MAX_LENGTH } from "./text.ts";
 
 export type WeeklyReadAudience = "organiser" | "kept_light_member";
@@ -27,6 +27,11 @@ export interface WeeklyReadStats {
   helloMornings: number;
   /** The asks the family composed this week. */
   familyAsks: number;
+  /**
+   * What `detectWeeklyPatterns` found about the family's part and her quiet days (ADR-46): rendered
+   * from copy after the counts, for organisers only; absent on reads drafted before patterns.
+   */
+  familyPatterns?: readonly FamilyPattern[];
 }
 
 export interface RenderWeeklyReadInput {
@@ -66,6 +71,45 @@ function assertStats(stats: WeeklyReadStats): void {
   }
 }
 
+function weekdayKey(weekday: number): MessageKey {
+  return `weekday.${weekday}` as MessageKey;
+}
+
+/** The organiser line of one family pattern. */
+function familyLine(lang: Lang, name: string, pattern: FamilyPattern): string {
+  switch (pattern.kind) {
+    case "no_reply":
+      return t(lang, "weekly_read.no_reply", {
+        name,
+        count: pattern.answers,
+        answered: pattern.of,
+      });
+    case "asks_by":
+      return t(lang, "weekly_read.asks_by", {
+        askers: pattern.askers
+          .map((asker) => t(lang, "weekly_read.asks_by_item", asker))
+          .join(t(lang, "weekly_read.asks_by_separator")),
+      });
+    case "after_second":
+      return pattern.usual === null
+        ? t(lang, "weekly_read.after_second", { count: pattern.answers })
+        : t(lang, "weekly_read.after_second_usual", {
+            count: pattern.answers,
+            usual: pattern.usual,
+          });
+    case "quiet_weekday":
+      return t(lang, "weekly_read.quiet_weekday", {
+        weekday: t(lang, weekdayKey(pattern.weekday)),
+        weeks: pattern.weeks,
+      });
+  }
+}
+
+/** One organiser line per family pattern, in the order they were found. */
+function familyLines(lang: Lang, name: string, patterns: readonly FamilyPattern[]): string[] {
+  return patterns.map((pattern) => familyLine(lang, name, pattern));
+}
+
 function countLines(lang: Lang, name: string, stats: WeeklyReadStats): string[] {
   const { countedDays, answeredDays, helloMornings, familyAsks } = stats;
   const answeredKey = countedDays === 1 ? "weekly_read.answered_one" : "weekly_read.answered";
@@ -78,7 +122,7 @@ function countLines(lang: Lang, name: string, stats: WeeklyReadStats): string[] 
       helloMornings === 1 ? "weekly_read.hello_mornings_one" : "weekly_read.hello_mornings";
     lines.push(t(lang, helloKey, { name, mornings: helloMornings }));
   }
-  return lines;
+  return [...lines, ...familyLines(lang, name, stats.familyPatterns ?? [])];
 }
 
 /** Paragraphs separated by a blank line: the counts, the lines, the suggestion, each when present. */
