@@ -61,7 +61,47 @@ export const PATTERNS = {
   quietWeekdayWeeks: 3,
   /** Answers after the second message are reported from this many in a week. */
   minAfterSecond: 2,
+  /** Her health words are named when said on this many days of the week, at most this many. */
+  minHealthDays: 2,
+  maxHealthWords: 3,
 } as const;
+
+/** Her own health words that came up on several days of a week, and the days (ADR-47). */
+export interface WeeklyHealthMention {
+  words: string;
+  dates: LocalDate[];
+}
+
+/**
+ * The health words she said on `PATTERNS.minHealthDays` or more days, in her first spelling, most
+ * days first, ties in the order she first said them. The caller passes only answers given under a
+ * health-words yes that covers the weekly read; nothing here decides consent.
+ */
+export function recurringHealthWords(
+  answers: readonly { date: LocalDate; words: readonly string[] }[],
+): WeeklyHealthMention[] {
+  const found = new Map<string, { words: string; dates: Set<LocalDate>; order: number }>();
+  for (const answer of answers) {
+    for (const said of answer.words) {
+      const key = said.trim().toLowerCase();
+      if (key.length === 0) {
+        continue;
+      }
+      const entry = found.get(key) ?? {
+        words: said.trim().slice(0, 120),
+        dates: new Set<LocalDate>(),
+        order: found.size,
+      };
+      entry.dates.add(answer.date);
+      found.set(key, entry);
+    }
+  }
+  return [...found.values()]
+    .filter((entry) => entry.dates.size >= PATTERNS.minHealthDays)
+    .sort((a, b) => b.dates.size - a.dates.size || a.order - b.order)
+    .slice(0, PATTERNS.maxHealthWords)
+    .map((entry) => ({ words: entry.words, dates: [...entry.dates].sort() }));
+}
 
 /** One of her days as the patterns read it. */
 export interface PatternDay {

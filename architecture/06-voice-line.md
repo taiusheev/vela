@@ -105,7 +105,7 @@ US law decides this design (§8.2): daily prerecorded calls to her line need her
 1. **The organiser sets her line up**, in the app on You > Her phone > "She has a landline". They enter her number. The app shows the Vela number and a six-digit code, which is valid for seven days. The number is stored on an invite, not on a link: no link exists until she says yes.
 2. **She calls the Vela number** from that line, usually with the organiser sitting beside her. Vela matches the caller ID against open voice invites, then asks for the code: "Please type the six numbers Anna gave you." The code ties the call to the invite. The caller ID matching ties it, weakly, to her line.
 3. **Vela reads the consent text** in her language (`voice-consent.v1`, below). Then: "If that's alright, press 1. If not, press 2." With a 1 she says yes. With a 2 the invite is closed and the organiser is told, as with a No on Telegram (spec §9, ADR-27).
-4. **The health-words question** follows, as on every channel (spec §9, `consent.health_words@1`), answered with 1 or 2.
+4. **The health-words question** follows, as on every channel (spec §9, `consent.health_words@2`), answered with 1 or 2.
 5. **Evidence.** The consent row stores: the Call SID; the caller ID; the digits pressed, with their times; the text version; and the language. The call is not recorded: the digits and the text version are the evidence, as a tap and a text version are on Telegram.
 
 **`voice-consent.v1` (en), draft for counsel:**

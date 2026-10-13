@@ -5,7 +5,7 @@ import {
   OpenWeeklyRead,
   type WeekDayState,
 } from "@vela/contracts";
-import { addDays, localTimeOf } from "@vela/core";
+import { addDays, localTimeOf, weeklyHealthLines } from "@vela/core";
 import { members, quietEvents, subscriptions, type VelaTransaction, weeklyReads } from "@vela/db";
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
@@ -14,7 +14,8 @@ import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { loadWeekDays } from "./jobs.ts";
-import { memberById, type Queryable } from "./repo.ts";
+import { familyById, memberById, type Queryable } from "./repo.ts";
+import { weeklyHealthMentions } from "./weekly-health.ts";
 
 /** Subscription states that cover her: the read is Vela Light's (spec §13, A9). */
 const COVERING = new Set(["trial", "active", "grace"]);
@@ -123,6 +124,17 @@ export async function loadApiWeeklyRead(
   });
 
   const stats = read.stats;
+  // Her health words as the organisers were sent them, while her yes and the words still stand
+  // (ADR-47), in the family's language like the rest of the notes.
+  const family = covered && stats.health_sent === true ? await familyById(db, familyId) : null;
+  const healthLines =
+    family === null
+      ? []
+      : weeklyHealthLines(
+          family.language,
+          her.displayName,
+          await weeklyHealthMentions(db, her, read.weekStart, now),
+        );
   return ApiWeeklyRead.parse({
     ...base,
     read: {
@@ -139,7 +151,7 @@ export async function loadApiWeeklyRead(
             family_asks: stats.family_asks,
           }
         : null,
-      notes: covered ? (read.sentLines ?? []) : null,
+      notes: covered ? [...(read.sentLines ?? []), ...healthLines] : null,
       suggestion:
         covered && read.sentSuggestion !== null && read.sentSuggestion.trim().length > 0
           ? read.sentSuggestion

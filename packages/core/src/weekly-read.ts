@@ -15,6 +15,7 @@ import type { FamilyPattern, Lang, LocalDate } from "@vela/contracts";
 import { type MessageKey, t } from "@vela/copy";
 import { lineCap, shorten, TEXT_MAX_LENGTH } from "./text.ts";
 import { weekdayOf } from "./time.ts";
+import type { WeeklyHealthMention } from "./weekly-patterns.ts";
 
 export type WeeklyReadAudience = "organiser" | "kept_light_member";
 
@@ -45,6 +46,11 @@ export interface RenderWeeklyReadInput {
   lines: readonly string[];
   /** The suggestion as sent; empty when there is none. */
   suggestion: string;
+  /**
+   * Her own health words that came up on several days, when she agreed to them for the weekly read
+   * and the founder sent them (ADR-47): lines from copy after the lines, for both audiences.
+   */
+  health?: readonly WeeklyHealthMention[];
   audience: WeeklyReadAudience;
 }
 
@@ -145,6 +151,23 @@ function familyLine(lang: Lang, name: string, pattern: FamilyPattern): string[] 
   }
 }
 
+/** One line per health word she came back to, quoting her words, naming the days when three or fewer. */
+export function weeklyHealthLines(
+  lang: Lang,
+  name: string,
+  health: readonly WeeklyHealthMention[],
+): string[] {
+  return health.map((mention) =>
+    mention.dates.length <= MAX_NAMED_DAYS
+      ? t(lang, "weekly_read.health_days", {
+          name,
+          words: mention.words,
+          weekdays: daysOf(lang, mention.dates),
+        })
+      : t(lang, "weekly_read.health_more", { name, words: mention.words }),
+  );
+}
+
 /** The organiser lines of the family patterns, in the order they were found. */
 function familyLines(lang: Lang, name: string, patterns: readonly FamilyPattern[]): string[] {
   return patterns.flatMap((pattern) => familyLine(lang, name, pattern));
@@ -214,7 +237,12 @@ function fitText(
  * only her copy of a read without lines. Lines that are blank are left out.
  */
 export function renderWeeklyRead(input: RenderWeeklyReadInput): string | null {
-  const lines = input.lines.map((line) => line.trim()).filter((line) => line.length > 0);
+  const lines = [
+    ...input.lines,
+    ...weeklyHealthLines(input.lang, input.name.trim(), input.health ?? []),
+  ]
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
   if (input.audience === "kept_light_member") {
     return lines.length === 0 ? null : fitText(input.lang, [], lines, "");
   }

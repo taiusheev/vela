@@ -63,8 +63,17 @@ import { type TickMember, tickMember } from "./tick.ts";
 /** The consent copy she agrees to, kept with the consent so a later rewording is a new version. */
 export const CONSENT_TEXT_VERSION = "consent.request@2";
 
-/** The health-words question she answers after her yes (L1), versioned the same way. */
-export const HEALTH_WORDS_TEXT_VERSION = "consent.health_words@1";
+/**
+ * The health-words question she answers after her yes (L1), versioned the same way. `@2` (ADR-47)
+ * adds that the Sunday read may say which of her health words came up more than once.
+ */
+export const HEALTH_WORDS_TEXT_VERSION = "consent.health_words@2";
+
+/**
+ * The versions of the health-words question whose yes covers her health words in the weekly read
+ * (ADR-47). A yes to `@1` covers the same-day flag only, so it never puts them in a read.
+ */
+export const WEEKLY_HEALTH_TEXT_VERSIONS: readonly string[] = ["consent.health_words@2"];
 
 /**
  * How long the health-words question waits after her yes. Cloudflare Queues promise no order between

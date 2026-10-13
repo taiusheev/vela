@@ -19,6 +19,7 @@ Their first morning is the day after they tap **Yes**. A Yes after 22:00 their t
 
 ## Before the setup day (about 30 minutes, any day this week)
 
+0. **The release with the new health-words question is live** (founder decision, 13 October): the production release that carries `privacy-notice.v4` and `consent.health_words@2` is approved and watched before the setup day, so your parent answers the question that names the weekly read. Read them `consent-script.v3` on the call.
 1. **Production backup drill** ([`infra/runbooks/restore-drill.md`](../../../infra/runbooks/restore-drill.md), about 20 minutes in the Neon console, Claude guides). Production holds no family yet, so this is the cheapest moment. Note the Neon plan's restore window: on the Free plan it is 6 hours.
 2. **Every adult approved.** Your parent and each relative who will be in the group opens `https://t.me/VelaLightbot`, presses **Start** and sends you the number the bot shows. Approve each number on the admin page, **Trial roster** (`/admin/roster`). The bot does nothing for a number that is not on the roster, and a relative who is not approved cannot ask or reply.
 3. **Each relative gets the privacy notice** (`https://vela.vela-light.workers.dev/privacy`) from you, individually, before you add them to the group.

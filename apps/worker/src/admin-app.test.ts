@@ -347,9 +347,26 @@ describe("an admin action", () => {
           weeklyReadId,
           lines: ["She walked to the market.", "The cat is well."],
           suggestion: "Ask about the market",
+          includeHealth: false,
         },
       ],
     ]);
+  });
+
+  it("sends her health words only when the founder left their box ticked (ADR-47)", async () => {
+    const weeklyReadId = "33333333-3333-7333-8333-333333333333";
+    const fake = createFakeAdminRuntime({ services: { sendWeeklyRead: async () => "sent" } });
+
+    await send(
+      fake,
+      formRequest(
+        `/admin/families/${familyId}/send_weekly_read`,
+        { weeklyReadId, lines: "", suggestion: "", includeHealth: "on" },
+        ORIGIN,
+      ),
+    );
+
+    expect(argsOf(fake.calls, "sendWeeklyRead")[0]?.[1]).toMatchObject({ includeHealth: true });
   });
 
   it("deletes a family only when the word is typed", async () => {

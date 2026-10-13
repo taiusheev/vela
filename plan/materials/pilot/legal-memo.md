@@ -665,7 +665,7 @@ Added on 17 September 2026, after the memo. On the founder's instruction, the te
 
 | # | Status | Where, and what differs from the memo |
 |---|---|---|
-| C1 | Applied (L1) | Consent kind `health_words`, its own message and buttons right after the yes to the light (`consent.health_words@1`); script §4 and §6; `infra/runbooks/data-requests.md` B for a change by hand or an answer on paper. The founder does not send the question by hand: the button flow is built before any family |
+| C1 | Applied (L1) | Consent kind `health_words`, its own message and buttons right after the yes to the light (`consent.health_words@1`; `@2` from 13 October 2026 also names the weekly read, ADR-47); script §4 and §6; `infra/runbooks/data-requests.md` B for a change by hand or an answer on paper. The founder does not send the question by hand: the button flow is built before any family |
 | C2 | Applied (L2) | Without the consent: no health mentions, no `unwell`, health left out of the summary, `flag_reason` the severity alone, and the organisers' notice without words or category. The flag check still runs |
 | C3 | Applied | Both notices: "Health words" section citing Article 6(1)(6); "No medical records." replaced; one lawful-basis line per group |
 | C4 | Applied in code (L3) | `understand.v4` and `flag.v2`, with eval cases in English and Traditional Chinese. Open: the paid eval run before merging |

@@ -610,7 +610,7 @@ describe("the health-words question", () => {
       memberId: seed.her.id,
       subjectRef: `member:${seed.her.id}`,
       answer: "yes",
-      textVersion: "consent.health_words@1",
+      textVersion: "consent.health_words@2",
       lang: "en",
       givenAt: h.clock.now(),
       withdrawnAt: null,
@@ -627,7 +627,7 @@ describe("the health-words question", () => {
       .where(eq(events.name, "consent_given"));
     expect(given.map((row) => row.props)).toContainEqual({
       kind: "health_words",
-      text_version: "consent.health_words@1",
+      text_version: "consent.health_words@2",
     });
     expect(h.telegram.sent.length).toBe(sentBefore);
     expect(h.telegram.closed.at(-1)).toEqual({

@@ -210,7 +210,7 @@ ORDER BY given_at;
 
   ```sql
   INSERT INTO consents (member_id, subject_ref, kind, answer, text_version, lang, channel, given_at, evidence)
-  SELECT m.id, 'member:' || m.id::text, 'health_words', '<yes or no>', 'consent.health_words@1', m.language, '<paper or call>', '<when they answered>'::timestamptz,
+  SELECT m.id, 'member:' || m.id::text, 'health_words', '<yes or no>', 'consent.health_words@2', m.language, '<paper or call>', '<when they answered>'::timestamptz,
          jsonb_build_object('note', '<family code> <date>', 'recorded_by', 'founder')
   FROM members AS m
   WHERE m.id = '<kept-light member id>' AND m.light_consented_at IS NOT NULL
