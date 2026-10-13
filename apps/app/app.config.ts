@@ -41,6 +41,7 @@ export default function configureApp({ config }: ConfigContext): ExpoConfig {
     name: config.name ?? "Vela Light",
     slug: config.slug ?? "vela-light",
     ios: { ...config.ios, supportsTablet: trial || audit ? false : config.ios?.supportsTablet },
+    ...(audit ? { updates: { ...config.updates, enabled: false } } : {}),
     extra: {
       ...config.extra,
       releaseCommit:

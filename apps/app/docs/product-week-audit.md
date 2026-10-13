@@ -6,7 +6,9 @@ Plan: PR #60, `plan/product-week.md`, source 0c7975d. Owner: Codex for app paths
 
 X1 is **in progress**, not complete. This is a source review and a native-audit setup receipt, not an observed iPhone audit. No native screenshots, measured taps, VoiceOver results, Dynamic Type results, real account loop, or TestFlight evidence have been collected.
 
-This Mac currently selects `/Library/Developer/CommandLineTools`; `xcrun --find simctl` fails. Spotlight found no Xcode application. `pnpm --filter @vela/app audit:doctor` reports the missing simulator and exits unsuccessfully without launching an app.
+On 13 October, Xcode 27.0 is installed and its license/first-launch checks pass. The synthetic native project, 119 Pods and an unsigned Debug simulator build for arm64/x86_64 succeeded. Bundle inspection confirmed the iPhone-only target, microphone/photo purpose strings, absent camera permission, aggregated privacy manifest and linked Opus decoder. These checks do not establish native launch or media behavior.
+
+No iOS simulator runtime is available yet. Apple's MobileAsset download stalled through both normal and export-path command-line attempts; restarting its protected service was refused by System Integrity Protection. Native walkthroughs, screenshots and accessibility checks remain pending.
 
 [Simulator setup reference](https://docs.expo.dev/workflow/ios-simulator/). Install Xcode from the Mac App Store, open it once to finish setup, choose Xcode’s tools in Settings → Locations → Command Line Tools, and install an iOS simulator runtime in Xcode Settings → Components. Then engineering can resume the native walkthrough. The founder deferred OS/device setup on 10 October; app work continues with source, automated and synthetic web checks, while native gates remain open. Apple Developer paid membership is needed for the later signed/TestFlight work, not for this simulator setup.
 
@@ -21,7 +23,7 @@ pnpm --filter @vela/app audit:ios
 
 The launcher disables dotenv loading, removes API/authentication/trial settings from its child environment, enables explicit demo fixtures, clears Metro's cache, and opens Expo Go on iOS. Existing local staging settings cannot turn this audit into a live family session.
 
-For a custom native simulator build, use the `audit-simulator` EAS profile. It is internal, iPhone-only, explicitly demo, and uses its own `audit` update channel. It does not extend a staging or store profile. Build only after the Expo account/build capacity is confirmed; no cloud build has been requested here.
+For a custom native simulator build, use the `audit-simulator` EAS profile. It is internal, iPhone-only and explicitly demo. Automatic Expo updates are disabled for this profile, so downloaded code cannot replace its bundled synthetic fixtures. Its configured channel remains `audit`; it does not extend a staging or store profile. Build only after the Expo account/build capacity is confirmed; no cloud build has been requested here. A local Release simulator build can embed the JavaScript for a walkthrough without a development server; it does not require Apple signing.
 
 Expo Go checks the basic experience. A custom build is still needed to exercise Vela's bundled Opus decoder; microphone, selected-photo access, background/resume, notifications and messenger media need separate native/device evidence. The configuration checks do not establish Apple acceptance.
 
