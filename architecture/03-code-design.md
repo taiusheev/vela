@@ -184,6 +184,7 @@ Keys, in catalog order (English text is the source; wording follows spec §20: n
 | `group.ask_queued` | Tomorrow already has {asker}'s ask. This one is saved for another morning. |
 | `group.answer_light` | ☀️ {name} answered {asker} · {time} |
 | `group.answer_hello` | ☀️ {name} is fine · {time} |
+| `group.answer_question_tap` | Vela asked: “{question}” Reply here to ask it yourself: a reply is the first thing {name} gets tomorrow morning. |
 | `group.answer_chip` | {name} chose: {choice} |
 | `group.answer_pick` | {name} picked photo {n}. |
 | `group.answer_vote` | {name} voted: {choice} |
@@ -192,6 +193,8 @@ Keys, in catalog order (English text is the source; wording follows spec §20: n
 | `quiet.notice` | It's been quiet at {name}'s today. The morning message went out at {sent}; {name} usually answers by {usual}. Nothing worrying is known. |
 | `quiet.notice_no_usual` | It's been quiet at {name}'s today. The morning message went out at {sent}. Nothing worrying is known. |
 | `quiet.nearby` | Nearby: {contacts} |
+| `quiet.next_step` | If you can, give {name} a call. |
+| `quiet.next_step_nearby` | If you can, give {name} a call. If {name} doesn't pick up, someone nearby could look in. |
 | `quiet.fine_button` | {name} is fine, I know why |
 | `quiet.wait_button` | Wait 2 hours |
 | `quiet.waiting` | I'll look again at {time}. |

@@ -799,13 +799,42 @@ describe("handleAnswerButton", () => {
     );
   }
 
-  it("keeps the plain fine line when she only taps fine on Vela's question", async () => {
+  it("shows the family Vela's question she only tapped fine on, so one of them can ask it", async () => {
     const scene = await morning({ type: "hello", text: "What was your very first job?" });
     await tapped(scene, { type: "answer", exchangeId: scene.exchangeId, answer: "fine" });
     await h.run(handlers());
 
     const [post] = h.telegram.sentTo(GROUP);
+    expect(post?.message.text).toBe(
+      "☀️ Mom is fine · 08:12\nVela asked: “What was your very first job?” Reply here to ask it yourself: a reply is the first thing Mom gets tomorrow morning.",
+    );
+  });
+
+  it("keeps the plain fine line on the plain hello, which asked nothing", async () => {
+    const scene = await morning({ type: "hello", text: null });
+    await tapped(scene, { type: "answer", exchangeId: scene.exchangeId, answer: "heart" });
+    await h.run(handlers());
+
+    const [post] = h.telegram.sentTo(GROUP);
     expect(post?.message.text).toBe("☀️ Mom is fine · 08:12");
+  });
+
+  it("answers Vela's question with a chip: the family sees the question and her choice", async () => {
+    const scene = await morning({ type: "hello", text: "Which season do you like best, and why?" });
+    await h.db.insert(chips).values({
+      exchangeId: scene.exchangeId,
+      chips: ["Spring", "Autumn", "Tell you later"],
+      promptVersion: "chips.v1",
+    });
+    await tapped(scene, { type: "chip", exchangeId: scene.exchangeId, index: 1 });
+    await h.run(handlers());
+
+    const [answer] = await h.db.select().from(answers);
+    expect(answer).toMatchObject({ kind: "chip", payload: { index: 1, choice: "Autumn" } });
+    const [post] = h.telegram.sentTo(GROUP);
+    expect(post?.message.text).toBe(
+      "☀️ Mom answered today's question from Vela · 08:12\n“Which season do you like best, and why?”\nMom chose: Autumn",
+    );
   });
 
   it("answers 'I'm fine': acknowledged, closed with the label, posted as a hello", async () => {

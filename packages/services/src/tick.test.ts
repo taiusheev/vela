@@ -490,7 +490,7 @@ describe("tickMember", () => {
       notifiedMemberIds: [seed.organiser.id],
     });
     expect(texts(ORGANISER_CHAT)).toEqual([
-      "It's been quiet at Mom's today. The morning message went out at 08:00. Nothing worrying is known.",
+      "It's been quiet at Mom's today. The morning message went out at 08:00. Nothing worrying is known.\n\nIf you can, give Mom a call.",
     ]);
     expect(await nextWake(her)).toEqual(at("2026-09-15", "19:00"));
 

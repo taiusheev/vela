@@ -168,7 +168,7 @@ describe("openQuiet", () => {
 
     const [notice] = h.telegram.sentTo(seed.organiserLink.externalId);
     expect(notice?.message.text).toBe(
-      "It's been quiet at Mom's today. The morning message went out at 08:00. Nothing worrying is known.",
+      "It's been quiet at Mom's today. The morning message went out at 08:00. Nothing worrying is known.\n\nIf you can, give Mom a call.",
     );
     const [quiet] = await quietRows();
     const buttons = notice?.message.buttons?.flat() ?? [];
@@ -201,7 +201,7 @@ describe("openQuiet", () => {
 
     const [notice] = h.telegram.sentTo(seed.organiserLink.externalId);
     expect(notice?.message.text).toBe(
-      "It's been quiet at Mom's today. The morning message went out at 08:00; Mom usually answers by 09:00. Nothing worrying is known.",
+      "It's been quiet at Mom's today. The morning message went out at 08:00; Mom usually answers by 09:00. Nothing worrying is known.\n\nIf you can, give Mom a call.",
     );
   });
 
@@ -228,7 +228,7 @@ describe("openQuiet", () => {
 
     const [notice] = h.telegram.sentTo(seed.organiserLink.externalId);
     expect(notice?.message.text).toBe(
-      "It's been quiet at Mom's today. The morning message went out at 23:00; Mom usually answers by 00:00. Nothing worrying is known.",
+      "It's been quiet at Mom's today. The morning message went out at 23:00; Mom usually answers by 00:00. Nothing worrying is known.\n\nIf you can, give Mom a call.",
     );
   });
 

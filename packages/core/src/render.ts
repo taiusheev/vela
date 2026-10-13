@@ -4,8 +4,8 @@
  * Text, in paragraphs: yesterday's replies under their heading; the late note or the repeat preface;
  * the greeting; the ask (who asks, what, and how to answer it, or, for a voice note or photo without
  * words, who sent it, or that the photo is gone) or the fallback hello with its signature; the hint.
- * Buttons: the question's chips one per row, the photo choice's 1 and 2, the vote's options one per
- * row, and always a last row with a heart and "I'm fine", so every arrival can be answered with one
+ * Buttons: the question's chips one per row (Vela's bank question's too), the photo choice's 1 and 2,
+ * the vote's options one per row, and always a last row with a heart and "I'm fine", so every arrival can be answered with one
  * tap.
  */
 import type { Button, ExchangeType, Lang } from "@vela/contracts";
@@ -22,6 +22,11 @@ export type ArrivalAsk =
        * null or absent keeps the plain hello.
        */
       question?: string | null;
+      /**
+       * Answers to tap for Vela's question when it is a question (spec §5.3), drafted as a family
+       * question's are; empty for a story, recipe or word, and for the plain hello.
+       */
+      chips?: readonly string[];
     }
   | {
       type: Exclude<ExchangeType, "hello">;
@@ -143,6 +148,12 @@ function askRows(lang: Lang, exchangeId: string, ask: ArrivalAsk): Button[][] {
     // Spec §5.3: chips belong to questions; story, recipe, and memory asks are answered by voice.
     case "question":
       return optionRows(ask.chips, MAX_CHIPS, (index) => ({ type: "chip", exchangeId, index }));
+    // Vela's own question, on a morning nobody asked, is answered the same way; the plain hello,
+    // with no question, has nothing to choose from.
+    case "hello":
+      return (ask.question?.trim() ?? "") === ""
+        ? []
+        : optionRows(ask.chips ?? [], MAX_CHIPS, (index) => ({ type: "chip", exchangeId, index }));
     case "photo_choice":
       return [
         [0, 1].map((index) =>

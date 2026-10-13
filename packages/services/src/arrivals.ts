@@ -95,6 +95,13 @@ interface Prepared {
   exchange: Exchange;
   /** True when this call settled the exchange, so the chips are drafted once. */
   fresh: boolean;
+  /** Her morning asks a question chips can answer: a family member's, or Vela's from the bank. */
+  takesChips: boolean;
+}
+
+interface Settled {
+  exchange: Exchange;
+  takesChips: boolean;
 }
 
 /**
@@ -119,7 +126,7 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
     }
     const existing = await exchangeForLocalDate(tx, memberId, date);
     if (existing !== null && existing.state !== "composed") {
-      return { exchange: existing, fresh: false };
+      return { exchange: existing, fresh: false, takesChips: false };
     }
     const candidates = (await askCandidates(tx, memberId, date)).filter(
       (candidate) =>
@@ -150,7 +157,7 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
       "exchangeId" in selection
         ? candidates.find((candidate) => candidate.id === selection.exchangeId)
         : undefined;
-    const exchange = await settle(tx, member, date, chosen, now);
+    const { exchange, takesChips } = await settle(tx, member, date, chosen, now);
     await recordEvent(
       tx,
       {
@@ -162,9 +169,9 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
       },
       now,
     );
-    return { exchange, fresh: true };
+    return { exchange, fresh: true, takesChips };
   });
-  if (prepared.fresh && prepared.exchange.type === "question") {
+  if (prepared.fresh && prepared.takesChips) {
     await draftChips(deps, prepared.exchange);
   }
   return prepared.exchange.id;
@@ -219,7 +226,7 @@ async function settle(
   date: LocalDate,
   chosen: Exchange | undefined,
   now: Date,
-): Promise<Exchange> {
+): Promise<Settled> {
   if (chosen !== undefined) {
     const [row] = await tx
       .update(exchanges)
@@ -229,9 +236,10 @@ async function settle(
     if (row === undefined) {
       throw new VelaError("not_found", `exchange ${chosen.id} vanished while preparing`);
     }
-    return row;
+    return { exchange: row, takesChips: row.type === "question" };
   }
   // Nobody asked: Vela asks her something new from the question bank rather than the same hello.
+  // A bank question takes chips as a family question does, so the easiest tap still says something.
   const question = await takeFallbackQuestion(tx, member, date, now);
   const [hello] = await tx
     .insert(exchanges)
@@ -241,7 +249,7 @@ async function settle(
       askerId: null,
       type: "hello",
       state: "scheduled",
-      text: question,
+      text: question?.text ?? null,
       textLang: member.language,
       whenRule: "date",
       scheduledFor: date,
@@ -251,7 +259,7 @@ async function settle(
   if (hello === undefined) {
     throw new VelaError("illegal_state", `no hello could be created for ${date}`);
   }
-  return hello;
+  return { exchange: hello, takesChips: question?.type === "question" };
 }
 
 /**
@@ -566,7 +574,16 @@ export async function loadAsk(
   morning: AskMorning,
 ): Promise<LoadedAsk> {
   if (exchange.type === "hello") {
-    return { ask: { type: "hello", question: exchange.text }, media: [] };
+    // Chips exist only for Vela's bank question, drafted when the morning was prepared.
+    const [chipRow] = await deps.db
+      .select()
+      .from(chips)
+      .where(eq(chips.exchangeId, exchange.id))
+      .limit(1);
+    return {
+      ask: { type: "hello", question: exchange.text, chips: chipRow?.chips ?? [] },
+      media: [],
+    };
   }
   const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);
   const rows = lastingRows(
