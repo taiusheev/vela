@@ -127,7 +127,12 @@ const STATS = {
 
 async function seedWeeklyRead(
   seed: SeededFamily,
-  options: { weekStart?: LocalDate; lines?: string[]; suggestion?: string } = {},
+  options: {
+    weekStart?: LocalDate;
+    lines?: string[];
+    suggestion?: string;
+    stats?: Record<string, unknown>;
+  } = {},
 ): Promise<string> {
   const [row] = await h.db
     .insert(weeklyReads)
@@ -137,7 +142,7 @@ async function seedWeeklyRead(
       weekStart: options.weekStart ?? WEEK_START,
       lines: options.lines ?? ["Draft line one.", "Draft line two."],
       suggestion: options.suggestion ?? "Draft suggestion.",
-      stats: STATS,
+      stats: options.stats ?? STATS,
       promptVersion: "weekly_read.v4",
       createdAt: h.clock.now(),
     })
@@ -1606,10 +1611,94 @@ describe("form input", () => {
 });
 
 describe("sendWeeklyRead", () => {
+  const ANSWER_TIME = {
+    kind: "answer_time",
+    direction: "later",
+    usual: "08:00",
+    thisWeek: "08:45",
+    secondWeek: false,
+    standout: null,
+  };
   const EDITED = {
     lines: ["She cooked dumplings on Tuesday.", " ", "Her sister visited on Friday."],
     suggestion: "Ask about the dumpling recipe.",
   };
+
+  it("gives organisers the family lines after the counts, and never her (ADR-46)", async () => {
+    const seed = await family();
+    const readId = await seedWeeklyRead(seed, {
+      stats: {
+        ...STATS,
+        patterns: [ANSWER_TIME],
+        family_patterns: [
+          { kind: "no_reply", dates: ["2026-09-08", "2026-09-10"], of: 5 },
+          { kind: "quiet_weekday", weekday: 3, weeks: 3 },
+          { kind: "a pattern from a later version", answers: 1 },
+        ],
+      },
+    });
+
+    expect(await sendWeeklyRead(h.deps, FOUNDER, { weeklyReadId: readId, ...EDITED })).toBe("sent");
+    await h.run(handlers());
+
+    // A stored pattern this version cannot read is left out; the read and the others still go.
+    expect(h.telegram.sentTo("1001")[0]?.message.text).toBe(
+      [
+        "Mom answered 5 of 7 days.",
+        "On 2 mornings nobody in the family asked, so Vela sent Mom a hello.",
+        "Mom's answers on Tuesday and Thursday got no reply or reaction from the family.",
+        "Wednesday mornings have stayed quiet 3 weeks in a row.",
+        "",
+        "She cooked dumplings on Tuesday.",
+        "Her sister visited on Friday.",
+        "",
+        "Something to ask next week: Ask about the dumpling recipe.",
+      ].join("\n"),
+    );
+    expect(h.telegram.sentTo("2001")).toHaveLength(0);
+  });
+
+  it("puts each family line after the counts, as the page shows them", async () => {
+    const seed = await family();
+    const readId = await seedWeeklyRead(seed, {
+      stats: {
+        ...STATS,
+        patterns: [ANSWER_TIME],
+        family_patterns: [
+          { kind: "no_reply", dates: ["2026-09-08", "2026-09-10"], of: 5 },
+          { kind: "asks_by", askers: [{ name: "Mia", asks: 5 }], none: ["Sam"] },
+          { kind: "quiet_weekday", weekday: 3, weeks: 3 },
+        ],
+      },
+    });
+
+    const page = await loadFamilyPage(h.deps, FOUNDER, seed.family.id);
+    const entry = page?.weeklyReads.find((read) => read.read.id === readId);
+    const counts = [
+      "Mom answered 5 of 7 days.",
+      "On 2 mornings nobody in the family asked, so Vela sent Mom a hello.",
+      "Mom's answers on Tuesday and Thursday got no reply or reaction from the family.",
+      "Asks this week: Mia 5.",
+      "No ask from Sam this week.",
+      "Wednesday mornings have stayed quiet 3 weeks in a row.",
+    ].join("\n");
+    expect(entry?.countLines).toBe(counts);
+    expect(entry?.patterns).toEqual([ANSWER_TIME]);
+
+    expect(await sendWeeklyRead(h.deps, FOUNDER, { weeklyReadId: readId, ...EDITED })).toBe("sent");
+    await h.run(handlers());
+    expect(h.telegram.sentTo("1001")[0]?.message.text).toBe(
+      [
+        counts,
+        "",
+        "She cooked dumplings on Tuesday.",
+        "Her sister visited on Friday.",
+        "",
+        "Something to ask next week: Ask about the dumpling recipe.",
+      ].join("\n"),
+    );
+    expect(h.telegram.sentTo("2001")).toHaveLength(0);
+  });
 
   it("reaches each active organiser once with the counts, the edited lines, and the suggestion", async () => {
     const seed = await family();

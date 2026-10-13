@@ -8,15 +8,18 @@ import { morningTimeOn } from "./morning-time.ts";
  */
 
 import { type AiCallRecord, isAiOff, type Mentions, SAFE_DEFAULTS, type WeeklyDay } from "@vela/ai";
-import type { LocalDate, LocalTime } from "@vela/contracts";
+import type { AnswerForm, AnswerKind, LocalDate, LocalTime } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
   addDays,
+  detectWeeklyPatterns,
   lateLatencyMinutes,
   localDateOf,
   localTimeOf,
   minutesBetween,
   outboundKey,
+  PATTERNS,
+  type PatternDay,
   quietAfterMinutes,
   TUNING,
   weekdayOf,
@@ -77,7 +80,7 @@ import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import { deleteOldDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
-import { clockMinutesBetween, medianTimeAround } from "./format.ts";
+import { medianTimeAround } from "./format.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { INVITE_DAYS } from "./invites.ts";
 import { sweepInboundMediaOrphans } from "./media-orphans.ts";
@@ -160,6 +163,32 @@ interface AnswerOnDay {
   summary: string | null;
   mentions: Record<string, unknown>;
   voiceMs: number | null;
+  /** Words in her written answer or voice transcript; null for an answer without words. */
+  words: number | null;
+}
+
+/**
+ * Words in her own text, for comparing her answers with her own earlier ones (ADR-46): a run of
+ * letters or digits is a word, and so is each Chinese character, which Chinese writes without spaces.
+ */
+const WORD = /\p{Script=Han}|[\p{L}\p{N}]+/gu;
+
+export function wordsIn(text: string): number {
+  return text.match(WORD)?.length ?? 0;
+}
+
+function answerWords(kind: string, payload: unknown, transcript: string | null): number | null {
+  const text =
+    kind === "voice"
+      ? transcript
+      : kind === "text" && typeof payload === "object" && payload !== null && "text" in payload
+        ? (payload as { text: unknown }).text
+        : null;
+  if (typeof text !== "string") {
+    return null;
+  }
+  const words = wordsIn(text);
+  return words === 0 ? null : words;
 }
 
 export interface WeekDay {
@@ -206,6 +235,8 @@ export async function loadWeekDays(
       summary: answers.summary,
       mentions: answers.mentions,
       voiceMs: media.durationMs,
+      payload: answers.payload,
+      transcript: answers.transcript,
     })
     .from(answers)
     .leftJoin(media, eq(media.id, answers.mediaId))
@@ -249,6 +280,7 @@ export async function loadWeekDays(
                 summary: answer.summary,
                 mentions: answer.mentions,
                 voiceMs: answer.kind === "voice" ? answer.voiceMs : null,
+                words: answerWords(answer.kind, answer.payload, answer.transcript),
               })),
     };
   });
@@ -276,16 +308,6 @@ function usualTimeOf(
   return medianTimeAround(answered, member.tz, member.arrivalTime);
 }
 
-function meanVoiceMs(days: readonly WeekDay[]): number | null {
-  const lengths = days.flatMap((day) =>
-    day.answers.flatMap((answer) => (answer.voiceMs === null ? [] : [answer.voiceMs])),
-  );
-  if (lengths.length === 0) {
-    return null;
-  }
-  return lengths.reduce((sum, value) => sum + value, 0) / lengths.length;
-}
-
 /**
  * The mention lists a week's topics are drawn from. Never `health`: topics are stored in
  * `weekly_reads.stats`, kept while the family uses Vela, and health words are kept only 30 days and
@@ -296,6 +318,16 @@ const TOPIC_MENTIONS = ["people", "places", "plans", "dates"] as const satisfies
   keyof Mentions,
   "health"
 >[];
+
+/**
+ * What the week's patterns read of her mentions: who and where and what she plans, never dates,
+ * which say when rather than what, and never health (ADR-46).
+ */
+const PATTERN_MENTIONS = [
+  "people",
+  "places",
+  "plans",
+] as const satisfies readonly (typeof TOPIC_MENTIONS)[number][];
 
 /** Things she mentioned on two or more days, in her words, at most ten; never her health words. */
 function repeatedMentions(days: readonly WeekDay[]): string[] {
@@ -322,6 +354,142 @@ function repeatedMentions(days: readonly WeekDay[]): string[] {
     .filter((entry) => entry.dates.size >= 2)
     .map((entry) => entry.text.slice(0, 120))
     .slice(0, 10);
+}
+
+/** How an answer kind reads as a form of answer; `other` (a video, a document) is none of them. */
+const FORM_OF: Readonly<Partial<Record<AnswerKind, AnswerForm>>> = {
+  voice: "voice",
+  text: "words",
+  photo: "photos",
+  heart: "taps",
+  fine: "taps",
+  chip: "taps",
+  vote: "taps",
+  photo_pick: "taps",
+  sticker: "taps",
+};
+
+/**
+ * One of her days as `detectWeeklyPatterns` reads it: when she answered, how, how long, what she
+ * mentioned (never her health words), who asked, and what the family sent back to her answer.
+ */
+function patternDayOf(
+  day: WeekDay,
+  timeZone: string,
+  familyReplies: ReadonlyMap<string, number>,
+  awayOn: (date: LocalDate) => boolean,
+): PatternDay {
+  const exchange = day.exchange;
+  const answeredAt = day.answeredAt;
+  const forms = new Set(
+    day.answers.flatMap((answer) => {
+      const form = FORM_OF[answer.kind as AnswerKind];
+      return form === undefined ? [] : [form];
+    }),
+  );
+  const words = day.answers.flatMap((answer) => (answer.words === null ? [] : [answer.words]));
+  const voiceMs = day.answers.find((answer) => answer.voiceMs !== null)?.voiceMs ?? null;
+  return {
+    date: day.date,
+    delivered: exchange?.deliveredAt != null,
+    away: awayOn(day.date),
+    answerMinute:
+      answeredAt === null
+        ? null
+        : minutesBetween(zonedInstant(day.date, "00:00", timeZone), answeredAt),
+    afterSecond:
+      answeredAt !== null &&
+      exchange?.repeatedAt != null &&
+      answeredAt.getTime() > exchange.repeatedAt.getTime(),
+    forms: [...forms],
+    words: words.length === 0 ? null : words.reduce((sum, value) => sum + value, 0),
+    voiceSeconds: voiceMs === null ? null : voiceMs / 1000,
+    mentions: day.answers.flatMap((answer) =>
+      PATTERN_MENTIONS.flatMap((kind) => {
+        const list = answer.mentions[kind];
+        return Array.isArray(list)
+          ? list.filter((item): item is string => typeof item === "string")
+          : [];
+      }),
+    ),
+    askType: exchange?.type ?? null,
+    askerName: exchange === null || exchange.type === "hello" ? null : day.askerName,
+    familyReplies: exchange === null ? 0 : (familyReplies.get(exchange.id) ?? 0),
+  };
+}
+
+/**
+ * The family members who take turns asking her and were in the family before the week's end, by
+ * name, as the turn prompt picks them (`turnHolders` in arrivals.ts).
+ */
+async function turnTakerNames(
+  db: Queryable,
+  member: Member,
+  weekEnd: LocalDate,
+): Promise<string[]> {
+  const rows = await db
+    .select({ name: members.displayName })
+    .from(members)
+    .where(
+      and(
+        eq(members.familyId, member.familyId),
+        ne(members.id, member.id),
+        eq(members.status, "active"),
+        eq(members.turnsIn, true),
+        eq(members.lightOn, false),
+        isNull(members.lightConsentedAt),
+        isNull(members.leftAt),
+        lt(members.createdAt, zonedInstant(addDays(weekEnd, 1), "00:00", member.tz)),
+      ),
+    );
+  return rows.map((row) => row.name);
+}
+
+/** Replies and reactions the family sent her, by exchange; replies among the others are left out. */
+async function familyRepliesTo(
+  db: Queryable,
+  member: Member,
+  days: readonly WeekDay[],
+): Promise<Map<string, number>> {
+  const ids = days.flatMap((day) => (day.exchange === null ? [] : [day.exchange.id]));
+  if (ids.length === 0) {
+    return new Map();
+  }
+  const rows = await db
+    .select({ exchangeId: replies.exchangeId, count: sql<number>`count(*)::int` })
+    .from(replies)
+    .where(
+      and(
+        inArray(replies.exchangeId, ids),
+        ne(replies.memberId, member.id),
+        eq(replies.toRecipient, true),
+      ),
+    )
+    .groupBy(replies.exchangeId);
+  return new Map(rows.map((row) => [row.exchangeId, Number(row.count)]));
+}
+
+/** Whether she was away on a date, an open-ended away running until it ended or to `through`. */
+async function awayCheck(
+  db: Queryable,
+  member: Member,
+  through: LocalDate,
+): Promise<(date: LocalDate) => boolean> {
+  const rows = await db
+    .select({
+      fromDate: awayPeriods.fromDate,
+      toDate: awayPeriods.toDate,
+      endedAt: awayPeriods.endedAt,
+    })
+    .from(awayPeriods)
+    .where(and(eq(awayPeriods.memberId, member.id), lte(awayPeriods.fromDate, through)));
+  return (date) =>
+    rows.some((period) => {
+      const last =
+        period.toDate ??
+        (period.endedAt === null ? through : localDateOf(period.endedAt, member.tz));
+      return period.fromDate <= date && date <= last;
+    });
 }
 
 function weeklyDayOf(day: WeekDay, answeredAt: Date, timeZone: string): WeeklyDay {
@@ -425,7 +593,7 @@ export async function draftWeeklyRead(
   }
   // Before the model is asked anything, so a week whose draft fails still retunes her threshold.
   await tuneQuietAfter(deps, member);
-  const lastWeekStart = addDays(weekStart, -DAYS_IN_WEEK);
+  const historyStart = addDays(weekStart, -PATTERNS.historyDays);
   const healthPermissions = await deps.db
     .select({ givenAt: consents.givenAt, withdrawnAt: consents.withdrawnAt })
     .from(consents)
@@ -439,7 +607,7 @@ export async function draftWeeklyRead(
   const healthAtStart = await hasHealthWordsConsent(deps.db, member.id, deps.clock.now());
   // Old consented summaries can contain health words. After withdrawal, omit their derived
   // text entirely; counts and original family answers remain unaffected.
-  const allDays = (await loadWeekDays(deps.db, member, lastWeekStart, weekEnd)).map((day) => ({
+  const allDays = (await loadWeekDays(deps.db, member, historyStart, weekEnd)).map((day) => ({
     ...day,
     answers: day.answers.map((answer) =>
       healthPermissions.some(
@@ -449,7 +617,11 @@ export async function draftWeeklyRead(
         : answer,
     ),
   }));
-  const lastWeek = allDays.filter((day) => day.date < weekStart);
+  // Her earlier weeks, never days before her light started, which no morning could have reached.
+  const history = allDays.filter(
+    (day) =>
+      day.date < weekStart && (member.lightStartsOn === null || day.date >= member.lightStartsOn),
+  );
   const counted = allDays.filter((day) => day.date >= firstCounted);
 
   const answered = counted.filter((day) => day.answeredAt !== null);
@@ -461,22 +633,14 @@ export async function draftWeeklyRead(
     ...member,
     arrivalTime: morningTimeOn(member, weekEnd),
   });
-  const lastUsualTime = usualTimeOf(lastWeek, {
-    ...member,
-    arrivalTime: morningTimeOn(member, weekEnd),
-  });
-  // The short way round the clock: from 23:55 to 00:05 is ten minutes later.
-  const driftMin =
-    usualTime === null || lastUsualTime === null
-      ? null
-      : clockMinutesBetween(lastUsualTime, usualTime);
-  const voiceMs = meanVoiceMs(counted);
-  const lastVoiceMs = meanVoiceMs(lastWeek);
-  const voiceLenDrift =
-    voiceMs === null || lastVoiceMs === null || lastVoiceMs === 0
-      ? null
-      : Math.round(((voiceMs - lastVoiceMs) / lastVoiceMs) * 100);
   const topics = repeatedMentions(counted);
+  const familyReplies = await familyRepliesTo(deps.db, member, allDays);
+  const awayOn = await awayCheck(deps.db, member, weekEnd);
+  const patterns = detectWeeklyPatterns({
+    week: counted.map((day) => patternDayOf(day, member.tz, familyReplies, awayOn)),
+    history: history.map((day) => patternDayOf(day, member.tz, familyReplies, awayOn)),
+    familyNames: await turnTakerNames(deps.db, member, weekEnd),
+  });
 
   const weeklyInput = {
     lang: family.language,
@@ -486,9 +650,7 @@ export async function draftWeeklyRead(
       day.answeredAt === null ? [] : [weeklyDayOf(day, day.answeredAt, member.tz)],
     ),
     usualAnswerTime: usualTime,
-    answerTimeDriftMinutes: driftMin,
-    voiceLengthDriftPercent: voiceLenDrift,
-    repeatedMentions: topics,
+    patterns: patterns.notes,
   };
   const outcome = await deps.ai.weeklyRead(weeklyInput);
   // AI off is not a failure: the draft is the safe default, and nothing is logged as a failed call.
@@ -502,9 +664,9 @@ export async function draftWeeklyRead(
     hello_mornings: helloMornings,
     family_asks: familyAsks,
     usual_time: usualTime,
-    drift_min: driftMin,
     topics,
-    voice_len_drift: voiceLenDrift,
+    patterns: patterns.notes,
+    family_patterns: patterns.family,
   };
   await deps.db.transaction(async (tx) => {
     const [currentFamily] = await tx
@@ -546,7 +708,14 @@ export async function draftWeeklyRead(
         weekStart,
         lines: value.lines,
         suggestion: value.suggestion,
-        stats: withdrewHealth ? { ...stats, topics: [] } : stats,
+        // What she mentioned leaves with the derived words her withdrawal removed.
+        stats: withdrewHealth
+          ? {
+              ...stats,
+              topics: [],
+              patterns: stats.patterns.filter((pattern) => pattern.kind !== "came_back_to"),
+            }
+          : stats,
         promptVersion: isAiOff(outcome) ? DRAFTED_WITH_AI_OFF : outcome.record.promptVersion,
         createdAt: now,
       })

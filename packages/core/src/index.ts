@@ -10,4 +10,5 @@ export * from "./schedule.ts";
 export * from "./time.ts";
 export * from "./tuning.ts";
 export * from "./turns.ts";
+export * from "./weekly-patterns.ts";
 export * from "./weekly-read.ts";

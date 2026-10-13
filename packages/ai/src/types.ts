@@ -13,6 +13,7 @@ import {
   LocalDate,
   LocalTime,
   ReplyKind,
+  WeeklyNotePattern,
 } from "@vela/contracts";
 import { z } from "zod";
 
@@ -411,10 +412,11 @@ export const WeeklyDay = z.object({
 export type WeeklyDay = z.infer<typeof WeeklyDay>;
 
 /**
- * Drifts and repeated mentions are computed by services; the model only words them. The week's
- * counts (days answered, mornings nobody asked, the family's asks) are not part of the input:
- * `renderWeeklyRead` in @vela/core writes them from `weekly_reads.stats` for organisers, so a model
- * can neither misstate them nor show them to her (spec §8, §13).
+ * The week's patterns are found by `detectWeeklyPatterns` in @vela/core against her own earlier
+ * weeks (ADR-46); the model only words them. The week's counts (days answered, mornings nobody asked,
+ * the family's asks) and the family patterns are not part of the input: `renderWeeklyRead` in
+ * @vela/core writes them from `weekly_reads.stats` for organisers, so a model can neither misstate
+ * them nor show them to her (spec §8, §13).
  */
 export const WeeklyReadInput = z.object({
   /** The reader's language. */
@@ -425,12 +427,8 @@ export const WeeklyReadInput = z.object({
   /** The days she answered this week, oldest first; empty when she answered none. */
   days: z.array(WeeklyDay).max(7),
   usualAnswerTime: LocalTime.nullable(),
-  /** Minutes later (positive) or earlier (negative) than last week's usual time. */
-  answerTimeDriftMinutes: z.number().int().nullable(),
-  /** Percent longer (positive) or shorter (negative) voice answers than last week. */
-  voiceLengthDriftPercent: z.number().nullable(),
-  /** Things mentioned on two or more days. */
-  repeatedMentions: z.array(z.string().max(120)).max(10),
+  /** What changed against her usual; empty when nothing did or there is too little to compare. */
+  patterns: z.array(WeeklyNotePattern).max(12),
 });
 export type WeeklyReadInput = z.infer<typeof WeeklyReadInput>;
 
