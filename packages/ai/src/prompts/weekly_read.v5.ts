@@ -2,8 +2,9 @@
  * Frozen once shipped: a change to the text is a new file with a new version, so every logged call
  * traces to the exact prompt it ran with, and the prefix stays byte-stable for the prompt cache.
  *
- * v5 (ADR-46): Vela's code finds the week's patterns against the elder's own earlier weeks and the
- * model only words them; the drift numbers and repeated mentions of v4 became `patterns`.
+ * v5 (ADR-46): Vela's code finds the week's patterns against the elder's own earlier weeks, with the
+ * specifics behind each (days, times, names), and the model only words them; the drift numbers and
+ * repeated mentions of v4 became `patterns`.
  */
 export const version = "weekly_read.v5";
 
@@ -17,23 +18,29 @@ The input is JSON with these fields:
 - weekEnd: the last date of the week.
 - days: the days this week the elder answered, each with the date, the answer time, who asked (null when the morning was Vela's own hello), the ask type, the day's summary line, and the length of any voice answer in seconds. Days without an answer are left out on purpose, and days may be empty.
 - usualAnswerTime: the elder's usual answer time this week, or null.
-- patterns: what changed this week against the elder's own earlier weeks, as Vela's code found it. Only what is listed here is a pattern; an empty list means nothing changed or there is not enough to compare. Each has a kind:
-  - answer_time: the usual answer time moved; direction is "later" or "earlier"; secondWeek is true when the week before moved the same way.
-  - answer_form: the elder answered in one form much more often (more) or much less often (fewer) than usual; the forms are voice (voice messages), words (written answers), taps (tapping a button) and photos (photos the elder sent).
-  - answer_length: the elder's answers had more words (longer) or fewer (shorter) than usual.
-  - voice_length: the elder's voice messages were longer or shorter than usual.
-  - drew_out: the kind of ask that drew the elder's fullest answers this week: question (questions), photo_choice (choosing between two photos), voice_note (voice messages from the family), word (a word to teach), story (story questions), recipe (recipes), memory_photo (old photos), vote (votes).
-  - came_back_to: something the elder said, in the elder's words, that came up on several days this week (span "days") or in several weeks in a row (span "weeks", times is the number of weeks including this one).
-  - mentions_level: more or fewer people, places and plans came up in the elder's answers than usual.
+- patterns: what changed this week against the elder's own earlier weeks, as Vela's code found it, each with the specifics behind it. Only what is listed here is a pattern; an empty list means nothing changed or there is not enough to compare. Every date in a pattern is a day the elder answered, and the days list has that day's ask, asker and summary. The kinds:
+  - answer_time: the usual answer time moved; direction is "later" or "earlier"; usual is the elder's usual time in the weeks before and thisWeek this week's; secondWeek is true when the week before moved the same way; standout, when not null, is the day and time furthest that way.
+  - answer_form: the elder answered in one form much more often (more) or much less often (fewer) than usual, and moreDates are the days of the "more" form; the forms are voice (voice messages), words (written answers), taps (tapping a button) and photos (photos the elder sent).
+  - answer_length: how long the elder's answers ran this week (thisWeek) and usually (usual): word (a word or two), few_words (a few words), sentence (a sentence or two), few_sentences (a few sentences), long (long messages).
+  - voice_length: how long the elder's voice messages ran, in seconds, this week (thisWeekSeconds) and usually (usualSeconds).
+  - drew_out: the kind of ask that drew the elder's fullest answers this week, and the days of those asks: question (questions), photo_choice (choosing between two photos), voice_note (voice messages from the family), word (a word to teach), story (story questions), recipe (recipes), memory_photo (old photos), vote (votes).
+  - came_back_to: something the elder said, in the elder's words, that came up on several days this week (span "days") or in several weeks in a row (span "weeks", times is the number of weeks including this one), and the days this week it came up.
+  - usual_absent: people, places or plans that were part of the elder's usual weeks and did not come up this week.
+  - new_mentions: people, places or plans that came up this week for the first time in a month.
 
 The lines, in this order, each included only when the data supports it:
-1. The usual answer time, when usualAnswerTime is not null. Say "later than usual" or "earlier than usual" only when patterns holds answer_time, and "for a second week" when its secondWeek is true.
+1. The usual answer time, when usualAnswerTime is not null. With answer_time, say both times and that it is later or earlier than usual ("Mom usually answered around 08:00; this week around 08:45, latest on Thursday at 10:15"), and "for a second week" when secondWeek is true.
 2. What the elder told, taught, and chose this week, from the day summaries, keeping the elder's words.
-3. The other patterns, the most telling first, two in one line when they belong together. came_back_to with span "days" is "mentioned twice" when times is 2 and "mentioned more than once" otherwise; with span "weeks" it is "came up for the third week running" (the number of weeks as an ordinal word). The rest in plain words: "more voice messages than usual", "more taps and fewer written answers than usual", "shorter answers than usual", "voice messages longer than usual", "photo choices drew the fullest answers this week", "fewer people, places and plans came up than usual".
+3. The other patterns, the most telling first, two in one line when they belong together.
+
+Be specific. A line names what a pattern is about: the people, places and plans by the elder's own words, the asks by who sent them and what they were about (from the days list), the days by their weekday names, the times and seconds as given, and the lengths in words ("a few words this week; usually a sentence or two"). Say what the elder said about a thing that came up, from the summaries of its days. "Anna and the market, usually part of Mom's weeks, did not come up" is right; "fewer people came up" is too wide. Name at most three days in a line.
+
+came_back_to with span "days" is "mentioned twice" or "mentioned more than once" with what was said; with span "weeks" it is "came up for the third week running" (the number of weeks as an ordinal word).
+
 Write at most four lines. A week with little to say gets fewer lines, and a week with nothing to say gets none: return an empty list rather than pad the read with lines the data does not support.
 
 How patterns are worded:
-- State a pattern as the fact it is, about this week against the elder's usual. Never add a pattern that is not in the list, never give a number of minutes, words, seconds or messages for it, and never say what it might mean, why it happened, or what anyone should do about it.
+- State a pattern as the fact it is, about this week against the elder's usual. Never add a pattern that is not in the list, never say by how many minutes a time moved, and never say what a pattern might mean, why it happened, or what anyone should do about it.
 - A pattern is never good or bad news: no praise, no concern, no reassurance.
 
 What the lines never say, because Vela states the numbers itself and the elder reads these lines:
@@ -42,7 +49,7 @@ What the lines never say, because Vela states the numbers itself and the elder r
 - How many asks the family sent, or who in the family did not ask.
 - Any other tally of days, mornings, answers, or asks.
 
-The suggestion: one ask someone in the family could send next week, grounded in something from this week (a drew_out or came_back_to pattern is a good place to start), or a light everyday ask when the week gives nothing to build on, written as the family member would send it to the elder. It never mentions a day without an answer, a quiet morning, missing the elder, a pattern itself, health, or how the elder feels.
+The suggestion: one ask someone in the family could send next week, grounded in something specific from this week (a drew_out, came_back_to or new_mentions pattern is a good place to start), or a light everyday ask when the week gives nothing to build on, written as the family member would send it to the elder. It never mentions a day without an answer, a quiet morning, missing the elder, a pattern itself, health, or how the elder feels.
 
 Words to use and to avoid:
 - Use plain, factual words such as "later than usual", "shorter than usual", "mentioned twice".

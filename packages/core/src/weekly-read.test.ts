@@ -257,27 +257,30 @@ describe("renderWeeklyRead length", () => {
 });
 
 describe("renderWeeklyRead family patterns (ADR-46)", () => {
+  // Monday 12 to Sunday 18 October 2026.
   const PATTERNS_FOUND: WeeklyReadStats["familyPatterns"] = [
-    { kind: "no_reply", answers: 2, of: 6 },
+    { kind: "no_reply", dates: ["2026-10-13", "2026-10-15"], of: 6 },
     {
       kind: "asks_by",
       askers: [
         { name: "Anna", asks: 3 },
         { name: "Minh", asks: 2 },
       ],
+      none: ["Lan"],
     },
-    { kind: "after_second", answers: 3, usual: 1 },
+    { kind: "after_second", dates: ["2026-10-12", "2026-10-14", "2026-10-17"], usual: 1 },
     { kind: "quiet_weekday", weekday: 3, weeks: 3 },
   ];
 
-  it("follows the counts for organisers, from copy, before the lines", () => {
+  it("follows the counts for organisers, from copy, naming the days and the people", () => {
     expect(text({ stats: { ...FULL_WEEK, familyPatterns: PATTERNS_FOUND } })).toBe(
       [
         "Mom answered 6 of 7 days.",
         "On 2 mornings nobody in the family asked, so Vela sent Mom a hello.",
-        "2 of Mom's 6 answers got no reply or reaction from the family.",
+        "Mom's answers on Tuesday and Thursday got no reply or reaction from the family.",
         "Asks this week: Anna 3, Minh 2.",
-        "3 answers came only after the second message; usually about 1 a week.",
+        "No ask from Lan this week.",
+        "On Monday, Wednesday and Saturday, Mom answered only after the second message; usually about 1 a week.",
         "Wednesday mornings have stayed quiet 3 weeks in a row.",
         "",
         LINES.join("\n"),
@@ -287,26 +290,54 @@ describe("renderWeeklyRead family patterns (ADR-46)", () => {
     );
   });
 
+  it("names one day in the singular, and counts more than three days instead of naming them", () => {
+    const one = text({
+      stats: { ...FULL_WEEK, familyPatterns: [{ kind: "no_reply", dates: ["2026-10-13"], of: 6 }] },
+      lines: [],
+      suggestion: "",
+    });
+    expect(one).toContain("Mom's answer on Tuesday got no reply or reaction from the family.");
+    const many = text({
+      stats: {
+        ...FULL_WEEK,
+        familyPatterns: [
+          {
+            kind: "no_reply",
+            dates: ["2026-10-12", "2026-10-13", "2026-10-15", "2026-10-16"],
+            of: 6,
+          },
+        ],
+      },
+      lines: [],
+      suggestion: "",
+    });
+    expect(many).toContain("4 of Mom's 6 answers got no reply or reaction from the family.");
+  });
+
   it("says no usual when there is none yet, and reads in Traditional Chinese", () => {
     const stats: WeeklyReadStats = {
       ...FULL_WEEK,
       familyPatterns: [
-        { kind: "after_second", answers: 2, usual: null },
+        { kind: "after_second", dates: ["2026-10-12", "2026-10-14"], usual: null },
         {
           kind: "asks_by",
           askers: [
             { name: "小芳", asks: 4 },
             { name: "Mia", asks: 1 },
           ],
+          none: ["阿偉", "小明"],
         },
+        { kind: "no_reply", dates: ["2026-10-13"], of: 5 },
       ],
     };
     expect(text({ stats, lines: [], suggestion: "" })).toContain(
-      "2 answers came only after the second message.",
+      "On Monday and Wednesday, Mom answered only after the second message.",
     );
     const zh = text({ lang: "zh-TW", name: "阿嬤", stats, lines: [], suggestion: "" });
-    expect(zh).toContain("有 2 則回覆是在第二次訊息之後才收到。");
+    expect(zh).toContain("星期一和星期三，阿嬤在第二次訊息之後才回覆。");
     expect(zh).toContain("這週的提問：小芳 4 次、Mia 1 次。");
+    expect(zh).toContain("阿偉和小明這週沒有提問。");
+    expect(zh).toContain("阿嬤星期二的回覆，沒有收到家人的回應或表情。");
   });
 
   it("never reaches her", () => {

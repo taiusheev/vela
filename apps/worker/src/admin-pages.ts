@@ -614,14 +614,49 @@ const FORM_NAMES: Readonly<Record<string, string>> = {
   photos: "photos",
 };
 
-/** A pattern as the founder checks it against the draft lines: the fact, in plain English. */
+const LENGTH_NAMES: Readonly<Record<string, string>> = {
+  word: "a word or two",
+  few_words: "a few words",
+  sentence: "a sentence or two",
+  few_sentences: "a few sentences",
+  long: "long messages",
+};
+
+/** "Tue 20 Oct", the way the founder reads a date of the week. */
+function shortDay(date: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+function shortDays(dates: readonly string[]): string {
+  return dates.map(shortDay).join(", ");
+}
+
+function quoted(items: readonly string[]): string {
+  return items.map((item) => `"${item}"`).join(", ");
+}
+
+/** A pattern as the founder checks it against the draft lines: the fact and its specifics. */
 export function describePattern(pattern: WeeklyNotePattern): string {
   switch (pattern.kind) {
     case "answer_time":
-      return `Answered ${pattern.direction} than usual, by about ${pattern.minutes} minutes${pattern.secondWeek ? ", for a second week" : ""}.`;
+      return [
+        `Answered ${pattern.direction} than usual: around ${pattern.thisWeek} this week, usually ${pattern.usual}`,
+        pattern.secondWeek ? ", for a second week" : "",
+        pattern.standout === null
+          ? ""
+          : `; ${pattern.direction === "later" ? "latest" : "earliest"} ${shortDay(pattern.standout.date)} at ${pattern.standout.time}`,
+        ".",
+      ].join("");
     case "answer_form":
       return [
-        pattern.more === null ? null : `more ${FORM_NAMES[pattern.more]}`,
+        pattern.more === null
+          ? null
+          : `more ${FORM_NAMES[pattern.more]} (${shortDays(pattern.moreDates)})`,
         pattern.fewer === null ? null : `fewer ${FORM_NAMES[pattern.fewer]}`,
       ]
         .filter((part) => part !== null)
@@ -629,17 +664,19 @@ export function describePattern(pattern: WeeklyNotePattern): string {
         .replace(/^./, (first) => first.toUpperCase())
         .concat(" than usual.");
     case "answer_length":
-      return `Answers ${pattern.direction} than usual.`;
+      return `Answers ran ${LENGTH_NAMES[pattern.thisWeek]} this week; usually ${LENGTH_NAMES[pattern.usual]}.`;
     case "voice_length":
-      return `Voice messages ${pattern.direction} than usual.`;
+      return `Voice messages about ${pattern.thisWeekSeconds} seconds this week; usually about ${pattern.usualSeconds}.`;
     case "drew_out":
-      return `Fullest answers came to ${ASK_TYPE_NAMES[pattern.askType] ?? pattern.askType}.`;
+      return `Fullest answers came to ${ASK_TYPE_NAMES[pattern.askType] ?? pattern.askType} (${shortDays(pattern.dates)}).`;
     case "came_back_to":
       return pattern.span === "days"
-        ? `Came back to "${pattern.text}" on ${pattern.times} days.`
-        : `"${pattern.text}" came up ${pattern.times} weeks in a row.`;
-    case "mentions_level":
-      return `${pattern.direction === "more" ? "More" : "Fewer"} people, places and plans came up than usual.`;
+        ? `Came back to "${pattern.text}" on ${pattern.times} days (${shortDays(pattern.dates)}).`
+        : `"${pattern.text}" came up ${pattern.times} weeks in a row (this week ${shortDays(pattern.dates)}).`;
+    case "usual_absent":
+      return `Usually part of the week, not this week: ${quoted(pattern.items)}.`;
+    case "new_mentions":
+      return `New this week, not in the four weeks before: ${quoted(pattern.items)}.`;
   }
 }
 

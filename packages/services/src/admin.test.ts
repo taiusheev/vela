@@ -1611,6 +1611,14 @@ describe("form input", () => {
 });
 
 describe("sendWeeklyRead", () => {
+  const ANSWER_TIME = {
+    kind: "answer_time",
+    direction: "later",
+    usual: "08:00",
+    thisWeek: "08:45",
+    secondWeek: false,
+    standout: null,
+  };
   const EDITED = {
     lines: ["She cooked dumplings on Tuesday.", " ", "Her sister visited on Friday."],
     suggestion: "Ask about the dumpling recipe.",
@@ -1621,9 +1629,9 @@ describe("sendWeeklyRead", () => {
     const readId = await seedWeeklyRead(seed, {
       stats: {
         ...STATS,
-        patterns: [{ kind: "answer_time", direction: "later", minutes: 45, secondWeek: false }],
+        patterns: [ANSWER_TIME],
         family_patterns: [
-          { kind: "no_reply", answers: 2, of: 5 },
+          { kind: "no_reply", dates: ["2026-09-08", "2026-09-10"], of: 5 },
           { kind: "quiet_weekday", weekday: 3, weeks: 3 },
           { kind: "a pattern from a later version", answers: 1 },
         ],
@@ -1638,7 +1646,7 @@ describe("sendWeeklyRead", () => {
       [
         "Mom answered 5 of 7 days.",
         "On 2 mornings nobody in the family asked, so Vela sent Mom a hello.",
-        "2 of Mom's 5 answers got no reply or reaction from the family.",
+        "Mom's answers on Tuesday and Thursday got no reply or reaction from the family.",
         "Wednesday mornings have stayed quiet 3 weeks in a row.",
         "",
         "She cooked dumplings on Tuesday.",
@@ -1655,10 +1663,10 @@ describe("sendWeeklyRead", () => {
     const readId = await seedWeeklyRead(seed, {
       stats: {
         ...STATS,
-        patterns: [{ kind: "answer_time", direction: "later", minutes: 45, secondWeek: false }],
+        patterns: [ANSWER_TIME],
         family_patterns: [
-          { kind: "no_reply", answers: 2, of: 5 },
-          { kind: "asks_by", askers: [{ name: "Mia", asks: 5 }] },
+          { kind: "no_reply", dates: ["2026-09-08", "2026-09-10"], of: 5 },
+          { kind: "asks_by", askers: [{ name: "Mia", asks: 5 }], none: ["Sam"] },
           { kind: "quiet_weekday", weekday: 3, weeks: 3 },
         ],
       },
@@ -1669,14 +1677,13 @@ describe("sendWeeklyRead", () => {
     const counts = [
       "Mom answered 5 of 7 days.",
       "On 2 mornings nobody in the family asked, so Vela sent Mom a hello.",
-      "2 of Mom's 5 answers got no reply or reaction from the family.",
+      "Mom's answers on Tuesday and Thursday got no reply or reaction from the family.",
       "Asks this week: Mia 5.",
+      "No ask from Sam this week.",
       "Wednesday mornings have stayed quiet 3 weeks in a row.",
     ].join("\n");
     expect(entry?.countLines).toBe(counts);
-    expect(entry?.patterns).toEqual([
-      { kind: "answer_time", direction: "later", minutes: 45, secondWeek: false },
-    ]);
+    expect(entry?.patterns).toEqual([ANSWER_TIME]);
 
     expect(await sendWeeklyRead(h.deps, FOUNDER, { weeklyReadId: readId, ...EDITED })).toBe("sent");
     await h.run(handlers());

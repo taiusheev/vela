@@ -273,11 +273,19 @@ describe("draftWeeklyRead", () => {
         family_asks: 2,
         usual_time: "09:15",
         topics: ["Auntie Lin"],
-        patterns: [{ kind: "came_back_to", text: "Auntie Lin", span: "days", times: 2 }],
+        patterns: [
+          {
+            kind: "came_back_to",
+            text: "Auntie Lin",
+            span: "days",
+            times: 2,
+            dates: ["2026-09-18", "2026-09-20"],
+          },
+        ],
         // Nobody replied to either answer, and Mia asked both mornings.
         family_patterns: [
-          { kind: "no_reply", answers: 2, of: 2 },
-          { kind: "asks_by", askers: [{ name: "Mia", asks: 2 }] },
+          { kind: "no_reply", dates: ["2026-09-18", "2026-09-20"], of: 2 },
+          { kind: "asks_by", askers: [{ name: "Mia", asks: 2 }], none: [] },
         ],
       },
       promptVersion: fakeRecord("weekly_read").promptVersion,
@@ -309,7 +317,15 @@ describe("draftWeeklyRead", () => {
       ],
       usualAnswerTime: "09:15",
       // Her first week: nothing to compare with, so only what she came back to.
-      patterns: [{ kind: "came_back_to", text: "Auntie Lin", span: "days", times: 2 }],
+      patterns: [
+        {
+          kind: "came_back_to",
+          text: "Auntie Lin",
+          span: "days",
+          times: 2,
+          dates: ["2026-09-18", "2026-09-20"],
+        },
+      ],
     });
     const [logged] = await h.db.select().from(aiCalls);
     expect(logged).toMatchObject({
@@ -377,6 +393,7 @@ describe("draftWeeklyRead", () => {
     expect(h.ai.calls[0]?.input).toMatchObject({
       patterns: [{ kind: "came_back_to", text: "the park", span: "days", times: 2 }],
     });
+    expect(JSON.stringify(h.ai.calls[0]?.input)).not.toContain("knee");
     expect(JSON.stringify(read)).not.toContain("knee");
   });
 
@@ -410,6 +427,12 @@ describe("draftWeeklyRead", () => {
       kind: "heart",
       channel: "telegram",
     });
+    // Sam takes turns too, and asked nothing this week.
+    await seedGroupMember(h.db, seed, {
+      now: at("2026-08-24", "09:00"),
+      name: "Sam",
+      externalId: "1003",
+    });
     h.clock.set(at("2026-09-20", "18:00"));
 
     await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
@@ -423,19 +446,26 @@ describe("draftWeeklyRead", () => {
       usual_time: "09:30",
       topics: [],
       patterns: [
-        { kind: "answer_time", direction: "later", minutes: 60, secondWeek: false },
-        { kind: "voice_length", direction: "longer" },
+        {
+          kind: "answer_time",
+          direction: "later",
+          usual: "08:30",
+          thisWeek: "09:30",
+          secondWeek: false,
+          standout: null,
+        },
+        { kind: "voice_length", direction: "longer", usualSeconds: 10, thisWeekSeconds: 20 },
       ],
       family_patterns: [
-        { kind: "no_reply", answers: 2, of: 3 },
-        { kind: "asks_by", askers: [{ name: "Mia", asks: 3 }] },
+        { kind: "no_reply", dates: ["2026-09-16", "2026-09-17"], of: 3 },
+        { kind: "asks_by", askers: [{ name: "Mia", asks: 3 }], none: ["Sam"] },
       ],
     });
     expect(h.ai.calls[0]?.input).toMatchObject({
       usualAnswerTime: "09:30",
       patterns: [
-        { kind: "answer_time", direction: "later", minutes: 60, secondWeek: false },
-        { kind: "voice_length", direction: "longer" },
+        { kind: "answer_time", usual: "08:30", thisWeek: "09:30" },
+        { kind: "voice_length", usualSeconds: 10, thisWeekSeconds: 20 },
       ],
       days: [{ date: "2026-09-15" }, { date: "2026-09-16" }, { date: "2026-09-17" }],
     });

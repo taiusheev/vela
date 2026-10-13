@@ -11,9 +11,10 @@
  * §8), so the counts and the nobody-asked line never reach her, and neither does the suggestion: it
  * is an ask meant to reach her as a surprise. A read with no lines has nothing to show her.
  */
-import type { FamilyPattern, Lang } from "@vela/contracts";
+import type { FamilyPattern, Lang, LocalDate } from "@vela/contracts";
 import { type MessageKey, t } from "@vela/copy";
 import { lineCap, shorten, TEXT_MAX_LENGTH } from "./text.ts";
+import { weekdayOf } from "./time.ts";
 
 export type WeeklyReadAudience = "organiser" | "kept_light_member";
 
@@ -75,39 +76,78 @@ function weekdayKey(weekday: number): MessageKey {
   return `weekday.${weekday}` as MessageKey;
 }
 
-/** The organiser line of one family pattern. */
-function familyLine(lang: Lang, name: string, pattern: FamilyPattern): string {
+/** "A", "A and B", "A, B and C", in the reader's language. */
+function listOf(lang: Lang, items: readonly string[]): string {
+  const last = items.at(-1) ?? "";
+  return items.length <= 1
+    ? last
+    : `${items.slice(0, -1).join(t(lang, "weekly_read.list_separator"))}${t(lang, "weekly_read.list_and")}${last}`;
+}
+
+/** The days of one week by their weekday names, which are unique within it. */
+function daysOf(lang: Lang, dates: readonly LocalDate[]): string {
+  return listOf(
+    lang,
+    dates.map((date) => t(lang, weekdayKey(weekdayOf(date)))),
+  );
+}
+
+/** Up to this many days are named; more read as a count. */
+const MAX_NAMED_DAYS = 3;
+
+/** The organiser lines of one family pattern. */
+function familyLine(lang: Lang, name: string, pattern: FamilyPattern): string[] {
   switch (pattern.kind) {
     case "no_reply":
-      return t(lang, "weekly_read.no_reply", {
-        name,
-        count: pattern.answers,
-        answered: pattern.of,
-      });
+      if (pattern.dates.length === 1) {
+        return [
+          t(lang, "weekly_read.no_reply_day", { name, weekday: daysOf(lang, pattern.dates) }),
+        ];
+      }
+      return [
+        pattern.dates.length <= MAX_NAMED_DAYS
+          ? t(lang, "weekly_read.no_reply_days", {
+              name,
+              weekdays: daysOf(lang, pattern.dates),
+            })
+          : t(lang, "weekly_read.no_reply", {
+              name,
+              count: pattern.dates.length,
+              answered: pattern.of,
+            }),
+      ];
     case "asks_by":
-      return t(lang, "weekly_read.asks_by", {
-        askers: pattern.askers
-          .map((asker) => t(lang, "weekly_read.asks_by_item", asker))
-          .join(t(lang, "weekly_read.asks_by_separator")),
-      });
-    case "after_second":
-      return pattern.usual === null
-        ? t(lang, "weekly_read.after_second", { count: pattern.answers })
-        : t(lang, "weekly_read.after_second_usual", {
-            count: pattern.answers,
-            usual: pattern.usual,
-          });
+      return [
+        t(lang, "weekly_read.asks_by", {
+          askers: pattern.askers
+            .map((asker) => t(lang, "weekly_read.asks_by_item", asker))
+            .join(t(lang, "weekly_read.list_separator")),
+        }),
+        ...(pattern.none.length === 0
+          ? []
+          : [t(lang, "weekly_read.asks_none", { names: listOf(lang, pattern.none) })]),
+      ];
+    case "after_second": {
+      const weekdays = daysOf(lang, pattern.dates);
+      return [
+        pattern.usual === null
+          ? t(lang, "weekly_read.after_second", { name, weekdays })
+          : t(lang, "weekly_read.after_second_usual", { name, weekdays, usual: pattern.usual }),
+      ];
+    }
     case "quiet_weekday":
-      return t(lang, "weekly_read.quiet_weekday", {
-        weekday: t(lang, weekdayKey(pattern.weekday)),
-        weeks: pattern.weeks,
-      });
+      return [
+        t(lang, "weekly_read.quiet_weekday", {
+          weekday: t(lang, weekdayKey(pattern.weekday)),
+          weeks: pattern.weeks,
+        }),
+      ];
   }
 }
 
-/** One organiser line per family pattern, in the order they were found. */
+/** The organiser lines of the family patterns, in the order they were found. */
 function familyLines(lang: Lang, name: string, patterns: readonly FamilyPattern[]): string[] {
-  return patterns.map((pattern) => familyLine(lang, name, pattern));
+  return patterns.flatMap((pattern) => familyLine(lang, name, pattern));
 }
 
 function countLines(lang: Lang, name: string, stats: WeeklyReadStats): string[] {

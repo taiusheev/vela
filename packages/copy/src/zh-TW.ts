@@ -158,11 +158,15 @@ export const zhTW: Record<keyof typeof en, string> = {
   "weekly_read.no_reply":
     "{name}這週的 {answered} 則回覆中，有 {count} 則沒有收到家人的回應或表情。",
   "weekly_read.asks_by": "這週的提問：{askers}。",
+  "weekly_read.no_reply_day": "{name}{weekday}的回覆，沒有收到家人的回應或表情。",
+  "weekly_read.no_reply_days": "{name}{weekdays}的回覆，沒有收到家人的回應或表情。",
   "weekly_read.asks_by_item": "{name} {asks} 次",
-  "weekly_read.asks_by_separator": "、",
-  "weekly_read.after_second": "有 {count} 則回覆是在第二次訊息之後才收到。",
+  "weekly_read.asks_none": "{names}這週沒有提問。",
+  "weekly_read.list_separator": "、",
+  "weekly_read.list_and": "和",
+  "weekly_read.after_second": "{weekdays}，{name}在第二次訊息之後才回覆。",
   "weekly_read.after_second_usual":
-    "有 {count} 則回覆是在第二次訊息之後才收到；平常一週大約 {usual} 則。",
+    "{weekdays}，{name}在第二次訊息之後才回覆；平常一週大約 {usual} 次。",
   "weekly_read.quiet_weekday": "已經連續 {weeks} 週，{weekday}早上都很安靜。",
   "weekday.0": "星期日",
   "weekday.1": "星期一",

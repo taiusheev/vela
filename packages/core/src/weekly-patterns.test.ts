@@ -2,6 +2,7 @@ import { FamilyPattern, WeeklyNotePattern } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
 import { addDays } from "./time.ts";
 import {
+  answerLengthOf,
   detectWeeklyPatterns,
   PATTERNS,
   type PatternDay,
@@ -71,11 +72,14 @@ function familyOf(input: WeeklyPatternInput, kind: FamilyPattern["kind"]) {
   return detect(input).family.filter((pattern) => pattern.kind === kind);
 }
 
+/** The week's dates, Monday 12 to Sunday 18 October 2026. */
+const D = Array.from({ length: 7 }, (_, index) => addDays(WEEK_START, index));
+
 describe("detectWeeklyPatterns", () => {
   it("finds no note in an ordinary week like her usual ones, and says who asked", () => {
     expect(detect({ week: week(), history: history() })).toEqual({
       notes: [],
-      family: [{ kind: "asks_by", askers: [{ name: "Anna", asks: 7 }] }],
+      family: [{ kind: "asks_by", askers: [{ name: "Anna", asks: 7 }], none: [] }],
     });
   });
 
@@ -89,29 +93,44 @@ describe("detectWeeklyPatterns", () => {
         index < 3 ? day(date, { familyReplies: 0, answerMinute: 700 }) : day(date),
       ),
       history: [],
+      familyNames: ["Anna", "Minh"],
     });
     expect(found.notes).toEqual([]);
     expect(found.family).toEqual([
-      { kind: "no_reply", answers: 3, of: 7 },
-      { kind: "asks_by", askers: [{ name: "Anna", asks: 7 }] },
+      { kind: "no_reply", dates: [D[0], D[1], D[2]], of: 7 },
+      { kind: "asks_by", askers: [{ name: "Anna", asks: 7 }], none: ["Minh"] },
     ]);
   });
 
   describe("answer time", () => {
-    it("reports a move of more than 30 minutes against her usual, rounded to five minutes", () => {
+    it("gives her usual time, this week's, and the day that stood out", () => {
       const input = {
-        week: week((date) => day(date, { answerMinute: 480 + 47 })),
+        week: week((date, index) => day(date, { answerMinute: index === 3 ? 615 : 527 })),
         history: history(),
       };
       expect(notesOf(input, "answer_time")).toEqual([
-        { kind: "answer_time", direction: "later", minutes: 45, secondWeek: false },
+        {
+          kind: "answer_time",
+          direction: "later",
+          usual: "08:00",
+          thisWeek: "08:45",
+          secondWeek: false,
+          standout: { date: D[3], time: "10:15" },
+        },
       ]);
     });
 
-    it("reports earlier answers too", () => {
+    it("names no standout when every day moved alike, and reports earlier answers too", () => {
       const input = { week: week((date) => day(date, { answerMinute: 420 })), history: history() };
       expect(notesOf(input, "answer_time")).toEqual([
-        { kind: "answer_time", direction: "earlier", minutes: 60, secondWeek: false },
+        {
+          kind: "answer_time",
+          direction: "earlier",
+          usual: "08:00",
+          thisWeek: "07:00",
+          secondWeek: false,
+          standout: null,
+        },
       ]);
     });
 
@@ -122,13 +141,13 @@ describe("detectWeeklyPatterns", () => {
 
     it("says when the week before moved the same way", () => {
       // Three weeks at 08:00, then last week at 09:00 and this week at 09:30: both later than usual,
-      // this week by 90 minutes against the three weeks before it, last week among them.
+      // this week against the three weeks before it, last week among them.
       const input = {
         week: week((date) => day(date, { answerMinute: 570 })),
         history: history((date, index) => day(date, { answerMinute: index >= 21 ? 540 : 480 })),
       };
-      expect(notesOf(input, "answer_time")).toEqual([
-        { kind: "answer_time", direction: "later", minutes: 90, secondWeek: true },
+      expect(notesOf(input, "answer_time")).toMatchObject([
+        { direction: "later", usual: "08:00", thisWeek: "09:30", secondWeek: true },
       ]);
     });
 
@@ -155,7 +174,7 @@ describe("detectWeeklyPatterns", () => {
   });
 
   describe("how she answers", () => {
-    it("reports more taps and fewer words when the shares move by 40 points or more", () => {
+    it("reports more taps and fewer written answers, with the days she tapped", () => {
       const input = {
         week: week((date, index) =>
           day(date, index < 5 ? { forms: ["taps"], words: null } : { forms: ["words"] }),
@@ -163,7 +182,7 @@ describe("detectWeeklyPatterns", () => {
         history: history(),
       };
       expect(notesOf(input, "answer_form")).toEqual([
-        { kind: "answer_form", more: "taps", fewer: "words" },
+        { kind: "answer_form", more: "taps", fewer: "words", moreDates: D.slice(0, 5) },
       ]);
     });
 
@@ -175,7 +194,7 @@ describe("detectWeeklyPatterns", () => {
         history: history(),
       };
       expect(notesOf(input, "answer_form")).toEqual([
-        { kind: "answer_form", more: "voice", fewer: null },
+        { kind: "answer_form", more: "voice", fewer: null, moreDates: D.slice(0, 4) },
       ]);
     });
 
@@ -196,23 +215,48 @@ describe("detectWeeklyPatterns", () => {
         history: history(),
       };
       expect(notesOf(input, "answer_form")).toEqual([
-        { kind: "answer_form", more: "taps", fewer: "words" },
+        { kind: "answer_form", more: "taps", fewer: "words", moreDates: D.slice(0, 3) },
       ]);
     });
   });
 
   describe("length", () => {
-    it("reports shorter answers at 40 percent fewer words than usual", () => {
-      const input = { week: week((date) => day(date, { words: 7 })), history: history() };
-      expect(notesOf(input, "answer_length")).toEqual([
-        { kind: "answer_length", direction: "shorter" },
+    it("reads lengths as a reader would put them", () => {
+      expect([1, 2, 3, 8, 9, 30, 31, 80, 81].map(answerLengthOf)).toEqual([
+        "word",
+        "word",
+        "few_words",
+        "few_words",
+        "sentence",
+        "sentence",
+        "few_sentences",
+        "few_sentences",
+        "long",
       ]);
     });
 
-    it("reports longer answers at 40 percent more", () => {
-      const input = { week: week((date) => day(date, { words: 17 })), history: history() };
+    it("reports shorter answers when they read differently: a few words, usually a sentence or two", () => {
+      const input = { week: week((date) => day(date, { words: 6 })), history: history() };
       expect(notesOf(input, "answer_length")).toEqual([
-        { kind: "answer_length", direction: "longer" },
+        { kind: "answer_length", direction: "shorter", usual: "sentence", thisWeek: "few_words" },
+      ]);
+    });
+
+    it("says nothing when the change would read the same, a sentence or two both weeks", () => {
+      // 12 words to 20 is two thirds more, and still a sentence or two.
+      const input = { week: week((date) => day(date, { words: 20 })), history: history() };
+      expect(notesOf(input, "answer_length")).toEqual([]);
+    });
+
+    it("reports longer answers", () => {
+      const input = { week: week((date) => day(date, { words: 45 })), history: history() };
+      expect(notesOf(input, "answer_length")).toEqual([
+        {
+          kind: "answer_length",
+          direction: "longer",
+          usual: "sentence",
+          thisWeek: "few_sentences",
+        },
       ]);
     });
 
@@ -224,14 +268,14 @@ describe("detectWeeklyPatterns", () => {
       expect(notesOf(input, "answer_length")).toEqual([]);
     });
 
-    it("reports voice messages shorter than usual from two this week and three before", () => {
+    it("gives voice messages' seconds, rounded to five, from two this week and three before", () => {
       const voice = (seconds: number) => ({ forms: ["voice" as const], voiceSeconds: seconds });
       const input = {
-        week: week((date, index) => day(date, index < 2 ? voice(10) : {})),
-        history: history((date, index) => day(date, index % 7 === 0 ? voice(40) : {})),
+        week: week((date, index) => day(date, index < 2 ? voice(12) : {})),
+        history: history((date, index) => day(date, index % 7 === 0 ? voice(41) : {})),
       };
       expect(notesOf(input, "voice_length")).toEqual([
-        { kind: "voice_length", direction: "shorter" },
+        { kind: "voice_length", direction: "shorter", usualSeconds: 40, thisWeekSeconds: 10 },
       ]);
     });
 
@@ -247,14 +291,19 @@ describe("detectWeeklyPatterns", () => {
   });
 
   describe("what drew her out", () => {
-    it("names the ask type whose answers were fullest, by half again over the rest", () => {
+    it("names the ask type whose answers were fullest, and the days of those asks", () => {
       const input = {
         week: week((date, index) =>
-          day(date, index < 2 ? { askType: "photo_choice", words: 30 } : { words: 10 }),
+          day(
+            date,
+            index === 1 || index === 4 ? { askType: "photo_choice", words: 30 } : { words: 10 },
+          ),
         ),
         history: [],
       };
-      expect(notesOf(input, "drew_out")).toEqual([{ kind: "drew_out", askType: "photo_choice" }]);
+      expect(notesOf(input, "drew_out")).toEqual([
+        { kind: "drew_out", askType: "photo_choice", dates: [D[1], D[4]] },
+      ]);
     });
 
     it("needs two answered asks of that type", () => {
@@ -294,7 +343,7 @@ describe("detectWeeklyPatterns", () => {
   });
 
   describe("what she came back to", () => {
-    it("reports something said on two days of the week, in her first spelling", () => {
+    it("reports something said on two days of the week, in her first spelling, with the days", () => {
       const input = {
         week: week((date, index) =>
           day(date, { mentions: index === 1 ? ["Tomatoes"] : index === 4 ? ["tomatoes "] : [] }),
@@ -302,11 +351,11 @@ describe("detectWeeklyPatterns", () => {
         history: [],
       };
       expect(notesOf(input, "came_back_to")).toEqual([
-        { kind: "came_back_to", text: "Tomatoes", span: "days", times: 2 },
+        { kind: "came_back_to", text: "Tomatoes", span: "days", times: 2, dates: [D[1], D[4]] },
       ]);
     });
 
-    it("reports a person who came up three weeks in a row, before anything said on two days", () => {
+    it("reports a person who came up weeks in a row, before anything said on two days", () => {
       const input = {
         week: week((date, index) =>
           day(date, { mentions: index === 0 ? ["Anna", "market"] : index === 2 ? ["market"] : [] }),
@@ -314,8 +363,8 @@ describe("detectWeeklyPatterns", () => {
         history: history((date, index) => day(date, { mentions: index % 7 === 3 ? ["anna"] : [] })),
       };
       expect(notesOf(input, "came_back_to")).toEqual([
-        { kind: "came_back_to", text: "Anna", span: "weeks", times: 5 },
-        { kind: "came_back_to", text: "market", span: "days", times: 2 },
+        { kind: "came_back_to", text: "Anna", span: "weeks", times: 5, dates: [D[0]] },
+        { kind: "came_back_to", text: "market", span: "days", times: 2, dates: [D[0], D[2]] },
       ]);
     });
 
@@ -338,50 +387,83 @@ describe("detectWeeklyPatterns", () => {
     });
   });
 
-  describe("how much came up", () => {
-    const busy = (date: string) => day(date, { mentions: ["Anna", "market"] });
+  describe("what was missing, and what was new", () => {
+    // Her usual weeks: the market on Mondays and Wednesdays, Anna on Fridays, the temple once.
+    const usualWeeks = history((date, index) =>
+      day(date, {
+        mentions: [
+          ...(index % 7 === 0 || index % 7 === 2 ? ["the market"] : []),
+          ...(index % 7 === 4 ? ["Anna"] : []),
+          ...(index === 20 ? ["the temple"] : []),
+        ],
+      }),
+    );
 
-    it("reports fewer people, places and plans at half her usual per answered day", () => {
+    it("names what was part of her usual weeks and did not come up, most said first", () => {
       const input = {
-        week: week((date, index) => day(date, { mentions: index === 0 ? ["Anna"] : [] })),
-        history: history(busy),
+        week: week((date, index) => day(date, { mentions: index === 2 ? ["Lan"] : [] })),
+        history: usualWeeks,
       };
-      expect(notesOf(input, "mentions_level")).toEqual([
-        { kind: "mentions_level", direction: "fewer" },
+      expect(notesOf(input, "usual_absent")).toEqual([
+        { kind: "usual_absent", items: ["the market", "Anna"] },
       ]);
     });
 
-    it("reports more at twice her usual", () => {
+    it("leaves out what came up only once or in one week, and what came up this week", () => {
       const input = {
-        week: week((date) => day(date, { mentions: ["Anna", "market", "temple", "lunch"] })),
-        history: history(busy),
+        week: week((date, index) => day(date, { mentions: index === 0 ? ["The Market"] : [] })),
+        history: usualWeeks,
       };
-      expect(notesOf(input, "mentions_level")).toEqual([
-        { kind: "mentions_level", direction: "more" },
-      ]);
+      expect(notesOf(input, "usual_absent")).toEqual([{ kind: "usual_absent", items: ["Anna"] }]);
     });
 
-    it("says nothing when little usually comes up", () => {
+    it("says nothing is missing from a week with too few answers to tell", () => {
       const input = {
-        week: week(),
-        history: history((date, index) => day(date, { mentions: index % 4 === 0 ? ["Anna"] : [] })),
+        week: week((date, index) => (index < 2 ? day(date) : quiet(date))),
+        history: usualWeeks,
       };
-      expect(notesOf(input, "mentions_level")).toEqual([]);
+      expect(notesOf(input, "usual_absent")).toEqual([]);
+    });
+
+    it("names what came up for the first time in four weeks, leaving out what she came back to", () => {
+      const input = {
+        week: week((date, index) =>
+          day(date, {
+            mentions:
+              index === 1 ? ["Vung Tau", "the market"] : index === 3 ? ["Vung Tau", "Lan"] : [],
+          }),
+        ),
+        history: usualWeeks,
+      };
+      expect(notesOf(input, "new_mentions")).toEqual([{ kind: "new_mentions", items: ["Lan"] }]);
+      expect(notesOf(input, "came_back_to")).toContainEqual(
+        expect.objectContaining({ text: "Vung Tau", span: "days" }),
+      );
+    });
+
+    it("calls nothing new without enough earlier weeks to know", () => {
+      const input = {
+        week: week((date, index) => day(date, { mentions: index === 1 ? ["Lan"] : [] })),
+        history: daysBefore(WEEK_START, 4, (date) => day(date)),
+      };
+      expect(notesOf(input, "new_mentions")).toEqual([]);
     });
   });
 
   describe("for organisers", () => {
-    it("counts her answers that got no reply or reaction", () => {
+    it("names the days her answers got no reply or reaction", () => {
       const input = {
         week: week((date, index) =>
           index === 6 ? quiet(date) : day(date, { familyReplies: index < 2 ? 0 : 2 }),
         ),
         history: history(),
       };
-      expect(familyOf(input, "no_reply")).toEqual([{ kind: "no_reply", answers: 2, of: 6 }]);
+      expect(familyOf(input, "no_reply")).toEqual([
+        { kind: "no_reply", dates: [D[0], D[1]], of: 6 },
+      ]);
     });
 
-    it("lists who asked, most first, leaving out Vela's own mornings", () => {
+    it("lists who asked, most first, and who takes turns but asked nothing", () => {
       const askers = ["Minh", "Anna", "Anna", null, "Anna", "Minh", "Lan"];
       const input = {
         week: week((date, index) => {
@@ -392,6 +474,7 @@ describe("detectWeeklyPatterns", () => {
           );
         }),
         history: history(),
+        familyNames: ["Anna", "Minh", "Lan", "Huy", "Bao"],
       };
       expect(familyOf(input, "asks_by")).toEqual([
         {
@@ -401,17 +484,20 @@ describe("detectWeeklyPatterns", () => {
             { name: "Minh", asks: 2 },
             { name: "Lan", asks: 1 },
           ],
+          none: ["Bao", "Huy"],
         },
       ]);
     });
 
-    it("counts answers after the second message against her usual week", () => {
+    it("names the days she answered after the second message, against her usual week", () => {
       const input = {
-        week: week((date, index) => day(date, { afterSecond: index < 3 })),
+        week: week((date, index) =>
+          day(date, { afterSecond: index === 0 || index === 2 || index === 5 }),
+        ),
         history: history((date, index) => day(date, { afterSecond: index % 7 === 0 })),
       };
       expect(familyOf(input, "after_second")).toEqual([
-        { kind: "after_second", answers: 3, usual: 1 },
+        { kind: "after_second", dates: [D[0], D[2], D[5]], usual: 1 },
       ]);
     });
 
@@ -429,7 +515,7 @@ describe("detectWeeklyPatterns", () => {
         history: [],
       };
       expect(familyOf(input, "after_second")).toEqual([
-        { kind: "after_second", answers: 2, usual: null },
+        { kind: "after_second", dates: [D[0], D[1]], usual: null },
       ]);
     });
 
@@ -468,13 +554,30 @@ describe("detectWeeklyPatterns", () => {
     });
   });
 
-  it("never puts a quiet day into a note: the notes are the same with or without them", () => {
-    const answeredDays = week((date, index) =>
-      day(date, { answerMinute: 560, forms: index < 4 ? ["taps"] : ["words"] }),
-    ).slice(0, 4);
-    const withQuiet = [...answeredDays, ...week((date) => quiet(date)).slice(4)];
-    expect(detect({ week: withQuiet, history: history() }).notes).toEqual(
-      detect({ week: answeredDays, history: history() }).notes,
+  it("never puts a quiet day into a note: every date in a note is a day she answered", () => {
+    const input = {
+      week: week((date, index) =>
+        index % 2 === 1
+          ? quiet(date)
+          : day(date, {
+              answerMinute: 560 + index * 10,
+              forms: ["taps"],
+              words: null,
+              askType: index === 0 || index === 4 ? "photo_choice" : "question",
+              mentions: index < 4 ? ["Lan"] : [],
+            }),
+      ),
+      history: history((date) => day(date, { mentions: ["the market"] })),
+    };
+    const found = detect(input);
+    expect(found.notes.length).toBeGreaterThan(0);
+    const answeredDates = new Set(
+      input.week.filter((entry) => entry.answerMinute !== null).map((entry) => entry.date),
     );
+    const datesIn = (value: unknown): string[] =>
+      JSON.stringify(value).match(/\d{4}-\d{2}-\d{2}/g) ?? [];
+    for (const date of datesIn(found.notes)) {
+      expect(answeredDates.has(date), date).toBe(true);
+    }
   });
 });

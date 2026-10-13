@@ -63,14 +63,20 @@
         {
           "kind": "answer_time",
           "direction": "later",
-          "minutes": 55,
-          "secondWeek": false
+          "usual": "07:55",
+          "thisWeek": "08:50",
+          "secondWeek": false,
+          "standout": {
+            "date": "2026-09-19",
+            "time": "09:20"
+          }
         },
         {
           "kind": "came_back_to",
           "text": "番茄",
           "span": "days",
-          "times": 2
+          "times": 2,
+          "dates": ["2026-09-14", "2026-09-19"]
         }
       ]
     },
@@ -118,7 +124,7 @@
       }
     ],
     "rubric": [
-      "The lines say that 阿嬤 answered later than usual (patterns holds answer_time, later), that the tomatoes came up more than once, and what 阿嬤 taught (braised pork with rock sugar, the Taiwanese 足好呷) in 阿嬤's words; there is no line about voice length (patterns holds no voice_length) and no worry words or causes.",
+      "The lines say that 阿嬤 answered later than usual (usually around 07:55, this week around 08:50, latest on Saturday at 09:20), that the tomatoes came up more than once, and what 阿嬤 taught (braised pork with rock sugar, the Taiwanese 足好呷) in 阿嬤's words; there is no line about voice length (patterns holds no voice_length) and no worry words or causes.",
       "No line says or hints how many days 阿嬤 answered, that one morning was Vela's hello because nobody in the family asked, or how many asks the family sent, and there are at most four lines.",
       "The suggestion is one ask a family member could send 阿嬤 next week, grounded in this week, such as another Taiwanese word or the tomatoes."
     ]
@@ -250,11 +256,14 @@
           "kind": "came_back_to",
           "text": "the bowls club",
           "span": "days",
-          "times": 2
+          "times": 2,
+          "dates": ["2026-09-08", "2026-09-11"]
         },
         {
           "kind": "voice_length",
-          "direction": "shorter"
+          "direction": "shorter",
+          "usualSeconds": 35,
+          "thisWeekSeconds": 15
         }
       ]
     },
@@ -304,7 +313,7 @@
       }
     ],
     "rubric": [
-      "The lines say that Dad's voice answers were shorter than usual, without a number or a guess at why, and that the bowls club came up more than once; any line about answer time gives only the usual time, with no later or earlier (patterns holds no answer_time).",
+      "The lines say that Dad's voice messages ran about 15 seconds this week, usually about 35, without a guess at why, and that the bowls club came up more than once (rained off, back on Friday), in Dad's words; any line about answer time gives only the usual time, with no later or earlier (patterns holds no answer_time).",
       "Although every answered morning this week was Vela's hello, no line says so, says that nobody in the family asked, or counts days, mornings, or asks, and the suggestion does not hint at it either.",
       "The suggestion is one ask a family member could send Dad, grounded in this week, such as the bowls club being back on Friday."
     ]
@@ -374,7 +383,8 @@
           "kind": "came_back_to",
           "text": "土風舞",
           "span": "days",
-          "times": 2
+          "times": 2,
+          "dates": ["2026-09-07", "2026-09-10"]
         }
       ]
     },
@@ -542,7 +552,7 @@
   {
     "id": "weekly-read-en-patterns-quieter-week",
     "call": "weekly_read",
-    "description": "Four answered days, mostly taps; patterns: later than usual for a second week, more taps and fewer words, fewer people, places and plans, photo choices drew the fullest answers, the garden for a third week. Worded as facts only.",
+    "description": "Four answered days, mostly taps; patterns: later than usual for a second week (latest Thursday), taps on two days, photo choices drew the fullest answers, the garden for a third week, the market and Auntie Hoa missing. Specific facts only.",
     "tags": ["no-invention", "no-counts", "no-guilt", "vocabulary", "mood"],
     "input": {
       "lang": "en",
@@ -587,27 +597,35 @@
         {
           "kind": "answer_time",
           "direction": "later",
-          "minutes": 45,
-          "secondWeek": true
+          "usual": "09:05",
+          "thisWeek": "09:50",
+          "secondWeek": true,
+          "standout": {
+            "date": "2026-10-22",
+            "time": "10:05"
+          }
         },
         {
           "kind": "answer_form",
           "more": "taps",
-          "fewer": "words"
+          "fewer": "words",
+          "moreDates": ["2026-10-19", "2026-10-22"]
         },
         {
           "kind": "drew_out",
-          "askType": "photo_choice"
+          "askType": "photo_choice",
+          "dates": ["2026-10-20", "2026-10-24"]
         },
         {
           "kind": "came_back_to",
           "text": "the garden",
           "span": "weeks",
-          "times": 3
+          "times": 3,
+          "dates": ["2026-10-20"]
         },
         {
-          "kind": "mentions_level",
-          "direction": "fewer"
+          "kind": "usual_absent",
+          "items": ["the market", "Auntie Hoa"]
         }
       ]
     },
@@ -631,7 +649,17 @@
       {
         "kind": "containsAny",
         "path": "lines",
-        "texts": ["photo"]
+        "texts": ["09:50", "9:50"]
+      },
+      {
+        "kind": "containsAny",
+        "path": "lines",
+        "texts": ["market"]
+      },
+      {
+        "kind": "containsAny",
+        "path": "lines",
+        "texts": ["Minh"]
       },
       {
         "kind": "notContains",
@@ -670,15 +698,15 @@
       }
     ],
     "rubric": [
-      "The lines say Mom usually answered around 09:50, later than usual for a second week; that Mom answered with more taps and fewer written answers than usual; that photo choices drew the fullest answers; that the garden came up for the third week running; and that fewer people, places and plans came up than usual, combining some of these so there are at most four lines.",
-      "No line gives a number of minutes, words or answers, guesses why anything changed, calls it good or bad, suggests what to do, or names a feeling or anything about health; nothing counts or hints at the days Mom did not answer.",
-      "The suggestion is one ask a family member could send Mom next week, built on the photo choices or the garden (another photo choice, the jasmine, Vung Tau), with no mention of a pattern, a quiet morning, health or feelings."
+      "The lines are specific: Mom usually answered around 09:05 and this week around 09:50, later for a second week, latest on Thursday at 10:05; Mom tapped a button on Monday and Thursday rather than writing; Minh's photo choices (the garden gate with the jasmine, the beach photo of Vung Tau) drew the fullest answers; the garden came up for the third week running; the market and Auntie Hoa did not come up this week. Some are combined so there are at most four lines.",
+      "No line gives a number of minutes of the change, a count of days, answers or asks, a guess at why anything changed, praise or concern, advice, a feeling or anything about health, and nothing hints at the days Mom did not answer.",
+      "The suggestion is one ask a family member could send Mom next week, built on the photo choices, the jasmine, the garden or Vung Tau, with no mention of a pattern, a quiet morning, health or feelings."
     ]
   },
   {
     "id": "weekly-read-zh-patterns-more-voice",
     "call": "weekly_read",
-    "description": "Five answered days with more voice messages than usual, longer voice messages, the vegetable garden mentioned on three days, and more people, places and plans than usual; worded as facts in Traditional Chinese without numbers, feelings or health.",
+    "description": "Five answered days, all with voice: more voice than usual and longer messages (about 45 seconds, usually 15), the vegetable garden on three days, the village chief and Kaohsiung new. Specific facts in Traditional Chinese without feelings or health.",
     "tags": ["taiwanese-mandarin", "no-invention", "no-counts", "vocabulary", "mood"],
     "input": {
       "lang": "zh-TW",
@@ -731,21 +759,25 @@
         {
           "kind": "answer_form",
           "more": "voice",
-          "fewer": null
+          "fewer": null,
+          "moreDates": ["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-23", "2026-10-25"]
         },
         {
           "kind": "voice_length",
-          "direction": "longer"
+          "direction": "longer",
+          "usualSeconds": 15,
+          "thisWeekSeconds": 45
         },
         {
           "kind": "came_back_to",
           "text": "菜園",
           "span": "days",
-          "times": 3
+          "times": 3,
+          "dates": ["2026-10-19", "2026-10-21", "2026-10-23"]
         },
         {
-          "kind": "mentions_level",
-          "direction": "more"
+          "kind": "new_mentions",
+          "items": ["里長", "高雄"]
         }
       ]
     },
@@ -772,6 +804,11 @@
         "texts": ["菜園"]
       },
       {
+        "kind": "containsAny",
+        "path": "lines",
+        "texts": ["高雄", "里長"]
+      },
+      {
         "kind": "notContains",
         "path": "lines",
         "texts": [
@@ -787,8 +824,7 @@
           "風險",
           "%",
           "％",
-          "分鐘",
-          "秒"
+          "分鐘"
         ]
       },
       {
@@ -803,9 +839,9 @@
       }
     ],
     "rubric": [
-      "The lines say 阿嬤 usually answered around 07:55 (with no later or earlier, since patterns holds no answer_time), that 阿嬤 sent more voice messages than usual and they were longer than usual, that the vegetable garden (菜園) was mentioned more than once, and that more people, places and plans came up than usual, keeping 阿嬤's words such as 地瓜葉 or 九層塔, at most four lines.",
-      "No line gives a number of seconds, minutes or days, guesses why, calls anything good or bad, gives advice, or names a feeling or anything about health.",
-      "The suggestion is one ask a family member could send 阿嬤 next week, grounded in the garden, the temple visit or the trip to 高雄, with no mention of a pattern, health or feelings."
+      "The lines are specific: 阿嬤 usually answered around 07:55 (no later or earlier, since patterns holds no answer_time); 阿嬤 answered by voice more than usual, about 45 seconds this week against about 15 usually; the vegetable garden (菜園) came up more than once, with what 阿嬤 said (地瓜葉, 九層塔); 里長 and 高雄 came up for the first time. At most four lines.",
+      "No line gives a count of days, answers or asks or minutes of a change, guesses why, calls anything good or bad, gives advice, or names a feeling or anything about health.",
+      "The suggestion is one ask a family member could send 阿嬤 next week, grounded in the garden, the temple visit with 里長 or the trip to 高雄, with no mention of a pattern, health or feelings."
     ]
   }
 ]

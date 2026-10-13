@@ -202,11 +202,17 @@ export const en = {
   "weekly_read.no_reply":
     "{count} of {name}'s {answered} answers got no reply or reaction from the family.",
   "weekly_read.asks_by": "Asks this week: {askers}.",
+  "weekly_read.no_reply_day":
+    "{name}'s answer on {weekday} got no reply or reaction from the family.",
+  "weekly_read.no_reply_days":
+    "{name}'s answers on {weekdays} got no reply or reaction from the family.",
   "weekly_read.asks_by_item": "{name} {asks}",
-  "weekly_read.asks_by_separator": ", ",
-  "weekly_read.after_second": "{count} answers came only after the second message.",
+  "weekly_read.asks_none": "No ask from {names} this week.",
+  "weekly_read.list_separator": ", ",
+  "weekly_read.list_and": " and ",
+  "weekly_read.after_second": "On {weekdays}, {name} answered only after the second message.",
   "weekly_read.after_second_usual":
-    "{count} answers came only after the second message; usually about {usual} a week.",
+    "On {weekdays}, {name} answered only after the second message; usually about {usual} a week.",
   "weekly_read.quiet_weekday": "{weekday} mornings have stayed quiet {weeks} weeks in a row.",
   "weekday.0": "Sunday",
   "weekday.1": "Monday",

@@ -319,6 +319,16 @@ const TOPIC_MENTIONS = ["people", "places", "plans", "dates"] as const satisfies
   "health"
 >[];
 
+/**
+ * What the week's patterns read of her mentions: who and where and what she plans, never dates,
+ * which say when rather than what, and never health (ADR-46).
+ */
+const PATTERN_MENTIONS = [
+  "people",
+  "places",
+  "plans",
+] as const satisfies readonly (typeof TOPIC_MENTIONS)[number][];
+
 /** Things she mentioned on two or more days, in her words, at most ten; never her health words. */
 function repeatedMentions(days: readonly WeekDay[]): string[] {
   const datesByMention = new Map<string, { text: string; dates: Set<LocalDate> }>();
@@ -395,7 +405,7 @@ function patternDayOf(
     words: words.length === 0 ? null : words.reduce((sum, value) => sum + value, 0),
     voiceSeconds: voiceMs === null ? null : voiceMs / 1000,
     mentions: day.answers.flatMap((answer) =>
-      TOPIC_MENTIONS.flatMap((kind) => {
+      PATTERN_MENTIONS.flatMap((kind) => {
         const list = answer.mentions[kind];
         return Array.isArray(list)
           ? list.filter((item): item is string => typeof item === "string")
@@ -406,6 +416,33 @@ function patternDayOf(
     askerName: exchange === null || exchange.type === "hello" ? null : day.askerName,
     familyReplies: exchange === null ? 0 : (familyReplies.get(exchange.id) ?? 0),
   };
+}
+
+/**
+ * The family members who take turns asking her and were in the family before the week's end, by
+ * name, as the turn prompt picks them (`turnHolders` in arrivals.ts).
+ */
+async function turnTakerNames(
+  db: Queryable,
+  member: Member,
+  weekEnd: LocalDate,
+): Promise<string[]> {
+  const rows = await db
+    .select({ name: members.displayName })
+    .from(members)
+    .where(
+      and(
+        eq(members.familyId, member.familyId),
+        ne(members.id, member.id),
+        eq(members.status, "active"),
+        eq(members.turnsIn, true),
+        eq(members.lightOn, false),
+        isNull(members.lightConsentedAt),
+        isNull(members.leftAt),
+        lt(members.createdAt, zonedInstant(addDays(weekEnd, 1), "00:00", member.tz)),
+      ),
+    );
+  return rows.map((row) => row.name);
 }
 
 /** Replies and reactions the family sent her, by exchange; replies among the others are left out. */
@@ -602,6 +639,7 @@ export async function draftWeeklyRead(
   const patterns = detectWeeklyPatterns({
     week: counted.map((day) => patternDayOf(day, member.tz, familyReplies, awayOn)),
     history: history.map((day) => patternDayOf(day, member.tz, familyReplies, awayOn)),
+    familyNames: await turnTakerNames(deps.db, member, weekEnd),
   });
 
   const weeklyInput = {

@@ -3,8 +3,9 @@
  * code with fixed thresholds and minimum samples, so the weekly read reports a pattern only when the
  * data shows one. The AI words the note patterns; it never decides that something is a pattern.
  *
- * Every comparison is with her own usual, never with other people, and is reported as a plain fact:
- * no score, no cause, no advice, no health word and no mood label. Note patterns are about the days
+ * Every comparison is with her own usual, never with other people, and is reported as a plain fact
+ * with its specifics (the days, the times, the people and places): no score, no cause, no advice,
+ * no health word and no mood label. Note patterns are about the days
  * she answered only, because she can read the lines they become (spec §8, §9). Family patterns may
  * count days without an answer or the family's own part, and are shown to organisers only.
  *
@@ -13,9 +14,11 @@
  */
 import type {
   AnswerForm,
+  AnswerLength,
   ExchangeType,
   FamilyPattern,
   LocalDate,
+  LocalTime,
   WeeklyNotePattern,
 } from "@vela/contracts";
 import { ANSWER_FORMS } from "@vela/contracts";
@@ -43,13 +46,17 @@ export const PATTERNS = {
   /** The ask type that drew her out needs this many answered asks and this lead over the rest. */
   drewOutMinAsks: 2,
   drewOutFactor: 1.5,
-  /** People, places and plans per answered day must halve or double against a usual of at least this. */
-  minUsualMentions: 0.5,
-  mentionsFactor: 2,
+  /** A day stands out when its answer time is this far beyond the week's middle. */
+  standoutMinutes: 20,
   /** A mention counts as came back to on this many days, or in this many weeks in a row. */
   comebackDays: 2,
   comebackWeeks: 3,
   maxComebacks: 5,
+  /** Part of her usual weeks: said on this many days, in this many of the three weeks before. */
+  usualMentionDays: 3,
+  usualMentionWeeks: 2,
+  /** At most this many people, places or plans are named as absent, or as new. */
+  maxNamed: 3,
   /** A weekday is reported as quiet after this many weeks in a row. */
   quietWeekdayWeeks: 3,
   /** Answers after the second message are reported from this many in a week. */
@@ -73,7 +80,7 @@ export interface PatternDay {
   words: number | null;
   /** The length of her voice answer that day; null without one. */
   voiceSeconds: number | null;
-  /** People, places, plans and dates she mentioned that day, as she said them; never health words. */
+  /** People, places and plans she mentioned that day, as she said them; never health words. */
   mentions: readonly string[];
   /** The day's ask; `hello` for Vela's own morning; null with no exchange. */
   askType: ExchangeType | null;
@@ -88,6 +95,8 @@ export interface WeeklyPatternInput {
   week: readonly PatternDay[];
   /** Her days in the `PATTERNS.historyDays` before the week, oldest first; none before her start. */
   history: readonly PatternDay[];
+  /** The family members who take turns asking her, by name; who of them asked nothing is named. */
+  familyNames?: readonly string[];
 }
 
 export interface WeeklyPatterns {
@@ -125,31 +134,57 @@ function enough(week: readonly PatternDay[], base: readonly PatternDay[]): boole
   return week.length >= PATTERNS.minWeekAnswers && base.length >= PATTERNS.minBaselineAnswers;
 }
 
+function medianMinute(days: readonly PatternDay[]): number | null {
+  return median(answered(days).map((day) => day.answerMinute as number));
+}
+
 /** The signed move of the median answer time, or null when it is within the threshold or unknown. */
 function timeShift(week: readonly PatternDay[], base: readonly PatternDay[]): number | null {
-  const thisWeek = answered(week);
-  const usual = answered(base);
-  if (!enough(thisWeek, usual)) {
+  if (!enough(answered(week), answered(base))) {
     return null;
   }
-  const shift =
-    (median(thisWeek.map((day) => day.answerMinute as number)) ?? 0) -
-    (median(usual.map((day) => day.answerMinute as number)) ?? 0);
+  const shift = (medianMinute(week) ?? 0) - (medianMinute(base) ?? 0);
   return Math.abs(shift) > PATTERNS.timeShiftMinutes ? shift : null;
 }
 
+/** Minutes after midnight as a time of day; rounded to five minutes when `round`. */
+function timeOf(minutes: number, round = false): LocalTime {
+  const value = round ? Math.round(minutes / 5) * 5 : Math.round(minutes);
+  const inDay = ((value % 1440) + 1440) % 1440;
+  const hours = String(Math.floor(inDay / 60)).padStart(2, "0");
+  return `${hours}:${String(inDay % 60).padStart(2, "0")}`;
+}
+
 function answerTime(input: WeeklyPatternInput, first: LocalDate): WeeklyNotePattern | null {
-  const shift = timeShift(input.week, window(input.history, first, PATTERNS.baselineDays));
+  const base = window(input.history, first, PATTERNS.baselineDays);
+  const shift = timeShift(input.week, base);
   if (shift === null) {
     return null;
   }
   const lastWeek = window(input.history, first, 7);
   const lastWeekShift = timeShift(lastWeek, window(input.history, first, PATTERNS.historyDays, 7));
+  const middle = medianMinute(input.week) as number;
+  const later = shift > 0;
+  const furthest = answered(input.week).reduce((best, day) =>
+    later
+      ? (day.answerMinute as number) > (best.answerMinute as number)
+        ? day
+        : best
+      : (day.answerMinute as number) < (best.answerMinute as number)
+        ? day
+        : best,
+  );
+  const beyond = Math.abs((furthest.answerMinute as number) - middle);
   return {
     kind: "answer_time",
-    direction: shift > 0 ? "later" : "earlier",
-    minutes: Math.max(5, Math.round(Math.abs(shift) / 5) * 5),
+    direction: later ? "later" : "earlier",
+    usual: timeOf(medianMinute(base) as number, true),
+    thisWeek: timeOf(middle, true),
     secondWeek: lastWeekShift !== null && Math.sign(lastWeekShift) === Math.sign(shift),
+    standout:
+      beyond >= PATTERNS.standoutMinutes
+        ? { date: furthest.date, time: timeOf(furthest.answerMinute as number) }
+        : null,
   };
 }
 
@@ -177,20 +212,39 @@ function answerForm(week: readonly PatternDay[], base: readonly PatternDay[]) {
   if (more === null && fewer === null) {
     return null;
   }
+  const moreForm = more?.form ?? null;
   return {
     kind: "answer_form" as const,
-    more: more?.form ?? null,
+    more: moreForm,
     fewer: fewer?.form ?? null,
+    moreDates:
+      moreForm === null
+        ? []
+        : thisWeek.filter((day) => day.forms.includes(moreForm)).map((day) => day.date),
   };
 }
 
-function lengthDirection(
+/** Her words as a reader would put their length. */
+export function answerLengthOf(words: number): AnswerLength {
+  if (words <= 2) return "word";
+  if (words <= 8) return "few_words";
+  if (words <= 30) return "sentence";
+  return words <= 80 ? "few_sentences" : "long";
+}
+
+interface LengthChange {
+  direction: "longer" | "shorter";
+  usual: number;
+  now: number;
+}
+
+function lengthChange(
   week: readonly number[],
   base: readonly number[],
   minWeek: number,
   minBase: number,
   minUsual: number,
-): "longer" | "shorter" | null {
+): LengthChange | null {
   const usual = median(base);
   const now = median(week);
   if (week.length < minWeek || base.length < minBase || usual === null || now === null) {
@@ -201,9 +255,50 @@ function lengthDirection(
   }
   const ratio = now / usual;
   if (ratio >= 1 + PATTERNS.lengthShiftRatio) {
-    return "longer";
+    return { direction: "longer", usual, now };
   }
-  return ratio <= 1 - PATTERNS.lengthShiftRatio ? "shorter" : null;
+  return ratio <= 1 - PATTERNS.lengthShiftRatio ? { direction: "shorter", usual, now } : null;
+}
+
+function answerLength(week: readonly PatternDay[], base: readonly PatternDay[]) {
+  const change = lengthChange(
+    wordsOf(answered(week)),
+    wordsOf(answered(base)),
+    PATTERNS.minWeekAnswers,
+    PATTERNS.minBaselineAnswers,
+    PATTERNS.minUsualWords,
+  );
+  if (change === null) {
+    return null;
+  }
+  const usual = answerLengthOf(change.usual);
+  const thisWeek = answerLengthOf(change.now);
+  // A change a reader would not see in the words ("a sentence or two" both weeks) is not reported.
+  return usual === thisWeek
+    ? null
+    : { kind: "answer_length" as const, direction: change.direction, usual, thisWeek };
+}
+
+function seconds(value: number): number {
+  return Math.max(5, Math.round(value / 5) * 5);
+}
+
+function voiceLength(week: readonly PatternDay[], base: readonly PatternDay[]) {
+  const change = lengthChange(
+    voiceOf(answered(week)),
+    voiceOf(answered(base)),
+    PATTERNS.minWeekVoice,
+    PATTERNS.minBaselineVoice,
+    1,
+  );
+  return change === null
+    ? null
+    : {
+        kind: "voice_length" as const,
+        direction: change.direction,
+        usualSeconds: seconds(change.usual),
+        thisWeekSeconds: seconds(change.now),
+      };
 }
 
 function wordsOf(days: readonly PatternDay[]): number[] {
@@ -241,7 +336,11 @@ function drewOut(week: readonly PatternDay[]): WeeklyNotePattern | null {
   if (others === null || best.fullness < PATTERNS.drewOutFactor * Math.max(others, 1)) {
     return null;
   }
-  return { kind: "drew_out", askType: bestType };
+  return {
+    kind: "drew_out",
+    askType: bestType,
+    dates: asked.filter((day) => day.askType === bestType).map((day) => day.date),
+  };
 }
 
 function keyOf(mention: string): string {
@@ -275,14 +374,15 @@ function cameBackTo(input: WeeklyPatternInput, first: LocalDate): WeeklyNotePatt
       weeks += 1;
     }
     const text = said.get(key) as string;
+    const thisWeek = [...dates].sort();
     if (weeks >= PATTERNS.comebackWeeks) {
       found.push({
-        pattern: { kind: "came_back_to", text, span: "weeks", times: weeks },
+        pattern: { kind: "came_back_to", text, span: "weeks", times: weeks, dates: thisWeek },
         order: 10 + weeks,
       });
     } else if (dates.size >= PATTERNS.comebackDays) {
       found.push({
-        pattern: { kind: "came_back_to", text, span: "days", times: dates.size },
+        pattern: { kind: "came_back_to", text, span: "days", times: dates.size, dates: thisWeek },
         order: dates.size,
       });
     }
@@ -295,37 +395,85 @@ function cameBackTo(input: WeeklyPatternInput, first: LocalDate): WeeklyNotePatt
     .map((entry) => entry.pattern);
 }
 
-function mentionsPerDay(days: readonly PatternDay[]): number {
-  const total = days.reduce((sum, day) => sum + new Set(day.mentions.map(keyOf)).size, 0);
-  return total / days.length;
+/** Each thing said in `days`, by its key: how she first spelled it, and the dates it came up. */
+function mentionDates(
+  days: readonly PatternDay[],
+): Map<string, { text: string; dates: Set<LocalDate> }> {
+  const found = new Map<string, { text: string; dates: Set<LocalDate> }>();
+  for (const day of days) {
+    for (const mention of day.mentions) {
+      const key = keyOf(mention);
+      if (key.length === 0) {
+        continue;
+      }
+      const entry = found.get(key) ?? { text: mention.trim().slice(0, 120), dates: new Set() };
+      entry.dates.add(day.date);
+      found.set(key, entry);
+    }
+  }
+  return found;
 }
 
-function mentionsLevel(week: readonly PatternDay[], base: readonly PatternDay[]) {
-  const thisWeek = answered(week);
-  const usual = answered(base);
-  if (!enough(thisWeek, usual)) {
+/** The most often said first, ties in the order she first said them, at most `PATTERNS.maxNamed`. */
+function mostSaid(entries: readonly { text: string; dates: Set<LocalDate> }[]): string[] {
+  return entries
+    .map((entry, index) => ({ ...entry, index }))
+    .sort((a, b) => b.dates.size - a.dates.size || a.index - b.index)
+    .slice(0, PATTERNS.maxNamed)
+    .map((entry) => entry.text);
+}
+
+/**
+ * People, places and plans that were part of her usual weeks (said on three days, in two of the three
+ * weeks before) and did not come up in a week she answered enough to tell.
+ */
+function usualAbsent(input: WeeklyPatternInput, first: LocalDate): WeeklyNotePattern | null {
+  if (answered(input.week).length < PATTERNS.minWeekAnswers) {
     return null;
   }
-  const usualRate = mentionsPerDay(usual);
-  if (usualRate < PATTERNS.minUsualMentions) {
+  const thisWeek = mentionDates(input.week);
+  const usual = [...mentionDates(window(input.history, first, PATTERNS.baselineDays))].filter(
+    ([key, entry]) => {
+      const weeks = new Set(
+        [...entry.dates].map((date) => Math.floor((Date.parse(first) - Date.parse(date)) / 6048e5)),
+      );
+      return (
+        !thisWeek.has(key) &&
+        entry.dates.size >= PATTERNS.usualMentionDays &&
+        weeks.size >= PATTERNS.usualMentionWeeks
+      );
+    },
+  );
+  const items = mostSaid(usual.map(([, entry]) => entry));
+  return items.length === 0 ? null : { kind: "usual_absent", items };
+}
+
+/** People, places and plans that came up this week and in none of the four weeks before. */
+function newMentions(
+  input: WeeklyPatternInput,
+  cameBack: readonly WeeklyNotePattern[],
+): WeeklyNotePattern | null {
+  if (answered(input.history).length < PATTERNS.minBaselineAnswers) {
     return null;
   }
-  const ratio = mentionsPerDay(thisWeek) / usualRate;
-  if (ratio >= PATTERNS.mentionsFactor) {
-    return { kind: "mentions_level" as const, direction: "more" as const };
-  }
-  return ratio <= 1 / PATTERNS.mentionsFactor
-    ? { kind: "mentions_level" as const, direction: "fewer" as const }
-    : null;
+  const before = mentionDates(input.history);
+  const reported = new Set(
+    cameBack.flatMap((pattern) => (pattern.kind === "came_back_to" ? [keyOf(pattern.text)] : [])),
+  );
+  const fresh = [...mentionDates(input.week)].filter(
+    ([key]) => !before.has(key) && !reported.has(key),
+  );
+  const items = mostSaid(fresh.map(([, entry]) => entry));
+  return items.length === 0 ? null : { kind: "new_mentions", items };
 }
 
 function noReply(week: readonly PatternDay[]): FamilyPattern | null {
   const thisWeek = answered(week);
-  const unanswered = thisWeek.filter((day) => day.familyReplies === 0).length;
-  return unanswered === 0 ? null : { kind: "no_reply", answers: unanswered, of: thisWeek.length };
+  const dates = thisWeek.filter((day) => day.familyReplies === 0).map((day) => day.date);
+  return dates.length === 0 ? null : { kind: "no_reply", dates, of: thisWeek.length };
 }
 
-function asksBy(week: readonly PatternDay[]): FamilyPattern | null {
+function asksBy(week: readonly PatternDay[], familyNames: readonly string[]): FamilyPattern | null {
   const counts = new Map<string, number>();
   for (const day of week) {
     if (day.askType !== null && day.askType !== "hello" && day.askerName !== null) {
@@ -338,11 +486,15 @@ function asksBy(week: readonly PatternDay[]): FamilyPattern | null {
   const askers = [...counts]
     .map(([name, asks]) => ({ name, asks }))
     .sort((a, b) => b.asks - a.asks || a.name.localeCompare(b.name));
-  return { kind: "asks_by", askers: askers.slice(0, 20) };
+  const none = [...new Set(familyNames)].filter((name) => !counts.has(name)).sort();
+  return { kind: "asks_by", askers: askers.slice(0, 20), none: none.slice(0, 20) };
 }
 
 function afterSecond(week: readonly PatternDay[], base: readonly PatternDay[]) {
-  const count = answered(week).filter((day) => day.afterSecond).length;
+  const dates = answered(week)
+    .filter((day) => day.afterSecond)
+    .map((day) => day.date);
+  const count = dates.length;
   if (count < PATTERNS.minAfterSecond) {
     return null;
   }
@@ -354,7 +506,7 @@ function afterSecond(week: readonly PatternDay[], base: readonly PatternDay[]) {
   if (usual !== null && count <= usual) {
     return null;
   }
-  return { kind: "after_second" as const, answers: count, usual };
+  return { kind: "after_second" as const, dates, usual };
 }
 
 function quietWeekdays(input: WeeklyPatternInput): FamilyPattern[] {
@@ -381,7 +533,7 @@ function quietWeekdays(input: WeeklyPatternInput): FamilyPattern[] {
 
 /**
  * The note patterns and the family patterns of one week. Notes come in the order the read uses them:
- * time, form, length, voice, what drew her out, what she came back to, then how much came up.
+ * time, form, length, voice, what drew her out, what she came back to, what was missing, what was new.
  */
 export function detectWeeklyPatterns(input: WeeklyPatternInput): WeeklyPatterns {
   const first = input.week[0]?.date;
@@ -389,38 +541,20 @@ export function detectWeeklyPatterns(input: WeeklyPatternInput): WeeklyPatterns 
     return { notes: [], family: [] };
   }
   const base = window(input.history, first, PATTERNS.baselineDays);
-  const voiceWeek = voiceOf(answered(input.week));
-  const voiceBase = voiceOf(answered(base));
+  const cameBack = cameBackTo(input, first);
   const notes: (WeeklyNotePattern | null)[] = [
     answerTime(input, first),
     answerForm(input.week, base),
-    (() => {
-      const direction = lengthDirection(
-        wordsOf(answered(input.week)),
-        wordsOf(answered(base)),
-        PATTERNS.minWeekAnswers,
-        PATTERNS.minBaselineAnswers,
-        PATTERNS.minUsualWords,
-      );
-      return direction === null ? null : { kind: "answer_length" as const, direction };
-    })(),
-    (() => {
-      const direction = lengthDirection(
-        voiceWeek,
-        voiceBase,
-        PATTERNS.minWeekVoice,
-        PATTERNS.minBaselineVoice,
-        1,
-      );
-      return direction === null ? null : { kind: "voice_length" as const, direction };
-    })(),
+    answerLength(input.week, base),
+    voiceLength(input.week, base),
     drewOut(input.week),
-    ...cameBackTo(input, first),
-    mentionsLevel(input.week, base),
+    ...cameBack,
+    usualAbsent(input, first),
+    newMentions(input, cameBack),
   ];
   const family: (FamilyPattern | null)[] = [
     noReply(input.week),
-    asksBy(input.week),
+    asksBy(input.week, input.familyNames ?? []),
     afterSecond(input.week, base),
     ...quietWeekdays(input),
   ];
