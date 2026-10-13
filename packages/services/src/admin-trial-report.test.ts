@@ -217,8 +217,67 @@ describe("founder trial counts", () => {
       medianLatencyMin: 15,
       latencySamples: 2,
       preArrivalAnswers: 1,
+      saidSomethingDays: 1,
     });
     expect(result?.days[0]?.fallback).toBe(false); // An erased asker is not a fallback.
+    // Words and voice say something; "I'm fine" alone does not; a day with no answer row neither.
+    expect(result?.days.map((day) => [day.day, day.saidSomething])).toEqual([
+      ["2026-10-01", true],
+      ["2026-10-02", false],
+      ["2026-10-03", false],
+    ]);
+  });
+
+  it("counts a day as said something by the kind of any of her answers, never her words", async () => {
+    const kinds: Record<
+      LocalDate,
+      ("heart" | "fine" | "sticker" | "other" | "chip" | "photo_pick")[]
+    > = {
+      "2026-09-29": ["heart"],
+      "2026-09-30": ["fine", "sticker"],
+      "2026-10-01": ["other"],
+      "2026-10-02": ["heart", "chip"],
+      "2026-10-03": ["photo_pick"],
+    };
+    for (const [day, given] of Object.entries(kinds) as [LocalDate, (typeof kinds)[LocalDate]][]) {
+      const row = await exchange(day, {
+        date: day,
+        state: "answered",
+        deliveredAt: new Date(`${day}T01:00:00Z`),
+        answeredAt: new Date(`${day}T02:00:00Z`),
+      });
+      await h.db.insert(answers).values(
+        given.map((kind) => ({
+          exchangeId: row.id,
+          memberId: seed.member.id,
+          kind,
+          channel: "telegram" as const,
+        })),
+      );
+    }
+    // The organiser's own voice answer on her exchange is not hers.
+    const quiet = await exchange("2026-10-04", {
+      date: "2026-10-04",
+      state: "answered",
+      deliveredAt: new Date("2026-10-04T01:00:00Z"),
+      answeredAt: new Date("2026-10-04T02:00:00Z"),
+    });
+    await h.db.insert(answers).values([
+      { exchangeId: quiet.id, memberId: seed.member.id, kind: "fine", channel: "telegram" },
+      { exchangeId: quiet.id, memberId: seed.organiser.id, kind: "voice", channel: "telegram" },
+    ]);
+    const result = (await report())?.recipients.find(
+      (recipient) => recipient.recipientId === seed.member.id,
+    );
+    expect(result?.days.map((day) => [day.day, day.saidSomething])).toEqual([
+      ["2026-09-29", false],
+      ["2026-09-30", false],
+      ["2026-10-01", false],
+      ["2026-10-02", true],
+      ["2026-10-03", true],
+      ["2026-10-04", false],
+    ]);
+    expect(result?.summary).toMatchObject({ answeredDays: 6, saidSomethingDays: 2 });
   });
 
   it("attributes next-morning read-back failures to the earlier exchange and warns on expired metadata", async () => {
@@ -467,6 +526,7 @@ describe("founder trial counts", () => {
         usefulNo: 0,
         trueConcern: 0,
         stopsSaid: 0,
+        saidSomethingDays: 3,
       };
       const byKey = (summary: typeof base) =>
         Object.fromEntries(trialNumbers(summary).map((n) => [n.key, n.status]));
@@ -478,10 +538,16 @@ describe("founder trial counts", () => {
         stops: "on_track",
         fallback_share: "kill",
         replies_heard: "on_track",
+        // Three of nine answered days said something: under the spec's 70%.
+        said_something: "watch",
       });
       expect(byKey({ ...base, eligibleDays: 6, eligibleAnsweredDays: 1 }).answer_rate).toBe(
         "too_early",
       );
+      expect(byKey({ ...base, answeredDays: 6, saidSomethingDays: 6 }).said_something).toBe(
+        "too_early",
+      );
+      expect(byKey({ ...base, saidSomethingDays: 7 }).said_something).toBe("on_track");
       expect(byKey({ ...base, eligibleAnsweredDays: 12 }).answer_rate).toBe("watch");
     });
 

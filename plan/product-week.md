@@ -23,7 +23,7 @@ An adult child cannot know, day to day, that a parent who lives alone is fine, w
 | Missed real trouble | 0 | any |
 | Parent stop rate | < 10% in month 1 | > 25% |
 
-Supporting: fallback-hello share of mornings (family stopped asking) under 15%; replies heard next morning on ≥ 50% of answered days.
+Supporting: fallback-hello share of mornings (family stopped asking) under 15%; replies heard next morning on ≥ 50% of answered days; answered days she said something (words, voice, a photo or a choice, not only ❤️ or "I'm fine"), over 70% (spec §18; plan/why-vela.md).
 
 ## Who does what
 
