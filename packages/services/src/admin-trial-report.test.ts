@@ -538,8 +538,8 @@ describe("founder trial counts", () => {
         stops: "on_track",
         fallback_share: "kill",
         replies_heard: "on_track",
-        // No published benchmark yet: the founder reads the share once a week of answers is in.
-        said_something: "founder_check",
+        // Three of nine answered days said something: under the spec's 70%.
+        said_something: "watch",
       });
       expect(byKey({ ...base, eligibleDays: 6, eligibleAnsweredDays: 1 }).answer_rate).toBe(
         "too_early",
@@ -547,6 +547,7 @@ describe("founder trial counts", () => {
       expect(byKey({ ...base, answeredDays: 6, saidSomethingDays: 6 }).said_something).toBe(
         "too_early",
       );
+      expect(byKey({ ...base, saidSomethingDays: 7 }).said_something).toBe("on_track");
       expect(byKey({ ...base, eligibleAnsweredDays: 12 }).answer_rate).toBe("watch");
     });
 

@@ -74,7 +74,7 @@ The two halves run on one engine. The same daily answer is both the sign of life
 | Missed real trouble | 0 | The promise |
 | Parent stop rate | < 10% in month 1 | Acceptance (research/11) |
 | Replies heard next morning | ≥ 50% of answered days | Reciprocity keeps her answering (research/08) |
-| **Days she said something** (new) | No published benchmark. Watch the trend from day 1 and set a target after week 4. | Separates an exchange from a check-in (§2) |
+| **Days she said something** (new on the report) | > 70% of answered days (the spec's own target, §18; no published benchmark) | Separates an exchange from a check-in (§2) |
 
 Same-day is the honest promise. Vela cannot find a fall in minutes; nothing short of a worn device does (research/00). What Vela can change is days into hours. In Japan, 21,856 people who died alone at home in 2024 were found after eight days or more, and a long lie's mortality rises from 12% when found within an hour to 67% after 72 hours (research/00).
 
@@ -82,14 +82,14 @@ Same-day is the honest promise. Vela cannot find a fall in minutes; nothing shor
 
 **This week, before the Vietnam family's first morning**
 
-1. *Done in this change.* The trial report gains "Days she said something": answered days where she gave words, voice, a photo, or a choice, rather than only ❤️ or "I'm fine". It counts answer kinds only, never content. From day one we can see whether Vela is an exchange or a check-in.
+1. *Done in this change.* The trial report gains "Days she said something": answered days where she gave words, voice, a photo, or a choice, rather than only ❤️ or "I'm fine". It counts answer kinds only, never content, against the spec's target of more than 70%. From day one we can see whether Vela is an exchange or a check-in.
 2. *Next.* Vela's own question gets one-tap answers too. On mornings no one asks, Vela sends a question from its bank with only ❤️ and "I'm fine" under it, while family questions get three drafted one-tap options (spec §5.3, `chips.v1`). The bank question should get the same treatment, so the easiest tap on a quiet-family morning still says something. This goes to staging first and to production only on the founder's go.
 3. *Founder.* Start the Vietnam week. On days 7 and 14, ask yourself the organiser question: "If Vela stopped tomorrow, how would you feel?" (research/14 §4). Then ask your parent which mornings she liked answering, and which felt like a chore.
 
 **Weeks 1–4 (Vietnam family, then 3–5 English-speaking families)**
 
 - Read the six numbers every Monday on `/admin/trial`, and fix only what moves them.
-- Then a gate before the Taiwan LINE launch: answer days ≥ 75%, useful notices > 60%, no missed trouble, and "said something" not falling.
+- Then a gate before the Taiwan LINE launch: answer days ≥ 75%, useful notices > 60%, no missed trouble, and "said something" over 70%.
 
 **Not until the gate is met**
 
@@ -98,5 +98,5 @@ No new feature outside the loop: family book, recipes, memory, kitchen table, vo
 ## 6. Gaps we cannot close from published data
 
 - No study measures a family-question loop's answer rate. The Vietnam week is the first real number (research/08 §4).
-- No study compares a bare tap with a content answer for retention. "Said something" is our own measure, and its target must come from our own weeks.
+- No study compares a bare tap with a content answer for retention. The spec's 70% is our own target; our first weeks test it.
 - No Taiwan- or Vietnam-specific willingness-to-pay data exists (research/14 §5).

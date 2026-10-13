@@ -302,6 +302,6 @@ describe("the trial overview", () => {
     expect(body).toContain("24 / 30 (80.0%)");
     expect(body).toContain(`/admin/families/${FAMILY_ID}/trial?days=30`);
     expect(body).toContain("On track");
-    expect(body).toContain("18 / 24 (75.0%) · Founder check");
+    expect(body).toContain("18 / 24 (75.0%) · On track");
   });
 });

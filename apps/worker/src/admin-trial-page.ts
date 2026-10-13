@@ -55,7 +55,7 @@ const NUMBER_LABEL: Record<TrialNumber["key"], { name: string; target: string }>
   },
   said_something: {
     name: "Answered days she said something",
-    target: `Words, voice, a photo or a choice, not only ❤️ or “I'm fine”. No published benchmark: read the trend from ${T.saidSomething.minDays} answered days; a falling share means mornings are becoming a check-in (plan/why-vela.md)`,
+    target: `> ${pct(T.saidSomething.onTrack)}: words, voice, a photo or a choice, not only ❤️ or “I'm fine” (spec §18); from ${T.saidSomething.minDays} answered days. A falling share means mornings are becoming a check-in (plan/why-vela.md)`,
   },
 };
 

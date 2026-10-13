@@ -124,10 +124,10 @@ export const TRIAL_TARGETS = {
   fallbackShare: { onTrack: 0.15, kill: 0.3, minDays: 7 },
   repliesHeard: { onTrack: 0.5, minDays: 7 },
   /**
-   * No published benchmark separates a contentful answer from a bare tap (plan/why-vela.md §6), so
-   * the share has no target yet: from a week of answered days the founder reads its trend.
+   * The spec's "answers with content ÷ answers > 70%" (product spec §18), counted here per answered
+   * day. No published study gives a benchmark (plan/why-vela.md §6), so it has no kill signal.
    */
-  saidSomething: { minDays: 7 },
+  saidSomething: { onTrack: 0.7, minDays: 7 },
 } as const;
 
 /**
@@ -256,10 +256,12 @@ export function trialNumbers(summary: TrialRecipientReport["summary"]): TrialNum
       value: saidSomething,
       numerator: s.saidSomethingDays,
       denominator: s.answeredDays,
-      status:
-        saidSomething === null || s.answeredDays < t.saidSomething.minDays
-          ? "too_early"
-          : "founder_check",
+      status: band(
+        saidSomething,
+        s.answeredDays >= t.saidSomething.minDays,
+        (v) => v > t.saidSomething.onTrack,
+        () => false,
+      ),
     },
   ];
 }
