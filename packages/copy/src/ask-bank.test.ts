@@ -6,6 +6,7 @@ import {
   type AskBankType,
   askBankItem,
   askBankText,
+  CHIP_QUESTIONS,
 } from "./ask-bank.ts";
 import {
   FORBIDDEN_ZH_TW,
@@ -238,5 +239,29 @@ describe("the question bank", () => {
     );
     expect(askBankText("knowledge.food.soup", "ja")).toBe(askBankText("knowledge.food.soup", "en"));
     expect(askBankText("life.family.nickname", "en")).toBeUndefined();
+  });
+});
+
+describe("CHIP_QUESTIONS", () => {
+  it("names only questions of the bank, so a story, recipe or word never takes chips", () => {
+    for (const id of CHIP_QUESTIONS) {
+      expect(askBankItem(id)?.type, id).toBe("question");
+    }
+  });
+
+  it("leaves out the questions whose answer is a name, a title or her own know-how", () => {
+    for (const id of [
+      "life.school.teacher",
+      "life.friends.best",
+      "life.work.colleague",
+      "life.music.song",
+      "opinions.taste.film",
+      "opinions.taste.book",
+      "opinions.place.visit",
+      "opinions.advice.first_job",
+      "knowledge.home.stain",
+    ]) {
+      expect(CHIP_QUESTIONS.has(id), id).toBe(false);
+    }
   });
 });

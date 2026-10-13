@@ -1,5 +1,6 @@
 import { createFakeAi, createOffAi, fakeRecord, genericChips } from "@vela/ai";
 import type { LocalDate, LocalTime, OutboundKind } from "@vela/contracts";
+import { CHIP_QUESTIONS } from "@vela/copy";
 import { decodeButton, outboundKey, zonedInstant } from "@vela/core";
 import {
   aiCalls,
@@ -390,10 +391,10 @@ describe("prepareDay", () => {
       familyId: seed.family.id,
       aboutMemberId: seed.member.id,
       localDay: TOMORROW,
-      bankId: "life.work.first_job",
+      bankId: "opinions.taste.season",
       type: "question",
       // An AI draft is written as a family member would send it: Vela never sends it as its own.
-      text: "Mom, what was your first job like?",
+      text: "Mom, which season do you love most?",
       lang: "en",
       promptVersion: "test",
     });
@@ -403,20 +404,39 @@ describe("prepareDay", () => {
     expect(await exchangeById(id)).toMatchObject({
       type: "hello",
       askerId: null,
-      text: "What was your very first job?",
+      text: "Which season do you like best, and why?",
     });
     const [used] = await h.db.select().from(suggestions);
     expect(used?.usedAt).toEqual(h.clock.now());
-    // A bank question takes chips as a family question does; nobody asked, so the family's name asks.
+    // A bank question whose answer is a choice takes chips as a family question does.
     expect(h.ai.calls.map((call) => call.call)).toEqual(["chips"]);
     expect(h.ai.calls[0]?.input).toMatchObject({
       lang: "en",
-      question: "What was your very first job?",
+      question: "Which season do you like best, and why?",
     });
     const [drafted] = await h.db.select().from(chips).where(eq(chips.exchangeId, id));
     expect(drafted?.chips).toEqual(["Good", "Not yet", "Tell you later"]);
     await prepareDay(h.deps, seed.member.id, TOMORROW);
     expect(h.ai.calls).toHaveLength(1);
+  });
+
+  it("drafts no chips for Vela's question whose answer is a name, as the model would invent one", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db.insert(suggestions).values({
+      familyId: seed.family.id,
+      aboutMemberId: seed.member.id,
+      localDay: TOMORROW,
+      bankId: "life.school.teacher",
+      type: "question",
+      text: "Mom, which teacher do you still remember?",
+      lang: "en",
+      promptVersion: "test",
+    });
+
+    const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+    expect((await exchangeById(id))?.text).toBe("Which teacher do you still remember, and why?");
+    expect(h.ai.calls).toHaveLength(0);
   });
 
   it("drafts no chips for Vela's story, which is hers to tell", async () => {
@@ -458,8 +478,10 @@ describe("prepareDay", () => {
     expect(hello?.text).toMatch(/\S/);
     const [used] = await h.db.select().from(suggestions);
     expect(used?.usedAt).toEqual(h.clock.now());
-    // Only the bank's questions take chips; the weekday decides the type (SUGGESTION_ROTATION).
-    expect(h.ai.calls.map((call) => call.call)).toEqual(used?.type === "question" ? ["chips"] : []);
+    // Only the bank questions CHIP_QUESTIONS names take chips; the weekday decides the item.
+    expect(h.ai.calls.map((call) => call.call)).toEqual(
+      CHIP_QUESTIONS.has(used?.bankId ?? "") ? ["chips"] : [],
+    );
   });
 
   it("keeps the plain hello when the day has no unused suggestion", async () => {

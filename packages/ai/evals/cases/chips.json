@@ -120,5 +120,47 @@
     "rubric": [
       "The chips reuse weekend plans from her own answers in her own mixed wording (去 Costco stays as written, not translated to 好市多), are short and distinct, and invent no new activities."
     ]
+  },
+  {
+    "id": "chips-en-teacher-no-invented-names",
+    "call": "chips",
+    "description": "A who-question with no past answers: a chip is posted as her own answer, so it may name no teacher she never named.",
+    "tags": ["generic", "no-invention"],
+    "input": {
+      "lang": "en",
+      "askerName": "Chen",
+      "question": "Which teacher do you still remember, and why?",
+      "pastAnswers": []
+    },
+    "checks": [
+      { "kind": "count", "path": "chips", "min": 3, "max": 3 },
+      {
+        "kind": "notMatches",
+        "path": "chips",
+        "patterns": ["\\b(mrs|mr|ms|dr)\\.?\\s+\\p{L}"]
+      }
+    ],
+    "rubric": [
+      "Three short options that describe a kind of teacher or a reason (for example A kind one, A strict one, Tell you later) and name no person, since none is in her past answers."
+    ]
+  },
+  {
+    "id": "chips-zh-best-friend-no-invented-names",
+    "call": "chips",
+    "description": "A who-question in Traditional Chinese with past answers that name nobody: no friend's name may be invented.",
+    "tags": ["taiwanese-mandarin", "no-invention"],
+    "input": {
+      "lang": "zh-TW",
+      "askerName": "小芳",
+      "question": "阿嬤，您年輕時最要好的朋友是誰？",
+      "pastAnswers": ["好", "還沒", "去市場"]
+    },
+    "checks": [
+      { "kind": "count", "path": "chips", "min": 3, "max": 3 },
+      { "kind": "writtenIn", "path": "chips", "lang": "zh-TW" }
+    ],
+    "rubric": [
+      "Three short options in Traditional Chinese that describe a kind of friend or defer (for example 鄰居、同學、改天說), naming no person, since none is in her past answers."
+    ]
   }
 ]

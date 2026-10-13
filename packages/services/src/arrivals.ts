@@ -239,7 +239,8 @@ async function settle(
     return { exchange: row, takesChips: row.type === "question" };
   }
   // Nobody asked: Vela asks her something new from the question bank rather than the same hello.
-  // A bank question takes chips as a family question does, so the easiest tap still says something.
+  // A bank question whose answer is a choice takes chips as a family question does, so the easiest
+  // tap still says something (`CHIP_QUESTIONS`).
   const question = await takeFallbackQuestion(tx, member, date, now);
   const [hello] = await tx
     .insert(exchanges)
@@ -259,7 +260,7 @@ async function settle(
   if (hello === undefined) {
     throw new VelaError("illegal_state", `no hello could be created for ${date}`);
   }
-  return { exchange: hello, takesChips: question?.type === "question" };
+  return { exchange: hello, takesChips: question?.takesChips === true };
 }
 
 /**

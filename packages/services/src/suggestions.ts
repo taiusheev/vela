@@ -24,6 +24,7 @@ import {
   type AskBankLang,
   type AskBankType,
   askBankItem,
+  CHIP_QUESTIONS,
 } from "@vela/copy";
 import {
   FORBIDDEN_ZH_TW,
@@ -294,15 +295,15 @@ export function renderSuggestion(
  * her unused suggestion for `date`, as its bank item in her language, never an AI draft, which is
  * written as a family member would send it. Taking it marks it used, so the family is not offered
  * it again and the writer's rules keep it from coming back for twelve weeks. Null when the day has no
- * suggestion, and the morning keeps the plain hello. Its type says how she answers it: a question
- * takes chips like a family question (spec §5.3); a story, recipe or word is hers to tell.
+ * suggestion, and the morning keeps the plain hello. `takesChips` says whether chips are drafted for
+ * it as for a family question (spec §5.3): only for the questions `CHIP_QUESTIONS` names.
  */
 export async function takeFallbackQuestion(
   tx: VelaTransaction,
   member: Pick<Member, "id" | "language">,
   date: LocalDate,
   now: Date,
-): Promise<{ text: string; type: AskBankType } | null> {
+): Promise<{ text: string; takesChips: boolean } | null> {
   const [row] = await tx
     .select({ id: suggestions.id, bankId: suggestions.bankId })
     .from(suggestions)
@@ -319,7 +320,7 @@ export async function takeFallbackQuestion(
   const text = item?.text[readerLang(member.language)].trim() ?? "";
   if (row === undefined || item === undefined || text === "") return null;
   await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, row.id));
-  return { text, type: item.type };
+  return { text, takesChips: CHIP_QUESTIONS.has(item.id) };
 }
 
 // the writer --------------------------------------------------------------------------------------
