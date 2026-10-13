@@ -3,7 +3,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
 import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
@@ -79,6 +86,8 @@ function AskComposer({
 }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+  const inlineSend = fontScale > 1.3;
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
@@ -258,6 +267,7 @@ function AskComposer({
           }}
         />
         <ScrollView
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           style={{ backgroundColor: palette.bg }}
           contentContainerStyle={{
@@ -284,6 +294,37 @@ function AskComposer({
     );
   }
 
+  // A large fixed footer can leave no space for the editor when the keyboard opens.
+  const sendControls = (
+    <View
+      style={{
+        backgroundColor: palette.bg,
+        borderTopWidth: 1,
+        borderTopColor: palette.rule,
+        paddingHorizontal: inlineSend ? 0 : space.margin,
+        paddingTop: space.m,
+        paddingBottom: insets.bottom + space.l,
+        gap: space.s,
+      }}
+    >
+      <Words variant="caption" tone="ink2">
+        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning` : when === "another_day" ? t`${day} morning` : t`Whenever`}`}
+      </Words>
+      <PrimaryButton
+        label={compose.isPending ? t`Sending…` : t`Send to ${name}`}
+        onPress={send}
+        disabled={
+          compose.isPending ||
+          savedElsewhere ||
+          !draft.ready ||
+          extras === undefined ||
+          noMorning ||
+          (!demo && (!ready || !written || (voiceNote && hello === null)))
+        }
+      />
+    </View>
+  );
+
   return (
     <>
       <Stack.Screen
@@ -299,6 +340,7 @@ function AskComposer({
         keyboardVerticalOffset={insets.top + 56}
       >
         <ScrollView
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           style={{ flex: 1, backgroundColor: palette.bg }}
           contentContainerStyle={{
@@ -489,34 +531,9 @@ function AskComposer({
               }}
             />
           )}
+          {inlineSend ? sendControls : null}
         </ScrollView>
-        <View
-          style={{
-            backgroundColor: palette.bg,
-            borderTopWidth: 1,
-            borderTopColor: palette.rule,
-            paddingHorizontal: space.margin,
-            paddingTop: space.m,
-            paddingBottom: insets.bottom + space.l,
-            gap: space.s,
-          }}
-        >
-          <Words variant="caption" tone="ink2">
-            {`${name} · ${when === "tomorrow" ? t`Tomorrow morning` : when === "another_day" ? t`${day} morning` : t`Whenever`}`}
-          </Words>
-          <PrimaryButton
-            label={compose.isPending ? t`Sending…` : t`Send to ${name}`}
-            onPress={send}
-            disabled={
-              compose.isPending ||
-              savedElsewhere ||
-              !draft.ready ||
-              extras === undefined ||
-              noMorning ||
-              (!demo && (!ready || !written || (voiceNote && hello === null)))
-            }
-          />
-        </View>
+        {inlineSend ? null : sendControls}
       </KeyboardAvoidingView>
     </>
   );
