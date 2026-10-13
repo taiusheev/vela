@@ -129,14 +129,8 @@ function useSignInGuard(parent: boolean | undefined): void {
 }
 
 function Root() {
-  const { palette, scheme } = useTheme();
   const { settled } = useAppLocale();
-  const parent = useParentMode();
-  const segments = useSegments();
-  useSignInGuard(parent);
-  // A tapped notification opens where it points once the account and the navigator are ready.
-  useOpenTapped();
-  const [ready] = useFonts({
+  const [ready, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
@@ -145,12 +139,25 @@ function Root() {
     Literata_600SemiBold,
   });
 
-  // The screens render before Literata and Inter arrive, with the platform's own faces standing in:
-  // a slow network must not leave a family looking at nothing. The splash also waits for a phone to
-  // read the language it remembers, so the first words seen are in that language.
+  // Native text can retain its fallback face if mounted before its font is registered. Native
+  // fonts are bundled, so keep the splash until they and the remembered language are ready.
+  // A font failure still opens the app with system faces; web keeps its immediate fallback render.
   useEffect(() => {
-    if (ready && settled) void SplashScreen.hideAsync();
-  }, [ready, settled]);
+    if ((ready || fontError !== null) && settled) void SplashScreen.hideAsync();
+  }, [ready, fontError, settled]);
+
+  if (Platform.OS !== "web" && (!settled || (!ready && fontError === null))) return null;
+
+  return <Navigation />;
+}
+
+function Navigation() {
+  const { palette, scheme } = useTheme();
+  const parent = useParentMode();
+  const segments = useSegments();
+  useSignInGuard(parent);
+  // A tapped notification opens where it points once the account and the navigator are ready.
+  useOpenTapped();
 
   // An old parent-device route must not mount or read its retained token in a trial organiser build.
   if (englishTrialBuild && segments[0] === "parent") return null;
