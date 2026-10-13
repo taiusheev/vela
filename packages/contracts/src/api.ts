@@ -253,6 +253,13 @@ export const ApiWeeklyRead = z.object({
         })
         .nullable(),
       notes: z.array(z.string()).nullable(),
+      /**
+       * The organiser lines that follow the counts (ADR-46): who asked, the days her answers got no
+       * reply, the days she answered after the second message, a weekday often quiet. Rendered by the
+       * server in the family's language, never by the model; she never sees them. Null when locked;
+       * absent from servers before it.
+       */
+      family_lines: z.array(z.string()).nullable().optional(),
       /** Null when locked, and when the founder removed it before sending. */
       suggestion: z.string().nullable(),
     })

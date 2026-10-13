@@ -2,10 +2,11 @@ import {
   type ApiMutationResponse,
   type ApiWeekDay,
   ApiWeeklyRead,
+  FamilyPattern,
   OpenWeeklyRead,
   type WeekDayState,
 } from "@vela/contracts";
-import { addDays, localTimeOf, weeklyHealthLines } from "@vela/core";
+import { addDays, familyLines, localTimeOf, weeklyHealthLines } from "@vela/core";
 import { members, quietEvents, subscriptions, type VelaTransaction, weeklyReads } from "@vela/db";
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
@@ -124,17 +125,26 @@ export async function loadApiWeeklyRead(
   });
 
   const stats = read.stats;
+  const family = covered ? await familyById(db, familyId) : null;
   // Her health words as the organisers were sent them, while her yes and the words still stand
   // (ADR-47), in the family's language like the rest of the notes.
-  const family = covered && stats.health_sent === true ? await familyById(db, familyId) : null;
   const healthLines =
-    family === null
+    family === null || stats.health_sent !== true
       ? []
       : weeklyHealthLines(
           family.language,
           her.displayName,
           await weeklyHealthMentions(db, her, read.weekStart, now),
         );
+  // The organiser lines after the counts (ADR-46); a stored pattern this version cannot read is
+  // left out, as on the admin page.
+  const stored = Array.isArray(stats.family_patterns) ? stats.family_patterns : [];
+  const patterns = stored.flatMap((item) => {
+    const parsed = FamilyPattern.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+  const organiserLines =
+    family === null ? null : familyLines(family.language, her.displayName, patterns);
   return ApiWeeklyRead.parse({
     ...base,
     read: {
@@ -152,6 +162,7 @@ export async function loadApiWeeklyRead(
           }
         : null,
       notes: covered ? [...(read.sentLines ?? []), ...healthLines] : null,
+      family_lines: organiserLines,
       suggestion:
         covered && read.sentSuggestion !== null && read.sentSuggestion.trim().length > 0
           ? read.sentSuggestion
