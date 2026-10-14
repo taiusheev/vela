@@ -199,7 +199,7 @@ export function sitePage(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${options.indexable ? null : raw('<meta name="robots" content="noindex, nofollow">\n')}<title>${page.title}</title>
 <meta name="description" content="${page.description}">
-<meta name="theme-color" content="#FBF7F0">
+<meta name="theme-color" content="#FBF9F5">
 <link rel="canonical" href="${url(page.path)}">
 ${page.alternates.map(
   (a) => html`<link rel="alternate" hreflang="${a.lang}" href="${url(a.path)}">
@@ -211,7 +211,7 @@ ${page.alternates.map(
 <meta property="og:image" content="${url("/site/img/open-graph.png")}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/site/favicon.svg">
-<link rel="preload" href="/site/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/site/fonts/PublicSans.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="/site/site.css">
 <script src="/site/boot.js"></script>
 <script src="/site/site.js" defer></script>
