@@ -34,4 +34,8 @@ tags:
 - assertVisible: "Sign-in is unavailable in this build"
 - assertVisible: "You can explore an example family. No messages are sent."
 - tapOn: "Go to Today"
+- assertVisible: "Mom"
+- assertVisible: "Dad"
+- tapOn:
+    css: '[data-testid="today-reply-x1"]'
 - assertVisible: "What did the garden look like this morning?"
