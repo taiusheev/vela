@@ -37,6 +37,7 @@
     },
     "testflight": {
       "extends": "staging",
+      "environment": "preview",
       "distribution": "store",
       "autoIncrement": true,
       "android": {
@@ -58,7 +59,7 @@
       "channel": "production"
     },
     "audit-simulator": {
-      "environment": "preview",
+      "environment": "development",
       "distribution": "internal",
       "channel": "audit",
       "ios": {
@@ -67,8 +68,6 @@
       "env": {
         "EXPO_NO_DOTENV": "1",
         "EXPO_PUBLIC_DEMO_MODE": "true",
-        "EXPO_PUBLIC_API_URL": "",
-        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "",
         "EXPO_PUBLIC_TRIAL_ENGLISH": "false"
       }
     }
