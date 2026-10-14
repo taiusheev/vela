@@ -77,10 +77,15 @@
       "android": {
         "track": "internal",
         "releaseStatus": "draft"
+      },
+      "ios": {
+        "ascAppId": "6822583145"
       }
     },
     "trial": {
-      "ios": {}
+      "ios": {
+        "ascAppId": "6822583145"
+      }
     }
   }
 }
