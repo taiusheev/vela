@@ -10,8 +10,7 @@ tags:
 - assertVisible: "answered 8:12"
 - assertVisible: "Mom saw it · 8:12"
 - assertVisible: "Dad"
-- tapOn:
-    css: '[data-testid="today-reply-x1"]'
+- tapOn: "^Reply$"
 - assertVisible: "What did the garden look like this morning?"
 - assertVisible: "Anna: Those are the ones from the seeds you saved"
 - tapOn: "Back"

@@ -9,7 +9,6 @@ tags:
     css: '[data-testid="today-heart-x1"]'
 - assertVisible: "Example · heart accepted"
 - assertNotVisible: "Heart for Mom"
-- tapOn:
-    css: '[data-testid="today-reply-x1"]'
+- tapOn: "^Reply$"
 - assertVisible: "Say something short"
 - assertVisible: "What the family said"

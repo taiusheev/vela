@@ -36,6 +36,5 @@ tags:
 - tapOn: "Go to Today"
 - assertVisible: "Mom"
 - assertVisible: "Dad"
-- tapOn:
-    css: '[data-testid="today-reply-x1"]'
+- tapOn: "^Reply$"
 - assertVisible: "What did the garden look like this morning?"
