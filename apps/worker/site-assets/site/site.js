@@ -10,6 +10,19 @@
   addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
+  // Reveal sections as they come into view.
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries)
+        if (e.isIntersecting) {
+          e.target.classList.add("in");
+          io.unobserve(e.target);
+        }
+    },
+    { rootMargin: "0px 0px -10% 0px" },
+  );
+  for (const node of document.querySelectorAll(".reveal")) io.observe(node);
+
   if (!data) return;
 
   // ---- Phone rendering -------------------------------------------------------------------------
@@ -92,6 +105,59 @@
     };
   }
 
+  // ---- Hero: one morning, with explicit pause and replay controls ------------------------------
+  const heroNode = document.querySelector(".stage .phone");
+  const badge = document.querySelector(".badge-light");
+  const control = document.querySelector(".hero-control");
+  if (heroNode && control) {
+    const p = phone(heroNode);
+    let paused = false;
+    let running = false;
+    const playMorning = async () => {
+      if (running) return;
+      running = true;
+      paused = false;
+      control.textContent = control.dataset.pause;
+      control.setAttribute("aria-pressed", "false");
+      p.clear();
+      badge?.classList.remove("lit");
+      const badgeCopy = [...(badge?.querySelectorAll("[data-on]") ?? [])];
+      for (const label of badgeCopy) label.textContent = label.dataset.waiting;
+      const questionIndex = data.hero.findIndex((step) => step.msg?.from === "ask");
+      for (const step of data.hero.slice(0, questionIndex + 1)) if (step.msg) p.add(step.msg);
+      for (const step of data.hero.slice(questionIndex + 1)) {
+        if (step.wait) await wait(step.wait);
+        while (paused) await new Promise((resolve) => setTimeout(resolve, 150));
+        if (step.typing) {
+          const t = p.typing();
+          await wait(step.typing);
+          t.remove();
+        }
+        while (paused) await new Promise((resolve) => setTimeout(resolve, 150));
+        if (step.tap) p.tap(step.tap);
+        if (step.lit) {
+          badge?.classList.add("lit");
+          for (const label of badgeCopy) label.textContent = label.dataset.on;
+        }
+        if (step.msg) p.add(step.msg);
+      }
+      running = false;
+      control.textContent = control.dataset.replay;
+      control.removeAttribute("aria-pressed");
+    };
+    control.addEventListener("click", () => {
+      if (!running) {
+        playMorning();
+        return;
+      }
+      paused = !paused;
+      control.textContent = paused ? control.dataset.resume : control.dataset.pause;
+      control.setAttribute("aria-pressed", String(paused));
+    });
+    if (!reduced) playMorning();
+    else badge?.classList.add("lit");
+  }
+
   // ---- One morning: the sticky phone follows the steps ----------------------------------------
   const sticky = document.querySelector(".morning .sticky .phone");
   const steps = [...document.querySelectorAll(".step")];
@@ -104,7 +170,7 @@
   };
   if (sticky && steps.length) {
     const p = phone(sticky);
-    let current = 0;
+    let current = -1;
     const pick = () => {
       let best = 0,
         bestDist = Infinity;
@@ -126,6 +192,10 @@
     addEventListener("resize", pick);
     pick();
   }
+  // Small screens: each step shows its own little phone, drawn once.
+  for (const [i, node] of [...document.querySelectorAll(".step .mini")].entries())
+    showStep(phone(node), i);
+
   // ---- Try it ----------------------------------------------------------------------------------
   const tryNode = document.querySelector(".try .phone");
   const asks = document.querySelector("#try-asks");
@@ -170,6 +240,9 @@
         busy = true;
         const run = generation;
         chosen = ask;
+        result.classList.remove("lit");
+        result.querySelector("span").textContent = data.try.waiting;
+        if (again) again.hidden = false;
         for (const x of asks.querySelectorAll("button")) {
           x.disabled = x !== b;
           x.setAttribute("aria-pressed", String(x === b));

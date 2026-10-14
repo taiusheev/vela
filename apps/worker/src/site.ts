@@ -96,6 +96,8 @@ interface Demo {
 /** A page of the site that exists in every language. */
 type SitePage = "home" | "precision" | "privacy";
 
+type Icon = "consent" | "symmetry" | "health" | "calm";
+
 interface SiteCopy {
   readonly languageName: string;
   readonly title: string;
@@ -187,6 +189,7 @@ interface SiteCopy {
     readonly items: readonly {
       readonly title: string;
       readonly body: string;
+      readonly icon: Icon;
     }[];
   };
   readonly numbers: {
@@ -253,7 +256,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     languageName: "English",
     title: "Vela · A little closer, every day",
     description:
-      "One small exchange a day between a parent and her family. She answers with one tap or her voice on Telegram; the family replies; tomorrow morning she hears them.",
+      "One small exchange a day between a parent and her family. She answers with one tap or her voice on LINE; the family replies; tomorrow morning she hears them.",
     skip: "Skip to content",
     nav: {
       how: "How it works",
@@ -264,16 +267,12 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       join: "Join the waitlist",
     },
     hero: {
-      eyebrow: "FOR THE PEOPLE YOU CALL HOME",
-      title: ["More than", "“I’m fine.”", "A little closer."],
-      lede: "Make a little room for your parent’s everyday. A question from you, an answer from home, and a conversation that carries on tomorrow.",
+      eyebrow: "Daily exchanges for families, near and far",
+      title: ["A little ", "closer", ", every day."],
+      lede: "Every morning someone in the family asks Mom one small thing. She answers with one tap or her voice, right in LINE. Tomorrow morning she hears what everyone said back.",
       join: "Join the waitlist",
-      watch: "Try an exchange",
-      trust: [
-        "No separate Vela app for her",
-        "One message a day",
-        "The exchange is free, for ever",
-      ],
+      watch: "See a morning",
+      trust: ["Nothing to install for her", "One message a day", "The exchange is free, for ever"],
       badge: ["Mom’s light is on", "Answered at 8:14"],
       photoAlt:
         "An older woman at her kitchen table in morning light, smiling at a message on her phone, a cup of tea in her hand.",
@@ -289,12 +288,12 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     morning: {
       eyebrow: "One morning with Vela",
       title: "One question. One answer. A whole family closer.",
-      lede: "A small ritual that fits around your lives. From the first question to the next morning’s reply.",
+      lede: "From today’s question to tomorrow’s read-back. Four small moments that fit around your lives.",
       steps: [
         {
           clock: "08:00 · Her morning",
           title: "Someone asks",
-          body: "Mei writes from Singapore: “What did you have for breakfast?” It arrives at Mom’s usual morning time, with Mei’s name on it. If nobody has a question ready, Vela offers a starting point.",
+          body: "Mei, in Singapore, wrote last night: “What did you have for breakfast?” It arrives at Mom’s usual morning time, with Mei’s name on it. If nobody has a question ready, Vela offers a starting point.",
         },
         {
           clock: "08:14 · Her answer",
@@ -319,7 +318,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       her: {
         title: "For her",
         items: [
-          "Answers in Telegram, the app she already uses",
+          "Answers in LINE, the app she already uses",
           "One tap, a photo, or her voice",
           "Large text, nothing to set up, no streaks",
           "She can say stop, and ask what the family sees",
@@ -355,7 +354,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "Any answer",
           what: "Her light is on",
-          detail: "The window lights up as soon as her answer arrives. It means “answered today”.",
+          detail: "Her window lights up as soon as her answer arrives: “answered today”.",
         },
         {
           when: "2½ hours later",
@@ -378,8 +377,8 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       alt: "Illustration: a single lit arched window in an apartment building at dusk, a plant and a tea cup on the sill.",
     },
     bleed: {
-      title: "The little things are the big things.",
-      body: "Breakfast. The garden. That story you’ve heard a hundred times. The little things are how we stay close. Vela makes a little room for them, every day.",
+      title: "Not a check-in. A conversation.",
+      body: "The best answer to “are you okay?” is a story about breakfast, a photo of the garden, a laugh in a voice note. Vela makes room for that, once a day.",
       alt: "Three generations laughing around a home dinner table, a granddaughter showing her grandmother something on a phone.",
     },
     plans: {
@@ -414,18 +413,22 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       title: "Built on her yes.",
       items: [
         {
+          icon: "consent",
           title: "Her choice",
           body: "Nothing starts until she says yes herself. She can say stop at any time, and start again.",
         },
         {
+          icon: "symmetry",
           title: "No secrets",
           body: "She can always ask what the family sees about her, and gets the same summary they do.",
         },
         {
+          icon: "health",
           title: "Her health, her words",
           body: "If she mentions a fall or pain, it is passed on only if she said yes to that, separately.",
         },
         {
+          icon: "calm",
           title: "One moment a day",
           body: "One message a day. No streaks, no badges, no guilt about a missed morning.",
         },
@@ -440,7 +443,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     join: {
       eyebrow: "Join the waitlist",
       title: "Be among the first families.",
-      lede: "We’re starting with a small family pilot. Leave your email and we’ll write when there’s room for your family.",
+      lede: "We’re starting with our own family in Vietnam, on Telegram. Leave your email and we’ll write when there’s room for your family.",
       email: "Your email",
       placeholder: "you@example.com",
       role: "Who would you set it up for?",
@@ -462,7 +465,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       items: [
         [
           "Does Mom need to install anything?",
-          "The first pilot uses Telegram. If your parent already has it, there’s no separate Vela app to install. The rest of the family asks and replies in its Telegram group.",
+          "No. She answers in LINE, the app she already uses. If your family uses Telegram, that works too. The family uses the Vela app or the family’s group.",
         ],
         [
           "Is this a way to keep tabs on her?",
@@ -551,7 +554,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       ],
       morning: [
         {
-          head: { title: "Vela", sub: "Telegram · her phone" },
+          head: { title: "Vela", sub: "LINE · her phone" },
           messages: [
             { from: "time", text: "Today 08:00" },
             {
@@ -563,7 +566,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
           ],
         },
         {
-          head: { title: "Vela", sub: "Telegram · her phone" },
+          head: { title: "Vela", sub: "LINE · her phone" },
           tap: "Market dumplings",
           messages: [
             {
@@ -593,7 +596,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
           ],
         },
         {
-          head: { title: "Vela", sub: "Telegram · her phone" },
+          head: { title: "Vela", sub: "LINE · her phone" },
           messages: [
             { from: "time", text: "Tomorrow 08:00" },
             {
@@ -612,7 +615,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         },
       ],
       try: {
-        head: { title: "Vela", sub: "Telegram · Mom’s phone" },
+        head: { title: "Vela", sub: "LINE · Mom’s phone" },
         time: "Today 08:00",
         tomorrow: "Tomorrow 08:00",
         pickFirst: "Choose a question first.",
@@ -725,7 +728,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     languageName: "繁體中文",
     title: "Vela · 每天，更靠近一點",
     description:
-      "長輩和家人之間，每天一次小小的交流。她在 Telegram 上點一下或說一句話回答；家人回覆；隔天早上她就聽到大家說了什麼。",
+      "長輩和家人之間，每天一次小小的交流。她在 LINE 上點一下或說一句話回答；家人回覆；隔天早上她就聽到大家說了什麼。",
     skip: "跳到主要內容",
     nav: {
       how: "怎麼運作",
@@ -736,12 +739,12 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       join: "加入等候名單",
     },
     hero: {
-      eyebrow: "給你心裡的家人",
-      title: ["不只一句", "「我很好」。", "每天，靠近一點。"],
-      lede: "在日常裡，為爸媽留一個位置。你問一件小事，家人從另一端回答。明天，繼續聊。",
+      eyebrow: "給遠近家人的每日交流",
+      title: ["每天，", "更靠近", "一點。"],
+      lede: "每天早上，家裡有人問媽媽一件小事。她直接在 LINE 上點一下或說一句話就能回答。隔天早上，她會聽到大家的回覆。",
       join: "加入等候名單",
-      watch: "試試每日交流",
-      trust: ["她不用另外安裝 Vela", "一天一則訊息", "每日交流永久免費"],
+      watch: "看看一個早晨",
+      trust: ["她不用安裝任何東西", "一天一則訊息", "每日交流永久免費"],
       badge: ["媽媽的燈亮了", "8:14 回答"],
       photoAlt: "一位年長女士在晨光中坐在廚房桌邊，手拿一杯茶，笑著看手機上的訊息。",
     },
@@ -756,12 +759,12 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     morning: {
       eyebrow: "和 Vela 的一個早晨",
       title: "一個問題，一個回答，一家人更靠近。",
-      lede: "從今天的提問到明早的回覆。一個能自然融入生活的小習慣。",
+      lede: "從今天的提問，到明天聽見家人的回覆。四個小時刻，自然融入彼此的生活。",
       steps: [
         {
           clock: "08:00 · 她的早晨",
           title: "有人提問",
-          body: "人在新加坡的小美寫下：「媽，今天早餐吃了什麼？」問題會在媽媽平常的早晨時間送到，上面署著小美的名字。如果家人一時想不到問題，Vela 也會提供一個話題。",
+          body: "人在新加坡的小美昨晚寫下：「媽，今天早餐吃了什麼？」問題會在媽媽平常的早晨時間送到，上面署著小美的名字。如果家人一時想不到問題，Vela 也會提供一個話題。",
         },
         {
           clock: "08:14 · 她的回答",
@@ -786,7 +789,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       her: {
         title: "給她",
         items: [
-          "在她本來就在用的 Telegram 上回答",
+          "在她本來就在用的 LINE 上回答",
           "點一下、一張照片，或她的聲音",
           "大字體、不用設定、沒有連續紀錄",
           "她可以說停，也可以問家人看到了什麼",
@@ -879,18 +882,22 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       title: "一切從她的同意開始。",
       items: [
         {
+          icon: "consent",
           title: "她自己決定",
           body: "她本人說好之前，什麼都不會開始。她隨時都可以說停，也可以再開始。",
         },
         {
+          icon: "symmetry",
           title: "沒有秘密",
           body: "她隨時都可以問家人看到了關於她的什麼，得到的摘要和家人看到的一樣。",
         },
         {
+          icon: "health",
           title: "她的健康，她的話",
           body: "如果她提到跌倒或疼痛，只有她另外同意過，才會轉告家人。",
         },
         {
+          icon: "calm",
           title: "一天一個時刻",
           body: "一天一則訊息。沒有連續紀錄、沒有徽章，錯過一天也不會被責怪。",
         },
@@ -905,7 +912,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     join: {
       eyebrow: "加入等候名單",
       title: "成為第一批使用的家庭。",
-      lede: "我們先從少數家庭開始試用。留下您的電子郵件，等可以邀請您的家人時，我們會寫信通知您。",
+      lede: "我們先從越南自己的家人開始，在 Telegram 上試用。留下您的電子郵件，等可以邀請您的家人時，我們會寫信通知您。",
       email: "您的電子郵件",
       placeholder: "you@example.com",
       role: "您想為誰設定？",
@@ -927,7 +934,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       items: [
         [
           "媽媽需要安裝什麼嗎？",
-          "第一輪試用使用 Telegram。如果長輩已經在用，就不用另外安裝 Vela App。其他家人可以直接在 Telegram 家庭群組裡提問、回覆。",
+          "不需要。她在本來就在用的 LINE 上回答。如果您的家人用 Telegram，也可以。家人則使用 Vela App 或家庭群組。",
         ],
         [
           "這是用來盯著她的嗎？",
@@ -1014,7 +1021,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       ],
       morning: [
         {
-          head: { title: "Vela", sub: "Telegram · 她的手機" },
+          head: { title: "Vela", sub: "LINE · 她的手機" },
           messages: [
             { from: "time", text: "今天 08:00" },
             {
@@ -1026,7 +1033,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
           ],
         },
         {
-          head: { title: "Vela", sub: "Telegram · 她的手機" },
+          head: { title: "Vela", sub: "LINE · 她的手機" },
           tap: "市場的水餃",
           messages: [
             {
@@ -1051,7 +1058,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
           ],
         },
         {
-          head: { title: "Vela", sub: "Telegram · 她的手機" },
+          head: { title: "Vela", sub: "LINE · 她的手機" },
           messages: [
             { from: "time", text: "明天 08:00" },
             {
@@ -1070,7 +1077,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         },
       ],
       try: {
-        head: { title: "Vela", sub: "Telegram · 媽媽的手機" },
+        head: { title: "Vela", sub: "LINE · 媽媽的手機" },
         time: "今天 08:00",
         tomorrow: "明天 08:00",
         pickFirst: "請先選一個問題。",
@@ -1202,18 +1209,25 @@ export function siteDemo(lang: SiteLang): Demo {
 // Pieces ------------------------------------------------------------------------------------------
 
 /** The emblem: the arched window, its four panes lit. Decorative; the name beside it carries it. */
-const MARK = html`<svg viewBox="-13.5 -13.5 127 159" aria-hidden="true" focusable="false"><path d="M34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z" fill="#D95D39"/><path fill-rule="evenodd" d="M34 -5.5H66A39.5 39.5 0 0 1 105.5 34V118A19.5 19.5 0 0 1 86 137.5H14A19.5 19.5 0 0 1 -5.5 118V34A39.5 39.5 0 0 1 34 -5.5ZM34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z" fill="currentColor"/><rect x="47" y="5.5" width="6" height="121" fill="currentColor"/><rect x="5.5" y="49.8" width="89" height="6" fill="currentColor"/></svg>`;
+const MARK = html`<svg viewBox="-13.5 -13.5 127 159" aria-hidden="true" focusable="false"><path d="M34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z" fill="#E9A23B"/><path fill-rule="evenodd" d="M34 -5.5H66A39.5 39.5 0 0 1 105.5 34V118A19.5 19.5 0 0 1 86 137.5H14A19.5 19.5 0 0 1 -5.5 118V34A39.5 39.5 0 0 1 34 -5.5ZM34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z" fill="currentColor"/><rect x="47" y="5.5" width="6" height="121" fill="currentColor"/><rect x="5.5" y="49.8" width="89" height="6" fill="currentColor"/></svg>`;
 
 /** Her light, whose panes `site.css` turns amber when its container is `.lit`. */
 const LAMP = html`<svg class="lamp" viewBox="-13.5 -13.5 127 159" aria-hidden="true" focusable="false"><path class="pane" d="M34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z"/><path fill-rule="evenodd" d="M34 -5.5H66A39.5 39.5 0 0 1 105.5 34V118A19.5 19.5 0 0 1 86 137.5H14A19.5 19.5 0 0 1 -5.5 118V34A39.5 39.5 0 0 1 34 -5.5ZM34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z" fill="#1E1A16"/><rect x="47" y="5.5" width="6" height="121" fill="#1E1A16"/><rect x="5.5" y="49.8" width="89" height="6" fill="#1E1A16"/></svg>`;
 
-/** An illustrative exchange, rendered before scripts run. The interactive example announces its messages. */
+const ICONS: Readonly<Record<Icon, Html>> = {
+  consent: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="14" stroke="#E9A23B"/><path d="M9 16.5l4.5 4.5L23 11.5"/></svg>`,
+  symmetry: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 16s5-8 13-8 13 8 13 8-5 8-13 8S3 16 3 16z"/><circle cx="16" cy="16" r="4" fill="#E9A23B" stroke="none"/></svg>`,
+  health: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 27S4 20 4 11.5A6 6 0 0 1 16 9a6 6 0 0 1 12 2.5C28 20 16 27 16 27z"/><path d="M10 15h3l2-3 2 6 2-3h3" stroke="#E9A23B"/></svg>`,
+  calm: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="16" cy="16" r="12"/><path d="M16 9v7l4 3" stroke="#E9A23B"/></svg>`,
+};
+
+/** An illustrative conversation readable before scripts run; the interactive example announces additions. */
 function phone(
   head: { title: string; sub: string },
   extra = "",
   messages: readonly DemoMessage[] = [],
 ): Html {
-  return html`<div class="phone${extra}" aria-hidden="${extra.includes("interactive") ? "false" : "true"}"><div class="screen"><div class="bar"><span class="ava">${MARK}</span><span><b>${head.title}</b><small>${head.sub}</small></span></div><div class="chat"${extra.includes("interactive") ? html` role="log" aria-live="polite" aria-relevant="additions"` : null}>${messages.map((m) => (m.from === "time" ? html`<div class="time">${m.text}</div>` : html`<div class="msg${m.from === "her" ? " me" : ""}${m.from === "vela" ? " vela" : ""}">${m.who ? html`<span class="who">${m.who}</span>` : null}${m.text}${m.voice ? html`<span class="voice-label">${m.voice} · ♪</span>` : null}${m.chips ? html`<div class="chips">${m.chips.map((label) => html`<span class="chip">${label}</span>`)}</div>` : null}</div>`))}</div></div></div>`;
+  return html`<div class="phone${extra}" aria-hidden="${extra.includes("interactive") ? "false" : "true"}"><div class="screen"><div class="bar"><span class="ava">${MARK}</span><span><b>${head.title}</b><small>${head.sub}</small></span></div><div class="chat"${extra.includes("interactive") ? html` role="log" aria-live="polite" aria-relevant="additions"` : null}>${messages.map((m) => (m.from === "time" ? html`<div class="time">${m.text}</div>` : html`<div class="msg${m.from === "her" ? " me" : ""}${m.from === "vela" ? " vela" : ""}${m.photo ? " photo" : ""}">${m.who ? html`<span class="who">${m.who}</span>` : null}${m.photo ? html`<img src="${m.photo}" alt="${m.alt ?? ""}" loading="lazy">` : null}${m.text}${m.voice ? html`<span class="voice-label">${m.voice} · ♪</span>` : null}${m.chips ? html`<div class="chips">${m.chips.map((label) => html`<span class="chip">${label}</span>`)}</div>` : null}</div>`))}</div></div></div>`;
 }
 
 function languageSwitch(lang: SiteLang, page: SitePage): Html {
@@ -1229,7 +1243,7 @@ function header(lang: SiteLang, page: SitePage): Html {
   const home = SITE_PATHS[lang].home;
   const at = (id: string) => (page === "home" ? `#${id}` : `${home}#${id}`);
   return html`<a class="skip" href="#main">${copy.skip}</a>
-<header class="top"><div class="wrap"><a class="brand" href="${home}">${MARK}<span>Vela</span></a><nav class="nav" aria-label="Vela"><a href="${at("how")}">${copy.nav.how}</a><a href="${at("try")}">${copy.nav.try}</a><a href="${at("faq")}">${copy.nav.faq}</a></nav>${languageSwitch(lang, page)}<a class="btn btn-primary" href="${at("join")}">${copy.nav.join}</a></div></header>`;
+<header class="top"><div class="wrap"><a class="brand" href="${home}">${MARK}<span>Vela</span></a><nav class="nav" aria-label="Vela"><a href="${at("how")}">${copy.nav.how}</a><a href="${at("try")}">${copy.nav.try}</a><a href="${at("light")}">${copy.nav.light}</a><a href="${at("plans")}">${copy.nav.plans}</a><a href="${at("faq")}">${copy.nav.faq}</a></nav>${languageSwitch(lang, page)}<a class="btn btn-primary" href="${at("join")}">${copy.nav.join}</a></div></header>`;
 }
 
 function footer(lang: SiteLang): Html {
@@ -1263,8 +1277,8 @@ export interface SitePageContent {
 /** The home page. `flash` is the waitlist's answer when the form posted without script. */
 export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageContent {
   const c = COPY[lang];
+  const demoHead = c.demo.morning[0]?.head ?? { title: "Vela", sub: "LINE" };
   const morning = c.demo.morning[0];
-  const demoHead = morning?.head ?? { title: "Vela", sub: "Telegram" };
   const heroMessages = c.demo.hero.flatMap((step) =>
     step.msg &&
     (step.msg.from === "ask" ||
@@ -1273,18 +1287,7 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
       ? [step.msg]
       : [],
   );
-  const morningSteps = [
-    ...c.morning.steps.slice(0, 2),
-    {
-      clock: lang === "en" ? "Today → tomorrow" : "今天 → 明天",
-      title: lang === "en" ? "The conversation comes back to her" : "家人的回覆，再回到她身邊",
-      body:
-        lang === "en"
-          ? "Her answer reaches the family. You reply with a thought, a photo, or your voice. Tomorrow morning, she hears what you said before the next question arrives."
-          : "她的回答送到家人手上。你回一句話、一張照片，或一段語音。隔天早上，今天的問題來之前，她會先聽到家人的回覆。",
-    },
-  ];
-  const example = lang === "en" ? "An illustrative family exchange" : "家人交流示範";
+  const marquee = [...c.marquee, ...c.marquee].map((line) => html`<span>${line}</span>`);
   return {
     title: c.title,
     description: c.description,
@@ -1295,53 +1298,59 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
     <p class="eyebrow">${c.hero.eyebrow}</p>
     <h1>${c.hero.title[0]}<em>${c.hero.title[1]}</em>${c.hero.title[2]}</h1>
     <p class="lede">${c.hero.lede}</p>
-    <div class="actions"><a class="btn btn-primary" href="#join">${c.hero.join}</a></div>
+    <div class="actions"><a class="btn btn-primary" href="#join">${c.hero.join}</a><a class="btn btn-ghost" href="#how"><span class="play" aria-hidden="true"></span>${c.hero.watch}</a></div>
     <ul class="trust">${c.hero.trust.map((t) => html`<li>${t}</li>`)}</ul>
   </div>
-  <div class="stage">
-    <div class="window-art" aria-hidden="true">${MARK}</div>
-    <p class="stage-label">${lang === "en" ? "A SMALL MOMENT, EVERY MORNING" : "每個早晨，一個小時刻"}</p>
-    ${phone(demoHead, " hero-exchange", heroMessages)}
-    <div class="badge-light lit">${LAMP}<span><strong>${c.hero.badge[0]}</strong><small>${c.hero.badge[1]}</small></span></div>
-    <p class="example-note">${example}</p>
+  <div class="stage reveal d2">
+    <div class="arch"><img src="${IMG}/morning-tea.jpg" width="1264" height="848" alt="${c.hero.photoAlt}" fetchpriority="high"></div>
+    <div class="badge-light lit">${LAMP}<span><strong data-on="${c.hero.badge[0]}" data-waiting="${lang === "en" ? "Waiting for Mom" : "等媽媽的回答"}">${c.hero.badge[0]}</strong><small data-on="${c.hero.badge[1]}" data-waiting="${lang === "en" ? "Illustrative morning" : "早晨示範"}">${c.hero.badge[1]}</small></span></div>
+    ${phone(demoHead, "", heroMessages)}
+    <button class="hero-control" type="button" data-pause="${lang === "en" ? "Pause demo" : "暫停示範"}" data-resume="${lang === "en" ? "Continue demo" : "繼續示範"}" data-replay="${lang === "en" ? "Replay morning" : "重播這個早晨"}">${lang === "en" ? "Replay morning" : "重播這個早晨"}</button>
   </div>
 </div></section>
 
-<section class="real-moment"><div class="wrap">
-  <div><p class="eyebrow">${lang === "en" ? "BETWEEN THE BIG CALLS" : "在每次通話之間"}</p><h2>${lang === "en" ? "You mean to call. Then the day happens." : "總想找時間打電話。轉眼，又過了一天。"}</h2></div>
-  <div class="moment-copy"><p>${lang === "en" ? "Work runs late. Time zones don’t line up. You finally talk, and somehow it’s the same question: “Everything okay?”" : "工作太忙，時差總是對不上。終於通上電話，卻又只問了一句：「最近好嗎？」"}</p><p>${lang === "en" ? "There’s more you’d like to hear. What she cooked. The plant that finally flowered. A story about Dad. Vela gives the small things a place in your day." : "其實，你想聽的還有很多。今天煮了什麼，哪盆花終於開了，關於爸爸的一個小故事。Vela 讓這些小事，重新走進彼此的日常。"}</p></div>
-</div></section>
+<div class="strip" aria-hidden="true"><div class="marquee">${marquee}</div></div>
 
 <section class="band morning" id="how"><div class="wrap">
   <div>
     <p class="eyebrow reveal">${c.morning.eyebrow}</p>
     <h2 class="reveal">${c.morning.title}</h2>
     <p class="lede reveal">${c.morning.lede}</p>
-    <ol class="steps">${morningSteps.map(
+    <ol class="steps">${c.morning.steps.map(
       (step, i) =>
-        html`<li class="step${i === 0 ? " on" : ""}"><p class="clock">${step.clock}</p><h3>${step.title}</h3><p>${step.body}</p></li>`,
+        html`<li class="step${i === 0 ? " on" : ""}"><p class="clock">${step.clock}</p><h3>${step.title}</h3><p>${step.body}</p>${phone(c.demo.morning[i]?.head ?? demoHead, " mini", c.demo.morning[i]?.messages ?? [])}</li>`,
     )}</ol>
   </div>
-  <div class="sticky"><p class="example-note">${example}</p>${phone(demoHead, "", morning?.messages ?? [])}</div>
+  <div class="sticky">${phone(demoHead, "", morning?.messages ?? [])}</div>
+</div></section>
+
+<section class="band soft"><div class="wrap">
+  <p class="eyebrow reveal">${c.sides.eyebrow}</p>
+  <h2 class="reveal">${c.sides.title}</h2>
+  <div class="sides">
+    <article class="side reveal"><div class="pic"><img src="${IMG}/voice-note.jpg" width="928" height="1152" alt="${c.sides.her.alt}" loading="lazy"></div><div class="body"><h3>${c.sides.her.title}</h3><ul>${c.sides.her.items.map((i) => html`<li>${i}</li>`)}</ul></div></article>
+    <article class="side reveal d1"><div class="pic"><img src="${IMG}/daughter-city.jpg" width="928" height="1152" alt="${c.sides.family.alt}" loading="lazy"></div><div class="body"><h3>${c.sides.family.title}</h3><ul>${c.sides.family.items.map((i) => html`<li>${i}</li>`)}</ul></div></article>
+  </div>
 </div></section>
 
 <section class="band try" id="try"><div class="wrap">
   <div class="try-copy">
     <p class="eyebrow">${c.tryIt.eyebrow}</p>
     <h2>${c.tryIt.title}</h2>
-    <p class="lede">${c.tryIt.lede}</p><p class="example-note">${lang === "en" ? "Illustrative demo · Nothing is sent or recorded." : "互動示範 · 不會傳送或錄製任何內容。"}</p>
+    <p class="lede">${c.tryIt.lede}</p><p class="demo-caption">${lang === "en" ? "An illustrative demo. Nothing is sent or recorded." : "互動示範。不會傳送或錄製任何內容。"}</p>
     <p class="nojs-note">${c.tryIt.noScript}</p>
   </div>
-  <div class="demo-display">${phone(c.demo.try.head, " interactive", morning?.messages ?? [])}<div class="try-result" role="status">${LAMP}<span></span></div></div>
+  ${phone(c.demo.try.head, " interactive", morning?.messages ?? [])}
   <div class="try-controls">
     <p class="try-step">${c.tryIt.step1}</p><div class="try-options" id="try-asks"></div>
     <p class="try-step">${c.tryIt.step2}</p><div class="try-options" id="try-answers"></div>
+    <div class="try-result" aria-live="polite">${LAMP}<span></span></div>
     <button class="try-again" type="button" hidden>${c.tryIt.again}</button>
   </div>
 </div></section>
 
 <section class="band night" id="light"><div class="wrap">
-  <div class="light-art"><div class="lit">${LAMP}</div><p>${lang === "en" ? "A light kept on." : "為家人，留一盞燈。"}</p><small>${lang === "en" ? "Answered today. A little closer." : "今天已回答。心，又近了一點。"}</small></div>
+  <div class="art reveal"><img src="${IMG}/a-light-at-home.jpg" width="933" height="1400" alt="${c.light.alt}" loading="lazy"></div>
   <div>
     <p class="eyebrow reveal">${c.light.eyebrow}</p>
     <h2 class="reveal">${c.light.title}</h2>
@@ -1354,18 +1363,34 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
   </div>
 </div></section>
 
-<section class="band founding"><div class="wrap">
-  <div><p class="eyebrow">${lang === "en" ? "WHY WE’RE BUILDING VELA" : "我們為什麼做 Vela"}</p><h2>${lang === "en" ? "Our own family comes first." : "從我們自己的家人開始。"}</h2></div>
-  <div><p class="lede">${lang === "en" ? "We’re preparing Vela’s first family pilot in Vietnam, using Telegram. Before inviting more families, we want to learn which mornings feel good to answer—and what feels like a chore." : "我們正準備和越南的家人，在 Telegram 上展開第一輪試用。邀請更多家庭之前，我們想先了解：哪些早晨讓人想回答，哪些事反而成了負擔。"}</p><p class="founding-credit">${lang === "en" ? "Timur · Vela founder" : "Timur · Vela 創辦人"}</p><a class="text-link" href="${SITE_PATHS[lang].precision}">${c.numbers.link} <span aria-hidden="true">↗</span></a></div>
+<section class="bleed"><img src="${IMG}/family-dinner.jpg" width="1264" height="848" alt="${c.bleed.alt}" loading="lazy"><div class="wrap reveal"><h2>${c.bleed.title}</h2><p>${c.bleed.body}</p></div></section>
+
+<section class="band" id="plans"><div class="wrap">
+  <p class="eyebrow reveal">${c.plans.eyebrow}</p>
+  <h2 class="reveal">${c.plans.title}</h2>
+  <div class="plans">
+    <div class="plan reveal"><h3>${c.plans.free.name}</h3><span class="tag">${c.plans.free.tag}</span><ul>${c.plans.free.items.map((i) => html`<li>${i}</li>`)}</ul></div>
+    <div class="plan light reveal d1"><h3>${c.plans.paid.name}</h3><span class="tag">${c.plans.paid.tag}</span><ul>${c.plans.paid.items.map((i) => html`<li>${i}</li>`)}</ul></div>
+  </div>
+  <p class="note reveal">${c.plans.note}</p>
 </div></section>
 
-<section class="band practical"><div class="wrap">
-  <details class="editorial-details" id="plans"><summary>${c.plans.title}</summary><div class="plans"><div class="plan"><h3>${c.plans.free.name}</h3><span class="tag">${c.plans.free.tag}</span><ul>${c.plans.free.items.map((i) => html`<li>${i}</li>`)}</ul></div><div class="plan"><h3>${c.plans.paid.name}</h3><span class="tag">${c.plans.paid.tag}</span><ul>${c.plans.paid.items.map((i) => html`<li>${i}</li>`)}</ul></div></div><p class="note">${c.plans.note}</p></details>
-  <details class="editorial-details"><summary>${c.promises.title}</summary><div class="promises">${c.promises.items.map((p) => html`<div class="promise"><h3>${p.title}</h3><p>${p.body}</p></div>`)}</div></details>
+<section class="band flush"><div class="wrap">
+  <p class="eyebrow reveal">${c.promises.eyebrow}</p>
+  <h2 class="reveal">${c.promises.title}</h2>
+  <div class="promises">${c.promises.items.map(
+    (p, i) =>
+      html`<div class="promise reveal d${i}">${ICONS[p.icon]}<h3>${p.title}</h3><p>${p.body}</p></div>`,
+  )}</div>
 </div></section>
+
+<section class="band flush"><div class="wrap"><div class="numbers reveal">
+  <div><p class="eyebrow">${c.numbers.eyebrow}</p><h2>${c.numbers.title}</h2></div>
+  <div><p>${c.numbers.body}</p><a class="btn btn-ghost" href="${SITE_PATHS[lang].precision}">${c.numbers.link}</a></div>
+</div></div></section>
 
 <section class="band join" id="join"><div class="wrap">
-  <div class="join-art" aria-hidden="true">${MARK}<span>Vela</span><p>${lang === "en" ? "A little closer, every day." : "每天，更靠近一點。"}</p></div>
+  <div class="art reveal"><img src="${IMG}/across-the-table.jpg" width="1400" height="933" alt="${c.join.alt}" loading="lazy"></div>
   <div>
     <p class="eyebrow">${c.join.eyebrow}</p>
     <h2>${c.join.title}</h2>
