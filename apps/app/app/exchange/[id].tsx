@@ -231,7 +231,7 @@ function ExchangeReader({ id }: { id: string }) {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: `${exchange.asker} → ${exchange.recipient}`,
+          title: exchange.recipient,
           headerLeft: () => <BackButton />,
         }}
       />
@@ -317,6 +317,9 @@ function ExchangeReader({ id }: { id: string }) {
         */}
         {answered ? (
           <View style={{ gap: space.m }}>
+            {sent.length > 0 || post.isSuccess ? (
+              <ReceiptChip label={demo ? t`Example · reply accepted` : t`Reply accepted`} />
+            ) : null}
             <Words variant="heading">
               <Trans>Reply</Trans>
             </Words>
@@ -332,7 +335,7 @@ function ExchangeReader({ id }: { id: string }) {
               ))}
             </View>
             <TextField
-              label={t`Reply`}
+              label={t`Reply to ${recipient}`}
               value={text}
               onChangeText={setText}
               placeholder={t`Say something short`}

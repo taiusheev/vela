@@ -1,7 +1,7 @@
 import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { apiConfigured, replyRefusal, replyTo } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { demoDataAllowed } from "../data/live-state.ts";
@@ -22,6 +22,7 @@ export function TodayHeart({
   compact?: boolean;
 }) {
   const palette = usePalette();
+  const { fontScale } = useWindowDimensions();
   const { t } = useLingui();
   const account = useAccount();
   const draft = useDraft(`heart.${id}`);
@@ -69,7 +70,7 @@ export function TodayHeart({
         gap: space.s,
         alignItems: "flex-start",
         flexShrink: 1,
-        maxWidth: compact ? 160 : undefined,
+        maxWidth: compact && fontScale <= 1.3 ? 160 : undefined,
       }}
     >
       {compact && !post.isSuccess ? (
@@ -81,8 +82,13 @@ export function TodayHeart({
           disabled={!draft.ready || post.isPending || post.isSuccess}
           onPress={sendHeart}
           style={({ pressed }) => ({
-            minHeight: 54,
-            minWidth: 54,
+            minHeight: 48,
+            alignSelf: "stretch",
+            minWidth: 48,
+            paddingHorizontal: space.m,
+            paddingVertical: space.s,
+            flexDirection: "row",
+            gap: space.s,
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
@@ -93,9 +99,12 @@ export function TodayHeart({
           })}
         >
           <BrandIcon name="heart" color={palette.ink} size={22} />
+          <View style={{ flexShrink: 1 }}>
+            <Words variant="button">{post.isPending ? t`Sending…` : t`Send a heart`}</Words>
+          </View>
         </Pressable>
       ) : post.isSuccess ? (
-        <ReceiptChip label={demo ? t`Example · heart sent` : t`Heart sent`} />
+        <ReceiptChip label={demo ? t`Example · heart accepted` : t`Heart accepted`} />
       ) : (
         <Chip
           label={post.isPending ? t`Sending…` : t`Heart for ${recipient}`}

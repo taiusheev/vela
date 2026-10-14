@@ -2,47 +2,24 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
-import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
-import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
-import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
-import { Light } from "../../src/components/light.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import { RemindersCard } from "../../src/components/reminders.tsx";
-import { TodayHeart } from "../../src/components/today-heart.tsx";
-import {
-  Card,
-  Eyebrow,
-  Hairline,
-  ReceiptChip,
-  SecondaryButton,
-  Words,
-} from "../../src/components/ui.tsx";
+import { TodayInbox } from "../../src/components/today-inbox.tsx";
+import { Card, Eyebrow, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { useAskOutcome } from "../../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
 import { localDayMonth } from "../../src/data/format.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
-import {
-  quietExampleFixture,
-  type Today,
-  type TodayExchange,
-  type TodayLight,
-  type TomorrowTurn,
-} from "../../src/data/today.ts";
+import { quietExampleFixture, type TodayLight, type TomorrowTurn } from "../../src/data/today.ts";
 import { useAway } from "../../src/data/useAway.ts";
 import { useCallingNumber } from "../../src/data/useCallingNumber.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
@@ -51,205 +28,7 @@ import { useQuiet } from "../../src/data/useQuiet.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
-import { hitSlop, space, type } from "../../src/theme/tokens.ts";
-
-function LightsRow({
-  lights,
-  onQuiet,
-}: {
-  lights: Today["lights"];
-  /** A quiet light opens its notice again, once the sheet that opened by itself was closed. */
-  onQuiet: (light: TodayLight) => void;
-}) {
-  const { fontScale } = useWindowDimensions();
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.m }}>
-      {lights.map((light) => (
-        <Pressable
-          key={light.memberId}
-          accessibilityRole={light.state === "quiet" ? "button" : undefined}
-          disabled={light.state !== "quiet"}
-          onPress={() => onQuiet(light)}
-          style={{
-            flexGrow: 1,
-            flexBasis: fontScale > 1.3 ? "100%" : 120,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: space.m,
-            paddingVertical: space.s,
-          }}
-        >
-          <Light state={light.answerReceived === true ? "lit" : light.state} height={44} />
-          <View style={{ flex: 1, gap: space.xs }}>
-            <Words variant="heading">{light.displayName}</Words>
-            <Words variant="caption" tone="ink2">
-              {light.stateText}
-            </Words>
-            {light.localDate === undefined ? null : (
-              <Words
-                variant="caption"
-                tone="ink2"
-              >{`${light.localDate} · ${light.timeZone ?? ""}`}</Words>
-            )}
-          </View>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
-  const { fontScale } = useWindowDimensions();
-  const { t } = useLingui();
-  const palette = usePalette();
-  const { familyId } = useToday();
-  const asker = exchange.asker;
-  const recipient = exchange.recipient;
-  const time = exchange.answer?.at;
-  return (
-    <View style={{ gap: space.m, paddingBottom: space.xl }}>
-      <Eyebrow>
-        {asker === undefined ? t`A hello for ${recipient}` : t`${asker} asked ${recipient}`}
-      </Eyebrow>
-      {exchange.deliveryNotice === undefined ? null : (
-        <Words variant="bodyMedium">{exchange.deliveryNotice}</Words>
-      )}
-      <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
-      {exchange.ask === undefined ? null : (
-        <Words variant="body" tone="ink2">
-          {exchange.ask}
-        </Words>
-      )}
-      {exchange.voiceHello === undefined || familyId === undefined ? null : (
-        <VoicePlayback
-          familyId={familyId}
-          mediaId={exchange.voiceHello.id}
-          durationMs={exchange.voiceHello.duration_ms}
-          expiresAt={exchange.voiceHello.expires_at}
-          state={exchange.voiceHello.state}
-          ready={exchange.voiceHello.state === "ready"}
-          label={t`Listen to the family’s voice ask`}
-        />
-      )}
-      {exchange.answer === undefined ? (
-        // Chosen with her light (`toToday`): her day can be answered by words to an earlier ask.
-        exchange.unanswered === undefined ? null : (
-          <Words variant="body" tone="ink2">
-            {exchange.unanswered}
-          </Words>
-        )
-      ) : (
-        <AnswerPanel>
-          <Words variant="voice">{exchange.answer.text}</Words>
-          {exchange.answer.photo === undefined ? null : (
-            <ReplyPhoto photo={exchange.answer.photo} size="full" />
-          )}
-          {exchange.answer.audio === undefined || familyId === undefined ? null : (
-            <VoicePlayback
-              familyId={familyId}
-              mediaId={exchange.answer.audio.id}
-              durationMs={exchange.answer.audio.duration_ms}
-              expiresAt={exchange.answer.audio.expires_at}
-              state={exchange.answer.audio.state}
-              ready={exchange.answer.audio.state === "ready"}
-            />
-          )}
-          <Words variant="caption" tone="ink3">
-            <Trans>
-              {recipient} answered at {time}
-            </Trans>
-          </Words>
-        </AnswerPanel>
-      )}
-      {exchange.deliveryPending === true ? null : (
-        <View
-          style={{
-            flexDirection: fontScale > 1.3 ? "column" : "row",
-            alignItems: "flex-start",
-            gap: space.m,
-          }}
-        >
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={hitSlop}
-            onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
-            style={{
-              flex: fontScale > 1.3 ? undefined : 1,
-              alignSelf: "stretch",
-              minHeight: 54,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.m,
-              backgroundColor: exchange.answer === undefined ? palette.actionSoft : palette.action,
-              borderRadius: 12,
-              paddingHorizontal: space.l,
-            }}
-          >
-            <BrandIcon
-              name="reply"
-              color={exchange.answer === undefined ? palette.action : palette.onAction}
-              size={20}
-            />
-            <View style={{ flex: 1 }}>
-              <Text
-                style={[
-                  type.button,
-                  { color: exchange.answer === undefined ? palette.action : palette.onAction },
-                ]}
-              >
-                {exchange.answer === undefined ? (
-                  <Trans>Open this exchange</Trans>
-                ) : (
-                  <Trans>Reply to {recipient}</Trans>
-                )}
-              </Text>
-            </View>
-            <BrandIcon
-              name="arrow"
-              color={exchange.answer === undefined ? palette.action : palette.onAction}
-              size={20}
-            />
-          </Pressable>
-          {exchange.answer === undefined ? null : (
-            <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} compact />
-          )}
-        </View>
-      )}
-      {exchange.replies.length > 0 ? (
-        <>
-          <Hairline />
-          {/* Each reply is its whole line already, with the name inside it. */}
-          {exchange.replies.map((reply) => (
-            <Words key={`${reply.from}:${reply.text}`} variant="body" tone="ink2">
-              {reply.text}
-            </Words>
-          ))}
-          <ReplyThumbnails photos={exchange.replies.flatMap((reply) => reply.photo ?? [])} />
-          {familyId === undefined
-            ? null
-            : exchange.replies.flatMap((reply) => {
-                const from = reply.from;
-                return reply.audio === undefined
-                  ? []
-                  : [
-                      <VoicePlayback
-                        key={reply.audio.id}
-                        familyId={familyId}
-                        mediaId={reply.audio.id}
-                        durationMs={reply.audio.duration_ms}
-                        expiresAt={reply.audio.expires_at}
-                        state={reply.audio.state}
-                        ready={reply.audio.state === "ready"}
-                        label={t`Listen to ${from}’s voice reply`}
-                      />,
-                    ];
-              })}
-        </>
-      ) : null}
-      {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
-    </View>
-  );
-}
+import { hitSlop, space } from "../../src/theme/tokens.ts";
 
 function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
   const { t } = useLingui();
@@ -328,6 +107,7 @@ export default function TodayScreen() {
 
 function FamilyToday({ day }: { day: TodayView }) {
   const palette = usePalette();
+  const { fontScale } = useWindowDimensions();
   const { t, i18n } = useLingui();
   const [quietOpen, setQuietOpen] = useState(false);
   // How the example notice was settled; its sentence is chosen as it renders, in the language shown.
@@ -470,10 +250,6 @@ function FamilyToday({ day }: { day: TodayView }) {
           <Trans>Loading your family’s morning…</Trans>
         </Words>
       ) : null}
-      <LightsRow
-        lights={today.lights}
-        onQuiet={(light) => (mayOpen ? openQuiet(light) : undefined)}
-      />
       {noAccount || noFamily ? (
         <Words variant="body" tone="ink2">
           <Trans>Setting up your family…</Trans>
@@ -533,6 +309,19 @@ function FamilyToday({ day }: { day: TodayView }) {
           )}
         </Card>
       ) : null}
+      <View style={{ gap: space.s }}>
+        {fontScale > 1.3 ? null : (
+          <>
+            <Words variant="heading">
+              <Trans>This morning</Trans>
+            </Words>
+            <Words variant="caption" tone="ink2">
+              <Trans>Each person’s local day</Trans>
+            </Words>
+          </>
+        )}
+        <TodayInbox today={today} familyId={familyId} onQuiet={mayOpen ? openQuiet : undefined} />
+      </View>
       {today.lights.flatMap((light) =>
         light.unreachableOn === undefined
           ? []
@@ -541,15 +330,26 @@ function FamilyToday({ day }: { day: TodayView }) {
       {today.lights.flatMap((light) =>
         light.awayId === undefined ? [] : [<AwayLine key={light.memberId} light={light} />],
       )}
-      {today.exchanges.map((exchange) => (
-        <ExchangeCard key={exchange.id} exchange={exchange} />
-      ))}
       {target === undefined || !canAsk(target) ? null : (
-        <SecondaryButton
-          label={t`Ask ${recipient} something`}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t`Ask ${recipient} something`}
+          accessibilityState={{ disabled: apiConfigured() && !live }}
           disabled={apiConfigured() && !live}
           onPress={() => router.push({ pathname: "/ask", params: { recipient: target.memberId } })}
-        />
+          style={({ pressed }) => ({
+            minHeight: 48,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.s,
+            opacity: apiConfigured() && !live ? 0.45 : pressed ? 0.75 : 1,
+          })}
+        >
+          <BrandIcon name="ask" color={palette.action} size={20} />
+          <Words variant="button" tone="action">
+            {t`Ask ${recipient} something`}
+          </Words>
+        </Pressable>
       )}
       {today.tomorrow.map((turn) => (
         <TomorrowCard key={turn.recipientId} tomorrow={turn} />

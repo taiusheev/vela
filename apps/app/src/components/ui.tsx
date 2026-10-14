@@ -4,7 +4,7 @@ import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
 
 type Role = keyof typeof type;
-type Tone = "ink" | "ink2" | "ink3" | "action";
+type Tone = "ink" | "ink2" | "ink3" | "action" | "onAction";
 
 export function Words({
   variant = "body",
@@ -32,7 +32,9 @@ export function Words({
         ? palette.ink3
         : tone === "action"
           ? palette.action
-          : palette.ink;
+          : tone === "onAction"
+            ? palette.onAction
+            : palette.ink;
   return (
     <Text
       numberOfLines={numberOfLines}

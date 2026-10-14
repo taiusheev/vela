@@ -21,7 +21,8 @@ tags:
 - tapOn: "Send to Mom"
 - assertVisible: "You tried an example ask. No message was sent."
 - tapOn: "Dismiss"
-- assertVisible: "What did the garden look like this morning?"
+- assertVisible: "Mom"
+- assertVisible: "Dad"
 - scrollUntilVisible:
     element: "Ask Mom something"
     direction: DOWN

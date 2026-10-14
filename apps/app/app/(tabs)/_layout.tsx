@@ -3,6 +3,7 @@ import { Tabs } from "expo-router";
 import { type ColorValue, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BrandIcon, type BrandIconName } from "../../src/components/brand/icon.tsx";
+import { Light } from "../../src/components/light.tsx";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space, type } from "../../src/theme/tokens.ts";
 
@@ -28,7 +29,11 @@ function TabIcon({
         backgroundColor: "transparent",
       }}
     >
-      <BrandIcon name={name} color={color} size={22} />
+      {name === "today" ? (
+        <Light state="resting" height={22} />
+      ) : (
+        <BrandIcon name={name} color={color} size={22} />
+      )}
     </View>
   );
 }

@@ -18,10 +18,6 @@ msgstr ""
 msgid "{asker} asked"
 msgstr "{asker}提問"
 
-#: app/(tabs)/index.tsx
-msgid "{asker} asked {recipient}"
-msgstr "{asker}問{recipient}"
-
 #: src/data/precision.ts
 msgid "{away} away"
 msgstr "{away}次正好外出"
@@ -251,7 +247,6 @@ msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet
 msgstr "{recipient}在 {time} 回覆了之前的提問，這則提問還沒有回覆。"
 
 #: app/(tabs)/exchanges.tsx
-#: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
 msgid "{recipient} answered at {time}"
 msgstr "{recipient}在 {time} 回覆了"
@@ -309,10 +304,6 @@ msgstr "📷 用照片回覆"
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "每年 79 美元"
-
-#: app/(tabs)/index.tsx
-msgid "A hello for {recipient}"
-msgstr "給{recipient}的問候"
 
 #: src/data/useExchanges.ts
 msgid "A hello from Vela"
@@ -762,6 +753,10 @@ msgstr "完成"
 msgid "downstairs"
 msgstr "樓下鄰居"
 
+#: app/(tabs)/index.tsx
+msgid "Each person’s local day"
+msgstr "依每個人的當地日期顯示"
+
 #: app/(tabs)/exchanges.tsx
 msgid "Earlier this month"
 msgstr "這個月稍早"
@@ -798,8 +793,12 @@ msgid "Enter the six digits from your message."
 msgstr "請輸入訊息中的六位數字。"
 
 #: src/components/today-heart.tsx
-msgid "Example · heart sent"
-msgstr "示範 · 愛心已送出"
+msgid "Example · heart accepted"
+msgstr "範例・愛心已受理"
+
+#: app/exchange/[id].tsx
+msgid "Example · reply accepted"
+msgstr "範例・回覆已受理"
 
 #: app/morning-settings.tsx
 msgid "Example settings previewed."
@@ -918,12 +917,12 @@ msgid "Heart"
 msgstr "愛心"
 
 #: src/components/today-heart.tsx
-msgid "Heart for {recipient}"
-msgstr "給{recipient}一顆愛心"
+msgid "Heart accepted"
+msgstr "愛心已受理"
 
 #: src/components/today-heart.tsx
-msgid "Heart sent"
-msgstr "愛心已送出"
+msgid "Heart for {recipient}"
+msgstr "給{recipient}一顆愛心"
 
 #: src/components/nearby-editor.tsx
 msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
@@ -1161,16 +1160,18 @@ msgstr "正在離開…"
 msgid "Listen"
 msgstr "聽一聽"
 
-#: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
 msgid "Listen to {from}’s voice reply"
 msgstr "聽{from}的語音回覆"
+
+#: src/components/today-inbox.tsx
+msgid "Listen to {recipient}’s answer"
+msgstr "聽{recipient}的回答"
 
 #: app/ask.tsx
 msgid "Listen to my voice note."
 msgstr "聽聽我的語音。"
 
-#: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
 msgid "Listen to the family’s voice ask"
 msgstr "聽家人的語音提問"
@@ -1462,6 +1463,14 @@ msgstr "請稍等…"
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr "一次一個問題。英語試辦會照您寫的原文送出。"
 
+#: src/components/today-inbox.tsx
+msgid "Open {name}’s exchange"
+msgstr "開啟{name}的交流"
+
+#: src/components/today-inbox.tsx
+msgid "Open quiet notice for {name}"
+msgstr "開啟{name}的安靜提醒"
+
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
@@ -1470,10 +1479,6 @@ msgstr "開啟設定"
 #: src/components/telegram-family-link.tsx
 msgid "Open Telegram with the account that already belongs to your approved pilot family. Tap Start, copy the connection code Vela sends you, and paste it below."
 msgstr "請用已加入您那個獲准試辦家庭的帳號打開 Telegram。點「開始」，複製 Vela 傳給您的連結碼，貼在下方。"
-
-#: app/(tabs)/index.tsx
-msgid "Open this exchange"
-msgstr "打開這次交流"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open Vela on Telegram"
@@ -1577,6 +1582,10 @@ msgstr "照片 {number}"
 msgid "Photo in the family group"
 msgstr "照片在家人群組裡"
 
+#: src/components/today-inbox.tsx
+msgid "Photo in this answer"
+msgstr "這則回答有照片"
+
 #: app/ask.tsx
 #: src/components/photo-slots.tsx
 msgid "Photos are not switched on here yet."
@@ -1614,6 +1623,10 @@ msgstr "比較安靜"
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記事與提醒 · 可以保存的家族故事書"
+
+#: src/components/today-inbox.tsx
+msgid "Read {recipient}’s exchange"
+msgstr "閱讀{recipient}的交流"
 
 #: src/components/story-day.tsx
 msgid "Read the family book"
@@ -1682,10 +1695,16 @@ msgid "Replace"
 msgstr "換一張"
 
 #: app/exchange/[id].tsx
+#: src/components/today-inbox.tsx
 msgid "Reply"
 msgstr "回覆"
 
-#: app/(tabs)/index.tsx
+#: app/exchange/[id].tsx
+msgid "Reply accepted"
+msgstr "回覆已受理"
+
+#: app/exchange/[id].tsx
+#: src/components/today-inbox.tsx
 msgid "Reply to {recipient}"
 msgstr "回覆{recipient}"
 
@@ -1764,6 +1783,10 @@ msgstr "看看 Vela Light"
 #: app/parent.tsx
 msgid "Send"
 msgstr "傳送"
+
+#: src/components/today-heart.tsx
+msgid "Send a heart"
+msgstr "送出愛心"
 
 #: app/onboarding.tsx
 msgid "Send it to her"
@@ -2344,6 +2367,10 @@ msgstr "這是範例家庭，所以沒有人離開。"
 #: src/components/today-heart.tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "這是您自己的早安訊息；回覆是給家人的。"
+
+#: app/(tabs)/index.tsx
+msgid "This morning"
+msgstr "今天早上"
 
 #: app/precision.tsx
 msgid "This page could not be reached just now."

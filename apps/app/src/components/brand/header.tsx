@@ -13,9 +13,9 @@ export function BrandHeader({ forceLight = false }: { forceLight?: boolean }) {
     <View
       accessibilityLabel="Vela"
       accessible
-      style={{ paddingBottom: space.l, alignSelf: "flex-start" }}
+      style={{ paddingVertical: space.s, alignSelf: "flex-start" }}
     >
-      <Svg viewBox="-17.5 -17.5 438.213 167" width={96} height={38}>
+      <Svg viewBox="-17.5 -17.5 438.213 167" width={126} height={48}>
         <Path
           d="M34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z"
           fill={palette.light}

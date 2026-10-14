@@ -8,10 +8,14 @@ tags:
 - launchApp
 - assertVisible: "Mom"
 - assertVisible: "answered 8:12"
-- assertVisible: "What did the garden look like this morning?"
 - assertVisible: "Mom saw it · 8:12"
+- assertVisible: "Dad"
+- tapOn:
+    css: '[data-testid="today-reply-x1"]'
+- assertVisible: "What did the garden look like this morning?"
 - assertVisible: "Anna: Those are the ones from the seeds you saved"
-- assertVisible: "TOMORROW · ANNA'S TURN TO ASK MOM"
+- tapOn: "Back"
+- assertVisible: "Tomorrow · Anna's turn to ask Mom"
 - scrollUntilVisible:
     element: "Ask Mom something"
     direction: DOWN

@@ -75,9 +75,9 @@ export const space = {
 export const radius = {
   card: 10,
   sheet: 24,
-  button: 10,
+  button: 13,
   parentButton: 10,
-  chip: 24,
+  chip: 13,
 } as const;
 
 export interface TextStyle {
@@ -103,24 +103,24 @@ function face(name: string, fallback: string): string {
 }
 
 /**
- * Conversation-first hierarchy: family words and titles in Literata; controls in Inter.
+ * The approved everyday identity: Inter for navigation and headings; Literata for family words.
  */
 export const type = {
-  display: { fontFamily: face("Literata_500Medium", SANS_TC), fontSize: 34, lineHeight: 42 },
-  title: { fontFamily: face("Literata_500Medium", SANS_TC), fontSize: 28, lineHeight: 36 },
-  voice: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 27, lineHeight: 40 },
+  display: { fontFamily: face("Inter_500Medium", SANS_TC), fontSize: 26, lineHeight: 34 },
+  title: { fontFamily: face("Inter_500Medium", SANS_TC), fontSize: 24, lineHeight: 32 },
+  voice: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 22, lineHeight: 36 },
   story: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 20, lineHeight: 34 },
-  preview: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 20, lineHeight: 30 },
+  preview: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 18, lineHeight: 28 },
   heading: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 17, lineHeight: 24 },
   body: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 17, lineHeight: 24 },
   bodyMedium: { fontFamily: face("Inter_500Medium", SANS_TC), fontSize: 17, lineHeight: 24 },
   button: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 16, lineHeight: 20 },
   caption: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 14, lineHeight: 20 },
   label: {
-    fontFamily: face("Inter_600SemiBold", SANS_TC),
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 0.72,
+    fontFamily: face("Inter_400Regular", SANS_TC),
+    fontSize: 13,
+    lineHeight: 20,
+    letterSpacing: 0,
   },
 } satisfies Record<string, TextStyle>;
 

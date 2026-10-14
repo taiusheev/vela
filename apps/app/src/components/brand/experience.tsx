@@ -86,10 +86,14 @@ export function ScreenHeading({
 }
 
 export function AnswerPanel({ children }: { children: ReactNode }) {
+  const palette = usePalette();
   return (
     <View
       style={{
         paddingVertical: space.m,
+        paddingLeft: space.l,
+        borderLeftWidth: 3,
+        borderLeftColor: palette.light,
         gap: space.m,
       }}
     >

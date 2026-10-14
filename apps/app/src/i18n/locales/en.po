@@ -17,10 +17,6 @@ msgstr ""
 msgid "{asker} asked"
 msgstr "{asker} asked"
 
-#: app/(tabs)/index.tsx
-msgid "{asker} asked {recipient}"
-msgstr "{asker} asked {recipient}"
-
 #: src/data/precision.ts
 msgid "{away} away"
 msgstr "{away} away"
@@ -250,7 +246,6 @@ msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet
 msgstr "{recipient} answered an earlier ask at {time}. This one has no answer yet."
 
 #: app/(tabs)/exchanges.tsx
-#: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
 msgid "{recipient} answered at {time}"
 msgstr "{recipient} answered at {time}"
@@ -308,10 +303,6 @@ msgstr "📷 Reply with a photo"
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "$79 a year"
-
-#: app/(tabs)/index.tsx
-msgid "A hello for {recipient}"
-msgstr "A hello for {recipient}"
 
 #: src/data/useExchanges.ts
 msgid "A hello from Vela"
@@ -761,6 +752,10 @@ msgstr "Done"
 msgid "downstairs"
 msgstr "downstairs"
 
+#: app/(tabs)/index.tsx
+msgid "Each person’s local day"
+msgstr "Each person’s local day"
+
 #: app/(tabs)/exchanges.tsx
 msgid "Earlier this month"
 msgstr "Earlier this month"
@@ -797,8 +792,12 @@ msgid "Enter the six digits from your message."
 msgstr "Enter the six digits from your message."
 
 #: src/components/today-heart.tsx
-msgid "Example · heart sent"
-msgstr "Example · heart sent"
+msgid "Example · heart accepted"
+msgstr "Example · heart accepted"
+
+#: app/exchange/[id].tsx
+msgid "Example · reply accepted"
+msgstr "Example · reply accepted"
 
 #: app/morning-settings.tsx
 msgid "Example settings previewed."
@@ -917,12 +916,12 @@ msgid "Heart"
 msgstr "Heart"
 
 #: src/components/today-heart.tsx
-msgid "Heart for {recipient}"
-msgstr "Heart for {recipient}"
+msgid "Heart accepted"
+msgstr "Heart accepted"
 
 #: src/components/today-heart.tsx
-msgid "Heart sent"
-msgstr "Heart sent"
+msgid "Heart for {recipient}"
+msgstr "Heart for {recipient}"
 
 #: src/components/nearby-editor.tsx
 msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
@@ -1160,16 +1159,18 @@ msgstr "Leaving…"
 msgid "Listen"
 msgstr "Listen"
 
-#: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
 msgid "Listen to {from}’s voice reply"
 msgstr "Listen to {from}’s voice reply"
+
+#: src/components/today-inbox.tsx
+msgid "Listen to {recipient}’s answer"
+msgstr "Listen to {recipient}’s answer"
 
 #: app/ask.tsx
 msgid "Listen to my voice note."
 msgstr "Listen to my voice note."
 
-#: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
 msgid "Listen to the family’s voice ask"
 msgstr "Listen to the family’s voice ask"
@@ -1461,6 +1462,14 @@ msgstr "One moment…"
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr "One question at a time. The English pilot sends your words as written."
 
+#: src/components/today-inbox.tsx
+msgid "Open {name}’s exchange"
+msgstr "Open {name}’s exchange"
+
+#: src/components/today-inbox.tsx
+msgid "Open quiet notice for {name}"
+msgstr "Open quiet notice for {name}"
+
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
@@ -1469,10 +1478,6 @@ msgstr "Open settings"
 #: src/components/telegram-family-link.tsx
 msgid "Open Telegram with the account that already belongs to your approved pilot family. Tap Start, copy the connection code Vela sends you, and paste it below."
 msgstr "Open Telegram with the account that already belongs to your approved pilot family. Tap Start, copy the connection code Vela sends you, and paste it below."
-
-#: app/(tabs)/index.tsx
-msgid "Open this exchange"
-msgstr "Open this exchange"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open Vela on Telegram"
@@ -1576,6 +1581,10 @@ msgstr "Photo {number}"
 msgid "Photo in the family group"
 msgstr "Photo in the family group"
 
+#: src/components/today-inbox.tsx
+msgid "Photo in this answer"
+msgstr "Photo in this answer"
+
 #: app/ask.tsx
 #: src/components/photo-slots.tsx
 msgid "Photos are not switched on here yet."
@@ -1613,6 +1622,10 @@ msgstr "quiet"
 #: app/vela-light.tsx
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
+
+#: src/components/today-inbox.tsx
+msgid "Read {recipient}’s exchange"
+msgstr "Read {recipient}’s exchange"
 
 #: src/components/story-day.tsx
 msgid "Read the family book"
@@ -1681,10 +1694,16 @@ msgid "Replace"
 msgstr "Replace"
 
 #: app/exchange/[id].tsx
+#: src/components/today-inbox.tsx
 msgid "Reply"
 msgstr "Reply"
 
-#: app/(tabs)/index.tsx
+#: app/exchange/[id].tsx
+msgid "Reply accepted"
+msgstr "Reply accepted"
+
+#: app/exchange/[id].tsx
+#: src/components/today-inbox.tsx
 msgid "Reply to {recipient}"
 msgstr "Reply to {recipient}"
 
@@ -1763,6 +1782,10 @@ msgstr "See Vela Light"
 #: app/parent.tsx
 msgid "Send"
 msgstr "Send"
+
+#: src/components/today-heart.tsx
+msgid "Send a heart"
+msgstr "Send a heart"
 
 #: app/onboarding.tsx
 msgid "Send it to her"
@@ -2343,6 +2366,10 @@ msgstr "This is the example family, so nobody left."
 #: src/components/today-heart.tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "This is your own morning; replies are for the family."
+
+#: app/(tabs)/index.tsx
+msgid "This morning"
+msgstr "This morning"
 
 #: app/precision.tsx
 msgid "This page could not be reached just now."

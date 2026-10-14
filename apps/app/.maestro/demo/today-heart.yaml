@@ -7,8 +7,9 @@ tags:
 - launchApp
 - tapOn:
     css: '[data-testid="today-heart-x1"]'
-- assertVisible: "Example · heart sent"
+- assertVisible: "Example · heart accepted"
 - assertNotVisible: "Heart for Mom"
-- tapOn: "Reply to Mom"
+- tapOn:
+    css: '[data-testid="today-reply-x1"]'
 - assertVisible: "Say something short"
 - assertVisible: "What the family said"
