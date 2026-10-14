@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { ConfigContext } from "expo/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import configureApp from "../../app.config.ts";
@@ -107,5 +108,23 @@ describe("audit simulator isolation", () => {
     expect(configureApp(withUpdates).updates?.enabled).toBe(false);
     vi.stubEnv("EAS_BUILD_PROFILE", "staging");
     expect(configureApp(withUpdates).updates?.enabled).toBe(true);
+  });
+});
+
+describe("eas.json", () => {
+  const eas = JSON.parse(readFileSync(new URL("../../eas.json", import.meta.url), "utf8")) as {
+    build: Record<string, { environment?: string; env?: Record<string, string> }>;
+  };
+  it("holds no empty value, which EAS refuses for the whole file and every build with it", () => {
+    for (const [name, profile] of Object.entries(eas.build)) {
+      for (const [key, value] of Object.entries(profile.env ?? {})) {
+        expect(value, `${name}.${key}`).not.toBe("");
+      }
+    }
+  });
+  it("keeps staging builds and the demo audit off the production EAS environment", () => {
+    expect(eas.build.testflight?.environment).toBe("preview");
+    expect(eas.build["audit-simulator"]?.environment).toBe("development");
+    expect(eas.build.trial?.environment).toBe("production");
   });
 });
