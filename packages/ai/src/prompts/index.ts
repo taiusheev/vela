@@ -7,6 +7,7 @@ import * as recipe from "./recipe.v1.ts";
 import * as suggest from "./suggest.v2.ts";
 import * as translate from "./translate.v1.ts";
 import * as understand from "./understand.v5.ts";
+import * as weeklyInsight from "./weekly_insight.v1.ts";
 import * as weeklyRead from "./weekly_read.v5.ts";
 
 export interface Prompt {
@@ -25,6 +26,7 @@ export const PROMPTS: Readonly<Record<AiCallName, Prompt>> = {
   hello,
   weekly_read: weeklyRead,
   recipe,
+  weekly_insight: weeklyInsight,
 };
 
 /** The tag pair every system prompt names as the boundary of untrusted family content. */

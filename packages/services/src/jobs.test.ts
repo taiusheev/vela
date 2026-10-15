@@ -342,6 +342,8 @@ describe("draftWeeklyRead", () => {
         lines: 2,
         ok: true,
         ai_off: false,
+        insight_readings: 0,
+        insight_feedback: 0,
       },
     ]);
     const notes = await h.db.select().from(outbound);
@@ -793,6 +795,7 @@ describe("applyRetention", () => {
     "consents_deleted",
     "deletions_deleted",
     "push_tickets_deleted",
+    "weekly_insights_cleared",
   ];
 
   /** Everything the 30-day clearing touches, dated `age` days ago, around one delivered exchange. */

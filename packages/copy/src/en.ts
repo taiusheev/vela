@@ -222,6 +222,7 @@ export const en = {
   "weekly_read.after_second_usual":
     "On {weekdays}, {name} answered only after the second message; usually about {usual} a week.",
   "weekly_read.quiet_weekday": "{weekday} mornings have stayed quiet {weeks} weeks in a row.",
+  "weekly_read.feedback_heading": "Just for you, {name}, about your own messages this week:",
   "weekday.0": "Sunday",
   "weekday.1": "Monday",
   "weekday.2": "Tuesday",
@@ -310,6 +311,10 @@ export const en = {
     "{count} queue jobs failed every retry since {since} UTC ({environment}) and were kept as dead letters. Look at them on the overview and replay if needed. Open: {link}",
   "admin.ops_ai_failing":
     "AI calls are failing: {failed} of {total} in the last hour ({environment}). Answers still light the light. Open: {link}",
+  "admin.ops_peer_down":
+    "Vela {peer} has not answered its health check since {since} UTC (last answer: {seen}). Its mornings and quiet notices may not be going out. Check: {link}",
+  "admin.ops_peer_back":
+    "Vela {peer} answers its health check again (down since {since} UTC, about {minutes} min). Look on its admin page for mornings that were late or missed. Check: {link}",
   "admin.ops_digest":
     "Vela {environment}, last 24 hours: {delivered} mornings delivered, {failed} failed; {answers} answers, {replies} replies, {readbacks} read-backs; {quiet} quiet notices, {resolved} resolved; {flags} flags, {stops} stops; AI {ai_calls} calls, {ai_failed} failed, US${ai_cost}; {dropped} dropped sends, {missed} missed scheduler runs. Open: {link}",
 } satisfies Record<string, string>;

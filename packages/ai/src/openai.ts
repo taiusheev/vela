@@ -48,6 +48,7 @@ export const OPENAI_MODEL_FOR: Record<AiCallName, OpenAiModel> = {
   readback: "gpt-5",
   weekly_read: "gpt-5",
   recipe: "gpt-5",
+  weekly_insight: "gpt-5",
   chips: "gpt-5-mini",
   suggest: "gpt-5-mini",
   hello: "gpt-5-mini",
@@ -62,6 +63,7 @@ export const OPENAI_EFFORT_FOR: Record<AiCallName, OpenAiReasoningEffort> = {
   readback: "low",
   weekly_read: "medium",
   recipe: "low",
+  weekly_insight: "medium",
   chips: "minimal",
   suggest: "minimal",
   hello: "minimal",
@@ -175,6 +177,7 @@ export function createOpenAiAi(options: OpenAiOptions): Ai {
     hello: (input) => invoke(client, { call: "hello" }, input),
     weeklyRead: (input) => invoke(client, { call: "weekly_read" }, input),
     recipe: (input) => invoke(client, { call: "recipe" }, input),
+    weeklyInsight: (input) => invoke(client, { call: "weekly_insight" }, input),
   };
 }
 

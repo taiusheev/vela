@@ -175,6 +175,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "weekly_read.after_second_usual":
     "{weekdays}，{name}在第二次訊息之後才回覆；平常一週大約 {usual} 次。",
   "weekly_read.quiet_weekday": "已經連續 {weeks} 週，{weekday}早上都很安靜。",
+  "weekly_read.feedback_heading": "{name}，這段只給你，關於你這週自己傳的訊息：",
   "weekday.0": "星期日",
   "weekday.1": "星期一",
   "weekday.2": "星期二",
@@ -260,6 +261,10 @@ export const zhTW: Record<keyof typeof en, string> = {
     "自 UTC {since} 起，有 {count} 個佇列工作重試全部失敗，已保存為無法投遞的工作（{environment}）。請到總覽查看，必要時重新送出。查看： {link}",
   "admin.ops_ai_failing":
     "AI 呼叫正在失敗：過去一小時 {total} 次中有 {failed} 次失敗（{environment}）。回答仍會點亮燈。查看： {link}",
+  "admin.ops_peer_down":
+    "Vela {peer} 自 UTC {since} 起健康檢查沒有正常回應（最後回應：{seen}）。那裡早上的訊息和安靜通知可能沒有送出。檢查： {link}",
+  "admin.ops_peer_back":
+    "Vela {peer} 的健康檢查已恢復正常（自 UTC {since} 起中斷，約 {minutes} 分鐘）。請到它的管理頁查看有沒有延遲或漏送的早晨。檢查： {link}",
   "admin.ops_digest":
     "Vela {environment}，過去 24 小時：送達 {delivered} 個早晨、失敗 {failed} 個；{answers} 則回答、{replies} 則回覆、{readbacks} 次讀回；{quiet} 次安靜通知、已解決 {resolved} 次；{flags} 個標記、{stops} 次停止；AI 呼叫 {ai_calls} 次、失敗 {ai_failed} 次、US${ai_cost}；丟棄 {dropped} 則、排程漏跑 {missed} 次。查看： {link}",
 };

@@ -203,6 +203,21 @@ describe("the two Workers' configurations", () => {
     },
   );
 
+  // Technical plan 2.3: each deployed environment reads the other's health check from its own
+  // Cloudflare account, the address .github/watchdog.json names; development reads none.
+  it("watch the other deployed environment's health check, and development none", () => {
+    expect(configOf("pilot", "staging").vars.PEER_HEALTHZ_URL).toBe(
+      `${hostOf("pilot", "production")}/healthz`,
+    );
+    expect(configOf("pilot", "production").vars.PEER_HEALTHZ_URL).toBe(
+      `${hostOf("pilot", "staging")}/healthz`,
+    );
+    expect(configOf("pilot", "development").vars.PEER_HEALTHZ_URL).toBeUndefined();
+    for (const environment of [...DEPLOYED, "development"] as const) {
+      expect(configOf("admin", environment).vars.PEER_HEALTHZ_URL, environment).toBeUndefined();
+    }
+  });
+
   it("links a notice path for every language a notice is written in", () => {
     expect(NOTICE_LANGS.map((lang) => NOTICE_PATHS[lang])).toEqual(["/privacy", "/privacy/zh-TW"]);
   });
@@ -567,6 +582,17 @@ describe("the pilot Worker's bindings", () => {
     expect(
       (["development", ...DEPLOYED] as const).map(
         (environment) => configOf("pilot", environment).vars.BOOK,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
+  // ADR-48: the founder's reading and each organiser's feedback, on where only test families are, and
+  // off in production until the founder has told the family it applies to. The commit that turns it
+  // on changes this.
+  it("draft the weekly insight in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.WEEKLY_INSIGHT,
       ),
     ).toEqual(["on", "on", "off"]);
   });

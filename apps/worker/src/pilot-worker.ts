@@ -381,6 +381,15 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
           } catch (error) {
             handle.deps.logger.error("dead_letter_replays_failed", { error: errorLabel(error) });
           }
+          // Plan 2.3: the other environment's health, last, so its wait never delays this one's.
+          const peer = handle.deps.config.peerHealthz ?? null;
+          if (peer !== null) {
+            try {
+              await runtime.services.watchPeer(handle.deps, await runtime.probeHealthz(peer.url));
+            } catch (error) {
+              handle.deps.logger.error("peer_watch_failed", { error: errorLabel(error) });
+            }
+          }
         } else if (controller.cron === NIGHTLY_CRON) {
           await runtime.services.rollupMetrics(handle.deps);
           await runNightlyJobs(runtime.services, handle.deps, env);

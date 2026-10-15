@@ -8,7 +8,7 @@
  */
 import { type Lang, REGIONS, type Region } from "@vela/contracts";
 import { decodeContentKey } from "@vela/db";
-import type { Config, PilotAdmission } from "@vela/services";
+import type { Config, PeerHealthz, PilotAdmission } from "@vela/services";
 import type { AdminEnv, InboundJob, PilotEnv } from "./env.ts";
 import {
   NOTICE_FILES,
@@ -537,7 +537,15 @@ export function readBook(env: { readonly BOOK?: string }): boolean {
   return readOnOff(env.BOOK, "BOOK");
 }
 
-function readOnOff(raw: string | undefined, name: "MEMORY" | "BOOK"): boolean {
+/**
+ * The var `WEEKLY_INSIGHT` (ADR-48): "on" drafts the founder's reading and each organiser's feedback
+ * with the weekly read; absent or "off" does not; any other value is refused.
+ */
+export function readWeeklyInsight(env: { readonly WEEKLY_INSIGHT?: string }): boolean {
+  return env.WEEKLY_INSIGHT === undefined ? false : readOnOff(env.WEEKLY_INSIGHT, "WEEKLY_INSIGHT");
+}
+
+function readOnOff(raw: string | undefined, name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT"): boolean {
   const value = raw?.trim() ?? "";
   if (value !== "on" && value !== "off") {
     throw new ConfigError(
@@ -546,6 +554,56 @@ function readOnOff(raw: string | undefined, name: "MEMORY" | "BOOK"): boolean {
     );
   }
   return value === "on";
+}
+
+function parsedUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The var `PEER_HEALTHZ_URL` (technical plan 2.3): the other deployed environment's `/healthz`, as
+ * an https address with that path and nothing more, never this Worker's own. Absent or empty
+ * watches nothing; development watches no other environment and refuses one.
+ */
+export function readPeerHealthz(
+  env: Pick<PilotEnv, "PEER_HEALTHZ_URL" | "PILOT_PUBLIC_URL">,
+  environment: Environment,
+): PeerHealthz | null {
+  const raw = env.PEER_HEALTHZ_URL?.trim() ?? "";
+  if (raw === "") return null;
+  if (environment === "development") {
+    throw new ConfigError(
+      "PEER_HEALTHZ_URL",
+      "PEER_HEALTHZ_URL is for staging and production: development watches no other environment",
+    );
+  }
+  const url = parsedUrl(raw);
+  if (
+    url === null ||
+    url.protocol !== "https:" ||
+    url.pathname !== "/healthz" ||
+    url.search !== "" ||
+    url.hash !== "" ||
+    url.username !== "" ||
+    url.password !== ""
+  ) {
+    throw new ConfigError(
+      "PEER_HEALTHZ_URL",
+      "PEER_HEALTHZ_URL must be the other environment's https://…/healthz, with nothing after it",
+    );
+  }
+  const own = parsedUrl(env.PILOT_PUBLIC_URL?.trim() ?? "");
+  if (own !== null && own.origin === url.origin) {
+    throw new ConfigError(
+      "PEER_HEALTHZ_URL",
+      "PEER_HEALTHZ_URL names this Worker's own /healthz: it must name the other environment's",
+    );
+  }
+  return { environment: environment === "production" ? "staging" : "production", url: url.href };
 }
 
 export function readPilotAdmission(
@@ -609,8 +667,10 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     privacyNoticeVersion: notices.en.version,
     memory: readMemory(env) && pilotAdmission === null,
     book: readBook(env),
+    weeklyInsight: readWeeklyInsight(env),
     pilotAdmission,
     suggestions: readApiSwitch(env) === "on",
+    peerHealthz: readPeerHealthz(env, environment),
   };
 }
 

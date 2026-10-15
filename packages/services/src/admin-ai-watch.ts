@@ -21,7 +21,7 @@ const DAY_MS = 86_400_000;
 
 /** Only known call categories are returned; even an unexpected database value cannot carry text. */
 const category = sql<string>`case when ${aiCalls.call} in
-  ('understand','flag','chips','translate','suggest','readback','hello','weekly_read','recipe','transcribe')
+  ('understand','flag','chips','translate','suggest','readback','hello','weekly_read','recipe','weekly_insight','transcribe')
   then ${aiCalls.call} else 'other' end`;
 const counts = {
   calls: sql<number>`count(*)::int`,

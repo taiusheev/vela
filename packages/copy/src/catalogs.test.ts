@@ -255,6 +255,8 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["admin.ops_dead_letter", ["count", "environment", "link", "since"]],
   ["admin.ops_scheduler_missed", ["count", "environment", "link", "since"]],
   ["admin.ops_ai_failing", ["environment", "failed", "link", "total"]],
+  ["admin.ops_peer_down", ["link", "peer", "seen", "since"]],
+  ["admin.ops_peer_back", ["link", "minutes", "peer", "since"]],
   [
     "admin.ops_digest",
     [
@@ -312,6 +314,9 @@ const ADMIN_COUNTS: ReadonlyMap<MessageKey, ReadonlySet<string>> = new Map([
   ["admin.ops_dead_letter", OPS_ALERT],
   ["admin.ops_scheduler_missed", OPS_ALERT],
   ["admin.ops_ai_failing", new Set(["failed", "total", "environment"])],
+  // The other environment's health check (plan 2.3): its name, its answer's status, times only.
+  ["admin.ops_peer_down", new Set(["peer", "seen", "since"])],
+  ["admin.ops_peer_back", new Set(["peer", "since", "minutes"])],
   [
     "admin.ops_digest",
     new Set([

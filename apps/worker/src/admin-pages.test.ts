@@ -445,3 +445,76 @@ describe("the overview's AI watch", () => {
     expect(section).not.toContain("0 ms");
   });
 });
+
+// ADR-48: the founder's reading and each organiser's feedback on the weekly read.
+describe("the weekly read's insight", () => {
+  const mia = memberFixture({ id: "44444444-4444-7444-8444-444444444444", displayName: "Mia" });
+  const READING = {
+    about: "elder" as const,
+    reading: "Mom may not want to be a worry.",
+    quotes: [{ date: "2026-09-14", text: "Don't worry about me." }],
+    sureness: "tentative" as const,
+  };
+  function weekly(sentAt: Date | null) {
+    return {
+      read: {
+        id: "66666666-6666-7666-8666-666666666666",
+        familyId: "11111111-1111-7111-8111-111111111111",
+        memberId: "22222222-2222-7222-8222-222222222222",
+        weekStart: "2026-09-14",
+        lines: ["Mom went to the market."],
+        suggestion: "Ask about the pears.",
+        stats: {},
+        promptVersion: "weekly_read.v5",
+        createdAt: new Date("2026-09-20T10:00:00Z"),
+        sentLines: sentAt === null ? null : ["Mom went to the market."],
+        sentSuggestion: sentAt === null ? null : "Ask about the pears.",
+        sentAt,
+      },
+      weekEnd: "2026-09-20",
+      countLines: "Mom answered 2 of 7 days.",
+      patterns: [],
+      healthLines: [],
+      healthSent: null,
+      readings: [READING],
+      feedback:
+        sentAt === null
+          ? [
+              {
+                memberId: mia.member.id,
+                name: "Mia",
+                text: "Your Monday ask landed.\nAsk about pears.",
+              },
+            ]
+          : [],
+      feedbackSent: sentAt === null ? null : 1,
+    };
+  }
+
+  it("shows the founder-only reading with its quoted words, and a feedback box per organiser", async () => {
+    const html = await render(familyPageFixture({ members: [mia], weeklyReads: [weekly(null)] }));
+    expect(html).toContain("Only you see this.");
+    expect(html).toContain("Mom may not want to be a worry.");
+    expect(html).toContain("“Don&#39;t worry about me.”");
+    expect(html).toContain(`name="feedback:${mia.member.id}"`);
+    expect(html).toContain("Your Monday ask landed.\nAsk about pears.</textarea>");
+  });
+
+  it("says how many organisers got their own feedback once sent, and shows no box", async () => {
+    const html = await render(
+      familyPageFixture({
+        members: [mia],
+        weeklyReads: [weekly(new Date("2026-09-20T12:00:00Z"))],
+      }),
+    );
+    expect(html).toContain("1 organiser got their own feedback.");
+    expect(html).not.toContain('name="feedback:');
+  });
+
+  it("shows nothing of it when the draft has no reading and no organiser to receive it", async () => {
+    const entry = { ...weekly(null), readings: [], feedback: [] };
+    const html = await render(familyPageFixture({ members: [mia], weeklyReads: [entry] }));
+    expect(html).not.toContain("Only you see this.");
+    expect(html).not.toContain('name="feedback:');
+  });
+});

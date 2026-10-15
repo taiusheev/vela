@@ -95,6 +95,13 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly SITE_HOST?: string;
   /**
+   * The other deployed environment's public `/healthz` (technical plan 2.3; `config.ts`,
+   * `readPeerHealthz`), which each 15-minute reconcile reads: staging names production's and
+   * production names staging's, so each is watched from the other's Cloudflare account. Development
+   * names none.
+   */
+  readonly PEER_HEALTHZ_URL?: string;
+  /**
    * Where pushes go (ADR-34; `config.ts`, `readPushSend`): "expo", Expo's push service, or "off",
    * when none is made or sent while devices are still registered. "off" in every environment until
    * the founder has set up Expo, Firebase and, for iPhones, Apple.
@@ -104,6 +111,12 @@ export interface PilotEnv extends SharedEnv {
   readonly MEMORY: string;
   /** "on" or "off": whether stories are kept in the family book (ADR-39). Production is "off". */
   readonly BOOK: string;
+  /**
+   * "on" or "off" (absent is "off"): whether the weekly read is drafted with the founder's reading of
+   * what may lie beneath the week's words and each organiser's feedback on their own messages
+   * (ADR-48). Production is "off" until the founder has told the family it applies to.
+   */
+  readonly WEEKLY_INSIGHT?: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;
