@@ -83,6 +83,7 @@ export function createClaudeAi(options: ClaudeAiOptions): Ai {
     hello: (input) => invoke(client, { call: "hello" }, input),
     weeklyRead: (input) => invoke(client, { call: "weekly_read" }, input),
     recipe: (input) => invoke(client, { call: "recipe" }, input),
+    weeklyInsight: (input) => invoke(client, { call: "weekly_insight" }, input),
   };
 }
 

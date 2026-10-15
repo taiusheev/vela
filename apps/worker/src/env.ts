@@ -111,6 +111,12 @@ export interface PilotEnv extends SharedEnv {
   readonly MEMORY: string;
   /** "on" or "off": whether stories are kept in the family book (ADR-39). Production is "off". */
   readonly BOOK: string;
+  /**
+   * "on" or "off" (absent is "off"): whether the weekly read is drafted with the founder's reading of
+   * what may lie beneath the week's words and each organiser's feedback on their own messages
+   * (ADR-48). Production is "off" until the founder has told the family it applies to.
+   */
+  readonly WEEKLY_INSIGHT?: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;

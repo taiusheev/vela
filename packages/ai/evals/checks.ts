@@ -166,14 +166,34 @@ function writtenIn(text: string, lang: CheckableLang, shown: string): CheckResul
   return verdict(share >= 0.5, `${shown}; expected Traditional Chinese`);
 }
 
+/**
+ * A string as it is; an array of strings as its items joined by newlines; and an array of objects
+ * (a weekly insight's readings or feedback) as every string inside it, in order, joined the same way.
+ */
 function textOf(value: unknown): string | null {
   if (typeof value === "string") {
     return value;
   }
-  if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
-    return value.join("\n");
+  if (!Array.isArray(value)) {
+    return null;
   }
-  return null;
+  const strings: string[] = [];
+  const collect = (item: unknown): boolean => {
+    if (typeof item === "string") {
+      strings.push(item);
+      return true;
+    }
+    if (typeof item === "object" && item !== null) {
+      return Object.values(item).every(collect);
+    }
+    return item === null || typeof item === "number" || typeof item === "boolean";
+  };
+  // The items themselves are strings or objects: a list of numbers is not text.
+  return value.every(
+    (item) => typeof item === "string" || (typeof item === "object" && item !== null),
+  ) && value.every(collect)
+    ? strings.join("\n")
+    : null;
 }
 
 function verdict(pass: boolean, reason: string): CheckResult {

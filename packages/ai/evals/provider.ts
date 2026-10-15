@@ -65,6 +65,8 @@ function runCall(ai: Ai, call: AiCallName, input: unknown): Promise<AiOutcome<un
       return ai.weeklyRead(INPUT_SCHEMAS.weekly_read.parse(input));
     case "recipe":
       return ai.recipe(INPUT_SCHEMAS.recipe.parse(input));
+    case "weekly_insight":
+      return ai.weeklyInsight(INPUT_SCHEMAS.weekly_insight.parse(input));
   }
 }
 

@@ -537,7 +537,15 @@ export function readBook(env: { readonly BOOK?: string }): boolean {
   return readOnOff(env.BOOK, "BOOK");
 }
 
-function readOnOff(raw: string | undefined, name: "MEMORY" | "BOOK"): boolean {
+/**
+ * The var `WEEKLY_INSIGHT` (ADR-48): "on" drafts the founder's reading and each organiser's feedback
+ * with the weekly read; absent or "off" does not; any other value is refused.
+ */
+export function readWeeklyInsight(env: { readonly WEEKLY_INSIGHT?: string }): boolean {
+  return env.WEEKLY_INSIGHT === undefined ? false : readOnOff(env.WEEKLY_INSIGHT, "WEEKLY_INSIGHT");
+}
+
+function readOnOff(raw: string | undefined, name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT"): boolean {
   const value = raw?.trim() ?? "";
   if (value !== "on" && value !== "off") {
     throw new ConfigError(
@@ -659,6 +667,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     privacyNoticeVersion: notices.en.version,
     memory: readMemory(env) && pilotAdmission === null,
     book: readBook(env),
+    weeklyInsight: readWeeklyInsight(env),
     pilotAdmission,
     suggestions: readApiSwitch(env) === "on",
     peerHealthz: readPeerHealthz(env, environment),

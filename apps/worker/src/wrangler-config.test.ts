@@ -586,6 +586,17 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // ADR-48: the founder's reading and each organiser's feedback, on where only test families are, and
+  // off in production until the founder has told the family it applies to. The commit that turns it
+  // on changes this.
+  it("draft the weekly insight in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.WEEKLY_INSIGHT,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
   it("never holds EXPO_ACCESS_TOKEN as a var, in either Worker or any environment", () => {
     for (const config of configs) {

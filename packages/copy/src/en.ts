@@ -221,6 +221,7 @@ export const en = {
   "weekly_read.after_second_usual":
     "On {weekdays}, {name} answered only after the second message; usually about {usual} a week.",
   "weekly_read.quiet_weekday": "{weekday} mornings have stayed quiet {weeks} weeks in a row.",
+  "weekly_read.feedback_heading": "Just for you, {name}, about your own messages this week:",
   "weekday.0": "Sunday",
   "weekday.1": "Monday",
   "weekday.2": "Tuesday",

@@ -27,6 +27,7 @@ export const AI_CALL_NAMES = [
   "hello",
   "weekly_read",
   "recipe",
+  "weekly_insight",
 ] as const;
 export const AiCallName = z.enum(AI_CALL_NAMES);
 export type AiCallName = z.infer<typeof AiCallName>;
@@ -444,6 +445,93 @@ export const WeeklyRead = z.object({
 });
 export type WeeklyRead = z.infer<typeof WeeklyRead>;
 
+// weekly insight (ADR-48) ------------------------------------------------------------------------------
+
+/** Who sent a message in her week: "elder" for her, a family key ("f1", …), or "vela". */
+const InsightSender = z.string().regex(/^(elder|vela|f\d{1,2})$/);
+
+/** One message of her week, in the words as written or said. */
+export const InsightMessage = z.object({
+  from: InsightSender,
+  /** The time on her clock. */
+  at: LocalTime,
+  form: z.enum(["words", "voice", "photo", "tap", "reaction"]),
+  /** Typed text, a transcript, the option tapped, or the reaction; null when it had no words. */
+  text: FamilyText.nullable(),
+});
+export type InsightMessage = z.infer<typeof InsightMessage>;
+
+/** A day of her week: the morning's ask, then her answers and the family's replies, oldest first. */
+export const InsightDay = z.object({
+  date: LocalDate,
+  weekday: Weekday,
+  ask: z
+    .object({
+      /** A family key, or "vela" for Vela's own question. */
+      from: InsightSender,
+      type: ExchangeType,
+      text: FamilyText.nullable(),
+    })
+    .nullable(),
+  messages: z.array(InsightMessage).max(40),
+});
+export type InsightDay = z.infer<typeof InsightDay>;
+
+/** A family member who wrote to her this week; `feedback` when they receive the read. */
+export const InsightPerson = z.object({
+  key: z.string().regex(/^f\d{1,2}$/),
+  name: Name,
+  feedback: z.boolean(),
+});
+export type InsightPerson = z.infer<typeof InsightPerson>;
+
+/**
+ * Her week's own words and the family's to her, for the founder's reading of what may lie beneath
+ * them and each organiser's feedback on their own messages (ADR-48). Days without a message are left
+ * out.
+ */
+export const WeeklyInsightInput = z.object({
+  /** The language of the feedback, the family's; the readings are in English, for the founder. */
+  lang: Lang,
+  elderName: Name,
+  weekEnd: LocalDate,
+  days: z.array(InsightDay).max(7),
+  family: z.array(InsightPerson).max(12),
+});
+export type WeeklyInsightInput = z.infer<typeof WeeklyInsightInput>;
+
+/** Words a reading rests on, copied exactly from one message of the week, with that message's date. */
+export const InsightQuote = z.object({
+  date: LocalDate,
+  text: z.string().min(1).max(200),
+});
+export type InsightQuote = z.infer<typeof InsightQuote>;
+
+/** One possible reading of what lies beneath the week's words, for the founder only. */
+export const InsightReading = z.object({
+  /** Her own side, the family's, or the exchange between them. */
+  about: z.enum(["elder", "family", "between"]),
+  reading: z.string().min(1).max(400),
+  quotes: z.array(InsightQuote).min(1).max(3),
+  sureness: z.enum(["tentative", "fairly_clear"]),
+});
+export type InsightReading = z.infer<typeof InsightReading>;
+
+/** Feedback to one family member about their own messages: what landed and one thing to try. */
+export const InsightFeedback = z.object({
+  key: z.string().regex(/^f\d{1,2}$/),
+  landed: z.string().min(1).max(300),
+  tryNext: z.string().min(1).max(300),
+});
+export type InsightFeedback = z.infer<typeof InsightFeedback>;
+
+/** Zero to three readings and feedback for each family member who gets it; empty is not a failure. */
+export const WeeklyInsight = z.object({
+  readings: z.array(InsightReading).max(3),
+  feedback: z.array(InsightFeedback).max(12),
+});
+export type WeeklyInsight = z.infer<typeof WeeklyInsight>;
+
 // recipe -------------------------------------------------------------------------------------------
 
 /** Her answers to a recipe ask, oldest first, to be written down as one card (spec §10). */
@@ -484,6 +572,7 @@ export interface AiCallTypes {
   hello: { input: HelloInput; output: HelloLines };
   weekly_read: { input: WeeklyReadInput; output: WeeklyRead };
   recipe: { input: RecipeInput; output: RecipeCard };
+  weekly_insight: { input: WeeklyInsightInput; output: WeeklyInsight };
 }
 
 /** Each call's input schema; every `Ai`, the fake included, parses its input with it. */
@@ -497,6 +586,7 @@ export const INPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes[
   hello: HelloInput,
   weekly_read: WeeklyReadInput,
   recipe: RecipeInput,
+  weekly_insight: WeeklyInsightInput,
 };
 
 /** Each call's output schema, which is also the structured-output format sent to Claude. */
@@ -510,6 +600,7 @@ export const OUTPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes
   hello: HelloLines,
   weekly_read: WeeklyRead,
   recipe: RecipeCard,
+  weekly_insight: WeeklyInsight,
 };
 
 /**
@@ -528,6 +619,7 @@ export interface Ai {
   hello(input: HelloInput): Promise<AiOutcome<HelloLines>>;
   weeklyRead(input: WeeklyReadInput): Promise<AiOutcome<WeeklyRead>>;
   recipe(input: RecipeInput): Promise<AiOutcome<RecipeCard>>;
+  weeklyInsight(input: WeeklyInsightInput): Promise<AiOutcome<WeeklyInsight>>;
 }
 
 export interface TranscribeInput {

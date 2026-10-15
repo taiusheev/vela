@@ -521,6 +521,14 @@ async function runAction(
         suggestion: field(form, "suggestion"),
         // Her health words go only when the founder saw them on the page and left them ticked.
         includeHealth: form.get("includeHealth") === "on",
+        // ADR-48: each organiser's own feedback, from the box named after their member id.
+        feedback: Object.fromEntries(
+          [...form.entries()].flatMap(([name, value]) =>
+            name.startsWith(FEEDBACK_FIELD) && typeof value === "string"
+              ? [[name.slice(FEEDBACK_FIELD.length), value]]
+              : [],
+          ),
+        ),
       });
     case "create_invite":
       // A new member, and a link that stops any earlier one working, so the word is typed out first.
@@ -547,6 +555,8 @@ async function runAction(
   }
 }
 
+/** The prefix of an organiser's feedback box on the weekly read form (ADR-48): `feedback:<member id>`. */
+const FEEDBACK_FIELD = "feedback:";
 function contactChannel(form: FormData): (typeof NEARBY_CONTACT_CHANNELS)[number] | null {
   const value = field(form, "channel");
   return NEARBY_CONTACT_CHANNELS.find((channel) => channel === value) ?? null;
