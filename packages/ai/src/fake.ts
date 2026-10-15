@@ -108,6 +108,49 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
       steps: input.answers,
       remarks: [],
     })),
+    // One tentative reading quoting her first worded message, and feedback naming each person's
+    // first ask, so tests can see what flowed through without a model.
+    weeklyInsight: method("weekly_insight", overrides.weeklyInsight, (input) => {
+      const hers = input.days.flatMap((day) =>
+        day.messages.flatMap((message) =>
+          message.from === "elder" && message.text !== null && message.text.trim() !== ""
+            ? [{ date: day.date, text: message.text.trim().slice(0, 200) }]
+            : [],
+        ),
+      );
+      const first = hers[0];
+      return {
+        readings:
+          first === undefined
+            ? []
+            : [
+                {
+                  about: "elder" as const,
+                  reading: `${input.elderName} may have more to say about this.`,
+                  quotes: [first],
+                  sureness: "tentative" as const,
+                },
+              ],
+        feedback: input.family.flatMap((person) => {
+          const asked = input.days.find((day) => day.ask?.from === person.key);
+          const wrote = input.days.some((day) =>
+            day.messages.some((message) => message.from === person.key),
+          );
+          return person.feedback && (asked !== undefined || wrote)
+            ? [
+                {
+                  key: person.key,
+                  landed:
+                    asked === undefined
+                      ? `Your replies reached ${input.elderName}.`
+                      : `Your ask on ${asked.weekday} reached ${input.elderName}.`,
+                  tryNext: `Ask ${input.elderName} one more thing about this week.`,
+                },
+              ]
+            : [];
+        }),
+      };
+    }),
   };
 }
 

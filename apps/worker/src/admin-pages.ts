@@ -699,6 +699,37 @@ function healthChoice(lines: readonly string[]): Html | null {
 <label><input type="checkbox" name="includeHealth" checked> Include these lines</label>`;
 }
 
+const READING_ABOUT = { elder: "about her", family: "about the family", between: "between them" };
+
+/**
+ * ADR-48: what may lie beneath the week's words, as the model read them and code checked every quote
+ * against the week's messages. Only the founder sees this: it is never sent, never shown to her,
+ * and never in the app.
+ */
+function insightReadings(readings: FamilyPage["weeklyReads"][number]["readings"]): Html | null {
+  return readings.length === 0
+    ? null
+    : html`<p><strong>Only you see this.</strong> <span class="muted">What may lie beneath the words this week: a possibility, not a fact, each resting on the words quoted. Never sent; cleared 30 days after the week.</span></p>
+<ul>${readings.map(
+        (reading) =>
+          html`<li>${reading.reading} <span class="muted">(${READING_ABOUT[reading.about]}; ${reading.sureness === "fairly_clear" ? "fairly clear" : "tentative"}; ${reading.quotes.map((quote) => `“${quote.text}” ${shortDay(quote.date)}`).join(", ")})</span></li>`,
+      )}</ul>`;
+}
+
+/**
+ * ADR-48: one box per organiser who would receive the read, prefilled with their draft feedback on
+ * their own messages; it goes only in that organiser's copy, and an empty box sends none.
+ */
+function feedbackBoxes(feedback: FamilyPage["weeklyReads"][number]["feedback"]): Html | null {
+  return feedback.length === 0
+    ? null
+    : html`<p class="muted">Feedback on each organiser's own messages. It goes only in that person's copy, after the read; edit it freely, and an empty box sends none.</p>
+${feedback.map(
+  (entry) =>
+    html`<label>Just for ${entry.name}<textarea name="feedback:${entry.memberId}">${entry.text}</textarea></label>`,
+)}`;
+}
+
 function weeklyReadsSection(data: FamilyPage): Html {
   const reads = data.weeklyReads.map((entry) => {
     const { read } = entry;
@@ -708,16 +739,18 @@ function weeklyReadsSection(data: FamilyPage): Html {
 <p class="muted">Counts and family lines, as organisers will read them (not editable; she never sees these):</p>
 <pre>${text(entry.countLines)}</pre>
 ${sent ? null : patternsFound(entry.patterns)}
+${insightReadings(entry.readings)}
 ${
   sent
-    ? html`<p>Sent lines:</p><pre>${(read.sentLines ?? []).join("\n")}</pre><p>Sent suggestion: ${text(read.sentSuggestion)}</p>${entry.healthSent === true ? html`<p class="muted">Sent with her health words, which go after 30 days.</p>` : null}`
+    ? html`<p>Sent lines:</p><pre>${(read.sentLines ?? []).join("\n")}</pre><p>Sent suggestion: ${text(read.sentSuggestion)}</p>${entry.healthSent === true ? html`<p class="muted">Sent with her health words, which go after 30 days.</p>` : null}${entry.feedbackSent !== null && entry.feedbackSent > 0 ? html`<p class="muted">${entry.feedbackSent} organiser${entry.feedbackSent === 1 ? "" : "s"} got their own feedback.</p>` : null}`
     : actionForm(
         data.family.id,
         "send_weekly_read",
         html`${hidden("weeklyReadId", read.id)}
 <label>Lines (one per line, at most four)<textarea name="lines">${read.lines.join("\n")}</textarea></label>
 ${healthChoice(entry.healthLines)}
-<label>Suggestion (empty removes it)<input name="suggestion" value="${text(read.suggestion) === DASH ? "" : read.suggestion}"></label>`,
+<label>Suggestion (empty removes it)<input name="suggestion" value="${text(read.suggestion) === DASH ? "" : read.suggestion}"></label>
+${feedbackBoxes(entry.feedback)}`,
         "Send to organisers",
       )
 }

@@ -16,7 +16,7 @@
  * the person's data without holding it (ADR-28). A contact's number arrives only with their yes, and
  * goes with their no (L8).
  */
-import { isAiOff } from "@vela/ai";
+import { InsightReading, isAiOff } from "@vela/ai";
 import {
   type AdminAction,
   type DomainEvent,
@@ -277,6 +277,11 @@ const SendWeeklyReadSchema = z.object({
    * leaves them out. Nothing goes in without her yes to the question that named the weekly read.
    */
   includeHealth: z.boolean().default(true),
+  /**
+   * ADR-48: each organiser's own feedback as the founder edited it, by member id; it goes only in
+   * that organiser's copy, and an empty one sends none.
+   */
+  feedback: z.record(Uuid, z.string().trim().max(700)).default({}),
 });
 export type SendWeeklyReadInput = z.input<typeof SendWeeklyReadSchema>;
 
@@ -310,6 +315,17 @@ const StoredWeeklyReadStats = z.object({
   family_patterns: readablePatterns(FamilyPattern),
   /** Whether the read went out with her health words (ADR-47); absent on reads before it. */
   health_sent: z.boolean().optional().catch(undefined),
+  /** ADR-48: the founder's readings; absent where it is off, before it, or after 30 days. */
+  insight: z
+    .object({ readings: readablePatterns(InsightReading), prompt_version: z.string() })
+    .optional()
+    .catch(undefined),
+  /** ADR-48: each organiser's draft feedback; absent likewise. */
+  feedback: readablePatterns(
+    z.object({ member_id: Uuid, landed: z.string(), try_next: z.string() }),
+  ),
+  /** ADR-48: how many organisers got their own feedback with the sent read. */
+  feedback_sent: z.number().int().min(0).optional().catch(undefined),
 });
 
 /** A form that does not parse is refused before anything is read; the cause never reaches a page. */
@@ -1338,7 +1354,14 @@ export async function sendWeeklyRead(
       const text = organiserText(family, member, stats, input.lines, input.suggestion, health);
       const weekEnd = weekEndOf(read);
       let sentTo = 0;
+      let feedbackSent = 0;
       for (const organiser of organisers) {
+        // ADR-48: an organiser's own feedback goes in their copy only, under a heading for them.
+        const own = input.feedback[organiser.member.id] ?? "";
+        const copy =
+          own === ""
+            ? text
+            : `${text}\n\n${t(family.language, "weekly_read.feedback_heading", { name: organiser.member.displayName })}\n${own}`;
         const result = await enqueueOutbound(deps, tx, {
           kind: "weekly_read",
           idempotencyKey: outboundKey("weekly_read", {
@@ -1350,10 +1373,11 @@ export async function sendWeeklyRead(
           channel: organiser.link.channel,
           conversationId: organiser.link.externalId,
           lang: family.language,
-          text,
+          text: copy,
         });
         if ("outboundId" in result) {
           sentTo += 1;
+          if (own !== "") feedbackSent += 1;
         }
       }
       if (sentTo === 0) {
@@ -1365,8 +1389,9 @@ export async function sendWeeklyRead(
           sentLines: input.lines,
           sentSuggestion: input.suggestion,
           sentAt: at,
-          // Her health words are never stored here: only that the read went out with them.
-          stats: { ...read.stats, health_sent: health.length > 0 },
+          // Her health words are never stored here: only that the read went out with them. The
+          // feedback itself is in each organiser's sent message, so only its count is kept.
+          stats: { ...read.stats, health_sent: health.length > 0, feedback_sent: feedbackSent },
         })
         .where(eq(weeklyReads.id, read.id));
       await logChange(tx, admin, at, {
@@ -1385,6 +1410,7 @@ export async function sendWeeklyRead(
             lines: input.lines.length,
             suggestion: input.suggestion.length > 0,
             health_lines: health.length,
+            feedback: feedbackSent,
           },
         },
       });
@@ -1700,6 +1726,15 @@ export interface FamilyPageWeeklyRead {
   healthLines: readonly string[];
   /** For a sent read, whether it went out with her health words; null before ADR-47 or unsent. */
   healthSent: boolean | null;
+  /** ADR-48: what may lie beneath the week's words, for the founder only; empty when none. */
+  readings: readonly InsightReading[];
+  /**
+   * ADR-48: for a read not yet sent, each organiser who would receive it, with their draft feedback
+   * ('' when the draft has none); empty for a sent read.
+   */
+  feedback: readonly { memberId: string; name: string; text: string }[];
+  /** For a sent read, how many organisers got their own feedback; null when unsent or before it. */
+  feedbackSent: number | null;
 }
 
 export interface FamilyPage {
@@ -1765,6 +1800,7 @@ function pageWeeklyRead(
   family: Family,
   member: Member | undefined,
   health: readonly WeeklyHealthMention[],
+  organisers: readonly Member[],
 ): FamilyPageWeeklyRead {
   const stats = StoredWeeklyReadStats.safeParse(read.stats);
   const countLines =
@@ -1792,6 +1828,22 @@ function pageWeeklyRead(
     healthLines:
       member === undefined ? [] : weeklyHealthLines(family.language, member.displayName, health),
     healthSent: read.sentAt === null || !stats.success ? null : (stats.data.health_sent ?? null),
+    readings: stats.success ? (stats.data.insight?.readings ?? []) : [],
+    feedback:
+      read.sentAt !== null
+        ? []
+        : organisers.map((organiser) => {
+            const draft = stats.success
+              ? stats.data.feedback?.find((entry) => entry.member_id === organiser.id)
+              : undefined;
+            return {
+              memberId: organiser.id,
+              name: organiser.displayName,
+              text: draft === undefined ? "" : `${draft.landed}\n${draft.try_next}`,
+            };
+          }),
+    feedbackSent:
+      read.sentAt === null || !stats.success ? null : (stats.data.feedback_sent ?? null),
   };
 }
 
@@ -1866,6 +1918,10 @@ export async function loadFamilyPage(
     .orderBy(desc(aiCalls.at), desc(aiCalls.id))
     .limit(PAGE_LIMIT);
   const membersById = new Map(memberRows.map((row) => [row.member.id, row.member]));
+  // ADR-48: who would receive a draft read now, each with a box for their own feedback.
+  const receivers = (await activeOrganisersWithLinks(db, family.id, ORGANISER_CHANNEL)).map(
+    (organiser) => organiser.member,
+  );
 
   return {
     family,
@@ -1884,7 +1940,7 @@ export async function loadFamilyPage(
           member === undefined || read.sentAt !== null
             ? []
             : await weeklyHealthMentions(db, member, read.weekStart, deps.clock.now());
-        return pageWeeklyRead(read, family, member, health);
+        return pageWeeklyRead(read, family, member, health, receivers);
       }),
     ),
     aiCalls: calls,
