@@ -100,6 +100,9 @@ type SitePage = "home" | "precision" | "privacy";
 
 type Icon = "consent" | "symmetry" | "health" | "calm";
 
+/** The facts in the band under the first screen. */
+type ProofIcon = "line" | "install" | "once" | "yes";
+
 /** A line of a small messenger excerpt: from the reader, from her, or the app's own grey text. */
 interface SnippetLine {
   readonly from: "you" | "her" | "meta";
@@ -137,22 +140,22 @@ interface SiteCopy {
     readonly photoAlt: string;
     readonly youAlt: string;
   };
+  readonly proof: readonly { readonly icon: ProofIcon; readonly text: string }[];
   /** Each worry is a picture (a messenger excerpt or a figure) with a one-line caption. */
   readonly worry: {
-    readonly eyebrow: string;
     readonly title: string;
     readonly moments: readonly {
       readonly when: string;
       readonly title: string;
+      /** The chat the excerpt comes from, as a messenger names it. */
+      readonly head?: string;
       readonly snippet?: readonly SnippetLine[];
       readonly figure?: Figure;
     }[];
   };
-  /** Two overlapping circles: what talks with her, what notices; Vela is where they meet. */
+  /** One statement in large type: what talks with her, what notices, and Vela, which does both. */
   readonly why: {
-    readonly eyebrow: string;
-    readonly title: string;
-    readonly venn: { readonly chat: Pair; readonly watch: Pair; readonly vela: Pair };
+    readonly lines: readonly Pair[];
     readonly note: string;
     readonly figures: readonly Figure[];
   };
@@ -161,14 +164,14 @@ interface SiteCopy {
     readonly title: readonly [string, string, string];
     readonly lede: string;
     readonly watch: string;
-    readonly trust: readonly string[];
     readonly badge: Pair;
     readonly photoAlt: string;
   };
+  /** The questions families ask, shown as cards (`marquee`). */
+  readonly questions: { readonly title: string; readonly lede: string };
   readonly marquee: readonly string[];
   /** The two ends of one exchange: the family's app, and her LINE chat (`demo.morning[3]`). */
   readonly screens: {
-    readonly eyebrow: string;
     readonly title: string;
     readonly lede: string;
     readonly you: { readonly title: string; readonly items: readonly string[] };
@@ -222,7 +225,6 @@ interface SiteCopy {
   };
   /** A yes/no chart: the family chat, cameras and alarms, and Vela, against what a family needs. */
   readonly different: {
-    readonly eyebrow: string;
     readonly title: string;
     readonly cols: readonly [string, string, string];
     readonly rows: readonly {
@@ -347,13 +349,19 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       youAlt:
         "A woman by an office window in the city, smiling at a message on her phone, a coffee on the ledge.",
     },
+    proof: [
+      { icon: "line", text: "Works inside LINE" },
+      { icon: "install", text: "Nothing to install for her" },
+      { icon: "once", text: "One message a day" },
+      { icon: "yes", text: "Starts only with her yes" },
+    ],
     worry: {
-      eyebrow: "Sound familiar?",
       title: "You think about her every day. You can’t call every day.",
       moments: [
         {
           when: "Sunday, 7 pm",
           title: "The call becomes a check-up",
+          head: "Mom",
           snippet: [
             { from: "you", text: "How’s your knee, Mom?" },
             { from: "her", text: "Fine, fine. Don’t worry about me." },
@@ -362,6 +370,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "Tuesday, 8 am",
           title: "Her good morning goes unanswered",
+          head: "Lin family · 6",
           snippet: [
             { from: "her", text: "Good morning, everyone 🌸" },
             { from: "meta", text: "Seen by 5" },
@@ -370,6 +379,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "Wednesday",
           title: "A day without a word",
+          head: "Mom",
           snippet: [
             { from: "you", text: "What are you up to today?" },
             { from: "meta", text: "Mom · last seen yesterday at 21:40" },
@@ -387,13 +397,11 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       ],
     },
     why: {
-      eyebrow: "Why we’re building Vela",
-      title: "Nothing was made for both.",
-      venn: {
-        chat: ["The family chat", "Talks, but doesn’t notice"],
-        watch: ["Cameras and alarms", "Notice, but feel like watching"],
-        vela: ["Vela", "Both"],
-      },
+      lines: [
+        ["The family chat", " talks, but doesn’t notice."],
+        ["Cameras and alarms", " notice, but feel like watching."],
+        ["Vela", " does both."],
+      ],
       note: "So we’re building it, and trying it first with our own family.",
       figures: [
         {
@@ -418,10 +426,13 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       title: ["A little ", "closer", ", every day."],
       lede: "One small question from the family each morning. She answers in LINE with a tap or her voice. If a morning stays quiet, you know that day.",
       watch: "See a morning",
-      trust: ["Nothing to install for her", "One message a day", "The exchange is free, for ever"],
       badge: ["Mom’s light is on", "Answered at 8:14"],
       photoAlt:
         "Close-up of an older woman’s hands holding a phone on a balcony full of plants, recording a voice note.",
+    },
+    questions: {
+      title: "Small questions. Real answers.",
+      lede: "A new one every morning, from someone who loves her.",
     },
     marquee: [
       "What did you have for breakfast?",
@@ -432,7 +443,6 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       "Tell me about your first job",
     ],
     screens: {
-      eyebrow: "Two screens, one exchange",
       title: "What you see, and what Mom sees.",
       lede: "A calm app for you. Just LINE for her.",
       you: {
@@ -537,7 +547,6 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       alt: "Illustration: a single lit arched window in an apartment building at dusk, a plant and a tea cup on the sill.",
     },
     different: {
-      eyebrow: "What’s different",
       title: "What makes Vela different.",
       cols: ["Family chat", "Cameras, alarms", "Vela"],
       rows: [
@@ -928,13 +937,19 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       photoAlt: "一位年長女士在晨光中坐在廚房桌邊，手拿一杯茶，笑著看手機上的訊息。",
       youAlt: "一位女士站在城市辦公室的窗邊，笑著看手機訊息，窗台上放著咖啡。",
     },
+    proof: [
+      { icon: "line", text: "就在 LINE 裡" },
+      { icon: "install", text: "她不用安裝任何東西" },
+      { icon: "once", text: "一天一則訊息" },
+      { icon: "yes", text: "她說好才開始" },
+    ],
     worry: {
-      eyebrow: "是不是很熟悉？",
       title: "您每天都想著她，卻沒辦法每天打電話。",
       moments: [
         {
           when: "星期日 晚上 7 點",
           title: "電話講成了問診",
+          head: "媽媽",
           snippet: [
             { from: "you", text: "媽，膝蓋還好嗎？" },
             { from: "her", text: "好啦好啦，不用擔心我。" },
@@ -943,6 +958,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "星期二 早上 8 點",
           title: "她的早安沒有人回",
+          head: "林家 · 6",
           snippet: [
             { from: "her", text: "大家早安 🌸 今天也要平安喔" },
             { from: "meta", text: "已讀 5" },
@@ -951,6 +967,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "星期三",
           title: "一整天沒有消息",
+          head: "媽媽",
           snippet: [
             { from: "you", text: "媽，今天在忙什麼？" },
             { from: "meta", text: "未讀" },
@@ -968,13 +985,11 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       ],
     },
     why: {
-      eyebrow: "我們為什麼做 Vela",
-      title: "沒有東西能兩者兼顧。",
-      venn: {
-        chat: ["家庭群組", "會聊天，但不會留意"],
-        watch: ["攝影機和緊急按鈕", "會留意，但像在看著她"],
-        vela: ["Vela", "兩者兼顧"],
-      },
+      lines: [
+        ["家庭群組", "會聊天，但不會留意。"],
+        ["攝影機和緊急按鈕", "會留意，但像在看著她。"],
+        ["Vela", " 兩者兼顧。"],
+      ],
       note: "所以我們做了 Vela，先從自己的家人開始試。",
       figures: [
         {
@@ -999,9 +1014,12 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       title: ["每天，", "更靠近", "一點。"],
       lede: "每天早上，家人問媽媽一個小問題。她在 LINE 上點一下或說一句話回答。如果哪天早上沒有回音，您當天就會知道。",
       watch: "看看一個早晨",
-      trust: ["她不用安裝任何東西", "一天一則訊息", "每日交流永久免費"],
       badge: ["媽媽的燈亮了", "8:14 回答"],
       photoAlt: "特寫：一位年長女士在種滿植物的陽台上，雙手拿著手機錄語音。",
+    },
+    questions: {
+      title: "小問題，真回答。",
+      lede: "每天早上一個新問題，來自愛她的人。",
     },
     marquee: [
       "今天早餐吃了什麼？",
@@ -1012,7 +1030,6 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       "說說妳的第一份工作",
     ],
     screens: {
-      eyebrow: "兩個畫面，一次交流",
       title: "您看到的，和媽媽看到的。",
       lede: "您用安靜的 App，她只用 LINE。",
       you: {
@@ -1112,7 +1129,6 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       alt: "插畫：黃昏時公寓大樓上唯一亮著的拱形窗，窗台上有一盆植物和一個茶杯。",
     },
     different: {
-      eyebrow: "有什麼不一樣",
       title: "Vela 有什麼不一樣。",
       cols: ["家庭群組", "攝影機、緊急按鈕", "Vela"],
       rows: [
@@ -1550,10 +1566,25 @@ function appScreen(a: SiteCopy["screens"]["app"]): Html {
   return html`<div class="phone device" aria-hidden="true"><div class="screen app">${STATUS}<div class="app-body"><p class="app-brand">${MARK}<span>Vela</span></p><p class="app-title">${a.today}</p><div class="app-window lit">${LAMP}<span><b>${a.who}</b><small>${a.status}</small></span></div><p class="app-asked">${a.asked}</p><p class="app-q">${a.question}</p><p class="app-answer">${a.answer}</p><span class="app-voice"><i></i><i></i><i></i><i></i><i></i><i></i>${a.voice}</span><p class="app-at">${a.answeredAt}</p><div class="app-actions"><span class="app-reply">${a.reply}</span><span class="app-heart">${HEART}</span></div><ul class="app-replies">${a.replies.map((r) => html`<li><b>${r.who}</b> ${r.text}</li>`)}</ul><p class="app-next">${a.next}</p></div><div class="app-tabs">${a.tabs.map((t, i) => html`<span${i === 0 ? html` class="on"` : null}>${t}</span>`)}</div></div></div>`;
 }
 
-/** A few lines of a messenger, illustrating a worry the text beside it already tells. */
-function snippet(lines: readonly SnippetLine[]): Html {
-  return html`<div class="snip" aria-hidden="true">${lines.map((line) => html`<p class="${line.from === "meta" ? "meta" : `b ${line.from}`}">${line.text}</p>`)}</div>`;
+/** A few lines of a messenger under the chat's name, illustrating the worry captioned below it. */
+function snippet(lines: readonly SnippetLine[], head?: string): Html {
+  return html`<div class="snip" aria-hidden="true">${head ? html`<p class="snip-head"><span class="ava">${head.slice(0, 1)}</span>${head}</p>` : null}${lines.map((line) => html`<p class="${line.from === "meta" ? "meta" : `b ${line.from}`}">${line.text}</p>`)}</div>`;
 }
+
+/** Small line icons for the facts under the first screen. */
+const PROOF_ICONS: Readonly<Record<ProofIcon, Html>> = {
+  line: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4z"/></svg>`,
+  install: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" focusable="false"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>`,
+  once: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="13" r="4"/><path d="M12 3.5v2M4.5 13h-2M21.5 13h-2M6.3 7.3l-1.4-1.4M17.7 7.3l1.4-1.4M3 20.5h18"/></svg>`,
+  yes: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.7a4.3 4.3 0 0 1 7.5 2.6c0 5.6-7.5 10.2-7.5 10.2z"/><path d="M9 12.5l2 2 4-4"/></svg>`,
+};
+
+/** Column marks for the comparison: the family chat, cameras and alarms, then Vela's window. */
+const COLUMN_ICONS: readonly Html[] = [
+  PROOF_ICONS.line,
+  html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.5" y="7" width="13" height="10" rx="2"/><path d="M15.5 10.5l6-3v9l-6-3z"/></svg>`,
+  LAMP,
+];
 
 /** A figure with its source; `extra` adds classes such as the entrance delay. */
 function figure(f: Figure, extra = ""): Html {
@@ -1596,7 +1627,6 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
       ? [step.msg]
       : [],
   );
-  const marquee = [...c.marquee, ...c.marquee].map((line) => html`<span>${line}</span>`);
   const readback = c.demo.morning[3];
   const herScreen = phone(readback?.head ?? demoHead, " device", readback?.messages ?? []);
   return {
@@ -1604,33 +1634,36 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
     description: c.description,
     body: html`${header(lang, "home")}
 <main id="main">
-<section class="hero"><div class="wrap">
-  <div class="reveal">
+<section class="hero split">
+  <div class="hero-copy"><div class="hero-inner">
     <p class="eyebrow">${c.hero.eyebrow}</p>
-    <h1>${c.hero.title[0]}<em>${c.hero.title[1]}</em>${c.hero.title[2]}</h1>
+    <h1><span>${c.hero.title[0]}</span><em>${c.hero.title[1]}</em>${c.hero.title[2]}</h1>
     <p class="lede">${c.hero.lede}</p>
-    <div class="actions"><a class="btn btn-primary" href="#join">${c.hero.join}</a><a class="btn btn-ghost" href="#meet">${c.hero.more}<span class="down" aria-hidden="true">↓</span></a></div>
-  </div>
-  <div class="stage apart reveal d2">
-    <div class="arch her"><img src="${IMG}/morning-tea.jpg" width="1264" height="848" alt="${c.hero.photoAlt}" fetchpriority="high"></div>
-    <div class="arch you"><img src="${IMG}/daughter-city.jpg" width="928" height="1152" alt="${c.hero.youAlt}"></div>
-    <p class="say you">${c.hero.exchange.you}</p>
+    <div class="actions"><a class="btn btn-amber" href="#join">${c.hero.join}</a><a class="btn btn-light" href="#meet">${c.hero.more}<span class="down" aria-hidden="true">↓</span></a></div>
+  </div></div>
+  <div class="hero-photo">
+    <img class="her-photo" src="${IMG}/morning-tea.jpg" width="1264" height="848" alt="${c.hero.photoAlt}" fetchpriority="high">
+    <div class="from-you"><img src="${IMG}/daughter-city.jpg" width="928" height="1152" alt="${c.hero.youAlt}"><p class="say you">${c.hero.exchange.you}</p></div>
     <p class="say her">${c.hero.exchange.her}<small>${c.hero.exchange.when}</small></p>
   </div>
-</div></section>
+</section>
+<div class="proof"><ul class="wrap">${c.proof.map((p) => html`<li>${PROOF_ICONS[p.icon]}<span>${p.text}</span></li>`)}</ul></div>
 
 <section class="band worry" id="worry"><div class="wrap">
-  <p class="eyebrow reveal">${c.worry.eyebrow}</p>
   <h2 class="reveal">${c.worry.title}</h2>
   <ol class="week">${c.worry.moments.map(
     (m, i) =>
-      html`<li class="moment reveal d${i % 4}">${m.snippet ? snippet(m.snippet) : null}${m.figure ? figure(m.figure, " boxed") : null}<p class="clock">${m.when}</p><h3>${m.title}</h3></li>`,
+      html`<li class="moment reveal d${i % 4}">${m.snippet ? snippet(m.snippet, m.head) : null}${m.figure ? figure(m.figure, " boxed") : null}<p class="clock">${m.when}</p><h3>${m.title}</h3></li>`,
   )}</ol>
 </div></section>
 
 <section class="band why" id="why"><div class="wrap">
-  <div class="why-head"><p class="eyebrow reveal">${c.why.eyebrow}</p><h2 class="reveal">${c.why.title}</h2><p class="why-note reveal">${c.why.note}</p></div>
-  <div class="venn reveal"><div class="circle chat"><b>${c.why.venn.chat[0]}</b><span>${c.why.venn.chat[1]}</span></div><div class="circle watch"><b>${c.why.venn.watch[0]}</b><span>${c.why.venn.watch[1]}</span></div><div class="both lit">${LAMP}<b>${c.why.venn.vela[0]}</b><span>${c.why.venn.vela[1]}</span></div></div>
+  <h2 class="statement reveal">${c.why.lines.map(([who, rest], i) =>
+    i === c.why.lines.length - 1
+      ? html`<span class="line vela lit">${LAMP}<b>${who}</b>${rest}</span>`
+      : html`<span class="line"><b>${who}</b>${rest}</span>`,
+  )}</h2>
+  <p class="why-note reveal">${c.why.note}</p>
   <div class="figures">${c.why.figures.map((f, i) => figure(f, ` reveal d${i}`))}</div>
 </div></section>
 
@@ -1640,7 +1673,6 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
     <h2 class="reveal">${c.meet.title[0]}<em>${c.meet.title[1]}</em>${c.meet.title[2]}</h2>
     <p class="lede reveal">${c.meet.lede}</p>
     <div class="actions reveal"><a class="btn btn-primary" href="#join">${c.hero.join}</a><a class="btn btn-ghost" href="#how"><span class="play" aria-hidden="true"></span>${c.meet.watch}</a></div>
-    <ul class="trust reveal">${c.meet.trust.map((t) => html`<li>${t}</li>`)}</ul>
   </div>
   <div class="stage reveal d1">
     <div class="arch"><img src="${IMG}/voice-note.jpg" width="928" height="1152" alt="${c.meet.photoAlt}" loading="lazy"></div>
@@ -1650,7 +1682,9 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
   </div>
 </div></section>
 
-<div class="strip" aria-hidden="true"><div class="marquee">${marquee}</div></div>
+<section class="band questions"><div class="wrap"><h2 class="reveal">${c.questions.title}</h2><p class="lede reveal">${c.questions.lede}</p></div>
+  <ul class="qrow" tabindex="0" aria-label="${c.questions.title}">${c.marquee.map((q, i) => html`<li class="qcard${["", " amber", " teal"][i % 3]}">${MARK}<p>${q}</p></li>`)}</ul>
+</section>
 
 <section class="band morning" id="how"><div class="wrap">
   <div>
@@ -1665,7 +1699,6 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
 </div></section>
 
 <section class="band screens" id="screens"><div class="wrap">
-  <p class="eyebrow reveal">${c.screens.eyebrow}</p>
   <h2 class="reveal">${c.screens.title}</h2>
   <p class="lede reveal">${c.screens.lede}</p>
   <div class="ends">
@@ -1706,11 +1739,10 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
 </div></section>
 
 <section class="band different" id="different"><div class="wrap">
-  <p class="eyebrow reveal">${c.different.eyebrow}</p>
   <h2 class="reveal">${c.different.title}</h2>
   <div class="compare reveal"><table><thead><tr><td></td>${c.different.cols.map(
     (col, i) =>
-      html`<th scope="col"${i === 2 ? html` class="vela lit"` : null}>${i === 2 ? LAMP : null}<span>${col}</span></th>`,
+      html`<th scope="col"${i === 2 ? html` class="vela lit"` : null}>${COLUMN_ICONS[i]}<span>${col}</span></th>`,
   )}</tr></thead><tbody>${c.different.rows.map(
     (row) =>
       html`<tr><th scope="row">${row.label}</th>${row.marks.map(

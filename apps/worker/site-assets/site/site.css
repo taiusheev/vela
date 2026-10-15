@@ -612,38 +612,6 @@ section {
   margin-bottom: 1rem;
   max-width: 22ch;
 }
-.strip {
-  border-block: 1px solid var(--rule);
-  background: var(--soft);
-  overflow: hidden;
-}
-.marquee {
-  display: flex;
-  gap: 3rem;
-  white-space: nowrap;
-  padding: 1.1rem 0;
-  width: max-content;
-  animation: marquee 38s linear infinite;
-  font: 600 1.05rem / 1 var(--serif);
-  color: var(--muted);
-}
-.marquee span {
-  display: inline-flex;
-  align-items: center;
-  gap: 3rem;
-}
-.marquee span::after {
-  content: "";
-  width: 0.55rem;
-  height: 0.7rem;
-  background: var(--amber);
-  border-radius: 999px 999px 2px 2px;
-}
-@keyframes marquee {
-  to {
-    transform: translateX(-50%);
-  }
-}
 
 /* One morning: sticky phone + steps */
 .morning .wrap {
@@ -1581,20 +1549,6 @@ html {
 .screen .chat {
   background: #a2bbc0;
 }
-.marquee {
-  animation: none;
-  margin-inline: auto;
-  padding-block: 1.1rem;
-  font-size: 0.88rem;
-  gap: 2rem;
-}
-.marquee span {
-  gap: 2rem;
-}
-.marquee span::after {
-  width: 0.4rem;
-  height: 0.55rem;
-}
 .demo-caption {
   font-size: 0.78rem;
   color: #d9e5e5;
@@ -1778,20 +1732,6 @@ input[type="email"] {
   font-size: 1.1em;
   line-height: 1;
 }
-.stage.apart .arch.her {
-  inset: 0 0 4.5rem 5rem;
-}
-.stage.apart .arch.you {
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 11.5rem;
-  aspect-ratio: 4 / 5;
-  border: 6px solid var(--paper);
-  box-shadow: 0 16px 36px -24px #1e1a1666;
-}
-.stage.apart .arch.you img {
-  object-position: 35% center;
-}
 .say {
   position: absolute;
   margin: 0;
@@ -1808,17 +1748,6 @@ input[type="email"] {
   margin-top: 0.3rem;
   font-size: 0.72rem;
   color: var(--caption);
-}
-.say.you {
-  left: 1.5rem;
-  top: 15.6rem;
-  background: #dce9d4;
-  border-bottom-left-radius: 4px;
-}
-.say.her {
-  right: 0.6rem;
-  bottom: 6rem;
-  border-bottom-right-radius: 4px;
 }
 
 .worry .week {
@@ -2006,25 +1935,10 @@ input[type="email"] {
     font-size: clamp(2.1rem, 9.6vw, 3.2rem);
     max-width: none;
   }
-  .stage.apart .arch.her {
-    inset: 0 0 4rem 3rem;
-  }
-  .stage.apart .arch.you {
-    width: 38%;
-    border-width: 4px;
-  }
   .say {
     max-width: 11.5rem;
     font-size: 0.8rem;
     padding: 0.5rem 0.7rem;
-  }
-  .say.you {
-    left: 0.5rem;
-    top: calc(38vw * 1.25 + 0.6rem);
-  }
-  .say.her {
-    right: 0.3rem;
-    bottom: 4.75rem;
   }
   .moment {
     padding: 1.3rem 1.2rem 1.2rem;
@@ -2432,85 +2346,6 @@ input[type="email"] {
   }
 }
 
-/* Why: two circles that each do half the job; Vela is where they overlap. */
-.why {
-  overflow-x: clip;
-}
-.why .wrap {
-  align-items: center;
-}
-.why-note {
-  max-width: 26rem;
-  margin: 1.25rem 0 0;
-  font: 600 1.15rem / 1.5 var(--serif);
-  color: var(--teal-ink);
-}
-.venn {
-  --d: min(17rem, 30vw);
-  position: relative;
-  justify-self: center;
-  width: calc(var(--d) * 1.7);
-  height: var(--d);
-}
-.venn .circle {
-  position: absolute;
-  top: 0;
-  width: var(--d);
-  height: var(--d);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.3rem;
-  border-radius: 50%;
-}
-.venn .chat {
-  left: 0;
-  padding: 0 calc(var(--d) * 0.4) 0 calc(var(--d) * 0.13);
-  background: #1f5c661a;
-  border: 1.5px solid #1f5c6640;
-}
-.venn .watch {
-  right: 0;
-  padding: 0 calc(var(--d) * 0.13) 0 calc(var(--d) * 0.4);
-  text-align: right;
-  background: #5a534b14;
-  border: 1.5px solid #5a534b33;
-}
-.venn b {
-  font: 600 clamp(0.85rem, 1.5vw, 1.1rem) / 1.2 var(--serif);
-}
-.venn .circle span {
-  font-size: clamp(0.7rem, 1.1vw, 0.85rem);
-  line-height: 1.35;
-  color: var(--muted);
-}
-.venn .both {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: calc(var(--d) * 0.3);
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  text-align: center;
-}
-.venn .both .lamp {
-  width: 1.7rem;
-  height: 2.1rem;
-  filter: drop-shadow(0 0 12px #e9a23baa);
-}
-.venn .both b {
-  color: var(--teal-ink);
-}
-.venn .both span {
-  font: 700 0.62rem / 1.1 var(--sans);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--amber-deep);
-}
-
 /* What's different: a yes/no chart, Vela's column lit. */
 .compare {
   margin-top: 2.5rem;
@@ -2596,25 +2431,6 @@ input[type="email"] {
   .js .moment.in .snip p:nth-child(2) {
     transition-delay: 0.7s;
   }
-  .js .venn .chat {
-    transform: translateX(14%);
-  }
-  .js .venn .watch {
-    transform: translateX(-14%);
-  }
-  .js .venn .circle {
-    transition: transform 0.9s var(--ease);
-  }
-  .js .venn .both {
-    opacity: 0;
-    transition: opacity 0.5s 0.7s var(--ease);
-  }
-  .js .venn.in .circle {
-    transform: none;
-  }
-  .js .venn.in .both {
-    opacity: 1;
-  }
   .js .compare .mark {
     opacity: 0;
     transform: scale(0.4);
@@ -2640,11 +2456,6 @@ input[type="email"] {
   }
 }
 
-@media (max-width: 900px) {
-  .venn {
-    --d: min(16rem, 52vw);
-  }
-}
 @media (max-width: 480px) {
   .compare th,
   .compare td {
@@ -2662,5 +2473,370 @@ input[type="email"] {
   .compare .mark {
     width: 1.3rem;
     height: 1.3rem;
+  }
+}
+
+/* Second pass, after studying Aura, Storyworth, Headspace and Papa: colour blocks, an edge-to-edge
+   photograph, a band of facts, one large statement, real messenger chrome, and fewer template cues. */
+.eyebrow::before {
+  content: none;
+}
+.btn-amber {
+  background: var(--amber);
+  color: var(--ink);
+}
+.btn-amber:hover {
+  transform: translateY(-1px);
+  background: #f0b358;
+}
+.btn-light {
+  background: transparent;
+  color: #fbf7f0;
+  box-shadow: inset 0 0 0 1.5px #fbf7f088;
+}
+.btn-light:hover {
+  background: #fbf7f0;
+  color: var(--teal-ink);
+}
+
+/* Hero: a deep teal block beside her photograph, edge to edge, the exchange on top of it. */
+.hero.split {
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  min-height: min(46rem, calc(100vh - 4.75rem));
+  padding: 0;
+  background: var(--teal-ink);
+}
+.hero-copy {
+  display: flex;
+  align-items: center;
+  padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 4.5vw, 4.5rem) clamp(3rem, 6vw, 5rem)
+    max(1.25rem, calc((100vw - var(--wrap)) / 2));
+  color: #f6f0e6;
+}
+.hero-inner {
+  width: 100%;
+  max-width: 34rem;
+}
+.hero.split .eyebrow {
+  color: var(--amber);
+}
+.hero.split h1 {
+  max-width: none;
+  margin-bottom: 1.25rem;
+  font-size: clamp(2.4rem, 3.9vw, 3.7rem);
+  color: #fbf7f0;
+}
+.hero.split h1 > span {
+  display: block;
+}
+.hero.split h1 em {
+  color: var(--amber);
+}
+.hero.split h1 em::after {
+  content: none;
+}
+.hero.split .lede {
+  max-width: 27rem;
+  color: #d7e3e2;
+}
+.hero-photo {
+  position: relative;
+  min-height: 30rem;
+  overflow: hidden;
+}
+.hero-photo .her-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 72% center;
+}
+.from-you {
+  position: absolute;
+  left: clamp(1rem, 3vw, 2.5rem);
+  top: clamp(1.25rem, 4vw, 3rem);
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+.from-you img {
+  width: clamp(4rem, 6.5vw, 6rem);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: 50% 28%;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 10px 24px -14px #1e1a16aa;
+}
+.from-you .say {
+  position: static;
+  margin-bottom: 0.4rem;
+  background: #dce9d4;
+  border-bottom-left-radius: 4px;
+}
+.hero-photo .say.her {
+  right: clamp(1rem, 3vw, 2.5rem);
+  bottom: clamp(1.25rem, 4vw, 3rem);
+  border-bottom-right-radius: 4px;
+}
+
+/* The facts band, where the best sites put their press logos and ratings. */
+.proof {
+  background: #123a41;
+  color: #f3ede4;
+}
+.proof ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.8rem 2rem;
+  margin: 0 auto;
+  padding: 1.15rem 0;
+  list-style: none;
+}
+.proof li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font: 500 0.92rem / 1.3 var(--sans);
+}
+.proof svg {
+  flex: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--amber);
+}
+
+/* Worries: white chat cards on a cream band, each with its chat's name like a real messenger. */
+.worry {
+  background: var(--soft);
+}
+.worry h2 {
+  max-width: 20ch;
+  margin-inline: auto;
+  text-align: center;
+}
+.worry .week {
+  margin-top: 3rem;
+}
+.moment {
+  border: 0;
+  background: #fff;
+  box-shadow:
+    0 1px 2px #1e1a160d,
+    0 18px 36px -26px #1e1a1660;
+}
+.moment .snip {
+  justify-content: flex-start;
+  padding: 0 0 0.9rem;
+  overflow: hidden;
+}
+.snip .snip-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+  padding: 0.5rem 0.7rem;
+  background: #ffffffe0;
+  font: 600 0.74rem / 1 var(--sans);
+  color: var(--ink);
+}
+.snip-head .ava {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--glow);
+  color: var(--amber-deep);
+  font-size: 0.66rem;
+}
+.snip .b,
+.snip .meta {
+  margin-inline: 0.8rem;
+}
+
+/* Why: one statement in large type on the night band, then the figures. */
+.why {
+  background: var(--night);
+  color: #f3ede4;
+}
+.why .wrap {
+  display: block;
+  text-align: center;
+}
+.why .statement {
+  max-width: none;
+  margin: 0 auto;
+  font-size: clamp(1.9rem, 4.4vw, 3.5rem);
+  line-height: 1.22;
+  color: #a99e90;
+}
+.statement .line {
+  display: block;
+  text-wrap: balance;
+}
+.statement .line b {
+  font-weight: 600;
+  color: #fbf7f0;
+}
+.statement .vela {
+  margin-top: 0.4em;
+  color: var(--amber);
+}
+.statement .vela b {
+  color: var(--amber);
+}
+.statement .lamp {
+  width: 0.62em;
+  height: 0.77em;
+  margin-right: 0.22em;
+  vertical-align: -0.04em;
+  filter: drop-shadow(0 0 14px #e9a23baa);
+}
+.why .why-note {
+  max-width: none;
+  margin: 1.5rem auto 0;
+  font: 500 1.05rem / 1.5 var(--sans);
+  color: #d6cbbd;
+}
+.why .figures {
+  margin-top: clamp(3rem, 6vw, 4.5rem);
+  text-align: left;
+}
+.why .figures .fig {
+  border-top-color: #e9a23b66;
+}
+.why .fig .big {
+  color: var(--amber);
+}
+.why .fig figcaption {
+  color: #d6cbbd;
+}
+.why .fig cite {
+  color: #9b9083;
+}
+
+/* Questions: big cards in a row that runs off the edge, as the best family products show them. */
+.questions {
+  overflow: hidden;
+  background: var(--glow);
+}
+.questions .wrap {
+  text-align: center;
+}
+.questions h2,
+.questions .lede {
+  margin-inline: auto;
+}
+.qrow {
+  display: flex;
+  gap: 1rem;
+  margin: 2.5rem 0 0;
+  padding: 0.5rem max(1rem, calc((100vw - var(--wrap)) / 2)) 1.5rem;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: max(1rem, calc((100vw - var(--wrap)) / 2));
+  scrollbar-width: none;
+}
+.qrow::-webkit-scrollbar {
+  display: none;
+}
+.qcard {
+  flex: 0 0 clamp(14rem, 22vw, 18rem);
+  min-height: clamp(12rem, 17vw, 15rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.4rem;
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ink);
+  scroll-snap-align: start;
+  box-shadow: 0 16px 32px -26px #1e1a1680;
+}
+.qcard svg {
+  width: 1.2rem;
+}
+.qcard p {
+  margin: 0;
+  font: 600 clamp(1.25rem, 1.8vw, 1.5rem) / 1.3 var(--serif);
+}
+.qcard.amber {
+  background: var(--amber);
+}
+.qcard.teal {
+  background: var(--teal);
+  color: #fbf7f0;
+}
+
+/* Screens on the cream band; the chart fills the width with an icon over each column. */
+.screens {
+  background: var(--soft);
+}
+.screens .end::before {
+  background: var(--paper);
+}
+.compare table {
+  max-width: none;
+}
+.compare thead th svg {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0 auto 0.45rem;
+  color: var(--caption);
+}
+.compare thead th.vela .lamp {
+  width: 1.6rem;
+  height: 2rem;
+}
+
+@media (max-width: 900px) {
+  .hero.split {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .hero-copy {
+    justify-content: flex-start;
+    padding: 2.75rem 1.25rem 2.5rem;
+  }
+  .hero-photo {
+    min-height: 0;
+    aspect-ratio: 4 / 3.3;
+  }
+  .proof ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .hero.split h1 {
+    font-size: clamp(2.2rem, 10vw, 2.9rem);
+  }
+  .proof li {
+    font-size: 0.8rem;
+  }
+  .proof svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+  .from-you img {
+    width: 3.4rem;
+  }
+  .qcard {
+    flex-basis: 72vw;
+  }
+}
+
+/* One morning: with one line per step, shorter steps keep the sticky phone close to its words. */
+@media (min-width: 901px) {
+  .morning .step {
+    min-height: 24vh;
   }
 }
