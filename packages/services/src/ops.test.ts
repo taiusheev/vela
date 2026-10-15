@@ -2,7 +2,7 @@ import { aiCalls, flags } from "@vela/db";
 import { like } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { recordEvent } from "./events.ts";
-import { opsAlerts, opsDigest } from "./ops.ts";
+import { opsAlerts, opsDigest, watchPeer } from "./ops.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 
 const ADMIN = "9001";
@@ -112,4 +112,86 @@ describe("opsDigest", () => {
       ["line:quota:x", `ops:digest:${h.clock.now().toISOString().slice(0, 10)}`].sort(),
     );
   });
+});
+
+describe("watchPeer", () => {
+  const PEER = {
+    environment: "production",
+    url: "https://vela.vela-light.workers.dev/healthz",
+  } as const;
+  const OK = { ok: true, seen: "ok" } as const;
+  const STALE = { ok: false, seen: "stale" } as const;
+  const QUARTER = 15 * 60 * 1000;
+
+  async function watching<T>(run: () => Promise<T>): Promise<T> {
+    h.config.peerHealthz = PEER;
+    try {
+      return await run();
+    } finally {
+      h.config.peerHealthz = null;
+    }
+  }
+
+  it("checks nothing without a peer", async () => {
+    expect(await watchPeer(h.deps, STALE)).toBe("unwatched");
+    expect(await h.db.select().from(flags)).toEqual([]);
+  });
+
+  it("forgives one failed check, tells the second once, and tells the recovery once", async () =>
+    watching(async () => {
+      expect(await watchPeer(h.deps, OK)).toBe("ok");
+      expect(await watchPeer(h.deps, { ok: false, seen: "no_answer" })).toBe("first_miss"); // 00:00
+      expect(toFounder()).toEqual([]);
+      h.clock.advance(QUARTER);
+      expect(await watchPeer(h.deps, STALE)).toBe("down"); // 00:15
+      h.clock.advance(QUARTER);
+      expect(await watchPeer(h.deps, STALE)).toBe("still_down"); // 00:30
+      h.clock.advance(QUARTER);
+      expect(await watchPeer(h.deps, OK)).toBe("back"); // 00:45
+      expect(await watchPeer(h.deps, OK)).toBe("ok");
+      expect(toFounder()).toEqual([
+        "Vela production has not answered its health check since 00:00 UTC (last answer: stale). Its mornings and quiet notices may not be going out. Check: https://vela.vela-light.workers.dev/healthz",
+        "Vela production answers its health check again (down since 00:00 UTC, about 45 min). Look on its admin page for mornings that were late or missed. Check: https://vela.vela-light.workers.dev/healthz",
+      ]);
+    }));
+
+  it("says nothing of one blip, and a later outage is told afresh", async () =>
+    watching(async () => {
+      expect(await watchPeer(h.deps, { ok: false, seen: "http_503" })).toBe("first_miss");
+      h.clock.advance(QUARTER);
+      expect(await watchPeer(h.deps, OK)).toBe("ok");
+      expect(toFounder()).toEqual([]);
+
+      h.clock.advance(QUARTER);
+      expect(await watchPeer(h.deps, STALE)).toBe("first_miss");
+      h.clock.advance(QUARTER);
+      expect(await watchPeer(h.deps, STALE)).toBe("down");
+      expect(toFounder()).toHaveLength(1);
+      expect(toFounder()[0]).toContain("since 00:30 UTC");
+    }));
+
+  it("keeps an outage it could not tell, and tells it once the admin chat exists", async () =>
+    watching(async () => {
+      const configured = h.config.adminConversationId;
+      h.config.adminConversationId = null;
+      try {
+        await watchPeer(h.deps, STALE);
+        h.clock.advance(QUARTER);
+        expect(await watchPeer(h.deps, STALE)).toBe("still_down");
+      } finally {
+        h.config.adminConversationId = configured;
+      }
+      h.clock.advance(QUARTER);
+      expect(await watchPeer(h.deps, STALE)).toBe("down");
+      expect(toFounder()[0]).toContain("since 00:00 UTC");
+    }));
+
+  it("is not swept away by the digest's weekly clean-up while the outage lasts", async () =>
+    watching(async () => {
+      await watchPeer(h.deps, STALE);
+      h.clock.advance(8 * 24 * 60 * 60 * 1000);
+      await opsDigest(h.deps);
+      expect(await watchPeer(h.deps, STALE)).toBe("down");
+      expect(toFounder().at(-1)).toMatch(/has not answered its health check since 00:00 UTC/);
+    }));
 });

@@ -95,6 +95,13 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly SITE_HOST?: string;
   /**
+   * The other deployed environment's public `/healthz` (technical plan 2.3; `config.ts`,
+   * `readPeerHealthz`), which each 15-minute reconcile reads: staging names production's and
+   * production names staging's, so each is watched from the other's Cloudflare account. Development
+   * names none.
+   */
+  readonly PEER_HEALTHZ_URL?: string;
+  /**
    * Where pushes go (ADR-34; `config.ts`, `readPushSend`): "expo", Expo's push service, or "off",
    * when none is made or sent while devices are still registered. "off" in every environment until
    * the founder has set up Expo, Firebase and, for iPhones, Apple.

@@ -170,7 +170,20 @@ export type MediaJob =
   | { type: "ingest_exchange_media"; mediaId: string };
 export type UnderstandJob = { type: "understand_answer"; answerId: string };
 
+/** The other deployed environment, whose `/healthz` each reconcile checks (technical plan 2.3). */
+export interface PeerHealthz {
+  readonly environment: "staging" | "production";
+  /** Its public `/healthz`: https, content-free, the same address the GitHub watchdog reads. */
+  readonly url: string;
+}
+
 export interface Config {
+  /**
+   * The other environment's health check: staging watches production and production watches
+   * staging, each from its own Cloudflare account, so a stopped Worker, cron or database there is
+   * told to this environment's admin chat within about half an hour. Absent or null checks nothing.
+   */
+  peerHealthz?: PeerHealthz | null;
   /** Explicit private trial admission; absent or null preserves the normal product behavior. */
   pilotAdmission?: PilotAdmission | null;
   /**

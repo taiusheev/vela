@@ -394,7 +394,10 @@
         // On: staging holds test families only (spec §12).
         "MEMORY": "on",
         // On: staging holds test families only (ADR-39).
-        "BOOK": "on"
+        "BOOK": "on",
+        // Technical plan 2.3: each reconcile reads production's health check from this account
+        // and tells staging's admin chat when it stays down (src/peer-health.ts).
+        "PEER_HEALTHZ_URL": "https://vela.vela-light.workers.dev/healthz"
       }
     },
 
@@ -491,7 +494,10 @@
         "MEMORY": "off",
         // Off, and pinned off by src/wrangler-config.test.ts: privacy notice v1 says the family
         // book comes later in the pilot, so no story is kept before a notice describes it.
-        "BOOK": "off"
+        "BOOK": "off",
+        // Technical plan 2.3: each reconcile reads staging's health check from this account, so
+        // staging and production watch each other from different Cloudflare accounts.
+        "PEER_HEALTHZ_URL": "https://vela.vela-light-staging.workers.dev/healthz"
       }
     }
   }

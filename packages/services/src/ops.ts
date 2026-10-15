@@ -9,6 +9,10 @@
  * once a UTC day. Each message is claimed in `flags` before it is sent, as LINE's quota alert is
  * (`quota.ts`), so two runs never both send it; a send that fails and may succeed later gives the
  * claim back. Claims older than a week are cleared by the digest.
+ *
+ * Each reconcile also checks the other deployed environment's `/healthz` (step 2.3), because the
+ * GitHub watchdog meant to read it every 15 minutes runs every few hours in practice: a check that
+ * fails twice in a row is told once, and its recovery once more.
  */
 import { ChannelSendError } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -191,4 +195,92 @@ export async function opsDigest(deps: Deps): Promise<boolean> {
       ),
     );
   return tellFounderOnce(deps, `${CLAIM_PREFIX}digest:${now.toISOString().slice(0, 10)}`, text);
+}
+
+/** Holds the first failed check of the other environment until it answers ok again; not a claim. */
+const PEER_DOWN_KEY = "peer_watch:down";
+
+/**
+ * What the other environment's `/healthz` answered: ok, or what was seen instead — its own status
+ * (`stale`, `no_reconcile_yet`), `http_<code>`, or `no_answer`. Never a body or an error message.
+ */
+export interface PeerAnswer {
+  readonly ok: boolean;
+  readonly seen: string;
+}
+
+/** What one check did: nothing to watch, all well, a first miss, told down, already told, told back. */
+export type PeerWatchOutcome = "unwatched" | "ok" | "first_miss" | "down" | "still_down" | "back";
+
+interface PeerDown {
+  readonly since: string;
+  readonly seen: string;
+}
+
+function hourMinute(at: Date): string {
+  return at.toISOString().slice(11, 16);
+}
+
+/**
+ * Step 2.3: one check of the other environment, `answer` being what its `/healthz` just said. The
+ * first failed check is only remembered, since a deploy or one lost request can fail one; the
+ * second in a row (15 minutes later) tells the founder once for that outage, and the first ok
+ * after it says it is back and for how long it was not, so the founder looks for late mornings.
+ * Nothing is told while this environment has no admin chat.
+ */
+export async function watchPeer(deps: Deps, answer: PeerAnswer): Promise<PeerWatchOutcome> {
+  const peer = deps.config.peerHealthz ?? null;
+  if (peer === null) return "unwatched";
+  const now = deps.clock.now();
+  const [row] = await deps.db
+    .select({ value: flags.value })
+    .from(flags)
+    .where(eq(flags.key, PEER_DOWN_KEY));
+  const down = (row?.value ?? null) as PeerDown | null;
+
+  if (answer.ok) {
+    if (down === null) return "ok";
+    await deps.db.delete(flags).where(eq(flags.key, PEER_DOWN_KEY));
+    const [told] = await deps.db
+      .select({ key: flags.key })
+      .from(flags)
+      .where(eq(flags.key, `${CLAIM_PREFIX}peer_down:${down.since}`));
+    if (told === undefined) return "ok";
+    const since = new Date(down.since);
+    const text = t(ADMIN_LANG, "admin.ops_peer_back", {
+      peer: peer.environment,
+      since: hourMinute(since),
+      minutes: Math.max(1, Math.round((now.getTime() - since.getTime()) / 60_000)),
+      link: peer.url,
+    });
+    return (await tellFounderOnce(deps, `${CLAIM_PREFIX}peer_back:${down.since}`, text))
+      ? "back"
+      : "ok";
+  }
+
+  deps.logger.warn("peer_unhealthy", { peer: peer.environment, seen: answer.seen });
+  if (down === null) {
+    await deps.db
+      .insert(flags)
+      .values({
+        key: PEER_DOWN_KEY,
+        value: { since: now.toISOString(), seen: answer.seen } satisfies PeerDown,
+        updatedAt: now,
+      })
+      .onConflictDoNothing({ target: flags.key });
+    return "first_miss";
+  }
+  await deps.db
+    .update(flags)
+    .set({ value: { since: down.since, seen: answer.seen } satisfies PeerDown, updatedAt: now })
+    .where(eq(flags.key, PEER_DOWN_KEY));
+  const text = t(ADMIN_LANG, "admin.ops_peer_down", {
+    peer: peer.environment,
+    since: hourMinute(new Date(down.since)),
+    seen: answer.seen,
+    link: peer.url,
+  });
+  return (await tellFounderOnce(deps, `${CLAIM_PREFIX}peer_down:${down.since}`, text))
+    ? "down"
+    : "still_down";
 }
