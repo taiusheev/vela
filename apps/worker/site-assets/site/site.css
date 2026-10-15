@@ -2855,3 +2855,14 @@ input[type="email"] {
 .bleed h2 {
   font-size: clamp(2rem, 4vw, 3.2rem);
 }
+
+/* Chinese hero: full-width brackets and the full stop each take a whole character's width, with the
+   mark drawn in one half. That left a gap before 「 at the start of the line and pushed 。 away
+   from 」. Fonts rarely support the trimming features, so pull both halves in directly. */
+:lang(zh-TW) .hero.split h1 {
+  letter-spacing: 0;
+}
+:lang(zh-TW) .hero.split h1 em {
+  margin-left: -0.5em;
+  margin-right: -0.45em;
+}
