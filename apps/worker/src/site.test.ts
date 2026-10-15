@@ -133,6 +133,17 @@ describe("the public website", () => {
     },
   );
 
+  // The founder's story order: the visitor's worry first, why nothing they have solves it, then Vela.
+  it.each(SITE_LANGS)("tells the worry before it names Vela (%s)", async (lang) => {
+    const fake = createFakePilotRuntime();
+    const body = await (await send(fake, `${origin()}${SITE_PATHS[lang].home}`)).text();
+    const at = (id: string) => body.indexOf(`id="${id}"`);
+    const order = ["worry", "why", "meet", "screens", "different", "join"].map(at);
+    expect(order.every((index) => index > 0)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(textOf(body.slice(body.indexOf("<h1"), body.indexOf("</h1>")))).not.toContain("Vela");
+  });
+
   it("embeds a demo script no string of which can close its element", () => {
     for (const lang of SITE_LANGS) {
       expect(JSON.stringify(siteDemo(lang))).not.toMatch(/<\/?script/i);

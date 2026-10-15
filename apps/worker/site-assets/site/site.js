@@ -154,8 +154,18 @@
       control.textContent = paused ? control.dataset.resume : control.dataset.pause;
       control.setAttribute("aria-pressed", String(paused));
     });
-    if (!reduced) playMorning();
-    else badge?.classList.add("lit");
+    // The demo sits below the opening story, so its morning starts the first time it comes into view.
+    if (!reduced) {
+      const start = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((e) => e.isIntersecting)) return;
+          start.disconnect();
+          playMorning();
+        },
+        { threshold: 0.35 },
+      );
+      start.observe(heroNode);
+    } else badge?.classList.add("lit");
   }
 
   // ---- One morning: the sticky phone follows the steps ----------------------------------------
