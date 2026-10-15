@@ -174,6 +174,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "weekly_read.after_second_usual":
     "{weekdays}，{name}在第二次訊息之後才回覆；平常一週大約 {usual} 次。",
   "weekly_read.quiet_weekday": "已經連續 {weeks} 週，{weekday}早上都很安靜。",
+  "weekly_read.feedback_heading": "{name}，這段只給你，關於你這週自己傳的訊息：",
   "weekday.0": "星期日",
   "weekday.1": "星期一",
   "weekday.2": "星期二",

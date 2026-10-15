@@ -36,5 +36,6 @@ export function createOffAi(): Ai {
     recipe: off("recipe"),
     hello: off("hello"),
     weeklyRead: off("weekly_read"),
+    weeklyInsight: off("weekly_insight"),
   };
 }

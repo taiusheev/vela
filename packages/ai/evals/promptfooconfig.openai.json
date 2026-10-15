@@ -27,6 +27,7 @@
           "cases/suggest.json",
           "cases/translate.json",
           "cases/understand.json",
+          "cases/weekly_insight.json",
           "cases/weekly_read.json"
         ]
       }

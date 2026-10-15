@@ -187,6 +187,12 @@ export interface Config {
   /** Explicit private trial admission; absent or null preserves the normal product behavior. */
   pilotAdmission?: PilotAdmission | null;
   /**
+   * Whether the weekly read is drafted with the founder's reading of what may lie beneath the week's
+   * words and each organiser's feedback on their own messages (ADR-48, `WEEKLY_INSIGHT`). Absent
+   * means not.
+   */
+  weeklyInsight?: boolean;
+  /**
    * Suggestions are written where the app's API is served (ADR-29, ADR-44): nightly, and on the
    * spot for an evening prompt or a morning that has none yet. Absent means not.
    */

@@ -88,13 +88,16 @@ import { deleteContact } from "./nearby-consent.ts";
 import { pilotFamilyAllowed } from "./pilot-admission.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import {
+  activeOrganisersWithLinks,
   dayAnsweredAt,
   familyById,
   hasHealthWordsConsent,
+  MESSENGER,
   memberById,
   type Queryable,
   recentAnsweredDays,
 } from "./repo.ts";
+import { keptInsight, loadInsightWeek } from "./weekly-insight.ts";
 
 const DAYS_IN_WEEK = 7;
 const RETENTION_DAYS = 30;
@@ -657,6 +660,38 @@ export async function draftWeeklyRead(
   if (!outcome.ok && !isAiOff(outcome)) {
     deps.logger.warn("weekly_read_draft_failed", { memberId, weekEnd, error: outcome.error });
   }
+  // ADR-48: the founder's reading of the week and each organiser's feedback, where switched on.
+  const insightWeek =
+    deps.config.weeklyInsight === true
+      ? await loadInsightWeek(
+          deps.db,
+          member,
+          family,
+          weekStart,
+          weekEnd,
+          new Set(
+            (await activeOrganisersWithLinks(deps.db, family.id, MESSENGER)).map(
+              (organiser) => organiser.member.id,
+            ),
+          ),
+        )
+      : null;
+  const insightOutcome =
+    insightWeek === null ? null : await deps.ai.weeklyInsight(insightWeek.input);
+  if (insightOutcome !== null && !insightOutcome.ok && !isAiOff(insightOutcome)) {
+    deps.logger.warn("weekly_insight_draft_failed", {
+      memberId,
+      weekEnd,
+      error: insightOutcome.error,
+    });
+  }
+  const insight =
+    insightWeek !== null && insightOutcome !== null && insightOutcome.ok
+      ? {
+          kept: keptInsight(insightWeek, insightOutcome.value),
+          promptVersion: insightOutcome.record.promptVersion,
+        }
+      : null;
   const now = deps.clock.now();
   const stats = {
     counted_days: counted.length,
@@ -700,6 +735,25 @@ export async function draftWeeklyRead(
         at: now,
       });
     }
+    if (insightOutcome !== null && !isAiOff(insightOutcome)) {
+      await recordAiCall(tx, {
+        familyId: family.id,
+        memberId: member.id,
+        record: insightOutcome.record,
+        inputRef: { member_id: member.id, week_end: weekEnd },
+        // A yes withdrawn while drafting takes the model's words about her week with it.
+        output: withdrewHealth ? null : insightOutcome.value,
+        at: now,
+      });
+    }
+    // Kept only while her words are (30 days, `applyRetention`), and never past a withdrawn yes.
+    const insightStats =
+      insight === null || withdrewHealth
+        ? {}
+        : {
+            insight: { readings: insight.kept.readings, prompt_version: insight.promptVersion },
+            feedback: insight.kept.feedback,
+          };
     const [read] = await tx
       .insert(weeklyReads)
       .values({
@@ -715,7 +769,7 @@ export async function draftWeeklyRead(
               topics: [],
               patterns: stats.patterns.filter((pattern) => pattern.kind !== "came_back_to"),
             }
-          : stats,
+          : { ...stats, ...insightStats },
         promptVersion: isAiOff(outcome) ? DRAFTED_WITH_AI_OFF : outcome.record.promptVersion,
         createdAt: now,
       })
@@ -738,6 +792,8 @@ export async function draftWeeklyRead(
           ok: outcome.ok,
           // Tells a draft made while AI was off from one whose call failed; both are not ok.
           ai_off: isAiOff(outcome),
+          insight_readings: insight?.kept.readings.length ?? 0,
+          insight_feedback: insight?.kept.feedback.length ?? 0,
         },
       },
       now,
@@ -1436,6 +1492,43 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .where(lt(deletions.deletedAt, cutoff5y))
       .returning({ id: deletions.id })
   ).length;
+
+  // ADR-48: the founder's readings and the organisers' feedback quote her words, so they go when
+  // her words do, 30 days after the week ends. The column is sealed, so each read of the four weeks
+  // before that point is read and written back without them; older ones were cleared on earlier
+  // nights.
+  const lastStart = addDays(localDateOf(cutoff30, "UTC"), 1 - DAYS_IN_WEEK);
+  const aging = await db
+    .select({ id: weeklyReads.id })
+    .from(weeklyReads)
+    .where(
+      and(
+        lte(weeklyReads.weekStart, lastStart),
+        gte(weeklyReads.weekStart, addDays(lastStart, -28)),
+      ),
+    );
+  counts.weekly_insights_cleared = 0;
+  for (const { id } of aging) {
+    // Each read under its row lock, as the founder's send writes `stats` under it, so neither
+    // write loses the other's.
+    const cleared = await db.transaction(async (tx) => {
+      const [read] = await tx
+        .select({ stats: weeklyReads.stats })
+        .from(weeklyReads)
+        .where(eq(weeklyReads.id, id))
+        .for("update");
+      if (
+        read === undefined ||
+        (!Object.hasOwn(read.stats, "insight") && !Object.hasOwn(read.stats, "feedback"))
+      ) {
+        return false;
+      }
+      const { insight: _insight, feedback: _feedback, ...kept } = read.stats;
+      await tx.update(weeklyReads).set({ stats: kept }).where(eq(weeklyReads.id, id));
+      return true;
+    });
+    if (cleared) counts.weekly_insights_cleared += 1;
+  }
 
   await recordEvent(db, { name: "retention_deleted", props: counts }, now);
   deps.logger.info("retention_applied", counts);

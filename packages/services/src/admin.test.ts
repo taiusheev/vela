@@ -1879,6 +1879,7 @@ describe("sendWeeklyRead", () => {
           lines: 2,
           suggestion: true,
           health_lines: 0,
+          feedback: 0,
         },
       },
     ]);

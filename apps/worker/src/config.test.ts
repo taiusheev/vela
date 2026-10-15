@@ -12,6 +12,7 @@ import {
   readPilotAdmission,
   readPushConfig,
   readPushSend,
+  readWeeklyInsight,
   secret,
 } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
@@ -886,5 +887,17 @@ describe("a secret", () => {
     const blank = configErrorOf(() => secret({ ACCESS_AUD: "  " }, "ACCESS_AUD"));
 
     expect([missing.code, blank.code]).toEqual(["ANTHROPIC_API_KEY", "ACCESS_AUD"]);
+  });
+});
+
+// ADR-48: absent is off, so an environment that never names it drafts the read as before.
+describe("the weekly insight switch", () => {
+  it("is off unless WEEKLY_INSIGHT says on, and refuses anything else by name", () => {
+    expect(readWeeklyInsight({})).toBe(false);
+    expect(readWeeklyInsight({ WEEKLY_INSIGHT: "off" })).toBe(false);
+    expect(readWeeklyInsight({ WEEKLY_INSIGHT: " on " })).toBe(true);
+    expect(readConfig({ ...chosenStaging, WEEKLY_INSIGHT: "on" }, filled).weeklyInsight).toBe(true);
+    const error = configErrorOf(() => readWeeklyInsight({ WEEKLY_INSIGHT: "yes" }));
+    expect(errorLabel(error)).toBe("ConfigError:WEEKLY_INSIGHT");
   });
 });

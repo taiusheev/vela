@@ -348,9 +348,37 @@ describe("an admin action", () => {
           lines: ["She walked to the market.", "The cat is well."],
           suggestion: "Ask about the market",
           includeHealth: false,
+          feedback: {},
         },
       ],
     ]);
+  });
+
+  // ADR-48: each organiser's own feedback, from the box named after their member id.
+  it("hands each organiser's feedback box to services by member id", async () => {
+    const weeklyReadId = "33333333-3333-7333-8333-333333333333";
+    const mia = "44444444-4444-7444-8444-444444444444";
+    const ben = "55555555-5555-7555-8555-555555555555";
+    const fake = createFakeAdminRuntime({ services: { sendWeeklyRead: async () => "sent" } });
+
+    await send(
+      fake,
+      formRequest(
+        `/admin/families/${familyId}/send_weekly_read`,
+        {
+          weeklyReadId,
+          lines: "",
+          suggestion: "",
+          [`feedback:${mia}`]: "Your Monday ask landed.\nAsk about the pears.",
+          [`feedback:${ben}`]: "",
+        },
+        ORIGIN,
+      ),
+    );
+
+    expect(argsOf(fake.calls, "sendWeeklyRead")[0]?.[1]).toMatchObject({
+      feedback: { [mia]: "Your Monday ask landed.\nAsk about the pears.", [ben]: "" },
+    });
   });
 
   it("sends her health words only when the founder left their box ticked (ADR-47)", async () => {
