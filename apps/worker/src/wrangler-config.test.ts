@@ -203,6 +203,21 @@ describe("the two Workers' configurations", () => {
     },
   );
 
+  // Technical plan 2.3: each deployed environment reads the other's health check from its own
+  // Cloudflare account, the address .github/watchdog.json names; development reads none.
+  it("watch the other deployed environment's health check, and development none", () => {
+    expect(configOf("pilot", "staging").vars.PEER_HEALTHZ_URL).toBe(
+      `${hostOf("pilot", "production")}/healthz`,
+    );
+    expect(configOf("pilot", "production").vars.PEER_HEALTHZ_URL).toBe(
+      `${hostOf("pilot", "staging")}/healthz`,
+    );
+    expect(configOf("pilot", "development").vars.PEER_HEALTHZ_URL).toBeUndefined();
+    for (const environment of [...DEPLOYED, "development"] as const) {
+      expect(configOf("admin", environment).vars.PEER_HEALTHZ_URL, environment).toBeUndefined();
+    }
+  });
+
   it("links a notice path for every language a notice is written in", () => {
     expect(NOTICE_LANGS.map((lang) => NOTICE_PATHS[lang])).toEqual(["/privacy", "/privacy/zh-TW"]);
   });

@@ -7,7 +7,15 @@ import { env } from "cloudflare:test";
 import { createFakeAi, createFakeStt } from "@vela/ai";
 import type { ChannelAdapter, ChannelQuota, InboundEvent } from "@vela/contracts";
 import type { Family, Member, VelaDatabase } from "@vela/db";
-import type { AdminOverview, Deps, FamilyPage, Logger, TrialOverview } from "@vela/services";
+import type {
+  AdminOverview,
+  Deps,
+  FamilyPage,
+  Logger,
+  PeerAnswer,
+  PeerHealthz,
+  TrialOverview,
+} from "@vela/services";
 import { vi } from "vitest";
 import type { AdminRuntime, AdminServices } from "../admin-runtime.ts";
 import type { ApiHandler } from "../api-runtime.ts";
@@ -170,8 +178,8 @@ export function fakeR2Bucket(objects: Map<string, FakeR2Object>): R2Bucket {
   } as unknown as R2Bucket;
 }
 
-/** Every services entry point either Worker calls. */
-type ServiceName = keyof PilotServices | keyof AdminServices;
+/** Every services entry point either Worker calls, and the pilot's health probe (plan 2.3). */
+type ServiceName = keyof PilotServices | keyof AdminServices | "probeHealthz";
 
 /** One recorded services call: its name and the arguments after `deps`. */
 export interface ServiceCall {
@@ -232,6 +240,10 @@ export interface FakePilotRuntimeOptions {
    * Only the cron reads it, and only where LINE is on.
    */
   readonly lineQuota?: () => Promise<ChannelQuota>;
+  /** The other environment the deps' config watches (plan 2.3); none when left out. */
+  readonly peerHealthz?: PeerHealthz;
+  /** What the runtime's probe answers for the watched `/healthz`, ok when left out. */
+  readonly probeHealthz?: (url: string) => Promise<PeerAnswer>;
 }
 
 export interface FakeAdminRuntimeOptions {
@@ -464,6 +476,10 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       note("opsDigest");
       return given.opsDigest === undefined ? false : given.opsDigest(deps);
     },
+    async watchPeer(deps, answer) {
+      note("watchPeer", answer);
+      return given.watchPeer === undefined ? "ok" : given.watchPeer(deps, answer);
+    },
     async writeSuggestions(deps) {
       note("writeSuggestions");
       return given.writeSuggestions === undefined
@@ -524,6 +540,7 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
           ...deps,
           scheduler: depsOptions.scheduler ?? deps.scheduler,
           channels: depsOptions.channels ?? deps.channels,
+          config: { ...deps.config, peerHealthz: options.peerHealthz ?? null },
         },
         close: async () => {
           recording.close();
@@ -545,6 +562,12 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       return api === undefined ? new Response(null, { status: 204 }) : api(request, env);
     },
     clerk: async () => Response.json({ ok: true }),
+    probeHealthz: async (url) => {
+      note("probeHealthz", url);
+      return options.probeHealthz === undefined
+        ? { ok: true, seen: "ok" }
+        : options.probeHealthz(url);
+    },
   };
 
   return {

@@ -24,6 +24,8 @@ import {
   memberOfDeviceToken,
   opsAlerts,
   opsDigest,
+  type PeerAnswer,
+  type PeerWatchOutcome,
   type ReconcileResult,
   reconcile,
   recordChannelQuota,
@@ -33,6 +35,7 @@ import {
   storeDeviceVoice,
   tickMember,
   understandAnswer,
+  watchPeer,
   writeSuggestions,
 } from "@vela/services";
 import { type ApiHandler, createApiHandler } from "./api-runtime.ts";
@@ -41,6 +44,7 @@ import { buildDeps, createChannels, type DepsHandle, type DepsOptions } from "./
 import type { PilotEnv } from "./env.ts";
 import { PRIVACY_NOTICES } from "./notices.generated.ts";
 import type { PrivacyNotices } from "./notices.ts";
+import { probeHealthz } from "./peer-health.ts";
 
 /** Every services entry point the pilot Worker calls, and nothing else (code design §9). */
 export interface PilotServices {
@@ -57,6 +61,8 @@ export interface PilotServices {
   claimDeadLetterReplays: typeof claimDeadLetterReplays;
   releaseDeadLetterReplay: typeof releaseDeadLetterReplay;
   opsDigest(deps: Deps): Promise<boolean>;
+  /** The other environment's health, as this run's probe read it (plan 2.3). */
+  watchPeer(deps: Deps, answer: PeerAnswer): Promise<PeerWatchOutcome>;
   writeSuggestions(deps: Deps): Promise<SuggestionsRun>;
   deliverOutbound(deps: Deps, outboundId: string): Promise<DeliveryResult>;
   ingestAnswerMedia(deps: Deps, answerId: string): Promise<void>;
@@ -89,6 +95,8 @@ export interface PilotRuntime {
   /** The API under /v1 (ADR-29): its own config check, limits and app; never `createDeps`. */
   readonly api: ApiHandler;
   readonly clerk: ClerkWebhookHandler;
+  /** Reads another environment's `/healthz` (plan 2.3); never throws. */
+  probeHealthz(url: string): Promise<PeerAnswer>;
 }
 
 const services: PilotServices = {
@@ -103,6 +111,7 @@ const services: PilotServices = {
   releaseDeadLetterReplay,
   opsAlerts,
   opsDigest,
+  watchPeer,
   writeSuggestions,
   deliverOutbound,
   ingestAnswerMedia,
@@ -122,4 +131,5 @@ export const pilotRuntime: PilotRuntime = {
   notices: PRIVACY_NOTICES,
   api: createApiHandler(),
   clerk: createClerkWebhookHandler(),
+  probeHealthz: (url) => probeHealthz(url),
 };

@@ -515,6 +515,53 @@ describe("cron", () => {
     expect(fake.closed()).toBe(1);
   });
 
+  // Technical plan 2.3: the other environment's health is read last, and only where one is named.
+  it("reads the other environment's health check last and hands the answer to services", async () => {
+    const peerHealthz = {
+      environment: "production",
+      url: "https://vela.vela-light.workers.dev/healthz",
+    } as const;
+    const fake = createFakePilotRuntime({
+      peerHealthz,
+      probeHealthz: async () => ({ ok: false, seen: "stale" }),
+    });
+
+    await runCron(createWorker(fake.runtime), RECONCILE_CRON);
+
+    expect(namesOf(fake.calls)).toEqual([
+      "reconcile",
+      "opsAlerts",
+      "claimDeadLetterReplays",
+      "probeHealthz",
+      "watchPeer",
+    ]);
+    expect(argsOf(fake.calls, "probeHealthz")).toEqual([[peerHealthz.url]]);
+    expect(argsOf(fake.calls, "watchPeer")).toEqual([[{ ok: false, seen: "stale" }]]);
+    expect(fake.closed()).toBe(1);
+  });
+
+  it("logs a failed health watch by its label alone, and the reconcile still succeeds", async () => {
+    const fake = createFakePilotRuntime({
+      peerHealthz: {
+        environment: "staging",
+        url: "https://vela.vela-light-staging.workers.dev/healthz",
+      },
+      services: {
+        watchPeer: async () => {
+          throw failedQueryFixture();
+        },
+      },
+    });
+
+    await runCron(createWorker(fake.runtime), RECONCILE_CRON);
+
+    expect(fake.logs).toEqual([
+      { level: "error", event: "peer_watch_failed", fields: { error: FAILED_QUERY_LABEL } },
+    ]);
+    expect(JSON.stringify(fake.logs)).not.toContain(FAILED_QUERY_WORDS);
+    expect(fake.closed()).toBe(1);
+  });
+
   // Technical plan 2.1: an alert that cannot be sent never fails the reconcile.
   it("logs an ops alert failure by its label alone, and the reconcile still succeeds", async () => {
     const fake = createFakePilotRuntime({

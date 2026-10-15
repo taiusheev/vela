@@ -8,6 +8,7 @@ import {
   readClerkWebhookSigningSecret,
   readConfig,
   readLineConfig,
+  readPeerHealthz,
   readPilotAdmission,
   readPushConfig,
   readPushSend,
@@ -201,6 +202,57 @@ describe("the configuration a deployed pilot Worker starts with", () => {
     expect(config.publicBaseUrl).toBe("http://localhost:8787");
     expect(config.privacyNoticeUrls.en).toBe("http://localhost:8787/privacy");
     expect(config.privacyNoticeUrls["zh-TW"]).toBe("http://localhost:8787/privacy/zh-TW");
+  });
+});
+
+// Technical plan 2.3: staging and production read each other's health check.
+describe("the other environment's health check", () => {
+  const PRODUCTION_HEALTHZ = "https://vela.vela-light.workers.dev/healthz";
+  const own = { PILOT_PUBLIC_URL: "https://vela.vela-light-staging.workers.dev" };
+
+  it("watches nothing when no address is set, as development ships", () => {
+    expect(readConfig(chosenStaging, filled).peerHealthz).toBeNull();
+    expect(readPeerHealthz({ PEER_HEALTHZ_URL: "  " }, "staging")).toBeNull();
+  });
+
+  it("names the other environment: staging watches production and production staging", () => {
+    expect(readPeerHealthz({ ...own, PEER_HEALTHZ_URL: PRODUCTION_HEALTHZ }, "staging")).toEqual({
+      environment: "production",
+      url: PRODUCTION_HEALTHZ,
+    });
+    expect(
+      readPeerHealthz(
+        {
+          PILOT_PUBLIC_URL: "https://vela.vela-light.workers.dev",
+          PEER_HEALTHZ_URL: "https://vela.vela-light-staging.workers.dev/healthz",
+        },
+        "production",
+      )?.environment,
+    ).toBe("staging");
+    expect(
+      readConfig({ ...chosenStaging, PEER_HEALTHZ_URL: PRODUCTION_HEALTHZ }, filled).peerHealthz,
+    ).toEqual({ environment: "production", url: PRODUCTION_HEALTHZ });
+  });
+
+  it.each([
+    ["http://vela.vela-light.workers.dev/healthz"],
+    ["https://vela.vela-light.workers.dev/"],
+    ["https://vela.vela-light.workers.dev/healthz?x=1"],
+    ["https://user:pass@vela.vela-light.workers.dev/healthz"],
+    ["vela.vela-light.workers.dev/healthz"],
+    ["https://vela.vela-light-staging.workers.dev/healthz"],
+  ])("refuses %s, naming the variable", (value) => {
+    const error = configErrorOf(() =>
+      readPeerHealthz({ ...own, PEER_HEALTHZ_URL: value }, "staging"),
+    );
+    expect(errorLabel(error)).toBe("ConfigError:PEER_HEALTHZ_URL");
+  });
+
+  it("refuses an address in development, which watches no other environment", () => {
+    const error = configErrorOf(() =>
+      readPeerHealthz({ PEER_HEALTHZ_URL: PRODUCTION_HEALTHZ }, "development"),
+    );
+    expect(errorLabel(error)).toBe("ConfigError:PEER_HEALTHZ_URL");
   });
 });
 
