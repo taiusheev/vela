@@ -23,18 +23,6 @@
   );
   for (const node of document.querySelectorAll(".reveal")) io.observe(node);
 
-  // A slow drift on the full-width photograph.
-  const bleed = document.querySelector(".bleed img");
-  if (bleed && !reduced) {
-    const drift = () => {
-      const box = bleed.parentElement.getBoundingClientRect();
-      const t = (innerHeight - box.top) / (innerHeight + box.height);
-      if (t > -0.2 && t < 1.2) bleed.style.transform = `translateY(${(-t * 12).toFixed(2)}%)`;
-    };
-    addEventListener("scroll", drift, { passive: true });
-    drift();
-  }
-
   if (!data) return;
 
   // ---- Phone rendering -------------------------------------------------------------------------
@@ -117,41 +105,57 @@
     };
   }
 
-  // ---- Hero: a morning on a loop ---------------------------------------------------------------
+  // ---- Hero: one morning, with explicit pause and replay controls ------------------------------
   const heroNode = document.querySelector(".stage .phone");
   const badge = document.querySelector(".badge-light");
-  if (heroNode) {
+  const control = document.querySelector(".hero-control");
+  if (heroNode && control) {
     const p = phone(heroNode);
-    let visible = true;
-    new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting;
-    }).observe(heroNode);
-    (async function loop() {
-      for (;;) {
-        p.clear();
-        badge?.classList.remove("lit");
-        for (const step of data.hero) {
-          while (!visible) await wait(400);
-          if (step.wait) await wait(step.wait);
-          if (step.typing) {
-            const t = p.typing();
-            await wait(step.typing);
-            t.remove();
-          }
-          if (step.tap) {
-            p.tap(step.tap);
-            await wait(500);
-          }
-          if (step.lit) {
-            badge?.classList.add("lit");
-            continue;
-          }
-          if (step.msg) p.add(step.msg);
+    let paused = false;
+    let running = false;
+    const playMorning = async () => {
+      if (running) return;
+      running = true;
+      paused = false;
+      control.textContent = control.dataset.pause;
+      control.setAttribute("aria-pressed", "false");
+      p.clear();
+      badge?.classList.remove("lit");
+      const badgeCopy = [...(badge?.querySelectorAll("[data-on]") ?? [])];
+      for (const label of badgeCopy) label.textContent = label.dataset.waiting;
+      const questionIndex = data.hero.findIndex((step) => step.msg?.from === "ask");
+      for (const step of data.hero.slice(0, questionIndex + 1)) if (step.msg) p.add(step.msg);
+      for (const step of data.hero.slice(questionIndex + 1)) {
+        if (step.wait) await wait(step.wait);
+        while (paused) await new Promise((resolve) => setTimeout(resolve, 150));
+        if (step.typing) {
+          const t = p.typing();
+          await wait(step.typing);
+          t.remove();
         }
-        await wait(4200);
-        if (reduced) return;
+        while (paused) await new Promise((resolve) => setTimeout(resolve, 150));
+        if (step.tap) p.tap(step.tap);
+        if (step.lit) {
+          badge?.classList.add("lit");
+          for (const label of badgeCopy) label.textContent = label.dataset.on;
+        }
+        if (step.msg) p.add(step.msg);
       }
-    })();
+      running = false;
+      control.textContent = control.dataset.replay;
+      control.removeAttribute("aria-pressed");
+    };
+    control.addEventListener("click", () => {
+      if (!running) {
+        playMorning();
+        return;
+      }
+      paused = !paused;
+      control.textContent = paused ? control.dataset.resume : control.dataset.pause;
+      control.setAttribute("aria-pressed", String(paused));
+    });
+    if (!reduced) playMorning();
+    else badge?.classList.add("lit");
   }
 
   // ---- One morning: the sticky phone follows the steps ----------------------------------------
@@ -200,7 +204,7 @@
   const again = document.querySelector(".try-again");
   if (tryNode && asks && answers && result) {
     const p = phone(tryNode);
-    // On a narrow screen the buttons sit below the phone: bring it back into view to show the tap.
+    // After an answer, bring the illustrative reply and its result into view.
     const showPhone = () => {
       const box = tryNode.getBoundingClientRect();
       if (box.top < 60 || box.bottom > innerHeight) {
@@ -209,11 +213,15 @@
     };
     let chosen = null;
     let busy = false;
+    let generation = 0;
     const reset = () => {
+      generation += 1;
+      busy = false;
       chosen = null;
       p.head(data.try.head);
       p.clear();
       p.add({ from: "time", text: data.try.time });
+      p.add(data.try.asks[0].message);
       for (const b of asks.querySelectorAll("button")) {
         b.disabled = false;
         b.setAttribute("aria-pressed", "false");
@@ -230,7 +238,11 @@
       b.addEventListener("click", async () => {
         if (busy) return;
         busy = true;
+        const run = generation;
         chosen = ask;
+        result.classList.remove("lit");
+        result.querySelector("span").textContent = data.try.waiting;
+        if (again) again.hidden = false;
         for (const x of asks.querySelectorAll("button")) {
           x.disabled = x !== b;
           x.setAttribute("aria-pressed", String(x === b));
@@ -238,9 +250,9 @@
         p.clear();
         p.head(data.try.head);
         p.add({ from: "time", text: data.try.time });
-        showPhone();
         const t = p.typing();
         await wait(700);
+        if (run !== generation) return;
         t.remove();
         p.add(ask.message);
         answers.replaceChildren();
@@ -250,6 +262,8 @@
           ab.addEventListener("click", async () => {
             if (busy || !chosen) return;
             busy = true;
+            const answerRun = generation;
+            if (again) again.hidden = false;
             showPhone();
             for (const x of answers.querySelectorAll("button")) {
               x.disabled = x !== ab;
@@ -259,14 +273,18 @@
               p.tap(a.chip);
               await wait(450);
             }
+            if (answerRun !== generation) return;
             p.add(a.message);
             await wait(800);
+            if (answerRun !== generation) return;
             p.add(data.try.ack);
             result.classList.add("lit");
             result.querySelector("span").textContent = data.try.lit;
             await wait(1300);
+            if (answerRun !== generation) return;
             p.add({ from: "time", text: data.try.tomorrow });
             await wait(500);
+            if (answerRun !== generation) return;
             p.add(a.readback);
             if (again) again.hidden = false;
             busy = false;
@@ -278,7 +296,10 @@
       asks.append(b);
       if (i === 0) b.dataset.first = "1";
     });
-    again?.addEventListener("click", reset);
+    again?.addEventListener("click", () => {
+      reset();
+      asks.querySelector("button")?.focus();
+    });
     reset();
   }
 
@@ -290,6 +311,7 @@
       const button = form.querySelector("button[type=submit]");
       const flash = form.querySelector(".flash") || el("div", "flash");
       flash.setAttribute("role", "status");
+      flash.tabIndex = -1;
       button.disabled = true;
       try {
         const response = await fetch(form.action, {

@@ -1505,3 +1505,347 @@ footer.site .run-by {
 .notice li {
   margin: 0.45rem 0;
 }
+
+/* Refinement of the original Vela site: keep its warmth, photographs, window and product story. */
+:root {
+  --radius: 16px;
+}
+html {
+  scroll-padding-top: 5.5rem;
+}
+.top {
+  border-bottom: 1px solid var(--rule);
+}
+.top .wrap {
+  height: 4.75rem;
+  gap: 1.25rem;
+}
+.nav {
+  gap: 1.15rem;
+  font-size: 0.85rem;
+}
+.brand {
+  font-size: 1.6rem;
+}
+.btn {
+  border-radius: 9px;
+}
+.btn-primary {
+  box-shadow: none;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+.hero {
+  padding-block: clamp(3rem, 6vw, 5.5rem) clamp(3rem, 7vw, 5.5rem);
+}
+.hero h1 {
+  max-width: 100%;
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+}
+.hero h1 em {
+  display: inline;
+}
+.hero h1 em::after {
+  height: 0.13em;
+  opacity: 0.4;
+  animation: none;
+}
+.hero .lede {
+  font-size: 1.12rem;
+  line-height: 1.75;
+  max-width: 29rem;
+}
+.hero .trust {
+  font-size: 0.75rem;
+  gap: 0.65rem 1rem;
+}
+.hero .stage {
+  min-height: 32rem;
+}
+.stage .arch {
+  inset: 0 0 2rem 5rem;
+  box-shadow: 0 20px 45px -30px #1e1a1655;
+}
+.stage .arch img {
+  object-position: 85% center;
+  animation: none;
+}
+.stage .phone {
+  width: 13rem;
+  bottom: 1.5rem;
+}
+.badge-light {
+  right: 0.6rem;
+  top: 1.5rem;
+  border-radius: 10px;
+  animation: none;
+  box-shadow: 0 8px 25px -15px #1e1a1655;
+}
+.lit .lamp {
+  filter: none;
+}
+.hero-control {
+  display: none;
+  position: absolute;
+  bottom: -0.8rem;
+  left: 0.35rem;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--muted);
+  font: 500 0.72rem / 1.5 var(--sans);
+  padding: 0.4rem 0;
+  min-height: 32px;
+  cursor: pointer;
+}
+.js .hero-control {
+  display: block;
+}
+.band {
+  padding-block: clamp(3.5rem, 7vw, 6rem);
+}
+.band h2 {
+  letter-spacing: -0.025em;
+}
+.morning .step {
+  min-height: 34vh;
+  opacity: 0.72;
+  padding-block: 1.6rem;
+}
+.morning .step.on {
+  opacity: 1;
+}
+.step h3 {
+  font-size: clamp(1.45rem, 2.5vw, 1.9rem);
+}
+.step p {
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.morning .sticky {
+  top: 6.5rem;
+  padding-top: 7rem;
+}
+.morning .sticky .phone {
+  width: min(17rem, calc((100vh - 8rem) * 9 / 18.5));
+}
+.phone {
+  box-shadow:
+    0 20px 40px -25px #1e1a1666,
+    inset 0 0 0 2px #3a332d;
+}
+.msg.me {
+  background: #dce9d4;
+}
+.screen .chat {
+  background: #a2bbc0;
+}
+.marquee {
+  animation: none;
+  margin-inline: auto;
+  padding-block: 1.1rem;
+  font-size: 0.88rem;
+  gap: 2rem;
+}
+.marquee span {
+  gap: 2rem;
+}
+.marquee span::after {
+  width: 0.4rem;
+  height: 0.55rem;
+}
+.side {
+  box-shadow: none;
+  border: 1px solid var(--rule);
+}
+.side .pic {
+  aspect-ratio: 5 / 3;
+}
+.side:hover .pic img {
+  transform: none;
+}
+.side .body {
+  padding: 1.5rem;
+}
+.side li {
+  font-size: 0.94rem;
+}
+.demo-caption {
+  font-size: 0.78rem;
+  color: #d9e5e5;
+  max-width: 32rem;
+}
+.try-options button {
+  border-radius: 8px;
+  min-height: 44px;
+}
+.try-options button:disabled[aria-pressed="true"] {
+  opacity: 1;
+}
+.try-again {
+  min-height: 40px;
+  padding-block: 0.5rem;
+}
+.try-again[hidden] {
+  display: none;
+}
+.plan {
+  border: 1px solid var(--rule);
+  box-shadow: none;
+}
+.promise {
+  border-radius: 0;
+  background: transparent;
+  border-top: 1px solid var(--rule);
+  padding: 1.5rem 0 0;
+}
+.promise svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.numbers {
+  box-shadow: none;
+  border: 1px solid var(--rule);
+}
+.night .art::after {
+  animation: none;
+}
+.bleed img {
+  height: 100%;
+}
+form.waitlist {
+  box-shadow: none;
+  border: 1px solid #e2d2b8;
+}
+.roles label,
+input[type="email"] {
+  border-radius: 8px;
+}
+.faq {
+  max-width: 54rem;
+}
+.faq summary {
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 500;
+}
+@media (max-width: 900px) {
+  .hero h1 {
+    max-width: 12ch;
+  }
+  .hero .stage {
+    min-height: 29rem;
+    max-width: 30rem;
+  }
+  .stage .arch {
+    inset: 0 0 2.5rem 4rem;
+  }
+  .stage .phone {
+    width: min(12rem, 42%);
+  }
+  .morning .step {
+    min-height: 0;
+    opacity: 1;
+  }
+  .morning .sticky {
+    padding-top: 0;
+  }
+  .step .mini {
+    width: 13rem;
+  }
+}
+@media (max-width: 480px) {
+  .top .wrap {
+    height: 4rem;
+    gap: 0.65rem;
+  }
+  .top .brand {
+    font-size: 1.3rem;
+    gap: 0.4rem;
+  }
+  .top .brand svg {
+    width: 1.2rem;
+  }
+  .top .langs {
+    font-size: 0.64rem;
+    background: none;
+    padding: 0;
+  }
+  .top .btn {
+    display: inline-flex;
+    font-size: 0.66rem;
+    padding: 0.65rem 0.7rem;
+    min-height: 36px;
+  }
+  .hero {
+    padding-top: 2.5rem;
+  }
+  .hero h1 {
+    font-size: clamp(2.8rem, 11vw, 3.65rem);
+    max-width: 12ch;
+  }
+  .hero .lede {
+    font-size: 1rem;
+  }
+  .hero .eyebrow {
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+  }
+  .hero .actions {
+    gap: 0.65rem;
+  }
+  .hero .actions .btn {
+    font-size: 0.85rem;
+    padding: 0.85rem 1rem;
+  }
+  .hero .trust {
+    font-size: 0.68rem;
+    gap: 0.5rem 0.8rem;
+  }
+  .hero .stage {
+    min-height: 27rem;
+  }
+  .stage .arch {
+    inset: 0 0 2.5rem 3.2rem;
+  }
+  .stage .phone {
+    width: 43%;
+  }
+  .badge-light {
+    font-size: 0.73rem;
+    padding: 0.65rem;
+    right: 0.3rem;
+    top: 1rem;
+  }
+  .badge-light .lamp {
+    width: 1.65rem;
+    height: 2rem;
+  }
+  .band h2 {
+    font-size: 2rem;
+  }
+  .side .pic {
+    aspect-ratio: 5 / 4;
+  }
+  :lang(zh-TW) .hero h1 {
+    max-width: 100%;
+    font-size: clamp(2.2rem, 9vw, 3rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    opacity: 1;
+  }
+}
+
+/* Show the first screen immediately; keep later entrances brief. */
+.hero .reveal {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+.js .reveal {
+  transition-duration: 0.45s;
+}

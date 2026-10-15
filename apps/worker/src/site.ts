@@ -288,12 +288,12 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     morning: {
       eyebrow: "One morning with Vela",
       title: "One question. One answer. A whole family closer.",
-      lede: "Here is a single day, from the ask to the read-back. Scroll, and watch it happen on her phone.",
+      lede: "From today’s question to tomorrow’s read-back. Four small moments that fit around your lives.",
       steps: [
         {
           clock: "08:00 · Her morning",
           title: "Someone asks",
-          body: "Mei, in Singapore, wrote last night: “What did you have for breakfast?” It arrives at Mom’s usual morning time, with Mei’s name on it. Every ask comes from a person; Vela only carries it.",
+          body: "Mei, in Singapore, wrote last night: “What did you have for breakfast?” It arrives at Mom’s usual morning time, with Mei’s name on it. If nobody has a question ready, Vela offers a starting point.",
         },
         {
           clock: "08:14 · Her answer",
@@ -354,7 +354,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "Any answer",
           what: "Her light is on",
-          detail: "Lit on the raw answer, before anything else runs.",
+          detail: "Her window lights up as soon as her answer arrives: “answered today”.",
         },
         {
           when: "2½ hours later",
@@ -443,7 +443,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     join: {
       eyebrow: "Join the waitlist",
       title: "Be among the first families.",
-      lede: "Vela opens to families in Taiwan first, then more places. Leave your email and we’ll write once, when your family can start.",
+      lede: "We’re starting with our own family in Vietnam, on Telegram. Leave your email and we’ll write when there’s room for your family.",
       email: "Your email",
       placeholder: "you@example.com",
       role: "Who would you set it up for?",
@@ -759,12 +759,12 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     morning: {
       eyebrow: "和 Vela 的一個早晨",
       title: "一個問題，一個回答，一家人更靠近。",
-      lede: "從提問到隔天的回顧，就是這樣的一天。往下滑，看看她的手機上發生了什麼。",
+      lede: "從今天的提問，到明天聽見家人的回覆。四個小時刻，自然融入彼此的生活。",
       steps: [
         {
           clock: "08:00 · 她的早晨",
           title: "有人提問",
-          body: "人在新加坡的小美昨晚寫下：「媽，今天早餐吃了什麼？」問題會在媽媽平常的早晨時間送到，上面署著小美的名字。每個提問都來自家人，Vela 只負責傳遞。",
+          body: "人在新加坡的小美昨晚寫下：「媽，今天早餐吃了什麼？」問題會在媽媽平常的早晨時間送到，上面署著小美的名字。如果家人一時想不到問題，Vela 也會提供一個話題。",
         },
         {
           clock: "08:14 · 她的回答",
@@ -821,7 +821,11 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       title: "某天早上沒有回音時，有人知道該怎麼做。",
       lede: "她的燈來自一次真正的交流，而不是一次查勤。如果某天早上一直沒有回音，Vela 給的是一個計畫，而不是警報。",
       ladder: [
-        { when: "任何回答", what: "她的燈亮了", detail: "一收到回答就亮，在其他處理之前。" },
+        {
+          when: "任何回答",
+          what: "她的燈亮了",
+          detail: "一收到回答，窗裡的燈就亮了，表示「今天已回答」。",
+        },
         {
           when: "2.5 小時後",
           what: "溫和地再傳一次",
@@ -908,7 +912,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     join: {
       eyebrow: "加入等候名單",
       title: "成為第一批使用的家庭。",
-      lede: "Vela 會先在台灣開放，之後再到更多地方。留下您的電子郵件，等您的家人可以開始時，我們會寫信通知您一次。",
+      lede: "我們先從越南自己的家人開始，在 Telegram 上試用。留下您的電子郵件，等可以邀請您的家人時，我們會寫信通知您。",
       email: "您的電子郵件",
       placeholder: "you@example.com",
       role: "您想為誰設定？",
@@ -1217,9 +1221,13 @@ const ICONS: Readonly<Record<Icon, Html>> = {
   calm: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="16" cy="16" r="12"/><path d="M16 9v7l4 3" stroke="#E9A23B"/></svg>`,
 };
 
-/** An empty phone that `site.js` fills; hidden from assistive technology, the text beside it tells it. */
-function phone(head: { title: string; sub: string }, extra = ""): Html {
-  return html`<div class="phone${extra}" aria-hidden="true"><div class="screen"><div class="bar"><span class="ava">${MARK}</span><span><b>${head.title}</b><small>${head.sub}</small></span></div><div class="chat"></div></div></div>`;
+/** An illustrative conversation readable before scripts run; the interactive example announces additions. */
+function phone(
+  head: { title: string; sub: string },
+  extra = "",
+  messages: readonly DemoMessage[] = [],
+): Html {
+  return html`<div class="phone${extra}" aria-hidden="${extra.includes("interactive") ? "false" : "true"}"><div class="screen"><div class="bar"><span class="ava">${MARK}</span><span><b>${head.title}</b><small>${head.sub}</small></span></div><div class="chat"${extra.includes("interactive") ? html` role="log" aria-live="polite" aria-relevant="additions"` : null}>${messages.map((m) => (m.from === "time" ? html`<div class="time">${m.text}</div>` : html`<div class="msg${m.from === "her" ? " me" : ""}${m.from === "vela" ? " vela" : ""}${m.photo ? " photo" : ""}">${m.who ? html`<span class="who">${m.who}</span>` : null}${m.photo ? html`<img src="${m.photo}" alt="${m.alt ?? ""}" loading="lazy">` : null}${m.text}${m.voice ? html`<span class="voice-label">${m.voice} · ♪</span>` : null}${m.chips ? html`<div class="chips">${m.chips.map((label) => html`<span class="chip">${label}</span>`)}</div>` : null}</div>`))}</div></div></div>`;
 }
 
 function languageSwitch(lang: SiteLang, page: SitePage): Html {
@@ -1270,6 +1278,15 @@ export interface SitePageContent {
 export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageContent {
   const c = COPY[lang];
   const demoHead = c.demo.morning[0]?.head ?? { title: "Vela", sub: "LINE" };
+  const morning = c.demo.morning[0];
+  const heroMessages = c.demo.hero.flatMap((step) =>
+    step.msg &&
+    (step.msg.from === "ask" ||
+      step.msg.from === "family" ||
+      (step.msg.from === "her" && step.msg.text))
+      ? [step.msg]
+      : [],
+  );
   const marquee = [...c.marquee, ...c.marquee].map((line) => html`<span>${line}</span>`);
   return {
     title: c.title,
@@ -1286,8 +1303,9 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
   </div>
   <div class="stage reveal d2">
     <div class="arch"><img src="${IMG}/morning-tea.jpg" width="1264" height="848" alt="${c.hero.photoAlt}" fetchpriority="high"></div>
-    <div class="badge-light">${LAMP}<span><strong>${c.hero.badge[0]}</strong><small>${c.hero.badge[1]}</small></span></div>
-    ${phone(demoHead)}
+    <div class="badge-light lit">${LAMP}<span><strong data-on="${c.hero.badge[0]}" data-waiting="${lang === "en" ? "Waiting for Mom" : "等媽媽的回答"}">${c.hero.badge[0]}</strong><small data-on="${c.hero.badge[1]}" data-waiting="${lang === "en" ? "Illustrative morning" : "早晨示範"}">${c.hero.badge[1]}</small></span></div>
+    ${phone(demoHead, "", heroMessages)}
+    <button class="hero-control" type="button" data-pause="${lang === "en" ? "Pause demo" : "暫停示範"}" data-resume="${lang === "en" ? "Continue demo" : "繼續示範"}" data-replay="${lang === "en" ? "Replay morning" : "重播這個早晨"}">${lang === "en" ? "Replay morning" : "重播這個早晨"}</button>
   </div>
 </div></section>
 
@@ -1300,10 +1318,10 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
     <p class="lede reveal">${c.morning.lede}</p>
     <ol class="steps">${c.morning.steps.map(
       (step, i) =>
-        html`<li class="step${i === 0 ? " on" : ""}"><p class="clock">${step.clock}</p><h3>${step.title}</h3><p>${step.body}</p>${phone(c.demo.morning[i]?.head ?? demoHead, " mini")}</li>`,
+        html`<li class="step${i === 0 ? " on" : ""}"><p class="clock">${step.clock}</p><h3>${step.title}</h3><p>${step.body}</p>${phone(c.demo.morning[i]?.head ?? demoHead, " mini", c.demo.morning[i]?.messages ?? [])}</li>`,
     )}</ol>
   </div>
-  <div class="sticky">${phone(demoHead)}</div>
+  <div class="sticky">${phone(demoHead, "", morning?.messages ?? [])}</div>
 </div></section>
 
 <section class="band soft"><div class="wrap">
@@ -1319,10 +1337,10 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
   <div class="try-copy">
     <p class="eyebrow">${c.tryIt.eyebrow}</p>
     <h2>${c.tryIt.title}</h2>
-    <p class="lede">${c.tryIt.lede}</p>
+    <p class="lede">${c.tryIt.lede}</p><p class="demo-caption">${lang === "en" ? "An illustrative demo. Nothing is sent or recorded." : "互動示範。不會傳送或錄製任何內容。"}</p>
     <p class="nojs-note">${c.tryIt.noScript}</p>
   </div>
-  ${phone(c.demo.try.head)}
+  ${phone(c.demo.try.head, " interactive", morning?.messages ?? [])}
   <div class="try-controls">
     <p class="try-step">${c.tryIt.step1}</p><div class="try-options" id="try-asks"></div>
     <p class="try-step">${c.tryIt.step2}</p><div class="try-options" id="try-answers"></div>
