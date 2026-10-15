@@ -28,7 +28,12 @@ async function account(identity: SessionIdentity, memberId: string): Promise<voi
 
 /** A read of her week as the founder sent it, or only drafted when `sent` is false. */
 async function readOfHerWeek(
-  options: { sent?: boolean; suggestion?: string; weekStart?: string } = {},
+  options: {
+    sent?: boolean;
+    suggestion?: string;
+    weekStart?: string;
+    familyPatterns?: unknown[];
+  } = {},
 ) {
   const sent = options.sent ?? true;
   const [read] = await h.db
@@ -48,6 +53,9 @@ async function readOfHerWeek(
         drift_min: null,
         topics: [],
         voice_len_drift: null,
+        ...(options.familyPatterns === undefined
+          ? {}
+          : { family_patterns: options.familyPatterns }),
       },
       promptVersion: "weekly_read@test",
       sentLines: sent ? ["She told you about the garden twice."] : null,
@@ -145,9 +153,29 @@ describe("loadApiWeeklyRead", () => {
         ],
         counts: { counted_days: 5, answered_days: 2, hello_mornings: 1, family_asks: 2 },
         notes: ["She told you about the garden twice."],
+        // A read drafted before ADR-46 holds no family patterns.
+        family_lines: [],
         suggestion: "Ask her which seeds she kept.",
       },
     });
+  });
+
+  it("gives organisers the family lines after the counts, skipping a pattern it cannot read (ADR-46)", async () => {
+    await readOfHerWeek({
+      familyPatterns: [
+        { kind: "no_reply", dates: ["2026-09-09", "2026-09-10"], of: 2 },
+        { kind: "asks_by", askers: [{ name: "Mia", asks: 2 }], none: ["Sam"] },
+        { kind: "a later kind", dates: [] },
+      ],
+    });
+    await covered("trial", new Date("2026-10-01T00:00:00.000Z"));
+
+    const name = seed.member.displayName;
+    expect((await load())?.read?.family_lines).toEqual([
+      `${name}'s answers on Wednesday and Thursday got no reply or reaction from the family.`,
+      "Asks this week: Mia 2.",
+      "No ask from Sam this week.",
+    ]);
   });
 
   it("shows the seven days and locks the rest when no Vela Light covers her", async () => {
@@ -165,7 +193,12 @@ describe("loadApiWeeklyRead", () => {
       "unanswered",
       "unanswered",
     ]);
-    expect(result?.read).toMatchObject({ counts: null, notes: null, suggestion: null });
+    expect(result?.read).toMatchObject({
+      counts: null,
+      notes: null,
+      family_lines: null,
+      suggestion: null,
+    });
   });
 
   it("locks a lapsed plan and a trial that has ended, and opens an active plan", async () => {
