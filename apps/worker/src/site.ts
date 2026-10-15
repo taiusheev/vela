@@ -1643,7 +1643,7 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
   </div></div>
   <div class="hero-photo">
     <img class="her-photo" src="${IMG}/morning-tea.jpg" width="1264" height="848" alt="${c.hero.photoAlt}" fetchpriority="high">
-    <div class="from-you"><img src="${IMG}/daughter-city.jpg" width="928" height="1152" alt="${c.hero.youAlt}"><p class="say you">${c.hero.exchange.you}</p></div>
+    <div class="from-you"><img src="${IMG}/daughter-city.jpg" width="480" height="480" alt="${c.hero.youAlt}"><p class="say you">${c.hero.exchange.you}</p></div>
     <p class="say her">${c.hero.exchange.her}<small>${c.hero.exchange.when}</small></p>
   </div>
 </section>

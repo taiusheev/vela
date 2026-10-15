@@ -2567,7 +2567,6 @@ input[type="email"] {
   height: auto;
   aspect-ratio: 1;
   object-fit: cover;
-  object-position: 50% 28%;
   border-radius: 50%;
   border: 3px solid #fff;
   box-shadow: 0 10px 24px -14px #1e1a16aa;
@@ -2839,4 +2838,20 @@ input[type="email"] {
   .morning .step {
     min-height: 24vh;
   }
+}
+
+/* Family band: keep their faces in the upper half and set the words on the darkened table below. */
+.bleed img {
+  object-position: 50% 62%;
+}
+.bleed::before {
+  background: linear-gradient(
+    180deg,
+    transparent 38%,
+    rgba(27, 23, 20, 0.55) 62%,
+    rgba(27, 23, 20, 0.88)
+  );
+}
+.bleed h2 {
+  font-size: clamp(2rem, 4vw, 3.2rem);
 }
