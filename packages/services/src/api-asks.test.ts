@@ -1,6 +1,8 @@
 import { ApiComposedAsk } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
 import {
+  answers,
+  channelLinks,
   events,
   exchanges,
   members,
@@ -13,8 +15,10 @@ import {
 } from "@vela/db";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { handleParentMessage } from "./answers.ts";
 import type { SessionIdentity } from "./api-access.ts";
 import { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
+import { loadApiExchange, loadApiExchanges } from "./api-exchanges.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
 import { deliverArrival } from "./arrivals.ts";
 import type { OutboundJob } from "./deps.ts";
@@ -78,6 +82,82 @@ async function exchangeRows() {
 }
 
 describe("composeApiAsk", () => {
+  it("sends text now without using a morning, retries once, and accepts a reply before tomorrow", async () => {
+    const first = await compose(
+      { text: "mom, show me the basil?", when: "now" },
+      { key: "immediate-first" },
+    );
+    const body = ApiComposedAsk.parse(first.response.body);
+    expect(body).toMatchObject({ when_rule: "now", scheduled_for: null, state: "scheduled" });
+    expect(first.after.outboundIds).toHaveLength(1);
+    expect(h.telegram.sent).toHaveLength(0);
+    expect(
+      (await loadApiExchanges(h.db, identity, seed.family.id, h.clock.now()))?.exchanges[0]
+        ?.delivery_status,
+    ).toBe("pending");
+    const replay = await compose(
+      { text: "mom, show me the basil?", when: "now" },
+      { key: "immediate-first" },
+    );
+    expect(replay.replayed).toBe(true);
+    expect(replay.after.outboundIds).toEqual([]);
+    const outboundId = first.after.outboundIds[0];
+    if (outboundId === undefined) throw new Error("missing immediate outbound");
+    await deliverOutbound(h.deps, outboundId);
+    await deliverOutbound(h.deps, outboundId);
+    expect(h.telegram.sent.filter((row) => row.message.kind === "conversation")).toHaveLength(1);
+    expect((await loadApiExchange(h.db, identity, body.id, h.clock.now()))?.delivery_status).toBe(
+      "delivered",
+    );
+    await compose({ text: "And how was lunch?", when: "now" });
+    await compose({ text: "What are you planting tomorrow?", when: "tomorrow" });
+    expect(
+      (await exchangeRows()).filter((row) => row.scheduledFor === addDays(today(), 1)),
+    ).toHaveLength(1);
+    await handleParentMessage(h.deps, seed.member, {
+      channel: "telegram",
+      eventId: "tg:immediate-answer",
+      at: h.clock.now().toISOString(),
+      sender: { externalUserId: seed.memberLink.externalId },
+      conversation: { externalId: seed.memberLink.externalId, kind: "private" },
+      kind: "text",
+      messageId: "300",
+      text: "It is by the window!",
+    });
+    expect((await h.db.select().from(answers))[0]?.exchangeId).toBe(body.id);
+  });
+  it("refuses immediate contact before consent, after pause, and through a blocked link", async () => {
+    for (const patch of [
+      { status: "invited" as const, lightOn: false, lightConsentedAt: null },
+      { status: "paused" as const, lightOn: true, lightConsentedAt: h.clock.now() },
+    ]) {
+      await h.db.update(members).set(patch).where(eq(members.id, seed.member.id));
+      await expect(compose({ text: "Hello", when: "now" })).rejects.toThrow();
+    }
+    await h.db
+      .update(members)
+      .set({ status: "active", lightOn: true, lightConsentedAt: h.clock.now() })
+      .where(eq(members.id, seed.member.id));
+    await h.db
+      .update(channelLinks)
+      .set({ blockedAt: h.clock.now() })
+      .where(eq(channelLinks.memberId, seed.member.id));
+    await expect(compose({ text: "Hello", when: "now" })).rejects.toThrow();
+    expect(await exchangeRows()).toHaveLength(0);
+  });
+  it("drops an immediate message if the parent stops while it is queued", async () => {
+    const first = await compose({ text: "Hello", when: "now" });
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.member.id));
+    const id = first.after.outboundIds[0];
+    if (id === undefined) throw new Error("missing outbound");
+    await deliverOutbound(h.deps, id);
+    expect(h.telegram.sent).toHaveLength(0);
+    const body = ApiComposedAsk.parse(first.response.body);
+    expect((await loadApiExchange(h.db, identity, body.id, h.clock.now()))?.delivery_status).toBe(
+      "failed",
+    );
+  });
+
   it("puts a question into her next morning and answers 201 with the composed ask", async () => {
     const result = await compose({ text: "What did the garden look like this morning?" });
     expect(result.replayed).toBe(false);

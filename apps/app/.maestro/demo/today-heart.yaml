@@ -10,5 +10,5 @@ tags:
 - assertVisible: "Example · heart sent"
 - assertNotVisible: "Heart for Mom"
 - tapOn: "Reply to Mom"
-- assertVisible: "Say something short"
-- assertVisible: "What the family said"
+- assertVisible: "Write to Mom"
+- assertVisible: "Talk with Mom"

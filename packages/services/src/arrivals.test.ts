@@ -748,7 +748,7 @@ describe("deliverArrival", () => {
         text: [
           "From your family:\nSam: Looks great, Mom!\nMia sent a voice message.",
           "Sorry this is late.\nGood morning, Mrs Chen.",
-          "Mia asks:\nWhich soup today?",
+          "From Mia\nWhich soup today?",
           "Reply with a voice message, or tap a button.",
         ].join("\n\n"),
         media: [
@@ -995,7 +995,7 @@ describe("deliverArrival", () => {
           message: { text: string; media?: unknown[]; buttons: { id: string }[][] };
         },
     );
-    expect(asChoice?.message.text).toContain("Mia asks:\nWhich one? Tap 1 or 2.");
+    expect(asChoice?.message.text).toContain("From Mia\nWhich one? Tap 1 or 2.");
     expect(asChoice?.message.media).toEqual([
       { kind: "image", providerFileId: "photo-1" },
       { kind: "image", providerFileId: "photo-2" },
@@ -1069,7 +1069,7 @@ describe("deliverArrival", () => {
 
   // A photo sent to the group without a caption is an ask with no words (flows §3.5). Once
   // retention has deleted it, the choice's places name nothing and the question names none, and
-  // her morning would read "Mia asks:" over nothing.
+  // her morning would read "From Mia" over nothing.
   it("says a photo sent without words is no longer there once it is gone, and asks how she is", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const gone = ["00000000-0000-4000-8000-00000000000a", "00000000-0000-4000-8000-00000000000b"];
@@ -1137,7 +1137,7 @@ describe("sendRepeat", () => {
       message: {
         text: [
           "In case you missed it:\nGood morning, Mrs Chen.",
-          "Mia asks:\nWhich soup today?",
+          "From Mia\nWhich soup today?",
           "Reply with a voice message, or tap a button.",
         ].join("\n\n"),
         media: [{ kind: "image", providerFileId: "photo-1" }],

@@ -3,7 +3,7 @@ import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../../theme/tokens.ts";
 import { Words } from "../ui.tsx";
-import { BrandHeader } from "./header.tsx";
+
 import { BrandIcon, type BrandIconName } from "./icon.tsx";
 import type { SceneKind } from "./scene.tsx";
 
@@ -61,7 +61,6 @@ export function ScreenHeading({
 }) {
   return (
     <View style={{ gap: space.s }}>
-      <BrandHeader />
       <View
         style={{
           flexDirection: "row",
@@ -105,6 +104,7 @@ export function FamilyAction({
   onPress,
   disabled = false,
   actionLabel,
+  testID,
 }: {
   title: string;
   detail?: string;
@@ -112,11 +112,13 @@ export function FamilyAction({
   onPress: () => void;
   disabled?: boolean;
   actionLabel?: string;
+  testID?: string;
 }) {
   const p = usePalette();
   const { fontScale } = useWindowDimensions();
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}

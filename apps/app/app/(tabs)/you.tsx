@@ -258,6 +258,7 @@ function FamilyYou({ day }: { day: TodayView }) {
                 <FamilyAction
                   icon="today"
                   title={morningTitle(member.name)}
+                  testID={`morning-settings-${member.memberId}`}
                   onPress={() =>
                     router.push({
                       pathname: "/morning-settings",

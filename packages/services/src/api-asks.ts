@@ -10,17 +10,19 @@ import {
 import { t } from "@vela/copy";
 import { addDays, localDateOf, outboundKey, zonedInstant } from "@vela/core";
 import { exchanges, media, members, suggestions, turns, type VelaTransaction } from "@vela/db";
-import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import { sharedWith } from "./api-media.ts";
+import { arrivalChannelOf } from "./arrivals.ts";
 import { canBeAsked, canWaitForHerYes } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { insertOutbound } from "./gateway.ts";
 import {
+  channelLinkOfMember,
   familyById,
   familyHasEnded,
   linkedGroupOfFamily,
@@ -291,7 +293,11 @@ export async function composeApiAsk(
         const today = localDateOf(now, locked.tz);
         const horizon = addDays(today, MAX_ASK_DAYS_AHEAD);
         const scheduledFor =
-          ask.when === "whenever" ? null : ask.when === "tomorrow" ? addDays(today, 1) : ask.date;
+          ask.when === "whenever" || ask.when === "now"
+            ? null
+            : ask.when === "tomorrow"
+              ? addDays(today, 1)
+              : ask.date;
         if (scheduledFor !== null && scheduledFor !== undefined) {
           if (scheduledFor <= today || scheduledFor > horizon) {
             throw new VelaError("invalid_payload", "That day is outside her next two weeks");
@@ -326,7 +332,7 @@ export async function composeApiAsk(
             askerId: asker.id,
             onBehalfOf: ask.on_behalf_of ?? null,
             type,
-            state: "composed",
+            state: ask.when === "now" ? "scheduled" : "composed",
             text: ask.text,
             textLang: asker.language,
             // `arrivals.ts` reads a vote's options from this one key; anything else delivers empty.
@@ -340,6 +346,19 @@ export async function composeApiAsk(
           })
           .returning();
         if (exchange === undefined) throw new Error("exchange insert returned no row");
+        // Authored questions are the newest style evidence. Remove only unused future drafts so
+        // the next writer can use those words instead of serving three days of stale drafts.
+        if (ask.suggestion_id === undefined) {
+          await tx
+            .delete(suggestions)
+            .where(
+              and(
+                eq(suggestions.aboutMemberId, locked.id),
+                isNull(suggestions.usedAt),
+                gte(suggestions.localDay, addDays(today, 1)),
+              ),
+            );
+        }
         const fromSuggestion =
           ask.suggestion_id !== undefined &&
           (await markSuggestionUsed(tx, ask.suggestion_id, familyId, locked.id, now));
@@ -378,6 +397,30 @@ export async function composeApiAsk(
           },
           now,
         );
+
+        if (ask.when === "now") {
+          const channel = arrivalChannelOf(locked);
+          // This version sends immediate text on linked messengers. The parent web surface needs
+          // its own live conversation reader before it can offer the same action.
+          const link =
+            channel === "device" ? null : await channelLinkOfMember(tx, locked.id, channel);
+          if (link === null || link.blockedAt !== null)
+            throw new VelaError("invalid_payload", "Parent's messenger is not connected");
+          const queued = await insertOutbound(deps, tx, {
+            kind: "conversation",
+            idempotencyKey: outboundKey("conversation", { exchangeId: exchange.id }),
+            memberId: locked.id,
+            actorId: asker.id,
+            channel,
+            conversationId: link.externalId,
+            exchangeId: exchange.id,
+            lang: locked.language,
+            text: `${t(locked.language, "arrival.from", { asker: asker.displayName })}\n\n${ask.text}`,
+            ref: { purpose: "arrival", exchangeId: exchange.id },
+            effect: { exchangeId: exchange.id },
+          });
+          if ("outboundId" in queued) after.outboundIds.push(queued.outboundId);
+        }
 
         // Tomorrow's morning is taken, so the family group hears who took it — never the words,
         // which are hers to hear first — as it does when someone asks there. Written as a row and

@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-15",
+  "scope": "Synthetic standalone HTML prototype only. No native/device/provider/family proof.",
+  "checks": [
+    "Reply has one arrow; composer switches now/morning without losing draft; receipt says accepted, not delivered",
+    "Pending parent can edit morning; saved value is shown; send-now disabled before consent; first message stays saved",
+    "Helper invitation is short, editable and honest about noncontact links; share preview and keyboard escape work",
+    "Style example can become editable draft; synthetic personalization explicitly identified",
+    "All family stages and views fit 320px",
+    "All family stages and views fit 390px",
+    "All family stages and views fit 430px",
+    "All family stages and views fit 736px",
+    "All family stages and views fit 1050px",
+    "Welcome action reaches useful preacceptance setup"
+  ],
+  "errors": []
+}

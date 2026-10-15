@@ -289,9 +289,39 @@ describe("loadApiToday", () => {
     expect(expired?.photos[0]?.expires_at).toBeNull();
   });
 
+  it("lights only real message days in the parent's zone, retaining earlier lights across a gap", async () => {
+    const earlier = addDays(today(), -3);
+    await seedExchange(h.db, seed, {
+      date: earlier,
+      state: "delivered",
+      deliveredAt: new Date(`${earlier}T10:00:00+08:00`),
+      text: "mom, what did you plant?",
+    });
+    await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      type: "hello",
+      state: "delivered",
+      deliveredAt: new Date(`${addDays(today(), -1)}T08:00:00+08:00`),
+      text: "An unattended bank question",
+    });
+    await seedExchange(h.db, seed, { date: today(), state: "scheduled", text: "Not sent yet" });
+    const days = (await load())?.connection_days?.[0]?.days;
+    expect(days).toHaveLength(7);
+    expect(days?.filter((day) => day.has_message).map((day) => day.date)).toEqual([earlier]);
+    expect(days?.find((day) => day.date === today())?.has_message).toBe(false);
+  });
   it("answers an empty day with the lights row and nothing else", async () => {
     const day = await load();
     expect(ApiToday.parse(day)).toEqual({
+      connection_days: [
+        {
+          member_id: seed.member.id,
+          days: Array.from({ length: 7 }, (_, index) => ({
+            date: addDays(today(), index - 6),
+            has_message: false,
+          })),
+        },
+      ],
       lights: [expect.objectContaining({ member_id: seed.member.id, state: "resting" })],
       exchanges: [],
       tomorrow: [],

@@ -1203,7 +1203,7 @@ describe("applyRetention", () => {
   // A whenever ask waits in the queue for a morning nobody asked, and she may stop for weeks while
   // the family keeps adding to it, and an ask whose own morning passed unsent waits for her next
   // one (flows §3.6): its words are cleared 30 days after delivery, never before, or the morning
-  // that takes it would say "Mia asks:" over nothing.
+  // that takes it would say "From Mia" over nothing.
   it("keeps the words of an ask still waiting for her, so the morning that takes it carries them", async () => {
     const seed = await seedFamily(h.db, { now: daysAgo(40) });
     const ask = (text: string, age: number, fields: Partial<typeof exchanges.$inferInsert>) => ({
@@ -1254,10 +1254,10 @@ describe("applyRetention", () => {
         (row.payload as { message: { text: string; buttons: { label: string }[][] } }).message,
     );
     expect(messages.map((message) => message.text.split("\n\n")[1])).toEqual([
-      "Mia asks:\nIs the persimmon ripe?",
-      "Mia asks:\nWhatever happened to the cat?",
-      "Mia asks:\nTea or coffee?\nTap one.",
-      "Mia asks:\nDid the plum tree flower?",
+      "From Mia\nIs the persimmon ripe?",
+      "From Mia\nWhatever happened to the cat?",
+      "From Mia\nTea or coffee?\nTap one.",
+      "From Mia\nDid the plum tree flower?",
     ]);
     expect(messages[2]?.buttons.flat().map((button) => button.label)).toEqual(
       expect.arrayContaining(["Tea", "Coffee"]),

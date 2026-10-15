@@ -73,6 +73,7 @@ export function exchangesFixture(): Exchange[] {
     {
       id: "x1",
       asker: "Mia",
+      recipientId: "m1",
       recipient: mom,
       ask: t`What did the garden look like this morning?`,
       day: t`Today`,
@@ -95,6 +96,7 @@ export function exchangesFixture(): Exchange[] {
     {
       id: "x2",
       asker: "Anna",
+      recipientId: "m1",
       recipient: mom,
       ask: t`Which one of us did you teach to make the pies?`,
       day: t`Yesterday`,
@@ -112,6 +114,7 @@ export function exchangesFixture(): Exchange[] {
     {
       id: "x3",
       asker: "Mia",
+      recipientId: "m1",
       recipient: mom,
       ask: t`A photo of the street where you grew up — do you remember the shop on the corner?`,
       day: t`Sunday`,

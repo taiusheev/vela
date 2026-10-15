@@ -217,7 +217,16 @@ function unansweredLine(exchange: ApiTodayExchange, light: MemberLight | undefin
 
 export function toToday(day: ApiToday, viewerMemberId?: string): Today {
   return {
-    lights: day.lights.map(toTodayLight),
+    lights: day.lights.map((light) => ({
+      ...toTodayLight(light),
+      ...(day.connection_days?.find((row) => row.member_id === light.member_id) === undefined
+        ? {}
+        : {
+            connectionDays: day.connection_days
+              .find((row) => row.member_id === light.member_id)
+              ?.days.map((row) => ({ date: row.date, hasMessage: row.has_message })),
+          }),
+    })),
     exchanges: day.exchanges.map((exchange) => {
       const light = day.lights.find((row) => row.member_id === exchange.recipient_id);
       return {

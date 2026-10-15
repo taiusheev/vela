@@ -398,9 +398,7 @@ describe("delivering a photo ask to Telegram", () => {
       })),
     );
     expect(JSON.stringify(message)).not.toMatch(/https?:/);
-    expect(message.text).toContain(
-      "Mia asks:\nWhich one do you like more?\nWhich one? Tap 1 or 2.",
-    );
+    expect(message.text).toContain("From Mia\nWhich one do you like more?\nWhich one? Tap 1 or 2.");
     expect(message.buttons[0]?.map((button) => decodeButton(button.id))).toEqual([
       { type: "pick", exchangeId: ask.id, index: 0 },
       { type: "pick", exchangeId: ask.id, index: 1 },
@@ -481,7 +479,7 @@ describe("delivering a photo ask to Telegram", () => {
 
     const message = await arrivalMessage();
     expect(message.media).toEqual([expect.objectContaining({ storageKey: lastingKey })]);
-    expect(message.text).toContain("Mia asks:\nWhich one do you like more?");
+    expect(message.text).toContain("From Mia\nWhich one do you like more?");
     expect(message.text).not.toContain("Tap 1 or 2");
     expect(message.buttons.flat().map((button) => decodeButton(button.id)?.type)).not.toContain(
       "pick",
@@ -976,7 +974,7 @@ describe("a photo ask carried past its photos' deletion", () => {
     const sent = await theOneArrival();
     expect(sent.message.media).toBeUndefined();
     expect(sent.uploads).toEqual([]);
-    expect(sent.message.text).toContain("Mia asks:\nWhich one do you like more?");
+    expect(sent.message.text).toContain("From Mia\nWhich one do you like more?");
     expect(sent.message.text).not.toContain("Tap 1 or 2");
     expect(h.logger.entries).toContainEqual({
       level: "warn",
@@ -997,7 +995,7 @@ describe("a photo ask carried past its photos' deletion", () => {
     const sent = await theOneArrival();
     expect(sent.message.media).toBeUndefined();
     expect(sent.uploads).toEqual([]);
-    expect(sent.message.text).toContain("Mia asks:\nWhich one do you like more?");
+    expect(sent.message.text).toContain("From Mia\nWhich one do you like more?");
     expect(sent.message.text).not.toContain("Tap 1 or 2");
     expect(
       (sent.message.buttons ?? []).flat().map((button) => decodeButton(button.id)?.type),

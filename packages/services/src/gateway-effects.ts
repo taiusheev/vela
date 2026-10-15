@@ -70,6 +70,7 @@ export type QuietNoticeEffect = z.infer<typeof QuietNoticeEffect>;
 
 /** The kinds whose send changes state beyond the outbound row, and what each needs to know. */
 export interface EffectByKind {
+  conversation: { exchangeId: string };
   arrival: ArrivalEffect;
   repeat: RepeatEffect;
   turn_prompt: TurnPromptEffect;
@@ -318,6 +319,16 @@ export async function applySentEffects(
   ctx: SentContext,
 ): Promise<SentOutcome> {
   switch (ctx.row.kind) {
+    case "conversation": {
+      const effect = parseEffect(deps, RepeatEffect, ctx);
+      if (effect !== null) {
+        await tx
+          .update(exchanges)
+          .set({ state: "delivered", deliveredAt: ctx.sentAt })
+          .where(and(eq(exchanges.id, effect.exchangeId), eq(exchanges.state, "scheduled")));
+      }
+      return NOTHING_FOLLOWS;
+    }
     case "arrival":
       return arrivalSent(deps, tx, ctx);
     case "repeat":

@@ -17,6 +17,7 @@ import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
+import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
@@ -172,7 +173,13 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
           <Pressable
             accessibilityRole="button"
             hitSlop={hitSlop}
-            onPress={() => router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })}
+            onPress={() =>
+              router.push(
+                exchange.answer === undefined
+                  ? { pathname: "/exchange/[id]", params: { id: exchange.id } }
+                  : { pathname: "/conversation", params: { recipient: exchange.recipientId } },
+              )
+            }
             style={{
               flex: fontScale > 1.3 ? undefined : 1,
               alignSelf: "stretch",
@@ -204,11 +211,6 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
                 )}
               </Text>
             </View>
-            <BrandIcon
-              name="arrow"
-              color={exchange.answer === undefined ? palette.action : palette.onAction}
-              size={20}
-            />
           </Pressable>
           {exchange.answer === undefined ? null : (
             <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} compact />
@@ -459,7 +461,28 @@ function FamilyToday({ day }: { day: TodayView }) {
       }}
     >
       <View style={{ gap: space.s }}>
-        <ScreenHeading title={<Trans context="tab">Today</Trans>} />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: space.m,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <ScreenHeading title={<Trans context="tab">Today</Trans>} />
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t`Family settings`}
+            onPress={() => router.push("/(tabs)/you")}
+            style={{ minHeight: 44, paddingHorizontal: space.m, justifyContent: "center" }}
+          >
+            <Words variant="button" tone="action">
+              <Trans>Family</Trans>
+            </Words>
+          </Pressable>
+        </View>
         {day.updatedAt > 0 ? (
           <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words>
         ) : null}
@@ -544,6 +567,29 @@ function FamilyToday({ day }: { day: TodayView }) {
       {today.exchanges.map((exchange) => (
         <ExchangeCard key={exchange.id} exchange={exchange} />
       ))}
+      {target === undefined ? null : (
+        <Card>
+          <SecondaryButton
+            label={t`Talk with ${recipient}`}
+            onPress={() =>
+              router.push({ pathname: "/conversation", params: { recipient: target.memberId } })
+            }
+          />
+          <Words variant="caption" tone="ink2">
+            {target.invited
+              ? t`Write their first message while you wait for their yes.`
+              : t`Send something now, or leave a question for their morning.`}
+          </Words>
+          {organiser || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
+            <SecondaryButton
+              label={t`${recipient}'s morning settings`}
+              onPress={() =>
+                router.push({ pathname: "/morning-settings", params: { member: target.memberId } })
+              }
+            />
+          ) : null}
+        </Card>
+      )}
       {target === undefined || !canAsk(target) ? null : (
         <SecondaryButton
           label={t`Ask ${recipient} something`}
@@ -551,6 +597,34 @@ function FamilyToday({ day }: { day: TodayView }) {
           onPress={() => router.push({ pathname: "/ask", params: { recipient: target.memberId } })}
         />
       )}
+      {today.lights.map((light) => (
+        <ConnectionWindows key={`week:${light.memberId}`} light={light} />
+      ))}
+      {target !== undefined &&
+      (target.invited === true || target.connectionDays?.every((day) => !day.hasMessage)) ? (
+        <Card>
+          <Words variant="heading">
+            <Trans>Your first days</Trans>
+          </Words>
+          <Words tone="ink2">
+            <Trans>
+              Start with one question in your own words. Choose a morning that suits them.
+            </Trans>
+          </Words>
+          <Words tone="ink2">
+            <Trans>
+              When they answer, write back while it is on your mind. A quiet day does not erase the
+              moments you have shared.
+            </Trans>
+          </Words>
+          <SecondaryButton
+            label={t`Write their first message`}
+            onPress={() =>
+              router.push({ pathname: "/conversation", params: { recipient: target.memberId } })
+            }
+          />
+        </Card>
+      ) : null}
       {today.tomorrow.map((turn) => (
         <TomorrowCard key={turn.recipientId} tomorrow={turn} />
       ))}

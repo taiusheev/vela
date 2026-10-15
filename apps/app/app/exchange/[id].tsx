@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ComposeReply, ReactionKind } from "@vela/contracts";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -392,6 +392,12 @@ function ExchangeReader({ id }: { id: string }) {
           </Words>
         )}
 
+        <SecondaryButton
+          label={t`Talk now`}
+          onPress={() =>
+            router.push({ pathname: "/conversation", params: { recipient: exchange?.recipientId } })
+          }
+        />
         <View style={{ gap: space.m }}>
           <Words variant="heading">
             <Trans>What the family said</Trans>

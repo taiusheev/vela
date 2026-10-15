@@ -1,6 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
-import { Pressable, Share, View } from "react-native";
+import { Platform, Pressable, Share, View } from "react-native";
 import type { NearbyView } from "../data/useNearby.ts";
 import { hitSlop, space } from "../theme/tokens.ts";
 import { ConfirmationDialog } from "./confirmation-dialog.tsx";
@@ -29,7 +29,11 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
       const link = await nearby.invite(contactId);
       if (link === null) return;
       await Share.share({
-        message: t`Hello ${who}. Could I list you on Vela as someone near ${name}, so I could ask you to look in on a day ${name} hasn't answered? Open this in Telegram to read what it means and say yes or no: ${link}`,
+        message:
+          Platform.OS === "ios"
+            ? t`Hi ${who}! If I can’t reach ${name}, could I ask you to look in? You can say yes here:`
+            : `${t`Hi ${who}! If I can’t reach ${name}, could I ask you to look in? You can say yes here:`}\n\n${link}`,
+        ...(Platform.OS === "ios" ? { url: link } : {}),
       });
     } catch {
       setShareTrouble(true);
