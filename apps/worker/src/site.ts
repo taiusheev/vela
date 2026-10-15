@@ -137,22 +137,23 @@ interface SiteCopy {
     readonly photoAlt: string;
     readonly youAlt: string;
   };
+  /** Each worry is a picture (a messenger excerpt or a figure) with a one-line caption. */
   readonly worry: {
     readonly eyebrow: string;
     readonly title: string;
-    readonly lede: string;
     readonly moments: readonly {
       readonly when: string;
       readonly title: string;
-      readonly body: string;
       readonly snippet?: readonly SnippetLine[];
       readonly figure?: Figure;
     }[];
   };
+  /** Two overlapping circles: what talks with her, what notices; Vela is where they meet. */
   readonly why: {
     readonly eyebrow: string;
     readonly title: string;
-    readonly paragraphs: readonly string[];
+    readonly venn: { readonly chat: Pair; readonly watch: Pair; readonly vela: Pair };
+    readonly note: string;
     readonly figures: readonly Figure[];
   };
   readonly meet: {
@@ -192,7 +193,6 @@ interface SiteCopy {
   readonly morning: {
     readonly eyebrow: string;
     readonly title: string;
-    readonly lede: string;
     readonly steps: readonly {
       readonly clock: string;
       readonly title: string;
@@ -220,14 +220,17 @@ interface SiteCopy {
     readonly promise: string;
     readonly alt: string;
   };
-  /** Each worry from `worry`, and what Vela does about it, in the same order. */
+  /** A yes/no chart: the family chat, cameras and alarms, and Vela, against what a family needs. */
   readonly different: {
     readonly eyebrow: string;
     readonly title: string;
-    readonly lede: string;
-    readonly now: string;
-    readonly vela: string;
-    readonly rows: readonly { readonly now: string; readonly vela: string }[];
+    readonly cols: readonly [string, string, string];
+    readonly rows: readonly {
+      readonly label: string;
+      readonly marks: readonly [boolean, boolean, boolean];
+    }[];
+    readonly yes: string;
+    readonly no: string;
   };
   readonly bleed: { readonly title: string; readonly body: string; readonly alt: string };
   readonly plans: {
@@ -331,7 +334,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     hero: {
       eyebrow: "For families with a parent living alone",
       title: ["She always says ", "she’s fine", "."],
-      lede: "You live far away. She lives alone. Every call ends with “Don’t worry about me,” and between calls there is only quiet. It could mean a busy morning at the market. It could mean she needed someone. From where you are, you can’t tell.",
+      lede: "But you’re far away, and a quiet day could mean anything.",
       join: "Join the waitlist",
       more: "How Vela helps",
       exchange: {
@@ -347,12 +350,10 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     worry: {
       eyebrow: "Sound familiar?",
       title: "You think about her every day. You can’t call every day.",
-      lede: "If your parent lives alone, far away, you may know this week by heart.",
       moments: [
         {
           when: "Sunday, 7 pm",
           title: "The call becomes a check-up",
-          body: "Did you eat? Did you sleep? How’s the knee? She says she’s fine, because she doesn’t want you to worry. You hang up knowing what you knew before.",
           snippet: [
             { from: "you", text: "How’s your knee, Mom?" },
             { from: "her", text: "Fine, fine. Don’t worry about me." },
@@ -361,7 +362,6 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "Tuesday, 8 am",
           title: "Her good morning goes unanswered",
-          body: "She sends the family group a photo of her flowers. Five people see it and nobody replies. To a parent, “seen” with no answer can feel like being ignored.",
           snippet: [
             { from: "her", text: "Good morning, everyone 🌸" },
             { from: "meta", text: "Seen by 5" },
@@ -370,7 +370,6 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "Wednesday",
           title: "A day without a word",
-          body: "Nothing from her today. Probably the market, or her phone on silent. You look again at lunch, and again after dinner. “Last seen” shows when she opened the app, not how she is.",
           snippet: [
             { from: "you", text: "What are you up to today?" },
             { from: "meta", text: "Mom · last seen yesterday at 21:40" },
@@ -379,10 +378,9 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "And the fixes",
           title: "Everything else feels like watching her",
-          body: "Cameras, sensors, an alarm button to wear. They answer “is she OK?” by making her feel like a patient in her own home, and many parents say no.",
           figure: {
             big: "1 in 10",
-            text: "mothers in one study would accept a camera at home. 7 in 10 of their adult children wanted one.",
+            text: "mothers in one study would accept a camera at home. Their children: 7 in 10.",
             source: "Berridge and Fredriksen-Goldsen, The Gerontologist, 2020",
           },
         },
@@ -390,26 +388,27 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     },
     why: {
       eyebrow: "Why we’re building Vela",
-      title: "Nothing was made for both halves of this.",
-      paragraphs: [
-        "The family chat was made for talking, not for noticing. When she goes quiet there, nobody owns the silence, so it means nothing and worries everyone.",
-        "Cameras and alarms were made for emergencies. They treat a healthy, independent parent like a patient.",
-        "We wanted the part in between: a daily reason for her to answer that isn’t a check, and someone who notices the one morning she doesn’t. That is Vela. We are trying it first with our own family.",
-      ],
+      title: "Nothing was made for both.",
+      venn: {
+        chat: ["The family chat", "Talks, but doesn’t notice"],
+        watch: ["Cameras and alarms", "Notice, but feel like watching"],
+        vela: ["Vela", "Both"],
+      },
+      note: "So we’re building it, and trying it first with our own family.",
       figures: [
         {
           big: "1 in 5",
-          text: "people over 65 in Taiwan, Japan and Korea live alone.",
+          text: "over-65s in Taiwan, Japan and Korea live alone.",
           source: "Taiwan Ministry of the Interior, 2023; IPSS Japan, 2024; Statistics Korea, 2022",
         },
         {
           big: "47%",
-          text: "of family caregivers who live far away report emotional distress, more than any other group of caregivers.",
+          text: "of faraway family caregivers report emotional distress.",
           source: "Family Caregiver Alliance, from AARP data",
         },
         {
           big: "1 in 3",
-          text: "older people living alone in Korea say they have no one to talk to.",
+          text: "older people living alone in Korea have no one to talk to.",
           source: "Statistics Korea, 2024",
         },
       ],
@@ -417,7 +416,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     meet: {
       eyebrow: "Meet Vela",
       title: ["A little ", "closer", ", every day."],
-      lede: "Every morning someone in the family asks Mom one small thing. She answers with one tap or her voice, right in LINE. Tomorrow morning she hears what everyone said back. And if a morning ever stays quiet, one person in the family hears about it that day.",
+      lede: "One small question from the family each morning. She answers in LINE with a tap or her voice. If a morning stays quiet, you know that day.",
       watch: "See a morning",
       trust: ["Nothing to install for her", "One message a day", "The exchange is free, for ever"],
       badge: ["Mom’s light is on", "Answered at 8:14"],
@@ -435,27 +434,24 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     screens: {
       eyebrow: "Two screens, one exchange",
       title: "What you see, and what Mom sees.",
-      lede: "The family gets a calm app. She gets one message a morning in LINE. Nobody has to learn the other’s way.",
+      lede: "A calm app for you. Just LINE for her.",
       you: {
         title: "You, in the Vela app",
         items: [
-          "Her window on your home screen: lit once she has answered, or “no word yet”",
-          "Her answer, her voice notes and everyone’s replies in one place",
-          "Whose turn it is to ask tomorrow, with an idea when you’re stuck",
-          "If a morning stays quiet: the facts, her usual time, and Call Mom",
+          "Her window lights up when she answers",
+          "Her words, her voice, everyone’s replies",
+          "If a morning is quiet: Call Mom",
         ],
       },
       her: {
         title: "Mom, in LINE",
         items: [
-          "One message a morning, in the app she already uses",
-          "A question from someone she loves, with their name on it",
-          "Big one-tap answers, a photo or her voice. No typing, no password",
-          "Next morning, what the family said back, read aloud if she likes",
+          "One message a morning",
+          "Big one-tap answers, or her voice",
+          "Your replies, read back next morning",
         ],
       },
-      nobody:
-        "What nobody sees: no camera, no location, no “last seen”. Only what she chooses to send, and she can ask any time what the family sees.",
+      nobody: "No camera. No location. No “last seen”. Only what she chooses to send.",
       app: {
         today: "Today",
         who: "Mom",
@@ -478,34 +474,33 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     morning: {
       eyebrow: "One morning with Vela",
       title: "One question. One answer. A whole family closer.",
-      lede: "From today’s question to tomorrow’s read-back. Four small moments that fit around your lives.",
       steps: [
         {
           clock: "08:00 · Her morning",
           title: "Someone asks",
-          body: "Mei, in Singapore, wrote last night: “What did you have for breakfast?” It arrives at Mom’s usual morning time, with Mei’s name on it. If nobody has a question ready, Vela offers a starting point.",
+          body: "Mei’s question arrives at Mom’s usual morning time.",
         },
         {
           clock: "08:14 · Her answer",
           title: "She answers in one gesture",
-          body: "A tap on a chip, a photo, or a short voice note. No typing, no new app, no password. Voice is always offered, never required.",
+          body: "A tap, a photo or her voice. No typing, no new app.",
         },
         {
           clock: "09:30 · The family",
           title: "Her answer becomes a moment",
-          body: "It lands in the family’s group and app. Jun reacts, Lily sends a photo, Mei replies by voice, each in their own language. Her light is on, and everyone can see it.",
+          body: "The family sees it and replies, each in their own language.",
         },
         {
           clock: "Next day, 08:00",
           title: "She hears them tomorrow",
-          body: "Next morning’s message begins with what the family said back, read aloud if she likes. She never has to scroll a feed. Then comes today’s question.",
+          body: "Tomorrow begins with what everyone said back.",
         },
       ],
     },
     tryIt: {
       eyebrow: "Try it",
       title: "Be the family, then be Mom.",
-      lede: "Pick a question to send. Then answer it the way she would, with a single tap, and see what happens next.",
+      lede: "Pick a question, then answer it as Mom.",
       step1: "1 · Choose what to ask",
       step2: "2 · Now answer as Mom",
       again: "Try another question",
@@ -515,61 +510,49 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     light: {
       eyebrow: "Vela Light",
       title: "When a morning goes quiet, someone knows what to do.",
-      lede: "Her light comes from a real exchange, not from a check. If a morning stays unanswered, Vela gives silence a plan instead of an alarm.",
+      lede: "No alarm. Just a calm plan, and only when it matters.",
       ladder: [
         {
           when: "Any answer",
           what: "Her light is on",
-          detail: "Her window lights up as soon as her answer arrives: “answered today”.",
+          detail: "“Answered today.”",
         },
         {
           when: "2½ hours later",
           what: "One gentle repeat",
-          detail: "Vela sends the ask once more. Most mornings end here.",
+          detail: "Most mornings end here.",
         },
         {
           when: "Hours later",
-          what: "A quiet note to the organiser",
-          detail: "The facts, her usual time, and the people nearby, with Call one tap away.",
+          what: "A quiet note to you",
+          detail: "The facts, and Call Mom.",
         },
         {
           when: "Any answer, or “she’s fine”",
           what: "Everyone is told it’s fine",
-          detail: "“Mom answered at 11:40. Everything’s lit again.”",
+          detail: "“Mom answered at 11:40.”",
         },
       ],
-      promise:
-        "Vela never contacts anyone by itself. Every message to a neighbour or friend is sent by a person’s tap.",
+      promise: "Vela never contacts anyone on its own.",
       alt: "Illustration: a single lit arched window in an apartment building at dusk, a plant and a tea cup on the sill.",
     },
     different: {
       eyebrow: "What’s different",
-      title: "Vela does what the family chat can’t.",
-      lede: "It works inside LINE, where your family already talks. Nothing to replace, and nothing new for her to learn.",
-      now: "Today",
-      vela: "With Vela",
+      title: "What makes Vela different.",
+      cols: ["Family chat", "Cameras, alarms", "Vela"],
       rows: [
-        {
-          now: "The call turns into a check-up, and every answer is “I’m fine.”",
-          vela: "Each day brings one question about her life: breakfast, the garden, how she met Dad. Her answer is a story, not a status.",
-        },
-        {
-          now: "Her good-morning photo is seen by five and answered by none.",
-          vela: "The family’s replies open her next morning, read aloud if she likes. Everything she says is heard.",
-        },
-        {
-          now: "A quiet day means nothing, so it worries you all day.",
-          vela: "Vela learns her usual morning. If one stays unanswered after a gentle repeat, one person hears that day, with the facts and a Call button.",
-        },
-        {
-          now: "Cameras and alarms make her a patient in her own home.",
-          vela: "Her light comes on because she answered someone she loves. Nothing starts without her yes, and she can always ask what the family sees.",
-        },
+        { label: "Asks about her life every day", marks: [false, false, true] },
+        { label: "Notices a quiet morning", marks: [false, true, true] },
+        { label: "Feels like care, not watching", marks: [true, false, true] },
+        { label: "Reads the family’s replies to her", marks: [false, false, true] },
+        { label: "Nothing new for her to install", marks: [true, false, true] },
       ],
+      yes: "Yes",
+      no: "No",
     },
     bleed: {
       title: "Not a check-in. A conversation.",
-      body: "The best answer to “are you okay?” is a story about breakfast, a photo of the garden, a laugh in a voice note. Vela makes room for that, once a day.",
+      body: "A story about breakfast says more than “I’m fine.”",
       alt: "Three generations laughing around a home dinner table, a granddaughter showing her grandmother something on a phone.",
     },
     plans: {
@@ -579,11 +562,10 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         name: "Free",
         tag: "For every family member, for ever",
         items: [
-          "Daily asks, her answers, everyone’s replies",
-          "Read-back every morning",
-          "Translation between your languages",
-          "Story day and your family’s archive",
-          "Her light, shown as “answered today”",
+          "Daily questions and answers",
+          "Morning read-back for her",
+          "Translation between languages",
+          "Her light: “answered today”",
         ],
       },
       paid: {
@@ -591,13 +573,12 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         tag: "30-day free trial, no card",
         items: [
           "A quiet note if a morning stays unanswered",
-          "Nearby people one tap away, and “Ask them to look in”",
-          "Away mode for trips and visits",
-          "The weekly read: her week in a few lines",
-          "Monthly figures on how often a note mattered",
+          "Nearby people, one tap away",
+          "Away mode for trips",
+          "Her week in a few lines",
         ],
       },
-      note: "Pricing is announced at launch; the waitlist hears first. If Vela Light ends, the daily exchange carries on. Nobody is cut off from their family.",
+      note: "Pricing at launch. If Vela Light ever ends, the daily exchange carries on.",
     },
     promises: {
       eyebrow: "What we promise",
@@ -606,35 +587,35 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           icon: "consent",
           title: "Her choice",
-          body: "Nothing starts until she says yes herself. She can say stop at any time, and start again.",
+          body: "Nothing starts until she says yes. She can stop any time.",
         },
         {
           icon: "symmetry",
           title: "No secrets",
-          body: "She can always ask what the family sees about her, and gets the same summary they do.",
+          body: "She can always see what the family sees.",
         },
         {
           icon: "health",
           title: "Her health, her words",
-          body: "If she mentions a fall or pain, it is passed on only if she said yes to that, separately.",
+          body: "A fall or pain is shared only if she agreed to that.",
         },
         {
           icon: "calm",
           title: "One moment a day",
-          body: "One message a day. No streaks, no badges, no guilt about a missed morning.",
+          body: "One message a day. No streaks, no guilt.",
         },
       ],
     },
     numbers: {
       eyebrow: "How Vela is doing",
       title: "We publish how often a quiet note mattered.",
-      body: "Every quiet note ends with what really happened: answered late, away, the family knew why, or something was wrong. Each month we publish the count, across every family, so you can judge for yourself.",
+      body: "Every quiet note ends with what really happened. We publish the monthly count.",
       link: "See the monthly figures",
     },
     join: {
       eyebrow: "Join the waitlist",
       title: "Be among the first families.",
-      lede: "We’re starting with our own family in Vietnam, on Telegram. Leave your email and we’ll write when there’s room for your family.",
+      lede: "We’re starting with our own family, on Telegram. Leave your email and we’ll write when there’s room for yours.",
       email: "Your email",
       placeholder: "you@example.com",
       role: "Who would you set it up for?",
@@ -940,7 +921,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     hero: {
       eyebrow: "給家中有長輩獨居的家庭",
       title: ["她總是說", "「我很好」", "。"],
-      lede: "您住得很遠，她一個人住。每次通話最後都是「不用擔心我」，兩通電話之間只剩下安靜。也許她只是去市場忙了一早上，也許她其實需要有人在身邊。隔著這麼遠，您分辨不出來。",
+      lede: "但您住得很遠，安靜的一天可能代表任何事。",
       join: "加入等候名單",
       more: "Vela 能怎麼幫忙",
       exchange: { you: "媽，最近還好嗎？", her: "我很好，不用擔心我 🙂", when: "星期日 19:04" },
@@ -950,12 +931,10 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     worry: {
       eyebrow: "是不是很熟悉？",
       title: "您每天都想著她，卻沒辦法每天打電話。",
-      lede: "如果您的爸媽一個人住在遠方，這樣的一週，您大概再熟悉不過。",
       moments: [
         {
           when: "星期日 晚上 7 點",
           title: "電話講成了問診",
-          body: "吃飯了嗎？睡得好嗎？膝蓋還痛嗎？她說她很好，因為她不想讓您擔心。掛上電話，您知道的和之前一樣多。",
           snippet: [
             { from: "you", text: "媽，膝蓋還好嗎？" },
             { from: "her", text: "好啦好啦，不用擔心我。" },
@@ -964,7 +943,6 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "星期二 早上 8 點",
           title: "她的早安沒有人回",
-          body: "她在家族群組傳了一張早安圖。五個人已讀，沒有人回覆。對長輩來說，「已讀不回」很容易讓她覺得被忽略。",
           snippet: [
             { from: "her", text: "大家早安 🌸 今天也要平安喔" },
             { from: "meta", text: "已讀 5" },
@@ -973,7 +951,6 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "星期三",
           title: "一整天沒有消息",
-          body: "今天她都沒有消息，您早上傳的訊息也還沒讀。大概是去市場了，或是手機調成靜音。午餐時您又看了一次，晚餐後再看一次。沒有消息，可能什麼都不代表，您卻放不下心。",
           snippet: [
             { from: "you", text: "媽，今天在忙什麼？" },
             { from: "meta", text: "未讀" },
@@ -982,10 +959,9 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           when: "還有那些辦法",
           title: "其他辦法都像在看著她",
-          body: "攝影機、感應器、隨身的緊急按鈕。它們回答「她還好嗎？」的方式，是讓她在自己家裡像個病人，很多長輩都會拒絕。",
           figure: {
             big: "1/10",
-            text: "在一項研究中，只有十分之一的母親願意在家裝攝影機；她們的成年子女卻有十分之七想裝。",
+            text: "在一項研究中，只有十分之一的母親願意在家裝攝影機；她們的子女是十分之七。",
             source: "Berridge 與 Fredriksen-Goldsen，《The Gerontologist》，2020",
           },
         },
@@ -993,26 +969,27 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     },
     why: {
       eyebrow: "我們為什麼做 Vela",
-      title: "從來沒有東西同時顧到這兩件事。",
-      paragraphs: [
-        "家庭群組是用來聊天的，不是用來留意的。她在群組裡安靜下來，沒有人負責這份安靜，所以它什麼都不代表，卻讓每個人都放不下心。",
-        "攝影機和緊急按鈕是為緊急狀況設計的。它們把一位健康、獨立的長輩，當成病人看待。",
-        "我們想要的是兩者之間的那一塊：每天給她一個想回答的理由，而不是一次查勤；以及在她沒回答的那個早上，有人會注意到。這就是 Vela。我們先從自己的家人開始試。",
-      ],
+      title: "沒有東西能兩者兼顧。",
+      venn: {
+        chat: ["家庭群組", "會聊天，但不會留意"],
+        watch: ["攝影機和緊急按鈕", "會留意，但像在看著她"],
+        vela: ["Vela", "兩者兼顧"],
+      },
+      note: "所以我們做了 Vela，先從自己的家人開始試。",
       figures: [
         {
           big: "97.7 萬",
-          text: "台灣 65 歲以上的長輩中，約 97.7 萬人獨居，將近四分之一。",
+          text: "台灣 65 歲以上獨居長輩，將近四分之一。",
           source: "內政部統計通報，2023 年資料",
         },
         {
           big: "47%",
-          text: "住在遠方的家庭照顧者中，有 47% 表示承受情緒壓力，是所有照顧者中最高的。",
+          text: "住在遠方的家庭照顧者承受情緒壓力。",
           source: "美國家庭照顧者聯盟（Family Caregiver Alliance），引用 AARP 資料",
         },
         {
           big: "1/3",
-          text: "韓國的獨居長輩中，約三分之一表示沒有人可以說話。",
+          text: "韓國獨居長輩沒有人可以說話。",
           source: "韓國統計廳，2024",
         },
       ],
@@ -1020,7 +997,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     meet: {
       eyebrow: "認識 Vela",
       title: ["每天，", "更靠近", "一點。"],
-      lede: "每天早上，家裡有人問媽媽一件小事。她直接在 LINE 上點一下或說一句話就能回答。隔天早上，她會聽到大家的回覆。如果哪天早上一直沒有回音，家裡會有一個人在當天就知道。",
+      lede: "每天早上，家人問媽媽一個小問題。她在 LINE 上點一下或說一句話回答。如果哪天早上沒有回音，您當天就會知道。",
       watch: "看看一個早晨",
       trust: ["她不用安裝任何東西", "一天一則訊息", "每日交流永久免費"],
       badge: ["媽媽的燈亮了", "8:14 回答"],
@@ -1037,27 +1014,20 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     screens: {
       eyebrow: "兩個畫面，一次交流",
       title: "您看到的，和媽媽看到的。",
-      lede: "家人用一個安靜的 App；她每天早上在 LINE 收到一則訊息。誰都不用學對方的方式。",
+      lede: "您用安靜的 App，她只用 LINE。",
       you: {
         title: "您，在 Vela App 裡",
         items: [
-          "主畫面上她的窗：她回答了就亮起，否則顯示「今天還沒有回覆」",
-          "她的回答、語音和大家的回覆，都在同一個地方",
-          "明天輪到誰提問，想不到時有建議",
-          "如果某天早上一直沒有回音：事實、她平常的時間，以及「打給媽媽」",
+          "她回答了，她的窗就亮起",
+          "她的話、她的聲音、大家的回覆",
+          "早上沒有回音時：打給媽媽",
         ],
       },
       her: {
         title: "媽媽，在 LINE 上",
-        items: [
-          "每天早上一則訊息，就在她本來就在用的 App",
-          "來自她愛的人的問題，上面有對方的名字",
-          "大大的一鍵選項、一張照片或她的聲音。不用打字、不用密碼",
-          "隔天早上，家人回了什麼，她想聽也可以朗讀給她聽",
-        ],
+        items: ["每天早上一則訊息", "大大的一鍵選項，或她的聲音", "隔天早上，把家人的回覆讀給她聽"],
       },
-      nobody:
-        "沒有人看得到的：沒有攝影機、沒有位置、沒有「上線時間」。只有她自己選擇傳送的內容，而且她隨時都可以問家人看到了什麼。",
+      nobody: "沒有攝影機，沒有位置，沒有「上線時間」。只有她自己選擇傳送的內容。",
       app: {
         today: "今天",
         who: "媽媽",
@@ -1080,34 +1050,33 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     morning: {
       eyebrow: "和 Vela 的一個早晨",
       title: "一個問題，一個回答，一家人更靠近。",
-      lede: "從今天的提問，到明天聽見家人的回覆。四個小時刻，自然融入彼此的生活。",
       steps: [
         {
           clock: "08:00 · 她的早晨",
           title: "有人提問",
-          body: "人在新加坡的小美昨晚寫下：「媽，今天早餐吃了什麼？」問題會在媽媽平常的早晨時間送到，上面署著小美的名字。如果家人一時想不到問題，Vela 也會提供一個話題。",
+          body: "小美的問題，在媽媽平常的早晨時間送到。",
         },
         {
           clock: "08:14 · 她的回答",
           title: "她用一個動作回答",
-          body: "點一下選項、選一張照片，或錄一小段語音。不用打字、不用新 App、不用密碼。語音隨時可以用，但從不強迫。",
+          body: "點一下、一張照片或她的聲音。不用打字，不用新 App。",
         },
         {
           clock: "09:30 · 家人",
           title: "她的回答成了一家人的時刻",
-          body: "回答會出現在家人的群組和 App 裡。阿俊按讚、莉莉傳了照片、小美用語音回覆，每個人都用自己的語言。她的燈亮了，大家都看得到。",
+          body: "家人看到後回覆，每個人用自己的語言。",
         },
         {
           clock: "隔天 08:00",
           title: "她隔天聽到回覆",
-          body: "隔天早上的訊息會先告訴她家人說了什麼，她想聽也可以朗讀給她聽。她不需要滑任何動態。接著才是今天的問題。",
+          body: "隔天早上，先聽家人說了什麼。",
         },
       ],
     },
     tryIt: {
       eyebrow: "試試看",
       title: "先當家人，再當媽媽。",
-      lede: "選一個問題送出。然後像她一樣，只用一個動作回答，看看接下來會發生什麼。",
+      lede: "選一個問題，再用媽媽的身分回答。",
       step1: "1 · 選擇要問什麼",
       step2: "2 · 現在用媽媽的身分回答",
       again: "換一個問題試試",
@@ -1116,60 +1085,49 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
     light: {
       eyebrow: "Vela Light",
       title: "某天早上沒有回音時，有人知道該怎麼做。",
-      lede: "她的燈來自一次真正的交流，而不是一次查勤。如果某天早上一直沒有回音，Vela 給的是一個計畫，而不是警報。",
+      lede: "沒有警報。只有一個安靜的計畫，而且只在需要時。",
       ladder: [
         {
           when: "任何回答",
           what: "她的燈亮了",
-          detail: "一收到回答，窗裡的燈就亮了，表示「今天已回答」。",
+          detail: "「今天已回答」。",
         },
         {
           when: "2.5 小時後",
           what: "溫和地再傳一次",
-          detail: "Vela 再送一次提問。大多數的早晨到這裡就結束了。",
+          detail: "大多數的早晨到這裡就結束了。",
         },
         {
           when: "幾小時後",
-          what: "給發起人的一則安靜通知",
-          detail: "事實、她平常回答的時間，以及附近的人，一鍵就能打電話。",
+          what: "給您的一則安靜通知",
+          detail: "事實，以及一鍵打給媽媽。",
         },
         {
           when: "任何回答，或「她沒事」",
           what: "每個人都會知道沒事了",
-          detail: "「媽媽在 11:40 回答了。燈又都亮了。」",
+          detail: "「媽媽在 11:40 回答了。」",
         },
       ],
-      promise: "Vela 從不自行聯絡任何人。每一則給鄰居或朋友的訊息，都是由家人親手按下送出的。",
+      promise: "Vela 從不自行聯絡任何人。",
       alt: "插畫：黃昏時公寓大樓上唯一亮著的拱形窗，窗台上有一盆植物和一個茶杯。",
     },
     different: {
       eyebrow: "有什麼不一樣",
-      title: "Vela 做到家庭群組做不到的事。",
-      lede: "它就在您家人本來就在聊天的 LINE 裡。不用換掉什麼，她也不用學任何新東西。",
-      now: "現在",
-      vela: "有了 Vela",
+      title: "Vela 有什麼不一樣。",
+      cols: ["家庭群組", "攝影機、緊急按鈕", "Vela"],
       rows: [
-        {
-          now: "電話講成了問診，每個回答都是「我很好」。",
-          vela: "每天一個關於她生活的問題：早餐、陽台的花、她和爸爸怎麼認識的。她的回答是一個故事，而不是一個狀態。",
-        },
-        {
-          now: "她的早安圖，五個人已讀，沒有人回。",
-          vela: "家人的回覆會成為她隔天早上的第一則訊息，她想聽也可以朗讀給她聽。她說的每句話都有人聽見。",
-        },
-        {
-          now: "安靜的一天什麼都不代表，所以讓您擔心一整天。",
-          vela: "Vela 會熟悉她平常的早晨。如果溫和地再問一次後還是沒有回音，家裡會有一個人在當天知道，附上事實和一鍵撥號。",
-        },
-        {
-          now: "攝影機和緊急按鈕，讓她在自己家裡像個病人。",
-          vela: "她的燈會亮，是因為她回答了她愛的人。她本人說好之前什麼都不會開始，她也隨時可以問家人看到了什麼。",
-        },
+        { label: "每天問起她的生活", marks: [false, false, true] },
+        { label: "注意到安靜的早晨", marks: [false, true, true] },
+        { label: "像關心，不像被看著", marks: [true, false, true] },
+        { label: "把家人的回覆讀給她聽", marks: [false, false, true] },
+        { label: "她不用安裝任何新東西", marks: [true, false, true] },
       ],
+      yes: "有",
+      no: "沒有",
     },
     bleed: {
       title: "不是報平安，是一段對話。",
-      body: "對「妳還好嗎？」最好的回答，是一段早餐的故事、一張花園的照片、語音裡的一聲笑。Vela 每天為這些留一點空間。",
+      body: "一段早餐的故事，比「我很好」說得更多。",
       alt: "三代同堂在家裡的餐桌旁開懷大笑，孫女正給奶奶看手機上的東西。",
     },
     plans: {
@@ -1179,25 +1137,23 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         name: "免費",
         tag: "每位家人，永久免費",
         items: [
-          "每天的提問、她的回答、大家的回覆",
-          "每天早上的回顧",
-          "家人之間不同語言的翻譯",
-          "故事日和家庭紀錄",
-          "她的燈，顯示為「今天已回答」",
+          "每天的提問和回答",
+          "給她的早晨回顧",
+          "不同語言之間的翻譯",
+          "她的燈：「今天已回答」",
         ],
       },
       paid: {
         name: "Vela Light",
         tag: "免費試用 30 天，不需信用卡",
         items: [
-          "早上一直沒有回音時的安靜通知",
-          "附近的人一鍵可聯絡，還有「請他們去看看」",
-          "旅行或探親時的外出模式",
-          "每週回顧：用幾句話說說她的一週",
-          "每月公布通知有多常真的派上用場",
+          "早上沒有回音時的安靜通知",
+          "附近的人，一鍵聯絡",
+          "旅行時的外出模式",
+          "用幾句話說說她的一週",
         ],
       },
-      note: "價格會在正式推出時公布，等候名單上的家庭會最先知道。即使 Vela Light 停止，每天的交流仍會繼續。沒有人會和家人斷了聯繫。",
+      note: "價格在推出時公布。即使 Vela Light 停止，每天的交流仍會繼續。",
     },
     promises: {
       eyebrow: "我們的承諾",
@@ -1206,35 +1162,35 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         {
           icon: "consent",
           title: "她自己決定",
-          body: "她本人說好之前，什麼都不會開始。她隨時都可以說停，也可以再開始。",
+          body: "她說好之前什麼都不會開始，隨時可以停。",
         },
         {
           icon: "symmetry",
           title: "沒有秘密",
-          body: "她隨時都可以問家人看到了關於她的什麼，得到的摘要和家人看到的一樣。",
+          body: "她隨時看得到家人看到的內容。",
         },
         {
           icon: "health",
           title: "她的健康，她的話",
-          body: "如果她提到跌倒或疼痛，只有她另外同意過，才會轉告家人。",
+          body: "跌倒或疼痛，只有她同意才會轉告。",
         },
         {
           icon: "calm",
           title: "一天一個時刻",
-          body: "一天一則訊息。沒有連續紀錄、沒有徽章，錯過一天也不會被責怪。",
+          body: "一天一則訊息。沒有連續紀錄，沒有壓力。",
         },
       ],
     },
     numbers: {
       eyebrow: "Vela 的表現",
       title: "我們公布安靜通知有多常真的重要。",
-      body: "每一則安靜通知最後都會記錄實際發生了什麼：晚一點回答、外出、家人知道原因，或真的出了事。我們每個月公布所有家庭的統計，讓您自己判斷。",
+      body: "每則安靜通知都會記錄實際發生了什麼。我們每月公布統計。",
       link: "查看每月數據",
     },
     join: {
       eyebrow: "加入等候名單",
       title: "成為第一批使用的家庭。",
-      lede: "我們先從越南自己的家人開始，在 Telegram 上試用。留下您的電子郵件，等可以邀請您的家人時，我們會寫信通知您。",
+      lede: "我們先從自己的家人開始，在 Telegram 上試用。留下電子郵件，有名額時我們會通知您。",
       email: "您的電子郵件",
       placeholder: "you@example.com",
       role: "您想為誰設定？",
@@ -1581,6 +1537,9 @@ function footer(lang: SiteLang): Html {
   return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}">${MARK}<span>Vela</span></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a><a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
 }
 
+const CHECK = html`<svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const CROSS = html`<svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 12h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+
 const HEART = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg>`;
 
 /** A phone's status bar and camera, so both ends of the exchange read as real screens. */
@@ -1663,16 +1622,15 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
 <section class="band worry" id="worry"><div class="wrap">
   <p class="eyebrow reveal">${c.worry.eyebrow}</p>
   <h2 class="reveal">${c.worry.title}</h2>
-  <p class="lede reveal">${c.worry.lede}</p>
   <ol class="week">${c.worry.moments.map(
     (m, i) =>
-      html`<li class="moment reveal d${i % 2}"><p class="clock">${m.when}</p><h3>${m.title}</h3><p>${m.body}</p>${m.snippet ? snippet(m.snippet) : null}${m.figure ? figure(m.figure) : null}</li>`,
+      html`<li class="moment reveal d${i % 4}">${m.snippet ? snippet(m.snippet) : null}${m.figure ? figure(m.figure, " boxed") : null}<p class="clock">${m.when}</p><h3>${m.title}</h3></li>`,
   )}</ol>
 </div></section>
 
 <section class="band why" id="why"><div class="wrap">
-  <div class="why-head"><p class="eyebrow reveal">${c.why.eyebrow}</p><h2 class="reveal">${c.why.title}</h2></div>
-  <div class="why-body reveal">${c.why.paragraphs.map((p) => html`<p>${p}</p>`)}</div>
+  <div class="why-head"><p class="eyebrow reveal">${c.why.eyebrow}</p><h2 class="reveal">${c.why.title}</h2><p class="why-note reveal">${c.why.note}</p></div>
+  <div class="venn reveal"><div class="circle chat"><b>${c.why.venn.chat[0]}</b><span>${c.why.venn.chat[1]}</span></div><div class="circle watch"><b>${c.why.venn.watch[0]}</b><span>${c.why.venn.watch[1]}</span></div><div class="both lit">${LAMP}<b>${c.why.venn.vela[0]}</b><span>${c.why.venn.vela[1]}</span></div></div>
   <div class="figures">${c.why.figures.map((f, i) => figure(f, ` reveal d${i}`))}</div>
 </div></section>
 
@@ -1698,7 +1656,6 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
   <div>
     <p class="eyebrow reveal">${c.morning.eyebrow}</p>
     <h2 class="reveal">${c.morning.title}</h2>
-    <p class="lede reveal">${c.morning.lede}</p>
     <ol class="steps">${c.morning.steps.map(
       (step, i) =>
         html`<li class="step${i === 0 ? " on" : ""}"><p class="clock">${step.clock}</p><h3>${step.title}</h3><p>${step.body}</p>${phone(c.demo.morning[i]?.head ?? demoHead, " mini", c.demo.morning[i]?.messages ?? [])}</li>`,
@@ -1742,7 +1699,7 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
     <p class="lede reveal">${c.light.lede}</p>
     <ol class="ladder">${c.light.ladder.map(
       (rung, i) =>
-        html`<li class="reveal d${Math.min(i, 3)}"><small>${rung.when}</small><b>${rung.what}</b>${rung.detail}</li>`,
+        html`<li class="reveal d${Math.min(i, 3)}${i === 0 || i === c.light.ladder.length - 1 ? " lit" : ""}"><small>${rung.when}</small><b>${rung.what}</b>${rung.detail}</li>`,
     )}</ol>
     <p class="promise-line reveal">${c.light.promise}</p>
   </div>
@@ -1751,11 +1708,16 @@ export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageC
 <section class="band different" id="different"><div class="wrap">
   <p class="eyebrow reveal">${c.different.eyebrow}</p>
   <h2 class="reveal">${c.different.title}</h2>
-  <p class="lede reveal">${c.different.lede}</p>
-  <ol class="diff">${c.different.rows.map(
-    (row, i) =>
-      html`<li class="reveal d${Math.min(i, 3)}"><div class="now">${LAMP}<small>${c.different.now}</small><p>${row.now}</p></div><div class="with lit">${LAMP}<small>${c.different.vela}</small><p>${row.vela}</p></div></li>`,
-  )}</ol>
+  <div class="compare reveal"><table><thead><tr><td></td>${c.different.cols.map(
+    (col, i) =>
+      html`<th scope="col"${i === 2 ? html` class="vela lit"` : null}>${i === 2 ? LAMP : null}<span>${col}</span></th>`,
+  )}</tr></thead><tbody>${c.different.rows.map(
+    (row) =>
+      html`<tr><th scope="row">${row.label}</th>${row.marks.map(
+        (yes, i) =>
+          html`<td class="${yes ? "yes" : "no"}${i === 2 ? " vela" : ""}">${yes ? CHECK : CROSS}<span class="sr">${yes ? c.different.yes : c.different.no}</span></td>`,
+      )}</tr>`,
+  )}</tbody></table></div>
 </div></section>
 
 <section class="bleed"><img src="${IMG}/family-dinner.jpg" width="1264" height="848" alt="${c.bleed.alt}" loading="lazy"><div class="wrap reveal"><h2>${c.bleed.title}</h2><p>${c.bleed.body}</p></div></section>

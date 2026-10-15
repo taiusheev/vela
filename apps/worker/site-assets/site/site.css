@@ -1848,12 +1848,6 @@ input[type="email"] {
   font-size: clamp(1.35rem, 2.2vw, 1.65rem);
   margin-bottom: 0.6rem;
 }
-.moment > p {
-  color: var(--muted);
-  font-size: 1rem;
-  line-height: 1.7;
-  max-width: 34rem;
-}
 .snip {
   margin-top: auto;
   display: flex;
@@ -1927,16 +1921,6 @@ input[type="email"] {
 .why-head h2 {
   margin-bottom: 0;
 }
-.why-body p {
-  font-size: 1.1rem;
-  line-height: 1.75;
-  max-width: 36rem;
-}
-.why-body p:last-child {
-  margin-bottom: 0;
-  font: 600 1.3rem / 1.5 var(--serif);
-  color: var(--teal-ink);
-}
 .figures {
   grid-column: 1 / -1;
   display: grid;
@@ -1994,54 +1978,6 @@ input[type="email"] {
   object-position: center 60%;
 }
 
-/* What's different: each worry, unlit, beside what Vela does, lit. */
-.diff {
-  list-style: none;
-  padding: 0;
-  margin: 2.5rem 0 0;
-  border-top: 1px solid var(--rule);
-}
-.diff li {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: clamp(1rem, 4vw, 3rem);
-  padding: 1.5rem 0;
-  border-bottom: 1px solid var(--rule);
-}
-.diff .now,
-.diff .with {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 0.85rem;
-  align-items: start;
-  align-content: start;
-}
-.diff .lamp {
-  width: 1.3rem;
-  height: 1.6rem;
-  grid-row: span 2;
-  margin-top: 0.1rem;
-}
-.diff small {
-  font: 600 0.72rem / 1.2 var(--sans);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--caption);
-}
-.diff .with small {
-  color: var(--teal);
-}
-.diff p {
-  margin: 0.35rem 0 0;
-}
-.diff .now p {
-  color: var(--muted);
-  font-size: 1rem;
-}
-.diff .with p {
-  font-size: 1.05rem;
-}
-
 @media (max-width: 900px) {
   .hero h1 {
     max-width: none;
@@ -2063,10 +1999,6 @@ input[type="email"] {
 @media (max-width: 48rem) {
   .worry .week {
     grid-template-columns: 1fr;
-  }
-  .diff li {
-    grid-template-columns: 1fr;
-    gap: 1rem;
   }
 }
 @media (max-width: 480px) {
@@ -2099,9 +2031,6 @@ input[type="email"] {
   }
   .meet .stage {
     min-height: 27rem;
-  }
-  .why-body p:last-child {
-    font-size: 1.15rem;
   }
 }
 
@@ -2445,4 +2374,293 @@ input[type="email"] {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--teal-ink);
+}
+
+/* Fewer words: each worry is a picture with a one-line caption, in a row of four. */
+.worry .week {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+.moment {
+  padding: 1rem 1rem 1.25rem;
+}
+.moment .snip,
+.moment .fig.boxed {
+  margin: 0 0 1.1rem;
+  min-height: 9rem;
+  justify-content: center;
+}
+.moment .fig.boxed {
+  display: flex;
+  flex-direction: column;
+  padding: 0.9rem 1rem;
+  border-top: 0;
+  border-radius: 12px;
+  background: var(--soft);
+}
+.fig.boxed .big {
+  font-size: 2.2rem;
+  margin-bottom: 0.35rem;
+}
+.fig.boxed figcaption {
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.fig.boxed cite {
+  margin-top: 0.4rem;
+  font-size: 0.64rem;
+}
+.moment .clock {
+  margin-bottom: 0.4rem;
+}
+.moment h3 {
+  margin: 0;
+  font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+}
+@media (max-width: 64rem) {
+  .worry .week {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 40rem) {
+  .worry .week {
+    grid-template-columns: 1fr;
+  }
+  .moment .snip,
+  .moment .fig.boxed {
+    min-height: 0;
+  }
+}
+
+/* Why: two circles that each do half the job; Vela is where they overlap. */
+.why {
+  overflow-x: clip;
+}
+.why .wrap {
+  align-items: center;
+}
+.why-note {
+  max-width: 26rem;
+  margin: 1.25rem 0 0;
+  font: 600 1.15rem / 1.5 var(--serif);
+  color: var(--teal-ink);
+}
+.venn {
+  --d: min(17rem, 30vw);
+  position: relative;
+  justify-self: center;
+  width: calc(var(--d) * 1.7);
+  height: var(--d);
+}
+.venn .circle {
+  position: absolute;
+  top: 0;
+  width: var(--d);
+  height: var(--d);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+  border-radius: 50%;
+}
+.venn .chat {
+  left: 0;
+  padding: 0 calc(var(--d) * 0.4) 0 calc(var(--d) * 0.13);
+  background: #1f5c661a;
+  border: 1.5px solid #1f5c6640;
+}
+.venn .watch {
+  right: 0;
+  padding: 0 calc(var(--d) * 0.13) 0 calc(var(--d) * 0.4);
+  text-align: right;
+  background: #5a534b14;
+  border: 1.5px solid #5a534b33;
+}
+.venn b {
+  font: 600 clamp(0.85rem, 1.5vw, 1.1rem) / 1.2 var(--serif);
+}
+.venn .circle span {
+  font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+  line-height: 1.35;
+  color: var(--muted);
+}
+.venn .both {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--d) * 0.3);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  text-align: center;
+}
+.venn .both .lamp {
+  width: 1.7rem;
+  height: 2.1rem;
+  filter: drop-shadow(0 0 12px #e9a23baa);
+}
+.venn .both b {
+  color: var(--teal-ink);
+}
+.venn .both span {
+  font: 700 0.62rem / 1.1 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--amber-deep);
+}
+
+/* What's different: a yes/no chart, Vela's column lit. */
+.compare {
+  margin-top: 2.5rem;
+  overflow-x: auto;
+}
+.compare table {
+  max-width: 56rem;
+}
+.compare th,
+.compare td {
+  padding: 1rem 0.75rem;
+  text-align: center;
+  white-space: normal;
+}
+.compare thead th {
+  min-width: 0;
+  font: 600 0.85rem / 1.25 var(--sans);
+  color: var(--muted);
+}
+.compare thead th.vela {
+  border-radius: 14px 14px 0 0;
+  font: 600 1.15rem / 1 var(--serif);
+  color: var(--teal-ink);
+}
+.compare thead th.vela .lamp {
+  display: block;
+  width: 1.6rem;
+  height: 2rem;
+  margin: 0 auto 0.4rem;
+}
+.compare tbody th {
+  padding-left: 0;
+  text-align: left;
+  font: 500 1.02rem / 1.4 var(--sans);
+  color: var(--ink);
+}
+.compare .vela {
+  background: #fbebcf99;
+}
+.compare tbody tr:last-child td.vela {
+  border-radius: 0 0 14px 14px;
+}
+.compare .mark {
+  display: inline-block;
+  width: 1.6rem;
+  height: 1.6rem;
+  vertical-align: middle;
+}
+.compare .yes .mark circle {
+  fill: var(--teal);
+}
+.compare .vela.yes .mark circle {
+  fill: var(--amber-deep);
+}
+.compare .no .mark {
+  color: #b9afa2;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.ladder li.lit::before {
+  background: var(--amber);
+}
+
+/* Motion that tells the story without words: bubbles arrive, circles meet, ticks land. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .moment .snip p {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+    transition:
+      opacity 0.35s var(--ease),
+      transform 0.35s var(--ease);
+  }
+  .js .moment.in .snip p {
+    opacity: 1;
+    transform: none;
+  }
+  .js .moment.in .snip p:nth-child(2) {
+    transition-delay: 0.7s;
+  }
+  .js .venn .chat {
+    transform: translateX(14%);
+  }
+  .js .venn .watch {
+    transform: translateX(-14%);
+  }
+  .js .venn .circle {
+    transition: transform 0.9s var(--ease);
+  }
+  .js .venn .both {
+    opacity: 0;
+    transition: opacity 0.5s 0.7s var(--ease);
+  }
+  .js .venn.in .circle {
+    transform: none;
+  }
+  .js .venn.in .both {
+    opacity: 1;
+  }
+  .js .compare .mark {
+    opacity: 0;
+    transform: scale(0.4);
+    transition:
+      opacity 0.35s var(--ease),
+      transform 0.35s var(--ease);
+  }
+  .js .compare.in .mark {
+    opacity: 1;
+    transform: none;
+  }
+  .js .compare.in tr:nth-child(2) .mark {
+    transition-delay: 0.1s;
+  }
+  .js .compare.in tr:nth-child(3) .mark {
+    transition-delay: 0.2s;
+  }
+  .js .compare.in tr:nth-child(4) .mark {
+    transition-delay: 0.3s;
+  }
+  .js .compare.in tr:nth-child(5) .mark {
+    transition-delay: 0.4s;
+  }
+}
+
+@media (max-width: 900px) {
+  .venn {
+    --d: min(16rem, 52vw);
+  }
+}
+@media (max-width: 480px) {
+  .compare th,
+  .compare td {
+    padding: 0.8rem 0.3rem;
+  }
+  .compare tbody th {
+    font-size: 0.88rem;
+  }
+  .compare thead th {
+    font-size: 0.7rem;
+  }
+  .compare thead th.vela {
+    font-size: 0.95rem;
+  }
+  .compare .mark {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
 }
