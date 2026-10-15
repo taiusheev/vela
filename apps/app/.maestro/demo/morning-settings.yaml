@@ -6,11 +6,9 @@ tags:
 - launchApp
 - tapOn: "You"
 - scrollUntilVisible:
-    element:
-      css: '[data-testid="morning-settings-m1"]'
+    element: "Change Mom's morning"
     direction: DOWN
-- tapOn:
-    css: '[data-testid="morning-settings-m1"]'
+- tapOn: "Change Mom's morning"
 - assertVisible: "Morning settings"
 - assertVisible: "This is an example. No settings are sent to a family."
 - assertVisible: "Times are in Asia/Taipei. Today's morning stays at 08:00. A new time starts tomorrow."

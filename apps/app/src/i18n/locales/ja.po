@@ -279,6 +279,10 @@ msgstr ""
 msgid "{recipient} saw it · {time}"
 msgstr ""
 
+#: app/(tabs)/index.tsx
+msgid "{recipient}'s morning settings"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "{wrong} where something was wrong"
 msgstr ""
@@ -592,10 +596,6 @@ msgstr ""
 
 #: app/(tabs)/you.tsx
 msgid "Change {name}'s morning"
-msgstr ""
-
-#: app/(tabs)/index.tsx
-msgid "Change {recipient}'s morning"
 msgstr ""
 
 #: app/onboarding.tsx

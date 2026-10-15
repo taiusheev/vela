@@ -286,6 +286,10 @@ msgstr "{recipient}已暫停晨間訊息。準備好時，可以在 Vela 的聊�
 msgid "{recipient} saw it · {time}"
 msgstr "{recipient}看過了 · {time}"
 
+#: app/(tabs)/index.tsx
+msgid "{recipient}'s morning settings"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "{wrong} where something was wrong"
 msgstr "{wrong}次真的有狀況"
@@ -600,10 +604,6 @@ msgstr "更改"
 #: app/(tabs)/you.tsx
 msgid "Change {name}'s morning"
 msgstr "更改{name}的早安訊息"
-
-#: app/(tabs)/index.tsx
-msgid "Change {recipient}'s morning"
-msgstr ""
 
 #: app/onboarding.tsx
 msgid "Change country"

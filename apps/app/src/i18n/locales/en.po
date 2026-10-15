@@ -285,6 +285,10 @@ msgstr "{recipient} has paused their mornings. They can start again in Vela's ch
 msgid "{recipient} saw it · {time}"
 msgstr "{recipient} saw it · {time}"
 
+#: app/(tabs)/index.tsx
+msgid "{recipient}'s morning settings"
+msgstr "{recipient}'s morning settings"
+
 #: src/data/precision.ts
 msgid "{wrong} where something was wrong"
 msgstr "{wrong} where something was wrong"
@@ -599,10 +603,6 @@ msgstr "Change"
 #: app/(tabs)/you.tsx
 msgid "Change {name}'s morning"
 msgstr "Change {name}'s morning"
-
-#: app/(tabs)/index.tsx
-msgid "Change {recipient}'s morning"
-msgstr "Change {recipient}'s morning"
 
 #: app/onboarding.tsx
 msgid "Change country"

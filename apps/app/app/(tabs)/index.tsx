@@ -582,7 +582,7 @@ function FamilyToday({ day }: { day: TodayView }) {
           </Words>
           {organiser || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
             <SecondaryButton
-              label={t`Change ${recipient}'s morning`}
+              label={t`${recipient}'s morning settings`}
               onPress={() =>
                 router.push({ pathname: "/morning-settings", params: { member: target.memberId } })
               }

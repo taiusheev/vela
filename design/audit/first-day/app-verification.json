@@ -4,7 +4,7 @@
   "checks": [
     "Today Reply opens the named conversation; history stays with Mom; send-now demo clears text and gives an explicit example receipt",
     "Morning compose remains independently reachable from the anytime conversation",
-    "Family header opens You; the named morning control navigates despite hidden duplicate labels; form previews a valid edit truthfully",
+    "Family header opens You; one distinct morning label navigates; invalid input is refused, valid input previews, and Cancel returns to You",
     "Unknown recipient neither shows another parent history nor offers an implicit compose for another person",
     "Exported app home/conversation/morning/nearby/family layouts fit 320px",
     "Exported app home/conversation/morning/nearby/family layouts fit 390px",
