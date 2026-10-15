@@ -1931,7 +1931,7 @@
         },
         "exchanges_when_rule_check": {
           "name": "exchanges_when_rule_check",
-          "value": "\"exchanges\".\"when_rule\" in ('tomorrow', 'date', 'whenever', 'now')"
+          "value": "\"when_rule\" in ('tomorrow', 'date', 'whenever', 'now')"
         }
       },
       "isRLSEnabled": false
@@ -3719,7 +3719,7 @@
       "checkConstraints": {
         "outbound_kind_check": {
           "name": "outbound_kind_check",
-          "value": "\"outbound\".\"kind\" in ('conversation', 'arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')"
+          "value": "\"kind\" in ('conversation', 'arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')"
         },
         "outbound_channel_check": {
           "name": "outbound_channel_check",
