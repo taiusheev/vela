@@ -17,11 +17,13 @@ await page.getByRole('button',{name:'Leave something for their morning',exact:tr
 await page.getByText('What are you sending?',{exact:true}).waitFor();
 assert.match(await page.locator('body').innerText(),/Tomorrow morning/);
 checks.push('Morning compose remains independently reachable from the anytime conversation');
-await page.goto(base+'/morning-settings?member=m1',{waitUntil:'networkidle'});
+await page.goto(base,{waitUntil:'networkidle'});
+await page.getByRole('button',{name:'Family settings',exact:true}).click();
+await page.getByTestId('morning-settings-m1').click();
 const time=page.getByRole('textbox',{name:'Morning time (24-hour HH:MM)'});
 await time.fill('09:15');await page.getByRole('button',{name:'Preview settings',exact:true}).click();
 await page.getByText('Example settings previewed.',{exact:true}).waitFor();
-checks.push('Morning time form accepts a valid edit and truthfully previews it in demo');
+checks.push('Family header opens You; the named morning control navigates despite hidden duplicate labels; form previews a valid edit truthfully');
 await page.goto(base+'/conversation?recipient=unknown',{waitUntil:'networkidle'});
 assert.equal(await page.getByRole('button',{name:'Send now',exact:true}).isDisabled(),true);
 assert.doesNotMatch(await page.locator('body').innerText(),/The tomatoes finally turned/);

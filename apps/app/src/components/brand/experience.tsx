@@ -104,6 +104,7 @@ export function FamilyAction({
   onPress,
   disabled = false,
   actionLabel,
+  testID,
 }: {
   title: string;
   detail?: string;
@@ -111,11 +112,13 @@ export function FamilyAction({
   onPress: () => void;
   disabled?: boolean;
   actionLabel?: string;
+  testID?: string;
 }) {
   const p = usePalette();
   const { fontScale } = useWindowDimensions();
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
