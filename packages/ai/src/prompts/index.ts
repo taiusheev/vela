@@ -4,7 +4,7 @@ import * as flag from "./flag.v2.ts";
 import * as hello from "./hello.v2.ts";
 import * as readback from "./readback.v1.ts";
 import * as recipe from "./recipe.v1.ts";
-import * as suggest from "./suggest.v1.ts";
+import * as suggest from "./suggest.v2.ts";
 import * as translate from "./translate.v1.ts";
 import * as understand from "./understand.v5.ts";
 import * as weeklyRead from "./weekly_read.v5.ts";

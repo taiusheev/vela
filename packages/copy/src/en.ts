@@ -84,11 +84,12 @@ export const en = {
     "Your light is not on yet. Your family organiser needs an approved Telegram account that can receive messages. Please ask your organiser to finish setup, then try again.",
   "pilot.invitation_only":
     "Vela’s English trial is invitation-only. Contact the founder for access. Your Telegram ID: {telegram_id}.",
+  "arrival.from": "From {asker}",
   "arrival.greeting": "Good morning, {address}.",
   "arrival.late": "Sorry this is late.",
   "arrival.repeat": "In case you missed it:",
   "arrival.readback_heading": "From your family:",
-  "arrival.asks": "{asker} asks:",
+  "arrival.asks": "From {asker}",
   "arrival.asks_on_behalf": "{asker} asks, for {child}:",
   "arrival.sent_photo": "{asker} sent you a photo.",
   "arrival.sent_voice": "{asker} sent you a voice message.",
@@ -232,7 +233,7 @@ export const en = {
   "help.followed":
     "Hello, I'm Vela. If someone in your family sent you an invitation, open it now. To set up Vela for your own family, send /start.",
   "nearby.request":
-    "{organiser} asks: you live near {name}. On a day when {name} hasn't answered and {organiser} can't get through, may {organiser} ask you, through Vela, to go round? Vela never writes to you on its own: any request comes from {organiser}. If you say yes, Vela keeps your name and this Telegram account until you or {organiser} remove them. You can say no, or change your mind at any time by sending stop. Vela is a pilot run by Timur Aiusheev. How your details are used: {notice}",
+    "{organiser} would like to ask you to look in on {name} if they cannot reach them.\n\nYou only hear from Vela when {organiser} asks. If you agree, Vela keeps your name and Telegram account until either of you removes it.\n\nYou can say no, or send stop any time.\n\nPilot run by Timur Aiusheev · Privacy: {notice}",
   "nearby.yes": "Yes, I'm happy to",
   "nearby.no": "No, thank you",
   "nearby.accepted":

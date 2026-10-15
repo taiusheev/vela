@@ -50,7 +50,7 @@ import {
   quietEvents,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, eq, gt, isNull, lt, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lt, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
@@ -83,7 +83,11 @@ export const RETRY_DELAY_MINUTES = [5, 15, 30] as const;
  * The kinds her pause holds back: her morning and its repeat (flows §3.13). Everything else to her
  * answers her own words — the reply to her stop, her thanks, a receipt — and still goes.
  */
-const HELD_BY_PAUSE: ReadonlySet<OutboundKind> = new Set<OutboundKind>(["arrival", "repeat"]);
+const HELD_BY_PAUSE: ReadonlySet<OutboundKind> = new Set<OutboundKind>([
+  "arrival",
+  "repeat",
+  "conversation",
+]);
 
 /**
  * The reason, and `outbound.error`, of a row dropped because she had said stop: the one reason a
@@ -183,6 +187,7 @@ const HealthWordsFor = z.object({
 
 const OutboundPayload = z.object({
   message: StoredMessage,
+  consentTextVersion: z.string().max(80).optional(),
   reply: StoredReply.optional(),
   ref: MessageRefIntent.optional(),
   effect: z.unknown().optional(),
@@ -233,6 +238,7 @@ function addSentMedia(
 }
 
 export interface OutboundRequestBase {
+  consentTextVersion?: string;
   /** From `outboundKey`: names this one message, so a repeat of the same request is a no-op. */
   idempotencyKey: string;
   /** Whose row it is: the reader of a private message, the poster's subject in a group. */
@@ -354,6 +360,9 @@ export async function insertOutbound(
   }
   const localDay = request.localDay ?? (await localTodayOf(deps, db, request.memberId));
   const payload: OutboundPayload = {
+    ...(request.consentTextVersion === undefined
+      ? {}
+      : { consentTextVersion: request.consentTextVersion }),
     message: {
       lang: message.data.lang,
       text: message.data.text,
@@ -646,6 +655,11 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
   if (member.status === "paused" && HELD_BY_PAUSE.has(row.kind)) {
     return (await dropWhilePaused(deps, loaded)) ?? deliverOutbound(deps, outboundId);
   }
+  if (
+    row.kind === "conversation" &&
+    (!member.lightOn || member.lightConsentedAt === null || member.status !== "active")
+  )
+    return drop(deps, loaded, "member_not_active");
   const repeatMoot = await repeatIsMoot(deps.db, row, member);
   if (repeatMoot !== null) {
     return drop(deps, loaded, repeatMoot);
@@ -887,6 +901,7 @@ async function pilotDeliveryAllowed(deps: Deps, loaded: LoadedOutbound): Promise
   if (row.channel === "telegram" && row.conversationId === deps.config.adminConversationId)
     return true;
   const sensitive = new Set<OutboundKind>([
+    "conversation",
     "arrival",
     "repeat",
     "turn_prompt",
@@ -1055,7 +1070,7 @@ export async function finishArrivalEffects(
     .where(
       and(
         eq(outbound.memberId, memberId),
-        eq(outbound.kind, "arrival"),
+        inArray(outbound.kind, ["arrival", "conversation"]),
         eq(outbound.status, "sent"),
         isNull(outbound.effectsAt),
         exchangeId === undefined ? undefined : eq(outbound.exchangeId, exchangeId),

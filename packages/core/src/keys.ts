@@ -40,6 +40,7 @@ interface KeyShape {
  * kind's comment says, never by copying the row.
  */
 export const OUTBOUND_KEY_SHAPES: Readonly<Record<OutboundKind, KeyShape>> = {
+  conversation: { parts: ["exchangeId"], suffix: "none" },
   /** Her morning: member and her local date. */
   arrival: { parts: ["memberId", "date"], suffix: "none" },
   repeat: { parts: ["memberId", "date"], suffix: "none" },

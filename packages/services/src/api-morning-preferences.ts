@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
+import { canWaitForHerYes } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { morningTimeOn } from "./morning-time.ts";
@@ -23,8 +24,9 @@ function editable(member: Member | undefined, familyId: string): member is Membe
     member !== undefined &&
     member.familyId === familyId &&
     member.leftAt === null &&
-    (member.status === "active" || member.status === "paused") &&
-    (member.lightOn || member.lightConsentedAt !== null)
+    (canWaitForHerYes(member, familyId) ||
+      ((member.status === "active" || member.status === "paused") &&
+        (member.lightOn || member.lightConsentedAt !== null)))
   );
 }
 function view(member: Member, now: Date): ApiMorningPreferences {
@@ -99,13 +101,19 @@ export async function setApiMorningPreferences(
           .update(members)
           .set({
             language: parsed.data.language,
-            ...(timeChanged
+            ...(canWaitForHerYes(member, family)
               ? {
-                  arrivalTime: currentTime,
-                  pendingArrivalTime: parsed.data.arrival_time,
-                  pendingArrivalDate: addDays(today, 1),
+                  arrivalTime: parsed.data.arrival_time,
+                  pendingArrivalTime: null,
+                  pendingArrivalDate: null,
                 }
-              : {}),
+              : timeChanged
+                ? {
+                    arrivalTime: currentTime,
+                    pendingArrivalTime: parsed.data.arrival_time,
+                    pendingArrivalDate: addDays(today, 1),
+                  }
+                : {}),
           })
           .where(eq(members.id, herId))
           .returning();

@@ -24,6 +24,28 @@ describe("PROMPTS registry", () => {
     }
   });
 
+  it("drafts in the holder's own style while leaving approval with the holder", () => {
+    expect(PROMPTS.suggest.version).toBe("suggest.v2");
+    expect(PROMPTS.suggest.system).toContain("holderWritingExamples");
+    expect(PROMPTS.suggest.system).toContain("match their everyday vocabulary");
+    expect(PROMPTS.suggest.system).toContain(
+      "Never automatically attribute unapproved generated words",
+    );
+    expect(
+      SuggestInput.safeParse({
+        lang: "en",
+        holderName: "Mia",
+        recipientAddress: "Mom",
+        forDate: "2026-10-16",
+        rotationType: "question",
+        recentMentions: [],
+        familyDates: [],
+        holderLastAsk: null,
+        holderWritingExamples: Array(6).fill("hello"),
+      }).success,
+    ).toBe(false);
+  });
+
   it("gives every call a unique version", () => {
     const versions = AI_CALL_NAMES.map((call) => PROMPTS[call].version);
     expect(new Set(versions).size).toBe(versions.length);

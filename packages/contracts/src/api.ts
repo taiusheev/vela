@@ -464,6 +464,14 @@ export const ApiTomorrowTurn = z.object({
 export type ApiTomorrowTurn = z.infer<typeof ApiTomorrowTurn>;
 
 export const ApiToday = z.object({
+  connection_days: z
+    .array(
+      z.object({
+        member_id: z.uuid(),
+        days: z.array(z.object({ date: LocalDate, has_message: z.boolean() })).length(7),
+      }),
+    )
+    .optional(),
   lights: z.array(MemberLight),
   exchanges: z.array(ApiTodayExchange),
   tomorrow: z.array(ApiTomorrowTurn),
@@ -544,6 +552,12 @@ export const ComposeAsk = z
      */
     voice_hello_id: z.uuid().optional(),
   })
+  .refine(
+    (ask) =>
+      ask.when !== "now" ||
+      (ask.type === "question" && ask.media_ids === undefined && ask.voice_hello_id === undefined),
+    { message: "send now takes a text message", path: ["when"] },
+  )
   .refine((ask) => (ask.when === "date") === (ask.date !== undefined), {
     message: "a date ask needs its date, and no other kind takes one",
     path: ["date"],

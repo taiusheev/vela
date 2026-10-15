@@ -23,6 +23,7 @@ import { loadApiQuiet, resolveApiQuiet } from "./api-quiet.ts";
 import type { OutboundJob } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { deliverOutbound } from "./gateway.ts";
+import { sha256Hex } from "./hash.ts";
 import { handleInbound } from "./inbound/router.ts";
 import { applyRetention } from "./jobs.ts";
 import { askApiToLookIn, type LookInRefusedError } from "./nearby-ask.ts";
@@ -149,7 +150,7 @@ describe("asking someone nearby on Telegram", () => {
     expect(h.telegram.sentTo(ANNA)).toEqual([]);
     const { request } = await annaOpensTheLink();
 
-    expect(request.message.text).toContain("Mia asks: you live near Mrs Chen.");
+    expect(request.message.text).toContain("Mia would like to ask you to look in on Mrs Chen");
     expect(request.message.text).toContain("Timur Aiusheev");
     expect(request.message.buttons?.flat().map((button) => decodeButton(button.id))).toEqual([
       { type: "nearby_consent", contactId, accept: true },
@@ -233,6 +234,28 @@ describe("asking someone nearby on Telegram", () => {
     expect(await contactRow()).toMatchObject({ externalId: null, declinedAt: h.clock.now() });
   });
 
+  it("keeps the original text hash and version when an old consent request is accepted after an update", async () => {
+    const { request } = await annaOpensTheLink();
+    const [row] = await h.db
+      .select()
+      .from(outbound)
+      .where(eq(outbound.idempotencyKey, request.message.idempotencyKey));
+    if (row === undefined) throw new Error("missing request");
+    const legacy = { ...row.payload };
+    delete legacy.consentTextVersion;
+    const originalText = "Legacy consent text the contact already saw";
+    legacy.message = { ...(legacy.message as Record<string, unknown>), text: originalText };
+    await h.db.update(outbound).set({ payload: legacy }).where(eq(outbound.id, row.id));
+    const yes = request.message.buttons?.[0]?.[0];
+    if (yes === undefined) throw new Error("missing yes");
+    await tap(ANNA, yes.id);
+    const [proof] = await h.db
+      .select()
+      .from(consents)
+      .where(eq(consents.subjectRef, `contact:${contactId}`));
+    expect(proof?.textVersion).toBe("nearby-consent.v2");
+    expect(proof?.evidence.text_sha256).toBe(await sha256Hex(originalText));
+  });
   it("removes them from every list when they send stop", async () => {
     await annaSaysYes();
 

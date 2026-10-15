@@ -10,15 +10,18 @@ import { addDays, localDateOf } from "@vela/core";
 import {
   answers,
   type Exchange,
+  events,
+  exchanges as exchangeRows,
   type Member,
   media,
   members,
+  outbound,
   replies,
   suggestions,
   translations,
   turns,
 } from "@vela/db";
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { loadApiLights } from "./api-lights.ts";
@@ -201,6 +204,20 @@ export async function exchangeRow(
   const fileOf = (id: string | null | undefined) =>
     id === null || id === undefined ? undefined : byId.get(id);
 
+  const [conversationFailure] =
+    exchange.whenRule === "now" && exchange.deliveredAt === null
+      ? await db
+          .select({ id: outbound.id })
+          .from(outbound)
+          .where(
+            and(
+              eq(outbound.exchangeId, exchange.id),
+              eq(outbound.kind, "conversation"),
+              inArray(outbound.status, ["failed", "dropped"]),
+            ),
+          )
+          .limit(1)
+      : [];
   return {
     id: exchange.id,
     recipient_id: recipient.id,
@@ -234,7 +251,7 @@ export async function exchangeRow(
       })),
     ),
     delivery_status:
-      exchange.deliveryFailedAt !== null
+      exchange.deliveryFailedAt !== null || conversationFailure !== undefined
         ? "failed"
         : exchange.deliveredAt !== null
           ? "delivered"
@@ -381,12 +398,58 @@ export async function loadApiToday(
   const keptLight = await keptLightMembersOfFamily(db, familyId);
   const exchanges: ApiTodayExchange[] = [];
   const tomorrow: ApiTomorrowTurn[] = [];
+  const connectionDays: NonNullable<ApiToday["connection_days"]> = [];
   for (const member of keptLight) {
     const today = localDateOf(now, member.tz);
+    // Actual received/sent messages, on the parent's local day. Scheduling and automated bank
+    // questions do not light a window. This record never resets because a day was quiet.
+    const since = new Date(now.getTime() - 8 * 86_400_000);
+    const received = await db
+      .select({ at: answers.receivedAt })
+      .from(answers)
+      .where(and(eq(answers.memberId, member.id), gte(answers.receivedAt, since)));
+    const sent = await db
+      .select({ at: exchangeRows.deliveredAt })
+      .from(exchangeRows)
+      .where(
+        and(
+          eq(exchangeRows.recipientId, member.id),
+          isNotNull(exchangeRows.askerId),
+          gte(exchangeRows.deliveredAt, since),
+          ne(exchangeRows.state, "withdrawn"),
+        ),
+      );
+    const deliveredReplies = await db
+      .select({ at: replies.readBackAt })
+      .from(replies)
+      .innerJoin(exchangeRows, eq(replies.exchangeId, exchangeRows.id))
+      .where(and(eq(exchangeRows.recipientId, member.id), gte(replies.readBackAt, since)));
+    const unattached = await db
+      .select({ at: events.at })
+      .from(events)
+      .where(
+        and(
+          eq(events.memberId, member.id),
+          eq(events.name, "answer_recorded"),
+          gte(events.at, since),
+        ),
+      );
+    const dates = new Set(
+      [...received, ...sent, ...deliveredReplies, ...unattached].flatMap((row) =>
+        row.at === null ? [] : [localDateOf(row.at, member.tz)],
+      ),
+    );
+    connectionDays.push({
+      member_id: member.id,
+      days: Array.from({ length: 7 }, (_, index) => {
+        const date = addDays(today, index - 6);
+        return { date, has_message: dates.has(date) };
+      }),
+    });
     const exchange = await exchangeForLocalDate(db, member.id, today);
     if (exchange !== null) exchanges.push(await exchangeRow(db, exchange, member, now));
     const turn = await turnOfTomorrow(db, familyId, member, addDays(today, 1), viewer, familyEnded);
     if (turn !== null) tomorrow.push(turn);
   }
-  return { lights, exchanges, tomorrow };
+  return { lights, exchanges, tomorrow, connection_days: connectionDays };
 }

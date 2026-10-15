@@ -314,6 +314,8 @@ export const SuggestInput = z.object({
   recentMentions: z.array(z.string().max(120)).max(20),
   familyDates: z.array(z.object({ date: LocalDate, label: z.string().min(1).max(80) })).max(10),
   holderLastAsk: z.object({ type: ExchangeType, text: FamilyText.nullable() }).nullable(),
+  /** Recent words this holder wrote to this recipient, excluding accepted AI drafts. */
+  holderWritingExamples: z.array(z.string().min(1).max(400)).max(5).optional(),
 });
 export type SuggestInput = z.infer<typeof SuggestInput>;
 

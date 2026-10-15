@@ -125,7 +125,7 @@ function AskComposer({
   const [kind, setKind] = useState<AskType>("question");
   const [moreTypes, setMoreTypes] = useState(false);
   const { text, setText } = draft;
-  const [when, setWhen] = useState<When>("tomorrow");
+  const [when, setWhen] = useState<When>(recipient?.invited === true ? "whenever" : "tomorrow");
   const [taken, setTaken] = useState<ApiAskConflict | null>(null);
   // A vote's options and a photo ask's photos (ADR-33), and what they add to the ask when sent.
   const [options, setOptions] = useState<VoteOption[]>(freshVoteOptions);
@@ -183,7 +183,12 @@ function AskComposer({
   const paused = recipient !== undefined && recipient.state === "paused";
   const invited = recipient !== undefined && recipient.invited === true;
   const ready =
-    demo || (live && familyId !== undefined && recipient !== undefined && !paused && !invited);
+    demo ||
+    (live &&
+      familyId !== undefined &&
+      recipient !== undefined &&
+      !paused &&
+      (!invited || (when === "whenever" && photos.count === 0)));
 
   // The voice hello goes up when the ask is sent, under the recording's own key, so a retry of the
   // send uploads it again as the same recording and the ask names it (spec §4).
@@ -485,7 +490,7 @@ function AskComposer({
               <Chip
                 label={t`Tomorrow morning`}
                 selected={when === "tomorrow"}
-                disabled={taken !== null}
+                disabled={taken !== null || invited}
                 onPress={() => setWhen("tomorrow")}
               />
               {day === null ? null : (

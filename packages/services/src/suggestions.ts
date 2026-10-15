@@ -35,6 +35,7 @@ import {
 import { addDays, localDateOf, weekdayOf } from "@vela/core";
 import {
   answers,
+  events,
   exchanges,
   type Family,
   families,
@@ -44,7 +45,21 @@ import {
   suggestions,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 import { canBeAsked, isAskable } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
@@ -352,6 +367,7 @@ interface WriterContext {
   readonly organisers: ReadonlyMap<string, Member>;
   readonly mentions: ReadonlyMap<string, readonly string[]>;
   readonly lastAsks: ReadonlyMap<string, { type: ExchangeType; text: string | null }>;
+  readonly writingExamples: ReadonlyMap<string, readonly string[]>;
 }
 
 function grouped<T, V>(
@@ -418,6 +434,7 @@ async function loadContext(
     organisers: new Map(),
     mentions: new Map(),
     lastAsks: new Map(),
+    writingExamples: new Map(),
   };
   const dates = plans.flatMap((plan) => plan.dates).sort();
   const first = dates[0];
@@ -510,7 +527,13 @@ async function loadContext(
     )
     .orderBy(desc(answers.receivedAt), desc(answers.id));
   const lastAskRows = await db
-    .select({ memberId: exchanges.recipientId, type: exchanges.type, text: exchanges.text })
+    .select({
+      memberId: exchanges.recipientId,
+      familyId: exchanges.familyId,
+      askerId: exchanges.askerId,
+      type: exchanges.type,
+      text: exchanges.text,
+    })
     .from(exchanges)
     .where(
       and(
@@ -530,9 +553,54 @@ async function loadContext(
   }
   const lastAsks = new Map<string, { type: ExchangeType; text: string | null }>();
   for (const row of lastAskRows) {
+    if (row.askerId !== organisers.get(row.familyId)?.id) continue;
     if (!lastAsks.has(row.memberId)) {
       lastAsks.set(row.memberId, { type: row.type, text: row.text });
     }
+  }
+  // Read authored examples separately: never teach a holder another person's voice, or feed
+  // accepted AI drafts back as evidence of how the holder writes.
+  const authoredRows = await db
+    .select({
+      memberId: exchanges.recipientId,
+      familyId: exchanges.familyId,
+      askerId: exchanges.askerId,
+      text: exchanges.text,
+    })
+    .from(exchanges)
+    .where(
+      and(
+        inArray(exchanges.recipientId, pendingIds),
+        isNotNull(exchanges.askerId),
+        isNotNull(exchanges.text),
+        ne(exchanges.state, "withdrawn"),
+        gte(exchanges.createdAt, new Date(now.getTime() - LAST_ASK_DAYS * DAY_MS)),
+        notExists(
+          db
+            .select({ id: events.id })
+            .from(events)
+            .where(
+              and(
+                eq(events.exchangeId, exchanges.id),
+                eq(events.name, "ask_composed"),
+                sql`${events.props}->>'from_suggestion' = 'true'`,
+              ),
+            ),
+        ),
+      ),
+    )
+    .orderBy(desc(exchanges.createdAt), desc(exchanges.id));
+  const writingExamples = new Map<string, string[]>();
+  for (const row of authoredRows) {
+    if (row.askerId !== organisers.get(row.familyId)?.id) continue;
+    let text = "";
+    for (const character of row.text?.trim() ?? "") {
+      if (text.length + character.length > 400) break;
+      text += character;
+    }
+    const examples = writingExamples.get(row.memberId) ?? [];
+    if (text !== "" && examples.length < 5 && !examples.includes(text)) examples.push(text);
+    writingExamples.set(row.memberId, examples);
   }
   const mentions = new Map(
     [
@@ -543,7 +611,7 @@ async function loadContext(
       ),
     ].map(([memberId, rows]) => [memberId, mentionsOf(rows)] as const),
   );
-  return { ...context, organisers, mentions, lastAsks };
+  return { ...context, organisers, mentions, lastAsks, writingExamples };
 }
 
 /** Whether the day is already settled before anything is picked: written, or claimed by an ask. */
@@ -599,6 +667,7 @@ function suggestInput(
     recentMentions: [...(context.mentions.get(member.id) ?? [])],
     familyDates: [],
     holderLastAsk: context.lastAsks.get(member.id) ?? null,
+    holderWritingExamples: [...(context.writingExamples.get(member.id) ?? [])],
   };
 }
 

@@ -65,6 +65,7 @@ import {
   lockDeliveredExchangeForLocalDate,
   markWakeDue,
   memberById,
+  messageRefFor,
   type Queryable,
   recordInboundMedia,
 } from "./repo.ts";
@@ -686,11 +687,33 @@ export async function handleParentMessage(
   // On her first morning nothing else was delivered, and her words would go out unattached.
   await finishArrivalEffects(deps, member.id);
   const now = deps.clock.now();
-  const exchange = await latestDeliveredExchangeWithin(
+  let exchange = await latestDeliveredExchangeWithin(
     deps.db,
     member.id,
     addMinutes(now, -ANSWER_WINDOW_HOURS * 60),
   );
+  if (event.replyToMessageId !== undefined) {
+    const ref = await messageRefFor(
+      deps.db,
+      event.channel,
+      event.conversation.externalId,
+      event.replyToMessageId,
+    );
+    if (ref?.purpose === "arrival" && ref.exchangeId !== null) {
+      const [quoted] = await deps.db
+        .select()
+        .from(exchanges)
+        .where(and(eq(exchanges.id, ref.exchangeId), eq(exchanges.recipientId, member.id)));
+      if (
+        quoted !== undefined &&
+        quoted.deliveredAt !== null &&
+        quoted.state !== "withdrawn" &&
+        quoted.state !== "archived" &&
+        quoted.deliveredAt >= addMinutes(now, -ANSWER_WINDOW_HOURS * 60)
+      )
+        exchange = quoted;
+    }
+  }
   if (exchange === null) {
     await postUnattached(deps, member, family, event, kind, now);
     return;

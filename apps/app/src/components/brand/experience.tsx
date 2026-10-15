@@ -3,7 +3,7 @@ import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../../theme/tokens.ts";
 import { Words } from "../ui.tsx";
-import { BrandHeader } from "./header.tsx";
+
 import { BrandIcon, type BrandIconName } from "./icon.tsx";
 import type { SceneKind } from "./scene.tsx";
 
@@ -61,7 +61,6 @@ export function ScreenHeading({
 }) {
   return (
     <View style={{ gap: space.s }}>
-      <BrandHeader />
       <View
         style={{
           flexDirection: "row",
