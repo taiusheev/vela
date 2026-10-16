@@ -287,10 +287,10 @@ describe("the pilot loop", () => {
       [
         HER,
         [
-          t("en", "arrival.greeting", { address: "Mrs Chen" }),
+          t("en", "arrival.greeting_3", { address: "Mrs Chen" }),
           "",
-          t("en", "arrival.asks", { asker: "Mia" }),
           "What are you cooking tonight?",
+          t("en", "arrival.signed", { asker: "Mia" }),
           "",
           t("en", "arrival.hint"),
         ].join("\n"),

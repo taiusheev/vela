@@ -23,6 +23,7 @@ import {
 } from "@vela/ai";
 import type { InboundEvent, InboundKind, LocalDate, MediaRef } from "@vela/contracts";
 import { t } from "@vela/copy";
+import { greetingKeyFor } from "@vela/core";
 import {
   answers,
   channelLinks,
@@ -189,24 +190,27 @@ async function exchangeOn(memberId: string, date: LocalDate): Promise<Exchange |
   return row;
 }
 
-const HELLO_ARRIVAL = [
-  t("en", "arrival.greeting", { address: "Mrs Chen" }),
-  "",
-  t("en", "arrival.hello"),
-  t("en", "arrival.hello_signature"),
-  "",
-  t("en", "arrival.hint"),
-].join("\n");
+/** Her fallback morning on `date`, whose greeting is worded by the date (render.ts). */
+const helloArrival = (date: LocalDate = "2026-09-14") =>
+  [
+    t("en", greetingKeyFor(date), { address: "Mrs Chen" }),
+    "",
+    t("en", "arrival.hello"),
+    t("en", "arrival.hello_signature"),
+    "",
+    t("en", "arrival.hint"),
+  ].join("\n");
 
-const HELLO_REPEAT = [
-  t("en", "arrival.repeat"),
-  t("en", "arrival.greeting", { address: "Mrs Chen" }),
-  "",
-  t("en", "arrival.hello"),
-  t("en", "arrival.hello_signature"),
-  "",
-  t("en", "arrival.hint"),
-].join("\n");
+const helloRepeat = (date: LocalDate = "2026-09-14") =>
+  [
+    t("en", "arrival.repeat"),
+    t("en", greetingKeyFor(date), { address: "Mrs Chen" }),
+    "",
+    t("en", "arrival.hello"),
+    t("en", "arrival.hello_signature"),
+    "",
+    t("en", "arrival.hint"),
+  ].join("\n");
 
 describe("silence", () => {
   it("repeats, opens quietly while she is learned, notifies with the nearby yes, waits, and lights again", async () => {
@@ -225,8 +229,8 @@ describe("silence", () => {
     // 08:00 the morning, 10:30 the repeat (+150 minutes), 14:00 the quiet event, silently.
     await runSchedulerUntil(seed.member.id, at("2026-09-14", "15:00"));
     expect(newMessages()).toEqual([
-      [HER, HELLO_ARRIVAL],
-      [HER, HELLO_REPEAT],
+      [HER, helloArrival()],
+      [HER, helloRepeat()],
     ]);
     const quiet = await h.db.select().from(quietEvents);
     expect(quiet[0]).toMatchObject({ openedAt: at("2026-09-14", "14:00"), lastNotifiedAt: null });
@@ -318,7 +322,7 @@ describe("silence", () => {
         .sentTo(HER)
         .slice(herMessagesSoFar)
         .map((entry) => entry.message.text),
-    ).toEqual([expect.stringMatching(/^Thank you, Mrs Chen\. /), HELLO_ARRIVAL]);
+    ).toEqual([expect.stringMatching(/^Thank you, Mrs Chen\. /), helloArrival("2026-09-15")]);
   });
 });
 
@@ -375,7 +379,7 @@ describe("the silence drill", () => {
   it("pauses the light without a repeat or a quiet notice when she blocks the bot after her morning reached her", async () => {
     const seed = await consentedYesterday();
     await runSchedulerUntil(seed.member.id, at("2026-09-14", "08:00"));
-    expect(newMessages()).toEqual([[HER, HELLO_ARRIVAL]]);
+    expect(newMessages()).toEqual([[HER, helloArrival()]]);
 
     // 10:00: she deletes the chat with "Stop and block bot", and Telegram refuses every later send.
     h.clock.set(at("2026-09-14", "10:00"));
@@ -395,7 +399,7 @@ describe("the silence drill", () => {
   it("looks at her day again when she unblocks the bot, so the quiet still opens and tells on time", async () => {
     const seed = await consentedYesterday();
     await runSchedulerUntil(seed.member.id, at("2026-09-14", "08:00"));
-    expect(newMessages()).toEqual([[HER, HELLO_ARRIVAL]]);
+    expect(newMessages()).toEqual([[HER, helloArrival()]]);
 
     // Blocked at 10:00, over the 10:30 tick, which holds her morning back; unblocked at 10:45.
     h.clock.set(at("2026-09-14", "10:00"));
@@ -408,7 +412,7 @@ describe("the silence drill", () => {
 
     // The repeat that fell due in the block goes at the unblock: nothing records when she unblocked.
     await runSchedulerUntil(seed.member.id, at("2026-09-14", "15:00"));
-    expect(newMessages()).toEqual([[HER, HELLO_REPEAT]]);
+    expect(newMessages()).toEqual([[HER, helloRepeat()]]);
     expect(await h.db.select().from(quietEvents)).toMatchObject([
       { openedAt: at("2026-09-14", "14:00"), lastNotifiedAt: null },
     ]);
@@ -421,8 +425,8 @@ describe("the silence drill", () => {
     const seed = await consentedYesterday();
     await runSchedulerUntil(seed.member.id, at("2026-09-14", "16:00"));
     expect(newMessages()).toEqual([
-      [HER, HELLO_ARRIVAL],
-      [HER, HELLO_REPEAT],
+      [HER, helloArrival()],
+      [HER, helloRepeat()],
       [ORGANISER, NOTICE_NO_NEARBY],
     ]);
     h.clock.set(at("2026-09-14", "16:05"));
@@ -462,8 +466,8 @@ describe("the silence drill", () => {
     await runSchedulerUntil(seed.member.id, at("2026-09-14", "16:00"));
 
     expect(newMessages()).toEqual([
-      [HER, HELLO_ARRIVAL],
-      [HER, HELLO_REPEAT],
+      [HER, helloArrival()],
+      [HER, helloRepeat()],
       [ORGANISER, NOTICE_NO_NEARBY],
     ]);
   });
@@ -483,7 +487,7 @@ describe("the silence drill", () => {
     expect(h.telegram.sentTo(HER).map((entry) => entry.message.text)).toEqual([
       [
         t("en", "arrival.late"),
-        t("en", "arrival.greeting", { address: "Mrs Chen" }),
+        t("en", greetingKeyFor("2026-09-14"), { address: "Mrs Chen" }),
         "",
         t("en", "arrival.hello"),
         t("en", "arrival.hello_signature"),

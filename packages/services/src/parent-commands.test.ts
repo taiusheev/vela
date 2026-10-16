@@ -248,7 +248,7 @@ describe("start", () => {
     expect(await herMessages()).toEqual([
       t("en", "parent.stopped"),
       "Welcome back. Your next morning arrives at 08:00.",
-      expect.stringContaining(t("en", "arrival.greeting", { address: "Mrs Chen" })),
+      expect.stringContaining(t("en", "arrival.greeting_2", { address: "Mrs Chen" })),
     ]);
     expect(await eventNames()).toEqual([
       "stop_said",
@@ -289,7 +289,7 @@ describe("start", () => {
     // The 10:30 repeat and the 14:00 quiet (its notice at 16:00 in her learning period) all passed
     // while she was paused, and the silence they would report ends with her own start.
     expect(await herMessages()).toEqual([
-      expect.stringContaining(t("en", "arrival.greeting", { address: "Mrs Chen" })),
+      expect.stringContaining(t("en", "arrival.greeting_2", { address: "Mrs Chen" })),
       t("en", "parent.stopped"),
       "Welcome back. Your next morning arrives at 08:00.",
     ]);
@@ -349,7 +349,7 @@ describe("start", () => {
     expect(await herMessages()).toEqual([
       t("en", "parent.stopped"),
       "Welcome back. Your next morning arrives at 08:00.",
-      expect.stringContaining(t("en", "arrival.greeting", { address: "Mrs Chen" })),
+      expect.stringContaining(t("en", "arrival.greeting_2", { address: "Mrs Chen" })),
     ]);
     expect((await outboundRows()).filter((row) => row.kind === "arrival")).toMatchObject([
       { status: "sent", attempts: 1, error: null },
@@ -383,7 +383,7 @@ describe("start", () => {
     expect(await herMessages()).toEqual([
       t("en", "parent.stopped"),
       "Welcome back. Your next morning arrives at 08:00.",
-      expect.stringContaining("From Mia\nWhich soup today?"),
+      expect.stringContaining("Which soup today?\n— Mia"),
     ]);
     const [carried] = await h.db.select().from(exchanges).where(eq(exchanges.id, ask.id));
     expect(carried).toMatchObject({ state: "delivered", scheduledFor: "2026-09-16" });

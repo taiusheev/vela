@@ -34,6 +34,9 @@ function render(overrides: Partial<RenderArrivalInput> = {}): RenderedArrival {
     readBack: [],
     late: false,
     repeat: false,
+    // A date whose greeting is the first wording, and a first morning, which ends with the hint.
+    date: "2026-10-16",
+    hint: true,
     ...overrides,
   });
 }
@@ -83,7 +86,7 @@ describe("renderArrival in English", () => {
     expect(paragraphs(arrival)).toEqual([
       "From your family:\nSam: The borscht turned out well.\nAnna and Sam sent ❤️",
       "Good morning, Mrs Chen.",
-      "From Mia\nWhat did you cook today?",
+      "What did you cook today?\n— Mia",
       "Reply with a voice message, or tap a button.",
     ]);
     expect(labels(arrival)).toEqual([["Soup"], ["Pancakes"], ["Nothing yet"], ["❤️", "I'm fine"]]);
@@ -118,9 +121,31 @@ describe("renderArrival in English", () => {
     );
   });
 
+  it("words the greeting three ways in turn by her local date, the same for a repeat", () => {
+    const greeting = (date: string, repeat = false) => paragraphs(render({ date, repeat }))[0];
+    expect(greeting("2026-10-16")).toBe("Good morning, Mrs Chen.");
+    expect(greeting("2026-10-17")).toBe("Morning, Mrs Chen!");
+    expect(greeting("2026-10-18")).toBe("Hello Mrs Chen, good morning.");
+    expect(greeting("2026-10-19")).toBe("Good morning, Mrs Chen.");
+    expect(greeting("2026-10-17", true)).toBe("In case you missed it:\nMorning, Mrs Chen!");
+  });
+
+  it("ends with how to answer only on her first mornings", () => {
+    const later = render({ hint: false, ask: question({ chips: ["Soup"] }) });
+    expect(paragraphs(later)).toEqual([
+      "Good morning, Mrs Chen.",
+      "What did you cook today?\n— Mia",
+    ]);
+    expect(labels(later)).toEqual([["Soup"], ["❤️", "I'm fine"]]);
+    expect(paragraphs(render({ hint: false, ask: { type: "hello" } }))).toEqual([
+      "Good morning, Mrs Chen.",
+      "How are you this morning?\n— Vela, for your family",
+    ]);
+  });
+
   it("names the parent who asks for a child", () => {
     const arrival = render({ ask: question({ askerName: "Anna", onBehalfOf: "Leo" }) });
-    expect(paragraphs(arrival)[1]).toBe("Anna asks, for Leo:\nWhat did you cook today?");
+    expect(paragraphs(arrival)[1]).toBe("What did you cook today?\n— Anna, for Leo");
   });
 
   it("shows at most three chips, keeping each chip's index when an empty one is left out", () => {
@@ -145,9 +170,7 @@ describe("renderArrival in English", () => {
     const arrival = render({
       ask: question({ type: "photo_choice", text: "Which one should I frame?", imageCount: 2 }),
     });
-    expect(paragraphs(arrival)[1]).toBe(
-      "From Mia\nWhich one should I frame?\nWhich one? Tap 1 or 2.",
-    );
+    expect(paragraphs(arrival)[1]).toBe("Which one should I frame?\nWhich one? Tap 1 or 2.\n— Mia");
     expect(labels(arrival)).toEqual([
       ["1", "2"],
       ["❤️", "I'm fine"],
@@ -166,7 +189,7 @@ describe("renderArrival in English", () => {
     const arrival = render({
       ask: question({ type: "vote", text: "Sunday call at 6 or 7?", voteOptions: ["6", "7"] }),
     });
-    expect(paragraphs(arrival)[1]).toBe("From Mia\nSunday call at 6 or 7?\nTap one.");
+    expect(paragraphs(arrival)[1]).toBe("Sunday call at 6 or 7?\nTap one.\n— Mia");
     expect(labels(arrival)).toEqual([["6"], ["7"], ["❤️", "I'm fine"]]);
     expect(actions(arrival).slice(0, 2)).toEqual([
       [{ type: "vote", exchangeId: EXCHANGE, index: 0 }],
@@ -188,7 +211,7 @@ describe("renderArrival in English", () => {
       ask: question({ type, chips: ["Soup"], text: "How did you meet Dad?" }),
     });
     expect(labels(arrival)).toEqual([["❤️", "I'm fine"]]);
-    expect(paragraphs(arrival)[1]).toBe("From Mia\nHow did you meet Dad?");
+    expect(paragraphs(arrival)[1]).toBe("How did you meet Dad?\n— Mia");
   });
 
   it("says a voice message was sent when a voice note has no text", () => {
@@ -218,13 +241,13 @@ describe("renderArrival in English", () => {
     expect(paragraphs(arrival)[1]).toBe("Mia sent you a photo.");
   });
 
-  it("keeps the asker line and the caption when a photo comes with words", () => {
+  it("keeps the caption, signed, when a photo comes with words", () => {
     const arrival = render({ ask: question({ text: "Remember this garden?", imageCount: 1 }) });
-    expect(paragraphs(arrival)[1]).toBe("From Mia\nRemember this garden?");
+    expect(paragraphs(arrival)[1]).toBe("Remember this garden?\n— Mia");
   });
 
   // Only a photo comes as a question or an old photo without words (flows §3.5), so one with no
-  // image left lost it, and "From Mia" would hang over nothing.
+  // image left lost it, and "— Mia" would sign nothing.
   it("says the photo is gone and asks how she is when a question or memory photo has no words and no image", () => {
     const gone =
       "Mia wanted to show you a photo, but it is no longer available. How are you today?";
@@ -249,7 +272,7 @@ describe("renderArrival in English", () => {
     expect(paragraphs(arrival)).toEqual([
       "From your family:\nSam: See you Sunday",
       "Good morning, Mrs Chen.",
-      "Nothing new from the family today. How are you this morning?\nVela, from your family",
+      "How are you this morning?\n— Vela, for your family",
       "Reply with a voice message, or tap a button.",
     ]);
     expect(actions(arrival)).toEqual([FINAL_ACTIONS]);
@@ -265,7 +288,7 @@ describe("renderArrival on a morning nobody asked, with Vela's question", () => 
     });
     expect(paragraphs(arrival)).toEqual([
       "Good morning, Mrs Chen.",
-      "Something to share with the family today:\nWhat was your very first job?\nVela, from your family",
+      "Something to share with the family today:\nWhat was your very first job?\n— Vela, for your family",
       "Reply with a voice message, or tap a button.",
     ]);
     expect(actions(arrival)).toEqual([FINAL_ACTIONS]);
@@ -274,9 +297,7 @@ describe("renderArrival on a morning nobody asked, with Vela's question", () => 
 
   it("keeps the plain hello for an empty question", () => {
     const arrival = render({ ask: { type: "hello", question: "  " }, readBack: [] });
-    expect(paragraphs(arrival)[1]).toBe(
-      "Nothing new from the family today. How are you this morning?\nVela, from your family",
-    );
+    expect(paragraphs(arrival)[1]).toBe("How are you this morning?\n— Vela, for your family");
   });
 
   it("puts the bank question's chips above the heart and I'm fine, as a family question's", () => {
@@ -325,7 +346,7 @@ describe("renderArrival with more words than one message holds", () => {
     expect(fits.text).not.toContain("…");
     const over = render({ ask: question({ text: "a".repeat(TEXT_LIMIT - base + 1) }) });
     expect(over.text.length).toBeLessThanOrEqual(TEXT_LIMIT);
-    expect(paragraphs(over)[1]).toMatch(/^From Mia\na+…$/);
+    expect(paragraphs(over)[1]).toMatch(/^a+…\n— Mia$/);
     expectSendable(over, "en");
   });
 
@@ -350,13 +371,13 @@ describe("renderArrival with more words than one message holds", () => {
     expect(lines[3]).toBe("Anna and Sam sent ❤️");
     expect(paragraphs(arrival).slice(1)).toEqual([
       "Good morning, Mrs Chen.",
-      "From Mia\nWhat did you cook today?",
+      "What did you cook today?\n— Mia",
       "Reply with a voice message, or tap a button.",
     ]);
     expect(labels(arrival)).toEqual([["Soup"], ["❤️", "I'm fine"]]);
   });
 
-  it("fits a maximal ask under a maximal read-back, keeping the greeting, the asker, and the hint", () => {
+  it("fits a maximal ask under a maximal read-back, keeping the greeting, the signature, and the hint", () => {
     const arrival = render({
       late: true,
       readBack: [`Sam: ${maximal("😀 ")}`, `Anna: ${maximal("ok ")}`, "Leo sent a voice message."],
@@ -374,7 +395,7 @@ describe("renderArrival with more words than one message holds", () => {
     expect(lines[2]).toBe("Leo sent a voice message.");
     const rest = paragraphs(arrival).slice(1);
     expect(rest[0]).toBe("Sorry this is late.\nGood morning, Mrs Chen.");
-    expect(rest[1]).toMatch(/^From Mia\nWhich day 🌷.*…\nTap one\.$/u);
+    expect(rest[1]).toMatch(/^Which day 🌷.*…\nTap one\.\n— Mia$/u);
     expect(rest[2]).toBe("Reply with a voice message, or tap a button.");
     expect(labels(arrival)).toEqual([["Sat"], ["Sun"], ["❤️", "I'm fine"]]);
   });
@@ -390,7 +411,8 @@ describe("renderArrival with more words than one message holds", () => {
     expect(lines.every((line) => line.endsWith("…"))).toBe(true);
     const ask = paragraphs(arrival)[2] ?? "";
     expect(
-      ask.startsWith(`From Mia\n${maximal("Tell me about the harvest. ").slice(0, 990)}`),
+      ask.startsWith(maximal("Tell me about the harvest. ").slice(0, 990)) &&
+        ask.endsWith("\n— Mia"),
     ).toBe(true);
   });
 
@@ -402,7 +424,7 @@ describe("renderArrival with more words than one message holds", () => {
     expectSendable(arrival, "en");
     expect(paragraphs(arrival).slice(1)).toEqual([
       "Good morning, Mrs Chen.",
-      "Nothing new from the family today. How are you this morning?\nVela, from your family",
+      "How are you this morning?\n— Vela, for your family",
       "Reply with a voice message, or tap a button.",
     ]);
   });
@@ -422,7 +444,7 @@ describe("renderArrival in Traditional Chinese", () => {
     expect(paragraphs(arrival)).toEqual([
       "家人的回覆：\n小明：奶奶的湯很好喝",
       "不好意思，這則訊息晚到了。\n陳奶奶，早安。",
-      "小美想問您：\n今天煮了什麼？",
+      "今天煮了什麼？\n—— 小美",
       "您可以傳語音訊息回覆，或按下面的按鈕。",
     ]);
     expect(labels(arrival)).toEqual([["湯"], ["麵"], ["❤️", "我很好"]]);
@@ -444,10 +466,10 @@ describe("renderArrival in Traditional Chinese", () => {
     });
     expect(paragraphs(arrival)).toEqual([
       `${t(lang, "arrival.repeat")}\n${t(lang, "arrival.greeting", { address: "陳奶奶" })}`,
-      `${t(lang, "arrival.asks_on_behalf", { asker: "小美", child: "小寶" })}\n${t(lang, "arrival.photo_choice")}`,
+      `${t(lang, "arrival.photo_choice")}\n${t(lang, "arrival.signed_on_behalf", { asker: "小美", child: "小寶" })}`,
       t(lang, "arrival.hint"),
     ]);
-    expect(paragraphs(arrival)[1]).toBe("小美替小寶問您：\n選哪一張呢？請按 1 或 2。");
+    expect(paragraphs(arrival)[1]).toBe("選哪一張呢？請按 1 或 2。\n—— 小美（替小寶問）");
     expect(labels(arrival)).toEqual([
       ["1", "2"],
       ["❤️", "我很好"],
@@ -494,7 +516,7 @@ describe("renderArrival in Traditional Chinese", () => {
     const arrival = render({ lang, address: "陳奶奶", ask: { type: "hello" } });
     expect(paragraphs(arrival)).toEqual([
       "陳奶奶，早安。",
-      "今天家人沒有新的消息。您早上過得好嗎？\nVela，代表您的家人",
+      "您早上過得好嗎？\n—— Vela，代表您的家人",
       "您可以傳語音訊息回覆，或按下面的按鈕。",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "我很好"]]);
@@ -511,7 +533,7 @@ describe("renderArrival in Traditional Chinese", () => {
         voteOptions: ["六點", "七點"],
       }),
     });
-    expect(paragraphs(arrival)[1]).toBe("小美想問您：\n星期天幾點視訊？\n請按一個選項。");
+    expect(paragraphs(arrival)[1]).toBe("星期天幾點視訊？\n請按一個選項。\n—— 小美");
     expect(labels(arrival)).toEqual([["六點"], ["七點"], ["❤️", "我很好"]]);
   });
 });

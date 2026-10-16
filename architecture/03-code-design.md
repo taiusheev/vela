@@ -136,19 +136,21 @@ Keys, in catalog order (English text is the source; wording follows spec §20: n
 | Key | English |
 |---|---|
 | `arrival.greeting` | Good morning, {address}. |
+| `arrival.greeting_2` | Morning, {address}! |
+| `arrival.greeting_3` | Hello {address}, good morning. |
 | `arrival.late` | Sorry this is late. |
 | `arrival.repeat` | In case you missed it: |
 | `arrival.readback_heading` | From yesterday: |
-| `arrival.asks` | {asker} asks: |
-| `arrival.asks_on_behalf` | {asker} asks, for {child}: |
+| `arrival.signed` | — {asker} |
+| `arrival.signed_on_behalf` | — {asker}, for {child} |
 | `arrival.sent_photo` | {asker} sent you a photo. |
 | `arrival.sent_voice` | {asker} sent you a voice message. |
 | `arrival.photo_gone` | {asker} wanted to show you a photo, but it is no longer available. How are you today? |
 | `arrival.photo_choice` | Which one? Tap 1 or 2. |
 | `arrival.vote` | Tap one. |
-| `arrival.hello` | Nothing new from the family today. How are you this morning? |
-| `arrival.hello_signature` | Vela, from your family |
-| `arrival.hint` | Reply with a voice message, or tap a button. |
+| `arrival.hello` | How are you this morning? |
+| `arrival.hello_signature` | — Vela, for your family |
+| `arrival.hint` | Reply with a voice message, or tap a button. (her first three mornings only) |
 | `button.fine` | I'm fine |
 | `button.heart` | ❤️ |
 | `button.choice` | {n} |

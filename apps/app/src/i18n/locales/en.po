@@ -1057,6 +1057,10 @@ msgstr "Hug"
 msgid "I have sent it"
 msgstr "I have sent it"
 
+#: src/components/nearby-editor.tsx
+msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
+msgstr "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
+
 #: src/data/notifications.ts
 msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
 msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
@@ -1072,6 +1076,10 @@ msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram l
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "If her morning stays quiet past her usual time, and when it is settled."
+
+#: src/components/nearby-editor.tsx
+msgid "If the link doesn’t open, add me to your contacts, then tap it again."
+msgstr "If the link doesn’t open, add me to your contacts, then tap it again."
 
 #: app/delete-account.tsx
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."

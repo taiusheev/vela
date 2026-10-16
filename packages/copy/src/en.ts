@@ -60,6 +60,12 @@
  * family asked (spec §4.5): she shares the answer with the family, and the question, not a person,
  * asks. `group.answer_question` shows the family the question her answer goes with.
  *
+ * A family member's ask reaches her as a note from them: their words exactly, signed below with
+ * `arrival.signed`, as a message from her child reads, never under a "From" header or with a bot's
+ * instructions every day (first test, 15 Oct 2026). `arrival.greeting` has three wordings used in
+ * turn by her local date. `arrival.hint` ends only her first mornings. Vela's own fallback is signed
+ * by Vela, never in a family member's name, and does not open by telling her nobody wrote.
+ *
  * `push.*` are notifications on an organiser's or a family member's phone (ADR-34). Their text
  * passes through Expo, Apple and Google and shows on a lock screen, so it carries names and times
  * only: never her words, an answer, a nearby contact, or anything about health. `push.quiet_notice`
@@ -84,21 +90,22 @@ export const en = {
     "Your light is not on yet. Your family organiser needs an approved Telegram account that can receive messages. Please ask your organiser to finish setup, then try again.",
   "pilot.invitation_only":
     "Vela’s English trial is invitation-only. Contact the founder for access. Your Telegram ID: {telegram_id}.",
-  "arrival.from": "From {asker}",
   "arrival.greeting": "Good morning, {address}.",
+  "arrival.greeting_2": "Morning, {address}!",
+  "arrival.greeting_3": "Hello {address}, good morning.",
   "arrival.late": "Sorry this is late.",
   "arrival.repeat": "In case you missed it:",
   "arrival.readback_heading": "From your family:",
-  "arrival.asks": "From {asker}",
-  "arrival.asks_on_behalf": "{asker} asks, for {child}:",
+  "arrival.signed": "— {asker}",
+  "arrival.signed_on_behalf": "— {asker}, for {child}",
   "arrival.sent_photo": "{asker} sent you a photo.",
   "arrival.sent_voice": "{asker} sent you a voice message.",
   "arrival.photo_gone":
     "{asker} wanted to show you a photo, but it is no longer available. How are you today?",
   "arrival.photo_choice": "Which one? Tap 1 or 2.",
   "arrival.vote": "Tap one.",
-  "arrival.hello": "Nothing new from the family today. How are you this morning?",
-  "arrival.hello_signature": "Vela, from your family",
+  "arrival.hello": "How are you this morning?",
+  "arrival.hello_signature": "— Vela, for your family",
   "arrival.hello_question": "Something to share with the family today:",
   "arrival.hint": "Reply with a voice message, or tap a button.",
   "button.fine": "I'm fine",

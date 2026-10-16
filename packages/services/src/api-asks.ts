@@ -415,7 +415,8 @@ export async function composeApiAsk(
             conversationId: link.externalId,
             exchangeId: exchange.id,
             lang: locked.language,
-            text: `${t(locked.language, "arrival.from", { asker: asker.displayName })}\n\n${ask.text}`,
+            // A message from her child reads as one: their words, signed with their name.
+            text: `${ask.text}\n${t(locked.language, "arrival.signed", { asker: asker.displayName })}`,
             ref: { purpose: "arrival", exchangeId: exchange.id },
             effect: { exchangeId: exchange.id },
           });

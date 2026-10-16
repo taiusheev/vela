@@ -1051,6 +1051,10 @@ msgstr ""
 msgid "I have sent it"
 msgstr ""
 
+#: src/components/nearby-editor.tsx
+msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
+msgstr ""
+
 #: src/data/notifications.ts
 msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
 msgstr ""
@@ -1065,6 +1069,10 @@ msgstr ""
 
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "If the link doesn’t open, add me to your contacts, then tap it again."
 msgstr ""
 
 #: app/delete-account.tsx
