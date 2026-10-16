@@ -728,6 +728,20 @@ async function arrivalWritten(tx: VelaTransaction, key: string): Promise<boolean
   return row !== undefined && row.status !== "dropped";
 }
 
+/** How many of her first mornings end with how to answer (render.ts `hint`). */
+const HINT_MORNINGS = 3;
+
+/**
+ * Whether `date` is one of her first mornings, counted from the first date her light allowed an
+ * arrival; with no start date recorded she is shown how to answer, as on a first morning.
+ */
+export function inFirstMornings(
+  member: { lightStartsOn: LocalDate | null },
+  date: LocalDate,
+): boolean {
+  return member.lightStartsOn === null || date < addDays(member.lightStartsOn, HINT_MORNINGS);
+}
+
 /**
  * Enqueues her arrival for `date`, preparing the day first if nothing was (flows §3.7). The read-back
  * voices come before the ask's own files, as the read-back lines come before the ask in the text.
@@ -772,6 +786,8 @@ export async function deliverArrival(
     readBack: readBack.lines,
     late,
     repeat: false,
+    date,
+    hint: inFirstMornings(member, date),
   });
   const attached = [...readBack.media, ...askFiles];
   const request: OutboundRequest = {
@@ -862,6 +878,8 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
     readBack: [],
     late: false,
     repeat: true,
+    date,
+    hint: inFirstMornings(member, date),
   });
   await enqueueOutbound(deps, deps.db, {
     kind: "repeat",

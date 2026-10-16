@@ -2,13 +2,16 @@
  * One arrival as plain text and buttons (spec §4.3–4.5, §14.3 M2 and M4), in her language.
  *
  * Text, in paragraphs: yesterday's replies under their heading; the late note or the repeat preface;
- * the greeting; the ask (who asks, what, and how to answer it, or, for a voice note or photo without
- * words, who sent it, or that the photo is gone) or the fallback hello with its signature; the hint.
+ * the greeting, worded three ways in turn by her local date; the ask, written as a note from the one
+ * who asks (their words and how to choose for a photo choice or vote, then their name, as a signed
+ * message reads; for a voice note or photo without words, who sent it, or that the photo is gone), or
+ * the fallback hello signed by Vela; and, on her first mornings only, the hint on how to answer
+ * (first test, 15 Oct 2026: a morning should read as her child writing, not as a bot).
  * Buttons: the question's chips one per row (Vela's bank question's too), the photo choice's 1 and 2,
  * the vote's options one per row, and always a last row with a heart and "I'm fine", so every arrival can be answered with one
  * tap.
  */
-import type { Button, ExchangeType, Lang } from "@vela/contracts";
+import type { Button, ExchangeType, Lang, LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { type ButtonAction, encodeButton } from "./buttons.ts";
 import { lineCap, shorten, TEXT_MAX_LENGTH } from "./text.ts";
@@ -51,6 +54,13 @@ export interface RenderArrivalInput {
   readBack: string[];
   late: boolean;
   repeat: boolean;
+  /** Her local date of the morning, which picks the greeting's wording. */
+  date: LocalDate;
+  /**
+   * Whether to end with how to answer. She needs it while the ritual is new; every day after, the
+   * line would only make a note from her family read like a form.
+   */
+  hint: boolean;
 }
 
 export interface RenderedArrival {
@@ -101,12 +111,26 @@ function optionRows(
 }
 
 /**
- * Who asks, what (`text`, already trimmed), and how to answer. An ask without words would otherwise
- * leave "Mia asks:" hanging over nothing, so a voice note, or a question or memory photo that carries
- * images, says what was sent instead. Only a photo comes as a question or a memory photo without
- * words (a text message is words, and the app asks with words), so one with no image left lost its
- * photos, to retention or to her channel: it says so, and asks how she is, so her morning still asks
- * her something. A photo choice short of two arrives here as a question.
+ * The greeting, worded three ways in turn by her local date, so the mornings do not open with the
+ * same line day after day, as a person writing would not.
+ */
+const GREETINGS = ["arrival.greeting", "arrival.greeting_2", "arrival.greeting_3"] as const;
+
+export function greetingKeyFor(date: LocalDate): (typeof GREETINGS)[number] {
+  const day = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
+  return (
+    GREETINGS[((day % GREETINGS.length) + GREETINGS.length) % GREETINGS.length] ?? GREETINGS[0]
+  );
+}
+
+/**
+ * The ask as a note from the one who asks (`text`, already trimmed): their words, how to choose for a
+ * photo choice or a vote, then their name below, as a signed message reads. An ask without words
+ * would otherwise leave a name signed under nothing, so a voice note, or a question or memory photo
+ * that carries images, says who sent what instead. Only a photo comes as a question or a memory photo
+ * without words (a text message is words, and the app asks with words), so one with no image left
+ * lost its photos, to retention or to her channel: it says so, and asks how she is, so her morning
+ * still asks her something. A photo choice short of two arrives here as a question.
  */
 function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text: string): string[] {
   const asker = ask.askerName;
@@ -118,19 +142,17 @@ function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text:
       return [t(lang, ask.imageCount > 0 ? "arrival.sent_photo" : "arrival.photo_gone", { asker })];
     }
   }
-  const lines = [
-    ask.onBehalfOf === null
-      ? t(lang, "arrival.asks", { asker })
-      : t(lang, "arrival.asks_on_behalf", { asker, child: ask.onBehalfOf }),
-  ];
-  if (text.length > 0) {
-    lines.push(text);
-  }
+  const lines = text.length > 0 ? [text] : [];
   if (ask.type === "photo_choice") {
     lines.push(t(lang, "arrival.photo_choice"));
   } else if (ask.type === "vote") {
     lines.push(t(lang, "arrival.vote"));
   }
+  lines.push(
+    ask.onBehalfOf === null
+      ? t(lang, "arrival.signed", { asker })
+      : t(lang, "arrival.signed_on_behalf", { asker, child: ask.onBehalfOf }),
+  );
   return lines;
 }
 
@@ -191,18 +213,20 @@ function composeText(
   } else if (input.late) {
     opening.push(t(lang, "arrival.late"));
   }
-  opening.push(t(lang, "arrival.greeting", { address: input.address }));
+  opening.push(t(lang, greetingKeyFor(input.date), { address: input.address }));
   paragraphs.push(opening);
 
   paragraphs.push(ask.type === "hello" ? helloLines(lang, ask) : askLines(lang, ask, askText));
-  paragraphs.push([t(lang, "arrival.hint")]);
+  if (input.hint) {
+    paragraphs.push([t(lang, "arrival.hint")]);
+  }
   return paragraphs.map((lines) => lines.join("\n")).join("\n\n");
 }
 
 /**
  * The text within `OutboundMessage`'s limit. An over-long text would make the platform refuse the
  * whole arrival and leave her without a morning, so the family's words are shortened instead, never
- * the greeting, who asks, or the hint. The read-back yields first, down to a floor for each line; then
+ * the greeting, who signs, or the hint. The read-back yields first, down to a floor for each line; then
  * the ask, down to its own floor; then the read-back again. A line is shortened, never dropped: every
  * reply behind the read-back is marked as read back once the arrival is sent.
  */

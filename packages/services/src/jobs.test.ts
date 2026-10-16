@@ -1254,10 +1254,10 @@ describe("applyRetention", () => {
         (row.payload as { message: { text: string; buttons: { label: string }[][] } }).message,
     );
     expect(messages.map((message) => message.text.split("\n\n")[1])).toEqual([
-      "From Mia\nIs the persimmon ripe?",
-      "From Mia\nWhatever happened to the cat?",
-      "From Mia\nTea or coffee?\nTap one.",
-      "From Mia\nDid the plum tree flower?",
+      "Is the persimmon ripe?\n— Mia",
+      "Whatever happened to the cat?\n— Mia",
+      "Tea or coffee?\nTap one.\n— Mia",
+      "Did the plum tree flower?\n— Mia",
     ]);
     expect(messages[2]?.buttons.flat().map((button) => button.label)).toEqual(
       expect.arrayContaining(["Tea", "Coffee"]),

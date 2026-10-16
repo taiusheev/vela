@@ -1058,6 +1058,10 @@ msgstr "抱抱"
 msgid "I have sent it"
 msgstr "我已經傳了"
 
+#: src/components/nearby-editor.tsx
+msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
+msgstr "如果{sharedWith}點不開連結，是因為您不在對方的聯絡人裡，Telegram 會把連結藏起來。請{sharedWith}先把您加為聯絡人，或改用簡訊傳送邀請。"
+
 #: src/data/notifications.ts
 msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
 msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有連結 Telegram，也沒有開啟 Vela 通知的手機。"
@@ -1073,6 +1077,10 @@ msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "早安訊息過了平常的回覆時間仍然安靜時，以及之後有了結果時。"
+
+#: src/components/nearby-editor.tsx
+msgid "If the link doesn’t open, add me to your contacts, then tap it again."
+msgstr "如果連結點不開，請先把我加為聯絡人，再點一次。"
 
 #: app/delete-account.tsx
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
