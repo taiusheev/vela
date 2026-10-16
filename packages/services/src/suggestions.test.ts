@@ -2,7 +2,16 @@ import { createFakeAi, createOffAi, fakeRecord, type SuggestInput } from "@vela/
 import type { LocalDate } from "@vela/contracts";
 import { ASK_BANK, type AskBankType, askBankItem, askBankText } from "@vela/copy";
 import { addDays, localDateOf, weekdayOf } from "@vela/core";
-import { aiCalls, answers, exchanges, families, type Member, members, suggestions } from "@vela/db";
+import {
+  aiCalls,
+  answers,
+  events,
+  exchanges,
+  families,
+  type Member,
+  members,
+  suggestions,
+} from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -546,6 +555,7 @@ describe("writeSuggestions with AI on", () => {
       recentMentions: [],
       familyDates: [],
       holderLastAsk: null,
+      holderWritingExamples: [],
     });
   });
 
@@ -616,6 +626,64 @@ describe("writeSuggestions with AI on", () => {
       type: "question",
       text: "What did you do this morning?",
     });
+  });
+
+  it("learns wording only from this holder's own asks to this parent, excluding AI drafts", async () => {
+    const sibling = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Leo",
+      externalId: "1009",
+    });
+    const own = "mom! what did you make for lunch today?";
+    await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      text: own,
+      createdAt: addMinutesAgo(30),
+    });
+    await seedExchange(h.db, seed, {
+      date: addDays(today(), -2),
+      text: "A sibling's formal question",
+      askerId: sibling.member.id,
+      createdAt: addMinutesAgo(40),
+    });
+    const ai = await seedExchange(h.db, seed, {
+      date: addDays(today(), -3),
+      text: "A polished generated question",
+      createdAt: addMinutesAgo(50),
+    });
+    await h.db.insert(events).values({
+      name: "ask_composed",
+      familyId: seed.family.id,
+      memberId: seed.organiser.id,
+      exchangeId: ai.id,
+      surface: "app",
+      props: { from_suggestion: true },
+      at: h.clock.now(),
+    });
+    await seedExchange(h.db, seed, {
+      date: addDays(today(), -4),
+      text: "A withdrawn draft",
+      state: "withdrawn",
+      createdAt: addMinutesAgo(60),
+    });
+    await seedExchange(h.db, seed, {
+      date: addDays(today(), -5),
+      text: "An old question",
+      createdAt: addMinutesAgo(60 * 24 * 31),
+    });
+    const other = await seedFamily(h.db, {
+      now: h.clock.now(),
+      memberExternalId: "6001",
+      organiserExternalId: "5001",
+    });
+    await seedExchange(h.db, other, {
+      date: today(),
+      text: "Another family's private words",
+      createdAt: h.clock.now(),
+    });
+    await writeSuggestions(h.deps);
+    const input = suggestCalls().find((call) => call.recipientAddress === "Mom");
+    expect(input?.holderWritingExamples).toEqual([own]);
   });
 
   it.each([

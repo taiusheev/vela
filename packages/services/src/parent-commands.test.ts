@@ -383,7 +383,7 @@ describe("start", () => {
     expect(await herMessages()).toEqual([
       t("en", "parent.stopped"),
       "Welcome back. Your next morning arrives at 08:00.",
-      expect.stringContaining("Mia asks:\nWhich soup today?"),
+      expect.stringContaining("From Mia\nWhich soup today?"),
     ]);
     const [carried] = await h.db.select().from(exchanges).where(eq(exchanges.id, ask.id));
     expect(carried).toMatchObject({ state: "delivered", scheduledFor: "2026-09-16" });

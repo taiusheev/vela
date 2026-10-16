@@ -1,6 +1,6 @@
 /**
  * A nearby contact's yes, asked for by Vela in the organiser's name (ADR-36; spec §9, §14.3 M6;
- * `plan/materials/pilot/nearby-contact-consent.en.md`, text B as `nearby-consent.v2`). An organiser
+ * `plan/materials/pilot/nearby-contact-consent.en.md`, text B as `nearby-consent.v3`). An organiser
  * shares a link from the app; the contact opens it in Telegram and is asked, in that organiser's
  * name, whether they may be asked to look in on her on a quiet morning. A yes keeps their Telegram
  * account with the yes, and lists them; a no deletes them at once, keeping only the proof that they
@@ -33,6 +33,7 @@ import {
   type OutboundRequest,
 } from "./gateway.ts";
 import { languageOfSender, sendOutsideGateway } from "./group.ts";
+import { sha256Hex } from "./hash.ts";
 import {
   chatConsentEvidence,
   forgetConsentSubjects,
@@ -42,7 +43,7 @@ import {
 import { activeOrganisersWithLinks, MESSENGER, type Queryable } from "./repo.ts";
 
 /** The text a contact's tap answers: text B of the nearby-contact consent, on Telegram. */
-export const NEARBY_TEXT_VERSION = "nearby-consent.v2";
+export const NEARBY_TEXT_VERSION = "nearby-consent.v3";
 /** A contact's link: `n` and 24 random bytes, apart from a member's invite of 43 characters. */
 const NEARBY_START = /^n[A-Za-z0-9_-]{32}$/;
 const NEARBY_TOKEN_BYTES = 24;
@@ -188,6 +189,7 @@ export async function handleNearbyStart(deps: Deps, event: InboundEvent): Promis
     conversationId,
     lang,
     text: t(lang, "nearby.request", params),
+    consentTextVersion: NEARBY_TEXT_VERSION,
     buttons: [
       [
         {
@@ -295,11 +297,16 @@ export async function handleNearbyConsentButton(
       key: "nearby.request",
       params,
     });
+    const sentText = (sent.payload as { message?: { text?: string } }).message?.text;
+    if (typeof sentText === "string") evidence.text_sha256 = await sha256Hex(sentText);
     const proof = {
       contactId: contact.id,
       subjectRef: subjectRef({ contactId: contact.id }),
       kind: "nearby" as const,
-      textVersion: NEARBY_TEXT_VERSION,
+      textVersion:
+        typeof sent.payload.consentTextVersion === "string"
+          ? sent.payload.consentTextVersion
+          : "nearby-consent.v2",
       lang,
       channel: event.channel,
       givenAt: now,

@@ -77,7 +77,7 @@ export const EXCHANGE_STATES = [
 export const ExchangeState = z.enum(EXCHANGE_STATES);
 export type ExchangeState = z.infer<typeof ExchangeState>;
 
-export const WHEN_RULES = ["tomorrow", "date", "whenever"] as const;
+export const WHEN_RULES = ["tomorrow", "date", "whenever", "now"] as const;
 export const WhenRule = z.enum(WHEN_RULES);
 export type WhenRule = z.infer<typeof WhenRule>;
 
@@ -111,6 +111,7 @@ export const LightState = z.enum(LIGHT_STATES);
 export type LightState = z.infer<typeof LightState>;
 
 export const OUTBOUND_KINDS = [
+  "conversation",
   "arrival",
   "repeat",
   "turn_prompt",

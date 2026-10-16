@@ -12,6 +12,7 @@ import { reactionLine, replyLine } from "./lines.ts";
  */
 
 export interface TodayLight {
+  connectionDays?: { date: string; hasMessage: boolean }[];
   memberId: string;
   displayName: string;
   timeZone?: string;
@@ -142,7 +143,16 @@ export function todayFixture(): Today {
   const time = clockTime(8, 12);
   return {
     lights: [
-      { memberId: "m1", displayName: recipient, state: "lit", stateText: t`answered ${time}` },
+      {
+        memberId: "m1",
+        displayName: recipient,
+        state: "lit",
+        stateText: t`answered ${time}`,
+        connectionDays: Array.from({ length: 7 }, (_, index) => ({
+          date: new Date(Date.now() - (6 - index) * 86_400_000).toISOString().slice(0, 10),
+          hasMessage: [0, 1, 3, 4, 6].includes(index),
+        })),
+      },
       { memberId: "m2", displayName: t`Dad`, state: "resting", stateText: t`No word yet today` },
     ],
     exchanges: [

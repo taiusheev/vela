@@ -49,6 +49,56 @@ async function her() {
   return row;
 }
 describe("organiser morning preferences", () => {
+  it("lets an organiser prepare an invited parent's morning without activating or contacting them", async () => {
+    await h.db
+      .update(members)
+      .set({
+        status: "invited",
+        lightOn: false,
+        lightConsentedAt: null,
+        lightStartsOn: null,
+      })
+      .where(eq(members.id, seed.member.id));
+    const before = await loadApiMorningPreferences(
+      h.db,
+      who,
+      seed.family.id,
+      seed.member.id,
+      h.clock.now(),
+    );
+    expect(before?.arrival_time).toBe("08:00");
+    const result = await save("09:30", "zh-TW");
+    expect(ApiMorningPreferences.parse(result.response.body)).toMatchObject({
+      arrival_time: "09:30",
+      today_arrival_time: "09:30",
+      effective_from: null,
+      language: "zh-TW",
+    });
+    expect(result.after).toEqual({ outboundIds: [], wakeMemberIds: [] });
+    expect(await her()).toMatchObject({
+      status: "invited",
+      lightOn: false,
+      lightConsentedAt: null,
+      lightStartsOn: null,
+      arrivalTime: "09:30",
+      pendingArrivalDate: null,
+    });
+    await tickMember(h.deps, seed.member.id);
+    expect(await h.db.select().from(outbound)).toHaveLength(0);
+    expect(await h.db.select().from(exchanges)).toHaveLength(0);
+    await save("07:15");
+    expect((await her()).arrivalTime).toBe("07:15");
+  });
+  it("does not turn an unconsented ordinary active member into a parent", async () => {
+    await h.db
+      .update(members)
+      .set({ lightOn: false, lightConsentedAt: null })
+      .where(eq(members.id, seed.member.id));
+    expect(
+      await loadApiMorningPreferences(h.db, who, seed.family.id, seed.member.id, h.clock.now()),
+    ).toBeNull();
+    await expect(save("09:00")).rejects.toThrow();
+  });
   it("keeps today's time across repeated earlier and later edits; tomorrow wakes at the last choice", async () => {
     const today = localDateOf(h.clock.now(), seed.member.tz);
     const first = await save("06:00");

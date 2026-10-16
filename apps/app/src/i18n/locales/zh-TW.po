@@ -94,9 +94,21 @@ msgstr "那個週日已經由{holder}安排了。"
 msgid "{known} fine, and the family knew why"
 msgstr "{known}次平安（家人知道原因）"
 
+#: src/components/connection-windows.tsx
+msgid "{label}: a family message"
+msgstr ""
+
+#: src/components/connection-windows.tsx
+msgid "{label}: no message recorded"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "{later} answered later"
 msgstr "{later}次稍晚回覆"
+
+#: src/components/connection-windows.tsx
+msgid "{name} · {count} days with messages"
+msgstr ""
 
 #: app/book.tsx
 msgid "{name} · {day}"
@@ -274,6 +286,10 @@ msgstr "{recipient}已暫停晨間訊息。準備好時，可以在 Vela 的聊�
 msgid "{recipient} saw it · {time}"
 msgstr "{recipient}看過了 · {time}"
 
+#: app/(tabs)/index.tsx
+msgid "{recipient}'s morning settings"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "{wrong} where something was wrong"
 msgstr "{wrong}次真的有狀況"
@@ -366,6 +382,10 @@ msgstr "一段語音"
 msgid "A vote"
 msgstr "投票"
 
+#: src/components/connection-windows.tsx
+msgid "A window for each day with a message. Quiet days keep the earlier lights."
+msgstr ""
+
 #: src/data/ask.ts
 msgid "A word to teach"
 msgstr "請教一個詞"
@@ -373,6 +393,11 @@ msgstr "請教一個詞"
 #: app/help.tsx
 msgid "About a quiet notice"
 msgstr "關於安靜通知"
+
+#: app/conversation.tsx
+#: src/data/useExchanges.ts
+msgid "Accepted for delivery. This is not a read receipt."
+msgstr ""
 
 #: app/(tabs)/you.tsx
 msgid "Account"
@@ -624,6 +649,10 @@ msgstr "請先在「你」選擇一位家人，再更改附近的人。"
 msgid "Choose a photo"
 msgstr "選一張照片"
 
+#: app/morning-settings.tsx
+msgid "Choose a time in {zone}. Everything waits until they accept the invitation."
+msgstr ""
+
 #: src/components/photo-reply.tsx
 msgid "Choose another"
 msgstr "換一張"
@@ -762,6 +791,10 @@ msgstr "完成"
 msgid "downstairs"
 msgstr "樓下鄰居"
 
+#: app/conversation.tsx
+msgid "Earlier messages"
+msgstr ""
+
 #: app/(tabs)/exchanges.tsx
 msgid "Earlier this month"
 msgstr "這個月稍早"
@@ -801,6 +834,10 @@ msgstr "請輸入訊息中的六位數字。"
 msgid "Example · heart sent"
 msgstr "示範 · 愛心已送出"
 
+#: app/conversation.tsx
+msgid "Example only. Nothing was sent."
+msgstr ""
+
 #: app/morning-settings.tsx
 msgid "Example settings previewed."
 msgstr "已預覽範例設定。"
@@ -824,6 +861,7 @@ msgctxt "role"
 msgid "family"
 msgstr "家人"
 
+#: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
 msgid "Family"
 msgstr "家人"
@@ -831,6 +869,10 @@ msgstr "家人"
 #: app/(tabs)/exchanges.tsx
 msgid "Family book"
 msgstr "家庭故事書"
+
+#: app/(tabs)/index.tsx
+msgid "Family settings"
+msgstr ""
 
 #: app/ask.tsx
 msgid "Fewer choices"
@@ -886,6 +928,7 @@ msgstr "前往「今天」"
 
 #: app/(tabs)/index.tsx
 #: app/away.tsx
+#: app/conversation.tsx
 #: app/morning-settings.tsx
 #: app/nearby.tsx
 msgid "Go to You"
@@ -924,10 +967,6 @@ msgstr "給{recipient}一顆愛心"
 #: src/components/today-heart.tsx
 msgid "Heart sent"
 msgstr "愛心已送出"
-
-#: src/components/nearby-editor.tsx
-msgid "Hello {who}. Could I list you on Vela as someone near {name}, so I could ask you to look in on a day {name} hasn't answered? Open this in Telegram to read what it means and say yes or no: {link}"
-msgstr "{who}您好。我可以在 Vela 上把您列為住在{name}附近的人嗎？這樣如果哪天{name}沒有回覆，我可以請您過去看看。請用 Telegram 打開這個連結，看看這代表什麼，再回答好或不好： {link}"
 
 #: app/help.tsx
 #: app/sign-in.tsx
@@ -969,6 +1008,10 @@ msgstr "不在家的期間，早上的訊息照常送出；不會通知家人早
 #: app/onboarding.tsx
 msgid "Her name, as the family calls her."
 msgstr "家裡平常怎麼稱呼這位家人。"
+
+#: src/components/nearby-editor.tsx
+msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
+msgstr ""
 
 #: src/components/test-sign-in-details.tsx
 msgid "Hide test sign-in details"
@@ -1143,6 +1186,10 @@ msgstr "離開"
 msgid "Leave {familyName}?"
 msgstr "要離開{familyName}嗎？"
 
+#: app/conversation.tsx
+msgid "Leave something for their morning"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "Leave the family"
 msgstr "離開這個家庭"
@@ -1199,6 +1246,10 @@ msgstr "正在載入安靜通知…"
 msgid "Loading voice…"
 msgstr "正在載入語音…"
 
+#: app/conversation.tsx
+msgid "Loading your conversation…"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 #: app/away.tsx
 #: app/nearby.tsx
@@ -1224,6 +1275,10 @@ msgstr "正在載入家人的問答…"
 #: src/auth/phone.ts
 msgid "Malaysia"
 msgstr "馬來西亞"
+
+#: app/conversation.tsx
+msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
+msgstr ""
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
@@ -1472,6 +1527,7 @@ msgid "Open Telegram with the account that already belongs to your approved pilo
 msgstr "請用已加入您那個獲准試辦家庭的帳號打開 Telegram。點「開始」，複製 Vela 傳給您的連結碼，貼在下方。"
 
 #: app/(tabs)/index.tsx
+#: app/conversation.tsx
 msgid "Open this exchange"
 msgstr "打開這次交流"
 
@@ -1734,9 +1790,17 @@ msgstr "已同意"
 msgid "Save calling number"
 msgstr "儲存電話號碼"
 
+#: app/conversation.tsx
+msgid "Save for their first morning"
+msgstr ""
+
 #: app/morning-settings.tsx
 msgid "Save morning settings"
 msgstr "儲存早安設定"
+
+#: app/conversation.tsx
+msgid "Saved for their first morning after they join."
+msgstr ""
 
 #: app/(tabs)/index.tsx
 #: app/away.tsx
@@ -1751,6 +1815,10 @@ msgstr "儲存中…"
 #: app/ask.tsx
 msgid "Say it the way you would say it"
 msgstr "用您平常說話的方式寫"
+
+#: app/conversation.tsx
+msgid "Say it while it is on your mind. Their daily morning stays scheduled."
+msgstr ""
 
 #: app/exchange/[id].tsx
 msgid "Say something short"
@@ -1777,9 +1845,17 @@ msgstr "傳驗證碼給我"
 msgid "Send my answer"
 msgstr "送出我的回答"
 
+#: app/conversation.tsx
+msgid "Send now"
+msgstr ""
+
 #: src/components/photo-reply.tsx
 msgid "Send photo"
 msgstr "送出照片"
+
+#: app/(tabs)/index.tsx
+msgid "Send something now, or leave a question for their morning."
+msgstr ""
 
 #: app/ask.tsx
 msgid "Send to {name}"
@@ -1790,6 +1866,7 @@ msgid "Send voice reply"
 msgstr "送出語音回覆"
 
 #: app/ask.tsx
+#: app/conversation.tsx
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 #: app/sign-in.tsx
@@ -1952,6 +2029,10 @@ msgstr "有人說{name}沒事。收到通知的每個人都已經知道了。"
 msgid "Someone who could look in, if it goes quiet"
 msgstr "安靜的日子裡，可以過去看看的人"
 
+#: app/conversation.tsx
+msgid "Something for {name}"
+msgstr ""
+
 #: app/(tabs)/sunday.tsx
 msgid "Something to ask next week"
 msgstr "下週可以問問看"
@@ -1971,6 +2052,10 @@ msgstr "西班牙"
 #: app/vela-light.tsx
 msgid "Start the 30 days"
 msgstr "開始 30 天試用"
+
+#: app/(tabs)/index.tsx
+msgid "Start with one question in your own words. Choose a morning that suits them."
+msgstr ""
 
 #: app/vela-light.tsx
 msgid "Starting…"
@@ -2030,6 +2115,18 @@ msgstr "把這個故事從書中移除"
 msgid "Take this story out of the family book?"
 msgstr "要從家庭故事書移除這段故事嗎？"
 
+#: app/exchange/[id].tsx
+msgid "Talk now"
+msgstr ""
+
+#: app/conversation.tsx
+msgid "Talk with {name}"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Talk with {recipient}"
+msgstr ""
+
 #: src/data/useToday.ts
 msgid "tapped an answer"
 msgstr "選了一個回答"
@@ -2077,6 +2174,10 @@ msgstr "驗證碼正確，但這個帳號還需要其他步驟才能完成登入
 #: src/components/telegram-family-link.tsx
 msgid "That connection did not go through. Check the code and Telegram account, then try again."
 msgstr "連結沒有完成。請檢查連結碼和 Telegram 帳號後再試一次。"
+
+#: app/conversation.tsx
+msgid "That could not be confirmed. Your words are still here. Retry to confirm the same message."
+msgstr ""
 
 #: app/onboarding.tsx
 msgid "That could not be saved just now. Nothing was lost; try again."
@@ -2323,6 +2424,10 @@ msgstr "這個連結已經失效。請建立新的連結，使用新的連結碼
 msgid "This device cannot share from here. Copy the words above and send them to her yourself."
 msgstr "這台裝置無法從這裡分享。請複製上面的文字，自己傳給這位家人。"
 
+#: app/conversation.tsx
+msgid "This draft could not be saved on this phone. Keep this screen open and try again."
+msgstr ""
+
 #: app/ask.tsx
 #: app/exchange/[id].tsx
 msgid "This iPhone could not keep a draft. Leave this screen open until your send succeeds."
@@ -2344,6 +2449,10 @@ msgstr "這是範例家庭，所以沒有人離開。"
 #: src/components/today-heart.tsx
 msgid "This is your own morning; replies are for the family."
 msgstr "這是您自己的早安訊息；回覆是給家人的。"
+
+#: src/data/useExchanges.ts
+msgid "This message could not be delivered. Their daily morning is unchanged."
+msgstr ""
 
 #: app/precision.tsx
 msgid "This page could not be reached just now."
@@ -2467,6 +2576,7 @@ msgstr "無法登入嗎？"
 #: app/(tabs)/you.tsx
 #: app/away.tsx
 #: app/book.tsx
+#: app/conversation.tsx
 #: app/exchange/[id].tsx
 #: app/morning-settings.tsx
 #: app/nearby.tsx
@@ -2762,6 +2872,10 @@ msgstr "早上一直很安靜時，Vela 會通知您。這裡是那些通知最�
 msgid "When she answers what you asked, and the evening before your turn."
 msgstr "家人回覆您的提問時，以及輪到您提問的前一晚。"
 
+#: app/(tabs)/index.tsx
+msgid "When they answer, write back while it is on your mind. A quiet day does not erase the moments you have shared."
+msgstr ""
+
 #: app/onboarding.tsx
 msgid "When you are with {name}, sign in to Vela on her phone and set it up there. Her phone then shows one message at a time in large words, and asks her first; nothing reaches her until she says yes."
 msgstr "和{name}在一起時，在長輩的手機上登入 Vela 並完成設定。之後那支手機一次只顯示一則大字訊息，並先徵求對方同意；對方答應之前，不會收到任何訊息。"
@@ -2801,6 +2915,22 @@ msgstr "您的燈亮著時，家人也會看到您每天早上有沒有回覆、
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 msgstr "您傳過的文字、照片和語音訊息會留在家庭中，因為那是家人日常的一部分。"
+
+#: app/conversation.tsx
+msgid "Write something they will recognise as you. It waits for their yes."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Write their first message"
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Write their first message while you wait for their yes."
+msgstr ""
+
+#: app/conversation.tsx
+msgid "Write to {name}"
+msgstr ""
 
 #: src/components/story-day.tsx
 msgid "Write your own question"
@@ -2921,6 +3051,10 @@ msgstr "目前無法載入您的家庭。"
 msgid "Your family's first parent connection is still being set up."
 msgstr "你的家庭仍在設定第一位家人的連結。"
 
+#: app/(tabs)/index.tsx
+msgid "Your first days"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "Your light is off, so nothing about your mornings is shown."
 msgstr "您的燈沒有亮著，所以不會顯示任何關於您早上的內容。"
@@ -2949,6 +3083,10 @@ msgstr "您的名字，用家人平常的叫法。"
 #: app/(tabs)/you.tsx
 msgid "Your name, the asks you write, and your replies."
 msgstr "您的名字、您寫的提問，以及您的回覆。"
+
+#: app/conversation.tsx
+msgid "Your parent"
+msgstr ""
 
 #: app/(tabs)/you.tsx
 msgid "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."

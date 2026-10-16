@@ -46,6 +46,7 @@ export const zhTW: Record<keyof typeof en, string> = {
     "您的燈還沒亮起。家人的安排人需要一個已獲准、且能收到訊息的 Telegram 帳號。請安排人完成設定，再試一次。",
   "pilot.invitation_only":
     "Vela 的英語試用僅限受邀者。請聯絡創辦人申請使用。您的 Telegram ID：{telegram_id}。",
+  "arrival.from": "來自{asker}",
   "arrival.greeting": "{address}，早安。",
   "arrival.late": "不好意思，這則訊息晚到了。",
   "arrival.repeat": "怕您沒看到，再傳一次：",

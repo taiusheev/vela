@@ -95,6 +95,7 @@ export default function MorningSettingsScreen() {
             initial={data}
             familyId={familyId ?? ""}
             demo={demo}
+            invited={her.invited === true}
           />
         )}
         <SecondaryButton label={t`Go to You`} onPress={() => router.replace("/(tabs)/you")} />
@@ -107,10 +108,12 @@ function MorningForm({
   initial,
   familyId,
   demo,
+  invited,
 }: {
   initial: ApiMorningPreferences;
   familyId: string;
   demo: boolean;
+  invited: boolean;
 }) {
   const { t } = useLingui();
   const { englishOnly } = useCapabilities();
@@ -163,9 +166,13 @@ function MorningForm({
         </Words>
       ) : null}
       <Words tone="ink2">
-        <Trans>
-          Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow.
-        </Trans>
+        {invited ? (
+          <Trans>Choose a time in {zone}. Everything waits until they accept the invitation.</Trans>
+        ) : (
+          <Trans>
+            Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow.
+          </Trans>
+        )}
       </Words>
       <TextField
         label={t`Morning time (24-hour HH:MM)`}

@@ -6,7 +6,7 @@ import {
   MAX_EXCHANGE_PAGE_SIZE,
 } from "@vela/contracts";
 import { exchanges, type Member, members } from "@vela/db";
-import { and, desc, eq, gte, isNotNull, lt, ne } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, lt, ne, or } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { exchangeRow } from "./api-today.ts";
 import type { Queryable } from "./repo.ts";
@@ -62,8 +62,10 @@ export async function loadApiExchanges(
         // The family is in the query itself: membership is not permission to read a nested id.
         eq(exchanges.familyId, familyId),
         ne(exchanges.state, "withdrawn"),
-        isNotNull(exchanges.deliveredAt),
-        gte(exchanges.deliveredAt, floor),
+        or(
+          and(isNotNull(exchanges.deliveredAt), gte(exchanges.deliveredAt, floor)),
+          and(eq(exchanges.whenRule, "now"), gte(exchanges.createdAt, floor)),
+        ),
         ...(after === null ? [] : [lt(exchanges.id, after)]),
       ),
     )
@@ -108,8 +110,10 @@ export async function loadApiExchange(
       and(
         eq(exchanges.id, exchangeId),
         ne(exchanges.state, "withdrawn"),
-        isNotNull(exchanges.deliveredAt),
-        gte(exchanges.deliveredAt, floor),
+        or(
+          and(isNotNull(exchanges.deliveredAt), gte(exchanges.deliveredAt, floor)),
+          and(eq(exchanges.whenRule, "now"), gte(exchanges.createdAt, floor)),
+        ),
       ),
     )
     .limit(1);

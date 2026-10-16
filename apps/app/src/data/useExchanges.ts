@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import { apiConfigured, fetchExchanges } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { type Exchange, type ExchangeReply, exchangesFixture } from "./exchanges.ts";
+import { timeOfDay } from "./format.ts";
 import { demoDataAllowed } from "./live-state.ts";
 import { dayName, toTodayExchange, useToday } from "./useToday.ts";
 
@@ -29,14 +30,27 @@ function toReply(
 /** One listed exchange in the screen's idiom: the same card Today shows, with its day. */
 export function toExchange(summary: ApiExchangeSummary, timeZone?: string): Exchange {
   const card = toTodayExchange(summary, timeZone);
+  const deliveryNotice =
+    summary.scheduled_for !== null
+      ? card.deliveryNotice
+      : summary.delivery_status === "failed"
+        ? t`This message could not be delivered. Their daily morning is unchanged.`
+        : summary.delivery_status === "pending"
+          ? t`Accepted for delivery. This is not a read receipt.`
+          : undefined;
   return {
-    ...(card.deliveryNotice === undefined ? {} : { deliveryNotice: card.deliveryNotice }),
+    ...(deliveryNotice === undefined ? {} : { deliveryNotice }),
     id: summary.id,
     recipientId: summary.recipient_id,
     asker: card.asker ?? "Vela",
     recipient: card.recipient,
     ask: card.ask ?? t`A hello from Vela`,
-    day: summary.scheduled_for === null ? "" : dayName(summary.scheduled_for),
+    day:
+      summary.scheduled_for === null
+        ? summary.delivered_at === null
+          ? ""
+          : timeOfDay(summary.delivered_at, timeZone)
+        : dayName(summary.scheduled_for),
     ...(card.answer === undefined ? {} : { answer: card.answer }),
     replies: summary.replies.map((reply, index) => toReply(summary.id, index, reply)),
     ...(card.receipt === undefined ? {} : { receipt: card.receipt }),
@@ -65,7 +79,7 @@ export interface ExchangesView {
  * in, and the example days otherwise. Pages arrive on request, never on scroll: the list ends at
  * thirty days in the family book, so there is no feed to keep pulling.
  */
-export function useExchanges(): ExchangesView {
+export function useExchanges(watch = false): ExchangesView {
   // The days are worded as they are built, so a change of language builds them again.
   useLingui();
   const account = useAccount();
@@ -80,6 +94,7 @@ export function useExchanges(): ExchangesView {
       fetchExchanges(familyId ?? "", pageParam, await account.token()),
     getNextPageParam: (last) => last.next_cursor,
     refetchOnWindowFocus: "always",
+    refetchInterval: watch ? 5_000 : false,
   });
   const refetch = pages.refetch;
   const refresh = useCallback(() => {
