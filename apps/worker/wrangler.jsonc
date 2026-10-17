@@ -506,9 +506,10 @@
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",
-        // Off, and pinned off by src/wrangler-config.test.ts, until the privacy notice and the
-        // consent script say an organiser may let Vela send its suggestion in their name.
-        "SEND_AS_ME": "off",
+        // On since privacy-notice.v5 and consent-script.v4 say an organiser may let Vela send its
+        // suggestion in their name (ADR-49, founder's approval of 17 Oct 2026). It does nothing for a
+        // family until one of its organisers chooses "Send it as me" in the app.
+        "SEND_AS_ME": "on",
         // Technical plan 2.3: each reconcile reads staging's health check from this account, so
         // staging and production watch each other from different Cloudflare accounts.
         "PEER_HEALTHZ_URL": "https://vela.vela-light-staging.workers.dev/healthz"
