@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v3` · 13 October 2026 · goes with `privacy-notice.v4` · spoken meaning matches the `consent.request@2` and `consent.health_words@2` messages (architecture/03-code-design.md §4, spec §9)
+Version `consent-script.v4` · 17 October 2026 · goes with `privacy-notice.v5` · spoken meaning matches the `consent.request@2` and `consent.health_words@2` messages (architecture/03-code-design.md §4, spec §9)
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes, that's fine" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
@@ -55,11 +55,14 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 - "Vela is not a doctor and never gives medical advice. If you need help quickly, call [local emergency number: 119 in Taiwan, 911 in the United States, 999 or 112 in the United Kingdom, 112 in the European Union] or [organiser] straight away. Don't wait for the morning message."
 - "If [organiser] can't reach you on a quiet day, they might ask [nearby contact's name] to come by. That is always [organiser]'s own decision. Vela never contacts anyone by itself."
 - "A computer program helps with the messages: it writes down voice messages as text, and suggests short answers you can tap."
+- "On a morning when nobody in the family has written you a question, Vela sends one of its own, signed 'Vela'. [Organiser] can also choose to let the program write that question in their style and send it with their name on it. It is still [organiser]'s choice, and in the family's app it is marked as written by Vela. You can always ask [organiser] or me whether a question was written by Vela. If you'd rather every question come only from the family's own words, tell [organiser] or me and it will be turned off."
 - "Companies that run Vela process your messages for it: the database is in Singapore, the program that writes down and understands voice messages works in the United States, Cloudflare's network, which runs Vela, works worldwide, and Telegram carries the messages."
 - "Your voice messages, photos and the words of your answers are deleted after 30 days. A one-line summary of each answer stays while the family uses Vela."
 - "While we test Vela over these first weeks, I read the messages too, only to make sure everything works."
 - "You can ask me at any time to see what Vela has about you, to get a copy, to correct it or to delete it."
-- "On Sundays [organiser] gets a few lines about your week: what you told the family, and what changed in how you answered, compared only with your own earlier weeks. It is never a score and never advice. Whenever you like, write 'what does the family see', and you'll get what the family saw from your latest answers and the lines about your week."
+- "On Sundays [organiser] gets a few lines about your week: what you told the family, and what changed in how you answered, compared only with your own earlier weeks. Those lines are never a score and never advice. Whenever you like, write 'what does the family see', and you'll get what the family saw from your latest answers and the lines about your week."
+- "[Organiser]'s copy of those Sunday lines may also have a few words just for them, about their own messages: which of their questions or replies you answered, and an idea for the next week. It never mentions your health."
+- "On Sundays the program also writes me, and only me, a few careful guesses about what may lie beneath the week's messages, yours and the family's: a feeling, a wish or a worry, each with the words it rests on. They are guesses, not facts. I use them only to understand the week and to see whether guesses like these are any good. I don't show them to anyone, and they are deleted 30 days after that week. You can ask me to see them."
 
 ### 5. Questions
 
@@ -89,7 +92,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 **1. "Who will see what I say?"**
 
-"The family in the Vela group: [names]. They see your answer, and a written version if you sent a voice message. On quiet days and on Sundays, [organiser] gets a short note. I read the messages during this test to make sure it works. Companies that run Vela for me process the messages: the database in Singapore, the program in the United States that writes down and understands the words, and Telegram. They use them only to run Vela. Nobody else sees your answers: not neighbours, not advertisers, not anyone selling anything."
+"The family in the Vela group: [names]. They see your answer, and a written version if you sent a voice message. On quiet days and on Sundays, [organiser] gets a short note. I read the messages during this test to make sure it works, and on Sundays I alone see the program's guesses about what may lie beneath the week's words. Companies that run Vela for me process the messages: the database in Singapore, the program in the United States that writes down and understands the words, and Telegram. They use them only to run Vela. Nobody else sees your answers: not neighbours, not advertisers, not anyone selling anything."
 
 **2. "What happens if I don't answer one day? Will everyone worry?"**
 
@@ -101,7 +104,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 **4. "Is a computer reading my messages? Is it a robot talking to me?"**
 
-"The questions come from real people in your family, with their names on them. Vela carries them. A computer program helps: it turns voice messages into writing, and suggests short answers you can tap. If a message mentions something like a fall or pain, it makes sure [organiser] hears about it: with your own words if you said yes to the health question, and otherwise with a short note without them. It never gives advice, never pretends to be someone in your family, and never contacts anyone. On days when nobody in the family has asked anything, Vela sends a short hello signed 'Vela, from your family'."
+"The questions come from people in your family, with their names on them, and Vela carries them. A computer program helps: it turns voice messages into writing, and suggests short answers you can tap. If a message mentions something like a fall or pain, it makes sure [organiser] hears about it: with your own words if you said yes to the health question, and otherwise with a short note without them. On Sundays it also suggests to [organiser] how their own messages might reach you, and writes me, only me, its guesses about what may lie beneath the week's words. It never gives you advice and never contacts anyone. On days when nobody in the family has asked anything, Vela sends a question of its own, signed 'Vela'. If [organiser] chose it, the program writes that question in [organiser]'s style instead and sends it with [organiser]'s name on it; the family's app shows it was written by Vela. Ask [organiser] or me whenever you want to know whether a question was written by Vela, and tell us if you'd like those to stop."
 
 **5. "What if I want to stop? Will [organiser] be upset?"**
 
@@ -112,7 +115,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 Record under the family code, never in the chat, and in Google Drive only the family code, dates, text versions, yes or no answers, the country codes and citizenship answers of "Who can join", and scores (never a quote or anything about health):
 
 - Date, time, language, who was on the call.
-- Versions used: `consent-script.v1`, `privacy-notice.v1`.
+- Versions used: `consent-script.v4`, `privacy-notice.v5`.
 - The answer: yes, no or not now.
 - Whether anything was corrected (the correction itself goes into Vela, `infra/runbooks/data-requests.md` section I), and whether a question stayed unanswered.
 - Research questions: yes or no; scores if yes.
