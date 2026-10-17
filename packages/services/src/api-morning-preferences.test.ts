@@ -3,12 +3,13 @@ import { addDays, localDateOf } from "@vela/core";
 import { exchanges, members, outbound, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { ApiIdempotencyError } from "./api-idempotency.ts";
 import { loadApiMorningPreferences, setApiMorningPreferences } from "./api-morning-preferences.ts";
 import { deliverArrival } from "./arrivals.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { morningTimeOn } from "./morning-time.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedFamily } from "./testing/seed.ts";
+import { type SeededFamily, seedFamily, seedGroupMember } from "./testing/seed.ts";
 import { loadScheduleInput, tickMember } from "./tick.ts";
 
 let h: Harness;
@@ -197,5 +198,86 @@ describe("organiser morning preferences", () => {
     await tickMember(h.deps, seed.member.id);
     await h.runDue({ outbound: (job) => deliverOutbound(h.deps, job.outboundId) });
     expect(await h.db.select().from(outbound).where(eq(outbound.kind, "arrival"))).toHaveLength(1);
+  });
+});
+
+describe("sending Vela's suggestion in the caller's name (first test, 16 Oct 2026)", () => {
+  async function choose(sendAsMe: boolean | undefined, available = true) {
+    return setApiMorningPreferences(
+      { ...h.deps, sendAsMe: available },
+      who,
+      `as-me-${++serial}`,
+      seed.family.id,
+      seed.member.id,
+      {
+        arrival_time: "08:00",
+        language: "en",
+        ...(sendAsMe === undefined ? {} : { send_as_me: sendAsMe }),
+      },
+    );
+  }
+
+  it("names the caller on her row when they turn it on, and shows it on, then off again", async () => {
+    const result = await choose(true);
+    expect(ApiMorningPreferences.parse(result.response.body)).toMatchObject({
+      send_as_me_available: true,
+      send_as_me: true,
+      sent_as: null,
+    });
+    expect((await her()).suggestionsSignedBy).toBe(seed.organiser.id);
+    const read = await loadApiMorningPreferences(
+      h.db,
+      who,
+      seed.family.id,
+      seed.member.id,
+      h.clock.now(),
+      { sendAsMe: true },
+    );
+    expect(read).toMatchObject({ send_as_me: true, sent_as: null });
+
+    await choose(false);
+    expect((await her()).suggestionsSignedBy).toBeNull();
+  });
+
+  it("leaves the choice as it is when an older app saves a time without it", async () => {
+    await choose(true);
+    await choose(undefined);
+    expect((await her()).suggestionsSignedBy).toBe(seed.organiser.id);
+  });
+
+  it("never stops another organiser's choice, and tells the caller whose name is used", async () => {
+    const { member: anna } = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      externalId: "7001",
+      role: "organiser",
+    });
+    await h.db
+      .update(members)
+      .set({ suggestionsSignedBy: anna.id })
+      .where(eq(members.id, seed.member.id));
+
+    const result = await choose(false);
+
+    expect((await her()).suggestionsSignedBy).toBe(anna.id);
+    expect(ApiMorningPreferences.parse(result.response.body)).toMatchObject({
+      send_as_me: false,
+      sent_as: "Anna",
+    });
+    await choose(true);
+    expect((await her()).suggestionsSignedBy).toBe(seed.organiser.id);
+  });
+
+  it("refuses to turn it on where the environment does not allow it, and reads unavailable", async () => {
+    await expect(choose(true, false)).rejects.toBeInstanceOf(ApiIdempotencyError);
+    expect((await her()).suggestionsSignedBy).toBeNull();
+    const read = await loadApiMorningPreferences(
+      h.db,
+      who,
+      seed.family.id,
+      seed.member.id,
+      h.clock.now(),
+    );
+    expect(read).toMatchObject({ send_as_me_available: false, send_as_me: false });
   });
 });

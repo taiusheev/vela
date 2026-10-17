@@ -37,6 +37,8 @@ export interface Exchange {
   id: string;
   recipientId?: string;
   asker: string;
+  /** Vela wrote the words and sent them in the asker's name, at the asker's own choice. */
+  draftedByVela?: true;
   recipient: string;
   /** Arrival outcome, distinct from whether the parent has answered. */
   deliveryNotice?: string;

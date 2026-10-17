@@ -18,9 +18,17 @@ msgstr ""
 msgid "{asker} asked"
 msgstr "{asker}提問"
 
+#: app/exchange/[id].tsx
+msgid "{asker} asked · written by Vela"
+msgstr "{asker}問的 · Vela 代筆"
+
 #: app/(tabs)/index.tsx
 msgid "{asker} asked {recipient}"
 msgstr "{asker}問{recipient}"
+
+#: app/(tabs)/index.tsx
+msgid "{asker} asked {recipient} · written by Vela"
+msgstr "{asker}問{recipient} · Vela 代筆"
 
 #: src/data/precision.ts
 msgid "{away} away"
@@ -258,6 +266,10 @@ msgstr "{notices, plural, other {# 則安靜通知。}}"
 msgid "{open, plural, one {# is still open.} other {# are still open.}}"
 msgstr "{open, plural, other {# 則還沒有結果。}}"
 
+#: app/morning-settings.tsx
+msgid "{otherSigner} has this on now, so Vela’s question goes in their name. Choosing your name here uses yours instead."
+msgstr "目前是{otherSigner}開啟這個功能，所以 Vela 的問題會用對方的名字送出。在這裡選擇用您的名字，就會改成您的名字。"
+
 #: src/data/useToday.ts
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
 msgstr "{recipient}在 {time} 回覆了之前的提問，這則提問還沒有回覆。"
@@ -288,7 +300,7 @@ msgstr "{recipient}看過了 · {time}"
 
 #: app/(tabs)/index.tsx
 msgid "{recipient}'s morning settings"
-msgstr ""
+msgstr "{recipient}的早安訊息設定"
 
 #: src/data/precision.ts
 msgid "{wrong} where something was wrong"
@@ -651,7 +663,7 @@ msgstr "選一張照片"
 
 #: app/morning-settings.tsx
 msgid "Choose a time in {zone}. Everything waits until they accept the invitation."
-msgstr ""
+msgstr "請選擇 {zone} 的時間。對方接受邀請之前，一切都會先保留。"
 
 #: src/components/photo-reply.tsx
 msgid "Choose another"
@@ -872,7 +884,7 @@ msgstr "家庭故事書"
 
 #: app/(tabs)/index.tsx
 msgid "Family settings"
-msgstr ""
+msgstr "家庭設定"
 
 #: app/ask.tsx
 msgid "Fewer choices"
@@ -1058,6 +1070,10 @@ msgstr "抱抱"
 msgid "I have sent it"
 msgstr "我已經傳了"
 
+#: src/components/nearby-editor.tsx
+msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
+msgstr "如果{sharedWith}點不開連結，是因為您不在對方的聯絡人裡，Telegram 會把連結藏起來。請{sharedWith}先把您加為聯絡人，或改用簡訊傳送邀請。"
+
 #: src/data/notifications.ts
 msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
 msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有連結 Telegram，也沒有開啟 Vela 通知的手機。"
@@ -1073,6 +1089,14 @@ msgstr "如果哪天早上比較安靜，目前沒有辦法通知您：您沒有
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "早安訊息過了平常的回覆時間仍然安靜時，以及之後有了結果時。"
+
+#: app/morning-settings.tsx
+msgid "If nobody in the family writes {name} a question for the morning, Vela can send the one it drafted in your style, signed with your name. You will see it marked “written by Vela”."
+msgstr "如果家裡沒有人寫問題給{name}，Vela 可以把照您的語氣擬好的問題，用您的名字送出。您會看到它標示「Vela 代筆」。"
+
+#: src/components/nearby-editor.tsx
+msgid "If the link doesn’t open, add me to your contacts, then tap it again."
+msgstr "如果連結點不開，請先把我加為聯絡人，再點一次。"
 
 #: app/delete-account.tsx
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
@@ -1833,6 +1857,10 @@ msgstr "看看 Vela Light"
 msgid "Send"
 msgstr "傳送"
 
+#: app/morning-settings.tsx
+msgid "Send it as me"
+msgstr "用我的名字送出"
+
 #: app/onboarding.tsx
 msgid "Send it to her"
 msgstr "傳給這位家人"
@@ -1855,7 +1883,7 @@ msgstr "送出照片"
 
 #: app/(tabs)/index.tsx
 msgid "Send something now, or leave a question for their morning."
-msgstr ""
+msgstr "現在就傳點什麼，或留一個問題給對方的早上。"
 
 #: app/ask.tsx
 msgid "Send to {name}"
@@ -2055,7 +2083,7 @@ msgstr "開始 30 天試用"
 
 #: app/(tabs)/index.tsx
 msgid "Start with one question in your own words. Choose a morning that suits them."
-msgstr ""
+msgstr "先用您自己的話寫一個問題，再選一個適合對方的早上。"
 
 #: app/vela-light.tsx
 msgid "Starting…"
@@ -2117,7 +2145,7 @@ msgstr "要從家庭故事書移除這段故事嗎？"
 
 #: app/exchange/[id].tsx
 msgid "Talk now"
-msgstr ""
+msgstr "現在聊聊"
 
 #: app/conversation.tsx
 msgid "Talk with {name}"
@@ -2125,7 +2153,7 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Talk with {recipient}"
-msgstr ""
+msgstr "和{recipient}聊聊"
 
 #: src/data/useToday.ts
 msgid "tapped an answer"
@@ -2543,6 +2571,10 @@ msgid "Tomorrow · {by} asked {recipient}"
 msgstr "明天 · {by}已向{recipient}提問"
 
 #: app/(tabs)/index.tsx
+msgid "Tomorrow · {by} asks {recipient} · written by Vela"
+msgstr "明天 · {by}問{recipient} · Vela 代筆"
+
+#: app/(tabs)/index.tsx
 msgid "Tomorrow · {name}'s turn to ask {recipient}"
 msgstr "明天 · 輪到{name}問{recipient}"
 
@@ -2735,6 +2767,10 @@ msgstr "Vela 回報服務出現問題。訊息可能會延遲。"
 msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
 msgstr "一個月要至少有來自{families}個家庭的{notices}則通知，Vela 才會顯示，這樣就看不出任何一個家庭的早上。"
 
+#: app/morning-settings.tsx
+msgid "Vela signs it"
+msgstr "由 Vela 署名"
+
 #: app/help.tsx
 msgid "Vela status"
 msgstr "Vela 狀態"
@@ -2868,13 +2904,17 @@ msgstr "早上比較安靜時"
 msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
 msgstr "早上一直很安靜時，Vela 會通知您。這裡是那些通知最後的結果。大多數是稍晚才回覆，或那天正好外出。"
 
+#: app/morning-settings.tsx
+msgid "When nobody writes"
+msgstr "沒有人寫的時候"
+
 #: src/push/provider.tsx
 msgid "When she answers what you asked, and the evening before your turn."
 msgstr "家人回覆您的提問時，以及輪到您提問的前一晚。"
 
 #: app/(tabs)/index.tsx
 msgid "When they answer, write back while it is on your mind. A quiet day does not erase the moments you have shared."
-msgstr ""
+msgstr "對方回覆後，趁還記得的時候回個訊息。安靜的一天，不會抹去你們一起分享過的時刻。"
 
 #: app/onboarding.tsx
 msgid "When you are with {name}, sign in to Vela on her phone and set it up there. Her phone then shows one message at a time in large words, and asks her first; nothing reaches her until she says yes."
@@ -2922,11 +2962,11 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Write their first message"
-msgstr ""
+msgstr "寫下第一則訊息"
 
 #: app/(tabs)/index.tsx
 msgid "Write their first message while you wait for their yes."
-msgstr ""
+msgstr "等對方答應的同時，先寫好第一則訊息。"
 
 #: app/conversation.tsx
 msgid "Write to {name}"
@@ -3053,7 +3093,7 @@ msgstr "你的家庭仍在設定第一位家人的連結。"
 
 #: app/(tabs)/index.tsx
 msgid "Your first days"
-msgstr ""
+msgstr "最初的幾天"
 
 #: app/(tabs)/you.tsx
 msgid "Your light is off, so nothing about your mornings is shown."

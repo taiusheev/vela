@@ -856,6 +856,7 @@ export function memberFixture(overrides: Partial<Member> = {}): FamilyPage["memb
       nextWakeAt: null,
       quietAfterMin: 360,
       learningUntil: null,
+      suggestionsSignedBy: null,
       answerStats: {},
       createdAt: new Date("2026-09-01T00:00:00.000Z"),
       leftAt: null,

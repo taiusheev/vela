@@ -18,8 +18,14 @@ import {
   turns,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { deliverArrival, prepareDay, sendRepeat, sendTurnPrompt } from "./arrivals.ts";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  deliverArrival,
+  inFirstMornings,
+  prepareDay,
+  sendRepeat,
+  sendTurnPrompt,
+} from "./arrivals.ts";
 import type { OutboundJob } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -420,6 +426,117 @@ describe("prepareDay", () => {
     expect(h.ai.calls).toHaveLength(1);
   });
 
+  describe("sent as the organiser who chose it (first test, 16 Oct 2026)", () => {
+    const config = () => h.deps.config as { sendAsMe?: boolean };
+    afterEach(() => {
+      config().sendAsMe = undefined;
+    });
+
+    /** Her day with an AI draft in Mia's voice, and Mia named on her row as the one who signs. */
+    async function signedFamily(
+      draft: { forMia?: boolean; lang?: "en" | "zh-TW"; text?: string } = {},
+    ) {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await h.db
+        .update(members)
+        .set({ suggestionsSignedBy: seed.organiser.id })
+        .where(eq(members.id, seed.member.id));
+      await h.db.insert(suggestions).values({
+        familyId: seed.family.id,
+        forMemberId: draft.forMia === false ? null : seed.organiser.id,
+        aboutMemberId: seed.member.id,
+        localDay: TOMORROW,
+        bankId: "opinions.taste.season",
+        type: "question",
+        text: draft.text ?? "Mom, which season do you love most?",
+        lang: draft.lang ?? "en",
+        promptVersion: "test",
+      });
+      return seed;
+    }
+
+    it("sends the draft in Mia's voice as Mia's ask, marked as Vela's draft, signed by Mia", async () => {
+      config().sendAsMe = true;
+      const seed = await signedFamily();
+
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+      expect(await exchangeById(id)).toMatchObject({
+        type: "question",
+        askerId: seed.organiser.id,
+        text: "Mom, which season do you love most?",
+        draftedByVela: true,
+        scheduledFor: TOMORROW,
+      });
+      const [used] = await h.db.select().from(suggestions);
+      expect(used?.usedAt).toEqual(h.clock.now());
+      // Her family's question takes chips, as any family question does.
+      expect(h.ai.calls.map((call) => call.call)).toEqual(["chips"]);
+
+      h.clock.set(at(TOMORROW, "08:00"));
+      await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+      const [row] = await outboundRows("arrival");
+      const payload = row?.payload as { message: { text: string } } | undefined;
+      expect(payload?.message.text.split("\n\n")[1]).toBe(
+        "Mom, which season do you love most?\n— Mia",
+      );
+    });
+
+    it("keeps Vela's own question while the environment does not allow it", async () => {
+      const seed = await signedFamily();
+
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+      expect(await exchangeById(id)).toMatchObject({
+        type: "hello",
+        askerId: null,
+        draftedByVela: false,
+      });
+    });
+
+    it("never sends a bank row, or a draft in another voice or another language, in Mia's name", async () => {
+      for (const draft of [{ forMia: false }, { lang: "zh-TW" as const }, { text: "" }]) {
+        await h.reset();
+        config().sendAsMe = true;
+        const seed = await signedFamily(draft);
+
+        const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+        expect(await exchangeById(id), JSON.stringify(draft)).toMatchObject({
+          type: "hello",
+          askerId: null,
+          draftedByVela: false,
+        });
+      }
+    });
+
+    it("signs nothing in the name of an organiser who has left", async () => {
+      config().sendAsMe = true;
+      const seed = await signedFamily();
+      await h.db
+        .update(members)
+        .set({ status: "left", leftAt: h.clock.now() })
+        .where(eq(members.id, seed.organiser.id));
+
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+      expect(await exchangeById(id)).toMatchObject({ type: "hello", askerId: null });
+    });
+
+    it("leaves a family member's own ask for the day as it is", async () => {
+      config().sendAsMe = true;
+      const seed = await signedFamily();
+      const ask = await seedExchange(h.db, seed, { date: TOMORROW, state: "composed" });
+
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+      expect(id).toBe(ask.id);
+      expect(await exchangeById(id)).toMatchObject({ draftedByVela: false });
+      const [kept] = await h.db.select().from(suggestions);
+      expect(kept?.usedAt).toBeNull();
+    });
+  });
+
   it("drafts no chips for Vela's question whose answer is a name, as the model would invent one", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await h.db.insert(suggestions).values({
@@ -619,7 +736,37 @@ describe("prepareDay", () => {
   });
 });
 
+describe("inFirstMornings", () => {
+  it("covers her first three mornings from the first date her light allowed, and a member with none", () => {
+    const member = { lightStartsOn: "2026-09-15" as LocalDate };
+    expect(
+      ["2026-09-15", "2026-09-16", "2026-09-17", "2026-09-18", "2026-10-01"].map((date) =>
+        inFirstMornings(member, date as LocalDate),
+      ),
+    ).toEqual([true, true, true, false, false]);
+    expect(inFirstMornings({ lightStartsOn: null }, "2026-10-01")).toBe(true);
+  });
+});
+
 describe("deliverArrival", () => {
+  // First test, 15 Oct 2026: after her first mornings the note from her family carries no
+  // instructions, as a message from her child would not.
+  it("leaves the how-to-answer line off once her first three mornings have passed", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const fourth = "2026-09-18";
+    await seedExchange(h.db, seed, { date: fourth, state: "composed", text: "Which soup today?" });
+    h.clock.set(at(fourth, "08:00"));
+
+    await deliverArrival(h.deps, seed.member.id, fourth, false);
+
+    const [row] = await outboundRows("arrival");
+    const payload = row?.payload as { message: { text: string } } | undefined;
+    expect(payload?.message.text.split("\n\n")).toEqual([
+      "Hello Mrs Chen, good morning.",
+      "Which soup today?\n— Mia",
+    ]);
+  });
+
   it("prepares the day on demand and enqueues the hello with the effect the gateway needs", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     h.clock.set(at(TOMORROW, "08:00"));
@@ -643,8 +790,8 @@ describe("deliverArrival", () => {
       message: {
         lang: "en",
         text: [
-          "Good morning, Mrs Chen.",
-          "Nothing new from the family today. How are you this morning?\nVela, from your family",
+          "Hello Mrs Chen, good morning.",
+          "How are you this morning?\n— Vela, for your family",
           "Reply with a voice message, or tap a button.",
         ].join("\n\n"),
         buttons: [[expect.objectContaining({ label: "❤️" }), expect.objectContaining({})]],
@@ -747,8 +894,8 @@ describe("deliverArrival", () => {
       message: {
         text: [
           "From your family:\nSam: Looks great, Mom!\nMia sent a voice message.",
-          "Sorry this is late.\nGood morning, Mrs Chen.",
-          "From Mia\nWhich soup today?",
+          "Sorry this is late.\nHello Mrs Chen, good morning.",
+          "Which soup today?\n— Mia",
           "Reply with a voice message, or tap a button.",
         ].join("\n\n"),
         media: [
@@ -818,8 +965,8 @@ describe("deliverArrival", () => {
       message: {
         text: [
           "From your family:\nSam: Looks great, Mom!\nMia sent a voice message.",
-          "Good morning, Mrs Chen.",
-          "Nothing new from the family today. How are you this morning?\nVela, from your family",
+          "Hello Mrs Chen, good morning.",
+          "How are you this morning?\n— Vela, for your family",
           "Reply with a voice message, or tap a button.",
         ].join("\n\n"),
         media: [{ kind: "audio", providerFileId: "voice-mia" }],
@@ -995,7 +1142,7 @@ describe("deliverArrival", () => {
           message: { text: string; media?: unknown[]; buttons: { id: string }[][] };
         },
     );
-    expect(asChoice?.message.text).toContain("From Mia\nWhich one? Tap 1 or 2.");
+    expect(asChoice?.message.text).toContain("Which one? Tap 1 or 2.\n— Mia");
     expect(asChoice?.message.media).toEqual([
       { kind: "image", providerFileId: "photo-1" },
       { kind: "image", providerFileId: "photo-2" },
@@ -1101,9 +1248,13 @@ describe("deliverArrival", () => {
         row.payload as { message: { text: string; media?: unknown[]; buttons: unknown[][] } },
     );
     expect(sent).toHaveLength(2);
+    // The two mornings differ only in the greeting, worded by her local date.
+    expect(sent.map((arrival) => arrival.message.text.split("\n\n")[0])).toEqual([
+      "Hello Mrs Chen, good morning.",
+      "Good morning, Mrs Chen.",
+    ]);
     for (const arrival of sent) {
-      expect(arrival.message.text.split("\n\n")).toEqual([
-        "Good morning, Mrs Chen.",
+      expect(arrival.message.text.split("\n\n").slice(1)).toEqual([
         "Mia wanted to show you a photo, but it is no longer available. How are you today?",
         "Reply with a voice message, or tap a button.",
       ]);
@@ -1136,8 +1287,8 @@ describe("sendRepeat", () => {
     expect(rows[0]?.payload).toMatchObject({
       message: {
         text: [
-          "In case you missed it:\nGood morning, Mrs Chen.",
-          "From Mia\nWhich soup today?",
+          "In case you missed it:\nHello Mrs Chen, good morning.",
+          "Which soup today?\n— Mia",
           "Reply with a voice message, or tap a button.",
         ].join("\n\n"),
         media: [{ kind: "image", providerFileId: "photo-1" }],

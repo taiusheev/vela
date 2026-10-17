@@ -534,6 +534,8 @@ describe("writeSuggestions with AI on", () => {
         lang: "en",
         source: { ai_source: "rotation" },
         promptVersion: fakeRecord("suggest").promptVersion,
+        // Whose voice the draft is written in.
+        forMemberId: seed.organiser.id,
       });
       expect(row.bankId).not.toBe("");
     }
@@ -626,6 +628,53 @@ describe("writeSuggestions with AI on", () => {
       type: "question",
       text: "What did you do this morning?",
     });
+  });
+
+  // First test, 16 Oct 2026: the draft Vela may send in an organiser's name is written in that
+  // organiser's voice, and drafts Vela already sent in their name never count as their writing.
+  it("writes in the voice of the organiser who chose to have it sent as them, and records them", async () => {
+    const { member: anna } = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Anna",
+      externalId: "1010",
+      role: "organiser",
+    });
+    await h.db
+      .update(members)
+      .set({ suggestionsSignedBy: anna.id })
+      .where(eq(members.id, seed.member.id));
+    await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      text: "mama, did the plums come in yet??",
+      askerId: anna.id,
+      createdAt: addMinutesAgo(30),
+    });
+    const sentForAnna = await seedExchange(h.db, seed, {
+      date: addDays(today(), -2),
+      text: "A draft Vela sent in Anna's name",
+      askerId: anna.id,
+      createdAt: addMinutesAgo(40),
+    });
+    await h.db
+      .update(exchanges)
+      .set({ draftedByVela: true })
+      .where(eq(exchanges.id, sentForAnna.id));
+    await seedExchange(h.db, seed, {
+      date: addDays(today(), -3),
+      text: "Mia's own question",
+      createdAt: addMinutesAgo(50),
+    });
+
+    await writeSuggestions(h.deps);
+
+    const input = suggestCalls().find((call) => call.recipientAddress === "Mom");
+    expect(input).toMatchObject({
+      holderName: "Anna",
+      holderWritingExamples: ["mama, did the plums come in yet??"],
+    });
+    for (const row of await rows()) {
+      expect(row.forMemberId).toBe(anna.id);
+    }
   });
 
   it("learns wording only from this holder's own asks to this parent, excluding AI drafts", async () => {

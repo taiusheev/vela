@@ -20,21 +20,24 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
   const [relation, setRelation] = useState("");
   const [shareTrouble, setShareTrouble] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [sharedWith, setSharedWith] = useState<string | null>(null);
   // The link goes from the organiser's own phone, in their own words around it: Vela writes to
-  // nobody until they open it (ADR-36).
+  // nobody until they open it (ADR-36). Telegram shows a link from someone outside the reader's
+  // contacts as plain text (first test, 15 Oct 2026), so the message says how to make it open.
   const askOnTelegram = async (contactId: string, who: string) => {
     setSharing(true);
     setShareTrouble(false);
     try {
       const link = await nearby.invite(contactId);
       if (link === null) return;
-      await Share.share({
+      const ask = t`Hi ${who}! If I can’t reach ${name}, could I ask you to look in? You can say yes here:`;
+      const ifClosed = t`If the link doesn’t open, add me to your contacts, then tap it again.`;
+      const result = await Share.share({
         message:
-          Platform.OS === "ios"
-            ? t`Hi ${who}! If I can’t reach ${name}, could I ask you to look in? You can say yes here:`
-            : `${t`Hi ${who}! If I can’t reach ${name}, could I ask you to look in? You can say yes here:`}\n\n${link}`,
+          Platform.OS === "ios" ? `${ask}\n\n${ifClosed}` : `${ask}\n\n${link}\n\n${ifClosed}`,
         ...(Platform.OS === "ios" ? { url: link } : {}),
       });
+      if (result.action !== Share.dismissedAction) setSharedWith(who);
     } catch {
       setShareTrouble(true);
     } finally {
@@ -171,6 +174,14 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
           <Trans>Two people nearby is the most.</Trans>
         </Words>
       ) : null}
+      {sharedWith === null || shareTrouble ? null : (
+        <Words variant="body" tone="ink2">
+          <Trans>
+            If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their
+            contacts. Ask {sharedWith} to add you, or send the invite by text message instead.
+          </Trans>
+        </Words>
+      )}
       {shareTrouble ? (
         <Words variant="body" tone="ink2">
           <Trans>

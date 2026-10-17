@@ -105,7 +105,12 @@ describe("composeApiAsk", () => {
     if (outboundId === undefined) throw new Error("missing immediate outbound");
     await deliverOutbound(h.deps, outboundId);
     await deliverOutbound(h.deps, outboundId);
-    expect(h.telegram.sent.filter((row) => row.message.kind === "conversation")).toHaveLength(1);
+    // Her child's words reach her as a message from them, signed with their name (first test).
+    expect(
+      h.telegram.sent
+        .filter((row) => row.message.kind === "conversation")
+        .map((row) => row.message.text),
+    ).toEqual(["mom, show me the basil?\n— Mia"]);
     expect((await loadApiExchange(h.db, identity, body.id, h.clock.now()))?.delivery_status).toBe(
       "delivered",
     );

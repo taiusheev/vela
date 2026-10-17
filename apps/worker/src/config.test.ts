@@ -12,6 +12,7 @@ import {
   readPilotAdmission,
   readPushConfig,
   readPushSend,
+  readSendAsMe,
   readWeeklyInsight,
   secret,
 } from "./config.ts";
@@ -892,6 +893,14 @@ describe("a secret", () => {
 
 // ADR-48: absent is off, so an environment that never names it drafts the read as before.
 describe("the weekly insight switch", () => {
+  it("is off unless SEND_AS_ME says on, and refuses anything else by name", () => {
+    expect(readSendAsMe({})).toBe(false);
+    expect(readSendAsMe({ SEND_AS_ME: "off" })).toBe(false);
+    expect(readConfig({ ...chosenStaging, SEND_AS_ME: "on" }, filled).sendAsMe).toBe(true);
+    const error = configErrorOf(() => readSendAsMe({ SEND_AS_ME: "yes" }));
+    expect(errorLabel(error)).toBe("ConfigError:SEND_AS_ME");
+  });
+
   it("is off unless WEEKLY_INSIGHT says on, and refuses anything else by name", () => {
     expect(readWeeklyInsight({})).toBe(false);
     expect(readWeeklyInsight({ WEEKLY_INSIGHT: "off" })).toBe(false);

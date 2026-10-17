@@ -119,6 +119,17 @@ describe("loadApiToday", () => {
     expect(await load(stranger)).toBeNull();
   });
 
+  it("says which asks Vela wrote and sent in the asker's name, today and tomorrow", async () => {
+    const sent = await seedExchange(h.db, seed, { date: today(), deliveredAt: h.clock.now() });
+    const next = await seedExchange(h.db, seed, { date: tomorrow(), state: "scheduled" });
+    expect((await load())?.exchanges[0]?.drafted_by_vela).toBe(false);
+    await h.db.update(exchanges).set({ draftedByVela: true }).where(eq(exchanges.id, sent.id));
+    await h.db.update(exchanges).set({ draftedByVela: true }).where(eq(exchanges.id, next.id));
+    const day = ApiToday.parse(await load());
+    expect(day.exchanges[0]).toMatchObject({ asker_name: "Mia", drafted_by_vela: true });
+    expect(day.tomorrow[0]?.ask).toMatchObject({ asker_name: "Mia", drafted_by_vela: true });
+  });
+
   it("describes original answer, greeting and reply recordings independently of AI text", async () => {
     const exchange = await seedExchange(h.db, seed, { date: today(), state: "answered" });
     const [voice, greeting, replied] = await h.db
@@ -373,6 +384,7 @@ describe("loadApiToday", () => {
         recipient_name: "Mom",
         recipient_tz: "Asia/Taipei",
         asker_name: "Mia",
+        drafted_by_vela: false,
         on_behalf_of: null,
         type: "question",
         ask: "What did the garden look like this morning?",
@@ -751,6 +763,7 @@ describe("loadApiToday", () => {
           type: "question",
           text: "What did the garden look like this morning?",
           asker_name: "Mia",
+          drafted_by_vela: false,
           on_behalf_of: null,
           withdrawable: true,
         },

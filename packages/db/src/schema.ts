@@ -94,6 +94,7 @@ import {
 } from "@vela/contracts";
 import { relations, sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   check,
@@ -289,6 +290,14 @@ export const members = pgTable(
     quietAfterMin: integer("quiet_after_min").notNull().default(360),
     /** The first 14 days: quiet shows in the app only, push after 8 h. */
     learningUntil: date("learning_until"),
+    /**
+     * On a kept-light member's row: the organiser who chose to have Vela's suggestion, drafted in
+     * their own style, sent in their name on a morning nobody in the family wrote for (first test,
+     * 16 Oct 2026); NULL, the default, for none. Set and cleared only by that organiser.
+     */
+    suggestionsSignedBy: uuid("suggestions_signed_by").references((): AnyPgColumn => members.id, {
+      onDelete: "set null",
+    }),
     /** {median_latency_min, late_latency_min, sunday_median_min, n_days, updated_at} */
     answerStats: jsonb("answer_stats").$type<JsonObject>().notNull().default({}),
     createdAt: createdAt(),
@@ -564,6 +573,11 @@ export const exchanges = pgTable(
     mediaIds: uuid("media_ids").array().notNull().default([]),
     /** The asker's 10-second hello. */
     voiceHelloId: uuid("voice_hello_id").references(() => media.id, { onDelete: "set null" }),
+    /**
+     * Vela drafted the words and sent them in the asker's name, at that asker's choice
+     * (`members.suggestions_signed_by`), so the family's view can say so.
+     */
+    draftedByVela: boolean("drafted_by_vela").notNull().default(false),
     whenRule: text("when_rule", { enum: WHEN_RULES }).notNull().default("tomorrow"),
     /** Recipient-local date of delivery. */
     scheduledFor: date("scheduled_for"),
@@ -766,8 +780,9 @@ export const suggestions = pgTable(
       .notNull()
       .references(() => families.id, { onDelete: "cascade" }),
     /**
-     * Unused by the writer: a suggestion is her morning's, not one turn holder's, because the
-     * holder is chosen only at the evening prompt and anyone may compose.
+     * The organiser whose voice an AI draft is written in; NULL for a bank row. A suggestion is still
+     * her morning's, not one turn holder's: anyone may compose from it. Vela sends it in this
+     * organiser's name only when her row names them (`members.suggestions_signed_by`).
      */
     forMemberId: uuid("for_member_id").references(() => members.id, { onDelete: "cascade" }),
     /** The kept-light member the suggestion is about. */

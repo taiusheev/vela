@@ -127,7 +127,7 @@ Every type has a **just say hi** at the bottom on the parent surface and an equi
 
 ### 4.5 Fallback hello
 
-Signed "Vela, from your family", after yesterday's replies if any. Since 10 October 2026 (founder decision, product week) it asks the day's unused suggestion from the question bank, in her language: "Something to share with the family today:" and the question, with heart and "I'm fine", so a morning nobody asked still gives her something new to tell instead of the same "how are you". The bank (98 asks since 10 October 2026) never repeats an item or its near-duplicates within twelve weeks, and the question taken is marked used. Only the bank item is used, never an AI draft, which is written as a family member would send it. With no suggestion for the day (the writer runs only where the API is on), it keeps "Nothing new from the family today. How are you this morning?". The family group sees her answer with the question it answered; a heart or "I'm fine" posts as "is fine". The composer logs a **quiet day** for the family. Target: under 20% of days per family; the turn prompts (§7) exist to make this rare. Ordinary members get no arrival on an empty day; their app simply shows the exchanges.
+Signed "— Vela, for your family", after yesterday's replies if any. Since 10 October 2026 (founder decision, product week) it asks the day's unused suggestion from the question bank, in her language: "Something to share with the family today:" and the question, with heart and "I'm fine", so a morning nobody asked still gives her something new to tell instead of the same "how are you". The bank (98 asks since 10 October 2026) never repeats an item or its near-duplicates within twelve weeks, and the question taken is marked used. Only the bank item is used, never an AI draft, which is written as a family member would send it. With no suggestion for the day (the writer runs only where the API is on), it keeps "How are you this morning?" (since 16 October 2026 it no longer opens by telling her nobody wrote). The family group sees her answer with the question it answered; a heart or "I'm fine" posts as "is fine". The composer logs a **quiet day** for the family. Target: under 20% of days per family; the turn prompts (§7) exist to make this rare. Ordinary members get no arrival on an empty day; their app simply shows the exchanges.
 
 ### 4.6 Repeat
 
@@ -310,7 +310,7 @@ All parent screens: body 22 pt minimum, targets 64 pt minimum, contrast 7:1, lig
 
 **M1 · Invite.** The organiser's share link opens the bot with a start parameter; the bot greets her by address form in her language and asks consent (§9) with two buttons.
 
-**M2 · Arrival.** One message: yesterday's replies (if any, text plus voice files), then "[Name] asks:" and the ask, with media; inline buttons per type (chips · photo A/B · vote options · ❤ · "I'm fine"); "Reply with a voice message or tap a button".
+**M2 · Arrival.** One message: yesterday's replies (if any, text plus voice files), then the greeting (three wordings in turn by her local date) and the ask written as a note from the asker: their words, then "— [Name]" below, with media; inline buttons per type (chips · photo A/B · vote options · ❤ · "I'm fine"); "Reply with a voice message or tap a button" on her first three mornings only (first test, 16 October 2026: a morning should read as her child writing, not as a bot).
 
 **M3 · Answer.** Any message counts. Voice is transcribed; a chip tap edits the message to show her choice. The acknowledgement follows once.
 
