@@ -119,7 +119,7 @@ export interface PilotEnv extends SharedEnv {
   readonly WEEKLY_INSIGHT?: string;
   /**
    * "on" or "off" (absent is "off"): whether an organiser may have Vela's suggestion sent in their
-   * name on a morning nobody wrote for. Production is "off" until the privacy notice describes it.
+   * name on a morning nobody wrote for. "on" everywhere since privacy-notice.v5 describes it.
    */
   readonly SEND_AS_ME?: string;
 
