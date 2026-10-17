@@ -928,6 +928,10 @@ msgstr ""
 msgid "Enter the six digits from your message."
 msgstr ""
 
+#: app/sign-in.tsx
+msgid "Error code: {code}"
+msgstr ""
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr ""
