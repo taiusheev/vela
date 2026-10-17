@@ -28,6 +28,11 @@ const drawings = {
   heart: "M12 21 3 12a6 6 0 0 1 9-8 6 6 0 0 1 9 8l-9 9Z",
   calendar: "M4 5h16v16H4V5Zm4-3v6m8-6v6M4 10h16m-12 5h2m4 0h2",
   mail: "M3 5h18v14H3V5Zm0 1 9 7 9-7",
+  plus: "M12 5v14M5 12h14",
+  send: "M12 20V5m-6 6 6-6 6 6",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  book: "M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Zm0 13a3 3 0 0 1 3-3h11M9 8h6",
+  search: "M11 4a7 7 0 1 0 0 14 7 7 0 1 0 0-14Zm5 12 4 4",
 } as const;
 
 export type BrandIconName = keyof typeof drawings;

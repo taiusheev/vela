@@ -13,10 +13,12 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: app/(tabs)/exchanges.tsx
 #: app/exchange/[id].tsx
 msgid "{asker} asked"
 msgstr "{asker} asked"
 
+#: app/(tabs)/exchanges.tsx
 #: app/exchange/[id].tsx
 msgid "{asker} asked · written by Vela"
 msgstr "{asker} asked · written by Vela"
@@ -40,6 +42,14 @@ msgstr "{by} asked at {time}. Waiting for {name}."
 #: src/data/useQuiet.ts
 msgid "{by} said {name} is fine. Everyone who was told has heard."
 msgstr "{by} said {name} is fine. Everyone who was told has heard."
+
+#: src/components/connection-windows.tsx
+msgid "{count, plural, one {# day with messages so far} other {# days with messages so far}}"
+msgstr "{count, plural, one {# day with messages so far} other {# days with messages so far}}"
+
+#: src/components/connection-windows.tsx
+msgid "{count, plural, one {# day with messages this week} other {# days with messages this week}}"
+msgstr "{count, plural, one {# day with messages this week} other {# days with messages this week}}"
 
 #: app/ask.tsx
 msgid "{day} morning"
@@ -85,6 +95,18 @@ msgstr "{from} sent a voice message"
 msgid "{from}: {text}"
 msgstr "{from}: {text}"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "{giver} sent a heart"
+msgstr "{giver} sent a heart"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "{giver} sent a hug"
+msgstr "{giver} sent a hug"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "{giver} sent a laugh"
+msgstr "{giver} sent a laugh"
+
 #: src/data/weekly.ts
 msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
 msgstr "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
@@ -109,19 +131,19 @@ msgstr "{label}: a family message"
 msgid "{label}: no message recorded"
 msgstr "{label}: no message recorded"
 
+#: src/components/connection-windows.tsx
+msgid "{label}: still to come"
+msgstr "{label}: still to come"
+
 #: src/data/precision.ts
 msgid "{later} answered later"
 msgstr "{later} answered later"
 
-#: src/components/connection-windows.tsx
-msgid "{name} · {count} days with messages"
-msgstr "{name} · {count} days with messages"
-
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "{name} · {day}"
 msgstr "{name} · {day}"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "{name} · {day} · {asker} asked"
 msgstr "{name} · {day} · {asker} asked"
 
@@ -148,6 +170,10 @@ msgstr "{name} has not said yes yet"
 #: app/ask.tsx
 msgid "{name} has not said yes yet. Once she does, her first morning is the next day."
 msgstr "{name} has not said yes yet. Once she does, her first morning is the next day."
+
+#: app/conversation.tsx
+msgid "{name} has not said yes yet. What you write waits for their first morning."
+msgstr "{name} has not said yes yet. What you write waits for their first morning."
 
 #: src/components/story-day.tsx
 msgid "{name} is asked on {day}."
@@ -241,7 +267,7 @@ msgstr "{name}'s morning"
 msgid "{name}'s phone"
 msgstr "{name}'s phone"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "{name}'s recipe · {day}"
 msgstr "{name}'s recipe · {day}"
 
@@ -268,6 +294,10 @@ msgstr "{open, plural, one {# is still open.} other {# are still open.}}"
 #: app/morning-settings.tsx
 msgid "{otherSigner} has this on now, so Vela’s question goes in their name. Choosing your name here uses yours instead."
 msgstr "{otherSigner} has this on now, so Vela’s question goes in their name. Choosing your name here uses yours instead."
+
+#: src/components/family-book.tsx
+msgid "{recipes, plural, one {# recipe} other {# recipes}}"
+msgstr "{recipes, plural, one {# recipe} other {# recipes}}"
 
 #: src/data/useToday.ts
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
@@ -297,9 +327,17 @@ msgstr "{recipient} has paused their mornings. They can start again in Vela's ch
 msgid "{recipient} saw it · {time}"
 msgstr "{recipient} saw it · {time}"
 
-#: app/(tabs)/index.tsx
-msgid "{recipient}'s morning settings"
-msgstr "{recipient}'s morning settings"
+#: app/(tabs)/exchanges.tsx
+msgid "{replies, plural, one {# reply} other {# replies}}"
+msgstr "{replies, plural, one {# reply} other {# replies}}"
+
+#: src/components/family-book.tsx
+msgid "{stories, plural, one {# story} other {# stories}}"
+msgstr "{stories, plural, one {# story} other {# stories}}"
+
+#: src/components/chat/chat-link.tsx
+msgid "{who}: {said}"
+msgstr "{who}: {said}"
 
 #: src/data/precision.ts
 msgid "{wrong} where something was wrong"
@@ -357,6 +395,10 @@ msgstr "A live connection has not been set up."
 msgid "A morning message is missing"
 msgstr "A morning message is missing"
 
+#: src/data/chat.ts
+msgid "A photo"
+msgstr "A photo"
+
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "A photo of the street where you grew up — do you remember the shop on the corner?"
@@ -364,6 +406,10 @@ msgstr "A photo of the street where you grew up — do you remember the shop on 
 #: src/data/ask.ts
 msgid "A question"
 msgstr "A question"
+
+#: app/conversation.tsx
+msgid "A question for her morning"
+msgstr "A question for her morning"
 
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
@@ -381,9 +427,21 @@ msgstr "A recipe"
 msgid "A small moment with your family, every day."
 msgstr "A small moment with your family, every day."
 
+#: src/data/chat.ts
+msgid "A sticker"
+msgstr "A sticker"
+
 #: src/data/ask.ts
 msgid "A story"
 msgstr "A story"
+
+#: app/conversation.tsx
+msgid "A voice hello for her morning"
+msgstr "A voice hello for her morning"
+
+#: src/data/chat.ts
+msgid "A voice message"
+msgstr "A voice message"
 
 #: src/data/ask.ts
 msgid "A voice note"
@@ -394,8 +452,8 @@ msgid "A vote"
 msgstr "A vote"
 
 #: src/components/connection-windows.tsx
-msgid "A window for each day with a message. Quiet days keep the earlier lights."
-msgstr "A window for each day with a message. Quiet days keep the earlier lights."
+msgid "A window lights on each day you and {name} share a message. A quiet day never takes the earlier lights away, and Monday starts a new row."
+msgstr "A window lights on each day you and {name} share a message. A quiet day never takes the earlier lights away, and Monday starts a new row."
 
 #: src/data/ask.ts
 msgid "A word to teach"
@@ -406,6 +464,9 @@ msgid "About a quiet notice"
 msgstr "About a quiet notice"
 
 #: app/conversation.tsx
+msgid "About ten seconds, played before the question."
+msgstr "About ten seconds, played before the question."
+
 #: src/data/useExchanges.ts
 msgid "Accepted for delivery. This is not a read receipt."
 msgstr "Accepted for delivery. This is not a read receipt."
@@ -438,9 +499,17 @@ msgstr "Adelaide"
 msgid "Alaska"
 msgstr "Alaska"
 
+#: app/(tabs)/exchanges.tsx
+msgid "All"
+msgstr "All"
+
 #: src/data/family.ts
 msgid "All said yes"
 msgstr "All said yes"
+
+#: src/data/chat.ts
+msgid "Already in a bag by the door."
+msgstr "Already in a bag by the door."
 
 #: app/vela-light.tsx
 msgid "Always free"
@@ -449,6 +518,10 @@ msgstr "Always free"
 #: src/data/ask.ts
 msgid "An old photo"
 msgstr "An old photo"
+
+#: src/data/chat.ts
+msgid "And a jar of the plum jam."
+msgstr "And a jar of the plum jam."
 
 #: src/components/story-day.tsx
 msgid "Another question"
@@ -465,6 +538,10 @@ msgstr "Answer with your voice"
 #: src/data/useToday.ts
 msgid "answered"
 msgstr "answered"
+
+#: src/data/chat.ts
+msgid "Answered"
+msgstr "Answered"
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -577,6 +654,7 @@ msgstr "away · {day}"
 msgid "Back"
 msgstr "Back"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Both of you, but only Mia listened about the butter."
 msgstr "Both of you, but only Mia listened about the butter."
@@ -589,6 +667,7 @@ msgstr "Brisbane"
 msgid "Call"
 msgstr "Call"
 
+#: app/conversation.tsx
 #: src/components/quiet-notice.tsx
 msgid "Call {name}"
 msgstr "Call {name}"
@@ -613,6 +692,7 @@ msgid "Change"
 msgstr "Change"
 
 #: app/(tabs)/you.tsx
+#: app/conversation.tsx
 msgid "Change {name}'s morning"
 msgstr "Change {name}'s morning"
 
@@ -676,6 +756,10 @@ msgstr "Choose from the list"
 msgid "Choose someone in your family, or return to Today. Your words are kept."
 msgstr "Choose someone in your family, or return to Today. Your words are kept."
 
+#: app/conversation.tsx
+msgid "Choose the morning; Vela delivers it then."
+msgstr "Choose the morning; Vela delivers it then."
+
 #: app/exchange/[id].tsx
 msgid "Choose this exchange's family on Today to play or send attachments."
 msgstr "Choose this exchange's family on Today to play or send attachments."
@@ -685,6 +769,7 @@ msgid "Choose your country, type your number as you would at home, and we text y
 msgstr "Choose your country, type your number as you would at home, and we text you a code."
 
 #: app/sign-in.tsx
+#: src/components/chat/action-sheet.tsx
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "Close"
@@ -704,6 +789,14 @@ msgstr "Codes by text message do not reach {where} yet. Use your email instead."
 #: src/components/reminders.tsx
 msgid "Coming up"
 msgstr "Coming up"
+
+#: src/components/family-book.tsx
+msgid "Coming up · {name} · {day}"
+msgstr "Coming up · {name} · {day}"
+
+#: src/components/family-book.tsx
+msgid "Coming up · {name} · {day} · chosen by {asker}"
+msgstr "Coming up · {name} · {day} · chosen by {asker}"
 
 #: src/components/nearby-editor.tsx
 msgid "Confirm removal"
@@ -733,6 +826,10 @@ msgstr "Connection code from your own Vela chat. It expires after 15 minutes."
 #: src/components/quiet-notice.tsx
 msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
 msgstr "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
+
+#: app/exchange/[id].tsx
+msgid "Continue in chat"
+msgstr "Continue in chat"
 
 #: app/ask.tsx
 msgid "Continue your saved ask to {savedName}"
@@ -774,6 +871,10 @@ msgstr "Deleting your account removes your sign-in, this phone's notifications a
 #: app/delete-account.tsx
 msgid "Deleting…"
 msgstr "Deleting…"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Delivered"
+msgstr "Delivered"
 
 #: src/data/useToday.ts
 msgid "Delivery of {recipient}’s morning is still pending."
@@ -857,16 +958,6 @@ msgstr "Example settings previewed."
 msgid "Exchange"
 msgstr "Exchange"
 
-#: app/(tabs)/_layout.tsx
-#: app/(tabs)/exchanges.tsx
-msgctxt "tab"
-msgid "Exchanges"
-msgstr "Exchanges"
-
-#: app/(tabs)/exchanges.tsx
-msgid "Exchanges stay here for thirty days."
-msgstr "Exchanges stay here for thirty days."
-
 #: src/data/family.ts
 msgctxt "role"
 msgid "family"
@@ -900,6 +991,10 @@ msgstr "First ask"
 #: src/components/service-status.tsx
 msgid "For a particular morning message, check Today or your parent's chat."
 msgstr "For a particular morning message, check Today or your parent's chat."
+
+#: src/components/chat/chat-bubble.tsx
+msgid "For her morning"
+msgstr "For her morning"
 
 #: src/auth/phone.ts
 msgid "France"
@@ -944,6 +1039,10 @@ msgstr "Go to Today"
 #: app/nearby.tsx
 msgid "Go to You"
 msgstr "Go to You"
+
+#: src/data/chat.ts
+msgid "Good morning from Vela"
+msgstr "Good morning from Vela"
 
 #: src/device/useParent.ts
 msgid "Good morning, Mom. Mia asks: what did you have for breakfast?"
@@ -1004,6 +1103,14 @@ msgstr "Her answer stays with the exchange. Long-term story saving is not switch
 msgid "Her first morning is the day after she says yes, at {time}."
 msgstr "Her first morning is the day after she says yes, at {time}."
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Her messenger did not take it. Her daily morning is unchanged."
+msgstr "Her messenger did not take it. Her daily morning is unchanged."
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Her morning"
+msgstr "Her morning"
+
 #: app/(tabs)/index.tsx
 msgid "Her morning already holds it."
 msgstr "Her morning already holds it."
@@ -1020,6 +1127,18 @@ msgstr "Her mornings still come while she is away. Nobody is told her morning we
 msgid "Her name, as the family calls her."
 msgstr "Her name, as the family calls her."
 
+#: app/(tabs)/exchanges.tsx
+msgid "Her words"
+msgstr "Her words"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Her words stay here for thirty days."
+msgstr "Her words stay here for thirty days."
+
+#: app/(tabs)/exchanges.tsx
+msgid "Her words stay here for thirty days. The stories she tells are kept in the family book."
+msgstr "Her words stay here for thirty days. The stories she tells are kept in the family book."
+
 #: src/components/nearby-editor.tsx
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 msgstr "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
@@ -1032,7 +1151,7 @@ msgstr "Hide test sign-in details"
 msgid "Hong Kong"
 msgstr "Hong Kong"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "How"
 msgstr "How"
 
@@ -1068,6 +1187,10 @@ msgstr "Hug"
 #: app/onboarding.tsx
 msgid "I have sent it"
 msgstr "I have sent it"
+
+#: src/data/chat.ts
+msgid "I'm fine"
+msgstr "I'm fine"
 
 #: src/components/nearby-editor.tsx
 msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
@@ -1133,6 +1256,7 @@ msgstr "Invite"
 
 #: app/(tabs)/you.tsx
 #: app/away.tsx
+#: app/conversation.tsx
 msgid "Is {name} away?"
 msgstr "Is {name} away?"
 
@@ -1152,7 +1276,7 @@ msgstr "It reaches her on the first morning after she says yes. Every morning af
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
 msgstr "It was a bakery, then a bookshop. We queued there for bread in the winter."
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "It will stop being kept as a story. The exchange still follows the usual retention period."
 msgstr "It will stop being kept as a story. The exchange still follows the usual retention period."
 
@@ -1185,13 +1309,21 @@ msgstr "Keep them"
 msgid "Keep this country"
 msgstr "Keep this country"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Keep this story"
 msgstr "Keep this story"
+
+#: src/components/family-book.tsx
+msgid "Kept for good"
+msgstr "Kept for good"
 
 #: app/(tabs)/you.tsx
 msgid "Language"
 msgstr "Language"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Last week"
+msgstr "Last week"
 
 #: app/(tabs)/sunday.tsx
 msgid "late"
@@ -1208,10 +1340,6 @@ msgstr "Leave"
 #: app/(tabs)/you.tsx
 msgid "Leave {familyName}?"
 msgstr "Leave {familyName}?"
-
-#: app/conversation.tsx
-msgid "Leave something for their morning"
-msgstr "Leave something for their morning"
 
 #: app/(tabs)/you.tsx
 msgid "Leave the family"
@@ -1235,6 +1363,10 @@ msgstr "Listen"
 #: app/exchange/[id].tsx
 msgid "Listen to {from}’s voice reply"
 msgstr "Listen to {from}’s voice reply"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Listen to {spoken}"
+msgstr "Listen to {spoken}"
 
 #: app/ask.tsx
 msgid "Listen to my voice note."
@@ -1299,6 +1431,12 @@ msgstr "Looking for your family's days…"
 msgid "Malaysia"
 msgstr "Malaysia"
 
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/exchanges.tsx
+msgctxt "tab"
+msgid "Memories"
+msgstr "Memories"
+
 #: app/conversation.tsx
 msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
 msgstr "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
@@ -1317,6 +1455,10 @@ msgstr "Messaging is unavailable while their connection is paused or cannot be r
 #: src/device/useParent.ts
 msgid "Mom"
 msgstr "Mom"
+
+#: app/conversation.tsx
+msgid "More for {name}"
+msgstr "More for {name}"
 
 #: app/ask.tsx
 msgid "More ways to ask"
@@ -1400,11 +1542,11 @@ msgstr "No number here: Vela asks them for it, with their yes."
 msgid "No quiet notice in the last 12 months."
 msgstr "No quiet notice in the last 12 months."
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "No stories have been kept here yet."
 msgstr "No stories have been kept here yet."
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
 msgstr "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
 
@@ -1418,7 +1560,6 @@ msgstr "No word yet today"
 msgid "No word yet today."
 msgstr "No word yet today."
 
-#: app/(tabs)/exchanges.tsx
 #: app/exchange/[id].tsx
 msgid "No word yet."
 msgstr "No word yet."
@@ -1431,6 +1572,10 @@ msgstr "Nobody in the family asked {name} anything this week."
 msgid "Nobody nearby yet"
 msgstr "Nobody nearby yet"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Not delivered"
+msgstr "Not delivered"
+
 #: app/precision.tsx
 msgid "Not enough notices yet to show a month."
 msgstr "Not enough notices yet to show a month."
@@ -1441,6 +1586,10 @@ msgstr "Not enough notices yet to show a month."
 msgid "Not now"
 msgstr "Not now"
 
+#: app/conversation.tsx
+msgid "Not sure where to start? Tap one to put it in the box."
+msgstr "Not sure where to start? Tap one to put it in the box."
+
 #: src/components/quiet-notice.tsx
 msgid "Not this time"
 msgstr "Not this time"
@@ -1449,9 +1598,17 @@ msgstr "Not this time"
 msgid "Nothing has happened yet. Her first morning will be here."
 msgstr "Nothing has happened yet. Her first morning will be here."
 
+#: app/(tabs)/exchanges.tsx
+msgid "Nothing here matches. Try another word, or All."
+msgstr "Nothing here matches. Try another word, or All."
+
 #: app/vela-light.tsx
 msgid "Nothing is charged during the pilot, and no card is asked for."
 msgstr "Nothing is charged during the pilot, and no card is asked for."
+
+#: src/components/family-book.tsx
+msgid "Nothing kept yet."
+msgstr "Nothing kept yet."
 
 #: app/onboarding.tsx
 msgid "Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her."
@@ -1550,7 +1707,6 @@ msgid "Open Telegram with the account that already belongs to your approved pilo
 msgstr "Open Telegram with the account that already belongs to your approved pilot family. Tap Start, copy the connection code Vela sends you, and paste it below."
 
 #: app/(tabs)/index.tsx
-#: app/conversation.tsx
 msgid "Open this exchange"
 msgstr "Open this exchange"
 
@@ -1558,7 +1714,7 @@ msgstr "Open this exchange"
 msgid "Open Vela on Telegram"
 msgstr "Open Vela on Telegram"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Opening the book…"
 msgstr "Opening the book…"
 
@@ -1656,18 +1812,34 @@ msgstr "Photo {number}"
 msgid "Photo in the family group"
 msgstr "Photo in the family group"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Photos"
+msgstr "Photos"
+
 #: app/ask.tsx
 #: src/components/photo-slots.tsx
 msgid "Photos are not switched on here yet."
 msgstr "Photos are not switched on here yet."
 
+#: app/conversation.tsx
+msgid "Photos for her morning"
+msgstr "Photos for her morning"
+
 #: src/data/useToday.ts
 msgid "picked a photo"
 msgstr "picked a photo"
 
+#: src/data/chat.ts
+msgid "Picked a photo"
+msgstr "Picked a photo"
+
 #: src/data/useToday.ts
 msgid "picked photo {number}"
 msgstr "picked photo {number}"
+
+#: src/data/chat.ts
+msgid "Picked photo {number}"
+msgstr "Picked photo {number}"
 
 #: app/onboarding.tsx
 msgid "Pilot setup could not be reached just now."
@@ -1715,6 +1887,14 @@ msgstr "Reading what this phone allows…"
 msgid "Ready"
 msgstr "Ready"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Recipe"
+msgstr "Recipe"
+
+#: src/components/family-book.tsx
+msgid "Recipes"
+msgstr "Recipes"
+
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Record again"
@@ -1759,6 +1939,10 @@ msgstr "Remove calling number"
 #: src/components/photo-slots.tsx
 msgid "Replace"
 msgstr "Replace"
+
+#: src/data/chat.ts
+msgid "Replied"
+msgstr "Replied"
 
 #: app/exchange/[id].tsx
 msgid "Reply"
@@ -1817,6 +2001,10 @@ msgstr "Save calling number"
 msgid "Save for their first morning"
 msgstr "Save for their first morning"
 
+#: src/data/chat.ts
+msgid "Save me two for Sunday?"
+msgstr "Save me two for Sunday?"
+
 #: app/morning-settings.tsx
 msgid "Save morning settings"
 msgstr "Save morning settings"
@@ -1835,26 +2023,50 @@ msgstr "Saved for their first morning after they join."
 msgid "Saving…"
 msgstr "Saving…"
 
+#: app/conversation.tsx
+msgid "Say hello to {name}"
+msgstr "Say hello to {name}"
+
 #: app/ask.tsx
 msgid "Say it the way you would say it"
 msgstr "Say it the way you would say it"
 
-#: app/conversation.tsx
-msgid "Say it while it is on your mind. Their daily morning stays scheduled."
-msgstr "Say it while it is on your mind. Their daily morning stays scheduled."
+#: src/components/chat/chat-link.tsx
+msgid "Say something now. It reaches {name}'s chat right away."
+msgstr "Say something now. It reaches {name}'s chat right away."
 
 #: app/exchange/[id].tsx
 msgid "Say something short"
 msgstr "Say something short"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Search her words"
+msgstr "Search her words"
+
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
 msgstr "See Vela Light"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Seen"
+msgstr "Seen"
 
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 msgid "Send"
 msgstr "Send"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Send {from} a heart"
+msgstr "Send {from} a heart"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Send {from} a hug"
+msgstr "Send {from} a hug"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Send {from} a laugh"
+msgstr "Send {from} a laugh"
 
 #: app/morning-settings.tsx
 msgid "Send it as me"
@@ -1880,10 +2092,6 @@ msgstr "Send now"
 msgid "Send photo"
 msgstr "Send photo"
 
-#: app/(tabs)/index.tsx
-msgid "Send something now, or leave a question for their morning."
-msgstr "Send something now, or leave a question for their morning."
-
 #: app/ask.tsx
 msgid "Send to {name}"
 msgstr "Send to {name}"
@@ -1893,10 +2101,10 @@ msgid "Send voice reply"
 msgstr "Send voice reply"
 
 #: app/ask.tsx
-#: app/conversation.tsx
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 #: app/sign-in.tsx
+#: src/components/chat/chat-bubble.tsx
 #: src/components/photo-reply.tsx
 #: src/components/story-day.tsx
 #: src/components/today-heart.tsx
@@ -1955,6 +2163,7 @@ msgstr "She has not answered yet, so there is nothing to reply to."
 msgid "She hears it in her read-back tomorrow morning."
 msgstr "She hears it in her read-back tomorrow morning."
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "She is never letting that go"
 msgstr "She is never letting that go"
@@ -1994,6 +2203,10 @@ msgstr "Show test sign-in details"
 #: app/(tabs)/exchanges.tsx
 msgid "Show translations"
 msgstr "Show translations"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Shows hearts, laughs and hugs to send"
+msgstr "Shows hearts, laughs and hugs to send"
 
 #: app/parent.tsx
 msgid "Sign in as family"
@@ -2057,8 +2270,12 @@ msgid "Someone who could look in, if it goes quiet"
 msgstr "Someone who could look in, if it goes quiet"
 
 #: app/conversation.tsx
-msgid "Something for {name}"
-msgstr "Something for {name}"
+msgid "Something for {name}'s morning"
+msgstr "Something for {name}'s morning"
+
+#: src/components/chat/chat-composer.tsx
+msgid "Something for her morning"
+msgstr "Something for her morning"
 
 #: app/(tabs)/sunday.tsx
 msgid "Something to ask next week"
@@ -2099,6 +2316,15 @@ msgstr "Stay"
 msgid "Stop"
 msgstr "Stop"
 
+#: app/(tabs)/exchanges.tsx
+#: src/components/family-book.tsx
+msgid "Stories"
+msgstr "Stories"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Story"
+msgstr "Story"
+
 #: src/components/story-day.tsx
 msgid "Story day · {name} · {day}"
 msgstr "Story day · {name} · {day}"
@@ -2130,29 +2356,21 @@ msgstr "Taiwan"
 msgid "Take it back"
 msgstr "Take it back"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Take it out"
 msgstr "Take it out"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Take this story out of the book"
 msgstr "Take this story out of the book"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Take this story out of the family book?"
 msgstr "Take this story out of the family book?"
 
-#: app/exchange/[id].tsx
-msgid "Talk now"
-msgstr "Talk now"
-
-#: app/conversation.tsx
+#: src/components/chat/chat-link.tsx
 msgid "Talk with {name}"
 msgstr "Talk with {name}"
-
-#: app/(tabs)/index.tsx
-msgid "Talk with {recipient}"
-msgstr "Talk with {recipient}"
 
 #: src/data/useToday.ts
 msgid "tapped an answer"
@@ -2218,6 +2436,7 @@ msgstr "That could not be saved just now. Try again in a moment."
 msgid "That could not be saved just now. Your changes are still here. Try again."
 msgstr "That could not be saved just now. Your changes are still here. Try again."
 
+#: app/conversation.tsx
 #: src/components/story-day.tsx
 msgid "That could not be sent just now. Try again in a moment."
 msgstr "That could not be sent just now. Try again in a moment."
@@ -2290,7 +2509,7 @@ msgstr "That photo is no longer here. Choose it again."
 msgid "That recording did not save. Try again."
 msgstr "That recording did not save. Try again."
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "That story could not be removed. Try again."
 msgstr "That story could not be removed. Try again."
 
@@ -2331,14 +2550,15 @@ msgid "The exchanges could not be reached just now."
 msgstr "The exchanges could not be reached just now."
 
 #: app/book.tsx
+#: src/components/family-book.tsx
 msgid "The family book"
 msgstr "The family book"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "The family book could not be reached just now."
 msgstr "The family book could not be reached just now."
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "The family book fills with the stories she tells on story day."
 msgstr "The family book fills with the stories she tells on story day."
 
@@ -2406,6 +2626,11 @@ msgstr "The quiet notice could not be reached just now. Contact your parent dire
 msgid "The send could not be confirmed. Retry the saved attempt to finish the same send."
 msgstr "The send could not be confirmed. Retry the saved attempt to finish the same send."
 
+#: src/components/family-book.tsx
+msgid "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
+msgstr "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
+
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
@@ -2414,6 +2639,10 @@ msgstr "The tomatoes finally turned. I picked three before breakfast and left th
 #: src/audio/VoicePlayback.tsx
 msgid "The voice is still being prepared. Try again shortly."
 msgstr "The voice is still being prepared. Try again shortly."
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read · {range}"
+msgstr "The weekly read · {range}"
 
 #: app/(tabs)/sunday.tsx
 msgid "The weekly read could not be reached just now."
@@ -2513,6 +2742,12 @@ msgstr "This photo could not be used. Choose another."
 msgid "This voice is no longer available."
 msgstr "This voice is no longer available."
 
+#: app/(tabs)/exchanges.tsx
+#: src/components/connection-windows.tsx
+msgid "This week"
+msgstr "This week"
+
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
@@ -2522,7 +2757,7 @@ msgstr "Those are the ones from the seeds you saved"
 msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 msgstr "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Tips"
 msgstr "Tips"
 
@@ -2535,6 +2770,7 @@ msgid "Toast and tea"
 msgstr "Toast and tea"
 
 #: app/away.tsx
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Today"
 msgstr "Today"
@@ -2606,7 +2842,6 @@ msgstr "Trouble signing in?"
 #: app/(tabs)/sunday.tsx
 #: app/(tabs)/you.tsx
 #: app/away.tsx
-#: app/book.tsx
 #: app/conversation.tsx
 #: app/exchange/[id].tsx
 #: app/morning-settings.tsx
@@ -2614,6 +2849,7 @@ msgstr "Trouble signing in?"
 #: app/onboarding.tsx
 #: app/precision.tsx
 #: app/vela-light.tsx
+#: src/components/family-book.tsx
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 msgid "Try again"
@@ -2642,6 +2878,10 @@ msgstr "Two people nearby is the most. Remove one to add someone else."
 #: src/data/ask.ts
 msgid "Two photos"
 msgstr "Two photos"
+
+#: app/conversation.tsx
+msgid "Two photos to choose between, or one to talk about."
+msgstr "Two photos to choose between, or one to talk about."
 
 #: app/sign-in.tsx
 msgid "Type your email, and we send you a code."
@@ -2705,6 +2945,10 @@ msgstr "Use this suggestion"
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
 msgstr "Usually answers by {time}"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Vela · her morning · {time}"
+msgstr "Vela · her morning · {time}"
 
 #: app/(tabs)/index.tsx
 msgid "Vela cannot reach {name} on {channel}"
@@ -2792,6 +3036,10 @@ msgstr "Vela suggests"
 msgid "Vela suggests · from her own words"
 msgstr "Vela suggests · from her own words"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Vela's hello at {time}: {text}"
+msgstr "Vela's hello at {time}: {text}"
+
 #: src/components/service-status.tsx
 msgid "Vela's last scheduled check completed."
 msgstr "Vela's last scheduled check completed."
@@ -2800,6 +3048,10 @@ msgstr "Vela's last scheduled check completed."
 #: src/data/onboarding.ts
 msgid "Vietnam"
 msgstr "Vietnam"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Voice"
+msgstr "Voice"
 
 #: src/components/voice-hello.tsx
 msgid "Voice hello, {time}. It plays before your ask."
@@ -2812,6 +3064,10 @@ msgstr "Voice note, {time}. She hears it in her morning."
 #: src/data/useToday.ts
 msgid "voted"
 msgstr "voted"
+
+#: src/data/chat.ts
+msgid "Voted"
+msgstr "Voted"
 
 #: src/components/quiet-notice.tsx
 msgid "Wait 2 hours"
@@ -2845,6 +3101,10 @@ msgstr "We sent a code to {sentTo}."
 msgid "We will text {phone}."
 msgstr "We will text {phone}."
 
+#: app/(tabs)/exchanges.tsx
+msgid "Week of {date}"
+msgstr "Week of {date}"
+
 #: app/(tabs)/sunday.tsx
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
@@ -2857,6 +3117,7 @@ msgstr "What are you looking forward to this week?"
 msgid "What are you sending?"
 msgstr "What are you sending?"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "What did the garden look like this morning?"
@@ -2869,6 +3130,10 @@ msgstr "What did you have for breakfast?"
 #: src/data/today.ts
 msgid "What seeds did you save from last year's garden?"
 msgstr "What seeds did you save from last year's garden?"
+
+#: app/(tabs)/exchanges.tsx
+msgid "What she told you this month, and the stories the family keeps for good."
+msgstr "What she told you this month, and the stories the family keeps for good."
 
 #: app/onboarding.tsx
 msgid "What should {name}'s first morning ask?"
@@ -2927,6 +3192,7 @@ msgstr "Whenever"
 msgid "Which one do you like more?"
 msgstr "Which one do you like more?"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Which one of us did you teach to make the pies?"
 msgstr "Which one of us did you teach to make the pies?"
@@ -2955,17 +3221,9 @@ msgstr "With your light on, they also see whether you answered each morning and 
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 msgstr "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 
-#: app/conversation.tsx
-msgid "Write something they will recognise as you. It waits for their yes."
-msgstr "Write something they will recognise as you. It waits for their yes."
-
-#: app/(tabs)/index.tsx
-msgid "Write their first message"
-msgstr "Write their first message"
-
-#: app/(tabs)/index.tsx
-msgid "Write their first message while you wait for their yes."
-msgstr "Write their first message while you wait for their yes."
+#: src/components/chat/chat-link.tsx
+msgid "Write something for when {name} says yes."
+msgstr "Write something for when {name} says yes."
 
 #: app/conversation.tsx
 msgid "Write to {name}"
@@ -2975,6 +3233,10 @@ msgstr "Write to {name}"
 msgid "Write your own question"
 msgstr "Write your own question"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "written by Vela"
+msgstr "written by Vela"
+
 #: src/components/set-up-phone.tsx
 msgid "Yes, this is {name}'s phone"
 msgstr "Yes, this is {name}'s phone"
@@ -2983,11 +3245,14 @@ msgstr "Yes, this is {name}'s phone"
 msgid "Yes, useful"
 msgstr "Yes, useful"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Yesterday"
 msgstr "Yesterday"
 
 #: app/exchange/[id].tsx
+#: src/components/chat/chat-bubble.tsx
+#: src/components/chat/chat-link.tsx
 #: src/data/family.ts
 #: src/data/useFamily.ts
 msgid "You"
@@ -2998,6 +3263,10 @@ msgstr "You"
 msgctxt "tab"
 msgid "You"
 msgstr "You"
+
+#: src/components/connection-windows.tsx
+msgid "You and {name}"
+msgstr "You and {name}"
 
 #: app/(tabs)/you.tsx
 msgid "You are paused: no turns come to you, and you are not told if it goes quiet."
@@ -3027,7 +3296,7 @@ msgstr "You can explore an example family. No messages are sent."
 msgid "You can reply once she has answered."
 msgstr "You can reply once she has answered."
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "You need"
 msgstr "You need"
 
@@ -3154,3 +3423,7 @@ msgstr "Your Telegram chat"
 #: src/components/voice-reply.tsx
 msgid "Your voice reply, {time} long."
 msgstr "Your voice reply, {time} long."
+
+#: app/conversation.tsx
+msgid "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."
+msgstr "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."

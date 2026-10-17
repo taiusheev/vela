@@ -1,8 +1,12 @@
 /**
  * Vela's question bank: the asks tomorrow's suggestion is drawn from (build plan 3.3), in English
- * and Traditional Chinese. Each item is the ask itself, addressed to her, exactly as "Use this" puts
- * it in the Ask field and as she would receive it. Every item is about her life, her knowledge, or
- * her opinions, never how she is; `ask-bank.test.ts` holds each text to the wording rules of
+ * and Traditional Chinese. Each item is worded twice. `child` is the ask as a son or daughter would
+ * write it to their parent (founder, 17 October 2026: "in a style that the adult child asking their
+ * mom"): what "Use this" puts in the Ask field, what the chat offers to start with, and what the
+ * evening prompt suggests. `text` is the same ask in Vela's own plain voice, which Vela sends in its
+ * own name on a morning nobody in the family wrote for (`takeFallbackQuestion`); it claims no
+ * family memory, since a bank item is never sent as a person (ADR-49). Every item is about her life, her knowledge,
+ * or her opinions, never how she is; `ask-bank.test.ts` holds both wordings to the rules of
  * `rules.ts`, including `HEALTH_CHECK`.
  *
  * Ids are stable for ever: rows in `suggestions` keep the id after retention has cleared any words,
@@ -47,8 +51,13 @@ export interface AskBankItem {
    * first day at work"); every other item is a group of its own, named by its id.
    */
   readonly group: string;
+  /** Vela's own plain wording, for the morning Vela asks it in its own name. */
   readonly text: Readonly<Record<AskBankLang, string>>;
+  /** The family's wording: a son or daughter writing to their parent. */
+  readonly child: Readonly<Record<AskBankLang, string>>;
 }
+
+type PlainItem = Omit<AskBankItem, "child">;
 
 function item(
   id: string,
@@ -57,7 +66,7 @@ function item(
   en: string,
   zhTW: string,
   group: string = id,
-): AskBankItem {
+): PlainItem {
   const theme = ASK_BANK_THEMES.find((candidate) => id.startsWith(`${candidate}.`));
   if (theme === undefined) {
     throw new Error(`ask bank item ${id} names no theme`);
@@ -65,7 +74,7 @@ function item(
   return { id, type, theme, topic, group, text: { en, "zh-TW": zhTW } };
 }
 
-export const ASK_BANK: readonly AskBankItem[] = [
+const PLAIN: readonly PlainItem[] = [
   // Questions
   item(
     "life.childhood.home",
@@ -777,6 +786,416 @@ export const ASK_BANK: readonly AskBankItem[] = [
  * to invent a name (tried on 13 October 2026: "Which teacher do you still remember?" drew "Mrs. Lee,
  * kind"), and her advice and know-how are hers to tell, which is why those questions are asked.
  */
+/**
+ * Each item as the family writes it, by id: warm, first person, the way a grown child texts a parent
+ * ("I realised I don't know what your very first job was"). Never "Mom" or a name, since the parent
+ * may be a father or a grandparent and the reader's own word for them goes in front when they want
+ * it. The Traditional Chinese uses 你, as family members write to each other, and awaits a native
+ * reader's review with the rest of the bank.
+ */
+const CHILD_VOICE: Readonly<Record<string, Readonly<Record<AskBankLang, string>>>> = {
+  "life.childhood.home": {
+    en: "I was trying to picture the house you grew up in. What did it look like?",
+    "zh-TW": "我突然很好奇你小時候住的房子，長什麼樣子？",
+  },
+  "life.childhood.games": {
+    en: "What games did you play with the other kids when you were little? I bet they were better than ours.",
+    "zh-TW": "你小時候都跟其他小朋友玩什麼？一定比我們那時候好玩吧。",
+  },
+  "life.school.teacher": {
+    en: "Is there a teacher you still think about? I'd love to know who, and why.",
+    "zh-TW": "有沒有哪個老師，你到現在還會想起來？為什麼？",
+  },
+  "life.work.first_job": {
+    en: "I realised I don't know what your very first job was. What was it?",
+    "zh-TW": "我發現我不知道你的第一份工作是什麼，可以跟我說嗎？",
+  },
+  "life.work.proud": {
+    en: "Of all the work you've done, what are you proudest of? I'd really like to know.",
+    "zh-TW": "你做過的這麼多工作裡，最讓你驕傲的是哪一個？",
+  },
+  "life.place.street": {
+    en: "What was your street like when you first lived on your own?",
+    "zh-TW": "你剛開始自己生活的時候，住的那條街是什麼樣子？",
+  },
+  "life.friends.best": {
+    en: "Who was your best friend when you were young? You've never really told me.",
+    "zh-TW": "你年輕時最好的朋友是誰？你好像沒跟我說過。",
+  },
+  "life.seasons.festival": {
+    en: "Which festival did your family love most when you were a kid?",
+    "zh-TW": "你小時候，家裡最期待哪一個節日？",
+  },
+  "life.music.song": {
+    en: "Which song takes you straight back to being young? I want to listen to it too.",
+    "zh-TW": "哪一首歌一聽就讓你回到年輕的時候？我也想聽聽看。",
+  },
+  "knowledge.garden.plant": {
+    en: "I want to grow something at home. What's the easiest plant to start with?",
+    "zh-TW": "我想在家裡種點東西，哪一種植物最好養？",
+  },
+  "knowledge.home.fix": {
+    en: "What's something at home you can fix that most people can't? I should learn it.",
+    "zh-TW": "家裡有什麼東西是你會修、別人都不會的？我應該學起來。",
+  },
+  "knowledge.food.market": {
+    en: "How do you pick good fruit at the market? Mine never tastes as good.",
+    "zh-TW": "去市場要怎麼挑水果？我買的常常不甜。",
+  },
+  "knowledge.home.tidy": {
+    en: "What's the one thing you think every home should have? I'm making a list.",
+    "zh-TW": "你覺得每個家裡一定要有的東西是什麼？我在列清單。",
+  },
+  "opinions.advice.first_job": {
+    en: "If someone was starting their first job tomorrow, what would you tell them?",
+    "zh-TW": "如果有人明天第一天上班，你會給對方什麼建議？",
+  },
+  "opinions.change.better": {
+    en: "What's one thing that's better now than when you were young?",
+    "zh-TW": "有什麼事情是現在比你年輕的時候更好的？",
+  },
+  "opinions.change.wish": {
+    en: "What's something from the old days you wish we still had?",
+    "zh-TW": "以前有什麼東西，你很希望現在還有？",
+  },
+  "opinions.taste.film": {
+    en: "Which film or show should I watch next? I trust your taste.",
+    "zh-TW": "你覺得我下一部該看哪一部電影或節目？我相信你的眼光。",
+  },
+  "opinions.taste.season": {
+    en: "Which season do you like best, and why? I can never decide mine.",
+    "zh-TW": "你最喜歡哪個季節？為什麼？我自己一直選不出來。",
+  },
+  "opinions.advice.dinner": {
+    en: "What makes a family dinner a really good one, in your view?",
+    "zh-TW": "你覺得怎樣的家庭晚餐，才算是一頓好晚餐？",
+  },
+  "opinions.place.visit": {
+    en: "If you could go back to any place you've been, where would you go?",
+    "zh-TW": "如果可以再回到去過的任何地方，你最想去哪裡？",
+  },
+  "life.childhood.memory": {
+    en: "Tell me about a day from when you were little that you still remember clearly. I'd love to hear it.",
+    "zh-TW": "跟我說說你小時候到現在還記得很清楚的一天。",
+  },
+  "life.work.first_day": {
+    en: "What was your first day at work like? Tell me everything you remember.",
+    "zh-TW": "你第一天上班是什麼情況？把你記得的都跟我說。",
+  },
+  "life.friends.oldest": {
+    en: "How did you meet your oldest friend? I don't think I've ever heard the story.",
+    "zh-TW": "你是怎麼認識你最老的朋友的？我好像從來沒聽過這個故事。",
+  },
+  "life.family.wedding": {
+    en: "Tell me about a wedding you remember. Whose was it, and what happened?",
+    "zh-TW": "跟我說一場你印象很深的婚禮，是誰的？發生了什麼事？",
+  },
+  "life.place.move": {
+    en: "Tell me about a time you moved somewhere new. What was the hardest part?",
+    "zh-TW": "跟我說說你搬到新地方的那一次，最難適應的是什麼？",
+  },
+  "life.childhood.mischief": {
+    en: "Did you ever get into trouble as a kid? I want the whole story.",
+    "zh-TW": "你小時候有沒有闖過禍？我想聽完整的故事。",
+  },
+  "life.family.grandparents": {
+    en: "Tell me about your grandparents. I know so little about them.",
+    "zh-TW": "跟我說說你的祖父母吧，我知道的好少。",
+  },
+  "life.seasons.new_year": {
+    en: "Tell me about a New Year you remember well. What made it special?",
+    "zh-TW": "跟我說一個你印象最深的新年，那年有什麼特別的？",
+  },
+  "life.work.teacher": {
+    en: "Who taught you something that really stuck? Tell me about them.",
+    "zh-TW": "誰教過你一件讓你記一輩子的事？跟我說說這個人。",
+  },
+  "life.place.trip": {
+    en: "What was the best trip you ever took? Tell me about it so I can picture it.",
+    "zh-TW": "你去過最棒的一趟旅行是哪裡？說給我聽，讓我想像一下。",
+  },
+  "life.school.day": {
+    en: "What was a normal school day like for you? Walk me through it.",
+    "zh-TW": "你上學的時候，一天是怎麼過的？從早上說給我聽。",
+  },
+  "life.home.neighbours": {
+    en: "Tell me about the neighbours you had growing up. Were there any real characters?",
+    "zh-TW": "跟我說說你小時候的鄰居，有沒有很特別的人？",
+  },
+  "life.change.television": {
+    en: "Do you remember the first time you watched television? Tell me about it.",
+    "zh-TW": "你還記得第一次看電視的情景嗎？說給我聽。",
+  },
+  "opinions.advice.choice": {
+    en: "Tell me about a choice you made that turned out well. I could use the inspiration.",
+    "zh-TW": "跟我說一個你做過、後來證明是對的決定，我想參考一下。",
+  },
+  "knowledge.craft.skill": {
+    en: "How did you get so good at the thing you're best at? Tell me how you learned.",
+    "zh-TW": "你最拿手的那件事，當初是怎麼學會的？",
+  },
+  "life.family.name": {
+    en: "What's the story behind your name, and who chose it?",
+    "zh-TW": "你的名字是怎麼來的？是誰取的？",
+  },
+  "knowledge.food.signature": {
+    en: "Everyone asks for that one dish of yours. Will you tell me how you make it?",
+    "zh-TW": "大家都想吃你的拿手菜，可以教我怎麼做嗎？",
+  },
+  "knowledge.food.breakfast": {
+    en: "What was breakfast like at home when you were growing up, and how was it made?",
+    "zh-TW": "你小時候家裡早餐都吃什麼？是怎麼做的？",
+  },
+  "knowledge.food.soup": {
+    en: "When it gets cold I always think of your soup. How do you make it?",
+    "zh-TW": "天氣一變冷我就想到你煮的湯，那要怎麼煮？",
+  },
+  "knowledge.food.new_year": {
+    en: "Which dish do you always make for New Year? I want to learn it this year.",
+    "zh-TW": "過年你一定會做的那道菜，今年我想學起來，怎麼做？",
+  },
+  "knowledge.food.snack": {
+    en: "What snack did you love as a kid? We should make it together sometime.",
+    "zh-TW": "你小時候最愛吃什麼點心？哪天我們一起做做看。",
+  },
+  "knowledge.food.preserve": {
+    en: "How do you pickle or preserve things at home? I want to try.",
+    "zh-TW": "你在家是怎麼醃菜或保存食物的？我想試試看。",
+  },
+  "knowledge.food.secret": {
+    en: "What's the secret ingredient in one of your recipes? I promise to keep it in the family.",
+    "zh-TW": "你哪道菜有秘密配方？我保證只留在家裡。",
+  },
+  "knowledge.food.parents": {
+    en: "Which dish from your own parents do you still make? I'd like to keep it going.",
+    "zh-TW": "你爸媽以前煮的菜，哪一道你到現在還在做？我想傳下去。",
+  },
+  "knowledge.language.saying": {
+    en: "What was that saying your parents always used? I want to remember it.",
+    "zh-TW": "你爸媽以前常掛在嘴邊的那句話是什麼？我想記下來。",
+  },
+  "knowledge.language.hometown": {
+    en: "Teach me a word from where you grew up. I want to try saying it.",
+    "zh-TW": "教我一個你家鄉的說法，我想學著講講看。",
+  },
+  "knowledge.language.kitchen": {
+    en: "What do you call your favourite kitchen tool? I always forget the word.",
+    "zh-TW": "你最愛用的那個廚房工具叫什麼？我老是忘記。",
+  },
+  "knowledge.language.blessing": {
+    en: "What's a good New Year wish I could say this year? Teach me one.",
+    "zh-TW": "今年過年我可以說什麼吉祥話？教我一句。",
+  },
+  "knowledge.language.weather": {
+    en: "Is there an old saying about the weather you grew up with? Teach me.",
+    "zh-TW": "有沒有你從小聽到大的天氣俗語？教我一句。",
+  },
+  "knowledge.language.song": {
+    en: "Teach me a line from a song you used to sing. I'll try singing it back.",
+    "zh-TW": "教我一句你以前常唱的歌，我唱回給你聽。",
+  },
+  "knowledge.language.nickname": {
+    en: "Did you have a nickname when you were young, or give anyone one? Tell me.",
+    "zh-TW": "你年輕時有沒有綽號？還是你幫別人取過？",
+  },
+  "opinions.language.favourite": {
+    en: "What's your favourite word, and why do you like it so much?",
+    "zh-TW": "你最喜歡哪一個詞？為什麼特別喜歡？",
+  },
+  "life.childhood.toy": {
+    en: "What was your favourite toy when you were little? I'm trying to picture it.",
+    "zh-TW": "你小時候最喜歡的玩具是什麼？我想像不出來。",
+  },
+  "life.school.subject": {
+    en: "Which subject did you like best at school, and why?",
+    "zh-TW": "你上學的時候最喜歡哪一科？為什麼？",
+  },
+  "life.work.colleague": {
+    en: "Who was the best person you ever worked with, and what made them so good?",
+    "zh-TW": "你共事過最好的人是誰？那個人好在哪裡？",
+  },
+  "life.place.hometown": {
+    en: "What's changed most in your hometown since you were young?",
+    "zh-TW": "你的家鄉跟你小時候比，變最多的是什麼？",
+  },
+  "life.family.parents_work": {
+    en: "What work did your parents do when you were small? I don't think I know.",
+    "zh-TW": "你小時候，你爸媽是做什麼工作的？我好像不知道。",
+  },
+  "life.money.first_buy": {
+    en: "What was the first thing you bought with your own money? I bet you still remember.",
+    "zh-TW": "你用自己賺的錢買的第一樣東西是什麼？還記得嗎？",
+  },
+  "life.friends.weekends": {
+    en: "What did you and your friends do on weekends when you were young?",
+    "zh-TW": "你年輕的時候，週末都跟朋友做什麼？",
+  },
+  "life.home.first_home": {
+    en: "What was your first home of your own like? I wish I'd seen it.",
+    "zh-TW": "你第一個自己的家是什麼樣子？真希望我看過。",
+  },
+  "life.place.getting_around": {
+    en: "How did people get around town when you were young: bus, bike, or on foot?",
+    "zh-TW": "你年輕的時候，大家都怎麼在城裡移動？公車、腳踏車還是走路？",
+  },
+  "life.music.dance": {
+    en: "What dance did everyone do when you were young? I want to see if you still can.",
+    "zh-TW": "你年輕的時候大家都跳什麼舞？你現在還會跳嗎？",
+  },
+  "knowledge.home.stain": {
+    en: "I've got a stain that won't come out. What's your best trick?",
+    "zh-TW": "我有個污漬洗不掉，你有什麼好方法？",
+  },
+  "knowledge.garden.flower": {
+    en: "If you had a new garden, which flower would you plant first?",
+    "zh-TW": "如果有一個新的花園，你第一個會種什麼花？",
+  },
+  "knowledge.money.groceries": {
+    en: "What's your best tip for saving money on groceries? I need it.",
+    "zh-TW": "買菜要怎麼省錢？教我一招，我很需要。",
+  },
+  "knowledge.craft.mend": {
+    en: "What's the most useful thing you know how to sew or mend? I can't even do a button.",
+    "zh-TW": "你會縫補的東西裡，最實用的是什麼？我連釦子都不會縫。",
+  },
+  "knowledge.weather.rain": {
+    en: "How can you tell rain is coming without a forecast? You always seem to know.",
+    "zh-TW": "不看天氣預報，要怎麼知道快下雨了？你好像都知道。",
+  },
+  "opinions.taste.book": {
+    en: "Which book or story should every child know? I want to read it to the kids.",
+    "zh-TW": "你覺得哪一本書或哪個故事，每個小孩都該知道？",
+  },
+  "opinions.advice.lasting": {
+    en: "What do you think makes a marriage or a friendship last? I'd like your view.",
+    "zh-TW": "你覺得婚姻或友情要長久，最重要的是什麼？",
+  },
+  "opinions.change.letters": {
+    en: "Letters or mobile phones: which do you prefer, and why?",
+    "zh-TW": "寫信和手機，你比較喜歡哪一個？為什麼？",
+  },
+  "opinions.taste.holiday": {
+    en: "What's your idea of a perfect day off? I want to plan one for you.",
+    "zh-TW": "對你來說，最完美的休假日是什麼樣子？我想幫你安排一天。",
+  },
+  "opinions.place.city": {
+    en: "Big city or small town: where would you rather live, and why?",
+    "zh-TW": "大城市還是小鎮，你比較想住哪裡？為什麼？",
+  },
+  "life.childhood.summer": {
+    en: "Which summer from when you were young do you still remember? Tell me about it.",
+    "zh-TW": "跟我說說你年輕時印象最深的一個夏天。",
+  },
+  "life.family.parents_met": {
+    en: "Do you know how your parents met? I'd love to hear the story.",
+    "zh-TW": "你知道你爸媽是怎麼認識的嗎？我好想聽這個故事。",
+  },
+  "life.work.unforgettable": {
+    en: "Was there a day at work you'll never forget? Tell me what happened.",
+    "zh-TW": "有沒有哪一天上班讓你一輩子忘不了？發生了什麼事？",
+  },
+  "life.home.kindness": {
+    en: "Tell me about a time a neighbour or a stranger helped you out.",
+    "zh-TW": "跟我說說有一次鄰居或陌生人幫了你的事。",
+  },
+  "life.place.journey": {
+    en: "What was your first long trip by train, bus or boat like? Tell me about it.",
+    "zh-TW": "你第一次搭火車、公車或船出遠門，是什麼情形？",
+  },
+  "life.friends.adventure": {
+    en: "Tell me about an adventure you had with a friend. The wilder the better.",
+    "zh-TW": "跟我說一次你跟朋友的冒險，越精彩越好。",
+  },
+  "life.school.funny": {
+    en: "What's the funniest thing that happened at your school? I need a laugh.",
+    "zh-TW": "你上學時發生過最好笑的事是什麼？我需要笑一下。",
+  },
+  "life.seasons.celebration": {
+    en: "Tell me about a birthday or celebration you remember really well.",
+    "zh-TW": "跟我說一個你記得很清楚的生日或慶祝。",
+  },
+  "life.change.telephone": {
+    en: "Do you remember the first time you used a telephone, and who you called?",
+    "zh-TW": "你還記得第一次打電話嗎？是打給誰？",
+  },
+  "opinions.advice.mistake": {
+    en: "Tell me about a mistake that taught you something useful. I'm collecting lessons.",
+    "zh-TW": "跟我說一個讓你學到東西的錯誤，我在收集人生功課。",
+  },
+  "knowledge.craft.handmade": {
+    en: "What's something you made with your own hands that you were proud of?",
+    "zh-TW": "你親手做過、讓你很得意的東西是什麼？",
+  },
+  "life.family.children": {
+    en: "What were we like when we were little? Tell me something I don't remember.",
+    "zh-TW": "我們小時候是什麼樣子？說一件我不記得的事。",
+  },
+  "knowledge.food.folded": {
+    en: "How do you make dumplings, or anything you fold by hand? I want to learn properly.",
+    "zh-TW": "你包餃子或其他手包的東西是怎麼做的？我想好好學。",
+  },
+  "knowledge.food.dessert": {
+    en: "Which dessert do you make for special days? I'd love you to teach me.",
+    "zh-TW": "特別的日子你都做什麼甜點？可以教我嗎？",
+  },
+  "knowledge.food.hot_drink": {
+    en: "How do you make your favourite hot drink? I want mine to taste like yours.",
+    "zh-TW": "你最喜歡的熱飲是怎麼泡的？我想泡得跟你一樣好喝。",
+  },
+  "knowledge.food.leftovers": {
+    en: "What do you cook with leftovers so nothing goes to waste? I always throw too much away.",
+    "zh-TW": "剩菜你都怎麼煮才不浪費？我老是丟掉太多。",
+  },
+  "knowledge.food.hot_weather": {
+    en: "What do you like to cook when it's hot out? I need ideas.",
+    "zh-TW": "天氣熱的時候你都煮什麼？給我一點靈感。",
+  },
+  "knowledge.food.street": {
+    en: "Which street food from your youth could you make at home? Show me how.",
+    "zh-TW": "你年輕時吃的哪一種小吃可以在家做？教我怎麼做。",
+  },
+  "knowledge.food.staple": {
+    en: "How do you make the rice, noodles or bread we always eat? Mine never comes out right.",
+    "zh-TW": "我們家常吃的飯、麵或麵包，你是怎麼做的？我做的總是不對。",
+  },
+  "knowledge.language.rhyme": {
+    en: "Teach me a rhyme you chanted in games as a kid. I'll teach it to the little ones.",
+    "zh-TW": "教我一首你小時候玩遊戲時念的童謠，我想教給小朋友。",
+  },
+  "knowledge.language.market": {
+    en: "What did sellers call out at the market when you were young? Teach me one.",
+    "zh-TW": "你小時候市場的小販都怎麼吆喝？教我一句。",
+  },
+  "knowledge.language.grandparents": {
+    en: "What did you call your grandparents, and what does the word mean?",
+    "zh-TW": "你以前怎麼稱呼你的祖父母？那個稱呼是什麼意思？",
+  },
+  "knowledge.language.kind_words": {
+    en: "What was a kind thing people often said to each other when you were young?",
+    "zh-TW": "你年輕的時候，大家常互相說的一句暖心話是什麼？",
+  },
+  "knowledge.language.proverb": {
+    en: "Is there a proverb about work or patience you live by? Teach it to me.",
+    "zh-TW": "有沒有一句關於工作或耐心的諺語，是你一直記著的？教我。",
+  },
+  "knowledge.language.family_cooking": {
+    en: "Is there a cooking word only our family uses? Teach me so it doesn't get lost.",
+    "zh-TW": "有沒有只有我們家才用的廚房用語？教我，免得失傳。",
+  },
+  "opinions.language.funny": {
+    en: "What's a funny expression that always makes you laugh? I need a new one.",
+    "zh-TW": "有什麼好笑的說法每次都讓你笑出來？教我一個新的。",
+  },
+};
+
+export const ASK_BANK: readonly AskBankItem[] = PLAIN.map((entry) => {
+  const child = CHILD_VOICE[entry.id];
+  if (child === undefined) {
+    throw new Error(`ask bank item ${entry.id} has no family wording`);
+  }
+  return { ...entry, child };
+});
+
 export const CHIP_QUESTIONS: ReadonlySet<string> = new Set([
   "life.childhood.home",
   "life.childhood.games",
@@ -804,11 +1223,23 @@ function isWrittenIn(text: AskBankItem["text"], lang: Lang): lang is AskBankLang
   return Object.hasOwn(text, lang);
 }
 
-/** The item's text in `lang`; a language the bank is not written in reads the English. */
+/**
+ * The item in Vela's own words in `lang`, for a morning Vela asks it; a language the bank is not
+ * written in reads the English.
+ */
 export function askBankText(id: string, lang: Lang): string | undefined {
   const found = BY_ID.get(id);
   if (found === undefined) {
     return undefined;
   }
   return isWrittenIn(found.text, lang) ? found.text[lang] : found.text.en;
+}
+
+/** The item as the family writes it, in `lang`, or in English where the bank has no `lang`. */
+export function askBankChildText(id: string, lang: Lang): string | undefined {
+  const found = BY_ID.get(id);
+  if (found === undefined) {
+    return undefined;
+  }
+  return isWrittenIn(found.child, lang) ? found.child[lang] : found.child.en;
 }

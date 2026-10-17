@@ -380,6 +380,13 @@ export type ApiTodayAnswer = z.infer<typeof ApiTodayAnswer>;
  */
 export const ApiTodayReply = z.object({
   from: z.string(),
+  /**
+   * Who wrote it, so a reader's own replies show as theirs in the conversation; absent in older
+   * responses.
+   */
+  from_id: z.uuid().optional(),
+  /** When it was written; absent in older responses. */
+  at: z.iso.datetime({ offset: true }).optional(),
   kind: ReplyKind,
   text: z.string().nullable(),
   /** A photo reply's photo, shown as itself; null for any other reply, or once it is deleted. */
@@ -396,6 +403,11 @@ export const ApiTodayExchange = z.object({
   recipient_tz: TimeZone.optional(),
   /** Null for Vela's own hello, and for an ask whose asker has since been deleted. */
   asker_name: z.string().nullable(),
+  /**
+   * The asker's member id, so a reader's own asks show as theirs in the conversation; null with
+   * `asker_name`, and absent in older responses.
+   */
+  asker_id: z.uuid().nullable().optional(),
   on_behalf_of: z.string().nullable(),
   /**
    * Vela drafted the ask and sent it in the asker's name, at the asker's own choice; absent in older
@@ -404,8 +416,17 @@ export const ApiTodayExchange = z.object({
   drafted_by_vela: z.boolean().optional(),
   type: ExchangeType,
   ask: z.string().nullable(),
+  /** When the ask was written, which orders a message still on its way; absent in older responses. */
+  created_at: z.iso.datetime({ offset: true }).optional(),
   voice_hello: ApiExchangeAudio.nullable().default(null),
+  /** Her latest answer, which Today and the lists show. */
   answer: ApiTodayAnswer.nullable(),
+  /**
+   * Every answer she gave to this exchange, oldest first, so a conversation shows each message she
+   * sent and not only her last (several messages within 36 hours attach to her latest delivered
+   * exchange, flows §3.9). The last is `answer`. Absent in older responses.
+   */
+  answers: z.array(ApiTodayAnswer).optional(),
   replies: z.array(ApiTodayReply),
   /** Arrival outcome; absent only in older responses. Failure may mean partial delivery. */
   delivery_status: z.enum(["pending", "delivered", "failed"]).optional(),

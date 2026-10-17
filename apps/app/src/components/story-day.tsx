@@ -22,7 +22,14 @@ import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from 
  * not to. The question is the family's choice, never Vela's own (spec: Vela authors nothing but the
  * fallback hello).
  */
-export function StoryDay({ memberId }: { memberId?: string }) {
+export function StoryDay({
+  memberId,
+  inBook = false,
+}: {
+  memberId?: string;
+  /** Shown inside the book itself, where a way into the book would lead nowhere new. */
+  inBook?: boolean;
+}) {
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
@@ -40,7 +47,7 @@ export function StoryDay({ memberId }: { memberId?: string }) {
   );
   const chosen = book.coming.find((story) => story.member_id === her?.memberId);
   const prompt = nextPrompt(asked, skip, lang);
-  const question = own ?? prompt?.text[lang] ?? "";
+  const question = own ?? prompt?.child[lang] ?? "";
   const sunday = nextSunday(new Date(), her?.timeZone);
   const day = dayName(sunday);
   const name = her?.displayName ?? t`Mom`;
@@ -86,7 +93,7 @@ export function StoryDay({ memberId }: { memberId?: string }) {
       ) : (
         <>
           {own === null && prompt !== undefined ? (
-            <Words variant="voice">{prompt.text[lang]}</Words>
+            <Words variant="voice">{prompt.child[lang]}</Words>
           ) : (
             <TextField
               placeholder={t`Your question for ${name}`}
@@ -146,7 +153,8 @@ export function StoryDay({ memberId }: { memberId?: string }) {
           </View>
         </>
       )}
-      {capabilities?.book === true || book.entries.length > 0 || book.recipes.length > 0 ? (
+      {!inBook &&
+      (capabilities?.book === true || book.entries.length > 0 || book.recipes.length > 0) ? (
         <SecondaryButton label={t`Read the family book`} onPress={() => router.push("/book")} />
       ) : null}
     </Card>

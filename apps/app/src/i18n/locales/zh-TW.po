@@ -14,10 +14,12 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: app/(tabs)/exchanges.tsx
 #: app/exchange/[id].tsx
 msgid "{asker} asked"
 msgstr "{asker}提問"
 
+#: app/(tabs)/exchanges.tsx
 #: app/exchange/[id].tsx
 msgid "{asker} asked · written by Vela"
 msgstr "{asker}問的 · Vela 代筆"
@@ -41,6 +43,14 @@ msgstr "{by}在 {time} 問了，正在等{name}回覆。"
 #: src/data/useQuiet.ts
 msgid "{by} said {name} is fine. Everyone who was told has heard."
 msgstr "{by}說{name}沒事。收到通知的每個人都已經知道了。"
+
+#: src/components/connection-windows.tsx
+msgid "{count, plural, one {# day with messages so far} other {# days with messages so far}}"
+msgstr "{count, plural, other {到目前有 # 天有訊息}}"
+
+#: src/components/connection-windows.tsx
+msgid "{count, plural, one {# day with messages this week} other {# days with messages this week}}"
+msgstr "{count, plural, other {這週有 # 天有訊息}}"
 
 #: app/ask.tsx
 msgid "{day} morning"
@@ -86,6 +96,18 @@ msgstr "{from}傳了一則語音訊息"
 msgid "{from}: {text}"
 msgstr "{from}：{text}"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "{giver} sent a heart"
+msgstr "{giver}送了一顆愛心"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "{giver} sent a hug"
+msgstr "{giver}送了一個擁抱"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "{giver} sent a laugh"
+msgstr "{giver}笑了"
+
 #: src/data/weekly.ts
 msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
 msgstr "{hellos, plural, other {有 # 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。}}"
@@ -104,25 +126,25 @@ msgstr "{known}次平安（家人知道原因）"
 
 #: src/components/connection-windows.tsx
 msgid "{label}: a family message"
-msgstr ""
+msgstr "{label}：有家人的訊息"
 
 #: src/components/connection-windows.tsx
 msgid "{label}: no message recorded"
-msgstr ""
+msgstr "{label}：沒有訊息"
+
+#: src/components/connection-windows.tsx
+msgid "{label}: still to come"
+msgstr "{label}：還沒到"
 
 #: src/data/precision.ts
 msgid "{later} answered later"
 msgstr "{later}次稍晚回覆"
 
-#: src/components/connection-windows.tsx
-msgid "{name} · {count} days with messages"
-msgstr ""
-
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "{name} · {day}"
 msgstr "{name} · {day}"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "{name} · {day} · {asker} asked"
 msgstr "{name} · {day} · {asker}問的"
 
@@ -149,6 +171,10 @@ msgstr "{name}還沒有同意"
 #: app/ask.tsx
 msgid "{name} has not said yes yet. Once she does, her first morning is the next day."
 msgstr "{name}還沒有同意。同意之後的隔天早上，就會收到第一則早安訊息。"
+
+#: app/conversation.tsx
+msgid "{name} has not said yes yet. What you write waits for their first morning."
+msgstr "{name}還沒有答應。你寫的話會等到第一個早晨再送出。"
 
 #: src/components/story-day.tsx
 msgid "{name} is asked on {day}."
@@ -242,7 +268,7 @@ msgstr "{name}的早安訊息"
 msgid "{name}'s phone"
 msgstr "{name}的手機"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "{name}'s recipe · {day}"
 msgstr "{name}的食譜 · {day}"
 
@@ -269,6 +295,10 @@ msgstr "{open, plural, other {# 則還沒有結果。}}"
 #: app/morning-settings.tsx
 msgid "{otherSigner} has this on now, so Vela’s question goes in their name. Choosing your name here uses yours instead."
 msgstr "目前是{otherSigner}開啟這個功能，所以 Vela 的問題會用對方的名字送出。在這裡選擇用您的名字，就會改成您的名字。"
+
+#: src/components/family-book.tsx
+msgid "{recipes, plural, one {# recipe} other {# recipes}}"
+msgstr "{recipes, plural, other {# 道食譜}}"
 
 #: src/data/useToday.ts
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
@@ -298,9 +328,17 @@ msgstr "{recipient}已暫停晨間訊息。準備好時，可以在 Vela 的聊�
 msgid "{recipient} saw it · {time}"
 msgstr "{recipient}看過了 · {time}"
 
-#: app/(tabs)/index.tsx
-msgid "{recipient}'s morning settings"
-msgstr "{recipient}的早安訊息設定"
+#: app/(tabs)/exchanges.tsx
+msgid "{replies, plural, one {# reply} other {# replies}}"
+msgstr "{replies, plural, other {# 則回覆}}"
+
+#: src/components/family-book.tsx
+msgid "{stories, plural, one {# story} other {# stories}}"
+msgstr "{stories, plural, other {# 個故事}}"
+
+#: src/components/chat/chat-link.tsx
+msgid "{who}: {said}"
+msgstr "{who}：{said}"
 
 #: src/data/precision.ts
 msgid "{wrong} where something was wrong"
@@ -358,6 +396,10 @@ msgstr "尚未設定即時連線。"
 msgid "A morning message is missing"
 msgstr "早晨訊息沒有送達"
 
+#: src/data/chat.ts
+msgid "A photo"
+msgstr "一張照片"
+
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "您從小長大的那條街的照片——還記得街角那家店嗎？"
@@ -365,6 +407,10 @@ msgstr "您從小長大的那條街的照片——還記得街角那家店嗎？
 #: src/data/ask.ts
 msgid "A question"
 msgstr "一個問題"
+
+#: app/conversation.tsx
+msgid "A question for her morning"
+msgstr "放進早安訊息的問題"
 
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
@@ -382,9 +428,21 @@ msgstr "一道菜的做法"
 msgid "A small moment with your family, every day."
 msgstr "每天，與家人相伴一小刻。"
 
+#: src/data/chat.ts
+msgid "A sticker"
+msgstr "一張貼圖"
+
 #: src/data/ask.ts
 msgid "A story"
 msgstr "一個故事"
+
+#: app/conversation.tsx
+msgid "A voice hello for her morning"
+msgstr "放進早安訊息的語音問候"
+
+#: src/data/chat.ts
+msgid "A voice message"
+msgstr "一則語音訊息"
 
 #: src/data/ask.ts
 msgid "A voice note"
@@ -395,8 +453,8 @@ msgid "A vote"
 msgstr "投票"
 
 #: src/components/connection-windows.tsx
-msgid "A window for each day with a message. Quiet days keep the earlier lights."
-msgstr ""
+msgid "A window lights on each day you and {name} share a message. A quiet day never takes the earlier lights away, and Monday starts a new row."
+msgstr "你和{name}有訊息往來的那天，窗就會亮起。安靜的一天不會讓之前的燈熄掉，每到星期一就重新開始一排。"
 
 #: src/data/ask.ts
 msgid "A word to teach"
@@ -407,9 +465,12 @@ msgid "About a quiet notice"
 msgstr "關於安靜通知"
 
 #: app/conversation.tsx
+msgid "About ten seconds, played before the question."
+msgstr "大約十秒，會在問題之前播放。"
+
 #: src/data/useExchanges.ts
 msgid "Accepted for delivery. This is not a read receipt."
-msgstr ""
+msgstr "已收下，準備送出。這不代表已讀。"
 
 #: app/(tabs)/you.tsx
 msgid "Account"
@@ -439,9 +500,17 @@ msgstr "阿得雷德"
 msgid "Alaska"
 msgstr "阿拉斯加"
 
+#: app/(tabs)/exchanges.tsx
+msgid "All"
+msgstr "全部"
+
 #: src/data/family.ts
 msgid "All said yes"
 msgstr "都同意了"
+
+#: src/data/chat.ts
+msgid "Already in a bag by the door."
+msgstr "已經裝好袋子放在門口了。"
 
 #: app/vela-light.tsx
 msgid "Always free"
@@ -450,6 +519,10 @@ msgstr "永遠免費"
 #: src/data/ask.ts
 msgid "An old photo"
 msgstr "一張老照片"
+
+#: src/data/chat.ts
+msgid "And a jar of the plum jam."
+msgstr "還有一罐梅子果醬。"
 
 #: src/components/story-day.tsx
 msgid "Another question"
@@ -465,6 +538,10 @@ msgstr "用聲音回答"
 
 #: src/data/useToday.ts
 msgid "answered"
+msgstr "回覆了"
+
+#: src/data/chat.ts
+msgid "Answered"
 msgstr "回覆了"
 
 #: src/data/today.ts
@@ -578,6 +655,7 @@ msgstr "外出中 · 到{day}"
 msgid "Back"
 msgstr "返回"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Both of you, but only Mia listened about the butter."
 msgstr "你們兩個都教過，但只有 Mia 把奶油那段聽進去了。"
@@ -590,6 +668,7 @@ msgstr "布里斯本"
 msgid "Call"
 msgstr "打電話"
 
+#: app/conversation.tsx
 #: src/components/quiet-notice.tsx
 msgid "Call {name}"
 msgstr "打電話給{name}"
@@ -614,6 +693,7 @@ msgid "Change"
 msgstr "更改"
 
 #: app/(tabs)/you.tsx
+#: app/conversation.tsx
 msgid "Change {name}'s morning"
 msgstr "更改{name}的早安訊息"
 
@@ -677,6 +757,10 @@ msgstr "從題庫選"
 msgid "Choose someone in your family, or return to Today. Your words are kept."
 msgstr "請選擇一位家人，或回到「今天」。您的文字已保留。"
 
+#: app/conversation.tsx
+msgid "Choose the morning; Vela delivers it then."
+msgstr "選一個早晨，Vela 會在那天送出。"
+
 #: app/exchange/[id].tsx
 msgid "Choose this exchange's family on Today to play or send attachments."
 msgstr "請在「今天」選擇這段對話所屬的家庭，再播放或傳送附件。"
@@ -686,6 +770,7 @@ msgid "Choose your country, type your number as you would at home, and we text y
 msgstr "選擇您的國家，照平常的方式輸入手機號碼，我們會用簡訊傳驗證碼給您。"
 
 #: app/sign-in.tsx
+#: src/components/chat/action-sheet.tsx
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "關閉"
@@ -705,6 +790,14 @@ msgstr "簡訊驗證碼目前還無法傳到{where}，請改用電子郵件。"
 #: src/components/reminders.tsx
 msgid "Coming up"
 msgstr "近期安排"
+
+#: src/components/family-book.tsx
+msgid "Coming up · {name} · {day}"
+msgstr "即將到來 · {name} · {day}"
+
+#: src/components/family-book.tsx
+msgid "Coming up · {name} · {day} · chosen by {asker}"
+msgstr "即將到來 · {name} · {day} · {asker}選的"
 
 #: src/components/nearby-editor.tsx
 msgid "Confirm removal"
@@ -734,6 +827,10 @@ msgstr "來自您自己 Vela 聊天室的連結碼，15 分鐘後失效。"
 #: src/components/quiet-notice.tsx
 msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
 msgstr "請用您平常的電話或 Telegram 聊天聯絡{name}。經對方同意後，您可以在「我」裡加入對方的電話號碼。"
+
+#: app/exchange/[id].tsx
+msgid "Continue in chat"
+msgstr "到聊天繼續說"
 
 #: app/ask.tsx
 msgid "Continue your saved ask to {savedName}"
@@ -776,6 +873,10 @@ msgstr "刪除帳號會移除您的登入、這支手機的通知，以及您在
 msgid "Deleting…"
 msgstr "刪除中…"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Delivered"
+msgstr "已送達"
+
 #: src/data/useToday.ts
 msgid "Delivery of {recipient}’s morning is still pending."
 msgstr "{recipient}的早安訊息仍待傳送。"
@@ -805,7 +906,7 @@ msgstr "樓下鄰居"
 
 #: app/conversation.tsx
 msgid "Earlier messages"
-msgstr ""
+msgstr "更早的訊息"
 
 #: app/(tabs)/exchanges.tsx
 msgid "Earlier this month"
@@ -848,7 +949,7 @@ msgstr "示範 · 愛心已送出"
 
 #: app/conversation.tsx
 msgid "Example only. Nothing was sent."
-msgstr ""
+msgstr "這只是範例，沒有送出任何訊息。"
 
 #: app/morning-settings.tsx
 msgid "Example settings previewed."
@@ -857,16 +958,6 @@ msgstr "已預覽範例設定。"
 #: app/exchange/[id].tsx
 msgid "Exchange"
 msgstr "交流"
-
-#: app/(tabs)/_layout.tsx
-#: app/(tabs)/exchanges.tsx
-msgctxt "tab"
-msgid "Exchanges"
-msgstr "問答"
-
-#: app/(tabs)/exchanges.tsx
-msgid "Exchanges stay here for thirty days."
-msgstr "問答會在這裡保留三十天。"
 
 #: src/data/family.ts
 msgctxt "role"
@@ -901,6 +992,10 @@ msgstr "第一個提問"
 #: src/components/service-status.tsx
 msgid "For a particular morning message, check Today or your parent's chat."
 msgstr "若要確認某則早晨訊息，請查看「今天」或爸媽的聊天室。"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "For her morning"
+msgstr "早安訊息"
 
 #: src/auth/phone.ts
 msgid "France"
@@ -945,6 +1040,10 @@ msgstr "前往「今天」"
 #: app/nearby.tsx
 msgid "Go to You"
 msgstr "前往「你」"
+
+#: src/data/chat.ts
+msgid "Good morning from Vela"
+msgstr "Vela 的早安問候"
 
 #: src/device/useParent.ts
 msgid "Good morning, Mom. Mia asks: what did you have for breakfast?"
@@ -1005,6 +1104,14 @@ msgstr "長輩的回答會留在這則問答裡。這裡尚未開啟長期保存
 msgid "Her first morning is the day after she says yes, at {time}."
 msgstr "同意之後的隔天 {time}，就會收到第一則早安訊息。"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Her messenger did not take it. Her daily morning is unchanged."
+msgstr "這則訊息沒有送達。每天的早安訊息不受影響。"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Her morning"
+msgstr "早安訊息"
+
 #: app/(tabs)/index.tsx
 msgid "Her morning already holds it."
 msgstr "早上的訊息已經排好了，無法收回。"
@@ -1021,9 +1128,21 @@ msgstr "不在家的期間，早上的訊息照常送出；不會通知家人早
 msgid "Her name, as the family calls her."
 msgstr "家裡平常怎麼稱呼這位家人。"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Her words"
+msgstr "說過的話"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Her words stay here for thirty days."
+msgstr "說過的話會在這裡保留三十天。"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Her words stay here for thirty days. The stories she tells are kept in the family book."
+msgstr "說過的話會在這裡保留三十天。說過的故事會收進家庭故事書。"
+
 #: src/components/nearby-editor.tsx
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
-msgstr ""
+msgstr "{who}你好！如果我聯絡不上{name}，可以請你過去看看嗎？你可以在這裡答應："
 
 #: src/components/test-sign-in-details.tsx
 msgid "Hide test sign-in details"
@@ -1033,7 +1152,7 @@ msgstr "隱藏測試登入資訊"
 msgid "Hong Kong"
 msgstr "香港"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "How"
 msgstr "做法"
 
@@ -1069,6 +1188,10 @@ msgstr "抱抱"
 #: app/onboarding.tsx
 msgid "I have sent it"
 msgstr "我已經傳了"
+
+#: src/data/chat.ts
+msgid "I'm fine"
+msgstr "我很好"
 
 #: src/components/nearby-editor.tsx
 msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
@@ -1134,6 +1257,7 @@ msgstr "邀請"
 
 #: app/(tabs)/you.tsx
 #: app/away.tsx
+#: app/conversation.tsx
 msgid "Is {name} away?"
 msgstr "{name}不在家嗎？"
 
@@ -1153,7 +1277,7 @@ msgstr "答應之後的第一個早上就會送到。之後每天早上，都會
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
 msgstr "先是麵包店，後來變成書店。冬天我們在那裡排隊買麵包。"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "It will stop being kept as a story. The exchange still follows the usual retention period."
 msgstr "這段故事將不再長期保存。原本的對話仍依一般保存期限保留。"
 
@@ -1186,13 +1310,21 @@ msgstr "保留這位聯絡人"
 msgid "Keep this country"
 msgstr "保留這個國家"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Keep this story"
 msgstr "保留這段故事"
+
+#: src/components/family-book.tsx
+msgid "Kept for good"
+msgstr "永久保存"
 
 #: app/(tabs)/you.tsx
 msgid "Language"
 msgstr "語言"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Last week"
+msgstr "上週"
 
 #: app/(tabs)/sunday.tsx
 msgid "late"
@@ -1209,10 +1341,6 @@ msgstr "離開"
 #: app/(tabs)/you.tsx
 msgid "Leave {familyName}?"
 msgstr "要離開{familyName}嗎？"
-
-#: app/conversation.tsx
-msgid "Leave something for their morning"
-msgstr ""
 
 #: app/(tabs)/you.tsx
 msgid "Leave the family"
@@ -1236,6 +1364,10 @@ msgstr "聽一聽"
 #: app/exchange/[id].tsx
 msgid "Listen to {from}’s voice reply"
 msgstr "聽{from}的語音回覆"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Listen to {spoken}"
+msgstr "聽{spoken}的聲音"
 
 #: app/ask.tsx
 msgid "Listen to my voice note."
@@ -1272,7 +1404,7 @@ msgstr "正在載入語音…"
 
 #: app/conversation.tsx
 msgid "Loading your conversation…"
-msgstr ""
+msgstr "正在載入對話…"
 
 #: app/(tabs)/you.tsx
 #: app/away.tsx
@@ -1300,9 +1432,15 @@ msgstr "正在載入家人的問答…"
 msgid "Malaysia"
 msgstr "馬來西亞"
 
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/exchanges.tsx
+msgctxt "tab"
+msgid "Memories"
+msgstr "回憶"
+
 #: app/conversation.tsx
 msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
-msgstr ""
+msgstr "連線暫停或無法聯絡時不能傳訊息。你的草稿會留在這裡。"
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/you.tsx
@@ -1318,6 +1456,10 @@ msgstr ""
 #: src/device/useParent.ts
 msgid "Mom"
 msgstr "媽媽"
+
+#: app/conversation.tsx
+msgid "More for {name}"
+msgstr "{name}的更多選項"
 
 #: app/ask.tsx
 msgid "More ways to ask"
@@ -1401,11 +1543,11 @@ msgstr "這裡不填電話號碼：對方同意後，Vela 會再向對方要號�
 msgid "No quiet notice in the last 12 months."
 msgstr "過去 12 個月沒有安靜通知。"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "No stories have been kept here yet."
 msgstr "這裡還沒有保存任何故事。"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
 msgstr "還沒有故事。在週日分頁選一個問題，說出的故事會收在這裡。"
 
@@ -1419,7 +1561,6 @@ msgstr "今天還沒有回覆"
 msgid "No word yet today."
 msgstr "今天還沒有回覆。"
 
-#: app/(tabs)/exchanges.tsx
 #: app/exchange/[id].tsx
 msgid "No word yet."
 msgstr "還沒有回覆。"
@@ -1432,6 +1573,10 @@ msgstr "這週家裡沒有人問{name}任何事。"
 msgid "Nobody nearby yet"
 msgstr "還沒有附近的聯絡人"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Not delivered"
+msgstr "未送達"
+
 #: app/precision.tsx
 msgid "Not enough notices yet to show a month."
 msgstr "通知還不夠多，暫時無法顯示任何月份。"
@@ -1442,6 +1587,10 @@ msgstr "通知還不夠多，暫時無法顯示任何月份。"
 msgid "Not now"
 msgstr "先不要"
 
+#: app/conversation.tsx
+msgid "Not sure where to start? Tap one to put it in the box."
+msgstr "不知道從哪裡開始？點一句放進輸入框。"
+
 #: src/components/quiet-notice.tsx
 msgid "Not this time"
 msgstr "這次沒有"
@@ -1450,9 +1599,17 @@ msgstr "這次沒有"
 msgid "Nothing has happened yet. Her first morning will be here."
 msgstr "還沒有任何內容。第一則早安訊息會出現在這裡。"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Nothing here matches. Try another word, or All."
+msgstr "沒有符合的內容。換個字試試，或選「全部」。"
+
 #: app/vela-light.tsx
 msgid "Nothing is charged during the pilot, and no card is asked for."
 msgstr "試辦期間不收任何費用，也不需要提供信用卡。"
+
+#: src/components/family-book.tsx
+msgid "Nothing kept yet."
+msgstr "還沒有保存任何內容。"
 
 #: app/onboarding.tsx
 msgid "Nothing reaches her until she says yes. Send her these words; the link tells her what Vela is and asks her."
@@ -1551,7 +1708,6 @@ msgid "Open Telegram with the account that already belongs to your approved pilo
 msgstr "請用已加入您那個獲准試辦家庭的帳號打開 Telegram。點「開始」，複製 Vela 傳給您的連結碼，貼在下方。"
 
 #: app/(tabs)/index.tsx
-#: app/conversation.tsx
 msgid "Open this exchange"
 msgstr "打開這次交流"
 
@@ -1559,7 +1715,7 @@ msgstr "打開這次交流"
 msgid "Open Vela on Telegram"
 msgstr "在 Telegram 打開 Vela"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Opening the book…"
 msgstr "正在打開故事書…"
 
@@ -1657,17 +1813,33 @@ msgstr "照片 {number}"
 msgid "Photo in the family group"
 msgstr "照片在家人群組裡"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Photos"
+msgstr "照片"
+
 #: app/ask.tsx
 #: src/components/photo-slots.tsx
 msgid "Photos are not switched on here yet."
 msgstr "這裡還沒有開啟照片功能。"
 
+#: app/conversation.tsx
+msgid "Photos for her morning"
+msgstr "放進早安訊息的照片"
+
 #: src/data/useToday.ts
 msgid "picked a photo"
 msgstr "選了一張照片"
 
+#: src/data/chat.ts
+msgid "Picked a photo"
+msgstr "選了一張照片"
+
 #: src/data/useToday.ts
 msgid "picked photo {number}"
+msgstr "選了第 {number} 張照片"
+
+#: src/data/chat.ts
+msgid "Picked photo {number}"
 msgstr "選了第 {number} 張照片"
 
 #: app/onboarding.tsx
@@ -1716,6 +1888,14 @@ msgstr "正在讀取這支手機的通知設定…"
 msgid "Ready"
 msgstr "準備完成"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Recipe"
+msgstr "食譜"
+
+#: src/components/family-book.tsx
+msgid "Recipes"
+msgstr "食譜"
+
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Record again"
@@ -1760,6 +1940,10 @@ msgstr "移除電話號碼"
 #: src/components/photo-slots.tsx
 msgid "Replace"
 msgstr "換一張"
+
+#: src/data/chat.ts
+msgid "Replied"
+msgstr "回覆了"
 
 #: app/exchange/[id].tsx
 msgid "Reply"
@@ -1816,7 +2000,11 @@ msgstr "儲存電話號碼"
 
 #: app/conversation.tsx
 msgid "Save for their first morning"
-msgstr ""
+msgstr "留到第一個早晨"
+
+#: src/data/chat.ts
+msgid "Save me two for Sunday?"
+msgstr "星期天幫我留兩顆好嗎？"
 
 #: app/morning-settings.tsx
 msgid "Save morning settings"
@@ -1824,7 +2012,7 @@ msgstr "儲存早安設定"
 
 #: app/conversation.tsx
 msgid "Saved for their first morning after they join."
-msgstr ""
+msgstr "已保存，會在加入後的第一個早晨送出。"
 
 #: app/(tabs)/index.tsx
 #: app/away.tsx
@@ -1836,26 +2024,50 @@ msgstr ""
 msgid "Saving…"
 msgstr "儲存中…"
 
+#: app/conversation.tsx
+msgid "Say hello to {name}"
+msgstr "跟{name}打聲招呼"
+
 #: app/ask.tsx
 msgid "Say it the way you would say it"
 msgstr "用您平常說話的方式寫"
 
-#: app/conversation.tsx
-msgid "Say it while it is on your mind. Their daily morning stays scheduled."
-msgstr ""
+#: src/components/chat/chat-link.tsx
+msgid "Say something now. It reaches {name}'s chat right away."
+msgstr "現在說點什麼，會馬上送到{name}的聊天室。"
 
 #: app/exchange/[id].tsx
 msgid "Say something short"
 msgstr "寫一句簡短的話"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Search her words"
+msgstr "搜尋說過的話"
+
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
 msgstr "看看 Vela Light"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Seen"
+msgstr "已看過"
 
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 msgid "Send"
 msgstr "傳送"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Send {from} a heart"
+msgstr "送{from}一顆愛心"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Send {from} a hug"
+msgstr "送{from}一個擁抱"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Send {from} a laugh"
+msgstr "對{from}笑一個"
 
 #: app/morning-settings.tsx
 msgid "Send it as me"
@@ -1875,15 +2087,11 @@ msgstr "送出我的回答"
 
 #: app/conversation.tsx
 msgid "Send now"
-msgstr ""
+msgstr "現在送出"
 
 #: src/components/photo-reply.tsx
 msgid "Send photo"
 msgstr "送出照片"
-
-#: app/(tabs)/index.tsx
-msgid "Send something now, or leave a question for their morning."
-msgstr "現在就傳點什麼，或留一個問題給對方的早上。"
 
 #: app/ask.tsx
 msgid "Send to {name}"
@@ -1894,10 +2102,10 @@ msgid "Send voice reply"
 msgstr "送出語音回覆"
 
 #: app/ask.tsx
-#: app/conversation.tsx
 #: app/exchange/[id].tsx
 #: app/parent.tsx
 #: app/sign-in.tsx
+#: src/components/chat/chat-bubble.tsx
 #: src/components/photo-reply.tsx
 #: src/components/story-day.tsx
 #: src/components/today-heart.tsx
@@ -1956,6 +2164,7 @@ msgstr "這位家人還沒有回覆，所以目前沒有可以回應的內容。
 msgid "She hears it in her read-back tomorrow morning."
 msgstr "這位家人明天早上會在早安訊息裡看到。"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "She is never letting that go"
 msgstr "媽媽會把這件事念一輩子"
@@ -1995,6 +2204,10 @@ msgstr "顯示測試登入資訊"
 #: app/(tabs)/exchanges.tsx
 msgid "Show translations"
 msgstr "顯示翻譯"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Shows hearts, laughs and hugs to send"
+msgstr "顯示可以送出的愛心、笑臉和擁抱"
 
 #: app/parent.tsx
 msgid "Sign in as family"
@@ -2058,8 +2271,12 @@ msgid "Someone who could look in, if it goes quiet"
 msgstr "安靜的日子裡，可以過去看看的人"
 
 #: app/conversation.tsx
-msgid "Something for {name}"
-msgstr ""
+msgid "Something for {name}'s morning"
+msgstr "給{name}早晨的東西"
+
+#: src/components/chat/chat-composer.tsx
+msgid "Something for her morning"
+msgstr "放進早安訊息"
 
 #: app/(tabs)/sunday.tsx
 msgid "Something to ask next week"
@@ -2100,6 +2317,15 @@ msgstr "留下"
 msgid "Stop"
 msgstr "停止"
 
+#: app/(tabs)/exchanges.tsx
+#: src/components/family-book.tsx
+msgid "Stories"
+msgstr "故事"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Story"
+msgstr "故事"
+
 #: src/components/story-day.tsx
 msgid "Story day · {name} · {day}"
 msgstr "故事日・{name}・{day}"
@@ -2131,29 +2357,21 @@ msgstr "台灣"
 msgid "Take it back"
 msgstr "收回"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Take it out"
 msgstr "移除故事"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Take this story out of the book"
 msgstr "把這個故事從書中移除"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Take this story out of the family book?"
 msgstr "要從家庭故事書移除這段故事嗎？"
 
-#: app/exchange/[id].tsx
-msgid "Talk now"
-msgstr "現在聊聊"
-
-#: app/conversation.tsx
+#: src/components/chat/chat-link.tsx
 msgid "Talk with {name}"
-msgstr ""
-
-#: app/(tabs)/index.tsx
-msgid "Talk with {recipient}"
-msgstr "和{recipient}聊聊"
+msgstr "跟{name}聊聊"
 
 #: src/data/useToday.ts
 msgid "tapped an answer"
@@ -2205,7 +2423,7 @@ msgstr "連結沒有完成。請檢查連結碼和 Telegram 帳號後再試一�
 
 #: app/conversation.tsx
 msgid "That could not be confirmed. Your words are still here. Retry to confirm the same message."
-msgstr ""
+msgstr "無法確認是否送出。你寫的話還在，請重試確認同一則訊息。"
 
 #: app/onboarding.tsx
 msgid "That could not be saved just now. Nothing was lost; try again."
@@ -2219,6 +2437,7 @@ msgstr "暫時無法儲存，請稍後再試。"
 msgid "That could not be saved just now. Your changes are still here. Try again."
 msgstr "暫時無法儲存。更改的內容都還在，請再試一次。"
 
+#: app/conversation.tsx
 #: src/components/story-day.tsx
 msgid "That could not be sent just now. Try again in a moment."
 msgstr "暫時無法送出，請稍後再試。"
@@ -2291,7 +2510,7 @@ msgstr "這張照片已經不在了，請重新選擇。"
 msgid "That recording did not save. Try again."
 msgstr "這段錄音沒有存好，請再錄一次。"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "That story could not be removed. Try again."
 msgstr "無法移除這個故事，請再試一次。"
 
@@ -2332,14 +2551,15 @@ msgid "The exchanges could not be reached just now."
 msgstr "目前無法載入問答。"
 
 #: app/book.tsx
+#: src/components/family-book.tsx
 msgid "The family book"
 msgstr "家庭故事書"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "The family book could not be reached just now."
 msgstr "暫時無法開啟家庭故事書。"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "The family book fills with the stories she tells on story day."
 msgstr "故事日說出的故事會收進家庭故事書。"
 
@@ -2407,6 +2627,11 @@ msgstr "暫時無法取得安靜通知。如果您擔心，請直接聯絡您的
 msgid "The send could not be confirmed. Retry the saved attempt to finish the same send."
 msgstr "無法確認是否已送出。請重試已保存的那一次，完成同一次傳送。"
 
+#: src/components/family-book.tsx
+msgid "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
+msgstr "故事日說的故事和分享的食譜，連同聲音，在三十天後也會留在這裡。"
+
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
@@ -2415,6 +2640,10 @@ msgstr "番茄終於紅了。早餐前我摘了三顆，放在窗台上。"
 #: src/audio/VoicePlayback.tsx
 msgid "The voice is still being prepared. Try again shortly."
 msgstr "語音還在準備中，請稍後再試。"
+
+#: app/(tabs)/sunday.tsx
+msgid "The weekly read · {range}"
+msgstr "每週回顧 · {range}"
 
 #: app/(tabs)/sunday.tsx
 msgid "The weekly read could not be reached just now."
@@ -2454,7 +2683,7 @@ msgstr "這台裝置無法從這裡分享。請複製上面的文字，自己傳
 
 #: app/conversation.tsx
 msgid "This draft could not be saved on this phone. Keep this screen open and try again."
-msgstr ""
+msgstr "這份草稿無法存在這支手機上。請先別關閉這個畫面，再試一次。"
 
 #: app/ask.tsx
 #: app/exchange/[id].tsx
@@ -2480,7 +2709,7 @@ msgstr "這是您自己的早安訊息；回覆是給家人的。"
 
 #: src/data/useExchanges.ts
 msgid "This message could not be delivered. Their daily morning is unchanged."
-msgstr ""
+msgstr "這則訊息無法送達。每天的早安訊息不受影響。"
 
 #: app/precision.tsx
 msgid "This page could not be reached just now."
@@ -2514,6 +2743,12 @@ msgstr "這張照片無法使用，請換一張。"
 msgid "This voice is no longer available."
 msgstr "這段語音已經無法使用。"
 
+#: app/(tabs)/exchanges.tsx
+#: src/components/connection-windows.tsx
+msgid "This week"
+msgstr "這週"
+
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "Those are the ones from the seeds you saved"
@@ -2523,7 +2758,7 @@ msgstr "那些就是您留下來的種子種出來的"
 msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 msgstr "時間以 {zone} 為準。今天的早安訊息維持在 {timeAgain}，新時間從明天開始。"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "Tips"
 msgstr "小叮嚀"
 
@@ -2536,6 +2771,7 @@ msgid "Toast and tea"
 msgstr "吐司配茶"
 
 #: app/away.tsx
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Today"
 msgstr "今天"
@@ -2607,7 +2843,6 @@ msgstr "無法登入嗎？"
 #: app/(tabs)/sunday.tsx
 #: app/(tabs)/you.tsx
 #: app/away.tsx
-#: app/book.tsx
 #: app/conversation.tsx
 #: app/exchange/[id].tsx
 #: app/morning-settings.tsx
@@ -2615,6 +2850,7 @@ msgstr "無法登入嗎？"
 #: app/onboarding.tsx
 #: app/precision.tsx
 #: app/vela-light.tsx
+#: src/components/family-book.tsx
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 msgid "Try again"
@@ -2643,6 +2879,10 @@ msgstr "附近的聯絡人最多兩位。請先移除一位，再加入其他人
 #: src/data/ask.ts
 msgid "Two photos"
 msgstr "兩張照片"
+
+#: app/conversation.tsx
+msgid "Two photos to choose between, or one to talk about."
+msgstr "兩張照片讓長輩選一張，或一張照片聊聊。"
 
 #: app/sign-in.tsx
 msgid "Type your email, and we send you a code."
@@ -2706,6 +2946,10 @@ msgstr "使用這個建議"
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
 msgstr "通常在 {time} 前回覆"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "Vela · her morning · {time}"
+msgstr "Vela · 早安訊息 · {time}"
 
 #: app/(tabs)/index.tsx
 msgid "Vela cannot reach {name} on {channel}"
@@ -2793,6 +3037,10 @@ msgstr "Vela 的建議"
 msgid "Vela suggests · from her own words"
 msgstr "Vela 的建議 · 取自這位家人說過的話"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Vela's hello at {time}: {text}"
+msgstr "Vela 在 {time} 的問候：{text}"
+
 #: src/components/service-status.tsx
 msgid "Vela's last scheduled check completed."
 msgstr "Vela 最近一次的排程檢查已完成。"
@@ -2801,6 +3049,10 @@ msgstr "Vela 最近一次的排程檢查已完成。"
 #: src/data/onboarding.ts
 msgid "Vietnam"
 msgstr "越南"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Voice"
+msgstr "語音"
 
 #: src/components/voice-hello.tsx
 msgid "Voice hello, {time}. It plays before your ask."
@@ -2813,6 +3065,10 @@ msgstr "語音，{time}。早上會播給對方聽。"
 #: src/data/useToday.ts
 msgid "voted"
 msgstr "投了票"
+
+#: src/data/chat.ts
+msgid "Voted"
+msgstr "投票了"
 
 #: src/components/quiet-notice.tsx
 msgid "Wait 2 hours"
@@ -2846,6 +3102,10 @@ msgstr "我們已經把驗證碼傳到 {sentTo}。"
 msgid "We will text {phone}."
 msgstr "我們會傳簡訊到 {phone}。"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Week of {date}"
+msgstr "{date}起的一週"
+
 #: app/(tabs)/sunday.tsx
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr "{name}這週跟您說了什麼、哪些事提了兩次，以及下次可以問{name}什麼。前 30 天免費。"
@@ -2858,6 +3118,7 @@ msgstr "這週有什麼讓您期待的事嗎？"
 msgid "What are you sending?"
 msgstr "您要傳什麼？"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "What did the garden look like this morning?"
@@ -2870,6 +3131,10 @@ msgstr "您早餐吃了什麼？"
 #: src/data/today.ts
 msgid "What seeds did you save from last year's garden?"
 msgstr "去年花園裡的種子，您留下了哪些？"
+
+#: app/(tabs)/exchanges.tsx
+msgid "What she told you this month, and the stories the family keeps for good."
+msgstr "這個月說過的話，和家人永久保存的故事。"
 
 #: app/onboarding.tsx
 msgid "What should {name}'s first morning ask?"
@@ -2928,6 +3193,7 @@ msgstr "哪天都可以"
 msgid "Which one do you like more?"
 msgstr "您比較喜歡哪一張？"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Which one of us did you teach to make the pies?"
 msgstr "您當初是教我們哪一個做派的？"
@@ -2956,25 +3222,21 @@ msgstr "您的燈亮著時，家人也會看到您每天早上有沒有回覆、
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 msgstr "您傳過的文字、照片和語音訊息會留在家庭中，因為那是家人日常的一部分。"
 
-#: app/conversation.tsx
-msgid "Write something they will recognise as you. It waits for their yes."
-msgstr ""
-
-#: app/(tabs)/index.tsx
-msgid "Write their first message"
-msgstr "寫下第一則訊息"
-
-#: app/(tabs)/index.tsx
-msgid "Write their first message while you wait for their yes."
-msgstr "等對方答應的同時，先寫好第一則訊息。"
+#: src/components/chat/chat-link.tsx
+msgid "Write something for when {name} says yes."
+msgstr "寫點什麼，等{name}答應後送出。"
 
 #: app/conversation.tsx
 msgid "Write to {name}"
-msgstr ""
+msgstr "寫給{name}"
 
 #: src/components/story-day.tsx
 msgid "Write your own question"
 msgstr "自己寫一個問題"
+
+#: src/components/chat/chat-bubble.tsx
+msgid "written by Vela"
+msgstr "Vela 代筆"
 
 #: src/components/set-up-phone.tsx
 msgid "Yes, this is {name}'s phone"
@@ -2984,11 +3246,14 @@ msgstr "是的，這是{name}的手機"
 msgid "Yes, useful"
 msgstr "有，很有幫助"
 
+#: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Yesterday"
 msgstr "昨天"
 
 #: app/exchange/[id].tsx
+#: src/components/chat/chat-bubble.tsx
+#: src/components/chat/chat-link.tsx
 #: src/data/family.ts
 #: src/data/useFamily.ts
 msgid "You"
@@ -2999,6 +3264,10 @@ msgstr "我"
 msgctxt "tab"
 msgid "You"
 msgstr "我"
+
+#: src/components/connection-windows.tsx
+msgid "You and {name}"
+msgstr "你和{name}"
 
 #: app/(tabs)/you.tsx
 msgid "You are paused: no turns come to you, and you are not told if it goes quiet."
@@ -3028,7 +3297,7 @@ msgstr "你可以探索範例家庭。這裡不會傳送任何訊息。"
 msgid "You can reply once she has answered."
 msgstr "等這位家人回覆之後，您就可以回應。"
 
-#: app/book.tsx
+#: src/components/family-book.tsx
 msgid "You need"
 msgstr "材料"
 
@@ -3126,7 +3395,7 @@ msgstr "您的名字、您寫的提問，以及您的回覆。"
 
 #: app/conversation.tsx
 msgid "Your parent"
-msgstr ""
+msgstr "你的家長"
 
 #: app/(tabs)/you.tsx
 msgid "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
@@ -3155,3 +3424,7 @@ msgstr "您的 Telegram 聊天室"
 #: src/components/voice-reply.tsx
 msgid "Your voice reply, {time} long."
 msgstr "您的語音回覆，共 {time}。"
+
+#: app/conversation.tsx
+msgid "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."
+msgstr "你的話會馬上送到{name}的聊天室，並署上你的名字。早安訊息照常送出。"

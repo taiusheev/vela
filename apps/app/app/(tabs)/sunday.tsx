@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryDay, StoryOfTheWeek } from "../../src/components/story-day.tsx";
@@ -15,6 +16,8 @@ import {
   SecondaryButton,
   Words,
 } from "../../src/components/ui.tsx";
+import { localDayMonth } from "../../src/data/format.ts";
+import { selectedLight } from "../../src/data/selected-light.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
@@ -116,6 +119,13 @@ function FamilySunday({ day }: { day: TodayView }) {
       : undefined,
   );
   const name = read.name;
+  const windowsFor = selectedLight(day.today.lights, view.memberId ?? selected);
+  const first = read.week?.lights[0]?.date;
+  const lastDay = read.week?.lights.at(-1)?.date;
+  const range =
+    first === undefined || lastDay === undefined
+      ? ""
+      : `${localDayMonth(first)} – ${localDayMonth(lastDay)}`;
 
   return (
     <ScrollView
@@ -132,6 +142,8 @@ function FamilySunday({ day }: { day: TodayView }) {
       {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
       <ScreenHeading title={<Trans context="tab">Sunday</Trans>} />
       <ParentChooser lights={day.today.lights} selected={view.memberId} onSelect={select} />
+      {/* This week first: the windows the family lit, Monday to Sunday (consumer flow row 93). */}
+      {windowsFor === undefined ? null : <ConnectionWindows light={windowsFor} />}
       {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}
       {view.loading ? (
         <Words variant="body" tone="ink2">
@@ -161,6 +173,11 @@ function FamilySunday({ day }: { day: TodayView }) {
             <Eyebrow>
               <Trans>{name}'s week</Trans>
             </Eyebrow>
+            {range.length === 0 ? null : (
+              <Words variant="caption" tone="ink3">
+                {t`The weekly read · ${range}`}
+              </Words>
+            )}
             <WeekRow lights={read.week.lights} />
           </Card>
           {read.locked && capabilities?.billing !== true ? (

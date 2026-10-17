@@ -1,43 +1,73 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ComposeAsk } from "@vela/contracts";
+import { ASK_BANK, type AskBankLang } from "@vela/copy";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
+  Text,
   useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiConfigured, composeAsk } from "../src/api/client.ts";
+import { apiConfigured, composeAsk, replyTo } from "../src/api/client.ts";
+import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
+import { BrandIcon } from "../src/components/brand/icon.tsx";
+import { ActionSheet, type SheetAction } from "../src/components/chat/action-sheet.tsx";
+import { ChatBubble, DayChip } from "../src/components/chat/chat-bubble.tsx";
+import { ChatComposer } from "../src/components/chat/chat-composer.tsx";
+import { Light } from "../src/components/light.tsx";
+import { SecondaryButton, Words } from "../src/components/ui.tsx";
+import { canAsk } from "../src/data/ask-target.ts";
 import {
-  Card,
-  Hairline,
-  PrimaryButton,
-  SecondaryButton,
-  TextField,
-  Words,
-} from "../src/components/ui.tsx";
+  type ChatMessage,
+  type ChatReactionKind,
+  chatFixture,
+  dayLabel,
+  localDateIn,
+  startsGroup,
+  toChat,
+} from "../src/data/chat.ts";
+import { clockTime } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
+import { useCallingNumber } from "../src/data/useCallingNumber.ts";
 import { useExchanges } from "../src/data/useExchanges.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { useDraft } from "../src/storage/useDraft.ts";
 import { usePalette } from "../src/theme/theme.tsx";
-import { space } from "../src/theme/tokens.ts";
+import { hitSlop, radius, space, type } from "../src/theme/tokens.ts";
 
 const UNLINKED = "pending";
 
-/** Anytime text and the existing morning ritual share a person, without sharing a daily slot. */
+/**
+ * The chat with one parent (consumer flow, rows 39–52): her messages, the family's, and the reader's
+ * own, in order, with words that go to her messenger now. Her daily morning keeps its own rhythm;
+ * "+" leaves something for it instead. Built from the family's exchanges, so a reply she sends to a
+ * message from here lands under it (flows §3.9).
+ */
 export default function ConversationScreen() {
   const { recipient } = useLocalSearchParams<{ recipient?: string }>();
   const day = useToday();
   return <Conversation key={`${day.familyId ?? UNLINKED}:${recipient ?? UNLINKED}`} />;
+}
+
+/** Three of the bank's questions in the family's voice, changing by the day, to start with. */
+function starters(lang: AskBankLang): string[] {
+  const questions = ASK_BANK.filter((item) => item.type === "question");
+  const offset = Math.floor(Date.now() / 86_400_000) % questions.length;
+  return [0, 7, 14].flatMap((step) => {
+    const item = questions[(offset + step) % questions.length];
+    return item === undefined ? [] : [item.child[lang]];
+  });
 }
 
 function Conversation() {
@@ -60,10 +90,18 @@ function Conversation() {
   const inlineComposer = fontScale > 1.3;
   const scroll = useRef<ScrollView>(null);
   const following = useRef(true);
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
+  const lang: AskBankLang = i18n.locale === "zh-TW" ? "zh-TW" : "en";
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
   const draft = useDraft(`conversation.${day.familyId ?? UNLINKED}.${light?.memberId ?? UNLINKED}`);
-  const [receipt, setReceipt] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<"more" | "menu" | null>(null);
+  // What the reader sent in the demo, and the words of a send still on its way.
+  const [demoSent, setDemoSent] = useState<ChatMessage[]>([]);
+  const [demoReactions, setDemoReactions] = useState<Record<string, ChatReactionKind[]>>({});
+  const [pending, setPending] = useState<string | null>(null);
+  const calling = useCallingNumber(day.familyId, light?.memberId);
+  const reactKey = useIdempotencyKey("chat-reaction");
   useFocusEffect(
     useCallback(() => {
       history.refresh();
@@ -72,6 +110,7 @@ function Conversation() {
   );
   const name = light?.displayName ?? t`Your parent`;
   const invited = light?.invited === true;
+
   const send = useMutation({
     mutationFn: async () => {
       if (demo) return { when: "now" };
@@ -89,100 +128,305 @@ function Conversation() {
       await composeAsk(day.familyId, await draft.keyFor(request), request, await account.token());
       return { when: request.when };
     },
-    onSuccess: async (accepted) => {
-      await draft.clear();
-      setReceipt(
-        demo
-          ? t`Example only. Nothing was sent.`
-          : accepted.when === "whenever"
-            ? t`Saved for their first morning after they join.`
-            : t`Accepted for delivery. This is not a read receipt.`,
-      );
-      void queries.invalidateQueries({ queryKey: ["exchanges"] });
-      void queries.invalidateQueries({ queryKey: ["today"] });
+    onMutate: () => {
+      setNote(null);
+      setPending(draft.text.trim());
+      following.current = true;
     },
+    onSuccess: async (accepted) => {
+      const words = draft.text.trim();
+      await draft.clear();
+      if (demo) {
+        const now = new Date();
+        setDemoSent((earlier) => [
+          ...earlier,
+          {
+            key: `demo:${earlier.length}`,
+            exchangeId: `demo:${earlier.length}`,
+            side: "me",
+            from: "Mia",
+            at: now.getTime(),
+            day: localDateIn(now.getTime()),
+            time: clockTime(now.getHours(), now.getMinutes()),
+            text: words,
+            status: "delivered",
+            reactions: [],
+          },
+        ]);
+        setNote(t`Example only. Nothing was sent.`);
+      } else if (accepted.when === "whenever") {
+        setNote(t`Saved for their first morning after they join.`);
+      }
+      await Promise.all([
+        queries.invalidateQueries({ queryKey: ["exchanges"] }),
+        queries.invalidateQueries({ queryKey: ["today"] }),
+      ]);
+    },
+    onSettled: () => setPending(null),
   });
+
+  const react = useMutation({
+    mutationFn: async ({ exchangeId, kind }: { exchangeId: string; kind: ChatReactionKind }) => {
+      if (demo) return;
+      await replyTo(
+        exchangeId,
+        reactKey({ exchangeId, kind }),
+        { reaction: kind },
+        await account.token(),
+      );
+    },
+    onSuccess: async (_done, { exchangeId, kind }) => {
+      if (demo) {
+        setDemoReactions((earlier) => ({
+          ...earlier,
+          [exchangeId]: [...(earlier[exchangeId] ?? []), kind],
+        }));
+        return;
+      }
+      await queries.invalidateQueries({ queryKey: ["exchanges"] });
+    },
+    onError: () => setNote(t`That could not be sent just now. Try again in a moment.`),
+  });
+
   const canSend =
     light !== undefined &&
     (demo || day.live) &&
     light.state !== "paused" &&
     light.unreachableOn === undefined;
+
+  const built: ChatMessage[] =
+    light === undefined
+      ? []
+      : demo
+        ? [...chatFixture(name), ...demoSent]
+        : toChat(
+            history.summaries,
+            light.memberId,
+            {
+              ...(day.memberId === undefined ? {} : { id: day.memberId }),
+            },
+            light.timeZone,
+          );
+  // A demo heart shows as given, on her last message of that exchange.
+  const messages = built.map((message) => {
+    const given = demoReactions[message.exchangeId];
+    if (given === undefined || message.side !== "her") return message;
+    const lastOfExchange = built
+      .filter((m) => m.exchangeId === message.exchangeId && m.side === "her")
+      .at(-1);
+    return lastOfExchange?.key !== message.key
+      ? message
+      : {
+          ...message,
+          reactions: [
+            ...message.reactions,
+            ...given.map((kind) => ({ kind, from: "Mia", mine: true })),
+          ],
+        };
+  });
+  if (pending !== null && pending.length > 0) {
+    const now = Date.now();
+    const date = new Date(now);
+    messages.push({
+      key: "pending",
+      exchangeId: "pending",
+      side: "me",
+      from: "",
+      at: now,
+      day: localDateIn(now, light?.timeZone),
+      time: clockTime(date.getHours(), date.getMinutes()),
+      text: pending,
+      status: "sending",
+      reactions: [],
+    });
+  }
+  const today = localDateIn(Date.now(), demo ? undefined : light?.timeZone);
+
+  const moreActions: SheetAction[] =
+    light === undefined || !canAsk(light)
+      ? []
+      : [
+          {
+            icon: "ask",
+            label: t`A question for her morning`,
+            detail: t`Choose the morning; Vela delivers it then.`,
+            onPress: () => router.push({ pathname: "/ask", params: { recipient: light.memberId } }),
+          },
+          ...(day.photos
+            ? [
+                {
+                  icon: "photo" as const,
+                  label: t`Photos for her morning`,
+                  detail: t`Two photos to choose between, or one to talk about.`,
+                  onPress: () =>
+                    router.push({
+                      pathname: "/ask",
+                      params: { recipient: light.memberId, kind: "two_photos" },
+                    }),
+                },
+              ]
+            : []),
+          {
+            icon: "mic",
+            label: t`A voice hello for her morning`,
+            detail: t`About ten seconds, played before the question.`,
+            onPress: () =>
+              router.push({
+                pathname: "/ask",
+                params: { recipient: light.memberId, kind: "voice_note" },
+              }),
+          },
+        ];
+  const menuActions: SheetAction[] =
+    light === undefined
+      ? []
+      : [
+          ...(calling.number === null
+            ? []
+            : [
+                {
+                  icon: "call" as const,
+                  label: t`Call ${name}`,
+                  onPress: () => void Linking.openURL(`tel:${calling.number ?? ""}`),
+                },
+              ]),
+          ...(day.organiser || demo
+            ? [
+                {
+                  icon: "time" as const,
+                  label: t`Change ${name}'s morning`,
+                  onPress: () =>
+                    router.push({
+                      pathname: "/morning-settings",
+                      params: { member: light.memberId },
+                    }),
+                },
+              ]
+            : []),
+          ...(light.state === "paused"
+            ? []
+            : [
+                {
+                  icon: "calendar" as const,
+                  label: t`Is ${name} away?`,
+                  onPress: () =>
+                    router.push({ pathname: "/away", params: { member: light.memberId } }),
+                },
+              ]),
+        ];
+
+  const blockedNote =
+    light === undefined || canSend ? null : (
+      <Words variant="caption" tone="ink2">
+        <Trans>
+          Messaging is unavailable while their connection is paused or cannot be reached. Your draft
+          stays here.
+        </Trans>
+      </Words>
+    );
   const composer = (
     <View
       style={{
         gap: space.s,
-        paddingHorizontal: inlineComposer ? 0 : space.margin,
-        paddingTop: space.m,
-        paddingBottom: insets.bottom + space.m,
-        borderTopWidth: 1,
+        paddingHorizontal: inlineComposer ? 0 : space.l,
+        paddingTop: space.s,
+        paddingBottom: (inlineComposer ? 0 : insets.bottom) + space.s,
+        borderTopWidth: inlineComposer ? 0 : 1,
         borderTopColor: palette.rule,
         backgroundColor: palette.bg,
       }}
     >
-      <TextField
-        label={t`Something for ${name}`}
-        value={draft.text}
-        onChangeText={(text) => {
-          draft.setText(text);
-          setReceipt(null);
-        }}
-        placeholder={t`Write to ${name}`}
-        multiline
-        maxLength={1000}
-        disabled={send.isPending}
-      />
-      <PrimaryButton
-        label={
-          send.isPending ? t`Sending…` : invited ? t`Save for their first morning` : t`Send now`
-        }
-        onPress={() => send.mutate()}
-        disabled={!canSend || !draft.ready || draft.text.trim() === "" || send.isPending}
-      />
+      {blockedNote}
       {draft.saveFailed ? (
-        <Words>
+        <Words variant="caption" tone="ink2">
           <Trans>
             This draft could not be saved on this phone. Keep this screen open and try again.
           </Trans>
         </Words>
       ) : null}
-      {!canSend ? (
-        <Words tone="ink2">
-          <Trans>
-            Messaging is unavailable while their connection is paused or cannot be reached. Your
-            draft stays here.
-          </Trans>
-        </Words>
-      ) : null}
       {send.isError ? (
-        <Words>
+        <Words variant="caption" tone="ink2">
           <Trans>
             That could not be confirmed. Your words are still here. Retry to confirm the same
             message.
           </Trans>
         </Words>
       ) : null}
-      {receipt === null ? null : (
+      {note === null ? null : (
         <View accessibilityLiveRegion="polite">
-          <Words>{receipt}</Words>
+          <Words variant="caption" tone="ink2">
+            {note}
+          </Words>
         </View>
       )}
       {light === undefined ? (
         <SecondaryButton label={t`Go to You`} onPress={() => router.push("/(tabs)/you")} />
       ) : (
-        <SecondaryButton
-          label={t`Leave something for their morning`}
-          onPress={() => router.push({ pathname: "/ask", params: { recipient: light?.memberId } })}
+        <ChatComposer
+          value={draft.text}
+          onChangeText={(text) => {
+            draft.setText(text);
+            setNote(null);
+          }}
+          placeholder={t`Write to ${name}`}
+          sendLabel={invited ? t`Save for their first morning` : t`Send now`}
+          onSend={() => send.mutate()}
+          {...(moreActions.length === 0 ? {} : { onMore: () => setSheet("more") })}
+          disabled={send.isPending || !draft.ready}
+          canSend={canSend}
         />
       )}
     </View>
   );
+
   return (
     <>
       <Stack.Screen
-        options={{ headerShown: true, title: name, headerLeft: () => <BackButton /> }}
+        options={{
+          headerShown: true,
+          title: name,
+          headerLeft: () => <BackButton />,
+          headerTitle: () =>
+            light === undefined ? (
+              <Text style={[type.heading, { color: palette.ink }]}>{name}</Text>
+            ) : (
+              <View
+                accessible
+                accessibilityRole="header"
+                accessibilityLabel={`${name}, ${light.stateText}`}
+                style={{ flexDirection: "row", alignItems: "center", gap: space.s }}
+              >
+                <Light state={light.answerReceived === true ? "lit" : light.state} height={26} />
+                <View>
+                  <Text style={[type.heading, { color: palette.ink }]}>{name}</Text>
+                  <Text style={[type.caption, { color: palette.ink3 }]}>{light.stateText}</Text>
+                </View>
+              </View>
+            ),
+          headerRight: () =>
+            menuActions.length === 0 ? null : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t`More for ${name}`}
+                testID="chat-menu"
+                hitSlop={hitSlop}
+                onPress={() => setSheet("menu")}
+                style={{
+                  width: 44,
+                  height: 44,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginRight: space.s,
+                }}
+              >
+                <BrandIcon name="more" color={palette.action} size={26} strokeWidth={3.2} />
+              </Pressable>
+            ),
+        }}
       />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0}
         style={{ flex: 1, backgroundColor: palette.bg }}
       >
         <ScrollView
@@ -203,70 +447,127 @@ function Conversation() {
             <RefreshControl refreshing={history.refreshing} onRefresh={history.refresh} />
           }
           contentContainerStyle={{
-            padding: space.margin,
-            paddingBottom: insets.bottom + space.xxxl,
-            gap: space.l,
+            flexGrow: 1,
+            paddingHorizontal: space.l,
+            paddingTop: space.l,
+            paddingBottom: space.l,
           }}
         >
-          <Words variant="title">
-            <Trans>Talk with {name}</Trans>
-          </Words>
-          <Words tone="ink2">
-            {invited
-              ? t`Write something they will recognise as you. It waits for their yes.`
-              : t`Say it while it is on your mind. Their daily morning stays scheduled.`}
-          </Words>
-          {history.loading ? (
-            <Words>
-              <Trans>Loading your conversation…</Trans>
+          <View style={{ alignItems: "center", paddingHorizontal: space.l, gap: space.xs }}>
+            <Words variant="caption" tone="ink3">
+              {invited
+                ? t`${name} has not said yes yet. What you write waits for their first morning.`
+                : t`Your words reach ${name}'s chat now, signed with your name. Their morning stays as it is.`}
             </Words>
+          </View>
+          {history.more ? (
+            <View style={{ alignItems: "center", paddingTop: space.m }}>
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={hitSlop}
+                onPress={() => {
+                  following.current = false;
+                  history.loadMore();
+                }}
+                style={{ minHeight: 44, justifyContent: "center" }}
+              >
+                <Words variant="button" tone="action">
+                  <Trans>Earlier messages</Trans>
+                </Words>
+              </Pressable>
+            </View>
+          ) : null}
+          {history.loading && !demo ? (
+            <View style={{ paddingTop: space.xl, alignItems: "center" }}>
+              <Words variant="body" tone="ink2">
+                <Trans>Loading your conversation…</Trans>
+              </Words>
+            </View>
           ) : null}
           {history.trouble ? (
-            <SecondaryButton label={t`Try again`} onPress={history.refresh} />
+            <View style={{ paddingTop: space.xl }}>
+              <SecondaryButton label={t`Try again`} onPress={history.refresh} />
+            </View>
           ) : null}
-          {history.exchanges
-            .filter((exchange) => exchange.recipientId === light?.memberId)
-            .slice()
-            .reverse()
-            .map((exchange) => (
-              <Card key={exchange.id}>
-                <Words variant="caption" tone="ink2">
-                  {exchange.asker} · {exchange.day}
-                </Words>
-                <Words>{exchange.ask}</Words>
-                {exchange.deliveryNotice === undefined ? null : (
-                  <Words tone="ink2">{exchange.deliveryNotice}</Words>
-                )}
-                {exchange.answer === undefined ? null : (
-                  <>
-                    <Hairline />
-                    <Words variant="caption" tone="ink2">
-                      {name} · {exchange.answer.at}
-                    </Words>
-                    <Words>{exchange.answer.text}</Words>
-                  </>
-                )}
-                <SecondaryButton
-                  label={t`Open this exchange`}
-                  onPress={() =>
-                    router.push({ pathname: "/exchange/[id]", params: { id: exchange.id } })
-                  }
-                />
-              </Card>
-            ))}
-          {history.more ? (
-            <SecondaryButton
-              label={t`Earlier messages`}
-              onPress={() => {
-                following.current = false;
-                history.loadMore();
+          {messages.length === 0 && !history.loading && light !== undefined ? (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                gap: space.l,
+                paddingVertical: space.xxl,
               }}
-            />
+            >
+              <View style={{ alignItems: "center", gap: space.m }}>
+                <Light state="resting" height={56} />
+                <Words variant="title">
+                  <Trans>Say hello to {name}</Trans>
+                </Words>
+              </View>
+              <Words variant="caption" tone="ink2">
+                <Trans>Not sure where to start? Tap one to put it in the box.</Trans>
+              </Words>
+              <View style={{ gap: space.s }}>
+                {starters(lang).map((starter) => (
+                  <Pressable
+                    key={starter}
+                    accessibilityRole="button"
+                    onPress={() => draft.setText(starter)}
+                    style={({ pressed }) => ({
+                      borderRadius: radius.card + 6,
+                      borderWidth: 1,
+                      borderColor: palette.rule,
+                      backgroundColor: pressed ? palette.surface2 : palette.surface,
+                      paddingHorizontal: space.l,
+                      paddingVertical: space.m,
+                    })}
+                  >
+                    <Text style={[type.body, { color: palette.ink }]}>{starter}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
           ) : null}
-          {inlineComposer ? composer : null}
+          {messages.map((message, index) => {
+            const previous = messages[index - 1];
+            const next = messages[index + 1];
+            const first = startsGroup(previous, message);
+            const last = next === undefined || startsGroup(message, next);
+            return (
+              <View key={message.key}>
+                {previous?.day === message.day ? null : (
+                  <DayChip label={dayLabel(message.day, today)} />
+                )}
+                <ChatBubble
+                  message={message}
+                  first={first}
+                  last={last}
+                  familyId={day.familyId}
+                  {...(message.side === "her" && (demo || day.live)
+                    ? {
+                        onReact: (kind: ChatReactionKind) =>
+                          react.mutate({ exchangeId: message.exchangeId, kind }),
+                        reacting: react.isPending,
+                      }
+                    : {})}
+                />
+              </View>
+            );
+          })}
+          {inlineComposer ? <View style={{ paddingTop: space.xl }}>{composer}</View> : null}
         </ScrollView>
         {inlineComposer ? null : composer}
       </KeyboardAvoidingView>
+      {sheet === "more" ? (
+        <ActionSheet
+          title={t`Something for ${name}'s morning`}
+          actions={moreActions}
+          onClose={() => setSheet(null)}
+        />
+      ) : null}
+      {sheet === "menu" ? (
+        <ActionSheet title={name} actions={menuActions} onClose={() => setSheet(null)} />
+      ) : null}
     </>
   );
 }

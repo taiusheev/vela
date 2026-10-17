@@ -400,7 +400,7 @@ function ExchangeReader({ id }: { id: string }) {
         )}
 
         <SecondaryButton
-          label={t`Talk now`}
+          label={t`Continue in chat`}
           onPress={() =>
             router.push({ pathname: "/conversation", params: { recipient: exchange?.recipientId } })
           }

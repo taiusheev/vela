@@ -33,7 +33,11 @@ function TabIcon({
   );
 }
 
-/** Today · Exchanges · Sunday · You, and no badge counts anywhere (spec §14.1 A6). */
+/**
+ * Today · Memories · Sunday · You, and no badge counts anywhere (spec §14.1 A6). The chat with a
+ * parent opens from Today, as a messenger opens a conversation; Memories keeps her words and the
+ * family book (consumer flow, apps/app/docs/consumer-flow.md).
+ */
 export default function TabsLayout() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
@@ -67,9 +71,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="exchanges"
         options={{
-          title: t({ context: "tab", message: "Exchanges" }),
+          title: t({ context: "tab", message: "Memories" }),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="exchanges" color={color} focused={focused} />
+            <TabIcon name="book" color={color} focused={focused} />
           ),
         }}
       />
@@ -78,7 +82,7 @@ export default function TabsLayout() {
         options={{
           title: t({ context: "tab", message: "Sunday" }),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="sunday" color={color} focused={focused} />
+            <TabIcon name="calendar" color={color} focused={focused} />
           ),
         }}
       />

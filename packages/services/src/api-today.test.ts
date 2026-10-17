@@ -1,5 +1,5 @@
 import { ApiToday, type Lang, type LocalDate } from "@vela/contracts";
-import { askBankText } from "@vela/copy";
+import { askBankChildText } from "@vela/copy";
 import { addDays, localDateOf } from "@vela/core";
 import {
   answers,
@@ -66,8 +66,9 @@ async function load(who: SessionIdentity = identity, familyId = seed.family.id) 
   return loadApiToday(h.db, who, familyId, h.clock.now());
 }
 
+/** A bank suggestion as the family reads it: the item in the family's wording. */
 function bankText(id: string, lang: Lang): string {
-  const text = askBankText(id, lang);
+  const text = askBankChildText(id, lang);
   if (text === undefined) throw new Error(`expected ${id} in the question bank`);
   return text;
 }
@@ -384,10 +385,12 @@ describe("loadApiToday", () => {
         recipient_name: "Mom",
         recipient_tz: "Asia/Taipei",
         asker_name: "Mia",
+        asker_id: seed.organiser.id,
         drafted_by_vela: false,
         on_behalf_of: null,
         type: "question",
         ask: "What did the garden look like this morning?",
+        created_at: exchange.createdAt.toISOString(),
         voice_hello: null,
         answer: {
           kind: "text",
@@ -399,10 +402,32 @@ describe("loadApiToday", () => {
           audio: null,
           photo: null,
         },
+        answers: [
+          {
+            kind: "text",
+            text: "The tomatoes finally turned.",
+            at: answeredAt.toISOString(),
+            picked_media_id: null,
+            picked_number: null,
+            translation: null,
+            audio: null,
+            photo: null,
+          },
+        ],
         replies: [
-          { from: "Mia", kind: "heart", text: null, photo: null, audio: null },
           {
             from: "Mia",
+            from_id: seed.organiser.id,
+            at: new Date(answeredAt.getTime() + 60_000).toISOString(),
+            kind: "heart",
+            text: null,
+            photo: null,
+            audio: null,
+          },
+          {
+            from: "Mia",
+            from_id: seed.organiser.id,
+            at: new Date(answeredAt.getTime() + 120_000).toISOString(),
             kind: "text",
             text: "Those are the seeds you saved",
             photo: null,

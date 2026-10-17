@@ -1391,7 +1391,7 @@ describe("sendTurnPrompt", () => {
 
     await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
     expect((await textOf(TOMORROW))?.message.text).toBe(
-      "Tomorrow is Mia's turn with Mom. Reply to this message with a question, a photo, or a voice note.\n\nIf you'd like an idea: “What did the house you grew up in look like?”",
+      "Tomorrow is Mia's turn with Mom. Reply to this message with a question, a photo, or a voice note.\n\nIf you'd like an idea: “I was trying to picture the house you grew up in. What did it look like?”",
     );
     h.clock.advanceMinutes(24 * 60);
     await sendTurnPrompt(h.deps, seed.member.id, "2026-09-16");

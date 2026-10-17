@@ -1,54 +1,108 @@
+import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { View } from "react-native";
+import { Text, View } from "react-native";
+import { shortDayName } from "../data/format.ts";
 import type { TodayLight } from "../data/today.ts";
-import { space } from "../theme/tokens.ts";
+import { weekWindows } from "../data/week-windows.ts";
+import { usePalette } from "../theme/theme.tsx";
+import { radius, space, type } from "../theme/tokens.ts";
 import { Light } from "./light.tsx";
-import { Words } from "./ui.tsx";
 
-/** A record of real messages, never an inferred wellbeing score or a streak that resets. */
+/**
+ * This week's windows at the top of Sunday: a record of real messages between her and the family,
+ * never an inferred wellbeing score, and never a streak that resets on a quiet day.
+ */
 export function ConnectionWindows({ light }: { light: TodayLight }) {
-  const { t, i18n } = useLingui();
+  const palette = usePalette();
+  const { t } = useLingui();
   const days = light.connectionDays;
-  if (days === undefined) return null;
-  const count = days.filter((day) => day.hasMessage).length;
+  if (days === undefined || days.length === 0) return null;
+  const week = weekWindows(days);
+  const count = week.filter((day) => day.hasMessage).length;
+  const sofar = week.filter((day) => !day.ahead).length;
   const name = light.displayName;
   return (
-    <View style={{ gap: space.m }}>
-      <Words variant="heading">
-        <Trans>
-          {name} · {count} days with messages
-        </Trans>
-      </Words>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.xs }}>
-        {days.map((day) => {
-          const date = new Date(`${day.date}T12:00:00Z`);
-          const label = date.toLocaleDateString(i18n.locale, {
-            timeZone: "UTC",
-            month: "short",
-            day: "numeric",
-          });
+    <View
+      style={{
+        backgroundColor: palette.lightSoft,
+        borderRadius: radius.card + 8,
+        paddingHorizontal: space.l,
+        paddingTop: space.l,
+        paddingBottom: space.l,
+        gap: space.l,
+      }}
+    >
+      <View style={{ gap: space.xs }}>
+        <Text style={[type.label, { color: palette.ink2, textTransform: "uppercase" }]}>
+          <Trans>This week</Trans>
+        </Text>
+        <Text accessibilityRole="header" style={[type.title, { color: palette.ink }]}>
+          <Trans>You and {name}</Trans>
+        </Text>
+        <Text style={[type.body, { color: palette.ink2 }]}>
+          {sofar === 7
+            ? plural(count, {
+                one: "# day with messages this week",
+                other: "# days with messages this week",
+              })
+            : plural(count, {
+                one: "# day with messages so far",
+                other: "# days with messages so far",
+              })}
+        </Text>
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        {week.map((day) => {
+          const label = shortDayName(day.date);
           return (
             <View
               key={day.date}
               accessible
               accessibilityLabel={
-                day.hasMessage ? t`${label}: a family message` : t`${label}: no message recorded`
+                day.ahead
+                  ? t`${label}: still to come`
+                  : day.hasMessage
+                    ? t`${label}: a family message`
+                    : t`${label}: no message recorded`
               }
-              style={{ alignItems: "center", gap: space.xs, flex: 1 }}
+              style={{ alignItems: "center", gap: space.s, flex: 1 }}
             >
-              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                <Light state={day.hasMessage ? "lit" : "resting"} height={44} />
+              <View
+                style={{ opacity: day.ahead ? 0.35 : 1 }}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                <Light state={day.hasMessage ? "lit" : "resting"} height={40} />
               </View>
-              <Words variant="caption" tone="ink2">
-                {date.toLocaleDateString(i18n.locale, { timeZone: "UTC", weekday: "narrow" })}
-              </Words>
+              <Text
+                style={[
+                  type.caption,
+                  {
+                    color: day.today ? palette.ink : palette.ink2,
+                    fontFamily: day.today ? type.heading.fontFamily : type.caption.fontFamily,
+                  },
+                ]}
+              >
+                {label}
+              </Text>
+              <View
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: day.today ? palette.lightDeep : "transparent",
+                }}
+              />
             </View>
           );
         })}
       </View>
-      <Words variant="caption" tone="ink2">
-        <Trans>A window for each day with a message. Quiet days keep the earlier lights.</Trans>
-      </Words>
+      <Text style={[type.caption, { color: palette.ink2 }]}>
+        <Trans>
+          A window lights on each day you and {name} share a message. A quiet day never takes the
+          earlier lights away, and Monday starts a new row.
+        </Trans>
+      </Text>
     </View>
   );
 }

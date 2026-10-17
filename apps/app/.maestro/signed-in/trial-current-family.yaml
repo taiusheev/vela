@@ -14,7 +14,7 @@ tags:
 - assertVisible: "Updated .*"
 - assertNotVisible: "Connect your Telegram family"
 - assertNotVisible: "Start the 30 days"
-- tapOn: "Exchanges"
+- tapOn: "Memories"
 - assertNotVisible: "Who are you keeping a light on for?"
 - tapOn: "Today"
 - assertVisible: ${TEST_PARENT_NAME}

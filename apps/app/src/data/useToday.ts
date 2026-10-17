@@ -260,6 +260,8 @@ export interface TodayView {
   noFamily: boolean;
   /** The reader organises this family, so the quiet notice is for them (spec A11). */
   organiser: boolean;
+  /** The reader's own member id in this family, which puts their messages on the right. */
+  memberId?: string;
   /** True only once the real day has arrived; pending live data is empty. */
   live: boolean;
   /**
@@ -354,6 +356,7 @@ export function useToday(): TodayView {
     noAccount,
     noFamily: me.data !== undefined && me.data.memberships.length === 0,
     organiser: membership?.role === "organiser",
+    ...(membership?.member_id === undefined ? {} : { memberId: membership.member_id }),
     live,
     photos: me.data?.photos === true,
     pushSent: me.data?.push === true,
