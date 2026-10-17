@@ -18,7 +18,7 @@ import {
   turns,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   deliverArrival,
   inFirstMornings,
@@ -424,6 +424,117 @@ describe("prepareDay", () => {
     expect(drafted?.chips).toEqual(["Good", "Not yet", "Tell you later"]);
     await prepareDay(h.deps, seed.member.id, TOMORROW);
     expect(h.ai.calls).toHaveLength(1);
+  });
+
+  describe("sent as the organiser who chose it (first test, 16 Oct 2026)", () => {
+    const config = () => h.deps.config as { sendAsMe?: boolean };
+    afterEach(() => {
+      config().sendAsMe = undefined;
+    });
+
+    /** Her day with an AI draft in Mia's voice, and Mia named on her row as the one who signs. */
+    async function signedFamily(
+      draft: { forMia?: boolean; lang?: "en" | "zh-TW"; text?: string } = {},
+    ) {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await h.db
+        .update(members)
+        .set({ suggestionsSignedBy: seed.organiser.id })
+        .where(eq(members.id, seed.member.id));
+      await h.db.insert(suggestions).values({
+        familyId: seed.family.id,
+        forMemberId: draft.forMia === false ? null : seed.organiser.id,
+        aboutMemberId: seed.member.id,
+        localDay: TOMORROW,
+        bankId: "opinions.taste.season",
+        type: "question",
+        text: draft.text ?? "Mom, which season do you love most?",
+        lang: draft.lang ?? "en",
+        promptVersion: "test",
+      });
+      return seed;
+    }
+
+    it("sends the draft in Mia's voice as Mia's ask, marked as Vela's draft, signed by Mia", async () => {
+      config().sendAsMe = true;
+      const seed = await signedFamily();
+
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+      expect(await exchangeById(id)).toMatchObject({
+        type: "question",
+        askerId: seed.organiser.id,
+        text: "Mom, which season do you love most?",
+        draftedByVela: true,
+        scheduledFor: TOMORROW,
+      });
+      const [used] = await h.db.select().from(suggestions);
+      expect(used?.usedAt).toEqual(h.clock.now());
+      // Her family's question takes chips, as any family question does.
+      expect(h.ai.calls.map((call) => call.call)).toEqual(["chips"]);
+
+      h.clock.set(at(TOMORROW, "08:00"));
+      await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+      const [row] = await outboundRows("arrival");
+      const payload = row?.payload as { message: { text: string } } | undefined;
+      expect(payload?.message.text.split("\n\n")[1]).toBe(
+        "Mom, which season do you love most?\n— Mia",
+      );
+    });
+
+    it("keeps Vela's own question while the environment does not allow it", async () => {
+      const seed = await signedFamily();
+
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+      expect(await exchangeById(id)).toMatchObject({
+        type: "hello",
+        askerId: null,
+        draftedByVela: false,
+      });
+    });
+
+    it("never sends a bank row, or a draft in another voice or another language, in Mia's name", async () => {
+      for (const draft of [{ forMia: false }, { lang: "zh-TW" as const }, { text: "" }]) {
+        await h.reset();
+        config().sendAsMe = true;
+        const seed = await signedFamily(draft);
+
+        const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+        expect(await exchangeById(id), JSON.stringify(draft)).toMatchObject({
+          type: "hello",
+          askerId: null,
+          draftedByVela: false,
+        });
+      }
+    });
+
+    it("signs nothing in the name of an organiser who has left", async () => {
+      config().sendAsMe = true;
+      const seed = await signedFamily();
+      await h.db
+        .update(members)
+        .set({ status: "left", leftAt: h.clock.now() })
+        .where(eq(members.id, seed.organiser.id));
+
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+      expect(await exchangeById(id)).toMatchObject({ type: "hello", askerId: null });
+    });
+
+    it("leaves a family member's own ask for the day as it is", async () => {
+      config().sendAsMe = true;
+      const seed = await signedFamily();
+      const ask = await seedExchange(h.db, seed, { date: TOMORROW, state: "composed" });
+
+      const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
+
+      expect(id).toBe(ask.id);
+      expect(await exchangeById(id)).toMatchObject({ draftedByVela: false });
+      const [kept] = await h.db.select().from(suggestions);
+      expect(kept?.usedAt).toBeNull();
+    });
   });
 
   it("drafts no chips for Vela's question whose answer is a name, as the model would invent one", async () => {

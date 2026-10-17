@@ -110,7 +110,11 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
   return (
     <View style={{ gap: space.m, paddingBottom: space.xl }}>
       <Eyebrow>
-        {asker === undefined ? t`A hello for ${recipient}` : t`${asker} asked ${recipient}`}
+        {asker === undefined
+          ? t`A hello for ${recipient}`
+          : exchange.draftedByVela === true
+            ? t`${asker} asked ${recipient} · written by Vela`
+            : t`${asker} asked ${recipient}`}
       </Eyebrow>
       {exchange.deliveryNotice === undefined ? null : (
         <Words variant="bodyMedium">{exchange.deliveryNotice}</Words>
@@ -265,7 +269,9 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
     <Card>
       <Eyebrow>
         {tomorrow.asked !== undefined
-          ? t`Tomorrow · ${by} asked ${recipient}`
+          ? tomorrow.asked.draftedByVela === true
+            ? t`Tomorrow · ${by} asks ${recipient} · written by Vela`
+            : t`Tomorrow · ${by} asked ${recipient}`
           : tomorrow.pending
             ? t`Tomorrow · ${recipient}`
             : tomorrow.mine

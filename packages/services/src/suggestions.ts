@@ -338,6 +338,71 @@ export async function takeFallbackQuestion(
   return { text, takesChips: CHIP_QUESTIONS.has(item.id) };
 }
 
+/** A suggestion Vela sends in an organiser's name: their voice's draft, and who signs it. */
+export interface SignedSuggestion {
+  readonly text: string;
+  readonly type: AskBankType;
+  readonly askerId: string;
+  /** Chips are drafted for a question, as for any family question (spec §5.3). */
+  readonly takesChips: boolean;
+}
+
+/**
+ * The ask Vela sends in an organiser's name on a morning nobody in the family wrote for (first test,
+ * 16 Oct 2026): her unused suggestion for `date`, when it is an AI draft written in the voice of the
+ * organiser her row names (`suggestions_signed_by`), in her language, and that organiser is still an
+ * active organiser of her family. Taking it marks it used. Null otherwise, and the morning falls back
+ * to Vela's own question, signed by Vela: a bank item is never sent in a person's name, and neither
+ * is a draft written in another organiser's voice.
+ *
+ * Called with her member row held `for update`, the lock the organiser's own switch is changed
+ * under (`setApiMorningPreferences`), so a switch turned off before this runs is seen off.
+ */
+export async function takeSignedSuggestion(
+  tx: VelaTransaction,
+  member: Pick<Member, "id" | "familyId" | "language" | "suggestionsSignedBy">,
+  date: LocalDate,
+  now: Date,
+): Promise<SignedSuggestion | null> {
+  const signerId = member.suggestionsSignedBy;
+  if (signerId === null) return null;
+  const [signer] = await tx.select().from(members).where(eq(members.id, signerId)).limit(1);
+  if (
+    signer === undefined ||
+    signer.familyId !== member.familyId ||
+    signer.role !== "organiser" ||
+    signer.status !== "active" ||
+    signer.leftAt !== null
+  ) {
+    return null;
+  }
+  const [row] = await tx
+    .select()
+    .from(suggestions)
+    .where(
+      and(
+        eq(suggestions.aboutMemberId, member.id),
+        eq(suggestions.localDay, date),
+        eq(suggestions.forMemberId, signer.id),
+        isNull(suggestions.usedAt),
+      ),
+    )
+    .limit(1)
+    .for("update");
+  const text = row?.text.trim() ?? "";
+  if (
+    row === undefined ||
+    text === "" ||
+    row.lang !== readerLang(member.language) ||
+    !isAskBankType(row.type) ||
+    DRAFT_GUARDS.some((guard) => guard.test(text))
+  ) {
+    return null;
+  }
+  await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, row.id));
+  return { text, type: row.type, askerId: signer.id, takesChips: row.type === "question" };
+}
+
 // the writer --------------------------------------------------------------------------------------
 
 interface Plan {
@@ -364,7 +429,12 @@ interface WriterContext {
   readonly days: StoredDay[];
   readonly used: ReadonlyMap<string, readonly string[]>;
   readonly asks: ReadonlyMap<string, readonly AskOnDay[]>;
-  readonly organisers: ReadonlyMap<string, Member>;
+  /**
+   * Whose voice each kept-light member's draft is written in, by her member id: the organiser who
+   * chose to have suggestions sent in their name (`members.suggestions_signed_by`) while they are
+   * still an active organiser of her family, else the family's first organiser.
+   */
+  readonly holders: ReadonlyMap<string, Member>;
   readonly mentions: ReadonlyMap<string, readonly string[]>;
   readonly lastAsks: ReadonlyMap<string, { type: ExchangeType; text: string | null }>;
   readonly writingExamples: ReadonlyMap<string, readonly string[]>;
@@ -431,7 +501,7 @@ async function loadContext(
     days: [],
     used: new Map(),
     asks: new Map(),
-    organisers: new Map(),
+    holders: new Map(),
     mentions: new Map(),
     lastAsks: new Map(),
     writingExamples: new Map(),
@@ -545,21 +615,30 @@ async function loadContext(
     )
     .orderBy(desc(exchanges.createdAt), desc(exchanges.id));
 
-  const organisers = new Map<string, Member>();
+  const firstOrganisers = new Map<string, Member>();
   for (const organiser of organiserRows) {
-    if (!organisers.has(organiser.familyId)) {
-      organisers.set(organiser.familyId, organiser);
+    if (!firstOrganisers.has(organiser.familyId)) {
+      firstOrganisers.set(organiser.familyId, organiser);
     }
+  }
+  const holders = new Map<string, Member>();
+  for (const { member, family } of pending) {
+    const signer = organiserRows.find(
+      (organiser) =>
+        organiser.id === member.suggestionsSignedBy && organiser.familyId === family.id,
+    );
+    const holder = signer ?? firstOrganisers.get(family.id);
+    if (holder !== undefined) holders.set(member.id, holder);
   }
   const lastAsks = new Map<string, { type: ExchangeType; text: string | null }>();
   for (const row of lastAskRows) {
-    if (row.askerId !== organisers.get(row.familyId)?.id) continue;
+    if (row.askerId !== holders.get(row.memberId)?.id) continue;
     if (!lastAsks.has(row.memberId)) {
       lastAsks.set(row.memberId, { type: row.type, text: row.text });
     }
   }
   // Read authored examples separately: never teach a holder another person's voice, or feed
-  // accepted AI drafts back as evidence of how the holder writes.
+  // accepted AI drafts, or drafts Vela sent in their name, back as evidence of how the holder writes.
   const authoredRows = await db
     .select({
       memberId: exchanges.recipientId,
@@ -573,6 +652,7 @@ async function loadContext(
         inArray(exchanges.recipientId, pendingIds),
         isNotNull(exchanges.askerId),
         isNotNull(exchanges.text),
+        eq(exchanges.draftedByVela, false),
         ne(exchanges.state, "withdrawn"),
         gte(exchanges.createdAt, new Date(now.getTime() - LAST_ASK_DAYS * DAY_MS)),
         notExists(
@@ -592,7 +672,7 @@ async function loadContext(
     .orderBy(desc(exchanges.createdAt), desc(exchanges.id));
   const writingExamples = new Map<string, string[]>();
   for (const row of authoredRows) {
-    if (row.askerId !== organisers.get(row.familyId)?.id) continue;
+    if (row.askerId !== holders.get(row.memberId)?.id) continue;
     let text = "";
     for (const character of row.text?.trim() ?? "") {
       if (text.length + character.length > 400) break;
@@ -611,7 +691,7 @@ async function loadContext(
       ),
     ].map(([memberId, rows]) => [memberId, mentionsOf(rows)] as const),
   );
-  return { ...context, organisers, mentions, lastAsks, writingExamples };
+  return { ...context, holders, mentions, lastAsks, writingExamples };
 }
 
 /** Whether the day is already settled before anything is picked: written, or claimed by an ask. */
@@ -645,10 +725,11 @@ function pickFor(context: WriterContext, plan: Plan, forDate: LocalDate): AskBan
 }
 
 /**
- * What the model is given: written for the family's first organiser in their language, the one the
- * evening prompt names when the family has no group (`sendTurnPrompt`), since the holder is not
- * chosen until then; her name as the family calls her; the bank item's type; what she mentioned;
- * and her last ask by anyone.
+ * What the model is given: written for her holder in their language (the organiser who chose to
+ * have suggestions sent in their name, else the family's first organiser, the one the evening prompt
+ * names when the family has no group, `sendTurnPrompt`, since the turn holder is not chosen until
+ * then); her name as the family calls her; the bank item's type; what she mentioned; and her last
+ * ask by that holder.
  */
 function suggestInput(
   context: WriterContext,
@@ -657,7 +738,7 @@ function suggestInput(
   item: AskBankItem,
 ): SuggestInput {
   const { member, family } = plan;
-  const organiser = context.organisers.get(family.id);
+  const organiser = context.holders.get(member.id);
   return {
     lang: readerLang(organiser?.language ?? family.language),
     holderName: organiser?.displayName ?? family.name,
@@ -795,7 +876,8 @@ async function writeDay(
       .insert(suggestions)
       .values({
         familyId: family.id,
-        forMemberId: null,
+        // Whose voice the draft is written in; a bank row is nobody's.
+        forMemberId: draft === null ? null : (context.holders.get(member.id)?.id ?? null),
         aboutMemberId: locked.id,
         localDay: forDate,
         bankId: item.id,

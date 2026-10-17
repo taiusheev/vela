@@ -597,6 +597,17 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // First test (16 Oct 2026): Vela's suggestion sent in an organiser's name, at their choice, on where
+  // only test families are, and off in production until the privacy notice and consent script say
+  // so. The commit that turns it on changes this.
+  it("let an organiser send Vela's suggestion as them in development and staging, not production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.SEND_AS_ME,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
   it("never holds EXPO_ACCESS_TOKEN as a var, in either Worker or any environment", () => {
     for (const config of configs) {

@@ -193,6 +193,11 @@ export interface Config {
    */
   weeklyInsight?: boolean;
   /**
+   * Whether an organiser who chose it has Vela's suggestion, drafted in their own style, sent in
+   * their name on a morning nobody in the family wrote for (`SEND_AS_ME`). Absent means not.
+   */
+  sendAsMe?: boolean;
+  /**
    * Suggestions are written where the app's API is served (ADR-29, ADR-44): nightly, and on the
    * spot for an evening prompt or a morning that has none yet. Absent means not.
    */

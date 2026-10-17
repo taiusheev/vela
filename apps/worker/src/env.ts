@@ -117,6 +117,11 @@ export interface PilotEnv extends SharedEnv {
    * (ADR-48). Production is "off" until the founder has told the family it applies to.
    */
   readonly WEEKLY_INSIGHT?: string;
+  /**
+   * "on" or "off" (absent is "off"): whether an organiser may have Vela's suggestion sent in their
+   * name on a morning nobody wrote for. Production is "off" until the privacy notice describes it.
+   */
+  readonly SEND_AS_ME?: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;

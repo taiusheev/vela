@@ -51,6 +51,9 @@ export default function MorningSettingsScreen() {
           today_arrival_time: "08:00",
           effective_from: null,
           language: "en",
+          send_as_me_available: true,
+          send_as_me: false,
+          sent_as: null,
         }
       : undefined;
   const data = read.data ?? example;
@@ -122,10 +125,18 @@ function MorningForm({
   const key = useIdempotencyKey("morning");
   const [time, setTime] = useState(initial.arrival_time);
   const [language, setLanguage] = useState(initial.language);
+  const [asMe, setAsMe] = useState(initial.send_as_me === true);
   const [saved, setSaved] = useState(false);
+  // Only an environment that allows it hears the choice; elsewhere the field stays out, as older
+  // apps leave it, and nothing changes.
+  const choice = initial.send_as_me_available === true ? { send_as_me: asMe } : {};
   const change = useMutation({
     mutationFn: async () => {
-      const input = SetMorningPreferences.parse({ arrival_time: time.trim(), language });
+      const input = SetMorningPreferences.parse({
+        arrival_time: time.trim(),
+        language,
+        ...choice,
+      });
       return setMorningPreferences(
         familyId,
         initial.member_id,
@@ -141,7 +152,11 @@ function MorningForm({
       void queries.invalidateQueries({ queryKey: ["family"] });
     },
   });
-  const valid = SetMorningPreferences.safeParse({ arrival_time: time.trim(), language }).success;
+  const valid = SetMorningPreferences.safeParse({
+    arrival_time: time.trim(),
+    language,
+    ...choice,
+  }).success;
   const editTime = (value: string) => {
     if (change.isPending) return;
     setSaved(false);
@@ -152,7 +167,13 @@ function MorningForm({
     setSaved(false);
     setLanguage(value);
   };
+  const editAsMe = (value: boolean) => {
+    if (change.isPending) return;
+    setSaved(false);
+    setAsMe(value);
+  };
   const name = initial.display_name;
+  const otherSigner = initial.sent_as ?? null;
   const zone = initial.time_zone;
   const timeAgain = initial.today_arrival_time;
   return (
@@ -204,6 +225,32 @@ function MorningForm({
           />
         ) : null}
       </View>
+      {initial.send_as_me_available === true ? (
+        <>
+          <Words variant="heading">
+            <Trans>When nobody writes</Trans>
+          </Words>
+          <Words tone="ink2">
+            <Trans>
+              If nobody in the family writes {name} a question for the morning, Vela can send the
+              one it drafted in your style, signed with your name. You will see it marked “written
+              by Vela”.
+            </Trans>
+          </Words>
+          {otherSigner !== null && !asMe ? (
+            <Words tone="ink2">
+              <Trans>
+                {otherSigner} has this on now, so Vela’s question goes in their name. Choosing your
+                name here uses yours instead.
+              </Trans>
+            </Words>
+          ) : null}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+            <Chip label={t`Send it as me`} selected={asMe} onPress={() => editAsMe(true)} />
+            <Chip label={t`Vela signs it`} selected={!asMe} onPress={() => editAsMe(false)} />
+          </View>
+        </>
+      ) : null}
       {change.isError ? (
         <Words tone="ink2">
           <Trans>That could not be saved just now. Your changes are still here. Try again.</Trans>

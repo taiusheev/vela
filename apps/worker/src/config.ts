@@ -545,7 +545,19 @@ export function readWeeklyInsight(env: { readonly WEEKLY_INSIGHT?: string }): bo
   return env.WEEKLY_INSIGHT === undefined ? false : readOnOff(env.WEEKLY_INSIGHT, "WEEKLY_INSIGHT");
 }
 
-function readOnOff(raw: string | undefined, name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT"): boolean {
+/**
+ * The var `SEND_AS_ME` (first test, 16 Oct 2026): "on" lets an organiser have Vela's suggestion sent
+ * in their name on a morning nobody in the family wrote for; absent or "off" does not; any other
+ * value is refused.
+ */
+export function readSendAsMe(env: { readonly SEND_AS_ME?: string }): boolean {
+  return env.SEND_AS_ME === undefined ? false : readOnOff(env.SEND_AS_ME, "SEND_AS_ME");
+}
+
+function readOnOff(
+  raw: string | undefined,
+  name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT" | "SEND_AS_ME",
+): boolean {
   const value = raw?.trim() ?? "";
   if (value !== "on" && value !== "off") {
     throw new ConfigError(
@@ -668,6 +680,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     memory: readMemory(env) && pilotAdmission === null,
     book: readBook(env),
     weeklyInsight: readWeeklyInsight(env),
+    sendAsMe: readSendAsMe(env),
     pilotAdmission,
     suggestions: readApiSwitch(env) === "on",
     peerHealthz: readPeerHealthz(env, environment),
