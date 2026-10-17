@@ -56,14 +56,6 @@ msgstr "{count, plural, other {這週有 # 天有訊息}}"
 msgid "{day} morning"
 msgstr "{day}早上"
 
-#: app/(tabs)/sunday.tsx
-msgid "{day}: answered at {time}"
-msgstr "{day}：於 {time} 回覆"
-
-#: app/(tabs)/sunday.tsx
-msgid "{day}: no answer"
-msgstr "{day}：尚未回覆"
-
 #: src/data/weekly.ts
 msgid "{days, plural, one {{name} answered {answered} of # day.} other {{name} answered {answered} of # days.}}"
 msgstr "{days, plural, other {{name}這週 # 天中回覆了{answered}天。}}"
@@ -1325,10 +1317,6 @@ msgstr "語言"
 #: app/(tabs)/exchanges.tsx
 msgid "Last week"
 msgstr "上週"
-
-#: app/(tabs)/sunday.tsx
-msgid "late"
-msgstr "較晚"
 
 #: app/exchange/[id].tsx
 msgid "Laugh"

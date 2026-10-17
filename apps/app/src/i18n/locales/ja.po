@@ -49,14 +49,6 @@ msgstr ""
 msgid "{day} morning"
 msgstr ""
 
-#: app/(tabs)/sunday.tsx
-msgid "{day}: answered at {time}"
-msgstr ""
-
-#: app/(tabs)/sunday.tsx
-msgid "{day}: no answer"
-msgstr ""
-
 #: src/data/weekly.ts
 msgid "{days, plural, one {{name} answered {answered} of # day.} other {{name} answered {answered} of # days.}}"
 msgstr ""
@@ -1317,10 +1309,6 @@ msgstr ""
 
 #: app/(tabs)/exchanges.tsx
 msgid "Last week"
-msgstr ""
-
-#: app/(tabs)/sunday.tsx
-msgid "late"
 msgstr ""
 
 #: app/exchange/[id].tsx

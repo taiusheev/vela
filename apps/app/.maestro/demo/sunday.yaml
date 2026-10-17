@@ -1,5 +1,5 @@
-# Sunday in the demo (A9): the example week's seven lights with a late day marked, the count lines,
-# the founder's notes and the suggestion, and a way to ask her something.
+# Sunday in the demo (A9): this week's windows, the weekly read's count lines, the founder's notes
+# and the suggestion, and a way to ask her something. One row of lights only (17 October 2026).
 url: ${APP_URL}
 name: Sunday shows her week, its counts, the notes and a suggestion
 tags:
@@ -8,7 +8,7 @@ tags:
 - launchApp
 - tapOn: "Sunday"
 - assertVisible: "Mom's week"
-- assertVisible: "late"
+- assertVisible: "You and Mom"
 - assertVisible: "Mom answered 6 of 7 days."
 - assertVisible: "On 1 morning nobody in the family asked, so Vela sent Mom a hello."
 - assertVisible: "Something to ask next week"
