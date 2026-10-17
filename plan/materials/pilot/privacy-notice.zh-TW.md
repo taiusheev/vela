@@ -1,6 +1,6 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v5` · last updated 15 October 2026 · This invitation-only research trial operates entirely in English. Everyone taking part must be comfortable using English.
+Version `privacy-notice.v5` · last updated 17 October 2026 · This invitation-only research trial operates entirely in English. Everyone taking part must be comfortable using English.
 
 ## In short
 
@@ -8,6 +8,7 @@ Version `privacy-notice.v5` · last updated 15 October 2026 · This invitation-o
 - We keep as little as we can. Voice notes, photos and the words of answers are deleted after 30 days. Book export is outside this trial. Stories are kept only when that feature is enabled and you choose to keep them.
 - When an answer mentions something like a fall or pain, Vela sends the organiser a separate note with the person's own words only if the person the light is for has agreed to that separately; otherwise the note carries none of their words. Their answers still reach the family group, organiser included, as they sent them.
 - On Sundays the organisers get a short weekly read. Each organiser's copy may also carry a few words, just for them, on how their own messages reached the person. The founder alone also sees a careful guess at what may lie beneath the week's words. See "The weekly read".
+- An organiser can choose to have Vela send a question it wrote in their style, with their name on it, on a morning when nobody in the family wrote one. The person the light is for sees it as a question from that organiser; the family's app marks it "written by Vela". See "Questions Vela writes for an organiser".
 - Vela never contacts anyone on its own. Every message to a neighbour or friend is sent by a person in the family.
 - Vela is not a medical or emergency service.
 - Anyone can say stop at any time, and anyone can ask to see, correct or delete what we hold about them.
@@ -42,6 +43,8 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 
 **From each week's messages between the person the light is for and the family:** what our software reads in the week as a whole, described under "The weekly read": for the founder only, up to three possible readings of what may lie beneath the words; and, for each organiser who asked or replied that week, a few words on their own messages.
 
+**Questions Vela drafts:** a suggested question for each of the next few mornings of the person the light is for, drafted from their recent answers and from the recent questions one organiser wrote to them; whether that organiser chose to have it sent in their name; and, on each question sent that way, a mark that Vela wrote it. See "Questions Vela writes for an organiser".
+
 **Optional calling number in the iPhone app:** With the person’s permission, an organiser may save their calling number on that device to open its dialler from a quiet notice. Vela does not upload that number. It is removed when cleared, when the organiser signs out or switches accounts, and when this app’s private storage is removed. The organiser can contact the founder to request help with deletion. Temporary audio and photo downloads in the app are scoped to its signed-in account and removed on account changes. Audio playback files are removed on completion or cancellation, with a startup sweep for interrupted sessions.
 
 **About nearby contacts:** the name and how they know the person, which the organiser gives; once the contact has said yes, also their phone number and the messaging app they use; and whether they agreed.
@@ -68,6 +71,7 @@ In the family's Vela group, Vela keeps only the messages meant for it: replies t
 6. **To run the service safely:** send every message once and on time, fix failures, prove that deleted information was deleted, and show what each person agreed to.
 7. **To learn whether the pilot works:** answer rates, answer times and how often days stay quiet, counted without names. Results are shared only as totals.
 8. **To decide who can join the pilot:** the planned cohort is the founder’s family in Vietnam for seven days, then 3–5 friends’ families in Taiwan for 30 days. This describes the proposed cohort, not legal clearance. The founder checks each participant’s residence and any relevant citizenship restrictions before approving participation. The Vietnam family waits until the review of its actual participants, consent and processing flows is complete. Existing restrictions remain in force until that review is recorded.
+9. **To suggest questions, and send one for an organiser who chose it:** draft a question the family could ask the person next, in the style of one organiser's own recent questions, for the family to use, change or ignore in the app; and, only for an organiser who chose "Send it as me", send it as that organiser's question on a morning when nobody in the family wrote one (see "Questions Vela writes for an organiser").
 
 We do not sell information, show advertising, or use anyone's words or voice to train AI models. We do not use a real answer or voice note to test or improve Vela's AI unless the person who said it agrees separately, for that one item.
 
@@ -100,6 +104,17 @@ Every Sunday Vela drafts the weekly read, and the founder checks it before anyth
 - **How long.** The readings and the feedback are deleted 30 days after the end of the week they are about. The weekly read then keeps only how many organisers got feedback. Feedback that was sent stays in the organiser's own chat until they delete it there.
 - **Who handles them.** OpenAI drafts them, in the United States (see "Who sees it").
 
+## Questions Vela writes for an organiser
+
+Every night Vela's AI drafts a question for each of the next few mornings of the person the light is for. It starts from Vela's own list of questions, and may draw on people, places and plans the person mentioned in recent answers and on the recent questions one organiser wrote to them, so that it sounds like that organiser. The family sees it in the app as a suggestion, and anyone in the family can use it, change it or ignore it.
+
+- **Sending it as the organiser.** In the app, on the person's morning settings, an organiser can choose "Send it as me". Then, on a morning when nobody in the family wrote a question by the evening before, Vela sends the question it drafted in that organiser's style as that organiser's question, with their name on it, instead of its own question signed "Vela". Only a question drafted in that organiser's style is sent this way, only in the person's language, and only while that organiser is still in the family. Vela's own list of questions is never sent with anyone's name on it. Only one organiser at a time can choose it for a person, and only that organiser can turn it on or off; turning it off applies to every morning not yet prepared.
+- **What the person sees.** The question arrives like any question from that organiser, with their name under it. The message itself does not say that Vela wrote it. In the app, the organisers and the family see it marked "written by Vela". If the person the light is for asks the organiser or the founder whether a question was written by Vela, they will be told.
+- **What it never does.** A question Vela writes never asks how the person is feeling or about their health, never makes up a name, and is never used as an example of how the organiser writes.
+- **Saying no.** The person the light is for can ask the organiser or the founder at any time for every question to come only from the family's own words, and it is turned off for their mornings.
+- **How long.** The words of a drafted question are deleted 30 days after Vela wrote them. A question sent this way is kept like any other question: its words are deleted after 30 days.
+- **Who handles them.** OpenAI drafts them, in the United States (see "Who sees it").
+
 ## Who sees it
 
 - **The family in the Vela group** sees the asks, the answers with their English transcripts, and the replies.
@@ -114,7 +129,7 @@ Every Sunday Vela drafts the weekly read, and the founder checks it before anyth
 | Clerk | App sign-in and session verification | Account identifier, name/email supplied for sign-in, session activity; no family message content | United States |
 | Neon (part of Databricks) | Database | Everything we store except voice notes and photos | Singapore |
 | Cloudflare | Runs Vela's software; stores voice notes and photos | Everything while it is processed; voice notes and photos at rest | Stored in its Asia-Pacific region as we request, which Cloudflare treats as a preference, not a guarantee; processed on its worldwide network |
-| OpenAI | AI: summaries, translations, suggested answers, drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), noticing words that matter. Vela asks OpenAI not to store these requests, and OpenAI does not use them to train its models | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
+| OpenAI | AI: summaries, translations, suggested answers, suggested questions in an organiser's style (see "Questions Vela writes for an organiser"), drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), noticing words that matter. Vela asks OpenAI not to store these requests, and OpenAI does not use them to train its models | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
 | Deepgram | Turns voice notes into text | Voice notes | United States |
 | Sentry | Error reports | Technical details and record numbers; no message content | Germany (EU) |
 | Telegram, and LINE from later in the pilot | Carry the messages | Everything sent in the chat | Their own data centres, under their own privacy policies |
@@ -133,7 +148,7 @@ Our database is in Singapore. We ask Cloudflare to store voice notes and photos 
 | Information | How long |
 |---|---|
 | Voice notes and photos (in answers, asks and replies) | 30 days, then deleted |
-| The words of answers, asks and replies: text, transcripts, translations, suggested answers, and health mentions where the person agreed to them | 30 days, then deleted |
+| The words of answers, asks and replies: text, transcripts, translations, suggested answers, suggested questions, and health mentions where the person agreed to them | 30 days, then deleted |
 | Existing stories previously kept in the family book (the book is unavailable in this trial) | Until the family removes them or leaves Vela. Saying "don't keep that one" removes a story |
 | One-line summaries of answers, answer times, records of quiet days, weekly reads (except the parts in the next row) | While the family uses Vela |
 | The founder's readings of what may lie beneath the words, and each organiser's feedback, in the weekly read | 30 days after the end of the week they are about, then deleted. Feedback that was sent stays in the organiser's own chat until they delete it there |
@@ -180,6 +195,7 @@ Every part of Vela is a choice.
 - Voice is never required: every ask can be answered with one tap.
 - Tapping "I've read it" in the family group is optional; asks and replies work without it.
 - An organiser who would rather not get feedback on their own messages can tell the founder, who then sends their copy of the weekly read without it.
+- "Send it as me" is off unless an organiser chooses it. Without it, on a morning nobody in the family wrote a question, Vela sends its own question, signed "Vela".
 - Nearby contacts are optional. Without them, a notice on a quiet day names no one to call except the organiser.
 - The research questions are optional.
 - An organiser who does not give a name and a way to be reached cannot join the pilot.
