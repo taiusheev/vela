@@ -191,6 +191,8 @@ Paging is on `exchanges.id`, which is uuidv7 and so already in the order the lis
 
 The route is a read, so it needs no write capability and is served whether or not a Clerk secret key is present — unlike composing, which needs the live session check.
 
+**17 October 2026: the conversation's fields.** Every exchange in `GET /today`, `GET /exchanges` and `GET /v1/exchanges/:id` carries, all optional so older responses parse: `answers`, every answer she gave to it oldest first (several messages within the 36-hour answer window attach to her latest delivered exchange, flows §3.9; `answer` stays her latest, with her photo pick kept as before); `asker_id`, null whenever `asker_name` is; `created_at`, which orders a message still on its way; and on each reply `from_id` and `at`. The app's chat with a parent is built from these alone: her answers, the family's asks and replies, by time, with the reader's own on the right. Nothing new is written, and no other family's member id is exposed, since every id belongs to the reader's own family.
+
 ### Replying (24 September 2026)
 
 `POST /v1/exchanges/:exchangeId/replies` takes `ComposeReply` — `{text}`, one to 1,000 characters of valid text — and answers 201 with `ApiReply`. `replyToApiExchange` in `packages/services/src/api-replies.ts` runs it through `runApiMutation` as `exchange.reply:v1`, with the exchange id in the fingerprint, so one key cannot be spent on two exchanges.

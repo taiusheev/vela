@@ -24,5 +24,7 @@ tags:
 - tapOn: "Reply to Mom"
 - tapOn: "Write to Mom"
 - inputText: "Save some seeds for our next visit."
-- tapOn: "Send now"
+- tapOn:
+    id: "Send now"
 - assertVisible: "Example only. Nothing was sent."
+- assertVisible: "Save some seeds for our next visit."

@@ -1,6 +1,6 @@
 import { createFakeAi, createOffAi, fakeRecord, type SuggestInput } from "@vela/ai";
 import type { LocalDate } from "@vela/contracts";
-import { ASK_BANK, type AskBankType, askBankItem, askBankText } from "@vela/copy";
+import { ASK_BANK, type AskBankType, askBankChildText, askBankItem } from "@vela/copy";
 import { addDays, localDateOf, weekdayOf } from "@vela/core";
 import {
   aiCalls,
@@ -256,14 +256,18 @@ describe("renderSuggestion", () => {
     source: {},
   } as const;
 
-  it("shows a bank row in each reader's language, English for a language the bank lacks", () => {
+  it("shows a bank row in each reader's language, in the family's wording, English for a language the bank lacks", () => {
     expect(renderSuggestion(bankRow, "en")).toEqual({
-      text: askBankText("knowledge.food.soup", "en"),
+      text: askBankChildText("knowledge.food.soup", "en"),
       type: "recipe",
       fromHerWords: false,
     });
-    expect(renderSuggestion(bankRow, "zh-TW")?.text).toBe("天氣變冷的時候，您會煮什麼湯？");
-    expect(renderSuggestion(bankRow, "ja")?.text).toBe(askBankText("knowledge.food.soup", "en"));
+    expect(renderSuggestion(bankRow, "zh-TW")?.text).toBe(
+      "天氣一變冷我就想到你煮的湯，那要怎麼煮？",
+    );
+    expect(renderSuggestion(bankRow, "ja")?.text).toBe(
+      askBankChildText("knowledge.food.soup", "en"),
+    );
   });
 
   it("shows an AI draft to a reader of its language, and its bank item to anyone else", () => {
@@ -280,7 +284,7 @@ describe("renderSuggestion", () => {
       fromHerWords: true,
     });
     expect(renderSuggestion(aiRow, "zh-TW")).toEqual({
-      text: "天氣變冷的時候，您會煮什麼湯？",
+      text: "天氣一變冷我就想到你煮的湯，那要怎麼煮？",
       type: "recipe",
       fromHerWords: false,
     });
@@ -291,7 +295,7 @@ describe("renderSuggestion", () => {
 
   it("shows the bank item once retention has cleared a draft, and nothing for an unknown id", () => {
     expect(renderSuggestion({ ...bankRow, lang: "en", text: "" }, "en")?.text).toBe(
-      askBankText("knowledge.food.soup", "en"),
+      askBankChildText("knowledge.food.soup", "en"),
     );
     expect(renderSuggestion({ ...bankRow, bankId: "life.unknown.item" }, "en")).toBeNull();
   });

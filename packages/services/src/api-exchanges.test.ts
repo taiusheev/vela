@@ -98,11 +98,62 @@ describe("loadApiExchanges", () => {
         asker_name: "Mia",
         ask: "What did the garden look like?",
         answer: expect.objectContaining({ text: "The tomatoes turned." }),
-        replies: [{ from: "Mia", kind: "heart", text: null, photo: null, audio: null }],
+        replies: [
+          {
+            from: "Mia",
+            from_id: seed.organiser.id,
+            at: daysAgo(1).toISOString(),
+            kind: "heart",
+            text: null,
+            photo: null,
+            audio: null,
+          },
+        ],
         scheduled_for: addDays(today(), -1),
         delivered_at: daysAgo(1).toISOString(),
       }),
     ]);
+  });
+
+  it("carries every message she sent to one exchange, oldest first, for the conversation", async () => {
+    const exchange = await seedDay(1, "Did the tomatoes turn?");
+    await h.db.insert(answers).values([
+      {
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        kind: "text",
+        channel: "telegram",
+        externalId: "2001:2",
+        payload: { text: "Three of them, red as anything." },
+        receivedAt: daysAgo(1),
+      },
+      {
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        kind: "heart",
+        channel: "telegram",
+        externalId: "2001:3",
+        receivedAt: new Date(daysAgo(1).getTime() + 5 * 60_000),
+      },
+      {
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        kind: "text",
+        channel: "telegram",
+        externalId: "2001:4",
+        payload: { text: "Come and get some on Sunday." },
+        receivedAt: new Date(daysAgo(1).getTime() + 9 * 60_000),
+      },
+    ]);
+    const [row] = ApiExchangePage.parse(await list()).exchanges;
+    expect(row?.asker_id).toBe(seed.organiser.id);
+    expect(row?.answers?.map((answer) => [answer.kind, answer.text])).toEqual([
+      ["text", "Three of them, red as anything."],
+      ["heart", null],
+      ["text", "Come and get some on Sunday."],
+    ]);
+    // Today and the lists still show her latest.
+    expect(row?.answer?.text).toBe("Come and get some on Sunday.");
   });
 
   it("reads newest first", async () => {

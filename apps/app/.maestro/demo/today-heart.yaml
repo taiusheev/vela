@@ -11,4 +11,4 @@ tags:
 - assertNotVisible: "Heart for Mom"
 - tapOn: "Reply to Mom"
 - assertVisible: "Write to Mom"
-- assertVisible: "Talk with Mom"
+- assertVisible: "Your words reach Mom's chat now, signed with your name. Their morning stays as it is."

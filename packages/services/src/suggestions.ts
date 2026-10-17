@@ -288,8 +288,9 @@ export interface RenderedSuggestion {
 /**
  * A suggestion in the reader's language (their `members.language`; English when it has no bank
  * text): an AI draft when it was written in that language and retention has not cleared it, and
- * otherwise the bank item it stands on, with that item's type. Null only for a bank id the bank
- * does not hold, which appending ids alone rules out.
+ * otherwise the bank item it stands on, in the family's wording (`child`: a son or daughter writing
+ * to their parent), with that item's type. A family member sends it as their own, so it reads as
+ * theirs. Null only for a bank id the bank does not hold, which appending ids alone rules out.
  */
 export function renderSuggestion(
   row: Pick<Suggestion, "bankId" | "type" | "text" | "lang" | "source">,
@@ -302,7 +303,7 @@ export function renderSuggestion(
   const item = askBankItem(row.bankId);
   return item === undefined
     ? null
-    : { text: item.text[lang], type: item.type, fromHerWords: false };
+    : { text: item.child[lang], type: item.type, fromHerWords: false };
 }
 
 /**

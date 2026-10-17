@@ -46,7 +46,10 @@ const OFFERED_AFTER_ASK = "push-offered.after-ask";
 /** A draft storage key before a family is linked, never visible copy. */
 const UNLINKED_FAMILY = "pending";
 
-type AskParams = { recipient?: string; suggestion?: string; text?: string };
+type AskParams = { recipient?: string; suggestion?: string; text?: string; kind?: string };
+
+/** The kinds the chat's "+" can open Ask on; anything else opens on a question. */
+const OPENING_KINDS: readonly string[] = ["question", "two_photos", "voice_note"];
 
 export default function AskScreen() {
   const view = useToday();
@@ -122,7 +125,11 @@ function AskComposer({
     return true;
   };
   // `text` comes from a reminder's "Ask" (spec §12): the question it suggests, for the asker to edit.
-  const [kind, setKind] = useState<AskType>("question");
+  const [kind, setKind] = useState<AskType>(
+    params.kind !== undefined && OPENING_KINDS.includes(params.kind)
+      ? (params.kind as AskType)
+      : "question",
+  );
   const [moreTypes, setMoreTypes] = useState(false);
   const { text, setText } = draft;
   const [when, setWhen] = useState<When>(recipient?.invited === true ? "whenever" : "tomorrow");

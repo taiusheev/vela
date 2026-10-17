@@ -17,7 +17,7 @@ import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
-import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
+import { ChatLink } from "../../src/components/chat/chat-link.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
@@ -573,39 +573,9 @@ function FamilyToday({ day }: { day: TodayView }) {
       {today.exchanges.map((exchange) => (
         <ExchangeCard key={exchange.id} exchange={exchange} />
       ))}
-      {target === undefined ? null : (
-        <Card>
-          <SecondaryButton
-            label={t`Talk with ${recipient}`}
-            onPress={() =>
-              router.push({ pathname: "/conversation", params: { recipient: target.memberId } })
-            }
-          />
-          <Words variant="caption" tone="ink2">
-            {target.invited
-              ? t`Write their first message while you wait for their yes.`
-              : t`Send something now, or leave a question for their morning.`}
-          </Words>
-          {organiser || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
-            <SecondaryButton
-              label={t`${recipient}'s morning settings`}
-              onPress={() =>
-                router.push({ pathname: "/morning-settings", params: { member: target.memberId } })
-              }
-            />
-          ) : null}
-        </Card>
-      )}
-      {target === undefined || !canAsk(target) ? null : (
-        <SecondaryButton
-          label={t`Ask ${recipient} something`}
-          disabled={apiConfigured() && !live}
-          onPress={() => router.push({ pathname: "/ask", params: { recipient: target.memberId } })}
-        />
-      )}
-      {today.lights.map((light) => (
-        <ConnectionWindows key={`week:${light.memberId}`} light={light} />
-      ))}
+      {/* The chat is where the day's words carry on (consumer flow rows 38–52). Her morning
+          settings live on You and in the chat's menu, never on the first screen. */}
+      {target === undefined ? null : <ChatLink light={target} />}
       {target !== undefined &&
       (target.invited === true || target.connectionDays?.every((day) => !day.hasMessage)) ? (
         <Card>
@@ -623,17 +593,18 @@ function FamilyToday({ day }: { day: TodayView }) {
               moments you have shared.
             </Trans>
           </Words>
-          <SecondaryButton
-            label={t`Write their first message`}
-            onPress={() =>
-              router.push({ pathname: "/conversation", params: { recipient: target.memberId } })
-            }
-          />
         </Card>
       ) : null}
       {today.tomorrow.map((turn) => (
         <TomorrowCard key={turn.recipientId} tomorrow={turn} />
       ))}
+      {target === undefined || !canAsk(target) ? null : (
+        <SecondaryButton
+          label={t`Ask ${recipient} something`}
+          disabled={apiConfigured() && !live}
+          onPress={() => router.push({ pathname: "/ask", params: { recipient: target.memberId } })}
+        />
+      )}
       {capabilities?.memory === true || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
         <RemindersCard familyId={familyId} />
       ) : null}

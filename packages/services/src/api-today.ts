@@ -141,18 +141,34 @@ async function nameOf(db: Queryable, memberId: string | null): Promise<string | 
   return row?.displayName ?? null;
 }
 
-/** Her answer in the family's language, the one translation the pipeline writes for it. */
-async function translationOf(
+/** Her answers in the family's language, the one translation the pipeline writes for each. */
+async function translationsOf(
   db: Queryable,
-  answerId: string,
-): Promise<{ lang: Lang; text: string } | null> {
-  const [row] = await db
-    .select({ lang: translations.lang, text: translations.text })
+  answerIds: readonly string[],
+): Promise<Map<string, { lang: Lang; text: string }>> {
+  if (answerIds.length === 0) return new Map();
+  const rows = await db
+    .select({ id: translations.objectId, lang: translations.lang, text: translations.text })
     .from(translations)
-    .where(and(eq(translations.objectType, "answer"), eq(translations.objectId, answerId)))
-    .limit(1);
-  const lang = Lang.safeParse(row?.lang);
-  return row === undefined || !lang.success ? null : { lang: lang.data, text: row.text };
+    .where(
+      and(eq(translations.objectType, "answer"), inArray(translations.objectId, [...answerIds])),
+    );
+  const found = new Map<string, { lang: Lang; text: string }>();
+  for (const row of rows) {
+    const lang = Lang.safeParse(row.lang);
+    if (lang.success && !found.has(row.id)) found.set(row.id, { lang: lang.data, text: row.text });
+  }
+  return found;
+}
+
+/** The photo one pick names, and its number as her buttons showed it (`pickedPhoto`). */
+function pickOf(
+  payload: Record<string, unknown>,
+): Pick<ApiTodayAnswer, "picked_media_id" | "picked_number"> {
+  const id = payload.media_id;
+  if (typeof id !== "string" || !Uuid.safeParse(id).success) return NO_PICK;
+  const index = payload.index;
+  return { picked_media_id: id, picked_number: index === 0 ? 1 : index === 1 ? 2 : null };
 }
 
 /** One exchange as a family reads it. Shared with the Exchanges list, which shows the same card. */
@@ -162,7 +178,8 @@ export async function exchangeRow(
   recipient: { id: string; displayName: string; tz?: string },
   now?: Date,
 ): Promise<ApiTodayExchange> {
-  const [answer] = await db
+  // Every answer, oldest first: a conversation shows each message she sent; Today shows the last.
+  const answerRows = await db
     .select({
       id: answers.id,
       kind: answers.kind,
@@ -174,11 +191,13 @@ export async function exchangeRow(
     })
     .from(answers)
     .where(eq(answers.exchangeId, exchange.id))
-    .orderBy(desc(answers.receivedAt), desc(answers.id))
-    .limit(1);
+    .orderBy(asc(answers.receivedAt), asc(answers.id));
+  const answer = answerRows.at(-1);
   const replyRows = await db
     .select({
       from: members.displayName,
+      fromId: replies.memberId,
+      at: replies.createdAt,
       kind: replies.kind,
       text: replies.text,
       mediaId: replies.mediaId,
@@ -189,7 +208,7 @@ export async function exchangeRow(
     .orderBy(asc(replies.createdAt), asc(replies.id));
 
   const ids = [
-    answer?.mediaId,
+    ...answerRows.map((row) => row.mediaId),
     exchange.voiceHelloId,
     ...replyRows.map((reply) => reply.mediaId),
   ].filter((id): id is string => typeof id === "string");
@@ -218,32 +237,48 @@ export async function exchangeRow(
           )
           .limit(1)
       : [];
+  const translated = await translationsOf(
+    db,
+    answerRows.filter((row) => answerText(row) !== null).map((row) => row.id),
+  );
+  const asWire = (row: (typeof answerRows)[number]): ApiTodayAnswer => ({
+    kind: row.kind,
+    text: answerText(row),
+    at: row.receivedAt.toISOString(),
+    ...(row.kind === "photo_pick" ? pickOf(row.payload) : NO_PICK),
+    translation: translated.get(row.id) ?? null,
+    audio: sourceAudio(fileOf(row.mediaId), now),
+    photo: sourcePhoto(fileOf(row.mediaId), now),
+  });
+  const askerName = await nameOf(db, exchange.askerId);
   return {
     id: exchange.id,
     recipient_id: recipient.id,
     recipient_name: recipient.displayName,
     ...(recipient.tz === undefined ? {} : { recipient_tz: recipient.tz }),
-    asker_name: await nameOf(db, exchange.askerId),
+    asker_name: askerName,
+    // Null with the name, so a deleted asker's id is not handed out on its own.
+    asker_id: askerName === null ? null : exchange.askerId,
     on_behalf_of: exchange.onBehalfOf,
     drafted_by_vela: exchange.draftedByVela,
     type: exchange.type,
     ask: exchange.text,
+    created_at: exchange.createdAt.toISOString(),
     voice_hello: sourceAudio(fileOf(exchange.voiceHelloId), now),
     answer:
       answer === undefined
         ? null
         : {
-            kind: answer.kind,
-            text: answerText(answer),
-            at: answer.receivedAt.toISOString(),
+            ...asWire(answer),
+            // Her pick stays shown when she went on to say something after it (ADR-33).
             ...(await pickedPhoto(db, exchange)),
-            translation: answerText(answer) === null ? null : await translationOf(db, answer.id),
-            audio: sourceAudio(fileOf(answer.mediaId), now),
-            photo: sourcePhoto(fileOf(answer.mediaId), now),
           },
+    answers: answerRows.map(asWire),
     replies: await Promise.all(
-      replyRows.map(async ({ mediaId, ...reply }) => ({
+      replyRows.map(async ({ mediaId, fromId, at, ...reply }) => ({
         ...reply,
+        from_id: fromId,
+        at: at.toISOString(),
         audio: sourceAudio(fileOf(mediaId), now),
         photo:
           reply.kind === "photo" && mediaId !== null

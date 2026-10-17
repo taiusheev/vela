@@ -1,10 +1,10 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, useWindowDimensions, View } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
-import { Light } from "../../src/components/light.tsx";
+import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryDay, StoryOfTheWeek } from "../../src/components/story-day.tsx";
 import {
@@ -15,76 +15,22 @@ import {
   SecondaryButton,
   Words,
 } from "../../src/components/ui.tsx";
+import { localDayMonth } from "../../src/data/format.ts";
+import { selectedLight } from "../../src/data/selected-light.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
 import { useWeeklyReadOpened } from "../../src/data/useWeeklyReadOpened.ts";
-import type { WeekLight } from "../../src/data/weekly.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
-/** Seven small lights, Monday to Sunday, each with its day and the time she answered (A9). */
-function WeekRow({ lights }: { lights: WeekLight[] }) {
-  const { t } = useLingui();
-  const { width, fontScale } = useWindowDimensions();
-  const [available, setAvailable] = useState(width - space.margin * 4 - 2);
-  // Keep calendar columns aligned when the phone or text size needs a second row.
-  const columns =
-    available >= 40 * fontScale * 7
-      ? 7
-      : available >= 40 * fontScale * 4
-        ? 4
-        : available >= 40 * fontScale * 2
-          ? 2
-          : 1;
-  return (
-    <View
-      onLayout={(event) => setAvailable(event.nativeEvent.layout.width)}
-      style={{
-        flexDirection: "row",
-        flexWrap: "wrap",
-        rowGap: space.l,
-      }}
-    >
-      {lights.map((light) => {
-        const day = light.day;
-        const time = light.note;
-        return (
-          <View
-            key={light.date}
-            accessible
-            accessibilityLabel={[
-              light.note.length > 0 ? t`${day}: answered at ${time}` : t`${day}: no answer`,
-              light.late ? t`late` : "",
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            style={{ alignItems: "center", gap: space.xs, width: `${100 / columns}%` }}
-          >
-            <Light state={light.state} height={28} />
-            <Words variant="caption" tone="ink2">
-              {light.day}
-            </Words>
-            <Words variant="caption" tone="ink3">
-              {light.note || "—"}
-            </Words>
-            {light.late ? (
-              <Words variant="caption" tone="ink3">
-                <Trans>late</Trans>
-              </Words>
-            ) : null}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 /**
- * Sunday (spec §13, A9): her latest weekly read the founder sent. Seven lights for her week, with a
- * late day marked; the count lines from the week's numbers; up to four notes in Literata; one
- * suggestion in action colour; the story of the week from the family book. Without Vela Light the lights show and the rest waits behind the
- * trial. Organisers only, since the read carries the counts of her days.
+ * Sunday (spec §13, A9): this week's windows first, then her latest weekly read the founder sent:
+ * the count lines from the week's numbers; up to four notes in Literata; one suggestion in action
+ * colour; the story of the week from the family book. The windows are the page's one row of lights
+ * (founder, 17 October 2026: "one streak is enough"), so the read keeps its days to its count lines.
+ * Without Vela Light the rest waits behind the trial. Organisers only, since the read carries the
+ * counts of her days.
  */
 export default function SundayScreen() {
   const day = useToday();
@@ -116,6 +62,13 @@ function FamilySunday({ day }: { day: TodayView }) {
       : undefined,
   );
   const name = read.name;
+  const windowsFor = selectedLight(day.today.lights, view.memberId ?? selected);
+  const first = read.week?.lights[0]?.date;
+  const lastDay = read.week?.lights.at(-1)?.date;
+  const range =
+    first === undefined || lastDay === undefined
+      ? ""
+      : `${localDayMonth(first)} – ${localDayMonth(lastDay)}`;
 
   return (
     <ScrollView
@@ -132,6 +85,8 @@ function FamilySunday({ day }: { day: TodayView }) {
       {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
       <ScreenHeading title={<Trans context="tab">Sunday</Trans>} />
       <ParentChooser lights={day.today.lights} selected={view.memberId} onSelect={select} />
+      {/* This week first: the windows the family lit, Monday to Sunday (consumer flow row 93). */}
+      {windowsFor === undefined ? null : <ConnectionWindows light={windowsFor} />}
       {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}
       {view.loading ? (
         <Words variant="body" tone="ink2">
@@ -157,12 +112,16 @@ function FamilySunday({ day }: { day: TodayView }) {
         </Words>
       ) : read.week === null ? null : (
         <>
-          <Card>
+          <View style={{ gap: space.xs }}>
             <Eyebrow>
               <Trans>{name}'s week</Trans>
             </Eyebrow>
-            <WeekRow lights={read.week.lights} />
-          </Card>
+            {range.length === 0 ? null : (
+              <Words variant="caption" tone="ink3">
+                {t`The weekly read · ${range}`}
+              </Words>
+            )}
+          </View>
           {read.locked && capabilities?.billing !== true ? (
             <Words variant="body" tone="ink2">
               <Trans>The weekly read could not be reached just now.</Trans>

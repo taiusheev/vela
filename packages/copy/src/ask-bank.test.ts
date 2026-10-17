@@ -4,6 +4,7 @@ import {
   ASK_BANK_THEMES,
   ASK_BANK_TYPES,
   type AskBankType,
+  askBankChildText,
   askBankItem,
   askBankText,
   CHIP_QUESTIONS,
@@ -175,8 +176,10 @@ describe("the question bank", () => {
   });
 
   it("writes each ask in English as one short ask, without surveillance, gendered or health-check words", () => {
-    for (const entry of ASK_BANK) {
-      const text = entry.text.en;
+    for (const [entry, text] of ASK_BANK.flatMap((entry) => [
+      [entry, entry.text.en] as const,
+      [entry, entry.child.en] as const,
+    ])) {
       expect(text, entry.id).toMatch(/^[A-Z].*[?.]$/);
       expect(text.split("?").length - 1, entry.id).toBeLessThanOrEqual(1);
       expect(wordCount(text), entry.id).toBeLessThanOrEqual(MAX_ENGLISH_WORDS);
@@ -187,8 +190,10 @@ describe("the question bank", () => {
   });
 
   it("writes each ask in Traditional Chinese as Taiwan does, briefly, with full-width punctuation and no health-check words", () => {
-    for (const entry of ASK_BANK) {
-      const text = entry.text["zh-TW"];
+    for (const [entry, text] of ASK_BANK.flatMap((entry) => [
+      [entry, entry.text["zh-TW"]] as const,
+      [entry, entry.child["zh-TW"]] as const,
+    ])) {
       expect(text, entry.id).toMatch(/[？。]$/);
       expect(text, entry.id).not.toMatch(/[?,.!:;]/);
       expect(hanCount(text), entry.id).toBeGreaterThan(0);
@@ -199,6 +204,29 @@ describe("the question bank", () => {
       expect(text, entry.id).not.toMatch(LATIN_TOUCHING_HAN);
       expect(text, entry.id).not.toMatch(HEALTH_CHECK["zh-TW"]);
     }
+  });
+
+  it("words each ask a second time as the family writes it, never as Vela's plain words, and never naming the parent", () => {
+    for (const entry of ASK_BANK) {
+      for (const lang of ["en", "zh-TW"] as const) {
+        expect(entry.child[lang], `${entry.id} ${lang}`).not.toBe(entry.text[lang]);
+      }
+      // The parent may be a father or a grandparent: the reader adds their own word for them.
+      expect(entry.child.en, entry.id).not.toMatch(
+        /\b(mom|mum|mother|dad|father|grandma|grandpa|vela)\b/i,
+      );
+      expect(entry.child["zh-TW"], entry.id).not.toMatch(/媽媽|爸爸|阿嬤|阿公|外婆|奶奶/);
+    }
+  });
+
+  it("finds the family's wording by id, and English for other languages", () => {
+    expect(askBankChildText("knowledge.food.soup", "en")).toBe(
+      "When it gets cold I always think of your soup. How do you make it?",
+    );
+    expect(askBankChildText("knowledge.food.soup", "ja")).toBe(
+      askBankChildText("knowledge.food.soup", "en"),
+    );
+    expect(askBankChildText("life.family.nickname", "en")).toBeUndefined();
   });
 
   it("uses guards that recognise what they forbid", () => {

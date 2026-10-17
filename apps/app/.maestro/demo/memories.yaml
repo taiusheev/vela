@@ -1,0 +1,20 @@
+# Memories in the demo (consumer flow rows 31–34): her words a week at a time, searchable, and
+# narrowed to her stories.
+url: ${APP_URL}
+name: Memories groups her words by week and finds a word
+tags:
+  - demo
+---
+- launchApp
+# Opened by itself: Today stays mounted behind a tab it opened, and its words would count as shown.
+- openLink: ${APP_URL}/exchanges
+- assertVisible: "This week"
+- assertVisible: "Last week"
+- tapOn: "Search her words"
+- inputText: "butter"
+- assertVisible: "Both of you, but only Mia listened about the butter."
+- assertNotVisible: "Mom answered at 8:12 · 2 replies"
+- eraseText
+- tapOn: "Stories"
+- assertVisible: "It was a bakery, then a bookshop. We queued there for bread in the winter."
+- assertNotVisible: "Both of you, but only Mia listened about the butter."

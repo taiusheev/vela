@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import type { ApiExchangeAudio, ReplyKind } from "@vela/contracts";
+import type { ApiExchangeAudio, ExchangeType, ReplyKind } from "@vela/contracts";
 import { clockTime } from "./format.ts";
 import type { ExchangePhoto } from "./today.ts";
 
@@ -45,6 +45,10 @@ export interface Exchange {
   ask: string;
   askOriginal?: string;
   day: string;
+  /** Her local date the exchange belongs to, which Memories groups weeks by. */
+  date?: string;
+  /** The kind of ask: a story or a recipe is told in Memories as one. */
+  type?: ExchangeType;
   answer?: ExchangeAnswer;
   replies: ExchangeReply[];
   receipt?: string;
@@ -71,6 +75,8 @@ function seen(recipient: string, time: string): string {
  */
 export function exchangesFixture(): Exchange[] {
   const mom = t`Mom`;
+  const daysAgo = (days: number) =>
+    new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
   return [
     {
       id: "x1",
@@ -79,6 +85,8 @@ export function exchangesFixture(): Exchange[] {
       recipient: mom,
       ask: t`What did the garden look like this morning?`,
       day: t`Today`,
+      date: daysAgo(0),
+      type: "question",
       answer: {
         text: t`The tomatoes finally turned. I picked three before breakfast and left them on the sill.`,
         at: clockTime(8, 12),
@@ -102,6 +110,8 @@ export function exchangesFixture(): Exchange[] {
       recipient: mom,
       ask: t`Which one of us did you teach to make the pies?`,
       day: t`Yesterday`,
+      date: daysAgo(1),
+      type: "question",
       answer: {
         text: t`Both of you, but only Mia listened about the butter.`,
         at: clockTime(9, 5),
@@ -120,6 +130,8 @@ export function exchangesFixture(): Exchange[] {
       recipient: mom,
       ask: t`A photo of the street where you grew up — do you remember the shop on the corner?`,
       day: t`Sunday`,
+      date: daysAgo(9),
+      type: "story",
       answer: {
         text: t`It was a bakery, then a bookshop. We queued there for bread in the winter.`,
         at: clockTime(8, 40),

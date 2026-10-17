@@ -5,6 +5,7 @@ import type { ApiExchangeSummary } from "@vela/contracts";
 import { useCallback } from "react";
 import { apiConfigured, fetchExchanges } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
+import { localDateIn } from "./chat.ts";
 import { type Exchange, type ExchangeReply, exchangesFixture } from "./exchanges.ts";
 import { timeOfDay } from "./format.ts";
 import { demoDataAllowed } from "./live-state.ts";
@@ -27,6 +28,17 @@ function toReply(
   };
 }
 
+/** Her local date of an exchange: the morning it was for, or the day it reached her. */
+function herDate(summary: ApiExchangeSummary, timeZone?: string): string | undefined {
+  if (summary.scheduled_for !== null) return summary.scheduled_for;
+  const at = summary.delivered_at ?? summary.created_at;
+  if (at === undefined || at === null) return undefined;
+  const instant = Date.parse(at);
+  return Number.isFinite(instant)
+    ? localDateIn(instant, summary.recipient_tz ?? timeZone)
+    : undefined;
+}
+
 /** One listed exchange in the screen's idiom: the same card Today shows, with its day. */
 export function toExchange(summary: ApiExchangeSummary, timeZone?: string): Exchange {
   const card = toTodayExchange(summary, timeZone);
@@ -46,6 +58,8 @@ export function toExchange(summary: ApiExchangeSummary, timeZone?: string): Exch
     ...(card.draftedByVela === undefined ? {} : { draftedByVela: card.draftedByVela }),
     recipient: card.recipient,
     ask: card.ask ?? t`A hello from Vela`,
+    type: summary.type,
+    ...(herDate(summary, timeZone) === undefined ? {} : { date: herDate(summary, timeZone) }),
     day:
       summary.scheduled_for === null
         ? summary.delivered_at === null
@@ -64,6 +78,8 @@ export function toExchange(summary: ApiExchangeSummary, timeZone?: string): Exch
 
 export interface ExchangesView {
   exchanges: Exchange[];
+  /** The same days as the wire carries them, which the conversation is built from. */
+  summaries: ApiExchangeSummary[];
   /** True once the real list has arrived; until then live builds carry an empty list. */
   live: boolean;
   loading: boolean;
@@ -105,6 +121,7 @@ export function useExchanges(watch = false): ExchangesView {
   if (!enabled) {
     return {
       exchanges: demoDataAllowed(apiConfigured(), accountsConfigured()) ? exchangesFixture() : [],
+      summaries: [],
       live: false,
       loading: apiConfigured() && account.ready && account.signedIn && familyId === undefined,
       refreshing: false,
@@ -115,7 +132,9 @@ export function useExchanges(watch = false): ExchangesView {
     };
   }
   const live = pages.data !== undefined;
+  const summaries = live ? pages.data.pages.flatMap((page) => page.exchanges) : [];
   return {
+    summaries,
     exchanges: live
       ? pages.data.pages.flatMap((page) =>
           page.exchanges.map((summary) =>

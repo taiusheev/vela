@@ -15,8 +15,11 @@ export function nextPrompt(
   skip: number,
   _lang: "en" | "zh-TW",
 ): AskBankItem | undefined {
+  // Asked in either wording: earlier story asks went out in Vela's plain words.
   const fresh = STORY_PROMPTS.filter((item) =>
-    Object.values(item.text).every((text) => !asked.has(text.trim())),
+    [...Object.values(item.text), ...Object.values(item.child)].every(
+      (text) => !asked.has(text.trim()),
+    ),
   );
   return fresh.length === 0 ? undefined : fresh[skip % fresh.length];
 }

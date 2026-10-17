@@ -1,0 +1,27 @@
+# The chat with Mom in the demo (consumer flow rows 38–52): opened from Today, it reads as one
+# conversation in order, a heart goes under her message, and words sent now show as sent.
+url: ${APP_URL}
+name: The chat with Mom reads in order and takes words and a heart
+tags:
+  - demo
+---
+- launchApp
+- tapOn: "Talk with Mom"
+- assertVisible: "Yesterday"
+- assertVisible: "Already in a bag by the door."
+- assertVisible: "And a jar of the plum jam."
+- tapOn: "And a jar of the plum jam."
+- tapOn:
+    id: "Send Mom a hug"
+- assertVisible: "🤗"
+- tapOn: "Write to Mom"
+- inputText: "Leave it with the neighbour if you go out."
+- tapOn:
+    id: "Send now"
+- assertVisible: "Leave it with the neighbour if you go out."
+- assertVisible: "Example only. Nothing was sent."
+- tapOn:
+    id: "More for Mom"
+- assertVisible: "Change Mom's morning"
+- tapOn: "Change Mom's morning"
+- assertVisible: "Morning settings"

@@ -813,6 +813,8 @@ describe("a photo reply from the app (A8)", () => {
     expect(shown.replies).toEqual([
       {
         from: "Mia",
+        from_id: seed.organiser.id,
+        at: expect.any(String),
         kind: "photo",
         text: null,
         photo: {

@@ -8,7 +8,7 @@ tags:
 - launchApp
 - openLink: ${APP_URL}/sunday
 - scrollUntilVisible:
-    element: "Tell me about a day from your childhood you still remember clearly."
+    element: "Tell me about a day from when you were little that you still remember clearly. I'd love to hear it."
     direction: DOWN
 - assertVisible: "Her answer stays with the exchange. Long-term story saving is not switched on here."
 - assertNotVisible: "Her answer is kept in the family book, unless she says not to."
@@ -17,7 +17,7 @@ tags:
     direction: DOWN
 - tapOn: "Another question"
 - scrollUntilVisible:
-    element: "Tell me about your first day at work."
+    element: "What was your first day at work like? Tell me everything you remember."
     direction: DOWN
 - scrollUntilVisible:
     element: "Write your own question"
@@ -27,5 +27,5 @@ tags:
 - inputText: "How did you learn to make soup?"
 - assertVisible: 'How did you learn to make soup\?'
 - tapOn: "Choose from the list"
-- assertVisible: "Tell me about your first day at work."
+- assertVisible: "What was your first day at work like? Tell me everything you remember."
 - assertNotVisible: "Read the family book"
