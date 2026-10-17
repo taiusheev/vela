@@ -934,6 +934,10 @@ msgstr "Enter a time such as 08:30 and choose a supported language."
 msgid "Enter the six digits from your message."
 msgstr "Enter the six digits from your message."
 
+#: app/sign-in.tsx
+msgid "Error code: {code}"
+msgstr "Error code: {code}"
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr "Example · heart sent"
