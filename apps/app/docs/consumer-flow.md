@@ -202,10 +202,13 @@ this change.
 
 ## What the map says
 
-1. **Two thirds of the visits are the same three steps, every day:** glance (is she all right?),
-   read (what did she say?), answer (a heart or a few words). Rows 16–21, 26, 29, 35–36, 38–42, 49,
-   52. They have to take two taps at most, and the answer has to reach her *now*, not in tomorrow's
-   read-back. That is the chat.
+1. **Most visits are the same three steps, every day:** glance (is she all right?), read (what did
+   she say?), answer (a heart or a few words). Rows 16–21, 26, 29, 35–36, 38–42, 49, 52. By count
+   the 120 uses split 26 daily, 23 weekly, 29 occasional and 42 rare; weighted by how often each
+   happens (an estimate: daily about 30 times a month, weekly 4, occasional once, rare once a
+   season), daily uses are about 85% of the times someone opens the app. They have to take two
+   taps at most, and the answer has to reach her *now*, not in tomorrow's read-back. That is the
+   chat.
 2. **One step a day belongs to the turn holder:** tomorrow's question (53–56, 66–67). It stays on
    Today's tomorrow card, and the suggestion must sound like a son or daughter writing to their
    mother, not like a survey.
