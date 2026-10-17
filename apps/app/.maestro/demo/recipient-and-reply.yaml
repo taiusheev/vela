@@ -25,6 +25,6 @@ tags:
 - tapOn: "Write to Mom"
 - inputText: "Save some seeds for our next visit."
 - tapOn:
-    css: '[data-testid="chat-send"]'
+    id: "Send now"
 - assertVisible: "Example only. Nothing was sent."
 - assertVisible: "Save some seeds for our next visit."

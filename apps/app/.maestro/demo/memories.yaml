@@ -6,13 +6,14 @@ tags:
   - demo
 ---
 - launchApp
-- tapOn: "Memories"
+# Opened by itself: Today stays mounted behind a tab it opened, and its words would count as shown.
+- openLink: ${APP_URL}/exchanges
 - assertVisible: "This week"
 - assertVisible: "Last week"
 - tapOn: "Search her words"
 - inputText: "butter"
 - assertVisible: "Both of you, but only Mia listened about the butter."
-- assertNotVisible: "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
+- assertNotVisible: "Mom answered at 8:12 · 2 replies"
 - eraseText
 - tapOn: "Stories"
 - assertVisible: "It was a bakery, then a bookshop. We queued there for bread in the winter."

@@ -12,16 +12,16 @@ tags:
 - assertVisible: "And a jar of the plum jam."
 - tapOn: "And a jar of the plum jam."
 - tapOn:
-    css: '[data-testid="chat-react-hug"]'
+    id: "Send Mom a hug"
 - assertVisible: "🤗"
 - tapOn: "Write to Mom"
 - inputText: "Leave it with the neighbour if you go out."
 - tapOn:
-    css: '[data-testid="chat-send"]'
+    id: "Send now"
 - assertVisible: "Leave it with the neighbour if you go out."
 - assertVisible: "Example only. Nothing was sent."
 - tapOn:
-    css: '[data-testid="chat-menu"]'
+    id: "More for Mom"
 - assertVisible: "Change Mom's morning"
 - tapOn: "Change Mom's morning"
 - assertVisible: "Morning settings"
