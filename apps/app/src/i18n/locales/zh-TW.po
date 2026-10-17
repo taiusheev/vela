@@ -951,6 +951,10 @@ msgstr "請輸入時間，例如 08:30，並選擇支援的語言。"
 msgid "Enter the six digits from your message."
 msgstr "請輸入訊息中的六位數字。"
 
+#: app/sign-in.tsx
+msgid "Error code: {code}"
+msgstr "錯誤代碼：{code}"
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr "示範 · 愛心已送出"

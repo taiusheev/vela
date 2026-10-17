@@ -54,6 +54,12 @@ type Trouble = {
     | "country_unsupported"
     | "phone_off"
     | "email_invalid";
+  /**
+   * Clerk's own error codes, shown small under a refusal the screen cannot word more exactly
+   * (founder, 18 October 2026: build 5 said only "That did not work"). Codes name what went wrong,
+   * never the person.
+   */
+  codes?: string;
 };
 
 /**
@@ -84,13 +90,19 @@ function codesOf(error: unknown): string[] {
 /** What a refused number or address means for the person, from Clerk's codes. */
 function refusalOf(error: unknown, phone: boolean): Trouble {
   const codes = codesOf(error).join(" ");
+  // What Clerk said, for the one refusal that has no words of its own; an error without codes
+  // (the network, a crash) says what kind of error it was.
+  const shown =
+    codes.length > 0 ? codesOf(error).join(", ") : String((error as Error | null)?.name ?? "");
+  const unworded = (): Trouble =>
+    shown.length === 0 ? { kind: "did_not_work" } : { kind: "did_not_work", codes: shown };
   if (/country/.test(codes)) return { kind: "country_unsupported" };
   // A number this Clerk instance does not take at all answers `form_param_unknown` on sign-up.
   if (/strategy|not_allowed|not_enabled|param_unknown/.test(codes)) {
-    return { kind: phone ? "phone_off" : "did_not_work" };
+    return phone ? { kind: "phone_off" } : unworded();
   }
   if (/format|invalid/.test(codes)) return { kind: phone ? "number_invalid" : "email_invalid" };
-  return { kind: "did_not_work" };
+  return unworded();
 }
 
 /**
@@ -381,6 +393,11 @@ function CodeSignIn() {
     }
   };
 
+  /** Clerk's codes under a refusal, to quote to Vela: "Error code: form_identifier_exists". */
+  function errorCode(code: string): string {
+    return t`Error code: ${code}`;
+  }
+
   /** The words for what went wrong, in the language the screen is in now. */
   function troubleWords(what: Trouble): string {
     switch (what.kind) {
@@ -578,6 +595,11 @@ function CodeSignIn() {
         {trouble === undefined ? null : (
           <Words variant="body" tone="ink2">
             {troubleWords(trouble)}
+          </Words>
+        )}
+        {trouble?.codes === undefined ? null : (
+          <Words variant="caption" tone="ink3" selectable>
+            {errorCode(trouble.codes)}
           </Words>
         )}
         {trouble?.kind === "country_unsupported" || trouble?.kind === "phone_off" ? (
