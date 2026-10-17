@@ -5,7 +5,7 @@ import {
 } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
 import { type Member, members } from "@vela/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
@@ -29,7 +29,45 @@ function editable(member: Member | undefined, familyId: string): member is Membe
         (member.lightOn || member.lightConsentedAt !== null)))
   );
 }
-function view(member: Member, now: Date): ApiMorningPreferences {
+/** The caller and the environment's switch, for the "send as me" part of the view. */
+interface SendAsMeView {
+  callerId: string;
+  available: boolean;
+}
+
+/**
+ * The name of the organiser whose name Vela's suggestion goes in, when that is not the caller and
+ * they are still an active organiser of her family: what the caller is told instead of a switch
+ * that looks off while someone else's name is used.
+ */
+async function otherSigner(
+  db: Queryable,
+  member: Member,
+  callerId: string,
+): Promise<string | null> {
+  const signerId = member.suggestionsSignedBy;
+  if (signerId === null || signerId === callerId) return null;
+  const [signer] = await db
+    .select({ name: members.displayName })
+    .from(members)
+    .where(
+      and(
+        eq(members.id, signerId),
+        eq(members.familyId, member.familyId),
+        eq(members.role, "organiser"),
+        eq(members.status, "active"),
+        isNull(members.leftAt),
+      ),
+    );
+  return signer?.name ?? null;
+}
+
+function view(
+  member: Member,
+  now: Date,
+  sendAsMe: SendAsMeView,
+  sentAs: string | null,
+): ApiMorningPreferences {
   const today = localDateOf(now, member.tz);
   return {
     member_id: member.id,
@@ -42,6 +80,9 @@ function view(member: Member, now: Date): ApiMorningPreferences {
         ? member.pendingArrivalDate
         : null,
     language: member.language,
+    send_as_me_available: sendAsMe.available,
+    send_as_me: member.suggestionsSignedBy === sendAsMe.callerId,
+    sent_as: sentAs,
   };
 }
 export async function loadApiMorningPreferences(
@@ -50,17 +91,36 @@ export async function loadApiMorningPreferences(
   familyId: string,
   memberId: string,
   now: Date,
+  options: { sendAsMe?: boolean } = {},
 ): Promise<ApiMorningPreferences | null> {
   if (!UUID.test(memberId)) return null;
   const family = familyId.toLowerCase();
   const access = await authorizeFamilyAccess(db, identity, family, "organiser");
   if (access.kind !== "granted") return null;
   const [member] = await db.select().from(members).where(eq(members.id, memberId.toLowerCase()));
-  return editable(member, family) ? view(member, now) : null;
+  if (!editable(member, family)) return null;
+  const callerId = access.access.memberId;
+  return view(
+    member,
+    now,
+    { callerId, available: options.sendAsMe === true },
+    await otherSigner(db, member, callerId),
+  );
+}
+
+/**
+ * Her row's signer after the caller's choice: their own id when they turn it on, none when they
+ * turn off what they had on, and otherwise as it was, so one organiser never stops another's choice
+ * by saving a time. A choice to turn it on where the environment does not allow it is refused.
+ */
+function signerAfter(member: Member, callerId: string, choice: boolean | undefined): string | null {
+  if (choice === true) return callerId;
+  if (choice === false && member.suggestionsSignedBy === callerId) return null;
+  return member.suggestionsSignedBy;
 }
 /** Save under the same member lock as morning preparation/enqueue. Existing delivery remains intact. */
 export async function setApiMorningPreferences(
-  deps: Pick<Deps, "db" | "clock">,
+  deps: Pick<Deps, "db" | "clock"> & { sendAsMe?: boolean },
   identity: SessionIdentity,
   key: string,
   familyId: string,
@@ -69,10 +129,13 @@ export async function setApiMorningPreferences(
 ): Promise<{ response: ApiMutationResponse; replayed: boolean; after: AfterCommit }> {
   const parsed = SetMorningPreferences.safeParse(input);
   if (!parsed.success) throw new ApiIdempotencyError("invalid");
+  if (parsed.data.send_as_me === true && deps.sendAsMe !== true)
+    throw new ApiIdempotencyError("invalid");
   if (!UUID.test(familyId) || !UUID.test(memberId)) throw notFound();
   const family = familyId.toLowerCase();
   const herId = memberId.toLowerCase();
   const after = nothingAfterCommit();
+  let callerId = "";
   const result = await runApiMutation(
     deps,
     identity,
@@ -87,6 +150,7 @@ export async function setApiMorningPreferences(
       authorize: async (tx) => {
         const access = await authorizeFamilyAccess(tx, identity, family, "organiser");
         if (access.kind !== "granted") throw notFound();
+        callerId = access.access.memberId;
       },
       mutate: async (tx) => {
         const [member] = await tx.select().from(members).where(eq(members.id, herId)).for("update");
@@ -101,6 +165,7 @@ export async function setApiMorningPreferences(
           .update(members)
           .set({
             language: parsed.data.language,
+            suggestionsSignedBy: signerAfter(member, callerId, parsed.data.send_as_me),
             ...(canWaitForHerYes(member, family)
               ? {
                   arrivalTime: parsed.data.arrival_time,
@@ -122,7 +187,15 @@ export async function setApiMorningPreferences(
           await markWakeDue(tx, herId, now);
           after.wakeMemberIds.push(herId);
         }
-        return { status: 200, body: view(saved, now) };
+        return {
+          status: 200,
+          body: view(
+            saved,
+            now,
+            { callerId, available: deps.sendAsMe === true },
+            await otherSigner(tx, saved, callerId),
+          ),
+        };
       },
     },
   );

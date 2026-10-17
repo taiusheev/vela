@@ -329,6 +329,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const photos = apiMediaFor(env, config, logger);
   return {
     ...photos,
+    sendAsMe: env.SEND_AS_ME?.trim() === "on",
     capabilities: {
       pilot: config.pilotAdmission != null,
       telegram_first: config.pilotAdmission != null,

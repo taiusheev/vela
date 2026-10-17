@@ -134,6 +134,7 @@ export function toTodayExchange(exchange: ApiTodayExchange, timeZone?: string): 
     id: exchange.id,
     recipientId: exchange.recipient_id,
     ...(exchange.asker_name === null ? {} : { asker: exchange.asker_name }),
+    ...(exchange.drafted_by_vela === true ? { draftedByVela: true as const } : {}),
     recipient: exchange.recipient_name,
     ...(exchange.voice_hello == null ? {} : { voiceHello: exchange.voice_hello }),
     ...(exchange.ask === null ? {} : { ask: exchange.ask }),
@@ -186,6 +187,7 @@ export function toTomorrowTurn(turn: ApiTomorrowTurn, viewerMemberId?: string): 
           asked: {
             by: ask.on_behalf_of ?? ask.asker_name ?? "Vela",
             text: words,
+            ...(ask.drafted_by_vela === true ? { draftedByVela: true as const } : {}),
             ...(ask.withdrawable === true ? { withdrawableId: ask.id } : {}),
           },
         }),

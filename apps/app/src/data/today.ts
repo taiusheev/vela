@@ -64,6 +64,8 @@ export interface TodayExchange {
   recipientId: string;
   /** Undefined for Vela's own hello, and for an ask whose asker has since been deleted. */
   asker?: string;
+  /** Vela wrote the words and sent them in the asker's name, at the asker's own choice. */
+  draftedByVela?: true;
   recipient: string;
   /** Arrival outcome, distinct from whether the parent has answered. */
   deliveryNotice?: string;
@@ -122,6 +124,8 @@ export interface TomorrowTurn {
   asked?: {
     by: string;
     text: string;
+    /** Vela wrote it and is sending it in the asker's name, at the asker's own choice. */
+    draftedByVela?: true;
     /** Set when the reader asked it and may still take it back (spec §19): the ask's id. */
     withdrawableId?: string;
   };

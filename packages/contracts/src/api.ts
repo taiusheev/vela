@@ -397,6 +397,11 @@ export const ApiTodayExchange = z.object({
   /** Null for Vela's own hello, and for an ask whose asker has since been deleted. */
   asker_name: z.string().nullable(),
   on_behalf_of: z.string().nullable(),
+  /**
+   * Vela drafted the ask and sent it in the asker's name, at the asker's own choice; absent in older
+   * responses, which never held one.
+   */
+  drafted_by_vela: z.boolean().optional(),
   type: ExchangeType,
   ask: z.string().nullable(),
   voice_hello: ApiExchangeAudio.nullable().default(null),
@@ -439,6 +444,8 @@ export const ApiTomorrowTurn = z.object({
       text: z.string().nullable(),
       asker_name: z.string().nullable(),
       on_behalf_of: z.string().nullable(),
+      /** Vela drafted it and is sending it in the asker's name, at the asker's own choice. */
+      drafted_by_vela: z.boolean().optional(),
       /** The reader asked it and her morning is not prepared yet, so they may withdraw it. */
       withdrawable: z.boolean(),
     })
@@ -1323,6 +1330,12 @@ export type ApiWithdrawn = z.infer<typeof ApiWithdrawn>;
 export const SetMorningPreferences = z.strictObject({
   arrival_time: LocalTime,
   language: z.enum(["en", "zh-TW"]),
+  /**
+   * The caller's own choice for her mornings (first test, 16 Oct 2026): true has Vela's suggestion,
+   * drafted in the caller's style, sent in the caller's name on a morning nobody wrote for; false
+   * stops it if the caller was the one signing; absent leaves it as it is, as older apps send.
+   */
+  send_as_me: z.boolean().optional(),
 });
 export type SetMorningPreferences = z.infer<typeof SetMorningPreferences>;
 export const ApiMorningPreferences = z.object({
@@ -1333,5 +1346,14 @@ export const ApiMorningPreferences = z.object({
   today_arrival_time: LocalTime,
   effective_from: LocalDate.nullable(),
   language: Lang,
+  /**
+   * Whether this environment lets an organiser have Vela's suggestion sent in their name; absent in
+   * older responses, which means not.
+   */
+  send_as_me_available: z.boolean().optional(),
+  /** Whether the caller is the organiser in whose name Vela's suggestion goes to her. */
+  send_as_me: z.boolean().optional(),
+  /** Another organiser's name when they, not the caller, have it on; else null. */
+  sent_as: z.string().nullable().optional(),
 });
 export type ApiMorningPreferences = z.infer<typeof ApiMorningPreferences>;

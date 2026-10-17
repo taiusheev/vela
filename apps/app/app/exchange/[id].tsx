@@ -252,7 +252,14 @@ function ExchangeReader({ id }: { id: string }) {
         ) : null}
         <Card>
           <Eyebrow>
-            {[exchange.day, t`${asker} asked`].filter((part) => part.length > 0).join(" · ")}
+            {[
+              exchange.day,
+              exchange.draftedByVela === true
+                ? t`${asker} asked · written by Vela`
+                : t`${asker} asked`,
+            ]
+              .filter((part) => part.length > 0)
+              .join(" · ")}
           </Eyebrow>
           {demo || familyId !== undefined ? (
             <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size="full" />

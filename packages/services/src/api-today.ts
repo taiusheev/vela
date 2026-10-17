@@ -225,6 +225,7 @@ export async function exchangeRow(
     ...(recipient.tz === undefined ? {} : { recipient_tz: recipient.tz }),
     asker_name: await nameOf(db, exchange.askerId),
     on_behalf_of: exchange.onBehalfOf,
+    drafted_by_vela: exchange.draftedByVela,
     type: exchange.type,
     ask: exchange.text,
     voice_hello: sourceAudio(fileOf(exchange.voiceHelloId), now),
@@ -361,6 +362,7 @@ async function turnOfTomorrow(
             text: composed.text,
             asker_name: await nameOf(db, composed.askerId),
             on_behalf_of: composed.onBehalfOf,
+            drafted_by_vela: composed.draftedByVela,
             // The asker may take it back until her morning is prepared (spec §19).
             withdrawable: composed.state === "composed" && composed.askerId === viewer.memberId,
           },

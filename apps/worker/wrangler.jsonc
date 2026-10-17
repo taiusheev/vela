@@ -279,7 +279,9 @@
     // On: her stories are kept in the family book (ADR-39).
     "BOOK": "on",
     // On: the founder's reading and each organiser's feedback with the weekly read (ADR-48).
-    "WEEKLY_INSIGHT": "on"
+    "WEEKLY_INSIGHT": "on",
+    // On: an organiser may have Vela's suggestion sent in their name (first test, 16 Oct 2026).
+    "SEND_AS_ME": "on"
   },
 
   "env": {
@@ -399,6 +401,8 @@
         "BOOK": "on",
         // On: staging holds test families only (ADR-48).
         "WEEKLY_INSIGHT": "on",
+        // On: staging holds test families only (first test, 16 Oct 2026).
+        "SEND_AS_ME": "on",
         // Technical plan 2.3: each reconcile reads production's health check from this account
         // and tells staging's admin chat when it stays down (src/peer-health.ts).
         "PEER_HEALTHZ_URL": "https://vela.vela-light.workers.dev/healthz"
@@ -502,6 +506,9 @@
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",
+        // Off, and pinned off by src/wrangler-config.test.ts, until the privacy notice and the
+        // consent script say an organiser may let Vela send its suggestion in their name.
+        "SEND_AS_ME": "off",
         // Technical plan 2.3: each reconcile reads staging's health check from this account, so
         // staging and production watch each other from different Cloudflare accounts.
         "PEER_HEALTHZ_URL": "https://vela.vela-light-staging.workers.dev/healthz"

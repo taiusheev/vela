@@ -43,6 +43,7 @@ export function toExchange(summary: ApiExchangeSummary, timeZone?: string): Exch
     id: summary.id,
     recipientId: summary.recipient_id,
     asker: card.asker ?? "Vela",
+    ...(card.draftedByVela === undefined ? {} : { draftedByVela: card.draftedByVela }),
     recipient: card.recipient,
     ask: card.ask ?? t`A hello from Vela`,
     day:

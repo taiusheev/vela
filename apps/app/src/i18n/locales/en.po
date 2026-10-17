@@ -17,9 +17,17 @@ msgstr ""
 msgid "{asker} asked"
 msgstr "{asker} asked"
 
+#: app/exchange/[id].tsx
+msgid "{asker} asked · written by Vela"
+msgstr "{asker} asked · written by Vela"
+
 #: app/(tabs)/index.tsx
 msgid "{asker} asked {recipient}"
 msgstr "{asker} asked {recipient}"
+
+#: app/(tabs)/index.tsx
+msgid "{asker} asked {recipient} · written by Vela"
+msgstr "{asker} asked {recipient} · written by Vela"
 
 #: src/data/precision.ts
 msgid "{away} away"
@@ -256,6 +264,10 @@ msgstr "{notices, plural, one {# quiet notice.} other {# quiet notices.}}"
 #: src/data/precision.ts
 msgid "{open, plural, one {# is still open.} other {# are still open.}}"
 msgstr "{open, plural, one {# is still open.} other {# are still open.}}"
+
+#: app/morning-settings.tsx
+msgid "{otherSigner} has this on now, so Vela’s question goes in their name. Choosing your name here uses yours instead."
+msgstr "{otherSigner} has this on now, so Vela’s question goes in their name. Choosing your name here uses yours instead."
 
 #: src/data/useToday.ts
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
@@ -1077,6 +1089,10 @@ msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram l
 msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "If her morning stays quiet past her usual time, and when it is settled."
 
+#: app/morning-settings.tsx
+msgid "If nobody in the family writes {name} a question for the morning, Vela can send the one it drafted in your style, signed with your name. You will see it marked “written by Vela”."
+msgstr "If nobody in the family writes {name} a question for the morning, Vela can send the one it drafted in your style, signed with your name. You will see it marked “written by Vela”."
+
 #: src/components/nearby-editor.tsx
 msgid "If the link doesn’t open, add me to your contacts, then tap it again."
 msgstr "If the link doesn’t open, add me to your contacts, then tap it again."
@@ -1840,6 +1856,10 @@ msgstr "See Vela Light"
 msgid "Send"
 msgstr "Send"
 
+#: app/morning-settings.tsx
+msgid "Send it as me"
+msgstr "Send it as me"
+
 #: app/onboarding.tsx
 msgid "Send it to her"
 msgstr "Send it to her"
@@ -2550,6 +2570,10 @@ msgid "Tomorrow · {by} asked {recipient}"
 msgstr "Tomorrow · {by} asked {recipient}"
 
 #: app/(tabs)/index.tsx
+msgid "Tomorrow · {by} asks {recipient} · written by Vela"
+msgstr "Tomorrow · {by} asks {recipient} · written by Vela"
+
+#: app/(tabs)/index.tsx
 msgid "Tomorrow · {name}'s turn to ask {recipient}"
 msgstr "Tomorrow · {name}'s turn to ask {recipient}"
 
@@ -2742,6 +2766,10 @@ msgstr "Vela reports a service problem. Messages may be delayed."
 msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
 msgstr "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
 
+#: app/morning-settings.tsx
+msgid "Vela signs it"
+msgstr "Vela signs it"
+
 #: app/help.tsx
 msgid "Vela status"
 msgstr "Vela status"
@@ -2874,6 +2902,10 @@ msgstr "When a morning goes quiet"
 #: app/precision.tsx
 msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
 msgstr "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
+
+#: app/morning-settings.tsx
+msgid "When nobody writes"
+msgstr "When nobody writes"
 
 #: src/push/provider.tsx
 msgid "When she answers what you asked, and the evening before your turn."

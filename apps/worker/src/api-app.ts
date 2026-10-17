@@ -236,6 +236,11 @@ export interface ApiWriteServices {
 
 export interface ApiRuntime {
   capabilities?: ApiCapabilities;
+  /**
+   * Whether an organiser may have Vela's suggestion sent in their name (`SEND_AS_ME`, first test
+   * 16 Oct 2026). Absent means not: the switch reads unavailable and turning it on is 400.
+   */
+  sendAsMe?: boolean;
   admission?: {
     config: PilotAdmission;
     permitsAccount: typeof pilotApiAccountAllowed;
@@ -821,6 +826,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         c.req.param("familyId"),
         c.req.param("memberId"),
         runtime.now(),
+        { sendAsMe: runtime.sendAsMe === true },
       );
       return preferences === null
         ? c.json(FAMILY_NOT_FOUND, 404)
@@ -1419,7 +1425,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
             400,
           );
         const result = await writes.services.setApiMorningPreferences(
-          { db: c.get("db"), clock: writes.clock },
+          { db: c.get("db"), clock: writes.clock, sendAsMe: runtime.sendAsMe === true },
           c.get("session"),
           c.get("writeKey"),
           c.req.param("familyId"),

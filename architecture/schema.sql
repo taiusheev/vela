@@ -34,7 +34,7 @@ CREATE TABLE "admin_access_log" (
 	"action" text NOT NULL,
 	"what" text NOT NULL,
 	"at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite'))
+	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove'))
 );
 
 CREATE TABLE "ai_calls" (
@@ -161,6 +161,18 @@ CREATE TABLE "consents" (
 	CONSTRAINT "consents_subject_deleted_check" CHECK ("member_id" is not null or "contact_id" is not null or ("subject_deleted_at" is not null and "evidence" - 'chat_id' - 'message_id' - 'text_sha256' - 'recorded_by' = '{}'::jsonb))
 );
 
+CREATE TABLE "dead_letters" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"message_id" text NOT NULL,
+	"job_type" text NOT NULL,
+	"job" jsonb NOT NULL,
+	"failed_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"replay_requested_at" timestamp with time zone,
+	"replayed_at" timestamp with time zone,
+	CONSTRAINT "dead_letters_message_id_key" UNIQUE("message_id"),
+	CONSTRAINT "dead_letters_job_type_check" CHECK ("job_type" in ('deliver', 'ingest_answer_media', 'ingest_exchange_media', 'understand_answer', 'handle_inbound'))
+);
+
 CREATE TABLE "deletions" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"object_type" text NOT NULL,
@@ -197,6 +209,7 @@ CREATE TABLE "exchanges" (
 	"options" jsonb,
 	"media_ids" uuid[] DEFAULT '{}' NOT NULL,
 	"voice_hello_id" uuid,
+	"drafted_by_vela" boolean DEFAULT false NOT NULL,
 	"when_rule" text DEFAULT 'tomorrow' NOT NULL,
 	"scheduled_for" date,
 	"delivered_at" timestamp with time zone,
@@ -211,7 +224,7 @@ CREATE TABLE "exchanges" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "exchanges_type_check" CHECK ("type" in ('question', 'photo_choice', 'voice_note', 'word', 'story', 'recipe', 'memory_photo', 'vote', 'hello')),
 	CONSTRAINT "exchanges_state_check" CHECK ("state" in ('composed', 'scheduled', 'delivered', 'seen', 'answered', 'replied', 'read_back', 'archived', 'withdrawn')),
-	CONSTRAINT "exchanges_when_rule_check" CHECK ("when_rule" in ('tomorrow', 'date', 'whenever'))
+	CONSTRAINT "exchanges_when_rule_check" CHECK ("when_rule" in ('tomorrow', 'date', 'whenever', 'now'))
 );
 
 CREATE TABLE "families" (
@@ -312,9 +325,12 @@ CREATE TABLE "members" (
 	"light_starts_on" date,
 	"wake_time" time,
 	"arrival_time" time DEFAULT '08:00' NOT NULL,
+	"pending_arrival_time" time,
+	"pending_arrival_date" date,
 	"next_wake_at" timestamp with time zone,
 	"quiet_after_min" integer DEFAULT 360 NOT NULL,
 	"learning_until" date,
+	"suggestions_signed_by" uuid,
 	"answer_stats" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"left_at" timestamp with time zone,
@@ -425,10 +441,16 @@ CREATE TABLE "outbound" (
 	"sent_at" timestamp with time zone,
 	"effects_at" timestamp with time zone,
 	CONSTRAINT "outbound_idempotency_key_key" UNIQUE("idempotency_key"),
-	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')),
+	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('conversation', 'arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')),
 	CONSTRAINT "outbound_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device')),
 	CONSTRAINT "outbound_status_check" CHECK ("status" in ('queued', 'sent', 'failed', 'dropped')),
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
+);
+
+CREATE TABLE "pilot_roster" (
+	"telegram_user_id" text PRIMARY KEY NOT NULL,
+	"added_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "pilot_roster_telegram_user_id_check" CHECK ("pilot_roster"."telegram_user_id" ~ '^[1-9][0-9]{0,12}$')
 );
 
 CREATE TABLE "push_devices" (
@@ -681,6 +703,7 @@ ALTER TABLE "media" ADD CONSTRAINT "media_family_id_families_id_fk" FOREIGN KEY 
 ALTER TABLE "media" ADD CONSTRAINT "media_uploaded_by_members_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "members" ADD CONSTRAINT "members_suggestions_signed_by_members_id_fk" FOREIGN KEY ("suggestions_signed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE set null ON UPDATE no action;
@@ -736,6 +759,7 @@ CREATE INDEX "away_active_idx" ON "away_periods" USING btree ("member_id") WHERE
 CREATE INDEX "book_entries_family_idx" ON "book_entries" USING btree ("family_id","kept_at");
 CREATE INDEX "channel_links_member_idx" ON "channel_links" USING btree ("member_id");
 CREATE INDEX "consents_subject_ref_idx" ON "consents" USING btree ("subject_ref");
+CREATE INDEX "dead_letters_failed_at_idx" ON "dead_letters" USING btree ("failed_at");
 CREATE INDEX "events_family_at_idx" ON "events" USING btree ("family_id","at");
 CREATE INDEX "events_name_at_idx" ON "events" USING btree ("name","at");
 CREATE UNIQUE INDEX "exchanges_one_per_day" ON "exchanges" USING btree ("recipient_id","scheduled_for") WHERE "scheduled_for" is not null and "state" <> 'withdrawn';
