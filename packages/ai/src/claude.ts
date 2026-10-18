@@ -20,7 +20,7 @@ import {
   SERVER_FALLBACK_BETA,
   TIMEOUT_MS_FOR,
 } from "./models.ts";
-import { normaliseSuggestion } from "./normalise-suggestion.ts";
+import { normaliseSuggestion, suggestionDateGrounded } from "./normalise-suggestion.ts";
 import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
@@ -190,6 +190,8 @@ async function invoke<K extends AiCallName>(
   }
 
   const value = spec.normalise ? spec.normalise(parsed.data, input) : parsed.data;
+  if (spec.call === "suggest" && !suggestionDateGrounded(input, value))
+    return failure("date_ungrounded", record);
   return { ok: true, value, record };
 }
 

@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-10-18T03:52:08.898Z",
+  "kind": "sanitized-hosted-followup-trace",
+  "sampledEvents": 157,
+  "outcomes": {
+    "ok": 157
+  },
+  "exceptions": 0,
+  "errorLogs": 0,
+  "limitations": [
+    "Only received trace samples; absence of a failing trace does not explain the earlier failed burst.",
+    "Request headers, tokens, raw response bodies and exception messages were never saved."
+  ]
+}

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { normaliseFlag, normaliseUnderstanding } from "./claude.ts";
 import { SAFE_DEFAULTS } from "./defaults.ts";
 import { MAX_RETRIES, MAX_TOKENS_FOR, TIMEOUT_MS_FOR } from "./models.ts";
-import { normaliseSuggestion } from "./normalise-suggestion.ts";
+import { normaliseSuggestion, suggestionDateGrounded } from "./normalise-suggestion.ts";
 import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
@@ -314,6 +314,8 @@ async function invoke<K extends AiCallName>(
     return failure("schema_invalid", record);
   }
   const value = spec.normalise ? spec.normalise(parsed.data, input) : parsed.data;
+  if (spec.call === "suggest" && !suggestionDateGrounded(input, value))
+    return failure("date_ungrounded", record);
   return { ok: true, value, record };
 }
 

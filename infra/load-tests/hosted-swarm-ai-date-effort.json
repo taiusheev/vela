@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-10-18T03:44:33.222Z",
+  "kind": "targeted-live-regressions",
+  "cases": [
+    "suggest-en-birthday-family-date",
+    "translate-en-grandchild-casual-to-respectful-zh"
+  ],
+  "repetitions": 3,
+  "attempts": 6,
+  "passed": 6,
+  "failures": [],
+  "costUsd": 0.020467000000000003,
+  "rubricJudged": false
+}

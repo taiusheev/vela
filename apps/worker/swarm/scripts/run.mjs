@@ -17,6 +17,9 @@ if (!token || process.env.CLOUDFLARE_ACCOUNT_ID !== account)
   throw new Error("staging_account_required");
 const derive = (label) =>
   createHmac("sha256", token).update(`vela-hosted-swarm/${label}`).digest("base64url");
+const clientConcurrency = Number(process.env.VELA_HOSTED_CLIENT_CONCURRENCY ?? 20);
+if (!Number.isInteger(clientConcurrency) || clientConcurrency < 1 || clientConcurrency > 40)
+  throw new Error("invalid_client_concurrency");
 const secret = derive("control");
 const contentKey = derive("sealing");
 async function cf(path, method = "GET", body) {
@@ -102,6 +105,7 @@ async function provision() {
 }
 async function control(path, body = {}) {
   const response = await fetch(`${origin}/control/${path}`, {
+    signal: AbortSignal.timeout(30_000),
     method: "POST",
     headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -109,11 +113,7 @@ async function control(path, body = {}) {
   if (!response.ok) throw new Error(`control_${path}_${response.status}`);
   return response.json();
 }
-async function pool(
-  items,
-  operation,
-  concurrency = Number(process.env.VELA_HOSTED_CLIENT_CONCURRENCY ?? 20),
-) {
+async function pool(items, operation, concurrency = clientConcurrency) {
   let cursor = 0;
   const results = await Promise.allSettled(
     Array.from({ length: concurrency }, async () => {
@@ -173,7 +173,7 @@ const evidence = {
   finalVerificationOnly: verifyFinal,
   httpRetries: [],
   queueMaxConcurrency: 20,
-  clientConcurrency: Number(process.env.VELA_HOSTED_CLIENT_CONCURRENCY ?? 20),
+  clientConcurrency,
   source: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   workingTreeDirty:
     execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim().length > 0,
@@ -282,11 +282,21 @@ try {
         const headers = { authorization: `Bearer ${family.token}` };
         async function get(path, status = 200) {
           for (let attempt = 0; ; attempt++) {
-            const r = await fetch(`${origin}/v1/${path}`, { headers });
+            const r = await fetch(`${origin}/v1/${path}`, {
+              headers,
+              signal: AbortSignal.timeout(30_000),
+            });
             if (r.status === status) return r.json();
             if (![502, 503, 504].includes(r.status) || attempt === 2)
               throw new Error(`api_read_${r.status}`);
+            const failure = await r
+              .clone()
+              .json()
+              .catch(() => null);
             evidence.httpRetries.push({
+              code: /^[a-z_]{1,50}$/.test(failure?.error?.code ?? "")
+                ? failure.error.code
+                : "non_api_response",
               operation: "read",
               status: r.status,
               attempt: attempt + 1,
@@ -330,6 +340,7 @@ try {
         for (let repeat = 0; repeat < 2; repeat++) {
           for (let attempt = 0; ; attempt++) {
             const response = await fetch(`${origin}/v1/exchanges/${card.id}/replies`, {
+              signal: AbortSignal.timeout(30_000),
               method: "POST",
               headers: {
                 ...headers,
@@ -454,6 +465,6 @@ try {
   }
   evidence.finishedAt = new Date().toISOString();
   evidence.status = evidence.passed ? "passed" : "failed";
-  await writeFile(receipt, JSON.stringify(evidence, null, 2) + "\n");
+  await writeFile(receipt, `${JSON.stringify(evidence, null, 2)}\n`);
   console.log(JSON.stringify({ passed: evidence.passed, receipt }));
 }

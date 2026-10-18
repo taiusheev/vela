@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-10-18T03:24:57.016Z",
+  "recordedAt": "2026-10-18T03:49:58.593Z",
   "kind": "targeted-live-regressions",
   "cases": [
     "hello-zh-code-switch-reply-translated",
@@ -9,12 +9,13 @@
     "understand-en-health-withheld-keeps-biscuits",
     "understand-zh-health-withheld-keeps-dumplings",
     "suggest-en-birthday-family-date",
-    "weekly-insight-zh-eats-alone-two-organisers"
+    "weekly-insight-zh-eats-alone-two-organisers",
+    "translate-en-grandchild-casual-to-respectful-zh"
   ],
   "repetitions": 3,
-  "attempts": 24,
-  "passed": 24,
+  "attempts": 27,
+  "passed": 27,
   "failures": [],
-  "costUsd": 0.207299,
+  "costUsd": 0.212556,
   "rubricJudged": false
 }

@@ -355,3 +355,22 @@ describe("date-sensitive suggestion effort", () => {
     expect(openAiEffortFor("understand", understandInput)).toBe("low");
   });
 });
+
+it("withholds an unsupported date draft rather than returning it as a successful suggestion", async () => {
+  const { ai } = clientWith([
+    completion({ type: "voice_note", text: "Dad, a childhood memory of Mia?", source: "date" }),
+  ]);
+  const outcome = await ai.suggest({
+    lang: "en",
+    holderName: "Leo",
+    recipientAddress: "Dad",
+    forDate: "2026-09-18",
+    rotationType: "voice_note",
+    recentMentions: [],
+    familyDates: [{ date: "2026-09-19", label: "Mia's 10th birthday" }],
+    holderLastAsk: null,
+  });
+  expect(outcome.ok).toBe(false);
+  expect(outcome.value.text).toBe("");
+  expect(outcome.record).toMatchObject({ ok: false, error: "date_ungrounded" });
+});

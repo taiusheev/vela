@@ -1,0 +1,91 @@
+{
+  "startedAt": "2026-10-18T03:43:55.395Z",
+  "kind": "hosted-cloudflare-neon-product-flow",
+  "families": 100,
+  "days": 3,
+  "mixed": true,
+  "resumedAtDay": 2,
+  "finalVerificationOnly": true,
+  "httpRetries": [
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 2
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 2
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    }
+  ],
+  "queueMaxConcurrency": 20,
+  "clientConcurrency": 20,
+  "source": "38d11a05289c27b0d4bf96bcbc2646873b414469",
+  "workingTreeDirty": true,
+  "status": "failed",
+  "passed": false,
+  "phases": [],
+  "limitations": [
+    "Isolated explicitly qualified PostgreSQL schema sharing staging's Neon compute and Hyperdrive.",
+    "Real deployed HTTP routes, Cloudflare queues, Durable Object alarms, gateway, sealed PostgreSQL writes and app read services.",
+    "Synthetic JWT sessions replace Clerk; recording Telegram and AI-off fallback. No real-provider, AI-quality or native-device evidence.",
+    "Virtual dates are advanced between phases; this is not a wall-clock soak or production capacity measurement."
+  ],
+  "resumeCheckpoint": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 278,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "failure": "api_reply_503",
+  "schedulerStopped": true,
+  "finishedAt": "2026-10-18T03:44:57.489Z"
+}
