@@ -1,0 +1,51 @@
+{
+  "applicationRevision": "f08b5a2f453fc1f0731625a008e79ff99b6f0145",
+  "testSha256": "eb4e207f744ba140d2a246ecd6e4bf2fdd02064bb4bf5ee31ef4071c8b2531a0",
+  "passed": true,
+  "totalFamilyDays": 11200,
+  "totals": {
+    "exchanges": 11200,
+    "answers": 11200,
+    "replies": 11200,
+    "signedDrafts": 5600,
+    "delivered": 11200,
+    "readBackReplies": 9600,
+    "duplicateSends": 0,
+    "unfinishedOutbound": 0,
+    "pendingJobs": 0,
+    "quietEvents": 0
+  },
+  "runs": [
+    {
+      "families": 100,
+      "days": 7,
+      "workers": 20,
+      "elapsedSeconds": 12.65,
+      "worstDailyAppReadP95Ms": 108.44,
+      "passed": true
+    },
+    {
+      "families": 500,
+      "days": 7,
+      "workers": 20,
+      "elapsedSeconds": 80.24,
+      "worstDailyAppReadP95Ms": 329.05,
+      "passed": true
+    },
+    {
+      "families": 1000,
+      "days": 7,
+      "workers": 40,
+      "elapsedSeconds": 212.97,
+      "worstDailyAppReadP95Ms": 391.87,
+      "passed": true
+    }
+  ],
+  "checks": {
+    "lint": "passed after formatter fix",
+    "typecheck": "9 of 9 packages passed",
+    "unitTests": "9 of 9 packages passed, 1 existing skipped app test",
+    "postgres": "122 tests in 44 files passed"
+  },
+  "interpretation": "Correctness holds for these synchronous local text workloads. These measurements do not establish hosted or production capacity, real AI quality, native UI usability or real family engagement."
+}
