@@ -25,7 +25,7 @@ describe("PROMPTS registry", () => {
   });
 
   it("drafts in the holder's own style while leaving approval with the holder", () => {
-    expect(PROMPTS.suggest.version).toBe("suggest.v2");
+    expect(PROMPTS.suggest.version).toBe("suggest.v3");
     expect(PROMPTS.suggest.system).toContain("holderWritingExamples");
     expect(PROMPTS.suggest.system).toContain("match their everyday vocabulary");
     expect(PROMPTS.suggest.system).toContain(
