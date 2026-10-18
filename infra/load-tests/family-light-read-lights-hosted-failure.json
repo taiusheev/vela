@@ -1,0 +1,111 @@
+{
+  "endpoint": "lights",
+  "kind": "hosted-read-only-http-bursts",
+  "source": "5f9b8f2b2b869749469a81bdc3779152726122fe",
+  "workingTreeDirty": true,
+  "startedAt": "2026-10-18T06:21:57.518Z",
+  "concurrency": 20,
+  "retries": 0,
+  "configuredCpuMs": 1000,
+  "before": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "requests": 100,
+      "statuses": {
+        "200": 87
+      },
+      "failures": [
+        {
+          "index": 87,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 88,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 89,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 90,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 91,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 92,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 93,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 94,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 95,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 96,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 97,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 98,
+          "reason": "network_or_body"
+        },
+        {
+          "index": 99,
+          "reason": "network_or_body"
+        }
+      ],
+      "elapsedMs": 8627.604083999999,
+      "p50Ms": 1513.4809589999986,
+      "p95Ms": 3932.8387089999997
+    }
+  ],
+  "limitations": [
+    "Existing synthetic cohort only; real sessions and messenger delivery remain outside this test.",
+    "No live tail session: inspect persisted observability after testing to retain normal execution conditions."
+  ],
+  "after": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "unchanged": true,
+  "passed": false,
+  "finishedAt": "2026-10-18T06:22:07.037Z"
+}

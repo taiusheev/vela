@@ -13,6 +13,14 @@ if (!token || process.env.CLOUDFLARE_ACCOUNT_ID !== account)
 const secret = createHmac("sha256", token).update("vela-hosted-swarm/control").digest("base64url");
 const rounds = Number(process.env.VELA_SWARM_HTTP_ROUNDS ?? 3);
 if (!Number.isInteger(rounds) || rounds < 1 || rounds > 10) throw new Error("invalid_rounds");
+const endpoint = process.env.VELA_SWARM_HTTP_ENDPOINT ?? "today";
+if (endpoint !== "today" && endpoint !== "lights") throw new Error("invalid_endpoint");
+const receiptName =
+  process.env.VELA_SWARM_HTTP_RECEIPT ??
+  (endpoint === "today"
+    ? "hosted-swarm-cpu-http-bursts.json"
+    : "hosted-swarm-lights-http-bursts.json");
+if (!/^[a-z0-9][a-z0-9-]{0,100}\.json$/.test(receiptName)) throw new Error("invalid_receipt_name");
 
 async function control(path) {
   const r = await fetch(`${origin}/control/${path}`, {
@@ -37,6 +45,7 @@ if (families.length !== 100 || families.some((f, index) => f.index !== index))
   throw new Error("expected_recorded_100_family_cohort");
 const before = await control("stats");
 const report = {
+  endpoint,
   kind: "hosted-read-only-http-bursts",
   source: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   workingTreeDirty:
@@ -66,14 +75,21 @@ for (let round = 0; round < rounds; round++) {
         const family = families[index];
         const began = performance.now();
         try {
-          const r = await fetch(`${origin}/v1/families/${family.familyId}/today`, {
+          const r = await fetch(`${origin}/v1/families/${family.familyId}/${endpoint}`, {
             headers: { authorization: `Bearer ${family.token}` },
             signal: AbortSignal.timeout(30_000),
           });
           statuses[r.status] = (statuses[r.status] ?? 0) + 1;
           if (r.ok) {
             const body = await r.json();
-            if (body.exchanges.length !== 1 || body.exchanges[0].recipient_id !== family.memberId)
+            const matches =
+              endpoint === "today"
+                ? body.exchanges?.length === 1 && body.exchanges[0].recipient_id === family.memberId
+                : Array.isArray(body) &&
+                  body.length === 1 &&
+                  body[0].member_id === family.memberId &&
+                  body[0].state === "lit";
+            if (!matches)
               failures.push({ index, status: r.status, reason: "unexpected_family_data" });
           } else {
             const body = await r.json().catch(() => null);
@@ -85,9 +101,18 @@ for (let round = 0; round < rounds; round++) {
             });
           }
         } catch (error) {
+          // Keep transport diagnostics, never exception messages, URLs or headers.
+          const errorCodes = [];
+          let cause = error;
+          for (let depth = 0; depth < 4 && cause; depth++, cause = cause.cause) {
+            if (typeof cause.code === "string" && /^[A-Z0-9_]{1,60}$/.test(cause.code))
+              errorCodes.push(cause.code);
+          }
           failures.push({
             index,
             reason: error?.name === "TimeoutError" ? "timeout" : "network_or_body",
+            errorName: /^[A-Za-z]{1,40}$/.test(error?.name ?? "") ? error.name : "Error",
+            errorCodes: [...new Set(errorCodes)],
           });
         }
         elapsed.push(performance.now() - began);
@@ -113,7 +138,7 @@ report.passed =
   report.unchanged && report.rounds.every((r) => r.requests === 100 && r.failures.length === 0);
 report.finishedAt = new Date().toISOString();
 const root = fileURLToPath(new URL("../../../../", import.meta.url));
-const receipt = `${root}infra/load-tests/hosted-swarm-cpu-http-bursts.json`;
+const receipt = `${root}infra/load-tests/${receiptName}`;
 await writeFile(receipt, `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify({ passed: report.passed, receipt }));
 if (!report.passed) process.exitCode = 1;
