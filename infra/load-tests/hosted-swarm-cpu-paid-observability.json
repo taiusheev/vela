@@ -1,0 +1,33 @@
+{
+  "recordedAt": "2026-10-18T05:22:44.403Z",
+  "kind": "persisted-observability-after-paid-cpu-bursts",
+  "sourceWindow": {
+    "from": 1792300800166,
+    "to": 1792300976321
+  },
+  "expectedTodayInvocations": 1000,
+  "observedTodayInvocations": 957,
+  "outcomes": {
+    "ok": 957
+  },
+  "statuses": {
+    "200": 957
+  },
+  "cpuTimeMs": {
+    "samples": 957,
+    "p50": 28,
+    "p95": 64,
+    "max": 172
+  },
+  "errorEvents": 0,
+  "errorLabels": [],
+  "limitations": [
+    "Restricted to the isolated synthetic Worker and recorded burst window.",
+    "No raw requests, headers, family messages or exception messages were saved.",
+    "No live tail session was active during the burst.",
+    "Persisted telemetry is incomplete. The independent HTTP receipt reconciles every request; these log records do not."
+  ],
+  "completeLogCoverage": false,
+  "allRecordedInvocationsSucceeded": true,
+  "coverageFraction": 0.957
+}
