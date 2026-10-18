@@ -15,7 +15,7 @@ import {
   users,
 } from "@vela/db";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
 import { loadApiToday } from "./api-today.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -104,6 +104,141 @@ async function seedSuggestion(values: Partial<NewSuggestion> = {}): Promise<Sugg
 }
 
 describe("loadApiToday", () => {
+  it("keeps each parent's tomorrow draft on their own date and inside their family", async () => {
+    const { member } = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Dad",
+      externalId: "today-dad",
+    });
+    await h.db
+      .update(members)
+      .set({
+        lightOn: true,
+        lightConsentedAt: h.clock.now(),
+        tz: "America/Los_Angeles",
+      })
+      .where(eq(members.id, member.id));
+    const dadTomorrow = addDays(localDateOf(h.clock.now(), "America/Los_Angeles"), 1);
+    const momDraft = await seedSuggestion();
+    const dadDraft = await seedSuggestion({
+      aboutMemberId: member.id,
+      localDay: dadTomorrow,
+      bankId: STORY_ID,
+      type: "story",
+    });
+    await seedSuggestion({ aboutMemberId: member.id, localDay: addDays(dadTomorrow, 1) });
+    const other = await seedFamily(h.db, {
+      now: h.clock.now(),
+      organiserExternalId: "today-other-organiser",
+      memberExternalId: "today-other-parent",
+    });
+    await seedSuggestion({ familyId: other.family.id, aboutMemberId: other.member.id });
+    const day = ApiToday.parse(await load());
+    expect(day.tomorrow).toHaveLength(2);
+    expect(day.tomorrow.find((turn) => turn.recipient_id === seed.member.id)).toMatchObject({
+      local_day: tomorrow(),
+      turn_pending: true,
+      suggestion: { id: momDraft.id, text: bankText(BANK_ID, "en") },
+    });
+    expect(day.tomorrow.find((turn) => turn.recipient_id === member.id)).toMatchObject({
+      local_day: dadTomorrow,
+      turn_pending: true,
+      suggestion: { id: dadDraft.id, text: bankText(STORY_ID, "en") },
+    });
+    expect(await load(identity, other.family.id)).toBeNull();
+    expect(await load(stranger)).toBeNull();
+  });
+
+  it("batches conversations, connection days and tomorrow across parents in different zones", async () => {
+    async function prepare(member: SeededFamily["member"], index: number) {
+      const date = localDateOf(h.clock.now(), member.tz);
+      const family = { ...seed, member };
+      const exchange = await seedExchange(h.db, family, {
+        date,
+        state: "answered",
+        deliveredAt: h.clock.now(),
+      });
+      await h.db.insert(answers).values({
+        exchangeId: exchange.id,
+        memberId: member.id,
+        kind: "text",
+        channel: "telegram",
+        externalId: `today-batch-${index}`,
+        payload: { text: `Words from parent ${index}` },
+        receivedAt: h.clock.now(),
+      });
+      await seedExchange(h.db, family, { date: addDays(date, 1), state: "composed" });
+      await h.db.insert(turns).values({
+        familyId: seed.family.id,
+        localDay: addDays(date, 1),
+        recipientId: member.id,
+        holderId: seed.organiser.id,
+        promptedAt: h.clock.now(),
+      });
+      return member;
+    }
+    const parents = [await prepare(seed.member, 0)];
+    const reads = vi.spyOn(h.db, "select");
+    try {
+      const first = ApiToday.parse(await load());
+      const singleReads = reads.mock.calls.length;
+      for (const [index, tz] of [
+        "America/Los_Angeles",
+        "Pacific/Kiritimati",
+        "Asia/Ho_Chi_Minh",
+      ].entries()) {
+        const { member } = await seedGroupMember(h.db, seed, {
+          now: h.clock.now(),
+          name: `Parent ${index + 1}`,
+          externalId: `today-parent-${index}`,
+        });
+        const [parent] = await h.db
+          .update(members)
+          .set({
+            tz,
+            lightOn: true,
+            lightConsentedAt: h.clock.now(),
+          })
+          .where(eq(members.id, member.id))
+          .returning();
+        if (parent === undefined) throw new Error("expected parent");
+        parents.push(await prepare(parent, index + 1));
+      }
+      reads.mockClear();
+      const day = ApiToday.parse(await load());
+      const familyReads = reads.mock.calls.length;
+      expect(day.exchanges).toHaveLength(4);
+      expect(day.tomorrow).toHaveLength(4);
+      expect(day.exchanges.find((card) => card.recipient_id === seed.member.id)).toEqual(
+        first.exchanges[0],
+      );
+      for (const [index, parent] of parents.entries()) {
+        const date = localDateOf(h.clock.now(), parent.tz);
+        expect(day.exchanges.find((card) => card.recipient_id === parent.id)?.answer?.text).toBe(
+          `Words from parent ${index}`,
+        );
+        expect(day.tomorrow.find((turn) => turn.recipient_id === parent.id)).toMatchObject({
+          local_day: addDays(date, 1),
+          holder_name: "Mia",
+          suggestion: null,
+          ask: { asker_name: "Mia" },
+        });
+        expect(day.connection_days?.find((row) => row.member_id === parent.id)?.days).toEqual(
+          Array.from({ length: 7 }, (_, i) => ({
+            date: addDays(date, i - 6),
+            has_message: i === 6,
+          })),
+        );
+      }
+      // Only the existing light-status reader still does up to five reads per extra parent.
+      // Conversation, window and tomorrow queries must be shared by the whole screen.
+      expect(familyReads, `single=${singleReads}, four=${familyReads}`).toBeLessThanOrEqual(
+        singleReads + 15,
+      );
+    } finally {
+      reads.mockRestore();
+    }
+  });
   it("reports pending, delivered and partial failed arrivals from gateway receipts", async () => {
     const exchange = await seedExchange(h.db, seed, { date: today() });
     expect((await load())?.exchanges[0]?.delivery_status).toBe("pending");
