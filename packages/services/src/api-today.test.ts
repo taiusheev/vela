@@ -230,11 +230,8 @@ describe("loadApiToday", () => {
           })),
         );
       }
-      // Only the existing light-status reader still does up to five reads per extra parent.
-      // Conversation, window and tomorrow queries must be shared by the whole screen.
-      expect(familyReads, `single=${singleReads}, four=${familyReads}`).toBeLessThanOrEqual(
-        singleReads + 15,
-      );
+      // Light status and card sources are shared by the whole screen, across all parents.
+      expect(familyReads, `single=${singleReads}, four=${familyReads}`).toBe(singleReads);
     } finally {
       reads.mockRestore();
     }

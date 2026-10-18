@@ -1,18 +1,11 @@
 import type { LightState, MemberLight } from "@vela/contracts";
-import { localDateOf } from "@vela/core";
-import { awayPeriods, members, quietEvents } from "@vela/db";
-import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
+import { addDays, localDateOf, zonedInstant } from "@vela/core";
+import { answers, awayPeriods, channelLinks, exchanges, members, quietEvents } from "@vela/db";
+import { and, asc, eq, gte, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { arrivalChannelOf } from "./arrivals.ts";
 import { morningTimeOn } from "./morning-time.ts";
-import {
-  channelLinkOfMember,
-  dayAnsweredAt,
-  exchangeForLocalDate,
-  firstAnswersByDate,
-  keptLightMembersOfFamily,
-  type Queryable,
-} from "./repo.ts";
+import { dayAnsweredAt, keptLightMembersOfFamily, type Queryable } from "./repo.ts";
 
 /**
  * The lights row behind Today and the widget (`GET /v1/families/:familyId/lights`, API contract
@@ -32,40 +25,126 @@ export async function loadApiLights(
   if (access.kind !== "granted") return null;
 
   const keptLight = await keptLightMembersOfFamily(db, familyId);
+  // Keep each parent's local date in the predicate: the family can span calendar dates and DST.
+  const parents = keptLight
+    .filter((member) => member.status !== "deceased")
+    .map((member) => ({
+      member,
+      today: localDateOf(now, member.tz),
+    }));
+  const awayRows =
+    parents.length === 0
+      ? []
+      : await db
+          .select({
+            id: awayPeriods.id,
+            memberId: awayPeriods.memberId,
+            toDate: awayPeriods.toDate,
+          })
+          .from(awayPeriods)
+          .where(
+            and(
+              isNull(awayPeriods.endedAt),
+              or(
+                ...parents.map(({ member, today }) =>
+                  and(
+                    eq(awayPeriods.memberId, member.id),
+                    lte(awayPeriods.fromDate, today),
+                    or(isNull(awayPeriods.toDate), gte(awayPeriods.toDate, today)),
+                  ),
+                ),
+              ),
+            ),
+          );
+  const mornings =
+    parents.length === 0
+      ? []
+      : await db
+          .select({
+            id: exchanges.id,
+            recipientId: exchanges.recipientId,
+            answeredAt: exchanges.answeredAt,
+          })
+          .from(exchanges)
+          .where(
+            and(
+              eq(exchanges.familyId, familyId),
+              ne(exchanges.state, "withdrawn"),
+              or(
+                ...parents.map(({ member, today }) =>
+                  and(eq(exchanges.recipientId, member.id), eq(exchanges.scheduledFor, today)),
+                ),
+              ),
+            ),
+          );
+  const quietRows =
+    mornings.length === 0
+      ? []
+      : await db
+          .select({
+            id: quietEvents.id,
+            exchangeId: quietEvents.exchangeId,
+          })
+          .from(quietEvents)
+          .where(
+            and(
+              inArray(
+                quietEvents.exchangeId,
+                mornings.map((row) => row.id),
+              ),
+              isNull(quietEvents.resolvedAt),
+            ),
+          );
+  // Receipt time counts an answer on its local day, including taps on older arrivals. Use the
+  // next local midnight, not a fixed 24 hours, on daylight-saving changes (firstAnswersByDate).
+  const received =
+    parents.length === 0
+      ? []
+      : await db
+          .select({
+            memberId: answers.memberId,
+            at: answers.receivedAt,
+          })
+          .from(answers)
+          .where(
+            or(
+              ...parents.map(({ member, today }) =>
+                and(
+                  eq(answers.memberId, member.id),
+                  gte(answers.receivedAt, zonedInstant(today, "00:00", member.tz)),
+                  lt(answers.receivedAt, zonedInstant(addDays(today, 1), "00:00", member.tz)),
+                ),
+              ),
+            ),
+          )
+          .orderBy(asc(answers.receivedAt));
+  const messengerParents = parents.filter(({ member }) => arrivalChannelOf(member) !== "device");
+  const links =
+    messengerParents.length === 0
+      ? []
+      : await db
+          .select({
+            memberId: channelLinks.memberId,
+            channel: channelLinks.channel,
+            blockedAt: channelLinks.blockedAt,
+          })
+          .from(channelLinks)
+          .where(
+            or(
+              ...messengerParents.map(({ member }) =>
+                and(
+                  eq(channelLinks.memberId, member.id),
+                  eq(channelLinks.channel, arrivalChannelOf(member)),
+                ),
+              ),
+            ),
+          );
   const lights: MemberLight[] = [];
-  for (const member of keptLight) {
-    // A light is for someone living: once she has died she has none to show (spec §19).
-    if (member.status === "deceased") continue;
-    const today = localDateOf(now, member.tz);
-    const [away] = await db
-      .select({ id: awayPeriods.id, toDate: awayPeriods.toDate })
-      .from(awayPeriods)
-      .where(
-        and(
-          eq(awayPeriods.memberId, member.id),
-          isNull(awayPeriods.endedAt),
-          lte(awayPeriods.fromDate, today),
-          or(isNull(awayPeriods.toDate), gte(awayPeriods.toDate, today)),
-        ),
-      )
-      .limit(1);
-    const exchange = await exchangeForLocalDate(db, member.id, today);
-    const [quiet] =
-      exchange === null
-        ? []
-        : await db
-            .select({ id: quietEvents.id })
-            .from(quietEvents)
-            .where(and(eq(quietEvents.exchangeId, exchange.id), isNull(quietEvents.resolvedAt)))
-            .limit(1);
-
-    // An answer counts for the local date it arrives on, whichever exchange it attaches to (flows
-    // §3.9): a message before the day's arrival attaches to the previous exchange, and a tap on an
-    // older arrival's buttons answers that older one, yet either answers her day. The quiet ladder
-    // counts the day answered by the same rule and tells the organisers "Everything is lit again";
-    // reading only the day's own exchange would show her resting under that message.
-    const firstAnswer =
-      (await firstAnswersByDate(db, member.id, member.tz, today, today)).get(today) ?? null;
+  for (const { member, today } of parents) {
+    const away = awayRows.find((row) => row.memberId === member.id);
+    const exchange = mornings.find((row) => row.recipientId === member.id);
+    const quiet = quietRows.find((row) => row.exchangeId === exchange?.id);
+    const firstAnswer = received.find((row) => row.memberId === member.id)?.at ?? null;
     const answeredAt = dayAnsweredAt(exchange?.answeredAt ?? null, firstAnswer);
     const state: LightState =
       member.status === "paused"
@@ -80,7 +159,7 @@ export async function loadApiLights(
 
     // Her phone (ADR-35) has no block to lose; a messenger link can be blocked or gone.
     const channel = arrivalChannelOf(member);
-    const link = channel === "device" ? null : await channelLinkOfMember(db, member.id, channel);
+    const link = links.find((row) => row.memberId === member.id && row.channel === channel);
     lights.push({
       member_id: member.id,
       display_name: member.displayName,
@@ -88,10 +167,10 @@ export async function loadApiLights(
       local_date: today,
       state,
       answered_at: answeredAt?.toISOString() ?? null,
-      usual_time: morningTimeOn(member, localDateOf(now, member.tz)),
+      usual_time: morningTimeOn(member, today),
       away_until: away?.toDate ?? null,
       away_id: away?.id ?? null,
-      unreachable_on: link !== null && link.blockedAt !== null ? channel : null,
+      unreachable_on: link !== undefined && link.blockedAt !== null ? channel : null,
       quiet_event_id: quiet?.id ?? null,
     });
   }

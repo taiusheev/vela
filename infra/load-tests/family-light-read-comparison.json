@@ -1,0 +1,93 @@
+{
+  "baseline": "7eb113a9ebd9f42ba150a99d5ecf453f3523f154",
+  "environment": "disposable PGlite, frozen synthetic data, alternating before/after order",
+  "includesSelectDistinctOn": true,
+  "networkDelayInjected": false,
+  "results": [
+    {
+      "surface": "Today",
+      "parents": 1,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 24,
+        "localWarmP95Ms": 6.06
+      },
+      "after": {
+        "selectQueries": 24,
+        "localWarmP95Ms": 5.83
+      }
+    },
+    {
+      "surface": "Lights",
+      "parents": 1,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 8,
+        "localWarmP95Ms": 2.06
+      },
+      "after": {
+        "selectQueries": 8,
+        "localWarmP95Ms": 1.83
+      }
+    },
+    {
+      "surface": "Today",
+      "parents": 4,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 39,
+        "localWarmP95Ms": 8.84
+      },
+      "after": {
+        "selectQueries": 24,
+        "localWarmP95Ms": 6.44
+      }
+    },
+    {
+      "surface": "Lights",
+      "parents": 4,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 23,
+        "localWarmP95Ms": 4.93
+      },
+      "after": {
+        "selectQueries": 8,
+        "localWarmP95Ms": 2.39
+      }
+    },
+    {
+      "surface": "Today",
+      "parents": 10,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 69,
+        "localWarmP95Ms": 15.24
+      },
+      "after": {
+        "selectQueries": 24,
+        "localWarmP95Ms": 8.06
+      }
+    },
+    {
+      "surface": "Lights",
+      "parents": 10,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 53,
+        "localWarmP95Ms": 9.9
+      },
+      "after": {
+        "selectQueries": 8,
+        "localWarmP95Ms": 2.96
+      }
+    }
+  ],
+  "limits": "Local read counts and warm timings only; not hosted latency or production capacity. Counts are constant for these populated fixtures, not all possible query branches. Synthetic local data only."
+}

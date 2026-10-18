@@ -108,3 +108,19 @@ A disposable PGlite comparison alternated baseline `ebb6c6a` and changed loaders
 See [comparison receipt](../load-tests/today-family-read-comparison.json). No network delay was injected. These are local warm timings and database query counts, not hosted latency or capacity measurements. New mixed-zone tests cover Taipei, Los Angeles, Kiritimati and Vietnam, per-parent tomorrow drafts, wrong-date exclusion and denied cross-family access. Existing Today/Lights/Memories tests cover content, translations, media, read-backs, consent and delivery states.
 
 Hosted correctness check: deployed source `03903f1` to the existing isolated Worker (deployment version `3590a3e3-0f3d-408b-a057-95b0970f722c`) without resetting its cohort. A raw burst of 100 Today reads at twenty concurrent clients passed 100/100 HTTP 200s, with zero retries or family/body mismatches and unchanged 300 deliveries/310 answers/280 replies/180 read-backs. All pending/dead/quiet/repeat/duplicate counts stayed zero. The single-parent hosted fixture verifies compatibility, not the larger-family speed improvement; its observed p95 was 3,184 ms, without a controlled hosted before/after comparison. See [HTTP receipt](../load-tests/today-family-read-hosted.json). The full local PostgreSQL contention suite passed 122/122 in 44 files after this source change.
+
+### Batched family light status
+
+The next regression fixture isolated the remaining per-parent work in `loadApiLights`: one parent required 8 selects and four required 23. The fixture failed on baseline `7eb113a` before the implementation. The reader now fetches away periods, today's mornings, open quiet events, today's received answers and the selected messenger links once for the family's living kept-light members. It selects only the morning/link fields the lights need. Each predicate uses that parent's own local day, with an exclusive next-local-midnight bound for answers, including 23-hour and 25-hour daylight-saving days.
+
+State precedence remains paused, away, answered, quiet, resting. Receipt time still counts an answer even when attached to an older exchange. Phone users ignore blocked messenger links, and messenger users are checked on their selected channel. Deceased members are omitted; invited parents remain visible when the family has no living lights. No schema, response-contract, UI, scheduling or notification rule changes.
+
+A comparison on the same frozen synthetic PGlite data alternated old/new readers over two warm-up pairs and ten measured pairs for each cohort and endpoint. Every complete response hash matched. Counts include `selectDistinctOn`:
+
+| Parents | Today queries before → after | Light queries before → after | Today local warm p95 before → after |
+| ---: | :--- | :--- | :--- |
+| 1 | 24 → 24 | 8 → 8 | 6.06 → 5.83 ms |
+| 4 | 39 → 24 | 23 → 8 | 8.84 → 6.44 ms |
+| 10 | 69 → 24 | 53 → 8 | 15.24 → 8.06 ms |
+
+See [comparison receipt](../load-tests/family-light-read-comparison.json). The count is constant across these populated fixtures; optional query branches still vary with the data. Local warm timings without injected network delay do not establish hosted latency or capacity. Regression tests require fixed query counts on both Lights and Today and cover different parent clocks, answer times, state precedence, selected messenger/phone availability, both daylight-saving transitions, empty/deceased families and invitations. Existing cross-family access tests remain in place.
