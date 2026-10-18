@@ -30,6 +30,8 @@ const settingsResponse = await fetch(
 );
 if (!settingsResponse.ok) throw new Error(`worker_settings_${settingsResponse.status}`);
 const { result: settings } = await settingsResponse.json();
+if (settings?.limits?.cpu_ms !== 100)
+  throw new Error("isolated_cpu_budget_100ms_required_before_verification");
 const { families } = await control("manifest");
 if (families.length !== 100 || families.some((f, index) => f.index !== index))
   throw new Error("expected_recorded_100_family_cohort");
