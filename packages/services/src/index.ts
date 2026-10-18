@@ -117,6 +117,7 @@ export {
 export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
 export { loadApiMorningPreferences, setApiMorningPreferences } from "./api-morning-preferences.ts";
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
+export { shareApiParentLink } from "./api-parent-link.ts";
 export {
   loadApiPrecision,
   loadPublicPrecision,

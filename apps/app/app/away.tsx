@@ -64,11 +64,11 @@ export default function AwayScreen() {
             ) : day.trouble ? (
               <Trans>Your family could not be reached just now.</Trans>
             ) : (
-              <Trans>Choose a parent from You before changing away dates.</Trans>
+              <Trans>Choose a parent in Settings before changing away dates.</Trans>
             )}
           </Words>
           {day.trouble ? <SecondaryButton label={t`Try again`} onPress={day.refresh} /> : null}
-          <SecondaryButton label={t`Go to You`} onPress={() => router.replace("/(tabs)/you")} />
+          <SecondaryButton label={t`Go to Settings`} onPress={() => router.replace("/settings")} />
         </View>
       </>
     );

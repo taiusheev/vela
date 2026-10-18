@@ -21,6 +21,7 @@ import type {
   ApiNearbyContact,
   ApiNearbyInvite,
   ApiNearbyRemoved,
+  ApiParentLink,
   ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
@@ -624,5 +625,20 @@ export function setMorningPreferences(
     token,
     key,
     body: preferences,
+  });
+}
+
+/** Preparing the share sheet never sends a message or changes the parent’s consent. */
+export function prepareParentLink(
+  familyId: string,
+  memberId: string,
+  key: string,
+  token: string | null,
+) {
+  return call<ApiParentLink>({
+    path: `/v1/families/${familyId}/members/${memberId}/parent-link`,
+    token,
+    key,
+    body: {},
   });
 }

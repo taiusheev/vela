@@ -446,16 +446,6 @@ function FamilyToday({ day }: { day: TodayView }) {
             <BrandHeader />
             <ScreenHeading title={<Trans>A little light from home.</Trans>} />
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t`Family settings`}
-            onPress={() => router.push("/(tabs)/you")}
-            style={{ minHeight: 44, paddingHorizontal: space.m, justifyContent: "center" }}
-          >
-            <Words variant="button" tone="action">
-              <Trans>Family</Trans>
-            </Words>
-          </Pressable>
         </View>
         {day.updatedAt > 0 ? (
           <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words>
@@ -530,7 +520,7 @@ function FamilyToday({ day }: { day: TodayView }) {
               <Words variant="body">
                 <Trans>Your family's first parent connection is still being set up.</Trans>
               </Words>
-              <SecondaryButton label={t`Go to You`} onPress={() => router.push("/(tabs)/you")} />
+              <SecondaryButton label={t`Go to Settings`} onPress={() => router.push("/settings")} />
             </>
           ) : (
             <Words variant="body">

@@ -383,6 +383,7 @@ function fixture(
       replyToApiExchange: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["replyToApiExchange"]>()
         .mockResolvedValue({ response: { status: 201, body: REPLY }, replayed: false }),
+      shareApiParentLink: vi.fn(),
       createApiFamily: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["createApiFamily"]>()
         .mockResolvedValue({ response: { status: 201, body: CREATED }, replayed: false }),
@@ -3246,5 +3247,48 @@ describe("morning preferences routes", () => {
     );
     expect(response.status).toBe(400);
     expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+});
+
+describe("parent link sharing", () => {
+  const path = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/parent-link`;
+  it("dispatches a private authenticated idempotent request without sending", async () => {
+    const { app, writes } = fixture(true);
+    const body = {
+      kind: "invite",
+      url: "https://t.me/VelaTestBot?start=synthetic",
+      text: "Synthetic invitation",
+      expires_at: "2026-09-29T00:00:00.000Z",
+    };
+    writes.services.shareApiParentLink.mockResolvedValue({
+      response: { status: 200, body },
+      replayed: false,
+    });
+    const response = await app.request(
+      writeRequest("POST", path, "{}", { authorization: "Bearer good" }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    expect(await response.json()).toEqual(body);
+    expect(writes.services.shareApiParentLink).toHaveBeenCalledWith(
+      { db: expect.anything(), clock: writes.clock, ...writes.families },
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      MEMBER_ID,
+      {},
+    );
+  });
+  it("refuses unauthenticated or malformed requests before preparing a token", async () => {
+    const { app, writes, verifySession } = fixture(true);
+    verifySession.mockResolvedValueOnce(null);
+    const refused = await app.request(writeRequest("POST", path, "{}"));
+    expect(refused.status).toBe(401);
+    const invalid = await app.request(
+      writeRequest("POST", path, '{"member":"wrong"}', { authorization: "Bearer good" }),
+    );
+    expect(invalid.status).toBe(400);
+    expect(writes.services.shareApiParentLink).not.toHaveBeenCalled();
   });
 });

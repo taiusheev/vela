@@ -22,6 +22,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
   const [code, setCode] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [openFailed, setOpenFailed] = useState(false);
+  const [enteringCode, setEnteringCode] = useState(false);
   const startKey = useIdempotencyKey("telegram-link");
   const provisionKey = useIdempotencyKey("provision");
   const completeKey = useIdempotencyKey("telegram-link-complete");
@@ -74,6 +75,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
   const open = async () => {
     if (start.data === undefined) return;
     setOpenFailed(false);
+    setEnteringCode(true);
     try {
       await Linking.openURL(start.data.telegram_url);
     } catch {
@@ -85,29 +87,37 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       <BrandHeader />
       <SetupProgress
         steps={[t`Your family`, t`Your Telegram chat`, t`Connection code`]}
-        current={start.data === undefined ? 0 : code.length === 0 ? 1 : 2}
+        current={start.data === undefined ? 0 : enteringCode ? 2 : 1}
       />
       <Words variant="title">
-        <Trans>Connect your Telegram family</Trans>
+        {start.data === undefined
+          ? t`Bring your family together`
+          : enteringCode
+            ? t`Paste your connection code`
+            : t`Open your own Telegram chat`}
       </Words>
       <Words variant="body" tone="ink2">
-        <Trans>
-          The free English pilot starts with the founder setting up your family on Telegram. Connect
-          that same family here to ask and reply on your iPhone.
-        </Trans>
+        <Trans>Your email is verified. Now connect the family you already have on Telegram.</Trans>
       </Words>
-      <Words variant="body" tone="ink2">
-        <Trans>
-          If your family has not been set up yet, contact the founder before continuing. Your parent
-          agrees in their own Telegram chat.
-        </Trans>
-      </Words>
-      <Words variant="caption" tone="ink2">
-        <Trans>
-          If you are joining as a relative, join the approved Telegram family group first.
-          Connecting here keeps your existing family role.
-        </Trans>
-      </Words>
+      {start.data === undefined ? (
+        <Card>
+          <Words variant="heading">
+            <Trans>Already set up with Vela?</Trans>
+          </Words>
+          <Words variant="body" tone="ink2">
+            <Trans>
+              Use your own Telegram account, the one in your family. Your parent uses their own chat
+              and does not need to register here.
+            </Trans>
+          </Words>
+          <Words variant="caption" tone="ink2">
+            <Trans>
+              New family? Contact the founder to join the free English pilot. Joining as a relative?
+              Join your approved family group first.
+            </Trans>
+          </Words>
+        </Card>
+      ) : null}
       {noAccount && start.data === undefined ? (
         <TextField
           label={t`Your name`}
@@ -130,8 +140,8 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
         <Card>
           <Words variant="body">
             <Trans>
-              Open Telegram with the account that already belongs to your approved pilot family. Tap
-              Start, copy the connection code Vela sends you, and paste it below.
+              In your own Vela chat, tap Start and copy the connection code. Return here to finish.
+              Keep this code private.
             </Trans>
           </Words>
           <SecondaryButton
@@ -144,27 +154,47 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
               <Trans>Telegram could not open. Copy this link into Telegram or your browser.</Trans>
             </Words>
           ) : null}
-          <Words variant="caption" selectable>
-            {start.data.telegram_url}
-          </Words>
-          <TextField
-            label={t`Connection code`}
-            value={code}
-            onChangeText={(value) => setCode(connectionCode(value))}
-            placeholder={t`Paste your connection code`}
-            helper={t`Connection code from your own Vela chat. It expires after 15 minutes.`}
-            autoCapitalize="none"
-            autoCorrect={false}
-            disabled={complete.isPending || expired}
-            onSubmit={() => {
-              if (!complete.isPending && !expired && code.length === 22) complete.mutate();
-            }}
-          />
-          <PrimaryButton
-            label={complete.isPending ? t`Connecting…` : t`Finish connecting`}
-            disabled={complete.isPending || code.trim().length !== 22 || expired}
-            onPress={() => complete.mutate()}
-          />
+          {openFailed ? (
+            <Words variant="caption" selectable>
+              {start.data.telegram_url}
+            </Words>
+          ) : null}
+          {!enteringCode ? (
+            <SecondaryButton
+              label={t`I have my connection code`}
+              onPress={() => setEnteringCode(true)}
+            />
+          ) : null}
+          {enteringCode ? (
+            <>
+              <TextField
+                label={t`Connection code`}
+                value={code}
+                onChangeText={(value) => {
+                  setCode(connectionCode(value));
+                  complete.reset();
+                }}
+                placeholder={t`Paste your connection code`}
+                helper={
+                  code.length > 0 && !/^[A-Za-z0-9_-]{22}$/.test(code)
+                    ? t`Paste the full code or the whole message from Vela. It contains 22 characters.`
+                    : t`You can paste the whole Telegram message. The code expires after 15 minutes.`
+                }
+                autoCapitalize="none"
+                autoCorrect={false}
+                disabled={complete.isPending || expired}
+                onSubmit={() => {
+                  if (!complete.isPending && !expired && /^[A-Za-z0-9_-]{22}$/.test(code))
+                    complete.mutate();
+                }}
+              />
+              <PrimaryButton
+                label={complete.isPending ? t`Connecting…` : t`Finish connecting`}
+                disabled={complete.isPending || !/^[A-Za-z0-9_-]{22}$/.test(code) || expired}
+                onPress={() => complete.mutate()}
+              />
+            </>
+          ) : null}
           {expired ? (
             <Words variant="body" tone="ink2">
               <Trans>This connection expired. Create a new one and use its new code.</Trans>
@@ -176,6 +206,8 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
             onPress={() => {
               setAttempt((value) => value + 1);
               setCode("");
+              setEnteringCode(false);
+              setOpenFailed(false);
               start.reset();
               complete.reset();
             }}
@@ -189,7 +221,6 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
           </Trans>
         </Words>
       ) : null}
-      <SetupHelp />
       {complete.data?.linked === false ? (
         <Words variant="body" tone="ink2">
           <Trans>
@@ -198,6 +229,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
           </Trans>
         </Words>
       ) : null}
+      <SetupHelp />
     </View>
   );
 }

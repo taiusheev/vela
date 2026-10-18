@@ -7,13 +7,17 @@ import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "../src/accessibility/use-reduced-motion.ts";
 import { apiConfigured } from "../src/api/client.ts";
+import { englishTrialBuild } from "../src/api/trial.ts";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
 import {
+  clerkErrorCodes,
   preferredCodeFactor,
   resendDelay,
   unknownIdentity,
+  validEmail,
   validVerificationCode,
   verificationCode,
+  verificationFailure,
 } from "../src/auth/code.ts";
 import {
   COUNTRIES,
@@ -27,7 +31,15 @@ import {
 import { BrandHeader } from "../src/components/brand/header.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { SetupHelp } from "../src/components/setup-help.tsx";
-import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
+import {
+  Card,
+  Chip,
+  PrimaryButton,
+  SecondaryButton,
+  SetupProgress,
+  TextField,
+  Words,
+} from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
@@ -53,7 +65,16 @@ type Trouble = {
     | "number_invalid"
     | "country_unsupported"
     | "phone_off"
-    | "email_invalid";
+    | "email_invalid"
+    | "expired"
+    | "rate_limited"
+    | "network";
+  /**
+   * Clerk's own error codes, shown small under a refusal the screen cannot word more exactly
+   * (founder, 18 October 2026: build 5 said only "That did not work"). Codes name what went wrong,
+   * never the person.
+   */
+  codes?: string;
 };
 
 /**
@@ -63,8 +84,7 @@ type Trouble = {
  */
 function logClerkCodes(step: "lookup" | "send" | "verify", error: unknown): void {
   if (!__DEV__) return;
-  const errors = (error as { errors?: { code?: unknown }[] } | null)?.errors;
-  const codes = Array.isArray(errors) ? errors.map((entry) => String(entry.code)) : [];
+  const codes = clerkErrorCodes(error);
   console.warn(
     `[sign-in] ${step} failed:`,
     codes.length === 0 ? String((error as Error)?.name) : codes.join(", "),
@@ -77,20 +97,27 @@ function looksLikeEmail(identifier: string): boolean {
 
 /** Clerk's error codes, which name what went wrong without naming the person. */
 function codesOf(error: unknown): string[] {
-  const errors = (error as { errors?: { code?: unknown }[] } | null)?.errors;
-  return Array.isArray(errors) ? errors.map((entry) => String(entry.code)) : [];
+  return clerkErrorCodes(error);
 }
 
 /** What a refused number or address means for the person, from Clerk's codes. */
 function refusalOf(error: unknown, phone: boolean): Trouble {
   const codes = codesOf(error).join(" ");
+  // What Clerk said, for the one refusal that has no words of its own; an error without codes
+  // (the network, a crash) says what kind of error it was.
+  const shown =
+    codes.length > 0 ? codesOf(error).join(", ") : String((error as Error | null)?.name ?? "");
+  const unworded = (): Trouble =>
+    shown.length === 0 ? { kind: "did_not_work" } : { kind: "did_not_work", codes: shown };
+  if (/rate_limit|too_many/.test(codes)) return { kind: "rate_limited" };
+  if (/network|offline|fetch/.test(codes) || error instanceof TypeError) return { kind: "network" };
   if (/country/.test(codes)) return { kind: "country_unsupported" };
   // A number this Clerk instance does not take at all answers `form_param_unknown` on sign-up.
   if (/strategy|not_allowed|not_enabled|param_unknown/.test(codes)) {
-    return { kind: phone ? "phone_off" : "did_not_work" };
+    return phone ? { kind: "phone_off" } : unworded();
   }
   if (/format|invalid/.test(codes)) return { kind: phone ? "number_invalid" : "email_invalid" };
-  return { kind: "did_not_work" };
+  return unworded();
 }
 
 /**
@@ -139,7 +166,7 @@ function NoAccounts() {
       style={{
         flex: 1,
         backgroundColor: palette.bg,
-        paddingTop: insets.top + space.xxxl,
+        paddingTop: insets.top + space.xl,
         paddingHorizontal: space.margin,
         gap: space.l,
         alignItems: "stretch",
@@ -236,7 +263,7 @@ function CodeSignIn() {
       setTrouble({ kind: "number_invalid" });
       return;
     }
-    if (mode === "email" && !looksLikeEmail(entered)) {
+    if (mode === "email" && !validEmail(entered)) {
       setTrouble({ kind: "email_invalid" });
       return;
     }
@@ -337,12 +364,14 @@ function CodeSignIn() {
         setTrouble({ kind: "wrong_code" });
         return;
       }
-      await setActive({ session });
+      await within(setActive({ session }));
       router.replace("/");
     } catch (error: unknown) {
       logClerkCodes("verify", error);
       setTrouble(
-        error instanceof TookTooLong ? { kind: "code_took_too_long" } : { kind: "wrong_code" },
+        error instanceof TookTooLong
+          ? { kind: "code_took_too_long" }
+          : { kind: verificationFailure(error) },
       );
     } finally {
       inFlight.current = false;
@@ -381,9 +410,20 @@ function CodeSignIn() {
     }
   };
 
+  /** Clerk's codes under a refusal, to quote to Vela: "Error code: form_identifier_exists". */
+  function errorCode(code: string): string {
+    return t`Error code: ${code}`;
+  }
+
   /** The words for what went wrong, in the language the screen is in now. */
   function troubleWords(what: Trouble): string {
     switch (what.kind) {
+      case "expired":
+        return t`That code has expired. Request a new code below.`;
+      case "rate_limited":
+        return t`Too many attempts. Wait a moment, then try again.`;
+      case "network":
+        return t`We could not connect. Check your internet connection and try again.`;
       case "cannot_receive":
         return t`That account cannot receive a code yet.`;
       case "did_not_work":
@@ -418,9 +458,10 @@ function CodeSignIn() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
-          paddingTop: insets.top + space.xxxl,
+          paddingTop: insets.top + space.xl,
           paddingBottom: insets.bottom + space.xxxl,
           paddingHorizontal: space.margin,
           gap: space.xl,
@@ -428,167 +469,176 @@ function CodeSignIn() {
       >
         <View style={{ gap: space.xl }}>
           <BrandHeader />
-          <Words variant="display">
-            <Trans>A little closer, every day.</Trans>
+          <SetupProgress
+            steps={[t`Your email`, t`Verify code`]}
+            current={step === "identifier" ? 0 : 1}
+          />
+          <Words variant="title">
+            {step === "identifier" ? t`Welcome to Vela` : t`Check your inbox`}
           </Words>
           <Words variant="body" tone="ink2">
-            <Trans>A small moment with your family, every day.</Trans>
+            {step === "identifier"
+              ? t`A little closer to your family. Use your email to get started or sign in.`
+              : t`Enter your code to continue to your family.`}
           </Words>
         </View>
-        {step === "identifier" ? (
-          <>
-            {PHONE_SIGN_IN ? (
-              <View style={{ flexDirection: "row", gap: space.s }}>
-                <Chip
-                  label={t`Phone number`}
-                  selected={mode === "phone"}
-                  disabled={working}
-                  onPress={() => {
-                    setMode("phone");
-                    setTrouble(undefined);
-                  }}
-                />
-                <Chip
-                  label={t`Email`}
-                  selected={mode === "email"}
-                  disabled={working}
-                  onPress={() => {
-                    setMode("email");
-                    setTrouble(undefined);
-                  }}
-                />
-              </View>
-            ) : null}
-            {mode === "phone" ? (
-              <>
-                <Words variant="body" tone="ink2">
-                  <Trans>
-                    Choose your country, type your number as you would at home, and we text you a
-                    code.
-                  </Trans>
-                </Words>
-                <SecondaryButton
-                  label={`${flagOf(country)}  ${countryName(country)}  +${country.dial}  ▾`}
-                  disabled={working}
-                  onPress={() => setPicking(true)}
-                />
-                <TextField
-                  label={t`Phone number`}
-                  value={number}
-                  disabled={working}
-                  onChangeText={(next) => {
-                    setNumber(next);
-                    setTrouble(undefined);
-                  }}
-                  placeholder={country.example}
-                  helper={
-                    international === null
-                      ? t`Your mobile number. The country code is added for you.`
-                      : t`We will text ${phone}.`
-                  }
-                  keyboardType="phone-pad"
-                  autoComplete="tel-national"
-                  autoFocus
-                  onSubmit={() => void sendCode()}
-                />
-              </>
-            ) : (
-              <>
-                <Words variant="body" tone="ink2">
-                  <Trans>Type your email, and we send you a code.</Trans>
-                </Words>
-                <TextField
-                  label={t`Email`}
-                  value={email}
-                  disabled={working}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  onChangeText={(next) => {
-                    setEmail(next);
-                    setTrouble(undefined);
-                  }}
-                  placeholder={t`name@example.com`}
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  autoFocus
-                  onSubmit={() => void sendCode()}
-                />
-              </>
-            )}
-            <PrimaryButton
-              label={working ? t`Sending…` : t`Send me a code`}
-              disabled={working || !ready || identifier.length === 0}
-              onPress={sendCode}
-            />
-          </>
-        ) : (
-          <>
-            <Words variant="body" tone="ink2">
-              {strategy === "email_code" ? (
-                <Trans>We sent a code to {sentTo}.</Trans>
+        <Card>
+          {step === "identifier" ? (
+            <>
+              {PHONE_SIGN_IN ? (
+                <View style={{ flexDirection: "row", gap: space.s }}>
+                  <Chip
+                    label={t`Phone number`}
+                    selected={mode === "phone"}
+                    disabled={working}
+                    onPress={() => {
+                      setMode("phone");
+                      setTrouble(undefined);
+                    }}
+                  />
+                  <Chip
+                    label={t`Email`}
+                    selected={mode === "email"}
+                    disabled={working}
+                    onPress={() => {
+                      setMode("email");
+                      setTrouble(undefined);
+                    }}
+                  />
+                </View>
+              ) : null}
+              {mode === "phone" ? (
+                <>
+                  <Words variant="body" tone="ink2">
+                    <Trans>
+                      Choose your country, type your number as you would at home, and we text you a
+                      code.
+                    </Trans>
+                  </Words>
+                  <SecondaryButton
+                    label={`${flagOf(country)}  ${countryName(country)}  +${country.dial}  ▾`}
+                    disabled={working}
+                    onPress={() => setPicking(true)}
+                  />
+                  <TextField
+                    label={t`Phone number`}
+                    value={number}
+                    disabled={working}
+                    onChangeText={(next) => {
+                      setNumber(next);
+                      setTrouble(undefined);
+                    }}
+                    placeholder={country.example}
+                    helper={
+                      international === null
+                        ? t`Your mobile number. The country code is added for you.`
+                        : t`We will text ${phone}.`
+                    }
+                    keyboardType="phone-pad"
+                    autoComplete="tel-national"
+                    autoFocus
+                    onSubmit={() => void sendCode()}
+                  />
+                </>
               ) : (
-                <Trans>We sent a code to {sentTo}.</Trans>
+                <>
+                  <Words variant="body" tone="ink2">
+                    <Trans>One email, one code. No password to remember.</Trans>
+                  </Words>
+                  <TextField
+                    label={t`Email`}
+                    value={email}
+                    disabled={working}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    onChangeText={(next) => {
+                      setEmail(next);
+                      setTrouble(undefined);
+                    }}
+                    placeholder={t`name@example.com`}
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    autoFocus
+                    onSubmit={() => void sendCode()}
+                  />
+                </>
               )}
+              <PrimaryButton
+                label={working ? t`Sending…` : t`Send me a code`}
+                disabled={working || !ready || identifier.length === 0}
+                onPress={sendCode}
+              />
+            </>
+          ) : (
+            <>
+              <Words variant="body" tone="ink2">
+                {strategy === "email_code" ? (
+                  <Trans>Your code was sent to {sentTo}. Check spam if it is missing.</Trans>
+                ) : (
+                  <Trans>Your code was sent to {sentTo}. Check spam if it is missing.</Trans>
+                )}
+              </Words>
+              <TextField
+                label={t`Sign-in code`}
+                value={code}
+                onChangeText={(value) => {
+                  setCode(verificationCode(value));
+                  setTrouble(undefined);
+                }}
+                disabled={working}
+                placeholder="123456"
+                helper={
+                  code.length > 0 && !validVerificationCode(code)
+                    ? t`Enter the six digits from your message.`
+                    : t`Six digits, good for ten minutes.`
+                }
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+                autoFocus
+                onSubmit={() => void enter()}
+              />
+              <PrimaryButton
+                label={working ? t`Checking…` : t`Continue`}
+                onPress={enter}
+                disabled={working || !ready || !validVerificationCode(code)}
+              />
+              <SecondaryButton
+                label={seconds > 0 ? t`Resend code in ${seconds}s` : t`Resend code`}
+                disabled={working || seconds > 0}
+                onPress={() => void resend()}
+              />
+              <SecondaryButton
+                label={PHONE_SIGN_IN ? t`Change email or number` : t`Use a different email`}
+                disabled={working}
+                onPress={() => {
+                  setStep("identifier");
+                  setCode("");
+                  setJoining(false);
+                  setTrouble(undefined);
+                }}
+              />
+            </>
+          )}
+          {trouble === undefined ? null : (
+            <Words variant="body" tone="ink2">
+              {troubleWords(trouble)}
             </Words>
-            <TextField
-              label={t`Sign-in code`}
-              value={code}
-              onChangeText={(value) => {
-                setCode(verificationCode(value));
-                setTrouble(undefined);
-              }}
-              disabled={working}
-              placeholder="123456"
-              helper={
-                code.length > 0 && !validVerificationCode(code)
-                  ? t`Enter the six digits from your message.`
-                  : t`Six digits, good for ten minutes.`
-              }
-              keyboardType="number-pad"
-              autoComplete="one-time-code"
-              autoFocus
-              onSubmit={() => void enter()}
-            />
-            <PrimaryButton
-              label={
-                working
-                  ? t`Checking…`
-                  : t({ comment: "button: sign in with the code", message: "Enter" })
-              }
-              onPress={enter}
-              disabled={working || !ready || !validVerificationCode(code)}
-            />
+          )}
+          {trouble?.codes === undefined ? null : (
+            <Words variant="caption" tone="ink3" selectable>
+              {errorCode(trouble.codes)}
+            </Words>
+          )}
+          {trouble?.kind === "country_unsupported" || trouble?.kind === "phone_off" ? (
             <SecondaryButton
-              label={seconds > 0 ? t`Resend code in ${seconds}s` : t`Resend code`}
-              disabled={working || seconds > 0}
-              onPress={() => void resend()}
-            />
-            <SecondaryButton
-              label={t`Change email or number`}
-              disabled={working}
+              label={t`Use my email instead`}
               onPress={() => {
-                setStep("identifier");
-                setCode("");
-                setJoining(false);
+                setMode("email");
                 setTrouble(undefined);
               }}
             />
-          </>
-        )}
-        {trouble === undefined ? null : (
-          <Words variant="body" tone="ink2">
-            {troubleWords(trouble)}
-          </Words>
-        )}
-        {trouble?.kind === "country_unsupported" || trouble?.kind === "phone_off" ? (
-          <SecondaryButton
-            label={t`Use my email instead`}
-            onPress={() => {
-              setMode("email");
-              setTrouble(undefined);
-            }}
-          />
-        ) : null}
+          ) : null}
+        </Card>
         <Modal
           visible={picking}
           animationType={reducedMotion ? "none" : "slide"}
@@ -634,7 +684,7 @@ function CodeSignIn() {
           </ScrollView>
         </Modal>
         {/* The app's language, before there is an account to keep it (build plan 3.1). */}
-        {step === "identifier" ? <LocaleChips /> : null}
+        {step === "identifier" && !englishTrialBuild ? <LocaleChips /> : null}
         {/*
           Clerk's bot check for a new account mounts itself into an element of this name, and says
           so loudly when it cannot find one. On the web this renders that element; on a phone it is

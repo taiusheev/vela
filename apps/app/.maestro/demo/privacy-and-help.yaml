@@ -7,6 +7,7 @@ tags:
 ---
 - launchApp
 - tapOn: "You"
+- tapOn: "Settings"
 - assertNotVisible: "Set it up"
 - scrollUntilVisible:
     element: "PRIVACY AND HELP"
@@ -30,4 +31,4 @@ tags:
     element: "Back"
     direction: UP
 - tapOn: "Back"
-- assertVisible: "You"
+- assertVisible: "Settings"

@@ -162,6 +162,7 @@ function fixture(options: FixtureOptions = {}) {
       updateApiAccount: vi.fn<Writes["services"]["updateApiAccount"]>(unused("update")),
       composeApiAsk: vi.fn<Writes["services"]["composeApiAsk"]>(unused("compose")),
       replyToApiExchange: vi.fn<Writes["services"]["replyToApiExchange"]>(unused("reply")),
+      shareApiParentLink: vi.fn(),
       createApiFamily: vi.fn<Writes["services"]["createApiFamily"]>(unused("create")),
       resolveApiQuiet: vi.fn<Writes["services"]["resolveApiQuiet"]>(unused("quiet")),
       setApiMorningPreferences: vi.fn().mockRejectedValue(new Error("no morning in these tests")),

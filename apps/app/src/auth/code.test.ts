@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  clerkErrorCodes,
   preferredCodeFactor,
   resendDelay,
   unknownIdentity,
+  validEmail,
   validVerificationCode,
   verificationCode,
+  verificationFailure,
 } from "./code.ts";
 
 describe("sign-in recovery", () => {
@@ -42,4 +45,33 @@ describe("sign-in recovery", () => {
     ])
       expect(unknownIdentity(error)).toBe(false);
   });
+});
+
+describe("registration input and recovery", () => {
+  it("accepts a trimmed email and rejects common mistakes before sending", () => {
+    expect(validEmail(" mia@example.test ")).toBe(true);
+    for (const email of ["mia", "mia@", "mia @example.test", "mia@@example.test", "mia@example"])
+      expect(validEmail(email)).toBe(false);
+  });
+  it("does not blame a correct code for network errors or expired and rate-limited attempts", () => {
+    expect(verificationFailure(new TypeError("network unavailable"))).toBe("network");
+    expect(verificationFailure({ errors: [{ code: "verification_expired" }] })).toBe("expired");
+    expect(verificationFailure({ errors: [{ code: "too_many_requests" }] })).toBe("rate_limited");
+    expect(verificationFailure({ errors: [{ code: "form_code_incorrect" }] })).toBe("wrong_code");
+    expect(verificationFailure({ errors: [null] })).toBe("wrong_code");
+  });
+});
+
+it("keeps support codes bounded and excludes malformed entries and private provider messages", () => {
+  expect(
+    clerkErrorCodes({
+      errors: [
+        null,
+        { code: "form_code_incorrect" },
+        { code: "mia@example.test" },
+        { code: "x".repeat(100) },
+        { message: "private" },
+      ],
+    }),
+  ).toEqual(["form_code_incorrect"]);
 });

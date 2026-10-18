@@ -360,7 +360,7 @@ function Conversation() {
         </View>
       )}
       {light === undefined ? (
-        <SecondaryButton label={t`Go to You`} onPress={() => router.push("/(tabs)/you")} />
+        <SecondaryButton label={t`Go to Settings`} onPress={() => router.push("/settings")} />
       ) : (
         <ChatComposer
           value={draft.text}

@@ -10,7 +10,7 @@ import { BrandIcon } from "./brand/icon.tsx";
 import { Light } from "./light.tsx";
 import { Words } from "./ui.tsx";
 
-function Portrait({
+export function Portrait({
   uri,
   name,
   width,
@@ -124,8 +124,6 @@ export function PortraitLamp({
   const { width, fontScale } = useWindowDimensions();
   const portraitWidth = Math.max(104, Math.min(142, (width - 120) * 0.46));
   const photo = usePortrait(familyId, selected.memberId);
-  const [busy, setBusy] = useState(false);
-  const [photoError, setPhotoError] = useState(false);
   const lit = portraitLightOn(selected);
   const name = selected.displayName;
   const room = scheme === "dark" ? "#193A3D" : "#234D50";
@@ -239,67 +237,6 @@ export function PortraitLamp({
             </Text>
           </Pressable>
         )}
-      </View>
-      <View style={{ gap: space.s }}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.m }}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: busy }}
-            disabled={busy}
-            onPress={() => {
-              setBusy(true);
-              setPhotoError(false);
-              void photo
-                .choose()
-                .catch(() => setPhotoError(true))
-                .finally(() => setBusy(false));
-            }}
-            style={{
-              minHeight: 44,
-              flexDirection: "row",
-              gap: space.s,
-              alignItems: "center",
-              opacity: busy ? 0.5 : 1,
-            }}
-          >
-            <BrandIcon name="photo" color={p.action} size={18} />
-            <Words variant="button" tone="action">
-              {busy
-                ? t`Opening photos…`
-                : photo.uri === null
-                  ? t`Add a photo of ${name}`
-                  : t`Change ${name}’s photo`}
-            </Words>
-          </Pressable>
-          {photo.uri === null ? null : (
-            <Pressable
-              accessibilityRole="button"
-              disabled={busy}
-              onPress={() => {
-                try {
-                  photo.remove();
-                } catch {
-                  setPhotoError(true);
-                }
-              }}
-              style={{ minHeight: 44, justifyContent: "center" }}
-            >
-              <Words variant="button" tone="action">
-                <Trans>Remove photo</Trans>
-              </Words>
-            </Pressable>
-          )}
-        </View>
-        <Words variant="caption" tone="ink2">
-          <Trans>Only on this device. Removed when you sign out.</Trans>
-        </Words>
-        {photoError ? (
-          <Words variant="caption" tone="ink2">
-            <Trans>
-              The photo could not be changed. Your previous photo is still here. Try again.
-            </Trans>
-          </Words>
-        ) : null}
       </View>
     </View>
   );
