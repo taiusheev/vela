@@ -49,7 +49,11 @@ export function usePortrait(familyId: string, memberId: string) {
             for (const uri of [saved.uri, asset.uri]) {
               if (uri.startsWith(`${new Directory(Paths.cache).uri.replace(/\/+$/, "")}/`)) {
                 const temporary = new File(uri);
-                if (temporary.exists) temporary.delete();
+                try {
+                  if (temporary.exists) temporary.delete();
+                } catch {
+                  /* Cache cleanup must not report a successfully installed portrait as failed. */
+                }
               }
             }
           }

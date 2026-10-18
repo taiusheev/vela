@@ -13,12 +13,14 @@ tags:
     css: '[data-testid="portrait-window-unlit"]'
 - assertVisible: "Talk with Dad"
 - tapOn: "Talk with Dad"
-- assertVisible: "Write to Dad"
+- assertVisible:
+    id: "More for Dad"
 - tapOn: "Back"
 - tapOn:
     css: '[data-testid="parent-choice-m1"]'
 - tapOn: "Talk with Mom"
-- assertVisible: "Write to Mom"
+- assertVisible:
+    id: "More for Mom"
 - tapOn: "Back"
 - assertVisible:
     css: '[data-testid="portrait-window-lit"]'

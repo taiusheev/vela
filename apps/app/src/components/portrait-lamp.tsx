@@ -107,7 +107,6 @@ export function PortraitLamp({
   onChat,
   onQuiet,
   quote,
-  at,
   stale = false,
 }: {
   lights: TodayLight[];
@@ -117,7 +116,6 @@ export function PortraitLamp({
   onChat(): void;
   onQuiet?: () => void;
   quote?: string;
-  at?: string;
   stale?: boolean;
 }) {
   const { t } = useLingui();
@@ -130,7 +128,6 @@ export function PortraitLamp({
   const [photoError, setPhotoError] = useState(false);
   const lit = portraitLightOn(selected);
   const name = selected.displayName;
-  const time = at;
   const room = scheme === "dark" ? "#193A3D" : "#234D50";
   const roomInk = "#FBF4E7";
   const roomMuted = "#D1DFD7";
@@ -206,12 +203,7 @@ export function PortraitLamp({
         </View>
         {quote === undefined ? null : (
           <View style={{ gap: space.s }}>
-            <Text style={[type.story, { color: roomInk }]}>{quote}</Text>
-            {at === undefined ? null : (
-              <Text
-                style={[type.caption, { color: roomMuted }]}
-              >{t`${name} answered at ${time}`}</Text>
-            )}
+            <Text style={[type.preview, { color: roomInk }]}>{quote}</Text>
           </View>
         )}
         <Pressable

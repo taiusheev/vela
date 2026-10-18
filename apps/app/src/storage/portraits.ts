@@ -50,7 +50,13 @@ const files: PortraitFiles =
           }
           // Install the replacement before removing the old portrait. Never return a stale image URI.
           for (const previous of directory.list())
-            if (previous.uri !== photo.uri) previous.delete();
+            if (previous.uri !== photo.uri) {
+              try {
+                previous.delete();
+              } catch {
+                /* A failed obsolete-file cleanup does not undo the installed photo. Sign-out deletes the directory. */
+              }
+            }
           return photo.uri;
         },
         remove: (scope, person) => {

@@ -139,10 +139,6 @@ msgstr "{name} · {day}"
 msgid "{name} · {day} · {asker} asked"
 msgstr "{name} · {day} · {asker} asked"
 
-#: src/components/portrait-lamp.tsx
-msgid "{name} answered at {time}"
-msgstr "{name} answered at {time}"
-
 #: app/vela-light.tsx
 msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
 msgstr "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."

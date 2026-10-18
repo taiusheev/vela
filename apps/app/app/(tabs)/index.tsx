@@ -479,7 +479,6 @@ function FamilyToday({ day }: { day: TodayView }) {
           }
           onQuiet={focused.state === "quiet" && mayOpen ? () => openQuiet(focused) : undefined}
           quote={focusedExchange?.answer?.text}
-          at={focusedExchange?.answer?.at}
           stale={trouble}
         />
       )}

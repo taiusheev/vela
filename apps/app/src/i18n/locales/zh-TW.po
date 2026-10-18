@@ -140,10 +140,6 @@ msgstr "{name} · {day}"
 msgid "{name} · {day} · {asker} asked"
 msgstr "{name} · {day} · {asker}問的"
 
-#: src/components/portrait-lamp.tsx
-msgid "{name} answered at {time}"
-msgstr "{name}在 {time} 回覆了"
-
 #: app/vela-light.tsx
 msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
 msgstr "{name}回覆了。接下來 30 天，Vela Light 免費開啟，讓您先看看它能做什麼，再決定要不要使用。"
