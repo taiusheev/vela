@@ -6,6 +6,7 @@ tags:
 ---
 - launchApp
 - openLink: ${APP_URL}/you
+- tapOn: "Settings"
 - scrollUntilVisible:
     element: "Pause"
     direction: DOWN
@@ -22,14 +23,14 @@ tags:
 - tapOn: "Stay"
 - assertNotVisible: "Leave the family"
 - openLink: ${APP_URL}/away?member=unknown
-- assertVisible: "Choose a parent from You before changing away dates."
+- assertVisible: "Choose a parent in Settings before changing away dates."
 - assertNotVisible: "Mom is away"
-- tapOn: "Go to You"
+- tapOn: "Go to Settings"
 - assertVisible: "Anna"
 - openLink: ${APP_URL}/nearby?member=unknown
-- assertVisible: "Choose a parent from You before changing the people nearby."
+- assertVisible: "Choose a parent in Settings before changing the people nearby."
 - assertNotVisible: "Add them"
-- tapOn: "Go to You"
+- tapOn: "Go to Settings"
 - openLink: ${APP_URL}/sign-in
 - assertVisible: "Sign-in is unavailable in this build"
 - assertVisible: "You can explore an example family. No messages are sent."

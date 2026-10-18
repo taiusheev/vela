@@ -520,7 +520,7 @@ function FamilyToday({ day }: { day: TodayView }) {
               <Words variant="body">
                 <Trans>Your family's first parent connection is still being set up.</Trans>
               </Words>
-              <SecondaryButton label={t`Go to You`} onPress={() => router.push("/(tabs)/you")} />
+              <SecondaryButton label={t`Go to Settings`} onPress={() => router.push("/settings")} />
             </>
           ) : (
             <Words variant="body">

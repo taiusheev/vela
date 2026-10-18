@@ -480,7 +480,7 @@ export default function OnboardingScreen() {
               name={name ?? t`her`}
             />
             <Words variant="caption" tone="ink3">
-              <Trans>You can also do it later, from You → Her phone.</Trans>
+              <Trans>You can also do it later, from You → Settings → Her phone.</Trans>
             </Words>
             <PrimaryButton label={t`Next`} onPress={() => goToStep("ready")} />
           </>

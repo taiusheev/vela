@@ -77,7 +77,7 @@ export default function MorningSettingsScreen() {
       >
         {her === undefined ? (
           <Words>
-            <Trans>Choose a parent from You before changing morning settings.</Trans>
+            <Trans>Choose a parent in Settings before changing morning settings.</Trans>
           </Words>
         ) : read.isError && data === undefined ? (
           <>
@@ -101,7 +101,7 @@ export default function MorningSettingsScreen() {
             invited={her.invited === true}
           />
         )}
-        <SecondaryButton label={t`Go to You`} onPress={() => router.replace("/(tabs)/you")} />
+        <SecondaryButton label={t`Go to Settings`} onPress={() => router.replace("/settings")} />
       </ScrollView>
     </>
   );

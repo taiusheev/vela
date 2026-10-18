@@ -750,16 +750,16 @@ msgid "Checking…"
 msgstr "確認中…"
 
 #: app/away.tsx
-msgid "Choose a parent from You before changing away dates."
-msgstr "請先在「你」選擇一位家人，再更改外出日期。"
+msgid "Choose a parent in Settings before changing away dates."
+msgstr "變更外出日期前，請先在設定中選擇一位家人。"
 
 #: app/morning-settings.tsx
-msgid "Choose a parent from You before changing morning settings."
-msgstr "請先在「你」選擇一位家人，再更改早安設定。"
+msgid "Choose a parent in Settings before changing morning settings."
+msgstr "變更早安設定前，請先在設定中選擇一位家人。"
 
 #: app/nearby.tsx
-msgid "Choose a parent from You before changing the people nearby."
-msgstr "請先在「你」選擇一位家人，再更改附近的人。"
+msgid "Choose a parent in Settings before changing the people nearby."
+msgstr "變更附近聯絡人前，請先在設定中選擇一位家人。"
 
 #: src/components/photo-slots.tsx
 msgid "Choose a photo"
@@ -844,8 +844,8 @@ msgid "Connection code"
 msgstr "連結碼"
 
 #: src/components/quiet-notice.tsx
-msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
-msgstr "請用您平常的電話或 Telegram 聊天聯絡{name}。經對方同意後，您可以在「我」裡加入對方的電話號碼。"
+msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
+msgstr "請使用平常的電話或 Telegram 對話聯絡{name}。經對方同意後，可以在「你」→「設定」中新增聯絡電話。"
 
 #: app/sign-in.tsx
 msgid "Continue"
@@ -1052,19 +1052,19 @@ msgstr "尋求協助或索取您的資料"
 msgid "Get help with Vela or your family connection"
 msgstr "取得 Vela 或家庭連結方面的協助"
 
-#: app/onboarding.tsx
-#: app/sign-in.tsx
-#: app/vela-light.tsx
-msgid "Go to Today"
-msgstr "前往「今天」"
-
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/conversation.tsx
 #: app/morning-settings.tsx
 #: app/nearby.tsx
-msgid "Go to You"
-msgstr "前往「你」"
+msgid "Go to Settings"
+msgstr "前往設定"
+
+#: app/onboarding.tsx
+#: app/sign-in.tsx
+#: app/vela-light.tsx
+msgid "Go to Today"
+msgstr "前往「今天」"
 
 #: src/data/chat.ts
 msgid "Good morning from Vela"
@@ -3437,8 +3437,8 @@ msgid "You are the only organiser who is active, and an organiser who is away is
 msgstr "目前只有您一位發起人在使用中，而暫停的發起人在安靜的日子不會收到通知。必須先有這個家庭的另一位發起人在使用中。"
 
 #: app/onboarding.tsx
-msgid "You can also do it later, from You → Her phone."
-msgstr "也可以之後再設定：我 → 長輩的手機。"
+msgid "You can also do it later, from You → Settings → Her phone."
+msgstr "您也可以稍後從「你」→「設定」→「家人的手機」進行設定。"
 
 #: app/sign-in.tsx
 msgid "You can explore an example family. No messages are sent."

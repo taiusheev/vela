@@ -749,16 +749,16 @@ msgid "Checking…"
 msgstr "Checking…"
 
 #: app/away.tsx
-msgid "Choose a parent from You before changing away dates."
-msgstr "Choose a parent from You before changing away dates."
+msgid "Choose a parent in Settings before changing away dates."
+msgstr "Choose a parent in Settings before changing away dates."
 
 #: app/morning-settings.tsx
-msgid "Choose a parent from You before changing morning settings."
-msgstr "Choose a parent from You before changing morning settings."
+msgid "Choose a parent in Settings before changing morning settings."
+msgstr "Choose a parent in Settings before changing morning settings."
 
 #: app/nearby.tsx
-msgid "Choose a parent from You before changing the people nearby."
-msgstr "Choose a parent from You before changing the people nearby."
+msgid "Choose a parent in Settings before changing the people nearby."
+msgstr "Choose a parent in Settings before changing the people nearby."
 
 #: src/components/photo-slots.tsx
 msgid "Choose a photo"
@@ -843,8 +843,8 @@ msgid "Connection code"
 msgstr "Connection code"
 
 #: src/components/quiet-notice.tsx
-msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
-msgstr "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
+msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
+msgstr "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
 
 #: app/sign-in.tsx
 msgid "Continue"
@@ -1051,19 +1051,19 @@ msgstr "Get help or request your data"
 msgid "Get help with Vela or your family connection"
 msgstr "Get help with Vela or your family connection"
 
-#: app/onboarding.tsx
-#: app/sign-in.tsx
-#: app/vela-light.tsx
-msgid "Go to Today"
-msgstr "Go to Today"
-
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/conversation.tsx
 #: app/morning-settings.tsx
 #: app/nearby.tsx
-msgid "Go to You"
-msgstr "Go to You"
+msgid "Go to Settings"
+msgstr "Go to Settings"
+
+#: app/onboarding.tsx
+#: app/sign-in.tsx
+#: app/vela-light.tsx
+msgid "Go to Today"
+msgstr "Go to Today"
 
 #: src/data/chat.ts
 msgid "Good morning from Vela"
@@ -3436,8 +3436,8 @@ msgid "You are the only organiser who is active, and an organiser who is away is
 msgstr "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
 
 #: app/onboarding.tsx
-msgid "You can also do it later, from You → Her phone."
-msgstr "You can also do it later, from You → Her phone."
+msgid "You can also do it later, from You → Settings → Her phone."
+msgstr "You can also do it later, from You → Settings → Her phone."
 
 #: app/sign-in.tsx
 msgid "You can explore an example family. No messages are sent."

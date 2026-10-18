@@ -743,15 +743,15 @@ msgid "Checking…"
 msgstr ""
 
 #: app/away.tsx
-msgid "Choose a parent from You before changing away dates."
+msgid "Choose a parent in Settings before changing away dates."
 msgstr ""
 
 #: app/morning-settings.tsx
-msgid "Choose a parent from You before changing morning settings."
+msgid "Choose a parent in Settings before changing morning settings."
 msgstr ""
 
 #: app/nearby.tsx
-msgid "Choose a parent from You before changing the people nearby."
+msgid "Choose a parent in Settings before changing the people nearby."
 msgstr ""
 
 #: src/components/photo-slots.tsx
@@ -837,7 +837,7 @@ msgid "Connection code"
 msgstr ""
 
 #: src/components/quiet-notice.tsx
-msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You, with their permission."
+msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
 msgstr ""
 
 #: app/sign-in.tsx
@@ -1045,18 +1045,18 @@ msgstr ""
 msgid "Get help with Vela or your family connection"
 msgstr ""
 
-#: app/onboarding.tsx
-#: app/sign-in.tsx
-#: app/vela-light.tsx
-msgid "Go to Today"
-msgstr ""
-
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/conversation.tsx
 #: app/morning-settings.tsx
 #: app/nearby.tsx
-msgid "Go to You"
+msgid "Go to Settings"
+msgstr ""
+
+#: app/onboarding.tsx
+#: app/sign-in.tsx
+#: app/vela-light.tsx
+msgid "Go to Today"
 msgstr ""
 
 #: src/data/chat.ts
@@ -3430,7 +3430,7 @@ msgid "You are the only organiser who is active, and an organiser who is away is
 msgstr ""
 
 #: app/onboarding.tsx
-msgid "You can also do it later, from You → Her phone."
+msgid "You can also do it later, from You → Settings → Her phone."
 msgstr ""
 
 #: app/sign-in.tsx

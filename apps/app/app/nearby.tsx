@@ -58,9 +58,12 @@ export default function NearbyScreen() {
         ) : her === undefined ? (
           <>
             <Words variant="body">
-              <Trans>Choose a parent from You before changing the people nearby.</Trans>
+              <Trans>Choose a parent in Settings before changing the people nearby.</Trans>
             </Words>
-            <SecondaryButton label={t`Go to You`} onPress={() => router.replace("/(tabs)/you")} />
+            <SecondaryButton
+              label={t`Go to Settings`}
+              onPress={() => router.replace("/settings")}
+            />
           </>
         ) : organiser ? (
           <>

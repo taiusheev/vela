@@ -7,6 +7,7 @@ Founder feedback on build 6: share a parent's link again after setup, move photo
 - Keep the You tab. It shows the selected family and a Settings entry.
 - You → Settings contains the existing family, morning preferences, nearby contacts, notification, language, privacy, pause/leave, sign-out and account-deletion controls.
 - Each parent's photo-and-link entry opens Parent settings. Add/change/remove portrait controls are only here; Today keeps the portrait and the answer-driven window light.
+- Recovery links open Settings directly; morning/away/nearby and calling-number help name the new location. Unknown parents remain blocked instead of falling back to another person.
 - Portrait files remain private, local to this device/session and scoped to family/member. The existing sign-out cleanup and late-picker rejection remain in force. No upload service or permission was added.
 
 ## Sharing a parent link
