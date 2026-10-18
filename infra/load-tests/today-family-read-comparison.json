@@ -1,0 +1,48 @@
+{
+  "baseline": "ebb6c6af980a6ab6672ed37039700dc68bcfdbbe",
+  "environment": "disposable PGlite, frozen synthetic data, alternating before/after order",
+  "includesSelectDistinctOn": true,
+  "networkDelayInjected": false,
+  "results": [
+    {
+      "parents": 1,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 26,
+        "localWarmP95Ms": 8.03
+      },
+      "after": {
+        "selectQueries": 24,
+        "localWarmP95Ms": 6.95
+      }
+    },
+    {
+      "parents": 4,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 83,
+        "localWarmP95Ms": 16.8
+      },
+      "after": {
+        "selectQueries": 39,
+        "localWarmP95Ms": 10.16
+      }
+    },
+    {
+      "parents": 10,
+      "samplesPerVersion": 10,
+      "identicalResponseHashes": true,
+      "before": {
+        "selectQueries": 197,
+        "localWarmP95Ms": 37.05
+      },
+      "after": {
+        "selectQueries": 69,
+        "localWarmP95Ms": 16.32
+      }
+    }
+  ],
+  "limits": "Local read counts and warm timings only; not hosted latency or production capacity. Existing light-status reader still scales per parent."
+}

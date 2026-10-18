@@ -90,3 +90,19 @@ The founder enabled Workers Paid. The first paid test deployed the 100 ms settin
 Final paid verification (18 October): the isolated Worker was deployed with a 1,000 ms budget. Ten rounds of 100 Today reads at twenty clients completed 1,000/1,000 HTTP 200 responses in 116.2 seconds, with zero retries and no response/family mismatches. Persisted logs covered 957 of those 1,000 invocations: all 957 were successful, CPU p95 64 ms/max 172 ms, and no error events or 08P01 labels were returned for the window. The client ledger covers all 1,000 responses; the server-log sample is explicitly incomplete. Family totals remained 100 families, 300 deliveries, 310 answers, 280 replies, 180 read-backs and 140 signed drafts; pending/dead/duplicate/quiet/repeat counts remained zero. No live tail was active. See [raw client receipt](../load-tests/hosted-swarm-cpu-http-bursts.json) and [persisted-log receipt](../load-tests/hosted-swarm-cpu-paid-observability.json). The initial 100 ms pass and its telemetry remain separate receipts.
 
 This verifies removal of the observed Free-plan CPU failure for the recorded workload. The separate protocol error did not recur in either paid 1,000-request run; its independent cause is not proven. These bounded read bursts do not establish a sustained production capacity limit or provider/native-family evidence. The provisioning-only failure path also now preserves prior cohort receipts instead of overwriting the ten-family preflight record with a deployment failure.
+
+### Today read follow-up
+
+The hosted work prompted a check of the remaining screen reads. Today still read each parent's connection-window sources, conversation details, tomorrow's turn/draft and names separately. A new four-parent regression fixture measured 79 ordinary selects before the change versus 25 for one parent; it failed the intended read budget before the implementation. This is an additional local finding, not a failure observed in the original one-parent hosted cohort.
+
+Today now batches connection-window sources, today's conversation rendering and tomorrow's turns/drafts/names across the family's recipients. Queries match each recipient's own today/tomorrow dates; received timestamps still determine connection windows, while provider timestamps still order displayed messages. Authorization, suggestion eligibility, language rendering and withdrawal rules remain in place. The existing light-status reader still performs per-parent reads; this change does not claim constant total queries.
+
+A disposable PGlite comparison alternated baseline `ebb6c6a` and changed loaders over the same frozen synthetic data. After two warm-up pairs, ten measured pairs per cohort produced identical complete response hashes in every pair. Counts below include `selectDistinctOn`, unlike the ordinary-select-only regression fixture:
+
+| Parents | Selects before | Selects after | Local warm p95 before | Local warm p95 after |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 26 | 24 | 8.03 ms | 6.95 ms |
+| 4 | 83 | 39 | 16.80 ms | 10.16 ms |
+| 10 | 197 | 69 | 37.05 ms | 16.32 ms |
+
+See [comparison receipt](../load-tests/today-family-read-comparison.json). No network delay was injected. These are local warm timings and database query counts, not hosted latency or capacity measurements. New mixed-zone tests cover Taipei, Los Angeles, Kiritimati and Vietnam, per-parent tomorrow drafts, wrong-date exclusion and denied cross-family access. Existing Today/Lights/Memories tests cover content, translations, media, read-backs, consent and delivery states.
