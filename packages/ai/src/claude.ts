@@ -20,6 +20,7 @@ import {
   SERVER_FALLBACK_BETA,
   TIMEOUT_MS_FOR,
 } from "./models.ts";
+import { normaliseSuggestion, suggestionDateGrounded } from "./normalise-suggestion.ts";
 import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
@@ -77,7 +78,7 @@ export function createClaudeAi(options: ClaudeAiOptions): Ai {
       invoke(client, { call: "understand", normalise: normaliseUnderstanding }, input),
     flag: (input) => invoke(client, { call: "flag", normalise: normaliseFlag }, input),
     chips: (input) => invoke(client, { call: "chips" }, input),
-    suggest: (input) => invoke(client, { call: "suggest" }, input),
+    suggest: (input) => invoke(client, { call: "suggest", normalise: normaliseSuggestion }, input),
     translate: (input) => invoke(client, { call: "translate" }, input),
     readback: (input) => invoke(client, { call: "readback" }, input),
     hello: (input) => invoke(client, { call: "hello" }, input),
@@ -189,6 +190,8 @@ async function invoke<K extends AiCallName>(
   }
 
   const value = spec.normalise ? spec.normalise(parsed.data, input) : parsed.data;
+  if (spec.call === "suggest" && !suggestionDateGrounded(input, value))
+    return failure("date_ungrounded", record);
   return { ok: true, value, record };
 }
 

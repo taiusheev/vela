@@ -47,6 +47,7 @@ import {
   outbound,
 } from "@vela/db";
 import { and, asc, eq, exists, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { answerSourceTime } from "./answer-message-time.ts";
 import { keepInBook, keepsInBook } from "./book.ts";
 import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
@@ -204,7 +205,7 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Lit | null
         kind: content.kind,
         channel: event.channel,
         externalId: inboundExternalId(event),
-        payload: payloadOf(content),
+        payload: { ...payloadOf(content), ...answerSourceTime(event, now) },
         mediaId: file?.id ?? null,
         receivedAt: now,
       })

@@ -1,0 +1,66 @@
+{
+  "startedAt": "2026-10-18T03:15:54.300Z",
+  "kind": "hosted-cloudflare-neon-product-flow",
+  "families": 100,
+  "days": 3,
+  "mixed": true,
+  "queueMaxConcurrency": 20,
+  "clientConcurrency": 20,
+  "source": "3db53536dc943fa021b2379ee7be999be15ab81c",
+  "workingTreeDirty": false,
+  "status": "test-corrected",
+  "passed": false,
+  "phases": [
+    {
+      "phase": "initialize-isolated-schema",
+      "elapsedMs": 38770.583042
+    },
+    {
+      "phase": "seed",
+      "elapsedMs": 9282.449374999997
+    },
+    {
+      "phase": "day-0:schedule-and-cloud-queue-delivery",
+      "elapsedMs": 97961.450958
+    },
+    {
+      "phase": "day-0:inbound-cloud-queue",
+      "elapsedMs": 131907.914833
+    },
+    {
+      "phase": "day-0:http-reply-and-app-reads",
+      "elapsedMs": 65877.56062499998
+    },
+    {
+      "phase": "day-0:http-journey-p95",
+      "p95Ms": 13769.696707999974
+    },
+    {
+      "phase": "away-and-signature-preferences",
+      "elapsedMs": 11392.472291000013
+    }
+  ],
+  "limitations": [
+    "Isolated explicitly qualified PostgreSQL schema sharing staging's Neon compute and Hyperdrive.",
+    "Real deployed HTTP routes, Cloudflare queues, Durable Object alarms, gateway, sealed PostgreSQL writes and app read services.",
+    "Synthetic JWT sessions replace Clerk; recording Telegram and AI-off fallback. No real-provider, AI-quality or native-device evidence.",
+    "Virtual dates are advanced between phases; this is not a wall-clock soak or production capacity measurement."
+  ],
+  "failure": "Test incorrectly expected away to skip arrivals; spec section 8 keeps arrivals and suppresses repeats/quiet.",
+  "schedulerStopped": true,
+  "finishedAt": "2026-10-18T03:27:10.379Z",
+  "observed": {
+    "families": 100,
+    "exchanges": 200,
+    "delivered": 200,
+    "answers": 110,
+    "signed": 95,
+    "replies": 100,
+    "read_back": 100,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "duplicates": 0
+  },
+  "stoppedAt": "2026-10-18T03:27:37.507Z"
+}

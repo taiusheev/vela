@@ -1,0 +1,67 @@
+{
+  "startedAt": "2026-10-18T03:30:11.267Z",
+  "kind": "hosted-cloudflare-neon-product-flow",
+  "families": 100,
+  "days": 3,
+  "mixed": true,
+  "resumedAtDay": 1,
+  "queueMaxConcurrency": 20,
+  "clientConcurrency": 20,
+  "source": "38d11a05289c27b0d4bf96bcbc2646873b414469",
+  "workingTreeDirty": false,
+  "status": "failed",
+  "passed": false,
+  "phases": [
+    {
+      "phase": "day-1:schedule-and-cloud-queue-delivery",
+      "elapsedMs": 5990.167541999999
+    },
+    {
+      "phase": "day-1:inbound-cloud-queue",
+      "elapsedMs": 115735.74187499999
+    },
+    {
+      "phase": "day-1:http-reply-and-app-reads",
+      "elapsedMs": 65286.804542
+    },
+    {
+      "phase": "day-1:http-journey-p95",
+      "p95Ms": 14701.242916999996
+    },
+    {
+      "phase": "away-suppresses-repeat-and-quiet",
+      "elapsedMs": 7705.255375000008
+    },
+    {
+      "phase": "day-2:schedule-and-cloud-queue-delivery",
+      "elapsedMs": 113444.70425000001
+    },
+    {
+      "phase": "day-2:inbound-cloud-queue",
+      "elapsedMs": 132042.07558400003
+    }
+  ],
+  "limitations": [
+    "Isolated explicitly qualified PostgreSQL schema sharing staging's Neon compute and Hyperdrive.",
+    "Real deployed HTTP routes, Cloudflare queues, Durable Object alarms, gateway, sealed PostgreSQL writes and app read services.",
+    "Synthetic JWT sessions replace Clerk; recording Telegram and AI-off fallback. No real-provider, AI-quality or native-device evidence.",
+    "Virtual dates are advanced between phases; this is not a wall-clock soak or production capacity measurement."
+  ],
+  "resumeCheckpoint": {
+    "families": 100,
+    "exchanges": 200,
+    "delivered": 200,
+    "answers": 110,
+    "signed": 95,
+    "replies": 100,
+    "read_back": 100,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "failure": "api_read_503",
+  "schedulerStopped": true,
+  "finishedAt": "2026-10-18T03:38:59.182Z"
+}

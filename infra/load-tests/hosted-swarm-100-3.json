@@ -1,0 +1,94 @@
+{
+  "startedAt": "2026-10-18T03:45:24.968Z",
+  "kind": "hosted-cloudflare-neon-product-flow",
+  "families": 100,
+  "days": 3,
+  "mixed": true,
+  "resumedAtDay": 2,
+  "finalVerificationOnly": true,
+  "httpRetries": [
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    },
+    {
+      "operation": "idempotent-reply",
+      "status": 503,
+      "code": "non_api_response",
+      "attempt": 1
+    },
+    {
+      "operation": "read",
+      "status": 503,
+      "attempt": 1
+    }
+  ],
+  "queueMaxConcurrency": 20,
+  "clientConcurrency": 20,
+  "source": "38d11a05289c27b0d4bf96bcbc2646873b414469",
+  "workingTreeDirty": true,
+  "status": "passed",
+  "passed": true,
+  "phases": [
+    {
+      "phase": "day-2:http-reply-and-app-reads",
+      "elapsedMs": 62122.461792
+    },
+    {
+      "phase": "day-2:http-journey-p95",
+      "p95Ms": 13825.231749999999
+    }
+  ],
+  "limitations": [
+    "Isolated explicitly qualified PostgreSQL schema sharing staging's Neon compute and Hyperdrive.",
+    "Real deployed HTTP routes, Cloudflare queues, Durable Object alarms, gateway, sealed PostgreSQL writes and app read services.",
+    "Synthetic JWT sessions replace Clerk; recording Telegram and AI-off fallback. No real-provider, AI-quality or native-device evidence.",
+    "Virtual dates are advanced between phases; this is not a wall-clock soak or production capacity measurement."
+  ],
+  "resumeCheckpoint": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 279,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "totals": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "schedulerStopped": true,
+  "finishedAt": "2026-10-18T03:46:29.891Z"
+}

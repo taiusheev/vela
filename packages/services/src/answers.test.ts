@@ -29,6 +29,7 @@ import {
   thanksKeyFor,
 } from "./answers.ts";
 import { loadApiLights } from "./api-lights.ts";
+import { exchangeRow } from "./api-today.ts";
 import type { Deps, OutboundJob } from "./deps.ts";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { openQuiet } from "./quiet.ts";
@@ -191,6 +192,41 @@ async function setMember(seed: SeededFamily, patch: Partial<typeof members.$infe
 }
 
 describe("handleParentMessage", () => {
+  it("keeps sender order when a follow-up reaches the queue before the original", async () => {
+    const { seed, exchangeId } = await morning();
+    const receipt = h.clock.now();
+    await handleParentMessage(
+      h.deps,
+      seed.member,
+      privateEvent(seed.memberLink, {
+        kind: "text",
+        text: "Second message",
+        at: "2026-09-14T00:05:00.000Z",
+      }),
+    );
+    h.clock.advanceMinutes(1);
+    await handleParentMessage(
+      h.deps,
+      seed.member,
+      privateEvent(seed.memberLink, {
+        kind: "text",
+        text: "First message",
+        at: "2026-09-14T00:04:00.000Z",
+      }),
+    );
+    const stored = await answerRows();
+    expect(stored.map((answer) => answer.receivedAt)).toEqual([receipt, h.clock.now()]);
+    const [exchange] = await h.db.select().from(exchanges).where(eq(exchanges.id, exchangeId));
+    if (!exchange) throw new Error("Expected exchange");
+    const card = await exchangeRow(h.db, exchange, seed.member, h.clock.now());
+    expect(card.answers?.map((answer) => answer.text)).toEqual(["First message", "Second message"]);
+    expect(card.answers?.map((answer) => answer.at)).toEqual([
+      "2026-09-14T00:04:00.000Z",
+      "2026-09-14T00:05:00.000Z",
+    ]);
+    expect(card.answer?.text).toBe("Second message");
+  });
+
   it("lights the exchange in one transaction, then acks her, posts to the group, and queues understanding", async () => {
     const { seed, exchangeId } = await morning();
     const now = h.clock.now();

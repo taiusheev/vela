@@ -5,6 +5,7 @@ import {
   OPENAI_MODELS,
   OPENAI_REMINDERS,
   OPENAI_SNAPSHOT_FOR,
+  openAiEffortFor,
   openAiPriceFor,
   responseSchema,
 } from "./openai.ts";
@@ -320,4 +321,56 @@ describe("createOpenAiAi failures", () => {
     ).rejects.toThrow();
     expect(requests).toHaveLength(0);
   });
+});
+
+describe("date-sensitive suggestion effort", () => {
+  it.each([
+    ["2026-09-17", "minimal"],
+    ["2026-09-18", "low"],
+    ["2026-09-19", "low"],
+    ["2026-09-20", "low"],
+    ["2026-09-21", "minimal"],
+  ])("uses the appropriate budget for the supplied event on %s", async (date, effort) => {
+    const { ai, requests } = clientWith([
+      completion({
+        type: "voice_note",
+        text: "Dad, a birthday message for Mia?",
+        source: "date",
+      }),
+    ]);
+    await ai.suggest({
+      lang: "en",
+      holderName: "Leo",
+      recipientAddress: "Dad",
+      forDate: "2026-09-18",
+      rotationType: "voice_note",
+      recentMentions: [],
+      familyDates: [{ date, label: "Mia's birthday" }],
+      holderLastAsk: null,
+    });
+    expect(JSON.parse(requests[0]?.text ?? "{}").reasoning_effort).toBe(effort);
+  });
+  it("preserves other call budgets", () => {
+    expect(openAiEffortFor("hello", understandInput)).toBe("minimal");
+    expect(openAiEffortFor("understand", understandInput)).toBe("low");
+  });
+});
+
+it("withholds an unsupported date draft rather than returning it as a successful suggestion", async () => {
+  const { ai } = clientWith([
+    completion({ type: "voice_note", text: "Dad, a childhood memory of Mia?", source: "date" }),
+  ]);
+  const outcome = await ai.suggest({
+    lang: "en",
+    holderName: "Leo",
+    recipientAddress: "Dad",
+    forDate: "2026-09-18",
+    rotationType: "voice_note",
+    recentMentions: [],
+    familyDates: [{ date: "2026-09-19", label: "Mia's 10th birthday" }],
+    holderLastAsk: null,
+  });
+  expect(outcome.ok).toBe(false);
+  expect(outcome.value.text).toBe("");
+  expect(outcome.record).toMatchObject({ ok: false, error: "date_ungrounded" });
 });

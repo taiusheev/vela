@@ -1,0 +1,60 @@
+{
+  "label": "before",
+  "recordedAt": "2026-10-18T02:54:56.901Z",
+  "families": 10,
+  "requests": 30,
+  "p50Ms": 2203.241583000001,
+  "p95Ms": 2548.015708,
+  "payloads": [
+    {
+      "index": 0,
+      "cards": 2,
+      "hash": "0adfc1339fe2f4f66e2e623625d97b1e299403c7fd5aac87d18d9c79972dfe1a"
+    },
+    {
+      "index": 1,
+      "cards": 2,
+      "hash": "02ddd3f77f829a8c3543040ee6b1df7d4bd2a782e479cd8ed11a9181f476f57a"
+    },
+    {
+      "index": 2,
+      "cards": 2,
+      "hash": "15c60d779eb15d403137751211968ae50355e103ec53149edd50304376c0f97f"
+    },
+    {
+      "index": 3,
+      "cards": 2,
+      "hash": "5d5c0990779736bf1963be011683df0eac8863c6e0c422cda3db58cbabc7100a"
+    },
+    {
+      "index": 4,
+      "cards": 2,
+      "hash": "44c7da1e57b2a6bb27f91edcb46efc79f339ddbe0485d5554f00d17f726b917e"
+    },
+    {
+      "index": 5,
+      "cards": 2,
+      "hash": "62c67013d4905b6938a4e97188f4e5199eeb7ca7ec3d29a3eb1ad96d24fe3f27"
+    },
+    {
+      "index": 6,
+      "cards": 2,
+      "hash": "3f8cc9a0346c631e2ba665a15af9f0a560ace7405d3e8c2c26d981af3e2bdb28"
+    },
+    {
+      "index": 7,
+      "cards": 2,
+      "hash": "26dd556cd938f5c055dd23779d0090cd6345cacd0aa84a16d1ef75538e895c82"
+    },
+    {
+      "index": 8,
+      "cards": 2,
+      "hash": "08eef23fdbef37ea5f7559ed26737d1b3d51756ea7d3622fe6f4264219829705"
+    },
+    {
+      "index": 9,
+      "cards": 2,
+      "hash": "e8380a323c82880e85ce1adb49d9340c400c27aa90d4b980673672e3070e7a91"
+    }
+  ]
+}

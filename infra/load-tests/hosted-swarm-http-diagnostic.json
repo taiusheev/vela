@@ -1,0 +1,349 @@
+{
+  "kind": "read-only-hosted-http-diagnostic",
+  "recordedAt": "2026-10-18T03:48:54.565Z",
+  "requests": 100,
+  "concurrency": 20,
+  "counts": {
+    "200": 58,
+    "500": 1,
+    "503": 41
+  },
+  "failures": [
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "6c20a4515670b02af3894eee4922f8db3b3fa11de8ca44c5f43c0dad0bddc951",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "b5b09344f4da09453406af053b4e70dd7d2196a2a0b16cf2f1a6a8b35cef81e6",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "7aa40157ee877363b79c4a2f8db13cbf0e27a13f3bdb90a5ccc9d4e8ad1c4cf0",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "ddfdc9aa27e6f6adf8da37e5e857e9fc0437f0f14440f8494a7f329d315cc9f5",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "5073488cc88ded29190e041f7f861d2a2794357216dc7660a6ac9aa157150701",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "71f964bdda136cb8ab8e0161ba1b8f92715effce21968c05ab3565482f5b9bb6",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "ef09fb12e0b2f3edfcdbb0c4d94975c23de92b90c485940dc42d68218e195021",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "cae4b4c0607c87d12087167c106a2207e5c1da10709395450aa0f26786afbe8b",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "b80634b8d606d343ff177a1884ec2a89bdea3832690dd040c73b1b35e2ecabbf",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "a1ac7724ca27b573fb1ff22ac1e4e89d9f468306b6c5964e63a6c0da375f6a61",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "af50aa9ba6115eb3a62e81ff2094aaf7e02513164a7c33cb993348514b1e7b35",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "993a46844c15cbaebf2a21ca2ac1527c6f91ab2e25245c6e582266c8a344b026",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "9a1edc2330c4b2d9979e42967cbcc3b68082fd6ab55aa1a789250d6f0ed4742f",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "cc658fde97b7c4eccfbe0a9165c11590a2e8d1dc72c51cb0f31789939a86e334",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "abb3dcea69df39f16c827e64a0cd9052671f9e43d16d7a60256923d07403c88d",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "0fdd82851be26feaad0eb34aaeeba241dac86231f16d75ecd8b77b1e746b0789",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "90755b476430be0fca91c2e0ce730afb227268e2911629faabcc7a06c97f3ef3",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "ace767bc218cc7ff0a18659556a6607dcda8e50d03baa6988c76108271cb4d05",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "a39f5d43fb32d813e102a7ceb75c0af5993e4dabab9841e1f4289055fd1a1fb4",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "48e322ffb1259f0e23f801dd96d9e1ad92c2bca0206ca9b4e78fbccc423475ed",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "e117dd6a190c9325e0a27f63120084e5ad216c35810cda7bd52c23722a6d521a",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "5f20d29779dd1ee358571b698dc95f907e45c2659bfab633f4206d5c3451bc71",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "750777d44dc3dd8644c37375a0b5e913214d581277a3a2d35640a2f8616eb629",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "6fe5a4bd159029f298a02ad0dea710499ba12616c789ede2671bcf4a6b19a4cf",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "f7a26ef21836faedea60adfa122ac33a81b7c72e96da87b6d47bbd073f58b51e",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "7035cc528f81c79c4deed1443bbb3c1f8f1b52532543c9d84fb3224fb5f87ff2",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "9e60a49dfa9476c227b6776c5d3f01b844361a736d3eb38316fd958c6f6db185",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "4ddf5afe8e072d1abfa4b4d7b02032b5e4a36d51c27ceec3045c0752f7023a35",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "393da6f910b0051b3df50e34cf7fc5182cbf065d1b784e61efeda25a356275ae",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "3e4bb836d8ae0bb5f397e7a6ad2e21a8f16a575b892383d724f8c78b44dc8a3f",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "2c9f8d59fd6c5d8c7c619a24df1e60edb2dd2815cd97b43c3456a0b30f043478",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "2578489402545f4c70ecdbe60602a3f6f06acae527657b6f7acf3f407442b89e",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "1000e05273c2bb64ff189c1652f6f11e0a18e05e16d049bd3483ef0894874b79",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "6a7f95fc67f1f8bdc4eb7c2153b23ece12cf2df1ea774d363665a4dfc21a99c0",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "4a6477ace2d272a5d97d5e26d38605390549f5f6f1a50b7139a16e633d686ebd",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "b48cc163d81ef59fab884bd3aa224225fa35f6780b01f5a459ef08c21e8d3151",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "3298d2e507bf7d2d1827056983e9639e4a7f88aed7bc1524ac9fe14e906da80d",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 500,
+      "type": "application/json",
+      "code": "internal",
+      "cloudflareError": null,
+      "bodySha256": "c1d17d74fe5f7fa74e1f9c8c92e56e637ae9279fc60d0d047fbf1dfc251fdcf3",
+      "bodyBytes": 64
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "b99ccf8d6d783abcf967860ee2f9d66b5d59af7a269390cb5183cf885978762d",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "15a6a25ea49ad811b5b026d696598f7c3089e19d235030a4ec4c496b959abb7c",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "d110f92e00c9992a2090ec26a673e8b1a7acfeae341f1fb4849aa620015a7d1b",
+      "bodyBytes": 4743
+    },
+    {
+      "status": 503,
+      "type": "text/html; charset=UTF-8",
+      "code": null,
+      "cloudflareError": null,
+      "bodySha256": "537adc99a11b5df0f5a485ddce4826a21d99594d5c96c4013db73253fee6b402",
+      "bodyBytes": 4743
+    }
+  ]
+}

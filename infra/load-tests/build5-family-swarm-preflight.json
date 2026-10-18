@@ -1,0 +1,145 @@
+{
+  "recordedAt": "2026-10-18T02:34:33.634Z",
+  "source": "f08b5a2f453fc1f0731625a008e79ff99b6f0145",
+  "build": 5,
+  "kind": "local-postgres-family-swarm",
+  "passed": true,
+  "families": 10,
+  "days": 2,
+  "workers": 10,
+  "simulatedSendDelayMs": 25,
+  "postgres": "18.6 (Homebrew)",
+  "elapsedMs": 469.89870800000006,
+  "totals": {
+    "exchanges": 20,
+    "answers": 20,
+    "replies": 20,
+    "signedDrafts": 10,
+    "delivered": 20,
+    "readBackReplies": 10,
+    "duplicateSends": 0,
+    "unfinishedOutbound": 0,
+    "pendingJobs": 0,
+    "quietEvents": 0
+  },
+  "failures": [],
+  "phases": [
+    {
+      "phase": "day-0:wake",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 56.62183300000004,
+      "elapsedMs": 88.27645899999993
+    },
+    {
+      "phase": "day-0:morning:delivery-0",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 35.58641699999998,
+      "elapsedMs": 43.48391700000002
+    },
+    {
+      "phase": "day-0:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.009916000000089298
+    },
+    {
+      "phase": "day-0:parent-answer",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 15.468082999999979,
+      "elapsedMs": 23.208041999999978
+    },
+    {
+      "phase": "day-0:answers:delivery-0",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 31.33508299999994,
+      "elapsedMs": 33.86325000000011
+    },
+    {
+      "phase": "day-0:answers:understand-0",
+      "operations": 10,
+      "errors": 0,
+      "p95Ms": 12.814334000000144,
+      "elapsedMs": 13.069375000000036
+    },
+    {
+      "phase": "day-0:child-reply",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 13.401415999999926,
+      "elapsedMs": 20.770125000000007
+    },
+    {
+      "phase": "day-0:app-reads",
+      "operations": 10,
+      "errors": 0,
+      "p95Ms": 26.20654099999979,
+      "elapsedMs": 26.460624999999936
+    },
+    {
+      "phase": "day-1:wake",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 38.90691700000002,
+      "elapsedMs": 62.17595799999981
+    },
+    {
+      "phase": "day-1:morning:delivery-0",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 38.19945899999993,
+      "elapsedMs": 40.33345899999995
+    },
+    {
+      "phase": "day-1:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.01520899999991343
+    },
+    {
+      "phase": "day-1:parent-answer",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 14.448750000000018,
+      "elapsedMs": 20.784582999999884
+    },
+    {
+      "phase": "day-1:answers:delivery-0",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 31.209583000000066,
+      "elapsedMs": 33.23162500000012
+    },
+    {
+      "phase": "day-1:answers:understand-0",
+      "operations": 10,
+      "errors": 0,
+      "p95Ms": 11.151250000000118,
+      "elapsedMs": 11.241500000000087
+    },
+    {
+      "phase": "day-1:child-reply",
+      "operations": 20,
+      "errors": 0,
+      "p95Ms": 9.223792000000003,
+      "elapsedMs": 16.437291999999843
+    },
+    {
+      "phase": "day-1:app-reads",
+      "operations": 10,
+      "errors": 0,
+      "p95Ms": 24.81595799999991,
+      "elapsedMs": 24.93966599999999
+    }
+  ],
+  "limitations": [
+    "Local disposable PostgreSQL with durability disabled; synthetic queue, Telegram and AI.",
+    "Seeded consenting families, text answers and replies only; onboarding, media, native UI, provider delivery and generated tone require separate evidence.",
+    "No Cloudflare/Neon capacity, production capacity or real family behavior measured."
+  ]
+}

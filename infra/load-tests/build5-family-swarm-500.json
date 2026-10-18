@@ -1,0 +1,425 @@
+{
+  "recordedAt": "2026-10-18T02:36:36.356Z",
+  "source": "f08b5a2f453fc1f0731625a008e79ff99b6f0145",
+  "build": 5,
+  "kind": "local-postgres-family-swarm",
+  "passed": true,
+  "families": 500,
+  "days": 7,
+  "workers": 20,
+  "simulatedSendDelayMs": 25,
+  "postgres": "18.6 (Homebrew)",
+  "elapsedMs": 80244.637166,
+  "totals": {
+    "exchanges": 3500,
+    "answers": 3500,
+    "replies": 3500,
+    "signedDrafts": 1750,
+    "delivered": 3500,
+    "readBackReplies": 3000,
+    "duplicateSends": 0,
+    "unfinishedOutbound": 0,
+    "pendingJobs": 0,
+    "quietEvents": 0
+  },
+  "failures": [],
+  "phases": [
+    {
+      "phase": "day-0:wake",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 76.36662500000011,
+      "elapsedMs": 2893.6039170000004
+    },
+    {
+      "phase": "day-0:morning:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 42.53845799999999,
+      "elapsedMs": 916.8594999999996
+    },
+    {
+      "phase": "day-0:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.007999999999810825
+    },
+    {
+      "phase": "day-0:parent-answer",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 24.481916000000638,
+      "elapsedMs": 919.6874170000001
+    },
+    {
+      "phase": "day-0:answers:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 29.296124999999847,
+      "elapsedMs": 724.0244169999996
+    },
+    {
+      "phase": "day-0:answers:understand-0",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 29.588458999999602,
+      "elapsedMs": 485.0948749999998
+    },
+    {
+      "phase": "day-0:child-reply",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 20.516499999999724,
+      "elapsedMs": 690.6630420000001
+    },
+    {
+      "phase": "day-0:app-reads",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 71.15770800000064,
+      "elapsedMs": 1185.83525
+    },
+    {
+      "phase": "day-1:wake",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 76.42587500000081,
+      "elapsedMs": 2874.6705
+    },
+    {
+      "phase": "day-1:morning:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 39.51716699999997,
+      "elapsedMs": 853.804583000001
+    },
+    {
+      "phase": "day-1:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.031582999999955064
+    },
+    {
+      "phase": "day-1:parent-answer",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 75.14066699999967,
+      "elapsedMs": 1473.0657499999998
+    },
+    {
+      "phase": "day-1:answers:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 29.5413750000007,
+      "elapsedMs": 738.5230410000004
+    },
+    {
+      "phase": "day-1:answers:understand-0",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 133.44333299999926,
+      "elapsedMs": 1337.0800419999996
+    },
+    {
+      "phase": "day-1:child-reply",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 57.10033399999884,
+      "elapsedMs": 1195.0595410000024
+    },
+    {
+      "phase": "day-1:app-reads",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 252.25654099999883,
+      "elapsedMs": 2432.571167000002
+    },
+    {
+      "phase": "day-2:wake",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 252.91933300000164,
+      "elapsedMs": 4861.145333999997
+    },
+    {
+      "phase": "day-2:morning:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 46.62354100000084,
+      "elapsedMs": 989.1452910000007
+    },
+    {
+      "phase": "day-2:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.012582999999722233
+    },
+    {
+      "phase": "day-2:parent-answer",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 50.44300000000294,
+      "elapsedMs": 1447.4936669999988
+    },
+    {
+      "phase": "day-2:answers:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 30.062458000000333,
+      "elapsedMs": 747.4547500000008
+    },
+    {
+      "phase": "day-2:answers:understand-0",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 38.79329199999847,
+      "elapsedMs": 640.3130420000016
+    },
+    {
+      "phase": "day-2:child-reply",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 28.076708000000508,
+      "elapsedMs": 890.6061670000017
+    },
+    {
+      "phase": "day-2:app-reads",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 118.37458400000105,
+      "elapsedMs": 1901.2554999999993
+    },
+    {
+      "phase": "day-3:wake",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 103.35316700000112,
+      "elapsedMs": 3770.4257080000025
+    },
+    {
+      "phase": "day-3:morning:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 110.08966700000019,
+      "elapsedMs": 1553.3575420000052
+    },
+    {
+      "phase": "day-3:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.005084000003989786
+    },
+    {
+      "phase": "day-3:parent-answer",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 35.77049999999872,
+      "elapsedMs": 1225.804415999999
+    },
+    {
+      "phase": "day-3:answers:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 33.10212500000489,
+      "elapsedMs": 786.9760419999948
+    },
+    {
+      "phase": "day-3:answers:understand-0",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 52.280791999997746,
+      "elapsedMs": 734.504958999998
+    },
+    {
+      "phase": "day-3:child-reply",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 46.57833300000493,
+      "elapsedMs": 1158.4509580000013
+    },
+    {
+      "phase": "day-3:app-reads",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 115.06149999999616,
+      "elapsedMs": 2048.251040999996
+    },
+    {
+      "phase": "day-4:wake",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 107.21929200000159,
+      "elapsedMs": 3877.3196249999964
+    },
+    {
+      "phase": "day-4:morning:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 44.81158399999549,
+      "elapsedMs": 1005.0828750000001
+    },
+    {
+      "phase": "day-4:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.005417000000306871
+    },
+    {
+      "phase": "day-4:parent-answer",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 53.19791699999769,
+      "elapsedMs": 1567.6581250000017
+    },
+    {
+      "phase": "day-4:answers:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 32.15520899999683,
+      "elapsedMs": 779.7276669999992
+    },
+    {
+      "phase": "day-4:answers:understand-0",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 43.9453330000033,
+      "elapsedMs": 732.6192500000034
+    },
+    {
+      "phase": "day-4:child-reply",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 28.354291000003286,
+      "elapsedMs": 909.2826249999998
+    },
+    {
+      "phase": "day-4:app-reads",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 160.4234590000051,
+      "elapsedMs": 2664.3774589999957
+    },
+    {
+      "phase": "day-5:wake",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 108.34662499999831,
+      "elapsedMs": 4049.2831670000014
+    },
+    {
+      "phase": "day-5:morning:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 49.96387500000128,
+      "elapsedMs": 1077.3644589999967
+    },
+    {
+      "phase": "day-5:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.006999999997788109
+    },
+    {
+      "phase": "day-5:parent-answer",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 55.797167000004265,
+      "elapsedMs": 1609.300374999999
+    },
+    {
+      "phase": "day-5:answers:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 31.174250000003667,
+      "elapsedMs": 766.538916999998
+    },
+    {
+      "phase": "day-5:answers:understand-0",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 52.09375,
+      "elapsedMs": 813.0184579999986
+    },
+    {
+      "phase": "day-5:child-reply",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 30.860083999999915,
+      "elapsedMs": 962.2489579999965
+    },
+    {
+      "phase": "day-5:app-reads",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 156.6814579999991,
+      "elapsedMs": 2728.8964160000105
+    },
+    {
+      "phase": "day-6:wake",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 152.38525000000664,
+      "elapsedMs": 4544.861208000002
+    },
+    {
+      "phase": "day-6:morning:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 58.26204200000211,
+      "elapsedMs": 1203.1566659999953
+    },
+    {
+      "phase": "day-6:morning:understand-0",
+      "operations": 0,
+      "errors": 0,
+      "p95Ms": 0,
+      "elapsedMs": 0.006582999994861893
+    },
+    {
+      "phase": "day-6:parent-answer",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 45.426166999997804,
+      "elapsedMs": 1572.7372079999914
+    },
+    {
+      "phase": "day-6:answers:delivery-0",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 42.15579200000502,
+      "elapsedMs": 925.1594170000026
+    },
+    {
+      "phase": "day-6:answers:understand-0",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 49.740709000005154,
+      "elapsedMs": 803.8354580000014
+    },
+    {
+      "phase": "day-6:child-reply",
+      "operations": 1000,
+      "errors": 0,
+      "p95Ms": 35.44987499999115,
+      "elapsedMs": 1026.2095839999965
+    },
+    {
+      "phase": "day-6:app-reads",
+      "operations": 500,
+      "errors": 0,
+      "p95Ms": 329.0515000000014,
+      "elapsedMs": 3743.450417
+    }
+  ],
+  "limitations": [
+    "Local disposable PostgreSQL with durability disabled; synthetic queue, Telegram and AI.",
+    "Seeded consenting families, text answers and replies only; onboarding, media, native UI, provider delivery and generated tone require separate evidence.",
+    "No Cloudflare/Neon capacity, production capacity or real family behavior measured."
+  ]
+}

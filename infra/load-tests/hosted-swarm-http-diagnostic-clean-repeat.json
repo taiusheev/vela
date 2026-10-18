@@ -1,0 +1,10 @@
+{
+  "kind": "read-only-hosted-http-diagnostic",
+  "recordedAt": "2026-10-18T03:50:08.934Z",
+  "requests": 100,
+  "concurrency": 20,
+  "counts": {
+    "200": 100
+  },
+  "failures": []
+}

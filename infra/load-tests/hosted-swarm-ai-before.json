@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-10-18T03:02:55.992Z",
+  "provider": "openai",
+  "prompt": "understand.v5",
+  "cases": 99,
+  "passed": 98,
+  "failed": [
+    {
+      "id": "understand-en-health-words-not-agreed-slip-soup",
+      "checks": [
+        "summary = \"Mum answered.\"; expected any of [\"soup\"]"
+      ]
+    }
+  ],
+  "flagRecall": "20/20",
+  "gatePassed": true,
+  "rubricJudged": false,
+  "costUsd": 0.7533989999999999,
+  "finding": "Health words were correctly omitted, but ordinary cooking information in a mixed answer was also omitted."
+}

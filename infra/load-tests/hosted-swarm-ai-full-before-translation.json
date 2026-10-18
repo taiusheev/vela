@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-10-18",
+  "cases": 102,
+  "passed": 101,
+  "failed": [
+    {
+      "id": "translate-en-grandchild-casual-to-respectful-zh",
+      "checks": [
+        "text = \"\u963f\u5b24\uff01\uff01\uff01OMG \u4f60\u7684\u6ef7\u8089\u770b\u8d77\u4f86\u4e5f\u592a\u597d\u5403\u4e86\u5427 \ud83d\ude0d \u62dc\u8a17\u5e6b\u6211\u7559\u4e00\u9ede\uff0c\u6211\u661f\u671f\u516d\u5c31\u53bb\uff01\uff01\"; must not contain [\"omg\"]"
+      ]
+    }
+  ],
+  "flagRecall": "20/20",
+  "gatePassed": true,
+  "rubricJudged": false,
+  "costUsd": 0.740515,
+  "finding": "All previously fixed regressions passed. One translated greeting retained English internet shorthand for an elder reader."
+}

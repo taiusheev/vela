@@ -2,6 +2,7 @@ import { z } from "zod";
 import { normaliseFlag, normaliseUnderstanding } from "./claude.ts";
 import { SAFE_DEFAULTS } from "./defaults.ts";
 import { MAX_RETRIES, MAX_TOKENS_FOR, TIMEOUT_MS_FOR } from "./models.ts";
+import { normaliseSuggestion, suggestionDateGrounded } from "./normalise-suggestion.ts";
 import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
@@ -68,6 +69,24 @@ export const OPENAI_EFFORT_FOR: Record<AiCallName, OpenAiReasoningEffort> = {
   suggest: "minimal",
   hello: "minimal",
 };
+
+/** Date precedence needs deliberation; ordinary rotation drafting keeps its existing budget. */
+export function openAiEffortFor(call: AiCallName, input: unknown): OpenAiReasoningEffort {
+  if (call === "suggest") {
+    const parsed = INPUT_SCHEMAS.suggest.safeParse(input);
+    if (parsed.success) {
+      const arrival = Date.parse(parsed.data.forDate);
+      if (
+        parsed.data.familyDates.some(({ date }) => {
+          const days = (Date.parse(date) - arrival) / 86_400_000;
+          return days >= 0 && days <= 2;
+        })
+      )
+        return "low";
+    }
+  }
+  return OPENAI_EFFORT_FOR[call];
+}
 
 /** US dollars per million tokens; cached input is billed at its own rate. */
 export interface OpenAiPrice {
@@ -171,7 +190,7 @@ export function createOpenAiAi(options: OpenAiOptions): Ai {
       invoke(client, { call: "understand", normalise: normaliseUnderstanding }, input),
     flag: (input) => invoke(client, { call: "flag", normalise: normaliseFlag }, input),
     chips: (input) => invoke(client, { call: "chips" }, input),
-    suggest: (input) => invoke(client, { call: "suggest" }, input),
+    suggest: (input) => invoke(client, { call: "suggest", normalise: normaliseSuggestion }, input),
     translate: (input) => invoke(client, { call: "translate" }, input),
     readback: (input) => invoke(client, { call: "readback" }, input),
     hello: (input) => invoke(client, { call: "hello" }, input),
@@ -208,7 +227,7 @@ async function invoke<K extends AiCallName>(
     model: OPENAI_SNAPSHOT_FOR[model],
     store: false,
     max_completion_tokens: MAX_TOKENS_FOR[spec.call],
-    reasoning_effort: OPENAI_EFFORT_FOR[spec.call],
+    reasoning_effort: openAiEffortFor(spec.call, input),
     messages: [
       { role: "developer", content: prompt.text },
       { role: "user", content: renderUserTurn(input) },
@@ -295,6 +314,8 @@ async function invoke<K extends AiCallName>(
     return failure("schema_invalid", record);
   }
   const value = spec.normalise ? spec.normalise(parsed.data, input) : parsed.data;
+  if (spec.call === "suggest" && !suggestionDateGrounded(input, value))
+    return failure("date_ungrounded", record);
   return { ok: true, value, record };
 }
 

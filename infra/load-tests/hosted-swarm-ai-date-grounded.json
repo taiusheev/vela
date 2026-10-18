@@ -1,0 +1,13 @@
+{
+  "recordedAt": "2026-10-18T03:47:44.794Z",
+  "kind": "targeted-live-regressions",
+  "cases": [
+    "suggest-en-birthday-family-date"
+  ],
+  "repetitions": 3,
+  "attempts": 3,
+  "passed": 3,
+  "failures": [],
+  "costUsd": 0.002875,
+  "rubricJudged": false
+}

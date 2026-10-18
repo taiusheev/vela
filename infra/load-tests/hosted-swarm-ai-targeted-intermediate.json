@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-10-18T03:20:38.624Z",
+  "kind": "targeted-live-regressions",
+  "cases": [
+    "hello-zh-code-switch-reply-translated",
+    "hello-zh-injection-guilt-reply",
+    "hello-en-instruction-is-not-read-receipt",
+    "understand-en-health-words-not-agreed-slip-soup",
+    "understand-en-health-withheld-keeps-biscuits",
+    "understand-zh-health-withheld-keeps-dumplings",
+    "suggest-en-birthday-family-date",
+    "weekly-insight-zh-eats-alone-two-organisers"
+  ],
+  "repetitions": 3,
+  "attempts": 24,
+  "passed": 23,
+  "failures": [
+    {
+      "id": "suggest-en-birthday-family-date",
+      "checks": [
+        "source = \"rotation\"; expected \"date\""
+      ]
+    }
+  ],
+  "costUsd": 0.203841,
+  "rubricJudged": false
+}

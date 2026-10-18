@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-10-18T03:46:36.301Z",
+  "kind": "targeted-live-regressions",
+  "cases": [
+    "hello-zh-code-switch-reply-translated",
+    "hello-zh-injection-guilt-reply",
+    "hello-en-instruction-is-not-read-receipt",
+    "understand-en-health-words-not-agreed-slip-soup",
+    "understand-en-health-withheld-keeps-biscuits",
+    "understand-zh-health-withheld-keeps-dumplings",
+    "suggest-en-birthday-family-date",
+    "weekly-insight-zh-eats-alone-two-organisers",
+    "translate-en-grandchild-casual-to-respectful-zh"
+  ],
+  "repetitions": 3,
+  "attempts": 27,
+  "passed": 26,
+  "failures": [
+    {
+      "id": "suggest-en-birthday-family-date",
+      "checks": [
+        "text = \"Dad, do you have a favorite memory of Mia from when she was little?\"; expected any of [\"birthday\"]"
+      ]
+    }
+  ],
+  "costUsd": 0.21780600000000003,
+  "rubricJudged": false
+}

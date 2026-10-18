@@ -9,8 +9,8 @@
     "dev:admin": "wrangler dev -c wrangler.admin.jsonc -c wrangler.jsonc",
     "deploy": "wrangler deploy",
     "release:smoke": "node scripts/release-smoke.ts",
-    "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run",
+    "typecheck": "node swarm/scripts/generate.mjs && tsc -p tsconfig.json && tsc -p swarm/tsconfig.json",
+    "test": "node swarm/scripts/generate.mjs && vitest run",
     "setup": "node scripts/setup-environment.ts",
     "telegram:setup": "node scripts/telegram-setup.ts",
     "notices": "node scripts/generate-notices.ts",
@@ -28,7 +28,9 @@
     "@vela/db": "workspace:*",
     "@vela/services": "workspace:*",
     "hono": "catalog:",
-    "jose": "catalog:"
+    "jose": "catalog:",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "catalog:",
@@ -36,6 +38,7 @@
     "@hono/node-server": "^2.1.1",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "catalog:"
+    "wrangler": "catalog:",
+    "@types/pg": "catalog:"
   }
 }
