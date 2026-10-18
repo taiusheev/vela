@@ -467,6 +467,9 @@ try {
   }
   evidence.finishedAt = new Date().toISOString();
   evidence.status = evidence.passed ? "passed" : "failed";
-  await writeFile(receipt, `${JSON.stringify(evidence, null, 2)}\n`);
-  console.log(JSON.stringify({ passed: evidence.passed, receipt }));
+  // A deployment attempt is not a cohort run; preserve the existing cohort receipt on failure.
+  if (!process.argv.includes("--provision-only")) {
+    await writeFile(receipt, `${JSON.stringify(evidence, null, 2)}\n`);
+    console.log(JSON.stringify({ passed: evidence.passed, receipt }));
+  }
 }
