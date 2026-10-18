@@ -109,7 +109,11 @@ async function control(path, body = {}) {
   if (!response.ok) throw new Error(`control_${path}_${response.status}`);
   return response.json();
 }
-async function pool(items, operation, concurrency = 20) {
+async function pool(
+  items,
+  operation,
+  concurrency = Number(process.env.VELA_HOSTED_CLIENT_CONCURRENCY ?? 20),
+) {
   let cursor = 0;
   const results = await Promise.allSettled(
     Array.from({ length: concurrency }, async () => {
@@ -145,7 +149,8 @@ async function settle(label, check) {
 const count = Number(process.env.VELA_HOSTED_FAMILIES ?? 10);
 const days = Number(process.env.VELA_HOSTED_DAYS ?? 2);
 const mixed = process.env.VELA_HOSTED_MIXED === "1";
-const resume = process.argv.includes("--resume-day-1");
+const verifyFinal = process.argv.includes("--verify-final");
+const resume = process.argv.includes("--resume-day-1") || verifyFinal;
 if (resume && (!mixed || count !== 100 || days !== 3))
   throw new Error("Unsupported resume checkpoint");
 if (mixed && (count < 40 || days !== 3)) throw new Error("mixed_needs_40_families_and_3_days");
@@ -164,9 +169,11 @@ const evidence = {
   families: count,
   days,
   mixed,
-  resumedAtDay: resume ? 1 : null,
+  resumedAtDay: verifyFinal ? 2 : resume ? 1 : null,
+  finalVerificationOnly: verifyFinal,
+  httpRetries: [],
   queueMaxConcurrency: 20,
-  clientConcurrency: 20,
+  clientConcurrency: Number(process.env.VELA_HOSTED_CLIENT_CONCURRENCY ?? 20),
   source: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   workingTreeDirty:
     execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim().length > 0,
@@ -194,10 +201,10 @@ try {
     if (
       cohort.length !== count ||
       cohort.some((row, index) => row.index !== index) ||
-      stats.delivered !== 200 ||
-      stats.answers !== 110 ||
-      stats.replies !== 100 ||
-      stats.read_back !== 100 ||
+      stats.delivered !== (verifyFinal ? 300 : 200) ||
+      stats.answers !== (verifyFinal ? 310 : 110) ||
+      (verifyFinal ? stats.replies < 278 || stats.replies > 280 : stats.replies !== 100) ||
+      stats.read_back !== (verifyFinal ? 180 : 100) ||
       stats.pending ||
       stats.dead ||
       stats.duplicates
@@ -218,9 +225,11 @@ try {
     );
   }
   seeded = true;
-  const totals = resume
-    ? { delivered: 100, answers: 110, replies: 100, readBack: 0, signed: 50 }
-    : { delivered: 0, answers: 0, replies: 0, readBack: 0, signed: 0 };
+  const totals = verifyFinal
+    ? { delivered: 200, answers: 200, replies: 180, readBack: 100, signed: 95 }
+    : resume
+      ? { delivered: 100, answers: 110, replies: 100, readBack: 0, signed: 50 }
+      : { delivered: 0, answers: 0, replies: 0, readBack: 0, signed: 0 };
   async function post(family, path, body, key, status = 200) {
     const r = await fetch(`${origin}/v1/${path}`, {
       method: "POST",
@@ -234,8 +243,8 @@ try {
     if (r.status !== status) throw new Error(`scenario_write_${r.status}`);
     return r.json();
   }
-  for (let day = resume ? 1 : 0; day < days; day++) {
-    if (!(resume && day === 1))
+  for (let day = verifyFinal ? 2 : resume ? 1 : 0; day < days; day++) {
+    if (!verifyFinal && !(resume && day === 1))
       await control("time", {
         time: new Date(Date.parse("2026-10-18T00:00:00.000Z") + day * 86400000).toISOString(),
       });
@@ -252,27 +261,39 @@ try {
       .filter(
         ({ index }) => index % 2 === 0 && !(mixed && day > 0 && index >= 20 && index < 30),
       ).length;
-    await measured(`day-${day}:schedule-and-cloud-queue-delivery`, async () => {
-      await pool(cohort, (_, index) => control("wake", { index, day }));
-      return settle("morning", (s) => s.delivered === totals.delivered && s.pending === 0);
-    });
-    await measured(`day-${day}:inbound-cloud-queue`, async () => {
-      await pool(active, ({ index }) => control("answer", { index, day }));
-      if (mixed)
-        await pool(
-          active.filter(({ index }) => index >= 30 && index < 40),
-          ({ index }) => control("answer", { index, day, part: 1 }),
-        );
-      return settle("answers", (s) => s.answers === totals.answers && s.pending === 0);
-    });
+    if (!verifyFinal)
+      await measured(`day-${day}:schedule-and-cloud-queue-delivery`, async () => {
+        await pool(cohort, (_, index) => control("wake", { index, day }));
+        return settle("morning", (s) => s.delivered === totals.delivered && s.pending === 0);
+      });
+    if (!verifyFinal)
+      await measured(`day-${day}:inbound-cloud-queue`, async () => {
+        await pool(active, ({ index }) => control("answer", { index, day }));
+        if (mixed)
+          await pool(
+            active.filter(({ index }) => index >= 30 && index < 40),
+            ({ index }) => control("answer", { index, day, part: 1 }),
+          );
+        return settle("answers", (s) => s.answers === totals.answers && s.pending === 0);
+      });
     const reads = [];
     await measured(`day-${day}:http-reply-and-app-reads`, () =>
       pool(cohort, async (family, index) => {
         const headers = { authorization: `Bearer ${family.token}` };
         async function get(path, status = 200) {
-          const r = await fetch(`${origin}/v1/${path}`, { headers });
-          if (r.status !== status) throw new Error(`api_read_${r.status}`);
-          return r.json();
+          for (let attempt = 0; ; attempt++) {
+            const r = await fetch(`${origin}/v1/${path}`, { headers });
+            if (r.status === status) return r.json();
+            if (![502, 503, 504].includes(r.status) || attempt === 2)
+              throw new Error(`api_read_${r.status}`);
+            evidence.httpRetries.push({
+              operation: "read",
+              status: r.status,
+              attempt: attempt + 1,
+            });
+            await r.body?.cancel();
+            await delay(500 * 2 ** attempt);
+          }
         }
         const started = performance.now();
         const today = await get(`families/${family.familyId}/today`);
@@ -307,16 +328,37 @@ try {
         family.cardId = card.id;
         const replyBody = JSON.stringify({ text: `Synthetic reply ${index} day ${day}` });
         for (let repeat = 0; repeat < 2; repeat++) {
-          const response = await fetch(`${origin}/v1/exchanges/${card.id}/replies`, {
-            method: "POST",
-            headers: {
-              ...headers,
-              "content-type": "application/json",
-              "idempotency-key": `hosted-${day}`,
-            },
-            body: replyBody,
-          });
-          if (response.status !== 201) throw new Error(`api_reply_${response.status}`);
+          for (let attempt = 0; ; attempt++) {
+            const response = await fetch(`${origin}/v1/exchanges/${card.id}/replies`, {
+              method: "POST",
+              headers: {
+                ...headers,
+                "content-type": "application/json",
+                "idempotency-key": `hosted-${day}`,
+              },
+              body: replyBody,
+            });
+            if (response.status === 201) {
+              await response.body?.cancel();
+              break;
+            }
+            if (![502, 503, 504].includes(response.status) || attempt === 2)
+              throw new Error(`api_reply_${response.status}`);
+            const failure = await response
+              .clone()
+              .json()
+              .catch(() => null);
+            evidence.httpRetries.push({
+              operation: "idempotent-reply",
+              status: response.status,
+              code: /^[a-z_]{1,50}$/.test(failure?.error?.code ?? "")
+                ? failure.error.code
+                : "non_api_response",
+              attempt: attempt + 1,
+            });
+            await response.body?.cancel();
+            await delay(500 * 2 ** attempt);
+          }
         }
         const memories = await get(`families/${family.familyId}/exchanges`);
         if (

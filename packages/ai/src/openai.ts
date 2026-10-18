@@ -70,6 +70,24 @@ export const OPENAI_EFFORT_FOR: Record<AiCallName, OpenAiReasoningEffort> = {
   hello: "minimal",
 };
 
+/** Date precedence needs deliberation; ordinary rotation drafting keeps its existing budget. */
+export function openAiEffortFor(call: AiCallName, input: unknown): OpenAiReasoningEffort {
+  if (call === "suggest") {
+    const parsed = INPUT_SCHEMAS.suggest.safeParse(input);
+    if (parsed.success) {
+      const arrival = Date.parse(parsed.data.forDate);
+      if (
+        parsed.data.familyDates.some(({ date }) => {
+          const days = (Date.parse(date) - arrival) / 86_400_000;
+          return days >= 0 && days <= 2;
+        })
+      )
+        return "low";
+    }
+  }
+  return OPENAI_EFFORT_FOR[call];
+}
+
 /** US dollars per million tokens; cached input is billed at its own rate. */
 export interface OpenAiPrice {
   readonly input: number;
@@ -209,7 +227,7 @@ async function invoke<K extends AiCallName>(
     model: OPENAI_SNAPSHOT_FOR[model],
     store: false,
     max_completion_tokens: MAX_TOKENS_FOR[spec.call],
-    reasoning_effort: OPENAI_EFFORT_FOR[spec.call],
+    reasoning_effort: openAiEffortFor(spec.call, input),
     messages: [
       { role: "developer", content: prompt.text },
       { role: "user", content: renderUserTurn(input) },
