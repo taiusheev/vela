@@ -6,6 +6,7 @@ import { localDateOf } from "@vela/core";
 import { connectDatabase, members, suggestions, users } from "@vela/db";
 import { type Deps, errorLabel } from "@vela/services";
 import { and, eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { jwtVerify, SignJWT } from "jose";
 import { createFakeTelegram } from "../../../packages/services/src/testing/fake-telegram.ts";
 import { seedFamily } from "../../../packages/services/src/testing/seed.ts";
@@ -141,6 +142,16 @@ const runtime: PilotRuntime = {
 };
 export class SwarmMemberScheduler extends MemberScheduler {
   override runtime = runtime;
+  override async alarm(): Promise<void> {
+    await super.alarm();
+    await this.ctx.storage.put("swarmAlarmCompleted", Date.now());
+  }
+  async completion(): Promise<{ at: number; next: number | null }> {
+    return {
+      at: (await this.ctx.storage.get<number>("swarmAlarmCompleted")) ?? 0,
+      next: await this.ctx.storage.getAlarm(),
+    };
+  }
 }
 const product = createWorker(runtime);
 
@@ -198,6 +209,7 @@ async function route(request: Request, env: SwarmEnv): Promise<Response> {
     time?: string;
     day?: number;
     part?: number;
+    after?: number;
     events?: InboundEvent[];
   };
   if (path === "/control/time") {
@@ -224,6 +236,61 @@ async function route(request: Request, env: SwarmEnv): Promise<Response> {
       });
       return json({ ok: true, schema: SCHEMA, migrations: 17 });
     }
+    if (path === "/control/manifest") {
+      const parent = alias(members, "synthetic_parent");
+      const rows = await c.db
+        .select({
+          subject: users.authSubject,
+          familyId: members.familyId,
+          organiserId: members.id,
+          memberId: parent.id,
+        })
+        .from(users)
+        .innerJoin(members, eq(members.userId, users.id))
+        .innerJoin(parent, and(eq(parent.familyId, members.familyId), eq(parent.role, "member")))
+        .where(eq(members.role, "organiser"));
+      const families = await Promise.all(
+        rows.map(async (row) => {
+          if (!row.subject || !/^swarm-\d+$/.test(row.subject))
+            throw new Error("manifest_invalid_actor");
+          const token = await new SignJWT({})
+            .setProtectedHeader({ alg: "HS256" })
+            .setIssuer("vela-synthetic-only")
+            .setSubject(row.subject)
+            .setExpirationTime("2h")
+            .sign(new TextEncoder().encode(env.SWARM_SECRET));
+          return {
+            index: Number(row.subject.slice(6)),
+            familyId: row.familyId,
+            organiserId: row.organiserId,
+            memberId: row.memberId,
+            token,
+          };
+        }),
+      );
+      return json({ families: families.sort((a, b) => a.index - b.index) });
+    }
+    if (path === "/control/away-completions") {
+      const namespace =
+        env.MEMBER_SCHEDULER as unknown as DurableObjectNamespace<SwarmMemberScheduler>;
+      const rows = await c.db
+        .select({ id: members.id })
+        .from(members)
+        .where(sql`${members.id} in
+        (select member_id from ${qualified("channel_links")} where external_id in
+        (${sql.join(
+          Array.from({ length: 20 }, (_, index) => sql`${`swarm-parent-${index}`}`),
+          sql`, `,
+        )}))`);
+      const checks = await Promise.all(
+        rows.map((row) => namespace.get(namespace.idFromName(row.id)).completion()),
+      );
+      return json({
+        completed: checks.filter((check) => check.at >= (input.after ?? Infinity)).length,
+        retrying: checks.filter((check) => check.next !== null && check.next < Date.now() + 90000)
+          .length,
+      });
+    }
     if (path === "/control/reset") {
       await c.db.execute(sql.raw(`DROP SCHEMA IF EXISTS "${SCHEMA}" CASCADE`));
       return json({ reset: true });
@@ -241,6 +308,7 @@ async function route(request: Request, env: SwarmEnv): Promise<Response> {
         (select count(*)::int from "${SCHEMA}".outbound where status != 'sent' or effects_at is null) pending,
         (select count(*)::int from "${SCHEMA}".dead_letters) dead,
         (select count(*)::int from "${SCHEMA}".quiet_events) quiet,
+        (select count(*)::int from "${SCHEMA}".outbound where kind='repeat') repeats,
         (select count(*)::int - count(distinct key)::int from "${SCHEMA}".swarm_sends) duplicates`),
       );
       return json(result.rows[0]);

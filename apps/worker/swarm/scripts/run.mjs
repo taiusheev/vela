@@ -145,6 +145,9 @@ async function settle(label, check) {
 const count = Number(process.env.VELA_HOSTED_FAMILIES ?? 10);
 const days = Number(process.env.VELA_HOSTED_DAYS ?? 2);
 const mixed = process.env.VELA_HOSTED_MIXED === "1";
+const resume = process.argv.includes("--resume-day-1");
+if (resume && (!mixed || count !== 100 || days !== 3))
+  throw new Error("Unsupported resume checkpoint");
 if (mixed && (count < 40 || days !== 3)) throw new Error("mixed_needs_40_families_and_3_days");
 if (
   !Number.isInteger(count) ||
@@ -161,6 +164,7 @@ const evidence = {
   families: count,
   days,
   mixed,
+  resumedAtDay: resume ? 1 : null,
   queueMaxConcurrency: 20,
   clientConcurrency: 20,
   source: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
@@ -183,20 +187,40 @@ try {
     await writeFile(receipt, `${JSON.stringify(evidence, null, 2)}\n`);
   if (process.argv.includes("--deploy")) await provision();
   if (process.argv.includes("--provision-only")) process.exit(0);
-  await control("time", { time: "2026-10-18T00:00:00.000Z" });
-  if (process.argv.includes("--reset")) await control("reset");
-  await measured("initialize-isolated-schema", () => control("init"));
-  const cohort = [];
-  await measured("seed", () =>
-    pool(
-      Array.from({ length: count }, (_, i) => i),
-      async (index) => {
-        cohort[index] = await control("seed", { index });
-      },
-    ),
-  );
+  let cohort = [];
+  if (resume) {
+    cohort = (await control("manifest")).families;
+    const stats = await control("stats");
+    if (
+      cohort.length !== count ||
+      cohort.some((row, index) => row.index !== index) ||
+      stats.delivered !== 200 ||
+      stats.answers !== 110 ||
+      stats.replies !== 100 ||
+      stats.read_back !== 100 ||
+      stats.pending ||
+      stats.dead ||
+      stats.duplicates
+    )
+      throw new Error("Resume checkpoint does not match the recorded first day");
+    evidence.resumeCheckpoint = stats;
+  } else {
+    await control("time", { time: "2026-10-18T00:00:00.000Z" });
+    if (process.argv.includes("--reset")) await control("reset");
+    await measured("initialize-isolated-schema", () => control("init"));
+    await measured("seed", () =>
+      pool(
+        Array.from({ length: count }, (_, i) => i),
+        async (index) => {
+          cohort[index] = await control("seed", { index });
+        },
+      ),
+    );
+  }
   seeded = true;
-  const totals = { delivered: 0, answers: 0, replies: 0, readBack: 0, signed: 0 };
+  const totals = resume
+    ? { delivered: 100, answers: 110, replies: 100, readBack: 0, signed: 50 }
+    : { delivered: 0, answers: 0, replies: 0, readBack: 0, signed: 0 };
   async function post(family, path, body, key, status = 200) {
     const r = await fetch(`${origin}/v1/${path}`, {
       method: "POST",
@@ -210,20 +234,24 @@ try {
     if (r.status !== status) throw new Error(`scenario_write_${r.status}`);
     return r.json();
   }
-  for (let day = 0; day < days; day++) {
-    await control("time", {
-      time: new Date(Date.parse("2026-10-18T00:00:00.000Z") + day * 86400000).toISOString(),
-    });
+  for (let day = resume ? 1 : 0; day < days; day++) {
+    if (!(resume && day === 1))
+      await control("time", {
+        time: new Date(Date.parse("2026-10-18T00:00:00.000Z") + day * 86400000).toISOString(),
+      });
     const active = cohort.flatMap((family, index) =>
       mixed && day === 1 && index < 20 ? [] : [{ family, index }],
     );
-    totals.delivered += active.length;
+    totals.delivered += count;
+    totals.readBack = totals.replies;
     totals.answers += active.length + (mixed ? 10 : 0);
     totals.replies += active.length;
-    totals.readBack += day === 0 ? 0 : active.length;
-    totals.signed += active.filter(
-      ({ index }) => index % 2 === 0 && !(mixed && day > 0 && index >= 20 && index < 30),
-    ).length;
+
+    totals.signed += cohort
+      .map((family, index) => ({ family, index }))
+      .filter(
+        ({ index }) => index % 2 === 0 && !(mixed && day > 0 && index >= 20 && index < 30),
+      ).length;
     await measured(`day-${day}:schedule-and-cloud-queue-delivery`, async () => {
       await pool(cohort, (_, index) => control("wake", { index, day }));
       return settle("morning", (s) => s.delivered === totals.delivered && s.pending === 0);
@@ -251,7 +279,11 @@ try {
         const card = today.exchanges[0];
         if (mixed && day === 1 && index < 20) {
           const memories = await get(`families/${family.familyId}/exchanges`);
-          if (today.lights[0]?.state !== "away" || memories.exchanges.length !== 1)
+          if (
+            today.lights[0]?.state !== "away" ||
+            memories.exchanges.length !== day + 1 ||
+            card?.answers?.length !== 0
+          )
             throw new Error("away_mismatch");
           return;
         }
@@ -288,7 +320,7 @@ try {
         }
         const memories = await get(`families/${family.familyId}/exchanges`);
         if (
-          memories.exchanges.length !== day + 1 - (mixed && day > 0 && index < 20 ? 1 : 0) ||
+          memories.exchanges.length !== day + 1 ||
           memories.exchanges.some((x) => x.recipient_id !== family.memberId)
         )
           throw new Error("memories_mismatch");
@@ -311,6 +343,23 @@ try {
       stats.quiet !== 0
     )
       throw new Error("daily_reconciliation");
+    if (mixed && day === 1) {
+      await measured("away-suppresses-repeat-and-quiet", async () => {
+        await control("time", { time: "2026-10-19T12:00:00.000Z" });
+        const after = Date.now();
+        await pool(cohort.slice(0, 20), (_, index) => control("wake", { index, day }));
+        const deadline = Date.now() + 120000;
+        for (;;) {
+          const completion = await control("away-completions", { after });
+          if (completion.completed === 20 && completion.retrying === 0) break;
+          if (Date.now() > deadline) throw new Error("Away scheduler did not settle");
+          await delay(1000);
+        }
+        const checked = await control("stats");
+        if (checked.quiet !== 0 || checked.repeats !== 0)
+          throw new Error("Away emitted a repeat or quiet notice");
+      });
+    }
     if (mixed && day === 0) {
       await measured("away-and-signature-preferences", async () => {
         await pool(cohort.slice(0, 20), (family) =>

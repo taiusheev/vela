@@ -2,6 +2,7 @@ import { z } from "zod";
 import { normaliseFlag, normaliseUnderstanding } from "./claude.ts";
 import { SAFE_DEFAULTS } from "./defaults.ts";
 import { MAX_RETRIES, MAX_TOKENS_FOR, TIMEOUT_MS_FOR } from "./models.ts";
+import { normaliseSuggestion } from "./normalise-suggestion.ts";
 import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
@@ -171,7 +172,7 @@ export function createOpenAiAi(options: OpenAiOptions): Ai {
       invoke(client, { call: "understand", normalise: normaliseUnderstanding }, input),
     flag: (input) => invoke(client, { call: "flag", normalise: normaliseFlag }, input),
     chips: (input) => invoke(client, { call: "chips" }, input),
-    suggest: (input) => invoke(client, { call: "suggest" }, input),
+    suggest: (input) => invoke(client, { call: "suggest", normalise: normaliseSuggestion }, input),
     translate: (input) => invoke(client, { call: "translate" }, input),
     readback: (input) => invoke(client, { call: "readback" }, input),
     hello: (input) => invoke(client, { call: "hello" }, input),
