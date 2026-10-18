@@ -1,7 +1,7 @@
 import type { AiCallName } from "../types.ts";
 import * as chips from "./chips.v1.ts";
 import * as flag from "./flag.v2.ts";
-import * as hello from "./hello.v3.ts";
+import * as hello from "./hello.v4.ts";
 import * as readback from "./readback.v1.ts";
 import * as recipe from "./recipe.v1.ts";
 import * as suggest from "./suggest.v3.ts";

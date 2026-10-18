@@ -192,7 +192,7 @@ describe("draftWeeklyRead with the weekly insight (ADR-48)", () => {
             quotes: [{ date: "2026-09-14", text: "Don't worry about me." }],
           },
         ],
-        prompt_version: "weekly_insight.v1",
+        prompt_version: "weekly_insight.v2",
       },
       // Tom gets none: he does not receive the read.
       feedback: [
@@ -344,7 +344,7 @@ describe("the insight on the page, in the send, and after 30 days", () => {
           sureness: "tentative",
         },
       ],
-      prompt_version: "weekly_insight.v1",
+      prompt_version: "weekly_insight.v2",
     },
   };
 
