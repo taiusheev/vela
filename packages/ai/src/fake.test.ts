@@ -51,7 +51,7 @@ describe("createFakeAi", () => {
       },
       record: {
         call: "understand",
-        promptVersion: "understand.v5",
+        promptVersion: "understand.v6",
         model: "claude-sonnet-5",
         ok: true,
         tokensIn: 0,

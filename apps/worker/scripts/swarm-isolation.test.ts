@@ -1,7 +1,9 @@
 import { members } from "@vela/db";
 import { is, sql } from "drizzle-orm";
 import { getTableConfig, PgDialect, PgTable } from "drizzle-orm/pg-core";
+import type { Client } from "pg";
 import { expect, it } from "vitest";
+import { createSwarmDatabase } from "../swarm/db.ts";
 import { MIGRATIONS, SCHEMA } from "../swarm/migrations.generated.ts";
 import * as synthetic from "../swarm/schema.generated.ts";
 
@@ -12,6 +14,10 @@ it("qualifies every synthetic table without changing the application's tables", 
   expect(getTableConfig(members).schema).toBeUndefined();
   const query = new PgDialect().sqlToQuery(sql`select 1 from ${synthetic.members}`);
   expect(query.sql).toContain(`"${SCHEMA}"."members"`);
+  const relational = createSwarmDatabase({} as Client)
+    .query.members.findMany()
+    .toSQL();
+  expect(relational.sql).toContain(`"${SCHEMA}"."members"`);
   expect(MIGRATIONS.length).toBeGreaterThan(100);
   expect(MIGRATIONS.every((statement) => !statement.includes('"public".'))).toBe(true);
 });

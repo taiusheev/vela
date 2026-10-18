@@ -28,7 +28,9 @@
     "@vela/db": "workspace:*",
     "@vela/services": "workspace:*",
     "hono": "catalog:",
-    "jose": "catalog:"
+    "jose": "catalog:",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "catalog:",
@@ -36,6 +38,7 @@
     "@hono/node-server": "^2.1.1",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "catalog:"
+    "wrangler": "catalog:",
+    "@types/pg": "catalog:"
   }
 }

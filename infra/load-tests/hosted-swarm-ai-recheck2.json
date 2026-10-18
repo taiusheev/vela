@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-10-18",
+  "cases": 102,
+  "passed": 100,
+  "failed": [
+    {
+      "id": "suggest-en-birthday-family-date",
+      "checks": [
+        "source = \"rotation\"; expected \"date\""
+      ]
+    },
+    {
+      "id": "weekly-insight-zh-eats-alone-two-organisers",
+      "checks": [
+        "readings.0.reading = \"\u963f\u5b24 may be living with quiet alone time around meals and gently downplaying it. \u201c\u4e00\u500b\u4eba\u5403\u98ef\uff0c\u716e\u4e00\u9ede\u5c31\u597d\u3002\u201d (2026-10-05); \u201c\u4e00\u500b\u4eba\u5403\uff0c\u96a8\u4fbf\u5403\u5403\u3002\u201d (2026-10-08); \u201c\u5f88\u597d\u5566\uff0c\u4e0d\u7528\u64d4\u5fc3\u3002\u201d (2026-10-11).\"; expected English"
+      ]
+    }
+  ],
+  "flagRecall": "20/20",
+  "gatePassed": true,
+  "rubricJudged": false,
+  "costUsd": 0.755878,
+  "finding": "The mixed-answer and instruction-only greeting regressions pass. Remaining checks concern source attribution and English interpretation versus verbatim quoted evidence."
+}

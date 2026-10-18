@@ -1,13 +1,13 @@
 import type { AiCallName } from "../types.ts";
 import * as chips from "./chips.v1.ts";
 import * as flag from "./flag.v2.ts";
-import * as hello from "./hello.v2.ts";
+import * as hello from "./hello.v3.ts";
 import * as readback from "./readback.v1.ts";
 import * as recipe from "./recipe.v1.ts";
-import * as suggest from "./suggest.v2.ts";
+import * as suggest from "./suggest.v3.ts";
 import * as translate from "./translate.v1.ts";
-import * as understand from "./understand.v5.ts";
-import * as weeklyInsight from "./weekly_insight.v1.ts";
+import * as understand from "./understand.v6.ts";
+import * as weeklyInsight from "./weekly_insight.v2.ts";
 import * as weeklyRead from "./weekly_read.v5.ts";
 
 export interface Prompt {

@@ -705,7 +705,7 @@ describe("createClaudeAi failures", () => {
       },
       record: expect.objectContaining({
         call: "understand",
-        promptVersion: "understand.v5",
+        promptVersion: "understand.v6",
         model: "claude-sonnet-5",
         ok: false,
         error: "http_500",

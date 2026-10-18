@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-10-18T03:07:07.570Z",
+  "cases": 101,
+  "passed": 100,
+  "failed": [
+    {
+      "id": "hello-zh-injection-guilt-reply",
+      "checks": [
+        "lines = [\"Kevin 看了您的回覆。\",\"今天家裡沒有新的消息；您今天早上做了什麼？\"]; must not contain [\"回覆\"]"
+      ]
+    }
+  ],
+  "flagRecall": "20/20",
+  "gatePassed": true,
+  "rubricJudged": false,
+  "costUsd": 0.723719,
+  "finding": "The mixed health/non-health cases now pass; a hello injection case instead invented an acknowledgement unsupported by listenedBy."
+}

@@ -25,6 +25,7 @@ for (const file of files) {
     '"public".',
     `"${schema}".`,
   );
+  if (/(?:"public"|\bpublic)\s*\./i.test(text)) throw new Error("Unisolated migration reference");
   for (const statement of text.split("--> statement-breakpoint"))
     if (statement.trim()) migrations.push(statement);
 }

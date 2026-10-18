@@ -23,6 +23,7 @@ import {
 } from "@vela/db";
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
+import { answerMessageTime, compareAnswerMessages } from "./answer-message-time.ts";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { loadApiLights } from "./api-lights.ts";
 import { sourceAudio, sourcePhoto } from "./api-media-descriptors.ts";
@@ -230,12 +231,14 @@ export async function renderExchangeRows(
           },
         ];
       });
-    const herAnswers = answerRows.filter((row) => row.exchangeId === exchange.id);
+    const herAnswers = answerRows
+      .filter((row) => row.exchangeId === exchange.id)
+      .sort(compareAnswerMessages);
     const answer = herAnswers.at(-1);
     const asWire = (row: (typeof answerRows)[number]): ApiTodayAnswer => ({
       kind: row.kind,
       text: answerText(row),
-      at: row.receivedAt.toISOString(),
+      at: answerMessageTime(row).toISOString(),
       ...(row.kind === "photo_pick" ? pickOf(row.payload) : NO_PICK),
       translation: translated.get(row.id) ?? null,
       audio: sourceAudio(fileOf(row.mediaId), now),

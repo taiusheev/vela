@@ -1,0 +1,36 @@
+{
+  "startedAt": "2026-10-18T02:56:40.948Z",
+  "kind": "hosted-cloudflare-neon-product-flow",
+  "families": 100,
+  "days": 3,
+  "mixed": true,
+  "source": "f08b5a2 plus hosted-swarm harness",
+  "passed": false,
+  "phases": [
+    {
+      "phase": "initialize-isolated-schema",
+      "elapsedMs": 42826.796708
+    },
+    {
+      "phase": "seed",
+      "elapsedMs": 18832.808375
+    },
+    {
+      "phase": "day-0:schedule-and-cloud-queue-delivery",
+      "elapsedMs": 139844.26670799998
+    },
+    {
+      "phase": "day-0:inbound-cloud-queue",
+      "elapsedMs": 218034.40995800003
+    }
+  ],
+  "limitations": [
+    "Isolated explicitly qualified PostgreSQL schema sharing staging's Neon compute and Hyperdrive.",
+    "Real deployed HTTP routes, Cloudflare queues, Durable Object alarms, gateway, sealed PostgreSQL writes and app read services.",
+    "Synthetic JWT sessions replace Clerk; recording Telegram and AI-off fallback. No real-provider, AI-quality or native-device evidence.",
+    "Virtual dates are advanced between phases; this is not a wall-clock soak or production capacity measurement."
+  ],
+  "failure": "answer_mismatch",
+  "schedulerStopped": true,
+  "finishedAt": "2026-10-18T03:08:48.518Z"
+}

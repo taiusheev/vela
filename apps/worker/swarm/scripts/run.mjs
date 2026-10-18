@@ -1,6 +1,6 @@
 /** Staging-only orchestrator. Secrets are derived in memory and never written or printed. */
 
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHmac } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
@@ -81,7 +81,7 @@ async function provision() {
         max_batch_size: 5,
         max_batch_timeout: 1,
         max_retries: 5,
-        max_concurrency: 4,
+        max_concurrency: 20,
         retry_delay: 10,
         ...(kind === "dead" ? {} : { dead_letter_queue: queues.dead.queue_name }),
       })),
@@ -109,7 +109,7 @@ async function control(path, body = {}) {
   if (!response.ok) throw new Error(`control_${path}_${response.status}`);
   return response.json();
 }
-async function pool(items, operation, concurrency = 10) {
+async function pool(items, operation, concurrency = 20) {
   let cursor = 0;
   const results = await Promise.allSettled(
     Array.from({ length: concurrency }, async () => {
@@ -161,7 +161,12 @@ const evidence = {
   families: count,
   days,
   mixed,
-  source: "f08b5a2 plus hosted-swarm harness",
+  queueMaxConcurrency: 20,
+  clientConcurrency: 20,
+  source: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  workingTreeDirty:
+    execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim().length > 0,
+  status: "in_progress",
   passed: false,
   phases,
   limitations: [
@@ -174,6 +179,8 @@ const evidence = {
 const receipt = `${root}infra/load-tests/hosted-swarm-${count}-${days}.json`;
 let seeded = false;
 try {
+  if (!process.argv.includes("--provision-only"))
+    await writeFile(receipt, `${JSON.stringify(evidence, null, 2)}\n`);
   if (process.argv.includes("--deploy")) await provision();
   if (process.argv.includes("--provision-only")) process.exit(0);
   await control("time", { time: "2026-10-18T00:00:00.000Z" });
@@ -252,7 +259,7 @@ try {
           card?.answers?.length !== (mixed && index >= 30 && index < 40 ? 2 : 1) ||
           card.answers[0].text !== `Synthetic answer ${index} day ${day}`
         )
-          throw new Error("answer_mismatch");
+          throw new Error(`answer_mismatch_${index}`);
         if (
           mixed &&
           index >= 30 &&
@@ -355,6 +362,7 @@ try {
     }
   }
   evidence.finishedAt = new Date().toISOString();
+  evidence.status = evidence.passed ? "passed" : "failed";
   await writeFile(receipt, JSON.stringify(evidence, null, 2) + "\n");
   console.log(JSON.stringify({ passed: evidence.passed, receipt }));
 }
