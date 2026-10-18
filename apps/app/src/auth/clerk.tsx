@@ -5,6 +5,7 @@ import { RequestInterrupted, sessionRequests } from "../api/request-session.ts";
 import { clearAudioCache } from "../audio/cache.ts";
 import { clearPhotoCache } from "../data/photos.ts";
 import { activatePrivateSession, clearSessionDrafts } from "../storage/drafts.ts";
+import { activatePortraitSession, clearPortraitSession } from "../storage/portraits.ts";
 
 /**
  * Sign-in is Clerk's (build plan 3.1). The key is public by design and arrives through the
@@ -65,13 +66,17 @@ function ClerkAccount({ children }: { children: ReactNode }) {
         sessionRequests.end(scope);
         clearPhotoCache();
         void clearAudioCache().catch(() => {});
-        await clearSessionDrafts(scope);
         try {
+          clearPortraitSession(scope);
+          await clearSessionDrafts(scope);
           sessionRequests.assertEndingScope(scope);
           await signOut({ sessionId });
         } catch (error) {
           // A failed provider sign-out leaves this identity active, but never resumes old work.
-          if (sessionRequests.resume(scope)) activatePrivateSession(scope);
+          if (sessionRequests.resume(scope)) {
+            activatePrivateSession(scope);
+            activatePortraitSession(scope);
+          }
           throw error;
         }
       },

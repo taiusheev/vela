@@ -140,6 +140,10 @@ msgstr "{name} · {day}"
 msgid "{name} · {day} · {asker} asked"
 msgstr "{name} · {day} · {asker}問的"
 
+#: src/components/portrait-lamp.tsx
+msgid "{name} answered at {time}"
+msgstr "{name}在 {time} 回覆了"
+
 #: app/vela-light.tsx
 msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
 msgstr "{name}回覆了。接下來 30 天，Vela Light 免費開啟，讓您先看看它能做什麼，再決定要不要使用。"
@@ -380,6 +384,10 @@ msgstr "來自 Vela 的問候"
 msgid "A little closer, every day."
 msgstr "每天，再靠近一點。"
 
+#: app/(tabs)/index.tsx
+msgid "A little light from home."
+msgstr "家裡傳來的一點光。"
+
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "尚未設定即時連線。"
@@ -472,6 +480,10 @@ msgstr "帳號"
 msgid "Across Vela"
 msgstr "整個 Vela"
 
+#: src/components/portrait-lamp.tsx
+msgid "Add a photo of {name}"
+msgstr "新增{name}的照片"
+
 #: src/components/vote-options.tsx
 msgid "Add an option"
 msgstr "新增選項"
@@ -540,6 +552,10 @@ msgstr "回覆了"
 #: src/data/useToday.ts
 msgid "answered {time}"
 msgstr "{time} 回覆了"
+
+#: src/components/portrait-lamp.tsx
+msgid "Answered today"
+msgstr "今天已回覆"
 
 #: src/data/useToday.ts
 msgid "Anyone"
@@ -688,6 +704,10 @@ msgstr "更改"
 #: app/conversation.tsx
 msgid "Change {name}'s morning"
 msgstr "更改{name}的早安訊息"
+
+#: src/components/portrait-lamp.tsx
+msgid "Change {name}’s photo"
+msgstr "更換{name}的照片"
 
 #: app/onboarding.tsx
 msgid "Change country"
@@ -1314,6 +1334,10 @@ msgstr "永久保存"
 msgid "Language"
 msgstr "語言"
 
+#: src/components/portrait-lamp.tsx
+msgid "Last confirmed update"
+msgstr "上次確認的狀態"
+
 #: app/(tabs)/exchanges.tsx
 msgid "Last week"
 msgstr "上週"
@@ -1519,6 +1543,10 @@ msgstr "紐西蘭"
 msgid "Next"
 msgstr "下一步"
 
+#: src/components/portrait-lamp.tsx
+msgid "No answer recorded today"
+msgstr "今天還沒有收到回覆"
+
 #: app/ask.tsx
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr "接下來兩週都沒有空出來的早上可以放照片提問。請改用文字提問，或稍後再試一次。"
@@ -1686,6 +1714,10 @@ msgstr "請稍等…"
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr "一次一個問題。英語試辦會照您寫的原文送出。"
 
+#: src/components/portrait-lamp.tsx
+msgid "Only on this device. Removed when you sign out."
+msgstr "照片只留在這部裝置，登出時會移除。"
+
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
@@ -1702,6 +1734,10 @@ msgstr "打開這次交流"
 #: src/components/telegram-family-link.tsx
 msgid "Open Vela on Telegram"
 msgstr "在 Telegram 打開 Vela"
+
+#: src/components/portrait-lamp.tsx
+msgid "Opening photos…"
+msgstr "正在開啟照片⋯"
 
 #: src/components/family-book.tsx
 msgid "Opening the book…"
@@ -1924,6 +1960,10 @@ msgstr "要從附近的人移除{whoToRemove}嗎？"
 #: src/components/calling-number-editor.tsx
 msgid "Remove calling number"
 msgstr "移除電話號碼"
+
+#: src/components/portrait-lamp.tsx
+msgid "Remove photo"
+msgstr "移除照片"
 
 #: src/components/photo-slots.tsx
 msgid "Replace"
@@ -2358,6 +2398,7 @@ msgid "Take this story out of the family book?"
 msgstr "要從家庭故事書移除這段故事嗎？"
 
 #: src/components/chat/chat-link.tsx
+#: src/components/portrait-lamp.tsx
 msgid "Talk with {name}"
 msgstr "跟{name}聊聊"
 
@@ -2595,6 +2636,10 @@ msgstr "附近的聯絡人是 Vela Light 的一部分：安靜通知裡會列出
 msgid "The people nearby could not be reached just now."
 msgstr "暫時無法取得附近的聯絡人。"
 
+#: src/components/portrait-lamp.tsx
+msgid "The photo could not be changed. Your previous photo is still here. Try again."
+msgstr "照片暫時無法更換，原本的照片仍然保留。請再試一次。"
+
 #: src/components/photo-reply.tsx
 msgid "The photo you chose"
 msgstr "您選的照片"
@@ -2765,7 +2810,6 @@ msgid "Today"
 msgstr "今天"
 
 #: app/(tabs)/_layout.tsx
-#: app/(tabs)/index.tsx
 msgctxt "tab"
 msgid "Today"
 msgstr "今天"
@@ -3037,6 +3081,10 @@ msgstr "Vela 最近一次的排程檢查已完成。"
 #: src/data/onboarding.ts
 msgid "Vietnam"
 msgstr "越南"
+
+#: src/components/portrait-lamp.tsx
+msgid "View quiet notice"
+msgstr "查看今天還沒回覆的提醒"
 
 #: app/(tabs)/exchanges.tsx
 msgid "Voice"

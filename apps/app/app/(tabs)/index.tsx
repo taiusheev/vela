@@ -16,11 +16,11 @@ import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { BrandHeader } from "../../src/components/brand/header.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
-import { ChatLink } from "../../src/components/chat/chat-link.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
-import { Light } from "../../src/components/light.tsx";
+import { PortraitLamp } from "../../src/components/portrait-lamp.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import { RemindersCard } from "../../src/components/reminders.tsx";
 import { TodayHeart } from "../../src/components/today-heart.tsx";
@@ -37,9 +37,9 @@ import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
 import { localDayMonth } from "../../src/data/format.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
+import { selectedLight } from "../../src/data/selected-light.ts";
 import {
   quietExampleFixture,
-  type Today,
   type TodayExchange,
   type TodayLight,
   type TomorrowTurn,
@@ -54,52 +54,13 @@ import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, space, type } from "../../src/theme/tokens.ts";
 
-function LightsRow({
-  lights,
-  onQuiet,
+function ExchangeCard({
+  exchange,
+  answerInPortrait = false,
 }: {
-  lights: Today["lights"];
-  /** A quiet light opens its notice again, once the sheet that opened by itself was closed. */
-  onQuiet: (light: TodayLight) => void;
+  exchange: TodayExchange;
+  answerInPortrait?: boolean;
 }) {
-  const { fontScale } = useWindowDimensions();
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.m }}>
-      {lights.map((light) => (
-        <Pressable
-          key={light.memberId}
-          accessibilityRole={light.state === "quiet" ? "button" : undefined}
-          disabled={light.state !== "quiet"}
-          onPress={() => onQuiet(light)}
-          style={{
-            flexGrow: 1,
-            flexBasis: fontScale > 1.3 ? "100%" : 120,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: space.m,
-            paddingVertical: space.s,
-          }}
-        >
-          <Light state={light.answerReceived === true ? "lit" : light.state} height={44} />
-          <View style={{ flex: 1, gap: space.xs }}>
-            <Words variant="heading">{light.displayName}</Words>
-            <Words variant="caption" tone="ink2">
-              {light.stateText}
-            </Words>
-            {light.localDate === undefined ? null : (
-              <Words
-                variant="caption"
-                tone="ink2"
-              >{`${light.localDate} · ${light.timeZone ?? ""}`}</Words>
-            )}
-          </View>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
   const { fontScale } = useWindowDimensions();
   const { t } = useLingui();
   const palette = usePalette();
@@ -145,7 +106,7 @@ function ExchangeCard({ exchange }: { exchange: TodayExchange }) {
         )
       ) : (
         <AnswerPanel>
-          <Words variant="voice">{exchange.answer.text}</Words>
+          {answerInPortrait ? null : <Words variant="voice">{exchange.answer.text}</Words>}
           {exchange.answer.photo === undefined ? null : (
             <ReplyPhoto photo={exchange.answer.photo} size="full" />
           )}
@@ -338,6 +299,7 @@ function FamilyToday({ day }: { day: TodayView }) {
   const palette = usePalette();
   const { t, i18n } = useLingui();
   const [quietOpen, setQuietOpen] = useState(false);
+  const [selectedParent, setSelectedParent] = useState<string>();
   // How the example notice was settled; its sentence is chosen as it renders, in the language shown.
   const [resolution, setResolution] = useState<"fine" | "wait" | undefined>();
   // The demo's ask to look in: answered by Lena a moment later, as a neighbour would.
@@ -452,9 +414,14 @@ function FamilyToday({ day }: { day: TodayView }) {
   const outcomeRecipient = outcome?.recipient ?? "";
   const date =
     outcome?.date === null || outcome?.date === undefined ? "" : localDayMonth(outcome.date);
-  const target = askRecipient(today.lights);
+  const focused = selectedLight(today.lights, selectedParent) ?? selectedLight(today.lights);
+  const focusedExchange = today.exchanges.find(
+    (exchange) => exchange.recipientId === focused?.memberId && exchange.answer !== undefined,
+  );
+  const target = focused ?? askRecipient(today.lights);
   const recipient = target?.displayName ?? t({ comment: "stands in for her name", message: "her" });
 
+  const portraitFamily = familyId === undefined ? "example" : familyId;
   return (
     <ScrollView
       refreshControl={<RefreshControl refreshing={day.loading} onRefresh={day.refresh} />}
@@ -476,7 +443,8 @@ function FamilyToday({ day }: { day: TodayView }) {
           }}
         >
           <View style={{ flex: 1 }}>
-            <ScreenHeading title={<Trans context="tab">Today</Trans>} />
+            <BrandHeader />
+            <ScreenHeading title={<Trans>A little light from home.</Trans>} />
           </View>
           <Pressable
             accessibilityRole="button"
@@ -499,10 +467,22 @@ function FamilyToday({ day }: { day: TodayView }) {
           <Trans>Loading your family’s morning…</Trans>
         </Words>
       ) : null}
-      <LightsRow
-        lights={today.lights}
-        onQuiet={(light) => (mayOpen ? openQuiet(light) : undefined)}
-      />
+      {focused === undefined ? null : (
+        <PortraitLamp
+          key={focused.memberId}
+          lights={today.lights}
+          selected={focused}
+          familyId={portraitFamily}
+          onSelect={setSelectedParent}
+          onChat={() =>
+            router.push({ pathname: "/conversation", params: { recipient: focused.memberId } })
+          }
+          onQuiet={focused.state === "quiet" && mayOpen ? () => openQuiet(focused) : undefined}
+          quote={focusedExchange?.answer?.text}
+          at={focusedExchange?.answer?.at}
+          stale={trouble}
+        />
+      )}
       {noAccount || noFamily ? (
         <Words variant="body" tone="ink2">
           <Trans>Setting up your family…</Trans>
@@ -570,12 +550,17 @@ function FamilyToday({ day }: { day: TodayView }) {
       {today.lights.flatMap((light) =>
         light.awayId === undefined ? [] : [<AwayLine key={light.memberId} light={light} />],
       )}
-      {today.exchanges.map((exchange) => (
-        <ExchangeCard key={exchange.id} exchange={exchange} />
-      ))}
+      {today.exchanges
+        .filter((exchange) => focused === undefined || exchange.recipientId === focused.memberId)
+        .map((exchange) => (
+          <ExchangeCard
+            key={exchange.id}
+            exchange={exchange}
+            answerInPortrait={exchange.id === focusedExchange?.id}
+          />
+        ))}
       {/* The chat is where the day's words carry on (consumer flow rows 38–52). Her morning
           settings live on You and in the chat's menu, never on the first screen. */}
-      {target === undefined ? null : <ChatLink light={target} />}
       {target !== undefined &&
       (target.invited === true || target.connectionDays?.every((day) => !day.hasMessage)) ? (
         <Card>
@@ -595,9 +580,11 @@ function FamilyToday({ day }: { day: TodayView }) {
           </Words>
         </Card>
       ) : null}
-      {today.tomorrow.map((turn) => (
-        <TomorrowCard key={turn.recipientId} tomorrow={turn} />
-      ))}
+      {today.tomorrow
+        .filter((turn) => focused === undefined || turn.recipientId === focused.memberId)
+        .map((turn) => (
+          <TomorrowCard key={turn.recipientId} tomorrow={turn} />
+        ))}
       {target === undefined || !canAsk(target) ? null : (
         <SecondaryButton
           label={t`Ask ${recipient} something`}
