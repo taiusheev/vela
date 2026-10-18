@@ -32,7 +32,6 @@ import {
   familyHasEnded,
   keptLightMembersOfFamily,
   type Queryable,
-  readBackExchangeId,
 } from "./repo.ts";
 import { renderSuggestion } from "./suggestions.ts";
 
@@ -54,82 +53,7 @@ function answerText(answer: {
 
 const Uuid = z.uuid();
 
-/**
- * The ask's photos, in the order she was shown them (ADR-33). Only the exchange's own family's
- * images, as the arrival reads them. A photo retention has deleted is left out: any other ask loses
- * its id, and a photo choice keeps it in its place naming nothing (`deleteMedia`), so no empty slot
- * is listed for it. `stored` is what the photo route would serve: a kept JPEG, or a Telegram photo
- * copied to storage.
- */
-async function photosOf(
-  db: Queryable,
-  exchange: Exchange,
-  now?: Date,
-): Promise<ApiTodayExchange["photos"]> {
-  return photosById(db, exchange.familyId, exchange.mediaIds, now);
-}
-
-/** The family's images with these ids, in this order, as the app shows them; a gone one is left out. */
-async function photosById(
-  db: Queryable,
-  familyId: string,
-  ids: readonly string[],
-  now?: Date,
-): Promise<ApiTodayExchange["photos"]> {
-  if (ids.length === 0) return [];
-  const rows = await db
-    .select({
-      id: media.id,
-      width: media.width,
-      height: media.height,
-      storageKey: media.storageKey,
-      mime: media.mime,
-      kept: media.kept,
-      expiresAt: media.expiresAt,
-    })
-    .from(media)
-    .where(and(eq(media.familyId, familyId), inArray(media.id, [...ids]), eq(media.kind, "image")));
-  const byId = new Map(rows.map((row) => [row.id.toLowerCase(), row]));
-  return ids.flatMap((id) => {
-    const row = byId.get(id.toLowerCase());
-    if (row === undefined) return [];
-    if (now !== undefined && !row.kept && row.expiresAt !== null && row.expiresAt <= now) return [];
-    return [
-      {
-        id: row.id,
-        width: row.width !== null && row.width > 0 ? row.width : null,
-        height: row.height !== null && row.height > 0 ? row.height : null,
-        stored: row.storageKey !== null && (row.mime === null || row.mime === "image/jpeg"),
-        expires_at: row.kept ? null : (row.expiresAt?.toISOString() ?? null),
-      },
-    ];
-  });
-}
-
 const NO_PICK = { picked_media_id: null, picked_number: null } as const;
-
-/**
- * The photo she picked on a photo choice, and its number as her buttons showed it: the latest
- * pick's, whatever answer came after it, so her choice still shows when she went on to say
- * something (ADR-33). The number stays when the photo is deleted, so the family still reads which
- * one she chose.
- */
-async function pickedPhoto(
-  db: Queryable,
-  exchange: Exchange,
-): Promise<Pick<ApiTodayAnswer, "picked_media_id" | "picked_number">> {
-  if (exchange.type !== "photo_choice") return NO_PICK;
-  const [pick] = await db
-    .select({ payload: answers.payload })
-    .from(answers)
-    .where(and(eq(answers.exchangeId, exchange.id), eq(answers.kind, "photo_pick")))
-    .orderBy(desc(answers.receivedAt), desc(answers.id))
-    .limit(1);
-  const id = pick?.payload.media_id;
-  if (typeof id !== "string" || !Uuid.safeParse(id).success) return NO_PICK;
-  const index = pick?.payload.index;
-  return { picked_media_id: id, picked_number: index === 0 ? 1 : index === 1 ? 2 : null };
-}
 
 async function nameOf(db: Queryable, memberId: string | null): Promise<string | null> {
   if (memberId === null) return null;
@@ -171,30 +95,39 @@ function pickOf(
   return { picked_media_id: id, picked_number: index === 0 ? 1 : index === 1 ? 2 : null };
 }
 
-/** One exchange as a family reads it. Shared with the Exchanges list, which shows the same card. */
+/** One card uses the same batched renderer as a page, preserving the wire contract. */
 export async function exchangeRow(
   db: Queryable,
   exchange: Exchange,
   recipient: { id: string; displayName: string; tz?: string },
   now?: Date,
 ): Promise<ApiTodayExchange> {
-  // Every answer, oldest first: a conversation shows each message she sent; Today shows the last.
+  const [row] = await renderExchangeRows(db, [{ exchange, recipient }], now);
+  if (row === undefined) throw new Error("Missing exchange card");
+  return row;
+}
+
+/** Read one page together: history size must not multiply database round trips. */
+export async function renderExchangeRows(
+  db: Queryable,
+  rows: readonly {
+    exchange: Exchange;
+    recipient: { id: string; displayName: string; tz?: string };
+  }[],
+  now?: Date,
+): Promise<ApiTodayExchange[]> {
+  if (rows.length === 0) return [];
+  const ids = rows.map((row) => row.exchange.id);
+  const familyIds = [...new Set(rows.map((row) => row.exchange.familyId))];
+  const recipientIds = [...new Set(rows.map((row) => row.recipient.id))];
   const answerRows = await db
-    .select({
-      id: answers.id,
-      kind: answers.kind,
-      payload: answers.payload,
-      transcript: answers.transcript,
-      summary: answers.summary,
-      receivedAt: answers.receivedAt,
-      mediaId: answers.mediaId,
-    })
+    .select()
     .from(answers)
-    .where(eq(answers.exchangeId, exchange.id))
+    .where(inArray(answers.exchangeId, ids))
     .orderBy(asc(answers.receivedAt), asc(answers.id));
-  const answer = answerRows.at(-1);
   const replyRows = await db
     .select({
+      exchangeId: replies.exchangeId,
       from: members.displayName,
       fromId: replies.memberId,
       at: replies.createdAt,
@@ -204,98 +137,158 @@ export async function exchangeRow(
     })
     .from(replies)
     .innerJoin(members, eq(members.id, replies.memberId))
-    .where(eq(replies.exchangeId, exchange.id))
+    .where(inArray(replies.exchangeId, ids))
     .orderBy(asc(replies.createdAt), asc(replies.id));
-
-  const ids = [
-    ...answerRows.map((row) => row.mediaId),
-    exchange.voiceHelloId,
-    ...replyRows.map((reply) => reply.mediaId),
-  ].filter((id): id is string => typeof id === "string");
+  const mediaIds = [
+    ...new Set(
+      [
+        ...answerRows.map((row) => row.mediaId),
+        ...replyRows.map((row) => row.mediaId),
+        ...rows.flatMap((row) => [row.exchange.voiceHelloId, ...row.exchange.mediaIds]),
+      ].filter((id): id is string => typeof id === "string"),
+    ),
+  ];
   const files =
-    ids.length === 0
+    mediaIds.length === 0
       ? []
       : await db
           .select()
           .from(media)
-          .where(and(eq(media.familyId, exchange.familyId), inArray(media.id, ids)));
-  const byId = new Map(files.map((file) => [file.id, file]));
-  const fileOf = (id: string | null | undefined) =>
-    id === null || id === undefined ? undefined : byId.get(id);
-
-  const [conversationFailure] =
-    exchange.whenRule === "now" && exchange.deliveredAt === null
-      ? await db
-          .select({ id: outbound.id })
-          .from(outbound)
-          .where(
-            and(
-              eq(outbound.exchangeId, exchange.id),
-              eq(outbound.kind, "conversation"),
-              inArray(outbound.status, ["failed", "dropped"]),
-            ),
-          )
-          .limit(1)
-      : [];
+          .where(and(inArray(media.familyId, familyIds), inArray(media.id, mediaIds)));
   const translated = await translationsOf(
     db,
     answerRows.filter((row) => answerText(row) !== null).map((row) => row.id),
   );
-  const asWire = (row: (typeof answerRows)[number]): ApiTodayAnswer => ({
-    kind: row.kind,
-    text: answerText(row),
-    at: row.receivedAt.toISOString(),
-    ...(row.kind === "photo_pick" ? pickOf(row.payload) : NO_PICK),
-    translation: translated.get(row.id) ?? null,
-    audio: sourceAudio(fileOf(row.mediaId), now),
-    photo: sourcePhoto(fileOf(row.mediaId), now),
-  });
-  const askerName = await nameOf(db, exchange.askerId);
-  return {
-    id: exchange.id,
-    recipient_id: recipient.id,
-    recipient_name: recipient.displayName,
-    ...(recipient.tz === undefined ? {} : { recipient_tz: recipient.tz }),
-    asker_name: askerName,
-    // Null with the name, so a deleted asker's id is not handed out on its own.
-    asker_id: askerName === null ? null : exchange.askerId,
-    on_behalf_of: exchange.onBehalfOf,
-    drafted_by_vela: exchange.draftedByVela,
-    type: exchange.type,
-    ask: exchange.text,
-    created_at: exchange.createdAt.toISOString(),
-    voice_hello: sourceAudio(fileOf(exchange.voiceHelloId), now),
-    answer:
-      answer === undefined
-        ? null
-        : {
-            ...asWire(answer),
-            // Her pick stays shown when she went on to say something after it (ADR-33).
-            ...(await pickedPhoto(db, exchange)),
-          },
-    answers: answerRows.map(asWire),
-    replies: await Promise.all(
-      replyRows.map(async ({ mediaId, fromId, at, ...reply }) => ({
-        ...reply,
-        from_id: fromId,
-        at: at.toISOString(),
-        audio: sourceAudio(fileOf(mediaId), now),
-        photo:
-          reply.kind === "photo" && mediaId !== null
-            ? ((await photosById(db, exchange.familyId, [mediaId], now))[0] ?? null)
-            : null,
-      })),
+  const askerIds = [
+    ...new Set(
+      rows.flatMap((row) => (row.exchange.askerId === null ? [] : [row.exchange.askerId])),
     ),
-    delivery_status:
-      exchange.deliveryFailedAt !== null || conversationFailure !== undefined
-        ? "failed"
-        : exchange.deliveredAt !== null
-          ? "delivered"
-          : "pending",
-    seen_at: exchange.seenAt?.toISOString() ?? null,
-    replies_reach_her: (await readBackExchangeId(db, recipient.id)) === exchange.id,
-    photos: await photosOf(db, exchange, now),
-  };
+  ];
+  const askers =
+    askerIds.length === 0
+      ? []
+      : await db
+          .select({ id: members.id, name: members.displayName })
+          .from(members)
+          .where(inArray(members.id, askerIds));
+  const names = new Map(askers.map((row) => [row.id, row.name]));
+  const delivered = await db
+    .selectDistinctOn([exchangeRows.recipientId], {
+      id: exchangeRows.id,
+      recipientId: exchangeRows.recipientId,
+    })
+    .from(exchangeRows)
+    .where(
+      and(
+        inArray(exchangeRows.recipientId, recipientIds),
+        isNotNull(exchangeRows.scheduledFor),
+        isNotNull(exchangeRows.deliveredAt),
+        ne(exchangeRows.state, "withdrawn"),
+      ),
+    )
+    .orderBy(exchangeRows.recipientId, desc(exchangeRows.scheduledFor));
+  const readBack = new Map<string, string>();
+  for (const row of delivered)
+    if (!readBack.has(row.recipientId)) readBack.set(row.recipientId, row.id);
+  const pendingIds = rows
+    .filter((row) => row.exchange.whenRule === "now" && row.exchange.deliveredAt === null)
+    .map((row) => row.exchange.id);
+  const failures =
+    pendingIds.length === 0
+      ? []
+      : await db
+          .select({ exchangeId: outbound.exchangeId })
+          .from(outbound)
+          .where(
+            and(
+              inArray(outbound.exchangeId, pendingIds),
+              eq(outbound.kind, "conversation"),
+              inArray(outbound.status, ["failed", "dropped"]),
+            ),
+          );
+  const failed = new Set(failures.map((row) => row.exchangeId));
+  return rows.map(({ exchange, recipient }) => {
+    const familyFiles = files.filter((file) => file.familyId === exchange.familyId);
+    const byId = new Map(familyFiles.map((file) => [file.id.toLowerCase(), file]));
+    const fileOf = (id: string | null | undefined) =>
+      id == null ? undefined : byId.get(id.toLowerCase());
+    const photoList = (photoIds: readonly string[]): ApiTodayExchange["photos"] =>
+      photoIds.flatMap((id) => {
+        const file = fileOf(id);
+        if (
+          file?.kind !== "image" ||
+          (now !== undefined && !file.kept && file.expiresAt !== null && file.expiresAt <= now)
+        )
+          return [];
+        return [
+          {
+            id: file.id,
+            width: file.width !== null && file.width > 0 ? file.width : null,
+            height: file.height !== null && file.height > 0 ? file.height : null,
+            stored: file.storageKey !== null && (file.mime === null || file.mime === "image/jpeg"),
+            expires_at: file.kept ? null : (file.expiresAt?.toISOString() ?? null),
+          },
+        ];
+      });
+    const herAnswers = answerRows.filter((row) => row.exchangeId === exchange.id);
+    const answer = herAnswers.at(-1);
+    const asWire = (row: (typeof answerRows)[number]): ApiTodayAnswer => ({
+      kind: row.kind,
+      text: answerText(row),
+      at: row.receivedAt.toISOString(),
+      ...(row.kind === "photo_pick" ? pickOf(row.payload) : NO_PICK),
+      translation: translated.get(row.id) ?? null,
+      audio: sourceAudio(fileOf(row.mediaId), now),
+      photo: sourcePhoto(fileOf(row.mediaId), now),
+    });
+    const picked =
+      exchange.type === "photo_choice"
+        ? herAnswers.findLast((row) => row.kind === "photo_pick")
+        : undefined;
+    const askerName = exchange.askerId === null ? null : (names.get(exchange.askerId) ?? null);
+    return {
+      id: exchange.id,
+      recipient_id: recipient.id,
+      recipient_name: recipient.displayName,
+      ...(recipient.tz === undefined ? {} : { recipient_tz: recipient.tz }),
+      asker_name: askerName,
+      asker_id: askerName === null ? null : exchange.askerId,
+      on_behalf_of: exchange.onBehalfOf,
+      drafted_by_vela: exchange.draftedByVela,
+      type: exchange.type,
+      ask: exchange.text,
+      created_at: exchange.createdAt.toISOString(),
+      voice_hello: sourceAudio(fileOf(exchange.voiceHelloId), now),
+      answer:
+        answer === undefined
+          ? null
+          : { ...asWire(answer), ...(picked === undefined ? NO_PICK : pickOf(picked.payload)) },
+      answers: herAnswers.map(asWire),
+      replies: replyRows
+        .filter((row) => row.exchangeId === exchange.id)
+        .map((row) => ({
+          from: row.from,
+          from_id: row.fromId,
+          at: row.at.toISOString(),
+          kind: row.kind,
+          text: row.text,
+          audio: sourceAudio(fileOf(row.mediaId), now),
+          photo:
+            row.kind === "photo" && row.mediaId !== null
+              ? (photoList([row.mediaId])[0] ?? null)
+              : null,
+        })),
+      delivery_status:
+        exchange.deliveryFailedAt !== null || failed.has(exchange.id)
+          ? "failed"
+          : exchange.deliveredAt !== null
+            ? "delivered"
+            : "pending",
+      seen_at: exchange.seenAt?.toISOString() ?? null,
+      replies_reach_her: readBack.get(recipient.id) === exchange.id,
+      photos: photoList(exchange.mediaIds),
+    };
+  });
 }
 
 /** Who is reading Today: suggestions are rendered in their language, and never shown about them. */

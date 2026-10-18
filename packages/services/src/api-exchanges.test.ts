@@ -2,7 +2,7 @@ import { ApiExchangePage, EXCHANGE_LIST_DAYS } from "@vela/contracts";
 import { addDays, localDateOf } from "@vela/core";
 import { answers, exchanges, members, replies, users } from "@vela/db";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
 import { loadApiExchange, loadApiExchanges } from "./api-exchanges.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -55,6 +55,35 @@ async function list(query = {}, who: SessionIdentity = identity, familyId = seed
 }
 
 describe("loadApiExchanges", () => {
+  it("reads ten conversations without multiplying database round trips", async () => {
+    async function dayWithAnswer(days: number) {
+      const day = await seedDay(days);
+      await h.db.insert(answers).values({
+        exchangeId: day.id,
+        memberId: seed.member.id,
+        kind: "text",
+        channel: "telegram",
+        externalId: `batch-answer-${days}`,
+        payload: { text: `Answer ${days}` },
+        receivedAt: daysAgo(days),
+      });
+    }
+    await dayWithAnswer(0);
+    const reads = vi.spyOn(h.db, "select");
+    try {
+      expect((await list())?.exchanges).toHaveLength(1);
+      const oneCardReads = reads.mock.calls.length;
+      for (let day = 1; day < 10; day++) await dayWithAnswer(day);
+      reads.mockClear();
+      const page = await list();
+      expect(page?.exchanges).toHaveLength(10);
+      expect(page?.exchanges.every((card) => card.answers?.length === 1)).toBe(true);
+      expect(reads.mock.calls.length).toBe(oneCardReads);
+    } finally {
+      reads.mockRestore();
+    }
+  });
+
   it("carries the Vietnam recipient's clock through list and directly opened exchanges", async () => {
     await h.db
       .update(members)

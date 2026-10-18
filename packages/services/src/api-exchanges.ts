@@ -5,10 +5,10 @@ import {
   EXCHANGE_PAGE_SIZE,
   MAX_EXCHANGE_PAGE_SIZE,
 } from "@vela/contracts";
-import { exchanges, type Member, members } from "@vela/db";
+import { exchanges, members } from "@vela/db";
 import { and, desc, eq, gte, isNotNull, lt, ne, or } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
-import { exchangeRow } from "./api-today.ts";
+import { exchangeRow, renderExchangeRows } from "./api-today.ts";
 import type { Queryable } from "./repo.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
@@ -73,15 +73,12 @@ export async function loadApiExchanges(
     .limit(size + 1);
 
   const page = rows.slice(0, size);
-  const summaries: ApiExchangeSummary[] = [];
-  for (const row of page) {
-    const recipient: Member = row.recipient;
-    summaries.push({
-      ...(await exchangeRow(db, row.exchange, recipient, now)),
-      scheduled_for: row.exchange.scheduledFor,
-      delivered_at: row.exchange.deliveredAt?.toISOString() ?? null,
-    });
-  }
+  const cards = await renderExchangeRows(db, page, now);
+  const summaries: ApiExchangeSummary[] = cards.map((card, index) => ({
+    ...card,
+    scheduled_for: page[index]?.exchange.scheduledFor ?? null,
+    delivered_at: page[index]?.exchange.deliveredAt?.toISOString() ?? null,
+  }));
   return {
     exchanges: summaries,
     next_cursor: rows.length > size ? (page[page.length - 1]?.exchange.id ?? null) : null,

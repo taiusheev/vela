@@ -1,0 +1,3 @@
+*.generated.ts
+wrangler.generated.json
+.private.json
