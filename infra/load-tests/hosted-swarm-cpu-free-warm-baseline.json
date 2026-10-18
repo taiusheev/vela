@@ -1,0 +1,58 @@
+{
+  "kind": "hosted-read-only-http-bursts",
+  "source": "79b1182c040e4199a9c48e5e3511f92f57663a64",
+  "workingTreeDirty": true,
+  "startedAt": "2026-10-18T05:08:10.728Z",
+  "concurrency": 20,
+  "retries": 0,
+  "before": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 13084.304666,
+      "p50Ms": 2429.405167,
+      "p95Ms": 3187.9341249999998
+    }
+  ],
+  "limitations": [
+    "Existing synthetic cohort only; real sessions and messenger delivery remain outside this test.",
+    "No live tail session: inspect persisted observability after testing to retain normal execution conditions."
+  ],
+  "after": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "unchanged": true,
+  "passed": true,
+  "finishedAt": "2026-10-18T05:08:23.996Z",
+  "configuredCpuMs": null,
+  "context": "Warm Free-plan baseline before applying the prepared100ms budget. Passing this burst does not close the historical exceededCpu finding."
+}

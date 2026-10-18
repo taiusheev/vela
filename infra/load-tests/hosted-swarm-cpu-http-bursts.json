@@ -1,0 +1,156 @@
+{
+  "kind": "hosted-read-only-http-bursts",
+  "source": "1e7a0a0b9d72619dc39473557ffd756074e7cd6f",
+  "workingTreeDirty": true,
+  "startedAt": "2026-10-18T05:20:30.166Z",
+  "concurrency": 20,
+  "retries": 0,
+  "configuredCpuMs": 1000,
+  "before": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 12557.958332999999,
+      "p50Ms": 2279.2775410000004,
+      "p95Ms": 3030.515167
+    },
+    {
+      "round": 1,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 11830.615957999998,
+      "p50Ms": 2189.258999999998,
+      "p95Ms": 2537.952707999999
+    },
+    {
+      "round": 2,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 12083.965417000003,
+      "p50Ms": 2183.2142499999973,
+      "p95Ms": 2371.9579169999997
+    },
+    {
+      "round": 3,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 11473.810875000003,
+      "p50Ms": 2214.7909169999984,
+      "p95Ms": 2428.7706670000043
+    },
+    {
+      "round": 4,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 11411.331207999996,
+      "p50Ms": 2157.3105829999986,
+      "p95Ms": 2430.0534999999945
+    },
+    {
+      "round": 5,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 11243.553125000006,
+      "p50Ms": 2188.751333,
+      "p95Ms": 2383.4212079999998
+    },
+    {
+      "round": 6,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 11588.533750000002,
+      "p50Ms": 2200.765459000002,
+      "p95Ms": 2432.9895000000106
+    },
+    {
+      "round": 7,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 11196.125207999998,
+      "p50Ms": 2149.367708000005,
+      "p95Ms": 2368.3004169999913
+    },
+    {
+      "round": 8,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 11447.906875,
+      "p50Ms": 2216.511916999996,
+      "p95Ms": 2455.3074999999953
+    },
+    {
+      "round": 9,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 11143.353749999995,
+      "p50Ms": 2173.731332999989,
+      "p95Ms": 2384.6015000000043
+    }
+  ],
+  "limitations": [
+    "Existing synthetic cohort only; real sessions and messenger delivery remain outside this test.",
+    "No live tail session: inspect persisted observability after testing to retain normal execution conditions."
+  ],
+  "after": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "unchanged": true,
+  "passed": true,
+  "finishedAt": "2026-10-18T05:22:26.321Z"
+}

@@ -1,0 +1,36 @@
+{
+  "recordedAt": "2026-10-18T05:03:36.398Z",
+  "kind": "historical-hosted-cpu-diagnosis",
+  "worker": "vela-swarm-20261018",
+  "sourceWindow": {
+    "from": 1792295280000,
+    "to": 1792295340000
+  },
+  "apiAccessStatus": 200,
+  "requestStatusesIncludingManifest": {
+    "200": 59,
+    "500": 1,
+    "503": 41
+  },
+  "cpuLimitFailures": 41,
+  "failedCpuTimeMs": {
+    "min": 10,
+    "max": 68
+  },
+  "databaseErrorLabels": [
+    "Error <- error:08P01"
+  ],
+  "budgetChangeAttempt": {
+    "requestedCpuMs": 100,
+    "status": 400,
+    "code": 100328,
+    "result": "CPU limits are not supported for the Free plan; setting was not applied."
+  },
+  "conclusions": [
+    "All 41 HTML503s in the recorded burst correlate with exceededCpu outcomes.",
+    "The isolated Worker and normal staging Worker have no explicit CPU override; the account is confirmed Free by Cloudflare validation.",
+    "The structured500 coincides with PostgreSQL protocol error08P01. Its causal relationship to CPU interruptions is not established.",
+    "No account plan, billing configuration, product Worker setting or family data was changed."
+  ],
+  "nextVerification": "After founder enables Workers Paid for staging, deploy the isolated100ms budget and repeat raw read bursts without live tail or HTTP retries."
+}

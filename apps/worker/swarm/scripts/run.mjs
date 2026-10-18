@@ -64,6 +64,8 @@ async function provision() {
     workers_dev: true,
     preview_urls: false,
     observability: { enabled: true },
+    // Hosted bursts exceeded the Free plan's 10 ms budget; require Paid and bound CPU use.
+    limits: { cpu_ms: 1000 },
     alias: { "@vela/db": "./db.ts" },
     vars: { ENVIRONMENT: "staging", API_V1: "on", LINE_CHANNEL: "off" },
     hyperdrive: [{ binding: "HYPERDRIVE", id: "e9e9837d1eee47528304916a1ac2d1e9" }],
@@ -465,6 +467,9 @@ try {
   }
   evidence.finishedAt = new Date().toISOString();
   evidence.status = evidence.passed ? "passed" : "failed";
-  await writeFile(receipt, `${JSON.stringify(evidence, null, 2)}\n`);
-  console.log(JSON.stringify({ passed: evidence.passed, receipt }));
+  // A deployment attempt is not a cohort run; preserve the existing cohort receipt on failure.
+  if (!process.argv.includes("--provision-only")) {
+    await writeFile(receipt, `${JSON.stringify(evidence, null, 2)}\n`);
+    console.log(JSON.stringify({ passed: evidence.passed, receipt }));
+  }
 }
