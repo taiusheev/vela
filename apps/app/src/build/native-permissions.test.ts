@@ -55,7 +55,7 @@ it("resolves native permissions and dependency privacy reasons without enabling 
     "Vela uses your microphone when you choose to record a voice message for your family.",
   );
   expect(plist?.NSPhotoLibraryUsageDescription).toBe(
-    "Vela uses the photos you choose for an ask or reply to your family.",
+    "Vela uses the photos you choose for family asks, replies, or a parent portrait saved only on this device.",
   );
   expect(plist?.NSCameraUsageDescription).toBeUndefined();
   expect(config.android?.blockedPermissions ?? []).not.toContain("android.permission.RECORD_AUDIO");

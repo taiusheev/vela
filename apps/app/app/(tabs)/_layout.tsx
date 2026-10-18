@@ -21,11 +21,11 @@ function TabIcon({
       style={{
         width: 56,
         height: 32,
-        borderTopWidth: focused ? 2 : 0,
+        borderRadius: 12,
         borderTopColor: palette.action,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "transparent",
+        backgroundColor: focused ? palette.actionSoft : "transparent",
       }}
     >
       <BrandIcon name={name} color={color} size={22} />

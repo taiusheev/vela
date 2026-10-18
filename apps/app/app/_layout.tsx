@@ -30,6 +30,7 @@ import { LocaleProvider, useAppLocale } from "../src/i18n/provider.tsx";
 import { PushProvider } from "../src/push/provider.tsx";
 import { useOpenTapped } from "../src/push/useOpenTapped.ts";
 import { activatePrivateSession, clearSessionDrafts } from "../src/storage/drafts.ts";
+import { activatePortraitSession, clearPortraitSession } from "../src/storage/portraits.ts";
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
 
 void SplashScreen.preventAutoHideAsync();
@@ -39,11 +40,13 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
     sessionRequests.activate(scope);
     clearPhotoCache();
     activatePrivateSession(scope);
+    activatePortraitSession(scope);
     return new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 60_000 } } });
   });
   useEffect(() => {
     sessionRequests.activate(scope);
     activatePrivateSession(scope);
+    activatePortraitSession(scope);
     const subscription = AppState.addEventListener("change", (state) =>
       focusManager.setFocused(state === "active"),
     );
@@ -54,6 +57,11 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
       queries.clear();
       clearPhotoCache();
       void clearAudioCache();
+      try {
+        clearPortraitSession(scope);
+      } catch {
+        /* The closed session cannot read or save portraits. */
+      }
       void clearSessionDrafts(scope);
     };
   }, [queries, scope]);

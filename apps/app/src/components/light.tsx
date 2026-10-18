@@ -30,12 +30,8 @@ export function Light({ state, height = 44, style }: LightProps) {
           stroke={p.ink}
           strokeWidth={11}
         />
-        {width >= 32 ? (
-          <>
-            <Rect x={47} y={5.5} width={6} height={121} fill={p.ink} />
-            <Rect x={5.5} y={49.8} width={89} height={6} fill={p.ink} />
-          </>
-        ) : null}
+        <Rect x={47} y={5.5} width={6} height={121} fill={p.ink} />
+        <Rect x={5.5} y={49.8} width={89} height={6} fill={p.ink} />
       </Svg>
     </View>
   );

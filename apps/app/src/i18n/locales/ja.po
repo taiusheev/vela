@@ -373,6 +373,10 @@ msgstr ""
 msgid "A little closer, every day."
 msgstr ""
 
+#: app/(tabs)/index.tsx
+msgid "A little light from home."
+msgstr ""
+
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr ""
@@ -465,6 +469,10 @@ msgstr ""
 msgid "Across Vela"
 msgstr ""
 
+#: src/components/portrait-lamp.tsx
+msgid "Add a photo of {name}"
+msgstr ""
+
 #: src/components/vote-options.tsx
 msgid "Add an option"
 msgstr ""
@@ -532,6 +540,10 @@ msgstr ""
 #: src/data/today.ts
 #: src/data/useToday.ts
 msgid "answered {time}"
+msgstr ""
+
+#: src/components/portrait-lamp.tsx
+msgid "Answered today"
 msgstr ""
 
 #: src/data/useToday.ts
@@ -680,6 +692,10 @@ msgstr ""
 #: app/(tabs)/you.tsx
 #: app/conversation.tsx
 msgid "Change {name}'s morning"
+msgstr ""
+
+#: src/components/portrait-lamp.tsx
+msgid "Change {name}’s photo"
 msgstr ""
 
 #: app/onboarding.tsx
@@ -1307,6 +1323,10 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
+#: src/components/portrait-lamp.tsx
+msgid "Last confirmed update"
+msgstr ""
+
 #: app/(tabs)/exchanges.tsx
 msgid "Last week"
 msgstr ""
@@ -1512,6 +1532,10 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
+#: src/components/portrait-lamp.tsx
+msgid "No answer recorded today"
+msgstr ""
+
 #: app/ask.tsx
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr ""
@@ -1679,6 +1703,10 @@ msgstr ""
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr ""
 
+#: src/components/portrait-lamp.tsx
+msgid "Only on this device. Removed when you sign out."
+msgstr ""
+
 #: app/(tabs)/you.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
@@ -1694,6 +1722,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Open Vela on Telegram"
+msgstr ""
+
+#: src/components/portrait-lamp.tsx
+msgid "Opening photos…"
 msgstr ""
 
 #: src/components/family-book.tsx
@@ -1916,6 +1948,10 @@ msgstr ""
 
 #: src/components/calling-number-editor.tsx
 msgid "Remove calling number"
+msgstr ""
+
+#: src/components/portrait-lamp.tsx
+msgid "Remove photo"
 msgstr ""
 
 #: src/components/photo-slots.tsx
@@ -2351,6 +2387,7 @@ msgid "Take this story out of the family book?"
 msgstr ""
 
 #: src/components/chat/chat-link.tsx
+#: src/components/portrait-lamp.tsx
 msgid "Talk with {name}"
 msgstr ""
 
@@ -2588,6 +2625,10 @@ msgstr ""
 msgid "The people nearby could not be reached just now."
 msgstr ""
 
+#: src/components/portrait-lamp.tsx
+msgid "The photo could not be changed. Your previous photo is still here. Try again."
+msgstr ""
+
 #: src/components/photo-reply.tsx
 msgid "The photo you chose"
 msgstr ""
@@ -2758,7 +2799,6 @@ msgid "Today"
 msgstr ""
 
 #: app/(tabs)/_layout.tsx
-#: app/(tabs)/index.tsx
 msgctxt "tab"
 msgid "Today"
 msgstr ""
@@ -3029,6 +3069,10 @@ msgstr ""
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Vietnam"
+msgstr ""
+
+#: src/components/portrait-lamp.tsx
+msgid "View quiet notice"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx

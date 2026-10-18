@@ -1,0 +1,20 @@
+# Assert the parent's readable state. Decorative, aria-hidden SVG nodes are verified by the
+# window rendering test; selecting them through Maestro's web accessibility bridge can stall.
+url: ${APP_URL}
+name: Parent portraits keep answer lights separate from reading
+tags:
+  - demo
+---
+- launchApp
+- assertVisible: 'Talk with Mom'
+- tapOn: 'Dad'
+- assertVisible: 'No word yet today'
+- assertVisible: 'Talk with Dad'
+- tapOn: 'Talk with Dad'
+- assertVisible: 'Dad'
+- tapOn: 'Back'
+- tapOn: 'Mom'
+- tapOn: 'Talk with Mom'
+- assertVisible: 'Mom'
+- tapOn: 'Back'
+- assertVisible: 'answered 8:12'

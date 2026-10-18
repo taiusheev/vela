@@ -86,8 +86,8 @@ export function PrimaryButton({
       onPress={onPress}
       style={({ pressed }) => ({
         backgroundColor: palette.action,
-        opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
-        borderRadius: radius.button,
+        opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
+        borderRadius: 14,
         minHeight: 54,
         paddingVertical: space.m,
         paddingHorizontal: space.l,
@@ -327,8 +327,8 @@ export function SecondaryButton({
         backgroundColor: palette.bg,
         borderColor: palette.control,
         borderWidth: 1,
-        opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
-        borderRadius: radius.button,
+        opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
+        borderRadius: 14,
         minHeight: 54,
         paddingVertical: space.m,
         paddingHorizontal: space.l,
