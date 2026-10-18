@@ -1,5 +1,5 @@
 import { MemberLight } from "@vela/contracts";
-import { addDays, addMinutes, localDateOf } from "@vela/core";
+import { addDays, addMinutes, localDateOf, zonedInstant } from "@vela/core";
 import {
   answers,
   awayPeriods,
@@ -10,11 +10,11 @@ import {
   users,
 } from "@vela/db";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
 import { loadApiLights } from "./api-lights.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
-import { type SeededFamily, seedExchange, seedFamily } from "./testing/seed.ts";
+import { type SeededFamily, seedExchange, seedFamily, seedGroupMember } from "./testing/seed.ts";
 
 let h: Harness;
 let seed: SeededFamily;
@@ -47,6 +47,189 @@ async function lights() {
 }
 
 describe("loadApiLights", () => {
+  it("keeps state precedence and channel availability separate for each parent", async () => {
+    const parents = [seed.member];
+    for (let index = 1; index < 4; index++) {
+      const next = await seedGroupMember(h.db, seed, {
+        now: h.clock.now(),
+        name: `Parent ${index}`,
+        externalId: `state-parent-${index}`,
+      });
+      const [member] = await h.db
+        .update(members)
+        .set({
+          lightOn: true,
+          lightConsentedAt: h.clock.now(),
+          primarySurface: index === 2 ? "parent-surface" : index === 3 ? "line" : "telegram",
+        })
+        .where(eq(members.id, next.member.id))
+        .returning();
+      if (member === undefined) throw new Error("expected parent");
+      parents.push(member);
+      await h.db
+        .update(channelLinks)
+        .set({ blockedAt: h.clock.now() })
+        .where(eq(channelLinks.id, next.link.id));
+    }
+    for (const [index, member] of parents.entries()) {
+      const day = await seedExchange(
+        h.db,
+        { ...seed, member },
+        {
+          date: today(),
+          state: "delivered",
+          answeredAt: index < 2 ? h.clock.now() : null,
+        },
+      );
+      if (index === 0) {
+        await h.db.update(members).set({ status: "paused" }).where(eq(members.id, member.id));
+        await h.db
+          .insert(quietEvents)
+          .values({ exchangeId: day.id, memberId: member.id, openedAt: h.clock.now() });
+      }
+      await h.db.insert(awayPeriods).values({
+        memberId: member.id,
+        fromDate: index < 2 ? today() : addDays(today(), 1),
+        source: "organiser",
+      });
+    }
+    const lineParent = parents[3];
+    if (lineParent === undefined) throw new Error("expected LINE parent");
+    await h.db.insert(channelLinks).values({
+      memberId: lineParent.id,
+      channel: "line",
+      externalId: "line-state-parent",
+      linkedAt: h.clock.now(),
+    });
+    const rows = await lights();
+    expect(rows?.map((row) => [row.member_id, row.state, row.unreachable_on])).toEqual([
+      [parents[0]?.id, "paused", null],
+      [parents[1]?.id, "away", "telegram"],
+      [parents[2]?.id, "resting", null],
+      [parents[3]?.id, "resting", null],
+    ]);
+    expect(rows?.slice(1).every((row) => row.quiet_event_id === null)).toBe(true);
+  });
+
+  it("keeps invited parents visible when there are no living lights to batch", async () => {
+    await h.db
+      .update(members)
+      .set({ status: "deceased", lightOn: false })
+      .where(eq(members.id, seed.member.id));
+    expect(await lights()).toEqual([]);
+    await h.db.insert(members).values({
+      familyId: seed.family.id,
+      role: "member",
+      displayName: "Invited parent",
+      language: "en",
+      tz: "Asia/Taipei",
+      country: "TW",
+      status: "invited",
+      lightOn: false,
+    });
+    expect(await lights()).toEqual([
+      expect.objectContaining({ display_name: "Invited parent", state: "none" }),
+    ]);
+  });
+
+  it("reads four parents' lights without multiplying queries or mixing their answer times", async () => {
+    async function prepare(member: SeededFamily["member"], index: number) {
+      const at = addMinutes(h.clock.now(), -index);
+      const day = await seedExchange(
+        h.db,
+        { ...seed, member },
+        {
+          date: localDateOf(h.clock.now(), member.tz),
+          state: "delivered",
+        },
+      );
+      await h.db.insert(answers).values({
+        exchangeId: day.id,
+        memberId: member.id,
+        kind: "text",
+        channel: "telegram",
+        externalId: `batch-light-${index}`,
+        receivedAt: at,
+      });
+      return { member, at };
+    }
+    const parents = [await prepare(seed.member, 0)];
+    const reads = vi.spyOn(h.db, "select");
+    try {
+      const first = await lights();
+      const singleReads = reads.mock.calls.length;
+      for (const [index, tz] of [
+        "America/Los_Angeles",
+        "Pacific/Kiritimati",
+        "Asia/Ho_Chi_Minh",
+      ].entries()) {
+        const next = await seedGroupMember(h.db, seed, {
+          now: h.clock.now(),
+          name: `Parent ${index}`,
+          externalId: `batch-light-parent-${index}`,
+        });
+        const [member] = await h.db
+          .update(members)
+          .set({
+            tz,
+            lightOn: true,
+            lightConsentedAt: h.clock.now(),
+          })
+          .where(eq(members.id, next.member.id))
+          .returning();
+        if (member === undefined) throw new Error("expected parent");
+        parents.push(await prepare(member, index + 1));
+      }
+      reads.mockClear();
+      const rows = await lights();
+      const familyReads = reads.mock.calls.length;
+      expect(rows).toHaveLength(4);
+      expect(rows?.find((row) => row.member_id === seed.member.id)).toEqual(first?.[0]);
+      for (const { member, at } of parents) {
+        expect(rows?.find((row) => row.member_id === member.id)).toMatchObject({
+          local_date: localDateOf(h.clock.now(), member.tz),
+          state: "lit",
+          answered_at: at.toISOString(),
+        });
+      }
+      expect(familyReads, `single=${singleReads}, four=${familyReads}`).toBe(singleReads);
+    } finally {
+      reads.mockRestore();
+    }
+  });
+
+  it.each(["2026-03-08T18:00:00Z", "2026-11-01T18:00:00Z"])(
+    "uses the full local day across daylight-saving changes at %s",
+    async (instant) => {
+      const now = new Date(instant);
+      const tz = "America/New_York";
+      const date = localDateOf(now, tz);
+      const start = zonedInstant(date, "00:00", tz);
+      const end = zonedInstant(addDays(date, 1), "00:00", tz);
+      await h.db.update(members).set({ tz }).where(eq(members.id, seed.member.id));
+      const day = await seedExchange(h.db, seed, { date, state: "delivered" });
+      async function answer(at: Date, id: number) {
+        await h.db.insert(answers).values({
+          exchangeId: day.id,
+          memberId: seed.member.id,
+          kind: "text",
+          channel: "telegram",
+          externalId: `dst-${id}`,
+          receivedAt: at,
+        });
+      }
+      const read = async () => (await loadApiLights(h.db, identity, seed.family.id, now))?.[0];
+      await answer(end, 1);
+      await answer(new Date(start.getTime() - 1), 2);
+      expect(await read()).toMatchObject({ state: "resting", answered_at: null });
+      const late = new Date(end.getTime() - 1);
+      await answer(late, 3);
+      expect(await read()).toMatchObject({ state: "lit", answered_at: late.toISOString() });
+      await answer(start, 4);
+      expect(await read()).toMatchObject({ state: "lit", answered_at: start.toISOString() });
+    },
+  );
+
   it("rests a kept-light member whose day holds nothing yet, in her own wire shape", async () => {
     const row = (await lights())?.[0];
     expect(MemberLight.parse(row)).toEqual({

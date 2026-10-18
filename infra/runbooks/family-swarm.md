@@ -108,3 +108,31 @@ A disposable PGlite comparison alternated baseline `ebb6c6a` and changed loaders
 See [comparison receipt](../load-tests/today-family-read-comparison.json). No network delay was injected. These are local warm timings and database query counts, not hosted latency or capacity measurements. New mixed-zone tests cover Taipei, Los Angeles, Kiritimati and Vietnam, per-parent tomorrow drafts, wrong-date exclusion and denied cross-family access. Existing Today/Lights/Memories tests cover content, translations, media, read-backs, consent and delivery states.
 
 Hosted correctness check: deployed source `03903f1` to the existing isolated Worker (deployment version `3590a3e3-0f3d-408b-a057-95b0970f722c`) without resetting its cohort. A raw burst of 100 Today reads at twenty concurrent clients passed 100/100 HTTP 200s, with zero retries or family/body mismatches and unchanged 300 deliveries/310 answers/280 replies/180 read-backs. All pending/dead/quiet/repeat/duplicate counts stayed zero. The single-parent hosted fixture verifies compatibility, not the larger-family speed improvement; its observed p95 was 3,184 ms, without a controlled hosted before/after comparison. See [HTTP receipt](../load-tests/today-family-read-hosted.json). The full local PostgreSQL contention suite passed 122/122 in 44 files after this source change.
+
+### Batched family light status
+
+The next regression fixture isolated the remaining per-parent work in `loadApiLights`: one parent required 8 selects and four required 23. The fixture failed on baseline `7eb113a` before the implementation. The reader now fetches away periods, today's mornings, open quiet events, today's received answers and the selected messenger links once for the family's living kept-light members. It selects only the morning/link fields the lights need. Each predicate uses that parent's own local day, with an exclusive next-local-midnight bound for answers, including 23-hour and 25-hour daylight-saving days.
+
+State precedence remains paused, away, answered, quiet, resting. Receipt time still counts an answer even when attached to an older exchange. Phone users ignore blocked messenger links, and messenger users are checked on their selected channel. Deceased members are omitted; invited parents remain visible when the family has no living lights. No schema, response-contract, UI, scheduling or notification rule changes.
+
+A comparison on the same frozen synthetic PGlite data alternated old/new readers over two warm-up pairs and ten measured pairs for each cohort and endpoint. Every complete response hash matched. Counts include `selectDistinctOn`:
+
+| Parents | Today queries before → after | Light queries before → after | Today local warm p95 before → after |
+| ---: | :--- | :--- | :--- |
+| 1 | 24 → 24 | 8 → 8 | 6.06 → 5.83 ms |
+| 4 | 39 → 24 | 23 → 8 | 8.84 → 6.44 ms |
+| 10 | 69 → 24 | 53 → 8 | 15.24 → 8.06 ms |
+
+See [comparison receipt](../load-tests/family-light-read-comparison.json). The count is constant across these populated fixtures; optional query branches still vary with the data. Local warm timings without injected network delay do not establish hosted latency or capacity. Regression tests require fixed query counts on both Lights and Today and cover different parent clocks, answer times, state precedence, selected messenger/phone availability, both daylight-saving transitions, empty/deceased families and invitations. Existing cross-family access tests remain in place.
+
+Hosted follow-up deployed application source `5f9b8f2` to the isolated Worker (`cfe43ff7-dc0a-4598-ad74-aed7dec2ed74`) without resetting the existing cohort. Today passed 100/100 raw requests at twenty clients. The first separate Lights burst recorded 87 HTTP 200s and 13 client network/body exceptions before an HTTP response was recorded. Its failed receipt is preserved. Persisted telemetry covered 89 Lights invocations in that window, all `ok`/200, CPU p95/max 61/177 ms, zero error events; coverage is incomplete and does not establish the cause of the client exceptions. A repeat Lights burst passed 100/100 with no HTTP retries or family/state mismatches. All runs retained the exact cohort totals, including 300 deliveries, 310 answers, 280 replies and 180 read-backs; no pending/dead/duplicate/quiet/repeat work. The repeat does not erase the failed run or prove a reliability target. See [Today receipt](../load-tests/family-light-read-today-hosted.json), [first Lights failure](../load-tests/family-light-read-lights-hosted-failure.json), [partial telemetry](../load-tests/family-light-read-lights-failure-observability.json) and [Lights repeat](../load-tests/family-light-read-lights-hosted.json). Receipts with `workingTreeDirty: true` include the recorded verifier/evidence edits; the deployed application source was unchanged during those checks.
+
+The read-only HTTP verifier now accepts `VELA_SWARM_HTTP_ENDPOINT=today|lights` and a bare JSON filename via `VELA_SWARM_HTTP_RECEIPT`; writes remain inside `infra/load-tests`. Its Lights default uses a separate filename to preserve the earlier CPU receipt. Transport failures include only a sanitized error class and whitelisted cause codes, never raw error messages, URLs, request headers or family content. It retains the isolated account/Worker/CPU-budget guards and performs no automatic retries. Example, with staging credentials loaded privately as in the hosted setup:
+
+```sh
+VELA_SWARM_HTTP_ENDPOINT=lights VELA_SWARM_HTTP_ROUNDS=1 \
+VELA_SWARM_HTTP_RECEIPT=family-light-read-lights-hosted.json \
+node apps/worker/swarm/scripts/http-burst.mjs
+```
+
+Validation after the application change: focused Today/Lights/Memories 62/62, full PostgreSQL contention 122/122 in 44 files, root `pnpm check` 9/9 tasks with 1,549 service tests. The final verifier edits passed repository lint, Node syntax validation and invalid-endpoint/receipt preflights; the new Lights mode passed the recorded hosted repeat. Single-parent hosted checks verify compatibility, not multi-parent latency, native/provider behavior or production capacity.

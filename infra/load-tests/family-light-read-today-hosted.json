@@ -1,0 +1,58 @@
+{
+  "endpoint": "today",
+  "kind": "hosted-read-only-http-bursts",
+  "source": "5f9b8f2b2b869749469a81bdc3779152726122fe",
+  "workingTreeDirty": false,
+  "startedAt": "2026-10-18T06:21:36.724Z",
+  "concurrency": 20,
+  "retries": 0,
+  "configuredCpuMs": 1000,
+  "before": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "requests": 100,
+      "statuses": {
+        "200": 100
+      },
+      "failures": [],
+      "elapsedMs": 15753.130042,
+      "p50Ms": 2562.3459999999995,
+      "p95Ms": 3997.8150829999995
+    }
+  ],
+  "limitations": [
+    "Existing synthetic cohort only; real sessions and messenger delivery remain outside this test.",
+    "No live tail session: inspect persisted observability after testing to retain normal execution conditions."
+  ],
+  "after": {
+    "families": 100,
+    "exchanges": 300,
+    "delivered": 300,
+    "answers": 310,
+    "signed": 140,
+    "replies": 280,
+    "read_back": 180,
+    "pending": 0,
+    "dead": 0,
+    "quiet": 0,
+    "repeats": 0,
+    "duplicates": 0
+  },
+  "unchanged": true,
+  "passed": true,
+  "finishedAt": "2026-10-18T06:21:52.908Z"
+}

@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-10-18T06:23:11.288Z",
+  "kind": "persisted-observability-after-light-read-failure",
+  "sourceWindow": {
+    "from": 1792304487518,
+    "to": 1792304557037
+  },
+  "expectedInvocations": 100,
+  "observedInvocations": 89,
+  "outcomes": {
+    "ok": 89
+  },
+  "statuses": {
+    "200": 89
+  },
+  "cpuTimeMs": {
+    "samples": 89,
+    "p50": 20,
+    "p95": 61,
+    "max": 177
+  },
+  "errorEvents": 0,
+  "errorLabels": [],
+  "completeLogCoverage": false,
+  "allRecordedInvocationsSucceeded": true,
+  "limitations": [
+    "Restricted to the isolated synthetic Worker and recorded burst window.",
+    "No raw requests, headers, family messages or exception messages were saved.",
+    "No live tail session was active during the burst."
+  ]
+}
