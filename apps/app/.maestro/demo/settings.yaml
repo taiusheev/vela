@@ -1,0 +1,20 @@
+url: ${APP_URL}
+name: Parent photo and invitation controls live in Settings inside You
+tags:
+  - demo
+---
+- launchApp
+- assertNotVisible: "Only on this device. Removed when you sign out."
+- tapOn: "You"
+- assertVisible: "Parent photos and links, notifications, language, and account"
+- tapOn: "Settings"
+- tapOn: "Mom’s photo and parent link"
+- assertVisible: "Parent settings"
+- assertVisible: "Add a photo of Mom"
+- assertVisible: "Only on this device. Removed when you sign out."
+- scrollUntilVisible:
+    element: "Send Mom the link again"
+    direction: DOWN
+- assertVisible: "This is an example family. No invitation is created or sent."
+- tapOn: "Back"
+- assertVisible: "Settings"

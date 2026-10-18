@@ -22,3 +22,10 @@ describe("pasting a Telegram connection code", () => {
     expect(connectionCode(long)).toBe(long);
   });
 });
+
+it("never guesses between two different codes or cuts a longer token into one", () => {
+  expect(connectionCode(`First Xy7_kP-2mQ9rT4vW1zA8bC second ${"Z".repeat(22)}`)).not.toBe(
+    "Xy7_kP-2mQ9rT4vW1zA8bC",
+  );
+  expect(connectionCode("Xy7_kP-2mQ9rT4vW1zA8bCextra")).toHaveLength(27);
+});

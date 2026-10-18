@@ -59,7 +59,13 @@ export default function OnboardingScreen() {
   const { locale } = useAppLocale();
   const account = useAccount();
   const queries = useQueryClient();
-  const { noAccount, pushSent } = useToday();
+  const {
+    noAccount,
+    pushSent,
+    loading: familyLoading,
+    trouble: familyTrouble,
+    refresh,
+  } = useToday();
   const capabilities = useCapabilities();
   const [step, setStep] = useState<Step>("who");
   const scroll = useRef<ScrollView>(null);
@@ -184,6 +190,7 @@ export default function OnboardingScreen() {
       <ScrollView
         ref={scroll}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: insets.top + space.xl,
@@ -193,7 +200,22 @@ export default function OnboardingScreen() {
         }}
       >
         {capabilities.capabilities?.telegram_first ? (
-          <TelegramFamilyLink noAccount={noAccount} />
+          familyLoading ? (
+            <Words variant="body" tone="ink2">
+              <Trans>Loading your family…</Trans>
+            </Words>
+          ) : familyTrouble ? (
+            <>
+              <Words variant="body" tone="ink2">
+                <Trans>
+                  Your account could not be loaded. Check your connection and try again.
+                </Trans>
+              </Words>
+              <SecondaryButton label={t`Try again`} onPress={refresh} />
+            </>
+          ) : (
+            <TelegramFamilyLink noAccount={noAccount} />
+          )
         ) : (
           <>
             <Words variant="body" tone="ink2">
@@ -214,6 +236,7 @@ export default function OnboardingScreen() {
       <ScrollView
         ref={scroll}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: insets.top + space.xl,

@@ -446,16 +446,6 @@ function FamilyToday({ day }: { day: TodayView }) {
             <BrandHeader />
             <ScreenHeading title={<Trans>A little light from home.</Trans>} />
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t`Family settings`}
-            onPress={() => router.push("/(tabs)/you")}
-            style={{ minHeight: 44, paddingHorizontal: space.m, justifyContent: "center" }}
-          >
-            <Words variant="button" tone="action">
-              <Trans>Family</Trans>
-            </Words>
-          </Pressable>
         </View>
         {day.updatedAt > 0 ? (
           <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words>

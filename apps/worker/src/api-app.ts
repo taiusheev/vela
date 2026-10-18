@@ -32,6 +32,7 @@ import {
   ApiNearbyContact,
   ApiNearbyInvite,
   ApiNearbyRemoved,
+  ApiParentLink,
   ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
@@ -65,6 +66,7 @@ import {
   type MediaUnavailableReason,
   MemberLight,
   OpenWeeklyRead,
+  ParentLinkRequest,
   PauseMember,
   QuietAction,
   QuietUseful,
@@ -149,6 +151,7 @@ import {
   type setApiAway,
   type setApiMorningPreferences,
   type setUpApiDevice,
+  type shareApiParentLink,
   type startAccountLink,
   type startApiTrial,
   TrialRefusedError,
@@ -208,6 +211,7 @@ export interface ApiWriteServices {
   composeApiAsk: typeof composeApiAsk;
   replyToApiExchange: typeof replyToApiExchange;
   createApiFamily: typeof createApiFamily;
+  shareApiParentLink: typeof shareApiParentLink;
   resolveApiQuiet: typeof resolveApiQuiet;
   pauseApiMember: typeof pauseApiMember;
   setApiMorningPreferences: typeof setApiMorningPreferences;
@@ -1234,6 +1238,27 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
     const familyDeps = writes.families;
     if (familyDeps !== undefined) {
+      app.post(
+        "/v1/families/:familyId/members/:memberId/parent-link",
+        authenticate,
+        validateWrite(ParentLinkRequest, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await writes.services.shareApiParentLink(
+            { db: c.get("db"), clock: writes.clock, ...familyDeps },
+            c.get("session"),
+            c.get("writeKey"),
+            c.req.param("familyId"),
+            c.req.param("memberId"),
+            c.get("writeInput"),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid parent link response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(ApiParentLink.parse(result.response.body), 200);
+        },
+      );
       // No family exists yet, so there is no family middleware: the caller becomes its organiser.
       app.post(
         "/v1/families",
