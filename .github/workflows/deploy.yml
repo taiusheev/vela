@@ -129,6 +129,11 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm --filter @vela/services run test:postgres
+      - name: Require a safe production scheduling window
+        run: pnpm --filter @vela/db exec node scripts/release-window.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VELA_DATABASE_ENVIRONMENT: production
       - name: Apply migrations
         run: pnpm --filter @vela/db migrate
         env:
