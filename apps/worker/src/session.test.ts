@@ -2,6 +2,7 @@ import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   type ClerkSessionOptions,
+  createClerkLinkRequester,
   createClerkSessionActivityChecker,
   createClerkSessionVerifier,
   createClerkUserDeleter,
@@ -573,5 +574,47 @@ describe("createClerkUserDeleter", () => {
     const remove = createClerkUserDeleter({ secretKey, fetch: fetchImpl });
     await expect(remove("../sessions/x")).rejects.toBeInstanceOf(SessionVerificationUnavailable);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("connection request identity", () => {
+  const identity = { authSubject: "user_example", sessionId: "sess_example" };
+  const user = {
+    id: identity.authSubject,
+    primary_email_address_id: "email_primary",
+    email_addresses: [
+      {
+        id: "email_primary",
+        email_address: "mia@example.com",
+        verification: { status: "verified" },
+      },
+    ],
+  };
+  it("uses only the verified primary email and masks its local part", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(Response.json(user));
+    expect(
+      await createClerkLinkRequester({ secretKey: "sk_test_example", fetch: fetchImpl })(identity),
+    ).toBe("m•••@example.com");
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+  it.each([
+    { ...user, id: "user_other" },
+    { ...user, primary_email_address_id: null },
+    {
+      ...user,
+      email_addresses: [{ ...user.email_addresses[0], verification: { status: "unverified" } }],
+    },
+    {
+      ...user,
+      email_addresses: [{ ...user.email_addresses[0], email_address: "injected\n@example.com" }],
+    },
+    { ...user, email_addresses: [] },
+  ])("refuses a different account or unverified/malformed identity", async (value) => {
+    await expect(
+      createClerkLinkRequester({
+        secretKey: "sk_test_example",
+        fetch: vi.fn<typeof fetch>().mockResolvedValue(Response.json(value)),
+      })(identity),
+    ).rejects.toBeInstanceOf(SessionVerificationUnavailable);
   });
 });

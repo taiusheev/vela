@@ -3,6 +3,7 @@ import {
   ApiLinkChallenge,
   ApiLinkCode,
   ApiLinkOutcome,
+  ApiLinkStatus,
   type ApiMutationResponse,
   InboundEvent,
 } from "@vela/contracts";
@@ -173,14 +174,29 @@ export async function startAccountLink(
   deps: Pick<Deps, "db" | "clock">,
   identity: SessionIdentity,
   key: string,
+  approval?: { requesterLabel: string },
 ): Promise<{ response: ApiMutationResponse; replayed: boolean }> {
   validateIdentity(identity, key);
+  if (
+    approval !== undefined &&
+    (!approval.requesterLabel.trim() ||
+      approval.requesterLabel.length > 200 ||
+      /[\p{C}]/u.test(approval.requesterLabel))
+  )
+    throw new ApiIdempotencyError("invalid");
   const sessionHash = await sha256Hex(identity.sessionId);
   let ownerId: string | undefined;
   return runApiMutation(
     deps,
     identity,
-    { key, operation: "account.link.start:v1", input: { session_hash: sessionHash } },
+    {
+      key,
+      operation: "account.link.start:v1",
+      input: {
+        session_hash: sessionHash,
+        ...(approval === undefined ? {} : { confirmation: "telegram" }),
+      },
+    },
     {
       authorize: async (tx) => {
         ownerId = (await lockOwner(tx, identity.authSubject)).id;
@@ -204,6 +220,8 @@ export async function startAccountLink(
           .values({
             userId: ownerId,
             sessionHash,
+            approvalRequested: approval !== undefined,
+            requesterLabel: approval?.requesterLabel ?? null,
             createdAt: at,
             expiresAt: new Date(at.getTime() + lifetime),
           })
@@ -214,6 +232,9 @@ export async function startAccountLink(
           body: ApiLinkChallenge.parse({
             challenge_id: proof.id,
             expires_at: proof.expiresAt.toISOString(),
+            ...(proof.approvalRequested
+              ? { confirmation: "telegram", requester_label: proof.requesterLabel ?? "" }
+              : {}),
           }),
         };
       },
@@ -285,6 +306,7 @@ export async function issueAccountLinkCode(
         channelLinkId: link.id,
         channelIdentityHash,
         codeHash,
+        approvedAt: null,
       })
       .where(eq(accountLinkChallenges.id, proof.id));
     return { code, expires_at: proof.expiresAt.toISOString() };
@@ -296,11 +318,11 @@ export async function completeAccountLink(
   identity: SessionIdentity,
   key: string,
   id: string,
-  code: string,
+  code: string | undefined,
 ): Promise<{ response: ApiMutationResponse; replayed: boolean }> {
   validateIdentity(identity, key);
   const normalizedId = challengeId(id);
-  if (!ApiLinkCode.safeParse(code).success || /[^A-Za-z0-9_-]/.test(code)) {
+  if (code !== undefined && (!ApiLinkCode.safeParse(code).success || /[^A-Za-z0-9_-]/.test(code))) {
     throw new ApiIdempotencyError("invalid");
   }
   const sessionHash = await sha256Hex(identity.sessionId);
@@ -325,8 +347,12 @@ export async function completeAccountLink(
     identity,
     {
       key,
-      operation: "account.link.complete:v1",
-      input: { challenge_id: normalizedId, session_hash: sessionHash, code },
+      operation: code === undefined ? "account.link.confirm:v1" : "account.link.complete:v1",
+      input: {
+        challenge_id: normalizedId,
+        session_hash: sessionHash,
+        ...(code === undefined ? {} : { code }),
+      },
       familyId: scope.familyId,
       memberId: scope.memberId,
     },
@@ -375,8 +401,12 @@ export async function completeAccountLink(
         if (proof.completedAt !== null) return outcome(member);
         const at = now(deps);
         if (!pending(proof, at)) return outcome();
-        const suppliedHash = await sha256Hex(JSON.stringify([proof.id, code]));
+        if (code === undefined && (!proof.approvalRequested || proof.approvedAt === null))
+          return outcome();
+        const suppliedHash =
+          code === undefined ? proof.codeHash : await sha256Hex(JSON.stringify([proof.id, code]));
         if (
+          suppliedHash === null ||
           !equalDigest(suppliedHash, proof.codeHash ?? "0".repeat(64)) ||
           proof.codeHash === null
         ) {
@@ -483,6 +513,11 @@ export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): P
     }
     try {
       const proof = await issueAccountLinkCode({ ...deps, db: tx }, id, event);
+      const [request] = await tx
+        .select()
+        .from(accountLinkChallenges)
+        .where(eq(accountLinkChallenges.id, id));
+      const modern = request?.approvalRequested === true;
       await enqueueOutbound(deps, tx, {
         kind: "system",
         idempotencyKey: key,
@@ -490,7 +525,21 @@ export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): P
         channel: "telegram",
         conversationId: event.conversation.externalId,
         lang,
-        text: t(lang, "account_link.code", { code: proof.code }),
+        text: modern
+          ? t(lang, "account_link.confirm", {
+              account: request.requesterLabel ?? "",
+              reference: id.slice(-6).toUpperCase(),
+              code: proof.code,
+            })
+          : t(lang, "account_link.code", { code: proof.code }),
+        ...(modern
+          ? {
+              buttons: [
+                [{ id: `la:${id}:${proof.code}`, label: t(lang, "account_link.approve") }],
+                [{ id: `lr:${id}:${proof.code}`, label: t(lang, "account_link.refuse") }],
+              ],
+            }
+          : {}),
       });
     } catch (error) {
       if (!(error instanceof ApiIdempotencyError) && !(error instanceof VelaError)) throw error;
@@ -504,5 +553,163 @@ export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): P
         text: t(lang, "account_link.unavailable"),
       });
     }
+  });
+}
+
+/** Private status belongs to the initiating account AND session, never to the URL alone. */
+export async function loadAccountLinkStatus(
+  deps: Pick<Deps, "db" | "clock"> & { pilotAdmission?: PilotAdmission | null },
+  identity: SessionIdentity,
+  id: string,
+): Promise<ApiLinkStatus> {
+  validateIdentity(identity, "link.status");
+  const normalizedId = challengeId(id);
+  const sessionHash = await sha256Hex(identity.sessionId);
+  return deps.db.transaction(async (tx) => {
+    await lockApiActor(tx, await sha256Hex(identity.authSubject));
+    const owner = await lockOwner(tx, identity.authSubject);
+    const proof = await lockChallenge(tx, normalizedId, owner.id, sessionHash);
+    const expires_at = proof.expiresAt.toISOString();
+    if (proof.invalidatedAt !== null) return { state: "cancelled", expires_at };
+    if (proof.completedAt === null && !pending(proof, now(deps)))
+      return { state: "expired", expires_at };
+    if (proof.completedAt === null && proof.approvedAt === null)
+      return { state: "waiting", expires_at };
+    if (proof.memberId === null || proof.channelLinkId === null) denied();
+    const { member, link } = await lockTarget(tx, proof.memberId, proof.channelLinkId);
+    if (
+      member.familyId !== proof.familyId ||
+      (member.userId !== null && member.userId !== owner.id) ||
+      (await sha256Hex(link.externalId)) !== proof.channelIdentityHash
+    )
+      denied();
+    const [family] = await tx.select().from(families).where(eq(families.id, member.familyId));
+    if (
+      family === undefined ||
+      (deps.pilotAdmission != null &&
+        (member.language !== "en" ||
+          family.language !== "en" ||
+          !pilotAllowsTelegram(deps.pilotAdmission, link.externalId)))
+    )
+      denied();
+    if (proof.completedAt !== null && member.userId !== owner.id) denied();
+    return ApiLinkStatus.parse({
+      state: proof.completedAt === null ? "approved" : "completed",
+      expires_at,
+      family_id: family.id,
+      member_id: member.id,
+      family_name: family.name,
+      member_name: member.displayName,
+    });
+  });
+}
+
+export async function cancelAccountLink(
+  deps: Pick<Deps, "db" | "clock">,
+  identity: SessionIdentity,
+  key: string,
+  id: string,
+) {
+  validateIdentity(identity, key);
+  const normalizedId = challengeId(id);
+  const sessionHash = await sha256Hex(identity.sessionId);
+  let proof: Challenge | undefined;
+  return runApiMutation(
+    deps,
+    identity,
+    {
+      key,
+      operation: "account.link.cancel:v1",
+      input: { challenge_id: normalizedId, session_hash: sessionHash },
+    },
+    {
+      authorize: async (tx) => {
+        const owner = await lockOwner(tx, identity.authSubject);
+        proof = await lockChallenge(tx, normalizedId, owner.id, sessionHash);
+      },
+      mutate: async (tx) => {
+        if (proof === undefined) denied();
+        // A late cancellation cannot undo an already committed attachment.
+        if (proof.completedAt !== null) conflict();
+        if (proof.invalidatedAt === null)
+          await tx
+            .update(accountLinkChallenges)
+            .set({ invalidatedAt: now(deps), codeHash: null })
+            .where(eq(accountLinkChallenges.id, proof.id));
+        return { status: 200, body: { cancelled: true } };
+      },
+    },
+  );
+}
+
+/** The existing private fallback proof is also a one-time opaque callback nonce (62 bytes). */
+export async function handleAccountLinkButton(deps: Deps, event: InboundEvent): Promise<void> {
+  if (
+    !InboundEvent.safeParse(event).success ||
+    event.channel !== "telegram" ||
+    event.kind !== "button" ||
+    event.conversation.kind !== "private" ||
+    event.sender.externalUserId !== event.conversation.externalId
+  )
+    return;
+  const match = /^l([ar]):([0-9a-f-]{36}):([A-Za-z0-9_-]{22})$/.exec(event.buttonData ?? "");
+  if (match === null || !uuid.safeParse(match[2]).success) return;
+  const [, choice, id, code] = match;
+  if (id === undefined || code === undefined) return;
+  const [candidate] = await deps.db
+    .select({ userId: users.id, authSubject: users.authSubject })
+    .from(accountLinkChallenges)
+    .innerJoin(users, eq(users.id, accountLinkChallenges.userId))
+    .where(eq(accountLinkChallenges.id, id));
+  if (candidate?.authSubject == null) return;
+  const authSubject = candidate.authSubject;
+  await deps.db.transaction(async (tx) => {
+    await lockApiActor(tx, await sha256Hex(authSubject));
+    const owner = await lockOwner(tx, authSubject);
+    const proof = await lockChallenge(tx, id, owner.id);
+    if (
+      !proof.approvalRequested ||
+      !pending(proof, now(deps)) ||
+      proof.memberId === null ||
+      proof.channelLinkId === null ||
+      proof.codeHash === null
+    )
+      return;
+    if (!equalDigest(await sha256Hex(JSON.stringify([id, code])), proof.codeHash)) return;
+    const { member, link } = await lockTarget(tx, proof.memberId, proof.channelLinkId);
+    if (
+      link.externalId !== event.sender.externalUserId ||
+      member.familyId !== proof.familyId ||
+      (await sha256Hex(link.externalId)) !== proof.channelIdentityHash ||
+      (member.userId !== null && member.userId !== owner.id)
+    )
+      return;
+    if (choice === "a" && !pilotAllowsTelegram(deps.config.pilotAdmission, link.externalId)) return;
+    const at = now(deps);
+    if (!pending(proof, at)) return;
+    const lang = deps.config.pilotAdmission == null ? member.language : "en";
+    if (choice === "r")
+      await tx
+        .update(accountLinkChallenges)
+        .set({ invalidatedAt: at, codeHash: null })
+        .where(eq(accountLinkChallenges.id, proof.id));
+    else if (proof.approvedAt === null)
+      await tx
+        .update(accountLinkChallenges)
+        .set({ approvedAt: at })
+        .where(eq(accountLinkChallenges.id, proof.id));
+    // A webhook retry reuses this durable response. No callback token is written into events/logs.
+    await enqueueOutbound(deps, tx, {
+      kind: "system",
+      memberId: member.id,
+      channel: "telegram",
+      conversationId: event.conversation.externalId,
+      lang,
+      idempotencyKey: outboundKey("system", {
+        conversationId: event.conversation.externalId,
+        suffix: `account_link_choice:${id}:${event.eventId}`,
+      }),
+      text: t(lang, choice === "a" ? "account_link.approved" : "account_link.cancelled"),
+    });
   });
 }

@@ -16,7 +16,7 @@ import { space } from "../theme/tokens.ts";
 import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
 
 /**
- * Story day (spec §10, A10) on the Sunday tab: a story question from Vela's bank, never one already
+ * Story day (spec §10, A10) on the Questions tab: a story question from Vela's bank, never one already
  * kept in the book, which a member of the family chooses for her coming Sunday — "Another question"
  * offers the next — and a way into the family book. Her answer is kept in the book unless she says
  * not to. The question is the family's choice, never Vela's own (spec: Vela authors nothing but the

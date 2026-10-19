@@ -15,12 +15,14 @@ import type {
   ApiExchangeSummary,
   ApiFamily,
   ApiLeft,
+  ApiLinkStatus,
   ApiLookInAsk,
   ApiMe,
   ApiMemberPause,
   ApiNearbyContact,
   ApiNearbyInvite,
   ApiNearbyRemoved,
+  ApiParentConnection,
   ApiParentLink,
   ApiPrecision,
   ApiPushDevice,
@@ -158,9 +160,16 @@ export interface LinkChallenge {
   challenge_id: string;
   telegram_url: string;
   expires_at: string;
+  confirmation?: "telegram";
+  requester_label?: string;
 }
 export function startTelegramLink(key: string, token: string | null): Promise<LinkChallenge> {
-  return call<LinkChallenge>({ path: "/v1/me/link", token, key, body: {} });
+  return call<LinkChallenge>({
+    path: "/v1/me/link",
+    token,
+    key,
+    body: { confirmation: "telegram" },
+  });
 }
 export function completeTelegramLink(
   input: { challenge_id: string; code: string },
@@ -641,4 +650,34 @@ export function prepareParentLink(
     key,
     body: {},
   });
+}
+
+export function fetchTelegramLinkStatus(
+  id: string,
+  token: string | null,
+  signal?: AbortSignal,
+): Promise<ApiLinkStatus> {
+  return call({ path: `/v1/me/link/${encodeURIComponent(id)}`, token, signal });
+}
+export function confirmTelegramLink(
+  id: string,
+  key: string,
+  token: string | null,
+): Promise<{ linked: false } | { linked: true; family_id: string; member_id: string }> {
+  return call({ path: "/v1/me/link/confirm", token, key, body: { challenge_id: id } });
+}
+export function cancelTelegramLink(
+  id: string,
+  key: string,
+  token: string | null,
+): Promise<{ cancelled: true }> {
+  return call({ path: "/v1/me/link/cancel", token, key, body: { challenge_id: id } });
+}
+export function fetchParentConnection(
+  familyId: string,
+  memberId: string,
+  token: string | null,
+  signal?: AbortSignal,
+): Promise<ApiParentConnection> {
+  return call({ path: `/v1/families/${familyId}/members/${memberId}/connection`, token, signal });
 }

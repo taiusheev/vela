@@ -29,6 +29,7 @@ import {
   admissionWithRoster,
   askApiToLookIn,
   authorizeFamilyAccess,
+  cancelAccountLink,
   completeAccountLink,
   composeApiAsk,
   createApiFamily,
@@ -40,6 +41,7 @@ import {
   inviteApiNearby,
   type Logger,
   leaveApiFamily,
+  loadAccountLinkStatus,
   loadApiBook,
   loadApiExchange,
   loadApiExchanges,
@@ -48,6 +50,7 @@ import {
   loadApiLights,
   loadApiMe,
   loadApiMorningPreferences,
+  loadApiParentConnection,
   loadApiPrecision,
   loadApiQuiet,
   loadApiReminders,
@@ -92,6 +95,7 @@ import { createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { createRandom } from "./random.ts";
 import {
+  createClerkLinkRequester,
   createClerkSessionActivityChecker,
   createClerkSessionVerifier,
   createClerkUserDeleter,
@@ -359,6 +363,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
           },
         }),
     push: config.pushSend === "expo",
+    parentConnection: loadApiParentConnection,
     verifySession: createClerkSessionVerifier({
       issuer: config.issuer,
       authorizedParties: [],
@@ -386,6 +391,9 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
             links: {
               start: startAccountLink,
               complete: completeAccountLink,
+              status: loadAccountLinkStatus,
+              cancel: cancelAccountLink,
+              requesterLabel: createClerkLinkRequester({ secretKey }),
               telegramBotUsername: config.telegramBotUsername,
             },
             verifyActiveSession: limitWrites(

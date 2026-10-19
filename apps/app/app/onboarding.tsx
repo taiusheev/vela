@@ -40,6 +40,8 @@ function SignedIn() {
 }
 
 function TelegramFirst({ waiting }: { waiting: boolean }) {
+  const account = useAccount();
+  const connectionScope = `${account.userId}:${account.sessionId ?? ""}`;
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
@@ -81,8 +83,8 @@ function TelegramFirst({ waiting }: { waiting: boolean }) {
         <Card>
           <Words variant="body">
             <Trans>
-              This test connects your existing Telegram family. The setup preview stays on this
-              phone and does not replace your family’s settings.
+              Your family stays together when you update Vela. Connect your own Telegram account to
+              find it; your parent uses their own invitation.
             </Trans>
           </Words>
           {!noAccount && !noFamily ? (
@@ -94,7 +96,7 @@ function TelegramFirst({ waiting }: { waiting: boolean }) {
               }}
             />
           ) : (
-            <TelegramFamilyLink noAccount={noAccount} />
+            <TelegramFamilyLink key={connectionScope} noAccount={noAccount} />
           )}
         </Card>
       )}

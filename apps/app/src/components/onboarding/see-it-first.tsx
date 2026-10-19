@@ -1,4 +1,6 @@
 import { useLingui } from "@lingui/react/macro";
+import { useQueryClient } from "@tanstack/react-query";
+import type { ApiMe } from "@vela/contracts";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { apiConfigured } from "../../api/client.ts";
@@ -34,6 +36,9 @@ export function SeeItFirst() {
   const { t, i18n } = useLingui();
   const draft = useOnboardingDraft();
   const account = useAccount();
+  const queries = useQueryClient();
+  const alreadyAccepted =
+    account.signedIn && queries.getQueryData<ApiMe>(["me"])?.privacy_accepted === true;
   const needsAccount = apiConfigured() && accountsConfigured() && !account.signedIn;
   const relationship = relationships.find((choice) => choice.value === draft.relationship);
   const name = nameFor(draft, relationship === undefined ? t`them` : i18n._(relationship.label));
@@ -59,7 +64,7 @@ export function SeeItFirst() {
         draft={draft}
         name={name}
         onSave={() => {
-          updateDraft({ step: "save" });
+          updateDraft({ step: "save", ...(alreadyAccepted ? { privacyAccepted: true } : {}) });
           if (draft.privacyAccepted && needsAccount) router.push("/sign-in");
         }}
       />

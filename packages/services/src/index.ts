@@ -9,10 +9,13 @@
  * here: it lives behind `@vela/services/testing`, so production code cannot reach it.
  */
 export {
+  cancelAccountLink,
   completeAccountLink,
+  handleAccountLinkButton,
   handleAccountLinkStart,
   isAccountLinkStart,
   issueAccountLinkCode,
+  loadAccountLinkStatus,
   startAccountLink,
 } from "./account-linking.ts";
 export {
@@ -117,7 +120,7 @@ export {
 export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
 export { loadApiMorningPreferences, setApiMorningPreferences } from "./api-morning-preferences.ts";
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
-export { shareApiParentLink } from "./api-parent-link.ts";
+export { loadApiParentConnection, shareApiParentLink } from "./api-parent-link.ts";
 export {
   loadApiPrecision,
   loadPublicPrecision,

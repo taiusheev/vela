@@ -13,7 +13,7 @@ tags:
 - assertVisible: "Add a photo of Mom"
 - assertVisible: "Only on this device. Removed when you sign out."
 - scrollUntilVisible:
-    element: "Send Mom the link again"
+    element: "An invitation for Mom"
     direction: DOWN
 - assertVisible: "This is an example family. No invitation is created or sent."
 - tapOn: "Back"

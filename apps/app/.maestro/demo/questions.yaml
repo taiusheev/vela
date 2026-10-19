@@ -1,0 +1,16 @@
+url: ${APP_URL}
+name: Questions targets the chosen parent and keeps reports on Sunday
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/questions
+- assertVisible: "Questions"
+- assertVisible: "Write a question for Mom"
+- tapOn: "Dad"
+- assertVisible: "Write a question for Dad"
+- tapOn: "Write a question for Dad"
+- assertVisible: "What are you sending?"
+- openLink: ${APP_URL}/sunday
+- assertVisible: "You and Mom"
+- assertNotVisible: "Write your own question"

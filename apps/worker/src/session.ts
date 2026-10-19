@@ -290,3 +290,60 @@ export function createClerkUserDeleter(options: ClerkSessionActivityOptions): Cl
     }
   };
 }
+
+/** The connection prompt uses Clerk's verified primary email, never an editable display name. */
+export function createClerkLinkRequester(options: ClerkSessionActivityOptions) {
+  const { secretKey } = options;
+  if (!nonblank(secretKey) || secretKey.length > 4096 || /[^!-~]/.test(secretKey))
+    throw new Error("Invalid session activity configuration");
+  const fetchImpl = options.fetch ?? fetch;
+  return async (identity: SessionIdentity): Promise<string> => {
+    if (!nonblank(identity.authSubject) || identity.authSubject.length > 200)
+      throw new SessionVerificationUnavailable();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5_000);
+    try {
+      const response = await fetchImpl(
+        `https://api.clerk.com/v1/users/${encodeURIComponent(identity.authSubject)}`,
+        {
+          headers: { Authorization: `Bearer ${secretKey}`, Accept: "application/json" },
+          signal: controller.signal,
+          redirect: "error",
+        },
+      );
+      if (!response.ok) throw new SessionVerificationUnavailable();
+      const value = await readActivityBody(response);
+      if (
+        typeof value !== "object" ||
+        value === null ||
+        !("id" in value) ||
+        value.id !== identity.authSubject ||
+        !("primary_email_address_id" in value) ||
+        !("email_addresses" in value) ||
+        !Array.isArray(value.email_addresses)
+      )
+        throw new SessionVerificationUnavailable();
+      for (const address of value.email_addresses) {
+        if (
+          typeof address !== "object" ||
+          address === null ||
+          address.id !== value.primary_email_address_id ||
+          address.verification?.status !== "verified" ||
+          typeof address.email_address !== "string" ||
+          address.email_address.length > 254 ||
+          !/^[^\s@\p{C}]+@[^\s@\p{C}]+$/u.test(address.email_address)
+        )
+          continue;
+        const [local, domain] = address.email_address.split("@");
+        if (local === undefined || domain === undefined) continue;
+        return `${Array.from(local)[0]}•••@${domain}`;
+      }
+      throw new SessionVerificationUnavailable();
+    } catch {
+      throw new SessionVerificationUnavailable();
+    } finally {
+      clearTimeout(timer);
+      controller.abort();
+    }
+  };
+}

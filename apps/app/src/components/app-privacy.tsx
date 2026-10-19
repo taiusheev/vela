@@ -1,19 +1,20 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { APP_PRIVACY_TEXT, appPrivacyAcceptance } from "@vela/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  APP_PRIVACY_TEXT,
+  APP_PRIVACY_VERSION,
+  type ApiMe,
+  appPrivacyAcceptance,
+} from "@vela/contracts";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Linking, Modal, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, apiBaseUrl, apiConfigured, fetchMe, provisionAccount } from "../api/client.ts";
 import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL } from "../api/support.ts";
 import { useAccount } from "../auth/clerk.tsx";
-import {
-  readDraft,
-  updateDraft,
-  updateDraftForRun,
-  useOnboardingDraft,
-} from "../data/onboarding-draft.ts";
+import { privacyGateDecision } from "../data/app-privacy-gate.ts";
+import { readDraft, updateDraft, useOnboardingDraft } from "../data/onboarding-draft.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
 import { LegalLinks } from "./legal-links.tsx";
@@ -34,6 +35,7 @@ export function AppPrivacy({
   const { t } = useLingui();
   const palette = usePalette();
   const [linkFailed, setLinkFailed] = useState(false);
+  const [details, setDetails] = useState(false);
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
@@ -48,19 +50,37 @@ export function AppPrivacy({
       <Words variant="title">
         <Trans>Before you continue</Trans>
       </Words>
-      <Card>
-        <Words selectable>{APP_PRIVACY_TEXT}</Words>
-      </Card>
-      <LegalLinks />
-      {linkFailed ? <Words selectable>{SUPPORT_EMAIL}</Words> : null}
+      <Words variant="body" tone="ink2">
+        <Trans>
+          Vela saves the family information you choose to share. OpenAI and Deepgram process
+          messages and voice notes in the United States to help with questions and weekly reads.
+          OpenAI may keep processing logs for up to 30 days. The founder can read exchanges to run
+          this private test. Your parent makes their own separate choices.
+        </Trans>
+      </Words>
       <SecondaryButton
-        label={t`Read the privacy notice`}
-        onPress={() => {
-          void Linking.openURL(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`).catch(() =>
-            setLinkFailed(true),
-          );
-        }}
+        label={details ? t`Hide privacy details` : t`Privacy details and terms`}
+        onPress={() => setDetails((value) => !value)}
       />
+      {details ? (
+        <>
+          <Card>
+            <Words selectable>{APP_PRIVACY_TEXT}</Words>
+          </Card>
+          <LegalLinks />
+        </>
+      ) : null}
+      {linkFailed ? <Words selectable>{SUPPORT_EMAIL}</Words> : null}
+      {details ? (
+        <SecondaryButton
+          label={t`Read the privacy notice`}
+          onPress={() => {
+            void Linking.openURL(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`).catch(() =>
+              setLinkFailed(true),
+            );
+          }}
+        />
+      ) : null}
       {failed ? (
         <Words>
           <Trans>Your choice could not be saved. Please try again.</Trans>
@@ -76,13 +96,25 @@ export function AppPrivacy({
   );
 }
 
-/** Ask existing signed-in testers for the current app permission; keep navigation mounted. */
+/** Server permission is authoritative; onboarding's explicit choice is saved without asking again. */
 export function AppPrivacyGate({ children }: { children: ReactNode }) {
   const account = useAccount();
+  const scope = `${account.userId}:${account.sessionId ?? ""}`;
+  return <ScopedPrivacyGate key={scope}>{children}</ScopedPrivacyGate>;
+}
+
+function ScopedPrivacyGate({ children }: { children: ReactNode }) {
+  const account = useAccount();
+  const { t } = useLingui();
   const draft = useOnboardingDraft();
   const queries = useQueryClient();
-  const [working, setWorking] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const enabled = apiConfigured() && account.ready && account.signedIn;
   const me = useQuery({
     queryKey: ["me"],
@@ -90,63 +122,76 @@ export function AppPrivacyGate({ children }: { children: ReactNode }) {
     enabled,
     retry: false,
   });
-  if (!enabled) return children;
-  // New accounts collect a name at onboarding; the same versioned permission travels with provisioning.
-  const newAccount = me.error instanceof ApiError && me.error.status === 404;
-  if (newAccount && draft.privacyAccepted) return children;
-  if (me.data?.privacy_accepted === true) return children;
-  const accept = async () => {
-    if (newAccount) {
-      acceptLocalPrivacy();
-      return;
-    }
-    if (working || !me.data) return;
-    const run = draft.run;
-    setWorking(true);
-    setFailed(false);
-    try {
-      await provisionAccount(
+  const missing = me.error instanceof ApiError && me.error.status === 404;
+  const decision = privacyGateDecision({
+    enabled,
+    accepted: me.data?.privacy_accepted,
+    loading: me.isPending,
+    missing,
+    failed: me.isError,
+    localAccepted: draft.privacyAccepted,
+  });
+  const save = useMutation({
+    mutationFn: async () => {
+      if (me.data === undefined) throw new Error("No current account");
+      return provisionAccount(
         {
           display_name: me.data.user.display_name,
           language: me.data.user.language,
           tz: me.data.user.tz,
           privacy_acceptance: appPrivacyAcceptance(),
         },
-        `privacy:${me.data.user.id}:v1`,
+        `privacy:${me.data.user.id}:${APP_PRIVACY_VERSION}`,
         await account.token(),
       );
-      updateDraftForRun(run, { privacyAccepted: true });
-      await queries.invalidateQueries({ queryKey: ["me"] });
-    } catch {
-      setFailed(true);
-    } finally {
-      setWorking(false);
-    }
+    },
+    onSuccess: (user) => {
+      if (!mounted.current) return;
+      queries.setQueryData<ApiMe>(["me"], (current) =>
+        current?.user.id === user.id ? { ...current, privacy_accepted: true } : current,
+      );
+      void queries.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+  const saveChoice = save.mutate;
+  useEffect(() => {
+    if (decision === "save" && save.status === "idle") saveChoice();
+  }, [decision, save.status, saveChoice]);
+  if (decision === "pass") return children;
+  const decline = () => {
+    updateDraft({ privacyAccepted: false });
+    void account.signOut();
   };
   return (
     <>
       {children}
-      <Modal
-        visible
-        onRequestClose={() => {
-          void account.signOut();
-        }}
-      >
-        <AppPrivacy
-          working={working || me.isPending}
-          failed={failed || (me.isError && !newAccount)}
-          onAccept={() => {
-            if (me.isError && !newAccount) {
-              void me.refetch();
-              return;
-            }
-            void accept();
-          }}
-          onDecline={() => {
-            updateDraft({ privacyAccepted: false });
-            void account.signOut();
-          }}
-        />
+      <Modal visible onRequestClose={decline}>
+        {decision === "ask" ? (
+          <AppPrivacy onAccept={acceptLocalPrivacy} onDecline={decline} />
+        ) : (
+          <ScrollView
+            contentContainerStyle={{ padding: space.margin, paddingTop: space.huge, gap: space.l }}
+          >
+            <Words variant="body" tone="ink2">
+              {decision === "loading" ? (
+                <Trans>Loading your account…</Trans>
+              ) : decision === "unavailable" ? (
+                <Trans>
+                  Your account could not be reached. Your privacy choice has not changed.
+                </Trans>
+              ) : save.isError ? (
+                <Trans>Your choice could not be saved. Please try again.</Trans>
+              ) : (
+                <Trans>Saving your choice…</Trans>
+              )}
+            </Words>
+            {decision === "unavailable" ? (
+              <SecondaryButton label={t`Try again`} onPress={() => void me.refetch()} />
+            ) : save.isError ? (
+              <SecondaryButton label={t`Try again`} onPress={() => save.mutate()} />
+            ) : null}
+          </ScrollView>
+        )}
       </Modal>
     </>
   );

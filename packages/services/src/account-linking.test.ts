@@ -14,9 +14,12 @@ import { eq, sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  cancelAccountLink,
   completeAccountLink,
+  handleAccountLinkButton,
   handleAccountLinkStart,
   issueAccountLinkCode,
+  loadAccountLinkStatus,
   startAccountLink,
 } from "./account-linking.ts";
 import type { SessionIdentity } from "./api-access.ts";
@@ -684,5 +687,170 @@ describe("account linking boundaries and atomicity", () => {
       await h.db.execute(sql`drop function pg_temp.fail_account_link_event()`);
     }
     expect((await complete(proof.id, proof.code)).response.body).toMatchObject({ linked: true });
+  });
+});
+
+describe("explicit Telegram approval", () => {
+  async function request() {
+    const started = ApiLinkChallenge.parse(
+      (
+        await startAccountLink(h.deps, identity, "modern-start", {
+          requesterLabel: "m•••@example.com",
+        })
+      ).response.body,
+    );
+    const inbound = { ...event(), startParam: `link_${started.challenge_id}` };
+    await handleAccountLinkStart(h.deps, inbound);
+    const [message] = await h.db.select().from(outbound);
+    const payload = (
+      message?.payload as { message?: { text?: string; buttons?: { id: string }[][] } } | null
+    )?.message;
+    const yes = payload?.buttons?.[0]?.[0]?.id;
+    const no = payload?.buttons?.[1]?.[0]?.id;
+    if (yes === undefined || no === undefined) throw new Error("Missing approval buttons");
+    expect(yes.length).toBeLessThanOrEqual(64);
+    expect(payload?.text).toContain("m•••@example.com");
+    expect(payload?.text).toContain(started.challenge_id.slice(-6).toUpperCase());
+    return { ...started, yes, no };
+  }
+  const button = (buttonData: string, externalId = seed.memberLink.externalId): InboundEvent => ({
+    ...event(externalId),
+    kind: "button",
+    buttonData,
+    callbackId: "private-callback",
+  });
+  const status = (id: string, actor = identity) => loadAccountLinkStatus(h.deps, actor, id);
+  const attached = async () =>
+    (await h.db.select().from(members).where(eq(members.id, seed.member.id)))[0]?.userId;
+
+  it("does not attach on start, status read or Telegram approval; only app confirmation attaches once", async () => {
+    const proof = await request();
+    expect(await status(proof.challenge_id)).toMatchObject({ state: "waiting" });
+    expect(await attached()).toBeNull();
+    expect(
+      await completeAccountLink(h.deps, identity, "too-early", proof.challenge_id, undefined),
+    ).toMatchObject({ response: noLink });
+    await handleAccountLinkButton(h.deps, button(proof.yes));
+    const ready = await status(proof.challenge_id);
+    expect(ready).toMatchObject({
+      state: "approved",
+      family_id: seed.family.id,
+      member_id: seed.member.id,
+    });
+    expect(JSON.stringify(ready)).not.toContain(proof.yes.split(":")[2]);
+    expect(await attached()).toBeNull();
+    const result = await completeAccountLink(
+      h.deps,
+      identity,
+      "confirmed",
+      proof.challenge_id,
+      undefined,
+    );
+    expect(result.response.body).toMatchObject({ linked: true });
+    expect(await attached()).toBe(userId);
+    expect(await status(proof.challenge_id)).toMatchObject({ state: "completed" });
+    expect(
+      (await completeAccountLink(h.deps, identity, "confirmed", proof.challenge_id, undefined))
+        .replayed,
+    ).toBe(true);
+    expect(await h.db.select().from(events).where(eq(events.name, "account_linked"))).toHaveLength(
+      1,
+    );
+  });
+  it("does not expose or consume approval from another account or another session", async () => {
+    const proof = await request();
+    await handleAccountLinkButton(h.deps, button(proof.yes));
+    for (const actor of [other, { ...identity, sessionId: "other-session" }]) {
+      await expect(status(proof.challenge_id, actor)).rejects.toMatchObject(denied);
+      await expect(
+        completeAccountLink(h.deps, actor, "stolen-confirm", proof.challenge_id, undefined),
+      ).rejects.toMatchObject(denied);
+      await expect(
+        cancelAccountLink(h.deps, actor, "stolen-cancel", proof.challenge_id),
+      ).rejects.toMatchObject(denied);
+    }
+    expect(await attached()).toBeNull();
+  });
+  it("rejects a forwarded callback, tampered nonce, group callback and wrong channel", async () => {
+    const proof = await request();
+    for (const inbound of [
+      button(proof.yes, "somebody-else"),
+      button(proof.yes.slice(0, -1) + (proof.yes.endsWith("A") ? "B" : "A")),
+      {
+        ...button(proof.yes),
+        conversation: { externalId: seed.memberLink.externalId, kind: "group" as const },
+      },
+      { ...button(proof.yes), channel: "line" as const },
+    ])
+      await handleAccountLinkButton(h.deps, inbound);
+    expect(await status(proof.challenge_id)).toMatchObject({ state: "waiting" });
+    expect(await attached()).toBeNull();
+  });
+  it("revokes an unconsumed grant on Telegram refusal or app cancellation", async () => {
+    const proof = await request();
+    await handleAccountLinkButton(h.deps, button(proof.yes));
+    await handleAccountLinkButton(h.deps, button(proof.no));
+    expect(await status(proof.challenge_id)).toMatchObject({ state: "cancelled" });
+    expect(
+      (await completeAccountLink(h.deps, identity, "refused", proof.challenge_id, undefined))
+        .response,
+    ).toEqual(noLink);
+    expect(await attached()).toBeNull();
+    const next = await start("next");
+    await cancelAccountLink(h.deps, identity, "cancel", next.challenge_id);
+    expect(await status(next.challenge_id)).toMatchObject({ state: "cancelled" });
+  });
+  it("invalidates an old grant on a new start and cannot approve after expiry", async () => {
+    const proof = await request();
+    await handleAccountLinkButton(h.deps, button(proof.yes));
+    await start("replacement");
+    expect(await status(proof.challenge_id)).toMatchObject({ state: "cancelled" });
+    await handleAccountLinkButton(h.deps, button(proof.yes));
+    expect(await attached()).toBeNull();
+    const next = ApiLinkChallenge.parse(
+      (await startAccountLink(h.deps, identity, "expiring", { requesterLabel: "m•••@example.com" }))
+        .response.body,
+    );
+    const issued = await issueAccountLinkCode(h.deps, next.challenge_id, event());
+    h.clock.advance(15 * 60 * 1000);
+    await handleAccountLinkButton(h.deps, button(`la:${next.challenge_id}:${issued.code}`));
+    expect(await status(next.challenge_id)).toMatchObject({ state: "expired" });
+    expect(
+      (await completeAccountLink(h.deps, identity, "expired", next.challenge_id, undefined))
+        .response,
+    ).toEqual(noLink);
+  });
+  it("keeps manual fallback working and does not undo a completed link on late cancel", async () => {
+    const proof = await request();
+    const code = proof.yes.split(":")[2];
+    if (code === undefined) throw new Error("Missing fallback");
+    expect((await complete(proof.challenge_id, code)).response.body).toMatchObject({
+      linked: true,
+    });
+    await expect(
+      cancelAccountLink(h.deps, identity, "late", proof.challenge_id),
+    ).rejects.toMatchObject(conflict);
+    await handleAccountLinkButton(h.deps, button(proof.no));
+    expect(await attached()).toBe(userId);
+  });
+  it("rechecks admission and family deletion after Telegram approval", async () => {
+    const proof = await request();
+    await handleAccountLinkButton(h.deps, button(proof.yes));
+    const restricted = { ...h.deps, pilotAdmission: { telegramUserIds: [] } };
+    await expect(
+      loadAccountLinkStatus(restricted, identity, proof.challenge_id),
+    ).rejects.toMatchObject(denied);
+    await expect(
+      completeAccountLink(restricted, identity, "revoked", proof.challenge_id, undefined),
+    ).rejects.toMatchObject(denied);
+    await h.db
+      .update(families)
+      .set({ deletedAt: h.clock.now() })
+      .where(eq(families.id, seed.family.id));
+    await expect(status(proof.challenge_id)).rejects.toMatchObject(denied);
+    await expect(
+      completeAccountLink(h.deps, identity, "deleted", proof.challenge_id, undefined),
+    ).rejects.toMatchObject(denied);
+    expect(await attached()).toBeNull();
   });
 });

@@ -1,9 +1,9 @@
 import { ApiCreatedFamily, ApiParentLink } from "@vela/contracts";
-import { channelLinks, consents, families, invites, members, users } from "@vela/db";
+import { channelLinks, consents, events, families, invites, members, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createApiFamily } from "./api-families.ts";
-import { shareApiParentLink } from "./api-parent-link.ts";
+import { loadApiParentConnection, shareApiParentLink } from "./api-parent-link.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 
 let h: Harness;
@@ -140,5 +140,64 @@ describe("re-sharing a parent link", () => {
     await expect(share("invalid", actor, created.family.id, "wrong")).rejects.toMatchObject({
       code: "invalid",
     });
+  });
+});
+
+describe("parent invitation status", () => {
+  const status = (who = actor, family = created.family.id, parent = created.kept_light_member.id) =>
+    loadApiParentConnection(h.deps, who, family, parent);
+  it("separates an unopened invite, opened chat, actual consent, pause and blocked delivery", async () => {
+    expect(await status()).toEqual({ state: "waiting" });
+    await h.db.insert(channelLinks).values({
+      memberId: created.kept_light_member.id,
+      channel: "telegram",
+      externalId: "parent-test",
+    });
+    await h.db
+      .update(members)
+      .set({ primarySurface: "telegram" })
+      .where(eq(members.id, created.kept_light_member.id));
+    expect(await status()).toEqual({ state: "opened" });
+    await h.db
+      .update(members)
+      .set({ status: "active", lightOn: true })
+      .where(eq(members.id, created.kept_light_member.id));
+    expect(await status()).toEqual({ state: "connected" });
+    await h.db
+      .update(members)
+      .set({ status: "paused" })
+      .where(eq(members.id, created.kept_light_member.id));
+    expect(await status()).toEqual({ state: "paused" });
+    await h.db
+      .update(channelLinks)
+      .set({ blockedAt: h.clock.now() })
+      .where(eq(channelLinks.memberId, created.kept_light_member.id));
+    expect(await status()).toEqual({ state: "unavailable" });
+  });
+  it("can report the recorded decline after the invitee was deleted, without retaining their profile", async () => {
+    await h.db.insert(events).values({
+      name: "consent_declined",
+      familyId: created.family.id,
+      memberId: created.kept_light_member.id,
+      surface: "telegram",
+    });
+    await h.db.delete(members).where(eq(members.id, created.kept_light_member.id));
+    expect(await status()).toEqual({ state: "declined" });
+    expect(await status(actor, created.family.id, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")).toEqual({
+      state: "unavailable",
+    });
+  });
+  it("requires an organiser of this exact live family", async () => {
+    await expect(status({ authSubject: "stranger", sessionId: "s2" })).rejects.toMatchObject({
+      code: "not_found",
+    });
+    await expect(status(actor, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")).rejects.toMatchObject({
+      code: "not_found",
+    });
+    await h.db
+      .update(members)
+      .set({ role: "member" })
+      .where(eq(members.id, created.organiser_member_id));
+    await expect(status()).rejects.toMatchObject({ code: "not_found" });
   });
 });

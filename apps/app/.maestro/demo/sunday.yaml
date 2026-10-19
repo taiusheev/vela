@@ -1,22 +1,15 @@
-# Sunday in the demo (A9): this week's windows, the weekly read's count lines, the founder's notes
-# and the suggestion, and a way to ask her something. One row of lights only (17 October 2026).
+# Sunday is for the week's windows and reports; question planning lives on Questions.
 url: ${APP_URL}
-name: Sunday shows her week, its counts, the notes and a suggestion
+name: Sunday shows her week and reports without question planning
 tags:
   - demo
 ---
 - launchApp
-- tapOn: "Sunday"
+- openLink: ${APP_URL}/sunday
 - assertVisible: "Mom's week"
 - assertVisible: "You and Mom"
 - assertVisible: "Mom answered 6 of 7 days."
 - assertVisible: "On 1 morning nobody in the family asked, so Vela sent Mom a hello."
-- assertVisible: "Something to ask next week"
-# Today stays mounted behind a tab it opened, its own "Ask Mom something" stacked under this one,
-# so the button is walked on Sunday opened by itself.
-- openLink: ${APP_URL}/sunday
-- scrollUntilVisible:
-    element: "Ask Mom something"
-    direction: DOWN
-- tapOn: "Ask Mom something"
-- assertVisible: "What are you sending?"
+- assertNotVisible: "Something to ask next week"
+- assertNotVisible: "Write your own question"
+- assertNotVisible: "Ask Mom something"

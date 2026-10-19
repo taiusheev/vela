@@ -86,6 +86,7 @@ function FamilyYou({ day }: { day: TodayView }) {
   const account = useAccount();
   const { capabilities, pilot, englishOnly } = useCapabilities();
   const [linkFailed, setLinkFailed] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const openLink = async (url: string) => {
     setLinkFailed(false);
     try {
@@ -456,20 +457,49 @@ function FamilyYou({ day }: { day: TodayView }) {
 
         <Card>
           <Eyebrow>
-            <Trans>Privacy and help</Trans>
+            <Trans>Help and settings</Trans>
           </Eyebrow>
-          <Words variant="body" tone="ink2">
-            <Trans>
-              Your parent can ask “what does the family see” in their own Telegram chat. Health-word
-              sharing is their separate choice, and saying stop pauses their light.
-            </Trans>
-          </Words>
           <FamilyAction
-            icon="privacy"
-            title={t`Read the privacy notice`}
-            onPress={() => void openLink(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`)}
+            icon="mail"
+            title={t`Get help or request your data`}
+            onPress={() => router.push("/help")}
           />
-          <LegalLinks />
+          <SecondaryButton
+            label={privacyOpen ? t`Hide privacy details` : t`Privacy details and terms`}
+            onPress={() => setPrivacyOpen((value) => !value)}
+          />
+          {privacyOpen ? (
+            <View style={{ gap: space.m }}>
+              <Words variant="body" tone="ink2">
+                <Trans>
+                  Your parent can ask “what does the family see” in their own Telegram chat.
+                  Health-word sharing is their separate choice, and saying stop pauses their light.
+                </Trans>
+              </Words>
+              <FamilyAction
+                icon="privacy"
+                title={t`Read the privacy notice`}
+                onPress={() => void openLink(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`)}
+              />
+              <LegalLinks />
+              <Words variant="caption" selectable>
+                {SUPPORT_EMAIL}
+              </Words>
+              <Words variant="caption" tone="ink2">
+                <Trans>
+                  Ask the founder for access, correction, deletion, or to withdraw consent. Never
+                  include private family content in a support message.
+                </Trans>
+              </Words>
+              {linkFailed ? (
+                <Words variant="body" tone="ink2">
+                  <Trans>
+                    That link could not open. Use the address above to contact the founder.
+                  </Trans>
+                </Words>
+              ) : null}
+            </View>
+          ) : null}
           <SecondaryButton
             label={t`Preview family setup`}
             onPress={() => {
@@ -477,25 +507,6 @@ function FamilyYou({ day }: { day: TodayView }) {
               router.push("/onboarding?preview=1");
             }}
           />
-          <FamilyAction
-            icon="mail"
-            title={t`Get help or request your data`}
-            onPress={() => router.push("/help")}
-          />
-          <Words variant="caption" selectable>
-            {SUPPORT_EMAIL}
-          </Words>
-          <Words variant="caption" tone="ink2">
-            <Trans>
-              Ask the founder for access, correction, deletion, or to withdraw consent. Never
-              include private family content in a support message.
-            </Trans>
-          </Words>
-          {linkFailed ? (
-            <Words variant="body" tone="ink2">
-              <Trans>That link could not open. Use the address above to contact the founder.</Trans>
-            </Words>
-          ) : null}
         </Card>
 
         {/* A kept light pauses and stops in her own chat, where her mornings arrive (spec §9). */}

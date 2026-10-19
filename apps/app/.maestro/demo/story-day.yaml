@@ -6,7 +6,7 @@ tags:
   - demo
 ---
 - launchApp
-- openLink: ${APP_URL}/sunday
+- openLink: ${APP_URL}/questions
 - scrollUntilVisible:
     element: "Tell me about a day from when you were little that you still remember clearly. I'd love to hear it."
     direction: DOWN

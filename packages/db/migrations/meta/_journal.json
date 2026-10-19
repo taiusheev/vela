@@ -134,6 +134,13 @@
       "when": 1792387427993,
       "tag": "0018_app_privacy_acceptance",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792395319888,
+      "tag": "0019_telegram_confirmation",
+      "breakpoints": true
     }
   ]
 }

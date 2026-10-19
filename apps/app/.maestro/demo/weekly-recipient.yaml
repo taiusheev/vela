@@ -1,5 +1,5 @@
 url: ${APP_URL}
-name: Sunday and the story question stay with the selected parent
+name: Reports and questions each stay with the selected parent
 tags:
   - demo
 ---
@@ -8,6 +8,8 @@ tags:
 - assertVisible: "Mom answered 6 of 7 days."
 - tapOn: "Dad"
 - assertNotVisible: "Mom answered 6 of 7 days."
+- openLink: ${APP_URL}/questions
+- tapOn: "Dad"
 - scrollUntilVisible:
     element: "Write your own question"
     direction: DOWN

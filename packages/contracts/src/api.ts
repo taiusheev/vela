@@ -73,6 +73,8 @@ export const ApiLinkChallenge = z.object({
   challenge_id: z.uuid(),
   expires_at: z.iso.datetime({ offset: true }),
   telegram_url: z.url().optional(),
+  confirmation: z.literal("telegram").optional(),
+  requester_label: z.string().max(200).optional(),
 });
 export type ApiLinkChallenge = z.infer<typeof ApiLinkChallenge>;
 
@@ -82,7 +84,23 @@ export const ApiLinkCode = z
   .regex(/^[A-Za-z0-9_-]+$/);
 export type ApiLinkCode = z.infer<typeof ApiLinkCode>;
 
-export const ApiLinkStartInput = z.strictObject({});
+export const ApiLinkStartInput = z.strictObject({ confirmation: z.literal("telegram").optional() });
+export const ApiLinkRequestInput = z.strictObject({ challenge_id: z.uuid() });
+export const ApiLinkStatus = z.discriminatedUnion("state", [
+  z.strictObject({
+    state: z.enum(["waiting", "expired", "cancelled"]),
+    expires_at: z.iso.datetime({ offset: true }),
+  }),
+  z.strictObject({
+    state: z.enum(["approved", "completed"]),
+    expires_at: z.iso.datetime({ offset: true }),
+    family_id: z.uuid(),
+    member_id: z.uuid(),
+    family_name: z.string(),
+    member_name: z.string(),
+  }),
+]);
+export type ApiLinkStatus = z.infer<typeof ApiLinkStatus>;
 export type ApiLinkStartInput = z.infer<typeof ApiLinkStartInput>;
 export const ApiLinkCompleteInput = z.strictObject({ challenge_id: z.uuid(), code: ApiLinkCode });
 export type ApiLinkCompleteInput = z.infer<typeof ApiLinkCompleteInput>;
