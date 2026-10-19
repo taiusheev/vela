@@ -19,8 +19,8 @@ function TabIcon({
   return (
     <View
       style={{
-        width: 56,
-        height: 32,
+        width: 48,
+        height: 28,
         borderRadius: 12,
         borderTopColor: palette.action,
         alignItems: "center",
@@ -34,14 +34,16 @@ function TabIcon({
 }
 
 /**
- * Today · Memories · Sunday · You, and no badge counts anywhere (spec §14.1 A6). The chat with a
+ * Today · Memories · Questions (+) · Sunday · You, and no badge counts anywhere (spec §14.1 A6). The chat with a
  * parent opens from Today, as a messenger opens a conversation; Memories keeps her words and the
  * family book (consumer flow, apps/app/docs/consumer-flow.md).
  */
 export default function TabsLayout() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width } = useWindowDimensions();
+  const barHeight = 68 + Math.max(0, fontScale - 1) * 24;
+  const barBottom = Math.max(insets.bottom, space.m);
   const { t } = useLingui();
   return (
     <Tabs
@@ -50,13 +52,23 @@ export default function TabsLayout() {
         tabBarActiveTintColor: palette.action,
         tabBarInactiveTintColor: palette.ink3,
         tabBarStyle: {
-          backgroundColor: palette.bg,
+          position: "absolute",
+          left: Math.max(space.m, (width - 560) / 2),
+          right: Math.max(space.m, (width - 560) / 2),
+          bottom: barBottom,
+          backgroundColor: palette.surface,
+          borderColor: palette.rule,
+          borderWidth: 1,
           borderTopColor: palette.rule,
-          height: 76 + Math.max(0, fontScale - 1) * 24 + insets.bottom,
-          paddingTop: space.s,
-          paddingBottom: insets.bottom + space.m,
+          borderTopWidth: 1,
+          borderRadius: 32,
+          height: barHeight,
+          paddingTop: 6,
+          paddingBottom: 6,
         },
-        tabBarLabelStyle: { fontFamily: type.label.fontFamily, fontSize: 12 },
+        sceneStyle: { backgroundColor: palette.bg, paddingBottom: barHeight + barBottom + space.m },
+        tabBarIconStyle: { width: 48, height: 28, marginBottom: 2 },
+        tabBarLabelStyle: { fontFamily: type.label.fontFamily, fontSize: 11, lineHeight: 14 },
       }}
     >
       <Tabs.Screen
@@ -74,6 +86,29 @@ export default function TabsLayout() {
           title: t({ context: "tab", message: "Memories" }),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="book" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="questions"
+        options={{
+          title: t`Questions`,
+          tabBarLabel: () => null,
+          tabBarAccessibilityLabel: t`Questions — add a question`,
+          tabBarButtonTestID: "questions-tab",
+          tabBarIcon: () => (
+            <View
+              style={{
+                width: 44,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: palette.action,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <BrandIcon name="plus" color={palette.onAction} size={25} />
+            </View>
           ),
         }}
       />

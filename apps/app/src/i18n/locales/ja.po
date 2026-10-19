@@ -141,10 +141,6 @@ msgstr ""
 msgid "{name} · {day} · {asker} asked"
 msgstr ""
 
-#: src/components/parent-link-settings.tsx
-msgid "{name} already has a chat with Vela. This link opens that chat without registering again."
-msgstr ""
-
 #: app/vela-light.tsx
 msgid "{name} answered. For 30 days, Vela Light is on for free, so you can see what it does before you decide."
 msgstr ""
@@ -161,6 +157,10 @@ msgstr ""
 msgid "{name} can't today."
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+msgid "{name} chose “Not now”."
+msgstr ""
+
 #: src/components/calling-number-editor.tsx
 msgid "{name} gave permission to save this number"
 msgstr ""
@@ -175,6 +175,10 @@ msgstr ""
 
 #: app/conversation.tsx
 msgid "{name} has not said yes yet. What you write waits for their first morning."
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "{name} has paused their mornings."
 msgstr ""
 
 #: src/components/story-day.tsx
@@ -219,6 +223,10 @@ msgstr ""
 
 #: src/data/quiet.ts
 msgid "{name} last answered yesterday at 8:41."
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "{name} opened the invitation."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -433,6 +441,10 @@ msgstr ""
 msgid "$79 a year"
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+msgid "A connection is not a delivered morning message or a reply."
+msgstr ""
+
 #: app/(tabs)/index.tsx
 msgid "A hello for {recipient}"
 msgstr ""
@@ -447,6 +459,10 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "A little light from home."
+msgstr ""
+
+#: app/(tabs)/questions.tsx
+msgid "A little something to ask. Write your own, choose an idea, or plan a story for Sunday."
 msgstr ""
 
 #: src/components/service-status.tsx
@@ -602,10 +618,6 @@ msgstr ""
 msgid "Already set up"
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Already set up with Vela?"
-msgstr ""
-
 #: app/vela-light.tsx
 msgid "Always free"
 msgstr ""
@@ -616,6 +628,10 @@ msgstr ""
 
 #: src/components/onboarding/story.tsx
 msgid "An example mother at her kitchen table with tea"
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "An invitation for {name}"
 msgstr ""
 
 #: src/data/ask.ts
@@ -683,7 +699,6 @@ msgstr ""
 msgid "Ask {name} how {what} went"
 msgstr ""
 
-#: app/(tabs)/sunday.tsx
 #: app/ask.tsx
 msgid "Ask {name} something"
 msgstr ""
@@ -784,10 +799,6 @@ msgstr ""
 msgid "Both of you, but only Mia listened about the butter."
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Bring your family together"
-msgstr ""
-
 #: src/data/onboarding.ts
 msgid "Brisbane"
 msgstr ""
@@ -818,6 +829,10 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Cancel connection"
+msgstr ""
+
 #. a time zone
 #. a time zone
 #: src/data/onboarding.ts
@@ -845,6 +860,11 @@ msgstr ""
 msgid "Check again"
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+#: src/components/telegram-family-link.tsx
+msgid "Check connection again"
+msgstr ""
+
 #: app/help.tsx
 msgid "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
 msgstr ""
@@ -855,6 +875,10 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Check your inbox"
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "Checking the family connection…"
 msgstr ""
 
 #: src/components/service-status.tsx
@@ -959,12 +983,25 @@ msgstr ""
 msgid "Confirm removal"
 msgstr ""
 
+#: app/(tabs)/questions.tsx
 #: src/components/telegram-family-link.tsx
-msgid "Connect existing family"
+msgid "Connect my family"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Connect my Telegram"
+msgstr ""
+
+#: app/(tabs)/questions.tsx
+msgid "Connect your family before adding a question."
 msgstr ""
 
 #: app/settings.tsx
 msgid "Connect your Telegram family"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Connected Telegram account: {linkedMemberName}"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -973,6 +1010,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Connection code"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Connection reference: {connectionReference}"
 msgstr ""
 
 #: src/components/quiet-notice.tsx
@@ -1153,6 +1194,10 @@ msgstr ""
 msgid "Family book"
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+msgid "Family connection"
+msgstr ""
+
 #: src/components/onboarding/story.tsx
 msgid "Far from you, Mom’s day is beginning."
 msgstr ""
@@ -1169,10 +1214,6 @@ msgstr ""
 msgid "Films, TV & books"
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Finish connecting"
-msgstr ""
-
 #: src/components/onboarding/questions.tsx
 msgid "First morning · {time}"
 msgstr ""
@@ -1183,6 +1224,10 @@ msgstr ""
 
 #: src/components/service-status.tsx
 msgid "For a particular morning message, check Today or your parent's chat."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "For another device: paste the full code or the whole private Telegram message. It expires after 15 minutes."
 msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
@@ -1211,6 +1256,10 @@ msgstr ""
 
 #: app/away.tsx
 msgid "From"
+msgstr ""
+
+#: app/(tabs)/questions.tsx
+msgid "From {fromName} · Saved for their morning"
 msgstr ""
 
 #: src/data/onboarding.ts
@@ -1308,6 +1357,10 @@ msgstr ""
 msgid "Help"
 msgstr ""
 
+#: app/settings.tsx
+msgid "Help and settings"
+msgstr ""
+
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -1363,6 +1416,11 @@ msgstr ""
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 msgstr ""
 
+#: app/settings.tsx
+#: src/components/app-privacy.tsx
+msgid "Hide privacy details"
+msgstr ""
+
 #: src/components/test-sign-in-details.tsx
 msgid "Hide test sign-in details"
 msgstr ""
@@ -1412,10 +1470,6 @@ msgstr ""
 msgid "I already have an account"
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "I have my connection code"
-msgstr ""
-
 #: src/components/onboarding/finish.tsx
 msgid "I have sent it"
 msgstr ""
@@ -1456,6 +1510,10 @@ msgstr ""
 msgid "If she doesn’t answer, you know the same day."
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "If Telegram cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
+msgstr ""
+
 #: src/components/onboarding/finish.tsx
 msgid "If the link doesn’t open for {name}, ask {name} to add you as a contact, then tap it again."
 msgstr ""
@@ -1477,7 +1535,7 @@ msgid "In none of them was something wrong."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "In your own Vela chat, tap Start and copy the connection code. Return here to finish. Keep this code private."
+msgid "In your own Vela chat, check the account and connection reference, then tap Connect my family. Return here to finish. No code to copy."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -1613,6 +1671,14 @@ msgstr ""
 msgid "Leaving…"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Let’s find your family."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Let’s try a fresh connection."
+msgstr ""
+
 #: src/components/onboarding/finish.tsx
 msgid "LINE isn’t open here yet, so this invitation opens Telegram."
 msgstr ""
@@ -1665,10 +1731,15 @@ msgstr ""
 msgid "Loading voice…"
 msgstr ""
 
+#: src/components/app-privacy.tsx
+msgid "Loading your account…"
+msgstr ""
+
 #: app/conversation.tsx
 msgid "Loading your conversation…"
 msgstr ""
 
+#: app/(tabs)/questions.tsx
 #: app/(tabs)/you.tsx
 #: app/away.tsx
 #: app/nearby.tsx
@@ -1754,6 +1825,10 @@ msgstr ""
 msgid "Morning language"
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+msgid "Morning messages are off. Give them time; another invitation will still need their own agreement."
+msgstr ""
+
 #: app/morning-settings.tsx
 msgid "Morning settings"
 msgstr ""
@@ -1822,10 +1897,6 @@ msgstr ""
 
 #: src/auth/phone.ts
 msgid "Netherlands"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "New family? Contact the founder to join the free English pilot. Joining as a relative? Join your approved family group first."
 msgstr ""
 
 #: src/auth/phone.ts
@@ -2015,6 +2086,10 @@ msgstr ""
 msgid "Once, gently, with something you can do. Never an alarm."
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "One confirmation, and you’re home."
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "One email, one code, no password. Then {savingFor}’s invitation is ready to send."
 msgstr ""
@@ -2041,14 +2116,26 @@ msgstr ""
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Only confirm a request you just started from your own Vela app."
+msgstr ""
+
 #: src/components/parent-photo-settings.tsx
 msgid "Only on this device. Removed when you sign out."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Open my family"
 msgstr ""
 
 #: app/settings.tsx
 #: src/components/onboarding/finish.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Open Telegram again"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -2060,23 +2147,23 @@ msgid "Open Today to see it."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Open Vela on Telegram"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "Open your own Telegram chat"
+msgid "Open your own Vela chat and confirm it’s you. Your family and messages stay together."
 msgstr ""
 
 #: src/components/parent-photo-settings.tsx
 msgid "Opening photos…"
 msgstr ""
 
-#: src/components/family-book.tsx
-msgid "Opening the book…"
+#: src/components/parent-link-settings.tsx
+msgid "Opening sharing…"
 msgstr ""
 
-#: src/components/parent-link-settings.tsx
-msgid "Opening the share sheet does not confirm delivery. Choose your parent and send it there."
+#: src/components/telegram-family-link.tsx
+msgid "Opening Telegram…"
+msgstr ""
+
+#: src/components/family-book.tsx
+msgid "Opening the book…"
 msgstr ""
 
 #: src/components/vote-options.tsx
@@ -2114,10 +2201,6 @@ msgstr ""
 msgid "Pacific"
 msgstr ""
 
-#: src/components/parent-link-settings.tsx
-msgid "Parent link"
-msgstr ""
-
 #: src/components/parent-photo-settings.tsx
 msgid "Parent photo"
 msgstr ""
@@ -2128,14 +2211,6 @@ msgstr ""
 
 #: app/parent-settings.tsx
 msgid "Parent settings"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "Paste the full code or the whole message from Vela. It contains 22 characters."
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "Paste your connection code"
 msgstr ""
 
 #: app/settings.tsx
@@ -2242,16 +2317,8 @@ msgstr ""
 msgid "Places & travel"
 msgstr ""
 
-#: src/components/parent-link-settings.tsx
-msgid "Prepare parent link"
-msgstr ""
-
-#: src/components/parent-link-settings.tsx
-msgid "Preparing link…"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "Preparing…"
+#: app/(tabs)/questions.tsx
+msgid "Planned for tomorrow"
 msgstr ""
 
 #: app/settings.tsx
@@ -2263,11 +2330,21 @@ msgid "Preview settings"
 msgstr ""
 
 #: app/settings.tsx
-msgid "Privacy and help"
+#: src/components/app-privacy.tsx
+msgid "Privacy details and terms"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
+msgstr ""
+
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/questions.tsx
+msgid "Questions"
+msgstr ""
+
+#: app/(tabs)/_layout.tsx
+msgid "Questions — add a question"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
@@ -2293,7 +2370,6 @@ msgstr ""
 
 #: app/settings.tsx
 #: src/components/app-privacy.tsx
-#: src/components/setup-help.tsx
 msgid "Read the privacy notice"
 msgstr ""
 
@@ -2333,10 +2409,6 @@ msgstr ""
 #: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Recording… {time}"
-msgstr ""
-
-#: src/components/parent-link-settings.tsx
-msgid "Refresh link"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -2467,6 +2539,10 @@ msgstr ""
 msgid "Saving"
 msgstr ""
 
+#: src/components/app-privacy.tsx
+msgid "Saving your choice…"
+msgstr ""
+
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/morning-settings.tsx
@@ -2538,8 +2614,8 @@ msgstr ""
 msgid "Send {name} the invitation."
 msgstr ""
 
-#: src/components/parent-link-settings.tsx
-msgid "Send {name} the link again"
+#: src/components/telegram-family-link.tsx
+msgid "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -2568,6 +2644,10 @@ msgstr ""
 
 #: src/components/photo-reply.tsx
 msgid "Send photo"
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "Send their invitation"
 msgstr ""
 
 #: app/ask.tsx
@@ -2619,6 +2699,10 @@ msgstr ""
 msgid "Set this up for my family"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Set up a new family in Telegram"
+msgstr ""
+
 #: src/components/set-up-phone.tsx
 msgid "Set up this phone for {name}"
 msgstr ""
@@ -2640,8 +2724,24 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Setup finished — connect my family"
+msgstr ""
+
 #: src/components/parent-link-settings.tsx
-msgid "Share link"
+msgid "Share invitation again"
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "Share one personal link in your usual chat. Your parent decides in Telegram or LINE and does not need to register in the app."
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "Share their chat link"
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -2776,7 +2876,7 @@ msgstr ""
 msgid "Something for her morning"
 msgstr ""
 
-#: app/(tabs)/sunday.tsx
+#: app/(tabs)/questions.tsx
 msgid "Something to ask next week"
 msgstr ""
 
@@ -2798,6 +2898,10 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Start with one question in your own words. Choose a morning that suits them."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Start your family in Telegram."
 msgstr ""
 
 #: app/vela-light.tsx
@@ -2885,7 +2989,11 @@ msgid "tapped an answer"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Telegram could not open. Copy this link into Telegram or your browser."
+msgid "Telegram confirmed"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Telegram didn’t open."
 msgstr ""
 
 #: src/auth/phone.ts
@@ -2912,10 +3020,6 @@ msgstr ""
 msgid "That change did not go through. Try again."
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "That code did not connect a family. Use the code from the Telegram account that belongs to your approved pilot family."
-msgstr ""
-
 #: app/sign-in.tsx
 msgid "That code did not work. Check it or resend the code below."
 msgstr ""
@@ -2929,7 +3033,7 @@ msgid "That code was right, but this account needs more than that to finish."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "That connection did not go through. Check the code and Telegram account, then try again."
+msgid "That confirmation is no longer valid. Try a fresh connection using your own Telegram account."
 msgstr ""
 
 #: app/conversation.tsx
@@ -3069,6 +3173,10 @@ msgstr ""
 msgid "The Chens"
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+msgid "The connection status could not be checked. This does not mean your parent has disconnected."
+msgstr ""
+
 #: app/vela-light.tsx
 msgid "The daily ask, the exchanges, turns, translation, story day, everyone in the family."
 msgstr ""
@@ -3204,6 +3312,10 @@ msgstr ""
 msgid "The weekly read starts once she has said yes and had a week of mornings."
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+msgid "Their chat is still connected, and morning messages are paused. They can say start in that chat when they want to resume."
+msgstr ""
+
 #: src/components/nearby-editor.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Their name"
@@ -3216,6 +3328,14 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "There’s no one nearby yet"
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "They joined in their own chat. Share a shortcut whenever they need to find Vela again; no new registration."
+msgstr ""
+
+#: src/components/parent-link-settings.tsx
+msgid "They still need to choose whether to join. Opening the link does not give consent."
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -3231,23 +3351,15 @@ msgid "This cannot be undone."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "This connection expired. Create a new one and use its new code."
+msgid "This connection expired or was cancelled. Your family is unchanged."
 msgstr ""
 
 #: src/components/parent-link-settings.tsx
-msgid "This device could not open sharing. Select and copy the link above, then send it to your parent."
+msgid "This connection needs attention."
 msgstr ""
 
 #: app/conversation.tsx
 msgid "This draft could not be saved on this phone. Keep this screen open and try again."
-msgstr ""
-
-#: src/components/parent-link-settings.tsx
-msgid "This invitation has expired. Refresh the link before sharing it."
-msgstr ""
-
-#: src/components/parent-link-settings.tsx
-msgid "This invitation is for {name}. Sharing it does not turn on their light; they decide in their own chat."
 msgstr ""
 
 #: app/ask.tsx
@@ -3274,6 +3386,10 @@ msgstr ""
 #: app/exchange/[id].tsx
 #: src/components/today-heart.tsx
 msgid "This is your own morning; replies are for the family."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "This isn’t my family"
 msgstr ""
 
 #: src/data/useExchanges.ts
@@ -3314,10 +3430,6 @@ msgstr ""
 
 #: src/components/photo-slots.tsx
 msgid "This photo could not be used. Choose another."
-msgstr ""
-
-#: app/onboarding.tsx
-msgid "This test connects your existing Telegram family. The setup preview stays on this phone and does not replace your family’s settings."
 msgstr ""
 
 #: src/audio/VoicePlayback.tsx
@@ -3424,6 +3536,7 @@ msgstr ""
 
 #: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
+#: app/(tabs)/questions.tsx
 #: app/(tabs)/sunday.tsx
 #: app/away.tsx
 #: app/conversation.tsx
@@ -3434,12 +3547,16 @@ msgstr ""
 #: app/precision.tsx
 #: app/settings.tsx
 #: app/vela-light.tsx
+#: src/components/app-privacy.tsx
 #: src/components/family-book.tsx
 #: src/components/nearby-editor.tsx
 #: src/components/onboarding/finish.tsx
-#: src/components/parent-link-settings.tsx
 #: src/components/photo-slots.tsx
 msgid "Try again"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Try opening Telegram again"
 msgstr ""
 
 #: app/settings.tsx
@@ -3509,6 +3626,10 @@ msgstr ""
 msgid "Uploading {percent}%"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Use a connection code instead"
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "Use a different email"
 msgstr ""
@@ -3523,11 +3644,12 @@ msgid "Use this"
 msgstr ""
 
 #: app/(tabs)/index.tsx
+#: app/(tabs)/questions.tsx
 msgid "Use this suggestion"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Use your own Telegram account, the one in your family. Your parent uses their own chat and does not need to register here."
+msgid "Use your own Telegram account. Your parent joins from the invitation you send them."
 msgstr ""
 
 #: src/components/quiet-notice.tsx
@@ -3602,6 +3724,10 @@ msgstr ""
 msgid "Vela reports a service problem. Messages may be delayed."
 msgstr ""
 
+#: src/components/app-privacy.tsx
+msgid "Vela saves the family information you choose to share. OpenAI and Deepgram process messages and voice notes in the United States to help with questions and weekly reads. OpenAI may keep processing logs for up to 30 days. The founder can read exchanges to run this private test. Your parent makes their own separate choices."
+msgstr ""
+
 #: src/data/precision.ts
 msgid "Vela shows a month once it has at least {notices} notices from {families} families, so no one family's morning can be read out of it."
 msgstr ""
@@ -3623,6 +3749,7 @@ msgid "Vela still writes to you on Telegram or LINE in a family where you are th
 msgstr ""
 
 #: app/(tabs)/index.tsx
+#: app/(tabs)/questions.tsx
 #: app/ask.tsx
 msgid "Vela suggests"
 msgstr ""
@@ -3717,8 +3844,20 @@ msgstr ""
 msgid "Was this notice useful?"
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+msgid "We can’t confirm an available chat for this parent. Check with them before trying to invite again."
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "We could not connect. Check your internet connection and try again."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "We couldn’t finish connecting. Your family and messages are unchanged. Try again when Vela is available."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "We found your family. Check it below, then finish connecting to this signed-in account."
 msgstr ""
 
 #: app/sign-in.tsx
@@ -3727,6 +3866,10 @@ msgstr ""
 
 #: app/(tabs)/exchanges.tsx
 msgid "Week of {date}"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Welcome back."
 msgstr ""
 
 #: app/sign-in.tsx
@@ -3865,6 +4008,10 @@ msgstr ""
 msgid "Work & advice"
 msgstr ""
 
+#: app/(tabs)/questions.tsx
+msgid "Write a question for {parentName}"
+msgstr ""
+
 #: src/components/chat/chat-link.tsx
 msgid "Write something for when {name} says yes."
 msgstr ""
@@ -3916,6 +4063,10 @@ msgstr ""
 msgid "You and {name}"
 msgstr ""
 
+#: src/components/parent-link-settings.tsx
+msgid "You and {name} are connected."
+msgstr ""
+
 #: app/settings.tsx
 msgid "You are paused: no turns come to you, and you are not told if it goes quiet."
 msgstr ""
@@ -3940,16 +4091,12 @@ msgstr ""
 msgid "You can explore an example family. No messages are sent."
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "You can paste the whole Telegram message. The code expires after 15 minutes."
-msgstr ""
-
 #: app/exchange/[id].tsx
 msgid "You can reply once she has answered."
 msgstr ""
 
 #: src/components/parent-link-settings.tsx
-msgid "You can share this after setup, whenever you need it. Your parent answers in their own chat."
+msgid "You chose to share the link. Delivery is not confirmed; Vela will show when your parent agrees."
 msgstr ""
 
 #: src/components/family-book.tsx
@@ -3988,6 +4135,10 @@ msgstr ""
 msgid "Your account could not be loaded. Check your connection and try again."
 msgstr ""
 
+#: src/components/app-privacy.tsx
+msgid "Your account could not be reached. Your privacy choice has not changed."
+msgstr ""
+
 #: app/delete-account.tsx
 msgid "Your account is deleted."
 msgstr ""
@@ -4024,20 +4175,27 @@ msgstr ""
 msgid "Your email"
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Your email is verified. Now connect the family you already have on Telegram."
-msgstr ""
-
 #: app/(tabs)/you.tsx
 #: app/precision.tsx
 #: src/components/family-chooser.tsx
-#: src/components/telegram-family-link.tsx
 msgid "Your family"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Your family connection"
 msgstr ""
 
 #: app/away.tsx
 #: app/settings.tsx
 msgid "Your family could not be reached just now."
+msgstr ""
+
+#: app/(tabs)/questions.tsx
+msgid "Your family could not be reached just now. Your saved questions are unchanged."
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Your family stays together when you update Vela. Connect your own Telegram account to find it; your parent uses their own invitation."
 msgstr ""
 
 #: app/settings.tsx
@@ -4046,6 +4204,10 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Your family's first parent connection is still being set up."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Your family’s settings and messages will stay as they are."
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -4086,6 +4248,7 @@ msgid "Your name, the asks you write, and your replies."
 msgstr ""
 
 #: app/conversation.tsx
+#: app/parent-settings.tsx
 msgid "Your parent"
 msgstr ""
 
@@ -4109,12 +4272,12 @@ msgstr ""
 msgid "Your questions are signed with it."
 msgstr ""
 
-#: app/delete-account.tsx
-msgid "Your sign-in has expired. Sign in again, then delete your account."
+#: src/components/telegram-family-link.tsx
+msgid "Your sign-in expired. Sign in again to finish connecting."
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Your Telegram chat"
+#: app/delete-account.tsx
+msgid "Your sign-in has expired. Sign in again, then delete your account."
 msgstr ""
 
 #: src/components/voice-reply.tsx

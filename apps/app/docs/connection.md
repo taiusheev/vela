@@ -1,0 +1,17 @@
+# Family connection and Questions
+
+19 October 2026. Implements the founder-approved connection study and subsequent navigation/privacy refinements for the next private testing version.
+
+Returning organisers sign in, tap **Connect my Telegram**, check the verified masked account and short connection reference in their own private Telegram chat, approve there, return and confirm the found family. The 22-character code remains an alternative for another device. Starting a fresh connection or cancelling affects the request, never the family or its history. Earlier staging families require a supported recovery/transfer; an update or new sign-in never merges environments.
+
+New approved organisers use guided Telegram setup while the current private trial requires it. The app explicitly opens their own chat and asks them to send `/start`, then return and connect. This does not open public admission or allow one adult to consent for another.
+
+Parent Settings has one prepare-and-share action. The server reuses a valid invitation, renews an expired one, or returns the existing chat shortcut. The screen distinguishes waiting, opened, connected, paused, declined and unavailable; an invitation open is not consent, and a share-sheet result is not a delivery receipt. Declined profiles remain deleted; the status projection uses only the existing content-free event. The screen does not silently recreate a declined parent.
+
+The bottom navigation keeps **Today · Memories · + · Sunday · You**. The central action has the accessibility label **Questions — add a question** and opens writing, tomorrow's suggestion, story planning and the next-week suggestion. The four familiar pages retain labels. Icon highlights have their own bounded area and a gap above labels; bar height respects font scale and safe-area space. Sunday retains the week's windows and reports, with all question planning moved to Questions. A family message day remains a connection day, not a wellbeing score or a punitive streak.
+
+Routine privacy/terms are collapsed in Settings, and setup help no longer repeats a privacy button. New/current-version permission remains an explicit, concise choice with expandable full wording. Sign-in itself does not ask again. The server's accepted version wins; loading and outages show neutral recovery, never another consent question. Onboarding acceptance carries into the intended sign-in and is persisted once. Local drafts remain scoped to accounts, and neither profile switches nor failed reads can reuse someone else's permission.
+
+Server prerequisites: migration `0019_telegram_confirmation`, new confirmation/status/cancel routes and verified-requester lookup must deploy before the new app is distributed. Older clients retain their code-based flow. No new native module or permission is required.
+
+Verification receipts are kept outside the repository under `verification-2026-10-19/connection`. Local source gates and PostgreSQL concurrency checks pass. Browser checks cover actual exported demo screens and a separate, isolated source copy with synthetic authentication and a loopback fixture API; provider navigation is intercepted. Those checks establish UI/contract behavior only, not live Clerk/Telegram, native sharing, signed iPhone or VoiceOver evidence. CI, staging, signed build/archive, production guards and TestFlight availability must each be verified before a release-complete claim.

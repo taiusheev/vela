@@ -3,7 +3,9 @@ import { accountLinkChallenges, events, members, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  cancelAccountLink,
   completeAccountLink,
+  handleAccountLinkButton,
   issueAccountLinkCode,
   startAccountLink,
 } from "../src/account-linking.ts";
@@ -249,5 +251,89 @@ describe("account linking on independent PostgreSQL connections", () => {
     // Deletion lets go of the membership it linked (ADR-43): this one is kept in the family on
     // Telegram, so it no longer names the deleted account.
     expect(await linkedMember()).toBeNull();
+  });
+});
+
+describe("approval grant on independent PostgreSQL connections", () => {
+  async function approved(client: RaceClient) {
+    const challenge = ApiLinkChallenge.parse(
+      (
+        await startAccountLink(client.deps, identity, "modern-start", {
+          requesterLabel: "m•••@example.com",
+        })
+      ).response.body,
+    );
+    const issued = await issueCode(client, challenge.challenge_id);
+    await handleAccountLinkButton(linkDeps(client), {
+      ...telegramStart(),
+      kind: "button",
+      buttonData: `la:${challenge.challenge_id}:${issued.code}`,
+      callbackId: "pg-approval",
+    });
+    return challenge;
+  }
+  it("attaches and records the link once when two sessions of the same initiating session confirm together", async () => {
+    const opener = await pg.client("opener"),
+      first = await pg.client("first"),
+      second = await pg.client("second");
+    const challenge = await approved(opener);
+    const results = await pg.finish(
+      "concurrent approved completions",
+      Promise.all([
+        pg.track(
+          completeAccountLink(
+            first.deps,
+            identity,
+            "confirm-one",
+            challenge.challenge_id,
+            undefined,
+          ),
+        ),
+        pg.track(
+          completeAccountLink(
+            second.deps,
+            identity,
+            "confirm-two",
+            challenge.challenge_id,
+            undefined,
+          ),
+        ),
+      ]),
+    );
+    for (const result of results) expect(result.response.body).toMatchObject({ linked: true });
+    expect(await linkedMember()).toBe(ownerId);
+    expect(await linkEvents()).toHaveLength(1);
+  });
+  it("a cancellation queued first prevents a completion already waiting for the same actor lock", async () => {
+    const opener = await pg.client("opener"),
+      canceller = await pg.client("canceller"),
+      completer = await pg.client("completer"),
+      blocker = await pg.client("blocker");
+    const challenge = await approved(opener);
+    const lock = await pg.holdActorLock(blocker, identity.authSubject);
+    const cancelled = pg.track(
+      cancelAccountLink(canceller.deps, identity, "cancel-first", challenge.challenge_id),
+    );
+    await pg.waitForActorLockWait(canceller, [blocker], cancelled);
+    const completed = pg.track(
+      completeAccountLink(
+        completer.deps,
+        identity,
+        "confirm-after-cancel",
+        challenge.challenge_id,
+        undefined,
+      ),
+    );
+    await pg.waitForActorLockWait(completer, [blocker], completed);
+    lock.release();
+    await pg.finish("blocker", lock.done);
+    const [cancelResult, completion] = await pg.finish(
+      "cancel before completion",
+      Promise.all([cancelled, completed]),
+    );
+    expect(cancelResult.response.body).toEqual({ cancelled: true });
+    expect(completion.response.body).toEqual({ linked: false });
+    expect(await linkedMember()).toBeNull();
+    expect(await linkEvents()).toHaveLength(0);
   });
 });

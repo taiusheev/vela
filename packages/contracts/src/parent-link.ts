@@ -9,3 +9,8 @@ export const ApiParentLink = z.object({
   expires_at: z.iso.datetime({ offset: true }).nullable(),
 });
 export type ApiParentLink = z.infer<typeof ApiParentLink>;
+
+export const ApiParentConnection = z.strictObject({
+  state: z.enum(["waiting", "opened", "connected", "paused", "declined", "unavailable"]),
+});
+export type ApiParentConnection = z.infer<typeof ApiParentConnection>;

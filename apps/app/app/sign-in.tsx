@@ -28,7 +28,6 @@ import {
   readable,
   toInternational,
 } from "../src/auth/phone.ts";
-import { AppPrivacy, acceptLocalPrivacy } from "../src/components/app-privacy.tsx";
 import { BrandHeader } from "../src/components/brand/header.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { SetupHelp } from "../src/components/setup-help.tsx";
@@ -42,7 +41,7 @@ import {
   Words,
 } from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
-import { readDraft, resetDraft, useOnboardingDraft } from "../src/data/onboarding-draft.ts";
+import { readDraft, useOnboardingDraft } from "../src/data/onboarding-draft.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
@@ -156,18 +155,7 @@ async function within<T>(work: Promise<T>): Promise<T> {
 export default function SignInScreen() {
   // A checkout without a Clerk key has no accounts at all; the screen says so rather than asking
   // Clerk's hooks for a provider that is not there.
-  const draft = useOnboardingDraft();
   if (!accountsConfigured()) return <NoAccounts />;
-  if (!draft.privacyAccepted)
-    return (
-      <AppPrivacy
-        onAccept={acceptLocalPrivacy}
-        onDecline={() => {
-          resetDraft();
-          router.replace("/onboarding");
-        }}
-      />
-    );
   return <CodeSignIn />;
 }
 

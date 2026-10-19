@@ -1,12 +1,14 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { Share } from "react-native";
-import { prepareParentLink } from "../api/client.ts";
+import { fetchParentConnection, prepareParentLink } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
+import { useConnectionForeground } from "../data/useConnectionForeground.ts";
 import { Card, Eyebrow, PrimaryButton, SecondaryButton, Words } from "./ui.tsx";
 
+/** Preparing and sharing is one deliberate action; the server reuses/renews the same parent's link. */
 export function ParentLinkSettings({
   familyId,
   memberId,
@@ -20,92 +22,151 @@ export function ParentLinkSettings({
 }) {
   const { t } = useLingui();
   const account = useAccount();
+  const active = useConnectionForeground();
   const key = useIdempotencyKey("parent-link");
-  const [attempt, setAttempt] = useState(0);
+  const generation = useRef(0);
+  const running = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const [sharing, setSharing] = useState(false);
   const [shareFailed, setShareFailed] = useState(false);
-  const [expired, setExpired] = useState(false);
+  const [shared, setShared] = useState(false);
+  const status = useQuery({
+    queryKey: ["parent-connection", account.userId, account.sessionId, familyId, memberId],
+    enabled: live && active,
+    queryFn: async ({ signal }) =>
+      fetchParentConnection(familyId, memberId, await account.token(), signal),
+    retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: "always",
+    refetchInterval: (query) =>
+      query.state.data?.state === "declined" || query.state.data?.state === "unavailable"
+        ? false
+        : query.state.error === null
+          ? 5_000
+          : 15_000,
+    refetchIntervalInBackground: false,
+  });
   const link = useMutation({
-    mutationFn: async (generation: number) =>
+    mutationFn: async () =>
       prepareParentLink(
         familyId,
         memberId,
-        key({ familyId, memberId, attempt: generation }),
+        key({ familyId, memberId, attempt: generation.current }),
         await account.token(),
       ),
   });
+  const state = !status.isError ? status.data?.state : undefined;
+  const connected = state === "connected" || state === "paused";
+  const unavailable = state === "declined" || state === "unavailable";
   const share = async () => {
-    if (!link.data) return;
+    if (!live || running.current || unavailable) return;
+    running.current = true;
+    setSharing(true);
     setShareFailed(false);
-    if (link.data.expires_at !== null && Date.parse(link.data.expires_at) <= Date.now()) {
-      setExpired(true);
-      return;
-    }
     try {
-      await Share.share({ message: link.data.text });
+      // A new deliberate share rechecks acceptance and expiry; a failed request retries its key.
+      const prepared = await link.mutateAsync();
+      generation.current += 1;
+      if (!mounted.current) return;
+      const result = await Share.share({ message: prepared.text });
+      if (mounted.current) setShared(result?.action === Share.sharedAction);
+      void status.refetch();
     } catch {
-      setShareFailed(true);
+      if (mounted.current) setShareFailed(true);
+    } finally {
+      running.current = false;
+      if (mounted.current) setSharing(false);
     }
   };
   return (
     <Card>
       <Eyebrow>
-        <Trans>Parent link</Trans>
+        <Trans>Family connection</Trans>
       </Eyebrow>
-      <Words variant="heading">{t`Send ${name} the link again`}</Words>
+      <Words variant="heading">
+        {state === "connected"
+          ? t`You and ${name} are connected.`
+          : state === "paused"
+            ? t`${name} has paused their mornings.`
+            : state === "opened"
+              ? t`${name} opened the invitation.`
+              : state === "declined"
+                ? t`${name} chose “Not now”.`
+                : state === "unavailable"
+                  ? t`This connection needs attention.`
+                  : t`An invitation for ${name}`}
+      </Words>
       <Words variant="body" tone="ink2">
-        <Trans>
-          You can share this after setup, whenever you need it. Your parent answers in their own
-          chat.
-        </Trans>
+        {state === "connected"
+          ? t`They joined in their own chat. Share a shortcut whenever they need to find Vela again; no new registration.`
+          : state === "paused"
+            ? t`Their chat is still connected, and morning messages are paused. They can say start in that chat when they want to resume.`
+            : state === "opened"
+              ? t`They still need to choose whether to join. Opening the link does not give consent.`
+              : state === "declined"
+                ? t`Morning messages are off. Give them time; another invitation will still need their own agreement.`
+                : state === "unavailable"
+                  ? t`We can’t confirm an available chat for this parent. Check with them before trying to invite again.`
+                  : t`Share one personal link in your usual chat. Your parent decides in Telegram or LINE and does not need to register in the app.`}
       </Words>
       {!live ? (
         <Words variant="caption" tone="ink2">
           <Trans>This is an example family. No invitation is created or sent.</Trans>
         </Words>
-      ) : link.data === undefined ? (
-        <PrimaryButton
-          label={
-            link.isPending
-              ? t`Preparing link…`
-              : link.isError
-                ? t`Try again`
-                : t`Prepare parent link`
-          }
-          disabled={link.isPending}
-          onPress={() => link.mutate(attempt)}
-        />
       ) : (
         <>
-          <Words variant="body" tone="ink2">
-            {link.data.kind === "invite"
-              ? t`This invitation is for ${name}. Sharing it does not turn on their light; they decide in their own chat.`
-              : t`${name} already has a chat with Vela. This link opens that chat without registering again.`}
-          </Words>
-          <Words variant="caption" selectable>
-            {link.data.url}
-          </Words>
-          <PrimaryButton label={t`Share link`} disabled={expired} onPress={() => void share()} />
-          {expired ? (
-            <Words variant="body" tone="ink2">
-              <Trans>This invitation has expired. Refresh the link before sharing it.</Trans>
+          {status.isPending ? (
+            <Words variant="caption" tone="ink2">
+              <Trans>Checking the family connection…</Trans>
             </Words>
           ) : null}
-          <Words variant="caption" tone="ink2">
-            <Trans>
-              Opening the share sheet does not confirm delivery. Choose your parent and send it
-              there.
-            </Trans>
-          </Words>
+          {status.isError ? (
+            <Words variant="caption" tone="ink2">
+              <Trans>
+                The connection status could not be checked. This does not mean your parent has
+                disconnected.
+              </Trans>
+            </Words>
+          ) : null}
+          {!unavailable ? (
+            <PrimaryButton
+              label={
+                sharing
+                  ? t`Opening sharing…`
+                  : connected
+                    ? t`Share their chat link`
+                    : shared
+                      ? t`Share invitation again`
+                      : t`Send their invitation`
+              }
+              disabled={sharing || link.isPending}
+              onPress={() => void share()}
+            />
+          ) : null}
           <SecondaryButton
-            label={t`Refresh link`}
-            onPress={() => {
-              const next = attempt + 1;
-              setAttempt(next);
-              link.mutate(next);
-              setShareFailed(false);
-              setExpired(false);
-            }}
+            label={t`Check connection again`}
+            disabled={status.isFetching || sharing}
+            onPress={() => void status.refetch()}
           />
+          {shared ? (
+            <Words variant="caption" tone="ink2">
+              <Trans>
+                You chose to share the link. Delivery is not confirmed; Vela will show when your
+                parent agrees.
+              </Trans>
+            </Words>
+          ) : null}
+          {state === "connected" ? (
+            <Words variant="caption" tone="ink2">
+              <Trans>A connection is not a delivered morning message or a reply.</Trans>
+            </Words>
+          ) : null}
         </>
       )}
       {link.isError ? (
@@ -115,13 +176,18 @@ export function ParentLinkSettings({
           </Trans>
         </Words>
       ) : null}
-      {shareFailed ? (
-        <Words variant="body" tone="ink2">
-          <Trans>
-            This device could not open sharing. Select and copy the link above, then send it to your
-            parent.
-          </Trans>
-        </Words>
+      {shareFailed && link.data ? (
+        <>
+          <Words variant="body" tone="ink2">
+            <Trans>
+              Sharing could not open. Select and copy the link below, then send it to your parent.
+              If it has expired, try sharing again for a fresh link.
+            </Trans>
+          </Words>
+          <Words variant="caption" selectable>
+            {link.data.url}
+          </Words>
+        </>
       ) : null}
     </Card>
   );

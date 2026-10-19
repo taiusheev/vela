@@ -53,6 +53,14 @@ export default function ParentSettingsScreen() {
               />
             ) : null}
           </>
+        ) : day.live && day.organiser && day.familyId && member ? (
+          <ParentLinkSettings
+            key={`link:${day.familyId}:${member}`}
+            familyId={day.familyId}
+            memberId={member}
+            name={t`Your parent`}
+            live
+          />
         ) : (
           <Words variant="body" tone="ink2">
             {day.loading

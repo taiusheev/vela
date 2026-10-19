@@ -35,6 +35,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ApiReadServices, type ApiRuntime, createApiApp } from "./api-app.ts";
 import { SessionVerificationUnavailable } from "./session.ts";
 
+type LinkServices = NonNullable<NonNullable<ApiRuntime["writes"]>["links"]>;
 const USER_ID = "11111111-1111-7111-8111-111111111111";
 const MEMBER_ID = "22222222-2222-7222-8222-222222222222";
 const FAMILY_ID = "33333333-3333-7333-8333-333333333333";
@@ -290,7 +291,7 @@ function database(): VelaDatabase {
 function fixture(
   enableWrites = false,
   push?: boolean,
-  options: Pick<ApiRuntime, "admission" | "capabilities"> = {},
+  options: Pick<ApiRuntime, "admission" | "capabilities" | "parentConnection"> = {},
 ) {
   const db = database();
   const close = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
@@ -329,6 +330,16 @@ function fixture(
   const logger = { error: vi.fn<ApiRuntime["logger"]["error"]>() };
   const writes = {
     links: {
+      requesterLabel: vi
+        .fn<NonNullable<LinkServices["requesterLabel"]>>()
+        .mockResolvedValue("s•••@example.com"),
+      status: vi
+        .fn<NonNullable<LinkServices["status"]>>()
+        .mockResolvedValue({ state: "waiting", expires_at: "2026-09-22T00:15:00.000Z" }),
+      cancel: vi.fn<NonNullable<LinkServices["cancel"]>>().mockResolvedValue({
+        response: { status: 200, body: { cancelled: true } },
+        replayed: false,
+      }),
       start: vi
         .fn<NonNullable<NonNullable<ApiRuntime["writes"]>["links"]>["start"]>()
         .mockResolvedValue({
@@ -3291,5 +3302,141 @@ describe("parent link sharing", () => {
     );
     expect(invalid.status).toBe(400);
     expect(writes.services.shareApiParentLink).not.toHaveBeenCalled();
+  });
+});
+
+describe("Telegram approval API", () => {
+  it("gets the prompt identity from the verified session, ignoring no client identity claims", async () => {
+    const f = fixture(true);
+    await expectResponse(
+      await f.app.request(
+        writeRequest("POST", "/v1/me/link", JSON.stringify({ confirmation: "telegram" }), {
+          authorization: "Bearer good",
+        }),
+      ),
+      201,
+      {
+        challenge_id: USER_ID,
+        expires_at: "2026-09-22T00:15:00.000Z",
+        telegram_url: `https://t.me/VelaTestBot?start=link_${USER_ID}`,
+      },
+    );
+    expect(f.writes.links.requesterLabel).toHaveBeenCalledExactlyOnceWith(IDENTITY);
+    expect(f.writes.links.start).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock },
+      IDENTITY,
+      "request-1",
+      { requesterLabel: "s•••@example.com" },
+    );
+    const bad = await f.app.request(
+      writeRequest(
+        "POST",
+        "/v1/me/link",
+        JSON.stringify({ confirmation: "telegram", requester_label: "attacker" }),
+        { authorization: "Bearer good" },
+      ),
+    );
+    expect(bad.status).toBe(400);
+  });
+  it("returns no-store session-scoped status without consuming approval", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(`/v1/me/link/${USER_ID}`, {
+      headers: { authorization: "Bearer good" },
+    });
+    await expectResponse(response, 200, {
+      state: "waiting",
+      expires_at: "2026-09-22T00:15:00.000Z",
+    });
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(f.writes.links.status).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock, pilotAdmission: undefined },
+      IDENTITY,
+      USER_ID,
+    );
+    expect(f.writes.links.complete).not.toHaveBeenCalled();
+  });
+  it("consumes a grant without accepting a client-supplied proof or member", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(
+      writeRequest("POST", "/v1/me/link/confirm", JSON.stringify({ challenge_id: USER_ID }), {
+        authorization: "Bearer good",
+      }),
+    );
+    await expectResponse(response, 200, {
+      linked: true,
+      member_id: MEMBER_ID,
+      family_id: FAMILY_ID,
+    });
+    expect(f.writes.links.complete).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock, pilotAdmission: undefined },
+      IDENTITY,
+      "request-1",
+      USER_ID,
+      undefined,
+    );
+    const bad = await f.app.request(
+      writeRequest(
+        "POST",
+        "/v1/me/link/confirm",
+        JSON.stringify({ challenge_id: USER_ID, family_id: FAMILY_ID }),
+        { authorization: "Bearer good" },
+      ),
+    );
+    expect(bad.status).toBe(400);
+  });
+  it("cancels only an active session's request", async () => {
+    const f = fixture(true);
+    const response = await f.app.request(
+      writeRequest("POST", "/v1/me/link/cancel", JSON.stringify({ challenge_id: USER_ID }), {
+        authorization: "Bearer good",
+      }),
+    );
+    await expectResponse(response, 200, { cancelled: true });
+    expect(f.writes.links.cancel).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock, pilotAdmission: undefined },
+      IDENTITY,
+      "request-1",
+      USER_ID,
+    );
+    f.writes.verifyActiveSession.mockResolvedValue(false);
+    expect(
+      (
+        await f.app.request(
+          writeRequest("POST", "/v1/me/link/cancel", JSON.stringify({ challenge_id: USER_ID }), {
+            authorization: "Bearer good",
+          }),
+        )
+      ).status,
+    ).toBe(401);
+  });
+  it.each(["/v1/me/link/confirm", "/v1/me/link/cancel"])(
+    "refuses an unauthenticated mutation before opening the database: %s",
+    async (path) => {
+      const f = fixture(true);
+      f.verifySession.mockResolvedValue(null);
+      expect(
+        (await f.app.request(writeRequest("POST", path, JSON.stringify({ challenge_id: USER_ID }))))
+          .status,
+      ).toBe(401);
+      expect(f.openDatabase).not.toHaveBeenCalled();
+    },
+  );
+  it("serves the authenticated parent status projection, never a private invite token", async () => {
+    const parentConnection = vi
+      .fn<NonNullable<ApiRuntime["parentConnection"]>>()
+      .mockResolvedValue({ state: "opened" });
+    const f = fixture(true, false, { parentConnection });
+    const path = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/connection`;
+    const response = await f.app.request(path, { headers: { authorization: "Bearer good" } });
+    await expectResponse(response, 200, { state: "opened" });
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(parentConnection).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db },
+      IDENTITY,
+      FAMILY_ID,
+      MEMBER_ID,
+    );
+    f.verifySession.mockResolvedValue(null);
+    expect((await f.app.request(path)).status).toBe(401);
   });
 });

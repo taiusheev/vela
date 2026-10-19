@@ -1,6 +1,6 @@
-import { ApiParentLink, ParentLinkRequest } from "@vela/contracts";
+import { type ApiParentConnection, ApiParentLink, ParentLinkRequest } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { invites, members } from "@vela/db";
+import { channelLinks, events, invites, members } from "@vela/db";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
@@ -102,4 +102,56 @@ export async function shareApiParentLink(
       },
     },
   );
+}
+
+/** Opening an invitation binds the chat; only the later consent changes invited to active. */
+export async function loadApiParentConnection(
+  deps: Pick<ApiFamilyDeps, "db">,
+  identity: SessionIdentity,
+  familyId: string,
+  memberId: string,
+): Promise<ApiParentConnection> {
+  if (!z.uuid().safeParse(familyId).success || !z.uuid().safeParse(memberId).success)
+    throw new VelaError("not_found", "Parent not found");
+  const family = familyId.toLowerCase(),
+    parent = memberId.toLowerCase();
+  const access = await authorizeFamilyAccess(deps.db, identity, family, "organiser");
+  if (access.kind !== "granted") throw new VelaError("not_found", "Parent not found");
+  const [member] = await deps.db
+    .select()
+    .from(members)
+    .where(and(eq(members.id, parent), eq(members.familyId, family), isNull(members.leftAt)));
+  if (member === undefined) {
+    const [declined] = await deps.db
+      .select({ id: events.id })
+      .from(events)
+      .where(
+        and(
+          eq(events.familyId, family),
+          eq(events.memberId, parent),
+          eq(events.name, "consent_declined"),
+        ),
+      )
+      .limit(1);
+    return { state: declined === undefined ? "unavailable" : "declined" };
+  }
+  if (member.wakeTime === null || !["invited", "active", "paused"].includes(member.status))
+    return { state: "unavailable" };
+  const [link] = await deps.db
+    .select()
+    .from(channelLinks)
+    .where(
+      and(
+        eq(channelLinks.memberId, parent),
+        eq(
+          channelLinks.channel,
+          member.primarySurface === "parent-surface" ? "device" : member.primarySurface,
+        ),
+      ),
+    )
+    .limit(1);
+  if (link?.blockedAt != null) return { state: "unavailable" };
+  if (member.status === "invited") return { state: link === undefined ? "waiting" : "opened" };
+  if (member.status === "paused") return { state: "paused" };
+  return { state: link === undefined ? "unavailable" : "connected" };
 }

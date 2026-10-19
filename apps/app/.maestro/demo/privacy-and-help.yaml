@@ -10,8 +10,10 @@ tags:
 - tapOn: "Settings"
 - assertNotVisible: "Set it up"
 - scrollUntilVisible:
-    element: "PRIVACY AND HELP"
+    element: "Privacy details and terms"
     direction: DOWN
+- assertNotVisible: "Read the privacy notice"
+- tapOn: "Privacy details and terms"
 - assertVisible: "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 - assertVisible: "Read the privacy notice"
 - assertVisible: "Get help or request your data"

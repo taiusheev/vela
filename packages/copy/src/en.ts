@@ -82,6 +82,13 @@
  * (05-line-flows.md §6), which say nothing about anyone.
  */
 export const en = {
+  "account_link.confirm":
+    "Connect your family to this Vela account?\nAccount: {account}\nConnection reference: {reference}\n\nOnly tap Connect my family if you just opened this from your own signed-in Vela app and the account and reference match. Opening this chat alone does not connect anything.\n\nUsing another device? Your private fallback code is {code}. Do not share it.",
+  "account_link.approve": "Connect my family",
+  "account_link.refuse": "This wasn’t me",
+  "account_link.approved":
+    "Telegram confirmed. Return to Vela on your iPhone to check your family and finish. No code to copy.",
+  "account_link.cancelled": "Connection cancelled. Your family and Telegram account are unchanged.",
   "account_link.code":
     "Enter this code in Vela to connect your Telegram account: {code}\nKeep it private; it expires soon.",
   "account_link.unavailable":

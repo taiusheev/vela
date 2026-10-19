@@ -12,7 +12,11 @@
 import type { InboundEvent, InboundKind } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { decodeButton, outboundKey, parseParentCommand } from "@vela/core";
-import { handleAccountLinkStart, isAccountLinkStart } from "../account-linking.ts";
+import {
+  handleAccountLinkButton,
+  handleAccountLinkStart,
+  isAccountLinkStart,
+} from "../account-linking.ts";
 import { organisersUnreachableAlert } from "../admin-alerts.ts";
 import {
   type AnswerButtonAction,
@@ -110,6 +114,7 @@ async function route(deps: Deps, event: InboundEvent): Promise<void> {
     (command === "stop" ||
       command === "what_family_sees" ||
       declines ||
+      (event.kind === "button" && /^lr:/.test(event.buttonData ?? "")) ||
       action?.type === "book_drop");
   if (
     !pilotAllowsInbound(deps.config.pilotAdmission, event) &&
@@ -264,6 +269,11 @@ async function acknowledge(deps: Deps, event: InboundEvent): Promise<void> {
 }
 
 async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
+  if (/^l[ar]:/.test(event.buttonData ?? "")) {
+    await acknowledge(deps, event);
+    await handleAccountLinkButton(deps, event);
+    return;
+  }
   const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
   if (action === null) {
     await acknowledge(deps, event);

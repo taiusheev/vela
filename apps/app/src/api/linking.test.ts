@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe("existing Telegram family connection", () => {
-  it("starts an authenticated, idempotent empty-body challenge and completes with that session", async () => {
+  it("starts an authenticated, idempotent Telegram-confirmation challenge and completes with that session", async () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce(
@@ -40,7 +40,7 @@ describe("existing Telegram family connection", () => {
       "https://vela.example/v1/me/link",
       expect.objectContaining({
         method: "POST",
-        body: "{}",
+        body: JSON.stringify({ confirmation: "telegram" }),
         headers: expect.objectContaining({
           authorization: "Bearer test-session",
           "idempotency-key": "same-start-attempt",

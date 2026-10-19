@@ -24,7 +24,9 @@ import {
   ApiLinkChallenge,
   ApiLinkCompleteInput,
   ApiLinkOutcome,
+  ApiLinkRequestInput,
   ApiLinkStartInput,
+  ApiLinkStatus,
   ApiLookInAsk,
   ApiMe,
   ApiMemberPause,
@@ -32,6 +34,7 @@ import {
   ApiNearbyContact,
   ApiNearbyInvite,
   ApiNearbyRemoved,
+  ApiParentConnection,
   ApiParentLink,
   ApiPrecision,
   ApiPushDevice,
@@ -93,6 +96,7 @@ import {
   type askApiToLookIn,
   type authorizeFamilyAccess,
   type Clock,
+  type cancelAccountLink,
   type completeAccountLink,
   type composeApiAsk,
   type createApiFamily,
@@ -107,6 +111,7 @@ import {
   type Logger,
   LookInRefusedError,
   type leaveApiFamily,
+  type loadAccountLinkStatus,
   type loadApiBook,
   type loadApiExchange,
   type loadApiExchanges,
@@ -115,6 +120,7 @@ import {
   type loadApiLights,
   type loadApiMe,
   type loadApiMorningPreferences,
+  type loadApiParentConnection,
   type loadApiPrecision,
   type loadApiQuiet,
   type loadApiReminders,
@@ -148,6 +154,7 @@ import {
   type replyToApiExchange,
   type resolveApiQuiet,
   runAfterCommit,
+  type SessionIdentity,
   type setApiAway,
   type setApiMorningPreferences,
   type setUpApiDevice,
@@ -239,6 +246,7 @@ export interface ApiWriteServices {
 }
 
 export interface ApiRuntime {
+  parentConnection?: typeof loadApiParentConnection;
   capabilities?: ApiCapabilities;
   /**
    * Whether an organiser may have Vela's suggestion sent in their name (`SEND_AS_ME`, first test
@@ -261,6 +269,9 @@ export interface ApiRuntime {
     links?: {
       start: typeof startAccountLink;
       complete: typeof completeAccountLink;
+      status?: typeof loadAccountLinkStatus;
+      cancel?: typeof cancelAccountLink;
+      requesterLabel?: (identity: SessionIdentity) => Promise<string>;
       telegramBotUsername: string;
     };
     verifyActiveSession: SessionActivityChecker;
@@ -1059,6 +1070,22 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       });
     },
   );
+  if (runtime.parentConnection !== undefined) {
+    app.get(
+      "/v1/families/:familyId/members/:memberId/connection",
+      authenticate,
+      withDatabase,
+      async (c) => {
+        const status = await runtime.parentConnection?.(
+          { db: c.get("db") },
+          c.get("session"),
+          c.req.param("familyId"),
+          c.req.param("memberId"),
+        );
+        return c.json(ApiParentConnection.parse(status), 200);
+      },
+    );
+  }
   const writes = runtime.writes;
   if (writes) {
     const checkActivity: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
@@ -1161,11 +1188,20 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         async (c) => {
           if (!/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(links.telegramBotUsername))
             return c.json(UNAVAILABLE, 503);
-          const result = await links.start(
+          const modern = ApiLinkStartInput.parse(c.get("writeInput")).confirmation === "telegram";
+          if (modern && links.requesterLabel === undefined) return c.json(UNAVAILABLE, 503);
+          const label = modern ? await links.requesterLabel?.(c.get("session")) : undefined;
+          if (modern && (typeof label !== "string" || label.length === 0))
+            throw new SessionVerificationUnavailable();
+          const args = [
             { db: c.get("db"), clock: writes.clock },
             c.get("session"),
             c.get("writeKey"),
-          );
+          ] as const;
+          const result =
+            label === undefined
+              ? await links.start(...args)
+              : await links.start(...args, { requesterLabel: label });
           if (result.response.status !== 201 || typeof result.replayed !== "boolean")
             throw new Error("Invalid account link response");
           const challenge = ApiLinkChallenge.parse(result.response.body);
@@ -1178,6 +1214,63 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           );
         },
       );
+      if (links.status !== undefined) {
+        app.get("/v1/me/link/:challengeId", authenticate, withDatabase, async (c) => {
+          const id = c.req.param("challengeId");
+          if (!ApiLinkRequestInput.shape.challenge_id.safeParse(id).success)
+            return c.json(NOT_FOUND, 404);
+          const status = await links.status?.(
+            {
+              db: c.get("db"),
+              clock: writes.clock,
+              pilotAdmission: c.get("pilotAdmission") ?? runtime.admission?.config,
+            },
+            c.get("session"),
+            id,
+          );
+          return c.json(ApiLinkStatus.parse(status), 200);
+        });
+      }
+      for (const operation of ["confirm", "cancel"] as const) {
+        app.post(
+          `/v1/me/link/${operation}`,
+          authenticate,
+          validateWrite(ApiLinkRequestInput, runtime.logger),
+          checkActivity,
+          withDatabase,
+          async (c) => {
+            const { challenge_id } = ApiLinkRequestInput.parse(c.get("writeInput"));
+            const deps = {
+              db: c.get("db"),
+              clock: writes.clock,
+              pilotAdmission: c.get("pilotAdmission") ?? runtime.admission?.config,
+            };
+            if (operation === "cancel" && links.cancel === undefined) return c.json(NOT_FOUND, 404);
+            const result =
+              operation === "confirm"
+                ? await links.complete(
+                    deps,
+                    c.get("session"),
+                    c.get("writeKey"),
+                    challenge_id,
+                    undefined,
+                  )
+                : await links.cancel?.(deps, c.get("session"), c.get("writeKey"), challenge_id);
+            if (result === undefined) return c.json(NOT_FOUND, 404);
+            c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+            if (operation === "confirm")
+              return c.json(ApiLinkOutcome.parse(result.response.body), 200);
+            if (
+              typeof result.response.body !== "object" ||
+              result.response.body === null ||
+              !("cancelled" in result.response.body) ||
+              result.response.body.cancelled !== true
+            )
+              throw new Error("Invalid link cancellation response");
+            return c.json({ cancelled: true }, 200);
+          },
+        );
+      }
       app.post(
         "/v1/me/link/complete",
         authenticate,

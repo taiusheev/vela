@@ -6,15 +6,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
-import { StoryDay, StoryOfTheWeek } from "../../src/components/story-day.tsx";
-import {
-  Card,
-  Eyebrow,
-  Hairline,
-  PrimaryButton,
-  SecondaryButton,
-  Words,
-} from "../../src/components/ui.tsx";
+import { StoryOfTheWeek } from "../../src/components/story-day.tsx";
+import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { localDayMonth } from "../../src/data/format.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
@@ -26,8 +19,8 @@ import { space } from "../../src/theme/tokens.ts";
 
 /**
  * Sunday (spec §13, A9): this week's windows first, then her latest weekly read the founder sent:
- * the count lines from the week's numbers; up to four notes in Literata; one suggestion in action
- * colour; the story of the week from the family book. The windows are the page's one row of lights
+ * the count lines from the week's numbers; up to four notes in Literata; and
+ * the story of the week from the family book. Question planning lives on Questions. The windows are the page's one row of lights
  * (founder, 17 October 2026: "one streak is enough"), so the read keeps its days to its count lines.
  * Without Vela Light the rest waits behind the trial. Organisers only, since the read carries the
  * counts of her days.
@@ -175,36 +168,15 @@ function FamilySunday({ day }: { day: TodayView }) {
                   </AnswerPanel>
                 </>
               )}
-              {read.week.suggestion === null ? null : (
-                <Card>
-                  <Eyebrow>
-                    <Trans>Something to ask next week</Trans>
-                  </Eyebrow>
-                  <Words variant="voice" tone="action">
-                    {read.week.suggestion}
-                  </Words>
-                </Card>
-              )}
               <StoryOfTheWeek
                 from={read.week.lights[0]?.date ?? ""}
                 to={read.week.lights.at(-1)?.date ?? ""}
                 {...(view.memberId === undefined ? {} : { memberId: view.memberId })}
               />
-              <PrimaryButton
-                label={t`Ask ${name} something`}
-                onPress={() =>
-                  router.push(
-                    view.memberId === undefined
-                      ? "/ask"
-                      : { pathname: "/ask", params: { recipient: view.memberId } },
-                  )
-                }
-              />
             </>
           )}
         </>
       )}
-      <StoryDay key={`${day.familyId}:${view.memberId}`} memberId={view.memberId} />
     </ScrollView>
   );
 }
