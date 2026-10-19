@@ -157,6 +157,7 @@ export default function SignInScreen() {
   // A checkout without a Clerk key has no accounts at all; the screen says so rather than asking
   // Clerk's hooks for a provider that is not there.
   const draft = useOnboardingDraft();
+  if (!accountsConfigured()) return <NoAccounts />;
   if (!draft.privacyAccepted)
     return (
       <AppPrivacy
@@ -167,7 +168,7 @@ export default function SignInScreen() {
         }}
       />
     );
-  return accountsConfigured() ? <CodeSignIn /> : <NoAccounts />;
+  return <CodeSignIn />;
 }
 
 function NoAccounts() {
