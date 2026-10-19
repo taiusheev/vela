@@ -1013,6 +1013,10 @@ msgid "Connection code"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
+msgid "Connection help reference: {supportReference}"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
 msgid "Connection reference: {connectionReference}"
 msgstr ""
 
@@ -1035,6 +1039,10 @@ msgstr ""
 
 #: src/data/onboarding.ts
 msgid "Cooking & food"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Copy the private connection code from your own Vela chat and paste it below. Your parent’s invitation is separate."
 msgstr ""
 
 #: src/components/test-sign-in-details.tsx
@@ -3634,6 +3642,10 @@ msgstr ""
 msgid "Use a different email"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Use a private connection code instead"
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "Use my email instead"
 msgstr ""
@@ -3650,6 +3662,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Use your own Telegram account. Your parent joins from the invitation you send them."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Use your private connection code."
 msgstr ""
 
 #: src/components/quiet-notice.tsx
@@ -4195,7 +4211,7 @@ msgid "Your family could not be reached just now. Your saved questions are uncha
 msgstr ""
 
 #: app/onboarding.tsx
-msgid "Your family stays together when you update Vela. Connect your own Telegram account to find it; your parent uses their own invitation."
+msgid "Your family stays together when you update Vela."
 msgstr ""
 
 #: app/settings.tsx

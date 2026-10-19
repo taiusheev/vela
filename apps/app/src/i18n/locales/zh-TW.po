@@ -1020,6 +1020,10 @@ msgid "Connection code"
 msgstr "連結碼"
 
 #: src/components/telegram-family-link.tsx
+msgid "Connection help reference: {supportReference}"
+msgstr "連線協助編號：{supportReference}"
+
+#: src/components/telegram-family-link.tsx
 msgid "Connection reference: {connectionReference}"
 msgstr "連結編號：{connectionReference}"
 
@@ -1043,6 +1047,10 @@ msgstr "繼續傳給{savedName}的已儲存提問"
 #: src/data/onboarding.ts
 msgid "Cooking & food"
 msgstr "烹飪與美食"
+
+#: src/components/telegram-family-link.tsx
+msgid "Copy the private connection code from your own Vela chat and paste it below. Your parent’s invitation is separate."
+msgstr "從你自己的 Vela 聊天複製私人連結碼，貼在下方。給家長的邀請是另外的連結。"
 
 #: src/components/test-sign-in-details.tsx
 msgid "Copy these ids into the private Terminal helper for the dedicated test account."
@@ -3641,6 +3649,10 @@ msgstr "改用連結代碼"
 msgid "Use a different email"
 msgstr "使用其他電子郵件"
 
+#: src/components/telegram-family-link.tsx
+msgid "Use a private connection code instead"
+msgstr "改用私人連結碼"
+
 #: app/sign-in.tsx
 msgid "Use my email instead"
 msgstr "改用我的電子郵件"
@@ -3658,6 +3670,10 @@ msgstr "使用這個建議"
 #: src/components/telegram-family-link.tsx
 msgid "Use your own Telegram account. Your parent joins from the invitation you send them."
 msgstr "請使用您自己的 Telegram 帳號。長輩會透過您傳送的邀請加入。"
+
+#: src/components/telegram-family-link.tsx
+msgid "Use your private connection code."
+msgstr "使用你的私人連結碼。"
 
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
@@ -4202,8 +4218,8 @@ msgid "Your family could not be reached just now. Your saved questions are uncha
 msgstr "目前無法讀取家人資料。已儲存的問題沒有變更。"
 
 #: app/onboarding.tsx
-msgid "Your family stays together when you update Vela. Connect your own Telegram account to find it; your parent uses their own invitation."
-msgstr "更新 Vela 後，家人仍會保留在一起。請連結您自己的 Telegram 帳號找回家人；長輩則使用專屬邀請。"
+msgid "Your family stays together when you update Vela."
+msgstr "更新 Vela 後，你的家庭仍會保留。"
 
 #: app/settings.tsx
 msgid "Your family, your preferences, your account."

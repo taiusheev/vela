@@ -15,3 +15,9 @@ Routine privacy/terms are collapsed in Settings, and setup help no longer repeat
 Server prerequisites: migration `0019_telegram_confirmation`, new confirmation/status/cancel routes and verified-requester lookup must deploy before the new app is distributed. Older clients retain their code-based flow. No new native module or permission is required.
 
 Verification receipts are kept outside the repository under `verification-2026-10-19/connection`. Local source gates and PostgreSQL concurrency checks pass. Browser checks cover actual exported demo screens and a separate, isolated source copy with synthetic authentication and a loopback fixture API; provider navigation is intercepted. Those checks establish UI/contract behavior only, not live Clerk/Telegram, native sharing, signed iPhone or VoiceOver evidence. CI, staging, signed build/archive, production guards and TestFlight availability must each be verified before a release-complete claim.
+
+## Connection-start recovery
+
+A real iPhone screenshot from build11 showed a failed start before Telegram opened. The screenshot does not establish the HTTP status or the underlying server/provider cause. Failed starts now show a bounded phase/status help reference (no token, email, challenge or family content) and offer an explicit switch to the existing private-code flow. This is a separate idempotent request in the same authenticated session; no failure automatically downgrades or attaches an account, and expired authentication cannot use the fallback. The code view explains copying a private proof instead of claiming no code is needed.
+
+The Telegram-first screen now places its scrolling viewport inside the top safe area, so scrolled text stays below the iPhone status bar. The repeated paragraph above its own brand/header is removed for disconnected accounts. Browser recovery checks use synthetic provider failures; a live successful connection and signed-device layout remain separate evidence.

@@ -1019,6 +1019,10 @@ msgid "Connection code"
 msgstr "Connection code"
 
 #: src/components/telegram-family-link.tsx
+msgid "Connection help reference: {supportReference}"
+msgstr "Connection help reference: {supportReference}"
+
+#: src/components/telegram-family-link.tsx
 msgid "Connection reference: {connectionReference}"
 msgstr "Connection reference: {connectionReference}"
 
@@ -1042,6 +1046,10 @@ msgstr "Continue your saved ask to {savedName}"
 #: src/data/onboarding.ts
 msgid "Cooking & food"
 msgstr "Cooking & food"
+
+#: src/components/telegram-family-link.tsx
+msgid "Copy the private connection code from your own Vela chat and paste it below. Your parent’s invitation is separate."
+msgstr "Copy the private connection code from your own Vela chat and paste it below. Your parent’s invitation is separate."
 
 #: src/components/test-sign-in-details.tsx
 msgid "Copy these ids into the private Terminal helper for the dedicated test account."
@@ -3640,6 +3648,10 @@ msgstr "Use a connection code instead"
 msgid "Use a different email"
 msgstr "Use a different email"
 
+#: src/components/telegram-family-link.tsx
+msgid "Use a private connection code instead"
+msgstr "Use a private connection code instead"
+
 #: app/sign-in.tsx
 msgid "Use my email instead"
 msgstr "Use my email instead"
@@ -3657,6 +3669,10 @@ msgstr "Use this suggestion"
 #: src/components/telegram-family-link.tsx
 msgid "Use your own Telegram account. Your parent joins from the invitation you send them."
 msgstr "Use your own Telegram account. Your parent joins from the invitation you send them."
+
+#: src/components/telegram-family-link.tsx
+msgid "Use your private connection code."
+msgstr "Use your private connection code."
 
 #: src/components/quiet-notice.tsx
 msgid "Usually answers by {time}"
@@ -4201,8 +4217,8 @@ msgid "Your family could not be reached just now. Your saved questions are uncha
 msgstr "Your family could not be reached just now. Your saved questions are unchanged."
 
 #: app/onboarding.tsx
-msgid "Your family stays together when you update Vela. Connect your own Telegram account to find it; your parent uses their own invitation."
-msgstr "Your family stays together when you update Vela. Connect your own Telegram account to find it; your parent uses their own invitation."
+msgid "Your family stays together when you update Vela."
+msgstr "Your family stays together when you update Vela."
 
 #: app/settings.tsx
 msgid "Your family, your preferences, your account."

@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { SeeItFirst } from "../src/components/onboarding/see-it-first.tsx";
@@ -48,58 +48,59 @@ function TelegramFirst({ waiting }: { waiting: boolean }) {
   const capabilities = useCapabilities();
   const { noAccount, noFamily, loading, trouble, refresh } = useToday();
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      automaticallyAdjustKeyboardInsets
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + space.xl,
-        paddingBottom: insets.bottom + space.xxxl,
-        paddingHorizontal: space.margin,
-        gap: space.l,
-      }}
-    >
-      {waiting ? (
-        <>
+    <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1, backgroundColor: palette.bg }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        style={{ backgroundColor: palette.bg }}
+        contentContainerStyle={{
+          paddingTop: space.xl,
+          paddingBottom: insets.bottom + space.xxxl,
+          paddingHorizontal: space.margin,
+          gap: space.l,
+        }}
+      >
+        {waiting ? (
+          <>
+            <Words variant="body" tone="ink2">
+              {capabilities.isError
+                ? t`Pilot setup could not be reached just now.`
+                : t`Loading pilot setup…`}
+            </Words>
+            <SecondaryButton label={t`Try again`} onPress={() => void capabilities.refetch()} />
+          </>
+        ) : loading ? (
           <Words variant="body" tone="ink2">
-            {capabilities.isError
-              ? t`Pilot setup could not be reached just now.`
-              : t`Loading pilot setup…`}
+            <Trans>Loading your family…</Trans>
           </Words>
-          <SecondaryButton label={t`Try again`} onPress={() => void capabilities.refetch()} />
-        </>
-      ) : loading ? (
-        <Words variant="body" tone="ink2">
-          <Trans>Loading your family…</Trans>
-        </Words>
-      ) : trouble ? (
-        <>
-          <Words variant="body" tone="ink2">
-            <Trans>Your account could not be loaded. Check your connection and try again.</Trans>
-          </Words>
-          <SecondaryButton label={t`Try again`} onPress={refresh} />
-        </>
-      ) : (
-        <Card>
-          <Words variant="body">
-            <Trans>
-              Your family stays together when you update Vela. Connect your own Telegram account to
-              find it; your parent uses their own invitation.
-            </Trans>
-          </Words>
-          {!noAccount && !noFamily ? (
-            <SecondaryButton
-              label={t`Go to Today`}
-              onPress={() => {
-                resetDraft();
-                router.replace("/");
-              }}
-            />
-          ) : (
-            <TelegramFamilyLink key={connectionScope} noAccount={noAccount} />
-          )}
-        </Card>
-      )}
-    </ScrollView>
+        ) : trouble ? (
+          <>
+            <Words variant="body" tone="ink2">
+              <Trans>Your account could not be loaded. Check your connection and try again.</Trans>
+            </Words>
+            <SecondaryButton label={t`Try again`} onPress={refresh} />
+          </>
+        ) : (
+          <Card>
+            {!noAccount && !noFamily ? (
+              <>
+                <Words variant="body">
+                  <Trans>Your family stays together when you update Vela.</Trans>
+                </Words>
+                <SecondaryButton
+                  label={t`Go to Today`}
+                  onPress={() => {
+                    resetDraft();
+                    router.replace("/");
+                  }}
+                />
+              </>
+            ) : (
+              <TelegramFamilyLink key={connectionScope} noAccount={noAccount} />
+            )}
+          </Card>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
