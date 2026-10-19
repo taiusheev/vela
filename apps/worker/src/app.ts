@@ -38,6 +38,7 @@ import {
   SITE_LANGS,
   SITE_PATHS,
   siteHome,
+  siteLegal,
   sitePrecision,
   sitePrivacy,
   unfilledSiteBlanks,
@@ -51,6 +52,7 @@ import {
   siteIndexable,
   sitemapXml,
 } from "./site-host.ts";
+import { LEGAL_ORIGIN, LEGAL_PAGES, legalPath } from "./site-legal.ts";
 
 /** The most a waitlist form may send, in characters. */
 const WAITLIST_MAX_BODY = 2048;
@@ -353,6 +355,23 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
           origin: canonicalOrigin(c.env, new URL(c.req.url)),
         },
       );
+
+    for (const page of LEGAL_PAGES) {
+      app.get(legalPath(lang, page), (c) =>
+        sitePage(
+          {
+            lang,
+            ...siteLegal(lang, page),
+            path: legalPath(lang, page),
+            alternates: SITE_LANGS.map((other) => ({ lang: other, path: legalPath(other, page) })),
+          },
+          {
+            indexable: siteIndexable(c.env, new URL(c.req.url)),
+            origin: LEGAL_ORIGIN,
+          },
+        ),
+      );
+    }
 
     app.get(SITE_PATHS[lang].privacy, (c) => {
       const refused = refusal(c);

@@ -1,9 +1,13 @@
 import { z } from "zod";
+import { AppPrivacyAcceptance } from "./app-privacy.ts";
 import {
   AnswerKind,
   Channel,
   ExchangeState,
   ExchangeType,
+  INTEREST_TOPICS,
+  InterestTopic,
+  KeptLightRelationship,
   Lang,
   LightState,
   LocalDate,
@@ -14,8 +18,10 @@ import {
   PushPermission,
   PushPlatform,
   REACTION_KINDS,
+  REPLY_WAYS,
   Region,
   ReplyKind,
+  ReplyWay,
   Role,
   SubscriptionStatus,
   TimeZone,
@@ -107,6 +113,7 @@ export type PageQuery = z.infer<typeof PageQuery>;
 export type PageQueryInput = z.input<typeof PageQuery>;
 
 export const ApiAccountProfile = z.strictObject({
+  privacy_acceptance: AppPrivacyAcceptance.optional(),
   display_name: z
     .string()
     .trim()
@@ -125,7 +132,8 @@ export type ApiAccountProfile = z.infer<typeof ApiAccountProfile>;
  * `PATCH /v1/me`: the profile's own fields, and `one_moment_a_day` (ADR-34), the account's switch
  * for its ordinary pushes. It never stops the quiet notice or its close.
  */
-export const ApiAccountPatch = ApiAccountProfile.partial()
+export const ApiAccountPatch = ApiAccountProfile.omit({ privacy_acceptance: true })
+  .partial()
   .extend({ one_moment_a_day: z.boolean().optional() })
   .refine(
     (patch) =>
@@ -143,6 +151,7 @@ export const ApiUser = z.object({
 export type ApiUser = z.infer<typeof ApiUser>;
 
 export const ApiMe = z.object({
+  privacy_accepted: z.boolean().default(false),
   user: ApiUser,
   memberships: z.array(
     z.object({
@@ -734,11 +743,25 @@ const PersonText = (max: number) =>
     .max(max)
     .refine((text) => text.isWellFormed() && !text.includes("\u0000"), "must be valid text");
 
+/** A list of choices from a fixed set, each at most once. */
+const DistinctChoices = <T extends z.ZodType<string>>(choice: T, min: number, max: number) =>
+  z
+    .array(choice)
+    .min(min)
+    .max(max)
+    .refine((chosen) => new Set(chosen).size === chosen.length, "each choice at most once");
+
 /**
  * Creating a family from the app (`POST /v1/families`, spec §14.1 A1). The organiser is the caller;
  * she is invited, not enrolled: her light stays off until she says yes on her own channel. Age, city
  * and "lives alone" from A1 are not asked, because nothing stores or uses them and the privacy
  * notice does not cover them.
+ *
+ * Onboarding also asks (founder, 19 October 2026) who she is to the organiser, what she loves to
+ * talk about and how she likes to answer. Each is optional, so an older app's request stays valid;
+ * the app of that date always sends all three. `interests` holds at least one topic when sent;
+ * an empty `reply_ways` is the organiser's "not sure yet". The pilot never stores them: its API
+ * refuses this route (`pilot_telegram_first`), and the pilot's privacy notice does not list them.
  */
 export const CreateFamily = z.strictObject({
   country: z.string().regex(/^[A-Z]{2}$/, "a two-letter country code"),
@@ -748,6 +771,9 @@ export const CreateFamily = z.strictObject({
     language: Lang,
     tz: TimeZone,
     wake_time: LocalTime,
+    relationship: KeptLightRelationship.optional(),
+    interests: DistinctChoices(InterestTopic, 1, INTEREST_TOPICS.length).optional(),
+    reply_ways: DistinctChoices(ReplyWay, 0, REPLY_WAYS.length).optional(),
   }),
 });
 export type CreateFamily = z.infer<typeof CreateFamily>;

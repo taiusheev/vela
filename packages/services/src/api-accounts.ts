@@ -1,4 +1,10 @@
-import { ApiAccountProfile, type ApiFamilyPlan, type ApiMe, type ApiUser } from "@vela/contracts";
+import {
+  APP_PRIVACY_VERSION,
+  ApiAccountProfile,
+  type ApiFamilyPlan,
+  type ApiMe,
+  type ApiUser,
+} from "@vela/contracts";
 import { families, members, subscriptions, users } from "@vela/db";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -74,6 +80,7 @@ export async function loadApiMe(
     .select({
       user: userProjection,
       oneMomentADay: users.oneMomentADay,
+      privacyAcceptance: users.privacyAcceptance,
       membership: { member_id: members.id, role: members.role, status: members.status },
       family: {
         id: families.id,
@@ -114,7 +121,12 @@ export async function loadApiMe(
       });
     }
   }
-  return { user: first.user, memberships, one_moment_a_day: first.oneMomentADay };
+  return {
+    user: first.user,
+    memberships,
+    one_moment_a_day: first.oneMomentADay,
+    privacy_accepted: first.privacyAcceptance?.version === APP_PRIVACY_VERSION,
+  };
 }
 
 export async function loadApiFamilyPlan(

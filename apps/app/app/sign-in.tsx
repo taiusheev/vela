@@ -28,6 +28,7 @@ import {
   readable,
   toInternational,
 } from "../src/auth/phone.ts";
+import { AppPrivacy, acceptLocalPrivacy } from "../src/components/app-privacy.tsx";
 import { BrandHeader } from "../src/components/brand/header.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { SetupHelp } from "../src/components/setup-help.tsx";
@@ -41,6 +42,7 @@ import {
   Words,
 } from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
+import { readDraft, resetDraft, useOnboardingDraft } from "../src/data/onboarding-draft.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
@@ -154,7 +156,19 @@ async function within<T>(work: Promise<T>): Promise<T> {
 export default function SignInScreen() {
   // A checkout without a Clerk key has no accounts at all; the screen says so rather than asking
   // Clerk's hooks for a provider that is not there.
-  return accountsConfigured() ? <CodeSignIn /> : <NoAccounts />;
+  const draft = useOnboardingDraft();
+  if (!accountsConfigured()) return <NoAccounts />;
+  if (!draft.privacyAccepted)
+    return (
+      <AppPrivacy
+        onAccept={acceptLocalPrivacy}
+        onDecline={() => {
+          resetDraft();
+          router.replace("/onboarding");
+        }}
+      />
+    );
+  return <CodeSignIn />;
 }
 
 function NoAccounts() {
@@ -195,6 +209,10 @@ function NoAccounts() {
 
 function CodeSignIn() {
   const palette = usePalette();
+  // Onboarding sends a newcomer here to save what they made: say so, by her name.
+  const draft = useOnboardingDraft();
+  const savingFor =
+    draft.step === "save" && draft.callName.trim().length > 0 ? draft.callName.trim() : null;
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
@@ -365,7 +383,7 @@ function CodeSignIn() {
         return;
       }
       await within(setActive({ session }));
-      router.replace("/");
+      router.replace(readDraft().step === "save" ? "/onboarding" : "/");
     } catch (error: unknown) {
       logClerkCodes("verify", error);
       setTrouble(
@@ -474,12 +492,18 @@ function CodeSignIn() {
             current={step === "identifier" ? 0 : 1}
           />
           <Words variant="title">
-            {step === "identifier" ? t`Welcome to Vela` : t`Check your inbox`}
+            {step !== "identifier"
+              ? t`Check your inbox`
+              : savingFor === null
+                ? t`Welcome to Vela`
+                : t`Save ${savingFor}’s mornings`}
           </Words>
           <Words variant="body" tone="ink2">
-            {step === "identifier"
-              ? t`A little closer to your family. Use your email to get started or sign in.`
-              : t`Enter your code to continue to your family.`}
+            {step !== "identifier"
+              ? t`Enter your code to continue to your family.`
+              : savingFor === null
+                ? t`A little closer to your family. Use your email to get started or sign in.`
+                : t`One email, one code, no password. Then ${savingFor}’s invitation is ready to send.`}
           </Words>
         </View>
         <Card>

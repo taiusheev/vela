@@ -5,11 +5,14 @@
  * workers.dev address, so a public domain adds no way in to them. `www.` sends a visitor to the
  * bare domain. Only the site's own address is indexed; every other address keeps search engines out.
  */
+
 import { SITE_LANGS, SITE_PATHS, SUPPORT_EMAIL, WAITLIST_PATH } from "./site.ts";
+import { LEGAL_ORIGIN, LEGAL_PAGES, legalPath } from "./site-legal.ts";
 
 /** The paths the public address answers; static files under /site/ are the platform's. */
 export const PUBLIC_SITE_PATHS: ReadonlySet<string> = new Set([
   ...SITE_LANGS.flatMap((lang) => [SITE_PATHS[lang].home, SITE_PATHS[lang].precision]),
+  ...SITE_LANGS.flatMap((lang) => LEGAL_PAGES.map((page) => legalPath(lang, page))),
   WAITLIST_PATH,
   "/privacy",
   "/privacy/zh-TW",
@@ -104,7 +107,7 @@ export function securityTxt(origin: string, now: Date): string {
     `Expires: ${expires.toISOString()}`,
     "Preferred-Languages: en, zh-TW",
     `Canonical: ${origin}/.well-known/security.txt`,
-    `Policy: ${origin}${SITE_PATHS.en.privacy}`,
+    `Policy: ${LEGAL_ORIGIN}${legalPath("en", "security")}`,
     "",
   ].join("\n");
 }

@@ -5,6 +5,7 @@ import type { PilotEnv } from "./env.ts";
 import { SITE_CSP } from "./html.ts";
 import { createWorker } from "./pilot-worker.ts";
 import { SITE_LANGS, SITE_PATHS, siteDemo, unfilledSiteBlanks } from "./site.ts";
+import { LEGAL_ORIGIN, LEGAL_PAGES, legalPath } from "./site-legal.ts";
 import {
   createFakePilotRuntime,
   type FakePilotRuntime,
@@ -91,7 +92,12 @@ describe("the public website", () => {
       ]);
       expect(body).not.toContain("style=");
       for (const [, url] of body.matchAll(/(?:src|href|content)="(https?:[^"]+)"/g)) {
-        expect(url?.startsWith(at)).toBe(true);
+        expect(
+          url?.startsWith(at) ||
+            SITE_LANGS.some((language) =>
+              LEGAL_PAGES.some((page) => url === `${LEGAL_ORIGIN}${legalPath(language, page)}`),
+            ),
+        ).toBe(true);
       }
       expect(body).toContain(`href="/privacy${lang === "en" ? "" : "/zh-TW"}"`);
       expect(body).toContain(`href="${SITE_PATHS[lang].precision}"`);

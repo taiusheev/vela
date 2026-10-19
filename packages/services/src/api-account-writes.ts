@@ -1,4 +1,5 @@
 import {
+  APP_PRIVACY_TEXT,
   ApiAccountPatch,
   ApiAccountProfile,
   type ApiMutationResponse,
@@ -82,6 +83,19 @@ export async function provisionApiAccount(
       mutate: async (tx) => {
         await provisionApiUser(tx, identity, parsed.data);
         const account = await lockAccount(tx, identity.authSubject);
+        if (account === undefined) throw new VelaError("not_found", "Account not found");
+        if (parsed.data.privacy_acceptance !== undefined) {
+          await tx
+            .update(users)
+            .set({
+              privacyAcceptance: {
+                version: parsed.data.privacy_acceptance.version,
+                text_sha256: await sha256Hex(APP_PRIVACY_TEXT),
+                accepted_at: deps.clock.now().toISOString(),
+              },
+            })
+            .where(eq(users.id, account.id));
+        }
         return { status: 200, body: ApiUser.parse(account) };
       },
     },
@@ -162,7 +176,10 @@ export async function disableApiAccount(
       .for("update");
     if (account === undefined) throw new VelaError("not_found", "Account not found");
     if (account.deletedAt === null) {
-      await tx.update(users).set({ deletedAt: now }).where(eq(users.id, account.id));
+      await tx
+        .update(users)
+        .set({ deletedAt: now, privacyAcceptance: null })
+        .where(eq(users.id, account.id));
     }
     await tx.delete(apiRequestReceipts).where(eq(apiRequestReceipts.actorHash, actorHash));
     await tx.delete(accountLinkChallenges).where(eq(accountLinkChallenges.userId, account.id));

@@ -130,6 +130,65 @@ describe("createApiFamily", () => {
     });
   });
 
+  it("keeps who she is, what she loves to talk about and how she likes to answer, as onboarding sent them", async () => {
+    const result = await create({
+      ...REQUEST,
+      kept_light_member: {
+        ...REQUEST.kept_light_member,
+        relationship: "mother",
+        interests: ["garden", "cooking", "old_days"],
+        reply_ways: ["voice", "photo"],
+      },
+    });
+    const body = ApiCreatedFamily.parse(result.response.body);
+    const [her] = await h.db
+      .select()
+      .from(members)
+      .where(eq(members.id, body.kept_light_member.id));
+    expect(her).toMatchObject({
+      relationship: "mother",
+      interests: ["garden", "cooking", "old_days"],
+      replyWays: ["voice", "photo"],
+    });
+    // The response is the one an older app reads: nothing new in it.
+    expect(Object.keys(body.kept_light_member).sort()).toEqual([
+      "arrival_time",
+      "display_name",
+      "id",
+      "status",
+    ]);
+  });
+
+  it('keeps the organiser\'s "not sure yet" as no reply ways, and leaves all three empty for an older app', async () => {
+    const unsure = ApiCreatedFamily.parse(
+      (
+        await create({
+          ...REQUEST,
+          kept_light_member: { ...REQUEST.kept_light_member, interests: ["music"], reply_ways: [] },
+        })
+      ).response.body,
+    );
+    const [first] = await h.db
+      .select()
+      .from(members)
+      .where(eq(members.id, unsure.kept_light_member.id));
+    expect(first).toMatchObject({ relationship: null, interests: ["music"], replyWays: [] });
+
+    await h.reset();
+    await h.db.insert(users).values({
+      authSubject: identity.authSubject,
+      displayName: "Mia",
+      language: "en",
+      tz: "Asia/Taipei",
+    });
+    const older = ApiCreatedFamily.parse((await create()).response.body);
+    const [second] = await h.db
+      .select()
+      .from(members)
+      .where(eq(members.id, older.kept_light_member.id));
+    expect(second).toMatchObject({ relationship: null, interests: null, replyWays: null });
+  });
+
   it("carries her invite on LINE too where LINE is on, opening Vela's chat with /start typed", async () => {
     keys += 1;
     const result = await createApiFamily(
@@ -342,6 +401,13 @@ describe("createApiFamily", () => {
       { ...REQUEST, kept_light_member: { ...person, wake_time: "7:30" } },
       { ...REQUEST, kept_light_member: { ...person, language: "xx" } },
       { ...REQUEST, kept_light_member: { ...person, age: 81 } },
+      { ...REQUEST, kept_light_member: { ...person, relationship: "aunt" } },
+      { ...REQUEST, kept_light_member: { ...person, interests: [] } },
+      { ...REQUEST, kept_light_member: { ...person, interests: ["cooking", "cooking"] } },
+      { ...REQUEST, kept_light_member: { ...person, interests: ["politics"] } },
+      { ...REQUEST, kept_light_member: { ...person, reply_ways: ["voice", "voice"] } },
+      { ...REQUEST, kept_light_member: { ...person, reply_ways: ["fax"] } },
+      { ...REQUEST, kept_light_member: { ...person, reply_ways: "voice" } },
       { ...REQUEST, extra: true },
     ]) {
       await expect(create(body), JSON.stringify(body)).rejects.toThrow(ApiIdempotencyError);

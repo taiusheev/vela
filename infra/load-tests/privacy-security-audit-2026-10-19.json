@@ -1,0 +1,86 @@
+{
+  "reviewDate": "2026-10-19",
+  "baseCommit": "46c31bfa30100df3c29344dccbabefa3dd7d8f9a",
+  "command": "pnpm audit --prod --json",
+  "vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 5,
+    "high": 2,
+    "critical": 0
+  },
+  "notes": "Dependency inventory includes Expo tooling; exploitability is not established by package presence. No advisory was suppressed or dependency version changed.",
+  "advisories": [
+    {
+      "package": "uuid",
+      "id": "GHSA-w5hq-g745-h8pq",
+      "severity": "moderate",
+      "versions": [
+        "7.0.3",
+        "8.3.2"
+      ],
+      "patchedVersions": ">=11.1.1",
+      "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq"
+    },
+    {
+      "package": "decode-uri-component",
+      "id": "GHSA-vcc3-ghjq-m6fr",
+      "severity": "moderate",
+      "versions": [
+        "0.2.2"
+      ],
+      "patchedVersions": ">=0.5.0",
+      "url": "https://github.com/advisories/GHSA-vcc3-ghjq-m6fr"
+    },
+    {
+      "package": "stream-json",
+      "id": "GHSA-528h-pc64-c93x",
+      "severity": "moderate",
+      "versions": [
+        "1.9.1"
+      ],
+      "patchedVersions": ">=3.5.0",
+      "url": "https://github.com/advisories/GHSA-528h-pc64-c93x"
+    },
+    {
+      "package": "node-forge",
+      "id": "GHSA-86w9-cpqp-85rv",
+      "severity": "high",
+      "versions": [
+        "1.4.0"
+      ],
+      "patchedVersions": null,
+      "url": "https://github.com/advisories/GHSA-86w9-cpqp-85rv"
+    },
+    {
+      "package": "braces",
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "severity": "high",
+      "versions": [
+        "3.0.3"
+      ],
+      "patchedVersions": null,
+      "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+    },
+    {
+      "package": "stream-json",
+      "id": "GHSA-hqr4-qq8f-hg3x",
+      "severity": "moderate",
+      "versions": [
+        "1.9.1"
+      ],
+      "patchedVersions": ">=3.6.0",
+      "url": "https://github.com/advisories/GHSA-hqr4-qq8f-hg3x"
+    },
+    {
+      "package": "stream-json",
+      "id": "GHSA-mjw6-4jj6-33hc",
+      "severity": "moderate",
+      "versions": [
+        "1.9.1"
+      ],
+      "patchedVersions": ">=3.6.0",
+      "url": "https://github.com/advisories/GHSA-mjw6-4jj6-33hc"
+    }
+  ]
+}

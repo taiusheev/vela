@@ -120,6 +120,20 @@
       "when": 1792206818944,
       "tag": "0016_send_as_me",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792376784233,
+      "tag": "0017_setup_answers",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792387427993,
+      "tag": "0018_app_privacy_acceptance",
+      "breakpoints": true
     }
   ]
 }

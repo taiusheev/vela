@@ -73,6 +73,8 @@ import {
   EVENT_NAMES,
   EXCHANGE_STATES,
   EXCHANGE_TYPES,
+  INTEREST_TOPICS,
+  KEPT_LIGHT_RELATIONSHIPS,
   LANGS,
   type LocalTime,
   MEDIA_KINDS,
@@ -87,6 +89,7 @@ import {
   REACTION_KINDS,
   REGIONS,
   REPLY_KINDS,
+  REPLY_WAYS,
   ROLES,
   SUBSCRIPTION_STATUSES,
   SURFACES,
@@ -113,7 +116,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { isOneOf, quoteLiteral } from "./checks.ts";
+import { isOneOf, isSubsetOf, quoteLiteral } from "./checks.ts";
 import {
   ANSWER_PAYLOAD_SEALING,
   EXCHANGE_OPTIONS_SEALING,
@@ -207,6 +210,12 @@ export const users = pgTable(
      * the turn prompt). It never stops the quiet notice or its close.
      */
     oneMomentADay: boolean("one_moment_a_day").notNull().default(true),
+    /** Current app permission evidence, never a parent’s or health consent. Cleared with account deletion. */
+    privacyAcceptance: jsonb("privacy_acceptance").$type<{
+      version: string;
+      text_sha256: string;
+      accepted_at: string;
+    }>(),
     createdAt: createdAt(),
     deletedAt: timestamptz("deleted_at"),
   },
@@ -262,6 +271,15 @@ export const members = pgTable(
     tz: text("tz").notNull(),
     country: text("country").notNull(),
     ageBand: text("age_band", { enum: AGE_BANDS }),
+    /**
+     * On a kept-light member's row, what the organiser told onboarding (founder, 19 October 2026):
+     * who she is to them, the topics she loves to talk about, and how she likes to answer, easiest
+     * first. NULL where onboarding did not ask; an empty `reply_ways` is "not sure yet". Deleted with
+     * her row, like everything else setup stored.
+     */
+    relationship: text("relationship", { enum: KEPT_LIGHT_RELATIONSHIPS }),
+    interests: text("interests", { enum: INTEREST_TOPICS }).array(),
+    replyWays: text("reply_ways", { enum: REPLY_WAYS }).array(),
     status: text("status", { enum: MEMBER_STATUSES }).notNull().default("invited"),
     turnsIn: boolean("turns_in").notNull().default(true),
     primarySurface: text("primary_surface", { enum: SURFACES }).notNull().default("app"),
@@ -313,6 +331,9 @@ export const members = pgTable(
     check("members_role_check", isOneOf(t.role, ROLES)),
     check("members_language_check", isOneOf(t.language, LANGS)),
     check("members_age_band_check", isOneOf(t.ageBand, AGE_BANDS)),
+    check("members_relationship_check", isOneOf(t.relationship, KEPT_LIGHT_RELATIONSHIPS)),
+    check("members_interests_check", isSubsetOf(t.interests, INTEREST_TOPICS)),
+    check("members_reply_ways_check", isSubsetOf(t.replyWays, REPLY_WAYS)),
     check("members_status_check", isOneOf(t.status, MEMBER_STATUSES)),
     check("members_primary_surface_check", isOneOf(t.primarySurface, SURFACES)),
   ],

@@ -22,6 +22,7 @@ import { BrandIcon } from "../src/components/brand/icon.tsx";
 import { CallingNumberEditor } from "../src/components/calling-number-editor.tsx";
 import { ConfirmationDialog } from "../src/components/confirmation-dialog.tsx";
 import { FamilyChooser } from "../src/components/family-chooser.tsx";
+import { LegalLinks } from "../src/components/legal-links.tsx";
 import { Light } from "../src/components/light.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { ServiceStatus } from "../src/components/service-status.tsx";
@@ -29,6 +30,7 @@ import { SetUpPhone } from "../src/components/set-up-phone.tsx";
 import { TestSignInDetails } from "../src/components/test-sign-in-details.tsx";
 import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { momentLine, nobodyTellsLine, phoneLine, toldOfQuiet } from "../src/data/notifications.ts";
+import { resetDraft } from "../src/data/onboarding-draft.ts";
 import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { useFamily } from "../src/data/useFamily.ts";
 import { useOneMoment } from "../src/data/useOneMoment.ts";
@@ -466,6 +468,14 @@ function FamilyYou({ day }: { day: TodayView }) {
             icon="privacy"
             title={t`Read the privacy notice`}
             onPress={() => void openLink(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`)}
+          />
+          <LegalLinks />
+          <SecondaryButton
+            label={t`Preview family setup`}
+            onPress={() => {
+              resetDraft();
+              router.push("/onboarding?preview=1");
+            }}
           />
           <FamilyAction
             icon="mail"

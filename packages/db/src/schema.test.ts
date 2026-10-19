@@ -11,6 +11,8 @@ import {
   EVENT_NAMES,
   EXCHANGE_STATES,
   EXCHANGE_TYPES,
+  INTEREST_TOPICS,
+  KEPT_LIGHT_RELATIONSHIPS,
   LANGS,
   MEDIA_KINDS,
   MEMBER_STATUSES,
@@ -23,6 +25,7 @@ import {
   QUIET_OUTCOMES,
   REGIONS,
   REPLY_KINDS,
+  REPLY_WAYS,
   ROLES,
   SURFACES,
   WHEN_RULES,
@@ -2055,6 +2058,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "members", column: "role", values: ROLES },
     { table: "members", column: "language", values: LANGS },
     { table: "members", column: "age_band", values: AGE_BANDS },
+    { table: "members", column: "relationship", values: KEPT_LIGHT_RELATIONSHIPS },
     { table: "members", column: "status", values: MEMBER_STATUSES },
     { table: "members", column: "primary_surface", values: SURFACES },
     { table: "channel_links", column: "channel", values: CHANNELS },
@@ -2115,6 +2119,27 @@ describe("CHECK constraints on enumerated columns", () => {
     },
   );
 
+  it.each([
+    { column: "interests", values: INTEREST_TOPICS },
+    { column: "reply_ways", values: REPLY_WAYS },
+  ])(
+    "members column $column holds any of its tuple's values, none, or nothing else",
+    async ({ column, values }) => {
+      await seedEveryTable();
+      const setList = (list: readonly string[] | null) =>
+        db.execute(
+          sql`update members set ${sql.identifier(column)} = ${list === null ? null : sql`${sql.raw(`ARRAY[${list.map((value) => `'${value}'`).join(", ")}]::text[]`)}`}`,
+        );
+
+      await setList(values);
+      await setList([]);
+      await setList(null);
+      const error = await rejection(setList([values[0] ?? "", "not_a_real_value"]));
+
+      expect(error).toEqual({ code: CHECK_VIOLATION, constraint: `members_${column}_check` });
+    },
+  );
+
   it("rejects a story day outside Sunday to Saturday", async () => {
     await seedFamily();
 
@@ -2154,6 +2179,8 @@ describe("CHECK constraints on enumerated columns", () => {
     const tested = [
       ...enumerated.map(({ table, column }) => `${table}_${column}_check`),
       "families_story_day_check",
+      "members_interests_check",
+      "members_reply_ways_check",
       "outbound_nearby_ask_actor_check",
       "media_storage_key_or_provider_file_id_check",
       "media_provider_unique_id_channel_check",

@@ -4,7 +4,13 @@
  * invited kept-light member's profile, her arrival time from her wake time, and a single-use link
  * that is good for a week.
  */
-import type { Lang, LocalTime } from "@vela/contracts";
+import type {
+  InterestTopic,
+  KeptLightRelationship,
+  Lang,
+  LocalTime,
+  ReplyWay,
+} from "@vela/contracts";
 import { type Invite, invites, type Member, members, type VelaTransaction } from "@vela/db";
 import type { Deps } from "./deps.ts";
 
@@ -36,6 +42,14 @@ export interface InvitedMemberProfile {
   timeZone: string;
   country: string;
   wakeTime: LocalTime;
+  /**
+   * What the app's onboarding also asks (19 October 2026): who she is to the organiser, what she
+   * loves to talk about, and how she likes to answer. Telegram onboarding asks none of them, so each
+   * stays NULL there.
+   */
+  relationship?: KeptLightRelationship;
+  interests?: readonly InterestTopic[];
+  replyWays?: readonly ReplyWay[];
 }
 
 /**
@@ -63,6 +77,9 @@ export async function insertInvitedMember(
       lightOn: false,
       wakeTime: profile.wakeTime,
       arrivalTime: addMinutesToLocalTime(profile.wakeTime, ARRIVAL_AFTER_WAKE_MINUTES),
+      relationship: profile.relationship ?? null,
+      interests: profile.interests === undefined ? null : [...profile.interests],
+      replyWays: profile.replyWays === undefined ? null : [...profile.replyWays],
       createdAt: now,
     })
     .returning();

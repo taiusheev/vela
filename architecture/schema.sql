@@ -316,6 +316,9 @@ CREATE TABLE "members" (
 	"tz" text NOT NULL,
 	"country" text NOT NULL,
 	"age_band" text,
+	"relationship" text,
+	"interests" text[],
+	"reply_ways" text[],
 	"status" text DEFAULT 'invited' NOT NULL,
 	"turns_in" boolean DEFAULT true NOT NULL,
 	"primary_surface" text DEFAULT 'app' NOT NULL,
@@ -338,6 +341,9 @@ CREATE TABLE "members" (
 	CONSTRAINT "members_role_check" CHECK ("role" in ('organiser', 'member')),
 	CONSTRAINT "members_language_check" CHECK ("language" in ('en', 'zh-TW', 'ja', 'de', 'hi', 'ru')),
 	CONSTRAINT "members_age_band_check" CHECK ("age_band" in ('child', 'teen', 'adult', 'elder')),
+	CONSTRAINT "members_relationship_check" CHECK ("relationship" in ('mother', 'father', 'grandmother', 'grandfather', 'other')),
+	CONSTRAINT "members_interests_check" CHECK ("interests" <@ ARRAY['cooking', 'garden', 'family', 'old_days', 'music', 'festivals', 'films_books', 'friends', 'travel', 'making', 'work', 'sayings']::text[]),
+	CONSTRAINT "members_reply_ways_check" CHECK ("reply_ways" <@ ARRAY['text', 'voice', 'photo', 'tap']::text[]),
 	CONSTRAINT "members_status_check" CHECK ("status" in ('invited', 'active', 'paused', 'left', 'deceased')),
 	CONSTRAINT "members_primary_surface_check" CHECK ("primary_surface" in ('app', 'parent-surface', 'line', 'whatsapp', 'telegram', 'voice'))
 );
@@ -630,6 +636,7 @@ CREATE TABLE "users" (
 	"language" text DEFAULT 'en' NOT NULL,
 	"tz" text DEFAULT 'UTC' NOT NULL,
 	"one_moment_a_day" boolean DEFAULT true NOT NULL,
+	"privacy_acceptance" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted_at" timestamp with time zone,
 	CONSTRAINT "users_auth_subject_key" UNIQUE("auth_subject"),

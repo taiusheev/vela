@@ -50,7 +50,7 @@ Updated 11 October for product-week X5. The app-level manifest in `apps/app/app.
 - **Diagnostics.** When crash reporting is added (step 5.3), add Diagnostics → Crash Data, Not linked, App Functionality, and update this file the same day.
 
 **Other App Review items this answers:**
-- **Account deletion (5.1.1(v)):** You → Delete account, in the app (ADR-43, PR #38).
+- **Account deletion (5.1.1(v)):** You → Settings → Delete account, in the app (ADR-43, PR #38).
 - **Sign in with Apple (4.8):** not required, because Vela offers no third-party or social sign-in, only an email code.
 - **Privacy policy URL:** `https://vela.vela-light.workers.dev/privacy`. It must answer 200 publicly on production first.
 - **Encryption export:** `ITSAppUsesNonExemptEncryption` is false in `app.json`. The native app uses HTTPS plus OS-provided SecureStore for session credentials, draft text and optional calling numbers. Complete Apple's encryption questionnaire against the final archive; the older statement that the app uses only HTTPS was incomplete.
@@ -62,7 +62,7 @@ Updated 11 October for product-week X5. The app-level manifest in `apps/app/app.
 |---|---|
 | Does your app collect or share any of the required user data types? | Yes |
 | Is all collected data encrypted in transit? | Yes (every build profile in `apps/app/eas.json` points the app at an https API) |
-| Do you provide a way for users to request that their data is deleted? | Yes: in the app (You → Delete account), and by email to the support address |
+| Do you provide a way for users to request that their data is deleted? | Yes: in the app (You → Settings → Delete account), and by email to the support address |
 | Data shared with third parties | None. Processors acting for Vela (Cloudflare, Neon, Clerk, OpenAI, Deepgram, Expo) count as service providers, not sharing. |
 
 | Play data type | Collected | Optional? | Purpose |
@@ -81,5 +81,5 @@ Updated 11 October for product-week X5. The app-level manifest in `apps/app/app.
 
 ## Found while preparing this
 
-- `infra/sub-processors.md` still lists Clerk under "planned (Sprint 3)", though the app signs in through it and notice v3 names it. Move it to "In use" with its DPA date when counsel reviews (gate 12).
+- Clerk is now in the active service register. Its agreement acceptance date still requires account-owner evidence.
 - Sentry is listed as a processor "not connected to the Workers yet". Either connect it (step 5.3) or move it to planned, so the list matches what runs.

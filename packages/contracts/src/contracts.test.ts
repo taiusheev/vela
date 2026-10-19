@@ -693,6 +693,7 @@ describe("API accounts and plan reads", () => {
         session_id: "private-session",
       }),
     ).toEqual({
+      privacy_accepted: false,
       user,
       memberships: [membership],
       photos: true,
@@ -702,6 +703,7 @@ describe("API accounts and plan reads", () => {
     expect(
       ApiMe.parse({ user, memberships: [], photos: false, one_moment_a_day: true, push: false }),
     ).toEqual({
+      privacy_accepted: false,
       user,
       memberships: [],
       photos: false,
@@ -724,6 +726,7 @@ describe("API accounts and plan reads", () => {
     expect(
       ApiMe.parse({ user, memberships: [], photos: true, one_moment_a_day: false, push: true }),
     ).toEqual({
+      privacy_accepted: false,
       user,
       memberships: [],
       photos: true,
