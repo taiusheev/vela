@@ -1,0 +1,27 @@
+# See It First introduction and safe entry into an unsaved setup preview.
+# The full wizard, privacy decision and completion are covered by the release browser journey.
+url: ${APP_URL}
+name: A newcomer sees how mornings work before entering private setup
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/onboarding
+- extendedWaitUntil:
+    visible: "Far from you, Mom’s day is beginning."
+    timeout: 20000
+- assertNotVisible: "Skip"
+- tapOn: "Send her a morning question"
+- assertVisible: "In her own messenger. No new app for her."
+- tapOn: "Wait for her answer"
+- assertVisible: "And her window lights up."
+- tapOn: "And on a quiet morning?"
+- assertVisible: "If she doesn’t answer, you know the same day."
+- tapOn: "Set this up for my family"
+
+- assertVisible: "Who are you keeping a light on for?"
+- assertVisible: "You’ve seen how it works. First pane lit."
+- assertVisible: "What you call them"
+- assertVisible: "What they call you"
+- assertVisible: "Your questions are signed with it."
+- assertVisible: "Continue"

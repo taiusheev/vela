@@ -134,6 +134,9 @@ export async function createApiFamily(
             timeZone: person.tz,
             country: request.country,
             wakeTime: person.wake_time,
+            ...(person.relationship === undefined ? {} : { relationship: person.relationship }),
+            ...(person.interests === undefined ? {} : { interests: person.interests }),
+            ...(person.reply_ways === undefined ? {} : { replyWays: person.reply_ways }),
           },
           now,
         );

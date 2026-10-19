@@ -52,7 +52,7 @@ import {
   siteIndexable,
   sitemapXml,
 } from "./site-host.ts";
-import { LEGAL_PAGES, legalPath } from "./site-legal.ts";
+import { LEGAL_ORIGIN, LEGAL_PAGES, legalPath } from "./site-legal.ts";
 
 /** The most a waitlist form may send, in characters. */
 const WAITLIST_MAX_BODY = 2048;
@@ -367,7 +367,7 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
           },
           {
             indexable: siteIndexable(c.env, new URL(c.req.url)),
-            origin: canonicalOrigin(c.env, new URL(c.req.url)),
+            origin: LEGAL_ORIGIN,
           },
         ),
       );

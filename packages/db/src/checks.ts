@@ -26,3 +26,11 @@ export function literalList(values: readonly string[]): string {
 export function isOneOf(column: PgColumn, values: readonly string[]): SQL {
   return sql`${sql.identifier(column.name)} in ${sql.raw(literalList(values))}`;
 }
+
+/**
+ * `"column" <@ ARRAY['a', 'b']::text[]`: every element of a text array column is one of the values.
+ * An empty array passes, as NULL does, like any CHECK.
+ */
+export function isSubsetOf(column: PgColumn, values: readonly string[]): SQL {
+  return sql`${sql.identifier(column.name)} <@ ${sql.raw(`ARRAY[${literalList(values).slice(1, -1)}]::text[]`)}`;
+}

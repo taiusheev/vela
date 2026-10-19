@@ -2,6 +2,7 @@
 
 import type { SiteLang } from "./site.ts";
 import type { PrivacySection } from "./site-privacy.ts";
+export const LEGAL_ORIGIN = "https://vela.vela-light.workers.dev";
 export const LEGAL_PAGES = ["terms", "security", "data-rights"] as const;
 export type LegalPage = (typeof LEGAL_PAGES)[number];
 export const LEGAL_LABELS: Record<SiteLang, Record<LegalPage, string>> = {

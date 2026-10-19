@@ -1,5 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { appPrivacyAcceptance } from "@vela/contracts";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { AppState, Linking, View } from "react-native";
@@ -8,6 +9,7 @@ import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { connectionCode } from "../data/connection-code.ts";
 import { deviceZone } from "../data/onboarding.ts";
+import { resetDraft } from "../data/onboarding-draft.ts";
 import { space } from "../theme/tokens.ts";
 import { BrandHeader } from "./brand/header.tsx";
 import { SetupHelp } from "./setup-help.tsx";
@@ -32,6 +34,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       if (noAccount) {
         const profile = {
           display_name: name.trim(),
+          privacy_acceptance: appPrivacyAcceptance(),
           language: "en" as const,
           tz: deviceZone("Asia/Ho_Chi_Minh"),
         };
@@ -65,6 +68,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
     },
     onSuccess: async (outcome) => {
       if (!outcome.linked) return;
+      resetDraft();
       queries.clear();
       router.replace("/");
     },

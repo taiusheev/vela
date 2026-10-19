@@ -38,6 +38,51 @@ export const AGE_BANDS = ["child", "teen", "adult", "elder"] as const;
 export const AgeBand = z.enum(AGE_BANDS);
 export type AgeBand = z.infer<typeof AgeBand>;
 
+/**
+ * Who she is to the organiser who set her up (onboarding, founder, 19 October 2026): it chooses
+ * "she", "he" or "they" in the organiser's screens. "other" is anyone else, written about as "they".
+ */
+export const KEPT_LIGHT_RELATIONSHIPS = [
+  "mother",
+  "father",
+  "grandmother",
+  "grandfather",
+  "other",
+] as const;
+export const KeptLightRelationship = z.enum(KEPT_LIGHT_RELATIONSHIPS);
+export type KeptLightRelationship = z.infer<typeof KeptLightRelationship>;
+
+/**
+ * What she loves to talk about, as the organiser chose at setup: the topics her suggested questions
+ * are drawn from. Each maps to topics of the question bank (`apps/app/src/data/onboarding.ts`).
+ * Nothing here names health, belief or politics: the bank asks about her life, her knowledge and her
+ * opinions only.
+ */
+export const INTEREST_TOPICS = [
+  "cooking",
+  "garden",
+  "family",
+  "old_days",
+  "music",
+  "festivals",
+  "films_books",
+  "friends",
+  "travel",
+  "making",
+  "work",
+  "sayings",
+] as const;
+export const InterestTopic = z.enum(INTEREST_TOPICS);
+export type InterestTopic = z.infer<typeof InterestTopic>;
+
+/**
+ * How she likes to answer, as the organiser chose at setup, so her morning can offer the easiest
+ * way first. An empty list is the organiser's "not sure yet".
+ */
+export const REPLY_WAYS = ["text", "voice", "photo", "tap"] as const;
+export const ReplyWay = z.enum(REPLY_WAYS);
+export type ReplyWay = z.infer<typeof ReplyWay>;
+
 /** Where a member receives their daily arrival. */
 export const SURFACES = ["app", "parent-surface", "line", "whatsapp", "telegram", "voice"] as const;
 export const Surface = z.enum(SURFACES);

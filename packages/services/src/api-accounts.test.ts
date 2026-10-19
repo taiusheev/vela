@@ -157,6 +157,7 @@ describe("provisionApiUser", () => {
     expect(await loadApiMe(h.db, externalIdentity)).toEqual({
       user,
       memberships: [],
+      privacy_accepted: false,
       one_moment_a_day: true,
     });
     expect(await h.db.select().from(members)).toEqual(beforeMembers);
@@ -266,6 +267,7 @@ describe("loadApiMe", () => {
     expect(await loadApiMe(h.db, identity)).toEqual({
       user,
       memberships: [],
+      privacy_accepted: false,
       one_moment_a_day: false,
     });
   });
@@ -275,6 +277,7 @@ describe("loadApiMe", () => {
     expect(await loadApiMe(h.db, identity)).toEqual({
       user,
       memberships: [],
+      privacy_accepted: false,
       one_moment_a_day: true,
     });
   });
@@ -357,6 +360,7 @@ describe("loadApiMe", () => {
       expect(await loadApiMe(h.db, identity)).toEqual({
         user: { id: seed.user.id, ...profile },
         memberships: [],
+        privacy_accepted: false,
         one_moment_a_day: true,
       });
     },

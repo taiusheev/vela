@@ -122,6 +122,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiMe: vi.fn<ApiReadServices["loadApiMe"]>().mockResolvedValue({
       user: { id: USER_ID, display_name: "Mia", language: "en", tz: "Asia/Taipei" },
       memberships: [],
+      privacy_accepted: false,
       one_moment_a_day: true,
     }),
     loadApiFamilyPlan: vi.fn<ApiReadServices["loadApiFamilyPlan"]>(unused("the plan")),

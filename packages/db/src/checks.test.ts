@@ -2,8 +2,8 @@ import { SUBSCRIPTION_STATUSES as CONTRACT_SUBSCRIPTION_STATUSES } from "@vela/c
 import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { isOneOf, literalList, quoteLiteral } from "./checks.ts";
-import { outbound, SUBSCRIPTION_STATUSES, subscriptions } from "./schema.ts";
+import { isOneOf, isSubsetOf, literalList, quoteLiteral } from "./checks.ts";
+import { members, outbound, SUBSCRIPTION_STATUSES, subscriptions } from "./schema.ts";
 
 describe("quoteLiteral", () => {
   it("doubles single quotes so a value cannot end the literal", () => {
@@ -37,5 +37,21 @@ describe("isOneOf", () => {
   it("renders the column unqualified with no bound parameters", () => {
     const query = new PgDialect().sqlToQuery(sql`${isOneOf(outbound.kind, ["ack", "flag"])}`);
     expect(query).toEqual({ sql: `"kind" in ('ack', 'flag')`, params: [] });
+  });
+});
+
+describe("isSubsetOf", () => {
+  it("renders a text-array containment check with no bound parameters", () => {
+    const query = new PgDialect().sqlToQuery(
+      sql`${isSubsetOf(members.replyWays, ["text", "voice", "it's"])}`,
+    );
+    expect(query).toEqual({
+      sql: `"reply_ways" <@ ARRAY['text', 'voice', 'it''s']::text[]`,
+      params: [],
+    });
+  });
+
+  it("refuses an empty list, which would allow nothing but an empty array", () => {
+    expect(() => isSubsetOf(members.interests, [])).toThrow("at least one value");
   });
 });

@@ -618,3 +618,46 @@ describe("disableApiAccount", () => {
     },
   );
 });
+
+describe("explicit app privacy permission", () => {
+  it("records the exact server text, version and time, and replays without inventing a second acceptance", async () => {
+    const { appPrivacyAcceptance, APP_PRIVACY_TEXT, APP_PRIVACY_VERSION } = await import(
+      "@vela/contracts"
+    );
+    const input = { ...profile, privacy_acceptance: appPrivacyAcceptance() };
+    await provision("privacy-record", input);
+    const [first] = await h.db.select().from(users);
+    expect(first?.privacyAcceptance).toEqual({
+      version: APP_PRIVACY_VERSION,
+      text_sha256: await sha256Hex(APP_PRIVACY_TEXT),
+      accepted_at: h.clock.now().toISOString(),
+    });
+    const replay = await provision("privacy-record", input);
+    expect(replay.replayed).toBe(true);
+    const [again] = await h.db.select().from(users);
+    expect(again?.privacyAcceptance).toEqual(first?.privacyAcceptance);
+    expect((await loadApiMe(h.db, identity))?.privacy_accepted).toBe(true);
+  });
+  it("does not infer permission from an old app, a false answer or a made-up text version", async () => {
+    await provision();
+    expect((await loadApiMe(h.db, identity))?.privacy_accepted).toBe(false);
+    for (const acceptance of [
+      { version: "app-privacy.v0", ai_processing: true, terms: true },
+      { version: "app-privacy.v1", ai_processing: false, terms: true },
+    ]) {
+      await expect(
+        provision("invalid-privacy", { ...profile, privacy_acceptance: acceptance }),
+      ).rejects.toMatchObject({ code: "invalid" });
+    }
+    const [account] = await h.db.select().from(users);
+    expect(account?.privacyAcceptance).toBeNull();
+  });
+  it("clears the account permission on account deletion without changing anyone else’s consent", async () => {
+    const { appPrivacyAcceptance } = await import("@vela/contracts");
+    await provision("privacy-delete", { ...profile, privacy_acceptance: appPrivacyAcceptance() });
+    await disableApiAccount(h.deps, identity.authSubject);
+    const [account] = await h.db.select().from(users);
+    expect(account?.privacyAcceptance).toBeNull();
+    expect(account?.deletedAt).not.toBeNull();
+  });
+});

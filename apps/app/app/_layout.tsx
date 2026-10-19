@@ -21,9 +21,11 @@ import { sessionRequests } from "../src/api/request-session.ts";
 import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
+import { AppPrivacyGate } from "../src/components/app-privacy.tsx";
 import { AskOutcomeProvider } from "../src/data/ask-outcome.tsx";
 import { FamilySelectionProvider } from "../src/data/family-selection.tsx";
 import { sessionScope } from "../src/data/live-state.ts";
+import { activateOnboardingSession, readDraft } from "../src/data/onboarding-draft.ts";
 import { clearPhotoCache } from "../src/data/photos.ts";
 import { readDeviceToken } from "../src/device/token.ts";
 import { LocaleProvider, useAppLocale } from "../src/i18n/provider.tsx";
@@ -76,6 +78,7 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
 function AccountQueries({ children }: { children: ReactNode }) {
   const account = useAccount();
   const scope = sessionScope(account);
+  activateOnboardingSession(account.signedIn ? scope : "guest");
   return (
     <SessionQueries key={scope} scope={scope}>
       {children}
@@ -117,7 +120,7 @@ function useParentMode(): boolean | undefined {
   return parent;
 }
 
-/** Nobody reaches a family's screens without a session, once accounts are configured. */
+/** Family data still requires sign-in; the local introduction and setup preview do not. */
 function useSignInGuard(parent: boolean | undefined): void {
   const account = useAccount();
   const segments = useSegments();
@@ -125,15 +128,17 @@ function useSignInGuard(parent: boolean | undefined): void {
   const onSignIn = segments[0] === "sign-in";
   const onHelp = segments[0] === "help";
   const onParent = segments[0] === "parent";
+  const onOnboarding = segments[0] === "onboarding";
   useEffect(() => {
     if (!accountsConfigured() || !account.ready || parent !== false) return;
     if (onParent) {
       if (englishTrialBuild) router.replace(account.signedIn ? "/" : "/sign-in");
       return;
     }
-    if (!account.signedIn && !onSignIn && !onHelp) router.replace("/sign-in");
-    if (account.signedIn && onSignIn) router.replace("/");
-  }, [account.ready, account.signedIn, onSignIn, onHelp, onParent, parent, router]);
+    if (!account.signedIn && !onSignIn && !onHelp && !onOnboarding) router.replace("/onboarding");
+    if (account.signedIn && onSignIn)
+      router.replace(readDraft().step === "save" ? "/onboarding" : "/");
+  }, [account.ready, account.signedIn, onSignIn, onHelp, onParent, onOnboarding, parent, router]);
 }
 
 function Root() {
@@ -173,16 +178,18 @@ function Navigation() {
   return (
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          headerStyle: { backgroundColor: palette.bg },
-          headerTintColor: palette.ink,
-          headerShadowVisible: false,
-          headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
-          contentStyle: { backgroundColor: palette.bg },
-        }}
-      />
+      <AppPrivacyGate>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            headerStyle: { backgroundColor: palette.bg },
+            headerTintColor: palette.ink,
+            headerShadowVisible: false,
+            headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
+            contentStyle: { backgroundColor: palette.bg },
+          }}
+        />
+      </AppPrivacyGate>
     </>
   );
 }

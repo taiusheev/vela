@@ -55,6 +55,7 @@ const ME: Omit<ApiMe, "photos" | "push"> = {
       family: { id: FAMILY_ID, name: "Synthetic family", region: "apac", plan: "light" },
     },
   ],
+  privacy_accepted: false,
   one_moment_a_day: true,
 };
 /** What `GET /v1/me` answers from `ME` on a runtime that keeps no photos and sends no pushes. */

@@ -15,7 +15,14 @@
  */
 import type { PublicPrecision } from "@vela/contracts";
 import { type Html, html } from "./html.ts";
-import { LEGAL_COPY, LEGAL_LABELS, LEGAL_PAGES, type LegalPage, legalPath } from "./site-legal.ts";
+import {
+  LEGAL_COPY,
+  LEGAL_LABELS,
+  LEGAL_ORIGIN,
+  LEGAL_PAGES,
+  type LegalPage,
+  legalPath,
+} from "./site-legal.ts";
 import { WEBSITE_PRIVACY } from "./site-privacy.ts";
 
 export const SITE_LANGS = ["en", "zh-TW"] as const;
@@ -1551,7 +1558,7 @@ function header(lang: SiteLang, page: SitePage | LegalPage): Html {
 
 function footer(lang: SiteLang): Html {
   const copy = COPY[lang].footer;
-  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}">${MARK}<span>Vela</span></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a>${LEGAL_PAGES.map((page) => html`<a href="${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
+  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}">${MARK}<span>Vela</span></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
 }
 
 const CHECK = html`<svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;

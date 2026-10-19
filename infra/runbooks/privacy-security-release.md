@@ -6,14 +6,14 @@ The founder requested a review of the app and website, deployment with See It Fi
 
 ## Implemented in this change
 
-- English and Traditional Chinese `/terms`, `/security`, `/data-rights`, with website footer navigation, canonical/alternate links and sitemap entries. All are public without a sign-in or database. security.txt now points to the vulnerability-reporting policy.
+- English and Traditional Chinese `/terms`, `/security`, `/data-rights`, with website footer navigation and canonical/alternate links. Legal links use the production Worker origin so the existing personal-account domain bridge can reach them without a dashboard change. All are public without a sign-in or database. security.txt now points to the vulnerability-reporting policy.
 - App Settings links to service terms, security and deletion instructions on the API origin. English matches the current trial language.
 - Notice v6 describes setup relationship/interests/reply preferences, local portraits versus uploaded message photos, OpenAI default abuse-monitoring retention, actual Sentry inactivity and app update delivery. Both existing notice URLs remain English as required by the current cohort.
 - Clerk moved from future work into the active provider register; no provider acceptance dates fabricated. Store deletion instructions now reflect You → Settings → Delete account.
 
 ## Requirements for the combined onboarding release
 
-The onboarding worktree is independently owned and currently uncommitted. Integrate only its committed, reviewed source, preserve attribution, apply migration 0017 before distributing the app and test the combined source. Do not overwrite another agent's working files.
+The founder explicitly authorised takeover and copying the onboarding snapshot into this separate integration branch, finishing privacy fixes and uploading the combined build. The original Claude checkout remains untouched. Migrations 0017 (setup answers) and 0018 (app permission evidence) must reach the target server before distributing the app.
 
 1. Before sign-in/profile submission, show who operates Vela, privacy and terms links, the categories saved and why; give a clear decline/leave path.
 2. Before family content reaches OpenAI or Deepgram, explain the data shared and purpose and obtain explicit permission, with version/time/evidence recorded server-side. A generic Continue button or a privacy-policy link alone is not evidence of AI permission. Organiser permission cannot replace the parent’s own permission. Parent and health choices stay independent. Audit pre-consent AI calls and queued work, including first-week suggestions and recipes.
@@ -47,7 +47,7 @@ No dependency versions were changed by this legal-pages patch. No clean vulnerab
 | User content and safety | Private-family model, support email and account removal | Review report/block and child-safety requirements against target storefronts; source terms cannot replace working abuse controls |
 | Store disclosures | Existing manifest and store worksheet; health classification unresolved | Review final shipped data flows, required-reason declarations and archive; submit accurate App Privacy/Data Safety answers |
 | Brand/IP | Vela name used; no trademark clearance recorded | Trademark/domain/store search and counsel decision in actual launch markets |
-| Website domain | Personal-account bridge currently proxies staging; legal paths absent from its allowlist | Update standalone bridge’s exact allowlist and verify public host pages/security policy. Do not expose API/admin/media or forward cookies/auth. Prefer a production website source for public launch; do not move domains implicitly |
+| Website domain | Personal-account bridge currently proxies staging; legal paths absent from its allowlist | New footer links and security policy use the production Worker’s public legal URLs, avoiding an account transfer or bridge update. Direct /terms on the marketing host remains outside its old bridge allowlist. Prefer a production website source for a future public launch; do not move domains implicitly |
 | Incident/data requests | Existing runbooks, public request route, founder email | Rehearse identity verification, access/correction/deletion, incident notification, recovery and evidence retention with synthetic data |
 
 ## Primary references checked
@@ -69,3 +69,13 @@ Root `pnpm check` passed all 9 packages after updating the existing sitemap-coun
 Live public requests from this session returned network/proxy 403 responses, and the web reader could not access the same public hosts. These are inconclusive network observations, not evidence of a Vela outage or a successful deployment. GitHub reports the previous production run39185429552 succeeded; this change has not deployed. The website bridge has no callable browser tool or personal-account credential in this session.
 
 New app labels have draft Traditional Chinese translations; no native-language or counsel review is claimed. Consent UI and stored evidence still need the onboarding integration above.
+
+## Combined testing candidate
+
+The approved integration includes the full See It First introduction/questions/first-week preview, explicit app privacy permission, account-bound setup drafts and portrait cleanup. New users can see the preview before sign-in. The production pilot still connects an existing approved Telegram family; preview answers do not overwrite that family. Existing signed-in testers can open You → Settings → Preview family setup. No public admission, parent-app, billing or provider switch is enabled.
+
+App permission is fingerprinted from the canonical shared English text and recorded with a server timestamp in the account row; current-version status is returned as a boolean only. Older clients remain compatible in the closed pilot. This is an organiser’s own permission and does not invent parent or health consent. Account deletion clears the app permission. Full public enforcement/withdrawal and provider agreement/counsel gates remain outside this testing release.
+
+Local root check passed all nine packages, including new permission/replay/deletion and draft/account/portrait lifecycle tests. The complete demo wizard, explicit permission and completion passed a browser journey with six 320/390/430 light/dark layout cases and no runtime errors. The hosted Maestro onboarding flow is an introduction/private-setup smoke; its unsupported Tab action was removed. Full wizard evidence is the separate browser journey, not a claim that Maestro walked every question.
+
+The production preflight is run through the protected environment with the founder’s explicit upload authorisation recorded in the review comment. Do not change protection rules. Publish/submission waits for the final CI, migration/deploy checks and exact source identity.

@@ -7,7 +7,7 @@
  */
 
 import { SITE_LANGS, SITE_PATHS, SUPPORT_EMAIL, WAITLIST_PATH } from "./site.ts";
-import { LEGAL_PAGES, legalPath } from "./site-legal.ts";
+import { LEGAL_ORIGIN, LEGAL_PAGES, legalPath } from "./site-legal.ts";
 
 /** The paths the public address answers; static files under /site/ are the platform's. */
 export const PUBLIC_SITE_PATHS: ReadonlySet<string> = new Set([
@@ -84,15 +84,6 @@ export function sitemapXml(origin: string): string {
       return `<url><loc>${origin}${SITE_PATHS[lang][page]}</loc>${alternates}</url>`;
     }),
   );
-  for (const page of LEGAL_PAGES) {
-    for (const lang of SITE_LANGS) {
-      const alternates = SITE_LANGS.map(
-        (other) =>
-          `<xhtml:link rel="alternate" hreflang="${other}" href="${origin}${legalPath(other, page)}"/>`,
-      ).join("");
-      pages.push(`<url><loc>${origin}${legalPath(lang, page)}</loc>${alternates}</url>`);
-    }
-  }
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${pages.join("")}</urlset>\n`;
 }
 
@@ -116,7 +107,7 @@ export function securityTxt(origin: string, now: Date): string {
     `Expires: ${expires.toISOString()}`,
     "Preferred-Languages: en, zh-TW",
     `Canonical: ${origin}/.well-known/security.txt`,
-    `Policy: ${origin}${legalPath("en", "security")}`,
+    `Policy: ${LEGAL_ORIGIN}${legalPath("en", "security")}`,
     "",
   ].join("\n");
 }

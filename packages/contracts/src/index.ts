@@ -1,5 +1,6 @@
 export * from "./adapter.ts";
 export * from "./api.ts";
+export * from "./app-privacy.ts";
 export * from "./domain.ts";
 export * from "./events.ts";
 export * from "./parent-link.ts";
