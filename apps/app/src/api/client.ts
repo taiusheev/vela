@@ -163,12 +163,16 @@ export interface LinkChallenge {
   confirmation?: "telegram";
   requester_label?: string;
 }
-export function startTelegramLink(key: string, token: string | null): Promise<LinkChallenge> {
+export function startTelegramLink(
+  key: string,
+  token: string | null,
+  method: "approval" | "code" = "approval",
+): Promise<LinkChallenge> {
   return call<LinkChallenge>({
     path: "/v1/me/link",
     token,
     key,
-    body: { confirmation: "telegram" },
+    body: method === "code" ? {} : { confirmation: "telegram" },
   });
 }
 export function completeTelegramLink(

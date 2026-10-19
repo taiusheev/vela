@@ -52,7 +52,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
     };
   }, []);
   const start = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (method: "approval" | "code") => {
       const token = await account.token();
       if (noAccount) {
         const profile = {
@@ -64,7 +64,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
         await provisionAccount(profile, provisionKey(profile), token);
         await queries.invalidateQueries({ queryKey: ["me"] });
       }
-      return startTelegramLink(startKey({ attempt: attempt.current }), token);
+      return startTelegramLink(startKey({ attempt: attempt.current, method }), token, method);
     },
   });
   const challenge = start.data;
@@ -170,12 +170,13 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       if (mounted.current) setOpenFailed(true);
     }
   };
-  const begin = async (newFamily = false) => {
+  const begin = async (newFamily = false, method: "approval" | "code" = "approval") => {
     if (opening.current) return;
     opening.current = true;
     setSetup(newFamily);
+    setManual(method === "code");
     try {
-      const request = await start.mutateAsync();
+      const request = await start.mutateAsync(method);
       await open(request, newFamily);
     } catch {
       /* The mutation keeps its safe retry state. */
@@ -199,6 +200,10 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
   };
   const failure = start.error ?? complete.error ?? cancel.error ?? status.error;
   const signedOut = failure instanceof ApiError && failure.status === 401;
+  const supportReference =
+    failure === null
+      ? null
+      : `${start.error ? "START" : complete.error ? "FINISH" : cancel.error ? "CANCEL" : "CHECK"}-${failure instanceof ApiError ? failure.status : "NETWORK"}`;
   const busy = start.isPending || complete.isPending || cancel.isPending;
   return (
     <View style={{ gap: space.l }}>
@@ -217,7 +222,9 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
                 ? t`Telegram didn’t open.`
                 : stopped
                   ? t`Let’s try a fresh connection.`
-                  : t`One confirmation, and you’re home.`}
+                  : manual
+                    ? t`Use your private connection code.`
+                    : t`One confirmation, and you’re home.`}
       </Words>
       <Words variant="body" tone="ink2">
         {approved
@@ -228,7 +235,9 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
               ? t`Open your own Vela chat and confirm it’s you. Your family and messages stay together.`
               : stopped
                 ? t`This connection expired or was cancelled. Your family is unchanged.`
-                : t`In your own Vela chat, check the account and connection reference, then tap Connect my family. Return here to finish. No code to copy.`}
+                : manual
+                  ? t`Copy the private connection code from your own Vela chat and paste it below. Your parent’s invitation is separate.`
+                  : t`In your own Vela chat, check the account and connection reference, then tap Connect my family. Return here to finish. No code to copy.`}
       </Words>
       {noAccount && challenge === undefined ? (
         <TextField
@@ -372,6 +381,16 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
               onPress={() => void status.refetch()}
             />
           ) : null}
+          {start.isError && !signedOut && challenge === undefined ? (
+            <SecondaryButton
+              label={t`Use a private connection code instead`}
+              disabled={busy}
+              onPress={() => void begin(false, "code")}
+            />
+          ) : null}
+          <Words variant="caption" tone="ink2" selectable>
+            {t`Connection help reference: ${supportReference}`}
+          </Words>
         </>
       ) : null}
       <Words variant="caption" tone="ink2">

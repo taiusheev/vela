@@ -10,6 +10,33 @@ afterEach(() => {
 });
 
 describe("existing Telegram family connection", () => {
+  it("can explicitly use the private-code route when Telegram confirmation cannot start", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ error: { code: "unavailable" } }, { status: 503 }))
+      .mockResolvedValueOnce(
+        Response.json({ challenge_id: "private-code-challenge" }, { status: 201 }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const { startTelegramLink } = await import("./client.ts");
+    await expect(startTelegramLink("approval-attempt", "same-session")).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await expect(startTelegramLink("code-attempt", "same-session", "code")).resolves.toMatchObject({
+      challenge_id: "private-code-challenge",
+    });
+    expect(fetch.mock.calls[1]).toEqual([
+      "https://vela.example/v1/me/link",
+      expect.objectContaining({
+        body: "{}",
+        headers: expect.objectContaining({
+          authorization: "Bearer same-session",
+          "idempotency-key": "code-attempt",
+        }),
+      }),
+    ]);
+  });
   it("starts an authenticated, idempotent Telegram-confirmation challenge and completes with that session", async () => {
     const fetch = vi
       .fn()
