@@ -22,6 +22,7 @@ import { BrandIcon } from "../src/components/brand/icon.tsx";
 import { CallingNumberEditor } from "../src/components/calling-number-editor.tsx";
 import { ConfirmationDialog } from "../src/components/confirmation-dialog.tsx";
 import { FamilyChooser } from "../src/components/family-chooser.tsx";
+import { LegalLinks } from "../src/components/legal-links.tsx";
 import { Light } from "../src/components/light.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { ServiceStatus } from "../src/components/service-status.tsx";
@@ -467,6 +468,7 @@ function FamilyYou({ day }: { day: TodayView }) {
             title={t`Read the privacy notice`}
             onPress={() => void openLink(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`)}
           />
+          <LegalLinks />
           <FamilyAction
             icon="mail"
             title={t`Get help or request your data`}

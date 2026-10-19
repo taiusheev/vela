@@ -15,6 +15,7 @@
  */
 import type { PublicPrecision } from "@vela/contracts";
 import { type Html, html } from "./html.ts";
+import { LEGAL_COPY, LEGAL_LABELS, LEGAL_PAGES, type LegalPage, legalPath } from "./site-legal.ts";
 import { WEBSITE_PRIVACY } from "./site-privacy.ts";
 
 export const SITE_LANGS = ["en", "zh-TW"] as const;
@@ -1532,15 +1533,15 @@ function phone(
   return html`<div class="phone${extra}" aria-hidden="${extra.includes("interactive") ? "false" : "true"}"><div class="screen">${extra.includes("device") ? STATUS : null}<div class="bar"><span class="ava">${MARK}</span><span><b>${head.title}</b><small>${head.sub}</small></span></div><div class="chat"${extra.includes("interactive") ? html` role="log" aria-live="polite" aria-relevant="additions"` : null}>${messages.map((m) => (m.from === "time" ? html`<div class="time">${m.text}</div>` : html`<div class="msg${m.from === "her" ? " me" : ""}${m.from === "vela" ? " vela" : ""}${m.photo ? " photo" : ""}">${m.who ? html`<span class="who">${m.who}</span>` : null}${m.photo ? html`<img src="${m.photo}" alt="${m.alt ?? ""}" loading="lazy">` : null}${m.text}${m.voice ? html`<span class="voice-label">${m.voice} · ♪</span>` : null}${m.chips ? html`<div class="chips">${m.chips.map((label) => html`<span class="chip">${label}</span>`)}</div>` : null}</div>`))}</div></div></div>`;
 }
 
-function languageSwitch(lang: SiteLang, page: SitePage): Html {
+function languageSwitch(lang: SiteLang, page: SitePage | LegalPage): Html {
   return html`<nav class="langs" aria-label="Language / 語言">${SITE_LANGS.map((other) =>
     other === lang
       ? html`<span aria-current="true">${COPY[other].languageName}</span>`
-      : html`<a href="${SITE_PATHS[other][page]}" hreflang="${other}" lang="${other}">${COPY[other].languageName}</a>`,
+      : html`<a href="${page === "home" || page === "precision" || page === "privacy" ? SITE_PATHS[other][page] : legalPath(other, page)}" hreflang="${other}" lang="${other}">${COPY[other].languageName}</a>`,
   )}</nav>`;
 }
 
-function header(lang: SiteLang, page: SitePage): Html {
+function header(lang: SiteLang, page: SitePage | LegalPage): Html {
   const copy = COPY[lang];
   const home = SITE_PATHS[lang].home;
   const at = (id: string) => (page === "home" ? `#${id}` : `${home}#${id}`);
@@ -1550,7 +1551,7 @@ function header(lang: SiteLang, page: SitePage): Html {
 
 function footer(lang: SiteLang): Html {
   const copy = COPY[lang].footer;
-  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}">${MARK}<span>Vela</span></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a><a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
+  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}">${MARK}<span>Vela</span></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a>${LEGAL_PAGES.map((page) => html`<a href="${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
 }
 
 const CHECK = html`<svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -1862,5 +1863,15 @@ export function sitePrivacy(lang: SiteLang): SitePageContent {
 <p class="back"><a class="btn btn-ghost" href="${SITE_PATHS[lang].home}">${COPY[lang].precisionPage.back}</a></p>
 </div></main>
 ${footer(lang)}`,
+  };
+}
+
+export function siteLegal(lang: SiteLang, page: LegalPage) {
+  const title = LEGAL_LABELS[lang][page];
+  const copy = LEGAL_COPY[lang][page];
+  return {
+    title: `${title} · Vela`,
+    description: copy.lede,
+    body: html`${header(lang, page)}<main id="main" class="wrap"><section class="page-head"><h1>${title}</h1><p class="lede">${copy.lede}</p></section><section class="prose notice">${copy.sections.map((section) => html`<section><h2>${section.heading}</h2>${section.paragraphs?.map((paragraph) => html`<p>${paragraph}</p>`)}</section>`)}<p><a href="${PRIVACY_PATHS[lang]}">${COPY[lang].footer.privacy}</a> · <a href="${SITE_PATHS[lang].privacy}">${COPY[lang].footer.sitePrivacy}</a></p><p class="back"><a class="btn btn-ghost" href="${SITE_PATHS[lang].home}">${COPY[lang].precisionPage.back}</a></p></section></main>${footer(lang)}`,
   };
 }

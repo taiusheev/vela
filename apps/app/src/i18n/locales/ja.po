@@ -2126,6 +2126,10 @@ msgstr ""
 msgid "Search her words"
 msgstr ""
 
+#: src/components/legal-links.tsx
+msgid "Security"
+msgstr ""
+
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
 msgstr ""
@@ -2214,6 +2218,10 @@ msgstr ""
 
 #: src/data/useToday.ts
 msgid "sent a voice message"
+msgstr ""
+
+#: src/components/legal-links.tsx
+msgid "Service terms"
 msgstr ""
 
 #: src/components/set-up-phone.tsx
@@ -2577,6 +2585,10 @@ msgstr ""
 
 #: src/components/today-heart.tsx
 msgid "That heart could not be sent just now. Tap to try again."
+msgstr ""
+
+#: src/components/legal-links.tsx
+msgid "That link could not open. Contact {SUPPORT_EMAIL}."
 msgstr ""
 
 #: src/components/setup-help.tsx
@@ -3503,6 +3515,10 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Your country"
+msgstr ""
+
+#: src/components/legal-links.tsx
+msgid "Your data and deletion"
 msgstr ""
 
 #: app/sign-in.tsx

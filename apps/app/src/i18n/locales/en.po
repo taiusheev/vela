@@ -2132,6 +2132,10 @@ msgstr "Say something short"
 msgid "Search her words"
 msgstr "Search her words"
 
+#: src/components/legal-links.tsx
+msgid "Security"
+msgstr "Security"
+
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
 msgstr "See Vela Light"
@@ -2221,6 +2225,10 @@ msgstr "sent a sticker"
 #: src/data/useToday.ts
 msgid "sent a voice message"
 msgstr "sent a voice message"
+
+#: src/components/legal-links.tsx
+msgid "Service terms"
+msgstr "Service terms"
 
 #: src/components/set-up-phone.tsx
 msgid "Set it up"
@@ -2584,6 +2592,10 @@ msgstr "That exchange is not here."
 #: src/components/today-heart.tsx
 msgid "That heart could not be sent just now. Tap to try again."
 msgstr "That heart could not be sent just now. Tap to try again."
+
+#: src/components/legal-links.tsx
+msgid "That link could not open. Contact {SUPPORT_EMAIL}."
+msgstr "That link could not open. Contact {SUPPORT_EMAIL}."
 
 #: src/components/setup-help.tsx
 msgid "That link could not open. Contact Vela at the address below."
@@ -3510,6 +3522,10 @@ msgstr "Your code was sent to {sentTo}. Check spam if it is missing."
 #: app/sign-in.tsx
 msgid "Your country"
 msgstr "Your country"
+
+#: src/components/legal-links.tsx
+msgid "Your data and deletion"
+msgstr "Your data and deletion"
 
 #: app/sign-in.tsx
 msgid "Your email"

@@ -2133,6 +2133,10 @@ msgstr "寫一句簡短的話"
 msgid "Search her words"
 msgstr "搜尋說過的話"
 
+#: src/components/legal-links.tsx
+msgid "Security"
+msgstr "安全性"
+
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
 msgstr "看看 Vela Light"
@@ -2222,6 +2226,10 @@ msgstr "傳了一張貼圖"
 #: src/data/useToday.ts
 msgid "sent a voice message"
 msgstr "傳了一則語音訊息"
+
+#: src/components/legal-links.tsx
+msgid "Service terms"
+msgstr "服務條款"
 
 #: src/components/set-up-phone.tsx
 msgid "Set it up"
@@ -2585,6 +2593,10 @@ msgstr "找不到這則問答。"
 #: src/components/today-heart.tsx
 msgid "That heart could not be sent just now. Tap to try again."
 msgstr "剛才未能送出愛心。點一下再試一次。"
+
+#: src/components/legal-links.tsx
+msgid "That link could not open. Contact {SUPPORT_EMAIL}."
+msgstr "無法開啟連結，請聯絡{SUPPORT_EMAIL}。"
 
 #: src/components/setup-help.tsx
 msgid "That link could not open. Contact Vela at the address below."
@@ -3511,6 +3523,10 @@ msgstr "驗證碼已寄至 {sentTo}。如果沒有收到，請查看垃圾郵件
 #: app/sign-in.tsx
 msgid "Your country"
 msgstr "您的國家"
+
+#: src/components/legal-links.tsx
+msgid "Your data and deletion"
+msgstr "資料權利與刪除"
 
 #: app/sign-in.tsx
 msgid "Your email"

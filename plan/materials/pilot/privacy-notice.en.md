@@ -1,6 +1,6 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v5` · last updated 17 October 2026 · This invitation-only research trial operates entirely in English. Everyone taking part must be comfortable using English.
+Version `privacy-notice.v6` · last updated 19 October 2026 · This invitation-only research trial operates entirely in English. Everyone taking part must be comfortable using English.
 
 ## In short
 
@@ -33,6 +33,10 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 - The name and username your messaging app shows us, your language and your time zone.
 - What you send to Vela: questions (we call them asks), photos, voice notes, and replies and reactions to answers.
 - Whether you tapped "I've read it" under Vela's first message in the group.
+
+**App setup and local preview:** The new onboarding asks for the relationship, interests and preferred ways of replying, alongside the name, language, country, time zone and morning time. These help prepare the first week. Before saving, the preview answers stay in app memory; a chosen portrait can leave a temporary local file. Closing the app clears the in-memory draft, but a temporary file can remain until it is cleaned up or the app cache is removed. Saving sends the setup answers and chosen questions to Vela; it does not record the invited person's consent. Relationship, interests and reply preferences are kept with their member profile for the same period as their name and morning settings. You can ask the founder to correct or remove them.
+
+**Optional parent portrait:** The organiser can choose a photo for a parent's window. The cropped portrait is stored on that device, scoped to the signed-in account and family, and is not uploaded to Vela or sent to an AI provider. Remove or replace it in the parent's settings. Signing out or changing accounts clears Vela's local portrait storage. This is different from a photo deliberately sent in an ask or reply, which is uploaded and follows the 30-day media rule. Choose a photo you have permission to use.
 
 **About the person the light is for**
 
@@ -129,11 +133,13 @@ Every night Vela's AI drafts a question for each of the next few mornings of the
 | Clerk | App sign-in and session verification | Account identifier, name/email supplied for sign-in, session activity; no family message content | United States |
 | Neon (part of Databricks) | Database | Everything we store except voice notes and photos | Singapore |
 | Cloudflare | Runs Vela's software; stores voice notes and photos | Everything while it is processed; voice notes and photos at rest | Stored in its Asia-Pacific region as we request, which Cloudflare treats as a preference, not a guarantee; processed on its worldwide network |
-| OpenAI | AI: summaries, translations, suggested answers, suggested questions in an organiser's style (see "Questions Vela writes for an organiser"), drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), noticing words that matter. Vela asks OpenAI not to store these requests, and OpenAI does not use them to train its models | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
+| OpenAI | AI: summaries, translations, suggested answers, suggested questions in an organiser's style (see "Questions Vela writes for an organiser"), drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), noticing words that matter. Vela sets `store: false` on its requests. OpenAI does not use API data for training by default, but may keep inputs and outputs in abuse-monitoring logs for up to 30 days, with longer retention where required by law or necessary for safety. This setting is not Zero Data Retention; no approved Zero Data Retention arrangement is recorded for this pilot | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
 | Deepgram | Turns voice notes into text | Voice notes | United States |
-| Sentry | Error reports | Technical details and record numbers; no message content | Germany (EU) |
-| Telegram, and LINE from later in the pilot | Carry the messages | Everything sent in the chat | Their own data centres, under their own privacy policies |
+| Sentry (planned, not connected) | No current processing for Vela; error reporting would need its own setup and notice before activation | None at present | Germany (EU), planned |
+| Telegram | Carries this trial’s messages as an independent messaging platform | Everything sent in the chat | Its own data centres, under its own privacy policy |
 | Google Drive, in the founder's own Google account | The founder's pilot notes | Only a family code instead of a name, dates, the versions of the texts people agreed to, yes or no answers, the country (or US state) where each person lives and whether they are a Russian citizen, as codes, and questionnaire scores; never quotes or anything about health. In a private folder shared with no one | On Google's servers in the United States and other countries, under Google's own terms for personal accounts |
+
+Expo delivers app builds and checks for app updates; it receives technical installation/update identifiers and network details. Push notifications are separately controlled and are not enabled merely because the app shows a permission prompt. If enabled, Expo and Apple (APNs) or Google (FCM) also receive device push tokens and notification text/identifiers, never family answer text or health words.
 
 Telegram is the messaging app used in this trial under its own terms. LINE and multilingual translation are outside this trial. Messages in those chats stay in the app until you delete them there; deleting your information in Vela does not remove them from your chat history.
 
