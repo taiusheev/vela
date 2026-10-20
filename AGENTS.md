@@ -16,3 +16,8 @@ The founder using this workspace is nontechnical. Codex owns the engineering wor
 - Report exactly what has been checked and what evidence is still missing, including deployment, recovery, device, and pilot evidence when the plan requires it.
 - Follow the repository's account and credential rules in `infra/README.md`. Prepare private account-owner actions so the founder can complete them without learning the implementation.
 - Offer nontechnical founder tasks when they advance the current goal: customer interviews, recruiting pilot families, reviewing product wording, and business choices. Explain the deliverable clearly.
+
+## Shared skills
+
+- Skills both agents use live in `.agents/skills/`; Claude reads the same folders through links in `.claude/skills/`. `shipping-a-pr` and `guarding-family-data` are Vela's own; the others are copied from their publishers at a pinned commit, with a `PROVENANCE.md` saying where from and what changed.
+- Change a skill by pull request, like code. Do not add skills or plugins from public marketplaces without the founder's yes.
