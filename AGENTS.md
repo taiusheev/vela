@@ -19,5 +19,5 @@ The founder using this workspace is nontechnical. Codex owns the engineering wor
 
 ## Shared skills
 
-- Skills both agents use live in `.agents/skills/`; Claude reads the same folders through links in `.claude/skills/`. `shipping-a-pr` and `guarding-family-data` are Vela's own; the others are copied from their publishers at a pinned commit, with a `PROVENANCE.md` saying where from and what changed.
+- Skills both agents use live in `.agents/skills/`; Claude reads the same folders through links in `.claude/skills/`. `shipping-a-pr`, `guarding-family-data`, `writing-vela-voice` (words families read) and `vela-zh-tw` (Taiwanese Chinese and its review) are Vela's own; the others are copied from their publishers at a pinned commit, with a `PROVENANCE.md` saying where from and what changed.
 - Change a skill by pull request, like code. Do not add skills or plugins from public marketplaces without the founder's yes.

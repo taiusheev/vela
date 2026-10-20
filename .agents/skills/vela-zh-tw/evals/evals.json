@@ -1,0 +1,26 @@
+{
+  "skill_name": "vela-zh-tw",
+  "evals": [
+    {
+      "id": 1,
+      "should_trigger": true,
+      "prompt": "I added a new screen in apps/app that says \"Send it as me, and Vela will mark it written by Vela\" plus a line about the weekly read. Please do the Chinese for the Taiwan launch.",
+      "expected_output": "Runs i18n:extract, fills zh-TW msgstr as drafts without the native-reviewed flag, uses 用我的名字送出 / Vela 代筆 / 每週小記 and 您, Taiwanese words and full-width punctuation with Latin spacing, runs the app tests, and says the lines need the native reviewer.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "should_trigger": true,
+      "prompt": "my aunt in Taichung says the LINE message to grandma sounds like it came from China. can you check the zh-TW bot wording and fix what's off?",
+      "expected_output": "Reviews packages/copy/src/zh-TW.ts against the mainland-term and Simplified checks and the register rules (您 to her, her name not 長輩/使用者, no 他/她), proposes fixes as drafts, keeps reviewed lines untouched, runs the copy tests, and flags known inconsistencies for the founder.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "should_trigger": false,
+      "prompt": "The zh-TW website page at /zh-TW returns a 500 on staging since this morning. Find out why and fix it.",
+      "expected_output": "A server error to debug in apps/worker; no Chinese wording work, so the zh-TW skill is not needed.",
+      "files": []
+    }
+  ]
+}
