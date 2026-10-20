@@ -275,6 +275,10 @@ export default function MemoriesScreen() {
             lights={day.today.lights}
             selected={parent}
             onSelect={(id) => setParent((current) => (current === id ? undefined : id))}
+            everyone={{
+              label: day.today.lights.length === 2 ? t`Both` : t`Everyone`,
+              onSelect: () => setParent(undefined),
+            }}
           />
           <View
             style={{

@@ -794,6 +794,10 @@ msgstr ""
 msgid "Big words, one message at a time. You set it up together."
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "Both"
+msgstr ""
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Both of you, but only Mia listened about the butter."
@@ -1165,6 +1169,10 @@ msgstr ""
 msgid "Every morning starts with it."
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "Everyone"
+msgstr ""
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr ""
@@ -1378,10 +1386,6 @@ msgstr ""
 
 #: src/components/story-day.tsx
 msgid "Her answer is kept in the family book, unless she says not to."
-msgstr ""
-
-#: src/components/story-day.tsx
-msgid "Her answer stays with the exchange. Long-term story saving is not switched on here."
 msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
@@ -1685,6 +1689,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Let’s try a fresh connection."
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "Like her other answers, it is kept for 30 days, then deleted."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -2848,6 +2856,10 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Signed “— Vela”. Your name is only on what you write."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Signed in as {myName}"
 msgstr ""
 
 #: app/sign-in.tsx

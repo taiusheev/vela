@@ -107,9 +107,7 @@ export function StoryDay({
             {capabilities?.book === true ? (
               <Trans>Her answer is kept in the family book, unless she says not to.</Trans>
             ) : (
-              <Trans>
-                Her answer stays with the exchange. Long-term story saving is not switched on here.
-              </Trans>
+              <Trans>Like her other answers, it is kept for 30 days, then deleted.</Trans>
             )}
           </Words>
           {taken === null ? null : (

@@ -15,6 +15,7 @@ export default function YouScreen() {
   const { t } = useLingui();
   const day = useToday();
   const { family, loading } = useFamily(day.familyId, day.familyId !== undefined);
+  const myName = family.me.name;
   const p = usePalette();
   const insets = useSafeAreaInsets();
   return (
@@ -33,10 +34,12 @@ export default function YouScreen() {
         <Eyebrow>
           <Trans>Your family</Trans>
         </Eyebrow>
-        <Words variant="title">{loading ? t`Loading your family…` : family.me.name}</Words>
-        <Words variant="body" tone="ink2">
-          {family.familyName}
-        </Words>
+        <Words variant="title">{loading ? t`Loading your family…` : family.familyName}</Words>
+        {loading ? null : (
+          <Words variant="body" tone="ink2">
+            <Trans>Signed in as {myName}</Trans>
+          </Words>
+        )}
         {family.keptLight.map((parent) => (
           <Words key={parent.memberId} variant="body">
             {parent.name} · {parent.line}
