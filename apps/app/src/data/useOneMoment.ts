@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiMe } from "@vela/contracts";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { apiConfigured, fetchMe, updateAccount } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { useAccount } from "../auth/clerk.tsx";
@@ -12,6 +12,8 @@ export interface OneMomentView {
   changing: boolean;
   /** The last change did not go through, so the switch shows what the account still has. */
   refused: boolean;
+  status: "example" | "loading" | "unavailable" | "ready" | "saving" | "saved" | "failed";
+  retry(): void;
 }
 
 /**
@@ -25,6 +27,7 @@ export function useOneMoment(): OneMomentView {
   const queries = useQueryClient();
   const keyFor = useIdempotencyKey("one-moment");
   const [example, setExample] = useState(true);
+  const saving = useRef(false);
   const enabled = apiConfigured() && account.ready && account.signedIn;
   // The same query as Today's, so react-query makes one request for both.
   const me = useQuery({
@@ -46,21 +49,55 @@ export function useOneMoment(): OneMomentView {
       );
     },
     onSettled: async () => {
-      await queries.invalidateQueries({ queryKey: ["me"] });
+      try {
+        await queries.invalidateQueries({ queryKey: ["me"] });
+      } finally {
+        saving.current = false;
+      }
     },
   });
   if (!enabled) {
-    return { on: example, set: setExample, changing: false, refused: false };
+    return {
+      on: example,
+      set: setExample,
+      changing: false,
+      refused: false,
+      status: "example",
+      retry: () => {},
+    };
   }
   if (me.data === undefined) {
     // Not read yet, or not readable: shown at its default and held still until it is known.
-    return { on: true, set: () => {}, changing: true, refused: false };
+    return {
+      on: true,
+      set: () => {},
+      changing: true,
+      refused: false,
+      status: me.isError ? "unavailable" : "loading",
+      retry: () => {
+        void me.refetch({ cancelRefetch: false });
+      },
+    };
   }
   const asked = change.isPending ? change.variables : undefined;
   return {
     on: asked ?? me.data.one_moment_a_day,
-    set: (on) => change.mutate(on),
+    set: (on) => {
+      if (saving.current || on === me.data.one_moment_a_day) return;
+      saving.current = true;
+      change.mutate(on);
+    },
     changing: change.isPending,
     refused: change.isError,
+    status: change.isPending
+      ? "saving"
+      : change.isError
+        ? "failed"
+        : change.isSuccess
+          ? "saved"
+          : "ready",
+    retry: () => {
+      void me.refetch({ cancelRefetch: false });
+    },
   };
 }

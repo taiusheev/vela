@@ -9,7 +9,9 @@ tags:
 # Opened by itself: Today stays mounted behind a tab it opened, and its words would count as shown.
 - openLink: ${APP_URL}/exchanges
 - assertVisible: "This week"
-- assertVisible: "Last week"
+# The oldest example is nine days old: on Monday/Tuesday it is two calendar weeks back.
+# Keep checking a distinct older-week heading without requiring one weekday's relative label.
+- assertVisible: "Last week|Week of .*"
 - tapOn: "Search her words"
 - inputText: "butter"
 - assertVisible: "Both of you, but only Mia listened about the butter."

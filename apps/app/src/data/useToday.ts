@@ -18,6 +18,7 @@ import { dayName, timeOfDay } from "./format.ts";
 import { replyLine } from "./lines.ts";
 import { demoDataAllowed } from "./live-state.ts";
 import { selectedMembership } from "./membership.ts";
+import { refreshReads } from "./query-refresh.ts";
 import {
   type Today,
   type TodayExchange,
@@ -316,8 +317,7 @@ export function useToday(): TodayView {
   const refetchDay = day.refetch;
   const refresh = useCallback(() => {
     if (!enabled) return;
-    void refetchMe();
-    if (familyId !== undefined) void refetchDay();
+    void refreshReads(refetchMe, ...(familyId === undefined ? [] : [refetchDay]));
   }, [enabled, familyId, refetchMe, refetchDay]);
 
   if (!enabled) {

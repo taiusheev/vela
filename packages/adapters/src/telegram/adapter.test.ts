@@ -144,6 +144,34 @@ describe("adapter.acknowledgeButton", () => {
 });
 
 describe("adapter.closeButtons", () => {
+  it("collapses completed setup text without removing any text or interpreting markup", async () => {
+    const { adapter, calls } = setup(() => telegramOk(true));
+    const original = "Mia 👩 would like to connect. <not markup>";
+    const text = `${original}\n\nYes, that's fine`;
+    await adapter.closeButtons("6023817745", "317", text, original.length);
+    expect(calls()).toEqual([
+      [
+        "editMessageText",
+        {
+          chat_id: 6023817745,
+          message_id: 317,
+          text,
+          entities: [{ type: "expandable_blockquote", offset: 0, length: original.length }],
+          link_preview_options: { is_disabled: true },
+        },
+      ],
+    ]);
+  });
+
+  it("rejects invalid collapsed ranges before calling Telegram", async () => {
+    const { adapter, calls } = setup(() => telegramOk(true));
+    for (const length of [0, -1, 1.5, 100]) {
+      await expect(
+        adapter.closeButtons("6023817745", "317", "setup\n\nYes", length),
+      ).rejects.toMatchObject({ code: "invalid_request" });
+    }
+    expect(calls()).toEqual([]);
+  });
   it("removes the keyboard with editMessageReplyMarkup when no text is given", async () => {
     const { adapter, calls } = setup(
       botApi({ editMessageReplyMarkup: () => ({ message_id: 317 }) }),

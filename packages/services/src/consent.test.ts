@@ -432,7 +432,12 @@ describe("handleConsentButton: Yes", () => {
       {
         conversationId: HER,
         messageId: "1",
-        replacementText: `${t("en", "consent.request", params)}\n\nYes, that's fine`,
+        replacementText: `${t("en", "consent.request", params)}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00" })}`,
+      },
+      {
+        conversationId: HER,
+        messageId: "1",
+        replacementText: `${t("en", "consent.request", params)}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00" })}`,
       },
     ]);
     expect(h.telegram.closed[0]?.replacementText).toContain("Timur Aiusheev");
@@ -491,7 +496,7 @@ describe("handleConsentButton: Yes", () => {
     expect((await eventNames()).filter((name) => name === "consent_given")).toHaveLength(1);
     // The second tap records nothing, so it only makes sure the buttons are gone.
     expect(h.telegram.closed.map((call) => call.replacementText)).toEqual([
-      `${t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN })}\n\nYes, that's fine`,
+      `${t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN })}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00" })}`,
       undefined,
     ]);
     expect(h.scheduler.history).toHaveLength(1);
@@ -530,17 +535,19 @@ describe("the health-words question", () => {
     return h.db.select().from(consents).where(eq(consents.kind, "health_words"));
   }
 
-  it("follows her thanks, ten seconds later, with its own Yes and No buttons, once", async () => {
+  it("updates the original request with her thanks, then asks health words with separate buttons once", async () => {
     const seed = await consented();
 
     const toHer = h.telegram.sentTo(HER);
     expect(toHer.map((entry) => entry.message.text)).toEqual([
       t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN }),
-      t("en", "consent.accepted", { time: "08:00" }),
       t("en", "consent.health_words", { organiser: "Mia" }),
     ]);
-    const [accepted, question] = toHer.slice(1);
-    expect((question?.at.getTime() ?? 0) - (accepted?.at.getTime() ?? 0)).toBe(10_000);
+    const [request, question] = toHer;
+    expect(h.telegram.closed.at(-1)?.replacementText).toContain(
+      t("en", "consent.accepted", { time: "08:00" }),
+    );
+    expect((question?.at.getTime() ?? 0) - (request?.at.getTime() ?? 0)).toBe(10_000);
     expect(
       question?.message.buttons?.flat().map((button) => [decodeButton(button.id), button.label]),
     ).toEqual([
@@ -959,7 +966,7 @@ describe("handleConsentButton: No", () => {
     expect(await eventNames()).toEqual(["invite_accepted", "consent_given"]);
     // The request keeps showing the Yes that stands.
     expect(h.telegram.closed.map((call) => call.replacementText?.split("\n\n").at(-1))).toEqual([
-      "Yes, that's fine",
+      t("en", "consent.accepted", { time: "08:00" }),
       undefined,
     ]);
   });

@@ -106,6 +106,11 @@ export interface TelegramEditMessageTextParams {
   readonly chat_id: TelegramChatId;
   readonly message_id: number;
   readonly text: string;
+  readonly entities?: readonly {
+    readonly type: "expandable_blockquote";
+    readonly offset: number;
+    readonly length: number;
+  }[];
   readonly link_preview_options?: TelegramLinkPreviewOptions;
   /** Omitted to remove the inline keyboard. */
   readonly reply_markup?: TelegramInlineKeyboardMarkup;

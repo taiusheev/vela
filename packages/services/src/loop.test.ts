@@ -230,10 +230,13 @@ describe("the pilot loop", () => {
       learningUntil: "2026-09-28",
     });
     expect(newMessages()).toEqual([
-      [HER, t("en", "consent.accepted", { time: "08:00" })],
       [ORGANISER, t("en", "organiser.consent_given", { name: "Mom", time: "08:00" })],
       [HER, t("en", "consent.health_words", { organiser: "Mia" })],
     ]);
+    expect(h.telegram.closed.at(-1)).toMatchObject({
+      conversationId: HER,
+      replacementText: expect.stringContaining(t("en", "consent.accepted", { time: "08:00" })),
+    });
     // She agrees that her health words may reach Mia: recorded, and nothing more is sent.
     await inbound(tapLast(HER, 0));
     expect(newMessages()).toEqual([]);

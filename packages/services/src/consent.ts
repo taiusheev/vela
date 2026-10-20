@@ -424,7 +424,7 @@ async function acceptConsent(
   event: InboundEvent,
   memberId: string,
   now: Date,
-): Promise<string | null> {
+): Promise<{ text: string; collapsedTextLength: number } | null> {
   const [member] = await tx.select().from(members).where(eq(members.id, memberId)).for("update");
   if (member === undefined || member.lightConsentedAt !== null) {
     return null;
@@ -479,6 +479,9 @@ async function acceptConsent(
     .where(eq(members.id, member.id));
   const time = morningTimeOn(member, addDays(today, 1));
   const conversationId = event.conversation.externalId;
+  const updateInPlace = event.channel === "telegram" && event.messageId !== undefined;
+  const confirmation = t(lang, "consent.accepted", { time });
+  const answered = answeredText(lang, "consent.request", params, true);
   await enqueueOutbound(deps, tx, {
     kind: "consent",
     idempotencyKey: outboundKey("consent", { conversationId, suffix: `accepted:${member.id}` }),
@@ -487,7 +490,13 @@ async function acceptConsent(
     conversationId,
     lang,
     ...replyFieldOf(event),
-    text: t(lang, "consent.accepted", { time }),
+    text: updateInPlace ? `${answered}\n\n${confirmation}` : confirmation,
+    ...(updateInPlace
+      ? {
+          consentUpdateMessageId: event.messageId,
+          consentTextLength: t(lang, "consent.request", params).length,
+        }
+      : {}),
   });
   // Keyed by the member alone, so she is asked once, whatever happens to her light later.
   await enqueueOutbound(deps, tx, {
@@ -521,7 +530,10 @@ async function acceptConsent(
     },
     now,
   );
-  return answeredText(lang, "consent.request", params, true);
+  return {
+    text: updateInPlace ? `${answered}\n\n${confirmation}` : answered,
+    collapsedTextLength: t(lang, "consent.request", params).length,
+  };
 }
 
 /**
@@ -649,7 +661,12 @@ export async function handleConsentButton(
       event.messageId !== undefined &&
       (answered !== null || sender.member.lightConsentedAt !== null)
     ) {
-      await adapter.closeButtons(conversationId, event.messageId, answered ?? undefined);
+      await adapter.closeButtons(
+        conversationId,
+        event.messageId,
+        answered?.text,
+        answered?.collapsedTextLength,
+      );
     }
     const changed = answered !== null;
     if (changed) {
@@ -786,7 +803,12 @@ export async function handleHealthWordsButton(
     return;
   }
   if (event.messageId !== undefined) {
-    await adapter.closeButtons(event.conversation.externalId, event.messageId, outcome.answered);
+    await adapter.closeButtons(
+      event.conversation.externalId,
+      event.messageId,
+      outcome.answered,
+      outcome.answered.lastIndexOf("\n\n"),
+    );
   }
   deps.logger.info("health_words_button", {
     familyId: sender.family.id,
