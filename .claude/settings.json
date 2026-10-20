@@ -1,0 +1,23 @@
+{
+  "enabledPlugins": {
+    "typescript-lsp@anthropic-plugin-directory": true,
+    "security-guidance@anthropic-plugin-directory": true
+  },
+  "env": {
+    "ENABLE_STOP_REVIEW": "0"
+  },
+  "permissions": {
+    "deny": [
+      "Bash(git add -A*)",
+      "Bash(git add --all*)",
+      "Bash(git add .)",
+      "Bash(git add . *)",
+      "Bash(git -C * add -A*)",
+      "Bash(git -C * add --all*)",
+      "Bash(git -C * add .)",
+      "Bash(git commit -a*)",
+      "Bash(git commit --all*)",
+      "Bash(git -C * commit -a*)"
+    ]
+  }
+}
