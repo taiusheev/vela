@@ -102,7 +102,9 @@ describe("the public website", () => {
       expect(body).toContain(`href="/privacy${lang === "en" ? "" : "/zh-TW"}"`);
       expect(body).toContain(`href="${SITE_PATHS[lang].precision}"`);
       expect(body).toContain('href="mailto:t.aiusheev@gmail.com"');
-      expect(body).toContain('<form class="waitlist" method="post" action="/waitlist">');
+      expect(body.match(/<form class="waitlist" method="post" action="\/waitlist"/g)).toHaveLength(
+        2,
+      );
       expect(fake.built()).toBe(0);
     },
   );
@@ -139,16 +141,30 @@ describe("the public website", () => {
     },
   );
 
-  // The founder's story order: the visitor's worry first, why nothing they have solves it, then Vela.
-  it.each(SITE_LANGS)("tells the worry before it names Vela (%s)", async (lang) => {
-    const fake = createFakePilotRuntime();
-    const body = await (await send(fake, `${origin()}${SITE_PATHS[lang].home}`)).text();
-    const at = (id: string) => body.indexOf(`id="${id}"`);
-    const order = ["worry", "why", "meet", "screens", "different", "join"].map(at);
-    expect(order.every((index) => index > 0)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(textOf(body.slice(body.indexOf("<h1"), body.indexOf("</h1>")))).not.toContain("Vela");
-  });
+  // The approved design explains the purpose immediately, then shows a concrete exchange.
+  it.each(SITE_LANGS)(
+    "shows the approved story and real app previews before the waitlist (%s)",
+    async (lang) => {
+      const fake = createFakePilotRuntime();
+      const body = await (await send(fake, `${origin()}${SITE_PATHS[lang].home}`)).text();
+      const at = (id: string) => body.indexOf(`id="${id}"`);
+      const order = ["hero-title", "idea", "exchange", "care", "join"].map(at);
+      expect(order.every((index) => index > 0)).toBe(true);
+      expect(order).toEqual([...order].sort((a, b) => a - b));
+      expect(textOf(body.slice(body.indexOf("<h1"), body.indexOf("</h1>")))).toContain(
+        lang === "en" ? "your parent" : "爸媽",
+      );
+      expect(body).toContain("/site/img/app-current/ask.png");
+      expect(body).toContain("/site/img/vela-logo.svg");
+      expect(body).toContain("/site/img/vela-mark-white.svg");
+      expect(body).toContain('id="photo-pause"');
+      expect(body).toContain('id="photo-next"');
+      expect(body).toContain('id="photo-previous"');
+      expect(body).not.toContain("Design preview");
+      expect(body).not.toContain("Telegram");
+      expect(body).not.toContain("hero-availability");
+    },
+  );
 
   it("embeds a demo script no string of which can close its element", () => {
     for (const lang of SITE_LANGS) {
@@ -356,7 +372,7 @@ describe("the website's privacy notice", () => {
     expect(body).toContain(lang === "en" ? "within 15 days" : "15 日內");
     expect(body).toContain(lang === "en" ? "Singapore" : "新加坡");
     expect(body).toContain(`href="/privacy${lang === "en" ? "" : "/zh-TW"}"`);
-    expect(home.match(new RegExp(`href="${SITE_PATHS[lang].privacy}"`, "g"))).toHaveLength(2);
+    expect(home.match(new RegExp(`href="${SITE_PATHS[lang].privacy}"`, "g"))).toHaveLength(3);
   });
 
   it("promises no cookies, and the pages set none", async () => {
