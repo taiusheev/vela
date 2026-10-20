@@ -800,6 +800,10 @@ msgstr "Before you continue"
 msgid "Big words, one message at a time. You set it up together."
 msgstr "Big words, one message at a time. You set it up together."
 
+#: app/(tabs)/exchanges.tsx
+msgid "Both"
+msgstr "Both"
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Both of you, but only Mia listened about the butter."
@@ -1171,6 +1175,10 @@ msgstr "Error code: {code}"
 msgid "Every morning starts with it."
 msgstr "Every morning starts with it."
 
+#: app/(tabs)/exchanges.tsx
+msgid "Everyone"
+msgstr "Everyone"
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr "Example · heart sent"
@@ -1385,10 +1393,6 @@ msgstr "her"
 #: src/components/story-day.tsx
 msgid "Her answer is kept in the family book, unless she says not to."
 msgstr "Her answer is kept in the family book, unless she says not to."
-
-#: src/components/story-day.tsx
-msgid "Her answer stays with the exchange. Long-term story saving is not switched on here."
-msgstr "Her answer stays with the exchange. Long-term story saving is not switched on here."
 
 #: src/components/chat/chat-bubble.tsx
 msgid "Her messenger did not take it. Her daily morning is unchanged."
@@ -1692,6 +1696,10 @@ msgstr "Let’s find your family."
 #: src/components/telegram-family-link.tsx
 msgid "Let’s try a fresh connection."
 msgstr "Let’s try a fresh connection."
+
+#: src/components/story-day.tsx
+msgid "Like her other answers, it is kept for 30 days, then deleted."
+msgstr "Like her other answers, it is kept for 30 days, then deleted."
 
 #: src/components/onboarding/finish.tsx
 msgid "LINE isn’t open here yet, so this invitation opens Telegram."
@@ -2855,6 +2863,10 @@ msgstr "Sign-out did not finish. You are still signed in. Try again."
 #: src/components/onboarding/questions.tsx
 msgid "Signed “— Vela”. Your name is only on what you write."
 msgstr "Signed “— Vela”. Your name is only on what you write."
+
+#: app/(tabs)/you.tsx
+msgid "Signed in as {myName}"
+msgstr "Signed in as {myName}"
 
 #: app/sign-in.tsx
 msgid "Signing in with a number is not open yet. Use your email instead."

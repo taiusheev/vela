@@ -801,6 +801,10 @@ msgstr "繼續之前"
 msgid "Big words, one message at a time. You set it up together."
 msgstr "大字顯示，一次一則訊息。由您陪著一起設定。"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Both"
+msgstr "兩位"
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Both of you, but only Mia listened about the butter."
@@ -1172,6 +1176,10 @@ msgstr "錯誤代碼：{code}"
 msgid "Every morning starts with it."
 msgstr "每天的早安訊息都從這個稱呼開始。"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Everyone"
+msgstr "每一位"
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr "示範 · 愛心已送出"
@@ -1386,10 +1394,6 @@ msgstr "這位家人"
 #: src/components/story-day.tsx
 msgid "Her answer is kept in the family book, unless she says not to."
 msgstr "回答會收進家庭故事書，除非本人說不要保留。"
-
-#: src/components/story-day.tsx
-msgid "Her answer stays with the exchange. Long-term story saving is not switched on here."
-msgstr "長輩的回答會留在這則問答裡。這裡尚未開啟長期保存故事的功能。"
 
 #: src/components/chat/chat-bubble.tsx
 msgid "Her messenger did not take it. Her daily morning is unchanged."
@@ -1693,6 +1697,10 @@ msgstr "一起找回您的家人。"
 #: src/components/telegram-family-link.tsx
 msgid "Let’s try a fresh connection."
 msgstr "重新建立一次連結。"
+
+#: src/components/story-day.tsx
+msgid "Like her other answers, it is kept for 30 days, then deleted."
+msgstr "和長輩的其他回答一樣，會保存 30 天，之後刪除。"
 
 #: src/components/onboarding/finish.tsx
 msgid "LINE isn’t open here yet, so this invitation opens Telegram."
@@ -2856,6 +2864,10 @@ msgstr "登出沒有完成，您仍在登入狀態。請再試一次。"
 #: src/components/onboarding/questions.tsx
 msgid "Signed “— Vela”. Your name is only on what you write."
 msgstr "署名「— Vela」。只有您自己寫的訊息才會署您的名字。"
+
+#: app/(tabs)/you.tsx
+msgid "Signed in as {myName}"
+msgstr "目前登入的是{myName}"
 
 #: app/sign-in.tsx
 msgid "Signing in with a number is not open yet. Use your email instead."

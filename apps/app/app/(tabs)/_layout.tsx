@@ -1,6 +1,6 @@
 import { useLingui } from "@lingui/react/macro";
 import { Tabs } from "expo-router";
-import { type ColorValue, useWindowDimensions, View } from "react-native";
+import { type ColorValue, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BrandIcon, type BrandIconName } from "../../src/components/brand/icon.tsx";
 import { usePalette } from "../../src/theme/theme.tsx";
@@ -68,7 +68,30 @@ export default function TabsLayout() {
         },
         sceneStyle: { backgroundColor: palette.bg, paddingBottom: barHeight + barBottom + space.m },
         tabBarIconStyle: { width: 48, height: 28, marginBottom: 2 },
-        tabBarLabelStyle: { fontFamily: type.label.fontFamily, fontSize: 11, lineHeight: 14 },
+        // On a 320 pt phone a tab is 59 pt wide; "Memories" needs 53, and the tab button keeps
+        // 5 pt of padding on each side. The label reaches into that padding, and a label that still
+        // does not fit (large text) shrinks instead of ending in "…".
+        tabBarLabel: ({ color, children }) => (
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+            maxFontSizeMultiplier={1.4}
+            style={{
+              fontFamily: type.label.fontFamily,
+              fontSize: 11,
+              lineHeight: 14,
+              alignSelf: "stretch",
+              marginHorizontal: -5,
+              // The web caps a one-line label at its parent's content width; lift it.
+              maxWidth: 999,
+              textAlign: "center",
+              color,
+            }}
+          >
+            {children}
+          </Text>
+        ),
       }}
     >
       <Tabs.Screen
