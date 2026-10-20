@@ -1,20 +1,15 @@
 /**
- * Vela's public website (launch gate 14). The home page tells the story in the order a visitor lives
- * it: the worry first (her "I'm fine", the unanswered group chat, a silent day, fixes that feel like
- * watching her), why nothing she has solves it, then Vela: one morning, a demo to try, the light,
- * what's different, Free and Vela Light, our promises, the waitlist, and "How Vela is doing", the
- * monthly precision spec §8 says is published on the website. The pilot Worker renders the pages next to the privacy notices,
- * so the numbers come from the same query as the app's (`loadPublicPrecision`); the stylesheet,
- * script, fonts and pictures are the Worker's static assets under `/site/` (`site-assets/`).
- *
- * The words follow spec §20 and §9: names, not "the user"; she is never described as monitored,
- * checked on, or tracked. The photographs are generated scenes and the illustrations the brand's;
- * none shows a real family, and nothing here is a testimonial. Choices the founder has not made yet
- * may be written as bracketed blanks (`[price]`); development and staging show them, production
- * refuses to serve a page that still holds one (`unfilledSiteBlanks`), as the notices do.
+ * Public website rendered by the pilot Worker. The approved homepage introduces the
+ * family exchange, shows the current app, and offers the existing protected waitlist.
+ * English and Traditional Chinese share the same flow. Auxiliary precision, privacy,
+ * and legal pages retain their existing data and notices. Local assets and progressive
+ * JavaScript work under the strict same-origin content security policy.
+ * Photos are generated illustrative scenes; app captures use a synthetic demo family.
+ * Production refuses unresolved bracketed placeholders via unfilledSiteBlanks.
  */
 import type { PublicPrecision } from "@vela/contracts";
 import { type Html, html } from "./html.ts";
+import { approvedCopy, approvedDemo, approvedHome } from "./site-home.ts";
 import {
   LEGAL_COPY,
   LEGAL_LABELS,
@@ -1508,37 +1503,16 @@ export function unfilledSiteBlanks(lang: SiteLang): string[] {
     else if (typeof value === "object" && value !== null) Object.values(value).forEach(visit);
   };
   visit(COPY[lang]);
+  visit(approvedCopy(lang));
   return [...found];
 }
 
 /** The site's demo script and messages for a language, as the page embeds them for `site.js`. */
-export function siteDemo(lang: SiteLang): Demo {
-  return COPY[lang].demo;
+export function siteDemo(lang: SiteLang) {
+  return approvedDemo(lang);
 }
 
 // Pieces ------------------------------------------------------------------------------------------
-
-/** The emblem: the arched window, its four panes lit. Decorative; the name beside it carries it. */
-const MARK = html`<svg viewBox="-13.5 -13.5 127 159" aria-hidden="true" focusable="false"><path d="M34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z" fill="#E9A23B"/><path fill-rule="evenodd" d="M34 -5.5H66A39.5 39.5 0 0 1 105.5 34V118A19.5 19.5 0 0 1 86 137.5H14A19.5 19.5 0 0 1 -5.5 118V34A39.5 39.5 0 0 1 34 -5.5ZM34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z" fill="currentColor"/><rect x="47" y="5.5" width="6" height="121" fill="currentColor"/><rect x="5.5" y="49.8" width="89" height="6" fill="currentColor"/></svg>`;
-
-/** Her light, whose panes `site.css` turns amber when its container is `.lit`. */
-const LAMP = html`<svg class="lamp" viewBox="-13.5 -13.5 127 159" aria-hidden="true" focusable="false"><path class="pane" d="M34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z"/><path fill-rule="evenodd" d="M34 -5.5H66A39.5 39.5 0 0 1 105.5 34V118A19.5 19.5 0 0 1 86 137.5H14A19.5 19.5 0 0 1 -5.5 118V34A39.5 39.5 0 0 1 34 -5.5ZM34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z" fill="#1E1A16"/><rect x="47" y="5.5" width="6" height="121" fill="#1E1A16"/><rect x="5.5" y="49.8" width="89" height="6" fill="#1E1A16"/></svg>`;
-
-const ICONS: Readonly<Record<Icon, Html>> = {
-  consent: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="14" stroke="#E9A23B"/><path d="M9 16.5l4.5 4.5L23 11.5"/></svg>`,
-  symmetry: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 16s5-8 13-8 13 8 13 8-5 8-13 8S3 16 3 16z"/><circle cx="16" cy="16" r="4" fill="#E9A23B" stroke="none"/></svg>`,
-  health: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 27S4 20 4 11.5A6 6 0 0 1 16 9a6 6 0 0 1 12 2.5C28 20 16 27 16 27z"/><path d="M10 15h3l2-3 2 6 2-3h3" stroke="#E9A23B"/></svg>`,
-  calm: html`<svg viewBox="0 0 32 32" fill="none" stroke="#1F5C66" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="16" cy="16" r="12"/><path d="M16 9v7l4 3" stroke="#E9A23B"/></svg>`,
-};
-
-/** An illustrative conversation readable before scripts run; the interactive example announces additions. */
-function phone(
-  head: { title: string; sub: string },
-  extra = "",
-  messages: readonly DemoMessage[] = [],
-): Html {
-  return html`<div class="phone${extra}" aria-hidden="${extra.includes("interactive") ? "false" : "true"}"><div class="screen">${extra.includes("device") ? STATUS : null}<div class="bar"><span class="ava">${MARK}</span><span><b>${head.title}</b><small>${head.sub}</small></span></div><div class="chat"${extra.includes("interactive") ? html` role="log" aria-live="polite" aria-relevant="additions"` : null}>${messages.map((m) => (m.from === "time" ? html`<div class="time">${m.text}</div>` : html`<div class="msg${m.from === "her" ? " me" : ""}${m.from === "vela" ? " vela" : ""}${m.photo ? " photo" : ""}">${m.who ? html`<span class="who">${m.who}</span>` : null}${m.photo ? html`<img src="${m.photo}" alt="${m.alt ?? ""}" loading="lazy">` : null}${m.text}${m.voice ? html`<span class="voice-label">${m.voice} · ♪</span>` : null}${m.chips ? html`<div class="chips">${m.chips.map((label) => html`<span class="chip">${label}</span>`)}</div>` : null}</div>`))}</div></div></div>`;
-}
 
 function languageSwitch(lang: SiteLang, page: SitePage | LegalPage): Html {
   return html`<nav class="langs" aria-label="Language / 語言">${SITE_LANGS.map((other) =>
@@ -1553,65 +1527,12 @@ function header(lang: SiteLang, page: SitePage | LegalPage): Html {
   const home = SITE_PATHS[lang].home;
   const at = (id: string) => (page === "home" ? `#${id}` : `${home}#${id}`);
   return html`<a class="skip" href="#main">${copy.skip}</a>
-<header class="top"><div class="wrap"><a class="brand" href="${home}">${MARK}<span>Vela</span></a><nav class="nav" aria-label="Vela"><a href="${at("why")}">${copy.nav.why}</a><a href="${at("how")}">${copy.nav.how}</a><a href="${at("try")}">${copy.nav.try}</a><a href="${at("light")}">${copy.nav.light}</a><a href="${at("plans")}">${copy.nav.plans}</a></nav>${languageSwitch(lang, page)}<a class="btn btn-primary" href="${at("join")}">${copy.nav.join}</a></div></header>`;
+<header class="top"><div class="wrap"><a class="brand" href="${home}"><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"></a><nav class="nav" aria-label="Vela"><a href="${at("idea")}">${copy.nav.why}</a><a href="${at("exchange")}">${copy.nav.how}</a><a href="${at("care")}">${lang === "en" ? "Made with care" : "用心設計"}</a></nav>${languageSwitch(lang, page)}<a class="btn btn-primary" href="${at("join")}">${copy.nav.join}</a></div></header>`;
 }
 
 function footer(lang: SiteLang): Html {
   const copy = COPY[lang].footer;
-  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}">${MARK}<span>Vela</span></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
-}
-
-const CHECK = html`<svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const CROSS = html`<svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 12h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
-
-const HEART = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg>`;
-
-/** A phone's status bar and camera, so both ends of the exchange read as real screens. */
-const STATUS = html`<div class="status" aria-hidden="true"><span>9:41</span><i class="island"></i><span class="signal"><i></i><i></i><i></i><b></b></span></div>`;
-
-/** The family's Today screen, drawn after the app's own: her window, her answer, the replies. */
-function appScreen(a: SiteCopy["screens"]["app"]): Html {
-  return html`<div class="phone device" aria-hidden="true"><div class="screen app">${STATUS}<div class="app-body"><p class="app-brand">${MARK}<span>Vela</span></p><p class="app-title">${a.today}</p><div class="app-window lit">${LAMP}<span><b>${a.who}</b><small>${a.status}</small></span></div><p class="app-asked">${a.asked}</p><p class="app-q">${a.question}</p><p class="app-answer">${a.answer}</p><span class="app-voice"><i></i><i></i><i></i><i></i><i></i><i></i>${a.voice}</span><p class="app-at">${a.answeredAt}</p><div class="app-actions"><span class="app-reply">${a.reply}</span><span class="app-heart">${HEART}</span></div><ul class="app-replies">${a.replies.map((r) => html`<li><b>${r.who}</b> ${r.text}</li>`)}</ul><p class="app-next">${a.next}</p></div><div class="app-tabs">${a.tabs.map((t, i) => html`<span${i === 0 ? html` class="on"` : null}>${t}</span>`)}</div></div></div>`;
-}
-
-/** A few lines of a messenger under the chat's name, illustrating the worry captioned below it. */
-function snippet(lines: readonly SnippetLine[], head?: string): Html {
-  return html`<div class="snip" aria-hidden="true">${head ? html`<p class="snip-head"><span class="ava">${head.slice(0, 1)}</span>${head}</p>` : null}${lines.map((line) => html`<p class="${line.from === "meta" ? "meta" : `b ${line.from}`}">${line.text}</p>`)}</div>`;
-}
-
-/** Small line icons for the facts under the first screen. */
-const PROOF_ICONS: Readonly<Record<ProofIcon, Html>> = {
-  line: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4z"/></svg>`,
-  install: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" focusable="false"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>`,
-  once: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="13" r="4"/><path d="M12 3.5v2M4.5 13h-2M21.5 13h-2M6.3 7.3l-1.4-1.4M17.7 7.3l1.4-1.4M3 20.5h18"/></svg>`,
-  yes: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.7a4.3 4.3 0 0 1 7.5 2.6c0 5.6-7.5 10.2-7.5 10.2z"/><path d="M9 12.5l2 2 4-4"/></svg>`,
-};
-
-/** Column marks for the comparison: the family chat, cameras and alarms, then Vela's window. */
-const COLUMN_ICONS: readonly Html[] = [
-  PROOF_ICONS.line,
-  html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.5" y="7" width="13" height="10" rx="2"/><path d="M15.5 10.5l6-3v9l-6-3z"/></svg>`,
-  LAMP,
-];
-
-/** A figure with its source; `extra` adds classes such as the entrance delay. */
-function figure(f: Figure, extra = ""): Html {
-  return html`<figure class="fig${extra}"><p class="big">${f.big}</p><figcaption>${f.text}<cite>${f.source}</cite></figcaption></figure>`;
-}
-
-/** The demo script `site.js` reads. A data block, never executed, so the page's CSP still holds. */
-function demoData(lang: SiteLang): Html {
-  // No `<` reaches the element, so no string in the JSON can close it.
-  const json = JSON.stringify(COPY[lang].demo).replace(/</g, "\\u003c");
-  return { markup: `<script type="application/json" id="vela-demo">${json}</script>` };
-}
-
-function flashMessage(lang: SiteLang, flash: WaitlistFlash): Html | null {
-  if (flash === null) return null;
-  const copy = COPY[lang].join;
-  return flash === "joined"
-    ? html`<div class="flash ok" role="status">${copy.joined}</div>`
-    : html`<div class="flash err" role="alert">${copy.badEmail}</div>`;
+  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}"><img src="/site/img/vela-logo-white.svg" width="126" height="48" alt="Vela"></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
 }
 
 // Pages -------------------------------------------------------------------------------------------
@@ -1624,200 +1545,7 @@ export interface SitePageContent {
 
 /** The home page. `flash` is the waitlist's answer when the form posted without script. */
 export function siteHome(lang: SiteLang, flash: WaitlistFlash = null): SitePageContent {
-  const c = COPY[lang];
-  const demoHead = c.demo.morning[0]?.head ?? { title: "Vela", sub: "LINE" };
-  const morning = c.demo.morning[0];
-  const heroMessages = c.demo.hero.flatMap((step) =>
-    step.msg &&
-    (step.msg.from === "ask" ||
-      step.msg.from === "family" ||
-      (step.msg.from === "her" && step.msg.text))
-      ? [step.msg]
-      : [],
-  );
-  const readback = c.demo.morning[3];
-  const herScreen = phone(readback?.head ?? demoHead, " device", readback?.messages ?? []);
-  return {
-    title: c.title,
-    description: c.description,
-    body: html`${header(lang, "home")}
-<main id="main">
-<section class="hero split">
-  <div class="hero-copy"><div class="hero-inner">
-    <p class="eyebrow">${c.hero.eyebrow}</p>
-    <h1><span>${c.hero.title[0]}</span><em>${c.hero.title[1]}</em>${c.hero.title[2]}</h1>
-    <p class="lede">${c.hero.lede}</p>
-    <div class="actions"><a class="btn btn-amber" href="#join">${c.hero.join}</a><a class="btn btn-light" href="#meet">${c.hero.more}<span class="down" aria-hidden="true">↓</span></a></div>
-  </div></div>
-  <div class="hero-photo">
-    <img class="her-photo" src="${IMG}/morning-tea.jpg" width="1264" height="848" alt="${c.hero.photoAlt}" fetchpriority="high">
-    <div class="from-you"><img src="${IMG}/daughter-city.jpg" width="480" height="480" alt="${c.hero.youAlt}"><p class="say you">${c.hero.exchange.you}</p></div>
-    <p class="say her">${c.hero.exchange.her}<small>${c.hero.exchange.when}</small></p>
-  </div>
-</section>
-<div class="proof"><ul class="wrap">${c.proof.map((p) => html`<li>${PROOF_ICONS[p.icon]}<span>${p.text}</span></li>`)}</ul></div>
-
-<section class="band worry" id="worry"><div class="wrap">
-  <h2 class="reveal">${c.worry.title}</h2>
-  <ol class="week">${c.worry.moments.map(
-    (m, i) =>
-      html`<li class="moment reveal d${i % 4}">${m.snippet ? snippet(m.snippet, m.head) : null}${m.figure ? figure(m.figure, " boxed") : null}<p class="clock">${m.when}</p><h3>${m.title}</h3></li>`,
-  )}</ol>
-</div></section>
-
-<section class="band why" id="why"><div class="wrap">
-  <h2 class="statement reveal">${c.why.lines.map(([who, rest], i) =>
-    i === c.why.lines.length - 1
-      ? html`<span class="line vela lit">${LAMP}<b>${who}</b>${rest}</span>`
-      : html`<span class="line"><b>${who}</b>${rest}</span>`,
-  )}</h2>
-  <p class="why-note reveal">${c.why.note}</p>
-  <div class="figures">${c.why.figures.map((f, i) => figure(f, ` reveal d${i}`))}</div>
-</div></section>
-
-<section class="band meet" id="meet"><div class="wrap">
-  <div>
-    <p class="eyebrow reveal">${c.meet.eyebrow}</p>
-    <h2 class="reveal">${c.meet.title[0]}<em>${c.meet.title[1]}</em>${c.meet.title[2]}</h2>
-    <p class="lede reveal">${c.meet.lede}</p>
-    <div class="actions reveal"><a class="btn btn-primary" href="#join">${c.hero.join}</a><a class="btn btn-ghost" href="#how"><span class="play" aria-hidden="true"></span>${c.meet.watch}</a></div>
-  </div>
-  <div class="stage reveal d1">
-    <div class="arch"><img src="${IMG}/voice-note.jpg" width="928" height="1152" alt="${c.meet.photoAlt}" loading="lazy"></div>
-    <div class="badge-light lit">${LAMP}<span><strong data-on="${c.meet.badge[0]}" data-waiting="${lang === "en" ? "Waiting for Mom" : "等媽媽的回答"}">${c.meet.badge[0]}</strong><small data-on="${c.meet.badge[1]}" data-waiting="${lang === "en" ? "Illustrative morning" : "早晨示範"}">${c.meet.badge[1]}</small></span></div>
-    ${phone(demoHead, "", heroMessages)}
-    <button class="hero-control" type="button" data-pause="${lang === "en" ? "Pause demo" : "暫停示範"}" data-resume="${lang === "en" ? "Continue demo" : "繼續示範"}" data-replay="${lang === "en" ? "Replay morning" : "重播這個早晨"}">${lang === "en" ? "Replay morning" : "重播這個早晨"}</button>
-  </div>
-</div></section>
-
-<section class="band questions"><div class="wrap"><h2 class="reveal">${c.questions.title}</h2><p class="lede reveal">${c.questions.lede}</p></div>
-  <ul class="qrow" tabindex="0" aria-label="${c.questions.title}">${c.marquee.map((q, i) => html`<li class="qcard${["", " amber", " teal"][i % 3]}">${MARK}<p>${q}</p></li>`)}</ul>
-</section>
-
-<section class="band morning" id="how"><div class="wrap">
-  <div>
-    <p class="eyebrow reveal">${c.morning.eyebrow}</p>
-    <h2 class="reveal">${c.morning.title}</h2>
-    <ol class="steps">${c.morning.steps.map(
-      (step, i) =>
-        html`<li class="step${i === 0 ? " on" : ""}"><p class="clock">${step.clock}</p><h3>${step.title}</h3><p>${step.body}</p>${phone(c.demo.morning[i]?.head ?? demoHead, " mini", c.demo.morning[i]?.messages ?? [])}</li>`,
-    )}</ol>
-  </div>
-  <div class="sticky">${phone(demoHead, "", morning?.messages ?? [])}</div>
-</div></section>
-
-<section class="band screens" id="screens"><div class="wrap">
-  <h2 class="reveal">${c.screens.title}</h2>
-  <p class="lede reveal">${c.screens.lede}</p>
-  <div class="ends">
-    <article class="end reveal">${appScreen(c.screens.app)}<div class="end-copy"><h3>${c.screens.you.title}</h3><ul>${c.screens.you.items.map((i) => html`<li>${i}</li>`)}</ul></div></article>
-    <article class="end reveal d1">${herScreen}<div class="end-copy"><h3>${c.screens.her.title}</h3><ul>${c.screens.her.items.map((i) => html`<li>${i}</li>`)}</ul></div></article>
-  </div>
-  <p class="nobody reveal">${c.screens.nobody}</p>
-</div></section>
-
-<section class="band try" id="try"><div class="wrap">
-  <div class="try-copy">
-    <p class="eyebrow">${c.tryIt.eyebrow}</p>
-    <h2>${c.tryIt.title}</h2>
-    <p class="lede">${c.tryIt.lede}</p><p class="demo-caption">${lang === "en" ? "An illustrative demo. Nothing is sent or recorded." : "互動示範。不會傳送或錄製任何內容。"}</p>
-    <p class="nojs-note">${c.tryIt.noScript}</p>
-  </div>
-  ${phone(c.demo.try.head, " interactive", morning?.messages ?? [])}
-  <div class="try-controls">
-    <p class="try-step">${c.tryIt.step1}</p><div class="try-options" id="try-asks"></div>
-    <p class="try-step">${c.tryIt.step2}</p><div class="try-options" id="try-answers"></div>
-    <div class="try-result" aria-live="polite">${LAMP}<span></span></div>
-    <button class="try-again" type="button" hidden>${c.tryIt.again}</button>
-  </div>
-</div></section>
-
-<section class="band night" id="light"><div class="wrap">
-  <div class="art reveal"><img src="${IMG}/a-light-at-home.jpg" width="933" height="1400" alt="${c.light.alt}" loading="lazy"></div>
-  <div>
-    <p class="eyebrow reveal">${c.light.eyebrow}</p>
-    <h2 class="reveal">${c.light.title}</h2>
-    <p class="lede reveal">${c.light.lede}</p>
-    <ol class="ladder">${c.light.ladder.map(
-      (rung, i) =>
-        html`<li class="reveal d${Math.min(i, 3)}${i === 0 || i === c.light.ladder.length - 1 ? " lit" : ""}"><small>${rung.when}</small><b>${rung.what}</b>${rung.detail}</li>`,
-    )}</ol>
-    <p class="promise-line reveal">${c.light.promise}</p>
-  </div>
-</div></section>
-
-<section class="band different" id="different"><div class="wrap">
-  <h2 class="reveal">${c.different.title}</h2>
-  <div class="compare reveal"><table><thead><tr><td></td>${c.different.cols.map(
-    (col, i) =>
-      html`<th scope="col"${i === 2 ? html` class="vela lit"` : null}>${COLUMN_ICONS[i]}<span>${col}</span></th>`,
-  )}</tr></thead><tbody>${c.different.rows.map(
-    (row) =>
-      html`<tr><th scope="row">${row.label}</th>${row.marks.map(
-        (yes, i) =>
-          html`<td class="${yes ? "yes" : "no"}${i === 2 ? " vela" : ""}">${yes ? CHECK : CROSS}<span class="sr">${yes ? c.different.yes : c.different.no}</span></td>`,
-      )}</tr>`,
-  )}</tbody></table></div>
-</div></section>
-
-<section class="bleed"><img src="${IMG}/family-dinner.jpg" width="1264" height="848" alt="${c.bleed.alt}" loading="lazy"><div class="wrap reveal"><h2>${c.bleed.title}</h2><p>${c.bleed.body}</p></div></section>
-
-<section class="band" id="plans"><div class="wrap">
-  <p class="eyebrow reveal">${c.plans.eyebrow}</p>
-  <h2 class="reveal">${c.plans.title}</h2>
-  <div class="plans">
-    <div class="plan reveal"><h3>${c.plans.free.name}</h3><span class="tag">${c.plans.free.tag}</span><ul>${c.plans.free.items.map((i) => html`<li>${i}</li>`)}</ul></div>
-    <div class="plan light reveal d1"><h3>${c.plans.paid.name}</h3><span class="tag">${c.plans.paid.tag}</span><ul>${c.plans.paid.items.map((i) => html`<li>${i}</li>`)}</ul></div>
-  </div>
-  <p class="note reveal">${c.plans.note}</p>
-</div></section>
-
-<section class="band flush"><div class="wrap">
-  <p class="eyebrow reveal">${c.promises.eyebrow}</p>
-  <h2 class="reveal">${c.promises.title}</h2>
-  <div class="promises">${c.promises.items.map(
-    (p, i) =>
-      html`<div class="promise reveal d${i}">${ICONS[p.icon]}<h3>${p.title}</h3><p>${p.body}</p></div>`,
-  )}</div>
-</div></section>
-
-<section class="band flush"><div class="wrap"><div class="numbers reveal">
-  <div><p class="eyebrow">${c.numbers.eyebrow}</p><h2>${c.numbers.title}</h2></div>
-  <div><p>${c.numbers.body}</p><a class="btn btn-ghost" href="${SITE_PATHS[lang].precision}">${c.numbers.link}</a></div>
-</div></div></section>
-
-<section class="band join" id="join"><div class="wrap">
-  <div class="art reveal"><img src="${IMG}/across-the-table.jpg" width="1400" height="933" alt="${c.join.alt}" loading="lazy"></div>
-  <div>
-    <p class="eyebrow">${c.join.eyebrow}</p>
-    <h2>${c.join.title}</h2>
-    <p class="lede">${c.join.lede}</p>
-    <form class="waitlist" method="post" action="${WAITLIST_PATH}">
-      <input type="hidden" name="lang" value="${lang}">
-      <div class="field"><label for="email">${c.join.email}</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" placeholder="${c.join.placeholder}"></div>
-      <fieldset><legend>${c.join.role}</legend><div class="roles">${(
-        ["organiser", "parent", "other"] as const
-      ).map(
-        (role) =>
-          html`<label><input type="radio" name="role" value="${role}"${role === "organiser" ? html` checked` : ""}> ${c.join.roles[role]}</label>`,
-      )}</div></fieldset>
-      <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
-      <button class="btn btn-primary" type="submit">${c.join.submit}</button>
-      ${flashMessage(lang, flash)}
-      <p class="fine">${c.join.fine} <a href="${SITE_PATHS[lang].privacy}">${c.join.fineLink}</a></p>
-    </form>
-  </div>
-</div></section>
-
-<section class="band" id="faq"><div class="wrap">
-  <p class="eyebrow">${c.faq.eyebrow}</p>
-  <h2>${c.faq.title}</h2>
-  <div class="faq">${c.faq.items.map(([q, a]) => html`<details><summary>${q}</summary><p>${a}</p></details>`)}</div>
-</div></section>
-</main>
-${footer(lang)}
-${demoData(lang)}`,
-  };
+  return approvedHome(lang, flash);
 }
 
 /** A share of notices as a whole percentage, or a dash for a month with none settled. */
