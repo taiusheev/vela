@@ -187,6 +187,12 @@ const HealthWordsFor = z.object({
 
 const OutboundPayload = z.object({
   message: StoredMessage,
+  /** Update a Telegram setup confirmation in place; retain the gateway's retries and receipt. */
+  consentUpdateMessageId: z
+    .string()
+    .regex(/^[1-9]\d*$/)
+    .optional(),
+  consentTextLength: z.number().int().positive().optional(),
   consentTextVersion: z.string().max(80).optional(),
   reply: StoredReply.optional(),
   ref: MessageRefIntent.optional(),
@@ -258,6 +264,8 @@ export interface OutboundRequestBase {
   buttons?: Button[][];
   media?: OutboundMediaRef[];
   replyToMessageId?: string;
+  consentUpdateMessageId?: string;
+  consentTextLength?: number;
   /** The event's free reply (`replyOf`), for the kinds that answer someone's own message. */
   reply?: StoredReply;
   ref?: MessageRefIntent;
@@ -359,7 +367,35 @@ export async function insertOutbound(
     );
   }
   const localDay = request.localDay ?? (await localTodayOf(deps, db, request.memberId));
+  if (
+    request.consentTextLength !== undefined &&
+    (request.consentUpdateMessageId === undefined ||
+      !Number.isInteger(request.consentTextLength) ||
+      request.consentTextLength <= 0 ||
+      request.consentTextLength >= request.text.length)
+  ) {
+    throw new VelaError("invalid_outbound", "invalid completed consent text range");
+  }
+  if (
+    request.consentUpdateMessageId !== undefined &&
+    (request.kind !== "consent" ||
+      request.channel !== "telegram" ||
+      !/^[1-9]\d*$/.test(request.consentUpdateMessageId) ||
+      (request.media?.length ?? 0) > 0 ||
+      request.buttons !== undefined)
+  ) {
+    throw new VelaError(
+      "invalid_outbound",
+      "only a plain Telegram consent confirmation can update a message",
+    );
+  }
   const payload: OutboundPayload = {
+    ...(request.consentTextLength === undefined
+      ? {}
+      : { consentTextLength: request.consentTextLength }),
+    ...(request.consentUpdateMessageId === undefined
+      ? {}
+      : { consentUpdateMessageId: request.consentUpdateMessageId }),
     ...(request.consentTextVersion === undefined
       ? {}
       : { consentTextVersion: request.consentTextVersion }),
@@ -728,7 +764,14 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
 
   let sent: RowSend;
   try {
-    sent = await sendRow(deps, taken, message.data, payload.data.effect);
+    sent = await sendRow(
+      deps,
+      taken,
+      message.data,
+      payload.data.effect,
+      payload.data.consentUpdateMessageId,
+      payload.data.consentTextLength,
+    );
   } catch (error) {
     if (error instanceof ChannelSendError) {
       return handleSendError(deps, taken, heldSince, payload.data, message.data.media, error);
@@ -1491,7 +1534,49 @@ async function sendRow(
   loaded: LoadedOutbound,
   message: OutboundMessage,
   effect: unknown,
+  consentUpdateMessageId?: string,
+  consentTextLength?: number,
 ): Promise<RowSend> {
+  if (consentUpdateMessageId !== undefined) {
+    if (loaded.row.kind !== "consent" || loaded.row.channel !== "telegram") {
+      throw new ChannelSendError("invalid_request", "consent update has an invalid destination");
+    }
+    const adapter = deps.channels.get("telegram");
+    try {
+      await adapter.closeButtons(
+        message.to.conversationId,
+        consentUpdateMessageId,
+        message.text,
+        consentTextLength,
+      );
+      return {
+        status: "sent",
+        result: {
+          externalMessageIds: [consentUpdateMessageId],
+          primaryMessageId: consentUpdateMessageId,
+        },
+      };
+    } catch (error) {
+      // Repeating an identical edit is safe even when its response was lost. Ordinary message
+      // sends retain their existing unknown-result handling.
+      if (error instanceof ChannelSendError && error.code === "unknown") {
+        throw new ChannelSendError(
+          "unavailable",
+          "setup confirmation update can be retried safely",
+        );
+      }
+      // A deleted/uneditable setup message gets its confirmation as a fresh message. Transient
+      // failures retry the edit, never create another bubble after an uncertain edit result.
+      if (
+        !(error instanceof ChannelSendError) ||
+        error.code !== "invalid_request" ||
+        !/message to edit not found|message (?:can't|cannot) be edited|message_id_invalid/i.test(
+          error.message,
+        )
+      )
+        throw error;
+    }
+  }
   if (loaded.row.channel === PUSH_CHANNEL) {
     const push = await sendPush(deps, loaded, message, effect);
     return push.status === "sent" ? { status: "sent", result: push.result, push } : push;

@@ -78,9 +78,18 @@ export function createTelegramAdapter(options: TelegramAdapterOptions): ChannelA
       await client.answerCallbackQuery({ callback_query_id: event.callbackId, text });
     },
 
-    async closeButtons(conversationId, messageId, replacementText) {
+    async closeButtons(conversationId, messageId, replacementText, collapsedTextLength) {
       const chatId = toChatId(conversationId);
       const id = toMessageId(messageId);
+      if (
+        collapsedTextLength !== undefined &&
+        (!Number.isInteger(collapsedTextLength) ||
+          collapsedTextLength <= 0 ||
+          replacementText === undefined ||
+          collapsedTextLength >= replacementText.length)
+      ) {
+        throw new ChannelSendError("invalid_request", "invalid collapsed setup text length");
+      }
       try {
         if (replacementText === undefined) {
           await client.editMessageReplyMarkup({ chat_id: chatId, message_id: id });
@@ -89,6 +98,17 @@ export function createTelegramAdapter(options: TelegramAdapterOptions): ChannelA
             chat_id: chatId,
             message_id: id,
             text: replacementText,
+            ...(collapsedTextLength === undefined
+              ? {}
+              : {
+                  entities: [
+                    {
+                      type: "expandable_blockquote" as const,
+                      offset: 0,
+                      length: collapsedTextLength,
+                    },
+                  ],
+                }),
             link_preview_options: { is_disabled: true },
           });
         }

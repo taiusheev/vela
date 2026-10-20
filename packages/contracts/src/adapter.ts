@@ -278,7 +278,13 @@ export interface ChannelAdapter {
    * Remove the buttons from a sent message, optionally replacing its text to show the choice.
    * Adapters whose `capabilities.editMessages` is false resolve without doing anything.
    */
-  closeButtons(conversationId: string, messageId: string, replacementText?: string): Promise<void>;
+  closeButtons(
+    conversationId: string,
+    messageId: string,
+    replacementText?: string,
+    /** UTF-16 length of completed setup text to keep in an expandable quote. */
+    collapsedTextLength?: number,
+  ): Promise<void>;
   /** Download media the platform holds. */
   fetchMedia(providerFileId: string): Promise<FetchedMedia>;
   /** Download a smaller copy of an image the platform holds, where it keeps one. */

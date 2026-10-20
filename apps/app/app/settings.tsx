@@ -394,9 +394,19 @@ function FamilyYou({ day }: { day: TodayView }) {
           ) : null}
           <Row
             title={t`One moment a day`}
-            caption={momentLine(moment.on, toldOfQuiet(family.me), her)}
+            caption={
+              moment.status === "loading"
+                ? t`Loading your notification preference…`
+                : moment.status === "unavailable"
+                  ? t`Your notification preference could not be loaded.`
+                  : momentLine(moment.on, toldOfQuiet(family.me), her)
+            }
             trailing={
               <Switch
+                accessibilityLabel={t`One moment a day`}
+                accessibilityState={{
+                  busy: moment.status === "saving" || moment.status === "loading",
+                }}
                 value={moment.on}
                 disabled={moment.changing}
                 onValueChange={moment.set}
@@ -405,6 +415,18 @@ function FamilyYou({ day }: { day: TodayView }) {
               />
             }
           />
+          {moment.status === "unavailable" ? (
+            <SecondaryButton label={t`Try again`} onPress={moment.retry} />
+          ) : null}
+          {moment.status === "saving" || moment.status === "saved" ? (
+            <View accessibilityLiveRegion="polite">
+              <Words variant="caption" tone="ink2">
+                {moment.status === "saving"
+                  ? t`Saving your preference…`
+                  : t`Notification preference saved.`}
+              </Words>
+            </View>
+          ) : null}
           {moment.refused ? (
             <Words variant="caption" tone="ink2">
               <Trans>That did not go through. Try again in a moment.</Trans>

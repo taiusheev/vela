@@ -1772,6 +1772,10 @@ msgstr "正在載入家人的早晨…"
 msgid "Loading your family’s plan…"
 msgstr "正在載入您家庭的方案…"
 
+#: app/settings.tsx
+msgid "Loading your notification preference…"
+msgstr "正在載入通知偏好設定…"
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr "正在找這則問答…"
@@ -2036,6 +2040,10 @@ msgstr "今天還沒有訊息。早上的訊息會出現在這裡。"
 #: app/exchange/[id].tsx
 msgid "Nothing yet."
 msgstr "還沒有內容。"
+
+#: app/settings.tsx
+msgid "Notification preference saved."
+msgstr "已儲存通知偏好設定。"
 
 #: app/settings.tsx
 msgid "Notifications"
@@ -2557,6 +2565,10 @@ msgstr "保存中"
 #: src/components/app-privacy.tsx
 msgid "Saving your choice…"
 msgstr "正在儲存您的選擇…"
+
+#: app/settings.tsx
+msgid "Saving your preference…"
+msgstr "正在儲存你的偏好設定…"
 
 #: app/(tabs)/index.tsx
 #: app/away.tsx
@@ -4269,6 +4281,10 @@ msgstr "您的名字，用家人平常的叫法。"
 #: app/settings.tsx
 msgid "Your name, the asks you write, and your replies."
 msgstr "您的名字、您寫的提問，以及您的回覆。"
+
+#: app/settings.tsx
+msgid "Your notification preference could not be loaded."
+msgstr "無法載入你的通知偏好設定。"
 
 #: app/conversation.tsx
 #: app/parent-settings.tsx

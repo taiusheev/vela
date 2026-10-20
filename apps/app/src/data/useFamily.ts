@@ -14,6 +14,7 @@ import { useIdempotencyKey } from "../api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { toYouFamily, type YouFamily, youFixture } from "./family.ts";
 import { demoDataAllowed } from "./live-state.ts";
+import { refreshReads } from "./query-refresh.ts";
 
 export interface FamilyView {
   family: YouFamily;
@@ -76,8 +77,7 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
   const refetchMe = me.refetch;
   const refresh = useCallback(() => {
     if (!enabled) return;
-    void refetchMe();
-    if (familyId !== undefined) void refetchRead();
+    void refreshReads(refetchMe, ...(familyId === undefined ? [] : [refetchRead]));
   }, [enabled, familyId, refetchMe, refetchRead]);
   const live = enabled && read.data !== undefined;
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
@@ -109,8 +109,10 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
         await account.token(),
       ),
     onSuccess: async () => {
-      await queries.invalidateQueries({ queryKey: ["family"] });
-      await queries.invalidateQueries({ queryKey: ["me"] });
+      await Promise.all([
+        queries.invalidateQueries({ queryKey: ["family"] }),
+        queries.invalidateQueries({ queryKey: ["me"] }),
+      ]);
     },
   });
   const leave = useMutation({

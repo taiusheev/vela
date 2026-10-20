@@ -1771,6 +1771,10 @@ msgstr "Loading your family’s morning…"
 msgid "Loading your family’s plan…"
 msgstr "Loading your family’s plan…"
 
+#: app/settings.tsx
+msgid "Loading your notification preference…"
+msgstr "Loading your notification preference…"
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr "Looking for that exchange…"
@@ -2035,6 +2039,10 @@ msgstr "Nothing yet today. Your morning message will be here."
 #: app/exchange/[id].tsx
 msgid "Nothing yet."
 msgstr "Nothing yet."
+
+#: app/settings.tsx
+msgid "Notification preference saved."
+msgstr "Notification preference saved."
 
 #: app/settings.tsx
 msgid "Notifications"
@@ -2556,6 +2564,10 @@ msgstr "Saving"
 #: src/components/app-privacy.tsx
 msgid "Saving your choice…"
 msgstr "Saving your choice…"
+
+#: app/settings.tsx
+msgid "Saving your preference…"
+msgstr "Saving your preference…"
 
 #: app/(tabs)/index.tsx
 #: app/away.tsx
@@ -4268,6 +4280,10 @@ msgstr "Your name, as the family says it."
 #: app/settings.tsx
 msgid "Your name, the asks you write, and your replies."
 msgstr "Your name, the asks you write, and your replies."
+
+#: app/settings.tsx
+msgid "Your notification preference could not be loaded."
+msgstr "Your notification preference could not be loaded."
 
 #: app/conversation.tsx
 #: app/parent-settings.tsx
