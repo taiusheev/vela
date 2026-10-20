@@ -335,7 +335,7 @@ export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageCont
     </section>
     <section class="question-chapter dark-section" id="idea" aria-labelledby="question-title">
       <div class="question-intro"><p class="eyebrow">${c.ideaEyebrow}</p><h2 id="question-title">${c.goBeyond}<br><em>${c.howAreYou}</em></h2><p>${c.specificQuestion}</p></div>
-      <div class="question-story"><div class="story-message from-you"><span>${c.youAsk}</span><p>${c.gardenQuestion}</p></div><div class="story-message from-parent"><span>${c.momAnswers}</span><p>${c.gardenAnswer}</p></div><div class="story-message your-reply"><span>${c.youReply}</span><p>${c.saveTwo}</p></div></div>
+      <div class="question-story"><div class="story-message"><span>${c.youAsk}</span><p>${c.gardenQuestion}</p></div><div class="story-message from-parent"><span>${c.momAnswers}</span><p>${c.gardenAnswer}</p></div><div class="story-message your-reply"><span>${c.youReply}</span><p>${c.saveTwo}</p></div></div>
       <p class="question-payoff">${c.payoffStart}<em>${c.payoffEnd}</em></p>
     </section>
     <section class="exchange-section" id="exchange" aria-labelledby="exchange-title">
