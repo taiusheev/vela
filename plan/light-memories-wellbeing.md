@@ -74,6 +74,45 @@ phased activation. No silent backfill of historical conversations under new cons
 
 ## Evidence ledger
 
+### Author withdrawal follow-up (22 October, not activated)
+
+Added an internal author-derived withdrawal operation. It withdraws only that member's existing
+rich_memories and memory_keep yes proofs, deletes pending candidates and sealed kept copies in the
+same transaction, and preserves original messages and unrelated consent purposes. No new yes/no
+proof is invented. Processing configuration and payment do not gate withdrawal. An organiser can
+withdraw only the organiser's own memories, not another adult's. Every retry rechecks membership;
+an old successful receipt never withdraws a later, separately recorded consent.
+
+The family/member/user lock order is shared with keep/remove; withdrawal takes an exclusive member
+lock. A compatible proposal may finish while that lock is waiting, but its candidate must be gone
+when withdrawal commits. Further proposals are refused. PostgreSQL tests assert that observable
+promise, not lock-queue ordering. Old keep retries cannot restore words after withdrawal.
+
+No acceptance route, app/messenger action or revised notice is activated here. Before adding
+acceptance, bind it to a fresh, versioned presentation and invalidate outstanding acceptance
+challenges on withdrawal: a late tap from an old screen must not silently restart processing.
+Future clients must refresh current state after a replay rather than treating a receipt as status.
+Final local pnpm check passed all 9 tasks, including 1,632 service tests (6 additional withdrawal
+cases); 8 unchanged tasks reused valid caches. All 16 real PostgreSQL memory races passed,
+including 2 new withdrawal races. A negative control that skipped proof withdrawal failed on
+re-extraction after the apparent stop; restoring it made all 16 pass again. Temporary databases
+were removed. Initial race-test ordering was corrected to allow a valid pre-withdrawal proposal
+while still requiring no surviving selections after commit. GitHub checks, actual app/messenger
+actions, capacity and real consent are not proven by these local results.
+
+### Personal-copy follow-up (22 October, not activated)
+
+Added a bounded internal read for the authenticated author's own kept quotes. It reuses the
+collection's current consent/source/identity checks, applies the author filter in SQL before the
+50-row page limit, and remains available with discovery off. It creates no export files, cached
+snapshots, routes or mutation receipts. The data-request runbook distinguishes this component from
+a complete export and records sealed-value, private delivery and in-progress invalidation gates.
+No founder console impersonation or whole-family data copy is introduced. Local root checks passed
+all 9 tasks (1,626 service tests, including 9 additional copy cases); 14 existing real PostgreSQL
+memory races passed with disposable database cleanup. Removing the author filter made both copy
+isolation tests fail, including the 51-other-quotes page case; the guard was restored before commit.
+GitHub results, combined-main verification, production delivery and actual consent remain pending.
+
 This initial change supplies domain-policy tests and a product/implementation contract only.
 Persistence, APIs, UI, discovery, clinical review, provider/device flows, scale and production are
 not proven by it. Record later receipts against each slice rather than marking the whole plan done.

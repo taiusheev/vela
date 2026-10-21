@@ -34,11 +34,13 @@ const absent = () => new VelaError("not_found", "Memory not found");
 const unavailable = () => new VelaError("illegal_state", "Memory is no longer available");
 const active = ["active", "paused"] as const;
 
-async function lockOwner(
+/** Shared lock order for owner actions; withdrawal takes the member's exclusive lock. */
+export async function lockMemoryOwner(
   db: Queryable,
   identity: SessionIdentity,
   familyId: string,
   memberId: string,
+  memberLock: "share" | "update" = "share",
 ) {
   const access = await authorizeFamilyAccess(db, identity, familyId);
   if (access.kind !== "granted" || access.access.memberId !== memberId) throw absent();
@@ -58,7 +60,7 @@ async function lockOwner(
         inArray(members.status, active),
       ),
     )
-    .for("share");
+    .for(memberLock);
   if (!family || !member || member.userId !== access.access.userId) throw absent();
   const [user] = await db
     .select()
@@ -113,7 +115,7 @@ export async function keepMemoryCandidate(
             ),
           );
         if (!location) throw absent();
-        await lockOwner(tx, identity, familyId, location.candidate.memberId);
+        await lockMemoryOwner(tx, identity, familyId, location.candidate.memberId);
         const [exchange] = await tx
           .select({ id: exchanges.id })
           .from(exchanges)
@@ -260,6 +262,30 @@ export async function loadKeptMemories(
   familyId: string,
   cursor: string | null = null,
 ): Promise<KeptMemoryPage | null> {
+  return readKeptMemoryPage(deps, identity, familyId, cursor, false);
+}
+
+/**
+ * One page of the authenticated author's own kept words for a free data copy.
+ * Not a whole-account export or a download endpoint. No export artifact is stored.
+ * Reauthorise every page; callers must not reuse cached pages after withdrawal.
+ */
+export async function loadOwnKeptMemoriesForExport(
+  deps: KeepDeps,
+  identity: SessionIdentity,
+  familyId: string,
+  cursor: string | null = null,
+): Promise<KeptMemoryPage | null> {
+  return readKeptMemoryPage(deps, identity, familyId, cursor, true);
+}
+
+async function readKeptMemoryPage(
+  deps: KeepDeps,
+  identity: SessionIdentity,
+  familyId: string,
+  cursor: string | null,
+  ownOnly: boolean,
+): Promise<KeptMemoryPage | null> {
   if (cursor !== null && !uuid.safeParse(cursor).success) return null;
   const access = await authorizeFamilyAccess(deps.db, identity, familyId);
   if (access.kind !== "granted") return null;
@@ -291,6 +317,7 @@ export async function loadKeptMemories(
     .where(
       and(
         eq(memoryKeeps.familyId, familyId),
+        ownOnly ? eq(memoryKeeps.memberId, access.access.memberId) : undefined,
         isNull(memoryKeeps.removedAt),
         isNull(members.leftAt),
         inArray(members.status, active),
@@ -386,7 +413,7 @@ export async function removeKeptMemory(
           .from(memoryKeeps)
           .where(and(eq(memoryKeeps.id, id), eq(memoryKeeps.familyId, familyId)));
         if (!row) throw absent();
-        await lockOwner(tx, identity, familyId, row.memberId);
+        await lockMemoryOwner(tx, identity, familyId, row.memberId);
         await tx
           .select({ id: answers.id })
           .from(answers)
