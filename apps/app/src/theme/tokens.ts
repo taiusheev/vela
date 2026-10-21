@@ -1,8 +1,9 @@
 import { Platform } from "react-native";
 
 /**
- * Shared Kept Light tokens. Modern task hierarchy is documented in
- * design/modern-practical-research.md; the palette preserves teal actions and warm human receipts.
+ * Shared Kept Light tokens, taken from the logo: its warm ink outline and its amber window. Actions
+ * are the ink's espresso, the light is amber, and nothing is teal, which the logo never had (founder,
+ * 21 Oct 2026). Modern task hierarchy is documented in design/modern-practical-research.md.
  */
 
 export interface Palette {
@@ -25,7 +26,7 @@ export interface Palette {
 
 export const lightPalette: Palette = {
   bg: "#FBF7F0",
-  surface: "#FFFFFF",
+  surface: "#FFFDF9",
   surface2: "#F3EDE4",
   ink: "#1E1A16",
   ink2: "#5A534B",
@@ -35,9 +36,9 @@ export const lightPalette: Palette = {
   light: "#E9A23B",
   lightDeep: "#C27612",
   lightSoft: "#FBEBCF",
-  action: "#1F5C66",
-  onAction: "#FFFFFF",
-  actionSoft: "#E1EEF0",
+  action: "#3A2A1F",
+  onAction: "#FFF8EE",
+  actionSoft: "#F3E8D8",
   error: "#B3261E",
 };
 
@@ -53,9 +54,9 @@ export const darkPalette: Palette = {
   light: "#E9A23B",
   lightDeep: "#F0B65A",
   lightSoft: "#3B2E19",
-  action: "#7FC3CC",
+  action: "#F0B65A",
   onAction: "#1B1714",
-  actionSoft: "#17383E",
+  actionSoft: "#3B2E19",
   error: "#F28B82",
 };
 
@@ -78,6 +79,8 @@ export const radius = {
   button: 10,
   parentButton: 10,
   chip: 24,
+  /** Today's cards and switcher, softer than a list card, after the founder's chosen prototype. */
+  panel: 20,
 } as const;
 
 export interface TextStyle {
@@ -114,7 +117,7 @@ export const type = {
   heading: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 17, lineHeight: 24 },
   body: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 17, lineHeight: 24 },
   bodyMedium: { fontFamily: face("Inter_500Medium", SANS_TC), fontSize: 17, lineHeight: 24 },
-  button: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 16, lineHeight: 20 },
+  button: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 15, lineHeight: 20 },
   caption: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 14, lineHeight: 20 },
   label: {
     fontFamily: face("Inter_600SemiBold", SANS_TC),
@@ -131,7 +134,28 @@ export const motion = {
   lightBloom: 700,
 } as const;
 
-/** The one shadow in the system, under the quiet notice sheet only. */
+/**
+ * Today's cards rest on the page with this one, low and wide and tinted from the ink, so they read
+ * as paper laid on paper rather than floating. Dark mode draws no shadow: its rule carries the edge.
+ */
+export const softShadow = {
+  shadowColor: "#6B4A2B",
+  shadowOpacity: 0.1,
+  shadowRadius: 24,
+  shadowOffset: { width: 0, height: 10 },
+  elevation: 3,
+} as const;
+
+/** Under the lit room on Today: deeper and warmer, as a lamp-lit window sits on a wall. */
+export const roomShadow = {
+  shadowColor: "#4A2E14",
+  shadowOpacity: 0.28,
+  shadowRadius: 32,
+  shadowOffset: { width: 0, height: 16 },
+  elevation: 8,
+} as const;
+
+/** The sheet's shadow, under the quiet notice only. */
 export const sheetShadow = {
   shadowColor: "#1E1A16",
   shadowOpacity: 0.14,

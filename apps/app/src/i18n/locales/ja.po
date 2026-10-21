@@ -335,6 +335,10 @@ msgstr ""
 msgid "{notices, plural, one {# quiet notice.} other {# quiet notices.}}"
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "{onlyName}'s light is on today"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "{open, plural, one {# is still open.} other {# are still open.}}"
 msgstr ""
@@ -353,6 +357,7 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
+#: src/components/today-feed.tsx
 msgid "{recipient} answered at {time}"
 msgstr ""
 
@@ -450,11 +455,15 @@ msgstr ""
 msgid "A hello from Vela"
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "A light comes on when they answer their morning."
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr ""
 
-#: app/(tabs)/index.tsx
+#: src/components/today-hero.tsx
 msgid "A little light from home."
 msgstr ""
 
@@ -603,6 +612,10 @@ msgstr ""
 msgid "All four panes lit"
 msgstr ""
 
+#: app/(tabs)/index.tsx
+msgid "All memories"
+msgstr ""
+
 #: src/data/family.ts
 msgid "All said yes"
 msgstr ""
@@ -676,7 +689,7 @@ msgstr ""
 msgid "answered {time}"
 msgstr ""
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Answered today"
 msgstr ""
 
@@ -685,6 +698,7 @@ msgid "Anyone"
 msgstr ""
 
 #: src/components/reminders.tsx
+#: src/components/today-hero.tsx
 msgid "Ask {name}"
 msgstr ""
 
@@ -697,6 +711,7 @@ msgid "Ask {name} how {what} went"
 msgstr ""
 
 #: app/ask.tsx
+#: src/components/today-hero.tsx
 msgid "Ask {name} something"
 msgstr ""
 
@@ -781,6 +796,10 @@ msgstr ""
 #: src/components/back-button.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Back"
+msgstr ""
+
+#: src/components/today-feed.tsx
+msgid "Be the first to answer {recipient}."
 msgstr ""
 
 #: src/components/app-privacy.tsx
@@ -956,6 +975,10 @@ msgstr ""
 msgid "Close by"
 msgstr ""
 
+#: src/components/today-feed.tsx
+msgid "Close notifications"
+msgstr ""
+
 #: src/components/quiet-notice.tsx
 msgid "Close quiet notice"
 msgstr ""
@@ -1120,6 +1143,10 @@ msgstr ""
 msgid "Each goes to {name} signed “— {you}”, one a morning, unless someone in the family writes that day. Take out any you would not send."
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "Each light came on with an answer this morning."
+msgstr ""
+
 #: app/conversation.tsx
 msgid "Earlier messages"
 msgstr ""
@@ -1170,6 +1197,10 @@ msgstr ""
 msgid "Everyone"
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "Everyone's light is on today"
+msgstr ""
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr ""
@@ -1209,6 +1240,10 @@ msgstr ""
 
 #: src/components/parent-link-settings.tsx
 msgid "Family connection"
+msgstr ""
+
+#: src/components/today-hero.tsx
+msgid "Family settings"
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -1587,6 +1622,14 @@ msgstr ""
 msgid "It has been accepted. Delivery happens in the parent's morning."
 msgstr ""
 
+#: src/components/today-feed.tsx
+msgid "It has been quiet at {name}'s today"
+msgstr ""
+
+#: src/components/today-hero.tsx
+msgid "It has been quiet at {quietName}'s today"
+msgstr ""
+
 #: src/components/onboarding/finish.tsx
 msgid "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 msgstr ""
@@ -1648,7 +1691,7 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Last confirmed update"
 msgstr ""
 
@@ -1704,6 +1747,7 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
+#: src/components/today-feed.tsx
 msgid "Listen to {from}’s voice reply"
 msgstr ""
 
@@ -1928,7 +1972,7 @@ msgstr ""
 msgid "No answer from Mom yet today."
 msgstr ""
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "No answer recorded today"
 msgstr ""
 
@@ -1968,6 +2012,10 @@ msgstr ""
 
 #: app/exchange/[id].tsx
 msgid "No word yet."
+msgstr ""
+
+#: src/components/today-feed.tsx
+msgid "Nobody has written back yet"
 msgstr ""
 
 #: src/data/weekly.ts
@@ -2026,6 +2074,10 @@ msgstr ""
 msgid "Nothing kept yet."
 msgstr ""
 
+#: src/components/today-feed.tsx
+msgid "Nothing new yet today."
+msgstr ""
+
 #: src/components/onboarding/finish.tsx
 msgid "Nothing was lost; try again."
 msgstr ""
@@ -2044,6 +2096,8 @@ msgid "Notification preference saved."
 msgstr ""
 
 #: app/settings.tsx
+#: src/components/today-feed.tsx
+#: src/components/today-hero.tsx
 msgid "Notifications"
 msgstr ""
 
@@ -2055,6 +2109,7 @@ msgstr ""
 msgid "Notifications are off in this phone's settings."
 msgstr ""
 
+#: src/components/today-feed.tsx
 #: src/data/notifications.ts
 msgid "Notifications are off."
 msgstr ""
@@ -2069,6 +2124,10 @@ msgstr ""
 
 #: src/data/notifications.ts
 msgid "Notifications come to the Vela app on a phone, not to a browser."
+msgstr ""
+
+#: src/components/today-hero.tsx
+msgid "Notifications, something new"
 msgstr ""
 
 #: src/data/notifications.ts
@@ -2476,6 +2535,7 @@ msgid "Replied"
 msgstr ""
 
 #: app/exchange/[id].tsx
+#: src/components/today-feed.tsx
 msgid "Reply"
 msgstr ""
 
@@ -2612,6 +2672,11 @@ msgstr ""
 
 #: src/components/onboarding/story.tsx
 msgid "See what Vela does with it. It takes twenty seconds."
+msgstr ""
+
+#: src/components/today-feed.tsx
+#: src/components/today-hero.tsx
+msgid "See what you can do"
 msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
@@ -2973,12 +3038,6 @@ msgstr ""
 msgid "Sunday"
 msgstr ""
 
-#: app/(tabs)/_layout.tsx
-#: app/(tabs)/sunday.tsx
-msgctxt "tab"
-msgid "Sunday"
-msgstr ""
-
 #: src/data/onboarding.ts
 msgid "Sydney"
 msgstr ""
@@ -3009,8 +3068,12 @@ msgid "Take this story out of the family book?"
 msgstr ""
 
 #: src/components/chat/chat-link.tsx
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Talk with {name}"
+msgstr ""
+
+#: src/components/today-feed.tsx
+msgid "Talk with {recipient}"
 msgstr ""
 
 #: src/data/useToday.ts
@@ -3275,6 +3338,10 @@ msgstr ""
 msgid "The old days"
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "The others have answered this morning."
+msgstr ""
+
 #: src/data/useNearby.ts
 msgid "The people nearby could not be reached just now."
 msgstr ""
@@ -3323,6 +3390,10 @@ msgstr ""
 
 #: src/audio/VoicePlayback.tsx
 msgid "The voice is still being prepared. Try again shortly."
+msgstr ""
+
+#: src/components/today-hero.tsx
+msgid "The week's words, read together on Sunday."
 msgstr ""
 
 #: app/(tabs)/sunday.tsx
@@ -3467,6 +3538,7 @@ msgstr ""
 
 #: app/(tabs)/exchanges.tsx
 #: src/components/connection-windows.tsx
+#: src/components/today-hero.tsx
 msgid "This week"
 msgstr ""
 
@@ -3499,12 +3571,17 @@ msgid "Today"
 msgstr ""
 
 #: app/(tabs)/_layout.tsx
+#: src/components/today-hero.tsx
 msgctxt "tab"
 msgid "Today"
 msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Today could not be reached just now."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Today with the family"
 msgstr ""
 
 #: src/data/useQuiet.ts
@@ -3541,6 +3618,10 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Tomorrow · your turn to ask {recipient}"
+msgstr ""
+
+#: src/components/today-feed.tsx
+msgid "Tomorrow is your turn to ask {recipient}"
 msgstr ""
 
 #: app/ask.tsx
@@ -3595,6 +3676,10 @@ msgstr ""
 #: src/components/onboarding/finish.tsx
 #: src/components/push-offer.tsx
 msgid "Turn on notifications"
+msgstr ""
+
+#: src/components/today-feed.tsx
+msgid "Turn them on to hear when someone answers, and if a morning goes quiet."
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -3706,6 +3791,7 @@ msgid "Vela asks on mornings nobody writes"
 msgstr ""
 
 #: app/(tabs)/index.tsx
+#: src/components/today-feed.tsx
 msgid "Vela cannot reach {name} on {channel}"
 msgstr ""
 
@@ -3825,7 +3911,7 @@ msgstr ""
 msgid "Vietnam"
 msgstr ""
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "View quiet notice"
 msgstr ""
 
@@ -3861,12 +3947,20 @@ msgstr ""
 msgid "Wait for her answer"
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "Waiting for {waitingNames}"
+msgstr ""
+
 #: src/data/useToday.ts
 msgid "waiting for her yes"
 msgstr ""
 
 #: app/ask.tsx
 msgid "Waiting for today to arrive. Your words are kept."
+msgstr ""
+
+#: src/components/today-hero.tsx
+msgid "Waiting for today's first light"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -3899,6 +3993,12 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "We will text {phone}."
+msgstr ""
+
+#: app/(tabs)/_layout.tsx
+#: app/(tabs)/sunday.tsx
+msgctxt "tab"
+msgid "Week"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
@@ -4063,6 +4163,10 @@ msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
 msgid "written by Vela"
+msgstr ""
+
+#: src/components/today-feed.tsx
+msgid "Wrote to {recipient}"
 msgstr ""
 
 #: src/components/set-up-phone.tsx

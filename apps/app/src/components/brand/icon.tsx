@@ -35,6 +35,7 @@ const drawings = {
   search: "M11 4a7 7 0 1 0 0 14 7 7 0 1 0 0-14Zm5 12 4 4",
   chat: "M4 5h16v11H9l-5 4V5Z",
   leave: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10",
+  bell: "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Zm4 4a2 2 0 0 0 4 0",
 } as const;
 
 export type BrandIconName = keyof typeof drawings;

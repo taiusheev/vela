@@ -7,9 +7,9 @@ tags:
 ---
 - launchApp
 - scrollUntilVisible:
-    element: "Ask Mom something"
+    element: "Ask Mom"
     direction: DOWN
-- tapOn: "Ask Mom something"
+- tapOn: "Ask Mom"
 - assertVisible: "What are you sending?"
 - tapOn: "Say it the way you would say it"
 - inputText: "What did you have for breakfast?"
@@ -23,5 +23,5 @@ tags:
 - tapOn: "Dismiss"
 - assertVisible: "What did the garden look like this morning?"
 - scrollUntilVisible:
-    element: "Ask Mom something"
+    element: "Ask Mom"
     direction: DOWN

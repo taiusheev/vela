@@ -305,7 +305,7 @@ export function Story({ step, signedIn }: { step: StoryStep; signedIn: boolean }
                       flex: 1,
                       minHeight: 46,
                       borderRadius: 13,
-                      backgroundColor: "#1F5C66",
+                      backgroundColor: "#3A2A1F",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
