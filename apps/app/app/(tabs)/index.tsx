@@ -17,7 +17,6 @@ import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandHeader } from "../../src/components/brand/header.tsx";
-import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "../../src/components/family-photo.tsx";
 import { PortraitLamp } from "../../src/components/portrait-lamp.tsx";
@@ -28,6 +27,7 @@ import {
   Card,
   Eyebrow,
   Hairline,
+  IconTile,
   ReceiptChip,
   SecondaryButton,
   Words,
@@ -148,20 +148,17 @@ function ExchangeCard({
             style={{
               flex: fontScale > 1.3 ? undefined : 1,
               alignSelf: "stretch",
-              minHeight: 54,
+              minHeight: 52,
               flexDirection: "row",
               alignItems: "center",
               gap: space.m,
               backgroundColor: exchange.answer === undefined ? palette.actionSoft : palette.action,
-              borderRadius: 12,
+              borderRadius: 14,
               paddingHorizontal: space.l,
+              paddingVertical: space.s,
             }}
           >
-            <BrandIcon
-              name="reply"
-              color={exchange.answer === undefined ? palette.action : palette.onAction}
-              size={20}
-            />
+            <IconTile name="reply" tone={exchange.answer === undefined ? "quiet" : "onAction"} />
             <View style={{ flex: 1 }}>
               <Text
                 style={[

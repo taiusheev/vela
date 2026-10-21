@@ -28,7 +28,15 @@ import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { ServiceStatus } from "../src/components/service-status.tsx";
 import { SetUpPhone } from "../src/components/set-up-phone.tsx";
 import { TestSignInDetails } from "../src/components/test-sign-in-details.tsx";
-import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../src/components/ui.tsx";
+import {
+  ActionGroup,
+  ActionRow,
+  Card,
+  Eyebrow,
+  Hairline,
+  SecondaryButton,
+  Words,
+} from "../src/components/ui.tsx";
 import { momentLine, nobodyTellsLine, phoneLine, toldOfQuiet } from "../src/data/notifications.ts";
 import { resetDraft } from "../src/data/onboarding-draft.ts";
 import { useCapabilities } from "../src/data/useCapabilities.ts";
@@ -541,34 +549,30 @@ function FamilyYou({ day }: { day: TodayView }) {
                   : t`You are paused: no turns come to you.`}
               </Words>
             ) : null}
-            <View style={{ flexDirection: "row", gap: space.xl }}>
-              <Pressable
-                accessibilityRole="button"
+            <ActionGroup>
+              <ActionRow
+                first
+                icon={family.me.paused ? "play" : "pause"}
+                label={family.me.paused ? t`Resume` : t`Pause`}
                 disabled={changing}
                 onPress={() => {
                   setLeaving(false);
                   if (family.me.paused) setPaused(false);
                   else confirmPause(true);
                 }}
-              >
-                <Words variant="button" tone="action">
-                  {family.me.paused ? t`Resume` : t`Pause`}
-                </Words>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
+              />
+              <ActionRow
+                careful
+                icon="leave"
+                label={t`Leave`}
                 disabled={changing}
                 onPress={() => {
                   setExampleNote(false);
                   confirmPause(false);
                   setLeaving(true);
                 }}
-              >
-                <Words variant="button" tone="action">
-                  <Trans>Leave</Trans>
-                </Words>
-              </Pressable>
-            </View>
+              />
+            </ActionGroup>
             {pausing ? (
               <ConfirmationDialog
                 onClose={() => {
