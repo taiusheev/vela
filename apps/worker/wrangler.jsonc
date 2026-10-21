@@ -178,12 +178,14 @@
       { "binding": "INBOUND_QUEUE", "queue": "vela-inbound" }
     ],
     // A message is retried until the send or the AI call stops failing, then parked in the
-    // dead-letter queue, where the founder can see it rather than lose it.
+    // dead-letter queue, where the founder can see it rather than lose it. Each batch waits at most a
+    // second: a family is a handful of messages, so a longer wait only delays her voice, its words
+    // and a chat message, and never fills a batch.
     "consumers": [
       {
         "queue": "vela-outbound",
         "max_batch_size": 10,
-        "max_batch_timeout": 5,
+        "max_batch_timeout": 1,
         "max_retries": 5,
         "retry_delay": 30,
         "dead_letter_queue": "vela-dead-letter"
@@ -191,7 +193,7 @@
       {
         "queue": "vela-media",
         "max_batch_size": 5,
-        "max_batch_timeout": 10,
+        "max_batch_timeout": 1,
         "max_retries": 3,
         "retry_delay": 60,
         "dead_letter_queue": "vela-dead-letter"
@@ -199,7 +201,7 @@
       {
         "queue": "vela-understand",
         "max_batch_size": 5,
-        "max_batch_timeout": 10,
+        "max_batch_timeout": 1,
         "max_retries": 3,
         "retry_delay": 60,
         "dead_letter_queue": "vela-dead-letter"
@@ -309,7 +311,7 @@
           {
             "queue": "vela-outbound-staging",
             "max_batch_size": 10,
-            "max_batch_timeout": 5,
+            "max_batch_timeout": 1,
             "max_retries": 5,
             "retry_delay": 30,
             "dead_letter_queue": "vela-dead-letter-staging"
@@ -317,7 +319,7 @@
           {
             "queue": "vela-media-staging",
             "max_batch_size": 5,
-            "max_batch_timeout": 10,
+            "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
             "dead_letter_queue": "vela-dead-letter-staging"
@@ -325,7 +327,7 @@
           {
             "queue": "vela-understand-staging",
             "max_batch_size": 5,
-            "max_batch_timeout": 10,
+            "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
             "dead_letter_queue": "vela-dead-letter-staging"
@@ -431,7 +433,7 @@
           {
             "queue": "vela-outbound-production",
             "max_batch_size": 10,
-            "max_batch_timeout": 5,
+            "max_batch_timeout": 1,
             "max_retries": 5,
             "retry_delay": 30,
             "dead_letter_queue": "vela-dead-letter-production"
@@ -439,7 +441,7 @@
           {
             "queue": "vela-media-production",
             "max_batch_size": 5,
-            "max_batch_timeout": 10,
+            "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
             "dead_letter_queue": "vela-dead-letter-production"
@@ -447,7 +449,7 @@
           {
             "queue": "vela-understand-production",
             "max_batch_size": 5,
-            "max_batch_timeout": 10,
+            "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
             "dead_letter_queue": "vela-dead-letter-production"

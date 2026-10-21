@@ -11,5 +11,5 @@ tags:
 - assertVisible: "Mom answered 6 of 7 days."
 - assertVisible: "On 1 morning nobody in the family asked, so Vela sent Mom a hello."
 - assertNotVisible: "Something to ask next week"
-- assertNotVisible: "Write your own question"
+- assertNotVisible: "Write your own story question for Sunday"
 - assertNotVisible: "Ask Mom something"

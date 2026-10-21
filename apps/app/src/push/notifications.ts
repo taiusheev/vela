@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { type PushAvailability, pushAvailability } from "./availability.ts";
-import { foregroundBehaviour } from "./taps.ts";
+import { foregroundBehaviour, isQuietKind, pushDataOf } from "./taps.ts";
 
 /**
  * The one door to expo-notifications (ADR-34, A1). It is loaded lazily and only where the build can
@@ -95,4 +95,27 @@ export async function quietChannelBlocked(notifications: NotificationsModule): P
   if (Platform.OS !== "android") return false;
   const channel = await notifications.getNotificationChannelAsync(QUIET_CHANNEL);
   return channel !== null && channel.importance === notifications.AndroidImportance.NONE;
+}
+
+/**
+ * Clears the notifications already shown about one parent once the reader is looking at her chat,
+ * as a messenger does: "Mom answered you" has been read. A quiet notice and its close stay, since
+ * they are settled on Today, not in the chat.
+ */
+export async function clearShownAbout(memberId: string): Promise<void> {
+  const notifications = await loadNotifications();
+  if (notifications === null) return;
+  try {
+    const shown = await notifications.getPresentedNotificationsAsync();
+    await Promise.all(
+      shown
+        .filter((item) => {
+          const data = pushDataOf(item.request.content.data);
+          return data !== null && data.member_id === memberId && !isQuietKind(data.kind);
+        })
+        .map((item) => notifications.dismissNotificationAsync(item.request.identifier)),
+    );
+  } catch {
+    // Clearing is a courtesy; a phone that refuses it keeps its notifications in the list.
+  }
 }

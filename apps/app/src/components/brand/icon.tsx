@@ -23,6 +23,8 @@ const drawings = {
   check: "m4 12 5 5L20 6",
   close: "m5 5 14 14M19 5 5 19",
   pause: "M8 4v16M16 4v16",
+  stop: "M7 7h10v10H7V7Z",
+  trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
   refresh: "M20 8a8 8 0 1 0 0 8M20 3v5h-5",
   privacy: "M6 10h12v11H6V10Zm3 0V5a3 3 0 0 1 6 0v5m-3 4v3",
   heart: "M12 21 3 12a6 6 0 0 1 9-8 6 6 0 0 1 9 8l-9 9Z",

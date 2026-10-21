@@ -118,9 +118,12 @@ export function appRowProblem(
 
 /**
  * The message Expo sends one phone for a row of `kind`. The quiet notice breaks through Focus
- * (time-sensitive) and sounds on the loud channel; its close sounds too, without breaking through;
- * an ordinary push is silent and may wait for the phone. Never a title (the app's name shows),
- * never a badge.
+ * (time-sensitive) and sounds on the loud channel; its close sounds too, without breaking through,
+ * and takes the notice's place on the lock screen (one `collapseId` and Android `tag` per quiet
+ * event), so a settled morning no longer reads "It's been quiet". Her answer receipt is an ordinary
+ * active push; the evening's turn prompt is passive, a nudge for the notification summary that never
+ * lights the screen. Every push about one parent stacks in one thread. Never a title (the app's
+ * name shows), never a badge.
  */
 export function pushMessageFor(
   kind: PushKind,
@@ -132,12 +135,20 @@ export function pushMessageFor(
   for (const [name, value] of Object.entries(data)) {
     if (typeof value === "string") fields[name] = value;
   }
+  // Ids only, as in `data`: one thread per parent of a family, one replaceable slot per quiet event.
+  const threadId = `${data.family_id}:${data.member_id}`;
+  const quietSlot =
+    data.quiet_event_id === undefined
+      ? {}
+      : { collapseId: `quiet:${data.quiet_event_id}`, tag: `quiet:${data.quiet_event_id}` };
   switch (kind) {
     case "quiet_notice":
       return {
         to: token,
         body,
         data: fields,
+        threadId,
+        ...quietSlot,
         channelId: ANDROID_QUIET_CHANNEL,
         priority: "high",
         interruptionLevel: "time-sensitive",
@@ -149,10 +160,23 @@ export function pushMessageFor(
         to: token,
         body,
         data: fields,
+        threadId,
+        ...quietSlot,
         channelId: ANDROID_QUIET_CHANNEL,
         priority: "high",
         interruptionLevel: "active",
         sound: "default",
+        ttl: OTHER_PUSH_TTL_SECONDS,
+      };
+    case "turn_prompt":
+      return {
+        to: token,
+        body,
+        data: fields,
+        threadId,
+        channelId: ANDROID_DAILY_CHANNEL,
+        priority: "normal",
+        interruptionLevel: "passive",
         ttl: OTHER_PUSH_TTL_SECONDS,
       };
     default:
@@ -160,6 +184,7 @@ export function pushMessageFor(
         to: token,
         body,
         data: fields,
+        threadId,
         channelId: ANDROID_DAILY_CHANNEL,
         priority: "normal",
         interruptionLevel: "active",

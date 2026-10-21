@@ -45,6 +45,7 @@ import { selectedLight } from "../src/data/selected-light.ts";
 import { useCallingNumber } from "../src/data/useCallingNumber.ts";
 import { useExchanges } from "../src/data/useExchanges.ts";
 import { useToday } from "../src/data/useToday.ts";
+import { clearShownAbout } from "../src/push/notifications.ts";
 import { useDraft } from "../src/storage/useDraft.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../src/theme/tokens.ts";
@@ -105,11 +106,13 @@ function Conversation() {
   const [pending, setPending] = useState<string | null>(null);
   const calling = useCallingNumber(day.familyId, light?.memberId);
   const reactKey = useIdempotencyKey("chat-reaction");
+  const herId = light?.memberId;
   useFocusEffect(
     useCallback(() => {
       history.refresh();
       day.refresh();
-    }, [history.refresh, day.refresh]),
+      if (herId !== undefined) void clearShownAbout(herId);
+    }, [history.refresh, day.refresh, herId]),
   );
   const name = light?.displayName ?? t`Your parent`;
   const invited = light?.invited === true;

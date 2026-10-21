@@ -476,6 +476,10 @@ describe("the pilot Worker's bindings", () => {
         ...inbound,
         `vela-dead-letter${suffix}`,
       ]);
+      // A family's chat message, her voice and its words each wait at most a second for a batch.
+      for (const consumer of consumers(pilot).slice(0, 3)) {
+        expect(consumer.max_batch_timeout, String(consumer.queue)).toBe(1);
+      }
       // Technical plan 2.7: dead jobs are kept for the founder, with nowhere further to go.
       expect(consumers(pilot).at(-1)).toEqual({
         queue: `vela-dead-letter${suffix}`,
