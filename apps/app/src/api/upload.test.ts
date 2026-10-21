@@ -7,7 +7,7 @@ vi.hoisted(() => {
 
 import { ApiError } from "./client.ts";
 import { sessionRequests } from "./request-session.ts";
-import { fetchPhoto, uploadMedia } from "./upload.ts";
+import { fetchPhoto, uploadDeviceVoice, uploadMedia, uploadVoice } from "./upload.ts";
 
 const FAMILY = "3b4c5d6e-7f8a-4b9c-8d0e-1f2a3b4c5d6e";
 const MEDIA = "4c5d6e7f-8a9b-4c0d-9e1f-2a3b4c5d6e7f";
@@ -196,6 +196,51 @@ describe("uploading a photo", () => {
     const failure = await upload.catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(ApiError);
     expect(failure).toMatchObject({ status: 0, code: "network" });
+  });
+});
+
+describe("uploading a voice", () => {
+  const M4A = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20, 0, 0]);
+  // The file the phone wrote, read back with the platform's own label for it: iOS calls an .m4a
+  // `audio/x-m4a`, and Expo's fetch puts a Blob body's label in place of the Content-Type given.
+  function phoneFetch() {
+    const calls: { url: string; init: RequestInit | undefined }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push({ url, init });
+        if (url.startsWith("file://"))
+          return new Response(new Blob([M4A], { type: "audio/x-m4a" }));
+        return new Response(JSON.stringify({ id: MEDIA, media_id: MEDIA }), { status: 201 });
+      }),
+    );
+    return calls;
+  }
+
+  it("sends a family voice as its bytes, so it keeps the audio/mp4 label the API takes", async () => {
+    const calls = phoneFetch();
+    const recording = { uri: "file:///hello.m4a", key: "voice-abc", durationMs: 4_200 };
+    await expect(uploadVoice(FAMILY, recording, "token")).resolves.toBe(MEDIA);
+    const sent = calls.at(-1);
+    expect(sent?.url).toBe(`https://api.vela.test/v1/families/${FAMILY}/voice`);
+    expect(sent?.init?.body).not.toBeInstanceOf(Blob);
+    expect(new Uint8Array(sent?.init?.body as ArrayBuffer)).toEqual(M4A);
+    expect(sent?.init?.headers).toMatchObject({
+      "content-type": "audio/mp4",
+      "idempotency-key": "voice:voice-abc",
+      "x-duration-ms": "4200",
+    });
+  });
+
+  it("sends her voice from her phone the same way", async () => {
+    const calls = phoneFetch();
+    await expect(uploadDeviceVoice("file:///her.m4a", "her-key", 3_000, "device")).resolves.toBe(
+      MEDIA,
+    );
+    const sent = calls.at(-1);
+    expect(sent?.init?.body).not.toBeInstanceOf(Blob);
+    expect(new Uint8Array(sent?.init?.body as ArrayBuffer)).toEqual(M4A);
+    expect(sent?.init?.headers).toMatchObject({ "content-type": "audio/mp4" });
   });
 });
 
