@@ -28,6 +28,7 @@ import type { Queryable } from "./repo.ts";
 import { RICH_MEMORY_CONSENT_VERSION, sourceDigest, sourceWords } from "./rich-memories.ts";
 
 type KeepDeps = Pick<Deps, "db" | "clock" | "config">;
+type KeepReadDeps = Omit<KeepDeps, "db"> & { db: Queryable };
 const uuid = z.uuid();
 const lifetime = 30 * 86_400_000;
 const absent = () => new VelaError("not_found", "Memory not found");
@@ -279,12 +280,25 @@ export async function loadOwnKeptMemoriesForExport(
   return readKeptMemoryPage(deps, identity, familyId, cursor, true);
 }
 
+/** Internal single-row source/consent validation for locked owner operations. No new reader audience. */
+export async function loadOwnKeptMemory(
+  deps: KeepReadDeps,
+  identity: SessionIdentity,
+  familyId: string,
+  id: string,
+): Promise<ApiKeptMemory | null> {
+  if (!uuid.safeParse(id).success) return null;
+  const page = await readKeptMemoryPage(deps, identity, familyId, null, true, id);
+  return page?.items[0] ?? null;
+}
+
 async function readKeptMemoryPage(
-  deps: KeepDeps,
+  deps: KeepReadDeps,
   identity: SessionIdentity,
   familyId: string,
   cursor: string | null,
   ownOnly: boolean,
+  onlyId?: string,
 ): Promise<KeptMemoryPage | null> {
   if (cursor !== null && !uuid.safeParse(cursor).success) return null;
   const access = await authorizeFamilyAccess(deps.db, identity, familyId);
@@ -317,6 +331,7 @@ async function readKeptMemoryPage(
     .where(
       and(
         eq(memoryKeeps.familyId, familyId),
+        onlyId === undefined ? undefined : eq(memoryKeeps.id, onlyId),
         // No sharing grant is implemented yet: even current organisers and later joiners see none.
         // Keep the separate export restriction below so future shared reads cannot widen copies.
         eq(memoryKeeps.memberId, access.access.memberId),

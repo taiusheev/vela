@@ -1,5 +1,5 @@
 -- Vela · Postgres schema
--- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/memory-keep-guards.sql.
+-- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/memory-*-guards.sql.
 -- Regenerate with: pnpm --filter @vela/db export-sql
 -- Applied through the migrations in packages/db/migrations (pnpm --filter @vela/db generate).
 -- Column meanings, retention rules, and the invariants behind each index are documented in
@@ -312,6 +312,7 @@ CREATE TABLE "members" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"family_id" uuid NOT NULL,
 	"user_id" uuid,
+	"memory_membership_revision" uuid DEFAULT uuidv7() NOT NULL,
 	"role" text DEFAULT 'member' NOT NULL,
 	"billing" boolean DEFAULT false NOT NULL,
 	"display_name" text NOT NULL,
@@ -401,11 +402,42 @@ CREATE TABLE "memory_keeps" (
 	"lang" text NOT NULL,
 	"occurred_at" timestamp with time zone NOT NULL,
 	"kept_at" timestamp with time zone NOT NULL,
+	"sharing_revision" uuid DEFAULT uuidv7() NOT NULL,
 	"removed_at" timestamp with time zone,
 	CONSTRAINT "memory_keeps_source_span_key" UNIQUE("source_answer_id","start_offset","end_offset"),
 	CONSTRAINT "memory_keeps_candidate_key" UNIQUE("candidate_id"),
 	CONSTRAINT "memory_keeps_kind_check" CHECK ("kind" in ('preference', 'story', 'humour', 'person', 'moment', 'follow_up')),
 	CONSTRAINT "memory_keeps_offsets_check" CHECK ("memory_keeps"."start_offset" >= 0 and "memory_keeps"."end_offset" > "memory_keeps"."start_offset" and "memory_keeps"."end_offset" - "memory_keeps"."start_offset" <= 2000)
+);
+
+CREATE TABLE "memory_shares" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"keep_id" uuid NOT NULL,
+	"recipient_member_id" uuid NOT NULL,
+	"recipient_user_id" uuid NOT NULL,
+	"recipient_membership_revision" uuid NOT NULL,
+	"sharing_revision" uuid NOT NULL,
+	"presentation_id" uuid,
+	"confirmation_version" text NOT NULL,
+	"fingerprint" text NOT NULL,
+	"granted_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "memory_shares_keep_recipient_key" UNIQUE("keep_id","recipient_member_id"),
+	CONSTRAINT "memory_shares_fingerprint_check" CHECK ("memory_shares"."fingerprint" ~ '^[0-9a-f]{64}$')
+);
+
+CREATE TABLE "memory_sharing_presentations" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"keep_id" uuid NOT NULL,
+	"owner_user_id" uuid NOT NULL,
+	"owner_membership_revision" uuid NOT NULL,
+	"recipient_ids" uuid[] NOT NULL,
+	"fingerprint" text NOT NULL,
+	"issued_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"consumed_at" timestamp with time zone,
+	CONSTRAINT "memory_sharing_presentations_fingerprint_check" CHECK ("memory_sharing_presentations"."fingerprint" ~ '^[0-9a-f]{64}$'),
+	CONSTRAINT "memory_sharing_presentations_audience_check" CHECK (cardinality("memory_sharing_presentations"."recipient_ids") between 1 and 50 and array_position("memory_sharing_presentations"."recipient_ids", null) is null),
+	CONSTRAINT "memory_sharing_presentations_timing_check" CHECK ("memory_sharing_presentations"."expires_at" = "memory_sharing_presentations"."issued_at" + interval '5 minutes' and ("memory_sharing_presentations"."consumed_at" is null or ("memory_sharing_presentations"."consumed_at" >= "memory_sharing_presentations"."issued_at" and "memory_sharing_presentations"."consumed_at" < "memory_sharing_presentations"."expires_at")))
 );
 
 CREATE TABLE "message_refs" (
@@ -771,6 +803,12 @@ ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_candidate_id_memory_cand
 ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_discovery_consent_id_consents_id_fk" FOREIGN KEY ("discovery_consent_id") REFERENCES "public"."consents"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_keep_consent_id_consents_id_fk" FOREIGN KEY ("keep_consent_id") REFERENCES "public"."consents"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_keep_id_memory_keeps_id_fk" FOREIGN KEY ("keep_id") REFERENCES "public"."memory_keeps"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_recipient_member_id_members_id_fk" FOREIGN KEY ("recipient_member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_recipient_user_id_users_id_fk" FOREIGN KEY ("recipient_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_presentation_id_memory_sharing_presentations_id_fk" FOREIGN KEY ("presentation_id") REFERENCES "public"."memory_sharing_presentations"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "memory_sharing_presentations" ADD CONSTRAINT "memory_sharing_presentations_keep_id_memory_keeps_id_fk" FOREIGN KEY ("keep_id") REFERENCES "public"."memory_keeps"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_sharing_presentations" ADD CONSTRAINT "memory_sharing_presentations_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_quiet_event_id_quiet_events_id_fk" FOREIGN KEY ("quiet_event_id") REFERENCES "public"."quiet_events"("id") ON DELETE cascade ON UPDATE no action;
@@ -847,6 +885,13 @@ CREATE INDEX "memory_keeps_member_idx" ON "memory_keeps" USING btree ("member_id
 CREATE INDEX "memory_keeps_discovery_consent_idx" ON "memory_keeps" USING btree ("discovery_consent_id");
 CREATE INDEX "memory_keeps_keep_consent_idx" ON "memory_keeps" USING btree ("keep_consent_id");
 CREATE INDEX "memory_keeps_removed_idx" ON "memory_keeps" USING btree ("removed_at");
+CREATE INDEX "memory_shares_recipient_idx" ON "memory_shares" USING btree ("recipient_member_id");
+CREATE INDEX "memory_shares_user_idx" ON "memory_shares" USING btree ("recipient_user_id");
+CREATE INDEX "memory_shares_presentation_idx" ON "memory_shares" USING btree ("presentation_id");
+CREATE INDEX "memory_sharing_presentations_keep_idx" ON "memory_sharing_presentations" USING btree ("keep_id");
+CREATE INDEX "memory_sharing_presentations_owner_idx" ON "memory_sharing_presentations" USING btree ("owner_user_id");
+CREATE INDEX "memory_sharing_presentations_recipients_idx" ON "memory_sharing_presentations" USING gin ("recipient_ids");
+CREATE INDEX "memory_sharing_presentations_expiry_idx" ON "memory_sharing_presentations" USING btree ("expires_at");
 CREATE UNIQUE INDEX "nearby_contacts_member_external_idx" ON "nearby_contacts" USING btree ("member_id","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';
 CREATE INDEX "outbound_pending_idx" ON "outbound" USING btree ("queued_at") WHERE "status" = 'queued';
@@ -949,3 +994,68 @@ FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
 --> statement-breakpoint
 CREATE TRIGGER memory_keep_exchange_guard AFTER UPDATE OF family_id ON "public"."exchanges"
 FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
+
+-- No quote/name copies. These guards invalidate both live grants and pending choices.
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_sharing_member"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  binding_changed boolean;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    DELETE FROM "public"."memory_sharing_presentations" WHERE recipient_ids @> ARRAY[OLD.id];
+    RETURN OLD;
+  END IF;
+  binding_changed := NEW.user_id IS DISTINCT FROM OLD.user_id
+    OR NEW.family_id IS DISTINCT FROM OLD.family_id
+    OR NEW.left_at IS DISTINCT FROM OLD.left_at
+    OR (NEW.status IN ('active', 'paused')) IS DISTINCT FROM (OLD.status IN ('active', 'paused'))
+    OR NEW.memory_membership_revision IS DISTINCT FROM OLD.memory_membership_revision;
+  IF binding_changed THEN
+    NEW.memory_membership_revision := uuidv7();
+    DELETE FROM "public"."memory_sharing_presentations" WHERE recipient_ids @> ARRAY[OLD.id];
+    DELETE FROM "public"."memory_shares" WHERE recipient_member_id = OLD.id;
+    -- A replacement account must not inherit the author's private kept words or shared choices.
+    DELETE FROM "public"."memory_keeps" WHERE member_id = OLD.id;
+  ELSIF NEW.display_name IS DISTINCT FROM OLD.display_name THEN
+    DELETE FROM "public"."memory_sharing_presentations" WHERE recipient_ids @> ARRAY[OLD.id]
+      AND consumed_at IS NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_sharing_member_guard BEFORE UPDATE OR DELETE ON "public"."members"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_sharing_member"();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_sharing_user"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.auth_subject IS DISTINCT FROM OLD.auth_subject OR NEW.deleted_at IS DISTINCT FROM OLD.deleted_at THEN
+    -- Do not update member rows before account deletion takes its ordered organiser locks.
+    -- Sharing locks the bound user rows first, so a concurrent share cannot survive this purge.
+    DELETE FROM "public"."memory_sharing_presentations" WHERE owner_user_id = OLD.id
+      OR recipient_ids && ARRAY(SELECT id FROM "public"."members" WHERE user_id = OLD.id);
+    DELETE FROM "public"."memory_shares" WHERE recipient_user_id = OLD.id;
+    DELETE FROM "public"."memory_keeps" WHERE member_id IN
+      (SELECT id FROM "public"."members" WHERE user_id = OLD.id);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_sharing_user_guard BEFORE UPDATE OF auth_subject, deleted_at ON "public"."users"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_sharing_user"();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_sharing_keep"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.removed_at IS NOT NULL OR NEW.sharing_revision IS DISTINCT FROM OLD.sharing_revision THEN
+    DELETE FROM "public"."memory_sharing_presentations" WHERE keep_id = OLD.id;
+    DELETE FROM "public"."memory_shares" WHERE keep_id = OLD.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_sharing_keep_guard BEFORE UPDATE OF removed_at, sharing_revision ON "public"."memory_keeps"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_sharing_keep"();

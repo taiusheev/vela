@@ -509,10 +509,20 @@ describe("disableApiAccount", () => {
     expect(await receipts()).toEqual(others);
     expect(await challenges()).toEqual(otherChallenges);
     // Her own light is kept in the family (ADR-43): only its account link goes.
+    const releasedEffects = await sideEffects();
+    const revision = releasedEffects.members.find(
+      (row) => row.id === seed.member.id,
+    )?.memoryMembershipRevision;
+    expect(typeof revision).toBe("string");
+    expect(revision).not.toBe(
+      effects.members.find((row) => row.id === seed.member.id)?.memoryMembershipRevision,
+    );
     const unlinked = {
       ...effects,
       members: effects.members.map((row) =>
-        row.id === seed.member.id ? { ...row, userId: null } : row,
+        row.id === seed.member.id
+          ? { ...row, userId: null, memoryMembershipRevision: revision }
+          : row,
       ),
     };
     expect(await sideEffects()).toEqual(unlinked);

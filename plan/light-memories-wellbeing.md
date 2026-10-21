@@ -4,6 +4,11 @@ Owner: engineering; product direction approved by founder on 21 October 2026.
 Contract: product/06-light-memories-wellbeing.md. Deliver vertical slices with evidence; no estimates
 of production capacity from a unit suite. Existing real-family and billing holds stay separate.
 
+Current status (22 October): private-first reads and the read-only confirmation foundation are
+merged but disabled. Persisted named permissions/revocation are the next proposed change, with
+synthetic database evidence below. Recipient reads, connected app/Telegram acceptance and the
+non-medical weekly support engine remain pending. No real-family activation is complete.
+
 ## 1. Source policy and product contract
 
 Implemented in this change: six memory categories; source-revision/quote materialisation; rejection
@@ -291,3 +296,62 @@ Verification: all 31 synthetic confirmation cases passed; local pnpm check passe
 including 1,666 service tests (7 unchanged test tasks reused valid caches). Removing the current
 fingerprint comparison made 11 stale-state tests fail; restoring it returned all 31 to passing.
 This proves the comparison tests, not persisted permission or device/consent behavior.
+
+### Persisted named permissions (22 October, internal and disabled)
+
+Private-first PR139 merged as 67a410d after both current-head GitHub runs passed source,
+PostgreSQL and app journeys. Its automatic staging deployment is tracked separately.
+Confirmation PR140 merged as af7f5de after latest GitHub source, database and app checks passed;
+its automatic test deployment is tracked separately. This persistence slice does not widen readers.
+
+Internal create/load/confirm/stop services now load authenticated live owner/source/consent state.
+A single-row owner lookup reuses the existing private keep checks rather than scanning pages.
+Create and confirm require richMemories=true; author preview and stop-sharing do not require payment
+or processing. Each write uses runApiMutation. Mutation receipts contain IDs only, never previews.
+Preview loading rechecks the server-owned five-minute record and never accepts a client snapshot.
+The confirmation applies the COMPLETE named audience; it does not silently preserve other recipients.
+Other pending choices are invalidated, and a consumed choice cannot be submitted with a new key.
+An identical successful receipt is replayable only while its current grant set is still intact.
+
+Two content-free tables hold presentations and per-person permissions. Neither copies quote or name
+text. Permissions bind current member/account and membership generation, kept-memory sharing revision,
+confirmation version, fingerprint and time. Only the chosen quote remains in the sealed keep table.
+New membership and sharing generations are persisted, not supplied by the client. Membership guards
+rotate generations; membership/account guards purge permissions/pending choices on departure/rejoin, account rebind/deletion,
+quote removal or source/consent invalidation. A replacement account also loses the old private keep.
+Recipient rename invalidates pending choices, not an already granted permission. The existing source
+guards and foreign keys cascade kept-quote correction, health changes, withdrawal and family erasure.
+Ordinary 30-day source cleanup remains the narrow exception that preserves chosen words/permissions.
+
+Stop-sharing rotates the sharing revision, clearing pending choices and permissions immediately.
+Old choices and old successful share receipts cannot restore them. A fresh author choice can share
+again. Replaying an older stop action acknowledges that original action; it does not revoke a later
+fresh choice. Future clients must refresh state after replay, as with consent withdrawal.
+Expired presentations are cleared by retention; grant fingerprint/version metadata remains with its
+active permission, while the expired presentation reference becomes null. No extra quote copy survives.
+
+The bounded internal workflow locks selected accounts in ID order before family, members and source/
+keep rows. It does no network/model work in the transaction. Membership changes rotate the persisted
+generation; account-subject/deletion changes purge old permissions/choices/keeps under the user lock.
+The user trigger must not update memberships before account deletion's ordered organiser locks.
+Synthetic PostgreSQL races cover stop/share, withdrawal/share, leave/rejoin/share, source correction,
+departure behind an in-flight share and duplicate confirmations. Disabling the member guard made the
+last-departure test fail on a surviving permission; restored guards passed all 22 memory race cases.
+Two more races prove account-subject changes invalidate choices before sharing and purge grants
+when queued behind sharing. Full disposable PostgreSQL suite: all 148 tests across 47 files passed.
+The initial user-trigger/member-lock inversion broke two existing account-deletion races; the new
+guard/lock-order fix restored both without changing deletion production code or weakening assertions.
+Broader root results and candidate delivery are recorded in the implementation receipt.
+
+Final local pnpm check passed all 9 tasks, including all 1,690 service tests (24 new persisted
+sharing cases). The service test task actually ran; 8 unchanged test tasks reused valid caches.
+The combined verification also has 238 database tests, 1,235 Worker tests and 377 app tests with
+1 existing skip. Original full-row account-binding assertions were preserved except for explicitly
+requiring the new membership revision to rotate on bind/unbind. No live notice/config changes.
+
+No Worker/app/messenger calls these services. Existing family readers and personal exports remain
+author-only even when a synthetic permission exists. A recipient read path still needs fresh grant,
+membership-generation, keep/source/consent and session checks before connection. There are no HTTP
+routes, live consent acceptance, shared UI, real-family activation or production tags in this slice.
+Live notice/scripts/generated notice and Worker configuration remain unchanged; no health/model
+processing or weekly report engine is added. Actual notice/translation/legal review remains required.

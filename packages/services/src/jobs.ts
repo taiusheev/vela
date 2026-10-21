@@ -46,6 +46,7 @@ import {
   members,
   memoryFacts,
   memoryKeeps,
+  memorySharingPresentations,
   messageRefs,
   metricsDaily,
   nearbyContacts,
@@ -1377,6 +1378,12 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .returning({ id: memoryFacts.id })
   ).length;
   counts.memory_candidates_deleted = await deleteExpiredMemoryCandidates(db, now);
+  counts.memory_sharing_presentations_deleted = (
+    await db
+      .delete(memorySharingPresentations)
+      .where(lte(memorySharingPresentations.expiresAt, now))
+      .returning({ id: memorySharingPresentations.id })
+  ).length;
   counts.memory_keep_tombstones_deleted = (
     await db
       .delete(memoryKeeps)

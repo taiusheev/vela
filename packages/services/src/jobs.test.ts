@@ -786,6 +786,7 @@ describe("applyRetention", () => {
     "memory_candidates_deleted",
     "memory_keep_tombstones_deleted",
     "memory_keep_proofs_closed",
+    "memory_sharing_presentations_deleted",
     "recipe_drafts_deleted",
     "reminders_deleted",
     "message_refs_deleted",

@@ -44,7 +44,7 @@ if (!statements.startsWith("CREATE")) {
 
 const header = [
   "-- Vela · Postgres schema",
-  "-- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/memory-keep-guards.sql.",
+  "-- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/memory-*-guards.sql.",
   "-- Regenerate with: pnpm --filter @vela/db export-sql",
   "-- Applied through the migrations in packages/db/migrations (pnpm --filter @vela/db generate).",
   "-- Column meanings, retention rules, and the invariants behind each index are documented in",
@@ -52,5 +52,9 @@ const header = [
 ].join("\n");
 
 const guards = readFileSync(new URL("../sql/memory-keep-guards.sql", import.meta.url), "utf8");
-writeFileSync(target, `${header}\n\n${statements}\n\n${guards}`);
+const sharingGuards = readFileSync(
+  new URL("../sql/memory-sharing-guards.sql", import.meta.url),
+  "utf8",
+);
+writeFileSync(target, `${header}\n\n${statements}\n\n${guards}\n${sharingGuards}`);
 console.log(`Wrote ${target}`);
