@@ -54,6 +54,20 @@ import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, space, type } from "../../src/theme/tokens.ts";
 
+/** Who asked whom, as the exchange names it: on its own card, and in the portrait over her answer. */
+function useAskedLine(): (exchange: TodayExchange) => string {
+  const { t } = useLingui();
+  return (exchange) => {
+    const asker = exchange.asker;
+    const recipient = exchange.recipient;
+    return asker === undefined
+      ? t`A hello for ${recipient}`
+      : exchange.draftedByVela === true
+        ? t`${asker} asked ${recipient} · written by Vela`
+        : t`${asker} asked ${recipient}`;
+  };
+}
+
 function ExchangeCard({
   exchange,
   answerInPortrait = false,
@@ -65,18 +79,39 @@ function ExchangeCard({
   const { t } = useLingui();
   const palette = usePalette();
   const { familyId } = useToday();
-  const asker = exchange.asker;
+  const askedLine = useAskedLine();
   const recipient = exchange.recipient;
   const time = exchange.answer?.at;
+  // Her answer, its ask and the way into the chat are in the portrait above: this card keeps only
+  // what the family said back, and a heart, so Today has one way into the chat and one time.
+  if (answerInPortrait) {
+    return (
+      <View style={{ gap: space.m, paddingBottom: space.xl }}>
+        <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
+        {exchange.answer?.photo === undefined ? null : (
+          <ReplyPhoto photo={exchange.answer.photo} size="full" />
+        )}
+        {exchange.answer?.audio === undefined || familyId === undefined ? null : (
+          <VoicePlayback
+            familyId={familyId}
+            mediaId={exchange.answer.audio.id}
+            durationMs={exchange.answer.audio.duration_ms}
+            expiresAt={exchange.answer.audio.expires_at}
+            state={exchange.answer.audio.state}
+            ready={exchange.answer.audio.state === "ready"}
+          />
+        )}
+        <FamilyReplies exchange={exchange} familyId={familyId} />
+        {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
+        {exchange.deliveryPending === true ? null : (
+          <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} />
+        )}
+      </View>
+    );
+  }
   return (
     <View style={{ gap: space.m, paddingBottom: space.xl }}>
-      <Eyebrow>
-        {asker === undefined
-          ? t`A hello for ${recipient}`
-          : exchange.draftedByVela === true
-            ? t`${asker} asked ${recipient} · written by Vela`
-            : t`${asker} asked ${recipient}`}
-      </Eyebrow>
+      <Eyebrow>{askedLine(exchange)}</Eyebrow>
       {exchange.deliveryNotice === undefined ? null : (
         <Words variant="bodyMedium">{exchange.deliveryNotice}</Words>
       )}
@@ -182,36 +217,52 @@ function ExchangeCard({
       {exchange.replies.length > 0 ? (
         <>
           <Hairline />
-          {/* Each reply is its whole line already, with the name inside it. */}
-          {exchange.replies.map((reply) => (
-            <Words key={`${reply.from}:${reply.text}`} variant="body" tone="ink2">
-              {reply.text}
-            </Words>
-          ))}
-          <ReplyThumbnails photos={exchange.replies.flatMap((reply) => reply.photo ?? [])} />
-          {familyId === undefined
-            ? null
-            : exchange.replies.flatMap((reply) => {
-                const from = reply.from;
-                return reply.audio === undefined
-                  ? []
-                  : [
-                      <VoicePlayback
-                        key={reply.audio.id}
-                        familyId={familyId}
-                        mediaId={reply.audio.id}
-                        durationMs={reply.audio.duration_ms}
-                        expiresAt={reply.audio.expires_at}
-                        state={reply.audio.state}
-                        ready={reply.audio.state === "ready"}
-                        label={t`Listen to ${from}’s voice reply`}
-                      />,
-                    ];
-              })}
+          <FamilyReplies exchange={exchange} familyId={familyId} />
         </>
       ) : null}
       {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
     </View>
+  );
+}
+
+/** What the family said back to her answer: each reply is its whole line already, with the name. */
+function FamilyReplies({
+  exchange,
+  familyId,
+}: {
+  exchange: TodayExchange;
+  familyId: string | undefined;
+}) {
+  const { t } = useLingui();
+  if (exchange.replies.length === 0) return null;
+  return (
+    <>
+      {exchange.replies.map((reply) => (
+        <Words key={`${reply.from}:${reply.text}`} variant="body" tone="ink2">
+          {reply.text}
+        </Words>
+      ))}
+      <ReplyThumbnails photos={exchange.replies.flatMap((reply) => reply.photo ?? [])} />
+      {familyId === undefined
+        ? null
+        : exchange.replies.flatMap((reply) => {
+            const from = reply.from;
+            return reply.audio === undefined
+              ? []
+              : [
+                  <VoicePlayback
+                    key={reply.audio.id}
+                    familyId={familyId}
+                    mediaId={reply.audio.id}
+                    durationMs={reply.audio.duration_ms}
+                    expiresAt={reply.audio.expires_at}
+                    state={reply.audio.state}
+                    ready={reply.audio.state === "ready"}
+                    label={t`Listen to ${from}’s voice reply`}
+                  />,
+                ];
+          })}
+    </>
   );
 }
 
@@ -295,6 +346,7 @@ export default function TodayScreen() {
 function FamilyToday({ day }: { day: TodayView }) {
   const palette = usePalette();
   const { t, i18n } = useLingui();
+  const askedLine = useAskedLine();
   const [quietOpen, setQuietOpen] = useState(false);
   const [selectedParent, setSelectedParent] = useState<string>();
   // How the example notice was settled; its sentence is chosen as it renders, in the language shown.
@@ -466,6 +518,11 @@ function FamilyToday({ day }: { day: TodayView }) {
           }
           onQuiet={focused.state === "quiet" && mayOpen ? () => openQuiet(focused) : undefined}
           quote={focusedExchange?.answer?.text}
+          asked={
+            focusedExchange === undefined
+              ? undefined
+              : { by: askedLine(focusedExchange), text: focusedExchange.ask }
+          }
           stale={trouble}
         />
       )}

@@ -21,7 +21,7 @@ tags:
 - assertVisible: "What is growing by your window?"
 - assertNotVisible: "Option 1"
 - tapOn: "Back"
-- tapOn: "Reply to Mom"
+- tapOn: "Talk with Mom"
 - tapOn: "Write to Mom"
 - inputText: "Save some seeds for our next visit."
 - tapOn:

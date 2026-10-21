@@ -107,6 +107,7 @@ export function PortraitLamp({
   onChat,
   onQuiet,
   quote,
+  asked,
   stale = false,
 }: {
   lights: TodayLight[];
@@ -116,6 +117,8 @@ export function PortraitLamp({
   onChat(): void;
   onQuiet?: () => void;
   quote?: string;
+  /** What the quote answers, read before it: who asked, and the ask in their words. */
+  asked?: { by: string; text?: string };
   stale?: boolean;
 }) {
   const { t } = useLingui();
@@ -200,7 +203,15 @@ export function PortraitLamp({
           </View>
         </View>
         {quote === undefined ? null : (
-          <View style={{ gap: space.s }}>
+          <View style={{ gap: space.m }}>
+            {asked === undefined ? null : (
+              <View style={{ gap: 2 }}>
+                <Text style={[type.label, { color: roomMuted }]}>{asked.by}</Text>
+                {asked.text === undefined ? null : (
+                  <Text style={[type.caption, { color: roomMuted }]}>{asked.text}</Text>
+                )}
+              </View>
+            )}
             <Text style={[type.preview, { color: roomInk }]}>{quote}</Text>
           </View>
         )}

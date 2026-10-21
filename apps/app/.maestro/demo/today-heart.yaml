@@ -5,10 +5,9 @@ tags:
   - demo
 ---
 - launchApp
-- tapOn:
-    css: '[data-testid="today-heart-x1"]'
+- tapOn: "Heart for Mom"
 - assertVisible: "Example · heart sent"
 - assertNotVisible: "Heart for Mom"
-- tapOn: "Reply to Mom"
+- tapOn: "Talk with Mom"
 - assertVisible: "Write to Mom"
 - assertVisible: "Your words reach Mom's chat now, signed with your name. Their morning stays as it is."
