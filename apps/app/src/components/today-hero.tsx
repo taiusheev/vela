@@ -37,7 +37,7 @@ export function useRoom() {
  * Warm light falling into a dark room: a wide glow from where her window sits, and a faint one
  * across the floor. Drawn, so it costs nothing and looks the same on every phone.
  */
-function RoomGlow({ id, strong }: { id: string; strong: boolean }) {
+export function RoomGlow({ id, strong }: { id: string; strong: boolean }) {
   const room = useRoom();
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
