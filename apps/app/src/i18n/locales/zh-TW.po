@@ -461,7 +461,7 @@ msgstr "來自 Vela 的問候"
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr "與家人再近一點。使用電子郵件註冊或登入。"
 
-#: app/(tabs)/index.tsx
+#: src/components/today-hero.tsx
 msgid "A little light from home."
 msgstr "家裡傳來的一點光。"
 
@@ -610,6 +610,10 @@ msgstr "全部"
 msgid "All four panes lit"
 msgstr "四扇窗都亮了"
 
+#: app/(tabs)/index.tsx
+msgid "All memories"
+msgstr "所有回憶"
+
 #: src/data/family.ts
 msgid "All said yes"
 msgstr "都同意了"
@@ -683,7 +687,7 @@ msgstr "回覆了"
 msgid "answered {time}"
 msgstr "{time} 回覆了"
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Answered today"
 msgstr "今天已回覆"
 
@@ -704,6 +708,7 @@ msgid "Ask {name} how {what} went"
 msgstr "問問{name}，{what}還順利嗎"
 
 #: app/ask.tsx
+#: src/components/today-hero.tsx
 msgid "Ask {name} something"
 msgstr "問{name}一件事"
 
@@ -1218,6 +1223,10 @@ msgstr "家庭故事書"
 msgid "Family connection"
 msgstr "家人連結"
 
+#: src/components/today-hero.tsx
+msgid "Family settings"
+msgstr "家人設定"
+
 #: src/components/onboarding/story.tsx
 msgid "Far from you, Mom’s day is beginning."
 msgstr "在離您很遠的地方，媽媽的一天開始了。"
@@ -1655,7 +1664,7 @@ msgstr "{name}一答應，您就會知道。"
 msgid "Language"
 msgstr "語言"
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Last confirmed update"
 msgstr "上次確認的狀態"
 
@@ -1935,7 +1944,7 @@ msgstr "下一步"
 msgid "No answer from Mom yet today."
 msgstr "媽媽今天還沒回覆。"
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "No answer recorded today"
 msgstr "今天還沒有收到回覆"
 
@@ -3016,7 +3025,7 @@ msgid "Take this story out of the family book?"
 msgstr "要從家庭故事書移除這段故事嗎？"
 
 #: src/components/chat/chat-link.tsx
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Talk with {name}"
 msgstr "跟{name}聊聊"
 
@@ -3332,6 +3341,10 @@ msgstr "番茄終於紅了。早餐前我摘了三顆，放在窗台上。"
 msgid "The voice is still being prepared. Try again shortly."
 msgstr "語音還在準備中，請稍後再試。"
 
+#: src/components/today-hero.tsx
+msgid "The week's words, read together."
+msgstr "這一週的話，一起讀。"
+
 #: app/(tabs)/sunday.tsx
 msgid "The weekly read · {range}"
 msgstr "每週回顧 · {range}"
@@ -3477,6 +3490,10 @@ msgstr "這段語音已經無法使用。"
 msgid "This week"
 msgstr "這週"
 
+#: src/components/today-hero.tsx
+msgid "This week, on Sunday"
+msgstr "這一週，週日見"
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -3506,6 +3523,7 @@ msgid "Today"
 msgstr "今天"
 
 #: app/(tabs)/_layout.tsx
+#: src/components/today-hero.tsx
 msgctxt "tab"
 msgid "Today"
 msgstr "今天"
@@ -3513,6 +3531,10 @@ msgstr "今天"
 #: app/(tabs)/index.tsx
 msgid "Today could not be reached just now."
 msgstr "目前無法載入今天的內容。"
+
+#: app/(tabs)/index.tsx
+msgid "Today with the family"
+msgstr "今天的家人"
 
 #: src/data/useQuiet.ts
 msgid "Today's ask reached {name} at {time}, and again at {timeAgain}."
@@ -3832,7 +3854,7 @@ msgstr "驗證代碼"
 msgid "Vietnam"
 msgstr "越南"
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "View quiet notice"
 msgstr "查看今天還沒回覆的提醒"
 

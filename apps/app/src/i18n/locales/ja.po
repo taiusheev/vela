@@ -454,7 +454,7 @@ msgstr ""
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr ""
 
-#: app/(tabs)/index.tsx
+#: src/components/today-hero.tsx
 msgid "A little light from home."
 msgstr ""
 
@@ -603,6 +603,10 @@ msgstr ""
 msgid "All four panes lit"
 msgstr ""
 
+#: app/(tabs)/index.tsx
+msgid "All memories"
+msgstr ""
+
 #: src/data/family.ts
 msgid "All said yes"
 msgstr ""
@@ -676,7 +680,7 @@ msgstr ""
 msgid "answered {time}"
 msgstr ""
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Answered today"
 msgstr ""
 
@@ -697,6 +701,7 @@ msgid "Ask {name} how {what} went"
 msgstr ""
 
 #: app/ask.tsx
+#: src/components/today-hero.tsx
 msgid "Ask {name} something"
 msgstr ""
 
@@ -1211,6 +1216,10 @@ msgstr ""
 msgid "Family connection"
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "Family settings"
+msgstr ""
+
 #: src/components/onboarding/story.tsx
 msgid "Far from you, Mom’s day is beginning."
 msgstr ""
@@ -1648,7 +1657,7 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Last confirmed update"
 msgstr ""
 
@@ -1928,7 +1937,7 @@ msgstr ""
 msgid "No answer from Mom yet today."
 msgstr ""
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "No answer recorded today"
 msgstr ""
 
@@ -3009,7 +3018,7 @@ msgid "Take this story out of the family book?"
 msgstr ""
 
 #: src/components/chat/chat-link.tsx
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "Talk with {name}"
 msgstr ""
 
@@ -3325,6 +3334,10 @@ msgstr ""
 msgid "The voice is still being prepared. Try again shortly."
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "The week's words, read together."
+msgstr ""
+
 #: app/(tabs)/sunday.tsx
 msgid "The weekly read · {range}"
 msgstr ""
@@ -3470,6 +3483,10 @@ msgstr ""
 msgid "This week"
 msgstr ""
 
+#: src/components/today-hero.tsx
+msgid "This week, on Sunday"
+msgstr ""
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -3499,12 +3516,17 @@ msgid "Today"
 msgstr ""
 
 #: app/(tabs)/_layout.tsx
+#: src/components/today-hero.tsx
 msgctxt "tab"
 msgid "Today"
 msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Today could not be reached just now."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Today with the family"
 msgstr ""
 
 #: src/data/useQuiet.ts
@@ -3825,7 +3847,7 @@ msgstr ""
 msgid "Vietnam"
 msgstr ""
 
-#: src/components/portrait-lamp.tsx
+#: src/components/today-hero.tsx
 msgid "View quiet notice"
 msgstr ""
 

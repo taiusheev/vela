@@ -78,6 +78,8 @@ export const radius = {
   button: 10,
   parentButton: 10,
   chip: 24,
+  /** Today's cards and switcher, softer than a list card, after the founder's chosen prototype. */
+  panel: 20,
 } as const;
 
 export interface TextStyle {
@@ -131,7 +133,19 @@ export const motion = {
   lightBloom: 700,
 } as const;
 
-/** The one shadow in the system, under the quiet notice sheet only. */
+/**
+ * Today's cards rest on the page with this one, low and wide and tinted from the ink, so they read
+ * as paper laid on paper rather than floating. Dark mode draws no shadow: its rule carries the edge.
+ */
+export const softShadow = {
+  shadowColor: "#1E1A16",
+  shadowOpacity: 0.07,
+  shadowRadius: 24,
+  shadowOffset: { width: 0, height: 10 },
+  elevation: 3,
+} as const;
+
+/** The sheet's shadow, under the quiet notice only. */
 export const sheetShadow = {
   shadowColor: "#1E1A16",
   shadowOpacity: 0.14,
