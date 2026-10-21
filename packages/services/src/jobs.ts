@@ -97,6 +97,7 @@ import {
   type Queryable,
   recentAnsweredDays,
 } from "./repo.ts";
+import { deleteExpiredMemoryCandidates } from "./rich-memories.ts";
 import { keptInsight, loadInsightWeek } from "./weekly-insight.ts";
 
 const DAYS_IN_WEEK = 7;
@@ -1373,6 +1374,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .where(or(lte(memoryFacts.expiresAt, now), lt(memoryFacts.createdAt, cutoff30)))
       .returning({ id: memoryFacts.id })
   ).length;
+  counts.memory_candidates_deleted = await deleteExpiredMemoryCandidates(db, now);
   counts.reminders_deleted = (
     await db
       .delete(reminders)

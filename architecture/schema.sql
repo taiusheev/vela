@@ -157,7 +157,7 @@ CREATE TABLE "consents" (
 	"withdrawn_at" timestamp with time zone,
 	"evidence" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"subject_deleted_at" timestamp with time zone,
-	CONSTRAINT "consents_kind_check" CHECK ("kind" in ('light', 'nearby', 'privacy_notice', 'pilot', 'health_words')),
+	CONSTRAINT "consents_kind_check" CHECK ("kind" in ('light', 'nearby', 'privacy_notice', 'pilot', 'health_words', 'rich_memories')),
 	CONSTRAINT "consents_answer_check" CHECK ("answer" in ('yes', 'no')),
 	CONSTRAINT "consents_subject_ref_check" CHECK ("subject_ref" ~ '^(member|contact):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' and ("member_id" is null or "subject_ref" = ('member:' || "member_id"::text)) and ("contact_id" is null or "subject_ref" = ('contact:' || "contact_id"::text))),
 	CONSTRAINT "consents_withdrawn_at_check" CHECK ("withdrawn_at" is null or "answer" = 'yes'),
@@ -349,6 +349,25 @@ CREATE TABLE "members" (
 	CONSTRAINT "members_reply_ways_check" CHECK ("reply_ways" <@ ARRAY['text', 'voice', 'photo', 'tap']::text[]),
 	CONSTRAINT "members_status_check" CHECK ("status" in ('invited', 'active', 'paused', 'left', 'deceased')),
 	CONSTRAINT "members_primary_surface_check" CHECK ("primary_surface" in ('app', 'parent-surface', 'line', 'whatsapp', 'telegram', 'voice'))
+);
+
+CREATE TABLE "memory_candidates" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"source_answer_id" uuid NOT NULL,
+	"consent_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"start_offset" integer NOT NULL,
+	"end_offset" integer NOT NULL,
+	"source_digest" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"dismissed_at" timestamp with time zone,
+	CONSTRAINT "memory_candidates_source_span_key" UNIQUE("source_answer_id","start_offset","end_offset"),
+	CONSTRAINT "memory_candidates_kind_check" CHECK ("kind" in ('preference', 'story', 'humour', 'person', 'moment', 'follow_up')),
+	CONSTRAINT "memory_candidates_offsets_check" CHECK ("memory_candidates"."start_offset" >= 0 and "memory_candidates"."end_offset" > "memory_candidates"."start_offset" and "memory_candidates"."end_offset" - "memory_candidates"."start_offset" <= 2000),
+	CONSTRAINT "memory_candidates_expiry_check" CHECK ("memory_candidates"."expires_at" > "memory_candidates"."created_at")
 );
 
 CREATE TABLE "memory_facts" (
@@ -714,6 +733,10 @@ ALTER TABLE "media" ADD CONSTRAINT "media_uploaded_by_members_id_fk" FOREIGN KEY
 ALTER TABLE "members" ADD CONSTRAINT "members_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_suggestions_signed_by_members_id_fk" FOREIGN KEY ("suggestions_signed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_consent_id_consents_id_fk" FOREIGN KEY ("consent_id") REFERENCES "public"."consents"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE set null ON UPDATE no action;
@@ -769,6 +792,7 @@ CREATE INDEX "away_active_idx" ON "away_periods" USING btree ("member_id") WHERE
 CREATE INDEX "book_entries_family_idx" ON "book_entries" USING btree ("family_id","kept_at");
 CREATE INDEX "channel_links_member_idx" ON "channel_links" USING btree ("member_id");
 CREATE INDEX "consents_subject_ref_idx" ON "consents" USING btree ("subject_ref");
+CREATE INDEX "consents_member_latest_idx" ON "consents" USING btree ("member_id","kind","given_at","id");
 CREATE INDEX "dead_letters_failed_at_idx" ON "dead_letters" USING btree ("failed_at");
 CREATE INDEX "events_family_at_idx" ON "events" USING btree ("family_id","at");
 CREATE INDEX "events_name_at_idx" ON "events" USING btree ("name","at");
@@ -780,6 +804,10 @@ CREATE INDEX "media_expiry_idx" ON "media" USING btree ("expires_at") WHERE "kep
 CREATE UNIQUE INDEX "media_family_id_channel_provider_unique_id_idx" ON "media" USING btree ("family_id","channel","provider_unique_id") WHERE "provider_unique_id" is not null;
 CREATE INDEX "members_due_idx" ON "members" USING btree ("next_wake_at") WHERE "status" = 'active';
 CREATE INDEX "members_family_idx" ON "members" USING btree ("family_id");
+CREATE INDEX "memory_candidates_family_page_idx" ON "memory_candidates" USING btree ("family_id","id");
+CREATE INDEX "memory_candidates_member_idx" ON "memory_candidates" USING btree ("member_id");
+CREATE INDEX "memory_candidates_consent_idx" ON "memory_candidates" USING btree ("consent_id");
+CREATE INDEX "memory_candidates_expiry_idx" ON "memory_candidates" USING btree ("expires_at");
 CREATE INDEX "memory_facts_family_idx" ON "memory_facts" USING btree ("family_id","on_date");
 CREATE INDEX "memory_facts_answer_idx" ON "memory_facts" USING btree ("source_answer_id");
 CREATE UNIQUE INDEX "nearby_contacts_member_external_idx" ON "nearby_contacts" USING btree ("member_id","external_id") WHERE "external_id" is not null;

@@ -77,3 +77,34 @@ phased activation. No silent backfill of historical conversations under new cons
 This initial change supplies domain-policy tests and a product/implementation contract only.
 Persistence, APIs, UI, discovery, clinical review, provider/device flows, scale and production are
 not proven by it. Record later receipts against each slice rather than marking the whole plan done.
+
+### Persistence follow-up (21 October)
+
+Implemented: source-backed candidate table and migrations; shared bounded response/selection
+contracts; an internal ordinary-content review entry point; purpose-specific rich_memories consent
+lookup; family-authorised 50-row cursor reads; author-only idempotent dismissal; 30-day expiry and
+retention cleanup. At most 12 candidates may be proposed per source, including dismissals; the
+source row serialises the count and insertion. Author removal remains available with discovery
+disabled. Candidate rows hold offsets and a sealed source fingerprint, not another copy
+of the person's words. Live text is rechecked for correction, health/flag changes and withdrawal.
+The fingerprint binds the current source words and language; it is not a source edit-history counter.
+
+There is no extraction worker, route, consent acceptance UI, app screen or long-term keep grant
+yet. Config.richMemories is absent from Worker configuration, which means off; synthetic harnesses
+opt in explicitly. The ingestion review argument is a trusted internal boundary, not a model's
+classification and not a safe public request body. No new source screening accuracy is claimed.
+Runtime wiring requires the independent environment switch, notice, consent UI and screening work
+above. Existing health consent never authorises conversational memory processing.
+
+The final full root run passed all 9 packages, including 1,593 service tests (18 new candidate
+cases). Eight package test tasks reused valid cache entries. Both sealing scripts also passed
+standalone typechecking and formatting. All 5 real PostgreSQL
+duplicates/withdrawal/correction/source-delete/family-delete races pass on disposable PostgreSQL
+18.6. Removing ON CONFLICT DO NOTHING makes the duplicate race fail on the unique key; restoring
+it makes the suite pass. The runners confirmed temporary database cleanup after each attempt.
+The PostgreSQL race waits account for the source lock used to bound candidate counts.
+Local PostgreSQL correctness does not prove hosted throughput or thousands of active families.
+
+Foundation PR131 merged as 1b133c3; staging deployment 39624916768 succeeded. That deployment
+contains the domain-policy foundation only. The persistence migrations and services are a separate
+follow-up; none of their runtime integration or production activation is claimed by that receipt.
