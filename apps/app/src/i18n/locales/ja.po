@@ -3397,6 +3397,10 @@ msgid "The week's words, read together on Sunday."
 msgstr ""
 
 #: app/(tabs)/sunday.tsx
+msgid "The weekly read"
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
 msgid "The weekly read · {range}"
 msgstr ""
 

@@ -1,21 +1,22 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AnswerPanel, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { RefreshControl, Text, View } from "react-native";
+import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
+import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryOfTheWeek } from "../../src/components/story-day.tsx";
-import { Card, Eyebrow, Hairline, SecondaryButton, Words } from "../../src/components/ui.tsx";
+import { SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
+import { SecondaryButton, Words } from "../../src/components/ui.tsx";
+import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
 import { localDayMonth } from "../../src/data/format.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
 import { useWeeklyReadOpened } from "../../src/data/useWeeklyReadOpened.ts";
-import { usePalette } from "../../src/theme/theme.tsx";
-import { space } from "../../src/theme/tokens.ts";
+import { radius, space, type } from "../../src/theme/tokens.ts";
 
 /**
  * Sunday (spec §13, A9): this week's windows first, then her latest weekly read the founder sent:
@@ -31,8 +32,7 @@ export default function SundayScreen() {
 }
 
 function FamilySunday({ day }: { day: TodayView }) {
-  const palette = usePalette();
-  const insets = useSafeAreaInsets();
+  const room = useRoom();
   const { t } = useLingui();
   const [selected, select] = useState<string | undefined>();
   const view = useWeeklyRead(selected);
@@ -64,16 +64,8 @@ function FamilySunday({ day }: { day: TodayView }) {
       : `${localDayMonth(first)} – ${localDayMonth(lastDay)}`;
 
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
+    <WarmPage
       refreshControl={<RefreshControl refreshing={view.refreshing} onRefresh={view.refresh} />}
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + space.xl,
-        paddingBottom: space.xxxl,
-        paddingHorizontal: space.margin,
-        gap: space.xl,
-      }}
     >
       {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
       <ScreenHeading title={<Trans context="tab">Week</Trans>} />
@@ -105,28 +97,13 @@ function FamilySunday({ day }: { day: TodayView }) {
         </Words>
       ) : read.week === null ? null : (
         <>
-          <View style={{ gap: space.xs }}>
-            <Eyebrow>
-              <Trans>{name}'s week</Trans>
-            </Eyebrow>
-            {range.length === 0 ? null : (
-              <Words variant="caption" tone="ink3">
-                {t`The weekly read · ${range}`}
-              </Words>
-            )}
-          </View>
+          <SectionTitle title={t`${name}'s week`} />
           {read.locked && capabilities?.billing !== true ? (
             <Words variant="body" tone="ink2">
               <Trans>The weekly read could not be reached just now.</Trans>
             </Words>
           ) : read.locked ? (
-            <Card
-              style={{
-                backgroundColor: palette.lightSoft,
-                borderColor: palette.lightSoft,
-                padding: space.l,
-              }}
-            >
+            <SoftCard tone="paper">
               <Words variant="bodyMedium">
                 <Trans>Vela Light shows you the read</Trans>
               </Words>
@@ -146,28 +123,53 @@ function FamilySunday({ day }: { day: TodayView }) {
                   )
                 }
               />
-            </Card>
+            </SoftCard>
           ) : (
             <>
-              <View style={{ gap: space.s }}>
-                {read.week.counts.map((line) => (
-                  <Words key={line} variant="body">
-                    {line}
-                  </Words>
-                ))}
-              </View>
-              {read.week.notes.length === 0 ? null : (
-                <>
-                  <Hairline />
-                  <AnswerPanel>
+              {/* The read is the week's peak, so it is lit as Today lights her morning. */}
+              <RoomCard id={`week-${view.readId ?? name}`}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: space.s,
+                  }}
+                >
+                  <Text
+                    style={[type.label, { letterSpacing: 0, color: room.muted, flexShrink: 1 }]}
+                  >
+                    {range.length === 0 ? t`The weekly read` : t`The weekly read · ${range}`}
+                  </Text>
+                  <Light state="lit" height={26} />
+                </View>
+                <View style={{ gap: space.xs }}>
+                  {read.week.counts.map((line) => (
+                    <Text key={line} style={[type.body, { color: room.ink }]}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+                {read.week.notes.length === 0 ? null : (
+                  <View
+                    style={{
+                      gap: space.m,
+                      marginTop: space.s,
+                      padding: space.l,
+                      borderRadius: radius.panel,
+                      backgroundColor: room.glass,
+                      borderWidth: 1,
+                      borderColor: room.glassRule,
+                    }}
+                  >
                     {read.week.notes.map((note) => (
-                      <Words key={note} variant="story">
+                      <Text key={note} style={[type.story, { color: room.ink }]}>
                         {note}
-                      </Words>
+                      </Text>
                     ))}
-                  </AnswerPanel>
-                </>
-              )}
+                  </View>
+                )}
+              </RoomCard>
               <StoryOfTheWeek
                 from={read.week.lights[0]?.date ?? ""}
                 to={read.week.lights.at(-1)?.date ?? ""}
@@ -177,6 +179,6 @@ function FamilySunday({ day }: { day: TodayView }) {
           )}
         </>
       )}
-    </ScrollView>
+    </WarmPage>
   );
 }
