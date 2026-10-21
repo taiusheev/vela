@@ -3,7 +3,6 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { Link, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
@@ -11,17 +10,21 @@ import { FamilyBook } from "../../src/components/family-book.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../../src/components/family-photo.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
+import { Portrait } from "../../src/components/portrait-lamp.tsx";
 import { StoryDay } from "../../src/components/story-day.tsx";
+import { SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
 import { Chip, SecondaryButton, Words } from "../../src/components/ui.tsx";
+import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
 import { dayLabel, localDateIn } from "../../src/data/chat.ts";
 import type { Exchange } from "../../src/data/exchanges.ts";
 import { localDayMonth } from "../../src/data/format.ts";
 import { useBook } from "../../src/data/useBook.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
+import { usePortrait } from "../../src/data/usePortrait.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
-import { hitSlop, radius, space, type } from "../../src/theme/tokens.ts";
+import { hitSlop, radius, softShadow, space, type } from "../../src/theme/tokens.ts";
 
 type Filter = "all" | "photos" | "voice" | "stories";
 
@@ -50,19 +53,24 @@ function matches(exchange: Exchange, filter: Filter, query: string): boolean {
   );
 }
 
-/** One thing she said, set as a keepsake: when, what she was asked, her words, her photo or voice. */
+/** One thing she said, set as a keepsake: who and when, what she was asked, her words, her photo
+ * or voice. The newest is `featured`: drawn as Today's lit room, the rest as the family's feed. */
 function MemoryCard({
   exchange,
   originals,
   today,
+  featured = false,
 }: {
   exchange: Exchange;
   originals: boolean;
   today: string;
+  featured?: boolean;
 }) {
   const palette = usePalette();
+  const room = useRoom();
   const { t } = useLingui();
   const { familyId } = useToday();
+  const photo = usePortrait(familyId ?? "", exchange.recipientId ?? "");
   const answer = exchange.answer;
   if (answer === undefined) return null;
   const shown = originals ? (answer.original ?? answer.text) : answer.text;
@@ -72,88 +80,109 @@ function MemoryCard({
   const kept = exchange.type === "story" || exchange.type === "recipe";
   const time = answer.at;
   const replies = exchange.replies.length;
+  const ink = featured ? room.ink : palette.ink;
+  const ink2 = featured ? room.muted : palette.ink2;
+  const ink3 = featured ? room.muted : palette.ink3;
+  const rule = featured ? room.glassRule : palette.rule;
+  const body = (
+    <>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
+        <Portrait uri={photo.uri} name={recipient} width={36} height={36} round />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[type.button, { color: ink }]}>{recipient}</Text>
+          <Text style={[type.caption, { fontSize: 13, color: ink3 }]}>{`${when} · ${time}`}</Text>
+        </View>
+        {kept ? (
+          <View
+            style={{
+              borderRadius: radius.chip,
+              backgroundColor: featured ? room.glass : palette.lightSoft,
+              borderWidth: featured ? 1 : 0,
+              borderColor: room.glassRule,
+              paddingHorizontal: space.s,
+              paddingVertical: 2,
+            }}
+          >
+            <Text
+              style={[
+                type.label,
+                { letterSpacing: 0, color: featured ? room.ink : palette.lightDeep },
+              ]}
+            >
+              {exchange.type === "recipe" ? t`Recipe` : t`Story`}
+            </Text>
+          </View>
+        ) : (
+          <Light state="lit" height={featured ? 24 : 18} />
+        )}
+      </View>
+      <View style={{ gap: 2 }}>
+        <Text style={[type.caption, { color: ink3 }]}>
+          {exchange.draftedByVela === true
+            ? t`${asker} asked · written by Vela`
+            : t`${asker} asked`}
+        </Text>
+        <Text numberOfLines={2} style={[type.body, { color: ink2 }]}>
+          {exchange.ask}
+        </Text>
+      </View>
+      <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={56} />
+      <Text numberOfLines={8} style={[type.preview, { color: ink }]}>
+        {shown}
+      </Text>
+      {answer.photo === undefined ? null : <ReplyPhoto photo={answer.photo} size="full" />}
+      {answer.audio === undefined || familyId === undefined ? null : (
+        <VoicePlayback
+          familyId={familyId}
+          mediaId={answer.audio.id}
+          durationMs={answer.audio.duration_ms}
+          expiresAt={answer.audio.expires_at}
+          state={answer.audio.state}
+          ready={answer.audio.state === "ready"}
+        />
+      )}
+      {/* Who and when are said once, at the top; the foot keeps small signs, never wrapping. */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: space.m,
+          paddingTop: space.s,
+          borderTopWidth: 1,
+          borderTopColor: rule,
+        }}
+      >
+        {answer.transcript === true ? (
+          <View
+            accessible
+            accessibilityLabel={t`From a voice note`}
+            style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
+          >
+            <BrandIcon name="mic" color={ink3} size={16} />
+            <Text style={[type.caption, { color: ink3 }]}>{t`Voice`}</Text>
+          </View>
+        ) : null}
+        {replies === 0 ? null : (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
+            <BrandIcon name="reply" color={ink3} size={16} />
+            <Text style={[type.caption, { color: ink3 }]}>
+              {plural(replies, { one: "# reply", other: "# replies" })}
+            </Text>
+          </View>
+        )}
+        <View style={{ flex: 1 }} />
+        <BrandIcon name="chevron" color={featured ? room.ink : palette.action} size={18} />
+      </View>
+    </>
+  );
   return (
     <Link href={{ pathname: "/exchange/[id]", params: { id: exchange.id } }} asChild>
       <Pressable accessibilityRole="button" hitSlop={hitSlop}>
-        <View
-          style={{
-            backgroundColor: palette.surface,
-            borderRadius: radius.card + 6,
-            borderWidth: 1,
-            borderColor: palette.rule,
-            padding: space.l,
-            gap: space.m,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
-            <Light state="lit" height={16} />
-            <Text
-              style={[type.label, { color: palette.ink3, textTransform: "uppercase", flex: 1 }]}
-            >{`${recipient} · ${when} · ${time}`}</Text>
-            {kept ? (
-              <View
-                style={{
-                  borderRadius: radius.chip,
-                  backgroundColor: palette.lightSoft,
-                  paddingHorizontal: space.s,
-                  paddingVertical: 2,
-                }}
-              >
-                <Text style={[type.label, { color: palette.ink2 }]}>
-                  {exchange.type === "recipe" ? t`Recipe` : t`Story`}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <View style={{ gap: 2 }}>
-            <Text style={[type.caption, { color: palette.ink3 }]}>
-              {exchange.draftedByVela === true
-                ? t`${asker} asked · written by Vela`
-                : t`${asker} asked`}
-            </Text>
-            <Text numberOfLines={2} style={[type.body, { color: palette.ink2 }]}>
-              {exchange.ask}
-            </Text>
-          </View>
-          <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={56} />
-          <Text numberOfLines={8} style={[type.preview, { color: palette.ink }]}>
-            {shown}
-          </Text>
-          {answer.photo === undefined ? null : <ReplyPhoto photo={answer.photo} size="full" />}
-          {answer.audio === undefined || familyId === undefined ? null : (
-            <VoicePlayback
-              familyId={familyId}
-              mediaId={answer.audio.id}
-              durationMs={answer.audio.duration_ms}
-              expiresAt={answer.audio.expires_at}
-              state={answer.audio.state}
-              ready={answer.audio.state === "ready"}
-            />
-          )}
-          {/* Who and when are said once, at the top; the foot keeps small signs, never wrapping. */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
-            {answer.transcript === true ? (
-              <View
-                accessible
-                accessibilityLabel={t`From a voice note`}
-                style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
-              >
-                <BrandIcon name="mic" color={palette.ink3} size={16} />
-                <Text style={[type.caption, { color: palette.ink3 }]}>{t`Voice`}</Text>
-              </View>
-            ) : null}
-            {replies === 0 ? null : (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
-                <BrandIcon name="reply" color={palette.ink3} size={16} />
-                <Text style={[type.caption, { color: palette.ink3 }]}>
-                  {plural(replies, { one: "# reply", other: "# replies" })}
-                </Text>
-              </View>
-            )}
-            <View style={{ flex: 1 }} />
-            <BrandIcon name="chevron" color={palette.action} size={18} />
-          </View>
-        </View>
+        {featured ? (
+          <RoomCard id={`memory-${exchange.id}`}>{body}</RoomCard>
+        ) : (
+          <SoftCard>{body}</SoftCard>
+        )}
       </Pressable>
     </Link>
   );
@@ -167,7 +196,6 @@ function MemoryCard({
  */
 export default function MemoriesScreen() {
   const palette = usePalette();
-  const insets = useSafeAreaInsets();
   const { t } = useLingui();
   const [originals, setOriginals] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
@@ -209,6 +237,8 @@ export default function MemoriesScreen() {
     if (group?.key === monday) group.items.push(exchange);
     else weeks.push({ key: monday, label, items: [exchange] });
   }
+  // The newest of her words, when nothing narrows the list, is lit as Today lights her morning.
+  const featuredId = filter === "all" && query.trim().length === 0 ? shown[0]?.id : undefined;
   const filters: { key: Filter; label: string }[] = [
     { key: "all", label: t`All` },
     { key: "photos", label: t`Photos` },
@@ -217,16 +247,9 @@ export default function MemoriesScreen() {
   ];
 
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
+    <WarmPage
+      gap={space.l}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + space.xl,
-        paddingBottom: space.xxxl,
-        paddingHorizontal: space.margin,
-        gap: space.l,
-      }}
     >
       <ScreenHeading
         title={<Trans context="tab">Memories</Trans>}
@@ -242,6 +265,8 @@ export default function MemoriesScreen() {
             backgroundColor: palette.surface2,
             borderRadius: radius.chip,
             padding: 4,
+            borderWidth: 1,
+            borderColor: palette.rule,
           }}
         >
           {(
@@ -255,14 +280,17 @@ export default function MemoriesScreen() {
               accessibilityRole="tab"
               accessibilityState={{ selected: showing === tab.key }}
               onPress={() => setSection(tab.key)}
-              style={{
-                flex: 1,
-                minHeight: 40,
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: radius.chip,
-                backgroundColor: showing === tab.key ? palette.surface : "transparent",
-              }}
+              style={[
+                {
+                  flex: 1,
+                  minHeight: 40,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: radius.chip,
+                  backgroundColor: showing === tab.key ? palette.surface : "transparent",
+                },
+                showing === tab.key ? softShadow : null,
+              ]}
             >
               <Text
                 style={[type.button, { color: showing === tab.key ? palette.ink : palette.ink2 }]}
@@ -295,12 +323,13 @@ export default function MemoriesScreen() {
               flexDirection: "row",
               alignItems: "center",
               gap: space.s,
-              minHeight: 44,
-              borderRadius: 22,
+              minHeight: 46,
+              borderRadius: 23,
               borderWidth: 1,
               borderColor: palette.rule,
               backgroundColor: palette.surface,
               paddingHorizontal: space.l,
+              ...softShadow,
             }}
           >
             <BrandIcon name="search" color={palette.ink3} size={18} />
@@ -366,19 +395,15 @@ export default function MemoriesScreen() {
           ) : null}
           {trouble ? <SecondaryButton label={t`Try again`} onPress={refresh} /> : null}
           {weeks.map((week) => (
-            <View key={week.key} style={{ gap: space.m }}>
-              <Text
-                accessibilityRole="header"
-                style={[type.heading, { color: palette.ink, paddingTop: space.s }]}
-              >
-                {week.label}
-              </Text>
+            <View key={week.key} style={{ gap: space.m, paddingTop: space.s }}>
+              <SectionTitle title={week.label} />
               {week.items.map((exchange) => (
                 <MemoryCard
                   key={exchange.id}
                   exchange={exchange}
                   originals={originals}
                   today={today}
+                  featured={exchange.id === featuredId}
                 />
               ))}
             </View>
@@ -396,6 +421,6 @@ export default function MemoriesScreen() {
           </Words>
         </>
       )}
-    </ScrollView>
+    </WarmPage>
   );
 }
