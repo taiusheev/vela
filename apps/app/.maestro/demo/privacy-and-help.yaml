@@ -10,14 +10,15 @@ tags:
 - tapOn: "Settings"
 - assertNotVisible: "Set it up"
 - scrollUntilVisible:
-    element: "Privacy details and terms"
+    element: "Read the privacy notice"
     direction: DOWN
-- assertNotVisible: "Read the privacy notice"
-- tapOn: "Privacy details and terms"
-- assertVisible: "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
-- assertVisible: "Read the privacy notice"
 - assertVisible: "Get help or request your data"
-- assertVisible: "t.aiusheev@gmail.com"
+- assertVisible: "Service terms"
+- assertVisible: "Your data and deletion"
+- scrollUntilVisible:
+    element: "t.aiusheev@gmail.com"
+    direction: DOWN
+- assertVisible: "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 - assertVisible: "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
 - assertNotVisible: "Set it up"
 - tapOn: "Get help or request your data"

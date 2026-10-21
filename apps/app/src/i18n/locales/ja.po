@@ -851,10 +851,6 @@ msgstr ""
 msgid "Central"
 msgstr ""
 
-#: app/settings.tsx
-msgid "Change"
-msgstr ""
-
 #: app/conversation.tsx
 #: app/settings.tsx
 msgid "Change {name}'s morning"
@@ -1401,10 +1397,6 @@ msgstr ""
 msgid "Help"
 msgstr ""
 
-#: app/settings.tsx
-msgid "Help and settings"
-msgstr ""
-
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -1452,7 +1444,6 @@ msgstr ""
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 msgstr ""
 
-#: app/settings.tsx
 #: src/components/app-privacy.tsx
 msgid "Hide privacy details"
 msgstr ""
@@ -2405,6 +2396,9 @@ msgid "Preview settings"
 msgstr ""
 
 #: app/settings.tsx
+msgid "Privacy and help"
+msgstr ""
+
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
 msgstr ""
@@ -2658,6 +2652,7 @@ msgstr ""
 msgid "Search her words"
 msgstr ""
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Security"
 msgstr ""
@@ -2775,6 +2770,7 @@ msgstr ""
 msgid "sent a voice message"
 msgstr ""
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Service terms"
 msgstr ""
@@ -3797,6 +3793,10 @@ msgstr ""
 msgid "Vela · her morning · {time}"
 msgstr ""
 
+#: app/settings.tsx
+msgid "Vela {version}"
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "Vela asks in its own name"
 msgstr ""
@@ -4227,10 +4227,6 @@ msgstr ""
 msgid "You are paused: no turns come to you."
 msgstr ""
 
-#: app/settings.tsx
-msgid "You are signed in to Vela."
-msgstr ""
-
 #: src/data/useFamily.ts
 msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
 msgstr ""
@@ -4320,6 +4316,7 @@ msgstr ""
 msgid "Your country"
 msgstr ""
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Your data and deletion"
 msgstr ""
@@ -4349,10 +4346,6 @@ msgstr ""
 
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
-msgstr ""
-
-#: app/settings.tsx
-msgid "Your family, your preferences, your account."
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -4431,6 +4424,10 @@ msgstr ""
 
 #: app/delete-account.tsx
 msgid "Your sign-in has expired. Sign in again, then delete your account."
+msgstr ""
+
+#: app/settings.tsx
+msgid "Your turns"
 msgstr ""
 
 #: app/conversation.tsx
