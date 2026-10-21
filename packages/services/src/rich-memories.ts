@@ -9,7 +9,16 @@ import {
   MemoryCandidateSelection,
 } from "@vela/contracts";
 import { materializeFamilyMemory } from "@vela/core";
-import { answers, consents, exchanges, families, members, memoryCandidates, users } from "@vela/db";
+import {
+  answers,
+  consents,
+  exchanges,
+  families,
+  members,
+  memoryCandidates,
+  memoryKeeps,
+  users,
+} from "@vela/db";
 import {
   and,
   asc,
@@ -41,7 +50,9 @@ export const MAX_MEMORY_CANDIDATES_PER_SOURCE = 12;
 const uuid = z.uuid();
 type MemoryDeps = Pick<Deps, "db" | "clock" | "config">;
 
-function sourceWords(answer: typeof answers.$inferSelect): { text: string; lang: string } | null {
+export function sourceWords(
+  answer: typeof answers.$inferSelect,
+): { text: string; lang: string } | null {
   if (answer.kind === "voice") {
     return answer.transcript?.trim() && answer.transcriptLang
       ? { text: answer.transcript, lang: answer.transcriptLang }
@@ -52,8 +63,18 @@ function sourceWords(answer: typeof answers.$inferSelect): { text: string; lang:
     : null;
 }
 
-function sourceDigest(answer: typeof answers.$inferSelect): Promise<string> {
-  return sha256Hex(JSON.stringify([answer.id, answer.memberId, sourceWords(answer)]));
+export function sourceDigest(answer: typeof answers.$inferSelect): Promise<string> {
+  return sha256Hex(
+    JSON.stringify([
+      2,
+      answer.id,
+      answer.memberId,
+      answer.exchangeId,
+      answer.kind,
+      answer.receivedAt.toISOString(),
+      sourceWords(answer),
+    ]),
+  );
 }
 
 const laterConsent = alias(consents, "later_memory_consent");
@@ -89,12 +110,16 @@ export async function proposeMemoryCandidate(
   const now = deps.clock.now();
   return deps.db.transaction(async (tx) => {
     const [location] = await tx
-      .select({ familyId: exchanges.familyId, memberId: answers.memberId })
+      .select({
+        familyId: exchanges.familyId,
+        exchangeId: exchanges.id,
+        memberId: answers.memberId,
+      })
       .from(answers)
       .innerJoin(exchanges, eq(exchanges.id, answers.exchangeId))
       .where(eq(answers.id, selection.source_answer_id));
     if (location === undefined) return null;
-    // Family -> member -> answer -> consent matches deletion, keeping and withdrawal lock order.
+    // Family -> member -> exchange -> answer -> consent matches cascading source deletion.
     const [family] = await tx
       .select()
       .from(families)
@@ -114,12 +139,19 @@ export async function proposeMemoryCandidate(
       )
       .for("share");
     if (member === undefined) return null;
+    const [exchange] = await tx
+      .select({ id: exchanges.id })
+      .from(exchanges)
+      .where(and(eq(exchanges.id, location.exchangeId), eq(exchanges.familyId, family.id)))
+      .for("share");
+    if (exchange === undefined) return null;
     const [answer] = await tx
       .select()
       .from(answers)
       .where(and(eq(answers.id, selection.source_answer_id), eq(answers.memberId, member.id)))
       .for("no key update");
-    if (answer === undefined || review.answerId !== answer.id) return null;
+    if (answer === undefined || review.answerId !== answer.id || answer.exchangeId !== exchange.id)
+      return null;
     const words = sourceWords(answer);
     if (words === null || words.text !== review.ordinaryText) return null;
     // Existing pipeline health/flag results are an extra refusal, not proof of ordinary content.
@@ -265,6 +297,13 @@ export async function loadMemoryCandidates(
       and(
         eq(memoryCandidates.familyId, familyId),
         isNull(memoryCandidates.dismissedAt),
+        isNull(memoryCandidates.keptAt),
+        notExists(
+          deps.db
+            .select({ id: memoryKeeps.id })
+            .from(memoryKeeps)
+            .where(eq(memoryKeeps.candidateId, memoryCandidates.id)),
+        ),
         gt(memoryCandidates.expiresAt, now),
         isNull(members.leftAt),
         inArray(members.status, ["active", "paused"]),
@@ -286,6 +325,7 @@ export async function loadMemoryCandidates(
                 eq(viewer.id, access.access.memberId),
                 eq(viewer.familyId, memoryCandidates.familyId),
                 eq(users.id, access.access.userId),
+                eq(users.authSubject, identity.authSubject),
                 isNull(users.deletedAt),
                 isNull(viewer.leftAt),
                 inArray(viewer.status, ["active", "paused"]),

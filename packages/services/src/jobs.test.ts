@@ -784,6 +784,8 @@ describe("applyRetention", () => {
     "book_answers_trimmed",
     "memory_facts_deleted",
     "memory_candidates_deleted",
+    "memory_keep_tombstones_deleted",
+    "memory_keep_proofs_closed",
     "recipe_drafts_deleted",
     "reminders_deleted",
     "message_refs_deleted",

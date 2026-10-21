@@ -695,6 +695,8 @@ export const answers = pgTable(
      */
     processingAttempts: smallint("processing_attempts").notNull().default(0),
     receivedAt: timestamptz("received_at").notNull().defaultNow(),
+    /** Only ordinary 30-day retention sets this, atomically with clearing the source words. */
+    wordsExpiredAt: timestamptz("words_expired_at"),
   },
   (t) => [
     unique("answers_channel_external_id_key").on(t.channel, t.externalId),
@@ -943,6 +945,8 @@ export const memoryCandidates = pgTable(
     createdAt: createdAt(),
     expiresAt: timestamptz("expires_at").notNull(),
     dismissedAt: timestamptz("dismissed_at"),
+    /** Never rediscover or replay success for a saved quote that a privacy guard removed. */
+    keptAt: timestamptz("kept_at"),
   },
   (t) => [
     unique("memory_candidates_source_span_key").on(t.sourceAnswerId, t.start, t.end),
@@ -956,6 +960,57 @@ export const memoryCandidates = pgTable(
       sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
     ),
     check("memory_candidates_expiry_check", sql`${t.expiresAt} > ${t.createdAt}`),
+  ],
+);
+
+/** Explicitly chosen exact words only. Database guards in sql/memory-keep-guards.sql invalidate
+ * copies on correction/withdrawal; ordinary source expiry is marked on answers separately. */
+export const memoryKeeps = pgTable(
+  "memory_keeps",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    candidateId: uuid("candidate_id").references(() => memoryCandidates.id, {
+      onDelete: "set null",
+    }),
+    sourceAnswerId: uuid("source_answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    discoveryConsentId: uuid("discovery_consent_id")
+      .notNull()
+      .references(() => consents.id, { onDelete: "cascade" }),
+    keepConsentId: uuid("keep_consent_id")
+      .notNull()
+      .references(() => consents.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: FAMILY_MEMORY_KINDS }).notNull(),
+    start: integer("start_offset").notNull(),
+    end: integer("end_offset").notNull(),
+    quote: sealedText("memory_keeps.quote").notNull(),
+    sourceDigest: sealedText("memory_keeps.source_digest").notNull(),
+    lang: text("lang").notNull(),
+    occurredAt: timestamptz("occurred_at").notNull(),
+    keptAt: timestamptz("kept_at").notNull(),
+    /** ID-only retry tombstone: quote and digest are blanked in the same transaction. */
+    removedAt: timestamptz("removed_at"),
+  },
+  (t) => [
+    unique("memory_keeps_source_span_key").on(t.sourceAnswerId, t.start, t.end),
+    unique("memory_keeps_candidate_key").on(t.candidateId),
+    index("memory_keeps_family_page_idx").on(t.familyId, t.id),
+    index("memory_keeps_member_idx").on(t.memberId),
+    index("memory_keeps_discovery_consent_idx").on(t.discoveryConsentId),
+    index("memory_keeps_keep_consent_idx").on(t.keepConsentId),
+    index("memory_keeps_removed_idx").on(t.removedAt),
+    check("memory_keeps_kind_check", isOneOf(t.kind, FAMILY_MEMORY_KINDS)),
+    check(
+      "memory_keeps_offsets_check",
+      sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
+    ),
   ],
 );
 
@@ -1394,6 +1449,7 @@ export const consents = pgTable(
   (t) => [
     index("consents_subject_ref_idx").on(t.subjectRef),
     index("consents_member_latest_idx").on(t.memberId, t.kind, t.givenAt, t.id),
+    index("consents_kind_withdrawn_idx").on(t.kind, t.withdrawnAt),
     check("consents_kind_check", isOneOf(t.kind, CONSENT_KINDS)),
     check("consents_answer_check", isOneOf(t.answer, CONSENT_ANSWERS)),
     // A reference that names another subject than the row's own member or contact would make the

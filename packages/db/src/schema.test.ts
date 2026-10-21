@@ -67,6 +67,7 @@ import {
   members,
   memoryCandidates,
   memoryFacts,
+  memoryKeeps,
   messageRefs,
   metricsDaily,
   NEARBY_CONTACT_CHANNELS,
@@ -515,17 +516,49 @@ async function seedEveryTable(): Promise<void> {
       )
       .returning(),
   );
-  await db.insert(memoryCandidates).values({
+  const memoryCandidate = only(
+    await db
+      .insert(memoryCandidates)
+      .values({
+        familyId,
+        memberId: seed.parent.id,
+        sourceAnswerId: answer.id,
+        consentId: memoryConsent.id,
+        kind: "preference",
+        start: 0,
+        end: 2,
+        sourceDigest: "a".repeat(64),
+        createdAt: new Date("2026-09-14T00:00:00Z"),
+        expiresAt: new Date("2026-10-14T00:00:00Z"),
+      })
+      .returning(),
+  );
+  const keepProof = only(
+    await db
+      .insert(consents)
+      .values(
+        consentAbout(
+          { memberId: seed.parent.id },
+          { kind: "memory_keep", textVersion: "memory.keep@1" },
+        ),
+      )
+      .returning(),
+  );
+  await db.insert(memoryKeeps).values({
     familyId,
     memberId: seed.parent.id,
+    candidateId: memoryCandidate.id,
     sourceAnswerId: answer.id,
-    consentId: memoryConsent.id,
+    discoveryConsentId: memoryConsent.id,
+    keepConsentId: keepProof.id,
     kind: "preference",
     start: 0,
     end: 2,
+    quote: "Hi",
     sourceDigest: "a".repeat(64),
-    createdAt: new Date("2026-09-14T00:00:00Z"),
-    expiresAt: new Date("2026-10-14T00:00:00Z"),
+    lang: "en",
+    occurredAt: new Date("2026-09-14T00:00:00Z"),
+    keptAt: new Date("2026-09-14T00:00:00Z"),
   });
   await db.insert(deadLetters).values({
     messageId: "dead-1",
@@ -2107,6 +2140,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "recipes", column: "status", values: RECIPE_STATUSES },
     { table: "memory_facts", column: "kind", values: MEMORY_FACT_KINDS },
     { table: "memory_candidates", column: "kind", values: FAMILY_MEMORY_KINDS },
+    { table: "memory_keeps", column: "kind", values: FAMILY_MEMORY_KINDS },
     { table: "quiet_events", column: "outcome", values: QUIET_OUTCOMES },
     { table: "away_periods", column: "source", values: AWAY_SOURCES },
     { table: "outbound", column: "kind", values: OUTBOUND_KINDS },
@@ -2182,6 +2216,10 @@ describe("CHECK constraints on enumerated columns", () => {
         code: CHECK_VIOLATION,
         constraint: "memory_candidates_offsets_check",
       });
+      expect(await rejection(db.update(memoryKeeps).set(offsets))).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "memory_keeps_offsets_check",
+      });
     }
     expect(
       await rejection(
@@ -2224,6 +2262,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "families_story_day_check",
       "memory_candidates_offsets_check",
       "memory_candidates_expiry_check",
+      "memory_keeps_offsets_check",
       "members_interests_check",
       "members_reply_ways_check",
       "outbound_nearby_ask_actor_check",

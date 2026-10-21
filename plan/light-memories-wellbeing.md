@@ -136,3 +136,47 @@ Clean GitHub typechecking caught a browser-only hovered property that local Expo
 Removed that dependency; press feedback remains platform-neutral. The subsequent full local
 TURBO_FORCE=true pnpm check passed all 9 tasks without cached results, including 1,593 service
 tests and 376 app tests (1 existing skip). Candidate GitHub checks must pass before integration.
+
+### Durable keep follow-up (22 October, not activated)
+
+Review UI PR133 merged as 11f4aaa; staging39633973823 succeeded, including both Workers and public
+release/protection smoke. Its candidate push/proposal checks passed all 19 existing app journeys.
+
+The next backend change adds internal owner-authenticated keep/read/remove services and an indexed
+sealed quote table. A keep copies only the selected words, language, provenance and sealed source
+fingerprint; no whole answer, question, audio or photo copy. The choice requires the proposed
+memory.keep@1 English explanation fingerprint and creates a content-free memory_keep consent proof.
+This is a synthetic service contract, not an implemented or approved consent-acceptance flow.
+Other locales and messenger evidence must be implemented before activation.
+
+Only ordinary 30-day cleanup marks source words as expired. That specific database transition
+preserves the chosen quote; source correction, manual erasure, health/flag changes, source deletion,
+new/withdrawn consent, membership departure and family deletion invalidate saved words. Database
+triggers remove copies in the changing transaction. Clearing only non-health analysis does not
+invalidate unchanged words. PostgreSQL documentation for the trigger mechanism:
+https://www.postgresql.org/docs/18/plpgsql-trigger.html.
+
+Reads recheck current viewer/member/family access, source integrity and both purpose/keep consent,
+in 50-row cursor pages. Reading/removal do not depend on paid-processing configuration. API mutation
+receipts contain IDs only and recheck author permissions on replay. Previously kept candidate
+markers prevent removed/invalidated words from resurfacing or stale receipts claiming success.
+Explicit removal blanks quote/digest immediately, retaining an ID-only retry tombstone for 30 days.
+Orphaned keep proofs are closed by retention and follow the existing five-year withdrawn-proof rule.
+
+Current privacy notice allows normal 30-day conversation retention, not this new long-term purpose.
+No notice is silently amended, no real family consent is fabricated and no historical backfill is
+performed. richMemories remains absent from Worker configuration (off); there are no new HTTP routes,
+app adapters, messenger actions or runtime keep callers. The preview still simulates saving.
+Final checks and candidate delivery evidence are recorded separately; no capacity or device claim.
+
+Verification so far: 24 keep cases plus 18 existing candidate cases pass, including 51 saves read
+as 50+1 cursor pages. The database suite passes with a guard/migration/schema drift test. Nine new
+keep races and five existing candidate races pass on disposable PostgreSQL18.6. Disabling duplicate
+handling makes the real duplicate-keep test fail; restoring it passes. Temporary databases are
+removed by the runner. Source fingerprints now also bind exchange, kind and source time. The keep
+and proposal lock order includes the exchange before its answer, preventing cascading-delete
+deadlocks; transferring an exchange to another family purges saved copies in that transaction.
+
+Final local pnpm check on combined main b3df7fb passed all 9 tasks, including 1,617 service tests.
+Eight tasks reused valid cache results. Both sealing inventory scripts also typecheck against the
+repository's ES2024 target. No app files or Worker runtime configuration differ from that main.

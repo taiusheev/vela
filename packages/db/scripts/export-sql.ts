@@ -4,7 +4,7 @@
  * Usage: pnpm --filter @vela/db export-sql
  */
 import { spawnSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,12 +44,13 @@ if (!statements.startsWith("CREATE")) {
 
 const header = [
   "-- Vela · Postgres schema",
-  "-- GENERATED FILE: DO NOT EDIT. The source of truth is packages/db/src/schema.ts.",
+  "-- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/memory-keep-guards.sql.",
   "-- Regenerate with: pnpm --filter @vela/db export-sql",
   "-- Applied through the migrations in packages/db/migrations (pnpm --filter @vela/db generate).",
   "-- Column meanings, retention rules, and the invariants behind each index are documented in",
   "-- schema.ts and in architecture/03-code-design.md §3.",
 ].join("\n");
 
-writeFileSync(target, `${header}\n\n${statements}\n`);
+const guards = readFileSync(new URL("../sql/memory-keep-guards.sql", import.meta.url), "utf8");
+writeFileSync(target, `${header}\n\n${statements}\n\n${guards}`);
 console.log(`Wrote ${target}`);

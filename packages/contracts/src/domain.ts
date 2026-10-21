@@ -236,6 +236,7 @@ export const CONSENT_KINDS = [
   "pilot",
   "health_words",
   "rich_memories",
+  "memory_keep",
 ] as const;
 export const ConsentKind = z.enum(CONSENT_KINDS);
 export type ConsentKind = z.infer<typeof ConsentKind>;
