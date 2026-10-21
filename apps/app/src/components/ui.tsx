@@ -2,6 +2,7 @@ import { type ReactNode, type Ref, useState } from "react";
 import { Pressable, type StyleProp, Text, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
+import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
 
 type Role = keyof typeof type;
 type Tone = "ink" | "ink2" | "ink3" | "action";
@@ -66,18 +67,23 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   );
 }
 
-/** At most one primary per screen; 56 pt tall in the app. */
+/**
+ * At most one primary per screen; 56 pt tall in the app. With an icon, the label sits left beside a
+ * tile, as every action in the app reads (button option 5, founder's choice, 21 Oct 2026).
+ */
 export function PrimaryButton({
   label,
   onPress,
   disabled = false,
   hint,
+  icon,
 }: {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
   /** Read by VoiceOver: why the button is waiting, when it is. */
   hint?: string;
+  icon?: BrandIconName;
 }) {
   const palette = usePalette();
   return (
@@ -92,16 +98,137 @@ export function PrimaryButton({
         backgroundColor: palette.action,
         opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
         borderRadius: 14,
-        minHeight: 54,
-        paddingVertical: space.m,
-        paddingHorizontal: space.l,
+        minHeight: icon === undefined ? 54 : 56,
+        paddingVertical: icon === undefined ? space.m : space.s,
+        paddingHorizontal: icon === undefined ? space.l : space.m,
+        flexDirection: "row",
+        gap: space.m,
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: icon === undefined ? "center" : "flex-start",
       })}
     >
-      <Text style={[type.button, { color: palette.onAction, textAlign: "center", flexShrink: 1 }]}>
+      {icon === undefined ? null : <IconTile name={icon} tone="onAction" />}
+      <Text
+        style={[
+          type.button,
+          {
+            color: palette.onAction,
+            textAlign: icon === undefined ? "center" : "left",
+            flexShrink: 1,
+          },
+        ]}
+      >
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+/** A 34 pt rounded tile holding an action's icon: on a filled button, soft teal, or careful red. */
+export function IconTile({
+  name,
+  tone = "soft",
+}: {
+  name: BrandIconName;
+  tone?: "onAction" | "soft" | "error" | "quiet";
+}) {
+  const palette = usePalette();
+  const ground =
+    tone === "onAction"
+      ? palette.actionTile
+      : tone === "error"
+        ? palette.errorSoft
+        : tone === "quiet"
+          ? palette.bg
+          : palette.actionSoft;
+  const ink =
+    tone === "onAction"
+      ? palette.onAction
+      : tone === "error"
+        ? palette.error
+        : tone === "quiet"
+          ? palette.ink2
+          : palette.action;
+  return (
+    <View
+      style={{
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        backgroundColor: ground,
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <BrandIcon name={name} color={ink} size={19} strokeWidth={2} />
+    </View>
+  );
+}
+
+/** Actions that sit together (Story day's choices, Pause and Leave): rows in one card. */
+export function ActionGroup({ children }: { children: ReactNode }) {
+  const palette = usePalette();
+  return (
+    <View
+      style={{
+        backgroundColor: palette.surface,
+        borderWidth: 1,
+        borderColor: palette.rule,
+        borderRadius: radius.card + 6,
+        overflow: "hidden",
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+/** One row of an ActionGroup: icon tile, label, chevron; `first` leaves out the dividing rule. */
+export function ActionRow({
+  icon,
+  label,
+  onPress,
+  first = false,
+  careful = false,
+  disabled = false,
+  testID,
+}: {
+  icon: BrandIconName;
+  label: string;
+  onPress?: () => void;
+  first?: boolean;
+  /** Leaving and other steps that are hard to undo: red label and tile. */
+  careful?: boolean;
+  disabled?: boolean;
+  testID?: string;
+}) {
+  const palette = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      {...(testID === undefined ? {} : { testID })}
+      style={({ pressed }) => ({
+        minHeight: 56,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space.m,
+        paddingHorizontal: space.m,
+        paddingVertical: space.s,
+        borderTopWidth: first ? 0 : 1,
+        borderTopColor: palette.rule,
+        backgroundColor: pressed ? palette.surface2 : "transparent",
+        opacity: disabled ? 0.45 : 1,
+      })}
+    >
+      <IconTile name={icon} tone={careful ? "error" : "soft"} />
+      <Text style={[type.button, { color: careful ? palette.error : palette.ink, flex: 1 }]}>
+        {label}
+      </Text>
+      <BrandIcon name="chevron" color={palette.ink3} size={16} strokeWidth={2} />
     </Pressable>
   );
 }
@@ -174,11 +301,14 @@ export function Chip({
   selected = false,
   disabled = false,
   onPress,
+  initials,
 }: {
   label: string;
   selected?: boolean;
   disabled?: boolean;
   onPress?: () => void;
+  /** A person's chip shows their initial, as a messenger shows a face; "Both" shows two. */
+  initials?: readonly { key: string; initial: string }[];
 }) {
   const palette = usePalette();
   return (
@@ -197,11 +327,41 @@ export function Chip({
         borderWidth: 1,
         borderColor: selected ? palette.action : palette.control,
         backgroundColor: selected ? palette.actionSoft : palette.surface,
-        paddingVertical: space.m,
-        paddingHorizontal: space.l,
+        paddingVertical: initials === undefined ? space.m : space.xs,
+        paddingLeft: initials === undefined ? space.l : space.xs + 2,
+        paddingRight: space.l,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space.s,
         opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
       })}
     >
+      {initials === undefined ? null : (
+        <View style={{ flexDirection: "row" }}>
+          {initials.map(({ key, initial }, index) => (
+            <View
+              key={key}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                marginLeft: index === 0 ? 0 : -10,
+                borderWidth: 2,
+                borderColor: selected ? palette.actionSoft : palette.surface,
+                backgroundColor: palette.surface2,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={[type.bodyMedium, { fontFamily: type.title.fontFamily, color: palette.ink }]}
+              >
+                {initial}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
       <Text
         style={[
           type.bodyMedium,
@@ -315,14 +475,24 @@ export function SecondaryButton({
   onPress,
   disabled = false,
   hint,
+  icon,
+  waiting,
 }: {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
   /** Read by VoiceOver: why the button is waiting, when it is. */
   hint?: string;
+  icon?: BrandIconName;
+  /**
+   * Said under the label while the button waits ("Waiting for Mom to say yes"): drawn calm and
+   * dashed with a clock, never as a faded button nobody can explain.
+   */
+  waiting?: string;
 }) {
   const palette = usePalette();
+  const held = disabled && waiting !== undefined;
+  const tile = held ? "time" : icon;
   return (
     <Pressable
       accessibilityRole="button"
@@ -332,21 +502,36 @@ export function SecondaryButton({
       accessibilityState={{ disabled }}
       onPress={onPress}
       style={({ pressed }) => ({
-        backgroundColor: palette.bg,
+        backgroundColor: held ? palette.surface2 : palette.bg,
         borderColor: palette.control,
         borderWidth: 1,
-        opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
+        borderStyle: held ? "dashed" : "solid",
+        opacity: disabled && !held ? 0.45 : pressed ? 0.82 : 1,
         borderRadius: 14,
-        minHeight: 54,
-        paddingVertical: space.m,
-        paddingHorizontal: space.l,
+        minHeight: tile === undefined ? 54 : 56,
+        paddingVertical: tile === undefined ? space.m : space.s,
+        paddingHorizontal: tile === undefined ? space.l : space.m,
+        flexDirection: "row",
+        gap: space.m,
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: tile === undefined ? "center" : "flex-start",
       })}
     >
-      <Text style={[type.button, { color: palette.ink, textAlign: "center", flexShrink: 1 }]}>
-        {label}
-      </Text>
+      {tile === undefined ? null : <IconTile name={tile} tone={held ? "quiet" : "soft"} />}
+      <View style={{ flexShrink: 1, gap: 2 }}>
+        <Text
+          style={[
+            type.button,
+            {
+              color: held ? palette.ink2 : palette.ink,
+              textAlign: tile === undefined ? "center" : "left",
+            },
+          ]}
+        >
+          {label}
+        </Text>
+        {held ? <Text style={[type.caption, { color: palette.ink2 }]}>{waiting}</Text> : null}
+      </View>
     </Pressable>
   );
 }

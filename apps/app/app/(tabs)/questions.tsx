@@ -71,6 +71,7 @@ export default function QuestionsScreen() {
       ) : (
         <>
           <PrimaryButton
+            icon="ask"
             label={t`Write a question for ${parentName}`}
             onPress={() =>
               router.push({ pathname: "/ask", params: { recipient: parent.memberId } })
@@ -94,6 +95,7 @@ export default function QuestionsScreen() {
               </Eyebrow>
               <Words variant="voice">{turn.suggestion.text}</Words>
               <SecondaryButton
+                icon="check"
                 label={t`Use this suggestion`}
                 onPress={() =>
                   router.push({

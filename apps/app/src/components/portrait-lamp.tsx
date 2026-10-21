@@ -211,20 +211,29 @@ export function PortraitLamp({
           style={({ pressed }) => ({
             backgroundColor: "#FBF2E3",
             opacity: pressed ? 0.85 : 1,
-            minHeight: 50,
+            minHeight: 56,
             borderRadius: 14,
-            paddingHorizontal: space.l,
-            paddingVertical: space.m,
+            paddingHorizontal: space.m,
+            paddingVertical: space.s,
             flexDirection: "row",
             gap: space.m,
             alignItems: "center",
-            justifyContent: "center",
           })}
         >
-          <Text
-            style={[type.button, { color: "#23484B", flexShrink: 1, textAlign: "center" }]}
-          >{t`Talk with ${name}`}</Text>
-          <BrandIcon name="arrow" color="#23484B" size={19} />
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              backgroundColor: "#F1E3CB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <BrandIcon name="chat" color="#23484B" size={19} strokeWidth={2} />
+          </View>
+          <Text style={[type.button, { color: "#23484B", flex: 1 }]}>{t`Talk with ${name}`}</Text>
+          <BrandIcon name="chevron" color="#23484B" size={18} strokeWidth={2} />
         </Pressable>
         {onQuiet === undefined ? null : (
           <Pressable

@@ -33,6 +33,8 @@ const drawings = {
   more: "M5 12h.01M12 12h.01M19 12h.01",
   book: "M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Zm0 13a3 3 0 0 1 3-3h11M9 8h6",
   search: "M11 4a7 7 0 1 0 0 14 7 7 0 1 0 0-14Zm5 12 4 4",
+  chat: "M4 5h16v11H9l-5 4V5Z",
+  leave: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10",
 } as const;
 
 export type BrandIconName = keyof typeof drawings;

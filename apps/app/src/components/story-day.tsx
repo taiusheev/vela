@@ -13,7 +13,16 @@ import { useBook } from "../data/useBook.ts";
 import { useCapabilities } from "../data/useCapabilities.ts";
 import { useToday } from "../data/useToday.ts";
 import { space } from "../theme/tokens.ts";
-import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
+import {
+  ActionGroup,
+  ActionRow,
+  Card,
+  Eyebrow,
+  PrimaryButton,
+  SecondaryButton,
+  TextField,
+  Words,
+} from "./ui.tsx";
 
 /**
  * Story day (spec §10, A10) on the Questions tab: a story question from Vela's bank, never one already
@@ -133,40 +142,50 @@ export function StoryDay({
             </Words>
           ) : null}
           <View style={{ gap: space.s }}>
-            {why === null ? null : (
+            {why !== null ? (
+              // Waiting for a reason: said inside a calm dashed button, and read out to VoiceOver.
               <View accessibilityLiveRegion="polite">
-                <Words variant="caption" tone="ink2">
-                  {why}
-                </Words>
+                <SecondaryButton label={t`Ask it on Sunday`} disabled waiting={why} hint={why} />
               </View>
+            ) : (
+              <SendButton
+                icon="calendar"
+                label={compose.isPending ? t`Sending…` : t`Ask it on Sunday`}
+                disabled={
+                  compose.isPending ||
+                  !apiConfigured() ||
+                  !live ||
+                  familyId === undefined ||
+                  book.loading ||
+                  book.trouble ||
+                  her?.invited === true ||
+                  her?.state === "paused" ||
+                  her === undefined ||
+                  question.trim().length === 0
+                }
+                onPress={() => compose.mutate(question.trim())}
+              />
             )}
-            <SendButton
-              label={compose.isPending ? t`Sending…` : t`Ask it on Sunday`}
-              {...(why === null ? {} : { hint: why })}
-              disabled={
-                compose.isPending ||
-                !apiConfigured() ||
-                !live ||
-                familyId === undefined ||
-                book.loading ||
-                book.trouble ||
-                her?.invited === true ||
-                her?.state === "paused" ||
-                her === undefined ||
-                question.trim().length === 0
-              }
-              onPress={() => compose.mutate(question.trim())}
-            />
             {own === null && prompt !== undefined ? (
-              <>
-                <SecondaryButton
+              <ActionGroup>
+                <ActionRow
+                  first
+                  icon="refresh"
                   label={t`Another question`}
                   onPress={() => setSkip((n) => n + 1)}
                 />
-                <SecondaryButton label={t`Write your own question`} onPress={() => setOwn("")} />
-              </>
+                <ActionRow
+                  icon="ask"
+                  label={t`Write your own question`}
+                  onPress={() => setOwn("")}
+                />
+              </ActionGroup>
             ) : prompt !== undefined ? (
-              <SecondaryButton label={t`Choose from the list`} onPress={() => setOwn(null)} />
+              <SecondaryButton
+                icon="check"
+                label={t`Choose from the list`}
+                onPress={() => setOwn(null)}
+              />
             ) : null}
           </View>
         </>

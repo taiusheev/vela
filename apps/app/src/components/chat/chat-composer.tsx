@@ -46,12 +46,11 @@ export function ChatComposer({
           style={({ pressed }) => ({
             width: 44,
             height: 44,
-            borderRadius: 22,
+            borderRadius: 14,
             alignItems: "center",
             justifyContent: "center",
-            borderWidth: 1,
-            borderColor: palette.control,
-            backgroundColor: pressed ? palette.surface2 : palette.surface,
+            backgroundColor: palette.actionSoft,
+            opacity: pressed ? 0.8 : 1,
           })}
         >
           <BrandIcon name="plus" color={palette.action} size={22} strokeWidth={2} />
