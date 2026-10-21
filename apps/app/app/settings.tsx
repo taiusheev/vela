@@ -446,7 +446,7 @@ function FamilyYou({ day }: { day: TodayView }) {
             <LocaleChips />
           )}
           <Words variant="caption" tone="ink3">
-            <Trans>The app's words. Her mornings keep the language she reads.</Trans>
+            <Trans>The app's words. The mornings keep their own language.</Trans>
           </Words>
           {language.refused ? (
             <Words variant="caption" tone="ink2">

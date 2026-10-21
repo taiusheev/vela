@@ -105,9 +105,11 @@ export function StoryDay({
           )}
           <Words variant="caption" tone="ink3">
             {capabilities?.book === true ? (
-              <Trans>Her answer is kept in the family book, unless she says not to.</Trans>
+              <Trans>
+                {name}'s answer is kept in the family book, unless {name} says not to.
+              </Trans>
             ) : (
-              <Trans>Like her other answers, it is kept for 30 days, then deleted.</Trans>
+              <Trans>Like {name}'s other answers, it is kept for 30 days, then deleted.</Trans>
             )}
           </Words>
           {taken === null ? null : (

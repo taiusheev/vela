@@ -63,8 +63,8 @@ export function FamilyBook({
         </Text>
         <Text style={[type.caption, { color: palette.ink2 }]}>
           <Trans>
-            The stories she tells on story day, and the recipes she shares, stay here after the 30
-            days, with her voice.
+            The stories told on story day, and the recipes shared, stay here after the 30 days, with
+            the voice that told them.
           </Trans>
         </Text>
       </View>
@@ -106,7 +106,7 @@ export function FamilyBook({
 
       {!apiConfigured() ? (
         <Words variant="body" tone="ink2">
-          <Trans>The family book fills with the stories she tells on story day.</Trans>
+          <Trans>The family book fills with the stories told on story day.</Trans>
         </Words>
       ) : book.loading ? (
         <Words variant="body" tone="ink2">
@@ -120,7 +120,7 @@ export function FamilyBook({
         <Words variant="body" tone="ink2">
           {bookOn ? (
             <Trans>
-              No stories yet. Choose a question on the Sunday tab, and what she tells is kept here.
+              No stories yet. Choose a question on the Sunday tab, and the story is kept here.
             </Trans>
           ) : (
             <Trans>No stories have been kept here yet.</Trans>

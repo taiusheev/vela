@@ -48,7 +48,7 @@ export function stateText(light: MemberLight): string {
     case "paused":
       return t`paused`;
     case "none":
-      return t`waiting for her yes`;
+      return t`waiting for a yes`;
     default:
       return t`No word yet today`;
   }
@@ -83,7 +83,7 @@ function wordlessAnswer(answer: ApiTodayAnswer): string {
     case "heart":
       return t`sent a heart`;
     case "fine":
-      return t`said she is fine`;
+      return t`tapped “I'm fine”`;
     case "photo":
       return t`sent a photo`;
     case "photo_pick": {

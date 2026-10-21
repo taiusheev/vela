@@ -1,5 +1,5 @@
 # A reply in the demo (A8): an exchange opens from Memories, and a reply shows under what the
-# family said, with the caption that she will not hear a reply to an older day; so does a heart.
+# family said, with the caption that Mom will not hear a reply to an older day; so does a heart.
 url: ${APP_URL}
 name: A reply shows under what the family said
 tags:
@@ -9,7 +9,7 @@ tags:
 - tapOn: "Memories"
 - tapOn: "Which one of us did you teach to make the pies?"
 - assertVisible: "What the family said"
-- assertVisible: "The family sees it here. She will not hear it: her mornings read back only her latest day."
+- assertVisible: "The family sees it here. Mom will not hear it: each morning reads back only the latest day."
 - tapOn: "Say something short"
 - inputText: "Save me a pie"
 - scrollUntilVisible:

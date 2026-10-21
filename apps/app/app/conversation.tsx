@@ -248,7 +248,7 @@ function Conversation() {
       : [
           {
             icon: "ask",
-            label: t`A question for her morning`,
+            label: t`A question for ${name}'s morning`,
             detail: t`Choose the morning; Vela delivers it then.`,
             onPress: () => router.push({ pathname: "/ask", params: { recipient: light.memberId } }),
           },
@@ -256,7 +256,7 @@ function Conversation() {
             ? [
                 {
                   icon: "photo" as const,
-                  label: t`Photos for her morning`,
+                  label: t`Photos for ${name}'s morning`,
                   detail: t`Two photos to choose between, or one to talk about.`,
                   onPress: () =>
                     router.push({
@@ -268,7 +268,7 @@ function Conversation() {
             : []),
           {
             icon: "mic",
-            label: t`A voice hello for her morning`,
+            label: t`A voice hello for ${name}'s morning`,
             detail: t`About ten seconds, played before the question.`,
             onPress: () =>
               router.push({

@@ -215,11 +215,11 @@ export function PushProvider({ children }: { children: ReactNode }) {
     () => ({
       quiet: {
         name: t`When a morning goes quiet`,
-        description: t`If her morning stays quiet past her usual time, and when it is settled.`,
+        description: t`If a morning stays quiet past its usual time, and when it is settled.`,
       },
       daily: {
         name: t`One moment a day`,
-        description: t`When she answers what you asked, and the evening before your turn.`,
+        description: t`When your question is answered, and the evening before your turn.`,
       },
     }),
     [t],

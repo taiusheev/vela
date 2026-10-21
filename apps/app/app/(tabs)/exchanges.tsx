@@ -134,7 +134,7 @@ function MemoryCard({
             <Text style={[type.caption, { color: palette.ink3, flex: 1 }]}>
               {[
                 answer.transcript === true
-                  ? t`${recipient} answered at ${time} · from her voice note`
+                  ? t`${recipient} answered at ${time} · from a voice note`
                   : t`${recipient} answered at ${time}`,
                 replies === 0 ? undefined : plural(replies, { one: "# reply", other: "# replies" }),
               ]
@@ -221,7 +221,7 @@ export default function MemoriesScreen() {
       <ScreenHeading
         title={<Trans context="tab">Memories</Trans>}
         subtitle={
-          <Trans>What she told you this month, and the stories the family keeps for good.</Trans>
+          <Trans>Answers from this month, and the stories the family keeps for good.</Trans>
         }
       />
       {bookOn ? (
@@ -236,7 +236,7 @@ export default function MemoriesScreen() {
         >
           {(
             [
-              { key: "words", label: t`Her words` },
+              { key: "words", label: t`Answers` },
               { key: "book", label: t`Family book` },
             ] as const
           ).map((tab) => (
@@ -295,10 +295,10 @@ export default function MemoriesScreen() {
           >
             <BrandIcon name="search" color={palette.ink3} size={18} />
             <TextInput
-              accessibilityLabel={t`Search her words`}
+              accessibilityLabel={t`Search answers`}
               value={query}
               onChangeText={setQuery}
-              placeholder={t`Search her words`}
+              placeholder={t`Search answers`}
               placeholderTextColor={palette.ink3}
               returnKeyType="search"
               style={[
@@ -347,7 +347,7 @@ export default function MemoriesScreen() {
             </Words>
           ) : live && answered.length === 0 ? (
             <Words variant="body" tone="ink2">
-              <Trans>Nothing has happened yet. Her first morning will be here.</Trans>
+              <Trans>Nothing has happened yet. The first morning will be here.</Trans>
             </Words>
           ) : answered.length > 0 && shown.length === 0 ? (
             <Words variant="body" tone="ink2">
@@ -377,11 +377,11 @@ export default function MemoriesScreen() {
           <Words variant="caption" tone="ink3">
             {bookOn ? (
               <Trans>
-                Her words stay here for thirty days. The stories she tells are kept in the family
-                book.
+                Answers stay here for thirty days. The stories told on story day are kept in the
+                family book.
               </Trans>
             ) : (
-              <Trans>Her words stay here for thirty days.</Trans>
+              <Trans>Answers stay here for thirty days.</Trans>
             )}
           </Words>
         </>

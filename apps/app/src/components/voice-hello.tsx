@@ -48,7 +48,7 @@ export function VoiceHello({
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.l }}>
         <Words variant="body" tone="ink2">
           {note ? (
-            <Trans>Voice note, {time}. She hears it in her morning.</Trans>
+            <Trans>Voice note, {time}. It plays in the morning.</Trans>
           ) : (
             <Trans>Voice hello, {time}. It plays before your ask.</Trans>
           )}

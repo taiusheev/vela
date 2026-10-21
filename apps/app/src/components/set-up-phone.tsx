@@ -54,8 +54,8 @@ export function SetUpPhone({
         <View style={{ gap: space.m }}>
           <Words variant="body" tone="ink2">
             <Trans>
-              This phone becomes {name}'s: large words, one message at a time, her answers with a
-              tap or in her own words. You are signed out of it, and she needs no account.
+              This phone becomes {name}'s: large words, one message at a time, answers with a tap or
+              in a few words. You are signed out of it, and {name} needs no account.
             </Trans>
           </Words>
           {setUp.isError ? (

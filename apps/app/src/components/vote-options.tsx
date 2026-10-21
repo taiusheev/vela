@@ -66,7 +66,7 @@ export function VoteOptions({
         );
       })}
       <Words variant="caption" tone="ink3">
-        <Trans>Short answers she can tap, from two to seven.</Trans>
+        <Trans>Short answers to tap, from two to seven.</Trans>
       </Words>
       {options.length >= VOTE_OPTIONS.most ? null : (
         <Pressable

@@ -78,6 +78,38 @@ const BRAND_ONLY: ReadonlySet<string> = new Set(["Vela", "Vela Light"]);
 const PLACEHOLDER = /\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
 /**
+ * A pronoun for the parent. A family may keep a light for a father as well as a mother, so the app
+ * says the parent's name (`{name}`, `{recipient}`) or neutral words, as the quiet notice does
+ * (`src/data/quiet.ts`) and as Traditional Chinese already must.
+ */
+const FORBIDDEN_EN = /\b(she|her|hers|he|him|his)\b/i;
+
+/**
+ * English msgids that may keep a pronoun, each written out in full: the onboarding story, which is
+ * about one example mother called Mom (`src/components/onboarding/story.tsx`), and the example
+ * family's own words in the demo (`src/data/weekly.ts`, `src/data/chat.ts`).
+ */
+const PRONOUN_ALLOWED: ReadonlySet<string> = new Set([
+  // The onboarding story's example mother.
+  "{time} · in her Telegram",
+  "{time} · She answered",
+  "An example mother at her kitchen table with tea",
+  "And her window lights up.",
+  "Her morning was sent at {time}. If you can, give her a call.",
+  "If she doesn’t answer, you know the same day.",
+  "In her own messenger. No new app for her.",
+  "Send her a morning question",
+  "She answers when she likes: a few words, a photo, or her voice.",
+  "That’s all the light means: she answered. Reply, listen, or just send a heart.",
+  "Wait for her answer",
+  // The example family's words.
+  "Ask her which seeds she wants to keep for next spring.",
+  "On Saturday she answered later than usual, after the market.",
+  "She is never letting that go",
+  "She told you about the garden on three mornings: the tomatoes, the seeds, the new bed by the fence.",
+]);
+
+/**
  * Every sentence an ICU message can become, with its placeholders kept as `{name}` and a plural's
  * `#` as `{count}`: one per branch of each plural or select, so each is checked as it will read.
  */
@@ -169,6 +201,14 @@ describe("the checks", () => {
     expect(withSampleValues("{time} 回覆，問{name}一件事")).not.toMatch(LATIN_TOUCHING_HAN);
   });
 
+  it("see a pronoun for the parent, and not the words that hold one", () => {
+    expect("Search her words").toMatch(FORBIDDEN_EN);
+    expect("Until she's back").toMatch(FORBIDDEN_EN);
+    expect("when {her} answers").toMatch(FORBIDDEN_EN);
+    expect("Heart for {recipient}").not.toMatch(FORBIDDEN_EN);
+    expect("Here is where their words stay").not.toMatch(FORBIDDEN_EN);
+  });
+
   it("see a space between a name placeholder and a Chinese character", () => {
     expect(spacedNames("問 {name} 一件事")).not.toEqual([]);
     expect(spacedNames("{from} 回覆了")).toEqual(["from"]);
@@ -235,6 +275,21 @@ describe("the English messages", () => {
     expect(
       failures(english, (item) => (SURVEILLANCE_WORDS.test(item.msgid) ? "surveillance" : null)),
     ).toEqual([]);
+  });
+
+  it("name the parent, never a pronoun", () => {
+    expect(
+      failures(english, (item) =>
+        FORBIDDEN_EN.test(item.msgid) && !PRONOUN_ALLOWED.has(item.msgid)
+          ? "a pronoun for the parent; say {name} or neutral words"
+          : null,
+      ),
+    ).toEqual([]);
+  });
+
+  it("allow a pronoun only where one is still written", () => {
+    const msgids = new Set(english.map((item) => item.msgid));
+    expect([...PRONOUN_ALLOWED].filter((msgid) => !msgids.has(msgid))).toEqual([]);
   });
 
   it("compile as the Metro transformer compiles them", () => {
