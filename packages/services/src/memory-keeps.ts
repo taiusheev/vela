@@ -260,6 +260,30 @@ export async function loadKeptMemories(
   familyId: string,
   cursor: string | null = null,
 ): Promise<KeptMemoryPage | null> {
+  return readKeptMemoryPage(deps, identity, familyId, cursor, false);
+}
+
+/**
+ * One page of the authenticated author's own kept words for a free data copy.
+ * Not a whole-account export or a download endpoint. No export artifact is stored.
+ * Reauthorise every page; callers must not reuse cached pages after withdrawal.
+ */
+export async function loadOwnKeptMemoriesForExport(
+  deps: KeepDeps,
+  identity: SessionIdentity,
+  familyId: string,
+  cursor: string | null = null,
+): Promise<KeptMemoryPage | null> {
+  return readKeptMemoryPage(deps, identity, familyId, cursor, true);
+}
+
+async function readKeptMemoryPage(
+  deps: KeepDeps,
+  identity: SessionIdentity,
+  familyId: string,
+  cursor: string | null,
+  ownOnly: boolean,
+): Promise<KeptMemoryPage | null> {
   if (cursor !== null && !uuid.safeParse(cursor).success) return null;
   const access = await authorizeFamilyAccess(deps.db, identity, familyId);
   if (access.kind !== "granted") return null;
@@ -291,6 +315,7 @@ export async function loadKeptMemories(
     .where(
       and(
         eq(memoryKeeps.familyId, familyId),
+        ownOnly ? eq(memoryKeeps.memberId, access.access.memberId) : undefined,
         isNull(memoryKeeps.removedAt),
         isNull(members.leftAt),
         inArray(members.status, active),
