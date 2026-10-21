@@ -33,6 +33,9 @@ import {
   chatFixture,
   dayLabel,
   localDateIn,
+  newestMine,
+  showsStatus,
+  showsTime,
   startsGroup,
   toChat,
 } from "../src/data/chat.ts";
@@ -379,6 +382,7 @@ function Conversation() {
     </View>
   );
 
+  const newest = newestMine(messages);
   return (
     <>
       <Stack.Screen
@@ -542,6 +546,8 @@ function Conversation() {
                   message={message}
                   first={first}
                   last={last}
+                  showTime={showsTime(message, next)}
+                  showStatus={showsStatus(message, newest)}
                   familyId={day.familyId}
                   {...(message.side === "her" && (demo || day.live)
                     ? {

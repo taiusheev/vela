@@ -25,10 +25,13 @@ import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from 
 export function StoryDay({
   memberId,
   inBook = false,
+  primary = true,
 }: {
   memberId?: string;
   /** Shown inside the book itself, where a way into the book would lead nowhere new. */
   inBook?: boolean;
+  /** False where the screen already has its one filled button (Questions). */
+  primary?: boolean;
 }) {
   const { t, i18n } = useLingui();
   const account = useAccount();
@@ -70,6 +73,15 @@ export function StoryDay({
     },
   });
   const taken = compose.isError ? askConflict(compose.error) : null;
+  // Why the button waits, said beside it rather than left as a faded button (the reasons Ask gives).
+  const why = !apiConfigured()
+    ? t`You can explore an example family. No messages are sent.`
+    : her?.state === "paused"
+      ? t`${name}'s light is paused just now, so nothing can be sent into her morning.`
+      : her?.invited === true
+        ? t`${name} has not said yes yet. Once she does, her first morning is the next day.`
+        : null;
+  const SendButton = primary ? PrimaryButton : SecondaryButton;
   const holder = taken?.taken_by;
 
   return (
@@ -121,8 +133,16 @@ export function StoryDay({
             </Words>
           ) : null}
           <View style={{ gap: space.s }}>
-            <PrimaryButton
+            {why === null ? null : (
+              <View accessibilityLiveRegion="polite">
+                <Words variant="caption" tone="ink2">
+                  {why}
+                </Words>
+              </View>
+            )}
+            <SendButton
               label={compose.isPending ? t`Sending…` : t`Ask it on Sunday`}
+              {...(why === null ? {} : { hint: why })}
               disabled={
                 compose.isPending ||
                 !apiConfigured() ||

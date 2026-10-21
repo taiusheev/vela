@@ -264,6 +264,31 @@ export function startsGroup(previous: ChatMessage | undefined, message: ChatMess
 }
 
 /**
+ * A time shows only where the conversation pauses, as messengers do: after the last message, at a
+ * new day, and after half an hour of quiet. Every bubble still says its time to VoiceOver.
+ */
+export const GAP_MS = 30 * 60_000;
+
+export function showsTime(message: ChatMessage, next: ChatMessage | undefined): boolean {
+  return next === undefined || next.day !== message.day || next.at - message.at >= GAP_MS;
+}
+
+/** The reader's newest message, the one place "Seen" or "Delivered" is said. */
+export function newestMine(messages: readonly ChatMessage[]): string | undefined {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.side === "me") return message.key;
+  }
+  return undefined;
+}
+
+/** "Sending…" and "Not delivered" always show; "Seen" and "Delivered" only once, at the newest. */
+export function showsStatus(message: ChatMessage, newest: string | undefined): boolean {
+  if (message.status === "sending" || message.status === "failed") return true;
+  return message.status !== undefined && message.key === newest;
+}
+
+/**
  * The example conversation for the demo, in the language active when called: yesterday's morning
  * and its replies, today's morning, and a message Mia sent afterwards that Mom answered.
  */

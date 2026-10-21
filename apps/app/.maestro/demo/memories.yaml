@@ -15,7 +15,7 @@ tags:
 - tapOn: "Search her words"
 - inputText: "butter"
 - assertVisible: "Both of you, but only Mia listened about the butter."
-- assertNotVisible: "Mom answered at 8:12 · 2 replies"
+- assertNotVisible: "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
 - eraseText
 - tapOn: "Stories"
 - assertVisible: "It was a bakery, then a bookshop. We queued there for bread in the winter."

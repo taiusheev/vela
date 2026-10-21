@@ -104,7 +104,11 @@ export default function QuestionsScreen() {
               />
             </Card>
           ) : null}
-          <StoryDay key={`story:${day.familyId}:${parent.memberId}`} memberId={parent.memberId} />
+          <StoryDay
+            key={`story:${day.familyId}:${parent.memberId}`}
+            memberId={parent.memberId}
+            primary={false}
+          />
           {day.organiser ? (
             <WeeklyQuestion
               key={`weekly:${day.familyId}:${parent.memberId}`}

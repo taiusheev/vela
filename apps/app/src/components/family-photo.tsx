@@ -17,6 +17,7 @@ import type { ExchangePhoto } from "../data/today.ts";
 import { useToday } from "../data/useToday.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { radius, space, type } from "../theme/tokens.ts";
+import { BrandIcon } from "./brand/icon.tsx";
 import { Words } from "./ui.tsx";
 
 /** A thumbnail's side in points, or the whole width a screen gives the photos. */
@@ -167,6 +168,9 @@ export function FamilyPhoto({
             {stored ? label : t`Photo in the family group`}
           </Words>
         </View>
+      ) : nothing ? (
+        // A thumbnail too small for words still says it is a photo, never an empty box.
+        <BrandIcon name="photo" color={palette.ink3} size={22} />
       ) : null}
       {number === undefined ? null : <PhotoNumber number={number} picked={picked} />}
     </View>

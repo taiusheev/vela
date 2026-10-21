@@ -177,6 +177,7 @@ msgid "{name} has not said yes yet"
 msgstr "{name}還沒有同意"
 
 #: app/ask.tsx
+#: src/components/story-day.tsx
 msgid "{name} has not said yes yet. Once she does, her first morning is the next day."
 msgstr "{name}還沒有同意。同意之後的隔天早上，就會收到第一則早安訊息。"
 
@@ -285,6 +286,7 @@ msgid "{name}'s light is on"
 msgstr "{name}的燈亮著"
 
 #: app/ask.tsx
+#: src/components/story-day.tsx
 msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
 msgstr "{name}的燈目前暫停中，所以現在無法放進早安訊息。"
 
@@ -356,15 +358,10 @@ msgstr "{recipes, plural, other {# 道食譜}}"
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
 msgstr "{recipient}在 {time} 回覆了之前的提問，這則提問還沒有回覆。"
 
-#: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
 msgid "{recipient} answered at {time}"
 msgstr "{recipient}在 {time} 回覆了"
-
-#: app/(tabs)/exchanges.tsx
-msgid "{recipient} answered at {time} · from her voice note"
-msgstr "{recipient}在 {time} 回覆了 · 由語音轉成文字"
 
 #: app/(tabs)/index.tsx
 msgid "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
@@ -1285,6 +1282,10 @@ msgstr "從"
 msgid "From {fromName} · Saved for their morning"
 msgstr "來自{fromName}· 已為早晨儲存"
 
+#: app/(tabs)/exchanges.tsx
+msgid "From a voice note"
+msgstr "來自語音訊息"
+
 #: src/data/onboarding.ts
 msgid "Garden & plants"
 msgstr "園藝與植物"
@@ -1398,10 +1399,6 @@ msgstr "回答會收進家庭故事書，除非本人說不要保留。"
 #: src/components/chat/chat-bubble.tsx
 msgid "Her messenger did not take it. Her daily morning is unchanged."
 msgstr "這則訊息沒有送達。每天的早安訊息不受影響。"
-
-#: src/components/chat/chat-bubble.tsx
-msgid "Her morning"
-msgstr "早安訊息"
 
 #: app/(tabs)/index.tsx
 msgid "Her morning already holds it."
@@ -4135,6 +4132,7 @@ msgid "You can add someone from Today later."
 msgstr "之後可以從「今天」加入。"
 
 #: app/sign-in.tsx
+#: src/components/story-day.tsx
 msgid "You can explore an example family. No messages are sent."
 msgstr "你可以探索範例家庭。這裡不會傳送任何訊息。"
 
