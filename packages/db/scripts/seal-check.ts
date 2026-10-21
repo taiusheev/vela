@@ -35,6 +35,8 @@ async function main(): Promise<void> {
       "recipes.title",
       "memory_facts.text",
       "memory_candidates.source_digest",
+      "memory_keeps.source_digest",
+      "memory_keeps.quote",
       "reminders.text",
       "weekly_reads.suggestion",
       "weekly_reads.sent_suggestion",

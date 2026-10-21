@@ -1,5 +1,5 @@
 -- Vela · Postgres schema
--- GENERATED FILE: DO NOT EDIT. The source of truth is packages/db/src/schema.ts.
+-- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/memory-keep-guards.sql.
 -- Regenerate with: pnpm --filter @vela/db export-sql
 -- Applied through the migrations in packages/db/migrations (pnpm --filter @vela/db generate).
 -- Column meanings, retention rules, and the invariants behind each index are documented in
@@ -78,6 +78,7 @@ CREATE TABLE "answers" (
 	"understood_at" timestamp with time zone,
 	"processing_attempts" smallint DEFAULT 0 NOT NULL,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"words_expired_at" timestamp with time zone,
 	CONSTRAINT "answers_channel_external_id_key" UNIQUE("channel","external_id"),
 	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker', 'other')),
 	CONSTRAINT "answers_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device'))
@@ -157,7 +158,7 @@ CREATE TABLE "consents" (
 	"withdrawn_at" timestamp with time zone,
 	"evidence" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"subject_deleted_at" timestamp with time zone,
-	CONSTRAINT "consents_kind_check" CHECK ("kind" in ('light', 'nearby', 'privacy_notice', 'pilot', 'health_words', 'rich_memories')),
+	CONSTRAINT "consents_kind_check" CHECK ("kind" in ('light', 'nearby', 'privacy_notice', 'pilot', 'health_words', 'rich_memories', 'memory_keep')),
 	CONSTRAINT "consents_answer_check" CHECK ("answer" in ('yes', 'no')),
 	CONSTRAINT "consents_subject_ref_check" CHECK ("subject_ref" ~ '^(member|contact):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' and ("member_id" is null or "subject_ref" = ('member:' || "member_id"::text)) and ("contact_id" is null or "subject_ref" = ('contact:' || "contact_id"::text))),
 	CONSTRAINT "consents_withdrawn_at_check" CHECK ("withdrawn_at" is null or "answer" = 'yes'),
@@ -364,6 +365,7 @@ CREATE TABLE "memory_candidates" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"dismissed_at" timestamp with time zone,
+	"kept_at" timestamp with time zone,
 	CONSTRAINT "memory_candidates_source_span_key" UNIQUE("source_answer_id","start_offset","end_offset"),
 	CONSTRAINT "memory_candidates_kind_check" CHECK ("kind" in ('preference', 'story', 'humour', 'person', 'moment', 'follow_up')),
 	CONSTRAINT "memory_candidates_offsets_check" CHECK ("memory_candidates"."start_offset" >= 0 and "memory_candidates"."end_offset" > "memory_candidates"."start_offset" and "memory_candidates"."end_offset" - "memory_candidates"."start_offset" <= 2000),
@@ -381,6 +383,29 @@ CREATE TABLE "memory_facts" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone,
 	CONSTRAINT "memory_facts_kind_check" CHECK ("kind" in ('date', 'person', 'place', 'health', 'plan', 'preference'))
+);
+
+CREATE TABLE "memory_keeps" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"candidate_id" uuid,
+	"source_answer_id" uuid NOT NULL,
+	"discovery_consent_id" uuid NOT NULL,
+	"keep_consent_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"start_offset" integer NOT NULL,
+	"end_offset" integer NOT NULL,
+	"quote" text NOT NULL,
+	"source_digest" text NOT NULL,
+	"lang" text NOT NULL,
+	"occurred_at" timestamp with time zone NOT NULL,
+	"kept_at" timestamp with time zone NOT NULL,
+	"removed_at" timestamp with time zone,
+	CONSTRAINT "memory_keeps_source_span_key" UNIQUE("source_answer_id","start_offset","end_offset"),
+	CONSTRAINT "memory_keeps_candidate_key" UNIQUE("candidate_id"),
+	CONSTRAINT "memory_keeps_kind_check" CHECK ("kind" in ('preference', 'story', 'humour', 'person', 'moment', 'follow_up')),
+	CONSTRAINT "memory_keeps_offsets_check" CHECK ("memory_keeps"."start_offset" >= 0 and "memory_keeps"."end_offset" > "memory_keeps"."start_offset" and "memory_keeps"."end_offset" - "memory_keeps"."start_offset" <= 2000)
 );
 
 CREATE TABLE "message_refs" (
@@ -740,6 +765,12 @@ ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_consent_id_con
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_candidate_id_memory_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."memory_candidates"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_discovery_consent_id_consents_id_fk" FOREIGN KEY ("discovery_consent_id") REFERENCES "public"."consents"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_keep_consent_id_consents_id_fk" FOREIGN KEY ("keep_consent_id") REFERENCES "public"."consents"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_quiet_event_id_quiet_events_id_fk" FOREIGN KEY ("quiet_event_id") REFERENCES "public"."quiet_events"("id") ON DELETE cascade ON UPDATE no action;
@@ -793,6 +824,7 @@ CREATE INDEX "book_entries_family_idx" ON "book_entries" USING btree ("family_id
 CREATE INDEX "channel_links_member_idx" ON "channel_links" USING btree ("member_id");
 CREATE INDEX "consents_subject_ref_idx" ON "consents" USING btree ("subject_ref");
 CREATE INDEX "consents_member_latest_idx" ON "consents" USING btree ("member_id","kind","given_at","id");
+CREATE INDEX "consents_kind_withdrawn_idx" ON "consents" USING btree ("kind","withdrawn_at");
 CREATE INDEX "dead_letters_failed_at_idx" ON "dead_letters" USING btree ("failed_at");
 CREATE INDEX "events_family_at_idx" ON "events" USING btree ("family_id","at");
 CREATE INDEX "events_name_at_idx" ON "events" USING btree ("name","at");
@@ -810,6 +842,11 @@ CREATE INDEX "memory_candidates_consent_idx" ON "memory_candidates" USING btree 
 CREATE INDEX "memory_candidates_expiry_idx" ON "memory_candidates" USING btree ("expires_at");
 CREATE INDEX "memory_facts_family_idx" ON "memory_facts" USING btree ("family_id","on_date");
 CREATE INDEX "memory_facts_answer_idx" ON "memory_facts" USING btree ("source_answer_id");
+CREATE INDEX "memory_keeps_family_page_idx" ON "memory_keeps" USING btree ("family_id","id");
+CREATE INDEX "memory_keeps_member_idx" ON "memory_keeps" USING btree ("member_id");
+CREATE INDEX "memory_keeps_discovery_consent_idx" ON "memory_keeps" USING btree ("discovery_consent_id");
+CREATE INDEX "memory_keeps_keep_consent_idx" ON "memory_keeps" USING btree ("keep_consent_id");
+CREATE INDEX "memory_keeps_removed_idx" ON "memory_keeps" USING btree ("removed_at");
 CREATE UNIQUE INDEX "nearby_contacts_member_external_idx" ON "nearby_contacts" USING btree ("member_id","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';
 CREATE INDEX "outbound_pending_idx" ON "outbound" USING btree ("queued_at") WHERE "status" = 'queued';
@@ -823,3 +860,92 @@ CREATE INDEX "replies_exchange_idx" ON "replies" USING btree ("exchange_id");
 CREATE UNIQUE INDEX "replies_channel_external_id_idx" ON "replies" USING btree ("channel","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "replies_one_reaction_idx" ON "replies" USING btree ("exchange_id","member_id","kind") WHERE "kind" in ('heart', 'laugh', 'hug');
 CREATE UNIQUE INDEX "suggestions_one_per_day" ON "suggestions" USING btree ("about_member_id","local_day");
+
+-- Explicit schema names also support the isolated Worker schema generator.
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_keep_source"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  -- Clearing non-health analysis does not change the chosen words (including existing book trim).
+  IF NEW.mentions = '{}'::jsonb
+     AND (OLD.mentions -> 'health' IS NULL OR OLD.mentions -> 'health' = '[]'::jsonb)
+     AND ROW(NEW.payload, NEW.transcript, NEW.transcript_lang, NEW.member_id, NEW.exchange_id,
+             NEW.kind, NEW.received_at, NEW.flag, NEW.words_expired_at)
+       IS NOT DISTINCT FROM
+         ROW(OLD.payload, OLD.transcript, OLD.transcript_lang, OLD.member_id, OLD.exchange_id,
+             OLD.kind, OLD.received_at, OLD.flag, OLD.words_expired_at) THEN
+    RETURN NEW;
+  END IF;
+  -- One narrowly defined retention transition, not permission to replace or erase words by hand.
+  IF OLD.words_expired_at IS NULL AND NEW.words_expired_at IS NOT NULL
+     AND NEW.words_expired_at >= OLD.received_at + interval '720 hours'
+     AND NEW.payload = OLD.payload - ARRAY['text', 'choice']
+     AND NEW.transcript IS NULL
+     AND NEW.transcript_lang IS NOT DISTINCT FROM OLD.transcript_lang
+     AND NEW.member_id = OLD.member_id AND NEW.exchange_id = OLD.exchange_id
+     AND NEW.kind = OLD.kind AND NEW.received_at = OLD.received_at
+     AND NEW.flag = OLD.flag AND NEW.mentions = '{}'::jsonb THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.payload IS DISTINCT FROM OLD.payload
+     OR NEW.transcript IS DISTINCT FROM OLD.transcript
+     OR NEW.transcript_lang IS DISTINCT FROM OLD.transcript_lang
+     OR NEW.member_id IS DISTINCT FROM OLD.member_id
+     OR NEW.exchange_id IS DISTINCT FROM OLD.exchange_id
+     OR NEW.kind IS DISTINCT FROM OLD.kind OR NEW.received_at IS DISTINCT FROM OLD.received_at
+     OR NEW.flag IS DISTINCT FROM OLD.flag OR NEW.mentions IS DISTINCT FROM OLD.mentions
+     OR NEW.words_expired_at IS DISTINCT FROM OLD.words_expired_at THEN
+    DELETE FROM "public"."memory_keeps" WHERE source_answer_id = OLD.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_source_guard BEFORE UPDATE ON "public"."answers"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_source"();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_keep_permission"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_TABLE_NAME = 'consents' THEN
+    IF TG_OP = 'INSERT' THEN
+      IF NEW.kind = 'rich_memories' THEN
+        -- Serialize a new consent against a keep using the member lock; a later yes is not a revival.
+        PERFORM id FROM "public"."members" WHERE id = NEW.member_id FOR UPDATE;
+        DELETE FROM "public"."memory_keeps" WHERE member_id = NEW.member_id
+          AND discovery_consent_id <> NEW.id;
+      END IF;
+    ELSIF NEW.answer <> 'yes' OR NEW.withdrawn_at IS NOT NULL OR NEW.subject_deleted_at IS NOT NULL
+       OR NEW.kind IS DISTINCT FROM OLD.kind OR NEW.member_id IS DISTINCT FROM OLD.member_id
+       OR NEW.text_version IS DISTINCT FROM OLD.text_version OR NEW.given_at IS DISTINCT FROM OLD.given_at THEN
+      DELETE FROM "public"."memory_keeps" WHERE removed_at IS NULL
+        AND (discovery_consent_id = OLD.id OR keep_consent_id = OLD.id);
+    END IF;
+  ELSIF TG_TABLE_NAME = 'members' THEN
+    IF NEW.left_at IS NOT NULL OR NEW.status NOT IN ('active', 'paused') OR NEW.family_id <> OLD.family_id THEN
+      DELETE FROM "public"."memory_keeps" WHERE member_id = OLD.id;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'families' THEN
+    IF NEW.deleted_at IS NOT NULL THEN
+      DELETE FROM "public"."memory_keeps" WHERE family_id = OLD.id;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'exchanges' THEN
+    IF NEW.family_id IS DISTINCT FROM OLD.family_id THEN
+      DELETE FROM "public"."memory_keeps" WHERE source_answer_id IN
+        (SELECT id FROM "public"."answers" WHERE exchange_id = OLD.id);
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_consent_guard AFTER INSERT OR UPDATE ON "public"."consents"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_member_guard AFTER UPDATE ON "public"."members"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_family_guard AFTER UPDATE ON "public"."families"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_exchange_guard AFTER UPDATE OF family_id ON "public"."exchanges"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
