@@ -423,18 +423,6 @@ msgstr ""
 msgid "❤️ I'm fine"
 msgstr ""
 
-#: src/components/voice-hello.tsx
-msgid "🎙 Add a voice hello (10 seconds)"
-msgstr ""
-
-#: src/components/voice-hello.tsx
-msgid "🎙 Record your voice note (10 seconds)"
-msgstr ""
-
-#: src/components/voice-reply.tsx
-msgid "🎙 Reply with your voice"
-msgstr ""
-
 #: src/components/photo-reply.tsx
 msgid "📷 Reply with a photo"
 msgstr ""
@@ -465,10 +453,6 @@ msgstr ""
 
 #: src/components/today-hero.tsx
 msgid "A little light from home."
-msgstr ""
-
-#: app/(tabs)/questions.tsx
-msgid "A little something to ask. Write your own, choose an idea, or plan a story for Sunday."
 msgstr ""
 
 #: src/components/service-status.tsx
@@ -517,6 +501,10 @@ msgstr ""
 
 #: src/data/ask.ts
 msgid "A story"
+msgstr ""
+
+#: src/components/story-day.tsx
+msgid "A story question for {name}'s {day} morning"
 msgstr ""
 
 #: app/conversation.tsx
@@ -570,6 +558,10 @@ msgstr ""
 #: src/components/onboarding/questions.tsx
 #: src/components/parent-photo-settings.tsx
 msgid "Add a photo of {name}"
+msgstr ""
+
+#: src/components/voice-hello.tsx
+msgid "Add a voice hello (10 seconds)"
 msgstr ""
 
 #: src/components/vote-options.tsx
@@ -1634,6 +1626,10 @@ msgstr ""
 msgid "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 msgstr ""
 
+#: app/(tabs)/questions.tsx
+msgid "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
+msgstr ""
+
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
 msgstr ""
@@ -1739,8 +1735,6 @@ msgstr ""
 msgid "LINE isn’t open here yet, so this invitation opens Telegram."
 msgstr ""
 
-#: src/components/voice-hello.tsx
-#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Listen"
 msgstr ""
@@ -1764,8 +1758,8 @@ msgstr ""
 msgid "Listen to the family’s voice ask"
 msgstr ""
 
-#: src/audio/VoicePlayback.tsx
-msgid "Listen to the original voice"
+#: src/components/voice-recorder.tsx
+msgid "Listen to your recording"
 msgstr ""
 
 #: app/morning-settings.tsx
@@ -1782,10 +1776,6 @@ msgstr ""
 
 #: app/precision.tsx
 msgid "Loading the quiet notices…"
-msgstr ""
-
-#: src/audio/VoicePlayback.tsx
-msgid "Loading voice…"
 msgstr ""
 
 #: src/components/app-privacy.tsx
@@ -2294,15 +2284,12 @@ msgid "Parent settings"
 msgstr ""
 
 #: app/settings.tsx
+#: src/audio/voice-bar.tsx
 msgid "Pause"
 msgstr ""
 
 #: app/settings.tsx
 msgid "Pause my turns"
-msgstr ""
-
-#: src/audio/VoicePlayback.tsx
-msgid "Pause voice"
 msgstr ""
 
 #: app/settings.tsx
@@ -2401,6 +2388,14 @@ msgstr ""
 msgid "Planned for tomorrow"
 msgstr ""
 
+#: src/audio/VoicePlayback.tsx
+msgid "Play the voice"
+msgstr ""
+
+#: src/audio/voice-bar.tsx
+msgid "Playback speed {rate} times"
+msgstr ""
+
 #: app/settings.tsx
 msgid "Preview family setup"
 msgstr ""
@@ -2473,20 +2468,22 @@ msgstr ""
 msgid "Recipes"
 msgstr ""
 
-#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Record again"
 msgstr ""
 
 #: src/components/voice-hello.tsx
-msgid "Recording your hello… {time} of 0:10"
+msgid "Record your voice note (10 seconds)"
 msgstr ""
 
-#: src/components/voice-hello.tsx
-msgid "Recording your voice note… {time} of 0:10"
+#: src/components/voice-recorder.tsx
+msgid "Recording · {time}"
 msgstr ""
 
-#: src/components/voice-reply.tsx
+#: src/components/voice-recorder.tsx
+msgid "Recording · {time} of {limit}"
+msgstr ""
+
 #: src/device/VoiceAnswer.tsx
 msgid "Recording… {time}"
 msgstr ""
@@ -2501,7 +2498,6 @@ msgstr ""
 
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
-#: src/components/voice-hello.tsx
 #: src/components/vote-options.tsx
 msgid "Remove"
 msgstr ""
@@ -2541,6 +2537,10 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Reply to {recipient}"
+msgstr ""
+
+#: src/components/voice-reply.tsx
+msgid "Reply with your voice"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -2685,6 +2685,7 @@ msgstr ""
 
 #: app/exchange/[id].tsx
 #: app/parent.tsx
+#: src/components/voice-recorder.tsx
 msgid "Send"
 msgstr ""
 
@@ -2725,6 +2726,7 @@ msgid "Send my answer"
 msgstr ""
 
 #: app/conversation.tsx
+#: src/components/voice-recorder.tsx
 msgid "Send now"
 msgstr ""
 
@@ -2744,10 +2746,6 @@ msgstr ""
 msgid "Send to {name}"
 msgstr ""
 
-#: src/components/voice-reply.tsx
-msgid "Send voice reply"
-msgstr ""
-
 #: app/ask.tsx
 #: app/exchange/[id].tsx
 #: app/parent.tsx
@@ -2756,7 +2754,7 @@ msgstr ""
 #: src/components/photo-reply.tsx
 #: src/components/story-day.tsx
 #: src/components/today-heart.tsx
-#: src/components/voice-reply.tsx
+#: src/components/voice-recorder.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
 msgstr ""
@@ -3007,10 +3005,16 @@ msgid "Stay"
 msgstr ""
 
 #: app/parent.tsx
-#: src/components/voice-hello.tsx
-#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
+msgstr ""
+
+#: src/components/voice-recorder.tsx
+msgid "Stop and listen first"
+msgstr ""
+
+#: src/components/voice-recorder.tsx
+msgid "Stop recording"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
@@ -3219,8 +3223,7 @@ msgstr ""
 msgid "That photo is no longer here. Choose it again."
 msgstr ""
 
-#: src/components/voice-hello.tsx
-#: src/components/voice-reply.tsx
+#: src/components/voice-recorder.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "That recording did not save. Try again."
 msgstr ""
@@ -3552,6 +3555,10 @@ msgstr ""
 msgid "Those are the ones from the seeds you saved"
 msgstr ""
 
+#: src/components/voice-recorder.tsx
+msgid "Throw this recording away"
+msgstr ""
+
 #: app/morning-settings.tsx
 msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 msgstr ""
@@ -3629,7 +3636,11 @@ msgid "Tomorrow is your turn to ask {recipient}"
 msgstr ""
 
 #: app/ask.tsx
-msgid "Tomorrow morning"
+msgid "Tomorrow morning, {tomorrow}"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Tomorrow, {tomorrow}"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -3923,14 +3934,6 @@ msgstr ""
 msgid "Voice"
 msgstr ""
 
-#: src/components/voice-hello.tsx
-msgid "Voice hello, {time}. It plays before your ask."
-msgstr ""
-
-#: src/components/voice-hello.tsx
-msgid "Voice note, {time}. She hears it in her morning."
-msgstr ""
-
 #: src/data/onboarding.ts
 msgid "Voice notes"
 msgstr ""
@@ -4153,6 +4156,10 @@ msgstr ""
 msgid "Write a question for {parentName}"
 msgstr ""
 
+#: app/(tabs)/questions.tsx
+msgid "Write a question for tomorrow morning, use Vela's idea, or plan a story for Sunday."
+msgstr ""
+
 #: src/components/chat/chat-link.tsx
 msgid "Write something for when {name} says yes."
 msgstr ""
@@ -4162,7 +4169,7 @@ msgid "Write to {name}"
 msgstr ""
 
 #: src/components/story-day.tsx
-msgid "Write your own question"
+msgid "Write your own story question for {day}"
 msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
@@ -4414,10 +4421,6 @@ msgstr ""
 msgid "Your question"
 msgstr ""
 
-#: src/components/story-day.tsx
-msgid "Your question for {name}"
-msgstr ""
-
 #: src/components/onboarding/questions.tsx
 msgid "Your questions are signed with it."
 msgstr ""
@@ -4428,10 +4431,6 @@ msgstr ""
 
 #: app/delete-account.tsx
 msgid "Your sign-in has expired. Sign in again, then delete your account."
-msgstr ""
-
-#: src/components/voice-reply.tsx
-msgid "Your voice reply, {time} long."
 msgstr ""
 
 #: app/conversation.tsx

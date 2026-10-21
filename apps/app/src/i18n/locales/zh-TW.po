@@ -430,18 +430,6 @@ msgstr "▶ 播放語音訊息 {number}"
 msgid "❤️ I'm fine"
 msgstr "❤️ 我很好"
 
-#: src/components/voice-hello.tsx
-msgid "🎙 Add a voice hello (10 seconds)"
-msgstr "🎙 加一段語音問候（10 秒）"
-
-#: src/components/voice-hello.tsx
-msgid "🎙 Record your voice note (10 seconds)"
-msgstr "🎙 錄一段語音（10 秒）"
-
-#: src/components/voice-reply.tsx
-msgid "🎙 Reply with your voice"
-msgstr "🎙 用聲音回覆"
-
 #: src/components/photo-reply.tsx
 msgid "📷 Reply with a photo"
 msgstr "📷 用照片回覆"
@@ -473,10 +461,6 @@ msgstr "與家人再近一點。使用電子郵件註冊或登入。"
 #: src/components/today-hero.tsx
 msgid "A little light from home."
 msgstr "家裡傳來的一點光。"
-
-#: app/(tabs)/questions.tsx
-msgid "A little something to ask. Write your own, choose an idea, or plan a story for Sunday."
-msgstr "問一件小事。自己寫、選個靈感，或為星期日安排一個故事問題。"
 
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
@@ -525,6 +509,10 @@ msgstr "一張貼圖"
 #: src/data/ask.ts
 msgid "A story"
 msgstr "一個故事"
+
+#: src/components/story-day.tsx
+msgid "A story question for {name}'s {day} morning"
+msgstr "給{name}{day}早上的故事問題"
 
 #: app/conversation.tsx
 msgid "A voice hello for her morning"
@@ -578,6 +566,10 @@ msgstr "加入"
 #: src/components/parent-photo-settings.tsx
 msgid "Add a photo of {name}"
 msgstr "新增{name}的照片"
+
+#: src/components/voice-hello.tsx
+msgid "Add a voice hello (10 seconds)"
+msgstr "加一段語音問候（10 秒）"
 
 #: src/components/vote-options.tsx
 msgid "Add an option"
@@ -1641,6 +1633,10 @@ msgstr "{quietName}那邊今天很安靜"
 msgid "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 msgstr "{name}第一次回覆時，窗就會亮起。{name}答應之前，什麼都不會傳出。"
 
+#: app/(tabs)/questions.tsx
+msgid "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
+msgstr "會在明天早上（{tomorrow}）送到{parentName}那裡。想現在就說，請打開聊天。"
+
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
 msgstr "先是麵包店，後來變成書店。冬天我們在那裡排隊買麵包。"
@@ -1746,8 +1742,6 @@ msgstr "和長輩的其他回答一樣，會保存 30 天，之後刪除。"
 msgid "LINE isn’t open here yet, so this invitation opens Telegram."
 msgstr "這裡還沒開放 LINE，所以這份邀請會開啟 Telegram。"
 
-#: src/components/voice-hello.tsx
-#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Listen"
 msgstr "聽一聽"
@@ -1771,9 +1765,9 @@ msgstr "聽聽我的語音。"
 msgid "Listen to the family’s voice ask"
 msgstr "聽家人的語音提問"
 
-#: src/audio/VoicePlayback.tsx
-msgid "Listen to the original voice"
-msgstr "聽原始語音"
+#: src/components/voice-recorder.tsx
+msgid "Listen to your recording"
+msgstr "聽聽你的錄音"
 
 #: app/morning-settings.tsx
 msgid "Loading morning settings…"
@@ -1790,10 +1784,6 @@ msgstr "正在讀取附近的人⋯"
 #: app/precision.tsx
 msgid "Loading the quiet notices…"
 msgstr "正在載入安靜通知…"
-
-#: src/audio/VoicePlayback.tsx
-msgid "Loading voice…"
-msgstr "正在載入語音…"
 
 #: src/components/app-privacy.tsx
 msgid "Loading your account…"
@@ -2301,16 +2291,13 @@ msgid "Parent settings"
 msgstr "父母的設定"
 
 #: app/settings.tsx
+#: src/audio/voice-bar.tsx
 msgid "Pause"
 msgstr "暫停"
 
 #: app/settings.tsx
 msgid "Pause my turns"
 msgstr "暫停我的輪次"
-
-#: src/audio/VoicePlayback.tsx
-msgid "Pause voice"
-msgstr "暫停語音"
 
 #: app/settings.tsx
 msgid "Pause your turns in {familyName}?"
@@ -2408,6 +2395,14 @@ msgstr "地方與旅行"
 msgid "Planned for tomorrow"
 msgstr "已為明天安排"
 
+#: src/audio/VoicePlayback.tsx
+msgid "Play the voice"
+msgstr "播放語音"
+
+#: src/audio/voice-bar.tsx
+msgid "Playback speed {rate} times"
+msgstr "播放速度{rate}倍"
+
 #: app/settings.tsx
 msgid "Preview family setup"
 msgstr "預覽家人設定"
@@ -2480,20 +2475,22 @@ msgstr "食譜"
 msgid "Recipes"
 msgstr "食譜"
 
-#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Record again"
 msgstr "重新錄音"
 
 #: src/components/voice-hello.tsx
-msgid "Recording your hello… {time} of 0:10"
-msgstr "正在錄您的問候… {time}，最長 0:10"
+msgid "Record your voice note (10 seconds)"
+msgstr "錄一段語音（10 秒）"
 
-#: src/components/voice-hello.tsx
-msgid "Recording your voice note… {time} of 0:10"
-msgstr "正在錄語音… {time}，最長 0:10"
+#: src/components/voice-recorder.tsx
+msgid "Recording · {time}"
+msgstr "錄音中 · {time}"
 
-#: src/components/voice-reply.tsx
+#: src/components/voice-recorder.tsx
+msgid "Recording · {time} of {limit}"
+msgstr "錄音中 · {time}／{limit}"
+
 #: src/device/VoiceAnswer.tsx
 msgid "Recording… {time}"
 msgstr "錄音中… {time}"
@@ -2508,7 +2505,6 @@ msgstr "之後提醒我問問看"
 
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
-#: src/components/voice-hello.tsx
 #: src/components/vote-options.tsx
 msgid "Remove"
 msgstr "移除"
@@ -2549,6 +2545,10 @@ msgstr "回覆"
 #: app/(tabs)/index.tsx
 msgid "Reply to {recipient}"
 msgstr "回覆{recipient}"
+
+#: src/components/voice-reply.tsx
+msgid "Reply with your voice"
+msgstr "用語音回覆"
 
 #: app/sign-in.tsx
 msgid "Resend code"
@@ -2692,6 +2692,7 @@ msgstr "已看過"
 
 #: app/exchange/[id].tsx
 #: app/parent.tsx
+#: src/components/voice-recorder.tsx
 msgid "Send"
 msgstr "傳送"
 
@@ -2732,6 +2733,7 @@ msgid "Send my answer"
 msgstr "送出我的回答"
 
 #: app/conversation.tsx
+#: src/components/voice-recorder.tsx
 msgid "Send now"
 msgstr "現在送出"
 
@@ -2751,10 +2753,6 @@ msgstr "傳送邀請"
 msgid "Send to {name}"
 msgstr "傳給{name}"
 
-#: src/components/voice-reply.tsx
-msgid "Send voice reply"
-msgstr "送出語音回覆"
-
 #: app/ask.tsx
 #: app/exchange/[id].tsx
 #: app/parent.tsx
@@ -2763,7 +2761,7 @@ msgstr "送出語音回覆"
 #: src/components/photo-reply.tsx
 #: src/components/story-day.tsx
 #: src/components/today-heart.tsx
-#: src/components/voice-reply.tsx
+#: src/components/voice-recorder.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
 msgstr "傳送中…"
@@ -3014,11 +3012,17 @@ msgid "Stay"
 msgstr "留下"
 
 #: app/parent.tsx
-#: src/components/voice-hello.tsx
-#: src/components/voice-reply.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Stop"
 msgstr "停止"
+
+#: src/components/voice-recorder.tsx
+msgid "Stop and listen first"
+msgstr "先停下來聽一次"
+
+#: src/components/voice-recorder.tsx
+msgid "Stop recording"
+msgstr "停止錄音"
 
 #: app/(tabs)/exchanges.tsx
 #: src/components/family-book.tsx
@@ -3226,8 +3230,7 @@ msgstr "這張照片沒有傳上去，請再試一次。"
 msgid "That photo is no longer here. Choose it again."
 msgstr "這張照片已經不在了，請重新選擇。"
 
-#: src/components/voice-hello.tsx
-#: src/components/voice-reply.tsx
+#: src/components/voice-recorder.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "That recording did not save. Try again."
 msgstr "這段錄音沒有存好，請再錄一次。"
@@ -3559,6 +3562,10 @@ msgstr "這週"
 msgid "Those are the ones from the seeds you saved"
 msgstr "那些就是您留下來的種子種出來的"
 
+#: src/components/voice-recorder.tsx
+msgid "Throw this recording away"
+msgstr "刪掉這段錄音"
+
 #: app/morning-settings.tsx
 msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 msgstr "時間以 {zone} 為準。今天的早安訊息維持在 {timeAgain}，新時間從明天開始。"
@@ -3636,8 +3643,12 @@ msgid "Tomorrow is your turn to ask {recipient}"
 msgstr "明天輪到你問{recipient}"
 
 #: app/ask.tsx
-msgid "Tomorrow morning"
-msgstr "明天早上"
+msgid "Tomorrow morning, {tomorrow}"
+msgstr "明天早上，{tomorrow}"
+
+#: app/ask.tsx
+msgid "Tomorrow, {tomorrow}"
+msgstr "明天，{tomorrow}"
 
 #: app/sign-in.tsx
 msgid "Too many attempts. Wait a moment, then try again."
@@ -3930,14 +3941,6 @@ msgstr "查看今天還沒回覆的提醒"
 msgid "Voice"
 msgstr "語音"
 
-#: src/components/voice-hello.tsx
-msgid "Voice hello, {time}. It plays before your ask."
-msgstr "語音問候，共 {time}。會在您的提問之前播放。"
-
-#: src/components/voice-hello.tsx
-msgid "Voice note, {time}. She hears it in her morning."
-msgstr "語音，{time}。早上會播給對方聽。"
-
 #: src/data/onboarding.ts
 msgid "Voice notes"
 msgstr "語音訊息"
@@ -4160,6 +4163,10 @@ msgstr "工作與建議"
 msgid "Write a question for {parentName}"
 msgstr "為{parentName}寫個問題"
 
+#: app/(tabs)/questions.tsx
+msgid "Write a question for tomorrow morning, use Vela's idea, or plan a story for Sunday."
+msgstr "寫一個明天早上的問題、用 Vela 的點子，或安排星期日的故事。"
+
 #: src/components/chat/chat-link.tsx
 msgid "Write something for when {name} says yes."
 msgstr "寫點什麼，等{name}答應後送出。"
@@ -4169,8 +4176,8 @@ msgid "Write to {name}"
 msgstr "寫給{name}"
 
 #: src/components/story-day.tsx
-msgid "Write your own question"
-msgstr "自己寫一個問題"
+msgid "Write your own story question for {day}"
+msgstr "自己寫一個{day}的故事問題"
 
 #: src/components/chat/chat-bubble.tsx
 msgid "written by Vela"
@@ -4421,10 +4428,6 @@ msgstr "試辦免費。安靜通知和重要訊息會送到發起人的 Telegram
 msgid "Your question"
 msgstr "你的問題"
 
-#: src/components/story-day.tsx
-msgid "Your question for {name}"
-msgstr "想問{name}的問題"
-
 #: src/components/onboarding/questions.tsx
 msgid "Your questions are signed with it."
 msgstr "您的問題會用這個名字署名。"
@@ -4436,10 +4439,6 @@ msgstr "登入已到期。請重新登入以完成連結。"
 #: app/delete-account.tsx
 msgid "Your sign-in has expired. Sign in again, then delete your account."
 msgstr "您的登入已過期。請重新登入，再刪除帳號。"
-
-#: src/components/voice-reply.tsx
-msgid "Your voice reply, {time} long."
-msgstr "您的語音回覆，共 {time}。"
 
 #: app/conversation.tsx
 msgid "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."

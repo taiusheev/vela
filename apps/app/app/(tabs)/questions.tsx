@@ -7,7 +7,9 @@ import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryDay } from "../../src/components/story-day.tsx";
 import { Card, Eyebrow, PrimaryButton, SecondaryButton, Words } from "../../src/components/ui.tsx";
+import { dayName } from "../../src/data/format.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
+import { tomorrowIn } from "../../src/data/story.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
@@ -24,6 +26,7 @@ export default function QuestionsScreen() {
   const turn = day.today.tomorrow.find((item) => item.recipientId === parent?.memberId);
   const parentName = parent?.displayName ?? "";
   const fromName = turn?.asked?.by ?? "";
+  const tomorrow = dayName(tomorrowIn(new Date(), parent?.timeZone));
   useFocusEffect(
     useCallback(() => {
       day.refresh();
@@ -44,7 +47,7 @@ export default function QuestionsScreen() {
       <ScreenHeading title={<Trans>Questions</Trans>} />
       <Words variant="body" tone="ink2">
         <Trans>
-          A little something to ask. Write your own, choose an idea, or plan a story for Sunday.
+          Write a question for tomorrow morning, use Vela's idea, or plan a story for Sunday.
         </Trans>
       </Words>
       <ParentChooser lights={day.today.lights} selected={parent?.memberId} onSelect={select} />
@@ -77,6 +80,9 @@ export default function QuestionsScreen() {
               router.push({ pathname: "/ask", params: { recipient: parent.memberId } })
             }
           />
+          <Words variant="caption" tone="ink2">
+            {t`It reaches ${parentName} tomorrow morning, ${tomorrow}. To write now, open the chat.`}
+          </Words>
           {turn?.asked ? (
             <Card>
               <Eyebrow>
