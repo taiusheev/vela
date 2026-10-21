@@ -84,6 +84,32 @@ privacy-notice.v6, scripts, generated notices, runtime switches and shared app l
 Revised full notice/script approval, native Chinese review, fresh one-use acceptance presentations,
 withdrawal invalidation, app/Telegram controls, readable delivery and screening remain prerequisites.
 
+### Author withdrawal follow-up (22 October, not activated)
+
+Added an internal author-derived withdrawal operation. It withdraws only that member's existing
+rich_memories and memory_keep yes proofs, deletes pending candidates and sealed kept copies in the
+same transaction, and preserves original messages and unrelated consent purposes. No new yes/no
+proof is invented. Processing configuration and payment do not gate withdrawal. An organiser can
+withdraw only the organiser's own memories, not another adult's. Every retry rechecks membership;
+an old successful receipt never withdraws a later, separately recorded consent.
+
+The family/member/user lock order is shared with keep/remove; withdrawal takes an exclusive member
+lock. A compatible proposal may finish while that lock is waiting, but its candidate must be gone
+when withdrawal commits. Further proposals are refused. PostgreSQL tests assert that observable
+promise, not lock-queue ordering. Old keep retries cannot restore words after withdrawal.
+
+No acceptance route, app/messenger action or revised notice is activated here. Before adding
+acceptance, bind it to a fresh, versioned presentation and invalidate outstanding acceptance
+challenges on withdrawal: a late tap from an old screen must not silently restart processing.
+Future clients must refresh current state after a replay rather than treating a receipt as status.
+Final local pnpm check passed all 9 tasks, including 1,632 service tests (6 additional withdrawal
+cases); 8 unchanged tasks reused valid caches. All 16 real PostgreSQL memory races passed,
+including 2 new withdrawal races. A negative control that skipped proof withdrawal failed on
+re-extraction after the apparent stop; restoring it made all 16 pass again. Temporary databases
+were removed. Initial race-test ordering was corrected to allow a valid pre-withdrawal proposal
+while still requiring no surviving selections after commit. GitHub checks, actual app/messenger
+actions, capacity and real consent are not proven by these local results.
+
 ### Personal-copy follow-up (22 October, not activated)
 
 Added a bounded internal read for the authenticated author's own kept quotes. It reuses the
