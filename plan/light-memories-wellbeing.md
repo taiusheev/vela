@@ -108,3 +108,26 @@ Local PostgreSQL correctness does not prove hosted throughput or thousands of ac
 Foundation PR131 merged as 1b133c3; staging deployment 39624916768 succeeded. That deployment
 contains the domain-policy foundation only. The persistence migrations and services are a separate
 follow-up; none of their runtime integration or production activation is claimed by that receipt.
+
+### Review UI follow-up (22 October)
+
+Persistence PR132 merged as abbadc6; staging deployment 39628557966 succeeded, including migrations,
+both Workers and public smoke. Candidate discovery remains unwired/off. No production activation.
+
+Implemented in the next proposed change: reusable memory review view and a session-scoped
+controller, plus a development-only synthetic preview. Exact quotes, original conversations,
+explicit keep confirmation, separate removal, author-only decisions, failed-write retry with
+stable keys, duplicate-tap prevention, changed-source rejection and account-change cleanup are
+covered. The preview does not store data or call an API. Permanent keeping remains unimplemented.
+English and Traditional Chinese use a separate feature catalog without changing shared catalogs;
+Chinese wording still requires native-language review before activation.
+
+Local pnpm check passed all 9 tasks; app tests passed 376 with 1 existing skip. Fourteen controller
+cases and one catalog completeness/compiler case are included. Browser review covered source,
+confirmation/cancel, failure/retry, collection/removal, family read-only access, changed sources,
+keyboard Enter and Chinese layout. Reviewed 320/390/768px widths; 320px confirmation had no
+horizontal overflow and a 64px primary action. Screenshots use synthetic words only.
+
+This is browser evidence, not signed-device, VoiceOver, Dynamic Type, Telegram, persistent consent,
+or capacity proof. Next: durable quote/keep-grant transactions with deletion/withdrawal races,
+then authenticated app and messenger adapters. The weekly wellbeing slice is still pending.
