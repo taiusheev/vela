@@ -1,0 +1,148 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-22 03:37+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#: src/data/memory-sharing-demo.ts
+msgid "Back to people"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Check again"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Choose people"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "I still laugh about the picnic with the dancing umbrella."
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Keeping a memory does not share it. You choose who can read these words."
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Memory sharing preview"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "No memory has been shared with Alex."
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "One moment…"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Only the selected quote appears. This does not open the original conversation."
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Opening sharing details…"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Opening the example…"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Please review the people again before sharing. There is no rush to decide."
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Preview controls"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Private · only you"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Refresh sharing details"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Remove the example source"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Review sharing"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Share these words?"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Share this memory"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Share with these people"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Shared with"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Shared with Alex"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Simulate a failed action"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Stop sharing"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "Stopping sharing removes access in Vela. Words someone already read or copied cannot be recalled."
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "Synthetic preview · no real sharing · English draft"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "The next action will fail once so you can try recovery."
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "The source is unavailable; the quote is no longer shown."
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "There is no one available to share with yet. This memory stays private."
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "These are the latest sharing details."
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "This memory or sharing choice is no longer available. Check the latest details before trying again."
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "View as Alex"
+msgstr ""
+
+#: app/memory-sharing-preview.tsx
+msgid "View as the author"
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "We couldn’t confirm the change. Try again, or go back and check the latest sharing details."
+msgstr ""
+
+#: src/data/memory-sharing-demo.ts
+msgid "We couldn’t load the sharing details. Your choices have not been confirmed here. Please try again."
+msgstr ""

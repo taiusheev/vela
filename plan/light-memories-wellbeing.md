@@ -355,3 +355,44 @@ membership-generation, keep/source/consent and session checks before connection.
 routes, live consent acceptance, shared UI, real-family activation or production tags in this slice.
 Live notice/scripts/generated notice and Worker configuration remain unchanged; no health/model
 processing or weekly report engine is added. Actual notice/translation/legal review remains required.
+
+### Recipient reading and sharing screen (22 October, internal/synthetic only)
+
+Permission PR142 merged as f2439fb after all newest-head source, PostgreSQL and app checks passed.
+Its automatic staging deployment is tracked separately. The earlier PR140 queue-configuration
+failure (Cloudflare internal error10500) was superseded by successful descendant deployment
+39659759659 at main88fa0c2; both Workers and public protection smoke passed. No old deployment
+was rerun over newer code and no provider credentials were changed.
+
+The separate internal shared-keeps reader now matches a current recipient account/membership
+generation and current keep-sharing revision before pagination. It also checks grant version/time
+and reuses all source/consent/health/retention checks. Only selected words are returned: no source
+answer ID or conversation-access hint. Default/private reads and personal copies remain author-only.
+Read access is not paid-gated. Later joiners/organisers cannot inherit historical permissions.
+
+A reusable sharing screen and session-scoped controller now support explicit named selection,
+exact-quote review, cancel, stable-key retry, expiry, refresh and stop-sharing. The controller
+rejects incomplete audiences and inconsistent server previews, clears words on reload/disposal,
+ignores late requests and reloads after writes instead of claiming optimistic success. The only
+adapter is an in-memory synthetic example under a guarded development route. There is no live
+author-state loader, authenticated transport, HTTP route or app/messenger connection in this slice.
+
+Removing recipient query predicates made the historical-access test fail on leaked synthetic
+words; restoring them passed all 71 focused service cases. 20 controller tests cover state/error/
+session behavior. Browser review verified review/cancel, keyboard Enter/Space, failed confirm/retry,
+quote-only recipient view and access removal after stop. 320/390/768px confirmation layouts had
+no horizontal overflow and 64px actions. Existing Kept Light tokens were retained. Copy is an
+English draft; shared locale files are untouched. Native accessibility/language/device/provider,
+revised notice acceptance, live consent and activation remain gated. See apps/app/docs/memory-sharing.md.
+
+The normal root translation guard rejected the first unwrapped English draft. All new preview
+text now uses real Lingui macros and an isolated catalog; shared catalogs stay byte-identical.
+Only English is loaded; generated Chinese/Japanese entries are untranslated, not reviewed copy.
+24 focused app cases passed (20 controller, 3 existing scanner, 1 new catalog). A production-mode
+web export rendered the new preview blank without console errors; the same export's home rendered
+normally as the positive control. Full independent PostgreSQL suite passed 148/148 across 47 files,
+including positive recipient reads and no access after a queued stop; disposable database removed.
+
+Final local pnpm check passed all 9 tasks: 1,697 service tests and 400 app tests with 1 existing
+skip actually ran; 7 unchanged tasks reused valid caches. No live notice/generated notice,
+shared locale or Worker enablement changes. Browser preview servers were stopped after review.
