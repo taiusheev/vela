@@ -306,6 +306,9 @@ describe("a quiet notice on phones", () => {
         interruptionLevel: "time-sensitive",
         sound: "default",
         ttl: 4 * 60 * 60,
+        threadId: `${seed.family.id}:${seed.member.id}`,
+        collapseId: `quiet:${quiet.id}`,
+        tag: `quiet:${quiet.id}`,
       });
     }
 
@@ -631,6 +634,9 @@ describe("a quiet event closing on phones", () => {
         interruptionLevel: "active",
         sound: "default",
         ttl: 12 * 60 * 60,
+        threadId: `${seed.family.id}:${seed.member.id}`,
+        collapseId: `quiet:${quiet.id}`,
+        tag: `quiet:${quiet.id}`,
       },
     ]);
     // Mia asked the question, but the close has just told her: no "Mom answered you." as well.
@@ -757,6 +763,7 @@ describe("the answer receipt", () => {
         priority: "normal",
         interruptionLevel: "active",
         ttl: 12 * 60 * 60,
+        threadId: `${seed.family.id}:${seed.member.id}`,
       },
     ]);
   });
@@ -903,8 +910,9 @@ describe("the evening turn without a group", () => {
         },
         channelId: "daily",
         priority: "normal",
-        interruptionLevel: "active",
+        interruptionLevel: "passive",
         ttl: 12 * 60 * 60,
+        threadId: `${seed.family.id}:${seed.member.id}`,
       },
     ]);
     const [turn] = await h.db.select().from(turns);

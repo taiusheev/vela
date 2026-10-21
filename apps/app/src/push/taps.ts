@@ -9,7 +9,7 @@ import { PushData, type PushKind } from "@vela/contracts";
 export type TapTarget =
   /** Today, and for a quiet notice the sheet for that event, which says calmly if it is settled. */
   | { screen: "today"; quietEventId?: string }
-  | { screen: "exchange"; exchangeId: string }
+  | { screen: "chat"; recipientId: string }
   | { screen: "ask"; recipientId: string; suggestionId?: string };
 
 const DATA_KEYS = [
@@ -51,9 +51,8 @@ export function tapTargetOf(data: PushData, shownFamilyId: string | undefined): 
     case "quiet_resolved":
       return { screen: "today" };
     case "answer_receipt":
-      return shown && data.exchange_id !== undefined
-        ? { screen: "exchange", exchangeId: data.exchange_id }
-        : { screen: "today" };
+      // Her answer is read where the family talks with her: the chat, at its newest message.
+      return shown ? { screen: "chat", recipientId: data.member_id } : { screen: "today" };
     case "turn_prompt":
       if (!shown) return { screen: "today" };
       return data.suggestion_id === undefined
@@ -65,7 +64,7 @@ export function tapTargetOf(data: PushData, shownFamilyId: string | undefined): 
 /** The route a target opens, as expo-router takes it. */
 export type TapHref =
   | { pathname: "/"; params: { quiet?: string } }
-  | { pathname: "/exchange/[id]"; params: { id: string } }
+  | { pathname: "/conversation"; params: { recipient: string } }
   | { pathname: "/ask"; params: { recipient: string; suggestion?: string } };
 
 export function hrefOf(target: TapTarget): TapHref {
@@ -75,8 +74,8 @@ export function hrefOf(target: TapTarget): TapHref {
         pathname: "/",
         params: target.quietEventId === undefined ? {} : { quiet: target.quietEventId },
       };
-    case "exchange":
-      return { pathname: "/exchange/[id]", params: { id: target.exchangeId } };
+    case "chat":
+      return { pathname: "/conversation", params: { recipient: target.recipientId } };
     case "ask":
       return {
         pathname: "/ask",
@@ -97,6 +96,11 @@ export interface ForegroundBehaviour {
 }
 
 const QUIET_KINDS: ReadonlySet<PushKind> = new Set<PushKind>(["quiet_notice", "quiet_resolved"]);
+
+/** The quiet notice and its close, which are settled on Today rather than read in a chat. */
+export function isQuietKind(kind: PushKind): boolean {
+  return QUIET_KINDS.has(kind);
+}
 
 /**
  * A quiet notice and its close, and her own morning on her phone, show as a banner with their sound

@@ -57,11 +57,10 @@ describe("where a tap goes (A4)", () => {
     expect(hrefOf(target)).toEqual({ pathname: "/", params: {} });
   });
 
-  it("opens the exchange she answered", () => {
+  it("opens the chat with the parent who answered", () => {
     const target = tapTargetOf(data({ kind: "answer_receipt", exchange_id: EXCHANGE }), FAMILY);
-    expect(target).toEqual({ screen: "exchange", exchangeId: EXCHANGE });
-    expect(hrefOf(target)).toEqual({ pathname: "/exchange/[id]", params: { id: EXCHANGE } });
-    expect(tapTargetOf(data({ kind: "answer_receipt" }), FAMILY)).toEqual({ screen: "today" });
+    expect(target).toEqual({ screen: "chat", recipientId: HER });
+    expect(hrefOf(target)).toEqual({ pathname: "/conversation", params: { recipient: HER } });
   });
 
   it("opens Ask for her, with the turn's suggestion when it has one", () => {

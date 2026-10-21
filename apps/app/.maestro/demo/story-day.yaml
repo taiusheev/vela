@@ -20,10 +20,10 @@ tags:
     element: "What was your first day at work like? Tell me everything you remember."
     direction: DOWN
 - scrollUntilVisible:
-    element: "Write your own question"
+    element: "Write your own story question for Sunday"
     direction: DOWN
-- tapOn: "Write your own question"
-- assertVisible: "Your question for Mom"
+- tapOn: "Write your own story question for Sunday"
+- assertVisible: "A story question for Mom's Sunday morning"
 - inputText: "How did you learn to make soup?"
 - assertVisible: 'How did you learn to make soup\?'
 - tapOn: "Choose from the list"
