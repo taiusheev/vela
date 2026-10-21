@@ -5,7 +5,8 @@
 The approved Light direction is in product/06-light-memories-wellbeing.md. This change builds a
 reusable parent-facing decision view, a session-scoped controller and a synthetic development
 preview. It does not wire permanent keeping, source extraction, consent acceptance or an API.
-The candidate backend from PR132 is independent and remains disabled in runtime configuration.
+The candidate backend from PR132 and durable keep backend from PR135 are independent and remain
+unwired/off in runtime configuration. PR136 adds personal-copy pages, not complete export delivery.
 
 Operate mode: the parent reads a meaningful quote, checks its original conversation and decides
 whether to keep it beyond 30 days. Family members can read but cannot decide for the author.
@@ -31,7 +32,9 @@ adapter must parse server responses, paginate bounded collections, enforce curre
 author permissions, source revision, revocable consent and retention in the server transaction.
 Client checks are convenience and defence in depth, never authorization. A timeout may hide an
 already-committed write; retry must return the same result rather than create a second copy.
-The current backend only supports candidates/dismissal; it cannot satisfy permanent keeping yet.
+The internal backend now supports candidates/dismissal and durable keeping/read/removal. There
+is still no authenticated HTTP adapter for this view and no real purpose-consent acceptance.
+Author-wide withdrawal is proposed separately in PR137; it is not an app or messenger control.
 
 The version memory.keep@1 names proposed review text. No real acceptance flow records it, and the
 synthetic preview never creates consent proofs. Notice/counsel/founder review precedes activation.
@@ -65,6 +68,9 @@ selected language and resolve per-person names, dates and permissions from autho
 - Browser screenshots are review evidence, not native screenshots. Signed iPhone, VoiceOver,
   Dynamic Type, live Telegram, real consent, persistent storage and hosted capacity remain unproven.
 
-The next slice is the durable quote/keep-grant transaction and its expiry/deletion/race tests,
-then an owner-authenticated app/device/messenger adapter. Only after those are verified should
-this view be linked from live Memories. The weekly wellbeing report remains a separate slice.
+The durable quote/keep-grant transaction and expiry/deletion races are implemented in PR135;
+personal-copy reads are implemented in PR136. Next: approved notice and purpose-consent wording,
+fresh acceptance presentations invalidated by withdrawal, and owner-authenticated app/messenger
+adapters. A review draft is in plan/materials/pilot/memory-consent-review.en.md, not the live notice.
+Verify actual keep/remove/withdrawal, free readable data copies and screening before linking this
+view from live Memories. The weekly wellbeing report remains a separate slice.

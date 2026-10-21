@@ -74,6 +74,16 @@ phased activation. No silent backfill of historical conversations under new cons
 
 ## Evidence ledger
 
+### Consent wording review (22 October, awaiting founder approval)
+
+Review-only English wording is in plan/materials/pilot/memory-consent-review.en.md. It separates
+optional discovery, per-quote keeping and withdrawal, states current/future family visibility,
+longer quote retention, provider/AI disclosures, no historical backfill and free privacy/data-copy
+controls. Approval applies to product wording, not notice replacement or activation. The current
+privacy-notice.v6, scripts, generated notices, runtime switches and shared app locales are unchanged.
+Revised full notice/script approval, native Chinese review, fresh one-use acceptance presentations,
+withdrawal invalidation, app/Telegram controls, readable delivery and screening remain prerequisites.
+
 ### Personal-copy follow-up (22 October, not activated)
 
 Added a bounded internal read for the authenticated author's own kept quotes. It reuses the
