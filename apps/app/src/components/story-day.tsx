@@ -117,7 +117,7 @@ export function StoryDay({
             <Words variant="voice">{prompt.child[lang]}</Words>
           ) : (
             <TextField
-              placeholder={t`Your question for ${name}`}
+              placeholder={t`A story question for ${name}'s ${day} morning`}
               value={own ?? ""}
               onChangeText={setOwn}
               multiline
@@ -176,7 +176,7 @@ export function StoryDay({
                 />
                 <ActionRow
                   icon="ask"
-                  label={t`Write your own question`}
+                  label={t`Write your own story question for ${day}`}
                   onPress={() => setOwn("")}
                 />
               </ActionGroup>

@@ -31,6 +31,7 @@ import { acceptedAsk, useAskOutcome } from "../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../src/data/ask-target.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { askExtras, photoCount } from "../src/data/photos.ts";
+import { tomorrowIn } from "../src/data/story.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
 import { dayName, type TodayView, useToday } from "../src/data/useToday.ts";
 import { usePush } from "../src/push/provider.tsx";
@@ -200,6 +201,26 @@ function AskComposer({
   // The voice hello goes up when the ask is sent, under the recording's own key, so a retry of the
   // send uploads it again as the same recording and the ask names it (spec §4).
   const [hello, setHello] = useState<Recorded | null>(null);
+  // It starts going up as soon as the recording stops, so Send does not wait for it. The upload is
+  // keyed by the recording, so taking it again at Send, after a failure, is the same voice.
+  const helloUpload = useRef<{ key: string; id: Promise<string> } | null>(null);
+  const uploadHello = useCallback(
+    (recorded: Recorded): Promise<string> => {
+      const started = helloUpload.current;
+      if (started?.key === recorded.key) return started.id;
+      const id = account.token().then((token) => uploadVoice(familyId ?? "", recorded, token));
+      helloUpload.current = { key: recorded.key, id };
+      // A failure here is met again at Send, which uploads once more.
+      id.catch(() => {
+        if (helloUpload.current?.id === id) helloUpload.current = null;
+      });
+      return id;
+    },
+    [account, familyId],
+  );
+  useEffect(() => {
+    if (hello !== null && !demo && familyId !== undefined) void uploadHello(hello).catch(() => {});
+  }, [hello, demo, familyId, uploadHello]);
   // A recording names its morning, as a photo does: Whenever goes when one is made.
   useEffect(() => {
     if (hello !== null && when === "whenever") setWhen("tomorrow");
@@ -208,9 +229,7 @@ function AskComposer({
     mutationFn: async ({ ask, saved = false }: { ask: ComposeAsk; saved?: boolean }) => {
       const token = await account.token();
       const withHello =
-        hello === null || saved
-          ? ask
-          : { ...ask, voice_hello_id: await uploadVoice(familyId ?? "", hello, token) };
+        hello === null || saved ? ask : { ...ask, voice_hello_id: await uploadHello(hello) };
       return composeAsk(familyId ?? "", await draft.keyFor(withHello), withHello, token);
     },
     onSuccess: async (accepted) => {
@@ -282,6 +301,8 @@ function AskComposer({
   const holder = taken?.taken_by;
   // Named, never "the day after": the next free morning can be several days out.
   const day = taken?.date_alternative == null ? null : dayName(taken.date_alternative);
+  // "Tomorrow" with its weekday, in her zone, so nobody wonders which morning it is.
+  const tomorrow = dayName(tomorrowIn(new Date(), recipient?.timeZone));
 
   if (offering) {
     return (
@@ -335,7 +356,7 @@ function AskComposer({
       }}
     >
       <Words variant="caption" tone="ink2">
-        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning` : when === "another_day" ? t`${day} morning` : t`Whenever`}`}
+        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning, ${tomorrow}` : when === "another_day" ? t`${day} morning` : t`Whenever`}`}
       </Words>
       <PrimaryButton
         label={compose.isPending ? t`Sending…` : t`Send to ${name}`}
@@ -495,7 +516,7 @@ function AskComposer({
             )}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
               <Chip
-                label={t`Tomorrow morning`}
+                label={t`Tomorrow, ${tomorrow}`}
                 selected={when === "tomorrow"}
                 disabled={taken !== null || invited}
                 onPress={() => setWhen("tomorrow")}
