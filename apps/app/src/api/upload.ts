@@ -209,6 +209,15 @@ export function recordingKey(): string {
 }
 
 /**
+ * A recording's bytes, read from the file the phone wrote. Sent as bytes, never as the Blob the file
+ * reads as: Expo's fetch labels a Blob body with the Blob's own type, which iOS gives an .m4a as
+ * `audio/x-m4a`, in place of the `audio/mp4` both voice routes take, and they refuse anything else.
+ */
+async function recordingBytes(uri: string, signal: AbortSignal): Promise<ArrayBuffer> {
+  return (await fetch(uri, { signal })).arrayBuffer();
+}
+
+/**
  * Her recording, read from the file the phone wrote, kept by the pilot Worker (`POST /device/voice`,
  * ADR-35): it answers the recording's media id, the same one for a retry under the same key. A
  * refusal is an `ApiError` with the Worker's reason.
@@ -224,7 +233,7 @@ export async function uploadDeviceVoice(
   }
 
   return sessionRequests.run(async (signal) => {
-    const recording = await (await fetch(uri, { signal })).blob();
+    const recording = await recordingBytes(uri, signal);
     assertRequestActive(signal);
     const response = await fetch(`${apiBaseUrl}/device/voice`, {
       method: "POST",
@@ -260,7 +269,7 @@ export async function uploadVoice(
   }
 
   return sessionRequests.authenticated(token, async (signal) => {
-    const body = await (await fetch(recording.uri, { signal })).blob();
+    const body = await recordingBytes(recording.uri, signal);
     assertRequestActive(signal);
     const response = await fetch(`${apiBaseUrl}/v1/families/${familyId}/voice`, {
       method: "POST",
