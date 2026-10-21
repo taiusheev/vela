@@ -67,3 +67,30 @@ export const KeptMemoryPage = z.strictObject({
   next_cursor: z.uuid().nullable(),
 });
 export type KeptMemoryPage = z.infer<typeof KeptMemoryPage>;
+
+/** Proposed named-sharing confirmation, not an activated consent route or access grant. */
+export const MEMORY_SHARE_VERSION = "memory.share@1";
+export const MEMORY_SHARE_EXPLANATION_EN =
+  "Share only these words with the people named below. People who join later will not see this memory. You can stop sharing later, but someone may already have read or copied it.";
+export const MemoryShareRecipient = z.strictObject({
+  member_id: z.uuid(),
+  display_name: z.string().trim().min(1).max(120),
+});
+export const MemorySharePreview = z.strictObject({
+  presentation_id: z.uuid(),
+  memory_id: z.uuid(),
+  quote: z.string().min(1).max(2000),
+  lang: z.string().min(1).max(35),
+  recipients: z.array(MemoryShareRecipient).min(1).max(50),
+  confirmation_version: z.literal(MEMORY_SHARE_VERSION),
+  explanation: z.literal(MEMORY_SHARE_EXPLANATION_EN),
+  presentation_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  expires_at: z.iso.datetime(),
+});
+export type MemorySharePreview = z.infer<typeof MemorySharePreview>;
+export const MemoryShareChoice = z.strictObject({
+  presentation_id: z.uuid(),
+  presentation_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  confirmation_version: z.literal(MEMORY_SHARE_VERSION),
+});
+export type MemoryShareChoice = z.infer<typeof MemoryShareChoice>;
