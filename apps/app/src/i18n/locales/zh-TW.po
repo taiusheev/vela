@@ -858,10 +858,6 @@ msgstr "取消連結"
 msgid "Central"
 msgstr "中部時間"
 
-#: app/settings.tsx
-msgid "Change"
-msgstr "更改"
-
 #: app/conversation.tsx
 #: app/settings.tsx
 msgid "Change {name}'s morning"
@@ -1408,10 +1404,6 @@ msgstr "愛心已送出"
 msgid "Help"
 msgstr "說明"
 
-#: app/settings.tsx
-msgid "Help and settings"
-msgstr "協助與設定"
-
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -1459,7 +1451,6 @@ msgstr "{name}，我是{you}。我幫我們設定了 Vela：每天早上我會�
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 msgstr "{who}你好！如果我聯絡不上{name}，可以請你過去看看嗎？你可以在這裡答應："
 
-#: app/settings.tsx
 #: src/components/app-privacy.tsx
 msgid "Hide privacy details"
 msgstr "收起隱私詳情"
@@ -2412,6 +2403,9 @@ msgid "Preview settings"
 msgstr "預覽設定"
 
 #: app/settings.tsx
+msgid "Privacy and help"
+msgstr "隱私與協助"
+
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
 msgstr "隱私詳情與條款"
@@ -2665,6 +2659,7 @@ msgstr "寫一句簡短的話"
 msgid "Search her words"
 msgstr "搜尋說過的話"
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Security"
 msgstr "安全性"
@@ -2782,6 +2777,7 @@ msgstr "傳了一張貼圖"
 msgid "sent a voice message"
 msgstr "傳了一則語音訊息"
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Service terms"
 msgstr "服務條款"
@@ -3804,6 +3800,10 @@ msgstr "通常在 {time} 前回覆"
 msgid "Vela · her morning · {time}"
 msgstr "Vela · 早安訊息 · {time}"
 
+#: app/settings.tsx
+msgid "Vela {version}"
+msgstr "Vela 版本{version}"
+
 #: src/components/onboarding/questions.tsx
 msgid "Vela asks in its own name"
 msgstr "Vela 以自己的名義提問"
@@ -4234,10 +4234,6 @@ msgstr "您目前暫停中：不會輪到您提問，安靜的日子也不會通
 msgid "You are paused: no turns come to you."
 msgstr "您目前暫停中：不會輪到您提問。"
 
-#: app/settings.tsx
-msgid "You are signed in to Vela."
-msgstr "您已登入 Vela。"
-
 #: src/data/useFamily.ts
 msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
 msgstr "目前只有您一位發起人在使用中，而暫停的發起人在安靜的日子不會收到通知。必須先有這個家庭的另一位發起人在使用中。"
@@ -4327,6 +4323,7 @@ msgstr "驗證碼已寄至 {sentTo}。如果沒有收到，請查看垃圾郵件
 msgid "Your country"
 msgstr "您的國家"
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Your data and deletion"
 msgstr "資料權利與刪除"
@@ -4357,10 +4354,6 @@ msgstr "目前無法讀取家人資料。已儲存的問題沒有變更。"
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
 msgstr "更新 Vela 後，你的家庭仍會保留。"
-
-#: app/settings.tsx
-msgid "Your family, your preferences, your account."
-msgstr "您的家人、偏好設定與帳號。"
 
 #: app/(tabs)/index.tsx
 msgid "Your family's first parent connection is still being set up."
@@ -4439,6 +4432,10 @@ msgstr "登入已到期。請重新登入以完成連結。"
 #: app/delete-account.tsx
 msgid "Your sign-in has expired. Sign in again, then delete your account."
 msgstr "您的登入已過期。請重新登入，再刪除帳號。"
+
+#: app/settings.tsx
+msgid "Your turns"
+msgstr "我的輪次"
 
 #: app/conversation.tsx
 msgid "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."
