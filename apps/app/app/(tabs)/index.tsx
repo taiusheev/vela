@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -36,6 +36,7 @@ import { useAskOutcome } from "../../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
 import { localDayMonth } from "../../src/data/format.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
+import { portraitInitials } from "../../src/data/portrait-lamp.ts";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
 import {
@@ -71,9 +72,12 @@ function useAskedLine(): (exchange: TodayExchange) => string {
 function ExchangeCard({
   exchange,
   answerInPortrait = false,
+  askInPortrait = false,
 }: {
   exchange: TodayExchange;
   answerInPortrait?: boolean;
+  /** The portrait above already says who asked and what, while her answer is awaited. */
+  askInPortrait?: boolean;
 }) {
   const { fontScale } = useWindowDimensions();
   const { t } = useLingui();
@@ -101,22 +105,35 @@ function ExchangeCard({
             ready={exchange.answer.audio.state === "ready"}
           />
         )}
-        <FamilyReplies exchange={exchange} familyId={familyId} />
-        {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
-        {exchange.deliveryPending === true ? null : (
-          <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} />
-        )}
+        <Thread>
+          <FamilyReplies exchange={exchange} familyId={familyId} />
+          {exchange.replies.length === 0 ? null : <Hairline />}
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: space.m,
+            }}
+          >
+            {exchange.deliveryPending === true ? null : (
+              <TodayHeart key={exchange.id} id={exchange.id} recipient={recipient} />
+            )}
+            {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
+          </View>
+        </Thread>
       </View>
     );
   }
   return (
     <View style={{ gap: space.m, paddingBottom: space.xl }}>
-      <Eyebrow>{askedLine(exchange)}</Eyebrow>
+      {askInPortrait ? null : <Eyebrow>{askedLine(exchange)}</Eyebrow>}
       {exchange.deliveryNotice === undefined ? null : (
         <Words variant="bodyMedium">{exchange.deliveryNotice}</Words>
       )}
       <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={72} />
-      {exchange.ask === undefined ? null : (
+      {exchange.ask === undefined || askInPortrait ? null : (
         <Words variant="body" tone="ink2">
           {exchange.ask}
         </Words>
@@ -215,10 +232,9 @@ function ExchangeCard({
         </View>
       )}
       {exchange.replies.length > 0 ? (
-        <>
-          <Hairline />
+        <Thread>
           <FamilyReplies exchange={exchange} familyId={familyId} />
-        </>
+        </Thread>
       ) : null}
       {exchange.receipt === undefined ? null : <ReceiptChip label={exchange.receipt} />}
     </View>
@@ -234,13 +250,39 @@ function FamilyReplies({
   familyId: string | undefined;
 }) {
   const { t } = useLingui();
+  const palette = usePalette();
   if (exchange.replies.length === 0) return null;
   return (
     <>
       {exchange.replies.map((reply) => (
-        <Words key={`${reply.from}:${reply.text}`} variant="body" tone="ink2">
-          {reply.text}
-        </Words>
+        <View
+          key={`${reply.from}:${reply.text}`}
+          style={{ flexDirection: "row", alignItems: "flex-start", gap: space.m }}
+        >
+          {/* Whose words these are at a glance, as in the family's own chat. */}
+          <View
+            accessible={false}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: palette.surface2,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text
+              style={[type.bodyMedium, { fontFamily: type.title.fontFamily, color: palette.ink }]}
+            >
+              {portraitInitials(reply.from).slice(0, 1)}
+            </Text>
+          </View>
+          <View style={{ flex: 1, paddingTop: 2 }}>
+            <Words variant="body" tone="ink2">
+              {reply.text}
+            </Words>
+          </View>
+        </View>
       ))}
       <ReplyThumbnails photos={exchange.replies.flatMap((reply) => reply.photo ?? [])} />
       {familyId === undefined
@@ -263,6 +305,25 @@ function FamilyReplies({
                 ];
           })}
     </>
+  );
+}
+
+/** The family's side of her answer: one panel, so the replies and what to do next read together. */
+function Thread({ children }: { children: ReactNode }) {
+  const palette = usePalette();
+  return (
+    <View
+      style={{
+        backgroundColor: palette.surface,
+        borderColor: palette.rule,
+        borderWidth: 1,
+        borderRadius: 16,
+        padding: space.m,
+        gap: space.m,
+      }}
+    >
+      {children}
+    </View>
   );
 }
 
@@ -467,6 +528,17 @@ function FamilyToday({ day }: { day: TodayView }) {
   const focusedExchange = today.exchanges.find(
     (exchange) => exchange.recipientId === focused?.memberId && exchange.answer !== undefined,
   );
+  // While her answer is awaited, the portrait shows what went out to her that morning.
+  const waitingExchange =
+    focusedExchange === undefined
+      ? today.exchanges.find(
+          (exchange) =>
+            exchange.recipientId === focused?.memberId &&
+            exchange.answer === undefined &&
+            exchange.ask !== undefined,
+        )
+      : undefined;
+  const portraitExchange = focusedExchange ?? waitingExchange;
   const target = focused ?? askRecipient(today.lights);
   const recipient = target?.displayName ?? t({ comment: "stands in for her name", message: "her" });
 
@@ -519,9 +591,9 @@ function FamilyToday({ day }: { day: TodayView }) {
           onQuiet={focused.state === "quiet" && mayOpen ? () => openQuiet(focused) : undefined}
           quote={focusedExchange?.answer?.text}
           asked={
-            focusedExchange === undefined
+            portraitExchange === undefined
               ? undefined
-              : { by: askedLine(focusedExchange), text: focusedExchange.ask }
+              : { by: askedLine(portraitExchange), text: portraitExchange.ask }
           }
           stale={trouble}
         />
@@ -600,6 +672,7 @@ function FamilyToday({ day }: { day: TodayView }) {
             key={exchange.id}
             exchange={exchange}
             answerInPortrait={exchange.id === focusedExchange?.id}
+            askInPortrait={exchange.id === waitingExchange?.id}
           />
         ))}
       {/* The chat is where the day's words carry on (consumer flow rows 38–52). Her morning

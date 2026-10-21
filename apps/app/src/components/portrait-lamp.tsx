@@ -89,7 +89,32 @@ function ParentChoice({
         opacity: pressed ? 0.8 : 1,
       })}
     >
-      <Portrait uri={photo.uri} name={light.displayName} width={35} height={44} />
+      <View>
+        <Portrait uri={photo.uri} name={light.displayName} width={35} height={44} />
+        {/* Her state at a glance, so the two portraits can be compared without reading. */}
+        <View
+          style={{
+            position: "absolute",
+            right: -5,
+            bottom: -3,
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            borderWidth: 2,
+            borderColor: selected ? p.actionSoft : p.surface,
+            backgroundColor: portraitLightOn(light) ? p.action : p.control,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <BrandIcon
+            name={portraitLightOn(light) ? "check" : "time"}
+            size={10}
+            color={p.onAction}
+            strokeWidth={2.5}
+          />
+        </View>
+      </View>
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
         <Words variant="bodyMedium">{light.displayName}</Words>
         <Words variant="caption" tone="ink2">
@@ -202,7 +227,7 @@ export function PortraitLamp({
             ) : null}
           </View>
         </View>
-        {quote === undefined ? null : (
+        {quote === undefined && asked === undefined ? null : (
           <View style={{ gap: space.m }}>
             {asked === undefined ? null : (
               <View style={{ gap: 2 }}>
@@ -212,7 +237,9 @@ export function PortraitLamp({
                 )}
               </View>
             )}
-            <Text style={[type.preview, { color: roomInk }]}>{quote}</Text>
+            {quote === undefined ? null : (
+              <Text style={[type.preview, { color: roomInk }]}>{quote}</Text>
+            )}
           </View>
         )}
         <Pressable
