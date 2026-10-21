@@ -1,0 +1,241 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-21 23:55+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: zh-TW\n"
+"X-Native-Review: pending; entries without the native-reviewed flag are drafts (build plan 2.4)\n"
+
+#: src/data/memory-review-demo.ts
+msgid "{name} decides whether to keep these words."
+msgstr "是否保留這段話，由{name}決定。"
+
+#: src/data/memory-review-demo.ts
+msgid "12 October"
+msgstr "10月12日"
+
+#: src/data/memory-review-demo.ts
+msgid "21 October"
+msgstr "10月21日"
+
+#: src/data/memory-review-demo.ts
+msgid "A moment to remember"
+msgstr "值得記住的時刻"
+
+#: src/data/memory-review-demo.ts
+msgid "A story to pass on"
+msgstr "值得傳下去的故事"
+
+#: src/data/memory-review-demo.ts
+msgid "Available until 20 November."
+msgstr "可查看至11月20日。"
+
+#: src/data/memory-review-demo.ts
+msgid "Back"
+msgstr "返回"
+
+#: src/data/memory-review-demo.ts
+msgid "Confirming…"
+msgstr "正在確認……"
+
+#: app/memory-review-preview.tsx
+msgid "Design preview · synthetic conversations · no real saving"
+msgstr "設計預覽・虛構對話・不會實際儲存"
+
+#: src/data/memory-review-demo.ts
+msgid "I put the flowers by the window. Yellow flowers always make the kitchen feel like summer. The cat has already tried to eat one."
+msgstr "我把花放在窗邊。黃色的花總讓廚房充滿夏天的感覺。貓咪已經想吃掉一朵了。"
+
+#: src/data/memory-review-demo.ts
+msgid "Keep these words"
+msgstr "保留這段話"
+
+#: src/data/memory-review-demo.ts
+msgid "Keep this with the family?"
+msgstr "把這段話留給家人嗎？"
+
+#: src/data/memory-review-demo.ts
+msgid "Kept memories"
+msgstr "已保留的回憶"
+
+#: src/data/memory-review-demo.ts
+msgid "Kept with the family. You can find it under Kept memories."
+msgstr "已保留給家人。你可以在「已保留的回憶」中找到。"
+
+#: src/data/memory-review-demo.ts
+msgid "Leave this one"
+msgstr "這段不保留"
+
+#: src/data/memory-review-demo.ts
+msgid "Left out of memories. The original conversation is unchanged."
+msgstr "這段話未加入回憶，原本的對話不會改變。"
+
+#: app/memory-review-preview.tsx
+msgid "Memory review preview"
+msgstr "回憶確認流程預覽"
+
+#: src/data/memory-review-demo.ts
+msgid "Mia asked: How did you meet Grandpa?"
+msgstr "Mia 問：你是怎麼認識爺爺的？"
+
+#: src/data/memory-review-demo.ts
+msgid "Mia asked: What made you smile this morning?"
+msgstr "Mia 問：今天早上，有什麼事讓你笑了？"
+
+#: src/data/memory-review-demo.ts
+msgid "Mom"
+msgstr "媽媽"
+
+#: app/memory-review-preview.tsx
+msgid "Mom’s memories"
+msgstr "媽媽的回憶"
+
+#: src/data/memory-review-demo.ts
+msgid "Nothing waiting to review. New suggestions will appear here."
+msgstr "目前沒有待確認的內容。新的建議會出現在這裡。"
+
+#: src/data/memory-review-demo.ts
+msgid "Only these words will stay in family memories after the conversation’s 30 days. Everyone in your Vela family can read them. You can remove this memory later."
+msgstr "對話的30天保存期限過後，只有這段話會留在家庭回憶中。Vela 家庭中的每位成員都可以閱讀。你之後隨時可以移除這則回憶。"
+
+#: app/memory-review-preview.tsx
+msgid "Opening the preview…"
+msgstr "正在開啟預覽……"
+
+#: src/data/memory-review-demo.ts
+msgid "Opening your memories…"
+msgstr "正在開啟你的回憶……"
+
+#: app/memory-review-preview.tsx
+msgid "Preview controls"
+msgstr "預覽設定"
+
+#: src/data/memory-review-demo.ts
+msgid "Read the conversation"
+msgstr "閱讀原本的對話"
+
+#: src/data/memory-review-demo.ts
+msgid "Remove from memories"
+msgstr "從回憶中移除"
+
+#: src/data/memory-review-demo.ts
+msgid "Remove this memory"
+msgstr "移除這則回憶"
+
+#: src/data/memory-review-demo.ts
+msgid "Remove this memory?"
+msgstr "要移除這則回憶嗎？"
+
+#: src/data/memory-review-demo.ts
+msgid "Removed from family memories."
+msgstr "已從家庭回憶中移除。"
+
+#: app/memory-review-preview.tsx
+msgid "Reset the examples"
+msgstr "重設範例"
+
+#: app/memory-review-preview.tsx
+msgid "Simulate a changed source"
+msgstr "模擬原始內容變更"
+
+#: app/memory-review-preview.tsx
+msgid "Simulate a failed change"
+msgstr "模擬操作失敗"
+
+#: src/data/memory-review-demo.ts
+msgid "Someone who matters"
+msgstr "重要的人"
+
+#: app/memory-review-preview.tsx
+msgid "Something Mom loves"
+msgstr "媽媽喜歡的事物"
+
+#: src/data/memory-review-demo.ts
+msgid "Something that made you laugh"
+msgstr "讓你開懷的趣事"
+
+#: src/data/memory-review-demo.ts
+msgid "Something to come back to"
+msgstr "之後想再聊的事"
+
+#: src/data/memory-review-demo.ts
+msgid "Something you love"
+msgstr "你喜歡的事物"
+
+#: src/data/memory-review-demo.ts
+msgid "That change could not be confirmed. Try the action again."
+msgstr "無法確認這次操作的結果。請再試一次。"
+
+#: app/memory-review-preview.tsx
+msgid "The next action will fail once, so you can try recovery."
+msgstr "下一次操作會失敗一次，讓你試試重試流程。"
+
+#: src/data/memory-review-demo.ts
+msgid "The source changed or is no longer available. Nothing new was kept."
+msgstr "原始內容已變更或無法取得，沒有保留新的回憶。"
+
+#: app/memory-review-preview.tsx
+msgid "The source will become unavailable on the next action."
+msgstr "下一次操作時，原始內容將無法取得。"
+
+#: app/memory-review-preview.tsx
+msgid "The things Mom loves, and the stories the family keeps. Mom decides what stays."
+msgstr "媽媽喜歡的事物，以及家人保留的故事。哪些內容留下來，由媽媽決定。"
+
+#: src/data/memory-review-demo.ts
+msgid "The things you love. The stories you tell. You decide what stays with the family."
+msgstr "你喜歡的事物，你分享的故事。要為家人留下什麼，由你決定。"
+
+#: src/data/memory-review-demo.ts
+msgid "These words will leave the family’s saved memories. Removing a memory does not delete copies someone has already downloaded."
+msgstr "這段話將從家人保存的回憶中移除，但不會刪除其他人已下載的副本。"
+
+#: src/data/memory-review-demo.ts
+msgid "To review"
+msgstr "待確認"
+
+#: src/data/memory-review-demo.ts
+msgid "Try again"
+msgstr "再試一次"
+
+#: app/memory-review-preview.tsx
+msgid "View as a family member"
+msgstr "以家人身分查看"
+
+#: app/memory-review-preview.tsx
+msgid "View as the author"
+msgstr "以本人身分查看"
+
+#: src/data/memory-review-demo.ts
+msgid "Yellow flowers always make the kitchen feel like summer."
+msgstr "黃色的花總讓廚房充滿夏天的感覺。"
+
+#: src/data/memory-review-demo.ts
+msgid "Yes, keep these words"
+msgstr "好，保留這段話"
+
+#: src/data/memory-review-demo.ts
+msgid "You"
+msgstr "你"
+
+#: src/data/memory-review-demo.ts
+msgid "Your grandfather asked me to dance, and stepped on my shoe before the music even started."
+msgstr "你爺爺邀我跳舞，音樂還沒開始，就先踩到我的鞋子了。"
+
+#: src/data/memory-review-demo.ts
+msgid "Your grandfather asked me to dance, and stepped on my shoe before the music even started. I laughed so much that he asked for a second chance."
+msgstr "你爺爺邀我跳舞，音樂還沒開始，就先踩到我的鞋子了。我笑個不停，他就拜託我再給他一次機會。"
+
+#: src/data/memory-review-demo.ts
+msgid "Your kept memories will be here. Start with a story, a joke, or something you love."
+msgstr "你保留的回憶會出現在這裡。可以從一則故事、一個笑話，或喜歡的事物開始。"
+
+#: src/data/memory-review-demo.ts
+msgid "Your memories"
+msgstr "你的回憶"
+
+#: src/data/memory-review-demo.ts
+msgid "Your memories could not be reached. Try opening them again."
+msgstr "暫時無法取得你的回憶，請再開啟一次。"

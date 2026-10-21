@@ -1,0 +1,240 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-21 23:55+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#: src/data/memory-review-demo.ts
+msgid "{name} decides whether to keep these words."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "12 October"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "21 October"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "A moment to remember"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "A story to pass on"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Available until 20 November."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Back"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Confirming…"
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Design preview · synthetic conversations · no real saving"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "I put the flowers by the window. Yellow flowers always make the kitchen feel like summer. The cat has already tried to eat one."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Keep these words"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Keep this with the family?"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Kept memories"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Kept with the family. You can find it under Kept memories."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Leave this one"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Left out of memories. The original conversation is unchanged."
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Memory review preview"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Mia asked: How did you meet Grandpa?"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Mia asked: What made you smile this morning?"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Mom"
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Mom’s memories"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Nothing waiting to review. New suggestions will appear here."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Only these words will stay in family memories after the conversation’s 30 days. Everyone in your Vela family can read them. You can remove this memory later."
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Opening the preview…"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Opening your memories…"
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Preview controls"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Read the conversation"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Remove from memories"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Remove this memory"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Remove this memory?"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Removed from family memories."
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Reset the examples"
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Simulate a changed source"
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Simulate a failed change"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Someone who matters"
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "Something Mom loves"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Something that made you laugh"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Something to come back to"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Something you love"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "That change could not be confirmed. Try the action again."
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "The next action will fail once, so you can try recovery."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "The source changed or is no longer available. Nothing new was kept."
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "The source will become unavailable on the next action."
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "The things Mom loves, and the stories the family keeps. Mom decides what stays."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "The things you love. The stories you tell. You decide what stays with the family."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "These words will leave the family’s saved memories. Removing a memory does not delete copies someone has already downloaded."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "To review"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Try again"
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "View as a family member"
+msgstr ""
+
+#: app/memory-review-preview.tsx
+msgid "View as the author"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Yellow flowers always make the kitchen feel like summer."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Yes, keep these words"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "You"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Your grandfather asked me to dance, and stepped on my shoe before the music even started."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Your grandfather asked me to dance, and stepped on my shoe before the music even started. I laughed so much that he asked for a second chance."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Your kept memories will be here. Start with a story, a joke, or something you love."
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Your memories"
+msgstr ""
+
+#: src/data/memory-review-demo.ts
+msgid "Your memories could not be reached. Try opening them again."
+msgstr ""

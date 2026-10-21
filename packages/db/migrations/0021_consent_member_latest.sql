@@ -1,0 +1,1 @@
+CREATE INDEX "consents_member_latest_idx" ON "consents" USING btree ("member_id","kind","given_at","id");

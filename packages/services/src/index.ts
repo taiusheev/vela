@@ -227,6 +227,11 @@ export {
   loadApiReminders,
 } from "./reminders.ts";
 export {
+  dismissMemoryCandidate,
+  loadMemoryCandidates,
+  proposeMemoryCandidate,
+} from "./rich-memories.ts";
+export {
   BANK_PROMPT_VERSION,
   pickBankItem,
   type RenderedSuggestion,

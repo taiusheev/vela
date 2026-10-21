@@ -3,6 +3,7 @@ export * from "./buttons.ts";
 export * from "./commands.ts";
 export * from "./errors.ts";
 export * from "./exchange.ts";
+export * from "./family-memories.ts";
 export * from "./keys.ts";
 export * from "./readback.ts";
 export * from "./render.ts";

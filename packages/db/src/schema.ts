@@ -73,6 +73,7 @@ import {
   EVENT_NAMES,
   EXCHANGE_STATES,
   EXCHANGE_TYPES,
+  FAMILY_MEMORY_KINDS,
   INTEREST_TOPICS,
   KEPT_LIGHT_RELATIONSHIPS,
   LANGS,
@@ -915,6 +916,49 @@ export const memoryFacts = pgTable(
   ],
 );
 
+/**
+ * Pending conversational selections, not long-term book entries. No quote copy; the sealed digest
+ * binds offsets to a source version. Dismissal remains until expiry to prevent rediscovery.
+ */
+export const memoryCandidates = pgTable(
+  "memory_candidates",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    sourceAnswerId: uuid("source_answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    consentId: uuid("consent_id")
+      .notNull()
+      .references(() => consents.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: FAMILY_MEMORY_KINDS }).notNull(),
+    start: integer("start_offset").notNull(),
+    end: integer("end_offset").notNull(),
+    sourceDigest: sealedText("memory_candidates.source_digest").notNull(),
+    createdAt: createdAt(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    dismissedAt: timestamptz("dismissed_at"),
+  },
+  (t) => [
+    unique("memory_candidates_source_span_key").on(t.sourceAnswerId, t.start, t.end),
+    index("memory_candidates_family_page_idx").on(t.familyId, t.id),
+    index("memory_candidates_member_idx").on(t.memberId),
+    index("memory_candidates_consent_idx").on(t.consentId),
+    index("memory_candidates_expiry_idx").on(t.expiresAt),
+    check("memory_candidates_kind_check", isOneOf(t.kind, FAMILY_MEMORY_KINDS)),
+    check(
+      "memory_candidates_offsets_check",
+      sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
+    ),
+    check("memory_candidates_expiry_check", sql`${t.expiresAt} > ${t.createdAt}`),
+  ],
+);
+
 export const reminders = pgTable(
   "reminders",
   {
@@ -1349,6 +1393,7 @@ export const consents = pgTable(
   },
   (t) => [
     index("consents_subject_ref_idx").on(t.subjectRef),
+    index("consents_member_latest_idx").on(t.memberId, t.kind, t.givenAt, t.id),
     check("consents_kind_check", isOneOf(t.kind, CONSENT_KINDS)),
     check("consents_answer_check", isOneOf(t.answer, CONSENT_ANSWERS)),
     // A reference that names another subject than the row's own member or contact would make the
