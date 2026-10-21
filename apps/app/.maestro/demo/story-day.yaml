@@ -10,8 +10,8 @@ tags:
 - scrollUntilVisible:
     element: "Tell me about a day from when you were little that you still remember clearly. I'd love to hear it."
     direction: DOWN
-- assertVisible: "Like her other answers, it is kept for 30 days, then deleted."
-- assertNotVisible: "Her answer is kept in the family book, unless she says not to."
+- assertVisible: "Like Mom's other answers, it is kept for 30 days, then deleted."
+- assertNotVisible: "Mom's answer is kept in the family book, unless Mom says not to."
 - scrollUntilVisible:
     element: "Another question"
     direction: DOWN

@@ -176,8 +176,8 @@ msgid "{name} has not said yes yet"
 msgstr "{name} has not said yes yet"
 
 #: app/ask.tsx
-msgid "{name} has not said yes yet. Once she does, her first morning is the next day."
-msgstr "{name} has not said yes yet. Once she does, her first morning is the next day."
+msgid "{name} has not said yes yet. The first morning comes the day after."
+msgstr "{name} has not said yes yet. The first morning comes the day after."
 
 #: app/conversation.tsx
 msgid "{name} has not said yes yet. What you write waits for their first morning."
@@ -200,12 +200,12 @@ msgid "{name} is away"
 msgstr "{name} is away"
 
 #: app/(tabs)/index.tsx
-msgid "{name} is away until {day}. Her mornings still come; nobody is told they went quiet."
-msgstr "{name} is away until {day}. Her mornings still come; nobody is told they went quiet."
+msgid "{name} is away for now. {name}'s mornings still come; nobody is told they went quiet."
+msgstr "{name} is away for now. {name}'s mornings still come; nobody is told they went quiet."
 
 #: app/(tabs)/index.tsx
-msgid "{name} is away until she's back. Her mornings still come; nobody is told they went quiet."
-msgstr "{name} is away until she's back. Her mornings still come; nobody is told they went quiet."
+msgid "{name} is away until {day}. {name}'s mornings still come; nobody is told they went quiet."
+msgstr "{name} is away until {day}. {name}'s mornings still come; nobody is told they went quiet."
 
 #: app/(tabs)/index.tsx
 msgid "{name} is back"
@@ -230,6 +230,10 @@ msgstr "{name} last answered yesterday at {time}."
 #: src/data/quiet.ts
 msgid "{name} last answered yesterday at 8:41."
 msgstr "{name} last answered yesterday at 8:41."
+
+#: app/(tabs)/index.tsx
+msgid "{name} may have blocked Vela's chat or changed phones. Until then, mornings cannot reach {name}, and nobody is told they went quiet. Ask {name} to open Vela's chat on {channel} and tap Start or Unblock, and the mornings come back."
+msgstr "{name} may have blocked Vela's chat or changed phones. Until then, mornings cannot reach {name}, and nobody is told they went quiet. Ask {name} to open Vela's chat on {channel} and tap Start or Unblock, and the mornings come back."
 
 #: src/components/parent-link-settings.tsx
 msgid "{name} opened the invitation."
@@ -267,6 +271,10 @@ msgstr "{name}: {what}, {day}"
 msgid "{name}: {what}. You will be reminded to ask on {day}."
 msgstr "{name}: {what}. You will be reminded to ask on {day}."
 
+#: src/components/story-day.tsx
+msgid "{name}'s answer is kept in the family book, unless {name} says not to."
+msgstr "{name}'s answer is kept in the family book, unless {name} says not to."
+
 #: src/components/onboarding/questions.tsx
 msgid "{name}’s first question"
 msgstr "{name}’s first question"
@@ -284,8 +292,8 @@ msgid "{name}'s light is on"
 msgstr "{name}'s light is on"
 
 #: app/ask.tsx
-msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
-msgstr "{name}'s light is paused just now, so nothing can be sent into her morning."
+msgid "{name}'s light is paused just now, so nothing can be sent yet."
+msgstr "{name}'s light is paused just now, so nothing can be sent yet."
 
 #: app/morning-settings.tsx
 msgid "{name}'s morning"
@@ -298,6 +306,10 @@ msgstr "{name}’s morning: {time} in {place}"
 #: src/components/onboarding/questions.tsx
 msgid "{name}’s mornings"
 msgstr "{name}’s mornings"
+
+#: app/away.tsx
+msgid "{name}'s mornings still come while {name} is away. Nobody is told a morning went quiet, and nothing is sent again later that day."
+msgstr "{name}'s mornings still come while {name} is away. Nobody is told a morning went quiet, and nothing is sent again later that day."
 
 #: src/components/onboarding/questions.tsx
 msgid "{name}’s own phone, with Vela"
@@ -362,16 +374,25 @@ msgid "{recipient} answered at {time}"
 msgstr "{recipient} answered at {time}"
 
 #: app/(tabs)/exchanges.tsx
-msgid "{recipient} answered at {time} · from her voice note"
-msgstr "{recipient} answered at {time} · from her voice note"
+msgid "{recipient} answered at {time} · from a voice note"
+msgstr "{recipient} answered at {time} · from a voice note"
 
 #: app/(tabs)/index.tsx
 msgid "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
 msgstr "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
 
+#: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
+msgid "{recipient} has not answered yet, so there is nothing to reply to."
+msgstr "{recipient} has not answered yet, so there is nothing to reply to."
+
 #: app/(tabs)/index.tsx
 msgid "{recipient} has paused their mornings. They can start again in Vela's chat when they are ready."
 msgstr "{recipient} has paused their mornings. They can start again in Vela's chat when they are ready."
+
+#: app/exchange/[id].tsx
+msgid "{recipient} hears it in tomorrow morning's read-back."
+msgstr "{recipient} hears it in tomorrow morning's read-back."
 
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -492,8 +513,8 @@ msgid "A question"
 msgstr "A question"
 
 #: app/conversation.tsx
-msgid "A question for her morning"
-msgstr "A question for her morning"
+msgid "A question for {name}'s morning"
+msgstr "A question for {name}'s morning"
 
 #: src/data/onboarding.ts
 msgid "A quick tap, like a heart"
@@ -520,8 +541,8 @@ msgid "A story"
 msgstr "A story"
 
 #: app/conversation.tsx
-msgid "A voice hello for her morning"
-msgstr "A voice hello for her morning"
+msgid "A voice hello for {name}'s morning"
+msgstr "A voice hello for {name}'s morning"
 
 #: src/data/chat.ts
 msgid "A voice message"
@@ -689,6 +710,22 @@ msgstr "answered {time}"
 msgid "Answered today"
 msgstr "Answered today"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Answers"
+msgstr "Answers"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Answers from this month, and the stories the family keeps for good."
+msgstr "Answers from this month, and the stories the family keeps for good."
+
+#: app/(tabs)/exchanges.tsx
+msgid "Answers stay here for thirty days."
+msgstr "Answers stay here for thirty days."
+
+#: app/(tabs)/exchanges.tsx
+msgid "Answers stay here for thirty days. The stories told on story day are kept in the family book."
+msgstr "Answers stay here for thirty days. The stories told on story day are kept in the family book."
+
 #: src/data/useToday.ts
 msgid "Anyone"
 msgstr "Anyone"
@@ -757,12 +794,12 @@ msgid "Asking…"
 msgstr "Asking…"
 
 #: src/data/notifications.ts
-msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
-msgstr "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
+msgid "At most one of each a day: when {name} answers what you asked, and the evening before your turn."
+msgstr "At most one of each a day: when {name} answers what you asked, and the evening before your turn."
 
 #: src/data/notifications.ts
-msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says."
-msgstr "At most one of each a day: when {her} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says."
+msgid "At most one of each a day: when {name} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says."
+msgstr "At most one of each a day: when {name} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says."
 
 #. a time zone
 #: src/data/onboarding.ts
@@ -1253,8 +1290,8 @@ msgid "For another device: paste the full code or the whole private Telegram mes
 msgstr "For another device: paste the full code or the whole private Telegram message. It expires after 15 minutes."
 
 #: src/components/chat/chat-bubble.tsx
-msgid "For her morning"
-msgstr "For her morning"
+msgid "For the morning"
+msgstr "For the morning"
 
 #: src/auth/phone.ts
 msgid "France"
@@ -1383,48 +1420,9 @@ msgstr "Help"
 msgid "Help and settings"
 msgstr "Help and settings"
 
-#. stands in for her name
-#. stands in for her name
-#: app/(tabs)/index.tsx
-#: app/ask.tsx
-msgid "her"
-msgstr "her"
-
-#: src/components/story-day.tsx
-msgid "Her answer is kept in the family book, unless she says not to."
-msgstr "Her answer is kept in the family book, unless she says not to."
-
-#: src/components/chat/chat-bubble.tsx
-msgid "Her messenger did not take it. Her daily morning is unchanged."
-msgstr "Her messenger did not take it. Her daily morning is unchanged."
-
-#: src/components/chat/chat-bubble.tsx
-msgid "Her morning"
-msgstr "Her morning"
-
-#: app/(tabs)/index.tsx
-msgid "Her morning already holds it."
-msgstr "Her morning already holds it."
-
 #: src/components/onboarding/story.tsx
 msgid "Her morning was sent at {time}. If you can, give her a call."
 msgstr "Her morning was sent at {time}. If you can, give her a call."
-
-#: app/away.tsx
-msgid "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
-msgstr "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
-
-#: app/(tabs)/exchanges.tsx
-msgid "Her words"
-msgstr "Her words"
-
-#: app/(tabs)/exchanges.tsx
-msgid "Her words stay here for thirty days."
-msgstr "Her words stay here for thirty days."
-
-#: app/(tabs)/exchanges.tsx
-msgid "Her words stay here for thirty days. The stories she tells are kept in the family book."
-msgstr "Her words stay here for thirty days. The stories she tells are kept in the family book."
 
 #: src/components/onboarding/finish.tsx
 msgid "Hi {name}, it’s {you}. I’ve set up Vela for us: one small question from me each morning. Tap to see it, then decide. (An example invitation: nothing was sent.)"
@@ -1517,8 +1515,8 @@ msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram li
 msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram link, and Vela does not send notifications to phones yet."
 
 #: src/push/provider.tsx
-msgid "If her morning stays quiet past her usual time, and when it is settled."
-msgstr "If her morning stays quiet past her usual time, and when it is settled."
+msgid "If a morning stays quiet past its usual time, and when it is settled."
+msgstr "If a morning stays quiet past its usual time, and when it is settled."
 
 #: app/morning-settings.tsx
 msgid "If nobody in the family writes {name} a question for the morning, Vela can send the one it drafted in your style, signed with your name. You will see it marked “written by Vela”."
@@ -1569,10 +1567,13 @@ msgstr "Include the country code, starting with +. For example, +84 for Vietnam.
 msgid "India"
 msgstr "India"
 
-#: app/(tabs)/index.tsx
 #: app/ask.tsx
-msgid "Into her morning."
-msgstr "Into her morning."
+msgid "Into {name}'s morning."
+msgstr "Into {name}'s morning."
+
+#: app/(tabs)/index.tsx
+msgid "Into {recipient}'s morning."
+msgstr "Into {recipient}'s morning."
 
 #: src/components/onboarding/finish.tsx
 msgid "Invitation sent"
@@ -1589,8 +1590,8 @@ msgid "It comes from you, in {app}, so {name} knows it’s really you."
 msgstr "It comes from you, in {app}, so {name} knows it’s really you."
 
 #: app/away.tsx
-msgid "It ends when she next answers, from a later day than today."
-msgstr "It ends when she next answers, from a later day than today."
+msgid "It ends when {name} next answers, from a later day than today."
+msgstr "It ends when {name} next answers, from a later day than today."
 
 #: app/(tabs)/index.tsx
 msgid "It has been accepted. Delivery happens in the parent's morning."
@@ -1698,8 +1699,8 @@ msgid "Let’s try a fresh connection."
 msgstr "Let’s try a fresh connection."
 
 #: src/components/story-day.tsx
-msgid "Like her other answers, it is kept for 30 days, then deleted."
-msgstr "Like her other answers, it is kept for 30 days, then deleted."
+msgid "Like {name}'s other answers, it is kept for 30 days, then deleted."
+msgstr "Like {name}'s other answers, it is kept for 30 days, then deleted."
 
 #: src/components/onboarding/finish.tsx
 msgid "LINE isn’t open here yet, so this invitation opens Telegram."
@@ -1962,8 +1963,8 @@ msgid "No stories have been kept here yet."
 msgstr "No stories have been kept here yet."
 
 #: src/components/family-book.tsx
-msgid "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
-msgstr "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
+msgid "No stories yet. Choose a question on the Sunday tab, and the story is kept here."
+msgstr "No stories yet. Choose a question on the Sunday tab, and the story is kept here."
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -2020,8 +2021,8 @@ msgid "Not this time"
 msgstr "Not this time"
 
 #: app/(tabs)/exchanges.tsx
-msgid "Nothing has happened yet. Her first morning will be here."
-msgstr "Nothing has happened yet. Her first morning will be here."
+msgid "Nothing has happened yet. The first morning will be here."
+msgstr "Nothing has happened yet. The first morning will be here."
 
 #: app/(tabs)/exchanges.tsx
 msgid "Nothing here matches. Try another word, or All."
@@ -2081,12 +2082,12 @@ msgid "Notifications come to the Vela app on a phone, not to a browser."
 msgstr "Notifications come to the Vela app on a phone, not to a browser."
 
 #: src/data/notifications.ts
-msgid "Off: nothing when {her} answers or when your turn comes."
-msgstr "Off: nothing when {her} answers or when your turn comes."
+msgid "Off: nothing when {name} answers or when your turn comes."
+msgstr "Off: nothing when {name} answers or when your turn comes."
 
 #: src/data/notifications.ts
-msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
-msgstr "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
+msgid "Off: nothing when {name} answers or when your turn comes. If a morning goes quiet, you are still told."
+msgstr "Off: nothing when {name} answers or when your turn comes. If a morning goes quiet, you are still told."
 
 #: src/components/onboarding/questions.tsx
 msgid "On a quiet morning you’ll see them with a Call button. Nobody hears from Vela until they say yes themselves."
@@ -2316,8 +2317,8 @@ msgid "Photos are not switched on here yet."
 msgstr "Photos are not switched on here yet."
 
 #: app/conversation.tsx
-msgid "Photos for her morning"
-msgstr "Photos for her morning"
+msgid "Photos for {name}'s morning"
+msgstr "Photos for {name}'s morning"
 
 #: src/data/useToday.ts
 msgid "picked a photo"
@@ -2528,10 +2529,6 @@ msgstr "Russia"
 msgid "Said no"
 msgstr "Said no"
 
-#: src/data/useToday.ts
-msgid "said she is fine"
-msgstr "said she is fine"
-
 #: src/data/family.ts
 #: src/data/useNearby.ts
 msgid "Said yes"
@@ -2604,8 +2601,8 @@ msgid "Say something short"
 msgstr "Say something short"
 
 #: app/(tabs)/exchanges.tsx
-msgid "Search her words"
-msgstr "Search her words"
+msgid "Search answers"
+msgstr "Search answers"
 
 #: src/components/legal-links.tsx
 msgid "Security"
@@ -2782,31 +2779,18 @@ msgstr "Sharing could not open. Select and copy the link below, then send it to 
 msgid "She answers when she likes: a few words, a photo, or her voice."
 msgstr "She answers when she likes: a few words, a photo, or her voice."
 
-#: app/exchange/[id].tsx
-#: src/components/today-heart.tsx
-msgid "She has not answered yet, so there is nothing to reply to."
-msgstr "She has not answered yet, so there is nothing to reply to."
-
-#: app/exchange/[id].tsx
-msgid "She hears it in her read-back tomorrow morning."
-msgstr "She hears it in her read-back tomorrow morning."
-
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "She is never letting that go"
 msgstr "She is never letting that go"
-
-#: app/(tabs)/index.tsx
-msgid "She may have blocked Vela's chat or changed phones. Until then her mornings cannot reach her, and nobody is told they went quiet. Ask her to open Vela's chat on {channel} and tap Start or Unblock, and her mornings come back."
-msgstr "She may have blocked Vela's chat or changed phones. Until then her mornings cannot reach her, and nobody is told they went quiet. Ask her to open Vela's chat on {channel} and tap Start or Unblock, and her mornings come back."
 
 #: src/data/weekly.ts
 msgid "She told you about the garden on three mornings: the tomatoes, the seeds, the new bed by the fence."
 msgstr "She told you about the garden on three mornings: the tomatoes, the seeds, the new bed by the fence."
 
 #: src/components/vote-options.tsx
-msgid "Short answers she can tap, from two to seven."
-msgstr "Short answers she can tap, from two to seven."
+msgid "Short answers to tap, from two to seven."
+msgstr "Short answers to tap, from two to seven."
 
 #: src/components/onboarding/questions.tsx
 msgid "Show {name}’s initials for now."
@@ -2911,8 +2895,8 @@ msgid "Something for {name}'s morning"
 msgstr "Something for {name}'s morning"
 
 #: src/components/chat/chat-composer.tsx
-msgid "Something for her morning"
-msgstr "Something for her morning"
+msgid "Something for the morning"
+msgstr "Something for the morning"
 
 #: app/(tabs)/questions.tsx
 msgid "Something to ask next week"
@@ -3021,6 +3005,10 @@ msgstr "Take this story out of the family book?"
 #: src/components/portrait-lamp.tsx
 msgid "Talk with {name}"
 msgstr "Talk with {name}"
+
+#: src/data/useToday.ts
+msgid "tapped “I'm fine”"
+msgstr "tapped “I'm fine”"
 
 #: src/data/useToday.ts
 msgid "tapped an answer"
@@ -3200,8 +3188,8 @@ msgid "The 30 days start after {name}'s first answer."
 msgstr "The 30 days start after {name}'s first answer."
 
 #: app/settings.tsx
-msgid "The app's words. Her mornings keep the language she reads."
-msgstr "The app's words. Her mornings keep the language she reads."
+msgid "The app's words. The mornings keep their own language."
+msgstr "The app's words. The mornings keep their own language."
 
 #: app/sign-in.tsx
 msgid "The bot check did not finish. Try again in a moment."
@@ -3233,16 +3221,16 @@ msgid "The family book could not be reached just now."
 msgstr "The family book could not be reached just now."
 
 #: src/components/family-book.tsx
-msgid "The family book fills with the stories she tells on story day."
-msgstr "The family book fills with the stories she tells on story day."
+msgid "The family book fills with the stories told on story day."
+msgstr "The family book fills with the stories told on story day."
 
 #: src/data/precision.ts
 msgid "The family found {found} of {verdicts} useful."
 msgstr "The family found {found} of {verdicts} useful."
 
 #: app/exchange/[id].tsx
-msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
-msgstr "The family sees it here. She will not hear it: her mornings read back only her latest day."
+msgid "The family sees it here. {recipient} will not hear it: each morning reads back only the latest day."
+msgstr "The family sees it here. {recipient} will not hear it: each morning reads back only the latest day."
 
 #: src/components/onboarding/finish.tsx
 msgid "The family, the first week and everything you told us."
@@ -3271,6 +3259,18 @@ msgstr "The link could not be prepared. Your family is unchanged. Try again or g
 #: src/components/onboarding/questions.tsx
 msgid "The message comes half an hour later, so it’s there when {name} first picks up the phone."
 msgstr "The message comes half an hour later, so it’s there when {name} first picks up the phone."
+
+#: src/components/chat/chat-bubble.tsx
+msgid "The messenger did not take it. The daily morning is unchanged."
+msgstr "The messenger did not take it. The daily morning is unchanged."
+
+#: src/components/chat/chat-bubble.tsx
+msgid "The morning"
+msgstr "The morning"
+
+#: app/(tabs)/index.tsx
+msgid "The morning already holds it."
+msgstr "The morning already holds it."
 
 #: app/(tabs)/index.tsx
 msgid "The next morning will appear here once it arrives. You can get an ask ready now."
@@ -3321,8 +3321,8 @@ msgid "The send could not be confirmed. Retry the saved attempt to finish the sa
 msgstr "The send could not be confirmed. Retry the saved attempt to finish the same send."
 
 #: src/components/family-book.tsx
-msgid "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
-msgstr "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
+msgid "The stories told on story day, and the recipes shared, stay here after the 30 days, with the voice that told them."
+msgstr "The stories told on story day, and the recipes shared, stay here after the 30 days, with the voice that told them."
 
 #: src/data/chat.ts
 #: src/data/exchanges.ts
@@ -3347,8 +3347,8 @@ msgid "The weekly read goes to the family's organisers."
 msgstr "The weekly read goes to the family's organisers."
 
 #: app/(tabs)/sunday.tsx
-msgid "The weekly read starts once she has said yes and had a week of mornings."
-msgstr "The weekly read starts once she has said yes and had a week of mornings."
+msgid "The weekly read starts after a yes and a week of mornings."
+msgstr "The weekly read starts after a yes and a week of mornings."
 
 #: src/components/parent-link-settings.tsx
 msgid "Their chat is still connected, and morning messages are paused. They can say start in that chat when they want to resume."
@@ -3451,8 +3451,8 @@ msgid "This phone"
 msgstr "This phone"
 
 #: src/components/set-up-phone.tsx
-msgid "This phone becomes {name}'s: large words, one message at a time, her answers with a tap or in her own words. You are signed out of it, and she needs no account."
-msgstr "This phone becomes {name}'s: large words, one message at a time, her answers with a tap or in her own words. You are signed out of it, and she needs no account."
+msgid "This phone becomes {name}'s: large words, one message at a time, answers with a tap or in a few words. You are signed out of it, and {name} needs no account."
+msgstr "This phone becomes {name}'s: large words, one message at a time, answers with a tap or in a few words. You are signed out of it, and {name} needs no account."
 
 #: src/components/onboarding/finish.tsx
 msgid "This phone cannot share from here. Copy the words above and send them yourself."
@@ -3649,8 +3649,8 @@ msgid "Until"
 msgstr "Until"
 
 #: app/away.tsx
-msgid "Until she's back"
-msgstr "Until she's back"
+msgid "Until {name} is back"
+msgstr "Until {name} is back"
 
 #: app/nearby.tsx
 msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
@@ -3703,8 +3703,8 @@ msgid "Usually answers by {time}"
 msgstr "Usually answers by {time}"
 
 #: src/components/chat/chat-bubble.tsx
-msgid "Vela · her morning · {time}"
-msgstr "Vela · her morning · {time}"
+msgid "Vela · morning · {time}"
+msgstr "Vela · morning · {time}"
 
 #: src/components/onboarding/questions.tsx
 msgid "Vela asks in its own name"
@@ -3800,10 +3800,13 @@ msgstr "Vela still writes to you on Telegram or LINE in a family where you are t
 msgid "Vela suggests"
 msgstr "Vela suggests"
 
-#: app/(tabs)/index.tsx
 #: app/ask.tsx
-msgid "Vela suggests · from her own words"
-msgstr "Vela suggests · from her own words"
+msgid "Vela suggests · from {name}'s own words"
+msgstr "Vela suggests · from {name}'s own words"
+
+#: app/(tabs)/index.tsx
+msgid "Vela suggests · from {recipient}'s own words"
+msgstr "Vela suggests · from {recipient}'s own words"
 
 #: src/components/onboarding/questions.tsx
 msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
@@ -3847,8 +3850,8 @@ msgid "Voice hello, {time}. It plays before your ask."
 msgstr "Voice hello, {time}. It plays before your ask."
 
 #: src/components/voice-hello.tsx
-msgid "Voice note, {time}. She hears it in her morning."
-msgstr "Voice note, {time}. She hears it in her morning."
+msgid "Voice note, {time}. It plays in the morning."
+msgstr "Voice note, {time}. It plays in the morning."
 
 #: src/data/onboarding.ts
 msgid "Voice notes"
@@ -3871,8 +3874,8 @@ msgid "Wait for her answer"
 msgstr "Wait for her answer"
 
 #: src/data/useToday.ts
-msgid "waiting for her yes"
-msgstr "waiting for her yes"
+msgid "waiting for a yes"
+msgstr "waiting for a yes"
 
 #: app/ask.tsx
 msgid "Waiting for today to arrive. Your words are kept."
@@ -3923,8 +3926,8 @@ msgid "Welcome to Vela"
 msgstr "Welcome to Vela"
 
 #: app/(tabs)/sunday.tsx
-msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
-msgstr "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
+msgid "What {name} told you this week, what came up twice, and something to ask {name} next. The first 30 days are free."
+msgstr "What {name} told you this week, what came up twice, and something to ask {name} next. The first 30 days are free."
 
 #: app/ask.tsx
 msgid "What are you sending?"
@@ -3947,10 +3950,6 @@ msgstr "What does {name} love to talk about?"
 #: src/data/today.ts
 msgid "What seeds did you save from last year's garden?"
 msgstr "What seeds did you save from last year's garden?"
-
-#: app/(tabs)/exchanges.tsx
-msgid "What she told you this month, and the stories the family keeps for good."
-msgstr "What she told you this month, and the stories the family keeps for good."
 
 #: app/exchange/[id].tsx
 msgid "What the family said"
@@ -3989,10 +3988,6 @@ msgstr "When does {name} usually wake up?"
 msgid "When nobody writes"
 msgstr "When nobody writes"
 
-#: src/push/provider.tsx
-msgid "When she answers what you asked, and the evening before your turn."
-msgstr "When she answers what you asked, and the evening before your turn."
-
 #: app/(tabs)/index.tsx
 msgid "When they answer, write back while it is on your mind. A quiet day does not erase the moments you have shared."
 msgstr "When they answer, write back while it is on your mind. A quiet day does not erase the moments you have shared."
@@ -4000,6 +3995,10 @@ msgstr "When they answer, write back while it is on your mind. A quiet day does 
 #: src/components/onboarding/finish.tsx
 msgid "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
 msgstr "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
+
+#: src/push/provider.tsx
+msgid "When your question is answered, and the evening before your turn."
+msgstr "When your question is answered, and the evening before your turn."
 
 #: app/ask.tsx
 msgid "Whenever"
@@ -4138,8 +4137,8 @@ msgid "You can explore an example family. No messages are sent."
 msgstr "You can explore an example family. No messages are sent."
 
 #: app/exchange/[id].tsx
-msgid "You can reply once she has answered."
-msgstr "You can reply once she has answered."
+msgid "You can reply once {recipient} has answered."
+msgstr "You can reply once {recipient} has answered."
 
 #: src/components/parent-link-settings.tsx
 msgid "You chose to share the link. Delivery is not confirmed; Vela will show when your parent agrees."
@@ -4296,6 +4295,13 @@ msgstr "Your name, the asks you write, and your replies."
 #: app/settings.tsx
 msgid "Your notification preference could not be loaded."
 msgstr "Your notification preference could not be loaded."
+
+#. stands in for the parent's name
+#. stands in for the parent's name
+#: app/(tabs)/index.tsx
+#: app/ask.tsx
+msgid "your parent"
+msgstr "your parent"
 
 #: app/conversation.tsx
 #: app/parent-settings.tsx

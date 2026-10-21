@@ -93,8 +93,8 @@ export default function AwayScreen() {
         </Words>
         <Words variant="body" tone="ink2">
           <Trans>
-            Her mornings still come while she is away. Nobody is told her morning went quiet, and
-            nothing is sent to her again later that day.
+            {name}'s mornings still come while {name} is away. Nobody is told a morning went quiet,
+            and nothing is sent again later that day.
           </Trans>
         </Words>
 
@@ -114,7 +114,7 @@ export default function AwayScreen() {
           </Words>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
             <Chip
-              label={t`Until she's back`}
+              label={t`Until ${name} is back`}
               selected={until === null}
               onPress={() => setUntil(null)}
             />
@@ -129,7 +129,7 @@ export default function AwayScreen() {
           </View>
           {until === null ? (
             <Words variant="caption" tone="ink3">
-              <Trans>It ends when she next answers, from a later day than today.</Trans>
+              <Trans>It ends when {name} next answers, from a later day than today.</Trans>
             </Words>
           ) : null}
         </View>

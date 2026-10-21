@@ -46,7 +46,7 @@ export function TodayHeart({
   const refusal = post.isError ? replyRefusal(post.error) : null;
   const trouble =
     refusal === "not_answered"
-      ? t`She has not answered yet, so there is nothing to reply to.`
+      ? t`${recipient} has not answered yet, so there is nothing to reply to.`
       : refusal === "her_own"
         ? t`This is your own morning; replies are for the family.`
         : post.isError

@@ -261,7 +261,9 @@ function AskComposer({
     });
   }
 
-  const name = recipient?.displayName ?? t({ comment: "stands in for her name", message: "her" });
+  const name =
+    recipient?.displayName ??
+    t({ comment: "stands in for the parent's name", message: "your parent" });
   // A voice note is its recording (spec §4): it needs one, and its words may be left to the default.
   const voiceNote = kind === "voice_note";
   const written = text.trim().length > 0 || (voiceNote && hello !== null);
@@ -272,9 +274,9 @@ function AskComposer({
   const waiting = !demo && !ready;
   const hold = waiting
     ? paused
-      ? t`${name}'s light is paused just now, so nothing can be sent into her morning.`
+      ? t`${name}'s light is paused just now, so nothing can be sent yet.`
       : invited
-        ? t`${name} has not said yes yet. Once she does, her first morning is the next day.`
+        ? t`${name} has not said yes yet. The first morning comes the day after.`
         : live
           ? t`Choose someone in your family, or return to Today. Your words are kept.`
           : t`Waiting for today to arrive. Your words are kept.`
@@ -305,7 +307,7 @@ function AskComposer({
           }}
         >
           <Words variant="title">
-            <Trans>Into her morning.</Trans>
+            <Trans>Into {name}'s morning.</Trans>
           </Words>
           <PushOffer
             reason={t`Hear it on this phone when ${name} answers.`}
@@ -468,7 +470,9 @@ function AskComposer({
           {suggestion === undefined || recipient === undefined ? null : (
             <SuggestionDisclosure
               label={
-                suggestion.fromHerWords ? t`Vela suggests · from her own words` : t`Vela suggests`
+                suggestion.fromHerWords
+                  ? t`Vela suggests · from ${name}'s own words`
+                  : t`Vela suggests`
               }
             >
               <Words variant="voice">{suggestion.text}</Words>

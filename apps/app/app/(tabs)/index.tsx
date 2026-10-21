@@ -243,7 +243,7 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
         <>
           <Words variant="voice">{tomorrow.asked.text}</Words>
           <Words variant="caption" tone="ink3">
-            <Trans>Into her morning.</Trans>
+            <Trans>Into {recipient}'s morning.</Trans>
           </Words>
           {tomorrow.asked.withdrawableId === undefined ? null : (
             <WithdrawLink exchangeId={tomorrow.asked.withdrawableId} />
@@ -254,7 +254,7 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
           {/* Vela's, as on Ask: without it a suggestion reads like an ask already on its way. */}
           <Words variant="caption" tone="ink2">
             {suggestion.fromHerWords ? (
-              <Trans>Vela suggests · from her own words</Trans>
+              <Trans>Vela suggests · from {recipient}'s own words</Trans>
             ) : (
               <Trans>Vela suggests</Trans>
             )}
@@ -419,7 +419,9 @@ function FamilyToday({ day }: { day: TodayView }) {
     (exchange) => exchange.recipientId === focused?.memberId && exchange.answer !== undefined,
   );
   const target = focused ?? askRecipient(today.lights);
-  const recipient = target?.displayName ?? t({ comment: "stands in for her name", message: "her" });
+  const recipient =
+    target?.displayName ??
+    t({ comment: "stands in for the parent's name", message: "your parent" });
 
   const portraitFamily = familyId === undefined ? "example" : familyId;
   return (
@@ -639,12 +641,12 @@ function AwayLine({ light }: { light: TodayLight }) {
       <Words variant="body" tone="ink2">
         {day === undefined ? (
           <Trans>
-            {name} is away until she's back. Her mornings still come; nobody is told they went
-            quiet.
+            {name} is away for now. {name}'s mornings still come; nobody is told they went quiet.
           </Trans>
         ) : (
           <Trans>
-            {name} is away until {day}. Her mornings still come; nobody is told they went quiet.
+            {name} is away until {day}. {name}'s mornings still come; nobody is told they went
+            quiet.
           </Trans>
         )}
       </Words>
@@ -681,9 +683,9 @@ function LostLine({ light }: { light: TodayLight }) {
       </Words>
       <Words variant="body" tone="ink2">
         <Trans>
-          She may have blocked Vela's chat or changed phones. Until then her mornings cannot reach
-          her, and nobody is told they went quiet. Ask her to open Vela's chat on {channel} and tap
-          Start or Unblock, and her mornings come back.
+          {name} may have blocked Vela's chat or changed phones. Until then, mornings cannot reach{" "}
+          {name}, and nobody is told they went quiet. Ask {name} to open Vela's chat on {channel}{" "}
+          and tap Start or Unblock, and the mornings come back.
         </Trans>
       </Words>
     </Card>
@@ -710,7 +712,7 @@ function WithdrawLink({ exchangeId }: { exchangeId: string }) {
     >
       <Words variant="button" tone="action">
         {withdraw.isError ? (
-          <Trans>Her morning already holds it.</Trans>
+          <Trans>The morning already holds it.</Trans>
         ) : (
           <Trans>Take it back</Trans>
         )}

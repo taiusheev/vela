@@ -91,7 +91,7 @@ function FamilySunday({ day }: { day: TodayView }) {
         </Words>
       ) : view.nobody ? (
         <Words variant="body" tone="ink2">
-          <Trans>The weekly read starts once she has said yes and had a week of mornings.</Trans>
+          <Trans>The weekly read starts after a yes and a week of mornings.</Trans>
         </Words>
       ) : view.trouble ? (
         <Words variant="body" tone="ink2">
@@ -132,8 +132,8 @@ function FamilySunday({ day }: { day: TodayView }) {
               </Words>
               <Words variant="body" tone="ink2">
                 <Trans>
-                  What {name} told you this week, what came up twice, and something to ask her next.
-                  The first 30 days are free.
+                  What {name} told you this week, what came up twice, and something to ask {name}{" "}
+                  next. The first 30 days are free.
                 </Trans>
               </Words>
               <SecondaryButton

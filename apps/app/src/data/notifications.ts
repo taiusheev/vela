@@ -49,15 +49,15 @@ export function toldOfQuiet(me: {
  * "One moment a day" as it is: what the switch holds back, and for a reader a quiet morning
  * reaches (`told`, `toldOfQuiet`), that the quiet notice comes whatever it says (A3).
  */
-export function momentLine(on: boolean, told: boolean, her: string): string {
+export function momentLine(on: boolean, told: boolean, name: string): string {
   if (on) {
     return told
-      ? t`At most one of each a day: when ${her} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says.`
-      : t`At most one of each a day: when ${her} answers what you asked, and the evening before your turn.`;
+      ? t`At most one of each a day: when ${name} answers what you asked, and the evening before your turn. If a morning goes quiet, you are told whatever this says.`
+      : t`At most one of each a day: when ${name} answers what you asked, and the evening before your turn.`;
   }
   return told
-    ? t`Off: nothing when ${her} answers or when your turn comes. If a morning goes quiet, you are still told.`
-    : t`Off: nothing when ${her} answers or when your turn comes.`;
+    ? t`Off: nothing when ${name} answers or when your turn comes. If a morning goes quiet, you are still told.`
+    : t`Off: nothing when ${name} answers or when your turn comes.`;
 }
 
 /**

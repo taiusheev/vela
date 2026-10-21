@@ -39,7 +39,7 @@ export function ChatComposer({
       {onMore === undefined ? null : (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={t`Something for her morning`}
+          accessibilityLabel={t`Something for the morning`}
           testID="chat-more"
           hitSlop={hitSlop}
           onPress={onMore}

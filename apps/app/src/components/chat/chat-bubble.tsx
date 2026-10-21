@@ -83,7 +83,7 @@ export function ChatBubble({
         }}
       >
         <Text style={[type.label, { color: palette.ink3, textTransform: "uppercase" }]}>
-          {t`Vela · her morning · ${time}`}
+          {t`Vela · morning · ${time}`}
         </Text>
         <Text style={[type.body, { color: palette.ink2, textAlign: "center" }]}>
           {message.text}
@@ -118,7 +118,7 @@ export function ChatBubble({
             ? t`Delivered`
             : undefined;
   const footer = [
-    message.morning === true ? t`Her morning` : undefined,
+    message.morning === true ? t`The morning` : undefined,
     time,
     message.draftedByVela === true ? t`written by Vela` : undefined,
     status,
@@ -160,7 +160,7 @@ export function ChatBubble({
               { color: mine ? palette.onAction : palette.ink3, textTransform: "uppercase" },
             ]}
           >
-            {t`For her morning`}
+            {t`For the morning`}
           </Text>
         </View>
       ) : null}
@@ -321,7 +321,7 @@ export function ChatBubble({
       ) : null}
       {last && message.status === "failed" ? (
         <Words variant="caption" tone="ink2">
-          <Trans>Her messenger did not take it. Her daily morning is unchanged.</Trans>
+          <Trans>The messenger did not take it. The daily morning is unchanged.</Trans>
         </Words>
       ) : null}
     </View>

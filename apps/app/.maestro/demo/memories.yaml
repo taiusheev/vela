@@ -1,7 +1,7 @@
-# Memories in the demo (consumer flow rows 31–34): her words a week at a time, searchable, and
-# narrowed to her stories.
+# Memories in the demo (consumer flow rows 31–34): Mom's answers a week at a time, searchable,
+# and narrowed to the stories.
 url: ${APP_URL}
-name: Memories groups her words by week and finds a word
+name: Memories groups answers by week and finds a word
 tags:
   - demo
 ---
@@ -12,7 +12,7 @@ tags:
 # The oldest example is nine days old: on Monday/Tuesday it is two calendar weeks back.
 # Keep checking a distinct older-week heading without requiring one weekday's relative label.
 - assertVisible: "Last week|Week of .*"
-- tapOn: "Search her words"
+- tapOn: "Search answers"
 - inputText: "butter"
 - assertVisible: "Both of you, but only Mia listened about the butter."
 - assertNotVisible: "Mom answered at 8:12 · 2 replies"
