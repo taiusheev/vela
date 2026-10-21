@@ -131,3 +131,8 @@ horizontal overflow and a 64px primary action. Screenshots use synthetic words o
 This is browser evidence, not signed-device, VoiceOver, Dynamic Type, Telegram, persistent consent,
 or capacity proof. Next: durable quote/keep-grant transactions with deletion/withdrawal races,
 then authenticated app and messenger adapters. The weekly wellbeing slice is still pending.
+
+Clean GitHub typechecking caught a browser-only hovered property that local Expo types accepted.
+Removed that dependency; press feedback remains platform-neutral. The subsequent full local
+TURBO_FORCE=true pnpm check passed all 9 tasks without cached results, including 1,593 service
+tests and 376 app tests (1 existing skip). Candidate GitHub checks must pass before integration.

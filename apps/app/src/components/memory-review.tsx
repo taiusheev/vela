@@ -53,12 +53,12 @@ function ReviewButton({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed, hovered }) => ({
+      style={({ pressed }) => ({
         minHeight: 64,
         borderRadius: radius.button + 4,
         borderWidth: 1,
         borderColor: primary ? ink.action : ink.control,
-        backgroundColor: primary ? ink.action : hovered ? ink.surface2 : ink.surface,
+        backgroundColor: primary ? ink.action : ink.surface,
         opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
         padding: space.l,
         justifyContent: "center",
