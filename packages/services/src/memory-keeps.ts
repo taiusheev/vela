@@ -255,7 +255,7 @@ const grant = alias(consents, "kept_quote_grant");
 const later = alias(consents, "kept_later_consent");
 const viewer = alias(members, "kept_memory_viewer");
 
-/** Reading and privacy removal do not depend on a subscription or processing switch. */
+/** Private keeps until explicit audience grants exist; reading/removal never depend on payment. */
 export async function loadKeptMemories(
   deps: KeepDeps,
   identity: SessionIdentity,
@@ -317,6 +317,9 @@ async function readKeptMemoryPage(
     .where(
       and(
         eq(memoryKeeps.familyId, familyId),
+        // No sharing grant is implemented yet: even current organisers and later joiners see none.
+        // Keep the separate export restriction below so future shared reads cannot widen copies.
+        eq(memoryKeeps.memberId, access.access.memberId),
         ownOnly ? eq(memoryKeeps.memberId, access.access.memberId) : undefined,
         isNull(memoryKeeps.removedAt),
         isNull(members.leftAt),

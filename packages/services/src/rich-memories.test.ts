@@ -84,12 +84,12 @@ function propose() {
     { answerId, ordinaryText: words },
   );
 }
-function read(who = organiser, cursor: string | null = null) {
+function read(who = owner, cursor: string | null = null) {
   return loadMemoryCandidates(h.deps, who, familyId, cursor);
 }
 
 describe("persistent conversational candidates", () => {
-  it("proposes once and lets the family read the exact live source without storing another quote", async () => {
+  it("proposes once and lets only the author review the exact live source without another quote copy", async () => {
     const id = await propose();
     expect(id).not.toBeNull();
     expect(await propose()).toBe(id);
@@ -97,6 +97,7 @@ describe("persistent conversational candidates", () => {
     expect(page.items).toHaveLength(1);
     expect(page.items[0]?.quote).toBe("I love yellow flowers.");
     expect(page.items[0]?.expires_at).toBe("2026-10-14T00:00:00.000Z");
+    expect(await read(organiser)).toEqual({ items: [], next_cursor: null });
     expect(await h.db.select().from(memoryCandidates)).toHaveLength(1);
     expect(h.ai.calls).toHaveLength(0);
   });
@@ -108,6 +109,47 @@ describe("persistent conversational candidates", () => {
     delete h.config.richMemories;
     expect(await propose()).toBeNull();
     expect(await h.db.select().from(memoryCandidates)).toHaveLength(0);
+  });
+
+  it("never gives a later family member historical suggestions, even after promotion", async () => {
+    await propose();
+    h.clock.advance(1000);
+    const identity = { authSubject: "synthetic|later-candidate-reader", sessionId: "later" };
+    const [user] = await h.db
+      .insert(users)
+      .values({ authSubject: identity.authSubject, displayName: "Synthetic later reader" })
+      .returning();
+    if (!user) throw new Error("Missing synthetic account");
+    const [joined] = await h.db
+      .insert(members)
+      .values({
+        familyId,
+        userId: user.id,
+        role: "member",
+        status: "active",
+        displayName: "Synthetic later reader",
+        language: "en",
+        tz: "Asia/Taipei",
+        country: "TW",
+        primarySurface: "telegram",
+        createdAt: h.clock.now(),
+      })
+      .returning();
+    if (!joined) throw new Error("Missing synthetic membership");
+    expect(await read(identity)).toEqual({ items: [], next_cursor: null });
+    await h.db.update(members).set({ role: "organiser" }).where(eq(members.id, joined.id));
+    expect(await read(identity)).toEqual({ items: [], next_cursor: null });
+    expect((await read())?.items).toHaveLength(1);
+  });
+
+  it("does not treat the former family-wide purpose version as private-review permission", async () => {
+    await propose();
+    await h.db
+      .update(consents)
+      .set({ textVersion: "consent.rich_memories@1" })
+      .where(eq(consents.id, consentId));
+    expect((await read())?.items).toEqual([]);
+    expect(await propose()).toBeNull();
   });
 
   it("does not expose a family to a stranger, malformed family or malformed cursor", async () => {
@@ -231,7 +273,8 @@ describe("persistent conversational candidates", () => {
   it("hides a departed subject and a deleted family", async () => {
     await propose();
     await h.db.update(members).set({ leftAt: h.clock.now() }).where(eq(members.id, memberId));
-    expect((await read())?.items).toEqual([]);
+    expect(await read()).toBeNull();
+    expect(await read(organiser)).toEqual({ items: [], next_cursor: null });
     await h.db.update(families).set({ deletedAt: h.clock.now() }).where(eq(families.id, familyId));
     expect(await read()).toBeNull();
   });
@@ -270,8 +313,9 @@ describe("persistent conversational candidates", () => {
       .where(eq(answers.id, answerId));
     const first = await read();
     expect(first?.items).toEqual([]);
+    expect(await read(organiser)).toEqual({ items: [], next_cursor: null });
     expect(first?.next_cursor).not.toBeNull();
-    const second = await read(organiser, first?.next_cursor ?? null);
+    const second = await read(owner, first?.next_cursor ?? null);
     expect(second?.items).toEqual([]);
     expect(second?.next_cursor).toBeNull();
   });
