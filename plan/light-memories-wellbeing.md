@@ -255,3 +255,39 @@ deadlocks; transferring an exchange to another family purges saved copies in tha
 Final local pnpm check on combined main b3df7fb passed all 9 tasks, including 1,617 service tests.
 Eight tasks reused valid cache results. Both sealing inventory scripts also typecheck against the
 repository's ES2024 target. No app files or Worker runtime configuration differ from that main.
+
+### Named-sharing confirmation foundation (22 October, not activated)
+
+Private-first PR139 requires purpose/keep @2; older family-wide wording must not be wired.
+The next slice builds an owner-only, read-only confirmation from trusted server state:
+one exact kept quote, explicit named recipients, and a five-minute presentation fingerprint.
+The explanation says later joiners receive no historical access and warns that already-read
+words or screenshots cannot be recalled. This is proposed English copy, not a live notice.
+
+The fingerprint binds quote/language, source, purpose/keep proof IDs, owner/account bindings,
+selected recipients' names/accounts/membership generations, sharing revision and expiry.
+Changing any of these invalidates the old confirmation. The audience is bounded at 50, with
+no family-wide wildcard, duplicate account, self, cross-family or ambiguous display name.
+Identical names require disambiguated server-generated labels before presentation.
+The content-free record holds only IDs, fingerprint and timestamps; previews must not be logged,
+cached durably or persisted as a second quote/name copy. The fingerprint is not a signature.
+
+There is deliberately no loader, grant writer, share table, route, app action or runtime caller.
+Membership/sharing generations are required design inputs, NOT existing persisted guarantees.
+The future database slice must establish these generations, load current authenticated state,
+lock/consume a server-owned single-use presentation and persist per-recipient grants atomically
+through runApiMutation. It must purge grants on quote removal, source changes, purpose/keep
+withdrawal, member departure/account rebind and family erasure. A replay must never recreate a
+revoked grant; returning members need a fresh owner choice. Personal exports stay author-only.
+Required real PostgreSQL negative-control races include revoke/share, leave/rejoin/share,
+withdraw/share, source correction/share and duplicate/replayed confirmation. Only after that
+slice may a recipient read path be connected. These unit checks alone prove none of those races.
+
+Current notice/scripts, generated notices, Worker switches and production remain unchanged.
+No clinical suggestions, model calls or health inputs are introduced. The weekly support engine
+and real app/Telegram consent acceptance remain separate pending work.
+
+Verification: all 31 synthetic confirmation cases passed; local pnpm check passed all 9 tasks,
+including 1,666 service tests (7 unchanged test tasks reused valid caches). Removing the current
+fingerprint comparison made 11 stale-state tests fail; restoring it returned all 31 to passing.
+This proves the comparison tests, not persisted permission or device/consent behavior.
