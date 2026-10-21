@@ -22,7 +22,8 @@ environments until tests and notice text are ready. Do not reuse MEMORY (dated p
   No new permanent quote copy by default. Version content hashes without exposing them to logs.
 - Index family/person/state/date/ID. Bounded extraction per source and idempotent unique source-span
   keys. Bounded cursor pagination; never fetch every family message to serve a collection page.
-- Family-authorised reads; owner-authorised correction/removal; mutation idempotency and real
+- Author-private reads; separate explicit audience grants before sharing; owner correction/removal;
+  mutation idempotency and real
   PostgreSQL race tests for duplicate extraction, keep/remove and concurrent source deletion.
 - New notice and consent version: categories, longer retention after explicit keeping, visibility,
   AI use, cancellation, export, withdrawal. Add messenger keep/remove before calling this complete.
@@ -53,8 +54,13 @@ results, plus load receipts at forecast traffic and 10× burst on isolated fake 
 
 Add a versioned report schema, eligible evidence references and reviewed action templates. Keep
 existing weekly reports working while new reports are off. Introduce WELLBEING_REPORT separately
-from founder-only WEEKLY_INSIGHT; pin production off. Health suggestions wait for purpose-specific
-consent, revised notice and qualified clinical review of templates and failure/urgent pathways.
+from founder-only WEEKLY_INSIGHT; pin production off. First release: non-medical everyday support
+only, from eligible ordinary interests/stories/practical requests, with fixed reviewed templates.
+No symptom-driven suggestions, health inference, disease claims, exercise/diet/sleep prescriptions
+or generated advice. Purpose-specific permission/notice, audience checks and safety review still
+apply; this is not a consent or regulatory workaround. Personalised health advice remains deferred
+behind separate permission, clinical review and legal/safety assessment. Existing urgent notices
+must not be suppressed by this flow's source exclusions.
 
 Create reviewable examples for a joyful week, a difficult week, sparse data, refusal and withdrawn
 sources. Build report draft/review/send APIs with idempotency and revision-bound approval. Recheck
@@ -73,6 +79,36 @@ Add support procedures, operational alerts, capacity/cost receipts and rollback 
 phased activation. No silent backfill of historical conversations under new consent.
 
 ## Evidence ledger
+
+### Approved private-first and everyday-support refinement (22 October, not activated)
+
+Founder approved the benchmark recommendation and asked for useful non-medical suggestions instead
+of medical advice. Candidate and default-kept reads now filter to the authenticated author before
+pagination. Current organisers and later joiners receive no quotes or cursor. Explicit named-audience
+sharing is still unimplemented; no fallback family-wide access is allowed until grants exist.
+New proposed purpose/keep versions reject the old family-wide consent assumptions; no historical
+proof is silently converted. The existing synthetic UI preview still uses its old review text and
+must not be wired to the new backend contract unchanged. Product examples narrow the first report
+to calls, interests, stories and practical offers; they do not implement or validate a live report.
+
+Local pnpm check passed all 9 tasks, including 1,635 service tests (3 new private/version cases).
+Focused memory tests passed 60/60 and existing real PostgreSQL races passed 16/16 with disposable
+cleanup. Removing both private-read filters made the two historical-access tests fail; restoring
+them made all 60 focused cases pass. No new mutation operation or schema migration was added. Explicit sharing,
+the revised real consent/preview flow, report generation, native/provider/capacity proof and
+production activation remain unimplemented/unverified. Current notices/scripts and Worker pins
+are unchanged; source/contract version changes cannot record real acceptance on their own.
+
+### Initial consent wording review (22 October, superseded)
+
+Review-only English wording is in plan/materials/pilot/memory-consent-review.en.md. It separates
+optional discovery, per-quote keeping and withdrawal. Its original current/future-family visibility
+proposal is superseded by the approved private-first direction above. The revised draft retains
+longer quote retention, provider/AI disclosures, no historical backfill and free privacy/data-copy
+controls. Approval applies to product wording, not notice replacement or activation. The current
+privacy-notice.v6, scripts, generated notices, runtime switches and shared app locales are unchanged.
+Revised full notice/script approval, native Chinese review, fresh one-use acceptance presentations,
+withdrawal invalidation, app/Telegram controls, readable delivery and screening remain prerequisites.
 
 ### Author withdrawal follow-up (22 October, not activated)
 
