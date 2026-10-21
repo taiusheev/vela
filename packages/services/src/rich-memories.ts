@@ -43,7 +43,7 @@ import { VelaError } from "./errors.ts";
 import { sha256Hex } from "./hash.ts";
 import type { Queryable } from "./repo.ts";
 
-export const RICH_MEMORY_CONSENT_VERSION = "consent.rich_memories@1";
+export const RICH_MEMORY_CONSENT_VERSION = "consent.rich_memories@2";
 const SOURCE_LIFETIME_MS = 30 * 86_400_000;
 const PAGE_SIZE = 50;
 export const MAX_MEMORY_CANDIDATES_PER_SOURCE = 12;
@@ -257,7 +257,7 @@ export async function proposeMemoryCandidate(
   });
 }
 
-/** Bounded, source-backed family read. The cursor is a scanned ID, not an offset. */
+/** Private author review. Family membership alone never reveals suggestions. */
 export async function loadMemoryCandidates(
   deps: MemoryDeps,
   identity: SessionIdentity,
@@ -296,6 +296,7 @@ export async function loadMemoryCandidates(
     .where(
       and(
         eq(memoryCandidates.familyId, familyId),
+        eq(memoryCandidates.memberId, access.access.memberId),
         isNull(memoryCandidates.dismissedAt),
         isNull(memoryCandidates.keptAt),
         notExists(

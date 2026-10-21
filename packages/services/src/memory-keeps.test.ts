@@ -108,7 +108,7 @@ async function choice() {
 async function keep(key = "synthetic:keep:operation", who = owner) {
   return keepMemoryCandidate(h.deps, who, key, familyId, await choice());
 }
-const read = (who = organiser) => loadKeptMemories(h.deps, who, familyId);
+const read = (who = owner) => loadKeptMemories(h.deps, who, familyId);
 const copy = (who = owner, cursor: string | null = null) =>
   loadOwnKeptMemoriesForExport(h.deps, who, familyId, cursor);
 async function keptId() {
@@ -119,6 +119,37 @@ async function keptId() {
 }
 
 describe("explicit durable conversational memories", () => {
+  it("does not share historical keeps with later members or organisers without an audience grant", async () => {
+    await keep();
+    h.clock.advance(1000);
+    const identity = { authSubject: "synthetic|later-kept-reader", sessionId: "later" };
+    const [user] = await h.db
+      .insert(users)
+      .values({ authSubject: identity.authSubject, displayName: "Synthetic later reader" })
+      .returning();
+    if (!user) throw new Error("Missing synthetic account");
+    const [joined] = await h.db
+      .insert(members)
+      .values({
+        familyId,
+        userId: user.id,
+        role: "member",
+        status: "active",
+        displayName: "Synthetic later reader",
+        language: "en",
+        tz: "Asia/Taipei",
+        country: "TW",
+        primarySurface: "telegram",
+        createdAt: h.clock.now(),
+      })
+      .returning();
+    if (!joined) throw new Error("Missing synthetic membership");
+    expect(await read(identity)).toEqual({ items: [], next_cursor: null });
+    expect(await copy(identity)).toEqual({ items: [], next_cursor: null });
+    await h.db.update(members).set({ role: "organiser" }).where(eq(members.id, joined.id));
+    expect(await read(identity)).toEqual({ items: [], next_cursor: null });
+    expect((await read())?.items).toHaveLength(1);
+  });
   it("withdraws purpose and keep proofs and deletes candidates/copies with processing off, not original messages", async () => {
     await keep();
     h.config.richMemories = false;
@@ -242,7 +273,7 @@ describe("explicit durable conversational memories", () => {
     await expect(
       keepMemoryCandidate(h.deps, owner, "synthetic:bad:version", familyId, {
         ...(await choice()),
-        confirmation_version: "old",
+        confirmation_version: "memory.keep@1",
       }),
     ).rejects.toMatchObject({ code: "invalid" });
     await expect(
@@ -459,9 +490,9 @@ describe("explicit durable conversational memories", () => {
     await h.db.delete(answers).where(eq(answers.id, answerId));
     expect(await h.db.select().from(memoryKeeps)).toHaveLength(0);
   });
-  it("copies only the requesting author's words, even when an organiser can read the family collection", async () => {
+  it("keeps both collection reads and personal copies private to the author", async () => {
     await keep();
-    expect((await read(organiser))?.items).toHaveLength(1);
+    expect(await read(organiser)).toEqual({ items: [], next_cursor: null });
     expect(await copy(organiser)).toEqual({ items: [], next_cursor: null });
     const page = await copy();
     expect(KeptMemoryPage.safeParse(page).success).toBe(true);
@@ -550,9 +581,10 @@ describe("explicit durable conversational memories", () => {
       }
       const page = (cursor: string | null = null) =>
         mode === "collection"
-          ? loadKeptMemories(h.deps, organiser, familyId, cursor)
+          ? loadKeptMemories(h.deps, owner, familyId, cursor)
           : copy(owner, cursor);
       const first = await page();
+      expect(await read(organiser)).toEqual({ items: [], next_cursor: null });
       // Another reader's 51 quotes must not fill this author's page or expose a cursor.
       if (mode === "own-copy")
         expect(await copy(organiser)).toEqual({ items: [], next_cursor: null });

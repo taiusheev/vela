@@ -1,6 +1,6 @@
 # Memories: consent wording for review
 
-22 October 2026 · REVIEW DRAFT ONLY · not approved, not shown to families.
+22 October 2026 · REVIEW DRAFT V2 · private-first direction approved; participant text not yet shown to families.
 
 This is a product-wording proposal, not legal clearance or a replacement privacy notice.
 The current notice remains privacy-notice.v6. No agreement is recorded by approving this draft.
@@ -8,8 +8,9 @@ Approval permits the next notice/script and consent-screen implementation work, 
 
 ## Decision for the founder
 
-Approve the following scope and words, or request changes. Memory suggestions are optional.
-The author decides what stays beyond 30 days. Family members can read, not decide for the author.
+The founder approved private-first review and explicit sharing after the company benchmark.
+This revised participant wording still needs full notice/script and language-specific review.
+Memory suggestions are optional. The author decides what stays beyond 30 days and who can read it.
 This permission does not cover personalised health advice or start a trial or payment.
 
 ## Proposed first question
@@ -22,9 +23,10 @@ people, moments and plans. Only new answers you send after agreeing are eligible
 Health and other sensitive words are not used for memory suggestions. If Vela is unsure,
 it leaves those words out.
 
-Everyone in your Vela family can read the suggestions, including people who join later.
+Only you can read these memory suggestions. Keeping words saves them privately; it does not share them.
 Suggestions expire with the original words, normally 30 days after your answer.
-Only you can choose which exact words to keep for longer.
+Only you can choose which exact words to keep for longer. Sharing is a separate choice showing who
+will be able to read them. New family members do not automatically see older memories.
 
 This is optional. Saying no does not stop your ordinary chats. Agreeing does not start a trial
 or charge anyone. You can later withdraw this permission and clear your memories.
@@ -42,15 +44,19 @@ An organiser may help someone read, but cannot choose for that person.
   own agreement. Not old conversations, the rest of the family's messages, raw voice recordings
   or photos. No health or other sensitive words enter this memory-suggestion process.
 - **AI and people.** OpenAI helps select possible memory quotes from eligible words. A suggestion
-  is not a fact about your personality. The new full notice must describe this purpose alongside
+  is not a fact about your personality. Remembering inside Vela is different from training an AI
+  model; this permission does not permit model training. Provider safety-log retention is separate
+  from Vela's memory retention, as described in the full notice. The new full notice must describe this purpose alongside
   the providers, countries, provider retention and founder access that apply. This draft does not
   change those arrangements or authorise a new provider.
-- **Who reads.** Current and future members of your Vela family can read suggestions and kept
-  quotes. They cannot agree to this permission or keep words for you. Review your family members
-  before agreeing. Future membership changes must remain visible in Vela.
+- **Who reads.** Suggestions and kept quotes are private to you by default. Only you can choose
+  to share a kept quote. Before sharing, Vela shows the current named readers. Membership or
+  organiser status alone does not allow access. New members cannot read older keeps unless you
+  explicitly approve those readers. Family membership changes must remain visible in Vela.
 - **What stays.** A suggestion expires with its source, normally after 30 days. Keeping needs a
   separate confirmation for each exact quote. Only those words are copied for longer, not the
-  whole conversation, voice recording or photo. A kept quote has no fixed expiry while its grants
+  whole conversation, voice recording or photo. Keeping alone grants no family access. A kept quote
+  has no fixed expiry while its grants
   and family membership remain valid. It is removed if you remove it, withdraw memory permission,
   leave the family, the family is deleted, or its source is corrected/deleted in Vela. Normal
   30-day clearing of the original words does not remove an explicitly kept quote.
@@ -71,12 +77,16 @@ The existing conversation and story-book rules are otherwise unchanged.
 
 ## Separate confirmation for one kept quote
 
-Show the exact selected quote, its source and its author. The existing proposed memory.keep@1
-English explanation is reproduced unchanged below; it is not approved by this document:
+Show the exact selected quote, its source and its author. New proposed memory.keep@2 private
+keeping explanation (the old family-wide memory.keep@1 explanation must not authorise it):
 
-> Only these words will stay in family memories after the conversation’s 30 days. Everyone in your Vela family can read them. You can remove this memory later.
+> Only these words will stay in your private memories after the conversation’s 30 days. Keeping does not share them with family. You can remove this memory later.
 
 Actions: **Keep these words** · **Back**.
+
+Sharing requires another confirmation showing the exact quote and named current readers, backed
+by separate revocable audience grants. Do not label the private keep action “Keep and share”.
+Report/search/export routes must enforce the same audience; they cannot reveal a private memory.
 
 No edit to the quote inside confirmation. Changed source, expired permission or mismatched
 confirmation version cancels the save. Only a server-confirmed result may say the words were kept.
@@ -99,8 +109,8 @@ and offer retry with the same request key. Refresh current state after any old r
 
 ## Requirements before anyone can accept
 
-1. Founder approves this product wording. Resolve any requested scope changes before coding
-   acceptance. This approval is not legal clearance or permission to activate.
+1. Founder approved the private-first product direction. Review these revised participant words
+   before recording real acceptance. Direction approval is not legal clearance or activation.
 2. Review and approve a new full notice and consent script, with the memory purpose, retention,
    family visibility, AI processing, provider details and withdrawal/data-copy arrangements.
    The main app permission must not silently substitute for the author's memory permission.
@@ -122,8 +132,10 @@ and offer retry with the same request key. Refresh current state after any old r
 
 ## Evidence boundary
 
-Current internal services support source-backed candidates, exact quote keeping, reading/removal
-and personal-copy pages. They are unwired/off. Copy pages are not a complete data export.
-Author withdrawal is proposed separately in PR137; its actual app/messenger action is not built.
+Current internal services support source-backed candidates, private exact quote keeping,
+reading/removal and personal-copy pages. They are unwired/off. Explicit sharing grants and complete
+data-copy delivery are not built. Author withdrawal from PR137 is backend-only, not an app/messenger action.
+The existing synthetic preview still displays old family-wide keep text; it must not be wired to
+this new private purpose/keep version unchanged. It makes no real consent or persistent save.
 The source policy consumes trusted ordinary-content review; screening accuracy is not proven.
 This document supplies no provider, accessibility, legal, clinical or capacity clearance.

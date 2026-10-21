@@ -42,9 +42,9 @@ export const MemoryCandidatePage = z.strictObject({
 export type MemoryCandidatePage = z.infer<typeof MemoryCandidatePage>;
 
 /** Proposed confirmation text; not an activated notice or consent-acceptance route. */
-export const MEMORY_KEEP_VERSION = "memory.keep@1";
+export const MEMORY_KEEP_VERSION = "memory.keep@2";
 export const MEMORY_KEEP_EXPLANATION_EN =
-  "Only these words will stay in family memories after the conversation’s 30 days. Everyone in your Vela family can read them. You can remove this memory later.";
+  "Only these words will stay in your private memories after the conversation’s 30 days. Keeping does not share them with family. You can remove this memory later.";
 export const MemoryKeepChoice = z.strictObject({
   candidate_id: z.uuid(),
   confirmation_version: z.literal(MEMORY_KEEP_VERSION),
