@@ -34,11 +34,13 @@ const absent = () => new VelaError("not_found", "Memory not found");
 const unavailable = () => new VelaError("illegal_state", "Memory is no longer available");
 const active = ["active", "paused"] as const;
 
-async function lockOwner(
+/** Shared lock order for owner actions; withdrawal takes the member's exclusive lock. */
+export async function lockMemoryOwner(
   db: Queryable,
   identity: SessionIdentity,
   familyId: string,
   memberId: string,
+  memberLock: "share" | "update" = "share",
 ) {
   const access = await authorizeFamilyAccess(db, identity, familyId);
   if (access.kind !== "granted" || access.access.memberId !== memberId) throw absent();
@@ -58,7 +60,7 @@ async function lockOwner(
         inArray(members.status, active),
       ),
     )
-    .for("share");
+    .for(memberLock);
   if (!family || !member || member.userId !== access.access.userId) throw absent();
   const [user] = await db
     .select()
@@ -113,7 +115,7 @@ export async function keepMemoryCandidate(
             ),
           );
         if (!location) throw absent();
-        await lockOwner(tx, identity, familyId, location.candidate.memberId);
+        await lockMemoryOwner(tx, identity, familyId, location.candidate.memberId);
         const [exchange] = await tx
           .select({ id: exchanges.id })
           .from(exchanges)
@@ -411,7 +413,7 @@ export async function removeKeptMemory(
           .from(memoryKeeps)
           .where(and(eq(memoryKeeps.id, id), eq(memoryKeeps.familyId, familyId)));
         if (!row) throw absent();
-        await lockOwner(tx, identity, familyId, row.memberId);
+        await lockMemoryOwner(tx, identity, familyId, row.memberId);
         await tx
           .select({ id: answers.id })
           .from(answers)

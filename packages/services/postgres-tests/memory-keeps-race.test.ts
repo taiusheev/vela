@@ -5,6 +5,7 @@ import {
   exchanges,
   families,
   members,
+  memoryCandidates,
   memoryKeeps,
   users,
   type VelaDatabase,
@@ -12,6 +13,7 @@ import {
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { sha256Hex } from "../src/hash.ts";
+import { withdrawOwnMemoryConsent } from "../src/memory-consent.ts";
 import { keepMemoryCandidate, removeKeptMemory } from "../src/memory-keeps.ts";
 import { proposeMemoryCandidate, RICH_MEMORY_CONSENT_VERSION } from "../src/rich-memories.ts";
 import { seedExchange, seedFamily } from "../src/testing/seed.ts";
@@ -105,6 +107,72 @@ async function keep(client: RaceClient, row: Source, key: string) {
 }
 
 describe("durable memory privacy on independent PostgreSQL connections", () => {
+  it("clears proposals that finish while withdrawal waits for the author's exclusive member lock", async () => {
+    const row = await source(seed.db);
+    const [withdrawer, proposer, holder] = await pg.clientPool("withdraw-proposal", 3);
+    if (!withdrawer || !proposer || !holder) throw new Error("Missing clients");
+    const held = await pg.holdRows(holder, (tx) =>
+      tx.select().from(members).where(eq(members.id, row.family.member.id)).for("share"),
+    );
+    const withdrawal = pg.track(
+      withdrawOwnMemoryConsent(
+        deps(withdrawer),
+        identity,
+        "synthetic:withdraw:proposal",
+        row.family.family.id,
+      ),
+    );
+    await pg.waitForRowLockWait(withdrawer, [holder], withdrawal);
+    const proposal = pg.track(
+      proposeMemoryCandidate(
+        deps(proposer),
+        { source_answer_id: row.answer.id, kind: "preference", start: 0, end: words.length },
+        { answerId: row.answer.id, ordinaryText: words },
+      ),
+    );
+    await pg.waitForRowLockWaitOrCompletion(proposer, [withdrawer, holder], proposal);
+    await held.release();
+    expect(await pg.settle("withdrawal", [withdrawal])).toMatchObject([{ status: "fulfilled" }]);
+    // PostgreSQL may let a compatible SHARE lock finish before the waiting UPDATE lock.
+    // Such a proposal is valid before withdrawal, but none may survive its commit.
+    expect(await pg.settle("racing proposal", [proposal])).toMatchObject([{ status: "fulfilled" }]);
+    expect(await seed.db.select().from(memoryCandidates)).toHaveLength(0);
+    expect(await seed.db.select().from(memoryKeeps)).toHaveLength(0);
+    expect(
+      await proposeMemoryCandidate(
+        deps(proposer),
+        { source_answer_id: row.answer.id, kind: "preference", start: 0, end: words.length },
+        { answerId: row.answer.id, ordinaryText: words },
+      ),
+    ).toBeNull();
+  });
+  it("cannot revive kept words through a retry queued behind purpose withdrawal", async () => {
+    const row = await source(seed.db);
+    await keep(seed, row, "synthetic:withdraw:initial");
+    const [withdrawer, keeper, holder] = await pg.clientPool("withdraw-keep", 3);
+    if (!withdrawer || !keeper || !holder) throw new Error("Missing clients");
+    const held = await pg.holdRows(holder, (tx) =>
+      tx.select().from(members).where(eq(members.id, row.family.member.id)).for("share"),
+    );
+    const withdrawal = pg.track(
+      withdrawOwnMemoryConsent(
+        deps(withdrawer),
+        identity,
+        "synthetic:withdraw:keep",
+        row.family.family.id,
+      ),
+    );
+    await pg.waitForRowLockWait(withdrawer, [holder], withdrawal);
+    const retry = pg.track(keep(keeper, row, "synthetic:withdraw:initial"));
+    await pg.waitForActorLockWait(keeper, [withdrawer], retry);
+    await held.release();
+    expect(await pg.settle("withdrawal", [withdrawal])).toMatchObject([{ status: "fulfilled" }]);
+    expect(await pg.settle("retry after withdrawal", [retry])).toMatchObject([
+      { status: "fulfilled", value: { kind: "rejected" } },
+    ]);
+    expect(await seed.db.select().from(memoryKeeps)).toHaveLength(0);
+    expect(await seed.db.select().from(memoryCandidates)).toHaveLength(0);
+  });
   it("serializes duplicate keeps with different request keys and creates one grant", async () => {
     const row = await source(seed.db);
     const [one, two, holder] = await pg.clientPool("duplicate-keep", 3);

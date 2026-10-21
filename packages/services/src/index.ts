@@ -188,6 +188,7 @@ export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
 export { ingestExchangeMedia, storeInboundCopy } from "./inbound-media-copy.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
+export { withdrawOwnMemoryConsent } from "./memory-consent.ts";
 export {
   keepMemoryCandidate,
   loadKeptMemories,
