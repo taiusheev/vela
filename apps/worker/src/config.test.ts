@@ -595,6 +595,8 @@ describe("closed pilot admission", () => {
       telegramUserIds: ["1001", "2001"],
     });
     expect(readConfig({ ...configured, MEMORY: "on" }, filled).memory).toBe(false);
+    // Candidate storage is deliberately not wired to Worker environments before notice/UX rollout.
+    expect(readConfig(configured, filled).richMemories).not.toBe(true);
   });
 });
 

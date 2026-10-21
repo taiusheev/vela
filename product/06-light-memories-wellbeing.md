@@ -4,6 +4,8 @@
 definition in product spec §12 and the paid-package boundary in §16. It defines intended behaviour,
 not current availability. Existing notice, consent and production switches still apply until the
 rollout below replaces them explicitly. The original spec governs all other behaviour.
+For the future WELLBEING_REPORT flow, the report requirements below replace §13. The existing
+weekly read continues under its current contract until that separate rollout is complete.
 
 ## Purpose
 

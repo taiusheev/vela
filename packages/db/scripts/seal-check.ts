@@ -34,6 +34,7 @@ async function main(): Promise<void> {
       "stories.transcript",
       "recipes.title",
       "memory_facts.text",
+      "memory_candidates.source_digest",
       "reminders.text",
       "weekly_reads.suggestion",
       "weekly_reads.sent_suggestion",

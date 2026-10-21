@@ -3,15 +3,9 @@
  * through family authorization. This policy is not an authorization boundary or a health detector.
  * No runtime uses it until the storage, consent and API rollout in plan/light-memories-wellbeing.md.
  */
-export const FAMILY_MEMORY_KINDS = [
-  "preference",
-  "story",
-  "humour",
-  "person",
-  "moment",
-  "follow_up",
-] as const;
-export type FamilyMemoryKind = (typeof FAMILY_MEMORY_KINDS)[number];
+import { FAMILY_MEMORY_KINDS, type FamilyMemoryKind } from "@vela/contracts";
+
+export { FAMILY_MEMORY_KINDS, type FamilyMemoryKind } from "@vela/contracts";
 
 export interface MemorySource {
   id: string;

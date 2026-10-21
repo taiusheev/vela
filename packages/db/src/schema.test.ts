@@ -11,6 +11,7 @@ import {
   EVENT_NAMES,
   EXCHANGE_STATES,
   EXCHANGE_TYPES,
+  FAMILY_MEMORY_KINDS,
   INTEREST_TOPICS,
   KEPT_LIGHT_RELATIONSHIPS,
   LANGS,
@@ -64,6 +65,7 @@ import {
   type Member,
   media,
   members,
+  memoryCandidates,
   memoryFacts,
   messageRefs,
   metricsDaily,
@@ -502,6 +504,29 @@ async function seedEveryTable(): Promise<void> {
   await db.insert(metricsDaily).values({ day: "2026-09-13", familyId, memberId: seed.parent.id });
   await db.insert(waitlistSignups).values({ email: "mia@example.com", language: "en" });
   await db.insert(pilotRoster).values({ telegramUserId: "2001" });
+  const memoryConsent = only(
+    await db
+      .insert(consents)
+      .values(
+        consentAbout(
+          { memberId: seed.parent.id },
+          { kind: "rich_memories", textVersion: "consent.rich_memories@1" },
+        ),
+      )
+      .returning(),
+  );
+  await db.insert(memoryCandidates).values({
+    familyId,
+    memberId: seed.parent.id,
+    sourceAnswerId: answer.id,
+    consentId: memoryConsent.id,
+    kind: "preference",
+    start: 0,
+    end: 2,
+    sourceDigest: "a".repeat(64),
+    createdAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-10-14T00:00:00Z"),
+  });
   await db.insert(deadLetters).values({
     messageId: "dead-1",
     jobType: "deliver",
@@ -2081,6 +2106,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "replies", column: "channel", values: CHANNELS },
     { table: "recipes", column: "status", values: RECIPE_STATUSES },
     { table: "memory_facts", column: "kind", values: MEMORY_FACT_KINDS },
+    { table: "memory_candidates", column: "kind", values: FAMILY_MEMORY_KINDS },
     { table: "quiet_events", column: "outcome", values: QUIET_OUTCOMES },
     { table: "away_periods", column: "source", values: AWAY_SOURCES },
     { table: "outbound", column: "kind", values: OUTBOUND_KINDS },
@@ -2149,6 +2175,23 @@ describe("CHECK constraints on enumerated columns", () => {
     expect(error).toEqual({ code: CHECK_VIOLATION, constraint: "families_story_day_check" });
   });
 
+  it("rejects invalid memory spans and candidates that outlive no source window", async () => {
+    await seedEveryTable();
+    for (const offsets of [{ start: -1 }, { end: 0 }, { end: 2001 }]) {
+      expect(await rejection(db.update(memoryCandidates).set(offsets))).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "memory_candidates_offsets_check",
+      });
+    }
+    expect(
+      await rejection(
+        db.update(memoryCandidates).set({
+          expiresAt: new Date("2026-09-14T00:00:00Z"),
+        }),
+      ),
+    ).toEqual({ code: CHECK_VIOLATION, constraint: "memory_candidates_expiry_check" });
+  });
+
   it("keeps a waitlist address lowercased and no longer than an address can be", async () => {
     await seedEveryTable();
 
@@ -2179,6 +2222,8 @@ describe("CHECK constraints on enumerated columns", () => {
     const tested = [
       ...enumerated.map(({ table, column }) => `${table}_${column}_check`),
       "families_story_day_check",
+      "memory_candidates_offsets_check",
+      "memory_candidates_expiry_check",
       "members_interests_check",
       "members_reply_ways_check",
       "outbound_nearby_ask_actor_check",
