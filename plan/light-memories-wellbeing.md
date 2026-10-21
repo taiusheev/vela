@@ -74,6 +74,19 @@ phased activation. No silent backfill of historical conversations under new cons
 
 ## Evidence ledger
 
+### Personal-copy follow-up (22 October, not activated)
+
+Added a bounded internal read for the authenticated author's own kept quotes. It reuses the
+collection's current consent/source/identity checks, applies the author filter in SQL before the
+50-row page limit, and remains available with discovery off. It creates no export files, cached
+snapshots, routes or mutation receipts. The data-request runbook distinguishes this component from
+a complete export and records sealed-value, private delivery and in-progress invalidation gates.
+No founder console impersonation or whole-family data copy is introduced. Local root checks passed
+all 9 tasks (1,626 service tests, including 9 additional copy cases); 14 existing real PostgreSQL
+memory races passed with disposable database cleanup. Removing the author filter made both copy
+isolation tests fail, including the 51-other-quotes page case; the guard was restored before commit.
+GitHub results, combined-main verification, production delivery and actual consent remain pending.
+
 This initial change supplies domain-policy tests and a product/implementation contract only.
 Persistence, APIs, UI, discovery, clinical review, provider/device flows, scale and production are
 not proven by it. Record later receipts against each slice rather than marking the whole plan done.

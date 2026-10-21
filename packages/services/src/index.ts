@@ -188,7 +188,12 @@ export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
 export { ingestExchangeMedia, storeInboundCopy } from "./inbound-media-copy.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
-export { keepMemoryCandidate, loadKeptMemories, removeKeptMemory } from "./memory-keeps.ts";
+export {
+  keepMemoryCandidate,
+  loadKeptMemories,
+  loadOwnKeptMemoriesForExport,
+  removeKeptMemory,
+} from "./memory-keeps.ts";
 export { askApiToLookIn, LookInRefusedError } from "./nearby-ask.ts";
 export { inviteApiNearby, NearbyInviteRefusedError } from "./nearby-consent.ts";
 export {
