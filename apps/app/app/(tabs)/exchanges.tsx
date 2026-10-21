@@ -89,7 +89,7 @@ function MemoryCard({
             <Light state="lit" height={16} />
             <Text
               style={[type.label, { color: palette.ink3, textTransform: "uppercase", flex: 1 }]}
-            >{`${recipient} · ${when}`}</Text>
+            >{`${recipient} · ${when} · ${time}`}</Text>
             {kept ? (
               <View
                 style={{
@@ -130,17 +130,27 @@ function MemoryCard({
               ready={answer.audio.state === "ready"}
             />
           )}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
-            <Text style={[type.caption, { color: palette.ink3, flex: 1 }]}>
-              {[
-                answer.transcript === true
-                  ? t`${recipient} answered at ${time} · from her voice note`
-                  : t`${recipient} answered at ${time}`,
-                replies === 0 ? undefined : plural(replies, { one: "# reply", other: "# replies" }),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </Text>
+          {/* Who and when are said once, at the top; the foot keeps small signs, never wrapping. */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
+            {answer.transcript === true ? (
+              <View
+                accessible
+                accessibilityLabel={t`From a voice note`}
+                style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
+              >
+                <BrandIcon name="mic" color={palette.ink3} size={16} />
+                <Text style={[type.caption, { color: palette.ink3 }]}>{t`Voice`}</Text>
+              </View>
+            ) : null}
+            {replies === 0 ? null : (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
+                <BrandIcon name="reply" color={palette.ink3} size={16} />
+                <Text style={[type.caption, { color: palette.ink3 }]}>
+                  {plural(replies, { one: "# reply", other: "# replies" })}
+                </Text>
+              </View>
+            )}
+            <View style={{ flex: 1 }} />
             <BrandIcon name="chevron" color={palette.action} size={18} />
           </View>
         </View>

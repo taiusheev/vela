@@ -170,6 +170,7 @@ msgid "{name} has not said yes yet"
 msgstr ""
 
 #: app/ask.tsx
+#: src/components/story-day.tsx
 msgid "{name} has not said yes yet. Once she does, her first morning is the next day."
 msgstr ""
 
@@ -278,6 +279,7 @@ msgid "{name}'s light is on"
 msgstr ""
 
 #: app/ask.tsx
+#: src/components/story-day.tsx
 msgid "{name}'s light is paused just now, so nothing can be sent into her morning."
 msgstr ""
 
@@ -349,14 +351,9 @@ msgstr ""
 msgid "{recipient} answered an earlier ask at {time}. This one has no answer yet."
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
 #: app/(tabs)/index.tsx
 #: app/exchange/[id].tsx
 msgid "{recipient} answered at {time}"
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "{recipient} answered at {time} · from her voice note"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -1278,6 +1275,10 @@ msgstr ""
 msgid "From {fromName} · Saved for their morning"
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "From a voice note"
+msgstr ""
+
 #: src/data/onboarding.ts
 msgid "Garden & plants"
 msgstr ""
@@ -1390,10 +1391,6 @@ msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
 msgid "Her messenger did not take it. Her daily morning is unchanged."
-msgstr ""
-
-#: src/components/chat/chat-bubble.tsx
-msgid "Her morning"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -4128,6 +4125,7 @@ msgid "You can add someone from Today later."
 msgstr ""
 
 #: app/sign-in.tsx
+#: src/components/story-day.tsx
 msgid "You can explore an example family. No messages are sent."
 msgstr ""
 

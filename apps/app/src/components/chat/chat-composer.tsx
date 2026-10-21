@@ -50,7 +50,7 @@ export function ChatComposer({
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: palette.rule,
+            borderColor: palette.control,
             backgroundColor: pressed ? palette.surface2 : palette.surface,
           })}
         >
@@ -64,7 +64,7 @@ export function ChatComposer({
           justifyContent: "center",
           borderRadius: 22,
           borderWidth: focused ? 2 : 1,
-          borderColor: focused ? palette.action : palette.rule,
+          borderColor: focused ? palette.action : palette.control,
           backgroundColor: palette.surface,
           paddingHorizontal: focused ? space.l - 1 : space.l,
         }}

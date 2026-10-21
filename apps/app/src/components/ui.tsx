@@ -71,16 +71,20 @@ export function PrimaryButton({
   label,
   onPress,
   disabled = false,
+  hint,
 }: {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** Read by VoiceOver: why the button is waiting, when it is. */
+  hint?: string;
 }) {
   const palette = usePalette();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled }}
+      {...(hint === undefined ? {} : { accessibilityHint: hint })}
       hitSlop={hitSlop}
       disabled={disabled}
       onPress={onPress}
@@ -310,15 +314,19 @@ export function SecondaryButton({
   label,
   onPress,
   disabled = false,
+  hint,
 }: {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** Read by VoiceOver: why the button is waiting, when it is. */
+  hint?: string;
 }) {
   const palette = usePalette();
   return (
     <Pressable
       accessibilityRole="button"
+      {...(hint === undefined ? {} : { accessibilityHint: hint })}
       hitSlop={hitSlop}
       disabled={disabled}
       accessibilityState={{ disabled }}

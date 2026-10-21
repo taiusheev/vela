@@ -44,6 +44,8 @@ export function ChatBubble({
   message,
   first,
   last,
+  showTime,
+  showStatus,
   familyId,
   onReact,
   reacting,
@@ -53,6 +55,10 @@ export function ChatBubble({
   first: boolean;
   /** The last of a group: the time and the status show under it. */
   last: boolean;
+  /** The conversation pauses after this message, so its time shows (`showsTime`). */
+  showTime: boolean;
+  /** "Seen" or "Delivered" is said here, or the message is still sending or failed (`showsStatus`). */
+  showStatus: boolean;
   familyId: string | undefined;
   /** Reactions are given on her messages only. */
   onReact?: (kind: ChatReactionKind) => void;
@@ -62,6 +68,8 @@ export function ChatBubble({
   const { t } = useLingui();
   const { fontScale } = useWindowDimensions();
   const [picking, setPicking] = useState(false);
+  // Tapping her message shows its time with the hearts, as messengers show a time on demand.
+  const [timeOpen, setTimeOpen] = useState(false);
   const side = message.side;
   const mine = side === "me";
   const hers = side === "her";
@@ -117,11 +125,14 @@ export function ChatBubble({
           : message.status === "delivered"
             ? t`Delivered`
             : undefined;
+  // "written by Vela" (ADR-49) always shows on its message; the time only at a pause or on a tap.
   const footer = [
-    message.morning === true ? t`Her morning` : undefined,
-    time,
-    message.draftedByVela === true ? t`written by Vela` : undefined,
-    status,
+    (last && showTime) || timeOpen ? time : undefined,
+    last && message.draftedByVela === true ? t`written by Vela` : undefined,
+    // A message still sending or not delivered says so wherever it sits in its group.
+    (last || message.status === "sending" || message.status === "failed") && showStatus
+      ? status
+      : undefined,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -210,8 +221,15 @@ export function ChatBubble({
           accessibilityRole="button"
           accessibilityLabel={label}
           accessibilityHint={t`Shows hearts, laughs and hugs to send`}
-          onPress={() => setPicking((open) => !open)}
-          onLongPress={() => setPicking(true)}
+          onPress={() => {
+            const open = !picking;
+            setPicking(open);
+            setTimeOpen(open);
+          }}
+          onLongPress={() => {
+            setPicking(true);
+            setTimeOpen(true);
+          }}
           style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
         >
           {body}
@@ -221,8 +239,16 @@ export function ChatBubble({
           {body}
         </View>
       )}
-      {message.reactions.length === 0 ? null : (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.xs }}>
+      {message.reactions.length === 0 && footer.length === 0 ? null : (
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: mine ? "flex-end" : "flex-start",
+            gap: space.xs,
+          }}
+        >
           {message.reactions.map((reaction) => {
             const giver = reaction.from;
             return (
@@ -255,6 +281,19 @@ export function ChatBubble({
               </View>
             );
           })}
+          {footer.length === 0 ? null : (
+            <Text
+              style={[
+                type.caption,
+                {
+                  color: message.status === "failed" ? palette.error : palette.ink3,
+                  paddingHorizontal: space.s,
+                },
+              ]}
+            >
+              {footer}
+            </Text>
+          )}
         </View>
       )}
       {picking && onReact !== undefined ? (
@@ -306,20 +345,7 @@ export function ChatBubble({
           })}
         </View>
       ) : null}
-      {last ? (
-        <Text
-          style={[
-            type.caption,
-            {
-              color: message.status === "failed" ? palette.error : palette.ink3,
-              paddingHorizontal: space.s,
-            },
-          ]}
-        >
-          {footer}
-        </Text>
-      ) : null}
-      {last && message.status === "failed" ? (
+      {message.status === "failed" ? (
         <Words variant="caption" tone="ink2">
           <Trans>Her messenger did not take it. Her daily morning is unchanged.</Trans>
         </Words>
