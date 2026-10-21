@@ -148,13 +148,13 @@ function ExchangeCard({
             style={{
               flex: fontScale > 1.3 ? undefined : 1,
               alignSelf: "stretch",
-              minHeight: 56,
+              minHeight: 52,
               flexDirection: "row",
               alignItems: "center",
               gap: space.m,
               backgroundColor: exchange.answer === undefined ? palette.actionSoft : palette.action,
               borderRadius: 14,
-              paddingHorizontal: space.m,
+              paddingHorizontal: space.l,
               paddingVertical: space.s,
             }}
           >

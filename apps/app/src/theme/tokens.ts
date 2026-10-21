@@ -21,10 +21,6 @@ export interface Palette {
   onAction: string;
   actionSoft: string;
   error: string;
-  /** The soft ground of a careful action's icon tile (Leave). */
-  errorSoft: string;
-  /** An icon tile sitting on a filled action button. */
-  actionTile: string;
 }
 
 export const lightPalette: Palette = {
@@ -43,8 +39,6 @@ export const lightPalette: Palette = {
   onAction: "#FFFFFF",
   actionSoft: "#E1EEF0",
   error: "#B3261E",
-  errorSoft: "#F7E1DE",
-  actionTile: "rgba(255,255,255,0.16)",
 };
 
 export const darkPalette: Palette = {
@@ -63,8 +57,6 @@ export const darkPalette: Palette = {
   onAction: "#1B1714",
   actionSoft: "#17383E",
   error: "#F28B82",
-  errorSoft: "#3A2422",
-  actionTile: "rgba(27,23,20,0.16)",
 };
 
 /** The 4 pt grid: 4, 8, 12, 16, 20, 24, 32, 40, 56, with 24 pt app margins. */

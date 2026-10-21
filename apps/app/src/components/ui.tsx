@@ -98,9 +98,9 @@ export function PrimaryButton({
         backgroundColor: palette.action,
         opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
         borderRadius: 14,
-        minHeight: icon === undefined ? 54 : 56,
+        minHeight: 52,
         paddingVertical: icon === undefined ? space.m : space.s,
-        paddingHorizontal: icon === undefined ? space.l : space.m,
+        paddingHorizontal: space.l,
         flexDirection: "row",
         gap: space.m,
         alignItems: "center",
@@ -124,7 +124,7 @@ export function PrimaryButton({
   );
 }
 
-/** A 34 pt rounded tile holding an action's icon: on a filled button, soft teal, or careful red. */
+/** An action's icon, drawn plain beside its label (no tile behind it, founder 21 Oct 2026). */
 export function IconTile({
   name,
   tone = "soft",
@@ -133,14 +133,6 @@ export function IconTile({
   tone?: "onAction" | "soft" | "error" | "quiet";
 }) {
   const palette = usePalette();
-  const ground =
-    tone === "onAction"
-      ? palette.actionTile
-      : tone === "error"
-        ? palette.errorSoft
-        : tone === "quiet"
-          ? palette.bg
-          : palette.actionSoft;
   const ink =
     tone === "onAction"
       ? palette.onAction
@@ -149,21 +141,7 @@ export function IconTile({
         : tone === "quiet"
           ? palette.ink2
           : palette.action;
-  return (
-    <View
-      style={{
-        width: 34,
-        height: 34,
-        borderRadius: 10,
-        backgroundColor: ground,
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      <BrandIcon name={name} color={ink} size={19} strokeWidth={2} />
-    </View>
-  );
+  return <BrandIcon name={name} color={ink} size={20} strokeWidth={2} />;
 }
 
 /** Actions that sit together (Story day's choices, Pause and Leave): rows in one card. */
@@ -212,11 +190,11 @@ export function ActionRow({
       onPress={onPress}
       {...(testID === undefined ? {} : { testID })}
       style={({ pressed }) => ({
-        minHeight: 56,
+        minHeight: 52,
         flexDirection: "row",
         alignItems: "center",
         gap: space.m,
-        paddingHorizontal: space.m,
+        paddingHorizontal: space.l,
         paddingVertical: space.s,
         borderTopWidth: first ? 0 : 1,
         borderTopColor: palette.rule,
@@ -320,7 +298,7 @@ export function Chip({
       onPress={onPress}
       style={({ pressed }) => ({
         borderRadius: radius.chip,
-        minHeight: 48,
+        minHeight: 44,
         maxWidth: "100%",
         flexShrink: 1,
         justifyContent: "center",
@@ -342,9 +320,9 @@ export function Chip({
             <View
               key={key}
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
                 marginLeft: index === 0 ? 0 : -10,
                 borderWidth: 2,
                 borderColor: selected ? palette.actionSoft : palette.surface,
@@ -508,9 +486,9 @@ export function SecondaryButton({
         borderStyle: held ? "dashed" : "solid",
         opacity: disabled && !held ? 0.45 : pressed ? 0.82 : 1,
         borderRadius: 14,
-        minHeight: tile === undefined ? 54 : 56,
+        minHeight: 52,
         paddingVertical: tile === undefined ? space.m : space.s,
-        paddingHorizontal: tile === undefined ? space.l : space.m,
+        paddingHorizontal: space.l,
         flexDirection: "row",
         gap: space.m,
         alignItems: "center",
