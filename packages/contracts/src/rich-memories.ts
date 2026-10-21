@@ -40,3 +40,30 @@ export const MemoryCandidatePage = z.strictObject({
   next_cursor: z.uuid().nullable(),
 });
 export type MemoryCandidatePage = z.infer<typeof MemoryCandidatePage>;
+
+/** Proposed confirmation text; not an activated notice or consent-acceptance route. */
+export const MEMORY_KEEP_VERSION = "memory.keep@1";
+export const MEMORY_KEEP_EXPLANATION_EN =
+  "Only these words will stay in family memories after the conversation’s 30 days. Everyone in your Vela family can read them. You can remove this memory later.";
+export const MemoryKeepChoice = z.strictObject({
+  candidate_id: z.uuid(),
+  confirmation_version: z.literal(MEMORY_KEEP_VERSION),
+  confirmation_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+});
+export const ApiKeptMemory = z.strictObject({
+  id: z.uuid(),
+  member_id: z.uuid(),
+  source_answer_id: z.uuid(),
+  kind: FamilyMemoryKind,
+  quote: z.string().min(1).max(2000),
+  lang: z.string().min(1).max(35),
+  occurred_at: z.iso.datetime(),
+  kept_at: z.iso.datetime(),
+  source_available: z.boolean(),
+});
+export type ApiKeptMemory = z.infer<typeof ApiKeptMemory>;
+export const KeptMemoryPage = z.strictObject({
+  items: z.array(ApiKeptMemory).max(50),
+  next_cursor: z.uuid().nullable(),
+});
+export type KeptMemoryPage = z.infer<typeof KeptMemoryPage>;

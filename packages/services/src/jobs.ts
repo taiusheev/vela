@@ -45,6 +45,7 @@ import {
   media,
   members,
   memoryFacts,
+  memoryKeeps,
   messageRefs,
   metricsDaily,
   nearbyContacts,
@@ -1333,6 +1334,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .set({
         payload: sql`${answers.payload} - array['text', 'choice']`,
         transcript: null,
+        wordsExpiredAt: sql`coalesce(${answers.wordsExpiredAt}, ${now})`,
         mentions: {},
         moodWords: [],
         flagReason: null,
@@ -1375,6 +1377,27 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .returning({ id: memoryFacts.id })
   ).length;
   counts.memory_candidates_deleted = await deleteExpiredMemoryCandidates(db, now);
+  counts.memory_keep_tombstones_deleted = (
+    await db
+      .delete(memoryKeeps)
+      .where(lt(memoryKeeps.removedAt, cutoff30))
+      .returning({ id: memoryKeeps.id })
+  ).length;
+  // A source/permission guard may delete its last copy before retention. Close the content-free
+  // proof so it follows the existing five-year withdrawn-consent rule, not indefinite retention.
+  counts.memory_keep_proofs_closed = (
+    await db
+      .update(consents)
+      .set({ withdrawnAt: now })
+      .where(
+        and(
+          eq(consents.kind, "memory_keep"),
+          isNull(consents.withdrawnAt),
+          sql`not exists (select 1 from ${memoryKeeps} where ${memoryKeeps.keepConsentId} = ${consents.id} and ${memoryKeeps.removedAt} is null)`,
+        ),
+      )
+      .returning({ id: consents.id })
+  ).length;
   counts.reminders_deleted = (
     await db
       .delete(reminders)

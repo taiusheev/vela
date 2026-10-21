@@ -62,6 +62,8 @@ const fields: readonly FieldSpec[] = [
   { table: "recipes", keys: ["id"], column: "card", kind: "jsonb" },
   { table: "memory_facts", keys: ["id"], column: "text", kind: "text" },
   { table: "memory_candidates", keys: ["id"], column: "source_digest", kind: "text" },
+  { table: "memory_keeps", keys: ["id"], column: "source_digest", kind: "text" },
+  { table: "memory_keeps", keys: ["id"], column: "quote", kind: "text" },
   { table: "reminders", keys: ["id"], column: "text", kind: "text" },
   { table: "quiet_events", keys: ["id"], column: "ask_to_check", kind: "jsonb" },
   { table: "weekly_reads", keys: ["id"], column: "lines", kind: "jsonb" },
