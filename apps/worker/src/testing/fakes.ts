@@ -834,6 +834,7 @@ export function memberFixture(overrides: Partial<Member> = {}): FamilyPage["memb
       id: "22222222-2222-7222-8222-222222222222",
       familyId: FAMILY_ID,
       userId: null,
+      memoryMembershipRevision: "33333333-3333-7333-8333-333333333333",
       role: "member",
       billing: false,
       displayName: "Mom",

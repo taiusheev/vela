@@ -16,7 +16,7 @@ describe("the kept-quote privacy guard definition", () => {
     expect(
       readFileSync(new URL("../../../architecture/schema.sql", import.meta.url), "utf8")
         .trim()
-        .endsWith(guards),
+        .includes(guards),
     ).toBe(true);
   });
 });

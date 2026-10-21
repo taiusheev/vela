@@ -68,6 +68,8 @@ import {
   memoryCandidates,
   memoryFacts,
   memoryKeeps,
+  memoryShares,
+  memorySharingPresentations,
   messageRefs,
   metricsDaily,
   NEARBY_CONTACT_CHANNELS,
@@ -544,21 +546,49 @@ async function seedEveryTable(): Promise<void> {
       )
       .returning(),
   );
-  await db.insert(memoryKeeps).values({
-    familyId,
-    memberId: seed.parent.id,
-    candidateId: memoryCandidate.id,
-    sourceAnswerId: answer.id,
-    discoveryConsentId: memoryConsent.id,
-    keepConsentId: keepProof.id,
-    kind: "preference",
-    start: 0,
-    end: 2,
-    quote: "Hi",
-    sourceDigest: "a".repeat(64),
-    lang: "en",
-    occurredAt: new Date("2026-09-14T00:00:00Z"),
-    keptAt: new Date("2026-09-14T00:00:00Z"),
+  const [keptMemory] = await db
+    .insert(memoryKeeps)
+    .values({
+      familyId,
+      memberId: seed.parent.id,
+      candidateId: memoryCandidate.id,
+      sourceAnswerId: answer.id,
+      discoveryConsentId: memoryConsent.id,
+      keepConsentId: keepProof.id,
+      kind: "preference",
+      start: 0,
+      end: 2,
+      quote: "Hi",
+      sourceDigest: "a".repeat(64),
+      lang: "en",
+      occurredAt: new Date("2026-09-14T00:00:00Z"),
+      keptAt: new Date("2026-09-14T00:00:00Z"),
+    })
+    .returning();
+  if (!keptMemory) throw new Error("Missing synthetic kept memory");
+  const [presentation] = await db
+    .insert(memorySharingPresentations)
+    .values({
+      keepId: keptMemory.id,
+      ownerUserId: user.id,
+      ownerMembershipRevision: seed.parent.memoryMembershipRevision,
+      recipientIds: [seed.organiser.id],
+      fingerprint: "a".repeat(64),
+      issuedAt: new Date("2026-09-14T00:00:00Z"),
+      expiresAt: new Date("2026-09-14T00:05:00Z"),
+    })
+    .returning();
+  if (!presentation) throw new Error("Missing synthetic presentation");
+  await db.insert(memoryShares).values({
+    keepId: keptMemory.id,
+    recipientMemberId: seed.organiser.id,
+    recipientUserId: user.id,
+    recipientMembershipRevision: seed.organiser.memoryMembershipRevision,
+    sharingRevision: keptMemory.sharingRevision,
+    presentationId: presentation.id,
+    confirmationVersion: "memory.share@1",
+    fingerprint: "a".repeat(64),
+    grantedAt: new Date("2026-09-14T00:00:00Z"),
   });
   await db.insert(deadLetters).values({
     messageId: "dead-1",
@@ -2230,6 +2260,34 @@ describe("CHECK constraints on enumerated columns", () => {
     ).toEqual({ code: CHECK_VIOLATION, constraint: "memory_candidates_expiry_check" });
   });
 
+  it("enforces bounded content-free sharing evidence", async () => {
+    await seedEveryTable();
+    expect(await rejection(db.update(memoryShares).set({ fingerprint: "words" }))).toMatchObject({
+      constraint: "memory_shares_fingerprint_check",
+    });
+    expect(
+      await rejection(db.update(memorySharingPresentations).set({ fingerprint: "words" })),
+    ).toMatchObject({ constraint: "memory_sharing_presentations_fingerprint_check" });
+    for (const recipientIds of [
+      [],
+      Array.from({ length: 51 }, () => "00000000-0000-4000-8000-000000000001"),
+    ]) {
+      expect(
+        await rejection(db.update(memorySharingPresentations).set({ recipientIds })),
+      ).toMatchObject({ constraint: "memory_sharing_presentations_audience_check" });
+    }
+    expect(
+      await rejection(
+        db.update(memorySharingPresentations).set({ expiresAt: new Date("2026-09-14T00:06:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "memory_sharing_presentations_timing_check" });
+    expect(
+      await rejection(
+        db.update(memorySharingPresentations).set({ consumedAt: new Date("2026-09-14T00:05:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "memory_sharing_presentations_timing_check" });
+  });
+
   it("keeps a waitlist address lowercased and no longer than an address can be", async () => {
     await seedEveryTable();
 
@@ -2263,6 +2321,10 @@ describe("CHECK constraints on enumerated columns", () => {
       "memory_candidates_offsets_check",
       "memory_candidates_expiry_check",
       "memory_keeps_offsets_check",
+      "memory_shares_fingerprint_check",
+      "memory_sharing_presentations_fingerprint_check",
+      "memory_sharing_presentations_audience_check",
+      "memory_sharing_presentations_timing_check",
       "members_interests_check",
       "members_reply_ways_check",
       "outbound_nearby_ask_actor_check",

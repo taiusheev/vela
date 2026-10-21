@@ -192,8 +192,18 @@ describe("account linking proof", () => {
         body: { linked: true, member_id: seed.member.id, family_id: seed.family.id },
       },
     });
-    expect(await h.db.select().from(members)).toEqual(
-      memberRows.map((row) => (row.id === seed.member.id ? { ...row, userId } : row)),
+    const linkedMembers = await h.db.select().from(members);
+    const revision = linkedMembers.find(
+      (row) => row.id === seed.member.id,
+    )?.memoryMembershipRevision;
+    expect(typeof revision).toBe("string");
+    expect(revision).not.toBe(
+      memberRows.find((row) => row.id === seed.member.id)?.memoryMembershipRevision,
+    );
+    expect(linkedMembers).toEqual(
+      memberRows.map((row) =>
+        row.id === seed.member.id ? { ...row, userId, memoryMembershipRevision: revision } : row,
+      ),
     );
     expect(await ancillary()).toEqual(before);
     expect(await challenge(pointer.challenge_id)).toMatchObject({

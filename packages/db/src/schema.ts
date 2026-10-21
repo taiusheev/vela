@@ -260,6 +260,8 @@ export const members = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     /** NULL for members reached only through a channel. */
     userId: uuid("user_id").references(() => users.id),
+    /** Sharing identity epoch, rotated by database guards on departure or account change. */
+    memoryMembershipRevision: uuid("memory_membership_revision").notNull().default(sql`uuidv7()`),
     role: text("role", { enum: ROLES }).notNull().default("member"),
     /** The organiser who pays. */
     billing: boolean("billing").notNull().default(false),
@@ -995,6 +997,8 @@ export const memoryKeeps = pgTable(
     lang: text("lang").notNull(),
     occurredAt: timestamptz("occurred_at").notNull(),
     keptAt: timestamptz("kept_at").notNull(),
+    /** Rotated on stop-sharing; old presentations and retries cannot restore permissions. */
+    sharingRevision: uuid("sharing_revision").notNull().default(sql`uuidv7()`),
     /** ID-only retry tombstone: quote and digest are blanked in the same transaction. */
     removedAt: timestamptz("removed_at"),
   },
@@ -1011,6 +1015,77 @@ export const memoryKeeps = pgTable(
       "memory_keeps_offsets_check",
       sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
     ),
+  ],
+);
+
+/** Short-lived, content-free pending choice. Recipient IDs are the explicit selected set,
+ * never a family-wide flag; member guards purge array references on departure/deletion. */
+export const memorySharingPresentations = pgTable(
+  "memory_sharing_presentations",
+  {
+    id: uuidv7Id(),
+    keepId: uuid("keep_id")
+      .notNull()
+      .references(() => memoryKeeps.id, { onDelete: "cascade" }),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ownerMembershipRevision: uuid("owner_membership_revision").notNull(),
+    recipientIds: uuid("recipient_ids").array().notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    issuedAt: timestamptz("issued_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    consumedAt: timestamptz("consumed_at"),
+  },
+  (t) => [
+    index("memory_sharing_presentations_keep_idx").on(t.keepId),
+    index("memory_sharing_presentations_owner_idx").on(t.ownerUserId),
+    index("memory_sharing_presentations_recipients_idx").using("gin", t.recipientIds),
+    index("memory_sharing_presentations_expiry_idx").on(t.expiresAt),
+    check(
+      "memory_sharing_presentations_fingerprint_check",
+      sql`${t.fingerprint} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      "memory_sharing_presentations_audience_check",
+      sql`cardinality(${t.recipientIds}) between 1 and 50 and array_position(${t.recipientIds}, null) is null`,
+    ),
+    check(
+      "memory_sharing_presentations_timing_check",
+      sql`${t.expiresAt} = ${t.issuedAt} + interval '5 minutes' and (${t.consumedAt} is null or (${t.consumedAt} >= ${t.issuedAt} and ${t.consumedAt} < ${t.expiresAt}))`,
+    ),
+  ],
+);
+
+/** One named person's permission, with no quote or name copy. Not read by any app/API path yet. */
+export const memoryShares = pgTable(
+  "memory_shares",
+  {
+    id: uuidv7Id(),
+    keepId: uuid("keep_id")
+      .notNull()
+      .references(() => memoryKeeps.id, { onDelete: "cascade" }),
+    recipientMemberId: uuid("recipient_member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    recipientUserId: uuid("recipient_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recipientMembershipRevision: uuid("recipient_membership_revision").notNull(),
+    sharingRevision: uuid("sharing_revision").notNull(),
+    presentationId: uuid("presentation_id").references(() => memorySharingPresentations.id, {
+      onDelete: "set null",
+    }),
+    confirmationVersion: text("confirmation_version").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    grantedAt: timestamptz("granted_at").notNull(),
+  },
+  (t) => [
+    unique("memory_shares_keep_recipient_key").on(t.keepId, t.recipientMemberId),
+    index("memory_shares_recipient_idx").on(t.recipientMemberId),
+    index("memory_shares_user_idx").on(t.recipientUserId),
+    index("memory_shares_presentation_idx").on(t.presentationId),
+    check("memory_shares_fingerprint_check", sql`${t.fingerprint} ~ '^[0-9a-f]{64}$'`),
   ],
 );
 
