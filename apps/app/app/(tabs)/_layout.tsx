@@ -138,7 +138,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="sunday"
         options={{
-          title: t({ context: "tab", message: "Sunday" }),
+          title: t({ context: "tab", message: "Week" }),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="calendar" color={color} focused={focused} />
           ),

@@ -1,13 +1,13 @@
 import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { apiConfigured, replyRefusal, replyTo } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { demoDataAllowed } from "../data/live-state.ts";
 import { useDraft } from "../storage/useDraft.ts";
 import { usePalette } from "../theme/theme.tsx";
-import { radius, space } from "../theme/tokens.ts";
+import { radius, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
 import { Chip, ReceiptChip, Words } from "./ui.tsx";
 
@@ -16,10 +16,13 @@ export function TodayHeart({
   id,
   recipient,
   compact = false,
+  onRoom,
 }: {
   id: string;
   recipient: string;
   compact?: boolean;
+  /** Drawn on Today's dark room: its ink and edge, and a sent heart as words in that ink. */
+  onRoom?: { ink: string; rule: string };
 }) {
   const palette = usePalette();
   const { t } = useLingui();
@@ -81,19 +84,26 @@ export function TodayHeart({
           disabled={!draft.ready || post.isPending || post.isSuccess}
           onPress={sendHeart}
           style={({ pressed }) => ({
-            minHeight: 54,
-            minWidth: 54,
+            minHeight: onRoom === undefined ? 54 : 44,
+            minWidth: onRoom === undefined ? 54 : 44,
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: palette.control,
-            borderRadius: radius.button,
+            borderColor: onRoom?.rule ?? palette.control,
+            borderRadius: onRoom === undefined ? radius.button : 999,
             backgroundColor: "transparent",
             opacity: post.isPending ? 0.45 : pressed ? 0.8 : 1,
           })}
         >
-          <BrandIcon name="heart" color={palette.ink} size={22} />
+          <BrandIcon name="heart" color={onRoom?.ink ?? palette.ink} size={22} />
         </Pressable>
+      ) : post.isSuccess && onRoom !== undefined ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, minHeight: 44 }}>
+          <BrandIcon name="heart" color={palette.light} size={18} strokeWidth={2.2} />
+          <Text style={[type.caption, { color: onRoom.ink }]}>
+            {demo ? t`Example · heart sent` : t`Heart sent`}
+          </Text>
+        </View>
       ) : post.isSuccess ? (
         <ReceiptChip label={demo ? t`Example · heart sent` : t`Heart sent`} />
       ) : (
@@ -103,10 +113,12 @@ export function TodayHeart({
           onPress={sendHeart}
         />
       )}
-      {trouble === null ? null : (
+      {trouble === null ? null : onRoom === undefined ? (
         <Words variant="body" tone="ink2">
           {trouble}
         </Words>
+      ) : (
+        <Text style={[type.caption, { color: onRoom.ink }]}>{trouble}</Text>
       )}
     </View>
   );

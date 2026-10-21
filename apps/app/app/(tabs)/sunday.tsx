@@ -76,7 +76,7 @@ function FamilySunday({ day }: { day: TodayView }) {
       }}
     >
       {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
-      <ScreenHeading title={<Trans context="tab">Sunday</Trans>} />
+      <ScreenHeading title={<Trans context="tab">Week</Trans>} />
       <ParentChooser lights={day.today.lights} selected={view.memberId} onSelect={select} />
       {/* This week first: the windows the family lit, Monday to Sunday (consumer flow row 93). */}
       {windowsFor === undefined ? null : <ConnectionWindows light={windowsFor} />}

@@ -5,7 +5,7 @@ tags:
   - demo
 ---
 - launchApp
-- tapOn: "Ask Mom something"
+- tapOn: "Ask Mom"
 - tapOn: "Say it the way you would say it"
 - inputText: "What is growing by your window?"
 - assertVisible: "What is growing by your window?"
