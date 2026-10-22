@@ -563,13 +563,14 @@ describe("the API as staging serves it", () => {
 // Clerk signed.
 describe("the runtime staging's API app runs on", () => {
   it.each(["development", "staging", "production"] as const)(
-    "never wires the new sharing routes in %s, even with legacy memory on",
+    "never wires the new sharing or author memory routes in %s, even with legacy memory on",
     (environment) => {
       const runtime = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on" }), {
         ...STAGING_CONFIG,
         environment,
       });
       expect(runtime.memorySharing).toBeUndefined();
+      expect(runtime.memories).toBeUndefined();
     },
   );
   it("publishes closed trial capabilities without opening a database", async () => {

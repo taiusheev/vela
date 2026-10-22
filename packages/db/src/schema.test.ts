@@ -68,6 +68,7 @@ import {
   memoryCandidates,
   memoryFacts,
   memoryKeeps,
+  memoryPermissionPresentations,
   memoryShares,
   memorySharingPresentations,
   messageRefs,
@@ -579,6 +580,17 @@ async function seedEveryTable(): Promise<void> {
     })
     .returning();
   if (!presentation) throw new Error("Missing synthetic presentation");
+  await db.insert(memoryPermissionPresentations).values({
+    memberId: seed.parent.id,
+    userId: user.id,
+    membershipRevision: seed.parent.memoryMembershipRevision,
+    textVersion: "consent.rich_memories@2",
+    noticeVersion: "privacy-notice.v7",
+    lang: "en",
+    textSha256: "a".repeat(64),
+    issuedAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-09-14T00:05:00Z"),
+  });
   await db.insert(memoryShares).values({
     keepId: keptMemory.id,
     recipientMemberId: seed.organiser.id,
@@ -2288,6 +2300,27 @@ describe("CHECK constraints on enumerated columns", () => {
     ).toMatchObject({ constraint: "memory_sharing_presentations_timing_check" });
   });
 
+  it("keeps the memory question's evidence to a hash and a five-minute one-use window", async () => {
+    await seedEveryTable();
+    expect(
+      await rejection(db.update(memoryPermissionPresentations).set({ textSha256: "words" })),
+    ).toMatchObject({ constraint: "memory_permission_presentations_sha_check" });
+    expect(
+      await rejection(
+        db
+          .update(memoryPermissionPresentations)
+          .set({ expiresAt: new Date("2026-09-14T00:06:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "memory_permission_presentations_timing_check" });
+    expect(
+      await rejection(
+        db
+          .update(memoryPermissionPresentations)
+          .set({ consumedAt: new Date("2026-09-14T00:05:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "memory_permission_presentations_timing_check" });
+  });
+
   it("keeps a waitlist address lowercased and no longer than an address can be", async () => {
     await seedEveryTable();
 
@@ -2325,6 +2358,8 @@ describe("CHECK constraints on enumerated columns", () => {
       "memory_sharing_presentations_fingerprint_check",
       "memory_sharing_presentations_audience_check",
       "memory_sharing_presentations_timing_check",
+      "memory_permission_presentations_sha_check",
+      "memory_permission_presentations_timing_check",
       "members_interests_check",
       "members_reply_ways_check",
       "outbound_nearby_ask_actor_check",

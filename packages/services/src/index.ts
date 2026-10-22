@@ -198,6 +198,12 @@ export {
   removeKeptMemory,
 } from "./memory-keeps.ts";
 export {
+  answerMemoryPermission,
+  loadMemoryPermission,
+  loadMemoryPermissionPresentation,
+  prepareMemoryPermission,
+} from "./memory-permission.ts";
+export {
   confirmMemorySharing,
   createMemorySharingPresentation,
   loadMemorySharingPresentation,

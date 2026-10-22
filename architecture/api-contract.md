@@ -663,3 +663,30 @@ HTTP tests inject synthetic domain ports to prove request/response/authenticatio
 separate service tests and real PostgreSQL races prove data authorization/transactions. This is not
 a live app/HTTP/database journey or provider/native proof. The app's sharing port remains synthetic,
 its production preview stays blank, and real-purpose acceptance is still not connected.
+
+## Author memory routes (22 October 2026, built but unconfigured)
+
+These routes register ONLY when a trusted server caller supplies `ApiRuntime.memories`.
+`apiRuntimeFor` supplies no such group in development, staging or production (pinned in
+`api-runtime.test.ts`). They need the approved `privacy-notice.v7` and a separate activation
+change before any family can use them. All rules of the sharing boundary above apply: verified
+session, `no-store`, idempotent writes, IDs/booleans only in receipts, 404 rather than 403.
+
+| Method | Path under /v1 | Input / response |
+|---|---|---|
+| GET | /families/:familyId/memory-permission | Signed-in person's own `MemoryPermissionState` |
+| POST | /families/:familyId/memory-permission/presentations | Strict `{lang:"en"}` → `{id}` (five-minute, one-use) |
+| GET | /families/:familyId/memory-permission-presentations/:presentationId | `MemoryPermissionPreview`: the exact question text and its SHA-256 |
+| POST | /families/:familyId/memory-permission/answer | `MemoryPermissionChoice` → `{answer}`; records a `consents` row, channel `app` |
+| POST | /families/:familyId/memory-permission/withdraw | Strict `{}` → `{withdrawn:true}`; clears suggestions, kept copies and open questions |
+| GET | /families/:familyId/memory-suggestions?cursor=UUID | Author's own `MemoryCandidatePage` |
+| POST | /families/:familyId/memory-suggestions/:candidateId/dismiss | Strict `{}` → `{dismissed:true}` |
+| POST | /families/:familyId/memories/keep | `MemoryKeepChoice` → `{kept:true,id}` |
+| GET | /families/:familyId/memories?cursor=UUID | Author's own `KeptMemoryPage` |
+| POST | /families/:familyId/memories/:memoryId/remove | Strict `{}` → `{removed:true}` |
+
+Prepare, answer and keep need `richMemories===true` (404 otherwise). Withdraw, dismiss and remove
+stay open when new processing is off: privacy actions are never gated by the switch or payment.
+An answer is refused (409) when its presentation is expired, used, for another account or membership
+revision, for other words, or was issued before a later withdrawal; a current yes changes only
+through withdraw. Only the person answers for themselves: an organiser cannot answer for anyone.
