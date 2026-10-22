@@ -28,6 +28,11 @@ export type ButtonAction =
   | { type: "pick"; exchangeId: string; index: number }
   | { type: "vote"; exchangeId: string; index: number }
   | { type: "consent"; memberId: string; accept: boolean }
+  /**
+   * Her one tap on the single consent message (consent.request@3): her light and her health words
+   * together ("both"), her light with her health words kept private ("light"), or neither ("no").
+   */
+  | { type: "consent_both"; memberId: string; choice: "both" | "light" | "no" }
   /** Her answer to the separate health-words question sent after her yes (flows §3.2). */
   | { type: "health_words"; memberId: string; accept: boolean }
   | { type: "quiet_fine"; quietEventId: string }
@@ -108,6 +113,8 @@ export function encodeButton(action: ButtonAction): string {
       return `k:${compactId(action.memberId, "memberId")}:${action.accept ? "y" : "n"}`;
     case "health_words":
       return `h:${compactId(action.memberId, "memberId")}:${action.accept ? "y" : "n"}`;
+    case "consent_both":
+      return `j:${compactId(action.memberId, "memberId")}:${action.choice === "both" ? "b" : action.choice === "light" ? "l" : "n"}`;
     case "quiet_fine":
       return `q:${compactId(action.quietEventId, "quietEventId")}:f`;
     case "quiet_wait":
@@ -184,6 +191,11 @@ export function decodeButton(data: string): ButtonAction | null {
     case "h":
       if (tail === "y") return { type: "health_words", memberId: id, accept: true };
       if (tail === "n") return { type: "health_words", memberId: id, accept: false };
+      return null;
+    case "j":
+      if (tail === "b") return { type: "consent_both", memberId: id, choice: "both" };
+      if (tail === "l") return { type: "consent_both", memberId: id, choice: "light" };
+      if (tail === "n") return { type: "consent_both", memberId: id, choice: "no" };
       return null;
     case "n":
       return tail === "r" ? { type: "notice_read", familyChannelId: id } : null;
