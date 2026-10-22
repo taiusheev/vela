@@ -3514,10 +3514,12 @@ msgstr ""
 msgid "The family's organisers choose the people nearby."
 msgstr ""
 
-#: src/components/first-week.tsx
-msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
 #: app/ask.tsx
 msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
 msgstr ""
 
 #: src/components/nearby-editor.tsx

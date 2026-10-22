@@ -3520,12 +3520,13 @@ msgstr "The family, the first week and everything you told us."
 msgid "The family's organisers choose the people nearby."
 msgstr "The family's organisers choose the people nearby."
 
-#: src/components/first-week.tsx
-msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
-msgstr "The garden came up twice: the tomatoes, and the seeds kept for spring."
 #: app/ask.tsx
 msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+
+#: src/components/first-week.tsx
+msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
+msgstr "The garden came up twice: the tomatoes, and the seeds kept for spring."
 
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
