@@ -1,7 +1,7 @@
 /** Two taps on the single consent message at once record one answer, never a mixed pair. */
 import type { InboundEvent } from "@vela/contracts";
 import { encodeButton } from "@vela/core";
-import { consents, members } from "@vela/db";
+import { consents, exchanges, members, outbound } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { handleCombinedConsentButton } from "../src/consent.ts";
@@ -24,6 +24,21 @@ beforeEach(async () => {
     .update(members)
     .set({ status: "invited", lightOn: false, lightConsentedAt: null, lightConsentText: null })
     .where(eq(members.id, seed.member.id));
+  // A question her child wrote while she was invited, waiting for her yes.
+  await seeder.db.insert(exchanges).values({
+    familyId: seed.family.id,
+    recipientId: seed.member.id,
+    askerId: seed.organiser.id,
+    type: "question",
+    state: "composed",
+    text: "What did you have for breakfast?",
+    textLang: "en",
+    options: {},
+    whenRule: "whenever",
+    scheduledFor: null,
+    createdAt: new Date(NOW.getTime() - 60_000),
+    mediaIds: [],
+  });
 });
 afterEach(async () => {
   await pg.cleanup();
@@ -92,5 +107,9 @@ describe("the single consent message on independent PostgreSQL connections", () 
     expect(health[0]?.evidence).toEqual(lights[0]?.evidence);
     const [her] = await seeder.db.select().from(members).where(eq(members.id, seed.member.id));
     expect(her).toMatchObject({ status: "active", lightOn: true });
+    // Her child's first words go out once, whichever tap won.
+    expect(
+      await seeder.db.select().from(outbound).where(eq(outbound.kind, "conversation")),
+    ).toHaveLength(1);
   });
 });
