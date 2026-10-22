@@ -27,6 +27,7 @@ import {
   type ApiNudges,
   addApiNearby,
   admissionWithRoster,
+  answerMemoryPermission,
   askApiToLookIn,
   authorizeFamilyAccess,
   cancelAccountLink,
@@ -35,10 +36,12 @@ import {
   createApiFamily,
   createApiReminder,
   disableApiAccount,
+  dismissMemoryCandidate,
   endApiAway,
   errorLabel,
   finishApiReminder,
   inviteApiNearby,
+  keepMemoryCandidate,
   type Logger,
   leaveApiFamily,
   loadAccountLinkStatus,
@@ -57,12 +60,17 @@ import {
   loadApiToday,
   loadApiWeeklyRead,
   loadDeviceMessages,
+  loadKeptMemories,
+  loadMemoryCandidates,
+  loadMemoryPermission,
+  loadMemoryPermissionPresentation,
   markApiDeceased,
   markApiQuietUseful,
   memberOfDeviceToken,
   openApiWeeklyRead,
   pauseApiMember,
   pilotApiAccountAllowed,
+  prepareMemoryPermission,
   provisionApiAccount,
   readApiMedia,
   readDeviceMedia,
@@ -71,6 +79,7 @@ import {
   removeApiDevice,
   removeApiNearby,
   removeApiPushDevice,
+  removeKeptMemory,
   replyToApiExchange,
   resolveApiQuiet,
   setApiAway,
@@ -83,6 +92,7 @@ import {
   uploadApiMedia,
   uploadApiVoice,
   withdrawApiAsk,
+  withdrawOwnMemoryConsent,
 } from "@vela/services";
 import {
   type ApiReadServices,
@@ -90,7 +100,7 @@ import {
   type ApiWriteServices,
   createApiApp,
 } from "./api-app.ts";
-import { type ApiConfig, readApiConfig, secret } from "./config.ts";
+import { type ApiConfig, readApiConfig, readRichMemories, secret } from "./config.ts";
 import { createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { createRandom } from "./random.ts";
@@ -140,6 +150,20 @@ export const API_READ_SERVICES: ApiReadServices = {
  * The writes the API serves: the same list `scripts/api-dev.ts` serves on a laptop. A service
  * added to `ApiWriteServices` fails `tsc` here until it is added to this list as well.
  */
+/** The author's own memory routes, offered only where RICH_MEMORIES is on. */
+export const MEMORY_SERVICES: NonNullable<ApiRuntime["memories"]>["services"] = {
+  loadMemoryPermission,
+  loadMemoryPermissionPresentation,
+  prepareMemoryPermission,
+  answerMemoryPermission,
+  withdrawOwnMemoryConsent,
+  loadMemoryCandidates,
+  dismissMemoryCandidate,
+  keepMemoryCandidate,
+  loadKeptMemories,
+  removeKeptMemory,
+};
+
 export const API_WRITE_SERVICES: ApiWriteServices = {
   provisionApiAccount,
   updateApiAccount,
@@ -336,6 +360,11 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   return {
     ...photos,
     sendAsMe: env.SEND_AS_ME?.trim() === "on",
+    // The author's own memories (privacy-notice v7). Only where RICH_MEMORIES is on: development
+    // and staging, never production (pinned in src/wrangler-config.test.ts). Sharing stays absent.
+    ...(readRichMemories(env)
+      ? { memories: { config: { richMemories: true }, services: MEMORY_SERVICES } }
+      : {}),
     capabilities: {
       pilot: config.pilotAdmission != null,
       telegram_first: config.pilotAdmission != null,

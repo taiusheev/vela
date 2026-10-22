@@ -49,7 +49,7 @@ const SOURCE_LIFETIME_MS = 30 * 86_400_000;
 const PAGE_SIZE = 50;
 export const MAX_MEMORY_CANDIDATES_PER_SOURCE = 12;
 const uuid = z.uuid();
-type MemoryDeps = Pick<Deps, "db" | "clock" | "config">;
+type MemoryDeps = Pick<Deps, "db" | "clock"> & { config: Pick<Deps["config"], "richMemories"> };
 
 export function sourceWords(
   answer: typeof answers.$inferSelect,
