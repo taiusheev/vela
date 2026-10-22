@@ -1,8 +1,8 @@
-# Privacy notice v7: Memories section (DRAFT for founder approval)
+# Privacy notice v7: Memories section (wording approved, not live)
 
-22 October 2026 · DRAFT · not live. The live notice stays `privacy-notice.v6` until the founder
-approves this text, it is merged into `privacy-notice.en.md` as `privacy-notice.v7`, and a
-separate activation change turns `RICH_MEMORIES` on. Chinese wording needs a native reviewer
+22 October 2026 · the founder approved this wording in chat on 22 October 2026 · not live.
+The live notice stays `privacy-notice.v6` until this text is merged into `privacy-notice.en.md`
+as `privacy-notice.v7` and a separate activation change turns `RICH_MEMORIES` on. Chinese wording needs a native reviewer
 before anyone is asked in Chinese.
 
 ## Line to add under "In short"
