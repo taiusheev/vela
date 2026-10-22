@@ -145,5 +145,5 @@ msgid "We couldn’t confirm the change. Try again, or go back and check the lat
 msgstr ""
 
 #: src/data/memory-sharing-demo.ts
-msgid "We couldn’t load the sharing details. Your choices have not been confirmed here. Please try again."
+msgid "We couldn’t load the sharing details. Sharing may still be on. Try stopping sharing below, or check again."
 msgstr ""

@@ -21,7 +21,7 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
-function setup(viewer = id(1)) {
+function setup(viewer = id(1), memory = id(10)) {
   const clock = { value: Date.parse("2026-10-22T00:00:00Z") };
   const view: MemorySharingView = {
     memory_id: id(10),
@@ -63,6 +63,7 @@ function setup(viewer = id(1)) {
   let sequence = 0;
   const controller = new MemorySharingController(
     viewer,
+    memory,
     { read, prepare, confirm, stop },
     () => `synthetic-sharing-${++sequence}`,
     () => clock.value,
@@ -72,6 +73,94 @@ function setup(viewer = id(1)) {
 }
 
 describe("session-scoped memory sharing", () => {
+  it("can stop sharing after the very first detail read fails, without exposing old words", async () => {
+    const h = setup();
+    for (const recipient of h.view.recipients) recipient.shared = true;
+    h.read.mockRejectedValueOnce(new Error("synthetic_read_failure"));
+    await h.controller.load();
+    expect(h.controller.snapshot().phase).toBe("read_error");
+    expect(h.controller.snapshot().view).toBeNull();
+    expect(h.controller.canStop()).toBe(true);
+    await h.controller.stop();
+    expect(h.stop.mock.calls[0]?.[0]).toEqual({ memory_id: id(10), key: "synthetic-sharing-1" });
+    expect(h.controller.snapshot().view?.recipients.some((r) => r.shared)).toBe(false);
+    expect(h.controller.snapshot().notice).toBe("updated");
+  });
+  it("can revoke while details stay unavailable without claiming a successful refresh", async () => {
+    const h = setup();
+    for (const recipient of h.view.recipients) recipient.shared = true;
+    h.read.mockResolvedValue(null);
+    await h.controller.load();
+    await h.controller.stop();
+    expect(h.stop).toHaveBeenCalledTimes(1);
+    expect(h.view.recipients.some((r) => r.shared)).toBe(false);
+    expect(h.controller.snapshot().phase).toBe("unavailable");
+    expect(h.controller.snapshot().view).toBeNull();
+    expect(h.controller.snapshot().notice).toBeNull();
+  });
+  it("keeps a fallback stop visible during a request, ignores duplicate taps and reuses failed keys", async () => {
+    const h = setup();
+    h.read.mockRejectedValueOnce(new Error("synthetic_read_failure"));
+    await h.controller.load();
+    h.stop.mockRejectedValueOnce(new Error("synthetic_stop_failure"));
+    await h.controller.stop();
+    expect(h.controller.snapshot().error).toBe("action");
+    const held = deferred<void>();
+    h.stop.mockImplementationOnce(() => held.promise);
+    const retry = h.controller.stop();
+    expect(h.controller.canStop()).toBe(true);
+    await h.controller.stop();
+    expect(h.stop).toHaveBeenCalledTimes(2);
+    expect(h.stop.mock.calls[0]?.[0]).toEqual(h.stop.mock.calls[1]?.[0]);
+    held.resolve();
+    await retry;
+  });
+  it("never displays a different memory returned by the server or retargets revocation to it", async () => {
+    const h = setup();
+    h.view.memory_id = id(99);
+    await h.controller.load();
+    expect(h.controller.snapshot().phase).toBe("unavailable");
+    expect(h.controller.snapshot().view).toBeNull();
+    await h.controller.prepare();
+    expect(h.prepare).not.toHaveBeenCalled();
+    await h.controller.stop();
+    expect(h.stop.mock.calls[0]?.[0].memory_id).toBe(id(10));
+  });
+  it.each([
+    ["invalid", id(10)],
+    [id(1), "invalid"],
+  ])("makes no requests for malformed scope %s/%s", async (viewer, memory) => {
+    const h = setup(viewer, memory);
+    await h.controller.load();
+    expect(h.controller.canStop()).toBe(false);
+    await h.controller.stop();
+    expect(h.read).not.toHaveBeenCalled();
+    expect(h.stop).not.toHaveBeenCalled();
+  });
+  it("never revokes from a disposed failed-read session", async () => {
+    const h = setup();
+    h.read.mockRejectedValueOnce(new Error("synthetic_read_failure"));
+    await h.controller.load();
+    h.controller.dispose();
+    expect(h.controller.canStop()).toBe(false);
+    await h.controller.stop();
+    expect(h.stop).not.toHaveBeenCalled();
+  });
+  it("ignores a fallback stop response that arrives after account disposal", async () => {
+    const h = setup();
+    h.read.mockRejectedValueOnce(new Error("synthetic_read_failure"));
+    await h.controller.load();
+    const held = deferred<void>();
+    h.stop.mockImplementationOnce(() => held.promise);
+    const pending = h.controller.stop();
+    h.controller.dispose();
+    held.resolve();
+    await pending;
+    expect(h.controller.snapshot().view).toBeNull();
+    expect(h.controller.snapshot().notice).toBeNull();
+    expect(h.controller.canStop()).toBe(false);
+    expect(h.read).toHaveBeenCalledTimes(1);
+  });
   it("starts private, selects no one automatically and cannot confirm without a fresh preview", async () => {
     const h = setup();
     await h.controller.load();

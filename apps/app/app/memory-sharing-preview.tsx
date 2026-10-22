@@ -13,6 +13,7 @@ import { MemorySharingController } from "../src/data/memory-sharing.ts";
 import {
   createMemorySharingDemo,
   DEMO_MEMORY_AUTHOR,
+  DEMO_MEMORY_ID,
   memorySharingCopy,
 } from "../src/data/memory-sharing-demo.ts";
 import { sharingI18n } from "../src/i18n/memory-sharing.ts";
@@ -38,6 +39,7 @@ function Preview() {
     let sequence = 0;
     const controller = new MemorySharingController(
       DEMO_MEMORY_AUTHOR,
+      DEMO_MEMORY_ID,
       demo.port,
       () => `example-sharing-${++sequence}`,
     );

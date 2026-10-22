@@ -45,16 +45,23 @@ export class MemorySharingController {
   private confirmKey: string | null = null;
   private stopKey: string | null = null;
   readonly viewerId: string;
+  readonly memoryId: string;
+  private readonly validScope: boolean;
   private readonly port: MemorySharingPort;
   private readonly nextKey: () => string;
   private readonly now: () => number;
   constructor(
     viewerId: string,
+    memoryId: string,
     port: MemorySharingPort,
     nextKey: () => string,
     now: () => number = Date.now,
   ) {
     this.viewerId = viewerId;
+    this.memoryId = memoryId;
+    this.validScope =
+      MemorySharingView.shape.memory_id.safeParse(memoryId).success &&
+      MemorySharingView.shape.author_id.safeParse(viewerId).success;
     this.port = port;
     this.nextKey = nextKey;
     this.now = now;
@@ -101,6 +108,10 @@ export class MemorySharingController {
     this.request?.abort();
     this.clearKeys();
     this.change(empty());
+    if (!this.validScope) {
+      this.change({ phase: "unavailable" });
+      return;
+    }
     try {
       const value = await this.bounded((signal) => this.port.read(signal));
       if (!this.active || this.generation !== generation) return;
@@ -108,6 +119,7 @@ export class MemorySharingController {
       if (
         !parsed.success ||
         parsed.data.author_id !== this.viewerId ||
+        parsed.data.memory_id !== this.memoryId ||
         new Set(parsed.data.recipients.map((r) => r.member_id)).size !==
           parsed.data.recipients.length
       ) {
@@ -238,22 +250,22 @@ export class MemorySharingController {
         this.change({ pending: null, error: "action" });
     }
   }
+  /** An explicit target allows free revocation even when details fail. This is a locator,
+   * never authorization: the server must reauthenticate the current author on every write. */
+  canStop = () =>
+    this.active &&
+    this.validScope &&
+    this.state.phase !== "loading" &&
+    !this.state.preview &&
+    (!this.state.view || this.state.view.recipients.some((r) => r.shared));
   async stop() {
-    const { view, pending } = this.state;
-    if (
-      !this.active ||
-      !view ||
-      pending !== null ||
-      this.state.preview ||
-      !view.recipients.some((r) => r.shared)
-    )
-      return;
+    if (!this.canStop() || this.state.pending !== null) return;
     const generation = this.generation;
     this.stopKey ??= this.nextKey();
     this.change({ pending: "stop", error: null });
     try {
       await this.bounded((signal) =>
-        this.port.stop({ memory_id: view.memory_id, key: this.stopKey ?? "" }, signal),
+        this.port.stop({ memory_id: this.memoryId, key: this.stopKey ?? "" }, signal),
       );
       if (!this.active || generation !== this.generation) return;
       await this.load();

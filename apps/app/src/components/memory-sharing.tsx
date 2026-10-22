@@ -82,16 +82,17 @@ export function MemorySharing({
 }: {
   controller: MemorySharingController;
   copy: MemorySharingCopy;
-  onScreenChange?(pane: "confirm" | "people"): void;
+  onScreenChange?(pane: "confirm" | "people" | "loading" | "read_error" | "unavailable"): void;
 }) {
   const state = useSyncExternalStore(
     controller.subscribe,
     controller.snapshot,
     controller.snapshot,
   );
+  const pane = state.phase === "ready" ? (state.preview ? "confirm" : "people") : state.phase;
   useEffect(() => {
-    onScreenChange?.(state.preview ? "confirm" : "people");
-  }, [state.preview, onScreenChange]);
+    onScreenChange?.(pane);
+  }, [pane, onScreenChange]);
   const busy = state.pending !== null;
   const view = state.view;
   const failure = state.error === "expired" ? copy.expired : state.error ? copy.actionError : null;
@@ -102,15 +103,33 @@ export function MemorySharing({
           {copy.title}
         </Text>
         <Text accessibilityLiveRegion="polite" style={body}>
-          {state.phase === "loading"
+          {state.phase === "loading" || busy
             ? copy.loading
             : state.phase === "unavailable"
               ? copy.unavailable
               : copy.readError}
         </Text>
+        {failure ? (
+          <Text accessibilityRole="alert" style={body}>
+            {failure}
+          </Text>
+        ) : null}
+        {controller.canStop() ? (
+          <>
+            <Text style={body}>{copy.stopExplanation}</Text>
+            <Button
+              label={copy.stop}
+              disabled={busy}
+              onPress={() => {
+                void controller.stop();
+              }}
+            />
+          </>
+        ) : null}
         {state.phase !== "loading" ? (
           <Button
             label={copy.retry}
+            disabled={busy}
             onPress={() => {
               void controller.load();
             }}
