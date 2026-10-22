@@ -431,3 +431,34 @@ with 1 existing skip actually ran; 7 unchanged tasks reused valid caches. All 90
 sharing cases passed. Full independent PostgreSQL suite passed 149/149 across 47 files, and the
 disposable database was removed. Snapshot-isolation negative control failed as intended; restored
 source passed. No live UI or new production notice was used to obtain these results.
+
+### Independent sharing recovery (22 October, synthetic UI only)
+
+Screen PR143 merged24136472 after the newest updated-head source, PostgreSQL and app journeys
+passed (nightly silence skipped by workflow). Its automatic staging run39717769719 is tracked
+separately. Author-state145 updated normally to f7e346f after143; newest-head checks are pending.
+
+The sharing controller is now bound to explicit immutable author/memory IDs rather than trusting
+the ID returned in a detail response. Wrong-memory responses are hidden, malformed scopes make
+no calls, and a stop always targets the original memory. These IDs are locators, not authorization;
+the future server adapter must still authenticate and authorize every action.
+
+Stop-sharing now remains available after detail-load failure/unavailability, even before a first
+successful read. Words are cleared; Stop sharing and Check again remain visible with busy/error/
+retry behavior. Failed stop retries keep their key, duplicate taps are ignored, and read failure
+after a write does not produce a success claim. Disposal rejects new actions and late responses.
+Phase changes reset the preview scroll so the failure heading stays visible. English draft copy
+explicitly warns sharing may still be on; isolated catalogs are synchronized, shared ones untouched.
+
+28 controller tests cover the original20 plus8 recovery/scope/session cases. Reintroducing the
+loaded-view dependency failed the first-read revocation regression; restoring independent scope
+passed. No new domain writes, migrations, model processing, live transport, consent/notice,
+production tag or real-family activation are added. Native/device/provider/language gates remain.
+
+Recovery final local pnpm check passed all 9 tasks: 408 app tests with 1 existing skip actually ran,
+and 8 unchanged test tasks reused valid caches (including 1,716 services). Browser synthetic flow
+verified failed detail read, hidden words, failed stop, keyboard retry, refreshed private status
+and a recipient with no quote. At 320/390/768px there was no horizontal overflow; Stop sharing
+and Check again measured 64px high. No signed-device or live-family proof is claimed.
+The final production-mode export kept the updated preview blank without console errors even
+with explicit demo mode on; its synthetic home rendered normally as positive control.

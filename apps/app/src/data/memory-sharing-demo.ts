@@ -10,7 +10,7 @@ import type { MemorySharingPort } from "./memory-sharing.ts";
 
 export const DEMO_MEMORY_AUTHOR = "00000000-0000-4000-8000-000000000001";
 export const DEMO_MEMORY_READER = "00000000-0000-4000-8000-000000000002";
-const memoryId = "00000000-0000-4000-8000-000000000010";
+export const DEMO_MEMORY_ID = "00000000-0000-4000-8000-000000000010";
 export const memorySharingCopy: MemorySharingCopy = {
   title: sharingI18n._(msg`Share this memory`),
   introduction: sharingI18n._(
@@ -36,7 +36,7 @@ export const memorySharingCopy: MemorySharingCopy = {
     msg`This memory or sharing choice is no longer available. Check the latest details before trying again.`,
   ),
   readError: sharingI18n._(
-    msg`We couldn’t load the sharing details. Your choices have not been confirmed here. Please try again.`,
+    msg`We couldn’t load the sharing details. Sharing may still be on. Try stopping sharing below, or check again.`,
   ),
   actionError: sharingI18n._(
     msg`We couldn’t confirm the change. Try again, or go back and check the latest sharing details.`,
@@ -52,7 +52,7 @@ export const memorySharingCopy: MemorySharingCopy = {
 /** In-memory synthetic examples only. No network, device storage or real consent record. */
 export function createMemorySharingDemo() {
   let view: MemorySharingView = {
-    memory_id: memoryId,
+    memory_id: DEMO_MEMORY_ID,
     author_id: DEMO_MEMORY_AUTHOR,
     quote: sharingI18n._(msg`I still laugh about the picnic with the dancing umbrella.`),
     revision: "00000000-0000-4000-8000-000000000020",
