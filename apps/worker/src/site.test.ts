@@ -157,7 +157,7 @@ describe("the public website", () => {
       expect(body).toContain("/site/img/app-current/ask.png");
       expect(body).toContain("/site/img/vela-logo.svg");
       expect(body).toContain("/site/img/vela-mark-white.svg");
-      expect(textOf(body)).toContain(lang === "en" ? "Calls carry the big news" : "電話聊的是大事");
+      expect(textOf(body)).toContain(lang === "en" ? "You use Vela" : "你使用 Vela");
       expect(textOf(body)).toContain(
         lang === "en" ? "Familiar for your parent" : "爸媽不用學新工具",
       );

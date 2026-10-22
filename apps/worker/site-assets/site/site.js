@@ -11,6 +11,18 @@
     return;
   }
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  const starters = [...root.querySelectorAll("[data-starter]")];
+  for (const button of starters) {
+    button.addEventListener("click", () => {
+      const example = c.examples?.[Number(button.dataset.starter)];
+      if (!example) return;
+      for (const choice of starters) choice.setAttribute("aria-pressed", String(choice === button));
+      for (const field of ["question", "answer", "reply"]) {
+        const node = root.querySelector(`#starter-${field}`);
+        if (node) node.textContent = example[field];
+      }
+    });
+  }
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;

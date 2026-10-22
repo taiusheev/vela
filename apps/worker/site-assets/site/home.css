@@ -3445,3 +3445,202 @@ body:has(.approved-home) {
 .approved-home .closing-section {
   background: var(--primary);
 }
+
+/* Product clarity and a consistent editorial rhythm, informed by startup reference review. */
+.approved-home .hero {
+  padding-top: 52px;
+}
+.approved-home .hero h1 {
+  font-size: clamp(52px, 6.8vw, 98px);
+  max-width: 1220px;
+  line-height: 1.1;
+}
+.approved-home .hero-description {
+  max-width: 700px;
+  padding-inline: 24px;
+  font-size: 17px;
+}
+.approved-home .product-facts {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  list-style: none;
+  padding: 0 24px;
+  margin: 24px auto 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.approved-home .product-facts li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.approved-home .product-facts li:before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: var(--amber-deep);
+  border-radius: 50%;
+}
+.approved-home .story-gallery {
+  margin-top: 35px;
+}
+.approved-home .story-card {
+  border-radius: 3px;
+  height: 285px;
+}
+.approved-home .question-intro {
+  align-items: center;
+}
+.approved-home .question-intro h2 {
+  font-size: clamp(44px, 5.3vw, 74px);
+}
+.approved-home .conversation-picker {
+  max-width: 1050px;
+  margin: 45px auto 0;
+  border-top: 1px solid #ffffff25;
+  padding-top: 25px;
+}
+.approved-home .conversation-picker .solution-kicker {
+  margin: 0 0 20px;
+  font-size: 11px;
+}
+.approved-home .starter-choices {
+  display: none;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.enhanced .approved-home .starter-choices {
+  display: flex;
+}
+.approved-home .starter-choices button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  min-height: 46px;
+  border: 1px solid #8f8170;
+  border-radius: 30px;
+  padding: 10px 18px;
+  background: transparent;
+  color: var(--paper);
+  font-size: 13px;
+  transition:
+    background 0.18s,
+    color 0.18s;
+}
+.approved-home .starter-choices button[aria-pressed="true"] {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--ink);
+}
+.approved-home .starter-choices button:hover {
+  border-color: var(--amber);
+}
+.approved-home .starter-choices button:focus-visible {
+  outline-color: var(--amber);
+}
+.approved-home .example-disclosure {
+  color: #b9b0a5;
+  font-size: 11px;
+  margin-top: 14px;
+}
+.approved-home .question-story {
+  margin-top: 28px;
+}
+.approved-home .from-parent {
+  background: #f3e8d8;
+}
+.approved-home .story-message p {
+  font-size: 22px;
+}
+.approved-home .question-payoff {
+  font-size: 29px;
+}
+.approved-home .exchange-stage {
+  border: 1px solid var(--line);
+  background: #f3ede4;
+  border-radius: 16px;
+}
+.approved-home .exchange-controls button {
+  min-height: 90px;
+}
+.approved-home .exchange-controls button[aria-selected="true"] {
+  background: var(--amber-soft);
+  box-shadow: inset 3px 0 var(--amber);
+}
+.approved-home .exchange-controls small {
+  font-size: 13px;
+}
+.approved-home .difference-grid h3 {
+  margin-top: 38px;
+  font-size: 25px;
+}
+.approved-home .difference-grid article {
+  min-height: 0;
+  padding: 30px 24px 36px;
+}
+.approved-home .difference-heading {
+  gap: 24px 60px;
+}
+.approved-home .difference-heading h2 {
+  font-size: clamp(43px, 5.3vw, 72px);
+}
+.approved-home .difference-section {
+  padding-block: 80px;
+}
+.approved-home .care-section {
+  margin-top: 0;
+}
+.approved-home .closing-section h2 em {
+  color: var(--amber);
+}
+@media (min-width: 1001px) {
+  .approved-home .exchange-copy {
+    position: sticky;
+    top: 40px;
+  }
+}
+@media (max-width: 700px) {
+  .approved-home .hero {
+    padding-top: 35px;
+  }
+  .approved-home .hero h1 {
+    font-size: clamp(42px, 10.7vw, 66px);
+    line-height: 1.14;
+  }
+  .approved-home .hero-description {
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  .approved-home .product-facts {
+    font-size: 11px;
+    gap: 10px 18px;
+    max-width: 460px;
+  }
+  .approved-home .story-card {
+    height: 265px;
+  }
+  .approved-home .conversation-picker {
+    margin-top: 30px;
+  }
+  .approved-home .starter-choices button {
+    font-size: 12px;
+    gap: 13px;
+    padding-inline: 14px;
+  }
+  .approved-home .example-disclosure {
+    max-width: 280px;
+    line-height: 1.7;
+  }
+  .approved-home .question-payoff {
+    font-size: 25px;
+  }
+  .approved-home .difference-grid h3 {
+    margin-top: 25px;
+  }
+  .approved-home .difference-section {
+    padding-block: 55px;
+  }
+}

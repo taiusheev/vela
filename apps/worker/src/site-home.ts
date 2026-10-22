@@ -16,9 +16,34 @@ const COPY = {
     heroParent: "your parent.",
     heroSecond: "Even from ",
     heroEmphasis: "far away.",
-    heroLine1: "Calls carry the big news. The small, ordinary stories are what get lost.",
-    heroLine2: "Vela turns one thoughtful question into an easy two-way exchange.",
-    seeHow: "See how it works",
+    heroLine1: "A thoughtful question from you. A voice note from home.",
+    heroLine2: "Vela helps your family share the everyday things, between calls.",
+    roleYou: "You use Vela",
+    roleParent: "Your parent uses a familiar messenger",
+    roleRhythm: "A rhythm you choose together",
+    exampleLabel: "TRY A CONVERSATION STARTER",
+    exampleNote: "Illustrative conversation · choose a question to see the exchange",
+    examples: [
+      {
+        label: "The garden",
+        question: "What did the garden look like this morning?",
+        answer: "The tomatoes finally turned. I picked three before breakfast.",
+        reply: "Save me two for Sunday?",
+      },
+      {
+        label: "A family recipe",
+        question: "What’s the secret to your Sunday soup?",
+        answer: "Your grandpa always added a little ginger. I still do it his way.",
+        reply: "I’m making it tonight. I’ll send you a photo.",
+      },
+      {
+        label: "An old story",
+        question: "What do you remember about your first job?",
+        answer: "I was so nervous I arrived an hour early. The door was still locked.",
+        reply: "I never knew that. What happened next?",
+      },
+    ],
+    seeHow: "Explore the product",
     galleryLabel: "Everyday family connection in four photographs",
     galleryKeys: "Moving photo story. Use left and right arrow keys to explore.",
     cityAlt: "A daughter finding a moment to send a voice message after work",
@@ -33,21 +58,21 @@ const COPY = {
     previousPhoto: "Previous photograph",
     nextPhoto: "Next photograph",
     pause: "Pause photos",
-    ideaEyebrow: "THE PROBLEM.",
+    ideaEyebrow: "LESS SMALL TALK. MORE OF EACH OTHER.",
     goBeyond: "“How are you?” often ends with",
     howAreYou: "“I’m fine.”",
     specificQuestion:
       "You care. But between busy days and distance, finding a natural way into the everyday details is hard.",
-    solutionKicker: "THE VELA WAY",
+    solutionKicker: "ONE SMALL QUESTION CAN OPEN A WHOLE STORY.",
     youAsk: "YOU ASK",
     gardenQuestion: "“What did the garden look like this morning?”",
     momAnswers: "MOM ANSWERS",
     gardenAnswer: "“The tomatoes finally turned. I picked three before breakfast.”",
     youReply: "YOU REPLY",
     saveTwo: "“Save me two for Sunday?”",
-    payoffStart: "Now you’re part of ",
-    payoffEnd: "her day.",
-    howEyebrow: "THREE SIMPLE FEATURES. ONE COMPLETE CONVERSATION.",
+    payoffStart: "Something to share. ",
+    payoffEnd: "Something to come back to.",
+    howEyebrow: "THE PRODUCT, IN THREE STEPS.",
     oneQuestion: "One question.",
     aWhole: "A whole",
     conversation: "conversation.",
@@ -73,7 +98,7 @@ const COPY = {
     differenceTitleStart: "Made for both sides",
     differenceTitleEnd: "of the family.",
     differenceLede:
-      "Vela is not another family feed. Every detail is shaped around one gentle, private exchange.",
+      "Easy for your parent. Meaningful for you. A little space for your relationship, built around everyday life.",
     differences: [
       {
         number: "01",
@@ -186,9 +211,34 @@ const COPY = {
     heroParent: "爸媽保持聯繫。",
     heroSecond: "無論相隔",
     heroEmphasis: "多遠。",
-    heroLine1: "電話聊的是大事，日常的小片段卻最容易錯過。",
-    heroLine2: "Vela 用一個用心的問題，開啟簡單的雙向交流。",
-    seeHow: "看看如何使用",
+    heroLine1: "你傳出一個用心的問題，家裡傳來一段熟悉的聲音。",
+    heroLine2: "在兩次通話之間，用 Vela 分享彼此的日常。",
+    roleYou: "你使用 Vela",
+    roleParent: "爸媽使用熟悉的通訊軟體",
+    roleRhythm: "一起決定適合的節奏",
+    exampleLabel: "試試不同的開場",
+    exampleNote: "對話示意 · 選一個問題，看看交流如何開始",
+    examples: [
+      {
+        label: "菜園的日常",
+        question: "今天早上，菜園長得怎麼樣？",
+        answer: "番茄終於紅了。吃早餐前，我摘了三顆。",
+        reply: "幫我留兩顆，星期天回去拿？",
+      },
+      {
+        label: "家傳的味道",
+        question: "星期天那鍋湯，有什麼祕訣？",
+        answer: "你阿公都會加一點薑，我到現在還是照他的方式煮。",
+        reply: "我今晚也來煮，煮好拍給你看。",
+      },
+      {
+        label: "以前的故事",
+        question: "還記得第一天上班的情形嗎？",
+        answer: "那天緊張得提早一小時到，連門都還沒開。",
+        reply: "我都不知道這件事。後來呢？",
+      },
+    ],
+    seeHow: "看看產品如何運作",
     galleryLabel: "四張照片裡的日常親情",
     galleryKeys: "移動中的照片故事。可用左右方向鍵瀏覽。",
     cityAlt: "女兒下班後，找個空檔傳一段語音",
@@ -202,20 +252,20 @@ const COPY = {
     previousPhoto: "上一張照片",
     nextPhoto: "下一張照片",
     pause: "暫停照片",
-    ideaEyebrow: "問題。",
+    ideaEyebrow: "多一點日常，也多了解彼此一點。",
     goBeyond: "一句「最近好嗎？」常常只換來",
     howAreYou: "「都很好。」",
     specificQuestion: "不是不關心，而是在忙碌與距離之間，很難找到自然的開場，聊進彼此真正的日常。",
-    solutionKicker: "VELA 的方式",
+    solutionKicker: "一個小問題，就能聊出一段故事。",
     youAsk: "你問",
     gardenQuestion: "「今天早上，菜園長得怎麼樣？」",
     momAnswers: "媽媽回答",
     gardenAnswer: "「番茄終於紅了。吃早餐前，我摘了三顆。」",
     youReply: "你回覆",
     saveTwo: "「幫我留兩顆，星期天回去拿？」",
-    payoffStart: "於是，你也成了",
-    payoffEnd: "她一天裡的一部分。",
-    howEyebrow: "三個簡單功能，完成一段雙向對話。",
+    payoffStart: "有一點日常可以分享，",
+    payoffEnd: "也有一段對話值得期待。",
+    howEyebrow: "三個步驟，看看 VELA 如何運作。",
     oneQuestion: "一個問題，",
     aWhole: "聊成",
     conversation: "一段對話。",
@@ -240,7 +290,7 @@ const COPY = {
     differenceEyebrow: "VELA 有什麼不同。",
     differenceTitleStart: "為家人的兩端而設計，",
     differenceTitleEnd: "不是另一個家庭動態牆。",
-    differenceLede: "Vela 的每個細節，都圍繞著一段溫柔、私密，而且能來回的交流。",
+    differenceLede: "爸媽用得輕鬆，你也能感受到交流的意義。讓家人的關係，在日常裡有自己的空間。",
     differences: [
       {
         number: "01",
@@ -375,6 +425,7 @@ export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageCont
       <h1 id="hero-title">${c.heroStart}<span class="hero-parent">${c.heroParent}</span><br>${c.heroSecond}<em>${c.heroEmphasis}</em></h1>
       <p class="hero-description">${c.heroLine1}<br>${c.heroLine2}</p>
       <div class="hero-actions"><a href="#join" class="button button-dark" data-waitlist aria-haspopup="dialog" aria-controls="waitlist-dialog">${c.join} <span aria-hidden="true">→</span></a><a class="hero-how" href="#exchange">${c.seeHow} <span aria-hidden="true">↓</span></a></div>
+      <ul class="product-facts"><li>${c.roleYou}</li><li>${c.roleParent}</li><li>${c.roleRhythm}</li></ul>
       <div class="story-gallery" role="region" aria-label="${c.galleryLabel}">
         <div class="story-viewport" tabindex="0" aria-label="${c.galleryKeys}">
           <div class="story-track">
@@ -391,7 +442,7 @@ export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageCont
     </section>
     <section class="question-chapter dark-section" id="idea" aria-labelledby="question-title">
       <div class="question-intro"><p class="eyebrow">${c.ideaEyebrow}</p><h2 id="question-title">${c.goBeyond}<br><em>${c.howAreYou}</em></h2><p>${c.specificQuestion}</p></div>
-      <p class="solution-kicker">${c.solutionKicker}</p><div class="question-story"><div class="story-message"><span>${c.youAsk}</span><p>${c.gardenQuestion}</p></div><div class="story-message from-parent"><span>${c.momAnswers}</span><p>${c.gardenAnswer}</p></div><div class="story-message your-reply"><span>${c.youReply}</span><p>${c.saveTwo}</p></div></div>
+      <div class="conversation-picker"><p class="solution-kicker">${c.solutionKicker}</p><div class="starter-choices js-only" role="group" aria-label="${c.exampleLabel}">${c.examples.map((example, index) => html`<button type="button" data-starter="${index}" aria-pressed="${index === 0 ? "true" : "false"}">${example.label}<span aria-hidden="true">↗</span></button>`)}</div><p class="example-disclosure">${c.exampleNote}</p></div><div class="question-story" aria-live="polite" aria-atomic="true"><div class="story-message"><span>${c.youAsk}</span><p id="starter-question">${c.examples[0].question}</p></div><div class="story-message from-parent"><span>${c.momAnswers}</span><p id="starter-answer">${c.examples[0].answer}</p></div><div class="story-message your-reply"><span>${c.youReply}</span><p id="starter-reply">${c.examples[0].reply}</p></div></div>
       <p class="question-payoff">${c.payoffStart}<em>${c.payoffEnd}</em></p>
     </section>
     <section class="exchange-section" id="exchange" aria-labelledby="exchange-title">
