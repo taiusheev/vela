@@ -175,7 +175,7 @@ const COPY = {
     how: "如何使用",
     beyond: "不只一句早安",
     join: "加入等候名單",
-    tagline: "給生活忙碌的你，也給年歲漸長的爸媽。",
+    tagline: "給你，也給年歲漸長的爸媽。",
     headline: "一點微光，",
     emphasis: "多一點安心。",
     hero: [
