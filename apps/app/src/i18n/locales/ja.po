@@ -843,6 +843,7 @@ msgid "Canada"
 msgstr ""
 
 #: app/morning-settings.tsx
+#: app/profile.tsx
 msgid "Cancel"
 msgstr ""
 
@@ -854,6 +855,10 @@ msgstr ""
 #. a time zone
 #: src/data/onboarding.ts
 msgid "Central"
+msgstr ""
+
+#: app/profile.tsx
+msgid "Change"
 msgstr ""
 
 #: app/conversation.tsx
@@ -1811,6 +1816,7 @@ msgid "Listen to your recording"
 msgstr ""
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 msgid "Little things worth remembering from your own answers"
 msgstr ""
 
@@ -1862,6 +1868,10 @@ msgstr ""
 
 #: app/settings.tsx
 msgid "Loading your notification preference…"
+msgstr ""
+
+#: app/profile.tsx
+msgid "Loading…"
 msgstr ""
 
 #: app/exchange/[id].tsx
@@ -2321,6 +2331,10 @@ msgstr ""
 msgid "Opening the book…"
 msgstr ""
 
+#: app/(tabs)/you.tsx
+msgid "Opens your name, your family and your own things"
+msgstr ""
+
 #: src/components/vote-options.tsx
 msgid "Option {number}"
 msgstr ""
@@ -2361,6 +2375,7 @@ msgid "Parent photo"
 msgstr ""
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 msgid "Parent photos and links, notifications, language, and account"
 msgstr ""
 
@@ -2495,6 +2510,10 @@ msgstr ""
 
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
+msgstr ""
+
+#: app/profile.tsx
+msgid "Profile"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
@@ -2714,6 +2733,10 @@ msgstr ""
 msgid "Save morning settings"
 msgstr ""
 
+#: app/profile.tsx
+msgid "Save name"
+msgstr ""
+
 #: app/conversation.tsx
 msgid "Saved for their first morning after they join."
 msgstr ""
@@ -2733,6 +2756,7 @@ msgstr ""
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/morning-settings.tsx
+#: app/profile.tsx
 #: src/components/app-privacy.tsx
 #: src/components/calling-number-editor.tsx
 #: src/components/quiet-notice.tsx
@@ -2912,6 +2936,7 @@ msgid "Setting up…"
 msgstr ""
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 #: app/settings.tsx
 msgid "Settings"
 msgstr ""
@@ -4489,6 +4514,10 @@ msgstr ""
 msgid "Your family could not be reached just now. Your saved questions are unchanged."
 msgstr ""
 
+#: app/profile.tsx
+msgid "Your family sees this name on your questions and replies."
+msgstr ""
+
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
 msgstr ""
@@ -4519,6 +4548,7 @@ msgstr ""
 
 #: app/(tabs)/you.tsx
 #: app/my-memories.tsx
+#: app/profile.tsx
 msgid "Your memories"
 msgstr ""
 
@@ -4538,9 +4568,14 @@ msgstr ""
 msgid "Your morning message"
 msgstr ""
 
+#: app/profile.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/telegram-family-link.tsx
 msgid "Your name"
+msgstr ""
+
+#: app/profile.tsx
+msgid "Your name could not be saved. Nothing changed. Try again."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -4566,6 +4601,14 @@ msgstr ""
 
 #: app/settings.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Your profile"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Your profile, {myName}, {familyName}"
 msgstr ""
 
 #: app/ask.tsx
