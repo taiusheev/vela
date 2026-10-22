@@ -1,12 +1,12 @@
 # Free analytics operations
 
-Status: implementation prepared; PostHog account/project absent. Collection is off in checked-in configurations. No live ingestion, production release, app distribution or payment setup is established.
+Status: EU PostHog project 315862 is connected and synthetic ingestion is verified. Public project metadata is in infra/analytics-project.json. Collection remains off in runtime configurations. No production ingestion, release, app distribution or payment setup is established.
 
 ## Free account setup
 
-Founder: open https://app.posthog.com/signup, choose EU Cloud, create the Vela project and do not add a payment card. Finish email/login privately. Give engineering only the public project token (phc_...) and project region; never a personal API key or password. Do not install vendor snippets from onboarding: Vela already sends explicit minimal events.
+Founder completed EU signup on 22 October 2026. Do not add a payment card. Verify the no-card free billing state before activation. Use only the public project token (phc_...) and project region; never request a personal API key or password. Do not install vendor snippets from onboarding: Vela already sends explicit minimal events.
 
-Use the one free project for production. Synthetic tests use local fake transport, not this project. If a staging project is needed, confirm its pricing before creating it. Free quotas and product pricing can change: verify https://posthog.com/pricing before activation. Product analytics is the only product needed; no Groups add-on, replay, surveys or managed warehouse.
+Use the one free project for production. Unit tests use fake transport. The actual-ingestion smoke test used synthetic data marked development/staging in this project; every saved production chart excludes it. If a separate staging project is needed, confirm its pricing before creating it. Free quotas and product pricing can change: verify https://posthog.com/pricing before activation. Product analytics is the only product needed; no Groups add-on, replay, surveys or managed warehouse.
 
 ## Collection and switches
 
@@ -28,7 +28,7 @@ Family setup/activation, asks/answers/replies, failures and weekly family retent
 
 ## Founder dashboard recipes
 
-Create a dashboard named Vela growth in PostHog:
+Open [Vela growth and engagement](https://eu.posthog.com/project/315862/dashboard/1045170). Its 10 saved charts were created and query-tested on 22 October 2026. They remain empty until reviewed production activation. Recipes for extending the dashboard:
 1. Opted-in website visitors: Trends, site_viewed, unique users, daily; break down source.
 2. Website interest: section_viewed, unique users, break down section.
 3. Section attention: section_active_time, aggregate average seconds, break down section. Averages are per flush event, not average total visit time; use sum(seconds)/unique users for total observed seconds per visitor.
@@ -39,7 +39,7 @@ Create a dashboard named Vela growth in PostHog:
 8. App screen visits: screen_viewed, total events, break down screen.
 9. App foreground seconds: screen_active_time, sum seconds, break down screen.
 
-Filter every insight to environment=production, and surface where needed. Call visitors “opted-in browsers/devices,” not exact people. No dashboard has yet been created: account access is required. Disable recording/autocapture in project settings as a backstop; Vela sends no SDK automatic events. Check Data management -> Activity for the named events and inspect a synthetic payload before any real usage.
+Filter every insight to environment=production, and surface where needed. Call visitors “opted-in browsers/devices,” not exact people. Existing charts use summed section seconds rather than per-flush averages. Recording is disabled; Vela sends no SDK automatic events. Check Data management -> Activity for the named events and inspect a synthetic payload before any real usage.
 
 Apple App Store Connect -> Analytics remains the authority for downloads, acquisition campaigns, paying users, subscriptions, revenue and churn. TestFlight metrics are beta installs; purchases there are sandbox transactions. Vela pilot is free. RevenueCat is not required just for analytics and has not been integrated.
 
@@ -57,5 +57,5 @@ Update/review website privacy notice, optional app notice and data-map before ac
 
 Automated tests exercise missing config, unknown fields/content, foreign origin, body size, relay failure, no transport before opt-in, withdrawal abort and stale account callbacks. Browser/native verification must additionally prove prompt, reject, allow, withdraw, foreground/background timing, account changes and private-storage failures. Native tests require a real installed build; unit tests do not prove it.
 
-The separate routing proposal #152 does not establish the live domain proxy target. Confirm site -> correct database -> protected waitlist before relying on conversion totals. Follow normal reviewed merge, staging and protected production release. PostHog account setup is required before real ingestion or dashboard proof. No live activation is claimed until those checks succeed.
+The separate routing proposal #152 does not establish the live domain proxy target. Confirm site -> correct database -> protected waitlist before relying on conversion totals. Follow normal reviewed merge, staging and protected production release. Synthetic ingestion and dashboard proof do not establish live collection. No live activation is claimed until those checks succeed.
 
