@@ -1642,9 +1642,21 @@ msgstr "{quietName}那邊今天很安靜"
 msgid "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 msgstr "{name}第一次回覆時，窗就會亮起。{name}答應之前，什麼都不會傳出。"
 
+#: app/ask.tsx
+msgid "It reaches {name} on {day} morning, the first one nobody else has asked for."
+msgstr "會在{day}早上送到{name}那裡，那是第一個還沒有人提問的早上。"
+
+#: app/ask.tsx
+msgid "It reaches {name} with tomorrow's morning message."
+msgstr "會跟著明天早上的訊息送到{name}那裡。"
+
 #: app/(tabs)/questions.tsx
 msgid "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
 msgstr "會在明天早上（{tomorrow}）送到{parentName}那裡。想現在就說，請打開聊天。"
+
+#: app/ask.tsx
+msgid "It waits its turn and reaches {name} on the first morning nobody else has asked for."
+msgstr "會先排隊，在第一個還沒有人提問的早上送到{name}那裡。"
 
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
@@ -2038,6 +2050,10 @@ msgstr "紐西蘭"
 #: src/components/onboarding/finish.tsx
 msgid "Next"
 msgstr "下一步"
+
+#: app/ask.tsx
+msgid "Next free morning"
+msgstr "下一個空的早上"
 
 #: src/components/onboarding/story.tsx
 msgid "No answer from Mom yet today."
@@ -3900,10 +3916,6 @@ msgstr "直到回來"
 msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
 msgstr "最多兩位住在{name}附近、如果哪天早上比較安靜可以過去看看的人。用「在 Telegram 上問」傳連結給每一位：只有在對方打開連結後，Vela 才會以您的名義傳訊息問對方。在對方同意之前，您可以自己打電話給對方。"
 
-#: app/(tabs)/index.tsx
-msgid "Updated {time}"
-msgstr "更新於 {time}"
-
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
 msgstr "正在上傳 {percent}%"
@@ -4263,10 +4275,6 @@ msgstr "對方回覆後，趁還記得的時候回個訊息。安靜的一天，
 #: src/components/onboarding/finish.tsx
 msgid "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
 msgstr "你們在一起的時候，在{name}的手機上登入。手機會用大字一次顯示一則訊息，並先詢問{name}：答應之前什麼都不會送到。"
-
-#: app/ask.tsx
-msgid "Whenever"
-msgstr "哪天都可以"
 
 #: src/components/onboarding/questions.tsx
 msgid "Where does {name} chat already?"
