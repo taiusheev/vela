@@ -1636,9 +1636,21 @@ msgstr "It has been quiet at {quietName}'s today"
 msgid "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 msgstr "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 
+#: app/ask.tsx
+msgid "It reaches {name} on {day} morning, the first one nobody else has asked for."
+msgstr "It reaches {name} on {day} morning, the first one nobody else has asked for."
+
+#: app/ask.tsx
+msgid "It reaches {name} with tomorrow's morning message."
+msgstr "It reaches {name} with tomorrow's morning message."
+
 #: app/(tabs)/questions.tsx
 msgid "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
 msgstr "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
+
+#: app/ask.tsx
+msgid "It waits its turn and reaches {name} on the first morning nobody else has asked for."
+msgstr "It waits its turn and reaches {name} on the first morning nobody else has asked for."
 
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
@@ -2027,6 +2039,10 @@ msgstr "New Zealand"
 #: src/components/onboarding/finish.tsx
 msgid "Next"
 msgstr "Next"
+
+#: app/ask.tsx
+msgid "Next free morning"
+msgstr "Next free morning"
 
 #: src/components/onboarding/story.tsx
 msgid "No answer from Mom yet today."
@@ -4237,10 +4253,6 @@ msgstr "When they answer, write back while it is on your mind. A quiet day does 
 #: src/components/onboarding/finish.tsx
 msgid "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
 msgstr "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
-
-#: app/ask.tsx
-msgid "Whenever"
-msgstr "Whenever"
 
 #: src/components/onboarding/questions.tsx
 msgid "Where does {name} chat already?"
