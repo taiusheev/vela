@@ -151,15 +151,15 @@ describe("the public website", () => {
       const order = ["hero-title", "idea", "exchange", "difference", "care", "join"].map(at);
       expect(order.every((index) => index > 0)).toBe(true);
       expect(order).toEqual([...order].sort((a, b) => a - b));
-      expect(textOf(body.slice(body.indexOf("<h1"), body.indexOf("</h1>")))).toContain(
-        lang === "en" ? "your parent" : "爸媽",
+      expect(textOf(body)).toContain(
+        lang === "en" ? "your parent every morning" : "每天早上向爸媽問好",
       );
-      expect(body).toContain("/site/img/app-current/ask.png");
+      expect(body).toContain("/site/img/app-current/ask-current.jpg");
       expect(body).toContain("/site/img/vela-logo.svg");
       expect(body).toContain("/site/img/vela-mark-white.svg");
       expect(textOf(body)).toContain(lang === "en" ? "You use Vela" : "你使用 Vela");
       expect(textOf(body)).toContain(
-        lang === "en" ? "Familiar for your parent" : "爸媽不用學新工具",
+        lang === "en" ? "The morning happens, even on busy days" : "就算今天很忙，早安還是會到",
       );
       expect(body).toContain('id="photo-pause"');
       expect(body).toContain('id="photo-next"');
