@@ -211,6 +211,7 @@ ${page.alternates.map(
 <meta property="og:image" content="${url("/site/img/open-graph.png")}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/site/favicon.svg">
+<link rel="apple-touch-icon" href="/site/apple-touch-icon.png">
 <link rel="preload" href="/site/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site/site.css">
 <script src="/site/boot.js"></script>
