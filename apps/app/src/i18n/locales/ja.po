@@ -447,6 +447,10 @@ msgstr ""
 msgid "$79 a year"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "18 or older"
+msgstr ""
+
 #: src/components/first-week.tsx
 msgid "3 replies from the family"
 msgstr ""
@@ -457,6 +461,10 @@ msgstr ""
 
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "A few questions about you. Every adult answers separately."
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -717,6 +725,14 @@ msgstr ""
 msgid "Anyone"
 msgstr ""
 
+#: app/eligibility-preview.tsx
+msgid "App user: Alex"
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "Are you 18 or older?"
+msgstr ""
+
 #: src/components/reminders.tsx
 #: src/components/today-hero.tsx
 msgid "Ask {name}"
@@ -825,6 +841,10 @@ msgstr ""
 
 #: src/components/today-feed.tsx
 msgid "Be the first to answer {recipient}."
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "Before joining Vela"
 msgstr ""
 
 #: src/components/app-privacy.tsx
@@ -987,8 +1007,20 @@ msgstr ""
 msgid "Choose your country, type your number as you would at home, and we text you a code."
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Choose your own answers and read both draft documents to continue."
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "Chosen · choose another"
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "Clear my test declaration"
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "Clearing…"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -1158,6 +1190,10 @@ msgstr ""
 msgid "Do you remember this?"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Do you usually live in Taiwan?"
+msgstr ""
+
 #: src/components/reminders.tsx
 msgid "Done"
 msgstr ""
@@ -1189,6 +1225,10 @@ msgstr ""
 #. a time zone
 #: src/data/onboarding.ts
 msgid "Eastern"
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "Eligibility notice — review draft"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -1494,6 +1534,10 @@ msgstr ""
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Hide draft documents"
+msgstr ""
+
 #: src/components/app-privacy.tsx
 msgid "Hide privacy details"
 msgstr ""
@@ -1549,6 +1593,14 @@ msgstr ""
 
 #: src/components/onboarding/story.tsx
 msgid "I already have an account"
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "I have read the draft eligibility notice."
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "I have read the draft service terms."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -1932,6 +1984,10 @@ msgstr ""
 
 #: app/my-memories.tsx
 msgid "Looking for your memories…"
+msgstr ""
+
+#: app/eligibility-preview.tsx
+msgid "Make the next record or clear fail"
 msgstr ""
 
 #: src/data/onboarding.ts
@@ -2333,6 +2389,10 @@ msgstr ""
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr ""
 
+#: app/eligibility-preview.tsx
+msgid "One synthetic failure queued. No real connection is used."
+msgstr ""
+
 #: src/components/telegram-family-link.tsx
 msgid "Only confirm a request you just started from your own Vela app."
 msgstr ""
@@ -2433,6 +2493,10 @@ msgstr ""
 
 #: app/parent-settings.tsx
 msgid "Parent settings"
+msgstr ""
+
+#: app/eligibility-preview.tsx
+msgid "Parent: Lin"
 msgstr ""
 
 #: app/settings.tsx
@@ -2548,6 +2612,10 @@ msgstr ""
 msgid "Playback speed {rate} times"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Prefer not to say"
+msgstr ""
+
 #: app/settings.tsx
 msgid "Preview family setup"
 msgstr ""
@@ -2562,6 +2630,10 @@ msgstr ""
 
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "Privacy rights and help remain available even if you cannot join."
 msgstr ""
 
 #: app/profile.tsx
@@ -2602,6 +2674,10 @@ msgstr ""
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Read the draft notice and terms"
+msgstr ""
+
 #: src/components/story-day.tsx
 msgid "Read the family book"
 msgstr ""
@@ -2640,6 +2716,10 @@ msgstr ""
 msgid "Record again"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Record test declaration"
+msgstr ""
+
 #: src/components/voice-hello.tsx
 msgid "Record your voice note (10 seconds)"
 msgstr ""
@@ -2650,6 +2730,10 @@ msgstr ""
 
 #: src/components/voice-recorder.tsx
 msgid "Recording · {time} of {limit}"
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "Recording…"
 msgstr ""
 
 #: src/device/VoiceAnswer.tsx
@@ -2967,6 +3051,10 @@ msgstr ""
 msgid "Service terms"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Service terms — review draft"
+msgstr ""
+
 #: src/components/set-up-phone.tsx
 msgid "Set it up"
 msgstr ""
@@ -3169,6 +3257,10 @@ msgstr ""
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Somewhere else"
+msgstr ""
+
 #: src/auth/phone.ts
 msgid "South Korea"
 msgstr ""
@@ -3243,7 +3335,12 @@ msgstr ""
 msgid "Sydney"
 msgstr ""
 
+#: app/eligibility-preview.tsx
+msgid "SYNTHETIC REVIEW · DRAFT · NO LIVE CONSENT"
+msgstr ""
+
 #: src/auth/phone.ts
+#: src/components/eligibility-review.tsx
 #: src/data/onboarding.ts
 msgid "Taiwan"
 msgstr ""
@@ -3287,6 +3384,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Telegram didn’t open."
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "Test declaration recorded"
 msgstr ""
 
 #: src/auth/phone.ts
@@ -3602,6 +3703,14 @@ msgstr ""
 msgid "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "The test declaration could not be cleared. It is still recorded. Try again."
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "The test declaration was not recorded. Your answers are still here. Try again."
+msgstr ""
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -3654,6 +3763,10 @@ msgstr ""
 msgid "There’s no one nearby yet"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "These answers are outside the proposed Taiwan launch scope. Nothing is submitted. This is not a legal eligibility decision."
+msgstr ""
+
 #: app/my-memories.tsx
 msgid "These words will be removed from your memories in Vela. Your original chat does not change."
 msgstr ""
@@ -3697,6 +3810,10 @@ msgstr ""
 #: app/ask.tsx
 #: app/exchange/[id].tsx
 msgid "This iPhone could not keep a draft. Leave this screen open until your send succeeds."
+msgstr ""
+
+#: src/components/eligibility-review.tsx
+msgid "This is a self-declaration, not verified identity or legal clearance. No family access, messages, AI processing or parent consent has been enabled."
 msgstr ""
 
 #: src/components/parent-link-settings.tsx
@@ -3914,6 +4031,10 @@ msgstr ""
 msgid "Try opening Telegram again"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Try recording again"
+msgstr ""
+
 #: app/my-memories.tsx
 msgid "Turn off and clear"
 msgstr ""
@@ -3963,6 +4084,10 @@ msgstr ""
 msgid "Ukraine"
 msgstr ""
 
+#: src/components/eligibility-review.tsx
+msgid "Under 18"
+msgstr ""
+
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "United Kingdom"
@@ -3999,6 +4124,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Use a private connection code instead"
+msgstr ""
+
+#: app/eligibility-preview.tsx
+msgid "Use fictional answers only. This preview keeps test choices in memory until you leave. No account, network, database or messages."
 msgstr ""
 
 #: app/sign-in.tsx

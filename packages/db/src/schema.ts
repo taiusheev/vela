@@ -86,6 +86,7 @@ import {
   PLANS,
   PUSH_PERMISSIONS,
   PUSH_PLATFORMS,
+  type PublicEligibilityRecord,
   QUIET_OUTCOMES,
   REACTION_KINDS,
   REGIONS,
@@ -211,6 +212,8 @@ export const users = pgTable(
      * the turn prompt). It never stops the quiet notice or its close.
      */
     oneMomentADay: boolean("one_moment_a_day").notNull().default(true),
+    /** Current review-only self declaration; cleared with account deletion, never grants access. */
+    publicEligibility: jsonb("public_eligibility").$type<PublicEligibilityRecord>(),
     /** Current app permission evidence, never a parent’s or health consent. Cleared with account deletion. */
     privacyAcceptance: jsonb("privacy_acceptance").$type<{
       version: string;
@@ -261,6 +264,8 @@ export const members = pgTable(
     /** NULL for members reached only through a channel. */
     userId: uuid("user_id").references(() => users.id),
     /** Sharing identity epoch, rotated by database guards on departure or account change. */
+    /** The member's own channel declaration, never inferred from an organiser's answers. Deleted with this row. */
+    publicEligibility: jsonb("public_eligibility").$type<PublicEligibilityRecord>(),
     memoryMembershipRevision: uuid("memory_membership_revision").notNull().default(sql`uuidv7()`),
     role: text("role", { enum: ROLES }).notNull().default("member"),
     /** The organiser who pays. */
