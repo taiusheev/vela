@@ -238,7 +238,9 @@ describe("the pilot loop", () => {
     ]);
     expect(h.telegram.closed.at(-1)).toMatchObject({
       conversationId: HER,
-      replacementText: expect.stringContaining(t("en", "consent.accepted", { time: "08:00" })),
+      replacementText: expect.stringContaining(
+        t("en", "consent.accepted", { time: "08:00", organiser: "Mia" }),
+      ),
     });
     expect(await hasHealthWordsConsent(h.db, her.id, h.clock.now())).toBe(true);
     // Her first wake is this evening's turn prompt: the light starts tomorrow.
