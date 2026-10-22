@@ -1057,6 +1057,42 @@ export const memorySharingPresentations = pgTable(
   ],
 );
 
+/**
+ * The memory-suggestion question as one person was shown it: a one-use, five-minute presentation
+ * bound to their membership revision and the exact text hash. No answer is stored here; the answer
+ * is a `consents` row. Withdrawal and membership changes delete pending presentations.
+ */
+export const memoryPermissionPresentations = pgTable(
+  "memory_permission_presentations",
+  {
+    id: uuidv7Id(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    membershipRevision: uuid("membership_revision").notNull(),
+    textVersion: text("text_version").notNull(),
+    noticeVersion: text("notice_version").notNull(),
+    lang: text("lang").notNull(),
+    textSha256: text("text_sha256").notNull(),
+    issuedAt: timestamptz("issued_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    consumedAt: timestamptz("consumed_at"),
+  },
+  (t) => [
+    index("memory_permission_presentations_member_idx").on(t.memberId),
+    index("memory_permission_presentations_user_idx").on(t.userId),
+    index("memory_permission_presentations_expiry_idx").on(t.expiresAt),
+    check("memory_permission_presentations_sha_check", sql`${t.textSha256} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "memory_permission_presentations_timing_check",
+      sql`${t.expiresAt} = ${t.issuedAt} + interval '5 minutes' and (${t.consumedAt} is null or (${t.consumedAt} >= ${t.issuedAt} and ${t.consumedAt} < ${t.expiresAt}))`,
+    ),
+  ],
+);
+
 /** One named person's permission, with no quote or name copy. Not read by any app/API path yet. */
 export const memoryShares = pgTable(
   "memory_shares",

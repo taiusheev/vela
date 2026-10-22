@@ -63,11 +63,24 @@ import {
   EndAway,
   FinishReminder,
   InviteNearby,
+  KeptMemoryPage,
   type Lang,
   LeaveFamily,
   MarkDeceased,
   type MediaUnavailableReason,
   MemberLight,
+  MemoryCandidatePage,
+  MemoryDismissed,
+  MemoryKeepChoice,
+  MemoryKept,
+  MemoryNoInput,
+  MemoryPermissionAnswered,
+  MemoryPermissionChoice,
+  MemoryPermissionPrepare,
+  MemoryPermissionPrepared,
+  MemoryPermissionPreview,
+  MemoryPermissionState,
+  MemoryRemoved,
   MemoryShareChoice,
   MemorySharePrepared,
   MemorySharePreview,
@@ -76,6 +89,7 @@ import {
   MemoryShareStop,
   MemoryShareStopped,
   MemorySharingView,
+  MemoryWithdrawn,
   OpenWeeklyRead,
   ParentLinkRequest,
   PauseMember,
@@ -102,6 +116,7 @@ import {
   AskVoiceMissingError,
   AwayRefusedError,
   type addApiNearby,
+  type answerMemoryPermission,
   type askApiToLookIn,
   type authorizeFamilyAccess,
   type Clock,
@@ -114,11 +129,13 @@ import {
   type createMemorySharingPresentation,
   type DeviceAlerts,
   type disableApiAccount,
+  type dismissMemoryCandidate,
   type endApiAway,
   errorLabel,
   FactMissingError,
   type finishApiReminder,
   type inviteApiNearby,
+  type keepMemoryCandidate,
   type Logger,
   LookInRefusedError,
   type leaveApiFamily,
@@ -138,6 +155,10 @@ import {
   type loadApiToday,
   type loadApiWeeklyRead,
   type loadDeviceMessages,
+  type loadKeptMemories,
+  type loadMemoryCandidates,
+  type loadMemoryPermission,
+  type loadMemoryPermissionPresentation,
   type loadMemorySharingPresentation,
   type loadMemorySharingView,
   type loadSharedKeptMemories,
@@ -154,6 +175,7 @@ import {
   type PilotAdmission,
   type pauseApiMember,
   type pilotApiAccountAllowed,
+  type prepareMemoryPermission,
   type provisionApiAccount,
   QuietUsefulRefusedError,
   type Random,
@@ -165,6 +187,7 @@ import {
   type removeApiDevice,
   type removeApiNearby,
   type removeApiPushDevice,
+  type removeKeptMemory,
   type replyToApiExchange,
   type resolveApiQuiet,
   runAfterCommit,
@@ -183,8 +206,9 @@ import {
   VelaError,
   WithdrawTooLateError,
   type withdrawApiAsk,
+  type withdrawOwnMemoryConsent,
 } from "@vela/services";
-import { Hono, type MiddlewareHandler } from "hono";
+import { type Context, Hono, type MiddlewareHandler } from "hono";
 import {
   type ApiSecurityEnv,
   createApiAuthentication,
@@ -272,6 +296,24 @@ export interface ApiRuntime {
       createMemorySharingPresentation: typeof createMemorySharingPresentation;
       confirmMemorySharing: typeof confirmMemorySharing;
       stopSharingMemory: typeof stopSharingMemory;
+    };
+  };
+  /** The author's own memories: permission, suggestions, keeping, removal and withdrawal.
+   * Unconfigured in EVERY actual runtime until the notice naming this purpose is approved.
+   * Removal and withdrawal stay available when new processing is off; never a paid gate. */
+  memories?: {
+    config: Parameters<typeof keepMemoryCandidate>[0]["config"];
+    services: {
+      loadMemoryPermission: typeof loadMemoryPermission;
+      loadMemoryPermissionPresentation: typeof loadMemoryPermissionPresentation;
+      prepareMemoryPermission: typeof prepareMemoryPermission;
+      answerMemoryPermission: typeof answerMemoryPermission;
+      withdrawOwnMemoryConsent: typeof withdrawOwnMemoryConsent;
+      loadMemoryCandidates: typeof loadMemoryCandidates;
+      dismissMemoryCandidate: typeof dismissMemoryCandidate;
+      keepMemoryCandidate: typeof keepMemoryCandidate;
+      loadKeptMemories: typeof loadKeptMemories;
+      removeKeptMemory: typeof removeKeptMemory;
     };
   };
   parentConnection?: typeof loadApiParentConnection;
@@ -1184,6 +1226,89 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       },
     );
   }
+  const memories = runtime.memories;
+  if (memories) {
+    const memoryReadDeps = (db: VelaDatabase) => ({
+      db,
+      clock: { now: () => runtime.now() },
+      config: memories.config,
+    });
+    const cursorOf = (c: Context<RuntimeEnv>): string | null | undefined => {
+      const cursors = c.req.queries("cursor") ?? [];
+      if (cursors.length > 1 || (cursors.length === 1 && !MEDIA_ID.test(cursors[0] ?? "")))
+        return undefined;
+      return cursors[0]?.toLowerCase() ?? null;
+    };
+    app.get(
+      "/v1/families/:familyId/memory-permission",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const state = await memories.services.loadMemoryPermission(
+          memoryReadDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+        );
+        return state === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(MemoryPermissionState.parse(state), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/memory-permission-presentations/:presentationId",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const preview = await memories.services.loadMemoryPermissionPresentation(
+          memoryReadDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          c.req.param("presentationId").toLowerCase(),
+        );
+        return preview === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(MemoryPermissionPreview.parse(preview), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/memory-suggestions",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const cursor = cursorOf(c);
+        if (cursor === undefined) return c.json(INVALID, 400);
+        const page = await memories.services.loadMemoryCandidates(
+          memoryReadDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          cursor,
+        );
+        return page === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(MemoryCandidatePage.parse(page), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/memories",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const cursor = cursorOf(c);
+        if (cursor === undefined) return c.json(INVALID, 400);
+        const page = await memories.services.loadKeptMemories(
+          memoryReadDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          cursor,
+        );
+        return page === null ? c.json(NOT_FOUND, 404) : c.json(KeptMemoryPage.parse(page), 200);
+      },
+    );
+  }
   if (writes) {
     const checkActivity: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
       if ((await writes.verifyActiveSession(c.get("session"))) !== true) {
@@ -1288,6 +1413,146 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
           return c.json(MemoryShareStopped.parse(result.response.body), 200);
         },
+      );
+    }
+    if (memories) {
+      const newMemoriesEnabled =
+        (gated: boolean): MiddlewareHandler<RuntimeEnv> =>
+        async (c, next) => {
+          if (gated && memories.config.richMemories !== true) return c.json(NOT_FOUND, 404);
+          await next();
+          return c.res;
+        };
+      const memoryDeps = (db: VelaDatabase) => ({
+        db,
+        clock: writes.clock,
+        config: memories.config,
+      });
+      // Stale choices become 409 without exposing a domain message.
+      const memoryWrite = async <T>(run: () => Promise<T>): Promise<T> => {
+        try {
+          return await run();
+        } catch (error) {
+          if (error instanceof VelaError && error.code === "illegal_state")
+            throw new ApiIdempotencyError("conflict");
+          throw error;
+        }
+      };
+      type MemoryWrite = (
+        deps: ReturnType<typeof memoryDeps>,
+        c: Context<RuntimeEnv>,
+      ) => Promise<{ response: { status: number; body: unknown }; replayed?: boolean }>;
+      const memoryRoute = (
+        path: string,
+        input: WriteSchema,
+        output: { parse: (value: unknown) => unknown },
+        gated: boolean,
+        run: MemoryWrite,
+      ) =>
+        app.post(
+          path,
+          newMemoriesEnabled(gated),
+          authenticate,
+          sharingIds,
+          validateWrite(input, runtime.logger),
+          checkActivity,
+          withDatabase,
+          async (c) => {
+            const result = await memoryWrite(() => run(memoryDeps(c.get("db")), c));
+            if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+              throw new Error("Invalid memory response");
+            c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+            return c.json(output.parse(result.response.body), 200);
+          },
+        );
+      const family = (c: Context<RuntimeEnv>) => c.req.param("familyId")?.toLowerCase() ?? "";
+      memoryRoute(
+        "/v1/families/:familyId/memory-permission/presentations",
+        MemoryPermissionPrepare,
+        MemoryPermissionPrepared,
+        true,
+        (deps, c) =>
+          memories.services.prepareMemoryPermission(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            c.get("writeInput"),
+          ),
+      );
+      memoryRoute(
+        "/v1/families/:familyId/memory-permission/answer",
+        MemoryPermissionChoice,
+        MemoryPermissionAnswered,
+        true,
+        (deps, c) => {
+          const choice = MemoryPermissionChoice.parse(c.get("writeInput"));
+          return memories.services.answerMemoryPermission(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            { ...choice, presentation_id: choice.presentation_id.toLowerCase() },
+          );
+        },
+      );
+      // Turning off and clearing never depends on the switch or a subscription.
+      memoryRoute(
+        "/v1/families/:familyId/memory-permission/withdraw",
+        MemoryNoInput,
+        MemoryWithdrawn,
+        false,
+        (deps, c) =>
+          memories.services.withdrawOwnMemoryConsent(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+          ),
+      );
+      memoryRoute(
+        "/v1/families/:familyId/memory-suggestions/:candidateId/dismiss",
+        MemoryNoInput,
+        MemoryDismissed,
+        false,
+        (deps, c) =>
+          memories.services.dismissMemoryCandidate(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            c.req.param("candidateId")?.toLowerCase() ?? "",
+          ),
+      );
+      memoryRoute(
+        "/v1/families/:familyId/memories/keep",
+        MemoryKeepChoice,
+        MemoryKept,
+        true,
+        (deps, c) => {
+          const choice = MemoryKeepChoice.parse(c.get("writeInput"));
+          return memories.services.keepMemoryCandidate(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            { ...choice, candidate_id: choice.candidate_id.toLowerCase() },
+          );
+        },
+      );
+      memoryRoute(
+        "/v1/families/:familyId/memories/:memoryId/remove",
+        MemoryNoInput,
+        MemoryRemoved,
+        false,
+        (deps, c) =>
+          memories.services.removeKeptMemory(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            c.req.param("memoryId")?.toLowerCase() ?? "",
+          ),
       );
     }
     const routes = [
