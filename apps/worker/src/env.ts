@@ -126,6 +126,12 @@ export interface PilotEnv extends SharedEnv {
    * name on a morning nobody wrote for. "on" everywhere since privacy-notice.v5 describes it.
    */
   readonly SEND_AS_ME?: string;
+  /**
+   * `RICH_MEMORIES`: "on" offers each signed-in person their own memories in the app (permission,
+   * suggestions, keeping, removal, turn off and clear; privacy-notice v7 wording). Absent or "off"
+   * leaves those routes absent. Pinned off in production until the notice is live.
+   */
+  readonly RICH_MEMORIES?: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;

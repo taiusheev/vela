@@ -45,6 +45,9 @@ export type MemoryCandidatePage = z.infer<typeof MemoryCandidatePage>;
 export const MEMORY_KEEP_VERSION = "memory.keep@2";
 export const MEMORY_KEEP_EXPLANATION_EN =
   "Only these words will stay in your private memories after the conversation’s 30 days. Keeping does not share them with family. You can remove this memory later.";
+/** SHA-256 of MEMORY_KEEP_EXPLANATION_EN, so the app can echo it without hashing (test pins it). */
+export const MEMORY_KEEP_EXPLANATION_SHA256 =
+  "2b8f0ea4f89e3f04e34213a712eca929932de83b14bea66af93c1123e8ab3923";
 export const MemoryKeepChoice = z.strictObject({
   candidate_id: z.uuid(),
   confirmation_version: z.literal(MEMORY_KEEP_VERSION),

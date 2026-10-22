@@ -612,6 +612,10 @@ msgstr ""
 msgid "All said yes"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "Allow memory suggestions"
+msgstr ""
+
 #: src/data/chat.ts
 msgid "Already in a bag by the door."
 msgstr ""
@@ -785,6 +789,7 @@ msgid "away · {day}"
 msgstr ""
 
 #: app/help.tsx
+#: app/my-memories.tsx
 #: src/components/back-button.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Back"
@@ -1106,6 +1111,10 @@ msgstr ""
 
 #: app/help.tsx
 msgid "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Disappears on {until} unless you keep it."
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -1549,6 +1558,10 @@ msgstr ""
 msgid "If the link doesn’t open, add me to your contacts, then tap it again."
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "If you agree, Vela can suggest little things worth remembering from your own new answers. Only you see them, and you choose what to keep."
+msgstr ""
+
 #: app/delete-account.tsx
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 msgstr ""
@@ -1650,12 +1663,24 @@ msgstr ""
 msgid "Keep my account"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "Keep my current settings"
+msgstr ""
+
 #: app/settings.tsx
 msgid "Keep my turns"
 msgstr ""
 
 #: src/components/nearby-editor.tsx
 msgid "Keep them"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Keep these words"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Keep these words?"
 msgstr ""
 
 #: src/components/family-book.tsx
@@ -1666,8 +1691,20 @@ msgstr ""
 msgid "Keeping {name}’s mornings safe…"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "Kept"
+msgstr ""
+
 #: src/components/family-book.tsx
 msgid "Kept for good"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Kept on {when}. Only you can see it."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Kept. Only you can see these words."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -1698,6 +1735,10 @@ msgstr ""
 msgid "Leave {familyName}?"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "Leave out"
+msgstr ""
+
 #: app/settings.tsx
 msgid "Leave the family"
 msgstr ""
@@ -1708,6 +1749,10 @@ msgstr ""
 
 #: app/settings.tsx
 msgid "Leaving…"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Left out. Your chat has not changed."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -1751,6 +1796,14 @@ msgstr ""
 
 #: src/components/voice-recorder.tsx
 msgid "Listen to your recording"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Little things worth remembering from your own answers"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Little things worth remembering from your own answers. Only you can see them."
 msgstr ""
 
 #: app/morning-settings.tsx
@@ -1807,6 +1860,10 @@ msgstr ""
 msgid "Looking for your family's days…"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "Looking for your memories…"
+msgstr ""
+
 #: src/data/onboarding.ts
 msgid "Making & mending"
 msgstr ""
@@ -1819,6 +1876,22 @@ msgstr ""
 #: app/(tabs)/exchanges.tsx
 msgctxt "tab"
 msgid "Memories"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Memories are not available here yet."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Memory suggestions are off"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Memory suggestions are on. New answers from now on can be suggested."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Memory suggestions stay off. Nothing else changed."
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -2016,6 +2089,7 @@ msgid "Not enough notices yet to show a month."
 msgstr ""
 
 #: app/ask.tsx
+#: app/my-memories.tsx
 #: app/vela-light.tsx
 #: src/components/app-privacy.tsx
 #: src/components/onboarding/finish.tsx
@@ -2057,6 +2131,10 @@ msgstr ""
 
 #: src/components/today-feed.tsx
 msgid "Nothing new yet today."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Nothing to suggest yet. Suggestions come from answers you send from now on."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -2437,9 +2515,14 @@ msgstr ""
 msgid "Read the family book"
 msgstr ""
 
+#: app/my-memories.tsx
 #: app/settings.tsx
 #: src/components/app-privacy.tsx
 msgid "Read the privacy notice"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Read the question"
 msgstr ""
 
 #: app/parent.tsx
@@ -2490,6 +2573,7 @@ msgstr ""
 msgid "Remind me to ask how it went"
 msgstr ""
 
+#: app/my-memories.tsx
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 #: src/components/vote-options.tsx
@@ -2514,6 +2598,14 @@ msgstr ""
 
 #: src/components/parent-photo-settings.tsx
 msgid "Remove photo"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Remove this memory?"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Removed from your memories."
 msgstr ""
 
 #: src/components/photo-slots.tsx
@@ -3030,6 +3122,10 @@ msgstr ""
 msgid "Story of the week"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "Suggested for you"
+msgstr ""
+
 #: src/components/onboarding/plan.tsx
 msgid "Suggested from what {name} loves"
 msgstr ""
@@ -3153,6 +3249,10 @@ msgstr ""
 msgid "That could not be sent just now. Your words are kept."
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "That did not go through. Nothing changed. Try again."
+msgstr ""
+
 #: app/settings.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
@@ -3217,6 +3317,10 @@ msgstr ""
 
 #: src/components/photo-slots.tsx
 msgid "That photo is no longer here. Choose it again."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "That question was no longer current. Nothing was recorded."
 msgstr ""
 
 #: src/components/voice-recorder.tsx
@@ -3319,6 +3423,10 @@ msgstr ""
 
 #: src/components/parent-link-settings.tsx
 msgid "The link could not be prepared. Your family is unchanged. Try again or get help."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "The memory question has changed"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -3433,6 +3541,10 @@ msgstr ""
 msgid "There’s no one nearby yet"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "These words will be removed from your memories in Vela. Your original chat does not change."
+msgstr ""
+
 #: src/components/parent-link-settings.tsx
 msgid "They joined in their own chat. Share a shortcut whenever they need to find Vela again; no new registration."
 msgstr ""
@@ -3451,6 +3563,10 @@ msgstr ""
 
 #: app/delete-account.tsx
 msgid "This cannot be undone."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "This cannot erase copies people have saved outside Vela. Turning memories on again later will not bring these memories back."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -3663,6 +3779,7 @@ msgstr ""
 #: app/conversation.tsx
 #: app/exchange/[id].tsx
 #: app/morning-settings.tsx
+#: app/my-memories.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/precision.tsx
@@ -3678,6 +3795,14 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Try opening Telegram again"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Turn off and clear"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Turn off and clear your memories?"
 msgstr ""
 
 #: app/settings.tsx
@@ -3901,6 +4026,10 @@ msgstr ""
 msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "Vela will stop suggesting memories from your answers. Your suggestions and kept memories will be removed from Vela. Your ordinary chats and other choices will not change."
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "Vela writes in a chat of its own."
 msgstr ""
@@ -3996,6 +4125,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "We found your family. Check it below, then finish connecting to this signed-in account."
+msgstr ""
+
+#: src/data/my-memories-demo.ts
+msgid "We rode the night train to the sea and ate pears from a paper bag."
 msgstr ""
 
 #: app/sign-in.tsx
@@ -4178,6 +4311,10 @@ msgstr ""
 
 #: src/components/today-feed.tsx
 msgid "Wrote to {recipient}"
+msgstr ""
+
+#: src/data/my-memories-demo.ts
+msgid "Yellow chrysanthemums on the balcony make the whole morning feel warm."
 msgstr ""
 
 #: src/components/set-up-phone.tsx
@@ -4370,6 +4507,19 @@ msgstr ""
 
 #: src/data/useFamily.ts
 msgid "Your light is paused from your own chat, where your mornings arrive."
+msgstr ""
+
+#: app/(tabs)/you.tsx
+#: app/my-memories.tsx
+msgid "Your memories"
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Your memories could not be reached just now."
+msgstr ""
+
+#: app/my-memories.tsx
+msgid "Your memory permission and copies have been cleared in Vela."
 msgstr ""
 
 #: app/sign-in.tsx
