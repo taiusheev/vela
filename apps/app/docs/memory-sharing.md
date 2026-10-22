@@ -2,8 +2,9 @@
 
 The private collection and personal data copies remain author-only. The separate internal
 `loadSharedKeptMemories` reader returns only an explicitly selected quote to its named recipient.
-It does not expose the original answer ID or a source-conversation availability hint. It has
-no HTTP route, service-barrel export, Worker caller, live app adapter or navigation entry.
+It does not expose the original answer ID or a source-conversation availability hint. An optional
+HTTP group and service exports now exist, but no actual Worker runtime configures them. There is
+still no live app adapter, navigation entry or real-family activation.
 
 Before pagination, the query checks the current authenticated account/member, membership
 generation, current keep-sharing revision, confirmation version and grant time. Existing source,
@@ -33,7 +34,8 @@ immediately; disposal clears session state and ignores late responses. Requests 
 ## Integration requirements
 
 - The internal `loadMemorySharingView` now supplies authenticated author-only state. Implement
-  HTTP transport and the live port adapter separately; it is not a server endpoint today.
+  the live port adapter separately. The optional HTTP boundary is built but unconfigured in all
+  actual runtimes; see architecture/api-contract.md. This is not an available family endpoint today.
 - The author-state response must contain the COMPLETE current audience and eligible people,
   never a partial page silently treated as the whole set. The current bounded contract allows
   at most 50 recipients; larger families need an explicit integration design, not truncation.
@@ -103,3 +105,17 @@ and a recipient with no access. At 320/390/768px both recovery actions measured 
 no horizontal overflow or old quote in the failed screen. Native accessibility remains unverified.
 The updated production-mode export, even with demo mode explicitly enabled, rendered the preview
 blank without console errors. Its synthetic home rendered normally as the positive control.
+
+## Optional HTTP integration
+
+The HTTP group uses existing bearer authentication, active write-session checks, bounded JSON,
+idempotency and safe error handling. Prepare returns only an ID; the port must load its ephemeral
+preview through a separate authenticated GET. All responses are no-store. New sharing is separately
+gated; read/stop remain independent of processing/payment once future runtime wiring is approved.
+Stop keeps its author checks even when exempted from closed-trial admission. An unavailable prepared
+preview must reset to fresh review; it must not trap the client retrying a consumed/expired ID.
+
+These routes are not configured by apiRuntimeFor in any environment, including when legacy MEMORY
+is on. New runtime pinning tests enforce that. Do not wire them or build a live navigation entry
+without the revised notice/fresh purpose/keep acceptance and remaining language/safety gates.
+HTTP port tests are synthetic boundaries; they do not prove a live HTTP/database/app journey.
