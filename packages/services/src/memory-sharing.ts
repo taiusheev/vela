@@ -1,7 +1,12 @@
-/** Disabled internal sharing writes. No Worker/app/messenger imports this module.
+/** Disabled internal sharing workflow. No Worker/app/messenger imports this module.
  * Receipts and permission rows contain IDs/fingerprints only; never quote/name copies.
  */
-import { MEMORY_KEEP_VERSION, MEMORY_SHARE_VERSION, MemoryShareChoice } from "@vela/contracts";
+import {
+  MEMORY_KEEP_VERSION,
+  MEMORY_SHARE_VERSION,
+  MemoryShareChoice,
+  MemorySharingView,
+} from "@vela/contracts";
 import {
   answers,
   exchanges,
@@ -13,7 +18,7 @@ import {
   users,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
@@ -42,6 +47,94 @@ const absent = () => new VelaError("not_found", "Memory not found");
 const unavailable = () =>
   new VelaError("illegal_state", "Sharing confirmation is no longer available");
 const eligibleStatus = ["active", "paused"] as const;
+
+/** Internal owner state, not an HTTP endpoint or permission to share. No payment/config gate.
+ * Read one coherent snapshot: never combine a previous quote/revision with a newer audience.
+ * Return the complete bounded audience or nothing; a partial list must never replace permissions.
+ * Prepare/confirm still revalidate live state under locks. No snapshot may authorize a later write.
+ */
+export async function loadMemorySharingView(
+  deps: SharingDeps,
+  identity: SessionIdentity,
+  familyId: string,
+  memoryId: string,
+): Promise<MemorySharingView | null> {
+  if (!uuid.safeParse(familyId).success || !uuid.safeParse(memoryId).success) return null;
+  return deps.db.transaction(
+    async (tx) => {
+      const access = await authorizeFamilyAccess(tx, identity, familyId);
+      if (access.kind !== "granted") return null;
+      const kept = await loadOwnKeptMemory({ ...deps, db: tx }, identity, familyId, memoryId);
+      if (!kept) return null;
+      const [revision] = await tx
+        .select({ value: memoryKeeps.sharingRevision })
+        .from(memoryKeeps)
+        .where(eq(memoryKeeps.id, kept.id));
+      if (!revision) return null;
+      const rows = await tx
+        .select({
+          id: members.id,
+          userId: users.id,
+          name: members.displayName,
+          shareId: memoryShares.id,
+        })
+        .from(members)
+        .innerJoin(
+          users,
+          and(
+            eq(users.id, members.userId),
+            isNull(users.deletedAt),
+            isNotNull(users.authSubject),
+            sql`btrim(${users.authSubject}) <> ''`,
+          ),
+        )
+        .leftJoin(
+          memoryShares,
+          and(
+            eq(memoryShares.keepId, kept.id),
+            eq(memoryShares.recipientMemberId, members.id),
+            eq(memoryShares.recipientUserId, users.id),
+            eq(memoryShares.recipientMembershipRevision, members.memoryMembershipRevision),
+            eq(memoryShares.sharingRevision, revision.value),
+            eq(memoryShares.confirmationVersion, MEMORY_SHARE_VERSION),
+            lte(memoryShares.grantedAt, deps.clock.now()),
+          ),
+        )
+        .where(
+          and(
+            eq(members.familyId, familyId),
+            ne(members.id, kept.member_id),
+            ne(users.id, access.access.userId),
+            isNull(members.leftAt),
+            inArray(members.status, eligibleStatus),
+          ),
+        )
+        .orderBy(asc(members.id))
+        .limit(51);
+      if (rows.length > 50 || new Set(rows.map((row) => row.userId)).size !== rows.length)
+        return null;
+      const parsed = MemorySharingView.safeParse({
+        memory_id: kept.id,
+        author_id: kept.member_id,
+        quote: kept.quote,
+        revision: revision.value,
+        audience_complete: true,
+        recipients: rows.map((row) => ({
+          member_id: row.id,
+          display_name: row.name,
+          shared: row.shareId !== null,
+        })),
+      });
+      if (!parsed.success) return null;
+      const names = parsed.data.recipients.map((row) =>
+        row.display_name.normalize("NFKC").toLocaleLowerCase("en-US"),
+      );
+      if (new Set(names).size !== names.length) return null;
+      return parsed.data;
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
+}
 
 /** Serialize the bounded sharing workflow per family. Lock order: sorted users -> family -> sorted
  * members -> exchange -> answer -> keep -> presentation. Lock accounts before membership rows,
