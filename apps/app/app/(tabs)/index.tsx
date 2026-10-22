@@ -379,7 +379,7 @@ export default function TodayScreen() {
 
 function FamilyToday({ day }: { day: TodayView }) {
   const palette = usePalette();
-  const { t, i18n } = useLingui();
+  const { t } = useLingui();
   const askedLine = useAskedLine();
   const [quietOpen, setQuietOpen] = useState(false);
   const [selectedParent, setSelectedParent] = useState<string>();
@@ -398,12 +398,6 @@ function FamilyToday({ day }: { day: TodayView }) {
     }, [day.refresh]),
   );
   const { trouble, noAccount, noFamily, live, organiser, familyId } = day;
-  const time = new Date(day.updatedAt).toLocaleString(i18n.locale, {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  });
   // `/?example=quiet` shows the example day gone quiet, only in the demo with no API: a real day,
   // or the fixtures standing in while it loads, is never replaced.
   const { example, quiet: tappedEventId } = useLocalSearchParams<{
@@ -555,12 +549,10 @@ function FamilyToday({ day }: { day: TodayView }) {
               setInboxOpen(true);
             }}
           />
-          {day.updatedAt > 0 ? (
-            <Words variant="caption" tone="ink3">{t`Updated ${time}`}</Words>
-          ) : null}
         </View>
         <FamilyStatus
           lights={today.lights}
+          familyId={portraitFamily}
           onQuiet={mayOpen ? (light) => openQuiet(light) : undefined}
         />
         <FamilyChooser day={day} />

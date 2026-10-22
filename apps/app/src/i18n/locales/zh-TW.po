@@ -3891,10 +3891,6 @@ msgstr "直到回來"
 msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
 msgstr "最多兩位住在{name}附近、如果哪天早上比較安靜可以過去看看的人。用「在 Telegram 上問」傳連結給每一位：只有在對方打開連結後，Vela 才會以您的名義傳訊息問對方。在對方同意之前，您可以自己打電話給對方。"
 
-#: app/(tabs)/index.tsx
-msgid "Updated {time}"
-msgstr "更新於 {time}"
-
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
 msgstr "正在上傳 {percent}%"
