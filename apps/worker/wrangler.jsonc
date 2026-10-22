@@ -370,8 +370,6 @@
       ],
       "vars": {
         "ENVIRONMENT": "staging",
-        // The public website's own address: indexed, website-only, www. redirected (site-host.ts).
-        "SITE_HOST": "vela-light.com",
         "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
         // The admin Worker's origin: links in the founder's admin messages open it.
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev",
@@ -477,6 +475,9 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
+        // The public website's own address: indexed, website-only, www. redirected (site-host.ts).
+        // Its waitlist then shares production's database with the protected production admin page.
+        "SITE_HOST": "vela-light.com",
         "TELEGRAM_BOT_USERNAME": "VelaLightbot",
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
         "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light.workers.dev/privacy",

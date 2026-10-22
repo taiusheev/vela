@@ -66,6 +66,7 @@ An environment's first migration and deploy are not done with this runbook: the 
 5. **Approve.** The production job waits for the founder's approval of the `production` environment. Approve it.
 6. **CI** (the GitHub `production` environment, the only place the production connection string and Cloudflare token exist) runs the checks, applies migrations to the Neon project `vela` once, then deploys `vela`, then `vela-admin`.
 7. **Watch for 30 minutes.** `https://vela.vela-light.workers.dev/healthz` 200 with `"status":"ok"` and its `/privacy` pages open; `https://vela-admin.vela-light.workers.dev/admin` opens through Cloudflare Access; both Workers' logs in the "Vela" dashboard show, since the deploy, no line whose `level` is `error`, no `ConfigError`, and no uncaught exception (as in step 3; Sentry is not connected yet); no watchdog failure email; the next due arrivals delivered on time in the admin page; no `scheduler_missed`; no new row under **Dead letters** on the admin overview, and no ops alert in the founder's chat (technical plan 2.1, 2.7).
+8. **Public website route.** In the Cloudflare account that owns `vela-light.com`, keep its proxy target on `https://vela.vela-light.workers.dev`, never the staging host. Submit one disposable waitlist address on `https://vela-light.com`, confirm it appears at `https://vela-admin.vela-light.workers.dev/admin/waitlist`, then remove that disposable row. Do not use a real participant address for this release check.
 
 ## English trial app release
 
