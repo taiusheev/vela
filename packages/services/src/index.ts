@@ -8,6 +8,7 @@
  * including the helpers these call themselves, is a flow's own business. The test harness is not
  * here: it lives behind `@vela/services/testing`, so production code cannot reach it.
  */
+
 export {
   cancelAccountLink,
   completeAccountLink,
@@ -193,8 +194,16 @@ export {
   keepMemoryCandidate,
   loadKeptMemories,
   loadOwnKeptMemoriesForExport,
+  loadSharedKeptMemories,
   removeKeptMemory,
 } from "./memory-keeps.ts";
+export {
+  confirmMemorySharing,
+  createMemorySharingPresentation,
+  loadMemorySharingPresentation,
+  loadMemorySharingView,
+  stopSharingMemory,
+} from "./memory-sharing.ts";
 export { askApiToLookIn, LookInRefusedError } from "./nearby-ask.ts";
 export { inviteApiNearby, NearbyInviteRefusedError } from "./nearby-consent.ts";
 export {

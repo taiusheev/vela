@@ -118,3 +118,20 @@ export const MemorySharingView = z.strictObject({
   recipients: z.array(MemoryShareRecipient.extend({ shared: z.boolean() })).max(50),
 });
 export type MemorySharingView = z.infer<typeof MemorySharingView>;
+
+/** Optional HTTP boundary; not enabled by existing Worker configuration. */
+export const MemoryShareRecipients = z.strictObject({
+  recipient_ids: z
+    .array(z.uuid().transform((id) => id.toLowerCase()))
+    .min(1)
+    .max(50)
+    .refine((ids) => new Set(ids).size === ids.length),
+});
+export type MemoryShareRecipients = z.infer<typeof MemoryShareRecipients>;
+export const MemorySharePrepared = z.strictObject({ id: z.uuid() });
+export type MemorySharePrepared = z.infer<typeof MemorySharePrepared>;
+export const MemoryShareSaved = z.strictObject({ shared: z.literal(true), id: z.uuid() });
+export type MemoryShareSaved = z.infer<typeof MemoryShareSaved>;
+export const MemoryShareStop = z.strictObject({});
+export const MemoryShareStopped = z.strictObject({ stopped: z.literal(true) });
+export type MemoryShareStopped = z.infer<typeof MemoryShareStopped>;

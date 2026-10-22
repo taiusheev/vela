@@ -562,6 +562,16 @@ describe("the API as staging serves it", () => {
 // authentication, and a write that reaches the limit, the nudges or the database needs a token
 // Clerk signed.
 describe("the runtime staging's API app runs on", () => {
+  it.each(["development", "staging", "production"] as const)(
+    "never wires the new sharing routes in %s, even with legacy memory on",
+    (environment) => {
+      const runtime = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on" }), {
+        ...STAGING_CONFIG,
+        environment,
+      });
+      expect(runtime.memorySharing).toBeUndefined();
+    },
+  );
   it("publishes closed trial capabilities without opening a database", async () => {
     const runtime = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on" }), {
       ...STAGING_CONFIG,
