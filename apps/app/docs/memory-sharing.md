@@ -37,9 +37,10 @@ immediately; disposal clears session state and ignores late responses. Requests 
 - The author-state response must contain the COMPLETE current audience and eligible people,
   never a partial page silently treated as the whole set. The current bounded contract allows
   at most 50 recipients; larger families need an explicit integration design, not truncation.
-  The internal loader returns null on overflow or ambiguous/invalid names. Do not wire that
-  unavailable state without an independent free stop-sharing/removal/withdrawal path; a failed
-  audience load must never make revocation inaccessible. No live UI is connected yet.
+  The internal loader returns null on overflow or ambiguous/invalid names. The reusable view
+  now offers independent stop-sharing after a failed/unavailable detail load. Live integration
+  must preserve that free path and removal/withdrawal, not disable them with the audience read.
+  No live UI is connected yet.
 - The server remains authority. Prepare and confirm must recheck current eligibility, authenticate
   the author, use server-owned single-use presentations and apply the COMPLETE selected audience.
   All writes go through the existing idempotent mutation boundary.
@@ -79,3 +80,26 @@ while a read is in flight can make that snapshot old. The next read sees the sto
 confirm must still revalidate the latest server-owned state. A real PostgreSQL test commits stop
 on a second connection while the first snapshot is open, verifies the coherent old view and then
 the fresh private view. Weakening isolation to read-committed makes this test fail.
+
+## Independent revocation recovery
+
+The controller now requires explicit immutable author/member and memory IDs. A server response
+for another memory is rejected without showing its words or retargeting any later stop action.
+Malformed scopes make no requests. A route ID is only a locator; it never authorizes a write.
+The future live adapter/server must authenticate and authorize the current author on every stop.
+
+After a failed or unavailable read, words remain hidden but Stop sharing and Check again remain
+available. Retry is disabled while stopping; the stop action keeps its key across failed attempts
+and ignores duplicate taps. It still reloads after writes: if that read fails, no success is claimed.
+Disposal disables actions, clears words/keys and ignores a late stop response. Phase changes scroll
+the preview back to the relevant heading, so a failed read is not hidden below the old screen.
+
+28 controller tests now cover the original flow plus first-read failure, persistent unavailable
+details, failed stop/retry, duplicate taps, wrong-memory responses, malformed scope and disposal.
+Restoring the former requirement for a loaded view made the first-read revocation test fail;
+the independent scope restores it. All examples remain synthetic and the only port is memory-only.
+Browser review exercised failed details, failed stop, keyboard retry, refreshed private status
+and a recipient with no access. At 320/390/768px both recovery actions measured 64px high, with
+no horizontal overflow or old quote in the failed screen. Native accessibility remains unverified.
+The updated production-mode export, even with demo mode explicitly enabled, rendered the preview
+blank without console errors. Its synthetic home rendered normally as the positive control.
