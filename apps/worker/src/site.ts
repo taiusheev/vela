@@ -1527,7 +1527,7 @@ function header(lang: SiteLang, page: SitePage | LegalPage): Html {
   const home = SITE_PATHS[lang].home;
   const at = (id: string) => (page === "home" ? `#${id}` : `${home}#${id}`);
   return html`<a class="skip" href="#main">${copy.skip}</a>
-<header class="top"><div class="wrap"><a class="brand" href="${home}"><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"></a><nav class="nav" aria-label="Vela"><a href="${at("idea")}">${copy.nav.why}</a><a href="${at("exchange")}">${copy.nav.how}</a><a href="${at("care")}">${lang === "en" ? "Made with care" : "用心設計"}</a></nav>${languageSwitch(lang, page)}<a class="btn btn-primary" href="${at("join")}">${copy.nav.join}</a></div></header>`;
+<header class="top"><div class="wrap"><a class="brand" href="${home}"><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"></a><nav class="nav" aria-label="Vela"><a href="${at("why")}">${copy.nav.why}</a><a href="${at("how")}">${copy.nav.how}</a><a href="${at("care")}">${lang === "en" ? "Made with care" : "用心設計"}</a></nav>${languageSwitch(lang, page)}<a class="btn btn-primary" href="${at("join")}">${copy.nav.join}</a></div></header>`;
 }
 
 function footer(lang: SiteLang): Html {

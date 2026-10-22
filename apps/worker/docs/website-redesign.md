@@ -2,6 +2,8 @@
 
 ## 22 October: approved Afterglow implementation
 
+Release follow-up: the founder requested copyright and public deployment. Homepage and supporting website footers now show the current UTC year, Vela, and localized all-rights-reserved wording. Auxiliary navigation targets the new `why`/`how` sections rather than removed legacy anchors. Regression tests cover copyright on both homepage languages, website privacy, precision, and generated legal pages. Public publication uses the existing domain bridge from `vela-light.com` to staging; no production backend tag or activation is part of this website release.
+
 The founder selected the refined Afterglow concept from five local alternatives and asked to build it. This replaces the previous homepage, not the app or auxiliary legal pages. The approved sequence is: automatic morning promise → busy adult children and aging parents → interactive hello/reply/quiet routine → memories and weekly read → participation choices → FAQ → existing waitlist.
 
 The dark espresso canvas, amber light, Inter headline with italic emphasis, real Today capture with parent photos, and warm-paper routine chapter follow `../prototypes/vela-five-directions-20261022/afterglow.html`. The implementation is bilingual English/Traditional Chinese. All CSS is scoped to `.approved-home.afterglow`; legal, precision and privacy pages keep their existing layout. The optional morning examples use local copy only, not family/provider calls. Unlike the comparison prototype, the production-source CTAs open the existing waitlist dialog and forms submit to the existing protected `/waitlist` endpoint. No new backend, accounts, billing, analytics, schema, consent or runtime activation is introduced.
