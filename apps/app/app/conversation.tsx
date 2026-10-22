@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ComposeAsk } from "@vela/contracts";
 import { ASK_BANK, type AskBankLang } from "@vela/copy";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Linking,
@@ -103,7 +103,13 @@ function Conversation() {
   // What the reader sent in the demo, and the words of a send still on its way.
   const [demoSent, setDemoSent] = useState<ChatMessage[]>([]);
   const [demoReactions, setDemoReactions] = useState<Record<string, ChatReactionKind[]>>({});
-  const [pending, setPending] = useState<string | null>(null);
+  // The words of a send on its way: "sending" until Vela has them, then "sent" until the
+  // conversation, read again, holds them itself (so they never blink out in between).
+  const [pending, setPending] = useState<{
+    text: string;
+    status: "sending" | "sent";
+    since: number;
+  } | null>(null);
   const calling = useCallingNumber(day.familyId, light?.memberId);
   const reactKey = useIdempotencyKey("chat-reaction");
   const herId = light?.memberId;
@@ -136,11 +142,13 @@ function Conversation() {
     },
     onMutate: () => {
       setNote(null);
-      setPending(draft.text.trim());
+      setPending({ text: draft.text.trim(), status: "sending", since: Date.now() });
       following.current = true;
     },
     onSuccess: async (accepted) => {
       const words = draft.text.trim();
+      // Vela has it now: say so at once, and read the conversation again without waiting on it.
+      setPending((current) => (current === null ? null : { ...current, status: "sent" }));
       await draft.clear();
       if (demo) {
         const now = new Date();
@@ -163,12 +171,11 @@ function Conversation() {
       } else if (accepted.when === "whenever") {
         setNote(t`Saved for their first morning after they join.`);
       }
-      await Promise.all([
-        queries.invalidateQueries({ queryKey: ["exchanges"] }),
-        queries.invalidateQueries({ queryKey: ["today"] }),
-      ]);
+      if (demo) setPending(null);
+      void queries.invalidateQueries({ queryKey: ["exchanges"] });
+      void queries.invalidateQueries({ queryKey: ["today"] });
     },
-    onSettled: () => setPending(null),
+    onError: () => setPending(null),
   });
 
   const react = useMutation({
@@ -230,7 +237,22 @@ function Conversation() {
           ],
         };
   });
-  if (pending !== null && pending.length > 0) {
+  // The sent words leave the "pending" bubble once the conversation itself has them, or after a
+  // while in any case, so a reading that never comes back cannot keep a stale bubble.
+  const arrived =
+    pending !== null &&
+    pending.status === "sent" &&
+    (Date.now() - pending.since > 20_000 ||
+      messages.some(
+        (message) =>
+          message.side === "me" &&
+          message.text === pending.text &&
+          message.at >= pending.since - 60_000,
+      ));
+  useEffect(() => {
+    if (arrived) setPending(null);
+  }, [arrived]);
+  if (pending !== null && pending.text.length > 0 && !arrived) {
     const now = Date.now();
     const date = new Date(now);
     messages.push({
@@ -241,8 +263,8 @@ function Conversation() {
       at: now,
       day: localDateIn(now, light?.timeZone),
       time: clockTime(date.getHours(), date.getMinutes()),
-      text: pending,
-      status: "sending",
+      text: pending.text,
+      status: pending.status,
       reactions: [],
     });
   }

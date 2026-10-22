@@ -2852,6 +2852,10 @@ msgstr "Send to {name}"
 msgid "Sending…"
 msgstr "Sending…"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Sent"
+msgstr "Sent"
+
 #: src/data/useToday.ts
 msgid "sent a heart"
 msgstr "sent a heart"

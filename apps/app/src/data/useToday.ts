@@ -309,7 +309,8 @@ export function useToday(): TodayView {
     queryKey: ["today", familyId],
     enabled: enabled && familyId !== undefined,
     queryFn: async () => fetchToday(familyId ?? "", await account.token()),
-    refetchInterval: 30_000,
+    // Her answer should reach the open app soon after she sends it; only while the app is open.
+    refetchInterval: 15_000,
     refetchOnWindowFocus: "always",
   });
 
