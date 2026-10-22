@@ -2535,12 +2535,13 @@ msgstr "隱私與協助"
 msgid "Privacy details and terms"
 msgstr "隱私詳情與條款"
 
-#: src/components/ask-ideas.tsx
-msgid "Puts these words in your question, to send or change"
-msgstr "把這句話放進你的問題，可以直接送出或修改"
 #: app/profile.tsx
 msgid "Profile"
 msgstr "個人資料"
+
+#: src/components/ask-ideas.tsx
+msgid "Puts these words in your question, to send or change"
+msgstr "把這句話放進你的問題，可以直接送出或修改"
 
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"

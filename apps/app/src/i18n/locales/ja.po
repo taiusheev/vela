@@ -2528,10 +2528,12 @@ msgstr ""
 msgid "Privacy details and terms"
 msgstr ""
 
-#: src/components/ask-ideas.tsx
-msgid "Puts these words in your question, to send or change"
 #: app/profile.tsx
 msgid "Profile"
+msgstr ""
+
+#: src/components/ask-ideas.tsx
+msgid "Puts these words in your question, to send or change"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
