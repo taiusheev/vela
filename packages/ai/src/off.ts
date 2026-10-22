@@ -34,6 +34,7 @@ export function createOffAi(): Ai {
     translate: off("translate"),
     readback: off("readback"),
     recipe: off("recipe"),
+    memoryPick: off("memory_pick"),
     hello: off("hello"),
     weeklyRead: off("weekly_read"),
     weeklyInsight: off("weekly_insight"),
