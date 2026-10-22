@@ -1504,6 +1504,7 @@ body:has(.afterglow) {
 }
 .approved-home.afterglow .waitlist {
   max-width: 550px;
+  border: 0;
   padding: 0;
   margin: 30px auto 0;
   background: none;
