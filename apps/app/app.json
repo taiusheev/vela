@@ -13,6 +13,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "family.vela.light",
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-dark.png",
+        "tinted": "./assets/icon-tinted.png"
+      },
       "privacyManifests": {
         "NSPrivacyTracking": false,
         "NSPrivacyTrackingDomains": [],
@@ -129,8 +134,9 @@
       "package": "family.vela.light",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundImage": "./assets/adaptive-background.png",
         "monochromeImage": "./assets/adaptive-monochrome.png",
-        "backgroundColor": "#FBF7F0"
+        "backgroundColor": "#2E231B"
       }
     },
     "web": {
@@ -149,7 +155,7 @@
           "imageWidth": 160,
           "backgroundColor": "#FBF7F0",
           "dark": {
-            "image": "./assets/splash-icon.png",
+            "image": "./assets/splash-icon-dark.png",
             "backgroundColor": "#1E1A16"
           }
         }

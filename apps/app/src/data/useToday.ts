@@ -61,6 +61,7 @@ export function toTodayLight(light: MemberLight): TodayLight {
     memberId: light.member_id,
     displayName: light.display_name,
     ...(light.tz === undefined ? {} : { timeZone: light.tz }),
+    ...(light.interests === undefined ? {} : { interests: light.interests }),
     ...(light.local_date === undefined ? {} : { localDate: light.local_date }),
     state: invited ? "resting" : (light.state as LightState),
     stateText: stateText(light),

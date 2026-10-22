@@ -189,8 +189,8 @@ msgid "{name} has not said yes yet. Once she does, her first morning is the next
 msgstr "{name} has not said yes yet. Once she does, her first morning is the next day."
 
 #: app/conversation.tsx
-msgid "{name} has not said yes yet. What you write waits for their first morning."
-msgstr "{name} has not said yes yet. What you write waits for their first morning."
+msgid "{name} has not said yes yet. Write a first hello now: it reaches {name} the moment they say yes, so the chat is waiting for them."
+msgstr "{name} has not said yes yet. Write a first hello now: it reaches {name} the moment they say yes, so the chat is waiting for them."
 
 #: src/components/parent-link-settings.tsx
 msgid "{name} has paused their mornings."
@@ -1350,6 +1350,10 @@ msgstr "From"
 msgid "From {fromName} · Saved for their morning"
 msgstr "From {fromName} · Saved for their morning"
 
+#: src/components/ask-ideas.tsx
+msgid "From {name}'s own words"
+msgstr "From {name}'s own words"
+
 #: app/(tabs)/exchanges.tsx
 msgid "From a voice note"
 msgstr "From a voice note"
@@ -1512,6 +1516,10 @@ msgstr "Hong Kong"
 msgid "How"
 msgstr "How"
 
+#: src/components/ask-ideas.tsx
+msgid "How {name} sees it"
+msgstr "How {name} sees it"
+
 #: src/components/reminders.tsx
 msgid "How did {what} go?"
 msgstr "How did {what} go?"
@@ -1556,6 +1564,10 @@ msgstr "I have sent it"
 #: src/data/chat.ts
 msgid "I'm fine"
 msgstr "I'm fine"
+
+#: src/components/ask-ideas.tsx
+msgid "Ideas for {name}"
+msgstr "Ideas for {name}"
 
 #: src/components/onboarding/plan.tsx
 msgid "If {name} says yes today"
@@ -1995,6 +2007,10 @@ msgstr "Mom, Mẹ, 媽…"
 #: app/conversation.tsx
 msgid "More for {name}"
 msgstr "More for {name}"
+
+#: src/components/ask-ideas.tsx
+msgid "More ideas"
+msgstr "More ideas"
 
 #: app/ask.tsx
 msgid "More ways to ask"
@@ -2558,6 +2574,10 @@ msgstr "Privacy details and terms"
 msgid "Profile"
 msgstr "Profile"
 
+#: src/components/ask-ideas.tsx
+msgid "Puts these words in your question, to send or change"
+msgstr "Puts these words in your question, to send or change"
+
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
 msgstr "Putting together {name}’s first week…"
@@ -2764,8 +2784,8 @@ msgid "Save calling number"
 msgstr "Save calling number"
 
 #: app/conversation.tsx
-msgid "Save for their first morning"
-msgstr "Save for their first morning"
+msgid "Save for when they say yes"
+msgstr "Save for when they say yes"
 
 #: src/data/chat.ts
 msgid "Save me two for Sunday?"
@@ -2780,8 +2800,8 @@ msgid "Save name"
 msgstr "Save name"
 
 #: app/conversation.tsx
-msgid "Saved for their first morning after they join."
-msgstr "Saved for their first morning after they join."
+msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
@@ -3503,6 +3523,9 @@ msgstr "The family's organisers choose the people nearby."
 #: src/components/first-week.tsx
 msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
 msgstr "The garden came up twice: the tomatoes, and the seeds kept for spring."
+#: app/ask.tsx
+msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
@@ -3988,7 +4011,6 @@ msgid "Use my email instead"
 msgstr "Use my email instead"
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Use this"
 msgstr "Use this"
 
@@ -4108,12 +4130,10 @@ msgstr "Vela still writes to you on Telegram or LINE in a family where you are t
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/questions.tsx
-#: app/ask.tsx
 msgid "Vela suggests"
 msgstr "Vela suggests"
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr "Vela suggests · from her own words"
 

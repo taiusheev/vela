@@ -2,7 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   findNodeHandle,
   KeyboardAvoidingView,
@@ -18,9 +18,9 @@ import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
 import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
 import type { Recorded } from "../src/audio/useRecording.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
+import { type AskIdea, AskIdeas, AskPreview } from "../src/components/ask-ideas.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
 import { ChoiceTile } from "../src/components/brand/experience.tsx";
-import { SuggestionDisclosure } from "../src/components/brand/suggestion.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
 import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
@@ -30,9 +30,11 @@ import { type AskType, askTypes, composableType, suggestedKind } from "../src/da
 import { acceptedAsk, useAskOutcome } from "../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../src/data/ask-target.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
+import { questionsFor } from "../src/data/onboarding.ts";
 import { askExtras, photoCount } from "../src/data/photos.ts";
 import { tomorrowIn } from "../src/data/story.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
+import { useFamily } from "../src/data/useFamily.ts";
 import { dayName, type TodayView, useToday } from "../src/data/useToday.ts";
 import { usePush } from "../src/push/provider.tsx";
 import { readFlag, writeFlag } from "../src/storage/flags.ts";
@@ -174,6 +176,33 @@ function AskComposer({
     },
     [setText],
   );
+  // Ideas to start from: Vela's suggestion from her own words first, then the bank's family wording
+  // in the topics chosen for her at setup (a broad, warm set when none were), a few at a time;
+  // "More ideas" turns the page.
+  const bankLang = i18n.locale === "zh-TW" ? "zh-TW" : "en";
+  const herInterests = recipient?.interests;
+  const bank = useMemo(() => questionsFor(herInterests ?? [], 60), [herInterests]);
+  const [ideaPage, setIdeaPage] = useState(0);
+  const IDEAS_A_PAGE = 4;
+  const pageCount = Math.max(1, Math.ceil(bank.length / IDEAS_A_PAGE));
+  const ideas: AskIdea[] = [
+    ...(suggestion === undefined
+      ? []
+      : [
+          {
+            key: `suggestion:${suggestion.id}`,
+            text: suggestion.text,
+            fromHerWords: suggestion.fromHerWords,
+          },
+        ]),
+    ...bank
+      .slice(
+        (ideaPage % pageCount) * IDEAS_A_PAGE,
+        (ideaPage % pageCount) * IDEAS_A_PAGE + IDEAS_A_PAGE,
+      )
+      .map((item) => ({ key: item.id, text: item.child[bankLang] })),
+  ];
+  const me = useFamily(familyId, familyId !== undefined).family.me.name;
   // Today's card sends its suggestion along. The live day can arrive after the screen opens, so it
   // fills the field once, when it is there, and never over words already typed.
   const offered = useRef(false);
@@ -424,6 +453,42 @@ function AskComposer({
             </View>
           ) : null}
 
+          {kind === "question" && recipient !== undefined ? (
+            <AskIdeas
+              ideas={ideas}
+              name={name}
+              disabled={!draft.ready || compose.isPending || savedElsewhere}
+              onMore={() => setIdeaPage((page) => page + 1)}
+              onPick={(idea) => {
+                if (
+                  idea.fromHerWords !== undefined &&
+                  suggestion !== undefined &&
+                  idea.key === `suggestion:${suggestion.id}`
+                )
+                  fill(suggestion, recipient.memberId);
+                else setText(idea.text);
+                questionRef.current?.focus();
+              }}
+            />
+          ) : null}
+
+          <View style={{ gap: space.m }}>
+            <TextField
+              label={t`Your question`}
+              inputRef={questionRef}
+              onContentSizeChange={keepQuestionVisible}
+              editorial
+              value={text}
+              onChangeText={setText}
+              placeholder={t`Say it the way you would say it`}
+              helper={t`One question at a time. The English pilot sends your words as written.`}
+              multiline
+              maxLength={1000}
+              disabled={!draft.ready || compose.isPending || savedElsewhere}
+            />
+          </View>
+          <AskPreview text={text} name={name} asker={me} />
+
           <View style={{ gap: space.m }}>
             <Words variant="heading">
               <Trans>What are you sending?</Trans>
@@ -470,37 +535,6 @@ function AskComposer({
             ) : null}
           </View>
 
-          <View style={{ gap: space.m }}>
-            <TextField
-              label={t`Your question`}
-              inputRef={questionRef}
-              onContentSizeChange={keepQuestionVisible}
-              editorial
-              value={text}
-              onChangeText={setText}
-              placeholder={t`Say it the way you would say it`}
-              helper={t`One question at a time. The English pilot sends your words as written.`}
-              multiline
-              maxLength={1000}
-              disabled={!draft.ready || compose.isPending || savedElsewhere}
-            />
-          </View>
-          {/* Live with no suggestion for her morning, there is no card. */}
-          {suggestion === undefined || recipient === undefined ? null : (
-            <SuggestionDisclosure
-              label={
-                suggestion.fromHerWords ? t`Vela suggests · from her own words` : t`Vela suggests`
-              }
-            >
-              <Words variant="voice">{suggestion.text}</Words>
-              <SecondaryButton
-                label={t`Use this`}
-                disabled={!draft.ready || compose.isPending || savedElsewhere}
-                onPress={() => fill(suggestion, recipient.memberId)}
-              />
-            </SuggestionDisclosure>
-          )}
-
           <PhotoSlots photos={photos} />
           {demo ? null : <VoiceHello onChange={setHello} note={voiceNote} />}
           {kind === "vote" ? <VoteOptions options={options} onChange={setOptions} /> : null}
@@ -543,7 +577,9 @@ function AskComposer({
                   ? t`It reaches ${name} with tomorrow's morning message.`
                   : when === "another_day"
                     ? t`It reaches ${name} on ${day} morning, the first one nobody else has asked for.`
-                    : t`It waits its turn and reaches ${name} on the first morning nobody else has asked for.`}
+                    : invited
+                      ? t`The first message waiting reaches ${name} the moment they say yes; the rest come with their mornings.`
+                      : t`It waits its turn and reaches ${name} on the first morning nobody else has asked for.`}
               </Words>
             )}
             {noMorning ? (

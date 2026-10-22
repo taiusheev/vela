@@ -183,7 +183,7 @@ msgid "{name} has not said yes yet. Once she does, her first morning is the next
 msgstr ""
 
 #: app/conversation.tsx
-msgid "{name} has not said yes yet. What you write waits for their first morning."
+msgid "{name} has not said yes yet. Write a first hello now: it reaches {name} the moment they say yes, so the chat is waiting for them."
 msgstr ""
 
 #: src/components/parent-link-settings.tsx
@@ -1344,6 +1344,10 @@ msgstr ""
 msgid "From {fromName} · Saved for their morning"
 msgstr ""
 
+#: src/components/ask-ideas.tsx
+msgid "From {name}'s own words"
+msgstr ""
+
 #: app/(tabs)/exchanges.tsx
 msgid "From a voice note"
 msgstr ""
@@ -1506,6 +1510,10 @@ msgstr ""
 msgid "How"
 msgstr ""
 
+#: src/components/ask-ideas.tsx
+msgid "How {name} sees it"
+msgstr ""
+
 #: src/components/reminders.tsx
 msgid "How did {what} go?"
 msgstr ""
@@ -1549,6 +1557,10 @@ msgstr ""
 
 #: src/data/chat.ts
 msgid "I'm fine"
+msgstr ""
+
+#: src/components/ask-ideas.tsx
+msgid "Ideas for {name}"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
@@ -1988,6 +2000,10 @@ msgstr ""
 
 #: app/conversation.tsx
 msgid "More for {name}"
+msgstr ""
+
+#: src/components/ask-ideas.tsx
+msgid "More ideas"
 msgstr ""
 
 #: app/ask.tsx
@@ -2552,6 +2568,10 @@ msgstr ""
 msgid "Profile"
 msgstr ""
 
+#: src/components/ask-ideas.tsx
+msgid "Puts these words in your question, to send or change"
+msgstr ""
+
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
 msgstr ""
@@ -2758,7 +2778,7 @@ msgid "Save calling number"
 msgstr ""
 
 #: app/conversation.tsx
-msgid "Save for their first morning"
+msgid "Save for when they say yes"
 msgstr ""
 
 #: src/data/chat.ts
@@ -2774,7 +2794,7 @@ msgid "Save name"
 msgstr ""
 
 #: app/conversation.tsx
-msgid "Saved for their first morning after they join."
+msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -3496,6 +3516,8 @@ msgstr ""
 
 #: src/components/first-week.tsx
 msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
+#: app/ask.tsx
+msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -3982,7 +4004,6 @@ msgid "Use my email instead"
 msgstr ""
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Use this"
 msgstr ""
 
@@ -4102,12 +4123,10 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/questions.tsx
-#: app/ask.tsx
 msgid "Vela suggests"
 msgstr ""
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr ""
 

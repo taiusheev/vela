@@ -190,8 +190,8 @@ msgid "{name} has not said yes yet. Once she does, her first morning is the next
 msgstr "{name}還沒有同意。同意之後的隔天早上，就會收到第一則早安訊息。"
 
 #: app/conversation.tsx
-msgid "{name} has not said yes yet. What you write waits for their first morning."
-msgstr "{name}還沒有答應。你寫的話會等到第一個早晨再送出。"
+msgid "{name} has not said yes yet. Write a first hello now: it reaches {name} the moment they say yes, so the chat is waiting for them."
+msgstr "{name}還沒有同意。現在先寫一句問候吧：{name}一同意就會收到，聊天室裡已經有話在等著。"
 
 #: src/components/parent-link-settings.tsx
 msgid "{name} has paused their mornings."
@@ -1351,6 +1351,10 @@ msgstr "從"
 msgid "From {fromName} · Saved for their morning"
 msgstr "來自{fromName}· 已為早晨儲存"
 
+#: src/components/ask-ideas.tsx
+msgid "From {name}'s own words"
+msgstr "來自{name}自己說的話"
+
 #: app/(tabs)/exchanges.tsx
 msgid "From a voice note"
 msgstr "來自語音訊息"
@@ -1513,6 +1517,10 @@ msgstr "香港"
 msgid "How"
 msgstr "做法"
 
+#: src/components/ask-ideas.tsx
+msgid "How {name} sees it"
+msgstr "{name}會看到的樣子"
+
 #: src/components/reminders.tsx
 msgid "How did {what} go?"
 msgstr "{what}還順利嗎？"
@@ -1557,6 +1565,10 @@ msgstr "我已經傳了"
 #: src/data/chat.ts
 msgid "I'm fine"
 msgstr "我很好"
+
+#: src/components/ask-ideas.tsx
+msgid "Ideas for {name}"
+msgstr "可以問{name}的話"
 
 #: src/components/onboarding/plan.tsx
 msgid "If {name} says yes today"
@@ -1996,6 +2008,10 @@ msgstr "媽、阿母、Mom…"
 #: app/conversation.tsx
 msgid "More for {name}"
 msgstr "{name}的更多選項"
+
+#: src/components/ask-ideas.tsx
+msgid "More ideas"
+msgstr "更多點子"
 
 #: app/ask.tsx
 msgid "More ways to ask"
@@ -2559,6 +2575,10 @@ msgstr "隱私詳情與條款"
 msgid "Profile"
 msgstr "個人資料"
 
+#: src/components/ask-ideas.tsx
+msgid "Puts these words in your question, to send or change"
+msgstr "把這句話放進你的問題，可以直接送出或修改"
+
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
 msgstr "正在安排{name}的第一週…"
@@ -2765,8 +2785,8 @@ msgid "Save calling number"
 msgstr "儲存電話號碼"
 
 #: app/conversation.tsx
-msgid "Save for their first morning"
-msgstr "留到第一個早晨"
+msgid "Save for when they say yes"
+msgstr "等對方同意後送出"
 
 #: src/data/chat.ts
 msgid "Save me two for Sunday?"
@@ -2781,8 +2801,8 @@ msgid "Save name"
 msgstr "儲存名字"
 
 #: app/conversation.tsx
-msgid "Saved for their first morning after they join."
-msgstr "已保存，會在加入後的第一個早晨送出。"
+msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr "已儲存。第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
 
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
@@ -3504,6 +3524,9 @@ msgstr "附近的聯絡人由這個家庭的發起人選定。"
 #: src/components/first-week.tsx
 msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
 msgstr "花園提到了兩次：番茄，還有留到春天的種子。"
+#: app/ask.tsx
+msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr "第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
 
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
@@ -3989,7 +4012,6 @@ msgid "Use my email instead"
 msgstr "改用我的電子郵件"
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Use this"
 msgstr "用這個"
 
@@ -4109,12 +4131,10 @@ msgstr "在您是唯一發起人、或有自己一盞燈的家庭裡，Vela 仍�
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/questions.tsx
-#: app/ask.tsx
 msgid "Vela suggests"
 msgstr "Vela 的建議"
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr "Vela 的建議 · 取自這位家人說過的話"
 
