@@ -8,7 +8,7 @@
       "lang": "en",
       "addressForm": "Mom",
       "ask": "What was your favourite trip when we were small?",
-      "answer": "We took the night train to the sea and ate pears from a paper bag. You fell asleep on your father's coat. It was cold but nobody minded."
+      "answer": "We took the night train to the sea and ate pears from a paper bag. You curled up on your father's coat and sang all the way."
     },
     "checks": [
       { "kind": "count", "path": "picks", "min": 1, "max": 2 },

@@ -110,7 +110,7 @@ export const CALL_CHECKS: Readonly<Record<AiCallName, readonly Check[]>> = {
       kind: "notMatches",
       path: "picks",
       patterns: [
-        "\\b(pain|hurts?|doctor|hospital|medicine|pills?|blood pressure|diabetes|fell|fall)\\b",
+        "\\b(pain|hurts?|doctor|hospital|medicine|pills?|blood pressure|diabetes|fell (?:down|over|ill)|a fall|falls? (?:down|over))\\b",
         "(痛|醫生|醫院|藥|血壓|糖尿病|跌倒)",
       ],
     },
