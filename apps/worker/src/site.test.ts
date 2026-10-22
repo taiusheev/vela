@@ -141,25 +141,40 @@ describe("the public website", () => {
     },
   );
 
-  // The approved design explains the purpose immediately, then shows a concrete exchange.
+  // Afterglow explains the problem, automatic routine, added value and care boundaries.
   it.each(SITE_LANGS)(
     "shows the approved story and real app previews before the waitlist (%s)",
     async (lang) => {
       const fake = createFakePilotRuntime();
       const body = await (await send(fake, `${origin()}${SITE_PATHS[lang].home}`)).text();
       const at = (id: string) => body.indexOf(`id="${id}"`);
-      const order = ["hero-title", "idea", "exchange", "care", "join"].map(at);
+      const order = ["hero-title", "why", "how", "more", "care", "join"].map(at);
       expect(order.every((index) => index > 0)).toBe(true);
       expect(order).toEqual([...order].sort((a, b) => a - b));
-      expect(textOf(body.slice(body.indexOf("<h1"), body.indexOf("</h1>")))).toContain(
-        lang === "en" ? "your parent" : "爸媽",
+      expect(textOf(body)).toContain(
+        lang === "en" ? "Vela does. Every morning." : "Vela 記得。每天早上。",
       );
-      expect(body).toContain("/site/img/app-current/ask.png");
+      expect(body).toContain("/site/img/app-current/today-portraits.jpg");
+      expect(body).toContain("/site/img/app-current/week-current.jpg");
+      expect(body).toContain("/site/img/story/parent-profile.jpg");
       expect(body).toContain("/site/img/vela-logo.svg");
-      expect(body).toContain("/site/img/vela-mark-white.svg");
-      expect(body).toContain('id="photo-pause"');
-      expect(body).toContain('id="photo-next"');
-      expect(body).toContain('id="photo-previous"');
+      expect(body).toContain("/site/img/vela-logo-white.svg");
+      expect(textOf(body)).toContain(lang === "en" ? "You use Vela" : "你使用 Vela");
+      expect(textOf(body)).toContain(
+        lang === "en" ? "Even when you forget." : "忘了準備，問候也不會落下。",
+      );
+      expect(body.match(/data-morning="\d" disabled/g)).toHaveLength(3);
+      expect(body).toContain('id="morning-preview" class="ritual-preview" aria-live="polite"');
+      expect(body).toContain(
+        lang === "en"
+          ? "Personalized health advice is not available."
+          : "目前未提供個人化健康建議。",
+      );
+      expect(body).toContain(
+        lang === "en"
+          ? "A reply isn’t proof of health or safety."
+          : "收到回覆，不代表能確認健康或安全狀況。",
+      );
       expect(body).not.toContain("Design preview");
       expect(body).not.toContain("Telegram");
       expect(body).not.toContain("hero-availability");
@@ -169,6 +184,21 @@ describe("the public website", () => {
   it("embeds a demo script no string of which can close its element", () => {
     for (const lang of SITE_LANGS) {
       expect(JSON.stringify(siteDemo(lang))).not.toMatch(/<\/?script/i);
+    }
+  });
+
+  it.each(SITE_LANGS)("shows the current copyright on every %s website page", async (lang) => {
+    const fake = createFakePilotRuntime();
+    const expected = `© ${new Date().getUTCFullYear()} Vela. ${lang === "en" ? "All rights reserved." : "保留所有權利。"}`;
+    for (const path of [
+      SITE_PATHS[lang].home,
+      SITE_PATHS[lang].precision,
+      SITE_PATHS[lang].privacy,
+      ...LEGAL_PAGES.map((page) => legalPath(lang, page)),
+    ]) {
+      const response = await send(fake, `${origin()}${path}`);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain(expected);
     }
   });
 
