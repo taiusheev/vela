@@ -6,11 +6,12 @@ This is a proposed addition to the existing private-test materials. It does not 
 into a public service, change existing participants' permissions, waive existing admission or market
 holds, or establish that Taiwan-only residence resolves every applicable law.
 
-## Proposed operator and service
+## Confirmed operator and proposed service
 
-The existing materials name Timur Aiusheev in Taipei, Taiwan, with t.aiusheev@gmail.com for contact.
-Confirm whether that natural person or a registered company will operate the public service before
-issuing the final documents. No company name or registration has been invented here.
+On 23 October 2026 the founder confirmed that Vela will initially be operated personally by
+Timur Aiusheev, an individual in Taipei, Taiwan, with t.aiusheev@gmail.com for contact.
+The public documents should identify this individual as the operator. This confirms the operator
+choice; it does not establish company registration or legal clearance for public operation.
 
 The proposed first public scope is adults aged 18 or older who usually reside in Taiwan. Each
 participant answers for themselves. Do not require a person to declare another adult's age,

@@ -61,8 +61,9 @@ An eligibility change must not block existing stopping, deletion, data access or
 
 ## Before real public signup
 
-1. Confirm who operates Vela: the existing natural-person operator or a registered entity, with the
-   correct name/address/contact. The draft names the existing operator and is not an entity decision.
+1. Operator choice confirmed by the founder on 23 October 2026: Timur Aiusheev personally,
+   initially as an individual in Taipei, Taiwan, with t.aiusheev@gmail.com for contact. Use this
+   identity in the public documents; counsel still needs to check operator details and obligations.
 2. Have Taiwan counsel confirm the adults-only service policy, capacity/representation cases,
    lawful bases, country/citizenship restrictions, overseas processing, consumer terms and retention.
    Taiwan residency alone is not legal clearance; existing exclusions and pilot admission stay intact.
