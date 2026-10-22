@@ -9,7 +9,7 @@
  */
 import type { PublicPrecision } from "@vela/contracts";
 import { type Html, html } from "./html.ts";
-import { approvedCopy, approvedDemo, approvedHome } from "./site-home.ts";
+import { approvedCopy, approvedDemo, approvedHome, siteCopyright } from "./site-home.ts";
 import {
   LEGAL_COPY,
   LEGAL_LABELS,
@@ -1527,12 +1527,12 @@ function header(lang: SiteLang, page: SitePage | LegalPage): Html {
   const home = SITE_PATHS[lang].home;
   const at = (id: string) => (page === "home" ? `#${id}` : `${home}#${id}`);
   return html`<a class="skip" href="#main">${copy.skip}</a>
-<header class="top"><div class="wrap"><a class="brand" href="${home}"><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"></a><nav class="nav" aria-label="Vela"><a href="${at("idea")}">${copy.nav.why}</a><a href="${at("exchange")}">${copy.nav.how}</a><a href="${at("care")}">${lang === "en" ? "Made with care" : "用心設計"}</a></nav>${languageSwitch(lang, page)}<a class="btn btn-primary" href="${at("join")}">${copy.nav.join}</a></div></header>`;
+<header class="top"><div class="wrap"><a class="brand" href="${home}"><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"></a><nav class="nav" aria-label="Vela"><a href="${at("why")}">${copy.nav.why}</a><a href="${at("how")}">${copy.nav.how}</a><a href="${at("care")}">${lang === "en" ? "Made with care" : "用心設計"}</a></nav>${languageSwitch(lang, page)}<a class="btn btn-primary" href="${at("join")}">${copy.nav.join}</a></div></header>`;
 }
 
 function footer(lang: SiteLang): Html {
   const copy = COPY[lang].footer;
-  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}"><img src="/site/img/vela-logo-white.svg" width="126" height="48" alt="Vela"></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p></div></footer>`;
+  return html`<footer class="site"><div class="wrap"><div><a class="brand" href="${SITE_PATHS[lang].home}"><img src="/site/img/vela-logo-white.svg" width="126" height="48" alt="Vela"></a><p class="run-by">${copy.runBy}</p></div><nav aria-label="${copy.contact}"><a href="${SITE_PATHS[lang].privacy}">${copy.sitePrivacy}</a><a href="${PRIVACY_PATHS[lang]}">${copy.privacy}</a><a href="${SITE_PATHS[lang].precision}">${copy.precision}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:${SUPPORT_EMAIL}">${copy.contact}</a></nav><p class="made">${copy.images}</p><p class="made">${siteCopyright(lang)}</p></div></footer>`;
 }
 
 // Pages -------------------------------------------------------------------------------------------
