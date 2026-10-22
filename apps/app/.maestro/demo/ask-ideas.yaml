@@ -1,0 +1,15 @@
+# Ask starts from ideas: Vela's suggestion from her own words, then ready family questions. A tap
+# puts the words in the box and the preview shows them as she will see them, signed.
+url: ${APP_URL}
+name: An idea fills the question and the preview shows how Mom sees it
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/ask
+- assertVisible: "Ideas for Mom"
+- assertVisible: "From Mom's own words"
+- tapOn: "More ideas"
+- tapOn: "From Mom's own words"
+- assertVisible: "How Mom sees it"
+- assertVisible: "Send to Mom"

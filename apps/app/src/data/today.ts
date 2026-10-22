@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import type { ApiExchangeAudio, ExchangeType } from "@vela/contracts";
+import type { ApiExchangeAudio, ExchangeType, InterestTopic } from "@vela/contracts";
 import type { LightState } from "../components/light.tsx";
 import { clockTime } from "./format.ts";
 import { reactionLine, replyLine } from "./lines.ts";
@@ -16,6 +16,8 @@ export interface TodayLight {
   memberId: string;
   displayName: string;
   timeZone?: string;
+  /** Topics she likes talking about, from setup, for the question ideas Ask offers. */
+  interests?: readonly InterestTopic[];
   localDate?: string;
   state: LightState;
   /** An answer arrived on this local day even when away/paused is the primary label. */

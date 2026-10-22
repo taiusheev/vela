@@ -165,6 +165,14 @@ msgstr ""
 msgid "{name} gave permission to save this number"
 msgstr ""
 
+#: src/components/first-week.tsx
+msgid "{name} has answered {count} mornings so far this week. Each answer goes into the read."
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "{name} has answered one morning so far this week. Each answer goes into the read."
+msgstr ""
+
 #: src/data/family.ts
 msgid "{name} has not said yes yet"
 msgstr ""
@@ -270,6 +278,10 @@ msgstr ""
 msgid "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
 msgstr ""
 
+#: src/components/first-week.tsx
+msgid "{name}'s first weekly read: {when}"
+msgstr ""
+
 #: app/vela-light.tsx
 msgid "{name}'s light is not on."
 msgstr ""
@@ -321,6 +333,10 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "{name}’s window is ready."
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "{name}'s words this week"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -429,6 +445,14 @@ msgstr ""
 
 #: app/vela-light.tsx
 msgid "$79 a year"
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "3 replies from the family"
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "5 mornings answered this week"
 msgstr ""
 
 #: src/components/parent-link-settings.tsx
@@ -709,6 +733,10 @@ msgstr ""
 #: app/ask.tsx
 #: src/components/today-hero.tsx
 msgid "Ask {name} something"
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "Ask {name} something for this week"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -1203,6 +1231,10 @@ msgstr ""
 msgid "Everyone's light is on today"
 msgstr ""
 
+#: src/components/first-week.tsx
+msgid "Example"
+msgstr ""
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr ""
@@ -1310,6 +1342,10 @@ msgstr ""
 
 #: app/(tabs)/questions.tsx
 msgid "From {fromName} · Saved for their morning"
+msgstr ""
+
+#: src/components/ask-ideas.tsx
+msgid "From {name}'s own words"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
@@ -1474,6 +1510,10 @@ msgstr ""
 msgid "How"
 msgstr ""
 
+#: src/components/ask-ideas.tsx
+msgid "How {name} sees it"
+msgstr ""
+
 #: src/components/reminders.tsx
 msgid "How did {what} go?"
 msgstr ""
@@ -1517,6 +1557,10 @@ msgstr ""
 
 #: src/data/chat.ts
 msgid "I'm fine"
+msgstr ""
+
+#: src/components/ask-ideas.tsx
+msgid "Ideas for {name}"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
@@ -1617,6 +1661,10 @@ msgstr ""
 
 #: app/away.tsx
 msgid "It ends when she next answers, from a later day than today."
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "It gathers what {name} tells the family this week. The more mornings {name} answers, the richer it gets."
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -1952,6 +2000,10 @@ msgstr ""
 
 #: app/conversation.tsx
 msgid "More for {name}"
+msgstr ""
+
+#: src/components/ask-ideas.tsx
+msgid "More ideas"
 msgstr ""
 
 #: app/ask.tsx
@@ -2514,6 +2566,10 @@ msgstr ""
 
 #: app/profile.tsx
 msgid "Profile"
+msgstr ""
+
+#: src/components/ask-ideas.tsx
+msgid "Puts these words in your question, to send or change"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
@@ -3105,6 +3161,10 @@ msgstr ""
 msgid "Something to ask next week"
 msgstr ""
 
+#: src/components/first-week.tsx
+msgid "Something to ask next: which seeds would be good to plant together?"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr ""
@@ -3454,6 +3514,14 @@ msgstr ""
 msgid "The family's organisers choose the people nearby."
 msgstr ""
 
+#: app/ask.tsx
+msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
+msgstr ""
+
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr ""
@@ -3732,6 +3800,10 @@ msgstr ""
 msgid "Toast and tea"
 msgstr ""
 
+#: src/components/first-week.tsx
+msgid "today"
+msgstr ""
+
 #: app/away.tsx
 #: src/data/chat.ts
 #: src/data/exchanges.ts
@@ -3934,7 +4006,6 @@ msgid "Use my email instead"
 msgstr ""
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Use this"
 msgstr ""
 
@@ -4054,12 +4125,10 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/questions.tsx
-#: app/ask.tsx
 msgid "Vela suggests"
 msgstr ""
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr ""
 
@@ -4230,6 +4299,10 @@ msgstr ""
 
 #: app/settings.tsx
 msgid "What the family sees about you"
+msgstr ""
+
+#: src/components/first-week.tsx
+msgid "What the read will show"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
