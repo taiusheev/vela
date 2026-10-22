@@ -171,6 +171,14 @@ msgstr "{name} chose “Not now”."
 msgid "{name} gave permission to save this number"
 msgstr "{name} gave permission to save this number"
 
+#: src/components/first-week.tsx
+msgid "{name} has answered {count} mornings so far this week. Each answer goes into the read."
+msgstr "{name} has answered {count} mornings so far this week. Each answer goes into the read."
+
+#: src/components/first-week.tsx
+msgid "{name} has answered one morning so far this week. Each answer goes into the read."
+msgstr "{name} has answered one morning so far this week. Each answer goes into the read."
+
 #: src/data/family.ts
 msgid "{name} has not said yes yet"
 msgstr "{name} has not said yes yet"
@@ -276,6 +284,10 @@ msgstr "{name}’s first question"
 msgid "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
 msgstr "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
 
+#: src/components/first-week.tsx
+msgid "{name}'s first weekly read: {when}"
+msgstr "{name}'s first weekly read: {when}"
+
 #: app/vela-light.tsx
 msgid "{name}'s light is not on."
 msgstr "{name}'s light is not on."
@@ -328,6 +340,10 @@ msgstr "{name}'s week"
 #: src/components/onboarding/finish.tsx
 msgid "{name}’s window is ready."
 msgstr "{name}’s window is ready."
+
+#: src/components/first-week.tsx
+msgid "{name}'s words this week"
+msgstr "{name}'s words this week"
 
 #: src/components/onboarding/questions.tsx
 msgid "{name}’s world"
@@ -436,6 +452,14 @@ msgstr "📷 Reply with a photo"
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "$79 a year"
+
+#: src/components/first-week.tsx
+msgid "3 replies from the family"
+msgstr "3 replies from the family"
+
+#: src/components/first-week.tsx
+msgid "5 mornings answered this week"
+msgstr "5 mornings answered this week"
 
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
@@ -716,6 +740,10 @@ msgstr "Ask {name} how {what} went"
 #: src/components/today-hero.tsx
 msgid "Ask {name} something"
 msgstr "Ask {name} something"
+
+#: src/components/first-week.tsx
+msgid "Ask {name} something for this week"
+msgstr "Ask {name} something for this week"
 
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
@@ -1204,6 +1232,10 @@ msgstr "Everyone"
 msgid "Everyone's light is on today"
 msgstr "Everyone's light is on today"
 
+#: src/components/first-week.tsx
+msgid "Example"
+msgstr "Example"
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr "Example · heart sent"
@@ -1619,6 +1651,10 @@ msgstr "It comes from you, in {app}, so {name} knows it’s really you."
 #: app/away.tsx
 msgid "It ends when she next answers, from a later day than today."
 msgstr "It ends when she next answers, from a later day than today."
+
+#: src/components/first-week.tsx
+msgid "It gathers what {name} tells the family this week. The more mornings {name} answers, the richer it gets."
+msgstr "It gathers what {name} tells the family this week. The more mornings {name} answers, the richer it gets."
 
 #: app/(tabs)/index.tsx
 msgid "It has been accepted. Delivery happens in the parent's morning."
@@ -3066,6 +3102,10 @@ msgstr "Something for her morning"
 msgid "Something to ask next week"
 msgstr "Something to ask next week"
 
+#: src/components/first-week.tsx
+msgid "Something to ask next: which seeds would be good to plant together?"
+msgstr "Something to ask next: which seeds would be good to plant together?"
+
 #: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "Something was wrong in {wrong} of {notices}."
@@ -3415,6 +3455,10 @@ msgstr "The family, the first week and everything you told us."
 msgid "The family's organisers choose the people nearby."
 msgstr "The family's organisers choose the people nearby."
 
+#: src/components/first-week.tsx
+msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
+msgstr "The garden came up twice: the tomatoes, and the seeds kept for spring."
+
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
@@ -3692,6 +3736,10 @@ msgstr "To answer with your voice, Vela needs the microphone. Ask your family to
 #: src/device/useParent.ts
 msgid "Toast and tea"
 msgstr "Toast and tea"
+
+#: src/components/first-week.tsx
+msgid "today"
+msgstr "today"
 
 #: app/away.tsx
 #: src/data/chat.ts
@@ -4192,6 +4240,10 @@ msgstr "What the family said"
 #: app/settings.tsx
 msgid "What the family sees about you"
 msgstr "What the family sees about you"
+
+#: src/components/first-week.tsx
+msgid "What the read will show"
+msgstr "What the read will show"
 
 #: src/components/onboarding/questions.tsx
 msgid "What they call you"
