@@ -857,10 +857,6 @@ msgstr "Cancel connection"
 msgid "Central"
 msgstr "Central"
 
-#: app/settings.tsx
-msgid "Change"
-msgstr "Change"
-
 #: app/conversation.tsx
 #: app/settings.tsx
 msgid "Change {name}'s morning"
@@ -1407,10 +1403,6 @@ msgstr "Heart sent"
 msgid "Help"
 msgstr "Help"
 
-#: app/settings.tsx
-msgid "Help and settings"
-msgstr "Help and settings"
-
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -1458,7 +1450,6 @@ msgstr "Hi {name}, it’s {you}. I’ve set up Vela for us: one small question f
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 msgstr "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 
-#: app/settings.tsx
 #: src/components/app-privacy.tsx
 msgid "Hide privacy details"
 msgstr "Hide privacy details"
@@ -2411,6 +2402,9 @@ msgid "Preview settings"
 msgstr "Preview settings"
 
 #: app/settings.tsx
+msgid "Privacy and help"
+msgstr "Privacy and help"
+
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
 msgstr "Privacy details and terms"
@@ -2664,6 +2658,7 @@ msgstr "Say something short"
 msgid "Search her words"
 msgstr "Search her words"
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Security"
 msgstr "Security"
@@ -2781,6 +2776,7 @@ msgstr "sent a sticker"
 msgid "sent a voice message"
 msgstr "sent a voice message"
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Service terms"
 msgstr "Service terms"
@@ -3803,6 +3799,10 @@ msgstr "Usually answers by {time}"
 msgid "Vela · her morning · {time}"
 msgstr "Vela · her morning · {time}"
 
+#: app/settings.tsx
+msgid "Vela {version}"
+msgstr "Vela {version}"
+
 #: src/components/onboarding/questions.tsx
 msgid "Vela asks in its own name"
 msgstr "Vela asks in its own name"
@@ -4233,10 +4233,6 @@ msgstr "You are paused: no turns come to you, and you are not told if it goes qu
 msgid "You are paused: no turns come to you."
 msgstr "You are paused: no turns come to you."
 
-#: app/settings.tsx
-msgid "You are signed in to Vela."
-msgstr "You are signed in to Vela."
-
 #: src/data/useFamily.ts
 msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
 msgstr "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
@@ -4326,6 +4322,7 @@ msgstr "Your code was sent to {sentTo}. Check spam if it is missing."
 msgid "Your country"
 msgstr "Your country"
 
+#: app/settings.tsx
 #: src/components/legal-links.tsx
 msgid "Your data and deletion"
 msgstr "Your data and deletion"
@@ -4356,10 +4353,6 @@ msgstr "Your family could not be reached just now. Your saved questions are unch
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
 msgstr "Your family stays together when you update Vela."
-
-#: app/settings.tsx
-msgid "Your family, your preferences, your account."
-msgstr "Your family, your preferences, your account."
 
 #: app/(tabs)/index.tsx
 msgid "Your family's first parent connection is still being set up."
@@ -4438,6 +4431,10 @@ msgstr "Your sign-in expired. Sign in again to finish connecting."
 #: app/delete-account.tsx
 msgid "Your sign-in has expired. Sign in again, then delete your account."
 msgstr "Your sign-in has expired. Sign in again, then delete your account."
+
+#: app/settings.tsx
+msgid "Your turns"
+msgstr "Your turns"
 
 #: app/conversation.tsx
 msgid "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."
