@@ -370,11 +370,12 @@ export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageCont
     <a href="#join" class="nav-cta" data-waitlist aria-haspopup="dialog" aria-controls="waitlist-dialog">${c.join} <span aria-hidden="true">→</span></a>
   </header>
   <main id="main">
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="hero" aria-labelledby="hero-title"><div class="hero-opening"><div class="hero-letter">
       <p class="eyebrow">${c.tagline}</p>
       <h1 id="hero-title">${c.heroStart}<span class="hero-parent">${c.heroParent}</span><br>${c.heroSecond}<em>${c.heroEmphasis}</em></h1>
       <p class="hero-description">${c.heroLine1}<br>${c.heroLine2}</p>
       <div class="hero-actions"><a href="#join" class="button button-dark" data-waitlist aria-haspopup="dialog" aria-controls="waitlist-dialog">${c.join} <span aria-hidden="true">→</span></a><a class="hero-how" href="#exchange">${c.seeHow} <span aria-hidden="true">↓</span></a></div>
+      </div><div class="hero-scene"><div class="home-window"><img src="/site/img/story/garden-update.jpg" alt="${c.gardenAlt}" width="1024" height="1024"><span class="window-crossbar" aria-hidden="true"></span></div><div class="window-message"><span class="window-message-label">${c.momAnswers}<span aria-hidden="true"> ↗</span></span><p>${c.gardenAnswer}</p><span class="window-message-reply">${c.saveTwo} <span aria-hidden="true">♡</span></span></div><p class="window-caption">${c.gardenCaption}</p></div></div>
       <div class="story-gallery" role="region" aria-label="${c.galleryLabel}">
         <div class="story-viewport" tabindex="0" aria-label="${c.galleryKeys}">
           <div class="story-track">
