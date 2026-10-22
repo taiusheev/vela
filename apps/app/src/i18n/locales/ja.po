@@ -1630,8 +1630,20 @@ msgstr ""
 msgid "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 msgstr ""
 
+#: app/ask.tsx
+msgid "It reaches {name} on {day} morning, the first one nobody else has asked for."
+msgstr ""
+
+#: app/ask.tsx
+msgid "It reaches {name} with tomorrow's morning message."
+msgstr ""
+
 #: app/(tabs)/questions.tsx
 msgid "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
+msgstr ""
+
+#: app/ask.tsx
+msgid "It waits its turn and reaches {name} on the first morning nobody else has asked for."
 msgstr ""
 
 #: src/data/exchanges.ts
@@ -2020,6 +2032,10 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "Next"
+msgstr ""
+
+#: app/ask.tsx
+msgid "Next free morning"
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -4226,10 +4242,6 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
-msgstr ""
-
-#: app/ask.tsx
-msgid "Whenever"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
