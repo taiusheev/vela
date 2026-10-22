@@ -61,6 +61,10 @@ interface SharedEnv {
  * the scheduler, the heartbeat, and the API under /v1.
  */
 export interface PilotEnv extends SharedEnv {
+  /** Optional usage analytics. Absent is off. Public project token, never a personal API key. */
+  readonly SITE_ANALYTICS?: string;
+  readonly POSTHOG_PROJECT_TOKEN?: string;
+  readonly POSTHOG_REGION?: string;
   /** Endpoint-specific Svix signing key for verified Clerk account deletion events. */
   readonly CLERK_WEBHOOK_SIGNING_SECRET?: string;
   /** Opt-in closed trial; absent is off. Participant IDs belong in a private Worker secret. */

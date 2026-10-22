@@ -44,6 +44,7 @@ import {
   unfilledSiteBlanks,
   WAITLIST_PATH,
 } from "./site.ts";
+import { siteAnalyticsApp } from "./site-analytics.ts";
 import {
   canonicalOrigin,
   robotsTxt,
@@ -105,6 +106,7 @@ async function readBoundedText(
 
 export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
   const app = new Hono<PilotAppEnv>();
+  app.route("/", siteAnalyticsApp());
 
   /**
    * Whether reconciliation is running (W2), for the watchdog outside Cloudflare: 200 while the last

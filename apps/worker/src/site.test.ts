@@ -88,6 +88,7 @@ describe("the public website", () => {
       expect(body.match(/<script[^>]*>/g)).toEqual([
         '<script src="/site/boot.js">',
         '<script src="/site/site.js" defer>',
+        '<script src="/site/analytics.js" defer>',
         '<script type="application/json" id="vela-demo">',
       ]);
       expect(body).not.toContain("style=");
@@ -375,7 +376,7 @@ describe("the website's privacy notice", () => {
     expect(home.match(new RegExp(`href="${SITE_PATHS[lang].privacy}"`, "g"))).toHaveLength(3);
   });
 
-  it("promises no cookies, and the pages set none", async () => {
+  it("discloses optional counts and the pages set no cookies", async () => {
     const fake = createFakePilotRuntime();
     const at = origin();
 
@@ -384,7 +385,8 @@ describe("the website's privacy notice", () => {
       expect((await send(fake, `${at}${path}`)).headers.get("set-cookie")).toBeNull();
     }
 
-    expect(notice).toContain("We do not use cookies, analytics, advertising or tracking tools");
+    expect(notice).toContain("Optional usage counts are off until you choose Allow counts");
+    expect(notice).toContain("Turning it off clears the identifier here");
   });
 });
 

@@ -1,0 +1,48 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-22 15:50+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en\n"
+
+#: src/analytics/provider.tsx
+msgid "Allow usage counts"
+msgstr "Allow usage counts"
+
+#: src/analytics/provider.tsx
+msgid "Analytics ID for access or deletion:"
+msgstr "Analytics ID for access or deletion:"
+
+#: src/analytics/provider.tsx
+msgid "Help improve Vela?"
+msgstr "Help improve Vela?"
+
+#: src/analytics/provider.tsx
+msgid "No thanks / turn off"
+msgstr "No thanks / turn off"
+
+#: src/analytics/provider.tsx
+msgid "Optional usage counts help us see which screens work well. PostHog receives a random ID, screen names, opening times and time on screen. No names, family messages, photos, audio or recordings are included. This is separate from your family permissions. Choosing no changes nothing in Vela."
+msgstr "Optional usage counts help us see which screens work well. PostHog receives a random ID, screen names, opening times and time on screen. No names, family messages, photos, audio or recordings are included. This is separate from your family permissions. Choosing no changes nothing in Vela."
+
+#: src/analytics/provider.tsx
+msgid "Storage region: European Union."
+msgstr "Storage region: European Union."
+
+#: src/analytics/provider.tsx
+msgid "Storage region: United States."
+msgstr "Storage region: United States."
+
+#: src/analytics/provider.tsx
+msgid "The analytics service receives network details when your phone connects. Counts are stored for up to 1 year in the configured PostHog region. You can stop future counts here anytime. Turning this off clears this device's analytics identity; it does not delete earlier counts. For access or deletion, contact t.aiusheev@gmail.com."
+msgstr "The analytics service receives network details when your phone connects. Counts are stored for up to 1 year in the configured PostHog region. You can stop future counts here anytime. Turning this off clears this device's analytics identity; it does not delete earlier counts. For access or deletion, contact t.aiusheev@gmail.com."
+
+#: src/analytics/provider.tsx
+msgid "Usage privacy"
+msgstr "Usage privacy"
+
+#: src/analytics/provider.tsx
+msgid "Your choice could not be saved on this device. Counts are stopped for this session. Please choose turn off again to save it for future openings."
+msgstr "Your choice could not be saved on this device. Counts are stopped for this session. Please choose turn off again to save it for future openings."

@@ -17,6 +17,7 @@ import { StatusBar } from "expo-status-bar";
 import { type ReactNode, useEffect, useState } from "react";
 import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { UsageAnalytics } from "../src/analytics/provider.tsx";
 import { sessionRequests } from "../src/api/request-session.ts";
 import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
@@ -179,6 +180,7 @@ function Navigation() {
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       <AppPrivacyGate>
+        <UsageAnalytics />
         <Stack
           screenOptions={{
             headerShown: false,
