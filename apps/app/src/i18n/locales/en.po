@@ -849,6 +849,7 @@ msgid "Canada"
 msgstr "Canada"
 
 #: app/morning-settings.tsx
+#: app/profile.tsx
 msgid "Cancel"
 msgstr "Cancel"
 
@@ -861,6 +862,10 @@ msgstr "Cancel connection"
 #: src/data/onboarding.ts
 msgid "Central"
 msgstr "Central"
+
+#: app/profile.tsx
+msgid "Change"
+msgstr "Change"
 
 #: app/conversation.tsx
 #: app/settings.tsx
@@ -1636,9 +1641,21 @@ msgstr "It has been quiet at {quietName}'s today"
 msgid "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 msgstr "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 
+#: app/ask.tsx
+msgid "It reaches {name} on {day} morning, the first one nobody else has asked for."
+msgstr "It reaches {name} on {day} morning, the first one nobody else has asked for."
+
+#: app/ask.tsx
+msgid "It reaches {name} with tomorrow's morning message."
+msgstr "It reaches {name} with tomorrow's morning message."
+
 #: app/(tabs)/questions.tsx
 msgid "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
 msgstr "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
+
+#: app/ask.tsx
+msgid "It waits its turn and reaches {name} on the first morning nobody else has asked for."
+msgstr "It waits its turn and reaches {name} on the first morning nobody else has asked for."
 
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
@@ -1805,6 +1822,7 @@ msgid "Listen to your recording"
 msgstr "Listen to your recording"
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 msgid "Little things worth remembering from your own answers"
 msgstr "Little things worth remembering from your own answers"
 
@@ -1857,6 +1875,10 @@ msgstr "Loading your family’s plan…"
 #: app/settings.tsx
 msgid "Loading your notification preference…"
 msgstr "Loading your notification preference…"
+
+#: app/profile.tsx
+msgid "Loading…"
+msgstr "Loading…"
 
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
@@ -2027,6 +2049,10 @@ msgstr "New Zealand"
 #: src/components/onboarding/finish.tsx
 msgid "Next"
 msgstr "Next"
+
+#: app/ask.tsx
+msgid "Next free morning"
+msgstr "Next free morning"
 
 #: src/components/onboarding/story.tsx
 msgid "No answer from Mom yet today."
@@ -2311,6 +2337,10 @@ msgstr "Opening Telegram…"
 msgid "Opening the book…"
 msgstr "Opening the book…"
 
+#: app/(tabs)/you.tsx
+msgid "Opens your name, your family and your own things"
+msgstr "Opens your name, your family and your own things"
+
 #: src/components/vote-options.tsx
 msgid "Option {number}"
 msgstr "Option {number}"
@@ -2351,6 +2381,7 @@ msgid "Parent photo"
 msgstr "Parent photo"
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 msgid "Parent photos and links, notifications, language, and account"
 msgstr "Parent photos and links, notifications, language, and account"
 
@@ -2486,6 +2517,10 @@ msgstr "Privacy and help"
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
 msgstr "Privacy details and terms"
+
+#: app/profile.tsx
+msgid "Profile"
+msgstr "Profile"
 
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
@@ -2704,6 +2739,10 @@ msgstr "Save me two for Sunday?"
 msgid "Save morning settings"
 msgstr "Save morning settings"
 
+#: app/profile.tsx
+msgid "Save name"
+msgstr "Save name"
+
 #: app/conversation.tsx
 msgid "Saved for their first morning after they join."
 msgstr "Saved for their first morning after they join."
@@ -2723,6 +2762,7 @@ msgstr "Saving your preference…"
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/morning-settings.tsx
+#: app/profile.tsx
 #: src/components/app-privacy.tsx
 #: src/components/calling-number-editor.tsx
 #: src/components/quiet-notice.tsx
@@ -2906,6 +2946,7 @@ msgid "Setting up…"
 msgstr "Setting up…"
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 #: app/settings.tsx
 msgid "Settings"
 msgstr "Settings"
@@ -3878,10 +3919,6 @@ msgstr "Until she's back"
 msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
 msgstr "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
 
-#: app/(tabs)/index.tsx
-msgid "Updated {time}"
-msgstr "Updated {time}"
-
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
 msgstr "Uploading {percent}%"
@@ -4242,10 +4279,6 @@ msgstr "When they answer, write back while it is on your mind. A quiet day does 
 msgid "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
 msgstr "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
 
-#: app/ask.tsx
-msgid "Whenever"
-msgstr "Whenever"
-
 #: src/components/onboarding/questions.tsx
 msgid "Where does {name} chat already?"
 msgstr "Where does {name} chat already?"
@@ -4491,6 +4524,10 @@ msgstr "Your family could not be reached just now."
 msgid "Your family could not be reached just now. Your saved questions are unchanged."
 msgstr "Your family could not be reached just now. Your saved questions are unchanged."
 
+#: app/profile.tsx
+msgid "Your family sees this name on your questions and replies."
+msgstr "Your family sees this name on your questions and replies."
+
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
 msgstr "Your family stays together when you update Vela."
@@ -4521,6 +4558,7 @@ msgstr "Your light is paused from your own chat, where your mornings arrive."
 
 #: app/(tabs)/you.tsx
 #: app/my-memories.tsx
+#: app/profile.tsx
 msgid "Your memories"
 msgstr "Your memories"
 
@@ -4540,10 +4578,15 @@ msgstr "Your mobile number. The country code is added for you."
 msgid "Your morning message"
 msgstr "Your morning message"
 
+#: app/profile.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/telegram-family-link.tsx
 msgid "Your name"
 msgstr "Your name"
+
+#: app/profile.tsx
+msgid "Your name could not be saved. Nothing changed. Try again."
+msgstr "Your name could not be saved. Nothing changed. Try again."
 
 #: src/components/telegram-family-link.tsx
 msgid "Your name, as the family says it."
@@ -4569,6 +4612,14 @@ msgstr "Your parent can ask “what does the family see” in their own Telegram
 #: app/settings.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 msgstr "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
+
+#: app/(tabs)/you.tsx
+msgid "Your profile"
+msgstr "Your profile"
+
+#: app/(tabs)/you.tsx
+msgid "Your profile, {myName}, {familyName}"
+msgstr "Your profile, {myName}, {familyName}"
 
 #: app/ask.tsx
 msgid "Your question"
