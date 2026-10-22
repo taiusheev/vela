@@ -12,7 +12,7 @@ const COPY = {
     how: "How it works",
     beyond: "Beyond the check-in",
     join: "Join the waitlist",
-    tagline: "FOR BUSY ADULT CHILDREN. FOR AGING PARENTS.",
+    tagline: "FOR ADULT CHILDREN. FOR AGING PARENTS.",
     headline: "A little light.",
     emphasis: "A lot less worry.",
     hero: [
