@@ -23,8 +23,11 @@ export interface ChatReaction {
   mine: boolean;
 }
 
-/** How far a message the reader sent has gone. "Seen" only when her messenger said so. */
-export type ChatStatus = "sending" | "delivered" | "seen" | "failed";
+/**
+ * How far a message the reader sent has gone: "sending" until Vela has it, "sent" once Vela has it
+ * and is passing it on, then "delivered", and "seen" only when her messenger said so.
+ */
+export type ChatStatus = "sending" | "sent" | "delivered" | "seen" | "failed";
 
 export interface ChatMessage {
   key: string;
@@ -115,7 +118,8 @@ function wordlessReply(kind: string): string {
 
 function statusOf(summary: ApiExchangeSummary): ChatStatus {
   if (summary.delivery_status === "failed") return "failed";
-  if (summary.delivery_status === "pending" || summary.delivered_at === null) return "sending";
+  // Vela already has it: what is left is passing it on, which the reader need not wait for.
+  if (summary.delivery_status === "pending" || summary.delivered_at === null) return "sent";
   return summary.seen_at === null ? "delivered" : "seen";
 }
 
@@ -282,7 +286,7 @@ export function newestMine(messages: readonly ChatMessage[]): string | undefined
   return undefined;
 }
 
-/** "Sending…" and "Not delivered" always show; "Seen" and "Delivered" only once, at the newest. */
+/** "Sending…" and "Not delivered" always show; "Sent", "Delivered" and "Seen" only at the newest. */
 export function showsStatus(message: ChatMessage, newest: string | undefined): boolean {
   if (message.status === "sending" || message.status === "failed") return true;
   return message.status !== undefined && message.key === newest;

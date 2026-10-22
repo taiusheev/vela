@@ -2893,6 +2893,10 @@ msgstr "傳給{name}"
 msgid "Sending…"
 msgstr "傳送中…"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Sent"
+msgstr "已送出"
+
 #: src/data/useToday.ts
 msgid "sent a heart"
 msgstr "送上一顆愛心"

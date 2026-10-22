@@ -120,11 +120,13 @@ export function ChatBubble({
       ? t`Sending…`
       : message.status === "failed"
         ? t`Not delivered`
-        : message.status === "seen"
-          ? t`Seen`
-          : message.status === "delivered"
-            ? t`Delivered`
-            : undefined;
+        : message.status === "sent"
+          ? t`Sent`
+          : message.status === "seen"
+            ? t`Seen`
+            : message.status === "delivered"
+              ? t`Delivered`
+              : undefined;
   // "written by Vela" (ADR-49) always shows on its message; the time only at a pause or on a tap.
   const footer = [
     (last && showTime) || timeOpen ? time : undefined,
