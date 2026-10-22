@@ -42,7 +42,9 @@ it("resolves native permissions and dependency privacy reasons without enabling 
     };
     android?: { blockedPermissions?: string[] };
     _internal?: {
-      modResults?: { ios?: { infoPlist?: Record<string, unknown> } };
+      modResults?: {
+        ios?: { infoPlist?: Record<string, unknown>; entitlements?: Record<string, unknown> };
+      };
     };
   };
   try {
@@ -51,6 +53,9 @@ it("resolves native permissions and dependency privacy reasons without enabling 
     throw new Error("Expo native configuration was not readable");
   }
   const plist = config._internal?.modResults?.ios?.infoPlist;
+  expect(
+    config._internal?.modResults?.ios?.entitlements?.["com.apple.developer.applesignin"],
+  ).toEqual(["Default"]);
   expect(plist?.NSMicrophoneUsageDescription).toBe(
     "Vela uses your microphone when you choose to record a voice message for your family.",
   );

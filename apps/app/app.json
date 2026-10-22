@@ -123,7 +123,8 @@
       },
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "family.vela.light",
@@ -173,7 +174,9 @@
         {
           "microphonePermission": "Vela uses your microphone when you choose to record a voice message for your family."
         }
-      ]
+      ],
+      "expo-apple-authentication",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

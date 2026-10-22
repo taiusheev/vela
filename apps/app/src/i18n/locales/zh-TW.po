@@ -455,6 +455,10 @@ msgid "A light comes on when they answer their morning."
 msgstr "早晨的問題一有回覆，燈就會亮起。"
 
 #: app/sign-in.tsx
+msgid "A little closer to your family. Choose how to continue."
+msgstr "與家人再近一點。請選擇登入方式。"
+
+#: app/sign-in.tsx
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr "與家人再近一點。使用電子郵件註冊或登入。"
 
@@ -1061,6 +1065,14 @@ msgstr "繼續"
 #: app/exchange/[id].tsx
 msgid "Continue in chat"
 msgstr "到聊天繼續說"
+
+#: app/sign-in.tsx
+msgid "Continue with Apple"
+msgstr "使用 Apple 繼續"
+
+#: app/sign-in.tsx
+msgid "Continue with Google"
+msgstr "使用 Google 繼續"
 
 #: app/ask.tsx
 msgid "Continue your saved ask to {savedName}"
@@ -2322,6 +2334,14 @@ msgstr "打開「今天」就能看到。"
 msgid "Open your own Vela chat and confirm it’s you. Your family and messages stay together."
 msgstr "開啟您自己的 Vela 聊天，確認是您本人。家人與訊息都會保留在一起。"
 
+#: app/sign-in.tsx
+msgid "Opening Apple…"
+msgstr "正在開啟 Apple⋯"
+
+#: app/sign-in.tsx
+msgid "Opening Google…"
+msgstr "正在開啟 Google⋯"
+
 #: src/components/parent-photo-settings.tsx
 msgid "Opening photos…"
 msgstr "正在開啟照片⋯"
@@ -3045,6 +3065,10 @@ msgstr "登入驗證碼"
 #: app/sign-in.tsx
 msgid "Sign-in could not be configured. Contact Vela for help."
 msgstr "登入設定未完成。請聯絡 Vela 取得協助。"
+
+#: app/sign-in.tsx
+msgid "Sign-in could not finish. Try again or use an email code."
+msgstr "無法完成登入。請再試一次，或改用電子郵件驗證碼。"
 
 #: app/sign-in.tsx
 msgid "Sign-in is unavailable in this build"
@@ -4472,6 +4496,10 @@ msgstr "無法讀取您的帳號。您的隱私選擇沒有變更。"
 #: app/delete-account.tsx
 msgid "Your account is deleted."
 msgstr "您的帳號已刪除。"
+
+#: app/sign-in.tsx
+msgid "Your account needs another verification step. Use an email code or contact Vela for help."
+msgstr "您的帳號需要進一步驗證。請使用電子郵件驗證碼，或聯絡 Vela 尋求協助。"
 
 #: src/device/VoiceAnswer.tsx
 msgid "Your answer, {time} long."

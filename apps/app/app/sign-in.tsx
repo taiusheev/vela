@@ -1,9 +1,12 @@
-import { useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { useSignIn, useSignInWithApple, useSignUp, useSSO } from "@clerk/clerk-expo";
 import { Trans, useLingui } from "@lingui/react/macro";
+import * as AppleAuthentication from "expo-apple-authentication";
+import { makeRedirectUri } from "expo-auth-session";
 import { getLocales } from "expo-localization";
 import { router, Stack } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, ScrollView, View } from "react-native";
+import { Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "../src/accessibility/use-reduced-motion.ts";
 import { apiConfigured } from "../src/api/client.ts";
@@ -28,6 +31,7 @@ import {
   readable,
   toInternational,
 } from "../src/auth/phone.ts";
+import { completeSocialSignIn, socialEnabled } from "../src/auth/social.ts";
 import { BrandHeader } from "../src/components/brand/header.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { SetupHelp } from "../src/components/setup-help.tsx";
@@ -42,8 +46,11 @@ import {
 } from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { readDraft, useOnboardingDraft } from "../src/data/onboarding-draft.ts";
-import { usePalette } from "../src/theme/theme.tsx";
+import { usePalette, useTheme } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
+
+// Completes the web popup on the same route used for native return. No arbitrary return URL.
+WebBrowser.maybeCompleteAuthSession();
 
 type Step = "identifier" | "code";
 /** Which of Clerk's two one-time codes this attempt is carrying. */
@@ -57,6 +64,8 @@ type Destination =
  */
 type Trouble = {
   kind:
+    | "social_failed"
+    | "social_incomplete"
     | "cannot_receive"
     | "did_not_work"
     | "bot_check"
@@ -150,7 +159,7 @@ async function within<T>(work: Promise<T>): Promise<T> {
 
 /**
  * A number or an email, whichever the account was made with, and a code to the same place (build
- * plan 3.1). Apple and Google come next; they need the app's store identifiers.
+ * plan 3.1). Google and Apple use the same Clerk identity and session boundary.
  */
 export default function SignInScreen() {
   // A checkout without a Clerk key has no accounts at all; the screen says so rather than asking
@@ -196,7 +205,7 @@ function NoAccounts() {
 }
 
 function CodeSignIn() {
-  const palette = usePalette();
+  const { palette, scheme } = useTheme();
   // Onboarding sends a newcomer here to save what they made: say so, by her name.
   const draft = useOnboardingDraft();
   const savingFor =
@@ -206,6 +215,24 @@ function CodeSignIn() {
   const { t } = useLingui();
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isLoaded: signUpLoaded, signUp } = useSignUp();
+  const { startSSOFlow } = useSSO();
+  const { startAppleAuthenticationFlow } = useSignInWithApple();
+  const [socialWorking, setSocialWorking] = useState<"google" | "apple" | null>(null);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    if (Platform.OS === "ios" && socialEnabled("apple")) {
+      void AppleAuthentication.isAvailableAsync()
+        .then((available) => {
+          if (mounted.current) setAppleAvailable(available);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [step, setStep] = useState<Step>("identifier");
   // Which half of Clerk is carrying this attempt: an account it knows, or one it is meeting.
   const [joining, setJoining] = useState(false);
@@ -243,6 +270,36 @@ function CodeSignIn() {
     setStep("code");
   };
   const ready = isLoaded && signUpLoaded && signIn !== undefined && signUp !== undefined;
+
+  const socialSignIn = async (provider: "google" | "apple") => {
+    if (!ready || inFlight.current) return;
+    inFlight.current = true;
+    setWorking(true);
+    setSocialWorking(provider);
+    setTrouble(undefined);
+    try {
+      const result =
+        provider === "apple" && Platform.OS === "ios"
+          ? await startAppleAuthenticationFlow()
+          : await startSSOFlow({
+              strategy: provider === "google" ? "oauth_google" : "oauth_apple",
+              redirectUrl: makeRedirectUri({ scheme: "velalight", path: "sign-in" }),
+            });
+      const outcome = await completeSocialSignIn(result, () => mounted.current);
+      if (!mounted.current) return;
+      if (outcome === "complete") router.replace(readDraft().step === "save" ? "/onboarding" : "/");
+      else if (outcome === "needs_more") setTrouble({ kind: "social_incomplete" });
+      else if (outcome === "unavailable") setTrouble({ kind: "social_failed" });
+    } catch {
+      if (mounted.current) setTrouble({ kind: "social_failed" });
+    } finally {
+      inFlight.current = false;
+      if (mounted.current) {
+        setWorking(false);
+        setSocialWorking(null);
+      }
+    }
+  };
 
   /** Not yet an account: the same code, through the other door. */
   const startJoining = async (entered: string) => {
@@ -424,6 +481,10 @@ function CodeSignIn() {
   /** The words for what went wrong, in the language the screen is in now. */
   function troubleWords(what: Trouble): string {
     switch (what.kind) {
+      case "social_failed":
+        return t`Sign-in could not finish. Try again or use an email code.`;
+      case "social_incomplete":
+        return t`Your account needs another verification step. Use an email code or contact Vela for help.`;
       case "expired":
         return t`That code has expired. Request a new code below.`;
       case "rate_limited":
@@ -475,10 +536,9 @@ function CodeSignIn() {
       >
         <View style={{ gap: space.xl }}>
           <BrandHeader />
-          <SetupProgress
-            steps={[t`Your email`, t`Verify code`]}
-            current={step === "identifier" ? 0 : 1}
-          />
+          {step === "code" ? (
+            <SetupProgress steps={[t`Your email`, t`Verify code`]} current={1} />
+          ) : null}
           <Words variant="title">
             {step !== "identifier"
               ? t`Check your inbox`
@@ -490,10 +550,55 @@ function CodeSignIn() {
             {step !== "identifier"
               ? t`Enter your code to continue to your family.`
               : savingFor === null
-                ? t`A little closer to your family. Use your email to get started or sign in.`
+                ? socialEnabled("google") || socialEnabled("apple")
+                  ? t`A little closer to your family. Choose how to continue.`
+                  : t`A little closer to your family. Use your email to get started or sign in.`
                 : t`One email, one code, no password. Then ${savingFor}’s invitation is ready to send.`}
           </Words>
         </View>
+        {step === "identifier" && (socialEnabled("google") || socialEnabled("apple")) ? (
+          <View style={{ gap: space.m }}>
+            {socialEnabled("apple") && Platform.OS === "ios" && appleAvailable ? (
+              <View
+                pointerEvents={working || !ready ? "none" : "auto"}
+                accessibilityState={{
+                  disabled: working || !ready,
+                  busy: socialWorking === "apple",
+                }}
+              >
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                  buttonStyle={
+                    scheme === "dark"
+                      ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                      : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                  }
+                  cornerRadius={8}
+                  style={{ width: "100%", height: 52 }}
+                  onPress={() => void socialSignIn("apple")}
+                />
+              </View>
+            ) : socialEnabled("apple") && Platform.OS !== "ios" ? (
+              <SecondaryButton
+                label={socialWorking === "apple" ? t`Opening Apple…` : t`Continue with Apple`}
+                disabled={working || !ready}
+                onPress={() => void socialSignIn("apple")}
+              />
+            ) : null}
+            {socialEnabled("google") ? (
+              <SecondaryButton
+                label={socialWorking === "google" ? t`Opening Google…` : t`Continue with Google`}
+                disabled={working || !ready}
+                onPress={() => void socialSignIn("google")}
+              />
+            ) : null}
+            {socialWorking === "apple" && Platform.OS === "ios" ? (
+              <Words variant="caption" tone="ink2">
+                <Trans>Opening Apple…</Trans>
+              </Words>
+            ) : null}
+          </View>
+        ) : null}
         <Card>
           {step === "identifier" ? (
             <>
@@ -548,7 +653,7 @@ function CodeSignIn() {
                     }
                     keyboardType="phone-pad"
                     autoComplete="tel-national"
-                    autoFocus
+                    autoFocus={!socialEnabled("google") && !socialEnabled("apple")}
                     onSubmit={() => void sendCode()}
                   />
                 </>
@@ -570,13 +675,13 @@ function CodeSignIn() {
                     placeholder={t`name@example.com`}
                     keyboardType="email-address"
                     autoComplete="email"
-                    autoFocus
+                    autoFocus={!socialEnabled("google") && !socialEnabled("apple")}
                     onSubmit={() => void sendCode()}
                   />
                 </>
               )}
               <PrimaryButton
-                label={working ? t`Sending…` : t`Send me a code`}
+                label={working && socialWorking === null ? t`Sending…` : t`Send me a code`}
                 disabled={working || !ready || identifier.length === 0}
                 onPress={sendCode}
               />
@@ -632,9 +737,11 @@ function CodeSignIn() {
             </>
           )}
           {trouble === undefined ? null : (
-            <Words variant="body" tone="ink2">
-              {troubleWords(trouble)}
-            </Words>
+            <View accessibilityRole="alert" accessibilityLiveRegion="polite">
+              <Words variant="body" tone="ink2">
+                {troubleWords(trouble)}
+              </Words>
+            </View>
           )}
           {trouble?.codes === undefined ? null : (
             <Words variant="caption" tone="ink3" selectable>

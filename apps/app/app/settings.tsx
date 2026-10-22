@@ -62,7 +62,12 @@ function FamilyYou({ day }: { day: TodayView }) {
   const language = useAppLocale();
   const { familyId, noAccount, pushSent, loading: todayLoading } = day;
   const push = usePush();
-  const signingOut = useMutation({ mutationFn: () => push.signOut() });
+  const signingOut = useMutation({
+    mutationFn: async () => {
+      await push.signOut();
+      router.replace("/sign-in");
+    },
+  });
   const moment = useOneMoment();
   const {
     family,
