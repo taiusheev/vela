@@ -1313,6 +1313,10 @@ msgstr "From"
 msgid "From {fromName} · Saved for their morning"
 msgstr "From {fromName} · Saved for their morning"
 
+#: src/components/ask-ideas.tsx
+msgid "From {name}'s own words"
+msgstr "From {name}'s own words"
+
 #: app/(tabs)/exchanges.tsx
 msgid "From a voice note"
 msgstr "From a voice note"
@@ -1475,6 +1479,10 @@ msgstr "Hong Kong"
 msgid "How"
 msgstr "How"
 
+#: src/components/ask-ideas.tsx
+msgid "How {name} sees it"
+msgstr "How {name} sees it"
+
 #: src/components/reminders.tsx
 msgid "How did {what} go?"
 msgstr "How did {what} go?"
@@ -1519,6 +1527,10 @@ msgstr "I have sent it"
 #: src/data/chat.ts
 msgid "I'm fine"
 msgstr "I'm fine"
+
+#: src/components/ask-ideas.tsx
+msgid "Ideas for {name}"
+msgstr "Ideas for {name}"
 
 #: src/components/onboarding/plan.tsx
 msgid "If {name} says yes today"
@@ -1937,6 +1949,10 @@ msgstr "Mom, Mẹ, 媽…"
 #: app/conversation.tsx
 msgid "More for {name}"
 msgstr "More for {name}"
+
+#: src/components/ask-ideas.tsx
+msgid "More ideas"
+msgstr "More ideas"
 
 #: app/ask.tsx
 msgid "More ways to ask"
@@ -2486,6 +2502,10 @@ msgstr "Privacy and help"
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
 msgstr "Privacy details and terms"
+
+#: src/components/ask-ideas.tsx
+msgid "Puts these words in your question, to send or change"
+msgstr "Puts these words in your question, to send or change"
 
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
@@ -3899,7 +3919,6 @@ msgid "Use my email instead"
 msgstr "Use my email instead"
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Use this"
 msgstr "Use this"
 
@@ -4019,12 +4038,10 @@ msgstr "Vela still writes to you on Telegram or LINE in a family where you are t
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/questions.tsx
-#: app/ask.tsx
 msgid "Vela suggests"
 msgstr "Vela suggests"
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr "Vela suggests · from her own words"
 

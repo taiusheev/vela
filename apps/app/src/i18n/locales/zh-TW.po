@@ -1314,6 +1314,10 @@ msgstr "從"
 msgid "From {fromName} · Saved for their morning"
 msgstr "來自{fromName}· 已為早晨儲存"
 
+#: src/components/ask-ideas.tsx
+msgid "From {name}'s own words"
+msgstr "來自{name}自己說的話"
+
 #: app/(tabs)/exchanges.tsx
 msgid "From a voice note"
 msgstr "來自語音訊息"
@@ -1476,6 +1480,10 @@ msgstr "香港"
 msgid "How"
 msgstr "做法"
 
+#: src/components/ask-ideas.tsx
+msgid "How {name} sees it"
+msgstr "{name}會看到的樣子"
+
 #: src/components/reminders.tsx
 msgid "How did {what} go?"
 msgstr "{what}還順利嗎？"
@@ -1520,6 +1528,10 @@ msgstr "我已經傳了"
 #: src/data/chat.ts
 msgid "I'm fine"
 msgstr "我很好"
+
+#: src/components/ask-ideas.tsx
+msgid "Ideas for {name}"
+msgstr "可以問{name}的話"
 
 #: src/components/onboarding/plan.tsx
 msgid "If {name} says yes today"
@@ -1938,6 +1950,10 @@ msgstr "媽、阿母、Mom…"
 #: app/conversation.tsx
 msgid "More for {name}"
 msgstr "{name}的更多選項"
+
+#: src/components/ask-ideas.tsx
+msgid "More ideas"
+msgstr "更多點子"
 
 #: app/ask.tsx
 msgid "More ways to ask"
@@ -2487,6 +2503,10 @@ msgstr "隱私與協助"
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
 msgstr "隱私詳情與條款"
+
+#: src/components/ask-ideas.tsx
+msgid "Puts these words in your question, to send or change"
+msgstr "把這句話放進你的問題，可以直接送出或修改"
 
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
@@ -3900,7 +3920,6 @@ msgid "Use my email instead"
 msgstr "改用我的電子郵件"
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Use this"
 msgstr "用這個"
 
@@ -4020,12 +4039,10 @@ msgstr "在您是唯一發起人、或有自己一盞燈的家庭裡，Vela 仍�
 
 #: app/(tabs)/index.tsx
 #: app/(tabs)/questions.tsx
-#: app/ask.tsx
 msgid "Vela suggests"
 msgstr "Vela 的建議"
 
 #: app/(tabs)/index.tsx
-#: app/ask.tsx
 msgid "Vela suggests · from her own words"
 msgstr "Vela 的建議 · 取自這位家人說過的話"
 
