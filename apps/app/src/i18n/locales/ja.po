@@ -448,6 +448,10 @@ msgid "A light comes on when they answer their morning."
 msgstr ""
 
 #: app/sign-in.tsx
+msgid "A little closer to your family. Choose how to continue."
+msgstr ""
+
+#: app/sign-in.tsx
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr ""
 
@@ -1053,6 +1057,14 @@ msgstr ""
 
 #: app/exchange/[id].tsx
 msgid "Continue in chat"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Continue with Apple"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Continue with Google"
 msgstr ""
 
 #: app/ask.tsx
@@ -2315,6 +2327,14 @@ msgstr ""
 msgid "Open your own Vela chat and confirm it’s you. Your family and messages stay together."
 msgstr ""
 
+#: app/sign-in.tsx
+msgid "Opening Apple…"
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Opening Google…"
+msgstr ""
+
 #: src/components/parent-photo-settings.tsx
 msgid "Opening photos…"
 msgstr ""
@@ -3037,6 +3057,10 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Sign-in could not be configured. Contact Vela for help."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Sign-in could not finish. Try again or use an email code."
 msgstr ""
 
 #: app/sign-in.tsx
@@ -4464,6 +4488,10 @@ msgstr ""
 
 #: app/delete-account.tsx
 msgid "Your account is deleted."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Your account needs another verification step. Use an email code or contact Vela for help."
 msgstr ""
 
 #: src/device/VoiceAnswer.tsx

@@ -454,6 +454,10 @@ msgid "A light comes on when they answer their morning."
 msgstr "A light comes on when they answer their morning."
 
 #: app/sign-in.tsx
+msgid "A little closer to your family. Choose how to continue."
+msgstr "A little closer to your family. Choose how to continue."
+
+#: app/sign-in.tsx
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr "A little closer to your family. Use your email to get started or sign in."
 
@@ -1060,6 +1064,14 @@ msgstr "Continue"
 #: app/exchange/[id].tsx
 msgid "Continue in chat"
 msgstr "Continue in chat"
+
+#: app/sign-in.tsx
+msgid "Continue with Apple"
+msgstr "Continue with Apple"
+
+#: app/sign-in.tsx
+msgid "Continue with Google"
+msgstr "Continue with Google"
 
 #: app/ask.tsx
 msgid "Continue your saved ask to {savedName}"
@@ -2321,6 +2333,14 @@ msgstr "Open Today to see it."
 msgid "Open your own Vela chat and confirm it’s you. Your family and messages stay together."
 msgstr "Open your own Vela chat and confirm it’s you. Your family and messages stay together."
 
+#: app/sign-in.tsx
+msgid "Opening Apple…"
+msgstr "Opening Apple…"
+
+#: app/sign-in.tsx
+msgid "Opening Google…"
+msgstr "Opening Google…"
+
 #: src/components/parent-photo-settings.tsx
 msgid "Opening photos…"
 msgstr "Opening photos…"
@@ -3044,6 +3064,10 @@ msgstr "Sign-in code"
 #: app/sign-in.tsx
 msgid "Sign-in could not be configured. Contact Vela for help."
 msgstr "Sign-in could not be configured. Contact Vela for help."
+
+#: app/sign-in.tsx
+msgid "Sign-in could not finish. Try again or use an email code."
+msgstr "Sign-in could not finish. Try again or use an email code."
 
 #: app/sign-in.tsx
 msgid "Sign-in is unavailable in this build"
@@ -4471,6 +4495,10 @@ msgstr "Your account could not be reached. Your privacy choice has not changed."
 #: app/delete-account.tsx
 msgid "Your account is deleted."
 msgstr "Your account is deleted."
+
+#: app/sign-in.tsx
+msgid "Your account needs another verification step. Use an email code or contact Vela for help."
+msgstr "Your account needs another verification step. Use an email code or contact Vela for help."
 
 #: src/device/VoiceAnswer.tsx
 msgid "Your answer, {time} long."
