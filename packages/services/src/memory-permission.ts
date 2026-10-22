@@ -24,7 +24,7 @@ import { sha256Hex } from "./hash.ts";
 import { lockMemoryOwner } from "./memory-keeps.ts";
 import type { Queryable } from "./repo.ts";
 
-type PermissionDeps = Pick<Deps, "db" | "clock" | "config">;
+type PermissionDeps = Pick<Deps, "db" | "clock"> & { config: Pick<Deps["config"], "richMemories"> };
 const uuid = z.uuid();
 const LIFETIME_MS = 5 * 60_000;
 const absent = () => new VelaError("not_found", "Memory permission not found");

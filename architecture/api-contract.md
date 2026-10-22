@@ -666,10 +666,10 @@ its production preview stays blank, and real-purpose acceptance is still not con
 
 ## Author memory routes (22 October 2026, built but unconfigured)
 
-These routes register ONLY when a trusted server caller supplies `ApiRuntime.memories`.
-`apiRuntimeFor` supplies no such group in development, staging or production (pinned in
-`api-runtime.test.ts`). They need the approved `privacy-notice.v7` and a separate activation
-change before any family can use them. All rules of the sharing boundary above apply: verified
+These routes register ONLY when `RICH_MEMORIES` is "on": development and staging (test families
+only, founder's request of 22 October 2026), never production, where `wrangler-config.test.ts` pins
+it off until `privacy-notice.v7` (wording approved 22 October) is the live notice and families are
+told. The sharing group stays absent everywhere. All rules of the sharing boundary above apply: verified
 session, `no-store`, idempotent writes, IDs/booleans only in receipts, 404 rather than 403.
 
 | Method | Path under /v1 | Input / response |
