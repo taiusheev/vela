@@ -26,6 +26,8 @@ import {
 import {
   channelLinks,
   consents,
+  type Exchange,
+  exchanges,
   type Family,
   families,
   type Invite,
@@ -35,7 +37,7 @@ import {
   outbound,
   type VelaTransaction,
 } from "@vela/db";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf, replyOf } from "./gateway.ts";
@@ -91,6 +93,38 @@ export const WEEKLY_HEALTH_TEXT_VERSIONS: readonly string[] = [
  * two jobs sent back to back, and the question must follow `consent.accepted` (flows §3.2).
  */
 export const HEALTH_WORDS_QUESTION_DELAY_SECONDS = 10;
+
+/**
+ * How long her child's first words wait after her yes, so they come after Vela's thanks (and after
+ * an old request's health-words question): Cloudflare Queues promise no order between two jobs.
+ */
+export const FIRST_WORDS_DELAY_SECONDS = 5;
+export const FIRST_WORDS_AFTER_HEALTH_QUESTION_DELAY_SECONDS = 20;
+
+/**
+ * The first question her family wrote while she was invited (spec A2), waiting for her yes: words
+ * only, for "whenever", the oldest first. Locked, so one yes sends it once.
+ */
+async function firstWaitingAsk(tx: VelaTransaction, member: Member): Promise<Exchange | null> {
+  const [first] = await tx
+    .select()
+    .from(exchanges)
+    .where(
+      and(
+        eq(exchanges.recipientId, member.id),
+        eq(exchanges.familyId, member.familyId),
+        eq(exchanges.state, "composed"),
+        eq(exchanges.whenRule, "whenever"),
+        isNull(exchanges.scheduledFor),
+        eq(exchanges.type, "question"),
+        isNull(exchanges.voiceHelloId),
+      ),
+    )
+    .orderBy(asc(exchanges.createdAt), asc(exchanges.id))
+    .limit(1)
+    .for("update");
+  return first !== undefined && first.mediaIds.length === 0 ? first : null;
+}
 
 /** The pilot's organisers are reached on Telegram (flows §3.2). */
 /** Organisers are reached on their own messenger (05-line-flows §5.11). */
@@ -559,7 +593,21 @@ async function acceptConsent(
   const time = morningTimeOn(member, addDays(today, 1));
   const conversationId = event.conversation.externalId;
   const updateInPlace = event.channel === "telegram" && event.messageId !== undefined;
-  const confirmation = t(lang, "consent.accepted", { time });
+  // Her child's first words reach her now, not tomorrow morning (founder's request of 22 Oct
+  // 2026), so the chat is not empty until then: the oldest question written while she was
+  // invited becomes a message from them, as "Send now" in the app sends one. Her own phone on the
+  // parent surface keeps it for her first morning, as it has no live conversation yet.
+  const first =
+    isMessenger(event.channel) && member.primarySurface !== "parent-surface"
+      ? await firstWaitingAsk(tx, member)
+      : null;
+  const firstAsker =
+    first === null || first.askerId === null ? null : await memberById(tx, first.askerId);
+  const firstWords = first !== null && firstAsker !== null;
+  const confirmation = t(lang, firstWords ? "consent.accepted_first" : "consent.accepted", {
+    time,
+    organiser: params.organiser,
+  });
   const answered = answeredText(lang, key, params, choiceLabel(answer));
   await enqueueOutbound(deps, tx, {
     kind: "consent",
@@ -599,7 +647,38 @@ async function acceptConsent(
       ref: { purpose: "consent", memberId: member.id },
       delaySeconds: HEALTH_WORDS_QUESTION_DELAY_SECONDS,
     });
-  await tellOrganisers(deps, tx, member, "organiser.consent_given", `given:${member.id}`, time);
+  if (first !== null && firstAsker !== null) {
+    await tx
+      .update(exchanges)
+      .set({ state: "scheduled", whenRule: "now" })
+      .where(eq(exchanges.id, first.id));
+    await enqueueOutbound(deps, tx, {
+      kind: "conversation",
+      idempotencyKey: outboundKey("conversation", { exchangeId: first.id }),
+      memberId: member.id,
+      actorId: firstAsker.id,
+      channel: event.channel,
+      conversationId,
+      exchangeId: first.id,
+      lang,
+      // A message from her child reads as one: their words, signed with their name.
+      text: `${first.text}\n${t(lang, "arrival.signed", { asker: firstAsker.displayName })}`,
+      ref: { purpose: "arrival", exchangeId: first.id },
+      effect: { exchangeId: first.id },
+      delaySeconds:
+        answer.combined === null
+          ? FIRST_WORDS_AFTER_HEALTH_QUESTION_DELAY_SECONDS
+          : FIRST_WORDS_DELAY_SECONDS,
+    });
+  }
+  await tellOrganisers(
+    deps,
+    tx,
+    member,
+    firstWords ? "organiser.consent_given_first" : "organiser.consent_given",
+    `given:${member.id}`,
+    time,
+  );
   await recordEvent(
     tx,
     {
@@ -678,7 +757,7 @@ async function tellOrganisers(
   deps: Deps,
   tx: VelaTransaction,
   member: Member,
-  key: "organiser.consent_given" | "organiser.consent_declined",
+  key: "organiser.consent_given" | "organiser.consent_given_first" | "organiser.consent_declined",
   suffix: string,
   time?: string,
 ): Promise<void> {
@@ -697,7 +776,7 @@ async function tellOrganisers(
       conversationId: organiser.link.externalId,
       lang,
       text:
-        key === "organiser.consent_given"
+        key === "organiser.consent_given" || key === "organiser.consent_given_first"
           ? t(lang, key, { name, time: time ?? member.arrivalTime })
           : t(lang, key, { name }),
     });

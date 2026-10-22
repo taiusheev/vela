@@ -158,9 +158,14 @@ export const en = {
   "consent.light_only": "Yes, health private",
   "consent.yes": "Yes, that's fine",
   "consent.no": "No, thank you",
-  "consent.accepted": "Thank you. Your first morning arrives tomorrow at {time}.",
+  "consent.accepted":
+    "Thank you. {organiser} will be so glad. Your first morning message arrives tomorrow at {time}.",
+  "consent.accepted_first":
+    "Thank you. {organiser} will be so glad. {organiser} has a first message for you, coming now. After that, a message arrives every morning at {time}, starting tomorrow.",
   "consent.declined": "That's fine. Nothing will arrive.",
   "organiser.consent_given": "{name} said yes. The first morning arrives tomorrow at {time}.",
+  "organiser.consent_given_first":
+    "{name} said yes, and your first message is on its way to {name} now. The mornings start tomorrow at {time}.",
   "organiser.consent_declined": "{name} said no for now. Nothing will be sent.",
   "invite.for_her":
     "Hello {name}, it is {organiser}. I would like to keep a light on for you: one small question from the family each morning. Open this to hear about it, and say yes if you would like it: {link} You can say stop at any time.",
