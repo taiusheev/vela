@@ -611,3 +611,55 @@ Opening the private Telegram start URL issues a private code with explicit appro
 `GET /v1/families/:familyId/members/:memberId/connection` is organiser-only for that exact live family. It returns only `{ state: waiting | opened | connected | paused | declined | unavailable }`. An invited member with a bound channel has opened an invite, not consented. A decline can be reported from the family's existing content-free `consent_declined` event after the declined profile is deleted. Status is neither a message-delivery receipt nor evidence of an answer. The existing parent-link POST still reuses a valid invitation, renews it after expiry, or returns the connected parent's chat shortcut; it never creates a duplicate parent.
 
 New app clients require migration `0019_telegram_confirmation` and the new server routes before distribution. The Telegram-first private trial and separate parent/health-word permission gates remain enabled.
+
+## Named-memory sharing HTTP boundary (22 October 2026, built but unconfigured)
+
+These routes register ONLY when a trusted server caller explicitly supplies `ApiRuntime.memorySharing`.
+`apiRuntimeFor` supplies no such group in development, staging or production, even with legacy
+`MEMORY=on`; tests pin that absence. No env option activates this group. The live capabilities
+response remains unchanged. Revised notices, fresh purpose/keep consent, translation/safety review
+and a separate reviewed runtime-wiring change are required before real-family use.
+
+| Method | Path under /v1 | Input / response |
+|---|---|---|
+| GET | /families/:familyId/memories/:memoryId/sharing | Author-only `MemorySharingView`, complete audience or404 |
+| POST | /families/:familyId/memories/:memoryId/sharing/presentations | Strict `{recipient_ids}` → `{id}` only |
+| GET | /families/:familyId/memory-sharing-presentations/:presentationId | Author-only ephemeral `MemorySharePreview` |
+| POST | /families/:familyId/memory-sharing/confirm | Strict `MemoryShareChoice` → `{shared:true,id}` |
+| POST | /families/:familyId/memories/:memoryId/sharing/stop | Strict `{}` → `{stopped:true}` |
+| GET | /families/:familyId/shared-memories?cursor=UUID | Explicit recipient's `SharedKeptMemoryPage` (at most50 items) |
+
+All configured routes require a verified bearer session and answer `Cache-Control: no-store`,
+including failures. Writes additionally require active-session verification, a bounded JSON body
+with no content encoding, `Idempotency-Key`, and the existing `runApiMutation` domain services.
+Success carries `Idempotency-Replayed: true|false`; receipts contain IDs/booleans only, never quotes
+or names. Loading a preview is a separate authenticated GET, not receipt replay or a cached quote.
+Every prepare/confirm still loads fresh locked server-owned state and single-use evidence.
+
+Malformed bodies, duplicate recipients (including case variants), malformed UUIDs and ambiguous
+cursors return400; unsupported content types/encoding415; oversized JSON413; missing/invalid session
+or inactive write session401. Unknown/unauthorized family, author, memory or presentation returns404.
+An ownership403 is deliberately NOT emitted: another member cannot distinguish a hidden resource
+from a missing one. Stale/consumed/tampered confirmation or idempotency conflicts return409; existing
+receipt limits429; unavailable verification503. Unexpected results/errors return generic500 and
+log only a safe error label. UUID inputs are canonicalized to lowercase before domain comparisons.
+
+New prepare/confirm require `richMemories===true`, independently rechecked by the domain services.
+Once runtime wiring is eventually approved, keep that group configured for reading/stop if new
+processing is turned off. There is no payment gate on those privacy actions. Authenticated stop is
+also exempt from closed-trial admission, like existing removal: its domain author/membership/source
+checks still apply. No other read or action gains that exemption. Without write-session wiring,
+write routes remain absent, while configured reads can remain available.
+
+Recipient pages never contain original answer IDs or conversation-access hints. They authorize
+the current named account/member generation and sharing revision before pagination. Author views
+fail closed on incomplete/ambiguous audiences. Neither an author-view revision nor a preview hash
+is authority to share without fresh server checks. A client must reload after every write/replay;
+an old stop receipt acknowledges its original action, not necessarily the current audience. Do not
+claim success from a failed reload. A prepared ID whose separate preview read is unavailable must
+lead back to refreshed review, not an endless retry of expired evidence.
+
+HTTP tests inject synthetic domain ports to prove request/response/authentication boundaries;
+separate service tests and real PostgreSQL races prove data authorization/transactions. This is not
+a live app/HTTP/database journey or provider/native proof. The app's sharing port remains synthetic,
+its production preview stays blank, and real-purpose acceptance is still not connected.
