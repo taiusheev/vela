@@ -64,6 +64,14 @@ import { type TickMember, tickMember } from "./tick.ts";
 export const CONSENT_TEXT_VERSION = "consent.request@2";
 
 /**
+ * The single consent message (founder's request of 22 Oct 2026): her light and her health words
+ * asked in one message, as two choices with three buttons, so one tap answers both. A yes to both
+ * records a `light` and a `health_words` consent from the same message and evidence. Requests sent
+ * before it (`@2`, with the health-words question after the yes) keep working as they were.
+ */
+export const COMBINED_CONSENT_TEXT_VERSION = "consent.request@3";
+
+/**
  * The health-words question she answers after her yes (L1), versioned the same way. `@2` (ADR-47)
  * adds that the Sunday read may say which of her health words came up more than once.
  */
@@ -73,7 +81,10 @@ export const HEALTH_WORDS_TEXT_VERSION = "consent.health_words@2";
  * The versions of the health-words question whose yes covers her health words in the weekly read
  * (ADR-47). A yes to `@1` covers the same-day flag only, so it never puts them in a read.
  */
-export const WEEKLY_HEALTH_TEXT_VERSIONS: readonly string[] = ["consent.health_words@2"];
+export const WEEKLY_HEALTH_TEXT_VERSIONS: readonly string[] = [
+  "consent.health_words@2",
+  COMBINED_CONSENT_TEXT_VERSION,
+];
 
 /**
  * How long the health-words question waits after her yes. Cloudflare Queues promise no order between
@@ -86,6 +97,18 @@ export const HEALTH_WORDS_QUESTION_DELAY_SECONDS = 10;
 const ORGANISER_CHANNEL = MESSENGER;
 
 export type ConsentButtonAction = Extract<ButtonAction, { type: "consent" }>;
+export type CombinedConsentButtonAction = Extract<ButtonAction, { type: "consent_both" }>;
+
+/**
+ * Her answer to a consent request, whichever message carried it: the old request (`combined`
+ * null; her health words are asked after her yes) or the single message (`combined` says whether
+ * her health words may be passed on, for a yes).
+ */
+interface ConsentAnswer {
+  memberId: string;
+  accept: boolean;
+  combined: { health: boolean } | null;
+}
 export type HealthWordsButtonAction = Extract<ButtonAction, { type: "health_words" }>;
 
 type InviteRefusal = "unknown" | "expired" | "used";
@@ -214,14 +237,41 @@ export async function consentRequestMessage(
   family: Family,
 ): Promise<{ text: string; buttons: Button[][] }> {
   const lang = member.language;
+  // One button a row, so each choice reads whole on a small phone and in LINE's quick replies.
+  const choice = (
+    value: CombinedConsentButtonAction["choice"],
+    label: "consent.both" | "consent.light_only" | "consent.no",
+  ): Button[] => [
+    {
+      id: encodeButton({ type: "consent_both", memberId: member.id, choice: value }),
+      label: t(lang, label),
+    },
+  ];
   return {
-    text: t(lang, "consent.request", await requestParams(deps, db, member, family)),
-    buttons: yesNoButtons(
-      lang,
-      { type: "consent", memberId: member.id, accept: true },
-      { type: "consent", memberId: member.id, accept: false },
-    ),
+    text: t(lang, "consent.request_both", await requestParams(deps, db, member, family)),
+    buttons: [
+      choice("both", "consent.both"),
+      choice("light", "consent.light_only"),
+      choice("no", "consent.no"),
+    ],
   };
+}
+
+/** The message key and text version a consent answer was given under. */
+function requestKeyOf(answer: Pick<ConsentAnswer, "combined">): {
+  key: "consent.request" | "consent.request_both";
+  version: string;
+} {
+  return answer.combined === null
+    ? { key: "consent.request", version: CONSENT_TEXT_VERSION }
+    : { key: "consent.request_both", version: COMBINED_CONSENT_TEXT_VERSION };
+}
+
+/** The label of the button she tapped, added below the answered message. */
+function choiceLabel(answer: ConsentAnswer): MessageKey {
+  if (answer.combined === null) return answer.accept ? "consent.yes" : "consent.no";
+  if (!answer.accept) return "consent.no";
+  return answer.combined.health ? "consent.both" : "consent.light_only";
 }
 
 type LinkOutcome = "linked" | "unusable" | "linked_elsewhere";
@@ -359,9 +409,9 @@ function answeredText(
   lang: Lang,
   key: MessageKey,
   params: Record<string, string>,
-  accept: boolean,
+  choice: MessageKey,
 ): string {
-  return `${t(lang, key, params)}\n\n${t(lang, accept ? "consent.yes" : "consent.no")}`;
+  return `${t(lang, key, params)}\n\n${t(lang, choice)}`;
 }
 
 /**
@@ -422,9 +472,11 @@ async function acceptConsent(
   deps: Deps,
   tx: VelaTransaction,
   event: InboundEvent,
-  memberId: string,
+  answer: ConsentAnswer,
   now: Date,
 ): Promise<{ text: string; collapsedTextLength: number } | null> {
+  const memberId = answer.memberId;
+  const { key, version } = requestKeyOf(answer);
   const [member] = await tx.select().from(members).where(eq(members.id, memberId)).for("update");
   if (member === undefined || member.lightConsentedAt !== null) {
     return null;
@@ -455,23 +507,50 @@ async function acceptConsent(
   const lang = member.language;
   const params = await requestParams(deps, tx, member, family);
   const today = localDateOf(now, member.tz);
+  const evidence = await tapEvidence(tx, event, member, lang, key, params);
   await tx.insert(consents).values({
     memberId: member.id,
     subjectRef: subjectRef({ memberId: member.id }),
     kind: "light",
     answer: "yes",
-    textVersion: CONSENT_TEXT_VERSION,
+    textVersion: version,
     lang,
     channel: event.channel,
     givenAt: now,
-    evidence: await tapEvidence(tx, event, member, lang, "consent.request", params),
+    evidence,
   });
+  if (answer.combined !== null) {
+    // Her second choice in the same message, from the same tap and the same proof: a yes passes
+    // her health words on, a "keep them private" is recorded as the no it is.
+    await tx.insert(consents).values({
+      memberId: member.id,
+      subjectRef: subjectRef({ memberId: member.id }),
+      kind: "health_words",
+      answer: answer.combined.health ? "yes" : "no",
+      textVersion: version,
+      lang,
+      channel: event.channel,
+      givenAt: now,
+      evidence,
+    });
+    await recordEvent(
+      tx,
+      {
+        name: answer.combined.health ? "consent_given" : "consent_declined",
+        familyId: family.id,
+        memberId: member.id,
+        surface: event.channel,
+        props: { kind: "health_words", text_version: version },
+      },
+      now,
+    );
+  }
   await tx
     .update(members)
     .set({
       lightOn: true,
       lightConsentedAt: now,
-      lightConsentText: CONSENT_TEXT_VERSION,
+      lightConsentText: version,
       status: "active",
       lightStartsOn: addDays(today, 1),
       learningUntil: learningUntil(today),
@@ -481,7 +560,7 @@ async function acceptConsent(
   const conversationId = event.conversation.externalId;
   const updateInPlace = event.channel === "telegram" && event.messageId !== undefined;
   const confirmation = t(lang, "consent.accepted", { time });
-  const answered = answeredText(lang, "consent.request", params, true);
+  const answered = answeredText(lang, key, params, choiceLabel(answer));
   await enqueueOutbound(deps, tx, {
     kind: "consent",
     idempotencyKey: outboundKey("consent", { conversationId, suffix: `accepted:${member.id}` }),
@@ -494,30 +573,32 @@ async function acceptConsent(
     ...(updateInPlace
       ? {
           consentUpdateMessageId: event.messageId,
-          consentTextLength: t(lang, "consent.request", params).length,
+          consentTextLength: t(lang, key, params).length,
         }
       : {}),
   });
+  // The old request asks about her health words after her yes; the single message already has.
   // Keyed by the member alone, so she is asked once, whatever happens to her light later.
-  await enqueueOutbound(deps, tx, {
-    kind: "consent",
-    idempotencyKey: outboundKey("consent", {
+  if (answer.combined === null)
+    await enqueueOutbound(deps, tx, {
+      kind: "consent",
+      idempotencyKey: outboundKey("consent", {
+        conversationId,
+        suffix: `health_words:${member.id}`,
+      }),
+      memberId: member.id,
+      channel: event.channel,
       conversationId,
-      suffix: `health_words:${member.id}`,
-    }),
-    memberId: member.id,
-    channel: event.channel,
-    conversationId,
-    lang,
-    text: t(lang, "consent.health_words", { organiser: params.organiser }),
-    buttons: yesNoButtons(
       lang,
-      { type: "health_words", memberId: member.id, accept: true },
-      { type: "health_words", memberId: member.id, accept: false },
-    ),
-    ref: { purpose: "consent", memberId: member.id },
-    delaySeconds: HEALTH_WORDS_QUESTION_DELAY_SECONDS,
-  });
+      text: t(lang, "consent.health_words", { organiser: params.organiser }),
+      buttons: yesNoButtons(
+        lang,
+        { type: "health_words", memberId: member.id, accept: true },
+        { type: "health_words", memberId: member.id, accept: false },
+      ),
+      ref: { purpose: "consent", memberId: member.id },
+      delaySeconds: HEALTH_WORDS_QUESTION_DELAY_SECONDS,
+    });
   await tellOrganisers(deps, tx, member, "organiser.consent_given", `given:${member.id}`, time);
   await recordEvent(
     tx,
@@ -526,13 +607,13 @@ async function acceptConsent(
       familyId: family.id,
       memberId: member.id,
       surface: event.channel,
-      props: { kind: "light", text_version: CONSENT_TEXT_VERSION },
+      props: { kind: "light", text_version: version },
     },
     now,
   );
   return {
     text: updateInPlace ? `${answered}\n\n${confirmation}` : answered,
-    collapsedTextLength: t(lang, "consent.request", params).length,
+    collapsedTextLength: t(lang, key, params).length,
   };
 }
 
@@ -549,9 +630,11 @@ async function declineConsent(
   deps: Deps,
   tx: VelaTransaction,
   event: InboundEvent,
-  memberId: string,
+  answer: ConsentAnswer,
   now: Date,
 ): Promise<{ lang: Lang; answered: string } | null> {
+  const memberId = answer.memberId;
+  const { key, version } = requestKeyOf(answer);
   const [member] = await tx.select().from(members).where(eq(members.id, memberId)).for("update");
   if (member === undefined || member.lightConsentedAt !== null || member.status !== "invited") {
     return null;
@@ -567,11 +650,11 @@ async function declineConsent(
     subjectRef: subjectRef({ memberId: member.id }),
     kind: "light",
     answer: "no",
-    textVersion: CONSENT_TEXT_VERSION,
+    textVersion: version,
     lang,
     channel: event.channel,
     givenAt: now,
-    evidence: await tapEvidence(tx, event, member, lang, "consent.request", params),
+    evidence: await tapEvidence(tx, event, member, lang, key, params),
   });
   await tellOrganisers(deps, tx, member, "organiser.consent_declined", `declined:${member.id}`);
   await recordEvent(
@@ -581,13 +664,13 @@ async function declineConsent(
       familyId: member.familyId,
       memberId: member.id,
       surface: event.channel,
-      props: { kind: "light", text_version: CONSENT_TEXT_VERSION, member_deleted: true },
+      props: { kind: "light", text_version: version, member_deleted: true },
     },
     now,
   );
   await forgetMembersWithTheirContacts(tx, [member.id], now);
   await tx.delete(members).where(eq(members.id, member.id));
-  return { lang, answered: answeredText(lang, "consent.request", params, false) };
+  return { lang, answered: answeredText(lang, key, params, choiceLabel(answer)) };
 }
 
 /** One message per active organiser with a Telegram link, in their own language. */
@@ -636,6 +719,39 @@ export async function handleConsentButton(
   action: ConsentButtonAction,
   tick: TickMember = tickMember,
 ): Promise<void> {
+  await answerConsent(
+    deps,
+    event,
+    { memberId: action.memberId, accept: action.accept, combined: null },
+    tick,
+  );
+}
+
+/** Her one tap on the single consent message: both, her light alone, or neither. */
+export async function handleCombinedConsentButton(
+  deps: Deps,
+  event: InboundEvent,
+  action: CombinedConsentButtonAction,
+  tick: TickMember = tickMember,
+): Promise<void> {
+  await answerConsent(
+    deps,
+    event,
+    {
+      memberId: action.memberId,
+      accept: action.choice !== "no",
+      combined: { health: action.choice === "both" },
+    },
+    tick,
+  );
+}
+
+async function answerConsent(
+  deps: Deps,
+  event: InboundEvent,
+  action: ConsentAnswer,
+  tick: TickMember,
+): Promise<void> {
   const adapter = deps.channels.get(event.channel);
   await adapter.acknowledgeButton(event);
   const sender = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
@@ -654,9 +770,7 @@ export async function handleConsentButton(
   const now = deps.clock.now();
   const conversationId = event.conversation.externalId;
   if (action.accept) {
-    const answered = await deps.db.transaction((tx) =>
-      acceptConsent(deps, tx, event, action.memberId, now),
-    );
+    const answered = await deps.db.transaction((tx) => acceptConsent(deps, tx, event, action, now));
     if (
       event.messageId !== undefined &&
       (answered !== null || sender.member.lightConsentedAt !== null)
@@ -675,9 +789,7 @@ export async function handleConsentButton(
     deps.logger.info("consent_button", { familyId: sender.family.id, accept: true, changed });
     return;
   }
-  const declined = await deps.db.transaction((tx) =>
-    declineConsent(deps, tx, event, action.memberId, now),
-  );
+  const declined = await deps.db.transaction((tx) => declineConsent(deps, tx, event, action, now));
   if (event.messageId !== undefined) {
     await adapter.closeButtons(conversationId, event.messageId, declined?.answered);
   }
@@ -764,7 +876,12 @@ async function recordHealthWords(
   );
   return {
     recorded: true,
-    answered: answeredText(lang, "consent.health_words", params, action.accept),
+    answered: answeredText(
+      lang,
+      "consent.health_words",
+      params,
+      action.accept ? "consent.yes" : "consent.no",
+    ),
   };
 }
 

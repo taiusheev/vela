@@ -150,7 +150,7 @@ function AskComposer({
   });
   const optionWords = options.map((option) => option.text);
   const extras = askExtras(kind, photos.slots, optionWords);
-  // A photo ask names its morning (B1): Whenever is not offered, and moves to the next one there is.
+  // A photo ask names its morning (B1): "Next free morning" is not offered, and moves to the next one there is.
   // With none free in her two weeks there is no morning to move to, and the button says so below.
   useEffect(() => {
     if (photos.count === 0 || when !== "whenever") return;
@@ -249,7 +249,7 @@ function AskComposer({
   useEffect(() => {
     if (hello !== null && !demo && familyId !== undefined) void uploadHello(hello).catch(() => {});
   }, [hello, demo, familyId, uploadHello]);
-  // A recording names its morning, as a photo does: Whenever goes when one is made.
+  // A recording names its morning, as a photo does: "Next free morning" goes when one is made.
   useEffect(() => {
     if (hello !== null && when === "whenever") setWhen("tomorrow");
   }, [hello, when]);
@@ -384,7 +384,7 @@ function AskComposer({
       }}
     >
       <Words variant="caption" tone="ink2">
-        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning, ${tomorrow}` : when === "another_day" ? t`${day} morning` : t`Whenever`}`}
+        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning, ${tomorrow}` : when === "another_day" ? t`${day} morning` : t`Next free morning`}`}
       </Words>
       <PrimaryButton
         label={compose.isPending ? t`Sending…` : t`Send to ${name}`}
@@ -563,12 +563,22 @@ function AskComposer({
               )}
               {photos.count > 0 || hello !== null ? null : (
                 <Chip
-                  label={t`Whenever`}
+                  label={t`Next free morning`}
                   selected={when === "whenever"}
                   onPress={() => setWhen("whenever")}
                 />
               )}
             </View>
+            {/* What the chosen morning means, in one line, so no choice has to be guessed. */}
+            {noMorning ? null : (
+              <Words variant="caption" tone="ink2">
+                {when === "tomorrow"
+                  ? t`It reaches ${name} with tomorrow's morning message.`
+                  : when === "another_day"
+                    ? t`It reaches ${name} on ${day} morning, the first one nobody else has asked for.`
+                    : t`It waits its turn and reaches ${name} on the first morning nobody else has asked for.`}
+              </Words>
+            )}
             {noMorning ? (
               <Words variant="body" tone="ink2">
                 <Trans>

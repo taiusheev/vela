@@ -18,7 +18,12 @@ import {
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "./consent.ts";
+import {
+  handleCombinedConsentButton,
+  handleConsentButton,
+  handleHealthWordsButton,
+  handleInviteStart,
+} from "./consent.ts";
 import type { OutboundJob } from "./deps.ts";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
@@ -236,7 +241,7 @@ describe("handleInviteStart", () => {
     expect(expired.invite.id).not.toBe(used.invite.id);
   });
 
-  it("links her, spends the invite, and sends the request with Yes and No", async () => {
+  it("links her, spends the invite, and sends one request asking both questions with three choices", async () => {
     const seed = await seedInvited();
 
     await handleInviteStart(h.deps, startEvent(TOKEN));
@@ -256,15 +261,19 @@ describe("handleInviteStart", () => {
     await h.run(handlers());
     const [request] = h.telegram.sentTo(HER);
     expect(request?.message.text).toBe(
-      t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN }),
+      t("en", "consent.request_both", { organiser: "Mia", notice: NOTICE_EN }),
     );
     expect(request?.message.text).toContain("Timur Aiusheev");
     expect(request?.message.lang).toBe("en");
+    // One choice a row, each its own tap.
     expect(
-      request?.message.buttons?.flat().map((button) => [decodeButton(button.id), button.label]),
+      request?.message.buttons?.map((row) =>
+        row.map((button) => [decodeButton(button.id), button.label]),
+      ),
     ).toEqual([
-      [{ type: "consent", memberId: seed.her.id, accept: true }, "Yes, that's fine"],
-      [{ type: "consent", memberId: seed.her.id, accept: false }, "No, thank you"],
+      [[{ type: "consent_both", memberId: seed.her.id, choice: "both" }, "Yes to both"]],
+      [[{ type: "consent_both", memberId: seed.her.id, choice: "light" }, "Yes, health private"]],
+      [[{ type: "consent_both", memberId: seed.her.id, choice: "no" }, "No, thank you"]],
     ]);
     const [ref] = await h.db.select().from(messageRefs);
     expect(ref).toMatchObject({
@@ -286,13 +295,14 @@ describe("handleInviteStart", () => {
 
     const [request] = h.telegram.sentTo(HER);
     expect(request?.message.text).toBe(
-      t("zh-TW", "consent.request", {
+      t("zh-TW", "consent.request_both", {
         organiser: "Mia",
         notice: "https://vela.test/privacy/zh-TW",
       }),
     );
     expect(request?.message.buttons?.flat().map((button) => button.label)).toEqual([
-      "好，沒問題",
+      "兩個都好",
+      "好，健康的話不分享",
       "不用了，謝謝",
     ]);
   });
@@ -540,7 +550,8 @@ describe("the health-words question", () => {
 
     const toHer = h.telegram.sentTo(HER);
     expect(toHer.map((entry) => entry.message.text)).toEqual([
-      t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN }),
+      // What the invite sends now is the single message; this tap is on an older request's Yes.
+      t("en", "consent.request_both", { organiser: "Mia", notice: NOTICE_EN }),
       t("en", "consent.health_words", { organiser: "Mia" }),
     ]);
     const [request, question] = toHer;
@@ -884,7 +895,7 @@ describe("handleConsentButton: No", () => {
     expect(contact.id).toBeDefined();
     await h.run(handlers());
     expect(h.telegram.sentTo(HER).map((entry) => entry.message.text)).toEqual([
-      t("en", "consent.request", params),
+      t("en", "consent.request_both", params),
       "That's fine. Nothing will arrive.",
     ]);
     expect(h.telegram.sentTo(ORGANISER).map((entry) => entry.message.text)).toEqual([
@@ -923,7 +934,7 @@ describe("handleConsentButton: No", () => {
     expect((await eventNames()).filter((name) => name === "consent_declined")).toHaveLength(1);
     expect(await h.db.select().from(consents)).toHaveLength(1);
     expect(h.telegram.sentTo(HER).map((entry) => entry.message.text)).toEqual([
-      t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN }),
+      t("en", "consent.request_both", { organiser: "Mia", notice: NOTICE_EN }),
       "That's fine. Nothing will arrive.",
     ]);
     expect(h.telegram.sentTo(ORGANISER)).toHaveLength(1);
@@ -1014,5 +1025,120 @@ describe("handleConsentButton: who may answer", () => {
       [],
     );
     expect(h.telegram.closed).toHaveLength(0);
+  });
+});
+
+describe("the single consent message (consent.request@3)", () => {
+  function choiceTap(memberId: string, choice: "both" | "light" | "no", user = HER): InboundEvent {
+    sequence += 1;
+    return {
+      channel: "telegram",
+      eventId: `tg:${sequence}`,
+      at: h.clock.now().toISOString(),
+      kind: "button",
+      sender: { externalUserId: user },
+      conversation: { externalId: user, kind: "private" },
+      messageId: "1",
+      buttonData: encodeButton({ type: "consent_both", memberId, choice }),
+      callbackId: `cb${sequence}`,
+    };
+  }
+  async function tap(memberId: string, choice: "both" | "light" | "no", user = HER) {
+    await handleCombinedConsentButton(
+      h.deps,
+      choiceTap(memberId, choice, user),
+      { type: "consent_both", memberId, choice },
+      async () => {},
+    );
+  }
+  const params = { organiser: "Mia", notice: NOTICE_EN };
+
+  it("answers both questions with one tap on Yes to both, from the same message and proof", async () => {
+    const seed = await linked();
+    await tap(seed.her.id, "both");
+    await h.run(handlers());
+
+    const rows = await h.db
+      .select()
+      .from(consents)
+      .where(eq(consents.memberId, seed.her.id))
+      .orderBy(asc(consents.kind));
+    const evidence = {
+      chat_id: HER,
+      message_id: "1",
+      params,
+      text_sha256: await sha256Hex(t("en", "consent.request_both", params)),
+    };
+    expect(rows.map((row) => [row.kind, row.answer, row.textVersion])).toEqual([
+      ["health_words", "yes", "consent.request@3"],
+      ["light", "yes", "consent.request@3"],
+    ]);
+    for (const row of rows) expect(row.evidence).toEqual(evidence);
+    expect(await hasHealthWordsConsent(h.db, seed.her.id, h.clock.now())).toBe(true);
+    // No second question follows: the single message already asked it.
+    expect(h.telegram.sentTo(HER).map((entry) => entry.message.text)).toEqual([
+      t("en", "consent.request_both", params),
+    ]);
+    expect(h.telegram.closed.at(-1)?.replacementText).toBe(
+      `${t("en", "consent.request_both", params)}\n\nYes to both\n\n${t("en", "consent.accepted", { time: "08:00" })}`,
+    );
+    expect((await herRow(seed.her.id))?.status).toBe("active");
+  });
+
+  it("keeps her health words private with Yes, health private, and still turns her light on", async () => {
+    const seed = await linked();
+    await tap(seed.her.id, "light");
+    await h.run(handlers());
+
+    const rows = await h.db
+      .select()
+      .from(consents)
+      .where(eq(consents.memberId, seed.her.id))
+      .orderBy(asc(consents.kind));
+    expect(rows.map((row) => [row.kind, row.answer])).toEqual([
+      ["health_words", "no"],
+      ["light", "yes"],
+    ]);
+    expect(await hasHealthWordsConsent(h.db, seed.her.id, h.clock.now())).toBe(false);
+    expect((await herRow(seed.her.id))?.lightOn).toBe(true);
+    expect(h.telegram.closed.at(-1)?.replacementText).toContain(
+      `${t("en", "consent.request_both", params)}\n\nYes, health private`,
+    );
+  });
+
+  it("declines both with No, thank you, keeping only the forgotten proof of the single message", async () => {
+    const seed = await linked();
+    await tap(seed.her.id, "no");
+    await h.run(handlers());
+
+    expect(await herRow(seed.her.id)).toBeUndefined();
+    const [proof] = await h.db.select().from(consents).where(eq(consents.kind, "light"));
+    expect(proof).toMatchObject({ answer: "no", textVersion: "consent.request@3" });
+    expect(await h.db.select().from(consents).where(eq(consents.kind, "health_words"))).toEqual([]);
+    expect(h.telegram.closed.at(-1)?.replacementText).toBe(
+      `${t("en", "consent.request_both", params)}\n\nNo, thank you`,
+    );
+  });
+
+  it("records only her first choice when she taps twice or the tap is redelivered", async () => {
+    const seed = await linked();
+    await tap(seed.her.id, "both");
+    await tap(seed.her.id, "light");
+    await tap(seed.her.id, "both");
+    await h.run(handlers());
+
+    const rows = await h.db.select().from(consents).where(eq(consents.memberId, seed.her.id));
+    expect(rows.map((row) => [row.kind, row.answer]).sort()).toEqual([
+      ["health_words", "yes"],
+      ["light", "yes"],
+    ]);
+  });
+
+  it("ignores a choice tapped by someone else", async () => {
+    const seed = await linked();
+    await tap(seed.her.id, "both", ORGANISER);
+    expect(await h.db.select().from(consents).where(eq(consents.memberId, seed.her.id))).toEqual(
+      [],
+    );
   });
 });

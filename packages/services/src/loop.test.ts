@@ -217,7 +217,10 @@ describe("the pilot loop", () => {
     expect(newMessages()).toEqual([
       [
         HER,
-        t("en", "consent.request", { organiser: "Mia", notice: "https://vela.test/privacy/en" }),
+        t("en", "consent.request_both", {
+          organiser: "Mia",
+          notice: "https://vela.test/privacy/en",
+        }),
       ],
     ]);
 
@@ -229,17 +232,14 @@ describe("the pilot loop", () => {
       lightStartsOn: "2026-09-15",
       learningUntil: "2026-09-28",
     });
+    // One tap, "Yes to both": her light, and her health words may reach Mia. No second question.
     expect(newMessages()).toEqual([
       [ORGANISER, t("en", "organiser.consent_given", { name: "Mom", time: "08:00" })],
-      [HER, t("en", "consent.health_words", { organiser: "Mia" })],
     ]);
     expect(h.telegram.closed.at(-1)).toMatchObject({
       conversationId: HER,
       replacementText: expect.stringContaining(t("en", "consent.accepted", { time: "08:00" })),
     });
-    // She agrees that her health words may reach Mia: recorded, and nothing more is sent.
-    await inbound(tapLast(HER, 0));
-    expect(newMessages()).toEqual([]);
     expect(await hasHealthWordsConsent(h.db, her.id, h.clock.now())).toBe(true);
     // Her first wake is this evening's turn prompt: the light starts tomorrow.
     expect(await nextWake(her.id)).toEqual(at("2026-09-14", "19:00"));

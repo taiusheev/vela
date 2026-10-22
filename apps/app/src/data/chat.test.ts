@@ -162,7 +162,7 @@ describe("the chat with a parent", () => {
     const chat = toChat([sending, hello, dad], MOM, { id: MIA });
     expect(chat.map((message) => [message.side, message.status])).toEqual([
       ["vela", undefined],
-      ["me", "sending"],
+      ["me", "sent"],
     ]);
   });
 
