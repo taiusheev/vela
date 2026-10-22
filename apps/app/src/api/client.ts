@@ -42,8 +42,20 @@ import type {
   ComposeAsk,
   ComposeReply,
   CreateFamily,
+  KeptMemoryPage,
+  MemoryCandidatePage,
+  MemoryKept,
+  MemoryPermissionAnswered,
+  MemoryPermissionPrepared,
+  MemoryPermissionPreview,
+  MemoryPermissionState,
   RegisterPushDevice,
   SetAway,
+} from "@vela/contracts";
+import {
+  MEMORY_KEEP_EXPLANATION_SHA256,
+  MEMORY_KEEP_VERSION,
+  MEMORY_PERMISSION_VERSION,
 } from "@vela/contracts";
 
 import { sessionRequests } from "./request-session.ts";
@@ -684,4 +696,126 @@ export function fetchParentConnection(
   signal?: AbortSignal,
 ): Promise<ApiParentConnection> {
   return call({ path: `/v1/families/${familyId}/members/${memberId}/connection`, token, signal });
+}
+
+/**
+ * The signed-in person's own memories (privacy-notice v7, consent.rich_memories@2). The server
+ * offers these routes only where Memories is switched on; elsewhere every one answers 404.
+ */
+export function fetchMemoryPermission(
+  familyId: string,
+  token: string | null,
+): Promise<MemoryPermissionState> {
+  return read<MemoryPermissionState>(`/v1/families/${familyId}/memory-permission`, token);
+}
+
+/** Asks the server for a fresh five-minute copy of the question, then reads its exact words. */
+export async function openMemoryPermission(
+  familyId: string,
+  key: string,
+  token: string | null,
+): Promise<MemoryPermissionPreview> {
+  const prepared = await call<MemoryPermissionPrepared>({
+    path: `/v1/families/${familyId}/memory-permission/presentations`,
+    token,
+    key,
+    body: { lang: "en" },
+  });
+  return read<MemoryPermissionPreview>(
+    `/v1/families/${familyId}/memory-permission-presentations/${prepared.id}`,
+    token,
+  );
+}
+
+/** Their own yes or no to the words they were shown, echoing that copy's fingerprint. */
+export function answerMemoryPermission(
+  familyId: string,
+  shown: MemoryPermissionPreview,
+  answer: "yes" | "no",
+  key: string,
+  token: string | null,
+): Promise<MemoryPermissionAnswered> {
+  return call<MemoryPermissionAnswered>({
+    path: `/v1/families/${familyId}/memory-permission/answer`,
+    token,
+    key,
+    body: {
+      presentation_id: shown.presentation_id,
+      answer,
+      text_version: MEMORY_PERMISSION_VERSION,
+      text_sha256: shown.text_sha256,
+    },
+  });
+}
+
+/** "Turn off and clear": stops suggestions and deletes their suggestions and kept memories. */
+export function withdrawMemories(
+  familyId: string,
+  key: string,
+  token: string | null,
+): Promise<{ withdrawn: true }> {
+  return call({
+    path: `/v1/families/${familyId}/memory-permission/withdraw`,
+    token,
+    key,
+    body: {},
+  });
+}
+
+export function fetchMemorySuggestions(
+  familyId: string,
+  token: string | null,
+): Promise<MemoryCandidatePage> {
+  return read<MemoryCandidatePage>(`/v1/families/${familyId}/memory-suggestions`, token);
+}
+
+export function dismissMemorySuggestion(
+  familyId: string,
+  candidateId: string,
+  key: string,
+  token: string | null,
+): Promise<{ dismissed: true }> {
+  return call({
+    path: `/v1/families/${familyId}/memory-suggestions/${candidateId}/dismiss`,
+    token,
+    key,
+    body: {},
+  });
+}
+
+/** Keeps one suggestion's exact words privately, after the person read the keep explanation. */
+export function keepMemory(
+  familyId: string,
+  candidateId: string,
+  key: string,
+  token: string | null,
+): Promise<MemoryKept> {
+  return call<MemoryKept>({
+    path: `/v1/families/${familyId}/memories/keep`,
+    token,
+    key,
+    body: {
+      candidate_id: candidateId,
+      confirmation_version: MEMORY_KEEP_VERSION,
+      confirmation_sha256: MEMORY_KEEP_EXPLANATION_SHA256,
+    },
+  });
+}
+
+export function fetchKeptMemories(familyId: string, token: string | null): Promise<KeptMemoryPage> {
+  return read<KeptMemoryPage>(`/v1/families/${familyId}/memories`, token);
+}
+
+export function removeKeptMemory(
+  familyId: string,
+  memoryId: string,
+  key: string,
+  token: string | null,
+): Promise<{ removed: true }> {
+  return call({
+    path: `/v1/families/${familyId}/memories/${memoryId}/remove`,
+    token,
+    key,
+    body: {},
+  });
 }

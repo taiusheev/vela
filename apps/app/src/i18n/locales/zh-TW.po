@@ -182,8 +182,8 @@ msgid "{name} has not said yes yet. Once she does, her first morning is the next
 msgstr "{name}還沒有同意。同意之後的隔天早上，就會收到第一則早安訊息。"
 
 #: app/conversation.tsx
-msgid "{name} has not said yes yet. What you write waits for their first morning."
-msgstr "{name}還沒有答應。你寫的話會等到第一個早晨再送出。"
+msgid "{name} has not said yes yet. Write a first hello now: it reaches {name} the moment they say yes, so the chat is waiting for them."
+msgstr "{name}還沒有同意。現在先寫一句問候吧：{name}一同意就會收到，聊天室裡已經有話在等著。"
 
 #: src/components/parent-link-settings.tsx
 msgid "{name} has paused their mornings."
@@ -619,6 +619,10 @@ msgstr "所有回憶"
 msgid "All said yes"
 msgstr "都同意了"
 
+#: app/my-memories.tsx
+msgid "Allow memory suggestions"
+msgstr "允許建議回憶"
+
 #: src/data/chat.ts
 msgid "Already in a bag by the door."
 msgstr "已經裝好袋子放在門口了。"
@@ -792,6 +796,7 @@ msgid "away · {day}"
 msgstr "外出中 · 到{day}"
 
 #: app/help.tsx
+#: app/my-memories.tsx
 #: src/components/back-button.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Back"
@@ -845,6 +850,7 @@ msgid "Canada"
 msgstr "加拿大"
 
 #: app/morning-settings.tsx
+#: app/profile.tsx
 msgid "Cancel"
 msgstr "取消"
 
@@ -857,6 +863,10 @@ msgstr "取消連結"
 #: src/data/onboarding.ts
 msgid "Central"
 msgstr "中部時間"
+
+#: app/profile.tsx
+msgid "Change"
+msgstr "更改"
 
 #: app/conversation.tsx
 #: app/settings.tsx
@@ -1114,6 +1124,10 @@ msgstr "{recipient}的早安訊息仍待傳送。"
 #: app/help.tsx
 msgid "Describe what went wrong and when it happened. Never send passwords, sign-in codes, private family messages or photos."
 msgstr "請說明發生了什麼問題，以及發生的時間。請勿傳送密碼、登入驗證碼、家人的私人訊息或照片。"
+
+#: app/my-memories.tsx
+msgid "Disappears on {until} unless you keep it."
+msgstr "若不保留，將在{until}消失。"
 
 #: app/(tabs)/index.tsx
 msgid "Dismiss"
@@ -1556,6 +1570,10 @@ msgstr "如果{name}點不開連結，請{name}先把您加為聯絡人，再點
 msgid "If the link doesn’t open, add me to your contacts, then tap it again."
 msgstr "如果連結點不開，請先把我加為聯絡人，再點一次。"
 
+#: app/my-memories.tsx
+msgid "If you agree, Vela can suggest little things worth remembering from your own new answers. Only you see them, and you choose what to keep."
+msgstr "如果你同意，Vela 可以從你之後的新回答中，建議值得記住的小事。只有你看得到，要保留哪些由你決定。"
+
 #: app/delete-account.tsx
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 msgstr "如果您是某個家庭唯一的發起人，或 Vela 為您自己留著一盞燈，您會繼續透過 Telegram 或 LINE 留在那個家庭，這樣就不會有人沒被通知。若也想離開，請在那裡說「停止」，或先請另一位家人擔任發起人。"
@@ -1624,9 +1642,21 @@ msgstr "{quietName}那邊今天很安靜"
 msgid "It lights the first time {name} answers. Nothing is sent before {name} says yes."
 msgstr "{name}第一次回覆時，窗就會亮起。{name}答應之前，什麼都不會傳出。"
 
+#: app/ask.tsx
+msgid "It reaches {name} on {day} morning, the first one nobody else has asked for."
+msgstr "會在{day}早上送到{name}那裡，那是第一個還沒有人提問的早上。"
+
+#: app/ask.tsx
+msgid "It reaches {name} with tomorrow's morning message."
+msgstr "會跟著明天早上的訊息送到{name}那裡。"
+
 #: app/(tabs)/questions.tsx
 msgid "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
 msgstr "會在明天早上（{tomorrow}）送到{parentName}那裡。想現在就說，請打開聊天。"
+
+#: app/ask.tsx
+msgid "It waits its turn and reaches {name} on the first morning nobody else has asked for."
+msgstr "會先排隊，在第一個還沒有人提問的早上送到{name}那裡。"
 
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
@@ -1657,6 +1687,10 @@ msgstr "哈薩克"
 msgid "Keep my account"
 msgstr "保留我的帳號"
 
+#: app/my-memories.tsx
+msgid "Keep my current settings"
+msgstr "維持目前設定"
+
 #: app/settings.tsx
 msgid "Keep my turns"
 msgstr "保留我的輪次"
@@ -1664,6 +1698,14 @@ msgstr "保留我的輪次"
 #: src/components/nearby-editor.tsx
 msgid "Keep them"
 msgstr "保留這位聯絡人"
+
+#: app/my-memories.tsx
+msgid "Keep these words"
+msgstr "保留這段話"
+
+#: app/my-memories.tsx
+msgid "Keep these words?"
+msgstr "要保留這段話嗎？"
 
 #: src/components/family-book.tsx
 msgid "Keep this story"
@@ -1673,9 +1715,21 @@ msgstr "保留這段故事"
 msgid "Keeping {name}’s mornings safe…"
 msgstr "正在保存{name}的早晨…"
 
+#: app/my-memories.tsx
+msgid "Kept"
+msgstr "已保留"
+
 #: src/components/family-book.tsx
 msgid "Kept for good"
 msgstr "永久保存"
+
+#: app/my-memories.tsx
+msgid "Kept on {when}. Only you can see it."
+msgstr "於{when}保留。只有你看得到。"
+
+#: app/my-memories.tsx
+msgid "Kept. Only you can see these words."
+msgstr "已保留。只有你看得到這段話。"
 
 #: src/components/onboarding/finish.tsx
 msgid "Know the moment {name} says yes."
@@ -1705,6 +1759,10 @@ msgstr "離開"
 msgid "Leave {familyName}?"
 msgstr "要離開{familyName}嗎？"
 
+#: app/my-memories.tsx
+msgid "Leave out"
+msgstr "略過"
+
 #: app/settings.tsx
 msgid "Leave the family"
 msgstr "離開這個家庭"
@@ -1716,6 +1774,10 @@ msgstr "請不要填電話號碼。對方同意後，Vela 會再向對方要號�
 #: app/settings.tsx
 msgid "Leaving…"
 msgstr "正在離開…"
+
+#: app/my-memories.tsx
+msgid "Left out. Your chat has not changed."
+msgstr "已略過。你的聊天內容沒有改變。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Let’s find your family."
@@ -1759,6 +1821,15 @@ msgstr "聽家人的語音提問"
 #: src/components/voice-recorder.tsx
 msgid "Listen to your recording"
 msgstr "聽聽你的錄音"
+
+#: app/(tabs)/you.tsx
+#: app/profile.tsx
+msgid "Little things worth remembering from your own answers"
+msgstr "從你自己的回答中，值得記住的小事"
+
+#: app/my-memories.tsx
+msgid "Little things worth remembering from your own answers. Only you can see them."
+msgstr "從你自己的回答中，值得記住的小事。只有你看得到。"
 
 #: app/morning-settings.tsx
 msgid "Loading morning settings…"
@@ -1806,6 +1877,10 @@ msgstr "正在載入您家庭的方案…"
 msgid "Loading your notification preference…"
 msgstr "正在載入通知偏好設定…"
 
+#: app/profile.tsx
+msgid "Loading…"
+msgstr "載入中…"
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr "正在找這則問答…"
@@ -1813,6 +1888,10 @@ msgstr "正在找這則問答…"
 #: app/(tabs)/exchanges.tsx
 msgid "Looking for your family's days…"
 msgstr "正在載入家人的問答…"
+
+#: app/my-memories.tsx
+msgid "Looking for your memories…"
+msgstr "正在找你的回憶…"
 
 #: src/data/onboarding.ts
 msgid "Making & mending"
@@ -1827,6 +1906,22 @@ msgstr "馬來西亞"
 msgctxt "tab"
 msgid "Memories"
 msgstr "回憶"
+
+#: app/my-memories.tsx
+msgid "Memories are not available here yet."
+msgstr "這裡還沒有提供回憶功能。"
+
+#: app/my-memories.tsx
+msgid "Memory suggestions are off"
+msgstr "回憶建議已關閉"
+
+#: app/my-memories.tsx
+msgid "Memory suggestions are on. New answers from now on can be suggested."
+msgstr "回憶建議已開啟。從現在起的新回答可以被建議。"
+
+#: app/my-memories.tsx
+msgid "Memory suggestions stay off. Nothing else changed."
+msgstr "回憶建議維持關閉，其他都沒有改變。"
 
 #: src/components/onboarding/story.tsx
 msgid "Message"
@@ -1956,6 +2051,10 @@ msgstr "紐西蘭"
 msgid "Next"
 msgstr "下一步"
 
+#: app/ask.tsx
+msgid "Next free morning"
+msgstr "下一個空的早上"
+
 #: src/components/onboarding/story.tsx
 msgid "No answer from Mom yet today."
 msgstr "媽媽今天還沒回覆。"
@@ -2023,6 +2122,7 @@ msgid "Not enough notices yet to show a month."
 msgstr "通知還不夠多，暫時無法顯示任何月份。"
 
 #: app/ask.tsx
+#: app/my-memories.tsx
 #: app/vela-light.tsx
 #: src/components/app-privacy.tsx
 #: src/components/onboarding/finish.tsx
@@ -2065,6 +2165,10 @@ msgstr "還沒有保存任何內容。"
 #: src/components/today-feed.tsx
 msgid "Nothing new yet today."
 msgstr "今天還沒有新消息。"
+
+#: app/my-memories.tsx
+msgid "Nothing to suggest yet. Suggestions come from answers you send from now on."
+msgstr "目前還沒有建議。建議會來自你從現在起傳送的回答。"
 
 #: src/components/onboarding/finish.tsx
 msgid "Nothing was lost; try again."
@@ -2234,6 +2338,10 @@ msgstr "正在開啟 Telegram…"
 msgid "Opening the book…"
 msgstr "正在打開故事書…"
 
+#: app/(tabs)/you.tsx
+msgid "Opens your name, your family and your own things"
+msgstr "打開你的名字、你的家人和你自己的東西"
+
 #: src/components/vote-options.tsx
 msgid "Option {number}"
 msgstr "選項 {number}"
@@ -2274,6 +2382,7 @@ msgid "Parent photo"
 msgstr "父母的照片"
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 msgid "Parent photos and links, notifications, language, and account"
 msgstr "父母的照片與連結、通知、語言及帳號"
 
@@ -2410,6 +2519,10 @@ msgstr "隱私與協助"
 msgid "Privacy details and terms"
 msgstr "隱私詳情與條款"
 
+#: app/profile.tsx
+msgid "Profile"
+msgstr "個人資料"
+
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
 msgstr "正在安排{name}的第一週…"
@@ -2444,10 +2557,15 @@ msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記
 msgid "Read the family book"
 msgstr "看家庭故事書"
 
+#: app/my-memories.tsx
 #: app/settings.tsx
 #: src/components/app-privacy.tsx
 msgid "Read the privacy notice"
 msgstr "閱讀隱私權告知事項"
+
+#: app/my-memories.tsx
+msgid "Read the question"
+msgstr "閱讀這個問題"
 
 #: app/parent.tsx
 msgid "Read this aloud"
@@ -2497,6 +2615,7 @@ msgstr "親戚"
 msgid "Remind me to ask how it went"
 msgstr "之後提醒我問問看"
 
+#: app/my-memories.tsx
 #: src/components/nearby-editor.tsx
 #: src/components/photo-slots.tsx
 #: src/components/vote-options.tsx
@@ -2522,6 +2641,14 @@ msgstr "移除電話號碼"
 #: src/components/parent-photo-settings.tsx
 msgid "Remove photo"
 msgstr "移除照片"
+
+#: app/my-memories.tsx
+msgid "Remove this memory?"
+msgstr "要移除這則回憶嗎？"
+
+#: app/my-memories.tsx
+msgid "Removed from your memories."
+msgstr "已從你的回憶中移除。"
 
 #: src/components/photo-slots.tsx
 msgid "Replace"
@@ -2602,8 +2729,8 @@ msgid "Save calling number"
 msgstr "儲存電話號碼"
 
 #: app/conversation.tsx
-msgid "Save for their first morning"
-msgstr "留到第一個早晨"
+msgid "Save for when they say yes"
+msgstr "等對方同意後送出"
 
 #: src/data/chat.ts
 msgid "Save me two for Sunday?"
@@ -2613,9 +2740,13 @@ msgstr "星期天幫我留兩顆好嗎？"
 msgid "Save morning settings"
 msgstr "儲存早安設定"
 
+#: app/profile.tsx
+msgid "Save name"
+msgstr "儲存名字"
+
 #: app/conversation.tsx
-msgid "Saved for their first morning after they join."
-msgstr "已保存，會在加入後的第一個早晨送出。"
+msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr "已儲存。第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
 
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
@@ -2632,6 +2763,7 @@ msgstr "正在儲存你的偏好設定…"
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/morning-settings.tsx
+#: app/profile.tsx
 #: src/components/app-privacy.tsx
 #: src/components/calling-number-editor.tsx
 #: src/components/quiet-notice.tsx
@@ -2761,6 +2893,10 @@ msgstr "傳給{name}"
 msgid "Sending…"
 msgstr "傳送中…"
 
+#: src/components/chat/chat-bubble.tsx
+msgid "Sent"
+msgstr "已送出"
+
 #: src/data/useToday.ts
 msgid "sent a heart"
 msgstr "送上一顆愛心"
@@ -2811,6 +2947,7 @@ msgid "Setting up…"
 msgstr "設定中…"
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 #: app/settings.tsx
 msgid "Settings"
 msgstr "設定"
@@ -3037,6 +3174,10 @@ msgstr "故事日・{name}・{day}"
 msgid "Story of the week"
 msgstr "本週的故事"
 
+#: app/my-memories.tsx
+msgid "Suggested for you"
+msgstr "為你建議"
+
 #: src/components/onboarding/plan.tsx
 msgid "Suggested from what {name} loves"
 msgstr "依{name}喜歡的事建議"
@@ -3160,6 +3301,10 @@ msgstr "暫時無法送出，請稍後再試。"
 msgid "That could not be sent just now. Your words are kept."
 msgstr "目前無法傳送。您寫的內容都還在。"
 
+#: app/my-memories.tsx
+msgid "That did not go through. Nothing changed. Try again."
+msgstr "沒有成功，什麼都沒有改變。請再試一次。"
+
 #: app/settings.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
@@ -3225,6 +3370,10 @@ msgstr "這張照片沒有傳上去，請再試一次。"
 #: src/components/photo-slots.tsx
 msgid "That photo is no longer here. Choose it again."
 msgstr "這張照片已經不在了，請重新選擇。"
+
+#: app/my-memories.tsx
+msgid "That question was no longer current. Nothing was recorded."
+msgstr "這個問題已經失效，沒有記錄任何回答。"
 
 #: src/components/voice-recorder.tsx
 #: src/device/VoiceAnswer.tsx
@@ -3327,6 +3476,10 @@ msgstr "最後一步交給{name}"
 #: src/components/parent-link-settings.tsx
 msgid "The link could not be prepared. Your family is unchanged. Try again or get help."
 msgstr "暫時無法取得連結。您的家庭設定沒有變更。請重試或取得協助。"
+
+#: app/my-memories.tsx
+msgid "The memory question has changed"
+msgstr "回憶問題的內容已更新"
 
 #: src/components/onboarding/questions.tsx
 msgid "The message comes half an hour later, so it’s there when {name} first picks up the phone."
@@ -3440,6 +3593,10 @@ msgstr "對方"
 msgid "There’s no one nearby yet"
 msgstr "附近還沒有人"
 
+#: app/my-memories.tsx
+msgid "These words will be removed from your memories in Vela. Your original chat does not change."
+msgstr "這段話會從你在 Vela 的回憶中移除。原本的聊天內容不會改變。"
+
 #: src/components/parent-link-settings.tsx
 msgid "They joined in their own chat. Share a shortcut whenever they need to find Vela again; no new registration."
 msgstr "對方已在自己的聊天中加入。需要再次找到 Vela 時，分享聊天捷徑即可，不用重新註冊。"
@@ -3459,6 +3616,10 @@ msgstr "這個帳號已經有一個家庭了。"
 #: app/delete-account.tsx
 msgid "This cannot be undone."
 msgstr "刪除後無法復原。"
+
+#: app/my-memories.tsx
+msgid "This cannot erase copies people have saved outside Vela. Turning memories on again later will not bring these memories back."
+msgstr "這無法刪除別人在 Vela 以外儲存的副本。之後重新開啟回憶，也不會找回這些回憶。"
 
 #: src/components/telegram-family-link.tsx
 msgid "This connection expired or was cancelled. Your family is unchanged."
@@ -3670,6 +3831,7 @@ msgstr "無法登入嗎？"
 #: app/conversation.tsx
 #: app/exchange/[id].tsx
 #: app/morning-settings.tsx
+#: app/my-memories.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/precision.tsx
@@ -3686,6 +3848,14 @@ msgstr "再試一次"
 #: src/components/telegram-family-link.tsx
 msgid "Try opening Telegram again"
 msgstr "再次嘗試開啟 Telegram"
+
+#: app/my-memories.tsx
+msgid "Turn off and clear"
+msgstr "關閉並清除"
+
+#: app/my-memories.tsx
+msgid "Turn off and clear your memories?"
+msgstr "要關閉並清除你的回憶嗎？"
 
 #: app/settings.tsx
 msgid "Turn on"
@@ -3749,10 +3919,6 @@ msgstr "直到回來"
 #: app/nearby.tsx
 msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
 msgstr "最多兩位住在{name}附近、如果哪天早上比較安靜可以過去看看的人。用「在 Telegram 上問」傳連結給每一位：只有在對方打開連結後，Vela 才會以您的名義傳訊息問對方。在對方同意之前，您可以自己打電話給對方。"
-
-#: app/(tabs)/index.tsx
-msgid "Updated {time}"
-msgstr "更新於 {time}"
 
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
@@ -3908,6 +4074,10 @@ msgstr "Vela 的建議 · 取自這位家人說過的話"
 msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
 msgstr "Vela 會依{name}喜歡的事建議問題。符合的都可以選。"
 
+#: app/my-memories.tsx
+msgid "Vela will stop suggesting memories from your answers. Your suggestions and kept memories will be removed from Vela. Your ordinary chats and other choices will not change."
+msgstr "Vela 會停止從你的回答中建議回憶。你的建議和已保留的回憶會從 Vela 移除。你平常的聊天和其他選擇都不會改變。"
+
 #: src/components/onboarding/questions.tsx
 msgid "Vela writes in a chat of its own."
 msgstr "Vela 會在專屬的聊天室裡傳訊息。"
@@ -4004,6 +4174,10 @@ msgstr "無法完成連結。家人與訊息沒有變更。請在 Vela 恢復可
 #: src/components/telegram-family-link.tsx
 msgid "We found your family. Check it below, then finish connecting to this signed-in account."
 msgstr "已找到您的家人。請確認下方資料，再完成與目前登入帳號的連結。"
+
+#: src/data/my-memories-demo.ts
+msgid "We rode the night train to the sea and ate pears from a paper bag."
+msgstr "我們搭夜車去海邊，從紙袋裡拿梨子吃。"
 
 #: app/sign-in.tsx
 msgid "We will text {phone}."
@@ -4106,10 +4280,6 @@ msgstr "對方回覆後，趁還記得的時候回個訊息。安靜的一天，
 msgid "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
 msgstr "你們在一起的時候，在{name}的手機上登入。手機會用大字一次顯示一則訊息，並先詢問{name}：答應之前什麼都不會送到。"
 
-#: app/ask.tsx
-msgid "Whenever"
-msgstr "哪天都可以"
-
 #: src/components/onboarding/questions.tsx
 msgid "Where does {name} chat already?"
 msgstr "{name}平常用什麼聊天？"
@@ -4186,6 +4356,10 @@ msgstr "Vela 代筆"
 #: src/components/today-feed.tsx
 msgid "Wrote to {recipient}"
 msgstr "寫給{recipient}"
+
+#: src/data/my-memories-demo.ts
+msgid "Yellow chrysanthemums on the balcony make the whole morning feel warm."
+msgstr "陽台上的黃色菊花，讓整個早上都暖了起來。"
 
 #: src/components/set-up-phone.tsx
 msgid "Yes, this is {name}'s phone"
@@ -4351,6 +4525,10 @@ msgstr "目前無法載入您的家庭。"
 msgid "Your family could not be reached just now. Your saved questions are unchanged."
 msgstr "目前無法讀取家人資料。已儲存的問題沒有變更。"
 
+#: app/profile.tsx
+msgid "Your family sees this name on your questions and replies."
+msgstr "家人會在你的提問和回覆上看到這個名字。"
+
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
 msgstr "更新 Vela 後，你的家庭仍會保留。"
@@ -4379,6 +4557,20 @@ msgstr "您的燈沒有亮著，所以不會顯示任何關於您早上的內容
 msgid "Your light is paused from your own chat, where your mornings arrive."
 msgstr "您的燈要從您自己的聊天室暫停，也就是您收到早安訊息的地方。"
 
+#: app/(tabs)/you.tsx
+#: app/my-memories.tsx
+#: app/profile.tsx
+msgid "Your memories"
+msgstr "你的回憶"
+
+#: app/my-memories.tsx
+msgid "Your memories could not be reached just now."
+msgstr "目前無法讀取你的回憶。"
+
+#: app/my-memories.tsx
+msgid "Your memory permission and copies have been cleared in Vela."
+msgstr "你在 Vela 的回憶同意與副本都已清除。"
+
 #: app/sign-in.tsx
 msgid "Your mobile number. The country code is added for you."
 msgstr "您的手機號碼。國碼會自動幫您加上。"
@@ -4387,10 +4579,15 @@ msgstr "您的手機號碼。國碼會自動幫您加上。"
 msgid "Your morning message"
 msgstr "您的早晨訊息"
 
+#: app/profile.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/telegram-family-link.tsx
 msgid "Your name"
 msgstr "你的名字"
+
+#: app/profile.tsx
+msgid "Your name could not be saved. Nothing changed. Try again."
+msgstr "名字沒有儲存成功，什麼都沒有改變。請再試一次。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Your name, as the family says it."
@@ -4416,6 +4613,14 @@ msgstr "您的父母可以在自己的 Telegram 聊天室裡問「家人看到�
 #: app/settings.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 msgstr "試辦免費。安靜通知和重要訊息會送到發起人的 Telegram 私人聊天室。"
+
+#: app/(tabs)/you.tsx
+msgid "Your profile"
+msgstr "你的個人資料"
+
+#: app/(tabs)/you.tsx
+msgid "Your profile, {myName}, {familyName}"
+msgstr "你的個人資料，{myName}，{familyName}"
 
 #: app/ask.tsx
 msgid "Your question"

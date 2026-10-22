@@ -26,7 +26,12 @@ import {
 } from "../answers.ts";
 import { handleAskCommand, handleGroupAsk, parseAskCommand } from "../asks.ts";
 import { handleBookDropButton } from "../book.ts";
-import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "../consent.ts";
+import {
+  handleCombinedConsentButton,
+  handleConsentButton,
+  handleHealthWordsButton,
+  handleInviteStart,
+} from "../consent.ts";
 import type { Deps } from "../deps.ts";
 import { errorLabel } from "../errors.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf } from "../gateway.ts";
@@ -281,6 +286,9 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
     return;
   }
   switch (action.type) {
+    case "consent_both":
+      await handleCombinedConsentButton(deps, event, action);
+      return;
     case "consent":
       await handleConsentButton(deps, event, action);
       return;

@@ -232,7 +232,8 @@ export interface Config {
    * words (data map row 29); a plan is then not kept at all.
    */
   memory: boolean;
-  /** Conversational candidates; absent means off. Not wired to any Worker environment yet. */
+  /** Author memories (`RICH_MEMORIES`, privacy-notice v7); absent means off. On in development and
+   * staging only; pinned off in production by apps/worker/src/wrangler-config.test.ts. */
   richMemories?: boolean;
   /**
    * Whether her answers to a story ask are kept in the family book beyond 30 days (ADR-39, `BOOK`).

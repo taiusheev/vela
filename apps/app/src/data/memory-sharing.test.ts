@@ -4,7 +4,11 @@ import {
   type MemorySharingView,
 } from "@vela/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MemorySharingController, type MemorySharingPort } from "./memory-sharing.ts";
+import {
+  MemorySharingController,
+  type MemorySharingPort,
+  MemorySharingRefreshRequired,
+} from "./memory-sharing.ts";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const controllers: MemorySharingController[] = [];
@@ -73,6 +77,70 @@ function setup(viewer = id(1), memory = id(10)) {
 }
 
 describe("session-scoped memory sharing", () => {
+  it("does not label a newer refresh expired when an older conflict-refresh finishes late", async () => {
+    const h = setup();
+    await h.controller.load();
+    h.controller.toggle(id(2));
+    await h.controller.prepare();
+    h.confirm.mockRejectedValueOnce(new MemorySharingRefreshRequired());
+    const held = deferred<unknown>();
+    const entered = deferred<void>();
+    h.read.mockImplementationOnce(async () => {
+      entered.resolve();
+      return held.promise;
+    });
+    const conflict = h.controller.confirm();
+    await entered.promise;
+    await h.controller.load();
+    held.resolve(h.view);
+    await conflict;
+    expect(h.controller.snapshot().phase).toBe("ready");
+    expect(h.controller.snapshot().error).toBeNull();
+  });
+  it("reloads and rotates the preparation key after a missing or consumed presentation", async () => {
+    const h = setup();
+    await h.controller.load();
+    h.controller.toggle(id(2));
+    h.prepare.mockRejectedValueOnce(new MemorySharingRefreshRequired());
+    await h.controller.prepare();
+    expect(h.controller.snapshot().preview).toBeNull();
+    expect(h.controller.snapshot().selected).toEqual([]);
+    expect(h.controller.snapshot().error).toBe("expired");
+    h.controller.toggle(id(2));
+    await h.controller.prepare();
+    expect(h.prepare.mock.calls[0]?.[0].key).not.toBe(h.prepare.mock.calls[1]?.[0].key);
+  });
+  it("requires a new named review after stale confirmation instead of retrying the old proof", async () => {
+    const h = setup();
+    await h.controller.load();
+    h.controller.toggle(id(2));
+    await h.controller.prepare();
+    h.confirm.mockRejectedValueOnce(new MemorySharingRefreshRequired());
+    await h.controller.confirm();
+    expect(h.controller.snapshot().preview).toBeNull();
+    expect(h.controller.snapshot().error).toBe("expired");
+    await h.controller.confirm();
+    expect(h.confirm).toHaveBeenCalledTimes(1);
+    h.controller.toggle(id(3));
+    await h.controller.prepare();
+    await h.controller.confirm();
+    expect(h.confirm.mock.calls[0]?.[0].key).not.toBe(h.confirm.mock.calls[1]?.[0].key);
+    expect(h.controller.snapshot().selected).toEqual([id(3)]);
+  });
+  it("hides old words and preserves independent revocation if stale-proof refresh fails", async () => {
+    const h = setup();
+    await h.controller.load();
+    h.controller.toggle(id(2));
+    await h.controller.prepare();
+    h.confirm.mockRejectedValueOnce(new MemorySharingRefreshRequired());
+    h.read.mockRejectedValueOnce(new Error("synthetic-refresh-failure"));
+    await h.controller.confirm();
+    expect(h.controller.snapshot().phase).toBe("read_error");
+    expect(h.controller.snapshot().view).toBeNull();
+    expect(h.controller.snapshot().preview).toBeNull();
+    expect(h.controller.canStop()).toBe(true);
+    expect(h.controller.snapshot().notice).toBeNull();
+  });
   it("can stop sharing after the very first detail read fails, without exposing old words", async () => {
     const h = setup();
     for (const recipient of h.view.recipients) recipient.shared = true;

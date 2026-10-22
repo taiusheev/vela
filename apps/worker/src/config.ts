@@ -554,9 +554,17 @@ export function readSendAsMe(env: { readonly SEND_AS_ME?: string }): boolean {
   return env.SEND_AS_ME === undefined ? false : readOnOff(env.SEND_AS_ME, "SEND_AS_ME");
 }
 
+/**
+ * The var `RICH_MEMORIES` (privacy-notice v7 wording, founder's approval of 22 Oct 2026): "on"
+ * offers each person their own memories in the app; absent or "off" does not; anything else is refused.
+ */
+export function readRichMemories(env: { readonly RICH_MEMORIES?: string }): boolean {
+  return env.RICH_MEMORIES === undefined ? false : readOnOff(env.RICH_MEMORIES, "RICH_MEMORIES");
+}
+
 function readOnOff(
   raw: string | undefined,
-  name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT" | "SEND_AS_ME",
+  name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT" | "SEND_AS_ME" | "RICH_MEMORIES",
 ): boolean {
   const value = raw?.trim() ?? "";
   if (value !== "on" && value !== "off") {
@@ -681,6 +689,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     book: readBook(env),
     weeklyInsight: readWeeklyInsight(env),
     sendAsMe: readSendAsMe(env),
+    richMemories: readRichMemories(env),
     pilotAdmission,
     suggestions: readApiSwitch(env) === "on",
     peerHealthz: readPeerHealthz(env, environment),

@@ -12,6 +12,7 @@ import {
   readPilotAdmission,
   readPushConfig,
   readPushSend,
+  readRichMemories,
   readSendAsMe,
   readWeeklyInsight,
   secret,
@@ -595,8 +596,8 @@ describe("closed pilot admission", () => {
       telegramUserIds: ["1001", "2001"],
     });
     expect(readConfig({ ...configured, MEMORY: "on" }, filled).memory).toBe(false);
-    // Candidate storage is deliberately not wired to Worker environments before notice/UX rollout.
-    expect(readConfig(configured, filled).richMemories).not.toBe(true);
+    // Memories stay off unless RICH_MEMORIES says on.
+    expect(readConfig({ ...configured, RICH_MEMORIES: "off" }, filled).richMemories).toBe(false);
   });
 });
 
@@ -890,6 +891,16 @@ describe("a secret", () => {
     const blank = configErrorOf(() => secret({ ACCESS_AUD: "  " }, "ACCESS_AUD"));
 
     expect([missing.code, blank.code]).toEqual(["ANTHROPIC_API_KEY", "ACCESS_AUD"]);
+  });
+});
+
+describe("the memories switch", () => {
+  it("is off unless RICH_MEMORIES says on, and refuses anything else by name", () => {
+    expect(readRichMemories({})).toBe(false);
+    expect(readRichMemories({ RICH_MEMORIES: "off" })).toBe(false);
+    expect(readConfig({ ...chosenStaging, RICH_MEMORIES: "on" }, filled).richMemories).toBe(true);
+    const error = configErrorOf(() => readRichMemories({ RICH_MEMORIES: "yes" }));
+    expect(errorLabel(error)).toBe("ConfigError:RICH_MEMORIES");
   });
 });
 

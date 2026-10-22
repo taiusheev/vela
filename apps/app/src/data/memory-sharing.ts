@@ -5,8 +5,8 @@ import {
   MemorySharingView,
 } from "@vela/contracts";
 
-/** No live adapter exists. Server authorization, eligibility, audience completeness and single-use
- * confirmation remain mandatory; this controller is not authority to save or reveal a quote. */
+/** Server authorization, eligibility, audience completeness and single-use confirmation remain
+ * mandatory; this controller is not authority to save or reveal a quote. */
 export interface MemorySharingPort {
   read(signal: AbortSignal): Promise<unknown>;
   prepare(
@@ -15,6 +15,13 @@ export interface MemorySharingPort {
   ): Promise<unknown>;
   confirm(input: MemoryShareChoice & { key: string }, signal: AbortSignal): Promise<void>;
   stop(input: { memory_id: string; key: string }, signal: AbortSignal): Promise<void>;
+}
+/** A consumed/missing presentation or conflicting confirmation needs a NEW review and keys. */
+export class MemorySharingRefreshRequired extends Error {
+  constructor() {
+    super("sharing_review_required");
+    this.name = "MemorySharingRefreshRequired";
+  }
 }
 export interface MemorySharingState {
   phase: "loading" | "ready" | "read_error" | "unavailable";
@@ -214,7 +221,14 @@ export class MemorySharingController {
         return;
       }
       this.change({ pending: null, preview: parsed.data });
-    } catch {
+    } catch (error) {
+      if (error instanceof MemorySharingRefreshRequired) {
+        if (!this.active || generation !== this.generation) return;
+        await this.load();
+        if (this.active && this.generation === generation + 1 && this.state.phase === "ready")
+          this.change({ error: "expired" });
+        return;
+      }
       if (this.active && generation === this.generation)
         this.change({ pending: null, error: "action" });
     }
@@ -245,7 +259,14 @@ export class MemorySharingController {
       if (!this.active || generation !== this.generation) return;
       await this.load();
       if (this.active && this.state.phase === "ready") this.change({ notice: "updated" });
-    } catch {
+    } catch (error) {
+      if (error instanceof MemorySharingRefreshRequired) {
+        if (!this.active || generation !== this.generation) return;
+        await this.load();
+        if (this.active && this.generation === generation + 1 && this.state.phase === "ready")
+          this.change({ error: "expired" });
+        return;
+      }
       if (this.active && generation === this.generation)
         this.change({ pending: null, error: "action" });
     }

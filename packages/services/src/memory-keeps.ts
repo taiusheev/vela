@@ -44,7 +44,7 @@ import { sha256Hex } from "./hash.ts";
 import type { Queryable } from "./repo.ts";
 import { RICH_MEMORY_CONSENT_VERSION, sourceDigest, sourceWords } from "./rich-memories.ts";
 
-type KeepDeps = Pick<Deps, "db" | "clock" | "config">;
+type KeepDeps = Pick<Deps, "db" | "clock"> & { config: Pick<Deps["config"], "richMemories"> };
 type KeepReadDeps = Omit<KeepDeps, "db"> & { db: Queryable };
 const uuid = z.uuid();
 const lifetime = 30 * 86_400_000;

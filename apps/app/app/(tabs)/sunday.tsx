@@ -7,7 +7,7 @@ import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryOfTheWeek } from "../../src/components/story-day.tsx";
-import { SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
+import { RoomWindow, SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
 import { SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
 import { localDayMonth } from "../../src/data/format.ts";
@@ -141,7 +141,9 @@ function FamilySunday({ day }: { day: TodayView }) {
                   >
                     {range.length === 0 ? t`The weekly read` : t`The weekly read · ${range}`}
                   </Text>
-                  <Light state="lit" height={26} />
+                  <RoomWindow>
+                    <Light state="lit" height={26} />
+                  </RoomWindow>
                 </View>
                 <View style={{ gap: space.xs }}>
                   {read.week.counts.map((line) => (

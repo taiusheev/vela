@@ -66,6 +66,7 @@ function randomAction(random: () => number): ButtonAction {
       "pick",
       "vote",
       "consent",
+      "consent_both",
       "health_words",
       "fine",
       "wait",
@@ -91,6 +92,12 @@ function randomAction(random: () => number): ButtonAction {
       return { type: "vote", exchangeId: uuidv7(random), index };
     case "consent":
       return { type: "consent", memberId: uuidv7(random), accept: random() < 0.5 };
+    case "consent_both":
+      return {
+        type: "consent_both",
+        memberId: uuidv7(random),
+        choice: pick(random, ["both", "light", "no"] as const),
+      };
     case "health_words":
       return { type: "health_words", memberId: uuidv7(random), accept: random() < 0.5 };
     case "fine":
@@ -170,6 +177,17 @@ describe("encodeButton and decodeButton", () => {
     const id = EXCHANGE.replaceAll("-", "");
 
     expect(encodeButton({ type: "consent", memberId: EXCHANGE, accept: true })).toBe(`k:${id}:y`);
+    // The single consent message's three choices are their own code, never an old Yes or No.
+    for (const [choice, tail] of [
+      ["both", "b"],
+      ["light", "l"],
+      ["no", "n"],
+    ] as const) {
+      const action = { type: "consent_both", memberId: EXCHANGE, choice } as const;
+      expect(encodeButton(action)).toBe(`j:${id}:${tail}`);
+      expect(decodeButton(`j:${id}:${tail}`)).toEqual(action);
+    }
+    expect(decodeButton(`j:${id}:y`)).toBeNull();
     expect(encodeButton({ type: "health_words", memberId: EXCHANGE, accept: true })).toBe(
       `h:${id}:y`,
     );

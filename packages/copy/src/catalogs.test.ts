@@ -118,6 +118,12 @@ const NO_CHANGES_NOTHING: Record<(typeof MVP_LANGS)[number], RegExp> = {
   "zh-TW": /就算您說不要，Vela 也會照常運作。/,
 };
 
+/** The single consent message's promise that keeping health words private changes nothing else. */
+const KEEP_PRIVATE_CHANGES_NOTHING: Record<(typeof MVP_LANGS)[number], RegExp> = {
+  en: /\bVela works the same if you keep them private\./,
+  "zh-TW": /如果您選擇不分享，Vela 也會照常運作。/,
+};
+
 /**
  * Words about her health or body. The flag notice sent without her health-words consent names
  * nothing she said (ADR-27), neither her words nor the kind of signal.
@@ -228,6 +234,7 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["group.notice_read", []],
   ["consent.request", ["notice", "organiser"]],
   ["consent.health_words", ["organiser"]],
+  ["consent.request_both", ["notice", "organiser"]],
   ["flag.notice_no_words", ["name"]],
   ["push.quiet_notice", ["name", "sent"]],
   ["push.answer_receipt", ["name"]],
@@ -528,6 +535,27 @@ describe("wording with a fixed meaning in every language", () => {
   it.each(MVP_LANGS)("%s health-words question says Vela works the same after a no", (lang) => {
     expect(catalogs[lang]["consent.health_words"]).toMatch(NO_CHANGES_NOTHING[lang]);
   });
+
+  // The single consent message (consent.request@3) asks both questions at once, but the health
+  // words stay their own choice: a yes to the light alone is offered, and keeping them private
+  // leaves Vela working, so the health consent is still given freely and separately (ADR-27).
+  it.each(MVP_LANGS)(
+    "%s single consent message keeps health words a separate, free choice",
+    (lang) => {
+      const text = catalogs[lang]["consent.request_both"];
+      expect(text).toContain(FOUNDER_NAME);
+      expect(text).toContain("{notice}");
+      expect(text).toMatch(KEEP_PRIVATE_CHANGES_NOTHING[lang]);
+      expect(text).not.toMatch(TIME_OF_DAY[lang]);
+      for (const key of ["consent.both", "consent.light_only", "consent.no"] as const) {
+        // Each button is named in the text she reads, and fits a LINE quick reply (20 graphemes).
+        expect(text, `${lang} ${key}`).toContain(catalogs[lang][key]);
+        expect([...new Intl.Segmenter().segment(catalogs[lang][key])].length).toBeLessThanOrEqual(
+          20,
+        );
+      }
+    },
+  );
 
   it.each(MVP_LANGS)("%s flag notice guard recognises a notice that names the signal", (lang) => {
     expect(HEALTH_NOTICE_SAMPLE[lang]).toMatch(HEALTH_WORDS[lang]);

@@ -1,5 +1,5 @@
-/** Privacy withdrawal only. No acceptance, activation or caller yet. */
-import { consents, memoryCandidates, memoryKeeps } from "@vela/db";
+/** Privacy withdrawal only; the answer itself is in memory-permission.ts. */
+import { consents, memoryCandidates, memoryKeeps, memoryPermissionPresentations } from "@vela/db";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
@@ -49,6 +49,10 @@ export async function withdrawOwnMemoryConsent(
         // and pending selections; neither can be revived by an old client choice after withdrawal.
         await tx.delete(memoryKeeps).where(eq(memoryKeeps.memberId, memberId));
         await tx.delete(memoryCandidates).where(eq(memoryCandidates.memberId, memberId));
+        // A question still open on another screen cannot turn memories back on.
+        await tx
+          .delete(memoryPermissionPresentations)
+          .where(eq(memoryPermissionPresentations.memberId, memberId));
         return { status: 200, body: { withdrawn: true } };
       },
     },

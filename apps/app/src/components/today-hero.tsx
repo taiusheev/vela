@@ -1,13 +1,35 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
-import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import Svg, { Defs, Path, RadialGradient, Rect, Stop } from "react-native-svg";
+import {
+  createContext,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Animated,
+  Easing,
+  type LayoutChangeEvent,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+  type ViewProps,
+} from "react-native";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
+import { useMotionPreference } from "../accessibility/use-reduced-motion.ts";
 import { portraitLightOn } from "../data/portrait-lamp.ts";
 import type { TodayLight } from "../data/today.ts";
 import { usePortrait } from "../data/usePortrait.ts";
 import { usePalette, useTheme } from "../theme/theme.tsx";
-import { hitSlop, radius, roomShadow, softShadow, space, type } from "../theme/tokens.ts";
+import { hitSlop, motion, radius, roomShadow, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
 import { Light } from "./light.tsx";
 import { Portrait } from "./portrait-lamp.tsx";
@@ -29,76 +51,226 @@ export function useRoom() {
     glassRule: "rgba(251, 236, 214, 0.15)",
     cream: "#FBEFDC",
     creamInk: "#2E231B",
-    glow: "#F2A93B",
+    glow: "#F09A38",
+    /** The hot middle of a lit window, a step paler than its glow. */
+    hot: "#FFC873",
   };
 }
 
+/** Where a light sits in its room, in points from the room's top left. */
+export interface LightSource {
+  x: number;
+  y: number;
+}
+
+interface RoomLightSlot {
+  roomRef: RefObject<View | null>;
+  /** Changes whenever the room is laid out again, so its window measures itself once more. */
+  epoch: number;
+  place(source: LightSource | undefined): void;
+}
+
+export const RoomLightContext = createContext<RoomLightSlot | undefined>(undefined);
+
 /**
- * Warm light falling into a dark room: a wide glow from where her window sits, and a faint one
- * across the floor. Drawn, so it costs nothing and looks the same on every phone.
+ * A room whose light comes from a window inside it: the room gives `roomRef` and `onRoomLayout`
+ * to its own view and `slot` to a RoomLightContext provider, and any RoomWindow in it says where
+ * the light starts.
  */
-export function RoomGlow({ id, strong }: { id: string; strong: boolean }) {
-  const room = useRoom();
+export function useRoomLight() {
+  const roomRef = useRef<View>(null);
+  const [source, setSource] = useState<LightSource>();
+  const [epoch, setEpoch] = useState(0);
+  const place = useCallback(
+    (next: LightSource | undefined) =>
+      setSource((now) => (now?.x === next?.x && now?.y === next?.y ? now : next)),
+    [],
+  );
+  const slot = useMemo<RoomLightSlot>(() => ({ roomRef, epoch, place }), [epoch, place]);
+  return { roomRef, source, slot, onRoomLayout: () => setEpoch((n) => n + 1) };
+}
+
+/**
+ * Wraps her lit window inside a room, so the room's light comes from it: measured in the room's
+ * own points whenever either moves, at any text size or language.
+ */
+export function RoomWindow({ children, ...props }: ViewProps & { children: ReactNode }) {
+  const slot = useContext(RoomLightContext);
+  const ref = useRef<View>(null);
+  const measure = useCallback(() => {
+    const room = slot?.roomRef.current;
+    const self = ref.current;
+    if (slot === undefined || room == null || self === null) return;
+    self.measureLayout(room, (x, y, width, height) =>
+      slot.place({ x: Math.round(x + width / 2), y: Math.round(y + height / 2) }),
+    );
+  }, [slot]);
+  useEffect(() => {
+    measure();
+  }, [measure]);
+  // Gone with her answer: the room falls back to its own light.
+  const place = slot?.place;
+  useEffect(() => () => place?.(undefined), [place]);
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100">
-        <Defs>
-          <RadialGradient id={`${id}-window`} cx="88" cy="20" r="70" gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor={room.glow} stopOpacity={strong ? 0.42 : 0.16} />
-            <Stop offset="0.45" stopColor={room.glow} stopOpacity={strong ? 0.12 : 0.05} />
-            <Stop offset="1" stopColor={room.glow} stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id={`${id}-floor`} cx="10" cy="105" r="60" gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor="#E9763B" stopOpacity={0.14} />
-            <Stop offset="1" stopColor="#E9763B" stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100" height="100" fill={`url(#${id}-window)`} />
-        <Rect x="0" y="0" width="100" height="100" fill={`url(#${id}-floor)`} />
-      </Svg>
+    <View ref={ref} onLayout={measure} {...props}>
+      {children}
     </View>
   );
 }
 
-/** The soft morning light at the top of Today, behind the header: warm, and barely there. */
+/**
+ * Light falls off smoothly, near the inverse square of a lamp, rather than in a straight ramp:
+ * a few close stops so the edge never shows as a ring on an 8-bit screen.
+ */
+const FALLOFF = [0, 0.08, 0.2, 0.35, 0.5, 0.68, 0.85, 1];
+
+/** The stops themselves, not a component: react-native-svg reads a gradient's own Stop children. */
+function falloff(color: string, peak: number) {
+  return FALLOFF.map((t) => (
+    <Stop key={t} offset={t} stopColor={color} stopOpacity={peak * (1 - t) ** 2.4} />
+  ));
+}
+
+const native = Platform.OS !== "web";
+
+/**
+ * Plays the light coming on: 0 to 1 when `on` turns true (once on arrival, again if her answer
+ * lands while the room is open), straight to 0 when it goes off. Still where motion is reduced,
+ * and nothing is shown until the platform has said which.
+ */
+function useBloom(on: boolean, bloom: boolean): Animated.Value {
+  const reduced = useMotionPreference();
+  const value = useRef(new Animated.Value(on && !bloom ? 1 : 0)).current;
+  useEffect(() => {
+    if (!on) {
+      value.setValue(0);
+      return;
+    }
+    if (reduced === undefined) return;
+    if (!bloom || reduced) {
+      value.setValue(1);
+      return;
+    }
+    const play = Animated.timing(value, {
+      toValue: 1,
+      duration: motion.lightBloom,
+      // A lamp warming, not a switch: most of the light by halfway, settling softly.
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: native,
+    });
+    play.start();
+    return () => play.stop();
+  }, [on, bloom, reduced, value]);
+  return value;
+}
+
+/**
+ * Light in a dark room, from one place: her window when it is lit, as amber; otherwise only the
+ * faint cream of a room nobody has lit, as amber means an answer and nothing else. Drawn in the
+ * room's own points, so the pool stays round on any card, and costs nothing on any phone. Without a
+ * window to start from, it falls from the top right and has no bright middle. With `bloom`, the
+ * amber comes on once as the room appears (Today keeps this for her morning).
+ */
+export function RoomGlow({
+  id,
+  strong,
+  source,
+  bloom = false,
+}: {
+  id: string;
+  strong: boolean;
+  source?: LightSource;
+  bloom?: boolean;
+}) {
+  const room = useRoom();
+  const [size, setSize] = useState<{ width: number; height: number }>();
+  const amber = useBloom(strong, bloom);
+  const onLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    if (width !== size?.width || height !== size?.height) setSize({ width, height });
+  };
+  const width = size?.width ?? 0;
+  const height = size?.height ?? 0;
+  const at = source ?? { x: width - 56, y: 56 };
+  const reach = Math.max(width * 1.05, 320);
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none" onLayout={onLayout}>
+      {size === undefined ? null : (
+        <>
+          <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+            <Defs>
+              <RadialGradient
+                id={`${id}-dim`}
+                cx={at.x}
+                cy={at.y}
+                r={reach}
+                gradientUnits="userSpaceOnUse"
+              >
+                {falloff(room.cream, 0.07)}
+              </RadialGradient>
+            </Defs>
+            <Rect x={0} y={0} width={width} height={height} fill={`url(#${id}-dim)`} />
+          </Svg>
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: amber }]}>
+            <Svg width={width} height={height}>
+              <Defs>
+                <RadialGradient
+                  id={`${id}-pool`}
+                  cx={at.x}
+                  cy={at.y}
+                  r={reach}
+                  gradientUnits="userSpaceOnUse"
+                >
+                  {falloff(room.glow, 0.36)}
+                </RadialGradient>
+                <RadialGradient
+                  id={`${id}-core`}
+                  cx={at.x}
+                  cy={at.y}
+                  r={72}
+                  gradientUnits="userSpaceOnUse"
+                >
+                  {falloff(room.hot, 0.3)}
+                </RadialGradient>
+              </Defs>
+              <Rect x={0} y={0} width={width} height={height} fill={`url(#${id}-pool)`} />
+              {source === undefined ? null : (
+                <Rect x={0} y={0} width={width} height={height} fill={`url(#${id}-core)`} />
+              )}
+            </Svg>
+          </Animated.View>
+        </>
+      )}
+    </View>
+  );
+}
+
+/**
+ * The soft morning light at the top of a tab, behind the header: warm, and barely there. Round in
+ * the page's own points, from just above the top right, where the brand's window would be.
+ */
 export function MorningLight() {
   const p = usePalette();
   const { scheme } = useTheme();
+  const { width } = useWindowDimensions();
+  const height = 460;
   return (
-    <View
-      style={{ position: "absolute", top: 0, left: 0, right: 0, height: 420 }}
-      pointerEvents="none"
-    >
-      <Svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100">
+    <View style={{ position: "absolute", top: 0, left: 0, right: 0, height }} pointerEvents="none">
+      <Svg width={width} height={height}>
         <Defs>
-          <RadialGradient id="morning" cx="80" cy="0" r="90" gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor={p.light} stopOpacity={scheme === "dark" ? 0.12 : 0.22} />
-            <Stop offset="1" stopColor={p.light} stopOpacity={0} />
+          <RadialGradient
+            id="morning"
+            cx={width * 0.82}
+            cy={-24}
+            r={Math.max(width * 1.15, 360)}
+            gradientUnits="userSpaceOnUse"
+          >
+            {falloff(p.light, scheme === "dark" ? 0.13 : 0.26)}
           </RadialGradient>
         </Defs>
-        <Rect x="0" y="0" width="100" height="100" fill="url(#morning)" />
+        <Rect x={0} y={0} width={width} height={height} fill="url(#morning)" />
       </Svg>
     </View>
-  );
-}
-
-/** The window from the lockup, alone: the brand mark, at the size of an app header. */
-function BrandMark() {
-  const p = usePalette();
-  return (
-    <Svg viewBox="-17.5 -17.5 141 167" width={24} height={28}>
-      <Path
-        d="M34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z"
-        fill={p.light}
-      />
-      <Path
-        fillRule="evenodd"
-        d="M34 -5.5H66A39.5 39.5 0 0 1 105.5 34V118A19.5 19.5 0 0 1 86 137.5H14A19.5 19.5 0 0 1 -5.5 118V34A39.5 39.5 0 0 1 34 -5.5ZM34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z"
-        fill={p.ink}
-      />
-      <Rect x="47" y="5.5" width="6" height="121" fill={p.ink} />
-      <Rect x="5.5" y="49.8" width="89" height="6" fill={p.ink} />
-    </Svg>
   );
 }
 
@@ -134,9 +306,6 @@ export function TodayHeader({
   const p = usePalette();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
-      <View accessible accessibilityLabel="Vela" style={{ flexShrink: 0 }}>
-        <BrandMark />
-      </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[type.title, { fontSize: 24, lineHeight: 28, color: p.ink }]}>Vela</Text>
         <Words variant="caption" tone="ink3" accessibilityRole="header">
@@ -227,9 +396,11 @@ function listNames(names: string[], locale: string): string {
  */
 export function FamilyStatus({
   lights,
+  familyId,
   onQuiet,
 }: {
   lights: TodayLight[];
+  familyId: string;
   onQuiet?: (light: TodayLight) => void;
 }) {
   const { t, i18n } = useLingui();
@@ -265,6 +436,9 @@ export function FamilyStatus({
           ? t`A light comes on when they answer their morning.`
           : t`The others have answered this morning.`;
   const tone = quiet !== undefined ? "quiet" : allLit ? "lit" : "waiting";
+  // The faces of whom the line is about: the quiet one, those still awaited, or everyone lit. The
+  // window stays her answer's own mark, so the brand is not repeated down the page.
+  const about = (quiet !== undefined ? [quiet] : allLit ? lit : waiting).slice(0, 2);
   const body = (
     <View
       testID="family-status"
@@ -283,21 +457,20 @@ export function FamilyStatus({
         softShadow,
       ]}
     >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 14,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: tone === "lit" ? p.surface : p.surface2,
-          shadowColor: p.light,
-          shadowOpacity: tone === "lit" ? 0.55 : 0,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 0 },
-        }}
-      >
-        <Light state={tone === "lit" ? "lit" : "resting"} height={28} />
+      <View style={{ flexDirection: "row", width: about.length > 1 ? 62 : 44 }}>
+        {about.map((light, index) => (
+          <View
+            key={light.memberId}
+            style={{
+              marginLeft: index === 0 ? 0 : -26,
+              borderRadius: 22,
+              borderWidth: 2,
+              borderColor: tone === "lit" ? p.lightSoft : p.surface,
+            }}
+          >
+            <Face light={light} familyId={familyId} size={40} />
+          </View>
+        ))}
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <Words variant="heading">{title}</Words>
@@ -506,145 +679,153 @@ export function TodayHero({
   const photo = usePortrait(familyId, selected.memberId);
   const lit = portraitLightOn(selected);
   const name = selected.displayName;
+  const { roomRef, source, slot, onRoomLayout } = useRoomLight();
   return (
-    <View
-      testID="portrait-lamp"
-      style={[{ borderRadius: 28, backgroundColor: room.bg }, roomShadow]}
-    >
+    <RoomLightContext.Provider value={slot}>
       <View
-        style={{
-          borderRadius: 28,
-          overflow: "hidden",
-          borderWidth: 1,
-          borderColor: room.edge,
-          padding: space.xl,
-          gap: space.l,
-        }}
+        testID="portrait-lamp"
+        style={[{ borderRadius: 28, backgroundColor: room.bg }, roomShadow]}
       >
-        <RoomGlow id={`room-${selected.memberId}`} strong={lit} />
         <View
+          ref={roomRef}
+          onLayout={onRoomLayout}
           style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: space.s,
+            borderRadius: 28,
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: room.edge,
+            padding: space.xl,
+            gap: space.l,
           }}
         >
-          <Pill>
-            <BrandIcon name="today" color={room.ink} size={14} strokeWidth={2} />
-            <Text style={[type.label, { letterSpacing: 0, color: room.ink }]}>
-              {t({ context: "tab", message: "Today" })}
-            </Text>
-          </Pill>
-          <Pill>
-            <BrandIcon name={lit ? "check" : "time"} color={room.muted} size={14} strokeWidth={2} />
-            <Text style={[type.label, { letterSpacing: 0, color: room.muted, flexShrink: 1 }]}>
-              {selected.stateText}
-            </Text>
-          </Pill>
-        </View>
-        {asked === undefined ? (
-          <Text style={[type.title, { color: room.ink }]}>{name}</Text>
-        ) : (
-          <View style={{ gap: space.xs }}>
-            {asked.text === undefined ? null : (
-              <Text style={[type.preview, { fontSize: 22, lineHeight: 31, color: room.ink }]}>
-                {asked.text}
-              </Text>
-            )}
-            <Text style={[type.caption, { color: room.muted }]}>{asked.by}</Text>
-          </View>
-        )}
-        {selected.localDate === undefined ? null : (
-          <Text style={[type.label, { color: room.muted }]}>{selected.localDate}</Text>
-        )}
-        {stale ? (
-          <Text style={[type.caption, { color: room.muted }]}>
-            <Trans>Last confirmed update</Trans>
-          </Text>
-        ) : null}
-        {answer === undefined ? null : (
+          <RoomGlow
+            id={`room-${selected.memberId}`}
+            strong={lit}
+            bloom
+            {...(source === undefined ? {} : { source })}
+          />
           <View
             style={{
-              backgroundColor: room.glass,
-              borderColor: room.glassRule,
-              borderWidth: 1,
-              borderRadius: radius.panel,
-              padding: space.l,
-              gap: space.m,
+              flexDirection: "row",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: space.s,
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
-              <Portrait uri={photo.uri} name={name} width={30} height={38} />
-              <Text style={[type.button, { color: room.ink, flex: 1 }]}>{name}</Text>
-              <View
-                testID={lit ? "portrait-window-lit" : "portrait-window-unlit"}
-                accessibilityLabel={lit ? t`Answered today` : t`No answer recorded today`}
-                style={{
-                  shadowColor: room.glow,
-                  shadowOpacity: lit ? 0.9 : 0,
-                  shadowRadius: 14,
-                  shadowOffset: { width: 0, height: 0 },
-                }}
-              >
-                <Light state={lit ? "lit" : "resting"} height={28} />
-              </View>
+            <Pill>
+              <Text style={[type.label, { letterSpacing: 0, color: room.ink }]}>
+                {t({ context: "tab", message: "Today" })}
+              </Text>
+            </Pill>
+            <Pill>
+              <BrandIcon
+                name={lit ? "check" : "time"}
+                color={room.muted}
+                size={14}
+                strokeWidth={2}
+              />
+              <Text style={[type.label, { letterSpacing: 0, color: room.muted, flexShrink: 1 }]}>
+                {selected.stateText}
+              </Text>
+            </Pill>
+          </View>
+          {asked === undefined ? (
+            <Text style={[type.title, { color: room.ink }]}>{name}</Text>
+          ) : (
+            <View style={{ gap: space.xs }}>
+              {asked.text === undefined ? null : (
+                <Text style={[type.preview, { fontSize: 22, lineHeight: 31, color: room.ink }]}>
+                  {asked.text}
+                </Text>
+              )}
+              <Text style={[type.caption, { color: room.muted }]}>{asked.by}</Text>
             </View>
-            <Text style={[type.preview, { color: room.ink }]}>{answer}</Text>
-            {heartFor === undefined ? null : (
-              <View style={{ alignItems: "flex-start" }}>
-                <TodayHeart
-                  key={heartFor}
-                  id={heartFor}
-                  recipient={name}
-                  compact
-                  onRoom={{ ink: room.ink, rule: room.glassRule }}
-                />
+          )}
+          {selected.localDate === undefined ? null : (
+            <Text style={[type.label, { color: room.muted }]}>{selected.localDate}</Text>
+          )}
+          {stale ? (
+            <Text style={[type.caption, { color: room.muted }]}>
+              <Trans>Last confirmed update</Trans>
+            </Text>
+          ) : null}
+          {answer === undefined ? null : (
+            <View
+              style={{
+                backgroundColor: room.glass,
+                borderColor: room.glassRule,
+                borderWidth: 1,
+                borderRadius: radius.panel,
+                padding: space.l,
+                gap: space.m,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
+                <Portrait uri={photo.uri} name={name} width={30} height={38} />
+                <Text style={[type.button, { color: room.ink, flex: 1 }]}>{name}</Text>
+                <RoomWindow
+                  testID={lit ? "portrait-window-lit" : "portrait-window-unlit"}
+                  accessibilityLabel={lit ? t`Answered today` : t`No answer recorded today`}
+                >
+                  <Light state={lit ? "lit" : "resting"} height={28} />
+                </RoomWindow>
               </View>
+              <Text style={[type.preview, { color: room.ink }]}>{answer}</Text>
+              {heartFor === undefined ? null : (
+                <View style={{ alignItems: "flex-start" }}>
+                  <TodayHeart
+                    key={heartFor}
+                    id={heartFor}
+                    recipient={name}
+                    compact
+                    onRoom={{ ink: room.ink, rule: room.glassRule }}
+                  />
+                </View>
+              )}
+            </View>
+          )}
+          <View
+            style={{
+              flexDirection: stacked ? "column" : "row",
+              flexWrap: stacked ? "nowrap" : "wrap",
+              alignItems: "stretch",
+              gap: space.s,
+            }}
+          >
+            <RoomButton
+              icon="chat"
+              label={t`Talk with ${name}`}
+              filled
+              stacked={stacked}
+              onPress={onChat}
+            />
+            {onAsk === undefined ? null : (
+              <RoomButton
+                icon="plus"
+                label={t`Ask ${name}`}
+                accessibilityLabel={t`Ask ${name} something`}
+                filled={false}
+                stacked={stacked}
+                disabled={askDisabled}
+                onPress={onAsk}
+              />
             )}
           </View>
-        )}
-        <View
-          style={{
-            flexDirection: stacked ? "column" : "row",
-            flexWrap: stacked ? "nowrap" : "wrap",
-            alignItems: "stretch",
-            gap: space.s,
-          }}
-        >
-          <RoomButton
-            icon="chat"
-            label={t`Talk with ${name}`}
-            filled
-            stacked={stacked}
-            onPress={onChat}
-          />
-          {onAsk === undefined ? null : (
-            <RoomButton
-              icon="plus"
-              label={t`Ask ${name}`}
-              accessibilityLabel={t`Ask ${name} something`}
-              filled={false}
-              stacked={stacked}
-              disabled={askDisabled}
-              onPress={onAsk}
-            />
+          {onQuiet === undefined ? null : (
+            <Pressable
+              accessibilityRole="button"
+              onPress={onQuiet}
+              style={{ minHeight: 44, justifyContent: "center" }}
+            >
+              <Text style={[type.button, { color: room.ink }]}>
+                <Trans>View quiet notice</Trans>
+              </Text>
+            </Pressable>
           )}
         </View>
-        {onQuiet === undefined ? null : (
-          <Pressable
-            accessibilityRole="button"
-            onPress={onQuiet}
-            style={{ minHeight: 44, justifyContent: "center" }}
-          >
-            <Text style={[type.button, { color: room.ink }]}>
-              <Trans>View quiet notice</Trans>
-            </Text>
-          </Pressable>
-        )}
       </View>
-    </View>
+    </RoomLightContext.Provider>
   );
 }
 

@@ -3,7 +3,7 @@ import { type RefreshControlProps, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePalette } from "../theme/theme.tsx";
 import { roomShadow, space } from "../theme/tokens.ts";
-import { MorningLight, RoomGlow, useRoom } from "./today-hero.tsx";
+import { MorningLight, RoomGlow, RoomLightContext, useRoom, useRoomLight } from "./today-hero.tsx";
 
 /**
  * A tab's page as Today draws it: warm paper with the morning's light behind the heading, so every
@@ -42,7 +42,8 @@ export function WarmPage({
 
 /**
  * The lit room: the logo's warm ink with amber light falling from a window. Kept for the one thing
- * on a page that matters most, as Today keeps it for her morning.
+ * on a page that matters most, as Today keeps it for her morning. Wrap her window in RoomWindow and
+ * the light comes from it.
  */
 export function RoomCard({
   id,
@@ -54,21 +55,26 @@ export function RoomCard({
   strong?: boolean;
 }) {
   const room = useRoom();
+  const { roomRef, source, slot, onRoomLayout } = useRoomLight();
   return (
-    <View style={[{ borderRadius: 28, backgroundColor: room.bg }, roomShadow]}>
-      <View
-        style={{
-          borderRadius: 28,
-          overflow: "hidden",
-          borderWidth: 1,
-          borderColor: room.edge,
-          padding: space.xl,
-          gap: space.m,
-        }}
-      >
-        <RoomGlow id={id} strong={strong} />
-        {children}
+    <RoomLightContext.Provider value={slot}>
+      <View style={[{ borderRadius: 28, backgroundColor: room.bg }, roomShadow]}>
+        <View
+          ref={roomRef}
+          onLayout={onRoomLayout}
+          style={{
+            borderRadius: 28,
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: room.edge,
+            padding: space.xl,
+            gap: space.m,
+          }}
+        >
+          <RoomGlow id={id} strong={strong} {...(source === undefined ? {} : { source })} />
+          {children}
+        </View>
       </View>
-    </View>
+    </RoomLightContext.Provider>
   );
 }
