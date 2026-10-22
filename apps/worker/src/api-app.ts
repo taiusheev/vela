@@ -68,6 +68,14 @@ import {
   MarkDeceased,
   type MediaUnavailableReason,
   MemberLight,
+  MemoryShareChoice,
+  MemorySharePrepared,
+  MemorySharePreview,
+  MemoryShareRecipients,
+  MemoryShareSaved,
+  MemoryShareStop,
+  MemoryShareStopped,
+  MemorySharingView,
   OpenWeeklyRead,
   ParentLinkRequest,
   PauseMember,
@@ -79,6 +87,7 @@ import {
   RemovePushDevice,
   SetAway,
   SetMorningPreferences,
+  SharedKeptMemoryPage,
   StartTrial,
   WithdrawAsk,
 } from "@vela/contracts";
@@ -99,8 +108,10 @@ import {
   type cancelAccountLink,
   type completeAccountLink,
   type composeApiAsk,
+  type confirmMemorySharing,
   type createApiFamily,
   type createApiReminder,
+  type createMemorySharingPresentation,
   type DeviceAlerts,
   type disableApiAccount,
   type endApiAway,
@@ -127,6 +138,9 @@ import {
   type loadApiToday,
   type loadApiWeeklyRead,
   type loadDeviceMessages,
+  type loadMemorySharingPresentation,
+  type loadMemorySharingView,
+  type loadSharedKeptMemories,
   MAX_VOICE_BYTES,
   MediaRefusedError,
   type MediaStore,
@@ -161,6 +175,7 @@ import {
   type shareApiParentLink,
   type startAccountLink,
   type startApiTrial,
+  type stopSharingMemory,
   TrialRefusedError,
   type updateApiAccount,
   type uploadApiMedia,
@@ -246,6 +261,19 @@ export interface ApiWriteServices {
 }
 
 export interface ApiRuntime {
+  /** Unconfigured in EVERY actual runtime. Future activation needs reviewed notice/fresh consent.
+   * Keep configured for free reads/stop if new processing is later disabled; never a paid gate. */
+  memorySharing?: {
+    config: Parameters<typeof confirmMemorySharing>[0]["config"];
+    services: {
+      loadMemorySharingView: typeof loadMemorySharingView;
+      loadMemorySharingPresentation: typeof loadMemorySharingPresentation;
+      loadSharedKeptMemories: typeof loadSharedKeptMemories;
+      createMemorySharingPresentation: typeof createMemorySharingPresentation;
+      confirmMemorySharing: typeof confirmMemorySharing;
+      stopSharingMemory: typeof stopSharingMemory;
+    };
+  };
   parentConnection?: typeof loadApiParentConnection;
   capabilities?: ApiCapabilities;
   /**
@@ -490,7 +518,10 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
             : await admission.withRoster(handle.db, admission.config);
       c.set("pilotAdmission", roster);
       const identity = c.get("session");
-      const removal = c.req.path.endsWith("/left") || c.req.path.endsWith("/remove");
+      const removal =
+        c.req.path.endsWith("/left") ||
+        c.req.path.endsWith("/remove") ||
+        c.req.path.endsWith("/sharing/stop");
       if (
         admission !== undefined &&
         roster !== undefined &&
@@ -1087,6 +1118,72 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
   }
   const writes = runtime.writes;
+  const sharing = runtime.memorySharing;
+  const sharingIds: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
+    if (Object.values(c.req.param()).some((id) => typeof id !== "string" || !MEDIA_ID.test(id)))
+      return c.json(INVALID, 400);
+    await next();
+    return c.res;
+  };
+  if (sharing) {
+    const readDeps = (db: VelaDatabase) => ({
+      db,
+      clock: { now: () => runtime.now() },
+      config: sharing.config,
+    });
+    app.get(
+      "/v1/families/:familyId/memories/:memoryId/sharing",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const view = await sharing.services.loadMemorySharingView(
+          readDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          c.req.param("memoryId").toLowerCase(),
+        );
+        return view === null ? c.json(NOT_FOUND, 404) : c.json(MemorySharingView.parse(view), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/memory-sharing-presentations/:presentationId",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const preview = await sharing.services.loadMemorySharingPresentation(
+          readDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          c.req.param("presentationId").toLowerCase(),
+        );
+        return preview === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(MemorySharePreview.parse(preview), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/shared-memories",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const cursors = c.req.queries("cursor") ?? [];
+        if (cursors.length > 1 || (cursors.length === 1 && !MEDIA_ID.test(cursors[0] ?? "")))
+          return c.json(INVALID, 400);
+        const page = await sharing.services.loadSharedKeptMemories(
+          readDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          cursors[0]?.toLowerCase() ?? null,
+        );
+        return page === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(SharedKeptMemoryPage.parse(page), 200);
+      },
+    );
+  }
   if (writes) {
     const checkActivity: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
       if ((await writes.verifyActiveSession(c.get("session"))) !== true) {
@@ -1095,6 +1192,104 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       await next();
       return c.res;
     };
+    if (sharing) {
+      const newSharingEnabled: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
+        if (sharing.config.richMemories !== true) return c.json(NOT_FOUND, 404);
+        await next();
+        return c.res;
+      };
+      const sharingDeps = (db: VelaDatabase) => ({
+        db,
+        clock: writes.clock,
+        config: sharing.config,
+      });
+      // Map stale confirmations before the generic handler; never expose a domain message.
+      const sharingWrite = async <T>(run: () => Promise<T>): Promise<T> => {
+        try {
+          return await run();
+        } catch (error) {
+          if (error instanceof VelaError && error.code === "illegal_state")
+            throw new ApiIdempotencyError("conflict");
+          throw error;
+        }
+      };
+      app.post(
+        "/v1/families/:familyId/memories/:memoryId/sharing/presentations",
+        newSharingEnabled,
+        authenticate,
+        sharingIds,
+        validateWrite(MemoryShareRecipients, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const selected = MemoryShareRecipients.parse(c.get("writeInput"));
+          const result = await sharingWrite(() =>
+            sharing.services.createMemorySharingPresentation(
+              sharingDeps(c.get("db")),
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId").toLowerCase(),
+              {
+                memory_id: c.req.param("memoryId").toLowerCase(),
+                recipient_ids: selected.recipient_ids,
+              },
+            ),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid sharing response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(MemorySharePrepared.parse(result.response.body), 200);
+        },
+      );
+      app.post(
+        "/v1/families/:familyId/memory-sharing/confirm",
+        newSharingEnabled,
+        authenticate,
+        sharingIds,
+        validateWrite(MemoryShareChoice, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const choice = MemoryShareChoice.parse(c.get("writeInput"));
+          const result = await sharingWrite(() =>
+            sharing.services.confirmMemorySharing(
+              sharingDeps(c.get("db")),
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId").toLowerCase(),
+              { ...choice, presentation_id: choice.presentation_id.toLowerCase() },
+            ),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid sharing response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(MemoryShareSaved.parse(result.response.body), 200);
+        },
+      );
+      app.post(
+        "/v1/families/:familyId/memories/:memoryId/sharing/stop",
+        authenticate,
+        sharingIds,
+        validateWrite(MemoryShareStop, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await sharingWrite(() =>
+            sharing.services.stopSharingMemory(
+              sharingDeps(c.get("db")),
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId").toLowerCase(),
+              c.req.param("memoryId").toLowerCase(),
+            ),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid sharing response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(MemoryShareStopped.parse(result.response.body), 200);
+        },
+      );
+    }
     const routes = [
       ["POST", "/v1/me/provision", ApiAccountProfile, writes.services.provisionApiAccount],
       ["PATCH", "/v1/me", ApiAccountPatch, writes.services.updateApiAccount],

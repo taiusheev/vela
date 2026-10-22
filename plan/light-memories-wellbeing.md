@@ -462,3 +462,33 @@ and a recipient with no quote. At 320/390/768px there was no horizontal overflow
 and Check again measured 64px high. No signed-device or live-family proof is claimed.
 The final production-mode export kept the updated preview blank without console errors even
 with explicit demo mode on; its synthetic home rendered normally as positive control.
+
+### Optional sharing HTTP boundary (22 October, built but unconfigured)
+
+Author-state145 merged b5716359 after current f7e346f source, PostgreSQL and app journeys passed
+in push39717773214/PR39717776388 (silence skipped by policy). Its automatic test deployment is
+tracked separately. Recovery147 updated normally to c1a8995; current-head checks are pending.
+
+A trusted optional ApiRuntime.memorySharing group now defines author state, prepare-ID, separate
+ephemeral preview, confirm, stop and recipient-page routes. All actual runtimes leave it absent:
+development/staging/production tests pin that even with legacy MEMORY on. No environment setting,
+Worker runtime wiring, app transport/navigation, notice change or real-family activation is added.
+
+Configured routes reuse verified sessions, active write-session checks, bounded strict JSON,
+idempotency and safe generic errors. UUIDs are canonicalized before domain calls. Prepare/confirm
+require new processing enabled at both route and domain boundaries; reading/stop are not paid or
+processing-gated. Stop bypasses closed-trial admission only, retaining domain author/source checks.
+Receipts carry IDs/booleans; quotes/names are only in separately authenticated no-store reads.
+Other authors/resources are404, not an existence-revealing403; stale confirmation/replay conflicts409.
+Recipient responses forbid original-conversation IDs or hints. Full protocol is in api-contract.md.
+
+HTTP tests inject synthetic domain ports; the existing service/real PostgreSQL tests prove data
+authorization and write races separately. Removing author-read authentication made the401 boundary
+test fail; restored authentication passes. No integrated live HTTP/database/app or native/provider
+proof is claimed. Revised notices/fresh purpose/keep acceptance and reviewed runtime wiring remain
+required, as do translation, native-device, provider and capacity gates. Weekly report stays separate.
+
+Final HTTP local pnpm check passed all 9 tasks: 1,716 service tests, 1,277 Worker tests and 408 app
+tests with 1 existing skip actually ran; 6 unchanged test tasks reused valid caches. The Worker
+total includes 39 new HTTP cases and 3 runtime-pinning cases. Full independent PostgreSQL suite
+passed 149/149 across 47 files; disposable database removed. No live records or runtime were used.
