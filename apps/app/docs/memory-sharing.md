@@ -32,11 +32,14 @@ immediately; disposal clears session state and ignores late responses. Requests 
 
 ## Integration requirements
 
-- Implement authenticated author-state transport and the port adapter separately. The new
-  `MemorySharingView` contract is a future transport shape, not a server endpoint today.
+- The internal `loadMemorySharingView` now supplies authenticated author-only state. Implement
+  HTTP transport and the live port adapter separately; it is not a server endpoint today.
 - The author-state response must contain the COMPLETE current audience and eligible people,
   never a partial page silently treated as the whole set. The current bounded contract allows
   at most 50 recipients; larger families need an explicit integration design, not truncation.
+  The internal loader returns null on overflow or ambiguous/invalid names. Do not wire that
+  unavailable state without an independent free stop-sharing/removal/withdrawal path; a failed
+  audience load must never make revocation inaccessible. No live UI is connected yet.
 - The server remains authority. Prepare and confirm must recheck current eligibility, authenticate
   the author, use server-owned single-use presentations and apply the COMPLETE selected audience.
   All writes go through the existing idempotent mutation boundary.
@@ -59,3 +62,20 @@ recipient quote-only viewing and revoked access. Confirmation layouts at 320/390
 horizontal overflow and both actions measured 64px high. This is web evidence, not native proof.
 The production-mode web export rendered this preview blank, with no console errors; its home
 screen rendered normally as the positive control. No real-family access was exercised.
+
+## Current author-state reader
+
+The internal loader uses one repeatable-read, read-only database snapshot for ownership, kept
+source/consent eligibility, sharing revision and recipient permissions. It loads the entire
+bounded eligible audience, not a first page. Current active/paused members with live bound
+accounts are eligible; self, departed, invited, deceased and unbound/deleted accounts are omitted.
+Current grant account/member generations, sharing revision, version and time decide `shared`.
+No one is selected merely for joining, paying or becoming an organiser. Names are trimmed and
+checked for normalized ambiguity; invalid/ambiguous names fail closed rather than guessing.
+No new tables, receipts, cached quote copies, writes or payment requirement are introduced.
+
+Snapshot results are observations as of the read, not authority to share later. A stop committed
+while a read is in flight can make that snapshot old. The next read sees the stop, and prepare/
+confirm must still revalidate the latest server-owned state. A real PostgreSQL test commits stop
+on a second connection while the first snapshot is open, verifies the coherent old view and then
+the fresh private view. Weakening isolation to read-committed makes this test fail.

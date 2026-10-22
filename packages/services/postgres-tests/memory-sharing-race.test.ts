@@ -12,8 +12,9 @@ import {
   memoryShares,
   memorySharingPresentations,
   users,
+  type VelaDatabase,
 } from "@vela/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { sha256Hex } from "../src/hash.ts";
 import { withdrawOwnMemoryConsent } from "../src/memory-consent.ts";
@@ -22,6 +23,7 @@ import {
   confirmMemorySharing,
   createMemorySharingPresentation,
   loadMemorySharingPresentation,
+  loadMemorySharingView,
   stopSharingMemory,
 } from "../src/memory-sharing.ts";
 import { proposeMemoryCandidate, RICH_MEMORY_CONSENT_VERSION } from "../src/rich-memories.ts";
@@ -149,6 +151,63 @@ async function confirm(client: RaceClient, row: Setup, key: string) {
 }
 
 describe("named-memory sharing on independent PostgreSQL connections", () => {
+  it("reads one read-only snapshot across a concurrent stop, then refreshes to private", async () => {
+    const row = await setup();
+    expect(await confirm(seed, row, "synthetic-initial-share")).toMatchObject({ kind: "shared" });
+    const [readerClient, writer] = await pg.clientPool("sharing-view-snapshot", 2);
+    if (!readerClient || !writer) throw new Error("Missing clients");
+    let mode: unknown;
+    // Establish a real snapshot, commit a separate revocation, then run the service's reads.
+    // No production hook or timing-based sleep is needed. The service supplies isolation/mode.
+    const observedDb = new Proxy(readerClient.db, {
+      get(target, property, receiver) {
+        if (property !== "transaction") return Reflect.get(target, property, receiver);
+        return (
+          run: Parameters<VelaDatabase["transaction"]>[0],
+          config: Parameters<VelaDatabase["transaction"]>[1],
+        ) =>
+          target.transaction(async (tx) => {
+            const settings = await tx.execute(
+              sql`select current_setting('transaction_isolation') as isolation, current_setting('transaction_read_only') as mode`,
+            );
+            mode = settings.rows[0];
+            await tx.select({ id: memoryKeeps.id }).from(memoryKeeps);
+            await stopSharingMemory(
+              deps(writer),
+              identity,
+              "synthetic-concurrent-stop",
+              row.family.family.id,
+              row.kept.id,
+            );
+            return run(tx);
+          }, config);
+      },
+    });
+    const snapshot = await loadMemorySharingView(
+      { ...deps(readerClient), db: observedDb },
+      identity,
+      row.family.family.id,
+      row.kept.id,
+    );
+    expect(snapshot?.recipients).toMatchObject([
+      { member_id: row.family.organiser.id, shared: true },
+    ]);
+    expect(mode).toMatchObject({ isolation: "repeatable read", mode: "on" });
+    expect(await seed.db.select().from(memoryShares)).toEqual([]);
+    const fresh = await loadMemorySharingView(
+      deps(seed),
+      identity,
+      row.family.family.id,
+      row.kept.id,
+    );
+    expect(fresh?.recipients).toMatchObject([
+      { member_id: row.family.organiser.id, shared: false },
+    ]);
+    expect(fresh?.revision).not.toBe(snapshot?.revision);
+    expect((await loadSharedKeptMemories(deps(seed), reader, row.family.family.id))?.items).toEqual(
+      [],
+    );
+  });
   it("cannot confirm an old choice queued behind stop-sharing", async () => {
     const row = await setup();
     const [stopper, confirmer, holder] = await pg.clientPool("stop-share", 3);

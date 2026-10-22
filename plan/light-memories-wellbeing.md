@@ -396,3 +396,38 @@ including positive recipient reads and no access after a queued stop; disposable
 Final local pnpm check passed all 9 tasks: 1,697 service tests and 400 app tests with 1 existing
 skip actually ran; 7 unchanged tasks reused valid caches. No live notice/generated notice,
 shared locale or Worker enablement changes. Browser preview servers were stopped after review.
+
+### Authenticated author sharing state (22 October, internal only)
+
+The internal author-state loader now joins the real private keep, current revision and complete
+eligible audience in a repeatable-read/read-only transaction. It is an observation, not a saved
+confirmation or later-write authority. It performs no writes and creates no quote/name copies.
+It remains usable when rich-memory processing is off; no payment gate is added.
+
+Only current active/paused members with live bound accounts appear; no author/self, departed,
+invited, deceased, unbound or deleted account is a new sharing option. Current permission account/
+membership generation, sharing revision, confirmation version and time determine the displayed
+audience. New joiners/organisers are not preselected. Normalized ambiguous names, invalid names or
+more than 50 eligible people return unavailable, never an incomplete replacement audience.
+Before live connection, unsupported/failed audience loading needs an independent free stop/
+remove/withdraw path; revocation must not depend on successful loading of all eligible people.
+
+Synthetic tests cover exact private words, author isolation, complete/current audiences, free
+reads after processing stops, stale grants, departure/account/name changes, invalidation and
+ordinary-retention survival. A real PostgreSQL snapshot test commits a stop from another
+connection, verifies the coherent earlier snapshot and then refreshes to the new private state.
+Deliberately weakening isolation to read-committed failed on the audience mismatch; the restored
+read-only repeatable snapshot passed. This is database evidence, not live account/provider proof.
+
+Permission PR142 staging39662523929 succeeded, including both Workers and public protection
+smoke (auth401/no-admin404/Access302/capabilities200). Screen PR143's original candidate passed
+all GitHub source/database/app checks, then was normally updated to main9bf0275 (settings144)
+as eda77d4; newest-head checks are tracked separately. Settings/locale work is preserved.
+No new HTTP route, service-barrel export, app/messenger transport, live notice/consent acceptance,
+shared locale change, model processing, production tag or real-family activation is included.
+
+Final author-state local pnpm check passed all 9 tasks: 1,716 service tests and 400 app tests
+with 1 existing skip actually ran; 7 unchanged tasks reused valid caches. All 90 focused keep/
+sharing cases passed. Full independent PostgreSQL suite passed 149/149 across 47 files, and the
+disposable database was removed. Snapshot-isolation negative control failed as intended; restored
+source passed. No live UI or new production notice was used to obtain these results.
