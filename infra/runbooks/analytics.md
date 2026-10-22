@@ -4,7 +4,7 @@ Status: EU PostHog project 315862 is connected and synthetic ingestion is verifi
 
 ## Free account setup
 
-Founder completed EU signup on 22 October 2026. Do not add a payment card. Verify the no-card free billing state before activation. Use only the public project token (phc_...) and project region; never request a personal API key or password. Do not install vendor snippets from onboarding: Vela already sends explicit minimal events.
+Founder completed EU signup on 22 October 2026. Billing was visibly verified as free, with an add-card upgrade prompt and 1M monthly product-analytics free limit. Do not add a payment card. Use only the public project token (phc_...) and project region; never request a personal API key or password. Do not install vendor snippets from onboarding: Vela already sends explicit minimal events.
 
 Use the one free project for production. Unit tests use fake transport. The actual-ingestion smoke test used synthetic data marked development/staging in this project; every saved production chart excludes it. If a separate staging project is needed, confirm its pricing before creating it. Free quotas and product pricing can change: verify https://posthog.com/pricing before activation. Product analytics is the only product needed; no Groups add-on, replay, surveys or managed warehouse.
 
