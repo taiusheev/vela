@@ -850,6 +850,7 @@ msgid "Canada"
 msgstr "加拿大"
 
 #: app/morning-settings.tsx
+#: app/profile.tsx
 msgid "Cancel"
 msgstr "取消"
 
@@ -862,6 +863,10 @@ msgstr "取消連結"
 #: src/data/onboarding.ts
 msgid "Central"
 msgstr "中部時間"
+
+#: app/profile.tsx
+msgid "Change"
+msgstr "更改"
 
 #: app/conversation.tsx
 #: app/settings.tsx
@@ -1806,6 +1811,7 @@ msgid "Listen to your recording"
 msgstr "聽聽你的錄音"
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 msgid "Little things worth remembering from your own answers"
 msgstr "從你自己的回答中，值得記住的小事"
 
@@ -1858,6 +1864,10 @@ msgstr "正在載入您家庭的方案…"
 #: app/settings.tsx
 msgid "Loading your notification preference…"
 msgstr "正在載入通知偏好設定…"
+
+#: app/profile.tsx
+msgid "Loading…"
+msgstr "載入中…"
 
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
@@ -2312,6 +2322,10 @@ msgstr "正在開啟 Telegram…"
 msgid "Opening the book…"
 msgstr "正在打開故事書…"
 
+#: app/(tabs)/you.tsx
+msgid "Opens your name, your family and your own things"
+msgstr "打開你的名字、你的家人和你自己的東西"
+
 #: src/components/vote-options.tsx
 msgid "Option {number}"
 msgstr "選項 {number}"
@@ -2352,6 +2366,7 @@ msgid "Parent photo"
 msgstr "父母的照片"
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 msgid "Parent photos and links, notifications, language, and account"
 msgstr "父母的照片與連結、通知、語言及帳號"
 
@@ -2487,6 +2502,10 @@ msgstr "隱私與協助"
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
 msgstr "隱私詳情與條款"
+
+#: app/profile.tsx
+msgid "Profile"
+msgstr "個人資料"
 
 #: src/components/onboarding/plan.tsx
 msgid "Putting together {name}’s first week…"
@@ -2705,6 +2724,10 @@ msgstr "星期天幫我留兩顆好嗎？"
 msgid "Save morning settings"
 msgstr "儲存早安設定"
 
+#: app/profile.tsx
+msgid "Save name"
+msgstr "儲存名字"
+
 #: app/conversation.tsx
 msgid "Saved for their first morning after they join."
 msgstr "已保存，會在加入後的第一個早晨送出。"
@@ -2724,6 +2747,7 @@ msgstr "正在儲存你的偏好設定…"
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/morning-settings.tsx
+#: app/profile.tsx
 #: src/components/app-privacy.tsx
 #: src/components/calling-number-editor.tsx
 #: src/components/quiet-notice.tsx
@@ -2903,6 +2927,7 @@ msgid "Setting up…"
 msgstr "設定中…"
 
 #: app/(tabs)/you.tsx
+#: app/profile.tsx
 #: app/settings.tsx
 msgid "Settings"
 msgstr "設定"
@@ -4488,6 +4513,10 @@ msgstr "目前無法載入您的家庭。"
 msgid "Your family could not be reached just now. Your saved questions are unchanged."
 msgstr "目前無法讀取家人資料。已儲存的問題沒有變更。"
 
+#: app/profile.tsx
+msgid "Your family sees this name on your questions and replies."
+msgstr "家人會在你的提問和回覆上看到這個名字。"
+
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
 msgstr "更新 Vela 後，你的家庭仍會保留。"
@@ -4518,6 +4547,7 @@ msgstr "您的燈要從您自己的聊天室暫停，也就是您收到早安訊
 
 #: app/(tabs)/you.tsx
 #: app/my-memories.tsx
+#: app/profile.tsx
 msgid "Your memories"
 msgstr "你的回憶"
 
@@ -4537,10 +4567,15 @@ msgstr "您的手機號碼。國碼會自動幫您加上。"
 msgid "Your morning message"
 msgstr "您的早晨訊息"
 
+#: app/profile.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/telegram-family-link.tsx
 msgid "Your name"
 msgstr "你的名字"
+
+#: app/profile.tsx
+msgid "Your name could not be saved. Nothing changed. Try again."
+msgstr "名字沒有儲存成功，什麼都沒有改變。請再試一次。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Your name, as the family says it."
@@ -4566,6 +4601,14 @@ msgstr "您的父母可以在自己的 Telegram 聊天室裡問「家人看到�
 #: app/settings.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 msgstr "試辦免費。安靜通知和重要訊息會送到發起人的 Telegram 私人聊天室。"
+
+#: app/(tabs)/you.tsx
+msgid "Your profile"
+msgstr "你的個人資料"
+
+#: app/(tabs)/you.tsx
+msgid "Your profile, {myName}, {familyName}"
+msgstr "你的個人資料，{myName}，{familyName}"
 
 #: app/ask.tsx
 msgid "Your question"
