@@ -181,8 +181,8 @@ msgid "{name} has not said yes yet. Once she does, her first morning is the next
 msgstr "{name} has not said yes yet. Once she does, her first morning is the next day."
 
 #: app/conversation.tsx
-msgid "{name} has not said yes yet. What you write waits for their first morning."
-msgstr "{name} has not said yes yet. What you write waits for their first morning."
+msgid "{name} has not said yes yet. Write a first hello now: it reaches {name} the moment they say yes, so the chat is waiting for them."
+msgstr "{name} has not said yes yet. Write a first hello now: it reaches {name} the moment they say yes, so the chat is waiting for them."
 
 #: src/components/parent-link-settings.tsx
 msgid "{name} has paused their mornings."
@@ -2693,8 +2693,8 @@ msgid "Save calling number"
 msgstr "Save calling number"
 
 #: app/conversation.tsx
-msgid "Save for their first morning"
-msgstr "Save for their first morning"
+msgid "Save for when they say yes"
+msgstr "Save for when they say yes"
 
 #: src/data/chat.ts
 msgid "Save me two for Sunday?"
@@ -2705,8 +2705,8 @@ msgid "Save morning settings"
 msgstr "Save morning settings"
 
 #: app/conversation.tsx
-msgid "Saved for their first morning after they join."
-msgstr "Saved for their first morning after they join."
+msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 
 #: src/components/onboarding/finish.tsx
 msgid "Saving"

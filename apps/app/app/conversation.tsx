@@ -161,7 +161,9 @@ function Conversation() {
         ]);
         setNote(t`Example only. Nothing was sent.`);
       } else if (accepted.when === "whenever") {
-        setNote(t`Saved for their first morning after they join.`);
+        setNote(
+          t`Saved. The first message waiting reaches ${name} the moment they say yes; the rest come with their mornings.`,
+        );
       }
       await Promise.all([
         queries.invalidateQueries({ queryKey: ["exchanges"] }),
@@ -375,7 +377,7 @@ function Conversation() {
             setNote(null);
           }}
           placeholder={t`Write to ${name}`}
-          sendLabel={invited ? t`Save for their first morning` : t`Send now`}
+          sendLabel={invited ? t`Save for when they say yes` : t`Send now`}
           onSend={() => send.mutate()}
           {...(moreActions.length === 0 ? {} : { onMore: () => setSheet("more") })}
           disabled={send.isPending || !draft.ready}
@@ -463,7 +465,7 @@ function Conversation() {
           <View style={{ alignItems: "center", paddingHorizontal: space.l, gap: space.xs }}>
             <Words variant="caption" tone="ink3">
               {invited
-                ? t`${name} has not said yes yet. What you write waits for their first morning.`
+                ? t`${name} has not said yes yet. Write a first hello now: it reaches ${name} the moment they say yes, so the chat is waiting for them.`
                 : t`Your words reach ${name}'s chat now, signed with your name. Their morning stays as it is.`}
             </Words>
           </View>

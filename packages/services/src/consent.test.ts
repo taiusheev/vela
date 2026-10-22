@@ -6,6 +6,7 @@ import {
   channelLinks,
   consents,
   events,
+  exchanges,
   type Family,
   families,
   type Invite,
@@ -442,12 +443,12 @@ describe("handleConsentButton: Yes", () => {
       {
         conversationId: HER,
         messageId: "1",
-        replacementText: `${t("en", "consent.request", params)}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00" })}`,
+        replacementText: `${t("en", "consent.request", params)}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00", organiser: "Mia" })}`,
       },
       {
         conversationId: HER,
         messageId: "1",
-        replacementText: `${t("en", "consent.request", params)}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00" })}`,
+        replacementText: `${t("en", "consent.request", params)}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00", organiser: "Mia" })}`,
       },
     ]);
     expect(h.telegram.closed[0]?.replacementText).toContain("Timur Aiusheev");
@@ -506,7 +507,7 @@ describe("handleConsentButton: Yes", () => {
     expect((await eventNames()).filter((name) => name === "consent_given")).toHaveLength(1);
     // The second tap records nothing, so it only makes sure the buttons are gone.
     expect(h.telegram.closed.map((call) => call.replacementText)).toEqual([
-      `${t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN })}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00" })}`,
+      `${t("en", "consent.request", { organiser: "Mia", notice: NOTICE_EN })}\n\nYes, that's fine\n\n${t("en", "consent.accepted", { time: "08:00", organiser: "Mia" })}`,
       undefined,
     ]);
     expect(h.scheduler.history).toHaveLength(1);
@@ -556,7 +557,7 @@ describe("the health-words question", () => {
     ]);
     const [request, question] = toHer;
     expect(h.telegram.closed.at(-1)?.replacementText).toContain(
-      t("en", "consent.accepted", { time: "08:00" }),
+      t("en", "consent.accepted", { time: "08:00", organiser: "Mia" }),
     );
     expect((question?.at.getTime() ?? 0) - (request?.at.getTime() ?? 0)).toBe(10_000);
     expect(
@@ -977,7 +978,7 @@ describe("handleConsentButton: No", () => {
     expect(await eventNames()).toEqual(["invite_accepted", "consent_given"]);
     // The request keeps showing the Yes that stands.
     expect(h.telegram.closed.map((call) => call.replacementText?.split("\n\n").at(-1))).toEqual([
-      t("en", "consent.accepted", { time: "08:00" }),
+      t("en", "consent.accepted", { time: "08:00", organiser: "Mia" }),
       undefined,
     ]);
   });
@@ -1080,7 +1081,7 @@ describe("the single consent message (consent.request@3)", () => {
       t("en", "consent.request_both", params),
     ]);
     expect(h.telegram.closed.at(-1)?.replacementText).toBe(
-      `${t("en", "consent.request_both", params)}\n\nYes to both\n\n${t("en", "consent.accepted", { time: "08:00" })}`,
+      `${t("en", "consent.request_both", params)}\n\nYes to both\n\n${t("en", "consent.accepted", { time: "08:00", organiser: "Mia" })}`,
     );
     expect((await herRow(seed.her.id))?.status).toBe("active");
   });
@@ -1140,5 +1141,95 @@ describe("the single consent message (consent.request@3)", () => {
     expect(await h.db.select().from(consents).where(eq(consents.memberId, seed.her.id))).toEqual(
       [],
     );
+  });
+});
+
+describe("her child's first words, sent when she says yes", () => {
+  async function waitingAsk(seed: Invited, text: string, minutesAgo: number) {
+    const [row] = await h.db
+      .insert(exchanges)
+      .values({
+        familyId: seed.family.id,
+        recipientId: seed.her.id,
+        askerId: seed.organiser.id,
+        type: "question",
+        state: "composed",
+        text,
+        textLang: "en",
+        options: {},
+        whenRule: "whenever",
+        scheduledFor: null,
+        createdAt: new Date(h.clock.now().getTime() - minutesAgo * 60_000),
+        mediaIds: [],
+      })
+      .returning();
+    if (row === undefined) throw new Error("Missing synthetic ask");
+    return row;
+  }
+  async function yesToBoth(seed: Invited) {
+    sequence += 1;
+    await handleCombinedConsentButton(
+      h.deps,
+      {
+        channel: "telegram",
+        eventId: `tg:${sequence}`,
+        at: h.clock.now().toISOString(),
+        kind: "button",
+        sender: { externalUserId: HER },
+        conversation: { externalId: HER, kind: "private" },
+        messageId: "1",
+        buttonData: encodeButton({ type: "consent_both", memberId: seed.her.id, choice: "both" }),
+        callbackId: `cb${sequence}`,
+      },
+      { type: "consent_both", memberId: seed.her.id, choice: "both" },
+      async () => {},
+    );
+  }
+
+  it("sends the oldest waiting question now, signed by its writer, after her thanks", async () => {
+    const seed = await linked();
+    const oldest = await waitingAsk(seed, "What did you have for breakfast?", 30);
+    const later = await waitingAsk(seed, "Which song did you sing to us?", 10);
+
+    await yesToBoth(seed);
+    const queued = await h.db.select().from(outbound).where(eq(outbound.kind, "conversation"));
+    expect(queued).toHaveLength(1);
+    expect(queued[0]).toMatchObject({ exchangeId: oldest.id, conversationId: HER });
+    await h.run(handlers());
+
+    const [sent] = await h.db.select().from(exchanges).where(eq(exchanges.id, oldest.id));
+    expect(sent).toMatchObject({ whenRule: "now" });
+    const [kept] = await h.db.select().from(exchanges).where(eq(exchanges.id, later.id));
+    expect(kept).toMatchObject({ state: "composed", whenRule: "whenever" });
+    const toHer = h.telegram.sentTo(HER).map((entry) => entry.message.text);
+    expect(toHer.at(-1)).toBe(
+      `What did you have for breakfast?\n${t("en", "arrival.signed", { asker: "Mia" })}`,
+    );
+    expect(h.telegram.closed.at(-1)?.replacementText).toContain(
+      t("en", "consent.accepted_first", { time: "08:00", organiser: "Mia" }),
+    );
+    expect(h.telegram.sentTo(ORGANISER).map((entry) => entry.message.text)).toContain(
+      t("en", "organiser.consent_given_first", { name: "Mom", time: "08:00" }),
+    );
+  });
+
+  it("says the first morning comes tomorrow when nobody wrote anything yet", async () => {
+    const seed = await linked();
+    await yesToBoth(seed);
+    await h.run(handlers());
+    expect(await h.db.select().from(outbound).where(eq(outbound.kind, "conversation"))).toEqual([]);
+    expect(h.telegram.closed.at(-1)?.replacementText).toContain(
+      t("en", "consent.accepted", { time: "08:00", organiser: "Mia" }),
+    );
+  });
+
+  it("sends the first words once when her yes is tapped twice", async () => {
+    const seed = await linked();
+    await waitingAsk(seed, "What did you have for breakfast?", 30);
+    await yesToBoth(seed);
+    await yesToBoth(seed);
+    expect(
+      await h.db.select().from(outbound).where(eq(outbound.kind, "conversation")),
+    ).toHaveLength(1);
   });
 });

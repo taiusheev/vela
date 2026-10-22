@@ -182,8 +182,8 @@ msgid "{name} has not said yes yet. Once she does, her first morning is the next
 msgstr "{name}還沒有同意。同意之後的隔天早上，就會收到第一則早安訊息。"
 
 #: app/conversation.tsx
-msgid "{name} has not said yes yet. What you write waits for their first morning."
-msgstr "{name}還沒有答應。你寫的話會等到第一個早晨再送出。"
+msgid "{name} has not said yes yet. Write a first hello now: it reaches {name} the moment they say yes, so the chat is waiting for them."
+msgstr "{name}還沒有同意。現在先寫一句問候吧：{name}一同意就會收到，聊天室裡已經有話在等著。"
 
 #: src/components/parent-link-settings.tsx
 msgid "{name} has paused their mornings."
@@ -2694,8 +2694,8 @@ msgid "Save calling number"
 msgstr "儲存電話號碼"
 
 #: app/conversation.tsx
-msgid "Save for their first morning"
-msgstr "留到第一個早晨"
+msgid "Save for when they say yes"
+msgstr "等對方同意後送出"
 
 #: src/data/chat.ts
 msgid "Save me two for Sunday?"
@@ -2706,8 +2706,8 @@ msgid "Save morning settings"
 msgstr "儲存早安設定"
 
 #: app/conversation.tsx
-msgid "Saved for their first morning after they join."
-msgstr "已保存，會在加入後的第一個早晨送出。"
+msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr "已儲存。第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
 
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
