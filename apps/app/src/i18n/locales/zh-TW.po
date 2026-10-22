@@ -172,6 +172,14 @@ msgstr "{name}選擇了「暫時不要」。"
 msgid "{name} gave permission to save this number"
 msgstr "{name}已同意讓我儲存這個號碼"
 
+#: src/components/first-week.tsx
+msgid "{name} has answered {count} mornings so far this week. Each answer goes into the read."
+msgstr "這週到目前為止，{name}回覆了 {count} 個早上。每一則回覆都會寫進每週小記。"
+
+#: src/components/first-week.tsx
+msgid "{name} has answered one morning so far this week. Each answer goes into the read."
+msgstr "這週到目前為止，{name}回覆了一個早上。每一則回覆都會寫進每週小記。"
+
 #: src/data/family.ts
 msgid "{name} has not said yes yet"
 msgstr "{name}還沒有同意"
@@ -277,6 +285,10 @@ msgstr "給{name}的第一個問題"
 msgid "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
 msgstr "{name}的第一份每週回顧會在星期日到來，回顧一週的晨間訊息。"
 
+#: src/components/first-week.tsx
+msgid "{name}'s first weekly read: {when}"
+msgstr "{name}的第一份每週小記：{when}"
+
 #: app/vela-light.tsx
 msgid "{name}'s light is not on."
 msgstr "{name}的燈還沒有點亮。"
@@ -329,6 +341,10 @@ msgstr "{name}的這一週"
 #: src/components/onboarding/finish.tsx
 msgid "{name}’s window is ready."
 msgstr "{name}的窗已經準備好了。"
+
+#: src/components/first-week.tsx
+msgid "{name}'s words this week"
+msgstr "{name}這週說的話"
 
 #: src/components/onboarding/questions.tsx
 msgid "{name}’s world"
@@ -437,6 +453,14 @@ msgstr "📷 用照片回覆"
 #: app/vela-light.tsx
 msgid "$79 a year"
 msgstr "每年 79 美元"
+
+#: src/components/first-week.tsx
+msgid "3 replies from the family"
+msgstr "家人回覆了 3 次"
+
+#: src/components/first-week.tsx
+msgid "5 mornings answered this week"
+msgstr "這週回覆了 5 個早上"
 
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
@@ -717,6 +741,10 @@ msgstr "問問{name}，{what}還順利嗎"
 #: src/components/today-hero.tsx
 msgid "Ask {name} something"
 msgstr "問{name}一件事"
+
+#: src/components/first-week.tsx
+msgid "Ask {name} something for this week"
+msgstr "這週問{name}一件事"
 
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
@@ -1210,6 +1238,10 @@ msgstr "每一位"
 msgid "Everyone's light is on today"
 msgstr "今天每個人的燈都亮著"
 
+#: src/components/first-week.tsx
+msgid "Example"
+msgstr "範例"
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr "示範 · 愛心已送出"
@@ -1637,6 +1669,10 @@ msgstr "由您從{app}傳出，{name}就知道真的是您。"
 #: app/away.tsx
 msgid "It ends when she next answers, from a later day than today."
 msgstr "從明天起，長輩下次回覆時就會自動結束。"
+
+#: src/components/first-week.tsx
+msgid "It gathers what {name} tells the family this week. The more mornings {name} answers, the richer it gets."
+msgstr "它會整理{name}這週跟家人說的話。{name}回覆的早上越多，內容就越豐富。"
 
 #: app/(tabs)/index.tsx
 msgid "It has been accepted. Delivery happens in the parent's morning."
@@ -3132,6 +3168,10 @@ msgstr "放進早安訊息"
 msgid "Something to ask next week"
 msgstr "下週可以問問看"
 
+#: src/components/first-week.tsx
+msgid "Something to ask next: which seeds would be good to plant together?"
+msgstr "下次可以問：哪些種子適合種在一起？"
+
 #: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "{notices}則中有{wrong}則真的有狀況。"
@@ -3485,6 +3525,10 @@ msgstr "附近的聯絡人由這個家庭的發起人選定。"
 msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr "第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
 
+#: src/components/first-week.tsx
+msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
+msgstr "花園提到了兩次：番茄，還有留到春天的種子。"
+
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr "無法分享邀請。請再試一次「在 Telegram 上問」；目前沒有聯絡任何人。"
@@ -3762,6 +3806,10 @@ msgstr "要用聲音回答，Vela 需要使用麥克風。請家人幫您在「�
 #: src/device/useParent.ts
 msgid "Toast and tea"
 msgstr "吐司配茶"
+
+#: src/components/first-week.tsx
+msgid "today"
+msgstr "今天"
 
 #: app/away.tsx
 #: src/data/chat.ts
@@ -4259,6 +4307,10 @@ msgstr "家人說了什麼"
 #: app/settings.tsx
 msgid "What the family sees about you"
 msgstr "家人看得到您的哪些資訊"
+
+#: src/components/first-week.tsx
+msgid "What the read will show"
+msgstr "每週小記會有什麼"
 
 #: src/components/onboarding/questions.tsx
 msgid "What they call you"

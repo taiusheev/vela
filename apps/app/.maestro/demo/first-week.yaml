@@ -1,0 +1,15 @@
+# Before a parent's first weekly read, Week says when it comes, shows an example of what it holds,
+# and offers a way to ask something now. In the demo, Dad has no read yet.
+url: ${APP_URL}
+name: Week before the first read says when it comes and shows an example
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/sunday
+- tapOn: "Dad"
+- assertVisible: "Dad's first weekly read: .*"
+- assertVisible: "What the read will show"
+- assertVisible: "Example"
+- tapOn: "Ask Dad something for this week"
+- assertVisible: "Ask Dad something"
