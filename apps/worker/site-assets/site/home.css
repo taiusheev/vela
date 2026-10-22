@@ -1496,6 +1496,12 @@ body:has(.afterglow) {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+.approved-home.afterglow .footer-copyright {
+  width: 100%;
+  color: #b6aa9b;
+  font-size: 10px;
+  line-height: 1.8;
+}
 .approved-home.afterglow .waitlist {
   max-width: 550px;
   padding: 0;

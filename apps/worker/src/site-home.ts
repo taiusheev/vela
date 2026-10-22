@@ -327,6 +327,9 @@ export function approvedCopy(lang: SiteLang) {
 export function approvedDemo(lang: SiteLang) {
   return COPY[lang];
 }
+export function siteCopyright(lang: SiteLang): string {
+  return `© ${new Date().getUTCFullYear()} Vela. ${lang === "en" ? "All rights reserved." : "保留所有權利。"}`;
+}
 function demoData(lang: SiteLang): Html {
   const json = JSON.stringify(approvedDemo(lang)).replace(/</g, "\\u003c");
   return { markup: `<script type="application/json" id="vela-demo">${json}</script>` };
@@ -370,7 +373,7 @@ export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageCont
 <section class="questions wrap" aria-labelledby="faq-title"><h2 class="label" id="faq-title">${c.faqLabel}</h2><div>${c.faqs.map((faq) => html`<details><summary>${faq.question}</summary><p>${faq.answer}</p></details>`)}</div></section>
 <section id="join" class="closing" aria-labelledby="closing-title"><div class="closing-light" aria-hidden="true"></div><p class="label">${c.closingLabel}</p><h2 id="closing-title">${c.closingTitle}<br><em>${c.closingEm}</em></h2><p>${c.closingBody}</p>${form(lang, "footer", flash)}</section>
 </main>
-<footer class="wrap footer"><a href="${home}" aria-label="Vela"><img src="/site/img/vela-logo-white.svg" width="78" height="30" alt="Vela"></a><span>${c.footer}</span><span>${c.guarantee}</span><nav class="footer-links" aria-label="${c.privacy}"><a href="${privacy}">${c.privacy}</a><a href="${pilotPrivacy}">${c.productPrivacy}</a><a href="${precision}">${c.serviceStatus}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:t.aiusheev@gmail.com">${c.contact}</a><a href="${otherHome}" hreflang="${otherLang}" lang="${otherLang}">${otherLabel}</a></nav></footer><p class="prototype-note">${c.disclosure}</p>
+<footer class="wrap footer"><a href="${home}" aria-label="Vela"><img src="/site/img/vela-logo-white.svg" width="78" height="30" alt="Vela"></a><span>${c.footer}</span><span>${c.guarantee}</span><nav class="footer-links" aria-label="${c.privacy}"><a href="${privacy}">${c.privacy}</a><a href="${pilotPrivacy}">${c.productPrivacy}</a><a href="${precision}">${c.serviceStatus}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:t.aiusheev@gmail.com">${c.contact}</a><a href="${otherHome}" hreflang="${otherLang}" lang="${otherLang}">${otherLabel}</a></nav><p class="footer-copyright">${siteCopyright(lang)}</p></footer><p class="prototype-note">${c.disclosure}</p>
 <dialog id="waitlist-dialog" aria-labelledby="waitlist-title"><button class="dialog-close" type="button" aria-label="${c.closeWaitlist}">×</button><img src="/site/img/vela-logo.svg" width="110" height="42" alt="Vela"><h2 id="waitlist-title">${c.dialogTitle}</h2><p>${c.leaveEmail}</p>${form(lang, "dialog")}</dialog>${demoData(lang)}</div>`,
   };
 }

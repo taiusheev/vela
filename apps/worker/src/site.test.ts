@@ -187,6 +187,21 @@ describe("the public website", () => {
     }
   });
 
+  it.each(SITE_LANGS)("shows the current copyright on every %s website page", async (lang) => {
+    const fake = createFakePilotRuntime();
+    const expected = `© ${new Date().getUTCFullYear()} Vela. ${lang === "en" ? "All rights reserved." : "保留所有權利。"}`;
+    for (const path of [
+      SITE_PATHS[lang].home,
+      SITE_PATHS[lang].precision,
+      SITE_PATHS[lang].privacy,
+      ...LEGAL_PAGES.map((page) => legalPath(lang, page)),
+    ]) {
+      const response = await send(fake, `${origin()}${path}`);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain(expected);
+    }
+  });
+
   it("has no founder's blank left, so production serves every page, and only production is indexed", async () => {
     expect(SITE_LANGS.map(unfilledSiteBlanks)).toEqual([[], []]);
     const fake = createFakePilotRuntime();
