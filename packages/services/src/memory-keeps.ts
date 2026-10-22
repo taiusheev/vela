@@ -4,7 +4,9 @@ import {
   type KeptMemoryPage,
   MEMORY_KEEP_EXPLANATION_EN,
   MEMORY_KEEP_VERSION,
+  MEMORY_SHARE_VERSION,
   MemoryKeepChoice,
+  type SharedKeptMemoryPage,
 } from "@vela/contracts";
 import {
   answers,
@@ -14,9 +16,24 @@ import {
   members,
   memoryCandidates,
   memoryKeeps,
+  memoryShares,
   users,
 } from "@vela/db";
-import { and, asc, desc, eq, gt, inArray, isNull, lte, notExists, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  exists,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  notExists,
+  or,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
@@ -255,8 +272,9 @@ const discovery = alias(consents, "kept_discovery_consent");
 const grant = alias(consents, "kept_quote_grant");
 const later = alias(consents, "kept_later_consent");
 const viewer = alias(members, "kept_memory_viewer");
+const ownerAccount = alias(users, "kept_memory_owner_account");
 
-/** Private keeps until explicit audience grants exist; reading/removal never depend on payment. */
+/** Author's private collection; recipient reads are separate. Never depends on payment. */
 export async function loadKeptMemories(
   deps: KeepDeps,
   identity: SessionIdentity,
@@ -264,6 +282,40 @@ export async function loadKeptMemories(
   cursor: string | null = null,
 ): Promise<KeptMemoryPage | null> {
   return readKeptMemoryPage(deps, identity, familyId, cursor, false);
+}
+
+/** Separate internal recipient collection, not a change to private/default reads or exports.
+ * It reveals only selected words, not original answer IDs or conversation-access hints.
+ * No runtime caller or HTTP route; reads revalidate every page without a payment gate.
+ */
+export async function loadSharedKeptMemories(
+  deps: KeepDeps,
+  identity: SessionIdentity,
+  familyId: string,
+  cursor: string | null = null,
+): Promise<SharedKeptMemoryPage | null> {
+  const page = await readKeptMemoryPage(
+    deps,
+    identity,
+    familyId,
+    cursor,
+    false,
+    undefined,
+    "shared",
+  );
+  if (!page) return null;
+  return {
+    items: page.items.map(({ id, member_id, kind, quote, lang, occurred_at, kept_at }) => ({
+      id,
+      member_id,
+      kind,
+      quote,
+      lang,
+      occurred_at,
+      kept_at,
+    })),
+    next_cursor: page.next_cursor,
+  };
 }
 
 /**
@@ -299,6 +351,7 @@ async function readKeptMemoryPage(
   cursor: string | null,
   ownOnly: boolean,
   onlyId?: string,
+  audience: "private" | "shared" = "private",
 ): Promise<KeptMemoryPage | null> {
   if (cursor !== null && !uuid.safeParse(cursor).success) return null;
   const access = await authorizeFamilyAccess(deps.db, identity, familyId);
@@ -328,17 +381,39 @@ async function readKeptMemoryPage(
     .innerJoin(grant, and(eq(grant.id, memoryKeeps.keepConsentId), eq(grant.memberId, members.id)))
     .innerJoin(viewer, eq(viewer.id, access.access.memberId))
     .innerJoin(users, eq(users.id, viewer.userId))
+    .innerJoin(ownerAccount, eq(ownerAccount.id, members.userId))
     .where(
       and(
         eq(memoryKeeps.familyId, familyId),
         onlyId === undefined ? undefined : eq(memoryKeeps.id, onlyId),
-        // No sharing grant is implemented yet: even current organisers and later joiners see none.
-        // Keep the separate export restriction below so future shared reads cannot widen copies.
-        eq(memoryKeeps.memberId, access.access.memberId),
+        // Select the audience BEFORE pagination. Private defaults and own copies never widen.
+        audience === "private"
+          ? eq(memoryKeeps.memberId, access.access.memberId)
+          : and(
+              ne(memoryKeeps.memberId, access.access.memberId),
+              exists(
+                deps.db
+                  .select({ id: memoryShares.id })
+                  .from(memoryShares)
+                  .where(
+                    and(
+                      eq(memoryShares.keepId, memoryKeeps.id),
+                      eq(memoryShares.recipientMemberId, viewer.id),
+                      eq(memoryShares.recipientUserId, users.id),
+                      eq(memoryShares.recipientMembershipRevision, viewer.memoryMembershipRevision),
+                      eq(memoryShares.sharingRevision, memoryKeeps.sharingRevision),
+                      eq(memoryShares.confirmationVersion, MEMORY_SHARE_VERSION),
+                      lte(memoryShares.grantedAt, now),
+                    ),
+                  ),
+              ),
+            ),
         ownOnly ? eq(memoryKeeps.memberId, access.access.memberId) : undefined,
         isNull(memoryKeeps.removedAt),
         isNull(members.leftAt),
         inArray(members.status, active),
+        isNull(ownerAccount.deletedAt),
+        isNotNull(ownerAccount.authSubject),
         eq(viewer.familyId, familyId),
         eq(users.id, access.access.userId),
         eq(users.authSubject, identity.authSubject),
