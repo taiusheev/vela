@@ -562,9 +562,19 @@ export function readRichMemories(env: { readonly RICH_MEMORIES?: string }): bool
   return env.RICH_MEMORIES === undefined ? false : readOnOff(env.RICH_MEMORIES, "RICH_MEMORIES");
 }
 
+/**
+ * The var `MEMORY_DISCOVERY` (memory-discovery.ts): "on" sends screened, ordinary answers to
+ * `memory_pick` for private memory suggestions; absent or "off" does not; anything else is refused.
+ */
+export function readMemoryDiscovery(env: { readonly MEMORY_DISCOVERY?: string }): boolean {
+  return env.MEMORY_DISCOVERY === undefined
+    ? false
+    : readOnOff(env.MEMORY_DISCOVERY, "MEMORY_DISCOVERY");
+}
+
 function readOnOff(
   raw: string | undefined,
-  name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT" | "SEND_AS_ME" | "RICH_MEMORIES",
+  name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT" | "SEND_AS_ME" | "RICH_MEMORIES" | "MEMORY_DISCOVERY",
 ): boolean {
   const value = raw?.trim() ?? "";
   if (value !== "on" && value !== "off") {
@@ -690,6 +700,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     weeklyInsight: readWeeklyInsight(env),
     sendAsMe: readSendAsMe(env),
     richMemories: readRichMemories(env),
+    memoryDiscovery: readMemoryDiscovery(env),
     pilotAdmission,
     suggestions: readApiSwitch(env) === "on",
     peerHealthz: readPeerHealthz(env, environment),

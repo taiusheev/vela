@@ -22,6 +22,7 @@
           "cases/chips.json",
           "cases/flag.json",
           "cases/hello.json",
+          "cases/memory_pick.json",
           "cases/readback.json",
           "cases/recipe.json",
           "cases/suggest.json",
