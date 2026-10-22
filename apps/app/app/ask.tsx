@@ -176,11 +176,12 @@ function AskComposer({
     },
     [setText],
   );
-  // Ideas to start from: Vela's suggestion from her own words first, then the bank's family wording,
-  // a few at a time; "More ideas" turns the page. A broad, warm set of topics stands in for her
-  // interests, which the app does not hold.
+  // Ideas to start from: Vela's suggestion from her own words first, then the bank's family wording
+  // in the topics chosen for her at setup (a broad, warm set when none were), a few at a time;
+  // "More ideas" turns the page.
   const bankLang = i18n.locale === "zh-TW" ? "zh-TW" : "en";
-  const bank = useMemo(() => questionsFor([], 60), []);
+  const herInterests = recipient?.interests;
+  const bank = useMemo(() => questionsFor(herInterests ?? [], 60), [herInterests]);
   const [ideaPage, setIdeaPage] = useState(0);
   const IDEAS_A_PAGE = 4;
   const pageCount = Math.max(1, Math.ceil(bank.length / IDEAS_A_PAGE));
@@ -576,7 +577,9 @@ function AskComposer({
                   ? t`It reaches ${name} with tomorrow's morning message.`
                   : when === "another_day"
                     ? t`It reaches ${name} on ${day} morning, the first one nobody else has asked for.`
-                    : t`It waits its turn and reaches ${name} on the first morning nobody else has asked for.`}
+                    : invited
+                      ? t`The first message waiting reaches ${name} the moment they say yes; the rest come with their mornings.`
+                      : t`It waits its turn and reaches ${name} on the first morning nobody else has asked for.`}
               </Words>
             )}
             {noMorning ? (

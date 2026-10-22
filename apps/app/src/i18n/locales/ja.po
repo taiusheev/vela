@@ -3474,6 +3474,10 @@ msgstr ""
 msgid "The family's organisers choose the people nearby."
 msgstr ""
 
+#: app/ask.tsx
+msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr ""
+
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr ""

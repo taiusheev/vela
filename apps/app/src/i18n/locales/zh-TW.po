@@ -3481,6 +3481,10 @@ msgstr "家庭、第一週，還有您告訴我們的一切。"
 msgid "The family's organisers choose the people nearby."
 msgstr "附近的聯絡人由這個家庭的發起人選定。"
 
+#: app/ask.tsx
+msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
+msgstr "第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
+
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr "無法分享邀請。請再試一次「在 Telegram 上問」；目前沒有聯絡任何人。"

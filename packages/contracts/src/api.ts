@@ -232,6 +232,11 @@ export const MemberLight = z.object({
    */
   unreachable_on: Channel.nullable(),
   quiet_event_id: z.uuid().nullable(),
+  /**
+   * What the organiser said she likes talking about at setup, so the app can offer questions in
+   * those topics. Optional: older responses and members without a choice carry none.
+   */
+  interests: z.array(InterestTopic).optional(),
 });
 export type MemberLight = z.infer<typeof MemberLight>;
 
