@@ -12,7 +12,7 @@ import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { Portrait } from "../../src/components/portrait-lamp.tsx";
 import { StoryDay } from "../../src/components/story-day.tsx";
-import { SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
+import { RoomWindow, SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
 import { Chip, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
 import { dayLabel, localDateIn } from "../../src/data/chat.ts";
@@ -113,7 +113,9 @@ function MemoryCard({
             </Text>
           </View>
         ) : (
-          <Light state="lit" height={featured ? 24 : 18} />
+          <RoomWindow>
+            <Light state="lit" height={featured ? 24 : 18} />
+          </RoomWindow>
         )}
       </View>
       <View style={{ gap: 2 }}>

@@ -12,6 +12,7 @@ export interface MotionPreferences {
 export function watchReducedMotion(
   preferences: MotionPreferences,
   update: (enabled: boolean) => void,
+  unavailable?: () => void,
 ): () => void {
   let active = true;
   let changed = false;
@@ -25,6 +26,7 @@ export function watchReducedMotion(
     },
     () => {
       // Keep the initial no-motion setting when the platform cannot report its preference.
+      if (active && !changed) unavailable?.();
     },
   );
   return () => {
