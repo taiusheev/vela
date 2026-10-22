@@ -30,6 +30,7 @@ import {
   confirmMemorySharing,
   createMemorySharingPresentation,
   loadMemorySharingPresentation,
+  loadMemorySharingView,
   stopSharingMemory,
 } from "./memory-sharing.ts";
 import { proposeMemoryCandidate, RICH_MEMORY_CONSENT_VERSION } from "./rich-memories.ts";
@@ -351,6 +352,7 @@ describe("disabled persisted named-memory sharing", () => {
     else await removeKeptMemory(h.deps, owner, key(), familyId, memoryId);
     expect(await h.db.select().from(memoryShares)).toEqual([]);
     expect(await h.db.select().from(memorySharingPresentations)).toEqual([]);
+    expect(await loadMemorySharingView(h.deps, owner, familyId, memoryId)).toBeNull();
   });
 
   it("invalidates a renamed recipient's pending confirmation without removing a current grant", async () => {
@@ -401,6 +403,9 @@ describe("disabled persisted named-memory sharing", () => {
     const [grant] = await h.db.select().from(memoryShares);
     expect(grant?.presentationId).toBeNull();
     expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items).toHaveLength(1);
+    expect(
+      (await loadMemorySharingView(h.deps, owner, familyId, memoryId))?.recipients[0]?.shared,
+    ).toBe(true);
   });
 
   it("keeps chosen words and grants through ordinary 30-day source cleanup only", async () => {
@@ -410,6 +415,9 @@ describe("disabled persisted named-memory sharing", () => {
     await applyRetention(h.deps);
     expect(await h.db.select().from(memoryShares)).toHaveLength(1);
     expect((await loadKeptMemories(h.deps, owner, familyId))?.items[0]?.quote).toBe(words);
+    const view = await loadMemorySharingView(h.deps, owner, familyId, memoryId);
+    expect(view?.quote).toBe(words);
+    expect(view?.recipients[0]?.shared).toBe(true);
     expect((await loadKeptMemories(h.deps, recipient, familyId))?.items).toEqual([]);
     expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items[0]?.quote).toBe(
       words,
@@ -493,6 +501,9 @@ describe("disabled persisted named-memory sharing", () => {
       await h.db.update(memoryShares).set(change);
       expect(await h.db.select().from(memoryShares)).toHaveLength(1);
       expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items).toEqual([]);
+      expect(
+        (await loadMemorySharingView(h.deps, owner, familyId, memoryId))?.recipients,
+      ).toMatchObject([{ member_id: recipientId, shared: false }]);
     },
   );
 
@@ -590,5 +601,154 @@ describe("disabled persisted named-memory sharing", () => {
     const ids = [...(first?.items ?? []), ...(second?.items ?? [])].map((item) => item.id);
     expect(new Set(ids).size).toBe(51);
     expect(ids).not.toContain(memoryId);
+  }, 20_000);
+});
+
+describe("internal author sharing state", () => {
+  it("returns private exact words and the complete eligible audience without writing", async () => {
+    const before = await h.db.select().from(apiRequestReceipts);
+    const [kept] = await h.db.select().from(memoryKeeps);
+    const view = await loadMemorySharingView(h.deps, owner, familyId, memoryId);
+    expect(view).toMatchObject({
+      memory_id: memoryId,
+      author_id: ownerId,
+      quote: words,
+      revision: kept?.sharingRevision,
+      audience_complete: true,
+      recipients: [{ member_id: recipientId, shared: false }],
+    });
+    expect(view).not.toHaveProperty("source_answer_id");
+    expect(await h.db.select().from(memorySharingPresentations)).toEqual([]);
+    expect(await h.db.select().from(memoryShares)).toEqual([]);
+    expect(await h.db.select().from(apiRequestReceipts)).toEqual(before);
+  });
+  it("denies another member, a wrong family, missing session, and malformed IDs", async () => {
+    expect(await loadMemorySharingView(h.deps, recipient, familyId, memoryId)).toBeNull();
+    expect(await loadMemorySharingView(h.deps, owner, crypto.randomUUID(), memoryId)).toBeNull();
+    expect(
+      await loadMemorySharingView(h.deps, { ...owner, sessionId: "" }, familyId, memoryId),
+    ).toBeNull();
+    expect(await loadMemorySharingView(h.deps, owner, familyId, "invalid")).toBeNull();
+    expect(await loadMemorySharingView(h.deps, owner, "invalid", memoryId)).toBeNull();
+  });
+  it("marks only current grants and never preselects a new member", async () => {
+    const { choice } = await prepare();
+    await confirmMemorySharing(h.deps, owner, key(), familyId, choice);
+    const newcomer = await additionalRecipient("New reader");
+    const view = await loadMemorySharingView(h.deps, owner, familyId, memoryId);
+    expect(view?.recipients).toHaveLength(2);
+    expect(view?.recipients.filter((row) => row.shared).map((row) => row.member_id)).toEqual([
+      recipientId,
+    ]);
+    expect(view?.recipients.find((row) => row.member_id === newcomer.id)?.shared).toBe(false);
+    expect(view?.recipients.map((row) => row.member_id)).toEqual([recipientId, newcomer.id].sort());
+  });
+  it("never exposes another family's people in the author's sharing options", async () => {
+    const foreign = await seedFamily(h.db, {
+      now: h.clock.now(),
+      organiserExternalId: "synthetic-foreign-organiser",
+      memberExternalId: "synthetic-foreign-member",
+    });
+    const [account] = await h.db
+      .insert(users)
+      .values({ authSubject: "synthetic|foreign-sharing-reader", displayName: "Synthetic foreign" })
+      .returning();
+    if (!account) throw new Error("Missing synthetic account");
+    await h.db
+      .update(members)
+      .set({ userId: account.id, displayName: "Other family reader" })
+      .where(eq(members.id, foreign.organiser.id));
+    expect(
+      (await loadMemorySharingView(h.deps, owner, familyId, memoryId))?.recipients.map(
+        (row) => row.member_id,
+      ),
+    ).toEqual([recipientId]);
+  });
+  it("preserves unique family-account bindings instead of duplicating a recipient", async () => {
+    const duplicate = await additionalRecipient("Synthetic second identity");
+    await expect(
+      h.db.update(members).set({ userId: recipientUserId }).where(eq(members.id, duplicate.id)),
+    ).rejects.toMatchObject({
+      cause: { code: "23505", constraint: "members_family_id_user_id_key" },
+    });
+    const view = await loadMemorySharingView(h.deps, owner, familyId, memoryId);
+    expect(view?.recipients).toHaveLength(2);
+    expect(new Set(view?.recipients.map((row) => row.member_id)).size).toBe(2);
+    expect(view?.recipients.some((row) => row.shared)).toBe(false);
+  });
+  it("refreshes the revision and audience after stop even when processing is off", async () => {
+    const { choice } = await prepare();
+    await confirmMemorySharing(h.deps, owner, key(), familyId, choice);
+    h.config.richMemories = false;
+    const before = await loadMemorySharingView(h.deps, owner, familyId, memoryId);
+    expect(before?.recipients[0]?.shared).toBe(true);
+    await stopSharingMemory(h.deps, owner, key(), familyId, memoryId);
+    const after = await loadMemorySharingView(h.deps, owner, familyId, memoryId);
+    expect(after?.quote).toBe(words);
+    expect(after?.revision).not.toBe(before?.revision);
+    expect(after?.recipients[0]?.shared).toBe(false);
+  });
+  it.each([
+    "unbound",
+    "no subject",
+    "blank subject",
+    "deleted account",
+    "invited",
+    "departed",
+    "deceased",
+  ])("omits an ineligible %s recipient", async (change) => {
+    if (change === "unbound")
+      await h.db.update(members).set({ userId: null }).where(eq(members.id, recipientId));
+    else if (change === "no subject")
+      await h.db.update(users).set({ authSubject: null }).where(eq(users.id, recipientUserId));
+    else if (change === "blank subject")
+      await h.db.update(users).set({ authSubject: " " }).where(eq(users.id, recipientUserId));
+    else if (change === "deleted account")
+      await h.db
+        .update(users)
+        .set({ deletedAt: h.clock.now() })
+        .where(eq(users.id, recipientUserId));
+    else if (change === "departed")
+      await h.db.update(members).set({ leftAt: h.clock.now() }).where(eq(members.id, recipientId));
+    else
+      await h.db
+        .update(members)
+        .set({ status: change === "invited" ? "invited" : "deceased" })
+        .where(eq(members.id, recipientId));
+    expect((await loadMemorySharingView(h.deps, owner, familyId, memoryId))?.recipients).toEqual(
+      [],
+    );
+  });
+  it("includes a paused recipient and reflects a rename without inventing permission", async () => {
+    await h.db
+      .update(members)
+      .set({ status: "paused", displayName: "  Alex  " })
+      .where(eq(members.id, recipientId));
+    expect((await loadMemorySharingView(h.deps, owner, familyId, memoryId))?.recipients).toEqual([
+      { member_id: recipientId, display_name: "Alex", shared: false },
+    ]);
+  });
+  it.each(["", " ", "x".repeat(121)])("fails closed for an unusable name %j", async (name) => {
+    await h.db.update(members).set({ displayName: name }).where(eq(members.id, recipientId));
+    expect(await loadMemorySharingView(h.deps, owner, familyId, memoryId)).toBeNull();
+  });
+  it("fails closed for visually ambiguous recipient names instead of choosing someone", async () => {
+    await h.db.update(members).set({ displayName: "Alex" }).where(eq(members.id, recipientId));
+    await additionalRecipient("ＡＬＥＸ");
+    expect(await loadMemorySharingView(h.deps, owner, familyId, memoryId)).toBeNull();
+  });
+  it("returns all 50 people or fails closed at 51, never a truncated replacement audience", async () => {
+    const { choice } = await prepare();
+    await confirmMemorySharing(h.deps, owner, key(), familyId, choice);
+    for (let index = 0; index < 49; index++) await additionalRecipient(`Synthetic person ${index}`);
+    const full = await loadMemorySharingView(h.deps, owner, familyId, memoryId);
+    expect(full?.recipients).toHaveLength(50);
+    expect(full?.audience_complete).toBe(true);
+    await additionalRecipient("Synthetic person 50");
+    expect(await loadMemorySharingView(h.deps, owner, familyId, memoryId)).toBeNull();
+    h.config.richMemories = false;
+    await stopSharingMemory(h.deps, owner, key(), familyId, memoryId);
+    expect(await h.db.select().from(memoryShares)).toEqual([]);
+    expect((await loadKeptMemories(h.deps, owner, familyId))?.items[0]?.quote).toBe(words);
   }, 20_000);
 });
