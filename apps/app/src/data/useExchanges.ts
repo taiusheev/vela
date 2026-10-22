@@ -111,7 +111,21 @@ export function useExchanges(watch = false): ExchangesView {
       fetchExchanges(familyId ?? "", pageParam, await account.token()),
     getNextPageParam: (last) => last.next_cursor,
     refetchOnWindowFocus: "always",
-    refetchInterval: watch ? 5_000 : false,
+    // While something the reader sent is still being passed on, look again sooner, so "Delivered"
+    // and her reply come up within a couple of seconds.
+    refetchInterval: (query) =>
+      !watch
+        ? false
+        : query.state.data?.pages.some((page) =>
+              page.exchanges.some(
+                (exchange) =>
+                  exchange.delivery_status === "pending" &&
+                  exchange.created_at !== undefined &&
+                  Date.now() - Date.parse(exchange.created_at) < 120_000,
+              ),
+            )
+          ? 2_000
+          : 5_000,
   });
   const refetch = pages.refetch;
   const refresh = useCallback(() => {
