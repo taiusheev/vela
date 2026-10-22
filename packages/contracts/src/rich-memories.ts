@@ -68,6 +68,18 @@ export const KeptMemoryPage = z.strictObject({
 });
 export type KeptMemoryPage = z.infer<typeof KeptMemoryPage>;
 
+/** A named recipient gets the chosen quote, never a grant to its original conversation. */
+export const ApiSharedKeptMemory = ApiKeptMemory.omit({
+  source_answer_id: true,
+  source_available: true,
+});
+export type ApiSharedKeptMemory = z.infer<typeof ApiSharedKeptMemory>;
+export const SharedKeptMemoryPage = z.strictObject({
+  items: z.array(ApiSharedKeptMemory).max(50),
+  next_cursor: z.uuid().nullable(),
+});
+export type SharedKeptMemoryPage = z.infer<typeof SharedKeptMemoryPage>;
+
 /** Proposed named-sharing confirmation, not an activated consent route or access grant. */
 export const MEMORY_SHARE_VERSION = "memory.share@1";
 export const MEMORY_SHARE_EXPLANATION_EN =
@@ -94,3 +106,15 @@ export const MemoryShareChoice = z.strictObject({
   confirmation_version: z.literal(MEMORY_SHARE_VERSION),
 });
 export type MemoryShareChoice = z.infer<typeof MemoryShareChoice>;
+
+/** Owner view supplied by a future authenticated transport. It must include the complete current
+ * audience; never treat an incomplete recipient page as the complete set to replace. */
+export const MemorySharingView = z.strictObject({
+  memory_id: z.uuid(),
+  author_id: z.uuid(),
+  quote: z.string().min(1).max(2000),
+  revision: z.uuid(),
+  audience_complete: z.literal(true),
+  recipients: z.array(MemoryShareRecipient.extend({ shared: z.boolean() })).max(50),
+});
+export type MemorySharingView = z.infer<typeof MemorySharingView>;

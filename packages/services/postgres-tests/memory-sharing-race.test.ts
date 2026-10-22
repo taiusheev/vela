@@ -17,7 +17,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { sha256Hex } from "../src/hash.ts";
 import { withdrawOwnMemoryConsent } from "../src/memory-consent.ts";
-import { keepMemoryCandidate } from "../src/memory-keeps.ts";
+import { keepMemoryCandidate, loadSharedKeptMemories } from "../src/memory-keeps.ts";
 import {
   confirmMemorySharing,
   createMemorySharingPresentation,
@@ -31,6 +31,7 @@ import { NOW, openPostgresHarness, type PostgresHarness, type RaceClient } from 
 let pg: PostgresHarness;
 let seed: RaceClient;
 const identity = { authSubject: "synthetic|postgres-sharing-owner", sessionId: "synthetic" };
+const reader = { authSubject: "synthetic|postgres-sharing-reader", sessionId: "synthetic" };
 const words = "I love yellow flowers.";
 beforeAll(async () => {
   pg = await openPostgresHarness();
@@ -175,6 +176,9 @@ describe("named-memory sharing on independent PostgreSQL connections", () => {
     expect(await seed.db.select().from(memoryShares)).toEqual([]);
     expect(await seed.db.select().from(memorySharingPresentations)).toEqual([]);
     expect(await seed.db.select().from(memoryKeeps)).toHaveLength(1);
+    expect((await loadSharedKeptMemories(deps(seed), reader, row.family.family.id))?.items).toEqual(
+      [],
+    );
   });
 
   it("cannot confirm an old choice queued behind purpose withdrawal", async () => {
@@ -284,6 +288,11 @@ describe("named-memory sharing on independent PostgreSQL connections", () => {
       { status: "fulfilled", value: { kind: "rejected", code: "illegal_state" } },
     ]);
     expect(await seed.db.select().from(memoryShares)).toHaveLength(1);
+    const page = await loadSharedKeptMemories(deps(seed), reader, row.family.family.id);
+    expect(page?.items).toHaveLength(1);
+    expect(page?.items[0]?.quote).toBe(words);
+    expect(page?.items[0]).not.toHaveProperty("source_answer_id");
+    expect(page?.items[0]).not.toHaveProperty("source_available");
     const [presentation] = await seed.db.select().from(memorySharingPresentations);
     expect(presentation?.consumedAt).not.toBeNull();
   });

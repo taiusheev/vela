@@ -23,6 +23,7 @@ import {
   keepMemoryCandidate,
   loadKeptMemories,
   loadOwnKeptMemoriesForExport,
+  loadSharedKeptMemories,
   removeKeptMemory,
 } from "./memory-keeps.ts";
 import {
@@ -179,6 +180,12 @@ describe("disabled persisted named-memory sharing", () => {
     expect(serialized).not.toContain(words);
     expect(serialized).not.toContain(preview.recipients[0]?.display_name);
     expect((await loadKeptMemories(h.deps, recipient, familyId))?.items).toEqual([]);
+    const shared = await loadSharedKeptMemories(h.deps, recipient, familyId);
+    expect(shared?.items.map((item) => item.id)).toEqual([memoryId]);
+    expect(shared?.items[0]?.quote).toBe(words);
+    expect(shared?.items[0]).not.toHaveProperty("source_answer_id");
+    expect(shared?.items[0]).not.toHaveProperty("source_available");
+    expect((await loadSharedKeptMemories(h.deps, owner, familyId))?.items).toEqual([]);
     expect((await loadOwnKeptMemoriesForExport(h.deps, recipient, familyId))?.items).toEqual([]);
     expect((await loadOwnKeptMemoriesForExport(h.deps, owner, familyId))?.items).toHaveLength(1);
   });
@@ -225,6 +232,7 @@ describe("disabled persisted named-memory sharing", () => {
     expect(await h.db.select().from(memoryShares)).toEqual([]);
     expect(await h.db.select().from(memorySharingPresentations)).toEqual([]);
     expect(await h.db.select().from(memoryKeeps)).toHaveLength(1);
+    expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items).toEqual([]);
     h.config.richMemories = true;
     await expect(
       confirmMemorySharing(h.deps, owner, confirmationKey, familyId, choice),
@@ -264,6 +272,7 @@ describe("disabled persisted named-memory sharing", () => {
     await expect(
       confirmMemorySharing(h.deps, owner, confirmationKey, familyId, choice),
     ).rejects.toMatchObject({ code: "illegal_state" });
+    expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items).toEqual([]);
   });
 
   it.each([
@@ -391,6 +400,7 @@ describe("disabled persisted named-memory sharing", () => {
     expect(await h.db.select().from(memorySharingPresentations)).toEqual([]);
     const [grant] = await h.db.select().from(memoryShares);
     expect(grant?.presentationId).toBeNull();
+    expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items).toHaveLength(1);
   });
 
   it("keeps chosen words and grants through ordinary 30-day source cleanup only", async () => {
@@ -401,6 +411,9 @@ describe("disabled persisted named-memory sharing", () => {
     expect(await h.db.select().from(memoryShares)).toHaveLength(1);
     expect((await loadKeptMemories(h.deps, owner, familyId))?.items[0]?.quote).toBe(words);
     expect((await loadKeptMemories(h.deps, recipient, familyId))?.items).toEqual([]);
+    expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items[0]?.quote).toBe(
+      words,
+    );
   });
 
   it("denies wildcard, duplicate, self, ambiguous, unbound or cross-family recipients", async () => {
@@ -463,4 +476,119 @@ describe("disabled persisted named-memory sharing", () => {
     ).not.toBeNull();
     expect(await h.db.select().from(memoryShares)).toEqual([]);
   });
+
+  it.each(["recipient generation", "sharing generation", "old version", "future grant"])(
+    "rejects a stale %s at read time even while the permission row exists",
+    async (field) => {
+      const { choice } = await prepare();
+      await confirmMemorySharing(h.deps, owner, key(), familyId, choice);
+      const change =
+        field === "recipient generation"
+          ? { recipientMembershipRevision: crypto.randomUUID() }
+          : field === "sharing generation"
+            ? { sharingRevision: crypto.randomUUID() }
+            : field === "old version"
+              ? { confirmationVersion: "memory.share@0" }
+              : { grantedAt: new Date(h.clock.now().getTime() + 1) };
+      await h.db.update(memoryShares).set(change);
+      expect(await h.db.select().from(memoryShares)).toHaveLength(1);
+      expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items).toEqual([]);
+    },
+  );
+
+  it("never grants historical words to a later joiner or promoted organiser", async () => {
+    const { choice } = await prepare();
+    await confirmMemorySharing(h.deps, owner, key(), familyId, choice);
+    const newcomer = await additionalRecipient("New reader");
+    const [account] = await h.db
+      .select()
+      .from(users)
+      .where(eq(users.id, newcomer.userId ?? ""));
+    if (!account?.authSubject) throw new Error("Missing synthetic account");
+    const actor = { authSubject: account.authSubject, sessionId: "newcomer" };
+    expect((await loadSharedKeptMemories(h.deps, actor, familyId))?.items).toEqual([]);
+    await h.db.update(members).set({ role: "organiser" }).where(eq(members.id, newcomer.id));
+    expect((await loadSharedKeptMemories(h.deps, actor, familyId))?.items).toEqual([]);
+    expect(await loadSharedKeptMemories(h.deps, actor, crypto.randomUUID())).toBeNull();
+    expect(await loadSharedKeptMemories(h.deps, actor, familyId, "invalid")).toBeNull();
+  });
+
+  it("keeps shared reads available when processing stops without widening private copies", async () => {
+    const { choice } = await prepare();
+    await confirmMemorySharing(h.deps, owner, key(), familyId, choice);
+    h.config.richMemories = false;
+    expect((await loadSharedKeptMemories(h.deps, recipient, familyId))?.items).toHaveLength(1);
+    expect((await loadOwnKeptMemoriesForExport(h.deps, recipient, familyId))?.items).toEqual([]);
+  });
+
+  it("filters named permissions before 50-row pagination", async () => {
+    const [originalAnswer] = await h.db.select().from(answers).where(eq(answers.id, answerId));
+    if (!originalAnswer) throw new Error("Missing synthetic original");
+    for (let i = 0; i < 51; i++) {
+      const [answer] = await h.db
+        .insert(answers)
+        .values({
+          exchangeId: originalAnswer.exchangeId,
+          memberId: ownerId,
+          kind: "text",
+          channel: "telegram",
+          payload: { text: words },
+          receivedAt: h.clock.now(),
+        })
+        .returning();
+      if (!answer) throw new Error("Missing synthetic answer");
+      const candidate = await proposeMemoryCandidate(
+        h.deps,
+        { source_answer_id: answer.id, kind: "preference", start: 0, end: words.length },
+        { answerId: answer.id, ordinaryText: words },
+      );
+      if (!candidate) throw new Error("Missing synthetic candidate");
+      const kept = await keepMemoryCandidate(h.deps, owner, key(), familyId, {
+        candidate_id: candidate,
+        confirmation_version: MEMORY_KEEP_VERSION,
+        confirmation_sha256: await sha256Hex(MEMORY_KEEP_EXPLANATION_EN),
+      });
+      const body = kept.response.body;
+      if (
+        body === null ||
+        typeof body !== "object" ||
+        Array.isArray(body) ||
+        typeof body.id !== "string"
+      )
+        throw new Error("Missing synthetic keep");
+      const created = await createMemorySharingPresentation(h.deps, owner, key(), familyId, {
+        memory_id: body.id,
+        recipient_ids: [recipientId],
+      });
+      const presented = created.response.body;
+      if (
+        presented === null ||
+        typeof presented !== "object" ||
+        Array.isArray(presented) ||
+        typeof presented.id !== "string"
+      )
+        throw new Error("Missing synthetic presentation");
+      const preview = await loadMemorySharingPresentation(h.deps, owner, familyId, presented.id);
+      if (!preview) throw new Error("Missing synthetic preview");
+      await confirmMemorySharing(h.deps, owner, key(), familyId, {
+        presentation_id: preview.presentation_id,
+        presentation_sha256: preview.presentation_sha256,
+        confirmation_version: MEMORY_SHARE_VERSION,
+      });
+    }
+    const first = await loadSharedKeptMemories(h.deps, recipient, familyId);
+    expect(first?.items).toHaveLength(50);
+    expect(first?.next_cursor).not.toBeNull();
+    const second = await loadSharedKeptMemories(
+      h.deps,
+      recipient,
+      familyId,
+      first?.next_cursor ?? null,
+    );
+    expect(second?.items).toHaveLength(1);
+    expect(second?.next_cursor).toBeNull();
+    const ids = [...(first?.items ?? []), ...(second?.items ?? [])].map((item) => item.id);
+    expect(new Set(ids).size).toBe(51);
+    expect(ids).not.toContain(memoryId);
+  }, 20_000);
 });
