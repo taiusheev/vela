@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # One root lockfile and catalog cover all workspace packages.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "01:00"
+      timezone: Asia/Taipei
+    cooldown:
+      default-days: 1
+    open-pull-requests-limit: 5
+    groups:
+      compatible-updates:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "01:30"
+      timezone: Asia/Taipei
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
