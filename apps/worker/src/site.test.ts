@@ -148,7 +148,7 @@ describe("the public website", () => {
       const fake = createFakePilotRuntime();
       const body = await (await send(fake, `${origin()}${SITE_PATHS[lang].home}`)).text();
       const at = (id: string) => body.indexOf(`id="${id}"`);
-      const order = ["hero-title", "idea", "exchange", "care", "join"].map(at);
+      const order = ["hero-title", "idea", "exchange", "difference", "care", "join"].map(at);
       expect(order.every((index) => index > 0)).toBe(true);
       expect(order).toEqual([...order].sort((a, b) => a - b));
       expect(textOf(body.slice(body.indexOf("<h1"), body.indexOf("</h1>")))).toContain(
@@ -157,6 +157,10 @@ describe("the public website", () => {
       expect(body).toContain("/site/img/app-current/ask.png");
       expect(body).toContain("/site/img/vela-logo.svg");
       expect(body).toContain("/site/img/vela-mark-white.svg");
+      expect(textOf(body)).toContain(lang === "en" ? "Calls carry the big news" : "電話聊的是大事");
+      expect(textOf(body)).toContain(
+        lang === "en" ? "Familiar for your parent" : "爸媽不用學新工具",
+      );
       expect(body).toContain('id="photo-pause"');
       expect(body).toContain('id="photo-next"');
       expect(body).toContain('id="photo-previous"');

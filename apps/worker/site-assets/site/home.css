@@ -12,11 +12,14 @@
 }
 .approved-home {
   --paper: #fbf7f0;
+  --surface: #fffdf9;
   --ink: #1e1a16;
+  --primary: #3a2a1f;
   --amber: #e9a23b;
-  --teal: #1f5c66;
-  --muted: #777167;
-  --line: #d9d2c7;
+  --amber-deep: #c27612;
+  --amber-soft: #fbebcf;
+  --muted: #6d655b;
+  --line: #e8e1d6;
   --serif: Literata, Georgia, serif;
   --sans: Inter, Arial, sans-serif;
 }
@@ -60,7 +63,7 @@ body:has(.approved-home) {
 .approved-home a:focus-visible,
 .approved-home summary:focus-visible,
 .approved-home [tabindex]:focus-visible {
-  outline: 3px solid var(--teal);
+  outline: 3px solid var(--primary);
   outline-offset: 6px;
 }
 .approved-home h1,
@@ -120,7 +123,7 @@ body:has(.approved-home) {
   color: var(--paper);
 }
 .approved-home .button-dark:hover {
-  background: var(--teal);
+  background: var(--primary);
 }
 .approved-home .button-cream {
   background: var(--paper);
@@ -208,7 +211,7 @@ body:has(.approved-home) {
 }
 .approved-home .little-star {
   font-size: 19px;
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home .hero h1 {
   font-size: clamp(72px, 8.5vw, 126px);
@@ -217,7 +220,7 @@ body:has(.approved-home) {
   letter-spacing: -0.07em;
 }
 .approved-home .hero h1 em {
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home .hero-description {
   font-size: 13px;
@@ -347,7 +350,7 @@ body:has(.approved-home) {
 }
 .approved-home .note-heart {
   margin-left: auto;
-  color: var(--teal);
+  color: var(--primary);
   font-size: 26px;
 }
 .approved-home .hero-footnote {
@@ -488,7 +491,7 @@ body:has(.approved-home) {
   width: 35px;
   height: 35px;
   border-radius: 50%;
-  background: var(--teal);
+  background: var(--primary);
   color: white;
   display: grid;
   place-items: center;
@@ -516,7 +519,7 @@ body:has(.approved-home) {
 .approved-home .waveform i {
   display: block;
   width: 3px;
-  background: var(--teal);
+  background: var(--primary);
   border-radius: 3px;
   height: 8px;
 }
@@ -553,7 +556,7 @@ body:has(.approved-home) {
   align-items: center;
 }
 .approved-home .exchange-copy .eyebrow {
-  color: var(--teal);
+  color: var(--primary);
   margin-bottom: 20px;
 }
 .approved-home .exchange-copy h2 {
@@ -561,7 +564,7 @@ body:has(.approved-home) {
   line-height: 1.13;
 }
 .approved-home .exchange-copy h2 em {
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home .section-copy {
   font-size: 12px;
@@ -597,7 +600,7 @@ body:has(.approved-home) {
   font: 600 12px var(--serif);
   align-self: flex-start;
   line-height: 1.7;
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home .exchange-controls b {
   display: block;
@@ -610,7 +613,7 @@ body:has(.approved-home) {
 }
 .approved-home .step-arrow {
   margin-left: auto;
-  color: var(--teal);
+  color: var(--primary);
   font-size: 20px;
   opacity: 0;
 }
@@ -636,7 +639,7 @@ body:has(.approved-home) {
   font:
     italic 15px / 1.25 Georgia,
     serif;
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home .annotation-star {
   font:
@@ -777,7 +780,7 @@ body:has(.approved-home) {
   text-decoration: underline;
   text-underline-offset: 3px;
   font-size: 8px;
-  color: var(--teal);
+  color: var(--primary);
   margin-top: 10px;
 }
 .approved-home .transcript-text {
@@ -787,14 +790,14 @@ body:has(.approved-home) {
   border-top: 1px solid #9baa983b;
 }
 .approved-home .demo-reply {
-  border-left: 2px solid var(--teal);
+  border-left: 2px solid var(--primary);
   padding: 6px 0 6px 11px;
   font-size: 11px;
   margin-top: 19px;
 }
 .approved-home .demo-reply b {
   display: block;
-  color: var(--teal);
+  color: var(--primary);
   font-size: 8px;
   margin-bottom: 5px;
 }
@@ -910,7 +913,7 @@ body:has(.approved-home) {
   font-size: clamp(38px, 4.5vw, 65px);
 }
 .approved-home .simple-heading h2 em {
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home .simple-heading > p {
   font-size: 12px;
@@ -941,7 +944,7 @@ body:has(.approved-home) {
   font:
     35px / 1 Georgia,
     serif;
-  color: var(--teal);
+  color: var(--primary);
   display: block;
   margin-bottom: 24px;
 }
@@ -995,7 +998,7 @@ body:has(.approved-home) {
 }
 .approved-home .care-copy > .eyebrow {
   font-size: 8px;
-  color: var(--teal);
+  color: var(--primary);
   margin-bottom: 24px;
 }
 .approved-home .care-copy h2 {
@@ -1003,7 +1006,7 @@ body:has(.approved-home) {
   line-height: 1.2;
 }
 .approved-home .care-copy h2 em {
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home .care-copy > p:not(.eyebrow) {
   font-size: 11px;
@@ -1067,7 +1070,7 @@ body:has(.approved-home) {
   font-size: 60px;
 }
 .approved-home .faq-section h2 em {
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home .faq-list details {
   padding: 23px 0;
@@ -1088,14 +1091,14 @@ body:has(.approved-home) {
   padding: 10px 0 0;
   border: 0;
   background: none;
-  color: var(--teal);
+  color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 .approved-home .closing-section {
   position: relative;
   overflow: hidden;
-  background: var(--teal);
+  background: var(--primary);
   color: var(--paper);
   padding: 75px 24px 80px;
   text-align: center;
@@ -1234,14 +1237,14 @@ body:has(.approved-home) {
 }
 .approved-home dialog > .eyebrow {
   font-size: 8px;
-  color: var(--teal);
+  color: var(--primary);
   margin: 24px 0 14px;
 }
 .approved-home dialog h2 {
   font-size: 46px;
 }
 .approved-home dialog h2 em {
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home dialog > p:not(.eyebrow) {
   font-size: 12px;
@@ -1920,6 +1923,141 @@ body:has(.approved-home) {
   }
 }
 
+/* The app and the logo share one palette: espresso leads, the amber window supports it. */
+.approved-home .button-dark,
+.approved-home .nav-cta:hover {
+  background: var(--primary);
+}
+.approved-home .button-dark:hover {
+  background: var(--ink);
+}
+.approved-home .hero h1 em,
+.approved-home .exchange-copy h2 em,
+.approved-home .simple-heading h2 em,
+.approved-home .care-copy h2 em,
+.approved-home .faq-section h2 em,
+.approved-home dialog h2 em {
+  color: var(--amber-deep);
+}
+.approved-home .solution-kicker {
+  max-width: 1050px;
+  margin: 52px auto -28px;
+  color: var(--amber);
+  font: 600 10px / 1.5 var(--sans);
+  letter-spacing: 0.15em;
+}
+.approved-home .difference-section {
+  padding: 96px max(6vw, 24px) 105px;
+  background: var(--amber-soft);
+  border-block: 1px solid #ead8b8;
+}
+.approved-home .difference-heading {
+  width: min(100%, 1120px);
+  margin: 0 auto 54px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);
+  gap: 18px 70px;
+  align-items: end;
+}
+.approved-home .difference-heading .eyebrow {
+  grid-column: 1 / -1;
+  color: var(--primary);
+}
+.approved-home .difference-heading h2 {
+  color: var(--primary);
+  font-size: clamp(45px, 5.7vw, 78px);
+}
+.approved-home .difference-heading h2 em {
+  color: var(--amber-deep);
+}
+.approved-home .difference-heading > p:last-child {
+  max-width: 350px;
+  padding-bottom: 8px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+.approved-home .difference-grid {
+  width: min(100%, 1120px);
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid #dfcba8;
+  background: var(--surface);
+}
+.approved-home .difference-grid article {
+  min-height: 300px;
+  padding: 30px 25px;
+  border-right: 1px solid #dfcba8;
+}
+.approved-home .difference-grid article:last-child {
+  border-right: 0;
+}
+.approved-home .difference-grid article > span {
+  display: block;
+  color: var(--amber-deep);
+  font: 600 11px / 1 var(--sans);
+  letter-spacing: 0.12em;
+}
+.approved-home .difference-grid h3 {
+  margin: 74px 0 16px;
+  color: var(--primary);
+  font: 600 24px / 1.28 var(--serif);
+  letter-spacing: -0.035em;
+}
+.approved-home .difference-grid p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.75;
+}
+@media (max-width: 900px) {
+  .approved-home .difference-heading {
+    display: block;
+  }
+  .approved-home .difference-heading h2 {
+    margin: 20px 0;
+  }
+  .approved-home .difference-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .approved-home .difference-grid article:nth-child(2) {
+    border-right: 0;
+  }
+  .approved-home .difference-grid article:nth-child(-n + 2) {
+    border-bottom: 1px solid #dfcba8;
+  }
+}
+@media (max-width: 560px) {
+  .approved-home .solution-kicker {
+    margin-top: 34px;
+    margin-bottom: -8px;
+  }
+  .approved-home .difference-section {
+    padding-block: 58px;
+  }
+  .approved-home .difference-heading {
+    margin-bottom: 32px;
+  }
+  .approved-home .difference-heading > p:last-child {
+    font-size: 15px;
+  }
+  .approved-home .difference-grid {
+    grid-template-columns: 1fr;
+  }
+  .approved-home .difference-grid article,
+  .approved-home .difference-grid article:nth-child(2) {
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid #dfcba8;
+  }
+  .approved-home .difference-grid article:last-child {
+    border-bottom: 0;
+  }
+  .approved-home .difference-grid h3 {
+    margin-top: 40px;
+  }
+}
+
 /* Revision 2: a clear first look, approved identity, and actual product screens. */
 .approved-home .wordmark {
   display: block;
@@ -1996,7 +2134,7 @@ body:has(.approved-home) {
   color: var(--ink);
 }
 .approved-home .role-connection {
-  color: var(--teal);
+  color: var(--primary);
   font-size: 20px;
 }
 .approved-home .hero > .button {
@@ -2073,7 +2211,7 @@ body:has(.approved-home) {
 }
 .approved-home .exchange-controls button[aria-selected="true"] {
   background: #eee7db;
-  box-shadow: inset 3px 0 var(--teal);
+  box-shadow: inset 3px 0 var(--primary);
 }
 .approved-home .exchange-controls button:hover {
   background: #f0eade;
@@ -2112,7 +2250,7 @@ body:has(.approved-home) {
 }
 .approved-home .stage-step-label {
   font-size: 9px;
-  color: var(--teal);
+  color: var(--primary);
   font-weight: 600;
   letter-spacing: 0.08em;
 }
@@ -2732,7 +2870,7 @@ body:has(.approved-home) {
   cursor: grab;
 }
 .approved-home .story-viewport:focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--primary);
   outline-offset: -3px;
 }
 .approved-home .story-track {
@@ -3020,7 +3158,7 @@ body:has(.approved-home) {
   color: #5a534b;
 }
 .approved-home #waitlist-dialog .form-status {
-  color: var(--teal);
+  color: var(--primary);
 }
 .approved-home #waitlist-dialog .form-status[role="alert"] {
   color: #8c3524;
@@ -3294,4 +3432,16 @@ body:has(.approved-home) {
 }
 .enhanced .approved-home .story-viewport {
   overflow: hidden;
+}
+
+/* Final palette authority: match the app's Kept Light tokens on every homepage revision. */
+.approved-home .hero h1 em,
+.approved-home .exchange-copy h2 em,
+.approved-home .care-copy h2 em,
+.approved-home .faq-section h2 em,
+.approved-home dialog h2 em {
+  color: var(--amber-deep);
+}
+.approved-home .closing-section {
+  background: var(--primary);
 }

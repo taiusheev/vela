@@ -11,13 +11,13 @@ const COPY = {
     how: "How it works",
     careNav: "Made with care",
     join: "Join the waitlist",
-    tagline: "A LITTLE CLOSER, EVERY DAY.",
+    tagline: "FOR FAMILIES LIVING APART.",
     heroStart: "Stay close to ",
     heroParent: "your parent.",
     heroSecond: "Even from ",
     heroEmphasis: "far away.",
-    heroLine1: "You send a question from Vela.",
-    heroLine2: "They reply in a messenger they know.",
+    heroLine1: "Calls carry the big news. The small, ordinary stories are what get lost.",
+    heroLine2: "Vela turns one thoughtful question into an easy two-way exchange.",
     seeHow: "See how it works",
     galleryLabel: "Everyday family connection in four photographs",
     galleryKeys: "Moving photo story. Use left and right arrow keys to explore.",
@@ -33,10 +33,12 @@ const COPY = {
     previousPhoto: "Previous photograph",
     nextPhoto: "Next photograph",
     pause: "Pause photos",
-    ideaEyebrow: "A SMALL WAY INTO EACH OTHER’S DAY.",
-    goBeyond: "Go beyond",
-    howAreYou: "“How are you?”",
-    specificQuestion: "A specific question gives you something real to talk about.",
+    ideaEyebrow: "THE PROBLEM.",
+    goBeyond: "“How are you?” often ends with",
+    howAreYou: "“I’m fine.”",
+    specificQuestion:
+      "You care. But between busy days and distance, finding a natural way into the everyday details is hard.",
+    solutionKicker: "THE VELA WAY",
     youAsk: "YOU ASK",
     gardenQuestion: "“What did the garden look like this morning?”",
     momAnswers: "MOM ANSWERS",
@@ -45,7 +47,7 @@ const COPY = {
     saveTwo: "“Save me two for Sunday?”",
     payoffStart: "Now you’re part of ",
     payoffEnd: "her day.",
-    howEyebrow: "HERE’S HOW IT WORKS.",
+    howEyebrow: "THREE SIMPLE FEATURES. ONE COMPLETE CONVERSATION.",
     oneQuestion: "One question.",
     aWhole: "A whole",
     conversation: "conversation.",
@@ -67,6 +69,33 @@ const COPY = {
     youApp: "YOU · THE VELA APP",
     showAnswer: "Show how the parent replies",
     next: "Next",
+    differenceEyebrow: "WHY VELA FEELS DIFFERENT.",
+    differenceTitleStart: "Made for both sides",
+    differenceTitleEnd: "of the family.",
+    differenceLede:
+      "Vela is not another family feed. Every detail is shaped around one gentle, private exchange.",
+    differences: [
+      {
+        number: "01",
+        title: "Familiar for your parent.",
+        body: "Your parent replies in a messenger already used every day. No new app or new habit to learn.",
+      },
+      {
+        number: "02",
+        title: "A real conversation, not a broadcast.",
+        body: "A question goes out, an answer comes back, and the family can reply. The loop closes both ways.",
+      },
+      {
+        number: "03",
+        title: "Specific enough to feel personal.",
+        body: "Thoughtful prompts make room for the garden, the recipe, the old story—the details that make a relationship yours.",
+      },
+      {
+        number: "04",
+        title: "Connection without pressure.",
+        body: "Families choose the rhythm together, with consent, pauses, and quiet days built in from the start.",
+      },
+    ],
     careEyebrow: "MADE WITH CARE.",
     closeSpace: "Close, with room",
     beYourself: "to be yourself.",
@@ -152,13 +181,13 @@ const COPY = {
     how: "如何使用",
     careNav: "用心設計",
     join: "加入等候名單",
-    tagline: "每天，靠近一點。",
+    tagline: "為住在不同地方的家人而設計。",
     heroStart: "和",
     heroParent: "爸媽保持聯繫。",
     heroSecond: "無論相隔",
     heroEmphasis: "多遠。",
-    heroLine1: "你從 Vela 傳出一個問題，",
-    heroLine2: "爸媽用熟悉的通訊軟體回答。",
+    heroLine1: "電話聊的是大事，日常的小片段卻最容易錯過。",
+    heroLine2: "Vela 用一個用心的問題，開啟簡單的雙向交流。",
     seeHow: "看看如何使用",
     galleryLabel: "四張照片裡的日常親情",
     galleryKeys: "移動中的照片故事。可用左右方向鍵瀏覽。",
@@ -173,10 +202,11 @@ const COPY = {
     previousPhoto: "上一張照片",
     nextPhoto: "下一張照片",
     pause: "暫停照片",
-    ideaEyebrow: "從一個小問題，走進彼此的一天。",
-    goBeyond: "試著多問一句，",
-    howAreYou: "不只是「你好嗎？」",
-    specificQuestion: "問得具體一點，就多了一件能好好聊的事。",
+    ideaEyebrow: "問題。",
+    goBeyond: "一句「最近好嗎？」常常只換來",
+    howAreYou: "「都很好。」",
+    specificQuestion: "不是不關心，而是在忙碌與距離之間，很難找到自然的開場，聊進彼此真正的日常。",
+    solutionKicker: "VELA 的方式",
     youAsk: "你問",
     gardenQuestion: "「今天早上，菜園長得怎麼樣？」",
     momAnswers: "媽媽回答",
@@ -185,7 +215,7 @@ const COPY = {
     saveTwo: "「幫我留兩顆，星期天回去拿？」",
     payoffStart: "於是，你也成了",
     payoffEnd: "她一天裡的一部分。",
-    howEyebrow: "就從這樣的小交換開始。",
+    howEyebrow: "三個簡單功能，完成一段雙向對話。",
     oneQuestion: "一個問題，",
     aWhole: "聊成",
     conversation: "一段對話。",
@@ -207,6 +237,32 @@ const COPY = {
     youApp: "你 · VELA APP",
     showAnswer: "看看爸媽如何回答",
     next: "下一步",
+    differenceEyebrow: "VELA 有什麼不同。",
+    differenceTitleStart: "為家人的兩端而設計，",
+    differenceTitleEnd: "不是另一個家庭動態牆。",
+    differenceLede: "Vela 的每個細節，都圍繞著一段溫柔、私密，而且能來回的交流。",
+    differences: [
+      {
+        number: "01",
+        title: "爸媽不用學新工具。",
+        body: "爸媽就在每天使用的通訊軟體裡回答，不用再安裝 App，也不用養成新的使用習慣。",
+      },
+      {
+        number: "02",
+        title: "不是單向分享，而是一段對話。",
+        body: "問題傳出去、回答傳回來，家人還能接著回覆。每一次交流，都有來有往。",
+      },
+      {
+        number: "03",
+        title: "問題夠具體，才真的像你們。",
+        body: "菜園、食譜、以前的故事——用心的問題，讓只屬於你們的日常有地方被說出來。",
+      },
+      {
+        number: "04",
+        title: "保持聯繫，也保留空間。",
+        body: "一家人一起決定節奏。從一開始，就把同意、暫停和安靜的日子放進設計裡。",
+      },
+    ],
     careEyebrow: "用心設計。",
     closeSpace: "讓彼此靠近，",
     beYourself: "也保有自己的空間。",
@@ -310,7 +366,7 @@ export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageCont
     body: html`<div class="approved-home">  <a class="skip-link" href="#main">${c.skip}</a>
   <header class="site-header">
     <a class="wordmark" href="${home}" aria-label="Vela"><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"></a>
-    <nav aria-label="Main navigation"><a href="#idea">${c.why}</a><a href="#exchange">${c.how}</a><a href="#care">${c.careNav}</a></nav>
+    <nav aria-label="Main navigation"><a href="#difference">${c.why}</a><a href="#exchange">${c.how}</a><a href="#care">${c.careNav}</a></nav>
     <a href="#join" class="nav-cta" data-waitlist aria-haspopup="dialog" aria-controls="waitlist-dialog">${c.join} <span aria-hidden="true">→</span></a>
   </header>
   <main id="main">
@@ -335,7 +391,7 @@ export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageCont
     </section>
     <section class="question-chapter dark-section" id="idea" aria-labelledby="question-title">
       <div class="question-intro"><p class="eyebrow">${c.ideaEyebrow}</p><h2 id="question-title">${c.goBeyond}<br><em>${c.howAreYou}</em></h2><p>${c.specificQuestion}</p></div>
-      <div class="question-story"><div class="story-message"><span>${c.youAsk}</span><p>${c.gardenQuestion}</p></div><div class="story-message from-parent"><span>${c.momAnswers}</span><p>${c.gardenAnswer}</p></div><div class="story-message your-reply"><span>${c.youReply}</span><p>${c.saveTwo}</p></div></div>
+      <p class="solution-kicker">${c.solutionKicker}</p><div class="question-story"><div class="story-message"><span>${c.youAsk}</span><p>${c.gardenQuestion}</p></div><div class="story-message from-parent"><span>${c.momAnswers}</span><p>${c.gardenAnswer}</p></div><div class="story-message your-reply"><span>${c.youReply}</span><p>${c.saveTwo}</p></div></div>
       <p class="question-payoff">${c.payoffStart}<em>${c.payoffEnd}</em></p>
     </section>
     <section class="exchange-section" id="exchange" aria-labelledby="exchange-title">
@@ -345,6 +401,7 @@ export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageCont
       <button id="tab-2" role="tab" aria-selected="false" aria-controls="exchange-panel" tabindex="-1" data-step="2" disabled><span class="step-count">03</span><span><b>${c.replyTitle}</b><small>${c.replyDetail}</small></span><span class="step-arrow" aria-hidden="true">→</span></button>
       </div></div><div class="exchange-stage" id="exchange-panel" role="tabpanel" aria-labelledby="tab-0" tabindex="0"><div class="stage-heading"><span class="stage-step-label" id="stage-step-label">${c.questionLabel}</span><span id="stage-source">${c.appSource}</span></div><div class="app-screen-shell" id="app-screen-shell"><img id="app-screen" src="/site/img/app-current/ask.png" alt="${c.askAlt}" width="390" height="844"><button class="screen-expand js-only" id="screen-expand" aria-haspopup="dialog" aria-controls="screen-dialog" aria-label="${c.enlarge}">${c.viewScreen} <span aria-hidden="true">↗</span></button></div><div class="parent-example" id="parent-example" hidden><div class="parent-example-heading"><img src="/site/img/vela-mark-small.svg" width="22" height="28" alt=""><span>${c.parentGreeting}</span></div><div id="phone-content"></div></div><p class="stage-explanation" id="stage-explanation">${c.initialExplanation}</p><div class="stage-bottom"><span id="stage-caption">${c.youApp}</span><button id="next-step" class="js-only" aria-label="${c.showAnswer}">${c.next} <span aria-hidden="true">→</span></button></div></div></div>
     </section>
+    <section class="difference-section" id="difference" aria-labelledby="difference-title"><div class="difference-heading"><p class="eyebrow">${c.differenceEyebrow}</p><h2 id="difference-title">${c.differenceTitleStart}<br><em>${c.differenceTitleEnd}</em></h2><p>${c.differenceLede}</p></div><div class="difference-grid">${c.differences.map((item) => html`<article><span>${item.number}</span><h3>${item.title}</h3><p>${item.body}</p></article>`)}</div></section>
     <section class="care-section" id="care" aria-labelledby="care-title"><div class="care-illustration"><img src="/site/img/a-light-at-home.jpg" alt="${c.windowAlt}" loading="lazy"></div><div class="care-copy"><p class="eyebrow">${c.careEyebrow}</p><h2 id="care-title">${c.closeSpace}<br><em>${c.beYourself}</em></h2><div class="care-lines"><details open><summary>${c.everyoneSay}<span aria-hidden="true">+</span></summary><p>${c.choice}</p></details><details><summary>${c.quietTitle}<span aria-hidden="true">+</span></summary><p>${c.quietBody}</p></details><details><summary>${c.dataTitle}<span aria-hidden="true">+</span></summary><p>${c.dataBody}</p><a href="${pilotPrivacy}" target="_blank" rel="noopener">${c.readPrivacy} ↗</a></details></div></div></section>
     <section class="faq-section" aria-labelledby="faq-title"><div><h2 id="faq-title">${c.faqStart}<br><em>${c.faqEnd}</em></h2></div><div class="faq-list"><details><summary>${c.needApp}<span aria-hidden="true">+</span></summary><p>${c.needAppBody}</p></details><details><summary>${c.replaceCalls}<span aria-hidden="true">+</span></summary><p>${c.replaceCallsBody}</p></details><details><summary>${c.afterAnswer}<span aria-hidden="true">+</span></summary><p>${c.afterAnswerBody}</p></details><details><summary>${c.whenTry}<span aria-hidden="true">+</span></summary><p>${c.whenTryBody}</p><a class="text-button" href="#join" data-waitlist>${c.join} →</a></details></div></section>
     <section class="closing-section" id="join" aria-labelledby="closing-title"><img class="closing-mark" src="/site/img/vela-mark-white.svg" width="48" height="60" alt=""><h2 id="closing-title">${c.closeStart}<em>${c.closer}</em><br>${c.everyDay}</h2><p>${c.firstFamilies}</p><form class="waitlist" method="post" action="/waitlist" data-waitlist-form><input type="hidden" name="lang" value="${lang}"><label for="footer-email">${c.yourEmail}</label><div class="waitlist-input-row"><input id="footer-email" type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com"><button class="button button-cream" type="submit">${c.join} <span aria-hidden="true">→</span></button></div><div class="form-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div><p class="waitlist-privacy">${c.updates} <a href="${privacy}">${c.privacy}</a></p><p class="form-status" role="status" aria-live="polite"></p>${flashMarkup}</form></section>
