@@ -141,29 +141,40 @@ describe("the public website", () => {
     },
   );
 
-  // The approved design explains the purpose immediately, then shows a concrete exchange.
+  // Afterglow explains the problem, automatic routine, added value and care boundaries.
   it.each(SITE_LANGS)(
     "shows the approved story and real app previews before the waitlist (%s)",
     async (lang) => {
       const fake = createFakePilotRuntime();
       const body = await (await send(fake, `${origin()}${SITE_PATHS[lang].home}`)).text();
       const at = (id: string) => body.indexOf(`id="${id}"`);
-      const order = ["hero-title", "idea", "exchange", "difference", "care", "join"].map(at);
+      const order = ["hero-title", "why", "how", "more", "care", "join"].map(at);
       expect(order.every((index) => index > 0)).toBe(true);
       expect(order).toEqual([...order].sort((a, b) => a - b));
       expect(textOf(body)).toContain(
-        lang === "en" ? "your parent every morning" : "每天早上向爸媽問好",
+        lang === "en" ? "Vela does. Every morning." : "Vela 記得。每天早上。",
       );
-      expect(body).toContain("/site/img/app-current/ask-current.jpg");
+      expect(body).toContain("/site/img/app-current/today-portraits.jpg");
+      expect(body).toContain("/site/img/app-current/week-current.jpg");
+      expect(body).toContain("/site/img/story/parent-profile.jpg");
       expect(body).toContain("/site/img/vela-logo.svg");
-      expect(body).toContain("/site/img/vela-mark-white.svg");
+      expect(body).toContain("/site/img/vela-logo-white.svg");
       expect(textOf(body)).toContain(lang === "en" ? "You use Vela" : "你使用 Vela");
       expect(textOf(body)).toContain(
-        lang === "en" ? "The morning happens, even on busy days" : "就算今天很忙，早安還是會到",
+        lang === "en" ? "Even when you forget." : "忘了準備，問候也不會落下。",
       );
-      expect(body).toContain('id="photo-pause"');
-      expect(body).toContain('id="photo-next"');
-      expect(body).toContain('id="photo-previous"');
+      expect(body.match(/data-morning="\d" disabled/g)).toHaveLength(3);
+      expect(body).toContain('id="morning-preview" class="ritual-preview" aria-live="polite"');
+      expect(body).toContain(
+        lang === "en"
+          ? "Personalized health advice is not available."
+          : "目前未提供個人化健康建議。",
+      );
+      expect(body).toContain(
+        lang === "en"
+          ? "A reply isn’t proof of health or safety."
+          : "收到回覆，不代表能確認健康或安全狀況。",
+      );
       expect(body).not.toContain("Design preview");
       expect(body).not.toContain("Telegram");
       expect(body).not.toContain("hero-availability");

@@ -1,5 +1,19 @@
 # Approved Vela website
 
+## 22 October: approved Afterglow implementation
+
+The founder selected the refined Afterglow concept from five local alternatives and asked to build it. This replaces the previous homepage, not the app or auxiliary legal pages. The approved sequence is: automatic morning promise → busy adult children and aging parents → interactive hello/reply/quiet routine → memories and weekly read → participation choices → FAQ → existing waitlist.
+
+The dark espresso canvas, amber light, Inter headline with italic emphasis, real Today capture with parent photos, and warm-paper routine chapter follow `../prototypes/vela-five-directions-20261022/afterglow.html`. The implementation is bilingual English/Traditional Chinese. All CSS is scoped to `.approved-home.afterglow`; legal, precision and privacy pages keep their existing layout. The optional morning examples use local copy only, not family/provider calls. Unlike the comparison prototype, the production-source CTAs open the existing waitlist dialog and forms submit to the existing protected `/waitlist` endpoint. No new backend, accounts, billing, analytics, schema, consent or runtime activation is introduced.
+
+The three morning selectors are native buttons with visible selected state, keyboard operation, and a polite live preview. Without JavaScript, the full explanatory step copy, first preview and ordinary waitlist forms remain available. The native dialog restores focus on close. Waitlist failures preserve the email and allow retry; successful submissions keep the confirmation and prevent duplicate re-submission. Optional movement respects reduced motion. There is no autoplay gallery in this selected design.
+
+`site/img/story/parent-profile.jpg` is copied from the existing illustrative app onboarding mother portrait, not a customer photo. Existing Today/Week captures and family photographs retain the provenance described below. They are synthetic English app captures on both language routes, labelled through localized alt text and disclosure; no translated app UI is fabricated. Memory discovery and everyday support suggestions remain clearly in development. Replies are never presented as proof that a parent is awake, healthy, alive or safe.
+
+Implementation checks: website route/waitlist tests, root `pnpm check`, rendered English/Traditional Chinese at 320/390/768/1440px, loaded assets, morning selectors, native dialog focus/close, FAQ, and a six-case isolated waitlist client harness (success, network error, invalid email response, rate limit, server error, malformed response). The harness uses fake responses and makes no network requests. Real waitlist signup, native assistive technology, public deployment and real-family delivery are separate evidence; none is implied by local preview success.
+
+The older composition notes below describe the superseded homepage and are retained as history.
+
 ## 22 October: morning reassurance revision, proposed
 
 The founder redirected the homepage toward busy adult children and aging parents: an automatic morning hello when the family has not prepared a message, visible answered-today evidence, and Vela Light's repeat/quiet-notice follow-up. Conversation examples explain how the routine creates family value; they are no longer the main problem statement. Memories and the weekly read deepen the value. Conversational memory discovery and everyday support suggestions are labelled in development; personalized mental/physical health advice and guarantees that somebody is safe, awake or alive are not claimed. See the current product contracts in `product/05-product-spec-v2.md` and `product/06-light-memories-wellbeing.md`.

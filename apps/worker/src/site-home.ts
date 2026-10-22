@@ -1,498 +1,326 @@
-/** Approved website, 20 October 2026. Synthetic examples; no family/provider calls. */
+/** Founder-selected Afterglow. Local imagery and synthetic examples; no family calls. */
 import { type Html, html } from "./html.ts";
 import type { SiteLang, SitePageContent, WaitlistFlash } from "./site.ts";
 import { LEGAL_LABELS, LEGAL_ORIGIN, LEGAL_PAGES, legalPath } from "./site-legal.ts";
 
-const SUPPORT_EMAIL = "t.aiusheev@gmail.com";
 const COPY = {
   en: {
+    title: "Vela — A little light. A lot less worry.",
+    description:
+      "For busy adult children and aging parents. Vela keeps the morning check-in going, even when you forget. See replies and keep family moments close.",
     skip: "Skip to content",
-    why: "Why Vela",
     how: "How it works",
-    careNav: "Made with care",
+    beyond: "Beyond the check-in",
     join: "Join the waitlist",
     tagline: "FOR BUSY ADULT CHILDREN. FOR AGING PARENTS.",
-    heroStart: "A morning check-in.",
-    heroParent: "",
-    heroSecond: "A little ",
-    heroEmphasis: "peace of mind.",
-    heroLine1:
-      "Vela checks in with your parent every morning—even when your day gets away from you.",
-    heroLine2: "See when they’ve answered. Know when it’s time to reach out.",
-    morningEyebrow: "YOUR LIFE GETS BUSIER. YOUR PARENTS GET OLDER.",
-    morningTitle: "You care every day. Remembering isn’t always that simple.",
-    morningProblem:
-      "Work. Children. Your own home. You mean to message your parent, then the day runs away. And later, there’s that thought: have I heard from them today?",
-    morningSolution:
-      "Vela keeps the morning routine going. A personal message when you’ve prepared one. A hello from Vela when you haven’t.",
-    morningSteps: [
+    headline: "A little light.",
+    emphasis: "A lot less worry.",
+    hero: [
+      "You can’t always remember to check in.",
+      "Vela does. Every morning.",
+      "See your parent’s reply, even on your busiest days.",
+    ],
+    seeMorning: "See a morning with Vela",
+    littleNews: "A little news.",
+    littleCloser: "A little closer.",
+    gardenAlt: "An illustrative parent photographing tomatoes in a balcony garden",
+    todayAlt:
+      "Current Vela app showing Mom and Dad with their profile photos and morning reply states",
+    momAlt: "Illustrative Mom profile picture",
+    lighter: "YOUR MORNING, LIGHTER.",
+    log: [
+      "Vela says good morning.",
+      "Automatically. No reminder needed.",
+      "A reply from home.",
+      "Waiting for you in the app.",
+      "You’re in a meeting.",
+      "The connection still happens.",
+    ],
+    receipt: "Mom answered.",
+    receiptTime: "A little news from home · 08:12",
+    example: "A MORNING WITH VELA · ILLUSTRATIVE EXAMPLE",
+    promises: [
+      "A daily hello, sent for you",
+      "A reply you can come back to",
+      "A quiet notice with Vela Light",
+    ],
+    problemLabel: "IT’S NOT THAT YOU DON’T CARE.",
+    lifeTitle: "Your life gets fuller.",
+    parentTitle: "Your parents get older.",
+    problem:
+      "Work. Your own family. One thing after another. Suddenly it’s evening, and the message you meant to send never happened.",
+    loving: "Loving them isn’t the hard part.",
+    remembering: "Remembering every day is.",
+    parentAlt: "An illustrative older parent listening to a message at the breakfast table",
+    people: "THE PEOPLE BEHIND THE CHECK-IN",
+    task: "Not another task.",
+    loved: "Someone you love.",
+    ritualLabel: "A SMALL ROUTINE. A REAL DIFFERENCE.",
+    ritualTitle: "You get on with your day.",
+    ritualEm: "Vela keeps the hello going.",
+    ritualIntro: "You use Vela. Your parent answers in a familiar messenger. No new app to learn.",
+    explore: "Explore a morning with Vela",
+    morningExample: "AN EXAMPLE MORNING",
+    momMorning: "Mom’s morning",
+    messenger: "In a familiar messenger",
+    steps: [
       {
-        time: "01 / EVERY MORNING",
-        title: "A check-in that doesn’t depend on your reminder.",
-        body: "At the agreed time, your parent receives a message in their messenger. If the family hasn’t prepared one, Vela supplies the morning hello.",
+        title: "Even when you forget.",
+        body: "Vela sends the morning hello. Prepare something personal, or let Vela supply the greeting.",
+        time: "08:00",
+        label: "A HELLO FROM VELA",
+        message: "Good morning, Mom. How’s your morning going?",
+        status: "Morning hello sent automatically",
+        outcome: "One less thing to remember. The daily connection still happens.",
       },
       {
-        time: "02 / WHEN THEY ANSWER",
-        title: "A reply you can see, at a glance.",
-        body: "Vela shows when your parent answered, with the words or voice note they shared. A small response becomes one less unanswered question in your day.",
+        title: "A reply. A little relief.",
+        body: "Your parent answers with a tap, words, or voice. The reply and its time are there when you have a moment.",
+        time: "08:12",
+        label: "A REPLY FROM MOM",
+        message: "Already in the garden. The tomatoes are finally turning!",
+        status: "Reply received · 08:12",
+        outcome:
+          "You’re busy. The reply is waiting. Come back to a little news from home when you can.",
       },
       {
-        time: "03 / IF IT STAYS QUIET",
-        title: "A clear next step for the family.",
-        body: "With Vela Light, a missed answer gets one repeat, then a quiet notice after the waiting period. You decide whether to call or ask a nearby contact for help.",
+        title: "And if it stays quiet?",
+        body: "Vela Light repeats once. After the waiting period, the family gets a quiet notice. You decide how to follow up.",
+        time: "Later",
+        label: "WHEN THE MORNING STAYS QUIET",
+        message: "No reply yet. It may be a good time to reach out.",
+        status: "With Vela Light · after one repeat and the waiting period",
+        outcome:
+          "The family gets a quiet notice. You choose the next step. No assumption about what silence means.",
       },
     ],
-    morningLimit:
-      "An answer means your parent replied. It is not a health assessment. Vela is not an emergency service.",
-    latestScreen: "Current Vela Today screen · illustrative family · 22 October",
-    latestAlt:
-      "Current Vela Today screen showing Mom answered at 8:12 and Dad has not answered yet",
-    memoryEyebrow: "MORE VALUE FROM THE MOMENTS THEY SHARE.",
-    memoryTitle: "Daily reassurance. A deeper picture over time.",
+    boundary: "Illustrative flow, not a live message. A reply isn’t proof of health or safety.",
+    memoryLabel: "BEYOND “DID YOU CHECK IN?”",
+    memoryTitle: "Don’t just keep up.",
+    memoryEm: "Keep the little things.",
+    ordinary: "The ordinary details are often the ones worth holding onto.",
+    recipeAlt: "Illustrative family members preparing a family recipe together",
+    memories: "MEMORIES",
+    recipeTitle: "One day, it’s just a recipe.",
+    recipeEm: "One day, it’s everything.",
     memoryBody:
-      "The answer is more than a morning response. It can be a story you didn’t know, a plan worth remembering, or something to ask about on your next call.",
-    memoryFeatures: [
+      "Come back to family messages, stories, and moments. More than a quick “I’m fine,” less lost in the rush.",
+    memoryStatus: "Conversational memory discovery is in development.",
+    weekLabel: "A LITTLE MORE PERSPECTIVE",
+    weekTitle: "The week.",
+    weekEm: "Not just this morning.",
+    weekBody: "A weekly read gives you another way to catch up, at your own pace.",
+    weekStatus:
+      "Everyday support suggestions are in development. Personalized health advice is not available.",
+    weekAlt: "Current Vela Week screen with a synthetic family’s weekly read",
+    values: [
+      { title: "Made for parents, too.", body: "A familiar messenger, not another app to learn." },
+      { title: "Care, with a choice.", body: "Taking part is a choice. Families stay in control." },
       {
-        label: "MEMORIES",
-        title: "Keep the details that make them, them.",
-        body: "Revisit the messages, voices, photos and stories your family shares. Conversational memory discovery and permission-based keeping are in development.",
-        image: "memories-current.jpg",
-        alt: "Current Vela Memories screen with sample family messages and stories",
-        status: "Current app preview · example family",
-      },
-      {
-        label: "THE WEEK",
-        title: "Catch up on more than the last message.",
-        body: "The weekly read brings the week’s shared moments together. We’re developing optional everyday support suggestions grounded in what your parent actually shares.",
-        image: "week-current.jpg",
-        alt: "Current Vela Week screen with sample morning responses and a weekly read",
-        status: "Current weekly read · support suggestions in development",
+        title: "A bridge, not a replacement.",
+        body: "Vela keeps the routine. You bring the relationship.",
       },
     ],
-    wellbeingNote:
-      "The planned suggestions help families choose a thoughtful next step—such as a call, a visit or an offer of practical help. Personalized mental or physical health advice is not available.",
-    roleYou: "You use Vela",
-    roleParent: "Your parent uses a familiar messenger",
-    roleRhythm: "Morning hello, even when you forget",
-    exampleLabel: "TRY A CONVERSATION STARTER",
-    exampleNote: "Illustrative conversation · choose a question to see the exchange",
-    examples: [
+    faqLabel: "A FEW THINGS YOU MIGHT WONDER",
+    faqs: [
       {
-        label: "The garden",
-        question: "What did the garden look like this morning?",
-        answer: "The tomatoes finally turned. I picked three before breakfast.",
-        reply: "Save me two for Sunday?",
+        question: "Is Vela for me?",
+        answer:
+          "Vela is for adult children who want a more consistent connection with an aging parent, especially when busy days or distance get in the way.",
       },
       {
-        label: "A family recipe",
-        question: "What’s the secret to your Sunday soup?",
-        answer: "Your grandpa always added a little ginger. I still do it his way.",
-        reply: "I’m making it tonight. I’ll send you a photo.",
+        question: "Does my parent need the Vela app?",
+        answer:
+          "No. You use the Vela app. Your parent answers in a familiar messenger. We’ll explain the supported options when your family starts.",
       },
       {
-        label: "An old story",
-        question: "What do you remember about your first job?",
-        answer: "I was so nervous I arrived an hour early. The door was still locked.",
-        reply: "I never knew that. What happened next?",
+        question: "Is this an emergency or medical service?",
+        answer:
+          "No. Vela supports a daily connection. It cannot confirm that someone is awake, safe, or healthy, and does not replace emergency services or professional care.",
+      },
+      {
+        question: "What happens after I join?",
+        answer:
+          "We’ll write when your family can start. Joining the waitlist does not create an account or start a paid plan.",
       },
     ],
-    seeHow: "Explore the product",
-    galleryLabel: "Everyday family connection in four photographs",
-    galleryKeys: "Moving photo story. Use left and right arrow keys to explore.",
-    cityAlt: "A daughter finding a moment to send a voice message after work",
-    gardenAlt: "A mother photographing the tomatoes she has grown on her balcony",
-    voiceAlt: "A father listening to a voice message at his breakfast table",
-    recipeAlt:
-      "A father and child cooking together, ready to share their attempt at a family recipe",
-    cityCaption: "A moment between everything.",
-    gardenCaption: "A little news from home.",
-    voiceCaption: "A familiar voice in their day.",
-    recipeCaption: "A little of your day, back.",
-    previousPhoto: "Previous photograph",
-    nextPhoto: "Next photograph",
-    pause: "Pause photos",
-    ideaEyebrow: "A CHECK-IN THAT ALSO STARTS A CONVERSATION.",
-    goBeyond: "More than",
-    howAreYou: "“I’m fine.”",
-    specificQuestion:
-      "A simple response tells you they answered. A thoughtful question also gives your parent something personal to share, whenever they feel like it.",
-    solutionKicker: "ONE SMALL QUESTION CAN OPEN A WHOLE STORY.",
-    youAsk: "YOU ASK",
-    gardenQuestion: "“What did the garden look like this morning?”",
-    momAnswers: "MOM ANSWERS",
-    gardenAnswer: "“The tomatoes finally turned. I picked three before breakfast.”",
-    youReply: "YOU REPLY",
-    saveTwo: "“Save me two for Sunday?”",
-    payoffStart: "Something to share. ",
-    payoffEnd: "Something to come back to.",
-    howEyebrow: "THE PRODUCT, IN THREE STEPS.",
-    oneQuestion: "One question.",
-    aWhole: "A whole",
-    conversation: "conversation.",
-    smallExchange: "A small exchange, with a reply coming back.",
-    exploreExchange: "Explore the daily exchange",
-    sendTitle: "Send a little something.",
-    sendDetail: "A question, a photo, a familiar hello.",
-    answerTitle: "They answer their way.",
-    answerDetail: "In a messenger they already know.",
-    replyTitle: "Keep the conversation going.",
-    replyDetail: "Send a little of your own day back.",
-    questionLabel: "01 / YOUR QUESTION",
-    appSource: "Vela app · Example family",
-    askAlt: "Current Vela Ask screen with example family data",
-    viewScreen: "View screen",
-    enlarge: "Enlarge the current app screen",
-    parentGreeting: "A morning hello for Mom",
-    initialExplanation: "Choose a question and who it’s for.",
-    youApp: "YOU · THE VELA APP",
-    showAnswer: "Show how the parent replies",
-    next: "Next",
-    differenceEyebrow: "WHY VELA FEELS DIFFERENT.",
-    differenceTitleStart: "More than remembering",
-    differenceTitleEnd: "to send a text.",
-    differenceLede:
-      "A consistent routine, a clear answer state, and a place for the family’s shared moments. That’s the value Vela adds to the conversations you already have.",
-    differences: [
-      {
-        number: "01",
-        title: "The morning happens, even on busy days.",
-        body: "The daily hello doesn’t rely on someone in the family remembering to write. Vela provides one when no family message is ready.",
-      },
-      {
-        number: "02",
-        title: "You can see whether they answered.",
-        body: "A timestamped reply is easy to find. With Vela Light, quiet notices help you decide when to follow up.",
-      },
-      {
-        number: "03",
-        title: "Their words add up to more.",
-        body: "The family’s shared moments live together, ready to revisit. The weekly read helps you catch up when you have time.",
-      },
-      {
-        number: "04",
-        title: "Connection without pressure.",
-        body: "Families choose the rhythm together, with consent, pauses, and quiet days built in from the start.",
-      },
-    ],
-    careEyebrow: "MADE WITH CARE.",
-    closeSpace: "Close, with room",
-    beYourself: "to be yourself.",
-    windowAlt: "An illustrated window with a warm light on at home",
-    everyoneSay: "Everyone gets a say.",
-    choice:
-      "Taking part is a choice. Agree on the rhythm together, with room for pauses and quiet days.",
-    quietTitle: "A quiet day isn’t a diagnosis.",
-    quietBody:
-      "Optional, agreed follow-ups can give the family a reason to reach out. Vela is not an emergency or medical service.",
-    dataTitle: "Clear about your family’s information.",
-    dataBody:
-      "Understand how content is handled and how to ask for access or deletion. Vela is not end-to-end encrypted.",
-    readPrivacy: "Read the product privacy information",
-    faqStart: "A few",
-    faqEnd: "good questions.",
-    needApp: "Does my parent need the Vela app?",
-    needAppBody:
-      "No. Vela is being built around the messengers parents already use. You use the Vela app; they have a familiar place to reply. We’ll share supported options as access opens.",
-    replaceCalls: "Does this replace our calls?",
-    replaceCallsBody:
-      "Keep calling and visiting. Vela gives you something small to share between those bigger conversations.",
-    afterAnswer: "What happens if I forget to write?",
-    afterAnswerBody:
-      "Vela still sends the morning hello at your parent’s agreed time. When nobody in the family has prepared a message, Vela supplies a question. You can catch up and reply when you have a moment.",
-    whenTry: "When can we try Vela?",
-    whenTryBody: "Join the waitlist and we’ll let you know when Vela is ready for your family.",
-    closeStart: "A little ",
-    closer: "closer,",
-    everyDay: "every day.",
-    firstFamilies: "Be among the first families to try Vela.",
+    closingLabel: "FOR THE PEOPLE ALWAYS ON YOUR MIND.",
+    closingTitle: "A familiar morning.",
+    closingEm: "A little peace of mind.",
+    closingBody: "You don’t have to remember everything to keep a little light on.",
     yourEmail: "Your email",
-    updates: "Vela availability updates only.",
-    privacy: "Privacy",
+    updates: "Only news about when your family can start.",
+    privacy: "Website privacy",
     productPrivacy: "Product privacy",
     serviceStatus: "How Vela is doing",
     contact: "Contact",
-    backToTop: "Back to top ↑",
-    footerTagline: "A little closer, every day.",
-    disclosure: "Illustrative photographs and example family",
+    footer: "A little closer, every day.",
+    guarantee: "A daily connection. Not a safety guarantee.",
+    disclosure: "Illustrative photographs and synthetic app data. Not customer stories.",
     closeWaitlist: "Close waitlist",
-    dialogTitleStart: "A little closer",
-    dialogTitleMiddle: "starts with ",
-    dialogTitleEnd: "hello.",
+    dialogTitle: "A little closer starts here.",
     leaveEmail: "Leave your email. We’ll let you know when Vela is ready for your family.",
-    screenSource: "VELA APP · EXAMPLE FAMILY",
-    closeScreen: "Close enlarged app screen",
-    enlargedAlt: "Enlarged Vela app screen",
-    title: "Vela — A morning check-in. A little peace of mind.",
-    description:
-      "For busy adult children and aging parents. Vela keeps the morning check-in going, even when you forget. See replies, follow up, and keep family moments close.",
     joined: "You’re on the list. We’ll write when your family can start.",
     badEmail: "Please enter a valid email address.",
     failed: "We couldn’t confirm your place. Please try again.",
     joining: "Joining…",
     onList: "You’re on the list ✓",
     rateLimited: "Please wait a moment and try again.",
-    play: "Play photos",
-    replay: "Replay",
-    readAnswer: "Read the example answer",
-    hideAnswer: "Hide the example answer",
-    parentSource: "Illustrative messenger exchange",
-    parentCaption: "YOUR PARENT · THEIR MESSENGER",
-    answerLabel: "02 / THEIR ANSWER",
-    replyLabel: "03 / YOUR REPLY",
-    askExplanation:
-      "Choose a question and who it’s for. Your parent receives it in their messenger.",
-    answerExplanation: "They answer with a tap or a voice note, in a familiar conversation.",
-    replyExplanation:
-      "Read her answer and send something back. She hears the family’s replies the next morning.",
-    parentQuestion: "What did the garden look like this morning?",
-    parentAnswer:
-      "The tomatoes finally turned. I picked three before breakfast and left them on the sill.",
-    parentSender: "A MORNING QUESTION, FROM MIA",
-    voiceLabel: "MOM’S VOICE REPLY",
-    noAudio: "Example messages; no audio is played.",
-    askScreenAlt: "Current Vela Ask screen with a sample garden question",
-    replyScreenAlt: "Current Vela Reply screen with a sample family response",
-    photoPosition: "Photograph",
   },
   "zh-TW": {
+    title: "Vela — 一點微光，多一點安心。",
+    description:
+      "給生活忙碌的你，也給年歲漸長的爸媽。就算忘了傳訊息，Vela 也會接續早晨的問候，讓你看見回覆、適時聯絡，記住家人的日常。",
     skip: "跳至主要內容",
-    why: "為什麼是 Vela",
     how: "如何使用",
-    careNav: "用心設計",
+    beyond: "不只一句早安",
     join: "加入等候名單",
     tagline: "給生活忙碌的你，也給年歲漸長的爸媽。",
-    heroStart: "每天早上，一聲問候。",
-    heroParent: "",
-    heroSecond: "心裡，",
-    heroEmphasis: "多一點安心。",
-    heroLine1: "就算忙得忘了傳訊息，Vela 也會每天早上向爸媽問好。",
-    heroLine2: "看見爸媽何時回覆，也知道什麼時候該再聯絡看看。",
-    morningEyebrow: "你的生活越來越忙，爸媽也漸漸變老。",
-    morningTitle: "每天都惦記，卻不一定每天都記得傳訊息。",
-    morningProblem:
-      "工作、孩子、自己的家。原本想傳訊息給爸媽，一忙卻又過了一天。晚一點才想起：今天有收到爸媽的消息嗎？",
-    morningSolution:
-      "Vela 把早晨的問候接續下去。有你準備的話，就替你送到；家人沒準備訊息時，Vela 也會送上一聲早安。",
-    morningSteps: [
+    headline: "一點微光，",
+    emphasis: "多一點安心。",
+    hero: [
+      "有時候，你會忙得忘了問候。",
+      "Vela 記得。每天早上。",
+      "再忙，也能在有空時看看爸媽的回覆。",
+    ],
+    seeMorning: "看看有 Vela 的早晨",
+    littleNews: "家裡的一點日常。",
+    littleCloser: "讓彼此靠近一點。",
+    gardenAlt: "爸媽在陽台菜園拍下番茄的示意照片",
+    todayAlt: "現行 Vela App，顯示媽媽與爸爸的大頭照及早晨回覆狀態",
+    momAlt: "媽媽大頭照示意",
+    lighter: "讓早晨，少一點掛心。",
+    log: [
+      "Vela 送上一聲早安。",
+      "自動送出，不用再提醒自己。",
+      "家裡傳來了回覆。",
+      "留在 App 裡，等你有空再看。",
+      "你正在開會。",
+      "問候依然沒有落下。",
+    ],
+    receipt: "媽媽回覆了。",
+    receiptTime: "家裡的一點日常 · 08:12",
+    example: "有 Vela 的早晨 · 示意內容",
+    promises: ["每天，替你送上一聲問候", "有空時，再看看爸媽的回覆", "Vela Light 提供後續提醒"],
+    problemLabel: "不是不關心，只是日子太忙。",
+    lifeTitle: "你的生活越來越滿，",
+    parentTitle: "爸媽也漸漸變老。",
+    problem:
+      "工作、自己的家庭，還有一件接一件的小事。忽然就到了晚上，原本想傳的那句問候，還沒送出去。",
+    loving: "關心爸媽，不難。",
+    remembering: "每天都記得，沒那麼容易。",
+    parentAlt: "長輩在早餐桌前聽訊息的示意照片",
+    people: "每一聲問候背後，都是你在乎的人。",
+    task: "不只是一件待辦，",
+    loved: "是你愛的人。",
+    ritualLabel: "一個小習慣，讓日常多一點連結。",
+    ritualTitle: "你繼續忙你的，",
+    ritualEm: "Vela 把問候接下去。",
+    ritualIntro: "你使用 Vela；爸媽在熟悉的通訊軟體裡回答，不用再學一個 App。",
+    explore: "看看有 Vela 的早晨",
+    morningExample: "早晨示例",
+    momMorning: "媽媽的早晨",
+    messenger: "在熟悉的通訊軟體裡",
+    steps: [
       {
-        time: "01 / 每天早上",
-        title: "忙得忘記了，問候還是會送到。",
-        body: "在約好的時間，爸媽會在熟悉的通訊軟體裡收到訊息。家人還沒準備內容時，Vela 會提供早晨的問候。",
+        title: "忘了準備，問候也不會落下。",
+        body: "你可以先準備想說的話；如果還沒準備，Vela 會提供早晨的問候。",
+        time: "08:00",
+        label: "VELA 送上的早安",
+        message: "媽媽，早安。今天早上過得怎麼樣？",
+        status: "早晨問候已自動送出",
+        outcome: "少一件要記住的事，每天的問候依然接得上。",
       },
       {
-        time: "02 / 收到回覆",
-        title: "一眼就能看到爸媽何時回覆。",
-        body: "Vela 顯示回覆時間，以及爸媽分享的文字或語音。忙碌之間，也能知道今天已收到消息。",
+        title: "看見回覆，心裡鬆一點。",
+        body: "爸媽可以點一下、打幾個字，或用語音回答。有空時，就能看到回覆和時間。",
+        time: "08:12",
+        label: "媽媽的回覆",
+        message: "已經在菜園了。番茄終於紅了！",
+        status: "收到回覆 · 08:12",
+        outcome: "你正在忙，回答會留著。有空時，再看看家裡的一點日常。",
       },
       {
-        time: "03 / 還沒有回覆",
-        title: "讓家人知道，下一步可以怎麼做。",
-        body: "使用 Vela Light 時，未回覆的訊息會再提醒一次；等候時間過後，家人會收到溫和的通知。由你決定打電話，或請附近的親友幫忙。",
+        title: "如果一直沒回覆呢？",
+        body: "Vela Light 會再問候一次。等候一段時間後，家人會收到提醒，再自行決定怎麼聯絡。",
+        time: "稍後",
+        label: "如果早晨一直沒有回覆",
+        message: "目前還沒收到回覆。也許可以再聯絡看看。",
+        status: "Vela Light · 再次問候並等候一段時間後",
+        outcome: "家人會收到提醒，下一步由你決定。不因為沉默，就判定發生了什麼事。",
       },
     ],
-    morningLimit: "收到回答，只代表爸媽已回覆，不是健康評估。Vela 不是緊急救援服務。",
-    latestScreen: "現行 Vela 今日畫面 · 示範家庭 · 10 月 22 日",
-    latestAlt: "現行 Vela 今日畫面：媽媽於 8:12 回覆，爸爸尚未回覆",
-    memoryEyebrow: "從爸媽分享的日常，得到更多。",
-    memoryTitle: "每天多一點安心，也慢慢多了解一點。",
+    boundary: "流程為示意，並非即時訊息。收到回覆，不代表能確認健康或安全狀況。",
+    memoryLabel: "不只知道「今天問候了嗎？」",
+    memoryTitle: "不只跟上日常，",
+    memoryEm: "也留住那些小事。",
+    ordinary: "看似平凡的細節，往往最值得記住。",
+    recipeAlt: "家人一起準備家傳料理的示意照片",
+    memories: "回憶",
+    recipeTitle: "今天，只是一道菜。",
+    recipeEm: "有一天，卻是最想念的味道。",
     memoryBody:
-      "回答不只是一聲早安，也可能是你沒聽過的故事、值得記住的計畫，或下次通話時想再問問的事。",
-    memoryFeatures: [
+      "回頭看看家人分享的訊息、故事和片刻。不只是一句「我很好」，也少一點被忙碌沖淡的日常。",
+    memoryStatus: "從對話發掘回憶的功能仍在開發中。",
+    weekLabel: "多一點理解的空間",
+    weekTitle: "看看這一週，",
+    weekEm: "不只今天早上。",
+    weekBody: "每週回顧，讓你用自己的步調，看看這一週家人分享了什麼。",
+    weekStatus: "日常家庭支持建議仍在開發中。目前未提供個人化健康建議。",
+    weekAlt: "現行 Vela 每週回顧畫面，使用示範家庭資料",
+    values: [
+      { title: "也替爸媽想好了。", body: "在熟悉的通訊軟體裡，不用多學一個 App。" },
+      { title: "關心，也保有選擇。", body: "是否參與由自己決定，家人一起商量節奏。" },
+      { title: "連結彼此，不取代相處。", body: "Vela 接續日常，感情還是你們的。" },
+    ],
+    faqLabel: "你可能想問的幾件事。",
+    faqs: [
       {
-        label: "回憶",
-        title: "記住那些，讓爸媽成為爸媽的小細節。",
-        body: "回看家人分享的訊息、聲音、照片和故事。對話回憶的自動發現，以及由本人同意的保存功能，仍在開發中。",
-        image: "memories-current.jpg",
-        alt: "現行 Vela 回憶畫面，使用示範家庭的訊息與故事",
-        status: "現行 App 預覽 · 示範家庭",
+        question: "Vela 適合我嗎？",
+        answer:
+          "如果你想和年歲漸長的爸媽保持更穩定的日常連結，卻常被忙碌或距離打斷，Vela 就是為這樣的家庭而做的。",
       },
       {
-        label: "這一週",
-        title: "有空時，一起看看這週的日常。",
-        body: "每週回顧把分享過的片段整理在一起。我們也正在開發根據爸媽實際分享內容，提供日常支持建議的功能。",
-        image: "week-current.jpg",
-        alt: "現行 Vela 每週畫面，使用示範家庭的早晨回覆與每週回顧",
-        status: "現行每週回顧 · 支持建議開發中",
+        question: "爸媽需要安裝 Vela App 嗎？",
+        answer:
+          "不需要。你使用 Vela App，爸媽在熟悉的通訊軟體裡回答。適合你的家庭開始使用時，我們會說明支援哪些選項。",
+      },
+      {
+        question: "這是緊急救援或醫療服務嗎？",
+        answer:
+          "不是。Vela 支持日常的家庭連結，無法確認一個人是否醒著、健康或安全，也不能取代緊急救援或專業照護。",
+      },
+      {
+        question: "加入之後會怎麼樣？",
+        answer:
+          "適合你的家庭開始使用時，我們會寄信通知。加入等候名單不會建立帳號，也不會開始付費方案。",
       },
     ],
-    wellbeingNote:
-      "規劃中的建議，協助家人選擇貼心的下一步，例如打電話、探望，或主動提供實際幫忙。目前不提供個人化的身心健康建議。",
-    roleYou: "你使用 Vela",
-    roleParent: "爸媽使用熟悉的通訊軟體",
-    roleRhythm: "忘了傳訊息，早安還是會到",
-    exampleLabel: "試試不同的開場",
-    exampleNote: "對話示意 · 選一個問題，看看交流如何開始",
-    examples: [
-      {
-        label: "菜園的日常",
-        question: "今天早上，菜園長得怎麼樣？",
-        answer: "番茄終於紅了。吃早餐前，我摘了三顆。",
-        reply: "幫我留兩顆，星期天回去拿？",
-      },
-      {
-        label: "家傳的味道",
-        question: "星期天那鍋湯，有什麼祕訣？",
-        answer: "你阿公都會加一點薑，我到現在還是照他的方式煮。",
-        reply: "我今晚也來煮，煮好拍給你看。",
-      },
-      {
-        label: "以前的故事",
-        question: "還記得第一天上班的情形嗎？",
-        answer: "那天緊張得提早一小時到，連門都還沒開。",
-        reply: "我都不知道這件事。後來呢？",
-      },
-    ],
-    seeHow: "看看產品如何運作",
-    galleryLabel: "四張照片裡的日常親情",
-    galleryKeys: "移動中的照片故事。可用左右方向鍵瀏覽。",
-    cityAlt: "女兒下班後，找個空檔傳一段語音",
-    gardenAlt: "媽媽拍下陽台上親手種的番茄",
-    voiceAlt: "爸爸吃早餐時，聽著家人的語音",
-    recipeAlt: "爸爸和孩子一起下廚，準備分享家傳食譜的成果",
-    cityCaption: "忙碌之間，想起你。",
-    gardenCaption: "家裡的一點新鮮事。",
-    voiceCaption: "熟悉的聲音，陪著一天。",
-    recipeCaption: "也把你的一天，分享回去。",
-    previousPhoto: "上一張照片",
-    nextPhoto: "下一張照片",
-    pause: "暫停照片",
-    ideaEyebrow: "一聲問候，也能聊成一段對話。",
-    goBeyond: "除了「都很好」，",
-    howAreYou: "還能多聊一點。",
-    specificQuestion:
-      "簡單的回答，讓你知道今天已收到消息。用心的問題，也讓爸媽在想分享時，有一個自然的開場。",
-    solutionKicker: "一個小問題，就能聊出一段故事。",
-    youAsk: "你問",
-    gardenQuestion: "「今天早上，菜園長得怎麼樣？」",
-    momAnswers: "媽媽回答",
-    gardenAnswer: "「番茄終於紅了。吃早餐前，我摘了三顆。」",
-    youReply: "你回覆",
-    saveTwo: "「幫我留兩顆，星期天回去拿？」",
-    payoffStart: "有一點日常可以分享，",
-    payoffEnd: "也有一段對話值得期待。",
-    howEyebrow: "三個步驟，看看 VELA 如何運作。",
-    oneQuestion: "一個問題，",
-    aWhole: "聊成",
-    conversation: "一段對話。",
-    smallExchange: "你分享一點，對方也有話傳回來。",
-    exploreExchange: "看看每天如何交流",
-    sendTitle: "傳一點日常。",
-    sendDetail: "一個問題、一張照片，或熟悉的問候。",
-    answerTitle: "讓爸媽照自己的方式回答。",
-    answerDetail: "就在原本熟悉的通訊軟體裡。",
-    replyTitle: "讓對話繼續。",
-    replyDetail: "把你的一天，也分享回去。",
-    questionLabel: "01 / 你想問的",
-    appSource: "Vela App · 示範家庭",
-    askAlt: "現行 Vela 提問畫面，使用示範家庭資料",
-    viewScreen: "放大畫面",
-    enlarge: "放大現行 App 畫面",
-    parentGreeting: "給媽媽的早安問候",
-    initialExplanation: "選一個問題，再選想問的人。",
-    youApp: "你 · VELA APP",
-    showAnswer: "看看爸媽如何回答",
-    next: "下一步",
-    differenceEyebrow: "VELA 有什麼不同。",
-    differenceTitleStart: "不只靠你每天記得，",
-    differenceTitleEnd: "傳一封訊息。",
-    differenceLede:
-      "固定的早晨問候、清楚的回覆狀態，以及家人分享日常的地方。讓原本的對話，多一份持續的照應。",
-    differences: [
-      {
-        number: "01",
-        title: "就算今天很忙，早安還是會到。",
-        body: "每天的問候，不必全靠家人記得準備。沒有預先寫好的訊息時，Vela 也會提供一聲早安。",
-      },
-      {
-        number: "02",
-        title: "爸媽回覆了沒有，一眼就清楚。",
-        body: "回覆時間很容易找到。使用 Vela Light 時，溫和的通知也能幫你決定何時再聯絡看看。",
-      },
-      {
-        number: "03",
-        title: "每天的小片段，累積成更多了解。",
-        body: "家人分享的日常放在一起，隨時能回看。每週回顧，讓忙碌的你有空時也能接上這週的故事。",
-      },
-      {
-        number: "04",
-        title: "保持聯繫，也保留空間。",
-        body: "一家人一起決定節奏。從一開始，就把同意、暫停和安靜的日子放進設計裡。",
-      },
-    ],
-    careEyebrow: "用心設計。",
-    closeSpace: "讓彼此靠近，",
-    beYourself: "也保有自己的空間。",
-    windowAlt: "家裡亮著一盞暖燈的窗戶插畫",
-    everyoneSay: "每個人都能自己決定。",
-    choice: "是否參與，由自己決定。一起商量適合的節奏，也為暫停和安靜的日子留點空間。",
-    quietTitle: "沒回覆，不等於出了狀況。",
-    quietBody: "雙方同意的後續提醒，可以讓家人想起再聯絡看看。Vela 不是緊急救援或醫療服務。",
-    dataTitle: "家人的資料，說清楚。",
-    dataBody: "了解內容如何處理，以及如何申請查閱或刪除。Vela 並未提供端對端加密。",
-    readPrivacy: "閱讀產品隱私說明",
-    faqStart: "你可能想問的",
-    faqEnd: "幾件事。",
-    needApp: "爸媽需要安裝 Vela App 嗎？",
-    needAppBody:
-      "不需要。我們正把 Vela 做進爸媽原本使用的通訊軟體。你使用 Vela App，他們在熟悉的地方回答。開放使用時，我們會說明支援哪些選項。",
-    replaceCalls: "這會取代打電話嗎？",
-    replaceCallsBody: "電話照打，也繼續見面。Vela 讓你們在那些長聊之間，也有一點日常可以分享。",
-    afterAnswer: "如果我忘了準備訊息呢？",
-    afterAnswerBody:
-      "Vela 還是會在約好的時間送上早安。家人還沒準備內容時，Vela 會提供一個問題。等你有空，再看看爸媽的回答、回覆幾句就好。",
-    whenTry: "什麼時候可以試用 Vela？",
-    whenTryBody: "加入等候名單，適合你的家庭開始使用時，我們會通知你。",
-    closeStart: "每天，",
-    closer: "靠近",
-    everyDay: "一點。",
-    firstFamilies: "和第一批家庭一起，試試 Vela。",
+    closingLabel: "給那些，你總是放在心上的人。",
+    closingTitle: "一聲熟悉的早安，",
+    closingEm: "心裡多一點安心。",
+    closingBody: "不必記住所有事，也能為家人留一點光。",
     yourEmail: "你的電子郵件",
     updates: "只寄送 Vela 開放使用的通知。",
     privacy: "網站隱私",
     productPrivacy: "產品隱私",
     serviceStatus: "Vela 的服務狀況",
     contact: "聯絡我們",
-    backToTop: "回到頁首 ↑",
-    footerTagline: "每天，靠近一點。",
-    disclosure: "照片與家庭對話皆為示意，並非真實使用者",
+    footer: "每天，靠近一點。",
+    guarantee: "日常的連結，不是安全保證。",
+    disclosure: "照片與 App 家庭資料皆為示意，並非真實使用者。",
     closeWaitlist: "關閉等候名單",
-    dialogTitleStart: "靠近一點，",
-    dialogTitleMiddle: "就從",
-    dialogTitleEnd: "一句你好開始。",
+    dialogTitle: "靠近一點，就從一句你好開始。",
     leaveEmail: "留下電子郵件。適合你的家庭開始使用時，我們會通知你。",
-    screenSource: "VELA APP · 示範家庭",
-    closeScreen: "關閉放大的 App 畫面",
-    enlargedAlt: "放大的 Vela App 畫面",
-    title: "Vela — 每天一聲問候，心裡多一點安心。",
-    description:
-      "給生活忙碌的你，也給年歲漸長的爸媽。就算忘了傳訊息，Vela 也會接續早晨的問候，讓你看見回覆、適時聯絡，記住家人的日常。",
     joined: "你已加入等候名單。適合你的家庭開始使用時，我們會通知你。",
     badEmail: "請填寫有效的電子郵件地址。",
     failed: "暫時無法確認是否加入成功，請再試一次。",
     joining: "加入中…",
     onList: "已加入等候名單 ✓",
     rateLimited: "請稍候再試一次。",
-    play: "播放照片",
-    replay: "重看",
-    readAnswer: "閱讀示範回答",
-    hideAnswer: "收起示範回答",
-    parentSource: "通訊軟體對話示意",
-    parentCaption: "爸媽 · 熟悉的通訊軟體",
-    answerLabel: "02 / 爸媽的回答",
-    replyLabel: "03 / 你的回覆",
-    askExplanation: "選一個問題，再選想問的人。爸媽在熟悉的通訊軟體裡收到。",
-    answerExplanation: "就在熟悉的對話裡，點一下或用語音回答。",
-    replyExplanation: "讀到她的回答，再傳幾句回去。隔天早上，她會聽到家人的回覆。",
-    parentQuestion: "今天早上，菜園長得怎麼樣？",
-    parentAnswer: "番茄終於紅了。吃早餐前，我摘了三顆，放在窗台上。",
-    parentSender: "MIA 傳來的早安問題",
-    voiceLabel: "媽媽的語音回答",
-    noAudio: "對話為示範內容；不播放錄音。",
-    askScreenAlt: "現行 Vela 提問畫面，使用菜園問題作為示範",
-    replyScreenAlt: "現行 Vela 回覆畫面，使用示範家庭資料",
-    photoPosition: "照片",
   },
 } as const;
+
 export function approvedCopy(lang: SiteLang) {
   return COPY[lang];
 }
@@ -503,74 +331,46 @@ function demoData(lang: SiteLang): Html {
   const json = JSON.stringify(approvedDemo(lang)).replace(/</g, "\\u003c");
   return { markup: `<script type="application/json" id="vela-demo">${json}</script>` };
 }
-export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageContent {
+
+/** Both forms retain ordinary POST navigation when JavaScript is unavailable. */
+function form(lang: SiteLang, id: string, flash: WaitlistFlash = null): Html {
   const c = COPY[lang];
-  const home = lang === "en" ? "/" : "/zh-TW";
   const privacy = lang === "en" ? "/website-privacy" : "/zh-TW/website-privacy";
-  const pilotPrivacy = lang === "en" ? "/privacy" : "/privacy/zh-TW";
-  const precision = lang === "en" ? "/how-vela-is-doing" : "/zh-TW/how-vela-is-doing";
-  const otherLang = lang === "en" ? "zh-TW" : "en";
-  const otherHome = lang === "en" ? "/zh-TW" : "/";
-  const otherLabel = lang === "en" ? "繁體中文" : "English";
-  const flashMarkup =
+  const feedback =
     flash === "joined"
       ? html`<div class="flash ok" role="status">${c.joined}</div>`
       : flash === "email"
         ? html`<div class="flash err" role="alert">${c.badEmail}</div>`
         : null;
+  return html`<form class="waitlist" method="post" action="/waitlist" data-waitlist-form><input type="hidden" name="lang" value="${lang}"><label for="${id}-email">${c.yourEmail}</label><div class="waitlist-input-row"><input id="${id}-email" type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com"><button class="button amber" type="submit">${c.join}<span aria-hidden="true">↗</span></button></div><div class="form-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div><p class="waitlist-privacy">${c.updates} <a href="${privacy}">${c.privacy}</a></p><p class="form-status" role="status" aria-live="polite"></p>${feedback}</form>`;
+}
+
+export function approvedHome(lang: SiteLang, flash: WaitlistFlash): SitePageContent {
+  const c = COPY[lang];
+  const home = lang === "en" ? "/" : "/zh-TW";
+  const otherLang = lang === "en" ? "zh-TW" : "en";
+  const otherHome = lang === "en" ? "/zh-TW" : "/";
+  const otherLabel = lang === "en" ? "繁體中文" : "English";
+  const privacy = lang === "en" ? "/website-privacy" : "/zh-TW/website-privacy";
+  const pilotPrivacy = lang === "en" ? "/privacy" : "/privacy/zh-TW";
+  const precision = lang === "en" ? "/how-vela-is-doing" : "/zh-TW/how-vela-is-doing";
+  const first = c.steps[0];
   return {
     title: c.title,
     description: c.description,
-    body: html`<div class="approved-home">  <a class="skip-link" href="#main">${c.skip}</a>
-  <header class="site-header">
-    <a class="wordmark" href="${home}" aria-label="Vela"><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"></a>
-    <nav aria-label="Main navigation"><a href="#difference">${c.why}</a><a href="#exchange">${c.how}</a><a href="#care">${c.careNav}</a></nav>
-    <a href="#join" class="nav-cta" data-waitlist aria-haspopup="dialog" aria-controls="waitlist-dialog">${c.join} <span aria-hidden="true">→</span></a>
-  </header>
-  <main id="main">
-    <section class="hero" aria-labelledby="hero-title">
-      <p class="eyebrow">${c.tagline}</p>
-      <h1 id="hero-title">${c.heroStart}<span class="hero-parent">${c.heroParent}</span><br>${c.heroSecond}<em>${c.heroEmphasis}</em></h1>
-      <p class="hero-description">${c.heroLine1}<br>${c.heroLine2}</p>
-      <div class="hero-actions"><a href="#join" class="button button-dark" data-waitlist aria-haspopup="dialog" aria-controls="waitlist-dialog">${c.join} <span aria-hidden="true">→</span></a><a class="hero-how" href="#exchange">${c.seeHow} <span aria-hidden="true">↓</span></a></div>
-      <ul class="product-facts"><li>${c.roleYou}</li><li>${c.roleParent}</li><li>${c.roleRhythm}</li></ul>
-      <figure class="morning-preview"><div class="morning-preview-copy"><img src="/site/img/vela-mark-small.svg" width="32" height="40" alt=""><p class="eyebrow">${lang === "en" ? "A LITTLE REASSURANCE FROM HOME" : "來自家裡的一點安心"}</p><h2>${lang === "en" ? "Mom answered." : "媽媽回覆了。"}<br>${lang === "en" ? "8:12 this morning." : "今天早上 8:12。"}</h2><p>${lang === "en" ? "A real response, a clear time, and a little of the day behind it. Ready when you have a moment." : "一段回答、一個清楚的時間，還有今天的一點日常。有空時，隨時都能看看。"}</p></div><div class="latest-phone"><img src="/site/img/app-current/today-portraits.jpg" alt="${c.latestAlt}" width="390" height="844"></div><figcaption>${c.latestScreen}</figcaption></figure>
-      <div class="story-gallery" role="region" aria-label="${c.galleryLabel}">
-        <div class="story-viewport" tabindex="0" aria-label="${c.galleryKeys}">
-          <div class="story-track">
-            <div class="story-group">
-              <figure class="story-card"><img src="/site/img/story/city-hello.jpg" alt="${c.cityAlt}" width="1024" height="1024"><figcaption><span>01</span>${c.cityCaption}</figcaption></figure>
-              <figure class="story-card"><img src="/site/img/story/garden-update.jpg" alt="${c.gardenAlt}" width="1024" height="1024"><figcaption><span>02</span>${c.gardenCaption}</figcaption></figure>
-              <figure class="story-card"><img src="/site/img/story/familiar-voice.jpg" alt="${c.voiceAlt}" width="1024" height="1024"><figcaption><span>03</span>${c.voiceCaption}</figcaption></figure>
-              <figure class="story-card"><img src="/site/img/story/family-recipe.jpg" alt="${c.recipeAlt}" width="1024" height="1024"><figcaption><span>04</span>${c.recipeCaption}</figcaption></figure>
-            </div>
-          </div>
-        </div>
-        <div class="gallery-controls js-only"><button class="gallery-control" id="photo-previous" aria-label="${c.previousPhoto}">←</button><button class="gallery-pause" id="photo-pause" aria-pressed="false">${c.pause} <span aria-hidden="true">Ⅱ</span></button><button class="gallery-control" id="photo-next" aria-label="${c.nextPhoto}">→</button></div>
-      </div>
-    </section>
-    <section class="morning-story" id="morning" aria-labelledby="morning-title"><div class="morning-story-heading"><p class="eyebrow">${c.morningEyebrow}</p><h2 id="morning-title">${c.morningTitle}</h2><p>${c.morningProblem}</p><p>${c.morningSolution}</p></div><div class="morning-steps">${c.morningSteps.map((step) => html`<article><span>${step.time}</span><h3>${step.title}</h3><p>${step.body}</p></article>`)}</div><p class="morning-boundary">${c.morningLimit}</p></section>
-    <section class="question-chapter dark-section" id="idea" aria-labelledby="question-title">
-      <div class="question-intro"><p class="eyebrow">${c.ideaEyebrow}</p><h2 id="question-title">${c.goBeyond}<br><em>${c.howAreYou}</em></h2><p>${c.specificQuestion}</p></div>
-      <div class="conversation-picker"><p class="solution-kicker">${c.solutionKicker}</p><div class="starter-choices js-only" role="group" aria-label="${c.exampleLabel}">${c.examples.map((example, index) => html`<button type="button" data-starter="${index}" aria-pressed="${index === 0 ? "true" : "false"}">${example.label}<span aria-hidden="true">↗</span></button>`)}</div><p class="example-disclosure">${c.exampleNote}</p></div><div class="question-story" aria-live="polite" aria-atomic="true"><div class="story-message"><span>${c.youAsk}</span><p id="starter-question">${c.examples[0].question}</p></div><div class="story-message from-parent"><span>${c.momAnswers}</span><p id="starter-answer">${c.examples[0].answer}</p></div><div class="story-message your-reply"><span>${c.youReply}</span><p id="starter-reply">${c.examples[0].reply}</p></div></div>
-      <p class="question-payoff">${c.payoffStart}<em>${c.payoffEnd}</em></p>
-    </section>
-    <section class="exchange-section" id="exchange" aria-labelledby="exchange-title">
-      <div class="exchange-layout"><div class="exchange-copy"><p class="eyebrow">${c.howEyebrow}</p><h2 id="exchange-title">${c.oneQuestion}<br>${c.aWhole}<br><em>${c.conversation}</em></h2><p class="section-copy">${c.smallExchange}</p><div class="exchange-controls" role="tablist" aria-orientation="vertical" aria-label="${c.exploreExchange}">
-      <button id="tab-0" role="tab" aria-selected="true" aria-controls="exchange-panel" data-step="0" disabled><span class="step-count">01</span><span><b>${c.sendTitle}</b><small>${c.sendDetail}</small></span><span class="step-arrow" aria-hidden="true">→</span></button>
-      <button id="tab-1" role="tab" aria-selected="false" aria-controls="exchange-panel" tabindex="-1" data-step="1" disabled><span class="step-count">02</span><span><b>${c.answerTitle}</b><small>${c.answerDetail}</small></span><span class="step-arrow" aria-hidden="true">→</span></button>
-      <button id="tab-2" role="tab" aria-selected="false" aria-controls="exchange-panel" tabindex="-1" data-step="2" disabled><span class="step-count">03</span><span><b>${c.replyTitle}</b><small>${c.replyDetail}</small></span><span class="step-arrow" aria-hidden="true">→</span></button>
-      </div></div><div class="exchange-stage" id="exchange-panel" role="tabpanel" aria-labelledby="tab-0" tabindex="0"><div class="stage-heading"><span class="stage-step-label" id="stage-step-label">${c.questionLabel}</span><span id="stage-source">${c.appSource}</span></div><div class="app-screen-shell" id="app-screen-shell"><img id="app-screen" src="/site/img/app-current/ask-current.jpg" alt="${c.askAlt}" width="390" height="844"><button class="screen-expand js-only" id="screen-expand" aria-haspopup="dialog" aria-controls="screen-dialog" aria-label="${c.enlarge}">${c.viewScreen} <span aria-hidden="true">↗</span></button></div><div class="parent-example" id="parent-example" hidden><div class="parent-example-heading"><img src="/site/img/vela-mark-small.svg" width="22" height="28" alt=""><span>${c.parentGreeting}</span></div><div id="phone-content"></div></div><p class="stage-explanation" id="stage-explanation">${c.initialExplanation}</p><div class="stage-bottom"><span id="stage-caption">${c.youApp}</span><button id="next-step" class="js-only" aria-label="${c.showAnswer}">${c.next} <span aria-hidden="true">→</span></button></div></div></div>
-    </section>
-    <section class="memory-story" id="value" aria-labelledby="value-title"><div class="memory-story-heading"><p class="eyebrow">${c.memoryEyebrow}</p><h2 id="value-title">${c.memoryTitle}</h2><p>${c.memoryBody}</p></div><div class="memory-features">${c.memoryFeatures.map((feature) => html`<article><div class="memory-feature-copy"><p class="eyebrow">${feature.label}</p><h3>${feature.title}</h3><p>${feature.body}</p><span class="feature-status">${feature.status}</span></div><div class="latest-phone"><img src="/site/img/app-current/${feature.image}" alt="${feature.alt}" width="390" height="844" loading="lazy"></div></article>`)}</div><p class="morning-boundary">${c.wellbeingNote}</p></section>
-    <section class="difference-section" id="difference" aria-labelledby="difference-title"><div class="difference-heading"><p class="eyebrow">${c.differenceEyebrow}</p><h2 id="difference-title">${c.differenceTitleStart}<br><em>${c.differenceTitleEnd}</em></h2><p>${c.differenceLede}</p></div><div class="difference-grid">${c.differences.map((item) => html`<article><span>${item.number}</span><h3>${item.title}</h3><p>${item.body}</p></article>`)}</div></section>
-    <section class="care-section" id="care" aria-labelledby="care-title"><div class="care-illustration"><img src="/site/img/a-light-at-home.jpg" alt="${c.windowAlt}" loading="lazy"></div><div class="care-copy"><p class="eyebrow">${c.careEyebrow}</p><h2 id="care-title">${c.closeSpace}<br><em>${c.beYourself}</em></h2><div class="care-lines"><details open><summary>${c.everyoneSay}<span aria-hidden="true">+</span></summary><p>${c.choice}</p></details><details><summary>${c.quietTitle}<span aria-hidden="true">+</span></summary><p>${c.quietBody}</p></details><details><summary>${c.dataTitle}<span aria-hidden="true">+</span></summary><p>${c.dataBody}</p><a href="${pilotPrivacy}" target="_blank" rel="noopener">${c.readPrivacy} ↗</a></details></div></div></section>
-    <section class="faq-section" aria-labelledby="faq-title"><div><h2 id="faq-title">${c.faqStart}<br><em>${c.faqEnd}</em></h2></div><div class="faq-list"><details><summary>${c.needApp}<span aria-hidden="true">+</span></summary><p>${c.needAppBody}</p></details><details><summary>${c.replaceCalls}<span aria-hidden="true">+</span></summary><p>${c.replaceCallsBody}</p></details><details><summary>${c.afterAnswer}<span aria-hidden="true">+</span></summary><p>${c.afterAnswerBody}</p></details><details><summary>${c.whenTry}<span aria-hidden="true">+</span></summary><p>${c.whenTryBody}</p><a class="text-button" href="#join" data-waitlist>${c.join} →</a></details></div></section>
-    <section class="closing-section" id="join" aria-labelledby="closing-title"><img class="closing-mark" src="/site/img/vela-mark-white.svg" width="48" height="60" alt=""><h2 id="closing-title">${c.closeStart}<em>${c.closer}</em><br>${c.everyDay}</h2><p>${c.firstFamilies}</p><form class="waitlist" method="post" action="/waitlist" data-waitlist-form><input type="hidden" name="lang" value="${lang}"><label for="footer-email">${c.yourEmail}</label><div class="waitlist-input-row"><input id="footer-email" type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com"><button class="button button-cream" type="submit">${c.join} <span aria-hidden="true">→</span></button></div><div class="form-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div><p class="waitlist-privacy">${c.updates} <a href="${privacy}">${c.privacy}</a></p><p class="form-status" role="status" aria-live="polite"></p>${flashMarkup}</form></section>
-  </main>
-  <footer><a class="wordmark" href="${home}" aria-label="Vela"><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"></a><span>${c.footerTagline}</span><div class="footer-links"><a href="${privacy}">${c.privacy}</a><a href="${pilotPrivacy}">${c.productPrivacy}</a><a href="${precision}">${c.serviceStatus}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:${SUPPORT_EMAIL}">${c.contact}</a><a href="${otherHome}" hreflang="${otherLang}" lang="${otherLang}">${otherLabel}</a><a href="#main">${c.backToTop}</a></div><p class="prototype-note">${c.disclosure}</p></footer>
-  <dialog id="waitlist-dialog" aria-labelledby="waitlist-title"><button class="dialog-close" aria-label="${c.closeWaitlist}">×</button><img src="/site/img/vela-logo.svg" width="126" height="48" alt="Vela"><h2 id="waitlist-title">${c.dialogTitleStart}<br>${c.dialogTitleMiddle}<em>${c.dialogTitleEnd}</em></h2><p>${c.leaveEmail}</p><form class="waitlist" method="post" action="/waitlist" data-waitlist-form><input type="hidden" name="lang" value="${lang}"><label for="dialog-email">${c.yourEmail}</label><div class="waitlist-input-row"><input id="dialog-email" type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com"><button class="button button-dark" type="submit">${c.join} <span aria-hidden="true">→</span></button></div><div class="form-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div><p class="waitlist-privacy">${c.updates} <a href="${privacy}">${c.privacy}</a></p><p class="form-status" role="status" aria-live="polite"></p></form></dialog>
-  <dialog id="screen-dialog" class="screen-dialog" aria-labelledby="screen-dialog-title"><div class="screen-dialog-header"><div><p class="eyebrow">${c.screenSource}</p><h2 id="screen-dialog-title">${c.sendTitle}</h2></div><button class="screen-dialog-close" aria-label="${c.closeScreen}">×</button></div><img id="enlarged-screen" src="/site/img/app-current/ask-current.jpg" alt="${c.enlargedAlt}" width="390" height="844"></dialog>
-${demoData(lang)}</div>`,
+    body: html`<div class="approved-home afterglow"><a class="skip-link" href="#main">${c.skip}</a>
+<header class="wrap nav"><a href="${home}" aria-label="Vela"><img class="logo white" src="/site/img/vela-logo-white.svg" width="110" height="42" alt="Vela"></a><nav class="nav-links" aria-label="${c.how}"><a href="#how">${c.how}</a><a href="#more">${c.beyond}</a><a class="language-link" href="${otherHome}" hreflang="${otherLang}" lang="${otherLang}">${otherLabel}</a><a class="nav-join" href="#join" data-waitlist aria-haspopup="dialog" aria-controls="waitlist-dialog">${c.join} ↗</a></nav></header>
+<main id="main">
+<section class="hero" aria-labelledby="hero-title"><div class="wrap"><p class="label eyebrow"><span class="dot" aria-hidden="true"></span>${c.tagline}</p><h1 id="hero-title">${c.headline}<br><em>${c.emphasis}</em></h1><p class="lede">${c.hero[0]}<br><strong>${c.hero[1]}</strong><br>${c.hero[2]}</p><div class="actions"><a class="button amber" href="#join" data-waitlist aria-haspopup="dialog" aria-controls="waitlist-dialog">${c.join}<span aria-hidden="true">↗</span></a><a class="text-link" href="#how">${c.seeMorning} ↓</a></div>
+<div class="morning-world"><figure class="home-moment"><img src="/site/img/story/garden-update.jpg" width="1024" height="1024" alt="${c.gardenAlt}"><figcaption>${c.littleNews}<br><em>${c.littleCloser}</em></figcaption></figure><div class="orbit" aria-hidden="true"></div><div class="orbit orbit-two" aria-hidden="true"></div><div class="phone hero-phone"><img src="/site/img/app-current/today-portraits.jpg" width="390" height="844" alt="${c.todayAlt}"></div><div class="morning-log"><p class="label">${c.lighter}</p><div><span>08:00</span><p>${c.log[0]}<small>${c.log[1]}</small></p></div><div><span>08:12</span><p>${c.log[2]}<small>${c.log[3]}</small></p></div><p class="log-note">${c.log[4]}<br>${c.log[5]}</p></div><div class="receipt floating-receipt"><img class="portrait" src="/site/img/story/parent-profile.jpg" width="38" height="38" alt="${c.momAlt}"><div><strong>${c.receipt}</strong><small>${c.receiptTime}</small></div><span class="receipt-check" aria-hidden="true">↗</span></div><span class="scene-note">${c.example}</span></div></div></section>
+<div class="promise-bar wrap">${c.promises.map((promise, index) => html`<span><i>0${index + 1}</i>${promise}</span>`)}</div>
+<section id="why" class="life-section wrap" aria-labelledby="problem-title"><div class="life-copy"><p class="label">${c.problemLabel}</p><h2 id="problem-title">${c.lifeTitle}<br><span>${c.parentTitle}</span></h2><p>${c.problem}</p><p class="life-point">${c.loving}<br><strong>${c.remembering}</strong></p></div><figure class="life-photo"><img loading="lazy" src="/site/img/story/familiar-voice.jpg" width="1024" height="1024" alt="${c.parentAlt}"><figcaption><span>${c.people}</span><p>${c.task}<br><em>${c.loved}</em></p></figcaption></figure></section>
+<section class="ritual" id="how" aria-labelledby="how-title"><div class="wrap"><div class="section-heading"><div><p class="label">${c.ritualLabel}</p><h2 id="how-title">${c.ritualTitle}<br><em>${c.ritualEm}</em></h2></div><p>${c.ritualIntro}</p></div><div class="ritual-grid"><div class="ritual-steps" role="group" aria-label="${c.explore}">${c.steps.map((step, index) => html`<button class="ritual-step" type="button" aria-pressed="${index === 0 ? "true" : "false"}" aria-controls="morning-preview" data-morning="${index}" disabled><span>0${index + 1}</span><span class="step-copy"><strong>${step.title}</strong><span>${step.body}</span></span><b aria-hidden="true">↗</b></button>`)}</div><div id="morning-preview" class="ritual-preview" aria-live="polite" aria-atomic="true"><div class="preview-top"><span class="label">${c.morningExample}</span><span id="morning-time">${first.time}</span></div><div class="example-person"><img src="/site/img/story/parent-profile.jpg" width="48" height="48" alt="${c.momAlt}"><div><strong>${c.momMorning}</strong><small>${c.messenger}</small></div><span class="sun-symbol" aria-hidden="true">☀</span></div><div class="example-message"><span class="label" id="morning-label">${first.label}</span><p id="morning-message">${first.message}</p><small id="morning-status">${first.status}</small></div><div class="example-outcome"><span class="dot" aria-hidden="true"></span><p id="morning-outcome">${first.outcome}</p></div><p class="example-disclaimer">${c.boundary}</p></div></div></div></section>
+<section id="more" class="beyond wrap" aria-labelledby="more-title"><div class="section-heading"><div><p class="label">${c.memoryLabel}</p><h2 id="more-title">${c.memoryTitle}<br><em>${c.memoryEm}</em></h2></div><p>${c.ordinary}</p></div><div class="memory-layout"><article class="memory-story"><img loading="lazy" src="/site/img/story/family-recipe.jpg" width="1024" height="1024" alt="${c.recipeAlt}"><div class="memory-caption"><p class="label">${c.memories}</p><h3>${c.recipeTitle}<br>${c.recipeEm}</h3><p>${c.memoryBody}</p><small>${c.memoryStatus}</small></div></article><article class="week-story"><div><p class="label">${c.weekLabel}</p><h3>${c.weekTitle}<br>${c.weekEm}</h3><p>${c.weekBody}</p><small>${c.weekStatus}</small></div><div class="phone"><img loading="lazy" src="/site/img/app-current/week-current.jpg" width="390" height="844" alt="${c.weekAlt}"></div></article></div><div class="values" id="care">${c.values.map((value) => html`<div><h3>${value.title}</h3><p>${value.body}</p></div>`)}</div></section>
+<section class="questions wrap" aria-labelledby="faq-title"><h2 class="label" id="faq-title">${c.faqLabel}</h2><div>${c.faqs.map((faq) => html`<details><summary>${faq.question}</summary><p>${faq.answer}</p></details>`)}</div></section>
+<section id="join" class="closing" aria-labelledby="closing-title"><div class="closing-light" aria-hidden="true"></div><p class="label">${c.closingLabel}</p><h2 id="closing-title">${c.closingTitle}<br><em>${c.closingEm}</em></h2><p>${c.closingBody}</p>${form(lang, "footer", flash)}</section>
+</main>
+<footer class="wrap footer"><a href="${home}" aria-label="Vela"><img src="/site/img/vela-logo-white.svg" width="78" height="30" alt="Vela"></a><span>${c.footer}</span><span>${c.guarantee}</span><nav class="footer-links" aria-label="${c.privacy}"><a href="${privacy}">${c.privacy}</a><a href="${pilotPrivacy}">${c.productPrivacy}</a><a href="${precision}">${c.serviceStatus}</a>${LEGAL_PAGES.map((page) => html`<a href="${LEGAL_ORIGIN}${legalPath(lang, page)}">${LEGAL_LABELS[lang][page]}</a>`)}<a href="mailto:t.aiusheev@gmail.com">${c.contact}</a><a href="${otherHome}" hreflang="${otherLang}" lang="${otherLang}">${otherLabel}</a></nav></footer><p class="prototype-note">${c.disclosure}</p>
+<dialog id="waitlist-dialog" aria-labelledby="waitlist-title"><button class="dialog-close" type="button" aria-label="${c.closeWaitlist}">×</button><img src="/site/img/vela-logo.svg" width="110" height="42" alt="Vela"><h2 id="waitlist-title">${c.dialogTitle}</h2><p>${c.leaveEmail}</p>${form(lang, "dialog")}</dialog>${demoData(lang)}</div>`,
   };
 }
