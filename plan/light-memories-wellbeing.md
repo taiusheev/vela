@@ -492,3 +492,34 @@ Final HTTP local pnpm check passed all 9 tasks: 1,716 service tests, 1,277 Worke
 tests with 1 existing skip actually ran; 6 unchanged test tasks reused valid caches. The Worker
 total includes 39 new HTTP cases and 3 runtime-pinning cases. Full independent PostgreSQL suite
 passed 149/149 across 47 files; disposable database removed. No live records or runtime were used.
+
+### App sharing transport (22 October, built but not mounted)
+
+The optional HTTP boundary149 merged1f9553a5 after newest checks passed; main CI39722006517 and
+staging39722006479 succeeded, including migrations, both Workers and public protection smoke.
+An independent public smoke passed7/7; synthetic unauthenticated sharing routes remain404.
+The later warm-light146 main066bfa37 staging39731333583 also succeeded. No production release
+or family-sharing activation was performed; the notice/fresh acceptance and release holds remain.
+
+An isolated `createMemorySharingHttpPort` now connects the controller protocol to authenticated
+HTTP-shaped requests. It pins immutable family/author/memory/session scope, requires HTTPS and
+a current token, rejects redirects/cookies and validates strict replies. It uses the existing
+session cancellation boundary through body reads; no old-account response or credential can
+start a later preview request. No screen imports or creates it and no Worker config is changed.
+
+Preparation remains IDs-only followed by a separate preview read. Confirmation requires the
+exact locally reviewed proof; receipts contain no quote. Reads/stop stay independent, including
+after an unavailable detail. Missing/consumed proofs or409conflicts now clear keys, old words
+and selections, refresh the current state and require a new named review. A failed refresh does
+not claim success or block free stop. No device storage, background queue or demo fallback exists.
+
+Synthetic transport/controller checks and a reviewed-proof negative control cover the boundary.
+This is not a connected authenticated Worker/database/app or native proof. Revised notice/fresh
+acceptance, live lifecycle/navigation mounting, translations, signed-device/accessibility and
+provider/capacity gates remain. The weekly-support engine is still separate pending work.
+
+Local transport verification: pnpm check9/9PASS; app463passed+1existing skip actually ran and
+8unchanged tasks reused valid caches. Focused82PASS (50new HTTP-port cases,32controller cases).
+Removing the exact-reviewed-proof guard failed the unreviewed-confirmation test; restored source
+passed the full gate. No domain/server/database source changed, so previous PostgreSQL evidence
+is retained, not claimed as a newly executed suite for this app-only slice.

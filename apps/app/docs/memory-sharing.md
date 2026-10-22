@@ -4,7 +4,7 @@ The private collection and personal data copies remain author-only. The separate
 `loadSharedKeptMemories` reader returns only an explicitly selected quote to its named recipient.
 It does not expose the original answer ID or a source-conversation availability hint. An optional
 HTTP group and service exports now exist, but no actual Worker runtime configures them. There is
-still no live app adapter, navigation entry or real-family activation.
+now an unwired app HTTP port, but no navigation entry, live screen binding or real-family activation.
 
 Before pagination, the query checks the current authenticated account/member, membership
 generation, current keep-sharing revision, confirmation version and grant time. Existing source,
@@ -33,8 +33,8 @@ immediately; disposal clears session state and ignores late responses. Requests 
 
 ## Integration requirements
 
-- The internal `loadMemorySharingView` now supplies authenticated author-only state. Implement
-  the live port adapter separately. The optional HTTP boundary is built but unconfigured in all
+- The internal `loadMemorySharingView` now supplies authenticated author-only state. The HTTP
+  port is built separately but no screen creates it. The optional HTTP boundary is unconfigured in all
   actual runtimes; see architecture/api-contract.md. This is not an available family endpoint today.
 - The author-state response must contain the COMPLETE current audience and eligible people,
   never a partial page silently treated as the whole set. The current bounded contract allows
@@ -99,7 +99,7 @@ the preview back to the relevant heading, so a failed read is not hidden below t
 28 controller tests now cover the original flow plus first-read failure, persistent unavailable
 details, failed stop/retry, duplicate taps, wrong-memory responses, malformed scope and disposal.
 Restoring the former requirement for a loaded view made the first-read revocation test fail;
-the independent scope restores it. All examples remain synthetic and the only port is memory-only.
+the independent scope restores it. The preview still uses only the synthetic memory-only port.
 Browser review exercised failed details, failed stop, keyboard retry, refreshed private status
 and a recipient with no access. At 320/390/768px both recovery actions measured 64px high, with
 no horizontal overflow or old quote in the failed screen. Native accessibility remains unverified.
@@ -119,3 +119,34 @@ These routes are not configured by apiRuntimeFor in any environment, including w
 is on. New runtime pinning tests enforce that. Do not wire them or build a live navigation entry
 without the revised notice/fresh purpose/keep acceptance and remaining language/safety gates.
 HTTP port tests are synthetic boundaries; they do not prove a live HTTP/database/app journey.
+
+## Unwired authenticated app port
+
+`src/api/memory-sharing.ts` implements the controller port without importing it into any screen,
+changing a feature flag or making construction itself send a request. The caller must supply a
+trusted HTTPS origin, immutable family/author/memory IDs, the current session scope and its token
+provider. It reuses `SessionRequests` for credential acquisition, account-change cancellation,
+late-body rejection, abort signals and a 15-second bound. Missing credentials never send a request.
+No cookies, redirect following, device storage, offline queue or demo fallback is added.
+
+Requests use no-store and strict response contracts. Author state must match the exact author and
+memory and contain a complete, duplicate-free audience. Preparation posts recipient IDs only, then
+separately reads the returned presentation ID. The port verifies that presentation, memory and
+audience; the controller additionally matches the visible quote and names. Only its exact reviewed
+proof can be confirmed. It retains no extra quote/name cache, only the in-memory proof IDs/digest.
+Receipts are checked but never presented as current state: confirmation/stop still reload details.
+Server error bodies are not parsed or surfaced. A missing detail returns unavailable; stop remains
+usable independently. Network failures retain controller action keys for explicit retry.
+
+Missing/consumed presentations and confirmation conflicts invalidate the local proof. The controller
+clears old words, audience selections and keys, reloads current author state, and requires another
+explicit named review. If that reload fails, it shows no old quote or success claim and still allows
+free stop-sharing. A generic retry cannot resend the stale proof indefinitely.
+
+Synthetic fetch/controller integration covers prepare, separate preview, confirmation, refresh,
+detail failure and independent stop. Session changes during credential reads, between POST/GET,
+or while response bodies are pending cannot reveal a late quote or send under the old identity.
+Removing the reviewed-proof guard makes the unreviewed-confirmation regression fail; restored
+source passes. These tests are not live authenticated Worker/database, signed-device, provider,
+VoiceOver or Dynamic Type proof. Future mounting must dispose on session/family changes and
+reload on foreground; the adapter alone is not app lifecycle wiring or consent acceptance.
