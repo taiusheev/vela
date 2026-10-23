@@ -31,7 +31,7 @@ import { localDayMonth } from "../src/data/format.ts";
 import { demoDataAllowed, sessionScope } from "../src/data/live-state.ts";
 import { questionsFor } from "../src/data/onboarding.ts";
 import { askExtras } from "../src/data/photos.ts";
-import { questionDates } from "../src/data/question-schedule.ts";
+import { editablePlannedQuestion, questionDates } from "../src/data/question-schedule.ts";
 import { tomorrowIn } from "../src/data/story.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
 import { usePlannedQuestions } from "../src/data/usePlannedQuestions.ts";
@@ -69,13 +69,16 @@ export default function AskScreen() {
   const lights = demo || view.live ? view.today.lights : [];
   const recipient = askRecipient(lights, params.recipient);
   const schedule = usePlannedQuestions(view.familyId);
-  const editing = schedule.data?.questions.find(
-    (question) => question.id === params.edit && question.editable,
+  const editing = editablePlannedQuestion(
+    schedule.data?.questions ?? [],
+    params.edit,
+    recipient?.memberId,
   );
+  const composerKey = `${scope}:${view.familyId ?? UNLINKED_FAMILY}:${recipient?.memberId ?? UNLINKED_FAMILY}:${params.edit ?? NEW_QUESTION}`;
   const initialEdit = useRef<{ scope: string; id: string; text: string } | null>(null);
-  if (initialEdit.current?.scope !== scope) initialEdit.current = null;
+  if (initialEdit.current?.scope !== composerKey) initialEdit.current = null;
   if (editing && initialEdit.current?.id !== editing.id)
-    initialEdit.current = { scope, id: editing.id, text: editing.text };
+    initialEdit.current = { scope: composerKey, id: editing.id, text: editing.text };
   const draft = useDraft(
     params.edit
       ? `ask.${view.familyId ?? UNLINKED_FAMILY}.edit.${params.edit}`
@@ -83,7 +86,6 @@ export default function AskScreen() {
     params.text ?? (initialEdit.current?.id === params.edit ? initialEdit.current?.text : "") ?? "",
     params.edit === undefined,
   );
-  const composerKey = `${scope}:${view.familyId ?? UNLINKED_FAMILY}:${recipient?.memberId ?? UNLINKED_FAMILY}:${params.edit ?? NEW_QUESTION}`;
   // A different parent starts a fresh media/when/suggestion state. Written words remain in the
   // family's existing encrypted draft, including the identity of any unconfirmed send.
   return (
@@ -158,8 +160,10 @@ function AskComposer({
   const [chooseDate, setChooseDate] = useState(false);
   const [date, setDate] = useState("");
   const schedule = usePlannedQuestions(familyId);
-  const editing = schedule.data?.questions.find(
-    (question) => question.id === params.edit && question.editable,
+  const editing = editablePlannedQuestion(
+    schedule.data?.questions ?? [],
+    params.edit,
+    recipient?.memberId,
   );
   const [editLoaded, setEditLoaded] = useState(false);
   const { text, setText } = draft;

@@ -117,7 +117,8 @@ export class AskVoiceMissingError extends Error {
 
 /** A voice hello is about ten seconds (spec §4); a little more is allowed for a slow stop. */
 export const MAX_VOICE_HELLO_MS = 15_000;
-export const MAX_VOICE_QUESTION_MS = 60_000;
+/** The editor stops at 60 seconds; the 200 ms native poll and device stop need a little headroom. */
+export const MAX_VOICE_QUESTION_MS = 65_000;
 
 /**
  * Takes the voice hello an ask names, `for share` as its photos are taken, and refuses the ask

@@ -11,6 +11,7 @@ short rows plus the current contextual suggestion. A chosen idea fills the edito
 A single photo attachment remains available where enabled. Existing chat links still open the two-photo and voice composers. Editing an existing scheduled
 question preserves its original format and attachments without exposing the old format menu. Voice questions
 record for up to a minute, with stop, playback and discard; sending waits until recording stops.
+The server allows five seconds of stop headroom so a full-minute recording is not rejected by a late native duration tick.
 
 Tomorrow, a chosen date in the next two weeks, and next free morning cover planning. The initial
 date skips mornings already claimed in the loaded schedule. The recipient's calendar determines

@@ -754,6 +754,7 @@ prepared/sent/withdrawn question returns 409 `too_late`; inaccessible questions 
 invalid input returns 400. Replays return the existing receipt after renewed membership checks.
 Unused future suggestions are invalidated, so fresh drafts can use the updated wording.
 
-Voice-note questions may carry up to 60 seconds of audio. A short introductory voice hello on
+The editor stops voice-note questions at 60 seconds. The server accepts up to 65 seconds to
+allow for the native duration poll and device stop delay. A short introductory voice hello on
 other question types retains its existing 15-second server limit. Upload size, ownership,
 expiry and microphone permission rules are unchanged.

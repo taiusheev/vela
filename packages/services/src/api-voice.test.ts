@@ -245,17 +245,17 @@ describe("a voice hello on an ask", () => {
     expect(sent?.message.buttons?.flat().length).toBeGreaterThan(0);
   });
 
-  it("allows a one-minute voice question but preserves the short hello limit", async () => {
+  it("allows a one-minute voice question with device stop delay but preserves the short hello limit", async () => {
     const recording = await voice();
-    await h.db.update(media).set({ durationMs: 60_000 }).where(eq(media.id, recording.body.id));
+    await h.db.update(media).set({ durationMs: 60_200 }).where(eq(media.id, recording.body.id));
     await expect(compose(recording.body.id)).rejects.toBeInstanceOf(AskVoiceMissingError);
     const accepted = await compose(recording.body.id, mia, "voice_note");
     expect(accepted.response.status).toBe(201);
   });
 
-  it("refuses voice questions beyond one minute", async () => {
+  it("refuses voice questions beyond the device stop allowance", async () => {
     const recording = await voice();
-    await h.db.update(media).set({ durationMs: 60_001 }).where(eq(media.id, recording.body.id));
+    await h.db.update(media).set({ durationMs: 65_001 }).where(eq(media.id, recording.body.id));
     await expect(compose(recording.body.id, mia, "voice_note")).rejects.toBeInstanceOf(
       AskVoiceMissingError,
     );
