@@ -80,13 +80,14 @@ function demoEntry(exchange: Exchange, keptBy: string | null): ApiBookEntry {
   };
 }
 
-/** The example family's book: its story kept, and one ordinary answer suggested to keep. */
+/**
+ * The example family's book: empty until something is kept here, so story day and the weekly read
+ * promise nothing the example cannot show, with one ordinary answer suggested to keep.
+ */
 function demoBook(exchanges: Exchange[]): ApiBook {
   const suggested = exchanges.find((exchange) => exchange.id === "x2");
   return {
-    entries: exchanges
-      .filter((exchange) => exchange.type === "story")
-      .map((exchange) => demoEntry(exchange, null)),
+    entries: [],
     recipes: [],
     coming: [],
     suggestions:
