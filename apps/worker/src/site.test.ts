@@ -483,6 +483,64 @@ describe("the website's protections", () => {
     expect(namesOf(fake.calls)).toEqual([]);
   });
 
+  it("bounds a streamed form before reading the rest or opening the database", async () => {
+    const fake = createFakePilotRuntime();
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("x".repeat(2049)));
+        // Deliberately never close: the route must reject without waiting for more bytes.
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+      }),
+    );
+    expect(response.status).toBe(413);
+    expect(cancelled).toBe(true);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("does not save a valid-looking prefix when the form stream stalls", async () => {
+    const fake = createFakePilotRuntime();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("email=qa%40example.invalid&lang=en"));
+      },
+    });
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+      }),
+    );
+    expect(response.status).toBe(408);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("counts UTF-8 bytes rather than characters in the form limit", async () => {
+    const fake = createFakePilotRuntime();
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: `email=a@b.co&pad=${"光".repeat(700)}`,
+      }),
+    );
+    expect(response.status).toBe(413);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
   it("says where to report a security problem", async () => {
     const fake = createFakePilotRuntime();
 

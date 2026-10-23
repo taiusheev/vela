@@ -55,7 +55,7 @@ import {
 } from "./site-host.ts";
 import { LEGAL_ORIGIN, LEGAL_PAGES, legalPath } from "./site-legal.ts";
 
-/** The most a waitlist form may send, in characters. */
+/** The most a waitlist form may send, in bytes. */
 const WAITLIST_MAX_BODY = 2048;
 
 /** How long the edge keeps a rendered precision page: the figures change once a month. */
@@ -455,9 +455,34 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       return c.json({ error: "unsupported" }, 415, { "cache-control": "no-store" });
     }
     // An address, a language and a choice fit in far less; anything bigger is not this form.
-    const raw = await c.req.text();
-    if (raw.length > WAITLIST_MAX_BODY) {
-      return c.json({ error: "too_large" }, 413, { "cache-control": "no-store" });
+    const reader = c.req.raw.body?.getReader();
+    let raw = "";
+    if (reader) {
+      const decoder = new TextDecoder();
+      let bytes = 0;
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        void reader.cancel().catch(() => {});
+      }, 3000);
+      try {
+        for (;;) {
+          const part = await reader.read();
+          if (part.done) break;
+          bytes += part.value.byteLength;
+          if (bytes > WAITLIST_MAX_BODY) {
+            void reader.cancel().catch(() => {});
+            return c.json({ error: "too_large" }, 413, { "cache-control": "no-store" });
+          }
+          raw += decoder.decode(part.value, { stream: true });
+        }
+        if (timedOut) {
+          return c.json({ error: "timeout" }, 408, { "cache-control": "no-store" });
+        }
+        raw += decoder.decode();
+      } finally {
+        clearTimeout(timer);
+      }
     }
     const form = new URLSearchParams(raw);
     const field = (name: string) => form.get(name) ?? "";

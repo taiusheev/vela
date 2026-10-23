@@ -49,7 +49,7 @@ Cloudflare domain traffic reporting can supply broader request/traffic totals, w
 
 Website sends events through a same-origin relay; only approved JSON fields are accepted. Visitor IP/headers/referrer and full URL are not forwarded. PostHog sees the relay connection. App connects directly to the configured PostHog Cloud region; PostHog receives transport network details. Geolocation enrichment and person profiles are disabled by event properties. Neither client uses cookies, replay or automatic capture.
 
-Choice v1 is local to browser/device/account. Native choices live in SecureStore, web choices in localStorage. Retention must be verified as at most 1 year in project settings before activation. Only founder should have project access. Withdrawal stops future collection and drops the local random identity; historical events require a separate deletion request. User can copy the displayed analytics ID before withdrawal for founder lookup. Do not link anonymous analytics to waitlist emails to identify a request.
+Choice v1 is local to browser/device/account. Native choices live in SecureStore, web choices in localStorage. On 23 October 2026 the live Billing page confirmed the free plan, no card, and a 1M product-event limit. PostHog’s current official https://posthog.com/docs/data/events-retention documents a 1-year event query window on Free and 7 years on paid plans. A query window is not proof of physical deletion at its boundary: the revised website notice makes this explicit. Counsel must approve this vendor retention/deletion policy before collection, and any upgrade requires a fresh notice/policy review. Only founder should have project access. Withdrawal stops future collection and drops the local random identity; historical events require a separate deletion request. User can copy the displayed analytics ID before withdrawal for founder lookup. Do not link anonymous analytics to waitlist emails to identify a request.
 
 Update/review website privacy notice, optional app notice and data-map before activation. Website zh-TW notice is a draft pending native review; app notice deliberately loads its isolated English catalog for the English testing cohort. Existing family consent text and server records remain untouched.
 
@@ -59,3 +59,13 @@ Automated tests exercise missing config, unknown fields/content, foreign origin,
 
 The separate routing proposal #152 does not establish the live domain proxy target. Confirm site -> correct database -> protected waitlist before relying on conversion totals. Follow normal reviewed merge, staging and protected production release. Synthetic ingestion and dashboard proof do not establish live collection. No live activation is claimed until those checks succeed.
 
+
+## Campaign readiness follow-up (23 October 2026)
+
+Live English/Traditional Chinese pages and privacy notices returned 200. Browser validation and a synthetic `example.invalid` signup displayed success. This does not prove a new unique row in production: the bridge remains domain-bridge-v1 with its documented staging target. Public private routes returned 404. Footer legal links on the production Worker returned 200; direct marketing-host legal routes still return 404. Small curl POST probes were blocked by Cloudflare before application validation, so they do not prove the app status codes.
+
+Both languages fit 320px and 390px browser viewports. Deferred images load without completed-image failures. The existing PostHog dashboard visibly states collection is not live; empty charts are not evidence of zero visitors. Project lookup confirms EU, IP discard enabled and replay disabled. No billing, account security or collection settings were changed.
+
+Security follow-up: waitlist input is bounded while streaming (2048 bytes, 3 seconds), and stalled valid prefixes are rejected before database access. The analytics relay likewise rejects stalled valid JSON before vendor delivery. Hono is patched from 4.13.7 to 4.13.13 for GHSA-5r4p-p66f-jhc7; the Worker does not use the affected serveStatic helper. Other Expo/toolchain advisories remain and are not a clean security-audit claim.
+
+Routing PR152 must be integrated first, then this branch brought to that main and given fresh checks. No collection activation while the website notice/Chinese review and vendor retention/deletion legal review remain open. The app analytics configuration remains absent. This website task does not authorise an app release or public family admission.

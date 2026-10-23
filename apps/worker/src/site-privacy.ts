@@ -30,7 +30,7 @@ const EMAIL = "t.aiusheev@gmail.com";
 export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
   en: {
     title: "Website privacy notice",
-    updated: "Last updated 22 October 2026 · optional usage counts v1",
+    updated: "Last updated 23 October 2026 · optional usage counts v1",
     lede: "This notice covers the Vela website and its waitlist. It explains what we collect when you visit or join, why, for how long, and what you can ask us to do.",
     sections: [
       {
@@ -58,7 +58,7 @@ export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
         heading: "How long we keep it",
         paragraphs: [
           "Your email stays on the waitlist until we have written to say Vela is open, or until you ask us to remove it, whichever comes first. We then delete it.",
-          "Optional usage events are kept for up to 1 year. Your browser choice remains until you change it or clear this website's storage. If you request access or deletion of analytics events, contact us before clearing the identifier so we can locate those events.",
+          "Our free PostHog plan has a 1-year event retention window for reports. This window does not guarantee immediate deletion when it ends; deletion is a separate process. Your browser choice remains until you change it or clear this website's storage. If you request access or deletion of analytics events, contact us before clearing the identifier so we can locate those events.",
         ],
       },
       {
@@ -102,7 +102,7 @@ export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
   },
   "zh-TW": {
     title: "網站隱私權告知事項",
-    updated: "最後更新：2026 年 10 月 22 日 · 選用使用統計 v1（翻譯待審）",
+    updated: "最後更新：2026 年 10 月 23 日 · 選用使用統計 v1（翻譯待審）",
     lede: "本告知事項適用於 Vela 網站及其等候名單，說明您瀏覽或加入時我們蒐集哪些資料、為什麼、保存多久，以及您可以要求我們做什麼。",
     sections: [
       {
@@ -130,7 +130,7 @@ export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
         heading: "保存期間",
         paragraphs: [
           "您的電子郵件會保留在等候名單上，直到我們寫信通知您 Vela 已開放，或您要求移除為止（以先發生者為準），之後即予刪除。",
-          "選用統計事件最長保存 1 年。瀏覽器內的選擇會保留到您變更或清除此網站的儲存資料為止。如需查閱或刪除統計事件，請在清除識別碼前聯絡我們，以便找到相關事件。",
+          "我們使用的 PostHog 免費方案提供 1 年的事件統計查詢期間。這不代表期間結束時資料會立即刪除；刪除須另行處理。瀏覽器內的選擇會保留到您變更或清除此網站的儲存資料為止。如需查閱或刪除統計事件，請在清除識別碼前聯絡我們，以便找到相關事件。",
         ],
       },
       {

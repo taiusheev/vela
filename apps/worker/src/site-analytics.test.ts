@@ -87,6 +87,26 @@ describe("optional website analytics", () => {
     expect((await send(payload, env, "https://foreign.invalid")).status).toBe(403);
     expect((await send(payload, env, "")).status).toBe(403);
   });
+  it("does not relay a valid JSON prefix when its body stream stalls", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch");
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(payload)));
+      },
+    });
+    const response = await app.request(
+      "http://localhost:8787/analytics/event",
+      {
+        method: "POST",
+        headers: { origin: "http://localhost:8787", "content-type": "application/json" },
+        body,
+      },
+      env,
+    );
+    expect(response.status).toBe(408);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("bounds payload size before parsing", async () => {
     expect((await send("x".repeat(2048))).status).toBe(413);
   });

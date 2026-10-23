@@ -54,7 +54,11 @@ export function siteAnalyticsApp() {
     if (!reader) return c.body(null, 400);
     let raw = "";
     const decoder = new TextDecoder();
-    const timer = setTimeout(() => void reader.cancel(), 3000);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      void reader.cancel().catch(() => {});
+    }, 3000);
     try {
       let bytes = 0;
       for (;;) {
@@ -62,7 +66,7 @@ export function siteAnalyticsApp() {
         if (part.done) break;
         bytes += part.value.byteLength;
         if (bytes > 1024) {
-          await reader.cancel();
+          void reader.cancel().catch(() => {});
           return c.body(null, 413);
         }
         raw += decoder.decode(part.value, { stream: true });
@@ -70,6 +74,8 @@ export function siteAnalyticsApp() {
     } finally {
       clearTimeout(timer);
     }
+    if (timedOut) return c.body(null, 408);
+    raw += decoder.decode();
     let value: unknown;
     try {
       value = JSON.parse(raw);
