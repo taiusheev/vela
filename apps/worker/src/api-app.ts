@@ -15,6 +15,7 @@ import {
   ApiDeviceMessages,
   ApiDeviceRemoved,
   ApiDeviceSetUp,
+  ApiEditedAsk,
   type ApiErrorBody,
   ApiExchangePage,
   ApiExchangeSummary,
@@ -38,6 +39,7 @@ import {
   ApiNearbyRemoved,
   ApiParentConnection,
   ApiParentLink,
+  ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
@@ -63,6 +65,7 @@ import {
   DeleteAccount,
   DeviceWrite,
   DismissKeepSuggestion,
+  EditAsk,
   EndAway,
   FinishReminder,
   InviteNearby,
@@ -144,6 +147,7 @@ import {
   type disableApiAccount,
   type dismissApiSuggestion,
   type dismissMemoryCandidate,
+  type editApiAsk,
   type endApiAway,
   errorLabel,
   FactMissingError,
@@ -164,6 +168,7 @@ import {
   type loadApiMe,
   type loadApiMorningPreferences,
   type loadApiParentConnection,
+  type loadApiPlannedQuestions,
   type loadApiPrecision,
   type loadApiQuiet,
   type loadApiReminders,
@@ -263,6 +268,7 @@ export interface ApiReadServices {
   loadApiBook: typeof loadApiBook;
   loadApiReminders: typeof loadApiReminders;
   loadApiExchange: typeof loadApiExchange;
+  loadApiPlannedQuestions: typeof loadApiPlannedQuestions;
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
   loadApiWeeklyRead: typeof loadApiWeeklyRead;
@@ -286,6 +292,7 @@ export interface ApiWriteServices {
   setApiMorningPreferences: typeof setApiMorningPreferences;
   leaveApiFamily: typeof leaveApiFamily;
   setApiAway: typeof setApiAway;
+  editApiAsk: typeof editApiAsk;
   withdrawApiAsk: typeof withdrawApiAsk;
   markApiDeceased: typeof markApiDeceased;
   endApiAway: typeof endApiAway;
@@ -1063,6 +1070,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       return page === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiExchangePage.parse(page));
     },
   );
+  app.get("/v1/families/:familyId/questions", authenticate, withDatabase, async (c) => {
+    const planned = await runtime.services.loadApiPlannedQuestions(
+      c.get("db"),
+      c.get("session"),
+      c.req.param("familyId"),
+    );
+    return planned === null
+      ? c.json(FAMILY_NOT_FOUND, 404)
+      : c.json(ApiPlannedQuestions.parse(planned));
+  });
   // The family book (ADR-39): every live member reads it; reading never needs Vela Light.
   app.get(
     "/v1/families/:familyId/book",
@@ -2241,6 +2258,27 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         );
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ApiAway.parse(result.response.body), 201);
+      },
+    );
+    app.post(
+      "/v1/exchanges/:exchangeId/edit",
+      authenticate,
+      validateWrite(EditAsk, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.editApiAsk(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiEditedAsk.parse(result.response.body), 200);
       },
     );
     // The asker takes an ask back before her morning is prepared (spec §19).

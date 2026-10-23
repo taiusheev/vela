@@ -732,6 +732,33 @@ entry of hers out of the book as removed by her (stories included), and deletes 
 "memories on" (`開啟回憶` / `开启回忆`) clears it without bringing anything back.
 
 
+### Planned questions and editing
+
+`GET /v1/families/:familyId/questions` requires an authenticated, current family membership.
+It returns `{ questions: [{ id, recipient_id, recipient_name, asker_name, text, date,
+editable, preparing }] }`, ordered by recipient-local date, with undated waiting questions last.
+It includes composed questions and dated questions already prepared for delivery, independently
+of the delivered-conversation pagination. `editable` is true only for the caller's own composed
+question. Prepared questions remain visible with `preparing: true`. Other families and former
+members receive 404. This projects existing question data; it creates no new retained copy.
+
+`POST /v1/exchanges/:exchangeId/edit` takes an `Idempotency-Key` and strict
+`{ text: string, date: YYYY-MM-DD | null }`. Only the original author, still a current member,
+can edit a composed question. `null` means next free morning and is refused for attached media.
+A dated question must be within the recipient's next 14 local days. The edit keeps its exchange ID,
+author, type, photos, recording, attribution and original retention clock. Media ownership and
+expiry are checked again for the new morning. The recipient row lock serialises edits with
+composition, withdrawal and morning preparation. Words and date commit together; any refusal
+leaves the original intact. An occupied morning returns the usual 409 taken-day details; a
+prepared/sent/withdrawn question returns 409 `too_late`; inaccessible questions return 404;
+invalid input returns 400. Replays return the existing receipt after renewed membership checks.
+Unused future suggestions are invalidated, so fresh drafts can use the updated wording.
+
+The editor stops voice-note questions at 60 seconds. The server accepts up to 65 seconds to
+allow for the native duration poll and device stop delay. A short introductory voice hello on
+other question types retains its existing 15-second server limit. Upload size, ownership,
+expiry and microphone permission rules are unchanged.
+
 
 ## Private-test weekly support report (new purpose, off by default)
 

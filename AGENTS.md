@@ -21,3 +21,8 @@ The founder using this workspace is nontechnical. Codex owns the engineering wor
 
 - Skills both agents use live in `.agents/skills/`; Claude reads the same folders through links in `.claude/skills/`. `shipping-a-pr` and `guarding-family-data` are Vela's own; the others are copied from their publishers at a pinned commit, with a `PROVENANCE.md` saying where from and what changed.
 - Change a skill by pull request, like code. Do not add skills or plugins from public marketplaces without the founder's yes.
+
+## Product focus
+
+- Keep each page focused on the customer's current task. Every visible action must help complete it.
+- Offer optional help when requested. Leave unrelated feature links, repeated explanations and filler off the page.
