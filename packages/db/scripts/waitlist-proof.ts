@@ -25,6 +25,9 @@ try {
   });
   await client.connect();
   const connected = client;
+  const proofId = randomUUID().replaceAll("-", "");
+  // This identifies only our reserved synthetic rows, so failed-run cleanup remains possible.
+  console.log(JSON.stringify({ check: "public_waitlist_started", target, proofId }));
   await proveWaitlist(
     {
       query: (sql, parameters) => connected.query(sql, parameters),
@@ -54,7 +57,7 @@ try {
       },
     },
     target,
-    randomUUID().replaceAll("-", ""),
+    proofId,
   );
   console.log(
     JSON.stringify({
