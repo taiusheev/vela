@@ -557,9 +557,9 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       };
     },
     notices: options.notices ?? noticesFixture(),
-    api: async (request, env) => {
+    api: async (request, env, context) => {
       apiRequests.push(`${request.method} ${new URL(request.url).pathname}`);
-      return api === undefined ? new Response(null, { status: 204 }) : api(request, env);
+      return api === undefined ? new Response(null, { status: 204 }) : api(request, env, context);
     },
     clerk: async () => Response.json({ ok: true }),
     probeHealthz: async (url) => {

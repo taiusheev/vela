@@ -1114,9 +1114,17 @@ msgstr "從你自己的 Vela 聊天複製私人連結碼，貼在下方。給家
 msgid "Copy these ids into the private Terminal helper for the dedicated test account."
 msgstr "請使用專用測試帳號，將這些識別碼貼到終端機的私人提示中。"
 
+#: app/weekly-support-preview.tsx
+msgid "Correct the market message"
+msgstr "更正市場訊息範例"
+
 #: src/components/weekly-support.tsx
 msgid "Could I help with a meal, an errand or getting somewhere this week? Tell me what would make things easier."
 msgstr "這週有沒有需要我幫忙準備一餐、跑腿或接送？跟我說怎樣能讓你輕鬆一點。"
+
+#: src/data/weekly-support-preview.ts
+msgid "Could someone help carry my groceries home next Friday?"
+msgstr "下星期五有人可以幫我把買的東西提回家嗎？"
 
 #: src/components/telegram-family-link.tsx
 msgid "Create a new connection"
@@ -1127,6 +1135,22 @@ msgstr "建立新的連結"
 #: src/data/today.ts
 msgid "Dad"
 msgstr "爸爸"
+
+#: app/weekly-support-preview.tsx
+msgid "Dad asked for company at the market. Check whether next Saturday still suits."
+msgstr "爸爸提到想一起去市場，問問下星期六是否仍然方便。"
+
+#: app/weekly-support-preview.tsx
+msgid "Dad asked for help carrying groceries. Offer to help bring them home."
+msgstr "爸爸想找人幫忙提東西，可以問問要不要一起提回家。"
+
+#: app/weekly-support-preview.tsx
+msgid "Dad wanted to share the flowers. Offer a little time to enjoy them together."
+msgstr "爸爸想和你分享開花的樣子，可以找個時間一起欣賞。"
+
+#: app/weekly-support-preview.tsx
+msgid "Dad's words · {date}"
+msgstr "爸爸說的話 · {date}"
 
 #: src/data/onboarding.ts
 msgid "Darwin"
@@ -1254,6 +1278,10 @@ msgstr "今天每個人的燈都亮著"
 msgid "Example · heart sent"
 msgstr "示範 · 愛心已送出"
 
+#: app/weekly-support-preview.tsx
+msgid "Example controls"
+msgstr "範例操作"
+
 #: src/components/onboarding/story.tsx
 msgid "Example morning"
 msgstr "範例早晨"
@@ -1261,6 +1289,10 @@ msgstr "範例早晨"
 #: app/conversation.tsx
 msgid "Example only. Nothing was sent."
 msgstr "這只是範例，沒有送出任何訊息。"
+
+#: app/weekly-support-preview.tsx
+msgid "Example report · Dad · 19–25 October"
+msgstr "回顧範例 · 爸爸 · 10 月 19 日至 25 日"
 
 #: app/morning-settings.tsx
 msgid "Example settings previewed."
@@ -1466,6 +1498,10 @@ msgstr "愛心已送出"
 msgid "Help"
 msgstr "說明"
 
+#: app/weekly-support-preview.tsx
+msgid "Help with something Dad asked for"
+msgstr "幫忙爸爸提過的事"
+
 #. stands in for her name
 #. stands in for her name
 #: app/(tabs)/index.tsx
@@ -1574,9 +1610,25 @@ msgstr "抱抱"
 msgid "I already have an account"
 msgstr "我已經有帳號了"
 
+#: app/weekly-support-preview.tsx
+msgid "I can help bring the groceries home. What time next Friday would suit you?"
+msgstr "我可以幫你把買的東西提回家，下星期五什麼時候方便？"
+
 #: src/components/onboarding/finish.tsx
 msgid "I have sent it"
 msgstr "我已經傳了"
+
+#: app/weekly-support-preview.tsx
+msgid "I'd like to come to the market with you. Does next Saturday still work?"
+msgstr "我想陪你一起去市場，下星期六還方便嗎？"
+
+#: src/data/weekly-support-preview.ts
+msgid "I'd like you to come to the market with me next Saturday."
+msgstr "下星期六想和你一起去市場。"
+
+#: app/weekly-support-preview.tsx
+msgid "I'd love to see the flowers. Would you like to show me on a call this week?"
+msgstr "我很想看看那些花，這週要不要通話時給我看看？"
 
 #: src/data/chat.ts
 msgid "I'm fine"
@@ -1742,6 +1794,10 @@ msgstr "這是{name}在您 App 裡的樣子。照片只留在這支手機上，�
 #: src/data/onboarding.ts
 msgid "Japan"
 msgstr "日本"
+
+#: app/weekly-support-preview.tsx
+msgid "Join a plan Dad mentioned"
+msgstr "一起參與爸爸提過的計畫"
 
 #: src/auth/phone.ts
 msgid "Kazakhstan"
@@ -1978,6 +2034,10 @@ msgstr "正在載入家人的問答…"
 msgid "Looking for your memories…"
 msgstr "正在找你的回憶…"
 
+#: app/weekly-support-preview.tsx
+msgid "Make time for something Dad enjoys"
+msgstr "留點時間一起做爸爸喜歡的事"
+
 #: src/data/onboarding.ts
 msgid "Making & mending"
 msgstr "手作與修補"
@@ -2175,6 +2235,10 @@ msgstr "這裡還沒有保存任何故事。"
 #: src/components/family-book.tsx
 msgid "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
 msgstr "還沒有故事。在週日分頁選一個問題，說出的故事會收在這裡。"
+
+#: app/weekly-support-preview.tsx
+msgid "No suggestions are available from the messages currently shared."
+msgstr "目前分享的訊息沒有可用的陪伴建議。"
 
 #: src/data/today.ts
 #: src/data/useToday.ts
@@ -2620,6 +2684,10 @@ msgstr "預覽家人設定"
 msgid "Preview settings"
 msgstr "預覽設定"
 
+#: app/weekly-support-preview.tsx
+msgid "Preview this offer"
+msgstr "預覽這個邀請"
+
 #: app/settings.tsx
 msgid "Privacy and help"
 msgstr "隱私與協助"
@@ -2755,6 +2823,10 @@ msgstr "移除電話號碼"
 msgid "Remove photo"
 msgstr "移除照片"
 
+#: app/weekly-support-preview.tsx
+msgid "Remove practical-help example message"
+msgstr "移除求助訊息範例"
+
 #: app/my-memories.tsx
 msgid "Remove this memory?"
 msgstr "要移除這則回憶嗎？"
@@ -2792,6 +2864,18 @@ msgstr "重新傳送驗證碼"
 msgid "Resend code in {seconds}s"
 msgstr "{seconds} 秒後可重新傳送驗證碼"
 
+#: app/weekly-support-preview.tsx
+msgid "Restore example message"
+msgstr "還原訊息範例"
+
+#: app/weekly-support-preview.tsx
+msgid "Restore example permission"
+msgstr "還原範例的使用許可"
+
+#: app/weekly-support-preview.tsx
+msgid "Restore example review"
+msgstr "還原範例審閱"
+
 #: app/settings.tsx
 msgid "Resume"
 msgstr "恢復"
@@ -2803,6 +2887,10 @@ msgstr "重新送出已保存的提問"
 #: app/exchange/[id].tsx
 msgid "Retry saved reply"
 msgstr "重新送出已保存的回覆"
+
+#: app/weekly-support-preview.tsx
+msgid "Review draft with example messages. Nothing is sent."
+msgstr "使用範例訊息的審閱草稿，不會送出任何訊息。"
 
 #: src/device/useParent.ts
 msgid "Rice porridge"
@@ -3199,6 +3287,10 @@ msgstr "新加坡"
 #: app/sign-in.tsx
 msgid "Six digits, good for ten minutes."
 msgstr "六位數字，十分鐘內有效。"
+
+#: app/weekly-support-preview.tsx
+msgid "Small offers based on what Dad chose to share. Dad decides what would help."
+msgstr "根據爸爸選擇分享的話，提供一點陪伴或幫忙，由爸爸決定需要什麼。"
 
 #: src/components/onboarding/questions.tsx
 msgid "So every message sounds like your family, not like an app."
@@ -3703,6 +3795,10 @@ msgstr "每週小記會寄給這個家庭的發起人。"
 #: app/(tabs)/sunday.tsx
 msgid "The weekly read starts once she has said yes and had a week of mornings."
 msgstr "等家人答應、也過了一週的早上之後，每週小記就會開始。"
+
+#: src/data/weekly-support-preview.ts
+msgid "The yellow flowers opened today. I wanted to show you."
+msgstr "今天黃色的花開了，我想給你看看。"
 
 #: src/components/parent-link-settings.tsx
 msgid "Their chat is still connected, and morning messages are paused. They can say start in that chat when they want to resume."
@@ -4389,6 +4485,7 @@ msgstr "家人看得到您的哪些資訊"
 msgid "What they call you"
 msgstr "對方怎麼稱呼您"
 
+#: app/weekly-support-preview.tsx
 #: src/components/weekly-support.tsx
 msgid "What would help this week?"
 msgstr "這週可以怎麼陪伴？"
@@ -4466,6 +4563,10 @@ msgstr "誰住在{name}附近？"
 #: app/settings.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 msgstr "您的燈亮著時，家人也會看到您每天早上有沒有回覆、幾點回覆；如果一直很安靜，家人也會收到通知。"
+
+#: app/weekly-support-preview.tsx
+msgid "Withdraw example permission"
+msgstr "撤回範例的使用許可"
 
 #: src/data/onboarding.ts
 msgid "Words & sayings"

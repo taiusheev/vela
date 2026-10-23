@@ -292,7 +292,7 @@ export function createWorker(runtime: PilotRuntime): VelaWorker {
       const publicAnswer = publicHostAnswer(request, env);
       if (publicAnswer !== null) return publicAnswer;
       if (isApiPath(new URL(request.url).pathname)) {
-        return runtime.api(request, env);
+        return runtime.api(request, env, ctx);
       }
       return app.fetch(request, env, ctx);
     },

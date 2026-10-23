@@ -289,6 +289,9 @@ importers:
       '@vela/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@vela/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       expo:
         specifier: ^57.0.24
         version: 57.0.24(ef75d4d37e3bdf5f3c12c424de46626c)
