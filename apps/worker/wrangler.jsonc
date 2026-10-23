@@ -374,6 +374,9 @@
       ],
       "vars": {
         "ENVIRONMENT": "staging",
+        // Keep accepting the existing bridge until production is deployed and its target moved.
+        // Remove only after a public signup is verified in production's protected waitlist.
+        "SITE_HOST": "vela-light.com",
         "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
         // The admin Worker's origin: links in the founder's admin messages open it.
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light-staging.workers.dev",
