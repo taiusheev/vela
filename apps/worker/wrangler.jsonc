@@ -374,7 +374,8 @@
       ],
       "vars": {
         "ENVIRONMENT": "staging",
-        // The public website's own address: indexed, website-only, www. redirected (site-host.ts).
+        // Keep accepting the existing bridge until production is deployed and its target moved.
+        // Remove only after a public signup is verified in production's protected waitlist.
         "SITE_HOST": "vela-light.com",
         "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
         // The admin Worker's origin: links in the founder's admin messages open it.
@@ -487,6 +488,9 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
+        // The public website's own address: indexed, website-only, www. redirected (site-host.ts).
+        // Its waitlist then shares production's database with the protected production admin page.
+        "SITE_HOST": "vela-light.com",
         "TELEGRAM_BOT_USERNAME": "VelaLightbot",
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
         "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light.workers.dev/privacy",
