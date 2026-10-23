@@ -160,9 +160,11 @@ describe("the two Workers' configurations", () => {
   // Each deployed Worker answers on its workers.dev address, with no route and no preview URL,
   // because every hostname a Worker answers on is one more to reason about (Access on the admin
   // Worker would cover a preview URL too). The one exception is the public website's domain on
-  // staging's pilot Worker, where src/site-host.ts answers only the website's paths.
+  // pilot Workers, where src/site-host.ts answers only the website's paths. Staging retains the
+  // current bridge's Origin permission until the protected production deploy and bridge cutover;
+  // removing it first would make the live waitlist reject every browser submission.
   it.each(DEPLOYED)(
-    "serve %s on workers.dev only, naming the website's domain on staging",
+    "serve %s on workers.dev only, allowing the website during the staged bridge cutover",
     (environment) => {
       for (const worker of ["pilot", "admin"] as const) {
         const config = configOf(worker, environment);
@@ -171,7 +173,7 @@ describe("the two Workers' configurations", () => {
         // The website's domain is in another Cloudflare account (the founder's own), so no Worker
         // here can declare it; it reaches the pilot through a proxy there (site-host.ts).
         expect(config.routes ?? [], worker).toEqual([]);
-        const site = worker === "pilot" && environment === "staging" ? "vela-light.com" : null;
+        const site = worker === "pilot" ? "vela-light.com" : null;
         expect(config.vars.SITE_HOST ?? null, worker).toBe(site);
       }
     },
