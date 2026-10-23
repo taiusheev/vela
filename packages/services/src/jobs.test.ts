@@ -800,6 +800,8 @@ describe("applyRetention", () => {
     "deletions_deleted",
     "push_tickets_deleted",
     "weekly_insights_cleared",
+    "weekly_support_presentations_deleted",
+    "weekly_support_selections_deleted",
   ];
 
   /** Everything the 30-day clearing touches, dated `age` days ago, around one delivered exchange. */

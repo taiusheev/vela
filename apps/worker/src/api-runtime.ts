@@ -1,3 +1,14 @@
+import { SUPPORT_NOTICE_VERSION } from "@vela/contracts";
+import {
+  answerWeeklySupportPermission,
+  loadWeeklySupportPresentation,
+  loadWeeklySupportReport,
+  prepareWeeklySupportPermission,
+  removeWeeklySupportReview,
+  reviewWeeklySupport,
+  stopWeeklySupport,
+  type WeeklySupportConfig,
+} from "@vela/services";
 /**
  * The API under /v1 on the pilot Worker (ADR-29): the handler `createWorker` hands `/v1` and every
  * path under it to, before the pilot's own routes. It checks its own configuration
@@ -378,6 +389,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const { secretKey } = config;
   const photos = apiMediaFor(env, config, logger);
   return {
+    weeklySupport: { config: weeklySupportConfig(env), services: WEEKLY_SUPPORT_SERVICES },
     ...photos,
     sendAsMe: env.SEND_AS_ME?.trim() === "on",
     // The author's own memories (privacy-notice v7). Only where RICH_MEMORIES is on: development
@@ -582,5 +594,32 @@ export function createApiHandler(
       logger.error("api_request_failed", { error: errorLabel(error) });
       return answer(INTERNAL, 500);
     }
+  };
+}
+
+export const WEEKLY_SUPPORT_SERVICES = {
+  loadWeeklySupportReport,
+  loadWeeklySupportPresentation,
+  prepareWeeklySupportPermission,
+  answerWeeklySupportPermission,
+  stopWeeklySupport,
+  reviewWeeklySupport,
+  removeWeeklySupportReview,
+};
+export function weeklySupportConfig(
+  env: Pick<PilotEnv, "WEEKLY_SUPPORT" | "WEEKLY_SUPPORT_NOTICE" | "WEEKLY_SUPPORT_FAMILIES">,
+): WeeklySupportConfig {
+  const raw = (env.WEEKLY_SUPPORT_FAMILIES ?? "")
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+  const valid =
+    raw.length <= 50 &&
+    raw.every((v) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v));
+  return {
+    enabled:
+      valid && env.WEEKLY_SUPPORT === "on" && env.WEEKLY_SUPPORT_NOTICE === SUPPORT_NOTICE_VERSION,
+    noticeVersion: env.WEEKLY_SUPPORT_NOTICE ?? "",
+    familyIds: valid ? [...new Set(raw)] : [],
   };
 }

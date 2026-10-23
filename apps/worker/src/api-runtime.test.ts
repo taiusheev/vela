@@ -1036,3 +1036,32 @@ describe("the per-account write limit", () => {
     ]);
   });
 });
+
+describe("private report configuration", () => {
+  it("requires explicit purpose approval and a bounded valid family list", async () => {
+    const { weeklySupportConfig } = await import("./api-runtime.ts");
+    const family = "00000000-0000-4000-8000-000000000001";
+    expect(weeklySupportConfig({}).enabled).toBe(false);
+    expect(
+      weeklySupportConfig({ WEEKLY_SUPPORT: "on", WEEKLY_SUPPORT_FAMILIES: family }).enabled,
+    ).toBe(false);
+    expect(
+      weeklySupportConfig({
+        WEEKLY_SUPPORT: "on",
+        WEEKLY_SUPPORT_NOTICE: "weekly-support-private-test@1",
+        WEEKLY_SUPPORT_FAMILIES: family,
+      }),
+    ).toEqual({
+      enabled: true,
+      noticeVersion: "weekly-support-private-test@1",
+      familyIds: [family],
+    });
+    expect(
+      weeklySupportConfig({
+        WEEKLY_SUPPORT: "on",
+        WEEKLY_SUPPORT_NOTICE: "weekly-support-private-test@1",
+        WEEKLY_SUPPORT_FAMILIES: "bad",
+      }),
+    ).toMatchObject({ enabled: false, familyIds: [] });
+  });
+});

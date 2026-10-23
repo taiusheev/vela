@@ -60,6 +60,10 @@ import {
   MEMORY_KEEP_EXPLANATION_SHA256,
   MEMORY_KEEP_VERSION,
   MEMORY_PERMISSION_VERSION,
+  SupportPrepared,
+  SupportPresentation,
+  SupportReport,
+  SupportWriteResult,
 } from "@vela/contracts";
 
 import { sessionRequests } from "./request-session.ts";
@@ -860,4 +864,35 @@ export function editQuestion(
   token: string | null,
 ): Promise<{ id: string; state: "composed" }> {
   return call({ path: `/v1/exchanges/${id}/edit`, token, key, body });
+}
+
+const reportPath = (familyId: string, memberId: string) =>
+  `/v1/families/${encodeURIComponent(familyId)}/weekly-support/${encodeURIComponent(memberId)}`;
+export async function fetchWeeklySupport(familyId: string, memberId: string, token: string | null) {
+  return SupportReport.parse(await read(reportPath(familyId, memberId), token));
+}
+export async function prepareWeeklySupport(
+  familyId: string,
+  memberId: string,
+  key: string,
+  token: string | null,
+) {
+  const prepared = SupportPrepared.parse(
+    await call({ path: `${reportPath(familyId, memberId)}/presentations`, token, key, body: {} }),
+  );
+  return SupportPresentation.parse(
+    await read(`${reportPath(familyId, memberId)}/presentations/${prepared.id}`, token),
+  );
+}
+export async function writeWeeklySupport(
+  familyId: string,
+  memberId: string,
+  action: "permission" | "review" | "remove" | "stop",
+  body: unknown,
+  key: string,
+  token: string | null,
+) {
+  return SupportWriteResult.parse(
+    await call({ path: `${reportPath(familyId, memberId)}/${action}`, body, key, token }),
+  );
 }

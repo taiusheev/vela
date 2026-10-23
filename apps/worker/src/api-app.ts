@@ -110,6 +110,14 @@ import {
   SetMorningPreferences,
   SharedKeptMemoryPage,
   StartTrial,
+  SupportNoInput,
+  SupportPermissionChoice,
+  SupportPrepared,
+  SupportPresentation,
+  SupportRemoveChoice,
+  SupportReport,
+  SupportReviewChoice,
+  SupportWriteResult,
   WithdrawAsk,
 } from "@vela/contracts";
 import type { Member, VelaDatabase } from "@vela/db";
@@ -124,6 +132,7 @@ import {
   AwayRefusedError,
   type addApiNearby,
   type answerMemoryPermission,
+  type answerWeeklySupportPermission,
   type askApiToLookIn,
   type authorizeFamilyAccess,
   type Clock,
@@ -173,6 +182,8 @@ import {
   type loadMemorySharingPresentation,
   type loadMemorySharingView,
   type loadSharedKeptMemories,
+  type loadWeeklySupportPresentation,
+  type loadWeeklySupportReport,
   MAX_VOICE_BYTES,
   MediaRefusedError,
   type MediaStore,
@@ -187,6 +198,7 @@ import {
   type pauseApiMember,
   type pilotApiAccountAllowed,
   type prepareMemoryPermission,
+  type prepareWeeklySupportPermission,
   type provisionApiAccount,
   QuietUsefulRefusedError,
   type Random,
@@ -199,8 +211,10 @@ import {
   type removeApiNearby,
   type removeApiPushDevice,
   type removeKeptMemory,
+  type removeWeeklySupportReview,
   type replyToApiExchange,
   type resolveApiQuiet,
+  type reviewWeeklySupport,
   runAfterCommit,
   type SessionIdentity,
   type setApiAway,
@@ -210,11 +224,14 @@ import {
   type startAccountLink,
   type startApiTrial,
   type stopSharingMemory,
+  type stopWeeklySupport,
   TrialRefusedError,
   type updateApiAccount,
   type uploadApiMedia,
   type uploadApiVoice,
   VelaError,
+  type WeeklySupportConfig,
+  WeeklySupportForbiddenError,
   WithdrawTooLateError,
   type withdrawApiAsk,
   type withdrawOwnMemoryConsent,
@@ -300,6 +317,18 @@ export interface ApiWriteServices {
 }
 
 export interface ApiRuntime {
+  weeklySupport?: {
+    config: WeeklySupportConfig;
+    services: {
+      loadWeeklySupportReport: typeof loadWeeklySupportReport;
+      loadWeeklySupportPresentation: typeof loadWeeklySupportPresentation;
+      prepareWeeklySupportPermission: typeof prepareWeeklySupportPermission;
+      answerWeeklySupportPermission: typeof answerWeeklySupportPermission;
+      stopWeeklySupport: typeof stopWeeklySupport;
+      reviewWeeklySupport: typeof reviewWeeklySupport;
+      removeWeeklySupportReview: typeof removeWeeklySupportReview;
+    };
+  };
   /** Unconfigured in EVERY actual runtime. Future activation needs reviewed notice/fresh consent.
    * Keep configured for free reads/stop if new processing is later disabled; never a paid gate. */
   memorySharing?: {
@@ -593,7 +622,8 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       const removal =
         c.req.path.endsWith("/left") ||
         c.req.path.endsWith("/remove") ||
-        c.req.path.endsWith("/sharing/stop");
+        c.req.path.endsWith("/sharing/stop") ||
+        c.req.path.endsWith("/stop");
       if (
         admission !== undefined &&
         roster !== undefined &&
@@ -632,6 +662,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
 
   app.onError(
     withApiErrorNoStore<RuntimeEnv>((error, c) => {
+      if (error instanceof WeeklySupportForbiddenError)
+        return c.json(
+          {
+            error: {
+              code: "forbidden",
+              message: "This report action is not available to this account.",
+            },
+          },
+          403,
+        );
       if (error instanceof ApiIdempotencyError) {
         if (error.code === "invalid") return c.json(INVALID, 400);
         if (error.code === "conflict") return c.json(CONFLICT, 409);
@@ -1090,6 +1130,40 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
     return exchange === null ? c.json(NOT_FOUND, 404) : c.json(ApiExchangeSummary.parse(exchange));
   });
+  const support = runtime.weeklySupport;
+  const supportBase = "/v1/families/:familyId/weekly-support/:memberId";
+  const supportDeps = (db: VelaDatabase) => ({
+    db,
+    clock: { now: runtime.now },
+    config: support?.config ?? { enabled: false, noticeVersion: "", familyIds: [] },
+  });
+  if (support) {
+    app.get(supportBase, authenticate, withDatabase, async (c) =>
+      c.json(
+        SupportReport.parse(
+          await support.services.loadWeeklySupportReport(
+            supportDeps(c.get("db")),
+            c.get("session"),
+            c.req.param("familyId").toLowerCase(),
+            c.req.param("memberId").toLowerCase(),
+          ),
+        ),
+      ),
+    );
+    app.get(`${supportBase}/presentations/:presentationId`, authenticate, withDatabase, async (c) =>
+      c.json(
+        SupportPresentation.parse(
+          await support.services.loadWeeklySupportPresentation(
+            supportDeps(c.get("db")),
+            c.get("session"),
+            c.req.param("familyId").toLowerCase(),
+            c.req.param("memberId").toLowerCase(),
+            c.req.param("presentationId").toLowerCase(),
+          ),
+        ),
+      ),
+    );
+  }
   // Organisers only: the read carries her week's counts, which she is never shown (spec §8). A
   // `member` that is not her, or no `member`, is 404.
   app.get(
@@ -1381,6 +1455,52 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       await next();
       return c.res;
     };
+    if (support) {
+      const actions = [
+        [
+          "presentations",
+          SupportNoInput,
+          SupportPrepared,
+          support.services.prepareWeeklySupportPermission,
+        ],
+        [
+          "permission",
+          SupportPermissionChoice,
+          SupportWriteResult,
+          support.services.answerWeeklySupportPermission,
+        ],
+        ["stop", SupportNoInput, SupportWriteResult, support.services.stopWeeklySupport],
+        ["review", SupportReviewChoice, SupportWriteResult, support.services.reviewWeeklySupport],
+        [
+          "remove",
+          SupportRemoveChoice,
+          SupportWriteResult,
+          support.services.removeWeeklySupportReview,
+        ],
+      ] as const;
+      for (const [action, input, output, run] of actions) {
+        app.post(
+          `${supportBase}/${action}`,
+          authenticate,
+          validateWrite(input, runtime.logger),
+          checkActivity,
+          withDatabase,
+          async (c) => {
+            const result = await run(
+              supportDeps(c.get("db")),
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId").toLowerCase(),
+              c.req.param("memberId").toLowerCase(),
+              c.get("writeInput"),
+            );
+            if (result.response.status !== 200) throw new Error("Invalid support response");
+            c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+            return c.json(output.parse(result.response.body));
+          },
+        );
+      }
+    }
     if (sharing) {
       const newSharingEnabled: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
         if (sharing.config.richMemories !== true) return c.json(NOT_FOUND, 404);

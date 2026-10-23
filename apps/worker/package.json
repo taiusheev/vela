@@ -10,7 +10,7 @@
     "deploy": "wrangler deploy",
     "release:smoke": "node scripts/release-smoke.ts",
     "typecheck": "node swarm/scripts/generate.mjs && tsc -p tsconfig.json && tsc -p swarm/tsconfig.json",
-    "test": "node swarm/scripts/generate.mjs && vitest run",
+    "test": "node swarm/scripts/generate.mjs && vitest run && vitest run --config vitest.integration.config.ts",
     "setup": "node scripts/setup-environment.ts",
     "telegram:setup": "node scripts/telegram-setup.ts",
     "notices": "node scripts/generate-notices.ts",
