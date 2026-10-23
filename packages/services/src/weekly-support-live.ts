@@ -26,7 +26,7 @@ import {
   users,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, desc, eq, gte, inArray, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, lte } from "drizzle-orm";
 import { z } from "zod";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
@@ -47,6 +47,9 @@ export class WeeklySupportForbiddenError extends Error {
   override readonly name = "WeeklySupportForbiddenError";
 }
 const DAY = 86_400_000;
+// Typed answers have no STT language field. A declared English/Chinese profile cannot make
+// incompatible scripts safe for these two reviewed lexicons. Human understanding is still required.
+const SUPPORTED_SOURCE_SCRIPT = /^[\p{Script=Latin}\p{Script=Han}\P{Letter}]*$/u;
 const absent = () => new VelaError("not_found", "Report not found");
 const stale = () => new ApiIdempotencyError("conflict");
 function gated(deps: WeeklySupportDeps, familyId: string, stop = false) {
@@ -177,8 +180,8 @@ function period(a: Access, now: Date) {
     until: zonedInstant(addDays(start, 7), "00:00", a.owner.tz),
   };
 }
-async function sources(tx: Db, a: Access, now: Date) {
-  if (!a.reader || !a.permission) return [];
+async function sources(tx: Db, a: Access, now: Date, approvedIds?: readonly string[]) {
+  if (!a.reader || !a.permission || approvedIds?.length === 0) return [];
   const week = period(a, now);
   const rows = await tx
     .select({ answer: answers, exchange: exchanges })
@@ -189,9 +192,10 @@ async function sources(tx: Db, a: Access, now: Date) {
         eq(answers.memberId, a.owner.id),
         eq(exchanges.familyId, a.owner.familyId),
         eq(exchanges.recipientId, a.owner.id),
-        gte(answers.receivedAt, week.from),
+        ...(approvedIds === undefined
+          ? [gte(answers.receivedAt, week.from), lt(answers.receivedAt, week.until)]
+          : [inArray(answers.id, [...approvedIds])]),
         gte(answers.receivedAt, a.permission.givenAt),
-        lt(answers.receivedAt, week.until),
         lte(answers.receivedAt, now),
       ),
     )
@@ -212,7 +216,8 @@ async function sources(tx: Db, a: Access, now: Date) {
       !answer.understoodAt ||
       (Array.isArray(answer.mentions.health) && answer.mentions.health.length > 0) ||
       !["en", "zh-TW"].includes(words.lang === "und" ? a.owner.language : words.lang) ||
-      hasSensitiveWords(words.text)
+      !SUPPORTED_SOURCE_SCRIPT.test(words.text) ||
+      hasSensitiveWords(words.text.normalize("NFKC"))
     )
       continue;
     output.push({
@@ -223,7 +228,7 @@ async function sources(tx: Db, a: Access, now: Date) {
       occurred_at: answer.receivedAt.toISOString(),
       occurred_on: localDateOf(answer.receivedAt, a.owner.tz),
     });
-    if (output.length === 50) break;
+    if (output.length === (approvedIds === undefined ? 50 : 100)) break;
   }
   return output;
 }
@@ -237,7 +242,6 @@ export async function loadWeeklySupportReport(
     const a = await access(deps, tx, identity, familyId, memberId);
     const now = deps.clock.now();
     const week = period(a, now);
-    const currentSources = await sources(tx, a, now);
     const reviews =
       a.reader && a.permission
         ? await tx
@@ -246,78 +250,95 @@ export async function loadWeeklySupportReport(
             .where(
               and(
                 eq(selections.memberId, memberId),
+                eq(selections.familyId, familyId),
                 eq(selections.permissionRevision, a.permission.revision),
+                gt(selections.expiresAt, now),
               ),
             )
             .orderBy(desc(selections.reviewedAt), asc(selections.id))
+            .limit(100)
         : [];
-    const validReviews = reviews.filter(
-      (r) =>
-        currentSources.some(
-          (s) =>
-            s.id === r.answerId &&
-            s.digest === r.sourceDigest &&
-            r.templateVersion === SUPPORT_TEMPLATE_VERSION,
-        ) &&
-        a.named.some(
+    // Read approved sources by identity, never through the 50-message discovery page or a new
+    // calendar week's window. Each quote still passes current audience, screening and expiry.
+    const approvedSources = await sources(
+      tx,
+      a,
+      now,
+      reviews.map((r) => r.answerId),
+    );
+    const items = reviews
+      .flatMap((r) => {
+        const source = approvedSources.find(
+          (s) => s.id === r.answerId && s.digest === r.sourceDigest,
+        );
+        const reviewer = a.named.find(
           (m) => m.id === r.reviewerId && m.memoryMembershipRevision === r.reviewerRevision,
-        ),
-    );
-    const approved = prepareWeeklySupportReview(
-      {
-        enabled: a.reader,
-        familyId,
-        memberId,
-        viewerId: a.actor.id,
-        activeMemberIds: a.live.map((m) => m.id),
-        organiserIds: a.named.map((m) => m.id),
-        permission:
-          a.permission?.state === "yes"
-            ? { version: a.permission.version, givenAt: a.permission.givenAt, withdrawnAt: null }
-            : null,
-        now,
-        weekFrom: week.from,
-        weekUntil: week.until,
-      },
-      currentSources.map((s) => ({
-        id: s.id,
-        familyId,
-        memberId,
-        revision: 1,
-        text: s.quote,
-        occurredAt: new Date(s.occurred_at),
-        expiresAt: new Date(new Date(s.occurred_at).getTime() + 30 * DAY),
-        deleted: false,
-        sensitivity: "ordinary" as const,
-        readerIds: [memberId, ...a.named.map((m) => m.id)],
-      })),
-      validReviews.map((r) => ({
-        sourceId: r.answerId,
-        sourceRevision: 1,
-        start: 0,
-        end: currentSources.find((s) => s.id === r.answerId)?.quote.length ?? 0,
-        kind: r.kind,
-        reviewerId: r.reviewerId,
-        reviewedAt: r.reviewedAt,
-        validUntil: r.expiresAt,
-      })),
-    );
-    const items = approved.flatMap((item) => {
-      const source = currentSources.find((s) => s.id === item.source.id);
-      const review = validReviews.find((r) => r.answerId === item.source.id);
-      return source && review
-        ? [
+        );
+        if (!source || !reviewer || r.templateVersion !== SUPPORT_TEMPLATE_VERSION) return [];
+        const sourceWeek = period(a, new Date(source.occurred_at));
+        const [draft] = prepareWeeklySupportReview(
+          {
+            enabled: a.reader,
+            familyId,
+            memberId,
+            viewerId: a.actor.id,
+            activeMemberIds: a.live.map((m) => m.id),
+            organiserIds: a.named.map((m) => m.id),
+            permission:
+              a.permission?.state === "yes"
+                ? {
+                    version: a.permission.version,
+                    givenAt: a.permission.givenAt,
+                    withdrawnAt: null,
+                  }
+                : null,
+            now,
+            weekFrom: sourceWeek.from,
+            weekUntil: sourceWeek.until,
+          },
+          [
             {
-              source,
-              kind: item.kind,
-              reviewed_at: review.reviewedAt.toISOString(),
-              reviewed_by: a.named.find((m) => m.id === review.reviewerId)?.displayName ?? "",
-              template_version: SUPPORT_TEMPLATE_VERSION,
-              expires_at: item.expiresAt.toISOString(),
+              id: source.id,
+              familyId,
+              memberId,
+              revision: 1,
+              text: source.quote,
+              occurredAt: new Date(source.occurred_at),
+              expiresAt: new Date(new Date(source.occurred_at).getTime() + 30 * DAY),
+              deleted: false,
+              sensitivity: "ordinary",
+              readerIds: [memberId, ...a.named.map((m) => m.id)],
             },
-          ]
-        : [];
-    });
+          ],
+          [
+            {
+              sourceId: r.answerId,
+              sourceRevision: 1,
+              start: 0,
+              end: source.quote.length,
+              kind: r.kind,
+              reviewerId: r.reviewerId,
+              reviewedAt: r.reviewedAt,
+              validUntil: r.expiresAt,
+            },
+          ],
+        );
+        return draft
+          ? [
+              {
+                source,
+                kind: draft.kind,
+                reviewed_at: r.reviewedAt.toISOString(),
+                reviewed_by: reviewer.displayName,
+                template_version: SUPPORT_TEMPLATE_VERSION,
+                expires_at: draft.expiresAt.toISOString(),
+              },
+            ]
+          : [];
+      })
+      .slice(0, 3);
+    const currentSources =
+      a.reader && a.actor.role === "organiser" ? await sources(tx, a, now) : [];
     return SupportReport.parse({
       member_id: memberId,
       name: a.owner.displayName,
@@ -337,7 +358,7 @@ export async function loadWeeklySupportReport(
       week_start: week.start,
       week_end: week.end,
       suggestions: items,
-      sources: a.reader && a.actor.role === "organiser" ? currentSources : [],
+      sources: currentSources,
     });
   });
 }
@@ -601,22 +622,33 @@ export async function reviewWeeklySupport(
         const expiry = new Date(
           Math.min(until.getTime(), new Date(source.occurred_at).getTime() + 30 * DAY),
         );
-        const currentSources = await sources(tx, a, now);
         const existing = await tx
-          .select({ id: selections.answerId, digest: selections.sourceDigest })
+          .select()
           .from(selections)
-          .where(
-            and(
-              eq(selections.memberId, memberId),
-              eq(selections.permissionRevision, a.permission.revision),
-              gte(selections.expiresAt, now),
+          .where(and(eq(selections.memberId, memberId), eq(selections.familyId, familyId)));
+        const existingSources = await sources(
+          tx,
+          a,
+          now,
+          existing.map((r) => r.answerId),
+        );
+        const validExisting = existing.filter(
+          (r) =>
+            r.permissionRevision === a.permission?.revision &&
+            r.templateVersion === SUPPORT_TEMPLATE_VERSION &&
+            r.expiresAt > now &&
+            existingSources.some((s) => s.id === r.answerId && s.digest === r.sourceDigest) &&
+            a.named.some(
+              (m) => m.id === r.reviewerId && m.memoryMembershipRevision === r.reviewerRevision,
             ),
-          );
-        if (
-          existing.filter((r) => currentSources.some((s) => s.id === r.id && s.digest === r.digest))
-            .length >= 3 &&
-          !existing.some((r) => r.id === source.id)
-        )
+        );
+        const validIds = new Set(validExisting.map((r) => r.id));
+        const staleIds = existing.filter((r) => !validIds.has(r.id)).map((r) => r.id);
+        if (staleIds.length > 0)
+          await tx
+            .delete(selections)
+            .where(and(eq(selections.memberId, memberId), inArray(selections.id, staleIds)));
+        if (validExisting.length >= 3 && !validExisting.some((r) => r.answerId === source.id))
           throw stale();
         await tx
           .insert(selections)

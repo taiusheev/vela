@@ -128,7 +128,6 @@ it("reads reviewed live source words and hides them after stopping through HTTP"
     kind: "text",
     channel: "telegram",
     payload: { text: "Could someone help sort my photos?" },
-    transcriptLang: "en",
     receivedAt: h.clock.now(),
     understoodAt: h.clock.now(),
   });

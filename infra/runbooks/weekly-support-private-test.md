@@ -4,7 +4,7 @@
 
 ## What this candidate supports
 
-A current-week, non-medical, organiser-reviewed report, read in the app by its parent and the
+A non-medical, organiser-reviewed report for this week, read in the app by its parent and the
 organisers the parent explicitly named. Exact parent text/voice transcript quotes; optional fixed
 interest/company/practical-help offers; original-conversation links; editable offers using the
 existing chat composer; removal, withdrawal and reload. The ordinary chat and urgent-concern paths
@@ -68,12 +68,17 @@ reports. The ordinary chat composer still requires a deliberate Send; an unfinis
 - Inputs: the parent's own answer text or voice transcript in their current local Monday–Sunday
   week, after permission, before 30-day expiry. No private organiser feedback, admin readings,
   kept-memory copies, media bytes or family observations. Source messages are not duplicated.
-- Existing understanding must have completed; flags, health mentions, unsupported/unknown languages,
-  sensitive whole text, withdrawn exchanges and expired/deleted words exclude a source. Human
+- Existing understanding must have completed; flags, health mentions, unsupported language labels,
+  scripts incompatible with the English/Chinese screening lexicons,
+  sensitive whole text, withdrawn exchanges and expired/deleted words exclude a source. Typed messages use the parent's declared language (they have no voice-language field). Human
   review is still required; a model never declares its own input safe. No content goes to AI here.
 - Persisted: permission version/notice/text fingerprint, encrypted named-audience snapshots with
   membership/account bindings; exact-source digests, fixed category/template version, reviewer,
   review time and expiry. No rendered quote, advice or complete report is stored.
+- Discover up to 50 current-week source messages. Read approved sources by exact identifier, not
+  through that discovery page; newer messages cannot displace an approved quote. Keep at most 3
+  currently valid offers globally, including across calendar weeks. Discard invalid/expired
+  references when saving another review.
 - Recheck permission, active membership, audience, source digest, template version and screening on
   every read/review. Corrections, deletion, retention and withdrawal hide derived quotes on the
   next read. The app reloads on focus and every 30 seconds; read errors hide stale report content.
@@ -85,7 +90,7 @@ reports. The ordinary chat composer still requires a deliberate Send; an unfinis
   presentations in one transaction. Replays cannot re-enable processing. Parent locking serialises
   review/withdrawal. No stored report words can survive source deletion.
 - References expire in at most 7 days after review and never more than 30 days after the source;
-  current-week display may end sooner at the week boundary. Nightly retention deletes expired
+  approved offers stay visible across the week boundary until their individual relevance deadline. Nightly retention deletes expired
   presentations and selections. Family/author/source deletion cascades. Standing purpose metadata
   is kept while the author uses the family; stop clears its names, subject deletion removes it.
 - Report queries exist only in session memory (`gcTime:0`), with no disk report cache. Write receipts
@@ -111,7 +116,8 @@ Run with synthetic accounts, not real-family copies. Save only synthetic screens
 | Cold open, offline/error, focus/pull refresh, parent switching | No stale quote exposed; bounded retry |
 | Offer chosen with an existing chat draft | Draft preserved; no automatic or double send |
 | Feature/notice/cohort off | Report unavailable; parent stop remains available |
-| Sparse or new week | Fewer/zero offers, no inferred health or invented advice |
+| Sparse or new week | No filler; an earlier reviewed offer stays until its own deadline |
+| More than 50 new messages | Approved sources are revalidated by ID and stay visible |
 
 Automated gates: `pnpm check`; disposable PostgreSQL 18 `test:postgres`; Worker HTTP integration
 with the real migrated synthetic database (part of Worker test); Maestro `weekly-private-report`.

@@ -473,3 +473,92 @@ it("encrypts audience names and source fingerprints instead of storing report wo
     "old photos",
   );
 });
+
+it("does not treat unsupported text scripts as English just because the profile uses English", async () => {
+  await permit();
+  const a = await source("У меня болит колено.");
+  await h.db.update(answers).set({ transcriptLang: null }).where(eq(answers.id, a.id));
+  expect((await read()).sources).toEqual([]);
+});
+it("still supports ordinary typed messages without a voice-language field", async () => {
+  await permit();
+  const a = await source();
+  await h.db.update(answers).set({ transcriptLang: null }).where(eq(answers.id, a.id));
+  expect((await read()).sources).toHaveLength(1);
+});
+
+it("screens compatibility-width health words without changing the original source", async () => {
+  await permit();
+  await source("Ｍｙ ｍｅｄｉｃｉｎｅ ｃｈａｎｇｅｄ.");
+  expect((await read()).sources).toEqual([]);
+});
+
+it("keeps a Sunday-reviewed offer visible on Monday until its relevance deadline", async () => {
+  h.clock.advance(6 * 86400000);
+  await permit();
+  await source();
+  await review();
+  h.clock.advance(20 * 60 * 60_000);
+  const report = await read();
+  expect(report.week_start).toBe("2026-09-21");
+  expect(report.suggestions).toHaveLength(1);
+});
+it("does not lose an approved source when newer messages move it off the review list", async () => {
+  await permit();
+  const original = await source();
+  await review();
+  h.clock.advance(1000);
+  await h.db.insert(answers).values(
+    Array.from({ length: 55 }, (_, i) => ({
+      exchangeId: original.exchangeId,
+      memberId: family.member.id,
+      kind: "text" as const,
+      channel: "telegram" as const,
+      payload: { text: `The flowers in pot ${i} opened.` },
+      receivedAt: h.clock.now(),
+      understoodAt: h.clock.now(),
+    })),
+  );
+  const report = await read();
+  expect(report.sources).toHaveLength(50);
+  expect(report.sources.some((s) => s.id === original.id)).toBe(false);
+  expect(report.suggestions[0]?.source.id).toBe(original.id);
+});
+
+it("cannot turn an invalidated old review into a fourth active offer", async () => {
+  await permit();
+  const original = await source();
+  await review();
+  await h.db
+    .update(answers)
+    .set({ payload: { text: "I have another box of photos to sort." } })
+    .where(eq(answers.id, original.id));
+  h.clock.advance(1000);
+  await h.db.insert(answers).values(
+    Array.from({ length: 3 }, (_, i) => ({
+      exchangeId: original.exchangeId,
+      memberId: family.member.id,
+      kind: "text" as const,
+      channel: "telegram" as const,
+      payload: { text: `The flowers in pot ${i} opened.` },
+      receivedAt: h.clock.now(),
+      understoodAt: h.clock.now(),
+    })),
+  );
+  const rows = (await read()).sources;
+  const choice = (s: (typeof rows)[number]) => ({
+    source_id: s.id,
+    source_digest: s.digest,
+    kind: "shared_interest",
+    ordinary_confirmed: true,
+    valid_until: new Date(h.clock.now().getTime() + 86400000).toISOString(),
+  });
+  for (const row of rows.filter((s) => s.id !== original.id))
+    await reviewWeeklySupport(deps, child, key(), ...args(), choice(row));
+  const corrected = rows.find((s) => s.id === original.id);
+  if (!corrected) throw new Error("Missing corrected source");
+  await expect(
+    reviewWeeklySupport(deps, child, key(), ...args(), choice(corrected)),
+  ).rejects.toHaveProperty("code", "conflict");
+  expect((await read()).suggestions).toHaveLength(3);
+});

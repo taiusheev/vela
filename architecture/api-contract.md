@@ -748,7 +748,7 @@ notice approval or the cohort list, but always requires the author's current ide
 
 | Method/suffix | Behaviour |
 | --- | --- |
-| GET base | Current local week, source-backed reviewed draft and current permission; organiser source review list only after the parent's yes and only for named organisers. Parent sees own approved draft without activity counts/private organiser notes. |
+| GET base | Support for the current local week, source-backed reviewed draft and current permission; organiser source review list only after the parent's yes and only for named organisers. Parent sees own approved draft without activity counts/private organiser notes. |
 | POST `/presentations` `{}` | Parent only; five-minute, one-use permission screen ID bound to current owner/account/membership, prior consent revision and named organiser list. |
 | GET `/presentations/:id` | Parent only; exact proposed purpose text and current named readers. Stale names/roster/account/consent/version conflict. |
 | POST `/permission` `{presentation_id,answer:"yes"|"no"}` | Parent choice only. Rotates permission revision and clears old review selections. Yes permits only subsequent source messages. |
@@ -764,3 +764,9 @@ Client reports remain session-memory only; read errors hide prior quotes. Source
 withdrawal/deletion and retention cannot be bypassed through historical rendered reports. Parent
 membership locks serialise mutations; independent PostgreSQL tests cover review vs stop in both
 orders. Full cohort, notice and signed-device gates: `infra/runbooks/weekly-support-private-test.md`.
+
+Approved sources are loaded by exact ID, separately from the bounded current-week discovery list.
+A still-relevant offer survives the Sunday/Monday boundary and newer messages until its own
+deadline. The source's original week/date is revalidated independently; the report range names the
+current support week. Capacity counts all still-valid approvals, not just the discovery page, and
+invalid/expired references are pruned inside the same locked mutation.
