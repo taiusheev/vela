@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
@@ -52,11 +52,7 @@ export function AskIdeas({
           </Words>
         </Pressable>
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: space.s, paddingVertical: 2, paddingRight: space.l }}
-      >
+      <View style={{ gap: space.s }}>
         {ideas.map((idea) => (
           <Pressable
             key={idea.key}
@@ -66,8 +62,8 @@ export function AskIdeas({
             onPress={() => onPick(idea)}
             style={({ pressed }) => [
               {
-                width: 220,
-                minHeight: 112,
+                width: "100%",
+                minHeight: 64,
                 padding: space.m,
                 gap: space.s,
                 borderRadius: radius.panel,
@@ -85,14 +81,14 @@ export function AskIdeas({
               </Text>
             ) : null}
             <Text
-              numberOfLines={4}
+              numberOfLines={6}
               style={[type.preview, { fontSize: 17, lineHeight: 24, color: p.ink }]}
             >
               {idea.text}
             </Text>
           </Pressable>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 }

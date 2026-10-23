@@ -8,9 +8,10 @@ import { exchanges, members, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
-import { composeApiAsk } from "./api-asks.ts";
+import { AskDayTakenError, composeApiAsk } from "./api-asks.ts";
+import { loadApiPlannedQuestions } from "./api-exchanges.ts";
 import { loadApiToday } from "./api-today.ts";
-import { WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
+import { editApiAsk, WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
 import { prepareDay } from "./arrivals.ts";
 import { VelaError } from "./errors.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -97,5 +98,108 @@ describe("withdrawing an ask", () => {
     await expect(withdraw(mia, ask.id)).rejects.toBeInstanceOf(WithdrawTooLateError);
     const [row] = await h.db.select().from(exchanges).where(eq(exchanges.id, ask.id));
     expect(row?.state).toBe("scheduled");
+  });
+});
+
+describe("planned questions and editing", () => {
+  it("lists every waiting morning and only the author's edit control", async () => {
+    const ask = await asked();
+    const date = addDays(localDateOf(h.clock.now(), seed.member.tz), 6);
+    await composeApiAsk(h.deps, mia, "second-day", seed.family.id, {
+      recipient_id: seed.member.id,
+      type: "question",
+      text: "Did you plant the tomatoes?",
+      when: "date",
+      date,
+    });
+    const mine = await loadApiPlannedQuestions(h.db, mia, seed.family.id);
+    expect(mine?.questions).toHaveLength(2);
+    expect(mine?.questions[0]).toMatchObject({ id: ask.id, editable: true });
+    expect(mine?.questions[1]?.date).toBe(date);
+    expect(
+      (await loadApiPlannedQuestions(h.db, sam, seed.family.id))?.questions.every(
+        (item) => !item.editable,
+      ),
+    ).toBe(true);
+    expect(
+      await loadApiPlannedQuestions(
+        h.db,
+        { authSubject: "outsider", sessionId: "other" },
+        seed.family.id,
+      ),
+    ).toBeNull();
+  });
+  it("changes wording and date together under the same delivery identity and replays safely", async () => {
+    const ask = await asked();
+    const input = {
+      text: "Mom, how did the tomatoes turn out?",
+      date: addDays(ask.scheduled_for ?? "", 3),
+    };
+    const changed = await editApiAsk(h.deps, mia, "edit-once", ask.id, input);
+    const retry = await editApiAsk(h.deps, mia, "edit-once", ask.id, input);
+    expect(changed.replayed).toBe(false);
+    expect(retry.replayed).toBe(true);
+    const [row] = await h.db.select().from(exchanges).where(eq(exchanges.id, ask.id));
+    expect(row).toMatchObject({
+      id: ask.id,
+      text: input.text,
+      scheduledFor: input.date,
+      state: "composed",
+      askerId: seed.organiser.id,
+    });
+  });
+  it("keeps the original when the new morning is occupied", async () => {
+    const ask = await asked();
+    const date = addDays(ask.scheduled_for ?? "", 1);
+    await composeApiAsk(h.deps, sam, "sam-day", seed.family.id, {
+      recipient_id: seed.member.id,
+      type: "question",
+      text: "What is growing?",
+      when: "date",
+      date,
+    });
+    await expect(
+      editApiAsk(h.deps, mia, "edit-conflict", ask.id, { text: "Changed", date }),
+    ).rejects.toBeInstanceOf(AskDayTakenError);
+    const [row] = await h.db.select().from(exchanges).where(eq(exchanges.id, ask.id));
+    expect(row).toMatchObject({
+      text: ask.ask,
+      scheduledFor: ask.scheduled_for,
+      state: "composed",
+    });
+  });
+  it("keeps consent and paused-recipient boundaries when editing", async () => {
+    const ask = await asked();
+    await h.db
+      .update(members)
+      .set({ status: "invited", lightOn: false, lightConsentedAt: null })
+      .where(eq(members.id, seed.member.id));
+    await expect(
+      editApiAsk(h.deps, mia, "invited-edit", ask.id, { text: "Changed", date: ask.scheduled_for }),
+    ).rejects.toBeInstanceOf(VelaError);
+    await h.db
+      .update(members)
+      .set({ status: "paused", lightOn: true, lightConsentedAt: h.clock.now() })
+      .where(eq(members.id, seed.member.id));
+    await expect(
+      editApiAsk(h.deps, mia, "paused-edit", ask.id, { text: "Changed", date: ask.scheduled_for }),
+    ).rejects.toBeInstanceOf(VelaError);
+    const [row] = await h.db.select().from(exchanges).where(eq(exchanges.id, ask.id));
+    expect(row?.text).toBe(ask.ask);
+  });
+
+  it("refuses another author's edit, invalid dates, withdrawn and prepared questions", async () => {
+    const ask = await asked();
+    const input = { text: "Changed", date: ask.scheduled_for };
+    await expect(editApiAsk(h.deps, sam, "not-mine", ask.id, input)).rejects.toBeInstanceOf(
+      VelaError,
+    );
+    await expect(
+      editApiAsk(h.deps, mia, "past", ask.id, { ...input, date: "2000-01-01" }),
+    ).rejects.toBeInstanceOf(VelaError);
+    await prepareDay(h.deps, seed.member.id, ask.scheduled_for ?? "");
+    await expect(editApiAsk(h.deps, mia, "too-late", ask.id, input)).rejects.toBeInstanceOf(
+      WithdrawTooLateError,
+    );
   });
 });

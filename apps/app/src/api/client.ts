@@ -26,6 +26,7 @@ import type {
   ApiNearbyRemoved,
   ApiParentConnection,
   ApiParentLink,
+  ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
@@ -44,6 +45,7 @@ import type {
   ComposeAsk,
   ComposeReply,
   CreateFamily,
+  EditAsk,
   KeptMemoryPage,
   MemoryCandidatePage,
   MemoryKept,
@@ -847,6 +849,21 @@ export function removeKeptMemory(
     key,
     body: {},
   });
+}
+
+export function fetchPlannedQuestions(
+  familyId: string,
+  token: string | null,
+): Promise<ApiPlannedQuestions> {
+  return read<ApiPlannedQuestions>(`/v1/families/${familyId}/questions`, token);
+}
+export function editQuestion(
+  id: string,
+  key: string,
+  body: EditAsk,
+  token: string | null,
+): Promise<{ id: string; state: "composed" }> {
+  return call({ path: `/v1/exchanges/${id}/edit`, token, key, body });
 }
 
 const reportPath = (familyId: string, memberId: string) =>

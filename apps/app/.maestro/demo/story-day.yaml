@@ -1,31 +1,27 @@
-# Story day in the explicit demo (A10): questions can be chosen and edited without promising
-# long-term retention or offering an unavailable book. Sending still requires the live API.
 url: ${APP_URL}
-name: Story questions can be chosen and edited without a retention promise
+name: Questions has one flow and Sunday questions stay editable
 tags:
   - demo
 ---
 - launchApp
 - openLink: ${APP_URL}/questions
-- scrollUntilVisible:
-    element: "Tell me about a day from when you were little that you still remember clearly. I'd love to hear it."
-    direction: DOWN
-- assertVisible: "Like her other answers, it is kept for 30 days, then deleted."
-- assertNotVisible: "Her answer is kept in the family book, unless she says not to."
-- scrollUntilVisible:
-    element: "Another question"
-    direction: DOWN
-- tapOn: "Another question"
-- scrollUntilVisible:
-    element: "What was your first day at work like? Tell me everything you remember."
-    direction: DOWN
-- scrollUntilVisible:
-    element: "Write your own story question for Sunday"
-    direction: DOWN
-- tapOn: "Write your own story question for Sunday"
-- assertVisible: "A story question for Mom's Sunday morning"
-- inputText: "How did you learn to make soup?"
-- assertVisible: 'How did you learn to make soup\?'
-- tapOn: "Choose from the list"
-- assertVisible: "What was your first day at work like? Tell me everything you remember."
+- assertVisible: "Planned questions"
+- assertNotVisible: "Ask it on Sunday"
 - assertNotVisible: "Read the family book"
+- tapOn: "Edit question or day"
+- assertVisible: "Edit question"
+- tapOn:
+    id: "Say it the way you would say it"
+- eraseText: 52
+- inputText: "Mom, how did you learn to make soup?"
+- tapOn: "Save changes"
+- assertVisible: "Question saved. You can adjust it below."
+- assertVisible: 'Mom, how did you learn to make soup\?'
+- tapOn: "Remove question"
+- assertVisible: "Remove this planned question?"
+- tapOn: "Keep question"
+- assertVisible: 'Mom, how did you learn to make soup\?'
+- tapOn: "Remove question"
+- tapOn: "Yes, remove question"
+- assertNotVisible: 'Mom, how did you learn to make soup\?'
+- assertVisible: "Write a question for Mom"

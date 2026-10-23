@@ -1,5 +1,5 @@
 url: ${APP_URL}
-name: Questions targets the chosen parent and keeps reports on Sunday
+name: Questions preserves the recipient through repeated planning
 tags:
   - demo
 ---
@@ -8,9 +8,22 @@ tags:
 - assertVisible: "Questions"
 - assertVisible: "Write a question for Mom"
 - tapOn: "Dad"
-- assertVisible: "Write a question for Dad"
 - tapOn: "Write a question for Dad"
-- assertVisible: "What are you sending?"
+- assertVisible: "Your question for Dad"
+- tapOn:
+    id: "Say it the way you would say it"
+- inputText: "Dad, what did you cook today?"
+- tapOn: "Save question"
+- assertVisible: "Write a question for Dad"
+- tapOn: "Mom"
+- tapOn: "Write a question for Mom"
+- tapOn: "Dad"
+- tapOn:
+    id: "Say it the way you would say it"
+- inputText: "Dad, which soup should I try making?"
+- tapOn: "Save question"
+- assertVisible: "Write a question for Dad"
+- assertVisible: 'Dad, which soup should I try making\?'
 - openLink: ${APP_URL}/sunday
 - assertVisible: "You and Mom"
 - assertNotVisible: "Write your own story question for Sunday"

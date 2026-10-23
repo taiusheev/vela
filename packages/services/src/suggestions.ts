@@ -671,9 +671,16 @@ async function loadContext(
       ),
     )
     .orderBy(desc(exchanges.createdAt), desc(exchanges.id));
+  // Setup queues stock questions too. A chosen stock prompt is not evidence of this person's voice.
+  const stockWording = new Set(
+    ASK_BANK.flatMap((item) =>
+      [...Object.values(item.text), ...Object.values(item.child)].map((text) => text.trim()),
+    ),
+  );
   const writingExamples = new Map<string, string[]>();
   for (const row of authoredRows) {
     if (row.askerId !== holders.get(row.memberId)?.id) continue;
+    if (stockWording.has(row.text?.trim() ?? "")) continue;
     let text = "";
     for (const character of row.text?.trim() ?? "") {
       if (text.length + character.length > 400) break;
