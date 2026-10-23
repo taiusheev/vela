@@ -7,6 +7,7 @@ import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { FirstWeek } from "../../src/components/first-week.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
+import { PrivateReportEntry } from "../../src/components/private-report-entry.tsx";
 import { RoomWindow, SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
 import { SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
@@ -182,6 +183,10 @@ function FamilySunday({ day }: { day: TodayView }) {
           )}
         </>
       )}
+      <PrivateReportEntry
+        familyId={day.familyId}
+        memberId={day.organiser ? view.memberId : day.memberId}
+      />
       {view.organiser && windowsFor !== undefined && windowsFor.invited !== true ? (
         <WeeklySupport name={windowsFor.displayName} memberId={windowsFor.memberId} />
       ) : null}

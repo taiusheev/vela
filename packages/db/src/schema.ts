@@ -2120,3 +2120,94 @@ export type WaitlistSignup = typeof waitlistSignups.$inferSelect;
 export type DeadLetter = typeof deadLetters.$inferSelect;
 export type MetricsDaily = typeof metricsDaily.$inferSelect;
 export type NewMetricsDaily = typeof metricsDaily.$inferInsert;
+
+/** Private-test report metadata only. Quotes are rebuilt from live sources, never copied here.
+ * Permission/presentation/selection rows cascade with their author, source or family.
+ */
+export const weeklySupportPermissions = pgTable(
+  "weekly_support_permissions",
+  {
+    memberId: uuid("member_id")
+      .primaryKey()
+      .references(() => members.id, { onDelete: "cascade" }),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    revision: uuid("revision").notNull(),
+    ownerRevision: uuid("owner_revision").notNull(),
+    version: text("version").notNull(),
+    noticeVersion: text("notice_version").notNull(),
+    textSha256: text("text_sha256").notNull(),
+    state: text("state", { enum: ["yes", "no", "withdrawn"] }).notNull(),
+    audience: sealedJsonb("weekly_support_permissions.audience")
+      .$type<{ id: string; revision: string; userId: string | null; name: string }[]>()
+      .notNull(),
+    givenAt: timestamptz("given_at").notNull(),
+  },
+  (t) => [
+    check("weekly_support_permissions_state_check", sql`${t.state} in ('yes', 'no', 'withdrawn')`),
+  ],
+);
+
+export const weeklySupportPresentations = pgTable(
+  "weekly_support_presentations",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ownerRevision: uuid("owner_revision").notNull(),
+    textSha256: text("text_sha256").notNull(),
+    permissionRevision: uuid("permission_revision"),
+    audience: sealedJsonb("weekly_support_presentations.audience")
+      .$type<{ id: string; revision: string; userId: string | null; name: string }[]>()
+      .notNull(),
+    issuedAt: timestamptz("issued_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    usedAt: timestamptz("used_at"),
+  },
+  (t) => [index("weekly_support_presentations_expiry_idx").on(t.expiresAt)],
+);
+
+export const weeklySupportSelections = pgTable(
+  "weekly_support_selections",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    answerId: uuid("answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    permissionRevision: uuid("permission_revision").notNull(),
+    sourceDigest: sealedText("weekly_support_selections.source_digest").notNull(),
+    templateVersion: text("template_version").notNull(),
+    kind: text("kind", { enum: ["shared_interest", "company", "practical_help"] }).notNull(),
+    reviewerId: uuid("reviewer_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    reviewerRevision: uuid("reviewer_revision").notNull(),
+    reviewedAt: timestamptz("reviewed_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+  },
+  (t) => [
+    unique("weekly_support_member_answer_key").on(t.memberId, t.answerId),
+    index("weekly_support_selection_expiry_idx").on(t.expiresAt),
+    check(
+      "weekly_support_selections_kind_check",
+      sql`${t.kind} in ('shared_interest', 'company', 'practical_help')`,
+    ),
+  ],
+);

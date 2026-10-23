@@ -119,6 +119,7 @@ CREATE TABLE "book_entries" (
 	"member_id" uuid NOT NULL,
 	"exchange_id" uuid NOT NULL,
 	"kept_at" timestamp with time zone NOT NULL,
+	"kept_by" uuid,
 	"removed_at" timestamp with time zone,
 	"removed_by" uuid,
 	CONSTRAINT "book_entries_exchange_id_key" UNIQUE("exchange_id")
@@ -284,6 +285,22 @@ CREATE TABLE "invites" (
 	CONSTRAINT "invites_channel_check" CHECK ("channel" in ('link', 'line', 'whatsapp', 'telegram', 'sms', 'email'))
 );
 
+CREATE TABLE "keep_suggestions" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"exchange_id" uuid NOT NULL,
+	"answer_id" uuid NOT NULL,
+	"start_offset" integer NOT NULL,
+	"end_offset" integer NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"dismissed_at" timestamp with time zone,
+	"dismissed_by" uuid,
+	CONSTRAINT "keep_suggestions_exchange_id_key" UNIQUE("exchange_id"),
+	CONSTRAINT "keep_suggestions_offsets_check" CHECK ("keep_suggestions"."start_offset" >= 0 and "keep_suggestions"."end_offset" > "keep_suggestions"."start_offset" and "keep_suggestions"."end_offset" - "keep_suggestions"."start_offset" <= 2000)
+);
+
 CREATE TABLE "media" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"family_id" uuid NOT NULL,
@@ -340,6 +357,7 @@ CREATE TABLE "members" (
 	"learning_until" date,
 	"suggestions_signed_by" uuid,
 	"answer_stats" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"memories_off_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"left_at" timestamp with time zone,
 	CONSTRAINT "members_family_id_user_id_key" UNIQUE("family_id","user_id"),
@@ -769,6 +787,52 @@ CREATE TABLE "weekly_reads" (
 	CONSTRAINT "weekly_reads_sent_lines_sent_suggestion_sent_at_check" CHECK (("sent_lines" is null) = ("sent_at" is null) and ("sent_suggestion" is null) = ("sent_at" is null))
 );
 
+CREATE TABLE "weekly_support_permissions" (
+	"member_id" uuid PRIMARY KEY NOT NULL,
+	"family_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"revision" uuid NOT NULL,
+	"owner_revision" uuid NOT NULL,
+	"version" text NOT NULL,
+	"notice_version" text NOT NULL,
+	"text_sha256" text NOT NULL,
+	"state" text NOT NULL,
+	"audience" jsonb NOT NULL,
+	"given_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "weekly_support_permissions_state_check" CHECK ("weekly_support_permissions"."state" in ('yes', 'no', 'withdrawn'))
+);
+
+CREATE TABLE "weekly_support_presentations" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"owner_revision" uuid NOT NULL,
+	"text_sha256" text NOT NULL,
+	"permission_revision" uuid,
+	"audience" jsonb NOT NULL,
+	"issued_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"used_at" timestamp with time zone
+);
+
+CREATE TABLE "weekly_support_selections" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"answer_id" uuid NOT NULL,
+	"permission_revision" uuid NOT NULL,
+	"source_digest" text NOT NULL,
+	"template_version" text NOT NULL,
+	"kind" text NOT NULL,
+	"reviewer_id" uuid NOT NULL,
+	"reviewer_revision" uuid NOT NULL,
+	"reviewed_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "weekly_support_member_answer_key" UNIQUE("member_id","answer_id"),
+	CONSTRAINT "weekly_support_selections_kind_check" CHECK ("weekly_support_selections"."kind" in ('shared_interest', 'company', 'practical_help'))
+);
+
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
@@ -785,6 +849,7 @@ ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FO
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_kept_by_members_id_fk" FOREIGN KEY ("kept_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_removed_by_members_id_fk" FOREIGN KEY ("removed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "channel_links" ADD CONSTRAINT "channel_links_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "chips" ADD CONSTRAINT "chips_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
@@ -801,6 +866,11 @@ ALTER TABLE "invites" ADD CONSTRAINT "invites_family_id_families_id_fk" FOREIGN 
 ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_members_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "invites" ADD CONSTRAINT "invites_for_member_id_members_id_fk" FOREIGN KEY ("for_member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "invites" ADD CONSTRAINT "invites_accepted_by_members_id_fk" FOREIGN KEY ("accepted_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_answer_id_answers_id_fk" FOREIGN KEY ("answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_dismissed_by_members_id_fk" FOREIGN KEY ("dismissed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "media" ADD CONSTRAINT "media_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "media" ADD CONSTRAINT "media_uploaded_by_members_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
@@ -868,6 +938,16 @@ ALTER TABLE "turns" ADD CONSTRAINT "turns_recipient_id_members_id_fk" FOREIGN KE
 ALTER TABLE "turns" ADD CONSTRAINT "turns_holder_id_members_id_fk" FOREIGN KEY ("holder_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_answer_id_answers_id_fk" FOREIGN KEY ("answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_reviewer_id_members_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "account_link_challenges_user_idx" ON "account_link_challenges" USING btree ("user_id");
 CREATE INDEX "account_link_challenges_expiry_idx" ON "account_link_challenges" USING btree ("expires_at");
 CREATE INDEX "account_link_challenges_completed_idx" ON "account_link_challenges" USING btree ("completed_at");
@@ -888,6 +968,9 @@ CREATE UNIQUE INDEX "exchanges_one_per_day" ON "exchanges" USING btree ("recipie
 CREATE INDEX "exchanges_queue_idx" ON "exchanges" USING btree ("recipient_id","when_rule","created_at") WHERE "state" = 'composed';
 CREATE INDEX "exchanges_family_recent_idx" ON "exchanges" USING btree ("family_id","scheduled_for" DESC NULLS FIRST);
 CREATE UNIQUE INDEX "family_channels_channel_conversation_id_idx" ON "family_channels" USING btree ("channel","conversation_id") WHERE "unlinked_at" is null;
+CREATE INDEX "keep_suggestions_family_idx" ON "keep_suggestions" USING btree ("family_id","created_at");
+CREATE INDEX "keep_suggestions_answer_idx" ON "keep_suggestions" USING btree ("answer_id");
+CREATE INDEX "keep_suggestions_expiry_idx" ON "keep_suggestions" USING btree ("expires_at");
 CREATE INDEX "media_expiry_idx" ON "media" USING btree ("expires_at") WHERE "kept" = false;
 CREATE UNIQUE INDEX "media_family_id_channel_provider_unique_id_idx" ON "media" USING btree ("family_id","channel","provider_unique_id") WHERE "provider_unique_id" is not null;
 CREATE INDEX "members_due_idx" ON "members" USING btree ("next_wake_at") WHERE "status" = 'active';
@@ -926,6 +1009,8 @@ CREATE INDEX "replies_exchange_idx" ON "replies" USING btree ("exchange_id");
 CREATE UNIQUE INDEX "replies_channel_external_id_idx" ON "replies" USING btree ("channel","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "replies_one_reaction_idx" ON "replies" USING btree ("exchange_id","member_id","kind") WHERE "kind" in ('heart', 'laugh', 'hug');
 CREATE UNIQUE INDEX "suggestions_one_per_day" ON "suggestions" USING btree ("about_member_id","local_day");
+CREATE INDEX "weekly_support_presentations_expiry_idx" ON "weekly_support_presentations" USING btree ("expires_at");
+CREATE INDEX "weekly_support_selection_expiry_idx" ON "weekly_support_selections" USING btree ("expires_at");
 
 -- Explicit schema names also support the isolated Worker schema generator.
 CREATE OR REPLACE FUNCTION "public"."invalidate_memory_keep_source"() RETURNS trigger

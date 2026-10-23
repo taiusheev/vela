@@ -51,6 +51,14 @@ msgstr "{count, plural, one {# day with messages so far} other {# days with mess
 msgid "{count, plural, one {# day with messages this week} other {# days with messages this week}}"
 msgstr "{count, plural, one {# day with messages this week} other {# days with messages this week}}"
 
+#: app/weekly-report.tsx
+msgid "{count} days"
+msgstr "{count} days"
+
+#: app/weekly-report.tsx
+msgid "{count} days · selected"
+msgstr "{count} days · selected"
+
 #: src/components/onboarding/questions.tsx
 msgid "{count} of 4 panes lit · {chapterName}"
 msgstr "{count} of 4 panes lit · {chapterName}"
@@ -346,12 +354,17 @@ msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on
 msgstr "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
 
 #: app/(tabs)/sunday.tsx
+#: app/weekly-report.tsx
 msgid "{name}'s week"
 msgstr "{name}'s week"
 
 #: src/components/onboarding/finish.tsx
 msgid "{name}’s window is ready."
 msgstr "{name}’s window is ready."
+
+#: app/weekly-report.tsx
+msgid "{name}'s words · {date}"
+msgstr "{name}'s words · {date}"
 
 #: src/components/first-week.tsx
 msgid "{name}'s words this week"
@@ -465,9 +478,29 @@ msgstr "📷 Reply with a photo"
 msgid "$79 a year"
 msgstr "$79 a year"
 
+#: app/weekly-report.tsx
+msgid "1 day"
+msgstr "1 day"
+
+#: app/weekly-report.tsx
+msgid "1 day · selected"
+msgstr "1 day · selected"
+
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr "A connection is not a delivered morning message or a reply."
+
+#: app/weekly-report.tsx
+msgid "A family organiser selected these words as an interest to ask about."
+msgstr "A family organiser selected these words as an interest to ask about."
+
+#: app/weekly-report.tsx
+msgid "A family organiser selected these words for an optional invitation."
+msgstr "A family organiser selected these words for an optional invitation."
+
+#: app/weekly-report.tsx
+msgid "A family organiser selected these words for an optional offer of help."
+msgstr "A family organiser selected these words for an optional offer of help."
 
 #: app/(tabs)/index.tsx
 msgid "A hello for {recipient}"
@@ -731,6 +764,10 @@ msgstr "Answered today"
 msgid "Anyone"
 msgstr "Anyone"
 
+#: app/weekly-report.tsx
+msgid "Approve this offer for {count} days"
+msgstr "Approve this offer for {count} days"
+
 #: src/components/reminders.tsx
 #: src/components/today-hero.tsx
 msgid "Ask {name}"
@@ -925,6 +962,10 @@ msgstr "Check connection again"
 msgid "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
 msgstr "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
 
+#: app/weekly-report.tsx
+msgid "Check this offer"
+msgstr "Check this offer"
+
 #: app/help.tsx
 msgid "Check Today and your parent's usual chat. If the message still has not arrived, contact Vela support. You can always contact your family directly."
 msgstr "Check Today and your parent's usual chat. If the message still has not arrived, contact Vela support. You can always contact your family directly."
@@ -997,6 +1038,10 @@ msgstr "Choose the morning; Vela delivers it then."
 msgid "Choose this exchange's family on Today to play or send attachments."
 msgstr "Choose this exchange's family on Today to play or send attachments."
 
+#: app/weekly-report.tsx
+msgid "Choose words you understand. Check the whole message for sensitive details and confirm the offer still fits."
+msgstr "Choose words you understand. Check the whole message for sensitive details and confirm the offer still fits."
+
 #: app/sign-in.tsx
 msgid "Choose your country, type your number as you would at home, and we text you a code."
 msgstr "Choose your country, type your number as you would at home, and we text you a code."
@@ -1014,6 +1059,10 @@ msgstr "Close"
 #: src/components/onboarding/questions.tsx
 msgid "Close by"
 msgstr "Close by"
+
+#: app/weekly-report.tsx
+msgid "Close message review"
+msgstr "Close message review"
 
 #: src/components/today-feed.tsx
 msgid "Close notifications"
@@ -1125,11 +1174,16 @@ msgstr "Could I help with a meal, an errand or getting somewhere this week? Tell
 msgid "Could someone help carry my groceries home next Friday?"
 msgstr "Could someone help carry my groceries home next Friday?"
 
+#: app/weekly-report.tsx
+msgid "Could someone help me sort the old photos?"
+msgstr "Could someone help me sort the old photos?"
+
 #: src/components/telegram-family-link.tsx
 msgid "Create a new connection"
 msgstr "Create a new connection"
 
 #. who the light is for
+#: app/weekly-report.tsx
 #: src/data/onboarding.ts
 #: src/data/today.ts
 msgid "Dad"
@@ -1192,6 +1246,10 @@ msgstr "Describe what went wrong and when it happened. Never send passwords, sig
 msgid "Disappears on {until} unless you keep it."
 msgstr "Disappears on {until} unless you keep it."
 
+#: app/weekly-report.tsx
+msgid "Discard this draft"
+msgstr "Discard this draft"
+
 #: app/(tabs)/index.tsx
 msgid "Dismiss"
 msgstr "Dismiss"
@@ -1233,6 +1291,10 @@ msgstr "Earlier this month"
 msgid "Eastern"
 msgstr "Eastern"
 
+#: app/weekly-report.tsx
+msgid "Edit an offer before sending"
+msgstr "Edit an offer before sending"
+
 #: app/sign-in.tsx
 msgid "Email"
 msgstr "Email"
@@ -1244,6 +1306,10 @@ msgstr "Email Vela support"
 #: app/settings.tsx
 msgid "English pilot"
 msgstr "English pilot"
+
+#: app/weekly-report.tsx
+msgid "English private-test wording"
+msgstr "English private-test wording"
 
 #: app/morning-settings.tsx
 msgid "Enter a time such as 08:30 and choose a supported language."
@@ -1264,6 +1330,10 @@ msgstr "Error code: {code}"
 #: src/components/onboarding/questions.tsx
 msgid "Every morning starts with it."
 msgstr "Every morning starts with it."
+
+#: app/weekly-report.tsx
+msgid "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
+msgstr "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
 
 #: app/(tabs)/exchanges.tsx
 msgid "Everyone"
@@ -1288,6 +1358,10 @@ msgstr "Example morning"
 #: app/conversation.tsx
 msgid "Example only. Nothing was sent."
 msgstr "Example only. Nothing was sent."
+
+#: app/weekly-report.tsx
+msgid "Example private report · no messages sent"
+msgstr "Example private report · no messages sent"
 
 #: app/weekly-support-preview.tsx
 msgid "Example report · Dad · 19–25 October"
@@ -1584,6 +1658,10 @@ msgstr "How does {name} like to reply?"
 msgid "How it reaches {name}"
 msgstr "How it reaches {name}"
 
+#: app/weekly-report.tsx
+msgid "How long will this offer still be relevant?"
+msgstr "How long will this offer still be relevant?"
+
 #: app/settings.tsx
 msgid "How the quiet notices ended, in your family and across Vela"
 msgstr "How the quiet notices ended, in your family and across Vela"
@@ -1605,6 +1683,10 @@ msgstr "How Vela is doing"
 msgid "Hug"
 msgstr "Hug"
 
+#: app/weekly-report.tsx
+msgid "I agree for these named people"
+msgstr "I agree for these named people"
+
 #: src/components/onboarding/story.tsx
 msgid "I already have an account"
 msgstr "I already have an account"
@@ -1612,6 +1694,10 @@ msgstr "I already have an account"
 #: app/weekly-support-preview.tsx
 msgid "I can help bring the groceries home. What time next Friday would suit you?"
 msgstr "I can help bring the groceries home. What time next Friday would suit you?"
+
+#: app/weekly-report.tsx
+msgid "I checked: ordinary words, understood, still relevant"
+msgstr "I checked: ordinary words, understood, still relevant"
 
 #: src/components/onboarding/finish.tsx
 msgid "I have sent it"
@@ -2033,6 +2119,10 @@ msgstr "Looking for your family's days…"
 msgid "Looking for your memories…"
 msgstr "Looking for your memories…"
 
+#: app/weekly-report.tsx
+msgid "Make time for an interest"
+msgstr "Make time for an interest"
+
 #: app/weekly-support-preview.tsx
 msgid "Make time for something Dad enjoys"
 msgstr "Make time for something Dad enjoys"
@@ -2211,6 +2301,10 @@ msgstr "No answer from Mom yet today."
 msgid "No answer recorded today"
 msgstr "No answer recorded today"
 
+#: app/weekly-report.tsx
+msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
+msgstr "No eligible messages were shared after permission this week. Nothing needs to be invented."
+
 #: app/ask.tsx
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
@@ -2226,6 +2320,10 @@ msgstr "No photo on this phone"
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
 msgstr "No quiet notice in the last 12 months."
+
+#: app/weekly-report.tsx
+msgid "No reviewed offers yet. There is limited information here; Vela will not fill the gaps with assumptions."
+msgstr "No reviewed offers yet. There is limited information here; Vela will not fill the gaps with assumptions."
 
 #: src/components/family-book.tsx
 msgid "No stories have been kept here yet."
@@ -2252,6 +2350,10 @@ msgstr "No word yet today."
 #: app/exchange/[id].tsx
 msgid "No word yet."
 msgstr "No word yet."
+
+#: app/weekly-report.tsx
+msgid "No, keep reports off"
+msgstr "No, keep reports off"
 
 #: src/components/today-feed.tsx
 msgid "Nobody has written back yet"
@@ -2394,9 +2496,14 @@ msgstr "Offer a call or some company. Make room to listen to how the week has fe
 msgid "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
 msgstr "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
 
+#: app/weekly-report.tsx
 #: src/components/weekly-support.tsx
 msgid "Offer practical help"
 msgstr "Offer practical help"
+
+#: app/weekly-report.tsx
+msgid "Offer some company"
+msgstr "Offer some company"
 
 #: src/components/weekly-support.tsx
 msgid "Offer some time together"
@@ -2453,6 +2560,7 @@ msgstr "One moment a day"
 
 #: app/(tabs)/sunday.tsx
 #: app/parent.tsx
+#: app/weekly-report.tsx
 msgid "One moment…"
 msgstr "One moment…"
 
@@ -2472,6 +2580,10 @@ msgstr "Only on this device. Removed when you sign out."
 msgid "Open my family"
 msgstr "Open my family"
 
+#: src/components/private-report-entry.tsx
+msgid "Open private report example"
+msgstr "Open private report example"
+
 #: app/settings.tsx
 #: src/components/onboarding/finish.tsx
 #: src/components/push-offer.tsx
@@ -2481,6 +2593,10 @@ msgstr "Open settings"
 #: src/components/telegram-family-link.tsx
 msgid "Open Telegram again"
 msgstr "Open Telegram again"
+
+#: src/components/private-report-entry.tsx
+msgid "Open the weekly support report"
+msgstr "Open the weekly support report"
 
 #: app/(tabs)/index.tsx
 msgid "Open this exchange"
@@ -2591,6 +2707,10 @@ msgstr "People near {name}"
 msgid "People nearby"
 msgstr "People nearby"
 
+#: app/weekly-report.tsx
+msgid "People who can read this report"
+msgstr "People who can read this report"
+
 #: src/data/onboarding.ts
 msgid "Perth"
 msgstr "Perth"
@@ -2695,6 +2815,10 @@ msgstr "Privacy and help"
 msgid "Privacy details and terms"
 msgstr "Privacy details and terms"
 
+#: app/weekly-report.tsx
+msgid "Private test · reviewed family support"
+msgstr "Private test · reviewed family support"
+
 #: app/profile.tsx
 msgid "Profile"
 msgstr "Profile"
@@ -2736,6 +2860,10 @@ msgstr "Quiet notices with the people nearby · away mode · the weekly read · 
 #: src/components/story-day.tsx
 msgid "Read the family book"
 msgstr "Read the family book"
+
+#: app/weekly-report.tsx
+msgid "Read the original conversation"
+msgstr "Read the original conversation"
 
 #: app/my-memories.tsx
 #: app/settings.tsx
@@ -2791,6 +2919,10 @@ msgstr "Recording… {time}"
 msgid "Relative"
 msgstr "Relative"
 
+#: app/weekly-report.tsx
+msgid "Reload report"
+msgstr "Reload report"
+
 #: src/components/reminders.tsx
 msgid "Remind me to ask how it went"
 msgstr "Remind me to ask how it went"
@@ -2829,6 +2961,10 @@ msgstr "Remove practical-help example message"
 #: app/my-memories.tsx
 msgid "Remove this memory?"
 msgstr "Remove this memory?"
+
+#: app/weekly-report.tsx
+msgid "Remove this offer"
+msgstr "Remove this offer"
 
 #: app/my-memories.tsx
 msgid "Removed from your memories."
@@ -2887,9 +3023,29 @@ msgstr "Retry saved ask"
 msgid "Retry saved reply"
 msgstr "Retry saved reply"
 
+#: app/weekly-report.tsx
+msgid "Review confirmed"
+msgstr "Review confirmed"
+
 #: app/weekly-support-preview.tsx
 msgid "Review draft with example messages. Nothing is sent."
 msgstr "Review draft with example messages. Nothing is sent."
+
+#: app/weekly-report.tsx
+msgid "Review more messages"
+msgstr "Review more messages"
+
+#: app/weekly-report.tsx
+msgid "Review this week's messages"
+msgstr "Review this week's messages"
+
+#: app/weekly-report.tsx
+msgid "Review who can read my report"
+msgstr "Review who can read my report"
+
+#: app/weekly-report.tsx
+msgid "Reviewed by {reviewer} · available until {date}"
+msgstr "Reviewed by {reviewer} · available until {date}"
 
 #: src/device/useParent.ts
 msgid "Rice porridge"
@@ -3168,6 +3324,10 @@ msgstr "Share one personal link in your usual chat. Your parent decides in Teleg
 msgid "Share their chat link"
 msgstr "Share their chat link"
 
+#: app/weekly-report.tsx
+msgid "Shared with you and: {readerNames}"
+msgstr "Shared with you and: {readerNames}"
+
 #: src/components/parent-link-settings.tsx
 msgid "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
 msgstr "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
@@ -3369,6 +3529,10 @@ msgstr "Stop and listen first"
 msgid "Stop recording"
 msgstr "Stop recording"
 
+#: app/weekly-report.tsx
+msgid "Stop reports about me"
+msgstr "Stop reports about me"
+
 #: app/(tabs)/exchanges.tsx
 #: src/components/family-book.tsx
 msgid "Stories"
@@ -3529,6 +3693,10 @@ msgstr "That did not go through. Nothing changed. Try again."
 #: src/device/useParent.ts
 msgid "That did not go through. Try again in a moment."
 msgstr "That did not go through. Try again in a moment."
+
+#: app/weekly-report.tsx
+msgid "That did not save. Try again when you are connected."
+msgstr "That did not save. Try again when you are connected."
 
 #: app/sign-in.tsx
 msgid "That did not work. Check it and try again."
@@ -3705,6 +3873,10 @@ msgstr "The memory question has changed"
 msgid "The message comes half an hour later, so it’s there when {name} first picks up the phone."
 msgstr "The message comes half an hour later, so it’s there when {name} first picks up the phone."
 
+#: app/weekly-report.tsx
+msgid "The message or permission changed. Reload and review it again."
+msgstr "The message or permission changed. Reload and review it again."
+
 #: app/(tabs)/index.tsx
 msgid "The next morning will appear here once it arrives. You can get an ask ready now."
 msgstr "The next morning will appear here once it arrives. You can get an ask ready now."
@@ -3748,6 +3920,10 @@ msgstr "The pilot is free. No payment or card is required. Your family’s asks,
 #: app/(tabs)/index.tsx
 msgid "The quiet notice could not be reached just now. Contact your parent directly if you are concerned."
 msgstr "The quiet notice could not be reached just now. Contact your parent directly if you are concerned."
+
+#: app/weekly-report.tsx
+msgid "The report could not be reached. Reload to check current access."
+msgstr "The report could not be reached. Reload to check current access."
 
 #: src/components/onboarding/questions.tsx
 msgid "The same time as yours."
@@ -3934,6 +4110,14 @@ msgstr "This phone is not set up for Vela any more. Ask your family to set it up
 #: src/components/photo-slots.tsx
 msgid "This photo could not be used. Choose another."
 msgstr "This photo could not be used. Choose another."
+
+#: app/weekly-report.tsx
+msgid "This private report is not available for this account or family."
+msgstr "This private report is not available for this account or family."
+
+#: app/weekly-report.tsx
+msgid "This report needs the parent's own permission. An organiser cannot agree for them."
+msgstr "This report needs the parent's own permission. An organiser cannot agree for them."
 
 #: src/audio/VoicePlayback.tsx
 msgid "This voice is no longer available."
@@ -4344,6 +4528,14 @@ msgstr "Verify code"
 msgid "Vietnam"
 msgstr "Vietnam"
 
+#: app/weekly-report.tsx
+msgid "View as family organiser"
+msgstr "View as family organiser"
+
+#: app/weekly-report.tsx
+msgid "View as parent"
+msgstr "View as parent"
+
 #: src/components/today-hero.tsx
 msgid "View quiet notice"
 msgstr "View quiet notice"
@@ -4484,6 +4676,7 @@ msgstr "What the family sees about you"
 msgid "What they call you"
 msgstr "What they call you"
 
+#: app/weekly-report.tsx
 #: app/weekly-support-preview.tsx
 #: src/components/weekly-support.tsx
 msgid "What would help this week?"
@@ -4583,9 +4776,21 @@ msgstr "Work & advice"
 msgid "Worth keeping?"
 msgstr "Worth keeping?"
 
+#: app/weekly-report.tsx
+msgid "Would a little help with this be welcome? Tell me what would work for you."
+msgstr "Would a little help with this be welcome? Tell me what would work for you."
+
 #: src/components/weekly-support.tsx
 msgid "Would you like a call or some company this week? When would suit you?"
 msgstr "Would you like a call or some company this week? When would suit you?"
+
+#: app/weekly-report.tsx
+msgid "Would you like a call or some company? What would suit you?"
+msgstr "Would you like a call or some company? What would suit you?"
+
+#: app/weekly-report.tsx
+msgid "Would you like to tell me more about this on our next call?"
+msgstr "Would you like to tell me more about this on our next call?"
 
 #: app/(tabs)/questions.tsx
 msgid "Write a question for {parentName}"
@@ -4687,6 +4892,10 @@ msgstr "You can reply once she has answered."
 msgid "You chose to share the link. Delivery is not confirmed; Vela will show when your parent agrees."
 msgstr "You chose to share the link. Delivery is not confirmed; Vela will show when your parent agrees."
 
+#: app/weekly-report.tsx
+msgid "You decide whether Vela can help prepare this report from messages you share after agreeing."
+msgstr "You decide whether Vela can help prepare this report from messages you share after agreeing."
+
 #: src/components/family-book.tsx
 msgid "You need"
 msgstr "You need"
@@ -4742,6 +4951,10 @@ msgstr "Your ask for {outcomeRecipient} is ready for {date}."
 #: app/(tabs)/index.tsx
 msgid "Your ask for {outcomeRecipient} is waiting for an available morning."
 msgstr "Your ask for {outcomeRecipient} is waiting for an available morning."
+
+#: app/weekly-report.tsx
+msgid "Your choice about weekly reports"
+msgstr "Your choice about weekly reports"
 
 #: src/components/app-privacy.tsx
 msgid "Your choice could not be saved. Please try again."

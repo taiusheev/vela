@@ -36,6 +36,7 @@ async function main(): Promise<void> {
       "memory_facts.text",
       "memory_candidates.source_digest",
       "memory_keeps.source_digest",
+      "weekly_support_selections.source_digest",
       "memory_keeps.quote",
       "reminders.text",
       "weekly_reads.suggestion",
@@ -75,6 +76,18 @@ async function main(): Promise<void> {
     }
 
     const jsonCandidates = [
+      {
+        query:
+          "select audience as value from weekly_support_permissions where jsonb_array_length(audience)>0 limit 1",
+        column: "weekly_support_permissions.audience",
+        policy: undefined,
+      },
+      {
+        query:
+          "select audience as value from weekly_support_presentations where jsonb_array_length(audience)>0 limit 1",
+        column: "weekly_support_presentations.audience",
+        policy: undefined,
+      },
       {
         query:
           "select payload as value from answers where jsonb_typeof(payload -> 'text') = 'string' or jsonb_typeof(payload -> 'choice') = 'string' limit 1",
