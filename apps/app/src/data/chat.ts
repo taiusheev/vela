@@ -378,3 +378,27 @@ export function chatFixture(name: string): ChatMessage[] {
     base("x4:answer:1", "her", name, today, 9, 15, t`And a jar of the plum jam.`),
   ];
 }
+
+/** A local send remains visible until its exact server exchange arrives. */
+export interface PendingChatMessage {
+  localId: string;
+  text: string;
+  status: "sending" | "sent";
+  since: number;
+  existingIds: string[];
+  exchangeId?: string;
+}
+export function pendingHasArrived(
+  pending: PendingChatMessage,
+  messages: readonly ChatMessage[],
+): boolean {
+  return messages.some(
+    (message) =>
+      message.side === "me" &&
+      (pending.exchangeId !== undefined
+        ? message.exchangeId === pending.exchangeId
+        : !pending.existingIds.includes(message.exchangeId) &&
+          message.text === pending.text &&
+          message.at >= pending.since - 60_000),
+  );
+}

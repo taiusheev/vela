@@ -213,11 +213,11 @@ function composeText(
   } else if (input.late) {
     opening.push(t(lang, "arrival.late"));
   }
-  opening.push(t(lang, greetingKeyFor(input.date), { address: input.address }));
+  if (!input.repeat) opening.push(t(lang, greetingKeyFor(input.date), { address: input.address }));
   paragraphs.push(opening);
 
   paragraphs.push(ask.type === "hello" ? helloLines(lang, ask) : askLines(lang, ask, askText));
-  if (input.hint) {
+  if (input.hint && !input.repeat) {
     paragraphs.push([t(lang, "arrival.hint")]);
   }
   return paragraphs.map((lines) => lines.join("\n")).join("\n\n");

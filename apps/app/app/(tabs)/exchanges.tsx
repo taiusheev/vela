@@ -22,6 +22,7 @@ import { type BookView, type KeepRefusal, useBook } from "../../src/data/useBook
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
 import { usePortrait } from "../../src/data/usePortrait.ts";
+import { usePullRefresh } from "../../src/data/usePullRefresh.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, radius, softShadow, space, type } from "../../src/theme/tokens.ts";
@@ -355,7 +356,11 @@ export default function MemoriesScreen() {
   const { capabilities } = useCapabilities();
   const day = useToday();
   const book = useBook(day.familyId);
-  const { exchanges, live, loading, refreshing, refresh, trouble, more, loadMore } = useExchanges();
+  const { exchanges, live, loading, refresh, trouble, more, loadMore } = useExchanges();
+  const refreshPage = useCallback(async () => {
+    await Promise.all([day.refresh(), refresh(), book.refresh()]);
+  }, [day.refresh, refresh, book.refresh]);
+  const pull = usePullRefresh(refreshPage);
   useFocusEffect(
     useCallback(() => {
       refresh();
@@ -418,7 +423,7 @@ export default function MemoriesScreen() {
   return (
     <WarmPage
       gap={space.l}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
     >
       <ScreenHeading
         title={<Trans context="tab">Memories</Trans>}

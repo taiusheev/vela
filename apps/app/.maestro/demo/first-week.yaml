@@ -1,7 +1,6 @@
-# Before a parent's first weekly read, Week says when it comes, shows an example of what it holds,
-# and offers a way to ask something now. In the demo, Dad has no read yet.
+# Before a first read, Week says when it comes and offers immediate everyday support.
 url: ${APP_URL}
-name: Week before the first read says when it comes and shows an example
+name: Week before the first read offers support for the chosen parent
 tags:
   - demo
 ---
@@ -9,7 +8,14 @@ tags:
 - openLink: ${APP_URL}/sunday
 - tapOn: "Dad"
 - assertVisible: "Dad's first weekly read: .*"
-- assertVisible: "What the read will show"
-- assertVisible: "Example"
-- tapOn: "Ask Dad something for this week"
-- assertVisible: "Ask Dad something"
+- scrollUntilVisible:
+    element: "Offer practical help"
+    direction: DOWN
+- assertVisible: "What would help this week.*"
+- tapOn: "Offer practical help"
+- assertVisible: "Your words reach Dad.*"
+- assertNotVisible: "Example only. Nothing was sent."
+- tapOn:
+    id: "Send now"
+- assertVisible: "Could I help with a meal, an errand or getting somewhere this week.*"
+- assertVisible: "Example only. Nothing was sent."

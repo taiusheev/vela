@@ -20,6 +20,7 @@
  * `api_rate_limit_failed`, and `api_request_failed`. A 4xx is never logged, and neither is a token,
  * an address, a body, a key, or any configured value.
  */
+
 import type { ApiErrorBody } from "@vela/contracts";
 import { connectDatabase } from "@vela/db";
 import {
@@ -97,6 +98,7 @@ import {
   withdrawApiAsk,
   withdrawOwnMemoryConsent,
 } from "@vela/services";
+import type { ExecutionContext as ApiExecutionContext } from "hono";
 import {
   type ApiReadServices,
   type ApiRuntime,
@@ -117,11 +119,19 @@ import {
 import { type AccountWriteLimiter, writeLimiterOf } from "./write-limit.ts";
 
 /** What `PilotRuntime.api` is: one request under /v1 in, its answer out. */
-export type ApiHandler = (request: Request, env: PilotEnv) => Promise<Response>;
+export type ApiHandler = (
+  request: Request,
+  env: PilotEnv,
+  context?: ExecutionContext,
+) => Promise<Response>;
 
 /** The API app as the handler uses it; `createApiApp` returns one. */
 export interface ApiApp {
-  fetch(request: Request): Response | Promise<Response>;
+  fetch(
+    request: Request,
+    env?: unknown,
+    context?: ApiExecutionContext,
+  ): Response | Promise<Response>;
 }
 
 /**
@@ -537,7 +547,7 @@ export function createApiHandler(
     return kept.app;
   }
 
-  return async (request, env) => {
+  return async (request, env, context) => {
     const logger = createLogger(env);
     let config: ApiConfig | null;
     try {
@@ -561,7 +571,9 @@ export function createApiHandler(
       return answer(UNAVAILABLE, 503);
     }
     try {
-      return await app.fetch(request);
+      return await (context === undefined
+        ? app.fetch(request)
+        : app.fetch(request, undefined, context));
     } catch (error) {
       logger.error("api_request_failed", { error: errorLabel(error) });
       return answer(INTERNAL, 500);

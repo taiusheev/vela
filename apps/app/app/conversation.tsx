@@ -34,6 +34,8 @@ import {
   dayLabel,
   localDateIn,
   newestMine,
+  type PendingChatMessage,
+  pendingHasArrived,
   showsStatus,
   showsTime,
   startsGroup,
@@ -44,6 +46,7 @@ import { demoDataAllowed } from "../src/data/live-state.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
 import { useCallingNumber } from "../src/data/useCallingNumber.ts";
 import { useExchanges } from "../src/data/useExchanges.ts";
+import { usePullRefresh } from "../src/data/usePullRefresh.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { clearShownAbout } from "../src/push/notifications.ts";
 import { useDraft } from "../src/storage/useDraft.ts";
@@ -76,12 +79,14 @@ function starters(lang: AskBankLang): string[] {
 
 function Conversation() {
   const { recipient } = useLocalSearchParams<{ recipient?: string }>();
+  const { suggestion } = useLocalSearchParams<{ suggestion?: string }>();
   const day = useToday();
   const light = selectedLight(day.today.lights, recipient);
   const account = useAccount();
   const queries = useQueryClient();
   const [watching, setWatching] = useState(false);
   const history = useExchanges(watching);
+  const pull = usePullRefresh(history.refresh);
   useFocusEffect(
     useCallback(() => {
       setWatching(true);
@@ -98,6 +103,13 @@ function Conversation() {
   const lang: AskBankLang = i18n.locale === "zh-TW" ? "zh-TW" : "en";
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
   const draft = useDraft(`conversation.${day.familyId ?? UNLINKED}.${light?.memberId ?? UNLINKED}`);
+  const offered = useRef(false);
+  useEffect(() => {
+    if (!draft.ready || offered.current || suggestion === undefined) return;
+    offered.current = true;
+    // An existing unfinished message always takes priority over an offered starting point.
+    if (!draft.text) draft.setText(suggestion);
+  }, [draft.ready, draft.text, draft.setText, suggestion]);
   const [note, setNote] = useState<string | null>(null);
   const [sheet, setSheet] = useState<"more" | "menu" | null>(null);
   // What the reader sent in the demo, and the words of a send still on its way.
@@ -105,11 +117,8 @@ function Conversation() {
   const [demoReactions, setDemoReactions] = useState<Record<string, ChatReactionKind[]>>({});
   // The words of a send on its way: "sending" until Vela has them, then "sent" until the
   // conversation, read again, holds them itself (so they never blink out in between).
-  const [pending, setPending] = useState<{
-    text: string;
-    status: "sending" | "sent";
-    since: number;
-  } | null>(null);
+  const [pending, setPending] = useState<PendingChatMessage[]>([]);
+  const sending = useRef(false);
   const calling = useCallingNumber(day.familyId, light?.memberId);
   const reactKey = useIdempotencyKey("chat-reaction");
   const herId = light?.memberId;
@@ -124,32 +133,51 @@ function Conversation() {
   const invited = light?.invited === true;
 
   const send = useMutation({
-    mutationFn: async () => {
-      if (demo) return { when: "now" };
+    mutationFn: async ({ text }: { text: string; localId: string }) => {
+      if (demo) return { when: "now", id: undefined };
       if (day.familyId === undefined || light === undefined) throw new Error("No recipient");
       const body = {
         recipient_id: light.memberId,
         type: "question" as const,
         when: invited ? ("whenever" as const) : ("now" as const),
-        text: draft.text.trim(),
+        text,
       };
       const saved = draft.savedBody<ComposeAsk>();
       const request = ComposeAsk.parse(
         saved?.text === body.text && saved?.recipient_id === body.recipient_id ? saved : body,
       );
-      await composeAsk(day.familyId, await draft.keyFor(request), request, await account.token());
-      return { when: request.when };
+      const [key, token] = await Promise.all([draft.keyFor(request), account.token()]);
+      const accepted = await composeAsk(day.familyId, key, request, token);
+      return { when: request.when, id: accepted.id };
     },
-    onMutate: () => {
+    onMutate: ({ text, localId }) => {
       setNote(null);
-      setPending({ text: draft.text.trim(), status: "sending", since: Date.now() });
+      setPending((earlier) => [
+        ...earlier,
+        {
+          localId,
+          text,
+          status: "sending",
+          since: Date.now(),
+          existingIds: history.summaries.map((summary) => summary.id),
+        },
+      ]);
       following.current = true;
     },
-    onSuccess: async (accepted) => {
-      const words = draft.text.trim();
+    onSuccess: async (accepted, { text: words, localId }) => {
       // Vela has it now: say so at once, and read the conversation again without waiting on it.
-      setPending((current) => (current === null ? null : { ...current, status: "sent" }));
-      await draft.clear();
+      setPending((current) =>
+        current.map((message) =>
+          message.localId === localId
+            ? {
+                ...message,
+                status: "sent",
+                ...(accepted.id === undefined ? {} : { exchangeId: accepted.id }),
+              }
+            : message,
+        ),
+      );
+      await draft.clear().catch(() => {});
       if (demo) {
         const now = new Date();
         setDemoSent((earlier) => [
@@ -173,11 +201,15 @@ function Conversation() {
           t`Saved. The first message waiting reaches ${name} the moment they say yes; the rest come with their mornings.`,
         );
       }
-      if (demo) setPending(null);
+      if (demo) setPending((current) => current.filter((message) => message.localId !== localId));
       void queries.invalidateQueries({ queryKey: ["exchanges"] });
       void queries.invalidateQueries({ queryKey: ["today"] });
     },
-    onError: () => setPending(null),
+    onError: (_error, { localId }) =>
+      setPending((current) => current.filter((message) => message.localId !== localId)),
+    onSettled: () => {
+      sending.current = false;
+    },
   });
 
   const react = useMutation({
@@ -239,34 +271,27 @@ function Conversation() {
           ],
         };
   });
-  // The sent words leave the "pending" bubble once the conversation itself has them, or after a
-  // while in any case, so a reading that never comes back cannot keep a stale bubble.
-  const arrived =
-    pending !== null &&
-    pending.status === "sent" &&
-    (Date.now() - pending.since > 20_000 ||
-      messages.some(
-        (message) =>
-          message.side === "me" &&
-          message.text === pending.text &&
-          message.at >= pending.since - 60_000,
-      ));
+  const outstanding = pending.filter((message) => !pendingHasArrived(message, built));
   useEffect(() => {
-    if (arrived) setPending(null);
-  }, [arrived]);
-  if (pending !== null && pending.text.length > 0 && !arrived) {
-    const now = Date.now();
-    const date = new Date(now);
+    if (outstanding.length !== pending.length) {
+      const arrived = pending.filter((message) => !outstanding.includes(message));
+      setPending((current) =>
+        current.filter((message) => !arrived.some((sent) => sent.localId === message.localId)),
+      );
+    }
+  }, [outstanding, pending]);
+  for (const message of outstanding) {
+    const date = new Date(message.since);
     messages.push({
-      key: "pending",
-      exchangeId: "pending",
+      key: message.localId,
+      exchangeId: message.exchangeId ?? message.localId,
       side: "me",
       from: "",
-      at: now,
-      day: localDateIn(now, light?.timeZone),
+      at: message.since,
+      day: localDateIn(message.since, light?.timeZone),
       time: clockTime(date.getHours(), date.getMinutes()),
-      text: pending.text,
-      status: pending.status,
+      text: message.text,
+      status: message.status,
       reactions: [],
     });
   }
@@ -393,14 +418,18 @@ function Conversation() {
         <SecondaryButton label={t`Go to Settings`} onPress={() => router.push("/settings")} />
       ) : (
         <ChatComposer
-          value={draft.text}
+          value={send.isPending ? "" : draft.text}
           onChangeText={(text) => {
             draft.setText(text);
             setNote(null);
           }}
           placeholder={t`Write to ${name}`}
           sendLabel={invited ? t`Save for when they say yes` : t`Send now`}
-          onSend={() => send.mutate()}
+          onSend={() => {
+            if (sending.current || !draft.text.trim()) return;
+            sending.current = true;
+            send.mutate({ text: draft.text.trim(), localId: `pending:${Date.now()}` });
+          }}
           {...(moreActions.length === 0 ? {} : { onMore: () => setSheet("more") })}
           disabled={send.isPending || !draft.ready}
           canSend={canSend}
@@ -474,9 +503,7 @@ function Conversation() {
           }}
           scrollEventThrottle={100}
           keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl refreshing={history.refreshing} onRefresh={history.refresh} />
-          }
+          refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: space.l,

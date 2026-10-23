@@ -110,13 +110,17 @@ jobs:
           python3 apps/app/scripts/serve-web.py apps/app/dist 8082 > "$RUNNER_TEMP/serve.log" 2>&1 &
           for _ in $(seq 1 30); do curl -fs http://localhost:8082 > /dev/null && exit 0; sleep 1; done
           cat "$RUNNER_TEMP/serve.log"; exit 1
+      - name: Check the Week offer first
+        run: maestro test --headless --screen-size 430x2400 --debug-output "$RUNNER_TEMP/maestro-first-week" --test-output-dir "$RUNNER_TEMP/maestro-first-week" --format junit --output "$RUNNER_TEMP/maestro-first-week.xml" -e APP_URL=http://localhost:8082 apps/app/.maestro/demo/first-week.yaml
       - name: Walk the flows
-        run: maestro test --headless --screen-size 430x2400 --format junit --output "$RUNNER_TEMP/maestro.xml" -e APP_URL=http://localhost:8082 apps/app/.maestro/demo
+        run: maestro test --headless --screen-size 430x2400 --debug-output "$RUNNER_TEMP/maestro-artifacts" --test-output-dir "$RUNNER_TEMP/maestro-artifacts" --format junit --output "$RUNNER_TEMP/maestro.xml" -e APP_URL=http://localhost:8082 apps/app/.maestro/demo
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: maestro
           path: |
             ${{ runner.temp }}/maestro.xml
-            ~/.maestro/tests
+            ${{ runner.temp }}/maestro-first-week.xml
+            ${{ runner.temp }}/maestro-first-week
+            ${{ runner.temp }}/maestro-artifacts
           retention-days: 7

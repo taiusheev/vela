@@ -5,6 +5,8 @@ import {
   type ChatMessage,
   dayLabel,
   newestMine,
+  type PendingChatMessage,
+  pendingHasArrived,
   showsStatus,
   showsTime,
   startsGroup,
@@ -281,5 +283,42 @@ describe("this week's windows", () => {
     expect(week[0]).toEqual({ date: "2026-10-19", hasMessage: true, ahead: false, today: true });
     expect(week.filter((day) => day.hasMessage)).toHaveLength(1);
     expect(week.slice(1).every((day) => day.ahead)).toBe(true);
+  });
+});
+
+describe("outgoing message reconciliation", () => {
+  const pending: PendingChatMessage = {
+    localId: "local",
+    text: "Hello",
+    since: 100_000,
+    status: "sending",
+    existingIds: ["old"],
+  };
+  const message = (exchangeId: string, text = "Hello", side: "me" | "her" = "me") => ({
+    key: `${exchangeId}:ask`,
+    exchangeId,
+    side,
+    text,
+    at: 100_000,
+    from: "Mia",
+    day: "2026-10-23",
+    time: "08:00",
+    reactions: [],
+  });
+  it("hides the local copy when polling beats the send acknowledgement", () => {
+    expect(pendingHasArrived(pending, [message("new")])).toBe(true);
+  });
+  it("never matches an earlier identical message or the parent's words", () => {
+    expect(pendingHasArrived(pending, [message("old"), message("new", "Hello", "her")])).toBe(
+      false,
+    );
+  });
+  it("uses the accepted exchange ID after acknowledgement, even for repeated words", () => {
+    const accepted = { ...pending, status: "sent" as const, exchangeId: "accepted" };
+    expect(pendingHasArrived(accepted, [message("other")])).toBe(false);
+    expect(pendingHasArrived(accepted, [message("accepted", "server words")])).toBe(true);
+  });
+  it("does not discard a delayed send just because time passed", () => {
+    expect(pendingHasArrived({ ...pending, since: 1 }, [])).toBe(false);
   });
 });

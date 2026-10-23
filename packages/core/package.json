@@ -5,7 +5,8 @@
   "description": "Pure domain logic: local time, the exchange state machine, the daily schedule, ask selection, arrival rendering, button codec, idempotency keys, tuning, parent commands, turns, read-back, weekly read rendering. No I/O.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./weekly-support": "./src/weekly-support.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

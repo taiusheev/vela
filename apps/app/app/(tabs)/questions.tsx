@@ -10,6 +10,7 @@ import { Card, Eyebrow, PrimaryButton, SecondaryButton, Words } from "../../src/
 import { dayName } from "../../src/data/format.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
 import { tomorrowIn } from "../../src/data/story.ts";
+import { usePullRefresh } from "../../src/data/usePullRefresh.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
@@ -21,6 +22,7 @@ export default function QuestionsScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const day = useToday();
+  const pull = usePullRefresh(day.refresh);
   const [selected, select] = useState<string>();
   const parent = selectedLight(day.today.lights, selected);
   const turn = day.today.tomorrow.find((item) => item.recipientId === parent?.memberId);
@@ -35,7 +37,7 @@ export default function QuestionsScreen() {
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={day.loading} onRefresh={day.refresh} />}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
       style={{ backgroundColor: palette.bg }}
       contentContainerStyle={{
         paddingTop: insets.top + space.xl,

@@ -30,6 +30,7 @@
     "@lingui/react": "catalog:",
     "@tanstack/react-query": "^5.103.2",
     "@vela/contracts": "workspace:*",
+    "@vela/core": "workspace:*",
     "expo": "^57.0.24",
     "expo-audio": "~57.0.5",
     "expo-constants": "~57.0.19",

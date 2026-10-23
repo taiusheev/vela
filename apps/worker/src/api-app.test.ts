@@ -2182,6 +2182,85 @@ describe("composing an ask", () => {
     expect(writes.nudges.deliver).toHaveBeenCalledWith("group-row");
   });
 
+  it("acknowledges a committed message while its queue handoff is still waiting", async () => {
+    const { app, writes, close } = fixture(true);
+    let release: (() => void) | undefined;
+    const queued = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    writes.nudges.deliver.mockReturnValue(queued);
+    const background: Promise<unknown>[] = [];
+    let response: Response | undefined;
+    const request = Promise.resolve(
+      app.fetch(composeRequest(undefined, { authorization: "Bearer good" }), undefined, {
+        waitUntil: (work) => {
+          background.push(work);
+        },
+        passThroughOnException() {},
+        props: {},
+      }),
+    ).then((value) => {
+      response = value;
+    });
+    try {
+      await vi.waitFor(() => expect(response?.status).toBe(201));
+      expect(background).toHaveLength(1);
+      expect(writes.nudges.deliver).toHaveBeenCalledWith("group-row");
+      expect(close).toHaveBeenCalledOnce();
+    } finally {
+      release?.();
+      await request;
+      await Promise.all(background);
+    }
+  });
+
+  it("still awaits the queue when no Worker lifetime is available", async () => {
+    const { app, writes } = fixture(true);
+    let release: (() => void) | undefined;
+    writes.nudges.deliver.mockReturnValue(
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    );
+    let settled = false;
+    const request = Promise.resolve(
+      app.request(composeRequest(undefined, { authorization: "Bearer good" })),
+    ).then((response) => {
+      settled = true;
+      return response;
+    });
+    try {
+      await vi.waitFor(() => expect(writes.nudges.deliver).toHaveBeenCalled());
+      expect(settled).toBe(false);
+    } finally {
+      release?.();
+    }
+    expect((await request).status).toBe(201);
+  });
+
+  it("keeps acceptance and safe failure reporting when a background queue handoff fails", async () => {
+    const { app, writes, logger } = fixture(true);
+    writes.nudges.deliver.mockRejectedValue(new Error("synthetic private content"));
+    const background: Promise<unknown>[] = [];
+    const response = await app.fetch(
+      composeRequest(undefined, { authorization: "Bearer good" }),
+      undefined,
+      {
+        waitUntil: (work) => {
+          background.push(work);
+        },
+        passThroughOnException() {},
+        props: {},
+      },
+    );
+    await Promise.all(background);
+    expect(response.status).toBe(201);
+    expect(logger.error).toHaveBeenCalledWith("api_after_commit_deliver_failed", {
+      outboundId: "group-row",
+    });
+    expect(JSON.stringify(logger.error.mock.calls)).not.toContain("synthetic private content");
+  });
+
   it("marks a replayed compose so the screen knows nothing new was written", async () => {
     const { app, writes } = fixture(true);
     writes.services.composeApiAsk.mockResolvedValue({

@@ -553,6 +553,19 @@ function validateWrite(
   };
 }
 
+/** The write is already durable. Keep queue delivery alive without delaying acceptance.
+ * Local callers without a Worker lifetime still await it, so work is never fire-and-forget. */
+async function handOffCommittedMessage(c: Context<RuntimeEnv>, work: Promise<void>): Promise<void> {
+  let lifetime: Context<RuntimeEnv>["executionCtx"] | undefined;
+  try {
+    lifetime = c.executionCtx;
+  } catch {
+    // Hono's executionCtx getter throws outside a Worker request.
+  }
+  if (lifetime === undefined) await work;
+  else lifetime.waitUntil(work);
+}
+
 export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
   const app = new Hono<RuntimeEnv>();
   const authenticate = createApiAuthentication<RuntimeEnv>(runtime.verifySession);
@@ -1815,9 +1828,12 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           throw new Error("Invalid API mutation response");
         }
         const ask = ApiComposedAsk.parse(result.response.body);
-        // Committed: now the line that tells the family group tomorrow's morning is taken.
-        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
-          runtime.logger.error(event, fields),
+        // Only committed outbound IDs are handed off; reconcile still retries queued work.
+        await handOffCommittedMessage(
+          c,
+          runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+            runtime.logger.error(event, fields),
+          ),
         );
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ask, 201);

@@ -114,20 +114,20 @@ describe("renderArrival in English", () => {
 
   it("prefaces a repeat, and a repeat carries no apology for lateness", () => {
     expect(paragraphs(render({ repeat: true }))[0]).toBe(
-      "In case you missed it:\nGood morning, Mrs Chen.",
+      "No rush — here’s the message from this morning.",
     );
     expect(paragraphs(render({ repeat: true, late: true }))[0]).toBe(
-      "In case you missed it:\nGood morning, Mrs Chen.",
+      "No rush — here’s the message from this morning.",
     );
   });
 
-  it("words the greeting three ways in turn by her local date, the same for a repeat", () => {
+  it("varies the first greeting and follows up without repeating it", () => {
     const greeting = (date: string, repeat = false) => paragraphs(render({ date, repeat }))[0];
     expect(greeting("2026-10-16")).toBe("Good morning, Mrs Chen.");
     expect(greeting("2026-10-17")).toBe("Morning, Mrs Chen!");
     expect(greeting("2026-10-18")).toBe("Hello Mrs Chen, good morning.");
     expect(greeting("2026-10-19")).toBe("Good morning, Mrs Chen.");
-    expect(greeting("2026-10-17", true)).toBe("In case you missed it:\nMorning, Mrs Chen!");
+    expect(greeting("2026-10-17", true)).toBe("No rush — here’s the message from this morning.");
   });
 
   it("ends with how to answer only on her first mornings", () => {
@@ -465,9 +465,8 @@ describe("renderArrival in Traditional Chinese", () => {
       }),
     });
     expect(paragraphs(arrival)).toEqual([
-      `${t(lang, "arrival.repeat")}\n${t(lang, "arrival.greeting", { address: "陳奶奶" })}`,
+      t(lang, "arrival.repeat"),
       `${t(lang, "arrival.photo_choice")}\n${t(lang, "arrival.signed_on_behalf", { asker: "小美", child: "小寶" })}`,
-      t(lang, "arrival.hint"),
     ]);
     expect(paragraphs(arrival)[1]).toBe("選哪一張呢？請按 1 或 2。\n—— 小美（替小寶問）");
     expect(labels(arrival)).toEqual([

@@ -342,6 +342,25 @@ describe("the API's host on the pilot Worker", () => {
     expect(build).toHaveBeenCalledOnce();
   });
 
+  it("forwards each request's Worker lifetime to the retained API app", async () => {
+    const fetch = vi.fn<ApiApp["fetch"]>().mockResolvedValue(new Response(null, { status: 204 }));
+    const handler = createApiHandler(() => ({ fetch }));
+    const first = {
+      waitUntil: vi.fn(),
+      passThroughOnException() {},
+      props: {},
+    } as unknown as ExecutionContext;
+    const second = {
+      waitUntil: vi.fn(),
+      passThroughOnException() {},
+      props: {},
+    } as unknown as ExecutionContext;
+    const request = apiRequest("/v1/me");
+    await handler(request, stagingEnv(), first);
+    await handler(request, stagingEnv(), second);
+    expect(fetch.mock.calls.map((call) => call[2])).toEqual([first, second]);
+  });
+
   it("builds the app again when the secret key or the issuer changes", async () => {
     const build = vi.fn<Build>(stubApp);
     const handler = createApiHandler(build);

@@ -469,7 +469,7 @@ describe("tickMember", () => {
 
     await advanceTo(her, at("2026-09-15", "10:30"));
     expect((await exchangeOn(her, "2026-09-15")).repeatedAt).toEqual(at("2026-09-15", "10:30"));
-    expect(texts(HER_CHAT)[1]).toContain("In case you missed it:");
+    expect(texts(HER_CHAT)[1]).toContain("No rush — here’s the message from this morning.");
     expect(await nextWake(her)).toEqual(at("2026-09-15", "14:00"));
 
     await advanceTo(her, at("2026-09-15", "14:00"));

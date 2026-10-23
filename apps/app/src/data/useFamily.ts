@@ -23,7 +23,7 @@ export interface FamilyView {
   trouble: boolean;
   loading: boolean;
   refreshing: boolean;
-  refresh(): void;
+  refresh(): Promise<void>;
   /** Pause or resume oneself; the example family answers at once, with nothing sent. */
   setPaused(paused: boolean): void;
   /** Leave the family; `onLeft` runs once the membership is closed. */
@@ -75,9 +75,9 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
   });
   const refetchRead = read.refetch;
   const refetchMe = me.refetch;
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     if (!enabled) return;
-    void refreshReads(refetchMe, ...(familyId === undefined ? [] : [refetchRead]));
+    await refreshReads(refetchMe, ...(familyId === undefined ? [] : [refetchRead]));
   }, [enabled, familyId, refetchMe, refetchRead]);
   const live = enabled && read.data !== undefined;
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
