@@ -15,7 +15,7 @@ export interface WeeklyReadView {
   loading: boolean;
   trouble: boolean;
   refreshing: boolean;
-  refresh(): void;
+  refresh(): Promise<void>;
   /** The read is for organisers (spec §13): anyone else is told so, and nothing is fetched. */
   organiser: boolean;
   /** Nobody in the family has said yes yet, so there is no week to read. */
@@ -54,9 +54,8 @@ export function useWeeklyRead(requested?: string): WeeklyReadView {
   });
 
   const refetch = query.refetch;
-  const refresh = useCallback(() => {
-    day.refresh();
-    if (enabled) void refetch();
+  const refresh = useCallback(async () => {
+    await Promise.all([day.refresh(), ...(enabled ? [refetch({ cancelRefetch: false })] : [])]);
   }, [day.refresh, enabled, refetch]);
 
   if (demoDataAllowed(apiConfigured(), accountsConfigured())) {

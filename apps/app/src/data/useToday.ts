@@ -272,7 +272,7 @@ export interface TodayView {
    */
   photos: boolean;
   updatedAt: number;
-  refresh(): void;
+  refresh(): Promise<void>;
   /**
    * Whether the API sends pushes (`ApiMe.push`, ADR-34). While it does not, nothing offers
    * notifications in passing, since none would come; You still shows this phone's state.
@@ -317,9 +317,9 @@ export function useToday(): TodayView {
 
   const refetchMe = me.refetch;
   const refetchDay = day.refetch;
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     if (!enabled) return;
-    void refreshReads(refetchMe, ...(familyId === undefined ? [] : [refetchDay]));
+    await refreshReads(refetchMe, ...(familyId === undefined ? [] : [refetchDay]));
   }, [enabled, familyId, refetchMe, refetchDay]);
 
   if (!enabled) {

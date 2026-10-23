@@ -84,7 +84,7 @@ export interface ExchangesView {
   live: boolean;
   loading: boolean;
   refreshing: boolean;
-  refresh(): void;
+  refresh(): Promise<void>;
   trouble: boolean;
   /** Another page exists within the thirty days; the list never scrolls past them. */
   more: boolean;
@@ -128,8 +128,8 @@ export function useExchanges(watch = false): ExchangesView {
           : 5_000,
   });
   const refetch = pages.refetch;
-  const refresh = useCallback(() => {
-    if (enabled) void refetch();
+  const refresh = useCallback(async () => {
+    if (enabled) await refetch({ cancelRefetch: false });
   }, [enabled, refetch]);
 
   if (!enabled) {

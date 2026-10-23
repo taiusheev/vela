@@ -57,6 +57,7 @@ import { useAway } from "../../src/data/useAway.ts";
 import { useCallingNumber } from "../../src/data/useCallingNumber.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
+import { usePullRefresh } from "../../src/data/usePullRefresh.ts";
 import { useQuiet } from "../../src/data/useQuiet.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { usePush } from "../../src/push/provider.tsx";
@@ -378,6 +379,7 @@ export default function TodayScreen() {
 }
 
 function FamilyToday({ day }: { day: TodayView }) {
+  const pull = usePullRefresh(day.refresh);
   const palette = usePalette();
   const { t } = useLingui();
   const askedLine = useAskedLine();
@@ -530,7 +532,7 @@ function FamilyToday({ day }: { day: TodayView }) {
     <View style={{ flex: 1, backgroundColor: palette.bg }}>
       <MorningLight />
       <ScrollView
-        refreshControl={<RefreshControl refreshing={day.loading} onRefresh={day.refresh} />}
+        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
         style={{ backgroundColor: "transparent" }}
         contentContainerStyle={{
           paddingTop: insets.top + space.xl,

@@ -38,7 +38,7 @@ export interface BookView {
   loading: boolean;
   trouble: boolean;
   refreshing: boolean;
-  refresh(): void;
+  refresh(): Promise<void>;
   /** An organiser takes a story out; Sunday and the book read again. */
   remove(exchangeId: string): void;
   removing: boolean;
@@ -130,8 +130,8 @@ export function useBook(familyId: string | undefined): BookView {
       live ? fetchBook(familyId ?? "", await account.token()) : demoBook(exchangesFixture()),
   });
   const refetch = read.refetch;
-  const refresh = useCallback(() => {
-    if (live) void refetch();
+  const refresh = useCallback(async () => {
+    if (live) await refetch({ cancelRefetch: false });
   }, [live, refetch]);
   const reread = async () => {
     if (live) await queries.invalidateQueries({ queryKey });

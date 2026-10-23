@@ -31,6 +31,7 @@ import { resetDraft } from "../src/data/onboarding-draft.ts";
 import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { useFamily } from "../src/data/useFamily.ts";
 import { useOneMoment } from "../src/data/useOneMoment.ts";
+import { usePullRefresh } from "../src/data/usePullRefresh.ts";
 import { type TodayView, useToday } from "../src/data/useToday.ts";
 import { useAppLocale } from "../src/i18n/provider.tsx";
 import { usePush } from "../src/push/provider.tsx";
@@ -67,7 +68,6 @@ function FamilyYou({ day }: { day: TodayView }) {
   const {
     family,
     refresh,
-    refreshing,
     live,
     trouble,
     loading: familyLoading,
@@ -82,10 +82,10 @@ function FamilyYou({ day }: { day: TodayView }) {
       refresh();
     }, [day.refresh, refresh]),
   );
-  const retry = () => {
-    day.refresh();
-    refresh();
-  };
+  const retry = useCallback(async () => {
+    await Promise.all([day.refresh(), refresh()]);
+  }, [day.refresh, refresh]);
+  const pull = usePullRefresh(retry);
   const [seesOpen, setSeesOpen] = useState(false);
   const [pausing, confirmPause] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -127,7 +127,7 @@ function FamilyYou({ day }: { day: TodayView }) {
       />
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={retry} />}
+        refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingTop: space.l,

@@ -491,6 +491,10 @@ msgstr ""
 msgid "A little light from home."
 msgstr ""
 
+#: src/components/weekly-support.tsx
+msgid "A little practical help"
+msgstr ""
+
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr ""
@@ -967,6 +971,10 @@ msgstr ""
 msgid "Choose a time in {zone}. Everything waits until they accept the invitation."
 msgstr ""
 
+#: src/components/weekly-support.tsx
+msgid "Choose an offer to edit it before sending."
+msgstr ""
+
 #: src/components/photo-reply.tsx
 msgid "Choose another"
 msgstr ""
@@ -1109,6 +1117,10 @@ msgstr ""
 
 #: src/components/test-sign-in-details.tsx
 msgid "Copy these ids into the private Terminal helper for the dedicated test account."
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "Could I help with a meal, an errand or getting somewhere this week? Tell me what would make things easier."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -1366,6 +1378,10 @@ msgstr ""
 
 #: src/data/onboarding.ts
 msgid "Garden & plants"
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "General ways to offer support. Let {name} choose what feels helpful."
 msgstr ""
 
 #: src/auth/phone.ts
@@ -2314,6 +2330,22 @@ msgstr ""
 
 #: src/data/notifications.ts
 msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "Offer a call or some company. Make room to listen to how the week has felt."
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "Offer practical help"
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "Offer some time together"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -3845,6 +3877,10 @@ msgstr ""
 msgid "Throw this recording away"
 msgstr ""
 
+#: src/components/weekly-support.tsx
+msgid "Time together"
+msgstr ""
+
 #: app/morning-settings.tsx
 msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 msgstr ""
@@ -4374,6 +4410,10 @@ msgstr ""
 msgid "What they call you"
 msgstr ""
 
+#: src/components/weekly-support.tsx
+msgid "What would help this week?"
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "What you call them"
 msgstr ""
@@ -4462,6 +4502,10 @@ msgstr ""
 
 #: app/(tabs)/exchanges.tsx
 msgid "Worth keeping?"
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "Would you like a call or some company this week? When would suit you?"
 msgstr ""
 
 #: app/(tabs)/questions.tsx

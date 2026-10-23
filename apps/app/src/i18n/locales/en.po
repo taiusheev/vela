@@ -497,6 +497,10 @@ msgstr "A little closer to your family. Use your email to get started or sign in
 msgid "A little light from home."
 msgstr "A little light from home."
 
+#: src/components/weekly-support.tsx
+msgid "A little practical help"
+msgstr "A little practical help"
+
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "A live connection has not been set up."
@@ -973,6 +977,10 @@ msgstr "Choose a photo"
 msgid "Choose a time in {zone}. Everything waits until they accept the invitation."
 msgstr "Choose a time in {zone}. Everything waits until they accept the invitation."
 
+#: src/components/weekly-support.tsx
+msgid "Choose an offer to edit it before sending."
+msgstr "Choose an offer to edit it before sending."
+
 #: src/components/photo-reply.tsx
 msgid "Choose another"
 msgstr "Choose another"
@@ -1116,6 +1124,10 @@ msgstr "Copy the private connection code from your own Vela chat and paste it be
 #: src/components/test-sign-in-details.tsx
 msgid "Copy these ids into the private Terminal helper for the dedicated test account."
 msgstr "Copy these ids into the private Terminal helper for the dedicated test account."
+
+#: src/components/weekly-support.tsx
+msgid "Could I help with a meal, an errand or getting somewhere this week? Tell me what would make things easier."
+msgstr "Could I help with a meal, an errand or getting somewhere this week? Tell me what would make things easier."
 
 #: src/components/telegram-family-link.tsx
 msgid "Create a new connection"
@@ -1373,6 +1385,10 @@ msgstr "From a voice note"
 #: src/data/onboarding.ts
 msgid "Garden & plants"
 msgstr "Garden & plants"
+
+#: src/components/weekly-support.tsx
+msgid "General ways to offer support. Let {name} choose what feels helpful."
+msgstr "General ways to offer support. Let {name} choose what feels helpful."
 
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
@@ -2321,6 +2337,22 @@ msgstr "Off: nothing when {her} answers or when your turn comes."
 #: src/data/notifications.ts
 msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
 msgstr "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
+
+#: src/components/weekly-support.tsx
+msgid "Offer a call or some company. Make room to listen to how the week has felt."
+msgstr "Offer a call or some company. Make room to listen to how the week has felt."
+
+#: src/components/weekly-support.tsx
+msgid "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
+msgstr "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
+
+#: src/components/weekly-support.tsx
+msgid "Offer practical help"
+msgstr "Offer practical help"
+
+#: src/components/weekly-support.tsx
+msgid "Offer some time together"
+msgstr "Offer some time together"
 
 #: src/components/onboarding/questions.tsx
 msgid "On a quiet morning you’ll see them with a Call button. Nobody hears from Vela until they say yes themselves."
@@ -3851,6 +3883,10 @@ msgstr "Those are the ones from the seeds you saved"
 msgid "Throw this recording away"
 msgstr "Throw this recording away"
 
+#: src/components/weekly-support.tsx
+msgid "Time together"
+msgstr "Time together"
+
 #: app/morning-settings.tsx
 msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 msgstr "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
@@ -4380,6 +4416,10 @@ msgstr "What the read will show"
 msgid "What they call you"
 msgstr "What they call you"
 
+#: src/components/weekly-support.tsx
+msgid "What would help this week?"
+msgstr "What would help this week?"
+
 #: src/components/onboarding/questions.tsx
 msgid "What you call them"
 msgstr "What you call them"
@@ -4469,6 +4509,10 @@ msgstr "Work & advice"
 #: app/(tabs)/exchanges.tsx
 msgid "Worth keeping?"
 msgstr "Worth keeping?"
+
+#: src/components/weekly-support.tsx
+msgid "Would you like a call or some company this week? When would suit you?"
+msgstr "Would you like a call or some company this week? When would suit you?"
 
 #: app/(tabs)/questions.tsx
 msgid "Write a question for {parentName}"

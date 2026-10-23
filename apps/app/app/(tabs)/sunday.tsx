@@ -7,13 +7,14 @@ import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { FirstWeek } from "../../src/components/first-week.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
-import { StoryOfTheWeek } from "../../src/components/story-day.tsx";
 import { RoomWindow, SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
 import { SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
+import { WeeklySupport } from "../../src/components/weekly-support.tsx";
 import { localDayMonth } from "../../src/data/format.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
+import { usePullRefresh } from "../../src/data/usePullRefresh.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
 import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
 import { useWeeklyReadOpened } from "../../src/data/useWeeklyReadOpened.ts";
@@ -37,6 +38,7 @@ function FamilySunday({ day }: { day: TodayView }) {
   const { t } = useLingui();
   const [selected, select] = useState<string | undefined>();
   const view = useWeeklyRead(selected);
+  const pull = usePullRefresh(view.refresh);
   useFocusEffect(
     useCallback(() => {
       view.refresh();
@@ -66,7 +68,7 @@ function FamilySunday({ day }: { day: TodayView }) {
 
   return (
     <WarmPage
-      refreshControl={<RefreshControl refreshing={view.refreshing} onRefresh={view.refresh} />}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
     >
       {/* The tab's own name: Chinese calls the tab 週日, and a weekday 星期日. */}
       <ScreenHeading title={<Trans context="tab">Week</Trans>} />
@@ -176,15 +178,13 @@ function FamilySunday({ day }: { day: TodayView }) {
                   </View>
                 )}
               </RoomCard>
-              <StoryOfTheWeek
-                from={read.week.lights[0]?.date ?? ""}
-                to={read.week.lights.at(-1)?.date ?? ""}
-                {...(view.memberId === undefined ? {} : { memberId: view.memberId })}
-              />
             </>
           )}
         </>
       )}
+      {view.organiser && windowsFor !== undefined && windowsFor.invited !== true ? (
+        <WeeklySupport name={windowsFor.displayName} memberId={windowsFor.memberId} />
+      ) : null}
     </WarmPage>
   );
 }

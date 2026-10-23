@@ -9,15 +9,16 @@ import {
   Literata_500Medium,
   Literata_600SemiBold,
 } from "@expo-google-fonts/literata";
-import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { focusManager, QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { UsageAnalytics } from "../src/analytics/provider.tsx";
+import { apiConfigured, fetchMe } from "../src/api/client.ts";
 import { sessionRequests } from "../src/api/request-session.ts";
 import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
@@ -33,7 +34,11 @@ import { LocaleProvider, useAppLocale } from "../src/i18n/provider.tsx";
 import { PushProvider } from "../src/push/provider.tsx";
 import { useOpenTapped } from "../src/push/useOpenTapped.ts";
 import { activatePrivateSession, clearSessionDrafts } from "../src/storage/drafts.ts";
-import { activatePortraitSession, clearPortraitSession } from "../src/storage/portraits.ts";
+import {
+  activatePortraitSession,
+  clearPortraitSession,
+  closePortraitSession,
+} from "../src/storage/portraits.ts";
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
 
 void SplashScreen.preventAutoHideAsync();
@@ -61,7 +66,7 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
       clearPhotoCache();
       void clearAudioCache();
       try {
-        clearPortraitSession(scope);
+        closePortraitSession(scope);
       } catch {
         /* The closed session cannot read or save portraits. */
       }
@@ -70,15 +75,37 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
   }, [queries, scope]);
   return (
     <QueryClientProvider client={queries}>
+      <WarmAccount />
       <FamilySelectionProvider>
         <AskOutcomeProvider>{children}</AskOutcomeProvider>
       </FamilySelectionProvider>
     </QueryClientProvider>
   );
 }
+/** Start the signed-in account read while bundled fonts and language initialise. */
+function WarmAccount() {
+  const account = useAccount();
+  useQuery({
+    queryKey: ["me"],
+    enabled: apiConfigured() && account.ready && account.signedIn,
+    queryFn: async () => fetchMe(await account.token()),
+  });
+  return null;
+}
 function AccountQueries({ children }: { children: ReactNode }) {
   const account = useAccount();
   const scope = sessionScope(account);
+  const previousScope = useRef(scope);
+  useEffect(() => {
+    if (previousScope.current !== scope) {
+      try {
+        clearPortraitSession(previousScope.current);
+      } catch {
+        /* Closed scopes reject reads and late picker results even if file cleanup fails. */
+      }
+      previousScope.current = scope;
+    }
+  }, [scope]);
   activateOnboardingSession(account.signedIn ? scope : "guest");
   return (
     <SessionQueries key={scope} scope={scope}>

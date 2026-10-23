@@ -108,7 +108,7 @@ export const en = {
   "arrival.greeting_2": "Morning, {address}!",
   "arrival.greeting_3": "Hello {address}, good morning.",
   "arrival.late": "Sorry this is late.",
-  "arrival.repeat": "In case you missed it:",
+  "arrival.repeat": "No rush — here’s the message from this morning.",
   "arrival.readback_heading": "From your family:",
   "arrival.signed": "— {asker}",
   "arrival.signed_on_behalf": "— {asker}, for {child}",

@@ -498,6 +498,10 @@ msgstr "與家人再近一點。使用電子郵件註冊或登入。"
 msgid "A little light from home."
 msgstr "家裡傳來的一點光。"
 
+#: src/components/weekly-support.tsx
+msgid "A little practical help"
+msgstr "幫忙分擔一點日常瑣事"
+
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "尚未設定即時連線。"
@@ -974,6 +978,10 @@ msgstr "選一張照片"
 msgid "Choose a time in {zone}. Everything waits until they accept the invitation."
 msgstr "請選擇 {zone} 的時間。對方接受邀請之前，一切都會先保留。"
 
+#: src/components/weekly-support.tsx
+msgid "Choose an offer to edit it before sending."
+msgstr "選一個想提供的幫忙，編輯後再送出。"
+
 #: src/components/photo-reply.tsx
 msgid "Choose another"
 msgstr "換一張"
@@ -1117,6 +1125,10 @@ msgstr "從你自己的 Vela 聊天複製私人連結碼，貼在下方。給家
 #: src/components/test-sign-in-details.tsx
 msgid "Copy these ids into the private Terminal helper for the dedicated test account."
 msgstr "請使用專用測試帳號，將這些識別碼貼到終端機的私人提示中。"
+
+#: src/components/weekly-support.tsx
+msgid "Could I help with a meal, an errand or getting somewhere this week? Tell me what would make things easier."
+msgstr "這週有沒有需要我幫忙準備一餐、跑腿或接送？跟我說怎樣能讓你輕鬆一點。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Create a new connection"
@@ -1374,6 +1386,10 @@ msgstr "來自語音訊息"
 #: src/data/onboarding.ts
 msgid "Garden & plants"
 msgstr "園藝與植物"
+
+#: src/components/weekly-support.tsx
+msgid "General ways to offer support. Let {name} choose what feels helpful."
+msgstr "這些是一般的陪伴與幫忙方式，讓{name}選擇需要什麼。"
 
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
@@ -2322,6 +2338,22 @@ msgstr "已關閉：{her}回覆或輪到您提問時，都不會通知。"
 #: src/data/notifications.ts
 msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
 msgstr "已關閉：{her}回覆或輪到您提問時，都不會通知。如果哪天早上比較安靜，仍然會通知您。"
+
+#: src/components/weekly-support.tsx
+msgid "Offer a call or some company. Make room to listen to how the week has felt."
+msgstr "問問要不要聊個電話或一起坐坐，留點時間聽聽這週的心情。"
+
+#: src/components/weekly-support.tsx
+msgid "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
+msgstr "問問需不需要幫忙準備一餐、跑腿或接送，看看怎樣能讓這週輕鬆一點。"
+
+#: src/components/weekly-support.tsx
+msgid "Offer practical help"
+msgstr "問問需要什麼幫忙"
+
+#: src/components/weekly-support.tsx
+msgid "Offer some time together"
+msgstr "約個時間陪伴"
 
 #: src/components/onboarding/questions.tsx
 msgid "On a quiet morning you’ll see them with a Call button. Nobody hears from Vela until they say yes themselves."
@@ -3852,6 +3884,10 @@ msgstr "那些就是您留下來的種子種出來的"
 msgid "Throw this recording away"
 msgstr "刪掉這段錄音"
 
+#: src/components/weekly-support.tsx
+msgid "Time together"
+msgstr "留點時間陪伴"
+
 #: app/morning-settings.tsx
 msgid "Times are in {zone}. Today's morning stays at {timeAgain}. A new time starts tomorrow."
 msgstr "時間以 {zone} 為準。今天的早安訊息維持在 {timeAgain}，新時間從明天開始。"
@@ -4381,6 +4417,10 @@ msgstr "每週小記會有什麼"
 msgid "What they call you"
 msgstr "對方怎麼稱呼您"
 
+#: src/components/weekly-support.tsx
+msgid "What would help this week?"
+msgstr "這週可以怎麼陪伴？"
+
 #: src/components/onboarding/questions.tsx
 msgid "What you call them"
 msgstr "您怎麼稱呼對方"
@@ -4470,6 +4510,10 @@ msgstr "工作與建議"
 #: app/(tabs)/exchanges.tsx
 msgid "Worth keeping?"
 msgstr "值得保留嗎？"
+
+#: src/components/weekly-support.tsx
+msgid "Would you like a call or some company this week? When would suit you?"
+msgstr "這週想不想聊個電話，或找個時間一起坐坐？什麼時候方便？"
 
 #: app/(tabs)/questions.tsx
 msgid "Write a question for {parentName}"
