@@ -622,14 +622,15 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
-  // Memory suggestions send screened answers to an AI call: off everywhere until the founder approves
-  // the screening. The commit that turns it on changes this.
-  it("sends no answer to the memory suggestion call in any environment yet", () => {
+  // Memory suggestions send screened answers to an AI call: on where only test families are (founder,
+  // 23 Oct 2026, after the live eval run), off in production until privacy-notice v7 is live and
+  // families are told. The commit that turns it on in production changes this.
+  it("suggests memories in development and staging, and not yet in production", () => {
     expect(
       (["development", ...DEPLOYED] as const).map(
         (environment) => configOf("pilot", environment).vars.MEMORY_DISCOVERY,
       ),
-    ).toEqual(["off", "off", "off"]);
+    ).toEqual(["on", "on", "off"]);
   });
 
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
