@@ -466,14 +466,6 @@ msgstr "📷 用照片回覆"
 msgid "$79 a year"
 msgstr "每年 79 美元"
 
-#: src/components/first-week.tsx
-msgid "3 replies from the family"
-msgstr "家人回覆了 3 次"
-
-#: src/components/first-week.tsx
-msgid "5 mornings answered this week"
-msgstr "這週回覆了 5 個早上"
-
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr "完成連結不代表早晨訊息已送達或已收到回覆。"
@@ -757,10 +749,6 @@ msgstr "問問{name}，{what}還順利嗎"
 #: src/components/today-hero.tsx
 msgid "Ask {name} something"
 msgstr "問{name}一件事"
-
-#: src/components/first-week.tsx
-msgid "Ask {name} something for this week"
-msgstr "這週問{name}一件事"
 
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
@@ -1261,10 +1249,6 @@ msgstr "每一位"
 #: src/components/today-hero.tsx
 msgid "Everyone's light is on today"
 msgstr "今天每個人的燈都亮著"
-
-#: src/components/first-week.tsx
-msgid "Example"
-msgstr "範例"
 
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
@@ -3249,10 +3233,6 @@ msgstr "放進早安訊息"
 msgid "Something to ask next week"
 msgstr "下週可以問問看"
 
-#: src/components/first-week.tsx
-msgid "Something to ask next: which seeds would be good to plant together?"
-msgstr "下次可以問：哪些種子適合種在一起？"
-
 #: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "{notices}則中有{wrong}則真的有狀況。"
@@ -3609,10 +3589,6 @@ msgstr "附近的聯絡人由這個家庭的發起人選定。"
 #: app/ask.tsx
 msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr "第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
-
-#: src/components/first-week.tsx
-msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
-msgstr "花園提到了兩次：番茄，還有留到春天的種子。"
 
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
@@ -4408,10 +4384,6 @@ msgstr "家人說了什麼"
 #: app/settings.tsx
 msgid "What the family sees about you"
 msgstr "家人看得到您的哪些資訊"
-
-#: src/components/first-week.tsx
-msgid "What the read will show"
-msgstr "每週小記會有什麼"
 
 #: src/components/onboarding/questions.tsx
 msgid "What they call you"

@@ -1,14 +1,13 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { localDateIn } from "../data/chat.ts";
 import { localDayMonth } from "../data/format.ts";
 import type { TodayLight } from "../data/today.ts";
 import { useExchanges } from "../data/useExchanges.ts";
 import { usePalette } from "../theme/theme.tsx";
-import { radius, space, type } from "../theme/tokens.ts";
+import { space, type } from "../theme/tokens.ts";
 import { SectionTitle, SoftCard } from "./today-hero.tsx";
-import { SecondaryButton, Words } from "./ui.tsx";
+import { Words } from "./ui.tsx";
 
 function addDays(date: string, days: number): string {
   return new Date(Date.parse(`${date}T12:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
@@ -21,8 +20,8 @@ function daysToSunday(date: string): number {
 
 /**
  * The Week page before the first weekly read: when it comes, the parent's own words so far this
- * week, an example of what the read will show (marked as one), and a way to ask something now, so
- * the page is never just an empty promise. Only what the family already sees; no counts of missed
+ * week. Everyday support actions follow on the Week screen, so
+ * the page offers something useful before the first report. Only what the family already sees; no counts of missed
  * days and no health words beyond her own answers, which the family reads in Memories anyway.
  */
 export function FirstWeek({ light }: { light: TodayLight }) {
@@ -79,48 +78,6 @@ export function FirstWeek({ light }: { light: TodayLight }) {
           ))}
         </View>
       )}
-
-      <View style={{ gap: space.m }}>
-        <SectionTitle title={t`What the read will show`} />
-        <SoftCard>
-          <View style={{ gap: space.m }}>
-            <Text style={[type.label, { letterSpacing: 0, color: p.ink3 }]}>
-              <Trans>Example</Trans>
-            </Text>
-            <View style={{ gap: space.xs }}>
-              <Words variant="body">
-                <Trans>5 mornings answered this week</Trans>
-              </Words>
-              <Words variant="body">
-                <Trans>3 replies from the family</Trans>
-              </Words>
-            </View>
-            <View
-              style={{
-                gap: space.s,
-                padding: space.m,
-                borderRadius: radius.panel,
-                backgroundColor: p.surface2,
-              }}
-            >
-              <Text style={[type.story, { color: p.ink }]}>
-                <Trans>
-                  The garden came up twice: the tomatoes, and the seeds kept for spring.
-                </Trans>
-              </Text>
-              <Text style={[type.story, { color: p.ink }]}>
-                <Trans>Something to ask next: which seeds would be good to plant together?</Trans>
-              </Text>
-            </View>
-          </View>
-        </SoftCard>
-      </View>
-
-      <SecondaryButton
-        label={t`Ask ${name} something for this week`}
-        icon="ask"
-        onPress={() => router.push({ pathname: "/ask", params: { recipient: light.memberId } })}
-      />
     </View>
   );
 }

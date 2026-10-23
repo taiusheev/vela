@@ -459,14 +459,6 @@ msgstr ""
 msgid "$79 a year"
 msgstr ""
 
-#: src/components/first-week.tsx
-msgid "3 replies from the family"
-msgstr ""
-
-#: src/components/first-week.tsx
-msgid "5 mornings answered this week"
-msgstr ""
-
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr ""
@@ -749,10 +741,6 @@ msgstr ""
 #: app/ask.tsx
 #: src/components/today-hero.tsx
 msgid "Ask {name} something"
-msgstr ""
-
-#: src/components/first-week.tsx
-msgid "Ask {name} something for this week"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -1253,10 +1241,6 @@ msgstr ""
 
 #: src/components/today-hero.tsx
 msgid "Everyone's light is on today"
-msgstr ""
-
-#: src/components/first-week.tsx
-msgid "Example"
 msgstr ""
 
 #: src/components/today-heart.tsx
@@ -3242,10 +3226,6 @@ msgstr ""
 msgid "Something to ask next week"
 msgstr ""
 
-#: src/components/first-week.tsx
-msgid "Something to ask next: which seeds would be good to plant together?"
-msgstr ""
-
 #: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr ""
@@ -3601,10 +3581,6 @@ msgstr ""
 
 #: app/ask.tsx
 msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
-msgstr ""
-
-#: src/components/first-week.tsx
-msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -4400,10 +4376,6 @@ msgstr ""
 
 #: app/settings.tsx
 msgid "What the family sees about you"
-msgstr ""
-
-#: src/components/first-week.tsx
-msgid "What the read will show"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx

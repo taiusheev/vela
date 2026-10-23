@@ -465,14 +465,6 @@ msgstr "📷 Reply with a photo"
 msgid "$79 a year"
 msgstr "$79 a year"
 
-#: src/components/first-week.tsx
-msgid "3 replies from the family"
-msgstr "3 replies from the family"
-
-#: src/components/first-week.tsx
-msgid "5 mornings answered this week"
-msgstr "5 mornings answered this week"
-
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr "A connection is not a delivered morning message or a reply."
@@ -756,10 +748,6 @@ msgstr "Ask {name} how {what} went"
 #: src/components/today-hero.tsx
 msgid "Ask {name} something"
 msgstr "Ask {name} something"
-
-#: src/components/first-week.tsx
-msgid "Ask {name} something for this week"
-msgstr "Ask {name} something for this week"
 
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
@@ -1260,10 +1248,6 @@ msgstr "Everyone"
 #: src/components/today-hero.tsx
 msgid "Everyone's light is on today"
 msgstr "Everyone's light is on today"
-
-#: src/components/first-week.tsx
-msgid "Example"
-msgstr "Example"
 
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
@@ -3248,10 +3232,6 @@ msgstr "Something for her morning"
 msgid "Something to ask next week"
 msgstr "Something to ask next week"
 
-#: src/components/first-week.tsx
-msgid "Something to ask next: which seeds would be good to plant together?"
-msgstr "Something to ask next: which seeds would be good to plant together?"
-
 #: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "Something was wrong in {wrong} of {notices}."
@@ -3608,10 +3588,6 @@ msgstr "The family's organisers choose the people nearby."
 #: app/ask.tsx
 msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
-
-#: src/components/first-week.tsx
-msgid "The garden came up twice: the tomatoes, and the seeds kept for spring."
-msgstr "The garden came up twice: the tomatoes, and the seeds kept for spring."
 
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
@@ -4407,10 +4383,6 @@ msgstr "What the family said"
 #: app/settings.tsx
 msgid "What the family sees about you"
 msgstr "What the family sees about you"
-
-#: src/components/first-week.tsx
-msgid "What the read will show"
-msgstr "What the read will show"
 
 #: src/components/onboarding/questions.tsx
 msgid "What they call you"
