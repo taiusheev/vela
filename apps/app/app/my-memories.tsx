@@ -42,10 +42,7 @@ export default function MyMemoriesScreen() {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const { t } = useLingui();
-  const { familyId, today } = useToday();
-  // Whose words a shared memory is: the parent's name from Today, else a plain word.
-  const authorOf = (memberId: string) =>
-    today.lights.find((light) => light.memberId === memberId)?.displayName ?? t`Your family`;
+  const { familyId } = useToday();
   const memories = useMyMemories(familyId);
   const [pane, setPane] = useState<Pane>({ kind: "list" });
   const [notice, setNotice] = useState<Notice>(null);
@@ -203,29 +200,6 @@ export default function MyMemoriesScreen() {
   } else {
     body = (
       <View style={{ gap: space.xl }}>
-        {memories.shared.length === 0 ? null : (
-          <View style={{ gap: space.m }}>
-            <Words variant="heading" accessibilityRole="header">
-              <Trans>Shared with you</Trans>
-            </Words>
-            {memories.shared.map((item) => {
-              const author = authorOf(item.member_id);
-              const when = localDayMonth(item.kept_at.slice(0, 10));
-              return (
-                <SoftCard key={item.id}>
-                  <View style={{ gap: space.m }}>
-                    <Quote words={item.quote} />
-                    <Words variant="caption" tone="ink3">
-                      <Trans>
-                        {author} kept these words on {when} and shared them with you.
-                      </Trans>
-                    </Words>
-                  </View>
-                </SoftCard>
-              );
-            })}
-          </View>
-        )}
         {notice === null ? null : (
           <View accessibilityLiveRegion="polite">
             <Words variant="body" tone="action">

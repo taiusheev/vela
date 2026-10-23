@@ -1,29 +1,14 @@
 /**
- * Memory suggestions from her own answers (privacy-notice v7 wording, consent.rich_memories@2):
- * after an answer is understood, an ordinary one may go to `memory_pick`, which points at up to two
- * exact phrases; code keeps only phrases found word for word and proposes them as her private
- * candidates. Off unless both `richMemories` and `memoryDiscovery` are on (MEMORY_DISCOVERY is off
- * in every environment until the founder approves the screening).
- *
- * Screening comes first and fails closed. Her words reach the memory model only when every one of
- * these, each independent of that model, says the answer is ordinary:
+ * The screen an answer passes before her words may reach the memory model (ADR-50: suggestions to
+ * the family of answers worth keeping, `memories.ts`). It fails closed: her words go only when every
+ * one of these, each independent of that model, says the answer is ordinary:
  * 1. the flag call ran and raised nothing;
  * 2. the understand call ran and named no health mention (read before the no-consent wipe);
  * 3. none of the health, body, money, religion, politics or loss words below is in her words.
- * An answer before her yes, a withdrawn yes, or an older version gets nothing, and the candidate
- * service checks all of that again with the source under lock.
  */
 import type { AiOutcome, FlagResult, Understanding } from "@vela/ai";
-import { type answers, consents, type Exchange, type Member } from "@vela/db";
-import { and, desc, eq } from "drizzle-orm";
-import type { Deps } from "./deps.ts";
-import { errorLabel } from "./errors.ts";
-import { offerMemory } from "./memory-chat.ts";
-import {
-  proposeMemoryCandidate,
-  RICH_MEMORY_CONSENT_VERSION,
-  sourceWords,
-} from "./rich-memories.ts";
+import type { answers } from "@vela/db";
+import { sourceWords } from "./rich-memories.ts";
 
 /**
  * Words that keep an answer away from the memory model, in English and Traditional Chinese. Broad
@@ -69,90 +54,4 @@ export function screenForMemories(
   if (screen.understanding.value.mentions.health.length > 0) return "health_mentioned";
   if (hasSensitiveWords(words.text)) return "sensitive_words";
   return null;
-}
-
-/** Her current memory yes, given before this answer arrived; anything else permits nothing. */
-async function permitted(
-  deps: Pick<Deps, "db">,
-  member: Member,
-  answer: typeof answers.$inferSelect,
-): Promise<boolean> {
-  const [latest] = await deps.db
-    .select()
-    .from(consents)
-    .where(and(eq(consents.memberId, member.id), eq(consents.kind, "rich_memories")))
-    .orderBy(desc(consents.givenAt), desc(consents.id))
-    .limit(1);
-  return (
-    latest !== undefined &&
-    latest.answer === "yes" &&
-    latest.withdrawnAt === null &&
-    latest.textVersion === RICH_MEMORY_CONSENT_VERSION &&
-    latest.givenAt.getTime() <= answer.receivedAt.getTime()
-  );
-}
-
-/**
- * Proposes her memory candidates from one understood answer. Never throws: a failure here must not
- * undo or repeat her answer's understanding, so it is logged by label and nothing is proposed.
- * Logs only counts and reasons, never her words.
- */
-export async function discoverMemories(
-  deps: Deps,
-  ctx: { answer: typeof answers.$inferSelect; member: Member; exchange: Exchange },
-  screen: DiscoveryScreen,
-): Promise<number> {
-  const { answer, member, exchange } = ctx;
-  try {
-    if (deps.config.richMemories !== true || deps.config.memoryDiscovery !== true) return 0;
-    const skip = screenForMemories(answer, screen);
-    if (skip !== null) {
-      deps.logger.info("memory_discovery_skipped", { answerId: answer.id, reason: skip });
-      return 0;
-    }
-    if (!(await permitted(deps, member, answer))) {
-      deps.logger.info("memory_discovery_skipped", {
-        answerId: answer.id,
-        reason: "no_permission",
-      });
-      return 0;
-    }
-    const words = sourceWords(answer);
-    if (words === null) return 0;
-    const picked = await deps.ai.memoryPick({
-      lang: member.language,
-      addressForm: member.addressForm ?? member.displayName,
-      ask: exchange.text,
-      answer: words.text,
-    });
-    if (!picked.ok) {
-      deps.logger.warn("memory_discovery_failed", { answerId: answer.id });
-      return 0;
-    }
-    let proposed = 0;
-    for (const pick of picked.value.picks) {
-      const quote = pick.quote.trim();
-      // Code, not the model, decides what her words are: only an exact phrase of hers is kept.
-      const start = words.text.indexOf(quote);
-      if (quote.length < 3 || start === -1 || hasSensitiveWords(quote)) continue;
-      const id = await proposeMemoryCandidate(
-        deps,
-        { source_answer_id: answer.id, kind: pick.kind, start, end: start + quote.length },
-        { answerId: answer.id, ordinaryText: words.text },
-      );
-      if (id === null) continue;
-      proposed += 1;
-      // One offer per answer in her chat, so a long answer never turns into a string of questions.
-      if (proposed === 1) await offerMemory(deps, member, id, quote);
-    }
-    deps.logger.info("memory_discovery", {
-      answerId: answer.id,
-      picked: picked.value.picks.length,
-      proposed,
-    });
-    return proposed;
-  } catch (error) {
-    deps.logger.error("memory_discovery_error", { answerId: answer.id, error: errorLabel(error) });
-    return 0;
-  }
 }

@@ -306,7 +306,7 @@ function fixture(
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>().mockResolvedValue(FAMILY),
     loadApiBook: vi
       .fn<ApiReadServices["loadApiBook"]>()
-      .mockResolvedValue({ entries: [], coming: [], recipes: [] }),
+      .mockResolvedValue({ entries: [], coming: [], recipes: [], suggestions: [] }),
     loadApiReminders: vi
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
@@ -459,6 +459,8 @@ function fixture(
       removeApiBookEntry: vi
         .fn()
         .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),
+      keepApiAnswer: vi.fn().mockRejectedValue(new Error("no keeping in these tests")),
+      dismissApiSuggestion: vi.fn().mockRejectedValue(new Error("no suggestions in these tests")),
       askApiToLookIn: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["askApiToLookIn"]>()
         .mockResolvedValue({

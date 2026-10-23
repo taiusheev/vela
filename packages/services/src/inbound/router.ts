@@ -46,7 +46,7 @@ import {
   resolveGroupSender,
   sendOutsideGateway,
 } from "../group.ts";
-import { handleMemoryOfferButton, handleMemoryPermissionButton } from "../memory-chat.ts";
+import { handleRetiredMemoryButton } from "../memories.ts";
 import { handleLookInButton } from "../nearby-ask.ts";
 import {
   handleNearbyConsentButton,
@@ -289,10 +289,10 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
   }
   switch (action.type) {
     case "memory_permission":
-      await handleMemoryPermissionButton(deps, event, action);
+      await handleRetiredMemoryButton(deps, event);
       return;
     case "memory_offer":
-      await handleMemoryOfferButton(deps, event, action);
+      await handleRetiredMemoryButton(deps, event);
       return;
     case "consent_both":
       await handleCombinedConsentButton(deps, event, action);

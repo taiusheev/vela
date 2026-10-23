@@ -189,6 +189,11 @@ export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
 export { ingestExchangeMedia, storeInboundCopy } from "./inbound-media-copy.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
+export {
+  type ApiKeepSuggestion,
+  dismissApiSuggestion,
+  keepApiAnswer,
+} from "./memories.ts";
 export { withdrawOwnMemoryConsent } from "./memory-consent.ts";
 export {
   keepMemoryCandidate,

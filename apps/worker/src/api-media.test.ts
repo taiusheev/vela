@@ -131,7 +131,7 @@ function fixture(options: FixtureOptions = {}) {
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>(unused("the family")),
     loadApiBook: vi
       .fn<ApiReadServices["loadApiBook"]>()
-      .mockResolvedValue({ entries: [], coming: [], recipes: [] }),
+      .mockResolvedValue({ entries: [], coming: [], recipes: [], suggestions: [] }),
     loadApiReminders: vi
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
@@ -192,6 +192,8 @@ function fixture(options: FixtureOptions = {}) {
       removeApiBookEntry: vi
         .fn()
         .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),
+      keepApiAnswer: vi.fn<Writes["services"]["keepApiAnswer"]>(unused("keep")),
+      dismissApiSuggestion: vi.fn<Writes["services"]["dismissApiSuggestion"]>(unused("dismiss")),
       askApiToLookIn: vi.fn<Writes["services"]["askApiToLookIn"]>(unused("ask to look in")),
       inviteApiNearby: vi.fn<Writes["services"]["inviteApiNearby"]>(unused("nearby invite")),
       markApiQuietUseful: vi.fn<Writes["services"]["markApiQuietUseful"]>(unused("useful")),

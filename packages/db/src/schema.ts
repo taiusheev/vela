@@ -321,6 +321,11 @@ export const members = pgTable(
     }),
     /** {median_latency_min, late_latency_min, sunday_median_min, n_days, updated_at} */
     answerStats: jsonb("answer_stats").$type<JsonObject>().notNull().default({}),
+    /**
+     * Her "memories off" (ADR-50): nothing of hers is kept past 30 days or suggested for keeping
+     * while it is set; "memories on" clears it.
+     */
+    memoriesOffAt: timestamptz("memories_off_at"),
     createdAt: createdAt(),
     /** Data is deleted 30 days later by the retention job. */
     leftAt: timestamptz("left_at"),
@@ -1245,11 +1250,57 @@ export const bookEntries = pgTable(
       .unique("book_entries_exchange_id_key")
       .references(() => exchanges.id, { onDelete: "cascade" }),
     keptAt: timestamptz("kept_at").notNull(),
+    /**
+     * The organiser who tapped "Keep" on an ordinary answer (ADR-50); null for a story the book
+     * keeps by default (ADR-39), or once that organiser's member row is gone.
+     */
+    keptBy: uuid("kept_by").references(() => members.id, { onDelete: "set null" }),
     removedAt: timestamptz("removed_at"),
     /** Who removed it: her own "don't keep that one", or an organiser; null while it is kept. */
     removedBy: uuid("removed_by").references(() => members.id, { onDelete: "set null" }),
   },
   (t) => [index("book_entries_family_idx").on(t.familyId, t.keptAt)],
+);
+
+/**
+ * An answer Vela suggests the organisers keep (ADR-50): one per exchange, pointing at the phrase
+ * the memory model picked by offsets into her answer, with no copy of her words. It goes with the
+ * answer (cascade) and expires with its 30 days; "Not this one" dismisses it for good.
+ */
+export const keepSuggestions = pgTable(
+  "keep_suggestions",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** Whose answer: the kept-light member. */
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    exchangeId: uuid("exchange_id")
+      .notNull()
+      .unique("keep_suggestions_exchange_id_key")
+      .references(() => exchanges.id, { onDelete: "cascade" }),
+    answerId: uuid("answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    start: integer("start_offset").notNull(),
+    end: integer("end_offset").notNull(),
+    createdAt: createdAt(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    dismissedAt: timestamptz("dismissed_at"),
+    dismissedBy: uuid("dismissed_by").references(() => members.id, { onDelete: "set null" }),
+  },
+  (t) => [
+    index("keep_suggestions_family_idx").on(t.familyId, t.createdAt),
+    index("keep_suggestions_answer_idx").on(t.answerId),
+    index("keep_suggestions_expiry_idx").on(t.expiresAt),
+    check(
+      "keep_suggestions_offsets_check",
+      sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
+    ),
+  ],
 );
 
 export const weeklyReads = pgTable(
@@ -2032,6 +2083,7 @@ export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
 export type QuietEvent = typeof quietEvents.$inferSelect;
 export type BookEntry = typeof bookEntries.$inferSelect;
+export type KeepSuggestion = typeof keepSuggestions.$inferSelect;
 export type NewQuietEvent = typeof quietEvents.$inferInsert;
 export type AwayPeriod = typeof awayPeriods.$inferSelect;
 export type NewAwayPeriod = typeof awayPeriods.$inferInsert;

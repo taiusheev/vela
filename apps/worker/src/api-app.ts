@@ -5,6 +5,7 @@ import {
   ApiAccountProfile,
   ApiAway,
   ApiBook,
+  ApiBookKept,
   ApiBookRemoved,
   ApiCapabilities,
   ApiComposedAsk,
@@ -20,6 +21,7 @@ import {
   ApiFamily,
   ApiFamilyPlan,
   ApiIdempotencyKey,
+  ApiKeepSuggestionDismissed,
   ApiLeft,
   ApiLinkChallenge,
   ApiLinkCompleteInput,
@@ -60,9 +62,11 @@ import {
   CreateReminder,
   DeleteAccount,
   DeviceWrite,
+  DismissKeepSuggestion,
   EndAway,
   FinishReminder,
   InviteNearby,
+  KeepBookEntry,
   KeptMemoryPage,
   type Lang,
   LeaveFamily,
@@ -129,12 +133,14 @@ import {
   type createMemorySharingPresentation,
   type DeviceAlerts,
   type disableApiAccount,
+  type dismissApiSuggestion,
   type dismissMemoryCandidate,
   type endApiAway,
   errorLabel,
   FactMissingError,
   type finishApiReminder,
   type inviteApiNearby,
+  type keepApiAnswer,
   type keepMemoryCandidate,
   type Logger,
   LookInRefusedError,
@@ -276,6 +282,8 @@ export interface ApiWriteServices {
   uploadApiVoice: typeof uploadApiVoice;
   askApiToLookIn: typeof askApiToLookIn;
   removeApiBookEntry: typeof removeApiBookEntry;
+  keepApiAnswer: typeof keepApiAnswer;
+  dismissApiSuggestion: typeof dismissApiSuggestion;
   createApiReminder: typeof createApiReminder;
   finishApiReminder: typeof finishApiReminder;
   markApiQuietUseful: typeof markApiQuietUseful;
@@ -1016,6 +1024,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         c.get("db"),
         c.get("session"),
         c.req.param("familyId"),
+        runtime.now(),
       );
       return book === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiBook.parse(book));
     },
@@ -2291,6 +2300,57 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         }
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ApiBookRemoved.parse(result.response.body), 200);
+      },
+    );
+    // An organiser keeps one of her answers in the family book (ADR-50). The first keep of hers
+    // also leaves the note that tells her, handed to the queue after the commit.
+    app.post(
+      "/v1/book/:exchangeId/keep",
+      authenticate,
+      validateWrite(KeepBookEntry, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.keepApiAnswer(
+          {
+            db: c.get("db"),
+            clock: writes.clock,
+            config: { book: runtime.capabilities?.book === true },
+          },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const kept = ApiBookKept.parse(result.response.body);
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(kept, 200);
+      },
+    );
+    // "Not this one" on a suggestion to keep (ADR-50).
+    app.post(
+      "/v1/book/:exchangeId/dismiss",
+      authenticate,
+      validateWrite(DismissKeepSuggestion, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.dismissApiSuggestion(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiKeepSuggestionDismissed.parse(result.response.body), 200);
       },
     );
     // "Remind me to ask" (spec §12): a reminder exists only after this tap.

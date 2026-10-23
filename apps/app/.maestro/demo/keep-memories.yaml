@@ -1,0 +1,25 @@
+# Memories the family keeps (ADR-50), in the demo: Vela suggests one of her answers worth keeping,
+# an organiser keeps another with "Keep", and both are counted in the family book.
+url: ${APP_URL}
+name: An organiser keeps her answers for good, and Vela suggests one
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/exchanges
+- assertVisible: "Worth keeping?"
+- assertVisible: "“Both of you, but only Mia listened about the butter.”"
+- tapOn: "Not this one"
+- assertNotVisible: "Worth keeping?"
+# On the web, Maestro's id is the accessible label; the newest answer's Keep comes first.
+- tapOn:
+    id: "Keep for good"
+    index: 0
+- assertVisible:
+    id: "Kept for good"
+- scrollUntilVisible:
+    element: "Family book"
+    direction: UP
+- tapOn: "Family book"
+- assertVisible: "1 story · 1 kept answer · 0 recipes"
+- assertVisible: "Kept by Mia"
