@@ -286,8 +286,8 @@
     "SEND_AS_ME": "on",
     // On: each person's own memories in the app (privacy-notice v7 wording, 22 Oct 2026).
     "RICH_MEMORIES": "on",
-    // Off: no answer goes to memory_pick until the founder approves the screening (22 Oct 2026).
-    "MEMORY_DISCOVERY": "off"
+    // On: screened, ordinary answers may become private memory suggestions (founder, 23 Oct 2026).
+    "MEMORY_DISCOVERY": "on"
   },
 
   "env": {
@@ -412,8 +412,9 @@
         // On: staging holds test families only; the founder asked to try Memories on iPhone there
         // (22 Oct 2026). Its notice wording (v7) is approved but not yet the live notice.
         "RICH_MEMORIES": "on",
-        // Off until the founder approves the memory screening; pinned by src/wrangler-config.test.ts.
-        "MEMORY_DISCOVERY": "off",
+        // On: staging holds test families only; the founder approved the screening after the live
+        // eval run of 23 Oct 2026 and asked for it in the test version only.
+        "MEMORY_DISCOVERY": "on",
         // Technical plan 2.3: each reconcile reads production's health check from this account
         // and tells staging's admin chat when it stays down (src/peer-health.ts).
         "PEER_HEALTHZ_URL": "https://vela.vela-light.workers.dev/healthz"

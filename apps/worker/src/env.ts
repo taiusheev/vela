@@ -130,8 +130,8 @@ export interface PilotEnv extends SharedEnv {
   readonly RICH_MEMORIES?: string;
   /**
    * `MEMORY_DISCOVERY`: "on" lets understood, screened, ordinary answers be sent to `memory_pick` for
-   * the author's private memory suggestions (only with RICH_MEMORIES on). Off everywhere until the
-   * founder approves the screening; pinned in src/wrangler-config.test.ts.
+   * the author's private memory suggestions (only with RICH_MEMORIES on). On in development and
+   * staging, off in production; pinned in src/wrangler-config.test.ts.
    */
   readonly MEMORY_DISCOVERY?: string;
 

@@ -237,8 +237,8 @@ export interface Config {
   richMemories?: boolean;
   /**
    * Memory suggestions from her ordinary answers (`MEMORY_DISCOVERY`, memory-discovery.ts): only with
-   * `richMemories` too. Absent means off; off in every environment until the founder approves the
-   * screening, pinned by apps/worker/src/wrangler-config.test.ts.
+   * `richMemories` too. Absent means off; on in development and staging (founder, 23 Oct 2026), off in
+   * production, pinned by apps/worker/src/wrangler-config.test.ts.
    */
   memoryDiscovery?: boolean;
   /**
