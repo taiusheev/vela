@@ -613,6 +613,27 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "on"]);
   });
 
+  // Memories (privacy-notice v7 wording, approved 22 Oct 2026): on where only test families are, off
+  // in production until v7 is the live notice and families are told. The commit that turns it on
+  // changes this.
+  it("offer each person their own memories in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.RICH_MEMORIES,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
+  // Memory suggestions send screened answers to an AI call: off everywhere until the founder approves
+  // the screening. The commit that turns it on changes this.
+  it("sends no answer to the memory suggestion call in any environment yet", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.MEMORY_DISCOVERY,
+      ),
+    ).toEqual(["off", "off", "off"]);
+  });
+
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
   it("never holds EXPO_ACCESS_TOKEN as a var, in either Worker or any environment", () => {
     for (const config of configs) {

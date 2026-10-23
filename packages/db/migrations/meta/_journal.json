@@ -169,6 +169,13 @@
       "when": 1792607856058,
       "tag": "0023_memory_sharing_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792652947557,
+      "tag": "0024_memory_permission_presentations",
+      "breakpoints": true
     }
   ]
 }

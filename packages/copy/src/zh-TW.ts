@@ -98,11 +98,19 @@ export const zhTW: Record<keyof typeof en, string> = {
     "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。Vela 由 Timur Aiusheev 經營。您的資料會怎麼使用，請看： {notice}",
   "consent.health_words":
     "還有一個問題。如果您提到身體狀況，例如跌倒或哪裡痛，Vela 可以把您說的話轉告{organiser}，讓{organiser}打電話給您，並在週日的每週小記裡寫出這週不只一次提到的話嗎？就算您說不要，Vela 也會照常運作。",
+  "consent.request_both":
+    "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。\n\n身體狀況的話是另一個選擇。如果您提到身體狀況，例如跌倒或哪裡痛，Vela 可以把您說的話轉告{organiser}，讓{organiser}打電話給您，並在週日的每週小記裡寫出這週不只一次提到的話。如果您選擇不分享，Vela 也會照常運作。\n\n請點「兩個都好」、「好，健康的話不分享」（健康的話只留給自己），或「不用了，謝謝」。Vela 由 Timur Aiusheev 經營。您的資料會怎麼使用，請看： {notice}",
+  "consent.both": "兩個都好",
+  "consent.light_only": "好，健康的話不分享",
   "consent.yes": "好，沒問題",
   "consent.no": "不用了，謝謝",
-  "consent.accepted": "謝謝您。第一則早安訊息會在明天 {time} 送到。",
+  "consent.accepted": "謝謝您。{organiser}一定會很開心。第一則早安訊息會在明天 {time} 送到。",
+  "consent.accepted_first":
+    "謝謝您。{organiser}一定會很開心。{organiser}有第一則訊息要給您，馬上就到。之後每天早上 {time} 都會有一則訊息，從明天開始。",
   "consent.declined": "沒關係，不會傳任何訊息給您。",
   "organiser.consent_given": "{name}同意了。第一則早安訊息會在明天 {time} 送到。",
+  "organiser.consent_given_first":
+    "{name}同意了，您的第一則訊息正在傳給{name}。早安訊息從明天 {time} 開始。",
   "organiser.consent_declined": "{name}說暫時先不要。不會傳送任何訊息。",
   "invite.for_her":
     "{name}您好，我是{organiser}。我想為您留一盞燈：每天早上，家人會問您一件小事。打開這個連結看看，願意的話就說好： {link} 您隨時都可以說「停」。",

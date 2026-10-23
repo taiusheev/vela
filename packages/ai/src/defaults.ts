@@ -56,4 +56,6 @@ export const SAFE_DEFAULTS: {
   }),
   // No reading and no feedback: the read goes out as it would without ADR-48.
   weekly_insight: () => ({ readings: [], feedback: [] }),
+  // Nothing picked: no suggestion is offered, which is always safe.
+  memory_pick: () => ({ picks: [] }),
 };

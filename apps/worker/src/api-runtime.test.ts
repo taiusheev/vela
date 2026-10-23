@@ -563,13 +563,33 @@ describe("the API as staging serves it", () => {
 // Clerk signed.
 describe("the runtime staging's API app runs on", () => {
   it.each(["development", "staging", "production"] as const)(
-    "never wires the new sharing routes in %s, even with legacy memory on",
+    "never wires the new sharing or author memory routes in %s with RICH_MEMORIES off, even with legacy memory on",
     (environment) => {
-      const runtime = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on" }), {
+      const runtime = apiRuntimeFor(
+        stagingEnv({ MEMORY: "on", BOOK: "on", RICH_MEMORIES: "off" }),
+        {
+          ...STAGING_CONFIG,
+          environment,
+        },
+      );
+      expect(runtime.memorySharing).toBeUndefined();
+      expect(runtime.memories).toBeUndefined();
+    },
+  );
+  it.each(["development", "staging"] as const)(
+    "offers the author memory routes in %s only when RICH_MEMORIES is on, never sharing",
+    (environment) => {
+      const off = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on", RICH_MEMORIES: "off" }), {
         ...STAGING_CONFIG,
         environment,
       });
-      expect(runtime.memorySharing).toBeUndefined();
+      expect(off.memories).toBeUndefined();
+      const on = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on", RICH_MEMORIES: "on" }), {
+        ...STAGING_CONFIG,
+        environment,
+      });
+      expect(on.memories?.config).toEqual({ richMemories: true });
+      expect(on.memorySharing).toBeUndefined();
     },
   );
   it("publishes closed trial capabilities without opening a database", async () => {

@@ -172,6 +172,7 @@ export async function loadApiLights(
       away_id: away?.id ?? null,
       unreachable_on: link !== undefined && link.blockedAt !== null ? channel : null,
       quiet_event_id: quiet?.id ?? null,
+      ...(member.interests === null ? {} : { interests: member.interests }),
     });
   }
 
@@ -203,6 +204,7 @@ export async function loadApiLights(
       away_id: null,
       unreachable_on: null,
       quiet_event_id: null,
+      ...(member.interests === null ? {} : { interests: member.interests }),
     });
   }
   return lights;

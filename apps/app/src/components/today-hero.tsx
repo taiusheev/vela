@@ -23,7 +23,7 @@ import {
   View,
   type ViewProps,
 } from "react-native";
-import Svg, { Defs, Path, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { useMotionPreference } from "../accessibility/use-reduced-motion.ts";
 import { portraitLightOn } from "../data/portrait-lamp.ts";
 import type { TodayLight } from "../data/today.ts";
@@ -274,26 +274,6 @@ export function MorningLight() {
   );
 }
 
-/** The window from the lockup, alone: the brand mark, at the size of an app header. */
-function BrandMark() {
-  const p = usePalette();
-  return (
-    <Svg viewBox="-17.5 -17.5 141 167" width={24} height={28}>
-      <Path
-        d="M34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z"
-        fill={p.light}
-      />
-      <Path
-        fillRule="evenodd"
-        d="M34 -5.5H66A39.5 39.5 0 0 1 105.5 34V118A19.5 19.5 0 0 1 86 137.5H14A19.5 19.5 0 0 1 -5.5 118V34A39.5 39.5 0 0 1 34 -5.5ZM34 5.5H66A28.5 28.5 0 0 1 94.5 34V118A8.5 8.5 0 0 1 86 126.5H14A8.5 8.5 0 0 1 5.5 118V34A28.5 28.5 0 0 1 34 5.5Z"
-        fill={p.ink}
-      />
-      <Rect x="47" y="5.5" width="6" height="121" fill={p.ink} />
-      <Rect x="5.5" y="49.8" width="89" height="6" fill={p.ink} />
-    </Svg>
-  );
-}
-
 export function Face({
   light,
   familyId,
@@ -326,9 +306,6 @@ export function TodayHeader({
   const p = usePalette();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
-      <View accessible accessibilityLabel="Vela" style={{ flexShrink: 0 }}>
-        <BrandMark />
-      </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[type.title, { fontSize: 24, lineHeight: 28, color: p.ink }]}>Vela</Text>
         <Words variant="caption" tone="ink3" accessibilityRole="header">
@@ -419,9 +396,11 @@ function listNames(names: string[], locale: string): string {
  */
 export function FamilyStatus({
   lights,
+  familyId,
   onQuiet,
 }: {
   lights: TodayLight[];
+  familyId: string;
   onQuiet?: (light: TodayLight) => void;
 }) {
   const { t, i18n } = useLingui();
@@ -457,6 +436,9 @@ export function FamilyStatus({
           ? t`A light comes on when they answer their morning.`
           : t`The others have answered this morning.`;
   const tone = quiet !== undefined ? "quiet" : allLit ? "lit" : "waiting";
+  // The faces of whom the line is about: the quiet one, those still awaited, or everyone lit. The
+  // window stays her answer's own mark, so the brand is not repeated down the page.
+  const about = (quiet !== undefined ? [quiet] : allLit ? lit : waiting).slice(0, 2);
   const body = (
     <View
       testID="family-status"
@@ -475,21 +457,20 @@ export function FamilyStatus({
         softShadow,
       ]}
     >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 14,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: tone === "lit" ? p.surface : p.surface2,
-          shadowColor: p.light,
-          shadowOpacity: tone === "lit" ? 0.55 : 0,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 0 },
-        }}
-      >
-        <Light state={tone === "lit" ? "lit" : "resting"} height={28} />
+      <View style={{ flexDirection: "row", width: about.length > 1 ? 62 : 44 }}>
+        {about.map((light, index) => (
+          <View
+            key={light.memberId}
+            style={{
+              marginLeft: index === 0 ? 0 : -26,
+              borderRadius: 22,
+              borderWidth: 2,
+              borderColor: tone === "lit" ? p.lightSoft : p.surface,
+            }}
+          >
+            <Face light={light} familyId={familyId} size={40} />
+          </View>
+        ))}
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <Words variant="heading">{title}</Words>
@@ -733,7 +714,6 @@ export function TodayHero({
             }}
           >
             <Pill>
-              <BrandIcon name="today" color={room.ink} size={14} strokeWidth={2} />
               <Text style={[type.label, { letterSpacing: 0, color: room.ink }]}>
                 {t({ context: "tab", message: "Today" })}
               </Text>
