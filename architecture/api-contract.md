@@ -526,6 +526,8 @@ export const MemberLight = z.object({
   member_id: z.uuid(), display_name: z.string(), state: LightState,
   answered_at: z.iso.datetime({ offset: true }).nullable(), usual_time: LocalTime.nullable(),
   away_until: LocalDate.nullable(), quiet_event_id: z.uuid().nullable(),
+  // Topics chosen for her at setup (22 Oct 2026), for the app's question ideas; absent when none.
+  interests: z.array(InterestTopic).optional(),
 });
 
 export const ComposeExchange = z.object({

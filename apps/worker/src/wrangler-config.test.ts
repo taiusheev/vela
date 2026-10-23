@@ -628,6 +628,16 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // Memory suggestions send screened answers to an AI call: off everywhere until the founder approves
+  // the screening. The commit that turns it on changes this.
+  it("sends no answer to the memory suggestion call in any environment yet", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.MEMORY_DISCOVERY,
+      ),
+    ).toEqual(["off", "off", "off"]);
+  });
+
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
   it("never holds EXPO_ACCESS_TOKEN as a var, in either Worker or any environment", () => {
     for (const config of configs) {

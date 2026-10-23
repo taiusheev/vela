@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { RefreshControl, Text, View } from "react-native";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
+import { FirstWeek } from "../../src/components/first-week.tsx";
 import { Light } from "../../src/components/light.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { StoryOfTheWeek } from "../../src/components/story-day.tsx";
@@ -89,6 +90,9 @@ function FamilySunday({ day }: { day: TodayView }) {
         <Words variant="body" tone="ink2">
           <Trans>The weekly read could not be reached just now.</Trans>
         </Words>
+      ) : read.week === null && windowsFor !== undefined ? (
+        // Before the first read: when it comes, her words so far, an example, and a way to ask.
+        <FirstWeek light={windowsFor} />
       ) : read.week === null && name.length > 0 ? (
         <Words variant="body" tone="ink2">
           <Trans>

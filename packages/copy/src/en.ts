@@ -16,6 +16,13 @@
  * `consent.no`, because a consent to carry words that may be medical must be given separately
  * (ADR-27); it says a no changes nothing else, so saying no is a free choice.
  *
+ * `consent.request_both` (`consent.request@3`, founder's decision of 22 Oct 2026) asks both in one
+ * message, so one tap answers: the health words are still their own, separate choice, with a yes to
+ * the light alone (`consent.light_only`) offered beside `consent.both` and `consent.no`, and the text
+ * says keeping them private changes nothing else. Its buttons are named in its text and fit LINE's
+ * 20-grapheme quick replies. `consent.request` and `consent.health_words` stay for messages sent
+ * before it, whose buttons still work.
+ *
  * `flag.notice_no_words` is the organisers' flag notice when she has not agreed to health words: her
  * name and nothing she said, no quote and no category, so it carries no health data and still gives
  * the organiser a reason to call.
@@ -145,11 +152,20 @@ export const en = {
     "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time. Vela is run by Timur Aiusheev. How your information is used: {notice}",
   "consent.health_words":
     "One more question. If you mention your health, for example a fall or pain, may Vela pass your words on to {organiser} so they can call you, and say in the Sunday read which of them came up more than once? Vela works the same if you say no.",
+  "consent.request_both":
+    "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time.\n\nYour health words are a separate choice. If you mention your health, for example a fall or pain, Vela can pass your words on to {organiser} so they can call you, and say in the Sunday read which of them came up more than once. Vela works the same if you keep them private.\n\nTap “Yes to both”, “Yes, health private” to keep your health words to yourself, or “No, thank you”. Vela is run by Timur Aiusheev. How your information is used: {notice}",
+  "consent.both": "Yes to both",
+  "consent.light_only": "Yes, health private",
   "consent.yes": "Yes, that's fine",
   "consent.no": "No, thank you",
-  "consent.accepted": "Thank you. Your first morning arrives tomorrow at {time}.",
+  "consent.accepted":
+    "Thank you. {organiser} will be so glad. Your first morning message arrives tomorrow at {time}.",
+  "consent.accepted_first":
+    "Thank you. {organiser} will be so glad. {organiser} has a first message for you, coming now. After that, a message arrives every morning at {time}, starting tomorrow.",
   "consent.declined": "That's fine. Nothing will arrive.",
   "organiser.consent_given": "{name} said yes. The first morning arrives tomorrow at {time}.",
+  "organiser.consent_given_first":
+    "{name} said yes, and your first message is on its way to {name} now. The mornings start tomorrow at {time}.",
   "organiser.consent_declined": "{name} said no for now. Nothing will be sent.",
   "invite.for_her":
     "Hello {name}, it is {organiser}. I would like to keep a light on for you: one small question from the family each morning. Open this to hear about it, and say yes if you would like it: {link} You can say stop at any time.",

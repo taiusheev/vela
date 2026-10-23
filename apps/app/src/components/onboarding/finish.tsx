@@ -142,41 +142,50 @@ export function Save({ name }: { name: string }) {
       }
       const { familyId, memberId } = created;
 
-      for (let index = readDraft().saved.asks; index < start.week.length; index += 1) {
-        const text = start.week[index];
-        if (text !== undefined) {
-          try {
-            await composeAsk(
-              familyId,
-              `ask:${run}:${index}`,
-              { recipient_id: memberId, type: "question", text, when: "whenever" },
-              token,
-            );
-          } catch (error) {
-            if (!refusedForGood(error)) throw error;
+      // Her first week stays in order, one ask after the other, since they reach her in the order
+      // they were queued. Everything else is independent of it and of each other, so it is saved
+      // at the same time: the wait is the longest part, not the sum of them all.
+      const saveAsks = async () => {
+        for (let index = readDraft().saved.asks; index < start.week.length; index += 1) {
+          const text = start.week[index];
+          if (text !== undefined) {
+            try {
+              await composeAsk(
+                familyId,
+                `ask:${run}:${index}`,
+                { recipient_id: memberId, type: "question", text, when: "whenever" },
+                token,
+              );
+            } catch (error) {
+              if (!refusedForGood(error)) throw error;
+            }
           }
+          updateDraft({ saved: { ...readDraft().saved, asks: index + 1 } });
         }
-        updateDraft({ saved: { ...readDraft().saved, asks: index + 1 } });
-      }
+      };
 
-      for (let index = readDraft().saved.nearby; index < start.people.length; index += 1) {
-        const person = start.people[index];
-        if (person !== undefined) {
-          try {
-            await addNearby(
-              familyId,
-              { member_id: memberId, name: person.name, relation: person.relation },
-              `nearby:${run}:${index}`,
-              token,
-            );
-          } catch (error) {
-            if (!refusedForGood(error)) throw error;
-          }
-        }
-        updateDraft({ saved: { ...readDraft().saved, nearby: index + 1 } });
-      }
+      // Each person has their own key, so trying again repeats none of them.
+      const saveNearby = async () => {
+        const first = readDraft().saved.nearby;
+        await Promise.all(
+          start.people.slice(first).map(async (person, offset) => {
+            try {
+              await addNearby(
+                familyId,
+                { member_id: memberId, name: person.name, relation: person.relation },
+                `nearby:${run}:${first + offset}`,
+                token,
+              );
+            } catch (error) {
+              if (!refusedForGood(error)) throw error;
+            }
+          }),
+        );
+        updateDraft({ saved: { ...readDraft().saved, nearby: start.people.length } });
+      };
 
-      if (start.nobody === "me" && !readDraft().saved.sendAsMe) {
+      const saveSendAsMe = async () => {
+        if (start.nobody !== "me" || readDraft().saved.sendAsMe) return;
         const morning = await fetchMorningPreferences(familyId, memberId, token);
         if (morning.send_as_me_available === true) {
           await setMorningPreferences(
@@ -188,7 +197,7 @@ export function Save({ name }: { name: string }) {
           );
         }
         updateDraft({ saved: { ...readDraft().saved, sendAsMe: true } });
-      }
+      };
 
       if (start.photo?.kind === "picked" && !readDraft().saved.portrait) {
         try {
@@ -199,11 +208,12 @@ export function Save({ name }: { name: string }) {
         updateDraft({ saved: { ...readDraft().saved, portrait: true } });
       }
 
-      await Promise.all([
-        queries.invalidateQueries({ queryKey: ["me"] }),
-        queries.invalidateQueries({ queryKey: ["today"] }),
-        queries.invalidateQueries({ queryKey: ["portrait"] }),
-      ]);
+      await Promise.all([saveAsks(), saveNearby(), saveSendAsMe()]);
+
+      // The next screens read these again on their own; the invitation does not wait for them.
+      void queries.invalidateQueries({ queryKey: ["me"] });
+      void queries.invalidateQueries({ queryKey: ["today"] });
+      void queries.invalidateQueries({ queryKey: ["portrait"] });
       updateDraft({ step: "invite" });
     } catch (error) {
       setProblem(alreadyOrganiser(error) ? "already" : "trouble");

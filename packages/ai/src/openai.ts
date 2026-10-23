@@ -53,6 +53,7 @@ export const OPENAI_MODEL_FOR: Record<AiCallName, OpenAiModel> = {
   chips: "gpt-5-mini",
   suggest: "gpt-5-mini",
   hello: "gpt-5-mini",
+  memory_pick: "gpt-5-mini",
 };
 
 export type OpenAiReasoningEffort = "minimal" | "low" | "medium";
@@ -68,6 +69,7 @@ export const OPENAI_EFFORT_FOR: Record<AiCallName, OpenAiReasoningEffort> = {
   chips: "minimal",
   suggest: "minimal",
   hello: "minimal",
+  memory_pick: "low",
 };
 
 /** Date precedence needs deliberation; ordinary rotation drafting keeps its existing budget. */
@@ -196,6 +198,7 @@ export function createOpenAiAi(options: OpenAiOptions): Ai {
     hello: (input) => invoke(client, { call: "hello" }, input),
     weeklyRead: (input) => invoke(client, { call: "weekly_read" }, input),
     recipe: (input) => invoke(client, { call: "recipe" }, input),
+    memoryPick: (input) => invoke(client, { call: "memory_pick" }, input),
     weeklyInsight: (input) => invoke(client, { call: "weekly_insight" }, input),
   };
 }

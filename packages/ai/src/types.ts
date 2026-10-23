@@ -28,6 +28,7 @@ export const AI_CALL_NAMES = [
   "weekly_read",
   "recipe",
   "weekly_insight",
+  "memory_pick",
 ] as const;
 export const AiCallName = z.enum(AI_CALL_NAMES);
 export type AiCallName = z.infer<typeof AiCallName>;
@@ -561,6 +562,42 @@ export const RecipeCard = z.object({
 });
 export type RecipeCard = z.infer<typeof RecipeCard>;
 
+// memory_pick --------------------------------------------------------------------------------------
+
+/**
+ * One ordinary answer she agreed may be used for memories (consent.rich_memories@2), already
+ * screened for health and other sensitive words by code before it is sent (memory-discovery.ts).
+ */
+export const MemoryPickInput = z.object({
+  lang: Lang,
+  addressForm: Name,
+  ask: ShortText.nullable(),
+  answer: FamilyText.min(1),
+});
+export type MemoryPickInput = z.infer<typeof MemoryPickInput>;
+
+export const MEMORY_PICK_KINDS = [
+  "preference",
+  "story",
+  "humour",
+  "person",
+  "moment",
+  "follow_up",
+] as const;
+
+/** Up to two phrases the model points at; code keeps only those found word for word in her answer. */
+export const MemoryPicks = z.object({
+  picks: z
+    .array(
+      z.object({
+        quote: z.string().min(1).max(400),
+        kind: z.enum(MEMORY_PICK_KINDS),
+      }),
+    )
+    .max(2),
+});
+export type MemoryPicks = z.infer<typeof MemoryPicks>;
+
 // ports --------------------------------------------------------------------------------------------
 
 /** The input and output types of each call, keyed by call name. */
@@ -575,6 +612,7 @@ export interface AiCallTypes {
   weekly_read: { input: WeeklyReadInput; output: WeeklyRead };
   recipe: { input: RecipeInput; output: RecipeCard };
   weekly_insight: { input: WeeklyInsightInput; output: WeeklyInsight };
+  memory_pick: { input: MemoryPickInput; output: MemoryPicks };
 }
 
 /** Each call's input schema; every `Ai`, the fake included, parses its input with it. */
@@ -589,6 +627,7 @@ export const INPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes[
   weekly_read: WeeklyReadInput,
   recipe: RecipeInput,
   weekly_insight: WeeklyInsightInput,
+  memory_pick: MemoryPickInput,
 };
 
 /** Each call's output schema, which is also the structured-output format sent to Claude. */
@@ -603,6 +642,7 @@ export const OUTPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes
   weekly_read: WeeklyRead,
   recipe: RecipeCard,
   weekly_insight: WeeklyInsight,
+  memory_pick: MemoryPicks,
 };
 
 /**
@@ -622,6 +662,7 @@ export interface Ai {
   weeklyRead(input: WeeklyReadInput): Promise<AiOutcome<WeeklyRead>>;
   recipe(input: RecipeInput): Promise<AiOutcome<RecipeCard>>;
   weeklyInsight(input: WeeklyInsightInput): Promise<AiOutcome<WeeklyInsight>>;
+  memoryPick(input: MemoryPickInput): Promise<AiOutcome<MemoryPicks>>;
 }
 
 export interface TranscribeInput {

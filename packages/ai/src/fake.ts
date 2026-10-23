@@ -101,6 +101,11 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
         .slice(0, 4),
       suggestion: genericWeeklySuggestion(input.lang, input.elderName),
     })),
+    // Her first sentence, word for word, as a moment, so tests can see what flowed through.
+    memoryPick: method("memory_pick", overrides.memoryPick, (input) => {
+      const first = input.answer.split(/(?<=[.!?。！？])\s*/)[0]?.trim() ?? "";
+      return { picks: first.length === 0 ? [] : [{ quote: first, kind: "moment" as const }] };
+    }),
     // Her answers as the steps, as she said them, so tests can see what flowed through.
     recipe: method("recipe", overrides.recipe, (input) => ({
       title: input.ask ?? "Recipe",
