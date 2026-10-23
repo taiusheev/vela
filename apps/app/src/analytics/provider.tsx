@@ -120,7 +120,7 @@ function ScopedUsage({ scope }: { scope: string }) {
           </Words>
           <Words>
             {i18n._(
-              msg`The analytics service receives network details when your phone connects. Counts are stored for up to 1 year in the configured PostHog region. You can stop future counts here anytime. Turning this off clears this device's analytics identity; it does not delete earlier counts. For access or deletion, contact t.aiusheev@gmail.com.`,
+              msg`The analytics service receives network details when your phone connects. Our free PostHog plan has a 1-year event reporting window in the configured region. This does not guarantee immediate deletion at its end. You can stop future counts here anytime. Turning this off clears this device's analytics identity; it does not delete earlier counts. For access or deletion, contact t.aiusheev@gmail.com.`,
             )}
           </Words>
           <Words>
