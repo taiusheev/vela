@@ -22,9 +22,13 @@ export function VoiceRecorder({
   refusedText,
   onRecorded,
   onSend,
+  compact = false,
+  onRecordingChange,
 }: {
   /** The microphone button's words before anything is recorded. */
   label: string;
+  compact?: boolean;
+  onRecordingChange?: (recording: boolean) => void;
   maxMs?: number;
   disabled?: boolean;
   sending?: boolean;
@@ -38,6 +42,9 @@ export function VoiceRecorder({
   const palette = usePalette();
   const voice = useRecording(maxMs === undefined ? {} : { maxMs });
   const recorded = voice.recorded;
+  useEffect(() => {
+    onRecordingChange?.(voice.recording);
+  }, [voice.recording, onRecordingChange]);
   const [rate, setRate] = useState<1 | 1.5 | 2>(1);
 
   useEffect(() => {
@@ -162,7 +169,7 @@ export function VoiceRecorder({
   }
 
   return (
-    <View style={{ gap: space.s }}>
+    <View style={{ gap: space.s, alignSelf: compact ? "flex-start" : undefined }}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -174,7 +181,7 @@ export function VoiceRecorder({
           alignItems: "center",
           gap: space.m,
           minHeight: 52,
-          paddingHorizontal: space.l,
+          paddingHorizontal: compact ? space.m : space.l,
           borderRadius: radius.chip,
           borderWidth: 1,
           borderColor: palette.control,
@@ -183,9 +190,11 @@ export function VoiceRecorder({
         })}
       >
         <BrandIcon name="mic" color={palette.action} size={22} strokeWidth={2} />
-        <Words variant="button" tone="action">
-          {label}
-        </Words>
+        {compact ? null : (
+          <Words variant="button" tone="action">
+            {label}
+          </Words>
+        )}
       </Pressable>
       {voice.failed ? (
         <Words variant="caption" tone="ink3">

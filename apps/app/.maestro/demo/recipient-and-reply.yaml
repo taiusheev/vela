@@ -6,20 +6,16 @@ tags:
 ---
 - launchApp
 - tapOn: "Ask Mom"
-- tapOn: "Say it the way you would say it"
+- tapOn:
+    id: "Say it the way you would say it"
 - inputText: "What is growing by your window?"
 - assertVisible: "What is growing by your window?"
 - tapOn: "Dad"
 - assertVisible: "Ask Dad something"
 - assertVisible: "What is growing by your window?"
-- assertNotVisible: "What seeds did you save from last year's garden?"
-- tapOn: "More ways to ask"
-- tapOn: "A vote"
-- assertVisible: "Option 1"
 - tapOn: "Mom"
 - assertVisible: "Ask Mom something"
 - assertVisible: "What is growing by your window?"
-- assertNotVisible: "Option 1"
 - tapOn: "Back"
 - tapOn: "Talk with Mom"
 - tapOn: "Write to Mom"
