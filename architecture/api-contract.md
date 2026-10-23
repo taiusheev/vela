@@ -6,6 +6,17 @@ Conventions: JSON over HTTPS; `Authorization: Bearer <session>`; ids are uuids; 
 
 ## 1. Auth and account
 
+### Public website waitlist
+
+`POST /waitlist` accepts same-origin form-urlencoded input, validates the email, and gives the same acknowledgment for new, duplicate and honeypot submissions. It reads at most 2048 UTF-8 bytes within 3 seconds, cancelling oversized or stalled input before opening a database connection. Errors include 400 invalid email, 403 foreign Origin, 408 stalled body, 413 too large, 415 wrong content type and 429 rate limit. A success response is not proof of a new unique signup; the protected waitlist is authoritative.
+
+### Optional public website analytics (usage counts v1)
+
+These routes are outside `/v1`, public-site paths only, and never read or mutate family records. They are disabled by default; the optional client choice is separate from family privacy acceptance. See `infra/runbooks/analytics.md` for the complete event/retention contract.
+
+- `GET /analytics/config`: `{enabled:boolean,region:"eu"|"us"|null,noticeVersion:"website-usage.v2"}`, no-store. Contains no project token.
+- `POST /analytics/event`: same-origin browser JSON; schema in `apps/worker/src/site-analytics.ts`. Required UUID random browser `id`, exact `noticeVersion=website-usage.v2`, fixed `event` enum, language `en` or `zh-TW`; optional fixed section/source enums, bounded integer seconds/step. Unknown fields rejected. Body at most 1024 bytes with a 3-second read bound; IP rate-limited under a separate analytics bucket. No authentication, arbitrary text, family ids, URL, email, or cookies. This is best-effort telemetry, not a domain mutation: no mutation receipt or idempotency cache is created, and no retry is performed. Responses: 204 accepted by downstream, 400 invalid, 403 foreign/missing Origin, 404 disabled, 408 stalled body, 413 too large, 415 wrong content-type, 429 rate-limited, 503 downstream failure. No 409 state exists. The relay forwards approved counts only; no visitor IP/headers or body is logged. Delivery counts can be lost and are not authoritative signup/payment records.
+
 | Method | Path | Purpose | Notes |
 |---|---|---|---|
 | POST | /auth/start | Start sign-in by phone or email | Sends OTP or magic link through the auth provider |

@@ -216,6 +216,8 @@ ${page.alternates.map(
 <link rel="stylesheet" href="/site/site.css">
 <script src="/site/boot.js"></script>
 <script src="/site/site.js" defer></script>
+<link rel="stylesheet" href="/site/analytics.css">
+<script src="/site/analytics.js" defer></script>
 </head>
 <body>${page.body}</body>
 </html>`.markup;
