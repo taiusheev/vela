@@ -1,6 +1,7 @@
-# Privacy notice v8: Memories your family keeps (draft, awaiting founder approval)
+# Privacy notice v8: Memories your family keeps (wording approved, not live)
 
-23 October 2026 · drafted for the founder's approval · not live.
+23 October 2026 · the founder approved this wording in chat on 23 October 2026 ("good, approved"),
+after asking that the parent is told and never asked · not live.
 This replaces the unreleased v7 Memories draft (`privacy-notice.v7-memories-draft.en.md`), which made
 memories the parent's own and needed her yes. In v8, memories are the family's: an organiser keeps
 the answers they want to remember. The person the light is for is told, not asked, and can stop it
