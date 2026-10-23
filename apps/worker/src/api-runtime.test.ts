@@ -563,6 +563,21 @@ describe("the API as staging serves it", () => {
 // Clerk signed.
 describe("the runtime staging's API app runs on", () => {
   it.each(["development", "staging", "production"] as const)(
+    "never mounts eligibility collection services in %s",
+    (environment) => {
+      const runtime = apiRuntimeFor(stagingEnv(), { ...STAGING_CONFIG, environment });
+      expect(Object.keys(runtime.services)).not.toContain("loadOwnPublicEligibility");
+      expect(Object.keys(runtime.writes?.services ?? {})).not.toContain(
+        "recordOwnPublicEligibility",
+      );
+      expect(Object.keys(runtime.writes?.services ?? {})).not.toContain(
+        "clearOwnPublicEligibility",
+      );
+      expect(Object.keys(runtime)).not.toContain("eligibility");
+      expect(runtime.eligibilityRights).toBeUndefined();
+    },
+  );
+  it.each(["development", "staging", "production"] as const)(
     "never wires the new sharing or author memory routes in %s with RICH_MEMORIES off, even with legacy memory on",
     (environment) => {
       const runtime = apiRuntimeFor(

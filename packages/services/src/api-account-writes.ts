@@ -178,7 +178,7 @@ export async function disableApiAccount(
     if (account.deletedAt === null) {
       await tx
         .update(users)
-        .set({ deletedAt: now, privacyAcceptance: null })
+        .set({ deletedAt: now, privacyAcceptance: null, publicEligibility: null })
         .where(eq(users.id, account.id));
     }
     await tx.delete(apiRequestReceipts).where(eq(apiRequestReceipts.actorHash, actorHash));

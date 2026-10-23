@@ -454,6 +454,10 @@ msgstr "📷 用照片回覆"
 msgid "$79 a year"
 msgstr "每年 79 美元"
 
+#: src/components/eligibility-review.tsx
+msgid "18 or older"
+msgstr "已滿 18 歲"
+
 #: src/components/first-week.tsx
 msgid "3 replies from the family"
 msgstr "家人回覆了 3 次"
@@ -465,6 +469,10 @@ msgstr "這週回覆了 5 個早上"
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr "完成連結不代表早晨訊息已送達或已收到回覆。"
+
+#: src/components/eligibility-review.tsx
+msgid "A few questions about you. Every adult answers separately."
+msgstr "先了解您自己的情況。每位成年人都要各自回答。"
 
 #: app/(tabs)/index.tsx
 msgid "A hello for {recipient}"
@@ -724,6 +732,14 @@ msgstr "今天已回覆"
 msgid "Anyone"
 msgstr "大家"
 
+#: app/eligibility-preview.tsx
+msgid "App user: Alex"
+msgstr "App 使用者：Alex"
+
+#: src/components/eligibility-review.tsx
+msgid "Are you 18 or older?"
+msgstr "您是否已滿 18 歲？"
+
 #: src/components/reminders.tsx
 #: src/components/today-hero.tsx
 msgid "Ask {name}"
@@ -833,6 +849,10 @@ msgstr "返回"
 #: src/components/today-feed.tsx
 msgid "Be the first to answer {recipient}."
 msgstr "第一個回覆{recipient}吧。"
+
+#: src/components/eligibility-review.tsx
+msgid "Before joining Vela"
+msgstr "加入 Vela 之前"
 
 #: src/components/app-privacy.tsx
 msgid "Before you continue"
@@ -994,9 +1014,21 @@ msgstr "請在「今天」選擇這段對話所屬的家庭，再播放或傳送
 msgid "Choose your country, type your number as you would at home, and we text you a code."
 msgstr "選擇您的國家，照平常的方式輸入手機號碼，我們會用簡訊傳驗證碼給您。"
 
+#: src/components/eligibility-review.tsx
+msgid "Choose your own answers and read both draft documents to continue."
+msgstr "請回答您自己的情況，並閱讀兩份草稿後再繼續。"
+
 #: src/components/onboarding/questions.tsx
 msgid "Chosen · choose another"
 msgstr "已選擇 · 換一張"
+
+#: src/components/eligibility-review.tsx
+msgid "Clear my test declaration"
+msgstr "清除我的模擬聲明"
+
+#: src/components/eligibility-review.tsx
+msgid "Clearing…"
+msgstr "正在清除⋯"
 
 #: app/sign-in.tsx
 #: src/components/chat/action-sheet.tsx
@@ -1165,6 +1197,10 @@ msgstr "關閉"
 msgid "Do you remember this?"
 msgstr "您還記得這張嗎？"
 
+#: src/components/eligibility-review.tsx
+msgid "Do you usually live in Taiwan?"
+msgstr "您平常是否居住在台灣？"
+
 #: src/components/reminders.tsx
 msgid "Done"
 msgstr "完成"
@@ -1197,6 +1233,10 @@ msgstr "這個月稍早"
 #: src/data/onboarding.ts
 msgid "Eastern"
 msgstr "東部時間"
+
+#: src/components/eligibility-review.tsx
+msgid "Eligibility notice — review draft"
+msgstr "資格聲明告知事項——審閱草稿"
 
 #: app/sign-in.tsx
 msgid "Email"
@@ -1501,6 +1541,10 @@ msgstr "{name}，我是{you}。我幫我們設定了 Vela：每天早上我會�
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 msgstr "{who}你好！如果我聯絡不上{name}，可以請你過去看看嗎？你可以在這裡答應："
 
+#: src/components/eligibility-review.tsx
+msgid "Hide draft documents"
+msgstr "收起草稿"
+
 #: src/components/app-privacy.tsx
 msgid "Hide privacy details"
 msgstr "收起隱私詳情"
@@ -1557,6 +1601,14 @@ msgstr "抱抱"
 #: src/components/onboarding/story.tsx
 msgid "I already have an account"
 msgstr "我已經有帳號了"
+
+#: src/components/eligibility-review.tsx
+msgid "I have read the draft eligibility notice."
+msgstr "我已閱讀資格聲明的告知事項草稿。"
+
+#: src/components/eligibility-review.tsx
+msgid "I have read the draft service terms."
+msgstr "我已閱讀服務條款草稿。"
 
 #: src/components/onboarding/finish.tsx
 msgid "I have sent it"
@@ -1940,6 +1992,10 @@ msgstr "正在載入家人的問答…"
 #: app/my-memories.tsx
 msgid "Looking for your memories…"
 msgstr "正在找你的回憶…"
+
+#: app/eligibility-preview.tsx
+msgid "Make the next record or clear fail"
+msgstr "模擬下一次記錄或清除失敗"
 
 #: src/data/onboarding.ts
 msgid "Making & mending"
@@ -2340,6 +2396,10 @@ msgstr "請稍等…"
 msgid "One question at a time. The English pilot sends your words as written."
 msgstr "一次一個問題。英語試辦會照您寫的原文送出。"
 
+#: app/eligibility-preview.tsx
+msgid "One synthetic failure queued. No real connection is used."
+msgstr "下一次操作將模擬失敗，不會使用真實連線。"
+
 #: src/components/telegram-family-link.tsx
 msgid "Only confirm a request you just started from your own Vela app."
 msgstr "請只確認您剛從自己的 Vela 應用程式發起的要求。"
@@ -2441,6 +2501,10 @@ msgstr "父母的照片與連結、通知、語言及帳號"
 #: app/parent-settings.tsx
 msgid "Parent settings"
 msgstr "父母的設定"
+
+#: app/eligibility-preview.tsx
+msgid "Parent: Lin"
+msgstr "家人：Lin"
 
 #: app/settings.tsx
 #: src/audio/voice-bar.tsx
@@ -2555,6 +2619,10 @@ msgstr "播放語音"
 msgid "Playback speed {rate} times"
 msgstr "播放速度{rate}倍"
 
+#: src/components/eligibility-review.tsx
+msgid "Prefer not to say"
+msgstr "不願提供"
+
 #: app/settings.tsx
 msgid "Preview family setup"
 msgstr "預覽家人設定"
@@ -2570,6 +2638,10 @@ msgstr "隱私與協助"
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
 msgstr "隱私詳情與條款"
+
+#: src/components/eligibility-review.tsx
+msgid "Privacy rights and help remain available even if you cannot join."
+msgstr "即使無法加入，您仍可查閱隱私權資訊及尋求協助。"
 
 #: app/profile.tsx
 msgid "Profile"
@@ -2609,6 +2681,10 @@ msgstr "沒人寫的日子也有訊息，署名是您"
 msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記事與提醒 · 可以保存的家族故事書"
 
+#: src/components/eligibility-review.tsx
+msgid "Read the draft notice and terms"
+msgstr "閱讀告知事項與條款草稿"
+
 #: src/components/story-day.tsx
 msgid "Read the family book"
 msgstr "看家庭故事書"
@@ -2647,6 +2723,10 @@ msgstr "食譜"
 msgid "Record again"
 msgstr "重新錄音"
 
+#: src/components/eligibility-review.tsx
+msgid "Record test declaration"
+msgstr "記錄模擬聲明"
+
 #: src/components/voice-hello.tsx
 msgid "Record your voice note (10 seconds)"
 msgstr "錄一段語音（10 秒）"
@@ -2658,6 +2738,10 @@ msgstr "錄音中 · {time}"
 #: src/components/voice-recorder.tsx
 msgid "Recording · {time} of {limit}"
 msgstr "錄音中 · {time}／{limit}"
+
+#: src/components/eligibility-review.tsx
+msgid "Recording…"
+msgstr "正在記錄⋯"
 
 #: src/device/VoiceAnswer.tsx
 msgid "Recording… {time}"
@@ -2974,6 +3058,10 @@ msgstr "傳了一則語音訊息"
 msgid "Service terms"
 msgstr "服務條款"
 
+#: src/components/eligibility-review.tsx
+msgid "Service terms — review draft"
+msgstr "服務條款——審閱草稿"
+
 #: src/components/set-up-phone.tsx
 msgid "Set it up"
 msgstr "開始設定"
@@ -3176,6 +3264,10 @@ msgstr "下次可以問：哪些種子適合種在一起？"
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "{notices}則中有{wrong}則真的有狀況。"
 
+#: src/components/eligibility-review.tsx
+msgid "Somewhere else"
+msgstr "其他地方"
+
 #: src/auth/phone.ts
 msgid "South Korea"
 msgstr "韓國"
@@ -3250,7 +3342,12 @@ msgstr "星期日"
 msgid "Sydney"
 msgstr "雪梨"
 
+#: app/eligibility-preview.tsx
+msgid "SYNTHETIC REVIEW · DRAFT · NO LIVE CONSENT"
+msgstr "模擬審閱・草稿・不記錄正式同意"
+
 #: src/auth/phone.ts
+#: src/components/eligibility-review.tsx
 #: src/data/onboarding.ts
 msgid "Taiwan"
 msgstr "台灣"
@@ -3295,6 +3392,10 @@ msgstr "Telegram 已確認"
 #: src/components/telegram-family-link.tsx
 msgid "Telegram didn’t open."
 msgstr "Telegram 未能開啟。"
+
+#: src/components/eligibility-review.tsx
+msgid "Test declaration recorded"
+msgstr "已記錄模擬聲明"
 
 #: src/auth/phone.ts
 msgid "Thailand"
@@ -3609,6 +3710,14 @@ msgstr "無法確認是否已送出。請重試已保存的那一次，完成同
 msgid "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
 msgstr "故事日說的故事和分享的食譜，連同聲音，在三十天後也會留在這裡。"
 
+#: src/components/eligibility-review.tsx
+msgid "The test declaration could not be cleared. It is still recorded. Try again."
+msgstr "未能清除模擬聲明，記錄仍然存在。請再試一次。"
+
+#: src/components/eligibility-review.tsx
+msgid "The test declaration was not recorded. Your answers are still here. Try again."
+msgstr "未能記錄模擬聲明。您的回答仍在這裡，請再試一次。"
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -3661,6 +3770,10 @@ msgstr "對方"
 msgid "There’s no one nearby yet"
 msgstr "附近還沒有人"
 
+#: src/components/eligibility-review.tsx
+msgid "These answers are outside the proposed Taiwan launch scope. Nothing is submitted. This is not a legal eligibility decision."
+msgstr "這些回答不符合規劃中的台灣服務範圍。資料不會送出。這不是法律適用資格的判定。"
+
 #: app/my-memories.tsx
 msgid "These words will be removed from your memories in Vela. Your original chat does not change."
 msgstr "這段話會從你在 Vela 的回憶中移除。原本的聊天內容不會改變。"
@@ -3705,6 +3818,10 @@ msgstr "這份草稿無法存在這支手機上。請先別關閉這個畫面，
 #: app/exchange/[id].tsx
 msgid "This iPhone could not keep a draft. Leave this screen open until your send succeeds."
 msgstr "這支 iPhone 無法保存草稿。請保持這個畫面開著，直到送出成功。"
+
+#: src/components/eligibility-review.tsx
+msgid "This is a self-declaration, not verified identity or legal clearance. No family access, messages, AI processing or parent consent has been enabled."
+msgstr "這是自行聲明，不代表身分已查驗或已通過法律審查。不會因此開放家人資料存取、訊息、AI 處理或代替家人同意。"
 
 #: src/components/parent-link-settings.tsx
 msgid "This is an example family. No invitation is created or sent."
@@ -3921,6 +4038,10 @@ msgstr "再試一次"
 msgid "Try opening Telegram again"
 msgstr "再次嘗試開啟 Telegram"
 
+#: src/components/eligibility-review.tsx
+msgid "Try recording again"
+msgstr "重新記錄"
+
 #: app/my-memories.tsx
 msgid "Turn off and clear"
 msgstr "關閉並清除"
@@ -3970,6 +4091,10 @@ msgstr "英國"
 msgid "Ukraine"
 msgstr "烏克蘭"
 
+#: src/components/eligibility-review.tsx
+msgid "Under 18"
+msgstr "未滿 18 歲"
+
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "United Kingdom"
@@ -4007,6 +4132,10 @@ msgstr "使用其他電子郵件"
 #: src/components/telegram-family-link.tsx
 msgid "Use a private connection code instead"
 msgstr "改用私人連結碼"
+
+#: app/eligibility-preview.tsx
+msgid "Use fictional answers only. This preview keeps test choices in memory until you leave. No account, network, database or messages."
+msgstr "請只使用虛構回答。測試選擇只會保留在記憶體中，離開即清除。不使用帳號、網路或資料庫，也不傳送訊息。"
 
 #: app/sign-in.tsx
 msgid "Use my email instead"
