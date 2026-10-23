@@ -77,6 +77,7 @@ import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
 import { type InsertResult, insertOutbound } from "./gateway.ts";
 import { storeInboundCopy } from "./inbound-media-copy.ts";
+import { askMemoryQuestion } from "./memory-chat.ts";
 import { discoverMemories } from "./memory-discovery.ts";
 import { pilotFamilyAllowed, pilotMemberAllowed } from "./pilot-admission.ts";
 import { offerRecipe } from "./recipes.ts";
@@ -1221,6 +1222,8 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
   // and switched inside, and never able to fail her answer's understanding.
   if (deps.config.richMemories === true && deps.config.memoryDiscovery === true && understood) {
     await discoverMemories(deps, ctx, { understanding: modelUnderstanding, flag: modelFlag });
+    // Once, after an answer of hers: may Vela suggest memories? Asked in her own chat.
+    await askMemoryQuestion(deps, member, family);
   }
 
   if (!understood) {

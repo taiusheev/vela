@@ -64,6 +64,7 @@ import {
   loadMemoryCandidates,
   loadMemoryPermission,
   loadMemoryPermissionPresentation,
+  loadSharedKeptMemories,
   markApiDeceased,
   markApiQuietUseful,
   memberOfDeviceToken,
@@ -162,6 +163,7 @@ export const MEMORY_SERVICES: NonNullable<ApiRuntime["memories"]>["services"] = 
   keepMemoryCandidate,
   loadKeptMemories,
   removeKeptMemory,
+  loadSharedKeptMemories,
 };
 
 export const API_WRITE_SERVICES: ApiWriteServices = {

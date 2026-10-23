@@ -46,6 +46,7 @@ import {
   resolveGroupSender,
   sendOutsideGateway,
 } from "../group.ts";
+import { handleMemoryOfferButton, handleMemoryPermissionButton } from "../memory-chat.ts";
 import { handleLookInButton } from "../nearby-ask.ts";
 import {
   handleNearbyConsentButton,
@@ -118,6 +119,7 @@ async function route(deps: Deps, event: InboundEvent): Promise<void> {
     event.conversation.kind === "private" &&
     (command === "stop" ||
       command === "what_family_sees" ||
+      command === "memories_off" ||
       declines ||
       (event.kind === "button" && /^lr:/.test(event.buttonData ?? "")) ||
       action?.type === "book_drop");
@@ -286,6 +288,12 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
     return;
   }
   switch (action.type) {
+    case "memory_permission":
+      await handleMemoryPermissionButton(deps, event, action);
+      return;
+    case "memory_offer":
+      await handleMemoryOfferButton(deps, event, action);
+      return;
     case "consent_both":
       await handleCombinedConsentButton(deps, event, action);
       return;

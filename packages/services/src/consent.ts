@@ -235,15 +235,23 @@ function yesNoButtons(lang: Lang, yes: ButtonAction, no: ButtonAction): Button[]
  * same way, and a tap derives it again from the same rows, so the hash of the rebuilt text matches
  * the message she saw.
  */
-async function organiserNameFor(db: Queryable, member: Member, family: Family): Promise<string> {
+export async function organiserNameFor(
+  db: Queryable,
+  member: Member,
+  family: Family,
+): Promise<string> {
+  return (await inviterOf(db, member))?.displayName ?? family.name;
+}
+
+/** Whoever sent her latest invite, if that member still exists. */
+export async function inviterOf(db: Queryable, member: Member): Promise<Member | null> {
   const [invite] = await db
     .select({ invitedBy: invites.invitedBy })
     .from(invites)
     .where(eq(invites.forMemberId, member.id))
     .orderBy(desc(invites.createdAt), desc(invites.id))
     .limit(1);
-  const inviter = invite === undefined ? null : await memberById(db, invite.invitedBy);
-  return inviter?.displayName ?? family.name;
+  return invite === undefined ? null : await memberById(db, invite.invitedBy);
 }
 
 /** The values filled into `consent.request` for her: who asks, and the notice in her language. */

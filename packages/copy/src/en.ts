@@ -156,6 +156,26 @@ export const en = {
     "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time.\n\nYour health words are a separate choice. If you mention your health, for example a fall or pain, Vela can pass your words on to {organiser} so they can call you, and say in the Sunday read which of them came up more than once. Vela works the same if you keep them private.\n\nTap “Yes to both”, “Yes, health private” to keep your health words to yourself, or “No, thank you”. Vela is run by Timur Aiusheev. How your information is used: {notice}",
   "consent.both": "Yes to both",
   "consent.light_only": "Yes, health private",
+  "memory.question":
+    "Would you like Vela to suggest memories from your answers? Vela can use AI to suggest little things worth remembering: things you enjoy, stories, jokes, people, moments and plans. Only new answers you send after agreeing are used. Health and other sensitive words are never used; if Vela is unsure, it leaves those words out. Only you can read these suggestions. They disappear with your answer, normally after 30 days, unless you choose to keep exact words. Keeping words does not share them; sharing is a separate choice that shows who will read them. This is optional: saying no does not change your ordinary chats, and saying yes does not start a trial or charge anyone. You can turn this off later and clear your memories. To turn it off, write “memories off”.",
+  "memory.allow": "Yes, suggest",
+  "memory.not_now": "Not now",
+  "memory.allowed":
+    "Thank you. When you share something worth remembering, Vela will offer it to you here. Write “memories off” at any time to stop and clear them.",
+  "memory.declined": "That's fine. Nothing changes.",
+  "memory.offer":
+    "“{quote}”\n\nKeep these words? Only these words will stay in your private memories after the conversation’s 30 days. Keeping does not share them with family. You can remove this memory later.",
+  "memory.offer_share":
+    "“{quote}”\n\nKeep these words? Only these words will stay in your private memories after the conversation’s 30 days. Keeping does not share them with family. You can remove this memory later.\n\n“Share with {organiser}” keeps them and lets {organiser} read them in the app. Share only these words with the people named below. People who join later will not see this memory. You can stop sharing later, but someone may already have read or copied it.",
+  "memory.keep": "Keep",
+  "memory.share": "Share with {organiser}",
+  "memory.leave": "Leave out",
+  "memory.kept": "Kept. Only you have these words.",
+  "memory.kept_shared": "Kept, and shared with {organiser}.",
+  "memory.left": "Left out.",
+  "memory.unavailable": "These words can no longer be kept.",
+  "memory.off_done":
+    "Memory suggestions are off, and your memories are cleared in Vela. Your ordinary chats stay the same.",
   "consent.yes": "Yes, that's fine",
   "consent.no": "No, thank you",
   "consent.accepted":

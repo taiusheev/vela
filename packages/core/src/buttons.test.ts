@@ -67,6 +67,8 @@ function randomAction(random: () => number): ButtonAction {
       "vote",
       "consent",
       "consent_both",
+      "memory_permission",
+      "memory_offer",
       "health_words",
       "fine",
       "wait",
@@ -92,6 +94,14 @@ function randomAction(random: () => number): ButtonAction {
       return { type: "vote", exchangeId: uuidv7(random), index };
     case "consent":
       return { type: "consent", memberId: uuidv7(random), accept: random() < 0.5 };
+    case "memory_permission":
+      return { type: "memory_permission", memberId: uuidv7(random), accept: random() < 0.5 };
+    case "memory_offer":
+      return {
+        type: "memory_offer",
+        candidateId: uuidv7(random),
+        choice: pick(random, ["keep", "share", "leave"] as const),
+      };
     case "consent_both":
       return {
         type: "consent_both",

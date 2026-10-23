@@ -32,6 +32,10 @@ msgstr "{asker}問{recipient}"
 msgid "{asker} asked {recipient} · written by Vela"
 msgstr "{asker}問{recipient} · Vela 代筆"
 
+#: app/my-memories.tsx
+msgid "{author} kept these words on {when} and shared them with you."
+msgstr "{author}在{when}保留了這段話，並分享給你。"
+
 #: src/data/precision.ts
 msgid "{away} away"
 msgstr "{away}次正好外出"
@@ -406,6 +410,10 @@ msgstr "{relation} · 設定好後再詢問"
 msgid "{replies, plural, one {# reply} other {# replies}}"
 msgstr "{replies, plural, other {# 則回覆}}"
 
+#: app/(tabs)/exchanges.tsx
+msgid "{sharedCount} memories were shared with you"
+msgstr "有{sharedCount}則回憶分享給你"
+
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr "{someone}住在附近，安靜的日子可以聯絡"
@@ -489,6 +497,10 @@ msgstr "家裡傳來的一點光。"
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "尚未設定即時連線。"
+
+#: app/(tabs)/exchanges.tsx
+msgid "A memory was shared with you"
+msgstr "有一則回憶分享給你"
 
 #: app/help.tsx
 msgid "A morning message is missing"
@@ -3024,6 +3036,10 @@ msgstr "在平常使用的聊天中分享專屬連結。長輩會在 Telegram �
 msgid "Share their chat link"
 msgstr "分享對方的聊天連結"
 
+#: app/my-memories.tsx
+msgid "Shared with you"
+msgstr "分享給你的"
+
 #: src/components/parent-link-settings.tsx
 msgid "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
 msgstr "無法開啟分享。請選取並複製下方連結，再傳給長輩。若連結已到期，請再次分享以取得新連結。"
@@ -4394,6 +4410,10 @@ msgstr "您的燈亮著時，家人也會看到您每天早上有沒有回覆、
 msgid "Words & sayings"
 msgstr "俗語與說法"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Words your family chose to keep and share with you"
+msgstr "家人選擇保留並分享給你的話"
+
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 msgstr "您傳過的文字、照片和語音訊息會留在家庭中，因為那是家人日常的一部分。"
@@ -4580,6 +4600,7 @@ msgid "Your email"
 msgstr "您的電子郵件"
 
 #: app/(tabs)/you.tsx
+#: app/my-memories.tsx
 #: app/precision.tsx
 #: src/components/family-chooser.tsx
 msgid "Your family"
@@ -4621,6 +4642,10 @@ msgstr "最初的幾天"
 #: src/components/onboarding/plan.tsx
 msgid "Your first question"
 msgstr "您的第一個問題"
+
+#: src/data/my-memories-demo.ts
+msgid "Your grandfather sang to the tomatoes every morning, and they grew the sweetest."
+msgstr "你爺爺每天早上都對番茄唱歌，結果長得最甜。"
 
 #: app/settings.tsx
 msgid "Your light is off, so nothing about your mornings is shown."

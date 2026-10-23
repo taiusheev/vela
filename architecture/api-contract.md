@@ -703,3 +703,15 @@ stay open when new processing is off: privacy actions are never gated by the swi
 An answer is refused (409) when its presentation is expired, used, for another account or membership
 revision, for other words, or was issued before a later withdrawal; a current yes changes only
 through withdraw. Only the person answers for themselves: an organiser cannot answer for anyone.
+
+### Memories in the parent's chat (23 October 2026, staging only)
+
+A parent who answers in Telegram or LINE has no app. With `RICH_MEMORIES` and `MEMORY_DISCOVERY` on
+(development and staging), after an answer of hers is understood Vela asks her once in her chat
+(`memory.question`, the approved consent.rich_memories@2 wording; buttons `m:<member>:y|n`), offers
+each new suggestion there (`memory.offer` / `memory.offer_share` with the keep@2 and share@1
+explanations; buttons `u:<candidate>:k|s|l` for Keep, Share with {organiser}, Leave out), and
+"memories off" (`关闭回忆` / `關閉回憶`) withdraws and clears, like the app's Turn off and clear.
+Every tap counts only from her own private chat. "Share" grants the one person who invited her, if
+they have the app; they read it at `GET /v1/families/:familyId/shared-memories`
+(`SharedKeptMemoryPage`), served by the memories group while the sharing group is unconfigured.

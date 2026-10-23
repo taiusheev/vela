@@ -1,10 +1,10 @@
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Link, useFocusEffect } from "expo-router";
+import { Link, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
-import { ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { FamilyAction, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import { FamilyBook } from "../../src/components/family-book.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../../src/components/family-photo.tsx";
@@ -21,6 +21,7 @@ import { localDayMonth } from "../../src/data/format.ts";
 import { useBook } from "../../src/data/useBook.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
+import { useMyMemories } from "../../src/data/useMyMemories.ts";
 import { usePortrait } from "../../src/data/usePortrait.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
@@ -207,6 +208,8 @@ export default function MemoriesScreen() {
   const { capabilities } = useCapabilities();
   const day = useToday();
   const book = useBook(day.familyId);
+  // Words a parent kept and shared with the reader from her chat.
+  const sharedCount = useMyMemories(day.familyId).shared.length;
   const { exchanges, live, loading, refreshing, refresh, trouble, more, loadMore } = useExchanges();
   useFocusEffect(
     useCallback(() => {
@@ -259,6 +262,19 @@ export default function MemoriesScreen() {
           <Trans>What she told you this month, and the stories the family keeps for good.</Trans>
         }
       />
+      {sharedCount === 0 ? null : (
+        <FamilyAction
+          icon="heart"
+          title={
+            sharedCount === 1
+              ? t`A memory was shared with you`
+              : t`${sharedCount} memories were shared with you`
+          }
+          detail={t`Words your family chose to keep and share with you`}
+          onPress={() => router.push("/my-memories")}
+          testID="memories-shared-with-you"
+        />
+      )}
       {bookOn ? (
         <View
           accessibilityRole="tablist"

@@ -51,6 +51,7 @@ import type {
   MemoryPermissionState,
   RegisterPushDevice,
   SetAway,
+  SharedKeptMemoryPage,
 } from "@vela/contracts";
 import {
   MEMORY_KEEP_EXPLANATION_SHA256,
@@ -800,6 +801,14 @@ export function keepMemory(
       confirmation_sha256: MEMORY_KEEP_EXPLANATION_SHA256,
     },
   });
+}
+
+/** What other members chose to share with the reader by name (a parent sharing from her chat). */
+export function fetchSharedMemories(
+  familyId: string,
+  token: string | null,
+): Promise<SharedKeptMemoryPage> {
+  return read<SharedKeptMemoryPage>(`/v1/families/${familyId}/shared-memories`, token);
 }
 
 export function fetchKeptMemories(familyId: string, token: string | null): Promise<KeptMemoryPage> {

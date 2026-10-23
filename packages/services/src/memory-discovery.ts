@@ -18,6 +18,7 @@ import { type answers, consents, type Exchange, type Member } from "@vela/db";
 import { and, desc, eq } from "drizzle-orm";
 import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
+import { offerMemory } from "./memory-chat.ts";
 import {
   proposeMemoryCandidate,
   RICH_MEMORY_CONSENT_VERSION,
@@ -139,7 +140,10 @@ export async function discoverMemories(
         { source_answer_id: answer.id, kind: pick.kind, start, end: start + quote.length },
         { answerId: answer.id, ordinaryText: words.text },
       );
-      if (id !== null) proposed += 1;
+      if (id === null) continue;
+      proposed += 1;
+      // One offer per answer in her chat, so a long answer never turns into a string of questions.
+      if (proposed === 1) await offerMemory(deps, member, id, quote);
     }
     deps.logger.info("memory_discovery", {
       answerId: answer.id,
