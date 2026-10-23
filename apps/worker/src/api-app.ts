@@ -93,6 +93,9 @@ import {
   OpenWeeklyRead,
   ParentLinkRequest,
   PauseMember,
+  PublicEligibilityClear,
+  PublicEligibilityCleared,
+  PublicEligibilityView,
   QuietAction,
   QuietUseful,
   RegisterPushDevice,
@@ -121,6 +124,7 @@ import {
   type authorizeFamilyAccess,
   type Clock,
   type cancelAccountLink,
+  type clearOwnPublicEligibility,
   type completeAccountLink,
   type composeApiAsk,
   type confirmMemorySharing,
@@ -161,6 +165,7 @@ import {
   type loadMemoryPermissionPresentation,
   type loadMemorySharingPresentation,
   type loadMemorySharingView,
+  type loadOwnPublicEligibility,
   type loadSharedKeptMemories,
   MAX_VOICE_BYTES,
   MediaRefusedError,
@@ -285,6 +290,12 @@ export interface ApiWriteServices {
 }
 
 export interface ApiRuntime {
+  /** Own rights only, absent in actual runtimes. No collection/config/admission capability. */
+  eligibilityRights?: {
+    load: typeof loadOwnPublicEligibility;
+    clear: typeof clearOwnPublicEligibility;
+  };
+
   /** Unconfigured in EVERY actual runtime. Future activation needs reviewed notice/fresh consent.
    * Keep configured for free reads/stop if new processing is later disabled; never a paid gate. */
   memorySharing?: {
@@ -550,10 +561,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     const handle = await runtime.openDatabase();
     try {
       c.set("db", handle.db);
+      // These exact own-account rights must remain usable outside the admission roster.
+      // Authentication and the service's own-account/tombstone checks still apply.
+      const eligibilityRight =
+        runtime.eligibilityRights !== undefined &&
+        ((c.req.method === "GET" && c.req.path === "/v1/me/eligibility") ||
+          (c.req.method === "POST" && c.req.path === "/v1/me/eligibility/clear"));
       const admission = runtime.admission;
       // The roster the founder keeps on the admin page joins the private allowlist (ADR-45).
       const roster =
-        admission === undefined
+        admission === undefined || eligibilityRight
           ? undefined
           : admission.withRoster === undefined
             ? admission.config
@@ -568,6 +585,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         admission !== undefined &&
         roster !== undefined &&
         !removal &&
+        !eligibilityRight &&
         (identity === undefined || !(await admission.permitsAccount(handle.db, identity, roster)))
       )
         return c.json(NOT_FOUND, 404);
@@ -1159,6 +1177,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       },
     );
   }
+  const eligibilityRights = runtime.eligibilityRights;
+  if (eligibilityRights) {
+    app.get("/v1/me/eligibility", authenticate, withDatabase, async (c) => {
+      const record = await eligibilityRights.load(
+        { db: c.get("db") },
+        { kind: "app", identity: c.get("session") },
+      );
+      return c.json(PublicEligibilityView.parse({ record }), 200);
+    });
+  }
   const writes = runtime.writes;
   const sharing = runtime.memorySharing;
   const sharingIds: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
@@ -1317,6 +1345,26 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       await next();
       return c.res;
     };
+    if (eligibilityRights) {
+      app.post(
+        "/v1/me/eligibility/clear",
+        authenticate,
+        validateWrite(PublicEligibilityClear, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await eligibilityRights.clear(
+            { db: c.get("db"), clock: writes.clock },
+            { kind: "app", identity: c.get("session") },
+            c.get("writeKey"),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid eligibility clear response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(PublicEligibilityCleared.parse(result.response.body), 200);
+        },
+      );
+    }
     if (sharing) {
       const newSharingEnabled: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
         if (sharing.config.richMemories !== true) return c.json(NOT_FOUND, 404);

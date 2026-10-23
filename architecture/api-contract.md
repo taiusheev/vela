@@ -692,3 +692,31 @@ stay open when new processing is off: privacy actions are never gated by the swi
 An answer is refused (409) when its presentation is expired, used, for another account or membership
 revision, for other words, or was issued before a later withdrawal; a current yes changes only
 through withdraw. Only the person answers for themselves: an organiser cannot answer for anyone.
+
+
+## Eligibility self-read and clear — optional review group
+
+This group is absent from development, staging and production runtimes. The optional internal
+`ApiRuntime.eligibilityRights` supplies only own-read and own-clear services, never a record service
+or eligibility switch. No public admission, live collection or legal acceptance is enabled.
+
+- `GET /v1/me/eligibility` returns `{ "record": <PublicEligibilityRecord or null> }` (200).
+  The verified app session supplies the actor. Query parameters never select another account/member.
+- `POST /v1/me/eligibility/clear` requires JSON `{}`, a valid `Idempotency-Key`, and an active verified
+  session. It returns `{ "cleared": true }` (200) with `Idempotency-Replayed: true|false`.
+  The service clears only that account's current declaration; separate family consents are unchanged.
+
+Every response is `Cache-Control: no-store`. Missing group, missing/deleted own account and unsupported
+methods/selectors return 404; missing/inactive authentication returns 401. There is no 403 distinction
+revealing another account because no account/member selector exists. Invalid body/key returns 400,
+unsupported content type 415, conflicting retry key 409, write rate limit 429, and unexpected errors
+are sanitized. A missing write runtime leaves read available and clear 404. Failed database handles
+are closed in the existing middleware's `finally` path.
+
+These exact own-account rights bypass pilot admission and its roster lookup, preserving rights if a
+person is no longer on the admission roster or that roster cannot load. They still require verified
+authentication and service-level own-account/tombstone checks. The exemption does not cover ordinary
+`/v1/me`, family access, collection, or any future route. No `POST /v1/me/eligibility`, record endpoint,
+Telegram caller, organiser-provided member target or save endpoint exists in this group. Future
+collection requires the approved full documents and enforcement described in
+`apps/app/docs/taiwan-public-eligibility.md`.

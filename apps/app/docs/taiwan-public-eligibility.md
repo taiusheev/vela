@@ -51,12 +51,21 @@ Singapore/Cloudflare infrastructure; live collection requires an updated data ma
 
 `PUBLIC_ELIGIBILITY_DEFAULT.enabled` is false. New records require an explicit internal
 `synthetic-review` configuration and the matching review version. Production is not an accepted
-service environment. No Worker runtime, route, bot handler, app navigation, account provisioning or
+service environment. No actual Worker runtime, bot handler, app navigation, account provisioning or
 family-creation path calls the service. Runtime regression tests cover development, staging and
-production. Clearing/own reads are service capabilities only, not new live endpoints.
+production. An optional `eligibilityRights` HTTP group is now prepared for self-read/clear only;
+it is absent from all actual runtimes and has no collection capability.
+
+`GET /v1/me/eligibility` and `POST /v1/me/eligibility/clear` derive the app actor only from a
+verified session. Clear also checks live session activity and requires an idempotency key plus
+a strict empty JSON body. Reads return the current own record or null, never an admission decision.
+Both responses are no-store. Only these exact own-rights routes bypass pilot admission and roster
+lookup; service authorization and account-deletion checks still apply. Ordinary account/family
+access remains admission-gated. No Telegram identity or member ID can be supplied over these routes.
 
 The preview and internal synthetic configuration are not a substitute for enforcement. Do not
-expose an endpoint or use these records as a family-access gate without completing the next section.
+mount this group in an actual runtime or use these records as a family-access gate without completing
+the next section.
 An eligibility change must not block existing stopping, deletion, data access or help paths.
 
 ## Before real public signup
@@ -73,7 +82,8 @@ An eligibility change must not block existing stopping, deletion, data access or
 4. Native Taiwanese review of the new Chinese text. Recheck the currently effective law; the official
    Chinese law page marks some 2025 amendments as not yet effective. Do not infer commencement from
    an updated consolidated English text.
-5. Add authenticated self-read/save/clear HTTP routes and verified private-channel integration, each
+5. Review and wire the prepared self-read/clear HTTP group; add reviewed save/presentation routes
+   and verified private-channel integration, each
    with admission/notice presentation checks and authorization tests. The parent must receive the
    applicable notice and independently choose before participation; an organiser's country or answers
    are never copied to the parent. A Telegram participant using an app later needs proof-based

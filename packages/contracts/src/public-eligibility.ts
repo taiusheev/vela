@@ -36,3 +36,8 @@ export const PublicEligibilityRecord = PublicEligibilityChoice.extend({
   status: z.literal("review_only"),
 });
 export type PublicEligibilityRecord = z.infer<typeof PublicEligibilityRecord>;
+
+/** Own-account rights only; these contracts never grant public admission. */
+export const PublicEligibilityView = z.strictObject({ record: PublicEligibilityRecord.nullable() });
+export const PublicEligibilityClear = z.strictObject({});
+export const PublicEligibilityCleared = z.strictObject({ cleared: z.literal(true) });

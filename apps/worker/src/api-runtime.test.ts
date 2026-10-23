@@ -574,6 +574,7 @@ describe("the runtime staging's API app runs on", () => {
         "clearOwnPublicEligibility",
       );
       expect(Object.keys(runtime)).not.toContain("eligibility");
+      expect(runtime.eligibilityRights).toBeUndefined();
     },
   );
   it.each(["development", "staging", "production"] as const)(
