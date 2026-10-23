@@ -141,6 +141,7 @@ function fixture(options: FixtureOptions = {}) {
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
+    loadApiPlannedQuestions: vi.fn(unused("planned questions")),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>(unused("the weekly read")),
@@ -175,6 +176,7 @@ function fixture(options: FixtureOptions = {}) {
       pauseApiMember: vi.fn<Writes["services"]["pauseApiMember"]>(unused("pause")),
       leaveApiFamily: vi.fn<Writes["services"]["leaveApiFamily"]>(unused("leave")),
       setApiAway: vi.fn<Writes["services"]["setApiAway"]>(unused("away")),
+      editApiAsk: vi.fn(unused("edit question")),
       withdrawApiAsk: vi.fn<Writes["services"]["withdrawApiAsk"]>(unused("withdraw")),
       markApiDeceased: vi.fn<Writes["services"]["markApiDeceased"]>(unused("deceased")),
       endApiAway: vi.fn<Writes["services"]["endApiAway"]>(unused("away end")),

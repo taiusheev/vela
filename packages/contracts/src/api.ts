@@ -582,6 +582,27 @@ const AskText = z
     "the ask must be valid UTF8 text without NUL",
   );
 
+/** Edit a waiting question without replacing its media, author or delivery identity. */
+export const EditAsk = z.strictObject({
+  text: AskText,
+  date: LocalDate.nullable(),
+});
+export type EditAsk = z.infer<typeof EditAsk>;
+export const ApiEditedAsk = z.object({ id: z.uuid(), state: z.literal("composed") });
+export const ApiPlannedAsk = z.object({
+  id: z.uuid(),
+  recipient_id: z.uuid(),
+  recipient_name: z.string(),
+  asker_name: z.string(),
+  text: z.string(),
+  date: LocalDate.nullable(),
+  editable: z.boolean(),
+  preparing: z.boolean(),
+});
+export type ApiPlannedAsk = z.infer<typeof ApiPlannedAsk>;
+export const ApiPlannedQuestions = z.object({ questions: z.array(ApiPlannedAsk) });
+export type ApiPlannedQuestions = z.infer<typeof ApiPlannedQuestions>;
+
 export const ComposeAsk = z
   .strictObject({
     recipient_id: z.uuid(),

@@ -1,27 +1,17 @@
-# Ask in the explicit demo (A7): the organiser writes one question in English, sees the truthful
-# as-written language explanation and returns to Today after the simulated send.
 url: ${APP_URL}
-name: An ask goes into her morning
+name: A personal question returns to its editable schedule
 tags:
   - demo
 ---
 - launchApp
-- scrollUntilVisible:
-    element: "Ask Mom"
-    direction: DOWN
-- tapOn: "Ask Mom"
-- assertVisible: "What are you sending?"
-- tapOn: "Say it the way you would say it"
-- inputText: "What did you have for breakfast?"
-- assertVisible: "One question at a time. The English pilot sends your words as written."
-- assertNotVisible: '.*shown to her in .+'
-- scrollUntilVisible:
-    element: "Send to Mom"
-    direction: DOWN
-- tapOn: "Send to Mom"
-- assertVisible: "You tried an example ask. No message was sent."
-- tapOn: "Dismiss"
-- assertVisible: "What did the garden look like this morning?"
-- scrollUntilVisible:
-    element: "Ask Mom"
-    direction: DOWN
+- openLink: ${APP_URL}/ask
+- assertVisible: "Your question for Mom"
+- tapOn:
+    id: "Say it the way you would say it"
+- inputText: "Mom, did the basil survive the rain?"
+- assertVisible: "Keep it short, like a message you would send yourself."
+- assertVisible: "When should it arrive?"
+- tapOn: "Save question"
+- assertVisible: "Questions"
+- assertVisible: "Question saved. You can adjust it below."
+- assertVisible: 'Mom, did the basil survive the rain\?'

@@ -1,5 +1,5 @@
 url: ${APP_URL}
-name: Reports and questions each stay with the selected parent
+name: Reports and planned questions each stay with the selected parent
 tags:
   - demo
 ---
@@ -10,16 +10,18 @@ tags:
 - assertNotVisible: "Mom answered 6 of 7 days."
 - openLink: ${APP_URL}/questions
 - tapOn: "Dad"
-- scrollUntilVisible:
-    element: "Write your own story question for Sunday"
-    direction: DOWN
-- tapOn: "Write your own story question for Sunday"
-- assertVisible: "A story question for Dad's Sunday morning"
+- assertVisible: "Write a question for Dad"
+- tapOn: "Edit question or day"
+- assertVisible: "Your question for Dad"
+- tapOn:
+    id: "Say it the way you would say it"
+- eraseText: 42
 - inputText: "What was your first job like?"
+- tapOn: "Save changes"
+- assertVisible: 'What was your first job like\?'
 - tapOn: "Mom"
-- scrollUntilVisible:
-    element: "Write your own story question for Sunday"
-    direction: DOWN
-- tapOn: "Write your own story question for Sunday"
-- assertVisible: "A story question for Mom's Sunday morning"
+- assertVisible: "Write a question for Mom"
+- assertNotVisible: 'What was your first job like\?'
+- tapOn: "Edit question or day"
+- assertVisible: "Your question for Mom"
 - assertNotVisible: 'What was your first job like\?'

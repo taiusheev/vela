@@ -100,7 +100,12 @@ export {
   removeApiDevice,
   setUpApiDevice,
 } from "./api-device.ts";
-export { type ApiExchangePageQuery, loadApiExchange, loadApiExchanges } from "./api-exchanges.ts";
+export {
+  type ApiExchangePageQuery,
+  loadApiExchange,
+  loadApiExchanges,
+  loadApiPlannedQuestions,
+} from "./api-exchanges.ts";
 export { AlreadyOrganiserError, type ApiFamilyDeps, createApiFamily } from "./api-families.ts";
 export { loadApiFamily } from "./api-family.ts";
 export {
@@ -141,7 +146,7 @@ export { loadApiToday } from "./api-today.ts";
 export { startApiTrial, TrialRefusedError } from "./api-trial.ts";
 export { MAX_VOICE_BYTES, MAX_VOICES_PER_ACCOUNT_DAY, uploadApiVoice } from "./api-voice.ts";
 export { loadApiWeeklyRead, openApiWeeklyRead } from "./api-weekly-read.ts";
-export { WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
+export { editApiAsk, WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
 export { type ApiBookEntry, loadApiBook, removeApiBookEntry } from "./book.ts";
 export {
   claimDeadLetterReplays,

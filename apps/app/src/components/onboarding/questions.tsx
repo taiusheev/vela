@@ -673,33 +673,46 @@ function Replies({ draft, name }: { draft: OnboardingDraft; name: string }) {
 function First({ draft, name }: { draft: OnboardingDraft; name: string }) {
   const { t } = useLingui();
   const palette = usePalette();
+  const [help, setHelp] = useState(false);
   const choices = firstQuestionChoices(draft.interests, draft.language);
-  const shown = firstQuestion(draft) || (choices[0] ?? "");
+  const shown = firstQuestion(draft) || t`Your words appear here.`;
   const you = draft.you.trim();
   const time = clock(arrivalAfter(draft.wake));
   return (
     <>
       <Title
-        why={t`Picked from what ${name} loves. It comes on the first morning, signed with your name.`}
+        why={t`Start with your own words, the way you normally message ${name}. You can use an idea if you get stuck.`}
       >
         {t`${name}’s first question`}
       </Title>
       <View style={{ gap: space.s }}>
-        {choices.map((choice) => (
-          <PickRow
-            key={choice}
-            title={choice}
-            editorial
-            selected={draft.own.trim().length === 0 && draft.firstPick === choice}
-            onPress={() => updateDraft({ firstPick: choice, own: "" })}
-          />
-        ))}
         <TextField
-          value={draft.own}
-          onChangeText={(own) => updateDraft({ own })}
-          placeholder={t`Or write your own…`}
+          value={draft.own || draft.firstPick || ""}
+          onChangeText={(own) => updateDraft({ own, firstPick: null })}
+          placeholder={t`What would you like to ask ${name}?`}
+          helper={t`A small, specific question feels more like you than a perfect one.`}
+          multiline
           maxLength={500}
         />
+        <Chip
+          label={help ? t`Hide ideas` : t`Help me start`}
+          selected={help}
+          onPress={() => setHelp((shown) => !shown)}
+        />
+        {help
+          ? choices.slice(0, 3).map((choice) => (
+              <PickRow
+                key={choice}
+                title={choice}
+                editorial
+                selected={draft.own === choice}
+                onPress={() => {
+                  updateDraft({ firstPick: null, own: choice });
+                  setHelp(false);
+                }}
+              />
+            ))
+          : null}
       </View>
       <View
         style={{

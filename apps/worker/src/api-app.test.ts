@@ -316,6 +316,7 @@ function fixture(
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
+    loadApiPlannedQuestions: vi.fn().mockResolvedValue({ questions: [] }),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
@@ -436,6 +437,7 @@ function fixture(
           replayed: false,
         }),
       setApiAway: vi.fn().mockRejectedValue(new Error("no away in these tests")),
+      editApiAsk: vi.fn(),
       withdrawApiAsk: vi.fn().mockRejectedValue(new Error("no withdraw in these tests")),
       markApiDeceased: vi.fn().mockRejectedValue(new Error("no deceased in these tests")),
       endApiAway: vi.fn().mockRejectedValue(new Error("no away in these tests")),
@@ -3524,5 +3526,77 @@ describe("Telegram approval API", () => {
     );
     f.verifySession.mockResolvedValue(null);
     expect((await f.app.request(path)).status).toBe(401);
+  });
+});
+
+describe("planned question routes", () => {
+  const path = `/v1/families/${FAMILY_ID}/questions`;
+  const editPath = `/v1/exchanges/${MEMBER_ID}/edit`;
+  const good = { authorization: "Bearer good" };
+  const input = { text: "Mom, how did the basil turn out?", date: "2026-09-25" };
+  it("authenticates schedule reads and keeps cross-family reads hidden", async () => {
+    const f = fixture(true);
+    f.verifySession.mockResolvedValueOnce(null);
+    expect((await f.app.request(path)).status).toBe(401);
+    expect(f.services.loadApiPlannedQuestions).not.toHaveBeenCalled();
+    await expectResponse(await f.app.request(path, { headers: good }), 200, { questions: [] });
+    expect(f.services.loadApiPlannedQuestions).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+    );
+    f.services.loadApiPlannedQuestions.mockResolvedValue(null);
+    expect((await f.app.request(path, { headers: good })).status).toBe(404);
+  });
+  it("validates edits before invoking writes and passes the idempotency key", async () => {
+    const f = fixture(true);
+    f.verifySession.mockResolvedValueOnce(null);
+    expect(
+      (await f.app.request(writeRequest("POST", editPath, JSON.stringify(input)))).status,
+    ).toBe(401);
+    expect(
+      (
+        await f.app.request(
+          writeRequest("POST", editPath, JSON.stringify({ ...input, date: "bad" }), good),
+        )
+      ).status,
+    ).toBe(400);
+    expect(f.writes.services.editApiAsk).not.toHaveBeenCalled();
+    f.writes.services.editApiAsk.mockResolvedValue({
+      response: { status: 200, body: { id: MEMBER_ID, state: "composed" } },
+      replayed: true,
+    });
+    const response = await f.app.request(
+      writeRequest("POST", editPath, JSON.stringify(input), good),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Idempotency-Replayed")).toBe("true");
+    expect(f.writes.services.editApiAsk).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      "request-1",
+      MEMBER_ID,
+      input,
+    );
+  });
+  it("does not mount writes without the write capability and maps missing or occupied asks", async () => {
+    const without = fixture();
+    expect(
+      (await without.app.request(writeRequest("POST", editPath, JSON.stringify(input), good)))
+        .status,
+    ).toBe(404);
+    const f = fixture(true);
+    f.writes.services.editApiAsk.mockRejectedValue(
+      new VelaError("not_found", "Exchange not found"),
+    );
+    expect(
+      (await f.app.request(writeRequest("POST", editPath, JSON.stringify(input), good))).status,
+    ).toBe(404);
+    f.writes.services.editApiAsk.mockRejectedValue(
+      new AskDayTakenError({ taken_by: "Sam", date_alternative: null }),
+    );
+    expect(
+      (await f.app.request(writeRequest("POST", editPath, JSON.stringify(input), good))).status,
+    ).toBe(409);
   });
 });
