@@ -88,6 +88,7 @@ describe("the public website", () => {
       expect(body.match(/<script[^>]*>/g)).toEqual([
         '<script src="/site/boot.js">',
         '<script src="/site/site.js" defer>',
+        '<script src="/site/analytics.js" defer>',
         '<script type="application/json" id="vela-demo">',
       ]);
       expect(body).not.toContain("style=");
@@ -405,7 +406,7 @@ describe("the website's privacy notice", () => {
     expect(home.match(new RegExp(`href="${SITE_PATHS[lang].privacy}"`, "g"))).toHaveLength(3);
   });
 
-  it("promises no cookies, and the pages set none", async () => {
+  it("discloses optional counts and the pages set no cookies", async () => {
     const fake = createFakePilotRuntime();
     const at = origin();
 
@@ -414,7 +415,8 @@ describe("the website's privacy notice", () => {
       expect((await send(fake, `${at}${path}`)).headers.get("set-cookie")).toBeNull();
     }
 
-    expect(notice).toContain("We do not use cookies, analytics, advertising or tracking tools");
+    expect(notice).toContain("Optional usage counts are off until you choose Allow counts");
+    expect(notice).toContain("Turning it off clears the identifier here");
   });
 });
 
@@ -478,6 +480,64 @@ describe("the website's protections", () => {
     );
 
     expect([wrongType.status, tooBig.status]).toEqual([415, 413]);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("bounds a streamed form before reading the rest or opening the database", async () => {
+    const fake = createFakePilotRuntime();
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("x".repeat(2049)));
+        // Deliberately never close: the route must reject without waiting for more bytes.
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+      }),
+    );
+    expect(response.status).toBe(413);
+    expect(cancelled).toBe(true);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("does not save a valid-looking prefix when the form stream stalls", async () => {
+    const fake = createFakePilotRuntime();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("email=qa%40example.invalid&lang=en"));
+      },
+    });
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+      }),
+    );
+    expect(response.status).toBe(408);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("counts UTF-8 bytes rather than characters in the form limit", async () => {
+    const fake = createFakePilotRuntime();
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: `email=a@b.co&pad=${"光".repeat(700)}`,
+      }),
+    );
+    expect(response.status).toBe(413);
     expect(namesOf(fake.calls)).toEqual([]);
   });
 

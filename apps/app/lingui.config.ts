@@ -34,9 +34,15 @@ export default defineConfig({
   fallbackLocales: { default: "en" },
   catalogs: [
     {
+      path: "<rootDir>/src/i18n/locales/analytics/{locale}",
+      include: ["<rootDir>/src/analytics"],
+      exclude: ["**/*.test.ts"],
+    },
+    {
       path: "<rootDir>/src/i18n/locales/{locale}",
       include: ["<rootDir>/app", "<rootDir>/src"],
       exclude: [
+        "**/analytics/**",
         "**/*.test.ts",
         "**/memory-review-preview.tsx",
         "**/memory-review-demo.ts",

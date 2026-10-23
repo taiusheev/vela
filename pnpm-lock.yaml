@@ -216,8 +216,8 @@ catalogs:
       specifier: 0.45.2
       version: 0.45.2
     hono:
-      specifier: 4.13.7
-      version: 4.13.7
+      specifier: 4.13.13
+      version: 4.13.13
     jose:
       specifier: 6.2.12
       version: 6.2.12
@@ -424,7 +424,7 @@ importers:
         version: 0.45.2(@cloudflare/workers-types@5.20260911.1)(@electric-sql/pglite@0.5.8)(@types/pg@8.23.1)(pg@8.23.0)
       hono:
         specifier: 'catalog:'
-        version: 4.13.7
+        version: 4.13.13
       jose:
         specifier: 'catalog:'
         version: 6.2.12
@@ -440,7 +440,7 @@ importers:
         version: 5.20260911.1
       '@hono/node-server':
         specifier: ^2.1.1
-        version: 2.1.1(hono@4.13.7)
+        version: 2.1.1(hono@4.13.13)
       '@types/pg':
         specifier: 'catalog:'
         version: 8.23.1
@@ -4859,8 +4859,8 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.13.7:
-    resolution: {integrity: sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ==}
+  hono@4.13.13:
+    resolution: {integrity: sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@7.0.2:
@@ -8199,9 +8199,9 @@ snapshots:
 
   '@formkit/auto-animate@0.8.4': {}
 
-  '@hono/node-server@2.1.1(hono@4.13.7)':
+  '@hono/node-server@2.1.1(hono@4.13.13)':
     dependencies:
-      hono: 4.13.7
+      hono: 4.13.13
 
   '@img/colour@1.1.0': {}
 
@@ -11011,7 +11011,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.13.7: {}
+  hono@4.13.13: {}
 
   hosted-git-info@7.0.2:
     dependencies:

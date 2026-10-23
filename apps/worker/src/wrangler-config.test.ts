@@ -128,6 +128,12 @@ function pilotHeader(): string {
 }
 
 describe("the two Workers' configurations", () => {
+  it("keeps optional website analytics off until the separate project and notice rollout", () => {
+    for (const environment of ["development", ...DEPLOYED] as const) {
+      expect(configOf("pilot", environment).vars.SITE_ANALYTICS).toBeUndefined();
+      expect(configOf("pilot", environment).vars.POSTHOG_PROJECT_TOKEN).toBeUndefined();
+    }
+  });
   it("cover both Workers in every environment deploy.yml deploys, and development", () => {
     expect(configs.map(({ worker, environment }) => `${worker}:${environment}`)).toEqual([
       "pilot:development",

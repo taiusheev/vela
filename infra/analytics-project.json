@@ -1,0 +1,9 @@
+{
+  "provider": "posthog",
+  "region": "eu",
+  "projectId": 315862,
+  "projectToken": "phc_w3ZVMG9CqXp6hujuvN868rNsmYZ5HCbW3k3oFQuw4Xux",
+  "tokenVisibility": "public capture token; not a personal API key",
+  "collectionEnabled": false,
+  "dashboardUrl": "https://eu.posthog.com/project/315862/dashboard/1045170"
+}
