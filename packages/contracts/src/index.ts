@@ -6,3 +6,5 @@ export * from "./events.ts";
 export * from "./parent-link.ts";
 export * from "./rich-memories.ts";
 export * from "./weekly.ts";
+
+export * from "./weekly-support.ts";

@@ -62,6 +62,8 @@ import {
   type Translation,
   translations,
   weeklyReads,
+  weeklySupportPresentations,
+  weeklySupportSelections,
 } from "@vela/db";
 import {
   and,
@@ -1094,6 +1096,19 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   cutoff5y.setUTCFullYear(cutoff5y.getUTCFullYear() - PROOF_RETENTION_YEARS);
   const counts: Record<string, number> = {};
   const db = deps.db;
+
+  counts.weekly_support_presentations_deleted = (
+    await db
+      .delete(weeklySupportPresentations)
+      .where(lte(weeklySupportPresentations.expiresAt, now))
+      .returning({ id: weeklySupportPresentations.id })
+  ).length;
+  counts.weekly_support_selections_deleted = (
+    await db
+      .delete(weeklySupportSelections)
+      .where(lte(weeklySupportSelections.expiresAt, now))
+      .returning({ id: weeklySupportSelections.id })
+  ).length;
 
   // Dead jobs, which may hold a family's words, are kept 14 days at most (technical plan 2.7).
   counts.dead_letters_deleted = await deleteOldDeadLetters(deps);

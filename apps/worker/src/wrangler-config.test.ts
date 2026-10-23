@@ -761,3 +761,12 @@ describe("the admin Worker's bindings", () => {
     },
   );
 });
+
+it("keeps new report processing, purpose approval and family roster off everywhere until approved", () => {
+  for (const environment of ["development", ...DEPLOYED] as const) {
+    const vars = configOf("pilot", environment).vars;
+    expect(vars.WEEKLY_SUPPORT).toBe("off");
+    expect(vars.WEEKLY_SUPPORT_NOTICE).toBe("");
+    expect(vars.WEEKLY_SUPPORT_FAMILIES).toBe("");
+  }
+});
